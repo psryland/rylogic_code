@@ -428,15 +428,15 @@ namespace CoinFlip
 		private bool m_transfers_update_required;
 
 		/// <summary>The percentage fee charged when performing exchanges</summary>
-		public double Fee => ExchSettings.TransactionFee;
+		public decimal Fee => ExchSettings.TransactionFee;
 
 		/// <summary>The value of all coins held on this exchange</summary>
-		public double NettWorth
+		public decimal NettWorth
 		{
 			get
 			{
-				if (this is CrossExchange) return 0;
-				return Balance.Values.Sum(x => (double)x.Coin.ValueOf(x.NettTotal));
+				if (this is CrossExchange) return 0m;
+				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.NettTotal));
 			}
 		}
 
@@ -603,7 +603,7 @@ namespace CoinFlip
 		public bool CandleDataUpdateInProgress { get; private set; }
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name)
+		public Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel, string creator_name)
 		{
 			// Only create trades from the main thread to guarantee creation order
 			Misc.AssertMainThread();
@@ -616,9 +616,9 @@ namespace CoinFlip
 					throw new Exception($"Cannot place orders when Trading is disabled");
 				if (pair.Exchange != this)
 					throw new Exception($"Pair {pair} is not provided by this exchange");
-				if (amount_in <= 0.0._(tt.CoinIn(pair)))
+				if (amount_in <= 0m._(tt.CoinIn(pair)))
 					throw new Exception($"Invalid trade 'in' amount: {amount_in}");
-				if (amount_out <= 0.0._(tt.CoinOut(pair)))
+				if (amount_out <= 0m._(tt.CoinOut(pair)))
 					throw new Exception($"Invalid trade 'out' amount: {amount_out}");
 				if (amount_in > fund[tt.CoinIn(pair)].Available)
 					throw new Exception($"Order amount ({amount_in}) is greater than the current available balance: {fund[tt.CoinIn(pair)].Available}");
@@ -698,7 +698,7 @@ namespace CoinFlip
 				}
 			}
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel);
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel);
 		private int m_in_create_order;
 
 		/// <summary>Cancel an existing order</summary>
@@ -1136,10 +1136,10 @@ namespace CoinFlip
 				if (history.TryGetValue(trade.OrderId, out var order_completed))
 				{
 					var pair = order_completed.Pair;
-					var amount_in = trade.AmountIn._(order_completed.CoinIn);
-					var amount_out = trade.AmountOut._(order_completed.CoinOut);
+					var amount_in = ((decimal)trade.AmountIn)._(order_completed.CoinIn);
+					var amount_out = ((decimal)trade.AmountOut)._(order_completed.CoinOut);
 					var commission_coin = Coins[trade.CommissionCoin];
-					var commission = trade.Commission._(commission_coin);
+					var commission = ((decimal)trade.Commission)._(commission_coin);
 					var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 					var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
 					order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));

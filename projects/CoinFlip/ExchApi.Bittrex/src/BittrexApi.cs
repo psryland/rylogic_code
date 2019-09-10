@@ -177,7 +177,7 @@ namespace Bittrex.API
 		}
 
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, double price_q2b, double amount_base, CancellationToken? cancel = null)
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, decimal price_q2b, decimal amount_base, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/market/selllimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
 			// https://api.bittrex.com/api/v1.1/market/buylimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3

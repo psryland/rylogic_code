@@ -70,7 +70,7 @@ namespace CoinFlip.UI.GfxObjects
 		public ETradeType TradeType => Trade.TradeType;
 
 		/// <summary>The price level that the indicator is at</summary>
-		public Unit<double> PriceQ2B
+		public Unit<decimal> PriceQ2B
 		{
 			get => Trade.PriceQ2B;
 			set => Trade.PriceQ2B = value;
@@ -86,8 +86,8 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			if (Visible)
 			{
-				var pt0 = Chart.ChartToClient(new Point(Chart.XAxis.Min, PriceQ2B));
-				var pt1 = Chart.ChartToClient(new Point(Chart.XAxis.Max, PriceQ2B));
+				var pt0 = Chart.ChartToClient(new Point(Chart.XAxis.Min, PriceQ2B.ToDouble()));
+				var pt1 = Chart.ChartToClient(new Point(Chart.XAxis.Max, PriceQ2B.ToDouble()));
 
 				// Colour based on trade direction
 				var col =
@@ -146,7 +146,7 @@ namespace CoinFlip.UI.GfxObjects
 					return new ChartControl.HitTestResult.Hit(this, pt0, null);
 
 				// Get the price in client space
-				var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B));
+				var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B.ToDouble()));
 				if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
 					return new ChartControl.HitTestResult.Hit(this, client_price, null);
 			}
@@ -167,7 +167,7 @@ namespace CoinFlip.UI.GfxObjects
 				}
 			case ChartControl.EDragState.Dragging:
 				{
-					PriceQ2B = (m_drag_start + args.Delta.Y)._(PriceQ2B);
+					PriceQ2B = (m_drag_start + (decimal)args.Delta.Y)._(PriceQ2B);
 					break;
 				}
 			case ChartControl.EDragState.Commit:
@@ -182,7 +182,7 @@ namespace CoinFlip.UI.GfxObjects
 			}
 			args.Handled = true;
 		}
-		private double m_drag_start;
+		private decimal m_drag_start;
 	}
 }
 

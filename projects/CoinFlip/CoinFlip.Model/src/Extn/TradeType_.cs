@@ -66,27 +66,29 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return 'price' in (CoinOut/CoinIn) for this trade direction. Assumes price is in (Quote/Base)</summary>
-		public static Unit<double> Price(this ETradeType tt, Unit<double> price_q2b)
+		public static Unit<decimal> Price(this ETradeType tt, Unit<decimal> price_q2b)
 		{
 			return
+				price_q2b == 0m ? 0m/1m._(price_q2b) :
 				tt == ETradeType.B2Q ? price_q2b :
-				tt == ETradeType.Q2B ? Math_.Div(1.0._(), price_q2b, 0.0 / 1.0._(price_q2b)) :
+				tt == ETradeType.Q2B ? (1m / price_q2b) :
 				throw new Exception("Unknown trade type");
 		}
 
 		/// <summary>Return 'price' in (Quote/Base) for this trade direction. Assumes price is in (CoinOut/CoinIn)</summary>
-		public static Unit<double> PriceQ2B(this ETradeType tt, Unit<double> price)
+		public static Unit<decimal> PriceQ2B(this ETradeType tt, Unit<decimal> price)
 		{
 			return
+				price == 0m ? 0m/1m._(price) :
 				tt == ETradeType.B2Q ? price :
-				tt == ETradeType.Q2B ? (1.0 / price) :
+				tt == ETradeType.Q2B ? (1m / price) :
 				throw new Exception("Unknown trade type");
 		}
 
 		/// <summary>Return the 'base' amount for a trade in this trade direction</summary>
-		public static Unit<double> AmountBase(this ETradeType tt, Unit<double> price_q2b, Unit<double>? amount_in = null, Unit<double>? amount_out = null)
+		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_in = null, Unit<decimal>? amount_out = null)
 		{
-			var price = (Unit<double>?)price_q2b;
+			var price = (Unit<decimal>?)price_q2b;
 			return
 				tt == ETradeType.B2Q ? (amount_in ?? (amount_out / price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
 				tt == ETradeType.Q2B ? (amount_out ?? (amount_in / price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
@@ -94,9 +96,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'quote' amount for a trade in this trade direction</summary>
-		public static Unit<double> AmountQuote(this ETradeType tt, Unit<double> price_q2b, Unit<double>? amount_in = null, Unit<double>? amount_out = null)
+		public static Unit<decimal> AmountQuote(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_in = null, Unit<decimal>? amount_out = null)
 		{
-			var price = (Unit<double>?)price_q2b;
+			var price = (Unit<decimal>?)price_q2b;
 			return
 				tt == ETradeType.B2Q ? (amount_out ?? (amount_in * price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
 				tt == ETradeType.Q2B ? (amount_in ?? (amount_out * price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
@@ -104,7 +106,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'in' amount for a trade in this trade direction</summary>
-		public static Unit<double> AmountIn(this ETradeType tt, Unit<double> amount_base, Unit<double> price_q2b)
+		public static Unit<decimal> AmountIn(this ETradeType tt, Unit<decimal> amount_base, Unit<decimal> price_q2b)
 		{
 			return
 				tt == ETradeType.B2Q ? amount_base :
@@ -113,7 +115,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'out' amount for a trade in this trade direction</summary>
-		public static Unit<double> AmountOut(this ETradeType tt, Unit<double> amount_base, Unit<double> price_q2b)
+		public static Unit<decimal> AmountOut(this ETradeType tt, Unit<decimal> amount_base, Unit<decimal> price_q2b)
 		{
 			return
 				tt == ETradeType.B2Q ? amount_base * price_q2b :

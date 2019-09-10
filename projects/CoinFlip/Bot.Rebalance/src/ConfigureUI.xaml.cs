@@ -62,10 +62,10 @@ namespace Bot.Rebalance
 		}
 
 		/// <summary>The amount held in base currency</summary>
-		public Unit<double> HoldingsBase => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Base].Total : 0;
+		public Unit<decimal> HoldingsBase => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Base].Total : 0m._();
 
 		/// <summary>The amount held in quote currency</summary>
-		public Unit<double> HoldingsQuote => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Quote].Total : 0;
+		public Unit<decimal> HoldingsQuote => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Quote].Total : 0m._();
 
 		/// <summary>The available funds</summary>
 		public ICollectionView Funds => CollectionViewSource.GetDefaultView(m_bot.Model.Funds);

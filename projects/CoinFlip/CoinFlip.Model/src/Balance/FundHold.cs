@@ -8,7 +8,7 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class FundHold
 	{
-		public FundHold(Guid id, long? order_id, Unit<double> amount, bool local)
+		public FundHold(Guid id, long? order_id, Unit<decimal> amount, bool local)
 		{
 			Id = id;
 			OrderId = order_id;
@@ -23,7 +23,7 @@ namespace CoinFlip
 		public long? OrderId { get; set; }
 
 		/// <summary>How much to reserve</summary>
-		public Unit<double> Amount { get; set; }
+		public Unit<decimal> Amount { get; set; }
 
 		/// <summary>True if this hold is not part of the held balance reported by the exchange</summary>
 		public bool Local { get; set; }

@@ -7,12 +7,12 @@ namespace Poloniex.API.DomainObjects
 	public class Balance
 	{
 		[JsonProperty("available")]
-		public double Available { get; private set; }
+		public decimal Available { get; private set; }
 
 		[JsonProperty("onOrders")]
-		public double HeldForTrades { get; private set; }
+		public decimal HeldForTrades { get; private set; }
 
 		[JsonProperty("btcValue")]
-		public double BitcoinValue { get; private set; }
+		public decimal BitcoinValue { get; private set; }
 	}
 }

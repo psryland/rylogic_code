@@ -24,26 +24,25 @@ namespace CoinFlip
 		public Fund Fund { get; }
 
 		/// <summary>The sum of holds in this container</summary>
-		public Unit<double> Total
+		public Unit<decimal> Total
 		{
 			get { lock (m_holds) return m_holds.Sum(x => x.Amount); }
 		}
 
 		/// <summary>The sum of holds held locally only</summary>
-		public Unit<double> Local
+		public Unit<decimal> Local
 		{
 			get { lock (m_holds) return m_holds.Where(x => x.Local).Sum(x => x.Amount); }
 		}
 
-
 		/// <summary>The sum of holds that the exchange is aware oforder</summary>
-		public Unit<double> ExchHeld
+		public Unit<decimal> ExchHeld
 		{
-			get { return m_holds.Where(x => !x.Local).Sum(x => x.Amount); }
+			get { lock (m_holds) return m_holds.Where(x => !x.Local).Sum(x => x.Amount); }
 		}
 
 		/// <summary>Create a new hold instance</summary>
-		public FundHold Create(Unit<double> amount, Guid? id = null, long? order_id = null, bool local = true)
+		public FundHold Create(Unit<decimal> amount, Guid? id = null, long? order_id = null, bool local = true)
 		{
 			lock (m_holds)
 			{

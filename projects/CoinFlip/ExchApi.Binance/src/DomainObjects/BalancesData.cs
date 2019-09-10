@@ -27,19 +27,19 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("makerCommission")]
-		public double MakerCommission { get; set; }
+		public decimal MakerCommission { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("takerCommission")]
-		public double TakerCommission { get; set; }
+		public decimal TakerCommission { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("buyerCommission")]
-		public double BuyerCommission { get; set; }
+		public decimal BuyerCommission { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("sellerCommission")]
-		public double SellerCommission { get; set; }
+		public decimal SellerCommission { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("canTrade")]
@@ -69,14 +69,14 @@ namespace Binance.API.DomainObjects
 
 			/// <summary></summary>
 			[JsonProperty("free")]
-			public double Free { get; set; }
+			public decimal Free { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("locked")]
-			public double Locked { get; set; }
+			public decimal Locked { get; set; }
 
 			/// <summary></summary>
-			public double Total => Free + Locked;
+			public decimal Total => Free + Locked;
     	}
 	}
 }

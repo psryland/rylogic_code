@@ -47,7 +47,7 @@ namespace CoinFlip
 				PriceData = price_data;
 				m_ord     = new LazyDictionary<long, Order>(k => null);
 				m_his     = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0.0._(k)));
+				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0m._(k)));
 				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_rng     = null;
 
@@ -145,9 +145,9 @@ namespace CoinFlip
 				var latest = PriceData[pair, Sim.TimeFrame]?.Current;
 				if (latest != null)
 				{
-					var spot_q2b = latest.Close;
-					var spread = spot_q2b * m_spread_frac;
-					pair.SpotPrice[ETradeType.Q2B] = spot_q2b._(pair.RateUnits);
+					var spot_q2b = (decimal)latest.Close;
+					var spread = spot_q2b * (decimal)m_spread_frac;
+					pair.SpotPrice[ETradeType.Q2B] = (spot_q2b         )._(pair.RateUnits);
 					pair.SpotPrice[ETradeType.B2Q] = (spot_q2b - spread)._(pair.RateUnits);
 				}
 			}
@@ -189,8 +189,8 @@ namespace CoinFlip
 					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].PriceQ2B;
 
 					// Q2B => first price is the minimum, B2Q => first price is a maximum
-					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == latest.Close._(pair.RateUnits));
-					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] == (latest.Close - (double)pair.Spread)._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == ((decimal)latest.Close                       )._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] == ((decimal)latest.Close - (decimal)pair.Spread)._(pair.RateUnits));
 				}
 
 				// Notify updated
@@ -238,7 +238,7 @@ namespace CoinFlip
 					}
 
 					// Sanity check that the partial trade isn't gaining or losing amount
-					Debug.Assert(Math_.FEqlRelative(order.AmountBase, (pos?.RemainingBase ?? 0) + (his?.Trades.Sum(x => x.AmountBase) ?? 0), 0.00000001));
+					Debug.Assert(Misc.EqlAmount(order.AmountBase, (his?.Trades.Sum(x => x.AmountBase) ?? 0m) + (pos?.RemainingBase ?? 0m)));
 				}
 
 				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
@@ -300,7 +300,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out)
 		{
 			// Validate the order
 			var bal = m_bal[tt.CoinIn(pair)];
@@ -356,7 +356,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, out Order ord, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, Unit<decimal> remaining_in, out Order ord, out OrderCompleted his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'.
 			// Also, exchanges use the base currency as the amount to fill, so for Q2B trades it's possible
@@ -369,7 +369,7 @@ namespace CoinFlip
 			var filled = market.Consume(pair, tt, ot, price_q2b, amount_base, out var remaining_base);
 
 			// The order is partially or completely filled...
-			Debug.Assert(Math_.FEqlRelative(amount_base, remaining_base + filled.Sum(x => x.AmountBase), 0.000000001));
+			Debug.Assert(Misc.EqlAmount(amount_base, filled.Sum(x => x.AmountBase) + remaining_base));
 			ord = remaining_base != 0 ? new Order(order_id, fund, pair, ot, tt, amount_in, amount_out, tt.AmountIn(remaining_base, price_q2b), Model.UtcNow, Model.UtcNow) : null;
 			his = remaining_base != amount_base ? new OrderCompleted(order_id, fund, pair, tt) : null;
 
@@ -429,7 +429,7 @@ namespace CoinFlip
 			var spread = latest.Close * m_spread_frac;
 			var best_q2b = latest.Close;
 			var best_b2q = latest.Close - spread;
-			var base_value = pair.Base.Value;
+			var base_value = (double)(decimal)pair.Base.Value;
 
 			md.Q2B.Offers.Resize(m_orders_per_book);
 			md.B2Q.Offers.Resize(m_orders_per_book);
@@ -439,17 +439,17 @@ namespace CoinFlip
 			for (var i = 0; i != m_orders_per_book; ++i)
 			{
 				var p = range * Math_.Sqr((double)i / m_orders_per_book);
-				md.Q2B.Offers[i] = new Offer((best_q2b + p)._(pair.RateUnits), RandomAmountBase()._(pair.Base));
-				md.B2Q.Offers[i] = new Offer((best_b2q - p)._(pair.RateUnits), RandomAmountBase()._(pair.Base));
+				md.Q2B.Offers[i] = new Offer(((decimal)(best_q2b + p))._(pair.RateUnits), RandomAmountBase()._(pair.Base));
+				md.B2Q.Offers[i] = new Offer(((decimal)(best_b2q - p))._(pair.RateUnits), RandomAmountBase()._(pair.Base));
 			}
 			return md;
 
-			double RandomAmountBase()
+			decimal RandomAmountBase()
 			{
 				// Generate an amount to trade in the application common currency (probably USD).
 				// Then convert that to base currency using the 'live' value.
 				var common_value = Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
-				var amount_base = Math_.Div(common_value, (double)base_value, common_value);
+				var amount_base = (decimal)Math_.Div(common_value, base_value, common_value);
 				return amount_base;
 			}
 		}
@@ -488,17 +488,17 @@ namespace CoinFlip
 		/// <summary>Represents the simulated user account on the exchange</summary>
 		private class AccountBalance
 		{
-			public AccountBalance(Coin coin, Unit<double> total)
+			public AccountBalance(Coin coin, Unit<decimal> total)
 			{
 				Coin = coin;
 				Total = total;
-				Holds = new Dictionary<long, Unit<double>>();
+				Holds = new Dictionary<long, Unit<decimal>>();
 			}
 			public Coin Coin { get; }
-			public Unit<double> Total { get; set; }
-			public Unit<double> Held => Holds.Values.Sum(x => x);
-			public Unit<double> Available => Total - Held;
-			public Dictionary<long, Unit<double>> Holds { get; }
+			public Unit<decimal> Total { get; set; }
+			public Unit<decimal> Held => Holds.Values.Sum(x => x);
+			public Unit<decimal> Available => Total - Held;
+			public Dictionary<long, Unit<decimal>> Holds { get; }
 		}
 	}
 }

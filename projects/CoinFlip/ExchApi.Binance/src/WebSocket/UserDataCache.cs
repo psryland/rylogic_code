@@ -553,19 +553,19 @@ namespace Binance.API
 
 			/// <summary></summary>
 			[JsonProperty("m")]
-			public double MakerCommissionRate { get; set; }
+			public decimal MakerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("t")]
-			public double TakerCommissionRate { get; set; }
+			public decimal TakerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("b")]
-			public double BuyerCommissionRate { get; set; }
+			public decimal BuyerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("s")]
-			public double SellerCommissionRate { get; set; }
+			public decimal SellerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("T")]
@@ -594,10 +594,10 @@ namespace Binance.API
 				public string Asset { get; set; }
 
 				[JsonProperty("f")]
-				public double Free { get; set; }
+				public decimal Free { get; set; }
 
 				[JsonProperty("l")]
-				public double Locked { get; set; }
+				public decimal Locked { get; set; }
 			}
 		}
 
@@ -627,10 +627,10 @@ namespace Binance.API
 				public string Asset { get; set; }
 
 				[JsonProperty("f")]
-				public double Free { get; set; }
+				public decimal Free { get; set; }
 
 				[JsonProperty("l")]
-				public double Locked { get; set; }
+				public decimal Locked { get; set; }
 			}
 
 		}
@@ -668,19 +668,19 @@ namespace Binance.API
 
 			/// <summary>Order quantity</summary>
 			[JsonProperty("q")]
-			public double AmountBase { get; set; }
+			public decimal AmountBase { get; set; }
 
 			/// <summary>Order price</summary>
 			[JsonProperty("p")]
-			public double Price { get; set; }
+			public decimal Price { get; set; }
 
 			/// <summary>Order stop price</summary>
 			[JsonProperty("P")]
-			public double StopPrice { get; set; }
+			public decimal StopPrice { get; set; }
 
 			/// <summary>Iceberg amount</summary>
 			[JsonProperty("F")]
-			public double IcebergAmountBase { get; set; }
+			public decimal IcebergAmountBase { get; set; }
 
 			/// <summary>Original client order Id. This is the ID of the order being cancelled</summary>
 			[JsonProperty("C")]
@@ -704,27 +704,27 @@ namespace Binance.API
 
 			/// <summary>Last executed quantity</summary>
 			[JsonProperty("l")]
-			public double AmountBaseLastExecuted { get; set; }
+			public decimal AmountBaseLastExecuted { get; set; }
 
 			/// <summary>Last quote asset transacted quantity (i.e. lastPrice * lastQty)</summary>
 			[JsonProperty("Y")]
-			public double AmountQuoteLastExecuted { get; set; }
+			public decimal AmountQuoteLastExecuted { get; set; }
 
 			/// <summary>Cumulative filled quantity</summary>
 			[JsonProperty("z")]
-			public double AmountBaseCumulativeFilled { get; set; }
+			public decimal AmountBaseCumulativeFilled { get; set; }
 
 			/// <summary>Cumulative quote asset transacted amount</summary>
 			[JsonProperty("Z")]
-			public double AmountQuoteCumulativeFilled { get; set; }
+			public decimal AmountQuoteCumulativeFilled { get; set; }
 
 			/// <summary>Last executed price</summary>
 			[JsonProperty("L")]
-			public double PriceLastExecuted { get; set; }
+			public decimal PriceLastExecuted { get; set; }
 
 			/// <summary>Commission amount</summary>
 			[JsonProperty("n")]
-			public double Commission { get; set; }
+			public decimal Commission { get; set; }
 
 			/// <summary>Commission asset</summary>
 			[JsonProperty("N")]

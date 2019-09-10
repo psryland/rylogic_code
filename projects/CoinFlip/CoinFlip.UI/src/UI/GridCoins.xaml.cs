@@ -238,16 +238,16 @@ namespace CoinFlip.UI
 			public string Symbol => CoinData.Symbol;
 
 			/// <summary>The value of all holdings of this coin on all source exchanges</summary>
-			public double Balance => Value * Total;
+			public decimal Balance => Value * Total;
 
 			/// <summary>The average value of this coin across all exchanges</summary>
-			public double Value => CoinData.AverageValue(SourceExchanges);
+			public decimal Value => CoinData.AverageValue(SourceExchanges);
 
 			/// <summary>The sum of account balances across all exchanges for this coin</summary>
-			public double Total => CoinData.NettTotal(SourceExchanges);
+			public decimal Total => CoinData.NettTotal(SourceExchanges);
 
 			/// <summary>The sum of available balance across all exchanges</summary>
-			public double Available => CoinData.NettAvailable(SourceExchanges);
+			public decimal Available => CoinData.NettAvailable(SourceExchanges);
 
 			/// <summary>True if a live value could be calculated</summary>
 			public bool LiveValueAvailable => SourceExchanges.Any(x => x.Coins[Symbol]?.LivePriceAvailable ?? false);

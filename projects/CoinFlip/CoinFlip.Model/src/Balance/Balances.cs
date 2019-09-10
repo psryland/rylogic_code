@@ -15,6 +15,10 @@ namespace CoinFlip
 	public class Balances :IEnumerable<IBalance>
 	{
 		// Notes:
+		// - Doubles vs. Decimals:
+		//   Decimals should only be used for storing the floating-point numbers and simple arithmetic operations on them.
+		//   All heavy mathematics like calculating indicators for technical analysis should be performed on Double values.
+		//   So, using decimal for balances, double for charts etc.
 		// - The balances of a single currency on an exchange
 		// - 'Balances' rather than 'Balance' because each balance is partitioned
 		//   into 'funds', where each fund is an isolated virtual account. This is
@@ -29,24 +33,24 @@ namespace CoinFlip
 
 		private readonly List<Balance> m_funds;
 		public Balances(Coin coin, DateTimeOffset last_updated)
-			:this(coin, 0.0._(coin), last_updated)
+			:this(coin, 0m._(coin), last_updated)
 		{}
-		public Balances(Coin coin, Unit<double> total, DateTimeOffset last_updated, bool notify = false)
-			:this(coin, total, 0.0._(coin), last_updated, notify)
+		public Balances(Coin coin, Unit<decimal> total, DateTimeOffset last_updated, bool notify = false)
+			:this(coin, total, 0m._(coin), last_updated, notify)
 		{}
-		public Balances(Coin coin, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset last_updated, bool notify = false)
+		public Balances(Coin coin, Unit<decimal> total, Unit<decimal> held_on_exch, DateTimeOffset last_updated, bool notify = false)
 		{
 			// Truncation error can create off by 1 LSD
 			if (total < 0)
 			{
-				Debug.Assert(total >= -double.Epsilon);
-				total = 0.0._(total);
+				Debug.Assert(total >= -decimal_.Epsilon);
+				total = 0m._(total);
 			}
 			if (!held_on_exch.WithinInclusive(0, total))
 			{
-				Debug.Assert(held_on_exch >= -double.Epsilon);
-				Debug.Assert(held_on_exch <= total + double.Epsilon);
-				held_on_exch = Math_.Clamp(held_on_exch, 0.0._(held_on_exch), total);
+				Debug.Assert(held_on_exch >= -decimal_.Epsilon);
+				Debug.Assert(held_on_exch <= total + decimal_.Epsilon);
+				held_on_exch = Math_.Clamp(held_on_exch, 0m._(held_on_exch), total);
 			}
 
 			Coin = coin;
@@ -101,39 +105,51 @@ namespace CoinFlip
 		public IEnumerable<IBalance> FundsExceptMain => Funds.Skip(1);
 
 		/// <summary>The account balance reported by the exchange</summary>
-		public Unit<double> ExchTotal { get; private set; }
-		public Unit<double> ExchHeld { get; private set; }
+		public Unit<decimal> ExchTotal { get; private set; }
+		public Unit<decimal> ExchHeld { get; private set; }
 
 		/// <summary>The nett total balance. The balance that the exchange reports (regardless of what the funds think they have)</summary>
-		public Unit<double> NettTotal => ExchTotal;
+		public Unit<decimal> NettTotal => ExchTotal;
 
 		/// <summary>The nett held balance is the held amount that the exchange reports plus the local hold amounts</summary>
-		public Unit<double> NettHeld => ExchHeld + m_funds.Select(x => x.Holds).Sum(x => x.Local);
+		public Unit<decimal> NettHeld => ExchHeld + m_funds.Select(x => x.Holds).Sum(x => x.Local);
 
 		/// <summary>The nett available balance is the (total - held) balance reported by the exchange</summary>
-		public Unit<double> NettAvailable => NettTotal - NettHeld;
+		public Unit<decimal> NettAvailable => NettTotal - NettHeld;
 
 		/// <summary>The value of the nett total in valuation currency</summary>
-		public Unit<double> NettValue => Coin.ValueOf(NettTotal);
+		public Unit<decimal> NettValue => Coin.ValueOf(NettTotal);
 
 		/// <summary>Access balances associated with the given fund. Unknown fund ids return an empty balance</summary>
 		public IBalance this[Fund fund] => Funds.FirstOrDefault(x => x.Fund == fund) ?? new Balance(this, fund);
 
 		/// <summary>Apply an update from an exchange for this currency</summary>
-		public void ExchangeUpdate(Unit<double> total, Unit<double> held, DateTimeOffset update_time)
+		public void ExchangeUpdate(Unit<decimal> total, Unit<decimal> held, DateTimeOffset update_time)
 		{
 			// Ignore out-of-date data (unless back testing where time can go backwards)
 			if (LastUpdated > update_time && !Model.BackTesting)
 				return;
 
-			ExchTotal = total;
-			ExchHeld = held;
+			var changed = false;
+			if (ExchTotal != total)
+			{
+				ExchTotal = total;
+				changed = true;
+			}
+			if (ExchHeld != held)
+			{
+				ExchHeld = held;
+				changed = true;
+			}
+
 			LastUpdated = update_time;
-			Invalidate();
+
+			if (changed)
+				Invalidate();
 		}
 
 		/// <summary>Set the total balance attributed to the fund 'fund_id'</summary>
-		public void AssignFundBalance(Fund fund, Unit<double> total, bool notify = true)
+		public void AssignFundBalance(Fund fund, Unit<decimal> total, bool notify = true)
 		{
 			// Notes:
 			// - Don't throw if the nett total becomes negative, that probably just means a fund
@@ -150,7 +166,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
-		public void ChangeFundBalance(Fund fund, Unit<double> change_amount, bool notify = true)
+		public void ChangeFundBalance(Fund fund, Unit<decimal> change_amount, bool notify = true)
 		{
 			// Get the balance info for 'fund_id', create if necessary
 			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund);//  ?? m_funds.Add2(new Balance(this, fund));
@@ -169,9 +185,9 @@ namespace CoinFlip
 		public Exception Validate()
 		{
 			// Check exchange side balance
-			if (ExchTotal < 0.0._(Coin))
+			if (ExchTotal < 0m._(Coin))
 				return new Exception("Exchange Balance Invalid: Total < 0");
-			if (ExchHeld < 0.0._(Coin))
+			if (ExchHeld < 0m._(Coin))
 				return new Exception("Exchange Balance Invalid: Held < 0");
 			if (ExchHeld > ExchTotal)
 				return new Exception("Exchange Balance Invalid: Held > Total");
@@ -179,9 +195,9 @@ namespace CoinFlip
 			// Check the fund balances are logical
 			foreach (var fund in Funds)
 			{
-				if (fund.Total < 0.0._(Coin))
+				if (fund.Total < 0m._(Coin))
 					return new Exception($"Fund {fund.Fund.Id} balance invalid: Total < 0");
-				if (fund.Held < 0.0._(Coin))
+				if (fund.Held < 0m._(Coin))
 					return new Exception($"Fund {fund.Fund.Id} balance invalid: Held < 0");
 			}
 
@@ -219,7 +235,7 @@ namespace CoinFlip
 			{
 				m_balances = balances;
 				Holds = new FundHoldContainer(fund);
-				m_total = 0.0._(balances.Coin);
+				m_total = 0m._(balances.Coin);
 				Fund = fund;
 			}
 
@@ -233,10 +249,10 @@ namespace CoinFlip
 			public DateTimeOffset LastUpdated => m_balances.LastUpdated;
 
 			/// <summary>The value of 'Coin' (probably in USD)</summary>
-			public double Value => Coin.ValueOf(1);
+			public decimal Value => Coin.ValueOf(1m);
 
 			/// <summary>The total balance associated with this fund (includes held amounts)</summary>
-			public Unit<double> Total
+			public Unit<decimal> Total
 			{
 				get
 				{
@@ -245,7 +261,7 @@ namespace CoinFlip
 						? m_balances.ExchTotal - m_balances.FundsExceptMain.Sum(x => x.Total)
 						: m_total;
 
-					return (double)total > double.Epsilon ? total : 0.0._(Coin);
+					return (decimal)total > 0m ? total : 0m._(Coin);
 				}
 				set
 				{
@@ -259,20 +275,20 @@ namespace CoinFlip
 					NotifyPropertyChanged(nameof(Available));
 				}
 			}
-			private Unit<double> m_total;
+			private Unit<decimal> m_total;
 
 			/// <summary>Total amount able to be used for new trades</summary>
-			public Unit<double> Available
+			public Unit<decimal> Available
 			{
 				get
 				{
 					var avail = Total - Held;
-					return (double)avail > double.Epsilon ? avail : 0.0._(Coin);
+					return (decimal)avail > 0m ? avail : 0m._(Coin);
 				}
 			}
 
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-			public Unit<double> Held
+			public Unit<decimal> Held
 			{
 				get
 				{
@@ -284,7 +300,7 @@ namespace CoinFlip
 					{
 						var held_in_other_funds = m_balances.FundsExceptMain.Cast<Balance>().Sum(x => x.Holds.ExchHeld);
 						var held = Holds.Local + (m_balances.ExchHeld - held_in_other_funds);
-						return (double)held > double.Epsilon ? held : 0.0._(Coin);
+						return (decimal)held > 0 ? held : 0m._(Coin);
 					}
 					else
 					{

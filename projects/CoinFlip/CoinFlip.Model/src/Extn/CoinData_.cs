@@ -7,17 +7,17 @@ namespace CoinFlip
 {
 	public static class CoinData_
 	{
-		/// <summary>Convert to Unit{double}</summary>
-		public static Unit<double> _(this double value, CoinData cd)
+		/// <summary>Convert to Unit{decimal}</summary>
+		public static Unit<decimal> _(this decimal value, CoinData cd)
 		{
 			return value._(cd.Symbol);
 		}
 
 		/// <summary>Return the average value of this coin across the given exchanges</summary>
-		public static Unit<double> AverageValue(this CoinData cd, IEnumerable<Exchange> source_exchanges)
+		public static Unit<decimal> AverageValue(this CoinData cd, IEnumerable<Exchange> source_exchanges)
 		{
 			// Find the average price on the available exchanges
-			var value = new Average<double>();
+			var value = new Average<decimal>();
 			foreach (var exch in source_exchanges)
 			{
 				// If the exchange doesn't have this coin, skip it
@@ -26,7 +26,7 @@ namespace CoinFlip
 					continue;
 
 				// If the exchange doesn't know the value of this coin yet, skip it
-				var val = coin.ValueOf(1.0);
+				var val = coin.ValueOf(1m);
 				if (val == 0)
 					continue;
 
@@ -41,9 +41,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>The sum of account balances across the given exchanges for this coin</summary>
-		public static Unit<double> NettTotal(this CoinData cd, IEnumerable<Exchange> source_exchanges)
+		public static Unit<decimal> NettTotal(this CoinData cd, IEnumerable<Exchange> source_exchanges)
 		{
-			var total = 0.0;
+			var total = 0m;
 			foreach (var exch in source_exchanges)
 			{
 				// If the exchange doesn't have this coin, skip it
@@ -60,9 +60,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>The sum of available balance across all exchanges</summary>
-		public static Unit<double> NettAvailable(this CoinData cd, IEnumerable<Exchange> source_exchanges)
+		public static Unit<decimal> NettAvailable(this CoinData cd, IEnumerable<Exchange> source_exchanges)
 		{
-			var avail = 0.0;
+			var avail = 0m;
 			foreach (var exch in source_exchanges)
 			{
 				// If the exchange doesn't have this coin, skip it

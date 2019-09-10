@@ -7,8 +7,8 @@ namespace CoinFlip
 {
 	public class SpotPrices
 	{
-		private Unit<double>? m_spot_q2b;
-		private Unit<double>? m_spot_b2q;
+		private Unit<decimal>? m_spot_q2b;
+		private Unit<decimal>? m_spot_b2q;
 
 		public SpotPrices(Coin base_, Coin quote)
 		{
@@ -26,7 +26,7 @@ namespace CoinFlip
 		public string RateUnits => $"{Quote}/{Base}";
 
 		/// <summary>Get/Set spot price (in Quote/Base)</summary>
-		public Unit<double>? this[ETradeType tt]
+		public Unit<decimal>? this[ETradeType tt]
 		{
 			get
 			{
@@ -37,7 +37,7 @@ namespace CoinFlip
 			}
 			set
 			{
-				if (value < 0.0._(RateUnits))
+				if (value < 0m._(RateUnits))
 					throw new Exception("Invalid spot price");
 
 				switch (tt)
@@ -53,13 +53,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the current difference between the lowest Q2B offer and the highest B2Q offer (positive number)</summary>
-		public Unit<double>? Spread
+		public Unit<decimal>? Spread
 		{
 			// Spread is the difference between the lowest Q2B offer and the highest B2Q offer
 			get
 			{
 				var spread = m_spot_q2b - m_spot_b2q;
-				Debug.Assert(spread == null || spread >= 0.0._(RateUnits));
+				Debug.Assert(spread == null || spread >= 0m._(RateUnits));
 				return spread;
 			}
 		}

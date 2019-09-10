@@ -12,7 +12,7 @@ namespace CoinFlip
 		ETradeType TradeType { get; }
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
-		Unit<double> PriceQ2B { get; }
+		Unit<decimal> PriceQ2B { get; }
 
 		/// <summary>When the order was created</summary>
 		DateTimeOffset Created { get; }

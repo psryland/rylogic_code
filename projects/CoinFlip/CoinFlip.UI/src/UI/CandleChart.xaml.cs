@@ -585,7 +585,7 @@ namespace CoinFlip.UI
 				}
 				double OrderToYValue(IOrder order)
 				{
-					return order.PriceQ2B;
+					return order.PriceQ2B.ToDouble();
 				}
 			}
 		}
@@ -648,8 +648,8 @@ namespace CoinFlip.UI
 				if (Exchange == null || Pair == null) return 0.0;
 				var total_base = Exchange.Balance[Pair.Base].NettTotal;
 				var total_quote = Exchange.Balance[Pair.Quote].NettTotal;
-				var value_base = (double)Pair.Base.ValueOf(total_base);
-				var value_quote = (double)Pair.Quote.ValueOf(total_quote);
+				var value_base = (double)Pair.Base.ValueOf(total_base).ToDouble();
+				var value_quote = (double)Pair.Quote.ValueOf(total_quote).ToDouble();
 				var denom = value_base + value_quote;
 				return !Math_.FEql(denom, 0) ? (value_base - value_quote) / denom : 0.0;
 			}
@@ -750,8 +750,8 @@ namespace CoinFlip.UI
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
 					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-					var price_min = Chart.YAxis.Min._(Instrument.RateUnits);
-					var price_max = Chart.YAxis.Max._(Instrument.RateUnits);
+					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
 					return
 						ord.Pair.Equals(Pair) &&
 						Model.UtcNow.Ticks.Within(time_min, time_max) &&
@@ -792,8 +792,8 @@ namespace CoinFlip.UI
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
 					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-					var price_min = Chart.YAxis.Min._(Instrument.RateUnits);
-					var price_max = Chart.YAxis.Max._(Instrument.RateUnits);
+					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
 					return
 						ord.Pair.Equals(Pair) &&
 						ord.Created.Ticks.Within(time_min, time_max) &&
@@ -1142,12 +1142,12 @@ namespace CoinFlip.UI
 					if (!visible)
 						return;
 
-					var click_price = hit.ChartPoint.Y._(Pair.RateUnits);
+					var click_price = ((decimal)hit.ChartPoint.Y)._(Pair.RateUnits);
 
 					// Buy base currency (Q2B)
 					{
 						var order_type = Pair.OrderType(ETradeType.Q2B, click_price) ?? EOrderType.Market;
-						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.Q2B, 0.0._(Pair.Quote), 0.0._(Pair.Base)) { PriceQ2B = click_price };
+						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.Q2B, 0m._(Pair.Quote), 0m._(Pair.Base)) { PriceQ2B = click_price };
 						buy.Header = $"Buy {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}...";
 						buy.CommandParameter = trade;
 					}
@@ -1155,7 +1155,7 @@ namespace CoinFlip.UI
 					// Buy quote currency (B2Q)
 					{
 						var order_type = Pair.OrderType(ETradeType.B2Q, click_price) ?? EOrderType.Market;
-						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.B2Q, 0.0._(Pair.Base), 0.0._(Pair.Quote)) { PriceQ2B = click_price };
+						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.B2Q, 0m._(Pair.Base), 0m._(Pair.Quote)) { PriceQ2B = click_price };
 						sel.Header = $"Sell {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}...";
 						sel.CommandParameter = trade;
 					}

@@ -1,7 +1,7 @@
 Immediate ToDo:
 
 CoinFlip
-	- Separate indicators and drawing tools
+	- Add UI to set the valuation currency
 	- TD sequential
 	- Support user defined ordering of coins in Coin grid and fund grid
 	- Colour TradeType text in Orders grid
@@ -20,7 +20,10 @@ CoinFlip
 	- Free draw line indicator
 	- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	- Support minimise to tray
-	- Fix dropped connection to exchange when waking from sleep
+	- Show remaining candle time
+	- Better back testing playback controls: sub step count, playback speed, pause with space bar
+	- Better triangle pattern controls
+	- Crosshair on equity chart
 	
 EDTradeAdvisor
 	- ED Style

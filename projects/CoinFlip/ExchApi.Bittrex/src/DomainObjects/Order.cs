@@ -24,27 +24,27 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The limit price at which the trade will be filled (in quote currency)</summary>
 		[JsonProperty("Limit")]
-		public double LimitQ2B { get; internal set; }
+		public decimal LimitQ2B { get; internal set; }
 
 		/// <summary>The price that the trade has been filled at (in quote currency)</summary>
 		[JsonProperty("Price")]
-		public double ActualPrice { get; set; }
+		public decimal ActualPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("PricePerUnit")]
-		public double? PricePerUnit { get; set; }
+		public decimal? PricePerUnit { get; set; }
 
 		/// <summary>The volume to trade (in base currency)</summary>
 		[JsonProperty("Quantity")]
-		public double AmountBase { get; set; }
+		public decimal AmountBase { get; set; }
 
 		/// <summary>The volume that remains to be traded (in base currency)</summary>
 		[JsonProperty("QuantityRemaining")]
-		public double RemainingBase { get; set; }
+		public decimal RemainingBase { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("CommissionPaid")]
-		public double CommissionPaid { get; set; }
+		public decimal CommissionPaid { get; set; }
 
 		/// <summary>The order creation time stamp</summary>
 		[JsonProperty("Opened")]

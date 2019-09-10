@@ -46,7 +46,7 @@ namespace CoinFlip
 				}
 
 				// Handler
-				void HandleNettWorthChanged(object sender, ValueChangedEventArgs<Unit<double>> e)
+				void HandleNettWorthChanged(object sender, ValueChangedEventArgs<Unit<decimal>> e)
 				{
 					Update();
 				}
@@ -110,7 +110,7 @@ namespace CoinFlip
 		public List<CoinBalanceInfo> CoinInfo { get; }
 
 		/// <summary>Return the global nett worth (coin == null) or nett worth of the given coin</summary>
-		public Unit<double> NettWorth(CoinData coin = null)
+		public Unit<decimal> NettWorth(CoinData coin = null)
 		{
 			return coin != null ? coin.NettTotal(Model.Exchanges) : Model.NettWorth;
 		}
@@ -121,7 +121,7 @@ namespace CoinFlip
 			var nett_worth = NettWorth();
 
 			// Create a quick lookup table of the value of each coin
-			var rate_of = CoinInfo.ToDictionary(c => c.Coin.Symbol, c => c.Value / 1.0._(c.Coin));
+			var rate_of = CoinInfo.ToDictionary(c => c.Coin.Symbol, c => c.Value / 1m._(c.Coin));
 
 			// Yield the current worth as the first data point
 			yield return new TimeWorthPair(Model.UtcNow, nett_worth);
@@ -226,7 +226,7 @@ namespace CoinFlip
 
 				// If our data is up to date then don't signal prices changed
 				var old = CoinInfo.FirstOrDefault(x => x.Coin == coin);
-				if (old != null && old.Total == new_total && Math_.FEqlRelative(old.Value, new_value, 0.0001))
+				if (old != null && old.Total == new_total && Misc.EqlPrice(old.Value, new_value))
 					continue;
 
 				// Add or update the new value for 'coin'
@@ -246,7 +246,7 @@ namespace CoinFlip
 		/// <summary>Set the order to display the coins in</summary>
 		private void OrderCoins(EOrderBy order_by)
 		{
-			Func<CoinBalanceInfo, double> pred;
+			Func<CoinBalanceInfo, decimal> pred;
 			switch (order_by) {
 			case EOrderBy.AscendingValue: pred = x => +x.Value; break;
 			case EOrderBy.DecendingValue: pred = x => -x.Value; break;
@@ -277,15 +277,15 @@ namespace CoinFlip
 			// - This type can also represent deposits and withdrawals.
 			//   A deposit has SymbolIn/AmountIn = null/0.
 			//   A withdrawal has SymbolOut/AmountOut = null/0.
-			public BalanceChange(DateTimeOffset time, string symbol_in = null, string symbol_out = null, string symbol_commission = null, double? amount_in = null, double? amount_out = null, double? amount_commission = null)
+			public BalanceChange(DateTimeOffset time, string symbol_in = null, string symbol_out = null, string symbol_commission = null, decimal? amount_in = null, decimal? amount_out = null, decimal? amount_commission = null)
 			{
 				Time = time;
 				SymbolIn = symbol_in;
 				SymbolOut = symbol_out;
 				SymbolComm = symbol_commission;
-				AmountIn = amount_in ?? 0;
-				AmountOut = amount_out ?? 0;
-				AmountComm = amount_commission ?? 0;
+				AmountIn = amount_in ?? 0m;
+				AmountOut = amount_out ?? 0m;
+				AmountComm = amount_commission ?? 0m;
 			}
 			public BalanceChange(OrderCompleted order)
 			{
@@ -303,8 +303,8 @@ namespace CoinFlip
 				SymbolIn = transfer.Type == ETransfer.Withdrawal ? transfer.Coin : null;
 				SymbolOut = transfer.Type == ETransfer.Deposit ? transfer.Coin : null;
 				SymbolComm = null;
-				AmountIn = transfer.Type == ETransfer.Withdrawal ? transfer.Amount : 0.0._(transfer.Coin);
-				AmountOut = transfer.Type == ETransfer.Deposit ? transfer.Amount : 0.0._(transfer.Coin);
+				AmountIn = transfer.Type == ETransfer.Withdrawal ? transfer.Amount : 0m._(transfer.Coin);
+				AmountOut = transfer.Type == ETransfer.Deposit ? transfer.Amount : 0m._(transfer.Coin);
 				AmountComm = 0;
 			}
 
@@ -321,24 +321,24 @@ namespace CoinFlip
 			public string SymbolComm { get; }
 
 			/// <summary>The amount sold</summary>
-			public Unit<double> AmountIn { get; }
+			public Unit<decimal> AmountIn { get; }
 
 			/// <summary>The amount bought</summary>
-			public Unit<double> AmountOut { get; }
+			public Unit<decimal> AmountOut { get; }
 
 			/// <summary>The amount charged in commission</summary>
-			public Unit<double> AmountComm { get; }
+			public Unit<decimal> AmountComm { get; }
 		}
 		public class CoinBalanceInfo
 		{
 			public CoinBalanceInfo(CoinData coin)
-				:this(coin, 0.0._(SettingsData.Settings.ValuationCurrency), 0.0._(coin), 0)
+				:this(coin, 0m._(SettingsData.Settings.ValuationCurrency), 0m._(coin), 0)
 			{ }
-			public CoinBalanceInfo(CoinData coin, Unit<double> value, Unit<double> total, int order)
+			public CoinBalanceInfo(CoinData coin, Unit<decimal> value, Unit<decimal> total, int order)
 			{
-				if (value < 0.0._(SettingsData.Settings.ValuationCurrency))
+				if (value < 0m._(SettingsData.Settings.ValuationCurrency))
 					throw new Exception("Invalid coin value");
-				if (total < 0.0._(coin))
+				if (total < 0m._(coin))
 					throw new Exception("Invalid total value");
 
 				Coin = coin;
@@ -351,23 +351,23 @@ namespace CoinFlip
 			public CoinData Coin { get; }
 
 			/// <summary>The last known value of this coin in common value units</summary>
-			public Unit<double> Value { get; set; }
+			public Unit<decimal> Value { get; set; }
 
 			/// <summary>The current balance of this coin</summary>
-			public Unit<double> Total { get; set; }
+			public Unit<decimal> Total { get; set; }
 
 			/// <summary>Sorting order</summary>
 			public int Order { get; set; }
 		}
 		public struct TimeWorthPair
 		{
-			public TimeWorthPair(DateTimeOffset time, Unit<double> worth)
+			public TimeWorthPair(DateTimeOffset time, Unit<decimal> worth)
 			{
 				Time = time;
 				Worth = worth;
 			}
 			public DateTimeOffset Time { get; }
-			public Unit<double> Worth { get; }
+			public Unit<decimal> Worth { get; }
 		}
 	}
 }

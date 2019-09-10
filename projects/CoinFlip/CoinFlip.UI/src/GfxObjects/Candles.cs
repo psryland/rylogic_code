@@ -123,7 +123,7 @@ namespace CoinFlip.UI.GfxObjects
 				if (rng.Begi + candle_idx == Instrument.Count - 1)
 				{
 					var spot = Instrument.SpotPrice(ETradeType.Q2B);
-					if (spot != null) candle_close = spot.Value;
+					if (spot != null) candle_close = spot.Value.ToDouble();
 				}
 
 				// Create the graphics with the first candle at x == 0

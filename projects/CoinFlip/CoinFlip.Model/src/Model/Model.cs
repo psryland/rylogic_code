@@ -514,24 +514,24 @@ namespace CoinFlip
 		public event EventHandler<ListChgEventArgs<OrderCompleted>> HistoryChanging;
 
 		/// <summary>Notify when the NettWorth value changes</summary>
-		public event EventHandler<ValueChangedEventArgs<Unit<double>>> NettWorthChanged;
+		public event EventHandler<ValueChangedEventArgs<Unit<decimal>>> NettWorthChanged;
 
 		/// <summary>Raised when a property of the simulation changes</summary>
 		public event EventHandler SimPropertyChanged;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
-		public Unit<double> NettWorth
+		public Unit<decimal> NettWorth
 		{
 			get => m_nett_worth;
 			set
 			{
 				if (m_nett_worth == value) return;
-				var args = new ValueChangedEventArgs<Unit<double>>(value, m_nett_worth);
+				var args = new ValueChangedEventArgs<Unit<decimal>>(value, m_nett_worth);
 				m_nett_worth = value;
 				NettWorthChanged?.Invoke(this, args);
 			}
 		}
-		private Unit<double> m_nett_worth;
+		private Unit<decimal> m_nett_worth;
 
 		/// <summary>Persist the current fund balances to settings</summary>
 		public void SaveFundBalances()
@@ -601,7 +601,7 @@ namespace CoinFlip
 		/// <summary>Set the latest value of 'NettWorth'</summary>
 		private void UpdateNettWorth()
 		{
-			var worth = 0.0._(SettingsData.Settings.ValuationCurrency);
+			var worth = 0m._(SettingsData.Settings.ValuationCurrency);
 			foreach (var exch in Exchanges)
 			{
 				foreach (var bal in exch.Balance.Values)

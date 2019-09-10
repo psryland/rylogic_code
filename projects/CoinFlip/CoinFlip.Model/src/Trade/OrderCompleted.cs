@@ -56,30 +56,30 @@ namespace CoinFlip
 		/// <summary>
 		/// The approximate price of the filled order (in Quote/Base).
 		/// Approximate because each trade can be at a different price.</summary>
-		public Unit<double> PriceQ2B
+		public Unit<decimal> PriceQ2B
 		{
 			get
 			{
 				return Trades.Count != 0
 					? Trades.Average(x => x.PriceQ2B)._(Pair.RateUnits)
-					: 0.0._(Pair.RateUnits);
+					: 0m._(Pair.RateUnits);
 			}
 		}
 
 		/// <summary>The sum of trade base amounts</summary>
-		public Unit<double> AmountBase => Trades.Sum(x => x.AmountBase)._(Pair.Base);
+		public Unit<decimal> AmountBase => Trades.Sum(x => x.AmountBase)._(Pair.Base);
 
 		/// <summary>The sum of trade quote amounts</summary>
-		public Unit<double> AmountQuote => Trades.Sum(x => x.AmountQuote)._(Pair.Quote);
+		public Unit<decimal> AmountQuote => Trades.Sum(x => x.AmountQuote)._(Pair.Quote);
 
 		/// <summary>The sum of trade input amounts</summary>
-		public Unit<double> AmountIn => Trades.Sum(x => x.AmountIn)._(CoinIn);
+		public Unit<decimal> AmountIn => Trades.Sum(x => x.AmountIn)._(CoinIn);
 
 		/// <summary>The sum of trade output amounts</summary>
-		public Unit<double> AmountOut => Trades.Sum(x => x.AmountOut)._(CoinOut);
+		public Unit<decimal> AmountOut => Trades.Sum(x => x.AmountOut)._(CoinOut);
 
 		/// <summary>The sum of trade commissions (in CommissionCoin)</summary>
-		public Unit<double> Commission => Trades.Sum(x => x.Commission)._(CommissionCoin);
+		public Unit<decimal> Commission => Trades.Sum(x => x.Commission)._(CommissionCoin);
 
 		/// <summary>The currency that commission was charged in</summary>
 		public Coin CommissionCoin => Trades.FirstOrDefault()?.CommissionCoin ?? CoinOut;

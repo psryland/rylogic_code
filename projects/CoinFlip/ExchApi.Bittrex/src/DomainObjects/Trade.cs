@@ -20,33 +20,33 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The absolute value of the change in the account balance, after fees (in quote currency)</summary>
 		[JsonProperty("Price")]
-		public double BalanceChange { get; set; }
+		public decimal BalanceChange { get; set; }
 
 		/// <summary>The price that the trade was filled at. Typically less than 'Limit' (in quote currency)</summary>
 		[JsonProperty("PricePerUnit")]
-		public double PricePerUnit { get; set; }
+		public decimal PricePerUnit { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("Quantity")]
-		public double QuantityBase { get; set; }
+		public decimal QuantityBase { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("QuantityRemaining")]
-		public double RemainingBase { get; set; }
+		public decimal RemainingBase { get; set; }
 
 		/// <summary>The amount filled in this trade (in base currency)</summary>
-		public double FilledBase => QuantityBase - RemainingBase;
+		public decimal FilledBase => QuantityBase - RemainingBase;
 
 		/// <summary>The amount filled in this trade (in quote currency)</summary>
-		public double FilledQuote => FilledBase * PricePerUnit;
+		public decimal FilledQuote => FilledBase * PricePerUnit;
 
 		/// <summary></summary>
 		[JsonProperty("Limit")]
-		public double Limit { get; set; }
+		public decimal Limit { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("Commission")]
-		public double Commission { get; set; }
+		public decimal Commission { get; set; }
 
 		/// <summary>The order creation time stamp</summary>
 		[JsonProperty("TimeStamp")]

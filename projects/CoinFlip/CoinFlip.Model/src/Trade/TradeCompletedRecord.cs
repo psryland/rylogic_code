@@ -16,9 +16,9 @@
 			OrderId = trade.OrderId;
 			Created = trade.Created.Ticks;
 			Updated = trade.Updated.Ticks;
-			AmountIn = trade.AmountIn;
-			AmountOut = trade.AmountOut;
-			Commission = trade.Commission;
+			AmountIn = (double)(decimal)trade.AmountIn;
+			AmountOut = (double)(decimal)trade.AmountOut;
+			Commission = (double)(decimal)trade.Commission;
 			CommissionCoin = trade.CommissionCoin.Symbol;
 		}
 

@@ -143,13 +143,13 @@ namespace CoinFlip.UI.GfxObjects
 			var price_range = RangeF.Invalid;
 			foreach (var order in b2q)
 			{
-				price_range.Encompass(order.PriceQ2B);
-				b2q_volume += order.AmountBase;
+				price_range.Encompass(order.PriceQ2B.ToDouble());
+				b2q_volume += order.AmountBase.ToDouble();
 			}
 			foreach (var order in q2b)
 			{
-				price_range.Encompass(order.PriceQ2B);
-				q2b_volume += order.AmountBase;
+				price_range.Encompass(order.PriceQ2B.ToDouble());
+				q2b_volume += order.AmountBase.ToDouble();
 			}
 
 			var max_volume = Math.Max(b2q_volume, q2b_volume);
@@ -184,9 +184,9 @@ namespace CoinFlip.UI.GfxObjects
 			var volume = 0.0;
 			for (int i = 0; i != count_b2q; ++i)
 			{
-				volume += b2q[i].AmountBase;
-				var y1 = (float)b2q[i].PriceQ2B;
-				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].PriceQ2B : y1;
+				volume += b2q[i].AmountBase.ToDouble();
+				var y1 = (float)b2q[i].PriceQ2B.ToDouble();
+				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].PriceQ2B.ToDouble() : y1;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 
@@ -207,9 +207,9 @@ namespace CoinFlip.UI.GfxObjects
 			volume = 0.0;
 			for (int i = 0; i != count_q2b; ++i)
 			{
-				volume += q2b[i].AmountBase;
-				var y0 = (float)q2b[i].PriceQ2B;
-				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].PriceQ2B : y0;
+				volume += q2b[i].AmountBase.ToDouble();
+				var y0 = (float)q2b[i].PriceQ2B.ToDouble();
+				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].PriceQ2B.ToDouble() : y0;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 

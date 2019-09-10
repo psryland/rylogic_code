@@ -61,8 +61,8 @@ namespace CoinFlip.UI.GfxObjects
 
 			if (spot_b2q != null)
 			{
-				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_b2q.Value));
-				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_b2q.Value));
+				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_b2q.Value.ToDouble()));
+				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_b2q.Value.ToDouble()));
 
 				// Add the line
 				B2QLine.X1 = pt0.X;
@@ -86,8 +86,8 @@ namespace CoinFlip.UI.GfxObjects
 
 			if (spot_q2b != null)
 			{
-				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_q2b.Value));
-				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_q2b.Value));
+				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_q2b.Value.ToDouble()));
+				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_q2b.Value.ToDouble()));
 
 				// Add the line
 				Q2BLine.X1 = pt0.X;

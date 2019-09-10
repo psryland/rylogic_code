@@ -22,9 +22,9 @@ namespace CoinFlip
 
 		public TradePair(Coin base_, Coin quote, Exchange exchange,
 			int? trade_pair_id = null,
-			RangeF<Unit<double>>? amount_range_base = null,
-			RangeF<Unit<double>>? amount_range_quote = null,
-			RangeF<Unit<double>>? price_range = null)
+			RangeF<Unit<decimal>>? amount_range_base = null,
+			RangeF<Unit<decimal>>? amount_range_quote = null,
+			RangeF<Unit<decimal>>? price_range = null)
 		{
 			Base  = base_;
 			Quote = quote;
@@ -34,9 +34,9 @@ namespace CoinFlip
 			RateUnitsInv = Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
 
 			TradePairId = trade_pair_id;
-			AmountRangeBase  = amount_range_base  ?? new RangeF<Unit<double>>(0.0._(Base), double.MaxValue._(Base));
-			AmountRangeQuote = amount_range_quote ?? new RangeF<Unit<double>>(0.0._(Quote), double.MaxValue._(Quote));
-			PriceRangeQ2B       = price_range        ?? new RangeF<Unit<double>>(0.0._(RateUnits), double.MaxValue._(RateUnits));
+			AmountRangeBase  = amount_range_base  ?? new RangeF<Unit<decimal>>(0m._(Base), decimal.MaxValue._(Base));
+			AmountRangeQuote = amount_range_quote ?? new RangeF<Unit<decimal>>(0m._(Quote), decimal.MaxValue._(Quote));
+			PriceRangeQ2B    = price_range        ?? new RangeF<Unit<decimal>>(0m._(RateUnits), decimal.MaxValue._(RateUnits));
 			MarketDepth      = new MarketDepth(base_, quote);
 		}
 
@@ -118,7 +118,7 @@ namespace CoinFlip
 		public SpotPrices SpotPrice { get; }
 
 		/// <summary>Return the current difference between the lowest Q2B offer and the highest B2Q offer (positive number)</summary>
-		public Unit<double>? Spread => SpotPrice.Spread;
+		public Unit<decimal>? Spread => SpotPrice.Spread;
 
 		/// <summary>The order books for this pair</summary>
 		public MarketDepth MarketDepth
@@ -148,16 +148,16 @@ namespace CoinFlip
 		private MarketDepth m_market_depth;
 
 		/// <summary>The allowable range of amounts for trading the base currency</summary>
-		public RangeF<Unit<double>> AmountRangeBase { get; private set; }
+		public RangeF<Unit<decimal>> AmountRangeBase { get; private set; }
 
 		/// <summary>The allowable range of amounts for trading the quote currency</summary>
-		public RangeF<Unit<double>> AmountRangeQuote { get; private set; }
+		public RangeF<Unit<decimal>> AmountRangeQuote { get; private set; }
 
 		/// <summary>The allowed price range (in Quote/Base) when trading this pair</summary>
-		public RangeF<Unit<double>> PriceRangeQ2B { get; private set; }
+		public RangeF<Unit<decimal>> PriceRangeQ2B { get; private set; }
 
 		/// <summary>Return the Fee charged when trading this pair. When the pairs are on different exchanges there is no fee</summary>
-		public double Fee => Base.Exchange == Quote.Exchange ? Base.Exchange.Fee : 0;
+		public decimal Fee => Base.Exchange == Quote.Exchange ? Base.Exchange.Fee : 0m;
 
 		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
 		public string RateUnits { get; }
@@ -167,7 +167,7 @@ namespace CoinFlip
 		public IEnumerable<ETimeFrame> CandleDataAvailable => Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame);
 
 		/// <summary>Return the order type implied by the given trade type and price relative to the spot price</summary>
-		public EOrderType? OrderType(ETradeType trade_type, Unit<double> price_q2b)
+		public EOrderType? OrderType(ETradeType trade_type, Unit<decimal> price_q2b)
 		{
 			// If the spot price is unknown, then so is the impled order type
 			var market_price_q2b = SpotPrice[trade_type];
@@ -177,15 +177,15 @@ namespace CoinFlip
 			if (trade_type == ETradeType.Q2B)
 			{
 				return
-					price_q2b > market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
-					price_q2b < market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
+					price_q2b > market_price_q2b.Value * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
+					price_q2b < market_price_q2b.Value * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
 					EOrderType.Market;
 			}
 			if (trade_type == ETradeType.B2Q)
 			{
 				return
-					price_q2b < market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
-					price_q2b > market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
+					price_q2b < market_price_q2b.Value * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
+					price_q2b > market_price_q2b.Value * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
 					EOrderType.Market;
 			}
 			throw new Exception("Unknown trade type");
@@ -196,20 +196,20 @@ namespace CoinFlip
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
 		/// Use 'amount_base' = 0 to get the spot price</summary>
-		public Trade BaseToQuote(Fund fund, Unit<double> amount_base)
+		public Trade BaseToQuote(Fund fund, Unit<decimal> amount_base)
 		{
-			if (amount_base < 0.0._(Base))
+			if (amount_base < 0m._(Base))
 				throw new Exception("Invalid amount");
 
 			// Determine the best price and amount in quote currency.
-			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.B2Q, 0.0._(Base), 0.0._(Quote));
+			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.B2Q, 0m._(Base), 0m._(Quote));
 			foreach (var x in MarketDepth.B2Q)
 			{
 				if (x.AmountBase < amount_base)
 				{
 					trade.PriceQ2B = x.PriceQ2B;
 					trade.AmountIn += x.AmountBase;
-					trade.AmountOut += x.PriceQ2B * x.AmountBase;
+					trade.AmountOut += (x.PriceQ2B * x.AmountBase);
 					amount_base -= x.AmountBase;
 				}
 				else
@@ -228,18 +228,18 @@ namespace CoinFlip
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
 		/// Use 'amount_quote' = 0 to get the spot price</summary>
-		public Trade QuoteToBase(Fund fund, Unit<double> amount_quote)
+		public Trade QuoteToBase(Fund fund, Unit<decimal> amount_quote)
 		{
-			if (amount_quote < 0.0._(Quote))
+			if (amount_quote < 0m._(Quote))
 				throw new Exception("Invalid amount");
 
 			// Determine the best price and amount in base currency.
 			// Note, the units are not the typical units for an order because
 			// I'm just using 'trade' to pass back a price and amount pair.
-			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.Q2B, 0.0._(Quote), 0.0._(Base));
+			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.Q2B, 0m._(Quote), 0m._(Base));
 			foreach (var x in MarketDepth.Q2B)
 			{
-				if (x.PriceQ2B * x.AmountBase < amount_quote)
+				if ((x.PriceQ2B * x.AmountBase) < amount_quote)
 				{
 					trade.PriceQ2B = x.PriceQ2B;
 					trade.AmountIn += x.AmountQuote;
@@ -258,7 +258,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an amount of currency using the available orders. e.g. Q2B => 'amount' in Quote, out in 'Base'</summary>
-		public Trade MarketTrade(Fund fund, ETradeType tt, Unit<double> amount)
+		public Trade MarketTrade(Fund fund, ETradeType tt, Unit<decimal> amount)
 		{
 			return
 				tt == ETradeType.Q2B ? QuoteToBase(fund, amount) :
@@ -267,13 +267,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
-		public int OrderBookIndex(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		public int OrderBookIndex(ETradeType tt, Unit<decimal> price_q2b, out bool beyond_order_book)
 		{
 			return MarketDepth.OrderBookIndex(tt, price_q2b, out beyond_order_book);
 		}
 
 		/// <summary>The total value of orders with a better price than 'price'</summary>
-		public Unit<double> OrderBookDepth(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price_q2b, out bool beyond_order_book)
 		{
 			return MarketDepth.OrderBookDepth(tt, price_q2b, out beyond_order_book);
 		}
@@ -294,14 +294,14 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the default amount to use for a trade on 'pair' (in CoinIn currency)</summary>
-		public Unit<double> DefaultTradeAmount(ETradeType tt)
+		public Unit<decimal> DefaultTradeAmount(ETradeType tt)
 		{
 			var coin = tt.CoinIn(this);
 			return coin.DefaultTradeAmount;
 		}
 
 		/// <summary>Return the default amount to use for a trade on this pair (in Base currency)</summary>
-		public Unit<double> DefaultTradeAmountBase(ETradeType tt, Unit<double> price_q2b)
+		public Unit<decimal> DefaultTradeAmountBase(ETradeType tt, Unit<decimal> price_q2b)
 		{
 			var vol = DefaultTradeAmount(tt);
 			return
@@ -311,7 +311,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the amount range to validate against for the input currency</summary>
-		public RangeF<Unit<double>> AmountRangeIn(ETradeType tt)
+		public RangeF<Unit<decimal>> AmountRangeIn(ETradeType tt)
 		{
 			return
 				tt == ETradeType.B2Q ? AmountRangeBase :
@@ -320,7 +320,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the amount range to validate against for the output currency</summary>
-		public RangeF<Unit<double>> AmountRangeOut(ETradeType tt)
+		public RangeF<Unit<decimal>> AmountRangeOut(ETradeType tt)
 		{
 			return
 				tt == ETradeType.B2Q ? AmountRangeQuote :
@@ -370,7 +370,7 @@ namespace CoinFlip
 			MarketDepth.AssertOrdersValid();
 
 			// Check the spread
-			if (Spread < 0.0._(RateUnits))
+			if (Spread < 0m._(RateUnits))
 				throw new Exception("Spread is negative");
 
 			return true;

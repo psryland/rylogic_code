@@ -297,16 +297,16 @@ namespace CoinFlip.UI
 			public CoinDataAdapter This => this;
 
 			/// <summary>Value of the coin (probably in USD)</summary>
-			public double Value => Coin?.ValueOf(1) ?? 0;
+			public decimal Value => Coin?.ValueOf(1m) ?? 0m;
 
 			/// <summary>The total amount of the coin (in coin currency)</summary>
-			public double Total => Coin?.Balances.NettTotal ?? 0.0;
+			public decimal Total => Coin?.Balances.NettTotal ?? 0m;
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
-			public double Available => Coin?.Balances.NettAvailable ?? 0.0;
+			public decimal Available => Coin?.Balances.NettAvailable ?? 0m;
 
 			/// <summary>The amount that is locked</summary>
-			public Unit<double> Held => Coin?.Balances.NettHeld ?? 0.0._(Symbol);
+			public Unit<decimal> Held => Coin?.Balances.NettHeld ?? 0m._(Symbol);
 
 			/// <summary></summary>
 			public void Invalidate(object sender = null, EventArgs args = null)

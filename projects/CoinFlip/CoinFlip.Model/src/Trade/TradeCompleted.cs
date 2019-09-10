@@ -13,16 +13,16 @@ namespace CoinFlip
 		//    of fields in the containing OrderCompleted. However, they allow convenient conversion
 		//    to CoinIn/CoinOut etc.
 
-		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<double> amount_in, Unit<double> amount_out, Unit<double> commission, Coin commission_coin, DateTimeOffset created, DateTimeOffset updated)
+		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<decimal> amount_in, Unit<decimal> amount_out, Unit<decimal> commission, Coin commission_coin, DateTimeOffset created, DateTimeOffset updated)
 		{
 			// Check units
 			var pair = order_completed.Pair;
 			var tt = order_completed.TradeType;
-			if (amount_in <= 0.0._(tt.CoinIn(pair)))
+			if (amount_in <= 0m._(tt.CoinIn(pair)))
 				throw new Exception("Invalid 'in' amount");
-			if (amount_out <= 0.0._(tt.CoinOut(pair)))
+			if (amount_out <= 0m._(tt.CoinOut(pair)))
 				throw new Exception("Invalid 'out' amount");
-			if (commission < 0.0._(commission_coin))
+			if (commission < 0m._(commission_coin))
 				throw new Exception("Negative commission");
 			if (created < Misc.CryptoCurrencyEpoch)
 				throw new Exception("Invalid creation time");
@@ -56,25 +56,25 @@ namespace CoinFlip
 		public long TradeId { get; }
 
 		/// <summary>The amount of currency sold (excludes commission)</summary>
-		public Unit<double> AmountIn { get; }
+		public Unit<decimal> AmountIn { get; }
 
 		/// <summary>The amount of currency bought (excludes commission)</summary>
-		public Unit<double> AmountOut { get; }
+		public Unit<decimal> AmountOut { get; }
 
 		/// <summary>The amount of base currency traded (excludes commission)</summary>
-		public Unit<double> AmountBase => TradeType.AmountBase(PriceQ2B, AmountIn, AmountOut);
+		public Unit<decimal> AmountBase => TradeType.AmountBase(PriceQ2B, AmountIn, AmountOut);
 
 		/// <summary>The amount of base currency traded (excludes commission)</summary>
-		public Unit<double> AmountQuote => TradeType.AmountQuote(PriceQ2B, AmountIn, AmountOut);
+		public Unit<decimal> AmountQuote => TradeType.AmountQuote(PriceQ2B, AmountIn, AmountOut);
 
 		/// <summary>The price that the trade was filled at (in CoinOut/CoinIn)</summary>
-		public Unit<double> Price => AmountOut / AmountIn;
+		public Unit<decimal> Price => AmountOut / AmountIn;
 
 		/// <summary>The price that the trade was filled at</summary>
-		public Unit<double> PriceQ2B => TradeType.PriceQ2B(Price);
+		public Unit<decimal> PriceQ2B => TradeType.PriceQ2B(Price);
 
 		/// <summary>The commission that was charged on this trade (in CoinOut)</summary>
-		public Unit<double> Commission { get; }
+		public Unit<decimal> Commission { get; }
 
 		/// <summary>The currency that the commission was charged in</summary>
 		public Coin CommissionCoin { get; }

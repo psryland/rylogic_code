@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Bittrex.API.DomainObjects
@@ -16,7 +15,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("amount")]
-		public double Amount { get; private set; }
+		public decimal Amount { get; private set; }
 
 		/// <summary>The address that was used for the deposit</summary>
 		[JsonProperty("address")]
@@ -36,7 +35,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("TxCost")]
-		public double TxCost { get; private set; }
+		public decimal TxCost { get; private set; }
 
 		/// <summary></summary>
 		[JsonProperty("TxId")]

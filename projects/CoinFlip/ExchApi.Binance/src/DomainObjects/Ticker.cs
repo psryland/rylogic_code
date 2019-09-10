@@ -8,7 +8,7 @@ namespace Binance.API.DomainObjects
 	{
 		public Ticker()
 		{ }
-		public Ticker(CurrencyPair pair, double price_change, double price_change_percent, double weighted_avg_price, double prev_close_price, double last_price, double last_qty, double price_q2b, double price_b2q, double open_price, double high_price, double low_price, double volume_base, double volume_quote, DateTimeOffset open_time, DateTimeOffset close_time, long first_trade_id, long last_trade_id, long trade_count)
+		public Ticker(CurrencyPair pair, decimal price_change, decimal price_change_percent, decimal weighted_avg_price, decimal prev_close_price, decimal last_price, decimal last_qty, decimal price_q2b, decimal price_b2q, decimal open_price, decimal high_price, decimal low_price, decimal volume_base, decimal volume_quote, DateTimeOffset open_time, DateTimeOffset close_time, long first_trade_id, long last_trade_id, long trade_count)
 		{
 			Pair = pair;
 			PriceChange = price_change;
@@ -59,55 +59,55 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("PriceChange")]
-		public double PriceChange { get; set; }
+		public decimal PriceChange { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("PriceChangePercent")]
-		public double PriceChangePercent { get; set; }
+		public decimal PriceChangePercent { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("weightedAvgPrice")]
-		public double WeightedAvgPrice { get; set; }
+		public decimal WeightedAvgPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("prevClosePrice")]
-		public double PrevClosePrice { get; set; }
+		public decimal PrevClosePrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("lastPrice")]
-		public double LastPrice { get; set; }
+		public decimal LastPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("lastQty")]
-		public double LastQty { get; set; }
+		public decimal LastQty { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("bidPrice")]
-		public double PriceB2Q { get; set; }
+		public decimal PriceB2Q { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("askPrice")]
-		public double PriceQ2B { get; set; }
+		public decimal PriceQ2B { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("openPrice")]
-		public double OpenPrice { get; set; }
+		public decimal OpenPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("highPrice")]
-		public double HighPrice { get; set; }
+		public decimal HighPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("lowPrice")]
-		public double LowPrice { get; set; }
+		public decimal LowPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("volume")]
-		public double VolumeBase { get; set; }
+		public decimal VolumeBase { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("quoteVolume")]
-		public double VolumeQuote { get; set; }
+		public decimal VolumeQuote { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("openTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]

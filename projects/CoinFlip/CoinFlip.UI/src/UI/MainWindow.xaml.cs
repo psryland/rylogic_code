@@ -187,7 +187,7 @@ namespace CoinFlip.UI
 		private SimulationView m_simulation_view;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
-		public double NettWorth => Model.NettWorth;
+		public decimal NettWorth => Model.NettWorth;
 		public string ValuationCurrency => SettingsData.Settings.ValuationCurrency;
 
 		/// <summary>Command to close the app</summary>

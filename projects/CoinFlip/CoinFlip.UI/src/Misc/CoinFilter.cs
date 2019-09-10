@@ -22,12 +22,12 @@ namespace CoinFlip.UI
 		private bool m_enabled;
 
 		/// <summary>Filter balances with a value or amount less than this threshold</summary>
-		public double Threshold
+		public decimal Threshold
 		{
 			get { return m_threshold; }
 			set { SetProp(ref m_threshold, value, nameof(Threshold)); }
 		}
-		private double m_threshold;
+		private decimal m_threshold;
 
 		/// <summary>What to filter on</summary>
 		public ECoinFilterType Type

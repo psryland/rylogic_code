@@ -84,8 +84,8 @@ namespace CoinFlip
 					// Create a trade pair. Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
 					var pair = new TradePair(base_, quote, this,
 						trade_pair_id: null,
-						amount_range_base: new RangeF<Unit<double>>(0.0005._(base_), 10000000.0._(base_)),
-						amount_range_quote: new RangeF<Unit<double>>(0.0005._(quote), 10000000.0._(quote)),
+						amount_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
+						amount_range_quote: new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
 						price_range: null);
 
 					// Update the pairs collection
@@ -290,7 +290,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
 		{
 			try
 			{

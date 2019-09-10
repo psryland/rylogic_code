@@ -82,8 +82,8 @@ namespace CoinFlip
 
 					// Create the trade pair
 					var pair = new TradePair(base_, quote, this, null,
-						amount_range_base: new RangeF<Unit<double>>(0.0001._(base_), 10000000.0._(base_)),
-						amount_range_quote: new RangeF<Unit<double>>(0.0001._(quote), 10000000.0._(quote)),
+						amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
+						amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 						price_range: null);
 
 					// Add the trade pair.
@@ -323,17 +323,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override async Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
+		protected override async Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
 		{
 			try
 			{
 				// Submit trade parameters
 				var cp = new CurrencyPair(pair.Base, pair.Quote);
-				var price_q2b = (double)tt.PriceQ2B(amount_out / amount_in);
+				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
 
 				var p = new OrderParams(tt.ToBinanceTT(), ot.ToBinanceOT());
-				p.PriceQ2B = ot != EOrderType.Market ? (decimal?)price_q2b : (decimal?)null;
-				p.AmountBase = (decimal)(double)tt.AmountBase(price_q2b, amount_in: amount_in);
+				p.PriceQ2B = ot != EOrderType.Market ? price_q2b : (decimal?)null;
+				p.AmountBase = tt.AmountBase(price_q2b, amount_in: amount_in);
 				p.Canonicalise(cp, Api);
 
 				// Place the trade order
@@ -409,7 +409,7 @@ namespace CoinFlip
 			var trade_id = fill.TradeId;
 			var amount_in = tt.AmountIn(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
 			var amount_out = tt.AmountOut(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
-			var commission = fill.CommissionAsset != null ? fill.Commission._(fill.CommissionAsset) : 0.0._(pair.Base);
+			var commission = fill.CommissionAsset != null ? fill.Commission._(fill.CommissionAsset) : 0m._(pair.Base);
 			var commission_coin = fill.CommissionAsset != null ? Coins[fill.CommissionAsset] : Coins[pair.Base];
 			var created = fill.Created;
 			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);

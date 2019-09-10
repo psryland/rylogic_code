@@ -27,19 +27,19 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("price")]
-		public double Price { get; set; }
+		public decimal Price { get; set; }
 
 		/// <summary>The initial amount of the order</summary>
 		[JsonProperty("qty")]
-		public double AmountBase { get; set; }
+		public decimal AmountBase { get; set; }
 
 		/// <summary>The initial amount of the order</summary>
 		[JsonProperty("quoteQty")]
-		public double AmountQuote { get; set; }
+		public decimal AmountQuote { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("commission")]
-		public double Commission { get; set; }
+		public decimal Commission { get; set; }
 
 		/// <summary>The initial amount of the order</summary>
 		[JsonProperty("commissionAsset")]

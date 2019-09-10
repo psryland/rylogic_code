@@ -89,7 +89,7 @@ namespace Bot.Rebalance
 			foreach (var tt in new[] { ETradeType.Q2B, ETradeType.B2Q })
 			{
 				// Get the current spot price
-				var price = pair.SpotPrice[tt] ?? 0.0._(pair.RateUnits);
+				var price = pair.SpotPrice[tt] ?? 0m._(pair.RateUnits);
 				if (price == 0)
 					continue;
 
@@ -170,17 +170,17 @@ namespace Bot.Rebalance
 		private TradePair Pair => Exchange?.Pairs[Settings.Pair];
 
 		/// <summary>The amount held in base currency</summary>
-		private Unit<double> HoldingsBase => Fund[Pair.Base].Total;
+		private Unit<decimal> HoldingsBase => Fund[Pair.Base].Total;
 
 		/// <summary>The amount held in quote currency</summary>
-		private Unit<double> HoldingsQuote => Fund[Pair.Quote].Total;
+		private Unit<decimal> HoldingsQuote => Fund[Pair.Quote].Total;
 
 		/// <summary>Get the fractional position of 'price' within the price range. [0,1] = [AllIn,AllOut]</summary>
-		private double PriceFrac(Unit<double> price)
+		private decimal PriceFrac(Unit<decimal> price)
 		{
-			var numer = (double)price - Settings.AllInPrice;
+			var numer = (decimal)price - Settings.AllInPrice;
 			var denom = Settings.AllOutPrice - Settings.AllInPrice;
-			return Math_.Clamp(numer / denom, 0.0, 1.0);
+			return Math_.Clamp(numer / denom, 0m, 1m);
 		}
 	}
 }

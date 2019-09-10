@@ -98,8 +98,8 @@ namespace CoinFlip
 
 					// Each order book as one entry for infinite volume.
 					// Available balance is applied after the loop is identified.
-					var buys = new[] { new Offer(1.0._(pair.RateUnits), double.MaxValue._(pair.Base)) };
-					var sells = new[] { new Offer(1.0._(pair.RateUnits), double.MaxValue._(pair.Base)) };
+					var buys = new[] { new Offer(1m._(pair.RateUnits), decimal.MaxValue._(pair.Base)) };
+					var sells = new[] { new Offer(1m._(pair.RateUnits), decimal.MaxValue._(pair.Base)) };
 					pair.MarketDepth.UpdateOrderBooks(buys, sells);
 
 					// Notify updated
@@ -116,7 +116,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
 		{
 			return Task.FromResult(new OrderResult(pair, false));
 		}

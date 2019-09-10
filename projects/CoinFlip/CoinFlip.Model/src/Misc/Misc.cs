@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using Rylogic.Extn;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -13,10 +14,10 @@ namespace CoinFlip
 	public static class Misc
 	{
 		/// <summary>The smallest amount change</summary>
-		public const double AmountEpsilon = 1e-8;
+		public const decimal AmountEpsilon = 1e-8m;
 
 		/// <summary>The smallest price change</summary>
-		public const double PriceEpsilon = 1e-8;
+		public const decimal PriceEpsilon = 1e-8m;
 
 		/// <summary>Regex expression for finding bot plugin dlls</summary>
 		public const string BotFilterRegex = @"Bot\.(?<name>\w+)\.dll";
@@ -39,6 +40,18 @@ namespace CoinFlip
 		{
 			if (Thread.CurrentThread.ManagedThreadId != Dispatcher.Thread.ManagedThreadId) return true;
 			throw new Exception("Main-thread call detected");
+		}
+
+		/// <summary>True if two prices are equal to within the price epsilon</summary>
+		public static bool EqlPrice(Unit<decimal> lhs, Unit<decimal> rhs, decimal? tol = null)
+		{
+			return (decimal)Math_.Abs(lhs - rhs) < (tol ?? PriceEpsilon);
+		}
+
+		/// <summary>True if two amounts are equal to within the amount epsilon</summary>
+		public static bool EqlAmount(Unit<decimal> lhs, Unit<decimal> rhs, decimal? tol = null)
+		{
+			return (decimal)Math_.Abs(lhs - rhs) < (tol ?? AmountEpsilon);
 		}
 
 		/// <summary>Execute a delegate on the main thread</summary>
@@ -313,6 +326,16 @@ namespace CoinFlip
 			var tf = TimeFrameToTicks(1.0, time_frame);
 			var ticks = ((time.Ticks + tf - 1) / tf) * tf;
 			return new DateTimeOffset(ticks, time.Offset);
+		}
+
+		/// <summary>Convert to Unit<double> </summary>
+		public static Unit<double> ToDouble(this Unit<decimal> v)
+		{
+			return Unit_.Cast<double, decimal>(v);
+		}
+		public static Unit<decimal> ToDecimal(this Unit<double> v)
+		{
+			return Unit_.Cast<decimal, double>(v);
 		}
 
 		/// <summary>Return a timestamp string suitable for a chart X tick value</summary>

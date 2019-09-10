@@ -32,50 +32,50 @@ namespace CoinFlip.Settings
 		/// <summary>The symbol name for the coin</summary>
 		public string Symbol
 		{
-			get { return get<string>(nameof(Symbol)); }
-			private set { set(nameof(Symbol), value); }
+			get => get<string>(nameof(Symbol));
+			private set => set(nameof(Symbol), value);
 		}
 
 		/// <summary>The number of significant digits used by this currency</summary>
 		public int SD
 		{
-			get { return get<int>(nameof(SD)); }
-			set { set(nameof(SD), value); }
+			get => get<int>(nameof(SD));
+			set => set(nameof(SD), value);
 		}
 
 		/// <summary>Value assigned to this coin</summary>
-		public double AssignedValue
+		public decimal AssignedValue
 		{
-			get { return get<double>(nameof(AssignedValue)); }
-			set { set(nameof(AssignedValue), value); }
+			get => get<decimal>(nameof(AssignedValue));
+			set => set(nameof(AssignedValue), value);
 		}
 
 		/// <summary>The maximum amount of this coin to automatically trade in one go</summary>
-		public double AutoTradingLimit
+		public decimal AutoTradingLimit
 		{
-			get { return get<double>(nameof(AutoTradingLimit)); }
-			set { set(nameof(AutoTradingLimit), value); }
+			get => get<decimal>(nameof(AutoTradingLimit));
+			set => set(nameof(AutoTradingLimit), value);
 		}
 
 		/// <summary>The amount to initialise trades with</summary>
-		public double DefaultTradeAmount
+		public decimal DefaultTradeAmount
 		{
-			get { return get<double>(nameof(DefaultTradeAmount)); }
-			set { set(nameof(DefaultTradeAmount), value); }
+			get => get<decimal>(nameof(DefaultTradeAmount));
+			set => set(nameof(DefaultTradeAmount), value);
 		}
 
 		/// <summary>The initial balance for this currency when back testing</summary>
-		public double BackTestingInitialBalance
+		public decimal BackTestingInitialBalance
 		{
-			get { return get<double>(nameof(BackTestingInitialBalance)); }
-			set { set(nameof(BackTestingInitialBalance), value); }
+			get => get<decimal>(nameof(BackTestingInitialBalance));
+			set => set(nameof(BackTestingInitialBalance), value);
 		}
 
 		/// <summary>True if cross-exchange pairs should be created for this coin</summary>
 		public bool CreateCrossExchangePairs
 		{
-			get { return get<bool>(nameof(CreateCrossExchangePairs)); }
-			set { set(nameof(CreateCrossExchangePairs), value); }
+			get => get<bool>(nameof(CreateCrossExchangePairs));
+			set => set(nameof(CreateCrossExchangePairs), value);
 		}
 
 		/// <summary>Raised when the live price of 'coin' changes</summary>

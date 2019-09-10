@@ -56,8 +56,8 @@ namespace CoinFlip
 		/// <summary>Add an offer to the depth of market</summary>
 		public void Add(Offer offer, bool validate = true)
 		{
-			Debug.Assert(!validate || offer.AmountBase != 0.0._(Base));
-			Debug.Assert(!validate || offer.AmountBase * offer.PriceQ2B != 0.0._(Quote));
+			Debug.Assert(!validate || offer.AmountBase != 0m._(Base));
+			Debug.Assert(!validate || offer.AmountBase * offer.PriceQ2B != 0m._(Quote));
 			Offers.Add(offer);
 		}
 

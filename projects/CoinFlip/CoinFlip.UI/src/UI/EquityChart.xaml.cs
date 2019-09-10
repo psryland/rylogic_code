@@ -233,7 +233,7 @@ namespace CoinFlip.UI
 						var xrange = new RangeF(0, Equity.BalanceChanges.Count);
 						var yrange = RangeF.Invalid;
 						foreach (var chg in Equity.NettWorthHistory())
-							yrange.Encompass(chg.Worth);
+							yrange.Encompass(chg.Worth.ToDouble());
 
 						bb = BBox.Encompass(bb, new v4((float)xrange.Beg, (float)yrange.Beg, -ZOrder.Max, 1f));
 						bb = BBox.Encompass(bb, new v4((float)xrange.End, (float)yrange.End, +ZOrder.Max, 1f));
@@ -422,7 +422,7 @@ namespace CoinFlip.UI
 		}
 		private double OrderToYValue(IOrder order)
 		{
-			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth;
+			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth.ToDouble();
 		}
 
 		/// <summary>Auto range the chart (if needed)</summary>

@@ -48,7 +48,7 @@ namespace CoinFlip
 		public string SymbolWithExchange => $"{Symbol} - {Exchange.Name}";
 
 		/// <summary>The default amount to use when creating a trade from this Coin</summary>
-		public Unit<double> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
+		public Unit<decimal> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
 
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
 		public Balances Balances => Exchange.Balance[this];
@@ -57,15 +57,15 @@ namespace CoinFlip
 		public bool LivePriceAvailable => ValuationPath.Count != 0 || Symbol == SettingsData.Settings.ValuationCurrency;
 
 		/// <summary>The value of 1 unit of this currency</summary>
-		public Unit<double> Value
+		public Unit<decimal> Value
 		{
 			get
 			{
 				var coin = this;
-				var value = (Unit<double>?)1.0._(coin);
+				var value = (Unit<decimal>?)1m._(coin);
 
 				if (!LivePriceAvailable && !UpdateValuationPaths())
-					return 0.0._(SettingsData.Settings.ValuationCurrency);
+					return 0m._(SettingsData.Settings.ValuationCurrency);
 
 				foreach (var pair in ValuationPath)
 				{
@@ -79,36 +79,42 @@ namespace CoinFlip
 					coin = pair.OtherCoin(coin);
 				}
 
-				Debug.Assert(value == null || value >= 0.0._(SettingsData.Settings.ValuationCurrency));
-				ValueApprox = value ?? 0.0._(SettingsData.Settings.ValuationCurrency);
+				Debug.Assert(value == null || value >= 0m);
+				ValueApprox = value ?? 0m._(SettingsData.Settings.ValuationCurrency);
 				return ValueApprox;
 			}
 		}
 
 		/// <summary>The last known live value (doesn't recheck the live value)</summary>
-		public Unit<double> ValueApprox { get; private set; }
+		public Unit<decimal> ValueApprox { get; private set; }
 
 		/// <summary>Return the value of 'amount' units of this currency</summary>
 		public Unit<double> ValueOf(double amount)
 		{
-			return amount * Value;
+			var value = (double)(decimal)Value;
+			return (amount * value)._(SettingsData.Settings.ValuationCurrency);
+		}
+		public Unit<decimal> ValueOf(decimal amount)
+		{
+			var value = (decimal)Value;
+			return (amount * value)._(SettingsData.Settings.ValuationCurrency);
 		}
 
 		/// <summary>The pairs to use to find the value in valuation currency</summary>
 		private List<TradePair> ValuationPath { get; }
 
 		/// <summary>The maximum amount to automatically trade</summary>
-		public Unit<double> AutoTradeLimit
+		public Unit<decimal> AutoTradeLimit
 		{
-			get { return Meta.AutoTradingLimit._(Symbol); }
-			set { Meta.AutoTradingLimit = value; }
+			get => Meta.AutoTradingLimit._(Symbol);
+			set => Meta.AutoTradingLimit = value;
 		}
 
 		/// <summary>The assigned amount this coin type is worth</summary>
-		public double AssignedValue
+		public decimal AssignedValue
 		{
-			get { return Meta.AssignedValue; }
-			set { Meta.AssignedValue = value; }
+			get => Meta.AssignedValue;
+			set => Meta.AssignedValue = value;
 		}
 
 		/// <summary>Ensure this coin can be valuated in the valuation currency</summary>

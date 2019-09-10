@@ -12,7 +12,7 @@ namespace CoinFlip.Settings
 		int PollPeriod { get; set; }
 
 		/// <summary>The fee charged per trade</summary>
-		double TransactionFee { get; set; }
+		decimal TransactionFee { get; set; }
 
 		/// <summary>The market depth to retrieve</summary>
 		int MarketDepth { get; set; }

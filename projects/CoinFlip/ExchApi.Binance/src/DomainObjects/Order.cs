@@ -20,22 +20,22 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("price")]
-		public double PriceQ2B { get; set; }
+		public decimal PriceQ2B { get; set; }
 
 		/// <summary>The initial amount of the order</summary>
 		[JsonProperty("origQty")]
-		public double AmountBase { get; set; }
+		public decimal AmountBase { get; set; }
 
 		/// <summary>The amount of the order that has been filled so far</summary>
 		[JsonProperty("executedQty")]
-		public double AmountCompleted { get; set; }
+		public decimal AmountCompleted { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("cummulativeQuoteQty")]
-		public double CummulativeAmountQuote { get; set; }
+		public decimal CummulativeAmountQuote { get; set; }
 
 		/// <summary>The outstanding amount of the order yet to be filled</summary>
-		public double Remaining => AmountBase - AmountCompleted;
+		public decimal Remaining => AmountBase - AmountCompleted;
 
 		/// <summary></summary>
 		public EOrderStatus Status { get; set; }
@@ -55,13 +55,13 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("stopPrice")]
-		public double StopPrice { get; set; }
+		public decimal StopPrice { get; set; }
 
 		/// <summary>
 		/// In "iceberg" is a conditional order to buy or sell a large amount of assets in
 		/// smaller predetermined quantities in order to conceal the total order quantity.</summary>
 		[JsonProperty("icebergQty")]
-		public double IcebergAmount { get; set; }
+		public decimal IcebergAmount { get; set; }
 
 		/// <summary></summary>
 		public DateTimeOffset Created { get; set; }

@@ -151,7 +151,7 @@
 					ToolTip="The price at which to make the trade"
 					x:Name="m_tb_price"
 					HorizontalContentAlignment="Right"
-					Text="{Binding PriceQ2B, UpdateSourceTrigger=Default}"
+					Text="{Binding PriceQ2B}"
 					IsEnabled="{Binding CanChoosePrice}"
 					Margin="20,1,3,1"
 					Padding="3"
@@ -204,7 +204,7 @@
 				<TextBox
 					x:Name="m_tb_amount_in"
 					HorizontalContentAlignment="Right"
-					Text="{Binding AmountIn, StringFormat={}{0:F8}, UpdateSourceTrigger=Default}"
+					Text="{Binding AmountIn}"
 					Margin="20,1,3,1"
 					Padding="3"
 					>
@@ -270,7 +270,7 @@
 				<TextBox
 					x:Name="m_tb_amount_out"
 					HorizontalContentAlignment="Right"
-					Text="{Binding AmountOut, StringFormat={}{0:F8}, UpdateSourceTrigger=Default}"
+					Text="{Binding AmountOut}"
 					Margin="20,1,3,1"
 					Padding="3"
 					>

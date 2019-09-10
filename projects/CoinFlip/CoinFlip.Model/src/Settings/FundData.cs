@@ -79,7 +79,7 @@ namespace CoinFlip.Settings
 		[DebuggerDisplay("{Symbol,nq} {Total}")]
 		public class BalData
 		{
-			public BalData(string sym, double total)
+			public BalData(string sym, decimal total)
 			{
 				Symbol = sym;
 				Total = total;
@@ -100,7 +100,7 @@ namespace CoinFlip.Settings
 			public string Symbol { get; set; }
 
 			/// <summary>The total amount of 'Symbol' from this exchange in this fund</summary>
-			public double Total { get; set; }
+			public decimal Total { get; set; }
 		}
 
 		private class TyConv : GenericTypeConverter<FundData> { }

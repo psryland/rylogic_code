@@ -213,6 +213,7 @@ namespace CoinFlip.UI
 							PriceQ2B = Trade.PriceQ2B.ToString(8, false);
 							AmountIn = Trade.AmountIn.ToString();
 							AmountOut = Trade.AmountOut.ToString();
+							Invalidate();
 						}
 					}
 				}
@@ -333,7 +334,7 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_amount_in, () => --m_in_amount_in))
 				{
 					// Default to an invalid amount
-					var amount_in = 0.0._(CoinIn);
+					var amount_in = 0m._(CoinIn);
 					m_amount_in = value;
 
 					// Convert the value into an amount
@@ -341,12 +342,12 @@ namespace CoinFlip.UI
 					if (value.EndsWith("%")) // Percentage of available in
 					{
 						value = value.Trim('%', ' ', '\t');
-						if (double.TryParse(value, out var pc) && pc > 0)
-							amount_in = AvailableIn * pc * 0.01;
+						if (decimal.TryParse(value, out var pc) && pc > 0)
+							amount_in = AvailableIn * pc * 0.01m;
 					}
 					else
 					{
-						if (double.TryParse(value, out var v) && v > 0)
+						if (decimal.TryParse(value, out var v) && v > 0)
 							amount_in = v._(CoinIn);
 					}
 
@@ -357,11 +358,9 @@ namespace CoinFlip.UI
 					if (amount_in != 0)
 						m_amount_in = Trade.AmountIn.ToString();
 
+					// Notify that the string value has changed. Other properties are
+					// notified as changed in the Trade property changed handler
 					NotifyPropertyChanged(nameof(AmountIn));
-					NotifyPropertyChanged(nameof(TradeDescriptionIn));
-					NotifyPropertyChanged(nameof(ValidationResults));
-					NotifyPropertyChanged(nameof(IsAmountInValid));
-					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}
@@ -378,12 +377,12 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_amount_out, () => --m_in_amount_out))
 				{
 					// Default to an invalid amount
-					var amount_out = 0.0._(CoinOut);
+					var amount_out = 0m._(CoinOut);
 					m_amount_out = value;
 
 					// Convert the value into an amount
 					value = value.Trim();
-					if (double.TryParse(value, out var v) && v > 0)
+					if (decimal.TryParse(value, out var v) && v > 0)
 						amount_out = v._(CoinOut);
 
 					// Update the trade amount.
@@ -393,11 +392,9 @@ namespace CoinFlip.UI
 					if (amount_out != 0)
 						m_amount_out = Trade.AmountOut.ToString();
 
+					// Notify that the string value has changed. Other properties are
+					// notified as changed in the Trade property changed handler
 					NotifyPropertyChanged(nameof(AmountOut));
-					NotifyPropertyChanged(nameof(TradeDescriptionOut));
-					NotifyPropertyChanged(nameof(ValidationResults));
-					NotifyPropertyChanged(nameof(IsAmountOutValid));
-					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}
@@ -415,12 +412,12 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_price_q2b, () => --m_in_price_q2b))
 				{
 					// Default to an invalid price
-					var price_q2b = 0.0._(Pair.RateUnits);
+					var price_q2b = 0m._(Pair.RateUnits);
 					m_price_q2b = value;
 
 					// Try to convert the value into a price
 					value = value.Trim();
-					if (double.TryParse(value, out var v) && v > 0)
+					if (decimal.TryParse(value, out var v) && v > 0)
 						price_q2b = v._(Pair.RateUnits);
 
 					// Update the trade price.
@@ -430,11 +427,9 @@ namespace CoinFlip.UI
 					if (price_q2b != 0)
 						m_price_q2b = Trade.PriceQ2B.ToString();
 
+					// Notify that the string value has changed. Other properties are
+					// notified as changed in the Trade property changed handler
 					NotifyPropertyChanged(nameof(PriceQ2B));
-					NotifyPropertyChanged(nameof(ValidationResults));
-					NotifyPropertyChanged(nameof(IsAmountInValid));
-					NotifyPropertyChanged(nameof(IsAmountOutValid));
-					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}
@@ -442,13 +437,13 @@ namespace CoinFlip.UI
 		private int m_in_price_q2b;
 
 		/// <summary>The available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
-		public Unit<double> AvailableIn => Trade.Fund[CoinIn].Available + ExistingHeld;
+		public Unit<decimal> AvailableIn => Trade.Fund[CoinIn].Available + ExistingHeld;
 
 		/// <summary>The available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
-		public Unit<double> AvailableOut => Trade.Fund[CoinOut].Available;
+		public Unit<decimal> AvailableOut => Trade.Fund[CoinOut].Available;
 
 		/// <summary>The total account balance of currency to sell</summary>
-		public Unit<double> BalanceIn => Trade.Fund[CoinIn].Total;
+		public Unit<decimal> BalanceIn => Trade.Fund[CoinIn].Total;
 
 		/// <summary>The currency sold</summary>
 		public Coin CoinIn => Trade.CoinIn;
@@ -458,8 +453,8 @@ namespace CoinFlip.UI
 
 		/// <summary>Description of the amount sold in the trade</summary>
 		public string TradeDescriptionIn => 
-			$"{Math_.Clamp(Math_.Div<double>(Trade.AmountIn, AvailableIn, 0), 0, 1):P1} of available {CoinIn}\n" +
-			$"{Math_.Clamp(Math_.Div<double>(Trade.AmountIn, BalanceIn, 0), 0, 1):P1} of account balance.\n";
+			$"{Math_.Clamp(Math_.Div<decimal>(Trade.AmountIn, AvailableIn, 0m), 0m, 1m):P1} of available {CoinIn}\n" +
+			$"{Math_.Clamp(Math_.Div<decimal>(Trade.AmountIn, BalanceIn, 0m), 0m, 1m):P1} of account balance.\n";
 
 		/// <summary>Description of the amount received from the trade</summary>
 		public string TradeDescriptionOut => $"Fee: {Trade.Commission.ToString(8, true)} ({Trade.CommissionCoin.ValueOf(Trade.Commission).ToString(6,true)})";
@@ -471,12 +466,28 @@ namespace CoinFlip.UI
 			throw new Exception($"Unknown trade type: {TradeType}");
 
 		/// <summary>The amount held for the existing trade</summary>
-		private Unit<double> ExistingHeld => (IsNewTrade || TradeType != m_existing_trade_type) ? 0.0._(CoinIn) : m_existing_held;
+		private Unit<decimal> ExistingHeld => (IsNewTrade || TradeType != m_existing_trade_type) ? 0m._(CoinIn) : m_existing_held;
 		private ETradeType m_existing_trade_type;
-		private Unit<double> m_existing_held;
+		private Unit<decimal> m_existing_held;
+
+		/// <summary>Signal re-evaluation of the validation state</summary>
+		private void Invalidate()
+		{
+			m_validation = null;
+			NotifyPropertyChanged(nameof(IsValid));
+			NotifyPropertyChanged(nameof(ValidationResults));
+			NotifyPropertyChanged(nameof(TradeDescriptionIn));
+			NotifyPropertyChanged(nameof(TradeDescriptionOut));
+			NotifyPropertyChanged(nameof(IsAmountInValid));
+			NotifyPropertyChanged(nameof(IsAmountOutValid));
+		}
 
 		/// <summary>Validate the trade data</summary>
-		public EValidation Validation => Trade.Validate(additional_balance_in: ExistingHeld);
+		public EValidation Validation
+		{
+			get => (m_validation ?? (m_validation = Trade.Validate(additional_balance_in: ExistingHeld))).Value;
+		}
+		private EValidation? m_validation;
 
 		/// <summary>A description of the validation errors</summary>
 		public string ValidationResults => Validation.ToErrorDescription();
@@ -497,9 +508,15 @@ namespace CoinFlip.UI
 		public Command Accept { get; }
 		private void AcceptInternal()
 		{
-			// Grab focus to ensure values are validated
-			if (!m_btn_accept.Focus())
-				throw new Exception("Create button cannot take input focus");
+			// If the ok button isn't focused, ignore the command
+			if (!m_btn_accept.IsFocused)
+			{
+				// Grab focus to ensure values are validated
+				if (!m_btn_accept.Focus())
+					throw new Exception("Create button cannot take input focus");
+
+				return;
+			}
 
 			// Ignore accept until the trade is valid
 			if (!IsValid)

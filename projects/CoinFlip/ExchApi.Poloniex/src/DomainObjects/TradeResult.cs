@@ -36,19 +36,19 @@ namespace Poloniex.API.DomainObjects
 
 			/// <summary>The trade price (in quote currency)</summary>
 			[JsonProperty("rate")]
-			public double PriceQ2B { get; internal set; }
+			public decimal PriceQ2B { get; internal set; }
 
 			/// <summary>The traded volume (in base currency)</summary>
 			[JsonProperty("amount")]
-			public double AmountBase { get; private set; }
+			public decimal AmountBase { get; private set; }
 
 			/// <summary></summary>
 			[JsonProperty("commission")] // TODO:
-			public double CommissionQuote { get; private set; }
+			public decimal CommissionQuote { get; private set; }
 
 			/// <summary>The value of the trade (equal to Price * VolumeBase) (in quote currency)</summary>
 			[JsonProperty("total")]
-			public double Total { get; private set; }
+			public decimal Total { get; private set; }
 
 			/// <summary>The trade time stamp</summary>
 			public DateTimeOffset Timestamp { get; private set; }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -63,7 +64,7 @@ namespace CoinFlip
 		/// Consume offers up to 'price_q2b' or 'amount_base' (based on order type).
 		/// 'pair' is the trade pair that this market depth data is associated with.
 		/// Returns the offers that were consumed. 'amount_remaining' is what remains unfilled</summary>
-		public IList<Offer> Consume(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> price_q2b, Unit<double> amount_base, out Unit<double> remaining_base)
+		public IList<Offer> Consume(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> price_q2b, Unit<decimal> amount_base, out Unit<decimal> remaining_base)
 		{
 			// Notes:
 			//  - 'remaining_base' should only be non zero if the order book is empty
@@ -119,16 +120,16 @@ namespace CoinFlip
 					offers.RemoveAt(0);
 
 				consumed.Add(new Offer(offer.PriceQ2B, remaining_base));
-				remaining_base = 0.0._(amount_base);
+				remaining_base -= remaining_base;
 			}
 			return consumed;
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
-		public int OrderBookIndex(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		public int OrderBookIndex(ETradeType tt, Unit<decimal> price_q2b, out bool beyond_order_book)
 		{
 			// Check units
-			if (price_q2b < 0.0._(RateUnits))
+			if (price_q2b < 0m._(RateUnits))
 				throw new Exception("Invalid price");
 
 			// If a trade cannot be filled by existing orders, it becomes an offer.
@@ -157,7 +158,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The total value of orders with a better price than 'price'</summary>
-		public Unit<double> OrderBookDepth(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price_q2b, out bool beyond_order_book)
 		{
 			var index = OrderBookIndex(tt, price_q2b, out beyond_order_book);
 			var orders = tt == ETradeType.B2Q ? Q2B.Offers : B2Q.Offers;
@@ -181,10 +182,10 @@ namespace CoinFlip
 		/// <summary>Check the orders are in the correct order</summary>
 		public bool AssertOrdersValid()
 		{
-			var q2b_price0 = 0.0;
-			var b2q_price0 = 0.0;
-			var q2b0 = 0.0;
-			var b2q0 = 0.0;
+			var q2b_price0 = 0m;
+			var b2q_price0 = 0m;
+			var q2b0 = 0m;
+			var b2q0 = 0m;
 
 			// The Q2B prices should increase, i.e. the best offer from a trader's point of view is the lowest price.
 			for (int i = 0; i != Q2B.Count; ++i)

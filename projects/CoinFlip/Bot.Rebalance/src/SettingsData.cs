@@ -12,9 +12,9 @@ namespace Bot.Rebalance
 		{
 			Exchange = string.Empty;
 			Pair = string.Empty;
-			AllInPrice = 0.0;
-			AllOutPrice = 100_000.0;
-			RebalanceThreshold = 0.1;
+			AllInPrice = 0m;
+			AllOutPrice = 100_000m;
+			RebalanceThreshold = 0.1m;
 			PendingOrders = new MonitoredOrders();
 
 			AutoSaveOnChanges = true;
@@ -40,23 +40,23 @@ namespace Bot.Rebalance
 		}
 
 		/// <summary>The price (in Quote/Base) at which the balance is maximally in the base currency</summary>
-		public double AllInPrice
+		public decimal AllInPrice
 		{
-			get => get<double>(nameof(AllInPrice));
+			get => get<decimal>(nameof(AllInPrice));
 			set => set(nameof(AllInPrice), value);
 		}
 
 		/// <summary>The price (in Quote/Base) at which the balance is maximally in the quote currency</summary>
-		public double AllOutPrice
+		public decimal AllOutPrice
 		{
-			get => get<double>(nameof(AllOutPrice));
+			get => get<decimal>(nameof(AllOutPrice));
 			set => set(nameof(AllOutPrice), value);
 		}
 
 		/// <summary>The minimum ratio difference before a rebalance is done</summary>
-		public double RebalanceThreshold
+		public decimal RebalanceThreshold
 		{
-			get => get<double>(nameof(RebalanceThreshold));
+			get => get<decimal>(nameof(RebalanceThreshold));
 			set => set(nameof(RebalanceThreshold), value);
 		}
 

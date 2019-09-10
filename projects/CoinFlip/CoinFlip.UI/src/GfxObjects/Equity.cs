@@ -100,7 +100,7 @@ namespace CoinFlip.UI.GfxObjects
 				{
 					//var x = (chg.Time - CoinFlip.Misc.CryptoCurrencyEpoch).TotalDays;
 					var x = (double)i;
-					plot[i--] = new ChartDataSeries.Pt(x, chg.Worth);
+					plot[i--] = new ChartDataSeries.Pt(x, chg.Worth.ToDouble());
 				}
 			}
 		}
@@ -159,7 +159,7 @@ namespace CoinFlip.UI.GfxObjects
 					foreach (var chg in data.NettWorthHistory(CoinInfo.Coin))
 					{
 						var x = (chg.Time - CoinFlip.Misc.CryptoCurrencyEpoch).TotalDays;
-						plot[i--] = new Pt(x, chg.Worth);
+						plot[i--] = new Pt(x, chg.Worth.ToDouble());
 					}
 				}
 			}

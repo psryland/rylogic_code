@@ -205,49 +205,49 @@ namespace Binance.API
 				private string PairInternal { set => Ticker.Pair = CurrencyPair.Parse(value); }
 
 				[JsonProperty("p")]
-				private double PriceChange { set => Ticker.PriceChange = value; }
+				private decimal PriceChange { set => Ticker.PriceChange = value; }
 
 				[JsonProperty("P")]
-				private double PriceChangePercent { set => Ticker.PriceChangePercent = value; }
+				private decimal PriceChangePercent { set => Ticker.PriceChangePercent = value; }
 
 				[JsonProperty("w")]
-				private double WeightedAvgPrice { set => Ticker.WeightedAvgPrice = value; }
+				private decimal WeightedAvgPrice { set => Ticker.WeightedAvgPrice = value; }
 
 				[JsonProperty("x")]
-				private double PrevClosePrice { set => Ticker.PrevClosePrice = value; }
+				private decimal PrevClosePrice { set => Ticker.PrevClosePrice = value; }
 
 				[JsonProperty("c")]
-				private double LastPrice { set => Ticker.LastPrice = value; }
+				private decimal LastPrice { set => Ticker.LastPrice = value; }
 
 				[JsonProperty("Q")]
-				private double LastQty { set => Ticker.LastQty = value; }
+				private decimal LastQty { set => Ticker.LastQty = value; }
 
 				[JsonProperty("b")]
-				private double PriceB2Q { set => Ticker.PriceB2Q = value; }
+				private decimal PriceB2Q { set => Ticker.PriceB2Q = value; }
 
 				[JsonProperty("a")]
-				private double PriceQ2B { set => Ticker.PriceQ2B = value; }
+				private decimal PriceQ2B { set => Ticker.PriceQ2B = value; }
 
 				[JsonProperty("B")]
-				public double B2QVolumeQuote { get; set; }
+				public decimal B2QVolumeQuote { get; set; }
 
 				[JsonProperty("A")]
-				public double Q2BVolumeQuote { get; set; }
+				public decimal Q2BVolumeQuote { get; set; }
 
 				[JsonProperty("o")]
-				private double OpenPrice { set => Ticker.OpenPrice = value; }
+				private decimal OpenPrice { set => Ticker.OpenPrice = value; }
 
 				[JsonProperty("h")]
-				private double HighPrice { set => Ticker.HighPrice = value; }
+				private decimal HighPrice { set => Ticker.HighPrice = value; }
 
 				[JsonProperty("l")]
-				private double LowPrice { set => Ticker.LowPrice = value; }
+				private decimal LowPrice { set => Ticker.LowPrice = value; }
 
 				[JsonProperty("v")]
-				private double VolumeBase { set => Ticker.VolumeBase = value; }
+				private decimal VolumeBase { set => Ticker.VolumeBase = value; }
 
 				[JsonProperty("q")]
-				private double VolumeQuote { set => Ticker.VolumeQuote = value; }
+				private decimal VolumeQuote { set => Ticker.VolumeQuote = value; }
 
 				[JsonProperty("openTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 				public DateTimeOffset OpenTime { set => Ticker.OpenTime = value; }

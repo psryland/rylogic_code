@@ -47,7 +47,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Apply an update from an exchange for 'coin'</summary>
-		public void ExchangeUpdate(Coin coin, Unit<double> total, Unit<double> held, DateTimeOffset update_time)
+		public void ExchangeUpdate(Coin coin, Unit<decimal> total, Unit<decimal> held, DateTimeOffset update_time)
 		{
 			Debug.Assert(Misc.AssertMainThread());
 
