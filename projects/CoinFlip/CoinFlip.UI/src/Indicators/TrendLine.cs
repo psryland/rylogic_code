@@ -28,7 +28,7 @@ namespace CoinFlip.UI.Indicators
 			Price1 = 0.0;
 			Colour = 0xFF00C000;
 			Visible = true;
-			Width = 3.0;
+			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 		}
 		public TrendLine(XElement node)
@@ -181,28 +181,32 @@ namespace CoinFlip.UI.Indicators
 					StrokeThickness = TL.Width,
 					StrokeDashArray = TL.LineStyle.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Round,
-					StrokeEndLineCap = PenLineCap.Round
+					StrokeEndLineCap = PenLineCap.Round,
+					IsHitTestVisible = false,
 				};
 				Glow = new Line
 				{
 					Stroke = TL.Colour.Alpha(0.25f).ToMediaBrush(),
 					StrokeThickness = TL.Width + GlowRadius,
 					StrokeStartLineCap = PenLineCap.Round,
-					StrokeEndLineCap = PenLineCap.Round
+					StrokeEndLineCap = PenLineCap.Round,
+					IsHitTestVisible = false,
 				};
 				Grab0 = new Ellipse
 				{
 					Fill = TL.Colour.Alpha(0.25f).ToMediaBrush(),
 					Stroke = TL.Colour.ToMediaBrush(),
 					Height = 2 * GrabRadius,
-					Width = 2 * GrabRadius
+					Width = 2 * GrabRadius,
+					IsHitTestVisible = false,
 				};
 				Grab1 = new Ellipse
 				{
 					Fill = TL.Colour.Alpha(0.25f).ToMediaBrush(),
 					Stroke = TL.Colour.ToMediaBrush(),
 					Height = 2 * GrabRadius,
-					Width = 2 * GrabRadius
+					Width = 2 * GrabRadius,
+					IsHitTestVisible = false,
 				};
 			}
 			public override void Dispose()

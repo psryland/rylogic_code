@@ -175,7 +175,7 @@ namespace CoinFlip
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades[fill.TradeId] = fill;
+					order_completed.Trades.AddOrUpdate(fill);
 
 					// Update the history of completed orders
 					AddToTradeHistory(order_completed);
@@ -289,22 +289,6 @@ namespace CoinFlip
 			});
 		}
 
-		/// <summary>Cancel an open trade</summary>
-		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
-		{
-			try
-			{
-				// Cancel the trade
-				var uuid = ToUuid(order_id);
-				var result = await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), uuid);
-				return result.Id == uuid;
-			}
-			catch (Exception ex)
-			{
-				throw new Exception($"Bittrex: Cancel trade (id={order_id}) failed. {ex.Message}", ex);
-			}
-		}
-
 		/// <summary>Open a trade</summary>
 		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
 		{
@@ -325,6 +309,24 @@ namespace CoinFlip
 			catch (Exception ex)
 			{
 				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount_in.ToString(8, true)} @  {(amount_out/amount_in).ToString(8, true)}", ex);
+			}
+		}
+
+		/// <summary>Cancel an open trade</summary>
+		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
+		{
+			try
+			{
+				// Convert a CoinFlip order id to a Bittrex UUID
+				var uuid = m_order_id_lookup[order_id];
+
+				// Cancel the trade
+				var result = await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), uuid);
+				return result.Id == uuid;
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Bittrex: Cancel trade (id={order_id}) failed. {ex.Message}", ex);
 			}
 		}
 
@@ -386,13 +388,7 @@ namespace CoinFlip
 			m_order_id_lookup[ids.OrderId] = guid;
 			return ids;
 		}
-
-		/// <summary>Convert a CoinFlip order id to a Bittrex UUID</summary>
-		private Guid ToUuid(long order_id)
-		{
-			return m_order_id_lookup[order_id];
-		}
-
+		
 		/// <summary>Convert boolean in 'xfr' into a transfer status</summary>
 		private Transfer.EStatus ToTransferStatus(global::Bittrex.API.DomainObjects.Transfer xfr)
 		{

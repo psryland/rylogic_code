@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -55,7 +57,7 @@ namespace CoinFlip.UI
 		/// <summary></summary>
 		public Model Model
 		{
-			get { return m_model; }
+			get => m_model;
 			set
 			{
 				if (m_model == value) return;
@@ -148,9 +150,17 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					var exchange = (Exchange)Exchanges?.CurrentItem;
-					Orders = exchange != null ? CollectionViewSource.GetDefaultView(exchange.Orders) : null;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orders)));
+					Orders = null;
+
+					var orders = Exchanges?.CurrentAs< Exchange>().Orders;
+					if (orders != null)
+					{
+						var view = new ListCollectionView(orders);
+						view.SortDescriptions.Add(new SortDescription(nameof(OrderCompleted.Created), ListSortDirection.Descending));
+						Orders = view;
+
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orders)));
+					}
 				}
 			}
 		}
@@ -171,7 +181,16 @@ namespace CoinFlip.UI
 		private async void CancelOrderInternal()
 		{
 			if (Current == null) return;
-			await Current.CancelOrder(Model.Shutdown.Token);
+			try { await Current.CancelOrder(Model.Shutdown.Token); }
+			catch (OperationCanceledException) { }
+			catch (Exception ex)
+			{
+				Model.Log.Write(ELogLevel.Error, ex, "Cancelling trade failed");
+				await Misc.RunOnMainThread(() =>
+				{
+					MsgBox.Show(Window.GetWindow(this), ex.MessageFull(), "Cancel Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+				});
+			}
 		}
 
 		/// <summary>Modify an existing order</summary>

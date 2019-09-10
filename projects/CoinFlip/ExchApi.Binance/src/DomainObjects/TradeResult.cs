@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
-using Rylogic.Extn;
 
 namespace Binance.API.DomainObjects
 {
@@ -13,20 +13,20 @@ namespace Binance.API.DomainObjects
 		}
 
 		/// <summary>Currency pair</summary>
+		[JsonProperty("symbol"), JsonConverter(typeof(ToCurrencyPair))]
 		public CurrencyPair Pair { get; set; }
-		[JsonProperty("symbol")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("orderId")]
 		public long OrderId { get; set; }
 
-		/// <summary>Unique identifier for the order</summary>
+		/// <summary>Globally unique identifier for the order</summary>
 		[JsonProperty("clientOrderId")]
 		public string ClientOrderId { get; set; }
 
 		/// <summary></summary>
+		[JsonProperty("transactTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 		public DateTimeOffset Created { get; set; }
-		[JsonProperty("transactTime")] private long CreatedInternal { set => Created = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 
 		/// <summary></summary>
 		[JsonProperty("price")]
@@ -48,20 +48,20 @@ namespace Binance.API.DomainObjects
 		public decimal Remaining => Amount - AmountCompleted;
 
 		/// <summary></summary>
+		[JsonProperty("status"), JsonConverter(typeof(ToEnum<EOrderStatus>))]
 		public EOrderStatus Status { get; set; }
-		[JsonProperty("status")] private string StatusInternal { set => Status = Enum<EOrderStatus>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("timeInForce"),JsonConverter(typeof(ToEnum<ETimeInForce>))]
 		public ETimeInForce TimeInForce { get; set; }
-		[JsonProperty("timeInForce")] private string TimeInForceInternal { set => TimeInForce = Enum<ETimeInForce>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("type"), JsonConverter(typeof(ToEnum<EOrderType>))]
 		public EOrderType Type { get; set; }
-		[JsonProperty("type")] private string TypeInternal { set => Type = Enum<EOrderType>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("side"), JsonConverter(typeof(ToEnum<EOrderSide>))]
 		public EOrderSide Side { get; set; }
-		[JsonProperty("side")] private string SideInternal { set => Side = Enum<EOrderSide>.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("fills")]

@@ -159,6 +159,8 @@ namespace CoinFlip.UI
 						var view = new ListCollectionView(history);
 						view.SortDescriptions.Add(new SortDescription(nameof(OrderCompleted.Created), ListSortDirection.Descending));
 						History = view;
+
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(History)));
 					}
 				}
 			}

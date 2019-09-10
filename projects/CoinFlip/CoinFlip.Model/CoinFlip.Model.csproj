@@ -132,6 +132,7 @@
     <Compile Include="src\Trade\Order.cs" />
     <Compile Include="src\Trade\OrderCompleted.cs" />
     <Compile Include="src\Trade\Trade.cs" />
+    <Compile Include="src\Exchange\TradeCompletedCollection.cs" />
     <Compile Include="src\Trade\TradePair.cs" />
     <Compile Include="src\Trade\TradeCompletedRecord.cs" />
     <Compile Include="src\Trade\OrderResult.cs" />

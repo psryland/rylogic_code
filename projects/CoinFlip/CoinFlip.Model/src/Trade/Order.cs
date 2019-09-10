@@ -15,9 +15,12 @@ namespace CoinFlip
 		//    should exist somewhere in their order book. When an Order is filled it
 		//    becomes a 'OrderCompleted'
 
-		public Order(long order_id, Fund fund, TradePair pair, EOrderType ot, ETradeType tt, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, DateTimeOffset? created, DateTimeOffset updated)
+		public Order(long order_id, Fund fund, TradePair pair, EOrderType ot, ETradeType tt, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, DateTimeOffset created, DateTimeOffset updated)
 			: base(fund, pair, ot, tt, amount_in, amount_out)
 		{
+			if (created < Misc.CryptoCurrencyEpoch)
+				throw new Exception("Invalid creation time");
+
 			OrderId = order_id;
 			UniqueKey = Guid.NewGuid();
 			RemainingIn = remaining_in;
@@ -45,7 +48,7 @@ namespace CoinFlip
 		public double RemainingFrac => Math_.Div(RemainingIn, AmountIn, 0);
 
 		/// <summary>When the order was created</summary>
-		public DateTimeOffset? Created { get; private set; }
+		public DateTimeOffset Created { get; private set; }
 
 		/// <summary>When this object was last updated from the server</summary>
 		public DateTimeOffset Updated { get; private set; }

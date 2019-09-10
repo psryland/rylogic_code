@@ -24,6 +24,8 @@ namespace CoinFlip
 				throw new Exception("Invalid 'out' amount");
 			if (commission < 0.0._(commission_coin))
 				throw new Exception("Negative commission");
+			if (created < Misc.CryptoCurrencyEpoch)
+				throw new Exception("Invalid creation time");
 
 			Order          = order_completed;
 			TradeId        = trade_id;

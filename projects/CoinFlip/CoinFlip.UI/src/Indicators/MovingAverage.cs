@@ -656,6 +656,7 @@ namespace CoinFlip.UI.Indicators
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,
+							IsHitTestVisible = false,
 						};
 						Glow = new Path
 						{
@@ -664,6 +665,7 @@ namespace CoinFlip.UI.Indicators
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,
+							IsHitTestVisible = false,
 						};
 					}
 					{// Create the path the high BB
@@ -676,6 +678,7 @@ namespace CoinFlip.UI.Indicators
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,
+							IsHitTestVisible = false,
 						};
 					}
 					{// Create the path the low BB
@@ -688,6 +691,7 @@ namespace CoinFlip.UI.Indicators
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,
+							IsHitTestVisible = false,
 						};
 					}
 				}

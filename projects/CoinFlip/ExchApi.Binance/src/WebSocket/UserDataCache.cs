@@ -682,7 +682,7 @@ namespace Binance.API
 			[JsonProperty("F")]
 			public double IcebergAmountBase { get; set; }
 
-			/// <summary>Original client order Id. This is the ID of the order being canceled</summary>
+			/// <summary>Original client order Id. This is the ID of the order being cancelled</summary>
 			[JsonProperty("C")]
 			public string OriginalClientOrderId { get; set; }
 

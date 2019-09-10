@@ -21,7 +21,7 @@ namespace CoinFlip.UI.Indicators
 			Price = 0.0;
 			Colour = 0xFF00C000;
 			Visible = true;
-			Width = 3.0;
+			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 		}
 		public HorizontalLine(XElement node)
@@ -101,17 +101,20 @@ namespace CoinFlip.UI.Indicators
 					StrokeDashArray = HL.LineStyle.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
+					IsHitTestVisible = false,
 				};
 				Glow = new Line
 				{
 					StrokeThickness = HL.Width + GlowRadius,
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
+					IsHitTestVisible = false,
 				};
 				Price = new TextBlock
 				{
 					Background = HL.Colour.ToMediaBrush(),
 					Foreground = HL.Colour.InvertBW().ToMediaBrush(),
+					IsHitTestVisible = false,
 				};
 				Price.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
 			}

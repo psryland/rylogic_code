@@ -18,7 +18,7 @@ namespace CoinFlip
 		/// <summary>Get or Add a completed order by 'order_id'</summary>
 		public OrderCompleted GetOrAdd(long order_id, Func<long, OrderCompleted> factory)
 		{
-			Debug.Assert(Misc.AssertMarketDataWrite());
+			Debug.Assert(Misc.AssertMainThread());
 			var order = Dictionary_.GetOrAdd(this, order_id, factory);
 			return order;
 		}
@@ -28,7 +28,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				return TryGetValue(order_id, out var pos) ? pos : null;
 			}
 		}

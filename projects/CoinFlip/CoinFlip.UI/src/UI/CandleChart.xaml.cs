@@ -580,7 +580,7 @@ namespace CoinFlip.UI
 				}
 				double OrderToXValue(IOrder order)
 				{
-					var time = order is Order ? Model.UtcNow : order.Created.Value;
+					var time = order is Order ? Model.UtcNow : order.Created;
 					return m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
 				}
 				double OrderToYValue(IOrder order)

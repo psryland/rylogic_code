@@ -23,7 +23,7 @@ namespace CoinFlip
 		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
 		public Balances GetOrAdd(Coin coin)
 		{
-			Debug.Assert(Misc.AssertMarketDataWrite());
+			Debug.Assert(Misc.AssertMainThread());
 			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
 		}
 
@@ -32,7 +32,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				if (coin.Exchange != Exchange && !(Exchange is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 				return TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
 			}

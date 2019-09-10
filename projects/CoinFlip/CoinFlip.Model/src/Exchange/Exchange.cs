@@ -603,8 +603,10 @@ namespace CoinFlip
 		public bool CandleDataUpdateInProgress { get; private set; }
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name)
+		public Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name)
 		{
+			// Only create trades from the main thread to guarantee creation order
+			Misc.AssertMainThread();
 			using (Scope.Create(() => ++m_in_create_order, () => --m_in_create_order))
 			{
 				// Sanity checks
@@ -631,76 +633,87 @@ namespace CoinFlip
 				var bal = fund[tt.CoinIn(pair)];
 				var hold_amount = amount_in;
 				var hold = bal.Holds.Create(hold_amount, local: true);
-//				using hold;
-
-				// Make the trade
-				// This can have the following results:
-				// 1) the entire trade is added to the order book for the pair -> a single order number is returned.
-				// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned.
-				// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
-				var result =
-					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out) :
-					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel) :
-					throw new Exception("Cannot create order, trading not enabled");
-
-				// Log the event
-				var price_q2b = ot == EOrderType.Market ? pair.SpotPrice[tt].Value : tt.PriceQ2B(amount_out / amount_in);
-				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
-
-				// Save the extra details about the live order.
-				UpsertLiveOrder(result.OrderId, fund, creator_name);
-
-				// The order may have been completed or partially filled. Add the filled orders to the trade history.
-				foreach (var fill in result.Trades)
+				using (Scope.Create(null, () => bal.Holds.Remove(hold)))
 				{
-					var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund, pair, tt));
-					order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now);
+					// Make the trade
+					// This can have the following results:
+					// 1) the entire trade is added to the order book for the pair -> a single order number is returned.
+					// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned.
+					// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
+					var result =
+						Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out) :
+						Model.AllowTrades ? CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel).Result :
+						throw new Exception("Cannot create order, trading not enabled");
+
+					// Modifying the orders and history collection needs to be synchronous
+					Misc.AssertMainThread();
+
+					// Log the event
+					var price_q2b = ot == EOrderType.Market ? pair.SpotPrice[tt].Value : tt.PriceQ2B(amount_out / amount_in);
+					Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
+
+					// Save the extra details about the live order.
+					UpsertLiveOrder(result.OrderId, fund, creator_name);
+
+					// The order may have been completed or partially filled. Add the filled orders to the trade history.
+					foreach (var fill in result.Trades)
+					{
+						var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund, pair, tt));
+						order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, fill.TradeId, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now));
+					}
+
+					// Add the order to the Orders collection so that there is no race condition between
+					// placing an order and checking 'Orders' for the existence of the order just placed.
+					if (!result.Filled)
+					{
+						// Add a 'Position' to the collection, this will be overwritten on the next update.
+						var filled_in = result.Trades.Sum(x => x.AmountIn)._(tt.CoinIn(pair));
+						var order = new Order(result.OrderId, fund, pair, ot, tt, amount_in, amount_out, amount_in - filled_in, now, now);
+						Orders.AddOrUpdate(order);
+
+						// Update the hold with the order id.
+						// Holds need to exist for the life of the order so we know how much
+						// of the exchange held amount to attributed to each fund.
+						hold.OrderId = result.OrderId;
+						hold = null; // Prevent the hold being released
+					}
+					else
+					{
+						// If the order was immediately completely filled, apply the changes to the associated fund.
+						// There was never any amount held on the exchange in this case.
+						// The hold is released when leaving the scope
+						ApplyCompletedOrderToFund(History[result.OrderId]);
+					}
+
+					// Remove entries from the order book that this order should have filled.
+					// This will be overwritten with the next update.
+					var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
+					pair.MarketDepth.Consume(pair, tt, ot, price_q2b, amount_base, out var _);
+
+					// Trigger updates
+					MarketDataUpdateRequired = true;
+					OrdersUpdateRequired = true;
+					BalanceUpdateRequired = true;
+					return Task.FromResult(result);
 				}
-
-				// Add the order to the Orders collection so that there is no race condition between
-				// placing an order and checking 'Orders' for the existence of the order just placed.
-				if (!result.Filled)
-				{
-					// Add a 'Position' to the collection, this will be overwritten on the next update.
-					var filled_in = result.Trades.Sum(x => x.AmountIn)._(tt.CoinIn(pair));
-					var order = new Order(result.OrderId, fund, pair, ot, tt, amount_in, amount_out, amount_in - filled_in, now, now);
-					Orders.AddOrUpdate(order);
-
-					// Update the hold with the order id.
-					// Holds need to exist for the life of the order so we know how much
-					// of the exchange held amount to attributed to each fund.
-					hold.OrderId = result.OrderId;
-				}
-				else
-				{
-					// If the order was immediately completely filled, apply the changes to the associated fund.
-					// There was never any amount held on the exchange in this case.
-					bal.Holds.Remove(hold);
-					ApplyCompletedOrderToFund(History[result.OrderId]);
-				}
-
-				// Remove entries from the order book that this order should have filled.
-				// This will be overwritten with the next update.
-				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
-				pair.MarketDepth.Consume(pair, tt, ot, price_q2b, amount_base, out var _);
-
-				// Trigger updates
-				MarketDataUpdateRequired = true;
-				OrdersUpdateRequired = true;
-				BalanceUpdateRequired = true;
-				return result;
 			}
 		}
 		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel);
 		private int m_in_create_order;
 
 		/// <summary>Cancel an existing order</summary>
-		public async Task<bool> CancelOrder(TradePair pair, long order_id, CancellationToken cancel)
+		public Task<bool> CancelOrder(TradePair pair, long order_id, CancellationToken cancel)
 		{
+			// Only cancel trades from the main thread to guarantee order
+			Misc.AssertMainThread();
+
 			var result =
 				Sim != null ? Sim.CancelOrderInternal(pair, order_id) :
-				Model.AllowTrades ? await CancelOrderInternal(pair, order_id, cancel) :
+				Model.AllowTrades ? CancelOrderInternal(pair, order_id, cancel).Result :
 				true;
+
+			// Modifying the orders and history collection needs to be synchronous
+			Misc.AssertMainThread();
 
 			// Remove the position from the orders collection so that there is no
 			// race condition while waiting for the orders to update from the server.
@@ -727,7 +740,7 @@ namespace CoinFlip
 			// Trigger a positions and balances update
 			OrdersUpdateRequired = true;
 			BalanceUpdateRequired = true;
-			return result;
+			return Task.FromResult(result);
 		}
 		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
@@ -961,7 +974,7 @@ namespace CoinFlip
 			{
 				// Get the trades not already in the DB
 				UpsertOrderCompleted(order, transaction);
-				foreach (var trade in order.Trades.Values)
+				foreach (var trade in order.Trades)
 					UpsertTradeCompleted(trade, transaction);
 
 				transaction.Commit();
@@ -1075,7 +1088,7 @@ namespace CoinFlip
 		/// <summary>Adjust the balances of a fund based on a completed order</summary>
 		private void ApplyCompletedOrderToFund(OrderCompleted his)
 		{
-			foreach (var trade in his.Trades.Values)
+			foreach (var trade in his.Trades)
 			{
 				{// Debt from CoinIn
 					var bal = Balance[trade.CoinIn];
@@ -1129,7 +1142,7 @@ namespace CoinFlip
 					var commission = trade.Commission._(commission_coin);
 					var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 					var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
-					order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
+					order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
 
 					// Record the range of completed orders
 					if (created < history_first)

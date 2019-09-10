@@ -18,12 +18,12 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				return TryGetValue(key, out var txfr) ? txfr : null;
 			}
 			set
 			{
-				Debug.Assert(Misc.AssertMarketDataWrite());
+				Debug.Assert(Misc.AssertMainThread());
 				base[key] = value;
 			}
 		}

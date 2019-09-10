@@ -228,16 +228,17 @@ namespace CoinFlip
 					// Update the history store
 					if (his != null)
 					{
-						var existing = m_his[order.OrderId]?.Trades.Values;
+						var existing = m_his[order.OrderId]?.Trades;
 						if (existing != null)
+						{
 							foreach (var h in existing)
-								his.Trades[h.TradeId] = h;
-
+								his.Trades.AddOrUpdate(h);
+						}
 						m_his[order.OrderId] = his;
 					}
 
 					// Sanity check that the partial trade isn't gaining or losing amount
-					Debug.Assert(Math_.FEqlRelative(order.AmountBase, (pos?.RemainingBase ?? 0) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0), 0.00000001));
+					Debug.Assert(Math_.FEqlRelative(order.AmountBase, (pos?.RemainingBase ?? 0) + (his?.Trades.Sum(x => x.AmountBase) ?? 0), 0.00000001));
 				}
 
 				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
@@ -247,7 +248,7 @@ namespace CoinFlip
 
 					// Update the trade history
 					var history_updates = m_his.Values.Where(x => x.Created.Ticks >= Exchange.HistoryInterval.End);
-					foreach (var exch_order in history_updates.SelectMany(x => x.Trades.Values))
+					foreach (var exch_order in history_updates.SelectMany(x => x.Trades))
 					{
 						// Get/Add the completed order
 						var order_completed = History.GetOrAdd(exch_order.OrderId,
@@ -255,7 +256,7 @@ namespace CoinFlip
 
 						// Add the trade to the completed order
 						var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-						order_completed.Trades[fill.TradeId] = fill;
+						order_completed.Trades.AddOrUpdate(fill);
 
 						// Update the history of the completed orders
 						Exchange.AddToTradeHistory(order_completed);
@@ -328,7 +329,7 @@ namespace CoinFlip
 			ApplyToBalance(pos, his);
 
 			// Record the filled orders in the trade result
-			return new OrderResult(pair, order_id, pos == null, his?.Trades.Values.Select(x =>
+			return new OrderResult(pair, order_id, pos == null, his?.Trades.Select(x =>
 				new OrderResult.Fill(x.TradeId, x.AmountIn, x.AmountOut, x.Commission, x.CommissionCoin)));
 		}
 
@@ -374,7 +375,7 @@ namespace CoinFlip
 
 			// Add 'TradeCompleted' entries for each order book offer that was filled
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(his, ++m_history_id, fill.AmountIn(tt), fill.AmountOut(tt), Exchange.Fee * fill.AmountOut(tt), tt.CoinOut(pair), Model.UtcNow, Model.UtcNow));
+				his.Trades.AddOrUpdate(new TradeCompleted(his, ++m_history_id, fill.AmountIn(tt), fill.AmountOut(tt), Exchange.Fee * fill.AmountOut(tt), tt.CoinOut(pair), Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -382,7 +383,7 @@ namespace CoinFlip
 		{
 			if (his != null)
 			{
-				foreach (var trade in his.Trades.Values)
+				foreach (var trade in his.Trades)
 				{
 					{// Debt from CoinIn
 						var bal = m_bal[trade.CoinIn];

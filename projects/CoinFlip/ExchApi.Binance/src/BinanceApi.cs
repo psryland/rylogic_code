@@ -13,6 +13,7 @@ using ExchApi.Common;
 using Newtonsoft.Json.Linq;
 using Rylogic.Attrib;
 using Rylogic.Extn;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Binance.API
@@ -29,6 +30,7 @@ namespace Binance.API
 			try
 			{
 				Log = new Logger("BinanceApi", log);
+				SymbolRules = new SymbolRulesMap();
 				TickerData = new TickerDataCache(this);
 				MarketData = new MarketDataCache(this);
 				CandleData = new CandleDataCache(this);
@@ -52,17 +54,22 @@ namespace Binance.API
 		public override async Task InitAsync()
 		{
 			// Populate the currency pair map.
-			Rules = await ServerRules(Shutdown);
+			var rules = await ServerRules(Shutdown);
 
 			// Record the current server time
-			ServerTimeOffsetMS = (long)(Rules.ServerTime - DateTimeOffset.UtcNow).TotalMilliseconds;
+			ServerTimeOffsetMS = (long)(rules.ServerTime - DateTimeOffset.UtcNow).TotalMilliseconds;
 
 			// Update the mapping from 'Symbol' to currency pairs
-			foreach (var sym in Rules.Symbols)
-				CurrencyPair.SymbolToPair[sym.Symbol] = new CurrencyPair(sym.BaseAsset, sym.QuoteAsset);
+			foreach (var sym in rules.Symbols)
+			{
+				// Set up the global mapping from "Symbol" to pairs so that CurrencyPair.Parse can work.s
+				var pair = new CurrencyPair(sym.BaseAsset, sym.QuoteAsset);
+				CurrencyPair.SymbolToPair[sym.Symbol] = pair;
+				SymbolRules[pair] = sym;
+			}
 
 			// Initialise the throttle with the weight limits
-			foreach (var limit in Rules.RateLimits)
+			foreach (var limit in rules.RateLimits)
 			{
 				if (limit.RateLimitType == ERateLimitType.REQUEST_WEIGHT)
 				{
@@ -82,8 +89,8 @@ namespace Binance.API
 		/// <summary>Return a timestamp for a request in Unix MS</summary>
 		private long RequestTimestamp => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + ServerTimeOffsetMS;
 
-		/// <summary>Global server rules</summary>
-		private ServerRulesData Rules { get; set; }
+		/// <summary>Rules per currency pair</summary>
+		public SymbolRulesMap SymbolRules { get; private set; }
 
 		/// <summary>The offset between our clock and the time reported by the server (in ms)</summary>
 		private long ServerTimeOffsetMS { get; set; }
@@ -310,48 +317,50 @@ namespace Binance.API
 		}
 
 		/// <summary>Create an order to buy/sell</summary>
-		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide side, EOrderType type, double? price_q2b, double amount_base, ETimeInForce? time_in_force = null, CancellationToken? cancel = null)
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, OrderParams order_params, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/order
+			var validation = order_params.Validate(pair, this);
+			if (validation != null)
+				throw validation;
 
-			var rules = Rules.Symbols.First(x => x.Symbol == pair.Id);
-			if (!rules.IsSpotTradingAllowed)
-				throw new Exception($"Spot trading is not allowed for {pair.Id}");
-			if (rules.Status != ESymbolStatus.TRADING)
-				throw new Exception($"{pair.Id} is not available for trading");
-			if (!rules.OrderTypes.Contains(type))
-				throw new Exception($"Order type {type} is not support for {pair.Id}");
+			var rules = SymbolRules[pair];
 
 			var parms = new Params { };
 			parms["symbol"] = pair.Id;
-			parms["side"] = side;
-			parms["type"] = type;
-			parms["quantity"] = amount_base.ToString(rules.BaseAssetPrecision);
+			parms["side"] = order_params.Side;
+			parms["type"] = order_params.Type;
+			parms["timeInForce"] = order_params.TimeInForce;
+			parms["quantity"] = order_params.AmountBase.ToString($"F{rules.BaseAssetPrecision}");
 			parms["newOrderRespType"] = "FULL";
-			if (price_q2b != null) parms["price"] = price_q2b.Value.ToString(8);
-			if (time_in_force != null) parms["timeInForce"] = time_in_force.Value;
+			if (order_params.PriceQ2B != null)
+				parms["price"] = order_params.PriceQ2B.Value.ToString($"F{rules.PricePrecision}");
+			if (order_params.StopPriceQ2B != null)
+				parms["stopPrice"] = order_params.StopPriceQ2B.Value.ToString($"F{rules.PricePrecision}"); ;
+			if (order_params.IcebergAmountBase != null)
+				parms["icebergQty"] = order_params.IcebergAmountBase.Value.ToString($"F{rules.BaseAssetPrecision}"); ;
 
 			// Place the order
-			var jtok = await GetData(HttpMethod.Post, ESecurityType.TRADE, "api/v3/order", cancel, parms, timestamp: true);
+			var jtok = await GetData(HttpMethod.Post, ESecurityType.TRADE, "api/v3/order", cancel, parms, timestamp: true, log_trace:true);
 			return ParseJsonReply<TradeResult>(jtok);
 		}
 
 		/// <summary>Cancel an order</summary>
-		public async Task<TradeResult> CancelTrade(CurrencyPair pair, long order_id, CancellationToken? cancel = null)
+		public async Task<TradeResult> CancelTrade(CurrencyPair pair, string client_order_id, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/order
 			var parms = new Params { };
 			parms["symbol"] = pair.Id;
-			parms["orderId"] = order_id;
+			parms["origClientOrderId"] = client_order_id;
 
-			var jtok = await GetData(HttpMethod.Delete, ESecurityType.TRADE, "api/v3/order", cancel, parms, timestamp: true);
+			var jtok = await GetData(HttpMethod.Delete, ESecurityType.TRADE, "api/v3/order", cancel, parms, timestamp: true, log_trace: true);
 			return ParseJsonReply<TradeResult>(jtok);
 		}
 
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private async Task<JToken> GetData(HttpMethod method, ESecurityType security, string command, CancellationToken? cancel, Params parameters = null, bool timestamp = false)
+		private async Task<JToken> GetData(HttpMethod method, ESecurityType security, string command, CancellationToken? cancel, Params parameters = null, bool timestamp = false, bool log_trace = false)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
@@ -387,11 +396,17 @@ namespace Binance.API
 						req.Headers.Add("X-MBX-APIKEY", Key);
 					}
 
+					if (log_trace)
+						Log.Write(ELogLevel.Debug, req.ToString());
+
 					// Submit the request
 					var sw = new Stopwatch().StartNow();
 					var response = await Client.SendAsync(req, cancel_token);
 					var reply = await response.Content.ReadAsStringAsync();
 					Log.Write(ELogLevel.Debug, $"Req time: {sw.Elapsed.ToPrettyString(min_unit: TimeSpan_.ETimeUnits.Milliseconds)} - {url}");
+
+					if (log_trace)
+						Log.Write(ELogLevel.Debug, reply.ToString());
 
 					// Check the API usage weight
 					if (response.Headers.TryGetValues("X-MBX-USED-WEIGHT", out var weights))

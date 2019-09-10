@@ -1,9 +1,19 @@
 ﻿using System;
 using Binance.API.DomainObjects;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Binance.API
 {
+	public static class Extn
+	{
+		/// <summary>True if binance considers this order type an algorithm order type</summary>
+		public static bool IsAlgo(this EOrderType ot)
+		{
+			return ot == EOrderType.STOP_LOSS || ot == EOrderType.STOP_LOSS_LIMIT || ot == EOrderType.TAKE_PROFIT || ot == EOrderType.TAKE_PROFIT_LIMIT;
+		}
+	}
+
 	internal static class Conv
 	{
 		public static TimeSpan ToTimeSpan(this EMarketPeriod period, double count = 1)
@@ -32,6 +42,8 @@ namespace Binance.API
 	}
 	public class ToCurrencyPair :JsonConverter<CurrencyPair>
 	{
+		public override bool CanWrite => true;
+
 		public override CurrencyPair ReadJson(JsonReader reader, Type objectType, CurrencyPair existingValue, bool hasExistingValue, JsonSerializer serializer)
 		{
 			return CurrencyPair.Parse((string)reader.Value);
@@ -39,6 +51,64 @@ namespace Binance.API
 		public override void WriteJson(JsonWriter writer, CurrencyPair value, JsonSerializer serializer)
 		{
 			writer.WriteValue(value.Id);
+		}
+	}
+	public class SymbolFilterConverter :JsonConverter
+	{
+		public override bool CanWrite => false;
+		public override bool CanConvert(Type objectType) => false;
+
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+		{
+			var jObject = JObject.Load(reader);
+			var value = jObject.ToObject<ServerRulesData.Filter>();
+
+			var item = (ServerRulesData.Filter)null;
+			switch (value.FilterType)
+			{
+			case EFilterType.PRICE_FILTER:
+				item = new ServerRulesData.FilterPrice();
+				break;
+			case EFilterType.PERCENT_PRICE:
+				item = new ServerRulesData.FilterPercentPrice();
+				break;
+			case EFilterType.LOT_SIZE:
+				item = new ServerRulesData.FilterLotSize();
+				break;
+			case EFilterType.MARKET_LOT_SIZE:
+				item = new ServerRulesData.FilterLotSize();
+				break;
+			case EFilterType.MIN_NOTIONAL:
+				item = new ServerRulesData.FilterMinNotional();
+				break;
+			case EFilterType.MAX_NUM_ORDERS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			case EFilterType.MAX_NUM_ALGO_ORDERS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			case EFilterType.EXCHANGE_MAX_NUM_ORDERS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			case EFilterType.EXCHANGE_MAX_NUM_ALGO_ORDERS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			case EFilterType.MAX_NUM_ICEBERG_ORDERS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			case EFilterType.ICEBERG_PARTS:
+				item = new ServerRulesData.FilterLimit();
+				break;
+			default:
+				throw new Exception($"Unknown filter type: {value.FilterType}");
+			}
+
+			serializer.Populate(jObject.CreateReader(), item);
+			return item;
+		}
+		public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

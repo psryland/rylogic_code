@@ -28,12 +28,12 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				return TryGetValue(key, out var pair) ? pair : null;
 			}
 			set
 			{
-				Debug.Assert(Misc.AssertMarketDataWrite());
+				Debug.Assert(Misc.AssertMainThread());
 				if (ContainsKey(key))
 				{
 					base[key].Update(value);
@@ -51,7 +51,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				if (TryGetValue(TradePair.MakeKey(sym0, sym1), out var pair0)) return pair0;
 				if (TryGetValue(TradePair.MakeKey(sym1, sym0), out var pair1)) return pair1;
 				return null;
@@ -63,7 +63,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				Debug.Assert(Misc.AssertMarketDataRead());
+				Debug.Assert(Misc.AssertMainThread());
 				if (TryGetValue(TradePair.MakeKey(sym, sym, exch0, exch1), out var pair0)) return pair0;
 				if (TryGetValue(TradePair.MakeKey(sym, sym, exch1, exch0), out var pair1)) return pair1;
 				return null;

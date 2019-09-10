@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,7 +11,6 @@ using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-using Rylogic.Maths;
 
 namespace CoinFlip.UI.Indicators
 {
@@ -38,7 +34,7 @@ namespace CoinFlip.UI.Indicators
 			Price1 = 0.0;
 			Colour = 0xFF00C000;
 			Visible = true;
-			Width = 3.0;
+			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 		}
 		public TrianglePattern(XElement node)
@@ -188,7 +184,7 @@ namespace CoinFlip.UI.Indicators
 			public View(TrianglePattern tri, IChartView chart)
 				:base(tri.Id, nameof(TrianglePattern), chart, tri)
 			{
-				var geom = Geometry_.MakePolygon(true, Pt2, Pt1, Pt0);
+				var geom = Geometry_.MakePolygon(false, Pt2, Pt1, Pt0, Pt2);
 				Line = new Path
 				{
 					Data = geom,
@@ -196,6 +192,7 @@ namespace CoinFlip.UI.Indicators
 					Stroke = Tri.Colour.ToMediaBrush(),
 					StrokeThickness = Tri.Width,
 					StrokeDashArray = Tri.LineStyle.ToStrokeDashArray(),
+					IsHitTestVisible = false,
 				};
 				Glow = new Path
 				{
@@ -203,27 +200,31 @@ namespace CoinFlip.UI.Indicators
 					Fill = Brushes.Transparent,
 					Stroke = Tri.Colour.Alpha(0.25f).ToMediaBrush(),
 					StrokeThickness = Tri.Width + GlowRadius,
+					IsHitTestVisible = false,
 				};
 				Grab0 = new Ellipse
 				{
 					Fill = Tri.Colour.Alpha(0.25f).ToMediaBrush(),
 					Stroke = Tri.Colour.ToMediaBrush(),
 					Height = 2 * GrabRadius,
-					Width = 2 * GrabRadius
+					Width = 2 * GrabRadius,
+					IsHitTestVisible = false,
 				};
 				Grab1 = new Ellipse
 				{
 					Fill = Tri.Colour.Alpha(0.25f).ToMediaBrush(),
 					Stroke = Tri.Colour.ToMediaBrush(),
 					Height = 2 * GrabRadius,
-					Width = 2 * GrabRadius
+					Width = 2 * GrabRadius,
+					IsHitTestVisible = false,
 				};
 				Grab2 = new Ellipse
 				{
 					Fill = Tri.Colour.Alpha(0.25f).ToMediaBrush(),
 					Stroke = Tri.Colour.ToMediaBrush(),
 					Height = 2 * GrabRadius,
-					Width = 2 * GrabRadius
+					Width = 2 * GrabRadius,
+					IsHitTestVisible = false,
 				};
 			}
 			public override void Dispose()
@@ -329,7 +330,7 @@ namespace CoinFlip.UI.Indicators
 					case nameof(Price0):
 					case nameof(Price1):
 						{
-							var geom = Geometry_.MakePolygon(true, Pt2, Pt1, Pt0);
+							var geom = Geometry_.MakePolygon(false, Pt2, Pt1, Pt0, Pt2);
 							Line.Data = geom;
 							Glow.Data = geom;
 							break;

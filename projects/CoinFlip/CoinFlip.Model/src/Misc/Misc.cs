@@ -41,18 +41,6 @@ namespace CoinFlip
 			throw new Exception("Main-thread call detected");
 		}
 
-		/// <summary>Assert that it is safe to read the market data</summary>
-		public static bool AssertMarketDataRead()
-		{
-			return AssertMainThread();
-		}
-
-		/// <summary>Assert that it is safe to write to the market data</summary>
-		public static bool AssertMarketDataWrite()
-		{
-			return AssertMainThread();
-		}
-
 		/// <summary>Execute a delegate on the main thread</summary>
 		public static DispatcherOperation RunOnMainThread(Action action)
 		{

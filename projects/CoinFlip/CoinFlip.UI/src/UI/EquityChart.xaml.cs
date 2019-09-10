@@ -418,7 +418,7 @@ namespace CoinFlip.UI
 		/// <summary>Callbacks for positioning order graphics</summary>
 		private double OrderToXValue(IOrder order)
 		{
-			return Equity.BalanceChanges.BinarySearch(x => x.Time.CompareTo(order.Created.Value), find_insert_position: true);
+			return Equity.BalanceChanges.BinarySearch(x => x.Time.CompareTo(order.Created), find_insert_position: true);
 		}
 		private double OrderToYValue(IOrder order)
 		{

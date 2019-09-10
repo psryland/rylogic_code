@@ -174,7 +174,7 @@ namespace CoinFlip
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades[fill.TradeId] = fill;
+					order_completed.Trades.AddOrUpdate(fill);
 
 					// Update the history of the completed orders
 					AddToTradeHistory(order_completed);

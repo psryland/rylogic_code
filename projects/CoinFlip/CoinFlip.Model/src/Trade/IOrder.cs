@@ -14,8 +14,8 @@ namespace CoinFlip
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
 		Unit<double> PriceQ2B { get; }
 
-		/// <summary>When the order was created (null if never created)</summary>
-		DateTimeOffset? Created { get; }
+		/// <summary>When the order was created</summary>
+		DateTimeOffset Created { get; }
 
 		/// <summary>String description of the order</summary>
 		string Description { get; }

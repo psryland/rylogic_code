@@ -1,4 +1,5 @@
 ﻿using System;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 
 namespace Binance.API.DomainObjects
@@ -6,8 +7,8 @@ namespace Binance.API.DomainObjects
 	public class OrderFill
 	{
 		/// <summary>Currency pair</summary>
+		[JsonProperty("symbol"), JsonConverter(typeof(ToCurrencyPair))]
 		public CurrencyPair Pair { get; set; }
-		[JsonProperty("symbol")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("orderId")]
@@ -45,8 +46,8 @@ namespace Binance.API.DomainObjects
 		public string CommissionAsset { get; set; }
 
 		/// <summary></summary>
+		[JsonProperty("time"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 		public DateTimeOffset Created { get; set; }
-		[JsonProperty("time")] private long CreatedInternal { set => Created = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 
 		/// <summary></summary>
 		[JsonProperty("isBuyer")]

@@ -9,6 +9,7 @@ using Binance.API.DomainObjects;
 using CoinFlip.Settings;
 using ExchApi.Common;
 using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -196,7 +197,7 @@ namespace CoinFlip
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades[fill.TradeId] = fill;
+					order_completed.Trades.AddOrUpdate(fill);
 
 					// Update the history of completed orders
 					AddToTradeHistory(order_completed);
@@ -326,19 +327,18 @@ namespace CoinFlip
 		{
 			try
 			{
-				// Place the trade order
+				// Submit trade parameters
 				var cp = new CurrencyPair(pair.Base, pair.Quote);
-				var side = tt.ToBinanceTT();
-				var type = ot.ToBinanceOT();
-				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
-				var amount_base = tt.AmountBase(price_q2b, amount_in: amount_in);
+				var price_q2b = (double)tt.PriceQ2B(amount_out / amount_in);
 
-				var res = await Api.SubmitTrade(cp, side, type, ot != EOrderType.Market ? price_q2b : (double?)null, amount_base, null, cancel);
+				var p = new OrderParams(tt.ToBinanceTT(), ot.ToBinanceOT());
+				p.PriceQ2B = ot != EOrderType.Market ? (decimal?)price_q2b : (decimal?)null;
+				p.AmountBase = (decimal)(double)tt.AmountBase(price_q2b, amount_in: amount_in);
+				p.Canonicalise(cp, Api);
 
-				// Binance seem to be a bit loose with order ids. You might need to use 'ClientOrderId' instead
-				// 'ClientOrderId' can be a Guid specified when the trade is created.
-				var order_id = res.OrderId;//ToIdPair(res.OrderId).OrderId;
-				return new OrderResult(pair, order_id, filled: false);
+				// Place the trade order
+				var res = await Api.SubmitTrade(cp, p, cancel);
+				return new OrderResult(pair, res.OrderId, filled: false);
 			}
 			catch (Exception ex)
 			{
@@ -352,7 +352,14 @@ namespace CoinFlip
 			try
 			{
 				var cp = new CurrencyPair(pair.Base, pair.Quote);
-				var res = await Api.CancelTrade(cp, order_id, cancel);
+
+				// Look up the Binance ClientOrderId for 'order_id'
+				var cid = Api.UserData.Orders[cp].FirstOrDefault(x => x.OrderId == order_id)?.ClientOrderId;
+				if (cid == null)
+					throw new Exception($"Could not find an order with this order id ({order_id})");
+
+				// Cancel the order
+				var res = await Api.CancelTrade(cp, cid, cancel);
 				return res.Status == EOrderStatus.CANCELED;
 			}
 			catch (Exception ex)
@@ -484,7 +491,7 @@ namespace CoinFlip
 				return EMarketPeriod.Month1;
 			}
 		}
-
+		
 		/// <summary></summary>
 		struct PairAndTicker
 		{
