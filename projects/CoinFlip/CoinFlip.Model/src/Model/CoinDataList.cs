@@ -11,7 +11,7 @@ namespace CoinFlip
 	public class CoinDataList :IList<CoinData>, IList, INotifyCollectionChanged
 	{
 		// Notes:
-		//  - This is a helper wrapper around the 'Settings.Coins' array.
+		//  - This is a wrapper around the 'Settings.Coins' array.
 		//    It allows new coins to be added implicitly.
 
 		public CoinDataList()
@@ -44,13 +44,17 @@ namespace CoinFlip
 		/// <summary>Access the coin data by index</summary>
 		public CoinData this[int index]
 		{
-			get { return SettingsData.Settings.Coins[index]; }
+			get => SettingsData.Settings.Coins[index];
 			set
 			{
 				var old = this[index];
 				var nue = value;
 
+				// Update the coin, and the display order
 				SettingsData.Settings.Coins[index] = nue;
+				for (int i = 0; i != SettingsData.Settings.Coins.Length; ++i)
+					SettingsData.Settings.Coins[i].DisplayOrder = i;
+
 				SettingsData.Settings.NotifySettingChanged(nameof(SettingsData.Settings.Coins));
 				SettingsData.Settings.AutoSave();
 

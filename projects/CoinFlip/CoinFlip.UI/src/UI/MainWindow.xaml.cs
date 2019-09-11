@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -22,6 +23,7 @@ namespace CoinFlip.UI
 
 			// Commands
 			CloseApp = Command.Create(this, CloseAppInternal);
+			ShowOptions = Command.Create(this, ShowOptionsInternal);
 			LogOn = Command.Create(this, LogOnInternal);
 			NewChart = Command.Create(this, NewChartInternal);
 			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
@@ -196,6 +198,20 @@ namespace CoinFlip.UI
 		{
 			Close();
 		}
+
+		/// <summary>Show the application settings dialog</summary>
+		public Command ShowOptions { get; }
+		private void ShowOptionsInternal()
+		{
+			if (m_settings_ui == null)
+			{
+				m_settings_ui = new MainSettingsUI(GetWindow(this));
+				m_settings_ui.Closed += delegate { m_settings_ui = null; };
+				m_settings_ui.Show();
+			}
+			m_settings_ui.Focus();
+		}
+		private MainSettingsUI m_settings_ui;
 
 		/// <summary>Toggle the live trading switch</summary>
 		public Command ToggleLiveTrading { get; }

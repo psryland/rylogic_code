@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using CoinFlip.Settings;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -97,6 +99,12 @@ namespace CoinFlip
 
 		/// <summary>Description string for the trade</summary>
 		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
+
+		/// <summary>The basic colour to associate with this trade</summary>
+		public Colour32 TradeColour =>
+			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
+			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
+			throw new Exception($"Unknown trade type: {TradeType}");
 
 		#region Equals
 		public bool Equals(TradeCompleted rhs)

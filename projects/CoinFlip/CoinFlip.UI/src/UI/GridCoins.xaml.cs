@@ -1,11 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Markup;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Container;
@@ -21,30 +24,37 @@ namespace CoinFlip.UI
 		// Notes:
 		//  - This grid shows balance and coin information based on averages over
 		//    all exchanges, the currently selected exchange, or a specific exchange.
+		//  - The underlying Model.Coins collection should be ordered by DisplayOrder
+		//  - Binding is tricky:
+		//      Option 1: Maintain a mirror of Model.Coins contains wrappers for each CoinData.
+		//        Con: needs to mirror in both directions src <-> mirror <-> grid,
+		//      Option 2: Bind directly to 'Model.CoinData' and use a Converter to supply the
+		//       values that aren't available on 'CoinData'
 
 		public GridCoins(Model model)
 		{
 			InitializeComponent();
 			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 
-			DockControl = new DockControl(this, "Coins");
-			Filter = new CoinFilter(x => (CoinDataAdapter)x);
-			ExchangeNames = new ListCollectionView(new List<string>());
-			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdapter(c, model, ExchangeNames), c => c?.CoinData)) { Filter = Filter.Predicate };
 			Model = model;
-
-			Filter.PropertyChanged += delegate { Coins.Refresh(); };
-			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
+			DockControl = new DockControl(this, "Coins");
+			ExchangeNames = new ListCollectionView(Model.TradingExchanges.Select(x => x.Name).ToList());
+			Filter = new CoinFilter(x => (CoinDataAdapter)x);
+			Coins = new List<CoinDataAdapter>(model.Coins.Select(x => new CoinDataAdapter(x, this)));
+			CoinsView = new ListCollectionView(Coins);
 
 			// Commands
 			AddCoin = Command.Create(this, AddCoinInternal);
 			RemoveCoin = Command.Create(this, RemoveCoinInternal);
+			ResetSort = Command.Create(this, ResetSortInternal);
 			SetBackTestingBalances = Command.Create(this, SetBackTestingBalancesInternal);
 
+			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
 			DataContext = this;
 		}
 		public void Dispose()
 		{
+			Filter = null;
 			Model = null;
 			DockControl = null;
 		}
@@ -52,38 +62,37 @@ namespace CoinFlip.UI
 		/// <summary></summary>
 		public Model Model
 		{
-			get { return m_model; }
+			get => m_model;
 			private set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					Model.Exchanges.CollectionChanged -= HandleExchangesChanged;
+					Model.Coins.CollectionChanged -= HandleCoinsChanged;
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
 					CoinData.LivePriceChanged -= HandleBalanceChanged;
-					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
-					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
-					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					CoinData.LivePriceChanged += HandleBalanceChanged;
 					CoinData.BalanceChanged += HandleBalanceChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
-					HandleExchangesChanged(null, null);
+					Model.Coins.CollectionChanged += HandleCoinsChanged;
+					Model.Exchanges.CollectionChanged += HandleExchangesChanged;
 				}
 
 				// Handlers
 				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					// Preserve the current item
-					var list = (List<string>)ExchangeNames.SourceCollection;
 					using (Scope.Create(() => ExchangeNames.CurrentItem, ci => ExchangeNames.MoveCurrentToOrFirst(ci)))
 					{
+						var list = (List<string>)ExchangeNames.SourceCollection;
 						list.Clear();
 						list.Add(SpecialExchangeSources.All);
 						list.Add(SpecialExchangeSources.Current);
@@ -91,25 +100,28 @@ namespace CoinFlip.UI
 						ExchangeNames.Refresh();
 					}
 
-					Coins.Refresh();
+					CoinsView?.Refresh();
 				}
 				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					using (Scope.Create(() => Coins.CurrentItem, ci => Coins.MoveCurrentToOrFirst(ci)))
-						Coins.Refresh();
+					using (Scope.Create(() => CoinsView.CurrentItem, ci => CoinsView.MoveCurrentToOrFirst(ci)))
+					{
+						Coins.Assign(Model.Coins.Select(x => new CoinDataAdapter(x, this)));
+						CoinsView.Refresh();
+					}
 				}
 				void HandleBalanceChanged(object sender, CoinEventArgs e)
 				{
-					var coin = Coins.Cast<CoinDataAdapter>().FirstOrDefault(x => x.CoinData.Symbol == e.Coin.Symbol);
+					var coin = Coins.FirstOrDefault(x => x.CoinData == e.Coin.Meta);
 					coin?.Invalidate();
 				}
 				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackTesting)));
+					NotifyPropertyChanged(nameof(BackTesting));
 				}
 				void HandleAllowTradesChanged(object sender, EventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
+					NotifyPropertyChanged(nameof(AllowTrades));
 				}
 			}
 		}
@@ -118,7 +130,7 @@ namespace CoinFlip.UI
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get { return m_dock_control; }
+			get => m_dock_control;
 			private set
 			{
 				if (m_dock_control == value) return;
@@ -128,11 +140,14 @@ namespace CoinFlip.UI
 		}
 		private DockControl m_dock_control;
 
+		/// <summary>A mirror of 'Model.Coins' for data binding</summary>
+		private List<CoinDataAdapter> Coins { get; }
+
 		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView ExchangeNames { get; }
 
 		/// <summary>The data source for coin data</summary>
-		public ICollectionView Coins { get; }
+		public ICollectionView CoinsView { get; }
 
 		/// <summary>True when back testing is enabled</summary>
 		public bool BackTesting => Model.BackTesting;
@@ -143,12 +158,36 @@ namespace CoinFlip.UI
 		/// <summary>The currently selected exchange</summary>
 		private CoinDataAdapter Current
 		{
-			get => (CoinDataAdapter)Coins.CurrentItem;
-			set => Coins.MoveCurrentTo(value);
+			get => (CoinDataAdapter)CoinsView.CurrentItem;
+			set => CoinsView.MoveCurrentTo(value);
 		}
 
 		/// <summary>Filter support for 'Coins'</summary>
-		public CoinFilter Filter { get; }
+		public CoinFilter Filter
+		{
+			get => m_filter;
+			set
+			{
+				if (m_filter == value) return;
+				if (m_filter != null)
+				{
+					m_filter.PropertyChanged -= HandlePropertyChanged;
+				}
+				m_filter = value;
+				if (m_filter != null)
+				{
+					m_filter.PropertyChanged += HandlePropertyChanged;
+				}
+
+				// Handler
+				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					CoinsView.Filter = Filter.Enabled ? Filter.Predicate : (Predicate<object>)null;
+					CoinsView.Refresh();
+				}
+			}
+		}
+		private CoinFilter m_filter;
 
 		/// <summary>Add a coin to the collection</summary>
 		public Command AddCoin { get; }
@@ -172,6 +211,14 @@ namespace CoinFlip.UI
 			Model.Coins.Remove(Current.CoinData);
 		}
 
+		/// <summary>Remove sorting from the coin list</summary>
+		public Command ResetSort { get; }
+		private void ResetSortInternal()
+		{
+			CoinsView.SortDescriptions.Clear();
+			CoinsView.GroupDescriptions.Clear();
+		}
+
 		/// <summary>Set initial balances for back testing</summary>
 		public Command SetBackTestingBalances { get; }
 		private void SetBackTestingBalancesInternal()
@@ -185,6 +232,10 @@ namespace CoinFlip.UI
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>A wrapper for CoinData to provide live value data</summary>
 		private class CoinDataAdapter :INotifyPropertyChanged, IValueTotalAvail
@@ -192,18 +243,18 @@ namespace CoinFlip.UI
 			// Notes:
 			//  - This CoinData wrapper is used with multiple Exchanges showing averaged/summed data
 
-			public CoinDataAdapter(CoinData cd, Model model, ICollectionView exchange_names)
+			private readonly GridCoins m_owner;
+			public CoinDataAdapter(CoinData cd, GridCoins owner)
 			{
 				CoinData = cd;
-				Model = model;
-				ExchangeNames = exchange_names;
+				m_owner = owner;
 			}
 
 			/// <summary>App logic</summary>
-			private Model Model { get; }
+			private Model Model => m_owner.Model;
 
 			/// <summary>All exchanges</summary>
-			private ICollectionView ExchangeNames { get; }
+			private ICollectionView ExchangeNames => m_owner.ExchangeNames;
 
 			/// <summary>Returns the exchanges to consider when averaging/summing values</summary>
 			private IEnumerable<Exchange> SourceExchanges
@@ -236,6 +287,9 @@ namespace CoinFlip.UI
 
 			/// <summary>Coin symbol code</summary>
 			public string Symbol => CoinData.Symbol;
+
+			/// <summary>The order to display the coins in</summary>
+			public int DisplayOrder => CoinData.DisplayOrder;
 
 			/// <summary>The value of all holdings of this coin on all source exchanges</summary>
 			public decimal Balance => Value * Total;

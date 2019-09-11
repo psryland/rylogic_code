@@ -1,10 +1,6 @@
 Immediate ToDo:
 
 CoinFlip
-	- Add UI to set the valuation currency
-	- TD sequential
-	- Support user defined ordering of coins in Coin grid and fund grid
-	- Colour TradeType text in Orders grid
 	- Show 'hodls' in equity plot
 	- Auto range equity chart
 	- History is broken - after deleting the DB the old history isn't restored
@@ -23,6 +19,8 @@ CoinFlip
 	- Show remaining candle time
 	- Better back testing playback controls: sub step count, playback speed, pause with space bar
 	- Better triangle pattern controls
+	- TD sequential
+	- SAR
 	- Crosshair on equity chart
 	
 EDTradeAdvisor

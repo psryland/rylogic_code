@@ -49,7 +49,10 @@
 		<!-- Resources -->
 		<DataGrid.Resources>
 			<ResourceDictionary>
-				<Style x:Key="RightAlignedTextColumn" TargetType="{x:Type TextBlock}">
+				<Style x:Key="TextBlockColoured" TargetType="{x:Type TextBlock}">
+					<Setter Property="Foreground" Value="{Binding TradeColour, Converter={conv:ColourToBrush}}"/>
+				</Style>
+				<Style x:Key="TextBlockRight" TargetType="{x:Type TextBlock}">
 					<Setter Property="HorizontalAlignment" Value="Right"/>
 				</Style>
 			</ResourceDictionary>
@@ -75,6 +78,7 @@
 			<DataGridTextColumn
 				Header="Side"
 				Binding="{Binding TradeTypeDesc, Mode=OneWay}"
+				ElementStyle="{StaticResource TextBlockColoured}"
 				Width="0.5*"
 				/>
 			<DataGridTextColumn
@@ -85,31 +89,31 @@
 			<DataGridTextColumn
 				Header="Price"
 				Binding="{Binding PriceQ2B, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
+				ElementStyle="{StaticResource TextBlockRight}"
 				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Amount In"
 				Binding="{Binding AmountIn, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
+				ElementStyle="{StaticResource TextBlockRight}"
 				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Amount Out"
 				Binding="{Binding AmountOut, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
+				ElementStyle="{StaticResource TextBlockRight}"
 				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Commission"
 				Binding="{Binding Commission, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
+				ElementStyle="{StaticResource TextBlockRight}"
 				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Trade Count"
 				Binding="{Binding Trades.Count, Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
+				ElementStyle="{StaticResource TextBlockRight}"
 				Width="0.2*"
 				/>
 		</DataGrid.Columns>

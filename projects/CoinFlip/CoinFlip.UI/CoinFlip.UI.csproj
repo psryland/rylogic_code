@@ -81,6 +81,9 @@
     <Compile Include="src\Dialogs\FundAllocationsUI.xaml.cs">
       <DependentUpon>FundAllocationsUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Dialogs\MainSettingsUI.xaml.cs">
+      <DependentUpon>MainSettingsUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Dialogs\NewBotUI.xaml.cs">
       <DependentUpon>NewBotUI.xaml</DependentUpon>
     </Compile>
@@ -154,6 +157,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Dialogs\FundAllocationsUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Dialogs\MainSettingsUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

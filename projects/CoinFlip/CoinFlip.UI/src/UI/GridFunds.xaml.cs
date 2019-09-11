@@ -28,16 +28,17 @@ namespace CoinFlip.UI
 			Model = model;
 			Filter = new CoinFilter(x => (CoinDataAdapter)x);
 			Exchanges = CollectionViewSource.GetDefaultView(model.Exchanges);// { Filter = x => !(x is CrossExchange) };
-			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, x => new CoinDataAdapter(this, x), x => x.CoinData)) { Filter = Filter.Predicate };
+			CoinsView = new ListCollectionView(ListAdapter.Create(model.Coins, x => new CoinDataAdapter(this, x), x => x.CoinData)) { Filter = Filter.Predicate };
 			Funds = new ListCollectionView(model.Funds);
 
 			//Exchanges.MoveCurrentToFirst();
-			Exchanges.CurrentChanged += delegate { Coins.Refresh(); };
-			Filter.PropertyChanged += delegate { Coins.Refresh(); };
+			Exchanges.CurrentChanged += delegate { CoinsView.Refresh(); };
+			Filter.PropertyChanged += delegate { CoinsView.Refresh(); };
 
 			// Commands
 			CreateNewFund = Command.Create(this, CreateNewFundInternal);
 			RemoveFund = Command.Create(this, RemoveFundInternal);
+			ResetSort = Command.Create(this, ResetSortInternal);
 			ShowFundAllocationsUI = Command.Create(this, ShowFundAllocationsUIInternal);
 
 			CreateFundColumns();
@@ -95,7 +96,7 @@ namespace CoinFlip.UI
 				}
 				void HandleBalanceChanged(object sender, CoinEventArgs e)
 				{
-					var coin = Coins.Cast<CoinDataAdapter>().FirstOrDefault(x => x.CoinData.Symbol == e.Coin.Symbol);
+					var coin = CoinsView.Cast<CoinDataAdapter>().FirstOrDefault(x => x.CoinData.Symbol == e.Coin.Symbol);
 					coin?.Invalidate();
 				}
 			}
@@ -168,7 +169,7 @@ namespace CoinFlip.UI
 		private Exchange m_exchange;
 
 		/// <summary>The data source for coin data</summary>
-		public ICollectionView Coins { get; }
+		public ICollectionView CoinsView { get; }
 
 		/// <summary>The available funds.</summary>
 		public ICollectionView Funds { get; }
@@ -220,6 +221,14 @@ namespace CoinFlip.UI
 			}
 		}
 
+		/// <summary>Remove sorting from the coin list</summary>
+		public Command ResetSort { get; }
+		private void ResetSortInternal()
+		{
+			CoinsView.SortDescriptions.Clear();
+			CoinsView.GroupDescriptions.Clear();
+		}
+
 		/// <summary>Show the UI for proportioning funds</summary>
 		public Command ShowFundAllocationsUI { get; }
 		private void ShowFundAllocationsUIInternal()
@@ -237,7 +246,7 @@ namespace CoinFlip.UI
 				m_grid.Columns.RemoveAt(1);
 
 			// Refresh the coin data source
-			Coins.Refresh();
+			CoinsView.Refresh();
 
 			// Create a column for each fund.
 			// Rows are bound to a collection of 'CoinDataAdapter'.

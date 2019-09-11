@@ -1,0 +1,118 @@
+﻿<Window 
+	x:Class="CoinFlip.UI.Dialogs.MainSettingsUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+	Title="CoinFlip Settings"
+	WindowStartupLocation="CenterOwner"
+	Height="450"
+	Width="800"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<TabControl
+			Margin="8"
+			>
+			<TabItem
+				Grid.Row="0"
+				Header="General"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="1*"/>
+						<ColumnDefinition Width="0.5*"/>
+						<ColumnDefinition Width="1*"/>
+						<ColumnDefinition Width="1*"/>
+					</Grid.ColumnDefinitions>
+
+					<!-- MainLoopPeriodMS -->
+					<TextBlock
+						Grid.Row="0"
+						Grid.Column="0"
+						Text="Main Loop Period (ms):"
+						VerticalAlignment="Center"
+						/>
+					<TextBox
+						Grid.Row="0"
+						Grid.Column="1"
+						Text="{Binding Settings.MainLoopPeriodMS}"
+						HorizontalContentAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+
+					<!-- Price Data Update Period MS -->
+					<TextBlock
+						Grid.Row="1"
+						Grid.Column="0"
+						Text="Price Data Update Period (ms):"
+						VerticalAlignment="Center"
+						/>
+					<TextBox
+						Grid.Row="1"
+						Grid.Column="1"
+						Text="{Binding Settings.MainLoopPeriodMS}"
+						HorizontalContentAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+
+					<!-- Valuation Currency -->
+					<TextBlock
+						Grid.Row="2"
+						Grid.Column="0"
+						Text="Valuation Currency:"
+						VerticalAlignment="Center"
+						/>
+					<TextBox
+						Grid.Row="2"
+						Grid.Column="1"
+						Text="{Binding Settings.ValuationCurrency}"
+						HorizontalContentAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+					
+					<!-- Auto Add Coins -->
+					<CheckBox
+						Grid.Row="3"
+						Grid.Column="0"
+						Content="Auto Add Coins"
+						IsChecked="{Binding Settings.AutoAddCoins}"
+						Margin="3"
+						/>
+				</Grid>
+			</TabItem>
+		</TabControl>
+		
+		<!-- Buttons -->
+		<StackPanel
+			Grid.Row="10"
+			HorizontalAlignment="Right"
+			Margin="16"
+			>
+			<Button
+				Content="OK"
+				MinWidth="80"
+				Command="{Binding Accept}"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>

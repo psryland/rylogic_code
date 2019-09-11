@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -352,6 +353,12 @@ namespace CoinFlip
 			TradeType == ETradeType.Q2B ? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
 			TradeType == ETradeType.B2Q ? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
 			"---";
+
+		/// <summary>The basic colour to associate with this trade</summary>
+		public Colour32 TradeColour =>
+			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
+			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
+			throw new Exception($"Unknown trade type: {TradeType}");
 
 		/// <summary>String description of the trade</summary>
 		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ ~{PriceQ2B.ToString(4, true)}";

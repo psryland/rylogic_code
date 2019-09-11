@@ -409,7 +409,7 @@ namespace CoinFlip
 		/// <summary>Data for each supported currency</summary>
 		public CoinDataList Coins
 		{
-			get { return m_coins; }
+			get => m_coins;
 			private set
 			{
 				if (m_coins == value) return;

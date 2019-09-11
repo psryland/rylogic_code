@@ -2,7 +2,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using CoinFlip.Settings;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -46,6 +48,12 @@ namespace CoinFlip
 			TradeType == ETradeType.Q2B ? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
 			TradeType == ETradeType.B2Q ? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
 			"---";
+
+		/// <summary>The basic colour to associate with this trade</summary>
+		public Colour32 TradeColour =>
+			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
+			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
+			throw new Exception($"Unknown trade type: {TradeType}");
 
 		/// <summary>The pair traded</summary>
 		public TradePair Pair { get; }

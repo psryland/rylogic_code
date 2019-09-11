@@ -122,10 +122,14 @@ namespace CoinFlip
 		{
 			// Check the current path still valid
 			var still_valid =
+				(m_last_valuation_currency == SettingsData.Settings.ValuationCurrency) && (
 				(Symbol == SettingsData.Settings.ValuationCurrency) ||
-				(ValuationPath.Count != 0 && ValuationPath.All(x => Exchange.Pairs.ContainsKey(x.UniqueKey)));
+				(ValuationPath.Count != 0 && ValuationPath.All(x => Exchange.Pairs.ContainsKey(x.UniqueKey))));
 			if (still_valid)
 				return true;
+
+			// Save the valuation currency so we can detect changes
+			m_last_valuation_currency = SettingsData.Settings.ValuationCurrency;
 
 			// Rebuild the valuation path
 			ValuationPath.Clear();
@@ -157,6 +161,7 @@ namespace CoinFlip
 			// throw new NotImplementedException();
 			return false;
 		}
+		private string m_last_valuation_currency;
 
 		/// <summary></summary>
 		public override string ToString()

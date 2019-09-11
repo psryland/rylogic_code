@@ -4,8 +4,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
     xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
-    mc:Ignorable="d" 
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	mc:Ignorable="d" 
 	d:DesignWidth="800"
 	d:DesignHeight="450"
 	>
@@ -86,10 +88,13 @@
 		Grid.Row="1"
 		AutoGenerateColumns="False"
 		GridLinesVisibility="None"
-		HeadersVisibility="Column"
+		CanUserResizeRows="False"
+		HeadersVisibility="All"
+		RowHeaderWidth="10"
 		IsReadOnly="True"
-		ItemsSource="{Binding Coins}"
-		SelectedItem="{Binding Coins/, Mode=TwoWay}"
+		ItemsSource="{Binding CoinsView}"
+		SelectedItem="{Binding CoinsView/, Mode=TwoWay}"
+		gui:DataGrid_.ReorderRowsWithDragDrop="True"
 		x:Name="m_grid"
 		>
 		<DataGrid.Resources>
@@ -108,6 +113,13 @@
 				Header="Coin"
 				Binding="{Binding Symbol, Mode=OneWay}"
 				Width="0.8*"
+				/>
+			<DataGridTextColumn
+				Header="X"
+				Binding="{Binding DisplayOrder, Mode=OneWay}"
+				CellStyle="{StaticResource LiveValueAvailableCellStyle}"
+				Width="0.1*"
+				Visibility="Collapsed"
 				/>
 			<DataGridTextColumn
 				Header="Balance"
@@ -145,17 +157,17 @@
 					Command="{Binding AddCoin}"
 					/>
 				<MenuItem
-					Header="{Binding Coins/Symbol, FallbackValue='Coin'}"
+					Header="{Binding CoinsView/Symbol, FallbackValue='Coin'}"
 					HeaderStringFormat="Remove {0}"
-					IsEnabled="{Binding Coins/, Converter={conv:NotNull}, FallbackValue=false}"
+					IsEnabled="{Binding CoinsView/, Converter={conv:NotNull}, FallbackValue=false}"
 					Command="{Binding RemoveCoin}"
 					/>
-				<!--<Separator/>
+				<Separator/>
 				<MenuItem
-					Header="Live Value Conversion..."
-					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
-					Command="{Binding EditLiveValueConversion}"
-					/>-->
+					Header="Reset Sort"
+					IsEnabled="{Binding CoinsView.SortDescriptions.Count, Converter={conv:Compare}, ConverterParameter='!=0'}"
+					Command="{Binding ResetSort}"
+					/>
 			</ContextMenu>
 		</DataGrid.ContextMenu>
 	</DataGrid>

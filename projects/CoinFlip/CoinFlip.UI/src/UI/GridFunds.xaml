@@ -115,9 +115,10 @@
 		AutoGenerateColumns="False"
 		GridLinesVisibility="None"
 		HeadersVisibility="Column"
+		CanUserSortColumns="False"
 		IsReadOnly="True"
-		ItemsSource="{Binding Coins}"
-		SelectedItem="{Binding Coins/, Mode=TwoWay}"
+		ItemsSource="{Binding CoinsView}"
+		SelectedItem="{Binding CoinsView/, Mode=TwoWay}"
 		x:Name="m_grid"
 		>
 		<DataGrid.Columns>

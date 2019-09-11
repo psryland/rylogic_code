@@ -38,6 +38,8 @@
 				<Separator/>
 				<MenuItem Header="New _Chart" Command="{Binding NewChart}"/>
 				<Separator/>
+				<MenuItem Header="_Options" Command="{Binding ShowOptions}"/>
+				<Separator/>
 				<MenuItem Header="E_xit" Command="{Binding CloseApp}"/>
 			</MenuItem>
 		</Menu>

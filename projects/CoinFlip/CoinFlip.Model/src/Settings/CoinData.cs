@@ -18,6 +18,7 @@ namespace CoinFlip.Settings
 		public CoinData(string symbol)
 		{
 			Symbol = symbol;
+			DisplayOrder = 0;
 			SD = 8;
 			AssignedValue = 0;
 			CreateCrossExchangePairs = false;
@@ -34,6 +35,13 @@ namespace CoinFlip.Settings
 		{
 			get => get<string>(nameof(Symbol));
 			private set => set(nameof(Symbol), value);
+		}
+
+		/// <summary>The order to display this coin</summary>
+		public int DisplayOrder
+		{
+			get => get<int>(nameof(DisplayOrder));
+			set => set(nameof(DisplayOrder), value);
 		}
 
 		/// <summary>The number of significant digits used by this currency</summary>
