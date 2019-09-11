@@ -22,12 +22,12 @@ namespace Rylogic.Gui.WPF
 		//   need to specify the 'Source' for the binding, which is where 'DataContextSpy' comes in.
 		//	<TextBox>
 		//		<TextBox.Resources>
-		//			<gui2:DataContextSpy x:Key="DataContextSpy" />
+		//			<gui:DataContextSpy x:Key="DataContextSpy" />
 		//		</TextBox.Resources>
 		//		<TextBox.Text>
 		//			<Binding Path = "YourProperty" ConverterParameter="1">
 		//				<Binding.Converter>
-		//					<gui2:MyConverter SourceValue = "{Binding Source={StaticResource DataContextSpy}, Path=DataContext.YourProperty}"/>
+		//					<gui:MyConverter SourceValue = "{Binding Source={StaticResource DataContextSpy}, Path=DataContext.YourProperty}"/>
 		//				</Binding.Converter>
 		//			</Binding>
 		//		</TextBox.Text>

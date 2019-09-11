@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Rylogic.Common;
@@ -412,22 +413,13 @@ namespace Rylogic.Common
 				}
 
 				// Handlers
-				async void HandleSettingChange(object sender, EventArgs args)
+				void HandleSettingChange(object sender, SettingChangeEventArgs args)
 				{
-					if (m_block_saving)
-						return;
-
-					// Save already pending?
-					if (m_auto_save_pending) return;
-					using (Scope.Create(() => m_auto_save_pending = true, () => m_auto_save_pending = false))
-					{
-						await Task.Delay(TimeSpan.FromMilliseconds(500));
-						Save();
-					}
+					if (args.Before) return;
+					AutoSave();
 				}
 			}
 		}
-		private bool m_auto_save_pending;
 		private bool m_auto_save;
 
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
@@ -568,6 +560,7 @@ namespace Rylogic.Common
 				throw new ArgumentNullException("filepath", "No settings filepath set");
 
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+			using (Scope.Create(null, () => m_auto_save_pending = false))
 			{
 				// Notify of a save about to happen
 				var args = new SettingsSavingEventArgs(false);
@@ -600,6 +593,7 @@ namespace Rylogic.Common
 				return;
 
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+			using (Scope.Create(null, () => m_auto_save_pending = false))
 			{
 				// Notify of a save about to happen
 				var args = new SettingsSavingEventArgs(false);
@@ -631,9 +625,24 @@ namespace Rylogic.Common
 		/// <summary>Save if 'AutoSaveOnChanges' is true</summary>
 		public void AutoSave()
 		{
-			if (!AutoSaveOnChanges) return;
-			Save();
+			if (!AutoSaveOnChanges || m_auto_save_pending)
+				return;
+
+			// If there is a sync context, then we can defer saving for a bit to catch batches of settings changes
+			// If not, then just save immediately. I don't know of any other .net core thread dispatcher system to use.
+			var ctx = SynchronizationContext.Current;
+			if (ctx != null)
+			{
+				void DoSave(object _) => Save();
+				Task.Delay(500).ContinueWith(x => ctx.Post(DoSave, null));
+				m_auto_save_pending = true;
+			}
+			else
+			{
+				Save();
+			}
 		}
+		private bool m_auto_save_pending;
 
 		/// <summary>Remove the settings file from persistent storage</summary>
 		public void Delete()

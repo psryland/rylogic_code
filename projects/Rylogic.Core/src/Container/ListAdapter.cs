@@ -10,7 +10,10 @@ namespace Rylogic.Container
 	{
 		// Notes:
 		//  - Used to make a list of type 'TIn' appear like a list of 'TOut'
-		//  - Uses function delegates to "Adapt" a 'TIn' to a 'TOut', and "Conform" a 'TOut' back to a 'TIn'
+		//  - Uses function delegates to "Adapt" a 'TIn' to a 'TOut', and "Conform" a 'TOut' back to a 'TIn'.
+		//  - *WARNING* if you're trying to use this class for binding it probably won't work because 'Adapt'
+		//    typically returns a new instance for each list item. Binding will only attached to the first
+		//    instance.
 
 		public ListAdapter(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn> conform = null)
 		{
@@ -101,7 +104,11 @@ namespace Rylogic.Container
 				throw new NotSupportedException();
 		}
 
-		/// <summary></summary>
+		/// <summary>The index of an element</summary>
+		public int IndexOf(TIn item)
+		{
+			return Source.IndexOf(item);
+		}
 		public int IndexOf(TOut item)
 		{
 			if (Conform != null)
@@ -128,6 +135,13 @@ namespace Rylogic.Container
 		}
 
 		/// <summary></summary>
+		public bool Remove(TIn item)
+		{
+			if (IsReadOnly) throw new InvalidOperationException("Collection is read-only");
+			var index = IndexOf(item);
+			if (index != -1) RemoveAt(index);
+			return index != -1;
+		}
 		public bool Remove(TOut item)
 		{
 			if (IsReadOnly) throw new InvalidOperationException("Collection is read-only");
@@ -166,17 +180,21 @@ namespace Rylogic.Container
 		{
 			add
 			{
-				if (m_collection_changed == null) ((INotifyCollectionChanged)Source).CollectionChanged += HandleCollectionChanged;
+				if (m_collection_changed == null && Source is INotifyCollectionChanged ncc) ncc.CollectionChanged += HandleCollectionChanged;
 				m_collection_changed += value;
 			}
 			remove
 			{
 				m_collection_changed -= value;
-				if (m_collection_changed == null) ((INotifyCollectionChanged)Source).CollectionChanged -= HandleCollectionChanged;
+				if (m_collection_changed == null && Source is INotifyCollectionChanged ncc) ncc.CollectionChanged -= HandleCollectionChanged;
 			}
 		}
+		private event NotifyCollectionChangedEventHandler m_collection_changed;
 		private void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
+			if (m_collection_changed == null)
+				return;
+
 			// Map the changed objects to adapted changed objects
 			var args = (NotifyCollectionChangedEventArgs)null;
 			switch (e.Action)
@@ -212,9 +230,8 @@ namespace Rylogic.Container
 					break;
 				}
 			}
-			m_collection_changed?.Invoke(this, args);
+			m_collection_changed.Invoke(this, args);
 		}
-		private event NotifyCollectionChangedEventHandler m_collection_changed;
 	}
 
 	public static class ListAdapter
