@@ -28,7 +28,7 @@ namespace TestWPF
 		public MainWindow()
 		{
 			InitializeComponent();
-			Things = new ListCollectionView(new List<Thing>());
+			Things = new ListCollectionView(m_things);
 #if DEBUG
 			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
 #endif
@@ -163,7 +163,7 @@ namespace TestWPF
 			list.AddRange(m_things.Where(x => x.Name.Contains(cb.Text)));
 			view.Refresh();
 		}
-		private Thing[] m_things = new Thing[] { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" };
+		private List<Thing> m_things = new List<Thing> { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" };
 
 		/// <summary></summary>
 		[DebuggerDisplay("{Name,nq}")]
@@ -175,6 +175,11 @@ namespace TestWPF
 			}
 			public string Name { get; }
 			public static implicit operator Thing(string name) { return new Thing(name); }
+		}
+
+		private void HandleReorderRowDrop(object sender, DataGrid_.ReorderRowDropEventArgs e)
+		{
+
 		}
 	}
 }

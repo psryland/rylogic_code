@@ -86,6 +86,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Wrapper for DependencyProperty.RegisterAttached that uses reflection to look for changed or coerce handlers</summary>
 		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
 		{
+			return DPRegisterAttached(typeof(T), prop_name, def, flags);
+		}
+		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		{
 			// Use:
 			//  In your class with property 'prop_name':
 			//  Define:
@@ -102,11 +106,11 @@ namespace Rylogic.Gui.WPF
 			var meta = new FrameworkPropertyMetadata(null, flags);
 
 			// Determine the type of the property
-			var prop_type = typeof(T).GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public).ReturnType;
+			var prop_type = class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public).ReturnType;
 			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
 
 			// If the type defines a Changed handler, add a callback
-			var changed_handler = typeof(T).GetMethod($"{prop_name}_Changed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			var changed_handler = class_type.GetMethod($"{prop_name}_Changed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 			if (changed_handler != null)
 			{
 				var param_count = changed_handler.GetParameters().Length;
@@ -120,7 +124,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// If the type defines a Validate handle, add a callback
-			var coerce_handler = typeof(T).GetMethod($"{prop_name}_Coerce", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			var coerce_handler = class_type.GetMethod($"{prop_name}_Coerce", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 			if (coerce_handler != null)
 			{
 				var param_count = coerce_handler.GetParameters().Length;
@@ -132,7 +136,7 @@ namespace Rylogic.Gui.WPF
 			}
 			
 			// Register the attached property using the return type of 'Get<prop_name>'
-			return DependencyProperty.RegisterAttached(prop_name, prop_type, typeof(T), meta);
+			return DependencyProperty.RegisterAttached(prop_name, prop_type, class_type, meta);
 		}
 
 		/// <summary>Attached to the Closed event of a window to clean up any child objects that are disposable</summary>
