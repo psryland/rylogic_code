@@ -323,26 +323,26 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override async Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
+		protected override async Task<OrderResult> CreateOrderInternal(Trade trade, CancellationToken cancel)
 		{
 			try
 			{
-				// Submit trade parameters
-				var cp = new CurrencyPair(pair.Base, pair.Quote);
-				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
-
-				var p = new OrderParams(tt.ToBinanceTT(), ot.ToBinanceOT());
-				p.PriceQ2B = ot != EOrderType.Market ? price_q2b : (decimal?)null;
-				p.AmountBase = tt.AmountBase(price_q2b, amount_in: amount_in);
-				p.Canonicalise(cp, Api);
+				// Create trade parameters
+				var cp = new CurrencyPair(trade.Pair.Base, trade.Pair.Quote);
+				var p = new OrderParams(trade.TradeType.ToBinanceTT(), trade.OrderType.ToBinanceOT())
+				{
+					AmountBase = trade.AmountBase,
+					PriceQ2B = trade.OrderType != EOrderType.Market ? trade.PriceQ2B : (decimal?)null,
+					StopPriceQ2B = trade.OrderType == EOrderType.Stop ? trade.PriceQ2B : (decimal?)null,
+				};// shouldn't need to .Canonicalise(cp, Api);
 
 				// Place the trade order
 				var res = await Api.SubmitTrade(cp, p, cancel);
-				return new OrderResult(pair, res.OrderId, filled: false);
+				return new OrderResult(trade.Pair, res.OrderId, filled: false);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Binance: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8, true)} @  {(amount_out / amount_in).ToString(8, true)}", ex);
+				throw new Exception($"Binance: Submit trade failed. {ex.Message}\n{trade.TradeType} Pair: {trade.Pair.Name}  Amt: {trade.AmountIn.ToString(8, true)} -> {trade.AmountOut.ToString(8, true)} @  {trade.PriceQ2B.ToString(8, true)}", ex);
 			}
 		}
 
@@ -383,6 +383,30 @@ namespace CoinFlip
 				foreach (var p in Pairs.Values)
 					foreach (var mp in Enum<EMarketPeriod>.Values)
 						yield return new PairAndTF(p, ToTimeFrame(mp));
+			}
+		}
+
+		/// <summary>Adjust the values in 'trade' to be within accepted exchange ranges</summary>
+		protected override void CanonicaliseInternal(Trade trade)
+		{
+			var p = new OrderParams(trade.TradeType.ToBinanceTT(), trade.OrderType.ToBinanceOT())
+			{
+				AmountBase = trade.AmountBase,
+				PriceQ2B = trade.OrderType != EOrderType.Market ? trade.PriceQ2B : (decimal?)null,
+				StopPriceQ2B = trade.OrderType == EOrderType.Stop ? trade.PriceQ2B : (decimal?)null,
+			}.Canonicalise(new CurrencyPair(trade.Pair.Base, trade.Pair.Quote), Api);
+
+			// Update 'trade' with canonical values
+			trade.PriceQ2B = p.PriceQ2B.Value._(trade.Pair.RateUnits);
+			if (trade.TradeType == ETradeType.Q2B)
+			{
+				trade.AmountOut = p.AmountBase._(trade.Pair.Base);
+				trade.AmountIn = (p.AmountBase * p.PriceQ2B.Value)._(trade.Pair.Quote);
+			}
+			if (trade.TradeType == ETradeType.B2Q)
+			{
+				trade.AmountIn = p.AmountBase._(trade.Pair.Base);
+				trade.AmountOut = (p.AmountBase * p.PriceQ2B.Value)._(trade.Pair.Quote);
 			}
 		}
 

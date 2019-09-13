@@ -27,6 +27,9 @@ namespace CoinFlip
 			Created = created;
 			Updated = updated;
 		}
+		public Order(long order_id, Trade trade, Unit<decimal> remaining_in, DateTimeOffset created)
+			: this(order_id, trade.Fund, trade.Pair, trade.OrderType, trade.TradeType, trade.AmountIn, trade.AmountOut, remaining_in, created, created)
+		{ }
 		public Order(Order rhs)
 			:this(rhs.OrderId, rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn, rhs.AmountOut, rhs.RemainingIn, rhs.Created, rhs.Updated)
 		{}

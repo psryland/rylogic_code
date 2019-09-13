@@ -14,7 +14,7 @@ using Rylogic.Gui.WPF;
 
 namespace CoinFlip.UI.Indicators
 {
-	public class TrianglePattern :SettingsXml<TrianglePattern>, IIndicator
+	public class TrianglePattern :Indicator<TrianglePattern>
 	{
 		// Notes:
 		//  - Point labelling:
@@ -24,25 +24,18 @@ namespace CoinFlip.UI.Indicators
 
 		public TrianglePattern()
 		{
-			Id = Guid.NewGuid();
-			Name = null;
 			Type = ETrianglePatternType.Symmetric;
 			Time0 = Misc.CryptoCurrencyEpoch.Ticks;
 			Time1 = Misc.CryptoCurrencyEpoch.Ticks;
 			Price0 = 0.0;
 			Price2 = 0.0;
 			Price1 = 0.0;
-			Colour = 0xFF00C000;
-			Visible = true;
 			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 		}
 		public TrianglePattern(XElement node)
 			: base(node)
 		{ }
-		public void Dispose()
-		{
-		}
 		protected override void OnSettingChange(SettingChangeEventArgs args)
 		{
 			if (args.After)
@@ -83,20 +76,6 @@ namespace CoinFlip.UI.Indicators
 				}
 			}
 			base.OnSettingChange(args);
-		}
-
-		/// <summary>Instance id</summary>
-		public Guid Id
-		{
-			get => get<Guid>(nameof(Id));
-			set => set(nameof(Id), value);
-		}
-
-		/// <summary>String notes for the indicator</summary>
-		public string Name
-		{
-			get => get<string>(nameof(Name));
-			set => set(nameof(Name), value);
 		}
 
 		/// <summary>The type of triangle pattern</summary>
@@ -141,20 +120,6 @@ namespace CoinFlip.UI.Indicators
 			set => set(nameof(Price2), value);
 		}
 
-		/// <summary>Colour of the indicator line</summary>
-		public Colour32 Colour
-		{
-			get => get<Colour32>(nameof(Colour));
-			set => set(nameof(Colour), value);
-		}
-
-		/// <summary>Show this indicator</summary>
-		public bool Visible
-		{
-			get => get<bool>(nameof(Visible));
-			set => set(nameof(Visible), value);
-		}
-
 		/// <summary>The width of the trend line</summary>
 		public double Width
 		{
@@ -170,10 +135,10 @@ namespace CoinFlip.UI.Indicators
 		}
 
 		/// <summary>The label to use when displaying this indicator</summary>
-		public string Label => $"Triangle {Name.Surround("(", ")")}";
+		public override string Label => $"Triangle {Name.Surround("(", ")")}";
 
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
-		public IIndicatorView CreateView(IChartView chart)
+		public override IIndicatorView CreateView(IChartView chart)
 		{
 			return new View(this, chart);
 		}

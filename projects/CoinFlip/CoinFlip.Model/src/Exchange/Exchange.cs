@@ -603,7 +603,7 @@ namespace CoinFlip
 		public bool CandleDataUpdateInProgress { get; private set; }
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel, string creator_name)
+		public Task<OrderResult> CreateOrder(Trade trade, CancellationToken cancel)
 		{
 			// Only create trades from the main thread to guarantee creation order
 			Misc.AssertMainThread();
@@ -614,14 +614,19 @@ namespace CoinFlip
 					throw new Exception("Re-entrant call to CreateOrder");
 				if (!Model.AllowTrades && !Model.BackTesting)
 					throw new Exception($"Cannot place orders when Trading is disabled");
-				if (pair.Exchange != this)
-					throw new Exception($"Pair {pair} is not provided by this exchange");
-				if (amount_in <= 0m._(tt.CoinIn(pair)))
-					throw new Exception($"Invalid trade 'in' amount: {amount_in}");
-				if (amount_out <= 0m._(tt.CoinOut(pair)))
-					throw new Exception($"Invalid trade 'out' amount: {amount_out}");
-				if (amount_in > fund[tt.CoinIn(pair)].Available)
-					throw new Exception($"Order amount ({amount_in}) is greater than the current available balance: {fund[tt.CoinIn(pair)].Available}");
+				if (trade.Pair.Exchange != this)
+					throw new Exception($"Pair {trade.Pair} is not provided by this exchange");
+				if (trade.AmountIn <= 0m._(trade.TradeType.CoinIn(trade.Pair)))
+					throw new Exception($"Invalid trade 'in' amount: {trade.AmountIn}");
+				if (trade.AmountOut <= 0m._(trade.TradeType.CoinOut(trade.Pair)))
+					throw new Exception($"Invalid trade 'out' amount: {trade.AmountOut}");
+				if (trade.AmountIn > trade.Fund[trade.TradeType.CoinIn(trade.Pair)].Available)
+					throw new Exception($"Order amount ({trade.AmountIn}) is greater than the current available balance: {trade.Fund[trade.TradeType.CoinIn(trade.Pair)].Available}");
+
+				// Check the trade is valid
+				var err = trade.Validate();
+				if (err != EValidation.Valid)
+					throw new Exception(err.ToErrorDescription());
 
 				// Get the creation time of the order
 				var now = Model.UtcNow;
@@ -630,8 +635,8 @@ namespace CoinFlip
 				// with other trades being placed while we wait for this one to go through.
 				// Don't need to account for the fee in the hold because the fee is taken from
 				// the received amount (usually).
-				var bal = fund[tt.CoinIn(pair)];
-				var hold_amount = amount_in;
+				var hold_amount = trade.AmountIn;
+				var bal = trade.Fund[trade.TradeType.CoinIn(trade.Pair)];
 				var hold = bal.Holds.Create(hold_amount, local: true);
 				using (Scope.Create(null, () => bal.Holds.Remove(hold)))
 				{
@@ -641,24 +646,24 @@ namespace CoinFlip
 					// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned.
 					// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 					var result =
-						Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out) :
-						Model.AllowTrades ? CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel).Result :
+						Sim != null ? Sim.CreateOrderInternal(trade) :
+						Model.AllowTrades ? CreateOrderInternal(trade, cancel).Result :
 						throw new Exception("Cannot create order, trading not enabled");
 
 					// Modifying the orders and history collection needs to be synchronous
 					Misc.AssertMainThread();
 
 					// Log the event
-					var price_q2b = ot == EOrderType.Market ? pair.SpotPrice[tt].Value : tt.PriceQ2B(amount_out / amount_in);
-					Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
+					var price_q2b = trade.OrderType == EOrderType.Market ? trade.Pair.SpotPrice[trade.TradeType].Value : trade.PriceQ2B;
+					Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {trade.AmountIn.ToString(8, true)} → {trade.AmountOut.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
 
 					// Save the extra details about the live order.
-					UpsertLiveOrder(result.OrderId, fund, creator_name);
+					UpsertLiveOrder(result.OrderId, trade.Fund, trade.CreatorName);
 
 					// The order may have been completed or partially filled. Add the filled orders to the trade history.
 					foreach (var fill in result.Trades)
 					{
-						var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund, pair, tt));
+						var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, trade.Fund, trade.Pair, trade.TradeType));
 						order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, fill.TradeId, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now));
 					}
 
@@ -667,8 +672,8 @@ namespace CoinFlip
 					if (!result.Filled)
 					{
 						// Add a 'Position' to the collection, this will be overwritten on the next update.
-						var filled_in = result.Trades.Sum(x => x.AmountIn)._(tt.CoinIn(pair));
-						var order = new Order(result.OrderId, fund, pair, ot, tt, amount_in, amount_out, amount_in - filled_in, now, now);
+						var filled_in = result.Trades.Sum(x => x.AmountIn)._(trade.CoinIn);
+						var order = new Order(result.OrderId, trade, trade.AmountIn - filled_in, now);
 						Orders.AddOrUpdate(order);
 
 						// Update the hold with the order id.
@@ -687,8 +692,7 @@ namespace CoinFlip
 
 					// Remove entries from the order book that this order should have filled.
 					// This will be overwritten with the next update.
-					var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
-					pair.MarketDepth.Consume(pair, tt, ot, price_q2b, amount_base, out var _);
+					trade.Pair.MarketDepth.Consume(trade.Pair, trade.TradeType, trade.OrderType, price_q2b, trade.AmountBase, out var _);
 
 					// Trigger updates
 					MarketDataUpdateRequired = true;
@@ -698,7 +702,7 @@ namespace CoinFlip
 				}
 			}
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel);
+		protected abstract Task<OrderResult> CreateOrderInternal(Trade trade, CancellationToken cancel);
 		private int m_in_create_order;
 
 		/// <summary>Cancel an existing order</summary>
@@ -756,6 +760,23 @@ namespace CoinFlip
 		{
 			yield break;
 		}
+
+		/// <summary>Adjust the values in 'trade' to be within accepted exchange ranges</summary>
+		public void Canonicalise(Trade trade)
+		{
+			try
+			{
+				// This shouldn't fail. It should do its best to make 'trade' valid
+				// but if it can't, then errors will be picked up when submitting the trade
+				CanonicaliseInternal(trade);
+			}
+			catch (Exception ex)
+			{
+				Model.Log.Write(ELogLevel.Error, ex, $"Canonicalise failed");
+			}
+		}
+		protected virtual void CanonicaliseInternal(Trade trade)
+		{}
 
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)

@@ -81,6 +81,7 @@
     <Compile Include="src\Chart\Instrument.cs" />
     <Compile Include="src\Chart\PriceData.cs" />
     <Compile Include="src\Chart\TimeFrame.cs" />
+    <Compile Include="src\Misc\ETrend.cs" />
     <Compile Include="src\Misc\EValidation.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />

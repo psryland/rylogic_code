@@ -13,14 +13,17 @@ namespace CoinFlip
 		/// <summary>User assigned name for the indicator</summary>
 		string Name { get; }
 
-		/// <summary>The label to use when displaying this indicator</summary>
-		string Label { get; }
-
 		/// <summary>Colour of the indicator line</summary>
 		Colour32 Colour { get; set; }
 
 		/// <summary>Show this indicator</summary>
 		bool Visible { get; set; }
+
+		/// <summary>The order to display indicators in</summary>
+		int DisplayOrder { get; set; }
+
+		/// <summary>The label to use when displaying this indicator</summary>
+		string Label { get; }
 
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
 		IIndicatorView CreateView(IChartView chart);
@@ -28,8 +31,8 @@ namespace CoinFlip
 
 	public interface IIndicatorView :IDisposable, INotifyPropertyChanged
 	{
-		/// <summary>The id of the indicator this is a view of</summary>
-		Guid IndicatorId { get; }
+		/// <summary>The indicator this is a view of</summary>
+		IIndicator Indicator { get; }
 
 		/// <summary>Description/Name of the indicator</summary>
 		string Label { get; }

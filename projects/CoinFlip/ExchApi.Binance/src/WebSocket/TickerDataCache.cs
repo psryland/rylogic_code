@@ -135,7 +135,8 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
-						m_socket.Connect(EndPoint).Wait();
+						using (Task_.NoSyncContext())
+							m_socket.Connect(EndPoint).Wait();
 					}
 
 					// Handlers

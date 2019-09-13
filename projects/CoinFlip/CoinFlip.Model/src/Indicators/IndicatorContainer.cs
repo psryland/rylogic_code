@@ -96,6 +96,7 @@ namespace CoinFlip
 			foreach (var kv in Indicators)
 			{
 				var pair = root.Add2(new XElement(XmlTag.Pair)).AttrValueSet(XmlTag.Name, kv.Key);
+				kv.Value.Sort(x => x.DisplayOrder);
 				foreach (var indy in kv.Value)
 					pair.Add2(XmlTag.Indy, indy, true);
 			}

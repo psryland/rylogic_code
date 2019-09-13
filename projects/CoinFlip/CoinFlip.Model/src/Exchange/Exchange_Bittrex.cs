@@ -290,25 +290,23 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(Trade trade, CancellationToken cancel)
 		{
 			try
 			{
 				// Place the trade order
-				if (ot != EOrderType.Limit)
+				if (trade.OrderType != EOrderType.Limit)
 					throw new NotImplementedException();
 
-				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
-				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToBittrexTT(), price_q2b, amount_base, cancel);
+				var res = await Api.SubmitTrade(new CurrencyPair(trade.Pair.Base, trade.Pair.Quote), trade.TradeType.ToBittrexTT(), trade.PriceQ2B, trade.AmountBase, cancel);
 
 				// Return the order result
 				var order_id = ToIdPair(res.Id).OrderId;
-				return new OrderResult(pair, order_id, filled: false);
+				return new OrderResult(trade.Pair, order_id, filled: false);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount_in.ToString(8, true)} @  {(amount_out/amount_in).ToString(8, true)}", ex);
+				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{trade.TradeType} Pair: {trade.Pair.Name}  Amt: {trade.AmountIn.ToString(8, true)} -> {trade.AmountOut.ToString(8, true)} @  {trade.PriceQ2B.ToString(8, true)}", ex);
 			}
 		}
 

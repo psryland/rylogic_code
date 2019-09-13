@@ -320,13 +320,14 @@ namespace Binance.API
 		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, OrderParams order_params, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/order
+
+			// Validate, don't change the order parameters
 			var validation = order_params.Validate(pair, this);
 			if (validation != null)
 				throw validation;
 
-			var rules = SymbolRules[pair];
-
 			var parms = new Params { };
+			var rules = SymbolRules[pair];
 			parms["symbol"] = pair.Id;
 			parms["side"] = order_params.Side;
 			parms["type"] = order_params.Type;

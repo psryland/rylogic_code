@@ -300,17 +300,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out)
+		public OrderResult CreateOrderInternal(Trade trade)
 		{
 			// Validate the order
-			var bal = m_bal[tt.CoinIn(pair)];
-			if (pair.Exchange != Exchange)
+			var bal = m_bal[trade.CoinIn];
+			if (trade.Exchange != Exchange)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
-			if (bal.Available < amount_in)
-				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)}  Bal:{bal.Available.ToString(8,true)}");
-			if (!pair.AmountRangeIn(tt).Contains(amount_in))
+			if (bal.Available < trade.AmountIn)
+				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{trade.TradeType} Pair: {trade.Pair.Name}  Amt: {trade.AmountIn.ToString(8,true)}  Bal:{bal.Available.ToString(8,true)}");
+			if (!trade.AmountRangeIn.Contains(trade.AmountIn))
 				throw new Exception($"SimExchange: 'In' amount is out of range");
-			if (!pair.AmountRangeOut(tt).Contains(amount_out))
+			if (!trade.AmountRangeOut.Contains(trade.AmountOut))
 				throw new Exception($"SimExchange: 'Out' amount is out of range");
 
 			// Stop the sim for 'RunToTrade' mode
@@ -321,7 +321,7 @@ namespace CoinFlip
 			var order_id = ++m_order_id;
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			TryFillOrder(pair, Fund.Default, order_id, tt, ot, amount_in, amount_out, amount_in, out var pos, out var his);
+			TryFillOrder(trade.Pair, Fund.Default, order_id, trade.TradeType, trade.OrderType, trade.AmountIn, trade.AmountOut, trade.AmountIn, out var pos, out var his);
 			if (pos != null) m_ord[order_id] = pos;
 			if (his != null) m_his[order_id] = his;
 
@@ -329,7 +329,7 @@ namespace CoinFlip
 			ApplyToBalance(pos, his);
 
 			// Record the filled orders in the trade result
-			return new OrderResult(pair, order_id, pos == null, his?.Trades.Select(x =>
+			return new OrderResult(trade.Pair, order_id, pos == null, his?.Trades.Select(x =>
 				new OrderResult.Fill(x.TradeId, x.AmountIn, x.AmountOut, x.Commission, x.CommissionCoin)));
 		}
 

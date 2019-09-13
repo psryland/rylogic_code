@@ -210,7 +210,8 @@ namespace CoinFlip.UI
 						// which don't need to display the full number of SD.
 						if (update_amounts)
 						{
-							PriceQ2B = Trade.PriceQ2B.ToString(8, false);
+							Exchange.Canonicalise(Trade);
+							PriceQ2B = Trade.PriceQ2B.ToString();
 							AmountIn = Trade.AmountIn.ToString();
 							AmountOut = Trade.AmountOut.ToString();
 							Invalidate();
@@ -356,7 +357,7 @@ namespace CoinFlip.UI
 
 					// For valid amounts, update the displayed string
 					if (amount_in != 0)
-						m_amount_in = Trade.AmountIn.ToString();
+						m_amount_in = Trade.AmountIn.ToString("G29");
 
 					// Notify that the string value has changed. Other properties are
 					// notified as changed in the Trade property changed handler
@@ -390,7 +391,7 @@ namespace CoinFlip.UI
 
 					// For valid amounts, update the displayed string
 					if (amount_out != 0)
-						m_amount_out = Trade.AmountOut.ToString();
+						m_amount_out = Trade.AmountOut.ToString("G29");
 
 					// Notify that the string value has changed. Other properties are
 					// notified as changed in the Trade property changed handler
@@ -425,7 +426,7 @@ namespace CoinFlip.UI
 
 					// Update the string when a valid
 					if (price_q2b != 0)
-						m_price_q2b = Trade.PriceQ2B.ToString();
+						m_price_q2b = Trade.PriceQ2B.ToString("G29");
 
 					// Notify that the string value has changed. Other properties are
 					// notified as changed in the Trade property changed handler
@@ -504,6 +505,12 @@ namespace CoinFlip.UI
 		/// <summary>True if the amount value is valid</summary>
 		public bool IsAmountOutValid => !Bit.AnySet(Validation, EValidation.AmountOutIsInvalid | EValidation.AmountOutOutOfRange | EValidation.InsufficientBalance);
 
+		/// <summary>Text to display on the accept button</summary>
+		public string AcceptText { get; }
+
+		/// <summary>The dialog result when closed</summary>
+		public bool? Result { get; private set; }
+
 		/// <summary>Close the dialog in the 'accepted' state</summary>
 		public Command Accept { get; }
 		private void AcceptInternal()
@@ -540,12 +547,6 @@ namespace CoinFlip.UI
 		{
 			Trade.AmountIn = AvailableIn;
 		}
-
-		/// <summary>Text to display on the accept button</summary>
-		public string AcceptText { get; }
-
-		/// <summary>The dialog result when closed</summary>
-		public bool? Result { get; private set; }
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

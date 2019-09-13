@@ -77,7 +77,7 @@ namespace TestWPF
 			}
 			m_series.Options.Colour = Colour32.Blue;
 			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
-			m_series.Options.PointStyle = ChartDataSeries.EPointStyle.Triangle;
+			m_series.Options.PointStyle = EPointStyle.Triangle;
 			m_series.Options.PointSize = 50f;
 			m_series.Options.LineWidth = 3f;
 			m_series.Chart = m_chart;

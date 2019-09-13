@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -42,6 +43,9 @@ namespace CoinFlip.UI
 			set => Indicators.MoveCurrentTo(value);
 		}
 
+		/// <summary>Raised when the order of indicators is changed in the legend</summary>
+		public event EventHandler IndicatorsReordered;
+
 		/// <summary>Show the property dialog for an indicator</summary>
 		private void HandleDoubleClick(object sender, MouseButtonEventArgs e)
 		{
@@ -61,6 +65,12 @@ namespace CoinFlip.UI
 			var indy = (IIndicatorView)cell.GetRow().Item;
 			indy.Visible = !indy.Visible;
 			e.Handled = true;
+		}
+
+		/// <summary>Notification that reordering happened</summary>
+		private void HandleReordered(object sender, RoutedEventArgs args)
+		{
+			IndicatorsReordered?.Invoke(this, EventArgs.Empty);
 		}
 	}
 }

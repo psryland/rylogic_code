@@ -74,6 +74,8 @@ namespace CoinFlip.UI
 					Model.BackTestingChange -= HandleBackTestingChange;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
 					CoinData.LivePriceChanged -= HandleBalanceChanged;
+					Coins.Clear();
+					CoinsView.Refresh();
 				}
 				m_model = value;
 				if (m_model != null)

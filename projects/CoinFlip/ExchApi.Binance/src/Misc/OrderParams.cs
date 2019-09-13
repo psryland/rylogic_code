@@ -7,28 +7,19 @@ namespace Binance.API
 {
 	public class OrderParams
 	{
-		public OrderParams(EOrderSide side, EOrderType type)
-			: this(side, type, 0, null, null)
+		public OrderParams(EOrderSide side, EOrderType type, ETimeInForce tif = ETimeInForce.GTC)
+			: this(side, type, tif, 0, null, null)
 		{ }
-		public OrderParams(EOrderSide side, decimal amount_base)
-			: this(side, EOrderType.MARKET, amount_base, null, null)
-		{ }
-		public OrderParams(EOrderSide side, decimal amount_base, decimal price_q2b)
-			: this(side, EOrderType.LIMIT, amount_base, price_q2b, null)
-		{ }
-		public OrderParams(EOrderSide side, EOrderType type, decimal amount_base, decimal? price_q2b, decimal? stop_price)
+		public OrderParams(EOrderSide side, EOrderType type, ETimeInForce tif, decimal amount_base, decimal? price_q2b, decimal? stop_price)
 		{
-			ClientOrderId = null;
 			Side = side;
 			Type = type;
-			TimeInForce = ETimeInForce.GTC;
+			TimeInForce = tif;
 			AmountBase = amount_base;
 			PriceQ2B = price_q2b;
 			StopPriceQ2B = stop_price;
 			IcebergAmountBase = null;
 		}
-
-		public Guid? ClientOrderId { get; set; }
 
 		/// <summary>The side of the trade</summary>
 		public EOrderSide Side { get; set; }
@@ -39,8 +30,11 @@ namespace Binance.API
 		/// <summary>How long the order is valid for</summary>
 		public ETimeInForce TimeInForce { get; set; }
 
-		/// <summary>The amount to trade</summary>
+		/// <summary>The amount to trade (in base currency)</summary>
 		public decimal AmountBase { get; set; }
+
+		/// <summary>The amount to trade (in quote currency)</summary>
+		public decimal AmountQuote { get; set; }
 
 		/// <summary>The price to trade at (null for market orders)</summary>
 		public decimal? PriceQ2B { get; set; }
@@ -51,47 +45,69 @@ namespace Binance.API
 		/// <summary>The size of the amount above water</summary>
 		public decimal? IcebergAmountBase { get; set; }
 
-		/// <summary>Round parameters to match the server rules. Throws if the rounding would produce an unexpected result</summary>
-		public void Canonicalise(CurrencyPair pair, BinanceApi api)
+		/// <summary>Round parameters to match the server rules</summary>
+		public OrderParams Canonicalise(CurrencyPair pair, BinanceApi api)
 		{
+			// Canonicalise doesn't through, it just does it's best.
+			// Use Validate to get error messages.
+
 			// Find the rules for 'cp'. Valid if no rules found
 			var rules = api.SymbolRules[pair];
 			if (rules == null)
-				throw new Exception($"No server rules for symbol: {pair.Id}");
+				return this;
 
+			var ticker = api.TickerData[pair];
 			if (Type == EOrderType.MARKET)
-				PriceQ2B = null;
-			else if (PriceQ2B == null)
-				throw new Exception($"Order type {Type} requires a price parameter");
+				PriceQ2B = ticker.PriceQ2B;
 
 			if (!Type.IsAlgo())
 				StopPriceQ2B = null;
 			else if (StopPriceQ2B == null)
-				throw new Exception($"Order type {Type} requires a spot price parameter");
+				StopPriceQ2B = PriceQ2B;
+
+			// Round to expected precision
+			AmountBase = Math.Round(AmountBase, rules.BaseAssetPrecision);
+			if (PriceQ2B != null)
+				PriceQ2B = Math.Round(PriceQ2B.Value, rules.PricePrecision);
+			if (StopPriceQ2B != null)
+				StopPriceQ2B = Math.Round(StopPriceQ2B.Value, rules.PricePrecision);
+			if (IcebergAmountBase != null)
+				IcebergAmountBase = Math.Round(IcebergAmountBase.Value, rules.BaseAssetPrecision);
 
 			// Round to the tick size
-			var price_filter = (ServerRulesData.FilterPrice)rules.Filters.FirstOrDefault(x => x.FilterType == EFilterType.PRICE_FILTER);
-			if (price_filter != null)
+			foreach (var filter in rules.Filters.OfType<ServerRulesData.FilterPrice>().Where(x => x.FilterType == EFilterType.PRICE_FILTER))
 			{
 				if (PriceQ2B != null)
-					PriceQ2B = price_filter.Round(PriceQ2B.Value);
+					PriceQ2B = filter.Round(PriceQ2B.Value);
 				if (StopPriceQ2B != null)
-					StopPriceQ2B = price_filter.Round(StopPriceQ2B.Value);
+					StopPriceQ2B = filter.Round(StopPriceQ2B.Value);
 			}
 
 			// Round to the lot size
 			var filter_type = Type != EOrderType.MARKET ? EFilterType.LOT_SIZE : EFilterType.MARKET_LOT_SIZE;
-			var lot_size_filter = (ServerRulesData.FilterLotSize)rules.Filters.FirstOrDefault(x => x.FilterType == filter_type);
-			if (lot_size_filter != null)
+			foreach (var filter in rules.Filters.OfType<ServerRulesData.FilterLotSize>().Where(x => x.FilterType == filter_type))
 			{
-				AmountBase = lot_size_filter.Round(AmountBase);
+				AmountBase = filter.Round(AmountBase);
+				if (IcebergAmountBase != null)
+					IcebergAmountBase = filter.Round(IcebergAmountBase.Value);
 			}
+
+			// Test against min notional
+			foreach (var filter in rules.Filters.OfType<ServerRulesData.FilterMinNotional>().Where(x => x.FilterType == EFilterType.MIN_NOTIONAL))
+			{
+				if (Type == EOrderType.MARKET && !filter.ApplyToMarketOrders)
+					continue;
+				
+				AmountBase = filter.Round(AmountBase, PriceQ2B.Value);
+			}
+
+			return this;
 		}
 
 		/// <summary>Validate these parameters against the server rules</summary>
 		public Exception Validate(CurrencyPair pair, BinanceApi api)
 		{
-			// Find the rules for 'cp'. Valid if no rules found
+			// If there are no rules for the pair, just hope...
 			var rules = api.SymbolRules[pair];
 			if (rules == null)
 				return null;
@@ -140,8 +156,8 @@ namespace Binance.API
 					{
 						var f = (ServerRulesData.FilterPercentPrice)filter;
 						var ticker = api.TickerData[pair];
-						var lo = (decimal)ticker.WeightedAvgPrice * f.MultiplierDown;
-						var hi = (decimal)ticker.WeightedAvgPrice * f.MultiplierUp;
+						var lo = ticker.WeightedAvgPrice * f.MultiplierDown;
+						var hi = ticker.WeightedAvgPrice * f.MultiplierUp;
 
 						if (PriceQ2B != null && PriceQ2B.Value < lo)
 							return new Exception($"Trade price ({PriceQ2B.Value}) is below the minimum average price band ({lo})");

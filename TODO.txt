@@ -1,27 +1,33 @@
 Immediate ToDo:
 
 CoinFlip
-	- Show 'hodls' in equity plot
-	- Auto range equity chart
-	- History is broken - after deleting the DB the old history isn't restored
-	- Change the equity chart to have constant spacing between trades, change to line chart.
-	- Depth of market scale indicator/adjuster
-	- Add price scenarios to the equity grid (dialog with sliders for each currency)
-	- Do something so that all pairs are not queried for history all the time on startup
-	- Figure out how to isolate the monitored orders between back testing and live mode
-	- Add spot price support to Poloniex and Bittrex
-	- Variable spread for backtesting
-	- Log view isn't updating when window doesn't have focus
-	- MOAR indicators
-	- Free draw line indicator
-	- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
-	- Support minimise to tray
-	- Show remaining candle time
-	- Better back testing playback controls: sub step count, playback speed, pause with space bar
-	- Better triangle pattern controls
-	- TD sequential
-	- SAR
-	- Crosshair on equity chart
+	Equity Plot:
+		- Show 'hodls' in equity plot
+		- Auto range equity chart
+		- Add price scenarios to the equity grid (dialog with sliders for each currency)
+		- Crosshair on equity chart
+		- Toggle for including transfers
+		- Implement equity since time point
+	Indicators:
+		- Free draw line indicator
+		- Create an indicator base class
+		- Better triangle pattern controls
+		- TD sequential
+		- SAR
+		- Add Reflective way of populating chart context menu for indicators and drawings
+	Bots:
+		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
+	General:
+		- Look at making HA candles available from an Instrument
+		- History is broken - after deleting the DB the old history isn't restored
+		- Depth of market scale indicator/adjuster
+		- Figure out how to isolate the monitored orders between back testing and live mode
+		- Add spot price support to Poloniex and Bittrex
+		- Variable spread for backtesting
+		- Log view isn't updating when window doesn't have focus
+		- Support minimise to tray
+		- Show remaining candle time
+		- Better back testing playback controls: sub step count, playback speed, pause with space bar
 	
 EDTradeAdvisor
 	- ED Style

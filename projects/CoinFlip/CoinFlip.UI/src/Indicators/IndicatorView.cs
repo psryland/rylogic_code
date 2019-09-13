@@ -34,9 +34,6 @@ namespace CoinFlip.UI.Indicators
 		/// <summary>The size in pixels of the grab handles</summary>
 		public const double GrabRadius = 5.0;
 
-		/// <summary>The Id of the indicator instance</summary>
-		public Guid IndicatorId => Id;
-
 		/// <summary>The indicator this view is based on</summary>
 		public IIndicator Indicator
 		{

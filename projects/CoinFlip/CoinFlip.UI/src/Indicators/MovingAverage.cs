@@ -16,16 +16,13 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI.Indicators
 {
-	public class MovingAverage :SettingsXml<MovingAverage>, IIndicator
+	public class MovingAverage :Indicator<MovingAverage>
 	{
 		public MovingAverage()
 		{
-			Id = Guid.NewGuid();
-			Name = null;
 			Exponential = false;
-			Periods = 50;
 			Colour = Colour32.Blue;
-			Visible = true;
+			Periods = 50;
 			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 			ShowBollingerBands = false;
@@ -38,22 +35,6 @@ namespace CoinFlip.UI.Indicators
 		public MovingAverage(XElement node)
 			:base(node)
 		{
-		}
-		public void Dispose()
-		{}
-
-		/// <summary>Instance id</summary>
-		public Guid Id
-		{
-			get => get<Guid>(nameof(Id));
-			set => set(nameof(Id), value);
-		}
-
-		/// <summary>String identifier for the indicator</summary>
-		public string Name
-		{
-			get => get<string>(nameof(Name));
-			set => set(nameof(Name), value);
 		}
 
 		/// <summary>True if this is an exponential moving average</summary>
@@ -68,20 +49,6 @@ namespace CoinFlip.UI.Indicators
 		{
 			get => get<int>(nameof(Periods));
 			set => set(nameof(Periods), value);
-		}
-
-		/// <summary>Colour of the indicator line</summary>
-		public Colour32 Colour
-		{
-			get => get<Colour32>(nameof(Colour));
-			set => set(nameof(Colour), value);
-		}
-
-		/// <summary>Show this indicator</summary>
-		public bool Visible
-		{
-			get => get<bool>(nameof(Visible));
-			set => set(nameof(Visible), value);
 		}
 
 		/// <summary>The width of the line</summary>
@@ -141,16 +108,44 @@ namespace CoinFlip.UI.Indicators
 		}
 
 		/// <summary>The label to use when displaying this indicator</summary>
-		public string Label => $"{(Exponential?"E":"")}MA-{Periods} {Name.Surround("(", ")")}";
+		public override string Label => $"{(Exponential?"E":"")}MA-{Periods} {Name.Surround("(", ")")}";
 
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
-		public IIndicatorView CreateView(IChartView chart)
+		public override IIndicatorView CreateView(IChartView chart)
 		{
 			return new View(this, chart);
 		}
 
+		/// <summary>A single point in the MA curve, representing a single candle</summary>
+		[DebuggerDisplay("{Description,nq}")]
+		public class MAPoint
+		{
+			public MAPoint(int candle_index, long ts, double value, double std_dev)
+			{
+				CandleIndex = candle_index;
+				Value = value;
+				StdDev = std_dev;
+				Timestamp = ts;
+			}
+
+			/// <summary>The index in the instrument that this point corresponds to</summary>
+			public double CandleIndex { get; }
+
+			/// <summary>The value of the moving average at 'Timestamp'</summary>
+			public double Value { get; }
+
+			/// <summary>The standard deviation of the moving average at 'Timestamp'</summary>
+			public double StdDev { get; }
+
+			/// <summary>The candle timestamp that this MA point corresponds to</summary>
+			public long Timestamp { get; }
+
+			/// <summary>Guess at whether double or long values are used</summary>
+			private string Description => $"{CandleIndex} {Value}";
+		}
+
 		/// <summary>A MA data set based on an instrument</summary>
-		public class MAContext :IDisposable
+		public class Context :IDisposable
 		{
 			// Notes:
 			//  - Calculate the MA for the full range (or perhaps limit to 1,000,000).
@@ -159,36 +154,36 @@ namespace CoinFlip.UI.Indicators
 			private readonly List<MAPoint> m_data;
 			private IStatMeanAndVarianceSingleVariable<double> m_stat;
 
-			public MAContext(MovingAverage ma, Instrument instrument)
+			public Context(MovingAverage ma, Instrument instrument)
 			{
 				m_data = new List<MAPoint>();
-				MA = ma;
+				Options = ma;
 				Instrument = instrument;
 
 				Reset();
-				CalculateMA();
+				Update();
 			}
 			public void Dispose()
 			{
 				Instrument = null;
-				MA = null;
+				Options = null;
 			}
 
 			/// <summary>The moving average this context is based on</summary>
-			private MovingAverage MA
+			private MovingAverage Options
 			{
-				get => m_ma;
+				get => n_options;
 				set
 				{
-					if (m_ma == value) return;
-					if (m_ma != null)
+					if (n_options == value) return;
+					if (n_options != null)
 					{
-						m_ma.SettingChange -= HandleSettingChange;
+						n_options.SettingChange -= HandleSettingChange;
 					}
-					m_ma = value;
-					if (m_ma != null)
+					n_options = value;
+					if (n_options != null)
 					{
-						m_ma.SettingChange += HandleSettingChange;
+						n_options.SettingChange += HandleSettingChange;
 					}
 
 					// Handler
@@ -200,41 +195,20 @@ namespace CoinFlip.UI.Indicators
 						case nameof(MovingAverage.Exponential):
 							{
 								Reset();
-								CalculateMA();
+								Update();
 								break;
 							}
 						case nameof(MovingAverage.Periods):
 							{
 								Reset();
-								CalculateMA();
+								Update();
 								break;
 							}
 						}
 					}
 				}
 			}
-			private MovingAverage m_ma;
-
-			/// <summary>Reset the data and recalculate</summary>
-			public void Reset()
-			{
-				m_data.Clear();
-				m_stat = MA.Exponential
-					? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(MA.Periods)
-					: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(MA.Periods);
-			}
-
-			/// <summary>The number of points in the MA</summary>
-			public int Count => m_data.Count;
-
-			/// <summary>Basic list access</summary>
-			public MAPoint this[int i] => m_data[i];
-
-			/// <summary>Returns the nearest index position of 'candle_index' within the data</summary>
-			public int IndexOf(double candle_index) => m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(candle_index), find_insert_position: true);
-
-			/// <summary>The candle range spanned by this context</summary>
-			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex + 1) : Range.Invalid;
+			private MovingAverage n_options;
 
 			/// <summary>The instrument to calculate the moving average over</summary>
 			public Instrument Instrument
@@ -256,14 +230,35 @@ namespace CoinFlip.UI.Indicators
 					// Handler
 					void HandleDataChanged(object sender, DataEventArgs e)
 					{
-						CalculateMA();
+						Update();
 					}
 				}
 			}
 			private Instrument m_instrument;
 
-			/// <summary>Update the MA to match the current state of 'Instrument'</summary>
-			public void CalculateMA()
+			/// <summary>The number of points in the MA</summary>
+			public int Count => m_data.Count;
+
+			/// <summary>Basic list access</summary>
+			public MAPoint this[int i] => m_data[i];
+
+			/// <summary>The candle range spanned by this context</summary>
+			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex + 1) : Range.Invalid;
+
+			/// <summary>Returns the nearest index position of 'candle_index' within the data</summary>
+			public int IndexOf(double candle_index) => m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(candle_index), find_insert_position: true);
+
+			/// <summary>Reset the data</summary>
+			public void Reset()
+			{
+				m_data.Clear();
+				m_stat = Options.Exponential
+					? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(Options.Periods)
+					: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(Options.Periods);
+			}
+
+			/// <summary>Update to match the current state of 'Instrument'</summary>
+			public void Update()
 			{
 				// 'm_stat' does not include the latest candle as it changes all the time.
 
@@ -322,34 +317,6 @@ namespace CoinFlip.UI.Indicators
 
 			/// <summary>Raised when data is changed</summary>
 			public event EventHandler<DataChangedEventArgs> DataChanged;
-
-			/// <summary>A single point in the MA curve, representing a single candle</summary>
-			[DebuggerDisplay("{Description,nq}")]
-			public class MAPoint
-			{
-				public MAPoint(int candle_index, long ts, double value, double std_dev)
-				{
-					CandleIndex = candle_index;
-					Value = value;
-					StdDev = std_dev;
-					Timestamp = ts;
-				}
-
-				/// <summary>The index in the instrument that this point corresponds to</summary>
-				public double CandleIndex { get; }
-
-				/// <summary>The value of the moving average at 'Timestamp'</summary>
-				public double Value { get; }
-
-				/// <summary>The standard deviation of the moving average at 'Timestamp'</summary>
-				public double StdDev { get; }
-
-				/// <summary>The candle timestamp that this MA point corresponds to</summary>
-				public long Timestamp { get; }
-
-				/// <summary>Guess at whether double or long values are used</summary>
-				private string Description => $"{CandleIndex} {Value}";
-			}
 		}
 
 		/// <summary>A view of the indicator</summary>
@@ -359,7 +326,7 @@ namespace CoinFlip.UI.Indicators
 				: base(ma.Id, ma.Name, chart, ma)
 			{
 				Cache = new ChartGfxCache(CreatePiece);
-				Data = new MAContext(ma, chart.Instrument);
+				Data = new Context(ma, chart.Instrument);
 				Data.DataChanged += (s,a) =>
 				{
 					Cache.Invalidate(a.Range);
@@ -376,7 +343,7 @@ namespace CoinFlip.UI.Indicators
 			private MovingAverage MA => (MovingAverage)Indicator;
 
 			/// <summary>The moving average data</summary>
-			private MAContext Data { get; }
+			private Context Data { get; }
 
 			/// <summary>A cache of graphics objects than span X-axis ranges</summary>
 			private ChartGfxCache Cache
@@ -439,13 +406,8 @@ namespace CoinFlip.UI.Indicators
 					switch (e.Key)
 					{
 					case nameof(Exponential):
-					case nameof(BBStdDev):
-						{
-							Data.Reset();
-							Cache.Invalidate();
-							break;
-						}
 					case nameof(Periods):
+					case nameof(BBStdDev):
 						{
 							Data.Reset();
 							Cache.Invalidate();
@@ -526,7 +488,7 @@ namespace CoinFlip.UI.Indicators
 				// Get the range required for display
 				var range = Data.CandleRange.Intersect(Chart.XAxis.Range);
 
-				// The line graphics are in chart space, get the transform to client space
+				// The graphics are in chart space, get the transform to client space
 				var c2c = Chart.ChartToClientSpace();
 				var c2c_2d = new MatrixTransform(c2c.x.x, 0, 0, c2c.y.y, c2c.w.x + MA.XOffset, c2c.w.y);
 
@@ -642,7 +604,7 @@ namespace CoinFlip.UI.Indicators
 					High = null;
 					Low = null;
 				}
-				public MAPiece(RangeF range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
+				public MAPiece(RangeF range, MovingAverage ma, IEnumerable<MAPoint> data)
 				{
 					Range = range;
 
@@ -730,7 +692,7 @@ namespace CoinFlip.UI.Indicators
 			}
 		}
 
-		/// <summary>Event args for MAContext.DataChanged</summary>
+		/// <summary>Event args for Context.DataChanged</summary>
 		public class DataChangedEventArgs
 		{
 			public DataChangedEventArgs(Range range)

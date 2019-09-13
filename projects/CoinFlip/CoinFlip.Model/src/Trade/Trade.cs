@@ -335,7 +335,7 @@ namespace CoinFlip
 		{
 			// Create the order on the exchange
 			Model.Log.Write(ELogLevel.Info, $"Creating or modifying trade: {Description}");
-			return await Exchange.CreateOrder(Fund, Pair, TradeType, OrderType, AmountIn, AmountOut, cancel, CreatorName);
+			return await Exchange.CreateOrder(this, cancel);
 		}
 
 		/// <summary>Trade property changed</summary>

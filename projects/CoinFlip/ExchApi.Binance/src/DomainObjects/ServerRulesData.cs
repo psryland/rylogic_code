@@ -201,6 +201,17 @@ namespace Binance.API.DomainObjects
 			/// <summary></summary>
 			[JsonProperty("applyToMarket")]
 			public bool ApplyToMarketOrders { get; private set; }
+
+			/// <summary>Round the given amount to zero or the minimum notional amount given price</summary>
+			public decimal Round(decimal amount_base, decimal price_q2b)
+			{
+				var value = price_q2b * amount_base;
+				if (value < MinNotional / 2)
+					return 0m;
+				if (value < MinNotional)
+					return MinNotional / price_q2b;
+				return amount_base;
+			}
 		}
 		public class FilterLimit :Filter
 		{

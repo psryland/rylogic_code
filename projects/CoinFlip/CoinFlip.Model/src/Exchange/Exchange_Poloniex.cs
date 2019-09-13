@@ -323,35 +323,32 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(Trade trade, CancellationToken cancel)
 		{
 			try
 			{
 				// Place the trade order
-				if (ot != EOrderType.Limit)
+				if (trade.OrderType != EOrderType.Limit)
 					throw new NotImplementedException();
 
-				var coin_in = tt.CoinIn(pair);
-				var coin_out = tt.CoinOut(pair);
-				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
-				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price_q2b, amount_base, cancel);
+				var cp = new CurrencyPair(trade.Pair.Base, trade.Pair.Quote);
+				var res = await Api.SubmitTrade(cp, trade.TradeType.ToPoloniexTT(), trade.PriceQ2B, trade.AmountBase, cancel);
 
 				// Get the immediate fills
 				var fills = new List<OrderResult.Fill>();
 				foreach (var fill in res.FilledOrders)
 				{
-					var fill_in = tt.AmountIn(fill.AmountBase, fill.PriceQ2B)._(coin_in);
-					var fill_out = tt.AmountOut(fill.AmountBase, fill.PriceQ2B)._(coin_out);
-					fills.Add(new OrderResult.Fill(fill.TradeId, fill_in, fill_out, fill.CommissionQuote, pair.Quote));
+					var fill_in  = trade.TradeType.AmountIn(fill.AmountBase, fill.PriceQ2B)._(trade.CoinIn);
+					var fill_out = trade.TradeType.AmountOut(fill.AmountBase, fill.PriceQ2B)._(trade.CoinOut);
+					fills.Add(new OrderResult.Fill(fill.TradeId, fill_in, fill_out, fill.CommissionQuote, trade.Pair.Quote));
 				}
 
 				// Return the order result
-				return new OrderResult(pair, res.OrderId, false, fills);
+				return new OrderResult(trade.Pair, res.OrderId, false, fills);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)} @  {(amount_out/amount_in).ToString(8,true)}", ex);
+				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{trade.TradeType} Pair: {trade.Pair.Name}  Amt: {trade.AmountIn.ToString(8, true)} -> {trade.AmountOut.ToString(8, true)} @  {trade.PriceQ2B.ToString(8, true)}", ex);
 			}
 		}
 

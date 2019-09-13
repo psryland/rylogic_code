@@ -97,7 +97,12 @@
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
     <Compile Include="src\Indicators\HorizontalLine.cs" />
-    <Compile Include="src\Indicators\IndicatorLegend.xaml.cs">
+    <Compile Include="src\Indicators\Indicator.cs" />
+    <Compile Include="src\Indicators\StopAndReverse.cs" />
+    <Compile Include="src\Indicators\StopAndReverseUI.xaml.cs">
+      <DependentUpon>StopAndReverseUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\UI\IndicatorLegend.xaml.cs">
       <DependentUpon>IndicatorLegend.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Indicators\MovingAverage.cs" />
@@ -168,7 +173,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\Indicators\IndicatorLegend.xaml">
+    <Page Include="src\Indicators\StopAndReverseUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\IndicatorLegend.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

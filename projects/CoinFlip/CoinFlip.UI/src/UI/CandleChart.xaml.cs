@@ -172,7 +172,7 @@ namespace CoinFlip.UI
 						}
 					case NotifyCollectionChangedAction.Remove:
 						{
-							IndicatorViews.RemoveIf(x => x.IndicatorId == e.Indicator.Id, dispose: true);
+							IndicatorViews.RemoveIf(x => x.Indicator.Id == e.Indicator.Id, dispose: true);
 							break;
 						}
 					}
@@ -452,7 +452,7 @@ namespace CoinFlip.UI
 						{
 							// Delete selected indicators
 							foreach (var indy in IndicatorViews.Where(x => x.Selected).ToList())
-								Model.Indicators.Remove(Pair.Name, indy.IndicatorId);
+								Model.Indicators.Remove(Pair.Name, indy.Indicator.Id);
 
 							e.Handled = true;
 							break;
@@ -472,12 +472,14 @@ namespace CoinFlip.UI
 				if (m_legend == value) return;
 				if (m_legend != null)
 				{
+					m_legend.IndicatorsReordered -= HandleReordred;
 					m_legend.PreviewKeyDown -= HandleKey;
 				}
 				m_legend = value;
 				if (m_legend != null)
 				{
 					m_legend.PreviewKeyDown += HandleKey;
+					m_legend.IndicatorsReordered += HandleReordred;
 				}
 
 				// Handlers
@@ -490,12 +492,22 @@ namespace CoinFlip.UI
 							// Delete the selected indicator
 							var indy = Legend.SelectedIndicator;
 							if (indy != null)
-								Model.Indicators.Remove(Pair.Name, indy.IndicatorId);
+								Model.Indicators.Remove(Pair.Name, indy.Indicator.Id);
 
 							e.Handled = true;
 							break;
 						}
 					}
+				}
+				void HandleReordred(object sender, EventArgs e)
+				{
+					// Set the new display order
+					int i = 0;
+					foreach (var indy in IndicatorViews.OfType<IIndicatorView>())
+						indy.Indicator.DisplayOrder = i++;
+
+					Model.Indicators.Save();
+					PopulateIndicators();
 				}
 			}
 		}
@@ -504,7 +516,7 @@ namespace CoinFlip.UI
 		/// <summary>The data displayed on the chart</summary>
 		public Instrument Instrument
 		{
-			get { return m_instrument; }
+			get => m_instrument;
 			private set
 			{
 				if (m_instrument == value) return;
@@ -534,6 +546,10 @@ namespace CoinFlip.UI
 
 				// Auto Range and refresh
 				Chart.AutoRange();
+
+				// Notify
+				NotifyPropertyChanged(nameof(AccountPositionDesc));
+				NotifyPropertyChanged(nameof(AccountPositionColour));
 
 				// Handler
 				void HandleDataChanged(object sender, DataEventArgs e)
@@ -599,9 +615,10 @@ namespace CoinFlip.UI
 			private set
 			{
 				// Notes:
-				//  - Don't make this an observable collection. This collection is maintained by Model.Indicators.CollectionChanged
-				//    to match indicator views 1-to-1 with the indicators in the model associated with this instrument. Do not try
-				//    to delete Model.Indicators based on removals from this collection.
+				//  - This collection is maintained by Model.Indicators.CollectionChanged to match indicator
+				//    views 1-to-1 with the indicators in the model associated with this instrument. Do not try
+				//    to delete Model.Indicators based on removals from this collection. Instead, delete from
+				//    the Model.Indicators then update this collection.
 				//  - This collection is observable so that the DataGrid updates in the UI automatically.
 
 				if (m_indicator_views == value) return;
@@ -1104,12 +1121,19 @@ namespace CoinFlip.UI
 				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
 				{
 					{
-						// New Moving Average
 						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
 						opt.Click += (s, a) =>
 						{
 							if (Instrument == null) return;
 							Model.Indicators.Add(Instrument.Pair.Name, new MovingAverage { });
+						};
+					}
+					{
+						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "SAR" });
+						opt.Click += (s, a) =>
+						{
+							if (Instrument == null) return;
+							Model.Indicators.Add(Instrument.Pair.Name, new StopAndReverse { });
 						};
 					}
 				}
