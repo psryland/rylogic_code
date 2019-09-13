@@ -10,11 +10,7 @@ CoinFlip
 		- Implement equity since time point
 	Indicators:
 		- Free draw line indicator
-		- Create an indicator base class
-		- Better triangle pattern controls
 		- TD sequential
-		- SAR
-		- Add Reflective way of populating chart context menu for indicators and drawings
 	Bots:
 		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	General:

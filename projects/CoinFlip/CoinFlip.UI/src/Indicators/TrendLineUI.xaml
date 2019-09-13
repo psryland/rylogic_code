@@ -56,8 +56,8 @@
 				Width="40"
 				/>
 			<ComboBox
-				ItemsSource="{Binding Data.TrendType, Converter={conv:EnumValues}}"
-				SelectedItem="{Binding Data.TrendType}"
+				ItemsSource="{Binding Data.Type, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Data.Type}"
 				HorizontalContentAlignment="Center"
 				MinWidth="140"
 				Margin="3"

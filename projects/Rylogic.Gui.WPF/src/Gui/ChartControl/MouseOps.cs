@@ -134,13 +134,6 @@ namespace Rylogic.Gui.WPF
 			//  - If at any point a mouse op is cancelled, no further mouse events are forwarded
 			//    to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
-			// Selection data for a mouse button
-			public bool m_btn_down;            // True while the corresponding mouse button is down
-			public Point m_grab_client;        // The client space location of where the chart was "grabbed" (note: ChartControl, not ChartPanel space)
-			public Point m_grab_chart;         // The chart space location of where the chart was "grabbed"
-			public HitTestResult m_hit_result; // The hit test result on mouse down
-			private bool m_is_click;           // True until the mouse is dragged beyond the click threshold
-
 			public MouseOp(ChartControl chart)
 			{
 				Chart = chart;
@@ -159,6 +152,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The owning chart</summary>
 			protected ChartControl Chart { get; }
 
+			/// <summary>The hit test result on mouse down</summary>
+			public HitTestResult HitResult { get; set; }
+
+			/// <summary>The chart space location of where the chart was "grabbed"</summary>
+			public Point GrabChart { get; set; }
+
+			/// <summary>The client space location of where the chart was "grabbed" (note: ChartControl, not ChartPanel space)</summary>
+			public Point GrabClient { get; set; }
+
 			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
 			public bool StartOnMouseDown { get; set; }
 
@@ -169,10 +171,11 @@ namespace Rylogic.Gui.WPF
 			public bool IsClick(Point location)
 			{
 				if (!m_is_click) return false;
-				var grab = m_grab_client;
+				var grab = GrabClient;
 				var diff = location - grab;
 				return m_is_click = diff.LengthSquared < Math_.Sqr(Chart.Options.MinDragPixelDistance);
 			}
+			private bool m_is_click; // True until the mouse is dragged beyond the click threshold
 
 			/// <summary>Called on mouse down</summary>
 			public virtual void MouseDown(MouseButtonEventArgs e) { }
@@ -223,7 +226,7 @@ namespace Rylogic.Gui.WPF
 				if (Chart.YAxisBounds.Contains(location)) m_hit_axis = EAxis.YAxis;
 
 				// Look for a selected object that the mouse operation starts on
-				m_hit_selected = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected);
+				m_hit_selected = HitResult.Hits.FirstOrDefault(x => x.Element.Selected);
 
 				// Record the drag start positions for selected objects
 				foreach (var elem in Chart.Selected)
@@ -253,8 +256,8 @@ namespace Rylogic.Gui.WPF
 					return;
 
 				// Pass the drag event out to users first
-				var delta = Chart.ClientToChart(location) - m_grab_chart;
-				var args = new ChartDraggedEventArgs(m_hit_result, delta, m_drag_state);
+				var delta = Chart.ClientToChart(location) - GrabChart;
+				var args = new ChartDraggedEventArgs(HitResult, delta, m_drag_state);
 				m_drag_state = EDragState.Dragging;
 				Chart.OnChartDragged(args);
 
@@ -280,7 +283,7 @@ namespace Rylogic.Gui.WPF
 				{ }
 				else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
-					if (Chart.DoChartAreaSelect(m_hit_result.ModifierKeys))
+					if (Chart.DoChartAreaSelect(HitResult.ModifierKeys))
 					{
 						// Otherwise change the selection area
 						if (m_cleanup_selection_graphic == null)
@@ -291,7 +294,7 @@ namespace Rylogic.Gui.WPF
 						}
 
 						// Position the selection graphic
-						var selection_area = BRect.FromBounds(m_grab_chart.ToV2(), Chart.ClientToChart(location).ToV2());
+						var selection_area = BRect.FromBounds(GrabChart.ToV2(), Chart.ClientToChart(location).ToV2());
 						Chart.Tools.AreaSelect.O2P = m4x4.Scale(selection_area.SizeX, selection_area.SizeY, 1f, new v4(selection_area.Centre, Chart.HighestZ, 1));
 					}
 				}
@@ -314,7 +317,7 @@ namespace Rylogic.Gui.WPF
 				if (IsClick(location))
 				{
 					// Pass the click event out to users first
-					var args = new ChartClickedEventArgs(m_hit_result, e, m_click_count);
+					var args = new ChartClickedEventArgs(HitResult, e, m_click_count);
 					Chart.OnChartClicked(args);
 
 					// If a selected element was hit on mouse down, see if it handles the click
@@ -324,19 +327,19 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// If no selected element was hit, try hovered elements
-					if (!args.Handled && m_hit_result.Hits.Count != 0)
+					if (!args.Handled && HitResult.Hits.Count != 0)
 					{
-						for (int i = 0; i != m_hit_result.Hits.Count && !args.Handled; ++i)
+						for (int i = 0; i != HitResult.Hits.Count && !args.Handled; ++i)
 						{
-							if (m_hit_result.Hits[i] == m_hit_selected) continue;
-							m_hit_result.Hits[i].Element.HandleClickedInternal(args);
+							if (HitResult.Hits[i] == m_hit_selected) continue;
+							HitResult.Hits[i].Element.HandleClickedInternal(args);
 						}
 					}
 
 					// If the click is still unhandled, use the click to try to select something (if within the chart)
-					if (!args.Handled && m_hit_result.Zone.HasFlag(EZone.Chart))
+					if (!args.Handled && HitResult.Zone.HasFlag(EZone.Chart))
 					{
-						var selection_area = new Rect(m_grab_chart, Size_.Zero);
+						var selection_area = new Rect(GrabChart, Size_.Zero);
 						Chart.SelectElements(selection_area, Keyboard.Modifiers, e.ToMouseBtns());
 					}
 
@@ -350,8 +353,8 @@ namespace Rylogic.Gui.WPF
 						m_drag_state = EDragState.Commit;
 
 					// Pass the drag event out to users first
-					var delta = Chart.ClientToChart(location) - m_grab_chart;
-					var args = new ChartDraggedEventArgs(m_hit_result, delta, m_drag_state);
+					var delta = Chart.ClientToChart(location) - GrabChart;
+					var args = new ChartDraggedEventArgs(HitResult, delta, m_drag_state);
 					Chart.OnChartDragged(args);
 
 					// See if the selected element handles dragging
@@ -377,9 +380,9 @@ namespace Rylogic.Gui.WPF
 					else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (m_hit_result.Zone.HasFlag(EZone.Chart) && m_cleanup_selection_graphic != null)
+						if (HitResult.Zone.HasFlag(EZone.Chart) && m_cleanup_selection_graphic != null)
 						{
-							var selection_area = BBox.From(new v4(m_grab_chart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
+							var selection_area = BBox.From(new v4(GrabChart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
 							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area, e.ToMouseBtns()));
 						}
 					}
@@ -408,7 +411,7 @@ namespace Rylogic.Gui.WPF
 					// Abort dragging
 					if (m_dragging_element != null)
 					{
-						m_dragging_element.HandleDraggedInternal(new ChartDraggedEventArgs(m_hit_result, default, m_drag_state));
+						m_dragging_element.HandleDraggedInternal(new ChartDraggedEventArgs(HitResult, default, m_drag_state));
 						m_dragging_element = null;
 					}
 
@@ -458,7 +461,7 @@ namespace Rylogic.Gui.WPF
 					return;
 
 				// Position the tape measure graphic
-				var pt0 = Chart.Camera.O2W * Chart.ChartToCamera(m_grab_chart);
+				var pt0 = Chart.Camera.O2W * Chart.ChartToCamera(GrabChart);
 				var pt1 = Chart.Camera.O2W * Chart.ChartToCamera(Chart.ClientToChart(location));
 				var delta = pt1 - pt0;
 				Chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
@@ -489,16 +492,16 @@ namespace Rylogic.Gui.WPF
 				if (IsClick(location))
 				{
 					// Pass the click event out to users first
-					var args = new ChartClickedEventArgs(m_hit_result, e);
+					var args = new ChartClickedEventArgs(HitResult, e);
 					Chart.OnChartClicked(args);
 
 					if (!args.Handled)
 					{
-						if (m_hit_result.Zone.HasFlag(EZone.Chart))
+						if (HitResult.Zone.HasFlag(EZone.Chart))
 						{ }
-						else if (m_hit_result.Zone.HasFlag(EZone.XAxis))
+						else if (HitResult.Zone.HasFlag(EZone.XAxis))
 						{ }
-						else if (m_hit_result.Zone.HasFlag(EZone.YAxis))
+						else if (HitResult.Zone.HasFlag(EZone.YAxis))
 						{ }
 					}
 				}
@@ -557,7 +560,7 @@ namespace Rylogic.Gui.WPF
 
 				// Limit the drag direction
 				var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
-				var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, m_grab_client);
+				var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, GrabClient);
 				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
 				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
@@ -574,7 +577,7 @@ namespace Rylogic.Gui.WPF
 				// If we haven't dragged, treat it as a click instead
 				if (IsClick(location))
 				{
-					var args = new ChartClickedEventArgs(m_hit_result, e);
+					var args = new ChartClickedEventArgs(HitResult, e);
 					Chart.OnChartClicked(args);
 					Chart.Scene.Invalidate();
 				}
@@ -582,7 +585,7 @@ namespace Rylogic.Gui.WPF
 				{
 					// Limit the drag direction
 					var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
-					var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, m_grab_client);
+					var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, GrabClient);
 					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
 					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 

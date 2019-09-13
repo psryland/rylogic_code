@@ -18,6 +18,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI.Indicators
 {
+	[Indicator]
 	public class StopAndReverse :Indicator<StopAndReverse>
 	{
 		public StopAndReverse()
@@ -596,5 +597,8 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>The X Range of the data that has changed</summary>
 			public Range Range { get; }
 		}
+
+		/// <summary>Returns a mouse op instance for creating the indicator</summary>
+		public static IIndicator Create(CandleChart _) => new StopAndReverse();
 	}
 }

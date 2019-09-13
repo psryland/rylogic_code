@@ -16,6 +16,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI.Indicators
 {
+	[Indicator]
 	public class MovingAverage :Indicator<MovingAverage>
 	{
 		public MovingAverage()
@@ -703,6 +704,9 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>The X Range of the data that has changed</summary>
 			public Range Range { get; }
 		}
+
+		/// <summary>Returns a mouse op instance for creating the indicator</summary>
+		public static IIndicator Create(CandleChart _) => new MovingAverage();
 	}
 }
 

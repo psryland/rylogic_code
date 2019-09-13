@@ -73,6 +73,7 @@
     <Compile Include="src\Exchange\TransfersCollection.cs" />
     <Compile Include="src\Extn\CoinData_.cs" />
     <Compile Include="src\Extn\TradeType_.cs" />
+    <Compile Include="src\Indicators\Attributes.cs" />
     <Compile Include="src\Misc\DapperExtensions.cs" />
     <Compile Include="src\Misc\ECandleStyle.cs" />
     <Compile Include="src\Misc\EShowItems.cs" />

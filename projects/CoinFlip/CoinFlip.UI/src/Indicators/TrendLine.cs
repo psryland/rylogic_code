@@ -15,11 +15,12 @@ using Rylogic.Maths;
 
 namespace CoinFlip.UI.Indicators
 {
+	[Indicator(IsDrawing = true)]
 	public class TrendLine :Indicator<TrendLine>
 	{
 		public TrendLine()
 		{
-			TrendType = ETrendType.Slope;
+			Type = ETrendType.Slope;
 			Time0 = Misc.CryptoCurrencyEpoch.Ticks;
 			Time1 = Misc.CryptoCurrencyEpoch.Ticks;
 			Price0 = 0.0;
@@ -38,31 +39,31 @@ namespace CoinFlip.UI.Indicators
 				{
 				case nameof(Time0):
 					{
-						if (TrendType == ETrendType.Vertical)
+						if (Type == ETrendType.Vertical)
 							Time1 = Time0;
 						break;
 					}
 				case nameof(Time1):
 					{
-						if (TrendType == ETrendType.Vertical)
+						if (Type == ETrendType.Vertical)
 							Time0 = Time1;
 						break;
 					}
 				case nameof(Price0):
 					{
-						if (TrendType == ETrendType.Horizontal)
+						if (Type == ETrendType.Horizontal)
 							Price1 = Price0;
 						break;
 					}
 				case nameof(Price1):
 					{
-						if (TrendType == ETrendType.Horizontal)
+						if (Type == ETrendType.Horizontal)
 							Price0 = Price1;
 						break;
 					}
-				case nameof(TrendType):
+				case nameof(Type):
 					{
-						switch (TrendType)
+						switch (Type)
 						{
 						default: throw new Exception("Unknown trend type");
 						case ETrendType.Slope: break;
@@ -77,10 +78,10 @@ namespace CoinFlip.UI.Indicators
 		}
 
 		/// <summary>The behaviour of this trend line</summary>
-		public ETrendType TrendType
+		public ETrendType Type
 		{
-			get => get<ETrendType>(nameof(TrendType));
-			set => set(nameof(TrendType), value);
+			get => get<ETrendType>(nameof(Type));
+			set => set(nameof(Type), value);
 		}
 
 		/// <summary>Start point time (in ticks)</summary>
@@ -132,6 +133,14 @@ namespace CoinFlip.UI.Indicators
 		public override IIndicatorView CreateView(IChartView chart)
 		{
 			return new View(this, chart);
+		}
+
+		/// <summary>Behaivours for this trend line</summary>
+		public enum ETrendType
+		{
+			Slope,
+			Horizontal,
+			Vertical,
 		}
 
 		/// <summary>A view of the indicator</summary>
@@ -396,12 +405,59 @@ namespace CoinFlip.UI.Indicators
 			private EMove m_move;
 		}
 
-		/// <summary>Behaivours for this trend line</summary>
-		public enum ETrendType
+		/// <summary>Returns a mouse op instance for creating the indicator</summary>
+		public static ChartControl.MouseOp Create(CandleChart chart) => new CreateOp(chart);
+		private class CreateOp :ChartControl.MouseOp
 		{
-			Slope,
-			Horizontal,
-			Vertical,
+			private readonly CandleChart m_chart;
+			private TrendLine m_indy;
+
+			public CreateOp(CandleChart chart)
+				: base(chart.Chart)
+			{
+				m_chart = chart;
+			}
+			private Model Model => m_chart.Model;
+			private Instrument Instrument => m_chart.Instrument;
+			public override void MouseDown(MouseButtonEventArgs e)
+			{
+				base.MouseDown(e);
+
+				var time = Instrument.TimeAtFIndex(GrabChart.X);
+				m_indy = Model.Indicators.Add(Instrument.Pair.Name, new TrendLine
+				{
+					Time0 = time,
+					Time1 = time,
+					Price0 = GrabChart.Y,
+					Price1 = GrabChart.Y,
+				});
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				base.MouseMove(e);
+
+				var client_pt = e.GetPosition(Chart);
+				var chart_pt = Chart.ClientToChart(client_pt);
+				var delta = client_pt - GrabClient;
+
+				m_indy.Type =
+					!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? ETrendType.Slope :
+					Math.Abs(delta.X) > Math.Abs(delta.Y) ? ETrendType.Horizontal : ETrendType.Vertical;
+
+				if (m_indy.Type == ETrendType.Horizontal)
+					chart_pt.Y = GrabChart.Y;
+				if (m_indy.Type == ETrendType.Vertical)
+					chart_pt.X = GrabChart.X;
+
+				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.X);
+				m_indy.Price1 = chart_pt.Y;
+			}
+			public override void NotifyCancelled()
+			{
+				base.NotifyCancelled();
+				if (m_indy != null)
+					Model.Indicators.Remove(Instrument.Pair.Name, m_indy.Id);
+			}
 		}
 	}
 }

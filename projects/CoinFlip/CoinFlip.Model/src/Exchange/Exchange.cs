@@ -616,12 +616,6 @@ namespace CoinFlip
 					throw new Exception($"Cannot place orders when Trading is disabled");
 				if (trade.Pair.Exchange != this)
 					throw new Exception($"Pair {trade.Pair} is not provided by this exchange");
-				if (trade.AmountIn <= 0m._(trade.TradeType.CoinIn(trade.Pair)))
-					throw new Exception($"Invalid trade 'in' amount: {trade.AmountIn}");
-				if (trade.AmountOut <= 0m._(trade.TradeType.CoinOut(trade.Pair)))
-					throw new Exception($"Invalid trade 'out' amount: {trade.AmountOut}");
-				if (trade.AmountIn > trade.Fund[trade.TradeType.CoinIn(trade.Pair)].Available)
-					throw new Exception($"Order amount ({trade.AmountIn}) is greater than the current available balance: {trade.Fund[trade.TradeType.CoinIn(trade.Pair)].Available}");
 
 				// Check the trade is valid
 				var err = trade.Validate();

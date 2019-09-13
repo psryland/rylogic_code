@@ -124,14 +124,17 @@ namespace CoinFlip.Bots
 					Cancel.Cancel();
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' stopped");
 				}
-				m_bot_main_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				m_bot_main_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) { IsEnabled = false } : null;
 				if (Active)
 				{
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' started");
 					LastStepTime = Model.UtcNow - LoopPeriod;
 					Cancel = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
-					if (!Model.BackTesting) m_bot_main_timer.Start();
-					HandleTick();
+					if (!Model.BackTesting)
+					{
+						m_bot_main_timer.Start();
+						HandleTick();
+					}
 				}
 
 				// Notify active changed
@@ -168,14 +171,14 @@ namespace CoinFlip.Bots
 		}
 		private DispatcherTimer m_bot_main_timer;
 
-		/// <summary>The time at which to step this bot again</summary>
-		public virtual DateTimeOffset NextStepTime => LastStepTime + LoopPeriod;
+		/// <summary>Time stamp of when the last occurred</summary>
+		protected DateTimeOffset LastStepTime { get; private set; }
 
 		/// <summary>How frequently the Bot wants to be stepped</summary>
 		public virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
 
-		/// <summary>Time stamp of when the last occurred</summary>
-		public DateTimeOffset LastStepTime { get; private set; }
+		/// <summary>The time at which to step this bot again</summary>
+		public virtual DateTimeOffset NextStepTime => LastStepTime + LoopPeriod;
 
 		/// <summary>The time span until this bot is due to be stepped</summary>
 		public TimeSpan TimeTillNextStep => NextStepTime - Model.UtcNow;

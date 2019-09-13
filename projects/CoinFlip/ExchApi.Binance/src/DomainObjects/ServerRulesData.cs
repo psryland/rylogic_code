@@ -137,8 +137,11 @@ namespace Binance.API.DomainObjects
 				var quantised_price = Math_.Clamp(price, MinPrice, MaxPrice);
 
 				// Align (down) to the tick size
-				var remainder = quantised_price % TickSize;
-				quantised_price -= remainder;
+				if (TickSize != 0)
+				{
+					var remainder = quantised_price % TickSize;
+					quantised_price -= remainder;
+				}
 
 				return quantised_price;
 			}
@@ -186,8 +189,11 @@ namespace Binance.API.DomainObjects
 				var quantised_amount = Math_.Clamp(amount, MinQuantity, MaxQuantity);
 
 				// Align (down) to the step size
-				var remainder = quantised_amount % StepSize;
-				quantised_amount -= remainder;
+				if (StepSize != 0)
+				{
+					var remainder = quantised_amount % StepSize;
+					quantised_amount -= remainder;
+				}
 
 				return quantised_amount;
 			}

@@ -103,10 +103,9 @@ namespace Rylogic.Gui.WPF
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
 			{
-				op.m_btn_down = true;
-				op.m_grab_client = location; // Note: in ChartControl space, not ChartPanel space
-				op.m_grab_chart = ClientToChart(op.m_grab_client);
-				op.m_hit_result = HitTestCS(op.m_grab_client, Keyboard.Modifiers, args.ToMouseBtns(), null);
+				op.GrabClient = location; // Note: in ChartControl space, not ChartPanel space
+				op.GrabChart = ClientToChart(op.GrabClient);
+				op.HitResult = HitTestCS(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
 				CaptureMouse();
 			}

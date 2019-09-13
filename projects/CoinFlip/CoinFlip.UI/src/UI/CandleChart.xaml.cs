@@ -81,6 +81,7 @@ namespace CoinFlip.UI
 					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
 					m_model.Indicators.CollectionChanged -= HandleIndicatorCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
+					CoinData.LivePriceChanged -= HandleLivePricesChanged;
 					CoinData.BalanceChanged -= HandleBalanceChanged;
 					m_model.Charts.Remove(this);
 				}
@@ -89,6 +90,7 @@ namespace CoinFlip.UI
 				{
 					m_model.Charts.Add(this);
 					CoinData.BalanceChanged += HandleBalanceChanged;
+					CoinData.LivePriceChanged += HandleLivePricesChanged;
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
 					m_model.Indicators.CollectionChanged += HandleIndicatorCollectionChanged;
 					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
@@ -102,6 +104,15 @@ namespace CoinFlip.UI
 
 				// Handler
 				void HandleBalanceChanged(object sender, CoinEventArgs e)
+				{
+					if (e.Coin == Pair?.Base || e.Coin == Pair?.Quote)
+					{
+						NotifyPropertyChanged(nameof(AccountPosition));
+						NotifyPropertyChanged(nameof(AccountPositionDesc));
+						NotifyPropertyChanged(nameof(AccountPositionColour));
+					}
+				}
+				void HandleLivePricesChanged(object sender, CoinEventArgs e)
 				{
 					if (e.Coin == Pair?.Base || e.Coin == Pair?.Quote)
 					{
@@ -1049,6 +1060,52 @@ namespace CoinFlip.UI
 					chart_options_menu.Items.AddRange(items);
 				}
 
+				// Drawing tools menu
+				var drawing_menu = cmenu.Items.Add2(new MenuItem { Header = "Drawing" });
+				foreach (var drawing in Indicator_.EnumDrawings())
+				{
+					var opt = drawing_menu.Items.Add2(new MenuItem { Header = Indicator_.Name(drawing) });
+					opt.Click += (s, a) =>
+					{
+						if (Instrument == null) return;
+
+						var instance = Indicator_.CreateInstance(drawing, this);
+						if (instance is ChartControl.MouseOp op)
+						{
+							Chart.MouseOperations.SetPending(MouseButton.Left, op);
+							return;
+						}
+						if (instance is IIndicator indy)
+						{
+							Model.Indicators.Add(Instrument.Pair.Name, indy);
+							return;
+						}
+					};
+				}
+
+				// Indicators sub menu
+				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
+				foreach (var indicator in Indicator_.EnumIndicators())
+				{
+					var opt = indicators_menu.Items.Add2(new MenuItem { Header = Indicator_.Name(indicator) });
+					opt.Click += (s, a) =>
+					{
+						if (Instrument == null) return;
+
+						var instance = Indicator_.CreateInstance(indicator, this);
+						if (instance is ChartControl.MouseOp op)
+						{
+							Chart.MouseOperations.SetPending(MouseButton.Left, op);
+							return;
+						}
+						if (instance is IIndicator indy)
+						{
+							Model.Indicators.Add(Instrument.Pair.Name, indy);
+							return;
+						}
+					};
+				}
+
 				// Candle style menu
 				var candles_menu = cmenu.Items.Add2(new MenuItem { Header = "Candles" });
 				{
@@ -1056,9 +1113,10 @@ namespace CoinFlip.UI
 					{
 						ItemsSource = Enum<ECandleStyle>.Values,
 						Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
+						HorizontalAlignment=HorizontalAlignment.Stretch,
 						SelectedItem = CandleStyle,
 						BorderThickness = new Thickness(0),
-						Margin = new Thickness(1,1,20,1),
+						Margin = new Thickness(1, 1, 20, 1),
 						MinWidth = 60,
 					});
 					opt.SelectionChanged += (s, a) =>
@@ -1069,73 +1127,6 @@ namespace CoinFlip.UI
 					{
 						opt.SelectedItem = CandleStyle;
 					};
-				}
-
-				// Drawing tools menu
-				var drawing_menu = cmenu.Items.Add2(new MenuItem { Header = "Drawing" });
-				{
-					{// Horizontal line
-						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
-						opt.Click += (s, a) =>
-						{
-							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new HorizontalLine
-							{
-								Price = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.5),
-							});
-						};
-					}
-					{// Trend line
-						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
-						opt.Click += (s, a) =>
-						{
-							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new TrendLine
-							{
-								Time0 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.25)),
-								Time1 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.75)),
-								Price0 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.25),
-								Price1 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.75),
-							});
-						};
-					}
-					{// Triangle
-						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Triangle" });
-						opt.Click += (s, a) =>
-						{
-							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new TrianglePattern
-							{
-								Type = TrianglePattern.ETrianglePatternType.Symmetric,
-								Time0 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.25)),
-								Time1 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.75)),
-								Price2 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.75),
-								Price0 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.25),
-								Price1 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.5),
-							});
-						};
-					}
-				}
-
-				// Indicators sub menu
-				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
-				{
-					{
-						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
-						opt.Click += (s, a) =>
-						{
-							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new MovingAverage { });
-						};
-					}
-					{
-						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "SAR" });
-						opt.Click += (s, a) =>
-						{
-							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new StopAndReverse { });
-						};
-					}
 				}
 
 				cmenu.Items.Add(new Separator());

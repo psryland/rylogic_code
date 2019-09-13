@@ -46,7 +46,7 @@ namespace CoinFlip
 		private Dictionary<string, List<IIndicator>> Indicators { get; }
 
 		/// <summary>Add data for a new indicator associated with 'pair'</summary>
-		public void Add(string pair_name, IIndicator indy)
+		public TIndicator Add<TIndicator>(string pair_name, TIndicator indy) where TIndicator : IIndicator
 		{
 			// Adding 'data' for an indicator should result in a new indicator appearing on
 			// any chart that displays 'pair'.
@@ -57,6 +57,8 @@ namespace CoinFlip
 
 			// Notify new indicator added
 			NotifyIndicatorsChanged(NotifyCollectionChangedAction.Add, pair_name, indy);
+
+			return indy;
 		}
 
 		/// <summary>Remove an indicator by id</summary>

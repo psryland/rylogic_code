@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,9 +12,11 @@ using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+using Rylogic.Utility;
 
 namespace CoinFlip.UI.Indicators
 {
+	[Indicator(IsDrawing = true)]
 	public class TrianglePattern :Indicator<TrianglePattern>
 	{
 		// Notes:
@@ -28,8 +31,8 @@ namespace CoinFlip.UI.Indicators
 			Time0 = Misc.CryptoCurrencyEpoch.Ticks;
 			Time1 = Misc.CryptoCurrencyEpoch.Ticks;
 			Price0 = 0.0;
-			Price2 = 0.0;
 			Price1 = 0.0;
+			Price2 = 0.0;
 			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 		}
@@ -46,8 +49,9 @@ namespace CoinFlip.UI.Indicators
 					{
 						switch (Type)
 						{
-						default: throw new Exception("Unknown trend type");
-						case ETrianglePatternType.Symmetric: break;
+						default: throw new Exception($"Unknown trend type: {Type}");
+						case ETrianglePatternType.Asymmetric: break;
+						case ETrianglePatternType.Symmetric: Price1 = (Price0 + Price2) / 2; break;
 						case ETrianglePatternType.Ascending: Price1 = Price2; break;
 						case ETrianglePatternType.Descending: Price1 = Price0; break;
 						}
@@ -55,26 +59,31 @@ namespace CoinFlip.UI.Indicators
 					}
 				case nameof(Price0):
 					{
-						if (Type == ETrianglePatternType.Descending)
-							Price1 = Price0;
+						if (Type == ETrianglePatternType.Symmetric) Price2 = Price0 + 2 * (Price1 - Price0);
+						if (Type == ETrianglePatternType.Descending) Price1 = Price0;
 						break;
 					}
 				case nameof(Price1):
 					{
-						if (Type == ETrianglePatternType.Ascending)
-							Price2 = Price1;
-						if (Type == ETrianglePatternType.Descending)
-							Price0 = Price1;
+						if (Type == ETrianglePatternType.Symmetric)
+						{
+							var delta = (Price2 - Price0) / 2;
+							Price0 = Price1 - delta;
+							Price2 = Price1 + delta;
+						}
+						if (Type == ETrianglePatternType.Ascending) Price2 = Price1;
+						if (Type == ETrianglePatternType.Descending) Price0 = Price1;
 						break;
 					}
 				case nameof(Price2):
 					{
-						if (Type == ETrianglePatternType.Ascending)
-							Price1 = Price2;
+						if (Type == ETrianglePatternType.Symmetric) Price0 = Price2 + 2 * (Price1 - Price2);
+						if (Type == ETrianglePatternType.Ascending) Price1 = Price2;
 						break;
 					}
 				}
 			}
+
 			base.OnSettingChange(args);
 		}
 
@@ -143,13 +152,29 @@ namespace CoinFlip.UI.Indicators
 			return new View(this, chart);
 		}
 
+		/// <summary>Triangle pattern types</summary>
+		public enum ETrianglePatternType
+		{
+			/// <summary>The slope of the top and bottom edges are not related</summary>
+			Asymmetric,
+
+			/// <summary>The slope of the top and bottom edges have antisymmetric signs</summary>
+			Symmetric,
+
+			/// <summary>Top edge is horizontal</summary>
+			Ascending,
+
+			/// <summary>Bottom edge is horizontal</summary>
+			Descending,
+		}
+
 		/// <summary>A view of the indicator</summary>
 		public class View :IndicatorView
 		{
 			public View(TrianglePattern tri, IChartView chart)
 				:base(tri.Id, nameof(TrianglePattern), chart, tri)
 			{
-				var geom = Geometry_.MakePolygon(false, Pt2, Pt1, Pt0, Pt2);
+				var geom = Geometry_.MakePolygon(true, Pt0, Pt1, Pt2);
 				Line = new Path
 				{
 					Data = geom,
@@ -157,6 +182,7 @@ namespace CoinFlip.UI.Indicators
 					Stroke = Tri.Colour.ToMediaBrush(),
 					StrokeThickness = Tri.Width,
 					StrokeDashArray = Tri.LineStyle.ToStrokeDashArray(),
+					StrokeLineJoin = PenLineJoin.Round,
 					IsHitTestVisible = false,
 				};
 				Glow = new Path
@@ -165,6 +191,7 @@ namespace CoinFlip.UI.Indicators
 					Fill = Brushes.Transparent,
 					Stroke = Tri.Colour.Alpha(0.25f).ToMediaBrush(),
 					StrokeThickness = Tri.Width + GlowRadius,
+					StrokeLineJoin = PenLineJoin.Round,
 					IsHitTestVisible = false,
 				};
 				Grab0 = new Ellipse
@@ -295,7 +322,7 @@ namespace CoinFlip.UI.Indicators
 					case nameof(Price0):
 					case nameof(Price1):
 						{
-							var geom = Geometry_.MakePolygon(false, Pt2, Pt1, Pt0, Pt2);
+							var geom = Geometry_.MakePolygon(true, Pt0, Pt1, Pt2);
 							Line.Data = geom;
 							Glow.Data = geom;
 							break;
@@ -456,24 +483,14 @@ namespace CoinFlip.UI.Indicators
 				case ChartControl.EDragState.Dragging:
 					{
 						var delta = Chart.ChartToClient(args.Delta);
-						if (m_move.HasFlag(EMove.Pt0))
+						if      (m_move == EMove.Pt0) ScnPt0 = m_drag_start0 + delta;
+						else if (m_move == EMove.Pt1) ScnPt1 = m_drag_start1 + delta;
+						else if (m_move == EMove.Pt2) ScnPt2 = m_drag_start2 + delta;
+						else if (m_move != EMove.None)
 						{
-							var ofs = delta;
-							if (Tri.Type == ETrianglePatternType.Descending && m_move != EMove.Pt0 && m_move != (EMove.Pt0 | EMove.Pt1)) ofs.Y = 0;
-							ScnPt0 = m_drag_start0 + ofs;
-						}
-						if (m_move.HasFlag(EMove.Pt1))
-						{
-							var ofs = delta;
-							if (Tri.Type == ETrianglePatternType.Descending && m_move != EMove.Pt1 && m_move != (EMove.Pt0 | EMove.Pt1)) ofs.Y = 0;
-							if (Tri.Type == ETrianglePatternType.Ascending  && m_move != EMove.Pt1 && m_move != (EMove.Pt2 | EMove.Pt1)) ofs.Y = 0;
-							ScnPt1 = m_drag_start1 + ofs;
-						}
-						if (m_move.HasFlag(EMove.Pt2))
-						{
-							var ofs = delta;
-							if (Tri.Type == ETrianglePatternType.Ascending && m_move != EMove.Pt2 && m_move != (EMove.Pt2 | EMove.Pt1)) ofs.Y = 0;
-							ScnPt2 = m_drag_start2 + ofs;
+							ScnPt0 = m_drag_start0 + delta;
+							ScnPt1 = m_drag_start1 + delta;
+							ScnPt2 = m_drag_start2 + delta;
 						}
 						break;
 					}
@@ -504,17 +521,69 @@ namespace CoinFlip.UI.Indicators
 			private EMove m_move;
 		}
 
-		/// <summary>Triangle pattern types</summary>
-		public enum ETrianglePatternType
+		/// <summary>Returns a mouse op instance for creating the indicator</summary>
+		public static ChartControl.MouseOp Create(CandleChart chart) => new CreateOp(chart);
+		private class CreateOp :ChartControl.MouseOp
 		{
-			/// <summary>Top and bottom edges are not horizontal</summary>
-			Symmetric,
+			private readonly CandleChart m_chart;
+			private TrianglePattern m_indy;
 
-			/// <summary>Top edge is horizontal</summary>
-			Ascending,
+			public CreateOp(CandleChart chart)
+				: base(chart.Chart)
+			{
+				m_chart = chart;
+			}
+			private Model Model => m_chart.Model;
+			private Instrument Instrument => m_chart.Instrument;
+			public override void MouseDown(MouseButtonEventArgs e)
+			{
+				base.MouseDown(e);
 
-			/// <summary>Bottom edge is horizontal</summary>
-			Descending,
+				var time = Instrument.TimeAtFIndex(GrabChart.X);
+				m_indy = Model.Indicators.Add(Instrument.Pair.Name, new TrianglePattern
+				{
+					Type = ETrianglePatternType.Symmetric,
+					Time0 = time,
+					Time1 = time,
+					Price0 = GrabChart.Y,
+					Price1 = GrabChart.Y,
+					Price2 = GrabChart.Y,
+				});
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				base.MouseMove(e);
+
+				var client_pt = e.GetPosition(Chart);
+				var chart_pt = Chart.ClientToChart(client_pt);
+				var delta = chart_pt - GrabChart;
+
+				m_indy.Type =
+					Keyboard.Modifiers == ModifierKeys.None ? ETrianglePatternType.Symmetric :
+					Keyboard.Modifiers == ModifierKeys.Control ? ETrianglePatternType.Asymmetric :
+					delta.Y > 0 ? ETrianglePatternType.Ascending : ETrianglePatternType.Descending;
+
+				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.X);
+				m_indy.Price1 = chart_pt.Y;
+				if (m_indy.Type == ETrianglePatternType.Symmetric)
+				{
+					if (delta.Y > 0)
+						m_indy.Price0 = GrabChart.Y - Math.Abs(delta.Y);
+					else
+						m_indy.Price2 = GrabChart.Y + Math.Abs(delta.Y);
+				}
+				if (m_indy.Type == ETrianglePatternType.Asymmetric)
+				{
+					m_indy.Price0 = GrabChart.Y - Math.Abs(delta.Y);
+					m_indy.Price2 = GrabChart.Y + Math.Abs(delta.Y);
+				}
+			}
+			public override void NotifyCancelled()
+			{
+				base.NotifyCancelled();
+				if (m_indy != null)
+					Model.Indicators.Remove(Instrument.Pair.Name, m_indy.Id);
+			}
 		}
 	}
 }

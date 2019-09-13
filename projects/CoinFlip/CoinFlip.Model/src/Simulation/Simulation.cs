@@ -227,7 +227,7 @@ namespace CoinFlip
 					m_sw_main_loop.Stop();
 					m_sw_main_loop.Reset();
 				}
-				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) { IsEnabled = false } : null;
 				if (Running)
 				{
 					m_max_ticks_per_step = Misc.TimeFrameToTicks(1.0 / StepsPerCandle, TimeFrame);
@@ -268,7 +268,8 @@ namespace CoinFlip
 						{
 							// If this is a single step, increment the clock by the step size,
 							// or up to the next bot to be stepped, which ever is less.
-							var step = TimeSpan_.Min(new TimeSpan(m_max_ticks_per_step), NextBotToStep()?.TimeTillNextStep ?? TimeSpan.MaxValue);
+							var time_till_next_bot = NextBotToStep()?.TimeTillNextStep ?? TimeSpan.MaxValue;
+							var step = TimeSpan_.Min(new TimeSpan(m_max_ticks_per_step), time_till_next_bot);
 							next_clock += step;
 							break;
 						}
@@ -282,10 +283,10 @@ namespace CoinFlip
 						var bot = NextBotToStep();
 
 						// If the next bot to step is within this step, step it.
-						if (bot != null && bot.LastStepTime + bot.LoopPeriod < next_clock)
+						if (bot != null && bot.NextStepTime <= next_clock)
 						{
 							// Advance to clock to the bot's next step time
-							Clock = bot.LastStepTime + bot.LoopPeriod;
+							Clock = bot.NextStepTime;
 
 							// Update each price data (i.e. "add" candles)
 							UpdatePriceData();

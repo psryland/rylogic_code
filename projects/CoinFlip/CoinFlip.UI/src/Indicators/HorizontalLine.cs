@@ -12,6 +12,7 @@ using Rylogic.Gui.WPF;
 
 namespace CoinFlip.UI.Indicators
 {
+	[Indicator(IsDrawing = true)]
 	public class HorizontalLine :Indicator<HorizontalLine>
 	{
 		public HorizontalLine()
@@ -248,12 +249,26 @@ namespace CoinFlip.UI.Indicators
 			private double m_drag_start;
 		}
 
-		/// <summary>Behaivours for this trend line</summary>
-		public enum ETrendType
+		/// <summary>Returns a mouse op instance for creating the indicator</summary>
+		public static ChartControl.MouseOp Create(CandleChart chart) => new CreateOp(chart);
+		private class CreateOp :ChartControl.MouseOp
 		{
-			Slope,
-			Horizontal,
-			Vertical,
+			private readonly CandleChart m_chart;
+			public CreateOp(CandleChart chart)
+				:base(chart.Chart)
+			{
+				m_chart = chart;
+			}
+			private Model Model => m_chart.Model;
+			private Instrument Instrument => m_chart.Instrument;
+			public override void MouseDown(MouseButtonEventArgs e)
+			{
+				base.MouseDown(e);
+				Model.Indicators.Add(Instrument.Pair.Name, new HorizontalLine
+				{
+					Price = GrabChart.Y,
+				});
+			}
 		}
 	}
 }
