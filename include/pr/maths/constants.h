@@ -34,6 +34,7 @@ namespace pr
 		constexpr double const E60_by_tau = 360.0 / tau;
 		constexpr double const root2      = double(1.4142135623730950488);
 		constexpr double const root3      = double(1.7320508075688772935274463415059);
+		constexpr double const root3_by_2 = root3 / 2.0; // 0.86602540378443864676
 		constexpr double const inv_root2  = 1.0 / root2;
 		constexpr double const inv_root3  = 1.0 / root3;
 
@@ -48,8 +49,16 @@ namespace pr
 		constexpr float const E60_by_tauf = 360.0f / tauf;
 		constexpr float const root2f      = float(1.4142135623730950488);
 		constexpr float const root3f      = float(1.7320508075688772935274463415059);
+		constexpr float const root3_by_2f = root3f / 2.0f; 
 		constexpr float const inv_root2f  = 1.0f / root2f;
 		constexpr float const inv_root3f  = 1.0f / root3f;
+
+		constexpr double const cos_30 = root3_by_2;
+		constexpr double const cos_45 = inv_root2;
+		constexpr double const cos_60 = 0.5;
+		constexpr double const sin_30 = cos_60;
+		constexpr double const sin_45 = cos_30;
+		constexpr double const sin_60 = cos_30;
 
 		constexpr char const    char_min     = limits<char>::min();
 		constexpr char const    char_max     = limits<char>::max();

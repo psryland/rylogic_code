@@ -43,6 +43,9 @@ namespace Rylogic.Gfx
 		/// <summary>Opaque colour</summary>
 		public Colour32 RGB => new Colour32(m_argb | 0xFF000000);
 
+		/// <summary>Test if this colour has transparency</summary>
+		public bool HasAlpha => (m_argb & 0xFF000000) != 0xFF000000;
+
 		// Byte components
 		public byte A { get { return (byte)((m_argb >> 24) & 0xFF); } set { m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); } }
 		public byte R { get { return (byte)((m_argb >> 16) & 0xFF); } set { m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); } }

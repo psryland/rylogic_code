@@ -5155,7 +5155,7 @@ LR"(// *************************************************************************
 			for (int i = 0; i != index; ++i, ++nug) {}
 			return nug->m_flags;
 		}
-		void LdrObject::NuggetFlags(rdr::ENuggetFlag flags, char const* name, int index)
+		void LdrObject::NuggetFlags(rdr::ENuggetFlag flags, bool state, char const* name, int index)
 		{
 			Apply([=](LdrObject* obj)
 			{
@@ -5163,7 +5163,35 @@ LR"(// *************************************************************************
 				{
 					auto nug = obj->m_model->m_nuggets.begin();
 					for (int i = 0; i != index; ++i, ++nug) {}
-					nug->m_flags = flags;
+					nug->m_flags = SetBits(nug->m_flags, flags, state);
+				}
+				return true;
+			}, name);
+		}
+
+		// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
+		Colour32 LdrObject::NuggetTint(char const* name, int index) const
+		{
+			auto obj = Child(name);
+			if (obj != nullptr && obj->m_model != nullptr)
+				return Colour32White;
+
+			if (index >= obj->m_model->m_nuggets.size())
+				throw std::runtime_error("nugget index out of range");
+
+			auto nug = obj->m_model->m_nuggets.begin();
+			for (int i = 0; i != index; ++i, ++nug) {}
+			return nug->m_tint;
+		}
+		void LdrObject::NuggetTint(Colour32 tint, char const* name, int index)
+		{
+			Apply([=](LdrObject* obj)
+			{
+				if (obj->m_model != nullptr)
+				{
+					auto nug = obj->m_model->m_nuggets.begin();
+					for (int i = 0; i != index; ++i, ++nug) {}
+					nug->m_tint = tint;
 				}
 				return true;
 			}, name);

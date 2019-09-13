@@ -119,6 +119,18 @@ namespace Rylogic.Gfx
 			RayCast,
 			_number_of,
 		};
+		public enum EStockTexture : int
+		{
+			Invalid = 0,
+			Black,
+			White,
+			Gray,
+			Checker,
+			Checker2,
+			Checker3,
+			WhiteSpot,
+			WhiteTriangle,
+		}
 		[Flags] public enum ECreateDeviceFlags : uint
 		{
 			D3D11_CREATE_DEVICE_SINGLETHREADED                                = 0x1,
@@ -2449,7 +2461,18 @@ namespace ldr
 			public ENuggetFlag NuggetFlags
 			{
 				get => NuggetFlagsGet(string.Empty);
-				set => NuggetFlagsSet(value, string.Empty);
+				set
+				{
+					NuggetFlagsSet(~ENuggetFlag.None, false, string.Empty);
+					NuggetFlagsSet(value, true, string.Empty);
+				}
+			}
+
+			/// <summary>Get/Set the nugget tint colour for the first nugget of this object</summary>
+			public Colour32 NuggetTint
+			{
+				get => NuggetTintGet(string.Empty);
+				set => NuggetTintSet(value, string.Empty);
 			}
 
 			/// <summary>The context id that this object belongs to</summary>
@@ -2636,9 +2659,21 @@ namespace ldr
 			{
 				return View3D_ObjectNuggetFlagsGet(Handle, name, index);
 			}
-			public void NuggetFlagsSet(ENuggetFlag flags, string name = null, int index = 0)
+			public void NuggetFlagsSet(ENuggetFlag flags, bool state, string name = null, int index = 0)
 			{
-				View3D_ObjectNuggetFlagsSet(Handle, flags, name, index);
+				View3D_ObjectNuggetFlagsSet(Handle, flags, state, name, index);
+			}
+
+			/// <summary>
+			/// Get/Set the nugget tint colour for a nugget within this object
+			/// See LdrObject::Apply for docs on the format of 'name'</summary>
+			public Colour32 NuggetTintGet(string name = null, int index = 0)
+			{
+				return View3D_ObjectNuggetTintGet(Handle, name, index);
+			}
+			public void NuggetTintSet(Colour32 tint, string name = null, int index = 0)
+			{
+				View3D_ObjectNuggetTintSet(Handle, tint, name, index);
 			}
 
 			/// <summary>
@@ -3004,6 +3039,13 @@ namespace ldr
 			/// <summary>Get/Set the private data of this texture by unique Id</summary>
 			public PrivateDataProxy PrivateData => new PrivateDataProxy(this);
 			public PrivateDataPointerProxy PrivateDataPointer => new PrivateDataPointerProxy(this);
+
+			/// <summary>Create a texture instance from a stock texture</summary>
+			public static Texture FromStock(EStockTexture tex)
+			{
+				// Stock textures are not reference counted
+				return new Texture(View3D_TextureFromStock(tex), owned: false);
+			}
 
 			/// <summary>Return properties of the texture</summary>
 			public static ImageInfo GetInfo(string tex_filepath)
@@ -3634,7 +3676,9 @@ namespace ldr
 		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string name);
 		[DllImport(Dll)] private static extern ENuggetFlag       View3D_ObjectNuggetFlagsGet     (HObject obj, string name, int index);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, string name, int index);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, bool state, string name, int index);
+		[DllImport(Dll)] private static extern Colour32          View3D_ObjectNuggetTintGet      (HObject obj, string name, int index);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetTintSet      (HObject obj, Colour32 colour, string name, int index);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
 		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string name);
@@ -3646,6 +3690,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
 
 		// Materials
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromStock            (EStockTexture tex);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);

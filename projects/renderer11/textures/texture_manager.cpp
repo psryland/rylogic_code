@@ -621,8 +621,10 @@ namespace pr::rdr
 				{
 					for (int i = 0; i != sz; ++i)
 					{
+						auto c = Colour32White;
 						auto t = Frac(0.0f, Len2(i - radius, j - radius), radius);
-						data[j*sz + i] = Lerp(Colour32Zero, Colour32White, 1.0f - SmoothStep(0.0f, 1.0f, t));
+						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
+						data[size_t(j*sz + i)] =c;
 					}
 				}
 
@@ -630,6 +632,53 @@ namespace pr::rdr
 				Texture2DDesc tdesc(src, 0, EUsage::Immutable);
 				auto sam = SamplerDesc::LinearClamp();
 				tex = CreateTexture2D(RdrId(EStockTexture::WhiteSpot), src, tdesc, sam, true, "#whitespot");
+				break;
+			}
+		case EStockTexture::WhiteTriangle:
+			{
+				const int sz = 64, hsz = sz / 2;
+				std::vector<uint> data;
+				data.resize(sz*sz);
+
+				// Equilateral triangle, 'pointing' up.
+				// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
+				//               \         /
+				//                \       /
+				//                 \     / 
+				//                   0,0
+
+				const float dx = maths::root3_by_2f / 2.0f;
+				const float dy = 0.75f;
+				const float s = 1.0f / sz;
+
+				for (int j = 0; j*4 <= sz*3; ++j)
+				{
+					auto y = j * s; // [0, 0.75]
+
+					// Do the positive half x range and mirror to -x
+					for (int i = 0; i != hsz; ++i)
+					{
+						auto x0 = s * (i+0);
+						auto x1 = s * (i+1);
+
+						// x*dy == y*dx on the edge
+						auto t =
+							(x1 * dy < y * dx) ? 0.0f :  // inside the triangle
+							(x0 * dy > y * dx) ? 1.0f :  // outside the triangle
+							(Frac(x0 * dy, y * dx, x1 * 0.75f)); // Spanning the edge
+						
+						auto c = Colour32White;
+						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
+						
+						data[size_t(j*sz + hsz-i)] = c;
+						data[size_t(j*sz + hsz+i)] = c;
+					}
+				}
+
+				Image src(sz, sz, data.data(), DXGI_FORMAT_R8G8B8A8_UNORM);
+				Texture2DDesc tdesc(src, 0, EUsage::Immutable);
+				auto sam = SamplerDesc::LinearClamp();
+				tex = CreateTexture2D(RdrId(EStockTexture::WhiteTriangle), src, tdesc, sam, true, "#whitetriangle");
 				break;
 			}
 		}

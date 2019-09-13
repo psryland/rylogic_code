@@ -22,13 +22,14 @@ namespace pr
 
 		#define PR_ENUM(x) \
 			x(Invalid  ,= InvalidId)\
-			x(Black    ,)\
-			x(White    ,)\
-			x(Gray     ,)\
-			x(Checker  ,)\
-			x(Checker2 ,)\
-			x(Checker3 ,)\
-			x(WhiteSpot,)
+			x(Black        ,)\
+			x(White        ,)\
+			x(Gray         ,)\
+			x(Checker      ,)\
+			x(Checker2     ,)\
+			x(Checker3     ,)\
+			x(WhiteSpot    ,)\
+			x(WhiteTriangle,)
 		PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
 		#undef PR_ENUM
 

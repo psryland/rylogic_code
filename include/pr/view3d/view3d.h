@@ -170,6 +170,18 @@ extern "C"
 		RayCast,
 		_number_of,
 	};
+	enum class EView3DStockTexture :int
+	{
+		Invalid = 0,
+		Black,
+		White,
+		Gray,
+		Checker,
+		Checker2,
+		Checker3,
+		WhiteSpot,
+		WhiteTriangle,
+	};
 	enum class EView3DLight :int
 	{
 		Ambient,
@@ -673,7 +685,9 @@ extern "C"
 	VIEW3D_API EView3DSortGroup  __stdcall View3D_ObjectSortGroupGet       (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectSortGroupSet       (View3DObject object, EView3DSortGroup group, char const* name);
 	VIEW3D_API EView3DNuggetFlag __stdcall View3D_ObjectNuggetFlagsGet     (View3DObject object, char const* name, int index);
-	VIEW3D_API void              __stdcall View3D_ObjectNuggetFlagsSet     (View3DObject object, EView3DNuggetFlag flags, char const* name, int index);
+	VIEW3D_API void              __stdcall View3D_ObjectNuggetFlagsSet     (View3DObject object, EView3DNuggetFlag flags, BOOL state, char const* name, int index);
+	VIEW3D_API View3DColour      __stdcall View3D_ObjectNuggetTintGet      (View3DObject object, char const* name, int index);
+	VIEW3D_API void              __stdcall View3D_ObjectNuggetTintSet      (View3DObject object, View3DColour colour, char const* name, int index);
 	VIEW3D_API View3DColour      __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
 	VIEW3D_API float             __stdcall View3D_ObjectReflectivityGet    (View3DObject object, char const* name);
@@ -685,6 +699,7 @@ extern "C"
 	VIEW3D_API View3DBBox        __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
 
 	// Materials
+	VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock            (EView3DStockTexture tex);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options);

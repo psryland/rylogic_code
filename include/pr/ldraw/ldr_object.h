@@ -526,8 +526,12 @@ namespace pr
 
 			// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
 			rdr::ENuggetFlag LdrObject::NuggetFlags(char const* name, int index) const;
-			void NuggetFlags(rdr::ENuggetFlag flags, char const* name, int index);
-				
+			void NuggetFlags(rdr::ENuggetFlag flags, bool state, char const* name, int index);
+
+			// Get/Set the nugget tint colour for this object or child objects matching 'name' (see Apply)
+			Colour32 NuggetTint(char const* name, int index) const;
+			void NuggetTint(Colour32 tint, char const* name, int index);
+
 			// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 			// For 'Get', the colour of the first object to match 'name' is returned
 			// For 'Set', the object base colour is not changed, only the tint colour = tint

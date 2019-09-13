@@ -108,7 +108,8 @@ namespace Rylogic.Gui.WPF
 		//  Alternatively, you can add a handler:
 		//   gui:DataGrid_.ReorderRowDrop="HandleReorderRowDrop"
 		//   private void HandleReorderRowDrop(object sender, DataGrid_.ReorderRowDropEventArgs e)
-		//  You can then handle reordered with custom code
+		//  You can then handle reordered with custom code.
+		//  Use the 'RowsReordered' to get notification after a reorder has happened
 
 		/// <summary>Foreground Attached property</summary>
 		public const int ReorderRowsWithDragDrop = 0;
@@ -168,42 +169,20 @@ namespace Rylogic.Gui.WPF
 				if (grab_index != drop_index)
 				{
 					// Reorder the items source.
-					// Call the event to see if the user code handles it
 					var args = new ReorderRowDropEventArgs(data.Grid, data.Row, drop_index);
+					
+					// Call the event to allow user code to handle it
 					data.Grid.RaiseEvent(args);
+
+					// Fallback to the default handling
 					if (!args.Handled)
-					{
-						// Guess at the item source and reorder:
-						// If the source is an unsorted/unfiltered/ungrouped ICollectionView then the source collection
-						// order should match the view order. Modify the source collection and refresh the view.
-						if (data.Grid.ItemsSource is ICollectionView view && view.SortDescriptions.Count == 0 && view.Filter == null && view.GroupDescriptions.Count == 0)
-						{
-							if (view.SourceCollection is IList list)
-							{
-								// Move to before the grab position
-								if (drop_index < grab_index)
-								{
-									var tmp = list[grab_index];
-									for (int i = grab_index; i != drop_index; --i)
-										list[i] = list[i - 1];
+						ReorderRowsDropDefaultHandler(data.Grid, args);
 
-									list[drop_index] = tmp;
-								}
-								// Move to after the grab position
-								else
-								{
-									var tmp = list[grab_index];
-									for (int i = grab_index; i != drop_index - 1; ++i)
-										list[i] = list[i + 1];
-
-									list[drop_index - 1] = tmp;
-								}
-								view.Refresh();
-								e.Handled = true;
-							}
-						}
-					}
+					// Notify if reordering happened
+					if (args.Handled)
+						data.Grid.RaiseEvent(new RoutedEventArgs(RowsReorderedEvent, data.Grid));
 				}
+
 				e.Handled = true;
 			}
 			void HandleDragging(object sender, DragEventArgs e)
@@ -322,14 +301,52 @@ namespace Rylogic.Gui.WPF
 				:base(ReorderRowDropEvent, sender)
 			{
 				Row = row;
-				InsertIndex = insert_index;
+				DropIndex = insert_index;
 			}
 
 			/// <summary>The row being dragged</summary>
 			public DataGridRow Row { get; }
 
+			/// <summary>The index of the row that was grabbed</summary>
+			public int GrabIndex => Row.GetIndex();
+
 			/// <summary>The index of where to insert the row</summary>
-			public int InsertIndex { get; }
+			public int DropIndex { get; }
+		}
+
+		/// <summary>Default implementation for the 'ReorderRowDrop' event when not handled</summary>
+		public static void ReorderRowsDropDefaultHandler(object sender, ReorderRowDropEventArgs args)
+		{
+			// Guess at the item source and reorder:
+			// If the source is an unsorted/unfiltered/ungrouped ICollectionView then the source collection
+			// order should match the view order. Modify the source collection and refresh the view.
+			var grid = (DataGrid)sender;
+			if (grid.ItemsSource is ICollectionView view && view.SortDescriptions.Count == 0 && view.Filter == null && view.GroupDescriptions.Count == 0)
+			{
+				if (view.SourceCollection is IList list)
+				{
+					// Move to before the grab position
+					if (args.DropIndex < args.GrabIndex)
+					{
+						var tmp = list[args.GrabIndex];
+						for (int i = args.GrabIndex; i != args.DropIndex; --i)
+							list[i] = list[i - 1];
+
+						list[args.DropIndex] = tmp;
+					}
+					// Move to after the grab position
+					else
+					{
+						var tmp = list[args.GrabIndex];
+						for (int i = args.GrabIndex; i != args.DropIndex - 1; ++i)
+							list[i] = list[i + 1];
+
+						list[args.DropIndex - 1] = tmp;
+					}
+					view.Refresh();
+					args.Handled = true;
+				}
+			}
 		}
 
 		/// <summary>Event for reordering the underlying collection on row drop</summary>
@@ -345,6 +362,21 @@ namespace Rylogic.Gui.WPF
 		{
 			if (d is UIElement uie)
 				uie.RemoveHandler(ReorderRowDropEvent, handler);
+		}
+
+		/// <summary>Event to signal that rows have been reordered</summary>
+		public const int RowsReordered = 0;
+		public delegate void RowsReorderedEventHandler(object sender, RoutedEventArgs args);
+		public static readonly RoutedEvent RowsReorderedEvent = EventManager.RegisterRoutedEvent(nameof(RowsReordered), RoutingStrategy.Bubble, typeof(RowsReorderedEventHandler), typeof(DataGrid_));
+		public static void AddRowsReorderedHandler(DependencyObject d, RowsReorderedEventHandler handler)
+		{
+			if (d is UIElement uie)
+				uie.AddHandler(RowsReorderedEvent, handler);
+		}
+		public static void RemoveRowsReorderedHandler(DependencyObject d, RowsReorderedEventHandler handler)
+		{
+			if (d is UIElement uie)
+				uie.RemoveHandler(RowsReorderedEvent, handler);
 		}
 
 		#endregion

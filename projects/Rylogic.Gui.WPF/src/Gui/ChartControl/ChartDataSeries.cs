@@ -18,8 +18,6 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public partial class ChartDataSeries : ChartControl.Element
 	{
-		private PointStyleTextures m_point_textures;
-
 		public ChartDataSeries(string name, EFormat format, OptionsData options = null, int? capacity = null)
 			: this(Guid.NewGuid(), name, format, options, capacity)
 		{ }
@@ -41,13 +39,11 @@ namespace Rylogic.Gui.WPF
 		{
 			m_data = new List<Pt>();
 			Cache = new ChartGfxCache(CreatePiece);
-			m_point_textures = new PointStyleTextures();
 			m_range_x = RangeF.Invalid;
 		}
 		public override void Dispose()
 		{
 			Cache = null;
-			Util.Dispose(ref m_point_textures);
 			base.Dispose();
 		}
 		public override XElement ToXml(XElement node)
@@ -212,7 +208,7 @@ namespace Rylogic.Gui.WPF
 			// Create a nugget for the points using the sprite shader
 			{
 				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, mat:mat);
 			}
@@ -261,7 +257,7 @@ namespace Rylogic.Gui.WPF
 			if (Options.PointsOnLinePlot)
 			{
 				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, range_overlaps:true, mat:mat);
 			}
@@ -317,7 +313,7 @@ namespace Rylogic.Gui.WPF
 					m_ibuf[indx++] = (ushort)(i * 2);
 
 				var mat = View3d.Material.New();
-				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.m_diff_tex = View3d.Texture.FromStock((View3d.EStockTexture)Options.PointStyle)?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
 			}
@@ -435,14 +431,6 @@ namespace Rylogic.Gui.WPF
 			Line,
 			StepLine,
 			Bar,
-		}
-
-		/// <summary>Point styles</summary>
-		public enum EPointStyle
-		{
-			Square,
-			Circle,
-			Triangle,
 		}
 
 		/// <summary>Formats for the plot data</summary>
@@ -690,70 +678,6 @@ namespace Rylogic.Gui.WPF
 			Colour32.Orange    , Colour32.Yellow      ,
 			Colour32.LightBlue , Colour32.LightSalmon , Colour32.LightGreen ,
 		};
-
-		/// <summary></summary>
-		private class PointStyleTextures : IDisposable
-		{
-			private readonly Dictionary<EPointStyle, View3d.Texture> m_map;
-			public PointStyleTextures()
-			{
-				m_map = new Dictionary<EPointStyle, View3d.Texture>();
-			}
-			public void Dispose()
-			{
-				foreach (var tex in m_map.Values)
-					tex.Dispose();
-
-				m_map.Clear();
-			}
-			public View3d.Texture this[EPointStyle style]
-			{
-				get
-				{
-					switch (style)
-					{
-					default: throw new Exception($"Unknown point style: {style}");
-					case EPointStyle.Square:
-						{
-							// No texture needed, squares a flat colour geometry
-							return null;
-						}
-					case EPointStyle.Circle:
-						{
-							// A circle texture
-							return m_map.GetOrAdd(style, s =>
-							{
-								var sz = 32;
-								var tex = new View3d.Texture(sz, sz);
-								using (var surf = tex.LockSurface(true))
-								{
-									surf.Gfx.Clear(System.Drawing.Color.Transparent);
-									surf.Gfx.FillEllipse(System.Drawing.Brushes.White, new RectangleF(0, 0, sz, sz));
-								}
-								return tex;
-							});
-						}
-					case EPointStyle.Triangle:
-						{
-							// An equilateral triangle within a square texture
-							return m_map.GetOrAdd(style, s =>
-							{
-								var sz = 128;
-								var h0 = 0.5f * sz * (float)Math.Tan(Math_.DegreesToRadians(60));
-								var h1 = 0.5f * (sz - h0);
-								var tex = new View3d.Texture(sz, sz);
-								using (var surf = tex.LockSurface(true))
-								{
-									surf.Gfx.Clear(System.Drawing.Color.Transparent);
-									surf.Gfx.FillPolygon(System.Drawing.Brushes.White, new[] { new PointF(sz, h1), new PointF(0, h1), new PointF(0.5f * sz, h0 + h1) });
-								}
-								return tex;
-							});
-						}
-					}
-				}
-			}
-		}
 
 		/// <summary>Rendering options for this data series</summary>
 		public class OptionsData : SettingsXml<OptionsData>

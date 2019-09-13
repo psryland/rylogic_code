@@ -1757,16 +1757,40 @@ VIEW3D_API EView3DNuggetFlag __stdcall View3D_ObjectNuggetFlagsGet(View3DObject 
 	}
 	CatchAndReport(View3D_ObjectNuggetFlagsGet, ,EView3DNuggetFlag::None);
 }
-VIEW3D_API void __stdcall View3D_ObjectNuggetFlagsSet(View3DObject object, EView3DNuggetFlag flags, char const* name, int index)
+VIEW3D_API void __stdcall View3D_ObjectNuggetFlagsSet(View3DObject object, EView3DNuggetFlag flags, BOOL state, char const* name, int index)
 {
 	try
 	{
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		object->NuggetFlags(static_cast<pr::rdr::ENuggetFlag>(flags), name, index);
+		object->NuggetFlags(static_cast<pr::rdr::ENuggetFlag>(flags), state != 0, name, index);
 	}
 	CatchAndReport(View3D_ObjectNuggetFlagsSet, ,);
+}
+
+// Get/Set the tint colour for a nugget within the model of an object or its children
+VIEW3D_API View3DColour __stdcall View3D_ObjectNuggetTintGet(View3DObject object, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<View3DColour>(object->NuggetTint(name, index));
+	}
+	CatchAndReport(View3D_ObjectNuggetTintGet, ,View3DColour());
+}
+VIEW3D_API void __stdcall View3D_ObjectNuggetTintSet(View3DObject object, View3DColour colour, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->NuggetTint(static_cast<pr::Colour32>(colour), name, index);
+	}
+	CatchAndReport(View3D_ObjectNuggetTintSet, ,);
 }
 
 // Get/Set the current or base colour of an object (the first object to match 'name') (See LdrObject::Apply)
@@ -1882,6 +1906,20 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object, int inc
 }
 
 // Materials ***************************************************************
+
+// Return one of the stock textures
+VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock(EView3DStockTexture tex)
+{
+	try
+	{
+		DllLockGuard;
+		// Drop the reference so that callers don't need to release the texture.
+		// Since it's stock, the renderer has a reference
+		auto texture = Dll().m_rdr.m_tex_mgr.FindStockTexture(static_cast<EStockTexture>(tex));
+		return texture.get();
+	}
+	CatchAndReport(View3D_TextureFromStock, , nullptr);
+}
 
 // Create a texture from data in memory.
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
@@ -3209,6 +3247,16 @@ static_assert(int(EView3DNuggetFlag::None            ) == int(pr::rdr::ENuggetFl
 static_assert(int(EView3DNuggetFlag::Hidden          ) == int(pr::rdr::ENuggetFlag::Hidden          ));
 static_assert(int(EView3DNuggetFlag::GeometryHasAlpha) == int(pr::rdr::ENuggetFlag::GeometryHasAlpha));
 static_assert(int(EView3DNuggetFlag::TintHasAlpha    ) == int(pr::rdr::ENuggetFlag::TintHasAlpha    ));
+
+static_assert(int(EView3DStockTexture::Invalid      ) == int(pr::rdr::EStockTexture::Invalid      ));
+static_assert(int(EView3DStockTexture::Black        ) == int(pr::rdr::EStockTexture::Black        ));
+static_assert(int(EView3DStockTexture::White        ) == int(pr::rdr::EStockTexture::White        ));
+static_assert(int(EView3DStockTexture::Gray         ) == int(pr::rdr::EStockTexture::Gray         ));
+static_assert(int(EView3DStockTexture::Checker      ) == int(pr::rdr::EStockTexture::Checker      ));
+static_assert(int(EView3DStockTexture::Checker2     ) == int(pr::rdr::EStockTexture::Checker2     ));
+static_assert(int(EView3DStockTexture::Checker3     ) == int(pr::rdr::EStockTexture::Checker3     ));
+static_assert(int(EView3DStockTexture::WhiteSpot    ) == int(pr::rdr::EStockTexture::WhiteSpot    ));
+static_assert(int(EView3DStockTexture::WhiteTriangle) == int(pr::rdr::EStockTexture::WhiteTriangle));
 
 static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
 static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));
