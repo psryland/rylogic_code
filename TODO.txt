@@ -1,6 +1,10 @@
 Immediate ToDo:
 
 CoinFlip
+	Candle Charts:
+		- Add option to set axis range explicitly
+		- Show remaining candle time
+		- Lock that axis ranges of two charts to be in sync
 	Equity Plot:
 		- Show 'hodls' in equity plot
 		- Auto range equity chart
@@ -14,7 +18,6 @@ CoinFlip
 	Bots:
 		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	General:
-		- Look at making HA candles available from an Instrument
 		- History is broken - after deleting the DB the old history isn't restored
 		- Depth of market scale indicator/adjuster
 		- Figure out how to isolate the monitored orders between back testing and live mode
@@ -22,7 +25,6 @@ CoinFlip
 		- Variable spread for backtesting
 		- Log view isn't updating when window doesn't have focus
 		- Support minimise to tray
-		- Show remaining candle time
 		- Better back testing playback controls: sub step count, playback speed, pause with space bar
 	
 EDTradeAdvisor

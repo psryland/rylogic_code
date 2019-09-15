@@ -82,7 +82,6 @@ namespace CoinFlip.UI.GfxObjects
 				(long)(x_value / BatchSize + 1) * BatchSize);
 
 			// Generate the graphics model for the data range [idx, idx + min(BatchSize, Count-idx))
-			var candle_style = SettingsData.Settings.Chart.CandleStyle;
 			var colour_bullish = SettingsData.Settings.Chart.Q2BColour.ARGB;
 			var colour_bearish = SettingsData.Settings.Chart.B2QColour.ARGB;
 
@@ -113,9 +112,10 @@ namespace CoinFlip.UI.GfxObjects
 			var wick = 6 * count;
 			var nugt = 0;
 
-			// Create the geometry
+			// Create the graphics with the first candle at x == 0
 			var candle_idx = 0;
-			double open = 0, high = 0, low = 0, close = 0;
+
+			// Create the geometry
 			foreach (var candle in candles)
 			{
 				// Use the spot price for the close of the 'Latest' candle.
@@ -126,45 +126,11 @@ namespace CoinFlip.UI.GfxObjects
 					if (spot != null) candle_close = spot.Value.ToDouble();
 				}
 
-				// Create the graphics with the first candle at x == 0
-				switch (candle_style)
-				{
-				default: throw new Exception($"Unsupported candle style: {candle_style}");
-				case ECandleStyle.Standard:
-					{
-						// Normal solid candles
-						open  = candle.Open;
-						high  = candle.High;
-						low   = candle.Low;
-						close = candle_close;
-						break;
-					}
-				case ECandleStyle.HeikinAshi:
-					{
-						// Heikin-Ashi candles: https://www.investopedia.com/terms/h/heikinashi.asp
-						//   Close = 0.25 * (Open + High + Low + Close)  (Average for current candle)
-						//   Open = 0.5 * (HA_PrevOpen + HA_PrevClose)   (Open/Close of previous HA candle)
-						//   High = Max(High, HA_Open, HA_Close)
-						//   Low = Min(Low, HA_Open, HA_Close)
-						// where:
-						//   HA = Heikin-Ashi candle
-						if (candle_idx == 0)
-						{
-							open = 0.5 * (candle.Open + candle_close);
-							close = 0.25 * (candle.Open + candle.High + candle.Low + candle_close);
-							high = Math_.Max(candle.High, open, close);
-							low = Math_.Min(candle.Low, open, close);
-						}
-						else
-						{
-							open = 0.5 * (open + close); // Previous HA candle values
-							close = 0.25 * (candle.Open + candle.High + candle.Low + candle_close);
-							high = Math_.Max(candle.High, open, close);
-							low = Math_.Min(candle.Low, open, close);
-						}
-						break;
-					}
-				}
+				var open  = candle.Open;
+				var high  = candle.High;
+				var low   = candle.Low;
+				var close = candle_close;
+
 				var col = close > open ? colour_bullish : close < open ? colour_bearish : 0xFFA0A0A0;
 				var x = (float)candle_idx++;
 				var o = (float)Math.Max(open, close);

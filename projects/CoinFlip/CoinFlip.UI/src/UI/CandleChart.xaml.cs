@@ -129,11 +129,6 @@ namespace CoinFlip.UI
 					case nameof(ChartSettings.SelectionDistance):
 						Chart.Options.MinSelectionDistance = SettingsData.Settings.Chart.SelectionDistance;
 						break;
-					case nameof(ChartSettings.CandleStyle):
-						NotifyPropertyChanged(nameof(CandleStyle));
-						GfxCandles?.Invalidate();
-						Chart.Invalidate();
-						break;
 					case nameof(ChartSettings.ShowOpenOrders):
 						NotifyPropertyChanged(nameof(ShowOpenOrders));
 						Chart.Invalidate();
@@ -544,6 +539,7 @@ namespace CoinFlip.UI
 				m_instrument = value;
 				if (m_instrument != null)
 				{
+					m_instrument.CandleStyle = CandleStyle;
 					GfxCandles = new GfxObjects.Candles(m_instrument);
 					GfxOpenOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
 					GfxCompletedOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
@@ -708,9 +704,22 @@ namespace CoinFlip.UI
 		/// <summary>The style of candles to use</summary>
 		public ECandleStyle CandleStyle
 		{
-			get => SettingsData.Settings.Chart.CandleStyle;
-			set => SettingsData.Settings.Chart.CandleStyle = value;
+			get => m_candle_style;
+			set
+			{
+				if (m_candle_style == value) return;
+				m_candle_style = value;
+
+				// Update the current instrument
+				if (Instrument != null)
+				{
+					Instrument.CandleStyle = value;
+					GfxCandles?.Invalidate();
+					Chart.Invalidate();
+				}
+			}
 		}
+		private ECandleStyle m_candle_style;
 
 		/// <summary>Show currently open orders on the chart</summary>
 		public EShowItems ShowOpenOrders
@@ -1113,7 +1122,6 @@ namespace CoinFlip.UI
 					{
 						ItemsSource = Enum<ECandleStyle>.Values,
 						Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
-						HorizontalAlignment=HorizontalAlignment.Stretch,
 						SelectedItem = CandleStyle,
 						BorderThickness = new Thickness(0),
 						Margin = new Thickness(1, 1, 20, 1),

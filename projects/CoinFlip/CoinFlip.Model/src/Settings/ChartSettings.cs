@@ -1,4 +1,4 @@
-﻿using System.Xml.Linq;
+using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gfx;
 
@@ -11,7 +11,6 @@ namespace CoinFlip.Settings
 			Q2BColour = new Colour32(0xff22b14c); // Green
 			B2QColour = new Colour32(0xffed1c24); // Red
 			NettWorthColour = new Colour32(0xffbbd2eb); // Blueish
-			CandleStyle = ECandleStyle.Standard;
 			ShowOpenOrders = EShowItems.Disabled;
 			ShowCompletedOrders = EShowItems.Disabled;
 			ShowMarketDepth = false;
@@ -45,12 +44,6 @@ namespace CoinFlip.Settings
 		{
 			get => get<Colour32>(nameof(NettWorthColour));
 			set => set(nameof(NettWorthColour), value);
-		}
-
-		public ECandleStyle CandleStyle
-		{
-			get => get<ECandleStyle>(nameof(CandleStyle));
-			set => set(nameof(CandleStyle), value);
 		}
 
 		/// <summary>Show current trades</summary>

@@ -24,6 +24,7 @@ namespace CoinFlip
 		// - The candle cache size has no upper bound. Potentially all candle data can be loaded into memory.
 		//   This only happens on demand however, by default only the last Chunk of candles are loaded.
 		// - The candle cache is an ordered collection of candles, sorted by time
+
 		public const int CacheChunkSize = 10_000;
 
 		/// <summary>Create a view of price data that updates as new data arrives</summary>
@@ -35,6 +36,7 @@ namespace CoinFlip
 
 				Name = name;
 				PriceData = pd;
+				CandleStyle = ECandleStyle.Standard;
 
 				// A cache of candle data read from the DB
 				m_cache = new List<Candle>();
@@ -105,9 +107,17 @@ namespace CoinFlip
 							if (e.IndexRange.Count != 1)
 								throw new Exception("An update of the current candle should be a single value");
 							if (e.IndexRange.Begi != Count - 1)
-								throw new Exception("The current candle index should be the only value in the update index range");
+								throw new Exception("The current candle index should be the latest candle");
 
-							this[e.IndexRange.Begi] = e.Candle;
+							// 'idx' is the global index of the candle in all available data (not the cache index)
+							var idx = e.IndexRange.Begi;
+
+							// Ensure the cache has a block of candles at include 'idx'
+							EnsureCached(idx);
+
+							// Replace the latest candle
+							m_cache.Resize(idx - CachedIndexRange.Begi);
+							InsertCandles(idx - CachedIndexRange.Begi, new[] { e.Candle });
 							break;
 						}
 					case DataEventArgs.EUpdateType.Range:
@@ -183,6 +193,19 @@ namespace CoinFlip
 		/// <summary>True when the price data is out of date</summary>
 		public bool DataSyncing => PriceData.DataSyncing;
 
+		/// <summary>The type of candles to return</summary>
+		public ECandleStyle CandleStyle
+		{
+			get => m_candle_style;
+			set
+			{
+				if (m_candle_style == value) return;
+				m_candle_style = value;
+				InvalidateCachedData();
+			}
+		}
+		private ECandleStyle m_candle_style;
+
 		/// <summary>The number of candles available up to the current time</summary>
 		public int Count
 		{
@@ -210,14 +233,6 @@ namespace CoinFlip
 
 				EnsureCached(idx);
 				return m_cache[idx - CachedIndexRange.Begi];
-			}
-			private set
-			{
-				if (!idx.Within(0, Count))
-					throw new ArgumentOutOfRangeException(nameof(idx), $"Invalid candle index: {idx}. Range: [0,{Count})");
-
-				EnsureCached(idx);
-				m_cache[idx - CachedIndexRange.Begi] = value;
 			}
 		}
 
@@ -379,21 +394,21 @@ namespace CoinFlip
 			if (CachedIndexRange.Empty)
 			{
 				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(DBCandleCount, idx + CacheChunkSize));
-				m_cache.AddRange(PriceData.ReadCandles(read));
+				InsertCandles(m_cache.Count, PriceData.ReadCandles(read));
 				CachedIndexRange = read;
 			}
 			else if (idx >= CachedIndexRange.End)
 			{
 				var chunks = (idx+1 - CachedIndexRange.End + CacheChunkSize - 1) / CacheChunkSize;
 				var read = new Range(CachedIndexRange.End, Math.Min(DBCandleCount, CachedIndexRange.End + chunks*CacheChunkSize));
-				m_cache.AddRange(PriceData.ReadCandles(read));
+				InsertCandles(m_cache.Count, PriceData.ReadCandles(read));
 				CachedIndexRange = new Range(CachedIndexRange.Beg, read.End);
 			}
 			else if (idx < CachedIndexRange.Beg)
 			{
 				var chunks = (CachedIndexRange.Beg - idx + CacheChunkSize - 1) / CacheChunkSize;
 				var read = new Range(Math.Max(0L, CachedIndexRange.Beg - chunks*CacheChunkSize), CachedIndexRange.Beg);
-				m_cache.InsertRange(0, PriceData.ReadCandles(read));
+				InsertCandles(0, PriceData.ReadCandles(read));
 				CachedIndexRange = new Range(read.Beg, CachedIndexRange.End);
 			}
 			else
@@ -403,6 +418,78 @@ namespace CoinFlip
 
 			// We should now have 'idx' in the cache
 			Debug.Assert(idx.Within(CachedIndexRange.Begi, CachedIndexRange.Endi));
+		}
+
+		/// <summary>Insert candles into the cache</summary>
+		private void InsertCandles(int index, IEnumerable<Candle> candles)
+		{
+			// Not expecting gaps in the cached candle data.
+			Debug.Assert(index == 0 || index == m_cache.Count);
+			switch (CandleStyle)
+			{
+			default: throw new Exception($"Unknown candle style: {CandleStyle}");
+			case ECandleStyle.Standard:
+				{
+					m_cache.InsertRange(index, candles);
+					break;
+				}
+			case ECandleStyle.HeikinAshi:
+				{
+					// Heikin-Ashi candles: https://www.investopedia.com/terms/h/heikinashi.asp
+					//   Close = 0.25 * (Open + High + Low + Close)  (Average for current candle)
+					//   Open = 0.5 * (HA_PrevOpen + HA_PrevClose)   (Open/Close of previous HA candle)
+					//   High = Max(High, HA_Open, HA_Close)
+					//   Low = Min(Low, HA_Open, HA_Close)
+					// where:
+					//   HA = Heikin-Ashi candle
+
+					Candle previous;
+					if (index != 0)
+					{
+						previous = m_cache[index - 1];
+					}
+					else if (candles.Any())
+					{
+						var c = candles.First();
+						var open = 0.5 * (c.Open + c.Close);
+						var close = 0.25 * (c.Open + c.High + c.Low + c.Close);
+						var high = Math_.Max(c.High, open, close);
+						var low = Math_.Min(c.Low, open, close);
+						previous = new Candle(c.Timestamp, open, high, low, close, c.Median, c.Volume);
+					}
+					else
+					{
+						break;
+					}
+
+					// If not appending to the end of the cache we'll need to recalculate
+					// all candles after 'insert_index' due to the recursive definition of HA candles.
+					if (index < m_cache.Count)
+					{
+						m_cache.Resize(index);
+						candles.Concat(PriceData.ReadCandles(CachedIndexRange));
+					}
+
+					// Insert HA candles
+					m_cache.InsertRange(index, ToHeikinAshi(candles, previous));
+					break;
+				}
+			}
+
+			/// <summary>Convert a stream of candles to HA candles</summary>
+			IEnumerable<Candle> ToHeikinAshi(IEnumerable<Candle> candle_stream, Candle ha_candle_previous)
+			{
+				foreach (var candle in candle_stream)
+				{
+					var open = 0.5 * (ha_candle_previous.Open + ha_candle_previous.Close); // Previous HA candle values
+					var close = 0.25 * (candle.Open + candle.High + candle.Low + candle.Close);
+					var high = Math_.Max(candle.High, open, close);
+					var low = Math_.Min(candle.Low, open, close);
+					var ha_candle = new Candle(candle.Timestamp, open, high, low, close, candle.Median, candle.Volume);
+					yield return ha_candle;
+					ha_candle_previous = ha_candle;
+				}
+			}
 		}
 		private List<Candle> m_cache;
 
