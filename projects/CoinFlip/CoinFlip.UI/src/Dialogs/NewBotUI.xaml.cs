@@ -7,7 +7,7 @@ using CoinFlip.Bots;
 using Rylogic.Gui.WPF;
 using Rylogic.Plugin;
 
-namespace CoinFlip.UI
+namespace CoinFlip.UI.Dialogs
 {
 	public partial class NewBotUI :Window, INotifyPropertyChanged
 	{

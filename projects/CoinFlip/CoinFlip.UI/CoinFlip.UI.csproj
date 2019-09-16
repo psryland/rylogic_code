@@ -72,8 +72,11 @@
     <Compile Include="src\Account\LogOnUI.xaml.cs">
       <DependentUpon>LogOnUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Dialogs\BackTestingConfigUI.xaml.cs">
-      <DependentUpon>BackTestingConfigUI.xaml</DependentUpon>
+    <Compile Include="src\Dialogs\BackTestingBalancesUI.xaml.cs">
+      <DependentUpon>BackTestingBalancesUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Dialogs\BackTestingOptionsUI.xaml.cs">
+      <DependentUpon>BackTestingOptionsUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Dialogs\ChartOptionsUI.xaml.cs">
       <DependentUpon>ChartOptionsUI.xaml</DependentUpon>
@@ -153,7 +156,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\Dialogs\BackTestingConfigUI.xaml">
+    <Page Include="src\Dialogs\BackTestingBalancesUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Dialogs\BackTestingOptionsUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

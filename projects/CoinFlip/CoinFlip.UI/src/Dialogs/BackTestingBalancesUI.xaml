@@ -1,5 +1,5 @@
 ﻿<Window
-	x:Class="CoinFlip.UI.BackTestingConfigUI"
+	x:Class="CoinFlip.UI.Dialogs.BackTestingBalancesUI"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,7 +7,7 @@
     mc:Ignorable="d" 
 	d:DesignWidth="800"
 	d:DesignHeight="450"
-	Title="Back Testing Configuration"
+	Title="Back Testing Balances"
 	WindowStartupLocation="CenterOwner"
 	SizeToContent="Height"
 	ResizeMode="CanResizeWithGrip"

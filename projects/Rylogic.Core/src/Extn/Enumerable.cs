@@ -220,6 +220,10 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns true if adjacent items in the collection satisfy 'pred(x[i], x[i+1])'</summary>
+		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, Func<TSource, int> pred)
+		{
+			return IsOrdered(source, ESequenceOrder.Increasing, Cmp<TSource>.From(pred));
+		}
 		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, Func<TSource,TSource,bool> pred)
 		{
 			var iter = source.GetIterator();

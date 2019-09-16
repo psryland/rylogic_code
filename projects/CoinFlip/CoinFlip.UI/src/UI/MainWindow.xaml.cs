@@ -24,10 +24,11 @@ namespace CoinFlip.UI
 			// Commands
 			CloseApp = Command.Create(this, CloseAppInternal);
 			ShowOptions = Command.Create(this, ShowOptionsInternal);
-			LogOn = Command.Create(this, LogOnInternal);
-			NewChart = Command.Create(this, NewChartInternal);
 			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
 			ToggleBackTesting = Command.Create(this, ToggleBackTestingInternal);
+			LogOn = Command.Create(this, LogOnInternal);
+			NewChart = Command.Create(this, NewChartInternal);
+
 			DataContext = this;
 		}
 		protected override void OnSourceInitialized(EventArgs e)
@@ -106,7 +107,7 @@ namespace CoinFlip.UI
 				m_model = value;
 				if (m_model != null)
 				{
-					Simulation = new SimulationView(m_model);
+					Simulation = new SimulationView(GetWindow(this), m_model);
 					m_model.EditingTrade += HandleEditingTrade;
 					m_model.NettWorthChanged += HandleNettWorthChanged;
 					Model.BackTestingChange += HandleBackTestingChange;

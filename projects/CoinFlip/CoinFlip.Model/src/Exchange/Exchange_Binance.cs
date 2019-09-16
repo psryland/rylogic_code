@@ -15,7 +15,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public class Binance : Exchange
+	public class Binance :Exchange
 	{
 		private readonly HashSet<TradePair> m_pairs;
 
@@ -247,7 +247,7 @@ namespace CoinFlip
 				if (Shutdown.IsCancellationRequested) return Task.CompletedTask;
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var ticker = Api.TickerData[cp];
-				ticker_updates.Add(new PairAndTicker{Pair = cp, Ticker = ticker});
+				ticker_updates.Add(new PairAndTicker { Pair = cp, Ticker = ticker });
 			}
 
 			// Stop market updates for unreferenced pairs
@@ -515,13 +515,15 @@ namespace CoinFlip
 				return EMarketPeriod.Month1;
 			}
 		}
-		
+
 		/// <summary></summary>
+		[DebuggerDisplay("{Pair.Id,nq}")]
 		struct PairAndTicker
 		{
 			public CurrencyPair Pair;
 			public Ticker Ticker;
 		}
+		[DebuggerDisplay("{Pair.Id,nq}")]
 		struct PairAndMarketData
 		{
 			public CurrencyPair Pair;

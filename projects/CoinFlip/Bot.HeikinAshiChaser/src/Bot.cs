@@ -48,6 +48,7 @@ namespace Bot.HeikinAshiChaser
 				m_instrument = value;
 				if (m_instrument != null)
 				{
+					m_instrument.CandleStyle = ECandleStyle.HeikinAshi;
 					//	m_instrument.DataChanged += HandleDataChanged;
 				}
 
@@ -87,8 +88,6 @@ namespace Bot.HeikinAshiChaser
 		}
 		private ConfigureUI m_config_ui;
 
-		private Candle LastHACandle { get; }
-
 		/// <summary>Step the bot</summary>
 		protected override Task StepInternal()
 		{
@@ -100,9 +99,9 @@ namespace Bot.HeikinAshiChaser
 				Instrument = new Instrument(Name, price_data);
 			}
 			if (Instrument.Count == 0)
-			{
 				return Task.CompletedTask;
-			}
+
+
 
 
 			return Task.CompletedTask;

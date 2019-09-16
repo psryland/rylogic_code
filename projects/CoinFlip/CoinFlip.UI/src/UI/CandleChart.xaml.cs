@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using CoinFlip.UI.GfxObjects;
 using CoinFlip.UI.Indicators;
 using Rylogic.Common;

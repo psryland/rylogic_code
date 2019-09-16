@@ -1,5 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Windows;
+using System.Windows.Input;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Gui.WPF;
 
@@ -7,8 +10,9 @@ namespace CoinFlip.UI
 {
 	public class SimulationView :IDisposable, INotifyPropertyChanged
 	{
-		public SimulationView(Model model)
+		public SimulationView(Window owner, Model model)
 		{
+			Owner = owner;
 			Model = model;
 
 			Reset = Command.Create(this, ResetInternal);
@@ -17,6 +21,7 @@ namespace CoinFlip.UI
 			Run = Command.Create(this, RunInternal);
 			Pause = Command.Create(this, PauseInternal);
 			Toggle = Command.Create(this, ToggleInternal);
+			ShowBackTestingOptions = Command.Create(this, ShowBackTestingOptionsInternal);
 		}
 		public void Dispose()
 		{
@@ -53,6 +58,9 @@ namespace CoinFlip.UI
 					NotifyPropertyChanged(nameof(CanPause));
 					NotifyPropertyChanged(nameof(PercentComplete));
 					NotifyPropertyChanged(nameof(Clock));
+					NotifyPropertyChanged(nameof(StepsPerCandle));
+					NotifyPropertyChanged(nameof(StartTime));
+					NotifyPropertyChanged(nameof(EndTime));
 				}
 				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
@@ -63,6 +71,9 @@ namespace CoinFlip.UI
 			}
 		}
 		private Model m_model;
+
+		/// <summary>The owner window</summary>
+		private Window Owner { get; }
 
 		/// <summary>The simulation (or null)</summary>
 		private Simulation Sim => Model.Simulation;
@@ -79,6 +90,43 @@ namespace CoinFlip.UI
 			get { return Sim?.TimeFrame ?? ETimeFrame.None; }
 			set { if (Sim != null) Sim.TimeFrame = value; }
 		}
+
+		/// <summary>Sub-candle simulated resolution</summary>
+		public int StepsPerCandle
+		{
+			get => Sim?.StepsPerCandle ?? 1;
+			set
+			{
+				if (Sim == null) return;
+				Sim.StepsPerCandle = value;
+			}
+		}
+
+		/// <summary>Simulation start time</summary>
+		public DateTimeOffset? StartTime
+		{
+			get => Sim?.StartTime;
+			set
+			{
+				if (Sim == null || value == null) return;
+				Sim.StartTime = value.Value;
+			}
+		}
+
+		/// <summary>Simulation end time</summary>
+		public DateTimeOffset EndTime
+		{
+			get => Sim?.EndTime ?? Misc.CryptoCurrencyEpoch;
+			set
+			{
+				if (Sim == null) return;
+				Sim.EndTime = value;
+			}
+		}
+
+		/// <summary>The limits for the simulation time range</summary>
+		public DateTimeOffset MinSimTime => Misc.CryptoCurrencyEpoch;
+		public DateTimeOffset MaxSimTime => DateTimeOffset.UtcNow;
 
 		/// <summary></summary>
 		public bool CanReset => Sim?.CanReset ?? false;
@@ -139,6 +187,25 @@ namespace CoinFlip.UI
 			else
 				Pause.Execute();
 		}
+
+		/// <summary>Show the dialog containing the back testing options</summary>
+		public Command ShowBackTestingOptions { get; }
+		private void ShowBackTestingOptionsInternal()
+		{
+			// Toggle the dialog visibility
+			if (m_back_testing_options_ui == null)
+			{
+				var pt = Owner.PointToScreen(Mouse.GetPosition(Owner));
+				m_back_testing_options_ui = new BackTestingOptionsUI(Owner, this) { Left = pt.X, Top = pt.Y+20, };
+				m_back_testing_options_ui.Closed += delegate { m_back_testing_options_ui = null; };
+				m_back_testing_options_ui.Show();
+			}
+			else
+			{
+				m_back_testing_options_ui.Close();
+			}
+		}
+		private BackTestingOptionsUI m_back_testing_options_ui;
 
 		/// <summary>Factional time through the simulation period</summary>
 		public double PercentComplete

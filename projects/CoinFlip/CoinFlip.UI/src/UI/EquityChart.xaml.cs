@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;

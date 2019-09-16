@@ -53,7 +53,7 @@ namespace CoinFlip
 		/// <summary>Get the current simulation time</summary>
 		public DateTimeOffset Clock
 		{
-			get { return Model.SimClock; }
+			get => Model.SimClock;
 			private set
 			{
 				if (Model.SimClock == value) return;
@@ -65,7 +65,7 @@ namespace CoinFlip
 		/// <summary>The simulation step resolution</summary>
 		public ETimeFrame TimeFrame
 		{
-			get { return SettingsData.Settings.BackTesting.TimeFrame; }
+			get => SettingsData.Settings.BackTesting.TimeFrame;
 			set
 			{
 				if (SettingsData.Settings.BackTesting.TimeFrame == value) return;
@@ -77,7 +77,7 @@ namespace CoinFlip
 		/// <summary>Get the back testing start time</summary>
 		public DateTimeOffset StartTime
 		{
-			get { return SettingsData.Settings.BackTesting.StartTime.RoundDownTo(TimeFrame); }
+			get => SettingsData.Settings.BackTesting.StartTime.RoundDownTo(TimeFrame);
 			set
 			{
 				if (SettingsData.Settings.BackTesting.StartTime == value) return;
@@ -104,14 +104,14 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Controls the rate that the simulation runs at</summary>
-		public double StepsPerCandle
+		/// <summary>Sub-candle simulated resolution</summary>
+		public int StepsPerCandle
 		{
-			get { return SettingsData.Settings.BackTesting.StepsPerCandle; }
+			get => SettingsData.Settings.BackTesting.StepsPerCandle;
 			set
 			{
 				if (SettingsData.Settings.BackTesting.StepsPerCandle == value) return;
-				SettingsData.Settings.BackTesting.StepsPerCandle = value;
+				SettingsData.Settings.BackTesting.StepsPerCandle = Math.Max(1, value);
 				NotifySimPropertyChanged();
 			}
 		}

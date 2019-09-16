@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
@@ -7,10 +6,9 @@ using System.Windows.Data;
 using CoinFlip.Settings;
 using Rylogic.Container;
 using Rylogic.Gui.WPF;
-using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace CoinFlip.UI
+namespace CoinFlip.UI.Dialogs
 {
 	public partial class FundAllocationsUI : Window, IDisposable, INotifyPropertyChanged
 	{

@@ -119,14 +119,18 @@
 				Visibility="{Binding Active, Converter={conv:BoolToVisible}}"
 				MaxHeight="32"
 				>
-				<ComboBox
-					ToolTip="The time frame or step size used for back testing"
-					MinWidth="80"
-					IsReadOnly="True"
-					IsEnabled="{Binding Running, Converter={conv:Not}}"
-					ItemsSource="{Binding TimeFrame, Converter={conv:EnumValues}}"
-					SelectedItem="{Binding TimeFrame}"
-					/>
+
+				<!-- Back Testing Options -->
+				<Button
+					Command="{Binding ShowBackTestingOptions}"
+					Background="Transparent"
+					BorderThickness="0"
+					Name="m_btn_back_testing_options"
+					>
+					<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
+				</Button>
+
+				<!-- Reset to starting time -->
 				<Button
 					ToolTip="Reset to the starting time (Shift+F5)"
 					Command="{Binding Reset}"
@@ -138,6 +142,8 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
+
+				<!-- Single step -->
 				<Button
 					ToolTip="Step forward by one step, then pause (F10)"
 					Command="{Binding StepOne}"
@@ -149,6 +155,8 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
+				
+				<!-- Run to trade -->
 				<Button
 					ToolTip="Run up to the next submitted or filled trade (F11)"
 					Command="{Binding RunToTrade}"
@@ -160,6 +168,8 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
+
+				<!-- Run -->
 				<Button
 					ToolTip="Run the back testing simulation (F5)"
 					Command="{Binding Run}"
@@ -172,6 +182,8 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
+				
+				<!-- Pause -->
 				<Button
 					ToolTip="Pause the back-testing simulation (F5)"
 					Command="{Binding Pause}"
@@ -184,6 +196,8 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
+
+				<!-- Time slider -->
 				<Slider
 					MinWidth="300"
 					VerticalAlignment="Center"
@@ -192,10 +206,12 @@
 					Maximum="100"
 					Value="{Binding PercentComplete}"
 					/>
+				
 				<TextBlock
 					Text="{Binding Clock, StringFormat=yyyy-MM-dd HH:mm}"
 					VerticalAlignment="Center"
 					/>
+
 			</ToolBar>
 		</ToolBarTray>
 		

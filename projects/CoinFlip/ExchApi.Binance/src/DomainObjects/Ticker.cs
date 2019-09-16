@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 
 namespace Binance.API.DomainObjects
 {
+	[DebuggerDisplay("{Pair.Id,nq}")]
 	public class Ticker
 	{
 		public Ticker()

@@ -5,7 +5,7 @@ using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Gui.WPF;
 
-namespace CoinFlip.UI
+namespace CoinFlip.UI.Dialogs
 {
 	public partial class ChartOptionsUI :Window, INotifyPropertyChanged
 	{

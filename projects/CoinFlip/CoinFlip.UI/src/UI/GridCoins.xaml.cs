@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -225,7 +226,7 @@ namespace CoinFlip.UI
 		public Command SetBackTestingBalances { get; }
 		private void SetBackTestingBalancesInternal()
 		{
-			var dlg = new BackTestingConfigUI(Window.GetWindow(this), Model);
+			var dlg = new BackTestingBalancesUI(Window.GetWindow(this), Model);
 			if (dlg.ShowDialog() == true)
 			{
 				Model.Simulation.Reset();

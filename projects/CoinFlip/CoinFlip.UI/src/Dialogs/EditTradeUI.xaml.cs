@@ -9,7 +9,7 @@ using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace CoinFlip.UI
+namespace CoinFlip.UI.Dialogs
 {
 	public partial class EditTradeUI :Window, INotifyPropertyChanged, IDisposable
 	{

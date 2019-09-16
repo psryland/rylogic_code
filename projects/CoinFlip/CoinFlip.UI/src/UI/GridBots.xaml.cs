@@ -7,6 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;

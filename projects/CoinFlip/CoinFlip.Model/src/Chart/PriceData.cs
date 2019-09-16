@@ -228,14 +228,14 @@ namespace CoinFlip
 		/// <summary>String description of the instrument</summary>
 		public string Description => $"{Pair.NameWithExchange}";
 
-		/// <summary>Return the candles over the given time range</summary>
-		public IEnumerable<Candle> ReadCandles(Range time_period)
+		/// <summary>Return the candles over the given index range</summary>
+		public IEnumerable<Candle> ReadCandles(Range index_range)
 		{
 			// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
 			var candles = DB.Query<Candle>(
 				$"select * from {TimeFrame}\n" +
 				$"order by [{nameof(Candle.Timestamp)}] limit @start,@count",
-				new { start = time_period.Beg, count = time_period.Size });
+				new { start = index_range.Beg, count = index_range.Size });
 
 			if (Model.BackTesting)
 			{

@@ -1,5 +1,5 @@
 <Window
-	x:Class="CoinFlip.UI.EditTradeUI"
+	x:Class="CoinFlip.UI.Dialogs.EditTradeUI"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

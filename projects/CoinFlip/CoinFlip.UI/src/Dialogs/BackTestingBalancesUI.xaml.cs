@@ -8,14 +8,14 @@ using CoinFlip.Settings;
 using Rylogic.Container;
 using Rylogic.Gui.WPF;
 
-namespace CoinFlip.UI
+namespace CoinFlip.UI.Dialogs
 {
-	public partial class BackTestingConfigUI :Window
+	public partial class BackTestingBalancesUI :Window
 	{
 		private class CoinToBalance :LazyDictionary<string, decimal> { };
 		private class ExchToBalance :LazyDictionary<string, CoinToBalance> { };
 
-		public BackTestingConfigUI(Window owner, Model model)
+		public BackTestingBalancesUI(Window owner, Model model)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -76,8 +76,8 @@ namespace CoinFlip.UI
 		/// <summary></summary>
 		private class CoinDataAdapter
 		{
-			private readonly BackTestingConfigUI m_me;
-			public CoinDataAdapter(BackTestingConfigUI me, CoinData cd)
+			private readonly BackTestingBalancesUI m_me;
+			public CoinDataAdapter(BackTestingBalancesUI me, CoinData cd)
 			{
 				m_me = me;
 				CoinData = cd;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Binance.API.DomainObjects;
 using ExchApi.Common;
@@ -61,6 +62,7 @@ namespace Binance.API
 					lock (stream.TickerData)
 					{
 						var sym = pair.Id;
+						//Debug.Assert(stream.TickerData.IsOrdered(x => x.Pair.Id.CompareTo(sym)));
 						var idx = stream.TickerData.BinarySearch(x => x.Pair.Id.CompareTo(sym));
 						return idx >= 0 ? new Ticker(stream.TickerData[idx]) : null;
 					}
@@ -176,6 +178,7 @@ namespace Binance.API
 					foreach (var update in updates)
 					{
 						var sym = update.Ticker.Pair.Id;
+						//Debug.Assert(TickerData.IsOrdered(x => x.Pair.Id.CompareTo(sym)));
 						var idx = TickerData.BinarySearch(x => x.Pair.Id.CompareTo(sym));
 						if (idx >= 0)
 							TickerData[idx] = update.Ticker;

@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using CoinFlip.Settings;
+using CoinFlip.UI.Dialogs;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
