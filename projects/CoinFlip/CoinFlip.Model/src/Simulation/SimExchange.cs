@@ -68,8 +68,8 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			Exchange.Sim = null;
 			Reset();
+			Exchange.Sim = null;
 		}
 
 		/// <summary>The owning simulation</summary>
@@ -120,15 +120,15 @@ namespace CoinFlip
 			Balance.Clear();
 			Transfers.Clear();
 			var exch_data = SettingsData.Settings.BackTesting.AccountBalances[Exchange.Name];
-			foreach (var coin in Coins.Values)
+			foreach (var coin in Coins)
 			{
 				var bal = exch_data[coin.Symbol];
 				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin)));
-				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
+				Balance.Add(new Balances(coin, bal.Total._(coin), Sim.Clock));
 
 				// Add a "deposit" for each non-zero balance
 				if (bal.Total != 0)
-					Transfers.Add(new Transfer($"{bal.Symbol}-BackTesting", ETransfer.Deposit, coin, bal.Total._(coin), Model.UtcNow, Transfer.EStatus.Complete));
+					Transfers.AddOrUpdate(new Transfer($"{bal.Symbol}-BackTesting", ETransfer.Deposit, coin, bal.Total._(coin), Model.UtcNow, Transfer.EStatus.Complete));
 
 				CoinData.NotifyBalanceChanged(coin);
 			}

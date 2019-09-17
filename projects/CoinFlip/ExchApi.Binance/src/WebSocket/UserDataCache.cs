@@ -452,7 +452,7 @@ namespace Binance.API
 			}
 
 			/// <summary>Access all historic trades for the given currency pair, since 'since' if given</summary>
-			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null, long? from_id = null] // Worker thread context
+			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null] // Worker thread context
 			{
 				get
 				{

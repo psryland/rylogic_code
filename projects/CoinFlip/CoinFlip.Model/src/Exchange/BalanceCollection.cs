@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -14,27 +15,41 @@ namespace CoinFlip
 		//  - Fund is a string ID for a named partition of money. Funds are used by bots to give predictability to account balances.
 
 		public BalanceCollection(Exchange exch)
-			: base(exch)
+			: base(exch, x => x.Coin)
 		{
-			KeyFrom = x => x.Coin;
-			SupportsSorting = false;
+			Balances.SupportsSorting = false;
+		}
+
+		/// <summary></summary>
+		private BindingDict<Coin, Balances> Balances => m_data;
+
+		/// <summary>Reset the collection</summary>
+		public void Clear()
+		{
+			Balances.Clear();
+		}
+
+		/// <summary>Add to this collection</summary>
+		public Balances Add(Balances balances)
+		{
+			return Balances.Add2(balances);
 		}
 
 		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
 		public Balances GetOrAdd(Coin coin)
 		{
 			Debug.Assert(Misc.AssertMainThread());
-			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
+			return Balances.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
 		}
 
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
-		public override Balances this[Coin coin]
+		public Balances this[Coin coin]
 		{
 			get
 			{
 				Debug.Assert(Misc.AssertMainThread());
 				if (coin.Exchange != Exchange && !(Exchange is CrossExchange)) throw new Exception("Currency not associated with this exchange");
-				return TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
+				return Balances.TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
 			}
 		}
 
@@ -60,7 +75,7 @@ namespace CoinFlip
 			balances.ExchangeUpdate(total, held, update_time);
 
 			// Invalidate bindings
-			ResetItem(balances);
+			Balances.ResetItem(balances);
 		}
 	}
 }

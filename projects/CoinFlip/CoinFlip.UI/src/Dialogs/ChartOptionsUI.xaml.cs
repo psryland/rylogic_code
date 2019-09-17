@@ -41,14 +41,17 @@ namespace CoinFlip.UI.Dialogs
 		/// <summary>Show the singleton instance of this dialog</summary>
 		public static void Show(Window owner, Point pt)
 		{
-			if (m_dlg_chart_options == null || m_dlg_chart_options.Owner != owner)
+			if (m_dlg_chart_options == null)
 			{
-				m_dlg_chart_options?.Close();
 				m_dlg_chart_options = new ChartOptionsUI(owner);
+				m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y).OnScreen();
+				m_dlg_chart_options.Closed += delegate { m_dlg_chart_options = null; };
+				m_dlg_chart_options.Show();
 			}
-			m_dlg_chart_options.Show();
-			m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y).OnScreen();
-
+			else
+			{
+				m_dlg_chart_options.Close();
+			}
 		}
 		private static ChartOptionsUI m_dlg_chart_options;
 

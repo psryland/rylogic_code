@@ -13,6 +13,7 @@
 			Symbol = transfer.Coin.Symbol;
 			Amount = transfer.Amount.ToDouble();
 			Created = transfer.Created.Ticks;
+			Status = transfer.Status;
 		}
 
 		/// <summary>A unique Id for the transfer (CoinFlip only, used as a primary key)</summary>
@@ -32,5 +33,8 @@
 
 		/// <summary>The timestamp of the transfer (in ticks)</summary>
 		public long Created { get; set; }
+
+		/// <summary></summary>
+		public Transfer.EStatus Status { get; set; }
 	}
 }

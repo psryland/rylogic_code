@@ -1,35 +1,36 @@
-﻿using System;
-using System.Diagnostics;
-using Rylogic.Extn;
+﻿using System.Diagnostics;
+using Rylogic.Container;
 
 namespace CoinFlip
 {
 	public class OrdersCompletedCollection : CollectionBase<long, OrderCompleted>
 	{
 		public OrdersCompletedCollection(Exchange exch)
-			: base(exch)
-		{
-			KeyFrom = x => x.OrderId;
-		}
-		public OrdersCompletedCollection(OrdersCompletedCollection rhs)
-			: base(rhs)
-		{ }
+			: base(exch, x => x.OrderId)
+		{}
 
-		/// <summary>Get or Add a completed order by 'order_id'</summary>
-		public OrderCompleted GetOrAdd(long order_id, Func<long, OrderCompleted> factory)
+		/// <summary></summary>
+		private BindingDict<long, OrderCompleted> Orders => m_data;
+
+		/// <summary>Reset the collection</summary>
+		public void Clear()
 		{
-			Debug.Assert(Misc.AssertMainThread());
-			var order = Dictionary_.GetOrAdd(this, order_id, factory);
-			return order;
+			Orders.Clear();
+		}
+
+		/// <summary></summary>
+		public OrderCompleted Add(OrderCompleted order)
+		{
+			return Orders.Add2(order);
 		}
 
 		/// <summary>Get/Set a history entry by order id. Returns null if 'order_id' is not in the collection</summary>
-		public override OrderCompleted this[long order_id]
+		public OrderCompleted this[long order_id]
 		{
 			get
 			{
 				Debug.Assert(Misc.AssertMainThread());
-				return TryGetValue(order_id, out var pos) ? pos : null;
+				return Orders.TryGetValue(order_id, out var pos) ? pos : null;
 			}
 		}
 	}

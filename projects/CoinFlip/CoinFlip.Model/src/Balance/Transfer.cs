@@ -37,13 +37,29 @@ namespace CoinFlip
 		public DateTimeOffset Created { get; }
 
 		/// <summary>The transaction status</summary>
-		public EStatus Status { get; }
+		public EStatus Status { get; private set; }
 
 		/// <summary>The exchange that this transfer occurred on</summary>
 		public Exchange Exchange => Coin.Exchange;
 
 		/// <summary>String description of the transfer</summary>
 		public string Description => $"{Type} {Coin} {Amount.ToString(Coin.Meta.SD, true)}";
+
+		/// <summary>Update the state of this order (with data received from the exchange)</summary>
+		public void Update(Transfer update)
+		{
+			if (TransactionId != update.TransactionId )
+				throw new Exception($"Update is not for this transfer");
+			if (Coin != update.Coin)
+				throw new Exception($"Update cannot change the asset");
+			if (Type != update.Type)
+				throw new Exception($"Update cannot change transfer type");
+			if (Amount != update.Amount)
+				throw new Exception($"Update cannot change transfer amount");
+
+			// Update fields
+			Status = update.Status;
+		}
 
 		/// <summary>Transfer transaction status</summary>
 		public enum EStatus
@@ -52,6 +68,7 @@ namespace CoinFlip
 			Complete,
 			Pending,
 			Cancelled,
+			Failed,
 		}
 	}
 }

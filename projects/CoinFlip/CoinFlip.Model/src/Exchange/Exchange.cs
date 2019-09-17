@@ -214,7 +214,7 @@ namespace CoinFlip
 		/// <summary>Get/Set the simulation. A non-null simulation implies 'BackTesting'</summary>
 		public SimExchange Sim
 		{
-			get { return m_sim; }
+			get => m_sim;
 			set
 			{
 				if (m_sim == value) return;
@@ -437,7 +437,7 @@ namespace CoinFlip
 			get
 			{
 				if (this is CrossExchange) return 0m;
-				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.NettTotal));
+				return Balance.Sum(x => (decimal)x.Coin.ValueOf(x.NettTotal));
 			}
 		}
 
@@ -903,7 +903,8 @@ namespace CoinFlip
 				$"  [{nameof(TransferRecord.Type)}] integer,\n" +
 				$"  [{nameof(TransferRecord.Symbol)}] text,\n" +
 				$"  [{nameof(TransferRecord.Amount)}] real,\n" +
-				$"  [{nameof(TransferRecord.Created)}] integer\n" +
+				$"  [{nameof(TransferRecord.Created)}] integer,\n" +
+				$"  [{nameof(TransferRecord.Status)}] integer\n" +
 				$")");
 
 			// Reset the interval of available history.
@@ -923,7 +924,7 @@ namespace CoinFlip
 		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
 		public void UpdateValuationPaths()
 		{
-			foreach (var coin in Coins.Values)
+			foreach (var coin in Coins)
 				coin.UpdateValuationPaths();
 		}
 
@@ -938,7 +939,7 @@ namespace CoinFlip
 			var live_order_ids = live_orders.ToHashSet(x => x.OrderId);
 
 			// Remove all orders that are no longer live
-			foreach (var order in Orders.Values.Where(x => !live_order_ids.Contains(x.OrderId)).ToArray())
+			foreach (var order in Orders.Where(x => !live_order_ids.Contains(x.OrderId)).ToArray())
 			{
 				// 'order' is newer than 'timestamp', so it can stay
 				if (order.Created >= timestamp)
@@ -996,7 +997,7 @@ namespace CoinFlip
 
 			// Add or update the completed order in the history collection
 			if (!History.TryGetValue(fill.OrderId, out var order_completed))
-				order_completed = History.Add2(fill.OrderId, new OrderCompleted(fill.OrderId, OrderIdToFund(fill.OrderId), fill.Pair, fill.TradeType));
+				order_completed = History.Add(new OrderCompleted(fill.OrderId, OrderIdToFund(fill.OrderId), fill.Pair, fill.TradeType));
 			order_completed.Trades.AddOrUpdate(fill);
 
 			// Update the completed order in the DB
@@ -1022,7 +1023,7 @@ namespace CoinFlip
 				throw new Exception("This transfer fill did not occur on this exchange");
 
 			// Add or update the transfer in the transfer collection
-			Transfers[transfer.TransactionId] = transfer;
+			Transfers.AddOrUpdate(transfer);
 
 			// Update the completed orders
 			using (var transaction = DB.BeginTransaction())
@@ -1131,23 +1132,24 @@ namespace CoinFlip
 		{
 			var rec = new TransferRecord(transfer);
 			DB.Execute(
-				$"insert or replace into {Table.TradeComplete} (\n" +
+				$"insert or replace into {Table.Transfer} (\n" +
 				$"  [{nameof(TransferRecord.TransactionId)}],\n" +
 				$"  [{nameof(TransferRecord.Type)}],\n" +
 				$"  [{nameof(TransferRecord.Symbol)}],\n" +
 				$"  [{nameof(TransferRecord.Amount)}],\n" +
-				$"  [{nameof(TransferRecord.Created)}]\n" +
+				$"  [{nameof(TransferRecord.Created)}],\n" +
+				$"  [{nameof(TransferRecord.Status)}]\n" +
 				$") values (\n" +
-				$"  @transaction_id, @type, @symbol, @amount\n" +
+				$"  @transaction_id, @type, @symbol, @amount, @created, @status\n" +
 				$")",
 				new
 				{
 					transaction_id = rec.TransactionId,
 					type = rec.Type,
-					created = rec.Created,
 					symbol = rec.Symbol,
 					amount = rec.Amount,
-					Created = rec.Created,
+					created = rec.Created,
+					status = rec.Status,
 				},
 				transaction);
 		}
@@ -1192,10 +1194,7 @@ namespace CoinFlip
 			if (DB == null) return;
 
 			var history = new Dictionary<long, OrderCompleted>();
-			var history_first = DateTimeOffset.MaxValue;
-			var history_last = Misc.CryptoCurrencyEpoch;
-			var transfers_last = Misc.CryptoCurrencyEpoch;
-			var history_last_id = 0L;
+			var transfers = new List<Transfer>();
 
 			// Get the completed orders
 			var orders = DB.Query<OrderCompletedRecord>($"select * from {Table.OrderComplete}");
@@ -1222,32 +1221,36 @@ namespace CoinFlip
 					var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 					var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
 					order_completed.Trades.AddOrUpdate(new TradeCompleted(trade.OrderId, trade.TradeId, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated));
-
-					// Record the range of completed orders
-					if (created < history_first)
-					{
-						history_first = created;
-					}
-					if (created > history_last)
-					{
-						history_last = created;
-						history_last_id = trade.TradeId;
-					}
 				}
 			}
 
-			// Assign to the collection
+			// Get the transfers
+			var xfers = DB.Query<TransferRecord>($"select * from {Table.Transfer}");
+			foreach (var xfer in xfers)
+			{
+				var coin = Coins.GetOrAdd(xfer.Symbol);
+				var amount = ((decimal)xfer.Amount)._(coin);
+				var created = new DateTimeOffset(xfer.Created, TimeSpan.Zero);
+				transfers.Add(new Transfer(xfer.TransactionId, xfer.Type, coin, amount, created, xfer.Status));
+			}
+
 			History.Clear();
-			History.AddRange(history);
+			Transfers.Clear();
+			HistoryInterval = Range.Invalid;
+			TransfersInterval = Range.Invalid;
 
-			// Set the time to get history from
-			m_history_last = history_last;
-			m_transfers_last = transfers_last;
-			m_history_last_id = history_last_id;
-
-			// Set the range to span the available history
-			if (history_first <= history_last)
-				HistoryInterval = new Range(history_first.Ticks, history_last.Ticks);
+			// Populate the collections
+			foreach (var his in history.Values)
+			{
+				History.Add(his);
+				foreach (var trade in his.Trades)
+					HistoryInterval.Encompass(trade.Updated.Ticks);
+			}
+			foreach (var xfer in transfers)
+			{
+				Transfers.AddOrUpdate(xfer);
+				TransfersInterval.Encompass(xfer.Created.Ticks);
+			}
 		}
 		private void SignalPopulateTradeHistory()
 		{
@@ -1259,12 +1262,11 @@ namespace CoinFlip
 
 		/// <summary>The time range that the completed orders history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
-		protected DateTimeOffset m_history_last; // Worker thread context only
-		protected long m_history_last_id; // TradeId. Worker thread context only
+		protected DateTimeOffset? m_history_last; // Worker thread context only
 
 		/// <summary>The time range that the transfer history covers (in ticks)</summary>
 		public Range TransfersInterval { get; protected set; }
-		protected DateTimeOffset m_transfers_last; // Worker thread context only
+		protected DateTimeOffset? m_transfers_last; // Worker thread context only
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

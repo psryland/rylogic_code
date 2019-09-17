@@ -40,7 +40,7 @@ namespace CoinFlip.UI
 			Chart = m_chart_equity;
 			Equity = new Equity(model);
 			GfxEquity = new GfxObjects.Equity(Equity);
-			GfxCompletedOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
+			GfxCompletedOrders = new GfxObjects.Orders(null,null);
 			Model = model;
 
 			// Commands
@@ -352,6 +352,14 @@ namespace CoinFlip.UI
 			GfxEquity.BuildScene(Chart);
 
 			{ // Completed order markers
+
+				// Get a snapshot of the nett worth history
+				var nett_worth_history_snapshot = Equity.NettWorthHistory().Select(x => x).ToList();
+				nett_worth_history_snapshot.Reverse();
+
+				GfxCompletedOrders.XValue = OrderToXValue;
+				GfxCompletedOrders.YValue = OrderToYValue;
+
 				// Convert the visible axis range to a time range
 				var visible_time_range = Equity.TimeRange(Chart.XAxis.Range);
 				switch (ShowCompletedOrders)
@@ -373,11 +381,24 @@ namespace CoinFlip.UI
 						var exchange = Exchanges.CurrentAs<Exchange>();
 						if (exchange != null)
 						{
-							var orders = exchange.History.Values.Where(x => visible_time_range.Contains(x.Created.Ticks));
+							var orders = exchange.History.Where(x => visible_time_range.Contains(x.Created.Ticks));
 							GfxCompletedOrders.BuildScene(orders, Model.SelectedCompletedOrders, Chart);
 						}
 						break;
 					}
+				}
+
+				// Callbacks for positioning order graphics
+				double OrderToXValue(IOrder order)
+				{
+					return nett_worth_history_snapshot.BinarySearch(x => x.Time.CompareTo(order.Created), find_insert_position: true);
+					//return Equity.BalanceChanges.BinarySearch(x => x.Time.CompareTo(order.Created), find_insert_position: true);
+				}
+				double OrderToYValue(IOrder order)
+				{
+					var idx = (int)OrderToXValue(order);
+					return nett_worth_history_snapshot[idx].Worth.ToDouble();
+					//return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth.ToDouble();
 				}
 			}
 		}
@@ -414,16 +435,6 @@ namespace CoinFlip.UI
 			// If the chart X axis range does not overlap the equity data range, auto range.
 			if (Chart.XAxis.Range.Intersect(new Range(0, Equity.Count)).Empty)
 				AutoRange.Execute();
-		}
-
-		/// <summary>Callbacks for positioning order graphics</summary>
-		private double OrderToXValue(IOrder order)
-		{
-			return Equity.BalanceChanges.BinarySearch(x => x.Time.CompareTo(order.Created), find_insert_position: true);
-		}
-		private double OrderToYValue(IOrder order)
-		{
-			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth.ToDouble();
 		}
 
 		/// <summary>Auto range the chart (if needed)</summary>

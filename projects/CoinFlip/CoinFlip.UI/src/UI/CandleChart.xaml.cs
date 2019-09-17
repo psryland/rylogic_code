@@ -778,7 +778,7 @@ namespace CoinFlip.UI
 				case EShowItems.All:
 					{
 						if (Exchange != null && Instrument.Count != 0)
-							GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Model.SelectedOpenOrders, Chart);
+							GfxOpenOrders.BuildScene(Exchange.Orders.Where(Visible), Model.SelectedOpenOrders, Chart);
 						else
 							GfxOpenOrders.ClearScene();
 						break;
@@ -820,7 +820,7 @@ namespace CoinFlip.UI
 				case EShowItems.All:
 					{
 						if (Exchange != null && Instrument.Count != 0)
-							GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Model.SelectedCompletedOrders, Chart);
+							GfxCompletedOrders.BuildScene(Exchange.History.Where(Visible), Model.SelectedCompletedOrders, Chart);
 						else
 							GfxCompletedOrders.ClearScene();
 						break;

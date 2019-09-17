@@ -206,14 +206,17 @@ namespace Rylogic.Container
 			AssertListAccess();
 			Insert(KeyFrom(value), value, m_keys.Count);
 		}
+		public TValue Add2(TValue value)
+		{
+			Add(value);
+			return value;
+		}
 
 		/// <summary>Add 'key:value' to the end of the collection</summary>
 		public void Add(TKey key, TValue value)
 		{
 			Insert(key, value, m_keys.Count);
 		}
-
-		/// <summary>Fluent Add</summary>
 		public TValue Add2(TKey key, TValue value)
 		{
 			Add(key, value);
@@ -224,6 +227,11 @@ namespace Rylogic.Container
 		public void Insert(TKey key, TValue value, int index)
 		{
 			InsertItem(key, value, index);
+		}
+		public TValue Insert2(TKey key, TValue value, int index)
+		{
+			Insert(key, value, index);
+			return value;
 		}
 
 		/// <summary>Remove the object at index position 'index'</summary>

@@ -162,4 +162,24 @@ namespace Binance.API
 		[Assoc("1w")] Week1,
 		[Assoc("1M")] Month1,
 	}
+
+	/// <summary>Status of a deposit</summary>
+	public enum EDepositStatus
+	{
+		Pending = 0,
+		Success = 1,
+		CreditedButCannotWithdraw = 6,
+	}
+
+	/// <summary>Status of a withdrawal</summary>
+	public enum EWithdrawalStatus
+	{
+		EmailSent        = 0,
+		Cancelled        = 1,
+		AwaitingApproval = 2,
+		Rejected         = 3,
+		Processing       = 4,
+		Failure          = 5,
+		Completed        = 6,
+	}
 }

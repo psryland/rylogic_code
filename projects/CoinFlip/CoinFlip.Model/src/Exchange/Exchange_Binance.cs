@@ -84,7 +84,7 @@ namespace CoinFlip
 				}
 
 				// Ensure a 'Balance' object exists for each coin type
-				foreach (var c in Coins.Values)
+				foreach (var c in Coins)
 					Balance.GetOrAdd(c);
 
 				// Record the pairs
@@ -162,7 +162,7 @@ namespace CoinFlip
 				if (!auto_add_coins && (!coins.Contains(pair.Base) || !coins.Contains(pair.Quote))) continue;
 
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-				var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
+				var history = Api.UserData.History[cp, m_history_last];
 				history_orders.AddRange(history);
 			}
 
@@ -178,7 +178,6 @@ namespace CoinFlip
 				//var order_ids = new HashSet<long>();
 				var orders = new List<Order>();
 				var new_pairs = new HashSet<TradePair>();
-				var history_last_id = 0L;
 
 				// Update the trade history
 				foreach (var exch_order in history_orders)
@@ -186,9 +185,6 @@ namespace CoinFlip
 					// Update the history of completed orders
 					var fill = TradeCompletedFrom(exch_order, timestamp);
 					AddToTradeHistory(fill);
-
-					// Save the last order id
-					history_last_id = fill.OrderId;
 				}
 
 				// Update the collection of existing orders
@@ -202,10 +198,7 @@ namespace CoinFlip
 
 				// Merge pairs that have trades into the 'm_pairs' set
 				lock (m_pairs)
-				{
 					m_pairs.AddRange(new_pairs);
-					m_history_last_id = history_last_id;
-				}
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -295,21 +288,20 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
-		protected override Task UpdateTransfersInternal(HashSet<string> coins) // worker thread context
+		protected async override Task UpdateTransfersInternal(HashSet<string> coins) // worker thread context
 		{
 			var timestamp = DateTimeOffset.Now;
 
-			// TODO:
+			// Request the transfers data
+			var deposits = await Api.GetDeposits(beg: m_transfers_last, cancel: Shutdown.Token);
+			var withdrawals = await Api.GetWithdrawals(beg: m_transfers_last, cancel: Shutdown.Token);
 
-			//// Request the transfers data
-			//var transfers = await Api.GetTransfers(beg: m_transfers_last, end: timestamp, cancel: Shutdown.Token);
-			//
-			//// Remove transfers we don't care about
-			//if (!SettingsData.Settings.AutoAddCoins)
-			//{
-			//	transfers.Deposits.RemoveAll(x => !coins.Contains(x.Currency));
-			//	transfers.Withdrawals.RemoveAll(x => !coins.Contains(x.Currency));
-			//}
+			// Remove transfers we don't care about
+			if (!SettingsData.Settings.AutoAddCoins)
+			{
+				deposits.RemoveAll(x => !coins.Contains(x.Asset));
+				withdrawals.RemoveAll(x => !coins.Contains(x.Asset));
+			}
 
 			// Record the time that transfer history has been updated to
 			m_transfers_last = timestamp;
@@ -317,23 +309,21 @@ namespace CoinFlip
 			// Queue integration of the transfer history
 			Model.DataUpdates.Add(() =>
 			{
-				//// Update the collection of funds transfers
-				//foreach (var dep in transfers.Deposits)
-				//{
-				//	var deposit = TransferFrom(dep);
-				//	AddToTransfersHistory(deposit);
-				//}
-				//foreach (var wid in transfers.Withdrawals)
-				//{
-				//	var withdrawal = TransferFrom(wid);
-				//	AddToTransfersHistory(withdrawal);
-				//}
+				// Update the collection of funds transfers
+				foreach (var dep in deposits)
+				{
+					var deposit = TransferFrom(dep);
+					AddToTransfersHistory(deposit);
+				}
+				foreach (var wid in withdrawals)
+				{
+					var withdrawal = TransferFrom(wid);
+					AddToTransfersHistory(withdrawal);
+				}
 
 				// Notify updated
 				Transfers.LastUpdated = timestamp;
 			});
-
-			return Task.CompletedTask;
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
@@ -467,6 +457,22 @@ namespace CoinFlip
 			return new TradeCompleted(order_id, trade_id, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
+		/// <summary>Convert an exchange deposit to a CoinFlip transfer</summary>
+		private Transfer TransferFrom(Deposit dep)
+		{
+			var coin = Coins.GetOrAdd(dep.Asset);
+			var amount = dep.Amount._(coin);
+			return new Transfer(dep.TxId, ETransfer.Deposit, coin, amount, dep.InsertTime, ToTransferStatus(dep.Status));
+		}
+
+		/// <summary>Convert an exchange withdrawal to a CoinFlip transfer</summary>
+		private Transfer TransferFrom(Withdrawal wit)
+		{
+			var coin = Coins.GetOrAdd(wit.Asset);
+			var amount = wit.Amount._(coin);
+			return new Transfer(wit.TxId, ETransfer.Withdrawal, coin, amount, wit.ApplyTime, ToTransferStatus(wit.Status));
+		}
+
 		/// <summary>Convert a market period to a time frame</summary>
 		private ETimeFrame ToTimeFrame(EMarketPeriod mp)
 		{
@@ -541,6 +547,38 @@ namespace CoinFlip
 				return EMarketPeriod.Week1;
 			case ETimeFrame.Month1:
 				return EMarketPeriod.Month1;
+			}
+		}
+
+		/// <summary>Convert a deposit status to the nearest transfer status</summary>
+		private Transfer.EStatus ToTransferStatus(EDepositStatus ds)
+		{
+			switch (ds)
+			{
+			default: throw new Exception($"Unknown deposit status: {ds}");
+			case EDepositStatus.Pending: return Transfer.EStatus.Pending;
+			case EDepositStatus.Success: return Transfer.EStatus.Complete;
+			case EDepositStatus.CreditedButCannotWithdraw: return Transfer.EStatus.Complete;
+			}
+		}
+
+		/// <summary>Convert a deposit status to the nearest transfer status</summary>
+		private Transfer.EStatus ToTransferStatus(EWithdrawalStatus ws)
+		{
+			switch (ws)
+			{
+			default: throw new Exception($"Unknown withdrawal status: {ws}");
+			case EWithdrawalStatus.EmailSent:
+			case EWithdrawalStatus.AwaitingApproval:
+			case EWithdrawalStatus.Processing:
+				return Transfer.EStatus.Pending;
+			case EWithdrawalStatus.Completed:
+				return Transfer.EStatus.Complete;
+			case EWithdrawalStatus.Cancelled:
+				return Transfer.EStatus.Cancelled;
+			case EWithdrawalStatus.Rejected:
+			case EWithdrawalStatus.Failure:
+				return Transfer.EStatus.Failed;
 			}
 		}
 

@@ -43,11 +43,6 @@
 				Width="0.8*"
 				/>
 			<DataGridTextColumn
-				Header="Transaction Id"
-				Binding="{Binding TransactionId}"
-				Width="1.5*"
-				/>
-			<DataGridTextColumn
 				Header="Type"
 				Binding="{Binding Type, Mode=OneWay}"
 				Width="1.0*"
@@ -61,6 +56,11 @@
 				Header="Amount"
 				Binding="{Binding Amount, Converter={conv:StringFormat}, ConverterParameter='8, false', Mode=OneWay}"
 				Width="1*"
+				/>
+			<DataGridTextColumn
+				Header="Transaction Id"
+				Binding="{Binding TransactionId}"
+				Width="1.5*"
 				/>
 		</DataGrid.Columns>
 	</DataGrid>

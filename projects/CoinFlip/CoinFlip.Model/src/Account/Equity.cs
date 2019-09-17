@@ -194,13 +194,13 @@ namespace CoinFlip
 			// Collect the trade history from each exchange
 			foreach (var exch in Model.Exchanges)
 			{
-				foreach (var order in exch.History.Values)
+				foreach (var order in exch.History)
 				{
 					if (order.Created <= since) continue;
 					BalanceChanges.Add(new BalanceChange(order));
 					data_added = true;
 				}
-				foreach (var txn in exch.Transfers.Values)
+				foreach (var txn in exch.Transfers)
 				{
 					if (txn.Created <= since) continue;
 					BalanceChanges.Add(new BalanceChange(txn));

@@ -80,11 +80,11 @@ namespace CoinFlip
 				return;
 
 			// Update fields
-			update.AmountIn = update.AmountIn;
-			update.AmountOut = update.AmountOut;
-			update.RemainingIn = update.RemainingIn;
-			update.Created = update.Created;
-			update.Updated = update.Updated;
+			AmountIn    = update.AmountIn;
+			AmountOut   = update.AmountOut;
+			RemainingIn = update.RemainingIn;
+			Created     = update.Created;
+			Updated     = update.Updated;
 		}
 
 		#region Equals

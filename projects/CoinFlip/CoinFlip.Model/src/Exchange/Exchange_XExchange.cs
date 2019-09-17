@@ -48,17 +48,15 @@ namespace CoinFlip
 							var exch0 = exchanges[j];
 							var exch1 = exchanges[i];
 							var pair = Pairs[sym, exch0, exch1];
+							if (pair != null) continue;
 
-							// If not, added it
-							if (pair == null)
-							{
-								pair = new TradePair(exch0.Coins[sym], exch1.Coins[sym], this);
-								Pairs.Add(pair);
+							// If not, add it
+							pair = new TradePair(exch0.Coins[sym], exch1.Coins[sym], this);
+							Pairs.Add(pair);
 
-								// Add the coins
-								Coins[pair.Base.SymbolWithExchange] = pair.Base;
-								Coins[pair.Quote.SymbolWithExchange] = pair.Quote;
-							}
+							// Add the coins
+							Coins.Add(pair.Base.SymbolWithExchange, pair.Base);
+							Coins.Add(pair.Quote.SymbolWithExchange, pair.Quote);
 						}
 					}
 				}
@@ -74,8 +72,8 @@ namespace CoinFlip
 				// Update the Balances data
 				foreach (var pair in Pairs)
 				{
-					Balance[pair.Base] = pair.Base.Balances;
-					Balance[pair.Quote] = pair.Quote.Balances;
+					Balance.Add(pair.Base.Balances);
+					Balance.Add(pair.Quote.Balances);
 				}
 
 				// Notify updated

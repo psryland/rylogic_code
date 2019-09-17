@@ -11,7 +11,7 @@
 	WindowStartupLocation="Manual"
 	SizeToContent="WidthAndHeight"
 	ResizeMode="CanResizeWithGrip"
-	WindowStyle="ToolWindow"
+	WindowStyle="None"
 	ShowInTaskbar="True"
 	MinHeight="200"
 	MinWidth="200"

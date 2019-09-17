@@ -78,9 +78,17 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
+					Transfers = null;
+
 					var transfers = Exchanges?.CurrentAs<Exchange>()?.Transfers;
-					Transfers = transfers != null ? new ListCollectionView(transfers) : null;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Transfers)));
+					if (transfers != null)
+					{
+						var view = new ListCollectionView(transfers);
+						view.SortDescriptions.Add(new SortDescription(nameof(Transfer.Created), ListSortDirection.Descending));
+						Transfers = view;
+
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Transfers)));
+					}
 				}
 			}
 		}

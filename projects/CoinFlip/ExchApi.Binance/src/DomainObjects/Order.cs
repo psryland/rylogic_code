@@ -1,4 +1,5 @@
 ﻿using System;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Rylogic.Extn;
 
@@ -7,8 +8,8 @@ namespace Binance.API.DomainObjects
 	public class Order
 	{
 		/// <summary>Currency pair</summary>
+		[JsonProperty("symbol"), JsonConverter(typeof(ToCurrencyPair))]
 		public CurrencyPair Pair { get; set; }
-		[JsonProperty("symbol")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("orderId")]
@@ -38,20 +39,20 @@ namespace Binance.API.DomainObjects
 		public decimal Remaining => AmountBase - AmountCompleted;
 
 		/// <summary></summary>
+		[JsonProperty("status"), JsonConverter(typeof(ToEnum<EOrderStatus>))]
 		public EOrderStatus Status { get; set; }
-		[JsonProperty("status")] private string StatusInternal { set => Status = Enum<EOrderStatus>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("timeInForce"), JsonConverter(typeof(ToEnum<ETimeInForce>))]
 		public ETimeInForce TimeInForce { get; set; }
-		[JsonProperty("timeInForce")] private string TimeInForceInternal { set => TimeInForce = Enum<ETimeInForce>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("type"), JsonConverter(typeof(ToEnum<EOrderType>))]
 		public EOrderType OrderType { get; set; }
-		[JsonProperty("type")] private string OrderTypeInternal { set => OrderType = Enum<EOrderType>.Parse(value); }
 
 		/// <summary></summary>
+		[JsonProperty("side"), JsonConverter(typeof(ToEnum<EOrderSide>))]
 		public EOrderSide OrderSide { get; set; }
-		[JsonProperty("side")] private string OrderSideInternal { set => OrderSide = Enum<EOrderSide>.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("stopPrice")]
@@ -64,12 +65,12 @@ namespace Binance.API.DomainObjects
 		public decimal IcebergAmount { get; set; }
 
 		/// <summary></summary>
+		[JsonProperty("time"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 		public DateTimeOffset Created { get; set; }
-		[JsonProperty("time")] private long CreatedInternal { set => Created = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 
 		/// <summary></summary>
+		[JsonProperty("updateTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 		public DateTimeOffset Updated { get; set; }
-		[JsonProperty("updateTime")] private long UpdatedTimeInternal { set => Updated = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 
 		/// <summary></summary>
 		[JsonProperty("isWorking")]

@@ -18,20 +18,22 @@ namespace CoinFlip.UI.GfxObjects
 		// Notes:
 		//  - A manager class for adding graphics to a chart for completed open orders
 
-		private Func<IOrder, double> m_xvalue;
-		private Func<IOrder, double> m_yvalue;
 		private Dictionary<long, OrderGfx> m_gfx;
 
 		public Orders(Func<IOrder, double> xvalue, Func<IOrder, double> yvalue)
 		{
-			m_xvalue = xvalue;
-			m_yvalue = yvalue;
+			XValue = xvalue;
+			YValue = yvalue;
 			m_gfx = new Dictionary<long, OrderGfx>();
 		}
 		public void Dispose()
 		{
 			ClearScene();
 		}
+
+		/// <summary>Callback functions used to position each order</summary>
+		public Func<IOrder, double> XValue { get; set; }
+		public Func<IOrder, double> YValue { get; set; }
 
 		/// <summary>Remove all order graphics from the scene</summary>
 		public void ClearScene()
@@ -63,8 +65,8 @@ namespace CoinFlip.UI.GfxObjects
 				var gfx = m_gfx.GetOrAdd(order.OrderId, k => new OrderGfx(order, this));
 
 				// Update the position
-				var x = m_xvalue(order);
-				var y = m_yvalue(order);
+				var x = XValue(order);
+				var y = YValue(order);
 				var s = chart.ChartToClient(new Point(x, y));
 				var hl = highlight.Contains(order.OrderId);
 				gfx.Update(chart.Overlay, s, hl);

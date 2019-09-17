@@ -604,7 +604,7 @@ namespace CoinFlip
 			var worth = 0m._(SettingsData.Settings.ValuationCurrency);
 			foreach (var exch in Exchanges)
 			{
-				foreach (var bal in exch.Balance.Values)
+				foreach (var bal in exch.Balance)
 					worth += bal.NettValue;
 			}
 			NettWorth = worth;

@@ -67,7 +67,7 @@ namespace CoinFlip
 				{
 					// Save the value of each non-zero balance
 					var bal_data = new List<FundData.BalData>();
-					foreach (var coin_balance in exch.Balance.Values)
+					foreach (var coin_balance in exch.Balance)
 					{
 						// 'coin_balance' contains the balance info for a coin.
 						// Save the amount allocated to each fund (if non zero)

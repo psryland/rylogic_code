@@ -112,7 +112,7 @@ namespace CoinFlip.UI.Dialogs
 			{
 				foreach (var exch in Model.Exchanges)
 				{
-					foreach (var bal in exch.Balance.Values)
+					foreach (var bal in exch.Balance)
 					{
 						var result = bal.Validate();
 						if (result != null)

@@ -1,42 +1,53 @@
 ﻿using System.Diagnostics;
+using Rylogic.Container;
 
 namespace CoinFlip
 {
-	public class OrdersCollection : CollectionBase<long, Order>
+	public class OrdersCollection :CollectionBase<long, Order>
 	{
 		public OrdersCollection(Exchange exch)
-			: base(exch)
+			:base(exch, x => x.OrderId)
+		{}
+
+		/// <summary></summary>
+		private BindingDict<long, Order> Orders => m_data;
+
+		/// <summary>Reset the collection</summary>
+		public void Clear()
 		{
-			KeyFrom = x => x.OrderId;
+			Orders.Clear();
 		}
-		public OrdersCollection(OrdersCollection rhs)
-			: base(rhs)
-		{ }
 
 		/// <summary>Add or update an order</summary>
 		public Order AddOrUpdate(Order order)
 		{
 			Debug.Assert(Misc.AssertMainThread());
 			Debug.Assert(order.AmountIn > 0 && order.AmountOut > 0 && order.Created > Misc.CryptoCurrencyEpoch); // Sanity check
-			if (TryGetValue(order.OrderId, out var existing))
+			if (Orders.TryGetValue(order.OrderId, out var existing))
 			{
 				existing.Update(order);
-				ResetItem(order.OrderId); // Needed since we're updating in-place
+				Orders.ResetItem(order.OrderId); // Needed since we're updating in-place
 			}
 			else
 			{
-				Add(order.OrderId, order);
+				Orders.Add(order.OrderId, order);
 			}
 			return order;
 		}
 
+		/// <summary>Remove an order</summary>
+		public bool Remove(long order_id)
+		{
+			return Orders.Remove(order_id);
+		}
+
 		/// <summary>Get a position by order id</summary>
-		public override Order this[long order_id]
+		public Order this[long order_id]
 		{
 			get
 			{
 				Debug.Assert(Misc.AssertMainThread());
-				return TryGetValue(order_id, out var ord) ? ord : null;
+				return Orders.TryGetValue(order_id, out var ord) ? ord : null;
 			}
 		}
 	}

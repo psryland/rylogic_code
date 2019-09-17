@@ -301,6 +301,36 @@ namespace Binance.API
 			return ParseJsonReply<List<OrderFill>>(jtok);
 		}
 
+		/// <summary>Get all deposits</summary>
+		public async Task<List<Deposit>> GetDeposits(string asset = null, UnixMSec? beg = null, UnixMSec? end = null, EDepositStatus? status = null, CancellationToken? cancel = null)
+		{
+			// https://api.binance.com/wapi/v3/depositHistory.html
+			var parms = new Params { };
+			if (asset != null) parms["asset"] = asset;
+			if (status != null) parms["status"] = (int)status;
+			if (beg != null) parms["startTime"] = beg.Value.Value;
+			if (end != null) parms["endTime"] = end.Value.Value;
+
+			// Get the history
+			var jtok = await GetData(HttpMethod.Get, ESecurityType.USER_DATA, "wapi/v3/depositHistory.html", cancel, parms, timestamp: true);
+			return ParseJsonReply<List<Deposit>>(jtok, "depositList");
+		}
+
+		/// <summary>Get all deposits</summary>
+		public async Task<List<Withdrawal>> GetWithdrawals(string asset = null, UnixMSec? beg = null, UnixMSec? end = null, EWithdrawalStatus? status = null, CancellationToken? cancel = null)
+		{
+			// https://api.binance.com/wapi/v3/depositHistory.html
+			var parms = new Params { };
+			if (asset != null) parms["asset"] = asset;
+			if (status != null) parms["status"] = (int)status;
+			if (beg != null) parms["startTime"] = beg.Value.Value;
+			if (end != null) parms["endTime"] = end.Value.Value;
+
+			// Get the history
+			var jtok = await GetData(HttpMethod.Get, ESecurityType.USER_DATA, "wapi/v3/withdrawHistory.html", cancel, parms, timestamp: true);
+			return ParseJsonReply<List<Withdrawal>>(jtok, "withdrawList");
+		}
+
 		/// <summary>Get all order related actions, such as new orders, cancelled orders, etc...</summary>
 		public async Task<List<Order>> GetAllOrders(CurrencyPair pair, UnixMSec? beg = null, UnixMSec? end = null, long? min_order_id = null, CancellationToken? cancel = null)
 		{
@@ -436,15 +466,22 @@ namespace Binance.API
 		}
 
 		/// <summary>Interpret a JSON reply that may be empty, an error, or valid data</summary>
-		private T ParseJsonReply<T>(JToken jtok)
+		private T ParseJsonReply<T>(JToken jtok, string field = null)
 		{
 			// If an empty array is returned, return a default instance of T
 			if (jtok is JArray jarr && jarr.Count == 0)
 				return Activator.CreateInstance<T>();
 
-			// Check for an error
-			if (jtok is JObject jobj && jobj["error"]?.Value<string>() is string error)
-				throw new BinanceException(EErrorCode.Failure, error);
+			if (jtok is JObject jobj)
+			{
+				// Check for an error
+				if (jobj["error"]?.Value<string>() is string error)
+					throw new BinanceException(EErrorCode.Failure, error);
+
+				// Extract sub-field
+				if (field != null && jobj.TryGetValue(field, out var child))
+					return child.ToObject<T>();
+			}
 
 			// Parse the result
 			return jtok.ToObject<T>();

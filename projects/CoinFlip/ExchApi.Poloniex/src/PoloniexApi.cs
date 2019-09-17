@@ -211,13 +211,11 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Get the history of deposits and withdrawals</summary>
-		public async Task<FundsTransfer> GetTransfers(UnixSec beg, UnixSec end, CancellationToken? cancel = null)
+		public async Task<FundsTransfer> GetTransfers(UnixSec? beg = null, UnixSec? end = null, CancellationToken? cancel = null)
 		{
-			var parms = new Params
-			{
-				{ "start", beg.Value },
-				{ "end", end.Value },
-			};
+			var parms = new Params { };
+			if (beg != null) parms["start"] = beg.Value.Value;
+			if (end != null) parms["end"] = end.Value.Value;
 			var jtok = await PostData(Method.Account, "returnDepositsWithdrawals", cancel, parms);
 			return ParseJsonReply<FundsTransfer>(jtok);
 		}

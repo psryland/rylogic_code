@@ -83,7 +83,7 @@ namespace CoinFlip
 				}
 
 				// Ensure a 'Balance' object exists for each coin type
-				foreach (var c in Coins.Values)
+				foreach (var c in Coins)
 					Balance.GetOrAdd(c);
 
 				// Record the pairs
