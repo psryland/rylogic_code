@@ -72,7 +72,7 @@ namespace CoinFlip
 			Model.DataUpdates.Add(() =>
 			{
 				// Update the Balances data
-				foreach (var pair in Pairs.Values)
+				foreach (var pair in Pairs)
 				{
 					Balance[pair.Base] = pair.Base.Balances;
 					Balance[pair.Quote] = pair.Quote.Balances;
@@ -90,7 +90,7 @@ namespace CoinFlip
 			Model.DataUpdates.Add(() =>
 			{
 				// Update the order book for each pair
-				foreach (var pair in Pairs.Values)
+				foreach (var pair in Pairs)
 				{
 					// Get the coins in the pair
 					var coin0 = pair.Base;

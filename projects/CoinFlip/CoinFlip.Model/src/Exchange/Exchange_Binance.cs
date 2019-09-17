@@ -67,7 +67,9 @@ namespace CoinFlip
 			var server_rules = await Api.ServerRules(cancel: Shutdown.Token);
 
 			// Filter out the coins we don't care about
-			server_rules.Symbols.RemoveAll(x => !(coins.Contains(x.BaseAsset) && coins.Contains(x.QuoteAsset)));
+			server_rules.Symbols.RemoveAll(x =>
+				!(coins.Contains(x.BaseAsset) && coins.Contains(x.QuoteAsset)) ||
+				x.Status != ESymbolStatus.TRADING);
 
 			// Add an action to integrate the data
 			Model.DataUpdates.Add(() =>
@@ -77,17 +79,7 @@ namespace CoinFlip
 				// Create the trade pairs and associated coins
 				foreach (var p in server_rules.Symbols)
 				{
-					var base_ = Coins.GetOrAdd(p.BaseAsset);
-					var quote = Coins.GetOrAdd(p.QuoteAsset);
-
-					// Create the trade pair
-					var pair = new TradePair(base_, quote, this, null,
-						amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-						amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
-						price_range: null);
-
-					// Add the trade pair.
-					Pairs[pair.UniqueKey] = pair;
+					var pair = Pairs.GetOrAdd(p.BaseAsset, p.QuoteAsset);
 					pairs.Add(pair);
 				}
 
@@ -191,16 +183,9 @@ namespace CoinFlip
 				// Update the trade history
 				foreach (var exch_order in history_orders)
 				{
-					// Get/Add the completed order
-					var order_completed = History.GetOrAdd(exch_order.OrderId,
-						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Side.TradeType()));
-
-					// Add the trade to the completed order
-					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades.AddOrUpdate(fill);
-
 					// Update the history of completed orders
-					AddToTradeHistory(order_completed);
+					var fill = TradeCompletedFrom(exch_order, timestamp);
+					AddToTradeHistory(fill);
 
 					// Save the last order id
 					history_last_id = fill.OrderId;
@@ -229,7 +214,7 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Update the market data, balances, and open positions</summary>
+		/// <summary>Update the market data</summary>
 		protected override Task UpdateDataInternal() // Worker thread context
 		{
 			// Record the time just before the query to the server
@@ -309,6 +294,48 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
+		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
+		protected override Task UpdateTransfersInternal(HashSet<string> coins) // worker thread context
+		{
+			var timestamp = DateTimeOffset.Now;
+
+			// TODO:
+
+			//// Request the transfers data
+			//var transfers = await Api.GetTransfers(beg: m_transfers_last, end: timestamp, cancel: Shutdown.Token);
+			//
+			//// Remove transfers we don't care about
+			//if (!SettingsData.Settings.AutoAddCoins)
+			//{
+			//	transfers.Deposits.RemoveAll(x => !coins.Contains(x.Currency));
+			//	transfers.Withdrawals.RemoveAll(x => !coins.Contains(x.Currency));
+			//}
+
+			// Record the time that transfer history has been updated to
+			m_transfers_last = timestamp;
+
+			// Queue integration of the transfer history
+			Model.DataUpdates.Add(() =>
+			{
+				//// Update the collection of funds transfers
+				//foreach (var dep in transfers.Deposits)
+				//{
+				//	var deposit = TransferFrom(dep);
+				//	AddToTransfersHistory(deposit);
+				//}
+				//foreach (var wid in transfers.Withdrawals)
+				//{
+				//	var withdrawal = TransferFrom(wid);
+				//	AddToTransfersHistory(withdrawal);
+				//}
+
+				// Notify updated
+				Transfers.LastUpdated = timestamp;
+			});
+
+			return Task.CompletedTask;
+		}
+
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
 		protected override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
@@ -380,7 +407,7 @@ namespace CoinFlip
 			}
 			else
 			{
-				foreach (var p in Pairs.Values)
+				foreach (var p in Pairs)
 					foreach (var mp in Enum<EMarketPeriod>.Values)
 						yield return new PairAndTF(p, ToTimeFrame(mp));
 			}
@@ -426,17 +453,18 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
-		private TradeCompleted TradeCompletedFrom(OrderFill fill, OrderCompleted order_completed, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(OrderFill fill, DateTimeOffset updated)
 		{
-			var tt = order_completed.TradeType;
-			var pair = order_completed.Pair;
+			var order_id = fill.OrderId;
 			var trade_id = fill.TradeId;
+			var pair = Pairs.GetOrAdd(fill.Pair.Base, fill.Pair.Quote);
+			var tt = fill.Side.TradeType();
 			var amount_in = tt.AmountIn(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
 			var amount_out = tt.AmountOut(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
 			var commission = fill.CommissionAsset != null ? fill.Commission._(fill.CommissionAsset) : 0m._(pair.Base);
 			var commission_coin = fill.CommissionAsset != null ? Coins[fill.CommissionAsset] : Coins[pair.Base];
 			var created = fill.Created;
-			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
+			return new TradeCompleted(order_id, trade_id, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

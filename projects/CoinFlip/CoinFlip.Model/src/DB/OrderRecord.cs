@@ -1,4 +1,4 @@
-﻿namespace CoinFlip
+﻿namespace CoinFlip.DB
 {
 	public class OrderRecord
 	{

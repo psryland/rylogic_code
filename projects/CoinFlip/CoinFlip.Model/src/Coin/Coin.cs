@@ -101,7 +101,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The pairs to use to find the value in valuation currency</summary>
-		private List<TradePair> ValuationPath { get; }
+		public List<TradePair> ValuationPath { get; }
 
 		/// <summary>The maximum amount to automatically trade</summary>
 		public Unit<decimal> AutoTradeLimit
@@ -145,8 +145,10 @@ namespace CoinFlip
 			}
 
 			// Look for likely common intermediate currencies
-			foreach (var intermediate in new[] { "BTC", "USDT", "USDC", "ETH" }.Where(x => x != SettingsData.Settings.ValuationCurrency))
+			var quote_currencies = new[] { "BTC", "USDT", "USDC", "ETH" }.Where(x => x != SettingsData.Settings.ValuationCurrency).ToList();
+			foreach (var intermediate in quote_currencies)
 			{
+				if (Symbol == intermediate) continue;
 				var step0 = Exchange.Pairs[Symbol, intermediate];
 				var step1 = Exchange.Pairs[intermediate, SettingsData.Settings.ValuationCurrency];
 				if (step0 != null && step1 != null)

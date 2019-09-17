@@ -15,11 +15,10 @@ namespace CoinFlip
 		//    of fields in the containing OrderCompleted. However, they allow convenient conversion
 		//    to CoinIn/CoinOut etc.
 
-		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<decimal> amount_in, Unit<decimal> amount_out, Unit<decimal> commission, Coin commission_coin, DateTimeOffset created, DateTimeOffset updated)
+		public TradeCompleted(long order_id, long trade_id, TradePair pair, ETradeType tt, Unit<decimal> amount_in, Unit<decimal> amount_out, Unit<decimal> commission, Coin commission_coin, DateTimeOffset created, DateTimeOffset updated)
 		{
 			// Check units
-			var pair = order_completed.Pair;
-			var tt = order_completed.TradeType;
+
 			if (amount_in <= 0m._(tt.CoinIn(pair)))
 				throw new Exception("Invalid 'in' amount");
 			if (amount_out <= 0m._(tt.CoinOut(pair)))
@@ -29,8 +28,10 @@ namespace CoinFlip
 			if (created < Misc.CryptoCurrencyEpoch)
 				throw new Exception("Invalid creation time");
 
-			Order          = order_completed;
+			OrderId        = order_id;
 			TradeId        = trade_id;
+			Pair           = pair;
+			TradeType      = tt;
 			AmountIn       = amount_in;
 			AmountOut      = amount_out;
 			Commission     = commission;
@@ -39,20 +40,17 @@ namespace CoinFlip
 			Updated        = updated;
 		}
 		public TradeCompleted(TradeCompleted rhs)
-			:this(rhs.Order, rhs.TradeId, rhs.AmountIn, rhs.AmountOut, rhs.Commission, rhs.CommissionCoin, rhs.Created, rhs.Updated)
+			:this(rhs.OrderId, rhs.TradeId, rhs.Pair, rhs.TradeType, rhs.AmountIn, rhs.AmountOut, rhs.Commission, rhs.CommissionCoin, rhs.Created, rhs.Updated)
 		{}
 
-		/// <summary>The order that this trade complete is a member of</summary>
-		public OrderCompleted Order { get; }
-
 		/// <summary>Unique Id for the open position on an exchange</summary>
-		public long OrderId => Order.OrderId;
+		public long OrderId { get; }
 
 		/// <summary>The pair being traded</summary>
-		public TradePair Pair => Order.Pair;
+		public TradePair Pair { get; }
 
 		/// <summary>The trade type</summary>
-		public ETradeType TradeType => Order.TradeType;
+		public ETradeType TradeType { get; }
 
 		/// <summary>Unique Id for a completed trade. 0 means not completed</summary>
 		public long TradeId { get; }

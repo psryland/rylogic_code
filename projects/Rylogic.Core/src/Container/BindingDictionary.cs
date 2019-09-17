@@ -213,6 +213,13 @@ namespace Rylogic.Container
 			Insert(key, value, m_keys.Count);
 		}
 
+		/// <summary>Fluent Add</summary>
+		public TValue Add2(TKey key, TValue value)
+		{
+			Add(key, value);
+			return value;
+		}
+
 		/// <summary>Add 'key:value' to the collection with index position 'index'</summary>
 		public void Insert(TKey key, TValue value, int index)
 		{

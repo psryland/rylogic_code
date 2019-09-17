@@ -196,7 +196,7 @@ namespace CoinFlip.UI
 					using (Scope.Create(() => PairNames.CurrentItem, n => PairNames.MoveCurrentToOrFirst(n)))
 					{
 						var list = (List<string>)PairNames.SourceCollection;
-						var pairs = Exchanges?.CurrentAs<Exchange>()?.Pairs.Values;
+						var pairs = Exchanges?.CurrentAs<Exchange>()?.Pairs;
 						list.Assign(pairs != null ? pairs.Select(x => x.Name).Prepend("All Pairs") : new string[0]);
 					}
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PairNames)));

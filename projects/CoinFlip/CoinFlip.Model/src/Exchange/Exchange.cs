@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Threading;
+using CoinFlip.DB;
 using CoinFlip.Settings;
 using Dapper;
 using ExchApi.Common;
@@ -656,10 +657,7 @@ namespace CoinFlip
 
 					// The order may have been completed or partially filled. Add the filled orders to the trade history.
 					foreach (var fill in result.Trades)
-					{
-						var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, trade.Fund, trade.Pair, trade.TradeType));
-						order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, fill.TradeId, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now));
-					}
+						AddToTradeHistory(new TradeCompleted(result.OrderId, fill.TradeId, trade.Pair, trade.TradeType, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now));
 
 					// Add the order to the Orders collection so that there is no race condition between
 					// placing an order and checking 'Orders' for the existence of the order just placed.
@@ -897,6 +895,17 @@ namespace CoinFlip
 				$"     on delete cascade\n" +
 				$")");
 
+			// Ensure the Transfer table exists
+			DB.Execute(
+				$"create table if not exists {Table.Transfer} (\n" +
+				$"  [{nameof(TransferRecord.Id)}] integer unique primary key autoincrement,\n" +
+				$"  [{nameof(TransferRecord.TransactionId)}] text unique,\n" +
+				$"  [{nameof(TransferRecord.Type)}] integer,\n" +
+				$"  [{nameof(TransferRecord.Symbol)}] text,\n" +
+				$"  [{nameof(TransferRecord.Amount)}] real,\n" +
+				$"  [{nameof(TransferRecord.Created)}] integer\n" +
+				$")");
+
 			// Reset the interval of available history.
 			HistoryInterval = new Range(
 				DateTimeOffset_.UnixEpoch.Ticks,
@@ -925,6 +934,7 @@ namespace CoinFlip
 			//  - This method should be called after the history has been updated so
 			//    that it can detect the difference between a filled and cancelled order.
 
+			Debug.Assert(Misc.AssertMainThread());
 			var live_order_ids = live_orders.ToHashSet(x => x.OrderId);
 
 			// Remove all orders that are no longer live
@@ -972,7 +982,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
-		public void AddToTradeHistory(OrderCompleted order)
+		public void AddToTradeHistory(TradeCompleted fill)
 		{
 			// Notes:
 			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
@@ -980,25 +990,52 @@ namespace CoinFlip
 			//   Also, 'OrderCompleted' instances are added as empty instances and then populated.
 			// - Adding an 'OrderCompleted' does not imply the associated order is filled. Orders can be
 			//   partially filled. AddToTradeHistory is called for each partial fill of an order.
-
-			if (order.Exchange != this)
+			Debug.Assert(Misc.AssertMainThread());
+			if (fill.Pair.Exchange != this)
 				throw new Exception("This position fill did not occur on this exchange");
 
-			// Update the completed orders
+			// Add or update the completed order in the history collection
+			if (!History.TryGetValue(fill.OrderId, out var order_completed))
+				order_completed = History.Add2(fill.OrderId, new OrderCompleted(fill.OrderId, OrderIdToFund(fill.OrderId), fill.Pair, fill.TradeType));
+			order_completed.Trades.AddOrUpdate(fill);
+
+			// Update the completed order in the DB
 			using (var transaction = DB.BeginTransaction())
 			{
 				// Get the trades not already in the DB
-				UpsertOrderCompleted(order, transaction);
-				foreach (var trade in order.Trades)
-					UpsertTradeCompleted(trade, transaction);
-
+				UpsertOrderCompleted(order_completed, transaction);
+				UpsertTradeCompleted(fill, transaction);
 				transaction.Commit();
 			}
 
 			// Update the history range
 			HistoryInterval = new Range(
-				Math.Min(HistoryInterval.Beg, order.Created.Ticks),
-				Math.Max(HistoryInterval.End, order.Created.Ticks));
+				Math.Min(HistoryInterval.Beg, order_completed.Created.Ticks),
+				Math.Max(HistoryInterval.End, order_completed.Created.Ticks));
+		}
+
+		/// <summary>Add a new or modified Transfer to the transfer history DB</summary>
+		public void AddToTransfersHistory(Transfer transfer)
+		{
+			Debug.Assert(Misc.AssertMainThread());
+			if (transfer.Exchange != this)
+				throw new Exception("This transfer fill did not occur on this exchange");
+
+			// Add or update the transfer in the transfer collection
+			Transfers[transfer.TransactionId] = transfer;
+
+			// Update the completed orders
+			using (var transaction = DB.BeginTransaction())
+			{
+				// Get the trades not already in the DB
+				UpsertTransfer(transfer, transaction);
+				transaction.Commit();
+			}
+
+			// Update the history range
+			TransfersInterval = new Range(
+				Math.Min(TransfersInterval.Beg, transfer.Created.Ticks),
+				Math.Max(TransfersInterval.End, transfer.Created.Ticks));
 		}
 
 		/// <summary>Update or insert a live order</summary>
@@ -1089,6 +1126,32 @@ namespace CoinFlip
 				transaction);
 		}
 
+		/// <summary>Update or insert a 'TradeCompleted'</summary>
+		private void UpsertTransfer(Transfer transfer, IDbTransaction transaction = null)
+		{
+			var rec = new TransferRecord(transfer);
+			DB.Execute(
+				$"insert or replace into {Table.TradeComplete} (\n" +
+				$"  [{nameof(TransferRecord.TransactionId)}],\n" +
+				$"  [{nameof(TransferRecord.Type)}],\n" +
+				$"  [{nameof(TransferRecord.Symbol)}],\n" +
+				$"  [{nameof(TransferRecord.Amount)}],\n" +
+				$"  [{nameof(TransferRecord.Created)}]\n" +
+				$") values (\n" +
+				$"  @transaction_id, @type, @symbol, @amount\n" +
+				$")",
+				new
+				{
+					transaction_id = rec.TransactionId,
+					type = rec.Type,
+					created = rec.Created,
+					symbol = rec.Symbol,
+					amount = rec.Amount,
+					Created = rec.Created,
+				},
+				transaction);
+		}
+
 		/// <summary>Return the fund id associated with an order id (from the order details)</summary>
 		public Fund OrderIdToFund(long order_id)
 		{
@@ -1151,13 +1214,14 @@ namespace CoinFlip
 				if (history.TryGetValue(trade.OrderId, out var order_completed))
 				{
 					var pair = order_completed.Pair;
+					var tt = order_completed.TradeType;
 					var amount_in = ((decimal)trade.AmountIn)._(order_completed.CoinIn);
 					var amount_out = ((decimal)trade.AmountOut)._(order_completed.CoinOut);
 					var commission_coin = Coins[trade.CommissionCoin];
 					var commission = ((decimal)trade.Commission)._(commission_coin);
 					var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 					var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
-					order_completed.Trades.AddOrUpdate(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
+					order_completed.Trades.AddOrUpdate(new TradeCompleted(trade.OrderId, trade.TradeId, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated));
 
 					// Record the range of completed orders
 					if (created < history_first)
@@ -1243,6 +1307,7 @@ namespace CoinFlip
 			public const string LiveOrders = "LiveOrders";
 			public const string OrderComplete = "OrderComplete";
 			public const string TradeComplete = "TradeComplete";
+			public const string Transfer = "Transfer";
 		}
 
 		/// <summary>Colours for exchanges</summary>
@@ -1250,81 +1315,3 @@ namespace CoinFlip
 		private static int m_colour_index;
 	}
 }
-
-///// <summary>App logic</summary>
-//public Model Model
-//{
-//	[DebuggerStepThrough] get { return m_model; }
-//	private set
-//	{
-//		if (m_model == value) return;
-//		if (m_model != null)
-//		{
-//			if (UpdateThreadActive) throw new Exception("Should not be nulling 'Model' when the thread is running");
-//			m_model.BackTestingChanging -= HandleBackTestingChanged;
-//			m_model.SimReset            -= HandleSimReset;
-//			m_model.Funds.ListChanging  -= HandleFundsListChanging;
-//		}
-//		m_model = value;
-//		if (m_model != null)
-//		{
-//			m_model.Funds.ListChanging  += HandleFundsListChanging;
-//			m_model.SimReset            += HandleSimReset;
-//			m_model.BackTestingChanging += HandleBackTestingChanged;
-//		}
-
-//		// Handlers
-//		void HandleBackTestingChanged(object sender, PrePostEventArgs e)
-//		{
-//			// If back testing is about to be enabled...
-//			if (!Model.BackTesting && e.Before)
-//			{
-//				// Turn off the update thread
-//				UpdateThreadActive = false;
-//			}
-
-//			// If back testing has just been enabled...
-//			if (Model.BackTesting && e.After)
-//			{
-//				// Reinitialise the history DB
-//				InitTradeHistoryDB();
-//			}
-
-//			// If back testing is about to be disabled...
-//			if (Model.BackTesting && e.Before)
-//			{
-//			}
-
-//			// If back testing has just been disabled...
-//			if (!Model.BackTesting && e.After)
-//			{
-//				// Reinitialise the history DB
-//				InitTradeHistoryDB();
-
-//				// Turn on the update thread
-//				UpdateThreadActive = Enabled;
-//			}
-
-//			RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Status)));
-//		}
-//		void HandleSimReset(object sender, SimResetEventArgs e)
-//		{
-//			// Reset the trade history DB when the sim resets
-//			InitTradeHistoryDB();
-//		}
-//		void HandleFundsListChanging(object sender, ListChgEventArgs<Fund> e)
-//		{
-//			// When the funds container changes, update all balances
-//			switch (e.ChangeType)
-//			{
-//			case ListChg.Reset:
-//			case ListChg.ItemAdded:
-//			case ListChg.ItemRemoved:
-//				foreach (var bal in Balance.Values)
-//					bal.UpdateBalancePartitions();
-//				break;
-//			}
-//		}
-//	}
-//}
-//private Model m_model;

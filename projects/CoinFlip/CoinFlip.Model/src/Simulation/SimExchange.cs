@@ -135,7 +135,7 @@ namespace CoinFlip
 
 			// Reset the spot price and order books of the pairs
 			m_depth.Clear();
-			foreach (var pair in Pairs.Values)
+			foreach (var pair in Pairs)
 			{
 				pair.SpotPrice[ETradeType.Q2B] = null;
 				pair.SpotPrice[ETradeType.B2Q] = null;
@@ -167,7 +167,7 @@ namespace CoinFlip
 			// Generate and copy the market depth data to each trade pair
 			{
 				// Update the order book for each pair
-				foreach (var pair in Pairs.Values)
+				foreach (var pair in Pairs)
 				{
 					// Get the data source for 'pair'
 					var src = PriceData[pair, Sim.TimeFrame];
@@ -250,16 +250,9 @@ namespace CoinFlip
 					var history_updates = m_his.Values.Where(x => x.Created.Ticks >= Exchange.HistoryInterval.End);
 					foreach (var exch_order in history_updates.SelectMany(x => x.Trades))
 					{
-						// Get/Add the completed order
-						var order_completed = History.GetOrAdd(exch_order.OrderId,
-							x => new OrderCompleted(x, Exchange.OrderIdToFund(x), exch_order.Pair, exch_order.TradeType));
-
-						// Add the trade to the completed order
-						var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-						order_completed.Trades.AddOrUpdate(fill);
-
 						// Update the history of the completed orders
-						Exchange.AddToTradeHistory(order_completed);
+						var fill = TradeCompletedFrom(exch_order, timestamp);
+						Exchange.AddToTradeHistory(fill);
 					}
 
 					// Update the collection of existing orders
@@ -375,7 +368,7 @@ namespace CoinFlip
 
 			// Add 'TradeCompleted' entries for each order book offer that was filled
 			foreach (var fill in filled)
-				his.Trades.AddOrUpdate(new TradeCompleted(his, ++m_history_id, fill.AmountIn(tt), fill.AmountOut(tt), Exchange.Fee * fill.AmountOut(tt), tt.CoinOut(pair), Model.UtcNow, Model.UtcNow));
+				his.Trades.AddOrUpdate(new TradeCompleted(his.OrderId, ++m_history_id, pair, tt, fill.AmountIn(tt), fill.AmountOut(tt), Exchange.Fee * fill.AmountOut(tt), tt.CoinOut(pair), Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -471,18 +464,19 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
-		private TradeCompleted TradeCompletedFrom(TradeCompleted fill, OrderCompleted order_completed, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(TradeCompleted fill, DateTimeOffset updated)
 		{
 			// This is mainly to mirror the behaviour of the actual exchanges
-			var tt = order_completed.TradeType;
-			var pair = order_completed.Pair;
+			var order_id = fill.OrderId;
 			var trade_id = fill.TradeId;
+			var tt = fill.TradeType;
+			var pair = fill.Pair;
 			var amount_in = fill.AmountIn;
 			var amount_out = fill.AmountOut;
 			var commission = fill.Commission;
 			var commission_coin = fill.CommissionCoin;
 			var created = fill.Created;
-			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
+			return new TradeCompleted(order_id, trade_id, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
 		/// <summary>Represents the simulated user account on the exchange</summary>

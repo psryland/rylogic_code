@@ -62,6 +62,7 @@
     <Compile Include="src\Bots\IBot.cs" />
     <Compile Include="src\Bots\MonitoredOrders.cs" />
     <Compile Include="src\Chart\Candle.cs" />
+    <Compile Include="src\DB\TransferRecord.cs" />
     <Compile Include="src\Exchange\BalanceCollection.cs" />
     <Compile Include="src\Exchange\Exchange_Binance.cs" />
     <Compile Include="src\Exchange\Exchange_Bittrex.cs" />
@@ -121,14 +122,14 @@
     <Compile Include="src\Settings\FundData.cs" />
     <Compile Include="src\Settings\ExchangeSettings.cs" />
     <Compile Include="src\Settings\IExchangeSettings.cs" />
-    <Compile Include="src\Trade\OrderRecord.cs" />
+    <Compile Include="src\DB\OrderRecord.cs" />
     <Compile Include="src\Settings\PoloniexSettings.cs" />
     <Compile Include="src\Settings\SettingsData.cs" />
     <Compile Include="src\Misc\EOrderType.cs" />
     <Compile Include="src\Settings\UISettings.cs" />
     <Compile Include="src\Simulation\SimExchange.cs" />
     <Compile Include="src\Simulation\Simulation.cs" />
-    <Compile Include="src\Trade\OrderCompletedRecord.cs" />
+    <Compile Include="src\DB\OrderCompletedRecord.cs" />
     <Compile Include="src\Trade\SpotPrices.cs" />
     <Compile Include="src\Trade\TradeCompleted.cs" />
     <Compile Include="src\Trade\Order.cs" />
@@ -136,7 +137,7 @@
     <Compile Include="src\Trade\Trade.cs" />
     <Compile Include="src\Exchange\TradeCompletedCollection.cs" />
     <Compile Include="src\Trade\TradePair.cs" />
-    <Compile Include="src\Trade\TradeCompletedRecord.cs" />
+    <Compile Include="src\DB\TradeCompletedRecord.cs" />
     <Compile Include="src\Trade\OrderResult.cs" />
   </ItemGroup>
   <ItemGroup>

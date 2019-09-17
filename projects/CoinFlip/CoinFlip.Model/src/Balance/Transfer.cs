@@ -33,11 +33,14 @@ namespace CoinFlip
 		/// <summary>The amount moved</summary>
 		public Unit<decimal> Amount { get; }
 
-		/// <summary>The timestamp of the transfer (in ticks)</summary>
+		/// <summary>The timestamp of the transfer</summary>
 		public DateTimeOffset Created { get; }
 
 		/// <summary>The transaction status</summary>
 		public EStatus Status { get; }
+
+		/// <summary>The exchange that this transfer occurred on</summary>
+		public Exchange Exchange => Coin.Exchange;
 
 		/// <summary>String description of the transfer</summary>
 		public string Description => $"{Type} {Coin} {Amount.ToString(Coin.Meta.SD, true)}";

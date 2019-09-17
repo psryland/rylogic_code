@@ -96,6 +96,10 @@ namespace CoinFlip
 								m_count += 1;
 							else
 								m_count = null;
+
+							// During backtesting, the previous candle may not have reached 100%.
+							// Remove it and refresh it from the price data to ensure it's a complete candle
+							m_cache.Resize(m_cache.Count - 1);
 							EnsureCached(Count - 1);
 							break;
 						}
@@ -399,16 +403,17 @@ namespace CoinFlip
 			if (idx == -1 || CachedIndexRange.Contains(idx))
 				return;
 
-			// Determine the range of data to read
+			// Read a chunk of data from the Price Data. When backtesting, don't read
+			// ahead because changes the behaviour compared to non-backtesting.
 			if (CachedIndexRange.Empty)
 			{
-				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(DBCandleCount, idx + CacheChunkSize));
+				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(Count, idx + CacheChunkSize));
 				InsertCandles(at_end:true, read.Begi, PriceData.ReadCandles(read));
 			}
 			else if (idx >= CachedIndexRange.End)
 			{
 				var chunks = (idx+1 - CachedIndexRange.End + CacheChunkSize - 1) / CacheChunkSize;
-				var read = new Range(CachedIndexRange.End, Math.Min(DBCandleCount, CachedIndexRange.End + chunks*CacheChunkSize));
+				var read = new Range(CachedIndexRange.End, Math.Min(Count, CachedIndexRange.End + chunks*CacheChunkSize));
 				InsertCandles(at_end:true, CachedIndexRange.Begi, PriceData.ReadCandles(read));
 			}
 			else if (idx < CachedIndexRange.Beg)

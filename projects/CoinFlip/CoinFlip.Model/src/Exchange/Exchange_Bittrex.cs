@@ -78,19 +78,8 @@ namespace CoinFlip
 				// Create the trade pairs and associated coins
 				foreach (var m in markets)
 				{
-					var base_ = Coins.GetOrAdd(m.Pair.Base);
-					var quote = Coins.GetOrAdd(m.Pair.Quote);
-
-					// Create a trade pair. Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
-					var pair = new TradePair(base_, quote, this,
-						trade_pair_id: null,
-						amount_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
-						amount_range_quote: new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
-						price_range: null);
-
-					// Update the pairs collection
-					Pairs[pair.UniqueKey] = pair;
-					pairs.Add(new CurrencyPair(base_, quote));
+					var pair = Pairs.GetOrAdd(m.Pair.Base, m.Pair.Quote);
+					pairs.Add(new CurrencyPair(pair.Base, pair.Quote));
 				}
 
 				// Ensure a 'Balance' object exists for each coin type
@@ -168,17 +157,9 @@ namespace CoinFlip
 				// Update the trade history
 				foreach (var exch_order in history)
 				{
-					// Get/Add the completed order
-					var ids = ToIdPair(exch_order.OrderId);
-					var order_completed = History.GetOrAdd(ids.OrderId,
-						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Type.TradeType()));
-
-					// Add the trade to the completed order
-					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades.AddOrUpdate(fill);
-
 					// Update the history of completed orders
-					AddToTradeHistory(order_completed);
+					var fill = TradeCompletedFrom(exch_order, timestamp);
+					AddToTradeHistory(fill);
 				}
 
 				// Update the collection of existing orders
@@ -273,16 +254,13 @@ namespace CoinFlip
 				foreach (var dep in deposits)
 				{
 					var deposit = TransferFrom(dep, ETransfer.Deposit);
-					Transfers[deposit.TransactionId] = deposit;
+					AddToTransfersHistory(deposit);
 				}
 				foreach (var wid in withdrawals)
 				{
 					var withdrawal = TransferFrom(wid, ETransfer.Withdrawal);
-					Transfers[withdrawal.TransactionId] = withdrawal;
+					AddToTransfersHistory(withdrawal);
 				}
-
-				// Save the available range
-				TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
 
 				// Notify updated
 				Transfers.LastUpdated = timestamp;
@@ -345,21 +323,22 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private TradeCompleted TradeCompletedFrom(global::Bittrex.API.DomainObjects.Trade his, OrderCompleted order_completed, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(global::Bittrex.API.DomainObjects.Trade his, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining
 			// volume so that each trade for a given order is unique (ish).
-			var tt = Misc.TradeType(his.Type);
-			var pair = order_completed.Pair;
 			var ids = ToIdPair(his.OrderId);
+			var order_id = ids.OrderId;
 			var trade_id = ids.TradeId;
+			var tt = Misc.TradeType(his.Type);
+			var pair = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
 			var amount_in = tt.AmountIn(his.FilledBase._(pair.Base), his.PricePerUnit._(pair.RateUnits));
 			var amount_out = tt.AmountOut(his.FilledBase._(pair.Base), his.PricePerUnit._(pair.RateUnits));
 			var commission = his.Commission._(pair.Quote);
 			var commission_coin = pair.Quote;
 			var created = his.Created;
-			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
+			return new TradeCompleted(order_id, trade_id, pair, tt, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>

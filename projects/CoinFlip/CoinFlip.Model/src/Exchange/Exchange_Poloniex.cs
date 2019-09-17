@@ -77,17 +77,7 @@ namespace CoinFlip
 				// Create the trade pairs and associated coins
 				foreach (var p in trade_pairs)
 				{
-					var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
-					var quote = Coins.GetOrAdd(p.Value.Pair.Quote);
-
-					// Create the trade pair
-					var pair = new TradePair(base_, quote, this, p.Value.Id,
-						amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-						amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
-						price_range: null);
-
-					// Add the trade pair.
-					Pairs[pair.UniqueKey] = pair;
+					Pairs.GetOrAdd(p.Value.Pair.Base, p.Value.Pair.Quote);
 					pairs.Add(p.Value.Pair);
 				}
 
@@ -168,16 +158,9 @@ namespace CoinFlip
 				// Update the trade history
 				foreach (var exch_order in history.Values.SelectMany(x => x))
 				{
-					// Get/Add the completed order
-					var order_completed = History.GetOrAdd(exch_order.OrderId,
-						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Type.TradeType()));
-
-					// Add the trade to the completed order
-					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
-					order_completed.Trades.AddOrUpdate(fill);
-
 					// Update the history of the completed orders
-					AddToTradeHistory(order_completed);
+					var fill = TradeCompletedFrom(exch_order, timestamp);
+					AddToTradeHistory(fill);
 				}
 
 				// Update the collection of existing orders
@@ -224,7 +207,7 @@ namespace CoinFlip
 			Model.DataUpdates.Add(() =>
 			{
 				// Process the order book data and update the pairs
-				foreach (var pair in Pairs.Values)
+				foreach (var pair in Pairs)
 				{
 					if (!order_book.TryGetValue(new CurrencyPair(pair.Base, pair.Quote).Id, out var orders))
 						continue;
@@ -265,16 +248,13 @@ namespace CoinFlip
 				foreach (var dep in transfers.Deposits)
 				{
 					var deposit = TransferFrom(dep);
-					Transfers[deposit.TransactionId] = deposit;
+					AddToTransfersHistory(deposit);
 				}
 				foreach (var wid in transfers.Withdrawals)
 				{
 					var withdrawal = TransferFrom(wid);
-					Transfers[withdrawal.TransactionId] = withdrawal;
+					AddToTransfersHistory(withdrawal);
 				}
-
-				// Save the available range
-				TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
 
 				// Notify updated
 				Transfers.LastUpdated = timestamp;
@@ -357,14 +337,13 @@ namespace CoinFlip
 		{
 			if (pair != null)
 			{
-				var cp = new CurrencyPair(pair.Base, pair.Quote);
 				if (!Pairs.ContainsKey(pair.UniqueKey)) yield break;
 				foreach (var mp in Enum<EMarketPeriod>.Values)
 					yield return new PairAndTF(pair, ToTimeFrame(mp));
 			}
 			else
 			{
-				foreach (var p in Pairs.Values)
+				foreach (var p in Pairs)
 					foreach (var mp in Enum<EMarketPeriod>.Values)
 						yield return new PairAndTF(p, ToTimeFrame(mp));
 			}
@@ -385,16 +364,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a completed order</summary>
-		private TradeCompleted TradeCompletedFrom(global::Poloniex.API.DomainObjects.TradeCompleted his, OrderCompleted order_completed, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(global::Poloniex.API.DomainObjects.TradeCompleted his, DateTimeOffset updated)
 		{
-			var tt         = Misc.TradeType(his.Type);
-			var pair       = order_completed.Pair;
+			var order_id   = his.OrderId;
 			var trade_id   = his.GlobalTradeId;
+			var tt         = his.Type.TradeType();
+			var pair       = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
 			var amount_in  = tt.AmountIn(his.AmountBase._(pair.Base), his.PriceQ2B._(pair.RateUnits));
 			var amount_out = tt.AmountOut(his.AmountBase._(pair.Base), his.PriceQ2B._(pair.RateUnits));
 			var commission = amount_out * his.Fee;
 			var created    = his.Timestamp;
-			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, pair.Quote, created, updated);
+			return new TradeCompleted(order_id, trade_id, pair, tt, amount_in, amount_out, commission, pair.Quote, created, updated);
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>

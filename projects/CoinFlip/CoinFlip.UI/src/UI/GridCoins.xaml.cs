@@ -39,7 +39,7 @@ namespace CoinFlip.UI
 
 			Model = model;
 			DockControl = new DockControl(this, "Coins");
-			ExchangeNames = new ListCollectionView(Model.TradingExchanges.Select(x => x.Name).ToList());
+			ExchangeNames = new ListCollectionView(SourceExchangeNames.ToList());
 			Filter = new CoinFilter(x => (CoinDataAdapter)x);
 			Coins = new List<CoinDataAdapter>(model.Coins.Select(x => new CoinDataAdapter(x, this)));
 			CoinsView = new ListCollectionView(Coins);
@@ -49,6 +49,7 @@ namespace CoinFlip.UI
 			RemoveCoin = Command.Create(this, RemoveCoinInternal);
 			ResetSort = Command.Create(this, ResetSortInternal);
 			SetBackTestingBalances = Command.Create(this, SetBackTestingBalancesInternal);
+			PromptValuationPath = Command.Create(this, PromptValuationPathInternal);
 
 			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
 			DataContext = this;
@@ -96,10 +97,7 @@ namespace CoinFlip.UI
 					using (Scope.Create(() => ExchangeNames.CurrentItem, ci => ExchangeNames.MoveCurrentToOrFirst(ci)))
 					{
 						var list = (List<string>)ExchangeNames.SourceCollection;
-						list.Clear();
-						list.Add(SpecialExchangeSources.All);
-						list.Add(SpecialExchangeSources.Current);
-						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
+						list.Assign(SourceExchangeNames);
 						ExchangeNames.Refresh();
 					}
 
@@ -145,6 +143,18 @@ namespace CoinFlip.UI
 
 		/// <summary>A mirror of 'Model.Coins' for data binding</summary>
 		private List<CoinDataAdapter> Coins { get; }
+
+		/// <summary>The options for exchange sources</summary>
+		private IEnumerable<string> SourceExchangeNames
+		{
+			get
+			{
+				yield return SpecialExchangeSources.All;
+				yield return SpecialExchangeSources.Current;
+				foreach (var exch in Model.TradingExchanges)
+					yield return exch.Name;
+			}
+		}
 
 		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView ExchangeNames { get; }
@@ -230,6 +240,20 @@ namespace CoinFlip.UI
 			if (dlg.ShowDialog() == true)
 			{
 				Model.Simulation.Reset();
+			}
+		}
+
+		/// <summary>Display a prompt showing the valuation path for this coin</summary>
+		public Command PromptValuationPath { get; }
+		private void PromptValuationPathInternal()
+		{
+			if (Current == null) return;
+			var prompt = new PromptUI(Window.GetWindow(this))
+			{
+				Prompt = $"The currency pairs used to determine the value in {SettingsData.Settings.ValuationCurrency}",
+			};
+			if (prompt.ShowDialog() == true)
+			{
 			}
 		}
 
