@@ -285,7 +285,9 @@ namespace CoinFlip
 			var time_range = new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
 			if (time_range.Contains(time_stamp.ExactTicks))
 			{
-				var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(time_stamp.ExactTicks), find_insert_position:true);
+				// 'idx' is where 'time_stamp' would be inserted, so the value at m_cache[idx] is >= time_stamp.
+				var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(time_stamp.ExactTicks));
+				if (idx < 0) idx = Math.Max(0, ~idx - 1);
 				return idx + CachedIndexRange.Begi;
 			}
 

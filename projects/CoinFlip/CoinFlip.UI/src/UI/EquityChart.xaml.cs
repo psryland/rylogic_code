@@ -393,6 +393,7 @@ namespace CoinFlip.UI
 			if (!DockControl.IsVisible)
 				return;
 
+			// Line plot
 			GfxEquity.BuildScene(Chart);
 
 			// Get a snapshot of the nett worth history
@@ -417,8 +418,7 @@ namespace CoinFlip.UI
 					{
 						var orders = Model.SelectedCompletedOrders
 							.Where(x => visible_time_range.Contains(x.Created.Ticks))
-							.Select(x => new OrderCompletedConfettiAdapter(x))
-							.ToList();
+							.Select(x => new OrderCompletedConfettiAdapter(x));
 
 						GfxCompletedOrders.BuildScene(orders, null, Chart);
 						break;
@@ -430,12 +430,11 @@ namespace CoinFlip.UI
 						{
 							var orders = exchange.History
 								.Where(x => visible_time_range.Contains(x.Created.Ticks))
-								.Select(x => new OrderCompletedConfettiAdapter(x))
-								.ToList();
+								.Select(x => new OrderCompletedConfettiAdapter(x));
 							var highlighted = Model.SelectedCompletedOrders
 								.Where(x => visible_time_range.Contains(x.Created.Ticks))
-								.Select(x => new OrderCompletedConfettiAdapter(x))
-								.ToList();
+								.Select(x => new OrderCompletedConfettiAdapter(x));
+
 							GfxCompletedOrders.BuildScene(orders, highlighted, Chart);
 						}
 						break;
@@ -549,8 +548,8 @@ namespace CoinFlip.UI
 			{
 				Stroke = Brushes.Black,
 				Points = Order.TradeType == ETradeType.Q2B
-						? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
-						: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
+					? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
+					: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
 			};
 			public TextBlock Label => new TextBlock
 			{

@@ -11,6 +11,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using CoinFlip.Settings;
 using CoinFlip.UI.Dialogs;
 using CoinFlip.UI.GfxObjects;
@@ -543,8 +544,8 @@ namespace CoinFlip.UI
 				{
 					m_instrument.CandleStyle = CandleStyle;
 					GfxCandles = new GfxObjects.Candles(m_instrument);
-					GfxOpenOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
-					GfxCompletedOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
+					GfxOpenOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
+					GfxCompletedOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
@@ -604,14 +605,23 @@ namespace CoinFlip.UI
 					// Signal a refresh
 					Chart.Invalidate();
 				}
-				double OrderToXValue(IOrder order)
+				Point OrderToPosition(Confetti.IItem item)
 				{
-					var time = order is Order ? Model.UtcNow : order.Created;
-					return m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
-				}
-				double OrderToYValue(IOrder order)
-				{
-					return order.PriceQ2B.ToDouble();
+					if (item is OrderConfettiAdapter oca)
+					{
+						var time = Model.UtcNow;
+						var X = m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
+						var Y = oca.Order.PriceQ2B.ToDouble();
+						return new Point(X, Y);
+					}
+					if (item is OrderCompletedConfettiAdapter cca)
+					{
+						var time = cca.Order.Created;
+						var X = m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
+						var Y = cca.Order.PriceQ2B.ToDouble();
+						return new Point(X, Y);
+					}
+					return new Point();
 				}
 			}
 		}
@@ -772,17 +782,33 @@ namespace CoinFlip.UI
 				case EShowItems.Selected:
 					{
 						if (Instrument.Count != 0)
-							GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), null, Chart);
+						{
+							var orders = Model.SelectedOpenOrders.Where(Visible)
+								.Select(x => new OrderConfettiAdapter(x));
+
+							GfxOpenOrders.BuildScene(orders, null, Chart);
+						}
 						else
+						{
 							GfxOpenOrders.ClearScene();
+						}
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Exchange != null && Instrument.Count != 0)
-							GfxOpenOrders.BuildScene(Exchange.Orders.Where(Visible), Model.SelectedOpenOrders, Chart);
+						{
+							var orders = Exchange.Orders.Where(Visible)
+								.Select(x => new OrderConfettiAdapter(x));
+							var highlight = Model.SelectedOpenOrders
+								.Select(x => new OrderConfettiAdapter(x));
+
+							GfxOpenOrders.BuildScene(orders, highlight, Chart);
+						}
 						else
+						{
 							GfxOpenOrders.ClearScene();
+						}
 						break;
 					}
 				}
@@ -814,17 +840,33 @@ namespace CoinFlip.UI
 				case EShowItems.Selected:
 					{
 						if (Instrument.Count != 0)
-							GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), null, Chart);
+						{
+							var orders = Model.SelectedCompletedOrders.Where(Visible)
+								.Select(x => new OrderCompletedConfettiAdapter(x));
+
+							GfxCompletedOrders.BuildScene(orders, null, Chart);
+						}
 						else
+						{
 							GfxCompletedOrders.ClearScene();
+						}
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Exchange != null && Instrument.Count != 0)
-							GfxCompletedOrders.BuildScene(Exchange.History.Where(Visible), Model.SelectedCompletedOrders, Chart);
+						{
+							var orders = Exchange.History.Where(Visible)
+								.Select(x => new OrderCompletedConfettiAdapter(x));
+							var highlighted = Model.SelectedCompletedOrders
+								.Select(x => new OrderCompletedConfettiAdapter(x));
+
+							GfxCompletedOrders.BuildScene(orders, highlighted, Chart);
+						}
 						else
+						{
 							GfxCompletedOrders.ClearScene();
+						}
 						break;
 					}
 				}
@@ -842,8 +884,7 @@ namespace CoinFlip.UI
 			}
 
 			// Market Depth
-			if (ShowMarketDepth)
-				GfxMarketDepth.BuildScene(Chart);
+			GfxMarketDepth.BuildScene(Chart);
 
 			// Bots
 			{
@@ -900,7 +941,7 @@ namespace CoinFlip.UI
 		private GfxObjects.UpdatingText m_gfx_updating_text;
 
 		/// <summary>Graphics for open orders</summary>
-		private GfxObjects.Orders GfxOpenOrders
+		private GfxObjects.Confetti GfxOpenOrders
 		{
 			get => m_gfx_open_orders;
 			set
@@ -908,33 +949,79 @@ namespace CoinFlip.UI
 				if (m_gfx_open_orders == value) return;
 				if (m_gfx_open_orders != null)
 				{
-					m_gfx_open_orders.OrderSelected -= HandleOrderSelected;
-					m_gfx_open_orders.EditOrder -= HandleEditOrder;
+					m_gfx_open_orders.ItemSelected -= HandleOrderSelected;
+					m_gfx_open_orders.EditItem -= HandleEditOrder;
 					Util.Dispose(ref m_gfx_open_orders);
 				}
 				m_gfx_open_orders = value;
 				if (m_gfx_open_orders != null)
 				{
-					m_gfx_open_orders.OrderSelected += HandleOrderSelected;
-					m_gfx_open_orders.EditOrder += HandleEditOrder;
+					m_gfx_open_orders.ItemSelected += HandleOrderSelected;
+					m_gfx_open_orders.EditItem += HandleEditOrder;
 				}
 
 				// Handlers
-				void HandleEditOrder(object sender, Orders.OrderEventArgs e)
+				void HandleEditOrder(object sender, Confetti.ItemEventArgs e)
 				{
-					Model.EditTrade((Order)e.Order);
+					if (e.Item is Order order)
+						Model.EditTrade(order);
 				}
-				void HandleOrderSelected(object sender, Orders.OrderEventArgs e)
+				void HandleOrderSelected(object sender, Confetti.ItemEventArgs e)
 				{
-					Model.SelectedOpenOrders.Clear();
-					Model.SelectedOpenOrders.Add((Order)e.Order);
+					if (e.Item is Order order)
+					{
+						Model.SelectedOpenOrders.Clear();
+						Model.SelectedOpenOrders.Add(order);
+					}
 				}
 			}
 		}
-		private GfxObjects.Orders m_gfx_open_orders;
+		private GfxObjects.Confetti m_gfx_open_orders;
+		private class OrderConfettiAdapter :GfxObjects.Confetti.IItem
+		{
+			public OrderConfettiAdapter(Order order)
+			{
+				Order = order;
+			}
+			public Order Order { get; }
+			public Polygon Icon => new Polygon
+			{
+				Stroke = Brushes.Black,
+				Points = Order.TradeType == ETradeType.Q2B
+					? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
+					: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
+			};
+			public TextBlock Label => new TextBlock
+			{
+				Text = Order.Description,
+				FontSize = 8.0,
+			};
+			public Colour32 Colour => Order.TradeType == ETradeType.Q2B
+				? SettingsData.Settings.Chart.Q2BColour.Darken(0.5f)
+				: SettingsData.Settings.Chart.B2QColour.Darken(0.5f);
+
+			#region Equals
+			public static bool operator ==(OrderConfettiAdapter lhs, OrderConfettiAdapter rhs)
+			{
+				return ReferenceEquals(lhs.Order, rhs.Order);
+			}
+			public static bool operator !=(OrderConfettiAdapter lhs, OrderConfettiAdapter rhs)
+			{
+				return !ReferenceEquals(lhs.Order, rhs.Order);
+			}
+			public override bool Equals(object obj)
+			{
+				return obj is OrderConfettiAdapter rhs && Order == rhs.Order;
+			}
+			public override int GetHashCode()
+			{
+				return Order.GetHashCode();
+			}
+			#endregion
+		}
 
 		/// <summary>Graphics for completed orders</summary>
-		private GfxObjects.Orders GfxCompletedOrders
+		private GfxObjects.Confetti GfxCompletedOrders
 		{
 			get => m_gfx_completed_orders;
 			set
@@ -942,24 +1029,69 @@ namespace CoinFlip.UI
 				if (m_gfx_completed_orders == value) return;
 				if (m_gfx_completed_orders != null)
 				{
-					m_gfx_completed_orders.OrderSelected -= HandleOrderSelected;
+					m_gfx_completed_orders.ItemSelected -= HandleOrderSelected;
 					Util.Dispose(ref m_gfx_completed_orders);
 				}
 				m_gfx_completed_orders = value;
 				if (m_gfx_completed_orders != null)
 				{
-					m_gfx_completed_orders.OrderSelected += HandleOrderSelected;
+					m_gfx_completed_orders.ItemSelected += HandleOrderSelected;
 				}
 
 				// Handler
-				void HandleOrderSelected(object sender, Orders.OrderEventArgs e)
+				void HandleOrderSelected(object sender, Confetti.ItemEventArgs e)
 				{
-					Model.SelectedCompletedOrders.Clear();
-					Model.SelectedCompletedOrders.Add((OrderCompleted)e.Order);
+					if (e.Item is OrderCompleted order)
+					{
+						Model.SelectedCompletedOrders.Clear();
+						Model.SelectedCompletedOrders.Add(order);
+					}
 				}
 			}
 		}
-		private GfxObjects.Orders m_gfx_completed_orders;
+		private GfxObjects.Confetti m_gfx_completed_orders;
+		private class OrderCompletedConfettiAdapter :GfxObjects.Confetti.IItem
+		{
+			public OrderCompletedConfettiAdapter(OrderCompleted order)
+			{
+				Order = order;
+			}
+			public OrderCompleted Order { get; }
+			public Polygon Icon => new Polygon
+			{
+				Stroke = Brushes.Black,
+				Points = Order.TradeType == ETradeType.Q2B
+					? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
+					: new PointCollection(new[] { new Point(0, 0), new Point(-5, -5), new Point(+5, -5) }),
+			};
+			public TextBlock Label => new TextBlock
+			{
+				Text = Order.Description,
+				FontSize = 8.0,
+			};
+			public Colour32 Colour => Order.TradeType == ETradeType.Q2B
+				? SettingsData.Settings.Chart.Q2BColour.Darken(0.5f)
+				: SettingsData.Settings.Chart.B2QColour.Darken(0.5f);
+
+			#region Equals
+			public static bool operator ==(OrderCompletedConfettiAdapter lhs, OrderCompletedConfettiAdapter rhs)
+			{
+				return ReferenceEquals(lhs.Order, rhs.Order);
+			}
+			public static bool operator !=(OrderCompletedConfettiAdapter lhs, OrderCompletedConfettiAdapter rhs)
+			{
+				return !ReferenceEquals(lhs.Order, rhs.Order);
+			}
+			public override bool Equals(object obj)
+			{
+				return obj is OrderCompletedConfettiAdapter rhs && Order == rhs.Order;
+			}
+			public override int GetHashCode()
+			{
+				return Order.GetHashCode();
+			}
+			#endregion
+		}
 
 		/// <summary>Graphics for market depth</summary>
 		private GfxObjects.MarketDepth GfxMarketDepth
