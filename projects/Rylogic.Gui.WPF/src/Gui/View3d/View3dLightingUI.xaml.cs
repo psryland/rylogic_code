@@ -27,7 +27,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The Light updated by this dialog</summary>
 		public View3d.Light Light
 		{
-			get { return m_light; }
+			get => m_light;
 			set
 			{
 				if (m_light == value) return;
@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Support pinning this window</summary>
 		private PinData PinState
 		{
-			get { return m_pin_state; }
+			get => m_pin_state;
 			set
 			{
 				if (m_pin_state == value) return;

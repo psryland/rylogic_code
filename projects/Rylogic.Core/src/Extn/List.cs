@@ -34,7 +34,7 @@ namespace Rylogic.Extn
 			return list[0];
 		}
 
-		/// <summary>Return the list element in the list</summary>
+		/// <summary>Return the last element in the list</summary>
 		public static T Back<T>(this IList<T> list)
 		{
 			Debug.Assert(list.Count != 0);

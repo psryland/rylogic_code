@@ -26,7 +26,7 @@ namespace Rylogic.Gui.WPF
 					XAxis.Range = snapshot.XRange;
 					YAxis.Range = snapshot.YRange;
 					SetCameraFromRange();
-					Scene.Invalidate();
+					Invalidate();
 				},
 			};
 		}
@@ -243,14 +243,14 @@ namespace Rylogic.Gui.WPF
 			case nameof(SetRangeFromCamera):
 				SetRangeFromCamera();
 				NotifyPropertyChanged(nameof(ValueAtPointer));
-				Scene.Invalidate();
+				Invalidate();
 				break;
 
 				// Set the camera position from the new axis ranges
 			case nameof(SetCameraFromRange):
 				SetCameraFromRange();
 				NotifyPropertyChanged(nameof(ValueAtPointer));
-				Scene.Invalidate();
+				Invalidate();
 				break;
 			}
 		}
@@ -371,7 +371,7 @@ namespace Rylogic.Gui.WPF
 			var c2w = Scene.Camera.O2W;
 			c2w.pos += c2w.x * (float)(gs_point.X - dst.X) + c2w.y * (float)(gs_point.Y - dst.Y);
 			Scene.Camera.O2W = c2w;
-			Scene.Invalidate();
+			Invalidate();
 		}
 
 		/// <summary>Handle navigation keyboard shortcuts</summary>
@@ -390,7 +390,7 @@ namespace Rylogic.Gui.WPF
 					if (AllowSelection)
 					{
 						Selected.Clear();
-						Scene.Invalidate();
+						Invalidate();
 					}
 					break;
 				}
@@ -422,13 +422,13 @@ namespace Rylogic.Gui.WPF
 			case Key.F5:
 				{
 					View3d.ReloadScriptSources();
-					Scene.Invalidate();
+					Invalidate();
 					break;
 				}
 			case Key.F7:
 				{
 					AutoRange();
-					Scene.Invalidate();
+					Invalidate();
 					break;
 				}
 			case Key.A:
@@ -437,7 +437,7 @@ namespace Rylogic.Gui.WPF
 					{
 						Selected.Clear();
 						Selected.AddRange(Elements);
-						Scene.Invalidate();
+						Invalidate();
 						Debug.Assert(CheckConsistency());
 					}
 					break;

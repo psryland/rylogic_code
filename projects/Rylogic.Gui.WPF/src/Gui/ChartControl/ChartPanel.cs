@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -50,6 +52,18 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public void RemoveObject(View3d.Object obj)
 		{
 			Window.RemoveObject(obj);
+		}
+		public void RemoveObjects(IEnumerable<View3d.Object> objects)
+		{
+			Window.RemoveObjects(objects);
+		}
+		public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
+		{
+			Window.RemoveObjects(context_ids, include_count, exclude_count);
+		}
+		public void RemoveAllObjects()
+		{
+			Window.RemoveAllObjects();
 		}
 
 		/// <summary>Prepare the scene for rendering</summary>

@@ -112,7 +112,6 @@ namespace Rylogic.Gui.WPF
 					Canvas.SetTop(LabelY, Chart.XAxisPanel.Height - LabelX.RenderSize.Height);
 					break;
 				case Dock.Bottom:
-					//Gui_.MapPoint(Chart, Chart.XAxisPanel, client_pt).X
 					Canvas.SetLeft(LabelX, Chart.TransformToDescendant(Chart.XAxisPanel).Transform(client_pt).X - LabelX.RenderSize.Width / 2);
 					Canvas.SetTop(LabelY, 0);
 					break;
@@ -123,7 +122,6 @@ namespace Rylogic.Gui.WPF
 				{
 				default: throw new Exception("CrossHair label: Unexpected side for the Y axis");
 				case Dock.Left:
-					//Gui_.MapPoint(Chart, Chart.YAxisPanel, client_pt).Y
 					Canvas.SetLeft(LabelY, Chart.YAxisPanel.Width - LabelY.RenderSize.Width);
 					Canvas.SetTop(LabelY, Chart.TransformToDescendant(Chart.YAxisPanel).Transform(client_pt).Y - LabelY.RenderSize.Height / 2);
 					break;
@@ -133,55 +131,6 @@ namespace Rylogic.Gui.WPF
 					break;
 				}
 			}
-
-			///// <summary>Set the chart-space position of the cross hair</summary>
-			//public void PositionCrossHair(Point chart_pt)
-			//{
-			//	//// The visible area of the chart at the camera focus distance
-			//	//var view = Camera.ViewArea(Camera.FocusDist);
-
-			//	//// 'chart_pt' converted to camera space
-			//	//var pt_cs = Chart.ChartToCamera(chart_pt);
-
-			//	//// Set the o2w for the cross hair
-			//	//// Scale by 2* because the cross hair may be near the border of the chart
-			//	//// and we need one half of the cross to be scaled to the full chart width.
-			//	//var o2p = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
-			//	//o2p.w.z += (float)(Camera.FocusDist * Options.CrossHairZOffset);
-			//	//Tools.CrossHair.O2P = o2p;
-
-			//	//Scene.Invalidate();
-			//}
-
-			///// <summary>Update the scene for the given orders</summary>
-			//public void BuildScene(ChartControl chart)
-			//{
-			//	// Cross hair labels
-			//	if (!chart.ShowCrossHair)
-			//	{
-			//		LineV.Detach();
-			//		LineH.Detach();
-			//		LabelX.Detach();
-			//		LabelY.Detach();
-			//		return;
-			//	}
-
-
-			//	var xhair = chart.Tools.CrossHair.O2P.pos.xy;
-			//	var pt = chart.ChartToClient(new Point(xhair.x, xhair.y));
-
-			//	// Position the candle label
-			//	LabelX.Visibility = Visibility.Visible;
-			//	LabelX.Text = chart.XAxis.TickText(xhair.x, chart.XAxis.Span);
-			//	Canvas.SetLeft(LabelX, Gui_.MapPoint(chart, chart.XAxisPanel, pt).X - LabelY.RenderSize.Width / 2);
-			//	Canvas.SetTop(LabelX, 0);
-
-			//	// Position the price label
-			//	LabelY.Visibility = Visibility.Visible;
-			//	LabelY.Text = ((decimal)xhair.y).ToString(8);
-			//	Canvas.SetLeft(LabelY, 0);
-			//	Canvas.SetTop(LabelY, Gui_.MapPoint(chart, chart.YAxisPanel, pt).Y - LabelY.RenderSize.Height / 2);
-			//}
 		}
 	}
 }

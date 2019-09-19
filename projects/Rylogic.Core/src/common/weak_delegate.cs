@@ -207,7 +207,7 @@ namespace Rylogic.Common
 		/// <summary>
 		/// Usage:
 		///   Attach a weak action/event handler to an event
-		///     provider.MyEvent += EventEx.MakeWeak(MyWeakEventHandler, eh => provider.MyEvent -= eh);
+		///     provider.MyEvent += WeakRef.MakeWeak(MyWeakEventHandler, eh => provider.MyEvent -= eh);
 		///     ...
 		///     // Must be a real method, not a lambda
 		///     void MyWeakEventHandler(object sender, EventArgs e){}

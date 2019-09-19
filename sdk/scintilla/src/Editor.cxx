@@ -2295,7 +2295,7 @@ void Editor::LayoutLine(int line, Surface *surface, ViewStyle &vstyle, LineLayou
 			}
 		}
 
-		// Small hack to make lines that end with italics not cut off the edge of the last character
+		// Small fix to make lines that end with italics not cut off the edge of the last character
 		if (lastSegItalics) {
 			ll->positions[numCharsInLine] += vstyle.lastSegItalicsOffset;
 		}

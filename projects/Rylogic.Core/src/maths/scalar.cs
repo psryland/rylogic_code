@@ -464,6 +464,24 @@ namespace Rylogic.Maths
 			return len_sq > 0 ? Sqrt(len_sq) : 0.0;
 		}
 
+		/// <summary>Truncate a number to 'decimal_places'</summary>
+		public static decimal Truncate(decimal d, int decimal_places)
+		{
+			if (decimal_places < 0)
+				throw new ArgumentOutOfRangeException(nameof(decimal_places), "value must be >= 0");
+
+			var m = (decimal)Math.Pow(10.0, -decimal_places);
+			return d - d % m;
+		}
+		public static double Truncate(double d, int decimal_places)
+		{
+			if (decimal_places < 0)
+				throw new ArgumentOutOfRangeException(nameof(decimal_places), "value must be >= 0");
+
+			var m = Math.Pow(10.0, -decimal_places);
+			return d - d % m;
+		}
+
 		/// <summary>Round a number to 'digits' significant digits</summary>
 		public static long RoundSD(long d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
 		{

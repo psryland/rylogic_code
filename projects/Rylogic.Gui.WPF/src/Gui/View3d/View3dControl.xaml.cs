@@ -412,8 +412,9 @@ namespace Rylogic.Gui.WPF
 			if (!m_render_pending) return;
 			using (Scope.Create(null, () => m_render_pending = false))
 			{
-				// Ignore renders until the D3DImage has a render target
-				if (D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
+				// Ignore renders until we have a non-zero size, and the D3DImage has a render target
+				if (ActualWidth == 0 || ActualHeight == 0 ||
+					D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 				{
 					// 'Validate' the window so that future Invalidate() calls to trigger the call back.
 					Window?.Validate();

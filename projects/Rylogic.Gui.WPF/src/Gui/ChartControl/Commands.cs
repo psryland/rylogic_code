@@ -17,12 +17,12 @@ namespace Rylogic.Gui.WPF
 			ToggleGridLines = Command.Create(this, () =>
 			{
 				Options.ShowGridLines = !Options.ShowGridLines;
-				Scene.Invalidate();
+				Invalidate();
 			});
 			ToggleAxes = Command.Create(this, () =>
 			{
 				Options.ShowAxes = !Options.ShowAxes;
-				Scene.Invalidate();
+				Invalidate();
 			});
 
 			// Tools Menu
@@ -44,7 +44,7 @@ namespace Rylogic.Gui.WPF
 			{
 				Range.Aspect = Scene.Window.Viewport.Width / Scene.Window.Viewport.Height;
 				SetCameraFromRange();
-				Scene.Invalidate();
+				Invalidate();
 			});
 			ToggleLockAspect = Command.Create(this, () =>
 			{

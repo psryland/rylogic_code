@@ -194,7 +194,6 @@ namespace pr
 						auto area = ExcludeDockedChildren(ClientRect());
 						if (m_main && area.width() > 0 && area.height() > 0)
 						{
-	//	area = pr::gui::Rect(20,20, 50,50);//hack
 							m_main->Resize(pr::To<IRect>(area));
 							m_main->RenderNeeded();
 						}

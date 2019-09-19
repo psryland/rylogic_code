@@ -35,6 +35,18 @@ namespace Rylogic.Gui.WPF
 	{
 		// Notes:
 		//  - Dispose is called when 'window' is closed 
+		//
+		// Usage:
+		//  In your window class:
+		//    ctor()
+		//    {
+		//        // Dispose is handled by 'PinData'
+		//        PinState = new PinData(this, EPin.Centre);
+		//    }
+		//
+		//    /// <summary>Support pinning this window</summary>
+		//    private PinData PinState { get; }
+		//
 
 		public PinData(Window window, EPin pin_site = EPin.Centre, bool pinned = true)
 		{

@@ -303,7 +303,7 @@ namespace Rylogic.Gui.WPF
 					var point_ss = e.GetPosition(Chart.Scene).ToPointF();
 					Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 
 				e.Handled = args.Handled;
 			}
@@ -398,7 +398,7 @@ namespace Rylogic.Gui.WPF
 
 				Util.Dispose(ref m_cleanup_selection_graphic);
 				Chart.Cursor = Cursors.Arrow;
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 			}
 			public override void OnKeyDown(KeyEventArgs e)
 			{
@@ -419,7 +419,7 @@ namespace Rylogic.Gui.WPF
 					Util.Dispose(ref m_cleanup_selection_graphic);
 
 					// Refresh
-					Chart.Scene.Invalidate();
+					Chart.Invalidate();
 				}
 			}
 		}
@@ -480,7 +480,7 @@ namespace Rylogic.Gui.WPF
 					//m_tape_measure_balloon.Visible = true;
 				}
 
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
@@ -518,7 +518,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				Chart.Cursor = Cursors.Arrow;
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 			}
 		}
 
@@ -566,7 +566,7 @@ namespace Rylogic.Gui.WPF
 
 				Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
 				Chart.SetRangeFromCamera();
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
@@ -579,7 +579,7 @@ namespace Rylogic.Gui.WPF
 				{
 					var args = new ChartClickedEventArgs(HitResult, e);
 					Chart.OnChartClicked(args);
-					Chart.Scene.Invalidate();
+					Chart.Invalidate();
 				}
 				else
 				{
@@ -591,7 +591,7 @@ namespace Rylogic.Gui.WPF
 
 					Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
 					Chart.SetRangeFromCamera();
-					Chart.Scene.Invalidate();
+					Chart.Invalidate();
 					e.Handled = true;
 				}
 			}

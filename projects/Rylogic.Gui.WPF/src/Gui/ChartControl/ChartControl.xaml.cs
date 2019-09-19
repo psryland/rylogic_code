@@ -132,24 +132,24 @@ namespace Rylogic.Gui.WPF
 						break;
 					case nameof(OptionsData.AntiAliasing):
 						Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
-						Scene.Invalidate();
+						Invalidate();
 						break;
 					case nameof(OptionsData.Orthographic):
 						Camera.Orthographic = Options.Orthographic;
-						Scene.Invalidate();
+						Invalidate();
 						break;
 					case nameof(OptionsData.FillMode):
 						Window.FillMode = Options.FillMode;
-						Scene.Invalidate();
+						Invalidate();
 						break;
 					case nameof(OptionsData.CullMode):
 						Window.CullMode = Options.CullMode;
-						Scene.Invalidate();
+						Invalidate();
 						break;
 					case nameof(OptionsData.BackgroundColour):
 						Window.BackgroundColour = Options.BackgroundColour;
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartBackground)));
-						Scene.Invalidate();
+						Invalidate();
 						break;
 					}
 				}
@@ -600,7 +600,7 @@ namespace Rylogic.Gui.WPF
 
 			// Set the axis range from the camera position
 			SetRangeFromCamera();
-			Scene.Invalidate();
+			Invalidate();
 		}
 
 		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
@@ -649,8 +649,11 @@ namespace Rylogic.Gui.WPF
 			// Set the new desired pixel aspect based on the
 			// axis ranges and the current size of the scene.
 			var sz = SceneBounds;
-			Scene.DesiredPixelAspect = Range.Aspect * sz.Height / sz.Width;
-			Scene.ActualPixelAspect = Scene.DesiredPixelAspect;
+			if (sz.Width != 0 && sz.Height != 0)
+			{
+				Scene.DesiredPixelAspect = Range.Aspect * sz.Height / sz.Width;
+				Scene.ActualPixelAspect = Scene.DesiredPixelAspect;
+			}
 
 			// Find the world space position of the new focus point.
 			// Move the focus point within the focus plane (parallel to the camera XY plane)

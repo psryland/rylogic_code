@@ -2,23 +2,18 @@ Immediate ToDo:
 
 CoinFlip
 	Candle Charts:
-		- Add option to set axis range explicitly
 		- Show remaining candle time
-		- Lock that axis ranges of two charts to be in sync
+		- Add measure tool to charts
 	Equity Plot:
 		- Show 'hodls' in equity plot
 		- Auto range equity chart
 		- Add price scenarios to the equity grid (dialog with sliders for each currency)
-		- Crosshair on equity chart
-		- Toggle for including transfers
-		- Implement equity since time point
 	Indicators:
 		- Free draw line indicator
 		- TD sequential
 	Bots:
 		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	General:
-		- History is broken - after deleting the DB the old history isn't restored
 		- Depth of market scale indicator/adjuster
 		- Figure out how to isolate the monitored orders between back testing and live mode
 		- Add spot price support to Poloniex and Bittrex
