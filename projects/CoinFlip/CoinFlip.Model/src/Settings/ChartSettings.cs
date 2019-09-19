@@ -15,10 +15,10 @@ namespace CoinFlip.Settings
 			ShowCompletedOrders = EShowItems.Disabled;
 			ShowMarketDepth = false;
 			XAxisLabelMode = EXAxisLabelMode.LocalTime;
-			TradeLabelSize = 10.0;
-			TradeLabelTransparency = 1.0;
-			ShowTradeDescriptions = true;
-			LabelsToTheLeft = true;
+			ConfettiLabelSize = 10.0;
+			ConfettiLabelTransparency = 1.0;
+			ConfettiDescriptionsVisible = true;
+			ConfettiLabelsToTheLeft = true;
 			SelectionDistance = 5.0;
 		}
 		public ChartSettings(XElement node)
@@ -74,32 +74,32 @@ namespace CoinFlip.Settings
 			set => set(nameof(XAxisLabelMode), value);
 		}
 
-		/// <summary>The font size for trade labels</summary>
-		public double TradeLabelSize
+		/// <summary>The font size for confetti labels</summary>
+		public double ConfettiLabelSize
 		{
-			get => get<double>(nameof(TradeLabelSize));
-			set => set(nameof(TradeLabelSize), value);
+			get => get<double>(nameof(ConfettiLabelSize));
+			set => set(nameof(ConfettiLabelSize), value);
 		}
 
 		/// <summary>How see through the backgrounds of the trade labels are</summary>
-		public double TradeLabelTransparency
+		public double ConfettiLabelTransparency
 		{
-			get => get<double>(nameof(TradeLabelTransparency));
-			set => set(nameof(TradeLabelTransparency), value);
+			get => get<double>(nameof(ConfettiLabelTransparency));
+			set => set(nameof(ConfettiLabelTransparency), value);
 		}
 
-		/// <summary>Show the descriptions next to the trade markers</summary>
-		public bool ShowTradeDescriptions
+		/// <summary>Show the descriptions next to the confetti icons</summary>
+		public bool ConfettiDescriptionsVisible
 		{
-			get => get<bool>(nameof(ShowTradeDescriptions));
-			set => set(nameof(ShowTradeDescriptions), value);
+			get => get<bool>(nameof(ConfettiDescriptionsVisible));
+			set => set(nameof(ConfettiDescriptionsVisible), value);
 		}
 
 		/// <summary>Show the labels to the left of the trade markers</summary>
-		public bool LabelsToTheLeft
+		public bool ConfettiLabelsToTheLeft
 		{
-			get => get<bool>(nameof(LabelsToTheLeft));
-			set => set(nameof(LabelsToTheLeft), value);
+			get => get<bool>(nameof(ConfettiLabelsToTheLeft));
+			set => set(nameof(ConfettiLabelsToTheLeft), value);
 		}
 
 		/// <summary>The distance in pixels needed to selected something</summary>

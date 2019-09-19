@@ -90,6 +90,7 @@
     <Compile Include="src\Dialogs\NewBotUI.xaml.cs">
       <DependentUpon>NewBotUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\GfxObjects\Confetti.cs" />
     <Compile Include="src\GfxObjects\Equity.cs" />
     <Compile Include="src\GfxObjects\Misc.cs" />
     <Compile Include="src\GfxObjects\Orders.cs" />
@@ -309,6 +310,8 @@
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="res\transfers_coloured.png" />
+    <Resource Include="res\transfers_gray.png" />
     <Resource Include="res\plus_gray.png" />
     <Resource Include="res\plus.png" />
     <Resource Include="res\cross_hair_blue.png" />

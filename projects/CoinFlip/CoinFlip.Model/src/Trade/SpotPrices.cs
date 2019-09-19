@@ -7,6 +7,7 @@ namespace CoinFlip
 {
 	public class SpotPrices
 	{
+		/// <summary>The buy and sell price in units of Quote/Base</summary>
 		private Unit<decimal>? m_spot_q2b;
 		private Unit<decimal>? m_spot_b2q;
 

@@ -30,6 +30,8 @@
 			<BitmapImage x:Key="history_green" UriSource="/CoinFlip.UI;component/res/history_green.png" />
 			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
 			<BitmapImage x:Key="market_depth_colour" UriSource="/CoinFlip.UI;component/res/market_depth_colour.png" />
+			<BitmapImage x:Key="transfers_gray" UriSource="/CoinFlip.UI;component/res/transfers_gray.png" />
+			<BitmapImage x:Key="transfers_coloured" UriSource="/CoinFlip.UI;component/res/transfers_coloured.png" />
 			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
 			<BitmapImage x:Key="cross_hair_gray" UriSource="/CoinFlip.UI;component/res/cross_hair_gray.png" />
 			<BitmapImage x:Key="cross_hair_blue" UriSource="/CoinFlip.UI;component/res/cross_hair_blue.png" />

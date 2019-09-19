@@ -130,6 +130,11 @@ namespace CoinFlip
 			if (LastUpdated > update_time && !Model.BackTesting)
 				return;
 
+			if (total < 0m._(Coin))
+				throw new Exception($"Exchange total balance is negative: {total}");
+			if (held > total)
+				throw new Exception($"Exchange held balance ({held}) is greater than the total balance ({total})");
+
 			var changed = false;
 			if (ExchTotal != total)
 			{

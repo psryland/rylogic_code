@@ -345,6 +345,24 @@ namespace CoinFlip
 			return new Range(idx_min, idx_max);
 		}
 
+		/// <summary>Convert an index range to a time range </summary>
+		public RangeF TimeToFIndexRange(TimeFrameTime time_min, TimeFrameTime time_max)
+		{
+			Debug.Assert(time_min <= time_max);
+			var idx_min = FIndexAt(time_min);
+			var idx_max = FIndexAt(time_max);
+			return new RangeF(idx_min, idx_max);
+		}
+
+		/// <summary>Convert an index range to a time range </summary>
+		public Range FIndexToTimeRange(double idx_min, double idx_max)
+		{
+			Debug.Assert(idx_min <= idx_max);
+			var time_min = TimeAtFIndex(idx_min);
+			var time_max = TimeAtFIndex(idx_max);
+			return new Range(time_min, time_max);
+		}
+
 		/// <summary>Return the candle at or immediately before 'time_stamp'</summary>
 		public Candle CandleAt(TimeFrameTime time_stamp)
 		{

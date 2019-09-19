@@ -34,6 +34,7 @@ namespace CoinFlip.UI
 			IndicatorViews = new ObservableCollection<IIndicatorView>();
 			Chart = m_chart_candles;
 			Legend = m_indicator_legend;
+			AxisLinkTo = None;
 			Model = model;
 
 			GfxSpotPrices = new GfxObjects.SpotPrices(Chart);
@@ -146,13 +147,13 @@ namespace CoinFlip.UI
 					case nameof(ChartSettings.XAxisLabelMode):
 						Chart.XAxisPanel.Invalidate();
 						break;
-					case nameof(ChartSettings.TradeLabelSize):
+					case nameof(ChartSettings.ConfettiLabelSize):
 						Chart.Invalidate();
 						break;
-					case nameof(ChartSettings.TradeLabelTransparency):
+					case nameof(ChartSettings.ConfettiLabelTransparency):
 						Chart.Invalidate();
 						break;
-					case nameof(ChartSettings.ShowTradeDescriptions):
+					case nameof(ChartSettings.ConfettiDescriptionsVisible):
 						Chart.Invalidate();
 						break;
 					}
@@ -581,12 +582,13 @@ namespace CoinFlip.UI
 					if (Chart.MouseOperations.Active == null)
 					{
 						// Auto range if the current chart range does not overlap the instrument range
-						if (Chart.XAxis.Max < 0 || Chart.XAxis.Min > latest_count)
-						{
-							Chart.AutoRange();
-						}
+						//if (Chart.XAxis.Max < 0 || Chart.XAxis.Min > latest_count)
+						//{
+						//	Chart.AutoRange();
+						//}
+						//else
 						// If the latest candle is visible, move the X-Axis range so that it stays in the same place on screen
-						else if (((double)m_prev_count).Within(Chart.XAxis.Min, Chart.XAxis.Max))
+						if (((double)m_prev_count).Within(Chart.XAxis.Min, Chart.XAxis.Max))
 						{
 							Chart.XAxis.Shift(latest_count - m_prev_count);
 							Chart.SetCameraFromRange();
@@ -975,6 +977,51 @@ namespace CoinFlip.UI
 		/// <summary>Add an ordinal to the chart name based on it's position in the model's chart view collection</summary>
 		public string ChartName => Model != null && Model.Charts.Count != 1 ? $"Chart:{Model.Charts.IndexOf(this)+1}" : $"Chart";
 
+		/// <summary>Another chart that this chart is linked</summary>
+		public IChartView AxisLinkTo
+		{
+			get => m_axis_link_to ?? (IChartView)None;
+			set
+			{
+				if (m_axis_link_to == value || m_in_axis_link_to != 0) return;
+				using (Scope.Create(() => ++m_in_axis_link_to, () => --m_in_axis_link_to))
+				{
+					if (m_axis_link_to != null)
+					{
+						// Remove the old link
+						//2-way link? m_axis_link_to.AxisLinkTo = null;
+						Chart.XAxis.LinkTo = null;
+					}
+					m_axis_link_to = value as CandleChart;
+					if (m_axis_link_to != null)
+					{
+						// Set up the new link
+						Chart.XAxis.LinkTo = new ChartControl.AxisLinkData(m_axis_link_to.Chart.XAxis, r => ConvertXRange(m_axis_link_to, this, r));
+						//2-way link? m_axis_link_to.AxisLinkTo = this;
+					}
+					NotifyPropertyChanged(nameof(AxisLinkTo));
+				}
+
+				// Handler
+				RangeF ConvertXRange(CandleChart src, CandleChart dst, RangeF range)
+				{
+					// Copy 'src's axis to 'dst's axis
+					if (src.Instrument == null || src.Instrument.Count == 0 || src.TimeFrame == ETimeFrame.None) return range;
+					if (dst.Instrument == null || dst.Instrument.Count == 0 || dst.TimeFrame == ETimeFrame.None) return range;
+
+					// Convert from the index range on 'src' to a time range
+					var r0 = src.Instrument.FIndexToTimeRange(range.Beg, range.End);
+
+					// Convert from the time range to an index range on 'dst'
+					var r1 = dst.Instrument.TimeToFIndexRange(new TimeFrameTime(r0.Beg, dst.TimeFrame), new TimeFrameTime(r0.End, dst.TimeFrame));
+
+					return r1;
+				}
+			}
+		}
+		private CandleChart m_axis_link_to;
+		private int m_in_axis_link_to;
+
 		/// <summary>The source exchange</summary>
 		public Exchange Exchange
 		{
@@ -1117,25 +1164,19 @@ namespace CoinFlip.UI
 				}
 
 				// Candle style menu
-				var candles_menu = cmenu.Items.Add2(new MenuItem { Header = "Candles" });
+				var candles_menu = cmenu.Items.Add2(new MenuItem { Header = "Candles", DataContext = this });
 				{
-					var opt = candles_menu.Items.Add2(new ComboBox
+					var cb = candles_menu.Items.Add2(new ComboBox
 					{
-						ItemsSource = Enum<ECandleStyle>.Values,
 						Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
+						ItemsSource = Enum<ECandleStyle>.Values,
 						SelectedItem = CandleStyle,
+						Background = SystemColors.ControlBrush,
 						BorderThickness = new Thickness(0),
 						Margin = new Thickness(1, 1, 20, 1),
-						MinWidth = 60,
+						MinWidth = 80,
 					});
-					opt.SelectionChanged += (s, a) =>
-					{
-						CandleStyle = (ECandleStyle)opt.SelectedItem;
-					};
-					candles_menu.ContextMenuOpening += (s, a) =>
-					{
-						opt.SelectedItem = CandleStyle;
-					};
+					cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(CandleStyle)) { Mode = BindingMode.TwoWay });
 				}
 
 				cmenu.Items.Add(new Separator());
@@ -1154,7 +1195,7 @@ namespace CoinFlip.UI
 					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor()),
 					Command = EditTrade,
 				});
-				cmenu.Opened += (s, a) =>
+				cmenu.Opened += delegate
 				{
 					// Get the price at the mouse location
 					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
@@ -1197,26 +1238,41 @@ namespace CoinFlip.UI
 			// Modify the XAxis context menu
 			{
 				var cmenu = Chart.XAxis.ContextMenu;
-
-				// Insert an option for changing the units of the XAxis
-				var idx = 0;
 				{
-					var opt = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Label Mode" });
+					// Add an option for changing the units of the XAxis
+					var opt = cmenu.Items.Add2(new MenuItem { Header = "Label Mode", DataContext = SettingsData.Settings.Chart });
 					{
 						var cb = opt.Items.Add2(new ComboBox
 						{
+							Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
 							ItemsSource = Enum<EXAxisLabelMode>.ValuesArray,
-							Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
 							Background = SystemColors.ControlBrush,
 							BorderThickness = new Thickness(0),
 							Margin = new Thickness(1, 1, 20, 1),
 							MinWidth = 80,
 						});
-						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(ChartSettings.XAxisLabelMode)) { Source = SettingsData.Settings.Chart });
-						cb.SelectionChanged += (s, a) =>
+						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(ChartSettings.XAxisLabelMode)) { Mode = BindingMode.TwoWay });
+					}
+				}
+				{
+					// Add an option to link this axis to the axis of another chart
+					var opt = cmenu.Items.Add2(new MenuItem { Header = "Link Axis", DataContext = this });
+					cmenu.Opened += delegate { opt.IsEnabled = Model.Charts.Count > 1; };
+					{
+						var other_charts = CollectionViewSource.GetDefaultView(Model.Charts.Except(this).Prepend(None));
+						cmenu.Opened += delegate { other_charts.Refresh(); };
+
+						var cb = opt.Items.Add2(new ComboBox
 						{
-							SettingsData.Settings.Chart.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
-						};
+							Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
+							ItemsSource = other_charts,
+							DisplayMemberPath = nameof(IChartView.ChartName),
+							Background = SystemColors.ControlBrush,
+							BorderThickness = new Thickness(0),
+							Margin = new Thickness(1, 1, 20, 1),
+							MinWidth = 80,
+						});
+						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(AxisLinkTo)) { Mode = BindingMode.TwoWay });
 					}
 				}
 			}
@@ -1251,6 +1307,20 @@ namespace CoinFlip.UI
 			public const float Trades = 0.013f;
 			public const float Cursors = 0.020f;
 			public const float Max = 0.1f;
+		}
+
+		/// <summary>Proxy chart to represent 'no chart'</summary>
+		private static readonly NullChart None = new NullChart();
+		private class NullChart :IChartView
+		{
+			public string ChartName => "None";
+			public Exchange Exchange { get => null; set { } }
+			public TradePair Pair { get => null; set { } }
+			public ETimeFrame TimeFrame { get => ETimeFrame.None; set { } }
+			public Instrument Instrument { get => null; set { } }
+			public bool IsActiveContentInPane { get => false; set { } }
+			public void EnsureActiveContent() { throw new NotImplementedException(); }
+			public void ScrollToTime(DateTimeOffset _) { throw new NotImplementedException(); }
 		}
 
 		/// <summary>Context for chart graphics</summary>

@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Rylogic.Gui.WPF;
 
 namespace CoinFlip.UI.Dialogs
 {
@@ -9,7 +10,11 @@ namespace CoinFlip.UI.Dialogs
 			InitializeComponent();
 			Owner = owner;
 			Icon = owner?.Icon;
+			PinState = new PinData(this);
 			DataContext = sim;
 		}
+
+		/// <summary>Pin window support</summary>
+		private PinData PinState { get; }
 	}
 }

@@ -15,7 +15,6 @@ namespace CoinFlip
 		{
 			BalanceChanges = new List<BalanceChange>();
 			CoinInfo = new List<CoinBalanceInfo>();
-			Since = Misc.CryptoCurrencyEpoch;
 			Order = EOrderBy.DecendingTotal;
 			Model = model;
 
@@ -37,10 +36,12 @@ namespace CoinFlip
 				{
 					m_model.NettWorthChanged -= HandleNettWorthChanged;
 					Model.BackTestingChange -= HandleBackTestingChanged;
+					SettingsData.Settings.SettingChange -= HandleSettingChange;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					SettingsData.Settings.SettingChange += HandleSettingChange;
 					Model.BackTestingChange += HandleBackTestingChanged;
 					m_model.NettWorthChanged += HandleNettWorthChanged;
 				}
@@ -53,6 +54,21 @@ namespace CoinFlip
 				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
 				{
 					Invalidate();
+				}
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					switch (e.Key)
+					{
+					case nameof(EquitySettings.Since):
+						Invalidate();
+						Update();
+						break;
+					case nameof(EquitySettings.IncludeTransfers):
+						Invalidate();
+						Update();
+						break;
+					}
 				}
 			}
 		}
@@ -70,19 +86,6 @@ namespace CoinFlip
 			}
 		}
 		private EOrderBy m_order;
-
-		/// <summary>The start time to display the equity from</summary>
-		public DateTimeOffset Since
-		{
-			get => m_since;
-			set
-			{
-				if (m_since == value) return;
-				m_since = value;
-				Invalidate();
-			}
-		}
-		private DateTimeOffset m_since;
 
 		/// <summary>Return the time range (in ticks) spanned by the given index range</summary>
 		public Range TimeRange(RangeF index_range)
@@ -187,9 +190,10 @@ namespace CoinFlip
 		private bool CompileHistory()
 		{
 			var data_added = false;
+			var include_transfers = SettingsData.Settings.Equity.IncludeTransfers;
 
 			// Look for any new completed orders.
-			var since = BalanceChanges.Count != 0 ? BalanceChanges.Back().Time : Since;
+			var since = BalanceChanges.Count != 0 ? BalanceChanges.Back().Time : SettingsData.Settings.Equity.Since;
 
 			// Collect the trade history from each exchange
 			foreach (var exch in Model.Exchanges)
@@ -200,11 +204,14 @@ namespace CoinFlip
 					BalanceChanges.Add(new BalanceChange(order));
 					data_added = true;
 				}
-				foreach (var txn in exch.Transfers)
+				if (include_transfers)
 				{
-					if (txn.Created <= since) continue;
-					BalanceChanges.Add(new BalanceChange(txn));
-					data_added = true;
+					foreach (var txn in exch.Transfers)
+					{
+						if (txn.Created <= since) continue;
+						BalanceChanges.Add(new BalanceChange(txn));
+						data_added = true;
+					}
 				}
 			}
 

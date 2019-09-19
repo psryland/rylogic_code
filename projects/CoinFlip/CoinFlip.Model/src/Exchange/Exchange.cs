@@ -754,21 +754,26 @@ namespace CoinFlip
 		}
 
 		/// <summary>Adjust the values in 'trade' to be within accepted exchange ranges</summary>
-		public void Canonicalise(Trade trade)
+		public Trade Canonicalise(Trade trade)
 		{
 			try
 			{
 				// This shouldn't fail. It should do its best to make 'trade' valid
 				// but if it can't, then errors will be picked up when submitting the trade
-				CanonicaliseInternal(trade);
+				return 
+					Sim != null ? Sim.CanonicaliseInternal(trade) :
+					CanonicaliseInternal(trade);
 			}
 			catch (Exception ex)
 			{
 				Model.Log.Write(ELogLevel.Error, ex, $"Canonicalise failed");
+				return trade;
 			}
 		}
-		protected virtual void CanonicaliseInternal(Trade trade)
-		{}
+		protected virtual Trade CanonicaliseInternal(Trade trade)
+		{
+			return trade;
+		}
 
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)

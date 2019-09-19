@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Rylogic.Extn;
@@ -16,6 +17,18 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			DockControl = new DockControl(this, "Transfers");
 			Model = model;
+
+			m_grid.SelectionChanged += (s, a) =>
+			{
+				if (m_selecting != 0) return;
+				using (Scope.Create(() => ++m_selecting, () => --m_selecting))
+				{
+					Model.SelectedTransfers.Clear();
+					foreach (var item in a.AddedItems.Cast<Transfer>())
+						Model.SelectedTransfers.Add(item);
+				}
+			};
+
 			DataContext = this;
 		}
 		public void Dispose()
@@ -23,22 +36,57 @@ namespace CoinFlip.UI
 			Model = null;
 			DockControl = null;
 		}
+		private int m_selecting;
 
 		/// <summary></summary>
 		public Model Model
 		{
-			get { return m_model; }
+			get => m_model;
 			set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
 				{
 					Exchanges = CollectionViewSource.GetDefaultView(null);
+					m_model.SelectedTransfers.CollectionChanged -= HandleSelectedTransfersChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.SelectedTransfers.CollectionChanged += HandleSelectedTransfersChanged;
 					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
+				}
+
+				// Handlers
+				void HandleSelectedTransfersChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					if (e.Action == NotifyCollectionChangedAction.Add)
+					{
+						if (m_selecting != 0) return;
+						using (Scope.Create(() => ++m_selecting, () => --m_selecting))
+						{
+							switch (e.Action)
+							{
+							case NotifyCollectionChangedAction.Reset:
+								{
+									m_grid.SelectedItems.Clear();
+									break;
+								}
+							case NotifyCollectionChangedAction.Add:
+								{
+									foreach (var item in e.NewItems)
+										m_grid.SelectedItems.Add(item);
+									break;
+								}
+							case NotifyCollectionChangedAction.Remove:
+								{
+									foreach (var item in e.OldItems)
+										m_grid.SelectedItems.Remove(item);
+									break;
+								}
+							}
+						}
+					}
 				}
 			}
 		}

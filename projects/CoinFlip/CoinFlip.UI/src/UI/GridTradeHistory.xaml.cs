@@ -28,8 +28,8 @@ namespace CoinFlip.UI
 			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			m_grid.SelectionChanged += (s, a) =>
 			{
-				if (m_selecting_orders != 0) return;
-				using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
+				if (m_selecting != 0) return;
+				using (Scope.Create(() => ++m_selecting, () => --m_selecting))
 				{
 					Model.SelectedCompletedOrders.Clear();
 					foreach (var item in a.AddedItems.Cast<OrderCompleted>())
@@ -50,7 +50,7 @@ namespace CoinFlip.UI
 			Model = null;
 			DockControl = null;
 		}
-		private int m_selecting_orders;
+		private int m_selecting;
 
 		/// <summary></summary>
 		public Model Model
@@ -78,8 +78,8 @@ namespace CoinFlip.UI
 				{
 					if (e.Action == NotifyCollectionChangedAction.Add)
 					{
-						if (m_selecting_orders != 0) return;
-						using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
+						if (m_selecting != 0) return;
+						using (Scope.Create(() => ++m_selecting, () => --m_selecting))
 						{
 							switch (e.Action)
 							{

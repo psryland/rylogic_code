@@ -85,6 +85,12 @@ namespace CoinFlip
 				throw new Exception("Unknown trade type");
 		}
 
+		/// <summary>Return 'price' in (Quote/Base) for this trade direction. Assumes price is in (CoinOut/CoinIn)</summary>
+		public static Unit<decimal> PriceQ2B(this ETradeType tt, Unit<decimal> amount_out, Unit<decimal> amount_in)
+		{
+			return tt.PriceQ2B(amount_out / amount_in);
+		}
+
 		/// <summary>Return the 'base' amount for a trade in this trade direction</summary>
 		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_in = null, Unit<decimal>? amount_out = null)
 		{

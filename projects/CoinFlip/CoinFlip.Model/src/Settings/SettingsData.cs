@@ -56,8 +56,8 @@ namespace CoinFlip.Settings
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
 			AutoSaveOnChanges = false;
 		}
-		public SettingsData(string filepath)
-			: base(filepath, ESettingsLoadFlags.IgnoreUnknownTypes) //hack
+		public SettingsData(string filepath, ESettingsLoadFlags opts = ESettingsLoadFlags.IgnoreUnknownTypes)
+			: base(filepath, opts)
 		{
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
 			AutoSaveOnChanges = false;

@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 using CoinFlip.Settings;
 using Rylogic.Common;
@@ -14,6 +13,7 @@ namespace CoinFlip.UI.Dialogs
 			InitializeComponent();
 			Owner = owner;
 			Icon = Owner?.Icon;
+			PinState = new PinData(this);
 			DataContext = this;
 
 			SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
@@ -22,16 +22,16 @@ namespace CoinFlip.UI.Dialogs
 			{
 				switch (e.Key)
 				{
-				case nameof(ChartSettings.TradeLabelSize):
+				case nameof(ChartSettings.ConfettiLabelSize):
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TradeLabelSize)));
 					break;
-				case nameof(ChartSettings.TradeLabelTransparency):
+				case nameof(ChartSettings.ConfettiLabelTransparency):
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TradeLabelTransparency)));
 					break;
-				case nameof(ChartSettings.ShowTradeDescriptions):
+				case nameof(ChartSettings.ConfettiDescriptionsVisible):
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowTradeDescriptions)));
 					break;
-				case nameof(ChartSettings.LabelsToTheLeft):
+				case nameof(ChartSettings.ConfettiLabelsToTheLeft):
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LabelsToTheLeft)));
 					break;
 				}
@@ -44,9 +44,9 @@ namespace CoinFlip.UI.Dialogs
 			if (m_dlg_chart_options == null)
 			{
 				m_dlg_chart_options = new ChartOptionsUI(owner);
-				m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y).OnScreen();
 				m_dlg_chart_options.Closed += delegate { m_dlg_chart_options = null; };
 				m_dlg_chart_options.Show();
+				m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y + 20).OnScreen();
 			}
 			else
 			{
@@ -55,32 +55,35 @@ namespace CoinFlip.UI.Dialogs
 		}
 		private static ChartOptionsUI m_dlg_chart_options;
 
+		/// <summary>Pin window support</summary>
+		private PinData PinState { get; }
+
 		/// <summary>The size of trade labels</summary>
 		public double TradeLabelSize
 		{
-			get => SettingsData.Settings.Chart.TradeLabelSize;
-			set => SettingsData.Settings.Chart.TradeLabelSize = value;
+			get => SettingsData.Settings.Chart.ConfettiLabelSize;
+			set => SettingsData.Settings.Chart.ConfettiLabelSize = value;
 		}
 
 		/// <summary>The transparency of trade label backgrounds</summary>
 		public double TradeLabelTransparency
 		{
-			get => SettingsData.Settings.Chart.TradeLabelTransparency * 100.0;
-			set => SettingsData.Settings.Chart.TradeLabelTransparency = value / 100.0;
+			get => SettingsData.Settings.Chart.ConfettiLabelTransparency * 100.0;
+			set => SettingsData.Settings.Chart.ConfettiLabelTransparency = value / 100.0;
 		}
 
 		/// <summary>Show the descriptions next to the trade markers</summary>
 		public bool ShowTradeDescriptions
 		{
-			get => SettingsData.Settings.Chart.ShowTradeDescriptions;
-			set => SettingsData.Settings.Chart.ShowTradeDescriptions = value;
+			get => SettingsData.Settings.Chart.ConfettiDescriptionsVisible;
+			set => SettingsData.Settings.Chart.ConfettiDescriptionsVisible = value;
 		}
 
 		/// <summary>Show the labels to the left of the trade markers</summary>
 		public bool LabelsToTheLeft
 		{
-			get => SettingsData.Settings.Chart.LabelsToTheLeft;
-			set => SettingsData.Settings.Chart.LabelsToTheLeft = value;
+			get => SettingsData.Settings.Chart.ConfettiLabelsToTheLeft;
+			set => SettingsData.Settings.Chart.ConfettiLabelsToTheLeft = value;
 		}
 
 		/// <summary></summary>

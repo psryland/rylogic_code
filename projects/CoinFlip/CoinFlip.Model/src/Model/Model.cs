@@ -58,6 +58,7 @@ namespace CoinFlip
 				Indicators = new IndicatorContainer();
 				SelectedOpenOrders = new ObservableCollection<Order>();
 				SelectedCompletedOrders = new ObservableCollection<OrderCompleted>();
+				SelectedTransfers = new ObservableCollection<Transfer>();
 				EditTradeContexts = new List<EditTradeContext>();
 
 				// Enable settings auto save after everything is up and running
@@ -492,6 +493,9 @@ namespace CoinFlip
 		/// <summary>Completed orders that are 'selected'</summary>
 		public ObservableCollection<OrderCompleted> SelectedCompletedOrders { get; }
 
+		/// <summary>Transfers that are 'selected'</summary>
+		public ObservableCollection<Transfer> SelectedTransfers { get; }
+		
 		/// <summary>The special case cross exchange</summary>
 		public CrossExchange CrossExchange { get; private set; }
 

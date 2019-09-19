@@ -2,6 +2,7 @@
 using System.Linq;
 using Binance.API.DomainObjects;
 using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace Binance.API
 {
@@ -48,7 +49,7 @@ namespace Binance.API
 		/// <summary>Round parameters to match the server rules</summary>
 		public OrderParams Canonicalise(CurrencyPair pair, BinanceApi api)
 		{
-			// Canonicalise doesn't through, it just does it's best.
+			// Canonicalise doesn't throw, it just does it's best.
 			// Use Validate to get error messages.
 
 			// Find the rules for 'cp'. Valid if no rules found
@@ -65,14 +66,14 @@ namespace Binance.API
 			else if (StopPriceQ2B == null)
 				StopPriceQ2B = PriceQ2B;
 
-			// Round to expected precision
-			AmountBase = Math.Round(AmountBase, rules.BaseAssetPrecision);
+			// Truncate to the expected precision. Can't round because we might round to a value greater than the balance
+			AmountBase = Math_.Truncate(AmountBase, rules.BaseAssetPrecision);
 			if (PriceQ2B != null)
-				PriceQ2B = Math.Round(PriceQ2B.Value, rules.PricePrecision);
+				PriceQ2B = Math_.Truncate(PriceQ2B.Value, rules.PricePrecision);
 			if (StopPriceQ2B != null)
-				StopPriceQ2B = Math.Round(StopPriceQ2B.Value, rules.PricePrecision);
+				StopPriceQ2B = Math_.Truncate(StopPriceQ2B.Value, rules.PricePrecision);
 			if (IcebergAmountBase != null)
-				IcebergAmountBase = Math.Round(IcebergAmountBase.Value, rules.BaseAssetPrecision);
+				IcebergAmountBase = Math_.Truncate(IcebergAmountBase.Value, rules.BaseAssetPrecision);
 
 			// Round to the tick size
 			foreach (var filter in rules.Filters.OfType<ServerRulesData.FilterPrice>().Where(x => x.FilterType == EFilterType.PRICE_FILTER))

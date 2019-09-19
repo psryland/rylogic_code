@@ -404,7 +404,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Adjust the values in 'trade' to be within accepted exchange ranges</summary>
-		protected override void CanonicaliseInternal(Trade trade)
+		protected override Trade CanonicaliseInternal(Trade trade)
 		{
 			var p = new OrderParams(trade.TradeType.ToBinanceTT(), trade.OrderType.ToBinanceOT())
 			{
@@ -425,6 +425,7 @@ namespace CoinFlip
 				trade.AmountIn = p.AmountBase._(trade.Pair.Base);
 				trade.AmountOut = (p.AmountBase * p.PriceQ2B.Value)._(trade.Pair.Quote);
 			}
+			return trade;
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order</summary>

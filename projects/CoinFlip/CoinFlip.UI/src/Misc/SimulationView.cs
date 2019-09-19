@@ -197,9 +197,9 @@ namespace CoinFlip.UI
 			{
 				var pt = Owner.PointToScreen(Mouse.GetPosition(Owner));
 				m_back_testing_options_ui = new BackTestingOptionsUI(Owner, this);
-				m_back_testing_options_ui.SetLocation(pt.X, pt.Y + 20).OnScreen();
 				m_back_testing_options_ui.Closed += delegate { m_back_testing_options_ui = null; };
 				m_back_testing_options_ui.Show();
+				m_back_testing_options_ui.SetLocation(pt.X, pt.Y + 20).OnScreen();
 			}
 			else
 			{

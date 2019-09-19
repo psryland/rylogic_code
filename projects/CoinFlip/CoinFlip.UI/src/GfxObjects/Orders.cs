@@ -142,12 +142,12 @@ namespace CoinFlip.UI.GfxObjects
 				overlay.Adopt(Mark);
 
 				Label.Foreground = col;
-				Label.Visibility = SettingsData.Settings.Chart.ShowTradeDescriptions ? Visibility.Visible : Visibility.Collapsed;
-				Label.FontSize = SettingsData.Settings.Chart.TradeLabelSize;
+				Label.Visibility = SettingsData.Settings.Chart.ConfettiDescriptionsVisible ? Visibility.Visible : Visibility.Collapsed;
+				Label.FontSize = SettingsData.Settings.Chart.ConfettiLabelSize;
 				Label.FontWeight = highlight ? FontWeights.Bold : FontWeights.Normal;
 				Label.Measure(Rylogic.Extn.Windows.Size_.Infinity);
-				Label.Background = new SolidColorBrush(Colour32.White.Alpha(1.0f - (float)SettingsData.Settings.Chart.TradeLabelTransparency).ToMediaColor());
-				Label.RenderTransform = SettingsData.Settings.Chart.LabelsToTheLeft
+				Label.Background = new SolidColorBrush(Colour32.White.Alpha(1.0f - (float)SettingsData.Settings.Chart.ConfettiLabelTransparency).ToMediaColor());
+				Label.RenderTransform = SettingsData.Settings.Chart.ConfettiLabelsToTheLeft
 					? new MatrixTransform(1, 0, 0, 1, s.X - Label.DesiredSize.Width - 7.0, s.Y - Label.DesiredSize.Height/2)
 					: new MatrixTransform(1, 0, 0, 1, s.X + 7.0, s.Y - Label.DesiredSize.Height / 2);
 				overlay.Adopt(Label);

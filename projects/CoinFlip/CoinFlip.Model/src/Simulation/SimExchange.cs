@@ -348,6 +348,30 @@ namespace CoinFlip
 			return m_depth[pair];
 		}
 
+		/// <summary>Adjust the values in 'trade' to be within accepted exchange ranges</summary>
+		public Trade CanonicaliseInternal(Trade trade)
+		{
+			const int AssetPrecision = 8;
+			const int PricePrecision = 8;
+
+			// If the trade is a market order, set the price to market price
+			if (trade.OrderType == EOrderType.Market)
+			{
+				var spot = trade.Pair.SpotPrice[trade.TradeType];
+				trade.PriceQ2B = Math_.Truncate(spot.Value, PricePrecision)._(trade.Pair.RateUnits);
+				trade.AmountIn = Math_.Truncate(trade.AmountIn, AssetPrecision)._(trade.CoinIn);
+				trade.AmountOut = Math_.Truncate(trade.AmountIn * trade.Price, AssetPrecision)._(trade.CoinOut);
+			}
+			else
+			{
+				trade.AmountIn = Math_.Truncate(trade.AmountIn, AssetPrecision)._(trade.CoinIn);
+				trade.AmountOut = Math_.Truncate(trade.AmountOut, AssetPrecision)._(trade.CoinOut);
+				if (trade.AmountIn != 0m._(trade.CoinIn))
+					trade.Price = trade.AmountOut / trade.AmountIn;
+			}
+			return trade;
+		}
+
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
 		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<decimal> amount_in, Unit<decimal> amount_out, Unit<decimal> remaining_in, out Order ord, out OrderCompleted his)
 		{
@@ -381,14 +405,20 @@ namespace CoinFlip
 					{// Debt from CoinIn
 						var bal = m_bal[trade.CoinIn];
 						bal.Total -= trade.AmountIn;
+						if (bal.Total < 0)
+							throw new Exception($"Total balance of {bal.Coin} is {bal.Total}");
 					}
 					{// Credit to CoinOut
 						var bal = m_bal[trade.CoinOut];
 						bal.Total += trade.AmountOut;
+						if (bal.Total < 0)
+							throw new Exception($"Total balance of {bal.Coin} is {bal.Total}");
 					}
 					{// Debt the commission
 						var bal = m_bal[trade.CommissionCoin];
 						bal.Total -= trade.Commission;
+						if (bal.Total < 0)
+							throw new Exception($"Total balance of {bal.Coin} is {bal.Total}");
 					}
 				}
 				{// Remove the hold
@@ -402,6 +432,8 @@ namespace CoinFlip
 				// Update the hold for the trade
 				var bal = m_bal[ord.CoinIn];
 				bal.Holds[ord.OrderId] = ord.RemainingIn;
+				if (bal.Held > bal.Total)
+					throw new Exception($"Held balance of {bal.Coin} exceeds total. Held {bal.Held}, Total {bal.Total}");
 			}
 		}
 

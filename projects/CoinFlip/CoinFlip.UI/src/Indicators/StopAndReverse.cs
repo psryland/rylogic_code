@@ -486,7 +486,8 @@ namespace CoinFlip.UI.Indicators
 			protected override void UpdateSceneCore()
 			{
 				base.UpdateSceneCore();
-				
+				Chart.Scene.RemoveObjects(new[] { SAR.Id }, 1, 0);
+
 				// No data, no SAR
 				if (Data.Count == 0 || !Visible)
 					return;

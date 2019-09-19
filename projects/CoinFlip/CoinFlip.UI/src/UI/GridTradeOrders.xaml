@@ -73,12 +73,14 @@
 				Header="Price"
 				Binding="{Binding PriceQ2B, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 				ElementStyle="{StaticResource TextBlockRight}"
+				CanUserSort="False"
 				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Spot Price"
 				Binding="{Binding SpotPriceQ2B, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 				ElementStyle="{StaticResource TextBlockRight}"
+				CanUserSort="False"
 				Width="1*"
 				/>
 			<DataGridTextColumn
@@ -91,12 +93,14 @@
 				Header="Amount (Base)"
 				Binding="{Binding AmountBase, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 				ElementStyle="{StaticResource TextBlockRight}"
+				CanUserSort="False"
 				Width="0.8*"
 				/>
 			<DataGridTextColumn
 				Header="Amount (Quote)"
 				Binding="{Binding AmountQuote, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 				ElementStyle="{StaticResource TextBlockRight}"
+				CanUserSort="False"
 				Width="0.8*"
 				/>
 			<DataGridTextColumn
