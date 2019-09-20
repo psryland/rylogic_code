@@ -225,7 +225,8 @@ namespace CoinFlip
 				if (Shutdown.IsCancellationRequested) return Task.CompletedTask;
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var ticker = Api.TickerData[cp];
-				ticker_updates.Add(new PairAndTicker { Pair = cp, Ticker = ticker });
+				if (ticker != null)
+					ticker_updates.Add(new PairAndTicker { Pair = cp, Ticker = ticker });
 			}
 
 			// Stop market updates for unreferenced pairs

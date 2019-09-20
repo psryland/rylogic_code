@@ -14,7 +14,6 @@ CoinFlip
 	Bots:
 		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	General:
-		- Depth of market scale indicator/adjuster
 		- Figure out how to isolate the monitored orders between back testing and live mode
 		- Add spot price support to Poloniex and Bittrex
 		- Variable spread for backtesting

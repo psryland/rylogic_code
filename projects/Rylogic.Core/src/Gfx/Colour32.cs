@@ -132,9 +132,9 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Return Black or White, whichever is best contrast to this colour</summary>
-		public Colour32 InvertBW()
+		public Colour32 InvertBW(Colour32? black = null, Colour32? white = null)
 		{
-			return Intensity > 0.6 ? Black : White;
+			return Intensity > 0.6 ? (black ?? Black) : (white ?? White);
 		}
 
 		/// <summary>Return this colour with the alpha value changed</summary>

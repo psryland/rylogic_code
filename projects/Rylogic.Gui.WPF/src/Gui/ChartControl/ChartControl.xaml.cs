@@ -68,6 +68,8 @@ namespace Rylogic.Gui.WPF
 				DefaultMouseControl = true;
 				DefaultKeyboardShortcuts = true;
 
+				Overlay.PreviewKeyDown += (s,a) => OnKeyDown(a);
+				Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
 				Scene.BuildScene += OnBuildScene;
 
 				InitCommands();
@@ -716,16 +718,16 @@ namespace Rylogic.Gui.WPF
 		public string PointerLocationText => LocationText(Mouse.GetPosition(this));
 
 		/// <summary>The client space rectangle that contains the View3d part of the control</summary>
-		private Rect SceneBounds => Scene.RenderArea(this);
+		public Rect SceneBounds => Scene.RenderArea(this);
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
-		private Rect XAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == XAxis)?.RenderArea(this) ?? Rect_.Zero;
+		public Rect XAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == XAxis)?.RenderArea(this) ?? Rect_.Zero;
 
 		/// <summary>The client space area of the YAxis area of the chart</summary>
-		private Rect YAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == YAxis)?.RenderArea(this) ?? Rect_.Zero;
+		public Rect YAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == YAxis)?.RenderArea(this) ?? Rect_.Zero;
 
 		/// <summary>The client space area of the chart title</summary>
-		private Rect TitleBounds => m_title_label.RenderArea(this);
+		public Rect TitleBounds => m_title_label.RenderArea(this);
 
 		/// <summary>Per button current mouse operation</summary>
 		public MouseOps MouseOperations

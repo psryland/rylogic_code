@@ -19,25 +19,18 @@ namespace Rylogic.Gui.WPF
 		{
 			public MouseOps()
 			{
-				PendingOp = Enum<MouseButton>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				Pending = new PendingOps(this);
 			}
 			public void Dispose()
 			{
 				Active = null;
-
-				foreach (var op in PendingOp.Values.NotNull().ToList())
-					op.Dispose();
-
-				PendingOp.Clear();
+				Pending.Dispose();
 			}
-
-			/// <summary>The next mouse operation for each mouse button</summary>
-			private Dictionary<MouseButton, MouseOp> PendingOp { get; }
 
 			/// <summary>The currently active mouse op</summary>
 			public MouseOp Active
 			{
-				get { return m_active; }
+				get => m_active;
 				private set
 				{
 					if (m_active == value) return;
@@ -66,42 +59,21 @@ namespace Rylogic.Gui.WPF
 			}
 			private MouseOp m_active;
 
-			/// <summary>Return the op pending for button 'idx'</summary>
-			public MouseOp Pending(MouseButton btn)
-			{
-				return PendingOp[btn];
-			}
-
-			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
-			public void SetPending(MouseButton btn, MouseOp op)
-			{
-				if (PendingOp[btn] == op) return;
-				if (PendingOp[btn] != null)
-				{
-					PendingOp[btn].Disposed -= HandleMouseOpDisposed;
-					PendingOp[btn].Dispose();
-				}
-				PendingOp[btn] = op;
-				if (PendingOp[btn] != null)
-				{
-					// Watch for external disposing
-					PendingOp[btn].Disposed -= HandleMouseOpDisposed;
-					PendingOp[btn].Disposed += HandleMouseOpDisposed;
-				}
-			}
+			/// <summary>The next mouse operation for each mouse button</summary>
+			public PendingOps Pending { get; }
 
 			/// <summary>Start/End the next mouse op for button 'idx'</summary>
 			public void BeginOp(MouseButton btn)
 			{
-				Active = PendingOp[btn];
-				PendingOp[btn] = null;
+				Active = Pending[btn];
+				Pending[btn] = null;
 			}
 			public void EndOp(MouseButton btn)
 			{
 				Active = null;
 
 				// If the next op starts immediately, begin it now
-				if (PendingOp[btn] != null && !PendingOp[btn].StartOnMouseDown)
+				if (Pending[btn] != null && !Pending[btn].StartOnMouseDown)
 					BeginOp(btn);
 			}
 
@@ -113,12 +85,51 @@ namespace Rylogic.Gui.WPF
 				var op = (MouseOp)sender;
 				op.Disposed -= HandleMouseOpDisposed;
 
+				// Clear the active op if it is 'op'
 				if (m_active == op)
 					m_active = null;
 
-				foreach (var key in PendingOp.Keys.ToList())
-					if (PendingOp[key] == op)
-						PendingOp[key] = null;
+				// Remove the op from the pending set
+				foreach (var key in Enum<MouseButton>.Values)
+					if (Pending[key] == op)
+						Pending[key] = null;
+			}
+
+			/// <summary>Dictionary-like proxy for pending mouse operations</summary>
+			public class PendingOps :IDisposable
+			{
+				private readonly MouseOps m_owner;
+				private readonly MouseOp[] m_pending;
+
+				internal PendingOps(MouseOps owner)
+				{
+					m_owner = owner;
+					m_pending = new MouseOp[Enum<MouseButton>.Count];
+				}
+				public void Dispose()
+				{
+					Util.DisposeAll(m_pending);
+				}
+				public MouseOp this[MouseButton btn]
+				{
+					get => m_pending[(int)btn];
+					set
+					{
+						if (m_pending[(int)btn] == value) return;
+						if (m_pending[(int)btn] != null)
+						{
+							m_pending[(int)btn].Disposed -= m_owner.HandleMouseOpDisposed;
+							m_pending[(int)btn].Dispose();
+						}
+						m_pending[(int)btn] = value;
+						if (m_pending[(int)btn] != null)
+						{
+							// Watch for external disposing
+							m_pending[(int)btn].Disposed -= m_owner.HandleMouseOpDisposed;
+							m_pending[(int)btn].Disposed += m_owner.HandleMouseOpDisposed;
+						}
+					}
+				}
 			}
 		}
 
@@ -134,10 +145,11 @@ namespace Rylogic.Gui.WPF
 			//  - If at any point a mouse op is cancelled, no further mouse events are forwarded
 			//    to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
-			public MouseOp(ChartControl chart)
+			public MouseOp(ChartControl chart, bool allow_cancel = false)
 			{
 				Chart = chart;
 				m_is_click = true;
+				m_allow_cancel = allow_cancel;
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
@@ -166,6 +178,7 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>True if the op was aborted</summary>
 			public bool Cancelled { get; protected set; }
+			private bool m_allow_cancel;
 
 			/// <summary>True if the distance between 'location' and mouse down should be treated as a click. Once false, then always false</summary>
 			public bool IsClick(Point location)
@@ -187,12 +200,17 @@ namespace Rylogic.Gui.WPF
 			public virtual void MouseUp(MouseButtonEventArgs e) { }
 
 			/// <summary>Called on key down</summary>
-			public virtual void OnKeyDown(KeyEventArgs e) { }
+			public virtual void OnKeyDown(KeyEventArgs e)
+			{
+				if (!m_allow_cancel || e.Key != Key.Escape) return;
+				Cancelled = true;
+				e.Handled = true;
+			}
 
 			/// <summary>Called on key up</summary>
 			public virtual void OnKeyUp(KeyEventArgs e) { }
 
-			/// <summary>Called when the mouse operation is cancelled</summary>
+			/// <summary>Called when the mouse operation is cancelled (as it is removed from 'Active')</summary>
 			public virtual void NotifyCancelled() { }
 		}
 
@@ -207,7 +225,8 @@ namespace Rylogic.Gui.WPF
 			private int m_click_count;
 			private EAxis m_hit_axis;
 
-			public MouseOpDefaultLButton(ChartControl chart) : base(chart)
+			public MouseOpDefaultLButton(ChartControl chart) 
+				: base(chart, allow_cancel: true)
 			{}
 			public override void Dispose()
 			{
@@ -403,9 +422,8 @@ namespace Rylogic.Gui.WPF
 			public override void OnKeyDown(KeyEventArgs e)
 			{
 				base.OnKeyDown(e);
-				if (e.Key == Key.Escape)
+				if (Cancelled)
 				{
-					Cancelled = true;
 					m_drag_state = EDragState.Cancel;
 
 					// Abort dragging

@@ -178,7 +178,7 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
-				var col = Chart.Scene.BackgroundColor.ToColour32().Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
+				var col = Chart.Scene.BackgroundColor.InvertBW();
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);

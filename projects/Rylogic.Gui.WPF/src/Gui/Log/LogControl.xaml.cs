@@ -419,7 +419,11 @@ namespace Rylogic.Gui.WPF
 					// Prevent the LogEntries collection getting too big.
 					// Defer because we can't edit the collection in this handler.
 					if (LogEntries.Count > MaxLines)
-						Dispatcher.BeginInvoke(() => LogEntries.RemoveRange(0, LogEntries.Count - MaxLines));
+						Dispatcher.BeginInvoke(() =>
+						{
+							if (LogEntries == null) return;
+							LogEntries.RemoveRange(0, LogEntries.Count - MaxLines);
+						});
 
 					// Auto scroll to the last row
 					// Have to do this outside of the event handler or we get an exception

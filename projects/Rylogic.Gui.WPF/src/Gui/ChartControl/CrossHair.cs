@@ -78,7 +78,7 @@ namespace Rylogic.Gui.WPF
 			public TextBlock LabelY { get; }
 
 			/// <summary></summary>
-			private Colour32 LineColour => Chart.Scene.BackgroundColor.ToColour32().Intensity < 0.5f ? 0xFFCCCCCC : 0xFF333333;
+			private Colour32 LineColour => Chart.Scene.BackgroundColor.InvertBW(0xFF333333, 0xFFCCCCCC);
 			private Colour32 BkgdColour => LineColour.Invert();
 
 			/// <summary></summary>

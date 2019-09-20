@@ -546,7 +546,7 @@ namespace CoinFlip.UI
 					GfxCandles = new GfxObjects.Candles(m_instrument);
 					GfxOpenOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
 					GfxCompletedOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
-					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
+					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth, Chart);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
 				}
@@ -884,7 +884,7 @@ namespace CoinFlip.UI
 			}
 
 			// Market Depth
-			GfxMarketDepth.BuildScene(Chart);
+			GfxMarketDepth.BuildScene();
 
 			// Bots
 			{
@@ -1261,7 +1261,7 @@ namespace CoinFlip.UI
 						var instance = Indicator_.CreateInstance(drawing, this);
 						if (instance is ChartControl.MouseOp op)
 						{
-							Chart.MouseOperations.SetPending(MouseButton.Left, op);
+							Chart.MouseOperations.Pending[MouseButton.Left] = op;
 							return;
 						}
 						if (instance is IIndicator indy)
@@ -1284,7 +1284,7 @@ namespace CoinFlip.UI
 						var instance = Indicator_.CreateInstance(indicator, this);
 						if (instance is ChartControl.MouseOp op)
 						{
-							Chart.MouseOperations.SetPending(MouseButton.Left, op);
+							Chart.MouseOperations.Pending[MouseButton.Left] = op;
 							return;
 						}
 						if (instance is IIndicator indy)

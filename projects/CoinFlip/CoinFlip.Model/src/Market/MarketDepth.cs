@@ -14,6 +14,8 @@ namespace CoinFlip
 	{
 		public MarketDepth(Coin @base, Coin quote)
 		{
+			Base = @base;
+			Quote = quote;
 			RateUnits = @base.Symbol != quote.Symbol ? $"{quote}/{@base}" : string.Empty;
 			Q2B = new OrderBook(@base, quote, ETradeType.Q2B);
 			B2Q = new OrderBook(@base, quote, ETradeType.B2Q);
@@ -24,6 +26,12 @@ namespace CoinFlip
 			Q2B = new OrderBook(rhs.Q2B);
 			B2Q = new OrderBook(rhs.B2Q);
 		}
+
+		/// <summary></summary>
+		public Coin Base { get; }
+
+		/// <summary></summary>
+		public Coin Quote { get; }
 
 		/// <summary>The units of the prices in this market</summary>
 		public string RateUnits { get; }

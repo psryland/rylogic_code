@@ -83,14 +83,14 @@ namespace Rylogic.Gui.WPF
 				return;
 
 			// Look for the mouse op to perform
-			if (MouseOperations.Pending(args.ChangedButton) == null && DefaultMouseControl)
+			if (MouseOperations.Pending[args.ChangedButton] == null && DefaultMouseControl)
 			{
 				switch (args.ChangedButton)
 				{
 				default: return;
-				case MouseButton.Left:   MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultLButton(this)); break;
-				case MouseButton.Middle: MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultMButton(this)); break;
-				case MouseButton.Right:  MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultRButton(this)); break;
+				case MouseButton.Left:   MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultLButton(this); break;
+				case MouseButton.Middle: MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultMButton(this); break;
+				case MouseButton.Right:  MouseOperations.Pending[args.ChangedButton] = new MouseOpDefaultRButton(this); break;
 				case MouseButton.XButton1: UndoNavigation(); break;
 				case MouseButton.XButton2: RedoNavigation(); break;
 				}

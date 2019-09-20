@@ -82,7 +82,7 @@ namespace Rylogic.Utility
 		{
 			if (doomed == null) return;
 			foreach (var kv in doomed)
-				kv.Value.Dispose();
+				kv.Value?.Dispose();
 
 			doomed.Clear();
 		}

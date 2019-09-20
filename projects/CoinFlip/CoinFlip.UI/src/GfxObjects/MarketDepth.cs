@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
@@ -15,39 +16,57 @@ namespace CoinFlip.UI.GfxObjects
 {
 	public class MarketDepth :Buffers
 	{
-		public MarketDepth(CoinFlip.MarketDepth market)
+		public MarketDepth(CoinFlip.MarketDepth market, ChartControl chart)
 		{
+			Chart = chart;
 			Market = market;
 
-			ScaleIndicator = new StackPanel
-			{
-				Orientation = Orientation.Horizontal,
-				Background = Brushes.White,
-				//Cursor = "SizeWE"
-			};
-			ScaleIndicator.Children.Add(new Polygon
+			Icon = new Polygon
 			{
 				Points = PointCollection.Parse("0,10 5,5 -5,5"),
 				Stroke = Brushes.Black,
-			});
-			ScaleIndicator.Children.Add(new TextBlock
+				Fill = Brushes.Black,
+				Cursor = Cursors.SizeWE,
+			};
+			Label = new TextBlock
 			{
-				Text = "100 BTC",
+				Text = string.Empty,
 				FontSize = 10.0,
-			});
+				IsHitTestVisible = false,
+			};
+			CursorVolume = new TextBlock
+			{
+				Text = string.Empty,
+				FontSize = 10.0,
+				Foreground = Chart.Scene.BackgroundColor.ToMediaBrush(),
+				Background = Chart.Scene.BackgroundColor.InvertBW(0xFF333333, 0xFFCCCCCC).ToMediaBrush(),
+				IsHitTestVisible = false,
+				Margin= new Thickness(2),
+			};
+			Icon.MouseLeftButtonDown += delegate
+			{
+				chart.MouseOperations.Pending[MouseButton.Left] = new DragMarketSizeScaler(this) { StartOnMouseDown = false };
+			};
+
+			IndicatorPosition = 0.25;
 		}
 		public override void Dispose()
 		{
 			Gfx = null;
 			Market = null;
-			ScaleIndicator = null;
+			Icon.Detach();
+			Label.Detach();
+			CursorVolume.Detach();
 			base.Dispose();
 		}
+
+		/// <summary>The chart this indicator is displayed on</summary>
+		private ChartControl Chart { get; }
 
 		/// <summary>The market whose depth we're drawing</summary>
 		private CoinFlip.MarketDepth Market
 		{
-			get { return m_market; }
+			get => m_market;
 			set
 			{
 				if (m_market == value) return;
@@ -70,13 +89,32 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		private CoinFlip.MarketDepth m_market;
 
-		/// <summary>The maximum volume in the depth market (defines the scale)</summary>
-		private decimal MaxVolume { get; set; }
+		/// <summary>The position of the indicator as a fraction of the chart width. 0 = Far right, 0.5 = middle, 1 = Far left</summary>
+		private double IndicatorPosition
+		{
+			get => m_indicator_position;
+			set
+			{
+				if (m_indicator_position == value) return;
+				m_indicator_position = Math_.Clamp(value, 0.05, 0.95);
+
+				var pt = new Point(Chart.SceneBounds.Width * (1.0 - m_indicator_position), 0.0);
+				Canvas.SetLeft(Icon, pt.X);
+				Canvas.SetTop(Icon, pt.Y);
+
+				Icon.Measure(new Size(100.0,100.0));
+				Canvas.SetLeft(Label, pt.X + Icon.DesiredSize.Width + 2);
+				Canvas.SetTop(Label, pt.Y);
+
+				Invalidate();
+			}
+		}
+		private double m_indicator_position;
 
 		/// <summary>The graphics object</summary>
 		private View3d.Object Gfx
 		{
-			get { return m_gfx ?? (m_gfx = UpdateGfx()); }
+			get => m_gfx;
 			set
 			{
 				if (m_gfx == value) return;
@@ -86,73 +124,106 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		private View3d.Object m_gfx;
 
-		/// <summary>The text label that indicates the volume</summary>
-		private StackPanel ScaleIndicator
-		{
-			get => m_scale_indicator;
-			set
-			{
-				if (m_scale_indicator == value) return;
-				if (m_scale_indicator?.Parent is Canvas parent)
-					parent.Children.Remove(m_scale_indicator);
-				m_scale_indicator = value;
-			}
-		}
-		private StackPanel m_scale_indicator;
+		/// <summary>The indicator showing the scale amount</summary>
+		private Polygon Icon { get; }
 
-		/// <summary>Invalidate the graphics</summary>
-		public void Invalidate()
-		{
-			Gfx = null;
-		}
+		/// <summary>Text describing the scale amount</summary>
+		private TextBlock Label { get; }
+
+		/// <summary>The volume at the cursor position (displayed when the cross hair is visible)</summary>
+		private TextBlock CursorVolume { get; }
+
+		/// <summary>The scale of the market graphics (in volume / xaxis unit)</summary>
+		private double Scale { get; set; }
 
 		/// <summary>Add the graphics objects to the scene</summary>
-		public void BuildScene(ChartControl chart)
+		public void BuildScene()
 		{
-			if (Gfx != null)
+			if (SettingsData.Settings.Chart.ShowMarketDepth)
 			{
-				// Market depth graphics created at x = 0 with an aspect ratio of 1:2.
-				// Position the depth info at the far right of the chart
-				var x_scale = (float)(0.25 * chart.XAxis.Span / chart.YAxis.Span);
-				Gfx.O2P = m4x4.Translation((float)chart.XAxis.Max, 0f, CandleChart.ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
-				chart.Scene.Window.AddObject(Gfx);
-			}
+				Gfx = Gfx ?? UpdateGfx();
+				if (Gfx != null)
+				{
+					// Market depth graphics created at x = 0. Position the depth info at the far right of the chart.
+					Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Max, 0f, CandleChart.ZOrder.Indicators);
+					Chart.Scene.AddObject(Gfx);
+				}
 
-			// Add the scale indicator
-			//Misc.AddToOverlay(ScaleIndicator, overlay);
-			//
+				// Add the scale indicator
+				Chart.Overlay.Adopt(Icon);
+				Chart.Overlay.Adopt(Label);
+
+				// Add the volume at the cursor if the cross hair is visible
+				if (Chart.ShowCrossHair)
+				{
+					var client_pt = Mouse.GetPosition(Chart.Overlay);
+					var chart_pt = Chart.ClientToChart(client_pt);
+					var volume = ((Chart.XAxis.Max - chart_pt.X) / Scale)._(Market.Base);
+
+					CursorVolume.Text = volume.ToString(8, true); ;
+					Canvas.SetLeft(CursorVolume, client_pt.X - CursorVolume.ActualWidth / 2);
+					Canvas.SetTop(CursorVolume, 0);
+					Chart.Overlay.Adopt(CursorVolume);
+				}
+				else
+				{
+					CursorVolume.Detach();
+				}
+			}
+			else
+			{
+				if (Gfx != null)
+					Chart.Scene.RemoveObject(Gfx);
+
+				Icon.Detach();
+				Label.Detach();
+				CursorVolume.Detach();
+			}
 		}
 
 		/// <summary>Update the graphics model</summary>
 		private View3d.Object UpdateGfx()
 		{
 			// Don't bother with a separate thread. This seems fast enough already.
-			var market = Market;
 
-			// Not market data? no graphics...
-			var b2q = market.B2Q;
-			var q2b = market.Q2B;
+			// No market data? no graphics...
+			var b2q = Market.B2Q;
+			var q2b = Market.Q2B;
 			var count_b2q = b2q.Count;
 			var count_q2b = q2b.Count;
 			if (count_b2q == 0 && count_q2b == 0)
 				return null;
 
-			// Find the bounds on the order book
+			// Find the bounds on the order book. To determine a suitable scaling
+			// factor, the maximum volume at the YMax/YMin prices on the chart are needed.
 			var b2q_volume = 0.0;
 			var q2b_volume = 0.0;
+			var visible_volume = 0.0;
+			var chart_yrange = Chart.YAxis.Range;
 			var price_range = RangeF.Invalid;
 			foreach (var order in b2q)
 			{
-				price_range.Encompass(order.PriceQ2B.ToDouble());
+				var price_q2b = (double)order.PriceQ2B.ToDouble();
+				price_range.Encompass(price_q2b);
 				b2q_volume += order.AmountBase.ToDouble();
+				if (price_q2b.Within(chart_yrange))
+					visible_volume = Math.Max(visible_volume, b2q_volume);
 			}
 			foreach (var order in q2b)
 			{
-				price_range.Encompass(order.PriceQ2B.ToDouble());
+				var price_q2b = (double)order.PriceQ2B.ToDouble();
+				price_range.Encompass(price_q2b);
 				q2b_volume += order.AmountBase.ToDouble();
+				if (price_q2b.Within(chart_yrange))
+					visible_volume = Math.Max(visible_volume, q2b_volume);
 			}
 
-			var max_volume = Math.Max(b2q_volume, q2b_volume);
+			// Round the max visible volume to an aesthetic number
+			var scale_volume = Math_.AestheticValue(visible_volume, -1);
+			Label.Text = $"{scale_volume} {Market.Base}";
+
+			// Scale the depth graphics so that 'scale_volume' extends 'IndicatorPosition' from the righthand edge of the chart.
+			Scale = IndicatorPosition * Chart.XAxis.Span / scale_volume;
 
 			// Update the graphics model
 			// Model is a histogram from right to left.
@@ -164,15 +235,12 @@ namespace CoinFlip.UI.GfxObjects
 			//       [   ] = b2q
 			// [         ]
 
-			// Scale the depth graphics so the width/height ratio is 0.5;
-			var count = count_b2q + count_q2b;
-			var width_scale = 0.5 * price_range.Size / max_volume;
-
 			// Note: B2Q = all offers to "sell" Base for Quote, i.e. they are the offers available to buyers.
 			var b2q_colour = SettingsData.Settings.Chart.Q2BColour.Alpha(0.5f);
 			var q2b_colour = SettingsData.Settings.Chart.B2QColour.Alpha(0.5f);
 
 			// Resize the cache buffers
+			var count = count_b2q + count_q2b;
 			m_vbuf.Resize(4 * count);
 			m_ibuf.Resize(6 * count);
 			m_nbuf.Resize(1);
@@ -187,7 +255,7 @@ namespace CoinFlip.UI.GfxObjects
 				volume += b2q[i].AmountBase.ToDouble();
 				var y1 = (float)b2q[i].PriceQ2B.ToDouble();
 				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].PriceQ2B.ToDouble() : y1;
-				var dx = (float)(width_scale * volume);
+				var dx = (float)(Scale * volume);
 				var v = vert;
 
 				m_vbuf[vert++] = new View3d.Vertex(new v4(-dx, y1, 0, 1f), b2q_colour);
@@ -210,7 +278,7 @@ namespace CoinFlip.UI.GfxObjects
 				volume += q2b[i].AmountBase.ToDouble();
 				var y0 = (float)q2b[i].PriceQ2B.ToDouble();
 				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].PriceQ2B.ToDouble() : y0;
-				var dx = (float)(width_scale * volume);
+				var dx = (float)(Scale * volume);
 				var v = vert;
 
 				m_vbuf[vert++] = new View3d.Vertex(new v4(-dx, y1, 0, 1f), q2b_colour);
@@ -232,6 +300,37 @@ namespace CoinFlip.UI.GfxObjects
 
 			// Update the graphics model in the GUI thread
 			return gfx;
+		}
+
+		/// <summary>Invalidate the graphics</summary>
+		public void Invalidate()
+		{
+			Gfx = null;
+		}
+
+		/// <summary>Mouse op for dragging the scale indicator</summary>
+		private class DragMarketSizeScaler :ChartControl.MouseOp
+		{
+			private double m_grab_position;
+
+			public DragMarketSizeScaler(MarketDepth owner)
+				:base(owner.Chart, allow_cancel: true)
+			{
+				Owner = owner;
+				m_grab_position = Owner.IndicatorPosition;
+			}
+			private MarketDepth Owner { get; }
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// Get the mouse position as a fraction of the horizontal range
+				if (Cancelled) return;
+				var pt = e.GetPosition(Owner.Chart.Overlay);
+				Owner.IndicatorPosition = Math_.Clamp(1.0 - pt.X / Chart.SceneBounds.Width, 0, 1);
+			}
+			public override void NotifyCancelled()
+			{
+				Owner.IndicatorPosition = m_grab_position;
+			}
 		}
 	}
 }

@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WPF
 
 		static View3dControl()
 		{
-			BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colors.LightGray);
+			BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colour32.LightGray);
 			View3d.LoadDll(throw_if_missing:false);
 		}
 		public View3dControl()
@@ -64,7 +64,7 @@ namespace Rylogic.Gui.WPF
 				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
 
 				// Set defaults
-				BackgroundColor = Colors.LightGray;
+				BackgroundColor = Colour32.LightGray;
 				DesiredPixelAspect = 1;
 				ClickTimeMS = 180;
 				MouseNavigation = true;
@@ -142,7 +142,7 @@ namespace Rylogic.Gui.WPF
 					switch (e.Setting)
 					{
 					case View3d.EWindowSettings.BackgroundColour:
-						BackgroundColor = Window.BackgroundColour.ToMediaColor();
+						BackgroundColor = Window.BackgroundColour;
 						break;
 					}
 				}
@@ -213,17 +213,17 @@ namespace Rylogic.Gui.WPF
 		public void Invalidate() => Window.Invalidate();
 
 		/// <summary>Set the background colour of the control</summary>
-		public Color BackgroundColor
+		public Colour32 BackgroundColor
 		{
-			get { return (Color)GetValue(BackgroundColorProperty); }
+			get { return (Colour32)GetValue(BackgroundColorProperty); }
 			set { SetValue(BackgroundColorProperty, value); }
 		}
-		private void BackgroundColor_Changed(Color new_value)
+		private void BackgroundColor_Changed(Colour32 new_value)
 		{
-			Window.BackgroundColour = new Colour32(new_value.ToArgbU());
+			Window.BackgroundColour = new_value;
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColor)));
 		}
-		public Brush BackgroundColorBrush => new SolidColorBrush(BackgroundColor);
+		public Brush BackgroundColorBrush => BackgroundColor.ToMediaBrush();
 		public static readonly DependencyProperty BackgroundColorProperty;
 
 		/// <summary>The render target multi-sampling</summary>
