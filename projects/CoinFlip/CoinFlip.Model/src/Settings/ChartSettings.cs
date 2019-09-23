@@ -13,6 +13,7 @@ namespace CoinFlip.Settings
 			NettWorthColour = new Colour32(0xffbbd2eb); // Blueish
 			ShowOpenOrders = EShowItems.Disabled;
 			ShowCompletedOrders = EShowItems.Disabled;
+			ShowVolume = false;
 			ShowMarketDepth = false;
 			XAxisLabelMode = EXAxisLabelMode.LocalTime;
 			ConfettiLabelSize = 10.0;
@@ -58,6 +59,13 @@ namespace CoinFlip.Settings
 		{
 			get => get<EShowItems>(nameof(ShowCompletedOrders));
 			set => set(nameof(ShowCompletedOrders), value);
+		}
+
+		/// <summary>Show the trade volume</summary>
+		public bool ShowVolume
+		{
+			get => get<bool>(nameof(ShowVolume));
+			set => set(nameof(ShowVolume), value);
 		}
 
 		/// <summary>Show current market depth</summary>

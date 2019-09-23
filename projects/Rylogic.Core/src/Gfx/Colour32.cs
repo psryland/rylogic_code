@@ -86,11 +86,11 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Linearly interpolate two colours</summary>
-		public Colour32 Lerp(Colour32 rhs, float t)
+		public Colour32 Lerp(Colour32 rhs, double t)
 		{
 			return Lerp(this, rhs, t);
 		}
-		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, float t)
+		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, double t)
 		{
 			return new Colour32(
 				(byte)(lhs.A*(1f - t) + rhs.A*t),
@@ -100,11 +100,11 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Linearly interpolate the non-alpha channels of two colours (lhs.A is used)</summary>
-		public Colour32 LerpNoAlpha(Colour32 rhs, float t)
+		public Colour32 LerpNoAlpha(Colour32 rhs, double t)
 		{
 			return LerpNoAlpha(this, rhs, t);
 		}
-		public static Colour32 LerpNoAlpha(Colour32 lhs, Colour32 rhs, float t)
+		public static Colour32 LerpNoAlpha(Colour32 lhs, Colour32 rhs, double t)
 		{
 			return new Colour32(
 				lhs.A,
@@ -114,13 +114,13 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Lerp this colour toward black by 't'</summary>
-		public Colour32 Darken(float t, bool alpha_too = false)
+		public Colour32 Darken(double t, bool alpha_too = false)
 		{
 			return alpha_too ? Lerp(Black, t) : LerpNoAlpha(Black, t);
 		}
 
 		/// <summary>Lerp this colour toward white by 't'</summary>
-		public Colour32 Lighten(float t, bool alpha_too = false)
+		public Colour32 Lighten(double t, bool alpha_too = false)
 		{
 			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
 		}

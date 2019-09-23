@@ -371,6 +371,7 @@ namespace CoinFlip
 							foreach (var exch in e.NewItems.Cast<Exchange>())
 							{
 								exch.Coins.ListChanging += HandleCoinsChanging;
+								exch.Pairs.ListChanging += HandlePairsChanging;
 								exch.Orders.ListChanging += HandleOrdersChanging;
 								exch.History.ListChanging += HandleHistoryChanging;
 							}
@@ -382,6 +383,7 @@ namespace CoinFlip
 							{
 								exch.History.ListChanging -= HandleHistoryChanging;
 								exch.Orders.ListChanging -= HandleOrdersChanging;
+								exch.Pairs.ListChanging -= HandlePairsChanging;
 								exch.Coins.ListChanging -= HandleCoinsChanging;
 							}
 							break;
@@ -392,6 +394,11 @@ namespace CoinFlip
 				{
 					var exchange = ((CoinCollection)sender).Exchange;
 					CoinChanging?.Invoke(exchange, e);
+				}
+				void HandlePairsChanging(object sender, ListChgEventArgs<TradePair> e)
+				{
+					var exchange = ((PairCollection)sender).Exchange;
+					PairsChanging?.Invoke(exchange, e);
 				}
 				void HandleOrdersChanging(object sender, ListChgEventArgs<Order> e)
 				{
@@ -510,6 +517,9 @@ namespace CoinFlip
 
 		/// <summary>Raised when a coin is added or removed from an exchange</summary>
 		public event EventHandler<ListChgEventArgs<Coin>> CoinChanging;
+
+		/// <summary>Raised when a pair is added or removed from an exchange</summary>
+		public event EventHandler<ListChgEventArgs<TradePair>> PairsChanging;
 
 		/// <summary>Raised when an order is added or removed from an exchange</summary>
 		public event EventHandler<ListChgEventArgs<Order>> OrdersChanging;

@@ -13,8 +13,6 @@ namespace CoinFlip.UI.GfxObjects
 {
 	public class Candles :Buffers
 	{
-		private const int BatchSize = 1024;
-
 		public Candles(Instrument instrument)
 		{
 			Cache = new ChartGfxCache(CreatePiece);
@@ -26,6 +24,9 @@ namespace CoinFlip.UI.GfxObjects
 			Cache = null;
 			base.Dispose();
 		}
+
+		/// <summary>Context for candle graphics</summary>
+		public static readonly Guid CtxId = Guid.NewGuid();
 
 		/// <summary>The instrument for which candles are being created</summary>
 		public Instrument Instrument
@@ -66,6 +67,7 @@ namespace CoinFlip.UI.GfxObjects
 			var range = Instrument.IndexRange((int)(chart.XAxis.Min - 1), (int)(chart.XAxis.Max + 1));
 
 			// Add the candles that cover 'range'
+			chart.Scene.RemoveObjects(new[] { CtxId }, 1, 0);
 			foreach (var gfx in Cache.Get(range).OfType<CandleGfx>())
 			{
 				if (gfx.Gfx == null) continue;
@@ -77,6 +79,7 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>Create standard candle graphics for the given range</summary>
 		private IChartGfxPiece CreatePiece(double x_value, RangeF missing)
 		{
+			const int BatchSize = 1024;
 			var db_idx_range = new Range(
 				(long)(x_value / BatchSize + 0) * BatchSize,
 				(long)(x_value / BatchSize + 1) * BatchSize);
@@ -178,7 +181,7 @@ namespace CoinFlip.UI.GfxObjects
 			m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
 
 			// Create the graphics
-			var gfx = new View3d.Object($"Candles-[{db_idx_range.Begi},{db_idx_range.Endi})", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CandleChart.CtxId);
+			var gfx = new View3d.Object($"Candles-[{db_idx_range.Begi},{db_idx_range.Endi})", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CtxId);
 			return new CandleGfx(gfx, db_idx_range);
 		}
 

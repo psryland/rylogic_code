@@ -23,7 +23,7 @@ namespace CoinFlip.UI.GfxObjects
 
 			Icon = new Polygon
 			{
-				Points = PointCollection.Parse("0,10 5,5 -5,5"),
+				Points = PointCollection.Parse("0,5 5,0 -5,0"),
 				Stroke = Brushes.Black,
 				Fill = Brushes.Black,
 				Cursor = Cursors.SizeWE,
@@ -59,6 +59,9 @@ namespace CoinFlip.UI.GfxObjects
 			CursorVolume.Detach();
 			base.Dispose();
 		}
+
+		/// <summary>Context for candle graphics</summary>
+		public static readonly Guid CtxId = Guid.NewGuid();
 
 		/// <summary>The chart this indicator is displayed on</summary>
 		private ChartControl Chart { get; }
@@ -295,7 +298,7 @@ namespace CoinFlip.UI.GfxObjects
 			}
 
 			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.GeometryHasAlpha);
-			var gfx = new View3d.Object("MarketDepth", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CandleChart.CtxId);
+			var gfx = new View3d.Object("MarketDepth", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CtxId);
 			gfx.Flags = View3d.EFlags.SceneBoundsExclude;
 
 			// Update the graphics model in the GUI thread

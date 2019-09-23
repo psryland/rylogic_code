@@ -353,7 +353,6 @@ namespace CoinFlip.UI.Indicators
 			public View(StopAndReverse sar, IChartView chart)
 				:base(sar.Id, nameof(StopAndReverse), chart, sar)
 			{
-			//	m_point_style_textures = new PointStyleTextures();
 				Cache = new ChartGfxCache(CreatePiece);
 				Data = new Context(sar, chart.Instrument);
 				Data.DataChanged += (s, a) =>
@@ -390,49 +389,34 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Create graphics for an X-range spanning 'x'</summary>
 			private SARPiece CreatePiece(double x, RangeF missing)
 			{
-				// The x-axis range spanned by the data
-				var x_range = Data.CandleRange;
-				x = Math.Floor(x);
+				// The available data
+				var data_range = Data.CandleRange;
 
-				// If there is no data, return a null piece spanning the entire range
-				if (x_range == RangeF.Invalid)
-					return new SARPiece(missing);
+				// If 'x' is before the available data, return a null graphics piece up to the start of available data
+				if (x < data_range.Beg)
+					return new SARPiece(new RangeF(missing.Beg, Math.Min(data_range.Beg, missing.End)));
 
-				// If 'x' is before the data range, return a null piece for the range [-inf, Data[0])
-				if (x_range.CompareTo(x) > 0)
-					return new SARPiece(new RangeF(missing.Beg, x_range.Beg));
-
-				// If 'x' is after the data range, return a null piece for the range [Data[N], +inf)
-				if (x_range.CompareTo(x) < 0)
-					return new SARPiece(new RangeF(x_range.End, missing.End));
-
-				// Find the nearest point in the data to 'x'
-				var idx = Data.IndexOf(x);
-				Debug.Assert(idx >= 0 && idx < Data.Count);
+				// If 'x' is after the available data, return a null graphics piece from the end of available data
+				if (x >= data_range.End)
+					return new SARPiece(new RangeF(Math.Max(data_range.End, missing.Beg), missing.End));
 
 				// Generate an index range based on 'missing', limited to the block size
 				const int PieceBlockSize = 512;
-				var idx0 = Math.Max(Data.IndexOf(missing.Beg), idx - PieceBlockSize);
-				var idx1 = Math.Min(Data.IndexOf(missing.End), idx + PieceBlockSize);
+				var idx  = (int)Math.Floor(x);
+				var idx0 = (int)Math_.Max(data_range.Beg, missing.Beg, idx - PieceBlockSize);
+				var idx1 = (int)Math_.Min(data_range.End, missing.End, idx + PieceBlockSize);
+				var count = idx1 - idx0;
 
-				// Set the x-axis range represented by this piece
-				x_range.Beg = idx0 == 0 ? missing.Beg : Data[idx0].CandleIndex;
-				x_range.End = idx1 == Data.Count ? missing.End : Data[idx1].CandleIndex;
-
-				// Create a piece that spans the index range
-				idx1 = Math.Min(idx1 + 1, Data.Count); // Add 1 to connect to the next piece
-				var data_range = new Range(idx0, idx1);
-
-				m_vbuf.Resize(data_range.Counti);
-				m_ibuf.Resize(data_range.Counti);
+				m_vbuf.Resize(count);
+				m_ibuf.Resize(count);
 				m_nbuf.Resize(2);
 
 				// Create the geometry
 				int vert = 0, indx = 0;
-				foreach (var pt in data_range.Select(i => Data[(int)i]))
+				for (int i = idx0; i != idx1; ++i)
 				{
 					var v = vert;
-					m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.CandleIndex, (float)pt.Value, 0f, 1f));
+					m_vbuf[vert++] = new View3d.Vertex(new v4((float)Data[i].CandleIndex, (float)Data[i].Value, 0f, 1f));
 					m_ibuf[indx++] = (ushort)v;
 				}
 
@@ -460,7 +444,7 @@ namespace CoinFlip.UI.Indicators
 
 				// Graphics object for the block of SARs
 				var gfx = new View3d.Object($"{Name}-[{data_range.Beg},{data_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-				return new SARPiece(x_range, gfx);
+				return new SARPiece(new Range(idx0, idx1), gfx);
 			}
 
 			/// <summary>Update when indicator settings change</summary>

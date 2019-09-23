@@ -105,6 +105,7 @@
     <Compile Include="src\Indicators\StopAndReverseUI.xaml.cs">
       <DependentUpon>StopAndReverseUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\GfxObjects\Volume.cs" />
     <Compile Include="src\UI\IndicatorLegend.xaml.cs">
       <DependentUpon>IndicatorLegend.xaml</DependentUpon>
     </Compile>
@@ -309,6 +310,8 @@
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="res\histogram_coloured.png" />
+    <Resource Include="res\histogram_gray.png" />
     <Resource Include="res\transfers_coloured.png" />
     <Resource Include="res\transfers_gray.png" />
     <Resource Include="res\plus_gray.png" />

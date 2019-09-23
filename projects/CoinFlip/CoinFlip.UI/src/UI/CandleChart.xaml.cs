@@ -44,6 +44,7 @@ namespace CoinFlip.UI
 			// Commands
 			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
 			ToggleShowCompletedOrders = Command.Create(this, ToggleShowCompletedOrdersInternal);
+			ToggleVolume = Command.Create(this, ToggleVolumeInternal);
 			ToggleMarketDepth = Command.Create(this, ToggleMarketDepthInternal);
 			ShowChartOptions = Command.Create(this, ShowChartOptionsInternal);
 			EditTrade = Command.Create(this, EditTradeInternal);
@@ -57,6 +58,7 @@ namespace CoinFlip.UI
 			GfxCompletedOrders = null;
 			GfxUpdatingText = null;
 			GfxSpotPrices = null;
+			GfxVolume = null;
 			GfxMarketDepth = null;
 			GfxCandles = null;
 			ChartSelector = null;
@@ -140,9 +142,12 @@ namespace CoinFlip.UI
 						NotifyPropertyChanged(nameof(ShowCompletedOrders));
 						Chart.Invalidate();
 						break;
+					case nameof(ChartSettings.ShowVolume):
+						NotifyPropertyChanged(nameof(ShowVolume));
+						Chart.Invalidate();
+						break;
 					case nameof(ChartSettings.ShowMarketDepth):
 						NotifyPropertyChanged(nameof(ShowMarketDepth));
-						GfxMarketDepth.Invalidate();
 						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.XAxisLabelMode):
@@ -534,6 +539,7 @@ namespace CoinFlip.UI
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(ref m_instrument);
+					GfxVolume = null;
 					GfxMarketDepth = null;
 					GfxCompletedOrders = null;
 					GfxOpenOrders = null;
@@ -546,6 +552,7 @@ namespace CoinFlip.UI
 					GfxCandles = new GfxObjects.Candles(m_instrument);
 					GfxOpenOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
 					GfxCompletedOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
+					GfxVolume = new GfxObjects.Volume(m_instrument, Chart);
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth, Chart);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
@@ -748,6 +755,13 @@ namespace CoinFlip.UI
 			set => SettingsData.Settings.Chart.ShowCompletedOrders = value;
 		}
 
+		/// <summary>Show the volume indicator</summary>
+		public bool ShowVolume
+		{
+			get => SettingsData.Settings.Chart.ShowVolume;
+			set => SettingsData.Settings.Chart.ShowVolume = value;
+		}
+
 		/// <summary>Show current market depth</summary>
 		public bool ShowMarketDepth
 		{
@@ -758,7 +772,6 @@ namespace CoinFlip.UI
 		/// <summary>Add graphics and elements to the chart</summary>
 		private void BuildScene()
 		{
-			Chart.Scene.Window.RemoveObjects(new[] { CtxId }, 1, 0);
 			if (Instrument == null || !DockControl.IsVisible)
 				return;
 
@@ -882,6 +895,9 @@ namespace CoinFlip.UI
 						ord.PriceQ2B.Within(price_min, price_max);
 				}
 			}
+
+			// Trade volume
+			GfxVolume.BuildScene();
 
 			// Market Depth
 			GfxMarketDepth.BuildScene();
@@ -1093,10 +1109,23 @@ namespace CoinFlip.UI
 			#endregion
 		}
 
+		/// <summary>Graphics for trade volume</summary>
+		private GfxObjects.Volume GfxVolume
+		{
+			get { return m_gfx_volume; }
+			set
+			{
+				if (m_gfx_volume == value) return;
+				Util.Dispose(ref m_gfx_volume);
+				m_gfx_volume = value;
+			}
+		}
+		private GfxObjects.Volume m_gfx_volume;
+
 		/// <summary>Graphics for market depth</summary>
 		private GfxObjects.MarketDepth GfxMarketDepth
 		{
-			get { return m_gfx_market_depth; }
+			get => m_gfx_market_depth;
 			set
 			{
 				if (m_gfx_market_depth == value) return;
@@ -1209,6 +1238,13 @@ namespace CoinFlip.UI
 		private void ToggleShowCompletedOrdersInternal()
 		{
 			ShowCompletedOrders = Enum<EShowItems>.Cycle(ShowCompletedOrders);
+		}
+
+		/// <summary>Show/Hide the market depth graphics on the chart</summary>
+		public Command ToggleVolume { get; }
+		private void ToggleVolumeInternal()
+		{
+			ShowVolume = !ShowVolume;
 		}
 
 		/// <summary>Show/Hide the market depth graphics on the chart</summary>
@@ -1454,8 +1490,5 @@ namespace CoinFlip.UI
 			public void EnsureActiveContent() { throw new NotImplementedException(); }
 			public void ScrollToTime(DateTimeOffset _) { throw new NotImplementedException(); }
 		}
-
-		/// <summary>Context for chart graphics</summary>
-		public static readonly Guid CtxId = Guid.NewGuid();
 	}
 }

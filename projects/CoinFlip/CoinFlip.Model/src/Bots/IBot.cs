@@ -29,7 +29,7 @@ namespace CoinFlip.Bots
 		// How to:
 		//  - Create a .NET framework 4.7.2 class library project called 'Bot.<BotName>'
 		//  - The main namespace for the project should be 'Bot.<BotName>'
-		//  - Add references to 'CoinFlip.Model', 'Rylogic.Core', 'Rylogic.Gui.WPF', 'PresentationCore', and 'PresentationFramework'
+		//  - Add references to 'CoinFlip.Model', 'Rylogic.Core', 'Rylogic.Gui.WPF', 'PresentationCore', 'PresentationFramework', and 'WindowsBase'
 		//  - Sub-class 'IBot' and decorate with '[Plugin(typeof(IBot))]'
 		//  - Add a project dependency to CoinFlip.UI on this new Bot so that it's built before CoinFlip.UI
 		//  - Set the post build event to: @"py $(ProjectDir)..\post_build_bot.py $(TargetPath) $(ProjectDir) $(ConfigurationName)"

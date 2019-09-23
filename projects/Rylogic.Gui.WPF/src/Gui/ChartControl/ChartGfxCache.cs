@@ -125,10 +125,10 @@ namespace Rylogic.Gui.WPF
 				var missing = new RangeF(
 					idx != 0 ? Pieces[idx - 1].Range.End : double.MinValue,
 					idx != Pieces.Count ? Pieces[idx].Range.Beg : double.MaxValue);
-				Debug.Assert(missing.Contains(x));
 
 				// There is no cached graphics for 'x', create it now. If no graphics can
 				// be created (because there's no data at 'x') then return null.
+				Debug.Assert(missing.Contains(x));
 				var piece = CreatePiece(x, missing);
 				if (piece == null)
 					return null;

@@ -33,6 +33,9 @@
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="*"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
@@ -142,7 +145,7 @@
 			Margin="3"
 			/>
 
-		<!-- Show Current Trades -->
+		<!-- Show Orders -->
 		<Button
 			Grid.Column="6"
 			Command="{Binding ToggleShowOpenOrders}"
@@ -204,10 +207,46 @@
 			</Image>
 		</Button>
 
+		<!-- Separator -->
+		<Line
+			Grid.Column="8"
+			X1="0" Y1="3" X2="0" Y2="26"
+			SnapsToDevicePixels="True"
+			Stroke="#AAA"
+			Margin="3"
+			/>
+
+		<!-- Volume -->
+		<Button
+			Grid.Column="9"
+			Command="{Binding ToggleVolume}"
+			ToolTip="Show/Hide the trade volume indicator on the chart"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowVolume}" Value="False">
+								<Setter Property="Source" Value="{StaticResource histogram_gray}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowVolume}" Value="True">
+								<Setter Property="Source" Value="{StaticResource histogram_coloured}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
 		<!-- Market Depth -->
 		<Button
-			Grid.Column="8"
+			Grid.Column="10"
 			Command="{Binding ToggleMarketDepth}"
+			ToolTip="Show/Hide the market depth indicator on the chart"
 			Background="Transparent"
 			BorderThickness="0"
 			MaxWidth="26"
@@ -219,11 +258,9 @@
 						<Style.Triggers>
 							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="False">
 								<Setter Property="Source" Value="{StaticResource market_depth_gray}"/>
-								<Setter Property="ToolTip" Value="Display market depth on the chart"/>
 							</DataTrigger>
 							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="True">
 								<Setter Property="Source" Value="{StaticResource market_depth_colour}"/>
-								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
 							</DataTrigger>
 						</Style.Triggers>
 					</Style>
@@ -233,7 +270,7 @@
 
 		<!-- Time Range -->
 		<StackPanel
-			Grid.Column="10"
+			Grid.Column="13"
 			>
 			<TextBlock
 				Text="{Binding VisibleTimeSpan}"
@@ -251,7 +288,7 @@
 
 		<!-- Chart Options -->
 		<Button
-			Grid.Column="11"
+			Grid.Column="14"
 			Command="{Binding ShowChartOptions}"
 			Background="Transparent"
 			BorderThickness="0"
