@@ -94,6 +94,7 @@
     <Compile Include="src\GfxObjects\Equity.cs" />
     <Compile Include="src\GfxObjects\Misc.cs" />
     <Compile Include="src\GfxObjects\MarketDepth.cs" />
+    <Compile Include="src\GfxObjects\RemainingTime.cs" />
     <Compile Include="src\GfxObjects\TradeWidget.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />

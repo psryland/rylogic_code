@@ -637,7 +637,7 @@ namespace CoinFlip.UI.Indicators
 						{
 							Data = path,
 							Stroke = ma.BBColour.ToMediaBrush(),
-							StrokeThickness = ma.Width * 0.5,
+							StrokeThickness = ma.BBWidth * 0.5,
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,
@@ -650,7 +650,7 @@ namespace CoinFlip.UI.Indicators
 						{
 							Data = path,
 							Stroke = ma.BBColour.ToMediaBrush(),
-							StrokeThickness = ma.Width * 0.5,
+							StrokeThickness = ma.BBWidth * 0.5,
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,
 							StrokeLineJoin = PenLineJoin.Round,

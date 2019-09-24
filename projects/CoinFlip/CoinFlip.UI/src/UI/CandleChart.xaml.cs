@@ -60,6 +60,7 @@ namespace CoinFlip.UI
 			GfxSpotPrices = null;
 			GfxVolume = null;
 			GfxMarketDepth = null;
+			GfxRemaingCandleTime = null;
 			GfxCandles = null;
 			ChartSelector = null;
 			Instrument = null;
@@ -543,6 +544,7 @@ namespace CoinFlip.UI
 					GfxMarketDepth = null;
 					GfxCompletedOrders = null;
 					GfxOpenOrders = null;
+					GfxRemaingCandleTime = null;
 					GfxCandles = null;
 				}
 				m_instrument = value;
@@ -550,6 +552,7 @@ namespace CoinFlip.UI
 				{
 					m_instrument.CandleStyle = CandleStyle;
 					GfxCandles = new GfxObjects.Candles(m_instrument);
+					GfxRemaingCandleTime = new GfxObjects.RemainingTime(Chart, m_instrument);
 					GfxOpenOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
 					GfxCompletedOrders = new GfxObjects.Confetti() { Position = OrderToPosition };
 					GfxVolume = new GfxObjects.Volume(m_instrument, Chart);
@@ -781,6 +784,18 @@ namespace CoinFlip.UI
 			// Price Data
 			GfxSpotPrices.BuildScene(Instrument.Pair, Chart);
 
+			// Updating text
+			GfxUpdatingText.BuildScene(Instrument?.DataSyncing == true, Chart);
+
+			// Candle remaining time
+			GfxRemaingCandleTime.BuildScene(Chart);
+
+			// Trade volume
+			GfxVolume.BuildScene();
+
+			// Market Depth
+			GfxMarketDepth.BuildScene();
+
 			// Open Orders
 			{
 				// Draw all positions on this instruction
@@ -896,12 +911,6 @@ namespace CoinFlip.UI
 				}
 			}
 
-			// Trade volume
-			GfxVolume.BuildScene();
-
-			// Market Depth
-			GfxMarketDepth.BuildScene();
-
 			// Bots
 			{
 				//// See if any bots want to draw on this chart
@@ -912,9 +921,6 @@ namespace CoinFlip.UI
 			// Indicator Views
 			foreach (var indy in IndicatorViews)
 				indy.BuildScene(this);
-
-			// Updating text
-			GfxUpdatingText.BuildScene(Instrument?.DataSyncing == true, Chart);
 		}
 
 		/// <summary>Graphics objects for the candle data</summary>
@@ -942,6 +948,19 @@ namespace CoinFlip.UI
 			}
 		}
 		private GfxObjects.SpotPrices m_gfx_spot_price;
+
+		/// <summary>The time remaining on the current latest candle</summary>
+		private GfxObjects.RemainingTime GfxRemaingCandleTime
+		{
+			get => m_gfx_remaining_time;
+			set
+			{
+				if (m_gfx_remaining_time == value) return;
+				Util.Dispose(ref m_gfx_remaining_time);
+				m_gfx_remaining_time = value;
+			}
+		}
+		private GfxObjects.RemainingTime m_gfx_remaining_time;
 
 		/// <summary>A message to indicate the chart is updating</summary>
 		private GfxObjects.UpdatingText GfxUpdatingText

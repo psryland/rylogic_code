@@ -190,7 +190,7 @@ namespace CoinFlip
 
 		/// <summary>The current time. This might be in the past during a simulation</summary>
 		public static DateTimeOffset UtcNow => BackTesting ? SimClock : DateTimeOffset.UtcNow;
-		public static DateTimeOffset SimClock { get; internal set; }
+		public static DateTimeOffset SimClock { get; internal set; } = Misc.CryptoCurrencyEpoch;
 
 		/// <summary>True if live trading</summary>
 		public static bool AllowTrades
