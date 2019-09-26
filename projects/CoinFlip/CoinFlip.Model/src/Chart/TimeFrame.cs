@@ -41,6 +41,9 @@ namespace CoinFlip
 		/// <summary>The exact time value as a UTC DateTimeOffset</summary>
 		public DateTimeOffset ExactUTC => new DateTimeOffset(ExactTicks, TimeSpan.Zero);
 
+		/// <summary>The exact time as a time span</summary>
+		public TimeSpan ExactTimeSpan => new TimeSpan(ExactTicks);
+
 		/// <summary>The time in ticks rounded down to an integer time frame unit</summary>
 		public long IntgTicks
 		{

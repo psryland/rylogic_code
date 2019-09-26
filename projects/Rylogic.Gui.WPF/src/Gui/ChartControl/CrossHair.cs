@@ -12,14 +12,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Helper object for drawing a horizontal and vertical line on the chart, with accompanying labels on the axes</summary>
 		public class CrossHair :IDisposable
 		{
-			private readonly ChartControl Chart;
 			public CrossHair(ChartControl chart)
 			{
 				Chart = chart;
+
+				var line_colour = Chart.Scene.BackgroundColor.Lerp(Chart.Scene.BackgroundColor.InvertBW(), 0.5);
+				var bkgd_colour = Chart.Scene.BackgroundColor.InvertBW(0xFF333333, 0xFFCCCCCC);
+				var text_colour = Chart.Scene.BackgroundColor;
+
 				LineV = new Line
 				{
-					Stroke = LineColour.ToMediaBrush(),
-					StrokeThickness = 1.0,
+					Stroke = line_colour.ToMediaBrush(),
+					StrokeThickness = 0.5,
 					StrokeDashArray = ELineStyles.Dashed.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
@@ -27,8 +31,8 @@ namespace Rylogic.Gui.WPF
 				};
 				LineH = new Line
 				{
-					Stroke = LineColour.ToMediaBrush(),
-					StrokeThickness = 1.0,
+					Stroke = line_colour.ToMediaBrush(),
+					StrokeThickness = 0.5,
 					StrokeDashArray = ELineStyles.Dashed.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
@@ -38,15 +42,15 @@ namespace Rylogic.Gui.WPF
 				{
 					Padding = new Thickness(2),
 					TextAlignment = TextAlignment.Center,
-					Background = LineColour.ToMediaBrush(),
-					Foreground = BkgdColour.ToMediaBrush(),
+					Background = bkgd_colour.ToMediaBrush(),
+					Foreground = text_colour.ToMediaBrush(),
 				};
 				LabelY = new TextBlock
 				{
 					Padding = new Thickness(2),
 					TextAlignment = TextAlignment.Center,
-					Background = LineColour.ToMediaBrush(),
-					Foreground = BkgdColour.ToMediaBrush(),
+					Background = bkgd_colour.ToMediaBrush(),
+					Foreground = text_colour.ToMediaBrush(),
 				};
 
 				LabelX.Typeface(Chart.XAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
@@ -65,6 +69,9 @@ namespace Rylogic.Gui.WPF
 				LabelY.Detach();
 			}
 
+			/// <summary>The owning chart</summary>
+			private ChartControl Chart { get; }
+
 			/// <summary>The vertical part of the cross hair</summary>
 			public Line LineV { get; }
 
@@ -76,10 +83,6 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>A text label for the cross hair price</summary>
 			public TextBlock LabelY { get; }
-
-			/// <summary></summary>
-			private Colour32 LineColour => Chart.Scene.BackgroundColor.InvertBW(0xFF333333, 0xFFCCCCCC);
-			private Colour32 BkgdColour => LineColour.Invert();
 
 			/// <summary></summary>
 			private View3d.Camera Camera => Chart.Camera;

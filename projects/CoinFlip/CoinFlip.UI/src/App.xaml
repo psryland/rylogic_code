@@ -37,6 +37,8 @@
 			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
 			<BitmapImage x:Key="cross_hair_gray" UriSource="/CoinFlip.UI;component/res/cross_hair_gray.png" />
 			<BitmapImage x:Key="cross_hair_blue" UriSource="/CoinFlip.UI;component/res/cross_hair_blue.png" />
+			<BitmapImage x:Key="tape_measure_gray" UriSource="/CoinFlip.UI;component/res/tape_measure_gray.png" />
+			<BitmapImage x:Key="tape_measure_coloured" UriSource="/CoinFlip.UI;component/res/tape_measure_coloured.png" />
 			<BitmapImage x:Key="options" UriSource="/CoinFlip.UI;component/res/options.png" />
 			<BitmapImage x:Key="power_gray" UriSource="/CoinFlip.UI;component/res/power_gray.png" />
 			<BitmapImage x:Key="power_blue" UriSource="/CoinFlip.UI;component/res/power_blue.png" />

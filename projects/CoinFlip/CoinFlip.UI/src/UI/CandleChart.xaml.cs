@@ -268,6 +268,7 @@ namespace CoinFlip.UI
 					m_chart.AutoRanging -= HandleAutoRanging;
 					m_chart.XAxis.TickText = m_chart.XAxis.DefaultTickText;
 					m_chart.YAxis.TickText = m_chart.YAxis.DefaultTickText;
+					m_chart.TapeMeasureStringFormat = ChartControl.DefaultTapeMeasureStringFormat;
 					Util.Dispose(ref m_chart);
 				}
 				m_chart = value;
@@ -288,6 +289,7 @@ namespace CoinFlip.UI
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
 					m_chart.XAxis.TickText = HandleChartXAxisTickText;
 					m_chart.YAxis.TickText = HandleChartYAxisTickText;
+					m_chart.TapeMeasureStringFormat = HandleTapeMeasureStringFormat;
 					m_chart.YAxis.Options.Side = Dock.Right;
 					m_chart.AutoRanging += HandleAutoRanging;
 					m_chart.MouseDown += HandleMouseDown;
@@ -363,6 +365,17 @@ namespace CoinFlip.UI
 
 					// This solves the rounding problem for values near zero when the axis span could be anything
 					return !Math_.FEql(x / Chart.YAxis.Span, 0.0) ? Math_.RoundSD(x, 5).ToString("G8") : "0";
+				}
+				ChartControl.TapeMeasure.LabelText HandleTapeMeasureStringFormat(Point beg, Point end)
+				{
+					var dx = end.X - beg.X;
+					var dy = end.Y - beg.Y;
+					return new ChartControl.TapeMeasure.LabelText
+					{
+						LabelX = $"{new TimeFrameTime(dx, TimeFrame).ExactTimeSpan.ToPrettyString()}\n{Math.Floor(dx)} candles",
+						LabelY = $"{dy._(Instrument.Pair.Quote).ToString(4, true)} ({dy / beg.Y:P2})",
+						LabelD = null,
+					};
 				}
 				void HandleMouseDown(object sender, MouseButtonEventArgs e)
 				{

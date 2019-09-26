@@ -91,6 +91,9 @@ namespace Bot.HeikinAshiChaser
 		/// <summary>Step the bot</summary>
 		protected override Task StepInternal()
 		{
+			// Buy on a green candle with the SAR below the price
+			// Sell on a colour flip
+
 			if (Instrument == null)
 			{
 				var exchange = Model.Exchanges[Settings.Exchange];
@@ -99,9 +102,11 @@ namespace Bot.HeikinAshiChaser
 				Instrument = new Instrument(Name, price_data);
 			}
 			if (Instrument.Count == 0)
+			{
 				return Task.CompletedTask;
+			}
 
-
+			// 
 
 
 			return Task.CompletedTask;

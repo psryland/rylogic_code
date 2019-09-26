@@ -14,61 +14,24 @@ namespace Rylogic.Gui.WPF
 		private void InitCommands()
 		{
 			// Objects Menu
-			ToggleGridLines = Command.Create(this, () =>
-			{
-				Options.ShowGridLines = !Options.ShowGridLines;
-				Invalidate();
-			});
-			ToggleAxes = Command.Create(this, () =>
-			{
-				Options.ShowAxes = !Options.ShowAxes;
-				Invalidate();
-			});
+			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
+			ToggleAxes = Command.Create(this, ToggleAxesInternal);
 
 			// Tools Menu
-			ToggleShowValue = Command.Create(this, () =>
-			{
-				ShowValueAtPointer = !ShowValueAtPointer;
-			});
-			ToggleShowCrossHair = Command.Create(this, () =>
-			{
-				ShowCrossHair = !ShowCrossHair;
-			});
+			ToggleShowValue = Command.Create(this, ToggleShowValueInternal);
+			ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
+			ToggleShowTapeMeasure = Command.Create(this, ToggleShowTapeMeasureInternal);
 
-			// Zoom Menu=
-			DoAutoRange = Command.Create(this, () =>
-			{
-				AutoRange();
-			});
-			DoAspect11 = Command.Create(this, () =>
-			{
-				Range.Aspect = Scene.Window.Viewport.Width / Scene.Window.Viewport.Height;
-				SetCameraFromRange();
-				Invalidate();
-			});
-			ToggleLockAspect = Command.Create(this, () =>
-			{
-				LockAspect = !LockAspect;
-			});
-			ToggleMouseCentredZoom = Command.Create(this, () =>
-			{
-				Options.MouseCentredZoom = !Options.MouseCentredZoom;
-			});
+			// Zoom Menu
+			DoAutoRange = Command.Create(this, DoAutoRangeInternal);
+			DoAspect11 = Command.Create(this, DoAspect11Internal);
+			ToggleLockAspect = Command.Create(this, ToggleLockAspectInternal);
+			ToggleMouseCentredZoom = Command.Create(this, ToggleMouseCentredZoomInternal);
 
 			// Rendering
-			SetBackgroundColour = Command.Create(this, () =>
-			{
-				Scene.SetBackgroundColour.Execute(null);
-				Options.BackgroundColour = Window.BackgroundColour;
-			});
-			ToggleOrthographic = Command.Create(this, () =>
-			{
-				Options.Orthographic = !Options.Orthographic;
-			});
-			ToggleAntiAliasing = Command.Create(this, () =>
-			{
-				Options.AntiAliasing = !Options.AntiAliasing;
-			});
+			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
+			ToggleAntiAliasing = Command.Create(this, ToggleAntiAliasingInternal);
 		}
 
 		/// <summary>Toggle visibility of the origin point</summary>
@@ -79,38 +42,94 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Toggle visibility of the grid lines</summary>
 		public Command ToggleGridLines { get; private set; }
+		private void ToggleGridLinesInternal()
+		{
+			Options.ShowGridLines = !Options.ShowGridLines;
+			Invalidate();
+		}
 
 		/// <summary>Toggle visibility of the axes</summary>
 		public Command ToggleAxes { get; private set; }
+		private void ToggleAxesInternal()
+		{
+			Options.ShowAxes = !Options.ShowAxes;
+			Invalidate();
+		}
 
 		/// <summary>Toggle the visibility of the value at the pointer</summary>
 		public Command ToggleShowValue { get; private set; }
+		private void ToggleShowValueInternal()
+		{
+			ShowValueAtPointer = !ShowValueAtPointer;
+		}
 
 		/// <summary>Toggle the visibility of the cross hair</summary>
 		public Command ToggleShowCrossHair { get; private set; }
+		private void ToggleShowCrossHairInternal()
+		{
+			ShowCrossHair = !ShowCrossHair;
+		}
+
+		/// <summary>Toggle the tape measure tool</summary>
+		public Command ToggleShowTapeMeasure { get; private set; }
+		private void ToggleShowTapeMeasureInternal()
+		{
+			ShowTapeMeasure = !ShowTapeMeasure;
+		}
 
 		/// <summary>Display the measurement tool</summary>
 		public Command ShowMeasureTool => Scene.ShowMeasureTool;
 
 		/// <summary>Auto range the chart</summary>
 		public Command DoAutoRange { get; private set; }
+		private void DoAutoRangeInternal()
+		{
+			AutoRange();
+		}
 
 		/// <summary>Set the pixel aspect ratio to 1:1</summary>
 		public Command DoAspect11 { get; private set; }
+		private void DoAspect11Internal()
+		{
+			Range.Aspect = Scene.Window.Viewport.Width / Scene.Window.Viewport.Height;
+			SetCameraFromRange();
+			Invalidate();
+		}
 
 		/// <summary>Toggle the state of 'LockAspect'</summary>
 		public Command ToggleLockAspect { get; private set; }
+		private void ToggleLockAspectInternal()
+		{
+			LockAspect = !LockAspect;
+		}
 
 		/// <summary>Toggle the state of zooming at the mouse pointer location</summary>
 		public Command ToggleMouseCentredZoom { get; private set; }
+		private void ToggleMouseCentredZoomInternal()
+		{
+			Options.MouseCentredZoom = !Options.MouseCentredZoom;
+		}
 
 		/// <summary>Set the background colour</summary>
 		public Command SetBackgroundColour { get; private set; }
+		private void SetBackgroundColourInternal()
+		{
+			Scene.SetBackgroundColour.Execute(null);
+			Options.BackgroundColour = Window.BackgroundColour;
+		}
 
 		/// <summary>Toggle between orthographic and perspective projection</summary>
 		public Command ToggleOrthographic { get; private set; }
+		private void ToggleOrthographicInternal()
+		{
+			Options.Orthographic = !Options.Orthographic;
+		}
 
 		/// <summary>Toggle antialiasing on/off</summary>
 		public Command ToggleAntiAliasing { get; private set; }
+		private void ToggleAntiAliasingInternal()
+		{
+			Options.AntiAliasing = !Options.AntiAliasing;
+		}
 	}
 }

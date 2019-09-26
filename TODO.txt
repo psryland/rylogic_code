@@ -2,17 +2,16 @@ Immediate ToDo:
 
 CoinFlip
 	Candle Charts:
-		- Show remaining candle time
 		- Add measure tool to charts
 	Equity Plot:
 		- Show 'hodls' in equity plot
 		- Auto range equity chart
 		- Add price scenarios to the equity grid (dialog with sliders for each currency)
 	Indicators:
+		- Fib
 		- Free draw line indicator
 		- TD sequential
 	Bots:
-		- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	General:
 		- Figure out how to isolate the monitored orders between back testing and live mode
 		- Add spot price support to Poloniex and Bittrex

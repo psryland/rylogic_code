@@ -173,7 +173,19 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The client space location of where the chart was "grabbed" (note: ChartControl, not ChartPanel space)</summary>
 			public Point GrabClient { get; set; }
 
-			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
+			/// <summary>The chart space location of the current mouse position over the chart</summary>
+			public Point DropChart { get; set; }
+
+			/// <summary>The client space location of the current mouse position over the chart (note: ChartControl, not ChartPanel space)</summary>
+			public Point DropClient { get; set; }
+
+			/// <summary>The displacement from the grab position</summary>
+			public Vector DeltaChart => DropChart - GrabChart;
+
+			/// <summary>The displacement from the grab position (note: ChartControl, not ChartPanel space)</summary>
+			public Vector DeltaClient => DropClient - GrabClient;
+
+			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible (default is true)</summary>
 			public bool StartOnMouseDown { get; set; }
 
 			/// <summary>True if the op was aborted</summary>

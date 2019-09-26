@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -19,7 +19,7 @@ namespace Rylogic.Gui.WPF
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
-	public partial class ChartControl : Grid, IDisposable, INotifyPropertyChanged
+	public partial class ChartControl :Grid, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
@@ -38,7 +38,7 @@ namespace Rylogic.Gui.WPF
 
 		static ChartControl()
 		{
-			View3d.LoadDll(throw_if_missing:false);
+			View3d.LoadDll(throw_if_missing: false);
 		}
 		public ChartControl()
 			: this(string.Empty, new OptionsData())
@@ -68,7 +68,7 @@ namespace Rylogic.Gui.WPF
 				DefaultMouseControl = true;
 				DefaultKeyboardShortcuts = true;
 
-				Overlay.PreviewKeyDown += (s,a) => OnKeyDown(a);
+				Overlay.PreviewKeyDown += (s, a) => OnKeyDown(a);
 				Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
 				Scene.BuildScene += OnBuildScene;
 
@@ -235,7 +235,7 @@ namespace Rylogic.Gui.WPF
 		public ChartPanel Scene => m_chart_panel;
 
 		/// <summary>The camera view of the scene</summary>
-		public View3d.Camera Camera => Scene?.Camera; 
+		public View3d.Camera Camera => Scene?.Camera;
 
 		/// <summary>The view3d window associated with 'Scene'</summary>
 		private View3d.Window Window => Scene?.Window; // Keep private, clients should be using 'Scene'
@@ -624,7 +624,7 @@ namespace Rylogic.Gui.WPF
 		{
 			// The grid is always parallel to the image plane of the camera.
 			// The camera forward vector points at the centre of the grid.
-			
+
 			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
 			var w2c = Math_.InvertFast(Scene.Camera.O2W);
 
@@ -893,7 +893,7 @@ namespace Rylogic.Gui.WPF
 					MouseWheel += OnMouseWheelCrossHair;
 					MouseMove += OnMouseMoveCrossHair;
 				}
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCrossHair)));
+				NotifyPropertyChanged(nameof(ShowCrossHair));
 
 				// Handlers
 				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
@@ -910,6 +910,42 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private CrossHair m_xhair;
+
+		/// <summary>Tape measure tool</summary>
+		public bool ShowTapeMeasure
+		{
+			get => m_tape != null;
+			set
+			{
+				if (ShowTapeMeasure == value) return;
+				if (ShowTapeMeasure)
+				{
+					Util.Dispose(ref m_tape);
+				}
+				m_tape = value ? new TapeMeasure(this) : null;
+				if (ShowTapeMeasure)
+				{
+				}
+				NotifyPropertyChanged(nameof(ShowTapeMeasure));
+
+				// Handlers
+			}
+		}
+		private TapeMeasure m_tape;
+
+		/// <summary>Callback for formatting the text display by the tape measure</summary>
+		public Func<Point, Point, TapeMeasure.LabelText> TapeMeasureStringFormat { get; set; } = DefaultTapeMeasureStringFormat;
+		public static TapeMeasure.LabelText DefaultTapeMeasureStringFormat(Point beg, Point end)
+		{
+			var dx = end.X - beg.X;
+			var dy = end.Y - beg.Y;
+			return new TapeMeasure.LabelText
+			{
+				LabelX = $"{dx:F3}",
+				LabelY = $"{dy:F3}",
+				LabelD = $"{Math_.Len2(dx, dy):F3}",
+			};
+		}
 
 		/// <summary>Binding helpers</summary>
 		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;

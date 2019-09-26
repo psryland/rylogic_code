@@ -136,9 +136,35 @@
 			</Image>
 		</Button>
 
+		<!-- Tape Measure -->
+		<Button
+			Grid.Column="5"
+			Command="{Binding Chart.ToggleShowTapeMeasure}"
+			ToolTip="Measure a time and price span"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Chart.ShowTapeMeasure}" Value="False">
+								<Setter Property="Source" Value="{StaticResource tape_measure_gray}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Chart.ShowTapeMeasure}" Value="True">
+								<Setter Property="Source" Value="{StaticResource tape_measure_coloured}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
 		<!-- Separator -->
 		<Line
-			Grid.Column="5"
+			Grid.Column="6"
 			X1="0" Y1="3" X2="0" Y2="26"
 			SnapsToDevicePixels="True"
 			Stroke="#AAA"
@@ -147,7 +173,7 @@
 
 		<!-- Show Orders -->
 		<Button
-			Grid.Column="6"
+			Grid.Column="7"
 			Command="{Binding ToggleShowOpenOrders}"
 			Background="Transparent"
 			BorderThickness="0"
@@ -178,7 +204,7 @@
 
 		<!-- Show Completed orders -->
 		<Button
-			Grid.Column="7"
+			Grid.Column="8"
 			Command="{Binding ToggleShowCompletedOrders}"
 			Background="Transparent"
 			BorderThickness="0"
@@ -209,7 +235,7 @@
 
 		<!-- Separator -->
 		<Line
-			Grid.Column="8"
+			Grid.Column="9"
 			X1="0" Y1="3" X2="0" Y2="26"
 			SnapsToDevicePixels="True"
 			Stroke="#AAA"
@@ -218,7 +244,7 @@
 
 		<!-- Volume -->
 		<Button
-			Grid.Column="9"
+			Grid.Column="10"
 			Command="{Binding ToggleVolume}"
 			ToolTip="Show/Hide the trade volume indicator on the chart"
 			Background="Transparent"
@@ -244,7 +270,7 @@
 
 		<!-- Market Depth -->
 		<Button
-			Grid.Column="10"
+			Grid.Column="11"
 			Command="{Binding ToggleMarketDepth}"
 			ToolTip="Show/Hide the market depth indicator on the chart"
 			Background="Transparent"

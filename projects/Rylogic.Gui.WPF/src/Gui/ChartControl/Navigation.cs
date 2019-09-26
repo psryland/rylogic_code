@@ -103,8 +103,8 @@ namespace Rylogic.Gui.WPF
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
 			{
-				op.GrabClient = location; // Note: in ChartControl space, not ChartPanel space
-				op.GrabChart = ClientToChart(op.GrabClient);
+				op.GrabClient = op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
+				op.GrabChart = op.DropChart = ClientToChart(location);
 				op.HitResult = HitTestCS(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
 				CaptureMouse();
@@ -119,7 +119,11 @@ namespace Rylogic.Gui.WPF
 			if (op != null)
 			{
 				if (!op.Cancelled)
+				{
+					op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
+					op.DropChart = ClientToChart(location);
 					op.MouseMove(args);
+				}
 			}
 			// Otherwise, provide mouse hover detection
 			else if (SceneBounds != Rect_.Zero)
