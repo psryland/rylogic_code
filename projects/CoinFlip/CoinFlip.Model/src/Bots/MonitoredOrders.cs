@@ -65,6 +65,12 @@ namespace CoinFlip.Bots
 		/// <summary>The number of orders not known to be filled</summary>
 		public int Count => Orders.Length;
 
+		/// <summary>Access the order by index</summary>
+		public PersistedOrder this[int i]
+		{
+			get => Orders[i];
+		}
+
 		/// <summary>Add the result of a created trade</summary>
 		public void Add(OrderResult order_result)
 		{

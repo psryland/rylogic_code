@@ -13,13 +13,13 @@
 namespace pr::filesys
 {
 	// Recursively enumerate directories below and including 'path'
-	// PathCB should have a signature: bool (*EnumDirectories)(String pathname)
-	// Returns false if 'EnumDirectories' returns false, indicating that the search ended early
+	// PathCB should have a signature: bool (*DirCB)(void*, std::filesystem::path pathname)
+	// Returns false if 'DirCB' returns false, indicating that the search ended early.
 	template <typename PathCB>
-	bool EnumDirectories(std::filesystem::path const& path, PathCB EnumDirectories)
+	bool EnumDirectories(std::filesystem::path const& path, PathCB DirCB, void* ctx)
 	{
 		// Enum this directory
-		if (!EnumDirectories(path))
+		if (!DirCB(ctx, path))
 			return false;
 
 		// Recurse the directories in this directory
@@ -35,7 +35,7 @@ namespace pr::filesys
 				continue;
 
 			// Recurse into subdirectories
-			if (!EnumDirectories(ff.fullpath2(), EnumDirectories))
+			if (!EnumDirectories(ff.fullpath2(), DirCB, ctx))
 				return false;
 		}
 		return true;
@@ -43,16 +43,16 @@ namespace pr::filesys
 
 	// Recursively enumerate files within and below 'path'
 	// 'file_masks' is a semicolon separated, null terminated, list of file masks
-	// PathCB should have a signature: bool (*file_cb)(FindFiles const& ff)
-	// SkipDirCB should have a signature: bool (*skip_cb)(FindFiles const& ff, int)
-	// Returns false if 'file_cb' returns false, indicating that the search ended early
+	// PathCB should have a signature: bool (*file_cb)(void*, FindFiles const& ff)
+	// SkipDirCB should have a signature: bool (*skip_cb)(void*, FindFiles const& ff)
+	// Returns false if 'file_cb' returns false, indicating that the search ended early.
 	template <typename PathCB, typename SkipDirCB>
-	bool EnumFiles(std::filesystem::path const& path, wchar_t const* file_masks, PathCB file_cb, SkipDirCB skip_cb)
+	bool EnumFiles(std::filesystem::path const& path, wchar_t const* file_masks, PathCB file_cb, SkipDirCB skip_cb, void* ctx)
 	{
 		// Find the files in this directory
 		for (FindFiles ff(path, file_masks); !ff.done(); ff.next())
 		{
-			if (!file_cb(ff))
+			if (!file_cb(ctx, ff))
 				return false;
 		}
 
@@ -69,11 +69,11 @@ namespace pr::filesys
 
 			// Allow callers to exclude specific directories
 			// Directories will not have trailing '\' characters
-			if (skip_cb(ff, 0))
+			if (skip_cb(ctx, ff))
 				continue;
 
 			// Enumerate the files in this directory
-			if (!EnumFiles(ff.fullpath2(), file_masks, file_cb, skip_cb))
+			if (!EnumFiles(ff.fullpath2(), file_masks, file_cb, skip_cb, ctx))
 				return false;
 		}
 		return true;
@@ -85,7 +85,7 @@ namespace pr::filesys
 	template <typename PathCB>
 	bool EnumFiles(std::filesystem::path const& path, wchar_t const* file_masks, PathCB file_cb)
 	{
-		return EnumFiles(path, file_masks, file_cb, [](FindFiles const&, int){ return false; });
+		return EnumFiles(path, file_masks, file_cb, [](void*, FindFiles const&, int){ return false; });
 	}
 }
 

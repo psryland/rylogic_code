@@ -59,6 +59,11 @@ namespace keyspy
 		}
 
 		// Global keystroke hook
+		static LRESULT _stdcall HookCB(int code, WPARAM wparam, LPARAM lparam)
+		{
+			me->Hook(code, wparam, lparam);
+			return CallNextHookEx(nullptr, code, wparam, lparam);
+		}
 		void Hook(int code, WPARAM wparam, LPARAM lparam)
 		{
 			if (code != HC_ACTION)
@@ -96,11 +101,6 @@ namespace keyspy
 			// Detect magic commands
 			if (wparam == WM_KEYUP)
 				CheckMagicCommands(p.vkCode);
-		}
-		static LRESULT _stdcall HookCB(int code, WPARAM wparam, LPARAM lparam)
-		{
-			me->Hook(code, wparam, lparam);
-			return CallNextHookEx(nullptr, code, wparam, lparam);
 		}
 
 		// Decode a stream of key data
@@ -200,6 +200,7 @@ namespace keyspy
 
 extern "C"
 {
+	// Rundll32.exe exported entry point function
 	__declspec(dllexport) void _stdcall EntryPoint(HWND hwnd, HINSTANCE hinst, LPSTR cmd_line, int)
 	{
 		try
@@ -218,6 +219,34 @@ extern "C"
 		{
 			assert(false && ex.what());
 		}
+	}
+
+	// Executable entry point
+	int __stdcall wWinMain(HINSTANCE hinst, HINSTANCE, LPWSTR cmd_line, int)
+	{
+		try
+		{
+			int argc = 0;
+			auto argv = CommandLineToArgvW(cmd_line, &argc);
+			if (argc <= 1)
+			{
+				keyspy::KBSniffer sniff(nullptr, hinst);
+				sniff.Pump();
+			}
+			else
+			{
+			}
+			return 0;
+		}
+		catch (std::exception const& ex)
+		{
+			assert(false && ex.what());
+			return -1;
+		}
+	}
+	int main(int argc, char* argv[])
+	{
+
 	}
 }
 

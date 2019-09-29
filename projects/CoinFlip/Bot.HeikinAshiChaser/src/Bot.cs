@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using CoinFlip;
 using CoinFlip.Bots;
+using Rylogic.Common;
 using Rylogic.Plugin;
 using Rylogic.Utility;
 
@@ -32,7 +33,50 @@ namespace Bot.HeikinAshiChaser
 		}
 
 		/// <summary>Bot settings</summary>
-		public SettingsData Settings { get; }
+		public SettingsData Settings
+		{
+			get => m_settings;
+			set
+			{
+				if (m_settings == value) return;
+				if (m_settings != null)
+				{
+					m_settings.SettingChange -= HandleSettingChange;
+				}
+				m_settings = value;
+				if (m_settings != null)
+				{
+					SetInstrument();
+					m_settings.SettingChange += HandleSettingChange;
+				}
+
+				// Handle setting change
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					switch (e.Key)
+					{
+					case nameof(SettingsData.Exchange):
+					case nameof(SettingsData.Pair):
+					case nameof(SettingsData.TimeFrame):
+						{
+							SetInstrument();
+							break;
+						}
+					}
+				}
+			}
+		}
+		private SettingsData m_settings;
+
+		/// <summary></summary>
+		public Exchange Exchange => !string.IsNullOrEmpty(Settings.Exchange) ? Model.Exchanges[Settings.Exchange] : null;
+
+		/// <summary></summary>
+		public TradePair Pair => Exchange != null && !string.IsNullOrEmpty(Settings.Pair) ? Exchange.Pairs[Settings.Pair] : null;
+
+		/// <summary></summary>
+		public ETimeFrame TimeFrame => Settings.TimeFrame;
 
 		/// <summary></summary>
 		public Instrument Instrument
@@ -60,19 +104,12 @@ namespace Bot.HeikinAshiChaser
 			}
 		}
 		private Instrument m_instrument;
-
-		/// <summary>Step this bot after each candle close</summary>
-		public override DateTimeOffset NextStepTime
+		private void SetInstrument()
 		{
-			get
-			{
-				var latest = Instrument.Latest;
-				return latest != null ? latest.CloseTime(Instrument.TimeFrame) : base.NextStepTime;
-			}
+			Instrument = Pair != null && TimeFrame != ETimeFrame.None
+				? new Instrument(Name, Model.PriceData[Pair, TimeFrame])
+				: null;
 		}
-
-		/// <summary>True if the bot is ok to run</summary>
-		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
 
 		/// <summary>Configure</summary>
 		protected override Task ConfigureInternal(object owner)
@@ -88,28 +125,48 @@ namespace Bot.HeikinAshiChaser
 		}
 		private ConfigureUI m_config_ui;
 
+		/// <summary>Step this bot after each candle close</summary>
+		public override DateTimeOffset NextStepTime => m_next_step_time ?? base.NextStepTime;
+		private DateTimeOffset? m_next_step_time;
+
+		/// <summary>True if the bot is ok to run</summary>
+		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
+
 		/// <summary>Step the bot</summary>
-		protected override Task StepInternal()
+		protected override async Task StepInternal()
 		{
-			// Buy on a green candle with the SAR below the price
-			// Sell on a colour flip
+			if (Instrument?.Count == 0)
+				return;
 
-			if (Instrument == null)
+			var latest = Instrument.Latest;
+			m_next_step_time = latest.CloseTime(TimeFrame);
+
+			// Use the fund balance to determine if we're long/short
+
+
+			// No current pending order
+			if (Settings.PendingOrders.Count == 0)
 			{
-				var exchange = Model.Exchanges[Settings.Exchange];
-				var pair = exchange.Pairs[Settings.Pair];
-				var price_data = Model.PriceData[pair, Settings.TimeFrame];
-				Instrument = new Instrument(Name, price_data);
+
+				// Create a trade in the directory indicated by the candle
+				if (latest.Bullish)
+				{
+					var trade = new Trade(Fund, Pair, EOrderType.Market, ETradeType.Q2B, 0, 0);
+					var result = await trade.CreateOrder(Shutdown);
+					Settings.PendingOrders.Add(result);
+				}
+				else
+				{
+					var trade = new Trade(Fund, Pair, EOrderType.Market, ETradeType.B2Q, 0, 0);
+					var result = await trade.CreateOrder(Shutdown);
+					Settings.PendingOrders.Add(result);
+				}
 			}
-			if (Instrument.Count == 0)
+			else
 			{
-				return Task.CompletedTask;
+				// If the candle trend doesn't match the current trade
+
 			}
-
-			// 
-
-
-			return Task.CompletedTask;
 		}
 	}
 }

@@ -231,7 +231,7 @@ def Compile(
 
 	# Get the compiler path
 	cl = CompilerPath()
-	sw += DefaultSwitches
+	sw = list(set(sw + DefaultSwitches))
 	defines += DefaultDefines
 	includes += DefaultIncludes
 	libpaths += DefaultLibPaths
@@ -247,6 +247,8 @@ def Compile(
 	# Pull the filepath apart
 	dir, file = os.path.split(files[0])
 	fname = os.path.splitext(file)[0]
+	if dir.lower().endswith("src"):
+		dir = os.path.abspath(os.path.join(dir, ".."))
 
 	# Default the output directory to the same path as the input file
 	outdir = os.path.abspath(outdir if outdir else os.path.join(dir,"obj"))
