@@ -403,7 +403,7 @@ namespace Rylogic.Maths
 				}
 
 				#region Sub Functions
-				Action<Matrix,int,int,Matrix,int,int,Matrix,int> SafeAplusBintoC = (Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz) =>
+				static void SafeAplusBintoC(Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 					{
@@ -414,8 +414,8 @@ namespace Rylogic.Maths
 							if (xb + j < B.Cols && yb + i < B.Rows) C[i, j] += B[yb + i, xb + j];
 						}
 					}
-				};
-				Action<Matrix,int,int,Matrix,int,int,Matrix,int> SafeAminusBintoC = (Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz) =>
+				}
+				static void SafeAminusBintoC(Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 					{
@@ -426,8 +426,8 @@ namespace Rylogic.Maths
 							if (xb + j < B.Cols && yb + i < B.Rows) C[i, j] -= B[yb + i, xb + j];
 						}
 					}
-				};
-				Action<Matrix,int,int,Matrix,int> SafeACopytoC = (Matrix A, int xa, int ya, Matrix C, int sz) =>
+				}
+				static void SafeACopytoC(Matrix A, int xa, int ya, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 					{
@@ -437,27 +437,26 @@ namespace Rylogic.Maths
 							if (xa + j < A.Cols && ya + i < A.Rows) C[i, j] += A[ya + i, xa + j];
 						}
 					}
-				};
-				Action<Matrix,int,int,Matrix,int,int,Matrix,int> AplusBintoC = (Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz) =>
+				}
+				static void AplusBintoC(Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 						for (int j = 0; j < sz; j++)
 							C[i, j] = A[ya + i, xa + j] + B[yb + i, xb + j];
-				};
-				Action<Matrix,int,int,Matrix,int,int,Matrix,int> AminusBintoC = (Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz) =>
+				}
+				static void AminusBintoC(Matrix A, int xa, int ya, Matrix B, int xb, int yb, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 						for (int j = 0; j < sz; j++)
 							C[i, j] = A[ya + i, xa + j] - B[yb + i, xb + j];
-				};
-				Action<Matrix,int,int,Matrix,int> ACopytoC = (Matrix A, int xa, int ya, Matrix C, int sz) =>
+				}
+				static void ACopytoC(Matrix A, int xa, int ya, Matrix C, int sz)
 				{
 					for (int i = 0; i < sz; i++) // rows
 						for (int j = 0; j < sz; j++)
 							C[i, j] = A[ya + i, xa + j];
-				};
-				Action<Matrix,Matrix,Matrix,int,Matrix[,]> StrassenMultiplyRun = null;
-				StrassenMultiplyRun = (Matrix A, Matrix B, Matrix C, int l, Matrix[,] f) =>
+				}
+				static void StrassenMultiplyRun(Matrix A, Matrix B, Matrix C, int l, Matrix[,] f)
 				{
 					// A * B into C, level of recursion, matrix field
 					// function for square matrix 2^N x 2^N
@@ -524,7 +523,7 @@ namespace Rylogic.Maths
 					for (int i = hh; i < sz; i++) // rows
 						for (int j = hh; j < sz; j++) // cols
 							C[i, j] = f[l, 1 + 1][i - hh, j - hh] - f[l, 1 + 2][i - hh, j - hh] + f[l, 1 + 3][i - hh, j - hh] + f[l, 1 + 6][i - hh, j - hh];
-				};
+				}
 				#endregion
 
 				SafeAplusBintoC(lhs, 0, 0, lhs, h, h, field[0, 0], h);

@@ -358,7 +358,7 @@ namespace Rylogic.Utility
 		public static bool GreaterEql(T a, T b) { return !Less(a,b); }
 
 		/// <summary>ToString with formatting</summary>
-		public static string ToString(T a)                                 { return a.ToString(); }
+		public static string ToString(T a)                                 { return a?.ToString() ?? string.Empty; }
 		public static string ToString(T a, IFormatProvider fp)             { return m_tostring1(a, fp); }
 		public static string ToString(T a, string fmt)                     { return m_tostring2(a, fmt); }
 		public static string ToString(T a, string fmt, IFormatProvider fp) { return m_tostring3(a, fmt, fp); }
@@ -370,7 +370,7 @@ namespace Rylogic.Utility
 		public static bool TryParse(string str, out T val)
 		{
 			try   { val = Parse(str); return true; }
-			catch { val = default(T); return false; }
+			catch { val = default!; return false; }
 		}
 		public static T Parse(string str) { return m_parse(str); }
 		private static Func<string, T> m_parse;

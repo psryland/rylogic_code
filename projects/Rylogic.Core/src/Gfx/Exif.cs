@@ -417,7 +417,18 @@ namespace Rylogic.Gfx
 		{
 			public const int FieldDataSizeInBytes = 4;
 			public const int SizeInBytes = 12;
-			public readonly static Field Null = new Field(Tag.Invalid, TiffDataType.Undefined, 0, new byte[FieldDataSizeInBytes]);
+			public readonly static Field Null = new Field();
+
+			public Field()
+				: this(Tag.Invalid, TiffDataType.Undefined, 0, new byte[FieldDataSizeInBytes])
+			{}
+			public Field(Tag tag, TiffDataType dt, uint count, byte[] data)
+			{
+				Tag = tag;
+				DataType = dt;
+				Count = count;
+				Data = data;
+			}
 
 			public Tag          Tag;
 			public TiffDataType DataType;
@@ -482,14 +493,6 @@ namespace Rylogic.Gfx
 				get { return Encoding.UTF8.GetString(Data, 0, Data.Length); }
 			}
 
-			public Field() {}
-			public Field(Tag tag, TiffDataType dt, uint count, byte[] data)
-			{
-				Tag      = tag;
-				DataType = dt;
-				Count    = count;
-				Data     = data;
-			}
 			public override string ToString()
 			{
 				var s = Tag.ToString() + ": ";
@@ -590,9 +593,9 @@ namespace Rylogic.Gfx
 		private abstract class ExifDataBase<Elem> :IExifData ,IExifDataInternal
 		{
 			protected readonly Dictionary<Tag, Elem> m_ifd = new Dictionary<Tag, Elem>();
-			protected ExifDataBase<Elem> m_sub_ifd;
-			protected ExifDataBase<Elem> m_gps_ifd;
-			protected ExifDataBase<Elem> m_nxt_ifd;
+			protected ExifDataBase<Elem>? m_sub_ifd;
+			protected ExifDataBase<Elem>? m_gps_ifd;
+			protected ExifDataBase<Elem>? m_nxt_ifd;
 
 			public override string ToString()
 			{
@@ -711,8 +714,8 @@ namespace Rylogic.Gfx
 		private class Data :ExifDataBase<Field>, IExifData ,IExifDataInternal
 		{
 			/// <summary>Jpg thumbnail data</summary>
-			public override byte[] Thumbnail { get { return m_Thumbnail; } }
-			private byte[] m_Thumbnail;
+			public override byte[] Thumbnail => m_Thumbnail;
+			private byte[] m_Thumbnail = new byte[0];
 
 			/// <summary>Returns access to the sub IFD table</summary>
 			public override IExifDataInternal SubIfd { get { return m_sub_ifd ?? (m_sub_ifd = new Data()); } }
@@ -759,27 +762,33 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>An index for the exif data in a jpg image</summary>
-		private class Index :ExifDataBase<long>, IExifData ,IExifDataInternal ,IDisposable
+		private class Index :ExifDataBase<long>, IExifData, IExifDataInternal, IDisposable
 		{
 			private readonly BinaryReaderEx m_br;
 			private long m_tiff_header_start;
 			private long m_thumbnail_offset;
 			private int m_thumbnail_length;
 
-			public Index(Stream stream) { m_br = new BinaryReaderEx(stream); }
-			public void Dispose() { m_br.Dispose(); }
+			public Index(Stream stream)
+			{
+				m_br = new BinaryReaderEx(stream);
+			}
+			public void Dispose()
+			{
+				m_br.Dispose();
+			}
 
 			/// <summary>Jpg thumbnail data</summary>
-			public override byte[] Thumbnail { get { return m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : null; } }
+			public override byte[] Thumbnail => m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : new byte[0];
 
 			/// <summary>Returns access to the sub IFD table</summary>
-			public override IExifDataInternal SubIfd { get { return m_sub_ifd ?? (m_sub_ifd = new Index(m_br.BaseStream)); } }
+			public override IExifDataInternal SubIfd => m_sub_ifd ?? (m_sub_ifd = new Index(m_br.BaseStream));
 
 			/// <summary>Returns access to the gps IFD table</summary>
-			public override IExifDataInternal GpsIfd { get { return m_gps_ifd ?? (m_gps_ifd = new Index(m_br.BaseStream)); } }
+			public override IExifDataInternal GpsIfd => m_gps_ifd ?? (m_gps_ifd = new Index(m_br.BaseStream));
 
 			/// <summary>Returns access to the next IFD table</summary>
-			public override IExifDataInternal NextIfd { get { return m_nxt_ifd ?? (m_nxt_ifd = new Index(m_br.BaseStream)); } }
+			public override IExifDataInternal NextIfd => m_nxt_ifd ?? (m_nxt_ifd = new Index(m_br.BaseStream));
 
 			/// <summary>Return the field associated with 'tag'</summary>
 			public override Field Field(Tag tag, bool recursive)
@@ -873,15 +882,17 @@ namespace Rylogic.Gfx
 		/// <summary>Saves the exif data in 'exif_data' into 'dst'. Any existing exif data in source is overwritten</summary>
 		public static void Save(string src_file, IExifData exif_data, string dst_file)
 		{
-			using (var src = new FileStream(src_file, FileMode.Open, FileAccess.Read, FileShare.Read))
-			using (var dst = new FileStream(dst_file, FileMode.Create, FileAccess.Write, FileShare.Read))
-				Write(src, exif_data as IExifDataInternal, dst);
+			using var src = new FileStream(src_file, FileMode.Open, FileAccess.Read, FileShare.Read);
+			using var dst = new FileStream(dst_file, FileMode.Create, FileAccess.Write, FileShare.Read);
+			if (exif_data is IExifDataInternal data)
+				Write(src, data, dst);
 		}
 
 		/// <summary>Saves the exif data in 'exif_data' into 'dst'. Any existing exif data in source is overwritten</summary>
 		public static void Save(Stream src, IExifData exif_data, Stream dst)
 		{
-			Write(src, exif_data as IExifDataInternal, dst);
+			if (exif_data is IExifDataInternal data)
+				Write(src, data, dst);
 		}
 
 		/// <summary>Parse a jpg image for its exif data</summary>
@@ -1394,8 +1405,8 @@ namespace Rylogic.UnitTests
 
 	[TestFixture] public class TestExif
 	{
-		private string SrcImageWith;
-		private string SrcImageWithout;
+		private string SrcImageWith = string.Empty;
+		private string SrcImageWithout = string.Empty;
 
 		[TestFixtureSetUp] public void Setup()
 		{

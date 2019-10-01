@@ -576,7 +576,7 @@ namespace Rylogic.Common
 
 	/// <summary>A floating point range over [Begin,End) on type 'T'</summary>
 	[DebuggerDisplay("{Beg} {End} ({Size})")]
-	public struct RangeF<T> where T:IComparable<T>
+	public struct RangeF<T> where T : struct, IComparable<T>
 	{
 		/// <summary>The value of the first element in the range</summary>
 		public T Beg;
@@ -585,7 +585,7 @@ namespace Rylogic.Common
 		public T End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF<T> Zero = new RangeF<T>{Beg = default(T), End = default(T)};
+		public static readonly RangeF<T> Zero = new RangeF<T>{Beg = default, End = default};
 
 		/// <summary>The default full range</summary>
 		public static readonly RangeF<T> Max = new RangeF<T> { Beg = Operators<T>.MinValue, End = Operators<T>.MaxValue };
@@ -632,25 +632,22 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty
-		{
-			get { return Equals(Beg,End); }
-		}
+		public bool Empty => Equals(Beg, End);
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public T Size
 		{
-			get { return Operators<T>.Sub(End, Beg); }
-			set { End = Operators<T>.Add(Beg, value); }
+			get => Operators<T>.Sub(End, Beg);
+			set => End = Operators<T>.Add(Beg, value);
 		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
 		public T Mid
 		{
-			get { return Operators<T,double>.Mul(Operators<T>.Add(Beg, End), 0.5); }
+			get => Operators<T, double>.Mul(Operators<T>.Add(Beg, End), 0.5);
 			set
 			{
-				var hsize = Operators<T,double>.Mul(Size, 0.5);
+				var hsize = Operators<T, double>.Mul(Size, 0.5);
 				Beg = Operators<T>.Sub(value, hsize);
 				End = Operators<T>.Add(value, hsize);
 			}
@@ -659,28 +656,8 @@ namespace Rylogic.Common
 		/// <summary>Empty the range and reset to [0,0)</summary>
 		public void Clear()
 		{
-			Beg = End = default(T);
+			Beg = End = default;
 		}
-
-	//	// Casting helpers
-	//	public float Begf  { get { return (float)Beg;  } }
-	//	public float Endf  { get { return (float)End;  } }
-	//	public float Sizef { get { return (float)Size; } }
-	//	public float Midf  { get { return (float)Mid;  } }
-
-	//	/// <summary>Enumerator for iterating over the range. 'step' is the step size, 'count' is the number of divisions. Use one or the other, not both. Defaults to step == 1.0</summary>
-	//	public IEnumerable<T> Enumerate(T? step = null, T? count = null)
-	//	{
-	//		var d = 1.0;
-	//		if (step  != null) d = step.Value;
-	//		if (count != null) d = Size / count.Value;
-	//		for (var i = Beg; i <= End; i += d)
-	//			yield return i;
-	//	}
-	//	public IEnumerable<float> Enumeratef(float? step = null, float? count = null)
-	//	{
-	//		return Enumerate(step, count).Select(x => (float)x);
-	//	}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		public bool Contains(T value)

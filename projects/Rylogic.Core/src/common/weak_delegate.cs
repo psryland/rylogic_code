@@ -24,7 +24,7 @@ namespace Rylogic.Common
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenEventHandler m_open_handler;
 		private readonly EventHandler     m_handler;
-		private Action<EventHandler>      m_unregister;
+		private Action<EventHandler>?     m_unregister;
 
 		public WeakHandlerImpl(EventHandler event_handler, Action<EventHandler> unregister)
 		{
@@ -39,10 +39,7 @@ namespace Rylogic.Common
 			if      (target != null)       { m_open_handler.Invoke(target, sender, args); }
 			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
 		}
-		public EventHandler Handler
-		{
-			get { return m_handler; }
-		}
+		public EventHandler Handler => m_handler;
 		public static implicit operator EventHandler(WeakHandlerImpl<T> weh)
 		{
 			return weh.m_handler;
@@ -54,7 +51,7 @@ namespace Rylogic.Common
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenEventHandler m_open_handler;
 		private readonly EventHandler<E>  m_handler;
-		private Action<EventHandler<E>>   m_unregister;
+		private Action<EventHandler<E>>?  m_unregister;
 
 		public WeakHandlerImpl(EventHandler<E> event_handler, Action<EventHandler<E>> unregister)
 		{
@@ -69,7 +66,7 @@ namespace Rylogic.Common
 			if      (target != null)       { m_open_handler.Invoke(target, sender, e); }
 			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
 		}
-		public EventHandler<E> Handler                                              { get { return m_handler; } }
+		public EventHandler<E> Handler => m_handler;
 		public static implicit operator EventHandler<E>(WeakHandlerImpl<T, E> weh) { return weh.m_handler; }
 	}
 
@@ -80,7 +77,7 @@ namespace Rylogic.Common
 		private readonly WeakReference m_target_ref;
 		private readonly OpenAction    m_open_action;
 		private readonly Action        m_handler;
-		private Action<Action>         m_unregister;
+		private Action<Action>?        m_unregister;
 
 		public WeakActionImpl(Action action, Action<Action> unregister)
 		{
@@ -104,7 +101,7 @@ namespace Rylogic.Common
 		private readonly WeakReference m_target_ref;
 		private readonly OpenAction    m_open_action;
 		private readonly Action<T1>    m_handler;
-		private Action<Action<T1>>     m_unregister;
+		private Action<Action<T1>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1> action, Action<Action<T1>> unregister)
 		{
@@ -128,7 +125,7 @@ namespace Rylogic.Common
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenAction       m_open_action;
 		private readonly Action<T1,T2>    m_handler;
-		private Action<Action<T1,T2>>     m_unregister;
+		private Action<Action<T1,T2>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2> action, Action<Action<T1,T2>> unregister)
 		{
@@ -152,7 +149,7 @@ namespace Rylogic.Common
 		private readonly WeakReference       m_target_ref;
 		private readonly OpenAction          m_open_action;
 		private readonly Action<T1,T2,T3>    m_handler;
-		private Action<Action<T1,T2,T3>>     m_unregister;
+		private Action<Action<T1,T2,T3>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2,T3> action, Action<Action<T1,T2,T3>> unregister)
 		{
@@ -176,7 +173,7 @@ namespace Rylogic.Common
 		private readonly WeakReference          m_target_ref;
 		private readonly OpenAction             m_open_action;
 		private readonly Action<T1,T2,T3,T4>    m_handler;
-		private Action<Action<T1,T2,T3,T4>>     m_unregister;
+		private Action<Action<T1,T2,T3,T4>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2,T3,T4> action, Action<Action<T1,T2,T3,T4>> unregister)
 		{
@@ -191,8 +188,8 @@ namespace Rylogic.Common
 			if      (target != null)       { m_open_action.Invoke(target, arg1, arg2, arg3, arg4); }
 			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
 		}
-		public Action<T1,T2,T3,T4> Handler                                                         { get { return m_handler; } }
-		public static implicit operator Action<T1,T2,T3,T4>(WeakActionImpl<T,T1,T2,T3,T4> weak_action) { return weak_action.m_handler; }
+		public Action<T1, T2, T3, T4> Handler => m_handler;
+		public static implicit operator Action<T1, T2, T3, T4>(WeakActionImpl<T, T1, T2, T3, T4> weak_action) => weak_action.m_handler;
 	}
 
 	public static class WeakRef
@@ -200,8 +197,7 @@ namespace Rylogic.Common
 		/// <summary>Returns the target of the reference or null</summary>
 		public static T Target<T>(this WeakReference<T> wref) where T : class
 		{
-			T x;
-			return wref.TryGetTarget(out x) ? x : null;
+			return wref.TryGetTarget(out var x) ? x : null!;
 		}
 
 		/// <summary>
@@ -312,10 +308,17 @@ namespace Rylogic.UnitTests
 		private static readonly List<string> hit       = new List<string>();
 		private class Gun
 		{
-			public event EventHandler Firing;
-			public event Action<Gun> Bang;
-			public event EventHandler<FiredArgs> Fired;
-			public class FiredArgs :EventArgs { public string Noise { get; set; } }
+			public event EventHandler? Firing;
+			public event Action<Gun>? Bang;
+			public event EventHandler<FiredArgs>? Fired;
+			public class FiredArgs :EventArgs
+			{
+				public FiredArgs(string noise)
+				{
+					Noise = noise;
+				}
+				public string Noise { get; }
+			}
 
 			~Gun()
 			{
@@ -325,7 +328,7 @@ namespace Rylogic.UnitTests
 			{
 				Firing?.Invoke(this, EventArgs.Empty);
 				Bang?.Invoke(this);
-				Fired?.Invoke(this, new FiredArgs{Noise = "Bang!"});
+				Fired?.Invoke(this, new FiredArgs("Bang!"));
 			}
 		}
 		private class Target
@@ -349,8 +352,8 @@ namespace Rylogic.UnitTests
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		void WeakActionsShootTargets(Gun gun)
 		{
-			var bob = new Target("bob");
-			var fred = new Target("fred");
+			Target? bob  = new Target("bob");
+			Target? fred = new Target("fred");
 			gun.Bang += WeakRef.MakeWeak<Gun>(bob.OnHit, h => gun.Bang -= h);
 			gun.Bang += fred.OnHit;
 			gun.Shoot();
@@ -367,7 +370,7 @@ namespace Rylogic.UnitTests
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		void WeakEventHandlersShootTargets(Gun gun)
 		{
-			var bob = new Target("bob");
+			Target? bob = new Target("bob");
 			gun.Firing += WeakRef.MakeWeak(bob.OnFiring, eh => gun.Firing -= eh);
 			gun.Bang   += WeakRef.MakeWeak<Gun>(bob.OnHit, eh => gun.Bang -= eh);
 			gun.Fired  += WeakRef.MakeWeak<Gun.FiredArgs>(bob.OnFired, eh => gun.Fired -= eh);

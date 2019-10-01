@@ -47,10 +47,10 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Raised when 'Value' changes. Careful, raised on the thread that changes the top status message</summary>
-		public static event EventHandler ValueChanged;
+		public static event EventHandler? ValueChanged;
 
 		/// <summary>Factory for producing status message instances</summary>
-		public static IStatusMessage NewStatusMessage(string message = null)
+		public static IStatusMessage NewStatusMessage(string? message = null)
 		{
 			return new StatusMessage(message);
 		}
@@ -60,7 +60,7 @@ namespace Rylogic.Utility
 		private class StatusMessage : IStatusMessage
 		{
 			private readonly StringBuilder m_sb;
-			public StatusMessage(string message)
+			public StatusMessage(string? message)
 			{
 				m_sb = new StringBuilder(message ?? string.Empty);
 				lock (MessageStack)

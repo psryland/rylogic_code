@@ -44,11 +44,12 @@ namespace Rylogic.Common
 			m_watched = new List<IWatcher>();
 			m_changed = new List<IWatcher>();
 			m_shutdown = shutdown ?? CancellationToken.None;
+			m_cancel = null;
 		}
 		public FileWatch(CancellationToken? shutdown, ChangedHandler on_changed, params string[] files)
 			:this(shutdown, on_changed, 0, null, files)
 		{}
-		public FileWatch(CancellationToken? shutdown, ChangedHandler on_changed, int id, object ctx, params string[] files)
+		public FileWatch(CancellationToken? shutdown, ChangedHandler on_changed, int id, object? ctx, params string[] files)
 			:this(shutdown)
 		{
 			foreach (string file in files)
@@ -63,14 +64,14 @@ namespace Rylogic.Common
 		/// <summary>Get/Set the auto-polling period. If the period is 0 polling is disabled</summary>
 		public TimeSpan PollPeriod
 		{
-			get { return m_poll_period; }
+			get => m_poll_period;
 			set
 			{
 				if (m_disposed) throw new ObjectDisposedException("FileWatch disposed. Do not set PollPeriod");
 				if (m_poll_period == value) return;
 				if (m_poll_period != TimeSpan.Zero)
 				{
-					m_cancel.Cancel();
+					m_cancel?.Cancel();
 					m_cancel = null;
 				}
 				m_poll_period = value;
@@ -95,7 +96,7 @@ namespace Rylogic.Common
 				}
 			}
 		}
-		private CancellationTokenSource m_cancel;
+		private CancellationTokenSource? m_cancel;
 		private TimeSpan m_poll_period;
 
 		/// <summary>The collection of watched paths</summary>
@@ -109,7 +110,7 @@ namespace Rylogic.Common
 		{
 			Add(path, on_changed, 0, null);
 		}
-		public void Add(string path, ChangedHandler on_changed, int id, object ctx)
+		public void Add(string path, ChangedHandler on_changed, int id, object? ctx)
 		{
 			Remove(path);
 			if (Path_.IsDirectory(path))
@@ -117,7 +118,7 @@ namespace Rylogic.Common
 			else
 				m_watched.Add(new WatchedFile(path, on_changed, id, ctx));
 		}
-		public void Add(IEnumerable<string> paths, ChangedHandler on_changed, int id = 0, object ctx = null)
+		public void Add(IEnumerable<string> paths, ChangedHandler on_changed, int id = 0, object? ctx = null)
 		{
 			foreach (var f in paths)
 				Add(f, on_changed, id, ctx);
@@ -149,7 +150,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Check the collection of filepaths for those that have changed</summary>
-		public void CheckForChangedFiles(object sender = null, EventArgs args = null)
+		public void CheckForChangedFiles(object? sender = null, EventArgs? args = null)
 		{
 			// Prevent reentrancy.
 			// This is not done in a worker thread because the main blocking call is
@@ -171,7 +172,7 @@ namespace Rylogic.Common
 		/// Item changed callback. Return true if the change was handled.
 		/// Returning false causes the FileChanged notification to happen
 		/// again next time CheckForChangedFiles() is called. </summary>
-		public delegate bool ChangedHandler(string filepath, object ctx);
+		public delegate bool ChangedHandler(string filepath, object? ctx);
 
 		/// <summary>Interface for a watch on the file system</summary>
 		private interface IWatcher
@@ -192,14 +193,14 @@ namespace Rylogic.Common
 		/// <summary></summary>
 		private class WatchedFile : IWatcher
 		{
-			public readonly FileInfo m_info;               // File info
+			public readonly FileInfo m_info;           // File info
 			public readonly ChangedHandler m_onchange; // The client to callback when a changed file is found
-			public readonly object m_ctx;                  // User provided context data
-			public bool m_exists0, m_exists1;              // Whether the file existed last time we checked
-			public long m_stamp0, m_stamp1;                // The last time the file was modified
-			public long m_size0, m_size1;                  // The last recorded size of the file
+			public readonly object? m_ctx;             // User provided context data
+			public bool m_exists0, m_exists1;          // Whether the file existed last time we checked
+			public long m_stamp0, m_stamp1;            // The last time the file was modified
+			public long m_size0, m_size1;              // The last recorded size of the file
 
-			public WatchedFile(string filepath, ChangedHandler onchange, int id, object ctx)
+			public WatchedFile(string filepath, ChangedHandler onchange, int id, object? ctx)
 			{
 				Path = filepath;
 				m_onchange = onchange;
@@ -262,9 +263,9 @@ namespace Rylogic.Common
 		{
 			private readonly Dictionary<string, WatchedFile> m_files; // The files in 'Path'
 			private readonly ChangedHandler m_onchange; // The client to callback when a file is changed within the directory
-			private readonly object m_ctx;
+			private readonly object? m_ctx;
 
-			public WatchedDir(string dirpath, ChangedHandler onchange, int id, object ctx)
+			public WatchedDir(string dirpath, ChangedHandler onchange, int id, object? ctx)
 			{
 				m_files = new Dictionary<string, WatchedFile>();
 				Path = dirpath;

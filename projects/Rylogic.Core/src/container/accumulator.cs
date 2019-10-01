@@ -7,7 +7,7 @@ namespace Rylogic.Container
 	{
 		public new TValue this[TKey key]
 		{
-			get { return TryGetValue(key, out var count) ? count : default(TValue); }
+			get { return TryGetValue(key, out var count) ? count : default!; }
 			set { base[key] = value; }
 		}
 	}

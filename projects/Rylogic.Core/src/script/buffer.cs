@@ -9,34 +9,35 @@ namespace Rylogic.Script
 		private readonly StringBuilder m_buf;
 		private readonly Src m_src;
 
-		public Buffer(Src src)                { m_buf = new StringBuilder(); m_src = src; }
-		public override void Dispose()        { m_buf.Clear(); m_src.Dispose(); }
-		public override SrcType SrcType       { get { return m_src.SrcType; } }
-		public override Loc Location          { get { return m_src.Location; } }
+		public Buffer(Src src)
+		{
+			m_buf = new StringBuilder();
+			m_src = src;
+		}
+		protected override void Dispose(bool _)
+		{
+			m_buf.Clear();
+			m_src.Dispose();
+			base.Dispose(_);
+		}
+
+		/// <summary></summary>
+		public override SrcType SrcType => m_src.SrcType;
+
+		/// <summary></summary>
+		public override Loc Location => m_src.Location;
 
 		/// <summary>The source being read from into the buffer</summary>
-		public Src  Src
-		{
-			get { return m_src; }
-		}
+		public Src Src => m_src;
 
 		/// <summary>True if the buffer is empty </summary>
-		public bool Empty
-		{
-			get { return m_buf.Length == 0; }
-		}
+		public bool Empty => m_buf.Length == 0;
 
 		/// <summary>The length of the buffered text</summary>
-		public int  Length
-		{
-			get { return m_buf.Length; }
-		}
+		public int Length => m_buf.Length;
 
 		/// <summary>The text buffer contents</summary>
-		public StringBuilder TextBuffer
-		{
-			get { return m_buf; }
-		}
+		public StringBuilder TextBuffer => m_buf;
 
 		/// <summary>Reset the text buffer</summary>
 		public void Clear()
@@ -47,15 +48,15 @@ namespace Rylogic.Script
 		/// <summary>Index access to the text buffer</summary>
 		public char this[int i]
 		{
-			get { Cache(i+1); return m_buf[i]; }
-			set { Cache(i+1); m_buf[i] = value; }
+			get { Cache(i + 1); return m_buf[i]; }
+			set { Cache(i + 1); m_buf[i] = value; }
 		}
 
 		/// <summary>Ensures 'n' characters are cached in the buffer. Negative values of 'n' have no effect</summary>
 		public void Cache(int n = 1)
 		{
 			n -= m_buf.Length;
-			for (; n-- > 0 && m_src.Peek != 0; m_buf.Append(m_src.Peek), m_src.Next()) {}
+			for (; n-- > 0 && m_src.Peek != 0; m_buf.Append(m_src.Peek), m_src.Next()) { }
 		}
 
 		// String compare - note asymmetric, i.e. buf="abcd", str="ab", buf.match(str) == true
@@ -67,7 +68,7 @@ namespace Rylogic.Script
 				return false;
 
 			int i;
-			for (i = 0; i != count && str[i] == m_buf[i]; ++i) {}
+			for (i = 0; i != count && str[i] == m_buf[i]; ++i) { }
 			return i == count;
 		}
 

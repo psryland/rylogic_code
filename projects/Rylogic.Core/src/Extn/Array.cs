@@ -84,7 +84,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Resize an array filling new elements using 'factory'</summary>
-		public static T[] Resize<T>(this T[] arr, int new_size, Func<int,T> factory = null)
+		public static T[] Resize<T>(this T[] arr, int new_size, Func<int,T>? factory = null)
 		{
 			var old_size = arr.Length;
 			Array.Resize(ref arr, new_size);

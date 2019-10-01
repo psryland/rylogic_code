@@ -45,7 +45,7 @@ namespace Rylogic.Plugin
 		}
 
 		/// <summary>Create an instance of 'ty' named 'name'</summary>
-		public Plugins<TInterface> Load(string name, Type ty, object[] args = null, Func<Type, object[], TInterface> factory = null)
+		public Plugins<TInterface> Load(string name, Type ty, object[]? args = null, Func<Type, object[]?, TInterface>? factory = null)
 		{
 			// Create all plugins using the factory callback
 			// This allows plugins to be created on a dispatcher thread using Dispatcher.Invoke
@@ -64,13 +64,13 @@ namespace Rylogic.Plugin
 		}
 
 		/// <summary>Add instances from 'plugin_file'</summary>
-		public Plugins<TInterface> Load(PluginFile file, object[] args = null, Func<Type, object[], TInterface> factory = null)
+		public Plugins<TInterface> Load(PluginFile file, object[]? args = null, Func<Type, object[]?, TInterface>? factory = null)
 		{
 			return Load(file.Name, file.Type, args, factory);
 		}
 
 		/// <summary>Add instances from 'plugin_files'</summary>
-		public Plugins<TInterface> Load(IEnumerable<PluginFile> plugin_files, object[] args = null, Func<Type, object[], TInterface> factory = null)
+		public Plugins<TInterface> Load(IEnumerable<PluginFile> plugin_files, object[]? args = null, Func<Type, object[]?, TInterface>? factory = null)
 		{
 			foreach (var file in plugin_files)
 				Load(file.Name, file.Type, args, factory);
@@ -79,7 +79,7 @@ namespace Rylogic.Plugin
 		}
 
 		/// <summary>Load an instance of each type that implements the interface 'TInterface' in 'ass'</summary>
-		public Plugins<TInterface> Load(Assembly ass, object[] args = null, Func<Type, object[], TInterface> factory = null)
+		public Plugins<TInterface> Load(Assembly ass, object[]? args = null, Func<Type, object[]?, TInterface>? factory = null)
 		{
 			foreach (var type in ass.GetExportedTypes())
 			{
@@ -94,7 +94,7 @@ namespace Rylogic.Plugin
 		}
 
 		/// <summary>Loads an instance of each type found in 'directory' that is flagged with the plugin attribute and implements 'TInterface'</summary>
-		public Plugins<TInterface> Load(string directory, object[] args = null, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern, Func<Type, object[], TInterface> factory = null, Func<string, float, bool> progress = null)
+		public Plugins<TInterface> Load(string directory, object[]? args = null, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern, Func<Type, object[]?, TInterface>? factory = null, Func<string, float, bool>? progress = null)
 		{
 			// Default callbacks
 			progress = progress ?? ((s, p) => true);

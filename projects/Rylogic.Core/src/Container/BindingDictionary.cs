@@ -7,6 +7,8 @@ using System.Diagnostics;
 using Rylogic.Common;
 using Rylogic.Utility;
 
+#nullable disable
+
 namespace Rylogic.Container
 {
 	[DebuggerDisplay("Count={Count}")]
@@ -661,7 +663,7 @@ namespace Rylogic.Container
 		{
 			AssertListAccess();
 
-			var key = KeyFrom(value);
+			var key = KeyFrom!(value);
 			Insert(key, value, index);
 		}
 

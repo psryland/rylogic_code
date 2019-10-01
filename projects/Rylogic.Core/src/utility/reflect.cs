@@ -178,16 +178,15 @@ namespace Rylogic.Utility
 
 		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
-		public static string Desc(string member_name)
+		public static string? Desc(string member_name)
 		{
 			var d0 = Attrs(member_name).OfType<DescAttribute>().FirstOrDefault();
-			if (d0 != null) return d0.Str;
-			return null;
+			return d0 != null ? d0.Str : null;
 		}
 
 		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
-		public static string Desc<Ret>(Expression<Func<T,Ret>> expression)
+		public static string? Desc<Ret>(Expression<Func<T,Ret>> expression)
 		{
 			var d0 = Attrs(expression).OfType<DescAttribute>().FirstOrDefault();
 			if (d0 != null) return d0.Str;
@@ -198,7 +197,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
-		public static string Desc(Expression<Action<T>> expression)
+		public static string? Desc(Expression<Action<T>> expression)
 		{
 			var d0 = Attrs(expression).OfType<DescAttribute>().FirstOrDefault();
 			if (d0 != null) return d0.Str;
@@ -243,7 +242,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Returns the item of type 'Ret' associated with the member named 'member_name'</summary>
 		[DebuggerStepThrough]
-		public static Ret Assoc<Ret>(string member_name, string name = null)
+		public static Ret Assoc<Ret>(string member_name, string? name = null)
 		{
 			var attr = Attrs(member_name).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
@@ -251,12 +250,12 @@ namespace Rylogic.Utility
 				var with_name = name != null ? $" with name {name}" : string.Empty;
 				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
-			return (Ret)attr.AssocItem;
+			return (Ret)attr.AssocItem!;
 		}
 
 		/// <summary>Returns the item of type 'Ret' associated with the member returned in 'expression'</summary>
 		[DebuggerStepThrough]
-		public static Ret Assoc<Ret,Res>(Expression<Func<T,Res>> expression, string name = null)
+		public static Ret Assoc<Ret,Res>(Expression<Func<T,Res>> expression, string? name = null)
 		{
 			var attr = Attrs(expression).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
@@ -264,12 +263,12 @@ namespace Rylogic.Utility
 				var with_name = name != null ? $" with name {name}" : string.Empty;
 				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
-			return (Ret)attr.AssocItem;
+			return (Ret)attr.AssocItem!;
 		}
 
 		/// <summary>Returns the item of type 'Ret' associated with the member returned in 'expression'</summary>
 		[DebuggerStepThrough]
-		public static Ret Assoc<Ret>(Expression<Action<T>> expression, string name = null)
+		public static Ret Assoc<Ret>(Expression<Action<T>> expression, string? name = null)
 		{
 			var attr = Attrs(expression).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
@@ -277,7 +276,7 @@ namespace Rylogic.Utility
 				var with_name = name != null ? $" with name {name}" : string.Empty;
 				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
-			return (Ret)attr.AssocItem;
+			return (Ret)attr.AssocItem!;
 		}
 
 		#endregion

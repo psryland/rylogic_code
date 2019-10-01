@@ -54,6 +54,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
+#nullable disable
+
 namespace Rylogic.INet
 {
 	public class Markdown

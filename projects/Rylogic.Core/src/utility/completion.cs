@@ -13,12 +13,18 @@ namespace Rylogic.Utility
 		{
 			m_lock = new object();
 			m_mre = new ManualResetEventSlim(false);
+			m_result = default!;
+			m_exception = null;
 			Type = EType.NotComplete;
 		}
 		public void Dispose()
 		{
-			Util.Dispose(ref m_mre, gc_ok:true);
+			Dispose(true);
 			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			Util.Dispose(ref m_mre!, gc_ok: true);
 		}
 
 		/// <summary>How the job was completed</summary>
@@ -35,10 +41,7 @@ namespace Rylogic.Utility
 		private EType m_type;
 
 		/// <summary>True if the job has ended</summary>
-		public bool IsCompleted
-		{
-			get { return Type != EType.NotComplete; }
-		}
+		public bool IsCompleted => Type != EType.NotComplete;
 
 		/// <summary>The result of the operation</summary>
 		public T Result
@@ -60,7 +63,7 @@ namespace Rylogic.Utility
 					if (IsCompleted)
 						throw new InvalidOperationException("Job has already completed");
 
-					m_result = value;
+					m_result = value!;
 					Type = EType.Result;
 				}
 			}
@@ -89,9 +92,9 @@ namespace Rylogic.Utility
 		private bool m_cancelled;
 
 		/// <summary>Signal that the job throw an exception</summary>
-		public Exception Exception
+		public Exception? Exception
 		{
-			get { return m_exception; }
+			get => m_exception;
 			set
 			{
 				if (value == null)
@@ -109,7 +112,7 @@ namespace Rylogic.Utility
 				}
 			}
 		}
-		private Exception m_exception;
+		private Exception? m_exception;
 
 		/// <summary>Wait for the job to complete</summary>
 		public void Wait()
@@ -151,14 +154,14 @@ namespace Rylogic.Utility
 		/// <summary>Signal the job as complete</summary>
 		public void Completed()
 		{
-			base.Result = null;
+			base.Result = null!;
 		}
 
 		/// <summary>Hide 'Result' for void results</summary>
 		private new object Result
 		{
-			get { return base.Result; }
-			set { base.Result = value; }
+			get => base.Result;
+			set => base.Result = value;
 		}
 	}
 }

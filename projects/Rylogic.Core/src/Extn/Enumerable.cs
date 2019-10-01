@@ -97,13 +97,13 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Compare sub-ranges within collections for value equality</summary>
-		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len, IEqualityComparer<TSource> comparer = null)
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len, IEqualityComparer<TSource>? comparer = null)
 		{
 			return SequenceEqual(lhs,rhs,0,0,len,comparer);
 		}
 
 		/// <summary>Compare sub-ranges within collections for value equality</summary>
-		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len, IEqualityComparer<TSource> comparer = null)
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len, IEqualityComparer<TSource>? comparer = null)
 		{
 			comparer = comparer ?? EqualityComparer<TSource>.Default;
 			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len), comparer);
@@ -132,7 +132,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>True if this collection is ordered, given by 'order'</summary>
-		public static bool SequenceOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order, IComparer<TSource> comparer = null)
+		public static bool SequenceOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order, IComparer<TSource>? comparer = null)
 		{
 			return source.IsOrdered(order, comparer);
 		}
@@ -144,7 +144,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
-		public static IEnumerable<TSource> ExceptBy<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> rhs, IEqualityComparer<TSource> comparer = null)
+		public static IEnumerable<TSource> ExceptBy<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> rhs, IEqualityComparer<TSource>? comparer = null) where TSource : notnull
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			var exclude = rhs.ToHashSet();
@@ -152,12 +152,12 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
-		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, HashSet<TSource> exclude)
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource>? comparer, HashSet<TSource> exclude)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			return source.Where(x => !exclude.Contains(x, comparer));
 		}
-		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer, params TSource[] rhs)
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource>? comparer, params TSource[] rhs)
 		{
 			return Except(source, comparer, rhs.ToHashSet());
 		}
@@ -197,7 +197,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the indices of 'element' within this collection</summary>
-		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer = null)
+		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource>? comparer = null)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 			var i = 0;
@@ -231,7 +231,7 @@ namespace Rylogic.Extn
 			for (var prev = iter.CurrentThenNext(); !iter.AtEnd && pred(prev, iter.Current); prev = iter.CurrentThenNext()) {}
 			return iter.AtEnd;
 		}
-		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order = ESequenceOrder.Increasing, IComparer<TSource> comparer = null)
+		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order = ESequenceOrder.Increasing, IComparer<TSource>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
 			switch (order)
@@ -245,7 +245,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
-		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet> comparer = null)
+		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet>? comparer = null)
 		{
 			comparer = comparer ?? Eql<TRet>.Default;
 
@@ -255,7 +255,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -279,14 +279,14 @@ namespace Rylogic.Extn
 				return max;
 			}
 		}
-		public static TSource MaxByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static TSource MaxByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
-			if (!source.Any()) return default(TSource);
+			if (!source.Any()) return default!;
 			return source.MaxBy(selector, comparer);
 		}
 
 		/// <summary>Returns the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -310,23 +310,23 @@ namespace Rylogic.Extn
 				return max;
 			}
 		}
-		public static TSource MinByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static TSource MinByOrDefault<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
-			if (!source.Any()) return default(TSource);
+			if (!source.Any()) return default!;
 			return source.MinBy(selector, comparer);
 		}
 
 		/// <summary>Returns the sum of the values in the collection</summary>
 		public static TValue Sum<TSource,TValue>(this IEnumerable<TSource> source, Func<TSource, TValue> selector)
 		{
-			var sum = default(TValue);
+			var sum = default(TValue)!;
 			foreach (var x in source)
 				sum = Operators<TValue>.Add(sum, selector(x));
 			return sum;
 		}
 
 		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>
-		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, IComparer<TSource> comparer = null)
+		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, IComparer<TSource>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
 			var dic = new Dictionary<TSource, int>();
@@ -342,13 +342,17 @@ namespace Rylogic.Extn
 		}
 		public class Freq<TSource>
 		{
-			public Freq() { Item = default(TSource); Frequency = 0; }
+			public Freq()
+			{
+				Item = default!;
+				Frequency = 0;
+			}
 			public TSource Item { get; set; }
 			public int Frequency { get; set; }
 		}
 
 		/// <summary>Returns the index of the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static int IndexOfMaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static int IndexOfMaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -376,7 +380,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the index of the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static int IndexOfMinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer = null)
+		public static int IndexOfMinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey>? comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
@@ -450,7 +454,7 @@ namespace Rylogic.Extn
 			while (en.MoveNext())
 			{
 				var item1 = en.Current;
-				var item2 = en.MoveNext() ? en.Current : default(TSource);
+				var item2 = en.MoveNext() ? en.Current : default!;
 				yield return Tuple.Create(item1,item2);
 			}
 		}
@@ -472,7 +476,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
-		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T> comparer = null)
+		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 
@@ -505,7 +509,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
-		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
+		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 
@@ -525,7 +529,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
-		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
+		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 			var accum = initial_value;
@@ -544,7 +548,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Compare elements with 'other' returning pairs where the elements are not equal</summary>
-		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IEqualityComparer<TSource> comparer = null)
+		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IEqualityComparer<TSource>? comparer = null)
 		{
 			comparer = comparer ?? Eql<TSource>.Default;
 
@@ -556,9 +560,9 @@ namespace Rylogic.Extn
 				yield return Tuple.Create(i0.Current, i1.Current);
 			}
 			for (; !i0.AtEnd; i0.MoveNext())
-				yield return Tuple.Create(i0.Current, default(TSource));
+				yield return Tuple.Create(i0.Current, default(TSource)!);
 			for (; !i1.AtEnd; i1.MoveNext())
-				yield return Tuple.Create(default(TSource), i1.Current);
+				yield return Tuple.Create(default(TSource)!, i1.Current);
 		}
 
 		/// <summary>Return all of the range except the last 'count' items</summary>
@@ -618,7 +622,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Batches items in a collection in groups >= 'batch_size'.</summary>
-		public static IEnumerable<IList<TSource>> Batch<TSource>(this IEnumerable<TSource> source, int batch_size, Func<TSource, bool> filter = null, bool auto_clear = true)
+		public static IEnumerable<IList<TSource>> Batch<TSource>(this IEnumerable<TSource> source, int batch_size, Func<TSource, bool>? filter = null, bool auto_clear = true)
 		{
 			var batch = new List<TSource>();
 			filter = filter ?? (x => true);
@@ -643,7 +647,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Group into sets where adjacent items satisfy 'selector'</summary>
-		public static IEnumerable<IGrouping<TKey, TSource>> GroupByAdjacent<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
+		public static IEnumerable<IGrouping<TKey, TSource>> GroupByAdjacent<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) where TKey : notnull
 		{
 			var iter = source.GetEnumerator();
 			if (!iter.MoveNext())

@@ -7,7 +7,7 @@ namespace Rylogic.Script
 	{
 		private readonly Buffer m_buf;
 
-		public CommentStrip(Src src, string line_end = "\n", string line_comment = "//", string block_start = "/*", string block_end = "*/")
+		public CommentStrip(Src src, string? line_end = "\n", string? line_comment = "//", string? block_start = "/*", string? block_end = "*/")
 		{
 			m_buf = new Buffer(src);
 			LineEnd           = line_end ?? string.Empty;
@@ -15,9 +15,10 @@ namespace Rylogic.Script
 			BlockCommentStart = block_start ?? string.Empty;
 			BlockCommentEnd   = block_end ?? string.Empty;
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			m_buf.Dispose();
+			base.Dispose(_);
 		}
 
 		// These code only works if line and block comments both start with the same initial character

@@ -59,10 +59,10 @@ namespace Rylogic.Common
 		private int m_count;
 
 		/// <summary>Raised when the reference count goes from 0 to non-0</summary>
-		public event EventHandler Referenced;
+		public event EventHandler? Referenced;
 
 		/// <summary>Raised when the reference count goes from non-0 to 0</summary>
-		public event EventHandler ZeroCount;
+		public event EventHandler? ZeroCount;
 
 		/// <summary></summary>
 		[Conditional("REFS")]

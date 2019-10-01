@@ -6,10 +6,28 @@ namespace Rylogic.Utility
 	/// <summary>An general purpose RAII scope</summary>
 	public class Scope :IDisposable
 	{
-		private Action m_on_exit;
+		/// <summary>Allow subclasses to inherit without having to forward the on_enter/on_exit constructor</summary>
+		public Scope() { }
+		protected Scope(Action on_enter, Action on_exit) // Use 'Create'
+		{
+			Init(on_enter, on_exit);
+		}
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			if (m_on_exit != null)
+				m_on_exit();
+		}
+
+		/// <summary>Clean up delegate</summary>
+		private Action? m_on_exit;
 
 		/// <summary>Construct the scope object</summary>
-		public static Scope Create(Action on_enter, Action on_exit)
+		public static Scope Create(Action? on_enter, Action? on_exit)
 		{
 			var s = new Scope();
 			s.Init(on_enter, on_exit);
@@ -37,7 +55,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Record 'on_exit' and call 'on_enter'</summary>
-		protected void Init(Action on_enter, Action on_exit)
+		protected void Init(Action? on_enter, Action? on_exit)
 		{
 			// Note: important to save 'on_exit' before calling 'on_enter' in case it throws
 			m_on_exit = on_exit;
@@ -51,25 +69,17 @@ namespace Rylogic.Utility
 			if (on_enter != null) await on_enter();
 			return this;
 		}
-
-		/// <summary>Allow subclasses to inherit without having to forward the on_enter/on_exit constructor</summary>
-		public Scope() {}
-		
-		/// <summary>Use 'Create'</summary>
-		protected Scope(Action on_enter, Action on_exit)
-		{
-			Init(on_enter, on_exit);
-		}
-		public void Dispose()
-		{
-			if (m_on_exit != null)
-				m_on_exit();
-		}
 	}
 
 	/// <summary>Scope for a generic type 'T'</summary>
 	public class Scope<T> :Scope
 	{
+		public Scope()
+		{
+			Value = default!;
+		}
+
+		/// <summary>Stored value for the duration of the scope</summary>
 		public T Value;
 
 		/// <summary>Allow implicit conversion to T</summary>

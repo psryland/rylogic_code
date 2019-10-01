@@ -82,7 +82,7 @@ namespace Rylogic.Container
 		public ListChgEventArgs(IList list)
 			:this(list, ListChg.Reset, -1, null)
 		{}
-		public ListChgEventArgs(IList list, ListChg chg, int index, object item)
+		public ListChgEventArgs(IList list, ListChg chg, int index, object? item)
 			:base(!chg.HasFlag(ListChg.Pre))
 		{
 			List       = list;
@@ -108,7 +108,7 @@ namespace Rylogic.Container
 		/// The item added/removed.
 		/// Writeable to allow PreAdd to change the item, note however that when
 		/// events are suspended PreAdd will not be called.</summary>
-		public object Item { get; set; }
+		public object? Item { get; set; }
 
 		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
 		public bool Cancel { get; set; }
@@ -121,7 +121,7 @@ namespace Rylogic.Container
 	public class ListChgEventArgs<T> :PrePostEventArgs
 	{
 		public ListChgEventArgs(IList<T> list)
-			:this(list, ListChg.Reset, -1, default(T))
+			:this(list, ListChg.Reset, -1, default!)
 		{}
 		public ListChgEventArgs(IList<T> list, ListChg chg, int index, T item)
 			:base(!chg.HasFlag(ListChg.Pre))

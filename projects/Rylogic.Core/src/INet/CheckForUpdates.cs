@@ -7,64 +7,6 @@ namespace Rylogic.INet
 {
 	public static partial class INet
 	{
-		/// <summary>The result of a 'CheckForUpdate' call</summary>
-		public class CheckForUpdateResult
-		{
-			/// <summary>The version number of the latest version according to the remote data</summary>
-			public string Version;
-
-			/// <summary>The location to download the latest version from</summary>
-			public string DownloadURL;
-
-			/// <summary>The location containing info about the latest version</summary>
-			public string InfoURL;
-		}
-
-		/// <summary>Data related to a specific async check for updates call</summary>
-		private class CheckForUpdateAsyncData :IAsyncResult
-		{
-			private readonly CheckForUpdateResult m_result = new CheckForUpdateResult();
-			private ManualResetEvent m_wait;
-			private int m_cancel;
-
-			/// <summary>Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
-			public WaitHandle AsyncWaitHandle
-			{
-				get { return m_wait ?? (m_wait = new ManualResetEvent(false)); }
-			}
-
-			/// <summary>Gets a value that indicates whether the asynchronous operation has completed.</summary>
-			public bool IsCompleted
-			{
-				get { return AsyncWaitHandle.WaitOne(0); }
-			}
-
-			/// <summary>Gets a user-defined object that qualifies or contains information about an asynchronous operation.</summary>
-			public object AsyncState
-			{
-				get { return null; }
-			}
-
-			/// <summary>Gets a value that indicates whether the asynchronous operation completed synchronously.</summary>
-			public bool CompletedSynchronously
-			{
-				get { return false; }
-			}
-
-			/// <summary>Signals cancel to the check for updates</summary>
-			internal bool CancelPending
-			{
-				get { return m_cancel != 0; }
-				set { if (value) Interlocked.CompareExchange(ref m_cancel, 1, 0); }
-			}
-
-			/// <summary>The result of the async check for updates</summary>
-			internal CheckForUpdateResult Result { get { return m_result; } }
-
-			/// <summary>Any error that occurred during the update check</summary>
-			internal Exception Error;
-		}
-
 		/// <summary>Begin an asynchronous check for update. Follows the standard Begin/End IAsyncResult pattern</summary>
 		/// <param name="identifier">The identifier for the application whose version is being checked</param>
 		/// <param name="url">The URL of the version xml file</param>
@@ -72,11 +14,10 @@ namespace Rylogic.INet
 		/// <param name="proxy">An optional proxy server</param>
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy proxy)
 		{
-			var async = new CheckForUpdateAsyncData();
-
 			// Do the version check as a background task
-			WaitCallback version_check = x =>
+			void version_check(object x)
 			{
+				var async = (CheckForUpdateAsyncData)x;
 				try
 				{
 					// Check the update URL is valid
@@ -86,11 +27,11 @@ namespace Rylogic.INet
 
 					// Create a web client and grab the version xml data
 					var latest_version_xml = "";
-					var error = (Exception)null;
-					using (var web = new WebClient{Proxy = proxy})
+					var error = (Exception?)null;
+					using (var web = new WebClient { Proxy = proxy })
 					using (var got = new ManualResetEvent(false))
 					{
-						web.DownloadStringCompleted += (s,a) =>
+						web.DownloadStringCompleted += (s, a) =>
 						{
 							try
 							{
@@ -124,19 +65,20 @@ namespace Rylogic.INet
 					if (info != null)
 					{
 						XElement elem;
-						if ((elem = info.Element("version" )) != null) async.Result.Version     = elem.Value;
-						if ((elem = info.Element("dl_url"  )) != null) async.Result.DownloadURL = elem.Value;
-						if ((elem = info.Element("info_url")) != null) async.Result.InfoURL     = elem.Value;
+						if ((elem = info.Element("version")) != null) async.Result.Version = elem.Value;
+						if ((elem = info.Element("dl_url")) != null) async.Result.DownloadURL = elem.Value;
+						if ((elem = info.Element("info_url")) != null) async.Result.InfoURL = elem.Value;
 					}
 				}
 				catch (Exception ex) { async.Error = ex; }
 				((ManualResetEvent)async.AsyncWaitHandle).Set();
-				if (callback != null) callback(async);
-			};
+				callback?.Invoke(async);
+			}
 
 			// Execute the async operation
-			ThreadPool.QueueUserWorkItem(version_check, async);
-			return async;
+			var async_data = new CheckForUpdateAsyncData();
+			ThreadPool.QueueUserWorkItem(version_check, async_data);
+			return async_data;
 		}
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback)
 		{
@@ -165,6 +107,57 @@ namespace Rylogic.INet
 			{
 				async.AsyncWaitHandle.Close();
 			}
+		}
+
+		/// <summary>The result of a 'CheckForUpdate' call</summary>
+		public class CheckForUpdateResult
+		{
+			public CheckForUpdateResult()
+			{
+				Version = string.Empty;
+				DownloadURL = string.Empty;
+				InfoURL = string.Empty;
+			}
+
+			/// <summary>The version number of the latest version according to the remote data</summary>
+			public string Version;
+
+			/// <summary>The location to download the latest version from</summary>
+			public string DownloadURL;
+
+			/// <summary>The location containing info about the latest version</summary>
+			public string InfoURL;
+		}
+
+		/// <summary>Data related to a specific async check for updates call</summary>
+		private class CheckForUpdateAsyncData :IAsyncResult
+		{
+			/// <summary>Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
+			public WaitHandle AsyncWaitHandle => m_wait ?? (m_wait = new ManualResetEvent(false));
+			private ManualResetEvent? m_wait;
+
+			/// <summary>Gets a value that indicates whether the asynchronous operation has completed.</summary>
+			public bool IsCompleted => AsyncWaitHandle.WaitOne(0);
+
+			/// <summary>Gets a user-defined object that qualifies or contains information about an asynchronous operation.</summary>
+			public object? AsyncState => null;
+
+			/// <summary>Gets a value that indicates whether the asynchronous operation completed synchronously.</summary>
+			public bool CompletedSynchronously => false;
+
+			/// <summary>Signals cancel to the check for updates</summary>
+			internal bool CancelPending
+			{
+				get => m_cancel != 0;
+				set { if (value) Interlocked.CompareExchange(ref m_cancel, 1, 0); }
+			}
+			private int m_cancel;
+
+			/// <summary>The result of the async check for updates</summary>
+			internal CheckForUpdateResult Result { get; } = new CheckForUpdateResult();
+
+			/// <summary>Any error that occurred during the update check</summary>
+			internal Exception? Error;
 		}
 	}
 }

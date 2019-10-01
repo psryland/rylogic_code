@@ -42,20 +42,17 @@ namespace Rylogic.Script
 		}
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
 			m_src.Dispose();
+			base.Dispose(disposing);
 		}
+
+		/// <summary>The File/Line/Column of the output file</summary>
+		public Loc OutputLocation => m_output_loc;
 
 		/// <summary>Push a new stream onto the source stack</summary>
 		public void PushSource(Src src)
 		{
 			m_src.Push(src);
-		}
-
-		/// <summary>The File/Line/Column of the output file</summary>
-		public Loc OutputLocation
-		{
-			get { return m_output_loc; }
 		}
 
 		/// <summary>
@@ -67,7 +64,7 @@ namespace Rylogic.Script
 		{
 			if (m_src.Empty) return -1;
 			Parse();
-			return m_src.Top.Peek;
+			return m_src.Top!.Peek;
 		}
 
 		/// <summary>
@@ -94,7 +91,7 @@ namespace Rylogic.Script
 			// field match. When == 0 we need to retest the pattern.
 			while (!m_src.Empty && m_match_ofs == 0)
 			{
-				m_src.Top.Cache(m_chunk_size);
+				m_src.Top!.Cache(m_chunk_size);
 				var m = m_pattern.Match(m_src.Top.TextBuffer.ToString());
 				m_match_ofs = m.Success ? m.Index : m_src.Top.Length != m_chunk_size ? m_src.Top.Length : m_chunk_size / 2;
 

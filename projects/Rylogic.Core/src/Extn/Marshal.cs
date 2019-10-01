@@ -120,9 +120,12 @@ namespace Rylogic.Common
 		public static TFunc PtrToDelegate<TFunc>(IntPtr ptr) where TFunc:class//delegate
 		{
 			if (!typeof(TFunc).IsSubclassOf(typeof(Delegate)))
-				throw new InvalidOperationException(typeof(TFunc).Name + " is not a delegate type");
+				throw new InvalidOperationException($"{typeof(TFunc).Name} is not a delegate type");
 
-			return Marshal.GetDelegateForFunctionPointer(ptr, typeof(TFunc)) as TFunc;
+			if (!(Marshal.GetDelegateForFunctionPointer(ptr, typeof(TFunc)) is TFunc func))
+				throw new InvalidOperationException($"Cannot convert pointer to {typeof(TFunc).Name} type");
+
+			return func;
 		}
 
 		/// <summary>Pin an object. No copy made</summary>
@@ -152,15 +155,14 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A helper class for pinning a managed structure so that it is suitable for unmanaged calls.</summary>
-	public class PinnedObject<T> :IDisposable
+	public sealed class PinnedObject<T> :IDisposable
 	{
 		// Notes:
 		// A pinned object will not be collected and will not be moved by the GC until explicitly freed.
 
-		protected T        m_managed_object;
-		protected GCHandle m_handle;
-		protected IntPtr   m_ptr;
-		protected bool     m_disposed;
+		private readonly T m_managed_object;
+		private GCHandle m_handle;
+		private bool     m_disposed;
 
 		public PinnedObject(T obj)
 			:this(obj, GCHandleType.Pinned)
@@ -169,35 +171,29 @@ namespace Rylogic.Common
 		{
 			m_managed_object = obj;
 			m_handle = GCHandle.Alloc(obj, type);
-			m_ptr = m_handle.AddrOfPinnedObject();
+			Pointer = m_handle.AddrOfPinnedObject();
+		}
+		public void Dispose()
+		{
+			if (m_disposed) return;
+			m_handle.Free();
+			m_disposed = true;
+			GC.SuppressFinalize(this);
 		}
 		~PinnedObject()
 		{
 			Dispose();
-		}
-		public void Dispose()
-		{
-			if (!m_disposed)
-			{
-				m_handle.Free();
-				m_ptr = IntPtr.Zero;
-				m_disposed = true;
-				GC.SuppressFinalize(this);
-			}
 		}
 
 		/// <summary>The managed object being pinned</summary>
 		public T ManangedObject
 		{
 			[DebuggerStepThrough] get { return (T)m_handle.Target; }
-			set { Marshal.StructureToPtr(value, m_ptr, false); }
+			set { Marshal.StructureToPtr(value, Pointer, false); }
 		}
 
 		/// <summary>Pointer to the pinned object</summary>
-		public IntPtr Pointer
-		{
-			[DebuggerStepThrough] get { return m_ptr; }
-		}
+		public IntPtr Pointer { get; }
 	}
 
 	/// <summary>Extra methods for GCHandle</summary>

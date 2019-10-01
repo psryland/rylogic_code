@@ -46,12 +46,15 @@ namespace Rylogic.Extn
 		/// <summary>Copies all of the fields of this object into 'to'. Returns 'to' for method chaining</summary>
 		public static T ShallowCopy<T>(this T from, T to)
 		{
+			if (from == null) throw new ArgumentNullException(nameof(from));
+			if (to == null) throw new ArgumentNullException(nameof(to));
 			return (T)ShallowCopy((object)from, to);
 		}
 
 		/// <summary>Creates a new instance of this object with all fields copied. Returns 'to' for method chaining</summary>
 		public static T ShallowCopy<T>(this T from)
 		{
+			if (from == null) throw new ArgumentNullException(nameof(from));
 			return ShallowCopy(from, (T)Activator.CreateInstance(from.GetType(), true));
 		}
 
@@ -124,6 +127,8 @@ namespace Rylogic.Extn
 		/// A deep copy of an instance of this class will cause o1 != o2</summary>
 		public static T DeepCopy<T>(this T from, T to)
 		{
+			if (from == null) throw new ArgumentNullException(nameof(from));
+			if (to == null) throw new ArgumentNullException(nameof(to));
 			return (T)DeepCopy((object)from, to);
 		}
 
@@ -133,6 +138,7 @@ namespace Rylogic.Extn
 		/// A deep copy of an instance of this class will cause o1 != o2</summary>
 		public static T DeepCopy<T>(this T from)
 		{
+			if (from == null) throw new ArgumentNullException(nameof(from));
 			return DeepCopy(from, (T)Activator.CreateInstance(from.GetType(), true));
 		}
 
@@ -181,11 +187,11 @@ namespace Rylogic.UnitTests
 		{
 			public int Level { get { return m_level; } }
 			private readonly int m_level;
-			public string m_string;
-			public object m_object { get; set; }
-			public Cloner m_child;
+			public string? m_string;
+			public object? m_object { get; set; }
+			public Cloner? m_child;
 			public List<DateTime> m_list;
-			public Dictionary<string, object> m_dict;
+			public Dictionary<string, object?> m_dict;
 
 			protected Cloner() :this(0) {}
 			public Cloner(int level)
@@ -200,10 +206,10 @@ namespace Rylogic.UnitTests
 				m_list = new List<DateTime>();
 				m_list.Add(DateTime.MaxValue);
 				m_list.Add(DateTime.Now);
-				m_dict = new Dictionary<string, object>();
+				m_dict = new Dictionary<string, object?>();
 				m_dict.Add(m_string, m_object);
 			}
-			public virtual bool Equal(Cloner rhs)
+			public virtual bool Equal(Cloner? rhs)
 			{
 				if (rhs == null) return false;
 				if (m_level != rhs.m_level) return false;
@@ -223,7 +229,7 @@ namespace Rylogic.UnitTests
 			public int m_derived_field;
 			protected DerivedCloner() {}
 			public DerivedCloner(int level) :base(level) { m_derived_field = level; }
-			public override bool Equal(Cloner rhs)
+			public override bool Equal(Cloner? rhs)
 			{
 				var d = rhs as DerivedCloner;
 				if (d == null || d.m_derived_field != m_derived_field) return false;

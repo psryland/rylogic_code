@@ -344,24 +344,21 @@ namespace Rylogic.Extn
 			public T Value { get; }
 
 			/// <summary>The associated description string of the enum member</summary>
-			public string Desc
-			{
-				get { return DescAttr.Desc(typeof(T), m_fi); }
-			}
+			public string? Desc => DescAttr.Desc(typeof(T), m_fi);
 
 			/// <summary>The associated AssocAttribute of the enum member</summary>
-			public TAssoc Assoc<TAssoc>(string name = null)
+			public TAssoc Assoc<TAssoc>(string? name = null)
 			{
 				return Assoc_.Assoc<TAssoc>(m_fi, name);
 			}
 
 			/// <summary>Try to get the associated value of the enum member</summary>
-			public bool TryAssoc<TAssoc>(out TAssoc assoc, string name = null)
+			public bool TryAssoc<TAssoc>(out TAssoc assoc, string? name = null)
 			{
 				return Assoc_.TryAssoc(m_fi, out assoc, name);
 			}
 
-			public override string ToString() { return Desc ?? Name; }
+			public override string ToString() => Desc ?? Name;
 			public static implicit operator T(Item item) { return item.Value; }
 		}
 
@@ -372,13 +369,13 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the objects of type 'TAssoc' associated with each enum member using the AssocAttribute</summary>
-		public static IEnumerable<TAssoc> Assoc<TAssoc>(string name = null)
+		public static IEnumerable<TAssoc> Assoc<TAssoc>(string? name = null)
 		{
 			return Items.Select(x => x.Assoc<TAssoc>(name));
 		}
 
 		/// <summary>Return the enum value with the given associated value. Null if there is no matching enum value</summary>
-		public static T? FromAssoc<TAssoc>(TAssoc assoc, string name = null)
+		public static T? FromAssoc<TAssoc>(TAssoc assoc, string? name = null)
 		{
 			if (m_assoc_reverse_lookup == null)
 			{
@@ -395,7 +392,7 @@ namespace Rylogic.Extn
 			var lookup = (Dictionary<TAssoc, T>)m_assoc_reverse_lookup;
 			return lookup.TryGetValue(assoc, out var value) ? (T?)value : null;
 		}
-		private static object m_assoc_reverse_lookup;
+		private static object? m_assoc_reverse_lookup;
 
 		/// <summary>Returns the number of members in the enumeration</summary>
 		public static int Count
@@ -441,7 +438,7 @@ namespace Rylogic.Extn
 			}
 			return m_impl_or(a,b);
 		}
-		private static Func<T,T,T> m_impl_or;
+		private static Func<T,T,T>? m_impl_or;
 	}
 
 	public static class Enum_

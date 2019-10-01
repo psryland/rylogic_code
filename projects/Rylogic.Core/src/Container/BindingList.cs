@@ -38,7 +38,7 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>Construct from a single value repeated 'initial_count' times</summary>
-		public BindingListEx(int initial_count, T value = default(T)) :base(Enumerable.Repeat(value, initial_count).ToList())
+		public BindingListEx(int initial_count, T value = default) :base(Enumerable.Repeat(value, initial_count).ToList())
 		{
 			Init();
 		}
@@ -61,7 +61,7 @@ namespace Rylogic.Container
 				// Map ListChanged events to ListChanging events
 				if (a.ListChangedType == ListChangedType.Reset)
 				{
-					OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+					OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default!));
 				}
 				if (a.ListChangedType == ListChangedType.ItemChanged)
 				{
@@ -92,7 +92,7 @@ namespace Rylogic.Container
 		public int IssueNumber { get; set; }
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
-		public event EventHandler<ListChgEventArgs<T>> ListChanging;
+		public event EventHandler<ListChgEventArgs<T>>? ListChanging;
 		protected virtual void OnListChanging(ListChgEventArgs<T> args)
 		{
 			ListChanging?.Invoke(this, args);
@@ -100,14 +100,14 @@ namespace Rylogic.Container
 
 		/// <summary>Raised whenever an element in the list is replaced (i.e. by SetItem)</summary>
 		[Obsolete("This is badly defined, stop using it")]
-		public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
+		public event EventHandler<ItemChgEventArgs<T>>? ItemChanged;
 
 		/// <summary>Removes all items from the list</summary>
 		protected override void ClearItems()
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T)!);
 				OnListChanging(args);
 				if (args.Cancel)
 					return;
@@ -225,9 +225,9 @@ namespace Rylogic.Container
 		public bool UseHashSet
 		{
 			get { return m_hash_set != null; }
-			set { m_hash_set = value ? this.ToHashSet() : null; }
+			set { m_hash_set = value ? this.ToHashSet(0) : null; }
 		}
-		private HashSet<T> m_hash_set;
+		private HashSet<T>? m_hash_set;
 
 		#region Sorting
 
@@ -236,15 +236,15 @@ namespace Rylogic.Container
 		protected override bool SupportsSortingCore => SupportsSorting;
 
 		/// <summary>The comparer used for sorting</summary>
-		public IComparer SortComparer { get; set; }
+		public IComparer? SortComparer { get; set; }
 
 		/// <summary>Get/Set the direction the list is sorted. The default is ListSortDirection.Ascending.</summary>
 		public ListSortDirection SortDirection { get; set; }
 		protected override ListSortDirection SortDirectionCore => SortDirection;
 
 		/// <summary>Get/Set the property descriptor that is used for sorting the list.</summary>
-		public PropertyDescriptor SortProperty { get; set; }
-		protected override PropertyDescriptor SortPropertyCore => SortProperty;
+		public PropertyDescriptor? SortProperty { get; set; }
+		protected override PropertyDescriptor? SortPropertyCore => SortProperty;
 
 		/// <summary>true if the list is sorted; otherwise, false. The default is false.</summary>
 		public bool IsSorted { get; private set; }
@@ -256,10 +256,12 @@ namespace Rylogic.Container
 			// Don't allow sort on non-comparable properties
 			if (!prop.PropertyType.Inherits(typeof(IComparable)))
 				return;
+			if (SortComparer == null)
+				return;
 
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T)!);
 				OnListChanging(args);
 				if (args.Cancel)
 					return;
@@ -284,7 +286,7 @@ namespace Rylogic.Container
 			base.ResetBindings();
 
 			if (RaiseListChangedEvents)
-				OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)!));
 		}
 
 		/// <summary>Removes any sort applied with ApplySortCore()</summary>
@@ -300,7 +302,7 @@ namespace Rylogic.Container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
+				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default!);
 				OnListChanging(args);
 				if (args.Cancel)
 					return;
@@ -358,7 +360,7 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>Raised when the caller signals a batch of changes are about to happen</summary>
-		public event EventHandler<PrePostEventArgs> BatchChanges;
+		public event EventHandler<PrePostEventArgs>? BatchChanges;
 		public Scope BatchChange()
 		{
 			return Scope.Create(

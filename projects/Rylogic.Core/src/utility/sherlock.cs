@@ -108,18 +108,19 @@ namespace Rylogic.UnitTests
 		#pragma warning disable 67, 169, 649
 		private class Thing
 		{
-			private event EventHandler PrivateEvent;
-			protected event EventHandler ProtectedEvent;
-			public event EventHandler PublicEvent;
-			private event EventHandler<CustEventArgs> PrivateCustomEvent;
-			public event EventHandler<CustEventArgs> PublicCustomEvent;
-			public class CustEventArgs :EventArgs {}
-
 			public Thing()
 			{
-				PrivateEvent       += Handler;
+				PrivateEvent += Handler;
 				PrivateCustomEvent += Handler;
 			}
+
+			private event EventHandler? PrivateEvent;
+			protected event EventHandler? ProtectedEvent;
+			public event EventHandler? PublicEvent;
+			private event EventHandler<CustEventArgs>? PrivateCustomEvent;
+			public event EventHandler<CustEventArgs>? PublicCustomEvent;
+			public class CustEventArgs :EventArgs {}
+
 			public void Handler(object sender, EventArgs e)
 			{}
 		}

@@ -141,7 +141,7 @@ namespace Rylogic.Extn
 			/// 'type_attr' controls whether the 'ty' attribute is added. By default it should
 			/// be added so that XML can be de-serialised to 'object'. If this is never needed
 			/// however it can be omitted.</summary>
-			public XElement Convert(object obj, XElement node, bool type_attr)
+			public XElement Convert(object? obj, XElement node, bool type_attr)
 			{
 				if (obj == null)
 				{
@@ -202,7 +202,7 @@ namespace Rylogic.Extn
 				var lookup_type = type.IsGenericType ? gen_type : type;
 
 				// Otherwise, use the bound ToXml function
-				ToFunc func = TryGetValue(lookup_type, out func) ? func : null;
+				ToFunc? func = TryGetValue(lookup_type, out var f) ? f : null;
 				for (;func == null;)
 				{
 					// See if 'obj' has a native 'ToXml' method
@@ -264,11 +264,10 @@ namespace Rylogic.Extn
 						var child = new XElement(name);
 
 						// Read the member to be written
-						FieldInfo field;
-						PropertyInfo prop;
-						object val = null;
-						if ((prop = m.Member as PropertyInfo) != null) val = prop.GetValue(o, null);
-						else if ((field = m.Member as FieldInfo) != null) val = field.GetValue(o);
+						object? val = 
+							m.Member is PropertyInfo prop ? prop.GetValue(o, null) :
+							m.Member is FieldInfo field ? field.GetValue(o) :
+							null;
 
 						n.Add(ToMap.Convert(val, child, true));
 					}
@@ -421,7 +420,7 @@ namespace Rylogic.Extn
 					foreach (var li_elem in elem.Elements())
 					{
 						var li = li_elem.As(ty_args[0]);
-						mi_add.Invoke(list, new object[] { li });
+						mi_add.Invoke(list, new object?[] { li });
 					}
 					return list;
 				};
@@ -436,7 +435,7 @@ namespace Rylogic.Extn
 					{
 						var key = kv_elem.Element("k").As(ty_args[0]);
 						var val = kv_elem.Element("v").As(ty_args[1]);
-						mi_add.Invoke(dic, new object[] { key, val });
+						mi_add.Invoke(dic, new object?[] { key, val });
 					}
 					return dic;
 				};
@@ -449,7 +448,7 @@ namespace Rylogic.Extn
 					foreach (var si_elem in elem.Elements())
 					{
 						var si = si_elem.As(ty_args[0]);
-						mi_add.Invoke(set, new object[] { si });
+						mi_add.Invoke(set, new object?[] { si });
 					}
 					return set;
 				};
@@ -469,7 +468,7 @@ namespace Rylogic.Extn
 			/// If 'type' is 'object' then the type is inferred from the node.
 			/// 'factory' is used to construct instances of type, unless type is
 			/// an array, in which case factory is used to construct the array elements</summary>
-			public object Convert(XElement elem, Type type, Func<Type,object> factory_)
+			public object? Convert(XElement elem, Type type, Func<Type,object>? factory_)
 			{
 				// XElement values are strings already
 				if (type == typeof(string))
@@ -481,7 +480,7 @@ namespace Rylogic.Extn
 				// automatically convert to the nullable type
 				var ty = Nullable.GetUnderlyingType(type);
 				var is_nullable = ty != null;
-				if (is_nullable) type = ty;
+				if (is_nullable) type = ty!;
 
 				// If the node has a type attribute use it instead of 'type'
 				if (elem.Attribute(TypeAttr) is XAttribute attr && type.FullName != attr.Value)
@@ -555,10 +554,8 @@ namespace Rylogic.Extn
 				// Use the generalised generic type if generic
 				var lookup_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 
-				AsFunc func;
-
 				// Find the function that converts the string to 'type'
-				func = TryGetValue(lookup_type, out func) ? func : null;
+				AsFunc? func = TryGetValue(lookup_type, out var f) ? f : null;
 				for (;func == null;) // There is no 'As' binding for this type, try a few possibilities
 				{
 					// Try a constructor that takes a single XElement parameter
@@ -650,10 +647,8 @@ namespace Rylogic.Extn
 							var m = members.BinarySearchFind(x => string.CompareOrdinal(x.Attr.Name ?? x.Member.Name, name));
 							if (m == null) continue;
 
-							FieldInfo field;
-							PropertyInfo prop;
-							if      ((prop  = m.Member as PropertyInfo) != null) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
-							else if ((field = m.Member as FieldInfo   ) != null) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
+							if (m.Member is PropertyInfo prop) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
+							if (m.Member is FieldInfo field) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
 						}
 						return obj;
 					};
@@ -668,7 +663,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
-		public static object ToObject(this XElement elem, Func<Type,object> factory = null)
+		public static object? ToObject(this XElement elem, Func<Type,object>? factory = null)
 		{
 			// Passing a factory function to handle any of the types 'elem' might be
 			// can work, but the factory function won't be available further down the
@@ -679,7 +674,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
-		public static object ToObject(this XElement elem, object optional_default, Func<Type,object> factory = null)
+		public static object? ToObject(this XElement elem, object optional_default, Func<Type,object>? factory = null)
 		{
 			if (elem == null) return optional_default;
 			return ToObject(elem, factory);
@@ -692,12 +687,12 @@ namespace Rylogic.Extn
 		/// E.g:<para\>
 		///  val = node.Element("val").As(typeof(int)) <para\>
 		///  val = node.Element("val").As(typeof(int), default_val) <para\></summary>
-		public static object As(this XElement elem, Type type, Func<Type,object> factory = null)
+		public static object? As(this XElement elem, Type type, Func<Type,object>? factory = null)
 		{
 			if (elem == null) throw new ArgumentNullException("XML element is null. Key not found?");
 			return AsMap.Convert(elem, type, factory);
 		}
-		public static object As(this XElement elem, Type type, object optional_default, Func<Type,object> factory = null)
+		public static object? As(this XElement elem, Type type, object? optional_default, Func<Type,object>? factory = null)
 		{
 			if (elem == null) return optional_default;
 			return As(elem, type, factory);
@@ -710,31 +705,31 @@ namespace Rylogic.Extn
 		/// E.g:<para\>
 		///  val = node.Element("val").As&lt;int&gt;() <para\>
 		///  val = node.Element("val").As&lt;int&gt;(default_val) <para\></summary>
-		public static T As<T>(this XElement elem, Func<Type,object> factory = null)
+		public static T As<T>(this XElement elem, Func<Type,object>? factory = null)
 		{
-			return (T)As(elem, typeof(T), factory);
+			return (T)As(elem, typeof(T), factory)!;
 		}
-		public static T As<T>(this XElement elem, T optional_default, Func<Type,object> factory = null)
+		public static T As<T>(this XElement elem, T optional_default, Func<Type,object>? factory = null)
 		{
-			return (T)As(elem, typeof(T), optional_default, factory);
+			return (T)As(elem, typeof(T), optional_default, factory)!;
 		}
 		public static T OrDefault<T>(this XElement elem, T def)
 		{
-			return (T)As(elem, typeof(T), def, null);
+			return (T)As(elem, typeof(T), def, null)!;
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
-		public static void As<T>(this XElement parent, IList<T> list, string elem_name, T optional_default, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)
+		public static void As<T>(this XElement parent, IList<T> list, string elem_name, T optional_default, Func<T,T,bool>? is_duplicate = null, Func<Type,object>? factory = null)
 		{
 			AsList<T>(parent, list, elem_name, e => e.As<T>(optional_default, factory), is_duplicate);
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
-		public static void As<T>(this XElement parent, IList<T> list, string elem_name, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)
+		public static void As<T>(this XElement parent, IList<T> list, string elem_name, Func<T,T,bool>? is_duplicate = null, Func<Type,object>? factory = null)
 		{
 			AsList<T>(parent, list, elem_name, e => e.As<T>(factory), is_duplicate);
 		}
-		private static void AsList<T>(XElement parent, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool> is_duplicate)
+		private static void AsList<T>(XElement parent, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool>? is_duplicate)
 		{
 			if (parent == null) throw new ArgumentNullException("XML element is null. Key not found?");
 
@@ -748,8 +743,10 @@ namespace Rylogic.Extn
 					for (int i = 0; i != list.Count; ++i)
 						if (is_duplicate(list[i], item)) { index = i; break; }
 				}
-				if (index != list.Count) list[index] = item;
-				else list.Add(item);
+				if (index != list.Count)
+					list[index] = item;
+				else
+					list.Add(item);
 				++count;
 			}
 		}
@@ -800,7 +797,7 @@ namespace Rylogic.Extn
 		/// Add 'child' to this element and return child. Useful for the syntax: "var element = root.Add2("name", child);"
 		/// WARNING: returns the *child* object added, *not* parent.
 		/// 'type_attr' is needed when the type of 'child' is not known at load time.</summary>
-		public static XElement Add2(this XContainer parent, string name, object child, bool type_attr)
+		public static XElement Add2(this XContainer parent, string name, object? child, bool type_attr)
 		{
 			var elem = child.ToXml(name, type_attr);
 			return parent.Add2(elem);
@@ -874,10 +871,10 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the value of the attribute called 'name' for this element, or 'def' if the element does not have the attribute</summary>
-		public static string AttrValue(this XElement elem, XName name, string def = null)
+		public static string? AttrValue(this XElement elem, XName name, string? def = null)
 		{
 			var attr = elem.Attribute(name);
-			return attr != null ? attr.Value : def;
+			return attr?.Value ?? def;
 		}
 
 		/// <summary>Fluent method for setting the value of an attribute</summary>
@@ -985,7 +982,7 @@ namespace Rylogic.Extn
 			}
 
 			/// <summary>Generates a full name for this op</summary>
-			private StringBuilder MakeFullName(XElement elem, StringBuilder sb = null)
+			private StringBuilder MakeFullName(XElement elem, StringBuilder? sb = null)
 			{
 				// If not the root element, call recursively, then build the name as the stack unwinds
 				sb = sb ?? new StringBuilder();
@@ -1030,10 +1027,10 @@ namespace Rylogic.Extn
 			public string FullName { get; private set; }
 
 			/// <summary>The value text associated with the op</summary>
-			public string Value { get; private set; }
+			public string? Value { get; private set; }
 
 			/// <summary>Locate the child element that this op applies to</summary>
-			public XNode FindChild(XContainer tree)
+			public XNode? FindChild(XContainer tree)
 			{
 				return Index < tree.ChildCount() ? tree.ChildByIndex(Index) : null;
 			}
@@ -1309,7 +1306,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Apply the changes described in 'diff' to this element tree</summary>
-		public static XElement Patch(this XContainer tree, XContainer diff)
+		public static XContainer Patch(this XContainer tree, XContainer diff)
 		{
 			// Each child element in 'diff' describes an operation to perform on 'tree'
 			foreach (var op_elem in diff.Elements())
@@ -1336,7 +1333,8 @@ namespace Rylogic.Extn
 						var child = op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
 							throw new Exception($"Name mismatch for remove operation. Expected: {op.Name}  Actual: {xe.Name}");
-						child.Remove();
+						if (child != null)
+							child.Remove();
 						break;
 					}
 
@@ -1371,11 +1369,11 @@ namespace Rylogic.Extn
 				case EOpType.Change:
 					{
 						// Find the child node
-						var child = (XContainer)op.FindChild(tree);
+						var child = (XContainer?)op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
 							throw new Exception($"Name mismatch for change operation. Expected: {op.Name}  Actual: {xe.Name}");
-
-						child.Patch(op_elem);
+						if (child != null)
+							child.Patch(op_elem);
 						break;
 					}
 
@@ -1388,7 +1386,7 @@ namespace Rylogic.Extn
 					}
 				}
 			}
-			return tree as XElement;
+			return tree;
 		}
 
 		/// <summary>Convert an XTree of differences into a string report.</summary>
@@ -1497,7 +1495,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Return an attribute operation that adds, replaces, or removes and attribute</summary>
-		private static XElement AttrOp(XName name, string value)
+		private static XElement AttrOp(XName name, string? value)
 		{
 			// 'value' == null will remove the attribute
 			var op = new XElement(nameof(EOpType.Attr));
@@ -1548,9 +1546,9 @@ namespace Rylogic.UnitTests
 		internal class Elem2
 		{
 			[DataMember(Name = "eye")] public readonly int m_int;
-			[DataMember] public readonly string m_string;
+			[DataMember] public readonly string? m_string;
 
-			public Elem2(int i, string s) { m_int = i; m_string = s; }
+			public Elem2(int i, string? s) { m_int = i; m_string = s; }
 			public override string ToString() { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
 			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
 			private bool Equals(Elem2 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
@@ -1568,10 +1566,10 @@ namespace Rylogic.UnitTests
 		internal class Elem3
 		{
 			[DataMember] public readonly int m_int;
-			[DataMember] public readonly string m_string;
+			[DataMember] public readonly string? m_string;
 
 			public Elem3() { m_int = 0; m_string = string.Empty; }
-			public Elem3(int i, string s) { m_int = i; m_string = s; }
+			public Elem3(int i, string? s) { m_int = i; m_string = s; }
 			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
 			private bool Equals(Elem3 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
 			public override bool Equals(object obj)
@@ -1725,7 +1723,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void ToXmlObjectArrays()
 		{
-			var arr = new object[] { null, new Elem1(1), new Elem2(2, "2"), new Elem3(3, "3") };
+			var arr = new object?[] { null, new Elem1(1), new Elem2(2, "2"), new Elem3(3, "3") };
 			var node = arr.ToXml("arr", true);
 			var ARR = node.As<object[]>(factory: ty =>
 				 {
@@ -1812,12 +1810,14 @@ namespace Rylogic.UnitTests
 
 			Xml_.Config.AnonymousTypesAsDictionary();
 
-			var OBJ0 = (IDictionary<string, object>)node0.ToObject();
+			var OBJ0 = (IDictionary<string, object>?)node0.ToObject();
+			if (OBJ0 == null) throw new NullReferenceException();
 			Assert.Equal("one", OBJ0["One"]);
 			Assert.Equal(2    , OBJ0["Two"]);
 			Assert.Equal(6.28 , OBJ0["Three"]);
 
-			var OBJ1 = (object[])node1.ToObject();
+			var OBJ1 = (object[]?)node1.ToObject();
+			if (OBJ1 == null) throw new NullReferenceException();
 			Assert.Equal(3, OBJ1.Length);
 
 			Assert.Equal("one", ((IDictionary<string, object>)OBJ1[0])["One"]);

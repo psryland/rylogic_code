@@ -7,6 +7,18 @@ namespace Rylogic.Script
 	/// <summary>Base class for a source of script characters</summary>
 	public abstract class Src :IDisposable
 	{
+		/// <summary>Clean up resources</summary>
+		protected Src()
+		{
+		}
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{}
+
 		/// <summary>A cached copy of the last character read from 'Peek'. Only used internally</summary>
 		private char m_char;
 
@@ -49,7 +61,7 @@ namespace Rylogic.Script
 		/// contain the terminating carriage return and/or line feed. The returned
 		/// value is null if the end of the input stream has been reached with no
 		/// characters being read (not even the new lines characters).</summary>
-		public string ReadLine()
+		public string? ReadLine()
 		{
 			var sb = new StringBuilder(16);
 			for (char ch; (ch = Peek) != 0; Next())
@@ -74,10 +86,7 @@ namespace Rylogic.Script
 		/// advancing to the next valid character</summary>
 		protected abstract void Advance(int n);
 
-		/// <summary>Clean up resources</summary>
-		public abstract void Dispose();
-
-		public override string ToString() { return Peek.ToString(); }
+		public override string ToString() => Peek.ToString();
 	}
 
 	/// <summary>A script character sequence from a text reader</summary>
@@ -90,9 +99,10 @@ namespace Rylogic.Script
 		{
 			m_reader = reader;
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			m_reader.Dispose();
+			base.Dispose(_);
 		}
 
 		/// <summary>The type of source this is</summary>
@@ -127,13 +137,17 @@ namespace Rylogic.Script
 	/// <summary>A script character sequence from a string</summary>
 	public class StringSrc :TextReaderSrc
 	{
-		public StringSrc(string str) :base(new StringReader(str)) {}
+		public StringSrc(string str)
+			:base(new StringReader(str))
+		{}
 	}
 
 	/// <summary>A script character sequence from a file</summary>
 	public class FileSrc :TextReaderSrc
 	{
-		public FileSrc(string filepath) :base(new StreamReader(filepath)) {}
+		public FileSrc(string filepath)
+			:base(new StreamReader(filepath))
+		{}
 	}
 
 	/// <summary>A script character source that inserts indenting on new lines</summary>
@@ -150,21 +164,25 @@ namespace Rylogic.Script
 			if (indent_first)
 				m_buf.TextBuffer.Append(m_indent);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			m_buf.Dispose();
+			base.Dispose(_);
 		}
 
 		public string LineEnd { get; private set; }
 
 		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType { get { return m_buf.SrcType; } }
+		public override SrcType SrcType => m_buf.SrcType;
 
 		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get { return m_buf.Location; } }
+		public override Loc Location => m_buf.Location;
 
 		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected override char PeekInternal() { return m_buf.Peek; }
+		protected override char PeekInternal()
+		{
+			return m_buf.Peek;
+		}
 
 		/// <summary>
 		/// Advances the internal position a minimum of 'n' positions.
@@ -172,7 +190,7 @@ namespace Rylogic.Script
 		/// advancing to the next valid character</summary>
 		protected override void Advance(int n)
 		{
-			for (;n-- != 0;)
+			for (; n-- != 0;)
 			{
 				m_buf.Next();
 				if (m_buf.Match(LineEnd) && m_buf.Src.Peek != 0)

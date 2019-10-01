@@ -23,21 +23,21 @@ namespace Rylogic.Extn
 		public static object New<A0>(this Type ty, A0 a0)
 		{
 			var arg_types = new Type[] { typeof(A0) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0 });
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0! });
 		}
 		public static object New<A0, A1>(this Type ty, A0 a0, A1 a1)
 		{
 			var arg_types = new Type[] { typeof(A0), typeof(A1) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0, a1 });
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0!, a1! });
 		}
 		public static object New<A0, A1, A2>(this Type ty, A0 a0, A1 a1, A2 a2)
 		{
 			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0, a1, a2 });
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0!, a1!, a2! });
 		}
 
 		/// <summary>Return a default instance of this type</summary>
-		public static object DefaultInstance(this Type type)
+		public static object? DefaultInstance(this Type type)
 		{
 			// If no Type was supplied, if the Type was a reference type, or if the Type was a System.Void, return null
 			if (type == null || !type.IsValueType || type == typeof(void))
@@ -317,7 +317,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of integer values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed integers</returns>
-		public static int[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static int[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => int.Parse(s, style, null)).ToArray();
@@ -366,7 +366,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of integer values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed integers</returns>
-		public static uint[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static uint[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => uint.Parse(s, style, null)).ToArray();
@@ -407,7 +407,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of integer values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed integers</returns>
-		public static long[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static long[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => long.Parse(s, style, null)).ToArray();
@@ -455,7 +455,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of integer values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed integers</returns>
-		public static ulong[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static ulong[] ParseArray(string val, NumberStyles style = NumberStyles.Integer, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => ulong.Parse(s, style, null)).ToArray();
@@ -507,7 +507,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of floating point values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed floating point values</returns>
-		public static float[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static float[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => float.Parse(s, style, null)).ToArray();
@@ -631,7 +631,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of floating point values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed floating point values</returns>
-		public static double[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static double[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => double.Parse(s, style, null)).ToArray();
@@ -720,7 +720,7 @@ namespace Rylogic.Extn
 		/// <param name="val">The string containing the array of floating point values</param>
 		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
 		/// <returns>An array of the parsed floating point values</returns>
-		public static decimal[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		public static decimal[] ParseArray(string val, NumberStyles style = NumberStyles.Float, string[]? delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
 		{
 			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
 			return strs.Select(s => decimal.Parse(s, style, null)).ToArray();

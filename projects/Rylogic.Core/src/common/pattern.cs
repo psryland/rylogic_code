@@ -80,11 +80,13 @@ namespace Rylogic.Common
 			public const string WholeLine  = "wholeline";
 		}
 
-		public Pattern() :this(EPattern.Substring, string.Empty) {}
+		public Pattern()
+			:this(EPattern.Substring, string.Empty)
+		{}
 		public Pattern(EPattern patn_type, string expr)
 		{
+			m_expr      = expr;
 			PatnType    = patn_type;
-			Expr        = expr;
 			IgnoreCase  = false;
 			Active      = true;
 			Invert      = false;
@@ -92,7 +94,7 @@ namespace Rylogic.Common
 		}
 		public Pattern(Pattern rhs)
 		{
-			Expr        = rhs.Expr;
+			m_expr        = rhs.Expr;
 			Active      = rhs.Active;
 			PatnType    = rhs.PatnType;
 			IgnoreCase  = rhs.IgnoreCase;
@@ -101,7 +103,7 @@ namespace Rylogic.Common
 		}
 		public Pattern(XElement node)
 		{
-			Expr        = node.Element(XmlTag.Expr      ).As<string>();
+			m_expr      = node.Element(XmlTag.Expr      ).As<string>();
 			PatnType    = node.Element(XmlTag.PatnType  ).As<EPattern>();
 			Active      = node.Element(XmlTag.Active    ).As<bool>();
 			IgnoreCase  = node.Element(XmlTag.IgnoreCase).As<bool>();
@@ -127,48 +129,48 @@ namespace Rylogic.Common
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
 		public EPattern PatnType
 		{
-			get { return m_patn_type; }
-			set { SetProp(ref m_patn_type, value, invalidate_patn:true); }
+			get => m_patn_type;
+			set => SetProp(ref m_patn_type, value, invalidate_patn: true);
 		}
 		private EPattern m_patn_type;
 
 		/// <summary>The pattern to use when matching</summary>
 		public string Expr
 		{
-			get { return m_expr; }
-			set { SetProp(ref m_expr, value, invalidate_patn:true); }
+			get => m_expr;
+			set => SetProp(ref m_expr, value, invalidate_patn: true);
 		}
 		private string m_expr;
 
 		/// <summary>True if the pattern should ignore case</summary>
 		public bool IgnoreCase
 		{
-			get { return m_ignore_case; }
-			set { SetProp(ref m_ignore_case, value, invalidate_patn:true); }
+			get => m_ignore_case;
+			set => SetProp(ref m_ignore_case, value, invalidate_patn: true);
 		}
 		private bool m_ignore_case;
 
 		/// <summary>True if the match result should be inverted</summary>
 		public bool Invert
 		{
-			get { return m_invert; }
-			set { SetProp(ref m_invert, value, invalidate_patn:false); }
+			get => m_invert;
+			set => SetProp(ref m_invert, value, invalidate_patn: false);
 		}
 		private bool m_invert;
 
 		/// <summary>Only match if the whole line matches</summary>
 		public bool WholeLine
 		{
-			get { return m_whole_line; }
-			set { SetProp(ref m_whole_line, value, invalidate_patn:false); }
+			get => m_whole_line;
+			set => SetProp(ref m_whole_line, value, invalidate_patn: false);
 		}
 		private bool m_whole_line;
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active
 		{
-			get { return m_active; }
-			set { SetProp(ref m_active, value, invalidate_patn:false); }
+			get => m_active;
+			set => SetProp(ref m_active, value, invalidate_patn: false);
 		}
 		private bool m_active;
 
@@ -186,7 +188,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Raised whenever data on this pattern changes</summary>
-		public event EventHandler PatternChanged;
+		public event EventHandler? PatternChanged;
 		private void RaisePatternChanged()
 		{
 			if (PatternChanged == null) return;
@@ -255,7 +257,7 @@ namespace Rylogic.Common
 				return m_compiled_patn = new Regex(expr, opts);
 			}
 		}
-		private Regex m_compiled_patn;
+		private Regex? m_compiled_patn;
 
 		/// <summary>Allows derived patterns to optionally keep whitespace in Substring/wildcard patterns</summary>
 		protected virtual bool PreserveWhitespace
@@ -274,7 +276,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
-		public Exception ValidateExpr()
+		public Exception? ValidateExpr()
 		{
 			try
 			{
@@ -294,7 +296,7 @@ namespace Rylogic.Common
 				return m_validation_exception = ex;
 			}
 		}
-		private Exception m_validation_exception;
+		private Exception? m_validation_exception;
 
 		/// <summary>Returns true if the match expression is valid</summary>
 		public virtual bool IsValid
@@ -422,15 +424,15 @@ namespace Rylogic.Common
 		}
 
 		#region Equals
-		public static bool operator == (Pattern lhs, Pattern rhs)
+		public static bool operator == (Pattern? lhs, Pattern? rhs)
 		{
 			return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
 		}
-		public static bool operator != (Pattern lhs, Pattern rhs)
+		public static bool operator != (Pattern? lhs, Pattern? rhs)
 		{
 			return !(lhs == rhs);
 		}
-		public bool Equals(Pattern rhs)
+		public bool Equals(Pattern? rhs)
 		{
 			return
 				rhs != null &&
@@ -468,7 +470,7 @@ namespace Rylogic.UnitTests
 	[TestFixture] public class TestPattern
 	{
 		/// <summary>Matches 'pat' to 'test' and checks the results agree with 'grp_names' and 'captures'</summary>
-		private static void Check(Pattern pat, string test, string[] grp_names, string[] captures)
+		private static void Check(Pattern pat, string test, string[]? grp_names, string[]? captures)
 		{
 			if (grp_names == null || captures == null)
 			{

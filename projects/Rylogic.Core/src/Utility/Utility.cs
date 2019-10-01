@@ -30,7 +30,7 @@ namespace Rylogic.Utility
 	{
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
 		[DebuggerStepThrough]
-		public static T Dispose<T>(ref T doomed, bool gc_ok = false) where T : class, IDisposable
+		public static T? Dispose<T>(ref T? doomed, bool gc_ok = false) where T : class, IDisposable
 		{
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
@@ -44,14 +44,14 @@ namespace Rylogic.Utility
 			return null;
 		}
 		[DebuggerStepThrough]
-		public static T Dispose<T>(T doomed) where T : class, IDisposable
+		public static T? Dispose<T>(T? doomed) where T : class, IDisposable
 		{
 			return Dispose(ref doomed);
 		}
 
 		/// <summary>Dispose all items in the 'doomed' array, start at the last item. On return, the array will be full of nulls</summary>
 		[DebuggerStepThrough]
-		public static T[] DisposeAll<T>(T[] doomed) where T : class, IDisposable
+		public static T?[]? DisposeAll<T>(T?[]? doomed) where T : class, IDisposable
 		{
 			if (doomed == null) return null;
 			for (int i = doomed.Length; i-- != 0; )
@@ -62,7 +62,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Disposes items in the 'doomed' list, started at the last item. On return, 'doomed' will be an empty list</summary>
 		[DebuggerStepThrough]
-		public static void DisposeAll<T>(IList<T> doomed) where T : class, IDisposable
+		public static void DisposeAll<T>(IList<T?> doomed) where T : class, IDisposable
 		{
 			// Pop each item from the collection and dispose it
 			if (doomed == null) return;
@@ -78,7 +78,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Disposes values in the 'doomed' dictionary. On return, 'doomed' will be an empty dictionary</summary>
 		[DebuggerStepThrough]
-		public static void DisposeAll<K,V>(IDictionary<K,V> doomed) where V : class, IDisposable
+		public static void DisposeAll<K,V>(IDictionary<K,V>? doomed) where V : class, IDisposable
 		{
 			if (doomed == null) return;
 			foreach (var kv in doomed)
@@ -89,9 +89,9 @@ namespace Rylogic.Utility
 
 		/// <summary>Dispose a range of doomed items</summary>
 		[DebuggerStepThrough]
-		public static IEnumerable<T> DisposeRange<T>(IEnumerable<T> doomed) where T : class, IDisposable
+		public static IEnumerable<T?> DisposeRange<T>(IEnumerable<T?>? doomed) where T : class, IDisposable
 		{
-			if (doomed == null) return doomed;
+			if (doomed == null) return null!;
 			foreach (var d in doomed.Where(x => x != null).ToList())
 				Dispose(d);
 
@@ -112,7 +112,7 @@ namespace Rylogic.Utility
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
 		public static bool IsGCFinalizerThread => Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId;
-		public static Thread GCThread
+		public static Thread? GCThread
 		{
 			get
 			{
@@ -125,7 +125,7 @@ namespace Rylogic.Utility
 
 					// Create the thread grabber, then collect it
 					var grabber = new GCThreadGrabber();
-					grabber = null;
+					grabber = null!;
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 				}
@@ -136,12 +136,12 @@ namespace Rylogic.Utility
 		/// <summary>A helper class that gets created then collected so we can grab details about the GC thread</summary>
 		private class GCThreadGrabber
 		{
-			public static Thread m_gc_thread;
+			public static Thread? m_gc_thread = null;
 			~GCThreadGrabber() { m_gc_thread = Thread.CurrentThread; }
 		}
 
 		/// <summary>Replacement for Debug.Assert that doesn't run off into infinite loops trying to display a dialog</summary>
-		[Conditional("DEBUG")] public static void Assert(bool condition, string msg = null)
+		[Conditional("DEBUG")] public static void Assert(bool condition, string? msg = null)
 		{
 			if (condition || m_assert_visible) return;
 			using (Scope.Create(() => m_assert_visible = true, v => m_assert_visible = v))
@@ -155,7 +155,7 @@ namespace Rylogic.Utility
 		private static bool m_assert_visible;
 
 		/// <summary>Stop in the debugger if 'condition' is true. For when assert dialogs cause problems with threading</summary>
-		[Conditional("DEBUG")] public static void BreakIf(bool condition, string msg = null)
+		[Conditional("DEBUG")] public static void BreakIf(bool condition, string? msg = null)
 		{
 			if (!condition || !Debugger.IsAttached) return;
 			if (msg != null) Debug.WriteLine(msg);
@@ -176,7 +176,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Blocks until the debugger is attached</summary>
-		public static void WaitForDebugger(Func<string, bool> wait_cb = null)
+		public static void WaitForDebugger(Func<string, bool>? wait_cb = null)
 		{
 			if (DebuggerAttached()) return;
 			var t = new Thread(new ThreadStart(() =>
@@ -260,7 +260,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
-		public static object ConvertTo(object value, Type result_type, bool ignore_case = false)
+		public static object? ConvertTo(object value, Type result_type, bool ignore_case = false)
 		{
 			var is_nullable = Nullable.GetUnderlyingType(result_type) != null;
 			var root_type   = Nullable.GetUnderlyingType(result_type) ?? result_type;
@@ -312,7 +312,8 @@ namespace Rylogic.Utility
 		public static T ConvertTo<T>(object value, bool ignore_case = false)
 		{
 			if (value is T) return (T)value;
-			return (T)ConvertTo(value, typeof(T), ignore_case);
+			var obj = ConvertTo(value, typeof(T), ignore_case);
+			return obj != null ? (T)obj : default!;
 		}
 
 		/// <summary>Helper for allocating a dictionary preloaded with data</summary>
@@ -507,7 +508,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static void AddToHistoryList<T>(IList<T> history, T item, int max_history_length, int index = 0, Func<T, T, bool> cmp = null)
+		public static void AddToHistoryList<T>(IList<T> history, T item, int max_history_length, int index = 0, Func<T, T, bool>? cmp = null)
 		{
 			if (Equals(item, null))
 				throw new NullReferenceException("Null cannot be added to a history list");
@@ -528,12 +529,12 @@ namespace Rylogic.Utility
 		public static void AddToHistoryList<T>(IList<T> history, T item, bool ignore_case, int max_history_length, int index = 0)
 		{
 			var flags = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			bool Cmp(T left, T right) => string.Compare(left.ToString(), right.ToString(), flags) == 0;
+			bool Cmp(T left, T right) => string.Compare(left?.ToString() ?? string.Empty, right?.ToString() ?? string.Empty, flags) == 0;
 			AddToHistoryList(history, item, max_history_length, index, Cmp);
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(T[] history, T item, int max_history_length, int index = 0, Func<T,T,bool> cmp = null)
+		public static T[] AddToHistoryList<T>(T[] history, T item, int max_history_length, int index = 0, Func<T,T,bool>? cmp = null)
 		{
 			// Convert the history to a list
 			var list = history?.ToList() ?? new List<T>();
@@ -547,7 +548,7 @@ namespace Rylogic.Utility
 		public static T[] AddToHistoryList<T>(T[] history, T item, bool ignore_case, int max_history_length, int index = 0)
 		{
 			var flags = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			bool Cmp(T left, T right) => string.Compare(left.ToString(), right.ToString(), flags) == 0;
+			bool Cmp(T left, T right) => string.Compare(left?.ToString() ?? string.Empty, right?.ToString() ?? string.Empty, flags) == 0;
 			return AddToHistoryList(history, item, max_history_length, index, Cmp);
 		}
 
@@ -560,7 +561,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Set 'existing' to 'value' if not already Equal. Raises 'raise' if not equal</summary>
-		public static void SetAndRaise<T>(object this_, ref T existing, T value, EventHandler raise, EventArgs args = null)
+		public static void SetAndRaise<T>(object this_, ref T existing, T value, EventHandler raise, EventArgs? args = null)
 		{
 			if (Equals(existing, value)) return;
 			existing = value;
@@ -568,7 +569,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Return an assembly attribute</summary>
-		public static T GetAssemblyAttribute<T>(Assembly ass)
+		public static T GetAssemblyAttribute<T>(Assembly? ass = null)
 		{
 			if (ass == null) ass = Assembly.GetEntryAssembly();
 			if (ass == null) ass = Assembly.GetExecutingAssembly();
@@ -576,14 +577,13 @@ namespace Rylogic.Utility
 			if (attr.Length == 0) throw new ApplicationException("Assembly does not have attribute "+typeof(T).Name);
 			return (T)(attr[0]);
 		}
-		public static T GetAssemblyAttribute<T>() { return GetAssemblyAttribute<T>(null); }
 
 		/// <summary>Return the main assembly for the currently running application</summary>
 		public static Assembly MainAssembly
 		{
 			get
 			{
-				Assembly ass = null;
+				var ass = (Assembly?)null;
 				if (ass == null) ass = Assembly.GetEntryAssembly();
 				if (ass == null) ass = Assembly.GetExecutingAssembly();
 				return ass;
@@ -595,7 +595,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Return the version number for an assembly</summary>
-		public static Version AssemblyVersion(Assembly ass)
+		public static Version AssemblyVersion(Assembly? ass = null)
 		{
 			ass = ass ?? MainAssembly;
 			return ass?.GetName().Version ?? new Version();
@@ -604,17 +604,13 @@ namespace Rylogic.Utility
 		{
 			return AssemblyVersion(Assembly.GetAssembly(type));
 		}
-		public static Version AssemblyVersion()
-		{
-			return AssemblyVersion((Assembly)null);
-		}
 		public static string AppVersion
 		{
 			get { return AssemblyVersion().ToString(3); }
 		}
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
-		public static DateTime AssemblyTimestamp(Assembly ass)
+		public static DateTime AssemblyTimestamp(Assembly? ass = null)
 		{
 			const int PeHeaderOffset = 60;
 			const int LinkerTimestampOffset = 8;
@@ -633,17 +629,13 @@ namespace Rylogic.Utility
 		{
 			return AssemblyTimestamp(Assembly.GetAssembly(type));
 		}
-		public static DateTime AssemblyTimestamp()
-		{
-			return AssemblyTimestamp((Assembly)null);
-		}
 		public static DateTime AppTimestamp
 		{
 			get { return AssemblyTimestamp(); }
 		}
 
 		/// <summary>Return the copyright string from an assembly</summary>
-		public static string AssemblyCopyright(Assembly ass)
+		public static string AssemblyCopyright(Assembly? ass = null)
 		{
 			ass = ass ?? MainAssembly;
 			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCopyrightAttribute)).ConstructorArguments[0].Value.ToString();
@@ -652,17 +644,13 @@ namespace Rylogic.Utility
 		{
 			return AssemblyCopyright(Assembly.GetAssembly(type));
 		}
-		public static string AssemblyCopyright()
-		{
-			return AssemblyCopyright((Assembly)null);
-		}
 		public static string AppCopyright
 		{
 			get { return AssemblyCopyright(); }
 		}
 
 		/// <summary>Return the company string from an assembly</summary>
-		public static string AssemblyCompany(Assembly ass)
+		public static string AssemblyCompany(Assembly? ass = null)
 		{
 			ass = ass ?? MainAssembly;
 			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCompanyAttribute)).ConstructorArguments[0].Value.ToString();
@@ -671,17 +659,13 @@ namespace Rylogic.Utility
 		{
 			return AssemblyCompany(Assembly.GetAssembly(type));
 		}
-		public static string AssemblyCompany()
-		{
-			return AssemblyCompany((Assembly)null);
-		}
 		public static string AppCompany
 		{
 			get { return AssemblyCompany(); }
 		}
 
 		/// <summary>Return the product name string from an assembly</summary>
-		public static string AssemblyProductName(Assembly ass)
+		public static string AssemblyProductName(Assembly? ass = null)
 		{
 			ass = ass ?? MainAssembly;
 			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyProductAttribute)).ConstructorArguments[0].Value.ToString();
@@ -689,10 +673,6 @@ namespace Rylogic.Utility
 		public static string AssemblyProductName(Type type)
 		{
 			return AssemblyProductName(Assembly.GetAssembly(type));
-		}
-		public static string AssemblyProductName()
-		{
-			return AssemblyProductName((Assembly)null);
 		}
 		public static string AppProductName
 		{
@@ -818,13 +798,11 @@ namespace Rylogic.Utility
 		public static Assembly ResolveEmbeddedAssembly(string assembly_name)
 		{
 			var resource_name = "AssemblyLoadingAndReflection." + new AssemblyName(assembly_name).Name + ".dll";
-			using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource_name))
-			{
-				Debug.Assert(stream != null, "Embedded assembly not found");
-				var assembly_data = new Byte[stream.Length];
-				stream.Read(assembly_data, 0, assembly_data.Length);
-				return Assembly.Load(assembly_data);
-			}
+			using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resource_name);
+			if (stream == null) throw new Exception("Embedded assembly not found");
+			var assembly_data = new Byte[stream.Length];
+			stream.Read(assembly_data, 0, assembly_data.Length);
+			return Assembly.Load(assembly_data);
 		}
 
 		/// <summary>Convert a Unix time (i.e. seconds past 1/1/1970) to a date time</summary>
@@ -852,8 +830,8 @@ namespace Rylogic.Utility
 		/// <summary>Execute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
 		public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
 		{
-			var r = default(TResult);
-			Exception ex = null;
+			var r = default(TResult)!;
+			var ex = (Exception?)null;
 			using (var reset = new AutoResetEvent(false))
 			{
 				// Can't use the thread pool for this because we abort the thread
@@ -1089,7 +1067,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Format a multi-line string that probably contains file/line info so that it becomes click-able in the debugger output window</summary>
-		public static string FormatForOutputWindow(string text, string pattern = null)
+		public static string FormatForOutputWindow(string text, string? pattern = null)
 		{
 			pattern = pattern ?? Regex_.FullPathPattern;
 
@@ -1265,17 +1243,17 @@ namespace Rylogic.Utility
 		public static T New<A0>(A0 a0)
 		{
 			var arg_types = new Type[] { typeof(A0) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0 });
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0 });
 		}
 		public static T New<A0, A1>(A0 a0, A1 a1)
 		{
 			var arg_types = new Type[] { typeof(A0), typeof(A1) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0, a1 });
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0, a1 });
 		}
 		public static T New<A0, A1, A2>(A0 a0, A1 a1, A2 a2)
 		{
 			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0, a1, a2 });
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0, a1, a2 });
 		}
 
 		/// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
@@ -1356,12 +1334,35 @@ namespace Rylogic.UnitTests
 			public byte m_byte;
 			public ushort m_ushort;
 
-			public override bool Equals(object obj) { return base.Equals(obj); }
-			public bool Equals(Struct other)        { return m_int == other.m_int && m_byte == other.m_byte && m_ushort == other.m_ushort; }
-			public override int GetHashCode()       { unchecked { int hashCode = m_int; hashCode = (hashCode*397) ^ m_byte.GetHashCode(); hashCode = (hashCode*397) ^ m_ushort.GetHashCode(); return hashCode; } }
+			public static bool operator ==(Struct left, Struct right)
+			{
+				return left.Equals(right);
+			}
+			public static bool operator !=(Struct left, Struct right)
+			{
+				return !(left == right);
+			}
+			public override bool Equals(object obj)
+			{
+				return base.Equals(obj);
+			}
+			public bool Equals(Struct other)
+			{
+				return m_int == other.m_int && m_byte == other.m_byte && m_ushort == other.m_ushort;
+			}
+			public override int GetHashCode()
+			{
+				unchecked
+				{
+					int hashCode = m_int;
+					hashCode = (hashCode * 397) ^ m_byte.GetHashCode();
+					hashCode = (hashCode * 397) ^ m_ushort.GetHashCode();
+					return hashCode;
+				}
+			}
 		}
 
-		[DataContract] [Serializable]
+		[DataContract][Serializable]
 		public class SerialisableType
 		{
 			public enum SomeEnum
@@ -1371,10 +1372,10 @@ namespace Rylogic.UnitTests
 				[EnumMember] Three,
 			}
 			[DataMember] public int      Int    { get; set; }
-			[DataMember] public string   String { get; set; }
+			[DataMember] public string?  String { get; set; }
 			[DataMember] public Point    Point  { get; set; }
 			[DataMember] public SomeEnum EEnum  { get; set; }
-			[DataMember] public int[]    Data   { get; set; }
+			[DataMember] public int[]?   Data   { get; set; }
 		}
 
 		[Test] public void ByteArrayCompare()

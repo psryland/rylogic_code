@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -20,7 +21,7 @@ namespace Rylogic.Attrib
 		{}
 
 		/// <summary>Associate a named instance of a constant value</summary>
-		public AssocAttribute(string name, object t)
+		public AssocAttribute(string? name, object t)
 			:this(name, t.GetType(), () => t)
 		{}
 
@@ -30,7 +31,7 @@ namespace Rylogic.Attrib
 		{}
 
 		/// <summary>Associate a named property or field via reflection</summary>
-		public AssocAttribute(string name, Type ty, string prop_or_field_name, bool non_public = false)
+		public AssocAttribute(string? name, Type ty, string prop_or_field_name, bool non_public = false)
 			:this(name, ty, null)
 		{
 			var mi = ty.GetProperty(prop_or_field_name, BindingFlags.Static|BindingFlags.Public|(non_public?BindingFlags.NonPublic:0))?.GetGetMethod(non_public);
@@ -49,7 +50,7 @@ namespace Rylogic.Attrib
 
 			throw new Exception("AssocAttribute: Cannot match named static property or field");
 		}
-		private AssocAttribute(string name, Type ty, Func<object> get)
+		private AssocAttribute(string? name, Type ty, Func<object>? get)
 		{
 			Name = name;
 			Type = ty;
@@ -57,21 +58,21 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>A name to identify the associated type</summary>
-		public string Name { get; }
+		public string? Name { get; }
 
 		/// <summary>The type of the associated value</summary>
 		public Type Type { get; }
 
 		/// <summary>The instance associated with the owning property/enum value/field</summary>
-		public object AssocItem => m_get();
-		private Func<object> m_get;
+		public object? AssocItem => m_get?.Invoke();
+		private Func<object>? m_get;
 	}
 
 	/// <summary>Access class for AssocAttribute</summary>
 	public static class Assoc_
 	{
 		/// <summary>Returns the AssocAttribute instance associated with an enum value</summary>
-		private static AssocAttribute Get<T>(MemberInfo mi, string name = null)
+		private static AssocAttribute? Get<T>(MemberInfo mi, string? name = null)
 		{
 			if (mi == null) return null;
 			return mi
@@ -81,10 +82,10 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>Returns the AssocItem instance associated with an enum value</summary>
-		public static T Assoc<T>(MemberInfo mi, string name = null)
+		public static T Assoc<T>(MemberInfo mi, string? name = null)
 		{
 			var attr = Get<T>(mi, name);
-			if (attr != null)
+			if (attr != null && attr.AssocItem != null)
 				return (T)attr.AssocItem;
 
 			throw name == null
@@ -93,7 +94,7 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>Returns the AssocItem instance associated with a property or field</summary>
-		public static T Assoc<T>(Type ty, string member_name, string name = null)
+		public static T Assoc<T>(Type ty, string member_name, string? name = null)
 		{
 			var mi =
 				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
@@ -102,21 +103,21 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>Return the AssocItem associated with an enum value</summary>
-		public static T Assoc<T>(this Enum enum_, string name = null)
+		public static T Assoc<T>(this Enum enum_, string? name = null)
 		{
 			return Assoc<T>(enum_.GetType(), enum_.ToString(), name);
 		}
 
 		/// <summary>Returns true if 'ty.member_name' has an AssocAttribute of type 'T'</summary>
-		public static bool TryAssoc<T>(MemberInfo mi, out T assoc, string name = null)
+		public static bool TryAssoc<T>(MemberInfo mi, out T assoc, string? name = null)
 		{
 			var attr = Get<T>(mi, name);
-			assoc = (T)(attr?.AssocItem ?? default(T));
+			assoc = (T)(attr?.AssocItem ?? default(T)!);
 			return attr != null;
 		}
 
 		/// <summary>Returns true if 'ty.member_name' has an AssocAttribute of type 'T'</summary>
-		public static bool TryAssoc<T>(Type ty, string member_name, out T assoc, string name = null)
+		public static bool TryAssoc<T>(Type ty, string member_name, out T assoc, string? name = null)
 		{
 			var mi =
 				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ??
@@ -125,7 +126,7 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>Returns true if 'enum_' has an AssocAttribute of type 'T'</summary>
-		public static bool TryAssoc<T>(this Enum enum_, out T assoc, string name = null)
+		public static bool TryAssoc<T>(this Enum enum_, out T assoc, string? name = null)
 		{
 			return TryAssoc<T>(enum_.GetType(), enum_.ToString(), out assoc, name);
 		}
@@ -136,7 +137,7 @@ namespace Rylogic.Attrib
 	{
 		/// <summary>Returns the item associated with a member</summary>
 		[DebuggerStepThrough]
-		public static T Get<Ret>(Expression<Func<Ty,Ret>> expression, string name = null)
+		public static T Get<Ret>(Expression<Func<Ty,Ret>> expression, string? name = null)
 		{
 			return R<Ty>.Assoc<T,Ret>(expression, name);
 		}
@@ -170,10 +171,10 @@ namespace Rylogic.UnitTests
 		public class Whatsit
 		{
 			[Assoc(5), Assoc(EType.A)]
-			public double Distance { get { return 2.0; } }
+			public double Distance => 2.0;
 
 			[Assoc(0.001), Assoc(EType.C)]
-			public double Speed { get { return 3.0; } }
+			public double Speed => 3.0;
 		}
 
 		[Test] public void Assoc()

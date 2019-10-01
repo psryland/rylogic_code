@@ -13,6 +13,7 @@ namespace Rylogic.Common
 		public UndoHistory()
 		{
 			History = new List<TRecord>();
+			ApplySnapshot = _ => { };
 			Capacity = 100;
 			End = 0;
 		}
@@ -24,7 +25,7 @@ namespace Rylogic.Common
 		private int End { get; set; }
 
 		/// <summary>Compares to history records for approximately equal. If equal enough, the rhs entry is not added to the history</summary>
-		public Func<TRecord, TRecord, bool> IsDuplicate { get; set; }
+		public Func<TRecord, TRecord, bool>? IsDuplicate { get; set; }
 
 		/// <summary>Function for applying a history snapshot</summary>
 		public Action<TRecord> ApplySnapshot { get; set; }

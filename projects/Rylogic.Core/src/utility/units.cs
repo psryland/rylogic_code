@@ -252,10 +252,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>True if this unit is '0' with no units</summary>
-		private bool IsScalarZero
-		{
-			get { return UnitId == Unit_.NoUnitsId && Equals(Value, default(T)); }
-		}
+		private bool IsScalarZero => UnitId == Unit_.NoUnitsId && Equals(Value, default(T)!);
 
 		/// <summary>Check units</summary>
 		public bool IsUnit(int unit_id) => UnitId == unit_id;

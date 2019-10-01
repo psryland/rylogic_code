@@ -11,26 +11,249 @@ namespace Rylogic.Common
 	/// <summary>Builder class for making html text</summary>
 	public class Html
 	{
-		#region Elements
+		public Html(string tag = "html", string? @class = null, string? id = null)
+		{
+			Attr = new Attribs();
+			Children = new List<Html>();
+			NewLine = Environment.NewLine;
+			Parent = null;
+			Tag = tag;
+
+			if (@class != null) Attr.Add("class", @class);
+			if (id != null) Attr.Add("id", id);
+		}
+
+		/// <summary>The parent element</summary>
+		private Html? Parent { get; set; }
+
+		/// <summary>The child objects of this element</summary>
+		private List<Html> Children { get; }
+
+		/// <summary>The html tag for this element</summary>
+		public string Tag { get; private set; }
+
+		/// <summary>The attributes for this element</summary>
+		public Attribs Attr { get; private set; }
+
+		/// <summary>Get/Set the class for this element</summary>
+		public string Class
+		{
+			get { return Attr["class"]; }
+			set { Attr["class"] = value; }
+		}
+
+		/// <summary>True if the generated html text is all on a single line</summary>
+		public string NewLine { get; set; }
+		public void NewLineAll(string newline)
+		{
+			NewLine = newline;
+			Children.ForEach(x => NewLineAll(newline));
+		}
+
+		/// <summary>Return the html text represented by this tree structure of elements</summary>
+		public override string ToString()
+		{
+			return Generate(null, 0).ToString();
+		}
+
+		/// <summary>Append string content. Returns this for method chaining</summary>
+		public Html Add(string content, bool html_encode)
+		{
+			if (html_encode)
+			{
+				content = FromText(content);
+				//content = WebUtility.HtmlEncode(content);
+			}
+
+			if (Children.Count != 0 && Children.Back() is Str str)
+				str.Content.Append(content);
+			else
+				Add(new Str(content));
+			return this;
+		}
+
+		/// <summary>Add an html element to this element. Returns this for method chaining</summary>
+		public Html Add<T>(T elem) where T:Html
+		{
+			elem.ValidParent(this);
+			elem.Parent = this;
+			Children.Add(elem);
+			elem.OnAdd();
+			return this;
+		}
+
+		/// <summary>Add a collection of html elements. Returns this for method chaining</summary>
+		public Html Add<T>(IEnumerable<T> elems) where T:Html
+		{
+			foreach (var e in elems) Add(e);
+			return this;
+		}
+
+		/// <summary>Remove this element from it's parent</summary>
+		public void Remove()
+		{
+			if (Parent == null) return;
+			Parent.Children.Remove(this);
+			Parent = null;
+			OnRemove();
+		}
+
+		/// <summary>The number of child elements</summary>
+		public int Count
+		{
+			get { return Children.Count; }
+		}
+
+		/// <summary>Get/Set elements by index</summary>
+		public Html this[int idx]
+		{
+			get { return Children[idx]; }
+			set { Children[idx] = value; }
+		}
+
+		/// <summary>Get an element by tag and index</summary>
+		public Html this[string tag, int idx = 0]
+		{
+			get { return Children.Where(x => x.Tag == tag).Skip(idx).FirstOrDefault(); }
+		}
+
+		/// <summary>Enumerate the elements</summary>
+		public IEnumerable<Html> Elems
+		{
+			get { return Children; }
+		}
+
+		/// <summary>Check that this element can be added to 'parent'</summary>
+		protected virtual void ValidParent(Html parent)
+		{
+			// Default to no checking...
+			//throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
+		}
+
+		/// <summary>True if this element has child content</summary>
+		protected virtual bool HasContent
+		{
+			get { return Children.Count != 0; }
+		}
+
+		/// <summary>Called when this element is added to another Html element</summary>
+		protected virtual void OnAdd()
+		{}
+
+		/// <summary>Called when this element is removed from another Html element</summary>
+		protected virtual void OnRemove()
+		{}
+
+		/// <summary>Generate the html text for this tree of elements in 'sb'. Set 'indent' to -1 for no indenting</summary>
+		public virtual StringBuilder Generate(StringBuilder? sb = null, int indent = 0)
+		{
+			sb = sb ?? new StringBuilder();
+
+			// Add the tag and attributes
+			GenerateTagOpen(sb, ref indent);
+
+			// Add the content. Note, using 'HasContent' because some
+			// elements may have content other than stuff in 'm_elems'
+			if (HasContent)
+			{
+				if (NewLine.HasValue())
+					sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
+
+				GenerateContent(sb, indent);
+
+				if (NewLine.HasValue())
+					sb.Append(NewLine).Append('\t', indent >= 0 ? indent-1 : 0);
+			}
+
+			// Close the tag
+			GenerateTagClose(sb, ref indent);
+
+			return sb;
+		}
+
+		/// <summary>Add the element tag and attributes</summary>
+		protected virtual void GenerateTagOpen(StringBuilder sb, ref int indent)
+		{
+			sb.Append("<").Append(Tag);
+			Attr.ForEach(x => sb.Append(" ").Append(x.Key).Append("=\"").Append(x.Value).Append("\""));
+			sb.Append(HasContent ? ">" : "/>");
+			if (indent >= 0) ++indent;
+		}
+
+		/// <summary>Add the element close tag</summary>
+		protected virtual void GenerateTagClose(StringBuilder sb, ref int indent)
+		{
+			if (indent >= 0) --indent;
+			if (!HasContent) return;
+			sb.Append("</").Append(Tag).Append(">");
+		}
+
+		/// <summary>Add the content of this element to 'sb'</summary>
+		protected virtual void GenerateContent(StringBuilder sb, int indent)
+		{
+			foreach (var x in Children)
+			{
+				x.Generate(sb, indent);
+				if (x != Children.Back() && NewLine.HasValue())
+					sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
+			}
+		}
+
+		/// <summary>Converts HTML to plain text.</summary>
+		public static string ToText(string html)
+		{
+			return new HtmlToText().Convert(html);
+		}
+
+		/// <summary>Convert simple plain text to html</summary>
+		public static string FromText(string text, bool nofollow = false)
+		{
+			return new TextToHtml().Convert(text, nofollow);
+		}
+
+		/// <summary>Element attributes</summary>
+		public class Attribs :Dictionary<string, string>
+		{
+			/// <summary>Add a key value pair to the definition. Returns this object for method chaining</summary>
+			public new Attribs Add(string key, string value)
+			{
+				base.Add(key, value);
+				return this;
+			}
+
+			/// <summary>Get/Set/Add/Update a key/value pair</summary>
+			public new string this[string key]
+			{
+				get
+				{
+					string value;
+					return TryGetValue(key, out value) ? value : string.Empty;
+				}
+				set
+				{
+					base[key] = value;
+				}
+			}
+		}
 
 		#region Head
 		public class Head :Html
 		{
-			public Head() :base("head")
-			{}
+			public Head() : base("head")
+			{ }
 		}
 		#endregion
 		#region Body
 		public class Body :Html
 		{
-			public Body(string class_ = null) :base("body", class_)
-			{}
+			public Body(string? class_ = null) : base("body", class_)
+			{ }
 		}
 		#endregion
 		#region Base
 		public class Base :Html
 		{
-			public Base(string href = null, string target = null) :base("base")
+			public Base(string? href = null, string? target = null) : base("base")
 			{
 				if (href != null) Attr["href"] = href;
 				if (target != null) Attr["target"] = target;
@@ -44,7 +267,7 @@ namespace Rylogic.Common
 			public class Def :Dictionary<string, string>
 			{
 				public Def(string name) { Name = name; }
-				
+
 				/// <summary>The name (or multiple names) for the style definition</summary>
 				public string Name { get; set; }
 
@@ -61,10 +284,10 @@ namespace Rylogic.Common
 					sb.Append(Name).Append(" {").Append(newline);
 					foreach (var x in this)
 					{
-						if (newline.HasValue()) sb.Append('\t',indent+1); else sb.Append(" ");
+						if (newline.HasValue()) sb.Append('\t', indent + 1); else sb.Append(" ");
 						sb.Append(x.Key).Append(": ").Append(x.Value).Append(";").Append(newline);
 					}
-					sb.Append('\t',indent).Append("}");
+					sb.Append('\t', indent).Append("}");
 				}
 
 				public override string ToString()
@@ -73,12 +296,12 @@ namespace Rylogic.Common
 				}
 			}
 
-			public Style() :base("style")
+			public Style() : base("style")
 			{
 				Defs = new List<Def>();
-				Attr.Add("type","text/css");
+				Attr.Add("type", "text/css");
 			}
-			
+
 			/// <summary>Create a Style instance by parsing html text</summary>
 			public Style Parse(string css)
 			{
@@ -151,7 +374,7 @@ namespace Rylogic.Common
 		#region String
 		public class Str :Html
 		{
-			public Str(string content = null, int capacity = 256) :base(string.Empty)
+			public Str(string? content = null, int capacity = 256) : base(string.Empty)
 			{
 				Content = new StringBuilder(capacity);
 				if (content != null) Content.Append(content);
@@ -161,7 +384,7 @@ namespace Rylogic.Common
 			public StringBuilder Content { get; private set; }
 
 			/// <summary>Generate the html text for this tree of elements in 'sb'. Set 'indent' to -1 for no indenting</summary>
-			public override StringBuilder Generate(StringBuilder sb = null, int indent = 0)
+			public override StringBuilder Generate(StringBuilder? sb = null, int indent = 0)
 			{
 				sb = sb ?? new StringBuilder();
 				sb.Append(Content.ToString());
@@ -172,8 +395,8 @@ namespace Rylogic.Common
 		#region Div
 		public class Div :Html
 		{
-			public Div(string class_ = null) :base("div", class_)
-			{}
+			public Div(string? @class = null) : base("div", @class)
+			{ }
 			protected override void ValidParent(Html parent)
 			{
 				if (parent is Body) return;
@@ -189,7 +412,7 @@ namespace Rylogic.Common
 			{
 				public class Hdr :Html
 				{
-					public Hdr(string class_ = null) :base("th", class_) { NewLine = string.Empty; }
+					public Hdr(string? @class = null) : base("th", @class) { NewLine = string.Empty; }
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
@@ -198,7 +421,7 @@ namespace Rylogic.Common
 				}
 				public class Data :Html
 				{
-					public Data(string class_ = null) :base("td", class_) { NewLine = string.Empty; }
+					public Data(string? @class = null) : base("td", @class) { NewLine = string.Empty; }
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
@@ -206,14 +429,14 @@ namespace Rylogic.Common
 					}
 				}
 
-				public Row(string class_ = null) :base("tr", class_) {}
+				public Row(string? @class = null) : base("tr", @class) { }
 				protected override void ValidParent(Html parent)
 				{
 					if (parent is Table) return;
 					throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 				}
 			}
-			public Table(string class_ = null) :base("table", class_) {}
+			public Table(string? @class = null) : base("table", @class) { }
 			protected override void ValidParent(Html parent)
 			{
 				if (parent is Body) return;
@@ -231,260 +454,23 @@ namespace Rylogic.Common
 			{
 				if (indent >= 0) --indent;
 				sb.Append("</tdata>");
-				if (NewLine.HasValue()) sb.Append(NewLine).Append('\t', indent >= 0 ? indent-1 : 0);
+				if (NewLine.HasValue()) sb.Append(NewLine).Append('\t', indent >= 0 ? indent - 1 : 0);
 				base.GenerateTagClose(sb, ref indent);
 			}
 		}
 		#endregion
-
-		#region Html Element Base
-
-		/// <summary>Element attributes</summary>
-		public class Attribs :Dictionary<string,string>
-		{
-			/// <summary>Add a key value pair to the definition. Returns this object for method chaining</summary>
-			public new Attribs Add(string key, string value)
-			{
-				base.Add(key, value);
-				return this;
-			}
-
-			/// <summary>Get/Set/Add/Update a key/value pair</summary>
-			public new string this[string key]
-			{
-				get
-				{
-					string value;
-					return TryGetValue(key, out value) ? value : string.Empty;
-				}
-				set
-				{
-					base[key] = value;
-				}
-			}
-		}
-
-		/// <summary>The parent element</summary>
-		private Html m_parent;
-
-		/// <summary>The child objects of this element</summary>
-		private List<Html> m_elems;
-
-		public Html(string tag = "html", string class_ = null, string id = null)
-		{
-			m_parent   = null;
-			m_elems    = new List<Html>();
-			Tag        = tag;
-			Attr       = new Attribs();
-			NewLine    = Environment.NewLine;
-
-			if (class_ != null) Attr.Add("class",class_);
-			if (id     != null) Attr.Add("id",id);
-		}
-
-		/// <summary>The html tag for this element</summary>
-		public string Tag { get; private set; }
-
-		/// <summary>The attributes for this element</summary>
-		public Attribs Attr { get; private set; }
-
-		/// <summary>Get/Set the class for this element</summary>
-		public string Class
-		{
-			get { return Attr["class"]; }
-			set { Attr["class"] = value; }
-		}
-
-		/// <summary>True if the generated html text is all on a single line</summary>
-		public string NewLine { get; set; }
-		public void NewLineAll(string newline)
-		{
-			NewLine = newline;
-			m_elems.ForEach(x => NewLineAll(newline));
-		}
-
-		/// <summary>Return the html text represented by this tree structure of elements</summary>
-		public override string ToString()
-		{
-			return Generate(null, 0).ToString();
-		}
-
-		/// <summary>Append string content. Returns this for method chaining</summary>
-		public Html Add(string content, bool html_encode)
-		{
-			if (html_encode)
-			{
-				content = FromText(content);
-				//content = WebUtility.HtmlEncode(content);
-			}
-
-			if (m_elems.Count != 0 && m_elems.Back() is Str str)
-				str.Content.Append(content);
-			else
-				Add(new Str(content));
-			return this;
-		}
-
-		/// <summary>Add an html element to this element. Returns this for method chaining</summary>
-		public Html Add<T>(T elem) where T:Html
-		{
-			elem.ValidParent(this);
-			elem.m_parent = this;
-			m_elems.Add(elem);
-			elem.OnAdd();
-			return this;
-		}
-
-		/// <summary>Add a collection of html elements. Returns this for method chaining</summary>
-		public Html Add<T>(IEnumerable<T> elems) where T:Html
-		{
-			foreach (var e in elems) Add(e);
-			return this;
-		}
-
-		/// <summary>Remove this element from it's parent</summary>
-		public void Remove()
-		{
-			if (m_parent == null) return;
-			m_parent.m_elems.Remove(this);
-			m_parent = null;
-			OnRemove();
-		}
-
-		/// <summary>The number of child elements</summary>
-		public int Count
-		{
-			get { return m_elems.Count; }
-		}
-
-		/// <summary>Get/Set elements by index</summary>
-		public Html this[int idx]
-		{
-			get { return m_elems[idx]; }
-			set { m_elems[idx] = value; }
-		}
-
-		/// <summary>Get an element by tag and index</summary>
-		public Html this[string tag, int idx = 0]
-		{
-			get { return m_elems.Where(x => x.Tag == tag).Skip(idx).FirstOrDefault(); }
-		}
-
-		/// <summary>Enumerate the elements</summary>
-		public IEnumerable<Html> Elems
-		{
-			get { return m_elems; }
-		}
-
-		/// <summary>Check that this element can be added to 'parent'</summary>
-		protected virtual void ValidParent(Html parent)
-		{
-			// Default to no checking...
-			//throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
-		}
-
-		/// <summary>True if this element has child content</summary>
-		protected virtual bool HasContent
-		{
-			get { return m_elems.Count != 0; }
-		}
-
-		/// <summary>Called when this element is added to another Html element</summary>
-		protected virtual void OnAdd()
-		{}
-
-		/// <summary>Called when this element is removed from another Html element</summary>
-		protected virtual void OnRemove()
-		{}
-
-		/// <summary>Generate the html text for this tree of elements in 'sb'. Set 'indent' to -1 for no indenting</summary>
-		public virtual StringBuilder Generate(StringBuilder sb = null, int indent = 0)
-		{
-			sb = sb ?? new StringBuilder();
-
-			// Add the tag and attributes
-			GenerateTagOpen(sb, ref indent);
-
-			// Add the content. Note, using 'HasContent' because some
-			// elements may have content other than stuff in 'm_elems'
-			if (HasContent)
-			{
-				if (NewLine.HasValue())
-					sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
-
-				GenerateContent(sb, indent);
-
-				if (NewLine.HasValue())
-					sb.Append(NewLine).Append('\t', indent >= 0 ? indent-1 : 0);
-			}
-
-			// Close the tag
-			GenerateTagClose(sb, ref indent);
-
-			return sb;
-		}
-
-		/// <summary>Add the element tag and attributes</summary>
-		protected virtual void GenerateTagOpen(StringBuilder sb, ref int indent)
-		{
-			sb.Append("<").Append(Tag);
-			Attr.ForEach(x => sb.Append(" ").Append(x.Key).Append("=\"").Append(x.Value).Append("\""));
-			sb.Append(HasContent ? ">" : "/>");
-			if (indent >= 0) ++indent;
-		}
-
-		/// <summary>Add the element close tag</summary>
-		protected virtual void GenerateTagClose(StringBuilder sb, ref int indent)
-		{
-			if (indent >= 0) --indent;
-			if (!HasContent) return;
-			sb.Append("</").Append(Tag).Append(">");
-		}
-
-		/// <summary>Add the content of this element to 'sb'</summary>
-		protected virtual void GenerateContent(StringBuilder sb, int indent)
-		{
-			foreach (var x in m_elems)
-			{
-				x.Generate(sb, indent);
-				if (x != m_elems.Back() && NewLine.HasValue())
-					sb.Append(NewLine).Append('\t', indent >= 0 ? indent : 0);
-			}
-		}
-
-		#endregion
-
-		#endregion
-
-		#region Text-to-Html Conversion
-
-		/// <summary>Converts HTML to plain text.</summary>
-		public static string ToText(string html)
-		{
-			return HtmlToText.Instance.Convert(html);
-		}
-
-		/// <summary>Convert simple plain text to html</summary>
-		public static string FromText(string text, bool nofollow = false)
-		{
-			return TextToHtml.Instance.Convert(text, nofollow);
-		}
 
 		#region Conversion Helpers
 
 		/// <summary>Converts HTML to plain text.</summary>
 		private class HtmlToText
 		{
-			// Singleton instance
-			public static HtmlToText Instance { get { return m_instance ?? (m_instance = new HtmlToText()); } }
-			private static HtmlToText m_instance;
-			
 			// Static data tables
 			private static readonly Dictionary<string, string> Tags;
 			private static readonly HashSet<string> IgnoreTags;
 			
 			// Instance variables
-			private TextBuilder m_text;
+			private readonly TextBuilder m_text;
 			private string m_html;
 			private int m_pos;
 			
@@ -530,14 +516,20 @@ namespace Rylogic.Common
 				IgnoreTags.Add("style");
 				IgnoreTags.Add("object");
 			}
-			
+			public HtmlToText()
+			{
+				m_text = new TextBuilder();
+				m_html = string.Empty;
+				m_pos = 0;
+			}
+
 			/// <summary>Converts the given HTML to plain text and returns the result.</summary>
 			/// <param name="html">HTML to be converted</param>
 			/// <returns>Resulting plain text</returns>
 			public string Convert(string html)
 			{
 				// Initialize state variables
-				m_text = new TextBuilder();
+				m_text.Clear();
 				m_html = html;
 				m_pos = 0;
 				
@@ -593,6 +585,7 @@ namespace Rylogic.Common
 						MoveAhead();
 					}
 				}
+
 				// Return result
 				return WebUtility.HtmlDecode(m_text.ToString());
 			}
@@ -850,10 +843,6 @@ namespace Rylogic.Common
 		/// <summary>Converts plain text to HTML</summary>
 		private class TextToHtml
 		{
-			/// <summary>Singleton access</summary>
-			private static TextToHtml m_instance;
-			public static TextToHtml Instance { get { return m_instance ?? (m_instance = new TextToHtml()); } }
-			
 			private const string ParaBreak = "\r\n\r\n";
 			private const string Link = "<a href=\"{0}\">{1}</a>";
 			private const string LinkNoFollow = "<a href=\"{0}\" rel=\"nofollow\">{1}</a>";
@@ -952,8 +941,6 @@ namespace Rylogic.Common
 				}
 			}
 		}
-
-		#endregion
 
 		#endregion
 	}

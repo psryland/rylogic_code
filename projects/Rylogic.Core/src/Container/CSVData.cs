@@ -29,14 +29,14 @@ namespace Rylogic.Container
 			{ }
 
 			/// <summary>Add a item to the row</summary>
-			public new Row Add(string s)
+			public new Row Add(string? s)
 			{
-				base.Add(s);
+				base.Add(s ?? string.Empty);
 				return this;
 			}
-			public Row Add(object s)
+			public Row Add(object? s)
 			{
-				return Add(s.ToString());
+				return Add(s?.ToString());
 			}
 
 			/// <summary>Add multiple items to the row</summary>
@@ -45,9 +45,9 @@ namespace Rylogic.Container
 				foreach (var x in range) Add(x);
 				return this;
 			}
-			public Row Add(params object[] values)
+			public Row Add(params object?[] values)
 			{
-				foreach (var x in values) Add(x.ToString());
+				foreach (var x in values) Add(x?.ToString());
 				return this;
 			}
 
@@ -229,7 +229,7 @@ namespace Rylogic.Container
 		/// <summary>
 		/// Read CSV rows from a stream or file.
 		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
-		public static IEnumerable<Row> Parse(Stream src, bool ignore_comment_rows, Action<double> progress_cb = null)
+		public static IEnumerable<Row> Parse(Stream src, bool ignore_comment_rows, Action<double>? progress_cb = null)
 		{
 			// Parse the CSV stream
 			// Fields can optionally be in quotes.
@@ -241,28 +241,21 @@ namespace Rylogic.Container
 				int line = 1, elem = 1;        // Natural indices
 
 				// Progress reporting
-				var last_progress = 0.0;
 				var stream_length = file.BaseStream.Length;
-				var ReportProgress = progress_cb == null || stream_length == 0 ? (Action)null : () =>
-				{
-					var progress = (double)file.BaseStream.Position / stream_length;
-					if (progress - last_progress < 0.01) return;
-					progress_cb(progress);
-					last_progress = progress;
-				};
+				var last_progress = 0.0;
 
 				// Parse the file char-by-char emitting CSV rows
-				for (int ch; (ch = next()) >= 0; )
+				for (int ch; (ch = Next()) >= 0; )
 				{
 					Debug.Assert(str.Length == 0, "Each loop around should be for a new element");
 
 					// Report progress
-					ReportProgress?.Invoke();
+					ReportProgress(file.BaseStream.Position, stream_length);
 
 					// If comments are supported, and the row starts with the comment symbol, consume the line
 					if (ch == '#' && ignore_comment_rows && row.Count == 0)
 					{
-						for (; (ch = next()) >= 0 && ch != '\n'; ) {} // consume the line
+						for (; (ch = Next()) >= 0 && ch != '\n'; ) {} // consume the line
 						++line;
 						elem = 1;
 						continue;
@@ -281,7 +274,7 @@ namespace Rylogic.Container
 							}
 							str.Append((char)ch);
 						}
-						if (ch >= 0) ch = next(); // Consume the closing quote
+						if (ch >= 0) ch = Next(); // Consume the closing quote
 						else throw new Exception($"Quoted CSV element not closed starting at line {line}, element {elem}");
 
 						// Expect the next character to be delimiter or EOF
@@ -293,7 +286,7 @@ namespace Rylogic.Container
 					{
 						// Otherwise, assume this is an un-quoted element, consume to the next delimiter
 						str.Append((char)ch);
-						for (; (ch = next()) >= 0 && ch != ',' && ch != '\n';)
+						for (; (ch = Next()) >= 0 && ch != ',' && ch != '\n';)
 							str.Append((char)ch);
 					}
 
@@ -327,7 +320,7 @@ namespace Rylogic.Container
 				}
 
 				// Get the next character from the stream
-				int next()
+				int Next()
 				{
 					var chint = file.Read();
 
@@ -336,9 +329,16 @@ namespace Rylogic.Container
 					if (file.Peek() == '\n') file.Read();
 					return '\n';
 				}
+				void ReportProgress(long pos, long len)
+				{
+					var progress = (double)pos / len;
+					if (progress_cb == null || progress - last_progress < 0.01) return;
+					progress_cb(progress);
+					last_progress = progress;
+				}
 			}
 		}
-		public static IEnumerable<Row> Parse(string filepath, bool ignore_comment_rows, Action<double> progress_cb = null)
+		public static IEnumerable<Row> Parse(string filepath, bool ignore_comment_rows, Action<double>? progress_cb = null)
 		{
 			var stream = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			return Parse(stream, ignore_comment_rows, progress_cb);
@@ -347,13 +347,13 @@ namespace Rylogic.Container
 		/// <summary>
 		/// Load and parse a CSV stream or file.
 		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
-		public static CSVData Load(Stream src, bool ignore_comment_rows, Action<double> progress_cb = null)
+		public static CSVData Load(Stream src, bool ignore_comment_rows, Action<double>? progress_cb = null)
 		{
 			var csv = new CSVData();
 			csv.Rows.AddRange(Parse(src, ignore_comment_rows, progress_cb));
 			return csv;
 		}
-		public static CSVData Load(string filepath, bool ignore_comment_rows, Action<double> progress_cb = null)
+		public static CSVData Load(string filepath, bool ignore_comment_rows, Action<double>? progress_cb = null)
 		{
 			var csv = new CSVData();
 			csv.Rows.AddRange(Parse(filepath, ignore_comment_rows, progress_cb));

@@ -37,6 +37,9 @@ namespace Rylogic.Common
 			/// Warning: the order of event handlers is not preserved.</summary>
 			public EventsState(T obj, Restore restore = Restore.Both, BindingFlags binding_flags = BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)
 			{
+				if (obj == null)
+					throw new ArgumentNullException(nameof(obj));
+
 				m_obj = obj;
 				m_restore = restore;
 				m_binding_flags = binding_flags;
@@ -46,30 +49,30 @@ namespace Rylogic.Common
 				var events = type.AllEvents(m_binding_flags).ToList();
 				foreach (var evt in events)
 				{
-					FieldInfo field;
-					if (!fields.TryGetValue(evt.Name, out field))
+					if (!fields.TryGetValue(evt.Name, out var field))
 						continue;
 
 					// Get the instance of the multicast delegate from 'obj' and save the invocation list
-					var mcd = field.GetValue(obj) as MulticastDelegate;
-					if (mcd == null)
-					{
-						m_events.Add(field, new Delegate[0]);
-					}
-					else
+					if (field.GetValue(obj) is MulticastDelegate mcd)
 					{
 						var delegates = mcd.GetInvocationList();
 						m_events.Add(field, delegates);
 					}
+					else
+					{
+						m_events.Add(field, new Delegate[0]);
+					}
 				}
 			}
-
-			/// <summary>Restores the event handlers to the delegates</summary>
 			public void Dispose()
 			{
-				var type = m_obj.GetType();
-
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
+			{
 				// Restore the delegates
+				var type = m_obj!.GetType();
 				foreach (var evt in m_events)
 				{
 					var field = evt.Key;
@@ -79,7 +82,7 @@ namespace Rylogic.Common
 					var new_delegates = mcd != null ? mcd.GetInvocationList() : new Delegate[0];
 
 					var event_info = type.GetEvent(field.Name, m_binding_flags);
-					Debug.Assert(event_info != null);
+					if (event_info == null) throw new Exception($"Failed to find event {field.Name} on {type.Name}");
 
 					if ((m_restore & Restore.RemoveAdded) == Restore.RemoveAdded)
 					{
@@ -100,7 +103,8 @@ namespace Rylogic.Common
 						else
 						{
 							// Remove any that were added
-							var remove = event_info.GetRemoveMethod(true); Debug.Assert(remove != null);
+							var remove = event_info.GetRemoveMethod(true);
+							if (remove == null) throw new Exception($"Remove method not found");
 							foreach (var d in added)
 								remove.Invoke(m_obj, new object[]{d});
 						}
@@ -124,7 +128,8 @@ namespace Rylogic.Common
 						else
 						{
 							// Add any that were removed
-							var add = event_info.GetAddMethod(true); Debug.Assert(add != null);
+							var add = event_info.GetAddMethod(true);
+							if (add == null) throw new Exception("Add method not found");
 							foreach (var d in removed)
 								add.Invoke(m_obj, new object[]{d});
 						}
@@ -144,10 +149,10 @@ namespace Rylogic.UnitTests
 	{
 		private class TestBase
 		{
-			protected event EventHandler<Args> Event2;
+			protected event EventHandler<Args>? Event2;
 			public class Args :EventArgs {};
 
-			public int Event2HandlerCount { get { return Event2 != null ? Event2.GetInvocationList().Length : 0; } }
+			public int Event2HandlerCount => Event2 != null ? Event2.GetInvocationList().Length : 0;
 
 			public virtual void ResetHandlers()
 			{
@@ -162,9 +167,9 @@ namespace Rylogic.UnitTests
 		{
 			public static string Result = string.Empty;
 
-			public Action Ignored;
-			public event EventHandler Event1;
-			public static event EventHandler Event3;
+			public Action? Ignored;
+			public event EventHandler? Event1;
+			public static event EventHandler? Event3;
 
 			public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
 			public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }

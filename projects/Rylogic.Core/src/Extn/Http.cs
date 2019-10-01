@@ -32,16 +32,10 @@ namespace Rylogic.Extn
 			using (Task_.NoSyncContext())
 			{
 				// Construct the request
-				var req = (HttpRequestMessage)null;
-				if (method == HttpMethod.Get)
-				{
-					req = new HttpRequestMessage(HttpMethod.Get, url + Http_.UrlEncode(parameters));
-				}
-				else if (method == HttpMethod.Post)
-				{
-					req = new HttpRequestMessage(HttpMethod.Post, url);
-					req.Content = new StringContent(Http_.UrlEncode(parameters).TrimStart('?'), Encoding.UTF8, "application/x-www-form-urlencoded");
-				}
+				var req = 
+					method == HttpMethod.Get ? new HttpRequestMessage(HttpMethod.Get, url + Http_.UrlEncode(parameters)) :
+					method == HttpMethod.Post ? new HttpRequestMessage(HttpMethod.Post, url){ Content = new StringContent(Http_.UrlEncode(parameters).TrimStart('?'), Encoding.UTF8, "application/x-www-form-urlencoded") } :
+					throw new NotSupportedException($"Http method {method} is not supported");
 
 				// Submit the request
 				var res = await client.SendAsync(req, cancel);

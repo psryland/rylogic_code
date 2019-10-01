@@ -352,16 +352,22 @@ namespace Rylogic.Maths
 			return new quat(Normalise(q.xyzw, def.xyzw));
 		}
 
-		/// <summary>Return the cosine of the angle between two quaternions (i.e. the dot product)</summary>
+		/// <summary>Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)</summary>
 		public static float CosAngle2(quat a, quat b)
 		{
+			// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
+			// where operator * is a quaternion multiply. The 'w' component of a quaternion
+			// multiply is given by: q.w = a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z;
+			// which is the same as q.w = Dot4(a,b) since conjugate negates the x,y,z
+			// components of 'b'. Remember: q.w = Cos(theta/2)
 			return Dot(a.xyzw, b.xyzw);
 		}
 
 		/// <summary>Return the angle between two quaternions (in radians)</summary>
-		public static float Angle2(quat a, quat b)
+		public static float Angle(quat a, quat b)
 		{
-			return (float)Math.Acos(CosAngle2(a, b));
+			// q.w = Cos(theta/2)
+			return 0.5f * (float)Math.Acos(CosAngle2(a, b));
 		}
 
 		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
@@ -409,20 +415,20 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Spherically interpolate between quaternions</summary>
-		public static quat Slerp(quat a, quat b, float frac)
+		public static quat Slerp(quat a, quat b, double frac)
 		{
 			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
-			var cos_angle = CosAngle2(a, b);
-			var b_ = cos_angle >= 0 ? b : -b;
-			cos_angle = Math.Abs(cos_angle);
+			var cos_angle2 = CosAngle2(a, b);
+			var b_ = cos_angle2 >= 0 ? b : -b;
+			cos_angle2 = Math.Abs(cos_angle2);
 
-			if (cos_angle < 0.95f)
+			if (cos_angle2 < 0.95f)
 			{
-				var angle = (float)Math.Acos(cos_angle);
-				var scale0 = (float)Math.Sin((1f - frac) * angle);
-				var scale1 = (float)Math.Sin((frac) * angle);
-				var sin_angle = (float)Math.Sin(angle);
-				return new quat((a.xyzw * scale0 + b_.xyzw * scale1) / sin_angle);
+				var angle = 0.5 * Math.Acos(cos_angle2);
+				var scale0 = Math.Sin((1 - frac) * angle);
+				var scale1 = Math.Sin((frac) * angle);
+				var sin_angle = Math.Sin(angle);
+				return new quat((a.xyzw * (float)scale0 + b_.xyzw * (float)scale1) / (float)sin_angle);
 			}
 			// "a" and "b" quaternions are very close, use linear interpolation
 			else

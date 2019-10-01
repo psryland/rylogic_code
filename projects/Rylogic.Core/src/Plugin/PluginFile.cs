@@ -38,19 +38,19 @@ namespace Rylogic.Plugin
 		}
 		public object Create<A1>(A1 a1)
 		{
-			return Activator.CreateInstance(Type, new object[] { a1 });
+			return Activator.CreateInstance(Type, new object?[] { a1 });
 		}
 		public object Create<A1, A2>(A1 a1, A2 a2)
 		{
-			return Activator.CreateInstance(Type, new object[] { a1, a2 });
+			return Activator.CreateInstance(Type, new object?[] { a1, a2 });
 		}
 		public object Create<A1, A2, A3>(A1 a1, A2 a2, A3 a3)
 		{
-			return Activator.CreateInstance(Type, new object[] { a1, a2, a3 });
+			return Activator.CreateInstance(Type, new object?[] { a1, a2, a3 });
 		}
 		public object Create<A1, A2, A3, A4>(A1 a1, A2 a2, A3 a3, A4 a4)
 		{
-			return Activator.CreateInstance(Type, new object[] { a1, a2, a3, a4 });
+			return Activator.CreateInstance(Type, new object?[] { a1, a2, a3, a4 });
 		}
 
 		/// <summary></summary>

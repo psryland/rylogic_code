@@ -82,7 +82,7 @@ namespace Rylogic.Extn
 		/// <summary>Resize a list default constructing objects to fill</summary>
 		public static void Resize<T>(this List<T> list, int newsize)
 		{
-			list.Resize(newsize, () => default(T));
+			list.Resize(newsize, () => default!);
 		}
 		public static void Resize<T>(this List<T> list, int newsize, Func<T> factory)
 		{
@@ -133,7 +133,7 @@ namespace Rylogic.Extn
 		/// Returns true if 'item' was added, false if it was a duplicate</summary>
 		public static bool AddIfUnique<T>(this IList<T> list, T item)
 		{
-			foreach (var i in list) if (i.Equals(item)) return false;
+			foreach (var i in list) if (Equals(i, item)) return false;
 			list.Add(item);
 			return true;
 		}
@@ -150,14 +150,13 @@ namespace Rylogic.Extn
 				list[i] = item;
 				return false;
 			}
-			replaced = default(T);
+			replaced = default!;
 			list.Add(item);
 			return true;
 		}
 		public static bool AddOrReplace<T>(this IList<T> list, T item, Func<T,T,bool> replace)
 		{
-			T replaced;
-			return AddOrReplace(list, item, replace, out replaced);
+			return AddOrReplace(list, item, replace, out var replaced);
 		}
 
 		/// <summary>Add a range of elements to the list</summary>
@@ -580,7 +579,7 @@ namespace Rylogic.Extn
 		public static T BinarySearchFind<T>(this IList<T> list, Func<T,int> cmp)
 		{
 			var idx = list.BinarySearch(cmp);
-			return idx >= 0 ? list[idx] : default(T);
+			return idx >= 0 ? list[idx] : default!;
 		}
 
 		/// <summary>
@@ -598,7 +597,7 @@ namespace Rylogic.Extn
 		/// Partition 'list' within the range [left,right) such that the element at list[left]
 		/// is moved to it's correct position within the list if it was sorted.
 		/// Returns the index location of where list[left] is moved to.</summary>
-		public static int Partition<T>(this IList<T> list, int left, int right, IComparer<T> comparer = null)
+		public static int Partition<T>(this IList<T> list, int left, int right, IComparer<T>? comparer = null)
 		{
 			if (left == right)
 				return left;
@@ -648,34 +647,34 @@ namespace Rylogic.Extn
 		{
 			return list.Sort(Cmp<T>.From(cmp));
 		}
-		public static IList<T> Sort<T>(this IList<T> list, IComparer<T> comparer = null)
+		public static IList<T> Sort<T>(this IList<T> list, IComparer<T>? comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);
 		}
-		public static IList Sort(this IList list, IComparer<object> comparer = null)
+		public static IList Sort(this IList list, IComparer<object>? comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);
 		}
 
 		/// <summary>Sub range sort using a delegate</summary>
-		public static IList<T> Sort<T>(this IList<T> list, int start, int count, IComparer<T> comparer = null)
+		public static IList<T> Sort<T>(this IList<T> list, int start, int count, IComparer<T>? comparer = null)
 		{
 			list.QuickSort(start, count, comparer);
 			return list;
 		}
-		public static IList Sort(this IList list, int start, int count, IComparer<object> comparer = null)
+		public static IList Sort(this IList list, int start, int count, IComparer<object>? comparer = null)
 		{
 			// This is the quick sort algorithm. Sorts in place
-			ArrayList.Adapter(list).Sort(start, count, (IComparer)comparer);
+			ArrayList.Adapter(list).Sort(start, count, (IComparer?)comparer);
 			return list;
 		}
 
 		/// <summary>Sort the list using the quick sort algorithm</summary>
-		public static IList<T> QuickSort<T>(this IList<T> list, IComparer<T> comparer = null)
+		public static IList<T> QuickSort<T>(this IList<T> list, IComparer<T>? comparer = null)
 		{
 			return list.QuickSort(0, list.Count, comparer);
 		}
-		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right, IComparer<T> comparer = null)
+		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 
@@ -693,7 +692,7 @@ namespace Rylogic.Extn
 
 		/// <summary>Remove adjacent duplicate elements within the range [begin, end).
 		/// Returns the end of the unique range (i.e. a value in the range [begin,end]</summary>
-		public static int Unique<T>(this IList<T> list, int begin, int end, IEqualityComparer<T> comparer = null)
+		public static int Unique<T>(this IList<T> list, int begin, int end, IEqualityComparer<T>? comparer = null)
 		{
 			Debug.Assert(begin <= end && end <= list.Count);
 			if (list.Count <= 1) return list.Count;
@@ -724,7 +723,7 @@ namespace Rylogic.Extn
 
 			return range_end;
 		}
-		public static int Unique<T>(this IList<T> list, IEqualityComparer<T> cmp = null)
+		public static int Unique<T>(this IList<T> list, IEqualityComparer<T>? cmp = null)
 		{
 			return list.Unique(0, list.Count, cmp);
 		}
@@ -744,14 +743,14 @@ namespace Rylogic.Extn
 			}
 			return list[pivot];
 		}
-		public static T NthElement<T>(this IList<T> list, int n, IComparer<T> comparer = null)
+		public static T NthElement<T>(this IList<T> list, int n, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 			return list.NthElement(n, 0, list.Count, comparer);
 		}
 
 		/// <summary>Merge a collection into this list. Note: this is a linear operation, this list and 'others' are expected to be ordered</summary>
-		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, int sign = +1, IComparer<T> comparer = null)
+		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, int sign = +1, IComparer<T>? comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 

@@ -45,10 +45,10 @@ namespace Rylogic.Common
 	public interface ISettingsSet
 	{
 		/// <summary>Parent settings for this settings object</summary>
-		ISettingsSet Parent { get; set; }
+		ISettingsSet? Parent { get; set; }
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
-		IReadOnlyDictionary<string, object> Data { get; }
+		IReadOnlyDictionary<string, object?> Data { get; }
 
 		/// <summary>Save the current settings</summary>
 		void Save();
@@ -65,18 +65,14 @@ namespace Rylogic.Common
 		where T:SettingsSet<T>, new()
 	{
 		/// <summary>The collection of settings</summary>
-		protected readonly Dictionary<string, object> m_data;
+		protected readonly Dictionary<string, object?> m_data;
 		protected SettingsSet()
 		{
-			m_data = new Dictionary<string, object>();
+			m_data = new Dictionary<string, object?>();
 		}
 
 		/// <summary>The default values for the settings</summary>
-		public static T Default
-		{
-			get { return m_default ?? (m_default = new T()); }
-		}
-		private static T m_default;
+		public static T Default { get; } = new T();
 
 		/// <summary>True to block all writes to the settings</summary>
 		[Browsable(false)]
@@ -84,9 +80,9 @@ namespace Rylogic.Common
 
 		/// <summary>Parent settings for this settings object</summary>
 		[Browsable(false)]
-		public ISettingsSet Parent
+		public ISettingsSet? Parent
 		{
-			get { return m_parent; }
+			get => m_parent;
 			set
 			{
 				if (m_parent == value) return;
@@ -94,10 +90,10 @@ namespace Rylogic.Common
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parent)));
 			}
 		}
-		private ISettingsSet m_parent;
+		private ISettingsSet? m_parent;
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
-		public IReadOnlyDictionary<string, object> Data => m_data;
+		public IReadOnlyDictionary<string, object?> Data => m_data;
 
 		/// <summary>Returns the top-most settings set</summary>
 		public ISettingsSet Root
@@ -106,7 +102,7 @@ namespace Rylogic.Common
 			{
 				ISettingsSet root;
 				for (root = this; root.Parent != null; root = root.Parent) {}
-				return root as T;
+				return root;
 			}
 		}
 
@@ -128,7 +124,7 @@ namespace Rylogic.Common
 			return
 				value is Value v ? v :
 				value != null ? Util.ConvertTo<Value>(value) :
-				default(Value);
+				default;
 		}
 
 		/// <summary>Write a settings value</summary>
@@ -140,7 +136,7 @@ namespace Rylogic.Common
 			// Key not in the data yet? Must be initial value from startup
 			if (!m_data.TryGetValue(key, out var old))
 			{
-				m_data[key] = value;
+				m_data[key] = value!;
 				return;
 			}
 
@@ -157,10 +153,10 @@ namespace Rylogic.Common
 			PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(key));
 
 			// Update the value
-			m_data[key] = value;
+			m_data[key] = value!;
 
 			// Notify changed
-			var args1 = new SettingChangeEventArgs(this, key, value, false);
+			var args1 = new SettingChangeEventArgs(this, key, value!, false);
 			OnSettingChange(args1);
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
 		}
@@ -197,13 +193,13 @@ namespace Rylogic.Common
 						key = key_elem.As<string>();
 						var val = val_elem.ToObject();
 						SetParentIfNesting(val);
-						m_data[key] = val;
+						m_data[key] = val!;
 					}
 					else
 					{
 						var val = setting.ToObject();
 						SetParentIfNesting(val);
-						m_data[key] = val;
+						m_data[key] = val!;
 					}
 				}
 				catch (TypeLoadException)
@@ -236,11 +232,11 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>An event raised before and after a setting is changes value</summary>
-		public event EventHandler<SettingChangeEventArgs> SettingChange;
+		public event EventHandler<SettingChangeEventArgs>? SettingChange;
 
 		/// <summary>Property changed</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		public event PropertyChangingEventHandler PropertyChanging;
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public event PropertyChangingEventHandler? PropertyChanging;
 
 		/// <summary>Manually notify of a setting change</summary>
 		public void NotifySettingChanged(string key)
@@ -266,7 +262,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>If 'nested' is not null, sets its Parent to this settings object</summary>
-		private void SetParentIfNesting(object nested)
+		private void SetParentIfNesting(object? nested)
 		{
 			if (nested == null)
 				return;
@@ -290,7 +286,8 @@ namespace Rylogic.Common
 		protected SettingsBase()
 		{
 			m_filepath = "";
-			SettingsEvent = null;
+			SettingsEvent = OnSettingsEvent;
+			LoadedVersion = string.Empty;
 			BackupOldSettings = true;
 
 			// Default to off so users can enable after startup completes
@@ -423,18 +420,13 @@ namespace Rylogic.Common
 		private bool m_auto_save;
 
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
-		public event EventHandler<SettingsLoadedEventArgs> SettingsLoaded;
+		public event EventHandler<SettingsLoadedEventArgs>? SettingsLoaded;
 
 		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
-		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
+		public event EventHandler<SettingsSavingEventArgs>? SettingsSaving;
 
 		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
-		public Action<ESettingsEvent, Exception, string> SettingsEvent
-		{
-			get { return m_impl_settings_error ?? ((err, ex, msg) => OnSettingsEvent(err, ex, msg)); }
-			set { m_impl_settings_error = value; }
-		}
-		private Action<ESettingsEvent, Exception, string> m_impl_settings_error;
+		public Action<ESettingsEvent, Exception?, string> SettingsEvent { get; set; }
 
 		/// <summary>Populate these settings from the default instance values</summary>
 		private void ResetToDefaults()
@@ -690,7 +682,7 @@ namespace Rylogic.Common
 		public virtual void Validate() {}
 
 		/// <summary>Default handling of settings errors/warnings</summary>
-		public virtual void OnSettingsEvent(ESettingsEvent err, Exception ex, string msg)
+		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
 		{
 			switch (err)
 			{
@@ -726,7 +718,8 @@ namespace Rylogic.Common
 	{
 		protected SettingsXml()
 		{
-			m_data = new Dictionary<string, object>();
+			m_data = new Dictionary<string, object?>();
+			ParentKey = string.Empty;
 		}
 		protected SettingsXml(XElement node)
 			:this()
@@ -774,8 +767,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The default values for the settings</summary>
-		public static T Default => m_default ?? (m_default = new T());
-		private static T m_default;
+		public static T Default { get; } = new T();
 
 		/// <summary>True to block all writes to the settings</summary>
 		[Browsable(false)]
@@ -783,7 +775,7 @@ namespace Rylogic.Common
 
 		/// <summary>Parent settings for this settings object</summary>
 		[Browsable(false)]
-		public ISettingsSet Parent
+		public ISettingsSet? Parent
 		{
 			get { return m_parent; }
 			set
@@ -791,7 +783,7 @@ namespace Rylogic.Common
 				if (m_parent == value) return;
 				if (m_parent != null)
 				{
-					ParentKey = null;
+					ParentKey = string.Empty;
 				}
 				m_parent = value;
 				if (m_parent != null)
@@ -802,21 +794,21 @@ namespace Rylogic.Common
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parent)));
 			}
 		}
-		private ISettingsSet m_parent;
+		private ISettingsSet? m_parent;
 
 		/// <summary>The key for 'this' in 'Parent'</summary>
 		protected string ParentKey { get; set; }
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
-		public IReadOnlyDictionary<string, object> Data => m_data;
-		private readonly Dictionary<string, object> m_data;
+		public IReadOnlyDictionary<string, object?> Data => m_data;
+		private readonly Dictionary<string, object?> m_data;
 
 		/// <summary>Raised before and after a setting changes</summary>
-		public event EventHandler<SettingChangeEventArgs> SettingChange;
+		public event EventHandler<SettingChangeEventArgs>? SettingChange;
 
 		/// <summary>Property changed</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		public event PropertyChangingEventHandler PropertyChanging;
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public event PropertyChangingEventHandler? PropertyChanging;
 
 		/// <summary>Save the current settings</summary>
 		public virtual void Save()
@@ -841,10 +833,10 @@ namespace Rylogic.Common
 		protected virtual Value get<Value>(string key)
 		{
 			if (m_data.TryGetValue(key, out var value))
-				return (Value)value;
+				return (Value)value!;
 
 			if (Default.m_data.TryGetValue(key, out value))
-				return (Value)value;
+				return (Value)value!;
 
 			throw new KeyNotFoundException(
 				$"Unknown setting '{key}'.\r\n"+
@@ -866,7 +858,7 @@ namespace Rylogic.Common
 				return;
 
 			// Otherwise, test for changes and notify
-			var old_value = (Value)m_data[key];
+			var old_value = (Value)m_data[key]!;
 			if (Equals(old_value, value)) return;
 
 			// Notify about to change
@@ -894,12 +886,14 @@ namespace Rylogic.Common
 	public static class Settings_
 	{
 		/// <summary>Return the single child setting based on the given key names</summary>
-		public static XElement Child(XElement element, params string[] key_names)
+		public static XElement? Child(XElement element, params string[] key_names)
 		{
-			var elem = element;
+			XElement? elem = element;
 			foreach (var key in key_names)
-				elem = elem?.Elements("setting").SingleOrDefault(x => x.Attribute("key").Value == key);
-
+			{
+				elem = elem.Elements("setting").SingleOrDefault(x => x.Attribute("key").Value == key);
+				if (elem == null) break;
+			}
 			return elem;
 		}
 
@@ -945,7 +939,7 @@ namespace Rylogic.Common
 	public class SettingChangeEventArgs : EventArgs
 	{
 		private readonly ISettingsSet m_ss;
-		public SettingChangeEventArgs(ISettingsSet ss, string key, object value, bool before)
+		public SettingChangeEventArgs(ISettingsSet ss, string key, object? value, bool before)
 		{
 			m_ss = ss;
 			Key = key;
@@ -974,7 +968,7 @@ namespace Rylogic.Common
 		public string Key { get; private set; }
 
 		/// <summary>The current value of the setting</summary>
-		public object Value { get; private set; }
+		public object? Value { get; private set; }
 
 		/// <summary>True if this event is just before the setting changes, false if just after</summary>
 		public bool Before { get; private set; }

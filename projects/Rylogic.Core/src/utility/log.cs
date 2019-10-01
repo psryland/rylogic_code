@@ -59,6 +59,7 @@ namespace Rylogic.Utility
 		static Log()
 		{
 			Writer = new NullLogger();
+			FilterPattern = null;
 			#if DEBUG
 			Level = ELogOutputLevel.Debug;
 			#else
@@ -73,7 +74,7 @@ namespace Rylogic.Utility
 		public static ILogWriter Writer { get; set; }
 
 		/// <summary>Regex filter pattern</summary>
-		public static string FilterPattern { get; set; }
+		public static string? FilterPattern { get; set; }
 
 		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
 		public static void Register(string filepath, bool reset)
@@ -101,7 +102,7 @@ namespace Rylogic.Utility
 		{
 			Write(ELogOutputLevel.Debug, sender, str);
 		}
-		public static void Debug(object sender, Exception ex, string str)
+		public static void Debug(object sender, Exception? ex, string str)
 		{
 			Write(ELogOutputLevel.Debug, sender, str, ex);
 		}
@@ -111,7 +112,7 @@ namespace Rylogic.Utility
 		{
 			Write(ELogOutputLevel.Info, sender, str);
 		}
-		public static void Info(object sender, Exception ex, string str)
+		public static void Info(object sender, Exception? ex, string str)
 		{
 			Write(ELogOutputLevel.Info, sender, str, ex);
 		}
@@ -121,7 +122,7 @@ namespace Rylogic.Utility
 		{
 			Write(ELogOutputLevel.Warn, sender, str);
 		}
-		public static void Warn(object sender, Exception ex, string str)
+		public static void Warn(object sender, Exception? ex, string str)
 		{
 			Write(ELogOutputLevel.Warn, sender, str, ex);
 		}
@@ -131,19 +132,19 @@ namespace Rylogic.Utility
 		{
 			Write(ELogOutputLevel.Error, sender, str);
 		}
-		public static void Error(object sender, Exception ex, string str)
+		public static void Error(object sender, Exception? ex, string str)
 		{
 			Write(ELogOutputLevel.Error, sender, str, ex);
 		}
 
 		/// <summary>Write info to the current log</summary>
-		public static void Exception(object sender, Exception ex, string str)
+		public static void Exception(object sender, Exception? ex, string str)
 		{
 			Write(ELogOutputLevel.Exception, sender, str, ex);
 		}
 
 		/// <summary>Single method for filtering and formatting log messages</summary>
-		private static void Write(ELogOutputLevel level, object sender, string str, Exception ex = null)
+		private static void Write(ELogOutputLevel level, object sender, string str, Exception? ex = null)
 		{
 			// Below the log level, ignore
 			if (level < Level)
@@ -230,28 +231,31 @@ namespace Rylogic.Utility
 	/// <summary>Asynchronous logging instance</summary>
 	public class Logger :IDisposable
 	{
+		private Logger(string tag, SharedContext ctx, Logger? forward_log)
+		{
+			m_ctx = null!;
+			Tag = tag;
+			Context = ctx;
+			ForwardLog = forward_log;
+			Enabled = true;
+		}
 		public Logger(string tag, ILogWriter log_cb, int occurrences_batch_size = 0)
-		{
-			Tag = tag;
-			Context = new SharedContext(log_cb, occurrences_batch_size);
-			ForwardLog = null;
-			Enabled = true;
-		}
+			: this(tag, new SharedContext(log_cb, occurrences_batch_size), null)
+		{ }
 		public Logger(string tag, ILogWriter log_cb, Logger fwd, int occurrences_batch_size = 0)
-			:this(tag, log_cb, occurrences_batch_size)
-		{
-			ForwardLog = fwd;
-		}
+			: this(tag, new SharedContext(log_cb, occurrences_batch_size), fwd)
+		{ }
 		public Logger(string tag, Logger rhs)
+			: this(tag, rhs.Context, rhs.ForwardLog)
+		{ }
+		public void Dispose()
 		{
-			Tag = tag;
-			Context = rhs.Context;
-			ForwardLog = rhs.ForwardLog;
-			Enabled = true;
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
-		public virtual void Dispose()
+		protected virtual void Dispose(bool _)
 		{
-			Context = null;
+			Context = null!;
 		}
 
 		/// <summary>The log entry tag for this instance</summary>
@@ -292,7 +296,7 @@ namespace Rylogic.Utility
 		/// <summary>Access the shared context</summary>
 		private SharedContext Context
 		{
-			[DebuggerStepThrough] get { return m_ctx; }
+			get { return m_ctx; }
 			set
 			{
 				if (m_ctx == value) return;
@@ -308,10 +312,10 @@ namespace Rylogic.Utility
 			}
 		}
 		private SharedContext m_ctx;
-		private IDisposable m_ref_token;
+		private IDisposable? m_ref_token;
 
 		/// <summary>A log instance to forward log entries to</summary>
-		public Logger ForwardLog { get; set; }
+		public Logger? ForwardLog { get; set; }
 
 		/// <summary>The object that log data is written to</summary>
 		public ILogWriter LogCB
@@ -337,7 +341,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Log a message</summary>
-		public void Write(ELogLevel level, string msg, string file = null, int? line = null)
+		public void Write(ELogLevel level, string msg, string? file = null, int? line = null)
 		{
 			if (!Enabled) return;
 			var evt = new LogEvent(level, Context.TimeZero, Tag, msg, file, line);
@@ -346,7 +350,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Log an exception with message 'msg'</summary>
-		public void Write(ELogLevel level, Exception ex, string msg, string file = null, int? line = null)
+		public void Write(ELogLevel level, Exception ex, string msg, string? file = null, int? line = null)
 		{
 			if (!Enabled) return;
 			var message =
@@ -453,7 +457,7 @@ namespace Rylogic.Utility
 			// The worker thread that forwards log events to the callback function
 			private bool LogConsumerThreadActive
 			{
-				get { return m_thread != null; }
+				get => m_thread != null;
 				set
 				{
 					if (LogConsumerThreadActive == value) return;
@@ -468,52 +472,54 @@ namespace Rylogic.Utility
 					{
 						m_thread.Start();
 					}
-				}
-			}
-			private void LogConsumerThread(SharedContext ctx, ILogWriter log_cb, int occurrences_batch_size = 0)
-			{
-				try
-				{
-					Thread.CurrentThread.Name = "pr::Logger";
 
-					for (var last = new LogEvent(); Dequeue(out var ev);)
+					// Entry point
+					void LogConsumerThread(SharedContext ctx, ILogWriter log_cb, int occurrences_batch_size = 0)
 					{
-						// Same event as last time? add it to the batch
-						bool is_same = false;
-						if (last.Occurrences < occurrences_batch_size && (is_same = LogEvent.Same(ev, last)) == true)
+						try
 						{
-							++last.Occurrences;
-							last.Timestamp = ev.Timestamp;
-							continue;
-						}
+							Thread.CurrentThread.Name = "pr::Logger";
 
-						// Have events been batched? Report them now
-						if (last.Occurrences != 0)
-						{
-							log_cb.Write(Serialise(last));
-							last.Occurrences = 0;
-						}
+							for (var last = new LogEvent(); Dequeue(out var ev);)
+							{
+								// Same event as last time? add it to the batch
+								bool is_same = false;
+								if (last.Occurrences < occurrences_batch_size && (is_same = LogEvent.Same(ev, last)) == true)
+								{
+									++last.Occurrences;
+									last.Timestamp = ev.Timestamp;
+									continue;
+								}
 
-						// Start of the next batch (and batching is enabled)? Add it to the batch
-						if (occurrences_batch_size != 0 && is_same)
-						{
-							last.Occurrences = 1;
-							last.Timestamp = ev.Timestamp;
+								// Have events been batched? Report them now
+								if (last.Occurrences != 0)
+								{
+									log_cb.Write(Serialise(last));
+									last.Occurrences = 0;
+								}
+
+								// Start of the next batch (and batching is enabled)? Add it to the batch
+								if (occurrences_batch_size != 0 && is_same)
+								{
+									last.Occurrences = 1;
+									last.Timestamp = ev.Timestamp;
+								}
+								else
+								{
+									log_cb.Write(Serialise(ev));
+									last = ev;
+									last.Occurrences = 0;
+								}
+							}
 						}
-						else
+						catch (Exception ex)
 						{
-							log_cb.Write(Serialise(ev));
-							last = ev;
-							last.Occurrences = 0;
+							Debug.Assert(false, $"Unknown exception in log thread: {ex.Message}");
 						}
 					}
 				}
-				catch (Exception ex)
-				{
-					Debug.Assert(false, $"Unknown exception in log thread: {ex.Message}");
-				}
 			}
-			private Thread m_thread;
+			private Thread? m_thread;
 
 			/// <summary>Queue a log event for writing to the log callback function</summary>
 			public void Enqueue(LogEvent ev)
@@ -549,7 +555,7 @@ namespace Rylogic.Utility
 				}
 				catch (InvalidOperationException) // means take called on completed collection
 				{
-					ev = null;
+					ev = new LogEvent();
 					return false;
 				}
 			}
@@ -578,7 +584,7 @@ namespace Rylogic.Utility
 				Line        = 0;
 				Occurrences = 0;
 			}
-			public LogEvent(ELogLevel level, DateTimeOffset tzero, string ctx, string msg, string file, int? line)
+			public LogEvent(ELogLevel level, DateTimeOffset tzero, string ctx, string msg, string? file, int? line)
 			{
 				Level       = level;
 				Timestamp   = DateTimeOffset.Now - tzero;
@@ -602,7 +608,7 @@ namespace Rylogic.Utility
 			public string Message { get; private set; }
 
 			/// <summary>The associated file (if appropriate)</summary>
-			public string File { get; private set; }
+			public string? File { get; private set; }
 
 			/// <summary>The associated line number (if appropriate)</summary>
 			public int? Line { get; private set; }
@@ -633,7 +639,6 @@ namespace Rylogic.Utility
 	public class LogToFile :ILogWriter ,IDisposable
 	{
 		private FileStream m_outf;
-
 		public LogToFile(string filepath, bool append)
 		{
 			Filepath = filepath;
@@ -641,9 +646,14 @@ namespace Rylogic.Utility
 			Path_.CreateDirs(Path_.Directory(filepath));
 			m_outf = new FileStream(Filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			Util.Dispose(ref m_outf);
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			Util.Dispose(ref m_outf!);
 		}
 		public string Filepath { get; }
 		public void Write(string text)

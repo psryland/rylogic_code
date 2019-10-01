@@ -36,31 +36,32 @@ namespace Rylogic.Attrib
 		private static readonly Cache<string, object> m_str_cache = new Cache<string, object>(1000) { ThreadSafe = true };
 
 		/// <summary>Get the DescAttribute or DescriptionAttribute associated with a member</summary>
-		public static Attribute Get(MemberInfo mi)
+		public static Attribute? Find(MemberInfo mi)
 		{
 			if (mi == null) return null;
 			var d0 = Attribute.GetCustomAttribute(mi, typeof(DescAttribute), false) as DescAttribute;
 			if (d0 != null) return d0;
 			var d1 = Attribute.GetCustomAttribute(mi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
 			if (d1 != null) return d1;
-			return null; // Return null to distinguish between Desc("") and no DescAttribute
+			return null;
 		}
 
 		/// <summary>Return the description for a property or field</summary>
-		public static string Desc(Type ty, MemberInfo mi)
+		public static string? Desc(Type ty, MemberInfo mi)
 		{
 			if (mi == null) return null; // Return null to distinguish between Desc("") and no DescAttribute
-			return (string)m_str_cache.Get(Key(ty, mi.Name), k =>
-				{
-					var attr = Get(mi);
-					if (attr is DescAttribute) return ((DescAttribute)attr).Str;
-					if (attr is DescriptionAttribute) return ((DescriptionAttribute)attr).Description;
-					return null; // Return null to distinguish between Desc("") and no DescAttribute
-				});
+			return (string)m_str_cache.Get(Key(ty, mi.Name), OnMiss);
+			object OnMiss(object k)
+			{
+				var attr = Find(mi);
+				if (attr is DescAttribute d0) return d0.Str;
+				if (attr is DescriptionAttribute d1) return d1.Description;
+				return null!; // Return null to distinguish between Desc("") and no DescAttribute
+			}
 		}
 
 		/// <summary>Return the associated description attribute for a property or field</summary>
-		public static string Desc(Type ty, string member_name)
+		public static string? Desc(Type ty, string member_name)
 		{
 			var mi =
 				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
@@ -69,19 +70,19 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
-		public static string Desc<T>(this T obj, string member_name)
+		public static string? Desc<T>(this T obj, string member_name) where T : notnull
 		{
 			return Desc(obj.GetType(), member_name);
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
-		public static string Desc<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
+		public static string? Desc<T,Ret>(this T obj, Expression<Func<T,Ret>> expression) where T : notnull
 		{
 			return Desc(obj.GetType(), R<T>.Name(expression));
 		}
 
 		/// <summary>Return the associated description attribute for an enum value</summary>
-		public static string Desc(this Enum enum_)
+		public static string? Desc(this Enum enum_)
 		{
 			return Desc(enum_.GetType(), enum_.ToString());
 		}
@@ -89,41 +90,36 @@ namespace Rylogic.Attrib
 		/// <summary>Return an array of the description strings associated with an enum type</summary>
 		public static string[] AllDesc(this Enum type)
 		{
-			return (string[])m_str_cache.Get(Key(type), k =>
-				{
-					var strs = new List<string>();
-					foreach (var v in Enum.GetValues(type.GetType()).OfType<Enum>())
-					{
-						strs.Add(v.Desc());
-					}
-					return strs.ToArray();
-				});
+			return (string[])m_str_cache.Get(Key(type), OnMiss);
+			object OnMiss(object _)
+			{
+				return Enum.GetValues(type.GetType()).OfType<Enum>().Select(x => x.Desc()).ToArray();
+			}
 		}
 
 		/// <summary>Return an array of the strings associated with a type</summary>
 		public static string[] AllDesc(this Type type)
 		{
-			return (string[])m_str_cache.Get(Key(type), k =>
+			return (string[])m_str_cache.Get(Key(type), OnMiss);
+			object OnMiss(object _)
+			{
+				var strs = new List<string>();
+				var members = type.AllMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+				foreach (var mi in members)
 				{
-					var strs = new List<string>();
-					var members = type.AllMembers(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-					foreach (var mi in members)
+					if (mi.GetCustomAttributes(typeof(DescAttribute), false).FirstOrDefault() is DescAttribute d0)
 					{
-						var d0 = mi.GetCustomAttributes(typeof(DescAttribute),false).FirstOrDefault() as DescAttribute;
-						if (d0 != null)
-						{
-							strs.Add(d0.Str);
-							continue;
-						}
-						var d1 = mi.GetCustomAttributes(typeof(DescriptionAttribute),false).FirstOrDefault() as DescriptionAttribute;
-						if (d1 != null)
-						{
-							strs.Add(d1.Description);
-							continue;
-						}
+						strs.Add(d0.Str);
+						continue;
 					}
-					return strs.ToArray();
-				});
+					if (mi.GetCustomAttributes(typeof(DescriptionAttribute), false).FirstOrDefault() is DescriptionAttribute d1)
+					{
+						strs.Add(d1.Description);
+						continue;
+					}
+				}
+				return strs.ToArray();
+			}
 		}
 
 		/// <summary>A cache key for an enum value</summary>

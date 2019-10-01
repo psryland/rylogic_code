@@ -17,7 +17,7 @@ namespace Rylogic.Common
 		public interface IReceiver
 		{
 			/// <summary>Display help information in the case of an invalid command line</summary>
-			void ShowHelp(Exception ex = null);
+			void ShowHelp(Exception? ex = null);
 
 			/// <summary>
 			/// Handle a command line option. Return true to continue parsing, false to stop.
@@ -128,17 +128,32 @@ namespace Rylogic.UnitTests
 		{
 			public int HelpShownCount;
 			public int ValidateCount;
-			public string Option;
-			public string OptionArg1;
-			public string OptionArg2;
-			public string Data1;
-			public string Data2;
+			public string? Option;
+			public string? OptionArg1;
+			public string? OptionArg2;
+			public string? Data1;
+			public string? Data2;
+			public bool CmdLineOptionResult;
+			public bool CmdLineDataResult;
 
-			public bool CmdLineOptionResult = true;
-			public bool CmdLineDataResult = true;
+			public Thing()
+			{
+				HelpShownCount = 0;
+				ValidateCount = 0;
+				Option =  null;
+				OptionArg1 = null;
+				OptionArg2 = null;
+				Data1 = null;
+				Data2 = null;
+				CmdLineOptionResult = true;
+				CmdLineDataResult = true;
+			}
 
 			/// <summary>Display help information in the case of an invalid command line</summary>
-			public void ShowHelp(Exception ex) { ++HelpShownCount; }
+			public void ShowHelp(Exception? ex)
+			{
+				++HelpShownCount; 
+			}
 
 			/// <summary>Expects '-option data data'</summary>
 			public bool CmdLineOption(string option, string[] args, ref int arg)

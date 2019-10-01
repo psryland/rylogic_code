@@ -133,20 +133,19 @@ namespace Rylogic.Maths
 		public float Length(float t0, float t1, float tol = Math_.TinyF)
 		{
 			// Recursive lambda
-			Func<Spline,float,float> Len = null;
-			Len = (s,t) =>
-				{
-					float poly_length  = (s.m.y - s.m.x).Length + (s.m.z - s.m.y).Length + (s.m.w - s.m.z).Length;
-					float chord_length = (s.m.w - s.m.x).Length;
-					if (poly_length - chord_length < tol)
-						return (poly_length + chord_length) * 0.5f;
+			float Len(Spline s, float t)
+			{
+				float poly_length = (s.m.y - s.m.x).Length + (s.m.z - s.m.y).Length + (s.m.w - s.m.z).Length;
+				float chord_length = (s.m.w - s.m.x).Length;
+				if (poly_length - chord_length < tol)
+					return (poly_length + chord_length) * 0.5f;
 
-					var split = s.Split(0.5f);
-					return Len(split.Item1, tol) + Len(split.Item2, tol);
-				};
-			
+				var split = s.Split(0.5f);
+				return Len(split.Item1, tol) + Len(split.Item2, tol);
+			}
+
 			// Trim 'spline' to the region of interest
-			Spline clipped = this;
+			var clipped = this;
 			if (t0 != 0f) clipped = clipped.Split(t0).Item2;
 			if (t1 != 1f) clipped = clipped.Split(t1).Item1;
 			return Len(clipped, tol);

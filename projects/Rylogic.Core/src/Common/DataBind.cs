@@ -26,53 +26,50 @@ namespace Rylogic.Common
 	///  NOTE: Does *not* automatically detected changes in the source data unless the source
 	///  implements 'INotifyPropertyChanged' and raises the 'PropertyChanged' event when the bound
 	///  value is changed.</summary>
-	public class DataBind<TSrc, TValue> where TSrc:class
+	public class DataBind<TSrc, TValue> where TSrc : class
 	{
+		/// <summary>Prefer Binding.Make()</summary>
+		public DataBind(TSrc? data_source, string member_name, TValue def_value = default!, BindingFlags flags = BindingFlags.Public | BindingFlags.Instance)
+		{
+			// Order is important here
+			m_get = null;
+			m_member_name = string.Empty;
+			m_bound = new List<Link>();
+			DefaultValue = def_value;
+			Flags = flags;
+			MemberName = member_name;
+			DataSource = data_source;
+		}
+
+		/// <summary>Construct a binding from an expression</summary>
+		public DataBind(TSrc? data_source, Expression<Func<TSrc, TValue>> expression, TValue def_value = default!, BindingFlags flags = BindingFlags.Public | BindingFlags.Instance)
+			: this(data_source, R<TSrc>.Name(expression), def_value, flags)
+		{ }
+
 		/// <summary>The collection of objects attached to this binding</summary>
 		private List<Link> m_bound;
 		private class Link
 		{
-			private readonly object m_target;
-			private MethodInfo m_set;
-
+			private readonly MethodInfo m_set;
 			public Link(object target, MethodInfo set)
 			{
-				m_target = target;
+				Target = target;
 				m_set = set;
 			}
-			public object Target
+			public object Target { get; }
+			public void Set(object? value)
 			{
-				get { return m_target; }
-			}
-			public void Set(object value)
-			{
-				m_set.Invoke(m_target, new[]{value});
+				m_set.Invoke(Target, new[] { value });
 			}
 		}
 
 		/// <summary>The getter for the binding source value</summary>
-		private MethodInfo m_get;
-
-		/// <summary>Prefer Binding.Make()</summary>
-		public DataBind(TSrc data_source, string member_name, TValue def_value = default(TValue), BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
-		{
-			// Order is important here
-			m_bound      = new List<Link>();
-			DefaultValue = def_value;
-			Flags        = flags;
-			MemberName   = member_name;
-			DataSource   = data_source;
-		}
-
-		/// <summary>Construct a binding from an expression</summary>
-		public DataBind(TSrc data_source, Expression<Func<TSrc,TValue>> expression, TValue def_value = default(TValue), BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
-			:this(data_source, R<TSrc>.Name(expression), def_value, flags)
-		{}
+		private MethodInfo? m_get;
 
 		/// <summary>The name of the property on the data source that provides the value</summary>
 		public string MemberName
 		{
-			get { return m_member_name; }
+			get => m_member_name;
 			set
 			{
 				if (m_member_name == value) return;
@@ -84,9 +81,9 @@ namespace Rylogic.Common
 		private string m_member_name;
 
 		/// <summary>The object that is the source of the value</summary>
-		public TSrc DataSource
+		public TSrc? DataSource
 		{
-			get { return m_data_source; }
+			get => m_data_source;
 			set
 			{
 				if (m_data_source == value) return;
@@ -102,16 +99,13 @@ namespace Rylogic.Common
 				ResetBindings();
 			}
 		}
-		private TSrc m_data_source;
+		private TSrc? m_data_source;
 
 		/// <summary>The value to use when 'DataSource' is null</summary>
 		public TValue DefaultValue { get; set; }
 
 		/// <summary>Get the current value from the 'DataSource' or null if not yet bound</summary>
-		public TValue Value
-		{
-			get { return (m_get != null && DataSource != null) ? (TValue)m_get.Invoke(DataSource, null) : DefaultValue; }
-		}
+		public TValue Value => (m_get != null && DataSource != null) ? (TValue)m_get.Invoke(DataSource, null) : DefaultValue;
 
 		/// <summary>The binding flags used to find the property on the data source</summary>
 		public BindingFlags Flags { get; set; }
@@ -120,7 +114,7 @@ namespace Rylogic.Common
 		public IEnumerable<object> BoundObjects { get { return m_bound.Select(x => x.Target); } }
 
 		/// <summary>Connect 'obj.property_or_method_name' to the binding value. Returns this binding for method chaining</summary>
-		public DataBind<TSrc, TValue> Add(object obj, string property_or_method_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		public DataBind<TSrc, TValue> Add(object obj, string property_or_method_name, BindingFlags flags = BindingFlags.Public | BindingFlags.Instance)
 		{
 			var ty = obj.GetType();
 
@@ -162,7 +156,7 @@ namespace Rylogic.Common
 
 			throw new Exception($"Property or Method '{property_or_method_name}' not found on object type {ty.Name}");
 		}
-		public DataBind<TSrc, TValue> Add<U,Ret>(U obj, Expression<Func<U,Ret>> expression, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		public DataBind<TSrc, TValue> Add<U, Ret>(U obj, Expression<Func<U, Ret>> expression, BindingFlags flags = BindingFlags.Public | BindingFlags.Instance) where U : notnull
 		{
 			return Add(obj, R<U>.Name(expression), flags);
 		}
@@ -174,7 +168,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Push a change in the binding value out to the bound objects</summary>
-		public void ResetBindings(object sender = null, EventArgs args = null)
+		public void ResetBindings(object? sender = null, EventArgs? args = null)
 		{
 			var value = Value;
 			m_bound.ForEach(x => x.Set(value));
@@ -186,7 +180,7 @@ namespace Rylogic.Common
 		/// If the bound object implements INotifyPropertyChanged and raises PropertyChanged events
 		/// then this event will be raised automatically when the bound value changes.
 		/// Note: 'sender' == this binding, not 'DataSource'</summary>
-		public event EventHandler ValueChanged;
+		public event EventHandler? ValueChanged;
 	}
 
 	public static class DataBind
@@ -208,9 +202,9 @@ namespace Rylogic.UnitTests
 	{
 		private class Thing :INotifyPropertyChanged
 		{
-			public string Value
+			public string? Value
 			{
-				get { return m_value; }
+				get => m_value;
 				set
 				{
 					if (m_value == value) return;
@@ -219,16 +213,16 @@ namespace Rylogic.UnitTests
 						PropertyChanged(this, new PropertyChangedEventArgs(nameof(Value)));
 				}
 			}
-			private string m_value;
-			public event PropertyChangedEventHandler PropertyChanged;
+			private string? m_value;
+			public event PropertyChangedEventHandler? PropertyChanged;
 		}
 		private class TextBox
 		{
-			public string Text { get; set; }
+			public string? Text { get; set; }
 		}
 		private class ComboBox
 		{
-			public string Text { get; set; }
+			public string? Text { get; set; }
 		}
 
 		[Test] public void Binding()

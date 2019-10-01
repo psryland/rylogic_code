@@ -44,7 +44,7 @@ namespace Rylogic.Container
 		public bool TryGetValue(K key, out V value)
 		{
 			int idx = FindIdx(key);
-			if (idx < 0) { value = default(V); return false; }
+			if (idx < 0) { value = default!; return false; }
 			value = base[idx];
 			return true;
 		}

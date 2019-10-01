@@ -8,29 +8,34 @@ namespace Rylogic.Script
 	{
 		private readonly Stack<Buffer> m_stack;
 
-		public SrcStack() :this(null) {}
-		public SrcStack(Src src)
+		public SrcStack()
+			:this(null)
+		{}
+		public SrcStack(Src? src)
 		{
 			m_stack = new Stack<Buffer>();
-			if (src != null) Push(src);
+			if (src != null)
+				Push(src);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			while (m_stack.Count != 0)
 				m_stack.Pop().Dispose();
+			
+			base.Dispose(_);
 		}
 
 		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType { get { return Empty ? SrcType.Unknown : Top.SrcType; } }
+		public override SrcType SrcType => !Empty ? Top!.SrcType : SrcType.Unknown;
 
 		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get { return Empty ? null : Top.Location; } }
+		public override Loc Location => !Empty ? Top!.Location : new Loc();
 
 		/// <summary>True if there are no sources on the stack</summary>
-		public bool Empty { get { return m_stack.Count == 0; } }
+		public bool Empty => m_stack.Count == 0;
 
 		/// <summary>The top script source on the stack</summary>
-		public Buffer Top { get { return Empty ? null : m_stack.Peek(); } }
+		public Buffer? Top => !Empty ? m_stack.Peek() : null;
 
 		/// <summary>Push a script source onto the stack</summary>
 		public void Push(Src src)
@@ -50,7 +55,7 @@ namespace Rylogic.Script
 		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
 		protected override char PeekInternal()
 		{
-			return Empty ? '\0' : Top.Peek;
+			return Top != null ? Top.Peek : '\0';
 		}
 
 		/// <summary>
@@ -61,13 +66,13 @@ namespace Rylogic.Script
 		{
 			for (;;)
 			{
-				for (; !Empty && Top.Peek == 0; Pop()) {}
+				for (; !Empty && Top!.Peek == 0; Pop()) {}
 				if (!Empty && n-- != 0) m_stack.Peek().Next();
 				else break;
 			}
 		}
 
-		public override string ToString() { return Empty ? "<empty>" : Top.ToString(); }
+		public override string ToString() => !Empty ? Top!.ToString() : "<empty>";
 	}
 }
 

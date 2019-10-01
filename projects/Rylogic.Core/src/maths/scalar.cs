@@ -179,13 +179,13 @@ namespace Rylogic.Maths
 		/// <summary>Absolute value of 'a'</summary>
 		public static T Abs<T>(T a)
 		{
-			return Operators<T>.GreaterEql(a, default(T)) ? a : Operators<T>.Neg(a);
+			return Operators<T>.GreaterEql(a, default!) ? a : Operators<T>.Neg(a);
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
-		public static T Div<T>(T a, T b, T def = default(T))
+		public static T Div<T>(T a, T b, T def = default)
 		{
-			return !Equals(b, default(T)) ? Operators<T>.Div(a, b) : def;
+			return !Equals(b, default) ? Operators<T>.Div(a, b) : def;
 		}
 
 		/// <summary>Minimum value</summary>
@@ -235,7 +235,7 @@ namespace Rylogic.Maths
 			if (values.Length == 1)
 				return values[0];
 
-			var sum = default(T);
+			var sum = default(T)!;
 			foreach (var v in values)
 				sum = Operators<T>.Add(sum, v);
 
@@ -326,7 +326,7 @@ namespace Rylogic.Maths
 		}
 		public static T Frac<T>(T min, T x, T max)
 		{
-			Debug.Assert(!min.Equals(max));
+			Debug.Assert(!Equals(min, max));
 			return Operators<T>.Div(Operators<T>.Sub(x, min), Operators<T>.Sub(max, min));
 		}
 

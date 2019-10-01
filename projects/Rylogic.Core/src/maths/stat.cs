@@ -136,18 +136,15 @@ namespace Rylogic.Maths
 	public class Average<T> :IStatMeanSingleVariable<T>
 	{
 		public Average()
-		{
-			Reset();
-		}
+			:this(default!, 0)
+		{}
+		public Average(Average<T> rhs)
+			: this(rhs.m_mean, rhs.m_count)
+		{}
 		public Average(T mean, int count)
 		{
-			m_mean  = mean;
+			m_mean = mean;
 			m_count = count;
-		}
-		public Average(Average<T> rhs)
-		{
-			m_mean = rhs.m_mean;
-			m_count = rhs.m_count;
 		}
 
 		/// <summary>Number of items added</summary>
@@ -165,7 +162,7 @@ namespace Rylogic.Maths
 		public virtual void Reset()
 		{
 			m_count = 0;
-			m_mean = default(T);
+			m_mean = default!;
 		}
 
 		/// <summary>
@@ -287,7 +284,7 @@ namespace Rylogic.Maths
 		public AverageVariance()
 			:base()
 		{
-			m_var = default(T);
+			m_var = default!;
 		}
 		public AverageVariance(T mean, T var, int count)
 			:base(mean, count)
@@ -307,16 +304,16 @@ namespace Rylogic.Maths
 		public double SamStdDev => Math_.Sqrt(Operators<double>.Cast(SamStdVar));
 
 		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
-		public T PopStdVar => m_count > 0 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 0))) : default(T);
+		public T PopStdVar => m_count > 0 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 0))) : default!;
 
 		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
-		public T SamStdVar => m_count > 1 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 1))) : default(T);
+		public T SamStdVar => m_count > 1 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 1))) : default!;
 
 		/// <summary>Reset the stats</summary>
 		public override void Reset()
 		{
 			base.Reset();
-			m_var = default(T);
+			m_var = default!;
 		}
 
 		/// <summary>
@@ -476,7 +473,10 @@ namespace Rylogic.Maths
 
 		public SimpleMovingAverage(int window_size)
 		{
-			Reset(window_size);
+			m_window = new double[window_size];
+			m_mean = 0.0;
+			m_count = 0;
+			m_i = 0;
 		}
 		public SimpleMovingAverage(SimpleMovingAverage rhs)
 			: this(rhs.m_window.Length)
@@ -605,13 +605,19 @@ namespace Rylogic.Maths
 		{}
 		public ExponentialMovingAverage(int window_size)
 		{
-			Reset(window_size);
+			if (window_size < 0)
+				throw new ArgumentOutOfRangeException(nameof(window_size), "Window size must be >= zero");
+
+			m_size = window_size;
+			m_count = 0;
+			m_mean = 0.0;
+			m_var = 0.0;
 		}
 		public ExponentialMovingAverage(ExponentialMovingAverage rhs)
+			:this(rhs.m_size)
 		{
 			m_mean  = rhs.m_mean;
 			m_var   = rhs.m_var;
-			m_size  = rhs.m_size;
 			m_count = rhs.m_count;
 		}
 
@@ -651,7 +657,7 @@ namespace Rylogic.Maths
 		public virtual void Reset(int window_size)
 		{
 			if (window_size < 0)
-				throw new ArgumentOutOfRangeException(nameof(window_size), "Window size must be greater than zero");
+				throw new ArgumentOutOfRangeException(nameof(window_size), "Window size must be >= zero");
 
 			m_size  = window_size;
 			m_count = 0;
@@ -874,9 +880,9 @@ namespace Rylogic.Maths
 	/// <summary>A class for tracking the distribution of a variable</summary>
 	public class Distribution
 	{
-		public Distribution(double bucket_size, string name = null)
+		public Distribution(double bucket_size, string? name = null)
 		{
-			Name = name;
+			Name = name ?? string.Empty;
 			BucketSize = bucket_size;
 			Buckets = new BucketCollection(bucket_size);
 			Reset();

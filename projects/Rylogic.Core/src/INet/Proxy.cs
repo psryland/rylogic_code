@@ -16,23 +16,13 @@ namespace Rylogic.INet
 	/// <summary>Proxy base class</summary>
 	public abstract class Proxy
 	{
-		/// <summary>The type of proxy.</summary>
-		public enum EType
-		{
-			None,
-			Http,
-			Socks4,
-			Socks4A,
-			Socks5,
-		}
-		
 		/// <summary>Factory method for creating a proxy instance by enum</summary>
-		public static Proxy Create(EType type, string proxy_host, int proxy_port, string proxy_username = null, string proxy_password = null)
+		public static Proxy Create(EType type, string proxy_host, int proxy_port, string? proxy_username = null, string? proxy_password = null)
 		{
 			switch (type)
 			{
 			default: throw new ArgumentOutOfRangeException("type");
-			case EType.None:    return null;
+			case EType.None:    throw new NotImplementedException("Null proxy not implemented");
 			case EType.Http:    return new HttpProxy   (proxy_host, proxy_port, proxy_username, proxy_password);
 			case EType.Socks4:  return new Socks4Proxy (proxy_host, proxy_port, proxy_username, proxy_password);
 			case EType.Socks4A: return new Socks4AProxy(proxy_host, proxy_port, proxy_username, proxy_password);
@@ -54,49 +44,19 @@ namespace Rylogic.INet
 			}
 		}
 
-		/// <summary>Async data for the BeginConnect/EndConnect pattern</summary>
-		protected class ProxyAsyncData :IAsyncResult
+		/// <summary>Construct</summary>
+		protected Proxy(string host, int port, string? username, string? password)
 		{
-			private readonly TcpClient m_tcp = new TcpClient();
-			private ManualResetEvent m_wait;
-			private int m_cancel;
-			
-			/// <summary>Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
-			public WaitHandle AsyncWaitHandle
-			{
-				get { return m_wait ?? (m_wait = new ManualResetEvent(false)); }
-			}
+			if (String.IsNullOrEmpty(host))
+				throw new ProxyException("ProxyHost property must contain a value.");
+			if (port <= 0 || port > 65535)
+				throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
 
-			/// <summary>Gets a value that indicates whether the asynchronous operation has completed.</summary>
-			public bool IsCompleted
-			{
-				get { return AsyncWaitHandle.WaitOne(0); }
-			}
-
-			/// <summary>Gets a user-defined object that qualifies or contains information about an asynchronous operation.</summary>
-			public object AsyncState
-			{
-				get { return null; }
-			}
-
-			/// <summary>Gets a value that indicates whether the asynchronous operation completed synchronously.</summary>
-			public bool CompletedSynchronously
-			{
-				get { return false; }
-			}
-			
-			/// <summary>Signals cancel to the async operation</summary>
-			internal bool CancelPending
-			{
-				get { return m_cancel != 0; }
-				set { if (value) Interlocked.CompareExchange(ref m_cancel, 1, 0); }
-			}
-
-			/// <summary>The result of the async operation</summary>
-			internal TcpClient TcpClient { get { return m_tcp; } }
-
-			/// <summary>Any error that occurred or null</summary>
-			internal Exception Error;
+			ProxyConnectTimeout = 15000; // 15 seconds
+			ProxyHostname = host;
+			ProxyPort = port;
+			ProxyUsername = username ?? string.Empty;
+			ProxyPassword = password ?? string.Empty;
 		}
 
 		/// <summary>The type of proxy connection</summary>
@@ -168,28 +128,13 @@ namespace Rylogic.INet
 			EndConnect(BeginConnect(destination_host, destination_port));
 		}
 
-		/// <summary>Construct</summary>
-		protected Proxy(string host, int port, string username, string password)
-		{
-			if (String.IsNullOrEmpty(host))
-				throw new ProxyException("ProxyHost property must contain a value.");
-			if (port <= 0 || port > 65535)
-				throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
-			
-			ProxyConnectTimeout = 15000; // 15 seconds
-			ProxyHostname  = host;
-			ProxyPort      = port;
-			ProxyUsername  = username;
-			ProxyPassword  = password;
-		}
-
 		/// <summary>Implement the connection through the proxy server</summary>
 		protected abstract void DoConnect(TcpClient tcp, string host, int port);
 
 		/// <summary>Sends 'request' over the TcpClient stream and reads a byte[] response</summary>
 		protected byte[] SendCmdAndGetReply(TcpClient tcp, byte[] request)
 		{
-			NetworkStream stream = tcp.GetStream();
+			var stream = tcp.GetStream();
 			stream.Write(request, 0, request.Length);
 			
 			// Wait for the proxy server to respond
@@ -201,22 +146,18 @@ namespace Rylogic.INet
 				string port = ep.Port.ToString(CultureInfo.InvariantCulture);
 				throw new ProxyException(string.Format("A timeout while connecting to proxy server {0}:{1}.", host, port));
 			}
-			
+
 			// Read the response
-			using (var ms = new MemoryStream(tcp.ReceiveBufferSize))
+			using var ms = new MemoryStream(tcp.ReceiveBufferSize);
+			byte[] buf = new byte[tcp.ReceiveBufferSize];
+			while (stream.DataAvailable)
 			{
-				byte[] buf = new byte[tcp.ReceiveBufferSize];
-				while (stream.DataAvailable)
-				{
-					int bytes = stream.Read(buf, 0, buf.Length);
-					ms.Write(buf, 0, bytes);
-				}
-				var reply = ms.ToArray();
-				// ReSharper disable UnusedVariable
-				string dbg; try { dbg = Encoding.ASCII.GetString(reply); } catch {}
-				// ReSharper restore UnusedVariable
-				return reply;
+				int bytes = stream.Read(buf, 0, buf.Length);
+				ms.Write(buf, 0, bytes);
 			}
+			var reply = ms.ToArray();
+			string dbg; try { dbg = Encoding.ASCII.GetString(reply); } catch { }
+			return reply;
 		}
 		
 		/// <summary>Returns a 2-byte array of the port number in big endian</summary>
@@ -227,6 +168,47 @@ namespace Rylogic.INet
 			array[1] = Convert.ToByte(port % 256);
 			return array;
 		}
+
+		/// <summary>Async data for the BeginConnect/EndConnect pattern</summary>
+		protected class ProxyAsyncData :IAsyncResult
+		{
+			/// <summary>The result of the async operation</summary>
+			internal TcpClient TcpClient { get; } = new TcpClient();
+
+			/// <summary>Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</summary>
+			public WaitHandle AsyncWaitHandle => m_wait ?? (m_wait = new ManualResetEvent(false));
+			private ManualResetEvent? m_wait;
+
+			/// <summary>Gets a value that indicates whether the asynchronous operation has completed.</summary>
+			public bool IsCompleted => AsyncWaitHandle.WaitOne(0);
+
+			/// <summary>Gets a user-defined object that qualifies or contains information about an asynchronous operation.</summary>
+			public object? AsyncState => null;
+
+			/// <summary>Gets a value that indicates whether the asynchronous operation completed synchronously.</summary>
+			public bool CompletedSynchronously => false;
+
+			/// <summary>Signals cancel to the async operation</summary>
+			internal bool CancelPending
+			{
+				get => m_cancel != 0;
+				set { if (value) _ = Interlocked.CompareExchange(ref m_cancel, 1, 0); }
+			}
+			private int m_cancel;
+
+			/// <summary>Any error that occurred or null</summary>
+			internal Exception? Error { get; set; }
+		}
+
+		/// <summary>The type of proxy.</summary>
+		public enum EType
+		{
+			None,
+			Http,
+			Socks4,
+			Socks4A,
+			Socks5,
+		}
 	}
 
 	/// <summary>
@@ -234,67 +216,21 @@ namespace Rylogic.INet
 	/// You can use this class to set up a connection to an HTTP proxy server.</summary>
 	public class HttpProxy :Proxy
 	{
-		// ReSharper disable UnusedMember.Local
-		private enum HttpResponseCodes
-		{
-			None = 0,
-			Continue = 100,
-			SwitchingProtocols = 101,
-			Ok = 200,
-			Created = 201,
-			Accepted = 202,
-			NonAuthoritiveInformation = 203,
-			NoContent = 204,
-			ResetContent = 205,
-			PartialContent = 206,
-			MultipleChoices = 300,
-			MovedPermanetly = 301,
-			Found = 302,
-			SeeOther = 303,
-			NotModified = 304,
-			UserProxy = 305,
-			TemporaryRedirect = 307,
-			BadRequest = 400,
-			Unauthorized = 401,
-			PaymentRequired = 402,
-			Forbidden = 403,
-			NotFound = 404,
-			MethodNotAllowed = 405,
-			NotAcceptable = 406,
-			ProxyAuthenticantionRequired = 407,
-			RequestTimeout = 408,
-			Conflict = 409,
-			Gone = 410,
-			PreconditionFailed = 411,
-			RequestEntityTooLarge = 413,
-			RequestUriTooLong = 414,
-			UnsupportedMediaType = 415,
-			RequestedRangeNotSatisfied = 416,
-			ExpectationFailed = 417,
-			InternalServerError = 500,
-			NotImplemented = 501,
-			BadGateway = 502,
-			ServiceUnavailable = 503,
-			GatewayTimeout = 504,
-			HttpVersionNotSupported = 505
-		}
-		// ReSharper restore UnusedMember.Local
-
-		/// <summary>The typical default port used for this type of proxy</summary>
-		public const int DefaultPort = 8080;
-
-		/// <summary>The type of proxy connection</summary>
-		public override EType ProxyType { get { return EType.Http; } }
-		
 		/// <summary>Constructor.</summary>
 		/// <param name="proxy_host">Host name or IP address of the proxy server.</param>
 		/// <param name="proxy_port">Port number for the proxy server.</param>
 		/// <param name="proxy_username">Http basic authentication user name</param>
 		/// <param name="proxy_password">Http basic authentication password</param>
-		public HttpProxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
-		:base(proxy_host, proxy_port, proxy_username, proxy_password)
+		public HttpProxy(string proxy_host, int proxy_port = DefaultPort, string? proxy_username = null, string? proxy_password = null)
+			: base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
-		
+
+		/// <summary>The typical default port used for this type of proxy</summary>
+		public const int DefaultPort = 8080;
+
+		/// <summary>The type of proxy connection</summary>
+		public override EType ProxyType => EType.Http;
+
 		/// <summary>
 		/// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
 		/// 'host:port' is the host on the other side of the proxy server
@@ -386,6 +322,51 @@ namespace Rylogic.INet
 				}
 			}
 		}
+
+		/// <summary></summary>
+		private enum HttpResponseCodes
+		{
+			None = 0,
+			Continue = 100,
+			SwitchingProtocols = 101,
+			Ok = 200,
+			Created = 201,
+			Accepted = 202,
+			NonAuthoritiveInformation = 203,
+			NoContent = 204,
+			ResetContent = 205,
+			PartialContent = 206,
+			MultipleChoices = 300,
+			MovedPermanetly = 301,
+			Found = 302,
+			SeeOther = 303,
+			NotModified = 304,
+			UserProxy = 305,
+			TemporaryRedirect = 307,
+			BadRequest = 400,
+			Unauthorized = 401,
+			PaymentRequired = 402,
+			Forbidden = 403,
+			NotFound = 404,
+			MethodNotAllowed = 405,
+			NotAcceptable = 406,
+			ProxyAuthenticantionRequired = 407,
+			RequestTimeout = 408,
+			Conflict = 409,
+			Gone = 410,
+			PreconditionFailed = 411,
+			RequestEntityTooLarge = 413,
+			RequestUriTooLong = 414,
+			UnsupportedMediaType = 415,
+			RequestedRangeNotSatisfied = 416,
+			ExpectationFailed = 417,
+			InternalServerError = 500,
+			NotImplemented = 501,
+			BadGateway = 502,
+			ServiceUnavailable = 503,
+			GatewayTimeout = 504,
+			HttpVersionNotSupported = 505
+		}
 	}
 
 	/// <summary>Socks4 Proxy.  This class implements the Socks4 standard proxy protocol.</summary>
@@ -403,8 +384,8 @@ namespace Rylogic.INet
 		/// <param name="proxy_port">Port used to connect to proxy server.</param>
 		/// <param name="proxy_username">Proxy user identification information.</param>
 		/// <param name="proxy_password">Proxy password - Not used, just here for consistency of interface</param>
-		public Socks4Proxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
-		:base(proxy_host, proxy_port, proxy_username, proxy_password)
+		public Socks4Proxy(string proxy_host, int proxy_port = DefaultPort, string? proxy_username = null, string? proxy_password = null)
+			:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 		
 		/// <summary>
@@ -495,8 +476,8 @@ namespace Rylogic.INet
 		/// <summary>Gets String representing the name of the proxy.</summary>
 		public override EType ProxyType { get { return EType.Socks4A;} }
 		
-		public Socks4AProxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
-		:base(proxy_host, proxy_port, proxy_username, proxy_password)
+		public Socks4AProxy(string proxy_host, int proxy_port = DefaultPort, string? proxy_username = null, string? proxy_password = null)
+			:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 		
 		/// <summary>Construct the message to send for a connection request</summary>
@@ -552,8 +533,8 @@ namespace Rylogic.INet
 		/// <summary>The type of proxy connection</summary>
 		public override EType ProxyType { get { return EType.Socks5; } }
 		
-		public Socks5Proxy(string proxy_host, int proxy_port = DefaultPort, string proxy_username = null, string proxy_password = null)
-		:base(proxy_host, proxy_port, proxy_username, proxy_password)
+		public Socks5Proxy(string proxy_host, int proxy_port = DefaultPort, string? proxy_username = null, string? proxy_password = null)
+			:base(proxy_host, proxy_port, proxy_username, proxy_password)
 		{}
 
 		/// <summary>Implement the connection through the proxy server</summary>

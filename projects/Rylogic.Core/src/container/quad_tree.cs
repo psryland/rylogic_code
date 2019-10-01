@@ -55,9 +55,9 @@ namespace Rylogic.Container
 		public class Node :Coord
 		{
 			public List<TItem> m_items;  // The items contained in this node
-			public Node        m_parent; // Pointer to the parent node
+			public Node?       m_parent; // Pointer to the parent node
 			public Node[]      m_child;  // Pointers to the child nodes
-			public Node(Coord coord, Node parent) :base(coord)
+			public Node(Coord coord, Node? parent) :base(coord)
 			{
 				m_items = new List<TItem>();
 				m_parent = parent;
@@ -245,8 +245,8 @@ namespace Rylogic.Container
 			// Navigate down the quad tree to look for an existing node
 			// at 'coord' or to find where a new node should be added
 			int quad = 0;
-			Node node = m_root;
-			Node existing = null;
+			var node = m_root;
+			var existing = (Node?)null;
 			for (;node.m_level < coord.m_level;)
 			{
 				// Get the child quad to descend to
@@ -352,7 +352,7 @@ namespace Rylogic.Container
 		/// Traverse the quad tree passing each item that possibly intersects 'point','radius' to 'pred'
 		/// 'pred' should return false to end the traversal, or true to continue.
 		/// Returns 'true' if a full search occurred, false if 'pred' returned false ending the search early.</summary>
-		public bool Traverse(float[] point, float radius, Func<TItem,Node,bool> pred, Node root = null)
+		public bool Traverse(float[] point, float radius, Func<TItem,Node,bool> pred, Node? root = null)
 		{
 			Debug.Assert(point.Length >= 2);
 
@@ -376,7 +376,7 @@ namespace Rylogic.Container
 
 			return true;
 		}
-		public bool Traverse(float[] point, float radius, Func<TItem,bool> pred, Node root = null)
+		public bool Traverse(float[] point, float radius, Func<TItem,bool> pred, Node? root = null)
 		{
 			return Traverse(point, radius, (i,n) => pred(i), root);
 		}
@@ -460,7 +460,7 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>Allocate a new node</summary>
-		private Node NewNode(Coord coord, Node parent)
+		private Node NewNode(Coord coord, Node? parent)
 		{
 			var node = new Node(coord, parent);
 			m_nodes.Add(node);

@@ -7,20 +7,21 @@ namespace Rylogic.Utility
 	public class UserData
 	{
 		/// <summary>A map from GUID to user data</summary>
-		private Dictionary<Guid, object> m_store;
+		private Dictionary<Guid, object?> m_store;
 
 		public UserData()
 		{
-			m_store = new Dictionary<Guid,object>();
+			m_store = new Dictionary<Guid, object?>();
 		}
-		public UserData(UserData rhs) :this()
+		public UserData(UserData rhs)
+			:this()
 		{
 			foreach (var pair in rhs.m_store)
 				m_store.Add(pair.Key, pair.Value);
 		}
 
 		/// <summary>Access the user data by GUID</summary>
-		public object this[Guid id]
+		public object? this[Guid id]
 		{
 			get
 			{

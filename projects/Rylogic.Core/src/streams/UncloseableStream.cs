@@ -114,9 +114,9 @@ namespace Rylogic.UnitTests
 			// Then check that the uncloseable stream wrapper works.
 			for (int i = 0; i != 2; ++i)
 			{
-				MemoryStream s = null;
-				Action func = () => { Assert.Equal(str.Length, s.Capacity); };
-				
+				var s = (MemoryStream?)null;
+				void func() { Assert.Equal(str.Length, s.Capacity); }
+
 				using (s = new MemoryStream(Encoding.ASCII.GetBytes(str)))
 				{
 					Assert.DoesNotThrow(()=>{Assert.True(s.CanRead);});

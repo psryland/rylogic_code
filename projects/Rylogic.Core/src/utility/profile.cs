@@ -161,9 +161,9 @@ namespace Rylogic.Utility
 			/// <summary>The collection of parent profile blocks that call this profile block</summary>
 			public CallerMap Callers;
 
-			internal Block(string name, int id)
+			internal Block(string? name, int id)
 			{
-				Name                   = name;
+				Name                   = name ?? string.Empty;
 				ProfileId              = id;
 				Callers                = new CallerMap();
 				SelfInclChildTimeTicks = 0;
@@ -210,12 +210,12 @@ namespace Rylogic.Utility
 		/// for each object/module/function/etc to be profiled.</summary>
 		public class Instance :Block
 		{
-			internal long     m_start;    // The RTC value on leaving the profile start method
-			internal int      m_active;   // > 0 while this profile is running, == 0 when it is not
-			internal Instance m_parent;   // Transient parent profile block
+			internal long     m_start;   // The RTC value on leaving the profile start method
+			internal int      m_active;  // > 0 while this profile is running, == 0 when it is not
+			internal Instance? m_parent; // Transient parent profile block
 
 			internal Instance(string name, int id)
-			:base(name, id)
+				:base(name, id)
 			{}
 
 			/// <summary>Reset the profile data, called after profile output has been generated</summary>
@@ -255,7 +255,7 @@ namespace Rylogic.Utility
 				SelfExclChildTimeTicks += time;
 				CallCount++;
 
-				Instance parent = m_parent;
+				var parent = m_parent;
 
 				// Pop this profile off the stack
 				mgr.m_stack = m_parent;
@@ -288,19 +288,16 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Profile collection manager singleton</summary>
-		private static Collecter mgr
-		{
-			[DebuggerStepThrough] get { return Collecter.s_instance ?? (Collecter.s_instance = new Collecter()); }
-		}
+		private static Collecter mgr => s_instance ?? (s_instance = new Collecter());
+		private static Collecter? s_instance; // Singleton instance
 
 		/// <summary>
 		/// Singleton class used on the collection side. Acts as a container of profiles.
 		/// Manages data related to collecting profile timing data.</summary>
 		internal class Collecter :List<Instance>
 		{
-			internal static Collecter  s_instance = null; // Singleton instance
 			internal readonly Instance m_root;            // The base instance for all profiles
-			internal Instance          m_stack;           // The stack of nested profiles
+			internal Instance?         m_stack;           // The stack of nested profiles
 			internal int               m_sample_count;    // The number of times a sample has been captured
 			internal double            m_ticks_per_ms;    // The scaler to convert from ticks to milliseconds
 			private  int               m_id;              // A unique id generator for profile instances
@@ -430,7 +427,8 @@ namespace Rylogic.Utility
 			/// <summary>Profile blocks that where called within this profile block</summary>
 			public ResultSample Child = new ResultSample();
 
-			public ResultData() :base(null,0)
+			public ResultData()
+				:base(null,0)
 			{
 				m_frames       = 1.0;
 				m_ticks_per_ms = 1.0;
@@ -638,7 +636,7 @@ namespace Rylogic.Utility
 			private Stopwatch m_sw;
 			private long m_count;
 
-			public CallFreq(string name, Action<CallFreq> output_cb = null)
+			public CallFreq(string name, Action<CallFreq>? output_cb = null)
 			{
 				m_sw = Stopwatch.StartNew();
 				m_count = -1;

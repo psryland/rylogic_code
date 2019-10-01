@@ -13,8 +13,8 @@ namespace Rylogic.Utility
 		//       Console.WriteLine(x); // goodbye
 		//       return rx;
 		//   }
-		private readonly Func<T>   m_get;
-		private readonly Action<T> m_set;
+		private readonly Func<T>?   m_get;
+		private readonly Action<T>? m_set;
 		private T m_value;
 
 		public Ref(T t)
@@ -25,13 +25,14 @@ namespace Rylogic.Utility
 		}
 		public Ref(Func<T> get, Action<T> set)
 		{
+			m_value = default!;
 			m_get = get;
 			m_set = set;
 		}
 		public T Value
 		{
 			get { return m_get != null ? m_get() : m_value; }
-			set { if (m_set != null) {m_set(value);} else {m_value = value;} }
+			set { if (m_set != null) { m_set(value); } else { m_value = value; } }
 		}
 		
 		// Allows:

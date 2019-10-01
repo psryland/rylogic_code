@@ -15,7 +15,7 @@ namespace Rylogic.Container
 		//    typically returns a new instance for each list item. Binding will only attached to the first
 		//    instance.
 
-		public ListAdapter(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn> conform = null)
+		public ListAdapter(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn>? conform = null)
 		{
 			Source = list;
 			Adapt = adapt;
@@ -29,7 +29,7 @@ namespace Rylogic.Container
 		public Func<TIn, TOut> Adapt { get; }
 
 		/// <summary>Inverse of the Adapter function</summary>
-		public Func<TOut, TIn> Conform { get; }
+		public Func<TOut, TIn>? Conform { get; }
 
 		/// <summary></summary>
 		public int Count => Source.Count;
@@ -46,20 +46,24 @@ namespace Rylogic.Container
 			get { return Adapt(Source[index]); }
 			set
 			{
-				if (IsReadOnly) throw new InvalidOperationException("Collection is read-only");
-				Source[index] = Conform(value);
+				if (IsReadOnly || Conform == null)
+					throw new InvalidOperationException("Collection is read-only");
+				
+				Source[index] = Conform(value)!;
 			}
 		}
 		object IList.this[int index]
 		{
-			get => this[index];
+			get => this[index]!;
 			set => this[index] = (TOut)value;
 		}
 
 		/// <summary></summary>
 		public void Add(TOut item)
 		{
-			if (IsReadOnly) throw new InvalidOperationException("Collection is read-only");
+			if (IsReadOnly|| Conform == null)
+				throw new InvalidOperationException("Collection is read-only");
+
 			Source.Add(Conform(item));
 		}
 		int IList.Add(object value)
@@ -126,7 +130,8 @@ namespace Rylogic.Container
 		/// <summary></summary>
 		public void Insert(int index, TOut item)
 		{
-			if (IsReadOnly) throw new InvalidOperationException("Collection is read-only");
+			if (IsReadOnly || Conform == null)
+				throw new InvalidOperationException("Collection is read-only");
 			Source.Insert(index, Conform(item));
 		}
 		void IList.Insert(int index, object value)
@@ -189,14 +194,14 @@ namespace Rylogic.Container
 				if (m_collection_changed == null && Source is INotifyCollectionChanged ncc) ncc.CollectionChanged -= HandleCollectionChanged;
 			}
 		}
-		private event NotifyCollectionChangedEventHandler m_collection_changed;
+		private event NotifyCollectionChangedEventHandler? m_collection_changed;
 		private void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 		{
 			if (m_collection_changed == null)
 				return;
 
 			// Map the changed objects to adapted changed objects
-			var args = (NotifyCollectionChangedEventArgs)null;
+			var args = (NotifyCollectionChangedEventArgs?)null;
 			switch (e.Action)
 			{
 			case NotifyCollectionChangedAction.Reset:
@@ -230,14 +235,15 @@ namespace Rylogic.Container
 					break;
 				}
 			}
-			m_collection_changed.Invoke(this, args);
+			if (args != null)
+				m_collection_changed.Invoke(this, args);
 		}
 	}
 
 	public static class ListAdapter
 	{
 		/// <summary>Helper for inferring type parameters</summary>
-		public static ListAdapter<TIn, TOut> Create<TIn, TOut>(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn> conform = null)
+		public static ListAdapter<TIn, TOut> Create<TIn, TOut>(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn>? conform = null)
 		{
 			return new ListAdapter<TIn, TOut>(list, adapt, conform);
 		}

@@ -13,6 +13,7 @@
 // Data to be encrypted must be sized in multiples of the block size
 
 using System;
+using System.Diagnostics;
 using System.Text;
 
 namespace Rylogic.Crypt
@@ -989,7 +990,7 @@ namespace Rylogic.Crypt
 		public class Chain
 		{
 			internal byte[] m_buf = new byte[BLOCK_SIZE];
-			public Chain(byte[] initial_chain = null)
+			public Chain(byte[]? initial_chain = null)
 			{
 				if (initial_chain != null)
 				{
@@ -1140,7 +1141,7 @@ namespace Rylogic.Crypt
 		/// 'result' - the buffer that receives the encrypted data. Note: 'result' can alias 'data' for ECB mode.
 		/// 'mode' - encryption mode to use
 		/// 'chain' - Required for CBC or CFB modes. A chain instance should be used to encrypt successive blocks of data.</summary>
-		public void Encrypt(byte[] data, byte[] result, EMode mode = EMode.ECB, Chain chain = null)
+		public void Encrypt(byte[] data, byte[] result, EMode mode = EMode.ECB, Chain? chain = null)
 		{
 			Encrypt(data, 0, data.Length, result, 0, mode, chain);
 		}
@@ -1153,12 +1154,10 @@ namespace Rylogic.Crypt
 		/// 'out_ofs' - where to start writing encrypted data into 'result'. Note 'len' bytes will be written.
 		/// 'mode' - encryption mode to use
 		/// 'chain' - Required for CBC or CFB modes. A chain instance should be used to encrypt successive blocks of data.</summary>
-		public void Encrypt(byte[] data, int ofs, int len, byte[] result, int out_ofs, EMode mode = EMode.ECB, Chain chain = null)
+		public void Encrypt(byte[] data, int ofs, int len, byte[] result, int out_ofs, EMode mode = EMode.ECB, Chain? chain = null)
 		{
 			if ((len % BLOCK_SIZE) != 0)
 				throw new ArgumentException("Data length is not a multiple of the block size");
-			if (mode != EMode.ECB && chain == null)
-				throw new ArgumentException(string.Format("A chain instance is required for encryption mode {0}", mode.ToString()));
 			if (mode != EMode.ECB && ReferenceEquals(data, result))
 				throw new ArgumentException("In-place encryption is only support for ECB mode");
 
@@ -1182,6 +1181,9 @@ namespace Rylogic.Crypt
 				}
 			case EMode.CBC: //CBC mode, using the Chain
 				{
+					if (chain == null)
+						throw new ArgumentException(string.Format("A chain instance is required for encryption mode {0}", mode.ToString()));
+
 					for (int i = 0, iend = len / BLOCK_SIZE; i != iend; ++i)
 					{
 						Xor(chain.m_buf, 0, data, src);                      // XOR a block of data into the chain
@@ -1194,6 +1196,9 @@ namespace Rylogic.Crypt
 				}
 			case EMode.CFB: //CFB mode, using the Chain
 				{
+					if (chain == null)
+						throw new ArgumentException(string.Format("A chain instance is required for encryption mode {0}", mode.ToString()));
+
 					for (int i = 0, iend = len / BLOCK_SIZE; i != iend; ++i)
 					{
 						EncryptBlock(chain.m_buf, 0, result, dst);
@@ -1213,7 +1218,7 @@ namespace Rylogic.Crypt
 		/// 'result' - the buffer that receives the decrypted data. Note: 'result' can alias 'data' for ECB mode.
 		/// 'mode' - decryption mode to use
 		/// 'chain' - Required for CBC or CFB modes. A chain instance should be used to encrypt successive blocks of data.</summary>
-		public void Decrypt(byte[] data, byte[] result, EMode mode = EMode.ECB, Chain chain = null)
+		public void Decrypt(byte[] data, byte[] result, EMode mode = EMode.ECB, Chain? chain = null)
 		{
 			Decrypt(data, 0, data.Length, result, 0, mode, chain);
 		}
@@ -1226,12 +1231,10 @@ namespace Rylogic.Crypt
 		/// 'out_ofs' -  where to start writing decrypted data into 'result'. Note 'len' bytes will be written.
 		/// 'mode' - decryption mode to use
 		/// 'chain' - Required for CBC or CFB modes. A chain instance should be used to encrypt successive blocks of data.</summary>
-		public void Decrypt(byte[] data, int ofs, int len, byte[] result, int out_ofs, EMode mode = EMode.ECB, Chain chain = null)
+		public void Decrypt(byte[] data, int ofs, int len, byte[] result, int out_ofs, EMode mode = EMode.ECB, Chain? chain = null)
 		{
 			if ((len % BLOCK_SIZE) != 0)
 				throw new ArgumentException("Data length is not a multiple of the block size");
-			if (mode != EMode.ECB && chain == null)
-				throw new ArgumentException(string.Format("A chain instance is required for decryption mode {0}", mode.ToString()));
 			if (mode != EMode.ECB && ReferenceEquals(data, result))
 				throw new ArgumentException("In-place decryption is only support for ECB mode");
 
@@ -1255,6 +1258,9 @@ namespace Rylogic.Crypt
 				}
 			case EMode.CBC: //CBC mode, using the Chain
 				{
+					if (chain == null)
+						throw new ArgumentException(string.Format("A chain instance is required for decryption mode {0}", mode.ToString()));
+
 					for (int i = 0, iend = len / BLOCK_SIZE; i != iend; ++i)
 					{
 						DecryptBlock(data, src, result, dst);
@@ -1267,6 +1273,9 @@ namespace Rylogic.Crypt
 				}
 			case EMode.CFB: //CFB mode, using the Chain
 				{
+					if (chain == null)
+						throw new ArgumentException(string.Format("A chain instance is required for decryption mode {0}", mode.ToString()));
+
 					for (int i = 0, iend = len / BLOCK_SIZE; i != iend; ++i)
 					{
 						// Note: not using Decrypt(), this is not a bug

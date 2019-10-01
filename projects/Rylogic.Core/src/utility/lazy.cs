@@ -9,17 +9,31 @@ using System.Diagnostics;
 namespace Rylogic.Utility
 {
 	/// <summary>Replacement for System.Lazy that has implicit conversion to T</summary>
-	[DebuggerStepThrough] public class Lazy<T>
+	[DebuggerStepThrough]
+	public class Lazy<T>
 	{
 		private readonly Func<T> m_func;
-		private readonly bool    m_has_value;
-		private T                m_result;
-		
-		public Lazy(Func<T> func) { m_func = func; m_has_value = false; }
-		private Lazy(T value)     { m_result = value; m_has_value = true; }
-		public T Value            { get { return m_has_value ? m_result : m_result = m_func(); } }
-		public bool HasValue      { get { return m_has_value; } }
-		
+		private T m_result;
+
+		public Lazy(Func<T> func)
+		{
+			m_func = func;
+			m_result = default!;
+			HasValue = false;
+		}
+		private Lazy(T value)
+		{
+			m_func = () => value;
+			m_result = value;
+			HasValue = true;
+		}
+
+		/// <summary>The result of calling 'm_func'</summary>
+		public T Value => HasValue ? m_result : (m_result = m_func());
+
+		/// <summary>Test if the lazy result has been calculated</summary>
+		public bool HasValue { get; }
+
 		// Values are implicitly convertible to Lazy<T> but the Lazy(T) constructor
 		// is private to prevent accidentally use such as: Lazy.New(ExpensiveFunction())
 		public static implicit operator Lazy<T>(T value) { return new Lazy<T>(value); }

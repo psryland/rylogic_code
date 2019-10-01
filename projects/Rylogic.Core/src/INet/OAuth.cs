@@ -10,24 +10,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.INet
 {
-	public class OAuth2 :IDisposable
+	public sealed class OAuth2 :IDisposable
 	{
 		// OAuth2 Protocol goes like this:
 		//  1) Register your app with the service that you are developing it for,
@@ -42,36 +35,38 @@ namespace Rylogic.INet
 		//     requests with your credentials and access token.
 		// Notes:
 
-		public OAuth2(string client_id, string client_secret, HttpClient client = null)
+		public OAuth2(string client_id, string client_secret, HttpClient? client = null)
 		{
 			m_client_owned = client == null;
-			Client = client ?? new HttpClient();
+			m_client = client ?? new HttpClient();
 			ClientID = client_id;
 			ClientSecret = client_secret;
-			AccessTokenUri = null;
-			AuthUri = null;
-			Scope = null;
-			State = null;
+			AccessTokenUri = string.Empty;
+			AuthUri = string.Empty;
+			Scope = string.Empty;
+			State = string.Empty;
 			Offline = false;
 			Locale = "en";
 		}
 		public void Dispose()
-			{
-				Client = null;
-			}
+		{
+			Client = null!;
+		}
 
 		/// <summary></summary>
 		private HttpClient Client
 		{
-			get { return m_client; }
+			get { return m_client ?? new HttpClient(); }
 			set
 			{
 				if (m_client == value) return;
-				if (m_client_owned) Util.Dispose(ref m_client);
+				if (m_client_owned)
+					Util.Dispose(ref m_client);
+
 				m_client = value;
 			}
 		}
-		private HttpClient m_client;
+		private HttpClient? m_client;
 		private bool m_client_owned;
 
 		/// <summary></summary>
@@ -191,18 +186,16 @@ namespace Rylogic.INet
 					kv.Add(m.Groups[1].Value, m.Groups[2].Value);
 				}
 
-				var v = (string)null;
 				var response = new Response
 				{
-					AccessToken = kv.TryGetValue("access_token", out v) ? v.Trim() : null,
-					RefreshToken = kv.TryGetValue("refresh_token", out v) ? v.Trim() : null,
-					State = kv.TryGetValue("state", out v) ? v.Trim() : null,
-					Expires = kv.TryGetValue("expires", out v) || kv.TryGetValue("expires_in", out v)
-						? DateTimeOffset.Now.AddSeconds(int.Parse(v.Trim())) : default,
+					AccessToken  = kv.TryGetValue("access_token", out var v0) ? v0.Trim() : string.Empty,
+					RefreshToken = kv.TryGetValue("refresh_token", out var v1) ? v1.Trim() : string.Empty,
+					State        = kv.TryGetValue("state", out var v2) ? v2.Trim() : string.Empty,
+					Expires      = (kv.TryGetValue("expires", out var e) || kv.TryGetValue("expires_in", out e)) ? DateTimeOffset.Now.AddSeconds(int.Parse(e.Trim())) : default,
 				};
 				return response;
 			}
-			
+
 			// URL encoded string?
 			if (reply.Contains('&'))
 			{
@@ -239,6 +232,14 @@ namespace Rylogic.INet
 		/// <summary>Response</summary>
 		public class Response
 		{
+			public Response()
+			{
+				AccessToken = string.Empty;
+				RefreshToken = string.Empty;
+				Expires = default;
+				State = string.Empty;
+			}
+
 			/// <summary></summary>
 			public string AccessToken { get; set; }
 

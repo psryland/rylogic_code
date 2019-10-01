@@ -80,9 +80,9 @@ namespace Rylogic.Streams
 		}
 		
 		/// <summary>Get a recycled block</summary>
-		private Block Recycle() // don't make into a property as watching in the debugger causes blocks to be used
+		private Block? Recycle() // don't make into a property as watching in the debugger causes blocks to be used
 		{
-			Block b;
+			Block? b;
 			lock (m_avail) b = m_avail.Count != 0 ? m_avail.Dequeue() : null;
 			if (b != null) CommitCharge += b.Data.Length;
 			return b;
@@ -164,7 +164,7 @@ namespace Rylogic.Streams
 				while (count != 0)
 				{
 					// Get the block at the front of the queue
-					Block b;
+					Block? b;
 					lock (m_parent.m_data)
 						b = !m_parent.Empty ? m_parent.PopFront() : null;
 						
@@ -232,7 +232,7 @@ namespace Rylogic.Streams
 					// If there is more than one block in use, we can add our data
 					// to the last block because it hasn't been read from yet. Otherwise
 					// get a new block from the recycler so that we don't block reads
-					Block b;
+					Block? b;
 					lock (m_parent.m_data)
 						b = m_parent.m_data.Count > 1 ? m_parent.PopBack() : m_parent.Recycle();
 					
@@ -274,8 +274,9 @@ namespace Rylogic.UnitTests
 			const string src = "This is a longest message to test blocking and asynchronous communication using the link stream";
 			string msg = string.Empty;
 
-			EventWaitHandle wait = new EventWaitHandle(false, EventResetMode.ManualReset);
-			Exception write_ex = null, read_ex = null;
+			var wait = new EventWaitHandle(false, EventResetMode.ManualReset);
+			var write_ex = (Exception?)null;
+			var read_ex = (Exception?)null;
 			
 			var link = new LinkStream{BlockBufferSize = 4, MaxCapacity = 8};
 			ThreadPool.QueueUserWorkItem(x =>

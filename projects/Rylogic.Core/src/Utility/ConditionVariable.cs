@@ -122,7 +122,7 @@ namespace Rylogic.Utility
 		//  }
 		private T m_value;
 		public ConditionVariable()
-			:this(default(T))
+			:this(default!)
 		{
 		}
 		public ConditionVariable(T value)
@@ -249,7 +249,7 @@ namespace Rylogic.UnitTests
 		public void Test0()
 		{
 			var cv = new ConditionVariable();
-			var data = (string)null;
+			var data = (string?)null;
 			var ready = false;
 			var processed = false;
 
@@ -339,7 +339,7 @@ namespace Rylogic.UnitTests
 		public async void Test2()
 		{
 			var cv = new ConditionVariable();
-			var data = (string)null;
+			var data = (string?)null;
 			var ready = false;
 			var processed = false;
 

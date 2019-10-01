@@ -22,8 +22,8 @@ namespace Rylogic.Utility
 			var done = new ManualResetEventSlim(false);
 			ThreadPool.QueueUserWorkItem(async _ =>
 			{
-				var sr = (Stream)null;
-				var mmf = (MemoryMappedFile)null;
+				var sr = (Stream?)null;
+				var mmf = (MemoryMappedFile?)null;
 				try
 				{
 					var buffer = new byte[block_size];
@@ -84,7 +84,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Starts a worker thread to read lines from the file</summary>
-		public static ManualResetEventSlim BeginReadLines(string filepath, WaitHandle stop, Action<string> lines_cb, Encoding encoding = null)
+		public static ManualResetEventSlim BeginReadLines(string filepath, WaitHandle stop, Action<string> lines_cb, Encoding? encoding = null)
 		{
 			// Use:
 			//  var stop = new ManualResetEventSlim(false);
@@ -96,8 +96,8 @@ namespace Rylogic.Utility
 			var done = new ManualResetEventSlim(false);
 			ThreadPool.QueueUserWorkItem(async _ =>
 			{
-				var sr = (StreamReader)null;
-				var mmf = (MemoryMappedFile)null;
+				var sr = (StreamReader?)null;
+				var mmf = (MemoryMappedFile?)null;
 				try
 				{
 					for (; ; Thread.Yield())

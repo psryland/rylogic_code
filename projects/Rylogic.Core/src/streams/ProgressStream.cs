@@ -12,60 +12,15 @@ namespace Rylogic.Streams
 		private long m_last_report_time; // The time of the last report
 		private long m_granularity;      // Controls how frequently to report progress
 
-		/// <summary>An event that notifies as the progress is changed.</summary>
-		public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
-		public class ProgressChangedEventArgs : EventArgs
-		{
-			/// <summary>The number of bytes read from the wrapped stream</summary>
-			public long BytesRead { get; private set; }
-
-			/// <summary>The total length of the wrapped stream (if known, 0 if not known)</summary>
-			public long Length { get; private set; }
-
-			/// <summary>Return the current progress as a percentage</summary>
-			public float ProgressPercentage { get { return Length != 0 ? BytesRead * 100f / Length : 50; } }
-
-			public ProgressChangedEventArgs(long bytesRead, long length) { BytesRead = bytesRead; Length = length; }
-		}
-		public void RaiseProgressChanged()
-		{
-			if (NotifyAllSteps)
-			{
-				while (m_bytes_read - m_last_report >= m_granularity)
-				{
-					m_last_report += m_granularity;
-					m_last_report_time = Environment.TickCount;
-					ProgressChangedEventArgs args = new ProgressChangedEventArgs(m_last_report, m_length);
-					if (ProgressChanged != null) ProgressChanged(this, args);
-				}
-			}
-			else
-			{
-				if (m_bytes_read - m_last_report >= m_granularity &&
-					Environment.TickCount - m_last_report_time >= MinInterval)
-				{
-					m_last_report = m_bytes_read;
-					m_last_report_time = Environment.TickCount;
-					ProgressChangedEventArgs args = new ProgressChangedEventArgs(m_last_report, m_length);
-					if (ProgressChanged != null) ProgressChanged(this, args);
-				}
-			}
-			
-			// Report the 100% case
-			if (m_length == m_bytes_read && m_last_report != m_bytes_read)
-			{
-				m_last_report = m_bytes_read;
-				ProgressChangedEventArgs args = new ProgressChangedEventArgs(m_last_report, m_length);
-				if (ProgressChanged != null) ProgressChanged(this, args);
-			}
-		}
-		
 		/// <summary>The granularity of progress changed reporting for streams of unknown length</summary>
 		public const long DefaultGranularity = 1024;
 		
-		public ProgressStream(Stream stream) :base(stream)
+		public ProgressStream(Stream stream)
+			:base(stream)
 		{
-			try { m_length = stream.CanSeek ? stream.Length : 0; } catch (NotSupportedException) { m_length = 0; }
+			try { m_length = stream.CanSeek ? stream.Length : 0; }
+			catch (NotSupportedException) { m_length = 0; }
+
 			NotifyAllSteps = false;
 			MinInterval = 0;
 			m_bytes_read = 0;
@@ -78,8 +33,8 @@ namespace Rylogic.Streams
 		/// By default this is set to the stream.Length/100 or 1024 for streams of unknown length</summary>
 		public long Granularity
 		{
-			get { return m_granularity; }
-			set { m_granularity = Math.Max(1, value); }
+			get => m_granularity;
+			set => m_granularity = Math.Max(1, value);
 		}
 
 		/// <summary>
@@ -97,11 +52,8 @@ namespace Rylogic.Streams
 		/// total length that has been read (i.e. 0.0 -> 1.0). If the wrapped stream has an unknown
 		/// length, then returns the number of bytes read so far.
 		/// </summary>
-		public double ReadProgress
-		{
-			get { return (double)m_bytes_read / (m_length == 0 ? 1 : m_length); }
-		}
-		
+		public double ReadProgress => (double)m_bytes_read / (m_length == 0 ? 1 : m_length);
+
 		/// <summary>
 		/// When overridden in a derived class, reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read.
 		/// </summary>
@@ -122,7 +74,7 @@ namespace Rylogic.Streams
 		{
 			int result = base.Read(buffer, offset, count);
 			m_bytes_read += result;
-			RaiseProgressChanged();
+			NotifyProgressChanged();
 			return result;
 		}
 
@@ -139,8 +91,56 @@ namespace Rylogic.Streams
 		{
 			int result = base.ReadByte();
 			m_bytes_read++;
-			RaiseProgressChanged();
+			NotifyProgressChanged();
 			return result;
+		}
+
+		/// <summary>An event that notifies as the progress is changed.</summary>
+		public event EventHandler<ProgressChangedEventArgs>? ProgressChanged;
+		public void NotifyProgressChanged()
+		{
+			if (NotifyAllSteps)
+			{
+				while (m_bytes_read - m_last_report >= m_granularity)
+				{
+					m_last_report += m_granularity;
+					m_last_report_time = Environment.TickCount;
+					var args = new ProgressChangedEventArgs(m_last_report, m_length);
+					if (ProgressChanged != null) ProgressChanged(this, args);
+				}
+			}
+			else
+			{
+				if (m_bytes_read - m_last_report >= m_granularity && Environment.TickCount - m_last_report_time >= MinInterval)
+				{
+					m_last_report = m_bytes_read;
+					m_last_report_time = Environment.TickCount;
+					var args = new ProgressChangedEventArgs(m_last_report, m_length);
+					if (ProgressChanged != null) ProgressChanged(this, args);
+				}
+			}
+
+			// Report the 100% case
+			if (m_length == m_bytes_read && m_last_report != m_bytes_read)
+			{
+				m_last_report = m_bytes_read;
+				var args = new ProgressChangedEventArgs(m_last_report, m_length);
+				if (ProgressChanged != null) ProgressChanged(this, args);
+			}
+		}
+
+		public class ProgressChangedEventArgs :EventArgs
+		{
+			/// <summary>The number of bytes read from the wrapped stream</summary>
+			public long BytesRead { get; private set; }
+
+			/// <summary>The total length of the wrapped stream (if known, 0 if not known)</summary>
+			public long Length { get; private set; }
+
+			/// <summary>Return the current progress as a percentage</summary>
+			public float ProgressPercentage { get { return Length != 0 ? BytesRead * 100f / Length : 50; } }
+
+			public ProgressChangedEventArgs(long bytesRead, long length) { BytesRead = bytesRead; Length = length; }
 		}
 	}
 }

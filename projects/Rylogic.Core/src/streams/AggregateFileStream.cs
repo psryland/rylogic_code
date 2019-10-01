@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Rylogic.Extn;
 
@@ -15,11 +16,12 @@ namespace Rylogic.Streams
 	{
 		public AggregateFileStream(IEnumerable<string> filepaths, FileShare file_share = FileShare.None, int buffer_size = 0x1000, FileOptions file_options = FileOptions.None)
 		{
-			FileShare      = file_share;
+			FileShare = file_share;
 			FileBufferSize = buffer_size;
-			FileOptions    = file_options;
-			Files          = new List<FileInfo>();
-			m_boundary     = new List<long>();
+			FileOptions = file_options;
+			Files = new List<FileInfo>();
+			m_boundary = new List<long>();
+			m_fs = null;
 
 			SetFiles(filepaths);
 		}
@@ -34,7 +36,7 @@ namespace Rylogic.Streams
 		private long m_position;
 
 		/// <summary>A file stream that reads from the one of the referenced files</summary>
-		private FileStream m_fs;
+		private FileStream? m_fs;
 
 		/// <summary>The index of the file that m_fs currently represents</summary>
 		private int m_fs_index;
@@ -72,17 +74,19 @@ namespace Rylogic.Streams
 			m_position = 0;
 			m_fs = null;
 			m_fs_index = -1;
-			if (FileStream == null) {} // Force 'FileStream' to be created so that a lock is held from construction
+			
+			// Force 'FileStream' to be created so that a lock is held from construction
+			var _ = FileStream;
 		}
 
 		/// <summary>Returns the file stream appropriate for the current 'Position' value</summary>
-		public FileStream FileStream
+		public FileStream? FileStream
 		{
 			get { return FileStreamAtOffset(Position); }
 		}
 
 		/// <summary>Returns the file stream appropriate for byte offset 'offset'</summary>
-		public FileStream FileStreamAtOffset(long offset)
+		public FileStream? FileStreamAtOffset(long offset)
 		{
 			var fidx = FileIndexAtOffset(offset);
 			if (m_fs != null && fidx == m_fs_index) return m_fs;
@@ -166,7 +170,7 @@ namespace Rylogic.Streams
 			long initial_position = Position;
 			while (count != 0)
 			{
-				var read = FileStream.Read(buffer, offset, (int)Math.Min(count, m_boundary[FileIndex] - Position));
+				var read = FileStream!.Read(buffer, offset, (int)Math.Min(count, m_boundary[FileIndex] - Position));
 				Position += read;
 				offset += read;
 				count -= read;
@@ -180,7 +184,7 @@ namespace Rylogic.Streams
 		public override int ReadByte()
 		{
 			if (Position >= Length) return -1;
-			var b = FileStream.ReadByte();
+			var b = FileStream!.ReadByte();
 			++Position;
 			return b;
 		}

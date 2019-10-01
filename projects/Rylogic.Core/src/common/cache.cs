@@ -56,7 +56,7 @@ namespace Rylogic.Common
 		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
 		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
 		/// need to call 'Add' to return the object to the cache.</summary>
-		TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null);
+		TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem>? on_hit = null);
 
 		/// <summary>Deletes (i.e. Disposes) and removes any object associated with 'key' from the cache</summary>
 		void Invalidate(TKey key);
@@ -80,6 +80,7 @@ namespace Rylogic.Common
 
 	/// <summary>Generic, count limited, cache implementation</summary>
 	public class Cache<TKey,TItem> :ICache<TKey,TItem>
+		where TKey : notnull
 	{
 		// Notes:
 		// - The cache is an ordered linked list and a map from keys to list nodes.
@@ -88,9 +89,14 @@ namespace Rylogic.Common
 		/// <summary>The cache entry</summary>
 		private class Entry
 		{
+			public Entry(TKey key, TItem item)
+			{
+				Key = key;
+				Item = item;
+			}
 			public TKey  Key  { get; set; }
 			public TItem Item { get; set; }
-			public override string ToString() { return string.Format("{0} -> {1}", Key, Item); }
+			public override string ToString() => string.Format("{0} -> {1}", Key, Item);
 		}
 
 		/// <summary>A linked list of the cached items, sorted by most recently accessed</summary>
@@ -179,7 +185,7 @@ namespace Rylogic.Common
 			using (Lock())
 			{
 				// Create a new node and add to the cache
-				var node = m_cache.AddFirst(new Entry{Key = key, Item = item});
+				var node = m_cache.AddFirst(new Entry(key, item));
 				m_lookup[key] = node;
 				LimitCacheSize();
 				return true;
@@ -199,7 +205,7 @@ namespace Rylogic.Common
 				for (; !k.AtEnd && !i.AtEnd; k.MoveNext(), i.MoveNext())
 				{
 					// Create a new node and add to the cache
-					var node = m_cache.AddFirst(new Entry{Key = k.Current, Item = i.Current});
+					var node = m_cache.AddFirst(new Entry(k.Current, i.Current));
 					m_lookup[k.Current] = node;
 				}
 				LimitCacheSize();
@@ -229,11 +235,11 @@ namespace Rylogic.Common
 		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
 		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
 		/// need to call 'Add' to return the object to the cache.</summary>
-		public TItem Get(TKey key, Func<TKey, TItem> on_miss, Action<TKey, TItem> on_hit = null)
+		public TItem Get(TKey key, Func<TKey, TItem> on_miss, Action<TKey, TItem>? on_hit = null)
 		{
 			return GetAsync(key, x => Task.FromResult(on_miss(x)), on_hit).Result;
 		}
-		public async Task<TItem> GetAsync(TKey key, Func<TKey, Task<TItem>> on_miss, Action<TKey, TItem> on_hit = null)
+		public async Task<TItem> GetAsync(TKey key, Func<TKey, Task<TItem>> on_miss, Action<TKey, TItem>? on_hit = null)
 		{
 			// Special case 0 capacity caches
 			if (Capacity == 0)
@@ -242,11 +248,12 @@ namespace Rylogic.Common
 			TItem item;
 
 			// Use the lookup map to find the node in the cache
-			var node = (LinkedListNode<Entry>)null;
+			LinkedListNode<Entry> node;
+			bool found = false;
 			using (Lock())
-				m_lookup.TryGetValue(key, out node);
+				found = m_lookup.TryGetValue(key, out node);
 
-			if (node != null)
+			if (found)
 			{
 				// Found!
 				Interlocked.Increment(ref m_stats.Hits);
@@ -281,7 +288,7 @@ namespace Rylogic.Common
 
 				// Cache miss, read it
 				item = await on_miss(key);
-				if (Equals(item, default(TItem)))
+				if (Equals(item, default(TItem)!))
 					return item;
 
 				// For standard caches, store the new item in the cache before returning it.
@@ -297,7 +304,7 @@ namespace Rylogic.Common
 						if (!m_lookup.TryGetValue(key, out node))
 						{
 							// Create a new node and add to the cache
-							node = m_cache.AddFirst(new Entry { Key = key, Item = item });
+							node = m_cache.AddFirst(new Entry(key, item));
 							m_lookup[key] = node;
 							LimitCacheSize();
 						}
@@ -414,7 +421,7 @@ namespace Rylogic.Common
 		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
 		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
 		/// need to call 'Add' to return the object to the cache.</summary>
-		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
+		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem>? on_hit = null)
 		{
 			Interlocked.Increment(ref m_stats.Misses);
 			return on_miss(key);
@@ -435,7 +442,7 @@ namespace Rylogic.Common
 		private bool m_valid;
 
 		public TimeCachedValue(int timeout_ms)
-			:this(default(T), timeout_ms)
+			:this(default!, timeout_ms)
 		{ }
 		public TimeCachedValue(T value, int timeout_ms)
 		{

@@ -9,9 +9,9 @@ namespace Rylogic.Container
 	/// <summary>A list wrapper that represents a set of contiguous lists</summary>
 	public class ConcatList<T> :IList<T> ,IList
 	{
-		public ConcatList(IList<IList<T>> lists = null)
+		public ConcatList(IList<IList<T>>? lists = null)
 		{
-			Lists = lists ?? new List<IList<T>>();
+			m_lists = lists ?? new List<IList<T>>();
 			SyncRoot = new object();
 		}
 
@@ -108,10 +108,10 @@ namespace Rylogic.Container
 				list[addr.ItemIdx] = value;
 			}
 		}
-		object IList.this[int index]
+		object? IList.this[int index]
 		{
 			get { return this[index]; }
-			set { this[index] = (T)value; }
+			set { this[index] = value != null ? (T)value : default!; }
 		}
 
 		/// <summary>The number of items in the ConcatList</summary>

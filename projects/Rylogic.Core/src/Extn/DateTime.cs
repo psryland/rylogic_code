@@ -453,7 +453,7 @@ namespace Rylogic.UnitTests
 				Assert.Equal(ts, TS);
 			}
 			{
-				var ts = TimeSpan_.TryParseExpr("-2mins").Value;
+				var ts = TimeSpan_.TryParseExpr("-2mins") ?? throw new Exception("Invalid timespan expression");
 				var s1 = ts.ToPrettyString();
 				var s2 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:true);
 				var s3 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:false);
@@ -462,19 +462,19 @@ namespace Rylogic.UnitTests
 				Assert.Equal(s3, "-2mins");
 			}
 			{
-				var ts = TimeSpan_.TryParseExpr("0mins").Value;
+				var ts = TimeSpan_.TryParseExpr("0mins") ?? throw new Exception("Invalid timespan expression");
 				var s1 = ts.ToPrettyString();
 				Assert.Equal(s1, "0s");
 			}
 			{
-				var ts = TimeSpan_.TryParseExpr("2ms").Value;
+				var ts = TimeSpan_.TryParseExpr("2ms") ?? throw new Exception("Invalid timespan expression");
 				var s1 = ts.ToPrettyString();
 				var s2 = ts.ToPrettyString(min_unit:TimeSpan_.ETimeUnits.Milliseconds);
 				Assert.Equal(s1, "0s");
 				Assert.Equal(s2, "2ms");
 			}
 			{
-				var ts = TimeSpan_.TryParseExpr("10y 25w 7d").Value;
+				var ts = TimeSpan_.TryParseExpr("10y 25w 7d") ?? throw new Exception("Invalid timespan expression");
 				var s1 = ts.ToPrettyString(trailing_zeros:false);
 				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
 				Assert.True(Math_.FEql(ts.TotalDays, 10*365 + 25*7 + 7));
@@ -482,7 +482,7 @@ namespace Rylogic.UnitTests
 				Assert.Equal(s2, "10y 26w");
 			}
 			{
-				var ts = TimeSpan_.TryParseExpr("-10y 25w 7d").Value;
+				var ts = TimeSpan_.TryParseExpr("-10y 25w 7d") ?? throw new Exception("Invalid timespan expression");
 				var s1 = ts.ToPrettyString(trailing_zeros:false);
 				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
 				Assert.True(Math_.FEql(ts.TotalDays, -10*365 + 25*7 + 7));

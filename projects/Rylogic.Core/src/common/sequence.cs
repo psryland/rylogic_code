@@ -16,7 +16,7 @@ namespace Rylogic.Common
 		///   (Y,Y) = (5,1) = 6 <para/>
 		///   So (X,X) is the nearest match.
 		/// Returns null of no match is found</summary>
-		public static Tuple<int,int> FindNearestMatch<T>(IEnumerable<T> lhs, IEnumerable<T> rhs, Func<T,T,bool> match)
+		public static Tuple<int,int>? FindNearestMatch<T>(IEnumerable<T> lhs, IEnumerable<T> rhs, Func<T,T,bool> match)
 		{
 			var L = new List<T>();
 			var R = new List<T>();
@@ -51,7 +51,7 @@ namespace Rylogic.UnitTests
 			var str1 = "abXcdY";
 			var str2 = "1Y2X34";
 			var d = Seq.FindNearestMatch(str1, str2, (l,r) => l == r);
-			Assert.True(d.Item1 == 2 && d.Item2 == 3); // (X,X)
+			Assert.True(d != null && d.Item1 == 2 && d.Item2 == 3); // (X,X)
 		}
 	}
 }

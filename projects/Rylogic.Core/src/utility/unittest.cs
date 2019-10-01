@@ -27,11 +27,11 @@ namespace Rylogic.UnitTests
 		/// Loads a .NET assembly and searches for any 'TestFixture' marked classes.
 		/// Any found are then executed. Returns true if all tests passed.
 		/// Diagnostic output is written to 'output'</summary>
-		public static bool RunTests(string assembly_filepath, Stream outstream = null)
+		public static bool RunTests(string assembly_filepath, Stream? outstream = null)
 		{
 			return RunTests(Assembly.LoadFile(assembly_filepath), outstream);
 		}
-		public static bool RunTests(Assembly ass, Stream outstream = null)
+		public static bool RunTests(Assembly ass, Stream? outstream = null)
 		{
 			try
 			{
@@ -52,7 +52,7 @@ namespace Rylogic.UnitTests
 					foreach (var fixture in test_fixtures)
 					{
 						// Create an instance of the unit test
-						object inst = null;
+						object inst;
 						try { inst = Activator.CreateInstance(fixture); }
 						catch (Exception ex)
 						{
@@ -201,33 +201,33 @@ namespace Rylogic.UnitTests
 			if (!test) return;
 			throw new UnitTestException(VSLink + "result is not 'False'");
 		}
-		public static void Null(object ptr)
+		public static void Null(object? ptr)
 		{
 			if (ptr == null) return;
 			throw new UnitTestException(VSLink + "reference is not Null");
 		}
-		public static void NotNull(object ptr)
+		public static void NotNull(object? ptr)
 		{
 			if (ptr != null) return;
 			throw new UnitTestException(VSLink + "reference is Null");
 		}
 
 		/// <summary>Tests reference equality</summary>
-		public static void AreSame(object lhs, object rhs)
+		public static void AreSame(object? lhs, object? rhs)
 		{
 			if (ReferenceEquals(lhs, rhs)) return;
 			throw new UnitTestException(VSLink + "references are not equal");
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void Equal(object expected, object result)
+		public static void Equal(object? expected, object? result)
 		{
 			if (Equals(expected, result)) return;
 			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {(expected ?? "null").ToString()}\r\n  result: {(result ?? "null").ToString()}");
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void Equal<T>(IEnumerable<T> expected, IEnumerable<T> result)
+		public static void Equal<T>(IEnumerable<T>? expected, IEnumerable<T>? result)
 		{
 			if (ReferenceEquals(expected, result)) return;
 			if (expected.SequenceEqual(result)) return;
@@ -247,7 +247,7 @@ namespace Rylogic.UnitTests
 		}
 
 		/// <summary>Tests value inequality</summary>
-		public static void NotEqual(object expected, object result)
+		public static void NotEqual(object? expected, object? result)
 		{
 			if (!Equals(expected, result)) return;
 			throw new UnitTestException(VSLink + "values are equal");
@@ -270,7 +270,7 @@ namespace Rylogic.UnitTests
 		{
 			Throws(typeof(T), action);
 		}
-		public static void DoesNotThrow(Action action, string msg = null)
+		public static void DoesNotThrow(Action action, string? msg = null)
 		{
 			try { action(); }
 			catch (Exception ex)

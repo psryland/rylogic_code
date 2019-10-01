@@ -36,21 +36,11 @@ namespace Rylogic.Container
 	[Serializable()]
 	public class Deque<T> :ICollection, IEnumerable<T>, ICloneable
 	{
-		/// <summary>Represents a node in the deque.</summary>
-		[Serializable()]
-		private class Node
-		{
-			public Node(T value) { Value = value; }
-			public T Value       { get; private set;  }
-			public Node Previous { get; set; }
-			public Node Next     { get; set; }
-		}
-
 		// The node at the front of the deque.
-		private Node m_front;
+		private Node? m_front;
 
 		// The node at the back of the deque.
-		private Node m_back;
+		private Node? m_back;
 
 		// The number of elements in the deque.
 		private int m_count;
@@ -66,14 +56,14 @@ namespace Rylogic.Container
 			m_count   = 0;
 			m_version = 0;
 		}
-
-		/// <summary>
-		/// Initializes a new instance of the Deque class that contains 
-		/// elements copied from the specified collection.</summary>
-		/// <param name="collection">The collection whose elements are copied to the new Deque.</param>
 		public Deque(IEnumerable<T> collection)
+			:this()
 		{
-			if (collection == null) throw new ArgumentNullException("collection");
+			// Initializes a new instance of the Deque class that contains 
+			// elements copied from the specified collection.
+			if (collection == null)
+				throw new ArgumentNullException("collection");
+
 			foreach (T item in collection)
 				PushBack(item);
 		}
@@ -105,14 +95,14 @@ namespace Rylogic.Container
 		public virtual void PushFront(T item)
 		{
 			// The new node to add to the front of the deque.
-			Node new_node = new Node(item);
+			var new_node = new Node(item);
 
 			// Link the new node to the front node. The current front node at 
 			// the front of the deque is now the second node in the deque.
 			new_node.Next = m_front;
 
 			// If the deque isn't empty.
-			if (Count > 0)
+			if (Count > 0 && m_front != null)
 			{
 				// Link the current front to the new node.
 				m_front.Previous = new_node;
@@ -140,14 +130,14 @@ namespace Rylogic.Container
 		public virtual void PushBack(T item)
 		{
 			// The new node to add to the back of the deque.
-			Node new_node = new Node(item);
+			var new_node = new Node(item);
 
 			// Link the new node to the back node. The current back node at 
 			// the back of the deque is now the second to the last node in the deque.
 			new_node.Previous = m_back;
 
 			// If the deque is not empty.
-			if (Count > 0)
+			if (Count > 0 && m_back != null)
 			{
 				// Link the current back node to the new node.
 				m_back.Next = new_node;
@@ -175,7 +165,7 @@ namespace Rylogic.Container
 		/// <exception cref="InvalidOperationException">The Deque is empty.</exception>
 		public virtual T PopFront()
 		{
-			if (Count == 0)
+			if (Count == 0 || m_front == null)
 				throw new InvalidOperationException("Deque is empty.");
 
 			// Get the object at the front of the deque.
@@ -188,7 +178,7 @@ namespace Rylogic.Container
 			m_count--;
 
 			// If the deque is not empty.
-			if (Count > 0)
+			if (Count > 0 && m_front != null)
 			{
 				// Tie off the previous link in the front node.
 				m_front.Previous = null;
@@ -210,7 +200,7 @@ namespace Rylogic.Container
 		/// <exception cref="InvalidOperationException">The Deque is empty.</exception>
 		public virtual T PopBack()
 		{
-			if (Count == 0)
+			if (Count == 0 || m_back == null)
 				throw new InvalidOperationException("Deque is empty.");
 
 			// Get the object at the back of the deque.
@@ -223,7 +213,7 @@ namespace Rylogic.Container
 			m_count--;
 
 			// If the deque is not empty.
-			if (Count > 0)
+			if (Count > 0 && m_back != null)
 			{
 				// Tie off the next link in the back node.
 				m_back.Next = null;
@@ -245,7 +235,9 @@ namespace Rylogic.Container
 		/// <exception cref="InvalidOperationException">The Deque is empty.</exception>
 		public virtual T PeekFront()
 		{
-			if (Count == 0) throw new InvalidOperationException("Deque is empty.");
+			if (Count == 0 || m_front == null)
+				throw new InvalidOperationException("Deque is empty.");
+			
 			return m_front.Value;
 		}
 
@@ -254,7 +246,9 @@ namespace Rylogic.Container
 		/// <exception cref="InvalidOperationException">The Deque is empty.</exception>
 		public virtual T PeekBack()
 		{
-			if (Count == 0) throw new InvalidOperationException("Deque is empty.");
+			if (Count == 0 || m_back == null)
+				throw new InvalidOperationException("Deque is empty.");
+
 			return m_back.Value;
 		}
 
@@ -284,6 +278,7 @@ namespace Rylogic.Container
 		/// <summary>Self consistency check</summary>
 		[Conditional("DEBUG")] private void AssertValid()
 		{
+			#nullable disable
 			int n = 0;
 			var current = m_front;
 			while (current != null)
@@ -298,8 +293,8 @@ namespace Rylogic.Container
 			{
 				Debug.Assert(m_front != null && m_back != null, "Front/Back Null Test - Count > 0");
 
-				Node f = m_front;
-				Node b = m_back;
+				var f = m_front;
+				var b = m_back;
 
 				while (f.Next != null && b.Previous != null)
 				{
@@ -314,6 +309,20 @@ namespace Rylogic.Container
 			{
 				Debug.Assert(m_front == null && m_back == null, "Front/Back Null Test - Count == 0");
 			}
+			#nullable enable
+		}
+
+		/// <summary>Represents a node in the deque.</summary>
+		[Serializable()]
+		private class Node
+		{
+			public Node(T value)
+			{
+				Value = value;
+			}
+			public T Value { get; }
+			public Node? Previous { get; set; }
+			public Node? Next { get; set; }
 		}
 
 		#region ICloneable
@@ -364,7 +373,7 @@ namespace Rylogic.Container
 					"destination array.");
 
 			var i = index;
-			foreach (object obj in this)
+			foreach (var obj in this)
 			{
 				array.SetValue(obj, i);
 				i++;
@@ -396,7 +405,7 @@ namespace Rylogic.Container
 
 		#region SynchronizedDeque
 		/// <summary>Implements a synchronization wrapper around a deque.</summary>
-		[Serializable()] private class SynchronizedDeque :Deque<T>, IEnumerable
+		private class SynchronizedDeque :Deque<T>, IEnumerable
 		{
 			/// <summary>The wrapped deque.</summary>
 			private Deque<T> m_deque;
@@ -487,10 +496,10 @@ namespace Rylogic.Container
 		#endregion
 
 		#region Enumerator
-		[Serializable()] private class Enumerator :IEnumerator<T>
+		private class Enumerator :IEnumerator<T>
 		{
 			private Deque<T> m_owner;
-			private Node     m_current_node;
+			private Node?    m_current_node;
 			private T        m_current;
 			private bool     m_move_result;
 			private long     m_version;
@@ -500,7 +509,7 @@ namespace Rylogic.Container
 			{
 				m_owner        = owner;
 				m_current_node = owner.m_front;
-				m_current      = default(T);
+				m_current      = default!;
 				m_move_result  = false;
 				m_version      = owner.m_version;
 				m_disposed     = false;
@@ -515,7 +524,7 @@ namespace Rylogic.Container
 				m_current_node = m_owner.m_front;
 				m_move_result  = false;
 			}
-			public object Current
+			public object? Current
 			{
 				get
 				{
@@ -677,7 +686,7 @@ namespace Rylogic.UnitTests
 				Assert.Equal(array[i + deque.Count], i);
 
 			array = new int[deque.Count];
-			Assert.Throws(typeof(Exception), () => deque.CopyTo(null, deque.Count));
+			Assert.Throws(typeof(Exception), () => deque.CopyTo(null!, deque.Count));
 			Assert.Throws(typeof(Exception), () => deque.CopyTo(array, -1));
 			Assert.Throws(typeof(Exception), () => deque.CopyTo(array, deque.Count / 2));
 			Assert.Throws(typeof(Exception), () => deque.CopyTo(array, deque.Count));

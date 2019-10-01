@@ -23,13 +23,13 @@ namespace Rylogic.Extn
 
 		/// <summary>Returns true if this string is not null or empty</summary>
 		[DebuggerStepThrough]
-		public static bool HasValue(this string str)
+		public static bool HasValue(this string? str)
 		{
 			return !string.IsNullOrEmpty(str);
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
-		public static string Substring(this string str, string start_pattern, string end_pattern, StringComparison cmp_type = StringComparison.InvariantCulture)
+		public static string Substring(this string str, string? start_pattern, string? end_pattern, StringComparison cmp_type = StringComparison.InvariantCulture)
 		{
 			var sidx = start_pattern != null ? str.IndexOf(start_pattern, 0, cmp_type) : 0;
 			if (sidx == -1) return string.Empty;
@@ -47,7 +47,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
-		public static string SubstringRegex(this string str, string start_pattern, string end_pattern, RegexOptions options = RegexOptions.None)
+		public static string SubstringRegex(this string str, string? start_pattern, string? end_pattern, RegexOptions options = RegexOptions.None)
 		{
 			var sidx = 0;
 			if (start_pattern != null)
@@ -140,7 +140,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Transforms a string by the given casing rules</summary>
-		public static string Txfm(this string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string sep, string delims = null)
+		public static string Txfm(this string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string? sep, string? delims = null)
 		{
 			if (string.IsNullOrEmpty(str))
 				return str;
@@ -190,7 +190,7 @@ namespace Rylogic.Extn
 			}
 			return sb.ToString();
 		}
-		public static string Txfm(this string str, EPrettyStyle style, string delims = null)
+		public static string Txfm(this string str, EPrettyStyle style, string? delims = null)
 		{
 			switch (style)
 			{
@@ -235,8 +235,7 @@ namespace Rylogic.Extn
 			if (caps) str = str.ToLower();
 
 			// Convert 'str' to it's plural form
-			var plural = (string)null;
-			if (m_mutated_plurals.TryGetValue(str, out plural))
+			if (m_mutated_plurals.TryGetValue(str, out var plural))
 			{
 				// Test the special cases first, those that are exceptions to the following "rules"
 			}
@@ -348,7 +347,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Return the string as a stream</summary>
-		public static Stream ToStream(this string str, Encoding enc = null)
+		public static Stream ToStream(this string str, Encoding? enc = null)
 		{
 			enc = enc ?? Encoding.UTF8;
 			return new MemoryStream(enc.GetBytes(str), false);
@@ -439,17 +438,17 @@ namespace Rylogic.Extn
 		public static bool TryConvertTo<P0>(this string str, out P0 p)
 		{
 			try { p = str.ConvertTo<P0>(); return true; }
-			catch { p = default; return false; }
+			catch { p = default!; return false; }
 		}
 		public static bool TryConvertTo<P0, P1>(this string str, out Tuple<P0, P1> p, char sep = ',')
 		{
 			try { p = str.ConvertTo<P0, P1>(); return true; }
-			catch { p = default; return false; }
+			catch { p = default!; return false; }
 		}
 		public static bool TryConvertTo<P0, P1, P2>(this string str, out Tuple<P0, P1, P2> p, char sep = ',')
 		{
 			try { p = str.ConvertTo<P0, P1, P2>(); return true; }
-			catch { p = default; return false; }
+			catch { p = default!; return false; }
 		}
 
 		/// <summary>Parse this string against 'regex'</summary>
@@ -479,98 +478,18 @@ namespace Rylogic.Extn
 		public static bool TryParse<P0>(this string str, string regex, out P0 p0)
 		{
 			try { str.Parse(regex, out p0); return true; }
-			catch { p0 = default(P0); return false; }
+			catch { p0 = default!; return false; }
 		}
 		public static bool TryParse<P0,P1>(this string str, string regex, out P0 p0, out P1 p1)
 		{
 			try { str.Parse(regex, out p0, out p1); return true; }
-			catch { p0 = default(P0); p1 = default(P1); return false; }
+			catch { p0 = default!; p1 = default!; return false; }
 		}
 		public static bool TryParse<P0,P1,P2>(this string str, string regex, out P0 p0, out P1 p1, out P2 p2)
 		{
 			try { str.Parse(regex, out p0, out p1, out p2); return true; }
-			catch { p0 = default(P0); p1 = default(P1); p2 = default(P2); return false; }
+			catch { p0 = default!; p1 = default!; p2 = default!; return false; }
 		}
-
-		//public static string HaackFormat(this string format, object source)
-		//{
-		//    var formattedStrings = (from expression in SplitFormat(format) select expression.Eval(source)).ToArray();
-		//    return string.Join("", formattedStrings);
-		//}
-
-		//private static int IndexOfSingle(string format, int start_index, char ch)
-		//{
-		//    for (int idx = format.IndexOf(ch, start_index); idx != -1; idx = format.IndexOf(ch,idx+1))
-		//    {
-		//        if (idx + 1 < format.Length && format[idx+1] == ch) continue;
-		//        return idx;
-		//    }
-		//    return -1;
-		//}
-
-		//private static IEnumerable<string> SplitFormat(string format)
-		//{
-		//    int exprEndIndex = -1;
-		//    int expStartIndex;
-		//    do
-		//    {
-		//        expStartIndex = IndexOfSingle(format, exprEndIndex + 1, '{');
-		//        if (expStartIndex == -1)
-		//        {
-		//            //everything after last end brace index.
-		//            if (exprEndIndex + 1 < format.Length)
-		//            {
-		//                yield return new LiteralFormat(format.Substring(exprEndIndex + 1));
-		//            }
-		//            break;
-		//        }
-
-		//        if (expStartIndex - exprEndIndex - 1 > 0)
-		//        {
-		//            //everything up to next start brace index
-		//            yield return new LiteralFormat(format.Substring(exprEndIndex + 1, expStartIndex - exprEndIndex - 1));
-		//        }
-
-		//        int endBraceIndex = IndexOfSingle(format, expStartIndex + 1, '}');
-		//        if (endBraceIndex < 0)
-		//        {
-		//            //rest of string, no end brace (could be invalid expression)
-		//            yield return new FormatExpression(format.Substring(expStartIndex));
-		//        }
-		//        else
-		//        {
-		//            exprEndIndex = endBraceIndex;
-		//            //everything from start to end brace.
-		//            yield return new FormatExpression(format.Substring(expStartIndex, endBraceIndex - expStartIndex + 1));
-
-		//        }
-		//    }
-		//    while (expStartIndex > -1);
-		//}
-
-		//static int IndexOfExpressionEnd(this string format, int startIndex)
-		//{
-		//  int endBraceIndex = format.IndexOf('}', startIndex);
-		//  if (endBraceIndex == -1) {
-		//    return endBraceIndex;
-		//  }
-		//  //start peeking ahead until there are no more braces...
-		//  // }}}}
-		//  int braceCount = 0;
-		//  for (int i = endBraceIndex + 1; i < format.Length; i++) {
-		//    if (format[i] == '}') {
-		//      braceCount++;
-		//    }
-		//    else {
-		//      break;
-		//    }
-		//  }
-		//  if (braceCount % 2 == 1) {
-		//    return IndexOfExpressionEnd(format, endBraceIndex + braceCount + 1);
-		//  }
-
-		//  return endBraceIndex;
-		//}
 	}
 
 	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>

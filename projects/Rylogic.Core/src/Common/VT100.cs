@@ -512,7 +512,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Raised when the user input buffer has data added</summary>
-			public event EventHandler InputAdded;
+			public event EventHandler? InputAdded;
 			protected virtual void OnInputAdded()
 			{
 				InputAdded?.Invoke(this, EventArgs.Empty);
@@ -568,14 +568,14 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Raised whenever the buffer changes</summary>
-			public event EventHandler<VT100BufferChangedEventArgs> BufferChanged;
+			public event EventHandler<VT100BufferChangedEventArgs>? BufferChanged;
 			protected virtual void OnBufferChanged(VT100BufferChangedEventArgs args)
 			{
 				BufferChanged?.Invoke(this, args);
 			}
 
 			/// <summary>Raised just before and just after buffer lines are dropped due to reaching the maximum Y-size</summary>
-			public event EventHandler<VT100BufferOverflowEventArgs> Overflow;
+			public event EventHandler<VT100BufferOverflowEventArgs>? Overflow;
 			protected virtual void OnOverflow(VT100BufferOverflowEventArgs args)
 			{
 				Overflow?.Invoke(this, args);
@@ -594,6 +594,9 @@ namespace Rylogic.Common
 				InvalidRect = InvalidRect.IsEmpty ? rect : Rectangle.Union(InvalidRect, rect);
 			}
 
+			/// <summary>True if capturing to file is currently enabled</summary>
+			public bool CapturingToFile => m_capture_file != null;
+
 			/// <summary>Start or stop capturing to a file</summary>
 			public void CaptureToFile(string filepath, bool capture_all_data)
 			{
@@ -606,7 +609,7 @@ namespace Rylogic.Common
 			}
 			private void Capture(string str, int ofs, int count, bool all_data)
 			{
-				if (!CapturingToFile) return;
+				if (m_capture_file == null) return;
 				if (m_capture_all_data != all_data) return;
 
 				var bytes = m_capture_all_data
@@ -616,14 +619,8 @@ namespace Rylogic.Common
 				m_capture_file.Write(bytes, 0, bytes.Length);
 				m_capture_file.Flush();
 			}
-			private FileStream m_capture_file;
+			private FileStream? m_capture_file;
 			private bool m_capture_all_data;
-
-			/// <summary>True if capturing to file is currently enabled</summary>
-			public bool CapturingToFile
-			{
-				get { return m_capture_file != null; }
-			}
 
 			/// <summary>Send the contents of a file to the terminal</summary>
 			public void SendFile(string filepath, bool binary_mode)

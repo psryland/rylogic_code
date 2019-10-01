@@ -12,55 +12,58 @@ namespace Rylogic.Common
 	{
 		private IEnumerable<T> m_enumerable; // The enumeration source
 		private IEnumerator<T> m_enumer;     // The enumerator that keeps track of where we're up to
-		private int m_index;
-		private bool m_last;
 
 		public Iterator(IEnumerable<T> enumerable)
 		{
 			m_enumerable = enumerable;
-			m_enumer     = m_enumerable.GetEnumerator();
-			m_index      = -1;
-			m_last       = false;
+			m_enumer = m_enumerable.GetEnumerator();
+			Index = -1;
+			AtEnd = false;
 			MoveNext();
 		}
 		public Iterator(Iterator<T> iter)
 		{
 			m_enumerable = iter.m_enumerable;
-			m_enumer     = m_enumerable.Skip(iter.Index).GetEnumerator(); // Advance to the same position as 'iter'
-			m_index      = iter.m_index;
-			m_last       = !m_enumer.MoveNext();
+			m_enumer = m_enumerable.Skip(iter.Index).GetEnumerator(); // Advance to the same position as 'iter'
+			Index = iter.Index;
+			AtEnd = !m_enumer.MoveNext();
 		}
 		public void Dispose()
 		{
-			m_enumerable = null;
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			m_enumerable = null!;
 			m_enumer.Dispose();
-			m_last = true;
-			m_index = -1;
+			AtEnd = true;
+			Index = -1;
 		}
 
 		/// <summary>The index of the current iteration</summary>
-		public int Index { get { return m_index; } }
+		public int Index { get; private set; }
+
+		/// <summary>True if the iterator is at the end of the range</summary>
+		public bool AtEnd { get; private set; }
 
 		/// <summary>The item pointed to by the iterator</summary>
 		public T Current
 		{
-			[System.Diagnostics.DebuggerStepThrough] get
+			[DebuggerStepThrough] get
 			{
-				if (m_last) throw new ArgumentOutOfRangeException();
+				if (AtEnd) throw new ArgumentOutOfRangeException();
 				return m_enumer.Current;
 			}
 		}
-		object IEnumerator.Current
-		{
-			get { return Current; }
-		}
+		object? IEnumerator.Current => Current;
 
 		/// <summary>Advance to the next item. Throws if called on the end of a range.</summary>
 		public bool MoveNext()
 		{
-			if (m_last) throw new ArgumentOutOfRangeException();
-			++m_index;
-			m_last = !m_enumer.MoveNext();
+			if (AtEnd) throw new ArgumentOutOfRangeException();
+			++Index;
+			AtEnd = !m_enumer.MoveNext();
 			return !AtEnd;
 		}
 
@@ -68,14 +71,8 @@ namespace Rylogic.Common
 		public void Reset()
 		{
 			m_enumer.Reset();
-			m_last = false;
-			m_index = -1;
-		}
-
-		/// <summary>True if the iterator is at the end of the range</summary>
-		public bool AtEnd
-		{
-			get { return m_last; }
+			AtEnd = false;
+			Index = -1;
 		}
 
 		/// <summary>Equivalent to calling MoveNext(), followed by Current. Basically pre increment and dereference</summary>

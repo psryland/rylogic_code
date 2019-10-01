@@ -15,7 +15,7 @@ namespace Rylogic.INet
 	/// <summary>
 	/// A class for creating FTP/FTPS connections.
 	/// FTPS = ftp explicit SSL. Note FTPS != SFTP (ssh ftp) </summary>
-	public class FTPConnection :IDisposable
+	public sealed class FTPConnection :IDisposable
 	{
 		// Example Sessions:
 		// Active Data Transfer Example:
@@ -43,151 +43,27 @@ namespace Rylogic.INet
 		//    Server: 226 Listing completed.                           (That succeeded, so the data is now sent over the established data connection.)
 		//    Client: QUIT
 		//    Server: 221 Goodbye.
-		
-		///<summary>FTP command reply codes</summary>
-		public enum Status
-		{
-			Unknown = -1,
-
-			// 100 Series - The requested action was initiated; expect another reply before proceeding with a new command.
-			RestartMarkerReply        = 110, // Restart marker reply. The text is exact and not left to the particular implementation; it must read "MARK yyyy = mmmm" where yyyy is User-process data stream marker, and mmmm server's equivalent marker (note the spaces between markers and "=").
-			ServiceReadyIn            = 120, // Service ready in nn minutes.
-			DataConnectionAlreadyOpen = 125, // Data Connection already open; transfer starting.
-			DataConnectionOpenning    = 150, // File status okay; about to open data connection. FTP uses two ports: 21 for sending commands, and 20 for sending data. A status code of 150 indicates that the server is about to open a new connection on port 20 to send some data.
-
-			// 200 Series - The requested action has been successfully completed.
-			CommandOkay               = 200, // Command okay.
-			CommandSuperfluous        = 202, // Command not implemented, superfluous at this site.
-			SystemStatus              = 211, // System status, or system help reply.
-			DirectoryStatus           = 212, // Directory status.
-			FileStatus                = 213, // File status.
-			HelpMessage               = 214, // Help message.
-			NameSystemType            = 215, // NAME system type. Where NAME is an official system name from the list in the Assigned Numbers document.
-			ServiceReady              = 220, // Service ready for new user.
-			ServiceClosing            = 221, // Service closing control connection. Logged out if appropriate.
-			DataConnectionOpen        = 225, // Data connection open; no transfer in progress.
-			DataConnectionClosing     = 226, // Closing data connection. Requested file action successful (for example; file transfer or file abort). The command opens a data connection on port 20 to perform an action, such as transferring a file. This action successfully completes, and the data connection is closed.
-			EnteringPassiveMode       = 227, // Entering Passive Mode. (h1,h2,h3,h4,p1,p2)
-			UserLoggedIn              = 230, // User logged in, proceed. This status code appears after the client sends the correct password. It indicates that the user has successfully logged on.
-			RequestedActionOkay       = 250, // Requested file action okay, completed.
-			PathnameCreated           = 257, // "PATHNAME" created.
-
-			// 300 Series - The command has been accepted, but the requested action is on hold, pending receipt of further information.
-			UserNameOkay              = 331, // User name okay, need password. You see this status code after the client sends a user name, regardless of whether the user name that is provided is a valid account on the system.
-			NeedAccountForLogin       = 332, // Need account for login. Provide login credentials
-			PendingFurtherInfo        = 350, // Requested file action pending further information.
-
-			// 400 Series - The command was not accepted and the requested action did not take place, but the error condition is temporary and the action may be requested again.
-			ServiceNotAvailable       = 421, // Error 421 Service not available, closing control connection. Error 421 User limit reached Error 421 You are not authorized to make the connection Error 421 Max connections reached Error 421 Max connections exceeded   This can be a reply to any command if the service knows it must shut down. Try logging in later.
-			CannotOpenDataConnection  = 425, // Cannot open data connection. Change from PASV to PORT mode, check your firewall settings, or try to connect via HTTP.
-			ConnectionClosed          = 426, // Connection closed; transfer aborted. The command opens a data connection to perform an action, but that action is canceled, and the data connection is closed. Try logging back in; contact your hosting provider to check if you need to increase your hosting account; try disabling the firewall on your PC to see if that solves the problem. If not, contact your hosting provider or ISP.
-			FileNotAvailable          = 450, // Requested file action not taken. File unavailable (e.g., file busy). Try again later.
-			RequestedActionAborted    = 451, // Requested action aborted: local error in processing. Ensure command and parameters were typed correctly.
-			InsufficientStorage       = 452, // Requested action not taken. Insufficient storage space in system. Ask FTP administrator to increase allotted storage space, or archive/delete remote files.
-
-			// 500 Series - The command was not accepted and the requested action did not take place.
-			SyntaxError               = 500, // Syntax error, command unrecognized, command line too long. Try switching to passive mode.
-			SyntaxErrorInArgs         = 501, // Syntax error in parameters or arguments. Verify your input; e.g., make sure there are no erroneous characters, spaces, etc.
-			CommandNotSupported       = 502, // Command not implemented. The server does not support this command.
-			BadSequenceOfCommands     = 503, // Bad sequence of commands. Verify command sequence.
-			ParameterNotSupported     = 504, // Command not implemented for that parameter. Ensure entered parameters are correct.
-			UserNotLoggedIn           = 530, // User not logged in. Ensure that you typed the correct user name and password combination. Some servers use this code instead of 421 when the user limit is reached
-			NeedAccountToStoreFiles   = 532, // Need account for storing files. Logged in user does not have permission to store files on remote server.
-			FileNotFound              = 550, // Requested action not taken. File unavailable, not found, not accessible. Verify that you are attempting to connect to the correct server/location. The administrator of the remote server must provide you with permission to connect via FTP.
-			ExceededStorageAllocation = 552, // Requested file action aborted. Exceeded storage allocation. More disk space is needed. Archive files on the remote server that you no longer need.
-			FileNameNotAllowed        = 553, // Requested action not taken. File name not allowed. Change the file name or delete spaces/special characters in the file name.
-
-			// 10,000 Series - Common Winsock Error Codes (complete list of Winsock error codes)
-			ConnectionResetByPeer     = 10054, // Connection reset by peer. The connection was forcibly closed by the remote host.
-			ConnectionFailedTimeout   = 10060, // Cannot connect to remote server. Generally a time-out error. Try switching from PASV to PORT mode, or try increasing the time-out value.
-			ConnectionRefused         = 10061, // Cannot connect to remote server. The connection is actively refused by the server. Try switching the connection port.
-			DirectoryNotEmpty         = 10066, // Directory not empty. The server will not delete this directory while there are files/folders in it. If you want to remove the directory, first archive or delete the files in it.
-			TooManyUsers              = 10068, // Too many users, server is full. Try logging in at another time.
-		}
-		
-		/// <summary>Download/Upload resume behaviour</summary>
-		public enum ResumeBehaviour
-		{
-			/// <summary>Overwrites any existing file and downloads/uploads the whole file</summary>
-			DontResume,
-			
-			/// <summary>Resume downloading if the local file exists, or resume uploading if the remote file exists. Throws if resuming is not supported</summary>
-			Resume,
-			
-			/// <summary>Use 'Resume' behaviour if the server supports it, otherwise use the 'DontResume' behaviour.</summary>
-			ResumeIfSupported
-		}
-		
-		/// <summary>Connection settings</summary>
-		public class Settings
-		{
-			/// <summary>The address to connect to</summary>
-			public string RemoteHost = string.Empty;
-
-			/// <summary>The port to connect to. 990 is the SSL port</summary>
-			public int RemotePort = 990;
-
-			/// <summary>The path on the remote server</summary>
-			public string RemotePath = ".";
-
-			/// <summary>The user name to log on with</summary>
-			public string UserName = string.Empty;
-
-			/// <summary>The password to log on with</summary>
-			public string Password = string.Empty;
-
-			/// <summary>Set to true to login using SSL</summary>
-			public bool UseSSL = true;
-
-			/// <summary>The SSL protocols to support</summary>
-			public SslProtocols SSLProtocols = SslProtocols.Ssl3 | SslProtocols.Tls;
-		}
-		
-		/// <summary>The response message that acknowledges a command</summary>
-		public class Reply
-		{
-			/// <summary>The full reply message</summary>
-			public readonly string Message;
-			
-			/// <summary>The reply code parsed from 'Message'</summary>
-			public readonly Status Code;
-			
-			public Reply(string reply)
-			{
-				bool valid = reply != null && reply.Length >= 3;
-				Message = valid ? reply.Substring(4) : string.Empty;
-				Code    = valid ? (Status)int.Parse(reply.Substring(0, 3)) : Status.Unknown;
-			}
-		}
 
 		/// <summary>An event that is called to trace the behaviour of the ftp connection. Mainly for debugging</summary>
-		public event TraceEvent TraceMessage;
+		public event TraceEvent? TraceMessage;
 		public delegate void TraceEvent(string message, params object[] args);
 		private void Trace(Rylogic.Utility.Lazy<string> message, params object[] args) { if (TraceMessage != null) TraceMessage("[FTPConnection] " + message, args); }
 
 		/// <summary>The stream over which ftp commands are sent</summary>
-		private Stream m_cmd;
+		private Stream? m_cmd;
 
-		private Settings m_settings = new Settings();
+		/// <summary>Creates an FTP connection</summary>
+		public FTPConnection()
+		{
+			Settings = new SettingsData();
+		}
+		public void Dispose()
+		{
+			Close();
+		}
 
-		//private string m_mes;
-		//private int m_bytes;
-		//private int m_ret_value;
-		//private string m_reply;
-		//private bool m_use_stream;
-		//private bool m_is_upload;
-		//private Stream m_stream1;
-		//private Stream m_stream2;
-
-		//private const int BLOCK_SIZE = 1024;
-		//private readonly Byte[] buffer = new Byte[BLOCK_SIZE];
-		//private readonly Encoding ASCII = Encoding.ASCII;
-
-		///// <summary>Creates an FTP connection</summary>
-		//public FTPConnection()
-		//{
-		//    //m_settings = new Settings();
-		//}
+		/// <summary></summary>
+		private SettingsData Settings { get; set; }
 
 		/// <summary>Returns true if this object is connected to an ftp host</summary>
 		public bool IsConnected
@@ -206,12 +82,6 @@ namespace Rylogic.INet
 			}
 		}
 
-		/// <summary>Close the connection on dispose</summary>
-		public void Dispose()
-		{
-			Close();
-		}
-
 		/// <summary>Close the FTP connection.</summary>
 		public void Close(bool send_quit = true)
 		{
@@ -226,19 +96,19 @@ namespace Rylogic.INet
 		}
 
 		/// <summary>Connect to the remote host</summary>
-		public void Login(Settings settings)
+		public void Login(SettingsData settings)
 		{
 			// Disconnect first
 			Close();
 
-			m_settings = settings;
+			Settings = settings;
 
 			// If 'UseSSL' is true, we connect to the socket, ask for SSL by sending
 			// the 'AUTH SSL' command, create the SSL stream, then log on with the username/pw
 
 			// Attempt to connect. (Throws on failure)
 			Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-			socket.Connect(new IPEndPoint(Dns.GetHostEntry(m_settings.RemoteHost).AddressList[0], m_settings.RemotePort));
+			socket.Connect(new IPEndPoint(Dns.GetHostEntry(Settings.RemoteHost).AddressList[0], Settings.RemotePort));
 			m_cmd = new NetworkStream(socket, true);
 
 			// Check the socket is connected
@@ -247,7 +117,7 @@ namespace Rylogic.INet
 				throw new IOException(reply.Message);
 
 			// If we're using SSL wrap the command stream in an SSLStream
-			if (m_settings.UseSSL)
+			if (Settings.UseSSL)
 			{
 				// Ask the socket to use SSL
 				SendCommand("AUTH SSL");
@@ -257,13 +127,13 @@ namespace Rylogic.INet
 			}
 
 			// Login with username/password
-			reply = SendCommand("USER " + m_settings.UserName);
+			reply = SendCommand("USER " + Settings.UserName);
 			switch (reply.Code)
 			{
 			default: Close(false); throw new IOException(reply.Message);
 			case Status.UserLoggedIn: break;
 			case Status.UserNameOkay:
-				reply = SendCommand("PASS " + m_settings.Password);
+				reply = SendCommand("PASS " + Settings.Password);
 				if (reply.Code != Status.UserLoggedIn && reply.Code != Status.CommandSuperfluous)
 				{
 					Close(false);
@@ -273,15 +143,18 @@ namespace Rylogic.INet
 			}
 
 			IsConnected = true;
-			Trace("Connected to " + m_settings.RemoteHost);
+			Trace("Connected to " + Settings.RemoteHost);
 
 			// Navigate to the remote path
-			ChangeRemoteDirectory(m_settings.RemotePath);
+			ChangeRemoteDirectory(Settings.RemotePath);
 		}
 
 		/// <summary>Send a command string over the ftp connection</summary>
 		public Reply SendCommand(string command)
 		{
+			if (m_cmd == null)
+				throw new Exception("No connection stream");
+
 			// Ensure the command line is complete
 			if (!command.EndsWith("\r\n")) command += "\r\n";
 			Trace(Lazy.New(()=>command.TrimEnd('\r','\n')));
@@ -295,12 +168,13 @@ namespace Rylogic.INet
 		/// <summary>Return the response message from the connection</summary>
 		private Reply ReadReply()
 		{
-			using(var sr = new StreamReader(new UncloseableStream(m_cmd)))
-			{
-				string reply = sr.ReadLine();
-				Trace("Reply: " + reply);
-				return new Reply(reply);
-			}
+			if (m_cmd == null)
+				throw new Exception("No connection stream");
+
+			using var sr = new StreamReader(new UncloseableStream(m_cmd));
+			string reply = sr.ReadLine();
+			Trace("Reply: " + reply);
+			return new Reply(reply);
 		}
 
 		/// <summary>FTP uses two ports: 21 for commands, and 20 for sending data. This method returns a stream over which data can be sent.</summary>
@@ -329,7 +203,7 @@ namespace Rylogic.INet
 				socket.Connect(new IPEndPoint(Dns.GetHostEntry(address).AddressList[0], port));
 				Stream data = new NetworkStream(socket, true);
 				
-				if (m_settings.UseSSL)
+				if (Settings.UseSSL)
 				{
 					// Ask the socket to use SSL
 					SendCommand("AUTH SSL");
@@ -350,7 +224,7 @@ namespace Rylogic.INet
 		private Stream WrapInSSLStream(Stream src)
 		{
 			var stream = new SslStream(src);
-			stream.AuthenticateAsClient(m_settings.RemoteHost, null, m_settings.SSLProtocols, true);
+			stream.AuthenticateAsClient(Settings.RemoteHost, null, Settings.SSLProtocols, true);
 			if (!stream.IsAuthenticated) throw new AuthenticationException("Failed to create a secure data connection");
 			return stream;
 		}
@@ -391,7 +265,7 @@ namespace Rylogic.INet
 		/// <summary>Download a remote file to a local filepath. The local file will be created, appended, or overwritten, but the path must exist.</summary>
 		public void Download(string remote_filename, string local_filepath, ResumeBehaviour resume = ResumeBehaviour.DontResume)
 		{
-			Trace(string.Format("Downloading: {0} from {1}/{2} to {3}" ,remote_filename ,m_settings.RemoteHost ,m_settings.RemotePath ,local_filepath));
+			Trace(string.Format("Downloading: {0} from {1}/{2} to {3}" ,remote_filename ,Settings.RemoteHost ,Settings.RemotePath ,local_filepath));
 			Reply reply;
 			
 			// If the local filepath is a directory, then append the remote filename as the local filename
@@ -449,7 +323,7 @@ namespace Rylogic.INet
 		/// <summary>Upload a local file to the host. The remote file will be named 'remote_filename' on the host</summary>
 		public void Upload(string local_filepath, string remote_filename, ResumeBehaviour resume = ResumeBehaviour.DontResume)
 		{
-			Trace(string.Format("Uploading: {0} to {1}/{2}/{3}" ,local_filepath ,m_settings.RemoteHost ,m_settings.RemotePath ,remote_filename));
+			Trace(string.Format("Uploading: {0} to {1}/{2}/{3}" ,local_filepath ,Settings.RemoteHost ,Settings.RemotePath ,remote_filename));
 			Reply reply;
 			
 			// Check the local filepath exists first
@@ -555,6 +429,122 @@ namespace Rylogic.INet
 			
 			Trace("Remote directory is now '" + remote_directory + "'");
 		}
+
+		///<summary>FTP command reply codes</summary>
+		public enum Status
+		{
+			Unknown = -1,
+
+			// 100 Series - The requested action was initiated; expect another reply before proceeding with a new command.
+			RestartMarkerReply = 110, // Restart marker reply. The text is exact and not left to the particular implementation; it must read "MARK yyyy = mmmm" where yyyy is User-process data stream marker, and mmmm server's equivalent marker (note the spaces between markers and "=").
+			ServiceReadyIn = 120, // Service ready in nn minutes.
+			DataConnectionAlreadyOpen = 125, // Data Connection already open; transfer starting.
+			DataConnectionOpenning = 150, // File status okay; about to open data connection. FTP uses two ports: 21 for sending commands, and 20 for sending data. A status code of 150 indicates that the server is about to open a new connection on port 20 to send some data.
+
+			// 200 Series - The requested action has been successfully completed.
+			CommandOkay = 200, // Command okay.
+			CommandSuperfluous = 202, // Command not implemented, superfluous at this site.
+			SystemStatus = 211, // System status, or system help reply.
+			DirectoryStatus = 212, // Directory status.
+			FileStatus = 213, // File status.
+			HelpMessage = 214, // Help message.
+			NameSystemType = 215, // NAME system type. Where NAME is an official system name from the list in the Assigned Numbers document.
+			ServiceReady = 220, // Service ready for new user.
+			ServiceClosing = 221, // Service closing control connection. Logged out if appropriate.
+			DataConnectionOpen = 225, // Data connection open; no transfer in progress.
+			DataConnectionClosing = 226, // Closing data connection. Requested file action successful (for example; file transfer or file abort). The command opens a data connection on port 20 to perform an action, such as transferring a file. This action successfully completes, and the data connection is closed.
+			EnteringPassiveMode = 227, // Entering Passive Mode. (h1,h2,h3,h4,p1,p2)
+			UserLoggedIn = 230, // User logged in, proceed. This status code appears after the client sends the correct password. It indicates that the user has successfully logged on.
+			RequestedActionOkay = 250, // Requested file action okay, completed.
+			PathnameCreated = 257, // "PATHNAME" created.
+
+			// 300 Series - The command has been accepted, but the requested action is on hold, pending receipt of further information.
+			UserNameOkay = 331, // User name okay, need password. You see this status code after the client sends a user name, regardless of whether the user name that is provided is a valid account on the system.
+			NeedAccountForLogin = 332, // Need account for login. Provide login credentials
+			PendingFurtherInfo = 350, // Requested file action pending further information.
+
+			// 400 Series - The command was not accepted and the requested action did not take place, but the error condition is temporary and the action may be requested again.
+			ServiceNotAvailable = 421, // Error 421 Service not available, closing control connection. Error 421 User limit reached Error 421 You are not authorized to make the connection Error 421 Max connections reached Error 421 Max connections exceeded   This can be a reply to any command if the service knows it must shut down. Try logging in later.
+			CannotOpenDataConnection = 425, // Cannot open data connection. Change from PASV to PORT mode, check your firewall settings, or try to connect via HTTP.
+			ConnectionClosed = 426, // Connection closed; transfer aborted. The command opens a data connection to perform an action, but that action is canceled, and the data connection is closed. Try logging back in; contact your hosting provider to check if you need to increase your hosting account; try disabling the firewall on your PC to see if that solves the problem. If not, contact your hosting provider or ISP.
+			FileNotAvailable = 450, // Requested file action not taken. File unavailable (e.g., file busy). Try again later.
+			RequestedActionAborted = 451, // Requested action aborted: local error in processing. Ensure command and parameters were typed correctly.
+			InsufficientStorage = 452, // Requested action not taken. Insufficient storage space in system. Ask FTP administrator to increase allotted storage space, or archive/delete remote files.
+
+			// 500 Series - The command was not accepted and the requested action did not take place.
+			SyntaxError = 500, // Syntax error, command unrecognized, command line too long. Try switching to passive mode.
+			SyntaxErrorInArgs = 501, // Syntax error in parameters or arguments. Verify your input; e.g., make sure there are no erroneous characters, spaces, etc.
+			CommandNotSupported = 502, // Command not implemented. The server does not support this command.
+			BadSequenceOfCommands = 503, // Bad sequence of commands. Verify command sequence.
+			ParameterNotSupported = 504, // Command not implemented for that parameter. Ensure entered parameters are correct.
+			UserNotLoggedIn = 530, // User not logged in. Ensure that you typed the correct user name and password combination. Some servers use this code instead of 421 when the user limit is reached
+			NeedAccountToStoreFiles = 532, // Need account for storing files. Logged in user does not have permission to store files on remote server.
+			FileNotFound = 550, // Requested action not taken. File unavailable, not found, not accessible. Verify that you are attempting to connect to the correct server/location. The administrator of the remote server must provide you with permission to connect via FTP.
+			ExceededStorageAllocation = 552, // Requested file action aborted. Exceeded storage allocation. More disk space is needed. Archive files on the remote server that you no longer need.
+			FileNameNotAllowed = 553, // Requested action not taken. File name not allowed. Change the file name or delete spaces/special characters in the file name.
+
+			// 10,000 Series - Common Winsock Error Codes (complete list of Winsock error codes)
+			ConnectionResetByPeer = 10054, // Connection reset by peer. The connection was forcibly closed by the remote host.
+			ConnectionFailedTimeout = 10060, // Cannot connect to remote server. Generally a time-out error. Try switching from PASV to PORT mode, or try increasing the time-out value.
+			ConnectionRefused = 10061, // Cannot connect to remote server. The connection is actively refused by the server. Try switching the connection port.
+			DirectoryNotEmpty = 10066, // Directory not empty. The server will not delete this directory while there are files/folders in it. If you want to remove the directory, first archive or delete the files in it.
+			TooManyUsers = 10068, // Too many users, server is full. Try logging in at another time.
+		}
+
+		/// <summary>Download/Upload resume behaviour</summary>
+		public enum ResumeBehaviour
+		{
+			/// <summary>Overwrites any existing file and downloads/uploads the whole file</summary>
+			DontResume,
+
+			/// <summary>Resume downloading if the local file exists, or resume uploading if the remote file exists. Throws if resuming is not supported</summary>
+			Resume,
+
+			/// <summary>Use 'Resume' behaviour if the server supports it, otherwise use the 'DontResume' behaviour.</summary>
+			ResumeIfSupported
+		}
+
+		/// <summary>Connection settings</summary>
+		public class SettingsData
+		{
+			/// <summary>The address to connect to</summary>
+			public string RemoteHost = string.Empty;
+
+			/// <summary>The port to connect to. 990 is the SSL port</summary>
+			public int RemotePort = 990;
+
+			/// <summary>The path on the remote server</summary>
+			public string RemotePath = ".";
+
+			/// <summary>The user name to log on with</summary>
+			public string UserName = string.Empty;
+
+			/// <summary>The password to log on with</summary>
+			public string Password = string.Empty;
+
+			/// <summary>Set to true to login using SSL</summary>
+			public bool UseSSL = true;
+
+			/// <summary>The SSL protocols to support</summary>
+			public SslProtocols SSLProtocols = SslProtocols.Ssl3 | SslProtocols.Tls;
+		}
+
+		/// <summary>The response message that acknowledges a command</summary>
+		public class Reply
+		{
+			public Reply(string reply)
+			{
+				bool valid = reply.Length >= 3;
+				Message = valid ? reply.Substring(4) : string.Empty;
+				Code = valid ? (Status)int.Parse(reply.Substring(0, 3)) : Status.Unknown;
+			}
+
+			/// <summary>The full reply message</summary>
+			public string Message { get; }
+
+			/// <summary>The reply code parsed from 'Message'</summary>
+			public Status Code { get; }
+		}
 	}
 
 	/// <summary>Utilities for ftp-related global methods</summary>
@@ -636,7 +626,7 @@ namespace Rylogic.UnitTests
 		{
 			try
 			{
-				var settings = new FTPConnection.Settings
+				var settings = new FTPConnection.SettingsData
 				{
 					RemoteHost = "192.168.0.150",
 					RemotePort = 21,

@@ -539,16 +539,16 @@ namespace Rylogic.LDraw
 			Append("*Matrix3x3 ",name," ",colour," {",basis.x*scale," ",basis.y*scale," ",basis.z*scale," ",Ldr.Position(basis.pos),"}\n");
 		}
 
-		public void Mesh(string name, Colour32 colour, IList<v4> verts, IList<v4> normals = null, IList<Colour32> colours = null, IList<v2> tex = null, IList<ushort> faces = null, IList<ushort> lines = null, IList<ushort> tetra = null, bool generate_normals = false, v4? position = null)
+		public void Mesh(string name, Colour32 colour, IList<v4>? verts, IList<v4>? normals = null, IList<Colour32>? colours = null, IList<v2>? tex = null, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
 		{
 			Append("*Mesh ",name," ",colour," {\n");
 			if (verts   != null) Append("*Verts {"    ).Append(verts  .Select(x => Ldr.Vec3(x)))  .Append("}\n");
 			if (normals != null) Append("*Normals {"  ).Append(normals.Select(x => Ldr.Vec3(x)))  .Append("}\n");
 			if (colours != null) Append("*Colours {"  ).Append(colours.Select(x => Ldr.Colour(x))).Append("}\n");
 			if (tex     != null) Append("*TexCoords {").Append(tex    .Select(x => Ldr.Vec2(x)))  .Append("}\n");
-			if (faces != null) { Debug.Assert(faces.All(i => i >= 0 && i < verts.Count)); Append("*Faces {").Append(faces).Append("}\n"); }
-			if (lines != null) { Debug.Assert(lines.All(i => i >= 0 && i < verts.Count)); Append("*Lines {").Append(lines).Append("}\n"); }
-			if (tetra != null) { Debug.Assert(tetra.All(i => i >= 0 && i < verts.Count)); Append("*Tetra {").Append(tetra).Append("}\n"); }
+			if (verts   != null && faces != null) { Debug.Assert(faces.All(i => i >= 0 && i < verts.Count)); Append("*Faces {").Append(faces).Append("}\n"); }
+			if (verts   != null && lines != null) { Debug.Assert(lines.All(i => i >= 0 && i < verts.Count)); Append("*Lines {").Append(lines).Append("}\n"); }
+			if (verts   != null && tetra != null) { Debug.Assert(tetra.All(i => i >= 0 && i < verts.Count)); Append("*Tetra {").Append(tetra).Append("}\n"); }
 			if (generate_normals) Append("*GenerateNormals\n");
 			if (position != null) Append(Ldr.Position(position.Value));
 			Append("}\n");

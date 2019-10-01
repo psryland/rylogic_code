@@ -16,7 +16,7 @@ namespace Rylogic.Common
 	/// <summary>A replacement for System.Console with extra features for intending and auto complete</summary>
 	public class ConsoleEx: IDisposable
 	{
-		private IDisposable _suppress_echo;
+		private IDisposable m_suppress_echo;
 		public ConsoleEx()
 		{
 			SynchroniseWrites = false;
@@ -29,11 +29,16 @@ namespace Rylogic.Common
 			AutoComplete = null;
 
 			// Workaround for difference in behaviour of Linux terminals
-			_suppress_echo = SuppressEcho();
+			m_suppress_echo = SuppressEcho();
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			_suppress_echo.Dispose();
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			m_suppress_echo.Dispose();
 		}
 
 		/// <summary>Control-C pressed event</summary>
@@ -44,11 +49,11 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Raised whenever the console buffer is rolled by 1 line</summary>
-		public event EventHandler BufferRolled;
+		public event EventHandler? BufferRolled;
 
 		/// <summary>Synchronise multi-threaded access with locks</summary>
 		public bool SynchroniseWrites { get; set; }
-		private object _write_sync = new object();
+		private object m_write_sync = new object();
 
 		/// <summary>Ensure the prompt is always printed on a new line</summary>
 		public bool AutoNewLine { get; set; }
@@ -70,7 +75,7 @@ namespace Rylogic.Common
 		public static bool IsWordCharDefault(char c) => char.IsLetterOrDigit(c) || c == '_';
 
 		/// <summary>Auto complete handler</summary>
-		public IAutoComplete AutoComplete { get; set; }
+		public IAutoComplete? AutoComplete { get; set; }
 
 		/// <summary>Caret location</summary>
 		public Point Location
@@ -132,7 +137,7 @@ namespace Rylogic.Common
 		/// <summary>RAII scope for acquiring the write lock</summary>
 		public IDisposable SyncWrites()
 		{
-			if (!SynchroniseWrites) return null;
+			if (!SynchroniseWrites) return new Scope();
 			return new WriteSync(this);
 		}
 
@@ -309,7 +314,7 @@ namespace Rylogic.Common
 		/// <summary>Obtains the next character or function key pressed by the user. If 'intercept' is true, the pressed key is not displayed in the console window.</summary>
 		public ConsoleKeyInfo ReadKey(bool intercept = false)
 		{
-			lock (_read_key_lock)
+			lock (m_read_key_lock)
 			{
 				var key = Console.ReadKey(intercept);
 				return key;
@@ -318,14 +323,14 @@ namespace Rylogic.Common
 		public bool TryReadKey(out ConsoleKeyInfo key, bool intercept = false)
 		{
 			key = default(ConsoleKeyInfo);
-			lock (_read_key_lock)
+			lock (m_read_key_lock)
 			{
 				if (Console.KeyAvailable == false) return false;
 				key = ReadKey(intercept);
 				return true;
 			}
 		}
-		public object _read_key_lock = new object();
+		public object m_read_key_lock = new object();
 
 		/// <summary>Read a line from the console, with auto-complete and history support</summary>
 		public string Read()
@@ -334,10 +339,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Async read a line from the console, with auto-complete and history support</summary>
-		public async Task<string> ReadAsync(CancellationToken cancel = default(CancellationToken), bool newline_on_enter = true)
+		public async Task<string> ReadAsync(CancellationToken cancel = default, bool newline_on_enter = true)
 		{
 			// Read up to the enter key being pressed
-			var input = (string)null;
+			var input = (string?)null;
 			using (var buf = new Buffer(this))
 			{
 				for (; input == null;)
@@ -448,53 +453,53 @@ namespace Rylogic.Common
 						case ConsoleKey.UpArrow:
 							{
 								if (History.Count == 0) break;
-								_history_index = (_history_index + History.Count - 1) % History.Count;
-								buf.Assign(0, History[_history_index], true);
+								m_history_index = (m_history_index + History.Count - 1) % History.Count;
+								buf.Assign(0, History[m_history_index], true);
 								break;
 							}
 						case ConsoleKey.DownArrow:
 							{
 								if (History.Count == 0) break;
-								_history_index = (_history_index + History.Count + 1) % History.Count;
-								buf.Assign(0, History[_history_index], true);
+								m_history_index = (m_history_index + History.Count + 1) % History.Count;
+								buf.Assign(0, History[m_history_index], true);
 								break;
 							}
 						case ConsoleKey.PageUp:
 							{
 								if (History.Count == 0) break;
-								_history_index = (_history_index + History.Count - 1) % History.Count;
+								m_history_index = (m_history_index + History.Count - 1) % History.Count;
 								if (buf.Length != 0)
 								{
 									// Search backward in the history for a partial match for 'buf'
 									for (int i = 0; i != History.Count; ++i)
 									{
-										if (History[_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
-										_history_index = (_history_index + History.Count - 1) % History.Count;
+										if (History[m_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
+										m_history_index = (m_history_index + History.Count - 1) % History.Count;
 									}
 								}
-								buf.Assign(0, History[_history_index], true);
+								buf.Assign(0, History[m_history_index], true);
 								break;
 							}
 						case ConsoleKey.PageDown:
 							{
 								if (History.Count == 0) break;
-								_history_index = (_history_index + History.Count + 1) % History.Count;
+								m_history_index = (m_history_index + History.Count + 1) % History.Count;
 								if (buf.Length != 0 && key.Modifiers == ConsoleModifiers.Control)
 								{
 									// Search forward in the history for a partial match for 'buf'
 									for (int i = 0; i != History.Count; ++i)
 									{
-										if (History[_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
-										_history_index = (_history_index + History.Count + 1) % History.Count;
+										if (History[m_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
+										m_history_index = (m_history_index + History.Count + 1) % History.Count;
 									}
 								}
-								buf.Assign(0, History[_history_index], true);
+								buf.Assign(0, History[m_history_index], true);
 								break;
 							}
 					}
 				}
 			}
-			return input;
+			return input ?? string.Empty;
 		}
 
 		/// <summary>Returns true if the Escape key has been pressed. Flushes console key buffer as a side effect</summary>
@@ -515,9 +520,9 @@ namespace Rylogic.Common
 				History.RemoveAt(0);
 
 			// Reset the history index
-			_history_index = 0;
+			m_history_index = 0;
 		}
-		private int _history_index;
+		private int m_history_index;
 
 		/// <summary>Handle auto complete behaviour</summary>
 		private bool DoAutoComplete(Buffer buf, ConsoleKeyInfo key)
@@ -528,27 +533,27 @@ namespace Rylogic.Common
 				return key_handled;
 
 			// If there are no suggestions yet, query them from the callback
-			if (key.Key == ConsoleKey.Tab && _suggestions == null)
+			if (key.Key == ConsoleKey.Tab && m_suggestions == null)
 			{
 				// Read the index for the start of the current word
-				_word_bounding_index = buf.Insert + buf.WordBoundaryOffset(-1);
+				m_word_bounding_index = buf.Insert + buf.WordBoundaryOffset(-1);
 
 				// Get the suggestions and result the index
-				_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
-				_auto_complete_index = 0;
+				m_suggestions = AutoComplete.Suggestions(buf.ToString(), m_word_bounding_index, buf.Insert);
+				m_auto_complete_index = 0;
 				key_handled = true;
 			}
 			// If auto complete is active cycle to the next suggestion
-			else if (key.Key == ConsoleKey.Tab && _suggestions?.Length > 1)
+			else if (key.Key == ConsoleKey.Tab && m_suggestions?.Length > 1)
 			{
 				// Tab cycles forward, Shift+Tab cycles backward through the suggestions
 				var cycle_direction = key.Modifiers != ConsoleModifiers.Shift ? +1 : -1;
-				_auto_complete_index = (_auto_complete_index + _suggestions.Length + cycle_direction) % _suggestions.Length;
+				m_auto_complete_index = (m_auto_complete_index + m_suggestions.Length + cycle_direction) % m_suggestions.Length;
 				key_handled = true;
 			}
 
 			// Update 'buf' with the suggestion
-			if (_suggestions?.Length > 0)
+			if (m_suggestions?.Length > 0)
 			{
 				switch (AutoComplete.CompletionMode)
 				{
@@ -560,21 +565,21 @@ namespace Rylogic.Common
 							{
 								buf.Assign(0, string.Empty, true);
 								key_handled = true;
-								_suggestions = null;
+								m_suggestions = null;
 							}
 							// Cycle completions
 							else if (key.Key == ConsoleKey.Tab)
 							{
 								// Replace the full user input text
-								buf.Assign(0, _suggestions[_auto_complete_index], true);
+								buf.Assign(0, m_suggestions[m_auto_complete_index], true);
 								key_handled = true;
 							}
 							// Commit
 							else
 							{
-								buf.Assign(0, _suggestions[_auto_complete_index], true);
+								buf.Assign(0, m_suggestions[m_auto_complete_index], true);
 								key_handled = key.Key == ConsoleKey.RightArrow;
-								_suggestions = null;
+								m_suggestions = null;
 							}
 							break;
 						}
@@ -585,47 +590,47 @@ namespace Rylogic.Common
 							{
 								buf.Assign(buf.Insert, string.Empty, true);
 								key_handled = true;
-								_suggestions = null;
+								m_suggestions = null;
 							}
 							// Cycle completions
 							else if (key.Key == ConsoleKey.Tab)
 							{
 								// Replace only the current word
-								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+								buf.Assign(m_word_bounding_index, m_suggestions[m_auto_complete_index], false);
 								key_handled = true;
 							}
 							// Commit
 							else if (key.Key == ConsoleKey.Spacebar || key.Key == ConsoleKey.RightArrow || key.Key == ConsoleKey.End || key.Key == ConsoleKey.Enter)
 							{
-								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], true);
+								buf.Assign(m_word_bounding_index, m_suggestions[m_auto_complete_index], true);
 								key_handled = true;
-								_suggestions = null;
+								m_suggestions = null;
 							}
 							// Continue to match
 							else if (!char.IsControl(key.KeyChar))
 							{
 								// Save the current suggestion
-								var suggestion = _suggestions[_auto_complete_index];
+								var suggestion = m_suggestions[m_auto_complete_index];
 
 								// Add the character to the user input
 								buf.Write(key.KeyChar);
 								key_handled = true;
 
 								// Look for new suggestions
-								_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
+								m_suggestions = AutoComplete.Suggestions(buf.ToString(), m_word_bounding_index, buf.Insert);
 
 								// Look for the previous suggestion in the new list
-								if (_suggestions?.Length > 0)
+								if (m_suggestions?.Length > 0)
 								{
-									var idx = Array.IndexOf(_suggestions, suggestion);
-									_auto_complete_index = idx != -1 ? idx : 0;
-									buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+									var idx = Array.IndexOf(m_suggestions, suggestion);
+									m_auto_complete_index = idx != -1 ? idx : 0;
+									buf.Assign(m_word_bounding_index, m_suggestions[m_auto_complete_index], false);
 								}
 								else
 								{
 									// Revert the user input to just what they've typed
 									buf.Assign(buf.Insert, string.Empty, false);
-									_suggestions = null;
+									m_suggestions = null;
 								}
 							}
 							break;
@@ -634,14 +639,14 @@ namespace Rylogic.Common
 			}
 
 			// Deactivation auto complete if there are no suggestions
-			if (_suggestions?.Length == 0)
-				_suggestions = null;
+			if (m_suggestions?.Length == 0)
+				m_suggestions = null;
 
 			return key_handled;
 		}
-		private string[] _suggestions;
-		private int _word_bounding_index;
-		private int _auto_complete_index;
+		private string[]? m_suggestions;
+		private int m_word_bounding_index;
+		private int m_auto_complete_index;
 
 		/// <summary>Convert a point to a console buffer index (not normalised)</summary>
 		private static int Idx(Point pt, int? width = null)
@@ -666,14 +671,14 @@ namespace Rylogic.Common
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 			{
 				// Preserve the terminal state
-				_stty = _stty ?? Util.ShellCmd("stty -g");
+				m_stty ??= Util.ShellCmd("stty -g");
 				return Scope.Create(
 					() => Util.ShellCmd("stty -echo"),
-					() => Util.ShellCmd($"stty {_stty}"));
+					() => Util.ShellCmd($"stty {m_stty}"));
 			}
 			return new Scope();
 		}
-		private string _stty;
+		private string? m_stty;
 
 		/// <summary>Helper for tracking the input string within the console buffer</summary>
 		private class Buffer :IDisposable

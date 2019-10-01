@@ -195,14 +195,12 @@ namespace Rylogic.Common
 		public static string CombinePath(IEnumerable<string> paths)
 		{
 			if (!paths.Any())
-				return "";
+				return string.Empty;
 
-			var path = (string)null;
-			var parts = paths.Where(x => !string.IsNullOrEmpty(x)).Select(x => x.TrimStart('/', '\\'));
-			foreach (var p in parts)
-			{
-				path = path != null ? Path.Combine(path, p) : p;
-			}
+			var path = string.Empty;
+			foreach (var p in paths.Where(x => !string.IsNullOrEmpty(x)).Select(x => x.TrimStart('/', '\\')))
+				path = Path.Combine(path, p);
+			
 			return Canonicalise(path);
 		}
 
@@ -244,7 +242,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Searches up the directory tree from 'initial_dir' looking for a directory matching 'dir_name'. Returns the first found</summary>
-		public static string FindAncestorDirectory(string dir_name, string initial_dir)
+		public static string? FindAncestorDirectory(string dir_name, string initial_dir)
 		{
 			for (;;)
 			{
@@ -288,7 +286,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Compare the contents of two files, returning true if their contents are different</summary>
-		public static bool DiffContent(string lhs, string rhs, Action<string> trace = null)
+		public static bool DiffContent(string lhs, string rhs, Action<string>? trace = null)
 		{
 			// Missing files are considered different
 			var sfound = FileExists(lhs);
@@ -348,7 +346,7 @@ namespace Rylogic.Common
 		/// Gets file system info for all files/directories in a directory that match a specific filter including all sub directories.
 		/// 'regex_filter' is a filter on the filename, not the full path.
 		/// Returns 'FileInfo' or 'DirectoryInfo'. 'FileSystemInfo' is just the common base class.</summary>
-		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool> progress = null, Func<string, Exception, bool> error = null)
+		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string? regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool>? progress = null, Func<string, Exception, bool>? error = null)
 		{
 			// Default callbacks
 			progress = progress ?? (s => true);
@@ -373,7 +371,7 @@ namespace Rylogic.Common
 			foreach (var entry in entries)
 			{
 				var attr = FileAttributes.Normal;
-				var exception = (Exception)null;
+				var exception = (Exception?)null;
 				try
 				{
 					attr = File.GetAttributes(entry);

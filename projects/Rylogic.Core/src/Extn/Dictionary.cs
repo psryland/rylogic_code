@@ -9,7 +9,7 @@ namespace Rylogic.Extn
 	public static class Dictionary_
 	{
 		/// <summary>Try to get an element from this dictionary, returning null if not available</summary>
-		public static V TryGetValue<K,V>(this IDictionary<K,V> dic, K key) where V : class
+		public static V? TryGetValue<K,V>(this IDictionary<K,V> dic, K key) where V : class
 		{
 			return dic.TryGetValue(key, out var value) ? value : null;
 		}
@@ -80,7 +80,7 @@ namespace Rylogic.Extn
 		/// <summary>Get the item associated with 'key' or 'default(TValue)' if not in the dictionary</summary>
 		public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey,TValue> dic, TKey key)
 		{
-			return dic.TryGetValue(key, out var value) ? value : default(TValue);
+			return dic.TryGetValue(key, out var value) ? value : default!;
 		}
 
 		/// <summary>Get the item associated with 'key' or 'default(TValue)' if not in the dictionary</summary>
