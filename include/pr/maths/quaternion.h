@@ -325,16 +325,21 @@ namespace pr
 		return Quat<A,B>{Normalise4(q.xyzw, def.xyzw)};
 	}
 
-	// Return the cosine of the angle between two quaternions (i.e. the dot product)
-	template <typename A, typename B> inline float pr_vectorcall CosAngle(quat_cref<A,B> a, quat_cref<A,B> b)
+	// Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)
+	template <typename A, typename B> inline float pr_vectorcall CosAngle2(quat_cref<A,B> a, quat_cref<A,B> b)
 	{
+		// The relative orientation between 'a' and 'b' is given by z = 'a * conj(b)'
+		// where operator * is a quaternion multiply. The 'w' component of a quaternion
+		// multiply is given by: q.w = a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z;
+		// which is the same as q.w = Dot4(a,b) since conjugate negates the x,y,z
+		// components of 'b'. Remember: q.w = Cos(theta/2)
 		return Dot4(a.xyzw, b.xyzw);
 	}
 
 	// Return the angle between two quaternions (in radians)
 	template <typename A, typename B> inline float pr_vectorcall Angle(quat_cref<A,B> a, quat_cref<A,B> b)
 	{
-		return ACos(CosAngle(a,b));
+		return 0.5f * ACos(CosAngle2(a,b));
 	}
 
 	// Scale the rotation 'q' by 'frac'. Returns a rotation about the same axis but with angle scaled by 'frac'

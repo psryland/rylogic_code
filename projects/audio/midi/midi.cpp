@@ -42,7 +42,7 @@ namespace pr
 			std::wregex pattern(LR"((\d+)-(.*)\\(\d+-\d+)\\(.*\.wav))");
 
 			// Build the map of notes
-			filesys::EnumFiles(root_dir, L"*.wav", [&](filesys::FindFiles const& ff)
+			filesys::EnumFiles(root_dir, L"*.wav", [&](void*, filesys::FindFiles const& ff)
 			{
 				auto rel_path = filesys::GetRelativePath<std::wstring>(root_dir, ff.fullpath2());
 
@@ -60,7 +60,7 @@ namespace pr
 				note.m_name = name;
 				note.m_samples.push_back(Note::Sample(vel, fpath));
 				return true;
-			});
+			}, nullptr);
 
 			// Build a wave bank and XML description of the instrument
 			WaveBankBuilder builder;

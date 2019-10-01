@@ -83,9 +83,9 @@ namespace pr::filesys
 	// 'file_masks' is a semicolon separated, null terminated, list of file masks
 	// PathCB should have a signature: bool (*file_cb)(FindFiles const& ff)
 	template <typename PathCB>
-	bool EnumFiles(std::filesystem::path const& path, wchar_t const* file_masks, PathCB file_cb)
+	bool EnumFiles(std::filesystem::path const& path, wchar_t const* file_masks, PathCB file_cb, void* ctx)
 	{
-		return EnumFiles(path, file_masks, file_cb, [](void*, FindFiles const&, int){ return false; });
+		return EnumFiles(path, file_masks, file_cb, [](void*, FindFiles const&){ return false; }, ctx);
 	}
 }
 
@@ -99,7 +99,7 @@ namespace pr::filesys
 		using namespace std::filesystem;
 
 		int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
-		auto file_cb = [&](FindFiles const& ff)
+		auto file_cb = [&](void*, FindFiles const& ff)
 		{
 			auto extn = ff.fullpath2().extension();
 			if      (extn.compare(".cpp") == 0) ++found[0];
@@ -117,8 +117,8 @@ namespace pr::filesys
 			return;
 		}
 
-		PR_CHECK(pr::filesys::EnumFiles(root, L"*.cpp;*.c", file_cb), true);
-		PR_CHECK(pr::filesys::EnumFiles(root, L"*.h;*.py" , file_cb), true);
+		PR_CHECK(pr::filesys::EnumFiles(root, L"*.cpp;*.c", file_cb, nullptr), true);
+		PR_CHECK(pr::filesys::EnumFiles(root, L"*.h;*.py" , file_cb, nullptr), true);
 		PR_CHECK(found[0] == 1, true);
 		PR_CHECK(found[1] == 0, true);
 		PR_CHECK(found[2] == 2, true);
