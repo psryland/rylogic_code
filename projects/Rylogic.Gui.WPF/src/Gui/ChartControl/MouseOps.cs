@@ -23,6 +23,11 @@ namespace Rylogic.Gui.WPF
 			}
 			public void Dispose()
 			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
+			{
 				Active = null;
 				Pending.Dispose();
 			}
@@ -96,7 +101,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Dictionary-like proxy for pending mouse operations</summary>
-			public class PendingOps :IDisposable
+			public sealed class PendingOps :IDisposable
 			{
 				private readonly MouseOps m_owner;
 				private readonly MouseOp[] m_pending;
@@ -134,7 +139,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Base class for a mouse operation performed with the mouse 'down -> [drag] -> up' sequence</summary>
-		public abstract class MouseOp : IDisposable
+		public abstract class MouseOp :IDisposable
 		{
 			// The general process goes:
 			//  - A mouse op is created and set as the pending operation in 'MouseOps'.
@@ -145,6 +150,7 @@ namespace Rylogic.Gui.WPF
 			//  - If at any point a mouse op is cancelled, no further mouse events are forwarded
 			//    to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
+			protected IDisposable m_suspended_chart_changed;
 			public MouseOp(ChartControl chart, bool allow_cancel = false)
 			{
 				Chart = chart;
@@ -153,12 +159,16 @@ namespace Rylogic.Gui.WPF
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				Disposed?.Invoke(this, EventArgs.Empty);
 				Util.Dispose(ref m_suspended_chart_changed);
 			}
-			protected IDisposable m_suspended_chart_changed;
 			public event EventHandler Disposed;
 
 			/// <summary>The owning chart</summary>
@@ -202,14 +212,31 @@ namespace Rylogic.Gui.WPF
 			}
 			private bool m_is_click; // True until the mouse is dragged beyond the click threshold
 
+			// Handle events by default. Unhandled events fall back to default handling by the chart
+
 			/// <summary>Called on mouse down</summary>
-			public virtual void MouseDown(MouseButtonEventArgs e) { }
+			public virtual void MouseDown(MouseButtonEventArgs e)
+			{
+				e.Handled = true;
+			}
 
 			/// <summary>Called on mouse move</summary>
-			public virtual void MouseMove(MouseEventArgs e) { }
+			public virtual void MouseMove(MouseEventArgs e)
+			{
+				e.Handled = true;
+			}
 
 			/// <summary>Called on mouse up</summary>
-			public virtual void MouseUp(MouseButtonEventArgs e) { }
+			public virtual void MouseUp(MouseButtonEventArgs e)
+			{
+				e.Handled = true;
+			}
+
+			/// <summary>Called on mouse wheel</summary>
+			public virtual void MouseWheel(MouseWheelEventArgs e)
+			{
+				e.Handled = true;
+			}
 
 			/// <summary>Called on key down</summary>
 			public virtual void OnKeyDown(KeyEventArgs e)
@@ -220,10 +247,15 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Called on key up</summary>
-			public virtual void OnKeyUp(KeyEventArgs e) { }
+			public virtual void OnKeyUp(KeyEventArgs e)
+			{
+				e.Handled = true;
+			}
 
 			/// <summary>Called when the mouse operation is cancelled (as it is removed from 'Active')</summary>
-			public virtual void NotifyCancelled() { }
+			public virtual void NotifyCancelled()
+			{
+			}
 		}
 
 		/// <summary>A mouse operation for dragging selected elements around, area selecting, or left clicking (Left Button)</summary>
@@ -240,10 +272,10 @@ namespace Rylogic.Gui.WPF
 			public MouseOpDefaultLButton(ChartControl chart) 
 				: base(chart, allow_cancel: true)
 			{}
-			public override void Dispose()
+			protected override void Dispose(bool _)
 			{
 				Util.Dispose(ref m_cleanup_selection_graphic);
-				base.Dispose();
+				base.Dispose(_);
 			}
 			public override void MouseDown(MouseButtonEventArgs e)
 			{

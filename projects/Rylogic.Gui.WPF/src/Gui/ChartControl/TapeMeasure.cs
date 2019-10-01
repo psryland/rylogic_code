@@ -278,6 +278,11 @@ namespace Rylogic.Gui.WPF
 					base.MouseMove(e);
 					m_owner.End = DropChart;
 				}
+				public override void MouseWheel(MouseWheelEventArgs e)
+				{
+					base.MouseWheel(e);
+					e.Handled = false;
+				}
 			}
 
 			/// <summary></summary>

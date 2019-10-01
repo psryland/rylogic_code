@@ -25,7 +25,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class CandleChart : Grid, IDockable, IDisposable, INotifyPropertyChanged, IChartView
+	public sealed partial class CandleChart : Grid, IDockable, IDisposable, INotifyPropertyChanged, IChartView
 	{
 		public CandleChart(Model model)
 		{

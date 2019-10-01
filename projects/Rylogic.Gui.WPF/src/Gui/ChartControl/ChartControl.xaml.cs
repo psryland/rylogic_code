@@ -84,6 +84,11 @@ namespace Rylogic.Gui.WPF
 		}
 		public void Dispose()
 		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
 			MouseOperations = null;
 			Tools = null;
 			Range = null;
@@ -885,11 +890,13 @@ namespace Rylogic.Gui.WPF
 				{
 					MouseMove -= OnMouseMoveCrossHair;
 					MouseWheel -= OnMouseWheelCrossHair;
+					Cursor = Cursors.Arrow;
 					Util.Dispose(ref m_xhair);
 				}
 				m_xhair = value ? new CrossHair(this) : null;
 				if (ShowCrossHair)
 				{
+					Cursor = Cursors.Cross;
 					MouseWheel += OnMouseWheelCrossHair;
 					MouseMove += OnMouseMoveCrossHair;
 				}
@@ -920,11 +927,13 @@ namespace Rylogic.Gui.WPF
 				if (ShowTapeMeasure == value) return;
 				if (ShowTapeMeasure)
 				{
+					Cursor = Cursors.Arrow;
 					Util.Dispose(ref m_tape);
 				}
 				m_tape = value ? new TapeMeasure(this) : null;
 				if (ShowTapeMeasure)
 				{
+					Cursor = Cursors.Cross;
 				}
 				NotifyPropertyChanged(nameof(ShowTapeMeasure));
 

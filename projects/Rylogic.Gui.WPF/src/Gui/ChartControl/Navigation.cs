@@ -164,10 +164,14 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnMouseWheel(MouseWheelEventArgs args)
 		{
-			// If there is a mouse op in progress, ignore the wheel
+			// If there is a mouse op in progress, forward the event
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
-				return;
+			{
+				op.MouseWheel(args);
+				if (args.Handled)
+					return;
+			}
 
 			var location = args.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);

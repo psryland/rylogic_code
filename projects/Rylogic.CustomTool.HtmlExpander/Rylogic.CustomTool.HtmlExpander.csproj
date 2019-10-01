@@ -46,27 +46,6 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Rylogic.Core\src\script\buffer.cs">
-      <Link>src\buffer.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\html_expander.cs">
-      <Link>src\html_expander.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\loc.cs">
-      <Link>src\loc.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\src.cs">
-      <Link>src\src.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\src_stack.cs">
-      <Link>src\src_stack.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\src_type.cs">
-      <Link>src\src_type.cs</Link>
-    </Compile>
-    <Compile Include="..\Rylogic.Core\src\script\template_replacer.cs">
-      <Link>src\template_replacer.cs</Link>
-    </Compile>
     <Compile Include="src\HtmlExpander.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -92,6 +71,12 @@
     <PackageReference Include="StreamJsonRpc">
       <Version>2.0.208</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
