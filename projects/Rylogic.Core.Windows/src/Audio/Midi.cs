@@ -538,27 +538,31 @@ namespace Rylogic.Audio
 		public VirtualMidi(string port_name, uint max_sysex_length = DefaultSysExSize, EFlags flags = EFlags.ParseRX)
 			:this(port_name, null, IntPtr.Zero, max_sysex_length, flags)
 		{}
-		public VirtualMidi(string port_name, Callback cb, IntPtr ctx, uint max_sysex_length = DefaultSysExSize, EFlags flags = EFlags.ParseRX)
+		public VirtualMidi(string port_name, uint max_sysex_length, EFlags flags, Guid manufacturer, Guid product)
+			: this(port_name, null, IntPtr.Zero, max_sysex_length, flags, manufacturer, product)
+		{ }
+		public VirtualMidi(string port_name, Callback? cb, IntPtr ctx, uint max_sysex_length = DefaultSysExSize, EFlags flags = EFlags.ParseRX)
 		{
 			var handle = VirtualMIDICreatePortEx2(port_name, cb, ctx, max_sysex_length, (uint)flags);
-			Init(handle, max_sysex_length);
-		}
-		public VirtualMidi(string port_name, uint max_sysex_length, EFlags flags, Guid manufacturer, Guid product)
-			:this(port_name, null, IntPtr.Zero, max_sysex_length, flags, manufacturer, product)
-		{}
-		public VirtualMidi(string port_name, Callback cb, IntPtr ctx, uint max_sysex_length, EFlags flags, Guid manufacturer, Guid product)
-		{
-			var handle = VirtualMIDICreatePortEx3(port_name, cb, ctx, max_sysex_length, (uint)flags, ref manufacturer, ref product);
-			Init(handle, max_sysex_length);
-		}
-		private void Init(IntPtr handle, uint max_sysex_length)
-		{
 			Check(handle != IntPtr.Zero);
 			m_handle = handle;
 			m_read_buffer = new byte[max_sysex_length];
 			m_read_process_ids = new UInt64[17];
 		}
-		public virtual void Dispose()
+		public VirtualMidi(string port_name, Callback? cb, IntPtr ctx, uint max_sysex_length, EFlags flags, Guid manufacturer, Guid product)
+		{
+			var handle = VirtualMIDICreatePortEx3(port_name, cb, ctx, max_sysex_length, (uint)flags, ref manufacturer, ref product);
+			Check(handle != IntPtr.Zero);
+			m_handle = handle;
+			m_read_buffer = new byte[max_sysex_length];
+			m_read_process_ids = new UInt64[17];
+		}
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
 		{
 			if (m_handle != IntPtr.Zero)
 			{
@@ -568,7 +572,7 @@ namespace Rylogic.Audio
 		}
 		~VirtualMidi()
 		{
-			Dispose();
+			Dispose(false);
 		}
 
 		/// <summary>"Turn Off" the virtual midi device</summary>
@@ -776,7 +780,7 @@ namespace Rylogic.Audio
 		/// why the port could not be created.
 		/// Note: VirtualMIDICreatePort / VirtualMIDICreatePortEx are deprecated</summary> 
 		[DllImport(DllName, EntryPoint = "virtualMIDICreatePortEx2", SetLastError = true, CharSet = CharSet.Unicode)]
-		private static extern IntPtr VirtualMIDICreatePortEx2(string portName, Callback callback, IntPtr dwCallbackInstance, UInt32 maxSysexLength, UInt32 flags);
+		private static extern IntPtr VirtualMIDICreatePortEx2(string portName, Callback? callback, IntPtr dwCallbackInstance, UInt32 maxSysexLength, UInt32 flags);
 
 		///<summary>
 		/// VirtualMIDICreatePortEx3
@@ -784,7 +788,7 @@ namespace Rylogic.Audio
 		/// that an application using the public port can retrieve using midiInGetDevCaps or midiOutGetDevCaps with the extended device-capability-
 		/// structures (MIDIINCAPS2 and MIDIOUTCAPS2).  If those pointers are set to NULL, the default-guids of the teVirtualMIDI-driver will be used.</summary>
 		[DllImport(DllName, EntryPoint = "virtualMIDICreatePortEx3", SetLastError = true, CharSet = CharSet.Unicode)]
-		private static extern IntPtr VirtualMIDICreatePortEx3(string portName, Callback callback, IntPtr dwCallbackInstance, UInt32 maxSysexLength, UInt32 flags, ref Guid manufacturer, ref Guid product);
+		private static extern IntPtr VirtualMIDICreatePortEx3(string portName, Callback? callback, IntPtr dwCallbackInstance, UInt32 maxSysexLength, UInt32 flags, ref Guid manufacturer, ref Guid product);
 
 		/// <summary>
 		/// With this function, you can close a virtual MIDI-port again, after you have instantiated it.

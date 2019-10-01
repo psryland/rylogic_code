@@ -57,7 +57,7 @@ namespace Rylogic.Utility
 			// Enumerate the results
 			for (int i = 0; i != process_count; ++i)
 			{
-				Process proc = null;
+				Process proc;
 				try { proc = Process.GetProcessById(process_info[i].Process.dwProcessId); }
 				catch (ArgumentException) { continue; } // The process might have ended
 				yield return proc;
@@ -69,24 +69,24 @@ namespace Rylogic.Utility
 		/// 'src' can be a single file, a comma separated list of files, or a directory<para/>
 		/// 'dst' can be a 
 		/// if 'src' is a directory, </summary>
-		public static void Copy(string src, string dst, bool overwrite = false, bool only_if_modified = false, bool ignore_non_existing = false, Action<string> feedback = null, bool show_unchanged = false)
+		public static void Copy(string src, string dst, bool overwrite = false, bool only_if_modified = false, bool ignore_non_existing = false, Action<string>? feedback = null, bool show_unchanged = false)
 		{
 			var src_is_dir = Path_.IsDirectory(src);
 			var dst_is_dir = Path_.IsDirectory(dst) || dst.EndsWith("/") || dst.EndsWith("\\") || src_is_dir;
 
 			// Find the names of the source files to copy
-			string[] files = null;
+			var files = new List<string>();
 			if (src_is_dir)
-				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories).Select(x => x.FullName).ToArray();
+				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories).Select(x => x.FullName).ToList();
 			else if (Path_.FileExists(src))
-				files = new [] { src };
+				files = new List<string>() { src };
 			else if (src.Contains('*') || src.Contains('?'))
-				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories, new Pattern(EPattern.Wildcard, src).RegexString).Select(x => x.FullName).ToArray();
+				files = Path_.EnumFileSystem(src, SearchOption.AllDirectories, new Pattern(EPattern.Wildcard, src).RegexString).Select(x => x.FullName).ToList();
 			else if (!ignore_non_existing)
 				throw new FileNotFoundException($"'{src}' does not exist");
 
 			// If the 'src' represents multiple files, 'dst' must be a directory
-			if (src_is_dir || files.Length > 1)
+			if (src_is_dir || files.Count > 1)
 			{
 				// if 'dst' doesn't exist, assume it's a directory
 				if (!Path_.DirExists(dst))
@@ -387,7 +387,7 @@ namespace Rylogic.Utility
 		/// 'regex_filter' is a filter on the filename, not the full path</summary>
 		[SuppressUnmanagedCodeSecurity]
 		[Obsolete("Use the Core version")]
-		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool> progress = null)
+		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string? regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool>? progress = null)
 		{
 			/// <remarks>
 			/// A fast enumerator of files in a directory.
@@ -545,7 +545,7 @@ namespace Rylogic.Utility
 					if (handle.IsInvalid) throw new FileNotFoundException($"Failed to get WIN32_FIND_Data for {dir}");
 				FullPath = dir;
 			}
-			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data, Match regex_match = null)
+			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data, Match? regex_match = null)
 			{
 				m_find_data = find_data;
 				FullPath = Path.Combine(dir, FileName);
@@ -561,7 +561,7 @@ namespace Rylogic.Utility
 			public string FullPath { get; private set; }
 
 			/// <summary>The result of the regular expression filter match (if used)</summary>
-			public Match RegexMatch { get; private set; }
+			public Match? RegexMatch { get; private set; }
 
 			/// <summary>The filename.extn of the file</summary>
 			public string FileName { get { return m_find_data.FileName; } }
@@ -607,7 +607,7 @@ namespace Rylogic.Utility
 		}
 
 		#region Interop
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+		[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 		private static extern SafeFindHandle FindFirstFile(string fileName, ref Win32.WIN32_FIND_DATA data);
 
 		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]

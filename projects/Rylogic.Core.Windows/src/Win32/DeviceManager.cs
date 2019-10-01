@@ -367,10 +367,10 @@ namespace Rylogic.Interop.Win32
 		private static extern bool SetupDiEnumDeviceInfo(SafeDeviceInfoSetHandle deviceInfoSet, int memberIndex, ref DeviceInfoData deviceInfoData);
 
 		[DllImport(Dll, CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern SafeDeviceInfoSetHandle SetupDiGetClassDevs([In()] ref Guid classGuid, [MarshalAs(UnmanagedType.LPWStr)] string enumerator, IntPtr hwndParent, SetupDiGetClassDevsFlags flags);
+		private static extern SafeDeviceInfoSetHandle SetupDiGetClassDevs([In()] ref Guid classGuid, [MarshalAs(UnmanagedType.LPWStr)] string? enumerator, IntPtr hwndParent, SetupDiGetClassDevsFlags flags);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool SetupDiGetDeviceInstanceId(IntPtr DeviceInfoSet, ref DeviceInfoData did, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
+		private static extern bool SetupDiGetDeviceInstanceId(IntPtr DeviceInfoSet, ref DeviceInfoData did, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
 
 		[SuppressUnmanagedCodeSecurity()]
 		[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]

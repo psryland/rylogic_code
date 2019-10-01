@@ -15,6 +15,7 @@
 		<FileVersion>1.0.2</FileVersion>
 		<AssemblyVersion>1.0.2</AssemblyVersion>
 		<LangVersion>latest</LangVersion>
+		<Nullable>Enable</Nullable>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE;NET471</DefineConstants>

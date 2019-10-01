@@ -11,7 +11,7 @@ using Rylogic.Extn;
 namespace Rylogic.Common
 {
 	/// <summary>Batch events by time</summary>
-	public class EventBatcher :IDisposable
+	public sealed class EventBatcher :IDisposable
 	{
 		// Notes:
 		// Used to group bursts of events into a few events.
@@ -29,24 +29,40 @@ namespace Rylogic.Common
 		/// <summary>The number of times Signal has been called since 'Action' was last raised</summary>
 		private int m_count;
 
-		public  EventBatcher()                                                     :this(TimeSpan.FromMilliseconds(10))               {}
-		public  EventBatcher(EventHandler action)                                  :this(action, TimeSpan.FromMilliseconds(10))       {}
-		public  EventBatcher(EventHandler action, TimeSpan delay)                  :this(() => action(null,null), delay)              {}
-		public  EventBatcher(Action action)                                        :this(action, TimeSpan.FromMilliseconds(10))       {}
-		public  EventBatcher(Action action, TimeSpan delay)                        :this(delay, Dispatcher.CurrentDispatcher, action) {}
-		public  EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher, action)                   {}
-		public  EventBatcher(TimeSpan delay)                                       :this(delay, Dispatcher.CurrentDispatcher)         {}
-		public  EventBatcher(TimeSpan delay, Dispatcher dispatcher)                :this(delay, dispatcher,null)                      {}
-		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action action)
+		public EventBatcher()
+			: this(TimeSpan.FromMilliseconds(10))
+		{ }
+		public EventBatcher(EventHandler action)
+			: this(action, TimeSpan.FromMilliseconds(10))
+		{ }
+		public EventBatcher(EventHandler action, TimeSpan delay)
+			: this(() => action(null, null), delay)
+		{ }
+		public EventBatcher(Action action)
+			: this(action, TimeSpan.FromMilliseconds(10))
+		{ }
+		public EventBatcher(Action action, TimeSpan delay)
+			: this(delay, Dispatcher.CurrentDispatcher, action)
+		{ }
+		public EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher)
+			: this(delay, dispatcher, action)
+		{ }
+		public EventBatcher(TimeSpan delay)
+			: this(delay, Dispatcher.CurrentDispatcher)
+		{ }
+		public EventBatcher(TimeSpan delay, Dispatcher dispatcher)
+			: this(delay, dispatcher, null)
+		{ }
+		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action? action)
 		{
-			m_lock           = new object();
-			m_shutdown       = false;
-			Dispatcher       = dispatcher ?? throw new ArgumentNullException("dispatcher","dispatcher can't be null");
-			Delay            = delay;
-			m_count          = 0;
-			Immediate        = false;
-			TriggerOnFirst   = false;
-			Priority         = DispatcherPriority.Normal;
+			m_lock = new object();
+			m_shutdown = false;
+			Dispatcher = dispatcher ?? throw new ArgumentNullException("dispatcher", "dispatcher can't be null");
+			Delay = delay;
+			m_count = 0;
+			Immediate = false;
+			TriggerOnFirst = false;
+			Priority = DispatcherPriority.Normal;
 
 			if (action != null)
 				Action += action;
@@ -58,7 +74,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The callback called when events have been signalled</summary>
-		public event Action Action;
+		public event Action? Action;
 
 		/// <summary>If true, 'Action' will be called on the first signal in a batch. If false, will be called after 'Delay'</summary>
 		public bool TriggerOnFirst { get; set; }
@@ -87,7 +103,7 @@ namespace Rylogic.Common
 		/// Signal the event. Signal can be called multiple times.
 		/// Note: this can be called from any thread, the resulting event will be marshalled
 		/// to the Dispatcher provided in the constructor of the event batcher</summary>
-		public void Signal(object sender = null, EventArgs args = null)
+		public void Signal(object? sender = null, EventArgs? args = null)
 		{
 			// Silently handle Signal calls on this object after it's shutdown
 			// They can be coming from any threat.
@@ -137,7 +153,7 @@ namespace Rylogic.Common
 		/// Signal the event synchronously.
 		/// Note: this can be called from any thread, the resulting event will be marshalled
 		/// to the Dispatcher provided in the constructor of the event batcher</summary>
-		public void SignalImmediate(object sender = null, EventArgs args = null)
+		public void SignalImmediate(object? sender = null, EventArgs? args = null)
 		{
 			if (Action == null || m_shutdown) return;
 			Dispatcher.Invoke(Action);
@@ -185,11 +201,10 @@ namespace Rylogic.Common
 		//			}
 		//		});
 		//	}
+		public bool Pending => m_issue != m_in_progress;
+		private volatile int m_issue;
+		private volatile int m_in_progress;
 
-		public bool Pending
-		{
-			get { return m_issue != m_in_progress; }
-		}
 		public void Signal()
 		{
 			++m_issue;
@@ -198,9 +213,6 @@ namespace Rylogic.Common
 		{
 			m_in_progress = m_issue;
 		}
-
-		private volatile int m_issue;
-		private volatile int m_in_progress;
 	}
 }
 

@@ -9,7 +9,7 @@ using HContext = System.IntPtr;
 
 namespace Rylogic.Audio
 {
-	public class Audio :IDisposable
+	public sealed class Audio :IDisposable
 	{
 		private readonly HContext m_context;
 		private readonly Dispatcher m_dispatcher; // Thread marshaller
@@ -25,7 +25,7 @@ namespace Rylogic.Audio
 			m_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 			// Initialise audio
-			var init_error = (string)null;
+			var init_error = (string?)null;
 			ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
 			m_context = Audio_Initialise(error_cb, IntPtr.Zero);
 			if (m_context == HContext.Zero)
@@ -52,7 +52,7 @@ namespace Rylogic.Audio
 		}
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
-		public event EventHandler<MessageEventArgs> Error;
+		public event EventHandler<MessageEventArgs>? Error;
 
 		/// <summary>Play a WAV file</summary>
 		public void PlayFile(string filepath)

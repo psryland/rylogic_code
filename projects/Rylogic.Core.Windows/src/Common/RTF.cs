@@ -224,7 +224,7 @@ namespace Rylogic.Common
 		public abstract class Content
 		{
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public abstract void ToRtf(StrBuild sb, Content parent);
+			public abstract void ToRtf(StrBuild sb, Content? parent);
 		}
 
 		/// <summary>A rectangle used to define margins and padding</summary>
@@ -283,7 +283,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Writes control words for the differences in style begin 'prev' and 'next'. Pass 'prev' as null to write all control words</summary>
-			public static StrBuild Write(StrBuild sb, TextStyle next, TextStyle prev)
+			public static StrBuild Write(StrBuild sb, TextStyle next, TextStyle? prev)
 			{
 				if (prev == null || next.FontStyle != prev.FontStyle)
 				{
@@ -362,6 +362,7 @@ namespace Rylogic.Common
 				public const string Frame                = @"\brdrframe"; // Border resembles a "Frame."
 
 				private string m_value;
+				public BType()                                      { m_value = None; }
 				public override string ToString()                   { return m_value; }
 				public static implicit operator BType(string value) { return new BType{m_value = value}; }
 				public static implicit operator string(BType value) { return value.m_value; }
@@ -539,13 +540,12 @@ namespace Rylogic.Common
 			public Builder Append(TextSpan text)
 			{
 				// Try to append the text to the last paragraph
-				Paragraph para = null;
-				bool merge = m_root.Content.Count != 0 && (para = m_root.Content.Back() as Paragraph) != null && ReferenceEquals(para.ParaStyle, DefaultParaStyle);
-				if (!merge) para = new Paragraph(DefaultParaStyle, TextStyle);
+				var last = m_root.Content.Count != 0 && m_root.Content.Back() is Paragraph p && ReferenceEquals(p.ParaStyle, DefaultParaStyle) ? p : null;
+				if (last != null)
+					last.Append(text);
+				else
+					Append(new Paragraph(DefaultParaStyle, TextStyle).Append(text));
 
-				// Concatenate the text
-				para.Append(text);
-				if (!merge) Append(para);
 				return this;
 			}
 		}
@@ -615,7 +615,7 @@ namespace Rylogic.Common
 			private readonly List<Font> m_fonts = new List<Font>();
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				if (m_fonts.Count == 0) return;
 				if (!sb.LineStart) sb.AppendLine(StrBuild.EType.Control);
@@ -652,7 +652,7 @@ namespace Rylogic.Common
 			private readonly List<Color> m_colours = new List<Color>();
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				if (!sb.LineStart) sb.AppendLine(StrBuild.EType.Control);
 				sb.Append(StrBuild.EType.Control, @"{\colortbl;");
@@ -686,7 +686,7 @@ namespace Rylogic.Common
 			public Font(string desc) { Index = -1; Desc  = desc; }
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				Debug.Assert(Index != -1, "This font has not been added to the font table yet");
 				sb.AppendFormat(StrBuild.EType.Control, @"{{\f{0}{1}}}",Index ,Desc);
@@ -742,7 +742,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				ParaStyle.ToRtf(sb, InTable);
 				TextStyle.Write(sb, Style, TextStyle.Default);
@@ -756,17 +756,20 @@ namespace Rylogic.Common
 		public class PageBreak :Content
 		{
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent) { sb.Append(StrBuild.EType.Control, @"\page"); }
+			public override void ToRtf(StrBuild sb, Content? parent)
+			{
+				sb.Append(StrBuild.EType.Control, @"\page");
+			}
 		}
 
 		/// <summary>Inserts a hyper link</summary>
 		public class Hyperlink :Content
 		{
-			public Hyperlink(string url, string friendly_text = null, TextStyle style = null)
+			public Hyperlink(string url, string? friendly_text = null, TextStyle? style = null)
 			{
 				Style        = style ?? new TextStyle{FontStyle = EFontStyle.Underline, ForeColourIndex = 0};
 				Url          = url;
-				FriendlyText = friendly_text;
+				FriendlyText = friendly_text ?? string.Empty;
 			}
 
 			/// <summary>The style applied to the text</summary>
@@ -779,7 +782,7 @@ namespace Rylogic.Common
 			public string FriendlyText { get; set; }
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				var friendly = !string.IsNullOrEmpty(FriendlyText) ? FriendlyText : Url;
 				var style = TextStyle.Write(new StrBuild(), Style, null);
@@ -819,7 +822,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				var para = parent as Paragraph;
 				var parent_style = para != null ? para.Style : TextStyle.Default;
@@ -916,7 +919,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				ParaStyle.ToRtf(sb, false);
 				TextStyle.Write(sb, TextStyle, TextStyle.Default);
@@ -964,8 +967,7 @@ namespace Rylogic.Common
 			/// <summary>Style for a table row</summary>
 			public class RowStyle
 			{
-				public static RowStyle Default { get { return m_default ?? (m_default = new RowStyle()); } }
-				private static RowStyle m_default;
+				public static RowStyle Default { get; } = new RowStyle();
 
 				public RowStyle()
 				{
@@ -1047,8 +1049,7 @@ namespace Rylogic.Common
 			public class CellStyle
 			{
 				/// <summary>The default style</summary>
-				public static CellStyle Default { get { return m_default ?? (m_default = new CellStyle()); } }
-				private static CellStyle m_default;
+				public static CellStyle Default { get; } = new CellStyle();
 
 				/// <summary>Vertical alignment within the cell</summary>
 				public EVerticalAlign VerticalAlignment { get; set; }
@@ -1059,7 +1060,7 @@ namespace Rylogic.Common
 					public const string Centre  = @"\clvertalc"; // Text is centered vertically in cell.
 					public const string Bottom  = @"\clvertalb"; // Text is bottom-aligned in cell.
 
-					private string m_value;
+					private string m_value = Default;
 					public override string ToString()                            { return m_value; }
 					public static implicit operator EVerticalAlign(string value) { return new EVerticalAlign{m_value = value}; }
 					public static implicit operator string(EVerticalAlign value) { return value.m_value; }
@@ -1085,7 +1086,7 @@ namespace Rylogic.Common
 					public const string Left2Right_Top2BottomVertical = @"\cltxlrtbv"; // Text in a cell flows left to right and top to bottom, vertical.
 					public const string Right2Left_Top2BottomVertical = @"\cltxtbrlv"; // Text in a cell flows top to bottom and right to left, vertical.
 
-					private string m_value;
+					private string m_value = Default;
 					public override string ToString()                       { return m_value; }
 					public static implicit operator ETextFlow(string value) { return new ETextFlow{m_value = value}; }
 					public static implicit operator string(ETextFlow value) { return value.m_value; }
@@ -1259,7 +1260,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Write the table as rtf to 'sb'</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				foreach (var r in m_rows)
 					r.ToRtf(sb, this);
@@ -1309,7 +1310,7 @@ namespace Rylogic.Common
 			/// <param name="wmf_out">An array of bytes used to hold the returned wmf</param>
 			/// <param name="mapping_mode">The mapping mode of the image.</param>
 			/// <param name="flags">Flags used to specify the format of the wmf returned</param>
-			[DllImport("gdiplus.dll")] private static extern uint GdipEmfToWmfBits(IntPtr emf, uint wmf_out_size, byte[] wmf_out, int mapping_mode, EmfToWmfFlags flags);
+			[DllImport("gdiplus.dll")] private static extern uint GdipEmfToWmfBits(IntPtr emf, uint wmf_out_size, byte[]? wmf_out, int mapping_mode, EmfToWmfFlags flags);
 
 			public EmbeddedImage(Image image) :this() { Add(image); }
 			public EmbeddedImage()
@@ -1430,7 +1431,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
-			public override void ToRtf(StrBuild sb, Content parent)
+			public override void ToRtf(StrBuild sb, Content? parent)
 			{
 				ParaStyle.ToRtf(sb, false);
 				sb.Append(StrBuild.EType.Control, m_sb.ToString());

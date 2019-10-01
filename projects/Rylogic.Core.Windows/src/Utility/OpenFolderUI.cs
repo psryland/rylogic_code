@@ -10,17 +10,21 @@ namespace Rylogic.Core.Windows
 	public class OpenFolderUI: INotifyPropertyChanged
 	{
 		public OpenFolderUI()
-		{}
+		{
+			m_title = "Browse for Directory";
+			m_description = string.Empty;
+			m_selected_path = string.Empty;
+		}
 
 		/// <summary>Dialog title</summary>
 		public string Title
 		{
-			get { return m_title ?? "Browse for Directory"; }
+			get => m_title;
 			set
 			{
 				if (m_title == value) return;
 				m_title = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Title)));
+				NotifyPropertyChanged(nameof(Title));
 			}
 		}
 		private string m_title;
@@ -28,12 +32,12 @@ namespace Rylogic.Core.Windows
 		/// <summary>Description text to display within the dialog</summary>
 		public string Description
 		{
-			get { return m_description ?? string.Empty; }
+			get { return m_description; }
 			set
 			{
 				if (m_description == value) return;
 				m_description = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description)));
+				NotifyPropertyChanged(nameof(Description));
 			}
 		}
 		private string m_description;
@@ -49,7 +53,7 @@ namespace Rylogic.Core.Windows
 			{
 				if (m_selected_path == value) return;
 				m_selected_path = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedPath)));
+				NotifyPropertyChanged(nameof(SelectedPath));
 			}
 		}
 		private string m_selected_path;
@@ -57,7 +61,7 @@ namespace Rylogic.Core.Windows
 		/// <summary>Show the dialog</summary>
 		public bool ShowDialog(IntPtr hwnd_owner)
 		{
-			IFileDialog dialog = null;
+			var dialog = (IFileDialog?)null;
 			try
 			{
 				dialog = new NativeFileOpenDialog();
@@ -106,6 +110,10 @@ namespace Rylogic.Core.Windows
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

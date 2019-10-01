@@ -23,7 +23,7 @@ namespace Rylogic.Common
 		/// Use comments such as:<para/>
 		///  //Assembly: System.dll<para/>
 		/// to declare required assembly references </summary>
-		public static RuntimeAssembly FromFile(string inst_name, string file, IEnumerable<string> include_paths = null)
+		public static RuntimeAssembly FromFile(string inst_name, string file, IEnumerable<string>? include_paths = null)
 		{
 			if (!Path_.FileExists(file))
 				throw new FileNotFoundException($"File {file} not found");
@@ -37,7 +37,7 @@ namespace Rylogic.Common
 		///  //Assembly: System.dll<para/>
 		/// to declare required assembly references.
 		/// 'inst_name' is the full name (namespace.classname) of the class in the code to instantiate</summary>
-		public static RuntimeAssembly FromString(string inst_name, string source, IEnumerable<string> include_paths = null)
+		public static RuntimeAssembly FromString(string inst_name, string source, IEnumerable<string>? include_paths = null)
 		{
 			// Scan the file for Reference Assembles
 			var assemblies = new List<string>();
@@ -96,7 +96,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The main instance</summary>
-		private object Instance { get; set; }
+		private object? Instance { get; set; }
 
 		/// <summary>Compilation results</summary>
 		public CompilerResults Results { get; private set; }

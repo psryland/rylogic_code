@@ -31,11 +31,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Update="src\Maths\vector.cs">
-			<DependentUpon>vector.tt</DependentUpon>
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-		</Compile>
+	  <Compile Remove="src\maths\vector.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="src\maths\vector.tt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -45,10 +45,6 @@
 	<ItemGroup>
 		<None Update="Rylogic.Core.runtimeconfig.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
-		<None Update="src\Maths\vector.tt">
-			<Generator>TextTemplatingFileGenerator</Generator>
-			<LastGenOutput>vector.cs</LastGenOutput>
 		</None>
 	</ItemGroup>
 

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Windows.Threading;
@@ -360,7 +361,7 @@ namespace Rylogic.Db
 		/// <summary>A helper for gluing strings together</summary>
 		[DebuggerStepThrough] public static string Sql(params object[] parts)
 		{
-			m_sql_cached_sb = m_sql_cached_sb ?? new StringBuilder();
+			m_sql_cached_sb ??= new StringBuilder();
 			return Sql(m_sql_cached_sb, parts);
 		}
 		[DebuggerStepThrough] public static string Sql(StringBuilder sb, params object[] parts)
@@ -377,7 +378,7 @@ namespace Rylogic.Db
 			foreach (var p in parts)
 				sb.Append(p);
 		}
-		[ThreadStatic] private static StringBuilder m_sql_cached_sb; // no initialised for thread statics
+		[ThreadStatic] private static StringBuilder? m_sql_cached_sb; // no initialised for thread statics
 
 		#endregion
 
@@ -540,7 +541,12 @@ namespace Rylogic.Db
 				if (rhs.Filepath == DBInMemory)
 					throw new SqliteException("Cannot open multiple connections to an in-memory database");
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				Close();
 				m_this_handle.Free();
@@ -597,10 +603,10 @@ namespace Rylogic.Db
 			/// <summary>
 			/// Executes an sql command that is expected to not return results. e.g. Insert/Update/Delete.
 			/// Returns the number of rows affected by the operation. Remember 'Query' requires disposing.</summary>
-			public int Execute(string sql, int first_idx = 1, IEnumerable<object> parms = null)
+			public int Execute(string sql, int first_idx = 1, IEnumerable<object>? parms = null)
 			{
-				using (var query = new Query(this, sql, first_idx, parms))
-					return Execute(query);
+				using var query = new Query(this, sql, first_idx, parms);
+				return Execute(query);
 			}
 			public int Execute(Query query)
 			{
@@ -609,10 +615,10 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Execute an sql query that returns a scalar (i.e. int) result</summary>
-			public int ExecuteScalar(string sql, int first_idx = 1, IEnumerable<object> parms = null)
+			public int ExecuteScalar(string sql, int first_idx = 1, IEnumerable<object>? parms = null)
 			{
-				using (var query = new Query(this, sql, first_idx, parms))
-					return ExecuteScalar(query);
+				using var query = new Query(this, sql, first_idx, parms);
+				return ExecuteScalar(query);
 			}
 			public int ExecuteScalar(Query query)
 			{
@@ -630,10 +636,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Returns the RowId for the last inserted row</summary>
-			public long LastInsertRowId
-			{
-				get { return NativeDll.LastInsertRowId(m_db); }
-			}
+			public long LastInsertRowId => NativeDll.LastInsertRowId(m_db);
 
 			// Notes:
 			//  How to Enumerate rows of queries that select specific columns, or use functions:
@@ -644,16 +647,16 @@ namespace Rylogic.Db
 			//  members of your type.
 
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
-			public IEnumerable<T> EnumRows<T>(string sql, int first_idx = 1, IEnumerable<object> parms = null)
+			public IEnumerable<T> EnumRows<T>(string sql, int first_idx = 1, IEnumerable<object>? parms = null)
 			{
 				return EnumRows(typeof(T), sql, first_idx, parms).Cast<T>();
 			}
-			public IEnumerable EnumRows(Type type, string sql, int first_idx = 1, IEnumerable<object> parms = null)
+			public IEnumerable EnumRows(Type type, string sql, int first_idx = 1, IEnumerable<object>? parms = null)
 			{
 				// Can't just return 'EnumRows(type, query)' because Dispose() is called on 'query'
-				using (var query = new Query(this, sql, first_idx, parms))
-					foreach (var r in query.Rows(type))
-						yield return r;
+				using var query = new Query(this, sql, first_idx, parms);
+				foreach (var r in query.Rows(type))
+					yield return r;
 			}
 
 			/// <summary>Drop any existing table created for type 'T'</summary>
@@ -663,9 +666,9 @@ namespace Rylogic.Db
 			}
 			public void DropTable(Type type, bool if_exists = true)
 			{
-				var meta = Sqlite.TableMetaData.GetMetaData(type);
+				var meta = TableMetaData.GetMetaData(type);
 				Execute(Sql("drop table ",if_exists?"if exists ":string.Empty, meta.Name));
-				RaiseDataChangedEvent(ChangeType.DropTable, meta.Name, 0);
+				NotifyDataChanged(ChangeType.DropTable, meta.Name, 0);
 			}
 
 			/// <summary>
@@ -677,7 +680,7 @@ namespace Rylogic.Db
 			///  http://www.sqlite.org/syntaxdiagrams.html#table-constraint <para/>
 			/// Notes: <para/>
 			///  auto increment must follow primary key without anything in between<para/></summary>
-			public void CreateTable<T>(OnCreateConstraint on_constraint = OnCreateConstraint.Reject) where T:new()
+			public void CreateTable<T>(OnCreateConstraint on_constraint = OnCreateConstraint.Reject) where T : new()
 			{
 				CreateTable<T>(() => new T(), on_constraint);
 			}
@@ -685,11 +688,11 @@ namespace Rylogic.Db
 			{
 				CreateTable(typeof(T), factory, on_constraint);
 			}
-			public void CreateTable(Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			public void CreateTable(Type type, Func<object>? factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
 				CreateTable(TableMetaData.GetMetaData(type).Name, type, factory, on_constraint);
 			}
-			public void CreateTable(string table_name, Type type, Func<object> factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
+			public void CreateTable(string table_name, Type type, Func<object>? factory = null, OnCreateConstraint on_constraint = OnCreateConstraint.Reject)
 			{
 				var meta = TableMetaData.GetMetaData(type);
 				if (factory != null)
@@ -702,7 +705,7 @@ namespace Rylogic.Db
 				else
 				{
 					Execute(Sql(CreateTableCmd(table_name, type, on_constraint)));
-					RaiseDataChangedEvent(ChangeType.CreateTable, meta.Name, 0);
+					NotifyDataChanged(ChangeType.CreateTable, meta.Name, 0);
 				}
 			}
 
@@ -736,7 +739,7 @@ namespace Rylogic.Db
 					if (cols1.Contains(c)) continue;
 					Execute(Sql("alter table ",meta.Name," add column ",meta.Column(i).ColumnDef(true)));
 				}
-				RaiseDataChangedEvent(ChangeType.AlterTable, meta.Name, 0);
+				NotifyDataChanged(ChangeType.AlterTable, meta.Name, 0);
 			}
 
 			/// <summary>Returns true if a table for type 'T' exists</summary>
@@ -789,7 +792,7 @@ namespace Rylogic.Db
 
 				return m_transaction_in_progress = new Transaction(this, () => m_transaction_in_progress = null);
 			}
-			private Transaction m_transaction_in_progress;
+			private Transaction? m_transaction_in_progress;
 
 			/// <summary>Returns free DB pages to the OS reducing the DB file size</summary>
 			public void Vacuum()
@@ -802,7 +805,7 @@ namespace Rylogic.Db
 			/// is invoked on Dispatcher.CurrentDispatcher to prevent accidentally modifying the database
 			/// connection during the sqlite update callback. For immediate DataChanged notification use
 			/// DataChangedImmediate.</summary>
-			public event EventHandler<DataChangedArgs> DataChanged;
+			public event EventHandler<DataChangedArgs>? DataChanged;
 
 			/// <summary>
 			/// Raised whenever a row in the database is inserted, updated, or deleted.
@@ -810,10 +813,10 @@ namespace Rylogic.Db
 			/// that invoked this event. Any actions to modify the database connection must be deferred
 			/// until after the completion of the Step() call that triggered the update event. Note that
 			/// sqlite3_prepare_v2() and sqlite3_step() both modify their database connections.</summary>
-			public event EventHandler<DataChangedArgs> DataChangedImmediate;
+			public event EventHandler<DataChangedArgs>? DataChangedImmediate;
 
 			/// <summary>Raise the data changed events</summary>
-			private void RaiseDataChangedEvent(ChangeType change_type, string table_name, long row_id)
+			private void NotifyDataChanged(ChangeType change_type, string table_name, long row_id)
 			{
 				var args = new DataChangedArgs(change_type, table_name, row_id);
 
@@ -832,7 +835,7 @@ namespace Rylogic.Db
 				// 'db_name' is always "main". sqlite doesn't allow renaming of the DB
 				var h = GCHandle.FromIntPtr(ctx);
 				var db = (Database)h.Target;
-				db.RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
+				db.NotifyDataChanged((ChangeType)change_type, table_name, row_id);
 			}
 
 			/// <summary>Throw if called from a different thread than the one that created this connection</summary>
@@ -864,7 +867,7 @@ namespace Rylogic.Db
 			public Table(Type type, Database db)
 				:this(null, type, db)
 			{}
-			public Table(string table_name, Type type, Database db)
+			public Table(string? table_name, Type type, Database db)
 			{
 				Debug.Assert(db.AssertCorrectThread());
 				if (db.Handle.IsInvalid)
@@ -877,19 +880,16 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>The database connection this table uses associated with this table</summary>
-			public Database DB { get; private set; }
+			public Database DB { get; }
 
 			/// <summary>Return the meta data for this table</summary>
-			public TableMetaData MetaData { get; private set; }
+			public TableMetaData MetaData { get; }
 
 			/// <summary>The name of this table</summary>
-			public string Name { get; private set; }
+			public string Name { get; }
 
 			/// <summary>Gets the number of columns in this table</summary>
-			public int ColumnCount
-			{
-				get { return MetaData.ColumnCount; }
-			}
+			public int ColumnCount => MetaData.ColumnCount;
 
 			/// <summary>Get the number of rows in this table</summary>
 			public int RowCount
@@ -897,49 +897,45 @@ namespace Rylogic.Db
 				get
 				{
 					GenerateExpression(null, "count");
-					try { return DB.ExecuteScalar(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
+					if (m_cmd.SqlString == null) throw new Exception($"Invalid Sql");
+					try { return DB.ExecuteScalar(m_cmd.SqlString, 1, m_cmd.Arguments); }
+					finally { ResetExpression(); }
 				}
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
 			public T Find<T>(params object[] keys)
 			{
-				return (T)Find(keys);
+				return (T)(Find(keys) ?? default!);
 			}
 			public T Find<T>(object key1, object key2) // overload for performance
 			{
-				return (T)Find(key1, key2);
+				return (T)(Find(key1, key2) ?? default!);
 			}
 			public T Find<T>(object key1) // overload for performance
 			{
-				return (T)Find(key1);
+				return (T)(Find(key1) ?? default!);
 			}
-			public object Find(params object[] keys)
+			public object? Find(params object[] keys)
 			{
-				using (var get = new Query(DB, GetCmd(MetaData.Type)))
-				{
-					get.BindPks(MetaData.Type, 1, keys);
-					foreach (var x in get.Rows(MetaData.Type)) return x;
-					return null;
-				}
+				using var get = new Query(DB, GetCmd(MetaData.Type));
+				get.BindPks(MetaData.Type, 1, keys);
+				foreach (var x in get.Rows(MetaData.Type)) return x;
+				return null;
 			}
-			public object Find(object key1, object key2) // overload for performance
+			public object? Find(object key1, object key2) // overload for performance
 			{
-				using (var get = new Query(DB, GetCmd(MetaData.Type)))
-				{
-					get.BindPks(MetaData.Type, 1, key1, key2);
-					foreach (var x in get.Rows(MetaData.Type)) return x;
-					return null;
-				}
+				using var get = new Query(DB, GetCmd(MetaData.Type));
+				get.BindPks(MetaData.Type, 1, key1, key2);
+				foreach (var x in get.Rows(MetaData.Type)) return x;
+				return null;
 			}
-			public object Find(object key1) // overload for performance
+			public object? Find(object key1) // overload for performance
 			{
-				using (var get = new Query(DB, GetCmd(MetaData.Type)))
-				{
-					get.BindPks(MetaData.Type, 1, key1);
-					foreach (var x in get.Rows(MetaData.Type)) return x;
-					return null;
-				}
+				using var get = new Query(DB, GetCmd(MetaData.Type));
+				get.BindPks(MetaData.Type, 1, key1);
+				foreach (var x in get.Rows(MetaData.Type)) return x;
+				return null;
 			}
 
 			/// <summary>Returns a row in the table (throws if not found)</summary>
@@ -977,70 +973,67 @@ namespace Rylogic.Db
 			/// <summary>Insert an item into the table.</summary>
 			public int Insert(object item, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
-				using (var insert = new Query(DB, InsertCmd(MetaData.Type, on_constraint)))
-				{
-					// Allow the object to be changed just prior to writing to the DB
-					item = DB.WriteItemHook(item);
+				using var insert = new Query(DB, InsertCmd(MetaData.Type, on_constraint));
 
-					// Bind the properties of the object to the query parameters
-					MetaData.BindObj(insert.Stmt, 1, item, MetaData.NonAutoIncs);
+				// Allow the object to be changed just prior to writing to the DB
+				item = DB.WriteItemHook(item);
 
-					// Run the query
-					var count = insert.Run();
+				// Bind the properties of the object to the query parameters
+				MetaData.BindObj(insert.Stmt, 1, item, MetaData.NonAutoIncs);
 
-					// Update the AutoIncrement property in 'item'
-					MetaData.SetAutoIncPK(item, DB.Handle);
+				// Run the query
+				var count = insert.Run();
 
-					// Return the number of rows affected
-					return count;
-				}
+				// Update the AutoIncrement property in 'item'
+				MetaData.SetAutoIncPK(item, DB.Handle);
+
+				// Return the number of rows affected
+				return count;
 			}
 
 			/// <summary>Insert many items into the table.</summary>
 			public int Insert(IEnumerable<object> items, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
 			{
-				using (var insert = new Query(DB, InsertCmd(MetaData.Type, on_constraint)))
+				using var insert = new Query(DB, InsertCmd(MetaData.Type, on_constraint));
+
+				int count = 0;
+				foreach (var item_ in items)
 				{
-					int count = 0;
-					foreach (var item_ in items)
-					{
-						// Allow the object to be changed just prior to writing to the DB
-						var item = DB.WriteItemHook(item_);
+					// Allow the object to be changed just prior to writing to the DB
+					var item = DB.WriteItemHook(item_);
 
-						// Bind the properties of the object to the query parameters
-						MetaData.BindObj(insert.Stmt, 1, item, MetaData.NonAutoIncs);
+					// Bind the properties of the object to the query parameters
+					MetaData.BindObj(insert.Stmt, 1, item, MetaData.NonAutoIncs);
 
-						// Run the query
-						count += insert.Run();
+					// Run the query
+					count += insert.Run();
 
-						// Update the AutoIncrement property in 'item'
-						MetaData.SetAutoIncPK(item, DB.Handle);
+					// Update the AutoIncrement property in 'item'
+					MetaData.SetAutoIncPK(item, DB.Handle);
 
-						// Reset the query for the next item
-						insert.Reset();
-					}
-					return count;
+					// Reset the query for the next item
+					insert.Reset();
 				}
+				return count;
 			}
 
 			/// <summary>Update 'item' in the table</summary>
 			public int Update(object item)
 			{
-				using (var update = new Query(DB, UpdateCmd(MetaData.Type)))
-				{
-					// Allow the object to be changed just prior to writing to the DB
-					item = DB.WriteItemHook(item);
+				using var update = new Query(DB, UpdateCmd(MetaData.Type));
 
-					// Bind the properties of the object to the query parameters
-					MetaData.BindObj(update.Stmt, 1, item, MetaData.NonPks);
-					MetaData.BindObj(update.Stmt, 1 + MetaData.NonPks.Length, item, MetaData.Pks);
+				// Allow the object to be changed just prior to writing to the DB
+				item = DB.WriteItemHook(item);
 
-					// Run the query
-					var count = update.Run();
+				// Bind the properties of the object to the query parameters
+				MetaData.BindObj(update.Stmt, 1, item, MetaData.NonPks);
+				MetaData.BindObj(update.Stmt, 1 + MetaData.NonPks.Length, item, MetaData.Pks);
 
-					// Return the number of rows affected
-					return count;
-				}
+				// Run the query
+				var count = update.Run();
+
+				// Return the number of rows affected
+				return count;
 			}
 
 			/// <summary>Delete 'item' from the table</summary>
@@ -1052,34 +1045,28 @@ namespace Rylogic.Db
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(params object[] keys)
 			{
-				using (var query = new Query(DB, DeleteCmd(MetaData.Type)))
-				{
-					query.BindParms(1, keys);
-					query.Step();
-					return query.RowsChanged;
-				}
+				using var query = new Query(DB, DeleteCmd(MetaData.Type));
+				query.BindParms(1, keys);
+				query.Step();
+				return query.RowsChanged;
 			}
 
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1, object key2) // overload for performance
 			{
-				using (var query = new Query(DB, DeleteCmd(MetaData.Type)))
-				{
-					query.BindParms(1, key1, key2);
-					query.Step();
-					return query.RowsChanged;
-				}
+				using var query = new Query(DB, DeleteCmd(MetaData.Type));
+				query.BindParms(1, key1, key2);
+				query.Step();
+				return query.RowsChanged;
 			}
 
 			/// <summary>Delete a row from the table. Returns the number of rows affected</summary>
 			public int DeleteByKey(object key1) // overload for performance
 			{
-				using (var query = new Query(DB, DeleteCmd(MetaData.Type)))
-				{
-					query.BindParms(1, key1);
-					query.Step();
-					return query.RowsChanged;
-				}
+				using var query = new Query(DB, DeleteCmd(MetaData.Type));
+				query.BindParms(1, key1);
+				query.Step();
+				return query.RowsChanged;
 			}
 
 			/// <summary>Update a single column for a single row in the table</summary>
@@ -1090,23 +1077,24 @@ namespace Rylogic.Db
 
 				// Get the affected column meta data
 				var column_meta = MetaData.Column(column_name);
+				if (column_meta == null)
+					throw new SqliteException(Result.Misuse, $"No column with name {column_name} found");
 
 				// Create the query for updating the column
 				var sql = Sql("update ",Name," set ",column_meta.NameBracketed," = ? where ",MetaData.PkConstraints());
-				using (var query = new Query(DB, sql))
-				{
-					// Bind the 'value' as the query parameter
-					column_meta.BindFn(query.Stmt, 1, value);
+				using var query = new Query(DB, sql);
 
-					// Bind the primary keys
-					query.BindPks(MetaData.Type, 2, keys);
+				// Bind the 'value' as the query parameter
+				column_meta.BindFn(query.Stmt, 1, value!);
 
-					// Run the update command
-					query.Step();
+				// Bind the primary keys
+				query.BindPks(MetaData.Type, 2, keys);
 
-					// Return the rows changed
-					return query.RowsChanged;
-				}
+				// Run the update command
+				query.Step();
+
+				// Return the rows changed
+				return query.RowsChanged;
 			}
 
 			/// <summary>Update the value of a column for all rows in a table</summary>
@@ -1114,20 +1102,21 @@ namespace Rylogic.Db
 			{
 				// Get the affected column meta data
 				var column_meta = MetaData.Column(column_name);
+				if (column_meta == null)
+					throw new SqliteException(Result.Misuse, $"No column with name {column_name} found");
 
 				// Create the query for updating all values in a column
 				var sql = Sql("update ",Name," set ",column_name," = ?");
-				using (var query = new Query(DB, sql))
-				{
-					// Bind the 'value' as the query parameter
-					column_meta.BindFn(query.Stmt, 1, value);
+				using var query = new Query(DB, sql);
 
-					// Run the update command
-					query.Step();
+				// Bind the 'value' as the query parameter
+				column_meta.BindFn(query.Stmt, 1, value!);
 
-					// Return the rows changed
-					return query.RowsChanged;
-				}
+				// Run the update command
+				query.Step();
+
+				// Return the rows changed
+				return query.RowsChanged;
 			}
 
 			/// <summary>Return the value of a specific column, in a single row, in the table</summary>
@@ -1135,20 +1124,21 @@ namespace Rylogic.Db
 			{
 				// Get the column meta data
 				var column_meta = MetaData.Column(column_name);
+				if (column_meta == null)
+					throw new SqliteException(Result.Misuse, $"No column with name {column_name} found");
 
 				// Create the query for selecting the column value for the row
 				var sql = Sql("select ",column_meta.NameBracketed," from ",Name," where ",MetaData.PkConstraints());
-				using (var query = new Query(DB, sql))
-				{
-					// Bind the primary keys to the query
-					query.BindPks(MetaData.Type, 1, keys);
+				using var query = new Query(DB, sql);
 
-					// Run the query
-					query.Step();
+				// Bind the primary keys to the query
+				query.BindPks(MetaData.Type, 1, keys);
 
-					// Return the column value
-					return (TValueType)column_meta.ReadFn(query.Stmt, 0);
-				}
+				// Run the query
+				query.Step();
+
+				// Return the column value
+				return (TValueType)column_meta.ReadFn(query.Stmt, 0);
 			}
 
 			/// <summary>IEnumerable interface</summary>
@@ -1156,11 +1146,12 @@ namespace Rylogic.Db
 			{
 				GenerateExpression();
 				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
+				if (m_cmd.SqlString == null) throw new Exception($"Invalid Sql");
 				return DB.EnumRows(MetaData.Type, m_cmd.SqlString, 1, m_cmd.Arguments).GetEnumerator();
 			}
 
 			/// <summary>Generate the sql string and arguments</summary>
-			public Table GenerateExpression(string select = null, string func = null)
+			public Table GenerateExpression(string? select = null, string? func = null)
 			{
 				m_cmd.Generate(MetaData.Type, select, func);
 				return this;
@@ -1174,22 +1165,17 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Read only access to the generated sql string</summary>
-			public string SqlString
-			{
-				get { return m_cmd.SqlString; }
-			}
+			public string? SqlString => m_cmd.SqlString;
 
 			/// <summary>Read only access to the generated sql arguments</summary>
-			public List<object> Arguments
-			{
-				get { return m_cmd.Arguments; }
-			}
+			public List<object>? Arguments => m_cmd.Arguments;
 
 			/// <summary>Return the first row. Throws if no rows found</summary>
 			public T First<T>()
 			{
 				m_cmd.Take(1);
-				try { return ((IEnumerable<T>)this).First(); } finally { m_cmd.Reset(); }
+				try { return ((IEnumerable<T>)this).First(); }
+				finally { m_cmd.Reset(); }
 			}
 			public T First<T>(Expression<Func<T,bool>> pred)
 			{
@@ -1201,7 +1187,8 @@ namespace Rylogic.Db
 			public T FirstOrDefault<T>()
 			{
 				m_cmd.Take(1);
-				try { return this.Cast<T>().FirstOrDefault(); } finally { m_cmd.Reset(); }
+				try { return this.Cast<T>().FirstOrDefault(); }
+				finally { m_cmd.Reset(); }
 			}
 			public T FirstOrDefault<T>(Expression<Func<T,bool>> pred)
 			{
@@ -1229,7 +1216,9 @@ namespace Rylogic.Db
 			public int Delete()
 			{
 				GenerateExpression("delete");
-				try { return DB.Execute(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
+				if (m_cmd.SqlString == null) throw new Exception($"Invalid Sql");
+				try { return DB.Execute(m_cmd.SqlString, 1, m_cmd.Arguments); }
+				finally { ResetExpression(); }
 			}
 
 			/// <summary>Add a 'select' clause to row enumeration</summary>
@@ -1237,7 +1226,9 @@ namespace Rylogic.Db
 			{
 				m_cmd.Select(pred);
 				GenerateExpression();
-				try { return DB.EnumRows<U>(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
+				if (m_cmd.SqlString == null) throw new Exception($"Invalid Sql");
+				try { return DB.EnumRows<U>(m_cmd.SqlString, 1, m_cmd.Arguments); }
+				finally { ResetExpression(); }
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
@@ -1280,9 +1271,9 @@ namespace Rylogic.Db
 			/// <summary>Wraps an sql expression for enumerating the rows of this table</summary>
 			protected class CmdExpr
 			{
-				private Expression m_select;
-				private Expression m_where;
-				private string m_order;
+				private Expression? m_select;
+				private Expression? m_where;
+				private string? m_order;
 				private int? m_take;
 				private int? m_skip;
 
@@ -1302,10 +1293,10 @@ namespace Rylogic.Db
 				}
 
 				/// <summary>The command translated into sql. Invalid until 'Generate()' is called</summary>
-				public string SqlString { get; private set; }
+				public string? SqlString { get; private set; }
 
 				/// <summary>Arguments for '?'s in the generated SqlString. Invalid until 'Generate()' is called</summary>
-				public List<object> Arguments { get; private set; }
+				public List<object>? Arguments { get; private set; }
 
 				/// <summary>Reset the expression</summary>
 				public void Reset()
@@ -1373,7 +1364,7 @@ namespace Rylogic.Db
 				}
 
 				/// <summary>Return an sql string representing this command</summary>
-				public void Generate(Type type, string select = null, string func = null)
+				public void Generate(Type type, string? select = null, string? func = null)
 				{
 					var meta = TableMetaData.GetMetaData(type);
 					var cmd = new TranslateResult();
@@ -1423,10 +1414,9 @@ namespace Rylogic.Db
 				/// <summary>
 				/// Translates an expression into an sql sub-string in 'text'.
 				/// Returns an object associated with 'expr' where appropriate, otherwise null.</summary>
-				private TranslateResult Translate(Expression expr, TranslateResult result = null)
+				private TranslateResult Translate(Expression expr, TranslateResult? result = null)
 				{
-					if (result == null)
-						result = new TranslateResult();
+					result ??= new TranslateResult();
 
 					var binary_expr = expr as BinaryExpression;
 					if (binary_expr != null)
@@ -1667,6 +1657,7 @@ namespace Rylogic.Db
 					return result;
 				}
 			}
+
 			#endregion
 		}
 
@@ -1781,6 +1772,7 @@ namespace Rylogic.Db
 			{
 				GenerateExpression();
 				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
+				if (m_cmd.SqlString == null) throw new Exception($"Invalid Sql");
 				return DB.EnumRows<T>(m_cmd.SqlString, 1, m_cmd.Arguments).GetEnumerator();
 			}
 		}
@@ -1811,13 +1803,18 @@ namespace Rylogic.Db
 				DB = db;
 				m_stmt = stmt;
 			}
-			public Query(Database db, string sql_string, int first_idx = 1, IEnumerable<object> parms = null)
+			public Query(Database db, string sql_string, int first_idx = 1, IEnumerable<object>? parms = null)
 				:this(db, Compile(db, sql_string))
 			{
 				if (parms != null)
 					BindParms(first_idx, parms);
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				Close();
 			}
@@ -1826,10 +1823,7 @@ namespace Rylogic.Db
 			public Database DB { get; private set; }
 
 			/// <summary>The string used to construct this query statement</summary>
-			public string SqlString
-			{
-				get { return NativeDll.SqlString(m_stmt); }
-			}
+			public string? SqlString => NativeDll.SqlString(m_stmt);
 
 			/// <summary>Returns the 'm_stmt' field after asserting it's validity</summary>
 			public sqlite3_stmt Stmt
@@ -1845,7 +1839,7 @@ namespace Rylogic.Db
 
 				// Call the event to see if we should cancel closing the query
 				var cancel = new QueryClosingEventArgs();
-				if (Closing != null) Closing(this, cancel);
+				Closing?.Invoke(this, cancel);
 				if (cancel.Cancel) return;
 
 				#if SQLITE_HANDLES
@@ -1860,7 +1854,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>An event raised when this query is closing</summary>
-			public event EventHandler<QueryClosingEventArgs> Closing;
+			public event EventHandler<QueryClosingEventArgs>? Closing;
 
 			/// <summary>Return the number of parameters in this statement</summary>
 			public int ParmCount
@@ -1877,7 +1871,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Return the name of a parameter by index</summary>
-			public string ParmName(int idx)
+			public string? ParmName(int idx)
 			{
 				return NativeDll.BindParameterName(Stmt, idx);
 			}
@@ -1886,7 +1880,7 @@ namespace Rylogic.Db
 			public void BindParm<T>(int idx, T value)
 			{
 				var bind = Bind.FuncFor(typeof(T));
-				bind(m_stmt, idx, value);
+				bind(m_stmt, idx, value!);
 			}
 
 			/// <summary>
@@ -2037,15 +2031,13 @@ namespace Rylogic.Db
 				while (Step())
 				{
 					var obj = meta.ReadObj(Stmt);
-					yield return DB.ReadItemHook(obj);
+					if (obj != null) obj = DB.ReadItemHook(obj);
+					yield return obj;
 				}
 			}
 
 			/// <summary></summary>
-			public override string ToString()
-			{
-				return SqlString;
-			}
+			public override string ToString() => SqlString ?? string.Empty;
 		}
 
 		#endregion
@@ -2053,10 +2045,8 @@ namespace Rylogic.Db
 		#region Transaction
 
 		/// <summary>An RAII class for transactional interaction with a database</summary>
-		public class Transaction :IDisposable
+		public sealed class Transaction :IDisposable
 		{
-			private readonly Action m_disposed;
-			private bool m_completed;
 
 			/// <summary>Typically created using the Database.NewTransaction() method</summary>
 			public Transaction(Database db, Action on_dispose)
@@ -2082,6 +2072,8 @@ namespace Rylogic.Db
 					m_disposed();
 				}
 			}
+			private readonly Action m_disposed;
+			private bool m_completed;
 
 			/// <summary>The database connection</summary>
 			private Database DB { get; set; }
@@ -2157,7 +2149,7 @@ namespace Rylogic.Db
 			///  Constraints = "unique (C1), primary key (C2, C3)"<para/>
 			///  Column 'C1' is unique, columns C2 and C3 are the primary keys (in that order)<para/>
 			/// Default value is null.</summary>
-			public string Constraints { get; set; }
+			public string? Constraints { get; set; }
 
 			/// <summary>
 			/// The name of the property or field to use as the primary key for a table.
@@ -2167,7 +2159,7 @@ namespace Rylogic.Db
 			/// property/field attributes or table constraints. If given, the column Order
 			/// value will be set to 0 for that column.<para/>
 			/// Default is value is null.</summary>
-			public string PrimaryKey { get; set; }
+			public string? PrimaryKey { get; set; }
 
 			/// <summary>
 			/// Set to true if the column given by 'PrimaryKey' is also an auto increment
@@ -2188,7 +2180,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>A comma separated list of properties/fields to ignore</summary>
-			public string Ignore { get; private set; }
+			public string? Ignore { get; private set; }
 		}
 
 		/// <summary>Marks a property or field as a column in a table</summary>
@@ -2216,7 +2208,7 @@ namespace Rylogic.Db
 			public bool AutoInc { get; set; }
 
 			/// <summary>The column name to use. If null or empty, the member name is used</summary>
-			public string Name { get; set; }
+			public string? Name { get; set; }
 
 			/// <summary>Defines the relative order of columns in the table. Default is '0'</summary>
 			public int Order { get; set; }
@@ -2228,7 +2220,7 @@ namespace Rylogic.Db
 			public DataType SqlDataType { get; set; }
 
 			/// <summary>Custom constraints to add to this column. Default is null</summary>
-			public string Constraints { get; set; }
+			public string? Constraints { get; set; }
 		}
 
 		/// <summary>Marks a property or field as not a column in the db table for a type.</summary>
@@ -2282,10 +2274,13 @@ namespace Rylogic.Db
 				// Build a collection of columns to ignore
 				var ignored = new List<string>();
 				foreach (var ign in type.GetCustomAttributes(typeof(IgnoreColumnsAttribute), true).Cast<IgnoreColumnsAttribute>())
+				{
+					if (ign.Ignore == null) continue;
 					ignored.AddRange(ign.Ignore.Split(',').Select(x => x.Trim(column_name_trim)));
+				}
 
 				// Tests if a member should be included as a column in the table
-				Func<MemberInfo, List<string>, bool> inc_member = (mi,marked) =>
+				bool IncludeMember(MemberInfo mi, List<string> marked) =>
 					!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
 					!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
 					(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
@@ -2299,13 +2294,13 @@ namespace Rylogic.Db
 				var cols = new List<ColumnMetaData>();
 				{
 					// If AllByDefault is enabled, get a collection of the properties/fields indicated by the binding flags in the attribute
-					var mark = !attr.AllByDefault ? null :
+					var mark = !attr.AllByDefault ? new List<string>() :
 						type.GetProperties(pflags).Where(x => x.CanRead && x.CanWrite).Select(x => x.Name).Concat(
 						type.GetFields    (fflags).Select(x => x.Name)).ToList();
 
 					// Check all public/non-public properties/fields
-					cols.AddRange(AllProps (type, binding_flags).Where(pi => inc_member(pi,mark)).Select(pi => new ColumnMetaData(pi)));
-					cols.AddRange(AllFields(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(fi => new ColumnMetaData(fi)));
+					cols.AddRange(AllProps (type, binding_flags).Where(pi => IncludeMember(pi,mark)).Select(pi => new ColumnMetaData(pi)));
+					cols.AddRange(AllFields(type, binding_flags).Where(fi => IncludeMember(fi,mark)).Select(fi => new ColumnMetaData(fi)));
 
 					// If we found read/write properties or fields then this is a normal db table type
 					if (cols.Count != 0)
@@ -2316,13 +2311,13 @@ namespace Rylogic.Db
 				if (TableKind == Kind.Unknown)
 				{
 					// If AllByDefault is enabled, get a collection of the properties/fields indicated by the binding flags in the attribute
-					var mark = !attr.AllByDefault ? null :
+					var mark = !attr.AllByDefault ? new List<string>() :
 						type.GetProperties(pflags).Where(x => x.CanRead).Select(x => x.Name).Concat(
 						type.GetFields    (fflags).Select(x => x.Name)).ToList();
 
 					// If we find public readonly properties or fields
-					cols.AddRange(AllProps(type, binding_flags).Where(pi => inc_member(pi,mark)).Select(x => new ColumnMetaData(x)));
-					cols.AddRange(AllProps(type, binding_flags).Where(fi => inc_member(fi,mark)).Select(x => new ColumnMetaData(x)));
+					cols.AddRange(AllProps(type, binding_flags).Where(pi => IncludeMember(pi,mark)).Select(x => new ColumnMetaData(x)));
+					cols.AddRange(AllProps(type, binding_flags).Where(fi => IncludeMember(fi,mark)).Select(x => new ColumnMetaData(x)));
 					if (cols.Count != 0)
 						TableKind = Kind.AnonType;
 				}
@@ -2338,7 +2333,7 @@ namespace Rylogic.Db
 				if (attr.PrimaryKey != null)
 				{
 					var col = cols.FirstOrDefault(x => x.Name == attr.PrimaryKey);
-					if (col == null) throw new ArgumentException("Named primary key column '"+attr.PrimaryKey+"' (given by Sqlite.TableAttribute) is not a found table column for type '"+Name+"'");
+					if (col == null) throw new ArgumentException($"Named primary key column '{attr.PrimaryKey}' (given by Sqlite.TableAttribute) is not a found table column for type '{Name} '");
 					col.IsPk = true;
 					col.IsAutoInc = attr.PKAutoInc;
 					col.Order = 0;
@@ -2351,7 +2346,7 @@ namespace Rylogic.Db
 				{
 					var s = Constraints.IndexOf('(', pk_ofs + primary_key.Length);
 					var e = Constraints.IndexOf(')', s + 1);
-					if (s == -1 || e == -1) throw new ArgumentException("Table constraints '"+Constraints+"' are invalid");
+					if (s == -1 || e == -1) throw new ArgumentException($"Table constraints '{Constraints}' are invalid");
 
 					// Check that every named primary key is actually a column
 					// and also ensure primary keys are ordered as given.
@@ -2359,7 +2354,7 @@ namespace Rylogic.Db
 					foreach (var pk in Constraints.Substring(s+1, e-s-1).Split(',').Select(x => x.Trim(column_name_trim)))
 					{
 						var col = cols.FirstOrDefault(x => x.Name == pk);
-						if (col == null) throw new ArgumentException("Named primary key column '"+pk+"' was not found as a table column for type '"+Name+"'");
+						if (col == null) throw new ArgumentException($"Named primary key column '{pk}' was not found as a table column for type '{Name}'");
 						col.IsPk = true;
 						col.Order = order++;
 					}
@@ -2406,22 +2401,16 @@ namespace Rylogic.Db
 			public ColumnMetaData[] NonAutoIncs { get; private set; }
 
 			/// <summary>Gets the number of columns in this table</summary>
-			public int ColumnCount
-			{
-				get { return Columns.Length; }
-			}
+			public int ColumnCount => Columns.Length;
 
+			// 'm_single_pk' is a pointer to the single primary key column for
+			// this table or null if the table has multiple primary keys.
 			/// <summary>Returns true of there is only one primary key for this type and it is an integer (i.e. an alias for the row id)</summary>
-			public bool SingleIntegralPK
-			{
-				// 'm_single_pk' is a pointer to the single primary key column for
-				// this table or null if the table has multiple primary keys.
-				get { return m_single_pk != null && m_single_pk.SqlDataType == DataType.Integer; }
-			}
-			private readonly ColumnMetaData m_single_pk;
+			public bool SingleIntegralPK => m_single_pk?.SqlDataType == DataType.Integer;
+			private readonly ColumnMetaData? m_single_pk;
 
 			/// <summary>True if the table uses multiple primary keys</summary>
-			public bool MultiplePK { get { return Pks.Length > 1; } }
+			public bool MultiplePK => Pks.Length > 1;
 
 			/// <summary>The kind of table represented by this meta data</summary>
 			public Kind TableKind { get; private set; }
@@ -2443,7 +2432,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Return the column meta data for a column by name</summary>
-			public ColumnMetaData Column(string column_name)
+			public ColumnMetaData? Column(string column_name)
 			{
 				foreach (var c in Columns)
 					if (string.CompareOrdinal(c.Name, column_name) == 0)
@@ -2512,13 +2501,13 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>Populate the properties and fields of 'item' from the column values read from 'stmt'</summary>
-			public object ReadObj(sqlite3_stmt stmt)
+			public object? ReadObj(sqlite3_stmt stmt)
 			{
 				var column_count = NativeDll.ColumnCount(stmt);
 				if (column_count == 0)
 					return null;
 
-				object obj;
+				object? obj;
 				if (TableKind == Kind.Table)
 				{
 					obj = Factory();
@@ -2572,7 +2561,7 @@ namespace Rylogic.Db
 			}
 			public T Clone<T>(T item)
 			{
-				return (T)Clone((object)item);
+				return (T)Clone((object)item!);
 			}
 
 			/// <summary>Returns true of 'lhs' and 'rhs' are equal instances of this table type</summary>
@@ -2613,7 +2602,7 @@ namespace Rylogic.Db
 				}
 
 				/// <summary>Returns a shallow copy of 'obj' as a new instance</summary>
-				public static object Clone(object obj) { return m_func_clone((T)obj); }
+				public static object Clone(object obj) { return m_func_clone((T)obj)!; }
 				private static readonly Func<T,T> m_func_clone = CloneFunc();
 				private static Func<T,T> CloneFunc()
 				{
@@ -2703,7 +2692,30 @@ namespace Rylogic.Db
 		public class ColumnMetaData
 		{
 			public const int OrderBaseValue = 0xFFFF;
+			
+			#nullable disable
+			private void Init(MemberInfo mi, Type type)
+			{
+				ColumnAttribute attr = null;
+				if (mi != null) attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault();
+				if (attr == null) attr = new ColumnAttribute();
+				var is_nullable = Nullable.GetUnderlyingType(type) != null;
 
+				MemberInfo = mi;
+				Name = !string.IsNullOrEmpty(attr.Name) ? attr.Name : (mi != null ? mi.Name : string.Empty);
+				SqlDataType = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
+				Constraints = attr.Constraints ?? "";
+				IsPk = attr.PrimaryKey;
+				IsAutoInc = attr.AutoInc;
+				IsNotNull = type.IsValueType && !is_nullable;
+				IsCollate = false;
+				Order = OrderBaseValue + attr.Order;
+				ClrType = type;
+
+				// Set up the bind and read methods
+				BindFn = Bind.FuncFor(type);
+				ReadFn = Read.FuncFor(type);
+			}
 			public ColumnMetaData(PropertyInfo pi)
 			{
 				Get = obj => pi.GetValue(obj, null);
@@ -2722,35 +2734,14 @@ namespace Rylogic.Db
 				Set = (obj,val) => { throw new NotImplementedException(); };
 				Init(null, type);
 			}
-			private void Init(MemberInfo mi, Type type)
-			{
-				ColumnAttribute attr = null;
-				if (mi != null) attr = (ColumnAttribute)mi.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault();
-				if (attr == null) attr = new ColumnAttribute();
-				var is_nullable = Nullable.GetUnderlyingType(type) != null;
-
-				MemberInfo      = mi;
-				Name            = !string.IsNullOrEmpty(attr.Name) ? attr.Name : (mi != null ? mi.Name : string.Empty);
-				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
-				Constraints     = attr.Constraints ?? "";
-				IsPk            = attr.PrimaryKey;
-				IsAutoInc       = attr.AutoInc;
-				IsNotNull       = type.IsValueType && !is_nullable;
-				IsCollate       = false;
-				Order           = OrderBaseValue + attr.Order;
-				ClrType         = type;
-
-				// Set up the bind and read methods
-				BindFn = Bind.FuncFor(type);
-				ReadFn = Read.FuncFor(type);
-			}
+			#nullable enable
 
 			/// <summary>The member info for the member represented by this column</summary>
 			public MemberInfo MemberInfo;
 
 			/// <summary>The name of the column</summary>
 			public string Name;
-			public string NameBracketed { get { return "[" + Name + "]"; } }
+			public string NameBracketed => $"[{Name}]";
 
 			/// <summary>The data type of the column</summary>
 			public DataType SqlDataType;
@@ -2978,18 +2969,18 @@ namespace Rylogic.Db
 					else // nullable type, wrap the binding functions
 					{
 						var base_type = Nullable.GetUnderlyingType(type);
-						var is_enum   = base_type.IsEnum;
+						var is_enum = base_type.IsEnum;
 						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
-						return (stmt,idx,obj) =>
+						return (stmt, idx, obj) =>
 						{
 							if (obj != null) FunctionMap[bind_type](stmt, idx, obj);
 							else NativeDll.BindNull(stmt, idx);
 						};
 					}
 				}
-				catch (KeyNotFoundException) {}
+				catch (KeyNotFoundException) { }
 				throw new KeyNotFoundException(
-					"A bind function was not found for type '"+type.Name+"'\r\n" +
+					$"A bind function was not found for type '{type.Name}'\r\n" +
 					"Custom types need to register a Bind/Read function in the " +
 					"BindFunction/ReadFunction map before being used");
 			}
@@ -3163,7 +3154,7 @@ namespace Rylogic.Db
 						var bind_type = is_enum ? Enum.GetUnderlyingType(base_type) : base_type;
 						return (stmt,idx) =>
 						{
-							if (NativeDll.ColumnType(stmt, idx) == DataType.Null) return null;
+							if (NativeDll.ColumnType(stmt, idx) == DataType.Null) return null!;
 							var obj = FunctionMap[bind_type](stmt, idx);
 							if (is_enum) obj = Enum.ToObject(base_type, obj);
 							return obj;
@@ -3221,12 +3212,12 @@ namespace Rylogic.Db
 		/// <summary>Represents the internal type used by sqlite to store information about a table</summary>
 		private class TableInfo
 		{
-			public int    cid        { get; set; }
-			public string name       { get; set; }
-			public string type       { get; set; }
-			public int    notnull    { get; set; }
-			public string dflt_value { get; set; }
-			public int    pk         { get; set; }
+			public int     cid        { get; set; }
+			public string? name       { get; set; }
+			public string? type       { get; set; }
+			public int     notnull    { get; set; }
+			public string? dflt_value { get; set; }
+			public int     pk         { get; set; }
 		}
 
 		#endregion
@@ -3317,7 +3308,7 @@ namespace Rylogic.Db
 						// Add the stack dump of where the owning DB handle was created
 						// If this is the garbage collector thread, it's possible the owner has been disposed already
 						var stmt = this as NativeSqlite3StmtHandle;
-						if (stmt != null)
+						if (stmt != null && stmt.m_db != null)
 						{
 							try { msg += "\r\nThe DB that the handle is associated with was created:\r\n" + (stmt.m_db.m_stack_at_creation != null ? stmt.m_db.m_stack_at_creation.ToString() : string.Empty); }
 							catch (Exception ex) { msg += "Owning DB handle creation stack not available\r\n" + ex.Message; }
@@ -3365,7 +3356,7 @@ namespace Rylogic.Db
 			private class NativeSqlite3StmtHandle :SQLiteHandle, sqlite3_stmt
 			{
 				#if SQLITE_HANDLES
-				public NativeSqlite3Handle m_db; // The owner DB handle
+				public NativeSqlite3Handle? m_db; // The owner DB handle
 				#endif
 
 				public NativeSqlite3StmtHandle()
@@ -3459,7 +3450,7 @@ namespace Rylogic.Db
 				if (res != Result.OK) throw new SqliteException(res, "Failed to open database connection to file "+filepath);
 				return db;
 			}
-			[DllImport(Dll, EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
+			[DllImport(Dll, EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 			private static extern Result sqlite3_open_v2(string filepath, out NativeSqlite3Handle db, int flags, IntPtr zvfs);
 
 			/// <summary>Set the busy wait timeout on the DB</summary>
@@ -3537,7 +3528,7 @@ namespace Rylogic.Db
 			private static extern Result sqlite3_step(NativeSqlite3StmtHandle stmt);
 
 			/// <summary>Returns the string used to create a prepared statement</summary>
-			public static string SqlString(sqlite3_stmt stmt)
+			public static string? SqlString(sqlite3_stmt stmt)
 			{
 				return UTF8toStr(sqlite3_sql((NativeSqlite3StmtHandle)stmt)); // this assumes sqlite3_prepare_v2 was used to create 'stmt'
 			}
@@ -3640,11 +3631,11 @@ namespace Rylogic.Db
 			{
 				return sqlite3_bind_parameter_index((NativeSqlite3StmtHandle)stmt, name);
 			}
-			[DllImport(Dll, EntryPoint = "sqlite3_bind_parameter_index", CallingConvention=CallingConvention.Cdecl)]
+			[DllImport(Dll, EntryPoint = "sqlite3_bind_parameter_index", CallingConvention=CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
 			private static extern int sqlite3_bind_parameter_index(NativeSqlite3StmtHandle stmt, string name);
 
 			/// <summary>Return the name of a parameter from its index</summary>
-			public static string BindParameterName(sqlite3_stmt stmt, int index)
+			public static string? BindParameterName(sqlite3_stmt stmt, int index)
 			{
 				return UTF8toStr(sqlite3_bind_parameter_name((NativeSqlite3StmtHandle)stmt, index));
 			}
@@ -3719,7 +3710,7 @@ namespace Rylogic.Db
 			private delegate void sqlite3_destructor_type(IntPtr ptr);
 
 			/// <summary>Converts an IntPtr that points to a null terminated UTF-8 string into a .NET string</summary>
-			public static string UTF8toStr(IntPtr utf8ptr)
+			public static string? UTF8toStr(IntPtr utf8ptr)
 			{
 				if (utf8ptr == IntPtr.Zero)
 					return null;
@@ -3748,28 +3739,39 @@ namespace Rylogic.Db
 	#region SqliteException
 
 	/// <summary>An exception type specifically for sqlite exceptions</summary>
+	[Serializable]
 	public class SqliteException :Exception
 	{
 		public SqliteException()
-		{ }
+		{
+			SqlErrMsg = string.Empty;
+		}
 		public SqliteException(string message)
 			:base(message)
-		{ }
+		{
+			SqlErrMsg = string.Empty;
+		}
 		public SqliteException(string message, Exception inner_exception)
 			:base(message, inner_exception)
-		{ }
-		public SqliteException(Sqlite.Result res, string message, string sql_error_msg = null)
+		{
+			SqlErrMsg = string.Empty;
+		}
+		public SqliteException(Sqlite.Result res, string message, string? sql_error_msg = null)
 			:this(message)
 		{
 			Result = res;
 			SqlErrMsg = sql_error_msg ?? string.Empty;
 		}
+		protected SqliteException(SerializationInfo serializationInfo, StreamingContext streamingContext)
+		{
+			throw new NotImplementedException();
+		}
 
 		/// <summary>The result code associated with this exception</summary>
-		public Sqlite.Result Result { get; private set; }
+		public Sqlite.Result Result { get; }
 
 		/// <summary>The sqlite error message</summary>
-		public string SqlErrMsg { get; private set; }
+		public string SqlErrMsg { get; }
 
 		/// <summary></summary>
 		public override string ToString()

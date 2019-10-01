@@ -126,14 +126,14 @@ namespace Rylogic.Extn.Windows
 		/// <summary>A property in an anonymous type</summary>
 		private struct AnonTypeProp
 		{
-			public AnonTypeProp(string name, object value)
+			public AnonTypeProp(string name, object? value)
 			{
 				Name = name;
 				Value = value;
 				Type = value?.GetType() ?? typeof(object);
 			}
 			public string Name;
-			public object Value;
+			public object? Value;
 			public Type Type;
 		}
 
@@ -151,7 +151,7 @@ namespace Rylogic.Extn.Windows
 				return m_module_builder;
 			}
 		}
-		private static ModuleBuilder m_module_builder;
+		private static ModuleBuilder? m_module_builder;
 	}
 }
 
