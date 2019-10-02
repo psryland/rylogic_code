@@ -91,7 +91,7 @@ namespace Rylogic.Script
 
 							// Use the pattern to get the value for the variable
 							using (var sr = new StreamReader(filepath, Encoding.UTF8, true, 65536))
-							for (string line; (line = sr.ReadLine()) != null && !(m = pattern.Match(line)).Success;) {}
+							for (string? line; (line = sr.ReadLine()) != null && !(m = pattern.Match(line)).Success;) {}
 							if (!m.Success) throw new Exception(string.Format("Invalid variable declaration: '{0}'.\n'value' regex expression did not find a match in {2}.\nExpected form: {1}", match.ToString(), expected_form, filepath));
 							var value = m.Result("${value}");
 
@@ -111,8 +111,7 @@ namespace Rylogic.Script
 							var name = m.Result("${name}");
 
 							// Lookup the value for the variable
-							string value;
-							if (!variables.TryGetValue(name, out value)) throw new Exception(string.Format("Invalid value declaration: '{0}'.\nVariable with 'name' {2} is not defined.\nExpected form: {1}", match.ToString(), expected_form, name));
+							if (!variables.TryGetValue(name, out var value)) throw new Exception(string.Format("Invalid value declaration: '{0}'.\nVariable with 'name' {2} is not defined.\nExpected form: {1}", match.ToString(), expected_form, name));
 							return indent + value;
 						}
 						#endregion

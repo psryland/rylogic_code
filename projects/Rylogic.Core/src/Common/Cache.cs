@@ -126,12 +126,17 @@ namespace Rylogic.Common
 		/// <summary>Calls Dispose() on all cached items</summary>
 		public void Dispose()
 		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
 			if (typeof(IDisposable).IsAssignableFrom(typeof(TItem)))
 			{
 				foreach (var e in m_cache)
 				{
-					var doomed = e.Item as IDisposable;
-					if (doomed != null) doomed.Dispose();
+					if (e.Item is IDisposable doomed)
+						doomed.Dispose();
 				}
 			}
 			m_cache.Clear();
@@ -217,7 +222,7 @@ namespace Rylogic.Common
 		public bool Remove(TKey key)
 		{
 			// Use the lookup map to find the node in the cache
-			LinkedListNode<Entry> node;
+			LinkedListNode<Entry>? node;
 			using (Lock())
 				m_lookup.TryGetValue(key, out node);
 
@@ -251,7 +256,7 @@ namespace Rylogic.Common
 			LinkedListNode<Entry> node;
 			bool found = false;
 			using (Lock())
-				found = m_lookup.TryGetValue(key, out node);
+				found = m_lookup.TryGetValue(key, out node!);
 
 			if (found)
 			{
@@ -301,7 +306,7 @@ namespace Rylogic.Common
 					{
 						// Check again if 'key' is not in the cache, it might have been
 						// added by another thread while we weren't holding the lock.
-						if (!m_lookup.TryGetValue(key, out node))
+						if (!m_lookup.TryGetValue(key, out node!))
 						{
 							// Create a new node and add to the cache
 							node = m_cache.AddFirst(new Entry(key, item));
@@ -354,7 +359,7 @@ namespace Rylogic.Common
 			using (Lock())
 			{
 				while (m_cache.Count > Capacity)
-					DeleteCachedItem(m_cache.Last, true);
+					DeleteCachedItem(m_cache.Last!, true);
 			}
 		}
 
@@ -363,13 +368,13 @@ namespace Rylogic.Common
 		{
 			// Remove the node from the list/lookup
 			m_lookup.Remove(node.Value.Key);
-			node.List.Remove(node);
+			node.List!.Remove(node);
 
 			// Dispose the item if disposable
 			if (dispose)
 			{
-				var disposable = node.Value.Item as IDisposable;
-				if (disposable != null) disposable.Dispose();
+				if (node.Value.Item is IDisposable disposable)
+					disposable.Dispose();
 			}
 		}
 
@@ -388,7 +393,12 @@ namespace Rylogic.Common
 	{
 		public PassThruCache()
 		{ }
-		public virtual void Dispose()
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
 		{ }
 
 		/// <summary>Get/Set whether the cache should use thread locking</summary>

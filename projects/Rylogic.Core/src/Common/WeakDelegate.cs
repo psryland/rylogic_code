@@ -20,54 +20,49 @@ namespace Rylogic.Common
 	// Event Handlers
 	public class WeakHandlerImpl<T> :IWeakHandler where T: class
 	{
-		private delegate void OpenEventHandler(T @this, object sender, EventArgs args);
+		private delegate void OpenEventHandler(T @this, object? sender, EventArgs args);
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenEventHandler m_open_handler;
-		private readonly EventHandler     m_handler;
 		private Action<EventHandler>?     m_unregister;
 
 		public WeakHandlerImpl(EventHandler event_handler, Action<EventHandler> unregister)
 		{
 			m_target_ref = new WeakReference(event_handler.Target);
 			m_open_handler = (OpenEventHandler)Delegate.CreateDelegate(typeof(OpenEventHandler), null, event_handler.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
-		public void Invoke(object sender, EventArgs args)
+		public void Invoke(object? sender, EventArgs args)
 		{
-			var target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_handler.Invoke(target, sender, args); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_handler.Invoke(target, sender, args); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public EventHandler Handler => m_handler;
-		public static implicit operator EventHandler(WeakHandlerImpl<T> weh)
-		{
-			return weh.m_handler;
-		}
+		public EventHandler Handler { get; }
+		public static implicit operator EventHandler(WeakHandlerImpl<T> weh) { return weh.Handler; }
 	}
 	public class WeakHandlerImpl<T, E> :IWeakHandler<E> where T: class where E: EventArgs
 	{
-		private delegate void OpenEventHandler(T @this, object sender, E e);
+		private delegate void OpenEventHandler(T @this, object? sender, E e);
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenEventHandler m_open_handler;
-		private readonly EventHandler<E>  m_handler;
 		private Action<EventHandler<E>>?  m_unregister;
 
 		public WeakHandlerImpl(EventHandler<E> event_handler, Action<EventHandler<E>> unregister)
 		{
 			m_target_ref = new WeakReference(event_handler.Target);
 			m_open_handler = (OpenEventHandler)Delegate.CreateDelegate(typeof(OpenEventHandler), null, event_handler.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
-		public void Invoke(object sender, E e)
+		public void Invoke(object? sender, E e)
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_handler.Invoke(target, sender, e); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_handler.Invoke(target, sender, e); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public EventHandler<E> Handler => m_handler;
-		public static implicit operator EventHandler<E>(WeakHandlerImpl<T, E> weh) { return weh.m_handler; }
+		public EventHandler<E> Handler { get; }
+		public static implicit operator EventHandler<E>(WeakHandlerImpl<T, E> weh) { return weh.Handler; }
 	}
 
 	// Actions
@@ -76,120 +71,115 @@ namespace Rylogic.Common
 		private delegate void OpenAction(T @this);
 		private readonly WeakReference m_target_ref;
 		private readonly OpenAction    m_open_action;
-		private readonly Action        m_handler;
 		private Action<Action>?        m_unregister;
 
 		public WeakActionImpl(Action action, Action<Action> unregister)
 		{
 			m_target_ref = new WeakReference(action.Target);
 			m_open_action = (OpenAction)Delegate.CreateDelegate(typeof(OpenAction), null, action.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
 		public void Invoke()
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_action.Invoke(target); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_action.Invoke(target); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public Action Handler                                             { get { return m_handler; } }
-		public static implicit operator Action(WeakActionImpl<T> weak_action) { return weak_action.m_handler; }
+		public Action Handler { get; }
+		public static implicit operator Action(WeakActionImpl<T> weak_action) { return weak_action.Handler; }
 	}
 	public class WeakActionImpl<T,T1> :IWeakAction<T1> where T: class
 	{
 		private delegate void OpenAction(T @this, T1 arg);
 		private readonly WeakReference m_target_ref;
 		private readonly OpenAction    m_open_action;
-		private readonly Action<T1>    m_handler;
 		private Action<Action<T1>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1> action, Action<Action<T1>> unregister)
 		{
 			m_target_ref = new WeakReference(action.Target);
 			m_open_action = (OpenAction)Delegate.CreateDelegate(typeof(OpenAction), null, action.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
 		public void Invoke(T1 arg)
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_action.Invoke(target, arg); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_action.Invoke(target, arg); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public Action<T1> Handler                                                 { get { return m_handler; } }
-		public static implicit operator Action<T1>(WeakActionImpl<T, T1> weak_action) { return weak_action.m_handler; }
+		public Action<T1> Handler { get; }
+		public static implicit operator Action<T1>(WeakActionImpl<T, T1> weak_action) { return weak_action.Handler; }
 	}
 	public class WeakActionImpl<T,T1,T2> :IWeakAction<T1,T2> where T: class
 	{
 		private delegate void OpenAction(T @this, T1 arg1, T2 arg2);
 		private readonly WeakReference    m_target_ref;
 		private readonly OpenAction       m_open_action;
-		private readonly Action<T1,T2>    m_handler;
 		private Action<Action<T1,T2>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2> action, Action<Action<T1,T2>> unregister)
 		{
 			m_target_ref = new WeakReference(action.Target);
 			m_open_action = (OpenAction)Delegate.CreateDelegate(typeof(OpenAction), null, action.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
 		public void Invoke(T1 arg1, T2 arg2)
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_action.Invoke(target, arg1, arg2); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_action.Invoke(target, arg1, arg2); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public Action<T1,T2> Handler                                                   { get { return m_handler; } }
-		public static implicit operator Action<T1,T2>(WeakActionImpl<T,T1,T2> weak_action) { return weak_action.m_handler; }
+		public Action<T1, T2> Handler { get; }
+		public static implicit operator Action<T1,T2>(WeakActionImpl<T,T1,T2> weak_action) { return weak_action.Handler; }
 	}
 	public class WeakActionImpl<T,T1,T2,T3> :IWeakAction<T1,T2,T3> where T: class
 	{
 		private delegate void OpenAction(T @this, T1 arg1, T2 arg2, T3 arg3);
 		private readonly WeakReference       m_target_ref;
 		private readonly OpenAction          m_open_action;
-		private readonly Action<T1,T2,T3>    m_handler;
 		private Action<Action<T1,T2,T3>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2,T3> action, Action<Action<T1,T2,T3>> unregister)
 		{
 			m_target_ref = new WeakReference(action.Target);
 			m_open_action = (OpenAction)Delegate.CreateDelegate(typeof(OpenAction), null, action.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
 		public void Invoke(T1 arg1, T2 arg2, T3 arg3)
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_action.Invoke(target, arg1, arg2, arg3); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_action.Invoke(target, arg1, arg2, arg3); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public Action<T1,T2,T3> Handler                                                      { get { return m_handler; } }
-		public static implicit operator Action<T1,T2,T3>(WeakActionImpl<T,T1,T2,T3> weak_action) { return weak_action.m_handler; }
+		public Action<T1, T2, T3> Handler { get; }
+		public static implicit operator Action<T1,T2,T3>(WeakActionImpl<T,T1,T2,T3> weak_action) { return weak_action.Handler; }
 	}
 	public class WeakActionImpl<T,T1,T2,T3,T4> :IWeakAction<T1,T2,T3,T4> where T: class
 	{
 		private delegate void OpenAction(T @this, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
 		private readonly WeakReference          m_target_ref;
 		private readonly OpenAction             m_open_action;
-		private readonly Action<T1,T2,T3,T4>    m_handler;
 		private Action<Action<T1,T2,T3,T4>>?    m_unregister;
 
 		public WeakActionImpl(Action<T1,T2,T3,T4> action, Action<Action<T1,T2,T3,T4>> unregister)
 		{
 			m_target_ref = new WeakReference(action.Target);
 			m_open_action = (OpenAction)Delegate.CreateDelegate(typeof(OpenAction), null, action.Method);
-			m_handler = Invoke;
+			Handler = Invoke;
 			m_unregister = unregister;
 		}
 		public void Invoke(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
 		{
-			T target = (T)m_target_ref.Target;
-			if      (target != null)       { m_open_action.Invoke(target, arg1, arg2, arg3, arg4); }
-			else if (m_unregister != null) { m_unregister(m_handler); m_unregister = null; }
+			var target = (T?)m_target_ref.Target;
+			if (target != null) { m_open_action.Invoke(target, arg1, arg2, arg3, arg4); }
+			else if (m_unregister != null) { m_unregister(Handler); m_unregister = null; }
 		}
-		public Action<T1, T2, T3, T4> Handler => m_handler;
-		public static implicit operator Action<T1, T2, T3, T4>(WeakActionImpl<T, T1, T2, T3, T4> weak_action) => weak_action.m_handler;
+		public Action<T1, T2, T3, T4> Handler { get; }
+		public static implicit operator Action<T1, T2, T3, T4>(WeakActionImpl<T, T1, T2, T3, T4> weak_action) => weak_action.Handler;
 	}
 
 	public static class WeakRef
@@ -226,56 +216,63 @@ namespace Rylogic.Common
 		public static EventHandler MakeWeak(this EventHandler handler, Action<EventHandler> unregister)
 		{
 			Validate(handler, unregister);
-			var weh_type = typeof(WeakHandlerImpl<>).MakeGenericType(handler.Method.DeclaringType);
-			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var weh_type = typeof(WeakHandlerImpl<>).MakeGenericType(method_type);
+			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weh = (IWeakHandler)cons.Invoke(new object[] { handler, unregister });
 			return weh.Handler;
 		}
 		public static EventHandler<E> MakeWeak<E>(this EventHandler<E> handler, Action<EventHandler<E>> unregister) where E: EventArgs
 		{
 			Validate(handler, unregister);
-			var weh_type = typeof(WeakHandlerImpl<,>).MakeGenericType(handler.Method.DeclaringType, typeof(E));
-			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var weh_type = typeof(WeakHandlerImpl<,>).MakeGenericType(method_type, typeof(E));
+			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weh = (IWeakHandler<E>)cons.Invoke(new object[] {handler, unregister});
 			return weh.Handler;
 		}
 		public static Action MakeWeak(this Action handler, Action<Action> unregister)
 		{
 			Validate(handler, unregister);
-			var type = typeof(WeakActionImpl<>).MakeGenericType(handler.Method.DeclaringType);
-			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var type = typeof(WeakActionImpl<>).MakeGenericType(method_type);
+			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weak_action = (IWeakAction)cons.Invoke(new object[] { handler, unregister });
 			return weak_action.Handler;
 		}
 		public static Action<T1> MakeWeak<T1>(this Action<T1> handler, Action<Action<T1>> unregister)
 		{
 			Validate(handler, unregister);
-			var type = typeof(WeakActionImpl<,>).MakeGenericType(handler.Method.DeclaringType, typeof(T1));
-			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var type = typeof(WeakActionImpl<,>).MakeGenericType(method_type, typeof(T1));
+			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weak_action = (IWeakAction<T1>)cons.Invoke(new object[] {handler, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2> MakeWeak<T1,T2>(this Action<T1,T2> handler, Action<Action<T1,T2>> unregister)
 		{
 			Validate(handler, unregister);
-			var type = typeof(WeakActionImpl<,,>).MakeGenericType(handler.Method.DeclaringType, typeof(T1), typeof(T2));
-			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var type = typeof(WeakActionImpl<,,>).MakeGenericType(method_type, typeof(T1), typeof(T2));
+			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weak_action = (IWeakAction<T1,T2>)cons.Invoke(new object[] {handler, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2,T3> MakeWeak<T1,T2,T3>(this Action<T1,T2,T3> handler, Action<Action<T1,T2,T3>> unregister)
 		{
 			Validate(handler, unregister);
-			var type = typeof(WeakActionImpl<,,,>).MakeGenericType(handler.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3));
-			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var type = typeof(WeakActionImpl<,,,>).MakeGenericType(method_type, typeof(T1), typeof(T2), typeof(T3));
+			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weak_action = (IWeakAction<T1,T2,T3>)cons.Invoke(new object[] {handler, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2,T3,T4> MakeWeak<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> handler, Action<Action<T1,T2,T3,T4>> unregister)
 		{
 			Validate(handler, unregister);
-			var type = typeof(WeakActionImpl<,,,,>).MakeGenericType(handler.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() });
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var type = typeof(WeakActionImpl<,,,,>).MakeGenericType(method_type, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+			var cons = type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weak_action = (IWeakAction<T1,T2,T3,T4>)cons.Invoke(new object[] {handler, unregister});
 			return weak_action.Handler;
 		}
@@ -284,11 +281,11 @@ namespace Rylogic.Common
 		private static void Validate(Delegate handler, Delegate unregister)
 		{
 			if (handler == null)
-				throw new ArgumentNullException("handler");
+				throw new ArgumentNullException(nameof(handler));
 			if (handler.Method.IsStatic || handler.Target == null)
-				throw new ArgumentException("Only instance methods are supported.", "handler");
+				throw new ArgumentException("Only instance methods are supported.", nameof(handler));
 			if (unregister == null)
-				throw new ArgumentNullException("unregister", "An unregister action is required to remove the weak handler");
+				throw new ArgumentNullException(nameof(unregister), "An unregister action is required to remove the weak handler");
 		}
 	}
 }
@@ -342,9 +339,9 @@ namespace Rylogic.UnitTests
 			{
 				collected.Add(m_name);
 			}
-			public void OnHit(Gun gun)                     { hit.Add(m_name); }
-			public void OnFiring(object s, EventArgs a)    { hit.Add("Don't Shoot"); }
-			public void OnFired(object s, Gun.FiredArgs a) { hit.Add(a.Noise); }
+			public void OnHit(Gun _) { hit.Add(m_name); }
+			public void OnFiring(object? s, EventArgs a) { hit.Add("Don't Shoot"); }
+			public void OnFired(object? s, Gun.FiredArgs a) { hit.Add(a.Noise); }
 		}
 
 		// This method needs to not be inlined so that the JIT doesn't

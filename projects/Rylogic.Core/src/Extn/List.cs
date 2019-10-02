@@ -341,7 +341,7 @@ namespace Rylogic.Extn
 			int removed = 0;
 			for (int i = start + count; i-- != start;)
 			{
-				if (!pred((T)list[i])) continue;
+				if (!pred((T)list[i]!)) continue;
 				if (dispose && list[i] is IDisposable disp) disp.Dispose();
 				list.RemoveAt(i);
 				++removed;
@@ -399,7 +399,7 @@ namespace Rylogic.Extn
 				throw new ArgumentException("List is an array which cannot be resized.");
 
 			// Create a copy of the list type
-			var filtered = (IList<T>)Activator.CreateInstance(list.GetType());
+			var filtered = (IList<T>)list.GetType().New();
 
 			// Filter the elements
 			int i = 0, j = 0, iend = list.Count;

@@ -246,7 +246,7 @@ namespace Rylogic.LDraw
 			else if (part is v2         ) m_sb.Append(Ldr.Vec2((v2)part));
 			else if (part is m4x4       ) m_sb.Append(Ldr.Mat4x4((m4x4)part));
 			else if (part is AxisId     ) m_sb.Append(((AxisId)part).Id);
-			else if (part is IEnumerable) foreach (var x in (IEnumerable )part) Append(" ").Append(x);
+			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(" ").Append(x ?? string.Empty);
 			else if (part != null       ) m_sb.Append(part.ToString());
 			return this;
 		}

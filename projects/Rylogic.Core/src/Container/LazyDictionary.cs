@@ -5,6 +5,7 @@ namespace Rylogic.Container
 {
 	/// <summary>A specialised dictionary that lazy-creates elements as accessed</summary>
 	public class LazyDictionary<TKey,TValue> :Dictionary<TKey,TValue>
+		where TKey : notnull
 	{
 		private readonly Func<TKey, TValue> m_factory;
 		public LazyDictionary()

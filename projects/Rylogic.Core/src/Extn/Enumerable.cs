@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Utility;
 
 namespace Rylogic.Extn
@@ -19,16 +20,18 @@ namespace Rylogic.Extn
 		public static IEnumerable OfType(this IEnumerable source, Type ty)
 		{
 			foreach (var x in source)
-				if (x.GetType().Inherits(ty))
+				if (x != null && x.GetType().Inherits(ty))
 					yield return x;
 		}
 
 		/// <summary>Enumerate all instances that aren't null</summary>
-		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource> source) where TSource:class
+		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource> source)
+			where TSource : class
 		{
 			return source.Where(x => x != null);
 		}
-		public static IEnumerable<TSource?> NotNull<TSource>(this IEnumerable<TSource?> source) where TSource:struct
+		public static IEnumerable<TSource?> NotNull<TSource>(this IEnumerable<TSource?> source)
+			where TSource : struct
 		{
 			return source.Where(x => x != null);
 		}
@@ -65,7 +68,7 @@ namespace Rylogic.Extn
 		public static void ForEach<TSource>(this IEnumerable source, Action<TSource> action)
 		{
 			foreach (var item in source)
-				action((TSource)item);
+				action((TSource)item!);
 		}
 
 		/// <summary>Apply 'action' to each item in the collection. Includes an indexing variable</summary>
@@ -79,7 +82,7 @@ namespace Rylogic.Extn
 		{
 			int i = 0;
 			foreach (var item in source)
-				action((TSource)item, i++);
+				action((TSource)item!, i++);
 		}
 
 		/// <summary>Apply 'action' to each item in the collection</summary>
@@ -87,25 +90,27 @@ namespace Rylogic.Extn
 		{
 			foreach (var item in source)
 				initial = action(item, initial);
+			
 			return initial;
 		}
 		public static TRet ForEach<TSource,TRet>(this IEnumerable source, TRet initial, Func<TSource, TRet, TRet> action)
 		{
 			foreach (var item in source)
-				initial = action((TSource)item, initial);
+				initial = action((TSource)item!, initial);
+
 			return initial;
 		}
 
 		/// <summary>Compare sub-ranges within collections for value equality</summary>
 		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len, IEqualityComparer<TSource>? comparer = null)
 		{
-			return SequenceEqual(lhs,rhs,0,0,len,comparer);
+			return SequenceEqual(lhs, rhs, 0, 0, len, comparer);
 		}
 
 		/// <summary>Compare sub-ranges within collections for value equality</summary>
 		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len, IEqualityComparer<TSource>? comparer = null)
 		{
-			comparer = comparer ?? EqualityComparer<TSource>.Default;
+			comparer ??= EqualityComparer<TSource>.Default;
 			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len), comparer);
 		}
 
@@ -116,15 +121,14 @@ namespace Rylogic.Extn
 			if (lhs == null || rhs == null) return false;
 
 			// A map from elements in 'lhs' to their counts
-			var lookup = new Dictionary<TSource, int>();
+			var lookup = new Accumulator<NullableKey<TSource>, int>();
 			foreach (var x in lhs)
-				lookup[x] = lookup.GetOrAdd(x) + 1;
+				lookup[x] += 1;
 
 			// Match each element in 'rhs' to the elements in 'lhs'
 			foreach (var x in rhs)
 			{
-				int count;
-				if (!lookup.TryGetValue(x, out count)) return false;
+				if (!lookup.TryGetValue(x, out var count)) return false;
 				if (count > 1) lookup[x] = count - 1;
 				else lookup.Remove(x);
 			}
@@ -291,7 +295,7 @@ namespace Rylogic.Extn
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
 
-			comparer = comparer ?? Cmp<TKey>.Default;
+			comparer ??= Cmp<TKey>.Default;
 			using (var src_iter = source.GetEnumerator())
 			{
 				if (!src_iter.MoveNext())
@@ -326,29 +330,26 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>
-		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, IComparer<TSource>? comparer = null)
+		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source)
 		{
-			comparer = comparer ?? Cmp<TSource>.Default;
-			var dic = new Dictionary<TSource, int>();
-
 			var most_freq = new Freq<TSource>();
+			var lookup = new Accumulator<NullableKey<TSource>, int>();
 			foreach (var item in source)
 			{
-				var count = dic.GetOrAdd(item) + 1;
-				if (count > most_freq.Frequency) { most_freq.Item = item; most_freq.Frequency = count; }
-				dic[item] = count;
+				var count = lookup[item] += 1;
+				if (count <= most_freq.Frequency) continue;
+				most_freq.Item = item;
+				most_freq.Frequency = count;
 			}
 			return most_freq;
 		}
-		public class Freq<TSource>
+		public class Freq<TItem>
 		{
-			public Freq()
-			{
-				Item = default!;
-				Frequency = 0;
-			}
-			public TSource Item { get; set; }
-			public int Frequency { get; set; }
+			/// <summary>The item being counted</summary>
+			public TItem Item = default!;
+
+			/// <summary>The count</summary>
+			public int Frequency = 0;
 		}
 
 		/// <summary>Returns the index of the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
@@ -431,14 +432,6 @@ namespace Rylogic.Extn
 			}
 			return count;
 		}
-
-		// Added to 4.7.1
-		///// <summary>Concatenate a single element to the beginning of the sequence</summary>
-		//public static IEnumerable<TSource> Prepend<TSource>(this IEnumerable<TSource> source, TSource first_one)
-		//{
-		//	yield return first_one;
-		//	foreach (var s in source) yield return s;
-		//}
 
 		/// <summary>Concatenate a single element to the end of the sequence</summary>
 		[Obsolete("Use Append")] public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> source, TSource one_more)

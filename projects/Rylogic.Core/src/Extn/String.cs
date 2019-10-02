@@ -547,7 +547,7 @@ namespace Rylogic.Extn
 			return ((IEnumerable<char>)this).GetEnumerator();
 		}
 
-		public static implicit operator string(IString s)        { return s.ToString(); }
+		public static implicit operator string?(IString s)       { return s.ToString(); }
 		public static implicit operator IString(string s)        { return new StringProxy(s); }
 		public static implicit operator IString(StringBuilder s) { return new StringBuilderProxy(s); }
 		public static implicit operator IString(char[] s)        { return new CharArrayProxy(s); }

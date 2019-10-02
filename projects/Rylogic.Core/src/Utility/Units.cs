@@ -10,7 +10,7 @@ using Rylogic.Extn;
 namespace Rylogic.Utility
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public struct Unit<T> : IComparable<Unit<T>>, IComparable<T>, IComparable where T : IComparable
+	public struct Unit<T> : IComparable<Unit<T>>, IComparable<T>, IComparable where T : struct, IComparable
 	{
 		public Unit(T value, int unit)
 		{
@@ -156,11 +156,11 @@ namespace Rylogic.Utility
 		/// <summary>ToString</summary>
 		public override string ToString()
 		{
-			return Value.ToString();
+			return Value.ToString() ?? string.Empty;
 		}
 		public string ToString(bool include_units)
 		{
-			var str = Value.ToString();
+			var str = Value.ToString() ?? string.Empty;
 			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
 		public string ToString(IFormatProvider fp, bool include_units = false)
@@ -229,9 +229,9 @@ namespace Rylogic.Utility
 			if (UnitId != rhs.UnitId && !IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return Value.Equals(rhs.Value);
 		}
-		[DebuggerStepThrough] public override bool Equals(object rhs)
+		[DebuggerStepThrough] public override bool Equals(object? rhs)
 		{
-			return rhs is Unit<T> && Equals((Unit<T>)rhs);
+			return rhs is Unit<T> u && Equals(u);
 		}
 		[DebuggerStepThrough] public override int GetHashCode()
 		{
@@ -246,9 +246,10 @@ namespace Rylogic.Utility
 		{
 			return Value.CompareTo(rhs);
 		}
-		int IComparable.CompareTo(object obj)
+		int IComparable.CompareTo(object? rhs)
 		{
-			return CompareTo((Unit<T>)obj);
+			if (rhs == null) throw new ArgumentNullException(nameof(rhs));
+			return CompareTo((Unit<T>)rhs);
 		}
 
 		/// <summary>True if this unit is '0' with no units</summary>
@@ -378,70 +379,85 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Explicit cast unit types</summary>
-		public static Unit<U> Cast<U, T>(Unit<T> x) where T : IComparable where U : IComparable
+		public static Unit<U> Cast<U, T>(Unit<T> x)
+			where T : struct, IComparable
+			where U : struct, IComparable
 		{
 			var u = Operators<U, T>.Cast(x.Value);
 			return new Unit<U>(u, x.UnitId);
 		}
 
 		/// <summary>Convert this raw value into a type with a known unit</summary>
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit) where T : IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit)
+			where T : struct, IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, Unit<T> unit) where T : IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, Unit<T> unit)
+			where T : struct, IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x) where T : IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x)
+			where T : struct, IComparable
 		{
 			return new Unit<T>(x, NoUnitsId);
 		}
 
 		/// <summary>Cast one unit to another</summary>
-		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, string unit) where T : IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, string unit)
+			where T : struct, IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T : IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit)
+			where T : struct, IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}
 
 		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
-		public static bool Within<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T : IComparable
+		public static bool Within<T>(this Unit<T> x, Unit<T> beg, Unit<T> end)
+			where T : struct, IComparable
 		{
 			return beg <= end
 				? x >= beg && x < end
 				: x >= end && x < beg;
 		}
-		public static bool Within<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T : IComparable
+		public static bool Within<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end)
+			where T : struct, IComparable
 		{
 			return x.HasValue && x.Value.Within(beg, end);
 		}
-		public static bool WithinInclusive<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T : IComparable
+		public static bool WithinInclusive<T>(this Unit<T> x, Unit<T> beg, Unit<T> end)
+			where T : struct, IComparable
 		{
 			return x.Within(beg, end) || x == end;
 		}
-		public static bool WithinInclusive<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T : IComparable
+		public static bool WithinInclusive<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end)
+			where T : struct, IComparable
 		{
 			return x.HasValue && x.Value.WithinInclusive(beg, end);
 		}
 
 		/// <summary>ToString</summary>
-		public static string ToString<T>(this Unit<T>? x, bool include_units) where T : IComparable
+		public static string ToString<T>(this Unit<T>? x, bool include_units)
+			where T : struct, IComparable
 		{
 			return x?.ToString(include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, IFormatProvider fp, bool include_units = false) where T : IComparable
+		public static string ToString<T>(this Unit<T>? x, IFormatProvider fp, bool include_units = false)
+			where T : struct, IComparable
 		{
 			return x?.ToString(fp, include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, string fmt, bool include_units = false) where T : IComparable
+		public static string ToString<T>(this Unit<T>? x, string fmt, bool include_units = false)
+			where T : struct, IComparable
 		{
 			return x?.ToString(fmt, include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, string fmt, IFormatProvider fp, bool include_units = false) where T : IComparable
+		public static string ToString<T>(this Unit<T>? x, string fmt, IFormatProvider fp, bool include_units = false)
+			where T : struct, IComparable
 		{
 			return x?.ToString(fmt, fp, include_units) ?? string.Empty;
 		}

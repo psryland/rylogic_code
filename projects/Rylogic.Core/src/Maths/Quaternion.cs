@@ -314,9 +314,9 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
-			return o is quat && (quat)o == this;
+			return o is quat q && q == this;
 		}
 		public override int GetHashCode()
 		{

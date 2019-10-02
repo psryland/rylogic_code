@@ -42,8 +42,8 @@ namespace Rylogic.Common
 		public int Compare(T lhs, T rhs) => m_cmp(lhs, rhs);
 		public bool Equals(T lhs, T rhs) => m_cmp(lhs, rhs) == 0;
 		public int GetHashCode(T obj) => obj?.GetHashCode() ?? 0;
-		int IComparer.Compare(object x, object y) => Compare((T)x, (T)y);
-		bool IEqualityComparer.Equals(object x, object y) => Equals((T)x, (T)y);
+		int IComparer.Compare(object? x, object? y) => Compare((T)x!, (T)y!);
+		bool IEqualityComparer.Equals(object? x, object? y) => Equals((T)x!, (T)y!);
 		int IEqualityComparer.GetHashCode(object obj) => GetHashCode((T)obj);
 
 		// Convert To
@@ -105,9 +105,9 @@ namespace Rylogic.Common
 		{
 			return obj?.GetHashCode() ?? 0;
 		}
-		bool IEqualityComparer.Equals(object x, object y)
+		bool IEqualityComparer.Equals(object? x, object? y)
 		{
-			return Equals((T)x, (T)y);
+			return Equals((T)x!, (T)y!);
 		}
 		int IEqualityComparer.GetHashCode(object obj)
 		{

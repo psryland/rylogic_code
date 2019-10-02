@@ -4,6 +4,7 @@ namespace Rylogic.Container
 {
 	/// <summary>A specialised dictionary for counting occurrences of unique types</summary>
 	public class Accumulator<TKey,TValue> :Dictionary<TKey,TValue>
+		where TKey : notnull
 	{
 		public new TValue this[TKey key]
 		{

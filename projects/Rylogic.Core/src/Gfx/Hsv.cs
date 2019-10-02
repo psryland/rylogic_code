@@ -174,9 +174,9 @@ namespace Rylogic.Gfx
 				? A.Equals(other.A) && H.Equals(other.H) && S.Equals(other.S) && V.Equals(other.V)
 				: A.Equals(other.A) && V.Equals(other.V) && other.S.Equals(0);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
-			return obj is HSV && Equals((HSV)obj);
+			return obj is HSV hsv && Equals(hsv);
 		}
 		public override int GetHashCode()
 		{

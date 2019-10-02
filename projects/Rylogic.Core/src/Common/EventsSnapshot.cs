@@ -121,7 +121,7 @@ namespace Rylogic.Common
 							// Report delegates that have been removed
 							if (removed.Count != 0)
 							{
-								var removed_names = string.Join("\n", removed.Select(x => $"{x.Target.ToString()}.{x.Method.Name}"));
+								var removed_names = string.Join("\n", removed.Select(x => $"{x.Target?.ToString() ?? "???"}.{x.Method.Name}"));
 								throw new Exception($"Event {type.Name}.{evt.Key.Name} has had handlers removed:\n{removed_names}");
 							}
 						}
@@ -196,7 +196,7 @@ namespace Rylogic.UnitTests
 			}
 			public void AttachHandlerToEvent2() { Event2 += Handler; }
 			public void AttachHandlerToEvent3() { Event3 += Handler; }
-			public void Handler(object sender, EventArgs args) { Result += "A"; }
+			public void Handler(object? sender, EventArgs args) { Result += "A"; }
 		}
 
 		[Test] public void TestRemoveAdded()

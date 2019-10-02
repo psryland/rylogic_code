@@ -74,7 +74,7 @@ namespace Rylogic.Common
 			private static IEnumerable<string> Enumerate()
 			{
 				foreach (var f in typeof(Types).GetFields().Where(x => x.FieldType == typeof(string)))
-					yield return f.GetRawConstantValue().ToString();
+					yield return f.GetRawConstantValue()!.ToString()!;
 			}
 		}
 
@@ -117,15 +117,14 @@ namespace Rylogic.Common
 			private static IEnumerable<string> Enumerate()
 			{
 				foreach (var f in typeof(Types).GetFields().Where(x => x.FieldType == typeof(string)))
-					yield return f.GetRawConstantValue().ToString();
+					yield return f.GetRawConstantValue()!.ToString()!;
 			}
 		}
 
 		/// <summary>Helper method for converting a filename extension to a mime type (not complete!)</summary>
 		public static Mime FromExtn(string extn)
 		{
-			Mime mime;
-			return m_ExtnToMimeTypeMap.TryGetValue(extn.TrimStart('.'), out mime) ? mime : new Mime();
+			return m_ExtnToMimeTypeMap.TryGetValue(extn.TrimStart('.'), out var mime) ? mime : new Mime();
 		}
 
 		#region Mime type extension map

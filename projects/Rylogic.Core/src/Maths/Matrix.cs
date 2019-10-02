@@ -604,7 +604,7 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
 			return o is Matrix && (Matrix)o == this;
 		}

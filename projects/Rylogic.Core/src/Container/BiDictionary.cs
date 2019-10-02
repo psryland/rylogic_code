@@ -5,7 +5,7 @@ using System.Linq;
 namespace Rylogic.Container
 {
 	/// <summary>Bi-directional dictionary</summary>
-	public class BiDictionary<T0,T1> :IDictionary<T0,T1>
+	public class BiDictionary<T0,T1> :IDictionary<T0,T1> where T0 : notnull where T1 : notnull
 	{
 		private readonly Dictionary<T0, T1> m_forward = new Dictionary<T0, T1>();
 		private readonly Dictionary<T1, T0> m_reverse = new Dictionary<T1, T0>();

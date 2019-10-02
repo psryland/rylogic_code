@@ -179,7 +179,7 @@ namespace Rylogic.Streams
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the read operation.</exception>
 		/// <filterpriority>2</filterpriority>
-		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
 		{
 			return m_stream.BeginRead(buffer, offset, count, callback, state);
 		}
@@ -216,7 +216,7 @@ namespace Rylogic.Streams
 		/// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed.</exception>
 		/// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the write operation.</exception>
 		/// <filterpriority>2</filterpriority>
-		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
 		{
 			return m_stream.BeginWrite(buffer, offset, count, callback, state);
 		}
@@ -330,13 +330,13 @@ namespace Rylogic.Streams
 			m_stream.WriteByte(value);
 		}
 		
-		#if !PR_DOTNET35
-		[Obsolete] protected override void ObjectInvariant()
-		{
-			MethodInfo method = m_stream.GetType().GetMethod("ObjectInvariant", BindingFlags.NonPublic|BindingFlags.ExactBinding);
-			method.Invoke(m_stream, null);
-		}
-		#endif
+		//#if !NET35
+		//[Obsolete] protected override void ObjectInvariant()
+		//{
+		//	var method = m_stream.GetType().GetMethod("ObjectInvariant", BindingFlags.NonPublic|BindingFlags.ExactBinding);
+		//	method.Invoke(m_stream, null);
+		//}
+		//#endif
 
 		/// <summary>
 		/// Obtains a lifetime service object to control the lifetime policy for this instance.

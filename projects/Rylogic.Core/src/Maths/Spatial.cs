@@ -76,9 +76,9 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
-			return o is v8<T> && (v8<T>)o == this;
+			return o is v8<T> v && v == this;
 		}
 		public override int GetHashCode()
 		{
@@ -150,9 +150,9 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
-			return o is m6x8<T,U> && (m6x8<T,U>)o == this;
+			return o is m6x8<T,U> m && m == this;
 		}
 		public override int GetHashCode()
 		{
@@ -218,9 +218,9 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
-			return o is Txfm6x8<T> && (Txfm6x8<T>)o == this;
+			return o is Txfm6x8<T> m && m == this;
 		}
 		public override int GetHashCode()
 		{

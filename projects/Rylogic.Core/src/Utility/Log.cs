@@ -354,9 +354,9 @@ namespace Rylogic.Utility
 		{
 			if (!Enabled) return;
 			var message =
-				ex is AggregateException        ae ? string.Concat(msg," - Exception: ", ae.MessageFull()) :
-				ex is TargetInvocationException ie ? string.Concat(msg," - Exception: ", ie.InnerException.Message) :
-				string.Concat(msg," - Exception: ", ex.MessageFull());
+				ex is AggregateException ae ? string.Concat(msg, " - Exception: ", ae.MessageFull()) :
+				ex is TargetInvocationException ie && ie.InnerException != null ? string.Concat(msg, " - Exception: ", ie.InnerException.Message) :
+				string.Concat(msg, " - Exception: ", ex.MessageFull());
 			var evt = new LogEvent(level, Context.TimeZero, Tag, message, file, line);
 			Write(evt);
 			ForwardLog?.Write(evt);
@@ -540,7 +540,7 @@ namespace Rylogic.Utility
 			{
 				try
 				{
-					if (!Queue.TryTake(out ev))
+					if (!Queue.TryTake(out ev!))
 					{
 						// Notes:
 						//  - If you get a block here on shutdown, it's probably because of leaked references to

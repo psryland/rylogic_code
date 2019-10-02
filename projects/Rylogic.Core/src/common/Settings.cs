@@ -410,7 +410,7 @@ namespace Rylogic.Common
 				}
 
 				// Handlers
-				void HandleSettingChange(object sender, SettingChangeEventArgs args)
+				void HandleSettingChange(object? sender, SettingChangeEventArgs args)
 				{
 					if (args.Before) return;
 					AutoSave();
@@ -564,7 +564,7 @@ namespace Rylogic.Common
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
 				var path = Path.GetDirectoryName(filepath);
-				if (!Path_.DirExists(path))
+				if (path != null && !Path_.DirExists(path))
 					Directory.CreateDirectory(path);
 
 				try
@@ -625,7 +625,7 @@ namespace Rylogic.Common
 			var ctx = SynchronizationContext.Current;
 			if (ctx != null)
 			{
-				void DoSave(object _) => Save();
+				void DoSave(object? _) => Save();
 				Task.Delay(500).ContinueWith(x => ctx.Post(DoSave, null));
 				m_auto_save_pending = true;
 			}

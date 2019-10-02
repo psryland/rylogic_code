@@ -19,9 +19,9 @@ namespace Rylogic.Utility
 				var mi = typeof(T).GetProperty("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
 				var fi = typeof(T).GetField("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
 				if (mi != null)
-					m_max_value = () => (T)mi.Invoke(null, null);
+					m_max_value = () => (T)mi.Invoke(null, null)!;
 				else if (fi != null)
-					m_max_value = () => (T)fi.GetValue(null);
+					m_max_value = () => (T)fi.GetValue(null)!;
 				else
 					m_max_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MaxValue'"); };
 			}
@@ -31,9 +31,9 @@ namespace Rylogic.Utility
 				var mi = typeof(T).GetProperty("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
 				var fi = typeof(T).GetField("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
 				if (mi != null)
-					m_min_value = () => (T)mi.Invoke(null, null);
+					m_min_value = () => (T)mi.Invoke(null, null)!;
 				else if (fi != null)
-					m_min_value = () => (T)fi.GetValue(null);
+					m_min_value = () => (T)fi.GetValue(null)!;
 				else
 					m_min_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MinValue'"); };
 			}
@@ -271,11 +271,11 @@ namespace Rylogic.Utility
 				var mi1 = typeof(T).GetMethod("ToString", new[]{typeof(IFormatProvider)});
 				var mi2 = typeof(T).GetMethod("ToString", new[]{typeof(string)});
 				var mi3 = typeof(T).GetMethod("ToString", new[]{typeof(string), typeof(IFormatProvider)});
-				if (mi1 != null) m_tostring1 = (a,fp) => (string)mi1.Invoke(a, new object[]{ fp });
+				if (mi1 != null) m_tostring1 = (a,fp) => (string?)mi1.Invoke(a, new object[]{ fp });
 				else             m_tostring1 = (a,fp) => { throw new Exception($"Type {typeof(T).Name} has no ToString(IFormatProvider) overload"); };
-				if (mi2 != null) m_tostring2 = (a,fmt) => (string)mi2.Invoke(a, new object[]{ fmt });
+				if (mi2 != null) m_tostring2 = (a,fmt) => (string?)mi2.Invoke(a, new object[]{ fmt });
 				else             m_tostring2 = (a,fmt) => { throw new Exception($"Type {typeof(T).Name} has no ToString(string) overload"); };
-				if (mi3 != null) m_tostring3 = (a,fmt,fp) => (string)mi3.Invoke(a, new object[]{ fmt, fp });
+				if (mi3 != null) m_tostring3 = (a,fmt,fp) => (string?)mi3.Invoke(a, new object[]{ fmt, fp });
 				else             m_tostring3 = (a,fmt,fp) => { throw new Exception($"Type {typeof(T).Name} has no ToString(string, IFormatProvider) overload"); };
 			}
 			#endregion
@@ -283,7 +283,7 @@ namespace Rylogic.Utility
 			{
 				var mi = typeof(T).GetMethod("Parse", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy, null, new Type[]{ typeof(string) }, null);
 				if (mi != null)
-					m_parse = s => (T)mi.Invoke(null, new object[]{ s });
+					m_parse = s => (T)mi.Invoke(null, new object[]{ s })!;
 				else
 					m_parse = s => { throw new Exception($"Type {typeof(T).Name} has no static method named 'Parse'"); };
 			}
@@ -359,12 +359,12 @@ namespace Rylogic.Utility
 
 		/// <summary>ToString with formatting</summary>
 		public static string ToString(T a)                                 { return a?.ToString() ?? string.Empty; }
-		public static string ToString(T a, IFormatProvider fp)             { return m_tostring1(a, fp); }
-		public static string ToString(T a, string fmt)                     { return m_tostring2(a, fmt); }
-		public static string ToString(T a, string fmt, IFormatProvider fp) { return m_tostring3(a, fmt, fp); }
-		private static Func<T,IFormatProvider,string>        m_tostring1;
-		private static Func<T,string,string>                 m_tostring2;
-		private static Func<T,string,IFormatProvider,string> m_tostring3;
+		public static string ToString(T a, IFormatProvider fp)             { return m_tostring1(a, fp) ?? string.Empty; }
+		public static string ToString(T a, string fmt)                     { return m_tostring2(a, fmt) ?? string.Empty; }
+		public static string ToString(T a, string fmt, IFormatProvider fp) { return m_tostring3(a, fmt, fp) ?? string.Empty; }
+		private static Func<T,IFormatProvider,string?>        m_tostring1;
+		private static Func<T,string,string?>                 m_tostring2;
+		private static Func<T,string,IFormatProvider,string?> m_tostring3;
 
 		/// <summary>Parse</summary>
 		public static bool TryParse(string str, out T val)

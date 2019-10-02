@@ -74,7 +74,7 @@ namespace Rylogic.Common
 			{
 				if (m_member_name == value) return;
 				m_member_name = value;
-				m_get = m_member_name.HasValue() ? typeof(TSrc).GetProperty(m_member_name, Flags).GetGetMethod() : null;
+				m_get = m_member_name.HasValue() ? typeof(TSrc).GetProperty(m_member_name, Flags)?.GetGetMethod() : null;
 				ResetBindings();
 			}
 		}
@@ -105,7 +105,7 @@ namespace Rylogic.Common
 		public TValue DefaultValue { get; set; }
 
 		/// <summary>Get the current value from the 'DataSource' or null if not yet bound</summary>
-		public TValue Value => (m_get != null && DataSource != null) ? (TValue)m_get.Invoke(DataSource, null) : DefaultValue;
+		public TValue Value => (m_get != null && DataSource != null) ? (TValue)m_get.Invoke(DataSource, null)! : DefaultValue;
 
 		/// <summary>The binding flags used to find the property on the data source</summary>
 		public BindingFlags Flags { get; set; }
@@ -127,7 +127,7 @@ namespace Rylogic.Common
 					throw new Exception($"Property type mismatch. Binding source type {typeof(TValue).Name} is not assignable to a property with type {prop.PropertyType.Name}.");
 
 				// Add the binding
-				var set = prop.GetSetMethod();
+				var set = prop.GetSetMethod() ?? throw new Exception($"Property {property_or_method_name} has not setter");
 				var bind = new Link(obj, set);
 				m_bound.Add(bind);
 

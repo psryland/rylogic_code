@@ -154,9 +154,9 @@ namespace Rylogic.Container
 		{
 			Lists.Back().Add(item);
 		}
-		int IList.Add(object value)
+		int IList.Add(object? value)
 		{
-			Add((T)value);
+			Add((T)value!);
 			return Count - 1;
 		}
 
@@ -182,9 +182,9 @@ namespace Rylogic.Container
 
 			return false;
 		}
-		bool IList.Contains(object value)
+		bool IList.Contains(object? value)
 		{
-			return Contains((T)value);
+			return Contains((T)value!);
 		}
 
 		/// <summary>Populate 'array' with the contents of this ConcatList</summary>
@@ -220,9 +220,9 @@ namespace Rylogic.Container
 			}
 			return -1;
 		}
-		int IList.IndexOf(object value)
+		int IList.IndexOf(object? value)
 		{
-			return IndexOf((T)value);
+			return IndexOf((T)value!);
 		}
 
 		/// <summary>Insert 'item' into the list at index position 'index'</summary>
@@ -235,9 +235,9 @@ namespace Rylogic.Container
 			var list = Lists[addr.ListIdx];
 			list.Insert(addr.ItemIdx != -1 ? addr.ItemIdx : list.Count, item);
 		}
-		void IList.Insert(int index, object value)
+		void IList.Insert(int index, object? value)
 		{
-			Insert(index, (T)value);
+			Insert(index, (T)value!);
 		}
 
 		/// <summary>Remove the first occurrence of 'item' from this ConcatList</summary>
@@ -249,9 +249,9 @@ namespace Rylogic.Container
 
 			return false;
 		}
-		void IList.Remove(object value)
+		void IList.Remove(object? value)
 		{
-			Remove((T)value);
+			Remove((T)value!);
 		}
 		public void Remove(T item, bool purge_empty_lists)
 		{

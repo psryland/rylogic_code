@@ -78,7 +78,9 @@ namespace Rylogic.Utility
 
 		/// <summary>Disposes values in the 'doomed' dictionary. On return, 'doomed' will be an empty dictionary</summary>
 		[DebuggerStepThrough]
-		public static void DisposeAll<K,V>(IDictionary<K,V>? doomed) where V : class, IDisposable
+		public static void DisposeAll<K,V>(IDictionary<K,V>? doomed)
+			where K : notnull
+			where V : class, IDisposable
 		{
 			if (doomed == null) return;
 			foreach (var kv in doomed)
@@ -103,12 +105,12 @@ namespace Rylogic.Utility
 		public static void DisposeRange(IList doomed, int start, int count)
 		{
 			for (int i = start, iend = start + count; i != iend; ++i)
-				doomed[i] = Dispose((IDisposable)doomed[i]);
+				doomed[i] = Dispose((IDisposable?)doomed[i]);
 		}
 
 		/// <summary>True if the current thread is the 'main' thread</summary>
 		public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == m_main_thread_id;
-		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+		private static readonly int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
 		public static bool IsGCFinalizerThread => Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId;
@@ -318,6 +320,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Helper for allocating a dictionary preloaded with data</summary>
 		public static Dictionary<TKey,TValue> NewDict<TKey,TValue>(int count, Func<int,TKey> key, Func<int,TValue> value)
+			where TKey : notnull
 		{
 			var dick = new Dictionary<TKey,TValue>();
 			for (int i = 0; i != count; ++i) dick.Add(key(i), value(i));
@@ -385,7 +388,7 @@ namespace Rylogic.Utility
 			using (var ptr = Marshal_.AllocHGlobal(sz))
 			{
 				Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
-				return (T)Marshal.PtrToStructure(ptr.Value.Ptr, typeof(T));
+				return Marshal.PtrToStructure<T>(ptr.Value.Ptr);
 			}
 		}
 
@@ -394,7 +397,7 @@ namespace Rylogic.Utility
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			using (var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned))
-				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
+				return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>Simple binary serialise</summary>
@@ -589,25 +592,19 @@ namespace Rylogic.Utility
 				return ass;
 			}
 		}
-		public static string MainAssemblyName
-		{
-			get { return MainAssembly?.GetName().Name ?? string.Empty; }
-		}
+		public static string MainAssemblyName => MainAssembly?.GetName().Name ?? string.Empty;
 
 		/// <summary>Return the version number for an assembly</summary>
 		public static Version AssemblyVersion(Assembly? ass = null)
 		{
-			ass = ass ?? MainAssembly;
+			ass ??= MainAssembly;
 			return ass?.GetName().Version ?? new Version();
 		}
 		public static Version AssemblyVersion(Type type)
 		{
 			return AssemblyVersion(Assembly.GetAssembly(type));
 		}
-		public static string AppVersion
-		{
-			get { return AssemblyVersion().ToString(3); }
-		}
+		public static string AppVersion => AssemblyVersion().ToString(3);
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly? ass = null)
@@ -629,16 +626,14 @@ namespace Rylogic.Utility
 		{
 			return AssemblyTimestamp(Assembly.GetAssembly(type));
 		}
-		public static DateTime AppTimestamp
-		{
-			get { return AssemblyTimestamp(); }
-		}
+		public static DateTime AppTimestamp => AssemblyTimestamp();
 
 		/// <summary>Return the copyright string from an assembly</summary>
 		public static string AssemblyCopyright(Assembly? ass = null)
 		{
-			ass = ass ?? MainAssembly;
-			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCopyrightAttribute)).ConstructorArguments[0].Value.ToString();
+			ass ??= MainAssembly;
+			var attr = ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCopyrightAttribute));
+			return attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
 		}
 		public static string AssemblyCopyright(Type type)
 		{
@@ -652,8 +647,9 @@ namespace Rylogic.Utility
 		/// <summary>Return the company string from an assembly</summary>
 		public static string AssemblyCompany(Assembly? ass = null)
 		{
-			ass = ass ?? MainAssembly;
-			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCompanyAttribute)).ConstructorArguments[0].Value.ToString();
+			ass ??= MainAssembly;
+			var attr = ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyCompanyAttribute));
+			return attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
 		}
 		public static string AssemblyCompany(Type type)
 		{
@@ -667,8 +663,9 @@ namespace Rylogic.Utility
 		/// <summary>Return the product name string from an assembly</summary>
 		public static string AssemblyProductName(Assembly? ass = null)
 		{
-			ass = ass ?? MainAssembly;
-			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyProductAttribute)).ConstructorArguments[0].Value.ToString();
+			ass ??= MainAssembly;
+			var attr = ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyProductAttribute));
+			return attr.ConstructorArguments[0].Value?.ToString() ?? string.Empty;
 		}
 		public static string AssemblyProductName(Type type)
 		{
@@ -1055,13 +1052,16 @@ namespace Rylogic.Utility
 		/// <summary>A stack trace that selected a band of stack frames</summary>
 		public static string StackTrace(int skip, int count)
 		{
-			StringBuilder sb = new StringBuilder();
+			var sb = new StringBuilder();
 			var st = new StackTrace(1,true).GetFrames();
-			if (st == null) return "";
+			if (st == null)
+				return string.Empty;
+
 			foreach (var s in st.Skip(skip).Take(count))
 			{
+				if (s == null) continue;
 				var m = s.GetMethod();
-				sb.AppendFormat(" {0,-60}({1,3})  {2}.{3}\n" ,s.GetFileName() ,s.GetFileLineNumber() ,m.ReflectedType.FullName ,m.Name);
+				sb.AppendFormat(" {0,-60}({1,3})  {2}.{3}\n", s.GetFileName(), s.GetFileLineNumber(), m?.ReflectedType?.FullName ?? "<unknown>", m?.Name ?? "<unknown>");
 			}
 			return sb.ToString();
 		}
@@ -1069,7 +1069,7 @@ namespace Rylogic.Utility
 		/// <summary>Format a multi-line string that probably contains file/line info so that it becomes click-able in the debugger output window</summary>
 		public static string FormatForOutputWindow(string text, string? pattern = null)
 		{
-			pattern = pattern ?? Regex_.FullPathPattern;
+			pattern ??= Regex_.FullPathPattern;
 
 			var sb = new StringBuilder();
 			var lines = text.Split('\n');
@@ -1237,24 +1237,28 @@ namespace Rylogic.Utility
 		/// <summary>Call the constructor of 'T' to create a new instance. Use x.GetType().New() if the type is unknown at compile time</summary>
 		public static T New()
 		{
-			var arg_types = new Type[] { };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(null);
+			m_cons0 ??= typeof(T).GetConstructor(new Type[] { }) ?? throw new Exception($"No default constructor found for {typeof(T).Name}");
+			return (T)m_cons0.Invoke(null);
 		}
 		public static T New<A0>(A0 a0)
 		{
-			var arg_types = new Type[] { typeof(A0) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0 });
+			m_cons1 ??= typeof(T).GetConstructor(new Type[] { typeof(A0) }) ?? throw new Exception($"No arity 1 constructor found for {typeof(T).Name}");
+			return (T)m_cons1.Invoke(new object?[] { a0 });
 		}
 		public static T New<A0, A1>(A0 a0, A1 a1)
 		{
-			var arg_types = new Type[] { typeof(A0), typeof(A1) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0, a1 });
+			m_cons2 ??= typeof(T).GetConstructor(new Type[] { typeof(A0), typeof(A1) }) ?? throw new Exception($"No arity 2 constructor found for {typeof(T).Name}");
+			return (T)m_cons2.Invoke(new object?[] { a0, a1 });
 		}
 		public static T New<A0, A1, A2>(A0 a0, A1 a1, A2 a2)
 		{
-			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
-			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object?[] { a0, a1, a2 });
+			m_cons3 ??= typeof(T).GetConstructor(new Type[] { typeof(A0), typeof(A1), typeof(A2) }) ?? throw new Exception($"No arity 3 constructor found for {typeof(T).Name}");
+			return (T)m_cons3.Invoke(new object?[] { a0, a1, a2 });
 		}
+		private static ConstructorInfo? m_cons0;
+		private static ConstructorInfo? m_cons1;
+		private static ConstructorInfo? m_cons2;
+		private static ConstructorInfo? m_cons3;
 
 		/// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
 		public static byte[] ToBlob(T obj)
@@ -1342,7 +1346,7 @@ namespace Rylogic.UnitTests
 			{
 				return !(left == right);
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				return base.Equals(obj);
 			}
@@ -1390,10 +1394,10 @@ namespace Rylogic.UnitTests
 		    Assert.Equal( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
 	    }
 		[Test] public void Convert()
-	    {
-		    int[] src = {1,2,3,4};
-		    List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
-		    for (int i = 0; i != src.Length; ++i) Assert.Equal(dst[i], 2*src[i]);
+		{
+			var src = new[] {1,2,3,4};
+			var dst = new List<int>(Util.Conv(src, i=>i*2));
+			for (int i = 0; i != src.Length; ++i) Assert.Equal(dst[i], 2*src[i]);
 	    }
 		[Test] public void ToFromByteArray()
 		{
@@ -1415,7 +1419,14 @@ namespace Rylogic.UnitTests
 		}
 		[Test] public void ToFromXml()
 		{
-			var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
+			var x1 = new SerialisableType
+			{
+				Int = 1,
+				String = "2",
+				Point = new Point(3, 4),
+				EEnum = SerialisableType.SomeEnum.Two,
+				Data = new[] { 1, 2, 3, 4 }
+			};
 			var xml = Util<SerialisableType>.ToXml(x1, true);
 			var x2 = Util<SerialisableType>.FromXml(xml);
 			Assert.Equal(x1.Int, x2.Int);

@@ -36,7 +36,7 @@ namespace Rylogic.Attrib
 		private static readonly Cache<string, object> m_str_cache = new Cache<string, object>(1000) { ThreadSafe = true };
 
 		/// <summary>Get the DescAttribute or DescriptionAttribute associated with a member</summary>
-		public static Attribute? Find(MemberInfo mi)
+		public static Attribute? Find(MemberInfo? mi)
 		{
 			if (mi == null) return null;
 			var d0 = Attribute.GetCustomAttribute(mi, typeof(DescAttribute), false) as DescAttribute;
@@ -47,7 +47,7 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>Return the description for a property or field</summary>
-		public static string? Desc(Type ty, MemberInfo mi)
+		public static string? Desc(Type ty, MemberInfo? mi)
 		{
 			if (mi == null) return null; // Return null to distinguish between Desc("") and no DescAttribute
 			return (string)m_str_cache.Get(Key(ty, mi.Name), OnMiss);
@@ -64,8 +64,8 @@ namespace Rylogic.Attrib
 		public static string? Desc(Type ty, string member_name)
 		{
 			var mi =
-				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
-				(MemberInfo)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+				(MemberInfo?)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
+				(MemberInfo?)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
 			return Desc(ty, mi);
 		}
 

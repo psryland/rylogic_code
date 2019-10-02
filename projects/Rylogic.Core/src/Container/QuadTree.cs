@@ -32,13 +32,12 @@ namespace Rylogic.Container
 				m_x = rhs.m_x;
 				m_y = rhs.m_y;
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
-				var rhs = obj as Coord;
-				return rhs != null
-					&& Equals(m_level ,rhs.m_level)
-					&& Equals(m_x     ,rhs.m_x    )
-					&& Equals(m_y     ,rhs.m_y    );
+				return obj is Coord rhs
+					&& Equals(m_level, rhs.m_level)
+					&& Equals(m_x, rhs.m_x)
+					&& Equals(m_y, rhs.m_y);
 			}
 			public override int GetHashCode()
 			{

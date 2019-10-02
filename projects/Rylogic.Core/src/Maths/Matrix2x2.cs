@@ -105,7 +105,7 @@ namespace Rylogic.Maths
 		public static m2x2 Identity { get { return m_identity; } }
 
 		// Functions
-		public override bool Equals(object o)               { return o is m2x2 && (m2x2)o == this; }
+		public override bool Equals(object? o)              { return o is m2x2 m && m == this; }
 		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode(); } }
 		public static m2x2 operator + (m2x2 rhs)            { return rhs; }
 		public static m2x2 operator - (m2x2 rhs)            { return new m2x2(-rhs.x, -rhs.y); }

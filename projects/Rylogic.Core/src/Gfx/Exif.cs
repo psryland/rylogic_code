@@ -715,7 +715,7 @@ namespace Rylogic.Gfx
 		{
 			/// <summary>Jpg thumbnail data</summary>
 			public override byte[] Thumbnail => m_Thumbnail;
-			private byte[] m_Thumbnail = new byte[0];
+			private byte[] m_Thumbnail = Array.Empty<byte>();
 
 			/// <summary>Returns access to the sub IFD table</summary>
 			public override IExifDataInternal SubIfd { get { return m_sub_ifd ?? (m_sub_ifd = new Data()); } }
@@ -729,8 +729,7 @@ namespace Rylogic.Gfx
 			/// <summary>Return the field associated with 'tag'</summary>
 			public override Field Field(Tag tag, bool recursive)
 			{
-				Field r;
-				if (m_ifd.TryGetValue(tag, out r)) return r;
+				if (m_ifd.TryGetValue(tag, out var r)) return r;
 				if (!recursive) return Exif.Field.Null;
 				if (m_sub_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_sub_ifd.Field(tag, true)))) return r;
 				if (m_gps_ifd != null && !ReferenceEquals(Exif.Field.Null, (r = m_gps_ifd.Field(tag, true)))) return r;
@@ -779,7 +778,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Jpg thumbnail data</summary>
-			public override byte[] Thumbnail => m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : new byte[0];
+			public override byte[] Thumbnail => m_thumbnail_length != 0 ? m_br.ReadBytes(m_thumbnail_offset, m_thumbnail_length) : Array.Empty<byte>();
 
 			/// <summary>Returns access to the sub IFD table</summary>
 			public override IExifDataInternal SubIfd => m_sub_ifd ?? (m_sub_ifd = new Index(m_br.BaseStream));

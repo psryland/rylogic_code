@@ -9,31 +9,43 @@ using System.Runtime.CompilerServices;
 using Rylogic.Common;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Range = Rylogic.Common.Range;
 
 namespace Rylogic.Extn
 {
 	public static class Type_
 	{
+		/// <summary>Return the type of this instance, falling back to its declared type if null</summary>
+		public static Type Ty<T>(this T t)
+		{
+			return t?.GetType() ?? typeof(T);
+		}
+
 		/// <summary>Call the constructor of this type to create a new instance. Use Util'T.New if the type is known at compile time</summary>
 		public static object New(this Type ty)
 		{
-			var arg_types = new Type[] { };
-			return ty.GetConstructor(arg_types).Invoke(null);
+			var cons = ty.GetConstructor(Array.Empty<Type>()) ?? throw new Exception($"Default constructor for {ty.Name} not found");
+			return cons.Invoke(null);
 		}
 		public static object New<A0>(this Type ty, A0 a0)
 		{
-			var arg_types = new Type[] { typeof(A0) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0! });
+			var cons = ty.GetConstructor(new Type[] { a0.Ty() }) ?? throw new Exception($"Arity 1 constructor for {ty.Name} not found");
+			return cons.Invoke(new object?[] { a0 });
 		}
 		public static object New<A0, A1>(this Type ty, A0 a0, A1 a1)
 		{
-			var arg_types = new Type[] { typeof(A0), typeof(A1) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0!, a1! });
+			var cons = ty.GetConstructor(new Type[] { a0.Ty(), a1.Ty() }) ?? throw new Exception($"Arity 2 constructor for {ty.Name} not found");
+			return cons.Invoke(new object?[] { a0, a1 });
 		}
 		public static object New<A0, A1, A2>(this Type ty, A0 a0, A1 a1, A2 a2)
 		{
-			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
-			return ty.GetConstructor(arg_types).Invoke(new object[] { a0!, a1!, a2! });
+			var cons = ty.GetConstructor(new Type[] { a0.Ty(), a1.Ty(), a2.Ty() }) ?? throw new Exception($"Arity 3 constructor for {ty.Name} not found");
+			return cons.Invoke(new object?[] { a0, a1, a2 });
+		}
+		public static object New<A0, A1, A2, A3>(this Type ty, A0 a0, A1 a1, A2 a2, A3 a3)
+		{
+			var cons = ty.GetConstructor(new Type[] { a0.Ty(), a1.Ty(), a2.Ty(), a3.Ty() }) ?? throw new Exception($"Arity 3 constructor for {ty.Name} not found");
+			return cons.Invoke(new object?[] { a0, a1, a2, a3 });
 		}
 
 		/// <summary>Return a default instance of this type</summary>
@@ -89,48 +101,55 @@ namespace Rylogic.Extn
 			}
 			name = Replace("Rylogic.Extn.ToolStripLocations", "Rylogic.Gui.WinForms.ToolStripLocations");
 			// End temporary
-
-			return Type.GetType(name, null
-				,(assembly,type_name,ignore_case) =>
-					{
-						var assems = assembly != null ? new[]{assembly} : AppDomain.CurrentDomain.GetAssemblies();
-						return assems.Select(ass => ass.GetType(type_name,false,ignore_case)).FirstOrDefault(t => t != null);
-					}
-				,throw_on_error);
+			
+			var type = Type.GetType(name, null, ResolveCB, throw_on_error);
+			return type ?? throw new TypeLoadException($"Type {name} not found");
+	
+			// Type resolver callback
+			Type? ResolveCB(Assembly? assembly, string type_name, bool ignore_case)
+			{
+				var assems = assembly != null ? new[] { assembly } : AppDomain.CurrentDomain.GetAssemblies();
+				return assems.Select(ass => ass.GetType(type_name, false, ignore_case)).FirstOrDefault(t => t != null);
+			}
 		}
 
 		/// <summary>Returns all inherited members for a type (including private members)</summary>
 		public static IEnumerable<MemberInfo> AllMembers(this Type type, BindingFlags flags)
 		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<MemberInfo>();
-			return AllMembers(type.BaseType, flags).Concat(type.GetMembers(flags|BindingFlags.DeclaredOnly));
+			return type != null && type != typeof(object) && type.BaseType != null
+				? AllMembers(type.BaseType, flags).Concat(type.GetMembers(flags|BindingFlags.DeclaredOnly))
+				: Enumerable.Empty<MemberInfo>();
 		}
 
 		/// <summary>Returns all inherited properties for a type</summary>
 		public static IEnumerable<PropertyInfo> AllProps(this Type type, BindingFlags flags)
 		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<PropertyInfo>();
-			return AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly));
+			return type != null && type != typeof(object) && type.BaseType != null
+				? AllProps(type.BaseType, flags).Concat(type.GetProperties(flags|BindingFlags.DeclaredOnly))
+				: Enumerable.Empty<PropertyInfo>();
 		}
 
 		/// <summary>Returns all inherited fields for a type</summary>
 		public static IEnumerable<FieldInfo> AllFields(this Type type, BindingFlags flags)
 		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<FieldInfo>();
-			return AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly));
+			return type != null && type != typeof(object) && type.BaseType != null
+				? AllFields(type.BaseType, flags).Concat(type.GetFields(flags|BindingFlags.DeclaredOnly))
+				: Enumerable.Empty<FieldInfo>();
 		}
 
 		/// <summary>Returns all inherited events for a type</summary>
 		public static IEnumerable<EventInfo> AllEvents(this Type type, BindingFlags flags)
 		{
-			if (type == null || type == typeof(object)) return Enumerable.Empty<EventInfo>();
-			return AllEvents(type.BaseType, flags).Concat(type.GetEvents(flags|BindingFlags.DeclaredOnly));
+			return type != null && type != typeof(object) && type.BaseType != null
+				? AllEvents(type.BaseType, flags).Concat(type.GetEvents(flags|BindingFlags.DeclaredOnly))
+				: Enumerable.Empty<EventInfo>();
 		}
 
 		/// <summary>Find all types derived from this type</summary>
 		public static List<Type> DerivedTypes(this Type type)
 		{
-			return Assembly.GetAssembly(type).GetTypes().Where(t => t != type && type.IsAssignableFrom(t)).ToList();
+			var ass = Assembly.GetAssembly(type) ?? throw new Exception($"The assembly containing {type.Name} could not be found");
+			return ass.GetTypes().Where(t => t != type && type.IsAssignableFrom(t)).ToList();
 		}
 
 		/// <summary>Returns true if 'type' is or inherits 'baseOrInterface'</summary>
@@ -223,7 +242,7 @@ namespace Rylogic.Extn
 		{
 			return
 				type.FindAttribute<CompilerGeneratedAttribute>(inherit: false) != null &&
-				type.FullName.Contains("AnonymousType");
+				type.FullName != null && type.FullName.Contains("AnonymousType");
 		}
 
 		/// <summary>Returns the methods on this type that are decorated with the attribute 'attribute_type'</summary>
@@ -244,27 +263,25 @@ namespace Rylogic.Extn
 			type = Nullable.GetUnderlyingType(type) ?? type;
 			type = type.IsEnum ? type.GetEnumUnderlyingType() : type;
 
-			switch (type.Name)
+			return type.Name switch
 			{
-			default:
-				//if (type.IsClass) return System.Data.DbType.Object;
-				throw new Exception($"Unknown conversion from {type.Name} to DbType");
-			case "String": return System.Data.DbType.String;
-			case "Byte[]": return System.Data.DbType.Binary;
-			case "Boolean": return System.Data.DbType.Boolean;
-			case "Byte": return System.Data.DbType.Byte;
-			case "SByte": return System.Data.DbType.SByte;
-			case "Int16": return System.Data.DbType.Int16;
-			case "Int32": return System.Data.DbType.Int32;
-			case "Int64": return System.Data.DbType.Int64;
-			case "UInt16": return System.Data.DbType.UInt16;
-			case "UInt32": return System.Data.DbType.UInt32;
-			case "UInt64": return System.Data.DbType.UInt64;
-			case "Single": return System.Data.DbType.Single;
-			case "Double": return System.Data.DbType.Double;
-			case "Decimal": return System.Data.DbType.Decimal;
-			case "Guid": return System.Data.DbType.Guid;
-			}
+				"String"  => System.Data.DbType.String,
+				"Byte[]"  => System.Data.DbType.Binary,
+				"Boolean" => System.Data.DbType.Boolean,
+				"Byte"    => System.Data.DbType.Byte,
+				"SByte"   => System.Data.DbType.SByte,
+				"Int16"   => System.Data.DbType.Int16,
+				"Int32"   => System.Data.DbType.Int32,
+				"Int64"   => System.Data.DbType.Int64,
+				"UInt16"  => System.Data.DbType.UInt16,
+				"UInt32"  => System.Data.DbType.UInt32,
+				"UInt64"  => System.Data.DbType.UInt64,
+				"Single"  => System.Data.DbType.Single,
+				"Double"  => System.Data.DbType.Double,
+				"Decimal" => System.Data.DbType.Decimal,
+				"Guid"    => System.Data.DbType.Guid,
+				_ => throw new Exception($"Unknown conversion from {type.Name} to DbType"),
+			};
 		}
 
 		/// <summary>Reformat the stack trace string to suit the debugger output window</summary>
@@ -280,8 +297,7 @@ namespace Rylogic.Extn
 	{
 		public static bool? TryParse(string val)
 		{
-			bool o;
-			return bool.TryParse(val, out o) ? (bool?)o : null;
+			return bool.TryParse(val, out var o) ? o : (bool?)null;
 		}
 	}
 
@@ -309,8 +325,7 @@ namespace Rylogic.Extn
 		/// <summary>Parse an integer returning the value or null</summary>
 		public static int? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
-			int o;
-			return int.TryParse(val, style, null, out o) ? (int?)o : null;
+			return int.TryParse(val, style, null, out var o) ? (int?)o : null;
 		}
 
 		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
@@ -358,8 +373,7 @@ namespace Rylogic.Extn
 		/// <summary>Parse an unsigned integer returning the value or null</summary>
 		public static uint? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
-			uint o;
-			return uint.TryParse(val, style, null, out o) ? (uint?)o : null;
+			return uint.TryParse(val, style, null, out var o) ? (uint?)o : null;
 		}
 
 		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
@@ -399,8 +413,7 @@ namespace Rylogic.Extn
 		/// <summary>Parse a long returning the value or null</summary>
 		public static long? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
-			long o;
-			return long.TryParse(val, style, null, out o) ? (long?)o : null;
+			return long.TryParse(val, style, null, out var o) ? (long?)o : null;
 		}
 
 		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
@@ -447,8 +460,7 @@ namespace Rylogic.Extn
 	{
 		public static ulong? TryParse(string val, NumberStyles style = NumberStyles.Integer)
 		{
-			ulong o;
-			return ulong.TryParse(val, style, null, out o) ? (ulong?)o : null;
+			return ulong.TryParse(val, style, null, out var o) ? (ulong?)o : null;
 		}
 
 		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
@@ -499,8 +511,7 @@ namespace Rylogic.Extn
 		/// <summary>Try parse a float from a string</summary>
 		public static float? TryParse(string val, NumberStyles style = NumberStyles.Float)
 		{
-			float o;
-			return float.TryParse(val, style, null, out o) ? (float?)o : null;
+			return float.TryParse(val, style, null, out var o) ? (float?)o : null;
 		}
 
 		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
@@ -587,12 +598,12 @@ namespace Rylogic.Extn
 		}
 		public static long Mantissa(this double x)
 		{
-			x.Decompose(out var mantissa, out var e, out var s);
+			x.Decompose(out var mantissa, out _, out _);
 			return mantissa;
 		}
 		public static long Exponent(this double x)
 		{
-			x.Decompose(out var m, out var exponent, out var s);
+			x.Decompose(out _, out var exponent, out _);
 			return exponent;
 		}
 
@@ -688,8 +699,7 @@ namespace Rylogic.Extn
 			else
 			{
 				// See if we should remove the trailing decimal point.
-				if ((significant_digits < test.Length) &&
-					result.EndsWith("."))
+				if (significant_digits < test.Length && result.EndsWith("."))
 					result = result.Substring(0, result.Length - 1);
 			}
 

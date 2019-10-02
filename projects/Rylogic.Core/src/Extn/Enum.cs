@@ -125,8 +125,7 @@ namespace Rylogic.Extn
 			}
 			public override string ToStringInternal(long value)
 			{
-				string n;
-				return m_dic.TryGetValue(value, out n) ? n : value.ToString(CultureInfo.InvariantCulture);
+				return m_dic.TryGetValue(value, out var n) ? n : value.ToString(CultureInfo.InvariantCulture);
 			}
 			public override long ParseInternal(string value, bool ignoreCase, bool parseNumber)
 			{
@@ -134,8 +133,8 @@ namespace Rylogic.Extn
 				if (value.Length == 0) throw new ArgumentException("Value is empty", "value");
 
 				var f = value[0];
-				if (parseNumber && (Char.IsDigit(f) || f == '+' || f == '-'))
-					return Int32.Parse(value);
+				if (parseNumber && (char.IsDigit(f) || f == '+' || f == '-'))
+					return int.Parse(value);
 
 				var string_comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 				foreach (var pair in m_dic)
@@ -152,10 +151,10 @@ namespace Rylogic.Extn
 					return false;
 
 				var f = value[0];
-				if (parse_number && (Char.IsDigit(f) || f == '+' || f == '-'))
+				if (parse_number && (char.IsDigit(f) || f == '+' || f == '-'))
 				{
 					int i;
-					if (Int32.TryParse(value, out i))
+					if (int.TryParse(value, out i))
 					{
 						result = i;
 						return true;
@@ -187,8 +186,7 @@ namespace Rylogic.Extn
 			}
 			public override string ToStringInternal(long value)
 			{
-				string n;
-				if (m_dic.TryGetValue(value, out n)) return n;
+				if (m_dic.TryGetValue(value, out var n)) return n;
 				var sb = new StringBuilder();
 				const string sep = ", ";
 				for (var i = m_values.Length - 1; i >= 0; i--)
@@ -334,7 +332,7 @@ namespace Rylogic.Extn
 			{
 				m_fi = fi;
 				Name = fi.Name;
-				Value = (T)fi.GetValue(null);
+				Value = (T)fi.GetValue(null)!;
 			}
 
 			/// <summary>The name of the enum member</summary>
@@ -376,6 +374,7 @@ namespace Rylogic.Extn
 
 		/// <summary>Return the enum value with the given associated value. Null if there is no matching enum value</summary>
 		public static T? FromAssoc<TAssoc>(TAssoc assoc, string? name = null)
+			where TAssoc : notnull
 		{
 			if (m_assoc_reverse_lookup == null)
 			{
@@ -453,7 +452,7 @@ namespace Rylogic.Extn
 		public static string ToStringFast(this Enum e)
 		{
 			var ty  = typeof(Enum<>).MakeGenericType(e.GetType());
-			var str = (string)ty.InvokeMember(nameof(e.ToString), BindingFlags.InvokeMethod, null, null, new object[] { e });
+			var str = (string?)ty.InvokeMember(nameof(e.ToString), BindingFlags.InvokeMethod, null, null, new object[] { e }) ?? string.Empty;
 			return str;
 		}
 
@@ -464,7 +463,7 @@ namespace Rylogic.Extn
 			int i = 0;
 			foreach (var v in Enum.GetValues(e.GetType()))
 			{
-				if (e.GetHashCode() == v.GetHashCode()) return i;
+				if (v != null && e.GetHashCode() == v.GetHashCode()) return i;
 				++i;
 			}
 			return -1;

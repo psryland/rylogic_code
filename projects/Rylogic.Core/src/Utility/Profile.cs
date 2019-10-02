@@ -700,10 +700,10 @@ namespace Rylogic.Utility
 		private static int Compare(double lhs, double rhs) { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 
 		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
-		private static V GetOrAdd<K,V>(Dictionary<K,V> dic, K key, Func<V> def)
+		private static V GetOrAdd<K, V>(Dictionary<K, V> dic, K key, Func<V> def)
+			where K : notnull
 		{
-			V value;
-			if (dic.TryGetValue(key, out value)) return value;
+			if (dic.TryGetValue(key, out var value)) return value;
 			dic.Add(key, value = def()); // 'def' is only evaluated if 'key' is not found
 			return value;
 		}

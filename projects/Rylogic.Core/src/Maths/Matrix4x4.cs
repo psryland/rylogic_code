@@ -352,9 +352,9 @@ namespace Rylogic.Maths
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object o)
+		public override bool Equals(object? o)
 		{
-			return o is m4x4 && (m4x4)o == this;
+			return o is m4x4 m && m == this;
 		}
 		public override int GetHashCode()
 		{

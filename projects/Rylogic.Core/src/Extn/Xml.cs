@@ -17,6 +17,7 @@ using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Extn
 {
@@ -99,8 +100,8 @@ namespace Rylogic.Extn
 				this[typeof(KeyValuePair<,>)] = (obj, node) =>
 				{
 					var ty = obj.GetType();
-					node.Add2("k", ty.GetProperty(nameof(KeyValuePair<int,int>.Key  )).GetValue(obj), false);
-					node.Add2("v", ty.GetProperty(nameof(KeyValuePair<int,int>.Value)).GetValue(obj), false);
+					node.Add2("k", ty.GetProperty(nameof(KeyValuePair<int,int>.Key  ))!.GetValue(obj), false);
+					node.Add2("v", ty.GetProperty(nameof(KeyValuePair<int,int>.Value))!.GetValue(obj), false);
 					return node;
 				};
 				this[typeof(List<>)] = (obj, node) =>
@@ -168,15 +169,15 @@ namespace Rylogic.Extn
 
 				// Handle unknown collections as arrays
 				if (obj is IEnumerable &&
-					type != typeof(Range) &&
-					type != typeof(RangeF) &&
+					type != typeof(Rylogic.Common.Range) &&
+					type != typeof(Rylogic.Common.RangeF) &&
 					gen_type != typeof(List<>) &&
 					gen_type != typeof(Dictionary<,>) &&
 					gen_type != typeof(HashSet<>))
 				{
 					// Derive an element name from the singular of the array name
 					var name = node.Name.LocalName;
-					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
+					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0, name.Length-1) : "_";
 
 					// Determine the type of the array elements
 					var elem_type = type.GetElementType();
@@ -234,7 +235,7 @@ namespace Rylogic.Extn
 				if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
 
 				// Replace the mapping with a call directly to that method
-				ToMap[type] = (o, n) => (XElement)mi.Invoke(o, new object[] { n });
+				ToMap[type] = (o, n) => (XElement?)mi.Invoke(o, new object[] { n }) ?? throw new Exception("ToXml method returned null");
 				return ToMap[type](obj, node);
 			}
 
@@ -409,13 +410,13 @@ namespace Rylogic.Extn
 					var ty_args = type.GetGenericArguments();
 					var key = elem.Element("k").As(ty_args[0]);
 					var val = elem.Element("v").As(ty_args[1]);
-					return Activator.CreateInstance(type, key, val);
+					return type.New(key, val);
 				};
 				this[typeof(List<>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
-					var list = Activator.CreateInstance(type);
-					var mi_add = type.GetMethod(nameof(List<int>.Add));
+					var list = type.New();
+					var mi_add = type.GetMethod(nameof(List<int>.Add))!;
 
 					foreach (var li_elem in elem.Elements())
 					{
@@ -428,9 +429,9 @@ namespace Rylogic.Extn
 				{
 					var ty_args = type.GetGenericArguments();
 					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
-					var mi_add = type.GetMethod(nameof(Dictionary<int,int>.Add));
+					var mi_add = type.GetMethod(nameof(Dictionary<int,int>.Add))!;
 
-					var dic = Activator.CreateInstance(type);
+					var dic = type.New();
 					foreach (var kv_elem in elem.Elements())
 					{
 						var key = kv_elem.Element("k").As(ty_args[0]);
@@ -442,8 +443,8 @@ namespace Rylogic.Extn
 				this[typeof(HashSet<>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
-					var set = Activator.CreateInstance(type);
-					var mi_add = type.GetMethod(nameof(HashSet<int>.Add));
+					var set = type.New();
+					var mi_add = type.GetMethod(nameof(HashSet<int>.Add))!;
 
 					foreach (var si_elem in elem.Elements())
 					{
@@ -474,7 +475,7 @@ namespace Rylogic.Extn
 				if (type == typeof(string))
 					return elem.Value;
 
-				var factory = factory_ ?? Activator.CreateInstance;
+				var factory = factory_ ?? Type_.New;
 
 				// If 'type' is nullable then returning the underlying type will
 				// automatically convert to the nullable type
@@ -515,9 +516,8 @@ namespace Rylogic.Extn
 					{
 						return string.Empty;
 					}
-					if (type.IsArray)
+					if (type.IsArray && type.GetElementType() is Type child_type)
 					{
-						var child_type = type.GetElementType();
 						return Array.CreateInstance(child_type, 0);
 					}
 					if (type.IsClass || is_nullable) // includes typeof(object)
@@ -541,8 +541,8 @@ namespace Rylogic.Extn
 
 					// Create an array of the correct type and length
 					var ty_elem = type.GetElementType();
-					var ty_array = ty_elem != typeof(AnonymousType) ? ty_elem : typeof(object);
-					var array = Array.CreateInstance(ty_array, children.Count);
+					ty_elem = ty_elem != null && ty_elem != typeof(AnonymousType) ? ty_elem : typeof(object);
+					var array = Array.CreateInstance(ty_elem, children.Count);
 
 					// Note: the 'factory' must handle both the array type and the element types
 					for (int i = 0; i != children.Count; ++i)
@@ -605,7 +605,7 @@ namespace Rylogic.Extn
 							method.Invoke(obj, new object[] { e });
 							return obj;
 						}
-						catch (TargetInvocationException ex)
+						catch (TargetInvocationException ex) when (ex.InnerException != null)
 						{
 							throw ex.InnerException;
 						}
@@ -632,7 +632,7 @@ namespace Rylogic.Extn
 				// Replace the mapped function with one that doesn't need to search for members
 				AsMap[type] = (el,ty,new_inst) =>
 					{
-						new_inst = new_inst ?? Activator.CreateInstance;
+						new_inst ??= Type_.New;// Activator.CreateInstance;
 
 						// This will always de-serialise as a default object ignoring the elements
 						if (members.Count == 0 && el.HasElements)
@@ -1532,7 +1532,7 @@ namespace Rylogic.UnitTests
 			public XElement ToXml(XElement node) { node.SetValue("elem_" + m_uint); return node; }
 			public override int GetHashCode() { return (int)m_uint; }
 			private bool Equals(Elem1 other) { return m_uint == other.m_uint; }
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
@@ -1552,7 +1552,7 @@ namespace Rylogic.UnitTests
 			public override string ToString() { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
 			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
 			private bool Equals(Elem2 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
@@ -1572,7 +1572,7 @@ namespace Rylogic.UnitTests
 			public Elem3(int i, string? s) { m_int = i; m_string = s; }
 			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
 			private bool Equals(Elem3 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
@@ -1750,15 +1750,15 @@ namespace Rylogic.UnitTests
 				Assert.True(v == V);
 			}
 			{
-				var r = new Range(-1, +1);
+				var r = new Rylogic.Common.Range(-1, +1);
 				var node = r.ToXml("r", true);
-				var R = node.As<Range>();
+				var R = node.As<Rylogic.Common.Range>();
 				Assert.True(r == R);
 			}
 			{
 				var r = new RangeF(-0.2, +0.2);
 				var node = r.ToXml("r", true);
-				var R = node.As<RangeF>();
+				var R = node.As<Rylogic.Common.RangeF>();
 				Assert.True(r == R);
 			}
 		}

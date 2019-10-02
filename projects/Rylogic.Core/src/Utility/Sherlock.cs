@@ -18,9 +18,6 @@ namespace Rylogic.Utility
 			var output = new List<string>();
 			var signed_up = new List<string>();
 
-			// Prop info for the 'FullName' property on MethodBase
-			var fullname_info = typeof(MethodBase).GetProperty("FullName", BindingFlags.NonPublic|BindingFlags.Instance);
-
 			// Events are field members of 'thing'
 			var fields = type.AllFields(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
 			foreach (var mcd_info in fields.Where(x => x.FieldType.BaseType == typeof(MulticastDelegate)))
@@ -28,17 +25,18 @@ namespace Rylogic.Utility
 				signed_up.Clear();
 
 				// Get the instance of the multicast delegate from 'thing'
-				var multicast_delegate = (MulticastDelegate)mcd_info.GetValue(thing);
-				if (multicast_delegate != null)
+				if (mcd_info.GetValue(thing) is MulticastDelegate multicast_delegate)
 				{
 					// Get the multicast delegate's invocation list
 					var invocation_list = multicast_delegate.GetType().GetMethod(nameof(MulticastDelegate.GetInvocationList));
 
 					// Get the delegates subscribed to the event
-					var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
-
-					// Get the full names of the methods signed up, so we can look for potential duplicates
-					signed_up.AddRange(delegates.Select(x => (string)fullname_info.GetValue(x.Method, null)).OrderBy(x => x));
+					if (invocation_list?.Invoke(multicast_delegate, null) is Delegate[] delegates)
+					{
+						// Get the full names of the methods signed up, so we can look for potential duplicates
+						var methods = delegates.Select(x => $"{x.Method.DeclaringType?.FullName ?? "<unk>"}.{x.Method.Name}").OrderBy(x => x);
+						signed_up.AddRange(methods);
+					}
 				}
 
 				// Add a row to the report
@@ -62,18 +60,18 @@ namespace Rylogic.Utility
 				throw new Exception($"Object {type.Name} has no event called {evt}");
 
 			// Get the instance of the multicast delegate from 'owner'
-			var multicast_delegate = (MulticastDelegate)fi_evt.GetValue(owner);
-			if (multicast_delegate != null)
+			if (fi_evt.GetValue(owner) is MulticastDelegate multicast_delegate)
 			{
 				// Get the multicast delegate's invocation list
 				var invocation_list = multicast_delegate.GetType().GetMethod(nameof(MulticastDelegate.GetInvocationList));
 
 				// Get the delegates subscribed to the event
-				var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
-
-				// Enum the attached handlers
-				foreach (var del in delegates)
-					yield return del;
+				if (invocation_list?.Invoke(multicast_delegate, null) is Delegate[] delegates)
+				{
+					// Enum the attached handlers
+					foreach (var del in delegates)
+						yield return del;
+				}
 			}
 			yield break;
 		}
@@ -121,7 +119,7 @@ namespace Rylogic.UnitTests
 			public event EventHandler<CustEventArgs>? PublicCustomEvent;
 			public class CustEventArgs :EventArgs {}
 
-			public void Handler(object sender, EventArgs e)
+			public void Handler(object? sender, EventArgs e)
 			{}
 		}
 		#pragma warning restore 67, 169, 649
@@ -138,23 +136,23 @@ namespace Rylogic.UnitTests
 				
 			var expected = new List<string>
 			{
-				"Thing.PrivateEvent - 1 handlers"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
-					
-				"Thing.ProtectedEvent - 0 handlers"+Environment.NewLine,
-					
-				"Thing.PublicEvent - 4 handlers"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
-					
-				"Thing.PrivateCustomEvent - 1 handlers"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+				"Thing.PrivateEvent - 1 handlers\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n",
 
-				"Thing.PublicCustomEvent - 2 handlers"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+				"Thing.ProtectedEvent - 0 handlers\r\n",
+
+				"Thing.PublicEvent - 4 handlers\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n",
+
+				"Thing.PrivateCustomEvent - 1 handlers\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n",
+
+				"Thing.PublicCustomEvent - 2 handlers\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n"+
+				"   Rylogic.UnitTests.TestSherlock+Thing.Handler\r\n",
 			};
 			var report = Sherlock.CheckEvents(thing);
 			Assert.Equal(expected.Count, report.Count);

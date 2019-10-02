@@ -443,7 +443,7 @@ namespace Rylogic.Common
 				m_invert        == rhs.m_invert      && 
 				m_whole_line    == rhs.m_whole_line; 
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return Equals(obj as Pattern);
 		}

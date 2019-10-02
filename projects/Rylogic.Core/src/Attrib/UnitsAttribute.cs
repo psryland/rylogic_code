@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using System.Reflection;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -74,8 +75,13 @@ namespace Rylogic.Attrib
 		/// <summary>Return the UnitsAttribute for an enum value</summary>
 		private static UnitsAttribute GetAttr<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
 		{
-			var fi = enum_.GetType().GetField(enum_.ToString());
-			return fi.FindAttribute<UnitsAttribute>(false);
+			if (!(enum_.ToString() is string field))
+				throw new Exception($"Enum value is not a valid field of {typeof(TEnum).Name}");
+			if (!(enum_.GetType().GetField(field) is FieldInfo fi))
+				throw new Exception($"Enum value {field} is not a field of {typeof(TEnum).Name}");
+			if (!(fi.FindAttribute<UnitsAttribute>(false) is UnitsAttribute attr))
+				throw new Exception($"Units attribute not found for {field} in {typeof(TEnum).Name}");
+			return attr;
 		}
 
 		/// <summary>Returns the unit label associated with an enum value</summary>

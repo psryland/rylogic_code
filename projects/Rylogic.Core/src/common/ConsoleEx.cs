@@ -954,7 +954,7 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Handle the console buffer rolling down one line</summary>
-			private void HandleBufferRolled(object sender, EventArgs e)
+			private void HandleBufferRolled(object? sender, EventArgs e)
 			{
 				_caret -= _console.BufferSize.Width;
 			}

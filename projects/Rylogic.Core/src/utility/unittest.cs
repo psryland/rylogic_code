@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -53,11 +54,14 @@ namespace Rylogic.UnitTests
 					{
 						// Create an instance of the unit test
 						object inst;
-						try { inst = Activator.CreateInstance(fixture); }
+						try { inst = Activator.CreateInstance(fixture) ?? throw new Exception($"Failed to create unit test {fixture.Name}"); }
 						catch (Exception ex)
 						{
-							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"Unit Testing:  {fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+							outp.WriteLine(
+								$"Unit Testing:  {fixture.Name} - Failed to create an instance of test fixture\n" +
+								$"{ex.MessageFull()}\n" +
+								$"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -71,8 +75,11 @@ namespace Rylogic.UnitTests
 						}
 						catch (Exception ex)
 						{
-							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+							outp.WriteLine(
+								$"Unit Testing:  {fixture.Name} - Test fixture set up function threw\n" +
+								$"{ex.MessageFull()}\n" +
+								$"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -103,11 +110,11 @@ namespace Rylogic.UnitTests
 							}
 							catch (Exception ex)
 							{
-								while (ex is TargetInvocationException) ex = ex.InnerException;
+								while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
 								outp.WriteLine();
 								outp.WriteLine($"Unit Testing:  Test {test.Name} Failed");
 								outp.WriteLine($"{ex.MessageFull()}");
-								outp.WriteLine($"{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+								outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
 								outp.Flush();
 								++failed;
 							}
@@ -115,21 +122,23 @@ namespace Rylogic.UnitTests
 
 						// Call the fixture clean up method
 						var cleanup = fixture.FindMethodsWithAttribute<TestFixtureTearDownAttribute>().FirstOrDefault();
-						if (cleanup != null) try
+						if (cleanup != null)
 						{
-							cleanup.Invoke(inst, null);
+							try
+							{
+								cleanup.Invoke(inst, null);
+							}
+							catch (Exception ex)
+							{
+								while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+								outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
+								outp.WriteLine($"{ex.MessageFull()}");
+								outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
+								outp.Flush();
+								++failed;
+								continue;
+							}
 						}
-						catch (Exception ex)
-						{
-							while (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
-							outp.WriteLine($"{ex.MessageFull()}");
-							outp.WriteLine($"{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
-							outp.Flush();
-							++failed;
-							continue;
-						}
-
 						passed += pass_count;
 					}
 
@@ -185,8 +194,8 @@ namespace Rylogic.UnitTests
 			{
 				var st = new System.Diagnostics.StackTrace(true);
 				var sf = st.GetFrame(2);
-				var file = sf.GetFileName();
-				var line = sf.GetFileLineNumber();
+				var file = sf?.GetFileName() ?? string.Empty;
+				var line = sf?.GetFileLineNumber() ?? 0;
 				return $"{file}({line}) : ";
 			}
 		}

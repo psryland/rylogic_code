@@ -49,7 +49,7 @@ namespace Rylogic.Plugin
 		{
 			// Create all plugins using the factory callback
 			// This allows plugins to be created on a dispatcher thread using Dispatcher.Invoke
-			factory = factory ?? ((t, a) => (TInterface)Activator.CreateInstance(t, a));
+			factory ??= (t, a) => (TInterface)t.New(a);
 
 			try
 			{
@@ -97,7 +97,7 @@ namespace Rylogic.Plugin
 		public Plugins<TInterface> Load(string directory, object[]? args = null, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern, Func<Type, object[]?, TInterface>? factory = null, Func<string, float, bool>? progress = null)
 		{
 			// Default callbacks
-			progress = progress ?? ((s, p) => true);
+			progress ??= (s, p) => true;
 
 			// Find all the types that implement 'TInterface'
 			var types = Enumerate(directory, search, regex_filter).ToList();

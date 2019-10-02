@@ -264,7 +264,7 @@ namespace Rylogic.Common
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is Range && Equals((Range)obj);
 		}
@@ -543,7 +543,7 @@ namespace Rylogic.Common
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			if (obj.GetType() != typeof(RangeF)) return false;
@@ -784,7 +784,7 @@ namespace Rylogic.Common
 		{
 			return !(lhs == rhs);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (ReferenceEquals(null, obj)) return false;
 			return obj is RangeF<T> r && Equals(r);

@@ -32,16 +32,17 @@ namespace Rylogic.Attrib
 
 		/// <summary>Associate a named property or field via reflection</summary>
 		public AssocAttribute(string? name, Type ty, string prop_or_field_name, bool non_public = false)
-			:this(name, ty, null)
+			: this(name, ty, null)
 		{
-			var mi = ty.GetProperty(prop_or_field_name, BindingFlags.Static|BindingFlags.Public|(non_public?BindingFlags.NonPublic:0))?.GetGetMethod(non_public);
+			var flags = BindingFlags.Static | BindingFlags.Public | (non_public ? BindingFlags.NonPublic : 0);
+			var mi = ty.GetProperty(prop_or_field_name, flags)?.GetGetMethod(non_public);
 			if (mi != null)
 			{
 				m_get = () => mi.Invoke(null, null);
 				return;
 			}
 
-			var fi = ty.GetField(prop_or_field_name, BindingFlags.Static|BindingFlags.Public|(non_public?BindingFlags.NonPublic:0));
+			var fi = ty.GetField(prop_or_field_name, flags);
 			if (fi != null)
 			{
 				m_get = () => fi.GetValue(null);
@@ -65,7 +66,7 @@ namespace Rylogic.Attrib
 
 		/// <summary>The instance associated with the owning property/enum value/field</summary>
 		public object? AssocItem => m_get?.Invoke();
-		private Func<object>? m_get;
+		private Func<object?>? m_get;
 	}
 
 	/// <summary>Access class for AssocAttribute</summary>
@@ -97,8 +98,9 @@ namespace Rylogic.Attrib
 		public static T Assoc<T>(Type ty, string member_name, string? name = null)
 		{
 			var mi =
-				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
-				(MemberInfo)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+				(MemberInfo?)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
+				(MemberInfo?)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
+				throw new Exception($"{member_name} is not a property or field of {ty.Name}");
 			return Assoc<T>(mi, name);
 		}
 
@@ -120,8 +122,9 @@ namespace Rylogic.Attrib
 		public static bool TryAssoc<T>(Type ty, string member_name, out T assoc, string? name = null)
 		{
 			var mi =
-				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ??
-				(MemberInfo)ty.GetField(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+				(MemberInfo?)ty.GetProperty(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ??
+				(MemberInfo?)ty.GetField(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ??
+				throw new Exception($"{member_name} is not a property or field of {ty.Name}");
 			return TryAssoc<T>(mi, out assoc, name);
 		}
 

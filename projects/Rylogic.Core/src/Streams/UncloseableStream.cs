@@ -27,7 +27,7 @@ namespace Rylogic.Streams
 		public override long Length { get { CheckClosed(); return base.Length; } }
 		public override long Position { get { CheckClosed(); return base.Position; } set { CheckClosed(); base.Position = value; } }
 
-		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+		public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
 		{
 			CheckClosed();
 			return base.BeginRead(buffer, offset, count, callback, state);
@@ -37,7 +37,7 @@ namespace Rylogic.Streams
 			CheckClosed();
 			return base.EndRead(asyncResult);
 		}
-		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+		public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object? state)
 		{
 			CheckClosed();
 			return base.BeginWrite(buffer, offset, count, callback, state);

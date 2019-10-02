@@ -70,7 +70,8 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Convert to/from a structure to non-GC memory. Freeing on dispose</summary>
-		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt) where TStruct:struct
+		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt)
+			where TStruct : struct
 		{
 			return Scope.Create(
 				() =>
@@ -84,9 +85,10 @@ namespace Rylogic.Common
 						Marshal.FreeCoTaskMem(ptr);
 					});
 		}
-		public static TStruct PtrToStructure<TStruct>(IntPtr ptr) where TStruct:struct
+		public static TStruct PtrToStructure<TStruct>(IntPtr ptr)
+			where TStruct : struct
 		{
-			return (TStruct)Marshal.PtrToStructure(ptr, typeof(TStruct));
+			return Marshal.PtrToStructure<TStruct>(ptr);
 		}
 
 		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
@@ -130,6 +132,7 @@ namespace Rylogic.Common
 
 		/// <summary>Pin an object. No copy made</summary>
 		public static PinnedObject<T> Pin<T>(T obj)
+			where T : class
 		{
 			return new PinnedObject<T>(obj);
 		}
@@ -156,6 +159,7 @@ namespace Rylogic.Common
 
 	/// <summary>A helper class for pinning a managed structure so that it is suitable for unmanaged calls.</summary>
 	public sealed class PinnedObject<T> :IDisposable
+		where T : class
 	{
 		// Notes:
 		// A pinned object will not be collected and will not be moved by the GC until explicitly freed.
@@ -188,8 +192,8 @@ namespace Rylogic.Common
 		/// <summary>The managed object being pinned</summary>
 		public T ManangedObject
 		{
-			[DebuggerStepThrough] get { return (T)m_handle.Target; }
-			set { Marshal.StructureToPtr(value, Pointer, false); }
+			get => (T?)m_handle.Target ?? throw new Exception("Pinned object is null");
+			set => Marshal.StructureToPtr(value, Pointer, false);
 		}
 
 		/// <summary>Pointer to the pinned object</summary>

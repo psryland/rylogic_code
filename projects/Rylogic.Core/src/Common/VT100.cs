@@ -201,7 +201,7 @@ namespace Rylogic.Common
 			{
 				return m_col == rhs.m_col && m_sty == rhs.m_sty;
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				return obj is Style && Equal((Style)obj);
 			}

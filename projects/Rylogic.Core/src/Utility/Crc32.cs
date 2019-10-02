@@ -40,7 +40,7 @@ namespace Rylogic.Utility
 		public CRC32(uint polynomial)
 		{
 			HashSizeValue = 32;
-			m_crc32_table = (uint[])Crc32TablesCache[polynomial];
+			m_crc32_table = (uint[])Crc32TablesCache[polynomial]!;
 			if (m_crc32_table == null)
 			{
 				m_crc32_table = BuildCrc32Table(polynomial);

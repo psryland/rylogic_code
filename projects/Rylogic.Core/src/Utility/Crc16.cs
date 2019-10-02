@@ -38,7 +38,7 @@ namespace Rylogic.Utility
 		public CRC16(ushort polynomial)
 		{
 			HashSizeValue = 16;
-			m_crc16_table = (ushort[])Crc16TablesCache[polynomial];
+			m_crc16_table = (ushort[])Crc16TablesCache[polynomial]!;
 			if (m_crc16_table == null)
 			{
 				m_crc16_table = BuildCrc16Table(polynomial);

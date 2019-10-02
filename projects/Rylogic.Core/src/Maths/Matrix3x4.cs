@@ -131,7 +131,7 @@ namespace Rylogic.Maths
 		public static readonly m3x4 Identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
 
 		// Operators
-		public override bool Equals(object o)               { return o is m3x4 && (m3x4)o == this; }
+		public override bool Equals(object? o)              { return o is m3x4 m && m == this; }
 		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode(); } }
 		public static m3x4 operator + (m3x4 rhs)            { return rhs; }
 		public static m3x4 operator - (m3x4 rhs)            { return new m3x4(-rhs.x, -rhs.y, -rhs.z); }

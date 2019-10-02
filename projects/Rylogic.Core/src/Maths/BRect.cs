@@ -50,7 +50,7 @@ namespace Rylogic.Maths
 		// Equality operators
 		public static bool operator == (BRect lhs, BRect rhs) { return lhs.m_centre == rhs.m_centre; }
 		public static bool operator != (BRect lhs, BRect rhs) { return !(lhs == rhs); }
-		public override bool Equals(object o)                 { return o is BRect && (BRect)o == this; }
+		public override bool Equals(object? o)                { return o is BRect && (BRect)o == this; }
 		public override int GetHashCode()                     { unchecked { return m_centre.GetHashCode() ^ m_radius.GetHashCode(); } }
 
 		// Conversion

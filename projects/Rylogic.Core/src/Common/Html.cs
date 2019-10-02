@@ -224,15 +224,8 @@ namespace Rylogic.Common
 			/// <summary>Get/Set/Add/Update a key/value pair</summary>
 			public new string this[string key]
 			{
-				get
-				{
-					string value;
-					return TryGetValue(key, out value) ? value : string.Empty;
-				}
-				set
-				{
-					base[key] = value;
-				}
+				get => TryGetValue(key, out var value) ? value : string.Empty;
+				set => base[key] = value;
 			}
 		}
 
@@ -564,11 +557,10 @@ namespace Rylogic.Common
 							// Exit preformatted mode
 							m_text.Preformatted = false;
 						}
-						
-						string value;
-						if (Tags.TryGetValue(tag, out value))
+
+						if (Tags.TryGetValue(tag, out var value))
 							m_text.Write(value);
-							
+
 						if (IgnoreTags.Contains(tag))
 							EatInnerContent(tag);
 					}

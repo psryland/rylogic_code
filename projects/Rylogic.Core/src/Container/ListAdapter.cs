@@ -52,10 +52,10 @@ namespace Rylogic.Container
 				Source[index] = Conform(value)!;
 			}
 		}
-		object IList.this[int index]
+		object? IList.this[int index]
 		{
 			get => this[index]!;
-			set => this[index] = (TOut)value;
+			set => this[index] = (TOut)value!;
 		}
 
 		/// <summary></summary>
@@ -66,9 +66,9 @@ namespace Rylogic.Container
 
 			Source.Add(Conform(item));
 		}
-		int IList.Add(object value)
+		int IList.Add(object? value)
 		{
-			Add((TOut)value);
+			Add((TOut)value!);
 			return Count - 1;
 		}
 
@@ -87,9 +87,9 @@ namespace Rylogic.Container
 			else
 				return IndexOf(item) != -1;
 		}
-		bool IList.Contains(object value)
+		bool IList.Contains(object? value)
 		{
-			return Contains((TOut)value);
+			return Contains((TOut)value!);
 		}
 
 		/// <summary></summary>
@@ -122,9 +122,9 @@ namespace Rylogic.Container
 			for (; index != Count && !Equals(item, Adapt(Source[index])); ++index) {}
 			return index != Count ? index : -1;
 		}
-		int IList.IndexOf(object value)
+		int IList.IndexOf(object? value)
 		{
-			return IndexOf((TOut)value);
+			return IndexOf((TOut)value!);
 		}
 
 		/// <summary></summary>
@@ -134,9 +134,9 @@ namespace Rylogic.Container
 				throw new InvalidOperationException("Collection is read-only");
 			Source.Insert(index, Conform(item));
 		}
-		void IList.Insert(int index, object value)
+		void IList.Insert(int index, object? value)
 		{
-			Insert(index, (TOut)value);
+			Insert(index, (TOut)value!);
 		}
 
 		/// <summary></summary>
@@ -154,9 +154,9 @@ namespace Rylogic.Container
 			if (index != -1) RemoveAt(index);
 			return index != -1;
 		}
-		void IList.Remove(object value)
+		void IList.Remove(object? value)
 		{
-			Remove((TOut)value);
+			Remove((TOut)value!);
 		}
 
 		/// <summary></summary>

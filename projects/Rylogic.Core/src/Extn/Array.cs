@@ -236,8 +236,8 @@ namespace Rylogic.Extn
 			if (typeof(T) == typeof(char  )) return (T)(object)AsChar  (arr);
 
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), $"As<T>: Insufficient data. Expected {Marshal.SizeOf(typeof(T))}, got {arr.Length}");
-			using (var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned))
-				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
+			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
+			return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>Return the checksum of this array of bytes</summary>
@@ -249,16 +249,12 @@ namespace Rylogic.Extn
 		/// <summary>Return the MD5 hash of this array of bytes. The hash is a 16byte array</summary>
 		public static byte[] Md5(this byte[] arr)
 		{
-			var alg = System.Security.Cryptography.MD5.Create();
+			using var alg = System.Security.Cryptography.MD5.Create();
 			return alg.ComputeHash(arr);
 		}
 
 		/// <summary>Set bytes in the array to 'value' using native 'memset'</summary>
 		public static byte[] Memset(this byte[] arr, byte value)
-		{
-			return arr.Memset(value, 0, arr.Length);
-		}
-		public static byte[] Memset(this byte[] arr, byte value, int ofs, int count)
 		{
 			int block = 32, index = 0;
 			int length = Math.Min(block, arr.Length);
@@ -345,13 +341,10 @@ namespace Rylogic.Extn
 
 		/// <summary>Implicit conversion to/from ArraySegment</summary>
 		public static implicit operator ArraySegment<T>(ArraySlice<T> s) { return new ArraySegment<T>(s.SourceArray, s.Offset, s.Count); }
-		public static implicit operator ArraySlice<T>(ArraySegment<T> s) { return new ArraySlice<T>(s.Array, s.Offset, s.Count); }
+		public static implicit operator ArraySlice<T>(ArraySegment<T> s) { return new ArraySlice<T>(s.Array!, s.Offset, s.Count); }
 
 		#region IList
-		public bool IsReadOnly
-		{
-			get { return true; }
-		}
+		public bool IsReadOnly => true;
 		public int IndexOf(T item)
 		{
 			var idx = Array.IndexOf(SourceArray, item, Offset, Length);

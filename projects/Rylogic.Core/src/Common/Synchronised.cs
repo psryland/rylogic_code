@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using Rylogic.Utility;
 
 namespace Rylogic.Common
@@ -11,7 +10,7 @@ namespace Rylogic.Common
 		private object m_lock;
 
 		public Synchronised()
-			:this((T)Activator.CreateInstance(typeof(T)))
+			:this(Util<T>.New())
 		{}
 		public Synchronised(T obj)
 		{

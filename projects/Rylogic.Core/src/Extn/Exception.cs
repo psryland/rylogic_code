@@ -17,7 +17,7 @@ namespace Rylogic.Extn
 				e = ae.Flatten();
 			
 			var sb = new StringBuilder();
-			for (;e != null; e = e.InnerException)
+			for (;e != null; e = e.InnerException!)
 			{
 				if (e is AggregateException) continue;
 				if (sb.Length != 0) sb.AppendLine();

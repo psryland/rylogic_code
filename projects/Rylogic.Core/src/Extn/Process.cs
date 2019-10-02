@@ -54,7 +54,7 @@ namespace Rylogic.Extn
 		public static async Task WaitForExitAsync(this Process process, CancellationToken? cancel = null)
 		{
 			var tcs = new TaskCompletionSource<object>();
-			void HandleExited(object sender, EventArgs args) => tcs.TrySetResult(true);
+			void HandleExited(object? sender, EventArgs args) => tcs.TrySetResult(true);
 
 			process.EnableRaisingEvents = true;
 			using (Scope.Create(() => process.Exited += HandleExited, () => process.Exited -= HandleExited))

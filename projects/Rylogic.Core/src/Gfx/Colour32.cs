@@ -24,7 +24,7 @@ namespace Rylogic.Gfx
 			NamedValues = typeof(Colour32)
 				.GetProperties(BindingFlags.Static | BindingFlags.Public)
 				.Where(x => x.PropertyType == typeof(Colour32))
-				.ToDictionary(x => x.Name, x => (Colour32)x.GetValue(null));
+				.ToDictionary(x => x.Name, x => (Colour32)x.GetValue(null)!);
 		}
 		public Colour32(uint argb)
 		{
@@ -231,8 +231,9 @@ namespace Rylogic.Gfx
 			var r_rgb = ((rhs.m_argb << 8) & 0xFFFFFF00) | ((rhs.m_argb >> 24) & 0xFF);
 			return l_rgb.CompareTo(r_rgb);
 		}
-		public int CompareTo(object rhs)
+		public int CompareTo(object? rhs)
 		{
+			if (rhs == null) throw new ArgumentNullException(nameof(rhs));
 			return CompareTo((Colour32)rhs);
 		}
 		#endregion

@@ -172,7 +172,7 @@ namespace Rylogic.INet
 				throw new Exception("No connection stream");
 
 			using var sr = new StreamReader(new UncloseableStream(m_cmd));
-			string reply = sr.ReadLine();
+			var reply = sr.ReadLine() ?? string.Empty;
 			Trace("Reply: " + reply);
 			return new Reply(reply);
 		}
@@ -526,7 +526,7 @@ namespace Rylogic.INet
 			public bool UseSSL = true;
 
 			/// <summary>The SSL protocols to support</summary>
-			public SslProtocols SSLProtocols = SslProtocols.Ssl3 | SslProtocols.Tls;
+			public SslProtocols SSLProtocols = SslProtocols.Tls;
 		}
 
 		/// <summary>The response message that acknowledges a command</summary>

@@ -15,9 +15,9 @@ namespace Rylogic.INet
 		public static IAsyncResult BeginCheckForUpdate(string identifier, string url, Action<IAsyncResult> callback, IWebProxy proxy)
 		{
 			// Do the version check as a background task
-			void version_check(object x)
+			void version_check(object? x)
 			{
-				var async = (CheckForUpdateAsyncData)x;
+				var async = (CheckForUpdateAsyncData)x!;
 				try
 				{
 					// Check the update URL is valid
