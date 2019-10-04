@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix
+	xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+	<!--
+	Notes:
+	- This file can be compiled using the WiX tool kit tools: 'candle.exe' and 'light.exe'
+	- Only the main executables and binaries are included explicitly in this file. The
+	  documentation files are compiled into a separate file using 'heat.exe'. The executables
+	  also have start menu and desktop shortcuts, so that's why they're in here.
+	- This file should not need modifying unless the project folder structure is changed.
+	- MSI installers only consider the first 3 version digits.
+	  When creating a new installer make sure you increment at least the third digit.
+	-->
+
+	<!--
+		Defined on the command line:
+		ProjDir - the root path for the project
+		TargetDir - the staging directory
+		ProductVersion - the application version number
+	-->
+	<?define ProductName        = "LDraw" ?>
+	<?define ProjectName        = "LDraw" ?>
+	<?define ProductIcon        = "icon.ico" ?>
+	<?define Manufacturer       = "Rylogic" ?>
+	<?define CompanyUrl         = "http://www.rylogic.co.nz" ?>
+	<?define ProductDescription = "LDraw - Script driven 3D object viewer" ?>
+
+	<!-- NEVER CHANGE THIS - it is required for upgrading existing installations -->
+	<?define UpgradeCode = "D60182CE-9329-4029-BF74-744D3B55C19D" ?>
+
+	<Product
+		Id="*"
+		Name="$(var.ProductName)"
+		Version="$(var.ProductVersion)"
+		Manufacturer="$(var.Manufacturer)"
+		UpgradeCode="$(var.UpgradeCode)"
+		Language="1033"
+		>
+
+		<!-- Package description -->
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" />
+		<MediaTemplate EmbedCab="yes"/>
+
+		<!-- Installer icon (must have an extension on the id)-->
+		<Icon Id="icon.ico" SourceFile="$(var.ProjDir)\$(var.ProductIcon)"/>
+
+		<!-- Override properties from the standard installer -->
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<Property Id="ARPPRODUCTICON" Value="icon.ico"/>
+		<Property Id="ARPHELPLINK" Value="$(var.CompanyUrl)"/>
+		<Property Id="ARPURLINFOABOUT" Value="$(var.CompanyUrl)"/>
+		<Property Id="DISABLEADVTSHORTCUTS" Value="1" /><!-- needed to work around ICE errors for start menu and desktop shortcuts in perMachine installs -->
+
+		<!-- Newer version installed message -->
+		<MajorUpgrade DowngradeErrorMessage="A newer version of $(var.ProductName) is already installed." />
+
+		<!-- Check that the required .NET version is installed -->
+		<PropertyRef Id="NETFRAMEWORK45" />
+		<Property Id="WIX_IS_NETFRAMEWORK_471_OR_LATER_INSTALLED" Value="0" /> <!-- Used to detect when WixNetFxExtension supports 4.7.1 -->
+		<Condition Message="This application requires .NET Framework 4.7.1. Please install the .NET Framework then run this installer again.">
+			<![CDATA[Installed OR (NETFRAMEWORK45 AND NETFRAMEWORK45 >= "#461308")]]>
+		</Condition>
+
+		<!-- Directory structures -->
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			
+			<!-- The install directory, in C:\program files (x86)\Rylogic\LDraw-->
+			<Directory Id="ProgramFiles64Folder">
+				<Directory Id="ManufacturerDir" Name="$(var.Manufacturer)">
+					<Directory Id="INSTALLFOLDER" Name="$(var.ProductName)">
+						<Directory Id="lib" Name="lib"/>
+					</Directory>
+				</Directory>
+			</Directory>
+
+			<!-- Start Menu folder -->
+			<Directory Id="ProgramMenuFolder">
+				<Directory Id="ProgramMenuVendorFolder" Name="$(var.Manufacturer)">
+					<Directory Id="ProgramMenuProductFolder" Name="$(var.ProjectName)"/>
+				</Directory>
+			</Directory>
+
+			<!-- Desktop shortcut -->
+			<Directory Id="DesktopFolder" SourceName="Desktop"/>
+		</Directory>
+
+		<!-- This defines what is included in the MSI -->
+		<Feature Id="ProductFeature" Title="$(var.ProjectName) Install" Level="1">
+			<ComponentGroupRef Id="executables" />
+			<ComponentGroupRef Id="lib_files" />
+		</Feature>
+
+		<!-- The main executables -->
+		<ComponentGroup Id="executables">
+			<Component Id="Cmp_ProjectName" Directory="INSTALLFOLDER" Guid="*">
+				<!-- Create folders -->
+				<CreateFolder Directory="ProgramMenuVendorFolder"/>
+				<CreateFolder Directory="ProgramMenuProductFolder"/>
+				<CreateFolder Directory="INSTALLFOLDER"/>
+
+				<!-- Clean up folders on uninstall -->
+				<RemoveFolder Id="Rm_INSTALLFOLDER"            Directory="INSTALLFOLDER" On="uninstall"/>
+				<RemoveFolder Id="Rm_ProgramMenuProductFolder" Directory="ProgramMenuProductFolder" On="uninstall" />
+				<RemoveFolder Id="Rm_ProgramMenuVendorFolder"  Directory="ProgramMenuVendorFolder" On="uninstall" />
+
+				<File Id="File_ProjectName" Source="$(var.TargetDir)\$(var.ProjectName).exe" Vital="yes" KeyPath="yes">
+					<Shortcut Id="Lnk_StartMenuProjName" Directory="ProgramMenuProductFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+					<Shortcut Id="Lnk_DesktopProjName" Directory="DesktopFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+				</File>
+			</Component>
+		</ComponentGroup>
+
+		<!-- Properties of the installer dialogs -->
+		<!-- See http://wixtoolset.org/documentation/manual/v3/wixui/wixui_customizations.html for image sizes -->
+		<WixVariable Id="WixUILicenseRtf" Value="$(var.ProjDir)\res\Licence.rtf" />
+		<WixVariable Id="WixUIBannerBmp" Value="$(var.ProjDir)\res\installer_banner_top.bmp" />
+		<WixVariable Id="WixUIDialogBmp" Value="$(var.ProjDir)\res\installer_banner_bkgd.bmp" />
+
+		<UI>
+			<UIRef Id="WixUI_InstallDir" />
+
+			<!-- Skip licence dialog -->
+			<Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+			<Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+
+			<!-- Launch after install - Ugly CheckBox - include only if you have to
+			 -->
+			<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch $(var.ProductName)" />
+			<Property Id="WixShellExecTarget" Value="[#File_ProjName]" />
+			<Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+		</UI>
+
+		<CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
+
+	</Product>
+</Wix>
