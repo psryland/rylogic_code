@@ -34,10 +34,12 @@ namespace Csex
 			}
 		}
 
-		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		/// <summary>Validate the current options</summary>
+		public override Exception Validate()
 		{
-			return m_infile.HasValue();
+			return
+				!m_infile.HasValue() ? new Exception("No in-filepath given") :
+				null;
 		}
 
 		class Node

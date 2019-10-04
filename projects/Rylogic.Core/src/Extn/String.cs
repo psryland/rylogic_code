@@ -42,7 +42,7 @@ namespace Rylogic.Extn
 		public static string[] SubstringRegex(this string str, string pattern, RegexOptions options = RegexOptions.None)
 		{
 			var m = Regex.Match(str, pattern, options);
-			if (!m.Success) return new string[0];
+			if (!m.Success) return Array.Empty<string>();
 			return m.Groups.Cast<Group>().Skip(1).Select(x => x.Value).ToArray();
 		}
 
@@ -171,7 +171,7 @@ namespace Rylogic.Extn
 
 					switch (word_start)
 					{
-					default: throw new ArgumentOutOfRangeException("word_start");
+					default: throw new ArgumentOutOfRangeException(nameof(word_start));
 					case ECapitalise.DontChange: sb.Append(str[i]); break;
 					case ECapitalise.UpperCase:  sb.Append(char.ToUpper(str[i])); break;
 					case ECapitalise.LowerCase:  sb.Append(char.ToLower(str[i])); break;
@@ -181,7 +181,7 @@ namespace Rylogic.Extn
 				{
 					switch (word_case)
 					{
-					default: throw new ArgumentOutOfRangeException("word_case");
+					default: throw new ArgumentOutOfRangeException(nameof(word_case));
 					case ECapitalise.DontChange: sb.Append(str[i]); break;
 					case ECapitalise.UpperCase:  sb.Append(char.ToUpper(str[i])); break;
 					case ECapitalise.LowerCase:  sb.Append(char.ToLower(str[i])); break;
@@ -547,7 +547,7 @@ namespace Rylogic.Extn
 			return ((IEnumerable<char>)this).GetEnumerator();
 		}
 
-		public static implicit operator string?(IString s)       { return s.ToString(); }
+		public static implicit operator string(IString s)        { return s.ToString() ?? throw new NullReferenceException(); }
 		public static implicit operator IString(string s)        { return new StringProxy(s); }
 		public static implicit operator IString(StringBuilder s) { return new StringBuilderProxy(s); }
 		public static implicit operator IString(char[] s)        { return new CharArrayProxy(s); }

@@ -531,7 +531,21 @@ namespace Rylogic.Gui.WinForms
 				}
 				public RdrOptions(RdrOptions rhs)
 				{
-					rhs.ShallowCopy(this);
+					Visible        = rhs.Visible;
+					DrawData       = rhs.DrawData;
+					DrawErrorBars  = rhs.DrawErrorBars;
+					PlotType       = rhs.PlotType;
+					PointColour    = rhs.PointColour;
+					PointSize      = rhs.PointSize;
+					LineColour     = rhs.LineColour;
+					LineWidth      = rhs.LineWidth;
+					BarColour      = rhs.BarColour;
+					BarWidth       = rhs.BarWidth;
+					ErrorBarColour = rhs.ErrorBarColour;
+					DrawMovingAvr  = rhs.DrawMovingAvr;
+					MAWindowSize   = rhs.MAWindowSize;
+					MALineColour   = rhs.MALineColour;
+					MALineWidth    = rhs.MALineWidth;
 				}
 				public enum EPlotType { Point, Line, Bar }
 				public bool       Visible        { get; set; }

@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# CA2237: Mark ISerializable types with serializable
+dotnet_diagnostic.CA2237.severity = silent
+
+# CA2101: Specify marshaling for P/Invoke string arguments
+dotnet_diagnostic.CA2101.severity = none

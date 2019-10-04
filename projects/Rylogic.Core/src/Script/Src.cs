@@ -106,10 +106,10 @@ namespace Rylogic.Script
 		}
 
 		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType { get { return SrcType.String; } }
+		public override SrcType SrcType => SrcType.String;
 
 		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get { return m_loc; } }
+		public override Loc Location => m_loc;
 
 		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
 		protected override char PeekInternal()
@@ -131,7 +131,8 @@ namespace Rylogic.Script
 			}
 		}
 
-		public override string ToString() { return Peek.ToString(); }
+		/// <summary></summary>
+		public override string ToString() => Peek.ToString();
 	}
 
 	/// <summary>A script character sequence from a string</summary>
@@ -146,7 +147,7 @@ namespace Rylogic.Script
 	public class FileSrc :TextReaderSrc
 	{
 		public FileSrc(string filepath)
-			:base(new StreamReader(filepath))
+			:base(new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read)))
 		{}
 	}
 

@@ -3055,10 +3055,10 @@ namespace Rylogic.Gui.WinForms
 				Surface = node.Element(XmlTag.Surface).As<Surface>();
 				UpdateModel();
 			}
-			public override void Dispose()
+			protected override void Dispose(bool _)
 			{
 				Surface.Dispose();
-				base.Dispose();
+				base.Dispose(_);
 			}
 
 			/// <summary>Export to XML</summary>

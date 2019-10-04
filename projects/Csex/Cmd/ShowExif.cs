@@ -33,10 +33,12 @@ namespace Csex
 			return true;
 		}
 
-		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		/// <summary>Validate the current options</summary>
+		public override Exception Validate()
 		{
-			return m_jpg_filepath.HasValue();
+			return
+				!m_jpg_filepath.HasValue() ? new Exception($"No jpg filepath given") :
+				null;
 		}
 
 		public override int Run()

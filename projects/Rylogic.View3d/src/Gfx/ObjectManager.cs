@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
 
 namespace Rylogic.Gfx
 {
-	public class ObjectManager : IDisposable
+	public sealed class ObjectManager : IDisposable
 	{
 		// Notes:
 		//  - This class provides the functionality for the object manager

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -7,10 +10,6 @@ namespace Csex
 {
 	public class Program :Cmd
 	{
-		private const string VersionString = "v1.0";
-		private readonly string[] m_args;
-		private Cmd m_cmd;
-
 		[STAThread]
 		static int Main(string[] args)
 		{
@@ -19,9 +18,20 @@ namespace Csex
 			return new Program(args).Run();
 		}
 
+		private const string VersionString = "v1.0";
+		private readonly string[] m_args;
+		private IList<Type> m_available_cmds;
+		private Cmd m_cmd;
+
 		public Program(string[] args)
 		{
 			m_args = args;
+			m_available_cmds = typeof(Program).Assembly.GetExportedTypes()
+				.Where(x => typeof(Cmd).IsAssignableFrom(x))
+				.Except(typeof(Cmd))
+				.Except(typeof(Program))
+				.Except(typeof(NEW_COMMAND))
+				.ToList();
 		}
 
 		/// <summary>Main run</summary>
@@ -58,54 +68,62 @@ namespace Csex
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public override void ShowHelp(Exception ex = null)
 		{
+			// Show command specific help
 			if (m_cmd != null)
-				m_cmd.ShowHelp(ex);
-			else
 			{
-				if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
-				Console.WriteLine(
-				"***********************************************************\n"+
-				" --- Commandline Extensions - Copyright (c) Rylogic 2012 --- \n"+
-				"***********************************************************\n"+
-				"                                         Version: "+VersionString+"\n"+
-				"  Syntax: Csex -command [parameters]\n"+
-				"\n"+
-				"  Commands:\n"+
-				"    -gencode\n"+
-				"        Generates an activation code\n"+
-				"\n"+
-				"    -signfile\n"+
-				"        Sign a file using RSA\n"+
-				"\n"+
-				"    -find_assembly_conflicts\n"+
-				"        Recursively checks assemblies for version conflicts in their dependent assemblies\n"+
-				"\n"+
-				"    -expand_template\n"+
-				"       Expand specific comments in a markup language (xml,html) file\n"+
-				"\n"+
-				"    -PatternUI\n"+
-				"       Show the Regex pattern testing ui\n"+
-				"\n"+
-				"    -find_duplicate_files\n"+
-				"       Find duplicate files within a directory tree\n"+
-				"\n"+
-				"    -showexif\n"+
-				"       Display Exif info for a jpg file\n"+
-				"\n"+
-				"    -showtree\n"+
-				"       Display a tree grid view of a text file containing whitespace indenting\n"+
-				"\n"+
-				"    -showbase64\n"+
-				"       Display a tool for encoding/decoding base64 text\n"+
-				"\n"+
-				"    -xmledit\n"+
-				"       Display a tool for editing XML files\n"+
-				"\n"+
-				// NEW_COMMAND - add a help string
-				"\n"+
-				"  Type Cex -command -help for help on a particular command\n"+
-				"");
+				m_cmd.ShowHelp(ex);
+				return;
 			}
+
+			// Show the command line error message
+			if (ex != null)
+				Console.WriteLine("Error parsing command line: {0}", ex.Message);
+
+			// Show the available commands
+			Console.Write(
+			$"*************************************************************\n" +
+			$" --- Commandline Extensions - Copyright (c) Rylogic 2012 --- \n" +
+			$"*************************************************************\n" +
+			$"                                         Version: {VersionString}\n" +
+			$"  Syntax: Csex -command [parameters]\n" +
+			$"\n" +
+			$"  Commands:\n" +
+			$"    -call\n" +
+			$"        Call a static method in a .NET assembly\n" +
+			$"\n" +
+			$"    -gencode\n" +
+			$"        Generates an activation code\n" +
+			$"\n" +
+			$"    -signfile\n" +
+			$"        Sign a file using RSA\n" +
+			$"\n" +
+			$"    -find_assembly_conflicts\n" +
+			$"        Recursively checks assemblies for version conflicts in their dependent assemblies\n" +
+			$"\n" +
+			$"    -expand_template\n" +
+			$"       Expand specific comments in a markup language (xml,html) file\n" +
+			$"\n" +
+			$"    -PatternUI\n" +
+			$"       Show the Regex pattern testing ui\n" +
+			$"\n" +
+			$"    -find_duplicate_files\n" +
+			$"       Find duplicate files within a directory tree\n" +
+			$"\n" +
+			$"    -showexif\n" +
+			$"       Display Exif info for a jpg file\n" +
+			$"\n" +
+			$"    -showtree\n" +
+			$"       Display a tree grid view of a text file containing whitespace indenting\n" +
+			$"\n" +
+			$"    -showbase64\n" +
+			$"       Display a tool for encoding/decoding base64 text\n" +
+			$"\n" +
+			$"    -xmledit\n" +
+			$"       Display a tool for editing XML files\n" +
+			$"\n" +
+			// NEW_COMMAND
+			$"  Type Cex -command -help for help on a particular command\n" +
+			$"");
 		}
 
 		/// <summary>Handle a command line option.</summary>
@@ -115,6 +133,7 @@ namespace Csex
 			{
 				switch (option.ToLowerInvariant())
 				{
+				case "-call":                    m_cmd = new Call(); break;
 				case "-gencode":                 m_cmd = new GenActivationCode(); break;
 				case "-signfile":                m_cmd = new SignFile(); break;
 				case "-find_assembly_conflicts": m_cmd = new FindAssemblyConflicts(); break;
@@ -142,9 +161,9 @@ namespace Csex
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		public override Exception Validate()
 		{
-			return m_cmd == null || m_cmd.OptionsValid();
+			return m_cmd?.Validate() is Exception err ? err : null;
 		}
 	}
 }

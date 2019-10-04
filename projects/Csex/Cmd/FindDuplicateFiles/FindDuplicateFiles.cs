@@ -56,10 +56,13 @@ namespace Csex
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		public override Exception Validate()
 		{
-			if (m_interactive) return true;
-			return m_src_dir.HasValue() && m_dst_dir.HasValue();
+			return
+				m_interactive ? null :
+				!m_src_dir.HasValue() ? new Exception($"No source directory") :
+				!m_dst_dir.HasValue() ? new Exception($"No destination directory") :
+				null;
 		}
 
 		/// <summary>Execute the command</summary>

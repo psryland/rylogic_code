@@ -38,9 +38,9 @@ namespace Csex
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		public override Exception Validate()
 		{
-			return true;
+			return null;
 		}
 
 		/// <summary>Run the command</summary>

@@ -6,7 +6,7 @@ import DeployLib
 import UserVars
 
 # The post-build step for Rylogic Assemblies
-def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str, deps:[str], run_tests:bool=True):
+def PostBuild(assembly:str, projdir:str, targetdir:str, framework:str, platform:str, config:str, deps:[str], run_tests:bool=True):
 
 	# Assert up-to-date tools
 	Tools.AssertVersion(1)
@@ -20,6 +20,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 
 	# Set this to false to disable running tests on compiling
 	RunTests = run_tests
+	RunTests = False
 
 	# The build outputs
 	dll = os.path.join(targetdir, f"{assembly}.dll")
@@ -31,23 +32,38 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 		if not os.path.exists(target):
 			print(f"{assembly} assembly not found.   **** Unit tests skipped ****")
 		else:
-			# Use PowerShell to run the unit-tests
+			
 			if target == dll:
+				# Run using dotnet - Doesn't work because libraries can't have entry points
+				#res,outp = Tools.Run([UserVars.dotnet, target])
+
+				# Map 'deps' to full paths.
+				# Dependent dlls should be next to the test dll, thanks to the build system
+				deps = [os.path.join(targetdir, p) for p in deps]
+				
+				# Run using cross-platform PowerShell
 				command = (
 					"& {\n" +
-					f"Set-Location {targetdir};\n" +
-					"\n".join(f"[Reflection.Assembly]::LoadFile('{os.path.join(targetdir,dep)}')|Out-Null;\n" for dep in deps) +
-					f"[Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +
-					f"Exit [{assembly}.Program]::Main();\n" +
+					f"    Set-Location {targetdir};\n" +
+					f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) +
+					f"    Add-Type -AssemblyName '{target}';\n" +
+					#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) + 
+					#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" + 
+					f"    $result = [{assembly}.Program]::Main();\n" +
+					f"    Exit $result;\n" +
 					"}")
+				#print(command)
+				#if framework == "net472":
+				#	res,outp = Tools.Run([UserVars.powershell64, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command])
+				#else:
+				res,outp = Tools.Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command])
 
-				powershell = UserVars.powershell64 if platform == "x64" else UserVars.powershell32
-				res,outp = Tools.Run([powershell, "-NonInteractive", "-NoProfile", "-STA", "-NoLogo", "-Command", command])
 				print(outp)
 				if not res:
 					raise Exception("   **** Unit tests failed ****   ")
 
 			elif target == exe:
+
 				# Run the exe directly
 				res,outp = Tools.Run([target])
 				print(outp)
@@ -55,7 +71,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 					raise Exception("   **** Unit tests failed ****   ")
 
 	# Copy to lib folder
-	Tools.Copy(target, os.path.join(UserVars.root, "lib", platform, config, ""))
+	#Tools.Copy(target, os.path.join(UserVars.root, "lib", platform, config, ""))
 	return
 
 # Nuget deploy a Rylogic Assembly

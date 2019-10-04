@@ -48,11 +48,12 @@ namespace Csex
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		public override Exception Validate()
 		{
 			return
-				m_pk.HasValue() &&
-				(m_data.HasValue() || m_filepath.HasValue());
+				!m_pk.HasValue() ? new Exception("No private key file provided") : 
+				!(m_data.HasValue() || m_filepath.HasValue()) ? new Exception("No data for file provided") :
+				null;
 		}
 
 		/// <summary>Run the command</summary>

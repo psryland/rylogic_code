@@ -248,10 +248,18 @@ namespace Rylogic.Extn
 			}
 		}
 
-		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
+		/// <summary>Returns true if all elements this collection are equal (or return equal results from 'selector')</summary>
+		public static bool AllSame<TSource>(this IEnumerable<TSource> source, IEqualityComparer<TSource>? comparer = null)
+		{
+			comparer ??= Eql<TSource>.Default;
+
+			if (!source.Any()) return true;
+			var first = source.First();
+			return source.Skip(1).All(x => comparer.Equals(first, x));
+		}
 		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet>? comparer = null)
 		{
-			comparer = comparer ?? Eql<TRet>.Default;
+			comparer ??= Eql<TRet>.Default;
 
 			if (!source.Any()) return true;
 			var first = selector(source.First());

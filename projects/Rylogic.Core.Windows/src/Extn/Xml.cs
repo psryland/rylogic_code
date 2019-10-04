@@ -167,6 +167,8 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void ToXmlAnonymous()
 		{
+			Xml_.Config.SupportAnonymousTypes();
+
 			var obj0 = new { One = "one", Two = 2, Three = 6.28 };
 			var obj1 = new[]
 			{
@@ -178,14 +180,12 @@ namespace Rylogic.UnitTests
 			var node0 = obj0.ToXml("obj0", true);
 			var node1 = obj1.ToXml("obj1", true);
 
-			Xml_.Config.SupportAnonymousTypes();
-
-			var OBJ0 = (dynamic)node0.ToObject();
+			var OBJ0 = (dynamic?)node0.ToObject() ?? throw new NullReferenceException();
 			Assert.Equal("one", OBJ0.One);
 			Assert.Equal(2, OBJ0.Two);
 			Assert.Equal(6.28, OBJ0.Three);
 
-			var OBJ1 = (dynamic[])node1.ToObject();
+			var OBJ1 = (dynamic[]?)node1.ToObject() ?? throw new NullReferenceException();
 			Assert.Equal(3, OBJ1.Length);
 
 			Assert.Equal("one", OBJ1[0].One);

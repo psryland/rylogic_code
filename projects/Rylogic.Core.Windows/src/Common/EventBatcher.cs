@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2011
 //***************************************************
 
+#if NET472
+
 using System;
 using System.Threading;
 using System.Windows.Threading;
@@ -19,9 +21,6 @@ namespace Rylogic.Common
 		// - Trigger on the first event received, (optional, see TriggerOnFirst)
 		// - Collect subsequent events,
 		// - Trigger every 'Delay' interval if events have been received since the last trigger
-
-		/// <summary>Synchronisation</summary>
-		private readonly object m_lock;
 
 		/// <summary>Condition variable to signal shutdown</summary>
 		private bool m_shutdown;
@@ -55,9 +54,8 @@ namespace Rylogic.Common
 		{ }
 		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action? action)
 		{
-			m_lock = new object();
 			m_shutdown = false;
-			Dispatcher = dispatcher ?? throw new ArgumentNullException("dispatcher", "dispatcher can't be null");
+			Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher), "dispatcher can't be null");
 			Delay = delay;
 			m_count = 0;
 			Immediate = false;
@@ -228,8 +226,8 @@ namespace Rylogic.UnitTests
 			var count = new int[2];
 			var dis = Dispatcher.CurrentDispatcher;
 			var thread_id = Thread.CurrentThread.ManagedThreadId;
-			var mre_eb1 = new ManualResetEvent(false);
-			var mre_eb2 = new ManualResetEvent(false);
+			using var mre_eb1 = new ManualResetEvent(false);
+			using var mre_eb2 = new ManualResetEvent(false);
 
 			// Not trigger on first, expect one call after the delay period
 			var eb1 = new EventBatcher(() =>
@@ -277,5 +275,7 @@ namespace Rylogic.UnitTests
 		}
 	}
 }
+
+#endif
 
 #endif

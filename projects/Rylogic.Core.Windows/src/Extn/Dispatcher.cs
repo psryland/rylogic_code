@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if NET472
+
+using System;
 using System.Windows.Threading;
 
 namespace Rylogic.Extn
@@ -52,3 +54,5 @@ namespace Rylogic.Extn
 		}
 	}
 }
+
+#endif

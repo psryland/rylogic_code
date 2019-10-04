@@ -153,39 +153,41 @@ namespace Rylogic.Script
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using Extn;
-	using Script;
+    using Common;
+    using Script;
+	using Utility;
 
 	[TestFixture] public class TestHtmlExpander
 	{
-		private const string IncludeFile = "TestExpandHtml_include.txt";
-		[SetUp] public void Setup()
-		{
-			File.WriteAllText(IncludeFile, "include file\r\ntext data");
-		}
-		[TearDown] public void TearDown()
-		{
-			File.Delete(IncludeFile);
-		}
 		[Test] public void TestExpandHtml()
 		{
-			var template =
-				$"<root>\r\n" +
-				$"\t\t <!--#include file=\"{IncludeFile}\"-->\r\n" +
-				$"<!--#var name=\"MyVar\" file=\"{IncludeFile}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n" +
-				$"  <!--#value name=\"MyVar\"-->\r\n"+
-				$"    <!--#value name=\"MyVar\"-->\r\n"+
-				$"</root>\r\n";
-			const string result =
-				"<root>\r\n" +
-				"\t\t include file\r\n" +
-				"\t\t text data\r\n" +
-				"\r\n" +
-				"  data\r\n" +
-				"    data\r\n" +
-				"</root>\r\n";
-			var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
-			Assert.Equal(result, r);
+			var filepath = Path.GetTempFileName();
+			var data = Encoding.UTF8.GetBytes("include file\r\ntext data");
+
+			// Shared read access doesn't work for DeleteOnClose files so might as well just use a normal file and delete on clean up
+			using (var file = new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+				file.Write(data, 0, data.Length);
+			
+			using (Scope.Create(null, () => Path_.DelFile(filepath)))
+			{
+				var template =
+					$"<root>\r\n" +
+					$"\t\t <!--#include file=\"{filepath}\"-->\r\n" +
+					$"<!--#var name=\"MyVar\" file=\"{filepath}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n" +
+					$"  <!--#value name=\"MyVar\"-->\r\n" +
+					$"    <!--#value name=\"MyVar\"-->\r\n" +
+					$"</root>\r\n";
+				const string result =
+					"<root>\r\n" +
+					"\t\t include file\r\n" +
+					"\t\t text data\r\n" +
+					"\r\n" +
+					"  data\r\n" +
+					"    data\r\n" +
+					"</root>\r\n";
+				var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
+				Assert.Equal(result, r);
+			}
 		}
 	}
 }

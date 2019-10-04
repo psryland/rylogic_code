@@ -10,8 +10,8 @@ namespace Rylogic.Common
 	[DebuggerDisplay("Idx={Index} {Current}")]
 	public class Iterator<T> :IEnumerator<T>
 	{
-		private IEnumerable<T> m_enumerable; // The enumeration source
-		private IEnumerator<T> m_enumer;     // The enumerator that keeps track of where we're up to
+		private readonly IEnumerator<T> m_enumer; // The enumerator that keeps track of where we're up to
+		private IEnumerable<T> m_enumerable;      // The enumeration source
 
 		public Iterator(IEnumerable<T> enumerable)
 		{

@@ -78,40 +78,67 @@ namespace Rylogic.Extn
 		public static Type Resolve(string name, bool throw_on_error = true)
 		{
 			// Temporary conversion from namespace 'pr' to namespace 'Rylogic'
-			string Replace(string old, string nue) => name.StartsWith(old) ? name.Replace(old, nue) : name;
-			if (name.StartsWith("pr."))
 			{
-				name = Replace("pr.attrib."    , "Rylogic.Attrib."   );
-				name = Replace("pr.audio."     , "Rylogic.Audio."    );
-				name = Replace("pr.common."    , "Rylogic.Common."   );
-				name = Replace("pr.container." , "Rylogic.Container.");
-				name = Replace("pr.crypt."     , "Rylogic.Crypt."    );
-				name = Replace("pr.db."        , "Rylogic.Db."       );
-				name = Replace("pr.extn."      , "Rylogic.Extn."     );
-				name = Replace("pr.gfx."       , "Rylogic.Graphix."  );
-				name = Replace("pr.gui."       , "Rylogic.Gui."      );
-				name = Replace("pr.inet."      , "Rylogic.INet."     );
-				name = Replace("pr.ldr."       , "Rylogic.LDraw."    );
-				name = Replace("pr.maths."     , "Rylogic.Maths."    );
-				name = Replace("pr.scintilla." , "Rylogic.Scintilla.");
-				name = Replace("pr.stream."    , "Rylogic.Streams."  );
-				name = Replace("pr.util."      , "Rylogic.Utility."  );
-				name = Replace("pr.view3d."    , "Rylogic.Graphix."  );
-				name = Replace("pr.win32."     , "Rylogic.Windows32.");
+				string Replace(string old, string nue) => name.StartsWith(old) ? name.Replace(old, nue) : name;
+				if (name.StartsWith("pr."))
+				{
+					name = Replace("pr.attrib.", "Rylogic.Attrib.");
+					name = Replace("pr.audio.", "Rylogic.Audio.");
+					name = Replace("pr.common.", "Rylogic.Common.");
+					name = Replace("pr.container.", "Rylogic.Container.");
+					name = Replace("pr.crypt.", "Rylogic.Crypt.");
+					name = Replace("pr.db.", "Rylogic.Db.");
+					name = Replace("pr.extn.", "Rylogic.Extn.");
+					name = Replace("pr.gfx.", "Rylogic.Graphix.");
+					name = Replace("pr.gui.", "Rylogic.Gui.");
+					name = Replace("pr.inet.", "Rylogic.INet.");
+					name = Replace("pr.ldr.", "Rylogic.LDraw.");
+					name = Replace("pr.maths.", "Rylogic.Maths.");
+					name = Replace("pr.scintilla.", "Rylogic.Scintilla.");
+					name = Replace("pr.stream.", "Rylogic.Streams.");
+					name = Replace("pr.util.", "Rylogic.Utility.");
+					name = Replace("pr.view3d.", "Rylogic.Graphix.");
+					name = Replace("pr.win32.", "Rylogic.Windows32.");
+				}
+				name = Replace("Rylogic.Extn.ToolStripLocations", "Rylogic.Gui.WinForms.ToolStripLocations");
 			}
-			name = Replace("Rylogic.Extn.ToolStripLocations", "Rylogic.Gui.WinForms.ToolStripLocations");
-			// End temporary
-			
-			var type = Type.GetType(name, null, ResolveCB, throw_on_error);
+
+			var type = Type.GetType(name, ResolveAssemblyCB, ResolveTypeCB, throw_on_error);
 			return type ?? throw new TypeLoadException($"Type {name} not found");
-	
+
 			// Type resolver callback
-			Type? ResolveCB(Assembly? assembly, string type_name, bool ignore_case)
+			static Assembly ResolveAssemblyCB(AssemblyName name)
 			{
+				// This is only called if 'name' specifies an assembly
+				var ass = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetName() == name && x.CodeBase == name.CodeBase);
+				if (ass == null) throw new TypeLoadException($"No assembly called {name.FullName} is currently loaded");
+				return ass;
+			}
+			static Type? ResolveTypeCB(Assembly? assembly, string type_name, bool ignore_case)
+			{
+				// Notes:
+				//  - There is an issue when assemblies are loaded dynamically. Dependent assemblies
+				//    get loaded again and the types within those assemblies are considered different
+				//    to the types of the same name (even thought the GUIDs are the same).
+				//  - "Types are per-assembly; if you have "the same" assembly loaded twice, then types
+				//    in each "copy" of the assembly are not considered to be the same type."
+				//  - "If assemblies are loaded from different paths, they're considered different
+				//    assemblies and therefore their types are different."
+				//  - "Loading an assembly into multiple contexts can cause type identity problems. If the
+				//    same type is loaded from the same assembly into two different contexts, it is as if
+				//    two different types with the same name had been loaded. An InvalidCastException is
+				//    thrown if you try to cast one type to the other, with the confusing message that
+				//    'type MyType cannot be cast to type MyType'.
+
 				var assems = assembly != null ? new[] { assembly } : AppDomain.CurrentDomain.GetAssemblies();
-				return assems.Select(ass => ass.GetType(type_name, false, ignore_case)).FirstOrDefault(t => t != null);
+				var types = assems.Select(ass => ass.GetType(type_name, false, ignore_case)).Where(t => t != null);
+				Debug.WriteIf(!types.AllSame(), $"WARNING: Multiple types called {type_name} are currently loaded!");
+				return types.LastOrDefault();
+				//if (!types.AllSame()) throw new TypeLoadException($"Multiple types called {type_name} are currently loaded");
+				//return types.FirstOrDefault();
 			}
 		}
+		private static readonly Cache<string, Type> m_type_resolve_cache = new Cache<string, Type>(100);
 
 		/// <summary>Returns all inherited members for a type (including private members)</summary>
 		public static IEnumerable<MemberInfo> AllMembers(this Type type, BindingFlags flags)

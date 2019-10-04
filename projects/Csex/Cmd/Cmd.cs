@@ -11,9 +11,7 @@ namespace Csex
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public abstract void ShowHelp(Exception ex = null);
 
-		/// <summary>
-		/// Handle a command line option.
-		/// Handles the /?, -h, and -help commands</summary>
+		/// <summary>Handle a command line option. Handles the /?, -h, and -help commands</summary>
 		public virtual bool CmdLineOption(string option, string[] args, ref int arg)
 		{
 			switch (option)
@@ -25,7 +23,7 @@ namespace Csex
 				arg = args.Length;
 				return true;
 			}
-			Console.WriteLine("Error: Unknown option '"+option+"'\n");
+			Console.WriteLine($"Error: Unknown option '{option}'\n");
 			return false;
 		}
 
@@ -36,6 +34,6 @@ namespace Csex
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
-		public abstract bool OptionsValid();
+		public abstract Exception Validate();
 	}
 }

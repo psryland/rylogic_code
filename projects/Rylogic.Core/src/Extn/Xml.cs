@@ -53,11 +53,13 @@ namespace Rylogic.Extn
 		/// A map from type to 'ToXml' method
 		/// User ToXml functions can be added to this map.
 		/// Note, they are only needed if ToBinding.Convert() method fails</summary>
-		public static ToBinding ToMap { [DebuggerStepThrough] get; private set; } = new ToBinding();
-		public class ToBinding :Dictionary<Type, ToFunc>
+		public static ToBinding ToMap { [DebuggerStepThrough] get; } = new ToBinding();
+		public class ToBinding
 		{
+			private readonly Dictionary<Type, ToFunc> m_bind;
 			public ToBinding()
 			{
+				m_bind = new Dictionary<Type, ToFunc>();
 				this[typeof(XElement)] = (obj, node) =>
 				{
 					node.Add(obj);
@@ -137,6 +139,26 @@ namespace Rylogic.Extn
 				};
 			}
 
+			/// <summary>The number of bindings</summary>
+			public int Count => m_bind.Count;
+
+			/// <summary>Get/Set a binding for a type</summary>
+			public ToFunc this[Type type]
+			{
+				get => m_bind[type];
+				set
+				{
+					if (value != null) m_bind[type] = value;
+					else m_bind.Remove(type);
+				}
+			}
+
+			/// <summary>Find a binding function</summary>
+			public bool TryGetValue(Type type, out ToFunc func)
+			{
+				return m_bind.TryGetValue(type, out func!);
+			}
+
 			/// <summary>
 			/// Saves 'obj' into 'node' using the bound ToXml methods.
 			/// 'type_attr' controls whether the 'ty' attribute is added. By default it should
@@ -203,7 +225,7 @@ namespace Rylogic.Extn
 				var lookup_type = type.IsGenericType ? gen_type : type;
 
 				// Otherwise, use the bound ToXml function
-				ToFunc? func = TryGetValue(lookup_type, out var f) ? f : null;
+				ToFunc? func = m_bind.TryGetValue(lookup_type, out var f) ? f : null;
 				for (;func == null;)
 				{
 					// See if 'obj' has a native 'ToXml' method
@@ -235,8 +257,8 @@ namespace Rylogic.Extn
 				if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
 
 				// Replace the mapping with a call directly to that method
-				ToMap[type] = (o, n) => (XElement?)mi.Invoke(o, new object[] { n }) ?? throw new Exception("ToXml method returned null");
-				return ToMap[type](obj, node);
+				this[type] = (o, n) => (XElement?)mi.Invoke(o, new object[] { n }) ?? throw new Exception("ToXml method returned null");
+				return this[type](obj, node);
 			}
 
 			/// <summary>Return an XElement object for a type that specifies the DataContract attribute</summary>
@@ -257,7 +279,7 @@ namespace Rylogic.Extn
 					.ToList();
 
 				// Replace the mapping function with a call that already has the members found
-				ToMap[type] = (o, n) =>
+				this[type] = (o, n) =>
 				{
 					foreach (var m in members)
 					{
@@ -274,7 +296,7 @@ namespace Rylogic.Extn
 					}
 					return n;
 				};
-				return ToMap[type](obj, node);
+				return this[type](obj, node);
 			}
 
 			/// <summary>Returns true if 'm' is a 'ToXml' method</summary>
@@ -312,11 +334,13 @@ namespace Rylogic.Extn
 		/// A map from type to 'As' method
 		/// User conversion functions can be added to this map
 		/// Note, they are only needed if AsBinding.Convert() method fails</summary>
-		public static AsBinding AsMap { [DebuggerStepThrough] get; private set; } = new AsBinding();
-		public class AsBinding :Dictionary<Type, AsFunc>
+		public static AsBinding AsMap { [DebuggerStepThrough] get; } = new AsBinding();
+		public class AsBinding
 		{
+			private readonly Dictionary<Type, AsFunc> m_bind;
 			public AsBinding()
 			{
+				m_bind = new Dictionary<Type, AsFunc>();
 				this[typeof(XElement)] = (elem, type, ctor) =>
 				{
 					return elem.Elements().FirstOrDefault();
@@ -459,9 +483,29 @@ namespace Rylogic.Extn
 						$".NETStandard 2.0 does not have support for Reflection.Emit (even though there is " +
 						$"support in .NET Core 2 and .NetFramework 4.6+). To support deserialisation of " +
 						$"anonymous types, you need to reference 'Rylogic.Core.Windows' and add a call to " +
-						$"'Xml_.Config.SupportAnonymousTypes()' during initialisation. Ulternatively, anonymous " +
+						$"'Xml_.Config.SupportAnonymousTypes()' during initialisation. Alternatively, anonymous " +
 						$"types can be returned as 'Dictionary<string,object>' by calling 'Xml_.Config.AnonymousTypesAsDictionary();");
 				};
+			}
+
+			/// <summary>The number of bindings</summary>
+			public int Count => m_bind.Count;
+
+			/// <summary>Get/Set a binding for a type</summary>
+			public AsFunc this[Type type]
+			{
+				get => m_bind[type];
+				set
+				{
+					if (value != null) m_bind[type] = value;
+					else m_bind.Remove(type);
+				}
+			}
+
+			/// <summary>Find a binding function</summary>
+			public bool TryGetValue(Type type, out AsFunc func)
+			{
+				return m_bind.TryGetValue(type, out func!);
 			}
 
 			/// <summary>
@@ -558,7 +602,7 @@ namespace Rylogic.Extn
 				AsFunc? func = TryGetValue(lookup_type, out var f) ? f : null;
 				for (;func == null;) // There is no 'As' binding for this type, try a few possibilities
 				{
-					// Try a constructor that takes a single XElement parameter
+					// Try a constructor that takes a single XElement parameter. The constructor can be private, but not inherited
 					var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
 					if (ctor != null) { func = this[type] = AsCtor; break; }
 
@@ -573,8 +617,14 @@ namespace Rylogic.Extn
 					// If a factory method has been supplied, rely on that
 					if (factory_ != null) { func = this[type] = AsFromFactory; break; }
 
-					// Note, the constructor can be private, but not inherited
-					throw new NotSupportedException($"No binding for converting XElement to type {type.Name}");
+					// Notes
+					//  - If it appears a type is in the map but TryGetValue returns false, it is probably
+					//    because libraries loaded dynamically seem to be considered different types.
+					//  - "Types are per-assembly; if you have "the same" assembly loaded twice, then types
+					//    in each "copy" of the assembly are not considered to be the same type."
+					throw new NotSupportedException(
+						$"No binding for converting XElement to type: {lookup_type.Name}\n" +
+						$"As-Bindings: [{Count}] {string.Join(",", m_bind.Keys.Select(x => x.Name))}");
 				}
 				return func(elem, type, factory);
 			}
@@ -586,8 +636,8 @@ namespace Rylogic.Extn
 				if (ctor == null) throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
 
 				// Replace the mapping with a call that doesn't need to search for the constructor
-				AsMap[type] = (e,t,i) => ctor.Invoke(new object[]{e});
-				return AsMap[type](elem, type, factory);
+				this[type] = (e,t,i) => ctor.Invoke(new object[]{e});
+				return this[type](elem, type, factory);
 			}
 
 			/// <summary>An 'As' method that expects 'type' to have a method called 'FromXml' taking a single XElement argument</summary>
@@ -597,20 +647,20 @@ namespace Rylogic.Extn
 				if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
 
 				// Replace the mapping with a call that doesn't need to search for the method
-				AsMap[type] = (e,t,i) =>
+				this[type] = (e,t,i) =>
+				{
+					try
 					{
-						try
-						{
-							var obj = factory(type);
-							method.Invoke(obj, new object[] { e });
-							return obj;
-						}
-						catch (TargetInvocationException ex) when (ex.InnerException != null)
-						{
-							throw ex.InnerException;
-						}
-					};
-				return AsMap[type](elem, type, factory);
+						var obj = factory(type);
+						method.Invoke(obj, new object[] { e });
+						return obj;
+					}
+					catch (TargetInvocationException ex) when (ex.InnerException != null)
+					{
+						throw ex.InnerException;
+					}
+				};
+				return this[type](elem, type, factory);
 			}
 
 			/// <summary>An 'As' method for types that specify the DataContract attribute</summary>
@@ -630,29 +680,29 @@ namespace Rylogic.Extn
 					.ToList();
 
 				// Replace the mapped function with one that doesn't need to search for members
-				AsMap[type] = (el,ty,new_inst) =>
+				this[type] = (el,ty,new_inst) =>
+				{
+					new_inst ??= Type_.New;// Activator.CreateInstance;
+
+					// This will always de-serialise as a default object ignoring the elements
+					if (members.Count == 0 && el.HasElements)
+						throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
+
+					// Read nodes from the XML, and populate any members with matching names
+					object obj = new_inst(ty);
+					foreach (var e in el.Elements())
 					{
-						new_inst ??= Type_.New;// Activator.CreateInstance;
+						// Look for the property or field by name
+						var name = e.Name.LocalName;
+						var m = members.BinarySearchFind(x => string.CompareOrdinal(x.Attr.Name ?? x.Member.Name, name));
+						if (m == null) continue;
 
-						// This will always de-serialise as a default object ignoring the elements
-						if (members.Count == 0 && el.HasElements)
-							throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
-
-						// Read nodes from the XML, and populate any members with matching names
-						object obj = new_inst(ty);
-						foreach (var e in el.Elements())
-						{
-							// Look for the property or field by name
-							var name = e.Name.LocalName;
-							var m = members.BinarySearchFind(x => string.CompareOrdinal(x.Attr.Name ?? x.Member.Name, name));
-							if (m == null) continue;
-
-							if (m.Member is PropertyInfo prop) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
-							if (m.Member is FieldInfo field) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
-						}
-						return obj;
-					};
-				return AsMap[type](elem, type, factory);
+						if (m.Member is PropertyInfo prop) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
+						if (m.Member is FieldInfo field) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
+					}
+					return obj;
+				};
+				return this[type](elem, type, factory);
 			}
 
 			/// <summary>An 'As' method that relies of the factory function to read 'elem'</summary>
@@ -899,15 +949,14 @@ namespace Rylogic.Extn
 				foreach (var child in node.Nodes())
 				{
 					// Not a container => a leaf node
-					var container = child as XContainer;
-					if (container == null)
-					{
-						yield return child;
-					}
-					else
+					if (child is XContainer container)
 					{
 						foreach (var leaf in LeafNodes(container))
 							yield return leaf;
+					}
+					else
+					{
+						yield return child;
 					}
 				}
 			}
@@ -985,7 +1034,7 @@ namespace Rylogic.Extn
 			private StringBuilder MakeFullName(XElement elem, StringBuilder? sb = null)
 			{
 				// If not the root element, call recursively, then build the name as the stack unwinds
-				sb = sb ?? new StringBuilder();
+				sb ??= new StringBuilder();
 				if (elem.Parent != null)
 				{
 					MakeFullName(elem.Parent, sb);
@@ -1045,6 +1094,7 @@ namespace Rylogic.Extn
 		/// <summary>Exception type created during diff/patching</summary>
 		public class Exception :System.Exception
 		{
+			public Exception() : base() {}
 			public Exception(string message) :base(message) {}
 		}
 
@@ -1065,8 +1115,8 @@ namespace Rylogic.Extn
 			var output_node_index = 0;
 
 			// Loop through the nodes at this level
-			var i = lhs.Nodes().GetIterator<XNode>();
-			var j = rhs.Nodes().GetIterator<XNode>();
+			using var i = lhs.Nodes().GetIterator<XNode>();
+			using var j = rhs.Nodes().GetIterator<XNode>();
 			for (; !i.AtEnd || !j.AtEnd;)
 			{
 				// If i still has elements but j does not

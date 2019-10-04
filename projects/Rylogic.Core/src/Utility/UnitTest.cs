@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Runtime.Versioning;
 using System.Text;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -45,7 +46,7 @@ namespace Rylogic.UnitTests
 				int failed = 0;
 				using (var outp = new StreamWriter(outstream, Encoding.ASCII, 4096, true))
 				{
-					outp.WriteLine($"Unit Testing:  {ass.GetName().Name}.dll  Platform={(Environment.Is64BitProcess ? "x64" : "x86")}  Config={(Util.IsDebug ? "Debug" : "Release")}  Version={ass.GetName().Version}");
+					outp.WriteLine($"Unit Testing:  {ass.GetName().Name}.dll  Framework={ass.FindAttribute<TargetFrameworkAttribute>()?.FrameworkName ?? ass.ImageRuntimeVersion}  Platform={(Environment.Is64BitProcess ? "x64" : "x86")}  Config={(Util.IsDebug ? "Debug" : "Release")}  Version={ass.GetName().Version}");
 					const string file_pattern = @" in " + Regex_.FullPathPattern + @":line\s(?<line>\d+)";
 
 					// Look for test fixtures

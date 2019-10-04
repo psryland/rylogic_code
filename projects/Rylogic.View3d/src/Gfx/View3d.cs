@@ -27,7 +27,7 @@ using HWND = System.IntPtr;
 namespace Rylogic.Gfx
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
-	public class View3d : IDisposable
+	public sealed class View3d : IDisposable
 	{
 		// Notes:
 		// - Each process should create a single View3d instance that is an isolated context.
@@ -396,7 +396,6 @@ namespace Rylogic.Gfx
 		[Flags] public enum EUpdateObject : uint // Flags for partial update of a model
 		{
 			None = 0U,
-			All = ~0U,
 			Name = 1 << 0,
 			Model = 1 << 1,
 			Transform = 1 << 2,
@@ -405,6 +404,7 @@ namespace Rylogic.Gfx
 			ColourMask = 1 << 5,
 			Flags = 1 << 6,
 			Animation = 1 << 7,
+			All = Name | Model | Transform | Children | Colour | ColourMask | Flags | Animation,
 		}
 		[Flags] public enum EFlags
 		{
@@ -502,13 +502,14 @@ namespace Rylogic.Gfx
 			public Vertex(v4 vert) { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col) { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm; m_uv = tex; pad = 0; }
+			
 			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
-		[StructLayout(LayoutKind.Sequential), Serializable]
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
-			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)]
+			[DebuggerDisplay("{Description,nq}"), StructLayout(LayoutKind.Sequential)]
 			public struct ShaderSet
 			{
 				[StructLayout(LayoutKind.Sequential), Serializable]
@@ -529,7 +530,7 @@ namespace Rylogic.Gfx
 				public string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
 			}
 
-			[DebuggerDisplay("Smap"), Serializable, StructLayout(LayoutKind.Sequential)]
+			[DebuggerDisplay("Smap"), StructLayout(LayoutKind.Sequential)]
 			public struct ShaderMap
 			{
 				public static ShaderMap New()
@@ -589,7 +590,6 @@ namespace Rylogic.Gfx
 			}
 		}
 
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Nugget
 		{
@@ -620,7 +620,6 @@ namespace Rylogic.Gfx
 			}
 		}
 
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ImageInfo
 		{
@@ -633,7 +632,6 @@ namespace Rylogic.Gfx
 			public float m_aspect { get { return (float)m_width / m_height; } }
 		}
 
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextureOptions
 		{
@@ -715,7 +713,6 @@ namespace Rylogic.Gfx
 			}
 		}
 
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct WindowOptions
 		{
@@ -735,7 +732,6 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Light source properties</summary>
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct LightInfo
 		{
@@ -810,7 +806,6 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>A ray description for hit testing in a 3d scene</summary>
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct HitTestRay
 		{
@@ -820,7 +815,6 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>The result of a ray cast hit test in a 3d scene</summary>
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct HitTestResult
 		{
@@ -852,7 +846,6 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>The viewport volume in render target space (i.e. screen coords, not normalised)</summary>
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Viewport
 		{
@@ -879,7 +872,6 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DIncludes
 		{
@@ -924,7 +916,6 @@ namespace Rylogic.Gfx
 			public int m_module_count;
 		}
 
-		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DSceneChanged
 		{
@@ -1151,8 +1142,9 @@ namespace ldr
 					try
 					{
 						// Create a runtime assembly from the embedded code
-						var ass = RuntimeAssembly.FromString("ldr.Main", src, new[] { Util.ResolveAppPath() });
-						result = ass.Invoke<string>("Execute");
+						using var ass = RuntimeAssembly.Compile(src, new[] { Util.ResolveAppPath() });
+						using var inst = ass.New("ldr.Main");
+						result = inst.Invoke<string>("Execute");
 					}
 					catch (CompileException ex)
 					{
@@ -1314,7 +1306,7 @@ namespace ldr
 		}
 
 		/// <summary>Binds a 3D scene to a window</summary>
-		public class Window :IDisposable
+		public sealed class Window :IDisposable
 		{
 			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error call back)
 			private readonly ReportErrorCB m_error_cb;          // A reference to prevent the GC from getting it
@@ -1364,7 +1356,7 @@ namespace ldr
 				Camera = new Camera(this);
 				Camera.SetPosition(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HWindow.Zero) return;
@@ -2384,7 +2376,12 @@ namespace ldr
 				Owned = owned;
 				Handle = handle;
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
 				if (Handle == HObject.Zero) return;
@@ -2768,7 +2765,7 @@ namespace ldr
 		}
 
 		/// <summary>A 3D manipulation gizmo</summary>
-		public class Gizmo :IDisposable
+		public sealed class Gizmo :IDisposable
 		{
 			// Use:
 			//  Create a gizmo, attach objects or other gizmos to it,
@@ -2798,7 +2795,7 @@ namespace ldr
 				m_owned = false;
 				View3D_GizmoAttachCB(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero);
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HObject.Zero) return;
@@ -2918,7 +2915,7 @@ namespace ldr
 		}
 
 		/// <summary>Texture resource wrapper</summary>
-		public class Texture :IDisposable
+		public sealed class Texture :IDisposable
 		{
 			private bool m_owned;
 
@@ -2971,7 +2968,7 @@ namespace ldr
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
 			
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HTexture.Zero) return;
@@ -3098,7 +3095,7 @@ namespace ldr
 			#region Helper Classes
 
 			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
-			public class Lock :IDisposable
+			public sealed class Lock :IDisposable
 			{
 				private readonly HTexture m_tex;
 
@@ -3225,7 +3222,7 @@ namespace ldr
 		}
 
 		/// <summary>CubeMap Texture resource wrapper</summary>
-		public class CubeMap :IDisposable
+		public sealed class CubeMap :IDisposable
 		{
 			// Notes:
 			//  - CubeMap is basically the same as Texture except it can only
@@ -3265,7 +3262,7 @@ namespace ldr
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HCubeMap.Zero) return;

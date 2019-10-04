@@ -236,99 +236,81 @@ namespace Rylogic.UnitTests
 
 	[TestFixture] public class TestAggregateFileStream
 	{
+		private readonly string file0 = Path.GetTempFileName();
+		private readonly string file1 = Path.GetTempFileName();
+		private readonly string file2 = Path.GetTempFileName();
+		private readonly string fileN = Path.GetTempFileName();
+		private string Content0 => "Line0\n";
+		private string Content1 => "Line1\n";
+		private string Content2 => "Line2\n";
+		private string CombinedContent => Content0 + Content1 + Content2;
+		private IEnumerable<string> Files => new[] { file0, file1, file2 };
+
 		[TestFixtureSetUp] public void Setup()
 		{
-			File.WriteAllText("file0.txt", Content0);
-			File.WriteAllText("file1.txt", Content1);
-			File.WriteAllText("file2.txt", Content2);
+			File.WriteAllText(file0, Content0);
+			File.WriteAllText(file1, Content1);
+			File.WriteAllText(file2, Content2);
 		}
 		[TestFixtureTearDown] public void CleanUp()
 		{
-			File.Delete("file0.txt");
-			File.Delete("file1.txt");
-			File.Delete("file2.txt");
-			File.Delete("fileN.txt");
-		}
-		private static IEnumerable<string> Files
-		{
-			get { return new[]{"file0.txt","file1.txt","file2.txt"}; }
-		}
-		private static string Content0
-		{
-			get { return "Line0\n"; }
-		}
-		private static string Content1
-		{
-			get { return "Line1\n"; }
-		}
-		private static string Content2
-		{
-			get { return "Line2\n"; }
-		}
-		private static string CombinedContent
-		{
-			get { return Content0 + Content1 + Content2; }
+			File.Delete(file0);
+			File.Delete(file1);
+			File.Delete(file2);
+			File.Delete(fileN);
 		}
 		[Test] public void TestGeneral()
 		{
-			using (var f = new AggregateFileStream(Files))
-			{
-				Assert.True(f.CanRead);
-				Assert.True(f.CanSeek);
-				Assert.False(f.CanWrite);
-				Assert.Equal((long)CombinedContent.Length, f.Length);
-			}
+			using var f = new AggregateFileStream(Files);
+			Assert.True(f.CanRead);
+			Assert.True(f.CanSeek);
+			Assert.False(f.CanWrite);
+			Assert.Equal((long)CombinedContent.Length, f.Length);
 		}
 		[Test] public void TestFileIndex()
 		{
-			using (var f = new AggregateFileStream(Files))
-			{
-				Assert.Equal(0, f.FileIndexAtOffset(0));
-				Assert.Equal(0, f.FileIndexAtOffset(Content0.Length - 1));
-				Assert.Equal(1, f.FileIndexAtOffset(Content0.Length));
-				Assert.Equal(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
-				Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
-				Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
-			}
+			using var f = new AggregateFileStream(Files);
+			Assert.Equal(0, f.FileIndexAtOffset(0));
+			Assert.Equal(0, f.FileIndexAtOffset(Content0.Length - 1));
+			Assert.Equal(1, f.FileIndexAtOffset(Content0.Length));
+			Assert.Equal(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
+			Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
+			Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
 		}
 		[Test] public void TestStream()
 		{
 			using (var f = new AggregateFileStream(Files))
-			using (var s = new FileStream("fileN.txt", FileMode.Create, FileAccess.Write, FileShare.Read))
-			{
+			using (var s = new FileStream(fileN, FileMode.Create, FileAccess.Write, FileShare.Read))
 				f.CopyTo(s);
-			}
 
-			var combined = File.ReadAllText("fileN.txt");
+			var combined = File.ReadAllText(fileN);
 			Assert.Equal(CombinedContent, combined);
 		}
 		[Test] public void TestRead()
 		{
-			using (var f = new AggregateFileStream(Files))
-			{
-				var s = "abcdefghijklmnopqrstuvwxyz";
-				var bytes = Encoding.UTF8.GetBytes(s);
-				var offset = 5; // into 'bytes'
-				int pos = 0;    // file pos
+			using var f = new AggregateFileStream(Files);
+			var s = "abcdefghijklmnopqrstuvwxyz";
+			var bytes = Encoding.UTF8.GetBytes(s);
+			var offset = 5; // into 'bytes'
+			int pos = 0;    // file pos
 
-				Assert.Equal((long)pos, f.Position);
-				var read = f.Read(bytes, offset, Content0.Length/2);
-				Assert.Equal(Content0.Length/2, read);
-				Assert.Equal((long)(pos + read), f.Position);
-				Assert.Equal(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
+			Assert.Equal((long)pos, f.Position);
+			var read = f.Read(bytes, offset, Content0.Length / 2);
+			Assert.Equal(Content0.Length / 2, read);
+			Assert.Equal((long)(pos + read), f.Position);
+			Assert.Equal(s.Substring(0, offset) + CombinedContent.Substring(pos, read) + s.Substring(offset + read), Encoding.UTF8.GetString(bytes));
 
-				s = Encoding.UTF8.GetString(bytes);
+			s = Encoding.UTF8.GetString(bytes);
 
-				pos = CombinedContent.Length / 3;
-				f.Seek(pos, SeekOrigin.Begin);
-				Assert.Equal((long)pos, f.Position);
+			pos = CombinedContent.Length / 3;
+			f.Seek(pos, SeekOrigin.Begin);
+			Assert.Equal((long)pos, f.Position);
 
-				offset = 11;
-				read = f.Read(bytes, offset, Content1.Length);
-				Assert.Equal(Content1.Length, read);
-				Assert.Equal((long)(pos + read), f.Position);
-				Assert.Equal(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
-			}
+			offset = 11;
+			read = f.Read(bytes, offset, Content1.Length);
+			Assert.Equal(Content1.Length, read);
+			Assert.Equal((long)(pos + read), f.Position);
+			Assert.Equal(s.Substring(0, offset) + CombinedContent.Substring(pos, read) + s.Substring(offset + read), Encoding.UTF8.GetString(bytes));
 		}
 		[Test] public void TestReadByte()
 		{
@@ -346,16 +328,14 @@ namespace Rylogic.UnitTests
 		}
 		[Test] public void TestPosition()
 		{
-			using (var f = new AggregateFileStream(Files))
+			using var f = new AggregateFileStream(Files);
+			var bytes = Encoding.UTF8.GetBytes(CombinedContent);
+			var rnd = new Random(0);
+			for (int i = 0; i != bytes.Length; ++i)
 			{
-				var bytes = Encoding.UTF8.GetBytes(CombinedContent);
-				var rnd = new Random(0);
-				for (int i = 0; i != bytes.Length; ++i)
-				{
-					var pos = rnd.Next(bytes.Length);
-					f.Position = pos;
-					Assert.Equal((int)bytes[pos], f.ReadByte());
-				}
+				var pos = rnd.Next(bytes.Length);
+				f.Position = pos;
+				Assert.Equal((int)bytes[pos], f.ReadByte());
 			}
 		}
 	}

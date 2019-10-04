@@ -33,8 +33,8 @@ namespace Rylogic.Common
 			/// should be incremented for each arg used.</summary>
 			bool CmdLineData(string data, string[] args, ref int arg);
 
-			/// <summary>Return true if all required options have been given</summary>
-			bool OptionsValid();
+			/// <summary>Return an exception indicating invalid options</summary>
+			Exception? Validate();
 		}
 
 		/// <summary>Returns true if 'arg' is prefixed by '-'</summary>
@@ -72,10 +72,10 @@ namespace Rylogic.Common
 				}
 
 				// Check that the given command line arguments are self consistent
-				if (result == Result.Success && !cr.OptionsValid())
+				if (result == Result.Success && cr.Validate() is Exception err)
 				{
 					result = Result.Failed;
-					cr.ShowHelp();
+					cr.ShowHelp(err);
 				}
 			}
 			catch (Exception ex)
@@ -173,10 +173,10 @@ namespace Rylogic.UnitTests
 			}
 
 			/// <summary>Return true if all required options have been given</summary>
-			public bool OptionsValid()
+			public Exception? Validate()
 			{
 				++ValidateCount;
-				return OptionArg1 == "B";
+				return OptionArg1 != "B" ? new Exception("OptionArg1 should be 'B'") : null;
 			}
 		}
 		[Test] public void TestParse0()

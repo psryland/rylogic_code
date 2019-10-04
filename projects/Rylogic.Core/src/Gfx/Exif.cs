@@ -1401,6 +1401,7 @@ namespace Rylogic.Gfx
 namespace Rylogic.UnitTests
 {
 	using Gfx;
+	using Utility;
 
 	[TestFixture] public class TestExif
 	{
@@ -1409,12 +1410,9 @@ namespace Rylogic.UnitTests
 
 		[TestFixtureSetUp] public void Setup()
 		{
-			var dir = Environment.CurrentDirectory;
-			var idx = dir.IndexOf("Rylogic");
-			if (idx != -1) dir = dir.Substring(0, idx);
-
-			SrcImageWith    = Path.Combine(dir, @"unittest_resources\exif_image_with.jpg");
-			SrcImageWithout = Path.Combine(dir, @"unittest_resources\exif_image_without.jpg");
+			var res = Path.Combine(Path.GetDirectoryName(Util.__FILE__())!, "..", "..", "..", "unittest_resources");
+			SrcImageWith    = Path.Combine(res, "exif_image_with.jpg");
+			SrcImageWithout = Path.Combine(res, "exif_image_without.jpg");
 		}
 		[Test] public void LoadExifToMemory()
 		{

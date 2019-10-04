@@ -2,9 +2,9 @@ using System;
 
 namespace Csex
 {
-	// NEW_COMMAND - implement
 	public class NEW_COMMAND :Cmd
 	{
+		/// <summary>Command specific help</summary>
 		public override void ShowHelp(Exception ex)
 		{
 			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
@@ -15,6 +15,7 @@ namespace Csex
 				"");
 		}
 
+		/// <summary>Command specific options</summary>
 		public override bool CmdLineOption(string option, string[] args, ref int arg)
 		{
 			switch (option)
@@ -24,12 +25,13 @@ namespace Csex
 			}
 		}
 
-		/// <summary>Return true if all required options have been given</summary>
-		public override bool OptionsValid()
+		/// <summary>Validate the current options</summary>
+		public override Exception Validate()
 		{
-			throw new NotImplementedException();
+			return null;
 		}
 
+		/// <summary>Execute the command</summary>
 		public override int Run()
 		{
 			return 0;

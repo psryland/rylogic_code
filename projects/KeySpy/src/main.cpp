@@ -235,6 +235,7 @@ extern "C"
 			}
 			else
 			{
+				(void)argv;
 			}
 			return 0;
 		}
@@ -246,7 +247,7 @@ extern "C"
 	}
 	int main(int argc, char* argv[])
 	{
-
+		(void)argc,argv;
 	}
 }
 
