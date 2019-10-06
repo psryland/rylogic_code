@@ -7,7 +7,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	/// <summary>A record of a dock location within the dock container</summary>
 	public class DockLocation
 	{
-		public DockLocation(EDockSite[] address = null, int index = int.MaxValue, EDockSite? auto_hide = null, int? float_window_id = null)
+		public DockLocation(EDockSite[]? address = null, int index = int.MaxValue, EDockSite? auto_hide = null, int? float_window_id = null)
 		{
 			Address = address ?? new[] { EDockSite.Centre };
 			Index = index;

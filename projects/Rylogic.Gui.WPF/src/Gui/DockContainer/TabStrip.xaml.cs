@@ -45,21 +45,21 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
 		/// <summary>Returns the tree root that hosts this tab strip</summary>
-		internal ITreeHost TreeHost => (ITreeHost)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
+		internal ITreeHost? TreeHost => (ITreeHost?)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
 
 		/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
 		public EDockSite StripLocation
 		{
-			get { return Parent is DockPanel ? DockPanel.GetDock(this).ToDockSite() : EDockSite.None; }
+			get => Parent is DockPanel ? DockPanel.GetDock(this).ToDockSite() : EDockSite.None;
 			set
 			{
-				if (Parent is DockPanel dp && value.IsEdge())
+				if (Parent is DockPanel && value.IsEdge())
 					DockPanel.SetDock(this, value.ToDock());
 			}
 		}
 
 		/// <summary>The auto hide panel this tab strip is associated with (null if none)</summary>
-		public AutoHidePanel AHPanel { get; set; }
+		public AutoHidePanel? AHPanel { get; set; }
 
 		/// <summary>The tab buttons in this tab strip</summary>
 		public ObservableCollection<TabButton> Buttons
@@ -109,20 +109,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		private ObservableCollection<TabButton> m_buttons;
+		private ObservableCollection<TabButton> m_buttons = null!;
 
 		/// <summary>Hit test the tab strip, returning the dockable associated with a hit tab button, or null. 'pt' is in TabStrip space</summary>
-		private DockControl HitTestTabButton(Point pt)
+		private DockControl? HitTestTabButton(Point pt)
 		{
 			var hit = InputHitTest(pt);
 			return (hit as TabButton)?.DockControl;
 		}
 
 		/// <summary>Get the content associated with the tabs</summary>
-		public IEnumerable<DockControl> AllContent
-		{
-			get { return Buttons.Select(x => x.DockControl); }
-		}
+		public IEnumerable<DockControl> AllContent => Buttons.Select(x => x.DockControl);
 
 		/// <summary>Set the layout transform based on the current strip location</summary>
 		private void UpdateLayoutTransform()

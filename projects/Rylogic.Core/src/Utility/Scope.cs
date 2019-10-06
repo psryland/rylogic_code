@@ -41,10 +41,10 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Create a scope around a value</summary>
-		public static Scope<T> Create<T>(Func<T> on_enter, Action<T> on_exit)
+		public static Scope<T> Create<T>(Func<T> on_enter, Action<T>? on_exit)
 		{
 			var s = new Scope<T>();
-			s.Init(() => s.Value = on_enter(), () => on_exit(s.Value));
+			s.Init(() => s.Value = on_enter(), () => on_exit?.Invoke(s.Value));
 			return s;
 		}
 		public static async Task<Scope<T>> CreateAsync<T>(Func<Task<T>> on_enter, Action<T> on_exit)

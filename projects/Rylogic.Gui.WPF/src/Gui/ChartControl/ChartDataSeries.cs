@@ -18,36 +18,35 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public partial class ChartDataSeries : ChartControl.Element
 	{
-		public ChartDataSeries(string name, EFormat format, OptionsData options = null, int? capacity = null)
+		public ChartDataSeries(string name, EFormat format, OptionsData? options = null, int? capacity = null)
 			: this(Guid.NewGuid(), name, format, options, capacity)
 		{ }
-		public ChartDataSeries(Guid id, string name, EFormat format, OptionsData options = null, int? capacity = null)
+		public ChartDataSeries(Guid id, string name, EFormat format, OptionsData? options = null, int? capacity = null)
 			: base(id, m4x4.Identity, name)
 		{
-			Init();
+			m_data = new List<Pt>(capacity ?? 100);
+			m_range_x = RangeF.Invalid;
+			Cache = new ChartGfxCache(CreatePiece);
 			Format = format;
 			Options = options ?? new OptionsData();
 		}
 		public ChartDataSeries(XElement node)
 			: base(node)
 		{
-			Init();
+			m_data = new List<Pt>();
+			m_range_x = RangeF.Invalid;
+			Cache = new ChartGfxCache(CreatePiece);
 			Format = node.Element(nameof(Format)).As<EFormat>();
 			Options = node.Element(nameof(Options)).As<OptionsData>();
 		}
-		private void Init()
+		protected override void Dispose(bool _)
 		{
-			m_data = new List<Pt>();
-			Cache = new ChartGfxCache(CreatePiece);
-			m_range_x = RangeF.Invalid;
-		}
-		public override void Dispose()
-		{
-			Cache = null;
-			base.Dispose();
+			Cache = null!;
+			base.Dispose(_);
 		}
 		public override XElement ToXml(XElement node)
 		{
+			node.Add2(nameof(Format), Format, false);
 			node.Add2(nameof(Options), Options, false);
 			return base.ToXml(node);
 		}
@@ -57,7 +56,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Gain access to the underlying data</summary>
 		public LockData Lock() => new LockData(this);
-		private List<Pt> m_data;
+		private readonly List<Pt> m_data;
 
 		/// <summary>Read the number of data points in the series. (Not synchronised by 'Lock()')</summary>
 		public int SampleCount => m_data.Count;
@@ -106,6 +105,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
 		protected override void UpdateSceneCore()
 		{
+			if (Chart == null)
+				return;
+
 			// Remove all series data graphics
 			Chart.Scene.Window.RemoveObjects(new[] { Id }, 1, 0);
 
@@ -350,8 +352,8 @@ namespace Rylogic.Gui.WPF
 				// Get the distance to the left and right of 'pt.x'
 				var l = pt_l != null ? lwidth * (pt_l.xf - pt.xf) : 0;
 				var r = pt_r != null ? rwidth * (pt_r.xf - pt.xf) : 0;
-				if (j == 0 && j + 1 != m_data.Count) l = -lwidth * (pt_r.xf - pt.xf);
-				if (j + 1 == m_data.Count && j != 0) r = -rwidth * (pt_l.xf - pt.xf);
+				if (j == 0 && j + 1 != m_data.Count && pt_r != null) l = -lwidth * (pt_r.xf - pt.xf);
+				if (j + 1 == m_data.Count && j != 0 && pt_l != null) r = -rwidth * (pt_l.xf - pt.xf);
 
 				var v = vidx;
 				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
@@ -411,15 +413,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A cache of graphics pieces for this data series</summary>
 		private ChartGfxCache Cache
 		{
-			get { return m_impl_cache; }
+			get => m_impl_cache;
 			set
 			{
 				if (m_impl_cache == value) return;
-				Util.Dispose(ref m_impl_cache);
+				Util.Dispose(ref m_impl_cache!);
 				m_impl_cache = value;
 			}
 		}
-		private ChartGfxCache m_impl_cache;
+		private ChartGfxCache m_impl_cache = null!;
 
 		/// <summary>ToString</summary>
 		public override string ToString() => $"{Name} count={m_data.Count}";
@@ -510,7 +512,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>RAII object for synchronising access to the underlying data</summary>
-		public class LockData : ICollection<Pt>, IDisposable
+		public sealed class LockData : ICollection<Pt>, IDisposable
 		{
 			private RangeF m_changed_data_rangex;
 			public LockData(ChartDataSeries owner)
@@ -669,7 +671,7 @@ namespace Rylogic.Gui.WPF
 		{
 			return m_colours[i % m_colours.Length];
 		}
-		private static Colour32[] m_colours =
+		private static readonly Colour32[] m_colours =
 		{
 			Colour32.Black     ,
 			Colour32.Blue      , Colour32.Red         , Colour32.Green      ,

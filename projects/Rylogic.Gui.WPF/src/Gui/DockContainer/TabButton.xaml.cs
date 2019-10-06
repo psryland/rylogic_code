@@ -22,12 +22,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			InitializeComponent();
 			DataContext = this;
+			DockControl = null!;
+			m_def_tab_text = string.Empty;
+			m_def_tab_icon = null;
 		}
-		public TabButton(string text, ImageSource icon)
+		public TabButton(string? text, ImageSource? icon)
 			: this()
 		{
-			DockControl = null;
-			m_def_tab_text = text;
+			m_def_tab_text = text ?? string.Empty;
 			m_def_tab_icon = icon;
 		}
 		public TabButton(DockControl content)
@@ -120,14 +122,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				// Make our content the active content on its dock pane
 				DockControl.IsActiveContent = true;
-				if (TabStrip.AHPanel != null)
-					TabStrip.AHPanel.PoppedOut = true;
+				if (TabStrip?.AHPanel is AutoHidePanel ahp)
+					ahp.PoppedOut = true;
 			}
 			else
 			{
 				// If this is a tab button on an auto hide panel, display the panel
-				if (TabStrip.AHPanel != null)
-					TabStrip.AHPanel.PoppedOut = !TabStrip.AHPanel.PoppedOut;
+				if (TabStrip?.AHPanel is AutoHidePanel ahp)
+					ahp.PoppedOut = !ahp.PoppedOut;
 			}
 		}
 
@@ -135,10 +137,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
 		/// <summary>The tab strip that contains this tab button</summary>
-		internal TabStrip TabStrip => Gui_.FindVisualParent<TabStrip>(this);
+		internal TabStrip? TabStrip => Gui_.FindVisualParent<TabStrip>(this);
 
 		/// <summary>Returns the tree root that hosts this tab (Remember AHP's don't host tab strips)</summary>
-		internal ITreeHost TreeHost => (ITreeHost)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
+		internal ITreeHost? TreeHost => (ITreeHost?)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
 
 		/// <summary>The DockControl for the associated dockable item</summary>
 		public DockControl DockControl { get; }
@@ -151,14 +153,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private string m_def_tab_text;
 
 		/// <summary>The icon for the tab</summary>
-		public ImageSource TabIcon => DockControl?.TabIcon ?? m_def_tab_icon;
-		private ImageSource m_def_tab_icon;
+		public ImageSource? TabIcon => DockControl?.TabIcon ?? m_def_tab_icon;
+		private ImageSource? m_def_tab_icon;
 
 		/// <summary>The tool tip string for this tab</summary>
 		public string TabToolTip => DockControl?.TabToolTip ?? string.Empty;
 
 		/// <summary>The context menu for this tab</summary>
-		public ContextMenu TabCMenu => DockControl?.TabCMenu;
+		public ContextMenu? TabCMenu => DockControl?.TabCMenu;
 
 		/// <summary>The thickness of the tab button borders, based on tab strip direction</summary>
 		public Thickness EdgeBorder
@@ -208,6 +210,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private ETabState m_tab_state;
 
 		/// <summary>Property changed</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

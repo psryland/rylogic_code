@@ -42,6 +42,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemAdded:
 					{
 						// Remove from any previous chart
+						if (elem == null) throw new Exception("ItemAdded should provide the added element"); 
 						elem.SetChartInternal(m_chart, false);
 
 						// Track the ID
@@ -53,6 +54,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemPreRemove:
 					{
 						// Remove from selected or hovered sets before removing form the collection
+						if (elem == null) throw new Exception("ItemPreRemove should provide the element to be removed"); 
 						elem.Selected = false;
 						elem.Hovered = false;
 
@@ -62,6 +64,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemRemoved:
 					{
 						// Remove from the chart
+						if (elem == null) throw new Exception("ItemRemoved should provide the removed element");
 						elem.SetChartInternal(null, false);
 
 						// Forget the ID

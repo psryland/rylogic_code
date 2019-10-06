@@ -42,6 +42,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			e.Cancel = true;
 			Hide();
 		}
+		protected override void OnClosed(EventArgs e)
+		{
+			Root = null!;
+			DockContainer = null!;
+			base.OnClosed(e);
+		}
 
 		/// <summary>An identifier for a floating window</summary>
 		public int Id { get; set; }
@@ -49,7 +55,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The dock container that owns this floating window</summary>
 		public DockContainer DockContainer
 		{
-			get { return m_dc; }
+			get => m_dc;
 			private set
 			{
 				if (m_dc == value) return;
@@ -73,14 +79,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		private DockContainer m_dc;
+		private DockContainer m_dc = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
 
 		/// <summary>The root level branch of the tree in this floating window</summary>
 		internal Branch Root
 		{
-			[DebuggerStepThrough]
-			get { return m_root; }
+			get => m_root;
 			set
 			{
 				if (m_root == value) return;
@@ -88,7 +93,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					m_root.TreeChanged -= HandleTreeChanged;
 					m_content.Children.Remove(m_root);
-					Util.Dispose(ref m_root);
+					Util.Dispose(ref m_root!);
 				}
 				m_root = value;
 				if (m_root != null)
@@ -125,7 +130,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		private Branch m_root;
+		private Branch m_root = null!;
 		Branch ITreeHost.Root => Root;
 
 		/// <summary>Manages events and changing of active pane/content</summary>
@@ -137,17 +142,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>
 		/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
 		/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
-		public DockControl ActiveContent
+		public DockControl? ActiveContent
 		{
-			get { return ActiveContentManager.ActiveContent; }
-			set { ActiveContentManager.ActiveContent = value; }
+			get => ActiveContentManager.ActiveContent;
+			set => ActiveContentManager.ActiveContent = value;
 		}
 
 		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
-		public DockPane ActivePane
+		public DockPane? ActivePane
 		{
-			get { return ActiveContentManager.ActivePane; }
-			set { ActiveContentManager.ActivePane = value; }
+			get => ActiveContentManager.ActivePane;
+			set => ActiveContentManager.ActivePane = value;
 		}
 
 		/// <summary>The current screen location and size of this window</summary>
@@ -173,7 +178,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		public DockPane Add(IDockable dockable, int index, params EDockSite[] location)
 		{
-			return Add(dockable?.DockControl, index, location);
+			return Add(dockable.DockControl, index, location);
 		}
 		public DockPane Add(IDockable dockable, params EDockSite[] location)
 		{

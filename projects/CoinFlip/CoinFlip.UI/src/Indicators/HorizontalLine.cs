@@ -86,12 +86,12 @@ namespace CoinFlip.UI.Indicators
 				};
 				Price.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
 			}
-			public override void Dispose()
+			protected override void Dispose(bool disposing)
 			{
 				Price.Detach();
 				Line.Detach();
 				Glow.Detach();
-				base.Dispose();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>The indicator data source</summary>

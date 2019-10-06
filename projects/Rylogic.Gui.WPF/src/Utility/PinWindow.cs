@@ -31,7 +31,7 @@ namespace Rylogic.Gui.WPF
 	}
 
 	/// <summary>Provides the functionality for pinning a window to another</summary>
-	public class PinData :IDisposable
+	public sealed class PinData :IDisposable
 	{
 		// Notes:
 		//  - Dispose is called when 'window' is closed 
@@ -50,6 +50,7 @@ namespace Rylogic.Gui.WPF
 
 		public PinData(Window window, EPin pin_site = EPin.Centre, bool pinned = true)
 		{
+			m_pin_window = null!;
 			PinSite = pin_site;
 			PinWindow = window;
 			Pinned = pinned;
@@ -58,7 +59,7 @@ namespace Rylogic.Gui.WPF
 		{
 			Pinned = false;
 			PinTarget = null;
-			PinWindow = null;
+			PinWindow = null!;
 		}
 
 		/// <summary>Pin or Unpin the window from the target</summary>
@@ -90,7 +91,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The window whose position we're controlling</summary>
 		private Window PinWindow
 		{
-			get { return m_pin_window; }
+			get => m_pin_window;
 			set
 			{
 				if (m_pin_window == value) return;
@@ -123,15 +124,15 @@ namespace Rylogic.Gui.WPF
 					switch (PinSite)
 					{
 					default: throw new Exception($"Unknown pin location '{PinSite}'");
-					case EPin.TopLeft:      PinOffset = new Vector(-PinWindow.ActualWidth    , 0); break;
-					case EPin.TopCentre:    PinOffset = new Vector(-PinWindow.ActualWidth / 2, 0); break;
-					case EPin.TopRight:     PinOffset = new Vector(0                         , 0); break;
-					case EPin.BottomLeft:   PinOffset = new Vector(-PinWindow.ActualWidth    , -PinWindow.ActualHeight); break;
+					case EPin.TopLeft: PinOffset = new Vector(-PinWindow.ActualWidth, 0); break;
+					case EPin.TopCentre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, 0); break;
+					case EPin.TopRight: PinOffset = new Vector(0, 0); break;
+					case EPin.BottomLeft: PinOffset = new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight); break;
 					case EPin.BottomCentre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight); break;
-					case EPin.BottomRight:  PinOffset = new Vector(0                         , -PinWindow.ActualHeight); break;
-					case EPin.CentreLeft:   PinOffset = new Vector(-PinWindow.ActualWidth    , -PinWindow.ActualHeight / 2); break;
-					case EPin.Centre:       PinOffset = new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2); break;
-					case EPin.CentreRight:  PinOffset = new Vector(0                         , -PinWindow.ActualHeight / 2); break;
+					case EPin.BottomRight: PinOffset = new Vector(0, -PinWindow.ActualHeight); break;
+					case EPin.CentreLeft: PinOffset = new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight / 2); break;
+					case EPin.Centre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2); break;
+					case EPin.CentreRight: PinOffset = new Vector(0, -PinWindow.ActualHeight / 2); break;
 					}
 				}
 				void HandleMoved(object sender, EventArgs e)
@@ -149,7 +150,7 @@ namespace Rylogic.Gui.WPF
 		private Window m_pin_window;
 
 		/// <summary>The window to position relative to (defaults to the Owner of PinWindow)</summary>
-		public Window PinTarget
+		public Window? PinTarget
 		{
 			get
 			{
@@ -184,7 +185,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private Window m_pin_target;
+		private Window? m_pin_target;
 
 		/// <summary>The offset from the PinTarget</summary>
 		public Vector PinOffset

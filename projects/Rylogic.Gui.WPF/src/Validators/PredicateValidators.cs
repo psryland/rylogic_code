@@ -113,7 +113,7 @@ namespace Rylogic.Gui.WPF.Validators
 		private static void Pred_Changed(DependencyObject obj, Func<object, ValidationResult> new_value, Func<object, ValidationResult> old_value)
 		{
 			// Update the set of validation rules
-			var binding = (Binding)null;
+			Binding binding;
 			switch (obj)
 			{
 			default:

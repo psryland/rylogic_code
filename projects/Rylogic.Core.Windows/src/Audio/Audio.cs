@@ -1,3 +1,4 @@
+#if NET472
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -97,3 +98,4 @@ namespace Rylogic.Audio
 		#endregion
 	}
 }
+#endif

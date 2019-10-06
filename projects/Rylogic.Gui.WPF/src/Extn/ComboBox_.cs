@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WPF
 		{
 			return edit.IsEditable
 				? edit.EditableTextBox().SelectionScope()
-				: Scope.Create<Range>(null, null);
+				: Scope.Create(() => Range.Invalid, null);
 		}
 	}
 }

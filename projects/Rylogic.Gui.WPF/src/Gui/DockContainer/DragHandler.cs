@@ -23,8 +23,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private readonly TabButton m_ghost_button;
 		private Point m_ss_start_pt;
 
-		public DragHandler(object draggee, Point ss_start_pt)
+		public DragHandler(DockControl draggee, Point ss_start_pt)
+			: this((object)draggee, ss_start_pt)
+		{ }
+		public DragHandler(DockPane draggee, Point ss_start_pt)
+			: this((object)draggee, ss_start_pt)
+		{ }
+		private DragHandler(object draggee, Point ss_start_pt)
 		{
+			if (draggee == null)
+				throw new Exception("Only panes and content should be being dragged");
+
 			WindowStartupLocation = WindowStartupLocation.Manual;
 			Visibility = Visibility.Collapsed;
 			Focusable = false;
@@ -32,21 +41,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			var dc = draggee as DockControl;
 			var dp = draggee as DockPane;
-			if (dc == null && dp == null)
-				throw new Exception("Only panes and content should be being dragged");
-
-			var owner =
-				dc != null ? dc.DockContainer :
-				dp != null ? dp.DockContainer :
-				null;
-			var item_name =
-				dc != null ? dc.TabText :
-				dp != null ? dp.CaptionText :
-				null;
-			var item_icon =
-				dc != null ? dc.TabIcon :
-				dp != null ? dp.VisibleContent?.TabIcon :
-				null;
+			var owner = dc?.DockContainer ?? dp?.DockContainer ?? throw new Exception("Dragged object must belong to a DockContainer");
+			var item_name = dc?.TabText ?? dp?.CaptionText;
+			var item_icon = dc?.TabIcon ?? dp?.VisibleContent?.TabIcon;
 
 			m_ss_start_pt = ss_start_pt;
 			m_ghost_button = new TabButton(item_name, item_icon) { Opacity = 0.5 };
@@ -54,7 +51,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			DockContainer = owner;
 			DraggedItem = draggee;
 			TreeHost = null;
-			DropAddress = new EDockSite[0];
+			DropAddress = Array.Empty<EDockSite>();
 			DropIndex = null;
 
 			// Hide all auto hide panels, since they are not valid drop targets
@@ -88,7 +85,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var loc_bottom = DockContainer.PointToScreen(new Point((DockContainer.Width - DimensionsFor(EIndicator.dock_site_bottom).Width) / 2, DockContainer.Height - distance_from_edge - DimensionsFor(EIndicator.dock_site_bottom).Height));
 
 			// Create the semi-transparent non-modal window for the dragged item
-			Ghost = new GhostPane(this, DraggedItem, loc_ghost) { Visibility = Visibility.Visible };
+			Ghost = new GhostPane(this, loc_ghost) { Visibility = Visibility.Visible };
 
 			// Create the dock site indicators
 			IndTop = new Indicator(this, EIndicator.dock_site_top, DockContainer.AutoHidePanels[EDockSite.Top].Root.DockPane(EDockSite.Centre), loc_top) { Visibility = Visibility.Visible };
@@ -172,7 +169,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				// Otherwise dock the dragged item at the dock address
-				else
+				else if (TreeHost != null)
 				{
 					// Ensure a pane exists at the drop address
 					var target = TreeHost.Root.DockPane(DropAddress);
@@ -180,14 +177,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					var content =
 						dc != null ? new[] { dc } :
 						dp != null ? dp.AllContent.ToArray() :
-						null;
+						throw new Exception();
 
 					// Dock the dragged item(s)
 					foreach (var c in content)
 					{
 						// If we're dropping the item within the same pane, the index needs to be
 						// adjusted if the original index is less than the new index.
-						if (c.DockPane == target && c.DockPane.TabStrip.Buttons.IndexOf(c.TabButton) < index)
+						if (c.DockPane == target && c.TabButton != null && c.DockPane.TabStrip.Buttons.IndexOf(c.TabButton) < index)
 							--index;
 
 						// Even if 'dc.DockPane == target' remove and re-add 'c' because we might be
@@ -202,13 +199,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Debug.Assert(DockContainer.ValidateTree());
 			}
 
-			Ghost = null;
-			IndCrossLg = null;
-			IndCrossSm = null;
-			IndLeft = null;
-			IndTop = null;
-			IndRight = null;
-			IndBottom = null;
+			Ghost = null!;
+			IndCrossLg = null!;
+			IndCrossSm = null!;
+			IndLeft = null!;
+			IndTop = null!;
+			IndRight = null!;
+			IndBottom = null!;
 			base.OnClosed(e);
 		}
 
@@ -219,7 +216,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private object DraggedItem { get; set; }
 
 		/// <summary>The tree to drop into</summary>
-		private ITreeHost TreeHost { get; set; }
+		private ITreeHost? TreeHost { get; set; }
 
 		/// <summary>Where to dock the dropped item. If empty drop in a new floating window</summary>
 		private EDockSite[] DropAddress { get; set; }
@@ -230,7 +227,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>A form used as graphics to show dragged items</summary>
 		private GhostPane Ghost
 		{
-			get { return m_ghost; }
+			get => m_ghost;
 			set
 			{
 				if (m_ghost == value) return;
@@ -238,7 +235,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_ghost = value;
 			}
 		}
-		private GhostPane m_ghost;
+		private GhostPane m_ghost = null!;
 
 		/// <summary>The cross of dock site locations displayed within the centre of a pane</summary>
 		private Indicator IndCrossLg
@@ -251,7 +248,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_cross_lg = value;
 			}
 		}
-		private Indicator m_cross_lg;
+		private Indicator m_cross_lg = null!;
 
 		/// <summary>The small cross of dock site locations displayed within the centre of a pane</summary>
 		private Indicator IndCrossSm
@@ -264,7 +261,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_cross_sm = value;
 			}
 		}
-		private Indicator m_cross_sm;
+		private Indicator m_cross_sm = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndLeft
@@ -277,7 +274,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_left = value;
 			}
 		}
-		private Indicator m_left;
+		private Indicator m_left = null!;
 
 		/// <summary>The top edge dock site indicator</summary>
 		private Indicator IndTop
@@ -290,7 +287,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_top = value;
 			}
 		}
-		private Indicator m_top;
+		private Indicator m_top = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndRight
@@ -303,7 +300,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_right = value;
 			}
 		}
-		private Indicator m_right;
+		private Indicator m_right = null!;
 
 		/// <summary>The left edge dock site indicator</summary>
 		private Indicator IndBottom
@@ -316,7 +313,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_bottom = value;
 			}
 		}
-		private Indicator m_bottom;
+		private Indicator m_bottom = null!;
 
 		/// <summary>Enumerate all indicators</summary>
 		private IEnumerable<Indicator> Indicators
@@ -335,7 +332,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Test the location 'screen_pt' as a possible drop location, and update the ghost and indicators</summary>
 		private void HitTestDropLocations(Point screen_pt)
 		{
-			var pane = (DockPane)null;
+			var pane = (DockPane?)null;
 			var snap_to = (EDropSite?)null;
 			var index = (int?)null;
 			var over_indicator = false;
@@ -365,7 +362,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				foreach (var tree in DockContainer.AllTreeHosts)
 				{
 					var hit = VisualTreeHelper.HitTest(tree.Root, tree.Root.PointFromScreen(screen_pt));
-					pane = Gui_.FindVisualParent<DockPane>(hit?.VisualHit, root: tree.Root);
+					pane = hit?.VisualHit is DependencyObject dp ? dp.FindVisualParent<DockPane>(root: tree.Root) : null;
 					if (pane != null) break;
 				}
 			}
@@ -374,15 +371,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane != null && !over_indicator)
 			{
 				var hit = VisualTreeHelper.HitTest(pane.TabStrip, pane.TabStrip.PointFromScreen(screen_pt));
-				if (Gui_.FindVisualParent<TabButton>(hit?.VisualHit, root: pane.TabStrip) is TabButton tab)
+				if (hit?.VisualHit is DependencyObject dp)
 				{
-					snap_to = EDropSite.PaneCentre;
-					index = pane.TabStrip.Buttons.IndexOf(tab);
-				}
-				else if (Gui_.FindVisualParent<TabStrip>(hit?.VisualHit, root: pane.TabStrip) is TabStrip ts)
-				{
-					snap_to = EDropSite.PaneCentre;
-					index = pane.TabStrip.Buttons.Except(m_ghost_button).Count();
+					if (dp.FindVisualParent<TabButton>(root: pane.TabStrip) is TabButton tab)
+					{
+						snap_to = EDropSite.PaneCentre;
+						index = pane.TabStrip.Buttons.IndexOf(tab);
+					}
+					else if (dp.FindVisualParent<TabStrip>(root: pane.TabStrip) is TabStrip ts)
+					{
+						snap_to = EDropSite.PaneCentre;
+						index = pane.TabStrip.Buttons.Except(m_ghost_button).Count();
+					}
 				}
 			}
 
@@ -390,7 +390,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane != null && !over_indicator)
 			{
 				var hit = VisualTreeHelper.HitTest(pane.TitleBar, pane.TitleBar.PointFromScreen(screen_pt));
-				if (Gui_.FindVisualParent<Panel>(hit?.VisualHit, root: pane.TitleBar) != null)
+				if (hit?.VisualHit is DependencyObject dp && dp.FindVisualParent<Panel>(root: pane.TitleBar) != null)
 					snap_to = EDropSite.PaneCentre;
 			}
 
@@ -398,7 +398,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane == null || snap_to == null)
 			{
 				// No pane or snap-to means float in a new window
-				DropAddress = new EDockSite[0];
+				DropAddress = Array.Empty<EDockSite>();
 				TreeHost = null;
 			}
 			else
@@ -418,7 +418,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				else if (snap.HasFlag(EDropSite.Branch))
 				{
 					// Snap to a site in the branch that owns 'pane'
-					var branch = pane.ParentBranch;
+					var branch = pane.ParentBranch ?? throw new Exception("Pane has no parent branch");
 					var address = branch.DockAddress.ToList();
 
 					// While the child at 'ds' is a branch, append 'EDockSite.Centre's to the address
@@ -430,7 +430,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				else if (snap.HasFlag(EDropSite.Root))
 				{
 					// Snap to an auto hide dock site
-					var branch = pane.RootBranch;
+					var branch = pane.RootBranch ?? throw new Exception("Pane has no root branch");
 					var address = branch.DockAddress.ToList();
 
 					// Auto hide panels always dock to the centre pane
@@ -452,7 +452,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			PositionGhost(screen_pt);
 
 			// If the mouse isn't over an indicator, update the positions of the indicators
-			if (!over_indicator)
+			if (!over_indicator && pane != null)
 				PositionCrossIndicator(pane);
 		}
 
@@ -461,8 +461,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			// Bounds in screen space covering the whole pane.
 			// Clip in window space, clipping out the title, tab strip etc
-			var bounds = Rect.Empty;
-			var clip = Geometry.Empty;
+			Rect bounds;
+			Geometry clip;
 
 			// No address means floating
 			if (TreeHost == null || DropAddress.Length == 0)
@@ -599,16 +599,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			// These are the expected dimensions of the indicators in WPF virtual pixels
 			// On high DPI screens the bitmaps will be scaled to these sizes.
-			switch (indy)
+			return indy switch
 			{
-			default: throw new Exception("Unknown indicator type");
-			case EIndicator.dock_site_cross_lg: return new Size(128, 128);
-			case EIndicator.dock_site_cross_sm: return new Size(64, 64);
-			case EIndicator.dock_site_left: return new Size(25, 25);
-			case EIndicator.dock_site_top: return new Size(25, 25);
-			case EIndicator.dock_site_right: return new Size(25, 25);
-			case EIndicator.dock_site_bottom: return new Size(25, 25);
-			}
+				EIndicator.dock_site_cross_lg => new Size(128, 128),
+				EIndicator.dock_site_cross_sm => new Size(64, 64),
+				EIndicator.dock_site_left => new Size(25, 25),
+				EIndicator.dock_site_top => new Size(25, 25),
+				EIndicator.dock_site_right => new Size(25, 25),
+				EIndicator.dock_site_bottom => new Size(25, 25),
+				_ => throw new Exception("Unknown indicator type"),
+			};
 		}
 
 		/// <summary>Return the hotspots for the given indicator</summary>
@@ -737,7 +737,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		[DebuggerDisplay("{Name}")]
 		private class GhostPane : GhostBase
 		{
-			public GhostPane(DragHandler owner, object item, Point loc)
+			public GhostPane(DragHandler owner, Point loc)
 				: base(owner)
 			{
 				Name = "Ghost";
@@ -753,9 +753,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		[DebuggerDisplay("{Name}")]
 		private class Indicator : GhostBase
 		{
-			private Hotspot[] m_spots;
-
-			public Indicator(DragHandler owner, EIndicator indy, DockPane pane = null, Point? loc = null)
+			private readonly Hotspot[] m_spots;
+			public Indicator(DragHandler owner, EIndicator indy, DockPane? pane = null, Point? loc = null)
 				: base(owner)
 			{
 				Name = indy.ToString();
@@ -789,7 +788,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 
 			/// <summary>The dock pane associated with this indicator</summary>
-			public DockPane DockPane { get; set; }
+			public DockPane? DockPane { get; set; }
 		}
 
 		/// <summary>A region within the indicate that corresponds to a dock site location</summary>

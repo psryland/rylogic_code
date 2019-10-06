@@ -41,7 +41,7 @@ namespace Rylogic.Gui.WPF
 		public Command ToggleFocusPoint => Scene.ToggleFocusPoint;
 
 		/// <summary>Toggle visibility of the grid lines</summary>
-		public Command ToggleGridLines { get; private set; }
+		public Command ToggleGridLines { get; private set; } = null!;
 		private void ToggleGridLinesInternal()
 		{
 			Options.ShowGridLines = !Options.ShowGridLines;
@@ -49,7 +49,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle visibility of the axes</summary>
-		public Command ToggleAxes { get; private set; }
+		public Command ToggleAxes { get; private set; } = null!;
 		private void ToggleAxesInternal()
 		{
 			Options.ShowAxes = !Options.ShowAxes;
@@ -57,21 +57,21 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle the visibility of the value at the pointer</summary>
-		public Command ToggleShowValue { get; private set; }
+		public Command ToggleShowValue { get; private set; } = null!;
 		private void ToggleShowValueInternal()
 		{
 			ShowValueAtPointer = !ShowValueAtPointer;
 		}
 
 		/// <summary>Toggle the visibility of the cross hair</summary>
-		public Command ToggleShowCrossHair { get; private set; }
+		public Command ToggleShowCrossHair { get; private set; } = null!;
 		private void ToggleShowCrossHairInternal()
 		{
 			ShowCrossHair = !ShowCrossHair;
 		}
 
 		/// <summary>Toggle the tape measure tool</summary>
-		public Command ToggleShowTapeMeasure { get; private set; }
+		public Command ToggleShowTapeMeasure { get; private set; } = null!;
 		private void ToggleShowTapeMeasureInternal()
 		{
 			ShowTapeMeasure = !ShowTapeMeasure;
@@ -81,14 +81,14 @@ namespace Rylogic.Gui.WPF
 		public Command ShowMeasureTool => Scene.ShowMeasureTool;
 
 		/// <summary>Auto range the chart</summary>
-		public Command DoAutoRange { get; private set; }
+		public Command DoAutoRange { get; private set; } = null!;
 		private void DoAutoRangeInternal()
 		{
 			AutoRange();
 		}
 
 		/// <summary>Set the pixel aspect ratio to 1:1</summary>
-		public Command DoAspect11 { get; private set; }
+		public Command DoAspect11 { get; private set; } = null!;
 		private void DoAspect11Internal()
 		{
 			Range.Aspect = Scene.Window.Viewport.Width / Scene.Window.Viewport.Height;
@@ -97,21 +97,21 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle the state of 'LockAspect'</summary>
-		public Command ToggleLockAspect { get; private set; }
+		public Command ToggleLockAspect { get; private set; } = null!;
 		private void ToggleLockAspectInternal()
 		{
 			LockAspect = !LockAspect;
 		}
 
 		/// <summary>Toggle the state of zooming at the mouse pointer location</summary>
-		public Command ToggleMouseCentredZoom { get; private set; }
+		public Command ToggleMouseCentredZoom { get; private set; } = null!;
 		private void ToggleMouseCentredZoomInternal()
 		{
 			Options.MouseCentredZoom = !Options.MouseCentredZoom;
 		}
 
 		/// <summary>Set the background colour</summary>
-		public Command SetBackgroundColour { get; private set; }
+		public Command SetBackgroundColour { get; private set; } = null!;
 		private void SetBackgroundColourInternal()
 		{
 			Scene.SetBackgroundColour.Execute(null);
@@ -119,14 +119,14 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle between orthographic and perspective projection</summary>
-		public Command ToggleOrthographic { get; private set; }
+		public Command ToggleOrthographic { get; private set; } = null!;
 		private void ToggleOrthographicInternal()
 		{
 			Options.Orthographic = !Options.Orthographic;
 		}
 
 		/// <summary>Toggle antialiasing on/off</summary>
-		public Command ToggleAntiAliasing { get; private set; }
+		public Command ToggleAntiAliasing { get; private set; } = null!;
 		private void ToggleAntiAliasingInternal()
 		{
 			Options.AntiAliasing = !Options.AntiAliasing;

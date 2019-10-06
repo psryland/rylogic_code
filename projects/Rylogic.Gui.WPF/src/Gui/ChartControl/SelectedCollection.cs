@@ -39,6 +39,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemAdded:
 					{
 						// Set the selected state on the added element
+						if (elem == null) throw new Exception("ItemAdded should provide the added element");
 						elem.SetSelectedInternal(true, false);
 
 						Debug.Assert(m_chart.CheckConsistency());
@@ -47,6 +48,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemRemoved:
 					{
 						// Clear the selected state from the removed element
+						if (elem == null) throw new Exception("ItemRemoved should provide the removed element");
 						elem.SetSelectedInternal(false, false);
 
 						Debug.Assert(m_chart.CheckConsistency());

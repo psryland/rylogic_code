@@ -92,8 +92,10 @@ namespace Rylogic.Core.Windows
 				{
 					if (unchecked((uint)result) == (uint)Win32.HRESULT.ERROR_CANCELLED)
 						return false;
+					else if (Marshal.GetExceptionForHR(result) is Exception err)
+						throw err;
 					else
-						throw Marshal.GetExceptionForHR(result);
+						throw new Exception($"OpenFolderUI returned an unknown result: {result}");
 				}
 
 				// Get the selected path

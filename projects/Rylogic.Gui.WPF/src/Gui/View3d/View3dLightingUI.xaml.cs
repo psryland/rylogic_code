@@ -35,10 +35,10 @@ namespace Rylogic.Gui.WPF
 				DataContext = m_light;
 			}
 		}
-		private View3d.Light m_light;
+		private View3d.Light m_light = null!;
 
 		/// <summary>Support pinning this window</summary>
-		private PinData PinState
+		private PinData? PinState
 		{
 			get => m_pin_state;
 			set
@@ -48,7 +48,7 @@ namespace Rylogic.Gui.WPF
 				m_pin_state = value;
 			}
 		}
-		private PinData m_pin_state;
+		private PinData? m_pin_state;
 
 		/// <summary>Handle the close button</summary>
 		private void HandleClose(object sender, RoutedEventArgs args)

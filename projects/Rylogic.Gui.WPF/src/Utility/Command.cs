@@ -7,15 +7,15 @@ namespace Rylogic.Gui.WPF
 	public abstract class Command : ICommand
 	{
 		/// <summary>Can execute changed</summary>
-		public event EventHandler CanExecuteChanged;
+		public event EventHandler? CanExecuteChanged;
 		protected void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
 		/// <summary>True if the command is available</summary>
-		public virtual bool CanExecute(object _) => true;
+		public virtual bool CanExecute(object? _) => true;
 		public void CanExecute() => CanExecute(null);
 
 		/// <summary>Execute the command</summary>
-		public virtual void Execute(object _) { }
+		public virtual void Execute(object? _) { }
 		public void Execute() => Execute(null);
 
 		/// <summary>Construct a command from a delegate</summary>
@@ -23,15 +23,15 @@ namespace Rylogic.Gui.WPF
 		{
 			return new Command<TOwner>(owner, (o, p) => execute(), null);
 		}
-		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object> execute)
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object?> execute)
 		{
 			return new Command<TOwner>(owner, (_, p) => execute(p), null);
 		}
-		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner, object> execute)
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner, object?> execute)
 		{
 			return new Command<TOwner>(owner, (o, p) => execute(o,p), null);
 		}
-		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object> execute, Func<object, bool> can_execute)
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object?> execute, Func<object?, bool> can_execute)
 		{
 			return new Command<TOwner>(owner, (_, p) => execute(p), (_, p) => can_execute(p));
 		}
@@ -43,7 +43,7 @@ namespace Rylogic.Gui.WPF
 		public Command(TOwner owner)
 			: this(owner, null, null)
 		{ }
-		public Command(TOwner owner, Action<TOwner, object> execute, Func<TOwner, object, bool> can_execute)
+		public Command(TOwner owner, Action<TOwner, object?>? execute, Func<TOwner, object?, bool>? can_execute)
 		{
 			Owner = owner;
 			m_execute = execute;
@@ -54,11 +54,11 @@ namespace Rylogic.Gui.WPF
 		protected TOwner Owner { get; }
 
 		/// <summary>True if the command is available</summary>
-		public override bool CanExecute(object parameter) => m_can_execute?.Invoke(Owner, parameter) ?? true;
-		private Func<TOwner, object, bool> m_can_execute;
+		public override bool CanExecute(object? parameter) => m_can_execute?.Invoke(Owner, parameter) ?? true;
+		private readonly Func<TOwner, object?, bool>? m_can_execute;
 
 		/// <summary>Execute the command</summary>
-		public override void Execute(object parameter) => m_execute?.Invoke(Owner, parameter);
-		private Action<TOwner, object> m_execute;
+		public override void Execute(object? parameter) => m_execute?.Invoke(Owner, parameter);
+		private readonly Action<TOwner, object?>? m_execute;
 	}
 }

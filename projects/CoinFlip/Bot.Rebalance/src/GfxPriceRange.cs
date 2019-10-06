@@ -15,10 +15,10 @@ namespace Bot.Rebalance
 			:base(id, m4x4.Identity, "PriceRange")
 		{
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			Gfx = null;
-			base.Dispose();
+			base.Dispose(_);
 		}
 		protected override void SetChartCore(ChartControl chart)
 		{

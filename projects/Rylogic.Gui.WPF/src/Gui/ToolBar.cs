@@ -9,15 +9,10 @@ namespace Rylogic.Gui.WPF
 	public class ToolBar : System.Windows.Controls.ToolBar
 	{
 		private Dictionary<Control, double> m_overflow_controls;
-		private ToolBarOverflowPanel m_overflow_panel;
+		private ToolBarOverflowPanel? m_overflow_panel;
 		private bool m_suppress_overflow_corrections;
 		private bool m_overflow_control_width_changed;
 
-		static ToolBar()
-		{
-			OverflowPanelBackgroundProperty = DependencyProperty.Register(nameof(OverflowPanelBackground), typeof(Brush), typeof(ToolBar), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
-			OverflowButtonVisibilityProperty = DependencyProperty.Register(nameof(OverflowButtonVisibility), typeof(Visibility), typeof(ToolBar), new FrameworkPropertyMetadata(Visibility.Visible, FrameworkPropertyMetadataOptions.AffectsRender));
-		}
 		public ToolBar()
 		{
 			m_overflow_controls = new Dictionary<Control, double>();
@@ -62,7 +57,7 @@ namespace Rylogic.Gui.WPF
 				// Handler
 				void ToolBarOverflowPanelOnLoadedHandler(object sender, RoutedEventArgs e)
 				{
-					if (m_suppress_overflow_corrections)
+					if (m_suppress_overflow_corrections || m_overflow_panel == null)
 						return;
 
 					var width = GetMaxChildWidth(m_overflow_panel);
@@ -88,14 +83,17 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Set the background colour of the border
-			if (m_overflow_panel.Parent is Border border)
+			if (m_overflow_panel != null)
 			{
-				border.Background = OverflowPanelBackground;
-			}
-			else
-			{
-				m_overflow_panel.Background = OverflowPanelBackground;
-				m_overflow_panel.Margin = new Thickness(0);
+				if (m_overflow_panel.Parent is Border border)
+				{
+					border.Background = OverflowPanelBackground;
+				}
+				else
+				{
+					m_overflow_panel.Background = OverflowPanelBackground;
+					m_overflow_panel.Margin = new Thickness(0);
+				}
 			}
 
 			// Set the overflow button background to match the tool bar background
@@ -112,7 +110,7 @@ namespace Rylogic.Gui.WPF
 			get { return (Brush)GetValue(OverflowPanelBackgroundProperty); }
 			set { SetValue(OverflowPanelBackgroundProperty, value); }
 		}
-		public static readonly DependencyProperty OverflowPanelBackgroundProperty;
+		public static readonly DependencyProperty OverflowPanelBackgroundProperty = DependencyProperty.Register(nameof(OverflowPanelBackground), typeof(Brush), typeof(ToolBar), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
 		/// <summary>Overflow button visibility</summary>
 		public Visibility OverflowButtonVisibility
@@ -120,19 +118,19 @@ namespace Rylogic.Gui.WPF
 			get { return (Visibility)GetValue(OverflowButtonVisibilityProperty); }
 			set { SetValue(OverflowButtonVisibilityProperty, value); }
 		}
-		public static readonly DependencyProperty OverflowButtonVisibilityProperty;
+		public static readonly DependencyProperty OverflowButtonVisibilityProperty = DependencyProperty.Register(nameof(OverflowButtonVisibility), typeof(Visibility), typeof(ToolBar), new FrameworkPropertyMetadata(Visibility.Visible, FrameworkPropertyMetadataOptions.AffectsRender));
 
 		/// <summary>Access the overflow panel</summary>
-		protected ToolBarOverflowPanel ToolBarOverflowPanel => GetTemplateChild("PART_ToolBarOverflowPanel") as ToolBarOverflowPanel;
+		protected ToolBarOverflowPanel? ToolBarOverflowPanel => GetTemplateChild("PART_ToolBarOverflowPanel") as ToolBarOverflowPanel;
 
 		/// <summary>Access the tool bar panel</summary>
-		protected ToolBarPanel ToolBarPanel => GetTemplateChild("PART_ToolBarPanel") as ToolBarPanel;
+		protected ToolBarPanel? ToolBarPanel => GetTemplateChild("PART_ToolBarPanel") as ToolBarPanel;
 
 		/// <summary>Access the gripper</summary>
-		protected Thumb Gripper => GetTemplateChild("ToolBarThumb") as Thumb;
+		protected Thumb? Gripper => GetTemplateChild("ToolBarThumb") as Thumb;
 
 		/// <summary>Access the overflow button</summary>
-		protected ToggleButton OverflowButton => GetTemplateChild("OverflowButton") as ToggleButton;
+		protected ToggleButton? OverflowButton => GetTemplateChild("OverflowButton") as ToggleButton;
 
 		/// <summary>Return the maximum width of a child within 'panel'</summary>
 		private static double GetMaxChildWidth(Panel panel)

@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl
 	{
 		/// <summary>The 2D size of the chart</summary>
-		public class RangeData : IDisposable
+		public sealed class RangeData : IDisposable
 		{
 			private readonly ChartControl m_chart;
 			public RangeData(ChartControl chart)
@@ -24,20 +24,20 @@ namespace Rylogic.Gui.WPF
 			}
 			public RangeData(RangeData rhs)
 			{
+				m_chart = rhs.m_chart;
 				XAxis = new Axis(rhs.XAxis);
 				YAxis = new Axis(rhs.YAxis);
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
-				XAxis = null;
-				YAxis = null;
+				XAxis = null!;
+				YAxis = null!;
 			}
 
 			/// <summary>The chart X axis</summary>
 			public Axis XAxis
 			{
-				[DebuggerStepThrough]
-				get { return m_xaxis; }
+				get => m_xaxis;
 				internal set
 				{
 					if (m_xaxis == value) return;
@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF
 					{
 						m_xaxis.Scroll -= HandleAxisScrolled;
 						m_xaxis.Zoomed -= HandleAxisZoomed;
-						Util.Dispose(ref m_xaxis);
+						Util.Dispose(ref m_xaxis!);
 					}
 					m_xaxis = value;
 					if (m_xaxis != null)
@@ -55,13 +55,12 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private Axis m_xaxis;
+			private Axis m_xaxis = null!;
 
 			/// <summary>The chart Y axis</summary>
 			public Axis YAxis
 			{
-				[DebuggerStepThrough]
-				get { return m_yaxis; }
+				get => m_yaxis;
 				internal set
 				{
 					if (m_yaxis == value) return;
@@ -69,7 +68,7 @@ namespace Rylogic.Gui.WPF
 					{
 						m_yaxis.Scroll -= HandleAxisScrolled;
 						m_yaxis.Zoomed -= HandleAxisZoomed;
-						Util.Dispose(ref m_yaxis);
+						Util.Dispose(ref m_yaxis!);
 					}
 					m_yaxis = value;
 					if (m_yaxis != null)
@@ -79,7 +78,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private Axis m_yaxis;
+			private Axis m_yaxis = null!;
 
 			/// <summary>The aspect ratio of the axes</summary>
 			public double Aspect
@@ -112,7 +111,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Notify of the axis zooming</summary>
-			private void HandleAxisZoomed(object sender, EventArgs e)
+			private void HandleAxisZoomed(object? sender, EventArgs e)
 			{
 				// Invalidate the cached grid line graphics on zoom for both axes, since the
 				// model will need to change size even if only zoomed on one axis.
@@ -130,7 +129,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Notify of the axis scrolled</summary>
-			private void HandleAxisScrolled(object sender, EventArgs e)
+			private void HandleAxisScrolled(object? sender, EventArgs e)
 			{
 				if (m_moved_args == null)
 				{
@@ -144,14 +143,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Raise the ChartMoved event on the chart</summary>
 			private void NotifyMoved()
 			{
+				if (m_moved_args == null) return;
 				m_chart.OnChartMoved(m_moved_args);
 				m_moved_args = null;
 			}
-			private ChartMovedEventArgs m_moved_args;
+			private ChartMovedEventArgs? m_moved_args;
 
 			/// <summary>A axis on the chart (typically X or Y)</summary>
 			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
-			public class Axis : IDisposable
+			public sealed class Axis : IDisposable
 			{
 				public delegate string TickTextCB(double x, double? step = null);
 
@@ -161,7 +161,6 @@ namespace Rylogic.Gui.WPF
 				public Axis(EAxis axis, ChartControl chart, double min, double max)
 				{
 					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
-					Debug.Assert(chart != null);
 					Chart = chart;
 					RangeLimits = new RangeF(-1e10, +1e10);
 					Set(min, max);
@@ -202,8 +201,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The axis label</summary>
 				public string Label
 				{
-					[DebuggerStepThrough]
-					get { return m_label ?? "X Axis"; }
+					get => m_label ?? "X Axis";
 					set
 					{
 						if (m_label == value) return;
@@ -211,7 +209,7 @@ namespace Rylogic.Gui.WPF
 						Chart.NotifyPropertyChanged(nameof(Label));
 					}
 				}
-				private string m_label;
+				private string? m_label;
 
 				/// <summary>The minimum axis value</summary>
 				public double Min
@@ -330,22 +328,22 @@ namespace Rylogic.Gui.WPF
 				private int m_in_set;
 
 				/// <summary>Raised whenever the range scales</summary>
-				public event EventHandler Moved;
-				protected virtual void OnMoved()
+				public event EventHandler? Moved;
+				private void OnMoved()
 				{
 					Moved?.Invoke(this, EventArgs.Empty);
 				}
 
 				/// <summary>Raised whenever the range scales</summary>
-				public event EventHandler Zoomed;
-				protected virtual void OnZoomed()
+				public event EventHandler? Zoomed;
+				private void OnZoomed()
 				{
 					Zoomed?.Invoke(this, EventArgs.Empty);
 				}
 
 				/// <summary>Raised whenever the range shifts</summary>
-				public event EventHandler Scroll;
-				protected virtual void OnScroll()
+				public event EventHandler? Scroll;
+				private void OnScroll()
 				{
 					Scroll?.Invoke(this, EventArgs.Empty);
 				}
@@ -406,9 +404,9 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>The graphics object used for grid lines</summary>
-				internal View3d.Object GridLineGfx
+				internal View3d.Object? GridLineGfx
 				{
-					get { return m_gridlines; }
+					get => m_gridlines;
 					set
 					{
 						if (m_gridlines == value) return;
@@ -416,7 +414,7 @@ namespace Rylogic.Gui.WPF
 						m_gridlines = value;
 					}
 				}
-				private View3d.Object m_gridlines;
+				private View3d.Object? m_gridlines;
 				private View3d.Object CreateGridLineGfx()
 				{
 					// Create a model for the grid lines
@@ -475,12 +473,11 @@ namespace Rylogic.Gui.WPF
 				/// <summary>Add graphics for this axis to the scene</summary>
 				internal void AddToScene(View3d.Window window)
 				{
-					if (GridLineGfx == null)
-						GridLineGfx = CreateGridLineGfx();
+					GridLineGfx ??= CreateGridLineGfx();
 
 					var cam = window.Camera;
 					var wh = cam.ViewArea(cam.FocusDist);
-					GridLines(out var min, out var max, out var step);
+					GridLines(out var min, out _, out _);
 					var pos =
 						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, (float)(cam.FocusDist * Chart.Options.GridZOffset), 0) :
 						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), (float)(cam.FocusDist * Chart.Options.GridZOffset), 0) :
@@ -501,7 +498,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>Link this axis to another axis so that this axis always follows the other axis. Note: circular links are allowed</summary>
-				public AxisLinkData LinkTo
+				public AxisLinkData? LinkTo
 				{
 					get => m_link_to;
 					set
@@ -523,10 +520,10 @@ namespace Rylogic.Gui.WPF
 							m_link_to.Axis.Moved += HandleMoved;
 						}
 
-						void HandleMoved(object sender, EventArgs e)
+						void HandleMoved(object? sender, EventArgs e)
 						{
 							// Ignore if this is a recursive call
-							if (m_in_set != 0)
+							if (m_in_set != 0 || m_link_to == null)
 								return;
 
 							var range = m_link_to.Convert(m_link_to.Axis.Range);
@@ -536,7 +533,7 @@ namespace Rylogic.Gui.WPF
 						}
 					}
 				}
-				private AxisLinkData m_link_to;
+				private AxisLinkData? m_link_to;
 
 				/// <summary>Friendly string view</summary>
 				public override string ToString()
@@ -545,7 +542,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				#region Equals
-				public bool Equals(Axis rhs)
+				public bool Equals(Axis? rhs)
 				{
 					// Value equal if the axes represent the same range
 					// but not necessarily the same options.
@@ -556,13 +553,13 @@ namespace Rylogic.Gui.WPF
 						Min == rhs.Min &&
 						Max == rhs.Max;
 				}
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return Equals(obj as Axis);
 				}
 				public override int GetHashCode()
 				{
-					return new { AxisType, Label, Min, Max, Options }.GetHashCode();
+					return new { AxisType, Label, Min, Max }.GetHashCode();
 				}
 				#endregion
 			}
@@ -571,7 +568,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Data used to link axes</summary>
 		public class AxisLinkData
 		{
-			public AxisLinkData(RangeData.Axis axis, Func<RangeF, RangeF> convert = null)
+			public AxisLinkData(RangeData.Axis axis, Func<RangeF, RangeF>? convert = null)
 			{
 				Axis = axis;
 				Convert = convert ?? (x => x);

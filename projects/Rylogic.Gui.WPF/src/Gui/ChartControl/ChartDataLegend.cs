@@ -39,12 +39,12 @@ namespace Rylogic.Gui.WPF
 			PositionZ = 0.001f;
 			ScreenSpace = true;
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
 			Gfx = null;
-			base.Dispose();
+			base.Dispose(_);
 		}
-		protected override void SetChartCore(ChartControl chart)
+		protected override void SetChartCore(ChartControl? chart)
 		{
 			m_series.Clear();
 			if (Chart != null)
@@ -67,9 +67,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Legend graphics</summary>
-		public View3d.Object Gfx
+		public View3d.Object? Gfx
 		{
-			get { return m_gfx; }
+			get => m_gfx;
 			private set
 			{
 				if (m_gfx == value) return;
@@ -77,45 +77,45 @@ namespace Rylogic.Gui.WPF
 				m_gfx = value;
 			}
 		}
-		private View3d.Object m_gfx;
+		private View3d.Object? m_gfx;
 
 		/// <summary>The background colour for the legend box</summary>
 		public Colour32 BackColour
 		{
-			get { return m_bk_colour; }
-			set { SetProp(ref m_bk_colour, value, nameof(BackColour), true, true); }
+			get => m_bk_colour;
+			set => SetProp(ref m_bk_colour, value, nameof(BackColour), true, true);
 		}
 		private Colour32 m_bk_colour;
 
 		/// <summary>Padding between the legend text and the border</summary>
 		public Thickness Padding
 		{
-			get { return m_padding; }
-			set { SetProp(ref m_padding, value, nameof(Padding), true, true); }
+			get => m_padding;
+			set => SetProp(ref m_padding, value, nameof(Padding), true, true);
 		}
 		private Thickness m_padding;
 
 		/// <summary>The origin position of the legend graphics</summary>
 		public v2 Anchor
 		{
-			get { return m_anchor; }
-			set { SetProp(ref m_anchor, value, nameof(Anchor), true, true); }
+			get => m_anchor;
+			set => SetProp(ref m_anchor, value, nameof(Anchor), true, true);
 		}
 		private v2 m_anchor;
 
 		/// <summary>Return the font to use for the legend</summary>
 		public Typeface Font
 		{
-			get { return m_font; }
-			set { SetProp(ref m_font, value, nameof(Font), true, false); }
+			get => m_font;
+			set => SetProp(ref m_font, value, nameof(Font), true, false);
 		}
 		private Typeface m_font;
 
 		/// <summary>Return the font to use for the legend</summary>
 		public double FontSize
 		{
-			get { return m_font_size; }
-			set { SetProp(ref m_font_size, value, nameof(FontSize), true, false); }
+			get => m_font_size;
+			set => SetProp(ref m_font_size, value, nameof(FontSize), true, false);
 		}
 		private double m_font_size;
 			
@@ -161,7 +161,7 @@ namespace Rylogic.Gui.WPF
 		protected override void UpdateSceneCore()
 		{
 			base.UpdateSceneCore();
-			if (Gfx != null)
+			if (Gfx != null && Chart != null)
 			{
 				Gfx.O2P = Position;
 				if (Visible)
@@ -172,9 +172,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+		public override ChartControl.HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
-			if (Gfx == null || !Gfx.Visible || mouse_btns == EMouseBtns.None)
+			if (Gfx == null || Chart == null || !Gfx.Visible || mouse_btns == EMouseBtns.None)
 				return null;
 
 			// Get the area covered by the legend in screen space

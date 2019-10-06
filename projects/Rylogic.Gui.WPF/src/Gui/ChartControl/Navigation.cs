@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ChartControl
 	{
-		private UndoHistory<NavHistoryRecord> m_nav_history;
+		private UndoHistory<NavHistoryRecord> m_nav_history = null!;
 
 		/// <summary>Set up the chart for MouseOps</summary>
 		private void InitNavigation()
@@ -182,7 +182,7 @@ namespace Rylogic.Gui.WPF
 			var defer_nav_checkpoint = DeferNavCheckpoints();
 			Dispatcher_.BeginInvokeDelayed(() =>
 			{
-				Util.Dispose(ref defer_nav_checkpoint);
+				Util.Dispose(ref defer_nav_checkpoint!);
 				SaveNavCheckpoint();
 			}, TimeSpan.FromMilliseconds(100));
 
@@ -190,7 +190,7 @@ namespace Rylogic.Gui.WPF
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) scale *= 0.01f;
 			var delta = Math_.Clamp(args.Delta * scale, -0.999f, 0.999f);
-			var chg = (string)null;
+			var chg = (string?)null;
 
 			// If zooming is allowed on both axes, translate the camera
 			if (hit.Zone == EZone.Chart && XAxis.AllowZoom && YAxis.AllowZoom)
@@ -297,14 +297,14 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Raised when the chart is clicked with the mouse</summary>
-		public event EventHandler<ChartClickedEventArgs> ChartClicked;
+		public event EventHandler<ChartClickedEventArgs>? ChartClicked;
 		protected virtual void OnChartClicked(ChartClickedEventArgs args)
 		{
 			ChartClicked?.Invoke(this, args);
 		}
 
 		/// <summary>Raised when the chart is dragged with the mouse</summary>
-		public event EventHandler<ChartDraggedEventArgs> ChartDragged;
+		public event EventHandler<ChartDraggedEventArgs>? ChartDragged;
 		protected virtual void OnChartDragged(ChartDraggedEventArgs args)
 		{
 			// This allows custom behaviour of a mouse drag on the chart
@@ -312,7 +312,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Raised when the chart is area selected</summary>
-		public event EventHandler<ChartAreaSelectEventArgs> ChartAreaSelect;
+		public event EventHandler<ChartAreaSelectEventArgs>? ChartAreaSelect;
 		protected virtual void OnChartAreaSelect(ChartAreaSelectEventArgs args)
 		{
 			ChartAreaSelect?.Invoke(this, args);
@@ -452,7 +452,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		public event EventHandler<KeyEventArgs> TranslateKey;
+		public event EventHandler<KeyEventArgs>? TranslateKey;
 
 		/// <summary>Remove all nav checkpoint history</summary>
 		public void ClearNavHistory()

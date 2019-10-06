@@ -8,18 +8,7 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class PromptUI : Window, INotifyPropertyChanged
 	{
-		static PromptUI()
-		{
-			ImageProperty = Gui_.DPRegister<PromptUI>(nameof(Image));
-			PromptProperty = Gui_.DPRegister<PromptUI>(nameof(Prompt));
-			ValueProperty = Gui_.DPRegister<PromptUI>(nameof(Value));
-			UnitsProperty = Gui_.DPRegister<PromptUI>(nameof(Units));
-			WrapProperty = Gui_.DPRegister<PromptUI>(nameof(Wrap));
-			ReadOnlyProperty = Gui_.DPRegister<PromptUI>(nameof(ReadOnly));
-			MultiLineProperty = Gui_.DPRegister<PromptUI>(nameof(MultiLine));
-			ValueAlignmentProperty = Gui_.DPRegister<PromptUI>(nameof(ValueAlignment));
-		}
-		public PromptUI(Window owner = null)
+		public PromptUI(Window? owner = null)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -41,7 +30,7 @@ namespace Rylogic.Gui.WPF
 			get { return (ImageSource)GetValue(ImageProperty); }
 			set { SetValue(ImageProperty, value); }
 		}
-		public static readonly DependencyProperty ImageProperty;
+		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<PromptUI>(nameof(Image));
 
 		/// <summary>The prompt text</summary>
 		public string Prompt
@@ -49,7 +38,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(PromptProperty); }
 			set { SetValue(PromptProperty, value); }
 		}
-		public static readonly DependencyProperty PromptProperty;
+		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<PromptUI>(nameof(Prompt));
 
 		/// <summary>The value of the user text field</summary>
 		public string Value
@@ -71,7 +60,7 @@ namespace Rylogic.Gui.WPF
 				m_field.ToolTip = null;
 			}
 		}
-		public static readonly DependencyProperty ValueProperty;
+		public static readonly DependencyProperty ValueProperty = Gui_.DPRegister<PromptUI>(nameof(Value));
 
 		/// <summary>A units string to display after the value text box</summary>
 		public string Units
@@ -79,7 +68,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(UnitsProperty); }
 			set { SetValue(UnitsProperty, value); }
 		}
-		public static readonly DependencyProperty UnitsProperty;
+		public static readonly DependencyProperty UnitsProperty = Gui_.DPRegister<PromptUI>(nameof(Units));
 
 		/// <summary>True if the value text should wrap</summary>
 		public bool Wrap
@@ -87,7 +76,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(WrapProperty); }
 			set { SetValue(WrapProperty, value); }
 		}
-		public static readonly DependencyProperty WrapProperty;
+		public static readonly DependencyProperty WrapProperty = Gui_.DPRegister<PromptUI>(nameof(Wrap));
 
 		/// <summary>True if the prompt is just displaying text</summary>
 		public bool ReadOnly
@@ -95,7 +84,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(ReadOnlyProperty); }
 			set { SetValue(ReadOnlyProperty, value); }
 		}
-		public static readonly DependencyProperty ReadOnlyProperty;
+		public static readonly DependencyProperty ReadOnlyProperty = Gui_.DPRegister<PromptUI>(nameof(ReadOnly));
 
 		/// <summary>True if the value can contain multiple lines</summary>
 		public bool MultiLine
@@ -103,7 +92,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(MultiLineProperty); }
 			set { SetValue(MultiLineProperty, value); }
 		}
-		public static readonly DependencyProperty MultiLineProperty;
+		public static readonly DependencyProperty MultiLineProperty = Gui_.DPRegister<PromptUI>(nameof(MultiLine));
 
 		/// <summary>How text in the value box should be aligned</summary>
 		public HorizontalAlignment ValueAlignment
@@ -111,19 +100,19 @@ namespace Rylogic.Gui.WPF
 			get { return (HorizontalAlignment)GetValue(ValueAlignmentProperty); }
 			set { SetValue(ValueAlignmentProperty, value); }
 		}
-		public static readonly DependencyProperty ValueAlignmentProperty;
+		public static readonly DependencyProperty ValueAlignmentProperty = Gui_.DPRegister<PromptUI>(nameof(ValueAlignment));
 
 		/// <summary>Validation function for allowed value text</summary>
-		public Func<string, ValidationResult> Validate
+		public Func<string, ValidationResult>? Validate
 		{
-			get { return m_validate; }
+			get => m_validate;
 			set
 			{
 				m_validate = value;
 				Value_Changed();
 			}
 		}
-		private Func<string, ValidationResult> m_validate;
+		private Func<string, ValidationResult>? m_validate;
 
 		/// <summary>True if the user input is valid</summary>
 		public bool IsValid
@@ -152,6 +141,6 @@ namespace Rylogic.Gui.WPF
 		private bool m_show_wrap_checkbox;
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

@@ -16,27 +16,27 @@ namespace Rylogic.Interop.Win32
 	// Collection used to enumerate Window Objects
 	public class Windows :IEnumerable, IEnumerator
 	{
-		[DllImport("user32.dll")] public static extern int  GetWindowText(HWND hwnd, StringBuilder title, int size);
-		[DllImport("user32.dll")] public static extern int  GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
-		[DllImport("user32.dll")] public static extern int  EnumWindows(EnumWindowsProc ewp, int lParam); 
+		[DllImport("user32.dll")] public static extern int GetWindowText(HWND hwnd, StringBuilder title, int size);
+		[DllImport("user32.dll")] public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
+		[DllImport("user32.dll")] public static extern int EnumWindows(EnumWindowsProc ewp, int lParam);
 		[DllImport("user32.dll")] public static extern bool IsWindowVisible(HWND hwnd);
 
 		// Delegate used for EnumWindows() callback function
 		public delegate bool EnumWindowsProc(HWND hwnd, int lParam);
 
 		private readonly ArrayList m_wnds = new ArrayList(); //array of windows
-		private readonly bool m_invisible = false;	// filter out invisible windows
+		private readonly bool m_invisible = false;  // filter out invisible windows
 		private readonly bool m_no_title = false; // filter out windows with no title
 		private int m_position = -1; // holds current index of m_wnds, necessary for IEnumerable
 
-		public Windows() :this(false, false) {}
+		public Windows() : this(false, false) { }
 		public Windows(bool invisible, bool untitled)
 		{
 			m_invisible = invisible;
 			m_no_title = untitled;
 
 			// EnumWindows callback function
-			EnumWindowsProc ewp = delegate(HWND hwnd, int lParam)
+			EnumWindowsProc ewp = delegate (HWND hwnd, int lParam)
 			{
 				if (m_invisible == false && !IsWindowVisible(hwnd))
 					return true;
@@ -60,18 +60,18 @@ namespace Rylogic.Interop.Win32
 		public static List<CWindow> GetWindowsByName(string name, bool partial)
 		{
 			List<CWindow> wnd = new List<CWindow>();
-			EnumWindowsProc ewp = delegate(HWND hwnd, int lParam)
+			EnumWindowsProc ewp = delegate (HWND hwnd, int lParam)
 			{
 				StringBuilder title = new StringBuilder(256);
 				StringBuilder module = new StringBuilder(256);
 				GetWindowModuleFileName(hwnd, module, 256);
 				GetWindowText(hwnd, title, 256);
-				
+
 				string wnd_title = title.ToString();
 				bool match = (!partial && wnd_title == name) || (partial && wnd_title.Contains(name));
 				if (!match)
 					return true;
-				
+
 				wnd.Add(new CWindow(wnd_title, hwnd, module.ToString()));
 				return true;
 			};
@@ -80,10 +80,19 @@ namespace Rylogic.Interop.Win32
 		}
 
 		// IEnumerable implementation
-		public IEnumerator GetEnumerator()	{ return this; }
-		public object Current				{ get { return m_wnds[m_position]; } }
-		public void Reset()					{ m_position = -1; }
-		public bool MoveNext()				{ ++m_position; return m_position < m_wnds.Count; }
+		public object? Current => m_wnds[m_position];
+		public IEnumerator GetEnumerator()
+		{
+			return this;
+		}
+		public void Reset()
+		{
+			m_position = -1;
+		}
+		public bool MoveNext()
+		{
+			++m_position; return m_position < m_wnds.Count;
+		}
 	}
 
 	// Represents another window

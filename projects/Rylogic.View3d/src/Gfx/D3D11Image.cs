@@ -38,29 +38,28 @@ namespace Rylogic.Gfx
 		//     var height = Math.Max(1, (int)Math.Ceiling(image.Height * dpi_scale));
 		//     d3d_image.SetRenderTargetSize(width, height);
 
-		static D3D11Image()
+		~D3D11Image()
 		{
-			WindowOwnerProperty = DependencyProperty.Register(nameof(WindowOwner), typeof(IntPtr), typeof(D3D11Image), new UIPropertyMetadata(IntPtr.Zero, new PropertyChangedCallback(WindowOwnerChanged)));
-			m_is_sw_fallback_enabled = typeof(D3DImage).GetField("_isSoftwareFallbackEnabled", BindingFlags.NonPublic | BindingFlags.Instance);
+			Dispose(false);
 		}
 		public D3D11Image()
 			: this(96.0, 96.0)
 		{ }
-		public D3D11Image(double dpiX, double dpiY, int multi_sampling = 1)
+		public D3D11Image(double dpiX, double dpiY, int multi_sampling = 4)
 			: base(dpiX, dpiY)
 		{
-			MultiSampling = 4;
+			MultiSampling = multi_sampling;
 		}
-		~D3D11Image()
+		public void Dispose()
 		{
-			Dispose();
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
-		public virtual void Dispose()
+		protected virtual void Dispose(bool _)
 		{
 			RenderTarget = null;
 			FrontBuffer = null;
 			WindowOwner = IntPtr.Zero;
-			GC.SuppressFinalize(this);
 		}
 		protected override Freezable CreateInstanceCore()
 		{
@@ -70,8 +69,8 @@ namespace Rylogic.Gfx
 		/// <summary>The window handle (HWND) of the window that hosts the D3D11Image</summary>
 		public IntPtr WindowOwner
 		{
-			get { return (IntPtr)(GetValue(WindowOwnerProperty)); }
-			set { SetValue(WindowOwnerProperty, value); }
+			get => (IntPtr)GetValue(WindowOwnerProperty);
+			set => SetValue(WindowOwnerProperty, value);
 		}
 		private static void WindowOwnerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
 		{
@@ -88,12 +87,12 @@ namespace Rylogic.Gfx
 				image.TryCreateRenderTarget();
 			}
 		}
-		public static DependencyProperty WindowOwnerProperty;
+		public static DependencyProperty WindowOwnerProperty = DependencyProperty.Register(nameof(WindowOwner), typeof(IntPtr), typeof(D3D11Image), new UIPropertyMetadata(IntPtr.Zero, new PropertyChangedCallback(WindowOwnerChanged)));
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
 		{
-			get { return m_multi_sampling; }
+			get => m_multi_sampling;
 			set
 			{
 				if (Equals(m_multi_sampling, value)) return;
@@ -104,9 +103,9 @@ namespace Rylogic.Gfx
 		private int m_multi_sampling;
 
 		/// <summary>The Dx11 render target texture</summary>
-		public View3d.Texture RenderTarget
+		public View3d.Texture? RenderTarget
 		{
-			get { return m_render_target; }
+			get => m_render_target;
 			set
 			{
 				if (m_render_target == value) return;
@@ -117,14 +116,14 @@ namespace Rylogic.Gfx
 				RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
-		private View3d.Texture m_render_target;
+		private View3d.Texture? m_render_target;
 		private int m_pixel_width = 16;
 		private int m_pixel_height = 16;
 
 		/// <summary>The Dx9 render target that matches the area on screen</summary>
-		private View3d.Texture FrontBuffer
+		private View3d.Texture? FrontBuffer
 		{
-			get { return m_front_buffer; }
+			get => m_front_buffer;
 			set
 			{
 				if (m_front_buffer == value) return;
@@ -147,10 +146,10 @@ namespace Rylogic.Gfx
 				}
 			}
 		}
-		private View3d.Texture m_front_buffer;
+		private View3d.Texture? m_front_buffer;
 
 		/// <summary>Raised when the render target changes</summary>
-		public event EventHandler RenderTargetChanged;
+		public event EventHandler? RenderTargetChanged;
 
 		/// <summary>Set the dimensions of the render target</summary>
 		public void SetRenderTargetSize(int pixel_width, int pixel_height)
@@ -222,11 +221,8 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>True if the front buffer is available</summary>
-		public new bool IsFrontBufferAvailable
-		{
-			get { return base.IsFrontBufferAvailable || (bool)m_is_sw_fallback_enabled.GetValue(this); }
-		}
-		private static FieldInfo m_is_sw_fallback_enabled;
+		public new bool IsFrontBufferAvailable => base.IsFrontBufferAvailable || (bool)m_is_sw_fallback_enabled.GetValue(this)!;
+		private static readonly FieldInfo m_is_sw_fallback_enabled = typeof(D3DImage).GetField("_isSoftwareFallbackEnabled", BindingFlags.NonPublic | BindingFlags.Instance) ?? throw new MissingFieldException("'D3DImage._isSoftwareFallbackEnabled' is missing");
 
 		/// <summary></summary>
 		private new void SetBackBuffer(D3DResourceType backBufferType, IntPtr backBuffer, bool enableSoftwareFallback)

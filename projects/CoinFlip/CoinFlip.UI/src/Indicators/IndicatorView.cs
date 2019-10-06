@@ -20,12 +20,12 @@ namespace CoinFlip.UI.Indicators
 
 			PropertyChanged += HandlePropertyChanged;
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
 			PropertyChanged -= HandlePropertyChanged;
 			Instrument = null;
 			Indicator = null;
-			base.Dispose();
+			base.Dispose(disposing);
 		}
 
 		/// <summary>The size in pixels to 'glow' by</summary>

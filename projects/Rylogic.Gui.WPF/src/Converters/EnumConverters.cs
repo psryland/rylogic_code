@@ -17,7 +17,7 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		// Notes:
 		//  - Convert an enum to its description attribute
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value is IEnumerable collection)
 				return collection.Cast<object>().OfType<Enum>().Select(x => x.Desc());
@@ -25,7 +25,7 @@ namespace Rylogic.Gui.WPF.Converters
 				return en.Desc();
 			return null;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -42,7 +42,7 @@ namespace Rylogic.Gui.WPF.Converters
 		//     ItemTemplate= "{conv:EnumValues+ToDesc}"
 		//     SelectedItem="{Binding MyProp}"
 		//     />
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
 				throw new ArgumentNullException();
@@ -52,7 +52,7 @@ namespace Rylogic.Gui.WPF.Converters
 			var values = Enum.GetValues(value.GetType());
 			return values;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}

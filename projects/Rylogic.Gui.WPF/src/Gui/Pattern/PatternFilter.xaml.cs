@@ -15,21 +15,15 @@ namespace Rylogic.Gui.WPF
 
 			Pattern = new Pattern(EPattern.Substring, string.Empty);
 			History = new BindingListEx<Pattern>();
-			EditPattern = Command.Create(this, () =>
-			{
-				var dlg = new PatternEditorUI { Owner = Window.GetWindow(this) };
-				dlg.Editor.EditPattern(Pattern);
-				if (dlg.ShowDialog() == true)
-					Pattern = (Pattern)dlg.Editor.Pattern;
-			});
-			
+			EditPattern = Command.Create(this, EditPatternInternal);
+   		
 			DataContext = this;
 		}
 
 		/// <summary>The current pattern</summary>
 		public Pattern Pattern
 		{
-			get { return m_pattern; }
+			get => m_pattern;
 			set
 			{
 				if (m_pattern != value)
@@ -45,15 +39,22 @@ namespace Rylogic.Gui.WPF
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pattern)));
 			}
 		}
-		private Pattern m_pattern;
+		private Pattern m_pattern = null!;
 
 		/// <summary>The history of filters</summary>
 		public BindingListEx<Pattern> History { get;  }
 
 		/// <summary>Display the pattern editor</summary>
 		public Command EditPattern { get; }
+		private void EditPatternInternal()
+		{
+			var dlg = new PatternEditorUI { Owner = Window.GetWindow(this) };
+			dlg.Editor.EditPattern(Pattern);
+			if (dlg.ShowDialog() == true)
+				Pattern = (Pattern)dlg.Editor.Pattern;
+		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

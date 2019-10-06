@@ -15,6 +15,7 @@ namespace Rylogic.Gfx
 
 		public ObjectManager(View3d.Window window, IEnumerable<Guid> excluded)
 		{
+			m_window = null!;
 			Window = window;
 			Exclude = new HashSet<Guid>(excluded);
 			Objects = new BindingListEx<View3d.Object>();
@@ -23,13 +24,13 @@ namespace Rylogic.Gfx
 		}
 		public void Dispose()
 		{
-			Window = null;
+			Window = null!;
 		}
 
 		/// <summary>The scene that this manager is associated with</summary>
 		public View3d.Window Window
 		{
-			get { return m_window; }
+			get => m_window;
 			private set
 			{
 				if (m_window == value) return;
@@ -44,7 +45,7 @@ namespace Rylogic.Gfx
 				}
 
 				// Handlers
-				void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
+				void HandleSceneChanged(object? sender, View3d.SceneChangedEventArgs args)
 				{
 					// Ignore if only excluded context ids have changed
 					if (args.ContextIds.All(x => Exclude.Contains(x)))

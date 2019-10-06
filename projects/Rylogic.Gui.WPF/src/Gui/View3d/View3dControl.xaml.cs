@@ -20,45 +20,45 @@ namespace Rylogic.Gui.WPF
 		// Notes:
 		//  - This control subclasses 'Image' because the D3DImage is an 'ImageSource'
 
-		private View3d.ReportErrorCB m_error_cb;
-
 		static View3dControl()
 		{
-			BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colour32.LightGray);
 			View3d.LoadDll(throw_if_missing:false);
 		}
 		public View3dControl()
 		{
+			InitializeComponent();
+			Stretch = Stretch.Fill;
+			StretchDirection = StretchDirection.Both;
+			UseLayoutRounding = true;
+			Focusable = true;
+
+			// Initialise commands
+			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
+			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
+			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
+			ResetView = Command.Create(this, ResetViewInternal);
+			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+			ShowMeasureTool = Command.Create(this, ShowMeasureToolInternal);
+			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
+			ShowObjectManager = Command.Create(this, ShowObjectManagerInternal);
+
+			if (DesignerProperties.GetIsInDesignMode(this))
+				return;
+
 			try
 			{
-				InitializeComponent();
-				Stretch = Stretch.Fill;
-				StretchDirection = StretchDirection.Both;
-				UseLayoutRounding = true;
-				Focusable = true;
-
-				if (DesignerProperties.GetIsInDesignMode(this))
-					return;
+				// Error callback
+				void ReportErrorCB(IntPtr ctx, string msg) => OnReportError(new ReportErrorEventArgs(msg));
 
 				// Initialise View3d in off-screen only mode (i.e. no window handle)
 				View3d = View3d.Create();
-				Window = new View3d.Window(View3d, IntPtr.Zero, new View3d.WindowOptions(m_error_cb = (ctx, msg) => OnReportError(new ReportErrorEventArgs(msg)), IntPtr.Zero));
+				Window = new View3d.Window(View3d, IntPtr.Zero, new View3d.WindowOptions(ReportErrorCB, IntPtr.Zero));
 				Camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
 				Camera.ClipPlanes(0.01f, 1000f, true);
 
 				// Create a D3D11 off-screen render target image source
 				Source = D3DImage = new D3D11Image();
-
-				// Initialise commands
-				ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
-				ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
-				ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
-				ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
-				ResetView = Command.Create(this, ResetViewInternal);
-				SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
-				ShowMeasureTool = Command.Create(this, ShowMeasureToolInternal);
-				ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
-				ShowObjectManager = Command.Create(this, ShowObjectManagerInternal);
 
 				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
 				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
@@ -76,12 +76,17 @@ namespace Rylogic.Gui.WPF
 				throw;
 			}
 		}
-		public virtual void Dispose()
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
 		{
 			Source = null;
-			D3DImage = null;
-			Window = null;
-			View3d = null;
+			D3DImage = null!;
+			Window = null!;
+			View3d = null!;
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
@@ -106,20 +111,20 @@ namespace Rylogic.Gui.WPF
 		/// <summary>View3d context reference</summary>
 		public View3d View3d
 		{
-			get { return m_view3d; }
+			get => m_view3d;
 			private set
 			{
 				if (m_view3d == value) return;
-				Util.Dispose(ref m_view3d);
+				Util.Dispose(ref m_view3d!);
 				m_view3d = value;
 			}
 		}
-		private View3d m_view3d;
+		private View3d m_view3d = null!;
 
 		/// <summary>View3d window instance</summary>
 		public View3d.Window Window
 		{
-			get { return m_window; }
+			get => m_window;
 			private set
 			{
 				if (m_window == value) return;
@@ -127,7 +132,7 @@ namespace Rylogic.Gui.WPF
 				{
 					m_window.OnInvalidated -= HandleInvalidated;
 					m_window.OnSettingsChanged -= HandleSettingsChanged;
-					Util.Dispose(ref m_window);
+					Util.Dispose(ref m_window!);
 				}
 				m_window = value;
 				if (m_window != null)
@@ -154,18 +159,18 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private View3d.Window m_window;
+		private View3d.Window m_window = null!;
 
 		/// <summary>The camera used to view the scene</summary>
 		public View3d.Camera Camera => Window.Camera;
 
 		/// <summary>The D3D render target texture</summary>
-		public View3d.Texture RenderTarget => D3DImage.RenderTarget;
+		public View3d.Texture? RenderTarget => D3DImage.RenderTarget;
 
 		/// <summary>An interop object providing an off-screen render target</summary>
 		private D3D11Image D3DImage
 		{
-			get { return m_d3d_image; }
+			get => m_d3d_image;
 			set
 			{
 				if (m_d3d_image == value) return;
@@ -174,7 +179,7 @@ namespace Rylogic.Gui.WPF
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
 					m_d3d_image.RenderTargetChanged -= HandleRTChanged;
-					Util.Dispose(ref m_d3d_image);
+					Util.Dispose(ref m_d3d_image!);
 				}
 				m_d3d_image = value;
 				if (m_d3d_image != null)
@@ -184,7 +189,7 @@ namespace Rylogic.Gui.WPF
 					m_d3d_image.RenderTargetChanged += HandleRTChanged;
 				}
 
-				void OnLoaded(object sender, EventArgs arg)
+				void OnLoaded(object? sender, EventArgs arg)
 				{
 					// When the control is loaded, attach the main win.
 					// Detach when unloaded (not reliable though)
@@ -192,12 +197,12 @@ namespace Rylogic.Gui.WPF
 					D3DImage.WindowOwner = win != null ? new WindowInteropHelper(win).Handle : IntPtr.Zero;
 					Invalidate();
 				}
-				void OnUnloaded(object sender, EventArgs arg)
+				void OnUnloaded(object? sender, EventArgs arg)
 				{
 					// When the control is unloaded, detach the window
 					D3DImage.WindowOwner = IntPtr.Zero;
 				}
-				void HandleRTChanged(object sender, EventArgs arg)
+				void HandleRTChanged(object? sender, EventArgs arg)
 				{
 					if (m_d3d_image.RenderTarget != null)
 						OnRenderTargetChanged();
@@ -207,7 +212,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private D3D11Image m_d3d_image;
+		private D3D11Image m_d3d_image = null!;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
 		public void Invalidate() => Window.Invalidate();
@@ -224,7 +229,7 @@ namespace Rylogic.Gui.WPF
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColor)));
 		}
 		public Brush BackgroundColorBrush => BackgroundColor.ToMediaBrush();
-		public static readonly DependencyProperty BackgroundColorProperty;
+		public static readonly DependencyProperty BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colour32.LightGray);
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
@@ -384,19 +389,22 @@ namespace Rylogic.Gui.WPF
 		private int m_mouse_down_at;
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
-		public event EventHandler<ReportErrorEventArgs> ReportError;
+		public event EventHandler<ReportErrorEventArgs>? ReportError;
 		protected virtual void OnReportError(ReportErrorEventArgs e)
 		{
 			ReportError?.Invoke(this, e);
 		}
 
 		/// <summary>Default handling of render target changes. Set the viewport and camera aspect</summary>
-		public event EventHandler RenderTargetChanged;
+		public event EventHandler? RenderTargetChanged;
 		protected virtual void OnRenderTargetChanged()
 		{
+			if (RenderTarget == null)
+				return;
+
 			// Set the viewport to match the render target size
 			Window.Viewport = new View3d.Viewport(0, 0, RenderTarget.Info.m_width, RenderTarget.Info.m_height);
 
@@ -448,7 +456,7 @@ namespace Rylogic.Gui.WPF
 		private bool m_render_pending;
 
 		// Allow objects to be added/removed from the scene
-		public event EventHandler<BuildSceneEventArgs> BuildScene;
+		public event EventHandler<BuildSceneEventArgs>? BuildScene;
 		protected virtual void OnBuildScene()
 		{
 			BuildScene?.Invoke(this, new BuildSceneEventArgs(Window));
@@ -519,42 +527,52 @@ namespace Rylogic.Gui.WPF
 		public Command ShowMeasureTool { get; }
 		private void ShowMeasureToolInternal()
 		{
-			m_measurement_ui = m_measurement_ui ?? new View3dMeasurementUI(this);
-			m_measurement_ui.Closed += (s, a) => { m_measurement_ui = null; Invalidate(); };
-			m_measurement_ui.Show();
+			if (m_measurement_ui == null)
+			{
+				m_measurement_ui = new View3dMeasurementUI(this);
+				m_measurement_ui.Closed += (s, a) => { m_measurement_ui = null; Invalidate(); };
+				m_measurement_ui.Show();
+			}
 			m_measurement_ui.Focus();
 		}
-		private View3dMeasurementUI m_measurement_ui;
+		private View3dMeasurementUI? m_measurement_ui;
 
 		/// <summary>Show the UI for changing the lighting</summary>
 		public Command ShowLightingUI { get; }
 		private void ShowLightingUIInternal()
 		{
-			var light = new View3d.Light(Window.LightProperties);
-			light.PropertyChanged += (s, a) =>
+			if (m_lighting_ui == null)
 			{
-				Window.LightProperties = m_lighting_ui.Light;
-				Invalidate();
-			};
+				var light = new View3d.Light(Window.LightProperties);
+				light.PropertyChanged += (s, a) =>
+				{
+					if (m_lighting_ui == null) return;
+					Window.LightProperties = m_lighting_ui.Light;
+					Invalidate();
+				};
 
-			m_lighting_ui = m_lighting_ui ?? new View3dLightingUI(this);
-			m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
-			m_lighting_ui.Light = light;
-			m_lighting_ui.Show();
+				m_lighting_ui = new View3dLightingUI(this);
+				m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
+				m_lighting_ui.Light = light;
+				m_lighting_ui.Show();
+			}
 			m_lighting_ui.Focus();
 		}
-		private View3dLightingUI m_lighting_ui;
+		private View3dLightingUI? m_lighting_ui;
 
 		/// <summary>Show the UI for objects in the scene</summary>
 		public Command ShowObjectManager { get; }
 		private void ShowObjectManagerInternal()
 		{
-			m_object_manager_ui = m_object_manager_ui ?? new View3dObjectManagerUI(this);
-			m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
-			m_object_manager_ui.Show();
+			if (m_object_manager_ui == null)
+			{
+				m_object_manager_ui = new View3dObjectManagerUI(this);
+				m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
+				m_object_manager_ui.Show();
+			}
 			m_object_manager_ui.Focus();
 		}
-		private View3dObjectManagerUI m_object_manager_ui;
+		private View3dObjectManagerUI? m_object_manager_ui;
 
 		/// <summary>Pre-set view directions</summary>
 		public ICollectionView ViewPresets
@@ -598,7 +616,7 @@ namespace Rylogic.Gui.WPF
 				};
 			}
 		}
-		private ICollectionView m_view_presets;
+		private ICollectionView m_view_presets = null!;
 
 		/// <summary>Directions to align the camera up-axis to</summary>
 		public ICollectionView AlignDirections
@@ -644,7 +662,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private ICollectionView m_align_directions;
+		private ICollectionView m_align_directions = null!;
 
 		/// <summary>Pre-set view directions</summary>
 		public enum EViewPresets

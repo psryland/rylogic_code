@@ -15,11 +15,11 @@ namespace Rylogic.Gui.WPF.Converters
 	[ValueConversion(typeof(bool), typeof(bool))]
 	public class Not : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return value is bool b ? !b : value == null;
 		}
-		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return value is bool b ? !b : value == null;
 		}
@@ -33,7 +33,7 @@ namespace Rylogic.Gui.WPF.Converters
 	[ValueConversion(typeof(object), typeof(bool), ParameterType=typeof(string))]
 	public class Compare :MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			// Expect parameter to have the form: "<=|>=|<|>|!=|== <constant value>"
 			var expr = (string)parameter;
@@ -53,7 +53,7 @@ namespace Rylogic.Gui.WPF.Converters
 				return Util.ConvertTo<double>(value) > double.Parse(expr.Substring(1));
 			throw new Exception("Unknown comparison");
 		}
-		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -69,7 +69,7 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		// Use:
 		// <RadioButton Content = "Words" IsChecked="{Binding PropName, Converter={StaticResource IsEqual}, ConverterParameter={x:Static xml_ns:MyType+MyNestedEnum.Value}}"/>
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null && parameter == null)
 				return true;
@@ -79,7 +79,7 @@ namespace Rylogic.Gui.WPF.Converters
 			var ty = parameter.GetType();
 			return Equals(Util.ConvertTo(value, ty), parameter);
 		}
-		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return parameter;
 		}
@@ -93,7 +93,7 @@ namespace Rylogic.Gui.WPF.Converters
 	[ValueConversion(typeof(object), typeof(bool))]
 	public class HasFlag : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null && parameter == null)
 				return true;
@@ -104,7 +104,7 @@ namespace Rylogic.Gui.WPF.Converters
 			var rhs = Util.ConvertTo<long>(parameter);
 			return (lhs & rhs) != 0;
 		}
-		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return parameter;
 		}
@@ -117,11 +117,11 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>True if all inputs are true</summary>
 	public class AllTrue : MarkupExtension, IMultiValueConverter
 	{
-		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
 		{
 			return values.All(x => x is bool b && b == true);
 		}
-		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+		public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			return Array_.New<object>(targetTypes.Length, i => b);
@@ -135,11 +135,11 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>True if any inputs are true</summary>
 	public class AnyTrue : MarkupExtension, IMultiValueConverter
 	{
-		public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
 		{
 			return values.Any(x => x is bool b && b == true);
 		}
-		public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+		public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			return Array_.New<object>(targetTypes.Length, i => b);
@@ -153,12 +153,12 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Visible if true</summary>
 	public class BoolToVisible : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			return b ? Visibility.Visible : Visibility.Collapsed;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is Visibility v)) return null;
 			return v == Visibility.Visible;
@@ -172,12 +172,12 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Collapsed if true</summary>
 	public class BoolToCollapsed : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			return b ? Visibility.Collapsed : Visibility.Visible;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is Visibility v)) return null;
 			return v == Visibility.Collapsed;
@@ -191,13 +191,13 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>TextWrapping if true. Use parameter="invert" for true == NoWrap</summary>
 	public class BoolToWrap : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (parameter is string s && string.Compare(s, "invert", true) == 0) b = !b;
 			return b ? TextWrapping.Wrap : TextWrapping.NoWrap;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is TextWrapping wrap)) return null;
 			var b = wrap == TextWrapping.Wrap;
@@ -213,7 +213,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between two values using a bool. Parameter should be 'true_value|false_value' where 'value' is a string that is convertable to 'targetType'</summary>
 	public class BoolSelect : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -234,7 +234,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			return Util.ConvertTo(val, targetType);
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -247,7 +247,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between two string values using a bool. Parameter should be 'true_value|false_value' where 'value' is a string</summary>
 	public class BoolToString : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -258,7 +258,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			return b ? c[0] : c[1];
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -271,7 +271,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between colours using a bool. Parameter should be 'true_colour|false_colour' where colour is a parsable string like #RGB</summary>
 	public class BoolToColour : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -283,7 +283,7 @@ namespace Rylogic.Gui.WPF.Converters
 			var colour = b ? true_colour : false_colour;
 			return colour.ToMediaColor();
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -296,7 +296,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between colour brushes using a bool. Parameter should be 'true_colour|false_colour' where colour is a parsable string like #RGB</summary>
 	public class BoolToBrush : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -308,7 +308,7 @@ namespace Rylogic.Gui.WPF.Converters
 			var colour = b ? true_colour : false_colour;
 			return new SolidColorBrush(colour.ToMediaColor());
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -321,7 +321,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between two double values using a bool. Parameter should be 'true_value|false_value' where 'value' is a parsable string like 0.123</summary>
 	public class BoolToDouble : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -332,7 +332,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			return b ? true_value : false_value;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}
@@ -345,7 +345,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Select between two int values using a bool. Parameter should be 'true_value|false_value' where 'value' is a parsable string like 3</summary>
 	public class BoolToInt : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
@@ -356,7 +356,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			return b ? true_value : false_value;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
 		}

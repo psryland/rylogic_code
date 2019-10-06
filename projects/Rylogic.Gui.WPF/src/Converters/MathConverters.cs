@@ -11,11 +11,11 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		// Notes:
 		//  - Scale a value by the given parameter
-		public object Convert(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return System.Convert.ToDouble(value) * System.Convert.ToDouble(parameter);
 		}
-		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return System.Convert.ToDouble(value) / System.Convert.ToDouble(parameter);
 		}
@@ -26,7 +26,7 @@ namespace Rylogic.Gui.WPF.Converters
 	}
 	public class VecToString : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			switch (value)
 			{
@@ -39,7 +39,7 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 			return null;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is string str))
 				return null;

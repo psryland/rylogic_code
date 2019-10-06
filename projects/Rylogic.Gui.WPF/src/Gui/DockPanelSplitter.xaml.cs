@@ -25,16 +25,6 @@ namespace Rylogic.Gui.WPF
 
 		static DockPanelSplitter()
 		{
-			// Proportional resize property
-			ProportionalResizeProperty = DependencyProperty.Register(nameof(ProportionalResize), typeof(bool), typeof(DockPanelSplitter), new UIPropertyMetadata(true));
-
-			// Thickness property
-			ThicknessProperty = DependencyProperty.Register(nameof(Thickness), typeof(double), typeof(DockPanelSplitter), new UIPropertyMetadata(4.0, ThicknessChanged));
-			void ThicknessChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			{
-				((DockPanelSplitter)d).UpdateHeightOrWidth();
-			}
-
 			// Override the default style key property
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(DockPanelSplitter), new FrameworkPropertyMetadata(typeof(DockPanelSplitter)));
 
@@ -42,11 +32,7 @@ namespace Rylogic.Gui.WPF
 			BackgroundProperty.OverrideMetadata(typeof(DockPanelSplitter), new FrameworkPropertyMetadata(Brushes.Transparent));
 
 			// Override the Dock property to get notifications when Dock is changed
-			DockPanel.DockProperty.OverrideMetadata(typeof(DockPanelSplitter), new FrameworkPropertyMetadata(Dock.Left, new PropertyChangedCallback(DockChanged)));
-			void DockChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-			{
-				((DockPanelSplitter)d).UpdateHeightOrWidth();
-			}
+			DockPanel.DockProperty.OverrideMetadata(typeof(DockPanelSplitter), new FrameworkPropertyMetadata(Dock.Left, new PropertyChangedCallback((d, e) => ((DockPanelSplitter)d).UpdateHeightOrWidth())));
 		}
 		public DockPanelSplitter()
 		{
@@ -131,13 +117,14 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			if (IsMouseCaptured)
+			if (IsMouseCaptured && m_target != null)
 			{
 				var pt = e.GetPosition(Parent as IInputElement);
 				var delta = new Point(pt.X - m_start_drag_point.X, pt.Y - m_start_drag_point.Y);
 				var dock = DockPanel.GetDock(this);
 
-				switch (Orientation) {
+				switch (Orientation)
+				{
 				case Orientation.Horizontal: delta.Y = AdjustHeight(m_target, delta.Y, dock); break;
 				case Orientation.Vertical: delta.X = AdjustWidth(m_target, delta.X, dock); break;
 				}
@@ -160,14 +147,14 @@ namespace Rylogic.Gui.WPF
 			m_target = null;
 			base.OnMouseUp(e);
 		}
-		private FrameworkElement m_target;
+		private FrameworkElement? m_target;
 
 		/// <summary>
 		/// Resize the target element proportionally with the parent container.
 		/// Set to false if you don't want the element to be resized when the parent is resized.</summary>
 		public bool ProportionalResize
 		{
-			get { return (bool)GetValue(ProportionalResizeProperty); }
+			get => (bool)GetValue(ProportionalResizeProperty);
 			set
 			{
 				if (ProportionalResize == value) return;
@@ -177,7 +164,7 @@ namespace Rylogic.Gui.WPF
 					RecordCurrentSize(target);
 			}
 		}
-		public static readonly DependencyProperty ProportionalResizeProperty;
+		public static readonly DependencyProperty ProportionalResizeProperty = DependencyProperty.Register(nameof(ProportionalResize), typeof(bool), typeof(DockPanelSplitter), new UIPropertyMetadata(true));
 
 		/// <summary>Height or width of splitter, depends on orientation of the splitter</summary>
 		public double Thickness
@@ -185,7 +172,7 @@ namespace Rylogic.Gui.WPF
 			get { return (double)GetValue(ThicknessProperty); }
 			set { SetValue(ThicknessProperty, value); }
 		}
-		public static readonly DependencyProperty ThicknessProperty;
+		public static readonly DependencyProperty ThicknessProperty = DependencyProperty.Register(nameof(Thickness), typeof(double), typeof(DockPanelSplitter), new UIPropertyMetadata(4.0, (d,e) => ((DockPanelSplitter)d).UpdateHeightOrWidth()));
 
 		/// <summary>Update the thickness of the splitter</summary>
 		private void UpdateHeightOrWidth()
@@ -221,7 +208,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Update the target element (the element the DockPanelSplitter works on)</summary>
-		private FrameworkElement GetTargetElement()
+		private FrameworkElement? GetTargetElement()
 		{
 			if (Parent is DockPanel dp && dp.Children.Count != 0)
 			{

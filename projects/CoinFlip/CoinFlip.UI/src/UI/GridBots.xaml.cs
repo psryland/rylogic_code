@@ -171,13 +171,13 @@ namespace CoinFlip.UI
 		private void HandleShowConfigureUI(object sender, MouseButtonEventArgs e)
 		{
 			if (e.ClickCount != 2) return;
-			var cell = DataGrid_.GetCell((DependencyObject)e.OriginalSource);
+			var cell = DataGrid_.FindCell((DependencyObject)e.OriginalSource);
 			Bots.MoveCurrentTo(cell.GetRow().Item);
 			ShowConfig.Execute();
 		}
 		private void HandleToggleActive(object sender, MouseButtonEventArgs e)
 		{
-			var cell = DataGrid_.GetCell((DependencyObject)e.OriginalSource);
+			var cell = DataGrid_.FindCell((DependencyObject)e.OriginalSource);
 			Bots.MoveCurrentTo(cell.GetRow().Item);
 			ToggleActive.Execute();
 		}

@@ -16,10 +16,6 @@ namespace Rylogic.Gui.WPF
 		private const string AlphaLabel = "A";
 		private EParts m_selected_part;
 
-		static ColourWheel()
-		{
-			ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour));
-		}
 		public ColourWheel()
 		{
 			InitializeComponent();
@@ -79,7 +75,7 @@ namespace Rylogic.Gui.WPF
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			base.OnRenderSizeChanged(sizeInfo);
-			LayoutDimensions = null;
+			LayoutDimensions = null!;
 		}
 		protected override Size MeasureOverride(Size constraint)
 		{
@@ -143,23 +139,23 @@ namespace Rylogic.Gui.WPF
 		/// <summary>
 		/// An event raised whenever the act of selecting a colour begins or ends.
 		/// Use the button state to tell. Occurs before the first colour change, or after the last colour change</summary>
-		public event EventHandler<MouseButtonEventArgs> ColourSelection;
+		public event EventHandler<MouseButtonEventArgs>? ColourSelection;
 
 		/// <summary>An event raised whenever the selected colour is changed</summary>
-		public event EventHandler<ColourEventArgs> ColourChanged;
+		public event EventHandler<ColourEventArgs>? ColourChanged;
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Control orientation</summary>
 		public Orientation Orientation
 		{
-			get { return m_orientation; }
+			get => m_orientation;
 			set
 			{
 				if (m_orientation == value) return;
 				m_orientation = value;
-				LayoutDimensions = null;
+				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orientation)));
 			}
 		}
@@ -168,12 +164,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The parts of the control to draw</summary>
 		public EParts Parts
 		{
-			get { return m_parts; }
+			get => m_parts;
 			set
 			{
 				if (m_parts == value) return;
 				m_parts = value;
-				LayoutDimensions = null;
+				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
 			}
 		}
@@ -182,12 +178,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The width of the slider bars</summary>
 		public double SliderWidth
 		{
-			get { return m_slider_width; }
+			get => m_slider_width;
 			set
 			{
 				if (m_slider_width == value) return;
 				m_slider_width = value;
-				LayoutDimensions = null;
+				LayoutDimensions = null!;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SliderWidth)));
 			}
 		}
@@ -196,7 +192,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The radius of the selector dot</summary>
 		public double SelectionIndicatorSize
 		{
-			get { return m_selection_indicator_size; }
+			get => m_selection_indicator_size;
 			set
 			{
 				if (m_selection_indicator_size == value) return;
@@ -210,8 +206,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The currently selected colour (RGB)</summary>
 		public Colour32 Colour
 		{
-			get { return (Colour32)GetValue(ColourProperty); }
-			set { SetValue(ColourProperty, value); }
+			get => (Colour32)GetValue(ColourProperty);
+			set => SetValue(ColourProperty, value);
 		}
 		private void Colour_Changed()
 		{
@@ -219,7 +215,7 @@ namespace Rylogic.Gui.WPF
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
 			InvalidateVisual();
 		}
-		public static readonly DependencyProperty ColourProperty;
+		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour));
 
 		/// <summary>The currently selected colour (HSV)</summary>
 		public HSV HSVColour
@@ -281,10 +277,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Measure the control layout</summary>
 		private Measurements LayoutDimensions
 		{
-			get { return m_measurements ?? (m_measurements = CalcMeasurements(new Size(ActualWidth, ActualHeight))); }
-			set { m_measurements = value; }
+			get => m_measurements ??= CalcMeasurements(new Size(ActualWidth, ActualHeight));
+			set => m_measurements = value;
 		}
-		private Measurements m_measurements;
+		private Measurements? m_measurements;
 
 		/// <summary>Returns the part hit at location x,y</summary>
 		private EParts PartHitTest(double x, double y)
@@ -310,7 +306,7 @@ namespace Rylogic.Gui.WPF
 			// Allocate the bitmap, if needed
 			var w = (int)Math.Ceiling(size.Width);
 			var h = (int)Math.Ceiling(size.Height);
-			var bm = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+			using var bm = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
 			// Silly radius? ignore
 			if (radius >= 10)
@@ -329,26 +325,23 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Generate a wheel bitmap
-				using (var gfx = System.Drawing.Graphics.FromImage(bm))
-				using (var pgb = new System.Drawing.Drawing2D.PathGradientBrush(points))
-				{
-					gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+				using var gfx = System.Drawing.Graphics.FromImage(bm);
+				using var pgb = new System.Drawing.Drawing2D.PathGradientBrush(points);
+				gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
 
-					// Set the various properties. Note the SurroundColors property, which contains an array of points, 
-					// in a one-to-one relationship with the points that created the gradient.
-					pgb.CenterColor = System.Drawing.Color.White;
-					pgb.CenterPoint = new System.Drawing.PointF((float)centre.X, (float)centre.Y);
-					pgb.SurroundColors = colours;
+				// Set the various properties. Note the SurroundColors property, which contains an array of points, 
+				// in a one-to-one relationship with the points that created the gradient.
+				pgb.CenterColor = System.Drawing.Color.White;
+				pgb.CenterPoint = new System.Drawing.PointF((float)centre.X, (float)centre.Y);
+				pgb.SurroundColors = colours;
 
-					var r = new System.Drawing.RectangleF((float)(centre.X - w * 0.5), (float)(centre.Y - h * 0.5), w, h);
-					gfx.FillEllipse(pgb, r);
-					//gfx.DrawEllipse(System.Drawing.Pens.Black, r);
-				}
+				var r = new System.Drawing.RectangleF((float)(centre.X - w * 0.5), (float)(centre.Y - h * 0.5), w, h);
+				gfx.FillEllipse(pgb, r);
 			}
 			m_bm = bm.ToBitmapSource();
 			return m_bm;
 		}
-		private ImageSource m_bm; // Cached wheel bitmap
+		private ImageSource? m_bm; // Cached wheel bitmap
 
 		/// <summary>Draw the selected colour indicator</summary>
 		private void RenderColourSelection(DrawingContext gfx, Point pt)
@@ -401,7 +394,6 @@ namespace Rylogic.Gui.WPF
 			var meas = new Measurements();
 			meas.Width = min;
 			meas.Height = min;
-
 			meas.Radius = Math.Max(0, min * 0.5 - p);
 			meas.Centre = new Point(p + Math.Ceiling(meas.Radius), p + Math.Ceiling(meas.Radius));
 			meas.Wheel = new Rect(0, 0, meas.Centre.X * 2, meas.Centre.Y * 2);

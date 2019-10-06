@@ -33,7 +33,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The currently active mouse op</summary>
-			public MouseOp Active
+			public MouseOp? Active
 			{
 				get => m_active;
 				private set
@@ -58,11 +58,11 @@ namespace Rylogic.Gui.WPF
 						// If the op starts immediately without a mouse down, fake
 						// a mouse down event as soon as it becomes active.
 						if (!m_active.StartOnMouseDown)
-							m_active.MouseDown(null);
+							m_active.MouseDown(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left));
 					}
 				}
 			}
-			private MouseOp m_active;
+			private MouseOp? m_active;
 
 			/// <summary>The next mouse operation for each mouse button</summary>
 			public PendingOps Pending { get; }
@@ -78,16 +78,16 @@ namespace Rylogic.Gui.WPF
 				Active = null;
 
 				// If the next op starts immediately, begin it now
-				if (Pending[btn] != null && !Pending[btn].StartOnMouseDown)
+				if (Pending[btn] != null && !Pending[btn]!.StartOnMouseDown)
 					BeginOp(btn);
 			}
 
 			/// <summary>Handle a mouse op being disposed externally</summary>
-			private void HandleMouseOpDisposed(object sender, EventArgs args)
+			private void HandleMouseOpDisposed(object? sender, EventArgs args)
 			{
 				// This should never be called when 'MouseOps' is the one calling dispose
 				// It's only to handle an external reference calling Dispose.
-				var op = (MouseOp)sender;
+				var op = (MouseOp)sender!;
 				op.Disposed -= HandleMouseOpDisposed;
 
 				// Clear the active op if it is 'op'
@@ -104,7 +104,7 @@ namespace Rylogic.Gui.WPF
 			public sealed class PendingOps :IDisposable
 			{
 				private readonly MouseOps m_owner;
-				private readonly MouseOp[] m_pending;
+				private readonly MouseOp?[] m_pending;
 
 				internal PendingOps(MouseOps owner)
 				{
@@ -115,23 +115,23 @@ namespace Rylogic.Gui.WPF
 				{
 					Util.DisposeAll(m_pending);
 				}
-				public MouseOp this[MouseButton btn]
+				public MouseOp? this[MouseButton btn]
 				{
 					get => m_pending[(int)btn];
 					set
 					{
 						if (m_pending[(int)btn] == value) return;
-						if (m_pending[(int)btn] != null)
+						if (m_pending[(int)btn] is MouseOp old_pending_op)
 						{
-							m_pending[(int)btn].Disposed -= m_owner.HandleMouseOpDisposed;
-							m_pending[(int)btn].Dispose();
+							old_pending_op.Disposed -= m_owner.HandleMouseOpDisposed;
+							old_pending_op.Dispose();
 						}
 						m_pending[(int)btn] = value;
-						if (m_pending[(int)btn] != null)
+						if (m_pending[(int)btn] is MouseOp new_pending_op)
 						{
 							// Watch for external disposing
-							m_pending[(int)btn].Disposed -= m_owner.HandleMouseOpDisposed;
-							m_pending[(int)btn].Disposed += m_owner.HandleMouseOpDisposed;
+							new_pending_op.Disposed -= m_owner.HandleMouseOpDisposed;
+							new_pending_op.Disposed += m_owner.HandleMouseOpDisposed;
 						}
 					}
 				}
@@ -150,7 +150,7 @@ namespace Rylogic.Gui.WPF
 			//  - If at any point a mouse op is cancelled, no further mouse events are forwarded
 			//    to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
-			protected IDisposable m_suspended_chart_changed;
+			protected IDisposable? m_suspended_chart_changed;
 			public MouseOp(ChartControl chart, bool allow_cancel = false)
 			{
 				Chart = chart;
@@ -169,13 +169,13 @@ namespace Rylogic.Gui.WPF
 				Disposed?.Invoke(this, EventArgs.Empty);
 				Util.Dispose(ref m_suspended_chart_changed);
 			}
-			public event EventHandler Disposed;
+			public event EventHandler? Disposed;
 
 			/// <summary>The owning chart</summary>
 			protected ChartControl Chart { get; }
 
 			/// <summary>The hit test result on mouse down</summary>
-			public HitTestResult HitResult { get; set; }
+			public HitTestResult HitResult { get; internal set; } = null!;
 
 			/// <summary>The chart space location of where the chart was "grabbed"</summary>
 			public Point GrabChart { get; set; }
@@ -200,7 +200,7 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>True if the op was aborted</summary>
 			public bool Cancelled { get; protected set; }
-			private bool m_allow_cancel;
+			private readonly bool m_allow_cancel;
 
 			/// <summary>True if the distance between 'location' and mouse down should be treated as a click. Once false, then always false</summary>
 			public bool IsClick(Point location)
@@ -261,10 +261,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A mouse operation for dragging selected elements around, area selecting, or left clicking (Left Button)</summary>
 		public class MouseOpDefaultLButton : MouseOp
 		{
-			private HitTestResult.Hit m_hit_selected;
-			private IDisposable m_cleanup_selection_graphic;
-			private IDisposable m_defer_nav_checkpoint;
-			private Element m_dragging_element;
+			private HitTestResult.Hit? m_hit_selected;
+			private IDisposable? m_cleanup_selection_graphic;
+			private IDisposable? m_defer_nav_checkpoint;
+			private Element? m_dragging_element;
 			private EDragState m_drag_state;
 			private int m_click_count;
 			private EAxis m_hit_axis;
@@ -491,7 +491,7 @@ namespace Rylogic.Gui.WPF
 		{
 			//private HintBalloon m_tape_measure_balloon;
 			private bool m_tape_measure_graphic_added;
-			private IDisposable m_defer_nav_checkpoint;
+			private IDisposable? m_defer_nav_checkpoint;
 
 			public MouseOpDefaultMButton(ChartControl chart) : base(chart)
 			{
@@ -588,7 +588,7 @@ namespace Rylogic.Gui.WPF
 		public class MouseOpDefaultRButton : MouseOp
 		{
 			private EAxis m_drag_axis_allow; // The allowed motion based on where the chart was grabbed
-			private IDisposable m_defer_nav_checkpoint;
+			private IDisposable? m_defer_nav_checkpoint;
 
 			public MouseOpDefaultRButton(ChartControl chart)
 				: base(chart)

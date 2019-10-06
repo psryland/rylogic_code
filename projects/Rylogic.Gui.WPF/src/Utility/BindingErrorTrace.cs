@@ -49,7 +49,7 @@ namespace Rylogic.Gui.WPF
 			PresentationTraceSources.DataBindingSource.Listeners.Remove(m_listener);
 			m_listener = null;
 		}
-		private static BindingErrorTraceListener m_listener;
+		private static BindingErrorTraceListener? m_listener;
 		private StringBuilder m_message = new StringBuilder();
 
 		/// <summary></summary>

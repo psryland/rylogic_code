@@ -723,12 +723,12 @@ namespace Rylogic.Audio
 			{
 				var vers = VirtualMIDIGetVersion(out var major, out var minor, out var release, out var build);
 				Version = new Version(major, minor, build, release);
-				VersionString = Marshal.PtrToStringAuto(vers);
+				VersionString = Marshal.PtrToStringAuto(vers) ?? string.Empty;
 			}
 			{
 				var vers = VirtualMIDIGetDriverVersion(out var major, out var minor, out var release, out var build);
 				DriverVersion = new Version(major, minor, build, release);
-				DriverVersionString = Marshal.PtrToStringAuto(vers);
+				DriverVersionString = Marshal.PtrToStringAuto(vers) ?? string.Empty;
 			}
 		}
 

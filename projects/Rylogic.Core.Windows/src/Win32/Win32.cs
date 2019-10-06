@@ -282,17 +282,16 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Convert a message constant to a string</summary>
 		public static string MsgIdToString(uint msg_id)
 		{
-			string name;
-			if (!m_wm_name.TryGetValue(msg_id, out name))
+			if (!m_wm_name.TryGetValue(msg_id, out var name))
 			{
-				var fi = typeof(Win32).GetFields(BindingFlags.Public|BindingFlags.Static)
+				var fi = typeof(Win32).GetFields(BindingFlags.Public | BindingFlags.Static)
 					.Where(x => x.IsLiteral)
 					.Where(x => x.Name.StartsWith("WM_") || x.Name.StartsWith("EM_"))
 					.FirstOrDefault(x =>
 						{
 							var val = x.GetValue(null);
 							if (val is uint) return (uint)val == (uint)msg_id;
-							if (val is int)  return (int)val == msg_id;
+							if (val is int) return (int)val == msg_id;
 							return false;
 						});
 

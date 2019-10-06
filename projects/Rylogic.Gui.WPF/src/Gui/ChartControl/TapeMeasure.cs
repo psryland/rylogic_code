@@ -11,7 +11,7 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ChartControl
 	{
-		public class TapeMeasure :IDisposable
+		public sealed class TapeMeasure :IDisposable
 		{
 			private readonly bool m_xhair_enabled;
 			public TapeMeasure(ChartControl chart)
@@ -88,7 +88,7 @@ namespace Rylogic.Gui.WPF
 					Chart.ShowCrossHair = m_xhair_enabled;
 
 				Detach();
-				Chart = null;
+				Chart = null!;
 			}
 
 			/// <summary>The owning chart</summary>
@@ -116,7 +116,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private ChartControl m_chart;
+			private ChartControl m_chart = null!;
 
 			/// <summary>The grab point of the tape measure</summary>
 			private Point? Beg
@@ -216,7 +216,9 @@ namespace Rylogic.Gui.WPF
 			/// <summary></summary>
 			private void UpdateGfx()
 			{
-				Debug.Assert(Beg != null && End != null);
+				if (Beg == null || End == null)
+					throw new Exception("UpdateGfx should only be called when both ends are valid");
+
 				var beg = Chart.ChartToClient(Beg.Value);
 				var end = Chart.ChartToClient(End.Value);
 
@@ -292,13 +294,13 @@ namespace Rylogic.Gui.WPF
 				//  - Leave properties as null to hide the associated label.
 
 				/// <summary>Text to display for the horizontal measurement</summary>
-				public string LabelX { get; set; }
+				public string? LabelX { get; set; }
 
 				/// <summary>Text to display for the vertical measurement</summary>
-				public string LabelY { get; set; }
+				public string? LabelY { get; set; }
 
 				/// <summary>Text to display for the diagonal measurement</summary>
-				public string LabelD { get; set; }
+				public string? LabelD { get; set; }
 			}
 		}
 	}

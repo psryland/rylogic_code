@@ -7,7 +7,8 @@ namespace Rylogic.Plugin
 	public static class Plugins_
 	{
 		/// <summary>Load plugins showing a UI if it takes too long</summary>
-		public static Plugins<TInterface> LoadWithUI<TInterface>(this Plugins<TInterface> plugins, Window owner, string directory, object[] args, SearchOption search, string regex_filter = Plugins<TInterface>.DefaultRegexPattern, int delay = 500, string title = null, string desc = null) where TInterface:class
+		public static Plugins<TInterface> LoadWithUI<TInterface>(this Plugins<TInterface> plugins, Window owner, string directory, object[]? args, SearchOption search, string? regex_filter = Plugins<TInterface>.DefaultRegexPattern, int delay = 500, string? title = null, string? desc = null)
+			where TInterface:class
 		{
 			// Need to implement ProgressUI in WPF
 			throw new NotImplementedException();

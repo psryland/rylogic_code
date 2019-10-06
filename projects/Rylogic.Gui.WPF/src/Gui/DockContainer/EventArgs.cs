@@ -8,33 +8,33 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
 	public class ActiveContentChangedEventArgs : EventArgs
 	{
-		public ActiveContentChangedEventArgs(IDockable old, IDockable nue)
+		public ActiveContentChangedEventArgs(IDockable? old, IDockable? nue)
 		{
 			ContentOld = old;
 			ContentNew = nue;
 		}
 
 		/// <summary>The content that was active</summary>
-		public IDockable ContentOld { get; }
+		public IDockable? ContentOld { get; }
 
 		/// <summary>The content that is becoming active</summary>
-		public IDockable ContentNew { get; }
+		public IDockable? ContentNew { get; }
 	}
 
 	/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
 	public class ActivePaneChangedEventArgs : EventArgs
 	{
-		public ActivePaneChangedEventArgs(DockPane old, DockPane nue)
+		public ActivePaneChangedEventArgs(DockPane? old, DockPane? nue)
 		{
 			PaneOld = old;
 			PaneNew = nue;
 		}
 
 		/// <summary>The pane that was active</summary>
-		public DockPane PaneOld { get; }
+		public DockPane? PaneOld { get; }
 
 		/// <summary>The pane that is becoming active</summary>
-		public DockPane PaneNew { get; }
+		public DockPane? PaneNew { get; }
 	}
 
 	/// <summary>Args for when dockables are moved within the dock container</summary>
@@ -64,17 +64,17 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Args for when the DockContainer is changed on a DockControl</summary>
 	public class DockContainerChangedEventArgs : EventArgs
 	{
-		public DockContainerChangedEventArgs(DockContainer old, DockContainer nue)
+		public DockContainerChangedEventArgs(DockContainer? old, DockContainer? nue)
 		{
 			Previous = old;
 			Current = nue;
 		}
 
 		/// <summary>The old dock container</summary>
-		public DockContainer Previous { get; }
+		public DockContainer? Previous { get; }
 
 		/// <summary>The new dock container</summary>
-		public DockContainer Current { get; }
+		public DockContainer? Current { get; }
 	}
 
 	/// <summary>Args for when layout is being saved</summary>
@@ -104,7 +104,7 @@ namespace Rylogic.Gui.WPF
 			ActiveContent,
 		}
 
-		public TreeChangedEventArgs(EAction action, DockControl dockcontrol = null, DockPane pane = null, Branch branch = null)
+		public TreeChangedEventArgs(EAction action, DockControl? dockcontrol = null, DockPane? pane = null, Branch? branch = null)
 		{
 			Action = action;
 			DockControl = dockcontrol;
@@ -116,12 +116,12 @@ namespace Rylogic.Gui.WPF
 		public EAction Action { get; }
 
 		/// <summary>Non-null if it was a dockable that was added or removed</summary>
-		public DockControl DockControl { get; }
+		public DockControl? DockControl { get; }
 
 		/// <summary>Non-null if it was a dock pane that was added or removed</summary>
-		public DockPane DockPane { get; }
+		public DockPane? DockPane { get; }
 
 		/// <summary>Non-null if it was a branch that was added or removed</summary>
-		public Branch Branch { get; }
+		public Branch? Branch { get; }
 	}
 }

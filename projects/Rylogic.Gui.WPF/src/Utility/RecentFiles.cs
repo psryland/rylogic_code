@@ -19,11 +19,6 @@ namespace Rylogic.Gui.WPF
 		//    <gui2:RecentFilesMenuItem Header= "_Recent Files">
 		//  </Menu>
 
-		static RecentFilesMenuItem()
-		{
-			MaxCountProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(MaxCount), 10);
-			ResetListTextProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(ResetListText), "<Clear Recent Files>");
-		}
 		public RecentFilesMenuItem()
 		{
 			Filepaths = new List<string>();
@@ -36,18 +31,18 @@ namespace Rylogic.Gui.WPF
 		public List<string> Filepaths { get; private set; }
 
 		/// <summary>The handler for when a recent file is selected</summary>
-		public Action<string> RecentFileSelected { get; set; }
+		public Action<string>? RecentFileSelected { get; set; }
 
 		/// <summary>Raised whenever the recent file list changes</summary>
-		public event EventHandler RecentFilesListChanged;
+		public event EventHandler? RecentFilesListChanged;
 
 		/// <summary>Get/Set the limit for how many files appear in the recent files list</summary>
 		public int MaxCount { get; set; }
-		public static readonly DependencyProperty MaxCountProperty;
+		public static readonly DependencyProperty MaxCountProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(MaxCount), 10);
 
 		/// <summary>The text to display as the last item allowing the user to clear the list</summary>
 		public string ResetListText { get; set; }
-		public static readonly DependencyProperty ResetListTextProperty;
+		public static readonly DependencyProperty ResetListTextProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(ResetListText), "<Clear Recent Files>");
 
 		/// <summary>Returns true if the given filepath is in the recent files list</summary>
 		public bool IsInRecents(string file)

@@ -36,8 +36,8 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			Measurement = null;
-			View3dCtrl = null;
+			Measurement = null!;
+			View3dCtrl = null!;
 			PinState = null;
 			base.OnClosed(e);
 		}
@@ -78,19 +78,19 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private View3dControl m_view3d_ctrl;
+		private View3dControl m_view3d_ctrl = null!;
 
 		/// <summary>The view model for the measurement behaviour</summary>
 		public Measurement Measurement
 		{
-			get { return m_measurement; }
+			get => m_measurement;
 			private set
 			{
 				if (m_measurement == value) return;
 				if (m_measurement != null)
 				{
 					m_measurement.PropertyChanged -= HandlePropertyChanged;
-					Util.Dispose(ref m_measurement);
+					Util.Dispose(ref m_measurement!);
 				}
 				m_measurement = value;
 				if (m_measurement != null)
@@ -130,12 +130,12 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private Measurement m_measurement;
+		private Measurement m_measurement = null!;
 
 		/// <summary>Pinned window support</summary>
-		private PinData PinState
+		private PinData? PinState
 		{
-			get { return m_pin_state; }
+			get => m_pin_state;
 			set
 			{
 				if (m_pin_state == value) return;
@@ -143,7 +143,7 @@ namespace Rylogic.Gui.WPF
 				m_pin_state = value;
 			}
 		}
-		private PinData m_pin_state;
+		private PinData? m_pin_state;
 
 		/// <summary>Snap to distance</summary>
 		public double SnapDistance
@@ -193,7 +193,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The available measurement reference frames</summary>
 		public ICollectionView ReferenceFrames
 		{
-			get { return m_reference_frames; }
+			get => m_reference_frames;
 			private set
 			{
 				if (m_reference_frames == value) return;
@@ -215,7 +215,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private ICollectionView m_reference_frames;
+		private ICollectionView m_reference_frames = null!;
 
 		/// <summary>The measurement results</summary>
 		public IBindingList Results => Measurement.Results;
@@ -238,7 +238,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Change the spot colour</summary>
 		private void HandleEditSpotColour(object sender, MouseButtonEventArgs e)

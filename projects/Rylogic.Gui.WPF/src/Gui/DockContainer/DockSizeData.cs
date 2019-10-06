@@ -23,6 +23,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			: this(rhs.Left, rhs.Top, rhs.Right, rhs.Bottom)
 		{ }
 		public DockSizeData(XElement node)
+			: this()
 		{
 			Left = node.Element(nameof(Left)).As(Left);
 			Top = node.Element(nameof(Top)).As(Top);
@@ -41,33 +42,33 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The branch associated with this sizes</summary>
-		internal Branch Owner { get; set; }
+		internal Branch? Owner { get; set; }
 
 		/// <summary>
 		/// The size of the left, top, right, bottom panes. If >= 1, then the value is interpreted
 		/// as pixels, if less than 1 then interpreted as a fraction of the client area width/height</summary>
 		public double Left
 		{
-			get { return m_left; }
-			set { SetProp(ref m_left, value); }
+			get => m_left;
+			set => SetProp(ref m_left, value);
 		}
 		private double m_left;
 		public double Top
 		{
-			get { return m_top; }
-			set { SetProp(ref m_top, value); }
+			get => m_top;
+			set => SetProp(ref m_top, value);
 		}
 		private double m_top;
 		public double Right
 		{
-			get { return m_right; }
-			set { SetProp(ref m_right, value); }
+			get => m_right;
+			set => SetProp(ref m_right, value);
 		}
 		private double m_right;
 		public double Bottom
 		{
-			get { return m_bottom; }
-			set { SetProp(ref m_bottom, value); }
+			get => m_bottom;
+			set => SetProp(ref m_bottom, value);
 		}
 		private double m_bottom;
 
@@ -84,14 +85,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			get
 			{
-				switch (ds)
+				return ds switch
 				{
-				case EDockSite.Left: return Left;
-				case EDockSite.Right: return Right;
-				case EDockSite.Top: return Top;
-				case EDockSite.Bottom: return Bottom;
-				}
-				return 1f;
+					EDockSite.Left => Left,
+					EDockSite.Right => Right,
+					EDockSite.Top => Top,
+					EDockSite.Bottom => Bottom,
+					_ => 1f,
+				};
 			}
 			set
 			{
@@ -101,6 +102,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				case EDockSite.Right: Right = value; break;
 				case EDockSite.Top: Top = value; break;
 				case EDockSite.Bottom: Bottom = value; break;
+				default: throw new Exception($"Cannot set the size for site {ds}");
 				}
 			}
 		}
@@ -151,15 +153,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var area = GetSizesForRect(rect, docked_mask);
 
 			// Return the size of the requested site
-			switch (location)
+			return location switch
 			{
-			default: throw new Exception($"No size value for dock zone {location}");
-			case EDockSite.Centre: return 0;
-			case EDockSite.Left: return area.Left;
-			case EDockSite.Top: return area.Top;
-			case EDockSite.Right: return area.Right;
-			case EDockSite.Bottom: return area.Bottom;
-			}
+				EDockSite.Centre => 0,
+				EDockSite.Left => area.Left,
+				EDockSite.Top => area.Top,
+				EDockSite.Right => area.Right,
+				EDockSite.Bottom => area.Bottom,
+				_ => throw new Exception($"No size value for dock zone {location}"),
+			};
 		}
 
 		/// <summary>Get the size for a dock site in pixels, assuming an available area 'rect'</summary>

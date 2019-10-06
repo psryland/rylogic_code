@@ -16,6 +16,7 @@
 		<FileVersion>1.0.3</FileVersion>
 		<AssemblyVersion>1.0.3</AssemblyVersion>
 		<LangVersion>latest</LangVersion>
+		<Nullable>Enable</Nullable>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -27,7 +28,7 @@
 		<DebugType>full</DebugType>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -57,32 +58,37 @@
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
 		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
+	
 	<ItemGroup>
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="PresentationCore" />
 		<Reference Include="PresentationFramework" />
-		<Reference Include="WindowsBase" />
 	</ItemGroup>
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView" Version="5.1.1" />
+		<PackageReference Include="WindowsBase" Version="4.6.1055"/>
 	</ItemGroup>
+	
 	<ItemGroup>
-	  <Compile Update="res\Resources.Designer.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Resources.resx</DependentUpon>
-	  </Compile>
-	  <Compile Update="src\Gui\ComboBoxAutoComplete.xaml.cs">
-	    <DependentUpon>ComboBoxAutoComplete.xaml</DependentUpon>
-	  </Compile>
+		<Compile Update="res\Resources.Designer.cs">
+		<DesignTime>True</DesignTime>
+		<AutoGen>True</AutoGen>
+		<DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+		<Compile Update="src\Gui\ComboBoxAutoComplete.xaml.cs">
+		<DependentUpon>ComboBoxAutoComplete.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
+	
 	<ItemGroup>
-	  <EmbeddedResource Update="res\Resources.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	    <CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
-	  </EmbeddedResource>
+		<EmbeddedResource Update="res\Resources.resx">
+		<Generator>ResXFileCodeGenerator</Generator>
+		<LastGenOutput>Resources.Designer.cs</LastGenOutput>
+		<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
+		</EmbeddedResource>
 	</ItemGroup>
+
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(TargetFramework) $(PlatformName) $(ConfigurationName)" />
 	</Target>

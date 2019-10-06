@@ -51,7 +51,7 @@ namespace CoinFlip.UI
 		{
 			if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2)
 			{
-				var cell = DataGrid_.GetCell((DependencyObject)e.OriginalSource);
+				var cell = DataGrid_.FindCell((DependencyObject)e.OriginalSource);
 				var indy = (IIndicatorView)cell.GetRow().Item;
 				indy.ShowOptionsUI();
 				e.Handled = true;
@@ -61,7 +61,7 @@ namespace CoinFlip.UI
 		/// <summary>Toggle visibility of an indicator</summary>
 		private void HandleVisibiliyToggle(object sender, MouseButtonEventArgs e)
 		{
-			var cell = DataGrid_.GetCell((DependencyObject)e.OriginalSource);
+			var cell = DataGrid_.FindCell((DependencyObject)e.OriginalSource);
 			var indy = (IIndicatorView)cell.GetRow().Item;
 			indy.Visible = !indy.Visible;
 			e.Handled = true;

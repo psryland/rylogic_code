@@ -9,28 +9,19 @@ using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
-	public partial class AxisPanel : Canvas, IDisposable, INotifyPropertyChanged
+	public sealed partial class AxisPanel : Canvas, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - Represents the tick marks and tick labels of an axis.
 		//  - This component is intended to be able to go on any size of the graph.
 
-		static AxisPanel()
-		{
-			AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis), flags:FrameworkPropertyMetadataOptions.None);
-			FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
-			FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
-			FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);
-			FontStretchProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStretch), def: FontStretches.Normal);
-			FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), def: 10.0);
-		}
 		public AxisPanel()
 		{
 			InitializeComponent();
 
 			// Commands
-			ToggleScrollLock = Command.Create(this, () => Axis.AllowScroll = !Axis.AllowScroll);
-			ToggleZoomLock = Command.Create(this, () => Axis.AllowZoom = !Axis.AllowZoom);
+			ToggleScrollLock = Command.Create(this, ToggleScrollLockInternal);
+			ToggleZoomLock = Command.Create(this, ToggleZoomLockInternal);
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
@@ -48,7 +39,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (FontFamily)GetValue(FontFamilyProperty); }
 			set { SetValue(FontFamilyProperty, value); }
 		}
-		public static readonly DependencyProperty FontFamilyProperty;
+		public static readonly DependencyProperty FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
 
 		/// <summary>Font style</summary>
 		public FontStyle FontStyle
@@ -56,7 +47,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (FontStyle)GetValue(FontStyleProperty); }
 			set { SetValue(FontStyleProperty, value); }
 		}
-		public static readonly DependencyProperty FontStyleProperty;
+		public static readonly DependencyProperty FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
 
 		/// <summary>Font weight</summary>
 		public FontWeight FontWeight
@@ -64,7 +55,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (FontWeight)GetValue(FontWeightProperty); }
 			set { SetValue(FontWeightProperty, value); }
 		}
-		public static readonly DependencyProperty FontWeightProperty;
+		public static readonly DependencyProperty FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);
 
 		/// <summary>Font stretch</summary>
 		public FontStretch FontStretch
@@ -72,7 +63,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (FontStretch)GetValue(FontStretchProperty); }
 			set { SetValue(FontStretchProperty, value); }
 		}
-		public static readonly DependencyProperty FontStretchProperty;
+		public static readonly DependencyProperty FontStretchProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStretch), def: FontStretches.Normal);
 
 		/// <summary>Font size for tick labels</summary>
 		public double FontSize
@@ -80,15 +71,15 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (double)GetValue(FontSizeProperty); }
 			set { SetValue(FontSizeProperty, value); }
 		}
-		public static readonly DependencyProperty FontSizeProperty;
+		public static readonly DependencyProperty FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), def: 10.0);
 
 		/// <summary>Font for tick labels</summary>
 		public Typeface Typeface => new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
 
 		/// <summary>The axis represented by this visual</summary>
-		public ChartControl.RangeData.Axis Axis
+		public ChartControl.RangeData.Axis? Axis
 		{
-			get { return (ChartControl.RangeData.Axis)GetValue(AxisProperty); }
+			get { return (ChartControl.RangeData.Axis?)GetValue(AxisProperty); }
 			set { SetValue(AxisProperty, value); }
 		}
 		private void Axis_Changed(ChartControl.RangeData.Axis new_value, ChartControl.RangeData.Axis old_value)
@@ -144,7 +135,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				}
 			}
 		}
-		public static readonly DependencyProperty AxisProperty;
+		public static readonly DependencyProperty AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis), flags: FrameworkPropertyMetadataOptions.None);
 
 		/// <summary>The axis options</summary>
 		public ChartControl.OptionsData.Axis Options => Axis?.Options ?? new ChartControl.OptionsData.Axis();
@@ -343,11 +334,21 @@ namespace Rylogic.Gui.WPF.ChartDetail
 
 		/// <summary>Toggle the scroll locked state of the axis</summary>
 		public Command ToggleScrollLock { get; }
+		private void ToggleScrollLockInternal()
+		{
+			if (Axis == null) return;
+			Axis.AllowScroll = !Axis.AllowScroll;
+		}
 
 		/// <summary>Toggle the scroll locked state of the axis</summary>
 		public Command ToggleZoomLock { get; }
+		private void ToggleZoomLockInternal()
+		{
+			if (Axis == null) return;
+			Axis.AllowZoom = !Axis.AllowZoom;
+		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

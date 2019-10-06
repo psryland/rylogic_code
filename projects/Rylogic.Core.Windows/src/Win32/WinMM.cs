@@ -257,7 +257,7 @@ namespace Rylogic.Interop.Win32
 		[DllImport("winmm.dll", CharSet=CharSet.Ansi)] public static extern int mixerMessage(IntPtr hmx, int uMsg, int dwParam1, int dwParam2);
 
 		/// <summary>RAII wrapper for a mixer handle</summary>
-		public class Mixer :IDisposable
+		public sealed class Mixer :IDisposable
 		{
 			public IntPtr Handle {get;set;}
 
@@ -296,7 +296,7 @@ namespace Rylogic.Interop.Win32
 				line_ctrls.cbmxctrl          = mixer_data_size;
 
 				Check(mixerGetLineControlsA(Handle, ref line_ctrls, (uint)EMixerGetLineControlsFlag.ONEBYTYPE));
-				return (MixerControl)Marshal.PtrToStructure(line_ctrls.pamxctrl, typeof(MixerControl));
+				return (MixerControl?)Marshal.PtrToStructure(line_ctrls.pamxctrl, typeof(MixerControl)) ?? throw new NullReferenceException($"Null returned for WinMM MixerControl");
 			}
 
 			/// <summary>Return the volume level for this mixer</summary>
@@ -312,7 +312,7 @@ namespace Rylogic.Interop.Win32
 					mixer_details.cChannels      = 1;
 					mixer_details.cMultipleItems = 0;
 					Check(mixerGetControlDetailsA(Handle, ref mixer_details, (uint)EMixerGetControlDetailsFlag.VALUE));
-					return (uint)(Marshal.PtrToStructure(mixer_details.paDetails, typeof(uint)));
+					return (uint?)(Marshal.PtrToStructure(mixer_details.paDetails, typeof(uint))) ?? throw new NullReferenceException($"Null returned for WinMM Volume");
 				}
 				set
 				{

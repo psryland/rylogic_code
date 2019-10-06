@@ -15,11 +15,11 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Convert an unknown type to 'targetType' using a TypeDescriptor converter</summary>
 	public class ToValue : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return Util.ConvertTo(value, targetType);
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return Util.ConvertTo(value, targetType);
 		}
@@ -32,13 +32,13 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Convert icons to images</summary>
 	public class IconToImageSource : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return value is Icon icon
 				? Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions())
 				: null;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException();
 		}
@@ -51,7 +51,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
 	public class StringFormat :MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
 				return null;
@@ -94,7 +94,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			return value.ToString();
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException($"MarkupExtension '{nameof(StringFormat)}' cannot convert any types back to '{targetType.Name}'");
 		}

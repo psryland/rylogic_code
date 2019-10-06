@@ -54,40 +54,44 @@ namespace Rylogic.Gui.WPF
 				Position = node.Element(nameof(Position)).As(Position);
 				Name = node.Element(nameof(Name)).As(Name);
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				Chart = null;
 				Invalidated = null;
 				PositionChanged = null;
 				DataChanged = null;
 				SelectedChanged = null;
-				View3d = null;
+				View3d = null!;
 			}
 
 			/// <summary>View3d context reference (needed because Elements can out-live the chart)</summary>
 			private View3d View3d
 			{
-				get { return m_view3d; }
+				get => m_view3d;
 				set
 				{
 					if (m_view3d == value) return;
-					Util.Dispose(ref m_view3d);
+					Util.Dispose(ref m_view3d!);
 					m_view3d = value;
 				}
 			}
-			private View3d m_view3d;
+			private View3d m_view3d = null!;
 
 			/// <summary>Non-null when the element has been added to a chart. Not virtual, override 'SetChartCore' instead</summary>
-			public ChartControl Chart
+			public ChartControl? Chart
 			{
-				[DebuggerStepThrough]
-				get { return m_chart; }
-				set { SetChartInternal(value, true); }
+				get => m_chart;
+				set => SetChartInternal(value, true);
 			}
-			private ChartControl m_chart;
+			private ChartControl? m_chart;
 
 			/// <summary>Assign the chart for this element</summary>
-			internal void SetChartInternal(ChartControl chart, bool update)
+			internal void SetChartInternal(ChartControl? chart, bool update)
 			{
 				// An Element can be added to a chart by assigning to the Chart property
 				// or by adding it to the Elements collection. It can be removed by setting
@@ -118,7 +122,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Add or remove this element from 'chart'</summary>
-			protected virtual void SetChartCore(ChartControl chart)
+			protected virtual void SetChartCore(ChartControl? chart)
 			{
 				// Note: don't suspend events on Chart.Elements.
 				// User code maybe watching for ListChanging events.
@@ -189,7 +193,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever a property of this Element changes</summary>
-			public event PropertyChangedEventHandler PropertyChanged;
+			public event PropertyChangedEventHandler? PropertyChanged;
 			protected void NotifyPropertyChanged(string prop_name)
 			{
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
@@ -204,7 +208,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever the element needs to be redrawn</summary>
-			public event EventHandler Invalidated;
+			public event EventHandler? Invalidated;
 			protected virtual void OnInvalidated()
 			{
 				IsInvalidated = true;
@@ -213,7 +217,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever data associated with the element changes</summary>
-			public event EventHandler DataChanged;
+			public event EventHandler? DataChanged;
 			protected virtual void OnDataChanged()
 			{
 				// Raise data changed on this element, and propagate
@@ -223,7 +227,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever the element is moved</summary>
-			public event EventHandler PositionChanged;
+			public event EventHandler? PositionChanged;
 			protected void OnPositionChanged()
 			{
 				PositionChanged?.Invoke(this, EventArgs.Empty);
@@ -231,7 +235,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever the element changes size</summary>
-			public event EventHandler SizeChanged;
+			public event EventHandler? SizeChanged;
 			protected void OnSizeChanged()
 			{
 				SizeChanged?.Invoke(this, EventArgs.Empty);
@@ -239,14 +243,14 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Raised whenever the element is selected or deselected</summary>
-			public event EventHandler SelectedChanged;
+			public event EventHandler? SelectedChanged;
 			protected virtual void OnSelectedChanged()
 			{
 				SelectedChanged?.Invoke(this, EventArgs.Empty);
 			}
 
 			/// <summary>Raised whenever the element is hovered over with the mouse</summary>
-			public event EventHandler HoveredChanged;
+			public event EventHandler? HoveredChanged;
 			protected virtual void OnHoveredChanged()
 			{
 				HoveredChanged?.Invoke(this, EventArgs.Empty);
@@ -267,7 +271,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Indicate that the graphics for this element needs to be recreated or modified</summary>
-			public void Invalidate(object sender = null, EventArgs args = null)
+			public void Invalidate(object? sender = null, EventArgs? args = null)
 			{
 				if (IsInvalidated) return;
 				OnInvalidated();
@@ -484,7 +488,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public virtual HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				return null;
 			}
@@ -517,7 +521,7 @@ namespace Rylogic.Gui.WPF
 			public m4x4 DragStartPosition { get; internal set; }
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			public void UpdateGfx(object sender = null, EventArgs args = null)
+			public void UpdateGfx(object? sender = null, EventArgs? args = null)
 			{
 				if (m_impl_updating_gfx != 0) return; // Protect against reentrancy
 				using (Scope.Create(() => ++m_impl_updating_gfx, () => --m_impl_updating_gfx))

@@ -25,15 +25,23 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Enumerate all instances that aren't null</summary>
-		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource> source)
+		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource?> source)
 			where TSource : class
 		{
-			return source.Where(x => x != null);
+			foreach (var s in source)
+			{
+				if (s == null) continue;
+				yield return s;
+			}
 		}
-		public static IEnumerable<TSource?> NotNull<TSource>(this IEnumerable<TSource?> source)
+		public static IEnumerable<TSource> NotNull<TSource>(this IEnumerable<TSource?> source)
 			where TSource : struct
 		{
-			return source.Where(x => x != null);
+			foreach (var s in source)
+			{
+				if (s == null) continue;
+				yield return s.Value;
+			}
 		}
 
 		/// <summary>Cast a collection to statically convertible type</summary>

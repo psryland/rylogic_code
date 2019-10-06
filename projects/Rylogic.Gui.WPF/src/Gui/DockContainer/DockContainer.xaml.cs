@@ -21,7 +21,7 @@ namespace Rylogic.Gui.WPF
 	using DockContainerDetail;
 
 	/// <summary>A dock container is the parent control that manages docking of controls that implement IDockable.</summary>
-	public partial class DockContainer : DockPanel, ITreeHost, IDisposable
+	public sealed partial class DockContainer : DockPanel, ITreeHost, IDisposable
 	{
 		// Notes:
 		//  - The dock container does not own the content. To clean up disposable content
@@ -63,23 +63,20 @@ namespace Rylogic.Gui.WPF
 			
 			// Ensure the default centre pane exists
 			Root.PruneBranches();
-			ActivePane = (DockPane)Root.Descendants[EDockSite.Centre].Item;
+			ActivePane = (DockPane?)Root.Descendants[EDockSite.Centre].Item ?? throw new ArgumentNullException("Expected a DockPane");
 
 			// Create Commands
-			CmdLoadLayout = new LoadLayoutCommand(this);
-			CmdSaveLayout = new SaveLayoutCommand(this);
-			CmdResetLayout = new ResetLayoutCommand(this);
+			CmdLoadLayout = Command.Create(this, CmdLoadLayoutInternal);
+			CmdSaveLayout = Command.Create(this, CmdSaveLayoutInternal);
+			CmdResetLayout = Command.Create(this, CmdResetLayoutInternal);
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			Root = null;
+			Root = null!;
 		}
 
 		/// <summary>The dock container that owns this instance</summary>
-		DockContainer ITreeHost.DockContainer
-		{
-			get { return this; }
-		}
+		DockContainer ITreeHost.DockContainer => this;
 
 		/// <summary>Options for the dock container</summary>
 		public OptionsData Options { get; }
@@ -89,26 +86,27 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Get/Set the globally active content (i.e. owned by this dock container). This will cause the pane that the content is on to also become active.</summary>
 		[Browsable(false)]
-		public IDockable ActiveDockable
+		public IDockable? ActiveDockable
 		{
-			get { return ActiveContent?.Dockable; }
-			set { ActiveContent = value?.DockControl; } // Note: this setter isn't called when the user clicks on some content, ActivePane.set is called.
+			// Note: this setter isn't called when the user clicks on some content, ActivePane.set is called.
+			get => ActiveContent?.Dockable;
+			set => ActiveContent = value?.DockControl;
 		}
 
 		/// <summary>Get/Set the globally active content (across the main control, all floating windows, and all auto hide panels)</summary>
 		[Browsable(false)]
-		public DockControl ActiveContent
+		public DockControl? ActiveContent
 		{
-			get { return ActiveContentManager.ActiveContent; }
-			set { ActiveContentManager.ActiveContent = value; }
+			get => ActiveContentManager.ActiveContent;
+			set => ActiveContentManager.ActiveContent = value;
 		}
 
 		/// <summary>Get/Set the globally active pane (i.e. owned by this dock container). Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 		[Browsable(false)]
-		public DockPane ActivePane
+		public DockPane? ActivePane
 		{
-			get { return ActiveContentManager.ActivePane; }
-			set { ActiveContentManager.ActivePane = value; }
+			get => ActiveContentManager.ActivePane;
+			set => ActiveContentManager.ActivePane = value;
 		}
 
 		/// <summary>Return all tree hosts associated with this dock container</summary>
@@ -148,10 +146,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enumerate all IDockable's managed by this container</summary>
 		public IEnumerable<IDockable> AllContent => AllContentInternal.Select(x => x.Dockable);
 		internal IEnumerable<DockControl> AllContentInternal => m_all_content;
-		private HashSet<DockControl> m_all_content;
+		private readonly HashSet<DockControl> m_all_content;
 
 		/// <summary>Return the dock pane at the given dock site or null if the site does not contain a dock pane</summary>
-		public DockPane GetPane(params EDockSite[] location)
+		public DockPane? GetPane(params EDockSite[] location)
 		{
 			return Root.DescendantAt(location)?.Item as DockPane;
 		}
@@ -160,7 +158,7 @@ namespace Rylogic.Gui.WPF
 		/// Returns a reference to the dock sizes at a given level in the tree.
 		/// 'location' should point to a branch otherwise null is returned.
 		/// location.Length == 0 returns the root level sizes</summary>
-		public DockSizeData GetDockSizes(params EDockSite[] location)
+		public DockSizeData? GetDockSizes(params EDockSite[] location)
 		{
 			return Root.GetDockSizes(location);
 		}
@@ -180,15 +178,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The root of the tree in this dock container</summary>
 		internal Branch Root
 		{
-			[DebuggerStepThrough]
-			get { return m_root; }
+			get => m_root;
 			set
 			{
 				if (m_root == value) return;
 				if (m_root != null)
 				{
 					m_root.TreeChanged -= HandleTreeChanged;
-					Util.Dispose(ref m_root);
+					Util.Dispose(ref m_root!);
 				}
 				m_root = value;
 				if (m_root != null)
@@ -197,7 +194,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>Handler for when panes/branches are added/removed from the tree</summary>
-				void HandleTreeChanged(object sender, TreeChangedEventArgs obj)
+				void HandleTreeChanged(object? sender, TreeChangedEventArgs obj)
 				{
 					switch (obj.Action)
 					{
@@ -217,11 +214,11 @@ namespace Rylogic.Gui.WPF
 								obj.DockControl != null ? new[] { obj.DockControl } :
 								obj.DockPane != null ? obj.DockPane.AllContent :
 								obj.Branch != null ? obj.Branch.AllContent :
-								new DockControl[0];
+								Array.Empty<DockControl>();
 
 							// Notify 'PaneChanged' for the affected content whenever the tree is changed
 							foreach (var dc in affected)
-								dc.RaisePaneChanged();
+								dc.NotifyPaneChanged();
 
 							break;
 						}
@@ -229,8 +226,8 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
+		private Branch m_root = null!;
 		Branch ITreeHost.Root => Root;
-		private Branch m_root;
 
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
 		internal DockPane Add(DockControl dc, int index, params EDockSite[] location)
@@ -238,18 +235,13 @@ namespace Rylogic.Gui.WPF
 			dc = dc ?? throw new ArgumentNullException(nameof(dc), "'dockable' or 'dockable.DockControl' cannot be 'null'");
 
 			// If no location is given, add the dockable to its default location
-			if (location.Length == 0)
-			{
-				return Add(dc, dc.DefaultDockLocation);
-			}
-			else
-			{
-				return Root.Add(dc, index, location);
-			}
+			return location.Length == 0
+				? Add(dc, dc.DefaultDockLocation)
+				: Root.Add(dc, index, location);
 		}
 		public DockPane Add(IDockable dockable, int index, params EDockSite[] location)
 		{
-			return Add(dockable?.DockControl, index, location);
+			return Add(dockable.DockControl, index, location);
 		}
 		public DockPane Add(IDockable dockable, params EDockSite[] location)
 		{
@@ -269,9 +261,9 @@ namespace Rylogic.Gui.WPF
 		internal DockPane Add(DockControl dc, DockLocation loc)
 		{
 			dc = dc ?? throw new ArgumentNullException(nameof(dc), "'dockable' or 'dockable.DockControl' cannot be 'null'");
-			loc = loc ?? dc.DefaultDockLocation;
+			loc ??= dc.DefaultDockLocation;
 
-			var pane = (DockPane)null;
+			DockPane pane;
 			if (loc.FloatingWindowId != null)
 			{
 				// If a floating window id is given, locate the floating window and add to that
@@ -297,7 +289,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public DockPane Add(IDockable dockable, DockLocation loc)
 		{
-			return Add(dockable?.DockControl, loc);
+			return Add(dockable.DockControl, loc);
 		}
 		public TDockable Add2<TDockable>(TDockable dockable, DockLocation loc) where TDockable : IDockable
 		{
@@ -306,7 +298,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Remove a dockable from this dock container</summary>
-		public void Remove(DockControl dc)
+		public void Remove(DockControl? dc)
 		{
 			// Idempotent remove
 			if (dc?.DockContainer == null)
@@ -319,9 +311,11 @@ namespace Rylogic.Gui.WPF
 			// The DockControl object can actually remove itself, but this method gives extra checking
 			dc.Remove();
 		}
-		public void Remove(IDockable dockable)
+		public void Remove(IDockable? dockable)
 		{
-			Remove(dockable?.DockControl);
+			// Idempotent remove
+			if (dockable == null) return;
+			Remove(dockable.DockControl);
 		}
 
 		/// <summary>Raised whenever the active pane changes in this dock container or associated floating window or auto hide panel</summary>
@@ -339,11 +333,15 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Initiate dragging of a pane or content</summary>
-		internal static void DragBegin(object draggee, Point ss_start_pt)
+		internal static void DragBegin(DockControl draggee, Point ss_start_pt)
 		{
 			// Create a form for displaying the dock site locations and handling the drop of a pane or content
-			var drop_handler = new DragHandler(draggee, ss_start_pt);
-			drop_handler.ShowDialog();
+			new DragHandler(draggee, ss_start_pt).ShowDialog();
+		}
+		internal static void DragBegin(DockPane draggee, Point ss_start_pt)
+		{
+			// Create a form for displaying the dock site locations and handling the drop of a pane or content
+			new DragHandler(draggee, ss_start_pt).ShowDialog();
 		}
 
 		/// <summary>The floating windows associated with this dock container</summary>
@@ -353,13 +351,43 @@ namespace Rylogic.Gui.WPF
 		public AutoHidePanelCollection AutoHidePanels { get; private set; }
 
 		/// <summary>A command to load a UI layout</summary>
-		public ICommand CmdLoadLayout { get; private set; }
+		public ICommand CmdLoadLayout { get; }
+		private void CmdLoadLayoutInternal()
+		{
+			// Prompt for a layout file
+			var fd = new OpenFileDialog { Title = "Load layout", Filter = Util.FileDialogFilter("Layout Files", "*.xml") };
+			if (fd.ShowDialog(Window.GetWindow(this)) != true)
+				return;
+
+			// Load the layout
+			try { LoadLayout(XDocument.Load(fd.FileName).Root); }
+			catch (Exception ex)
+			{
+				MessageBox.Show(Window.GetWindow(this), $"Layout could not be loaded\r\n{ex.Message}", "Load Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
+		}
 
 		/// <summary>A command to save the UI layout</summary>
 		public ICommand CmdSaveLayout { get; private set; }
+		private void CmdSaveLayoutInternal()
+		{
+			var fd = new SaveFileDialog { Title = "Save layout", Filter = Util.FileDialogFilter("Layout Files", "*.xml"), FileName = "Layout.xml", DefaultExt = "XML" };
+			if (fd.ShowDialog(Window.GetWindow(this)) != true)
+				return;
+
+			try { SaveLayout().Save(fd.FileName); }
+			catch (Exception ex)
+			{
+				MessageBox.Show(Window.GetWindow(this), $"Layout could not be saved\r\n{ex.Message}", "Save Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+			}
+		}
 
 		/// <summary>A command to reset the UI layout</summary>
 		public ICommand CmdResetLayout { get; private set; }
+		private void CmdResetLayoutInternal()
+		{
+			ResetLayout();
+		}
 
 		/// <summary>Creates an instance of a menu with options to select specific content</summary>
 		public MenuItem WindowsMenu(string menu_name = "Windows")
@@ -475,18 +503,15 @@ namespace Rylogic.Gui.WPF
 		{
 			// Get the size of each dock site relative to 'rect'
 			var site_size = dock_site_sizes.GetSizesForRect(rect, docked_mask | (EDockMask)(1 << (int)docksite));
-
-			// Get the initial rectangle for the dock site assuming no other docked children
-			var r = Rect.Empty;
-			switch (docksite)
+			var r = docksite switch
 			{
-			default: throw new Exception($"No bounds value for dock zone {docksite}");
-			case EDockSite.Centre: r = rect; break;
-			case EDockSite.Left: r = new Rect(rect.Left, rect.Top, site_size.Left, rect.Height); break;
-			case EDockSite.Right: r = new Rect(rect.Right - site_size.Right, rect.Top, site_size.Right, rect.Height); break;
-			case EDockSite.Top: r = new Rect(rect.Left, rect.Top, rect.Width, site_size.Top); break;
-			case EDockSite.Bottom: r = new Rect(rect.Left, rect.Bottom - site_size.Bottom, rect.Width, site_size.Bottom); break;
-			}
+				EDockSite.Centre => rect,
+				EDockSite.Left   => new Rect(rect.Left, rect.Top, site_size.Left, rect.Height),
+				EDockSite.Right  => new Rect(rect.Right - site_size.Right, rect.Top, site_size.Right, rect.Height),
+				EDockSite.Top    => new Rect(rect.Left, rect.Top, rect.Width, site_size.Top),
+				EDockSite.Bottom => new Rect(rect.Left, rect.Bottom - site_size.Bottom, rect.Width, site_size.Bottom),
+				_ => throw new Exception($"No bounds value for dock zone {docksite}"),
+			};
 
 			// Remove areas from 'r' for sites with EDockSite values greater than 'location' (if present).
 			// Note: order of subtracting areas is important, subtract from highest priority to lowest
@@ -507,14 +532,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert a dock site to a dock panel dock location</summary>
 		internal static Dock ToDock(EDockSite ds)
 		{
-			switch (ds)
+			return ds switch
 			{
-			default: throw new Exception($"Cannot convert {ds} to a DockPanel 'Dock' value");
-			case EDockSite.Left: return Dock.Left;
-			case EDockSite.Right: return Dock.Right;
-			case EDockSite.Top: return Dock.Top;
-			case EDockSite.Bottom: return Dock.Bottom;
-			}
+				EDockSite.Left   => Dock.Left,
+				EDockSite.Right  => Dock.Right,
+				EDockSite.Top    => Dock.Top,
+				EDockSite.Bottom => Dock.Bottom,
+				_ => throw new Exception($"Cannot convert {ds} to a DockPanel 'Dock' value"),
+			};
 		}
 
 		/// <summary>Save state to XML</summary>
@@ -549,7 +574,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Record the layout of this dock container</summary>
-		public virtual XElement SaveLayout()
+		public XElement SaveLayout()
 		{
 			return ToXml(new XElement(XmlTag.DockContainerLayout));
 		}
@@ -558,7 +583,7 @@ namespace Rylogic.Gui.WPF
 		/// Update the layout of this dock container using the data in 'node'
 		/// Use 'content_factory' to create content on demand during loading.
 		/// 'content_factory(string persist_name, string type_name, XElement user_data)'</summary>
-		public virtual void LoadLayout(XElement node, Func<string, string, XElement, DockControl> content_factory = null)
+		public void LoadLayout(XElement node, Func<string, string, XElement, DockControl>? content_factory = null)
 		{
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
@@ -574,8 +599,9 @@ namespace Rylogic.Gui.WPF
 				var name = content_node.Element(XmlTag.Name).As(string.Empty);
 				var type = content_node.Element(XmlTag.Type).As(string.Empty);
 				var udat = content_node.Element(XmlTag.UserData);
-				if (all_content.TryGetValue(name, out var content) ||
-					(content = content_factory?.Invoke(name, type, udat)) != null)
+
+				DockControl? content;
+				if (all_content.TryGetValue(name, out content) || (content = content_factory?.Invoke(name, type, udat)) != null)
 				{
 					var loc = new DockLocation(content_node);
 					if (loc.Address.First() != EDockSite.None)
@@ -609,7 +635,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Move all content to it's default dock address</summary>
-		public virtual void ResetLayout()
+		public void ResetLayout()
 		{
 			// Adding each dockable without an address causes it to be moved to its default location
 			foreach (var dc in AllContentInternal.ToArray())
@@ -654,88 +680,7 @@ namespace Rylogic.Gui.WPF
 			return sb.ToString();
 		}
 
-		#region Commands
-		public class CommandBase : ICommand
-		{
-			protected readonly DockContainer m_dc;
-			public CommandBase(DockContainer dc)
-			{
-				m_dc = dc;
-			}
-			public Window Wnd
-			{
-				get { return Window.GetWindow(m_dc); }
-			}
-			public string LayoutFileFilter
-			{
-				get { return Util.FileDialogFilter("Layout Files", "*.xml"); }
-			}
-			public virtual void Execute(object _)
-			{
-			}
-			public virtual bool CanExecute(object _)
-			{
-				return true;
-			}
-			public event EventHandler CanExecuteChanged { add { } remove { } }
-		}
-		public class LoadLayoutCommand : CommandBase
-		{
-			public LoadLayoutCommand(DockContainer dc)
-				: base(dc)
-			{ }
-
-			/// <summary>Load the UI layout</summary>
-			public override void Execute(object _)
-			{
-				// Prompt for a layout file
-				var fd = new OpenFileDialog { Title = "Load layout", Filter = LayoutFileFilter };
-				if (fd.ShowDialog(Wnd) != true)
-					return;
-
-				// Load the layout
-				try { m_dc.LoadLayout(XDocument.Load(fd.FileName).Root); }
-				catch (Exception ex)
-				{
-					MessageBox.Show(Wnd, $"Layout could not be loaded\r\n{ex.Message}", "Load Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-				}
-			}
-		}
-		public class SaveLayoutCommand : CommandBase
-		{
-			public SaveLayoutCommand(DockContainer dc)
-				: base(dc)
-			{ }
-
-			/// <summary>Save the UI layout</summary>
-			public override void Execute(object _)
-			{
-				var fd = new SaveFileDialog { Title = "Save layout", Filter = LayoutFileFilter, FileName = "Layout.xml", DefaultExt = "XML" };
-				if (fd.ShowDialog(Wnd) != true)
-					return;
-
-				try { m_dc.SaveLayout().Save(fd.FileName); }
-				catch (Exception ex)
-				{
-					MessageBox.Show(Wnd, $"Layout could not be saved\r\n{ex.Message}", "Save Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-				}
-			}
-		}
-		public class ResetLayoutCommand : CommandBase
-		{
-			public ResetLayoutCommand(DockContainer dc)
-				: base(dc)
-			{ }
-
-			/// <summary>Reset the UI layout back to defaults</summary>
-			public override void Execute(object _)
-			{
-				m_dc.ResetLayout();
-			}
-		}
-		#endregion
-
-		public class AutoHidePanelCollection : IEnumerable<AutoHidePanel>, IDisposable
+		public sealed class AutoHidePanelCollection : IEnumerable<AutoHidePanel>, IDisposable
 		{
 			private readonly AutoHidePanel[] m_auto_hide;
 			public AutoHidePanelCollection(DockContainer dc, Canvas centre)
@@ -800,7 +745,7 @@ namespace Rylogic.Gui.WPF
 		public class FloatingWindowCollection : IEnumerable<FloatingWindow>
 		{
 			private readonly DockContainer m_dc;
-			private ObservableCollection<FloatingWindow> m_floaters;
+			private readonly ObservableCollection<FloatingWindow> m_floaters;
 			public FloatingWindowCollection(DockContainer dc)
 			{
 				m_dc = dc;

@@ -11,7 +11,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gfx
 {
-	public class Measurement :IDisposable, INotifyPropertyChanged
+	public sealed class Measurement :IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This class provides the functionality for a measurement tool.
@@ -40,35 +40,35 @@ namespace Rylogic.Gfx
 			
 			Window = window;
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
 			GfxHotSpot0 = null;
 			GfxHotSpot1 = null;
 			GfxMeasure = null;
-			Window = null;
+			Window = null!;
 		}
 
 		/// <summary>The 3D scene to do the measuring in</summary>
 		public View3d.Window Window
 		{
-			get { return m_window; }
+			get => m_window;
 			set
 			{
 				if (m_window == value) return;
-				if (m_window != null)
+				if (m_window != null!)
 				{
 					m_window.OnRendering -= HandleRendering;
 					m_window.OnSceneChanged -= HandleSceneChanged;
 				}
 				m_window = value;
-				if (m_window != null)
+				if (m_window != null!)
 				{
 					m_window.OnSceneChanged += HandleSceneChanged;
 					m_window.OnRendering += HandleRendering;
 				}
 
 				// Handlers
-				void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs e)
+				void HandleSceneChanged(object? sender, View3d.SceneChangedEventArgs e)
 				{
 					if (e.ChangeType == View3d.ESceneChanged.ObjectsRemoved)
 					{
@@ -78,7 +78,7 @@ namespace Rylogic.Gfx
 							Hit1.Obj = null;
 					}
 				}
-				void HandleRendering(object sender, EventArgs e)
+				void HandleRendering(object? sender, EventArgs e)
 				{
 					// Add the graphics for the measurement
 					if (GfxMeasure != null)
@@ -119,13 +119,13 @@ namespace Rylogic.Gfx
 				}
 			}
 		}
-		private View3d.Window m_window;
+		private View3d.Window m_window = null!;
 
 		/// <summary>The context Id to use for the measurement graphics</summary>
 		public Guid CtxId
 		{
-			get { return ContextIds[ContextIds.Length - 1]; }
-			set { ContextIds[ContextIds.Length - 1] = value; }
+			get => ContextIds[ContextIds.Length - 1];
+			set => ContextIds[ContextIds.Length - 1] = value;
 		}
 
 		/// <summary>The include/exclude list of context ids</summary>
@@ -149,7 +149,7 @@ namespace Rylogic.Gfx
 		/// <summary>The colour of the hot spots</summary>
 		public Colour32 SpotColour
 		{
-			get { return m_spot_colour; }
+			get => m_spot_colour;
 			set
 			{
 				if (m_spot_colour == value) return;
@@ -163,7 +163,7 @@ namespace Rylogic.Gfx
 		/// <summary>The snap distance</summary>
 		public double SnapDistance
 		{
-			get { return m_snap_distance; }
+			get => m_snap_distance;
 			set
 			{
 				if (SnapDistance == value) return;
@@ -177,7 +177,7 @@ namespace Rylogic.Gfx
 		/// <summary>The snap-to flags</summary>
 		public View3d.EHitTestFlags Flags
 		{
-			get { return m_flags; }
+			get => m_flags;
 			set
 			{
 				if (Flags == value) return;
@@ -191,7 +191,7 @@ namespace Rylogic.Gfx
 		/// <summary>The reference frame to display the measurements in</summary>
 		public EReferenceFrame ReferenceFrame
 		{
-			get { return m_reference_frame; }
+			get => m_reference_frame;
 			set
 			{
 				if (ReferenceFrame == value) return;
@@ -207,7 +207,7 @@ namespace Rylogic.Gfx
 		/// <summary>The start point to measure from</summary>
 		public Hit Hit0
 		{
-			get { return m_hit0; }
+			get => m_hit0;
 			set
 			{
 				if (m_hit0 == value) return;
@@ -221,7 +221,7 @@ namespace Rylogic.Gfx
 		/// <summary>The start point to measure from</summary>
 		public Hit Hit1
 		{
-			get { return m_hit1; }
+			get => m_hit1;
 			set
 			{
 				if (m_hit1 == value) return;
@@ -233,9 +233,9 @@ namespace Rylogic.Gfx
 		private Hit m_hit1;
 
 		/// <summary>Get/Set the Hit point that is being set</summary>
-		public Hit ActiveHit
+		public Hit? ActiveHit
 		{
-			get { return m_active_hit; }
+			get => m_active_hit;
 			set
 			{
 				if (ActiveHit == value) return;
@@ -244,7 +244,7 @@ namespace Rylogic.Gfx
 				NotifyPropertyChanged(nameof(ActiveHit));
 			}
 		}
-		private Hit m_active_hit;
+		private Hit? m_active_hit;
 
 		/// <summary>True when we can measure between 'Hit0' and 'Hit1'</summary>
 		public bool MeasurementValid => Hit0.IsValid && Hit1.IsValid;
@@ -264,12 +264,12 @@ namespace Rylogic.Gfx
 					}
 				case EReferenceFrame.Object1Space:
 					{
-						if (!Hit0.IsValid) return m4x4.Identity;
+						if (!Hit0.IsValid || Hit0.Obj == null) return m4x4.Identity;
 						return Math_.Orthonormalise(Hit0.Obj.O2P);
 					}
 				case EReferenceFrame.Object2Space:
 					{
-						if (!Hit1.IsValid) return m4x4.Identity;
+						if (!Hit1.IsValid || Hit1.Obj == null) return m4x4.Identity;
 						return Math_.Orthonormalise(Hit1.Obj.O2P);
 					}
 				}
@@ -327,7 +327,7 @@ namespace Rylogic.Gfx
 		private bool m_is_drag;
 
 		/// <summary>Graphics for the hotspot that follows the mouse around</summary>
-		private View3d.Object GfxHotSpot0
+		private View3d.Object? GfxHotSpot0
 		{
 			get
 			{
@@ -345,10 +345,10 @@ namespace Rylogic.Gfx
 				m_gfx_hotspot0 = value;
 			}
 		}
-		private View3d.Object m_gfx_hotspot0;
+		private View3d.Object? m_gfx_hotspot0;
 
 		/// <summary>Graphics for the hotspot that follows the mouse around</summary>
-		private View3d.Object GfxHotSpot1
+		private View3d.Object? GfxHotSpot1
 		{
 			get
 			{
@@ -366,10 +366,10 @@ namespace Rylogic.Gfx
 				m_gfx_hotspot1 = value;
 			}
 		}
-		private View3d.Object m_gfx_hotspot1;
+		private View3d.Object? m_gfx_hotspot1;
 
 		/// <summary>Measurement graphics</summary>
-		private View3d.Object GfxMeasure
+		private View3d.Object? GfxMeasure
 		{
 			get
 			{
@@ -428,17 +428,17 @@ namespace Rylogic.Gfx
 				m_gfx_measure = value;
 			}
 		}
-		private View3d.Object m_gfx_measure;
+		private View3d.Object? m_gfx_measure;
 
 		/// <summary>Update the measurement graphics</summary>
-		private void InvalidateGfxMeasure(object sender = null, EventArgs args = null)
+		private void InvalidateGfxMeasure(object? sender = null, EventArgs? args = null)
 		{
 			GfxMeasure = null;
 		}
 
 		/// <summary>Property changed</summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		protected void NotifyPropertyChanged(string prop_name)
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
@@ -471,8 +471,8 @@ namespace Rylogic.Gfx
 			}
 
 			// Update the hit object if known
-			Results[EQuantity.Instance0] = new Result(EQuantity.Instance0, Hit0.IsValid ? Hit0.Obj.Name : "---");
-			Results[EQuantity.Instance1] = new Result(EQuantity.Instance1, Hit1.IsValid ? Hit1.Obj.Name : "---");
+			Results[EQuantity.Instance0] = new Result(EQuantity.Instance0, Hit0.IsValid ? Hit0.Obj!.Name : "---");
+			Results[EQuantity.Instance1] = new Result(EQuantity.Instance1, Hit1.IsValid ? Hit1.Obj!.Name : "---");
 		}
 
 		/// <summary>The end point of a measurement</summary>
@@ -481,15 +481,15 @@ namespace Rylogic.Gfx
 			public Hit()
 			{
 				PointWS = v4.Origin;
-				Obj = null;
 				SnapType = View3d.ESnapType.NoSnap;
+				Obj = null;
 			}
 
 			/// <summary>The point in world space of the start of the measurement</summary>
 			public v4 PointWS;
 
 			/// <summary>The object that the measurement point is on</summary>
-			public View3d.Object Obj;
+			public View3d.Object? Obj;
 
 			/// <summary>The type of point snap applied</summary>
 			public View3d.ESnapType SnapType;
@@ -511,7 +511,7 @@ namespace Rylogic.Gfx
 			public EQuantity Quantity { get; }
 
 			/// <summary>String name for the quantity</summary>
-			public string QuantityName => Quantity.Desc();
+			public string QuantityName => Quantity.Desc() ?? string.Empty;
 
 			/// <summary>The result of the measurement</summary>
 			public string Value { get; set; }

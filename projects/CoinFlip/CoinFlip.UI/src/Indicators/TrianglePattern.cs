@@ -219,14 +219,14 @@ namespace CoinFlip.UI.Indicators
 					IsHitTestVisible = false,
 				};
 			}
-			public override void Dispose()
+			protected override void Dispose(bool disposing)
 			{
 				Line.Detach();
 				Glow.Detach();
 				Grab0.Detach();
 				Grab1.Detach();
 				Grab2.Detach();
-				base.Dispose();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>The indicator data source</summary>

@@ -360,11 +360,11 @@ namespace CoinFlip.UI.Indicators
 					Cache.Invalidate(a.Range);
 				};
 			}
-			public override void Dispose()
+			protected override void Dispose(bool disposing)
 			{
 				Cache = null;
 				Util.Dispose(Data);
-				base.Dispose();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>The indicator data source</summary>

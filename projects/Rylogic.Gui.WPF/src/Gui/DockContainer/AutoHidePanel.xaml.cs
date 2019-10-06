@@ -11,7 +11,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>A panel that docks to the edges of the main dock container and auto hides when focus is lost</summary>
 	[DebuggerDisplay("AutoHidePanel {DockSite}")]
-	public partial class AutoHidePanel : Grid, ITreeHost, IDisposable
+	public sealed partial class AutoHidePanel : Grid, ITreeHost, IDisposable
 	{
 		// Notes:
 		//  - An auto hide panel is a panel that pops out from the edges of the dock container.
@@ -90,16 +90,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			TabStrip.Detach();
 			TabStrip.AHPanel = this;
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			Root = null;
-			DockContainer = null;
+			Root = null!;
+			DockContainer = null!;
 		}
 
 		/// <summary>The dock container that owns this auto hide window</summary>
 		public DockContainer DockContainer
 		{
-			get { return m_dc; }
+			get => m_dc;
 			private set
 			{
 				if (m_dc == value) return;
@@ -114,7 +114,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				/// <summary>Handler for when the active content changes</summary>
-				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+				void HandleActiveContentChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
 					// Hide the auto hide panel whenever content that isn't in our tree becomes active
 					if (e.ContentNew == null || e.ContentNew.DockControl.DockPane?.RootBranch != Root)
@@ -126,21 +126,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
+		private DockContainer m_dc = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
-		private DockContainer m_dc;
 
 		/// <summary>The root level branch of the tree in this auto hide window</summary>
 		internal Branch Root
 		{
-			[DebuggerStepThrough]
-			get { return m_root; }
+			get => m_root;
 			private set
 			{
 				if (m_root == value) return;
 				if (m_root != null)
 				{
 					m_root.TreeChanged -= HandleTreeChanged;
-					Util.Dispose(ref m_root);
+					Util.Dispose(ref m_root!);
 				}
 				m_root = value;
 				if (m_root != null)
@@ -149,7 +148,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				/// <summary>Handler for when the tree in this auto hide panel changes</summary>
-				void HandleTreeChanged(object sender, TreeChangedEventArgs args)
+				void HandleTreeChanged(object? sender, TreeChangedEventArgs args)
 				{
 					switch (args.Action)
 					{
@@ -192,11 +191,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
+		private Branch m_root = null!;
 		Branch ITreeHost.Root
 		{
 			get { return Root; }
 		}
-		private Branch m_root;
 
 		/// <summary>Manages events and changing of active pane/content</summary>
 		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;
@@ -213,17 +212,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>
 		/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
 		/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
-		public DockControl ActiveContent
+		public DockControl? ActiveContent
 		{
-			get { return ActiveContentManager.ActiveContent; }
-			set { ActiveContentManager.ActiveContent = value; }
+			get => ActiveContentManager.ActiveContent;
+			set => ActiveContentManager.ActiveContent = value;
 		}
 
 		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
-		public DockPane ActivePane
+		public DockPane? ActivePane
 		{
-			get { return ActiveContentManager.ActivePane; }
-			set { ActiveContentManager.ActivePane = value; }
+			get => ActiveContentManager.ActivePane;
+			set => ActiveContentManager.ActivePane = value;
 		}
 
 		/// <summary>Get/Set the popped out state of the auto hide panel</summary>

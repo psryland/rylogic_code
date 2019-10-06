@@ -525,7 +525,7 @@ namespace Rylogic.Db
 				ReadItemHook = x => x;
 				WriteItemHook = x => x;
 				OwningThreadId = Thread.CurrentThread.ManagedThreadId;
-				SyncContext = SynchronizationContext.Current;
+				SyncContext = SynchronizationContext.Current ?? new SynchronizationContext();
 				m_this_handle = GCHandle.Alloc(this);
 
 				// Open the database file

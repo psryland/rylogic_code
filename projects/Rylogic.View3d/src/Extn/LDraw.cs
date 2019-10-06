@@ -8,7 +8,7 @@ namespace Rylogic.Gfx
 {
 	public static class LDraw_
 	{
-		public static void Mesh(this LdrBuilder ldr, string name, Colour32 colour, View3d.EGeom geom, IList<View3d.Vertex> verts, IList<ushort> faces = null, IList<ushort> lines = null, IList<ushort> tetra = null, bool generate_normals = false, v4? position = null)
+		public static void Mesh(this LdrBuilder ldr, string name, Colour32 colour, View3d.EGeom geom, IList<View3d.Vertex> verts, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
 		{
 			ldr.Append("*Mesh ", name, " ", colour, " {\n");
 			if ((geom & View3d.EGeom.Vert) != 0) ldr.Append("*Verts {").Append(verts.Select(x => Ldr.Vec3(x.m_pos))).Append("}\n");

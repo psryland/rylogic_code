@@ -41,14 +41,6 @@ namespace Rylogic.Gui.WPF
 		private const int FilePollPeriodMS = 100;
 		private readonly int m_main_thread_id;
 
-		static LogControl()
-		{
-			PopOutOnNewMessagesProperty = Gui_.DPRegister<LogControl>(nameof(PopOutOnNewMessages));
-			ShowLogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(ShowLogFilepath));
-			LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
-			TailScrollProperty = Gui_.DPRegister<LogControl>(nameof(TailScroll));
-			FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
-		}
 		public LogControl()
 		{
 			InitializeComponent();
@@ -77,6 +69,7 @@ namespace Rylogic.Gui.WPF
 			// A buffer of the log entries.
 			// This is populated by calls to AddMessage or from the log file.
 			LogEntries = new ObservableCollection<LogEntry>();
+			LogEntriesView = new ListCollectionView(LogEntries) { Filter = obj => obj is LogEntry le && le.Level >= FilterLevel };
 
 			// Define a line in the log
 			LogEntryPattern = null;
@@ -100,42 +93,26 @@ namespace Rylogic.Gui.WPF
 			MaxFileBytes = 2 * 1024 * 1024;
 
 			// Commands
-			BrowseForLogFile = Command.Create(this, () =>
-			{
-				OpenLogFile(null);
-			});
-			ClearLog = Command.Create(this, () =>
-			{
-				Clear();
-			});
-			ToggleTailScroll = Command.Create(this, () =>
-			{
-				TailScroll = !TailScroll;
-			});
-			ToggleLineWrap = Command.Create(this, () =>
-			{
-				LineWrap = !LineWrap;
-			});
-			CopySelectedRowsToClipboard = Command.Create(this, () =>
-			{
-				var sb = new StringBuilder();
-				foreach (var le in m_view.SelectedItems.Cast<LogEntry>()) sb.Append(le.Text);
-				try { Clipboard.SetData(DataFormats.Text, sb.ToString()); } catch { }
-			});
-			CopySelectedMessagesToClipboard = Command.Create(this, () =>
-			{
-				var sb = new StringBuilder();
-				foreach (var le in m_view.SelectedItems.Cast<LogEntry>()) sb.Append(le.Message);
-				try { Clipboard.SetData(DataFormats.Text, sb.ToString()); } catch { }
-			});
+			BrowseForLogFile = Command.Create(this, BrowseForLogFileInternal);
+			ClearLog = Command.Create(this, ClearLogInternal);
+			ToggleTailScroll = Command.Create(this, ToggleTailScrollInternal);
+			ToggleLineWrap = Command.Create(this, ToggleLineWrapInternal);
+			CopySelectedRowsToClipboard = Command.Create(this, CopySelectedRowsToClipboardInternal);
+			CopySelectedMessagesToClipboard = Command.Create(this, CopySelectedMessagesToClipboardInternal);
 
 			DataContext = this;
 		}
 		public void Dispose()
 		{
-			LogEntries = null;
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			LogEntries = null!;
 			LogFilepath = null;
-			DockControl = null;
+			Highlighting = null!;
+			DockControl = null!;
 		}
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
 		{
@@ -150,7 +127,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get { return m_dock_control; }
+			get => m_dock_control;
 			private set
 			{
 				if (m_dock_control == value) return;
@@ -158,7 +135,7 @@ namespace Rylogic.Gui.WPF
 				{
 					m_dock_control.ActiveChanged -= HandleActiveChanged;
 					m_dock_control.DockContainerChanged -= HandleDockContainerChanged;
-					Util.Dispose(ref m_dock_control);
+					Util.Dispose(ref m_dock_control!);
 				}
 				m_dock_control = value;
 				if (m_dock_control != null)
@@ -182,20 +159,20 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private DockControl m_dock_control;
+		private DockControl m_dock_control = null!;
 		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
 		{ }
 
 		/// <summary>Get/Set the log file to display. Setting a filepath sets the control to the 'file tail' mode</summary>
-		public string LogFilepath
+		public string? LogFilepath
 		{
-			get { return m_log_filepath; }
+			get => m_log_filepath;
 			set
 			{
 				// Allow setting to the same value
 				if (m_log_filepath != null)
 				{
-					m_watch.Remove(m_log_filepath);
+					m_watch!.Remove(m_log_filepath);
 					Util.Dispose(ref m_watch);
 				}
 				m_log_filepath = value;
@@ -206,63 +183,62 @@ namespace Rylogic.Gui.WPF
 					HandleFileChanged(m_log_filepath, null);
 				}
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogFilepath)));
-				
+
 				// Handlers
-				bool HandleFileChanged(string filepath, object ctx)
+				bool HandleFileChanged(string filepath, object? ctx)
 				{
 					try
 					{
 						// Open the file
-						using (var file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+						using var file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+						// Get the file length (remember this is potentially changing all the time)
+						var fend = file.Seek(0, SeekOrigin.End);
+
+						// Determine the file offset to start reading from
+						var fpos = Math.Max(0, fend - MaxFileBytes);
+						var le = LogEntries.LastOrDefault(x => x.FromFile);
+						if (le != null) fpos = Math.Min(le.FPos, fend);
+
+						// Read forwards from 'pos' to the end of the file
+						for (; fpos != fend;)
 						{
-							// Get the file length (remember this is potentially changing all the time)
-							var fend = file.Seek(0, SeekOrigin.End);
+							// Read a chunk from the file
+							var len = (int)Math.Min(fend - fpos, m_buf.Length);
+							file.Seek(fpos, SeekOrigin.Begin);
+							if (file.Read(m_buf, 0, len) != len)
+								throw new Exception("Failed to read file");
 
-							// Determine the file offset to start reading from
-							var fpos = Math.Max(0, fend - MaxFileBytes);
-							var le = LogEntries.LastOrDefault(x => x.FromFile);
-							if (le != null) fpos = Math.Min(le.FPos, fend);
-
-							// Read forwards from 'pos' to the end of the file
-							for (; fpos != fend;)
+							// Extract log entries from the file data
+							var fstart = fpos;
+							for (int s = 0, e = 0; fpos != fend; s = e)
 							{
-								// Read a chunk from the file
-								var len = (int)Math.Min(fend - fpos, m_buf.Length);
-								file.Seek(fpos, SeekOrigin.Begin);
-								if (file.Read(m_buf, 0, len) != len)
-									throw new Exception("Failed to read file");
+								// Log lines start with the ESC character '\u001b'
+								for (; s != len && m_buf[s] != LineDelimiter; ++s) { }
+								fpos = fstart + s;
 
-								// Extract log entries from the file data
-								var fstart = fpos;
-								for (int s = 0, e = 0; fpos != fend; s = e)
-								{
-									// Log lines start with the ESC character '\u001b'
-									for (; s != len && m_buf[s] != LineDelimiter; ++s) { }
-									fpos = fstart + s;
+								// No log lines found
+								if (s == len)
+									break;
 
-									// No log lines found
-									if (s == len)
-										break;
+								// Find the start of the next log entry
+								for (e = s + 1; e != len && m_buf[e] != LineDelimiter; ++e) { }
 
-									// Find the start of the next log entry
-									for (e = s + 1; e != len && m_buf[e] != LineDelimiter; ++e) { }
+								// [s,e) is a log entry. If 'm_buf[e]' is not the delimiter then it may be a partial entry
+								var entry = new LogEntry(this, fstart + s, Encoding.UTF8.GetString(m_buf, s + 1, e - s - 1), true);
 
-									// [s,e) is a log entry. If 'm_buf[e]' is not the delimiter then it may be a partial entry
-									var entry = new LogEntry(this, fstart + s, Encoding.UTF8.GetString(m_buf, s + 1, e - s - 1), true);
+								// Add to the log entries collection. Replace any partial log entry
+								int i = LogEntries.Count;
+								for (; i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) { }
+								if (i >= 0 && LogEntries[i].FPos == entry.FPos)
+									LogEntries[i] = entry;
+								else
+									LogEntries.Add(entry);
 
-									// Add to the log entries collection. Replace any partial log entry
-									int i = LogEntries.Count;
-									for (; i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) { }
-									if (i >= 0 && LogEntries[i].FPos == entry.FPos)
-										LogEntries[i] = entry;
-									else
-										LogEntries.Add(entry);
-
-									// If we haven't read to the end of the file, re-read from 's'.
-									// If we have read to the end of the file, exit the loop.
-									if (e == len && len != m_buf.Length)
-										fpos = fend;
-								}
+								// If we haven't read to the end of the file, re-read from 's'.
+								// If we have read to the end of the file, exit the loop.
+								if (e == len && len != m_buf.Length)
+									fpos = fend;
 							}
 						}
 					}
@@ -274,9 +250,9 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
+		private string? m_log_filepath;
 		private byte[] m_buf = new byte[8192];
-		private string m_log_filepath;
-		private FileWatch m_watch;
+		private FileWatch? m_watch;
 
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages
@@ -284,7 +260,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(PopOutOnNewMessagesProperty); }
 			set { SetValue(PopOutOnNewMessagesProperty, value); }
 		}
-		public static readonly DependencyProperty PopOutOnNewMessagesProperty;
+		public static readonly DependencyProperty PopOutOnNewMessagesProperty = Gui_.DPRegister<LogControl>(nameof(PopOutOnNewMessages));
 
 		/// <summary>Show UI parts related to log files</summary>
 		public bool ShowLogFilepath
@@ -292,7 +268,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(ShowLogFilepathProperty); }
 			set { SetValue(ShowLogFilepathProperty, value); }
 		}
-		public static readonly DependencyProperty ShowLogFilepathProperty;
+		public static readonly DependencyProperty ShowLogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(ShowLogFilepath));
 
 		/// <summary>Line wrap mode</summary>
 		public bool LineWrap
@@ -304,7 +280,7 @@ namespace Rylogic.Gui.WPF
 		{
 			CreateColumns();
 		}
-		public static readonly DependencyProperty LineWrapProperty;
+		public static readonly DependencyProperty LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
 
 		/// <summary>Scroll the view to the last entry</summary>
 		public bool TailScroll
@@ -317,7 +293,7 @@ namespace Rylogic.Gui.WPF
 			if (new_value)
 				ScrollToEnd();
 		}
-		public static readonly DependencyProperty TailScrollProperty;
+		public static readonly DependencyProperty TailScrollProperty = Gui_.DPRegister<LogControl>(nameof(TailScroll));
 
 		/// <summary>The minimum log level to display</summary>
 		public ELogLevel FilterLevel
@@ -329,13 +305,12 @@ namespace Rylogic.Gui.WPF
 		{
 			LogEntriesView?.Refresh();
 		}
-		public static readonly DependencyProperty FilterLevelProperty;
+		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
 
 		/// <summary>A regex expression for extracting lines from the log file</summary>
-		public Regex LogEntryPattern
+		public Regex? LogEntryPattern
 		{
-			[DebuggerStepThrough]
-			get { return m_log_entry_pattern; }
+			get => m_log_entry_pattern;
 			set
 			{
 				if (m_log_entry_pattern == value) return;
@@ -343,7 +318,7 @@ namespace Rylogic.Gui.WPF
 				CreateColumns();
 			}
 		}
-		private Regex m_log_entry_pattern;
+		private Regex? m_log_entry_pattern;
 
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
 		public char LineDelimiter { get; set; }
@@ -357,18 +332,20 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set watching of the log file for changes</summary>
 		public bool Freeze
 		{
-			get { return m_freeze; }
+			get => m_freeze;
 			set
 			{
 				if (m_freeze == value) return;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS);
+					if (m_watch != null)
+						m_watch.PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS);
 				}
 				m_freeze = value;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = TimeSpan.Zero;
+					if (m_watch != null)
+						m_watch.PollPeriod = TimeSpan.Zero;
 				}
 			}
 		}
@@ -377,36 +354,29 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A buffer of the log entries</summary>
 		public ObservableCollection<LogEntry> LogEntries
 		{
-			[DebuggerStepThrough]
-			get { return m_log_entries; }
+			get => m_log_entries;
 			private set
 			{
 				if (m_log_entries == value) return;
 				if (m_log_entries != null)
 				{
-					LogEntriesView = new ListCollectionView(new LogEntry[0]);
 					m_log_entries.CollectionChanged -= HandleLogEntriesChanged;
 				}
 				m_log_entries = value;
 				if (m_log_entries != null)
 				{
 					m_log_entries.CollectionChanged += HandleLogEntriesChanged;
-					LogEntriesView = new ListCollectionView(LogEntries) { Filter = FilterLogEntries };
 				}
 
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntries)));
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntriesView)));
 
 				// Handlers
-				bool FilterLogEntries(object obj)
-				{
-					return obj is LogEntry le && le.Level >= FilterLevel;
-				}
 				void HandleLogEntriesChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					if (e.Action != NotifyCollectionChangedAction.Add)
 						return;
-				
+
 					// If a log entry was added, pop-out.
 					if (DockControl?.DockContainer != null)
 					{
@@ -433,8 +403,8 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		public ICollectionView LogEntriesView { get; private set; }
-		private ObservableCollection<LogEntry> m_log_entries;
+		private ObservableCollection<LogEntry> m_log_entries = null!;
+		public ICollectionView LogEntriesView { get; }
 
 		// Trigger a refresh
 		private void SignalRefresh()
@@ -452,7 +422,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Highlighting patterns (in priority order)</summary>
 		public ObservableCollection<HLPattern> Highlighting
 		{
-			get { return m_highlighting; }
+			get => m_highlighting;
 			set
 			{
 				if (m_highlighting == value) return;
@@ -474,7 +444,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		public ObservableCollection<HLPattern> m_highlighting;
+		public ObservableCollection<HLPattern> m_highlighting = null!;
 		private int m_highlighting_issue;
 
 		/// <summary>Use the log entry pattern to create columns</summary>
@@ -532,7 +502,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Update the log file to display</summary>
-		private void OpenLogFile(string filepath)
+		private void OpenLogFile(string? filepath)
 		{
 			// Prompt for a log file if not given
 			if (filepath == null)
@@ -586,19 +556,49 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Browse for a log file to display</summary>
 		public Command BrowseForLogFile { get; }
+		private void BrowseForLogFileInternal()
+		{
+			OpenLogFile(null);
+		}
 
 		/// <summary>Clear the error log display (not the file)</summary>
 		public Command ClearLog { get; }
+		private void ClearLogInternal()
+		{
+			Clear();
+		}
 
 		/// <summary>Toggle scrolling to the last log entry</summary>
 		public Command ToggleTailScroll { get; }
+		private void ToggleTailScrollInternal()
+		{
+			TailScroll = !TailScroll;
+		}
 
 		/// <summary>Toggle line wrapping mode</summary>
 		public Command ToggleLineWrap { get; }
+		private void ToggleLineWrapInternal()
+		{
+			LineWrap = !LineWrap;
+		}
 
 		/// <summary>Copy the selected rows to the clipboard</summary>
 		public Command CopySelectedRowsToClipboard { get; }
+		private void CopySelectedRowsToClipboardInternal()
+		{
+			var sb = new StringBuilder();
+			foreach (var le in m_view.SelectedItems.Cast<LogEntry>()) sb.Append(le.Text);
+			try { Clipboard.SetData(DataFormats.Text, sb.ToString()); } catch { }
+		}
+
+		/// <summary></summary>
 		public Command CopySelectedMessagesToClipboard { get; }
+		private void CopySelectedMessagesToClipboardInternal()
+		{
+			var sb = new StringBuilder();
+			foreach (var le in m_view.SelectedItems.Cast<LogEntry>()) sb.Append(le.Message);
+			try { Clipboard.SetData(DataFormats.Text, sb.ToString()); } catch { }
+		}
 
 		/// <summary>Switch out of tail scroll mode when a row other than the last is selected</summary>
 		private void HandleSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -608,7 +608,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>A single log entry</summary>
 		[DebuggerDisplay("[{FPos}] {Text}")]
@@ -644,8 +644,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Lazy regex pattern match</summary>
 			private T Read<T>(string grp, Func<string, T> parse)
 			{
-				m_match = m_match ?? m_this.LogEntryPattern.Match(Text);
-				if (m_match.Success)
+				m_match ??= m_this.LogEntryPattern?.Match(Text);
+				if (m_match != null && m_match.Success)
 				{
 					try
 					{
@@ -654,9 +654,9 @@ namespace Rylogic.Gui.WPF
 					}
 					catch { }
 				}
-				return default(T);
+				return default!;
 			}
-			private Match m_match;
+			private Match? m_match;
 
 			/// <summary>The lighting pattern suitable for this log entry (or null)</summary>
 			public HLPattern Highlight
@@ -665,13 +665,13 @@ namespace Rylogic.Gui.WPF
 				{
 					if (m_highlight_issue != m_this.m_highlighting_issue)
 					{
-						m_highlight = m_this.Highlighting.FirstOrDefault(x => x.IsMatch(Text)) ?? new HLPattern(Colors.Transparent, Colors.Black);
+						m_highlight = m_this.Highlighting.FirstOrDefault(x => x.IsMatch(Text));
 						m_highlight_issue = m_this.m_highlighting_issue;
 					}
-					return m_highlight;
+					return m_highlight ?? new HLPattern(Colors.Transparent, Colors.Black);
 				}
 			}
-			private HLPattern m_highlight;
+			private HLPattern? m_highlight;
 			private int m_highlight_issue;
 
 			/// <summary>Line wrapping</summary>

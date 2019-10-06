@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF
 			var provide_value_target = (IProvideValueTarget)serviceProvider.GetService(typeof(IProvideValueTarget));
 
 			// Determine the event handler type
-			var event_handler_type = (Type)null;
+			var event_handler_type = (Type?)null;
 			if (provide_value_target.TargetProperty is EventInfo ei)
 			{
 				event_handler_type = ei.EventHandlerType;
@@ -83,10 +83,12 @@ namespace Rylogic.Gui.WPF
 
 				int method_args_start;
 				object method_target;
+				string? method_name;
 
 				// If the first argument is a string then it must be the name of the method to invoke on the data context.
 				// If not then it is the explicit method target object and the second argument will be name of the method to invoke.
-				if (arg0 is string method_name)
+				method_name = arg0 as string;
+				if (method_name != null)
 				{
 					method_target = element.DataContext;
 					method_args_start = 1;
@@ -143,7 +145,7 @@ namespace Rylogic.Gui.WPF
 
 				// Couldn't match a method with the raw arguments, so check if we can find a method with the same name
 				// and parameter count and try to convert any XAML string arguments to match the method parameter types
-				var method = method_target_type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic).SingleOrDefault(m => m.Name == method_name && m.GetParameters().Length == arguments.Length);
+				MethodInfo? method = method_target_type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic).SingleOrDefault(m => m.Name == method_name && m.GetParameters().Length == arguments.Length);
 				if (method != null)
 				{
 					var parameters = method.GetParameters();
@@ -205,7 +207,7 @@ namespace Rylogic.Gui.WPF
 				TargetObject = targetObject;
 				TargetProperty = targetProperty;
 			}
-			public object GetService(Type serviceType)
+			public object? GetService(Type serviceType)
 			{
 				return serviceType.IsInstanceOfType(this) ? this : null;
 			}
@@ -222,12 +224,6 @@ namespace Rylogic.Gui.WPF
 
 	public class EventArgsExtension : MarkupExtension
 	{
-		public PropertyPath Path { get; set; }
-		public IValueConverter Converter { get; set; }
-		public object ConverterParameter { get; set; }
-		public Type ConverterTargetType { get; set; }
-		[TypeConverter(typeof(CultureInfoIetfLanguageTagConverter))]
-		public CultureInfo ConverterCulture { get; set; }
 		public EventArgsExtension()
 		{
 		}
@@ -235,6 +231,12 @@ namespace Rylogic.Gui.WPF
 		{
 			Path = new PropertyPath(path);
 		}
+		public PropertyPath? Path { get; set; }
+		public IValueConverter? Converter { get; set; }
+		public object? ConverterParameter { get; set; }
+		public Type? ConverterTargetType { get; set; }
+		[TypeConverter(typeof(CultureInfoIetfLanguageTagConverter))]
+		public CultureInfo? ConverterCulture { get; set; }
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
 			return this;

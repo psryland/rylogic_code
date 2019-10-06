@@ -490,7 +490,7 @@ namespace Rylogic.Gfx
 
 		#region Structs
 
-		[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		public struct Vertex
 		{
 			public v4 m_pos;
@@ -512,13 +512,13 @@ namespace Rylogic.Gfx
 			[DebuggerDisplay("{Description,nq}"), StructLayout(LayoutKind.Sequential)]
 			public struct ShaderSet
 			{
-				[StructLayout(LayoutKind.Sequential), Serializable]
+				[StructLayout(LayoutKind.Sequential)]
 				public struct ShaderVS { public EShaderVS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential), Serializable]
+				[StructLayout(LayoutKind.Sequential)]
 				public struct ShaderGS { public EShaderGS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential), Serializable]
+				[StructLayout(LayoutKind.Sequential)]
 				public struct ShaderPS { public EShaderPS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
-				[StructLayout(LayoutKind.Sequential), Serializable]
+				[StructLayout(LayoutKind.Sequential)]
 				public struct ShaderCS { public EShaderCS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
 
 				public ShaderVS m_vs;
@@ -661,7 +661,7 @@ namespace Rylogic.Gfx
 				uint mips = 0U,
 				uint colour_key = 0U,
 				bool has_alpha = false,
-				string dbg_name = null)
+				string? dbg_name = null)
 			{
 				return new TextureOptions
 				{
@@ -692,7 +692,7 @@ namespace Rylogic.Gfx
 				uint mips = 1U,
 				uint colour_key = 0U,
 				bool has_alpha = true,
-				string dbg_name = null)
+				string? dbg_name = null)
 			{
 				return new TextureOptions
 				{
@@ -826,10 +826,7 @@ namespace Rylogic.Gfx
 			public v4 m_ws_intercept;
 
 			// The object that was hit (or null)
-			public Object HitObject
-			{
-				get { return IsHit ? new Object(m_obj) : null; }
-			}
+			public Object? HitObject => IsHit ? new Object(m_obj) : null;
 			private IntPtr m_obj;
 
 			/// <summary>The distance from the ray origin to the hit point</summary>
@@ -839,10 +836,7 @@ namespace Rylogic.Gfx
 			public ESnapType m_snap_type;
 
 			/// <summary>True if something was hit</summary>
-			public bool IsHit
-			{
-				get { return m_obj != IntPtr.Zero; }
-			}
+			public bool IsHit => m_obj != IntPtr.Zero;
 		}
 
 		/// <summary>The viewport volume in render target space (i.e. screen coords, not normalised)</summary>
@@ -882,13 +876,13 @@ namespace Rylogic.Gfx
 			public View3DIncludes(string paths)
 				: this(paths, null)
 			{ }
-			public View3DIncludes(HMODULE module, IEnumerable<string> paths = null)
+			public View3DIncludes(HMODULE module, IEnumerable<string>? paths = null)
 				: this(paths, new[] { module })
 			{ }
-			public View3DIncludes(IEnumerable<string> paths = null, IEnumerable<HMODULE> modules = null)
+			public View3DIncludes(IEnumerable<string>? paths = null, IEnumerable<HMODULE>? modules = null)
 				: this(paths != null ? string.Join(",", paths) : null, modules.Take(16).ToArray())
 			{ }
-			public View3DIncludes(string paths, HMODULE[] modules)
+			public View3DIncludes(string? paths, HMODULE[]? modules)
 			{
 				m_include_paths = paths;
 				m_modules = new HMODULE[16];
@@ -902,13 +896,13 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>A comma or semicolon separated list of search directories</summary>
-			public string IncludePaths
+			public string? IncludePaths
 			{
-				get { return m_include_paths; }
-				set { m_include_paths = value; }
+				get => m_include_paths;
+				set => m_include_paths = value;
 			}
 			[MarshalAs(UnmanagedType.LPWStr)]
-			public string m_include_paths;
+			public string? m_include_paths;
 
 			/// <summary>An array of binary modules that contain resources</summary>
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
@@ -923,18 +917,12 @@ namespace Rylogic.Gfx
 			public ESceneChanged ChangeType;
 
 			/// <summary>The context ids involved in the change</summary>
-			public Guid[] ContextIds
-			{
-				get { return Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count); }
-			}
+			public Guid[] ContextIds => Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count);
 			private IntPtr m_ctx_ids;
 			private int m_count;
 
 			/// <summary>The object that changed (for single object changes only)</summary>
-			public Object Object
-			{
-				get { return m_object != IntPtr.Zero ? new Object(m_object) : null; }
-			}
+			public Object? Object => m_object != IntPtr.Zero ? new Object(m_object) : null;
 			private HObject m_object;
 		}
 
@@ -980,8 +968,8 @@ namespace Rylogic.Gfx
 		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
 			[MarshalAs(UnmanagedType.LPWStr)] string code,
 			[MarshalAs(UnmanagedType.LPWStr)] string support,
-			[MarshalAs(UnmanagedType.BStr)] out string result,
-			[MarshalAs(UnmanagedType.BStr)] out string errors);
+			[MarshalAs(UnmanagedType.BStr)] out string? result,
+			[MarshalAs(UnmanagedType.BStr)] out string? errors);
 
 		#endregion
 
@@ -1023,7 +1011,7 @@ namespace Rylogic.Gfx
 			++m_ref_count;
 			return m_singleton;
 		}
-		private static View3d m_singleton;
+		private static View3d? m_singleton;
 		private static int m_ref_count;
 
 		/// <summary></summary>
@@ -1040,7 +1028,7 @@ namespace Rylogic.Gfx
 				m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 
 				// Initialise view3d
-				string init_error = null;
+				var init_error = (string?)null;
 				void ErrorCB(HTexture ctx, string msg) => init_error = msg;
 				m_context = View3D_Initialise(ErrorCB, IntPtr.Zero, CreateDeviceFlags);
 				if (m_context == HContext.Zero)
@@ -1077,7 +1065,7 @@ namespace Rylogic.Gfx
 
 				// Add a C# code handler
 				SetEmbeddedCodeHandler("CSharp", HandleEmbeddedCSharp);
-				bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string result, out string errors) // worker thread context
+				bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string? result, out string? errors) // worker thread context
 				{
 					// This function may be called simultaneously in multiple threads
 					result = null;
@@ -1192,13 +1180,13 @@ namespace ldr
 		}
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
-		public event EventHandler<MessageEventArgs> Error;
+		public event EventHandler<MessageEventArgs>? Error;
 
 		/// <summary>Progress update when a file is being parsed</summary>
-		public event EventHandler<AddFileProgressEventArgs> AddFileProgress;
+		public event EventHandler<AddFileProgressEventArgs>? AddFileProgress;
 
 		/// <summary>Event notifying whenever sources are loaded/reloaded</summary>
-		public event EventHandler<SourcesChangedEventArgs> OnSourcesChanged;
+		public event EventHandler<SourcesChangedEventArgs>? OnSourcesChanged;
 
 		/// <summary>Install/Remove an embedded code handler for language 'lang'</summary>
 		public void SetEmbeddedCodeHandler(string lang, EmbeddedCodeHandlerCB handler)
@@ -1208,9 +1196,9 @@ namespace ldr
 				m_embedded_code_handlers[lang] = handler;
 				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, true);
 			}
-			else if (m_embedded_code_handlers.TryGetValue(lang, out handler))
+			else if (m_embedded_code_handlers.TryGetValue(lang, out handler!))
 			{
-				m_embedded_code_handlers[lang] = null;
+				m_embedded_code_handlers.Remove(lang);
 				View3D_EmbeddedCodeCBSet(lang, handler, IntPtr.Zero, false);
 			}
 		}
@@ -1220,9 +1208,9 @@ namespace ldr
 		/// The objects are created with the context Id that is returned from this function.
 		/// Callers should then add objects to a window using AddObjectsById.
 		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)</summary>
-		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, string[] include_paths = null)
+		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, string[]? include_paths = null)
 		{
-			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
+			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
 			return View3D_LoadScriptSource(ldr_filepath, additional, ref inc);
 		}
 
@@ -1232,9 +1220,9 @@ namespace ldr
 		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
 		/// This is different to 'LoadScriptSource' because if 'ldr_script' is a file it is not added to
 		/// the collection of script sources. It's a one-off method to add objects</summary>
-		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[] include_paths = null)
+		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null)
 		{
-			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? new string[0]) };
+			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
 			var ctx = context_id ?? Guid.NewGuid();
 			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc);
 		}
@@ -1246,7 +1234,7 @@ namespace ldr
 		}
 
 		/// <summary>Poll for changed script source files, and reload any that have changed. (designed as a Timer.Tick handler)</summary>
-		public void CheckForChangedSources(object sender = null, EventArgs args = null)
+		public void CheckForChangedSources(object? sender = null, EventArgs? args = null)
 		{
 			View3D_CheckForChangedSources();
 		}
@@ -1369,19 +1357,19 @@ namespace ldr
 			}
 
 			/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
-			public event EventHandler<ErrorEventArgs> Error;
+			public event EventHandler<ErrorEventArgs>? Error;
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
-			public event EventHandler<SettingChangeEventArgs> OnSettingsChanged;
+			public event EventHandler<SettingChangeEventArgs>? OnSettingsChanged;
 
 			/// <summary>Raised when Invalidate is called</summary>
-			public event EventHandler OnInvalidated;
+			public event EventHandler? OnInvalidated;
 
 			/// <summary>Event notifying of a render about to happen</summary>
-			public event EventHandler OnRendering;
+			public event EventHandler? OnRendering;
 
 			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
-			public event EventHandler<SceneChangedEventArgs> OnSceneChanged;
+			public event EventHandler<SceneChangedEventArgs>? OnSceneChanged;
 
 			/// <summary>Triggers the 'OnInvalidated' event on the first call. Future calls are ignored until 'Present' or 'Validate' are called</summary>
 			public void Invalidate()
@@ -1475,7 +1463,7 @@ namespace ldr
 			}
 
 			/// <summary>Raised just before a mouse navigation happens</summary>
-			public event EventHandler<MouseNavigateEventArgs> MouseNavigating;
+			public event EventHandler<MouseNavigateEventArgs>? MouseNavigating;
 
 			/// <summary>Perform a hit test in the scene</summary>
 			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
@@ -1502,8 +1490,8 @@ namespace ldr
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
 			{
-				get { return Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(Handle)); }
-				set { View3D_WindowSettingsSet(Handle, value); }
+				get => Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(Handle)) ?? string.Empty;
+				set => View3D_WindowSettingsSet(Handle, value);
 			}
 
 			/// <summary>Enumerate the guids associated with this window</summary>
@@ -1643,7 +1631,7 @@ namespace ldr
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
-			public BBox SceneBounds(ESceneBounds bounds, Guid[] except = null)
+			public BBox SceneBounds(ESceneBounds bounds, Guid[]? except = null)
 			{
 				return View3D_WindowSceneBounds(Handle, bounds, except?.Length ?? 0, except);
 			}
@@ -1804,7 +1792,7 @@ namespace ldr
 			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
 			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
 			/// a source and destination texture at the same time</summary>
-			public void SetRT(Texture render_target, Texture depth_buffer = null)
+			public void SetRT(Texture? render_target, Texture? depth_buffer = null)
 			{
 				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero);
 			}
@@ -1908,19 +1896,19 @@ namespace ldr
 			}
 
 			#region Equals
-			public static bool operator == (Window lhs, Window rhs)
+			public static bool operator == (Window? lhs, Window? rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Window lhs, Window rhs)
+			public static bool operator != (Window? lhs, Window? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(Window rhs)
+			public bool Equals(Window? rhs)
 			{
 				return rhs != null && Handle == rhs.Handle;
 			}
-			public override bool Equals(object rhs)
+			public override bool Equals(object? rhs)
 			{
 				return Equals(rhs as Window);
 			}
@@ -2037,36 +2025,36 @@ namespace ldr
 			/// <summary>Get/Set Orthographic projection mode</summary>
 			public bool Orthographic
 			{
-				get { return View3D_CameraOrthographicGet(m_window.Handle); }
-				set { View3D_CameraOrthographicSet(m_window.Handle, value); }
+				get => View3D_CameraOrthographicGet(m_window.Handle);
+				set => View3D_CameraOrthographicSet(m_window.Handle, value);
 			}
 
 			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
 			public v4 AlignAxis
 			{
-				get { return View3D_CameraAlignAxisGet(m_window.Handle); }
-				set { View3D_CameraAlignAxisSet(m_window.Handle, value); }
+				get => View3D_CameraAlignAxisGet(m_window.Handle);
+				set => View3D_CameraAlignAxisSet(m_window.Handle, value);
 			}
 
 			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
 			public float Aspect
 			{
-				get { return View3D_CameraAspectGet(m_window.Handle); }
-				set { View3D_CameraAspectSet(m_window.Handle, value); }
+				get => View3D_CameraAspectGet(m_window.Handle);
+				set => View3D_CameraAspectSet(m_window.Handle, value);
 			}
 
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
 			public float FovX
 			{
-				get { return View3D_CameraFovXGet(m_window.Handle); }
-				set { View3D_CameraFovXSet(m_window.Handle, value); }
+				get => View3D_CameraFovXGet(m_window.Handle);
+				set => View3D_CameraFovXSet(m_window.Handle, value);
 			}
 
 			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public float FovY
 			{
-				get { return View3D_CameraFovYGet(m_window.Handle); }
-				set { View3D_CameraFovYSet(m_window.Handle, value); }
+				get => View3D_CameraFovYGet(m_window.Handle);
+				set => View3D_CameraFovYSet(m_window.Handle, value);
 			}
 
 			/// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
@@ -2084,14 +2072,14 @@ namespace ldr
 			/// <summary>Get/Set the camera near plane distance. Focus relative</summary>
 			public float NearPlane
 			{
-				get { ClipPlanes(out var n, out var f, true); return n; }
+				get { ClipPlanes(out var n, out _, true); return n; }
 				set { ClipPlanes(value, FarPlane, true); }
 			}
 
 			/// <summary>Get/Set the camera far plane distance. Focus relative</summary>
 			public float FarPlane
 			{
-				get { ClipPlanes(out var n, out var f, true); return f; }
+				get { ClipPlanes(out _, out var f, true); return f; }
 				set { ClipPlanes(NearPlane, value, true); }
 			}
 
@@ -2115,7 +2103,7 @@ namespace ldr
 			/// <summary>Get/Set the distance to the camera focus point</summary>
 			public float FocusDist
 			{
-				get { return View3D_CameraFocusDistanceGet(m_window.Handle); }
+				get => View3D_CameraFocusDistanceGet(m_window.Handle);
 				set
 				{
 					Debug.Assert(value >= 0, "Focus distance cannot be negative");
@@ -2293,19 +2281,19 @@ namespace ldr
 			}
 
 			#region Equals
-			public static bool operator == (Camera lhs, Camera rhs)
+			public static bool operator == (Camera? lhs, Camera? rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Camera lhs, Camera rhs)
+			public static bool operator != (Camera? lhs, Camera? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(Camera rhs)
+			public bool Equals(Camera? rhs)
 			{
 				return rhs != null && m_window == rhs.m_window;
 			}
-			public override bool Equals(object obj)
+			public override bool Equals(object? obj)
 			{
 				return Equals(obj as Camera);
 			}
@@ -2396,7 +2384,7 @@ namespace ldr
 			public bool Owned;
 
 			/// <summary>User data attached to the object</summary>
-			public object Tag { get; set; }
+			public object? Tag { get; set; }
 
 			/// <summary>Object name</summary>
 			public string Name
@@ -2506,7 +2494,7 @@ namespace ldr
 			}
 
 			/// <summary>Return the object that is the root parent of this object (possibly itself)</summary>
-			public Object Root
+			public Object? Root
 			{
 				get
 				{
@@ -2516,7 +2504,7 @@ namespace ldr
 			}
 
 			/// <summary>Return the object that is the immediate parent of this object</summary>
-			public Object Parent
+			public Object? Parent
 			{
 				get
 				{
@@ -2526,12 +2514,12 @@ namespace ldr
 			}
 
 			/// <summary>Return a child object of this object</summary>
-			public Object Child(string name)
+			public Object? Child(string name)
 			{
 				var child = View3D_ObjectGetChildByName(Handle, name);
 				return child != HObject.Zero ? new Object(child, false) : null;
 			}
-			public Object Child(int index)
+			public Object? Child(int index)
 			{
 				var child = View3D_ObjectGetChildByIndex(Handle, index);
 				return child != HObject.Zero ? new Object(child, false) : null;
@@ -2571,11 +2559,11 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression.
 			/// Note, setting the o2w for a child object positions the object in world space rather than parent space
 			/// (internally the appropriate O2P transform is calculated to put the object at the given O2W location)</summary>
-			public m4x4 O2WGet(string name = null)
+			public m4x4 O2WGet(string? name = null)
 			{
 				return View3D_ObjectO2WGet(Handle, name);
 			}
-			public void O2WSet(m4x4 o2w, string name = null)
+			public void O2WSet(m4x4 o2w, string? name = null)
 			{
 				View3D_ObjectO2WSet(Handle, ref o2w, name);
 			}
@@ -2586,11 +2574,11 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public m4x4 O2PGet(string name = null)
+			public m4x4 O2PGet(string? name = null)
 			{
 				return View3D_ObjectO2PGet(Handle, name);
 			}
-			public void O2PSet(m4x4 o2p, string name = null)
+			public void O2PSet(m4x4 o2p, string? name = null)
 			{
 				View3D_ObjectO2PSet(Handle, ref o2p, name);
 			}
@@ -2601,11 +2589,11 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public bool VisibleGet(string name = null)
+			public bool VisibleGet(string? name = null)
 			{
 				return View3D_ObjectVisibilityGet(Handle, name);
 			}
-			public void VisibleSet(bool vis, string name = null)
+			public void VisibleSet(bool vis, string? name = null)
 			{
 				View3D_ObjectVisibilitySet(Handle, vis, name);
 			}
@@ -2616,11 +2604,11 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public bool WireframeGet(string name = null)
+			public bool WireframeGet(string? name = null)
 			{
 				return View3D_ObjectWireframeGet(Handle, name);
 			}
-			public void WireframeSet(bool vis, string name = null)
+			public void WireframeSet(bool vis, string? name = null)
 			{
 				View3D_ObjectWireframeSet(Handle, vis, name);
 			}
@@ -2628,11 +2616,11 @@ namespace ldr
 			/// <summary>
 			/// Get/Set the object flags
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
-			public EFlags FlagsGet(string name = null)
+			public EFlags FlagsGet(string? name = null)
 			{
 				return View3D_ObjectFlagsGet(Handle, name);
 			}
-			public void FlagsSet(EFlags flags, bool state, string name = null)
+			public void FlagsSet(EFlags flags, bool state, string? name = null)
 			{
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
 			}
@@ -2640,11 +2628,11 @@ namespace ldr
 			/// <summary>
 			/// Get/Set the object sort group.
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
-			public ESortGroup SortGroupGet(string name = null)
+			public ESortGroup SortGroupGet(string? name = null)
 			{
 				return View3D_ObjectSortGroupGet(Handle, name);
 			}
-			public void SortGroupSet(ESortGroup group, string name = null)
+			public void SortGroupSet(ESortGroup group, string? name = null)
 			{
 				View3D_ObjectSortGroupSet(Handle, group, name);
 			}
@@ -2652,11 +2640,11 @@ namespace ldr
 			/// <summary>
 			/// Get/Set the nugget flags for a nugget within this object
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
-			public ENuggetFlag NuggetFlagsGet(string name = null, int index = 0)
+			public ENuggetFlag NuggetFlagsGet(string? name = null, int index = 0)
 			{
 				return View3D_ObjectNuggetFlagsGet(Handle, name, index);
 			}
-			public void NuggetFlagsSet(ENuggetFlag flags, bool state, string name = null, int index = 0)
+			public void NuggetFlagsSet(ENuggetFlag flags, bool state, string? name = null, int index = 0)
 			{
 				View3D_ObjectNuggetFlagsSet(Handle, flags, state, name, index);
 			}
@@ -2664,11 +2652,11 @@ namespace ldr
 			/// <summary>
 			/// Get/Set the nugget tint colour for a nugget within this object
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
-			public Colour32 NuggetTintGet(string name = null, int index = 0)
+			public Colour32 NuggetTintGet(string? name = null, int index = 0)
 			{
 				return View3D_ObjectNuggetTintGet(Handle, name, index);
 			}
-			public void NuggetTintSet(Colour32 tint, string name = null, int index = 0)
+			public void NuggetTintSet(Colour32 tint, string? name = null, int index = 0)
 			{
 				View3D_ObjectNuggetTintSet(Handle, tint, name, index);
 			}
@@ -2680,15 +2668,15 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public Colour32 ColourGet(bool base_colour, string name = null)
+			public Colour32 ColourGet(bool base_colour, string? name = null)
 			{
 				return View3D_ObjectColourGet(Handle, base_colour, name);
 			}
-			public void ColourSet(Colour32 colour, uint mask, string name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
+			public void ColourSet(Colour32 colour, uint mask, string? name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
 				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
 			}
-			public void ColourSet(Colour32 colour, string name = null)
+			public void ColourSet(Colour32 colour, string? name = null)
 			{
 				ColourSet(colour, 0xFFFFFFFF, name);
 			}
@@ -2699,7 +2687,7 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public void ResetColour(string name = null)
+			public void ResetColour(string? name = null)
 			{
 				View3D_ObjectResetColour(Handle, name);
 			}
@@ -2710,11 +2698,11 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public float ReflectivityGet(string name = null)
+			public float ReflectivityGet(string? name = null)
 			{
 				return View3D_ObjectReflectivityGet(Handle, name);
 			}
-			public void ReflectivitySet(float reflectivity, string name = null)
+			public void ReflectivitySet(float reflectivity, string? name = null)
 			{
 				View3D_ObjectReflectivitySet(Handle, reflectivity, name);
 			}
@@ -2725,7 +2713,7 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public void SetTexture(Texture tex, string name = null)
+			public void SetTexture(Texture tex, string? name = null)
 			{
 				View3D_ObjectSetTexture(Handle, tex.Handle, name);
 			}
@@ -2741,19 +2729,19 @@ namespace ldr
 			}
 
 			#region Equals
-			public static bool operator ==(Object lhs, Object rhs)
+			public static bool operator ==(Object? lhs, Object? rhs)
 			{
 				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator !=(Object lhs, Object rhs)
+			public static bool operator !=(Object? lhs, Object? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(Object rhs)
+			public bool Equals(Object? rhs)
 			{
 				return rhs != null && Handle == rhs.Handle;
 			}
-			public override bool Equals(object rhs)
+			public override bool Equals(object? rhs)
 			{
 				return Equals(rhs as Object);
 			}
@@ -2801,8 +2789,9 @@ namespace ldr
 				if (m_handle == HObject.Zero) return;
 				View3D_GizmoDetachCB(m_handle, m_cb);
 				if (m_owned) View3D_GizmoDelete(m_handle);
-				m_cb = null;
+				m_cb = null!;
 				m_handle = HObject.Zero;
+				GC.SuppressFinalize(this);
 			}
 
 			/// <summary>Get/Set whether the gizmo is looking for mouse interaction</summary>
@@ -2848,13 +2837,13 @@ namespace ldr
 			}
 
 			/// <summary>Raised whenever the gizmo is manipulated</summary>
-			public event EventHandler<MovedEventArgs> Moved;
+			public event EventHandler<MovedEventArgs>? Moved;
 			public class MovedEventArgs : EventArgs
 			{
 				/// <summary>The type of movement event this is</summary>
 				public EEvent Type { get; private set; }
 
-				[System.Diagnostics.DebuggerStepThrough]
+				[DebuggerStepThrough]
 				public MovedEventArgs(EEvent type)
 				{
 					Type = type;
@@ -2891,19 +2880,19 @@ namespace ldr
 			}
 
 			#region Equals
-			public static bool operator ==(Gizmo lhs, Gizmo rhs)
+			public static bool operator ==(Gizmo? lhs, Gizmo? rhs)
 			{
 				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator !=(Gizmo lhs, Gizmo rhs)
+			public static bool operator !=(Gizmo? lhs, Gizmo? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(Gizmo rhs)
+			public bool Equals(Gizmo? rhs)
 			{
 				return rhs != null && m_handle == rhs.m_handle;
 			}
-			public override bool Equals(object rhs)
+			public override bool Equals(object? rhs)
 			{
 				return Equals(rhs as Gizmo);
 			}
@@ -2994,7 +2983,7 @@ namespace ldr
 			}
 
 			/// <summary>User Data</summary>
-			public object Tag { get; set; }
+			public object? Tag { get; set; }
 
 			/// <summary>The current ref count of this texture</summary>
 			private ulong RefCount => View3D_TextureRefCount(Handle);
@@ -3198,19 +3187,19 @@ namespace ldr
 			#endregion
 
 			#region Equals
-			public static bool operator == (Texture lhs, Texture rhs)
+			public static bool operator == (Texture? lhs, Texture? rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Texture lhs, Texture rhs)
+			public static bool operator != (Texture? lhs, Texture? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(Texture rhs)
+			public bool Equals(Texture? rhs)
 			{
 				return rhs != null && Handle == rhs.Handle;
 			}
-			public override bool Equals(object rhs)
+			public override bool Equals(object? rhs)
 			{
 				return Equals(rhs as Texture);
 			}
@@ -3274,19 +3263,19 @@ namespace ldr
 			public HCubeMap Handle;
 
 			#region Equals
-			public static bool operator ==(CubeMap lhs, CubeMap rhs)
+			public static bool operator ==(CubeMap? lhs, CubeMap? rhs)
 			{
 				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator !=(CubeMap lhs, CubeMap rhs)
+			public static bool operator !=(CubeMap? lhs, CubeMap? rhs)
 			{
 				return !(lhs == rhs);
 			}
-			public bool Equals(CubeMap rhs)
+			public bool Equals(CubeMap? rhs)
 			{
 				return rhs != null && Handle == rhs.Handle;
 			}
-			public override bool Equals(object rhs)
+			public override bool Equals(object? rhs)
 			{
 				return Equals(rhs as CubeMap);
 			}
@@ -3457,7 +3446,7 @@ namespace ldr
 			}
 
 			/// <summary>Notify property value changed</summary>
-			public event PropertyChangedEventHandler PropertyChanged;
+			public event PropertyChangedEventHandler? PropertyChanged;
 			private void SetProp<T>(ref T prop, T value, string name)
 			{
 				if (Equals(prop, value)) return;
@@ -3522,7 +3511,7 @@ namespace ldr
 			public Guid[] ContextIds { get; private set; }
 
 			/// <summary>The LdrObject involved in the change (single object changes only)</summary>
-			public Object Object { get; private set; }
+			public Object? Object { get; private set; }
 		}
 		public class SettingChangeEventArgs : EventArgs
 		{
@@ -3544,10 +3533,9 @@ namespace ldr
         private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
+		public static bool LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
-			if (ModuleLoaded) return;
-			m_module = Win32.LoadDll(Dll+".dll", dir, throw_if_missing);
+			return ModuleLoaded || (m_module = Win32.LoadDll(Dll + ".dll", dir, throw_if_missing)) != IntPtr.Zero;
 		}
 
 		// Context
@@ -3590,7 +3578,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById   (HWindow window, IntPtr context_ids, int include_count, int exclude_count);
 		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
+		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[]? except);
 		[DllImport(Dll)] private static extern float           View3D_WindowAnimTimeGet         (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, float time_s);
 		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
@@ -3662,28 +3650,28 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_ObjectNameSet            (HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ObjectTypeGetBStr        (HObject obj);
-		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2WGet             (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectO2WSet             (HObject obj, ref m4x4 o2w, string name);
-		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2PGet             (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectO2PSet             (HObject obj, ref m4x4 o2p, string name);
-		[DllImport(Dll)] private static extern bool              View3D_ObjectVisibilityGet      (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectVisibilitySet      (HObject obj, bool visible, string name);
-		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string name);
-		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string name);
-		[DllImport(Dll)] private static extern ENuggetFlag       View3D_ObjectNuggetFlagsGet     (HObject obj, string name, int index);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, bool state, string name, int index);
-		[DllImport(Dll)] private static extern Colour32          View3D_ObjectNuggetTintGet      (HObject obj, string name, int index);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetTintSet      (HObject obj, Colour32 colour, string name, int index);
-		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
-		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectReflectivitySet    (HObject obj, float reflectivity, string name);
-		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
+		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2WGet             (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectO2WSet             (HObject obj, ref m4x4 o2w, string? name);
+		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2PGet             (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectO2PSet             (HObject obj, ref m4x4 o2p, string? name);
+		[DllImport(Dll)] private static extern bool              View3D_ObjectVisibilityGet      (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectVisibilitySet      (HObject obj, bool visible, string? name);
+		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string? name);
+		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string? name);
+		[DllImport(Dll)] private static extern ENuggetFlag       View3D_ObjectNuggetFlagsGet     (HObject obj, string? name, int index);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, bool state, string? name, int index);
+		[DllImport(Dll)] private static extern Colour32          View3D_ObjectNuggetTintGet      (HObject obj, string? name, int index);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetTintSet      (HObject obj, Colour32 colour, string? name, int index);
+		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string? name, EColourOp op, float op_value);
+		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectReflectivitySet    (HObject obj, float reflectivity, string? name);
+		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string? name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
 
 		// Materials
@@ -3691,7 +3679,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
-		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
+		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[]? dst_rect, Rectangle[]? src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureRelease              (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);

@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl
 	{
 		/// <summary>A collection of graphics used by the chart itself</summary>
-		public class ChartTools : IDisposable
+		public sealed class ChartTools : IDisposable
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
@@ -26,16 +26,16 @@ namespace Rylogic.Gui.WPF
 			}
 			public void Dispose()
 			{
-				Chart = null;
-				AreaSelect = null;
-				Resizer = null;
-				TapeMeasure = null;
+				Chart = null!;
+				AreaSelect = null!;
+				Resizer = null!;
+				TapeMeasure = null!;
 			}
 
 			/// <summary>The owner of these tools</summary>
 			private ChartControl Chart
 			{
-				get { return m_chart; }
+				get => m_chart;
 				set
 				{
 					if (m_chart == value) return;
@@ -50,7 +50,7 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// Handlers
-					void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
+					void HandleOptionsChanged(object? sender, PropertyChangedEventArgs e)
 					{
 						switch (e.PropertyName)
 						{
@@ -63,7 +63,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private ChartControl m_chart;
+			private ChartControl m_chart = null!;
 
 			/// <summary>Chart options</summary>
 			private OptionsData Options => Chart?.Options ?? new OptionsData();
@@ -71,15 +71,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Graphic for area selection</summary>
 			public View3d.Object AreaSelect
 			{
-				get { return m_area_select; }
+				get => m_area_select;
 				private set
 				{
 					if (m_area_select == value) return;
-					Util.Dispose(ref m_area_select);
+					Util.Dispose(ref m_area_select!);
 					m_area_select = value;
 				}
 			}
-			private View3d.Object m_area_select;
+			private View3d.Object m_area_select = null!;
 			private View3d.Object CreateAreaSelect()
 			{
 				var ldr = Ldr.Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, pos: v4.Origin);
@@ -91,26 +91,29 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Graphics for the resizing grab zones</summary>
 			public ResizeGrabber[] Resizer
 			{
-				get { return m_resizer; }
+				get => m_resizer;
 				private set
 				{
 					if (m_resizer == value) return;
-					Util.DisposeAll(m_resizer);
+					Util.DisposeAll(m_resizer!);
 					m_resizer = value;
 				}
 			}
-			private ResizeGrabber[] m_resizer;
+			private ResizeGrabber[] m_resizer = null!;
 			private ResizeGrabber[] CreateResizeGrabber()
 			{
 				return Array_.New(8, i => new ResizeGrabber(i));
 			}
 			public class ResizeGrabber : View3d.Object
 			{
-				public ResizeGrabber(int corner) : base($"*Box resizer_{corner} {{5}}", false, Id, null)
+				public ResizeGrabber(int corner)
+					: base($"*Box resizer_{corner} {{5}}", false, Id, null)
 				{
 					FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 					switch (corner)
 					{
+					default:
+						throw new Exception("Invalid corner");
 					case 0:
 						Cursor = Cursors.SizeNESW;
 						Direction = Math_.Normalise(new v2(-1, -1));
@@ -167,15 +170,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>A line for measuring distances</summary>
 			public View3d.Object TapeMeasure
 			{
-				get { return m_tape_measure; }
+				get => m_tape_measure;
 				private set
 				{
 					if (m_tape_measure == value) return;
-					Util.Dispose(ref m_tape_measure);
+					Util.Dispose(ref m_tape_measure!);
 					m_tape_measure = value;
 				}
 			}
-			private View3d.Object m_tape_measure;
+			private View3d.Object m_tape_measure = null!;
 			private View3d.Object CreateTapeMeasure()
 			{
 				var col = Chart.Scene.BackgroundColor.InvertBW();

@@ -18,7 +18,7 @@ namespace Rylogic.Gui.WPF
 	public static partial class Gui_
 	{
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegister<T>(string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -50,13 +50,13 @@ namespace Rylogic.Gui.WPF
 			if (changed_handler != null)
 			{
 				var param_count = changed_handler.GetParameters().Length;
-				switch (param_count)
+				meta.PropertyChangedCallback = param_count switch
 				{
-				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
-				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue, e.OldValue }); break;
-				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }); break;
-				case 0: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, null); break;
-				}
+					2 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue, e.OldValue }),
+					1 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }),
+					0 => (d, e) => changed_handler.Invoke(d, null),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
+				};
 			}
 
 			// If the type defines a Coerce handler, add a callback
@@ -64,15 +64,15 @@ namespace Rylogic.Gui.WPF
 			if (coerce_handler != null)
 			{
 				var param_count = coerce_handler.GetParameters().Length;
-				switch (param_count)
+				meta.CoerceValueCallback = param_count switch
 				{
-				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce");
-				case 1: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(d, new object[] { v }); break;
-				}
+					1 => (d, v) => coerce_handler.Invoke(d, new object[] { v }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
+				};
 			}
 
 			// IF the type defines a Validation handler
-			var validate_cb = (ValidateValueCallback)null;
+			var validate_cb = (ValidateValueCallback?)null;
 			var validation_handler = typeof(T).GetMethod($"{prop_name}_Validate", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 			if (validation_handler != null)
 			{
@@ -84,11 +84,11 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Wrapper for DependencyProperty.RegisterAttached that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
 		{
 			return DPRegisterAttached(typeof(T), prop_name, def, flags);
 		}
-		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -114,13 +114,13 @@ namespace Rylogic.Gui.WPF
 			if (changed_handler != null)
 			{
 				var param_count = changed_handler.GetParameters().Length;
-				switch (param_count)
+				meta.PropertyChangedCallback = param_count switch
 				{
-				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
-				case 3: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue, e.OldValue }); break;
-				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue }); break;
-				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d }); break;
-				}
+					3 => (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue, e.OldValue }),
+					2 => (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue }),
+					1 => (d, e) => changed_handler.Invoke(null, new object[] { d }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
+				};
 			}
 
 			// If the type defines a Validate handle, add a callback
@@ -128,11 +128,11 @@ namespace Rylogic.Gui.WPF
 			if (coerce_handler != null)
 			{
 				var param_count = coerce_handler.GetParameters().Length;
-				switch (param_count)
+				meta.CoerceValueCallback = param_count switch
 				{
-				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce");
-				case 2: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(null, new object[] { d, v }); break;
-				}
+					2 => (d, v) => coerce_handler.Invoke(null, new object[] { d, v }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
+				};
 			}
 			
 			// Register the attached property using the return type of 'Get<prop_name>'
@@ -235,7 +235,8 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Finds a child in the visual tree matching the specified type (and, optionally, predicate). Depth-first search</summary>
-		public static T FindVisualChild<T>(this DependencyObject parent, Func<T, bool> pred = null) where T : DependencyObject
+		public static T? FindVisualChild<T>(this DependencyObject parent, Func<T, bool>? pred = null)
+			where T : DependencyObject
 		{
 			for (int i = 0, iend = VisualTreeHelper.GetChildrenCount(parent); i != iend; ++i)
 			{
@@ -251,13 +252,14 @@ namespace Rylogic.Gui.WPF
 			}
 			return null;
 		}
-		public static DependencyObject FindVisualChild(this DependencyObject parent, Func<DependencyObject, bool> pred = null)
+		public static DependencyObject? FindVisualChild(this DependencyObject parent, Func<DependencyObject, bool>? pred = null)
 		{
 			return FindVisualChild<DependencyObject>(parent, pred);
 		}
 
 		/// <summary>Finds a child in the logical tree matching the specified type (and, optionally, predicate). Depth-first search</summary>
-		public static T FindLogicalChild<T>(this DependencyObject parent, Func<T, bool> pred = null) where T : DependencyObject
+		public static T? FindLogicalChild<T>(this DependencyObject parent, Func<T, bool>? pred = null)
+			where T : DependencyObject
 		{
 			foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<T>())
 			{
@@ -272,7 +274,7 @@ namespace Rylogic.Gui.WPF
 			}
 			return null;
 		}
-		public static DependencyObject FindLogicalChild(this DependencyObject parent, Func<DependencyObject, bool> pred = null)
+		public static DependencyObject? FindLogicalChild(this DependencyObject parent, Func<DependencyObject, bool>? pred = null)
 		{
 			return FindLogicalChild<DependencyObject>(parent, pred);
 		}
@@ -281,7 +283,8 @@ namespace Rylogic.Gui.WPF
 		/// Finds a parent in the visual tree matching the specified type.
 		/// If 'pred' is a filter, typically used to find parents by name.
 		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
-		public static T FindVisualParent<T>(this DependencyObject item, Func<T, bool> pred = null, DependencyObject root = null) where T : DependencyObject
+		public static T? FindVisualParent<T>(this DependencyObject item, Func<T, bool>? pred = null, DependencyObject? root = null)
+			where T : DependencyObject
 		{
 			if (item == null)
 				return null;
@@ -299,7 +302,7 @@ namespace Rylogic.Gui.WPF
 			}
 			return null;
 		}
-		public static DependencyObject FindVisualParent(this DependencyObject item, Func<DependencyObject, bool> pred = null, DependencyObject root = null)
+		public static DependencyObject? FindVisualParent(this DependencyObject item, Func<DependencyObject, bool>? pred = null, DependencyObject? root = null)
 		{
 			return FindVisualParent<DependencyObject>(item, pred, root);
 		}
@@ -349,7 +352,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Convert text to formatted text based on this control's font settings</summary>
-		public static FormattedText ToFormattedText(this Control ui, string text, double emSize = 12.0, Brush brush = null)
+		public static FormattedText ToFormattedText(this Control ui, string text, double emSize = 12.0, Brush? brush = null)
 		{
 			var tf = ui.Typeface();
 			return new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, tf, emSize, brush ?? Brushes.Black, 96.0);
@@ -479,7 +482,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns new Rect(0,0,RenderSize)</summary>
-		public static Rect RenderArea(this UIElement vis, UIElement relative_to_ancestor = null)
+		public static Rect RenderArea(this UIElement vis, UIElement? relative_to_ancestor = null)
 		{
 			var pt = new Point();
 			if (relative_to_ancestor != null) pt = vis.TransformToAncestor(relative_to_ancestor).Transform(pt);
@@ -501,9 +504,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if this window was shown using ShowDialog</summary>
 		public static bool IsModal(this Window window)
 		{
-			return (bool)m_fi_showingAsDialog.GetValue(window);
+			return (bool)m_fi_showing_as_dialog.GetValue(window)!;
 		}
-		private static FieldInfo m_fi_showingAsDialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic);
+		private static readonly FieldInfo m_fi_showing_as_dialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic);
 
 		/// <summary>Show the folder browser dialog</summary>
 		public static bool ShowDialog(this OpenFolderUI dlg, DependencyObject dep)

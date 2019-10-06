@@ -97,9 +97,7 @@ namespace Rylogic.Gui.WPF
 				{
 					foreach (TriggerAction triggerAction in actionCollection)
 					{
-						BeginStoryboard bsb = triggerAction as BeginStoryboard;
-
-						if (bsb != null && bsb.Storyboard != null && bsb.Storyboard is TriggerTraceStoryboard)
+						if (triggerAction is BeginStoryboard bsb && bsb.Storyboard != null && bsb.Storyboard is TriggerTraceStoryboard)
 						{
 							actionCollection.Remove(bsb);
 							break;

@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	/// A pane groups a set of IDockable items together. Only one IDockable is displayed at a time in the pane,
 	/// but tabs for all dockable items are displayed in the tab strip along the top, bottom, left, or right.</summary>
 	[DebuggerDisplay("{DumpDesc()}")]
-	public partial class DockPane : DockPanel, IPaneOrBranch, INotifyPropertyChanged, IDisposable
+	public sealed partial class DockPane : DockPanel, IPaneOrBranch, INotifyPropertyChanged, IDisposable
 	{
 		// Notes:
 		//  - DockPane's don't move within the tree, only the content moves.
@@ -58,11 +58,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (IsKeyboardFocusWithin)
 				ActiveContentManager.ActivePane = this;
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
 			// Note: we don't own any of the content
 			VisibleContent = null;
-			AllContent = null;
+			AllContent = null!;
 
 			// Ensure this pane is removed from it's parent branch
 			if (ParentBranch != null)
@@ -70,7 +70,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The owning dock container</summary>
-		public DockContainer DockContainer { [DebuggerStepThrough] get; }
+		public DockContainer DockContainer { get; }
 
 		/// <summary>Manages events and changing of active pane/content</summary>
 		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;
@@ -88,39 +88,32 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public DockPanel Centre => m_content_pane;
 
 		/// <summary>The control that hosts the dock pane and branch tree</summary>
-		internal ITreeHost TreeHost => ParentBranch?.TreeHost;
+		internal ITreeHost? TreeHost => ParentBranch?.TreeHost;
 
 		/// <summary>The branch at the top of the tree that contains this pane</summary>
-		internal Branch RootBranch => ParentBranch?.RootBranch;
+		internal Branch? RootBranch => ParentBranch?.RootBranch;
 
 		/// <summary>The branch that contains this pane</summary>
-		internal Branch ParentBranch => Parent as Branch;
-		Branch IPaneOrBranch.ParentBranch => ParentBranch;
+		internal Branch? ParentBranch => Parent as Branch;
+		Branch? IPaneOrBranch.ParentBranch => ParentBranch;
 
 		/// <summary>Get the dock site for this pane</summary>
-		public EDockSite DockSite
-		{
-			get { return ParentBranch?.Descendants.Single(x => x.Item == this).DockSite ?? EDockSite.None; }
-		}
+		public EDockSite DockSite => ParentBranch?.Descendants.Single(x => x.Item == this).DockSite ?? EDockSite.None;
 
 		/// <summary>Get the dock sites, from top to bottom, describing where this pane is located in the tree </summary>
-		public EDockSite[] DockAddress
-		{
-			get { return ParentBranch?.DockAddress.Append(DockSite).ToArray() ?? new[] { DockSite }; }
-		}
+		public EDockSite[] DockAddress => ParentBranch?.DockAddress.Append(DockSite).ToArray() ?? new[] { DockSite };
 
 		/// <summary>The content hosted by this pane</summary>
 		public ObservableCollection<DockControl> AllContent
 		{
-			[DebuggerStepThrough]
-			get { return m_content; }
+			get => m_content;
 			private set
 			{
 				if (m_content == value) return;
 				if (m_content != null)
 				{
 					// Note: The DockPane does not own the content
-					ContentView = null;
+					ContentView = null!;
 					m_content.CollectionChanged -= HandleCollectionChanged;
 				}
 				m_content = value;
@@ -131,7 +124,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				/// <summary>Handle the list of content in this pane changing</summary>
-				void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandleCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 				{
 					// Update the pane with the change to the content.
 					// Note: the 'ContentView' updates the ActiveContent.
@@ -195,12 +188,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		private ObservableCollection<DockControl> m_content;
+		private ObservableCollection<DockControl> m_content = null!;
 
 		/// <summary>The view of the content in this pane</summary>
 		public ICollectionView ContentView
 		{
-			get { return m_content_view; }
+			get => m_content_view;
 			private set
 			{
 				if (m_content_view == value) return;
@@ -215,23 +208,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				// When the current position changes, update the active content
-				void HandleCurrentChanged(object sender, EventArgs e)
+				void HandleCurrentChanged(object? sender, EventArgs e)
 				{
 					VisibleContent = (DockControl)ContentView.CurrentItem;
 				}
 			}
 		}
-		private ICollectionView m_content_view;
+		private ICollectionView m_content_view = null!;
 
 		/// <summary>
 		/// The content in this pane that was last active (Not necessarily the active content for the dock container)
 		/// There should always be visible content while 'AllContent' is not empty. Empty panes are destroyed.
 		/// If this pane is not the active pane, then setting the visible content only raises events for this pane.
 		/// If this is the active pane, then the dock container events are also raised.</summary>
-		public DockControl VisibleContent
+		public DockControl? VisibleContent
 		{
-			[DebuggerStepThrough]
-			get { return m_visible_content; }
+			get => m_visible_content;
 			set
 			{
 				if (m_visible_content == value) return;
@@ -284,23 +276,21 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 					// Notify the container of this tree that the active content in this pane was changed
 					// (allowing the globally active content notification to be sent if this is the active pane)
-					ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.ActiveContent, pane: this, dockcontrol: value));
+					var parent_branch = ParentBranch ?? throw new Exception("DockPanes should be children of branches");
+					parent_branch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.ActiveContent, pane: this, dockcontrol: value));
 				}
 			}
 		}
-		private DockControl m_visible_content;
+		private DockControl? m_visible_content;
 		private int m_in_visible_content;
 
 		/// <summary>Get the text to display in the title bar for this pane</summary>
-		public string CaptionText
-		{
-			get { return VisibleContent?.TabText ?? string.Empty; }
-		}
+		public string CaptionText => VisibleContent?.TabText ?? string.Empty;
 
 		/// <summary>Get/Set the content in the pane floating</summary>
 		public bool IsFloating
 		{
-			get { return TreeHost is FloatingWindow; }
+			get => TreeHost is FloatingWindow;
 			set
 			{
 				if (AllContent.Count == 0)
@@ -309,11 +299,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				var visible_content = VisibleContent;
 				if (MoveVisibleContentOnly)
 				{
-					visible_content.IsFloating = value;
+					if (visible_content != null)
+						visible_content.IsFloating = value;
 				}
 				else
 				{
-					var pane = (DockPane)null;
+					var pane = (DockPane?)null;
 					foreach (var c in AllContent.ToArray())
 					{
 						if (pane == null)
@@ -326,7 +317,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							pane.AllContent.Add(c);
 						}
 					}
-					pane.VisibleContent = visible_content;
+					if (pane != null)
+						pane.VisibleContent = visible_content;
 				}
 			}
 		}
@@ -334,7 +326,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the content in this pane to auto hide mode</summary>
 		public bool IsAutoHide
 		{
-			get { return TreeHost is AutoHidePanel; }
+			get => TreeHost is AutoHidePanel;
 			set
 			{
 				if (AllContent.Count == 0)
@@ -343,11 +335,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				var visible_content = VisibleContent;
 				if (MoveVisibleContentOnly)
 				{
-					visible_content.IsAutoHide = value;
+					if (visible_content != null)
+						visible_content.IsAutoHide = value;
 				}
 				else
 				{
-					var pane = (DockPane)null;
+					var pane = (DockPane?)null;
 					foreach (var c in AllContent.ToArray())
 					{
 						if (pane == null)
@@ -360,7 +353,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							pane.AllContent.Add(c);
 						}
 					}
-					pane.VisibleContent = visible_content;
+					if (pane != null)
+						pane.VisibleContent = visible_content;
 				}
 			}
 		}
@@ -369,8 +363,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public bool MoveVisibleContentOnly { get; set; }
 
 		/// <summary>Raised whenever the visible content for this dock pane changes</summary>
-		public event EventHandler<ActiveContentChangedEventArgs> VisibleContentChanged;
-		protected void OnVisibleContentChanged(ActiveContentChangedEventArgs args)
+		public event EventHandler<ActiveContentChangedEventArgs>? VisibleContentChanged;
+		private void OnVisibleContentChanged(ActiveContentChangedEventArgs args)
 		{
 			// Set the active tab button
 			foreach (var btn in TabStrip.Buttons)
@@ -387,7 +381,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Raised when the pane is activated</summary>
-		public event EventHandler ActivatedChanged;
+		public event EventHandler? ActivatedChanged;
 		internal void OnActivatedChanged()
 		{
 			ActivatedChanged?.Invoke(this, EventArgs.Empty);
@@ -397,13 +391,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set this pane as activated. Activation causes the active content in this pane to be activated</summary>
 		public bool Activated
 		{
-			get { return ActiveContentManager.ActivePane == this; }
+			get => ActiveContentManager.ActivePane == this;
 			set
 			{
 				// Assign this pane as the active one. This will cause the previously active pane
 				// to have Activated = false called. Careful, need to handle 'Activated' or 'TreeHost.ActivePane'
 				// being assigned to. The ActivePane handler will call OnActivatedChanged.
-				ActiveContentManager.ActivePane = value ? this : null;
+				if (value)
+					ActiveContentManager.ActivePane = this;
+				else
+					throw new Exception("Cannot set the active pane to 'not' this. Another pane must be activated instead");
 			}
 		}
 
@@ -473,7 +470,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					if (VisibleContent == null) return;
 					VisibleContent.Close();
-					RootBranch.PruneBranches();
+					RootBranch?.PruneBranches();
 				};
 			}
 		}
@@ -543,6 +540,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

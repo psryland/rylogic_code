@@ -76,8 +76,8 @@ namespace Rylogic.Gui.WPF
 			// On focus lost, try to set the selected item to match the current text
 			if (SelectedItem == null && ItemsSource is ICollectionView view)
 			{
-				var ty = (Type)null;
-				var prop = (PropertyInfo)null;
+				var ty = (Type?)null;
+				var prop = (PropertyInfo?)null;
 				foreach (var item in view.SourceCollection)
 				{
 					prop = prop != null && ty == item.GetType() ? prop : (ty = item.GetType()).GetProperty(DisplayMemberPath);
@@ -91,7 +91,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Raised to update the collection bound to 'ItemsSource'</summary>
-		public event EventHandler UpdateAutoCompleteList;
+		public event EventHandler? UpdateAutoCompleteList;
 		private void NotifyUpdateAutoCompleteList()
 		{
 			// When the user types, set CurrentItem to null

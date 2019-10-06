@@ -39,6 +39,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemAdded:
 					{
 						// Set the hovered state for the added element
+						if (elem == null) throw new Exception("Item should be provided in ItemAdded events");
 						elem.SetHoveredInternal(true, false);
 
 						Debug.Assert(m_chart.CheckConsistency());
@@ -47,6 +48,7 @@ namespace Rylogic.Gui.WPF
 				case ListChg.ItemRemoved:
 					{
 						// Clear the hovered state for the removed element
+						if (elem == null) throw new Exception("Item should be provided in ItemRemoved events");
 						elem.SetHoveredInternal(false, false);
 
 						Debug.Assert(m_chart.CheckConsistency());

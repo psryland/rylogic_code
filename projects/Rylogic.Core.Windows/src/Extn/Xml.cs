@@ -85,7 +85,7 @@ namespace Rylogic.Extn.Windows
 				{
 					var ctor = cb.GetILGenerator();
 					ctor.Emit(OpCodes.Ldarg_0);
-					ctor.Emit(OpCodes.Call, typeof(object).GetConstructor(new Type[0]));
+					ctor.Emit(OpCodes.Call, typeof(object).GetConstructor(Array.Empty<Type>())!);
 
 					var i = -1;
 					if (++i < args.Count)
@@ -109,17 +109,18 @@ namespace Rylogic.Extn.Windows
 					for (++i; i < args.Count; ++i)
 					{
 						ctor.Emit(OpCodes.Ldarg_0);
-						ctor.Emit(OpCodes.Ldarg_S, args[i].Name);
+						ctor.Emit(OpCodes.Ldarg_S, args[i].Name ?? throw new ArgumentNullException($"Name cannot be null for property at index{i}"));
 						ctor.Emit(OpCodes.Stfld, fields[i]);
 					}
 					ctor.Emit(OpCodes.Ret);
 				}
 
 				// Add the anonymous type to the dictionary
-				anon_type = tb.CreateType();
+				anon_type = tb.CreateType() ?? throw new Exception("Creating the anonymous type failed");
 				m_anon_types.Add(anon_type_key, anon_type);
 			}
-			return anon_type.GetConstructor(types).Invoke(values);
+			var cons = anon_type.GetConstructor(types) ?? throw new Exception($"Anonymous type constructor not found");
+			return cons.Invoke(values);
 		}
 		private static readonly Dictionary<string, Type> m_anon_types = new Dictionary<string, Type>();
 
@@ -145,8 +146,8 @@ namespace Rylogic.Extn.Windows
 				if (m_module_builder == null)
 				{
 					var ass_name = new AssemblyName("Rylogic.XmlDynamicTypes");
-					var ass_builder = AppDomain.CurrentDomain.DefineDynamicAssembly(ass_name, AssemblyBuilderAccess.Run);
-					m_module_builder = ass_builder.DefineDynamicModule(ass_name.Name);
+					var ass_builder = AssemblyBuilder.DefineDynamicAssembly(ass_name, AssemblyBuilderAccess.Run);
+					m_module_builder = ass_builder.DefineDynamicModule(ass_name.Name ?? string.Empty);
 				}
 				return m_module_builder;
 			}

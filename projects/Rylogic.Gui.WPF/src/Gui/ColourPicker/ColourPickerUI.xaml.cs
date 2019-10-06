@@ -6,10 +6,6 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ColourPickerUI : Window
 	{
-		static ColourPickerUI()
-		{
-			ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour));
-		}
 		public ColourPickerUI()
 		{
 			InitializeComponent();
@@ -20,17 +16,17 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The colour selected in the dialog</summary>
 		public Colour32 Colour
 		{
-			get { return (Colour32)GetValue(ColourProperty); }
-			set { SetValue(ColourProperty, value); }
+			get => (Colour32)GetValue(ColourProperty);
+			set => SetValue(ColourProperty, value);
 		}
 		private void Colour_Changed()
 		{
 			ColorChanged?.Invoke(this, new ColourWheel.ColourEventArgs(Colour));
 		}
-		public static readonly DependencyProperty ColourProperty;
+		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour));
 
 		/// <summary>Raised when the colour is changed</summary>
-		public event EventHandler<ColourWheel.ColourEventArgs> ColorChanged;
+		public event EventHandler<ColourWheel.ColourEventArgs>? ColorChanged;
 
 		/// <summary>Accept button</summary>
 		public Command Accept { get; }

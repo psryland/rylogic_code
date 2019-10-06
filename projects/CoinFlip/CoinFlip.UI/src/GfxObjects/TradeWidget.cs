@@ -34,13 +34,13 @@ namespace CoinFlip.UI.GfxObjects
 			};
 			LabelEP.Typeface(candle_chart.Chart.XAxisPanel.Typeface, candle_chart.Chart.XAxisPanel.FontSize);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
 			LabelEP.Detach();
 			LineEP.Detach();
 			GlowEP.Detach();
 			Trade = null;
-			base.Dispose();
+			base.Dispose(disposing);
 		}
 
 		/// <summary>The Trade being 'indicated'</summary>

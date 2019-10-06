@@ -55,21 +55,13 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Display a modal message box</summary>
-		public static bool? Show(Window owner, string message, string title = null, EButtons btns = EButtons.OK, EIcon icon = EIcon.None, EButton default_button = EButton.OK)
+		public static bool? Show(Window owner, string message, string? title = null, EButtons btns = EButtons.OK, EIcon icon = EIcon.None, EButton default_button = EButton.OK)
 		{
-			title = title ?? string.Empty;
-			message = message ?? string.Empty;
+			title ??= string.Empty;
+			message ??= string.Empty;
 			return new MsgBox(owner, message, title, btns, icon, default_button).ShowDialog();
 		}
 
-		static MsgBox()
-		{
-			MessageProperty = Gui_.DPRegister<MsgBox>(nameof(Message));
-			ImageProperty = Gui_.DPRegister<MsgBox>(nameof(Image));
-			PositiveBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(PositiveBtnText));
-			NeutralBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(NeutralBtnText));
-			NegativeBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(NegativeBtnText));
-		}
 		public MsgBox()
 			: this(null, string.Empty, string.Empty, EButtons.OK, EIcon.None, EButton.OK)
 		{ }
@@ -82,16 +74,16 @@ namespace Rylogic.Gui.WPF
 		public MsgBox(string message, string title, EButtons btns, EIcon icon)
 			: this(null, message, title, btns, icon, EButton.OK)
 		{ }
-		public MsgBox(Window owner, string message, string title)
+		public MsgBox(Window? owner, string message, string title)
 			: this(owner, message, title, EButtons.OK, EIcon.None, EButton.OK)
 		{ }
-		public MsgBox(Window owner, string message, string title, EButtons btns)
+		public MsgBox(Window? owner, string message, string title, EButtons btns)
 			: this(owner, message, title, btns, EIcon.None, EButton.OK)
 		{ }
-		public MsgBox(Window owner, string message, string title, EButtons btns, EIcon icon)
+		public MsgBox(Window? owner, string message, string title, EButtons btns, EIcon icon)
 			: this(owner, message, title, btns, icon, EButton.OK)
 		{ }
-		public MsgBox(Window owner, string message, string title, EButtons btns, EIcon icon, EButton default_button)
+		public MsgBox(Window? owner, string message, string title, EButtons btns, EIcon icon, EButton default_button)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -114,7 +106,7 @@ namespace Rylogic.Gui.WPF
 
 			switch (btns)
 			{
-			default: throw new ArgumentOutOfRangeException("btns");
+			default: throw new ArgumentOutOfRangeException(nameof(btns));
 			case EButtons.OK:
 				m_btn_positive.Content = "_OK";
 				m_btn_positive.IsDefault = default_button == EButton.OK;
@@ -172,27 +164,26 @@ namespace Rylogic.Gui.WPF
 				m_btn_negative.Visibility = Visibility.Visible;
 				break;
 			}
-			switch (icon)
+			Image = icon switch
 			{
-			default: throw new ArgumentOutOfRangeException("icon");
-			case EIcon.None:        Image = null; break;
-			case EIcon.Error:       Image = System.Drawing.SystemIcons.Error.ToBitmapSource(); break;
-			case EIcon.Question:    Image = System.Drawing.SystemIcons.Question.ToBitmapSource(); break;
-			case EIcon.Exclamation: Image = System.Drawing.SystemIcons.Exclamation.ToBitmapSource(); break;
-			case EIcon.Asterisk:    Image = System.Drawing.SystemIcons.Asterisk.ToBitmapSource(); break;
-			case EIcon.Information: Image = System.Drawing.SystemIcons.Information.ToBitmapSource(); break;
-			}
-
+				EIcon.None => null,
+				EIcon.Error => System.Drawing.SystemIcons.Error.ToBitmapSource(),
+				EIcon.Question => System.Drawing.SystemIcons.Question.ToBitmapSource(),
+				EIcon.Exclamation => System.Drawing.SystemIcons.Exclamation.ToBitmapSource(),
+				EIcon.Asterisk => System.Drawing.SystemIcons.Asterisk.ToBitmapSource(),
+				EIcon.Information => System.Drawing.SystemIcons.Information.ToBitmapSource(),
+				_ => throw new ArgumentOutOfRangeException(nameof(icon)),
+			};
 			DataContext = this;
 		}
 
 		/// <summary>The image to show to the left of the message</summary>
-		public ImageSource Image
+		public ImageSource? Image
 		{
-			get { return (ImageSource)GetValue(ImageProperty); }
+			get { return (ImageSource?)GetValue(ImageProperty); }
 			set { SetValue(ImageProperty, value); }
 		}
-		public static readonly DependencyProperty ImageProperty;
+		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<MsgBox>(nameof(Image));
 
 		/// <summary>The message to display</summary>
 		public string Message
@@ -200,7 +191,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(MessageProperty); }
 			set { SetValue(MessageProperty, value); }
 		}
-		public static readonly DependencyProperty MessageProperty;
+		public static readonly DependencyProperty MessageProperty = Gui_.DPRegister<MsgBox>(nameof(Message));
 
 		/// <summary>The positive button control</summary>
 		public Button PositiveBtn => m_btn_positive;
@@ -217,7 +208,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(PositiveBtnTextProperty); }
 			set { SetValue(PositiveBtnTextProperty, value); }
 		}
-		public static readonly DependencyProperty PositiveBtnTextProperty;
+		public static readonly DependencyProperty PositiveBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(PositiveBtnText));
 
 		/// <summary>Get/Set the text on the neutral button.</summary>
 		public string NeutralBtnText
@@ -225,7 +216,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(NeutralBtnTextProperty); }
 			set { SetValue(NeutralBtnTextProperty, value); }
 		}
-		public static readonly DependencyProperty NeutralBtnTextProperty;
+		public static readonly DependencyProperty NeutralBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(NeutralBtnText));
 
 		/// <summary>Get/Set the text on the negative button.</summary>
 		public string NegativeBtnText
@@ -233,7 +224,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(NegativeBtnTextProperty); }
 			set { SetValue(NegativeBtnTextProperty, value); }
 		}
-		public static readonly DependencyProperty NegativeBtnTextProperty;
+		public static readonly DependencyProperty NegativeBtnTextProperty = Gui_.DPRegister<MsgBox>(nameof(NegativeBtnText));
 	}
 }
 

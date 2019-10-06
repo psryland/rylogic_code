@@ -22,7 +22,7 @@ namespace Rylogic.Gui.WPF
 	}
 
 	/// <summary>A cache of graphics objects that span the X-Axis</summary>
-	public class ChartGfxCache : IDisposable
+	public sealed class ChartGfxCache : IDisposable
 	{
 		// Notes:
 		// - This cache is intended to be used by ChartDataSeries-like classes.
@@ -36,7 +36,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public void Dispose()
 		{
-			Pieces = null;
+			Pieces = null!;
 		}
 
 		/// <summary>Reset the cache</summary>
@@ -88,7 +88,7 @@ namespace Rylogic.Gui.WPF
 				m_pieces = value;
 			}
 		}
-		private List<IChartGfxPiece> m_pieces;
+		private List<IChartGfxPiece> m_pieces = null!;
 
 		/// <summary>
 		/// Get the series data graphics that spans the given x range.
@@ -113,7 +113,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Return the graphics piece that spans 'x'</summary>
-		public IChartGfxPiece CacheGet(double x)
+		public IChartGfxPiece? CacheGet(double x)
 		{
 			// Search the cache for the model that spans 'x'
 			var idx = Pieces.BinarySearch(p => p.Range.CompareTo(x));
@@ -152,9 +152,9 @@ namespace Rylogic.Gui.WPF
 	}
 
 	/// <summary>View3d graphics for a part of the series data</summary>
-	public class ChartGfxPiece :IChartGfxPiece
+	public sealed class ChartGfxPiece :IChartGfxPiece
 	{
-		public ChartGfxPiece(View3d.Object gfx, RangeF range)
+		public ChartGfxPiece(View3d.Object? gfx, RangeF range)
 		{
 			Gfx = gfx;
 			Range = range;
@@ -165,9 +165,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The model for the piece of the series data graphics</summary>
-		public View3d.Object Gfx
+		public View3d.Object? Gfx
 		{
-			get { return m_gfx; }
+			get => m_gfx;
 			private set
 			{
 				if (m_gfx == value) return;
@@ -175,7 +175,7 @@ namespace Rylogic.Gui.WPF
 				m_gfx = value;
 			}
 		}
-		private View3d.Object m_gfx;
+		private View3d.Object? m_gfx;
 
 		/// <summary>The X-Axis span covered by this piece</summary>
 		public RangeF Range { get; }

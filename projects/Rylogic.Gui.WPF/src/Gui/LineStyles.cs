@@ -16,17 +16,17 @@ namespace Rylogic.Gui.WPF
 	public static class LineStyles_
 	{
 		/// <summary>Return the stroke dash array for this line style</summary>
-		public static DoubleCollection ToStrokeDashArray(this ELineStyles line_style, double scale = 1.0)
+		public static DoubleCollection? ToStrokeDashArray(this ELineStyles line_style, double scale = 1.0)
 		{
-			switch (line_style)
+			return line_style switch
 			{
-			case ELineStyles.Solid:      return null;
-			case ELineStyles.Dashed:     return new DoubleCollection(new[] { 5.0 * scale, 2.0 * scale });
-			case ELineStyles.Dots:       return new DoubleCollection(new[] { 1.0 * scale, 5.0 * scale });
-			case ELineStyles.DotDash:    return new DoubleCollection(new[] { 1.0 * scale, 2.0 * scale, 5.0 * scale, 2.0 * scale });
-			case ELineStyles.DotDotDash: return new DoubleCollection(new[] { 1.0 * scale, 2.0 * scale, 1.0 * scale, 2.0 * scale, 5.0 * scale, 2.0 * scale });
-			default: throw new Exception($"Unknown line style: {line_style}");
-			}
+				ELineStyles.Solid => null,
+				ELineStyles.Dashed => new DoubleCollection(new[] { 5.0 * scale, 2.0 * scale }),
+				ELineStyles.Dots => new DoubleCollection(new[] { 1.0 * scale, 5.0 * scale }),
+				ELineStyles.DotDash => new DoubleCollection(new[] { 1.0 * scale, 2.0 * scale, 5.0 * scale, 2.0 * scale }),
+				ELineStyles.DotDotDash => new DoubleCollection(new[] { 1.0 * scale, 2.0 * scale, 1.0 * scale, 2.0 * scale, 5.0 * scale, 2.0 * scale }),
+				_ => throw new Exception($"Unknown line style: {line_style}"),
+			};
 		}
 	}
 }

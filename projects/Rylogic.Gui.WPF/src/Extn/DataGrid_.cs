@@ -22,7 +22,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns the cell that contains 'dp' (or null)</summary>
-		public static DataGridCell GetCell(DependencyObject dp)
+		public static DataGridCell? FindCell(DependencyObject dp)
 		{
 			return Gui_.FindVisualParent<DataGridCell>(dp);
 		}
@@ -30,7 +30,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Returns the row that contains this cell</summary>
 		public static DataGridRow GetRow(this DataGridCell cell)
 		{
-			return Gui_.FindVisualParent<DataGridRow>(cell);
+			return Gui_.FindVisualParent<DataGridRow>(cell) ?? throw new Exception("Cell does not have an associated row");
 		}
 
 		/// <summary>Returns the cell and column index of this cell</summary>
@@ -46,7 +46,7 @@ namespace Rylogic.Gui.WPF
 		#region Column Visibility
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
-		public static void ColumnVisibilityCMenu(this DataGrid grid, Action<DataGridColumn> on_vis_changed = null)
+		public static void ColumnVisibilityCMenu(this DataGrid grid, Action<DataGridColumn>? on_vis_changed = null)
 		{
 			var cmenu = new ContextMenu();
 			foreach (var col in grid.Columns.Cast<DataGridColumn>())
@@ -139,7 +139,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Handlers
-			void HandleDrop(object sender, DragEventArgs e)
+			static void HandleDrop(object? sender, DragEventArgs e)
 			{
 				// Must allow move
 				if (!e.AllowedEffects.HasFlag(DragDropEffects.Move))
@@ -156,8 +156,12 @@ namespace Rylogic.Gui.WPF
 
 				// Don't allow drop if not over a row header
 				var row_header = e.OriginalSource is DependencyObject src ? Gui_.FindVisualParent<DataGridRowHeader>(src, root: data.Grid) : null;
+				if (row_header == null)
+					return;
+
+				// Must drop over a row
 				var row = Gui_.FindVisualParent<DataGridRow>(row_header, root: data.Grid);
-				if (row_header == null || row == null)
+				if (row == null)
 					return;
 
 				// Get the index of the insert position
@@ -185,7 +189,7 @@ namespace Rylogic.Gui.WPF
 
 				e.Handled = true;
 			}
-			void HandleDragging(object sender, DragEventArgs e)
+			static void HandleDragging(object? sender, DragEventArgs e)
 			{
 				e.Effects = DragDropEffects.None;
 				e.Handled = true;
@@ -223,30 +227,30 @@ namespace Rylogic.Gui.WPF
 				var scn_pt = row_header.PointToScreen(2 * row_pt.Y < row_header.ActualHeight ? new Point(0,0) : new Point(0,row_header.ActualHeight));
 				data.PositionIndicator(scn_pt);
 			}
-			void HandleMouseDown(object sender, MouseButtonEventArgs e)
+			static void HandleMouseDown(object? sender, MouseButtonEventArgs e)
 			{
 				if (!(e.OriginalSource is DependencyObject src)) return;
+				if (!(sender is DataGrid grid)) return;
 
-				var grid = (DataGrid)sender;
 				var row_header = Gui_.FindVisualParent<DataGridRowHeader>(src, root: grid);
 				if (row_header != null && grid.Cursor != Cursors.SizeNS)
 				{
 					grid.Dispatcher.BeginInvoke(new Action(() =>
 					{
-						using (var data = new ReorderRowsWithDragDropData(grid, e.GetPosition(grid)))
-							DragDrop.DoDragDrop(grid, data, DragDropEffects.Move | DragDropEffects.Copy | DragDropEffects.Link);
+						using var data = new ReorderRowsWithDragDropData(grid, e.GetPosition(grid));
+						DragDrop.DoDragDrop(grid, data, DragDropEffects.Move | DragDropEffects.Copy | DragDropEffects.Link);
 					}));
 					e.Handled = true;
 				}
 			}
 		}
-		private class ReorderRowsWithDragDropData :IDisposable
+		private sealed class ReorderRowsWithDragDropData :IDisposable
 		{
 			public ReorderRowsWithDragDropData(DataGrid grid, Point grab)
 			{
 				Grid = grid;
 				Grab = grab;
-				Row = Gui_.FindVisualParent<DataGridRow>(grid.InputHitTest(grab) as DependencyObject, root: grid);
+				Row = (grid.InputHitTest(grab) as DependencyObject)?.FindVisualParent<DataGridRow>(root: grid) ?? throw new Exception("Dragged row not found");
 				Indicator = new Popup
 				{
 					Placement = PlacementMode.AbsolutePoint,

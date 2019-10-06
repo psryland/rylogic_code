@@ -11,7 +11,7 @@ namespace Rylogic.Gui.WPF.Converters
 {
 	public class ToMediaColor : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			switch (value)
 			{
@@ -38,7 +38,7 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 			return null;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is Color col))
 				return null;
@@ -61,7 +61,7 @@ namespace Rylogic.Gui.WPF.Converters
 	}
 	public class ColourToBrush : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			// Convert all colour types to Colour32
 			var colour = Colour32.Black;
@@ -90,7 +90,7 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 			return new SolidColorBrush(colour.ToMediaColor());
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is SolidColorBrush b))
 				return null;
@@ -111,7 +111,7 @@ namespace Rylogic.Gui.WPF.Converters
 	}
 	public class ColourToString : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			switch (value)
 			{
@@ -126,7 +126,7 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 			return null;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is string str))
 				return null;
@@ -149,7 +149,7 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		// Notes:
 		//   - Given a colour, returns a brush suitable for text written over that colour
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			var colour = Colour32.White;
 			switch (value)
@@ -171,7 +171,7 @@ namespace Rylogic.Gui.WPF.Converters
 				? Brushes.Black
 				: Brushes.White;
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException();
 		}
@@ -185,14 +185,14 @@ namespace Rylogic.Gui.WPF.Converters
 		// Notes:
 		//   - Returns colours for a given error level
 		//   - Use parameter="bg" to get the background colour
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is EErrorLevel lvl)) return Colors.Black;
 			return parameter is string str && str == "bg"
 				? new SolidColorBrush(lvl.Background().ToMediaColor())
 				: new SolidColorBrush(lvl.Foreground().ToMediaColor());
 		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException();
 		}

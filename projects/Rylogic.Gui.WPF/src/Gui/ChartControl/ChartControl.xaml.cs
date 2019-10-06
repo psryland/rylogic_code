@@ -46,32 +46,33 @@ namespace Rylogic.Gui.WPF
 		public ChartControl(string title, OptionsData options)
 		{
 			InitializeComponent();
+
+			Title = title;
+			Options = options;
+			Range = new RangeData(this);
+			BaseRangeX = new RangeF(0.0, 1.0);
+			BaseRangeY = new RangeF(0.0, 1.0);
+			MouseOperations = new MouseOps();
+			Elements = new ElementCollection(this);
+			Selected = new SelectedCollection(this);
+			Hovered = new HoveredCollection(this);
+			Tools = new ChartTools(this);
+
+			AllowSelection = false;
+			AllowElementDragging = false;
+			DefaultMouseControl = true;
+			DefaultKeyboardShortcuts = true;
+
+			Overlay.PreviewKeyDown += (s, a) => OnKeyDown(a);
+			Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
+			Scene.BuildScene += OnBuildScene;
+
 			if (DesignerProperties.GetIsInDesignMode(this))
 				return;
 
 			try
 			{
 				View3d = View3d.Create();
-				Title = title;
-				Options = options;
-				Range = new RangeData(this);
-				BaseRangeX = new RangeF(0.0, 1.0);
-				BaseRangeY = new RangeF(0.0, 1.0);
-				MouseOperations = new MouseOps();
-				Elements = new ElementCollection(this);
-				Selected = new SelectedCollection(this);
-				Hovered = new HoveredCollection(this);
-				Tools = new ChartTools(this);
-
-				AllowSelection = false;
-				AllowElementDragging = false;
-				DefaultMouseControl = true;
-				DefaultKeyboardShortcuts = true;
-
-				Overlay.PreviewKeyDown += (s, a) => OnKeyDown(a);
-				Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
-				Scene.BuildScene += OnBuildScene;
-
 				InitCommands();
 				InitNavigation();
 				DataContext = this;
@@ -89,19 +90,19 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void Dispose(bool _)
 		{
-			MouseOperations = null;
-			Tools = null;
-			Range = null;
-			Options = null;
+			MouseOperations = null!;
+			Tools = null!;
+			Range = null!;
+			Options = null!;
 			Scene.Dispose();
-			View3d = null;
+			View3d = null!;
 		}
 
 		/// <summary>Rendering options for the chart</summary>
 		public OptionsData Options
 		{
 			[DebuggerStepThrough]
-			get { return m_options; }
+			get => m_options;
 			set
 			{
 				if (m_options == value) return;
@@ -173,12 +174,12 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private OptionsData m_options;
+		private OptionsData m_options = null!;
 
 		/// <summary>The title of the chart</summary>
 		public string Title
 		{
-			get { return m_title ?? string.Empty; }
+			get => m_title ?? string.Empty;
 			set
 			{
 				if (m_title == value) return;
@@ -186,7 +187,7 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(Title));
 			}
 		}
-		private string m_title;
+		private string? m_title;
 
 		/// <summary>The chart background colour</summary>
 		public Color ChartBackground
@@ -207,27 +208,28 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The current X/Y axis range of the chart</summary>
 		public RangeData Range
 		{
-			[DebuggerStepThrough]
-			get { return m_range; }
+			get => m_range;
 			private set
 			{
 				if (value == m_range) return;
-				Util.Dispose(ref m_range);
+				Util.Dispose(ref m_range!);
 				m_range = value;
-
-				NotifyPropertyChanged(nameof(Range));
-				NotifyPropertyChanged(nameof(XAxis));
-				NotifyPropertyChanged(nameof(YAxis));
+				if (m_range != null)
+				{
+					NotifyPropertyChanged(nameof(Range));
+					NotifyPropertyChanged(nameof(XAxis));
+					NotifyPropertyChanged(nameof(YAxis));
+				}
 			}
 		}
-		private RangeData m_range;
+		private RangeData m_range = null!;
 
 		/// <summary>Accessor to the current X axis</summary>
-		public RangeData.Axis XAxis => Range?.XAxis;
+		public RangeData.Axis XAxis => Range.XAxis;
 		public AxisPanel XAxisPanel => m_xaxis_panel;
 
 		/// <summary>Accessor to the current Y axis</summary>
-		public RangeData.Axis YAxis => Range?.YAxis;
+		public RangeData.Axis YAxis => Range.YAxis;
 		public AxisPanel YAxisPanel => m_yaxis_panel;
 
 		/// <summary>Default X axis range of the chart</summary>
@@ -239,30 +241,30 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The view3d part of the chart</summary>
 		public ChartPanel Scene => m_chart_panel;
 
-		/// <summary>The camera view of the scene</summary>
-		public View3d.Camera Camera => Scene?.Camera;
-
-		/// <summary>The view3d window associated with 'Scene'</summary>
-		private View3d.Window Window => Scene?.Window; // Keep private, clients should be using 'Scene'
-
 		/// <summary>A WPF canvas that overlays the 3d part of the chart</summary>
 		public Canvas Overlay => m_chart_overlay;
+
+		/// <summary>The camera view of the scene</summary>
+		public View3d.Camera Camera => Scene.Camera;
+
+		/// <summary>The view3d window associated with 'Scene'</summary>
+		private View3d.Window Window => Scene.Window; // Keep private, clients should be using 'Scene'
 
 		/// <summary>View3d context reference</summary>
 		private View3d View3d
 		{
-			get { return m_view3d; }
+			get => m_view3d;
 			set
 			{
 				if (m_view3d == value) return;
-				Util.Dispose(ref m_view3d);
+				Util.Dispose(ref m_view3d!);
 				m_view3d = value;
 			}
 		}
-		private View3d m_view3d;
+		private View3d m_view3d = null!;
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
-		public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene;
+		public event EventHandler<View3dControl.BuildSceneEventArgs>? BuildScene;
 		private void OnBuildScene(object sender, View3dControl.BuildSceneEventArgs e)
 		{
 			// Notes:
@@ -291,21 +293,21 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 		internal void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
-		public event EventHandler<ChartMovedEventArgs> ChartMoved;
+		public event EventHandler<ChartMovedEventArgs>? ChartMoved;
 		protected virtual void OnChartMoved(ChartMovedEventArgs args)
 		{
 			ChartMoved?.Invoke(this, args);
 		}
 
 		/// <summary>Raised whenever elements in the chart have been edited or moved</summary>
-		public event EventHandler<ChartChangedEventArgs> ChartChanged;
+		public event EventHandler<ChartChangedEventArgs>? ChartChanged;
 		protected virtual void OnChartChanged(ChartChangedEventArgs args)
 		{
 			if (m_chart_changed_suspended != 0) return;
@@ -320,14 +322,14 @@ namespace Rylogic.Gui.WPF
 		private int m_chart_changed_suspended;
 
 		/// <summary>Called after the chart has painted, allowing users to add graphics on top of the chart</summary>
-		public event EventHandler<AddOverlaysOnPaintEventArgs> AddOverlaysOnPaint;
+		public event EventHandler<AddOverlaysOnPaintEventArgs>? AddOverlaysOnPaint;
 		protected virtual void OnAddOverlaysOnPaint(AddOverlaysOnPaintEventArgs args)
 		{
 			AddOverlaysOnPaint?.Invoke(this, args);
 		}
 
 		/// <summary>Called during AutoRange to allow handlers to set the auto range</summary>
-		public event EventHandler<AutoRangeEventArgs> AutoRanging;
+		public event EventHandler<AutoRangeEventArgs>? AutoRanging;
 		protected virtual void OnAutoRanging(AutoRangeEventArgs args)
 		{
 			AutoRanging?.Invoke(this, args);
@@ -554,7 +556,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on the chart and all elements within the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool> pred)
+		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool>? pred)
 		{
 			var result = HitTestZoneCS(client_point, modifier_keys, mouse_btns);
 
@@ -737,15 +739,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Per button current mouse operation</summary>
 		public MouseOps MouseOperations
 		{
-			get { return m_mouse_ops; }
+			get => m_mouse_ops;
 			private set
 			{
 				if (m_mouse_ops == value) return;
-				Util.Dispose(ref m_mouse_ops);
+				Util.Dispose(ref m_mouse_ops!);
 				m_mouse_ops = value;
 			}
 		}
-		private MouseOps m_mouse_ops;
+		private MouseOps m_mouse_ops = null!;
 
 		/// <summary>
 		/// Select elements that are wholly within 'rect'. (rect is in chart space)
@@ -903,20 +905,21 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(ShowCrossHair));
 
 				// Handlers
-				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
+				void OnMouseMoveCrossHair(object? sender, MouseEventArgs e)
 				{
 					var location = e.GetPosition(this);
-					if (SceneBounds.Contains(location))
+					if (m_xhair != null && SceneBounds.Contains(location))
 						m_xhair.PositionCrossHair(location);
 				}
-				void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
+				void OnMouseWheelCrossHair(object? sender, MouseEventArgs e)
 				{
 					var location = e.GetPosition(this);
-					m_xhair.PositionCrossHair(location);
+					if (m_xhair != null)
+						m_xhair.PositionCrossHair(location);
 				}
 			}
 		}
-		private CrossHair m_xhair;
+		private CrossHair? m_xhair;
 
 		/// <summary>Tape measure tool</summary>
 		public bool ShowTapeMeasure
@@ -940,7 +943,7 @@ namespace Rylogic.Gui.WPF
 				// Handlers
 			}
 		}
-		private TapeMeasure m_tape;
+		private TapeMeasure? m_tape;
 
 		/// <summary>Callback for formatting the text display by the tape measure</summary>
 		public Func<Point, Point, TapeMeasure.LabelText> TapeMeasureStringFormat { get; set; } = DefaultTapeMeasureStringFormat;
@@ -963,16 +966,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Chart graphics</summary>
 		public ChartTools Tools
 		{
-			[DebuggerStepThrough]
-			get { return m_tools; }
+			get => m_tools;
 			private set
 			{
 				if (m_tools == value) return;
-				Util.Dispose(ref m_tools);
+				Util.Dispose(ref m_tools!);
 				m_tools = value;
 			}
 		}
-		private ChartTools m_tools;
+		private ChartTools m_tools = null!;
 
 		#region Self Consistency
 

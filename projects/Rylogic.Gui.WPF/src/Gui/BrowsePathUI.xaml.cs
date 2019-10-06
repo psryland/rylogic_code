@@ -13,15 +13,6 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class BrowsePathUI : UserControl
 	{
-		static BrowsePathUI()
-		{
-			PathTypeProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathType));
-			SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath));
-			PathValidationProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathValidation), flags: FrameworkPropertyMetadataOptions.None);
-			MaxHistoryLengthProperty = Gui_.DPRegister<BrowsePathUI>(nameof(MaxHistoryLength));
-			DialogTitleProperty = Gui_.DPRegister<BrowsePathUI>(nameof(DialogTitle));
-			FileFilterProperty = Gui_.DPRegister<BrowsePathUI>(nameof(FileFilter));
-		}
 		public BrowsePathUI()
 		{
 			InitializeComponent();
@@ -43,7 +34,7 @@ namespace Rylogic.Gui.WPF
 			get { return (EType)GetValue(PathTypeProperty); }
 			set { SetValue(PathTypeProperty, value); }
 		}
-		public static readonly DependencyProperty PathTypeProperty;
+		public static readonly DependencyProperty PathTypeProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathType));
 
 		/// <summary>The selected path</summary>
 		public string SelectedPath
@@ -57,8 +48,8 @@ namespace Rylogic.Gui.WPF
 			Util.AddToHistoryList(History, new_value, true, MaxHistoryLength);
 			SelectedPathChanged?.Invoke(this, EventArgs.Empty);
 		}
-		public static readonly DependencyProperty SelectedPathProperty;
-		public event EventHandler SelectedPathChanged;
+		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath));
+		public event EventHandler? SelectedPathChanged;
 
 		/// <summary>Callback function for validating a selected path</summary>
 		public Func<string, ValidationResult> PathValidation
@@ -73,7 +64,7 @@ namespace Rylogic.Gui.WPF
 			binding.ValidationRules.Clear();
 			binding.ValidationRules.Add(new PredicateValidator<string>(new_value));
 		}
-		public static readonly DependencyProperty PathValidationProperty;
+		public static readonly DependencyProperty PathValidationProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathValidation), flags: FrameworkPropertyMetadataOptions.None);
 
 		/// <summary>The history of paths</summary>
 		public ObservableCollection<string> History { get; }
@@ -85,7 +76,7 @@ namespace Rylogic.Gui.WPF
 			get { return (int)GetValue(MaxHistoryLengthProperty); }
 			set { SetValue(MaxHistoryLengthProperty, value); }
 		}
-		public static readonly DependencyProperty MaxHistoryLengthProperty;
+		public static readonly DependencyProperty MaxHistoryLengthProperty = Gui_.DPRegister<BrowsePathUI>(nameof(MaxHistoryLength));
 
 		/// <summary>The title to display on the path browser dialog</summary>
 		public string DialogTitle
@@ -93,7 +84,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(DialogTitleProperty) ?? $"Select a {(PathType == EType.SelectDirectory ? "Directory" : "File")}"; }
 			set { SetValue(DialogTitleProperty, value); }
 		}
-		public static readonly DependencyProperty DialogTitleProperty;
+		public static readonly DependencyProperty DialogTitleProperty = Gui_.DPRegister<BrowsePathUI>(nameof(DialogTitle));
 
 		/// <summary>The filter to apply in open/save file dialogs. Example: "Image files (*.bmp, *.jpg)|*.bmp;*.jpg|All files (*.*)|*.*"</summary>
 		public string FileFilter
@@ -101,7 +92,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(FileFilterProperty); }
 			set { SetValue(FileFilterProperty, value); }
 		}
-		public static readonly DependencyProperty FileFilterProperty;
+		public static readonly DependencyProperty FileFilterProperty = Gui_.DPRegister<BrowsePathUI>(nameof(FileFilter));
 
 		/// <summary>Open the path browser</summary>
 		public Command BrowsePath { get; }

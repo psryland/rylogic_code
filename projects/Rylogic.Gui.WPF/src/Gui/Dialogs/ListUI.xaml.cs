@@ -9,12 +9,7 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ListUI : Window, INotifyPropertyChanged
 	{
-		static ListUI()
-		{
-			PromptProperty = Gui_.DPRegister<ListUI>(nameof(Prompt));
-			AllowCancelProperty = Gui_.DPRegister<ListUI>(nameof(AllowCancel));
-		}
-		public ListUI(Window owner = null)
+		public ListUI(Window? owner = null)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -62,7 +57,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(PromptProperty); }
 			set { SetValue(PromptProperty, value); }
 		}
-		public static readonly DependencyProperty PromptProperty;
+		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<ListUI>(nameof(Prompt));
 
 		/// <summary>True if the cancel button is displayed</summary>
 		public bool AllowCancel
@@ -70,7 +65,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(AllowCancelProperty); }
 			set { SetValue(AllowCancelProperty, value); }
 		}
-		public static readonly DependencyProperty AllowCancelProperty;
+		public static readonly DependencyProperty AllowCancelProperty = Gui_.DPRegister<ListUI>(nameof(AllowCancel));
 
 		/// <summary>Items displayed in the list</summary>
 		public ObservableCollection<object> Items { get; }
@@ -99,6 +94,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 	}
 }

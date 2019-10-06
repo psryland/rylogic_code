@@ -28,7 +28,7 @@ namespace Rylogic.Gui.WPF
 	internal interface IPaneOrBranch : IDisposable
 	{
 		/// <summary>The parent of this dock pane or branch</summary>
-		Branch ParentBranch { get; }
+		Branch? ParentBranch { get; }
 	}
 
 	/// <summary>Locations in the dock container where dock panes or trees of dock panes, can be docked.</summary>

@@ -18,7 +18,7 @@ namespace Rylogic.Gui.WPF
 	/// Provides the implementation of the docking functionality.
 	/// Classes that implement IDockable have one of these as a public property.</summary>
 	[DebuggerDisplay("DockControl {TabText}")]
-	public class DockControl : IDisposable
+	public sealed class DockControl : IDisposable
 	{
 		// Cut'n'Paste Boilerplate
 		// Inherit:
@@ -69,7 +69,7 @@ namespace Rylogic.Gui.WPF
 
 			DockAddresses = new Dictionary<Branch, EDockSite[]>();
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
 			Remove();
 		}
@@ -78,10 +78,9 @@ namespace Rylogic.Gui.WPF
 		public UIElement Owner { get; set; }
 
 		/// <summary>Get/Set the dock container that manages this content.</summary>
-		public DockContainer DockContainer
+		public DockContainer? DockContainer
 		{
-			[DebuggerStepThrough]
-			get { return m_dc; }
+			get => m_dc;
 			set
 			{
 				if (m_dc == value) return;
@@ -101,29 +100,29 @@ namespace Rylogic.Gui.WPF
 				DockContainerChanged?.Invoke(this, new DockContainerChangedEventArgs(old, nue));
 
 				// Handlers
-				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+				void HandleActiveContentChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
 					if (e.ContentNew == Owner || e.ContentOld == Owner)
 						ActiveChanged?.Invoke(this, e);
 				}
 			}
 		}
-		private DockContainer m_dc;
+		private DockContainer? m_dc;
 
 		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
-		public event EventHandler PaneChanged;
+		public event EventHandler? PaneChanged;
 
 		/// <summary>Raised when 'Close' is selected from the tab context menu</summary>
-		public event EventHandler Closed;
+		public event EventHandler? Closed;
 
 		/// <summary>Raised when this becomes the active content</summary>
-		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
+		public event EventHandler<ActiveContentChangedEventArgs>? ActiveChanged;
 
 		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
-		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+		public event EventHandler<DockContainerSavingLayoutEventArgs>? SavingLayout;
 
 		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
-		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
+		public event EventHandler<DockContainerChangedEventArgs>? DockContainerChanged;
 
 		/// <summary>Hide this item in the dock container. (Use Remove() to make remove it completely)</summary>
 		public void Close()
@@ -145,7 +144,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>If true, the instance is removed and disposed when closed</summary>
 		public bool DestroyOnClose
 		{
-			get { return m_destroy_on_close; }
+			get => m_destroy_on_close;
 			set
 			{
 				if (m_destroy_on_close == value) return;
@@ -160,7 +159,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handler
-				void HandleClose(object sender, EventArgs args)
+				void HandleClose(object? sender, EventArgs args)
 				{
 					Closed -= HandleClose;
 					if (m_destroy_on_close)
@@ -175,19 +174,15 @@ namespace Rylogic.Gui.WPF
 		private bool m_destroy_on_close;
 
 		/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
-		internal ITreeHost TreeHost
-		{
-			get { return DockPane?.TreeHost; }
-		}
+		internal ITreeHost? TreeHost => DockPane?.TreeHost;
 
 		/// <summary>Gets 'Owner' as an IDockable</summary>
 		public IDockable Dockable => (IDockable)Owner;
 
 		/// <summary>Get/Set the pane that this content resides within.</summary>
-		public DockPane DockPane
+		public DockPane? DockPane
 		{
-			[DebuggerStepThrough]
-			get { return m_pane; }
+			get => m_pane;
 			set
 			{
 				if (m_pane == value) return;
@@ -201,8 +196,8 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private DockPane m_pane;
-		internal void SetDockPaneInternal(DockPane pane)
+		private DockPane? m_pane;
+		internal void SetDockPaneInternal(DockPane? pane)
 		{
 			if (m_pane == pane)
 				return;
@@ -215,18 +210,18 @@ namespace Rylogic.Gui.WPF
 			// Record the dock container that 'pane' belongs to.
 			// Don't set 'DockContainer' to null, only change it. The dock container remembers content
 			// that has been added, so that it can restore it to a previous dock pane.
-			var dc = pane?.DockContainer;
+			var dc = m_pane?.DockContainer;
 			if (dc != null && DockContainer != dc)
 				DockContainer = dc;
 
 			// If a pane is given, save the dock address for the root branch (if the pane is within a tree)
-			if (pane != null && pane.ParentBranch != null)
+			if (m_pane != null && m_pane.ParentBranch != null && m_pane.RootBranch != null)
 				DockAddresses[m_pane.RootBranch] = DockAddress;
 
 			// Notify of pane changed
-			RaisePaneChanged();
+			NotifyPaneChanged();
 		}
-		internal void RaisePaneChanged()
+		internal void NotifyPaneChanged()
 		{
 			PaneChanged?.Invoke(this, EventArgs.Empty);
 		}
@@ -272,28 +267,20 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The full location of this content in the tree of docked windows from Root branch to 'DockPane'</summary>
-		public EDockSite[] DockAddress
-		{
-			get { return DockPane != null ? DockPane.DockAddress : new[] { EDockSite.None }; }
-		}
+		public EDockSite[] DockAddress => DockPane != null ? DockPane.DockAddress : new[] { EDockSite.None };
 
 		/// <summary>The index of this dockable within the content of 'DockPane'</summary>
-		public int ContentIndex
-		{
-			get { return DockPane?.AllContent.IndexOf(this) ?? int.MaxValue; }
-		}
+		public int ContentIndex => DockPane?.AllContent.IndexOf(this) ?? int.MaxValue;
 
 		/// <summary>Get/Set whether this content is in a floating window</summary>
 		public bool IsFloating
 		{
-			get { return TreeHost is FloatingWindow; }
+			get => TreeHost is FloatingWindow;
 			set
 			{
 				if (IsFloating == value) return;
-
-				//// Record properties of the Pane we're currently in, so we can
-				//// set them on new pane that will host this content 
-				//var strip_location = DockPane?.TabStripCtrl.StripLocation;
+				if (DockContainer == null)
+					throw new ArgumentNullException("An associated DockContainer is required");
 
 				// Float this dockable
 				if (value)
@@ -334,10 +321,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
 		public bool IsAutoHide
 		{
-			get { return TreeHost is AutoHidePanel; }
+			get => TreeHost is AutoHidePanel;
 			set
 			{
 				if (IsAutoHide == value) return;
+				if (DockContainer == null)
+					throw new ArgumentNullException("An associated DockContainer is required");
 
 				// Auto hide this dockable
 				if (value)
@@ -373,14 +362,14 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>True if this content is visible somewhere in the dock container or it's floating windows</summary>
-		public bool IsVisible
-		{
-			get => IsActiveContentInPane && DockPane.IsVisible;
-		}
+		public bool IsVisible => IsActiveContentInPane && (DockPane?.IsVisible ?? false);
 
 		/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
 		internal EDockSite[] DockAddressFor(ITreeHost tree)
 		{
+			if (DockContainer == null)
+				throw new ArgumentNullException("An associated DockContainer is required");
+
 			return DockAddresses.GetOrAdd(tree.Root, x =>
 			{
 				if (DefaultDockLocation.FloatingWindowId != null)
@@ -421,8 +410,8 @@ namespace Rylogic.Gui.WPF
 		}
 		private Dictionary<Branch, EDockSite[]> DockAddresses { get; }
 
-		/// <summary>Return the tab button associated with this content</summary>
-		internal TabButton TabButton => DockPane?.TabStrip.Buttons.FirstOrDefault(x => x.DockControl == this);
+		/// <summary>Return the tab button associated with this content. (Null when not added to a DockPane)</summary>
+		internal TabButton? TabButton => DockPane?.TabStrip.Buttons.FirstOrDefault(x => x.DockControl == this);
 
 		/// <summary>Get/Set whether the dock pane title control is visible while this content is active. Null means inherit default</summary>
 		public bool? ShowTitle { get; set; }
@@ -431,9 +420,9 @@ namespace Rylogic.Gui.WPF
 		public EDockSite? TabStripLocation { get; set; }
 
 		/// <summary>The text to display on the tab. Defaults to 'Owner.Text'</summary>
-		public string TabText
+		public string? TabText
 		{
-			get { return m_tab_text ?? (Owner as Window)?.Title; }
+			get => m_tab_text ?? (Owner as Window)?.Title ?? string.Empty;
 			set
 			{
 				if (m_tab_text == value) return;
@@ -444,10 +433,10 @@ namespace Rylogic.Gui.WPF
 				TabButton?.InvalidateArrange();
 			}
 		}
-		private string m_tab_text;
+		private string? m_tab_text;
 
 		/// <summary>The icon to display on the tab. Defaults to '(Owner as Window)?.Icon'</summary>
-		public ImageSource TabIcon
+		public ImageSource? TabIcon
 		{
 			get { return m_icon ?? (Owner as Window)?.Icon; }
 			set
@@ -457,15 +446,15 @@ namespace Rylogic.Gui.WPF
 				TabButton?.InvalidateArrange();
 			}
 		}
-		private ImageSource m_icon;
+		private ImageSource? m_icon;
 
 		/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
-		public string TabToolTip
+		public string? TabToolTip
 		{
-			get { return m_impl_tab_tt ?? TabText; }
-			set { m_impl_tab_tt = value; }
+			get { return m_tab_tt ?? TabText; }
+			set { m_tab_tt = value; }
 		}
-		private string m_impl_tab_tt;
+		private string? m_tab_tt;
 
 		/// <summary>A context menu to display when the tab for this content is right clicked</summary>
 		public ContextMenu TabCMenu { get; set; }
@@ -523,7 +512,7 @@ namespace Rylogic.Gui.WPF
 
 			m_kb_focus = null;
 		}
-		private IInputElement m_kb_focus;
+		private IInputElement? m_kb_focus;
 
 		/// <summary>Save to XML</summary>
 		public XElement ToXml(XElement node)
@@ -543,9 +532,9 @@ namespace Rylogic.Gui.WPF
 	}
 
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
-	public class Dockable : DockPanel, IDockable
+	public sealed class Dockable : DockPanel, IDisposable, IDockable
 	{
-		public Dockable(Control hostee, string persist_name, DockLocation location = null)
+		public Dockable(Control hostee, string persist_name, DockLocation? location = null)
 		{
 			MinWidth = hostee.MinWidth;
 			MinHeight = hostee.MinHeight;
@@ -557,22 +546,22 @@ namespace Rylogic.Gui.WPF
 			if (location != null)
 				DockControl.DefaultDockLocation = location;
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
-			DockControl = null;
+			DockControl = null!;
 		}
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
 		{
-			get { return m_dock_control; }
+			get => m_dock_control;
 			private set
 			{
 				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control);
+				Util.Dispose(ref m_dock_control!);
 				m_dock_control = value;
 			}
 		}
-		private DockControl m_dock_control;
+		private DockControl m_dock_control = null!;
 	}
 }
