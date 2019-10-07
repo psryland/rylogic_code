@@ -28,6 +28,7 @@
 					<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>
 					<MenuItem Header="_Dock Container" Command="{Binding ShowDockContainer}"/>
 					<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
+					<MenuItem Header="_Scintilla" Command="{Binding ScintillaUI}"/>
 					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 				</MenuItem>
 				<MenuItem Header="_Dialogs">

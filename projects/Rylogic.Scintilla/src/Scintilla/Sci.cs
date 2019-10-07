@@ -12,14 +12,12 @@ namespace Rylogic.Scintilla
 	/// <summary>Typedef Scintilla.Scintilla to 'Sci' and add Rylogic specific features</summary>
 	public class Sci :global::Scintilla.Scintilla
 	{
-		#region Enumerations
 		public enum EEndOfLineMode
 		{
 			CR   = SC_EOL_CR,
 			LF   = SC_EOL_LF,
 			CRLF = SC_EOL_CRLF,
 		}
-		#endregion
 
 		/// <summary>Helper for sending text to scintilla</summary>
 		public class CellBuf
@@ -110,9 +108,9 @@ namespace Rylogic.Scintilla
 				Array.Resize(ref m_cells, new_size);
 			}
 
-			public class BufPtr :IDisposable
+			public sealed class BufPtr :IDisposable
 			{
-				private GCHandle_.Scope m_scope;
+				private GCHandle_.Scope m_scope = null!;
 				public BufPtr(Cell[] cells, int ofs, int length)
 				{
 					m_scope = GCHandle_.Alloc(cells, GCHandleType.Pinned);
@@ -121,7 +119,7 @@ namespace Rylogic.Scintilla
 				}
 				public void Dispose()
 				{
-					Util.Dispose(ref m_scope);
+					Util.Dispose(ref m_scope!);
 				}
 
 				/// <summary>The pointer to the pinned memory</summary>
@@ -191,18 +189,15 @@ namespace Rylogic.Scintilla
 		}
 		private static Dictionary<int, string> m_sci_name = new Dictionary<int,string>();
 
-		#region Scintilla Dll
+		/// <summary>True if the scintilla dll has been loaded</summary>
+		public static bool ModuleLoaded => m_module != IntPtr.Zero;
+		private static IntPtr m_module = IntPtr.Zero;
 		public const string Dll = "scintilla";
 
-		public static bool ScintillaAvailable { get { return m_module != IntPtr.Zero; } }
-		private static IntPtr m_module = IntPtr.Zero;
-
 		/// <summary>Load the scintilla dll</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
+		public static bool LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
-			if (m_module != IntPtr.Zero) return; // Already loaded
-			m_module = Win32.LoadDll(Dll+".dll", dir);
+			return ModuleLoaded || (m_module = Win32.LoadDll(Dll + ".dll", dir, throw_if_missing)) != IntPtr.Zero;
 		}
-		#endregion
 	}
 }

@@ -59,7 +59,7 @@ namespace Rylogic.Gui.WPF
 				"The pattern to applied to each line separately\n" +
 				"so that you can test multiple cases simultaneously.\n";
 
-			Commit = Command.Create(this, CommitInternal);
+			CommitChanges = Command.Create(this, CommitChangesInternal);
 			ShowHelp = Command.Create(this, ShowHelpInternal);
 
 			// Bind
@@ -321,7 +321,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Commit changes to the pattern</summary>
 		public Command CommitChanges { get; }
-		private void CommitInternal()
+		private void CommitChangesInternal()
 		{
 			Commit?.Invoke(this, EventArgs.Empty);
 		}

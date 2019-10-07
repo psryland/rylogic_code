@@ -119,11 +119,13 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Convert an unmanaged function pointer to a delegate</summary>
-		public static TFunc PtrToDelegate<TFunc>(IntPtr ptr) where TFunc:class//delegate
+		public static TFunc PtrToDelegate<TFunc>(IntPtr ptr)
+			where TFunc : class//delegate
 		{
 			if (!typeof(TFunc).IsSubclassOf(typeof(Delegate)))
 				throw new InvalidOperationException($"{typeof(TFunc).Name} is not a delegate type");
-
+			if (ptr == IntPtr.Zero)
+				throw new InvalidOperationException($"Pointer cannot be null");
 			if (!(Marshal.GetDelegateForFunctionPointer(ptr, typeof(TFunc)) is TFunc func))
 				throw new InvalidOperationException($"Cannot convert pointer to {typeof(TFunc).Name} type");
 

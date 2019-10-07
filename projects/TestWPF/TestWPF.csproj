@@ -65,6 +65,9 @@
     <Compile Include="src\PatternEditorUI.xaml.cs">
       <DependentUpon>PatternEditorUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\ScintillaUI.xaml.cs">
+      <DependentUpon>ScintillaUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\ToolUI.xaml.cs">
       <DependentUpon>ToolUI.xaml</DependentUpon>
     </Compile>
@@ -104,6 +107,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Res.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ScintillaUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

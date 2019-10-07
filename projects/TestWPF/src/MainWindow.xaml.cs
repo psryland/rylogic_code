@@ -127,6 +127,10 @@ namespace TestWPF
 			{
 				new ToolUI { Owner = this }.Show();
 			});
+			ScintillaUI = Command.Create(this, () =>
+			{
+				new ScintillaUI().Show();
+			});
 			ShowView3DUI = Command.Create(this, () =>
 			{
 				new View3dUI().Show();
@@ -146,6 +150,7 @@ namespace TestWPF
 		public Command ShowProgressUI { get; }
 		public Command ShowPromptUI { get; }
 		public Command ShowToolWindow { get; }
+		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }
 		public Command Exit { get; }
 

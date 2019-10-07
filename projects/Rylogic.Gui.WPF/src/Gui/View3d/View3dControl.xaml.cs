@@ -69,6 +69,8 @@ namespace Rylogic.Gui.WPF
 				ClickTimeMS = 180;
 				MouseNavigation = true;
 				DefaultKeyboardShortcuts = true;
+
+				DataContext = this;
 			}
 			catch
 			{

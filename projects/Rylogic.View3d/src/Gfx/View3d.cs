@@ -1017,16 +1017,16 @@ namespace Rylogic.Gfx
 		/// <summary></summary>
 		private View3d()
 		{
+			if (!ModuleLoaded)
+				throw new Exception("View3d.dll has not been loaded");
+
+			m_windows = new List<Window>();
+			m_dispatcher = Dispatcher.CurrentDispatcher;
+			m_thread_id = Thread.CurrentThread.ManagedThreadId;
+			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
+
 			try
 			{
-				if (!ModuleLoaded)
-					throw new Exception("View3d.dll has not been loaded");
-
-				m_windows = new List<Window>();
-				m_dispatcher = Dispatcher.CurrentDispatcher;
-				m_thread_id = Thread.CurrentThread.ManagedThreadId;
-				m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
-
 				// Initialise view3d
 				var init_error = (string?)null;
 				void ErrorCB(HTexture ctx, string msg) => init_error = msg;
@@ -2299,7 +2299,7 @@ namespace ldr
 			}
 			public override int GetHashCode()
 			{
-				return m_window.GetHashCode() * 137;
+				return m_window.GetHashCode();
 			}
 			#endregion
 		}
@@ -3528,9 +3528,9 @@ namespace ldr
 		#region DLL extern functions
 
 		/// <summary>True if the view3d dll has been loaded</summary>
-		private const string Dll = "view3d";
         public static bool ModuleLoaded => m_module != IntPtr.Zero;
         private static IntPtr m_module = IntPtr.Zero;
+		private const string Dll = "view3d";
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static bool LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)

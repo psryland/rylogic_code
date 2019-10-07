@@ -1,33 +1,31 @@
-﻿<Project Sdk="MSBuild.Sdk.Extras/1.6.68">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
 		<TargetFrameworks>net472</TargetFrameworks>
-		<Authors>P Ryland</Authors>
-		<Company>Rylogic</Company>
-		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
-		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
-		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
 		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
 		<OutputType>Library</OutputType>
 		<StartupObject />
-		<EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
-		<ExtrasEnableWpfProjectSetup>true</ExtrasEnableWpfProjectSetup>
-		<Version>1.0.3</Version>
-		<FileVersion>1.0.3</FileVersion>
-		<AssemblyVersion>1.0.3</AssemblyVersion>
+		<UseWpf>true</UseWpf>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<DefineConstants>RELEASE;NET472</DefineConstants>
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<Version>1.0.3</Version>
+		<FileVersion>1.0.3</FileVersion>
+		<AssemblyVersion>1.0.3</AssemblyVersion>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|NET472|AnyCPU'">
-		<DefineConstants>TRACE;DEBUG;NET472;PR_UNITTESTS</DefineConstants>
-		<DebugSymbols>true</DebugSymbols>
-		<DebugType>full</DebugType>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>RELEASE</DefineConstants>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
@@ -56,9 +54,10 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
 		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="PresentationCore" />
@@ -67,25 +66,22 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView" Version="5.1.1" />
-		<PackageReference Include="WindowsBase" Version="4.6.1055"/>
+		<PackageReference Include="WindowsBase" Version="4.6.1055" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<Compile Update="res\Resources.Designer.cs">
-		<DesignTime>True</DesignTime>
-		<AutoGen>True</AutoGen>
-		<DependentUpon>Resources.resx</DependentUpon>
-		</Compile>
-		<Compile Update="src\Gui\ComboBoxAutoComplete.xaml.cs">
-		<DependentUpon>ComboBoxAutoComplete.xaml</DependentUpon>
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resources.resx</DependentUpon>
 		</Compile>
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<EmbeddedResource Update="res\Resources.resx">
-		<Generator>ResXFileCodeGenerator</Generator>
-		<LastGenOutput>Resources.Designer.cs</LastGenOutput>
-		<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
+			<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
 		</EmbeddedResource>
 	</ItemGroup>
 

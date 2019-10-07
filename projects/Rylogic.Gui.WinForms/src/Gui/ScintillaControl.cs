@@ -48,14 +48,14 @@ namespace Rylogic.Gui.WinForms
 		}
 		public ScintillaCtrl()
 		{
-			if (Sci.ScintillaAvailable)
+			if (Sci.ModuleLoaded)
 				CreateHandle();
 		}
 		protected override CreateParams CreateParams
 		{
 			get
 			{
-				if (!Sci.ScintillaAvailable)
+				if (!Sci.ModuleLoaded)
 				{
 					Debug.WriteLine("Scintilla dll not loaded");
 					return base.CreateParams;
@@ -68,7 +68,7 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnHandleCreated(EventArgs e)
 		{
-			if (Sci.ScintillaAvailable)
+			if (Sci.ModuleLoaded)
 			{
 				// Get the function pointer for direct calling the WndProc (rather than windows messages)
 				var func = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
@@ -95,7 +95,7 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (!Sci.ScintillaAvailable)
+			if (!Sci.ModuleLoaded)
 				e.Graphics.Clear(Color.Gray);
 			else
 				base.OnPaint(e);
