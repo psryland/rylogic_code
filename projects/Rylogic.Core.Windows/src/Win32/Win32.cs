@@ -280,7 +280,7 @@ namespace Rylogic.Interop.Win32
 		public const int WM_USER                         = 0x0400;
 
 		/// <summary>Convert a message constant to a string</summary>
-		public static string MsgIdToString(uint msg_id)
+		public static string MsgIdToString(int msg_id)
 		{
 			if (!m_wm_name.TryGetValue(msg_id, out var name))
 			{
@@ -300,7 +300,7 @@ namespace Rylogic.Interop.Win32
 			}
 			return name;
 		}
-		private static Dictionary<uint, string> m_wm_name = new Dictionary<uint,string>();
+		private static Dictionary<int, string> m_wm_name = new Dictionary<int,string>();
 		#endregion
 
 		#region WM_NOTIFY codes
@@ -1243,31 +1243,31 @@ namespace Rylogic.Interop.Win32
 		}
 
 		/// <summary>Returns the upper 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
-		public static uint HiWord(uint dword)
+		public static int HiWord(long dword)
 		{
-			return (dword >> 16) & 0xFFFF;
+			return (int)((dword >> 16) & 0xFFFF);
 		}
-		public static int HiWord(int dword)
+		public static uint HiWord(ulong dword)
 		{
-			return (int)HiWord((uint)dword);
+			return (uint)((dword >> 16) & 0xFFFF);
 		}
 		public static int HiWord(IntPtr dword)
 		{
-			return (int)HiWord((uint)dword);
+			return (int)HiWord(dword.ToInt64());
 		}
 
 		/// <summary>Returns the lower 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
-		public static uint LoWord(uint dword)
+		public static int LoWord(long dword)
 		{
-			return dword & 0xFFFF;
+			return (int)(dword & 0xFFFF);
 		}
-		public static int LoWord(int dword)
+		public static uint LoWord(ulong dword)
 		{
-			return (int)LoWord((uint)dword);
+			return (uint)(dword & 0xFFFF);
 		}
 		public static int LoWord(IntPtr dword)
 		{
-			return (int)LoWord((uint)dword);
+			return (int)LoWord(dword.ToInt64());
 		}
 
 		/// <summary>Convert a win32 system time to a date time offset</summary>
@@ -1460,7 +1460,7 @@ namespace Rylogic.Interop.Win32
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
 		/// <summary>Output a trace of wndproc messages to the debug output window</summary>
-		public static void WndProcDebug(IntPtr hwnd, uint msg, IntPtr wparam, IntPtr lparam, string name)
+		public static void WndProcDebug(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, string name)
 		{
 			#if true
 			using (Scope.Create(() => ++m_wnd_proc_nest, () => --m_wnd_proc_nest))
@@ -1482,7 +1482,7 @@ namespace Rylogic.Interop.Win32
 		}
 		public static void WndProcDebug(ref Message m, string name)
 		{
-			WndProcDebug(m.hwnd, m.message, m.wparam, m.lparam, name);
+			WndProcDebug(m.hwnd, (int)m.message, m.wparam, m.lparam, name);
 		}
 		private static int m_wnd_proc_nest = 0; // Tracks how often WndProc has been called recursively
 		private static int m_msg_idx = 0;
@@ -1490,13 +1490,9 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Convert a wndproc message to a string</summary>
 		public static string DebugMessage(ref Message msg)
 		{
-			return DebugMessage(msg.hwnd, msg.message, msg.wparam, msg.lparam);
+			return DebugMessage(msg.hwnd, (int)msg.message, msg.wparam, msg.lparam);
 		}
-		public static string DebugMessage(IntPtr hwnd, uint msg, IntPtr wparam, IntPtr lparam)
-		{
-			return DebugMessage(hwnd, msg, (uint)wparam, (uint)lparam);
-		}
-		public static string DebugMessage(IntPtr hwnd, uint msg, uint wparam, uint lparam)
+		public static string DebugMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam)
 		{
 			var wparam_lo = LoWord(wparam);
 			var wparam_hi = HiWord(wparam);
@@ -1511,85 +1507,111 @@ namespace Rylogic.Interop.Win32
 			switch (msg)
 			{
 			default:
-				return $"{hdr} {wnd} {wp} {lp}";
+				{
+					return $"{hdr} {wnd} {wp} {lp}";
+				}
 			case WM_KEYDOWN:
 			case WM_KEYUP:
 			case WM_CHAR:
-				return
-					$"{hdr} " +
-					$"'{(msg == WM_CHAR ? new string((char)wparam,1) : Enum<EKeyCodes>.ToString(wparam))}'({wparam})  " +
-					$"repeats:{(lparam&0xffff)}  " +
-					$"state:{((lparam & (1 << 29)) != 0 ? "ALT " : string.Empty)}  " +
-					$"transition:{((lparam & (1 << 30)) != 0 ? "1" : "0")}{((lparam & (1 << 31)) != 0 ? "0" : "1")}";
+				{
+					return
+						$"{hdr} " +
+						$"'{(msg == WM_CHAR ? new string((char)wparam_lo, 1) : Enum<EKeyCodes>.ToString(wparam.ToInt64()))}'({wparam})  " +
+						$"repeats:{lparam_lo}  " +
+						$"state:{((lparam_hi & (1 << 13)) != 0 ? "ALT " : string.Empty)}  " +
+						$"transition:{((lparam_hi & (1 << 14)) != 0 ? "1" : "0")}{((lparam_hi & (1 << 15)) != 0 ? "0" : "1")}";
+				}
 			case WM_LBUTTONDOWN:
-				return
-					$"{hdr} button state = " +
-					$"{((wparam&MK_CONTROL ) != 0 ?"|Ctrl" :"")}" +
-					$"{((wparam&MK_LBUTTON ) != 0 ?"|LBtn" :"")}" +
-					$"{((wparam&MK_MBUTTON ) != 0 ?"|MBtn" :"")}" +
-					$"{((wparam&MK_RBUTTON ) != 0 ?"|RBtn" :"")}" +
-					$"{((wparam&MK_SHIFT   ) != 0 ?"|Shift":"")}" +
-					$"{((wparam&MK_XBUTTON1) != 0 ?"|XBtn1":"")}" +
-					$"{((wparam&MK_XBUTTON2) != 0 ?"|XBtn2":"")}  " +
-					$"x,y=({lparam_lo},{lparam_hi})";
+				{
+					return
+						$"{hdr} button state = " +
+						$"{((wparam_lo & MK_CONTROL) != 0 ? "|Ctrl" : "")}" +
+						$"{((wparam_lo & MK_LBUTTON) != 0 ? "|LBtn" : "")}" +
+						$"{((wparam_lo & MK_MBUTTON) != 0 ? "|MBtn" : "")}" +
+						$"{((wparam_lo & MK_RBUTTON) != 0 ? "|RBtn" : "")}" +
+						$"{((wparam_lo & MK_SHIFT) != 0 ? "|Shift" : "")}" +
+						$"{((wparam_lo & MK_XBUTTON1) != 0 ? "|XBtn1" : "")}" +
+						$"{((wparam_lo & MK_XBUTTON2) != 0 ? "|XBtn2" : "")}  " +
+						$"x,y=({lparam_lo},{lparam_hi})";
+				}
 			case WM_ACTIVATEAPP:
-				return $"{hdr} {(wparam!=0?"ACTIVE":"INACTIVE")} Other Thread: {lparam}";
+				{
+					return $"{hdr} {((int)wparam != 0 ? "ACTIVE" : "INACTIVE")} Other Thread: {lparam}";
+				}
 			case WM_ACTIVATE:
-				return $"{hdr} {(LoWord(wparam)==WA_ACTIVE?"ACTIVE":LoWord(wparam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE")} Other Window: {lparam}";
+				{
+					return $"{hdr} {(LoWord(wparam) == WA_ACTIVE ? "ACTIVE" : LoWord(wparam) == WA_INACTIVE ? "INACTIVE" : "Click ACTIVE")} Other Window: {lparam}";
+				}
 			case WM_NCACTIVATE:
-				return $"{hdr} {(wparam!=0?"ACTIVE":"INACTIVE")} {lp}";
+				{
+					return $"{hdr} {((int)wparam != 0 ? "ACTIVE" : "INACTIVE")} {lp}";
+				}
 			case WM_MOUSEACTIVATE:
-				return $"{hdr} top level parent window = {wparam}  {lp}";
+				{
+					return $"{hdr} top level parent window = {wparam}  {lp}";
+				}
 			case WM_SHOWWINDOW:
-				return $"{hdr} {(wparam!=0?"VISIBLE":"HIDDEN")} {(lparam==SW_OTHERUNZOOM?"OtherUnzoom":lparam==SW_PARENTCLOSING?"ParentClosing":lparam==SW_OTHERZOOM?"OtherZoom":lparam==SW_PARENTOPENING?"ParentOpening":"ShowWindow called")}";
+				{
+					var reason = (int)lparam switch
+					{
+						SW_OTHERUNZOOM => "OtherUnzoom",
+						SW_PARENTCLOSING => "ParentClosing",
+						SW_OTHERZOOM => "OtherZoom",
+						SW_PARENTOPENING => "ParentOpening",
+						_ => "ShowWindow called",
+					};
+					return $"{hdr} {((int)wparam != 0 ? "VISIBLE" : "HIDDEN")} {reason}";
+				}
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
 				{
 					var wpos = Marshal_.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
 					return string.Format("{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
-						,hdr
-						,wpos.x ,wpos.y
-						,wpos.cx ,wpos.cy
-						,wpos.hwndInsertAfter
-						,(wpos.flags&SWP_DRAWFRAME     )!=0 ?"|SWP_DRAWFRAME"     :""
-						,(wpos.flags&SWP_FRAMECHANGED  )!=0 ?"|SWP_FRAMECHANGED"  :""
-						,(wpos.flags&SWP_HIDEWINDOW    )!=0 ?"|SWP_HIDEWINDOW"    :""
-						,(wpos.flags&SWP_NOACTIVATE    )!=0 ?"|SWP_NOACTIVATE"    :""
-						,(wpos.flags&SWP_NOCOPYBITS    )!=0 ?"|SWP_NOCOPYBITS"    :""
-						,(wpos.flags&SWP_NOMOVE        )!=0 ?"|SWP_NOMOVE"        :""
-						,(wpos.flags&SWP_NOOWNERZORDER )!=0 ?"|SWP_NOOWNERZORDER" :""
-						,(wpos.flags&SWP_NOREDRAW      )!=0 ?"|SWP_NOREDRAW"      :""
-						,(wpos.flags&SWP_NOREPOSITION  )!=0 ?"|SWP_NOREPOSITION"  :""
-						,(wpos.flags&SWP_NOSENDCHANGING)!=0 ?"|SWP_NOSENDCHANGING":""
-						,(wpos.flags&SWP_NOSIZE        )!=0 ?"|SWP_NOSIZE"        :""
-						,(wpos.flags&SWP_NOZORDER      )!=0 ?"|SWP_NOZORDER"      :""
-						,(wpos.flags&SWP_SHOWWINDOW    )!=0 ?"|SWP_SHOWWINDOW"    :"");
+						, hdr
+						, wpos.x, wpos.y
+						, wpos.cx, wpos.cy
+						, wpos.hwndInsertAfter
+						, (wpos.flags & SWP_DRAWFRAME) != 0 ? "|SWP_DRAWFRAME" : ""
+						, (wpos.flags & SWP_FRAMECHANGED) != 0 ? "|SWP_FRAMECHANGED" : ""
+						, (wpos.flags & SWP_HIDEWINDOW) != 0 ? "|SWP_HIDEWINDOW" : ""
+						, (wpos.flags & SWP_NOACTIVATE) != 0 ? "|SWP_NOACTIVATE" : ""
+						, (wpos.flags & SWP_NOCOPYBITS) != 0 ? "|SWP_NOCOPYBITS" : ""
+						, (wpos.flags & SWP_NOMOVE) != 0 ? "|SWP_NOMOVE" : ""
+						, (wpos.flags & SWP_NOOWNERZORDER) != 0 ? "|SWP_NOOWNERZORDER" : ""
+						, (wpos.flags & SWP_NOREDRAW) != 0 ? "|SWP_NOREDRAW" : ""
+						, (wpos.flags & SWP_NOREPOSITION) != 0 ? "|SWP_NOREPOSITION" : ""
+						, (wpos.flags & SWP_NOSENDCHANGING) != 0 ? "|SWP_NOSENDCHANGING" : ""
+						, (wpos.flags & SWP_NOSIZE) != 0 ? "|SWP_NOSIZE" : ""
+						, (wpos.flags & SWP_NOZORDER) != 0 ? "|SWP_NOZORDER" : ""
+						, (wpos.flags & SWP_SHOWWINDOW) != 0 ? "|SWP_SHOWWINDOW" : "");
 				}
 			case WM_KILLFOCUS:
-				return $"{hdr} Focused Window: {wparam}";
+				{
+					return $"{hdr} Focused Window: {wparam}";
+				}
 			case WM_NOTIFY:
 				{
 					var notify_type = "unknown";
 					var nmhdr = Marshal_.PtrToStructure<NMHDR>((IntPtr)lparam);
-					if      (NM_LAST   <= nmhdr.code) notify_type = "NM";
-					else if (LVN_LAST  <= nmhdr.code) notify_type = "LVN";
-					else if (HDN_LAST  <= nmhdr.code) notify_type = "HDN";
-					else if (TVN_LAST  <= nmhdr.code) notify_type = "TVN";
-					else if (TTN_LAST  <= nmhdr.code) notify_type = "TTN";
-					else if (TCN_LAST  <= nmhdr.code) notify_type = "TCN";
-					else if (CDN_LAST  <= nmhdr.code) notify_type = "CDN";
-					else if (TBN_LAST  <= nmhdr.code) notify_type = "TBN";
-					else if (UDN_LAST  <= nmhdr.code) notify_type = "UDN";
-					else if (DTN_LAST  <= nmhdr.code) notify_type = "DTN";
-					else if (MCN_LAST  <= nmhdr.code) notify_type = "MCN";
+					if (NM_LAST <= nmhdr.code) notify_type = "NM";
+					else if (LVN_LAST <= nmhdr.code) notify_type = "LVN";
+					else if (HDN_LAST <= nmhdr.code) notify_type = "HDN";
+					else if (TVN_LAST <= nmhdr.code) notify_type = "TVN";
+					else if (TTN_LAST <= nmhdr.code) notify_type = "TTN";
+					else if (TCN_LAST <= nmhdr.code) notify_type = "TCN";
+					else if (CDN_LAST <= nmhdr.code) notify_type = "CDN";
+					else if (TBN_LAST <= nmhdr.code) notify_type = "TBN";
+					else if (UDN_LAST <= nmhdr.code) notify_type = "UDN";
+					else if (DTN_LAST <= nmhdr.code) notify_type = "DTN";
+					else if (MCN_LAST <= nmhdr.code) notify_type = "MCN";
 					else if (DTN_LAST2 <= nmhdr.code) notify_type = "DTN";
 					else if (CBEN_LAST <= nmhdr.code) notify_type = "CBEN";
-					else if (RBN_LAST  <= nmhdr.code) notify_type = "RBN";
-					else if (IPN_LAST  <= nmhdr.code) notify_type = "IPN";
-					else if (SBN_LAST  <= nmhdr.code) notify_type = "SBN";
-					else if (PGN_LAST  <= nmhdr.code) notify_type = "PGN";
-					else if (WMN_LAST  <= nmhdr.code) notify_type = "WMN";
-					else if (BCN_LAST  <= nmhdr.code) notify_type = "BCN";
+					else if (RBN_LAST <= nmhdr.code) notify_type = "RBN";
+					else if (IPN_LAST <= nmhdr.code) notify_type = "IPN";
+					else if (SBN_LAST <= nmhdr.code) notify_type = "SBN";
+					else if (PGN_LAST <= nmhdr.code) notify_type = "PGN";
+					else if (WMN_LAST <= nmhdr.code) notify_type = "WMN";
+					else if (BCN_LAST <= nmhdr.code) notify_type = "BCN";
 					else if (TRBN_LAST <= nmhdr.code) notify_type = "TRBN";
 
 					// Ignore
@@ -1597,41 +1619,48 @@ namespace Rylogic.Interop.Win32
 						return "";
 
 					return string.Format("{0} SourceCtrlId = {1}  from_hWnd: {2}  from_id: {3}  code: {4}:{5}"
-						,hdr
-						,wparam
-						,nmhdr.hwndFrom
-						,nmhdr.idFrom
-						,nmhdr.code
-						,notify_type);
+						, hdr
+						, wparam
+						, nmhdr.hwndFrom
+						, nmhdr.idFrom
+						, nmhdr.code
+						, notify_type);
 				}
 			case WM_PARENTNOTIFY:
 				{
 					string details;
 					switch (LoWord(wparam))
 					{
-					default:             details = $"Unexpected event. {HiWord(wparam)}"; break;
-					case WM_CREATE:      details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
-					case WM_DESTROY:     details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
+					default: details = $"Unexpected event. {HiWord(wparam)}"; break;
+					case WM_CREATE: details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
+					case WM_DESTROY: details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
 					case WM_LBUTTONDOWN: details = $"LButton {LParamToPoint(lparam)}"; break;
 					case WM_MBUTTONDOWN: details = $"MButton {LParamToPoint(lparam)}"; break;
 					case WM_RBUTTONDOWN: details = $"RButton {LParamToPoint(lparam)}"; break;
 					case WM_XBUTTONDOWN: details = $"XButton btn:{HiWord(wparam)} {LParamToPoint(lparam)}"; break;
 					case WM_POINTERDOWN: details = $"Pointer Down ptr:{HiWord(wparam)}"; break;
 					}
-					return $"{hdr} evt: {MsgIdToString(LoWord(wparam))} {details}";
+					return $"{hdr} evt: {MsgIdToString((int)LoWord(wparam))} {details}";
 				}
 			case WM_SYSKEYDOWN:
-				return $"{hdr} vk_key = {wparam} ({Enum<EKeyCodes>.ToString((int)wparam)})  Repeats: {lparam_lo}  lParam: {lparam}";
+				{
+					return $"{hdr} vk_key = {wparam} ({Enum<EKeyCodes>.ToString((int)wparam)})  Repeats: {lparam_lo}  lParam: {lparam}";
+				}
 			case WM_PAINT:
-				//{
-				//	RECT r;
-				//	::GetUpdateRect(hWnd, &r, FALSE);
-				//	return "{0} update=({1},{2}) size=({3},{4})  HDC: {5}{6}"
-				//		.Fmt(hdr
-				//		,r.left ,r.top ,r.right - r.left ,r.bottom - r.top
-				//		,wParam
-				//		,newline);
-				//}
+				{
+					//	RECT r;
+					//	::GetUpdateRect(hWnd, &r, FALSE);
+					//	return "{0} update=({1},{2}) size=({3},{4})  HDC: {5}{6}"
+					//		.Fmt(hdr
+					//		,r.left ,r.top ,r.right - r.left ,r.bottom - r.top
+					//		,wParam
+					//		,newline);
+					goto case WM_NULL;
+				}
+			case WM_TIMER:
+				{
+					goto case WM_NULL;
+				}
 			case WM_NCHITTEST:
 			case WM_SETCURSOR:
 			case WM_NCMOUSEMOVE:

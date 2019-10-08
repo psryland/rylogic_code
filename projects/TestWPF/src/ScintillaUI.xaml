@@ -12,6 +12,7 @@
 	>
 	<DockPanel>
 		<gui:ScintillaControl
+			gui:Scintilla_.Style="Default"
 			/>
 	</DockPanel>
 	</Window>

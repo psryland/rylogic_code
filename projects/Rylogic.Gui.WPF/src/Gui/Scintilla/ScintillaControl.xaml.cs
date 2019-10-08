@@ -13,7 +13,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ScintillaControl :UserControl
+	public partial class ScintillaControl :HwndHost
 	{
 		// Notes:
 		//  - See http://www.scintilla.org/ScintillaDoc.html for documentation
@@ -21,6 +21,7 @@ namespace Rylogic.Gui.WPF
 		//  - Function comments are mostly incomplete because it'd take too long.. Fill them in as needed
 		//  - Copy/port #pragma regions from the native control on demand
 		//  - Dispose is handled internally via the Closed event on the owning window.
+		private const int ScintillaId = 0x1;
 
 		static ScintillaControl()
 		{
@@ -29,128 +30,153 @@ namespace Rylogic.Gui.WPF
 		public ScintillaControl()
 		{
 			InitializeComponent();
-			CreateNativeControl();
 		}
 
-		/// <summary>Instantiate the native scintilla control</summary>
-		private void CreateNativeControl()
-		{
-			m_native_control = new NativeControl();
-			m_native_control.Initialized += HandleInitialised;
-			m_native_control.MessageHook += HandleMessages;
-			m_native_control.HorizontalAlignment = HorizontalAlignment.Stretch;
-			m_native_control.VerticalAlignment = VerticalAlignment.Stretch;
-			m_native_control.Loaded += (s,a) =>
-			{
-				// When the owning window is closed, call dispose on the native control
-				var owner = Window.GetWindow((DependencyObject)s) ?? throw new Exception("Native scintilla control must be a child of a window");
-				owner.Closed += HandleClosed;
-			};
-
-			// Add the native control as a child of the host
-			m_host.Child = m_native_control;
-
-			void HandleInitialised(object? sender, EventArgs e)
-			{
-				// Reset the style
-				CodePage = Sci.SC_CP_UTF8;
-				Cursor = Cursors.IBeam;
-				ClearAll();
-				ClearDocumentStyle();
-				StyleBits = 7;
-				TabWidth = 4;
-				Indent = 4;
-			}
-			void HandleClosed(object sender, EventArgs e)
-			{
-				if (m_native_control == null) return;
-				m_native_control.Initialized -= HandleInitialised;
-				m_native_control.MessageHook -= HandleMessages;
-				Util.Dispose(ref m_native_control!);
-			}
-			IntPtr HandleMessages(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-			{
-				switch (msg)
-				{
-				case Win32.WM_CLOSE:
-					{
-						break;
-					}
-				case Win32.WM_COMMAND:
-					{
-						// Watch for edit notifications
-						var notif = Win32.HiWord(wparam.ToInt32());
-						var id = Win32.LoWord(wparam.ToInt32());
-						if (notif == Win32.EN_CHANGE)// && id == Id)
-							TextChanged?.Invoke(this, EventArgs.Empty);
-						break;
-					}
-				case Win32.WM_REFLECT + Win32.WM_NOTIFY:
-					{
-						var nmhdr = Marshal_.PtrToStructure<Win32.NMHDR>(lparam);
-						var notif = Marshal_.PtrToStructure<Sci.SCNotification>(lparam);
-						HandleSCNotification(ref nmhdr, ref notif);
-						break;
-					}
-				}
-				return IntPtr.Zero;
-			}
-			void HandleSCNotification(ref Win32.NMHDR nmhdr, ref global::Scintilla.Scintilla.SCNotification notif)
-			{
-						/// <summary>Handle notification from the native scintilla control</summary>
-				switch (notif.nmhdr.code)
-				{
-				case Sci.SCN_CHARADDED:
-					{
-						if (AutoIndent)
-						{
-							var lem = EOLMode;
-							var lend =
-								(lem == Sci.EEndOfLineMode.CR && notif.ch == '\r') ||
-								(lem == Sci.EEndOfLineMode.LF && notif.ch == '\n') ||
-								(lem == Sci.EEndOfLineMode.CRLF && notif.ch == '\n');
-							if (lend)
-							{
-								var line = LineFromPosition(CurrentPos);
-								var indent = line > 0 ? LineIndentation(line - 1) : 0;
-								LineIndentation(line, indent);
-								GotoPos(FindColumn(line, indent));
-							}
-						}
-
-						// Notify text changed
-						TextChanged?.Invoke(this, EventArgs.Empty);
-						break;
-					}
-				case Sci.SCN_UPDATEUI:
-					{
-						switch (notif.updated)
-						{
-						case Sci.SC_UPDATE_SELECTION:
-							{
-								OnSelectionChanged();
-								break;
-							}
-						case Sci.SC_UPDATE_H_SCROLL:
-						case Sci.SC_UPDATE_V_SCROLL:
-							{
-								//var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
-								//OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
-								break;
-							}
-						}
-						break;
-					}
-				}
-			}
-		}
-		private NativeControl m_native_control = null!;
+		/// <summary>The window handle of the Scintilla control</summary>
+		private IntPtr Hwnd { get; set; }
 
 		/// <summary>Call the direct function</summary>
-		public int Cmd(int code, IntPtr wparam, IntPtr lparam) => (int)m_native_control.Call(code, wparam, lparam);
-		public int Cmd(int code, int wparam, IntPtr lparam) => Cmd(code, (IntPtr)wparam, lparam);
-		public int Cmd(int code, int wparam, int lparam) => Cmd(code, (IntPtr)wparam, (IntPtr)lparam);
-		public int Cmd(int code, int wparam) => Cmd(code, (IntPtr)wparam, IntPtr.Zero);
+		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
+		{
+			if (m_func == null) return IntPtr.Zero;
+			return m_func(m_ptr, code, wparam, lparam);
+		}
+		private Sci.DirectFunction? m_func;
+		private IntPtr m_ptr;
+
+		/// <summary>Create the native window handle</summary>
+		protected override HandleRef BuildWindowCore(HandleRef hwnd_parent)
+		{
+			// Notes:
+			//  - The examples suggest creating the scintilla control as a child of a static control
+			//    in order to fix some issue with notification messages sent from the native control.
+			//    I haven't seen any issue so I'm just creating the native control directly. Doing so
+			//    means resizing and general interaction with FrameworkElements works properly.
+			if (hwnd_parent.Handle == IntPtr.Zero)
+				throw new Exception("Expected this control to be a child");
+
+			// Create the native scintilla window to fit within 'hwnd_parent'
+			Win32.GetClientRect(hwnd_parent.Handle, out var parent_rect);
+			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, (IntPtr)ScintillaId, IntPtr.Zero, IntPtr.Zero);
+			if (Hwnd == IntPtr.Zero)
+				throw new Exception("Failed to create scintilla native control");
+
+			// Get the function pointer for direct calling the WndProc (rather than windows messages)
+			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
+			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
+			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func);
+
+			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
+			var parent = HwndSource.FromHwnd(hwnd_parent.Handle);
+			parent.AddHook(HandleNotifications);
+
+			// When the owning window is closed, call dispose on the native control
+			var owner = Window.GetWindow(this) ?? throw new Exception("Native scintilla control must be a child of a window");
+			owner.Closed += delegate
+			{
+				parent.RemoveHook(HandleNotifications);
+				Dispose();
+			};
+
+			// Reset to the default style
+			CodePage = Sci.SC_CP_UTF8;
+			Cursor = Cursors.IBeam;
+			ClearAll();
+			ClearDocumentStyle();
+			StyleBits = 7;
+			TabWidth = 4;
+			Indent = 4;
+
+			// Return the host window handle
+			return new HandleRef(this, Hwnd);
+		}
+		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			handled = false;
+			return IntPtr.Zero;
+		}
+		protected override void DestroyWindowCore(HandleRef hwnd)
+		{
+			m_func = null;
+			m_ptr = IntPtr.Zero;
+			Win32.DestroyWindow(hwnd.Handle);
+		}
+
+		/// <summary>Handle messages from the native control</summary>
+		private IntPtr HandleNotifications(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
+			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
+
+			switch (msg)
+			{
+			case Win32.WM_COMMAND:
+				{
+					// Watch for edit notifications
+					var notif = Win32.HiWord(wparam.ToInt32());
+					var id = Win32.LoWord(wparam.ToInt32());
+					if (notif == Win32.EN_CHANGE && id == ScintillaId)
+						TextChanged?.Invoke(this, EventArgs.Empty);
+					break;
+				}
+			case Win32.WM_NOTIFY:
+				{
+					//var nmhdr = Marshal_.PtrToStructure<Win32.NMHDR>(lparam);
+					var notif = Marshal_.PtrToStructure<Sci.SCNotification>(lparam);
+					switch (notif.nmhdr.code)
+					{
+					case Sci.SCN_CHARADDED:
+						{
+							if (AutoIndent)
+							{
+								var lem = EOLMode;
+								var lend =
+									(lem == Sci.EEndOfLineMode.CR && notif.ch == '\r') ||
+									(lem == Sci.EEndOfLineMode.LF && notif.ch == '\n') ||
+									(lem == Sci.EEndOfLineMode.CRLF && notif.ch == '\n');
+								if (lend)
+								{
+									var line = LineFromPosition(CurrentPos);
+									var indent = line > 0 ? LineIndentation(line - 1) : 0;
+									LineIndentation(line, indent);
+									GotoPos(FindColumn(line, indent));
+								}
+							}
+							break;
+						}
+					case Sci.SCN_UPDATEUI:
+						{
+							switch (notif.updated)
+							{
+							case Sci.SC_UPDATE_SELECTION:
+								{
+									OnSelectionChanged();
+									break;
+								}
+							case Sci.SC_UPDATE_H_SCROLL:
+							case Sci.SC_UPDATE_V_SCROLL:
+								{
+									//var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
+									//OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
+									break;
+								}
+							}
+							break;
+						}
+					}
+					break;
+				}
+			}
+
+			handled = false;
+			return IntPtr.Zero;
+		}
+
+		/// <summary>Call the direct function</summary>
+		public int Cmd(int code, IntPtr wparam, IntPtr lparam) => (int)Call(code, wparam, lparam);
+		public int Cmd(int code, long wparam, IntPtr lparam) => Cmd(code, (IntPtr)wparam, lparam);
+		public int Cmd(int code, long wparam, long lparam) => Cmd(code, (IntPtr)wparam, (IntPtr)lparam);
+		public int Cmd(int code, long wparam) => Cmd(code, (IntPtr)wparam, IntPtr.Zero);
 		public int Cmd(int code) => Cmd(code, IntPtr.Zero, IntPtr.Zero);
 
 		#region Text
@@ -276,7 +302,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public new void AddText(string text)
+		public void AddText(string text)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
 			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
@@ -1004,11 +1030,11 @@ namespace Rylogic.Gui.WPF
 
 		#region DragDrop
 
-		public new bool AllowDrop
-		{
-			get => (Win32.GetWindowLong(m_native_control.Hwnd, Win32.GWL_EXSTYLE) & Win32.WS_EX_ACCEPTFILES) != 0;
-			set => Win32.DragAcceptFiles(m_native_control.Hwnd, value);
-		}
+		//public new bool AllowDrop
+		//{
+		//	get => (Win32.GetWindowLong(Hwnd, Win32.GWL_EXSTYLE) & Win32.WS_EX_ACCEPTFILES) != 0;
+		//	set => Win32.DragAcceptFiles(Hwnd, value);
+		//}
 
 		#endregion
 
@@ -1217,7 +1243,7 @@ namespace Rylogic.Gui.WPF
 		public Colour32 CaretFore
 		{
 			get => (uint)Cmd(Sci.SCI_GETCARETFORE);
-			set => Cmd(Sci.SCI_SETCARETFORE, (int)value.ARGB);
+			set => Cmd(Sci.SCI_SETCARETFORE, (long)value.ARGB);
 		}
 
 		/// <summary></summary>
@@ -2048,63 +2074,5 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
-		/// <summary>Host the native scintilla control in WPF</summary>
-		private class NativeControl :HwndHost
-		{
-			private const int ScintillaId = 0x1;
-
-			public NativeControl()
-			{ }
-
-			/// <summary>The window handle of the Scintilla control</summary>
-			public IntPtr Hwnd { get; private set; }
-
-			/// <summary>Call the direct function</summary>
-			public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
-			{
-				if (m_func == null) return IntPtr.Zero;
-				return m_func(m_ptr, code, wparam, lparam);
-			}
-			private Sci.DirectFunction? m_func;
-			private IntPtr m_ptr;
-
-			/// <summary>Create the native window handle</summary>
-			protected override HandleRef BuildWindowCore(HandleRef hwnd_parent)
-			{
-				// Notes:
-				//  - The examples suggest creating the scintilla control as a child of a static control
-				//    in order to fix some issue with notification messages sent from the native control.
-				//    I haven't seen any issue so I'm just creating the native control directly. Doing so
-				//    means resizing and general interaction with FrameworkElements works properly.
-				if (hwnd_parent.Handle == IntPtr.Zero)
-					throw new Exception("Expected this control to be a child");
-
-				// Create the native scintilla window to fit within 'hwnd_parent'
-				Win32.GetClientRect(hwnd_parent.Handle, out var parent_rect);
-				Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, (IntPtr)ScintillaId, IntPtr.Zero, IntPtr.Zero);
-				if (Hwnd == IntPtr.Zero)
-					throw new Exception("Failed to create scintilla native control");
-
-				// Get the function pointer for direct calling the WndProc (rather than windows messages)
-				var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
-				m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
-				m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func);
-
-				// Return the host window handle
-				return new HandleRef(this, Hwnd);
-			}
-			protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lParam, ref bool handled)
-			{
-				handled = false;
-				return IntPtr.Zero;
-			}
-			protected override void DestroyWindowCore(HandleRef hwnd)
-			{
-				m_func = null;
-				m_ptr = IntPtr.Zero;
-				Win32.DestroyWindow(hwnd.Handle);
-			}
-		}
 	}
 }
