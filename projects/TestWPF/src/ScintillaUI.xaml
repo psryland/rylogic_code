@@ -1,8 +1,8 @@
 ﻿<Window
 	x:Class="TestWPF.ScintillaUI"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
@@ -10,9 +10,19 @@
 	Height="450"
 	Width="800"
 	>
-	<DockPanel>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		
 		<gui:ScintillaControl
-			gui:Scintilla_.Style="Default"
+			Grid.Row="0"
+			gui:Scintilla_.Style="LdrDark"
 			/>
-	</DockPanel>
-	</Window>
+		<gui:ScintillaControl
+			Grid.Row="1"
+			gui:Scintilla_.Style="LdrLight"
+			/>
+	</Grid>
+</Window>

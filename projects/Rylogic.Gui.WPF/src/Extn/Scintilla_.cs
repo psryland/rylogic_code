@@ -36,7 +36,7 @@ namespace Rylogic.Gui.WPF
 		};
 
 		/// <summary>Initialise with reasonable default style</summary>
-		public static void InitDefaultStyle(this ScintillaControl sc)
+		public static void DefaultStyle(ScintillaControl sc)
 		{
 			sc.CodePage = Sci.SC_CP_UTF8;
 			sc.ClearDocumentStyle();
@@ -107,7 +107,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Set up this control for Ldr script</summary>
-		public static void InitLdrStyle(this ScintillaControl sc, bool dark = false)
+		public static void LdrStyleLight(ScintillaControl sc) => LdrStyle(sc, dark: false);
+		public static void LdrStyleDark(ScintillaControl sc) => LdrStyle(sc, dark: true);
+		public static void LdrStyle(ScintillaControl sc, bool dark)
 		{
 			sc.ClearDocumentStyle();
 			sc.StyleBits = 7;
@@ -206,17 +208,17 @@ namespace Rylogic.Gui.WPF
 				{
 				case EScintillaStyles.Default:
 					{
-						sc.InitDefaultStyle();
+						sc.InitStyle = DefaultStyle;
 						break;
 					}
 				case EScintillaStyles.LdrLight:
 					{
-						sc.InitLdrStyle(dark: false);
+						sc.InitStyle = LdrStyleLight;
 						break;
 					}
 				case EScintillaStyles.LdrDark:
 					{
-						sc.InitLdrStyle(dark: true);
+						sc.InitStyle = LdrStyleDark;
 						break;
 					}
 				}

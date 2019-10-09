@@ -366,12 +366,10 @@ namespace Rylogic.Utility
 		{
 			var size = Marshal.SizeOf(structure);
 			var arr = new byte[size];
-			using (var ptr = Marshal_.AllocHGlobal(size))
-			{
-				Marshal.StructureToPtr(structure, ptr.Value.Ptr, true);
-				Marshal.Copy(ptr.Value.Ptr, arr, 0, size);
-				return arr;
-			}
+			using var ptr = Marshal_.Alloc(EHeap.HGlobal, size);
+			Marshal.StructureToPtr(structure, ptr.Value.Ptr, true);
+			Marshal.Copy(ptr.Value.Ptr, arr, 0, size);
+			return arr;
 		}
 
 		/// <summary>Create an array of bytes with the same size as 'T'</summary>
@@ -385,66 +383,60 @@ namespace Rylogic.Utility
 		{
 			Debug.Assert(arr.Length - offset >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			var sz = Marshal.SizeOf(typeof(T));
-			using (var ptr = Marshal_.AllocHGlobal(sz))
-			{
-				Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
-				return Marshal.PtrToStructure<T>(ptr.Value.Ptr);
-			}
+			using var ptr = Marshal_.Alloc(EHeap.HGlobal, sz);
+			Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
+			return Marshal.PtrToStructure<T>(ptr.Value.Ptr);
 		}
 
 		/// <summary>Convert an array of bytes to a structure</summary>
 		public static T FromBytes<T>(byte[] arr)
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
-			using (var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned))
-				return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
+			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
+			return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>Simple binary serialise</summary>
 		public static byte[] Serialise(params object[] args)
 		{
-			using (var ms = new MemoryStream())
-			{
-				Serialise(ms, args);
-				ms.Seek(0, SeekOrigin.Begin);
-				return ms.ToArray();
-			}
+			using var ms = new MemoryStream();
+			Serialise(ms, args);
+			ms.Seek(0, SeekOrigin.Begin);
+			return ms.ToArray();
 		}
 		public static void Serialise(MemoryStream ms, params object[] args)
 		{
 			// Using BinaryReader to deserialise
-			using (var bw = new BinaryWriter(ms, Encoding.UTF8, true))
-			{
-				foreach (var arg in args)
-					Write(arg);
+			using var bw = new BinaryWriter(ms, Encoding.UTF8, true);
+			foreach (var arg in args)
+				Write(arg);
 
-				void Write(object value)
+			void Write(object value)
+			{
+				switch (value)
 				{
-					switch (value)
-					{
-					default: throw new Exception($"Serialise: Unsupported type: {value.GetType().Name}");
-					case bool    x: bw.Write(x); break;
-					case byte    x: bw.Write(x); break;
-					case sbyte   x: bw.Write(x); break;
-					case byte[]  x: bw.Write(x); break;
-					case char    x: bw.Write(x); break;
-					case char[]  x: bw.Write(x); break;
-					case short   x: bw.Write(x); break;
-					case ushort  x: bw.Write(x); break;
-					case int     x: bw.Write(x); break;
-					case uint    x: bw.Write(x); break;
-					case long    x: bw.Write(x); break;
-					case ulong   x: bw.Write(x); break;
-					case float   x: bw.Write(x); break;
-					case double  x: bw.Write(x); break;
-					case decimal x: bw.Write(x); break;
-					case string  x: bw.Write(x); break;
-					case v2      x: bw.Write(x.x); bw.Write(x.y); break;
-					case v3      x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); break;
-					case v4      x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); bw.Write(x.w); break;
-					case m4x4    x: Write(x.x); Write(x.y); Write(x.z); Write(x.w); break;
-					case BBox    x: Write(x.Centre); Write(x.Radius); break;
-					}
+				default: throw new Exception($"Serialise: Unsupported type: {value.GetType().Name}");
+				case bool x: bw.Write(x); break;
+				case byte x: bw.Write(x); break;
+				case sbyte x: bw.Write(x); break;
+				case byte[] x: bw.Write(x); break;
+				case char x: bw.Write(x); break;
+				case char[] x: bw.Write(x); break;
+				case short x: bw.Write(x); break;
+				case ushort x: bw.Write(x); break;
+				case int x: bw.Write(x); break;
+				case uint x: bw.Write(x); break;
+				case long x: bw.Write(x); break;
+				case ulong x: bw.Write(x); break;
+				case float x: bw.Write(x); break;
+				case double x: bw.Write(x); break;
+				case decimal x: bw.Write(x); break;
+				case string x: bw.Write(x); break;
+				case v2 x: bw.Write(x.x); bw.Write(x.y); break;
+				case v3 x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); break;
+				case v4 x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); bw.Write(x.w); break;
+				case m4x4 x: Write(x.x); Write(x.y); Write(x.z); Write(x.w); break;
+				case BBox x: Write(x.Centre); Write(x.Radius); break;
 				}
 			}
 		}

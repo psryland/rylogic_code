@@ -135,7 +135,7 @@ namespace CoinFlip.Bots
 		public event EventHandler<MonitoredOrderEventArgs> OrderCancelled;
 
 		/// <summary>A persistable record of an order result</summary>
-		public class PersistedOrder :SettingsXml<PersistedOrder>
+		public class PersistedOrder :SettingsSet<PersistedOrder>
 		{
 			public PersistedOrder()
 			{

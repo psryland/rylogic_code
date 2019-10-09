@@ -7,7 +7,7 @@ using Rylogic.Utility;
 namespace CoinFlip.Settings
 {
 	[TypeConverter(typeof(TyConv))]
-	public class BotData :SettingsXml<BotData>
+	public class BotData :SettingsSet<BotData>
 	{
 		public BotData()
 		{

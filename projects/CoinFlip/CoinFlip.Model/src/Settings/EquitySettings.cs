@@ -4,7 +4,7 @@ using Rylogic.Common;
 
 namespace CoinFlip.Settings
 {
-	public class EquitySettings :SettingsXml<EquitySettings>
+	public class EquitySettings :SettingsSet<EquitySettings>
 	{
 		public EquitySettings()
 		{

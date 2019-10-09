@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -12,7 +10,7 @@ using Rylogic.Gui.WPF;
 
 namespace CoinFlip.UI.Indicators
 {
-	public abstract class Indicator<TDerived> :SettingsXml<TDerived>, IIndicator
+	public abstract class Indicator<TDerived> :SettingsSet<TDerived>, IIndicator
 		where TDerived : Indicator<TDerived>, new()
 	{
 		public Indicator()
@@ -27,8 +25,14 @@ namespace CoinFlip.UI.Indicators
 			: base(node)
 		{
 		}
-		public virtual void Dispose()
-		{ }
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+		}
 
 		/// <summary>Instance id</summary>
 		public Guid Id

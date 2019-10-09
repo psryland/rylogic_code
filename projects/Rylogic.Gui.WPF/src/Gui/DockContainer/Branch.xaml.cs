@@ -612,7 +612,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>A collection of branches or panes descendant from this branch</summary>
 		[DebuggerDisplay("{m_branch.DumpDesc()}")]
-		internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
+		internal sealed class DescendantCollection : IDisposable, IEnumerable<DescentantData>
 		{
 			/// <summary>The child controls (dock panes or branches) of this branch</summary>
 			private readonly Branch m_branch;
@@ -627,7 +627,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				for (var i = 0; i != m_descendants.Length; ++i)
 					m_descendants[i] = new DescentantData(m_branch, (EDockSite)i);
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				Util.DisposeRange(m_descendants.Select(x => x.Item));
 			}

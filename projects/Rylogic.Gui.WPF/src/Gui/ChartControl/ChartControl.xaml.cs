@@ -49,6 +49,7 @@ namespace Rylogic.Gui.WPF
 
 			Title = title;
 			Options = options;
+			Scene.Chart = this;
 			Range = new RangeData(this);
 			BaseRangeX = new RangeF(0.0, 1.0);
 			BaseRangeY = new RangeF(0.0, 1.0);
@@ -112,7 +113,7 @@ namespace Rylogic.Gui.WPF
 					m_options.YAxis.PropertyChanged -= HandleAxisOptionsChanged;
 					m_options.PropertyChanged -= HandleOptionsChanged;
 				}
-				m_options = value;
+				m_options = value ?? new OptionsData();
 				if (m_options != null)
 				{
 					// Apply the options to the scene
@@ -192,8 +193,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The chart background colour</summary>
 		public Color ChartBackground
 		{
-			get { return Options.BackgroundColour.ToMediaColor(); }
-			set { Options.BackgroundColour = value.ToColour32(); }
+			get => Options.BackgroundColour.ToMediaColor();
+			set => Options.BackgroundColour = value.ToColour32();
 		}
 
 		/// <summary>All chart objects</summary>

@@ -457,10 +457,12 @@ namespace Rylogic.Gui.WinForms
 				};
 
 				// Get the pointer to the FORMATRANGE structure in non-GC memory
-				using (var lparam = Marshal_.StructureToPtr(fmt_range))
+				using (var buffer = Marshal_.Alloc<Win32.FORMATRANGE>(EHeap.CoTaskMem))
 				{
+					Marshal.StructureToPtr(fmt_range, buffer.Value.Ptr, false);
+
 					// Send the rendered data for printing, then release and cached info
-					var res = Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE,  new IntPtr(1), lparam);
+					var res = Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE,  new IntPtr(1), buffer.Value.Ptr);
 					Win32.SendMessage(rtb_handle, (uint)Win32.EM_FORMATRANGE, (IntPtr)0, (IntPtr)0);
 					return (int)res; // Return last + 1 character printed
 				}
@@ -468,7 +470,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Get a reference to an OLE interface for the RichEditControl</summary>
-		private RichEditOleInterface OleInterface { get { return new RichEditOleInterface(this); } }
+		private RichEditOleInterface OleInterface => new RichEditOleInterface(this);
 
 		#region IRichEditOle
 
@@ -486,14 +488,14 @@ namespace Rylogic.Gui.WinForms
 				m_text_document = IntPtr.Zero;
 
 				// Allocate the ptr that EM_GETOLEINTERFACE will fill in.
-				using (var ptr = Marshal_.AllocCoTaskMem(typeof(IntPtr), 1))
+				using (var buffer = Marshal_.Alloc(EHeap.CoTaskMem, typeof(IntPtr), 1))
 				{
 					//Marshal.WriteIntPtr(ptr, IntPtr.Zero);  // Clear it.
-					if (Win32.SendMessage(rtb.Handle, Win32.EM_GETOLEINTERFACE, IntPtr.Zero, ptr) == IntPtr.Zero)
+					if (Win32.SendMessage(rtb.Handle, Win32.EM_GETOLEINTERFACE, IntPtr.Zero, buffer.Value.Ptr) == IntPtr.Zero)
 						throw new Exception("RichTextBox.OleInterface - EM_GETOLEINTERFACE failed.");
 
 					// Read the returned pointer.
-					using (var pRichEdit = Scope.Create(() => Marshal.ReadIntPtr(ptr), p => Marshal.Release(p)))
+					using (var pRichEdit = Scope.Create(() => Marshal.ReadIntPtr(buffer.Value.Ptr), p => Marshal.Release(p)))
 					{
 						if (pRichEdit == IntPtr.Zero)
 							throw new Exception("RichTextBox.OleInterface - failed to get the pointer.");

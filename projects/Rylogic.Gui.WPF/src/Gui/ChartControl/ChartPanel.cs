@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 
@@ -40,7 +41,17 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		}
 
 		/// <summary>The containing chart control</summary>
-		private ChartControl Chart => Gui_.FindVisualParent<ChartControl>(this) ?? throw new Exception("ChartPanel should be a child of a ChartControl");
+		internal ChartControl Chart
+		{
+			get => m_chart;
+			set
+			{
+				if (m_chart == value) return;
+				m_chart = value;
+				ContextMenu.DataContext = m_chart;
+			}
+		}
+		private ChartControl m_chart = null!;
 
 		/// <summary>Add an object to the scene</summary>
 		public void AddObject(View3d.Object obj)

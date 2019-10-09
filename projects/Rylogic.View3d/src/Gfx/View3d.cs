@@ -2340,13 +2340,11 @@ namespace ldr
 				var ctx = context_id ?? Guid.NewGuid();
 
 				// Serialise the verts/indices to a memory buffer
-				using (var vbuf = Marshal_.Pin(verts))
-				using (var ibuf = Marshal_.Pin(indices))
-				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
-				{
-					Handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
-					if (Handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");
-				}
+				using var vbuf = Marshal_.Pin(verts);
+				using var ibuf = Marshal_.Pin(indices);
+				using var nbuf = Marshal_.ArrayToPtr(EHeap.HGlobal, nuggets);
+				Handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
+				if (Handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");
 			}
 
 			/// <summary>Create an object via callback</summary>

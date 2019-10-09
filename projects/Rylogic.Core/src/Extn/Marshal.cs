@@ -5,6 +5,16 @@ using Rylogic.Utility;
 
 namespace Rylogic.Common
 {
+	/// <summary>Process heaps</summary>
+	public enum EHeap
+	{
+		/// <summary>HGlobal is the is the unmanaged process heap</summary>
+		HGlobal,
+
+		/// <summary>CoTaskMem is the COM heap</summary>
+		CoTaskMem,
+	}
+
 	/// <summary>Extra methods related to Marshal</summary>
 	public static class Marshal_
 	{
@@ -21,44 +31,29 @@ namespace Rylogic.Common
 		//  take unaligned types through the interface and internally convert
 		//  them to aligned types.
 
-		/// <summary>Convenience wrapper for release</summary>
-		public static void Release(ref IntPtr ptr)
+		/// <summary>Convenience wrapper for release on IUnknown COM interfaces</summary>
+		public static void Release(ref IntPtr iunknown)
 		{
-			if (ptr == IntPtr.Zero) return;
-			Marshal.Release(ptr);
-			ptr = IntPtr.Zero;
+			if (iunknown == IntPtr.Zero) return;
+			Marshal.Release(iunknown);
+			iunknown = IntPtr.Zero;
 		}
 
 		/// <summary>RAII scope for allocated global memory</summary>
-		public static Scope<UnmanagedBuffer> AllocHGlobal(int size_in_bytes)
+		public static Scope<UnmanagedBuffer> Alloc(EHeap mem, int size_in_bytes)
 		{
-			return AllocHGlobal(typeof(byte), size_in_bytes);
+			return Alloc(mem, typeof(byte), size_in_bytes);
 		}
-		public static Scope<UnmanagedBuffer> AllocHGlobal<TStruct>(int count = 1) where TStruct:struct
+		public static Scope<UnmanagedBuffer> Alloc<TStruct>(EHeap mem, int count = 1)
+			where TStruct : struct
 		{
-			return AllocHGlobal(typeof(TStruct), count);
+			return Alloc(mem, typeof(TStruct), count);
 		}
-		public static Scope<UnmanagedBuffer> AllocHGlobal(Type type, int count)
+		public static Scope<UnmanagedBuffer> Alloc(EHeap mem, Type type, int count = 1)
 		{
 			return Scope.Create(
-				() => new UnmanagedBuffer(type, count),
-				buf => buf.Release());
-		}
-
-		/// <summary>RAII scope for allocated co-task memory</summary>
-		public static Scope<IntPtr> AllocCoTaskMem(int size_in_bytes)
-		{
-			return AllocCoTaskMem(typeof(byte), size_in_bytes);
-		}
-		public static Scope<IntPtr> AllocCoTaskMem<TStruct>(int count = 1) where TStruct:struct
-		{
-			return AllocCoTaskMem(typeof(TStruct), count);
-		}
-		public static Scope<IntPtr> AllocCoTaskMem(Type type, int count)
-		{
-			return Scope.Create(
-				() => Marshal.AllocCoTaskMem(Marshal.SizeOf(type) * count),
-				ptr => Marshal.FreeCoTaskMem(ptr));
+				() => new UnmanagedBuffer(mem, type, count),
+				buf => buf.Dispose());
 		}
 
 		/// <summary>Copy a managed string into unmanaged memory, converting to ANSI format if required</summary>
@@ -70,7 +65,8 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Convert to/from a structure to non-GC memory. Freeing on dispose</summary>
-		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt)
+		[Obsolete("Use 'Alloc' instead")]
+		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt, EHeap mem)
 			where TStruct : struct
 		{
 			return Scope.Create(
@@ -85,6 +81,7 @@ namespace Rylogic.Common
 						Marshal.FreeCoTaskMem(ptr);
 					});
 		}
+		[Obsolete("Use 'Marshal.PtrToStructure' instead")]
 		public static TStruct PtrToStructure<TStruct>(IntPtr ptr)
 			where TStruct : struct
 		{
@@ -92,9 +89,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
-		public static Scope<UnmanagedBuffer> ArrayToPtr<T>(T[] arr) where T:struct
+		public static Scope<UnmanagedBuffer> ArrayToPtr<T>(EHeap mem, T[] arr)
+			where T : struct
 		{
-			var scope = AllocHGlobal<T>(arr.Length);
+			var scope = Alloc<T>(mem, arr.Length);
 			var elem_sz = Marshal.SizeOf(typeof(T));
 
 			var ptr = scope.Value.Ptr;
@@ -106,13 +104,14 @@ namespace Rylogic.Common
 
 			return scope;
 		}
-		public static T[] PtrToArray<T>(IntPtr ptr, int count) where T:struct
+		public static T[] PtrToArray<T>(IntPtr ptr, int count)
+			where T : struct
 		{
 			var r = new T[count];
 			var elem_sz = Marshal.SizeOf(typeof(T));
 			for (int i = 0; i != count; ++i)
 			{
-				r[i] = PtrToStructure<T>(ptr);
+				r[i] = Marshal.PtrToStructure<T>(ptr);
 				ptr += elem_sz;
 			}
 			return r;
@@ -138,24 +137,47 @@ namespace Rylogic.Common
 		{
 			return new PinnedObject<T>(obj);
 		}
-	}
 
-	/// <summary>Unmanaged memory buffer</summary>
-	public struct UnmanagedBuffer
-	{
-		public int Length;
-		public IntPtr Ptr;
+		/// <summary>Unmanaged memory buffer</summary>
+		public sealed class UnmanagedBuffer :IDisposable
+		{
+			public UnmanagedBuffer(EHeap mem, Type ty, int count)
+			{
+				Type = mem;
+				Length = Marshal.SizeOf(ty) * count;
+				Ptr = Type switch
+				{
+					EHeap.CoTaskMem => Marshal.AllocCoTaskMem(Length),
+					EHeap.HGlobal => Marshal.AllocHGlobal(Length),
+					_ => throw new Exception($"Unknown global memory type: {mem}"),
+				};
+			}
+			public void Dispose()
+			{
+				if (Ptr == IntPtr.Zero) return;
+				switch (Type)
+				{
+				case EHeap.HGlobal: Marshal.FreeHGlobal(Ptr); break;
+				case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(Ptr); break;
+				default: throw new Exception("$Unknown global memory type: {mem}");
+				}
+				Ptr = IntPtr.Zero;
+				Length = 0;
+				GC.SuppressFinalize(this);
+			}
 
-		public UnmanagedBuffer(Type ty, int count)
-		{
-			Length = Marshal.SizeOf(ty) * count;
-			Ptr = Marshal.AllocHGlobal(Length);
-		}
-		public void Release()
-		{
-			Marshal.FreeHGlobal(Ptr);
-			Ptr = IntPtr.Zero;
-			Length = 0;
+			public EHeap Type;
+			public IntPtr Ptr;
+			public int Length;
+
+			/// <summary>Interpret the buffer as a structure type</summary>
+			public TStruct As<TStruct>()
+				where TStruct : struct
+			{
+				if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
+				if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
+				return Marshal.PtrToStructure<TStruct>(Ptr);
+			}
 		}
 	}
 

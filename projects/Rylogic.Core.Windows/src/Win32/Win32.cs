@@ -10,6 +10,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Input;
@@ -1565,7 +1566,7 @@ namespace Rylogic.Interop.Win32
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
 				{
-					var wpos = Marshal_.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
+					var wpos = Marshal.PtrToStructure<WINDOWPOS>(lparam);
 					return string.Format("{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
 						, hdr
 						, wpos.x, wpos.y
@@ -1592,7 +1593,7 @@ namespace Rylogic.Interop.Win32
 			case WM_NOTIFY:
 				{
 					var notify_type = "unknown";
-					var nmhdr = Marshal_.PtrToStructure<NMHDR>((IntPtr)lparam);
+					var nmhdr = Marshal.PtrToStructure<NMHDR>(lparam);
 					if (NM_LAST <= nmhdr.code) notify_type = "NM";
 					else if (LVN_LAST <= nmhdr.code) notify_type = "LVN";
 					else if (HDN_LAST <= nmhdr.code) notify_type = "HDN";
@@ -1658,6 +1659,10 @@ namespace Rylogic.Interop.Win32
 					goto case WM_NULL;
 				}
 			case WM_TIMER:
+				{
+					goto case WM_NULL;
+				}
+			case WM_GETOBJECT:
 				{
 					goto case WM_NULL;
 				}

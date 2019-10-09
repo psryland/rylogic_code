@@ -64,12 +64,43 @@ namespace Rylogic.Common
 	public abstract class SettingsSet<T> :ISettingsSet, INotifyPropertyChanged, INotifyPropertyChanging
 		where T:SettingsSet<T>, new()
 	{
-		/// <summary>The collection of settings</summary>
-		protected readonly Dictionary<string, object?> m_data;
+		// Notes:
+		//  - SettingsSet is intended as a child element of SettingsBase.
+		//  - SettingsSet doesn't have an 'Upgrade' method because SettingsSets don't
+		//    contain version numbers (SettingsBase does).
+
 		protected SettingsSet()
 		{
 			m_data = new Dictionary<string, object?>();
 		}
+		protected SettingsSet(XElement node)
+			: this()
+		{
+			if (node != null)
+			{
+				var ty = typeof(T);
+				foreach (var n in node.Elements())
+				{
+					// Use the type to determine the type of the XML element
+					var prop_name = n.Name.LocalName;
+					var pi = ty.GetProperty(prop_name, BindingFlags.Instance | BindingFlags.Public);
+
+					// Ignore XML values that are no longer properties of 'T'
+					if (pi == null) continue;
+					m_data[prop_name] = n.As(pi.PropertyType);
+				}
+
+				// Exceptions will bubble up to the root SettingsBase object
+				return;
+			}
+
+			// Fall back to default values
+			// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+			m_data = new T().m_data;
+		}
+		protected SettingsSet(SettingsSet<T> rhs)
+			: this(rhs.ToXml(new XElement("root")))
+		{}
 
 		/// <summary>The default values for the settings</summary>
 		public static T Default { get; } = new T();
@@ -94,6 +125,7 @@ namespace Rylogic.Common
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
 		public IReadOnlyDictionary<string, object?> Data => m_data;
+		protected readonly Dictionary<string, object?> m_data;
 
 		/// <summary>Returns the top-most settings set</summary>
 		public ISettingsSet Root
@@ -150,7 +182,7 @@ namespace Rylogic.Common
 			// Notify about to change
 			var args0 = new SettingChangeEventArgs(this, key, old, true);
 			OnSettingChange(args0); if (args0.Cancel) return;
-			PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(key));
+			NotifyPropertyChanging(key);
 
 			// Update the value
 			m_data[key] = value!;
@@ -158,7 +190,7 @@ namespace Rylogic.Common
 			// Notify changed
 			var args1 = new SettingChangeEventArgs(this, key, value!, false);
 			OnSettingChange(args1);
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
+			NotifyPropertyChanged(key);
 		}
 
 		/// <summary>Return the settings as an XML node tree</summary>
@@ -234,10 +266,6 @@ namespace Rylogic.Common
 		/// <summary>An event raised before and after a setting is changes value</summary>
 		public event EventHandler<SettingChangeEventArgs>? SettingChange;
 
-		/// <summary>Property changed</summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
-		public event PropertyChangingEventHandler? PropertyChanging;
-
 		/// <summary>Manually notify of a setting change</summary>
 		public void NotifySettingChanged(string key)
 		{
@@ -259,6 +287,20 @@ namespace Rylogic.Common
 		void ISettingsSet.OnSettingChange(SettingChangeEventArgs args)
 		{
 			OnSettingChange(args);
+		}
+
+		/// <summary>Property changing</summary>
+		public event PropertyChangingEventHandler? PropertyChanging;
+		private void NotifyPropertyChanging(string prop_name)
+		{
+			PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(prop_name));
+		}
+
+		/// <summary>Property changed</summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>If 'nested' is not null, sets its Parent to this settings object</summary>
@@ -713,7 +755,7 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for a class that gets saved to/loaded from XML only</summary>
-	public abstract class SettingsXml<T> :ISettingsSet, INotifyPropertyChanged, INotifyPropertyChanging
+	[Obsolete("Use SettingsSet")] public abstract class SettingsXml<T> :ISettingsSet, INotifyPropertyChanged, INotifyPropertyChanging
 		where T:SettingsXml<T>, new()
 	{
 		protected SettingsXml()

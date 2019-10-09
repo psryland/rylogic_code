@@ -10,7 +10,7 @@ namespace CoinFlip.Settings
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
 	[DebuggerDisplay("{Symbol} {AssignedValue}")]
-	public class CoinData : SettingsXml<CoinData>
+	public class CoinData : SettingsSet<CoinData>
 	{
 		public CoinData()
 			: this(string.Empty)

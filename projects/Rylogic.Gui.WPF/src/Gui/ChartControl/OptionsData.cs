@@ -12,13 +12,13 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl
 	{
 		[TypeConverter(typeof(TyConv))]
-		public class OptionsData :SettingsXml<OptionsData>
+		public class OptionsData :SettingsSet<OptionsData>
 		{
 			public OptionsData()
 			{
 				NavigationMode = ENavMode.Chart2D;
 				LockAspect = null;
-				BackgroundColour = Colour32.LightGray;
+				BackgroundColour = Colour32.White;
 				SelectionColour = 0x8060A0E0;
 				GridZOffset = 0.001;
 				CrossHairZOffset = 0.005;
@@ -102,6 +102,7 @@ namespace Rylogic.Gui.WPF
 					var shown = ShowGridLines;
 					XAxis.ShowGridLines = !shown;
 					YAxis.ShowGridLines = !shown;
+					NotifyPropertyChanged(nameof(ShowGridLines));
 				}
 			}
 
@@ -198,7 +199,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			[TypeConverter(typeof(TyConv))]
-			public class Axis :SettingsXml<Axis>
+			public class Axis :SettingsSet<Axis>
 			{
 				public Axis()
 				{

@@ -13,7 +13,7 @@ namespace CoinFlip.Settings
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
 	[DebuggerDisplay("{Id,nq}")]
-	public class FundData : SettingsXml<FundData>
+	public class FundData : SettingsSet<FundData>
 	{
 		public FundData()
 			: this(string.Empty, new ExchData[0])

@@ -134,8 +134,8 @@ namespace Rylogic.Gui.WinForms
 			case Win32.WM_REFLECT + Win32.WM_NOTIFY:
 				#region
 				{
-					var nmhdr = Marshal_.PtrToStructure<Win32.NMHDR>(m.LParam);
-					var notif = Marshal_.PtrToStructure<Sci.SCNotification>(m.LParam);
+					var nmhdr = Marshal.PtrToStructure<Win32.NMHDR>(m.LParam);
+					var notif = Marshal.PtrToStructure<Sci.SCNotification>(m.LParam);
 					HandleSCNotification(ref nmhdr, ref notif);
 					break;
 				}

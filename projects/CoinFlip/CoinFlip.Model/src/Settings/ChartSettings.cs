@@ -4,7 +4,7 @@ using Rylogic.Gfx;
 
 namespace CoinFlip.Settings
 {
-	public class ChartSettings :SettingsXml<ChartSettings>
+	public class ChartSettings :SettingsSet<ChartSettings>
 	{
 		public ChartSettings()
 		{

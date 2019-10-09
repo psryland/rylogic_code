@@ -682,7 +682,7 @@ namespace Rylogic.Gui.WPF
 		};
 
 		/// <summary>Rendering options for this data series</summary>
-		public class OptionsData : SettingsXml<OptionsData>
+		public class OptionsData : SettingsSet<OptionsData>
 		{
 			public OptionsData()
 			{
@@ -714,17 +714,8 @@ namespace Rylogic.Gui.WPF
 				: base(node)
 			{ }
 			public OptionsData(OptionsData rhs)
-			{
-				Colour = rhs.Colour;
-				PlotType = rhs.PlotType;
-				PointStyle = rhs.PointStyle;
-				PointSize = rhs.PointSize;
-				LineWidth = rhs.LineWidth;
-				PointsOnLinePlot = rhs.PointsOnLinePlot;
-				BarWidth = rhs.BarWidth;
-				BarHorizontalAlignment = rhs.BarHorizontalAlignment;
-				LinesOnBarPlot = rhs.LinesOnBarPlot;
-			}
+				: base(rhs)
+			{ }
 
 			/// <summary>The base colour for this plot</summary>
 			public Colour32 Colour

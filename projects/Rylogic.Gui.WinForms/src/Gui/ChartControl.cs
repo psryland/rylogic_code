@@ -1827,7 +1827,7 @@ namespace Rylogic.Gui.WinForms
 		#region Range
 
 		/// <summary>The 2D size of the chart</summary>
-		public class RangeData :IDisposable
+		public sealed class RangeData :IDisposable
 		{
 			public RangeData(ChartControl owner)
 			{
@@ -1840,7 +1840,7 @@ namespace Rylogic.Gui.WinForms
 				XAxis = new Axis(rhs.XAxis);
 				YAxis = new Axis(rhs.YAxis);
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
 				XAxis = null;
 				YAxis = null;
@@ -1977,7 +1977,7 @@ namespace Rylogic.Gui.WinForms
 			private ChartMovedEventArgs m_moved_args;
 
 			/// <summary>A axis on the chart (typically X or Y)</summary>
-			public class Axis :IDisposable
+			public sealed class Axis :IDisposable
 			{
 				public Axis(EAxis axis, ChartControl owner)
 					:this(axis, owner, 0f, 1f)
@@ -2155,14 +2155,14 @@ namespace Rylogic.Gui.WinForms
 
 				/// <summary>Raised whenever the range scales</summary>
 				public event EventHandler Zoomed;
-				protected virtual void OnZoomed()
+				private void OnZoomed()
 				{
 					Zoomed?.Invoke(this, EventArgs.Empty);
 				}
 
 				/// <summary>Raised whenever the range shifts</summary>
 				public event EventHandler Scroll;
-				protected virtual void OnScroll()
+				private void OnScroll()
 				{
 					Scroll?.Invoke(this, EventArgs.Empty);
 				}
@@ -5815,7 +5815,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Rendering options for this data series</summary>
-		public class OptionsData :SettingsXml<OptionsData>
+		public class OptionsData :SettingsSet<OptionsData>
 		{
 			public OptionsData()
 			{

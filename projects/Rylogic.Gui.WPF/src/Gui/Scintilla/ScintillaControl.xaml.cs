@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
@@ -31,20 +32,6 @@ namespace Rylogic.Gui.WPF
 		{
 			InitializeComponent();
 		}
-
-		/// <summary>The window handle of the Scintilla control</summary>
-		private IntPtr Hwnd { get; set; }
-
-		/// <summary>Call the direct function</summary>
-		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
-		{
-			if (m_func == null) return IntPtr.Zero;
-			return m_func(m_ptr, code, wparam, lparam);
-		}
-		private Sci.DirectFunction? m_func;
-		private IntPtr m_ptr;
-
-		/// <summary>Create the native window handle</summary>
 		protected override HandleRef BuildWindowCore(HandleRef hwnd_parent)
 		{
 			// Notes:
@@ -52,6 +39,8 @@ namespace Rylogic.Gui.WPF
 			//    in order to fix some issue with notification messages sent from the native control.
 			//    I haven't seen any issue so I'm just creating the native control directly. Doing so
 			//    means resizing and general interaction with FrameworkElements works properly.
+			if (!Sci.ModuleLoaded)
+				throw new Exception("Scintilla DLL must be loaded before attempting to create the scintilla control");
 			if (hwnd_parent.Handle == IntPtr.Zero)
 				throw new Exception("Expected this control to be a child");
 
@@ -60,11 +49,6 @@ namespace Rylogic.Gui.WPF
 			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, (IntPtr)ScintillaId, IntPtr.Zero, IntPtr.Zero);
 			if (Hwnd == IntPtr.Zero)
 				throw new Exception("Failed to create scintilla native control");
-
-			// Get the function pointer for direct calling the WndProc (rather than windows messages)
-			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
-			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
-			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func);
 
 			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
 			var parent = HwndSource.FromHwnd(hwnd_parent.Handle);
@@ -78,22 +62,16 @@ namespace Rylogic.Gui.WPF
 				Dispose();
 			};
 
-			// Reset to the default style
-			CodePage = Sci.SC_CP_UTF8;
-			Cursor = Cursors.IBeam;
-			ClearAll();
-			ClearDocumentStyle();
-			StyleBits = 7;
-			TabWidth = 4;
-			Indent = 4;
+			// Get the function pointer for direct calling the WndProc (rather than windows messages)
+			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
+			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
+			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func) ?? throw new Exception("Failed to retrieve the direct call function");
+
+			// Reset the style
+			InitStyle(this);
 
 			// Return the host window handle
 			return new HandleRef(this, Hwnd);
-		}
-		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-		{
-			handled = false;
-			return IntPtr.Zero;
 		}
 		protected override void DestroyWindowCore(HandleRef hwnd)
 		{
@@ -101,13 +79,73 @@ namespace Rylogic.Gui.WPF
 			m_ptr = IntPtr.Zero;
 			Win32.DestroyWindow(hwnd.Handle);
 		}
+		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			// Notes:
+			//  - This is a wnd proc for the native scintilla control
+
+			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
+			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
+			switch (msg)
+			{
+			case Win32.WM_SETFOCUS:
+				{
+					if (m_in_wnd_proc != 0) break;
+					using (Scope.Create(() => ++m_in_wnd_proc, () => --m_in_wnd_proc))
+					{
+						Keyboard.Focus(this);
+						Win32.SetFocus(Hwnd);
+						handled = true;
+					}
+					break;
+				}
+			}
+			return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			switch (e.Key)
+			{
+			case Key.Tab:
+			case Key.Up:
+			case Key.Down:
+			case Key.Left:
+			case Key.Right:
+				{
+					// Forward navigation keys to the native control.
+					// This cannot be done in WndProc because navigation keys never make
+					// it to the native control.
+					var vk = (int)Win32.ToVKey(e.Key);
+					Win32.SendMessage(Hwnd, Win32.WM_KEYDOWN, vk, 1);
+					e.Handled = true;
+					break;
+				}
+			}
+			base.OnKeyDown(e);
+		}
+		private int m_in_wnd_proc;
+
+		/// <summary>The window handle of the Scintilla control</summary>
+		private IntPtr Hwnd { get; set; }
+
+		/// <summary>Call the direct function</summary>
+		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
+		{
+			if (m_func == null) return IntPtr.Zero;
+			return m_func(m_ptr, code, wparam, lparam);
+		}
+		private Sci.DirectFunction? m_func;
+		private IntPtr m_ptr;
 
 		/// <summary>Handle messages from the native control</summary>
 		private IntPtr HandleNotifications(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
 		{
+			// Notes:
+			//  - 'hwnd' is the window handle of the parent window of the native scintilla control.
+			//    Scintilla sends notifications to its parent, which is what we're handling here.
+
 			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
 			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
-
 			switch (msg)
 			{
 			case Win32.WM_COMMAND:
@@ -116,13 +154,15 @@ namespace Rylogic.Gui.WPF
 					var notif = Win32.HiWord(wparam.ToInt32());
 					var id = Win32.LoWord(wparam.ToInt32());
 					if (notif == Win32.EN_CHANGE && id == ScintillaId)
+					{
 						TextChanged?.Invoke(this, EventArgs.Empty);
+						handled = true;
+					}
 					break;
 				}
 			case Win32.WM_NOTIFY:
 				{
-					//var nmhdr = Marshal_.PtrToStructure<Win32.NMHDR>(lparam);
-					var notif = Marshal_.PtrToStructure<Sci.SCNotification>(lparam);
+					var notif = Marshal.PtrToStructure<Sci.SCNotification>(lparam);
 					switch (notif.nmhdr.code)
 					{
 					case Sci.SCN_CHARADDED:
@@ -164,12 +204,41 @@ namespace Rylogic.Gui.WPF
 							break;
 						}
 					}
+					handled = true;
 					break;
 				}
 			}
-
-			handled = false;
 			return IntPtr.Zero;
+		}
+
+		/// <summary>A callback function used to reset the style of the control</summary>
+		public Action<ScintillaControl> InitStyle
+		{
+			get => m_init_style ?? DefaultInitStyle;
+			set
+			{
+				if (m_init_style == value) return;
+				m_init_style = value;
+				if (m_func != null && m_init_style != null)
+					m_init_style(this);
+			}
+		}
+		private Action<ScintillaControl>? m_init_style;
+
+		/// <summary>Default initial style function</summary>
+		public static void DefaultInitStyle(ScintillaControl sc)
+		{
+			if (sc.m_func == null)
+				throw new Exception($"Scintilla native control has not been created yet");
+
+			// Reset to the default style
+			sc.CodePage = Sci.SC_CP_UTF8;
+			sc.Cursor = Cursors.IBeam;
+			sc.ClearAll();
+			sc.ClearDocumentStyle();
+			sc.StyleBits = 7;
+			sc.TabWidth = 4;
+			sc.Indent = 4;
 		}
 
 		/// <summary>Call the direct function</summary>
@@ -261,9 +330,10 @@ namespace Rylogic.Gui.WPF
 		{
 			get
 			{
-				throw new NotImplementedException();
-				//Sci.TextRange tr;
-				//Cmd(Sci.SCI_GETTEXTRANGE, 0, &tr);
+				using var tr = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
+				Cmd(Sci.SCI_GETTEXTRANGE, 0, tr.Value.Ptr);
+				var range = tr.Value.As<Sci.TextRange>();
+				return new Range(range.chrg.cpMin, range.chrg.cpMax);
 			}
 		}
 
