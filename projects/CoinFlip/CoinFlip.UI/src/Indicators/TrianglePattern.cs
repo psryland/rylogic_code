@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,10 +8,9 @@ using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-using Rylogic.Utility;
+using Drawing_ = Rylogic.Extn.Windows.Drawing_;
 
 namespace CoinFlip.UI.Indicators
 {

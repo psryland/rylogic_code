@@ -228,7 +228,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the popped out state of the auto hide panel</summary>
 		public bool PoppedOut
 		{
-			get { return Visibility == Visibility.Visible; }
+			get => Visibility == Visibility.Visible;
 			set
 			{
 				if (PoppedOut == value) return;

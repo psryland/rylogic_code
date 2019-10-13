@@ -22,6 +22,8 @@ namespace Rylogic.Gui.WPF
 				SelectionColour = 0x8060A0E0;
 				GridZOffset = 0.001;
 				CrossHairZOffset = 0.005;
+				FocusPointVisible = false;
+				OriginPointVisible = false;
 				ShowAxes = true;
 				AntiAliasing = true;
 				FillMode = View3d.EFillMode.Solid;
@@ -84,6 +86,20 @@ namespace Rylogic.Gui.WPF
 			{
 				get => get<double>(nameof(CrossHairZOffset));
 				set => set(nameof(CrossHairZOffset), value);
+			}
+
+			/// <summary>True if the focus is visible</summary>
+			public bool FocusPointVisible
+			{
+				get => get<bool>(nameof(FocusPointVisible));
+				set => set(nameof(FocusPointVisible), value);
+			}
+
+			/// <summary>True if the origin is visible</summary>
+			public bool OriginPointVisible
+			{
+				get => get<bool>(nameof(OriginPointVisible));
+				set => set(nameof(OriginPointVisible), value);
 			}
 
 			/// <summary>Show/Hide the chart axes</summary>

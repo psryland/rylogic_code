@@ -1269,7 +1269,7 @@ VIEW3D_API EView3DNavOp __stdcall View3D_MouseBtnToNavOp(int mk)
 // Lighting ********************************************************
 
 // Return the configuration of the single light source
-VIEW3D_API void __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DLight& light)
+VIEW3D_API BOOL __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DLight& light)
 {
 	try
 	{
@@ -1290,8 +1290,9 @@ VIEW3D_API void __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DL
 		light.m_cast_shadow     = window->m_light.m_cast_shadow;
 		light.m_on              = window->m_light.m_on;
 		light.m_cam_relative    = window->m_light.m_cam_relative;
+		return TRUE;
 	}
-	CatchAndReport(View3D_LightPropertiesGet, window, );
+	CatchAndReport(View3D_LightPropertiesGet, window, FALSE);
 }
 
 // Configure the single light source
@@ -2929,7 +2930,7 @@ VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_focus_point_visible;
+		return window->FocusPointVisible();
 	}
 	CatchAndReport(View3D_FocusPointVisibleGet, window, false);
 }
@@ -2942,7 +2943,7 @@ VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(View3DWindow window, BOOL 
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_focus_point_visible = show != 0;
+		window->FocusPointVisible(show != 0);
 	}
 	CatchAndReport(View3D_FocusPointVisibleSet, window,);
 }
@@ -2968,7 +2969,7 @@ VIEW3D_API BOOL __stdcall View3D_OriginVisibleGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_origin_point_visible;
+		return window->OriginPointVisible();
 	}
 	CatchAndReport(View3D_OriginVisibleGet, window, false);
 }
@@ -2981,7 +2982,7 @@ VIEW3D_API void __stdcall View3D_OriginVisibleSet(View3DWindow window, BOOL show
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_origin_point_visible = show != 0;
+		window->OriginPointVisible(show != 0);
 	}
 	CatchAndReport(View3D_OriginVisibleSet, window,);
 }
@@ -3109,6 +3110,18 @@ VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
 		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
 	}
 	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());
+}
+
+// Return the auto complete templates as a BSTR
+VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr()
+{
+	try
+	{
+		DllLockGuard;
+		auto templates = pr::ldr::AutoCompleteTemplates();
+		return ::SysAllocStringLen(templates.c_str(), UINT(templates.size()));
+	}
+	CatchAndReport(View3D_AutoCompleteTemplatesBStr,,BSTR());
 }
 
 // Show a window containing the demo scene script

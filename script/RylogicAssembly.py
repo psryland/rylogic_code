@@ -20,7 +20,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, framework:str, platform:
 
 	# Set this to false to disable running tests on compiling
 	RunTests = run_tests
-	RunTests = False
+	#RunTests = False
 
 	# The build outputs
 	dll = os.path.join(targetdir, f"{assembly}.dll")
@@ -45,7 +45,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, framework:str, platform:
 				command = (
 					"& {\n" +
 					f"    Set-Location {targetdir};\n" +
-					f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) +
+					#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) +
 					f"    Add-Type -AssemblyName '{target}';\n" +
 					#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) + 
 					#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" + 
@@ -53,11 +53,8 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, framework:str, platform:
 					f"    Exit $result;\n" +
 					"}")
 				#print(command)
-				#if framework == "net472":
-				#	res,outp = Tools.Run([UserVars.powershell64, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command])
-				#else:
-				res,outp = Tools.Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command])
 
+				res,outp = Tools.Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command])
 				print(outp)
 				if not res:
 					raise Exception("   **** Unit tests failed ****   ")

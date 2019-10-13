@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using Rylogic.Common;
 
 namespace RyLogViewer.Options
@@ -80,7 +81,7 @@ namespace RyLogViewer.Options
 		}
 
 		/// <summary>Validate settings</summary>
-		internal void Validate()
+		public override Exception Validate()
 		{
 			// If restoring the screen location, ensure it's on screen
 			if (RestoreScreenLocation)
@@ -95,6 +96,8 @@ namespace RyLogViewer.Options
 				if (!valid)
 					RestoreScreenLocation = false;
 			}
+
+			return null;
 		}
 	}
 }

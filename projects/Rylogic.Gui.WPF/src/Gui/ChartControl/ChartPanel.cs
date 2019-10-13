@@ -58,6 +58,18 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			Window.AddObject(obj);
 		}
+		public void AddObjects(IEnumerable<View3d.Object> objects)
+		{
+			Window.AddObjects(objects);
+		}
+		public void AddObjects(Guid context_id)
+		{
+			Window.AddObjects(context_id);
+		}
+		public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
+		{
+			Window.AddObjects(context_ids, include_count, exclude_count);
+		}
 
 		/// <summary>Remove an object from the scene</summary>
 		public void RemoveObject(View3d.Object obj)
@@ -70,6 +82,13 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		}
 		public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
 		{
+			// Don't remove chart tools
+			if (include_count == 0)
+			{
+				Array.Resize(ref context_ids, context_ids.Length + 1);
+				context_ids[context_ids.Length - 1] = ChartControl.ChartTools.Id;
+				++exclude_count;
+			}
 			Window.RemoveObjects(context_ids, include_count, exclude_count);
 		}
 		public void RemoveAllObjects()

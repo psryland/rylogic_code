@@ -340,6 +340,8 @@ extern "C"
 		BackgroundColour,
 		Lighting,
 		Camera,
+		FocusPointVisible,
+		OriginPointVisible,
 	};
 
 	struct View3DV2
@@ -649,7 +651,7 @@ extern "C"
 	VIEW3D_API EView3DNavOp          __stdcall View3D_MouseBtnToNavOp       (int mk);
 
 	// Lights
-	VIEW3D_API void        __stdcall View3D_LightPropertiesGet       (View3DWindow window, View3DLight& light);
+	VIEW3D_API BOOL        __stdcall View3D_LightPropertiesGet       (View3DWindow window, View3DLight& light);
 	VIEW3D_API void        __stdcall View3D_LightPropertiesSet       (View3DWindow window, View3DLight const& light);
 	VIEW3D_API void        __stdcall View3D_LightSource              (View3DWindow window, View3DV4 position, View3DV4 direction, BOOL camera_relative);
 	VIEW3D_API void        __stdcall View3D_LightShowDialog          (View3DWindow window);
@@ -787,6 +789,7 @@ extern "C"
 	VIEW3D_API GUID       __stdcall View3D_DemoSceneCreate          (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_DemoSceneDelete          ();
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
+	VIEW3D_API BSTR       __stdcall View3D_AutoCompleteTemplatesBStr();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);
 	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
 	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);

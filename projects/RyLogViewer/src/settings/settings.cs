@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -487,7 +488,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
-		public override void Validate()
+		public override Exception Validate()
 		{
 			// If restoring the screen location, ensure it's onscreen
 			if (RestoreScreenLoc)
@@ -537,33 +538,35 @@ namespace RyLogViewer
 				if (c.ProtocolType != ProtocolType.Tcp && c.ProtocolType != ProtocolType.Udp)
 					c.ProtocolType = ProtocolType.Tcp;
 			}
+
+			// No errors, just silently fix up inconsistencies.
+			return null;
 		}
 
 		/// <summary>Called when loading settings from an earlier version</summary>
-		public override void Upgrade(XElement settings, string from_version)
+		protected override void UpgradeCore(XElement settings, string from_version)
 		{
 			for (;from_version != Version;)
 			{
 				switch (from_version)
 				{
 				default:
-					base.Upgrade(settings, from_version);
+					base.UpgradeCore(settings, from_version);
 					break;
 				case "vX.X": // example
 					from_version = Upgrade_vXX_to_vYY(settings);
 					break;
 				}
 			}
-		}
 
-		/// <summary>Example upgrade method</summary>
-		private string Upgrade_vXX_to_vYY(XElement settings)
-		{
-			// Modify the contents of 'settings'
-			// Do not use any types that might change over time
+			string Upgrade_vXX_to_vYY(XElement s)
+			{
+				// Modify the contents of 'settings'
+				// Do not use any types that might change over time
 
-			// Done, return the version
-			return "vY.Y";
+				// Done, return the version
+				return "vY.Y";
+			}
 		}
 	}
 }

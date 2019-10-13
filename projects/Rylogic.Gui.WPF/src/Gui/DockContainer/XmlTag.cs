@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Rylogic.Gui.WPF.DockContainerDetail
+﻿namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>Tags used in persisting layout to XML</summary>
 	internal static class XmlTag

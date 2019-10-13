@@ -58,7 +58,7 @@ namespace Rylogic.Gui.WPF
 						// If the op starts immediately without a mouse down, fake
 						// a mouse down event as soon as it becomes active.
 						if (!m_active.StartOnMouseDown)
-							m_active.MouseDown(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left));
+							m_active.MouseDown(null);
 					}
 				}
 			}
@@ -215,8 +215,12 @@ namespace Rylogic.Gui.WPF
 			// Handle events by default. Unhandled events fall back to default handling by the chart
 
 			/// <summary>Called on mouse down</summary>
-			public virtual void MouseDown(MouseButtonEventArgs e)
+			public virtual void MouseDown(MouseButtonEventArgs? e)
 			{
+				// Note: 'e' can be null if the MouseOp starts immediately.
+				// Using a dummy MouseButtonEventArgs object results in an InvalidOperationException
+				// saying "Every RoutedEventArgs must have a non-null RoutedEvent associated with it".
+				if (e == null) return;
 				e.Handled = true;
 			}
 
@@ -277,8 +281,9 @@ namespace Rylogic.Gui.WPF
 				Util.Dispose(ref m_cleanup_selection_graphic);
 				base.Dispose(_);
 			}
-			public override void MouseDown(MouseButtonEventArgs e)
+			public override void MouseDown(MouseButtonEventArgs? e)
 			{
+				if (e == null) throw new Exception("This mouse op should start on mouse down");
 				var location = e.GetPosition(Chart);
 				m_drag_state = EDragState.Start;
 				m_click_count = e.ClickCount;
@@ -493,7 +498,8 @@ namespace Rylogic.Gui.WPF
 			private bool m_tape_measure_graphic_added;
 			private IDisposable? m_defer_nav_checkpoint;
 
-			public MouseOpDefaultMButton(ChartControl chart) : base(chart)
+			public MouseOpDefaultMButton(ChartControl chart)
+				: base(chart)
 			{
 				//m_tape_measure_balloon = new HintBalloon
 				//{
@@ -503,8 +509,9 @@ namespace Rylogic.Gui.WPF
 				//};
 				m_tape_measure_graphic_added = false;
 			}
-			public override void MouseDown(MouseButtonEventArgs e)
+			public override void MouseDown(MouseButtonEventArgs? e)
 			{
+				if (e == null) throw new Exception("This mouse op should start on mouse down");
 				m_defer_nav_checkpoint = Chart.DeferNavCheckpoints();
 				var location = e.GetPosition(Chart);
 
@@ -593,8 +600,9 @@ namespace Rylogic.Gui.WPF
 			public MouseOpDefaultRButton(ChartControl chart)
 				: base(chart)
 			{ }
-			public override void MouseDown(MouseButtonEventArgs e)
+			public override void MouseDown(MouseButtonEventArgs? e)
 			{
+				if (e == null) throw new Exception("This mouse op should start on mouse down");
 				var location = e.GetPosition(Chart);
 
 				if (Chart.SceneBounds.Contains(location)) m_drag_axis_allow = EAxis.Both;

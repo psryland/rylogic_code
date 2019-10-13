@@ -86,22 +86,30 @@ namespace Rylogic.Common
 						continue;
 					}
 
-					// Look in 'libdir' for a system assembly
-					if (Path_.FileExists(Path.Combine(libdir, ass)))
+					var search_paths = (include_paths ?? Array.Empty<string>()).Append(Util.ResolveAppPath());
+
+					if (ass.StartsWith("."))
 					{
-						yield return Path.Combine(libdir, ass);
-						continue;
+						// Look in likely paths
+						var ass_filepath = search_paths.Select(x => Path.Combine(x, ass)).FirstOrDefault(x => Path_.FileExists(x));
+						if (ass_filepath != null)
+						{
+							yield return ass_filepath;
+							continue;
+						}
+					}
+					else
+					{
+						// Look in 'libdir' for a system assembly
+						var ass_filepath = Path.Combine(libdir, ass);
+						if (Path_.FileExists(ass_filepath))
+						{
+							yield return ass_filepath;
+							continue;
+						}
 					}
 
-					// Look in likely paths
-					var paths = (include_paths ?? Array.Empty<string>()).Append(Util.ResolveAppPath());
-					foreach (var path in paths)
-					{
-						if (!Path_.FileExists(Path.Combine(path, ass))) continue;
-						yield return Path.Combine(path, ass);
-						continue;
-					}
-					throw new FileNotFoundException($"Failed to resolve referenced assembly: {ass}\nSearch paths: {string.Join("\n", paths)}");
+					throw new FileNotFoundException($"Failed to resolve referenced assembly: {ass}\nSearch paths: {string.Join("\n", search_paths)}");
 				}
 			}
 	}

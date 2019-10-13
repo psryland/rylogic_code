@@ -6,6 +6,9 @@ namespace Rylogic.Extn
 {
 	public static class Guid_
 	{
+		/// <summary>Regex pattern for finding valid Guids</summary>
+		public const string RegexPattern = @"[{(]?([0-9A-Fa-f]{8}[-]?(?:[0-9A-Fa-f]{4}[-]?){3}[0-9A-Fa-f]{12})[)}]?";
+
 		/// <summary>Creates a name-based UUID using the algorithm from RFC 4122 §4.3.</summary>
 		/// <param name="namespaceId">The ID of the namespace.</param>
 		/// <param name="name">The name (within that namespace).</param>
@@ -93,3 +96,26 @@ namespace Rylogic.Extn
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace Rylogic.UnitTests
+{
+	using Extn;
+	using System.Text.RegularExpressions;
+
+	[TestFixture]
+	public class TestGuidExtns
+	{
+		[Test]
+		public void RegexMatch()
+		{
+			Assert.True(Regex.IsMatch(Guid.NewGuid().ToString(), Guid_.RegexPattern));
+			Assert.True(Regex.IsMatch(Guid_.DnsNamespace.ToString(), Guid_.RegexPattern));
+			Assert.True(Regex.IsMatch(Guid_.UrlNamespace.ToString(), Guid_.RegexPattern));
+			Assert.True(Regex.IsMatch(Guid_.IsoOidNamespace.ToString(), Guid_.RegexPattern));
+
+			Assert.False(Regex.IsMatch("NotAGuid-9dad-11d1-80b4-00c04fd430c8", Guid_.RegexPattern));
+		}
+	}
+}
+#endif

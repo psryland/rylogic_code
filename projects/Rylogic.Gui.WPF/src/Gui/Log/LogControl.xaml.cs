@@ -51,7 +51,7 @@ namespace Rylogic.Gui.WPF
 			DockControl = new DockControl(this, "log")
 			{
 				TabText = "Log",
-				DefaultDockLocation = new DockLocation(auto_hide: EDockSite.Right),
+				DefaultDockLocation = new DockContainer.DockLocation(auto_hide: EDockSite.Right),
 			};
 
 			// When docked in an auto-hide panel, pop out on new messages

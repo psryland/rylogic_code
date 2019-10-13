@@ -432,6 +432,31 @@ namespace pr::script
 							break;
 						}
 						#pragma endregion
+						#pragma region Depend
+						if (src.match_adv(L"depend"))
+						{
+							EatLineSpace(src, 1, 0);
+							loc_beg = src.Loc();
+
+							if (*src != L'<' && *src != L'\"')
+								throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #depend");
+
+							// Buffer up the dependent filepath
+							auto end = *src == L'<' ? L'>' : L'\"';
+							BufferLiteral(src, emit, end);
+							if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "depend string incomplete");
+
+							// Open the dependent file but don't push it to the source stack.
+							// The include handler will see this as a referenced file but the content doesn't effect the script
+							auto path = src.str(1, emit - 2); src.pop();
+							auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
+							auto inc = Includes->Open(path, flags, src.Loc());
+							inc = nullptr; // release the include immediately
+
+							is_output = false;
+							break;
+						}
+						#pragma endregion
 						break;
 					case 'e':
 						#pragma region Else
@@ -1170,12 +1195,15 @@ namespace pr::script
 			char const* str_in =
 				"#  define ONE 1 // ignore me \n"
 				"#include \"inc\"\n"
+				"#depend \"dep\"\n"
 				;
 			char const* str_out =
-				"included 1\n"
+				"included 1\n\n"
 				;
 
-			Includes inc; inc.AddString(L"inc", "included ONE");
+			Includes inc;
+			inc.AddString(L"inc", "included ONE");
+			inc.AddString(L"dep", "Anything");
 			PtrA src(str_in);
 			Preprocessor pp(&src, false, &inc);
 			for (;*pp && *str_out; ++pp, ++str_out)

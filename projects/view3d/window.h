@@ -204,6 +204,14 @@ namespace view3d
 		// Show/Hide the angle tool
 		void ShowAngleTool(bool show);
 
+		// Show/Hide the focus point
+		bool FocusPointVisible();
+		void FocusPointVisible(bool vis);
+
+		// Show/Hide the origin point
+		bool OriginPointVisible();
+		void OriginPointVisible(bool vis);
+
 		// Cast a ray into the scene, returning hit info
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 

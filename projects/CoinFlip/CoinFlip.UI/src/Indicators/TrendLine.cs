@@ -8,10 +8,10 @@ using System.Xml.Linq;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
+using Drawing_ = Rylogic.Extn.Windows.Drawing_;
 
 namespace CoinFlip.UI.Indicators
 {

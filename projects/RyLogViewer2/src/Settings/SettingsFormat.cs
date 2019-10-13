@@ -119,7 +119,7 @@ namespace RyLogViewer.Options
 		}
 
 		/// <summary>Validate settings</summary>
-		internal void Validate()
+		public override Exception Validate()
 		{
 			int column_count = ColumnCount;
 			if (column_count < Constants.ColumnCountMin || column_count > Constants.ColumnCountMax)
@@ -129,6 +129,8 @@ namespace RyLogViewer.Options
 			int row_height = RowHeight;
 			if (row_height < Constants.RowHeightMinHeight || row_height > Constants.RowHeightMaxHeight)
 				RowHeight = Constants.RowHeightDefault;
+
+			return null;
 		}
 	}
 }

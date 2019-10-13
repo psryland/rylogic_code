@@ -36,7 +36,15 @@ namespace Rylogic.Extn
 
 	/// <summary>Marker type for fluent API configuration extension methods</summary>
 	public class XmlConfig
-	{};
+	{
+		// Notes:
+		//  - Xml_.Config.SupportRylogicMathsTypes           in 'Rylogic.Core\src\Maths\Math.cs'
+		//  - Xml_.Config.SupportSystemDrawingPrimitiveTypes in 'Rylogic.Core\src\Extn\Drawing.cs'
+		//  - Xml_.Config.SupportRylogicGraphicsTypes        in 'Rylogic.Core\src\Gfx\Gfx.cs'
+		//  - Xml_.Config.SupportSystemDrawingCommonTypes    in 'Rylogic.Core.Windows\src\Extn\Drawing.cs'
+		//  - Xml_.Config.SupportWinFormsTypes               in 'Rylogic.Gui.WinForms\src\Extn\Xml.cs'
+		//  - Xml_.Config.SupportWPFTypes                    in 'Rylogic.Gui.WPF\src\Extn\Xml.cs'
+	};
 
 	/// <summary>XML helper methods</summary>
 	public static class Xml_
@@ -1650,6 +1658,8 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void ToXmlDrawing()
 		{
+			Xml_.Config.SupportSystemDrawingPrimitiveTypes();
+
 			{
 				var pt = new Point(1, 2);
 				var node = pt.ToXml("pt", false);

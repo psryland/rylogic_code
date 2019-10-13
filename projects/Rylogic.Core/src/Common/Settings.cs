@@ -27,21 +27,21 @@ public class Settings :SettingsBase<Settings>
 
 	public string Name
 	{
-		get { return get<string>(nameof(Name)); }
-		set { set(nameof(Name), value); }
+		get => get<string>(nameof(Name));
+		set => set(nameof(Name), value);
 	}
 
 	public int Value
 	{
-		get { return get<int>(nameof(Value)); }
-		set { set(nameof(Value), value); }
+		get => return get<int>(nameof(Value));
+		set => set(nameof(Value), value);
 	}
 }
 #endif
 
 namespace Rylogic.Common
 {
-	/// <summary>Common interface for 'SettingsSet' and 'SettingsBase'</summary>
+	/// <summary>Common interface for "SettingsSet'T" and "SettingsBase'T"</summary>
 	public interface ISettingsSet
 	{
 		/// <summary>Parent settings for this settings object</summary>
@@ -58,6 +58,12 @@ namespace Rylogic.Common
 
 		/// <summary>Called before and after a setting changes</summary>
 		void OnSettingChange(SettingChangeEventArgs args);
+
+		/// <summary>
+		/// A callback method called when a settings related event occurs.
+		/// Note: in any tree-like structure of settings there is only one 'SettingsEvent'
+		/// which is the one provided by the top-level settings set.</summary>
+		Action<ESettingsEvent, Exception?, string> SettingsEvent { get; set; }
 	}
 
 	/// <summary>A base class for settings structures</summary>
@@ -65,45 +71,48 @@ namespace Rylogic.Common
 		where T:SettingsSet<T>, new()
 	{
 		// Notes:
-		//  - SettingsSet is intended as a child element of SettingsBase.
-		//  - SettingsSet doesn't have an 'Upgrade' method because SettingsSets don't
-		//    contain version numbers (SettingsBase does).
+		//  - SettingsSet is intended to be a recursive data structure.
+		//  - Functionality should be mainly in SettingsSet, SettingsBase is
+		//    just for supporting loading from files/streams/etc.
+		//  - Top level SettingsSets are instances of SettingsBase.
+
+		public const string VersionKey = "__SettingsVersion";
 
 		protected SettingsSet()
 		{
 			m_data = new Dictionary<string, object?>();
+			LoadedVersion = string.Empty;
 		}
-		protected SettingsSet(XElement node)
+		protected SettingsSet(XElement node, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 			: this()
 		{
 			if (node != null)
 			{
-				var ty = typeof(T);
-				foreach (var n in node.Elements())
+				try
 				{
-					// Use the type to determine the type of the XML element
-					var prop_name = n.Name.LocalName;
-					var pi = ty.GetProperty(prop_name, BindingFlags.Instance | BindingFlags.Public);
-
-					// Ignore XML values that are no longer properties of 'T'
-					if (pi == null) continue;
-					m_data[prop_name] = n.As(pi.PropertyType);
+					FromXml(node, flags);
+					return;
 				}
-
-				// Exceptions will bubble up to the root SettingsBase object
-				return;
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
+					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
+					ResetToDefaults(); // Fall back to default values
+				}
 			}
-
-			// Fall back to default values
-			// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-			m_data = new T().m_data;
 		}
-		protected SettingsSet(SettingsSet<T> rhs)
-			: this(rhs.ToXml(new XElement("root")))
+		protected SettingsSet(SettingsSet<T> rhs, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
+			: this(rhs.ToXml(new XElement("root")), flags)
 		{}
 
 		/// <summary>The default values for the settings</summary>
 		public static T Default { get; } = new T();
+
+		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
+		public virtual string Version => "v1.0";
+
+		/// <summary>The version number that was loaded (and possibly upgraded from)</summary>
+		public string LoadedVersion { get; private set; }
 
 		/// <summary>True to block all writes to the settings</summary>
 		[Browsable(false)]
@@ -194,7 +203,13 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Return the settings as an XML node tree</summary>
-		public virtual XElement ToXml(XElement node)
+		public XElement ToXml(XElement? node = null)
+		{
+			node ??= new XElement("settings");
+			node.Add2(VersionKey, Version, false);
+			return ToXmlCore(node);
+		}
+		protected virtual XElement ToXmlCore(XElement node)
 		{
 			foreach (var d in m_data.OrderBy(x => x.Key))
 			{
@@ -206,17 +221,61 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Populate this object from XML</summary>
-		public virtual void FromXml(XElement node, ESettingsLoadFlags flags)
+		public void FromXml(XElement node)
+		{
+			// Don't merge this and make flags a default parameter. Reflection is used to find
+			// this specific overload of 'FromXml'
+			FromXmlCore(node, ESettingsLoadFlags.None);
+		}
+		public void FromXml(XElement node, ESettingsLoadFlags flags)
+		{
+			FromXmlCore(node, flags);
+		}
+		protected virtual void FromXmlCore(XElement node, ESettingsLoadFlags flags)
 		{
 			m_data.Clear();
+
+			// Read and save the settings version. If no version available, assume the 'latest' version.
+			var vers = node.Element(VersionKey);
+			LoadedVersion = vers?.Value ?? Version;
+
+			// Upgrade old settings
+			if (LoadedVersion != Version)
+				Upgrade(node, LoadedVersion);
+
+			// Remove the version number to support old-style settings
+			// where the element name was interpreted as the setting name.
+			vers?.Remove();
+
+			// Load the settings values into 'm_data'
 			foreach (var setting in node.Elements())
 			{
 				var key = setting.Attribute("key")?.Value;
 				try
 				{
-					if (key == null)
+					if (key != null)
 					{
-						// Support old style settings
+						var val = setting.ToObject();
+						SetParentIfNesting(val);
+						m_data[key] = val!;
+					}
+					// Support old SettingXml style settings where the element name matches the property name
+					else if (setting.Name.LocalName != "setting")
+					{
+						// Use the type to determine the type of the XML element
+						var prop_name = setting.Name.LocalName;
+						var pi = typeof(T).GetProperty(prop_name, BindingFlags.Instance | BindingFlags.Public);
+
+						// Ignore XML values that are no longer properties of 'T'
+						if (pi == null) continue;
+
+						var val = setting.As(pi.PropertyType);
+						SetParentIfNesting(val);
+						m_data[prop_name] = val!;
+					}
+					else
+					{
+						// Support old style settings that used to have key/value child elements
 						var key_elem = setting.Element("key");
 						var val_elem = setting.Element("value");
 						if (key_elem == null || val_elem == null)
@@ -224,12 +283,6 @@ namespace Rylogic.Common
 
 						key = key_elem.As<string>();
 						var val = val_elem.ToObject();
-						SetParentIfNesting(val);
-						m_data[key] = val!;
-					}
-					else
-					{
-						var val = setting.ToObject();
 						SetParentIfNesting(val);
 						m_data[key] = val!;
 					}
@@ -250,10 +303,59 @@ namespace Rylogic.Common
 				// Key not in the data yet? Must be initial value from startup
 				m_data[i.Key] = i.Value;
 			}
+
+			// Allow invalid settings to be rejected
+			if (Validate() is Exception ex)
+				throw ex;
+
+			// Set readonly after loading is complete
+			ReadOnly = flags.HasFlag(ESettingsLoadFlags.ReadOnly);
 		}
-		public void FromXml(XElement node)
+
+		/// <summary>Upgrade settings to the latest version from 'from_version'</summary>
+		public void Upgrade(XElement old_settings, string from_version)
 		{
-			FromXml(node, ESettingsLoadFlags.None);
+			BackupCore(old_settings, from_version);
+			UpgradeCore(old_settings, from_version);
+		}
+		protected virtual void BackupCore(XElement old_settings, string from_version)
+		{
+			// Perform a backup of 'old_settings' before they get upgraded
+		}
+		protected virtual void UpgradeCore(XElement old_settings, string from_version)
+		{
+			// Boiler-plate:
+			//for (; from_version != Version; )
+			//{
+			//	switch (from_version)
+			//	{
+			//	default:
+			//		{
+			//			base.Upgrade(old_settings, from_version);
+			//			return;
+			//		}
+			//	case "v1.1":
+			//		{
+			//			#region Change description
+			//			{
+			//				// Modify the XML document using hard-coded element names.
+			//				// Note: don't use constants for the element names because they
+			//				// may get changed in the future. This is one case where magic
+			//				// strings is actually the correct thing to do!
+			//			}
+			//			#endregion
+			//			from_version = "v1.2";
+			//			break;
+			//		}
+			//	}
+			//}
+			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
+		}
+
+		/// <summary>Perform validation on the loaded settings</summary>
+		public virtual Exception? Validate()
+		{
+			return null;
 		}
 
 		/// <summary>Save the current settings</summary>
@@ -261,6 +363,16 @@ namespace Rylogic.Common
 		{
 			if (Parent == null) throw new Exception("Settings set is not a child of SettingsBase. Save not possible");
 			Parent.Save();
+		}
+
+		/// <summary>Reset this settings set to the default construction values</summary>
+		public void Reset()
+		{
+			ResetCore();
+		}
+		protected virtual void ResetCore()
+		{
+			ResetToDefaults();
 		}
 
 		/// <summary>An event raised before and after a setting is changes value</summary>
@@ -287,6 +399,49 @@ namespace Rylogic.Common
 		void ISettingsSet.OnSettingChange(SettingChangeEventArgs args)
 		{
 			OnSettingChange(args);
+		}
+
+		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
+		public Action<ESettingsEvent, Exception?, string> SettingsEvent
+		{
+			get => Parent?.SettingsEvent ?? m_action ?? OnSettingsEvent;
+			set
+			{
+				if (Parent != null)
+					Parent.SettingsEvent = value;
+				else
+					m_action = value;
+			}
+		}
+		private Action<ESettingsEvent, Exception?, string>? m_action;
+		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
+		{
+			// Default handling of settings errors/warnings
+			switch (err)
+			{
+			default:
+				Debug.Assert(false, "Unknown settings event type");
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.LoadingSettings:
+			case ESettingsEvent.SavingSettings:
+				//Log.Debug(this, msg);
+				break;
+			case ESettingsEvent.NoVersion:
+				Log.Info(this, msg);
+				break;
+			case ESettingsEvent.FileNotFound:
+				Log.Warn(this, msg);
+				break;
+			case ESettingsEvent.LoadFailed:
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.SaveFailed:
+				// By default, show an error message box. User code can prevent this by replacing
+				// the SettingsEvent action, or overriding OnSettingsEvent
+				//MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
 		}
 
 		/// <summary>Property changing</summary>
@@ -317,44 +472,34 @@ namespace Rylogic.Common
 			if (nested is IEnumerable<ISettingsSet> sets)
 				sets.ForEach(x => x.Parent = this);
 		}
+
+		/// <summary>Populate these settings from the default instance values</summary>
+		protected void ResetToDefaults()
+		{
+			// Use 'new T()' so that reference types can be used, otherwise we'll change the defaults
+			// Use 'set' so that ISettingsSets are parented correctly
+			foreach (var d in new T().m_data)
+				set(d.Key, d.Value);
+		}
 	}
 
 	/// <summary>A base class for simple settings</summary>
 	public abstract class SettingsBase<T> :SettingsSet<T>
 		where T:SettingsBase<T>, new()
 	{
-		public const string VersionKey = "__SettingsVersion";
-
 		protected SettingsBase()
+			: base()
 		{
-			m_filepath = "";
-			SettingsEvent = OnSettingsEvent;
-			LoadedVersion = string.Empty;
 			BackupOldSettings = true;
 
 			// Default to off so users can enable after startup completes
 			AutoSaveOnChanges = false;
 		}
 		protected SettingsBase(XElement node, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
-			:this()
-		{
-			if (node != null)
-			{
-				try
-				{
-					FromXml(node, flags);
-					return;
-				}
-				catch (Exception ex)
-				{
-					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
-					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
-					ResetToDefaults(); // Fall back to default values
-				}
-			}
-		}
+			: base(node, flags)
+		{ }
 		protected SettingsBase(Stream stream, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
-			:this()
+			: this()
 		{
 			if (stream != null)
 			{
@@ -390,7 +535,7 @@ namespace Rylogic.Common
 			}
 		}
 		protected SettingsBase(SettingsBase<T> rhs, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
-			: this(rhs.ToXml(new XElement("root")), flags)
+			: base(rhs, flags)
 		{ }
 
 		/// <summary>Returns the directory in which to store app settings</summary>
@@ -417,27 +562,18 @@ namespace Rylogic.Common
 			get { return Util.ResolveAppPath("settings.xml"); }
 		}
 
-		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		public virtual string Version
-		{
-			get { return "v1.0"; }
-		}
-
-		/// <summary>The version number that was loaded (and possibly upgraded from)</summary>
-		public string LoadedVersion { get; private set; }
-
 		/// <summary>Returns the filepath for the persisted settings file. Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath
 		{
-			get { return m_filepath; }
-			set { m_filepath = value ?? string.Empty; }
+			get => m_filepath ?? string.Empty;
+			set => m_filepath = value;
 		}
-		private string m_filepath;
+		private string? m_filepath;
 
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
 		public bool AutoSaveOnChanges
 		{
-			get { return m_auto_save; }
+			get => m_auto_save;
 			set
 			{
 				if (m_auto_save == value) return;
@@ -461,85 +597,47 @@ namespace Rylogic.Common
 		}
 		private bool m_auto_save;
 
+		/// <summary>Backup old settings before upgrades</summary>
+		public bool BackupOldSettings { get; set; }
+
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>
 		public event EventHandler<SettingsLoadedEventArgs>? SettingsLoaded;
 
 		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
 		public event EventHandler<SettingsSavingEventArgs>? SettingsSaving;
 
-		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
-		public Action<ESettingsEvent, Exception?, string> SettingsEvent { get; set; }
-
-		/// <summary>Populate these settings from the default instance values</summary>
-		private void ResetToDefaults()
-		{
-			// Use 'new T()' so that reference types can be used, otherwise we'll change the defaults
-			// Use 'set' so that ISettingsSets are parented correctly
-			foreach (var d in new T().m_data)
-				set(d.Key, d.Value); 
-		}
-
 		/// <summary>Resets the persisted settings to their defaults</summary>
-		public void Reset()
+		protected override void ResetCore()
 		{
-			Default.Save(Filepath);
-			Load(Filepath);
+			// If the settings were loaded from disk, overwrite them with the defaults
+			if (Path_.IsValidFilepath(Filepath, require_rooted: true))
+			{
+				Default.Save(Filepath);
+				Load(Filepath);
+			}
+			else
+			{
+				base.ResetCore();
+			}
 		}
 
-		/// <summary>Load the settings from XML</summary>
-		public override void FromXml(XElement node, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
+		/// <summary>Populate this object from XML</summary>
+		protected override void FromXmlCore(XElement node, ESettingsLoadFlags flags)
 		{
-			// Read the settings version
-			var vers = node.Element(VersionKey);
-			if (vers == null)
-			{
-				SettingsEvent(ESettingsEvent.NoVersion, null, "Settings data does not contain a version, using defaults");
-				Reset();
-				return; // Reset will recursively call Load again
-			}
-
-			// Save the loaded version number
-			LoadedVersion = vers.Value;
-
-			// Upgrade old settings
-			if (vers.Value != Version)
-			{
-				// Backup old settings
-				if (BackupOldSettings && Filepath.HasValue())
-				{
-					var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({vers.Value}){Path_.Extn(Filepath)}");
-					node.Save(backup_filepath);
-				}
-
-				// Upgrade the settings in memory
-				Upgrade(node, vers.Value);
-			}
-
-			// Remove the version number to support old-style settings
-			// where the element name was interpreted as the setting name.
-			vers.Remove();
-
-			// Load the settings from XML
-			base.FromXml(node, flags);
-			Validate();
-
-			// Set readonly after loading is complete
-			ReadOnly = flags.HasFlag(ESettingsLoadFlags.ReadOnly);
+			base.FromXmlCore(node, flags);
 
 			// Notify of settings loaded
-			SettingsLoaded?.Invoke(this,new SettingsLoadedEventArgs(Filepath));
+			SettingsLoaded?.Invoke(this, new SettingsLoadedEventArgs(Filepath));
 		}
 
-		/// <summary>Return the settings as XML</summary>
-		public XElement ToXml()
+		/// <summary>Perform a backup of 'old_settings' before they get upgraded</summary>
+		protected override void BackupCore(XElement old_settings, string from_version)
 		{
-			return ToXml(new XElement("settings"));
-		}
-		public override XElement ToXml(XElement node)
-		{
-			node.Add2(VersionKey, Version, false);
-			base.ToXml(node);
-			return node;
+			if (BackupOldSettings && Filepath.HasValue())
+			{
+				var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({from_version}){Path_.Extn(Filepath)}");
+				old_settings.Save(backup_filepath);
+			}
 		}
 
 		/// <summary>
@@ -684,74 +782,6 @@ namespace Rylogic.Common
 			if (Path_.FileExists(Filepath))
 				File.Delete(Filepath);
 		}
-
-		/// <summary>Backup old settings before upgrades</summary>
-		public bool BackupOldSettings { get; set; }
-
-		/// <summary>Called when loading settings from an earlier version</summary>
-		public virtual void Upgrade(XElement old_settings, string from_version)
-		{
-			// Boiler-plate:
-			//for (; from_version != Version; )
-			//{
-			//	switch (from_version)
-			//	{
-			//	default:
-			//		{
-			//			base.Upgrade(old_settings, from_version);
-			//			return;
-			//		}
-			//	case "v1.1":
-			//		{
-			//			#region Change description
-			//			{
-			//				// Modify the XML document using hard-coded element names.
-			//				// Note: don't use constants for the element names because they
-			//				// may get changed in the future. This is one case where magic
-			//				// strings is actually the correct thing to do!
-			//			}
-			//			#endregion
-			//			from_version = "v1.2";
-			//			break;
-			//		}
-			//	}
-			//}
-
-			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
-		}
-
-		/// <summary>Perform validation on the loaded settings</summary>
-		public virtual void Validate() {}
-
-		/// <summary>Default handling of settings errors/warnings</summary>
-		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
-		{
-			switch (err)
-			{
-			default:
-				Debug.Assert(false, "Unknown settings event type");
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.LoadingSettings:
-			case ESettingsEvent.SavingSettings:
-				//Log.Debug(this, msg);
-				break;
-			case ESettingsEvent.NoVersion:
-				Log.Info(this, msg);
-				break;
-			case ESettingsEvent.FileNotFound:
-				Log.Warn(this, msg);
-				break;
-			case ESettingsEvent.LoadFailed:
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.SaveFailed:
-				// By default, show an error message box. User code can prevent this by replacing
-				// the SettingsEvent action, or overriding OnSettingsEvent
-				//MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				break;
-			}
-		}
 	}
 
 	/// <summary>A base class for a class that gets saved to/loaded from XML only</summary>
@@ -869,6 +899,49 @@ namespace Rylogic.Common
 		void ISettingsSet.OnSettingChange(SettingChangeEventArgs args)
 		{
 			OnSettingChange(args);
+		}
+
+		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
+		public Action<ESettingsEvent, Exception?, string> SettingsEvent
+		{
+			get => Parent?.SettingsEvent ?? m_action ?? OnSettingsEvent;
+			set
+			{
+				if (Parent != null)
+					Parent.SettingsEvent = value;
+				else
+					m_action = value;
+			}
+		}
+		private Action<ESettingsEvent, Exception?, string>? m_action;
+		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
+		{
+			// Default handling of settings errors/warnings
+			switch (err)
+			{
+			default:
+				Debug.Assert(false, "Unknown settings event type");
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.LoadingSettings:
+			case ESettingsEvent.SavingSettings:
+				//Log.Debug(this, msg);
+				break;
+			case ESettingsEvent.NoVersion:
+				Log.Info(this, msg);
+				break;
+			case ESettingsEvent.FileNotFound:
+				Log.Warn(this, msg);
+				break;
+			case ESettingsEvent.LoadFailed:
+				Log.Exception(this, ex, msg);
+				break;
+			case ESettingsEvent.SaveFailed:
+				// By default, show an error message box. User code can prevent this by replacing
+				// the SettingsEvent action, or overriding OnSettingsEvent
+				//MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				break;
+			}
 		}
 
 		/// <summary>Read a settings value</summary>

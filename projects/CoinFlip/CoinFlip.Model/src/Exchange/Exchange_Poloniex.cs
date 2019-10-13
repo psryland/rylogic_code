@@ -30,9 +30,9 @@ namespace CoinFlip
 			m_pairs = new HashSet<CurrencyPair>();
 			Api = new PoloniexApi(key, secret, shutdown, Model.Log);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
-			base.Dispose();
+			base.Dispose(_);
 			Api = null;
 		}
 

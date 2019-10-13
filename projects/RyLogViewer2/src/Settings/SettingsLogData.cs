@@ -62,9 +62,8 @@ namespace RyLogViewer.Options
 		}
 
 		/// <summary>Validate settings</summary>
-		internal void Validate()
+		public override Exception Validate()
 		{
-
 			// File buffer size
 			int file_buf_size = FileBufSize;
 			if (file_buf_size < Constants.FileBufSizeMin || file_buf_size > Constants.FileBufSizeMax)
@@ -79,6 +78,8 @@ namespace RyLogViewer.Options
 			int line_cache_count = LineCacheCount;
 			if (line_cache_count < Constants.LineCacheCountMin || line_cache_count > Constants.LineCacheCountMax)
 				LineCacheCount = Constants.LineCacheCountDefault;
+
+			return null;
 		}
 	}
 }

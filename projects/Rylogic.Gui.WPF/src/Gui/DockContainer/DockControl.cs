@@ -62,7 +62,7 @@ namespace Rylogic.Gui.WPF
 
 			Owner = owner;
 			PersistName = persist_name;
-			DefaultDockLocation = new DockLocation();
+			DefaultDockLocation = new DockContainer.DockLocation();
 			TabText = PersistName;
 			TabIcon = null;
 			TabCMenu = DefaultTabCMenu();
@@ -230,20 +230,20 @@ namespace Rylogic.Gui.WPF
 		public string PersistName { get; set; }
 
 		/// <summary>The dock location to use if not otherwise given</summary>
-		public DockLocation DefaultDockLocation { get; set; }
+		public DockContainer.DockLocation DefaultDockLocation { get; set; }
 
 		/// <summary>Get the current dock location</summary>
-		public DockLocation CurrentDockLocation
+		public DockContainer.DockLocation CurrentDockLocation
 		{
 			get
 			{
 				if (TreeHost is FloatingWindow fw)
-					return new DockLocation(DockAddress, ContentIndex, float_window_id: fw.Id);
+					return new DockContainer.DockLocation(DockAddress, ContentIndex, float_window_id: fw.Id);
 
 				if (TreeHost is AutoHidePanel ah)
-					return new DockLocation(DockAddress, ContentIndex, auto_hide: ah.DockSite);
+					return new DockContainer.DockLocation(DockAddress, ContentIndex, auto_hide: ah.DockSite);
 
-				return new DockLocation(DockAddress, ContentIndex);
+				return new DockContainer.DockLocation(DockAddress, ContentIndex);
 			}
 		}
 
@@ -420,7 +420,7 @@ namespace Rylogic.Gui.WPF
 		public EDockSite? TabStripLocation { get; set; }
 
 		/// <summary>The text to display on the tab. Defaults to 'Owner.Text'</summary>
-		public string? TabText
+		public string TabText
 		{
 			get => m_tab_text ?? (Owner as Window)?.Title ?? string.Empty;
 			set
@@ -430,7 +430,7 @@ namespace Rylogic.Gui.WPF
 				// Have to invalidate the whole tab strip, because the text length
 				// will change causing the other tabs to move.
 				m_tab_text = value;
-				TabButton?.InvalidateArrange();
+				TabButton?.InvalidateMeasure();
 			}
 		}
 		private string? m_tab_text;
@@ -534,7 +534,7 @@ namespace Rylogic.Gui.WPF
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
 	public sealed class Dockable : DockPanel, IDisposable, IDockable
 	{
-		public Dockable(Control hostee, string persist_name, DockLocation? location = null)
+		public Dockable(Control hostee, string persist_name, DockContainer.DockLocation? location = null)
 		{
 			MinWidth = hostee.MinWidth;
 			MinHeight = hostee.MinHeight;

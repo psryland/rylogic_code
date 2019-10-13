@@ -102,7 +102,12 @@ namespace CoinFlip
 				throw;
 			}
 		}
-		public virtual void Dispose()
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
 		{
 			UpdateThreadActive = false;
 			Shutdown = null;

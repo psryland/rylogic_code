@@ -13,10 +13,10 @@ namespace Rylogic.Gui.WPF
 		//  - This is a replacement for a menu item that handles a list of recent filepaths
 		// Usage:
 		// In your XAML file:
-		//  xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui"
+		//  xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui"
 		//  ...
 		//  <Menu>
-		//    <gui2:RecentFilesMenuItem Header= "_Recent Files">
+		//    <gui:RecentFilesMenuItem Header= "_Recent Files" Name="m_recent_files">
 		//  </Menu>
 
 		public RecentFilesMenuItem()

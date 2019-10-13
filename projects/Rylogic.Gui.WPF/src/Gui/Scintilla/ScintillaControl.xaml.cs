@@ -70,6 +70,10 @@ namespace Rylogic.Gui.WPF
 			// Reset the style
 			InitStyle(this);
 
+			// Set the pending text
+			Text = m_text;
+			m_text = string.Empty;
+
 			// Return the host window handle
 			return new HandleRef(this, Hwnd);
 		}
@@ -97,6 +101,11 @@ namespace Rylogic.Gui.WPF
 						Win32.SetFocus(Hwnd);
 						handled = true;
 					}
+					break;
+				}
+			case Win32.WM_CLOSE:
+				{
+					m_text = Text;
 					break;
 				}
 			}
@@ -127,11 +136,12 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The window handle of the Scintilla control</summary>
 		private IntPtr Hwnd { get; set; }
+		private bool HandleCreated => Hwnd != IntPtr.Zero;
 
 		/// <summary>Call the direct function</summary>
 		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
 		{
-			if (m_func == null) return IntPtr.Zero;
+			if (m_func == null) throw new Exception("The scintilla control has not been created yet");// return IntPtr.Zero;
 			return m_func(m_ptr, code, wparam, lparam);
 		}
 		private Sci.DirectFunction? m_func;
@@ -250,10 +260,15 @@ namespace Rylogic.Gui.WPF
 
 		#region Text
 
+		/// <summary>Allow the control to store the text content before and after the window handle has been created</summary>
+		private string m_text = string.Empty;
+
 		/// <summary>Clear all text from the control</summary>
 		public void ClearAll()
 		{
-			Cmd(Sci.SCI_CLEARALL);
+			m_text = string.Empty;
+			if (HandleCreated)
+				Cmd(Sci.SCI_CLEARALL);
 		}
 
 		/// <summary>Clear style for the document</summary>
@@ -263,7 +278,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Gets the length of the text in the control</summary>
-		public int TextLength => Cmd(Sci.SCI_GETTEXTLENGTH);
+		public int TextLength => HandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
 
 		/// <summary>Gets or sets the current text</summary>
 		public string Text
@@ -275,6 +290,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Read the text out of the control</summary>
 		private string GetText()
 		{
+			if (!HandleCreated)
+				return m_text;
+
 			var len = TextLength;
 			if (len == 0)
 				return string.Empty;
@@ -291,6 +309,10 @@ namespace Rylogic.Gui.WPF
 			if (text.Length == 0)
 			{
 				ClearAll();
+			}
+			else if (!HandleCreated)
+			{
+				m_text = text;
 			}
 			else
 			{
@@ -325,16 +347,24 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public int LineCount => Cmd(Sci.SCI_GETLINECOUNT);
 
-		/// <summary></summary>
-		public Range TextRange
+		/// <summary>Returns the text in the given range</summary>
+		public string TextRange(Range range)
 		{
-			get
+			if (range.Beg < 0 || range.End > TextLength)
+				throw new Exception($"Invalid text range: [{range.Beg}, {range.End}). Current text length is {TextLength}");
+
+			// Request the text in the given range
+			using var buffer = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
+			Marshal.StructureToPtr(new Sci.TextRange
 			{
-				using var tr = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
-				Cmd(Sci.SCI_GETTEXTRANGE, 0, tr.Value.Ptr);
-				var range = tr.Value.As<Sci.TextRange>();
-				return new Range(range.chrg.cpMin, range.chrg.cpMax);
-			}
+				chrg = new Sci.CharacterRange{cpMin = range.Beg, cpMax = range.End},
+				lpstrText = null,
+			}, buffer.Value.Ptr, false);
+			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
+
+			// Return the returned string
+			var tr = Marshal.PtrToStructure<Sci.TextRange>(buffer.Value.Ptr);
+			return tr.lpstrText ?? string.Empty;
 		}
 
 		/// <summary></summary>
@@ -1312,7 +1342,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public Colour32 CaretFore
 		{
-			get => (uint)Cmd(Sci.SCI_GETCARETFORE);
+			get => unchecked((uint)Cmd(Sci.SCI_GETCARETFORE));
 			set => Cmd(Sci.SCI_SETCARETFORE, (long)value.ARGB);
 		}
 

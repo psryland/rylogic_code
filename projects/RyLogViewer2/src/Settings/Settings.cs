@@ -1,4 +1,5 @@
-﻿using System.Windows.Media;
+﻿using System;
+using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gui.WPF;
@@ -314,7 +315,7 @@ namespace RyLogViewer.Options
 		//}
 
 		/// <summary>Perform validation on the loaded settings</summary>
-		public override void Validate()
+		public override Exception Validate()
 		{
 			General.Validate();
 			LogData.Validate();
@@ -325,17 +326,17 @@ namespace RyLogViewer.Options
 			if (file_scroll_width < Constants.FileScrollMinWidth || file_scroll_width > Constants.FileScrollMaxWidth)
 				FileScrollWidth = Constants.FileScrollWidthDefault;
 
-
-			//todo // Network connection settings
+			// Network connection settings
 			//todo foreach (var c in NetworkConnectionHistory)
 			//todo {
 			//todo 	if (c.ProtocolType != ProtocolType.Tcp && c.ProtocolType != ProtocolType.Udp)
 			//todo 		c.ProtocolType = ProtocolType.Tcp;
 			//todo }
+			return null;
 		}
 
 		/// <summary>Called when loading settings from an earlier version</summary>
-		public override void Upgrade(XElement settings, string from_version)
+		protected override void UpgradeCore(XElement settings, string from_version)
 		{
 			for (; from_version != Version;)
 			{
@@ -349,17 +350,15 @@ namespace RyLogViewer.Options
 					break;
 				}
 			}
+
+			string Upgrade_vXX_to_vYY(XElement s)
+			{
+				// Modify the contents of 'settings'
+				// Do not use any types that might change over time
+
+				// Done, return the version
+				return "vY.Y";
+			}
 		}
-
-		/// <summary>Example upgrade method</summary>
-		private string Upgrade_vXX_to_vYY(XElement settings)
-		{
-			// Modify the contents of 'settings'
-			// Do not use any types that might change over time
-
-			// Done, return the version
-			return "vY.Y";
-		}
-
 	}
 }

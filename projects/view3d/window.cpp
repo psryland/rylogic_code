@@ -766,6 +766,28 @@ namespace view3d
 		ui.Visible(show);
 	}
 
+	// Show/Hide the focus point
+	bool Window::FocusPointVisible()
+	{
+		return m_focus_point_visible;
+	}
+	void Window::FocusPointVisible(bool vis)
+	{
+		m_focus_point_visible = vis;
+		NotifySettingsChanged(EView3DWindowSettings::FocusPointVisible);
+	}
+
+	// Show/Hide the origin point
+	bool Window::OriginPointVisible()
+	{
+		return m_origin_point_visible;
+	}
+	void Window::OriginPointVisible(bool vis)
+	{
+		m_origin_point_visible = vis;
+		NotifySettingsChanged(EView3DWindowSettings::OriginPointVisible);
+	}
+
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
 	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
 	{

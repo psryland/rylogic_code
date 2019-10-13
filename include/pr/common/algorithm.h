@@ -442,7 +442,7 @@ namespace pr
 		if (include_count == 0 && exclude_count != 0)
 			return true;
 
-		// If only includes have been given and not found in the include range, assume not included
+		// If only includes have been given and not found in the include range, assume excluded
 		if (include_count != 0 && exclude_count == 0)
 			return false;
 
@@ -450,6 +450,8 @@ namespace pr
 		if (include_count == 0 && exclude_count == 0)
 			return true;
 
+		// Includes and excludes have been given, but 'item' is not in either range.
+		// Filtering is ambiguous, the caller should ensure this case doesn't occur.
 		throw std::exception("Unknown filter case");
 	}
 }

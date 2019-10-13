@@ -229,6 +229,11 @@ namespace Rylogic.Gui.WPF
 		private Branch m_root = null!;
 		Branch ITreeHost.Root => Root;
 
+		// Tip: to add auto hide dockables use:
+		//  m_dc.Add(new ThingUI(), EDockSite.Right).IsAutoHide = true;
+		//  To have the auto hide panel not popped out on start up, make sure
+		//  it isn't the current active content.
+
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
 		internal DockPane Add(DockControl dc, int index, params EDockSite[] location)
 		{
@@ -247,12 +252,14 @@ namespace Rylogic.Gui.WPF
 		{
 			return Add(dockable, int.MaxValue, location);
 		}
-		public TDockable Add2<TDockable>(TDockable dockable, int index, params EDockSite[] location) where TDockable : IDockable
+		public TDockable Add2<TDockable>(TDockable dockable, int index, params EDockSite[] location)
+			where TDockable : IDockable
 		{
 			Add(dockable, index, location);
 			return dockable;
 		}
-		public TDockable Add2<TDockable>(TDockable dockable, params EDockSite[] location) where TDockable : IDockable
+		public TDockable Add2<TDockable>(TDockable dockable, params EDockSite[] location)
+			where TDockable : IDockable
 		{
 			return Add2(dockable, int.MaxValue, location);
 		}
@@ -291,7 +298,8 @@ namespace Rylogic.Gui.WPF
 		{
 			return Add(dockable.DockControl, loc);
 		}
-		public TDockable Add2<TDockable>(TDockable dockable, DockLocation loc) where TDockable : IDockable
+		public TDockable Add2<TDockable>(TDockable dockable, DockLocation loc)
+			where TDockable : IDockable
 		{
 			Add(dockable, loc);
 			return dockable;

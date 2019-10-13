@@ -270,10 +270,11 @@ namespace Rylogic.Gui.WPF
 				{
 					m_owner = owner;
 				}
-				public override void MouseDown(MouseButtonEventArgs e)
+				public override void MouseDown(MouseButtonEventArgs? e)
 				{
-					base.MouseDown(e);
+					if (e == null) throw new Exception("This mouse op should start on mouse down");
 					m_owner.Beg = GrabChart;
+					base.MouseDown(e);
 				}
 				public override void MouseMove(MouseEventArgs e)
 				{

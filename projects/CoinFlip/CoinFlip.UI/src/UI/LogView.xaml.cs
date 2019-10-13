@@ -6,7 +6,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class LogView : Grid, IDockable, IDisposable
+	public sealed partial class LogView : Grid, IDockable, IDisposable
 	{
 		public LogView()
 		{

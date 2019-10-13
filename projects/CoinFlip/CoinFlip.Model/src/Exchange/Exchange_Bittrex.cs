@@ -31,9 +31,9 @@ namespace CoinFlip
 			m_order_id_lookup = new Dictionary<long, Guid>();
 			Api = new BittrexApi(key, secret, shutdown, Model.Log);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
-			base.Dispose();
+			base.Dispose(_);
 			Api = null;
 		}
 

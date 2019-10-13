@@ -4,6 +4,13 @@ namespace Rylogic.Extn
 {
 	public static class CollectionView_
 	{
+		/// <summary>Fluent MoveCurrentToFirst</summary>
+		public static ICollectionView MoveCurrentToFirst2(this ICollectionView collection)
+		{
+			collection.MoveCurrentToFirst();
+			return collection;
+		}
+
 		/// <summary>Move the current position to 'item' or the first item if 'item' is not found</summary>
 		public static bool MoveCurrentToOrFirst(this ICollectionView collection, object item)
 		{

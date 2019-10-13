@@ -19,7 +19,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public class Model : IDisposable
+	public sealed class Model : IDisposable
 	{
 		// Notes:
 		//  Startup Process:
@@ -38,7 +38,7 @@ namespace CoinFlip
 
 		static Model()
 		{
-			Log = new Logger("CoinFlip", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append: false));
+			Log = new Logger("CoinFlip", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt")));
 			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
 			Log.Write(ELogLevel.Debug, "<<< Started >>>");
 

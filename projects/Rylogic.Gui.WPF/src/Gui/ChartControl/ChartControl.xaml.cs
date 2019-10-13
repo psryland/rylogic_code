@@ -103,7 +103,7 @@ namespace Rylogic.Gui.WPF
 		public OptionsData Options
 		{
 			[DebuggerStepThrough]
-			get => m_options;
+			get => m_options ?? new OptionsData();
 			set
 			{
 				if (m_options == value) return;
@@ -113,7 +113,7 @@ namespace Rylogic.Gui.WPF
 					m_options.YAxis.PropertyChanged -= HandleAxisOptionsChanged;
 					m_options.PropertyChanged -= HandleOptionsChanged;
 				}
-				m_options = value ?? new OptionsData();
+				m_options = value;
 				if (m_options != null)
 				{
 					// Apply the options to the scene
@@ -121,6 +121,8 @@ namespace Rylogic.Gui.WPF
 					Window.FillMode = Options.FillMode;
 					Window.CullMode = Options.CullMode;
 					Window.BackgroundColour = Options.BackgroundColour;
+					Window.FocusPointVisible = Options.FocusPointVisible;
+					Window.OriginPointVisible = Options.OriginPointVisible;
 					Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
 					PositionAxisPanels();
 
@@ -160,6 +162,14 @@ namespace Rylogic.Gui.WPF
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartBackground)));
 						Invalidate();
 						break;
+					case nameof(OptionsData.FocusPointVisible):
+						Window.FocusPointVisible = Options.FocusPointVisible;
+						Invalidate();
+						break;
+					case nameof(OptionsData.OriginPointVisible):
+						Window.OriginPointVisible = Options.OriginPointVisible;
+						Invalidate();
+						break;
 					}
 				}
 				void HandleAxisOptionsChanged(object sender, PropertyChangedEventArgs e)
@@ -175,7 +185,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private OptionsData m_options = null!;
+		private OptionsData? m_options;
 
 		/// <summary>The title of the chart</summary>
 		public string Title

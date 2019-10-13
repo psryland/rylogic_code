@@ -9,7 +9,7 @@ namespace EDTradeAdvisor
 		private static Logger m_log;
 		static Log()
 		{
-			m_log = new Logger("EDTA", new LogToFile(Filepath, append: false));
+			m_log = new Logger("EDTA", new LogToFile(Filepath, LogToFile.EFlags.None));
 			m_log.TimeZero = m_log.TimeZero - m_log.TimeZero.TimeOfDay;
 			m_log.Write(ELogLevel.Info, "<<< Started >>>");
 		}

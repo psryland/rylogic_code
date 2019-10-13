@@ -38,6 +38,9 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<!-- 
+		<PackageReference Include="System.Drawing.Common" Version="4.6.0" />
+		-->
 	</ItemGroup>
 	<ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.0' ">
 		<!-- Using 3.2.1 because that the latest version used in powershell, needed to run the unit tests -->

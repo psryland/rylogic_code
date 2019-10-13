@@ -800,7 +800,7 @@ namespace pr::script
 			const int Quat           = HashKeyword(L"Quat"          );
 			const int QuatPos        = HashKeyword(L"QuatPos"       );
 			const int Rand4x4        = HashKeyword(L"Rand4x4"       );
-			const int RandPos        = HashKeyword(L"HashPos"       );
+			const int RandPos        = HashKeyword(L"RandPos"       );
 			const int RandOri        = HashKeyword(L"RandOri"       );
 			const int Euler          = HashKeyword(L"Euler"         );
 			const int Scale          = HashKeyword(L"Scale"         );

@@ -638,12 +638,14 @@ namespace Rylogic.Utility
 	/// <summary>Log writer that writes to a file</summary>
 	public class LogToFile :ILogWriter ,IDisposable
 	{
-		private FileStream m_outf;
-		public LogToFile(string filepath, bool append)
+		private readonly FileStream m_outf;
+		public LogToFile(string filepath, EFlags flags = EFlags.None)
 		{
 			Filepath = filepath;
-			append &= File.Exists(filepath);
+			Flags = flags;
+
 			Path_.CreateDirs(Path_.Directory(filepath));
+			var append = Flags.HasFlag(EFlags.Append) && File.Exists(filepath);
 			m_outf = new FileStream(Filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 		}
 		public void Dispose()
@@ -653,15 +655,30 @@ namespace Rylogic.Utility
 		}
 		protected virtual void Dispose(bool _)
 		{
-			Util.Dispose(ref m_outf!);
+			m_outf.Dispose();
 		}
+	
+		/// <summary>The full filepath of the log file</summary>
 		public string Filepath { get; }
+
+		/// <summary>The flags the log file was created with</summary>
+		public EFlags Flags { get; }
+
+		/// <summary>The ILogWriter Write method</summary>
 		public void Write(string text)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
 			m_outf.Seek(0, SeekOrigin.End);
 			m_outf.Write(bytes, 0, bytes.Length);
 			m_outf.Flush();
+		}
+
+		[Flags]
+		public enum EFlags
+		{
+			None = 0,
+			Append = 1 << 0,
+			DeleteOnClose = 1 << 1,
 		}
 	}
 
@@ -696,22 +713,20 @@ namespace Rylogic.UnitTests
 		public void Logger()
 		{
 			var l2s = new LogToString();
-			using (var log0 = new Logger("Thing1", l2s, 1) { AddTimestamp = false })
-			using (var log1 = new Logger("Thing2", log0))
-			{
-				log0.Write(ELogLevel.Error, "Error message", "A:\\file.txt", 32);
-				log1.Write(ELogLevel.Info, "Info message");
-				log0.Write(ELogLevel.Warn, new Exception("Exception"), "Exception message");
+			using var log0 = new Logger("Thing1", l2s, 1) { AddTimestamp = false };
+			using var log1 = new Logger("Thing2", log0);
+			log0.Write(ELogLevel.Error, "Error message", "A:\\file.txt", 32);
+			log1.Write(ELogLevel.Info, "Info message");
+			log0.Write(ELogLevel.Warn, new Exception("Exception"), "Exception message");
 
-				log0.Flush();
+			log0.Flush();
 
-				// Overwrite the timestamp so its the same for all unit tests
-				var lines = l2s.Str.ToString().Split(new[]{"\u001b"}, StringSplitOptions.RemoveEmptyEntries);
-				Assert.Equal(3, lines.Length);
-				Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message");
-				Assert.True(lines[1] == "Thing2|Info|Info message");
-				Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception");
-			}
+			// Overwrite the timestamp so its the same for all unit tests
+			var lines = l2s.Str.ToString().Split(new[] { "\u001b" }, StringSplitOptions.RemoveEmptyEntries);
+			Assert.Equal(3, lines.Length);
+			Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message");
+			Assert.True(lines[1] == "Thing2|Info|Info message");
+			Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception");
 		}
 	}
 }

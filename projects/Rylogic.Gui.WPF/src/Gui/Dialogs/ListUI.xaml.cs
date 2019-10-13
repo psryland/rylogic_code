@@ -9,6 +9,21 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ListUI : Window, INotifyPropertyChanged
 	{
+		// Example Usage:
+		//  var dlg = new ListUI(owner)
+		//  {
+		//      Title = "Available Options",
+		//      Prompt = "Choose one of these",
+		//      SelectionMode = SelectionMode.Extended,
+		//      DisplayMember = nameof(Thing.Name),
+		//      AllowCancel = true,
+		//  };
+		//  dlg.Items.AddRange(Model.AllTheThings());
+		//  if (dlg.ShowDialog() == true)
+		//  {
+		//      Use(dlg.SelectedItems.Cast<Thing>());
+		//  }
+
 		public ListUI(Window? owner = null)
 		{
 			InitializeComponent();

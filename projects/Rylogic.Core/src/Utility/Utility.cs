@@ -1265,11 +1265,9 @@ namespace Rylogic.Utility
 		/// <summary>Deserialise 'blob' to an instance of 'T'</summary>
 		public static T FromBlob(byte[] blob)
 		{
-			using (var ms = new MemoryStream(blob, false))
-			{
-				var obj = new BinaryFormatter().Deserialize(ms);
-				return (T)obj;
-			}
+			using var ms = new MemoryStream(blob, false);
+			var obj = new BinaryFormatter().Deserialize(ms);
+			return (T)obj;
 		}
 
 		/// <summary>

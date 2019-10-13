@@ -1031,14 +1031,14 @@ namespace Scintilla
 		public struct TextRange
 		{
 			public CharacterRange chrg;
-			[MarshalAs(UnmanagedType.LPStr)] public string lpstrText;
+			[MarshalAs(UnmanagedType.LPStr)] public string? lpstrText;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextToFind
 		{
 			public CharacterRange chrg;
-			[MarshalAs(UnmanagedType.LPStr)] public string lpstrText;
+			[MarshalAs(UnmanagedType.LPStr)] public string? lpstrText;
 			public CharacterRange chrgText;
 		}
 

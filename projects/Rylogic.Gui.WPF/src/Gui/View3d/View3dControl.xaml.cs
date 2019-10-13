@@ -228,7 +228,7 @@ namespace Rylogic.Gui.WPF
 		private void BackgroundColor_Changed(Colour32 new_value)
 		{
 			Window.BackgroundColour = new_value;
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColor)));
+			NotifyPropertyChanged(nameof(BackgroundColor));
 		}
 		public Brush BackgroundColorBrush => BackgroundColor.ToMediaBrush();
 		public static readonly DependencyProperty BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colour32.LightGray);
@@ -240,7 +240,7 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				D3DImage.MultiSampling = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MultiSampling)));
+				NotifyPropertyChanged(nameof(MultiSampling));
 			}
 		}
 
@@ -252,7 +252,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_click_time_ms == value) return;
 				m_click_time_ms = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClickTimeMS)));
+				NotifyPropertyChanged(nameof(ClickTimeMS));
 			}
 		}
 		private int m_click_time_ms;
@@ -263,7 +263,7 @@ namespace Rylogic.Gui.WPF
 			get { return m_default_keyshortcuts; }
 			set
 			{
-				using (Scope.Create(null, () => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DefaultKeyboardShortcuts)))))
+				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts))))
 				{
 					KeyDown -= HandleKeyDown;
 					if (!(m_default_keyshortcuts = value)) return;
@@ -284,7 +284,7 @@ namespace Rylogic.Gui.WPF
 			get { return m_mouse_navigation; }
 			set
 			{
-				using (Scope.Create(null, () => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MouseNavigation)))))
+				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(MouseNavigation))))
 				{
 					MouseDown -= OnMouseDown;
 					MouseUp -= OnMouseUp;
@@ -314,7 +314,7 @@ namespace Rylogic.Gui.WPF
 				if (value == 0)
 					throw new ArgumentException("The desired pixel aspect cannot be 0");
 				m_desired_pixel_aspect = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DesiredPixelAspect)));
+				NotifyPropertyChanged(nameof(DesiredPixelAspect));
 			}
 		}
 		private double m_desired_pixel_aspect;
@@ -389,9 +389,6 @@ namespace Rylogic.Gui.WPF
 				Invalidate();
 		}
 		private int m_mouse_down_at;
-
-		/// <summary></summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
 		public event EventHandler<ReportErrorEventArgs>? ReportError;
@@ -690,6 +687,13 @@ namespace Rylogic.Gui.WPF
 			[Desc("-Y Axis")] NegY,
 			[Desc("+Z Axis")] PosZ,
 			[Desc("-Z Axis")] NegZ,
+		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		#region EventArgs

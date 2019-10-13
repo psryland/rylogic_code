@@ -30,9 +30,9 @@ namespace CoinFlip
 			m_pairs = new HashSet<TradePair>();
 			Api = new BinanceApi(key, secret, shutdown, Model.Log);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool _)
 		{
-			base.Dispose();
+			base.Dispose(_);
 			Api = null;
 		}
 

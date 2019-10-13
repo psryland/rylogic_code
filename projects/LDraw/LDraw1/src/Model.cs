@@ -16,7 +16,7 @@ using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {
-	public class Model :IDisposable
+	public sealed class Model :IDisposable
 	{
 		public Model(MainUI main_ui)
 		{

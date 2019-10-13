@@ -485,6 +485,8 @@ namespace Rylogic.Gfx
 			BackgroundColour,
 			Lighting,
 			Camera,
+			FocusPointVisible,
+			OriginPointVisible,
 		}
 		#endregion
 
@@ -1084,7 +1086,6 @@ $@"//
 //Assembly: System.Xml.Linq.dll
 //Assembly: .\Rylogic.Core.dll
 //Assembly: .\Rylogic.Core.Windows.dll
-//Assembly: .\Rylogic.Gui.WinForms.dll
 //Assembly: .\Rylogic.View3d.dll
 //Assembly: .\LDraw.exe
 using System;
@@ -1099,7 +1100,6 @@ using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gfx;
-using Rylogic.Gui.WinForms;
 using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -1207,7 +1207,7 @@ namespace ldr
 		/// Create multiple objects from a source script file and store the script file in the collection of sources.
 		/// The objects are created with the context Id that is returned from this function.
 		/// Callers should then add objects to a window using AddObjectsById.
-		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)</summary>
+		/// 'include_paths' is a list of paths to use to resolve #include directives (or nullptr)</summary>
 		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, string[]? include_paths = null)
 		{
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
@@ -1260,15 +1260,14 @@ namespace ldr
 		public void DeleteUnused(Guid[] context_ids, int include_count, int exclude_count)
 		{
 			Debug.Assert(include_count + exclude_count == context_ids.Length);
-			using (var ids = Marshal_.Pin(context_ids))
-				View3D_ObjectsDeleteUnused(ids.Pointer, include_count, exclude_count);
+			using var ids = Marshal_.Pin(context_ids);
+			View3D_ObjectsDeleteUnused(ids.Pointer, include_count, exclude_count);
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
 		public Guid? ContextIdFromFilepath(string filepath)
 		{
-			Guid id;
-			return View3D_ContextIdFromFilepath(filepath, out id) ? id : (Guid?)null;
+			return View3D_ContextIdFromFilepath(filepath, out var id) ? id : (Guid?)null;
 		}
 
 		/// <summary>Enumerate the guids in the store</summary>
@@ -1282,10 +1281,10 @@ namespace ldr
 		}
 
 		/// <summary>Return the example Ldr script</summary>
-		public string ExampleScript
-		{
-			get { return View3D_ExampleScriptBStr(); }
-		}
+		public static string ExampleScript => View3D_ExampleScriptBStr();
+
+		/// <summary>Template descriptions for auto complete of LDraw script</summary>
+		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
 
 		/// <summary>Flush any pending commands to the graphics card</summary>
 		public static void Flush()
@@ -1382,20 +1381,16 @@ namespace ldr
 			}
 
 			/// <summary>The associated view3d object</summary>
-			public View3d View { [DebuggerStepThrough] get; }
+			public View3d View { get; }
 
 			/// <summary>Get the view3d native handle for the window (Note: this is not the HWND)</summary>
-			public HWindow Handle { [DebuggerStepThrough] get; private set; }
+			public HWindow Handle { get; private set; }
 
 			/// <summary>Get the windows handle associated with this window (Note: Null if using off-screen rendering only)</summary>
-			public HWND Hwnd { [DebuggerStepThrough] get; }
+			public HWND Hwnd { get; }
 
 			/// <summary>Camera controls</summary>
-			public Camera Camera
-			{
-				[DebuggerStepThrough]
-				get; private set;
-			}
+			public Camera Camera { get; }
 
 			/// <summary>
 			/// Mouse navigation and/or object manipulation.
@@ -1571,11 +1566,15 @@ namespace ldr
 			}
 
 			/// <summary>Add multiple objects, filtered by 'context_ids</summary>
+			public void AddObjects(Guid context_id)
+			{
+				AddObjects(new[] { context_id }, 1, 0);
+			}
 			public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using (var ids = Marshal_.Pin(context_ids))
-					View3D_WindowAddObjectsById(Handle, ids.Pointer, include_count, exclude_count);
+				using var ids = Marshal_.Pin(context_ids);
+				View3D_WindowAddObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
@@ -1608,8 +1607,8 @@ namespace ldr
 			public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using (var ids = Marshal_.Pin(context_ids))
-					View3D_WindowRemoveObjectsById(Handle, ids.Pointer, include_count, exclude_count);
+				using var ids = Marshal_.Pin(context_ids);
+				View3D_WindowRemoveObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Remove all instances from the window</summary>
@@ -1619,10 +1618,7 @@ namespace ldr
 			}
 
 			/// <summary>Return the number of objects in a window</summary>
-			public int ObjectCount
-			{
-				get { return View3D_WindowObjectCount(Handle); }
-			}
+			public int ObjectCount => View3D_WindowObjectCount(Handle);
 
 			/// <summary>True if 'obj' is a member of this window</summary>
 			public bool HasObject(Object obj, bool search_children)
@@ -1639,41 +1635,41 @@ namespace ldr
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{
-				get { return View3D_FocusPointVisibleGet(Handle); }
-				set { View3D_FocusPointVisibleSet(Handle, value); }
+				get => View3D_FocusPointVisibleGet(Handle);
+				set => View3D_FocusPointVisibleSet(Handle, value);
 			}
 
 			/// <summary>Set the size of the focus point graphic</summary>
 			public float FocusPointSize
 			{
-				set { View3D_FocusPointSizeSet(Handle, value); }
+				set => View3D_FocusPointSizeSet(Handle, value);
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
 			public bool OriginPointVisible
 			{
-				get { return View3D_OriginVisibleGet(Handle); }
-				set { View3D_OriginVisibleSet(Handle, value); }
+				get => View3D_OriginVisibleGet(Handle);
+				set => View3D_OriginVisibleSet(Handle, value);
 			}
 
 			/// <summary>Set the size of the origin graphic</summary>
 			public float OriginPointSize
 			{
-				set { View3D_OriginSizeSet(Handle, value); }
+				set => View3D_OriginSizeSet(Handle, value);
 			}
 
 			/// <summary>Get/Set whether object bounding boxes are visible</summary>
 			public bool BBoxesVisible
 			{
-				get { return View3D_BBoxesVisibleGet(Handle); }
-				set { View3D_BBoxesVisibleSet(Handle, value); }
+				get => View3D_BBoxesVisibleGet(Handle);
+				set => View3D_BBoxesVisibleSet(Handle, value);
 			}
 
 			/// <summary>Get/Set whether the selection box is visible</summary>
 			public bool SelectionBoxVisible
 			{
-				get { return View3D_SelectionBoxVisibleGet(Handle); }
-				set { View3D_SelectionBoxVisibleSet(Handle, value); }
+				get => View3D_SelectionBoxVisibleGet(Handle);
+				set => View3D_SelectionBoxVisibleSet(Handle, value);
 			}
 
 			/// <summary>Set the position of the selection box</summary>
@@ -1691,29 +1687,29 @@ namespace ldr
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get { return View3D_FillModeGet(Handle); }
-				set { View3D_FillModeSet(Handle, value); }
+				get => View3D_FillModeGet(Handle);
+				set => View3D_FillModeSet(Handle, value);
 			}
 
 			/// <summary>Get/Set the face culling mode</summary>
 			public ECullMode CullMode
 			{
-				get { return View3D_CullModeGet(Handle); }
-				set { View3D_CullModeSet(Handle, value); }
+				get => View3D_CullModeGet(Handle);
+				set => View3D_CullModeSet(Handle, value);
 			}
 
 			/// <summary>Get/Set the multi-sampling level for the window</summary>
 			public int MultiSampling
 			{
-				get { return View3D_MultiSamplingGet(Handle); }
-				set { View3D_MultiSamplingSet(Handle, value); }
+				get => View3D_MultiSamplingGet(Handle);
+				set => View3D_MultiSamplingSet(Handle, value);
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get { View3D_LightPropertiesGet(Handle, out var light); return light; }
-				set { View3D_LightPropertiesSet(Handle, ref value); }
+				get => View3D_LightPropertiesGet(Handle, out var light) ? light : default;
+				set => View3D_LightPropertiesSet(Handle, ref value);
 			}
 
 			/// <summary>Show the lighting dialog</summary>
@@ -1731,29 +1727,29 @@ namespace ldr
 			/// <summary>Show/Hide the measuring tool</summary>
 			public bool ShowMeasureTool
 			{
-				get { return View3D_MeasureToolVisible(Handle); }
-				set { View3D_ShowMeasureTool(Handle, value); }
+				get => View3D_MeasureToolVisible(Handle);
+				set => View3D_ShowMeasureTool(Handle, value);
 			}
 
 			/// <summary>Show/Hide the angle tool</summary>
 			public bool ShowAngleTool
 			{
-				get { return View3D_AngleToolVisible(Handle); }
-				set { View3D_ShowAngleTool(Handle, value); }
+				get => View3D_AngleToolVisible(Handle);
+				set => View3D_ShowAngleTool(Handle, value);
 			}
 
 			/// <summary>The background colour for the window</summary>
 			public Colour32 BackgroundColour
 			{
-				get { return new Colour32(View3D_BackgroundColourGet(Handle)); }
-				set { View3D_BackgroundColourSet(Handle, value.ARGB); }
+				get => new Colour32(View3D_BackgroundColourGet(Handle));
+				set => View3D_BackgroundColourSet(Handle, value.ARGB);
 			}
 
 			/// <summary>Get/Set the animation clock</summary>
 			public float AnimTime
 			{
-				get { return View3D_WindowAnimTimeGet(Handle); }
-				set { View3D_WindowAnimTimeSet(Handle, value); }
+				get => View3D_WindowAnimTimeGet(Handle);
+				set => View3D_WindowAnimTimeSet(Handle, value);
 			}
 
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
@@ -1806,7 +1802,7 @@ namespace ldr
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport
 			{
-				get { return View3D_Viewport(Handle); }
+				get => View3D_Viewport(Handle);
 				set
 				{
 					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid viewport size");
@@ -1818,8 +1814,8 @@ namespace ldr
 			/// <summary>Get/Set whether the depth buffer is enabled</summary>
 			public bool DepthBufferEnabled
 			{
-				get { return View3D_DepthBufferEnabledGet(Handle); }
-				set { View3D_DepthBufferEnabledSet(Handle, value); }
+				get => View3D_DepthBufferEnabledGet(Handle);
+				set => View3D_DepthBufferEnabledSet(Handle, value);
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
@@ -3468,16 +3464,16 @@ namespace ldr
 			}
 
 			/// <summary>An anonymous pointer unique to each 'AddFile' call</summary>
-			public Guid ContextId { get; private set; }
+			public Guid ContextId { get; }
 
 			/// <summary>The file currently being parsed</summary>
-			public string Filepath { get; private set; }
+			public string Filepath { get; }
 
 			/// <summary>How far through the current file parsing is up to</summary>
-			public long FileOffset { get; private set; }
+			public long FileOffset { get; }
 
 			/// <summary>Last progress update notification</summary>
-			public bool Complete { get; private set; }
+			public bool Complete { get; }
 		}
 		public class SourcesChangedEventArgs :EventArgs
 		{
@@ -3488,10 +3484,10 @@ namespace ldr
 			}
 
 			/// <summary>The cause of the source changes</summary>
-			public ESourcesChangedReason Reason { get; private set; }
+			public ESourcesChangedReason Reason { get; }
 
 			/// <summary>True if files are about to change</summary>
-			public bool Before { get; private set; }
+			public bool Before { get; }
 		}
 		public class SceneChangedEventArgs :EventArgs
 		{
@@ -3503,13 +3499,13 @@ namespace ldr
 			}
 
 			/// <summary>How the scene was changed</summary>
-			public ESceneChanged ChangeType { get; private set; }
+			public ESceneChanged ChangeType { get; }
 
 			/// <summary>The context ids of the objects that were changed in the scene</summary>
-			public Guid[] ContextIds { get; private set; }
+			public Guid[] ContextIds { get; }
 
 			/// <summary>The LdrObject involved in the change (single object changes only)</summary>
-			public Object? Object { get; private set; }
+			public Object? Object { get; }
 		}
 		public class SettingChangeEventArgs : EventArgs
 		{
@@ -3623,7 +3619,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (EMouseBtns mk);
 
 		// Lights
-		[DllImport(Dll)] private static extern void              View3D_LightPropertiesGet       (HWindow window, out LightInfo light);
+		[DllImport(Dll)] private static extern bool              View3D_LightPropertiesGet       (HWindow window, out LightInfo light);
 		[DllImport(Dll)] private static extern void              View3D_LightPropertiesSet       (HWindow window, ref LightInfo light);
 		[DllImport(Dll)] private static extern void              View3D_LightSource              (HWindow window, v4 position, v4 direction, bool camera_relative);
 		[DllImport(Dll)] private static extern void              View3D_LightShowDialog          (HWindow window);
@@ -3765,7 +3761,9 @@ namespace ldr
 		[DllImport(Dll)] private static extern ulong             View3D_RefCount                 (IntPtr pointer);
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ExampleScriptBStr();
-
+		[return: MarshalAs(UnmanagedType.BStr)]
+		[DllImport(Dll)] private static extern string            View3D_AutoCompleteTemplatesBStr();
+		
 		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
 		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);
 		[DllImport(Dll)] private static extern void              View3D_LdrEditorCtrlInit        (HWND scintilla_control, bool dark);

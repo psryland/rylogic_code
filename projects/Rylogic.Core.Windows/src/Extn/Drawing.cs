@@ -140,5 +140,22 @@ namespace Rylogic.Extn.Windows
 		{
 			return new Rect(rect.X, rect.Y, rect.Width, rect.Height);
 		}
+
+		/// <summary>Add XML serialisation support for graphics types</summary>
+		public static XmlConfig SupportSystemDrawingCommonTypes(this XmlConfig cfg)
+		{
+			Xml_.ToMap[typeof(System.Drawing.Drawing2D.Matrix)] = (obj, node) =>
+			{
+				var mat = (System.Drawing.Drawing2D.Matrix)obj;
+				node.Add(string.Join(" ", mat.Elements));
+				return node;
+			};
+			Xml_.AsMap[typeof(System.Drawing.Drawing2D.Matrix)] = (elem, type, instance) =>
+			{
+				var v = float_.ParseArray(elem.Value);
+				return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
+			};
+			return cfg;
+		}
 	}
 }
