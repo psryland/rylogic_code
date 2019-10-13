@@ -4846,7 +4846,7 @@ namespace pr::ldr
 		//   {
 		//      (<x> <y> <z>)
 		//      [*SomeFlag One|Two|Three:sf]
-		//      [!sf:*SomethingElse:se]
+		//      [*SomethingElse:se:!sf]
 		//      [*o2w {}]
 		//   }
 		//   ~>
@@ -4858,16 +4858,15 @@ namespace pr::ldr
 		// Text within [] is optional. [] can also nest.
 		// Text within () is a repeatable section.
 		// | means select one of the identifiers on either side of the bar.
-		// [] can also describe requirements: [requirements:text:label] where:
-		//    requirements:
-		//      !a = the optional labelled 'a' must be given for this optional to be available
-		//      ^a = the optional labelled 'a' must not be given for this optional to be available
-		//      there can be mutliple requirements, e.g. [!a^b:text:c] = must have 'a', must not have 'b'
+		// [] can also describe requirements: [text:label:requirements] where:
 		//    text:
 		//      the normal optional field text
 		//    label:
 		//      an identifier to label the optional
-		// [] must have 0 or 2 ':' characters only. 
+		//    requirements:
+		//      !a = the optional labelled 'a' must be given for this optional to be available
+		//      ^a = the optional labelled 'a' must not be given for this optional to be available
+		//      there can be mutliple requirements, e.g. [text:c:!a^b] = must have 'a', must not have 'b'
 
 		std::wstring str;
 		str.reserve(4096);
