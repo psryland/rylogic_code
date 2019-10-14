@@ -95,12 +95,16 @@ namespace Rylogic.Maths
 		public static void Swap<T>(ref T lhs, ref T rhs) { var tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static float Len2Sq(float x, float y) { return Sqr(x) + Sqr(y); }
 		public static float Len3Sq(float x, float y, float z) { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static float Len4Sq(float x, float y, float z, float w) { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
 		public static float Len2(float x, float y) { return Sqrt(Len2Sq(x, y)); }
 		public static float Len3(float x, float y, float z) { return Sqrt(Len3Sq(x, y, z)); }
+		public static float Len4(float x, float y, float z, float w) { return Sqrt(Len4Sq(x, y, z, w)); }
 		public static double Len2Sq(double x, double y) { return Sqr(x) + Sqr(y); }
 		public static double Len3Sq(double x, double y, double z) { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static double Len4Sq(double x, double y, double z, double w) { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
 		public static double Len2(double x, double y) { return Sqrt(Len2Sq(x, y)); }
 		public static double Len3(double x, double y, double z) { return Sqrt(Len3Sq(x, y, z)); }
+		public static double Len4(double x, double y, double z, double w) { return Sqrt(Len4Sq(x, y, z, w)); }
 
 		// Floating point comparisons
 

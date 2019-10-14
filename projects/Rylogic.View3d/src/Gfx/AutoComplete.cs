@@ -45,29 +45,36 @@ namespace Rylogic.Gfx
 			{
 				Templates = new List<Template>();
 
-				// Minimal template is <~~>
 				templates ??= AutoCompleteTemplates;
+				foreach (var template in FindTemplateDeclarations(templates))
+					Templates.Add(new Template(template));
+
+				// Sort the templates to allow binary search
+				Templates.Sort();
+			}
+
+			/// <summary>Split 'templates' into substrings containing template declarations</summary>
+			private static IEnumerable<string> FindTemplateDeclarations(string templates)
+			{
+				// Minimal template is <~~>
 				if (templates.Length < 4)
-					return;
+					yield break;
 
 				// Partition the string into template definitions
 				int b = 0, e = 0, nest = 0;
 				for (int i = 0; i != templates.Length - 1; ++i)
 				{
-					b = nest == 0 ? i : b;
+					b = nest == 0 ? i + 2 : b;
 					nest += (templates[i + 0] == '<' && templates[i + 1] == '~') ? 1 : 0;
 					nest -= (templates[i + 0] == '~' && templates[i + 1] == '>') ? 1 : 0;
-					e = nest > 0 ? i : Math.Max(b, e);
+					e = nest == 0 ? e : i + 1;
 
-					if (e - b > 4 && nest == 0)
+					if (e - b > 0 && nest == 0)
 					{
 						var template = templates.Substring(b, e - b).Trim(' ', '\n');
-						Templates.Add(new Template(template));
+						yield return template;
 					}
 				}
-
-				// Sort the templates to allow binary search
-				Templates.Sort();
 			}
 
 			/// <summary>A sorted list of templates</summary>
@@ -80,6 +87,12 @@ namespace Rylogic.Gfx
 				{
 					ChildTemplates = new List<Template>();
 					Text = template;
+
+					foreach (var child in FindTemplateDeclarations(template))
+						ChildTemplates.Add(new Template(child));
+
+					// Sort for binary search
+					ChildTemplates.Sort();
 				}
 
 				/// <summary>The template raw text</summary>
@@ -94,6 +107,8 @@ namespace Rylogic.Gfx
 					return Text.CompareTo(rhs.Text);
 				}
 			}
+		
+			
 		}
 	}
 }

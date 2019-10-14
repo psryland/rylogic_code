@@ -199,8 +199,8 @@ namespace pr::rdr
 			m_tb_diffuse       .Text(FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_diffuse.argb ));
 			m_tb_specular      .Text(FmtS(L"%6.6X" ,0xFFFFFF & m_light.m_specular.argb));
 			m_tb_spec_power    .Text(FmtS(L"%d" ,(int)(0.5f + m_light.m_specular_power)));
-			m_tb_spot_inner    .Text(FmtS(L"%d" ,(int)(0.5f + RadiansToDegrees(ACos(m_light.m_inner_cos_angle)))));
-			m_tb_spot_outer    .Text(FmtS(L"%d" ,(int)(0.5f + RadiansToDegrees(ACos(m_light.m_outer_cos_angle)))));
+			m_tb_spot_inner    .Text(FmtS(L"%d" ,(int)(0.5f + RadiansToDegrees(m_light.m_inner_angle))));
+			m_tb_spot_outer    .Text(FmtS(L"%d" ,(int)(0.5f + RadiansToDegrees(m_light.m_outer_angle))));
 
 			Invalidate();
 		}
@@ -215,18 +215,18 @@ namespace pr::rdr
 			if (m_rdo_spot       .Checked()) m_light.m_type = rdr::ELight::Spot;
 
 			// Transform
-			m_light.m_position        = To<v4>(m_tb_position.Text(), 1.0f);
-			m_light.m_direction       = Normalise3(To<v4>(m_tb_direction.Text(), 0.0f));
-			m_light.m_cam_relative    = m_chk_cam_rel.Checked();
-			m_light.m_range           = To<float>(m_tb_range.Text());
-			m_light.m_falloff         = To<float>(m_tb_falloff.Text());
-			m_light.m_cast_shadow     = To<float>(m_tb_shadow_range.Text());
-			m_light.m_ambient         = To<Colour32>(m_tb_ambient.Text()).a0();
-			m_light.m_diffuse         = To<Colour32>(m_tb_diffuse.Text()).a1();
-			m_light.m_specular        = To<Colour32>(m_tb_specular.Text()).a0();
-			m_light.m_specular_power  = To<float>(m_tb_spec_power.Text());
-			m_light.m_inner_cos_angle = Cos(DegreesToRadians(To<float>(m_tb_spot_inner.Text())));
-			m_light.m_outer_cos_angle = Cos(DegreesToRadians(To<float>(m_tb_spot_outer.Text())));
+			m_light.m_position       = To<v4>(m_tb_position.Text(), 1.0f);
+			m_light.m_direction      = Normalise3(To<v4>(m_tb_direction.Text(), 0.0f));
+			m_light.m_cam_relative   = m_chk_cam_rel.Checked();
+			m_light.m_range          = To<float>(m_tb_range.Text());
+			m_light.m_falloff        = To<float>(m_tb_falloff.Text());
+			m_light.m_cast_shadow    = To<float>(m_tb_shadow_range.Text());
+			m_light.m_ambient        = To<Colour32>(m_tb_ambient.Text()).a0();
+			m_light.m_diffuse        = To<Colour32>(m_tb_diffuse.Text()).a1();
+			m_light.m_specular       = To<Colour32>(m_tb_specular.Text()).a0();
+			m_light.m_specular_power = To<float>(m_tb_spec_power.Text());
+			m_light.m_inner_angle    = DegreesToRadians(To<float>(m_tb_spot_inner.Text()));
+			m_light.m_outer_angle    = DegreesToRadians(To<float>(m_tb_spot_outer.Text()));
 		}
 
 		// Enable/Disable controls

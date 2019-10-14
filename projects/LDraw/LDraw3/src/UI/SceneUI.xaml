@@ -1,0 +1,65 @@
+﻿<UserControl
+	x:Class="LDraw.UI.SceneUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	>
+	
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<ContextMenu x:Key="TabCMenu">
+				<MenuItem Header="_Rename"/>
+				<MenuItem Header="_Clear"/>
+				<Separator/>
+				<MenuItem Header="_Close"/>
+			</ContextMenu>
+		</ResourceDictionary>
+	</UserControl.Resources>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<ToolBarTray
+			Grid.Row="0"
+			ToolBarTray.IsLocked="True"
+			>
+			<ToolBar
+				MaxHeight="32"
+				>
+				<Button
+					Command="{Binding ShowLightingUI}"
+					ToolTip="Display lighting properties for this scene"
+					>
+					<Image
+						Source="{StaticResource light_bulb}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
+				</Button>
+				<ToggleButton
+					ToolTip="Auto range the view on new data"
+					IsChecked="{Binding AutoRange}"
+					>
+					<Image
+						Source="{StaticResource auto_range}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</ToggleButton>
+			</ToolBar>
+		</ToolBarTray>
+		
+		<gui:ChartControl
+			Grid.Row="1"
+			Name="m_scene"
+			/>
+	</Grid>
+</UserControl>

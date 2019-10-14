@@ -1,0 +1,416 @@
+﻿<Window
+	x:Class="LDraw.Dialogs.LightingUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Lighting Properties"
+	WindowStartupLocation="CenterOwner"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
+	Width="400"
+	Height="450"
+	MinWidth="360"
+	MinHeight="466"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<Grid
+			Grid.Row="0"
+			Margin="8"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Light type -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="0"
+				Grid.ColumnSpan="2"
+				Orientation="Horizontal"
+				HorizontalAlignment="Left"
+				Margin="4"
+				>
+				<Image
+					Source="{StaticResource light_bulb}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					MaxWidth="56"
+					MaxHeight="56"
+					Margin="12,8,12,8"
+					/>
+				<StackPanel
+					Orientation="Horizontal"
+					VerticalAlignment="Center"
+					Margin="10,0,20,0"
+					>
+					<TextBlock
+						Text="Light Source Type: "
+						VerticalAlignment="Center"
+						HorizontalAlignment="Right"
+						Margin="3"
+						/>
+					<ComboBox
+						Grid.Row="0"
+						Grid.Column="1"
+						ItemsSource="{Binding Light.Type, Converter={conv:EnumValues}}"
+						SelectedItem="{Binding Light.Type}"
+						VerticalAlignment="Center"
+						MinWidth="100"
+						Margin="3"
+						/>
+				</StackPanel>
+			</StackPanel>
+
+			<!-- Position/Direction -->
+			<GroupBox
+				Grid.Row="1"
+				Grid.Column="0"
+				Header="Position/Direction"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+
+					<!-- Position -->
+					<StackPanel
+						Grid.Row="0"
+						IsEnabled="{Binding HasPosition}"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Position: "
+							/>
+						<TextBox
+							Text="{Binding Light.Position, Converter={conv:VecToString}, ConverterParameter=1}"
+							Margin="20,0,0,0"
+							/>
+					</StackPanel>
+
+					<!-- Direction -->
+					<StackPanel
+						Grid.Row="1"
+						IsEnabled="{Binding HasDirection}"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Direction: "
+							/>
+						<TextBox
+							Text="{Binding Light.Direction, Converter={conv:VecToString}, ConverterParameter=0}"
+							Margin="20,0,0,0"
+							/>
+					</StackPanel>
+					
+					<!-- Camera Relative -->
+					<CheckBox
+						Grid.Row="2"
+						Content="Camera Relative"
+						IsEnabled="{Binding IsCasting}"
+						IsChecked="{Binding Light.CameraRelative}"
+						Margin="3"
+						/>
+				</Grid>
+			</GroupBox>
+			
+			<!-- Basic colours -->
+			<GroupBox
+				Grid.Row="1"
+				Grid.Column="1"
+				Header="Colours"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+
+					<!-- Ambient -->
+					<StackPanel
+						Grid.Row="0"
+						>
+						<TextBlock
+							Text="Ambient (aarrggbb): "
+							/>
+						<DockPanel
+							Margin="20,0,0,0"
+							>
+							<Button
+								DockPanel.Dock="Right"
+								Command="{Binding SetAmbientColour}"
+								VerticalAlignment="Center"
+								Width="18"
+								Height="18"
+								Margin="3"
+								>
+								<Image
+									Source="{StaticResource colour_wheel}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</Button>
+							<TextBox
+								Text="{Binding Light.Ambient, Converter={conv:ColourToString}}"
+								MinWidth="100"
+								HorizontalContentAlignment="Center"
+								VerticalAlignment="Center"
+								/>
+						</DockPanel>
+					</StackPanel>
+
+					<!-- Diffuse -->
+					<StackPanel
+						Grid.Row="1"
+						IsEnabled="{Binding IsCasting}"
+						>
+						<TextBlock
+							Text="Diffuse (aarrggbb): "
+							/>
+						<DockPanel
+							Margin="20,0,0,0"
+							>
+							<Button
+								DockPanel.Dock="Right"
+								Command="{Binding SetDiffuseColour}"
+								VerticalAlignment="Center"
+								Width="18"
+								Height="18"
+								Margin="3"
+								>
+								<Image
+									Source="{StaticResource colour_wheel}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</Button>
+							<TextBox
+								Text="{Binding Light.Diffuse, Converter={conv:ColourToString}}"
+								MinWidth="100"
+								HorizontalContentAlignment="Center"
+								VerticalAlignment="Center"
+								/>
+						</DockPanel>
+					</StackPanel>
+
+					<!-- Specular -->
+					<StackPanel
+						Grid.Row="2"
+						IsEnabled="{Binding IsCasting}"
+						>
+						<TextBlock
+							Text="Specular (aarrggbb): "
+							/>
+						<DockPanel
+							Margin="20,0,0,0"
+							>
+							<Button
+								DockPanel.Dock="Right"
+								Command="{Binding SetSpecularColour}"
+								VerticalAlignment="Center"
+								Width="18"
+								Height="18"
+								Margin="3"
+								>
+								<Image
+									Source="{StaticResource colour_wheel}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</Button>
+							<TextBox
+								Text="{Binding Light.Specular, Converter={conv:ColourToString}}"
+								MinWidth="100"
+								HorizontalContentAlignment="Center"
+								VerticalAlignment="Center"
+								/>
+						</DockPanel>
+					</StackPanel>
+
+					<!-- Specular power -->
+					<StackPanel
+						Grid.Row="3"
+						IsEnabled="{Binding IsCasting}"
+						>
+						<TextBlock
+							Text="Specular Power: "
+							/>
+						<DockPanel>
+							<TextBox
+								DockPanel.Dock="Right"
+								Text="{Binding Light.SpecularPower, StringFormat={}{0:N2}}"
+								HorizontalAlignment="Left"
+								HorizontalContentAlignment="Right"
+								Width="60"
+								/>
+							<gui:SliderFunction
+								Minimum="-2"
+								Maximum="5"
+								FunctionExpr="pow(10, x)"
+								InverseExpr="log10(x)"
+								ValueFn="{Binding Light.SpecularPower}"
+								Margin="20,0,0,0"
+								/>
+						</DockPanel>
+					</StackPanel>
+				</Grid>
+			</GroupBox>
+
+			<!-- Spotlight properties -->
+			<GroupBox
+				Grid.Row="2"
+				Header="Spotlight"
+				IsEnabled="{Binding HasSpot}"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+				
+					<!-- Inner Angle -->
+					<StackPanel
+						Grid.Row="0"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Inner Spot Angle: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding Light.InnerAngle, StringFormat={}{0:N1}}"
+							HorizontalContentAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="40"
+							/>
+					</StackPanel>
+
+					<!-- Outer Angle -->
+					<StackPanel
+						Grid.Row="1"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Outer Spot Angle: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding Light.OuterAngle, StringFormat={}{0:N1}}"
+							HorizontalContentAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="40"
+							/>
+					</StackPanel>
+
+					<!-- Range -->
+					<StackPanel
+						Grid.Row="2"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Range: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding Light.Range, StringFormat={}{0:N0}}"
+							HorizontalContentAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="40"
+							/>
+					</StackPanel>
+
+					<!-- Falloff -->
+					<StackPanel
+						Grid.Row="3"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Fall-Off: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding Light.Falloff, StringFormat={}{0:N1}}"
+							HorizontalContentAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="40"
+							/>
+					</StackPanel>
+
+				</Grid>
+			</GroupBox>
+
+			<!-- Miscellaneous -->
+			<GroupBox
+				Grid.Row="2"
+				Grid.Column="1"
+				Header="Miscellaneous"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+
+					<!-- Shadow range -->
+					<StackPanel
+						Grid.Row="2"
+						IsEnabled="{Binding IsCasting}"
+						Orientation="Horizontal"
+						HorizontalAlignment="Right"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Shadow Range: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding Light.CastShadow}"
+							HorizontalContentAlignment="Center"
+							VerticalAlignment="Center"
+							MinWidth="40"
+							/>
+					</StackPanel>
+
+				</Grid>
+			</GroupBox>
+			
+		</Grid>
+	
+		<!-- Ok Button -->
+		<Button
+			Grid.Row="1"
+			Content="OK"
+			Command="{Binding Accept}"
+			HorizontalAlignment="Right"
+			MinWidth="80"
+			Margin="12"
+			/>
+	</Grid>
+</Window>

@@ -167,7 +167,7 @@ namespace pr::rdr
 		cb.m_ambient      = Colour(light.m_ambient).rgba;
 		cb.m_colour       = Colour(light.m_diffuse).rgba;
 		cb.m_specular     = Colour(light.m_specular, light.m_specular_power).rgba;
-		cb.m_spot         = v4(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
+		cb.m_spot         = v4(light.m_inner_angle, light.m_outer_angle, light.m_range, light.m_falloff);
 	}
 
 	// Set the env-map to world orientation

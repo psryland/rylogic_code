@@ -1,0 +1,53 @@
+﻿<Window
+	x:Class="LDraw.Dialogs.AboutUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="NoResize"
+	WindowStartupLocation="CenterOwner"
+	ShowInTaskbar="False"
+	Title="About LDraw"
+	MinHeight="165"
+	MinWidth="300"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="auto"/>
+			<RowDefinition Height="auto"/>
+		</Grid.RowDefinitions>
+
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Horizontal"
+			Margin="12"
+			>
+			<gui:View3dControl
+				Width="64"
+				Height="64"
+				Margin="0,0,3,0"
+				Name="m_view"
+				/>
+			<TextBox
+				Text="{Binding AboutInfo, Mode=OneWay}"
+				Background="White"
+				IsReadOnly="True"
+				MinWidth="150"
+				Margin="3,0,0,0"
+				/>
+		</StackPanel>
+		
+		<!-- Buttons -->
+		<Button
+			Grid.Row="1"
+			Content="OK"
+			Command="{Binding Accept}"
+			HorizontalAlignment="Right"
+			MinWidth="80"
+			Margin="12"
+			/>
+	</Grid>
+</Window>

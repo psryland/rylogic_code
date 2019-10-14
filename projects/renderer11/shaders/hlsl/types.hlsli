@@ -44,7 +44,7 @@ struct Light
 	float4 m_ambient;      // The colour of the ambient light
 	float4 m_colour;       // The colour of the directional light
 	float4 m_specular;     // The colour of the specular light. alpha channel is specular power
-	float4 m_spot;         // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+	float4 m_spot;         // x = inner angle, y = outer angle, z = range, w = falloff
 };
 
 // EnvMap

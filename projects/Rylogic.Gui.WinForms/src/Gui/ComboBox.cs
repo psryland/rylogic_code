@@ -329,34 +329,39 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Set the value explicitly (i.e. not ignored if equal to the current value)</summary>
 		public void SetValue(object value, bool notify = true)
 		{
-			// Adopt the type from 'value' if 'ValueType' is currently 'object'
-			if (ValueType == typeof(object) && value != null)
-				ValueType = value.GetType();
+			if (m_in_set_value != 0) return;
+			using (Scope.Create(() => ++m_in_set_value, () => --m_in_set_value))
+			{
+				// Adopt the type from 'value' if 'ValueType' is currently 'object'
+				if (ValueType == typeof(object) && value != null)
+					ValueType = value.GetType();
 
-			// Null is equivalent to the default type for structs
-			if (ValueType.IsValueType && value == null)
-				value = ValueType.DefaultInstance();
+				// Null is equivalent to the default type for structs
+				if (ValueType.IsValueType && value == null)
+					value = ValueType.DefaultInstance();
 
-			// Check the assigned value has the correct type
-			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
-				throw new ArgumentException($"Cannot assign to 'Value', argument has the wrong type. Expected: {ValueType.Name}  Received: {value.GetType().Name} with value '{value}'");
+				// Check the assigned value has the correct type
+				if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
+					throw new ArgumentException($"Cannot assign to 'Value', argument has the wrong type. Expected: {ValueType.Name}  Received: {value.GetType().Name} with value '{value}'");
 
-			// Save the assigned value
-			m_value = value;
+				// Save the assigned value
+				m_value = value;
 
-			// Try assign the value to the SelectedItem property.
-			// If 'value' is not a drop down item, this will be silently ignored
-			SelectedItem = value;
+				// Try assign the value to the SelectedItem property.
+				// If 'value' is not a drop down item, this will be silently ignored
+				SelectedItem = value;
 
-			// Set 'Text' to match the value
-			ValueToTextIfNotFocused(value);
+				// Set 'Text' to match the value
+				ValueToTextIfNotFocused(value);
 
-			// Notify value changed
-			if (notify)
-				OnValueChanged(new ValueEventArgs(Value));
+				// Notify value changed
+				if (notify)
+					OnValueChanged(new ValueEventArgs(Value));
 
-			Trace($"SetValue to '{value}'");
+				Trace($"SetValue to '{value}'");
+			}
 		}
+		private int m_in_set_value;
 
 		/// <summary>True if a valid value is selected</summary>
 		public bool Valid => Value != null;
@@ -577,7 +582,9 @@ namespace Rylogic.Gui.WinForms
 			set
 			{
 				base.SelectedItem = value;
-				Value = base.SelectedItem;
+
+				if (base.SelectedItem != null)
+					Value = base.SelectedItem;
 
 				// For drop down lists, if 'value' isn't in the collection then
 				// then the call to SelectedItem is ignored, silently.

@@ -6,12 +6,18 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class ColourPickerUI : Window
 	{
-		public ColourPickerUI()
+		public ColourPickerUI(Window? owner = null, Colour32? initial_colour = null)
 		{
 			InitializeComponent();
+			Owner = owner;
+			Icon = owner?.Icon;
+			Colour = InitialColour = initial_colour ?? Colour32.White;
 			Accept = Command.Create(this, AcceptInternal);
 			DataContext = this;
 		}
+
+		/// <summary>The initial colour (if provided)</summary>
+		public Colour32 InitialColour { get; }
 
 		/// <summary>The colour selected in the dialog</summary>
 		public Colour32 Colour

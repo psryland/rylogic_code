@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LDraw3": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

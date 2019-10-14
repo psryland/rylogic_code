@@ -1,0 +1,207 @@
+﻿<Window
+	x:Class="LDraw.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	ResizeMode="CanResizeWithGrip"
+	Title="LDraw"
+	Height="768"
+	Width="1024"
+	>
+	<DockPanel>
+		
+		<!-- Main menu -->
+		<Menu
+			DockPanel.Dock="Top"
+			Name="m_menu"
+			>
+			<MenuItem Header="_File">
+				<MenuItem Header="_New Scene"
+					Command="{Binding NewScene}"
+					ToolTip="Create a new empty 3D scene"
+					/>
+				<MenuItem Header="_New Script"
+					Command="{Binding NewScript}"
+					ToolTip="Create a new empty script window"
+					/>
+				<Separator/>
+				<MenuItem Header="_Open File"
+					Command="{Binding OpenFile}"
+					ToolTip="View 3D objects from a file in a scene"
+					/>
+				<MenuItem Header="_Open File Additional"
+					Command="{Binding OpenFileAdditional}"
+					ToolTip="Add 3D objects from a file to a scene"
+					/>
+				<MenuItem Header="_Save File"
+					Command="{Binding SaveFile}"
+					IsEnabled="{Binding ScriptHasFocusAndNeedsSave}"
+					ToolTip="Save the current script"
+					/>
+				<MenuItem Header="_Save File As"
+					Command="{Binding SaveFileAs}"
+					IsEnabled="{Binding ScriptHasFocus}"
+					ToolTip="Save the current script to a new location"
+					/>
+				<Separator/>
+				<gui:RecentFilesMenuItem
+					Header= "_Recent Files"
+					Name="m_recent_files"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="_Exit"
+					Command="{Binding Exit}"
+					/>
+			</MenuItem>
+			<MenuItem Header="_Navigation"/>
+			<MenuItem Header="_Data"/>
+			<MenuItem Header="_Rendering">
+				<MenuItem
+					Header="_Lighting..."
+					Command="{Binding ShowLightingUI}"
+					/>
+			</MenuItem>
+			<MenuItem Header="_Help">
+				<MenuItem
+					Header="_Example Script"
+					Command="{Binding ShowExampleScript}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="_About"
+					Command="{Binding ShowAbout}"
+					/>
+			</MenuItem>
+		</Menu>
+		
+		<!-- Tool bar -->
+		<ToolBarTray
+			DockPanel.Dock="Top"
+			ToolBarTray.IsLocked="True"
+			>
+			<ToolBar
+				Visibility="Visible"
+				MaxHeight="32"
+				>
+				<Label
+					Content="Tools:"
+					VerticalAlignment="Center"
+					/>
+				<Button>
+					<Image
+						Source="{StaticResource set_square}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+			</ToolBar>
+			<ToolBar
+				Visibility="Visible"
+				MaxHeight="32"
+				>
+				<Label
+					Content="Link Cameras:"
+					VerticalAlignment="Center"
+					/>
+				<Button>
+					<Image
+						Source="{StaticResource green_left_right}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button>
+					<Image
+						Source="{StaticResource green_up_down}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button>
+					<Image
+						Source="{StaticResource green_in_out}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button>
+					<Image
+						Source="{StaticResource green_rotate}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Separator/>
+				<Label
+					Content="Link Axes:"
+					/>
+				<Button>
+					<Image
+						Source="{StaticResource xaxis}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button>
+					<Image
+						Source="{StaticResource yaxis}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+			</ToolBar>
+		</ToolBarTray>
+		
+		<!-- Status bar -->
+		<StatusBar
+			DockPanel.Dock="Bottom"
+			>
+			<StatusBarItem
+				Content="{Binding StatusMessage, FallbackValue='Idle'}"
+				VerticalAlignment="Center"
+				Margin="3,0,3,0"
+				/>
+			<StatusBarItem
+				Visibility="{Binding ParsingProgress, Converter={conv:NullToCollapsed}}"
+				VerticalAlignment="Center"
+				>
+				<Grid
+					DataContext="{Binding ParsingProgress}"
+					>
+					<ProgressBar
+						Value="{Binding Percentage, FallbackValue=0, Mode=OneWay}"
+						IsIndeterminate="{Binding IsIndeterminate}"
+						Maximum="100"
+						Minimum="0"
+						VerticalAlignment="Center"
+						MinWidth="300"
+						MinHeight="16"
+						/>
+					<TextBlock
+						VerticalAlignment="Center"
+						Text="{Binding DataSourceName}"
+						Margin="3,0,0,0"
+						/>
+				</Grid>
+			</StatusBarItem>
+		</StatusBar>
+		
+		<!-- Dock container -->
+		<gui:DockContainer
+			x:Name="m_dc"
+			/>
+
+	</DockPanel>
+</Window>

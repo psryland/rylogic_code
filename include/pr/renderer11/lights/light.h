@@ -10,20 +10,20 @@ namespace pr::rdr
 {
 	struct Light :pr::AlignTo<16>
 	{
-		v4       m_position;        // Position, only valid for point,spot lights
-		v4       m_direction;       // Direction, only valid for directional,spot lights
-		ELight   m_type;            // One of ambient, directional, point, spot
-		Colour32 m_ambient;         // Ambient light colour
-		Colour32 m_diffuse;         // Main light colour
-		Colour32 m_specular;        // Specular light colour
-		float    m_specular_power;  // Specular power (controls specular spot size)
-		float    m_range;           // Light range
-		float    m_falloff;         // Intensity falloff per unit distance
-		float    m_inner_cos_angle; // Spot light inner angle 100% light
-		float    m_outer_cos_angle; // Spot light outer angle 0% light
-		float    m_cast_shadow;     // Shadow cast range, 0 for off
-		bool     m_on;              // True if this light is on
-		bool     m_cam_relative;    // True if the light should move with the camera
+		v4       m_position;       // Position, only valid for point,spot lights
+		v4       m_direction;      // Direction, only valid for directional,spot lights
+		ELight   m_type;           // One of ambient, directional, point, spot
+		Colour32 m_ambient;        // Ambient light colour
+		Colour32 m_diffuse;        // Main light colour
+		Colour32 m_specular;       // Specular light colour
+		float    m_specular_power; // Specular power (controls specular spot size)
+		float    m_range;          // Light range
+		float    m_falloff;        // Intensity falloff per unit distance
+		float    m_inner_angle;    // Spot light inner angle 100% light (in radians)
+		float    m_outer_angle;    // Spot light outer angle 0% light (in radians)
+		float    m_cast_shadow;    // Shadow cast range, 0 for off
+		bool     m_on;             // True if this light is on
+		bool     m_cam_relative;   // True if the light should move with the camera
 
 		Light();
 		bool IsValid() const;

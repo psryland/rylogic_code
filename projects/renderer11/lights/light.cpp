@@ -8,20 +8,20 @@
 namespace pr::rdr
 {
 	Light::Light()
-		:m_position        (v4Origin)
-		,m_direction       (-0.577350f, -0.577350f, -0.577350f, 0.0f)
-		,m_type            (ELight::Directional)
-		,m_ambient         (0.0f, 0.0f, 0.0f, 0.0f)
-		,m_diffuse         (0.5f, 0.5f, 0.5f, 1.0f)
-		,m_specular        (0.1f, 0.1f, 0.1f, 0.0f)
-		,m_specular_power  (1000.0f)
-		,m_range           (100.0f)
-		,m_falloff         (0.0f)
-		,m_inner_cos_angle (0.97f)
-		,m_outer_cos_angle (0.92f)
-		,m_cast_shadow     (0.0f)
-		,m_on              (true)
-		,m_cam_relative    (false)
+		:m_position(v4Origin)
+		,m_direction(-0.577350f, -0.577350f, -0.577350f, 0.0f)
+		,m_type(ELight::Directional)
+		,m_ambient(0.0f, 0.0f, 0.0f, 0.0f)
+		,m_diffuse(0.5f, 0.5f, 0.5f, 1.0f)
+		,m_specular(0.1f, 0.1f, 0.1f, 0.0f)
+		,m_specular_power(1000.0f)
+		,m_range(100.0f)
+		,m_falloff(0.0f)
+		,m_inner_angle(maths::tau_by_4f)
+		,m_outer_angle(maths::tau_by_4f)
+		,m_cast_shadow(0.0f)
+		,m_on(true)
+		,m_cam_relative(false)
 	{}
 
 	// Return true if this light is in a valid state
@@ -69,8 +69,8 @@ namespace pr::rdr
 		x(Diff ,= pr::hash::HashICT(L"Diff"))\
 		x(Spec ,= pr::hash::HashICT(L"Spec"))\
 		x(SPwr ,= pr::hash::HashICT(L"SPwr"))\
-		x(InCA ,= pr::hash::HashICT(L"InCA"))\
-		x(OtCA ,= pr::hash::HashICT(L"OtCA"))\
+		x(Ang0 ,= pr::hash::HashICT(L"Ang0"))\
+		x(Ang1 ,= pr::hash::HashICT(L"Ang1"))\
 		x(Rng  ,= pr::hash::HashICT(L"Rng" ))\
 		x(FOff ,= pr::hash::HashICT(L"FOff"))\
 		x(Shdw ,= pr::hash::HashICT(L"Shdw"))\
@@ -92,8 +92,8 @@ namespace pr::rdr
 			<< "  *" << ELightKW::Spec << "{" << m_specular.argb << "}\n"
 			<< std::dec
 			<< "  *" << ELightKW::SPwr << "{" << m_specular_power << "}\n"
-			<< "  *" << ELightKW::InCA << "{" << m_inner_cos_angle << "}\n"
-			<< "  *" << ELightKW::OtCA << "{" << m_outer_cos_angle << "}\n"
+			<< "  *" << ELightKW::Ang0 << "{" << m_inner_angle << "}\n"
+			<< "  *" << ELightKW::Ang1 << "{" << m_outer_angle << "}\n"
 			<< "  *" << ELightKW::Rng  << "{" << m_range << "}\n"
 			<< "  *" << ELightKW::FOff << "{" << m_falloff << "}\n"
 			<< "  *" << ELightKW::Shdw << "{" << m_cast_shadow << "}\n"
@@ -125,8 +125,8 @@ namespace pr::rdr
 				case ELightKW::Diff: reader.IntS(light.m_diffuse.argb, 16); break;
 				case ELightKW::Spec: reader.IntS(light.m_specular.argb, 16); break;
 				case ELightKW::SPwr: reader.RealS(light.m_specular_power); break;
-				case ELightKW::InCA: reader.RealS(light.m_inner_cos_angle); break;
-				case ELightKW::OtCA: reader.RealS(light.m_outer_cos_angle); break;
+				case ELightKW::Ang0: reader.RealS(light.m_inner_angle); break;
+				case ELightKW::Ang1: reader.RealS(light.m_outer_angle); break;
 				case ELightKW::Rng:  reader.RealS(light.m_range); break;
 				case ELightKW::FOff: reader.RealS(light.m_falloff); break;
 				case ELightKW::Shdw: reader.RealS(light.m_cast_shadow); break;

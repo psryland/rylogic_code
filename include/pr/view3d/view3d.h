@@ -419,8 +419,8 @@ extern "C"
 		View3DColour m_diffuse;
 		View3DColour m_specular;
 		float        m_specular_power;
-		float        m_inner_cos_angle;
-		float        m_outer_cos_angle;
+		float        m_inner_angle;
+		float        m_outer_angle;
 		float        m_range;
 		float        m_falloff;
 		float        m_cast_shadow;
@@ -818,11 +818,18 @@ namespace view3d
 
 	struct Vertex :View3DVertex
 	{
-		void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) { pos = p; col = c; norm = n; tex = t; }
+		void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) noexcept
+		{
+			pos = p;
+			col = c;
+			norm = n;
+			tex = t;
+		}
 	};
 	struct WindowOptions :View3DWindowOptions
 	{
-		WindowOptions() :View3DWindowOptions()
+		WindowOptions() noexcept
+			:View3DWindowOptions()
 		{
 			m_error_cb                  = nullptr;
 			m_error_cb_ctx              = nullptr;
@@ -833,7 +840,8 @@ namespace view3d
 	};
 	struct TextureOptions :View3DTextureOptions
 	{
-		TextureOptions() :View3DTextureOptions()
+		TextureOptions() noexcept
+			:View3DTextureOptions()
 		{
 			m_format         = DXGI_FORMAT_R8G8B8A8_UNORM;
 			m_mips           = 0;
@@ -850,7 +858,7 @@ namespace view3d
 	struct UpdateModelKeep :View3DUpdateModelKeep
 	{
 		enum class EKeep { None, All };
-		UpdateModelKeep(EKeep keep = EKeep::None)
+		UpdateModelKeep(EKeep keep = EKeep::None) noexcept
 		{
 			m_name        = keep == EKeep::All;
 			m_transform   = keep == EKeep::All;

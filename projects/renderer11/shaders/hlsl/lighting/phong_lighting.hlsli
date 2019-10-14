@@ -22,14 +22,15 @@ float LightPoint(in uniform float4 ws_light_position, in float4 ws_norm, in floa
 }
 
 // Returns the intensity of reflected radial light on a surface at position 'ws_pos' with normal 'ws_norm' and transparency 'alpha'
-float LightSpot(in uniform float4 ws_light_position, in uniform float4 ws_light_direction, in uniform float inner_cosangle, in uniform float outer_cosangle, in uniform float range, in float4 ws_norm, in float4 ws_pos, in float alpha)
+float LightSpot(in uniform float4 ws_light_position, in uniform float4 ws_light_direction, in uniform float inner_angle, in uniform float outer_angle, in uniform float range, in uniform float falloff, in float4 ws_norm, in float4 ws_pos, in float alpha)
 {
 	float brightness = LightPoint(ws_light_position, ws_norm, ws_pos, alpha);
 	float4 light_to_pos = ws_pos - ws_light_position;
 	float dist = length(light_to_pos);
-	float cos_angle = saturate(dot(light_to_pos, ws_light_direction) / dist);
-	brightness *= saturate((outer_cosangle - cos_angle) / (outer_cosangle - inner_cosangle));
+	float angle = 2.0f * acos(saturate(dot(light_to_pos, ws_light_direction) / dist));
+	brightness *= saturate((outer_angle - angle) / (outer_angle - inner_angle));
 	brightness *= saturate((range - dist) * 9 / range);
+	brightness *= saturate(1.0f / (1.0f + falloff*dist));
 	return brightness;
 }
 
@@ -54,7 +55,7 @@ float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 
 	float intensity = 0;
 	if      (DirectionalLight(light)) intensity = LightDirectional(light.m_ws_direction ,ws_norm ,unlit_diff.a);
 	else if (PointLight(light))       intensity = LightPoint      (light.m_ws_position  ,ws_norm ,ws_pos ,unlit_diff.a);
-	else if (SpotLight(light))        intensity = LightSpot       (light.m_ws_position  ,light.m_ws_direction ,light.m_spot.x ,light.m_spot.y ,light.m_spot.z ,ws_norm ,ws_pos ,unlit_diff.a);
+	else if (SpotLight(light))        intensity = LightSpot       (light.m_ws_position  ,light.m_ws_direction ,light.m_spot.x ,light.m_spot.y ,light.m_spot.z ,light.m_spot.w ,ws_norm ,ws_pos ,unlit_diff.a);
 
 	float4 ltdiff = float4(0,0,0,0);
 	ltdiff.rgb += light.m_ambient.rgb;

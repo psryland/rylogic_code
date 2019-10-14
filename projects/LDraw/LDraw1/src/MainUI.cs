@@ -1152,7 +1152,7 @@ namespace LDraw
 		private void ShowExampleScript()
 		{
 			var ui = Model.AddNewScript("Example");
-			ui.Editor.Text = Model.View3d.ExampleScript;
+			ui.Editor.Text = View3d.ExampleScript;
 		}
 
 		/// <summary>Update the state of the progress bar</summary>

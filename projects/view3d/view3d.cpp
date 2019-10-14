@@ -1276,20 +1276,20 @@ VIEW3D_API BOOL __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DL
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		light.m_position        = view3d::To<View3DV4>(window->m_light.m_position);
-		light.m_direction       = view3d::To<View3DV4>(window->m_light.m_direction);
-		light.m_type            = static_cast<EView3DLight>(window->m_light.m_type);
-		light.m_ambient         = window->m_light.m_ambient;
-		light.m_diffuse         = window->m_light.m_diffuse;
-		light.m_specular        = window->m_light.m_specular;
-		light.m_specular_power  = window->m_light.m_specular_power;
-		light.m_inner_cos_angle = window->m_light.m_inner_cos_angle;
-		light.m_outer_cos_angle = window->m_light.m_outer_cos_angle;
-		light.m_range           = window->m_light.m_range;
-		light.m_falloff         = window->m_light.m_falloff;
-		light.m_cast_shadow     = window->m_light.m_cast_shadow;
-		light.m_on              = window->m_light.m_on;
-		light.m_cam_relative    = window->m_light.m_cam_relative;
+		light.m_position       = view3d::To<View3DV4>(window->m_light.m_position);
+		light.m_direction      = view3d::To<View3DV4>(window->m_light.m_direction);
+		light.m_type           = static_cast<EView3DLight>(window->m_light.m_type);
+		light.m_ambient        = window->m_light.m_ambient;
+		light.m_diffuse        = window->m_light.m_diffuse;
+		light.m_specular       = window->m_light.m_specular;
+		light.m_specular_power = window->m_light.m_specular_power;
+		light.m_inner_angle    = window->m_light.m_inner_angle;
+		light.m_outer_angle    = window->m_light.m_outer_angle;
+		light.m_range          = window->m_light.m_range;
+		light.m_falloff        = window->m_light.m_falloff;
+		light.m_cast_shadow    = window->m_light.m_cast_shadow;
+		light.m_on             = window->m_light.m_on;
+		light.m_cam_relative   = window->m_light.m_cam_relative;
 		return TRUE;
 	}
 	CatchAndReport(View3D_LightPropertiesGet, window, FALSE);
@@ -1303,20 +1303,20 @@ VIEW3D_API void __stdcall View3D_LightPropertiesSet(View3DWindow window, View3DL
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
-		window->m_light.m_direction       = view3d::To<pr::v4>(light.m_direction);
-		window->m_light.m_type            = pr::Enum<pr::rdr::ELight>::From(light.m_type);
-		window->m_light.m_ambient         = light.m_ambient;
-		window->m_light.m_diffuse         = light.m_diffuse;
-		window->m_light.m_specular        = light.m_specular;
-		window->m_light.m_specular_power  = light.m_specular_power;
-		window->m_light.m_inner_cos_angle = light.m_inner_cos_angle;
-		window->m_light.m_outer_cos_angle = light.m_outer_cos_angle;
-		window->m_light.m_range           = light.m_range;
-		window->m_light.m_falloff         = light.m_falloff;
-		window->m_light.m_cast_shadow     = light.m_cast_shadow;
-		window->m_light.m_on              = light.m_on != 0;
-		window->m_light.m_cam_relative    = light.m_cam_relative != 0;
+		window->m_light.m_position       = view3d::To<pr::v4>(light.m_position);
+		window->m_light.m_direction      = view3d::To<pr::v4>(light.m_direction);
+		window->m_light.m_type           = pr::Enum<pr::rdr::ELight>::From(light.m_type);
+		window->m_light.m_ambient        = light.m_ambient;
+		window->m_light.m_diffuse        = light.m_diffuse;
+		window->m_light.m_specular       = light.m_specular;
+		window->m_light.m_specular_power = light.m_specular_power;
+		window->m_light.m_inner_angle    = light.m_inner_angle;
+		window->m_light.m_outer_angle    = light.m_outer_angle;
+		window->m_light.m_range          = light.m_range;
+		window->m_light.m_falloff        = light.m_falloff;
+		window->m_light.m_cast_shadow    = light.m_cast_shadow;
+		window->m_light.m_on             = light.m_on != 0;
+		window->m_light.m_cam_relative   = light.m_cam_relative != 0;
 	}
 	CatchAndReport(View3D_LightPropertiesSet, window,);
 }

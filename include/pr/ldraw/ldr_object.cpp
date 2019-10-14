@@ -3254,8 +3254,8 @@ namespace pr::ldr
 		{
 			p.m_reader.Vector3(m_light.m_position, 1.0f);
 			p.m_reader.Vector3(m_light.m_direction, 0.0f);
-			p.m_reader.Real(m_light.m_inner_cos_angle); // actually in degrees
-			p.m_reader.Real(m_light.m_outer_cos_angle); // actually in degrees
+			p.m_reader.Real(m_light.m_inner_angle); // actually in degrees
+			p.m_reader.Real(m_light.m_outer_angle); // actually in degrees
 		}
 	};
 
@@ -4992,9 +4992,9 @@ namespace pr::ldr
 			"*Point [<name>] [<colour>]\n"
 			"{\n"
 			"	(x y z)\n"
-			"	[:*Width {<width>}:w]\n"
-			"	[!w^t:*Style {Square|Circle|Star}:s]\n"
-			"	[!w^s:*Texture {\"<texture>\"}:t]\n"
+			"	[*Width {<width>}:w]\n"
+			"	[*Style {Square|Circle|Star}:s:!w^t]\n"
+			"	[*Texture {\"<texture>\"}:t:!w^s]\n"
 			"}\n"
 			"~>\n"
 		);

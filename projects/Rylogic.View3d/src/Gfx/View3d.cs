@@ -742,66 +742,73 @@ namespace Rylogic.Gfx
 			public Colour32 m_diffuse;
 			public Colour32 m_specular;
 			public float m_specular_power;
-			public float m_inner_cos_angle;
-			public float m_outer_cos_angle;
+			public float m_inner_angle;
+			public float m_outer_angle;
 			public float m_range;
 			public float m_falloff;
 			public float m_cast_shadow;
 			public bool m_on;
 			public bool m_cam_relative;
 
-			/// <summary>Return properties for an ambient light source</summary>
-			public static LightInfo Ambient(Colour32 ambient)
+			/// <summary>Default light info</summary>
+			public static LightInfo Default()
 			{
 				return new LightInfo
 				{
+					m_on = true,
 					m_type = ELight.Ambient,
 					m_position = v4.Origin,
-					m_direction = v4.Zero,
-					m_ambient = ambient,
-					m_diffuse = Colour32.Zero,
-					m_specular = Colour32.Zero,
-					m_specular_power = 0f,
+					m_direction = -v4.ZAxis,
+					m_ambient = 0xFF101010,
+					m_diffuse = 0xFF808080,
+					m_specular = 0xFF808080,
+					m_specular_power = 1000f,
+					m_inner_angle = Math_.TauBy4F,
+					m_outer_angle = Math_.TauBy4F,
+					m_range = 1000f,
+					m_falloff = 0f,
 					m_cast_shadow = 0f,
-					m_on = true,
 					m_cam_relative = false,
 				};
+			}
+
+			/// <summary>Return properties for an ambient light source</summary>
+			public static LightInfo Ambient(Colour32? ambient = null)
+			{
+				var light = Default();
+				light.m_type = ELight.Ambient;
+				light.m_ambient = ambient ?? light.m_ambient;
+				return light;
 			}
 
 			/// <summary>Return properties for a directional light source</summary>
-			public static LightInfo Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
+			public static LightInfo Directional(v4 direction, Colour32? ambient = null, Colour32? diffuse = null, Colour32? specular = null, float? spec_power = null, float? cast_shadow = null, bool camera_relative = false)
 			{
-				return new LightInfo
-				{
-					m_type = ELight.Directional,
-					m_position = v4.Origin,
-					m_direction = Math_.Normalise(direction),
-					m_ambient = ambient,
-					m_diffuse = diffuse,
-					m_specular = specular,
-					m_specular_power = spec_power,
-					m_cast_shadow = cast_shadow,
-					m_on = true,
-					m_cam_relative = false,
-				};
+				var light = Default();
+				light.m_type = ELight.Directional;
+				light.m_direction = Math_.Normalise(direction);
+				light.m_ambient = ambient ?? light.m_ambient;
+				light.m_diffuse = diffuse ?? light.m_diffuse;
+				light.m_specular = specular ?? light.m_specular;
+				light.m_specular_power = spec_power ?? light.m_specular_power;
+				light.m_cast_shadow = cast_shadow ?? light.m_cast_shadow;
+				light.m_cam_relative = camera_relative;
+				return light;
 			}
 
 			/// <summary>Return properties for a point light source</summary>
-			public static LightInfo Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
+			public static LightInfo Point(v4 position, Colour32? ambient = null, Colour32? diffuse = null, Colour32? specular = null, float? spec_power = null, float? cast_shadow = null, bool camera_relative = false)
 			{
-				return new LightInfo
-				{
-					m_type = ELight.Point,
-					m_position = position,
-					m_direction = v4.Zero,
-					m_ambient = ambient,
-					m_diffuse = diffuse,
-					m_specular = specular,
-					m_specular_power = spec_power,
-					m_cast_shadow = cast_shadow,
-					m_on = true,
-					m_cam_relative = false,
-				};
+				var light = Default();
+				light.m_type = ELight.Point;
+				light.m_position = position;
+				light.m_ambient = ambient ?? light.m_ambient;
+				light.m_diffuse = diffuse ?? light.m_diffuse;
+				light.m_specular = specular ?? light.m_specular;
+				light.m_specular_power = spec_power ?? light.m_specular_power;
+				light.m_cast_shadow = cast_shadow ?? light.m_cast_shadow;
+				light.m_cam_relative = camera_relative;
+				return light;
 			}
 		}
 

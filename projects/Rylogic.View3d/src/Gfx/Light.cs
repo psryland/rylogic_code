@@ -20,15 +20,16 @@ namespace Rylogic.Gfx
 			{
 				m_info = light;
 			}
-			public Light(Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power = 1000f, v4? direction = null, v4? position = null)
+			public Light(Colour32 ambient, Colour32 diffuse, Colour32 specular, double spec_power = 1000.0, v4? direction = null, v4? position = null)
 				:this(
-					direction != null ? LightInfo.Directional(direction.Value, ambient, diffuse, specular, spec_power, 0f) :
-					position  != null ? LightInfo.Point(position.Value, ambient, diffuse, specular, spec_power, 0f) :
+					direction != null ? LightInfo.Directional(direction.Value, ambient, diffuse, specular, (float)spec_power, 0) :
+					position  != null ? LightInfo.Point(position.Value, ambient, diffuse, specular, (float)spec_power, 0) :
 					LightInfo.Ambient(ambient))
 			{}
 			public Light(XElement node)
 				:this()
 			{
+				On             = node.Element(nameof(On            )).As(On            );
 				Type           = node.Element(nameof(Type          )).As(Type          );
 				Position       = node.Element(nameof(Position      )).As(Position      );
 				Direction      = node.Element(nameof(Direction     )).As(Direction     );
@@ -41,7 +42,6 @@ namespace Rylogic.Gfx
 				Range          = node.Element(nameof(Range         )).As(Range         );
 				Falloff        = node.Element(nameof(Falloff       )).As(Falloff       );
 				CastShadow     = node.Element(nameof(CastShadow    )).As(CastShadow    );
-				On             = node.Element(nameof(On            )).As(On            );
 				CameraRelative = node.Element(nameof(CameraRelative)).As(CameraRelative);
 			}
 			public XElement ToXml(XElement node)
@@ -71,6 +71,13 @@ namespace Rylogic.Gfx
 			}
 			private LightInfo m_info;
 
+			/// <summary>Whether the light is active or not</summary>
+			public bool On
+			{
+				get => m_info.m_on;
+				set => SetProp(ref m_info.m_on, value, nameof(On));
+			}
+
 			/// <summary>The type of light source</summary>
 			public ELight Type
 			{
@@ -89,7 +96,7 @@ namespace Rylogic.Gfx
 			public v4 Direction
 			{
 				get => m_info.m_direction;
-				set => SetProp(ref m_info.m_direction, value, nameof(Direction));
+				set => SetProp(ref m_info.m_direction, Math_.Normalise(value, -v4.ZAxis), nameof(Direction));
 			}
 
 			/// <summary>The colour of the ambient component of the light</summary>
@@ -114,52 +121,53 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>The specular power</summary>
-			public float SpecularPower
+			public double SpecularPower
 			{
 				get => m_info.m_specular_power;
-				set => SetProp(ref m_info.m_specular_power, value, nameof(SpecularPower));
+				set => SetProp(ref m_info.m_specular_power, (float)value, nameof(SpecularPower));
 			}
 
 			/// <summary>The inner spot light cone angle (in degrees)</summary>
-			public float InnerAngle
+			public double InnerAngle
 			{
-				get => (float)Math_.RadiansToDegrees(Math.Acos(m_info.m_inner_cos_angle));
-				set => SetProp(ref m_info.m_inner_cos_angle, (float)Math.Cos(Math_.DegreesToRadians(value)), nameof(InnerAngle));
+				get => Math_.RadiansToDegrees(m_info.m_inner_angle);
+				set
+				{
+					var angle = Math_.DegreesToRadians(Math_.Clamp(value, 0, 180));
+					SetProp(ref m_info.m_inner_angle, (float)angle, nameof(InnerAngle));
+				}
 			}
 
 			/// <summary>The outer spot light cone angle (in degrees)</summary>
-			public float OuterAngle
+			public double OuterAngle
 			{
-				get => (float)Math_.RadiansToDegrees(Math.Acos(m_info.m_outer_cos_angle));
-				set => SetProp(ref m_info.m_outer_cos_angle, (float)Math.Cos(Math_.DegreesToRadians(value)), nameof(OuterAngle));
+				get => Math_.RadiansToDegrees(m_info.m_outer_angle);
+				set
+				{
+					var angle = Math_.DegreesToRadians(Math_.Clamp(value, 0, 180));
+					SetProp(ref m_info.m_outer_angle, (float)angle, nameof(OuterAngle));
+				}
 			}
 
 			/// <summary>The range of the light</summary>
-			public float Range
+			public double Range
 			{
 				get => m_info.m_range;
-				set => SetProp(ref m_info.m_range, value, nameof(Range));
+				set => SetProp(ref m_info.m_range, (float)value, nameof(Range));
 			}
 
 			/// <summary>The attenuation of the light with distance</summary>
-			public float Falloff
+			public double Falloff
 			{
 				get => m_info.m_falloff;
-				set => SetProp(ref m_info.m_falloff, value, nameof(Falloff));
+				set => SetProp(ref m_info.m_falloff, (float)value, nameof(Falloff));
 			}
 
 			/// <summary>The maximum distance from the light source in which objects cast shadows</summary>
-			public float CastShadow
+			public double CastShadow
 			{
 				get => m_info.m_cast_shadow;
-				set => SetProp(ref m_info.m_cast_shadow, value, nameof(CastShadow));
-			}
-
-			/// <summary>Whether the light is active or not</summary>
-			public bool On
-			{
-				get => m_info.m_on;
-				set => SetProp(ref m_info.m_on, value, nameof(On));
+				set => SetProp(ref m_info.m_cast_shadow, (float)value, nameof(CastShadow));
 			}
 
 			/// <summary>Whether the light moves with the camera or not</summary>
