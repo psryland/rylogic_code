@@ -1,24 +1,28 @@
 ﻿namespace Rylogic.Script
 {
-	// A location within a script source
+	/// <summary>A location within a script source</summary>
 	public class Loc
 	{
-		public string Filepath;
-		public int Line;
-		public int Column;
-		
 		public Loc()
-		{
-			Filepath = string.Empty;
-			Line = 0;
-			Column = 0;
-		}
+			:this(string.Empty, 0, 0)
+		{}
 		public Loc(string filepath, int line, int column)
 		{
-			Filepath = filepath;
+			Uri = filepath;
 			Line = line;
 			Column  = column;
 		}
+
+		/// <summary>The filepath, resource address, etc</summary>
+		public string Uri;
+
+		/// <summary>The line number within the source</summary>
+		public int Line;
+
+		/// <summary>The column number within the source</summary>
+		public int Column;
+
+		/// <summary>Increment the location based on 'ch'</summary>
 		public char inc(char ch)
 		{
 			if (ch == '\n')
@@ -33,7 +37,8 @@
 			return ch;
 		}
 
-		public override string ToString() { return string.Format("File:{0} Line:{1} Col:{2}", Filepath, Line, Column); }
+		/// <summary></summary>
+		public override string ToString() => $"File:{Uri} Line:{Line} Col:{Column}";
 	};
 }
 

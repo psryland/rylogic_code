@@ -168,17 +168,16 @@ namespace Rylogic.Scintilla
 		/// <summary>Convert a scintilla message id to a string</summary>
 		public static string IdToString(int sci_id)
 		{
-			string name;
-			if (!m_sci_name.TryGetValue(sci_id, out name))
+			if (!m_sci_name.TryGetValue(sci_id, out var name))
 			{
-				var fi = typeof(Sci).GetFields(System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static)
+				var fi = typeof(Sci).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
 					.Where(x => x.IsLiteral)
 					.Where(x => x.Name.StartsWith("SCI_") || x.Name.StartsWith("SCN_"))
 					.FirstOrDefault(x =>
 						{
 							var val = x.GetValue(null);
 							if (val is uint) return (uint)val == (uint)sci_id;
-							if (val is int)  return (int)val == sci_id;
+							if (val is int) return (int)val == sci_id;
 							return false;
 						});
 

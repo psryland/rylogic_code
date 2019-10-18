@@ -342,6 +342,68 @@ namespace Rylogic.Common
 			return false;
 		}
 
+		/// <summary>Attempt to resolve a partial filepath given a list of directories to search</summary>
+		public static string ResolvePath(string partial_path, IList<string>? search_paths = null, string? current_dir = null, bool check_working_dir = true)
+		{
+			var searched_paths = new List<string>();
+			return ResolvePath(partial_path, search_paths, current_dir, check_working_dir, ref searched_paths);
+		}
+		public static string ResolvePath(string partial_path, IList<string>? search_paths, string? current_dir, bool check_working_dir, ref List<string> searched_paths)
+		{
+			// If the partial path is actually a full path
+			if (Path.IsPathRooted(partial_path))
+			{
+				if (FileExists(partial_path))
+					return partial_path;
+			}
+
+			// If a current directory is provided, search there first
+			if (current_dir != null)
+			{
+				var path = CombinePath(current_dir, partial_path);
+				if (FileExists(path))
+					return path;
+
+				searched_paths.Add(Directory(path));
+			}
+
+			// Check the working directory
+			if (check_working_dir)
+			{
+				var path = Path.GetFullPath(partial_path);
+				if (FileExists(path))
+					return path;
+
+				searched_paths.Add(Directory(path));
+			}
+
+			// Search the search paths
+			if (search_paths != null)
+			{
+				foreach (var dir in search_paths)
+				{
+					var path = CombinePath(dir, partial_path);
+					if (FileExists(path))
+						return path;
+
+					// If the search paths contain partial paths, resolve recursively
+					if (!Path.IsPathRooted(path))
+					{
+						var paths = search_paths;
+						paths.RemoveIf(x => x == dir);
+						path = ResolvePath(path, paths, current_dir, check_working_dir, ref searched_paths);
+						if (FileExists(path))
+							return path;
+					}
+
+					searched_paths.Add(Directory(path));
+				}
+			}
+
+			// Return an empty string for unresolved
+			return string.Empty;
+		}
+
 		/// <summary>
 		/// Gets file system info for all files/directories in a directory that match a specific filter including all sub directories.
 		/// 'regex_filter' is a filter on the filename, not the full path.

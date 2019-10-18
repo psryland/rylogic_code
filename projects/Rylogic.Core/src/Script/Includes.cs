@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Script
 {
@@ -41,295 +45,238 @@ namespace Rylogic.Script
 	/// <summary>An include handler that tries to open include files from resources, search paths, or a string table</summary>
 	public class Includes : IIncludeHandler
 	{
-		[Flags] public enum EType
-		{
-			None      = 0,
-			Files     = 1 << 0,
-			Resources = 1 << 1,
-			Strings   = 1 << 2,
-			All       = ~None,
-		}
-
-		/// <summary>Types of includes supported</summary>
-		private EType m_types;
-
-		/// <summary>The search paths to resolve include files from</summary>
-		private readonly List<string> m_paths;
-
-		// The binary modules containing resources
-		//private List<IntPtr> m_modules;
-
-		/// <summary>A map of include names to strings</summary>
-		private readonly Dictionary<string, string> m_strtab;
-
 		public Includes(EType types = EType.Files)
 		{
-			m_types = types;
-			m_paths = new List<string>();
-			//m_modules()
-			m_strtab = new Dictionary<string, string>();
+			Types = types;
+			SearchPaths = new List<string>();
+			Assemblies = new List<Assembly>();
+			StrTable = new Dictionary<string, string>();
 			FileOpened = null;
 		}
 		public Includes(string search_paths, EType types = EType.Files)
 			:this(types)
 		{
-			SearchPaths = search_paths;
+			SearchPathList = search_paths;
 		}
-		//public Includes(std::initializer_list<HMODULE> modules, EType types = EType::Files)
-		//	:Includes(types)
-		//{
-		//	ResourceModules(modules);
-		//}
-		//public Includes(string search_paths, std::initializer_list<HMODULE> modules, EType types = EType::None)
-		//	:Includes(types)
-		//{
-		//	SearchPaths(search_paths);
-		//	ResourceModules(modules);
-		//}
-
-		/// <summary>Get/Set the search paths as a comma or semicolon separated list</summary>
-		public string SearchPaths
+		public Includes(IEnumerable<Assembly> assemblies, EType types = EType.Resources)
+			:this(types)
 		{
-			get
-			{
-				var paths = new StringBuilder();
-				foreach (var path in m_paths)
-					paths.Append(paths.Length != 0 ? "," : "").Append(path);
+			Assemblies.Assign(assemblies);
+		}
+		public Includes(string search_paths, IEnumerable<Assembly> assemblies, EType types = EType.Files|EType.Resources)
+			:this(types)
+		{
+			SearchPathList = search_paths;
+			Assemblies.Assign(assemblies);
+		}
 
-				return paths.ToString();
-			}
+		/// <summary>Types of includes supported</summary>
+		public EType Types { get; set; }
+
+		/// <summary>The directory paths to search</summary>
+		public List<string> SearchPaths { get; }
+
+		/// <summary>The assemblies containing resources</summary>
+		public List<Assembly> Assemblies { get; }
+
+		/// <summary>A map of include names to strings</summary>
+		public Dictionary<string, string> StrTable { get; }
+
+		/// <summary>If true, missing includes do not throw</summary>
+		public bool IgnoreMissingIncludes { get; set; }
+
+		/// <summary>Get/Set the search paths as a delimited list</summary>
+		public string SearchPathList
+		{
+			get => string.Join(",", SearchPaths.Where(x => x.Length != 0));
 			set
 			{
-				m_paths.Clear();
-				foreach (var path in value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
-					m_paths.Add(path);
+				SearchPaths.Clear();
+				foreach (var path in value.Split(new[] { ',', ';', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+					SearchPaths.Add(path);
 
-				if (m_paths.Count != 0)
-					m_types |= EType.Files;
+				if (SearchPaths.Count != 0)
+					Types |= EType.Files;
 			}
 		}
 
-		//// Get/Set the modules to check for resources
-		//public virtual Modules const& ResourceModules() const
-		//{
-		//	return m_modules;
-		//}
-		//public virtual void ResourceModules(std::initializer_list<HMODULE> modules)
-		//{
-		//	m_modules.assign(std::begin(modules), std::end(modules));
-		//
-		//	if (!m_modules.empty())
-		//		m_types |= EType::Resources;
-		//}
+		/// <summary> Convert 'name' into a resource string id</summary>
+		public static string ResId(string name)
+		{
+			return name.Replace(".", "_");
+		}
 
-		///// <summary>Get/Set the string table</summary>
-		//public IDictionary<string, string> StringTable
-		//{
-		//	get => m_strtab;
-		//	set
-		//	{
-		//		m_strtab = value;
-		//		if (m_strtab.Count != 0)
-		//			m_types |= EType.Strings;
-		//	}
-		//}
-
-		/// <summary>Add a path to the include search paths. Ensures uniqueness of paths</summary>
+		/// <summary>Add/Insert a path in the search paths</summary>
 		public void AddSearchPath(string path, int? index = null)
 		{
-			m_types |= EType.Files;
-
-			// Remove 'path' if already in the 'm_paths' collection
+			index ??= SearchPaths.Count;
 			path = Path_.Canonicalise(path);
-			m_paths.Remove(path);
-			m_paths.Add(path);
+			SearchPaths.Insert(Math.Min(index.Value, SearchPaths.Count), path);
+			SearchPaths.RemoveIf(x => !ReferenceEquals(x,path) && Path_.Compare(x, path) == 0);
 		}
 
-		//// Add a module handle to the modules collection. Ensures uniqueness
-		//void AddResourceModule(HMODULE module, size_t index = ~size_t())
-		//{
-		//	m_types |= EType::Resources;
-		//
-		//	// Remove 'module' if already in the 'm_modules' collection
-		//	auto end = std::remove_if(std::begin(m_modules), std::end(m_modules), [&](HMODULE m) { return m == module; });
-		//	m_modules.erase(end, std::end(m_modules));
-		//	m_modules.insert(std::begin(m_modules) + std::min(m_modules.size(), index), module);
-		//}
-
-		//// Add a string to the string include table
-		//void AddString(string key, std::string value)
-		//{
-		//	m_types |= EType::Strings;
-		//	m_strtab[key] = value;
-		//}
-
-		//// Convert 'name' into a resource string id
-		//string ResId(string const& name) const
-		//{
-		//	auto id = name;
-		//	pr::str::Replace(id, L".", L"_");
-		//	return pr::str::UpperCase(id);
-		//}
-
-		// Resolve an include into a full path
-		// 'search_paths_only' is true when the include is within angle brackets (i.e. #include <file>)
+		/// <summary>Resolve an include into a full path</summary>
 		public string ResolveInclude(string include, EIncludeFlags flags, Loc? loc = null)
 		{
-#if false
-			string result, searched_paths;
-			HMODULE module;
-
 			// Try file includes
-			if (pr::AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
+			var searched_paths = new List<string>();
+			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
 				return result;
 
-			// Try resources
-			if (pr::AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
-				return result;
+			// TODO: this is broken, is 'result' a filepath or the content of the include??
 
-			// Try the string table
-			if (pr::AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
-				return result;
+		//	// Try assemblies
+		//	if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(include, out result, out _))
+		//		return result;
+		//
+		//	// Try the string table
+		//	if (Types.HasFlag(EType.Strings) && ResolveStringInclude(include, out result))
+		//		return result;
 
 			// Ignore if missing includes flagged
-			if (m_ignore_missing_includes)
-				return string();
+			if (IgnoreMissingIncludes)
+				return string.Empty;
 
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to resolve include '%S'\n\nNot found in these search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
-#endif
-			throw new NotImplementedException();
+			throw new ScriptException(EResult.MissingInclude, loc ?? new Loc(), searched_paths.Count != 0
+				? $"Failed to resolve include '{include}'\n\nNot found in these search paths:\n{string.Join("\n", searched_paths)}"
+				: $"Failed to resolve include '{include}'");
 		}
 
-		// Resolve an include into a full path
-		public bool ResolveFileInclude(string include, bool include_local_dir, Loc? loc, out string result, out string searched_paths)
-		{
-			result = string.Empty;
-			searched_paths = string.Empty;
-#if false
-			// If we should search the local directory first, find the local directory name from 'loc'
-			string local_dir, *current_dir = nullptr;
-			if (include_local_dir)
-			{
-				// Note: 'local_dir' means the directory local to the current source location 'loc'.
-				// Don't use the executable local directory: "pr::filesys::CurrentDirectory<string>()"
-				// If the executable directory is wanted, add it manually before calling resolve.
-				local_dir = pr::filesys::GetDirectory(loc.StreamName());
-				current_dir = !local_dir.empty() ? &local_dir : nullptr;
-			}
-
-			// Resolve the filepath
-			auto filepath = pr::filesys::ResolvePath<string>(include, m_paths, current_dir, false, &searched_paths);
-			if (filepath.empty())
-				return false;
-
-			// Return the resolved include
-			result = filepath;
-			return true;
-#endif
-			throw new NotImplementedException();
-		}
-
-		//// Resolve an include from the available modules
-		//public bool ResolveResourceInclude(string include, out string result, bool binary, HMODULE& module)
-		//{
-		//	result = ResId(include);
-		//	for (auto m : m_modules)
-		//	{
-		//		if (!pr::resource::Find(result.c_str(), binary ? L"BINARY" : L"TEXT", m)) continue;
-		//		module = m;
-		//		return true;
-		//	}
-		//	return false;
-		//}
-
-		/// <summary>Resolve an include into a string that is in the string table</summary>
-		public bool ResolveStringInclude(string include, out string result)
-		{
-			return m_strtab.TryGetValue(include, out result);
-		}
-
-		// Returns a 'Src' corresponding to the string "include".
-		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-		// 'loc' is where in the current source the include comes from.
+		/// <summary>
+		/// Returns a 'Src' corresponding to the string "include".
+		/// 'search_paths_only' is true for #include <desc> and false for #include "desc".
+		/// 'loc' is where in the current source the include comes from.</summary>
 		public Src Open(string include, EIncludeFlags flags, Loc? loc = null)
 		{
-	throw new NotImplementedException();
-#if false
-			string result, searched_paths;
-			HMODULE module;
-
 			// Try file includes
-			if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
+			var searched_paths = new List<string>();
+			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
 			{
-				FileOpened.Raise(result);
-				return std::make_unique<FileSrc>(result.c_str());
+				FileOpened?.Invoke(this, new ValueEventArgs(result));
+				return new FileSrc(result);
 			}
 
 			// Try resources
-			if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
+			var id = ResId(include);
+			if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(id, out var assembly))
 			{
-				auto res = pr::resource::Read<char>(result.c_str(), L"TEXT", module);
-				return std::make_unique<PtrA>(res.m_data);
+				using var stream = assembly!.GetManifestResourceStream(id) ?? throw new Exception("Resource not found");
+				using var reader = new StreamReader(stream, Encoding.UTF8, true);
+				return new StringSrc(reader.ReadToEnd());
 			}
 
 			// Try the string table
-			if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
+			var key = include;
+			if (Types.HasFlag(EType.Strings) && ResolveStringInclude(key, out var strtab))
 			{
-				auto i = m_strtab.find(result);
-				return std::make_unique<PtrA>(i->second.c_str());
+				return new StringSrc(strtab![key]);
 			}
 
 			// If ignoring missing includes, return an empty source
-			if (m_ignore_missing_includes)
+			if (IgnoreMissingIncludes)
 			{
-				return std::make_unique<PtrA>("");
+				return new NullSrc();
 			}
 
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to open include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to open include '%S'", include.c_str()));
-#endif
+			// Throw on missing include
+			throw new ScriptException(EResult.MissingInclude, loc ?? new Loc(), searched_paths.Count != 0
+					? $"Failed to open include '{include}'\n\nNot found in these search paths:\n{string.Join("\n", searched_paths)}"
+					: $"Failed to open include '{include}'");
 		}
 
-		// Open 'include' as an ASCII stream
+		/// <summary>Open 'include' as a stream</summary>
 		public Stream OpenStream(string include, EIncludeFlags flags, Loc? loc = null)
 		{
-#if false
-			string result, searched_paths;
-			HMODULE module;
-
 			// Try file includes
-			if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
+			var searched_paths = new List<string>();
+			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var fullpath, out searched_paths))
 			{
-				FileOpened.Raise(result);
-				return std::make_unique<std::ifstream>(result.c_str(), AllSet(flags, EFlags::Binary) ? std::istream::binary : 0);
+				FileOpened?.Invoke(this, new ValueEventArgs(fullpath));
+				return new FileStream(fullpath, FileMode.Open, FileAccess.Read, FileShare.Read);
 			}
 
 			// Try resources
-			if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
+			var id = ResId(include);
+			if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(id, out var assembly))
 			{
-				auto res = pr::resource::Read<char>(result.c_str(), AllSet(flags, EFlags::Binary) ? L"BINARY" : L"TEXT", module);
-				return std::unique_ptr<std::basic_istream<char>>(new mem_istream<char>(res.m_data, res.size()));
+				return assembly!.GetManifestResourceStream(id) ?? throw new Exception("Resource not found");
 			}
 
 			// Try the string table
-			if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
+			var key = include;
+			if (Types.HasFlag(EType.Strings) && ResolveStringInclude(key, out var strtab))
 			{
-				auto i = m_strtab.find(result);
-				return std::make_unique<std::istringstream>(i->second);
+				return new MemoryStream(Encoding.UTF8.GetBytes(strtab![key]));
 			}
 
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to resolve include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
-#endif
-			throw new NotImplementedException();
+			// If ignoring missing includes, return an empty source
+			if (IgnoreMissingIncludes)
+			{
+				return new MemoryStream(Array.Empty<byte>());
+			}
+
+			// Throw on missing include
+			throw new ScriptException(EResult.MissingInclude, loc ?? new Loc(), searched_paths.Count != 0
+					? $"Failed to open include '{include}'\n\nNot found in these search paths:\n{string.Join("\n", searched_paths)}"
+					: $"Failed to open include '{include}'");
 		}
 
 		/// <summary>Raised whenever a file is opened</summary>
 		public event EventHandler<ValueEventArgs>? FileOpened;
+
+		/// <summary>Resolve an include partial path into a full path</summary>
+		private bool ResolveFileInclude(string include, bool include_local_dir, Loc? loc, out string fullpath, out List<string> searched_paths)
+		{
+			fullpath = string.Empty;
+
+			// If we should search the local directory first, find the local directory name from 'loc'.
+			// Note: 'local_dir' means the directory local to the current source location 'loc'.
+			// Don't use the executable local directory: "Environment.CurrentDirectory"
+			// If the executable directory is wanted, add it manually before calling resolve.
+			var local_dir = include_local_dir && loc?.Uri is string uri ? Path_.Directory(uri) : null;
+
+			// Resolve the filepath
+			searched_paths = new List<string>();
+			var filepath = Path_.ResolvePath(include, SearchPaths, local_dir, false, ref searched_paths);
+			if (filepath.Length == 0)
+				return false;
+
+			// Return the resolved include
+			fullpath = filepath;
+			return true;
+		}
+
+		/// <summary>Resolve a resource key into the assembly that contains that resource</summary>
+		private bool ResolveResourceInclude(string resource_key, out Assembly? assembly)
+		{
+			foreach (var ass in Assemblies)
+			{
+				if (ass.GetManifestResourceStream(resource_key) == null) continue;
+				assembly = ass;
+				return true;
+			}
+			assembly = null;
+			return false;
+		}
+
+		/// <summary>Resolve a string include tag into the value from the string table</summary>
+		private bool ResolveStringInclude(string tag, out Dictionary<string,string>? str_table)
+		{
+			// Future versions may have multiple string tables
+			str_table = StrTable.ContainsKey(tag) ? StrTable : null;
+			return str_table != null;
+		}
+
+		/// <summary>The locations to search for includes</summary>
+		[Flags]
+		public enum EType
+		{
+			None      = 0,
+			Files     = 1 << 0,
+			Resources = 1 << 1,
+			Strings   = 1 << 2,
+			All       = Files | Resources | Strings,
+		}
 	}
 
 	/// <summary>An include handler that doesn't handle any includes.</summary>
