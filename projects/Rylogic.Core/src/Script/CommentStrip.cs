@@ -1,108 +1,76 @@
-﻿using System.Diagnostics;
-
-namespace Rylogic.Script
+﻿namespace Rylogic.Script
 {
 	/// <summary>Strips comments from a character stream</summary>
 	public class CommentStrip :Src
 	{
-		private readonly Buffer m_buf;
-
-		public CommentStrip(Src src, string? line_end = "\n", string? line_comment = "//", string? block_start = "/*", string? block_end = "*/")
+		public CommentStrip(Src src, string? line_end = "\n", string? line_comment = "//", string? block_beg = "/*", string? block_end = "*/")
 		{
-			m_buf = new Buffer(src);
-			LineEnd           = line_end ?? string.Empty;
-			LineComment       = line_comment ?? string.Empty;
-			BlockCommentStart = block_start ?? string.Empty;
-			BlockCommentEnd   = block_end ?? string.Empty;
+			Src = src;
+			LineEnd = line_end ?? string.Empty;
+			LineComment = line_comment ?? string.Empty;
+			BlockCommentBeg = block_beg ?? string.Empty;
+			BlockCommentEnd = block_end ?? string.Empty;
+			m_in_literal_string = false;
+			m_escape = false;
 		}
 		protected override void Dispose(bool _)
 		{
-			m_buf.Dispose();
+			Src.Dispose();
 			base.Dispose(_);
 		}
 
-		// These code only works if line and block comments both start with the same initial character
-		public string LineEnd { get; private set; }
-		public string LineComment { get; private set; }
-		public string BlockCommentStart { get; private set; }
-		public string BlockCommentEnd { get; private set; }
+		/// <summary>The input stream</summary>
+		private Src Src { get; }
 
-		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType { get { return m_buf.SrcType; } }
+		// These code only works if line and block comments both start with the same initial character
+		public string LineEnd { get; }
+		public string LineComment { get; }
+		public string BlockCommentBeg { get; }
+		public string BlockCommentEnd { get; }
 
 		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get { return m_buf.Location; } }
+		public override Loc Location => Src.Location;
 
-		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected override char PeekInternal() { return m_buf.Peek; }
-
-		/// <summary>
-		/// Advances the internal position a minimum of 'n' positions.
-		/// If the character at the new position is not a valid character to be return keep
-		/// advancing to the next valid character</summary>
-		protected override void Advance(int n)
+		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
+		protected override char Read()
 		{
-			for (;;)
+			for (; ; )
 			{
-				// If there are characters buffered, then they're ones we need to return
-				if (m_buf.Empty)
+				// Read through literal strings or characters
+				if (m_in_literal_string)
 				{
-					// Read through literal strings
-					if (m_buf.Peek == '\"')
-					{
-						BufferLiteralString();
-						continue;
-					}
-
-					// Read through literal characters
-					if (m_buf.Peek == '\'')
-					{
-						BufferLiteralChar();
-						continue;
-					}
-
-					// Skip comments
-					// Check that the next character in the stream matches the first character in the comment sequence
-					// before adding characters to the buffer. This only works if line and block comments start with the same character
-
-					if (LineComment.Length != 0 && m_buf.Peek == LineComment[0] && m_buf.Match(LineComment))
-					{
-						EatLineComment();
-						continue;
-					}
-					if (BlockCommentStart.Length != 0 && m_buf.Peek == BlockCommentStart[0] && m_buf.Match(BlockCommentStart))
-					{
-						EatBlockComment();
-						continue;
-					}
+					m_in_literal_string = m_escape || !(Src == '\"' || Src == '\'');
+					m_escape = Src == '\\';
+					break;
+				}
+				else if (Src == '\"' || Src == '\'')
+				{
+					m_in_literal_string = true;
+					m_escape = false;
+					break;
 				}
 
-				if (n-- == 0) break;
-				m_buf.Next();
-			}
-		}
+				// Skip comments
+				if (LineComment.Length != 0 && Src == LineComment[0] && Src.Match(LineComment))
+				{
+					Extract.EatLineComment(Src, LineComment);
+					continue;
+				}
+				if (BlockCommentBeg.Length != 0 && Src == BlockCommentBeg[0] && Src.Match(BlockCommentBeg))
+				{
+					Extract.EatBlockComment(Src, BlockCommentBeg, BlockCommentEnd);
+					continue;
+				}
 
-		private void BufferLiteralString()
-		{
-			m_buf.Cache(); Debug.Assert(m_buf[0] == '\"');
-			for (bool esc = true; m_buf.Src.Peek != 0 && (m_buf.Src.Peek != '\"' || esc); esc = (m_buf.Src.Peek == '\\'), m_buf.Cache(m_buf.Length+1)) {}
-			if (m_buf.Src.Peek != 0) m_buf.Cache(m_buf.Length+1);
+				break;
+			}
+
+			var ch = Src.Peek;
+			if (ch != 0) Src.Next();
+			return ch;
 		}
-		private void BufferLiteralChar()
-		{
-			m_buf.Cache(); Debug.Assert(m_buf[0] == '\'');
-			for (bool esc = true; m_buf.Src.Peek != 0 && (m_buf.Src.Peek != '\'' || esc); esc = (m_buf.Src.Peek == '\\'), m_buf.Cache(m_buf.Length+1)) {}
-			if (m_buf.Src.Peek != 0) m_buf.Cache(m_buf.Length+1);
-		}
-		private void EatLineComment()
-		{
-			for (; m_buf.Peek != 0 && !m_buf.Match(LineEnd); m_buf.Next()) {}
-		}
-		private void EatBlockComment()
-		{
-			for (; m_buf.Peek != 0 && !m_buf.Match(BlockCommentEnd); m_buf.Next()) {}
-			m_buf.Clear();
-		}
+		private bool m_in_literal_string;
+		private bool m_escape;
 	}
 }
 
@@ -111,50 +79,53 @@ namespace Rylogic.UnitTests
 {
 	using Script;
 
-	[TestFixture] public partial class TestScript
+	[TestFixture]
+	public partial class TestScript
 	{
-		[Test] public void StripCppComments()
+		[Test]
+		public void StripCppComments()
 		{
 			const string str_in =
-				"123// comment         \n"+
-				"456/* block */789     \n"+
-				"// many               \n"+
-				"// lines              \n"+
-				"// \"string\"         \n"+
-				"/* \"string\" */      \n"+
-				"\"string \\\" /*a*/ //b\"  \n"+
-				"/not a comment\n"+
-				"/*\n"+
-				"  more lines\n"+
-				"*/\n"+
+				"123// comment         \n" +
+				"456/* block */789     \n" +
+				"// many               \n" +
+				"// lines              \n" +
+				"// \"string\"         \n" +
+				"/* \"string\" */      \n" +
+				"\"string \\\" /*a*/ //b\"  \n" +
+				"/not a comment\n" +
+				"/*\n" +
+				"  more lines\n" +
+				"*/\n" +
 				"/*back to*//*back*/ comment\n";
 			const string str_out =
-				"123\n"+
-				"456789     \n"+
-				"\n"+
-				"\n"+
-				"\n"+
-				"      \n"+
-				"\"string \\\" /*a*/ //b\"  \n"+
-				"/not a comment\n"+
-				"\n"+
+				"123\n" +
+				"456789     \n" +
+				"\n" +
+				"\n" +
+				"\n" +
+				"      \n" +
+				"\"string \\\" /*a*/ //b\"  \n" +
+				"/not a comment\n" +
+				"\n" +
 				" comment\n";
 
 			var src = new StringSrc(str_in);
 			var strip = new CommentStrip(src);
-			var result = strip.ReadToEnd();
-			Assert.Equal(str_out, result);
+			for (int i = 0; i != str_out.Length; ++i, strip.Next())
+				Assert.Equal(str_out[i], strip.Peek);
 			Assert.Equal((char)0, strip.Peek);
 		}
-		[Test] public void StripAsmComments()
+		[Test]
+		public void StripAsmComments()
 		{
 			const string str_in =
-				"; asm comments start with a ; character\r\n"+
-				"mov 43 2\r\n"+
+				"; asm comments start with a ; character\r\n" +
+				"mov 43 2\r\n" +
 				"ldr $a 2 ; imaginary asm";
 			const string str_out =
-				"\r\n"+
-				"mov 43 2\r\n"+
+				"\r\n" +
+				"mov 43 2\r\n" +
 				"ldr $a 2 ";
 
 			var src = new StringSrc(str_in);

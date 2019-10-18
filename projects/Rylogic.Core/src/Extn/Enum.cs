@@ -14,7 +14,8 @@ using Rylogic.Attrib;
 
 namespace Rylogic.Extn
 {
-	public static class Enum<T> where T : struct, IConvertible
+	public static class Enum<T>
+		where T : struct, IConvertible
 	{
 		static Enum()
 		{
@@ -250,6 +251,12 @@ namespace Rylogic.Extn
 			return Converter.ToStringInternal(value.ToInt64(null));
 		}
 
+		/// <summary>Convert from a long value to an enum value</summary>
+		public static T ToValue(long value)
+		{
+			return (T)Enum.ToObject(typeof(T), value);
+		}
+
 		/// <summary>Convert a string to an enum values, throws on failure</summary>
 		public static T Parse(string value, bool ignore_case = false, bool parse_numeric = true)
 		{
@@ -259,20 +266,17 @@ namespace Rylogic.Extn
 		/// <summary>Convert a string into an enum value</summary>
 		public static T? TryParse(string value, bool ignoreCase, bool parseNumeric)
 		{
-			long ir;
-			return Converter.TryParseInternal(value, ignoreCase, parseNumeric, out ir)
+			return Converter.TryParseInternal(value, ignoreCase, parseNumeric, out var ir)
 				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
 		public static T? TryParse(string value, bool ignoreCase)
 		{
-			long ir;
-			return Converter.TryParseInternal(value, ignoreCase, true, out ir)
+			return Converter.TryParseInternal(value, ignoreCase, true, out var ir)
 				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
 		public static T? TryParse(string value)
 		{
-			long ir;
-			return Converter.TryParseInternal(value, false, true, out ir)
+			return Converter.TryParseInternal(value, false, true, out var ir)
 				? (T?)Enum.ToObject(typeof(T), ir) : null;
 		}
 

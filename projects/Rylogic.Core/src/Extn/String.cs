@@ -21,8 +21,19 @@ namespace Rylogic.Extn
 	{
 		public static char[] WhiteSpaceChars = new[] { ' ', '\t', '\r', '\n', '\v' };
 
+		// Character classes
+		public static bool IsNewLine(char ch) => ch == '\n';
+		public static bool IsLineSpace(char ch) => ch == ' ' || ch == '\t' || ch == '\r';
+		public static bool IsWhiteSpace(char ch) => IsLineSpace(ch) || IsNewLine(ch) || ch == '\v' || ch == '\f';
+		public static bool IsDecDigit(char ch) => (ch >= '0' && ch <= '9');
+		public static bool IsBinDigit(char ch) => (ch >= '0' && ch <= '1');
+		public static bool IsOctDigit(char ch) => (ch >= '0' && ch <= '7');
+		public static bool IsHexDigit(char ch) => IsDecDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+		public static bool IsDigit(char ch) => IsDecDigit(ch);
+		public static bool IsAlpha(char ch) => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+		public static bool IsIdentifier(char ch, bool first) => ch == '_' || IsAlpha(ch) || (!first && IsDigit(ch));
+
 		/// <summary>Returns true if this string is not null or empty</summary>
-		[DebuggerStepThrough]
 		public static bool HasValue(this string? str)
 		{
 			return !string.IsNullOrEmpty(str);
@@ -82,6 +93,12 @@ namespace Rylogic.Extn
 			return str.EndsWith(newline) ? str : (str + newline);
 		}
 
+		/// <summary>True if this string contains the character 'ch'</summary>
+		public static bool Contains(this string str, char ch)
+		{
+			return str.IndexOf(ch) != -1;
+		}
+
 		/// <summary>Returns a string containing this character repeated 'count' times</summary>
 		public static string Repeat(this char ch, int count)
 		{
@@ -110,33 +127,6 @@ namespace Rylogic.Extn
 		public static string Strip(this string str, Func<char, bool> pred)
 		{
 			return new string(str.ToCharArray().Where(x => !pred(x)).ToArray());
-		}
-
-		public enum ECapitalise
-		{
-			DontChange = 0,
-			UpperCase  = 1,
-			LowerCase  = 2,
-		}
-		public enum ESeparate
-		{
-			DontChange = 0,
-			Add        = 1,
-			Remove     = 2,
-		}
-		public enum EPrettyStyle
-		{
-			/// <summary>Words start with capitals followed by lower case and are separated by spaces</summary>
-			Title,
-
-			/// <summary>Words are all upper case, separated with underscore</summary>
-			Macro,
-
-			/// <summary>Words are lower case, separated by underscore</summary>
-			LocalVar,
-
-			/// <summary>Words start with capitals followed by lower case and have no separators</summary>
-			TypeDecl,
 		}
 
 		/// <summary>Transforms a string by the given casing rules</summary>
@@ -217,6 +207,14 @@ namespace Rylogic.Extn
 			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
 		}
 
+		/// <summary>Add/Remove quotes from a string if it doesn't already have them</summary>
+		public static string Quotes(this string str, bool add)
+		{
+			if (add && (str.Length >= 2 && str[0] == '\"' && str[str.Length-1] == '\"')) return str; // already quoted
+			if (!add && (str.Length < 2 || str[0] != '\"' || str[str.Length-1] != '\"')) return str; // already not quoted
+			return add ? $"\"{str}\"" : str.Substring(1, str.Length - 2);
+		}
+
 		/// <summary>Returns this string with 'prefix' prepended, and 'postfix' appended, if this string is not null or empty</summary>
 		public static string Surround(this string str, string prefix, string postfix)
 		{
@@ -233,6 +231,18 @@ namespace Rylogic.Extn
 			// Handle all caps
 			var caps = str.All(x => char.IsUpper(x));
 			if (caps) str = str.ToLower();
+
+			m_mutated_plurals ??= new Dictionary<string, string>
+			{
+				// Add to this on demand... (*sigh*... English...)
+				{ "barracks","barracks" },
+				{ "child","children" },
+				{ "goose","geese" },
+				{ "man","men" },
+				{ "mouse","mice" },
+				{ "person","people" },
+				{ "woman","women" },
+			};
 
 			// Convert 'str' to it's plural form
 			if (m_mutated_plurals.TryGetValue(str, out var plural))
@@ -256,10 +266,7 @@ namespace Rylogic.Extn
 			if (caps) plural = plural.ToUpper();
 			return plural;
 		}
-		private static Dictionary<string,string> m_mutated_plurals = new Dictionary<string, string>()
-			.ChainAdd("barracks","barracks").ChainAdd("child","children").ChainAdd("goose","geese").ChainAdd("man","men")
-			.ChainAdd("mouse","mice").ChainAdd("person","people").ChainAdd("woman","women")
-			; // Add to this on demand... (*sigh*... English...)
+		private static Dictionary<string,string>? m_mutated_plurals;
 
 		/// <summary>
 		/// Split the string into substrings at places where 'pred' returns >= 0.
@@ -371,9 +378,7 @@ namespace Rylogic.Extn
 			return File.ReadAllText(filepath);
 		}
 
-		/// <summary>
-		/// Returns the minimum edit distance between two strings.
-		/// Useful for determining how "close" two strings are to each other</summary>
+		/// <summary> Returns the minimum edit distance between two strings. Useful for determining how "close" two strings are to each other</summary>
 		public static int LevenshteinDistance(this string str, string rhs)
 		{
 			// Degenerate cases
@@ -412,6 +417,52 @@ namespace Rylogic.Extn
  
 			return v0[rhs.Length];
 		}
+
+		/// <summary>Remove leading white space and trailing tabs around '\n' characters.</summary>
+		public static string ProcessIndentedNewlines(string str)
+		{
+			return Regex.Replace(str, @"[\s\t]*\n[\t]*", "\n");
+		}
+
+		/// <summary>
+		/// Look for 'identifier' within the range [start, start+count) ensuring it is not a substring of a larger identifier.
+		/// Returns the index of it's position or -1 if not found.</summary>
+		public static int IndexOfIdentifier(this string src, string identifier, int start, int count)
+		{
+			// Notes:
+			//  - This is basically 'pr::str::FindIdentifier'.
+			//  - Identifiers are: [A-Za-z_]+[A-Za-z0-9_]* i.e. the first character is a special case.
+			//    Consider: ' 1token', ' _1token', and ' _1111token'.
+			if (identifier.Length == 0 || !IsIdentifier(identifier[0], true) || !identifier.Skip(1).All(x => IsIdentifier(x, false)))
+				throw new ArgumentException($"Value '{identifier}' is not a valid identifier");
+
+			var beg = start;
+			var end = beg + count;
+			for (int i = beg; i != end;)
+			{
+				// Find the next instance of 'value'
+				var idx = src.IndexOf(identifier, i, end - i);
+				if (idx == -1) break;
+				i = idx + identifier.Length;
+
+				// Check for characters after. i.e. don't return "bobble" if "bob" is the identifier
+				var j = idx + identifier.Length;
+				if (j != end && IsIdentifier(src[j], false))
+					continue;
+
+				// Look for any characters before. i.e. don't return "plumbob" if "bob" is the identifier
+				// This has to be a search, consider: ' 1token', ' _1token', and ' _1111token'.
+				for (j = idx; j-- != beg && IsIdentifier(src[j], false);) { }
+				if (++j != idx && IsIdentifier(src[j], true))
+					continue;
+
+				// Found one
+				return idx;
+			}
+			return -1;
+		}
+		public static int IndexOfIdentifier(this string src, string identifier, int start) => IndexOfIdentifier(src, identifier, start, src.Length - start);
+		public static int IndexOfIdentifier(this string src, string identifier) => IndexOfIdentifier(src, identifier, 0);
 
 		/// <summary>Parse this string against 'regex'</summary>
 		public static P0 ConvertTo<P0>(this string str)
@@ -490,146 +541,32 @@ namespace Rylogic.Extn
 			try { str.Parse(regex, out p0, out p1, out p2); return true; }
 			catch { p0 = default!; p1 = default!; p2 = default!; return false; }
 		}
-	}
 
-	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
-	public abstract class IString :IEnumerable<char>
-	{
-		protected readonly int m_ofs, m_length;
-		protected IString() :this(0, 0) {}
-		protected IString(int ofs, int length)
+		public enum ECapitalise
 		{
-			m_ofs = ofs;
-			m_length = length;
+			DontChange = 0,
+			UpperCase = 1,
+			LowerCase = 2,
 		}
+		public enum ESeparate
+		{
+			DontChange = 0,
+			Add = 1,
+			Remove = 2,
+		}
+		public enum EPrettyStyle
+		{
+			/// <summary>Words start with capitals followed by lower case and are separated by spaces</summary>
+			Title,
 
-		public abstract int Length       { get; }
-		public abstract char this[int i] { get; }
-		public abstract IString Substring(int ofs, int length);
+			/// <summary>Words are all upper case, separated with underscore</summary>
+			Macro,
 
-		/// <summary>
-		/// Split the string into substrings at places where 'pred' returns >= 0.
-		/// int Pred(IString s, int idx) - "returns the length of the separater that starts at 's[idx]'".
-		/// So < 0 means not a separater</summary>
-		public IEnumerable<IString> Split(Func<IString, int,int> pred)
-		{
-			if (Length == 0) yield break;
-			for (int s = 0, e, end = Length;;)
-			{
-				int sep_len = 0;
-				for (e = s; e != end && (sep_len = pred(this,e)) < 0; ++e) {}
-				yield return Substring(s, e - s);
-				if (e == end) break;
-				s = e + sep_len;
-			}
-		}
-		public IEnumerable<IString> Split(params char[] sep)
-		{
-			return Split((s,i) => sep.Contains(s[i]) ? 1 : -1);
-		}
+			/// <summary>Words are lower case, separated by underscore</summary>
+			LocalVar,
 
-		/// <summary>Trim chars from the front/back of the string</summary>
-		public IString Trim(params char[] ch)
-		{
-			int s = 0, e = m_length;
-			for (; s != m_length && ch.Contains(this[s]); ++s) {}
-			for (; e != s && ch.Contains(this[e-1]); --e) {}
-			return Substring(s, e - s);
-		}
-
-		IEnumerator<char> IEnumerable<char>.GetEnumerator()
-		{
-			for (int i = 0, iend = i + m_length; i != iend; ++i)
-				yield return this[i];
-		}
-		IEnumerator IEnumerable.GetEnumerator()
-		{
-			return ((IEnumerable<char>)this).GetEnumerator();
-		}
-
-		public static implicit operator string(IString s)        { return s.ToString() ?? throw new NullReferenceException(); }
-		public static implicit operator IString(string s)        { return new StringProxy(s); }
-		public static implicit operator IString(StringBuilder s) { return new StringBuilderProxy(s); }
-		public static implicit operator IString(char[] s)        { return new CharArrayProxy(s); }
-
-		public static IString From(string s        , int ofs = 0, int length = int.MaxValue) { return new StringProxy(s, ofs, length); }
-		public static IString From(StringBuilder s , int ofs = 0, int length = int.MaxValue) { return new StringBuilderProxy(s, ofs, length); }
-		public static IString From(char[] s        , int ofs = 0, int length = int.MaxValue) { return new CharArrayProxy(s, ofs, length); }
-
-		private class StringProxy :IString
-		{
-			private readonly string m_str;
-			public StringProxy(string s, int ofs = 0, int length = int.MaxValue)
-				:base(ofs, Math.Min(s.Length, length))
-			{
-				m_str = s;
-			}
-			public override int Length
-			{
-				get { return m_length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new StringProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return m_str.Substring(m_ofs, m_length);
-			}
-		}
-		private class StringBuilderProxy :IString
-		{
-			private readonly StringBuilder m_str;
-			public StringBuilderProxy(StringBuilder s, int ofs = 0, int length = int.MaxValue)
-				:base(ofs, Math.Min(s.Length, length))
-			{
-				m_str = s;
-			}
-			public override int Length
-			{
-				get { return m_str.Length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new StringBuilderProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return m_str.ToString(m_ofs, m_length);
-			}
-		}
-		private class CharArrayProxy :IString
-		{
-			private readonly char[] m_str;
-			public CharArrayProxy(char[] s, int ofs = 0, int length = int.MaxValue)
-				:base(ofs, Math.Min(s.Length, length))
-			{
-				m_str = s;
-			}
-			public override int Length
-			{
-				get { return m_str.Length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new CharArrayProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return new string(m_str, m_ofs, m_length);
-			}
+			/// <summary>Words start with capitals followed by lower case and have no separators</summary>
+			TypeDecl,
 		}
 	}
 }
@@ -639,26 +576,30 @@ namespace Rylogic.UnitTests
 {
 	using Extn;
 
-	[TestFixture] public class TestStringExtns
+	[TestFixture]
+	public class TestStringExtns
 	{
-		[Test] public void StringWordWrap()
+		[Test]
+		public void StringWordWrap()
 		{
 			//                    "123456789ABCDE"
-			const string text   = "   A long string that\nis\r\nto be word wrapped";
-			const string result = "   A long\n"+
-									"string that\n"+
-									"is to be word\n"+
+			const string text = "   A long string that\nis\r\nto be word wrapped";
+			const string result = "   A long\n" +
+									"string that\n" +
+									"is to be word\n" +
 									"wrapped";
 			string r = text.WordWrap(14);
 			Assert.Equal(result, r);
 		}
-		[Test] public void TestAppendLines()
+		[Test]
+		public void TestAppendLines()
 		{
 			const string s = "\n\n\rLine \n Line\n\r";
-			var str = s.LineList(s,s);
-			Assert.Equal("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
+			var str = s.LineList(s, s);
+			Assert.Equal("\n\n\rLine \n Line" + Environment.NewLine + "Line \n Line" + Environment.NewLine + "Line \n Line" + Environment.NewLine, str);
 		}
-		[Test] public void Substring()
+		[Test]
+		public void Substring()
 		{
 			const string s1 = "aa {one} bb {two}";
 			const string s2 = "aa {} bb {two}";
@@ -666,35 +607,71 @@ namespace Rylogic.UnitTests
 			const string s4 = "first:second";
 			const string s5 = "<32> regex </32>";
 
-			Assert.Equal("one", s1.Substring("{","}"));
-			Assert.Equal("", s2.Substring("{","}"));
-			Assert.Equal("dasd", s3.Substring("Begin "," End"));
-			Assert.Equal("first", s4.Substring(null,":"));
+			Assert.Equal("one", s1.Substring("{", "}"));
+			Assert.Equal("", s2.Substring("{", "}"));
+			Assert.Equal("dasd", s3.Substring("Begin ", " End"));
+			Assert.Equal("first", s4.Substring(null, ":"));
 			Assert.Equal("second", s4.Substring(":", null));
 			Assert.Equal("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
 			Assert.Equal("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
 			Assert.Equal("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
 		}
-		[Test] public void Levenshtein()
+		[Test]
+		public void Levenshtein()
 		{
 			var str1 = "Paul Rulz";
 			var str2 = "Paul Was Here";
 			var d = str1.LevenshteinDistance(str2);
 			Assert.Equal(d, 8);
 		}
-		[Test] public void StringProxy()
+		[Test]
+		public void ProcessIndentedNewlines()
 		{
-			Func<IString, int, char> func = (s,i) => s[i];
-
-			var s0 = "Hello World";
-			var s1 = new StringBuilder("Hello World");
-			var s2 = "Hello World".ToCharArray();
-
-			Assert.Equal(func(s0, 6), 'W');
-			Assert.Equal(func(s1, 6), 'W');
-			Assert.Equal(func(s2, 6), 'W');
+			const string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
+			var result = Str_.ProcessIndentedNewlines(str);
+			Assert.Equal("\nwords    and\nmore  words\n and more\nwords\n", result);
 		}
-		[Test] public void StringTransform()
+		[Test]
+		public void IndexOfIdentifier()
+		{
+			// Found be cause '1' is not a valid identifier first character
+			Assert.Equal(2, " 1token".IndexOfIdentifier("token"));
+
+			// Found because only looking in the range [2,)
+			Assert.Equal(2, " 1token".IndexOfIdentifier("token", 2));
+
+			// Not found because 'token' is a substring of 'token2'
+			Assert.Equal(-1, " 1token2".IndexOfIdentifier("token"));
+
+			// Found the second 'token' that isn't a substring
+			Assert.Equal(9, " 1token2 token ".IndexOfIdentifier("token"));
+
+			// Found because only looking in the range [2,7)
+			Assert.Equal(2, " 1token2".IndexOfIdentifier("token", 2, 5));
+
+			// Not found because 'token' is a substring of '_1token'
+			Assert.Equal(-1, " _1token".IndexOfIdentifier("token"));
+
+			// Found because only looking the range [3,)
+			Assert.Equal(3, " _1token".IndexOfIdentifier("token", 3));
+
+			// Not found because 'token' is a substring of 'token2'
+			Assert.Equal(-1, " _1token2".IndexOfIdentifier("token", 3));
+
+			// Found because only looking in the range [3,8)
+			Assert.Equal(3, " _1token2".IndexOfIdentifier("token", 3, 5));
+
+			// Not found because 'token' is a substring of '_1token'
+			Assert.Equal(-1, " _1token2".IndexOfIdentifier("token", 0, 8));
+
+			// Not found because 'token' is a substring of '_1111token'
+			Assert.Equal(-1, " _1111token".IndexOfIdentifier("token"));
+
+			// Found because '1111' is not a valid identifier first character
+			Assert.Equal(6, " _1111token".IndexOfIdentifier("token", 2));
+		}
+		[Test]
+		public void StringTransform()
 		{
 			const string str0 = "SOME_stringWith_weird_Casing_Number03";
 			string str;
@@ -711,9 +688,10 @@ namespace Rylogic.UnitTests
 			str = "FieldCAPSBlah".Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.DontChange, Str_.ESeparate.Add, " ");
 			Assert.Equal("Field CAPS Blah", str);
 		}
-		[Test] public void RegexPatterns()
+		[Test]
+		public void RegexPatterns()
 		{
-			var tests = new []
+			var tests = new[]
 			{
 				// Quoted path, not at the start of a string, with white spaces, and non word but legal path characters
 				new
@@ -871,197 +849,18 @@ namespace Rylogic.UnitTests
 					Valid  = true,
 				},
 			};
-			
+
 			foreach (var test in tests)
 			{
 				var m = Regex.Match(test.Str, Regex_.FullPathPattern);
-				Assert.Equal(m.Success              , test.Valid);
-				Assert.Equal(m.Groups[0      ].Value, test.Match0);
+				Assert.Equal(m.Success, test.Valid);
+				Assert.Equal(m.Groups[0].Value, test.Match0);
 				Assert.Equal(m.Groups["drive"].Value, test.Drive);
-				Assert.Equal(m.Groups["dir"  ].Value, test.Dir);
-				Assert.Equal(m.Groups["file" ].Value, test.File);
-				Assert.Equal(m.Groups["q"    ].Value, test.Quote);
+				Assert.Equal(m.Groups["dir"].Value, test.Dir);
+				Assert.Equal(m.Groups["file"].Value, test.File);
+				Assert.Equal(m.Groups["q"].Value, test.Quote);
 			}
 		}
 	}
 }
 #endif
-
-/*
- * public static class HaackFormatter
-{
-}
-And the code for the supporting classes
-public class FormatExpression : ITextExpression
-{
-  bool _invalidExpression = false;
-
-  public FormatExpression(string expression) {
-	if (!expression.StartsWith("{") || !expression.EndsWith("}")) {
-	  _invalidExpression = true;
-	  Expression = expression;
-	  return;
-	}
-
-	string expressionWithoutBraces = expression.Substring(1
-		, expression.Length - 2);
-	int colonIndex = expressionWithoutBraces.IndexOf(':');
-	if (colonIndex < 0) {
-	  Expression = expressionWithoutBraces;
-	}
-	else {
-	  Expression = expressionWithoutBraces.Substring(0, colonIndex);
-	  Format = expressionWithoutBraces.Substring(colonIndex + 1);
-	}
-  }
-
-  public string Expression {
-	get;
-	private set;
-  }
-
-  public string Format
-  {
-	get;
-	private set;
-  }
-
-  public string Eval(object o) {
-	if (_invalidExpression) {
-	  throw new FormatException("Invalid expression");
-	}
-	try
-	{
-	  if (String.IsNullOrEmpty(Format))
-	  {
-		return (DataBinder.Eval(o, Expression) ?? string.Empty).ToString();
-	  }
-	  return (DataBinder.Eval(o, Expression, "{0:" + Format + "}") ??
-		string.Empty).ToString();
-	}
-	catch (ArgumentException) {
-	  throw new FormatException();
-	}
-	catch (HttpException) {
-	  throw new FormatException();
-	}
-  }
-}
-
-public class LiteralFormat : ITextExpression
-{
-  public LiteralFormat(string literalText) {
-	LiteralText = literalText;
-  }
-
-  public string LiteralText {
-	get;
-	private set;
-  }
-
-  public string Eval(object o) {
-	string literalText = LiteralText
-		.Replace("{{", "{")
-		.Replace("}}", "}");
-	return literalText;
-  }
-}
-	 *
-	 *
-	 *
-	 * static string Format( this string str
-, params Expression<Func<string,object>[] args)
-{ var parameters=args.ToDictionary
-( e=>string.Format("{{{0}}}",e.Parameters[0].Name)
-,e=>e.Compile()(e.Parameters[0].Name));
-
-var sb = new StringBuilder(str);
-foreach(var kv in parameters)
-{ sb.Replace( kv.Key
-,kv.Value != null ? kv.Value.ToString() : "");
-}
-return sb.ToString();
-}
-	 */
-	//    /// <summary>Scanf style string parsing</summary>
-	//    public static int Scanf(this string str, string format, params object[] args)
-	//    {
-	//        // i is for 'str', j is for 'format'
-	//        int i = 0, j = 0, count = 0;
-	//        try
-	//        {
-	//            for (;;)
-	//            {
-	//                // while the format string matches 'str'
-	//                for (; i != str.Length && j != format.Length && str[i] == format[j] && format[j] != '{'; ++i, ++j) {}
-	//                if (format[j] != '{') break;
-	//                int idx = int.Parse(format.Substring(0));
-	//                for (int i = 0; i != str.Length && count != args.Length; ++count)
-	//                {
-	//                    if (args[count] is Box<char>)
-	//                    {
-	//                        ((Box<char>)args[count]).obj = str[i];
-	//                        ++i;
-	//                    }
-	//                    else if (args[count] is string)
-	//                    {
-	//                        int ws = str.IndexOfAny(new []{' ','\t','\n','\v','\r'}); if (ws == -1) ws = str.Length;
-	//                        args[count] = str.Substring(i, ws - i);
-	//                        i = ws;
-	//                    }
-	//                    else if (args[count] is int)
-	//                    {
-	//                        args[count] = int.Parse(str.Substring(i));
-	//                    }
-	//                    else break;
-	//                }
-	//            }
-	//        }
-	//        catch (Exception) {}
-	//        return count;
-	//    }
-
-	//    /// <summary>
-	//    /// This method is the inverse of <see cref="String.Format"/>.
-	//    /// </summary>
-	//    /// <param name="str">The string to format.</param>
-	//    /// <param name="format">The format string to parse.</param>
-	//    /// <returns>The parsed values.</returns>
-	//    public static IEnumerable<string> Parse(this string str, string format)
-	//    {
-	//        Regex match_double = new Regex(@"(\{\d+\}\{\d+\})");
-	//        if (match_double.IsMatch(format))
-	//            throw new ArgumentException("Invalid format string. You must put at least one character between all parse tokens.");
-
-	//        Regex empty_braces = new Regex(@"(\{\})");
-	//        if (empty_braces.IsMatch(format))
-	//            throw new ArgumentException("Do not include {} in your format string.");
-
-	//        Regex expression = new Regex(@"(\{\d+\})+");
-	//        foreach (Match match in expression.Matches(format))
-	//        {
-	//            match.Index
-
-	//        }
-	//        //string[] boundaries = format.Split(matches).ToArray();
-
-	//        //int startPosition = 0;
-	//        //for (int i = 0; i < matches.Count; ++i)
-	//        //{
-	//        //    startPosition += boundaries[i].Length;
-	//        //    var nextBoundary = boundaries[i + 1];
-	//        //    if (string.IsNullOrEmpty(nextBoundary))
-	//        //    {
-	//        //        yield return str.Substring(startPosition);
-	//        //    }
-	//        //    else
-	//        //    {
-	//        //        var nextBoundaryStartIndex = str.IndexOf(nextBoundary, startPosition);
-	//        //        var parsedLength = nextBoundaryStartIndex - startPosition;
-	//        //        var parsedValue = str.Substring(startPosition, parsedLength);
-	//        //        startPosition += parsedValue.Length;
-	//        //        yield return parsedValue;
-	//        //    }
-	//        //}
-	//    }
-	//}

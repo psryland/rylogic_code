@@ -537,7 +537,6 @@ namespace pr
 		}
 		#pragma endregion
 
-
 		#pragma region Extract Number
 		// Extract a number (real or int) from 'src'
 		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E}[{+|-}]digits][U][L][L]

@@ -214,6 +214,10 @@ namespace Rylogic.Maths
 		{
 			return new m4x4(m3x4.Rotation(from, to), translation);
 		}
+		public static m4x4 Transform(quat rot, v4 translation)
+		{
+			return new m4x4(new m3x4(rot), translation);
+		}
 
 		/// <summary>Create a scale matrix</summary>
 		public static m4x4 Scale(float s, v4 translation)

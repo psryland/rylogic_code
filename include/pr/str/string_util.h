@@ -388,34 +388,31 @@ namespace pr
 		template <typename Str1, typename Str2>
 		inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
 		{
-			auto begin  = BeginC(src);
-			auto iter   = begin + ofs;
-			auto end    = iter + count;
-			auto id_len = Length(identifier);
-
-			for (;;++iter)
+			auto beg = BeginC(src) + ofs;
+			auto end = beg + count;
+			auto len = Length(identifier);
+			for (auto iter = beg; iter != end;)
 			{
 				// Find the next instance of 'identifier'
-				iter = FindStr(iter, end, identifier);
-				if (iter == end)
-					return ofs + count;
+				auto ptr = FindStr(iter, end, identifier);
+				if (ptr == end) break;
+				iter = ptr + len;
 
-				// Check for identifier characters after iter + id_len
-				// i.e. don't return "bobble" if "bob" is the identifier
-				auto j = iter + id_len;
+				// Check for characters after. i.e. don't return "bobble" if "bob" is the identifier
+				auto j = ptr + len;
 				if (j != end && IsIdentifier(*j, false))
 					continue;
 
-				// Look for any identifier characters before iter
-				// i.e. don't return "plumbob" if "bob" is the identifier
-				for (j = iter; j > begin && IsIdentifier(*--j, false);) {}
-				for (        ; j != iter && !IsIdentifier(*j, true); ++j) {}
-				if  (j != iter)
+				// Look for any characters before. i.e. don't return "plumbob" if "bob" is the identifier
+				// This has to be a search, consider: ' 1token', ' _1token', and ' _1111token'.
+				for (j = ptr; j-- != beg && IsIdentifier(*j, false);) {}
+				if (++j != ptr && IsIdentifier(*j, true))
 					continue;
 
 				// Found one
-				return size_t(iter - begin);
+				return size_t(ptr - BeginC(src));
 			}
+			return ofs + count;
 		}
 		template <typename Str1, typename Str2> inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs)
 		{
@@ -659,13 +656,18 @@ namespace pr::str
 			PR_CHECK(Equal(str1, str), true);
 		}
 		{//FindIdentifier
-			char const str[] = "aid id iid    id aiden";
-			wchar_t id[] = L"id";
-			size_t idx;
-			idx = FindIdentifier(str, id);           PR_CHECK(idx, 4U);
-			idx = FindIdentifier(str, id, idx+1, 3); PR_CHECK(idx, 8U);
-			idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 14U);
-			idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 22U);
+			PR_CHECK(2  == FindIdentifier(" 1token"        , "token"), true);
+			PR_CHECK(2  == FindIdentifier(" 1token"        , "token", 2), true);
+			PR_CHECK(8  == FindIdentifier(" 1token2"       , "token"), true);
+			PR_CHECK(9  == FindIdentifier(" 1token2 token ", "token"), true);
+			PR_CHECK(2  == FindIdentifier(" 1token2"       , "token", 2, 5), true);
+			PR_CHECK(8  == FindIdentifier(" _1token"       , "token"), true);
+			PR_CHECK(3  == FindIdentifier(" _1token"       , "token", 3), true);
+			PR_CHECK(9  == FindIdentifier(" _1token2"      , "token", 3), true);
+			PR_CHECK(3  == FindIdentifier(" _1token2"      , "token", 3, 5), true);
+			PR_CHECK(8  == FindIdentifier(" _1token2"      , "token", 0, 8), true);
+			PR_CHECK(11 == FindIdentifier(" _1111token"    , "token"), true);
+			PR_CHECK(6  == FindIdentifier(" _1111token"    , "token", 2), true);
 		}
 		{//Quotes
 			char empty[3] = "";

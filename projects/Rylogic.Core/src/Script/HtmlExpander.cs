@@ -10,10 +10,10 @@ namespace Rylogic.Script
 	public static class Expand
 	{
 		/// <summary>Expands template xml files</summary>
-		public static string Xml(Src src, string current_dir) { return Markup(src,current_dir); }
+		public static string Xml(Src src, string current_dir) => Markup(src, current_dir);
 
 		/// <summary>Expands template html files</summary>
-		public static string Html(Src src, string current_dir) { return Markup(src,current_dir); }
+		public static string Html(Src src, string current_dir) => Markup(src, current_dir);
 
 		/// <summary>Expands template mark-up files</summary>
 		public static string Markup(Src src, string current_dir)
@@ -60,7 +60,7 @@ namespace Rylogic.Script
 							fpath = Path.IsPathRooted(fpath) ? fpath : Path.Combine(current_dir, fpath);
 							if (!File.Exists(fpath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", fpath), fpath);
 
-							tr.PushSource(new IndentSrc(new FileSrc(fpath), indent, true));
+							tr.PushSource(new AddIndents(new FileSrc(fpath), indent, true));
 							return string.Empty;
 						}
 						#endregion

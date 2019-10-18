@@ -16,10 +16,40 @@ namespace Rylogic.Extn
 	/// <summary>Extensions for Lists</summary>
 	public static class List_
 	{
-		// NOtes:
+		// Notes:
 		//  To disambiguate IList and IList<T>:
 		//   - Implement for IList<T> and specialise for the non-generic concrete classes.
 		//     Generic versions are by far the most common.
+		//   - 'Deconstruct' for IList<T> has to have the 'rest' parameter because overloads without it are ambiguous
+		//     Deconstructing assignment from an IList will always need the ignore token. e.g. var (a, b, _) = MyList;
+
+		/// <summary>Deconstructing assignment</summary>
+		public static void Deconstruct<T>(this IList<T> list, out T arg0, out IList<T> rest)
+		{
+			arg0 = list.Count > 0 ? list[0] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection is empty");
+			rest = list.Skip(1).ToList();
+		}
+		public static void Deconstruct<T>(this IList<T> list, out T arg0, out T arg1, out IList<T> rest)
+		{
+			arg0 = list.Count > 0 ? list[0] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection is empty");
+			arg1 = list.Count > 1 ? list[1] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 1 element");
+			rest = list.Skip(2).ToList();
+		}
+		public static void Deconstruct<T>(this IList<T> list, out T arg0, out T arg1, out T arg2, out IList<T> rest)
+		{
+			arg0 = list.Count > 0 ? list[0] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection is empty");
+			arg1 = list.Count > 1 ? list[1] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 1 element");
+			arg2 = list.Count > 2 ? list[2] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 2 elements");
+			rest = list.Skip(3).ToList();
+		}
+		public static void Deconstruct<T>(this IList<T> list, out T arg0, out T arg1, out T arg2, out T arg3, out IList<T> rest)
+		{
+			arg0 = list.Count > 0 ? list[0] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection is empty");
+			arg1 = list.Count > 1 ? list[1] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 1 element");
+			arg2 = list.Count > 2 ? list[2] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 2 elements");
+			arg3 = list.Count > 2 ? list[3] : throw new ArgumentOutOfRangeException("Deconstruction assignment. Collection only has 3 elements");
+			rest = list.Skip(4).ToList();
+		}
 
 		/// <summary>Return true if the list is empty</summary>
 		public static bool Empty(this IList list)
@@ -1023,6 +1053,27 @@ namespace Rylogic.UnitTests
 			Assert.Equal(set0.GetType(), set1.GetType());
 			Assert.Equal(new[] { 2, 4, 6, 8 }, set0);
 			Assert.Equal(new[] { 1, 3, 5, 7, 9 }, set1);
+		}
+		[Test]
+		public void Deconstruction()
+		{
+			var list = new[] { 1, 2, 3, 4, 5, 6 };
+			{
+				var (a, rest) = list;
+				Assert.Equal(1, a);
+				Assert.Equal(new[] { 2, 3, 4, 5, 6 }, rest);
+			}
+			{
+				var (_, a, b, rest) = list;
+				Assert.Equal(2, a);
+				Assert.Equal(3, b);
+				Assert.Equal(new[] { 4, 5, 6 }, rest);
+			}
+			{
+				var (_, _, a, b, _) = list;
+				Assert.Equal(3, a);
+				Assert.Equal(4, b);
+			}
 		}
 	}
 }

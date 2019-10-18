@@ -301,14 +301,14 @@ namespace Rylogic.Maths
 		#region Random
 
 		/// <summary>Create a random 3x4 matrix</summary>
-		public static m3x4 Random(Random r, float min_value, float max_value)
+		public static m3x4 Random(float min_value, float max_value, Random r)
 		{
 			return new m3x4(
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)));
 		}
-		public static m3x4 Random(Random r, float min_value, float max_value, float w)
+		public static m3x4 Random(float min_value, float max_value, float w, Random r)
 		{
 			return new m3x4(
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w),
@@ -317,13 +317,13 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a random 3D rotation matrix</summary>
-		public static m3x4 Random(Random r, v4 axis, float min_angle, float max_angle)
+		public static m3x4 Random(v4 axis, float min_angle, float max_angle, Random r)
 		{
 			return Rotation(axis, r.Float(min_angle, max_angle));
 		}
 		public static m3x4 Random(Random r)
 		{
-			return Random(r, v4.Random3N(0.0f, r), 0.0f, (float)Math_.Tau);
+			return Random(v4.Random3N(0.0f, r), 0.0f, (float)Math_.Tau, r);
 		}
 
 		#endregion
@@ -589,14 +589,14 @@ namespace Rylogic.UnitTests
 		{
 			var rng = new Random();
 			{
-				var m = m3x4.Random(rng, v4.Random3N(0, rng), -(float)Math_.Tau, +(float)Math_.Tau);
+				var m = m3x4.Random(v4.Random3N(0, rng), -Math_.TauF, +Math_.TauF, rng);
 				var inv_m0 = Math_.InvertFast(m);
 				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
 			} {
 				for (; ; )
 				{
-					var m = m3x4.Random(rng, -5.0f, +5.0f, 0);
+					var m = m3x4.Random(-5.0f, +5.0f, 0, rng);
 					if (!Math_.IsInvertible(m)) continue;
 					var inv_m = Math_.Invert(m);
 					var I0 = inv_m * m;

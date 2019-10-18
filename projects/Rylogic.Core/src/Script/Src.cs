@@ -1,15 +1,23 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Rylogic.Maths;
 
 namespace Rylogic.Script
 {
 	/// <summary>Base class for a source of script characters</summary>
+	[DebuggerDisplay("{Description,nq}")]
 	public abstract class Src :IDisposable
 	{
-		/// <summary>Clean up resources</summary>
+		// Notes:
+		//  - The source is exhausted when 'Peek' returns 0
+		//  - This class supports local buffering.
+		//  - Don't make 'Read' public, that would by-pass the local buffering.
+
 		protected Src()
 		{
+			Buffer = new StringBuilder(256);
 		}
 		public void Dispose()
 		{
@@ -19,32 +27,88 @@ namespace Rylogic.Script
 		protected virtual void Dispose(bool _)
 		{}
 
-		/// <summary>A cached copy of the last character read from 'Peek'. Only used internally</summary>
-		private char m_char;
-
-		/// <summary>The type of source this is</summary>
-		public abstract SrcType SrcType { get; }
-
-		/// <summary>The 'file position' within the source</summary>
+		/// <summary>
+		/// The current position within the source.
+		/// Note: when buffering is used the might be past the current 'Peek' position</summary>
 		public abstract Loc Location { get; }
 
+		/// <summary>A local cache of characters read from the source</summary>
+		public StringBuilder Buffer { get; }
+
 		/// <summary>Returns the next character in the character stream without advancing the stream position</summary>
-		public char Peek
+		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
+		public char Peek => this[0];
+
+		/// <summary>Read ahead buffering</summary>
+		public char this[int i]
 		{
 			get
 			{
-				var ch = PeekInternal();
-				if (ch != m_char) { Advance(0); m_char = PeekInternal(); }
-				return m_char;
+				ReadAhead(i + 1);
+				return i < Buffer.Length ? Buffer[i] : '\0';
 			}
+		}
+
+		/// <summary>
+		/// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF is hit.
+		/// Returns the number of characters actually buffered (a value in [0, n])</summary>
+		public int ReadAhead(int n)
+		{
+			for (; n > Buffer.Length;)
+			{
+				// Ensure 'Buffer's length grows with each loop
+				var count = Buffer.Length;
+
+				// Don't add '\0' to the buffer. 'TextBuffer' should never contain '\0' characters.
+				// Read() returns 0 when the source is exhausted, or if the Buffer has been modified
+				// directly. If the latter, we still need to check 'n' chars have been buffered.
+				var ch = Read();
+				if (ch != 0) { Buffer.Append(ch); continue; }
+				if (Buffer.Length > count) continue;
+				break;
+			}
+			return Math.Min(n, Buffer.Length);
+		}
+
+		/// <summary>
+		/// Buffer until 'pred' returns false. Starts from src[start].
+		/// Returns the number of characters buffered.</summary>
+		public int ReadAhead(Func<char, bool> pred, int start = 0)
+		{
+			int i = start;
+			for (; ; ++i)
+			{
+				var ch = this[i];
+				if (ch == 0 || !pred(ch)) break;
+			}
+			return i;
 		}
 
 		/// <summary>Increment to the next character</summary>
 		public void Next(int n = 1)
 		{
-			if (Peek == 0) return;
-			Advance(n);
+			if (n < 0)
+				throw new Exception("Cannot seek backwards");
+
+			// Consume from the buffered characters first
+			var remove = Math.Min(n, Buffer.Length);
+			Buffer.Remove(0, remove);
+			n -= remove;
+
+			// Consume any remaining from the underlying source
+			for (; n != 0 && Read() != 0; --n) {}
 		}
+
+		/// <summary>
+		/// Return the next valid character from the underlying stream or '\0' for the end of stream.
+		/// If you want to inject characters into the stream, modify 'Buffer' and return '\0' from Read().
+		/// The stream is only considered empty when 'Buffer' is empty and Read returns 0.</summary>
+		protected abstract char Read();
+
+		/// <summary>Pointer-like interface</summary>
+		public static implicit operator char(Src src) { return src.Peek; }
+		public static Src operator ++(Src src) { src.Next(); return src; }
+		public static Src operator +(Src src, int n) { src.Next(n); return src; }
 
 		/// <summary>Reads all characters from the src and returns them as one string.</summary>
 		public string ReadToEnd()
@@ -66,137 +130,116 @@ namespace Rylogic.Script
 			var sb = new StringBuilder(16);
 			for (char ch; (ch = Peek) != 0; Next())
 			{
-				if (ch == '\r' || ch == '\n')
+				if (ch != '\r' && ch != '\n')
 				{
-					Next();
-					if (ch == '\r' && Peek == '\n') Next();
-					return sb.ToString();
+					sb.Append(ch);
+					continue;
 				}
-				sb.Append(ch);
+
+				Next();
+				if (ch == '\r' && Peek == '\n') Next();
+				return sb.ToString();
 			}
 			return sb.Length != 0 ? sb.ToString() : null;
 		}
 
-		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected abstract char PeekInternal();
+		/// <summary>String compare. Note: asymmetric, i.e. src="abcd", str="ab", src.Match(str) == true</summary>
+		public bool Match(string str) => Match(str, str.Length);
+		public bool Match(string str, int count)
+		{
+			ReadAhead(count);
+			if (Buffer.Length < count)
+				return false;
 
-		/// <summary>
-		/// Advances the internal position a minimum of 'n' positions.
-		/// If the character at the new position is not a valid character to be return keep
-		/// advancing to the next valid character</summary>
-		protected abstract void Advance(int n);
+			int i = 0;
+			for (; i != count && str[i] == Buffer[i]; ++i) { }
+			return i == count;
+		}
 
-		public override string ToString() => Peek.ToString();
+		/// <summary>Debugger description. Don't use Peek because that has side effects that make debugging confusing</summary>
+		public virtual string Description => Buffer.ToString();
 	}
 
-	/// <summary>A script character sequence from a text reader</summary>
-	public class TextReaderSrc :Src
+	/// <summary>A script source that always returns 0</summary>
+	public class NullSrc :Src
 	{
-		private readonly TextReader m_reader;
-		private readonly Loc m_loc = new Loc();
-
-		public TextReaderSrc(TextReader reader)
-		{
-			m_reader = reader;
-		}
-		protected override void Dispose(bool _)
-		{
-			m_reader.Dispose();
-			base.Dispose(_);
-		}
-
-		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType => SrcType.String;
-
-		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location => m_loc;
-
-		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected override char PeekInternal()
-		{
-			int ch = m_reader.Peek();
-			return ch != -1 ? (char)ch : (char)0;
-		}
-
-		/// <summary>
-		/// Advances the internal position a minimum of 'n' positions.
-		/// If the character at the new position is not a valid character to be return keep
-		/// advancing to the next valid character</summary>
-		protected override void Advance(int n)
-		{
-			for (;n-- != 0;)
-			{
-				int ch = m_reader.Read();
-				m_loc.inc((char)ch);
-			}
-		}
-
-		/// <summary></summary>
-		public override string ToString() => Peek.ToString();
+		public override Loc Location => new Loc();
+		protected override char Read() { return '\0'; }
+		public override string Description => "NullSrc";
 	}
 
 	/// <summary>A script character sequence from a string</summary>
-	public class StringSrc :TextReaderSrc
+	public class StringSrc :Src
 	{
-		public StringSrc(string str)
-			:base(new StringReader(str))
+		private readonly string m_str;
+		private int m_position;
+
+		public StringSrc(string str, int position = 0)
+		{
+			m_str = str;
+			m_position = position;
+			Location = new Loc();
+		}
+		public StringSrc(StringSrc rhs)
+			: this(rhs.m_str, rhs.Position)
 		{}
+
+		/// <summary>The current position in the string</summary>
+		public int Position
+		{
+			get => m_position;
+			set => m_position = Math_.Clamp(value, 0, m_str.Length);
+		}
+
+		/// <summary>The 'file position' within the source</summary>
+		public override Loc Location { get; }
+
+		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
+		protected override char Read()
+		{
+			var ch = m_position != m_str.Length ? m_str[m_position++] : '\0';
+			return Location.inc(ch);
+		}
 	}
 
 	/// <summary>A script character sequence from a file</summary>
-	public class FileSrc :TextReaderSrc
+	public class FileSrc :Src
 	{
-		public FileSrc(string filepath)
-			:base(new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read)))
-		{}
-	}
+		private readonly string m_filepath;
+		private StreamReader m_stream;
 
-	/// <summary>A script character source that inserts indenting on new lines</summary>
-	public class IndentSrc :Src
-	{
-		private readonly Buffer m_buf;
-		private readonly string m_indent;
-
-		public IndentSrc(Src src, string indent, bool indent_first = true, string line_end = "\n")
+		public FileSrc(string filepath, long position = 0)
 		{
-			m_buf = new Buffer(src);
-			m_indent = indent;
-			LineEnd = line_end;
-			if (indent_first)
-				m_buf.TextBuffer.Append(m_indent);
+			m_filepath = filepath;
+			m_stream = new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
+			m_stream.BaseStream.Position = position;
+			Location = new Loc();
 		}
+		public FileSrc(FileSrc rhs)
+			: this(rhs.m_filepath, rhs.m_stream.BaseStream.Position)
+		{ }
 		protected override void Dispose(bool _)
 		{
-			m_buf.Dispose();
+			m_stream.Dispose();
 			base.Dispose(_);
 		}
 
-		public string LineEnd { get; private set; }
-
-		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType => m_buf.SrcType;
-
-		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location => m_buf.Location;
-
-		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected override char PeekInternal()
+		/// <summary>The current position in the file</summary>
+		public long Position
 		{
-			return m_buf.Peek;
+			get => m_stream.BaseStream.Position;
+			set => m_stream.BaseStream.Position = value;
 		}
 
-		/// <summary>
-		/// Advances the internal position a minimum of 'n' positions.
-		/// If the character at the new position is not a valid character to be return keep
-		/// advancing to the next valid character</summary>
-		protected override void Advance(int n)
+		/// <summary>The 'file position' within the source</summary>
+		public override Loc Location { get; }
+
+		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
+		protected override char Read()
 		{
-			for (; n-- != 0;)
-			{
-				m_buf.Next();
-				if (m_buf.Match(LineEnd) && m_buf.Src.Peek != 0)
-					m_buf.TextBuffer.Append(m_indent);
-			}
+			var ch = m_stream.Read();
+			if (ch == -1) return '\0';
+			return Location.inc((char)ch);
 		}
 	}
 }
@@ -206,9 +249,23 @@ namespace Rylogic.UnitTests
 {
 	using Script;
 
-	[TestFixture] public partial class TestScript
+	[TestFixture]
+	public partial class TestScript
 	{
-		[Test] public void StringSrc()
+		[Test]
+		public void NullSrc()
+		{
+			var src = new NullSrc();
+			Assert.Equal('\0', src.Peek);
+			src.Next();
+			Assert.Equal('\0', src.Peek);
+			src.Next(10);
+			Assert.Equal('\0', src.Peek);
+			src.ReadAhead(10);
+			Assert.Equal('\0', src.Peek);
+		}
+		[Test]
+		public void StringSrc()
 		{
 			const string str = "This is a stream of characters\n";
 			var src = new StringSrc(str);
@@ -216,21 +273,46 @@ namespace Rylogic.UnitTests
 				Assert.Equal(str[i], src.Peek);
 			Assert.Equal((char)0, src.Peek);
 		}
-		[Test] public void IndentSrc()
+		[Test]
+		public void BufferingSrc()
 		{
-			const string str_in =
+			const string str0 =
 				"This is \n" +
 				"a stream of \n" +
 				"characters\n";
-			const string str_out =
-				"indent This is \n" +
-				"indent a stream of \n" +
-				"indent characters\n";
 
-			var src = new IndentSrc(new StringSrc(str_in), "indent ");
-			for (int i = 0; i != str_out.Length; ++i, src.Next())
-				Assert.Equal(str_out[i], src.Peek);
-			Assert.Equal((char)0, src.Peek);
+			var src = new StringSrc(str0);
+			for (int i = 0; i != 5; ++i)
+				Assert.Equal(str0[i], src[i]);
+			for (int i = 0; i != 5; ++i, src.Next())
+				Assert.Equal(str0[i], src.Peek);
+			src.ReadAhead(5);
+			for (int i = 0; i != 5; ++i)
+				Assert.Equal(str0[i + 5], src[i]);
+			for (int i = 5; i != str0.Length; ++i, src.Next())
+				Assert.Equal(str0[i], src.Peek);
+		}
+		[Test]
+		public void Match()
+		{
+			const string str0 = "1234567890";
+			var src = new StringSrc(str0);
+
+			Assert.Equal(true, src.Match(""));
+
+			Assert.Equal(true, src.Match("1234"));
+			Assert.Equal(true, src.Match("12"));
+			Assert.Equal(false, src.Match("1235"));
+
+			src.Next();
+			Assert.Equal(true, src.Match("234567"));
+			Assert.Equal(true, src.Match("2"));
+			Assert.Equal(false, src.Match("123"));
+
+			src.Next(4);
+			Assert.Equal(true, src.Match("67"));
+			Assert.Equal(true, src.Match("67890"));
+			Assert.Equal(false, src.Match("678901"));
 		}
 	}
 }

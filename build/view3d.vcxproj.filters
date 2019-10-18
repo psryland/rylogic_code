@@ -105,6 +105,27 @@
     <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
       <Filter>src\pr\ldraw</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\script\buf8.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\embedded.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\fail_policy.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\filter.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\forward.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\location.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\macros.h">
+      <Filter>src\pr\script</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\lua\lua_core.c">

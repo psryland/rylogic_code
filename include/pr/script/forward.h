@@ -91,6 +91,7 @@ namespace pr::script
 		x(Invalid      ,""             ,= pr::hash::HashCT(""            ))\
 		x(Include      ,"include"      ,= pr::hash::HashCT("include"     ))\
 		x(IncludePath  ,"include_path" ,= pr::hash::HashCT("include_path"))\
+		x(Depend       ,"depend"       ,= pr::hash::HashCT("depend"      ))\
 		x(Define       ,"define"       ,= pr::hash::HashCT("define"      ))\
 		x(Undef        ,"undef"        ,= pr::hash::HashCT("undef"       ))\
 		x(Defifndef    ,"defifndef"    ,= pr::hash::HashCT("defifndef"   ))\

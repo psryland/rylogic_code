@@ -1,30 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using Rylogic.Extn;
 
 namespace Rylogic.Script
 {
 	/// <summary>A simple template replacer used for text substitutions</summary>
 	public class TemplateReplacer :TextReader
 	{
-		/// <summary>The stack of character sources that we're reading from</summary>
-		private readonly SrcStack m_src;
-
-		/// <summary>The chunk size to buffer the source (must be at least 2x the maximum pattern match length)</summary>
-		private readonly int m_chunk_size;
-
-		/// <summary>The function that provides the text substitution</summary>
-		private readonly SubstituteFunction m_substitute;
-
-		/// <summary>A regex pattern used to match templates</summary>
-		private readonly Regex m_pattern;
-
-		/// <summary>The File/Line/Column of the output file</summary>
-		private readonly Loc m_output_loc;
-
-		/// <summary>How far until another regex pattern match test is needed</summary>
-		private int m_match_ofs;
-
 		/// <summary>
 		/// A callback function called whenever a template field match is found.
 		/// Return the string with which to replace 'field' with. If the substitution
@@ -33,38 +16,68 @@ namespace Rylogic.Script
 
 		public TemplateReplacer(Src src, string pattern, SubstituteFunction subst, int chunk_size = 4096)
 		{
-			m_src = new SrcStack(src);
-			m_chunk_size = chunk_size;
-			m_substitute = subst;
-			m_pattern = new Regex(pattern);
-			m_output_loc = new Loc();
+			Src = new SrcStack(src);
+			Substitute = subst;
+			Pattern = new Regex(pattern);
+			ChunkSize = chunk_size;
+			OutputLocation = new Loc();
 			m_match_ofs = 0;
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_src.Dispose();
+			Src.Dispose();
 			base.Dispose(disposing);
 		}
 
+		/// <summary>The stack of character sources that we're reading from</summary>
+		private SrcStack Src { get; }
+
+		/// <summary>The function that provides the text substitution</summary>
+		private SubstituteFunction Substitute { get; }
+
+		/// <summary>A regex pattern used to match templates</summary>
+		private Regex Pattern { get; }
+
+		/// <summary>The chunk size to buffer the source (must be at least 2x the maximum pattern match length)</summary>
+		private int ChunkSize { get; }
+
 		/// <summary>The File/Line/Column of the output file</summary>
-		public Loc OutputLocation => m_output_loc;
+		public Loc OutputLocation { get; }
 
 		/// <summary>Push a new stream onto the source stack</summary>
 		public void PushSource(Src src)
 		{
-			m_src.Push(src);
+			Src.Push(src);
 		}
 
 		/// <summary>
-		/// Returns the next available character without actually reading it from
-		/// the input stream. The current position of the TextReader is not changed by
-		/// this operation. The returned value is -1 if no further characters are
-		/// available.</summary>
+		/// Returns the next available character without actually reading it from the input stream.
+		/// The current position of the TextReader is not changed by this operation.
+		/// The returned value is -1 if no further characters are available.</summary>
 		public override int Peek()
 		{
-			if (m_src.Empty) return -1;
-			Parse();
-			return m_src.Top!.Peek;
+			// 'm_match_ofs' is the minimum number of characters until the next possible template
+			// field match. When == 0 we need to retest the pattern.
+			while (!Src.Empty && m_match_ofs == 0)
+			{
+				// Buffer the source in chunks
+				Src.ReadAhead(ChunkSize);
+
+				// Find the index of the next match
+				var m = Pattern.Match(Src.Buffer.ToString());
+				m_match_ofs = m.Success ? m.Index : Src.Buffer.Length != ChunkSize ? Src.Buffer.Length : ChunkSize / 2;
+
+				// If there is a match for the next character in the src,
+				// call the callback and do the substitution.
+				if (m.Success && m_match_ofs == 0)
+				{
+					Src.Buffer.Remove(0, m.Length);
+					var replace = Substitute(this, m);
+					Src.Buffer.Insert(0, replace);
+				}
+			}
+			var ch = Src.Peek;
+			return ch != 0 ? ch : -1;
 		}
 
 		/// <summary>
@@ -72,44 +85,24 @@ namespace Rylogic.Script
 		/// -1 if no further characters are available.</summary>
 		public override int Read()
 		{
-			if (m_src.Empty) return -1;
-			try
-			{
-				return m_output_loc.inc((char)Peek());
-			}
-			finally
-			{
-				--m_match_ofs;
-				m_src.Next();
-			}
+			var ch = Peek();
+			if (ch == -1)
+				return -1;
+
+			Src.Next();
+			--m_match_ofs;
+			OutputLocation.inc((char)ch);
+			return ch;
 		}
 
-		/// <summary>Parses the current source position for template substitutions</summary>
-		private void Parse()
-		{
-			// 'm_match_ofs' is the minimum number of characters until the next possible template
-			// field match. When == 0 we need to retest the pattern.
-			while (!m_src.Empty && m_match_ofs == 0)
-			{
-				m_src.Top!.Cache(m_chunk_size);
-				var m = m_pattern.Match(m_src.Top.TextBuffer.ToString());
-				m_match_ofs = m.Success ? m.Index : m_src.Top.Length != m_chunk_size ? m_src.Top.Length : m_chunk_size / 2;
-
-				// If there is a match for the next character in the src,
-				// call the callback and do the substitution.
-				if (m.Success && m_match_ofs == 0)
-				{
-					m_src.Top.TextBuffer.Remove(0, m.Length);
-					var replace = m_substitute(this, m);
-					m_src.Top.TextBuffer.Insert(0, replace);
-				}
-			}
-		}
+		/// <summary>How far until another regex pattern match test is needed</summary>
+		private int m_match_ofs;
 
 		/// <summary>Process a string template</summary>
 		public static string Process(Src template, string pattern, SubstituteFunction subst, int chunk_size = 4096)
 		{
-			return new TemplateReplacer(template, pattern, subst, chunk_size).ReadToEnd();
+			using var tr = new TemplateReplacer(template, pattern, subst, chunk_size);
+			return tr.ReadToEnd();
 		}
 	}
 }

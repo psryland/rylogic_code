@@ -48,6 +48,11 @@ namespace Rylogic.Maths
 			xy = xy_;
 			zw = zw_;
 		}
+		public v4(v3 xyz_, float w_) : this()
+		{
+			xyz = xyz_;
+			w = w_;
+		}
 		public v4(float[] arr, int start = 0)
 			:this()
 		{
@@ -284,6 +289,14 @@ namespace Rylogic.Maths
 				r.Float(min, max));
 		}
 
+		/// <summary>Return a random vector within a 4D sphere of radius 'rad' (Note: *not* on the sphere)</summary>
+		public static v4 Random4(float rad, Random r)
+		{
+			var rad_sq = rad*rad;
+			v4 v; for (; (v = Random4(-rad, rad, r)).LengthSq > rad_sq;) { }
+			return v;
+		}
+
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v4 Random4(v4 min, v4 max, Random r)
 		{
@@ -293,13 +306,11 @@ namespace Rylogic.Maths
 				r.Float(min.z, max.z),
 				r.Float(min.w, max.w));
 		}
-		
-		/// <summary>Return a random vector within a 4D sphere of radius 'rad' (Note: *not* on the sphere)</summary>
-		public static v4 Random4(float rad, Random r)
+
+		/// <summary>Create a random vector centred on 'centre' with radius 'radius'.</summary>
+		public static v4 Random4(v4 centre, float radius, Random r)
 		{
-			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random4(-rad, rad, r)).LengthSq > rad_sq;) { }
-			return v;
+			return Random4(radius, r) + centre;
 		}
 
 		/// <summary>Return a random vector on the unit 4D sphere</summary>
@@ -319,6 +330,15 @@ namespace Rylogic.Maths
 				w);
 		}
 
+		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
+		public static v4 Random3(float rad, float w, Random r)
+		{
+			var rad_sq = rad*rad;
+			v4 v; for (; (v = Random3(-rad, rad, 0, r)).LengthSq > rad_sq; ){}
+			v.w = w;
+			return v;
+		}
+
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v4 Random3(v4 min, v4 max, float w, Random r)
 		{
@@ -329,13 +349,10 @@ namespace Rylogic.Maths
 				w);
 		}
 
-		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
-		public static v4 Random3(float rad, float w, Random r)
+		// Create a random vector centred on 'centre' with radius 'radius'.
+		public static v4 Random3(v4 centre, float radius, float w, Random r)
 		{
-			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random3(-rad, rad, 0, r)).LengthSq > rad_sq; ){}
-			v.w = w;
-			return v;
+			return new v4(v3.Random3(centre.xyz, radius, r), w);
 		}
 
 		/// <summary>Return a random vector on the unit 3D sphere</summary>

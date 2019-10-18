@@ -15,7 +15,7 @@ namespace Rylogic.Maths
 	/// <summary>Quaternion functions. Note: a quaternion is a v4</summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{Description,nq")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct quat
 	{
 		[FieldOffset( 0)] public float x;

@@ -17,14 +17,23 @@ namespace Rylogic.Maths
 	{
 		public AxisId(EAxisId id)
 		{
-			if (Math.Abs((int)id) < 1 || Math.Abs((int)id) > 3)
-				throw new Exception("Invalid axis id. Must one of ±1, ±2, ±3 corresponding to ±X, ±Y, ±Z respectively");
-
+			m_id = 0;
 			Id = id;
 		}
 
 		/// <summary></summary>
-		public EAxisId Id { get; set; }
+		public EAxisId Id
+		{
+			get => m_id;
+			set
+			{
+				if (Math.Abs((int)value) < 1 || Math.Abs((int)value) > 3)
+					throw new Exception("Invalid axis id. Must one of ±1, ±2, ±3 corresponding to ±X, ±Y, ±Z respectively");
+
+				m_id = value;
+			}
+		}
+		private EAxisId m_id;
 
 		/// <summary>Get/Set the axis associated with this id</summary>
 		public v4 Axis
@@ -33,7 +42,7 @@ namespace Rylogic.Maths
 			{
 				switch (Id)
 				{
-				default: throw new Exception("Axis id is invalid");
+				default: throw new Exception($"{Id} is not a valid axis id");
 				case EAxisId.PosX: return v4.XAxis;
 				case EAxisId.NegX: return v4.XAxis;
 				case EAxisId.PosY: return v4.YAxis;
@@ -50,16 +59,29 @@ namespace Rylogic.Maths
 				if (value == -v4.YAxis) { Id = EAxisId.NegY; return; }
 				if (value == +v4.ZAxis) { Id = EAxisId.PosZ; return; }
 				if (value == -v4.ZAxis) { Id = EAxisId.NegZ; return; }
-				throw new Exception($"Axis {value} does not have an axis id");
+				throw new Exception($"{value} is not a named axis");
 			}
 		}
 
-		public static implicit operator EAxisId(AxisId id) { return id.Id; }
+		/// <summary>Try to convert 'id' to an axis id</summary>
+		public static bool Try(int id, out AxisId axis)
+		{
+			axis = default;
+			if (Math.Abs(id) < 1 || Math.Abs(id) > 3)
+				return false;
+
+			axis = id;
+			return true;
+		}
+
+		/// <summary></summary>
 		public static implicit operator AxisId(EAxisId id) { return new AxisId(id); }
-
-		public static implicit operator int(AxisId id) { return (int)id.Id; }
 		public static implicit operator AxisId(int id) { return new AxisId((EAxisId)id); }
+		public static implicit operator EAxisId(AxisId id) { return id.Id; }
+		public static implicit operator int(AxisId id) { return (int)id.Id; }
+		public static implicit operator v4(AxisId id) { return id.Axis; }
 
+		/// <summary></summary>
 		public override string ToString() => ((int)Id).ToString();
 	}
 }

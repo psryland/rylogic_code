@@ -212,18 +212,24 @@ namespace Rylogic.Maths
 			return new v3(r.Float(min, max), r.Float(min, max), r.Float(min, max));
 		}
 
-		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
-		public static v3 Random3(v3 min, v3 max, Random r)
-		{
-			return new v3(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z));
-		}
-
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
 		public static v3 Random3(float rad, Random r)
 		{
 			var rad_sq = rad*rad;
 			v3 v; for (; (v = Random3(-rad, rad, r)).LengthSq > rad_sq; ){}
 			return v;
+		}
+
+		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
+		public static v3 Random3(v3 min, v3 max, Random r)
+		{
+			return new v3(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z));
+		}
+
+		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
+		public static v3 Random3(v3 centre, float radius, Random r)
+		{
+			return  Random3(radius, r) + centre;
 		}
 
 		/// <summary>Return a random vector on the unit 3D sphere</summary>

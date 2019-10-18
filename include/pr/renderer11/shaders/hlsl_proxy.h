@@ -121,7 +121,7 @@ namespace pr
 			float4 m_ambient;      // The colour of the ambient light
 			float4 m_colour;       // The colour of the directional light
 			float4 m_specular;     // The colour of the specular light. alpha channel is specular power
-			float4 m_range;        // x = range, y = falloff, z = inner cos angle, w = outer cos angle
+			float4 m_range;        // x = inner angle, y = outer angle, z = range, w = falloff
 
 			SLight(pr::rdr::Light const& light)
 				:m_info((int)light.m_type,0,0,0)
@@ -130,7 +130,7 @@ namespace pr
 				,m_ambient(To<Colour>(light.m_ambient).rgba)
 				,m_colour(To<Colour>(light.m_diffuse).rgba)
 				,m_specular(v4(To<Colour>(light.m_specular).rgb, light.m_specular_power))
-				,m_range(light.m_range, light.m_falloff, light.m_inner_cos_angle, light.m_outer_cos_angle)
+				,m_range(light.m_inner_angle, light.m_outer_angle, light.m_range, light.m_falloff)
 			{}
 		};
 

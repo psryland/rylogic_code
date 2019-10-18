@@ -1,78 +1,97 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 
 namespace Rylogic.Script
 {
-	/// <summary>A stack of script character sources</summary>
-	public sealed class SrcStack :Src
+	[DebuggerDisplay("{Description,nq}")]
+	public sealed class SrcStack :IDisposable
 	{
-		private readonly Stack<Buffer> m_stack;
+		// Notes:
+		//  - SrcStack is not a 'Src' subclass because the stack must not buffer.
 
 		public SrcStack()
-			:this(null)
-		{}
+			: this(null)
+		{ }
 		public SrcStack(Src? src)
 		{
-			m_stack = new Stack<Buffer>();
+			Stack = new Stack<Src>();
 			if (src != null)
 				Push(src);
 		}
-		protected override void Dispose(bool _)
+		public void Dispose()
 		{
-			while (m_stack.Count != 0)
-				m_stack.Pop().Dispose();
-			
-			base.Dispose(_);
+			for (; !Empty;)
+				Pop();
 		}
 
-		/// <summary>The type of source this is</summary>
-		public override SrcType SrcType => !Empty ? Top!.SrcType : SrcType.Unknown;
+		/// <summary>The stack of input streams</summary>
+		private Stack<Src> Stack { get; }
 
 		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location => !Empty ? Top!.Location : new Loc();
+		public Loc Location => Top.Location;
+
+		/// <summary>The local cache buffer of the top source</summary>
+		public StringBuilder Buffer => Top.Buffer;
 
 		/// <summary>True if there are no sources on the stack</summary>
-		public bool Empty => m_stack.Count == 0;
+		public bool Empty => Stack.Count == 0;
 
 		/// <summary>The top script source on the stack</summary>
-		public Buffer? Top => !Empty ? m_stack.Peek() : null;
+		public Src Top => Stack.Count != 0 ? Stack.Peek() : new NullSrc();
 
 		/// <summary>Push a script source onto the stack</summary>
 		public void Push(Src src)
 		{
-			if (src == null) throw new ArgumentNullException("src", "Null character source provided");
-			m_stack.Push(src as Buffer ?? new Buffer(src));
-			Advance(0);
+			// The stack takes ownership of 'src' and calls dispose on it when popped.
+			if (src == null)
+				throw new ArgumentNullException("src", "Null character source provided");
+
+			Stack.Push(src);
 		}
 
 		/// <summary>Pop a source from the stack</summary>
 		public void Pop()
 		{
-			m_stack.Pop().Dispose();
-			Advance(0);
+			var popped = Stack.Pop();
+			popped.Dispose();
 		}
 
-		/// <summary>Returns the character at the current source position or 0 when the source is exhausted</summary>
-		protected override char PeekInternal()
+		/// <summary>The next character</summary>
+		public char Peek
 		{
-			return Top != null ? Top.Peek : '\0';
-		}
-
-		/// <summary>
-		/// Advances the internal position a minimum of 'n' positions.
-		/// If the character at the new position is not a valid character to be return keep
-		/// advancing to the next valid character</summary>
-		protected override void Advance(int n)
-		{
-			for (;;)
+			get
 			{
-				for (; !Empty && Top!.Peek == 0; Pop()) {}
-				if (!Empty && n-- != 0) m_stack.Peek().Next();
-				else break;
+				// Careful, make sure Peek is readonly. Don't want the debugger to change it's state when viewed in watch windows.
+				var ch = Top.Peek;
+				if (ch == 0 && Stack.Count != 0) throw new Exception("Stack.Pop has been missed");
+				return ch;
 			}
 		}
 
-		public override string ToString() => !Empty ? Top!.ToString() : "<empty>";
+		/// <summary>Increment to the next character</summary>
+		public void Next(int n = 1)
+		{
+			for (; n > 0; --n)
+			{
+				Top.Next();
+				for (; Stack.Count != 0 && Top.Peek == 0;)
+					Pop();
+			}
+		}
+
+		/// <summary>Read ahead for the top sources</summary>
+		public int ReadAhead(int n) => Top.ReadAhead(n);
+		public int ReadAhead(Func<char, bool> pred, int start = 0) => Top.ReadAhead(pred, start);
+
+		/// <summary>Pointer-like interface</summary>
+		public static implicit operator char(SrcStack src) { return src.Peek; }
+		public static SrcStack operator ++(SrcStack src) { src.Next(); return src; }
+		public static SrcStack operator +(SrcStack src, int n) { src.Next(n); return src; }
+
+		/// <summary></summary>
+		public string Description => Top.Description;
 	}
 }
 
