@@ -61,10 +61,6 @@
 			<MenuItem Header="_Navigation"/>
 			<MenuItem Header="_Data"/>
 			<MenuItem Header="_Rendering">
-				<MenuItem
-					Header="_Lighting..."
-					Command="{Binding ShowLightingUI}"
-					/>
 			</MenuItem>
 			<MenuItem Header="_Help">
 				<MenuItem

@@ -1030,15 +1030,20 @@ namespace Scintilla
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextRange
 		{
+			/// <summary>The range of text to read</summary>
 			public CharacterRange chrg;
-			[MarshalAs(UnmanagedType.LPStr)] public string? lpstrText;
+
+			/// <summary>
+			/// An out parameter that contains a copy of the text for the requested range.
+			/// Use 'Marshal_.StringToHGlobalAnsi' to allocate the buffer that will received the text</summary>
+			public IntPtr lpstrText;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextToFind
 		{
 			public CharacterRange chrg;
-			[MarshalAs(UnmanagedType.LPStr)] public string? lpstrText;
+			public IntPtr lpstrText;
 			public CharacterRange chrgText;
 		}
 
@@ -1115,5 +1120,12 @@ namespace Scintilla
 			public int annotationLinesAdded; // SCN_MODIFIED with SC_MOD_CHANGEANNOTATION
 			public int updated;              // SCN_UPDATEUI
 		}
+	}
+
+	/// <summary></summary>
+	public enum ECaseInsensitiveBehaviour
+	{
+		RespectCase = Scintilla.SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE,
+		IgnoreCase = Scintilla.SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE,
 	}
 }

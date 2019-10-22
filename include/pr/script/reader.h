@@ -64,8 +64,6 @@ namespace pr::script
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
 		{}
-		virtual ~Reader()
-		{}
 
 		// Access the underlying source
 		Src const& Source() const noexcept
@@ -161,6 +159,12 @@ namespace pr::script
 		bool IsValue()
 		{
 			return !IsKeyword() && !IsSectionEnd() && !IsSourceEnd();
+		}
+
+		// Return true if the next token matches the given regular expression
+		bool IsMatch(std::regex pattern)
+		{
+			return false;
 		}
 
 		// Move to the start/end of a section and then one past it

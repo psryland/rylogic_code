@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Rylogic.Common;
@@ -11,6 +10,7 @@ using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
 using Rylogic.Utility;
+using Scintilla;
 
 namespace Rylogic.Gui.WPF
 {
@@ -22,6 +22,7 @@ namespace Rylogic.Gui.WPF
 		//  - Function comments are mostly incomplete because it'd take too long.. Fill them in as needed
 		//  - Copy/port #pragma regions from the native control on demand
 		//  - Dispose is handled internally via the Closed event on the owning window.
+
 		private const int ScintillaId = 0x1;
 
 		static ScintillaControl()
@@ -66,6 +67,9 @@ namespace Rylogic.Gui.WPF
 			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
 			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
 			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func) ?? throw new Exception("Failed to retrieve the direct call function");
+
+			// Notify handled created
+			HandleCreated?.Invoke(this, EventArgs.Empty);
 
 			// Reset the style
 			InitStyle(this);
@@ -129,6 +133,24 @@ namespace Rylogic.Gui.WPF
 					e.Handled = true;
 					break;
 				}
+			case Key.Space:
+				{
+					// Ctrl+Space shows the auto complete list
+					if (AutoComplete != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+					{
+						DoAutoComplete();
+						e.Handled = true;
+					}
+
+					// Ctrl+Shift+Space shows the 'call tips'
+					if (CallTip != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+					{
+						DoCallTips();
+						e.Handled = true;
+					}
+
+					break;
+				}
 			}
 			base.OnKeyDown(e);
 		}
@@ -136,12 +158,13 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The window handle of the Scintilla control</summary>
 		private IntPtr Hwnd { get; set; }
-		private bool HandleCreated => Hwnd != IntPtr.Zero;
+		public event EventHandler? HandleCreated;
+		private bool IsHandleCreated => Hwnd != IntPtr.Zero;
 
 		/// <summary>Call the direct function</summary>
 		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
 		{
-			if (m_func == null) throw new Exception("The scintilla control has not been created yet");// return IntPtr.Zero;
+			if (m_func == null) throw new Exception("The scintilla control has not been created yet");
 			return m_func(m_ptr, code, wparam, lparam);
 		}
 		private Sci.DirectFunction? m_func;
@@ -252,11 +275,227 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Call the direct function</summary>
-		public int Cmd(int code, IntPtr wparam, IntPtr lparam) => (int)Call(code, wparam, lparam);
-		public int Cmd(int code, long wparam, IntPtr lparam) => Cmd(code, (IntPtr)wparam, lparam);
-		public int Cmd(int code, long wparam, long lparam) => Cmd(code, (IntPtr)wparam, (IntPtr)lparam);
-		public int Cmd(int code, long wparam) => Cmd(code, (IntPtr)wparam, IntPtr.Zero);
-		public int Cmd(int code) => Cmd(code, IntPtr.Zero, IntPtr.Zero);
+		public int Cmd(int code, IntPtr wparam, IntPtr lparam)
+		{
+			return (int)Call(code, wparam, lparam);
+		}
+		public int Cmd(int code, long wparam, IntPtr lparam)
+		{
+			return Cmd(code, (IntPtr)wparam, lparam);
+		}
+		public int Cmd(int code, long wparam, string lparam)
+		{
+			using var text = Marshal_.AllocAnsiString(lparam);
+			return Cmd(code, wparam, text.Value);
+		}
+		public int Cmd(int code, long wparam, long lparam)
+		{
+			return Cmd(code, (IntPtr)wparam, (IntPtr)lparam);
+		}
+		public int Cmd(int code, long wparam)
+		{
+			return Cmd(code, (IntPtr)wparam, IntPtr.Zero);
+		}
+		public int Cmd(int code)
+		{
+			return Cmd(code, IntPtr.Zero, IntPtr.Zero);
+		}
+
+		#region Auto Complete
+
+		// Notes:
+		//  - Autocompletion displays a list box showing likely identifiers based upon the user's typing. The user chooses the currently selected item by pressing
+		//    the tab character or another character that is a member of the fillup character set defined with SCI_AUTOCSETFILLUPS. Autocompletion is triggered by
+		//    your application. For example, in C if you detect that the user has just typed "fred", you could look up fred, and if it has a known list of members,
+		//    you could offer them in an autocompletion list. Alternatively, you could monitor the user's typing and offer a list of likely items once their typing
+		//    has narrowed down the choice to a reasonable list. As yet another alternative, you could define a key code to activate the list.
+		//  - When the user makes a selection from the list the container is sent a SCN_AUTOCSELECTION notification message. On return from the notification Scintilla
+		//    will insert the selected text and the container is sent a SCN_AUTOCCOMPLETED notification message unless the autocompletion list has been cancelled, for
+		//    example by the container sending SCI_AUTOCCANCEL.
+		//  - To make use of autocompletion you must monitor each character added to the document.See SciTEBase::CharAdded() in SciTEBase.cxx for an example of autocompletion.
+
+		/// <summary>Provider of auto complete functionality</summary>
+		public event EventHandler<AutoCompleteEventArgs>? AutoComplete;
+		public class AutoCompleteEventArgs :EventArgs
+		{
+			public AutoCompleteEventArgs(string partial)
+			{
+				Partial = partial;
+				Completions = new List<string>();
+				Handled = false;
+			}
+
+			/// <summary>The partial text already typed</summary>
+			public string Partial { get; }
+
+			/// <summary>The list of possible completions</summary>
+			public List<string> Completions { get; }
+
+			/// <summary>True if auto completion data has been provided</summary>
+			public bool Handled { get; set; }
+		}
+
+		/// <summary></summary>
+		private void DoAutoComplete()
+		{
+			// Get the text near the caret
+			var line = GetCurLine(out var caret_offset);
+
+			// Keep only the last non whitespace characters
+			int i; for (i = caret_offset; i-- != 0 && !char.IsWhiteSpace(line[i]);) { }
+			var text = line.Substring(i + 1, caret_offset - i - 1);
+
+			// Let auto complete be handled
+			var args = new AutoCompleteEventArgs(text);
+			AutoComplete?.Invoke(this, args);
+			if (args.Handled)
+			{
+				// Create an unmanaged list of words and display them in the auto complete popup
+				var word_list = string.Join(new string(AutoCompleteSeparator, 1), args.Completions);
+				using var ptr = Marshal_.AllocAnsiString(word_list);
+				Cmd(Sci.SCI_AUTOCSHOW, args.Partial.Length, ptr.Value);
+			}
+		}
+
+		/// <summary>The configured auto completion list separator character (defaults to ' ')</summary>
+		public char AutoCompleteSeparator
+		{
+			get => (char)Cmd(Sci.SCI_AUTOCGETSEPARATOR);
+			set => Cmd(Sci.SCI_AUTOCSETSEPARATOR, value);
+		}
+
+		/// <summary>
+		/// Sets the characters that will automatically cancel the autocompletion list.
+		/// When you start the editor, this list is empty.</summary>
+		public string AutoCompleteStopCharacters
+		{
+			set => Cmd(Sci.SCI_AUTOCSTOPS, 0, value);
+		}
+
+		/// <summary>
+		/// By default, the list is cancelled if there are no viable matches (the user has typed characters that no longer match a list entry).
+		/// If you want to keep displaying the original list, set AutoHide to false. This also effects SCI_AUTOCSELECT.</summary>
+		public bool AutoCompleteAutoHide
+		{
+			get => Cmd(Sci.SCI_AUTOCGETAUTOHIDE) != 0;
+			set => Cmd(Sci.SCI_AUTOCSETAUTOHIDE, value ? 1 : 0);
+		}
+
+		/// <summary>
+		/// Get/Set whether autocomplete text matching is case sensitive.
+		/// By default, matching of characters to list members is case sensitive.</summary>
+		public bool AutoCompleteIgnoreCase
+		{
+			get => Cmd(Sci.SCI_AUTOCGETIGNORECASE) != 0;
+			set => Cmd(Sci.SCI_AUTOCSETIGNORECASE, value ? 1 : 0);
+		}
+
+
+		/// <summary>
+		/// Get or set the maximum width of an autocompletion list expressed as the number of characters in the longest
+		/// item that will be totally visible. If zero (the default) then the list's width is calculated to fit the item
+		/// with the most characters. Any items that cannot be fully displayed within the available width are indicated
+		/// by the presence of ellipsis.</summary>
+		public int AutoCompleteMaxWidth
+		{
+			get => Cmd(Sci.SCI_AUTOCSETMAXWIDTH);
+			set => Cmd(Sci.SCI_AUTOCSETMAXWIDTH, value);
+		}
+
+		/// <summary>Get /Sset the maximum number of rows that will be visible in an autocompletion list.If there are more rows in the list, then a vertical scrollbar is shown.The default is 5.</summary>
+		public int AutoCompleteMaxHeight
+		{
+			get => Cmd(Sci.SCI_AUTOCSETMAXHEIGHT);
+			set => Cmd(Sci.SCI_AUTOCSETMAXHEIGHT, value);
+		}
+
+		/// <summary>
+		/// Get/Set
+		/// When autocompletion is set to ignore case (SCI_AUTOCSETIGNORECASE), by default it will nonetheless select the first list member
+		/// that matches in a case sensitive way to entered characters. This corresponds to a behaviour property of SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE(0).
+		/// If you want autocompletion to ignore case at all, choose SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE(1).</summary>
+		public ECaseInsensitiveBehaviour AutoCompleteCaseSensitiveBehaviour
+		{
+			get => (ECaseInsensitiveBehaviour)Cmd(Sci.SCI_AUTOCGETCASEINSENSITIVEBEHAVIOUR);
+			set => Cmd(Sci.SCI_AUTOCSETCASEINSENSITIVEBEHAVIOUR, (int)value);
+		}
+
+		#endregion
+
+		#region Call Tips
+
+		// Notes:
+		//  - Call tips are small windows displaying the arguments to a function and are displayed after the user has typed the name of the function.
+		//    They normally display characters using the font facename, size and character set defined by STYLE_DEFAULT. You can choose to use STYLE_CALLTIP
+		//    to define the facename, size, foreground and background colours and character set with SCI_CALLTIPUSESTYLE. This also enables support for Tab
+		//    characters. There is some interaction between call tips and autocompletion lists in that showing a call tip cancels any active autocompletion
+		//    list, and vice versa.
+		//  - Call tips can highlight part of the text within them. You could use this to highlight the current argument to a function by counting the number
+		//    of commas (or whatever separator your language uses). See SciTEBase::CharAdded() in SciTEBase.cxx for an example of call tip use.
+		//  - The mouse may be clicked on call tips and this causes a SCN_CALLTIPCLICK notification to be sent to the container. Small up and down arrows may
+		//    be displayed within a call tip by, respectively, including the characters '\001', or '\002'. This is useful for showing that there are overloaded
+		//    variants of one function name and that the user can click on the arrows to cycle through the overloads.
+		//  - Alternatively, call tips can be displayed when you leave the mouse pointer for a while over a word in response to the SCN_DWELLSTART notification 
+		//    and cancelled in response to SCN_DWELLEND. This method could be used in a debugger to give the value of a variable, or during editing to give
+		//    information about the word under the pointer.
+
+		/// <summary>Provider of call tip functionality</summary>
+		public event EventHandler<CallTipEventArgs>? CallTip;
+		public class CallTipEventArgs :EventArgs
+		{
+			public CallTipEventArgs()
+			{
+				Definition = string.Empty;
+				Handled = false;
+			}
+
+			/// <summary>The definition to display for the call tip</summary>
+			public string Definition { get; set; }
+
+			/// <summary></summary>
+			public bool Handled { get; set; }
+		}
+
+		/// <summary></summary>
+		private void DoCallTips()
+		{
+			var args = new CallTipEventArgs();
+			CallTip?.Invoke(this, args);
+			if (args.Handled && args.Definition.Length != 0)
+			{
+				ShowCallTip(CurrentPos, args.Definition);
+			}
+		}
+
+		/// <summary>
+		/// Starts the process by displaying the call tip window. If a call tip is already active, this has no effect.
+		/// 'pos' is the position in the document at which to align the call tip. The call tip text is aligned to start 1 line below this character unless you
+		/// have included up and/or down arrows in the call tip text in which case the tip is aligned to the right-hand edge of the rightmost arrow.
+		/// The assumption is that you will start the text with something like "\001 1 of 3 \002".
+		/// 'definition' is the call tip text. This can contain multiple lines separated by '\n' (Line Feed, ASCII code 10) characters.
+		/// Do not include '\r' (Carriage Return, ASCII code 13), as this will most likely print as an empty box. '\t' (Tab, ASCII code 9) is supported if you
+		/// set a tabsize with SCI_CALLTIPUSESTYLE.
+		/// The position of the caret is remembered here so that the call tip can be cancelled automatically if subsequent deletion moves the caret before this position.
+		public void ShowCallTip(long pos, string definition)
+		{
+			Cmd(Sci.SCI_CALLTIPSHOW, pos, definition);
+		}
+
+		/// <summary>
+		/// Cancels any displayed call tip. Scintilla will also cancel call tips for you if you use any keyboard commands that are not compatible with editing the
+		/// argument list of a function. Call tips are cancelled if you delete back past the position where the caret was when the tip was triggered.</summary>
+		public void CancelCallTip()
+		{
+			Cmd(Sci.SCI_CALLTIPCANCEL);
+		}
+
+		/// <summary>True if a call tip is active.</summary>
+		public bool CallTipActive
+		{
+			get => Cmd(Sci.SCI_CALLTIPACTIVE) != 0;
+		}
+
+		#endregion
 
 		#region Text
 
@@ -267,7 +506,7 @@ namespace Rylogic.Gui.WPF
 		public void ClearAll()
 		{
 			m_text = string.Empty;
-			if (HandleCreated)
+			if (IsHandleCreated)
 				Cmd(Sci.SCI_CLEARALL);
 		}
 
@@ -278,7 +517,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Gets the length of the text in the control</summary>
-		public int TextLength => HandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
+		public int TextLength => IsHandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
 
 		/// <summary>Gets or sets the current text</summary>
 		public string Text
@@ -290,7 +529,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Read the text out of the control</summary>
 		private string GetText()
 		{
-			if (!HandleCreated)
+			if (!IsHandleCreated)
 				return m_text;
 
 			var len = TextLength;
@@ -310,7 +549,7 @@ namespace Rylogic.Gui.WPF
 			{
 				ClearAll();
 			}
-			else if (!HandleCreated)
+			else if (!IsHandleCreated)
 			{
 				m_text = text;
 			}
@@ -354,17 +593,17 @@ namespace Rylogic.Gui.WPF
 				throw new Exception($"Invalid text range: [{range.Beg}, {range.End}). Current text length is {TextLength}");
 
 			// Request the text in the given range
+			using var text = Marshal_.Alloc(EHeap.HGlobal, range.Sizei + 1);
 			using var buffer = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
 			Marshal.StructureToPtr(new Sci.TextRange
 			{
 				chrg = new Sci.CharacterRange{cpMin = range.Beg, cpMax = range.End},
-				lpstrText = null,
+				lpstrText = text.Value.Ptr,
 			}, buffer.Value.Ptr, false);
 			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
 
 			// Return the returned string
-			var tr = Marshal.PtrToStructure<Sci.TextRange>(buffer.Value.Ptr);
-			return tr.lpstrText ?? string.Empty;
+			return Marshal.PtrToStringAnsi(text.Value.Ptr);
 		}
 
 		/// <summary></summary>
@@ -518,7 +757,7 @@ namespace Rylogic.Gui.WPF
 			SelectionChanged?.Invoke(this, EventArgs.Empty);
 		}
 
-		/// <summary></summary>
+		/// <summary>This selects all the text in the document. The current position is not scrolled into view.</summary>
 		public void SelectAll()
 		{
 			Cmd(Sci.SCI_SELECTALL);
@@ -531,21 +770,46 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_SETSELECTIONMODE, value);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Get/Set the current caret position.
+		/// 'Set' sets the current position and creates a selection between the anchor and the current position.
+		/// The caret is not scrolled into view.</summary>
 		public int CurrentPos
 		{
 			get => Cmd(Sci.SCI_GETCURRENTPOS);
 			set => Cmd(Sci.SCI_SETCURRENTPOS, value);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Get/Set the current anchor position.
+		/// 'Set' sets the anchor position and creates a selection between the anchor position and the current position.
+		/// The caret is not scrolled into view.</summary>
+		public int Anchor
+		{
+			get => Cmd(Sci.SCI_GETANCHOR);
+			set => Cmd(Sci.SCI_SETANCHOR, value);
+		}
+
+		/// <summary>
+		/// Get/Set the selection start position.
+		/// 'Get' returns the start of the selection without regard to which end is the current position and which is the anchor.
+		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
+		/// SCI_GETSELECTIONEND returns the larger of the two values.
+		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
+		/// It does not make the caret visible. After set, the anchor position is unchanged, and the caret position is Max(anchor, current)</summary>
 		public int SelectionStart
 		{
 			get => Cmd(Sci.SCI_GETSELECTIONSTART);
 			set => Cmd(Sci.SCI_SETSELECTIONSTART, value);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Get/Set the selection end position.
+		/// 'Get' returns the end of the selection without regard to which end is the current position and which is the anchor.
+		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
+		/// SCI_GETSELECTIONEND returns the larger of the two values.
+		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
+		/// It does not make the caret visible. After set, the anchor position is Min(anchor, caret), and the caret position is unchanged.</summary>
 		public int SelectionEnd
 		{
 			get => Cmd(Sci.SCI_GETSELECTIONEND);
@@ -556,6 +820,12 @@ namespace Rylogic.Gui.WPF
 		public void SetSel(int start, int end)
 		{
 			Cmd(Sci.SCI_SETSEL, start, end);
+		}
+
+		/// <summary>This removes any selection and sets the caret at 'position'. The caret is not scrolled into view.</summary>
+		public void ClearSelection(int position)
+		{
+			Cmd(Sci.SCI_SETEMPTYSELECTION, position);
 		}
 
 		/// <summary>
@@ -628,13 +898,6 @@ namespace Rylogic.Gui.WPF
 		public void GotoLine(int line)
 		{
 			Cmd(Sci.SCI_GOTOLINE, line);
-		}
-
-		/// <summary></summary>
-		public int Anchor
-		{
-			get => Cmd(Sci.SCI_GETANCHOR);
-			set => Cmd(Sci.SCI_SETANCHOR, value);
 		}
 
 		/// <summary>Get the line index from a character index</summary>

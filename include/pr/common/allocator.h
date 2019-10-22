@@ -64,9 +64,9 @@ namespace pr
 		}
 
 		// enable if helpers
-		template <typename U> using enable_if_pod    = typename std::enable_if< std::is_pod<U>::value>::type;
-		template <typename U> using enable_if_nonpod = typename std::enable_if<!std::is_pod<U>::value>::type;
-		template <typename U> using enable_if_can_cc = typename std::enable_if<std::is_copy_constructible<U>::value>::type;
+		template <typename U> using enable_if_pod    = typename std::enable_if_t< std::is_pod<U>::value>;
+		template <typename U> using enable_if_nonpod = typename std::enable_if_t<!std::is_pod<U>::value>;
+		template <typename U> using enable_if_can_cc = typename std::enable_if_t<std::is_copy_constructible<U>::value>;
 
 		// is_pod
 		template <typename = enable_if_pod<T>> void default_construct(void* p, char = 0)

@@ -83,7 +83,7 @@ namespace Rylogic.Script
 
 		/// <summary>Read ahead for the top sources</summary>
 		public int ReadAhead(int n) => Top.ReadAhead(n);
-		public int ReadAhead(Func<char, bool> pred, int start = 0) => Top.ReadAhead(pred, start);
+		public int ReadAhead(Func<char, int> adv, int start = 0) => Top.ReadAhead(adv, start);
 
 		/// <summary>Pointer-like interface</summary>
 		public static implicit operator char(SrcStack src) { return src.Peek; }

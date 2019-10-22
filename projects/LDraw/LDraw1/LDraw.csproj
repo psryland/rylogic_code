@@ -154,37 +154,37 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\lib\x64\Debug\view3d.dll">
+    <None Include="..\..\..\lib\x64\Debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x64\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x64\Release\view3d.dll">
+    <None Include="..\..\..\lib\x64\Release\view3d.dll">
       <Link>lib\x64\release\view3d.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x64\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x86\Debug\view3d.dll">
+    <None Include="..\..\..\lib\x86\Debug\view3d.dll">
       <Link>lib\x86\debug\view3d.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x86\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x86\Release\view3d.dll">
+    <None Include="..\..\..\lib\x86\Release\view3d.dll">
       <Link>lib\x86\release\view3d.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x86\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x64\Debug\scintilla.dll">
+    <None Include="..\..\..\lib\x64\Debug\scintilla.dll">
       <Link>lib\x64\debug\scintilla.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x64\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x64\Release\scintilla.dll">
+    <None Include="..\..\..\lib\x64\Release\scintilla.dll">
       <Link>lib\x64\release\scintilla.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x64\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x86\Debug\scintilla.dll">
+    <None Include="..\..\..\lib\x86\Debug\scintilla.dll">
       <Link>lib\x86\debug\scintilla.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x86\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\lib\x86\Release\scintilla.dll">
+    <None Include="..\..\..\lib\x86\Release\scintilla.dll">
       <Link>lib\x86\release\scintilla.dll</Link>
-      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory Condition="Exists('..\..\..\lib\x86\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>

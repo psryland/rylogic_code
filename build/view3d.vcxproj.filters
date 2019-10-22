@@ -152,5 +152,11 @@
     <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
       <Filter>src\pr\ldraw</Filter>
     </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_object_templates.cpp">
+      <Filter>src\pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_object_demo_scene.cpp">
+      <Filter>src\pr\ldraw</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

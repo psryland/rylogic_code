@@ -1,5 +1,5 @@
 //***************************************************************************************************
-// Ldr Object Manager
+// Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 
@@ -199,15 +199,6 @@ namespace pr::ldr
 			m_last_progress_update = system_clock::now();
 		}
 	};
-
-	// Template prototype for ObjectCreators
-	template <ELdrObject ObjType> struct ObjectCreator;
-
-	// String hash wrapper
-	inline size_t Hash(char const* str)
-	{
-		return pr::hash::Hash(str);
-	}
 
 	// Forward declare the recursive object parsing function
 	bool ParseLdrObject(ParseParams& p);
@@ -679,223 +670,598 @@ namespace pr::ldr
 			obj->ScreenSpace(true);
 	}
 
+	// Get/Create an instance of the point sprites shader
+	ShaderPtr PointSpriteShader(Renderer& rdr, v2 point_size, bool depth)
+	{
+		auto id = pr::hash::Hash("PointSprites", point_size, depth);
+		auto shdr = rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
+		shdr->m_size = point_size;
+		shdr->m_depth = depth;
+		return shdr;
+	}
+
+	// Get or create an instance of the thick line shader for line strip geometry
+	ShaderPtr ThickLineShaderLS(Renderer& rdr, float line_width)
+	{
+		auto id = pr::hash::Hash("ThickLineStrip", line_width);
+		auto shdr = rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
+		shdr->m_width = line_width;
+		return shdr;
+	}
+
+	// Get or create an instance of the thick line shader for line list geometry
+	ShaderPtr ThickLineShaderLL(Renderer& rdr, float line_width)
+	{
+		auto id = pr::hash::Hash("ThickLineList", line_width);
+		auto shdr = rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
+		shdr->m_width = line_width;
+		return shdr;
+	}
+
+	// Get or create an instance of the arrow head shader
+	ShaderPtr ArrowHeadShader(Renderer& rdr, float line_width)
+	{
+		auto id = pr::hash::Hash("ArrowHead", line_width);
+		auto shdr = rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
+		shdr->m_size = line_width;
+		return shdr;
+	}
+
+	// Convert a line strip into a line list of "dash" line segments
+	void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
+	{
+		assert(int(in.size()) >= 2);
+
+		// Turn the sequence of line segments into a single dashed line
+		auto t = 0.0f;
+		for (int i = 1, iend = int(in.size()); i != iend; ++i)
+		{
+			auto d = in[i] - in[i-1];
+			auto len = Length3(d);
+
+			// Emit dashes over the length of the line segment
+			for (;t < len; t += dash.x + dash.y)
+			{
+				out.push_back(in[i-1] + d * Clamp(t         , 0.0f, len) / len);
+				out.push_back(in[i-1] + d * Clamp(t + dash.x, 0.0f, len) / len);
+			}
+			t -= len + dash.x + dash.y;
+		}
+	}
+
+	// Convert a line list into a list of "dash" line segments
+	void DashLineList(VCont const& in, VCont& out, v2 const& dash)
+	{
+		assert(int(in.size()) >= 2 && int(in.size() & 1) == 0);
+
+		// Turn the line list 'in' into dashed lines
+		// Turn the sequence of line segments into a single dashed line
+		for (int i = 0, iend = int(in.size()); i != iend; i += 2)
+		{
+			auto d  = in[i+1] - in[i];
+			auto len = Length3(d);
+
+			// Emit dashes over the length of the line segment
+			for (auto t = 0.0f; t < len; t += dash.x + dash.y)
+			{
+				out.push_back(in[i] + d * Clamp(t, 0.0f, len) / len);
+				out.push_back(in[i] + d * Clamp(t + dash.x, 0.0f, len) / len);
+			}
+		}
+	}
+
 	#pragma endregion
 
-	#pragma region ObjectCreator Base Classes
+	#pragma region Object modifiers
+	
+	namespace creation
+	{
+		// Support for objects with a texture
+		struct Textured
+		{
+			Texture2DPtr m_texture;
+			NuggetProps m_local_mat;
+
+			Textured()
+				:m_texture()
+				,m_local_mat()
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return false;
+					}
+				case EKeyword::Texture:
+					{
+						ParseTexture(p, m_texture);
+						return true;
+					}
+				case EKeyword::Video:
+					{
+						ParseVideo(p, m_texture);
+						return true;
+					}
+				}
+			}
+			NuggetProps* Material()
+			{
+				// This function is used to pass texture/shader data to the model generated.
+				// Topo and Geom are not used, each model type knows what topo and geom it's using.
+				m_local_mat.m_tex_diffuse = m_texture;
+				//if (m_texture->m_video)
+				//	m_texture->m_video->Play(true);
+				return &m_local_mat;
+			}
+		};
+
+		// Support for objects with a main axis
+		struct MainAxis
+		{
+			m4x4 m_o2w;
+			AxisId m_main_axis; // The natural main axis of the object
+			AxisId m_align;     // The axis we want the main axis to be aligned to
+
+			MainAxis(AxisId main_axis = AxisId::PosZ, AxisId align = AxisId::PosZ)
+				:m_o2w(m4x4Identity)
+				,m_main_axis(main_axis)
+				,m_align(align)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return false;
+					}
+				case EKeyword::AxisId:
+					{
+						p.m_reader.IntS(m_align.value, 10);
+						if (AxisId::IsValid(m_align))
+						{
+							m_o2w = m4x4::Transform(m_main_axis, m_align, v4Origin);
+							return true;
+						}
+
+						p.ReportError(EResult::InvalidValue, "AxisId must be +/- 1, 2, or 3 (corresponding to the positive or negative X, Y, or Z axis)");
+						return false;
+					}
+				}
+			}
+
+			// True if the main axis is not equal to the desired align axis
+			bool RotationNeeded() const
+			{
+				return m_main_axis != m_align;
+			}
+
+			// Returns the rotation from 'main_axis' to 'axis'
+			m4x4 const& O2W() const
+			{
+				return m_o2w;
+			}
+
+			// Returns a pointer to a rotation from 'main_axis' to 'axis'. Returns null if identity
+			m4x4 const* O2WPtr() const
+			{
+				return RotationNeeded() ? &m_o2w : nullptr;
+			}
+		};
+
+		// Support for light sources that cast
+		struct CastingLight
+		{
+			CastingLight()
+			{}
+			bool ParseKeyword(ParseParams& p, Light& light, EKeyword kw)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return false;
+					}
+				case EKeyword::Range:
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.Real(light.m_range);
+						p.m_reader.Real(light.m_falloff);
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Specular:
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.Int(light.m_specular.argb, 16);
+						p.m_reader.Real(light.m_specular_power);
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::CastShadow:
+					{
+						p.m_reader.RealS(light.m_cast_shadow);
+						return true;
+					}
+				}
+			}
+		};
+
+		// Support for point sprites
+		struct PointSprite
+		{
+			enum class EStyle
+			{
+				Square,
+				Circle,
+				Triangle,
+				Star,
+				Annulus,
+			};
+
+			v2     m_point_size;
+			EStyle m_style;
+			bool   m_depth;
+
+			PointSprite()
+				:m_point_size()
+				,m_style(EStyle::Square)
+				,m_depth(false)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return false;
+					}
+				case EKeyword::Size:
+					{
+						// Allow one or two dimensions
+						p.m_reader.SectionStart();
+						p.m_reader.Real(m_point_size.x);
+						if (!p.m_reader.IsSectionEnd())
+							p.m_reader.Real(m_point_size.y);
+						else
+							m_point_size.y = m_point_size.x;
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Style:
+					{
+						string32 ident;
+						p.m_reader.IdentifierS(ident);
+						switch (HashI(ident.c_str()))
+						{
+						default: p.m_reader.ReportError(pr::script::EResult::UnknownToken); break;
+						case HashI("square"):   m_style = EStyle::Square; break;
+						case HashI("circle"):   m_style = EStyle::Circle; break;
+						case HashI("triangle"): m_style = EStyle::Triangle; break;
+						case HashI("star"):     m_style = EStyle::Star; break;
+						case HashI("annulus"):  m_style = EStyle::Annulus; break;
+						}
+						return true;
+					}
+				case EKeyword::Depth:
+					{
+						m_depth = true;
+						return true;
+					}
+				}
+			}
+			Texture2DPtr PointStyleTexture(ParseParams& p)
+			{
+				EStyle style = m_style;
+				iv2 size = To<iv2>(m_point_size);
+				iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
+				switch (style)
+				{
+				default: throw std::exception("Unknown point style");
+				case EStyle::Square:
+					{
+						// No texture needed for square style
+						return nullptr;
+					}
+				case EStyle::Circle:
+					{
+						auto id = pr::hash::Hash("PointStyleCircle", sz);
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							return CreatePointStyleTexture(p, id, sz, "PointStyleCircle", [=](auto dc, auto fr, auto) { dc->FillEllipse({ { w0, h0 }, w0, h0 }, fr); });
+						});
+					}
+				case EStyle::Triangle:
+					{
+						auto id = pr::hash::Hash("PointStyleTriangle", sz);
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
+						{
+							Renderer::Lock lk(p.m_rdr);
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Throw(geom->Open(&sink.m_ptr));
+
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
+							auto h1 = 0.5f * (sz.y - h0);
+
+							sink->BeginFigure({ w0, h1 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.0f * w0, h1 });
+							sink->AddLine({ 0.5f * w0, h0 + h1 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							pr::Throw(sink->Close());
+
+							return CreatePointStyleTexture(p, id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
+					}
+				case EStyle::Star:
+					{
+						auto id = pr::hash::Hash("PointStyleStar", sz);
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
+						{
+							Renderer::Lock lk(p.m_rdr);
+							D3DPtr<ID2D1PathGeometry> geom;
+							D3DPtr<ID2D1GeometrySink> sink;
+							pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
+							pr::Throw(geom->Open(&sink.m_ptr));
+
+							auto w0 = 1.0f * sz.x;
+							auto h0 = 1.0f * sz.y;
+
+							sink->BeginFigure({ 0.5f * w0, 0.0f * h0 }, D2D1_FIGURE_BEGIN_FILLED);
+							sink->AddLine({ 0.4f * w0, 0.4f * h0 });
+							sink->AddLine({ 0.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.4f * w0, 0.6f * h0 });
+							sink->AddLine({ 0.5f * w0, 1.0f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.6f * h0 });
+							sink->AddLine({ 1.0f * w0, 0.5f * h0 });
+							sink->AddLine({ 0.6f * w0, 0.4f * h0 });
+							sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+							pr::Throw(sink->Close());
+
+							return CreatePointStyleTexture(p, id, sz, "PointStyleStar", [=](auto dc, auto fr, auto) { dc->FillGeometry(geom.get(), fr, nullptr); });
+						});
+					}
+				case EStyle::Annulus:
+					{
+						auto id = pr::hash::Hash("PointStyleAnnulus", sz);
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [&]
+						{
+							auto w0 = sz.x * 0.5f;
+							auto h0 = sz.y * 0.5f;
+							auto w1 = sz.x * 0.4f;
+							auto h1 = sz.y * 0.4f;
+							return CreatePointStyleTexture(p, id, sz, "PointStyleAnnulus", [=](auto dc, auto fr, auto bk)
+							{
+								dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
+								dc->FillEllipse({ { w0, h0 }, w0, h0 }, fr);
+								dc->FillEllipse({ { w0, h0 }, w1, h1 }, bk);
+							});
+						});
+					}
+				}
+			}
+			template <typename TDrawOnIt>
+			Texture2DPtr CreatePointStyleTexture(ParseParams& p, RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
+			{
+				// Create a texture large enough to contain the text, and render the text into it
+				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
+				Texture2DDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+				auto tex = p.m_rdr.m_tex_mgr.CreateTexture2D(id, Image(), tdesc, sdesc, false, name);
+
+				// Get a D2D device context to draw on
+				auto dc = tex->GetD2DeviceContext();
+
+				// Create the brushes
+				D3DPtr<ID2D1SolidColorBrush> fr_brush;
+				D3DPtr<ID2D1SolidColorBrush> bk_brush;
+				auto fr = pr::To<D3DCOLORVALUE>(0xFFFFFFFF);
+				auto bk = pr::To<D3DCOLORVALUE>(0x00000000);
+				pr::Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
+				pr::Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
+
+				// Draw the spot
+				dc->BeginDraw();
+				dc->Clear(&bk);
+				draw(dc, fr_brush.get(), bk_brush.get());
+				pr::Throw(dc->EndDraw());
+				return tex;
+			}
+		};
+
+		// Support for generate normals
+		struct GenNorms
+		{
+			float m_smoothing_angle;
+
+			GenNorms(float gen_normals = -1.0f)
+				:m_smoothing_angle(gen_normals)
+			{}
+			bool ParseKeyword(ParseParams& p, EKeyword kw)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return false;
+					}
+				case EKeyword::GenerateNormals:
+					{
+						p.m_reader.RealS(m_smoothing_angle);
+						m_smoothing_angle = pr::DegreesToRadians(m_smoothing_angle);
+						return true;
+					}
+				}
+			}
+
+			// Generate normals if needed
+			void Generate(ParseParams& p)
+			{
+				if (m_smoothing_angle < 0.0f)
+					return;
+
+				auto& verts   = p.m_cache.m_point;
+				auto& indices = p.m_cache.m_index;
+				auto& normals = p.m_cache.m_norms;
+				auto& nuggets = p.m_cache.m_nugts;
+
+				// Can't generate normals per nugget because nuggets may share vertices.
+				// Generate normals for all vertices (verts used by lines only with have zero-normals)
+				normals.resize(verts.size());
+
+				// Generate normals for the nuggets containing faces
+				for (auto& nug : nuggets)
+				{
+					// Not face topology...
+					if (nug.m_topo != EPrim::TriList)
+						continue;
+
+					// The number of indices in this nugget
+					auto iptr = indices.data();
+					auto icount = indices.size();
+					if (!nug.m_irange.empty())
+					{
+						iptr += nug.m_irange.begin();
+						icount = nug.m_irange.size();
+					}
+
+					// Not sure if this works... needs testing
+					pr::geometry::GenerateNormals(icount, iptr, m_smoothing_angle,
+						[&](pr::uint16 i)
+						{
+							return verts[i];
+						}, 0,
+						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
+						{
+							if (new_idx >= verts.size())
+							{
+								verts.resize(new_idx + 1, verts[orig_idx]);
+								normals.resize(new_idx + 1, normals[orig_idx]);
+							}
+							normals[new_idx] = norm;
+						},
+						[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
+						{
+							*iptr++ = i0;
+							*iptr++ = i1;
+							*iptr++ = i2;
+						});
+
+					// Geometry has normals now
+					nug.m_geom |= EGeom::Norm;
+				}
+			}
+		};
+	}
+
+	#pragma endregion
+
+	#pragma region ObjectCreator
+
+	// Template prototype for ObjectCreators
+	template <ELdrObject ObjType> struct ObjectCreator;
 
 	// Base class for all object creators
 	struct IObjectCreator
 	{
 		ParseParams& p;
+		VCont& m_verts;
+		ICont& m_indices;
+		NCont& m_normals;
+		CCont& m_colours;
+		TCont& m_texs;
+		GCont& m_nuggets;
+
 		virtual ~IObjectCreator() {}
-		IObjectCreator(ParseParams& p_) :p(p_) {}
-		virtual bool ParseKeyword(EKeyword)
-		{
-			return false;
-		}
-		virtual void Parse()
-		{
-			p.ReportError(EResult::UnknownToken);
-		}
-		virtual void CreateModel(LdrObject*)
+		IObjectCreator(ParseParams& p_)
+			:p(p_)
+			,m_verts  (p.m_cache.m_point)
+			,m_indices(p.m_cache.m_index)
+			,m_normals(p.m_cache.m_norms)
+			,m_colours(p.m_cache.m_color)
+			,m_texs   (p.m_cache.m_texts)
+			,m_nuggets(p.m_cache.m_nugts)
 		{}
+		virtual bool ParseKeyword(EKeyword) { return false; }
+		virtual void Parse() { p.ReportError(EResult::UnknownToken); }
+		virtual void CreateModel(LdrObject*) {}
 	};
 
-	// Base class for objects with a texture
-	struct IObjectCreatorTexture :IObjectCreator
-	{
-		Texture2DPtr m_texture;
-		NuggetProps m_local_mat;
+	#pragma endregion
 
-		IObjectCreatorTexture(ParseParams& p)
+	#pragma region Sprite Objects
+
+	// ELdrObject::Point
+	template <> struct ObjectCreator<ELdrObject::Point> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::PointSprite m_sprite;
+		bool m_per_point_colour;
+
+		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_texture()
-			,m_local_mat()
-		{}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw) {
-			default: return IObjectCreator::ParseKeyword(kw);
-			case EKeyword::Texture:  ParseTexture(p, m_texture); return true;
-			case EKeyword::Video:    ParseVideo(p, m_texture); return true;
-			}
-		}
-		virtual NuggetProps* Material()
-		{
-			// This function is used to pass texture/shader data to the model generated.
-			// Topo and Geom are not used, each model type knows what topo and geom it's using.
-			m_local_mat.m_tex_diffuse = m_texture;
-			//if (m_texture->m_video)
-			//	m_texture->m_video->Play(true);
-			return &m_local_mat;
-		}
-	};
-
-	// Base class of light source objects
-	struct IObjectCreatorLight :IObjectCreator
-	{
-		Light m_light;
-
-		IObjectCreatorLight(ParseParams& p)
-			:IObjectCreator(p)
-			,m_light()
-		{
-			m_light.m_on = true;
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreator::ParseKeyword(kw);
-			case EKeyword::Range:
-				{
-					p.m_reader.SectionStart();
-					p.m_reader.Real(m_light.m_range);
-					p.m_reader.Real(m_light.m_falloff);
-					p.m_reader.SectionEnd();
-					return true;
-				}
-			case EKeyword::Specular:
-				{
-					p.m_reader.SectionStart();
-					p.m_reader.Int(m_light.m_specular.argb, 16);
-					p.m_reader.Real(m_light.m_specular_power);
-					p.m_reader.SectionEnd();
-					return true;
-				}
-			case EKeyword::CastShadow:
-				{
-					p.m_reader.RealS(m_light.m_cast_shadow);
-					return true;
-				}
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Assign the light data as user data
-			obj->m_user_data.get<Light>() = m_light;
-		}
-	};
-
-	// Base class for point sprite objects
-	struct IObjectCreatorPoint :IObjectCreatorTexture
-	{
-		enum class EStyle
-		{
-			Square,
-			Circle,
-			Triangle,
-			Star,
-			Annulus,
-		};
-
-		VCont& m_point;
-		CCont& m_color;
-		bool   m_per_point_colour;
-		EStyle m_style;
-		v2     m_point_size;
-		bool   m_depth;
-
-		IObjectCreatorPoint(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_point(p.m_cache.m_point)
-			,m_color(p.m_cache.m_color)
+			,m_tex()
+			,m_sprite()
 			,m_per_point_colour(false)
-			,m_style(EStyle::Square)
-			,m_point_size()
-			,m_depth(false)
 		{}
-		void Parse() override
-		{
-			pr::v4 pt;
-			p.m_reader.Vector3(pt, 1.0f);
-			m_point.push_back(pt);
-			if (m_per_point_colour)
-			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_color.push_back(col);
-			}
-		}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
 			default:
 				{
-					return IObjectCreatorTexture::ParseKeyword(kw);
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						m_sprite.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
 			case EKeyword::Coloured:
 				{
 					m_per_point_colour = true;
 					return true;
 				}
-			case EKeyword::Width:
-				{
-					p.m_reader.RealS(m_point_size.x);
-					m_point_size.y = m_point_size.x;
-					return true;
-				}
-			case EKeyword::Size:
-				{
-					// Allow one or two dimensions
-					p.m_reader.SectionStart();
-					p.m_reader.Real(m_point_size.x);
-					if (!p.m_reader.IsSectionEnd())
-						p.m_reader.Real(m_point_size.y);
-					else
-						m_point_size.y = m_point_size.x;
-					p.m_reader.SectionEnd();
-					return true;
-				}
-			case EKeyword::Style:
-				{
-					string32 ident;
-					p.m_reader.IdentifierS(ident);
-					switch (HashI(ident.c_str()))
-					{
-					default: p.m_reader.ReportError(pr::script::EResult::UnknownToken); break;
-					case HashI("square"):   m_style = EStyle::Square; break;
-					case HashI("circle"):   m_style = EStyle::Circle; break;
-					case HashI("triangle"): m_style = EStyle::Triangle; break;
-					case HashI("star"):     m_style = EStyle::Star; break;
-					case HashI("annulus"):  m_style = EStyle::Annulus; break;
-					}
-					return true;
-				}
-			case EKeyword::Depth:
-				{
-					m_depth = true;
-					return true;
-				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 pt;
+			p.m_reader.Vector3(pt, 1.0f);
+			m_verts.push_back(pt);
+			
+			if (m_per_point_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_colours.push_back(col);
 			}
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			using namespace pr::rdr;
-
 			// Validate
-			if (m_point.size() < 1)
+			if (m_verts.size() < 1)
 			{
 				p.ReportError(EResult::Failed, pr::FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator<>::Points(p.m_rdr, int(m_point.size()), m_point.data(), int(m_color.size()), m_color.data(), Material());
+			obj->m_model = ModelGenerator<>::Points(p.m_rdr, int(m_verts.size()), m_verts.data(), int(m_colours.size()), m_colours.data(), m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use a geometry shader to draw points
-			if (m_point_size.x != 0 && m_point_size.y != 0)
+			if (m_sprite.m_point_size != v2Zero)
 			{
 				// Get/Create an instance of the point sprites shader
-				auto id = pr::hash::Hash("PointSprites", m_point_size, m_depth);
-				auto shdr = p.m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
-				shdr->m_size = m_point_size;
-				shdr->m_depth = m_depth;
+				auto shdr = PointSpriteShader(p.m_rdr, m_sprite.m_point_size, m_sprite.m_depth);
 
 				// Get/Create the point style texture
-				auto tex = PointStyleTexture(m_style, To<iv2>(m_point_size));
+				auto tex = m_sprite.PointStyleTexture(p);
 
 				// Update the nuggets
 				for (auto& nug : obj->m_model->m_nuggets)
@@ -905,159 +1271,256 @@ namespace pr::ldr
 				}
 			}
 		}
-		Texture2DPtr PointStyleTexture(EStyle style, iv2 const& size)
-		{
-			iv2 sz(PowerOfTwoGreaterThan(size.x), PowerOfTwoGreaterThan(size.y));
-			switch (style)
-			{
-			default: throw std::exception("Unknown point style");
-			case EStyle::Square:
-				{
-					// No texture needed for square style
-					return nullptr;
-				}
-			case EStyle::Circle:
-				{
-					auto id = pr::hash::Hash("PointStyleCircle", sz);
-					return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
-					{
-						auto w0 = sz.x * 0.5f;
-						auto h0 = sz.y * 0.5f;
-						return CreatePointStyleTexture(id, sz, "PointStyleCircle", [=](auto dc, auto fr, auto){ dc->FillEllipse({{w0, h0}, w0, h0}, fr); });
-					});
-				}
-			case EStyle::Triangle:
-				{
-					auto id = pr::hash::Hash("PointStyleTriangle", sz);
-					return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
-					{
-						Renderer::Lock lk(p.m_rdr);
-						D3DPtr<ID2D1PathGeometry> geom;
-						D3DPtr<ID2D1GeometrySink> sink;
-						pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-						pr::Throw(geom->Open(&sink.m_ptr));
-
-						auto w0 = 1.0f * sz.x;
-						auto h0 = 0.5f * sz.y * (float)tan(pr::DegreesToRadians(60.0f));
-						auto h1 = 0.5f * (sz.y - h0);
-
-						sink->BeginFigure({w0, h1}, D2D1_FIGURE_BEGIN_FILLED);
-						sink->AddLine    ({0.0f*w0, h1});
-						sink->AddLine    ({0.5f*w0, h0 + h1});
-						sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-						pr::Throw(sink->Close());
-
-						return CreatePointStyleTexture(id, sz, "PointStyleTriangle", [=](auto dc, auto fr, auto){ dc->FillGeometry(geom.get(), fr, nullptr); });
-					});
-				}
-			case EStyle::Star:
-				{
-					auto id = pr::hash::Hash("PointStyleStar", sz);
-					return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
-					{
-						Renderer::Lock lk(p.m_rdr);
-						D3DPtr<ID2D1PathGeometry> geom;
-						D3DPtr<ID2D1GeometrySink> sink;
-						pr::Throw(lk.D2DFactory()->CreatePathGeometry(&geom.m_ptr));
-						pr::Throw(geom->Open(&sink.m_ptr));
-
-						auto w0 = 1.0f * sz.x;
-						auto h0 = 1.0f * sz.y;
-
-						sink->BeginFigure({0.5f*w0, 0.0f*h0}, D2D1_FIGURE_BEGIN_FILLED);
-						sink->AddLine    ({0.4f*w0, 0.4f*h0});
-						sink->AddLine    ({0.0f*w0, 0.5f*h0});
-						sink->AddLine    ({0.4f*w0, 0.6f*h0});
-						sink->AddLine    ({0.5f*w0, 1.0f*h0});
-						sink->AddLine    ({0.6f*w0, 0.6f*h0});
-						sink->AddLine    ({1.0f*w0, 0.5f*h0});
-						sink->AddLine    ({0.6f*w0, 0.4f*h0});
-						sink->EndFigure(D2D1_FIGURE_END_CLOSED);
-						pr::Throw(sink->Close());
-
-						return CreatePointStyleTexture(id, sz, "PointStyleStar", [=](auto dc, auto fr, auto){ dc->FillGeometry(geom.get(), fr, nullptr); });
-					});
-				}
-			case EStyle::Annulus:
-				{
-					auto id = pr::hash::Hash("PointStyleAnnulus", sz);
-					return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
-					{
-						auto w0 = sz.x * 0.5f;
-						auto h0 = sz.y * 0.5f;
-						auto w1 = sz.x * 0.4f;
-						auto h1 = sz.y * 0.4f;
-						return CreatePointStyleTexture(id, sz, "PointStyleAnnulus", [=](auto dc, auto fr, auto bk)
-						{
-							dc->SetPrimitiveBlend(D2D1_PRIMITIVE_BLEND_COPY);
-							dc->FillEllipse({{w0, h0}, w0, h0}, fr);
-							dc->FillEllipse({{w0, h0}, w1, h1}, bk);
-						});
-					});
-				}
-			}
-		}
-		template <typename TDrawOnIt> Texture2DPtr CreatePointStyleTexture(RdrId id, iv2 const& sz, char const* name, TDrawOnIt draw)
-		{
-			// Create a texture large enough to contain the text, and render the text into it
-			SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
-			Texture2DDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-			tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-			auto tex = p.m_rdr.m_tex_mgr.CreateTexture2D(id, Image(), tdesc, sdesc, false, name);
-
-			// Get a D2D device context to draw on
-			auto dc = tex->GetD2DeviceContext();
-
-			// Create the brushes
-			D3DPtr<ID2D1SolidColorBrush> fr_brush;
-			D3DPtr<ID2D1SolidColorBrush> bk_brush;
-			auto fr = pr::To<D3DCOLORVALUE>(0xFFFFFFFF);
-			auto bk = pr::To<D3DCOLORVALUE>(0x00000000);
-			pr::Throw(dc->CreateSolidColorBrush(fr, &fr_brush.m_ptr));
-			pr::Throw(dc->CreateSolidColorBrush(bk, &bk_brush.m_ptr));
-
-			// Draw the spot
-			dc->BeginDraw();
-			dc->Clear(&bk);
-			draw(dc, fr_brush.get(), bk_brush.get());
-			pr::Throw(dc->EndDraw());
-			return tex;
-		}
 	};
 
-	// Base class for object creators that are based on lines
-	struct IObjectCreatorLine :IObjectCreator
-	{
-		VCont& m_point;
-		ICont& m_index;
-		CCont& m_color;
-		v2     m_dashed;
-		float  m_line_width;
-		bool   m_per_line_colour;
-		bool   m_smooth;
-		bool   m_linestrip;
-		bool   m_linemesh;
+	#pragma endregion
 
-		IObjectCreatorLine(ParseParams& p, bool linestrip, bool linemesh)
+	#pragma region Line Objects
+
+	// ELdrObject::Line
+	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreator
+	{
+		v2 m_dashed;
+		float m_line_width;
+		bool m_per_line_colour;
+
+		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_point(p.m_cache.m_point)
-			,m_index(p.m_cache.m_index)
-			,m_color(p.m_cache.m_color)
-			,m_line_width()
 			,m_dashed(v2XAxis)
+			,m_line_width()
 			,m_per_line_colour()
-			,m_smooth()
-			,m_linestrip(linestrip)
-			,m_linemesh(linemesh)
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-			default: return IObjectCreator::ParseKeyword(kw);
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
 			case EKeyword::Coloured:
 				{
 					m_per_line_colour = true;
+					return true;
+				}
+			case EKeyword::Param:
+				{
+					float t[2];
+					p.m_reader.RealS(t, 2);
+					if (m_verts.size() < 2)
+					{
+						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+					}
+					auto& p0 = m_verts[m_verts.size() - 2];
+					auto& p1 = m_verts[m_verts.size() - 1];
+					auto dir = p1 - p0;
+					auto pt = p0;
+					p0 = pt + t[0] * dir;
+					p1 = pt + t[1] * dir;
+					return true;
+				}
+			case EKeyword::Dashed:
+				{
+					p.m_reader.Vector2S(m_dashed);
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 p0, p1;
+			p.m_reader.Vector3(p0, 1.0f);
+			p.m_reader.Vector3(p1, 1.0f);
+			m_verts.push_back(p0);
+			m_verts.push_back(p1);
+			if (m_per_line_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_colours.push_back(col);
+				m_colours.push_back(col);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.size() < 2)
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Convert lines to dashed lines
+			if (m_dashed != v2XAxis)
+			{
+				// Convert each line segment to dashed lines
+				VCont verts;
+				std::swap(verts, m_verts);
+				DashLineList(verts, m_verts, m_dashed);
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+			}
+		}
+	};
+
+	// ELdrObject::LineD
+	template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreator
+	{
+		v2 m_dashed;
+		float m_line_width;
+		bool m_per_line_colour;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_dashed(v2XAxis)
+			,m_line_width()
+			,m_per_line_colour()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_line_colour = true;
+					return true;
+				}
+			case EKeyword::Param:
+				{
+					float t[2];
+					p.m_reader.RealS(t, 2);
+					if (m_verts.size() < 2)
+					{
+						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+					}
+					auto& p0 = m_verts[m_verts.size() - 2];
+					auto& p1 = m_verts[m_verts.size() - 1];
+					auto dir = p1 - p0;
+					auto pt = p0;
+					p0 = pt + t[0] * dir;
+					p1 = pt + t[1] * dir;
+					return true;
+				}
+			case EKeyword::Dashed:
+				{
+					p.m_reader.Vector2S(m_dashed);
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 p0, p1;
+			p.m_reader.Vector3(p0, 1.0f);
+			p.m_reader.Vector3(p1, 0.0f);
+			m_verts.push_back(p0);
+			m_verts.push_back(p0 + p1);
+			if (m_per_line_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_colours.push_back(col);
+				m_colours.push_back(col);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.size() < 2)
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Convert lines to dashed lines
+			if (m_dashed != v2XAxis)
+			{
+				// Convert each line segment to dashed lines
+				VCont verts;
+				std::swap(verts, m_verts);
+				DashLineList(verts, m_verts, m_dashed);
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+			}
+		}
+	};
+
+	// ELdrObject::LineStrip
+	template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreator
+	{
+		v2 m_dashed;
+		float m_line_width;
+		bool m_per_vert_colour;
+		bool m_smooth;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_dashed(v2XAxis)
+			,m_line_width()
+			,m_per_vert_colour()
+			,m_smooth()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			case EKeyword::Param:
+				{
+					float t[2];
+					p.m_reader.RealS(t, 2);
+					if (m_verts.size() < 2)
+					{
+						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
+					}
+					auto& p0 = m_verts[m_verts.size() - 2];
+					auto& p1 = m_verts[m_verts.size() - 1];
+					auto dir = p1 - p0;
+					auto pt = p0;
+					p0 = pt + t[0] * dir;
+					p1 = pt + t[1] * dir;
 					return true;
 				}
 			case EKeyword::Smooth:
@@ -1075,259 +1538,1564 @@ namespace pr::ldr
 					p.m_reader.RealS(m_line_width);
 					return true;
 				}
-			case EKeyword::Param:
-				{
-					float t[2];
-					p.m_reader.RealS(t, 2);
-					if (m_point.size() < 2)
-					{
-						p.ReportError(EResult::Failed, "No preceding line to apply parametric values to");
-					}
-					auto& p0 = m_point[m_point.size() - 2];
-					auto& p1 = m_point[m_point.size() - 1];
-					auto dir = p1 - p0;
-					auto pt = p0;
-					p0 = pt + t[0] * dir;
-					p1 = pt + t[1] * dir;
-					return true;
-				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 pt;
+			p.m_reader.Vector3(pt, 1.0f);
+			m_verts.push_back(pt);
+				
+			if (m_per_vert_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_colours.push_back(col);
 			}
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			using namespace pr::rdr;
-
-			// Validate
-			if (m_point.size() < 2)
-			{
-				// Allow line strips to have 0 or 1 point because they are a created from
-				// lists of points and treating 0 or 1 as a special case is inconvenient
-				if (m_linestrip) return;
-				p.ReportError(EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+			// Allow line strips to have 0 or 1 point because they are a created from
+			// lists of points and treating 0 or 1 as a special case is inconvenient
+			if (m_verts.size() < 2)
 				return;
-			}
 
 			// Smooth the points
-			if (m_smooth && m_linestrip)
+			if (m_smooth)
 			{
-				VCont points;
-				std::swap(points, m_point);
-				pr::Smooth(points, m_point);
+				VCont verts;
+				std::swap(verts, m_verts);
+				pr::Smooth(verts, m_verts);
 			}
 
 			// Convert lines to dashed lines
+			auto line_strip = true;
 			if (m_dashed != v2XAxis)
 			{
-				VCont points;
-				std::swap(points, m_point);
+				// 'Dashing' a line turns it into a line list
+				VCont verts;
+				std::swap(verts, m_verts);
+				DashLineStrip(verts, m_verts, m_dashed);
+				line_strip = false;
+			}
 
-				if (m_linestrip)
-				{
-					// 'Dashing' a line turns it into a line list
-					DashLineStrip(points, m_point, m_dashed);
-					m_linestrip = false;
-				}
-				else if (!m_linemesh)
-				{
-					// Convert each line segment to dashed lines
-					DashLineList(points, m_point, m_dashed);
-				}
+			// The thick line strip shader uses lineadj which requires an extra first and last vert
+			if (line_strip && m_line_width != 0.0f)
+			{
+				m_verts.insert(std::begin(m_verts), m_verts.front());
+				m_verts.insert(std::end(m_verts), m_verts.back());
 			}
 
 			// Create the model
-			if (m_linemesh)
-			{
-				auto cdata = MeshCreationData()
-					.verts  (m_point.data(), int(m_point.size()))
-					.indices(m_index.data(), int(m_index.size()))
-					.colours(m_color.data(), int(m_color.size()))
-					.nuggets({NuggetProps(m_linestrip ? EPrim::LineStrip : EPrim::LineList, EGeom::Vert|EGeom::Colr)});
-				obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
-			}
-			else if (m_linestrip)
-			{
-				if (m_line_width != 0.0f)
-				{
-					// The thick line strip shader uses lineadj which requires an extra first and last vert
-					m_point.insert(std::begin(m_point), m_point.front());
-					m_point.insert(std::end(m_point), m_point.back());
-				}
-				obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), int(m_color.size()), m_color.data());
-			}
-			else
-			{
-				obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_point.size() / 2), m_point.data(), int(m_color.size()), m_color.data());
-			}
+			obj->m_model = line_strip
+				? ModelGenerator<>::LineStrip(p.m_rdr, int(m_verts.size() - 1), m_verts.data(), int(m_colours.size()), m_colours.data())
+				: ModelGenerator<>::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Use thick lines
 			if (m_line_width != 0.0f)
 			{
-				if (m_linestrip)
-				{
-					// Get or create an instance of the thick line shader
-					auto id = pr::hash::Hash("ThickLineStrip", m_line_width);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
-					shdr->m_width = m_line_width;
-					for (auto& nug : obj->m_model->m_nuggets)
-					{
-						nug.m_topo = EPrim::LineStripAdj;
-						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
-					}
-				}
-				else
-				{
-					// Get or create an instance of the thick line shader
-					auto id = pr::hash::Hash("ThickLineList", m_line_width);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
-					shdr->m_width = m_line_width;
-					for (auto& nug : obj->m_model->m_nuggets)
-					{
-						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
-					}
-				}
-			}
-		}
-		void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
-		{
-			assert(int(in.size()) >= 2);
+				auto shdr = line_strip
+					? ThickLineShaderLS(p.m_rdr, m_line_width)
+					: ThickLineShaderLL(p.m_rdr, m_line_width);
 
-			// Turn the sequence of line segments into a single dashed line
-			auto t = 0.0f;
-			for (int i = 1, iend = int(in.size()); i != iend; ++i)
-			{
-				auto d = in[i] - in[i-1];
-				auto len = Length3(d);
-
-				// Emit dashes over the length of the line segment
-				for (;t < len; t += dash.x + dash.y)
+				for (auto& nug : obj->m_model->m_nuggets)
 				{
-					out.push_back(in[i-1] + d * Clamp(t         , 0.0f, len) / len);
-					out.push_back(in[i-1] + d * Clamp(t + dash.x, 0.0f, len) / len);
-				}
-				t -= len + dash.x + dash.y;
-			}
-		}
-		void DashLineList(VCont const& in, VCont& out, v2 const& dash)
-		{
-			assert(int(in.size()) >= 2 && int(in.size() & 1) == 0);
-
-			// Turn the line list 'in' into dashed lines
-			// Turn the sequence of line segments into a single dashed line
-			for (int i = 0, iend = int(in.size()); i != iend; i += 2)
-			{
-				auto d  = in[i+1] - in[i];
-				auto len = Length3(d);
-
-				// Emit dashes over the length of the line segment
-				for (auto t = 0.0f; t < len; t += dash.x + dash.y)
-				{
-					out.push_back(in[i] + d * Clamp(t, 0.0f, len) / len);
-					out.push_back(in[i] + d * Clamp(t + dash.x, 0.0f, len) / len);
+					nug.m_topo = line_strip ? EPrim::LineStripAdj : EPrim::LineList;
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
 			}
 		}
 	};
 
-	// Base class for object creators that are based on 2d shapes
-	struct IObjectCreatorShape2d :IObjectCreatorTexture
+	// ELdrObject::LineBox
+	template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreator
 	{
-		AxisId m_axis_id;
-		v4     m_dim;
-		int    m_facets;
-		bool   m_solid;
+		v2 m_dashed;
+		float m_line_width;
 
-		IObjectCreatorShape2d(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_axis_id(AxisId::PosZ)
-			,m_dim()
-			,m_facets(40)
-			,m_solid(false)
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_dashed(v2XAxis)
+			,m_line_width()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
-			case EKeyword::Solid:  m_solid = true; return true;
-			case EKeyword::Facets: p.m_reader.IntS(m_facets, 10); return true;
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Dashed:
+				{
+					p.m_reader.Vector2S(m_dashed);
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 dim;
+			p.m_reader.Real(dim.x);
+			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.Real(dim.y);
+			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.Real(dim.z);
+			dim *= 0.5f;
+
+			m_verts.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
+			m_verts.push_back(v4(+dim.x, -dim.y, -dim.z, 1.0f));
+			m_verts.push_back(v4(+dim.x, +dim.y, -dim.z, 1.0f));
+			m_verts.push_back(v4(-dim.x, +dim.y, -dim.z, 1.0f));
+			m_verts.push_back(v4(-dim.x, -dim.y, +dim.z, 1.0f));
+			m_verts.push_back(v4(+dim.x, -dim.y, +dim.z, 1.0f));
+			m_verts.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
+			m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
+
+			pr::uint16 idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.empty())
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Convert lines to dashed lines
+			if (m_dashed != v2XAxis)
+			{
+				// Convert each line segment to dashed lines
+				VCont verts;
+				std::swap(verts, m_verts);
+				DashLineList(verts, m_verts, m_dashed);
+			}
+
+			// Create the model
+			auto cdata = MeshCreationData()
+				.verts  (m_verts.data(), int(m_verts.size()))
+				.indices(m_indices.data(), int(m_indices.size()))
+				.colours(m_colours.data(), int(m_colours.size()))
+				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
+			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				// Get or create an instance of the thick line shader
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 			}
 		}
 	};
 
-	// Base class for planar objects
-	struct IObjectCreatorPlane :IObjectCreatorTexture
+	// ELdrObject::Grid
+	template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreator
 	{
-		VCont& m_point;
-		CCont& m_color;
-		bool   m_per_vert_colour;
+		v2 m_dashed;
+		float m_line_width;
 
-		IObjectCreatorPlane(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_point(p.m_cache.m_point)
-			,m_color(p.m_cache.m_color)
-			,m_per_vert_colour()
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_dashed(v2XAxis)
+			,m_line_width()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
-			switch (kw) {
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
-			case EKeyword::Coloured:
-				#pragma region
+			switch (kw)
+			{
+			default:
 				{
-					m_per_vert_colour = true;
+					return
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Dashed:
+				{
+					p.m_reader.Vector2S(m_dashed);
 					return true;
 				}
-				#pragma endregion
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v2 dim, div;
+			p.m_reader.Vector2(dim);
+			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
+				div = dim;
+			else
+				p.m_reader.Vector2(div);
+
+			pr::v2 step = dim / div;
+			for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
+			{
+				m_verts.push_back(v4(i, -dim.y / 2, 0, 1));
+				m_verts.push_back(v4(i, dim.y / 2, 0, 1));
+			}
+			for (float i = -dim.y / 2; i <= dim.y / 2; i += step.y)
+			{
+				m_verts.push_back(v4(-dim.x / 2, i, 0, 1));
+				m_verts.push_back(v4(dim.x / 2, i, 0, 1));
 			}
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			using namespace pr::rdr;
-
 			// Validate
-			if (m_point.empty() || (m_point.size() % 4) != 0)
+			if (m_verts.empty())
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Convert lines to dashed lines
+			if (m_dashed != v2XAxis)
+			{
+				// Convert each line segment to dashed lines
+				VCont verts;
+				std::swap(verts, m_verts);
+				DashLineList(verts, m_verts, m_dashed);
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				// Get or create an instance of the thick line shader
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+			}
+		}
+	};
+
+	// ELdrObject::Spline
+	template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreator
+	{
+		pr::vector<pr::Spline> m_splines;
+		CCont m_spline_colours;
+		float m_line_width;
+		bool m_per_segment_colour;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_splines()
+			,m_spline_colours()
+			,m_line_width()
+			,m_per_segment_colour()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_segment_colour = true;
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::Spline spline;
+			p.m_reader.Vector3(spline.x, 1.0f);
+			p.m_reader.Vector3(spline.y, 1.0f);
+			p.m_reader.Vector3(spline.z, 1.0f);
+			p.m_reader.Vector3(spline.w, 1.0f);
+			m_splines.push_back(spline);
+
+			if (m_per_segment_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_spline_colours.push_back(col);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_splines.empty())
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Generate a line strip for all spline segments (separated using strip-cut indices)
+			auto seg = -1;
+			auto thick = m_line_width != 0.0f;
+			pr::vector<pr::v4, 30, true> raster;
+			for (auto& spline : m_splines)
+			{
+				++seg;
+
+				// Generate points for the spline
+				raster.resize(0);
+				pr::Raster(spline, raster, 30);
+
+				// Check for 16-bit index overflow
+				if (m_verts.size() + raster.size() >= 0xFFFF)
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
+					return;
+				}
+
+				// Add the line strip to the geometry buffers
+				auto vert = uint16(m_verts.size());
+				m_verts.insert(std::end(m_verts), std::begin(raster), std::end(raster));
+
+				{// Indices
+					auto ibeg = m_indices.size();
+					m_indices.reserve(m_indices.size() + raster.size() + (thick ? 2 : 0) + 1);
+
+					// The thick line strip shader uses lineadj which requires an extra first and last vert
+					if (thick) m_indices.push_back_fast(vert);
+
+					auto iend = ibeg + raster.size();
+					for (auto i = ibeg; i != iend; ++i)
+						m_indices.push_back_fast(vert++);
+
+					if (thick) m_indices.push_back_fast(vert);
+					m_indices.push_back_fast(uint16(-1)); // strip-cut
+				}
+
+				// Colours
+				if (m_per_segment_colour)
+				{
+					auto ibeg = m_colours.size();
+					m_colours.reserve(m_colours.size() + raster.size());
+					
+					auto iend = ibeg + raster.size();
+					for (auto i = ibeg; i != iend; ++i)
+						m_colours.push_back_fast(m_spline_colours[seg]);
+				}
+			}
+
+			// Create the model
+			auto cdata = MeshCreationData()
+				.verts  (m_verts.data(), int(m_verts.size()))
+				.indices(m_indices.data(), int(m_indices.size()))
+				.colours(m_colours.data(), int(m_colours.size()))
+				.nuggets({NuggetProps(EPrim::LineStrip, EGeom::Vert|EGeom::Colr)});
+			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (thick)
+			{
+				auto shdr = ThickLineShaderLS(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+				{
+					nug.m_topo = EPrim::LineStripAdj;
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+				}
+			}
+		}
+	};
+
+	// ELdrObject::Arrow
+	template <> struct ObjectCreator<ELdrObject::Arrow> :IObjectCreator
+	{
+		enum EArrowType
+		{
+			Invalid = -1,
+			Line = 0,
+			Fwd = 1 << 0,
+			Back = 1 << 1,
+			FwdBack = Fwd | Back
+		};
+
+		EArrowType m_type;
+		float m_line_width;
+		bool m_per_vert_colour;
+		bool m_smooth;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_type(EArrowType::Invalid)
+			,m_line_width()
+			,m_per_vert_colour()
+			,m_smooth()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			case EKeyword::Smooth:
+				{
+					m_smooth = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			// Expect the arrow type first
+			if (m_type == EArrowType::Invalid)
+			{
+				string32 ty;
+				p.m_reader.Identifier(ty);
+				if      (pr::str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
+				else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
+				else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
+				else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
+				else { p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack"); return; }
+			}
+			else
+			{
+				pr::v4 pt;
+				p.m_reader.Vector3(pt, 1.0f);
+				m_verts.push_back(pt);
+
+				if (m_per_vert_colour)
+				{
+					pr::Colour32 col;
+					p.m_reader.Int(col.argb, 16);
+					m_colours.push_back(col);
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.size() < 2)
+			{
+				p.ReportError(EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Convert the points into a spline if smooth is specified
+			if (m_smooth)
+			{
+				VCont verts;
+				std::swap(verts, m_verts);
+				pr::Smooth(verts, m_verts);
+			}
+
+			pr::geometry::Props props;
+
+			// Colour interpolation iterator
+			auto col = pr::CreateLerpRepeater(m_colours.data(), int(m_colours.size()), int(m_verts.size()), pr::Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+
+			// Model bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+
+			// Generate the model
+			// 'm_point' should contain line strip data
+			ModelGenerator<>::Cache<> cache(int(m_verts.size() + 2), int(m_verts.size() + 2));
+
+			auto v_in  = std::begin(m_verts);
+			auto v_out = std::begin(cache.m_vcont);
+			auto i_out = std::begin(cache.m_icont);
+			pr::Colour32 c = pr::Colour32White;
+			pr::uint16 index = 0;
+
+			// Add the back arrow head geometry (a point)
+			if (m_type & EArrowType::Back)
+			{
+				SetPCN(*v_out++, *v_in, *col, pr::Normalise3(*v_in - *(v_in+1)));
+				*i_out++ = index++;
+			}
+
+			// Add the line strip
+			for (std::size_t i = 0, iend = m_verts.size(); i != iend; ++i)
+			{
+				SetPC(*v_out++, bb(*v_in++), c = cc(*col++));
+				*i_out++ = index++;
+			}
+			
+			// Add the forward arrow head geometry (a point)
+			if (m_type & EArrowType::Fwd)
+			{
+				--v_in;
+				SetPCN(*v_out++, *v_in, c, pr::Normalise3(*v_in - *(v_in-1)));
+				*i_out++ = index++;
+			}
+
+			// Create the model
+			VBufferDesc vb(cache.m_vcont.size(), &cache.m_vcont[0]);
+			IBufferDesc ib(cache.m_icont.size(), &cache.m_icont[0]);
+			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Get instances of the arrow head geometry shader and the thick line shader
+			auto thk_shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+			auto arw_shdr = ArrowHeadShader(p.m_rdr, m_line_width*2);
+
+			// Create nuggets
+			NuggetProps nug;
+			pr::rdr::Range vrange(0,0);
+			pr::rdr::Range irange(0,0);
+			if (m_type & EArrowType::Back)
+			{
+				vrange = pr::rdr::Range(0, 1);
+				irange = pr::rdr::Range(0, 1);
+				nug.m_topo = EPrim::PointList;
+				nug.m_geom = EGeom::Vert|EGeom::Colr;
+				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
+				nug.m_vrange = vrange;
+				nug.m_irange = irange;
+				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
+				obj->m_model->CreateNugget(nug);
+			}
+			{
+				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + m_verts.size());
+				irange = pr::rdr::Range(irange.m_end, irange.m_end + m_verts.size());
+				nug.m_topo = EPrim::LineStrip;
+				nug.m_geom = EGeom::Vert|EGeom::Colr;
+				nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
+				nug.m_vrange = vrange;
+				nug.m_irange = irange;
+				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
+				obj->m_model->CreateNugget(nug);
+			}
+			if (m_type & EArrowType::Fwd)
+			{
+				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + 1);
+				irange = pr::rdr::Range(irange.m_end, irange.m_end + 1);
+				nug.m_topo = EPrim::PointList;
+				nug.m_geom = EGeom::Vert|EGeom::Colr;
+				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
+				nug.m_vrange = vrange;
+				nug.m_irange = irange;
+				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
+				obj->m_model->CreateNugget(nug);
+			}
+		}
+	};
+
+	// ELdrObject::Matrix3x3
+	template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreator
+	{
+		float  m_line_width;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_line_width()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::m4x4 basis;
+			p.m_reader.Matrix3x3(basis.rot);
+
+			pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
+			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
+			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
+
+			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
+			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
+			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.empty())
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Create the model
+			auto cdata = MeshCreationData()
+				.verts(m_verts.data(), int(m_verts.size()))
+				.indices(m_indices.data(), int(m_indices.size()))
+				.colours(m_colours.data(), int(m_colours.size()))
+				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
+			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				// Get or create an instance of the thick line shader
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+			}
+		}
+	};
+
+	// ELdrObject::CoordFrame
+	template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreator
+	{
+		float m_line_width;
+		float m_scale;
+		bool m_rh;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_line_width()
+			,m_scale()
+			,m_rh(true)
+		{
+			pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
+			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
+			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
+
+			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
+			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
+			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
+		}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			case EKeyword::Scale:
+				{
+					p.m_reader.RealS(m_scale);
+					return true;
+				}
+			case EKeyword::LeftHanded:
+				{
+					m_rh = false;
+					return true;
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			if (m_scale != 1.0f)
+			{
+				for (auto& pt : m_verts)
+					pt.xyz *= m_scale;
+			}
+			if (!m_rh)
+			{
+				m_verts[3].xyz = -m_verts[3].xyz;
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Lines(p.m_rdr, int(m_verts.size() / 2), m_verts.data(), int(m_colours.size()), m_colours.data());
+			obj->m_model->m_name = obj->TypeAndName();
+
+			// Use thick lines
+			if (m_line_width != 0.0f)
+			{
+				// Get or create an instance of the thick line shader
+				auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+				for (auto& nug : obj->m_model->m_nuggets)
+					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+			}
+		}
+	};
+
+	#pragma endregion
+
+	#pragma region Shapes2d
+
+	// ELdrObject::Circle
+	template <> struct ObjectCreator<ELdrObject::Circle> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		v2 m_dim;
+		int m_facets;
+		bool m_solid;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_dim()
+			,m_facets(40)
+			,m_solid()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+			case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_dim.x);
+			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
+				m_dim.y = m_dim.x;
+			else
+				p.m_reader.Real(m_dim.y);
+
+			if (Abs(m_dim) != m_dim)
+			{
+				p.ReportError(EResult::InvalidValue, "Circle dimensions contain a negative value");
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// LdrObject::Pie
+	template <> struct ObjectCreator<ELdrObject::Pie> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		v2 m_scale;
+		v2 m_ang;
+		v2 m_rad;
+		int m_facets;
+		bool m_solid;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_scale(v2One)
+			,m_ang()
+			,m_rad()
+			,m_facets(40)
+			,m_solid()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+			case EKeyword::Scale:
+				{
+					p.m_reader.Vector2S(m_scale);
+					return true;
+				}
+			case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Vector2(m_ang);
+			p.m_reader.Vector2(m_rad);
+
+			m_ang.x = pr::DegreesToRadians(m_ang.x);
+			m_ang.y = pr::DegreesToRadians(m_ang.y);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::Pie(p.m_rdr, m_scale.x, m_scale.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Rect
+	template <> struct ObjectCreator<ELdrObject::Rect> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		v2 m_dim;
+		float m_corner_radius;
+		int m_facets;
+		bool m_solid;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_dim()
+			,m_corner_radius()
+			,m_facets(40)
+			,m_solid()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::CornerRadius:
+				{
+					p.m_reader.RealS(m_corner_radius);
+					return true;
+				}
+			case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					m_facets *= 4;
+					return true;
+				}
+			case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_dim.x);
+			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
+				m_dim.y = m_dim.x;
+			else
+				p.m_reader.Real(m_dim.y);
+			m_dim *= 0.5f;
+
+			if (Abs(m_dim) != m_dim)
+			{
+				p.ReportError(EResult::InvalidValue, "Rect dimensions contain a negative value");
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Polygon
+	template <> struct ObjectCreator<ELdrObject::Polygon> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		pr::vector<v2> m_poly;
+		bool m_per_line_colour;
+		bool m_solid;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_poly()
+			,m_per_line_colour(false)
+			,m_solid()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_line_colour = true;
+					return true;
+				}
+			case EKeyword::Solid:
+				{
+					m_solid = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			for (;p.m_reader.IsValue();)
+			{
+				v2 pt;
+				p.m_reader.Vector2(pt);
+				m_poly.push_back(pt);
+
+				if (m_per_line_colour)
+				{
+					Colour32 col;
+					p.m_reader.Int(col.argb, 16);
+					m_colours.push_back(col);
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::Polygon(p.m_rdr, int(m_poly.size()), m_poly.data(), m_solid, int(m_colours.size()), m_colours.data(), m_axis.O2WPtr(), m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	#pragma endregion
+
+	#pragma region Quads
+
+	// ELdrObject::Triangle
+	template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreator
+	{
+		creation::MainAxis m_axis;
+		creation::Textured m_tex;
+		bool m_per_vert_colour;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_axis()
+			,m_tex()
+			,m_per_vert_colour()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 pt[3]; pr::Colour32 col[3];
+			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
+			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
+			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
+			m_verts.push_back(pt[0]);
+			m_verts.push_back(pt[1]);
+			m_verts.push_back(pt[2]);
+			m_verts.push_back(pt[2]); // create a degenerate
+			if (m_per_vert_colour)
+			{
+				m_colours.push_back(col[0]);
+				m_colours.push_back(col[1]);
+				m_colours.push_back(col[2]);
+				m_colours.push_back(col[2]);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.empty() || (m_verts.size() % 4) != 0)
+			{
+				p.ReportError(EResult::Failed, "Object description incomplete");
+				return;
+			}
+
+			// Apply the axis id rotation
+			if (m_axis.RotationNeeded())
+			{
+				for (auto& pt : m_verts)
+					pt = m_axis.O2W() * pt;
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Quad
+	template <> struct ObjectCreator<ELdrObject::Quad> :IObjectCreator
+	{
+		creation::MainAxis m_axis;
+		creation::Textured m_tex;
+		bool m_per_vert_colour;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_axis()
+			,m_tex()
+			,m_per_vert_colour()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 pt[4]; pr::Colour32 col[4];
+			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
+			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
+			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
+			p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].argb, 16));
+			m_verts.push_back(pt[0]);
+			m_verts.push_back(pt[1]);
+			m_verts.push_back(pt[2]);
+			m_verts.push_back(pt[3]);
+			if (m_per_vert_colour)
+			{
+				m_colours.push_back(col[0]);
+				m_colours.push_back(col[1]);
+				m_colours.push_back(col[2]);
+				m_colours.push_back(col[3]);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.empty() || (m_verts.size() % 4) != 0)
+			{
+				p.ReportError(EResult::Failed, "Object description incomplete");
+				return;
+			}
+
+			// Apply the axis id rotation
+			if (m_axis.RotationNeeded())
+			{
+				for (auto& pt : m_verts)
+					pt = m_axis.O2W() * pt;
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Plane
+	template <> struct ObjectCreator<ELdrObject::Plane> :IObjectCreator
+	{
+		creation::Textured m_tex;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
+		void Parse() override
+		{
+			v4 pnt, fwd; float w, h;
+			p.m_reader.Vector3(pnt, 1.0f);
+			p.m_reader.Vector3(fwd, 0.0f);
+			p.m_reader.Real(w);
+			p.m_reader.Real(h);
+
+			fwd = Normalise3(fwd);
+			auto up = Perpendicular(fwd);
+			auto left = Cross3(up, fwd);
+			up *= h * 0.5f;
+			left *= w * 0.5f;
+			m_verts.push_back(pnt - up - left);
+			m_verts.push_back(pnt - up + left);
+			m_verts.push_back(pnt + up - left);
+			m_verts.push_back(pnt + up + left);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_verts.empty() || (m_verts.size() % 4) != 0)
 			{
 				p.ReportError(EResult::Failed, "Object description incomplete");
 				return;
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_point.size() / 4), m_point.data(), int(m_color.size()), m_color.data(), pr::m4x4Identity, Material());
+			obj->m_model = ModelGenerator<>::Quad(p.m_rdr, int(m_verts.size() / 4), m_verts.data(), int(m_colours.size()), m_colours.data(), pr::m4x4Identity, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
 
-	// Base class for arbitrary cuboid shapes
-	struct IObjectCreatorCuboid :IObjectCreatorTexture
+	// ELdrObject::Ribbon
+	template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreator
 	{
-		pr::v4 m_pt[8];
-		pr::m4x4 m_b2w;
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		float m_width;
+		bool m_per_vert_colour;
+		bool m_smooth;
 
-		IObjectCreatorCuboid(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_pt()
-			,m_b2w(m4x4Identity)
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_width(10.0f)
+			,m_per_vert_colour()
+			,m_smooth(false)
 		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_width);
+					return true;
+				}
+			case EKeyword::Smooth:
+				{
+					m_smooth = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			pr::v4 pt;
+			p.m_reader.Vector3(pt, 1.0f);
+			m_verts.push_back(pt);
+
+			if (m_per_vert_colour)
+			{
+				pr::Colour32 col;
+				p.m_reader.Int(col.argb, 16);
+				m_colours.push_back(col);
+			}
+		}
 		void CreateModel(LdrObject* obj) override
 		{
-			obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, Material());
+			// Validate
+			if (m_verts.size() < 2)
+			{
+				p.ReportError(EResult::Failed, "Object description incomplete");
+				return;
+			}
+
+			// Smooth the points
+			if (m_smooth)
+			{
+				VCont verts;
+				std::swap(verts, m_verts);
+				pr::Smooth(verts, m_verts);
+			}
+
+			pr::v4 normal = m_axis.m_align;
+			obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, int(m_verts.size() - 1), m_verts.data(), m_width, 1, &normal, int(m_colours.size()), m_colours.data(), m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
 
-	// Base class for cone shapes
-	struct IObjectCreatorCone :IObjectCreatorTexture
-	{
-		AxisId m_axis_id;
-		v4     m_dim; // x,y = radius, z = height
-		v2     m_scale;
-		int    m_layers;
-		int    m_wedges;
+	#pragma endregion
 
-		IObjectCreatorCone(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_axis_id(AxisId::PosZ)
+	#pragma region Shapes3d
+
+	// ELdrObject::Box
+	template <> struct ObjectCreator<ELdrObject::Box> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		v4 m_dim;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_dim()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_dim.x);
+			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x;
+			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.z); else m_dim.z = m_dim.y;
+			m_dim *= 0.5f;
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Bar
+	template <> struct ObjectCreator<ELdrObject::Bar> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		v4 m_pt0, m_pt1, m_up;
+		float m_width, m_height;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_pt0()
+			,m_pt1()
+			,m_up(v4YAxis)
+			,m_width(0.1f)
+			,m_height(0.1f)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Up:
+				{
+					p.m_reader.Vector3S(m_up, 0.0f);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Vector3(m_pt0, 1.0f);
+			p.m_reader.Vector3(m_pt1, 1.0f);
+			p.m_reader.Real(m_width);
+			if (p.m_reader.IsValue())
+				p.m_reader.Real(m_height);
+			else
+				m_height = m_width;
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			auto dim = v4(m_width, m_height, pr::Length3(m_pt1 - m_pt0), 0.0f) * 0.5f;
+			auto b2w = pr::OriFromDir(m_pt1 - m_pt0, 2, m_up, (m_pt1 + m_pt0) * 0.5f);
+			obj->m_model = ModelGenerator<>::Box(p.m_rdr, dim, b2w, Colour32White, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::BoxList
+	template <> struct ObjectCreator<ELdrObject::BoxList> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		pr::vector<v4,16> m_location;
+		v4 m_dim;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_location()
+			,m_dim()
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
+		void Parse() override
+		{
+			v4 v;
+			p.m_reader.Vector3(v, 1.0f);
+			if (m_dim == pr::v4Zero)
+				m_dim = v.w0();
+			else
+				m_location.push_back(v);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Validate
+			if (m_dim == pr::v4Zero || m_location.size() == 0)
+			{
+				p.ReportError(EResult::Failed, "BoxList object description incomplete");
+				return;
+			}
+			if (Abs(m_dim) != m_dim)
+			{
+				p.ReportError(EResult::InvalidValue, "BoxList box dimensions contain a negative value");
+				return;
+			}
+
+			m_dim *= 0.5f;
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, int(m_location.size()), m_location.data(), m_dim, 0, 0, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::FrustumWH
+	template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		pr::v4 m_pt[8];
+		float m_width, m_height;
+		float m_near, m_far;
+		float m_view_plane;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_pt()
+			,m_width(1.0f)
+			,m_height(1.0f)
+			,m_near(0.0f)
+			,m_far(1.0f)
+			,m_view_plane(1.0f)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::ViewPlaneZ:
+				{
+					p.m_reader.RealS(m_view_plane);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_width);
+			p.m_reader.Real(m_height);
+			p.m_reader.Real(m_near);
+			p.m_reader.Real(m_far);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			float w = m_width  * 0.5f / m_view_plane;
+			float h = m_height * 0.5f / m_view_plane;
+			float n = m_near, f = m_far;
+
+			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
+			m_pt[1] = v4(-n*w, +n*h, n, 1.0f);
+			m_pt[2] = v4(+n*w, -n*h, n, 1.0f);
+			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
+			m_pt[4] = v4(+f*w, -f*h, f, 1.0f);
+			m_pt[5] = v4(+f*w, +f*h, f, 1.0f);
+			m_pt[6] = v4(-f*w, -f*h, f, 1.0f);
+			m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
+
+			obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::FrustumFA
+	template <> struct ObjectCreator<ELdrObject::FrustumFA> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::MainAxis m_axis;
+		pr::v4 m_pt[8];
+		float m_fovY, m_aspect;
+		float m_near, m_far;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_axis()
+			,m_pt()
+			,m_fovY(maths::tau_by_8f)
+			,m_aspect(1.0f)
+			,m_near(0.0f)
+			,m_far(1.0f)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_axis.ParseKeyword(p, kw) ||
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_fovY);
+			p.m_reader.Real(m_aspect);
+			p.m_reader.Real(m_near);
+			p.m_reader.Real(m_far);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Construct pointed down +z, then rotate the points based on axis id
+			float h = Tan(DegreesToRadians(m_fovY * 0.5f));
+			float w = m_aspect * h;
+			float n = m_near, f = m_far;
+			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
+			m_pt[1] = v4(+n*w, -n*h, n, 1.0f);
+			m_pt[2] = v4(-n*w, +n*h, n, 1.0f);
+			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
+			m_pt[4] = v4(-f*w, -f*h, f, 1.0f);
+			m_pt[5] = v4(+f*w, -f*h, f, 1.0f);
+			m_pt[6] = v4(-f*w, +f*h, f, 1.0f);
+			m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
+
+			obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Sphere
+	template <> struct ObjectCreator<ELdrObject::Sphere> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		v4 m_dim;
+		int m_facets;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_dim()
+			,m_facets(3)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Facets:
+				{
+					p.m_reader.IntS(m_facets, 10);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_dim.x);
+			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x; 
+			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.z); else m_dim.z = m_dim.y; 
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_facets, Colour32White, m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::CylinderHR
+	template <> struct ObjectCreator<ELdrObject::CylinderHR> :IObjectCreator
+	{
+		creation::MainAxis m_axis;
+		creation::Textured m_tex;
+		v4 m_dim; // x,y = radius, z = height
+		v2 m_scale;
+		int m_layers;
+		int m_wedges;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_axis()
+			,m_tex()
 			,m_dim()
 			,m_scale(v2One)
 			,m_layers(1)
@@ -1337,55 +3105,336 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
-			case EKeyword::Layers:  p.m_reader.Int(m_layers, 10); return true;
-			case EKeyword::Wedges:  p.m_reader.Int(m_wedges, 10); return true;
-			case EKeyword::Scale:   p.m_reader.Vector2(m_scale); return true;
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Facets:
+				{
+					int facets[2];
+					p.m_reader.IntS(facets, 2, 10);
+					m_layers = facets[0];
+					m_wedges = facets[1];
+					return true;
+				}
+			case EKeyword::Scale:
+				{
+					p.m_reader.Vector2S(m_scale);
+					return true;
+				}
 			}
+		}
+		void Parse() override
+		{
+			p.m_reader.Real(m_dim.z);
+			p.m_reader.Real(m_dim.x);
+			if (p.m_reader.IsValue()) p.m_reader.Real(m_dim.y); else m_dim.y = m_dim.x;
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			m4x4 o2w, *po2w = nullptr;
-			if (m_axis_id != AxisId::PosZ)
-			{
-				o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-				po2w = &o2w;
-			}
-
 			// Create the model
-			obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, po2w, Material());
+			obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, m_axis.O2WPtr(), m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
 
-	// Base class for mesh based objects
-	struct IObjectCreatorMesh :IObjectCreatorTexture
+	// ELdrObject::ConeHA
+	template <> struct ObjectCreator<ELdrObject::ConeHA> :IObjectCreator
 	{
-		VCont& m_verts;
-		ICont& m_indices;
-		NCont& m_normals;
-		CCont& m_colours;
-		TCont& m_texs;
-		GCont& m_nuggets;
-		float m_gen_normals;
+		creation::MainAxis m_axis;
+		creation::Textured m_tex;
+		v4 m_dim; // x,y = radius, z = height
+		v2 m_scale;
+		int m_layers;
+		int m_wedges;
 
-		IObjectCreatorMesh(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_verts  (p.m_cache.m_point)
-			,m_indices(p.m_cache.m_index)
-			,m_normals(p.m_cache.m_norms)
-			,m_colours(p.m_cache.m_color)
-			,m_texs   (p.m_cache.m_texts)
-			,m_nuggets(p.m_cache.m_nugts)
-			,m_gen_normals(-1.0f)
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_axis()
+			,m_tex()
+			,m_dim()
+			,m_scale(v2One)
+			,m_layers(1)
+			,m_wedges(20)
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						m_tex.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Facets:
+				{
+					int facets[2];
+					p.m_reader.IntS(facets, 2, 10);
+					m_layers = facets[0];
+					m_wedges = facets[1];
+					return true;
+				}
+			case EKeyword::Scale:
+				{
+					p.m_reader.Vector2S(m_scale);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			float h0, h1, a;
+			p.m_reader.Real(h0);
+			p.m_reader.Real(h1);
+			p.m_reader.Real(a);
+
+			m_dim.z = h1 - h0;
+			m_dim.x = h0 * Tan(a);
+			m_dim.y = h1 * Tan(a);
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Create the model
+			obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, m_axis.O2WPtr(), m_tex.Material());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Tube
+	template <> struct ObjectCreator<ELdrObject::Tube> :IObjectCreator
+	{
+		enum ECSType
+		{
+			Invalid,
+			Round,
+			Square,
+			CrossSection,
+		};
+
+		ECSType m_type;         // Cross section type
+		pr::vector<v2> m_cs;    // 2d cross section
+		float m_radx, m_rady;   // X,Y radii for implicit cross sections
+		int m_cs_facets;        // The number of divisions for Round cross sections
+		bool m_per_vert_colour; // Colour per vertex
+		bool m_closed;          // True if the tube end caps should be filled in
+		bool m_cs_smooth;       // True if outward normals for the tube are smoothed
+		bool m_smooth;          // True if the extrusion path is smooth
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_type(Invalid)
+			,m_cs()
+			,m_radx()
+			,m_rady()
+			,m_cs_facets(20)
+			,m_per_vert_colour()
+			,m_closed(false)
+			,m_cs_smooth(false)
+			,m_smooth()
+		{}
+		bool ParseKeyword(EKeyword kw)
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Style:
+				{
+					// Expect *Style { cross_section_type <data> }
+					p.m_reader.SectionStart();
+
+					// Determine the cross section type
+					string32 type;
+					p.m_reader.Identifier(type);
+					m_type =
+						str::EqualI(type, "Round") ? ECSType::Round :
+						str::EqualI(type, "Square") ? ECSType::Square :
+						str::EqualI(type, "CrossSection") ? ECSType::CrossSection :
+						ECSType::Invalid;
+
+					// Create the cross section profile based on the style
+					switch (m_type)
+					{
+					default:
+						{
+							p.ReportError(EResult::UnknownValue, FmtS("Cross Section type %s is not supported", type.c_str()));
+							return false;
+						}
+					case ECSType::Round:
+						{
+							// Elliptical cross section, expect 1 or 2 radii to follow
+							p.m_reader.Real(m_radx);
+							if (p.m_reader.IsValue()) p.m_reader.Real(m_rady); else m_rady = m_radx;
+							m_cs_smooth = true;
+							break;
+						}
+					case ECSType::Square:
+						{
+							// Square cross section, expect 1 or 2 radii to follow
+							p.m_reader.Real(m_radx);
+							if (p.m_reader.IsValue()) p.m_reader.Real(m_rady); else m_rady = m_radx;
+							m_cs_smooth = false;
+							break;
+						}
+					case ECSType::CrossSection:
+						{
+							// Create the cross section, expect X,Y pairs
+							for (; p.m_reader.IsValue();)
+							{
+								v2 pt;
+								p.m_reader.Vector2(pt);
+								m_cs.push_back(pt);
+							}
+							break;
+						}
+					}
+
+					// Optional cross section parameters
+					for (EKeyword kw0; p.m_reader.NextKeywordH(kw0);)
+					{
+						switch (kw0)
+						{
+						case EKeyword::Facets:
+							{
+								p.m_reader.IntS(m_cs_facets, 10);
+								break;
+							}
+						case EKeyword::Smooth:
+							{
+								m_cs_smooth = true;
+								break;
+							}
+						}
+					}
+
+					p.m_reader.SectionEnd();
+					return true;
+				}
+			case EKeyword::Coloured:
+				{
+					m_per_vert_colour = true;
+					return true;
+				}
+			case EKeyword::Smooth:
+				{
+					m_smooth = true;
+					return true;
+				}
+			case EKeyword::Closed:
+				{
+					m_closed = true;
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			// Parse the extrusion path
+			v4 pt; Colour32 col;
+			p.m_reader.Vector3(pt, 1.0f);
+			if (m_per_vert_colour)
+				p.m_reader.Int(col.argb, 16);
+				
+			// Ignore degenerates
+			if (m_verts.empty() || !FEql(m_verts.back(), pt))
+			{
+				m_verts.push_back(pt);
+				if (m_per_vert_colour)
+					m_colours.push_back(col);
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// If no cross section or extrusion path is given
+			if (m_verts.empty())
+			{
+				p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
+				return;
+			}
+
+			// Create the cross section for implicit profiles
+			switch (m_type)
+			{
+			default:
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					return;
+				}
+			case ECSType::Round:
+				{
+					for (auto i = 0; i != m_cs_facets; ++i)
+						m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_cs_facets), m_rady * Sin(float(maths::tau) * i / m_cs_facets)));
+					break;
+				}
+			case ECSType::Square:
+				{
+					// Create the cross section
+					m_cs.push_back(v2(-m_radx, -m_rady));
+					m_cs.push_back(v2(+m_radx, -m_rady));
+					m_cs.push_back(v2(+m_radx, +m_rady));
+					m_cs.push_back(v2(-m_radx, +m_rady));
+					break;
+				}
+			case ECSType::CrossSection:
+				{
+					if (m_cs.empty())
+					{
+						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
+						return;
+					}
+					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
+					{
+						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
+						return;
+					}
+					break;
+				}
+			}
+
+			// Smooth the tube centre line
+			if (m_smooth)
+			{
+				VCont verts;
+				std::swap(verts, m_verts);
+				pr::Smooth(verts, m_verts);
+			}
+
+			// Create the model
+			obj->m_model = ModelGenerator<>::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_verts.size()), m_verts.data(), m_closed, m_cs_smooth, int(m_colours.size()), m_colours.data());
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+	};
+
+	// ELdrObject::Mesh
+	template <> struct ObjectCreator<ELdrObject::Mesh> :IObjectCreator
+	{
+		creation::Textured m_tex;
+		creation::GenNorms m_gen_norms;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_gen_norms(-1.0f)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						m_gen_norms.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
 			case EKeyword::Verts:
-				#pragma region
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -1398,9 +3447,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::Normals:
-				#pragma region
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -1413,9 +3460,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::Colours:
-				#pragma region
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -1428,9 +3473,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::TexCoords:
-				#pragma region
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -1443,11 +3486,9 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::Lines:
-				#pragma region
 				{
-					NuggetProps nug = *Material();
+					auto nug = *m_tex.Material();
 					nug.m_topo = EPrim::LineList;
 					nug.m_geom = EGeom::Vert |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
@@ -1474,11 +3515,9 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::Faces:
-				#pragma region
 				{
-					NuggetProps nug = *Material();
+					auto nug = *m_tex.Material();
 					nug.m_topo = EPrim::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
@@ -1509,11 +3548,9 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
-				#pragma endregion
 			case EKeyword::Tetra:
-				#pragma region
 				{
-					NuggetProps nug = *Material();
+					auto nug = *m_tex.Material();
 					nug.m_topo = EPrim::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
@@ -1554,16 +3591,12 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
-				#pragma endregion
-			case EKeyword::GenerateNormals:
-				#pragma region
-				{
-					p.m_reader.RealS(m_gen_normals);
-					m_gen_normals = pr::DegreesToRadians(m_gen_normals);
-					return true;
-				}
-				#pragma endregion
 			}
+		}
+		void Parse() override
+		{
+			// All fields are child keywords
+			p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
 		}
 		void CreateModel(LdrObject* obj) override
 		{
@@ -1610,44 +3643,7 @@ namespace pr::ldr
 			}
 
 			// Generate normals if needed
-			if (m_gen_normals >= 0.0f)
-			{
-				// Can't generate normals per nugget because nuggets may share vertices.
-				// Generate normals for all vertices (verts used by lines only with have zero-normals)
-				m_normals.resize(m_verts.size());
-
-				// Generate normals for the nuggets containing faces
-				for (auto& nug : m_nuggets)
-				{
-					// Not face topology...
-					if (nug.m_topo != EPrim::TriList)
-						continue;
-
-					// Not sure if this works... needs testing
-					auto icount = nug.m_irange.size();
-					auto iptr = m_indices.data() + nug.m_irange.begin();
-					pr::geometry::GenerateNormals(icount, iptr, m_gen_normals,
-						[&](pr::uint16 i)
-						{
-							return m_verts[i];
-						}, 0,
-						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
-						{
-							if (new_idx >= m_verts.size())
-							{
-								m_verts  .resize(new_idx + 1, m_verts[orig_idx]);
-								m_normals.resize(new_idx + 1, m_normals[orig_idx]);
-							}
-							m_normals[new_idx] = norm;
-						},
-						[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
-						{
-							*iptr++ = i0;
-							*iptr++ = i1;
-							*iptr++ = i2;
-						});
-				}
-			}
+			m_gen_norms.Generate(p);
 
 			// Create the model
 			auto cdata = MeshCreationData()
@@ -1662,1182 +3658,57 @@ namespace pr::ldr
 		}
 	};
 
-	#pragma endregion
-
-	#pragma region Sprite Objects
-
-	// ELdrObject::Point
-	template <> struct ObjectCreator<ELdrObject::Point> :IObjectCreatorPoint
+	// ELdrObject::ConvexHull
+	template <> struct ObjectCreator<ELdrObject::ConvexHull> :IObjectCreator
 	{
+		creation::Textured m_tex;
+		creation::GenNorms m_gen_norms;
+
 		ObjectCreator(ParseParams& p)
-			:IObjectCreatorPoint(p)
+			:IObjectCreator(p)
+			,m_tex()
+			,m_gen_norms(0.0f)
 		{}
-	};
-
-	#pragma endregion
-
-	#pragma region Line Objects
-
-	// ELdrObject::Line
-	template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, false)
-		{}
-		void Parse() override
+		bool ParseKeyword(EKeyword kw) override
 		{
-			pr::v4 p0, p1;
-			p.m_reader.Vector3(p0, 1.0f);
-			p.m_reader.Vector3(p1, 1.0f);
-			m_point.push_back(p0);
-			m_point.push_back(p1);
-			if (m_per_line_colour)
+			switch (kw)
 			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_color.push_back(col);
-				m_color.push_back(col);
-			}
-		}
-	};
-
-	// ELdrObject::LineD
-	template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, false)
-		{}
-		void Parse() override
-		{
-			pr::v4 p0, p1;
-			p.m_reader.Vector3(p0, 1.0f);
-			p.m_reader.Vector3(p1, 0.0f);
-			m_point.push_back(p0);
-			m_point.push_back(p0 + p1);
-			if (m_per_line_colour)
-			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_color.push_back(col);
-				m_color.push_back(col);
-			}
-		}
-	};
-
-	// ELdrObject::LineStrip
-	template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, true, false)
-		{}
-		void Parse() override
-		{
-			pr::v4 pt;
-			p.m_reader.Vector3(pt, 1.0f);
-			m_point.push_back(pt);
-				
-			if (m_per_line_colour)
-			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				m_color.push_back(col);
-			}
-		}
-	};
-
-	// ELdrObject::LineBox
-	template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, true)
-		{}
-		void Parse() override
-		{
-			pr::v4 dim;
-			p.m_reader.Real(dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.Real(dim.y);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.Real(dim.z);
-			dim *= 0.5f;
-
-			m_point.push_back(v4(-dim.x, -dim.y, -dim.z, 1.0f));
-			m_point.push_back(v4(+dim.x, -dim.y, -dim.z, 1.0f));
-			m_point.push_back(v4(+dim.x, +dim.y, -dim.z, 1.0f));
-			m_point.push_back(v4(-dim.x, +dim.y, -dim.z, 1.0f));
-			m_point.push_back(v4(-dim.x, -dim.y, +dim.z, 1.0f));
-			m_point.push_back(v4(+dim.x, -dim.y, +dim.z, 1.0f));
-			m_point.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
-			m_point.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
-
-			pr::uint16 idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-			m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
-		}
-	};
-
-	// ELdrObject::Grid
-	template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, false)
-		{}
-		void Parse() override
-		{
-			int axis_id;
-			pr::v2 dim, div;
-			p.m_reader.Int(axis_id, 10);
-			p.m_reader.Vector2(dim);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) div = dim; else p.m_reader.Vector2(div);
-
-			pr::v2 step = dim / div;
-			for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
-			{
-				m_point.push_back(v4(i, -dim.y / 2, 0, 1));
-				m_point.push_back(v4(i, dim.y / 2, 0, 1));
-			}
-			for (float i = -dim.y / 2; i <= dim.y / 2; i += step.y)
-			{
-				m_point.push_back(v4(-dim.x / 2, i, 0, 1));
-				m_point.push_back(v4(dim.x / 2, i, 0, 1));
-			}
-		}
-	};
-
-	// ELdrObject::Spline
-	template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, true, false)
-		{}
-		void Parse() override
-		{
-			pr::Spline spline;
-			p.m_reader.Vector3(spline.x, 1.0f);
-			p.m_reader.Vector3(spline.y, 1.0f);
-			p.m_reader.Vector3(spline.z, 1.0f);
-			p.m_reader.Vector3(spline.w, 1.0f);
-
-			// Generate points for the spline
-			pr::vector<pr::v4, 30, true> raster;
-			pr::Raster(spline, raster, 30);
-			m_point.insert(std::end(m_point), std::begin(raster), std::end(raster));
-
-			if (m_per_line_colour)
-			{
-				pr::Colour32 col;
-				p.m_reader.Int(col.argb, 16);
-				for (size_t i = 0, iend = raster.size(); i != iend; ++i)
-					m_color.push_back(col);
-			}
-		}
-	};
-
-	// ELdrObject::Arrow
-	template <> struct ObjectCreator<ELdrObject::Arrow> :IObjectCreatorLine
-	{
-		enum EArrowType { Invalid = -1, Line = 0, Fwd = 1 << 0, Back = 1 << 1, FwdBack = Fwd | Back };
-		EArrowType m_type;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, true, false)
-			,m_type(EArrowType::Invalid)
-		{}
-		void Parse() override
-		{
-			// If no points read yet, expect the arrow type first
-			if (m_type == EArrowType::Invalid)
-			{
-				string32 ty;
-				p.m_reader.Identifier(ty);
-				if      (pr::str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
-				else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
-				else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
-				else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-				else { p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack"); return; }
-			}
-			else
-			{
-				pr::v4 pt;
-				p.m_reader.Vector3(pt, 1.0f);
-				m_point.push_back(pt);
-
-				if (m_per_line_colour)
+			default:
 				{
-					pr::Colour32 col;
-					p.m_reader.Int(col.argb, 16);
-					m_color.push_back(col);
+					return
+						m_tex.ParseKeyword(p, kw) ||
+						m_gen_norms.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
 				}
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-				
-			// Validate
-			if (m_point.size() < 2)
-			{
-				p.ReportError(EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
-				return;
-			}
-
-			// Convert the points into a spline if smooth is specified
-			if (m_smooth && m_linestrip)
-			{
-				auto point = m_point;
-				m_point.resize(0);
-				pr::Smooth(point, m_point);
-			}
-
-			pr::geometry::Props props;
-
-			// Colour interpolation iterator
-			auto col = pr::CreateLerpRepeater(m_color.data(), int(m_color.size()), int(m_point.size()), pr::Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
-
-			// Model bounding box
-			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
-
-			// Generate the model
-			// 'm_point' should contain line strip data
-			ModelGenerator<>::Cache<> cache(int(m_point.size() + 2), int(m_point.size() + 2));
-
-			auto v_in  = std::begin(m_point);
-			auto v_out = std::begin(cache.m_vcont);
-			auto i_out = std::begin(cache.m_icont);
-			pr::Colour32 c = pr::Colour32White;
-			pr::uint16 index = 0;
-
-			// Add the back arrow head geometry (a point)
-			if (m_type & EArrowType::Back)
-			{
-				SetPCN(*v_out++, *v_in, *col, pr::Normalise3(*v_in - *(v_in+1)));
-				*i_out++ = index++;
-			}
-
-			// Add the line strip
-			for (std::size_t i = 0, iend = m_point.size(); i != iend; ++i)
-			{
-				SetPC(*v_out++, bb(*v_in++), c = cc(*col++));
-				*i_out++ = index++;
-			}
-			
-			// Add the forward arrow head geometry (a point)
-			if (m_type & EArrowType::Fwd)
-			{
-				--v_in;
-				SetPCN(*v_out++, *v_in, c, pr::Normalise3(*v_in - *(v_in-1)));
-				*i_out++ = index++;
-			}
-
-			// Create the model
-			VBufferDesc vb(cache.m_vcont.size(), &cache.m_vcont[0]);
-			IBufferDesc ib(cache.m_icont.size(), &cache.m_icont[0]);
-			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
-			obj->m_model->m_name = obj->TypeAndName();
-
-			// Get instances of the arrow head geometry shader and the thick line shader
-			auto id_thk = pr::hash::Hash("ThickLineList", m_line_width);
-			auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, RdrId(EStockShader::ThickLineListGS));
-			thk_shdr->m_width = m_line_width;
-
-			auto id_arw = pr::hash::Hash("ArrowHead", m_line_width*2);
-			auto arw_shdr = p.m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id_arw, RdrId(EStockShader::ArrowHeadGS));
-			arw_shdr->m_size = m_line_width * 2;
-
-			// Create nuggets
-			NuggetProps nug;
-			pr::rdr::Range vrange(0,0);
-			pr::rdr::Range irange(0,0);
-			if (m_type & EArrowType::Back)
-			{
-				vrange = pr::rdr::Range(0, 1);
-				irange = pr::rdr::Range(0, 1);
-				nug.m_topo = EPrim::PointList;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(nug);
-			}
-			{
-				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + m_point.size());
-				irange = pr::rdr::Range(irange.m_end, irange.m_end + m_point.size());
-				nug.m_topo = EPrim::LineStrip;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
-				obj->m_model->CreateNugget(nug);
-			}
-			if (m_type & EArrowType::Fwd)
-			{
-				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + 1);
-				irange = pr::rdr::Range(irange.m_end, irange.m_end + 1);
-				nug.m_topo = EPrim::PointList;
-				nug.m_geom = EGeom::Vert|EGeom::Colr;
-				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
-				obj->m_model->CreateNugget(nug);
-			}
-		}
-	};
-
-	// ELdrObject::Matrix3x3
-	template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreatorLine
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, true)
-		{}
-		void Parse() override
-		{
-			pr::m4x4 basis;
-			p.m_reader.Matrix3x3(basis.rot);
-
-			pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
-
-			m_point.insert(m_point.end(), pts, pts + PR_COUNTOF(pts));
-			m_color.insert(m_color.end(), col, col + PR_COUNTOF(col));
-			m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
-		}
-	};
-
-	// ELdrObject::CoordFrame
-	template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreatorLine
-	{
-		bool m_rh;
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, true)
-			,m_rh(true)
-		{
-			pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
-			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
-
-			m_point.insert(m_point.end(), pts, pts + PR_COUNTOF(pts));
-			m_color.insert(m_color.end(), col, col + PR_COUNTOF(col));
-			m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreatorLine::ParseKeyword(kw);
-			case EKeyword::LeftHanded: m_rh = false; return true;
-			}
-		}
-		void Parse() override
-		{
-			float scale;
-			p.m_reader.Real(scale);
-			for (auto& pt : m_point)
-				pt.xyz *= scale;
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			if (!m_rh)
-				m_point[3].xyz = -m_point[3].xyz;
-				
-			IObjectCreatorLine::CreateModel(obj);
-		}
-	};
-
-	#pragma endregion
-
-	#pragma region Shapes2d
-
-	// ELdrObject::Circle
-	template <> struct ObjectCreator<ELdrObject::Circle> :IObjectCreatorShape2d
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorShape2d(p)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd())
-				m_dim.y = m_dim.x;
-			else
-				p.m_reader.Real(m_dim.y);
-
-			if (Abs(m_dim) != m_dim)
-			{
-				p.ReportError(EResult::InvalidValue, "Circle dimensions contain a negative value");
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-
-			m4x4 o2w, *po2w = nullptr;
-			if (m_axis_id != AxisId::PosZ)
-			{
-				o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-				po2w = &o2w;
-			}
-
-			// Create the model
-			obj->m_model = ModelGenerator<>::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, po2w, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// LdrObject::Pie
-	template <> struct ObjectCreator<ELdrObject::Pie> :IObjectCreatorShape2d
-	{
-		v2 m_ang;
-		v2 m_rad;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorShape2d(p)
-			,m_ang()
-			,m_rad()
-		{
-			m_dim = v4One;
-		}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Vector2(m_ang);
-			p.m_reader.Vector2(m_rad);
-
-			m_ang.x = pr::DegreesToRadians(m_ang.x);
-			m_ang.y = pr::DegreesToRadians(m_ang.y);
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreatorShape2d::ParseKeyword(kw);
-			case EKeyword::Scale: p.m_reader.Vector2(m_dim.xy); return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-
-			m4x4 o2w, *po2w = nullptr;
-			if (m_axis_id != AxisId::PosZ)
-			{
-				o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-				po2w = &o2w;
-			}
-
-			// Create the model
-			obj->m_model = ModelGenerator<>::Pie(p.m_rdr, m_dim.x, m_dim.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, po2w, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Rect
-	template <> struct ObjectCreator<ELdrObject::Rect> :IObjectCreatorShape2d
-	{
-		float m_corner_radius;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorShape2d(p)
-			,m_corner_radius()
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
-			m_dim *= 0.5f;
-
-			if (Abs(m_dim) != m_dim)
-			{
-				p.ReportError(EResult::InvalidValue, "Rect dimensions contain a negative value");
-			}
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreatorShape2d::ParseKeyword(kw);
-			case EKeyword::CornerRadius: p.m_reader.RealS(m_corner_radius); return true;
-			case EKeyword::Facets:       p.m_reader.IntS(m_facets, 10); m_facets *= 4; return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-			m4x4 o2w, *po2w = nullptr;
-			if (m_axis_id != AxisId::PosZ)
-			{
-				o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-				po2w = &o2w;
-			}
-
-			// Create the model
-			obj->m_model = ModelGenerator<>::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, po2w, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Polygon
-	template <> struct ObjectCreator<ELdrObject::Polygon> :IObjectCreatorShape2d
-	{
-		pr::vector<v2> m_verts;
-		CCont&         m_colours;
-		bool           m_per_line_colour;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorShape2d(p)
-			,m_verts()
-			,m_colours(p.m_cache.m_color)
-			,m_per_line_colour(false)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			for (;p.m_reader.IsValue();)
-			{
-				v2 pt;
-				p.m_reader.Vector2(pt);
-				m_verts.push_back(pt);
-
-				if (m_per_line_colour)
+			case EKeyword::Verts:
 				{
-					Colour32 col;
-					p.m_reader.Int(col.argb, 16);
-					m_colours.push_back(col);
-				}
-			}
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreatorShape2d::ParseKeyword(kw);
-			case EKeyword::Coloured: m_per_line_colour = true; return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-			m4x4 o2w, *po2w = nullptr;
-			if (m_axis_id != AxisId::PosZ)
-			{
-				o2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-				po2w = &o2w;
-			}
-
-			// Create the model
-			obj->m_model = ModelGenerator<>::Polygon(p.m_rdr, int(m_verts.size()), m_verts.data(), m_solid, int(m_colours.size()), m_colours.data(), po2w, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Triangle
-	template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreatorPlane
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorPlane(p)
-		{}
-		void Parse() override
-		{
-			pr::v4 pt[3]; pr::Colour32 col[3];
-			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
-			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
-			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
-			m_point.push_back(pt[0]);
-			m_point.push_back(pt[1]);
-			m_point.push_back(pt[2]);
-			m_point.push_back(pt[2]); // create a degenerate
-			if (m_per_vert_colour)
-			{
-				m_color.push_back(col[0]);
-				m_color.push_back(col[1]);
-				m_color.push_back(col[2]);
-				m_color.push_back(col[2]);
-			}
-		}
-	};
-
-	// ELdrObject::Quad
-	template <> struct ObjectCreator<ELdrObject::Quad> :IObjectCreatorPlane
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorPlane(p)
-		{}
-		void Parse() override
-		{
-			pr::v4 pt[4]; pr::Colour32 col[4];
-			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
-			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
-			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
-			p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].argb, 16));
-			m_point.push_back(pt[0]);
-			m_point.push_back(pt[1]);
-			m_point.push_back(pt[2]);
-			m_point.push_back(pt[3]);
-			if (m_per_vert_colour)
-			{
-				m_color.push_back(col[0]);
-				m_color.push_back(col[1]);
-				m_color.push_back(col[2]);
-				m_color.push_back(col[3]);
-			}
-		}
-	};
-
-	// ELdrObject::Plane
-	template <> struct ObjectCreator<ELdrObject::Plane> :IObjectCreatorPlane
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorPlane(p)
-		{}
-		void Parse() override
-		{
-			v4 pnt, fwd; float w, h;
-			p.m_reader.Vector3(pnt, 1.0f);
-			p.m_reader.Vector3(fwd, 0.0f);
-			p.m_reader.Real(w);
-			p.m_reader.Real(h);
-
-			fwd = Normalise3(fwd);
-			auto up = Perpendicular(fwd);
-			auto left = Cross3(up, fwd);
-			up *= h * 0.5f;
-			left *= w * 0.5f;
-			m_point.push_back(pnt - up - left);
-			m_point.push_back(pnt - up + left);
-			m_point.push_back(pnt + up - left);
-			m_point.push_back(pnt + up + left);
-		}
-	};
-
-	// ELdrObject::Ribbon
-	template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreatorPlane
-	{
-		AxisId m_axis_id;
-		float  m_width;
-		bool   m_smooth;
-		int    m_parm_index;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorPlane(p)
-			,m_axis_id(AxisId::PosZ)
-			,m_width(10.0f)
-			,m_smooth(false)
-			,m_parm_index(0)
-		{}
-		void Parse() override
-		{
-			switch (m_parm_index){
-			case 0: // Axis id
-				p.m_reader.Int(m_axis_id.value, 10);
-				++m_parm_index;
-				break;
-			case 1: // Width
-				p.m_reader.Real(m_width);
-				++m_parm_index;
-				break;
-			case 2: // Points
-				pr::v4 pt;
-				p.m_reader.Vector3(pt, 1.0f);
-				m_point.push_back(pt);
-
-				if (m_per_vert_colour)
-				{
-					pr::Colour32 col;
-					p.m_reader.Int(col.argb, 16);
-					m_color.push_back(col);
-				}
-				break;
-			}
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw){
-			default: return IObjectCreatorPlane::ParseKeyword(kw);
-			case EKeyword::Smooth: m_smooth = true; return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			using namespace pr::rdr;
-
-			// Validate
-			if (m_point.size() < 2)
-			{
-				p.ReportError(EResult::Failed, "Object description incomplete");
-				return;
-			}
-
-			// Smooth the points
-			if (m_smooth)
-			{
-				auto points = m_point;
-				m_point.resize(0);
-				pr::Smooth(points, m_point);
-			}
-
-			pr::v4 normal = m_axis_id;
-			obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), m_width, 1, &normal, int(m_color.size()), m_color.data(), Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	#pragma endregion
-
-	#pragma region Shapes3d
-
-	// ELdrObject::Box
-	template <> struct ObjectCreator<ELdrObject::Box> :IObjectCreatorTexture
-	{
-		v4 m_dim;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_dim()
-		{}
-		void Parse() override
-		{
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
-			m_dim *= 0.5f;
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Create the model
-			obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::BoxLine
-	template <> struct ObjectCreator<ELdrObject::BoxLine> :IObjectCreatorTexture
-	{
-		m4x4 m_b2w;
-		v4 m_dim, m_up;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_b2w()
-			,m_dim()
-			,m_up(v4YAxis)
-		{}
-		void Parse() override
-		{
-			float w = 0.1f, h = 0.1f;
-			v4 s0, s1;
-			p.m_reader.Vector3(s0, 1.0f);
-			p.m_reader.Vector3(s1, 1.0f);
-			p.m_reader.Real(w);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) h = w; else p.m_reader.Real(h);
-			m_dim = v4(w, h, pr::Length3(s1 - s0), 0.0f) * 0.5f;
-			m_b2w = pr::OriFromDir(s1 - s0, 2, m_up, (s1 + s0) * 0.5f);
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw) {
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
-			case EKeyword::Up: p.m_reader.Vector3S(m_up, 0.0f); return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			obj->m_model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, Colour32White, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::BoxList
-	template <> struct ObjectCreator<ELdrObject::BoxList> :IObjectCreatorTexture
-	{
-		pr::vector<v4,16> m_location;
-		v4 m_dim;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_location()
-			,m_dim()
-		{}
-		void Parse() override
-		{
-			v4 v;
-			p.m_reader.Vector3(v, 1.0f);
-			if (m_dim == pr::v4Zero)
-				m_dim = v.w0();
-			else
-				m_location.push_back(v);
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Validate
-			if (m_dim == pr::v4Zero || m_location.size() == 0)
-			{
-				p.ReportError(EResult::Failed, "BoxList object description incomplete");
-				return;
-			}
-			if (Abs(m_dim) != m_dim)
-			{
-				p.ReportError(EResult::InvalidValue, "BoxList box dimensions contain a negative value");
-				return;
-			}
-
-			m_dim *= 0.5f;
-
-			// Create the model
-			obj->m_model = ModelGenerator<>::BoxList(p.m_rdr, int(m_location.size()), m_location.data(), m_dim, 0, 0, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::FrustumWH
-	template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreatorCuboid
-	{
-		float m_width, m_height, m_near, m_far, m_view_plane;
-		AxisId m_axis_id;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorCuboid(p)
-			,m_width(1.0f)
-			,m_height(1.0f)
-			,m_near(0.0f)
-			,m_far(1.0f)
-			,m_view_plane(1.0f)
-			,m_axis_id(AxisId::PosZ)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(m_width);
-			p.m_reader.Real(m_height);
-			p.m_reader.Real(m_near);
-			p.m_reader.Real(m_far);
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw) {
-			default: return IObjectCreatorCuboid::ParseKeyword(kw);
-			case EKeyword::ViewPlaneZ: p.m_reader.RealS(m_view_plane); return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			float w = m_width  * 0.5f / m_view_plane;
-			float h = m_height * 0.5f / m_view_plane;
-			float n = m_near, f = m_far;
-
-			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
-			m_pt[1] = v4(-n*w, +n*h, n, 1.0f);
-			m_pt[2] = v4(+n*w, -n*h, n, 1.0f);
-			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
-			m_pt[4] = v4(+f*w, -f*h, f, 1.0f);
-			m_pt[5] = v4(+f*w, +f*h, f, 1.0f);
-			m_pt[6] = v4(-f*w, -f*h, f, 1.0f);
-			m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
-
-			m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-
-			IObjectCreatorCuboid::CreateModel(obj);
-		}
-	};
-
-	// ELdrObject::FrustumFA
-	template <> struct ObjectCreator<ELdrObject::FrustumFA> :IObjectCreatorCuboid
-	{
-		float m_fovY, m_aspect, m_near, m_far;
-		AxisId m_axis_id;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorCuboid(p)
-			,m_fovY(float(maths::tau_by_8))
-			,m_aspect(1.0f)
-			,m_near(0.0f)
-			,m_far(1.0f)
-			,m_axis_id(AxisId::PosZ)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(m_fovY);
-			p.m_reader.Real(m_aspect);
-			p.m_reader.Real(m_near);
-			p.m_reader.Real(m_far);
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Construct pointed down +z, then rotate the points based on axis id
-			float h = Tan(DegreesToRadians(m_fovY * 0.5f));
-			float w = m_aspect * h;
-			float n = m_near, f = m_far;
-			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
-			m_pt[1] = v4(+n*w, -n*h, n, 1.0f);
-			m_pt[2] = v4(-n*w, +n*h, n, 1.0f);
-			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
-			m_pt[4] = v4(-f*w, -f*h, f, 1.0f);
-			m_pt[5] = v4(+f*w, -f*h, f, 1.0f);
-			m_pt[6] = v4(-f*w, +f*h, f, 1.0f);
-			m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
-
-			m_b2w = m4x4::Transform(AxisId::PosZ, m_axis_id, v4Origin);
-
-			IObjectCreatorCuboid::CreateModel(obj);
-		}
-	};
-
-	// ELdrObject::Sphere
-	template <> struct ObjectCreator<ELdrObject::Sphere> :IObjectCreatorTexture
-	{
-		v4 m_dim;
-		int m_divisions;
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorTexture(p)
-			,m_dim()
-			,m_divisions(3)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw) {
-			default: return IObjectCreatorTexture::ParseKeyword(kw);
-			case EKeyword::Divisions: p.m_reader.Int(m_divisions, 10); return true;
-			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			obj->m_model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, Colour32White, Material());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::CylinderHR
-	template <> struct ObjectCreator<ELdrObject::CylinderHR> :IObjectCreatorCone
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorCone(p)
-		{}
-		void Parse() override
-		{
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(m_dim.z);
-			p.m_reader.Real(m_dim.x);
-			if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
-		}
-	};
-
-	// ELdrObject::ConeHA
-	template <> struct ObjectCreator<ELdrObject::ConeHA> :IObjectCreatorCone
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorCone(p)
-		{}
-		void Parse() override
-		{
-			float h0, h1, a;
-			p.m_reader.Int(m_axis_id.value, 10);
-			p.m_reader.Real(h0);
-			p.m_reader.Real(h1);
-			p.m_reader.Real(a);
-
-			m_dim.z = h1 - h0;
-			m_dim.x = h0 * Tan(a);
-			m_dim.y = h1 * Tan(a);
-		}
-	};
-
-	// ELdrObject::Tube
-	template <> struct ObjectCreator<ELdrObject::Tube> :IObjectCreatorLine
-	{
-		string32       m_type;         // Cross section type
-		pr::vector<v2> m_cs;           // 2d cross section
-		float          m_radx, m_rady; // X,Y radii for implicit cross sections
-		int            m_facets;       // The number of divisions for Round cross sections
-		bool           m_closed;       // True if the tube end caps should be filled in
-		bool           m_smooth_cs;    // True if outward normals for the tube are smoothed
-
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLine(p, false, false)
-			,m_type()
-			,m_cs()
-			,m_radx()
-			,m_rady()
-			,m_facets(20)
-			,m_closed(false)
-			,m_smooth_cs(false)
-		{}
-		void Parse() override
-		{
-			// Parse the extrusion path
-			v4 pt; Colour32 col;
-			p.m_reader.Vector3(pt, 1.0f);
-			if (m_per_line_colour) p.m_reader.Int(col.argb, 16);
-				
-			// Ignore degenerates
-			if (m_point.empty() || !FEql(m_point.back(), pt))
-			{
-				m_point.push_back(pt);
-				if (m_per_line_colour) m_color.push_back(col);
-			}
-		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw)
-			{
-			default: return IObjectCreatorLine::ParseKeyword(kw);
-			case EKeyword::Style:
-				{
-					// Expect *Style { cross_section_type <data> }
+					int r = 1;
 					p.m_reader.SectionStart();
-
-					// Determine the cross section type
-					p.m_reader.Identifier(m_type);
-
-					// Create the cross section profile based on the style
-					if (pr::str::EqualI(m_type, "Round"))
+					for (pr::v4 v; !p.m_reader.IsSectionEnd(); ++r)
 					{
-						// Elliptical cross section, expect 1 or 2 radii to follow
-						p.m_reader.Real(m_radx);
-						if (p.m_reader.IsValue())
-							p.m_reader.Real(m_rady);
-						else
-							m_rady = m_radx;
-
-						m_smooth_cs = true;
+						p.m_reader.Vector3(v, 1.0f);
+						m_verts.push_back(v);
+						if (r % 500 == 0) p.ReportProgress();
 					}
-					else if (pr::str::EqualI(m_type, "Square"))
-					{
-						// Square cross section, expect 1 or 2 radii to follow
-						p.m_reader.Real(m_radx);
-						if (p.m_reader.IsValue())
-							p.m_reader.Real(m_rady);
-						else
-							m_rady = m_radx;
-
-						m_smooth_cs = false;
-					}
-					else if (pr::str::EqualI(m_type, "CrossSection"))
-					{
-						// Create the cross section, expect X,Y pairs
-						for (;p.m_reader.IsValue();)
-						{
-							v2 pt;
-							p.m_reader.Vector2(pt);
-							m_cs.push_back(pt);
-						}
-					}
-					else
-					{
-						p.ReportError(EResult::UnknownValue, FmtS("Cross Section type %s is not supported", m_type.c_str()));
-						//p.m_reader.FindSectionEnd();
-						//m_type.clear();
-					}
-
-					// Optional parameters
-					for (EKeyword kw0; p.m_reader.NextKeywordH(kw0);)
-					{
-						switch (kw0) {
-						case EKeyword::Facets: p.m_reader.IntS(m_facets, 10); break;
-						case EKeyword::Smooth: m_smooth_cs = true; break;
-						}
-					}
-
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Closed:
-				{
-					m_closed = true;
-					return true;
-				}
 			}
-		}
-		void CreateModel(LdrObject* obj) override
-		{
-			// If no cross section or extrusion path is given
-			if (m_point.empty())
-			{
-				p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
-				return;
-			}
-
-			// Create the cross section for implicit profiles
-			if (pr::str::EqualI(m_type, "Round"))
-			{
-				for (auto i = 0; i != m_facets; ++i)
-					m_cs.push_back(v2(m_radx * Cos(float(maths::tau) * i / m_facets), m_rady * Sin(float(maths::tau) * i / m_facets)));
-			}
-			else if (pr::str::EqualI(m_type, "Square"))
-			{
-				// Create the cross section
-				m_cs.push_back(v2(-m_radx, -m_rady));
-				m_cs.push_back(v2(+m_radx, -m_rady));
-				m_cs.push_back(v2(+m_radx, +m_rady));
-				m_cs.push_back(v2(-m_radx, +m_rady));
-			}
-			else if (pr::str::EqualI(m_type, "CrossSection"))
-			{
-				if (m_cs.empty())
-				{
-					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
-					return;
-				}
-				if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
-				{
-					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
-					return;
-				}
-			}
-			else
-			{
-				p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
-				return;
-			}
-
-			// Smooth the tube centre line
-			if (m_smooth)
-			{
-				auto points = m_point;
-				m_point.resize(0);
-				pr::Smooth(points, m_point);
-			}
-
-			obj->m_model = ModelGenerator<>::Extrude(p.m_rdr, int(m_cs.size()), m_cs.data(), int(m_point.size()), m_point.data(), m_closed, m_smooth_cs, int(m_color.size()), m_color.data());
-			obj->m_model->m_name = obj->TypeAndName();
-		}
-	};
-
-	// ELdrObject::Mesh
-	template <> struct ObjectCreator<ELdrObject::Mesh> :IObjectCreatorMesh
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorMesh(p)
-		{}
-		void Parse() override
-		{
-			p.ReportError(EResult::UnknownValue, "Mesh object description invalid");
-		}
-	};
-
-	// ELdrObject::ConvexHull
-	template <> struct ObjectCreator<ELdrObject::ConvexHull> :IObjectCreatorMesh
-	{
-		ObjectCreator(ParseParams& p)
-			:IObjectCreatorMesh(p)
-		{
-			m_gen_normals = 0.0f;
 		}
 		void Parse() override
 		{
+			// All fields are child keywords
 			p.ReportError(EResult::UnknownValue, "Convex hull object description invalid");
 		}
 		void CreateModel(LdrObject* obj) override
 		{
+			// Validate
+			if (m_verts.size() < 2)
+			{
+				p.ReportError(EResult::Failed, "Convex hull object description incomplete. At least 2 vertices required");
+				return;
+			}
+
 			// Allocate space for the face indices
 			m_indices.resize(6 * (m_verts.size() - 2));
 
@@ -2848,12 +3719,24 @@ namespace pr::ldr
 			m_indices.resize(3 * num_faces);
 
 			// Create a nugget for the hull
-			auto nug = *Material();
+			auto nug = *m_tex.Material();
 			nug.m_topo = EPrim::TriList;
 			nug.m_geom = EGeom::Vert;
 			m_nuggets.push_back(nug);
 
-			IObjectCreatorMesh::CreateModel(obj);
+			// Generate normals if needed
+			m_gen_norms.Generate(p);
+
+			// Create the model
+			auto cdata = MeshCreationData()
+				.verts  (m_verts  .data(), int(m_verts  .size()))
+				.indices(m_indices.data(), int(m_indices.size()))
+				.nuggets(m_nuggets.data(), int(m_nuggets.size()))
+				.colours(m_colours.data(), int(m_colours.size()))
+				.normals(m_normals.data(), int(m_normals.size()))
+				.tex    (m_texs   .data(), int(m_texs   .size()));
+			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
+			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
 
@@ -2863,7 +3746,7 @@ namespace pr::ldr
 		using Column = pr::vector<float>;
 		using Table  = pr::vector<Column>;
 
-		AxisId m_axis_id;
+		creation::MainAxis m_axis;
 		Table m_table;
 		CCont m_colours;
 		int m_xcolumn;
@@ -2873,7 +3756,7 @@ namespace pr::ldr
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
-			,m_axis_id(AxisId::PosZ)
+			,m_axis()
 			,m_table()
 			,m_colours()
 			,m_xcolumn(0)
@@ -2881,11 +3764,54 @@ namespace pr::ldr
 			,m_x0()
 			,m_y0()
 		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::YAxis:
+				{
+					m_x0 = 0.0f;
+					p.m_reader.RealS(*m_x0);
+					return true;
+				}
+			case EKeyword::XAxis:
+				{
+					m_y0 = 0.0f;
+					p.m_reader.RealS(*m_y0);
+					return true;
+				}
+			case EKeyword::XColumn:
+				{
+					p.m_reader.IntS(m_xcolumn, 10);
+					return true;
+				}
+			case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_width);
+					return true;
+				}
+			case EKeyword::Colours:
+				{
+					p.m_reader.SectionStart();
+					for (;!p.m_reader.IsSectionEnd();)
+					{
+						Colour32 col;
+						p.m_reader.Int(col.argb, 16);
+						m_colours.push_back(col);
+					}
+					p.m_reader.SectionEnd();
+					return true;
+				}
+			}
+		}
 		void Parse() override
 		{
-			// Read the axis id
-			p.m_reader.Int(m_axis_id.value, 10);
-
 			// Read up to the first non-delimiter. This is the start of the CSV data
 			if (!p.m_reader.IsSectionEnd())
 			{
@@ -2969,46 +3895,6 @@ namespace pr::ldr
 				}
 			}
 		}
-		bool ParseKeyword(EKeyword kw) override
-		{
-			switch (kw) {
-			default: return IObjectCreator::ParseKeyword(kw);
-			case EKeyword::YAxis:
-				{
-					m_x0 = 0.0f;
-					p.m_reader.RealS(*m_x0);
-					return true;
-				}
-			case EKeyword::XAxis:
-				{
-					m_y0 = 0.0f;
-					p.m_reader.RealS(*m_y0);
-					return true;
-				}
-			case EKeyword::XColumn:
-				{
-					p.m_reader.IntS(m_xcolumn, 10);
-					return true;
-				}
-			case EKeyword::Width:
-				{
-					p.m_reader.RealS(m_width);
-					return true;
-				}
-			case EKeyword::Colours:
-				{
-					p.m_reader.SectionStart();
-					for (;!p.m_reader.IsSectionEnd();)
-					{
-						Colour32 col;
-						p.m_reader.Int(col.argb, 16);
-						m_colours.push_back(col);
-					}
-					p.m_reader.SectionEnd();
-					return true;
-				}
-			}
-		}
 		void CreateModel(LdrObject* obj) override
 		{
 			using namespace pr::rdr;
@@ -3026,7 +3912,7 @@ namespace pr::ldr
 			}
 
 			// Get the rotation for axis id
-			auto rot = m3x4::Rotation(AxisId::PosZ, m_axis_id);
+			auto rot = m_axis.O2W().rot;
 
 			// Default colours to use for each column
 			Colour32 const colours[] =
@@ -3077,7 +3963,7 @@ namespace pr::ldr
 					Encompass(yrange, y);
 
 					v4 vert(x, y, 0.0f, 1.0f);
-					verts.push_back(m_axis_id != AxisId::PosZ ? rot * vert : vert);
+					verts.push_back(rot * vert);
 					lines.push_back(static_cast<pr::uint16>(ibase + i));
 					colrs.push_back(colour);
 				}
@@ -3087,9 +3973,7 @@ namespace pr::ldr
 				if (m_width != 0.0f)
 				{
 					// Use thick lines
-					auto id = pr::hash::Hash("ThickLineList", m_width);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
-					shdr->m_width = m_width;
+					auto shdr = ThickLineShaderLL(p.m_rdr, m_width);
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
 				nugts.push_back(nug);
@@ -3145,31 +4029,27 @@ namespace pr::ldr
 		wstring256 m_filepath;
 		m4x4 m_bake;
 		int m_part;
-		float m_gen_normals;
+		creation::GenNorms m_gen_norms;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_filepath()
 			,m_bake(m4x4Identity)
-			,m_gen_normals(-1.0f)
+			,m_gen_norms()
 		{}
-		void Parse() override
-		{
-			p.m_reader.String(m_filepath);
-		}
 		bool ParseKeyword(EKeyword kw) override
 		{
-			switch (kw) {
-			default: return IObjectCreator::ParseKeyword(kw);
+			switch (kw)
+			{
+			default:
+				{
+					return
+						m_gen_norms.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
 			case EKeyword::Part:
 				{
 					p.m_reader.IntS(m_part, 10);
-					return true;
-				}
-			case EKeyword::GenerateNormals:
-				{
-					p.m_reader.RealS(m_gen_normals);
-					m_gen_normals = pr::DegreesToRadians(m_gen_normals);
 					return true;
 				}
 			case EKeyword::BakeTransform:
@@ -3178,6 +4058,10 @@ namespace pr::ldr
 					return true;
 				}
 			}
+		}
+		void Parse() override
+		{
+			p.m_reader.String(m_filepath);
 		}
 		void CreateModel(LdrObject* obj) override
 		{
@@ -3211,7 +4095,7 @@ namespace pr::ldr
 			}
 
 			// Create the model
-			obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
+			obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_norms.m_smoothing_angle);
 			obj->m_model->m_name = obj->TypeAndName();
 		}
 	};
@@ -3221,41 +4105,93 @@ namespace pr::ldr
 	#pragma region Special Objects
 
 	// ELdrObject::DirLight
-	template <> struct ObjectCreator<ELdrObject::DirLight> :IObjectCreatorLight
+	template <> struct ObjectCreator<ELdrObject::DirLight> :IObjectCreator
 	{
+		creation::CastingLight m_cast;
+		Light m_light;
+
 		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLight(p)
-		{}
+			:IObjectCreator(p)
+			,m_cast()
+			,m_light()
+		{
+			m_light.m_on = true;
+		}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_cast.ParseKeyword(p, m_light, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
 		void Parse() override
 		{
 			p.m_reader.Vector3(m_light.m_direction, 0.0f);
 		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Assign the light data as user data
+			obj->m_user_data.get<Light>() = m_light;
+		}
 	};
 
 	// ELdrObject::PointLight
-	template <> struct ObjectCreator<ELdrObject::PointLight> :IObjectCreatorLight
+	template <> struct ObjectCreator<ELdrObject::PointLight> :IObjectCreator
 	{
+		creation::CastingLight m_cast;
+		Light m_light;
+
 		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLight(p)
-		{}
+			:IObjectCreator(p)
+			,m_cast()
+			,m_light()
+		{
+			m_light.m_on = true;
+		}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_cast.ParseKeyword(p, m_light, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
 		void Parse() override
 		{
 			p.m_reader.Vector3(m_light.m_position, 1.0f);
 		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Assign the light data as user data
+			obj->m_user_data.get<Light>() = m_light;
+		}
 	};
 
 	// ELdrObject::SpotLight
-	template <> struct ObjectCreator<ELdrObject::SpotLight> :IObjectCreatorLight
+	template <> struct ObjectCreator<ELdrObject::SpotLight> :IObjectCreator
 	{
+		creation::CastingLight m_cast;
+		Light m_light;
+
 		ObjectCreator(ParseParams& p)
-			:IObjectCreatorLight(p)
+			:IObjectCreator(p)
+			,m_cast()
+			,m_light()
 		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			return
+				m_cast.ParseKeyword(p, m_light, kw) ||
+				IObjectCreator::ParseKeyword(kw);
+		}
 		void Parse() override
 		{
 			p.m_reader.Vector3(m_light.m_position, 1.0f);
 			p.m_reader.Vector3(m_light.m_direction, 0.0f);
 			p.m_reader.Real(m_light.m_inner_angle); // actually in degrees
 			p.m_reader.Real(m_light.m_outer_angle); // actually in degrees
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Assign the light data as user data
+			obj->m_user_data.get<Light>() = m_light;
 		}
 	};
 
@@ -3294,11 +4230,11 @@ namespace pr::ldr
 		};
 		using TextFmtCont = pr::vector<TextFormat>;
 
-		wstring256     m_text;
-		EType          m_type;
-		TextFmtCont    m_fmt;
-		TextLayout     m_layout;
-		AxisId         m_axis_id;
+		wstring256 m_text;
+		EType m_type;
+		TextFmtCont m_fmt;
+		TextLayout m_layout;
+		creation::MainAxis m_axis;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -3306,7 +4242,7 @@ namespace pr::ldr
 			,m_type(EType::Full3D)
 			,m_fmt()
 			,m_layout()
-			,m_axis_id(AxisId::PosZ)
+			,m_axis(AxisId::PosZ)
 		{}
 		void Parse() override
 		{
@@ -3321,7 +4257,12 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default: return IObjectCreator::ParseKeyword(kw);
+			default:
+				{
+					return
+						m_axis.ParseKeyword(p, kw) ||
+						IObjectCreator::ParseKeyword(kw);
+				}
 			case EKeyword::CString:
 				{
 					wstring256 text;
@@ -3398,17 +4339,12 @@ namespace pr::ldr
 					p.m_reader.Vector2S(m_layout.m_dim);
 					return true;
 				}
-			case EKeyword::Axis:
-				{
-					p.m_reader.IntS(m_axis_id.value, 10);
-					return true;
-				}
 			}
 		}
 		void CreateModel(LdrObject* obj) override
 		{
 			// Create a quad containing the text
-			obj->m_model = ModelGenerator<>::Text(p.m_rdr, m_text, m_fmt.data(), int(m_fmt.size()), m_layout, m_axis_id);
+			obj->m_model = ModelGenerator<>::Text(p.m_rdr, m_text, m_fmt.data(), int(m_fmt.size()), m_layout, m_axis.m_align);
 			obj->m_model->m_name = obj->TypeAndName();
 
 			// Create the model
@@ -3510,7 +4446,7 @@ namespace pr::ldr
 		void CreateModel(LdrObject* obj) override
 		{
 			// Locate the model that this is an instance of
-			auto model_key = Hash(obj->m_name.c_str());
+			auto model_key = pr::hash::Hash(obj->m_name.c_str());
 			auto mdl = p.m_models.find(model_key);
 			if (mdl == p.m_models.end())
 			{
@@ -3524,9 +4460,12 @@ namespace pr::ldr
 	#pragma endregion
 
 	// Parse an ldr object of type 'ShapeType'
-	// Note: not using an output iterator style callback because model instancing relies on the map from object to model.
 	template <ELdrObject ShapeType> void Parse(ParseParams& p)
 	{
+		// Notes:
+		//  - Not using an output iterator style callback because model
+		//    instancing relies on the map from object to model.
+
 		// Read the object attributes: name, colour, instance
 		auto attr = ParseAttributes(p.m_reader, ShapeType);
 		auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
@@ -3577,7 +4516,7 @@ namespace pr::ldr
 		creator.CreateModel(obj.get());
 
 		// Add the model and instance to the containers
-		p.m_models[Hash(obj->m_name.c_str())] = obj->m_model;
+		p.m_models[pr::hash::Hash(obj->m_name.c_str())] = obj->m_model;
 		p.m_objects.push_back(obj);
 
 		// Reset the memory pool for the next object
@@ -3618,7 +4557,7 @@ namespace pr::ldr
 		case ELdrObject::Plane:      Parse<ELdrObject::Plane     >(p); break;
 		case ELdrObject::Ribbon:     Parse<ELdrObject::Ribbon    >(p); break;
 		case ELdrObject::Box:        Parse<ELdrObject::Box       >(p); break;
-		case ELdrObject::BoxLine:    Parse<ELdrObject::BoxLine   >(p); break;
+		case ELdrObject::Bar:        Parse<ELdrObject::Bar       >(p); break;
 		case ELdrObject::BoxList:    Parse<ELdrObject::BoxList   >(p); break;
 		case ELdrObject::FrustumWH:  Parse<ELdrObject::FrustumWH >(p); break;
 		case ELdrObject::FrustumFA:  Parse<ELdrObject::FrustumFA >(p); break;
@@ -3897,1109 +4836,6 @@ namespace pr::ldr
 	void Remove(ObjectCont& objects, LdrObject* obj)
 	{
 		pr::erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
-	}
-
-	// Generate a scene that demos the supported object types and modifiers.
-	std::wstring CreateDemoScene()
-	{
-		std::wstring str;
-		str.reserve(4096);
-
-		#pragma region Demo Scene
-
-		// Intro and definitions
-		str.append(L""
-			"//********************************************\n"
-			"// LineDrawer demo scene\n"
-			"//  Copyright (c) Rylogic Ltd 2002\n"
-			"//********************************************\n"
-			"//\n"
-			"//  Syntax:\n"
-			"//    LDraw script (.ldr) expects keywords to be preceeded by a '*' character.\n"
-			"//    The syntax that follows the keyword depends on the particular keyword.\n"
-			"//    Braces, { and }, are used to define Sections which control the nesting of\n"
-			"//    data, and allow the parser to skip unrecognised blocks in the script.\n"
-			"//    The parser supports a C-Style preprocessor to allow macro substitutions\n"
-			"//    and embedding of other code (e.g. C#, lua, etc).\n"
-			"//    Keywords are not case sensitive, however Ldr script in general is.\n"
-			"//\n"
-			"//  Summary:\n"
-			"//		*Keyword                    - keywords are identified by '*' characters\n"
-			"//		{// Section begin           - nesting of objects within sections implies parenting\n"
-			"//			// Line comment         - single line comments\n"
-			"//			/* Block comment */     - block comments\n"
-			"//			#eval{1+2}              - macro expression evaluation\n"
-			"//		}// Section end\n"
-			"//\n"
-			"//		C-style preprocessing\n"
-			"//		#include \"include_file\"   - include other script files\n"
-			"//		#define MACRO subst_text    - define text substitution macros\n"
-			"//		MACRO                       - macro substitution\n"
-			"//		#undef MACRO                - un-defining of macros\n"
-			"//		#ifdef MACRO                - nestable preprocessor controlled sections\n"
-			"//		#elif MACRO\n"
-			"//			#ifndef MACRO\n"
-			"//			#endif\n"
-			"//		#else\n"
-			"//		#endif\n"
-			"//		#lit\n"
-			"//			literal text\n"
-			"//		#end\n"
-			"//		#embedded(lua)\n"
-			"//			--lua code\n"
-			"//		#end\n"
-			"//\n"
-			"//  Definitions:\n"
-			"//    ctx_id - this is a GUID used to identify a source of objects. It allows\n"
-			"//             objects to be added/removed/refreshed in descrete sets.\n"
-			"//    axis_id - is an integer describing an axis number. It must be one\n"
-			"//              of ±1, ±2, ±3 corresponding to ±X, ±Y, ±Z respectively.\n"
-			"//    [field] - fields in square brackets mean optional fields.\n"
-			"//\n"
-			"//  Object Description format:\n"
-			"//       *ObjectType [name] [colour]\n"
-			"//       {\n"
-			"//          ...\n"
-			"//       }\n"
-			"//    The name and colour parameters are optional and have defaults of:\n"
-			"//       name     = 'ObjectType'\n"
-			"//       colour   = FFFFFFFF\n"
-			"\n"
-		);
-
-		// Global flags, commands, includes, cameras, and lights
-		str.append(L""
-			"// Clear existing data.\n"
-			"// Context ids can be listed within a section to clear objects from a specific source.\n"
-			"*Clear /*{ctx_id ...}*/\n"
-			"\n"
-			"// Allow missing includes to be ignored and not cause errors\n"
-			"*AllowMissingIncludes\n"
-			"#include \"missing_file.ldr\"\n"
-			"\n"
-			"// Add an explicit dependency on another file. This is basically the same as an #include except\n"
-			"// the dependent file contents are not added to the script. This is useful for trigger an auto refresh.\n"
-			"#depend \"trigger_update.txt\"\n"
-			"\n"
-			"// A camera section must be at the top level in the script.\n"
-			"// Camera descriptions raise an event immediately after being parsed.\n"
-			"// The application handles this event to set the camera position.\n"
-			"*Camera\n"
-			"{\n"
-			"	// Note: order is important. Camera properties are set in the order declared\n"
-			"	*o2w {*pos{0 0 4}}        // Camera position/orientation within the scene\n"
-			"	*LookAt {0 0 0}           // Optional. Point the camera at {x,y,z} from where it currently is. Sets the focus distance\n"
-			"	//*Align {0 1 0}          // Optional. Lock the camera's up axis to  {x,y,z}\n"
-			"	//*Aspect {1.0}           // Optional. Aspect ratio (w/h). FovY is unchanged, FovX is changed. Default is 1\n"
-			"	//*FovX {45}              // Optional. X field of view (deg). Y field of view is determined by aspect ratio\n"
-			"	//*FovY {45}              // Optional. Y field of view (deg). X field of view is determined by aspect ratio (default 45 deg)\n"
-			"	//*Fov {45 45}            // Optional. {Horizontal,Vertical} field of view (deg). Implies aspect ratio.\n"
-			"	//*Near {0.01}            // Optional. Near clip plane distance\n"
-			"	//*Far {100.0}            // Optional. Far clip plane distance\n"
-			"	//*Orthographic           // Optional. Use an orthographic projection rather than perspective\n"
-			"}\n"
-			"\n"
-			"// Light sources can be top level objects, children of other objects, or contain child objects.\n"
-			"// In some ways they are like a *Group object, they have no geometry of their own but can contain\n"
-			"// objects with geometry.\n"
-			"*DirLight sun FFFF00         // Colour attribute is the colour of the light source\n"
-			"{\n"
-			"	0 -1 -0.3                 // Direction dx,dy,dz (doesn't need to be normalised)\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	*CastShadow {10}          // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w {*pos{5 5 5}}        // Position/orientation of the object\n"
-			"}\n"
-			"*PointLight glow FF00FF\n"
-			"{\n"
-			"	5 5 5                     // Position x,y,z\n"
-			"	*Range {100 0}            // Optional. {range, falloff}. Default is infinite\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	//*CastShadow {10}        // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w{*pos{5 5 5}}\n"
-			"}\n"
-			"*SpotLight spot 00FFFF\n"
-			"{\n"
-			"	3 5 4                     // Position x,y,z\n"
-			"	-1 -1 -1                  // Direction dx,dy,dz (doesn't need to be normalised)\n"
-			"	30 60                     // Inner angle (deg), Outer angle (deg)\n"
-			"	*Range {100 0}            // Optional. {range, falloff}. Default is infinite\n"
-			"	*Specular {FFFFFF 1000}   // Optional. Specular colour and power\n"
-			"	//*CastShadow {10}        // Optional. {range} Shadows are cast from this light source out to range\n"
-			"	*o2w{*pos{5 5 5}}         // Position and orientation (directional lights shine down -z)\n"
-			"}\n"
-			"\n"
-		);
-
-		// Minimal example
-		str.append(L""
-			"// Basic minimal object example:\n"
-			"*Box {1 2 3}\n"
-			"\n"
-		);
-
-		// Object transforms
-		str.append(L""
-			"// An example of applying a transform to an object.\n"
-			"// All objects have an implicit object-to-parent transform that is identity.\n"
-			"// Successive 'o2w' sections pre-multiply this transform for the object.\n"
-			"// Fields within the 'o2w' section are applied in the order they are declared.\n"
-			"*Box transforms_example FF00FF00\n"
-			"{\n"
-			"	2 3 1\n"
-			"	*o2w\n"
-			"	{\n"
-			"		// An empty 'o2w' is equivalent to an identity transform\n"
-			"		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}    // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major\n"
-			"		*M3x3 {1 0 0  0 1 0  0 0 1}                   // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major\n"
-			"		*Pos {0 1 0}                                  // {x y z}\n"
-			"		*Align {3 0 1 0}                              // {axis_id dx dy dz } - direction vector, and axis id to align to that direction\n"
-			"		*Quat {0 #eval{sin(pi/2)} 0 #eval{cos(pi/2)}} // {x y z s} - quaternion\n"
-			"		*QuatPos {0 1 0 0  1 -2 3}                    // {q.x q.y q.z q.s p.x p.y p.z} - quaternion position\n"
-			"		*Rand4x4 {0 1 0 2}                            // {cx cy cz r} - centre position, radius. Random orientation\n"
-			"		*RandPos {0 1 0 2}                            // {cx cy cz r} - centre position, radius\n"
-			"		*RandOri                                      // Randomises the orientation of the current transform\n"
-			"		*Scale {1 1.2 1}                              // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values\n"
-			"		*Normalise                                    // Normalises the lengths of the vectors of the current transform\n"
-			"		*Orthonormalise                               // Normalises the lengths and makes orthogonal the vectors of the current transform\n"
-			"		*Transpose *Transpose                         // Transposes the current transform\n"
-			"		*Inverse *Inverse                             // Inverts the current transform\n"
-			"		*Euler {45 30 60}                             // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw\n"
-			"	}\n"
-			"}\n"
-			"\n"
-		);
-
-		// Object modifiers
-		str.append(L""
-			"// There are a number of object modifiers that can be used to\n"
-			"// control the colour, texture, visibility, and animation of objects.\n"
-			"// These modifiers can be applied to any object (except where noted).\n"
-			"*Box modifiers_example FFFF0000\n"
-			"{\n"
-			"	0.2 0.5 0.4\n"
-			"	*Colour {FFFF00FF}         // Override the base colour of the model\n"
-			"	*ColourMask {FF000000}     // applies: 'child.colour = (obj.base_colour & mask) | (child.base_colour & ~mask)' to all children recursively\n"
-			"	*Reflectivity {0.3}        // Reflectivity (used with environment mapping)\n"
-			"	*RandColour                // Apply a random colour to this object\n"
-			"	*Animation                 // Add simple animation to this object\n"
-			"	{\n"
-			"		*Style PingPong        // Animation style, one of: NoAnimation, PlayOnce, PlayReverse, PingPong, PlayContinuous\n"
-			"		*Period { 1.2 }        // The period of the animation in seconds\n"
-			"		*Velocity { 1 1 1 }    // Linear velocity vector in m/s\n"
-			"		*AngVelocity { 1 0 0 } // Angular velocity vector in rad/s\n"
-			"	}\n"
-			"	*Hidden                  // Object is created in an invisible state\n"
-			"	*Wireframe               // Object is created with wireframe fill mode\n"
-			"	*Texture                 // Texture (only supported on some object types)\n"
-			"	{\n"
-			"		\"#checker\"        // texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)\n"
-			"		*Addr {Clamp Clamp} // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce\n"
-			"		*Filter {Linear}    // Optional filtering of the texture. Options: Point, Linear, Anisotropic\n"
-			"		*Alpha              // Optional. Indicates the texture contains alpha pixels\n"
-			"		*o2w                // Optional 3d texture coord transform\n"
-			"		{\n"
-			"			*Scale{100 100 1}\n"
-			"			*Euler{0 0 90}\n"
-			"		}\n"
-			"	}\n"
-			"	//*ScreenSpace    // The object's '*o2w' transform is interpreted as a screen space position/orientation\n"
-			"	                  // Screen space coordinates are in the volume:\n"
-			"	                  //  (-1,-1, 0) = bottom, left, near plane\n"
-			"	                  //  (+1,+1,-1) = top, right, far plane\n"
-			"	//*NoZWrite       // Don't write to the Z buffer\n"
-			"	//*NoZTest        // Don't depth-text\n"
-			"}\n"
-			"\n"
-		);
-
-		// Instancing
-		str.append(L""
-			"// Model Instancing.\n"
-			"// An instance can be created from any previously defined object.\n"
-			"// The instance will share the renderable model from the object it is an instance of.\n"
-			"// Note that properties of the object are not inherited by the instance.\n"
-			"*Box instancing_example FF0000FF\n"
-			"{\n"
-			"	// 'false' in the object declaration means this model will be created\n"
-			"	// in memory only and not displayed. It can be used for instancing still.\n"
-			"	0.8 1 2\n"
-			"	*RandColour // Note: this will not be inherited by the instances\n"
-			"	*Hidden // Don't show this instance\n"
-			"}\n"
-			"*Instance instancing_example FFFF0000   // The name indicates which model to instance\n"
-			"{\n"
-			"	*o2w {*Pos {5 0 -2}}\n"
-			"}\n"
-			"*Instance instancing_example FF0000FF\n"
-			"{\n"
-			"	*o2w {*Pos {-4 0.5 0.5}}\n"
-			"}\n"
-			"\n"
-		);
-
-		// Nesting
-		str.append(L""
-			"// Object Nesting.\n"
-			"// Nested objects are in the space of their parent so a parent transform is applied to all children.\n"
-			"*Box nesting_example1 80FFFF00\n"
-			"{\n"
-			"	0.4 0.7 0.3\n"
-			"	*o2w {*pos {0 3 0} *randori}\n"
-			"	*ColourMask { FF000000 }              // This colour mask is applied to all child recursively\n"
-			"	*Box nested1_1 FF00FFFF               // Positioned relative to 'nesting_example1'\n"
-			"	{\n"
-			"		0.4 0.7 0.3\n"
-			"		*o2w {*pos {1 0 0} *randori}\n"
-			"		*Box nested1_2 FF00FFFF           // Positioned relative to 'nested1_1'\n"
-			"		{\n"
-			"			0.4 0.7 0.3\n"
-			"			*o2w {*pos {1 0 0} *randori}\n"
-			"			*Box nested1_3 FF00FFFF       // Positioned relative to 'nested1_2'\n"
-			"			{\n"
-			"				0.4 0.7 0.3\n"
-			"				*o2w {*pos {1 0 0} *randori}\n"
-			"			}\n"
-			"		}\n"
-			"	}\n"
-			"}\n"
-			"\n"
-		);
-
-		// Group
-		str.append(L""
-			"// Groups are a special object type that doesn't contain geometry\n"
-			"// but has a coordinate space and child objects.\n"
-			"*Group group\n"
-			"{\n"
-			"	*Wireframe     // Object modifiers applied to groups are applied recursively to children within the group\n"
-			"	*Box b FF00FF00 { 0.4 0.1 0.2 }\n"
-			"	*Sphere s FF0000FF { 0.3 *o2w{*pos{0 1 2}}}\n"
-			"}\n"
-			"\n"
-		);
-
-		// Text
-		str.append(L""
-			"// Text objects are textured quads that contain GDI text.\n"
-			"// There is support for screen space, billboard, and full 3D text objects.\n"
-			"\n"
-			"// Fonts declared at global scope set the default for following objects\n"
-			"// All fields are optional, replacing the default if given.\n"
-			"*Font\n"
-			"{\n"
-			"	*Name {\"tahoma\"} // Font name\n"
-			"	*Size {18}         // Font size (in points)\n"
-			"	*Weight {300}      // Font weight (100 = ultra light, 300 = normal, 900 = heavy)\n"
-			"	*Style {Normal}    // Style. One of: Normal Italic Oblique\n"
-			"	*Stretch {5}       // Stretch. 1 = condensed, 5 = normal, 9 = expanded\n"
-			"	//*Underline       // Underlined text\n"
-			"	//*Strikeout       // Strikethrough text\n"
-			"}\n"
-			"\n"
-			"// Screen space text.\n"
-			"*Text camera_space_text\n"
-			"{\n"
-			"	*ScreenSpace\n"
-			"\n"
-			"	// Text is concatenated, with changes of style applied\n"
-			"	// Text containing multiple lines has the line-end whitespace and indentation tabs removed.\n"
-			"	*Font { *Name {\"Times New Roman\"} *Colour {FF0000FF} *Size{18}}\n"
-			"	\"This is camera space \n"
-			"	text with new lines in it, and \"\n"
-			"	*NewLine\n"
-			"	*Font {*Colour {FF00FF00} *Size{24} *Style{Oblique}}\n"
-			"	\"with varying colours \n"
-			"	and \"\n"
-			"	*Font {*Colour {FFFF0000} *Weight{800} *Style{Italic} *Strikeout}\n"
-			"	\"stiles \"\n"
-			"	*Font {*Colour {FFFFFF00} *Style{Italic} *Underline}\n"
-			"	\"styles \"\n"
-			"\n"
-			"	// The background colour of the quad\n"
-			"	*BackColour {40A0A0A0}\n"
-			"\n"
-			"	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right\n"
-			"	*Anchor { -1 +1 }\n"
-			"\n"
-			"	// Padding between the quad boundary and the text\n"
-			"	*Padding {10 20 10 10}\n"
-			"\n"
-			"	// *o2w is interpreted as a 'text to camera space' transform\n"
-			"	// (-1,-1,0) is the lower left corner on the near plane.\n"
-			"	// (+1,+1,1) is the upper right corner on the far plane.\n"
-			"	// The quad is automatically scaled to make the text unscaled on-screen\n"
-			"	*o2w {*pos{-1, +1, 0}}\n"
-			"}\n"
-			"\n"
-			"// Billboard text always faces the camera and is scaled based on camera distance\n"
-			"*Text billboard_text\n"
-			"{\n"
-			"	*Font {*Colour {FF00FF00}} // Note: Font changes must come before text that uses the font\n"
-			"	\"This is billboard text\"\n"
-			"	*Billboard\n"
-			"\n"
-			"	*Anchor {0 0}\n"
-			"\n"
-			"	// The rotational part of *o2w is ignored, only the 3d position is used\n"
-			"	*o2w {*pos{0,1,0}}\n"
-			"}\n"
-			"\n"
-			"// Texture quad containing text\n"
-			"*Text three_dee_text\n"
-			"{\n"
-			"	*Font {*Name {\"Courier New\"} *Size {40}}\n"
-			"\n"
-			"	// Normal text string, everything between quotes (including new lines)\n"
-			"	\"This is normal\n"
-			"	3D text. \"\n"
-			"\n"
-			"	*CString\n"
-			"	{\n"
-			"		// Text can also be given as a C-Style string that uses escape characters.\n"
-			"		// Everything between matched quotes (including new lines, although\n"
-			"		// indentation tabs are not removed for C-Style strings)\n"
-			"		\"It can even       \n"
-			"		use\\n \\\"C-Style\\\" strings\"\n"
-			"	}\n"
-			"\n"
-			"	*Axis {+3}      // Optional. Set the direction of the quad normal. One of: X = ±1, Y = ±2, Z = ±3\n"
-			"	*Dim {512 128}  // Optional. The size used to determine the layout area\n"
-			"	*Format         // Optional\n"
-			"	{\n"
-			"		Left      // Horizontal alignment. One of: Left, CentreH, Right\n"
-			"		Top       // Vertical Alignment. One of: Top, CentreV, Bottom\n"
-			"		Wrap      // Text wrapping. One of: NoWrap, Wrap, WholeWord, Character, EmergencyBreak\n"
-			"	}\n"
-			"	*BackColour {40000000}\n"
-			"	*o2w {*scale{0.02}}\n"
-			"}\n"
-			"\n"
-		);
-
-		// Objects
-		str.append(L""
-			"// ************************************************************************************\n"
-			"// Objects\n"
-			"// ************************************************************************************\n"
-			"// Below is an example of every supported object type with notes on their syntax.\n"
-			"\n"
-		);
-
-		// Points
-		str.append(L""
-			"// Points ***********************************************\n"
-			"\n"
-			"// A list of points\n"
-			"*Point pts\n"
-			"{\n"
-			"	0 0 0        // x y z point positions\n"
-			"	1 1 1\n"
-			"\n"
-			"	// Using embedded C# to generate points\n"
-			"	#embedded(CSharp)\n"
-			"	var rng = new Random();\n"
-			"	for (int i = 0; i != 100; ++i)\n"
-			"		Out.AppendLine(v4.Random3(1.0f, 1.0f, rng).ToString3());\n"
-			"	#end\n"
-			"\n"
-			"	*Width {20}                // Optional. Specify a size for the point\n"
-			"	*Style { Circle }          // Optional. One of: Square, Circle, Star, .. Requires 'Width'\n"
-			"	*Texture {\"#whitespot\"}    // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.\n"
-			"}\n"
-			"\n"
-		);
-
-		// Lines
-		str.append(L""
-			"// Lines ***********************************************\n"
-			"\n"
-			"// Line modifiers:\n"
-			"//   *Coloured - The lines have an aarrggbb colour after each one. Must occur before line data if used.\n"
-			"//   *Width {w} - Render the lines with the thickness 'w' specified (in pixels).\n"
-			"//   *Param {t0 t1} - Clip/Extend the previous line to the parametric values given.\n"
-			"//   *dashed {on off} - Convert the line to a dashed line with dashes of length 'on' and gaps of length 'off'.\n"
-			"\n"
-			"// A model containing an arbitrary list of line segments\n"
-			"*Line lines\n"
-			"{\n"
-			"	*Coloured                       // Optional. If given means the lines have an aarrggbb colour after each one. Must occur before line data if used\n"
-			"	-2  1  4  2 -3 -1 FFFF00FF      // x0 y0 z0  x1 y1 z1 Start and end points for a line\n"
-			"	+1 -2  4 -1 -3 -1 FF00FFFF\n"
-			"	-2  4  1  4 -3  1 FFFFFF00\n"
-			"}\n"
-			"\n"
-			"// A list of line segments given point and direction\n"
-			"*LineD lineds FF00FF00\n"
-			"{\n"
-			"	//*Coloured            // Optional. *Coloured is valid for all line types\n"
-			"	0  1  0 -1  0  0       // x y z dx dy dz - start and direction for a line\n"
-			"	0  1  0  0  0 -1\n"
-			"	0  1  0  1  0  0\n"
-			"	0  1  0  0  0  1\n"
-			"	*Param {0.2 0.6}       // Optional. Parametric values. Applies to the previous line only\n"
-			"}\n"
-			"\n"
-			"// A model containing a sequence of line segments given by a list of points\n"
-			"*LineStrip linestrip\n"
-			"{\n"
-			"	*Coloured              // Optional.\n"
-			"	0 0 0 FF00FF00         // Colour of the vertex in the line strip\n"
-			"	0 0 1 FF0000FF         // *Param can only be used from the second vertex onwards\n"
-			"	0 1 1 FFFF00FF *Param {0.2 0.4}\n"
-			"	1 1 1 FFFFFF00\n"
-			"	1 1 0 FF00FFFF\n"
-			"	1 0 0 FFFFFFFF\n"
-			"	*Dashed {0.1 0.05}\n"
-			"	*Smooth                // Optional. Turns the line segments into a smooth spline\n"
-			"}\n"
-			"\n"
-			"// A cuboid made from lines\n"
-			"*LineBox linebox\n"
-			"{\n"
-			"	2 4 1 // Width, height, depth. Accepts 1, 2, or 3 dimensions. 1dim = cube, 2 = rod, 3 = arbitrary box\n"
-			"}\n"
-			"\n"
-			"// A grid of lines\n"
-			"*Grid grid FFA08080\n"
-			"{\n"
-			"	3      // axis_id\n"
-			"	4 5    // width, height\n"
-			"	8 10   // Optional, w,h divisions. If omitted defaults to width/height\n"
-			"}\n"
-			"\n"
-			"// A curve described by a start and end point and two control points.\n"
-			"*Spline spline\n"
-			"{\n"
-			"	*Coloured                           // Optional. If specified each spline has an aarrggbb colour after it. Must occur before any spline data if used\n"
-			"	0 0 0  0 0 1  1 0 1  1 0 0 FF00FF00 // p0 p1 p2 p3 - all points are positions\n"
-			"	0 0 0  1 0 0  1 1 0  1 1 1 FFFF0000 // tangents given by p1-p0, p3-p2\n"
-			"	*Width { 4 }                        // Optional line width\n"
-			"}\n"
-			"\n"
-			"// A line with pointy ends\n"
-			"*Arrow arrow FF00FF00\n"
-			"{\n"
-			"	FwdBack                             // Type of  arrow. One of Line, Fwd, Back, or FwdBack\n"
-			"	*Coloured                           // Optional. If specified each line section has an aarrggbb colour after it. Must occur before any point data if used\n"
-			"	-1 -1 -1 FF00FF00                   // Corner points forming a line strip of connected lines\n"
-			"	-2  3  4 FFFF0000                   // Note, colour blends smoothly between each vertex\n"
-			"	+2  0 -2 FFFFFF00\n"
-			"	*Smooth                             // Optional. Turns the line segments into a smooth spline\n"
-			"	*Width { 5 }                        // Optional line width and arrow head size\n"
-			"}\n"
-			"\n"
-		);
-
-		// 2D Shapes
-		str.append(L""
-			"// 2D Shapes ***********************************************\n"
-			"\n"
-			"// A circle or ellipse\n"
-			"*Circle circle\n"
-			"{\n"
-			"	2                                   // Normal direction. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z \n"
-			"	1.6                                 // radius\n"
-			"	*Solid                              // Optional, if omitted then the circle is an outline only\n"
-			"	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour\n"
-			"	//*Facets { 40 }                    // Optional, controls the smoothness of the edge\n"
-			"}\n"
-			"*Circle ellipse\n"
-			"{\n"
-			"	2                                   // Normal direction. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	1.6 0.8                             // radiusx, radiusy\n"
-			"	*Solid                              // Optional, if omitted then the circle is an outline only\n"
-			"	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour\n"
-			"	//*Facets { 40 }                    // Optional, controls the smoothness of the edge\n"
-			"}\n"
-			"\n"
-			"// A pie or wedge\n"
-			"*Pie pie FF00FFFF\n"
-			"{\n"
-			"	2                                  // Normal direction. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	10 45                              // Start angle, End angle in degress (from the 'x' axis). Equal values creates a ring\n"
-			"	0.1 0.7                            // inner radius, outer radius\n"
-			"	*Scale 1.0 0.8                     // Optional. X,Y scale factors\n"
-			"	*Solid                             // Optional, if omitted then the shape is an outline only\n"
-			"	//*Facets { 40 }                   // Optional, controls the smoothness of the inner and outer edges\n"
-			"}\n"
-			"\n"
-			"// A rectangle\n"
-			"*Rect rect FF0000FF\n"
-			"{\n"
-			"	2                                  // Normal direction. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	1.2                                // width\n"
-			"	1.3                                // Optional height. If omitted, height = width\n"
-			"	*Solid                             // Optional, if omitted then the shape is an outline only\n"
-			"	*CornerRadius { 0.2 }              // Optional corner radius for rounded corners\n"
-			"	*Facets { 2 }                      // Optional, controls the smoothness of the corners\n"
-			"}\n"
-			"\n"
-			"// A 2D polygon\n"
-			"*Polygon poly FFFFFFFF\n"
-			"{\n"
-			"	//*Coloured                        // Optional. If specified means each point has a colour (must come first)\n"
-			"	3                                  // Normal direction. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	1.0f, 3.0f                         // A list of 2D points with CCW winding order describing the polygon\n"
-			"	1.4f, 1.7f\n"
-			"	0.4f, 2.0f\n"
-			"	1.5f, 1.2f\n"
-			"	1.0f, 0.0f\n"
-			"	1.7f, 1.0f\n"
-			"	2.5f, 0.5f\n"
-			"	2.0f, 1.5f\n"
-			"	2.0f, 2.0f\n"
-			"	1.5f, 2.5f\n"
-			"	*Solid                             // Optional. Filled polygon\n"
-			"}\n"
-			"\n"
-		);
-
-		// 3D Shapes
-		str.append(L""
-			"// A matrix drawn as a set of three basis vectors (X=red, Y=green, Z=blue)\n"
-			"*Matrix3x3 a2b_transform\n"
-			"{\n"
-			"	1 0 0      // X\n"
-			"	0 1 0      // Y\n"
-			"	0 0 1      // Z\n"
-			"}\n"
-			"\n"
-			"// A set of basis vectors\n"
-			"*CoordFrame a2b\n"
-			"{\n"
-			"	0.1                                // Optional, scale\n"
-			"	*LeftHanded                        // Optional, create a left handed coordinate frame\n"
-			"}\n"
-			"\n"
-			"// A list of triangles\n"
-			"*Triangle triangle FFFFFFFF\n"
-			"{\n"
-			"	*Coloured                          // Optional. If specified means each corner of the triangle has a colour\n"
-			"	-1.5 -1.5 0 FFFF0000               // Three corner points of the triangle\n"
-			"	+1.5 -1.5 0 FF00FF00\n"
-			"	+0.0  1.5 0 FF0000FF\n"
-			"	*Texture {\"#checker\"}              // Optional texture\n"
-			"	*o2w {*randpos{0 0 0 2}}\n"
-			"}\n"
-			"\n"
-			"// A quad given by 4 corner points\n"
-			"*Quad quad FFFFFFFF\n"
-			"{\n"
-			"	*Coloured                     // Optional. If specified means each corner of the quad has a colour\n"
-			"	-1.5 -1.5 0 FFFF0000          // Four corner points of the quad\n"
-			"	+1.5 -1.5 0 FF00FF00          // Corner order should be 'S' layout\n"
-			"	-1.5  1.5 0 FF0000FF          // i.e.\n"
-			"	+1.5  1.5 0 FFFF00FF          //  (-x,-y)  (x,-y)  (-x,y)  (x,y)\n"
-			"	*Texture                      // Optional texture\n"
-			"	{\n"
-			"		\"#checker\"                                // texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)\n"
-			"		*Addr {Clamp Clamp}                       // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce\n"
-			"		*Filter {Linear}                          // Optional filtering of the texture. Options: Point, Linear, Anisotropic\n"
-			"		*o2w { *scale{100 100 1} *euler{0 0 90} } // Optional 3d texture coord transform\n"
-			"	}\n"
-			"	*o2w {*randpos{0 0 0 2}}\n"
-			"}\n"
-			"\n"
-			"// A quad to represent a plane\n"
-			"*Plane plane FF000080\n"
-			"{\n"
-			"	0 -2 -2                 // x y z - centre point of the plane\n"
-			"	1 1 1                   // dx dy dz - forward direction of the plane\n"
-			"	0.5 0.5                 // width, height of the edges of the plane quad\n"
-			"	*Texture {\"#checker\"}   // Optional texture\n"
-			"}\n"
-			"\n"
-			"// A triangle strip of quads following a line\n"
-			"*Ribbon ribbon FF00FFFF\n"
-			"{\n"
-			"	3                     // Axis id. The forward facing axis for the ribbon\n"
-			"	0.1                   // Width (in world space)\n"
-			"	*Coloured             // Optional. If specified means each pair of verts in along the ribbon has a colour\n"
-			"	-1 -2  0 FFFF0000\n"
-			"	-1  3  0 FF00FF00\n"
-			"	+2  0  0 FF0000FF\n"
-			"	*Smooth                     // Optional. Generates a spline through the points\n"
-			"	*Texture{\"#checker\"}        // Optional texture repeated along each quad of the ribbon\n"
-			"	*o2w {*randpos{0 0 0 2} *randori}\n"
-			"}\n"
-			"\n"
-			"// A box\n"
-			"*Box box\n"
-			"{\n"
-			"	0.2 0.5 0.3              // Width, [height], [depth]. Accepts 1, 2, or 3 dimensions. 1=cube, 2=rod, 3=arbitrary box\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// A box between two points with a width and height in the other two directions\n"
-			"*BoxLine boxline\n"
-			"{\n"
-			"	*Up {0 1 0}                       // Optional. Controls the orientation of width and height for the box (must come first if specified)\n"
-			"	0 1 0  1 2 1  0.1 0.15            // x0 y0 z0  x1 y1 z1  width [height]. height = width if omitted\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// A list of boxes all with the same dimensions at the given locations\n"
-			"*BoxList boxlist\n"
-			"{\n"
-			"	+0.4  0.2  0.5 // Box dimensions: width, height, depth.\n"
-			"	-1.0 -1.0 -1.0 // locations: x,y,z\n"
-			"	-1.0  1.0 -1.0\n"
-			"	+1.0 -1.0 -1.0\n"
-			"	+1.0  1.0 -1.0\n"
-			"	-1.0 -1.0  1.0\n"
-			"	-1.0  1.0  1.0\n"
-			"	+1.0 -1.0  1.0\n"
-			"	+1.0  1.0  1.0\n"
-			"}\n"
-			"\n"
-			"// A frustum given by width, height, near plane and far plane.\n"
-			"// Width, Height given at '1' along the z axis by default, unless *ViewPlaneZ is given.\n"
-			"*FrustumWH frustumwh\n"
-			"{\n"
-			"	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	*ViewPlaneZ { 2 }                   // Optional. The distance at which the frustum has dimensions width,height\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// A frustum given by field of view (in Y), aspect ratio, and near and far plane distances.\n"
-			"*FrustumFA frustumfa\n"
-			"{\n"
-			"	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-		);
-		str.append(L""
-			"// A sphere given by radius\n"
-			"*Sphere sphere\n"
-			"{\n"
-			"	0.2                                  // radius\n"
-			"	*Divisions 3                         // Optional. Controls the faceting of the sphere\n"
-			"	*Texture                             // Optional texture\n"
-			"	{\n"
-			"		\"#checker\"\n"
-			"		*Addr {Wrap Wrap}\n"
-			"		*o2w {*scale{10 10 1}}\n"
-			"	}\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"*Sphere ellipsoid\n"
-			"{\n"
-			"	0.2 0.4 0.6                        // xradius [yradius] [zradius]\n"
-			"	*Texture {\"#checker\"}              // Optional texture\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// A cylinder given by axis number, height, and radius\n"
-			"*CylinderHR cylinder\n"
-			"{\n"
-			"	2                                 // Major axis. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	0.6 0.2                           // height, radius\n"
-			"	*Layers 3                         // Optional. Controls the number of divisions along the cylinder major axis\n"
-			"	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cylinder\n"
-			"	*Scale 1.2 0.8                    // Optional. X,Y scale factors\n"
-			"	*Texture {\"#checker\"}             // Optional texture\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"*CylinderHR cone FFFF00FF\n"
-			"{\n"
-			"	2                                 // Major axis. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	0.8 0.5 0                         // height, base radius, [tip radius].\n"
-			"	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis\n"
-			"	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone\n"
-			"	*Scale 1.5 0.4                    // Optional. X,Y scale factors\n"
-			"	*Texture {\"#checker\"}             // Optional texture\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// A cone given by axis number, two heights, and solid angle\n"
-			"*ConeHA coneha FF00FFFF\n"
-			"{\n"
-			"	2                                 // Major axis.  axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	0.1 1.2 0.5                       // tip-to-top distance, tip-to-base distance, solid angle(rad).\n"
-			"	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis\n"
-			"	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone\n"
-			"	*Scale 1 1                        // Optional. X,Y scale factors\n"
-			"	*Texture {\"#checker\"}             // Optional texture\n"
-			"	*o2w{*RandPos{0 0 0 2}} *RandColour\n"
-			"}\n"
-			"\n"
-			"// An extrusion along a path\n"
-			"*Tube tube FFFFFFFF\n"
-			"{\n"
-			"	*Style\n"
-			"	{\n"
-			"		// The cross section type; one of Round, Square, CrossSection\n"
-			"		//Round 0.2 0.3  // Elliptical profile. radius X [radius Y]  \n"
-			"		//Square 0.2 0.3 // Rectangular profile. radius X [radius Y]\n"
-			"		CrossSection     // <list of X,Y pairs> Arbitrary profile\n"
-			"		-0.2 -0.2\n"
-			"		+0.2 -0.2\n"
-			"		+0.05 +0.0\n"
-			"		+0.2 +0.2\n"
-			"		-0.2 +0.2\n"
-			"		-0.05 +0.0\n"
-			"		*Facets { 50 }  // Optional. Used for Round cross section profiles\n"
-			"		//*Smooth       // Optional. Use smooth normals for the walls of the tube\n"
-			"	}\n"
-			"	*Coloured             // Optional. If given means each cross section along the tube has a colour\n"
-			"	0  1  0 FFFF0000\n"
-			"	0  0  1 FF00FF00\n"
-			"	0  1  2 FF0000FF\n"
-			"	1  1  2 FFFF00FF\n"
-			"	*Smooth               // Optional. Generates a spline through the extrusion path\n"
-			"	*Closed               // Optional. Fills in the end caps of the tube\n"
-			"	*o2w{*randpos{0 0 0 2} *randori}\n"
-			"}\n"
-			"\n"
-		);
-		str.append(L""
-			"// A mesh of lines, faces, or tetrahedra.\n"
-			"// Syntax:\n"
-			"//	*Mesh [name] [colour]\n"
-			"//	{\n"
-			"//		*Verts { x y z ... }\n"
-			"//		[*Normals { nx ny nz ... }]                            // One per vertex\n"
-			"//		[*Colours { c0 c1 c2 ... }]                            // One per vertex\n"
-			"//		[*TexCoords { tx ty ... }]                             // One per vertex\n"
-			"//		*Faces { f00 f01 f02  f10 f11 f12  f20 f21 f22  ...}   // Indices of faces\n"
-			"//		*Lines { l00 l01  l10 l11  l20 l21  l30 l31 ...}       // Indices of lines\n"
-			"//		*Tetra { t00 t01 t02 t03  t10 t11 t12 t13 ...}         // Indices of tetrahedra\n"
-			"//		[GenerateNormals]                                      // Only works for faces or tetras\n"
-			"//	}\n"
-			"// Each 'Faces', 'Lines', 'Tetra' block is a sub-model within the mesh\n"
-			"// Vertex, normal, colour, and texture data must be given before faces, lines, or tetra data\n"
-			"// Textures must be defined before faces, lines, or tetra\n"
-			"*Mesh mesh FFFFFF00\n"
-			"{\n"
-			"	*Verts {\n"
-			"	1.087695 -2.175121 0.600000\n"
-			"	1.087695  3.726199 0.600000\n"
-			"	2.899199 -2.175121 0.600000\n"
-			"	2.899199  3.726199 0.600000\n"
-			"	1.087695  3.726199 0.721147\n"
-			"	1.087695 -2.175121 0.721147\n"
-			"	2.899199 -2.175121 0.721147\n"
-			"	2.899199  3.726199 0.721147\n"
-			"	1.087695  3.726199 0.721147\n"
-			"	1.087695  3.726199 0.600000\n"
-			"	1.087695 -2.175121 0.600000\n"
-			"	1.087695 -2.175121 0.721147\n"
-			"	2.730441  3.725990 0.721148\n"
-			"	2.740741 -2.175321 0.721147\n"
-			"	2.740741 -2.175321 0.600000\n"
-			"	2.730441  3.725990 0.600000\n"
-			"	}\n"
-			"	*Faces {\n"
-			"	0,1,2;,  // commas and semicolons treated as whitespace\n"
-			"	3,2,1;,\n"
-			"	4,5,6;,\n"
-			"	6,7,4;,\n"
-			"	8,9,10;,\n"
-			"	8,10,11;,\n"
-			"	12,13,14;,\n"
-			"	14,15,12;;\n"
-			"	}\n"
-			"	*GenerateNormals {30}\n"
-			"}\n"
-			"\n"
-			"// Find the convex hull of a point cloud\n"
-			"*ConvexHull convexhull FFFFFF00\n"
-			"{\n"
-			"	*Verts {\n"
-			"	-0.998  0.127 -0.614\n"
-			"	+0.618  0.170 -0.040\n"
-			"	-0.300  0.792  0.646\n"
-			"	+0.493 -0.652  0.718\n"
-			"	+0.421  0.027 -0.392\n"
-			"	-0.971 -0.818 -0.271\n"
-			"	-0.706 -0.669  0.978\n"
-			"	-0.109 -0.762 -0.991\n"
-			"	-0.983 -0.244  0.063\n"
-			"	+0.142  0.204  0.214\n"
-			"	-0.668  0.326 -0.098\n"
-			"	}\n"
-			"	*RandColour *o2w{*RandPos{0 0 -1 2}}\n"
-			"}\n"
-			"\n"
-			"// Model from a 3D model file.\n"
-			"// Supported formats: *.3ds, *.stl, *.p3d, (so far)\n"
-			"//*Model model_from_file\n"
-			"//{\n"
-			"//	\"filepath\"            // The file to create the model from\n"
-			"//	*Part { n }           // For model formats that contain multiple models, allows a specific sub model to be selected\n"
-			"//	*GenerateNormals {30} // Generate normals for the model (smoothing angle between faces)\n"
-			"//}\n"
-			"\n"
-			"// Create a chart from a table of values.\n"
-			"// Expects text data in a 2D matrix. Plots columns 1,2,3,.. vs. column 0.\n"
-			"*Chart chart\n"
-			"{\n"
-			"	3                 // Axis id. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z\n"
-			"	//#include \"filepath.csv\" // Alternatively, #include a file containing the data:\n"
-			"	index, col1, col2 // Rows containing non-number values are ignored\n"
-			"	0, 10, -10,       // Chart data\n"
-			"	1,  5,   0,\n"
-			"	2,  0,   8,\n"
-			"	3,  2,   5,\n"
-			"	4,  6,  10,       // Trailing blank values are ignored\n"
-			"	// Trailing new lines are ignored\n"
-			"	*XColumn { 0 }    // Optional. Define which column to use as the X axis values (default 0). Use -1 to plot vs. index position\n"
-			"	*XAxis { 2 }      // Optional. Explicit X axis Y intercept\n"
-			"	*YAxis { 0 }      // Optional. Explicit Y axis X intercept\n"
-			"	*Colours          // Optional. Assign colours to each column\n"
-			"	{\n"
-			"		FF00FF00\n"
-			"		FFFF0000\n"
-			"	}\n"
-			"	*Width { 1 }      // Optional. A width for the lines\n"
-			"}\n"
-			"\n"
-		);
-
-		// Embedded code
-		str.append(L""
-			"// Embedded lua code can be used to programmatically generate script\n"
-			"#embedded(lua,support)\n"
-			"	-- Lua code\n"
-			"	-- Between the embedded/end tags, all text is treated as lua code\n"
-			"	-- and passed to the lua interpretter. The 'support' tag indicates\n"
-			"	-- that this block is only adding supporting functions and variables\n"
-			"	function make_box(box_number)\n"
-			"		return \"*box b\"..box_number..\" FFFF0000 { 1 *o2w{*randpos {0 1 0 2}}}\n\"\n"
-			"	end\n"
-			"\n"
-			"	function make_boxes()\n"
-			"		local str = \"\"\n"
-			"		for i = 0,10 do\n"
-			"			str = str..make_box(i)\n"
-			"		end\n"
-			"		return str\n"
-			"	end\n"
-			"#end\n"
-			"\n"
-			"*Group luaboxes1\n"
-			"{\n"
-			"	#embedded(lua) return make_boxes() #end\n"
-			"	*o2w {*pos {-10 0 0}}\n"
-			"}\n"
-			"*Group luaboxes2\n"
-			"{\n"
-			"	#embedded(lua) return make_boxes() #end\n"
-			"	*o2w {*pos {10 0 0}}\n"
-			"}\n"
-			"\n"
-			"// Embedded C# code is also supported in managed applications.\n"
-			"// Embedded CSharp code is constructed as follows:\n"
-			"//	 namespace ldr\n"
-			"//	 {\n"
-			"//	 	public class Main\n"
-			"//	 	{\n"
-			"//	 		private StringBuilder Out = new StringBuilder();\n"
-			"//\n"
-			"//			//The 'Main' object exists for the whole script\n"
-			"//			//successive #embedded(CSharp,support) sections are appended.\n"
-			"//			#embedded(CSharp,support) code added here.\n"
-			"//\n"
-			"//	 		public string Execute()\n"
-			"//	 		{\n"
-			"//				//Each #embedded(CSharp) section replaces the previous one.\n"
-			"//	 			#embedded(CSharp) code added here\n"
-			"//\n"
-			"//				Add to the StringBuilder object 'Out'\n"
-			"//	 			return Out.ToString();\n"
-			"//	 		}\n"
-			"//	 	}\n"
-			"//	 }\n"
-			"#embedded(CSharp,support)\n"
-			"Random m_rng;\n"
-			"public Main()\n"
-			"{\n"
-			"	m_rng = new Random();\n"
-			"}\n"
-			"m4x4 O2W\n"
-			"{\n"
-			"	get { return m4x4.Random4x4(v4.Origin, 2.0f, m_rng); }\n"
-			"}\n"
-			"#end\n"
-			"\n"
-			"*Group csharp_spheres\n"
-			"{\n"
-			"	#embedded(CSharp)\n"
-			"	Out.AppendLine(Ldr.Box(\"CS_Box\", 0xFFFF0080, 0.4f, O2W));\n"
-			"	Log.Info(\"You can also write to the log window (when used in LDraw)\");\n"
-			"	#end\n"
-			"}\n"
-			"\n"
-		);
-
-		#pragma endregion
-		return str;
-	}
-
-	// Return the auto completion templates
-	std::wstring AutoCompleteTemplates()
-	{
-		// Template syntax:
-		//   <~
-		//   *Example [<name>] [<colour>]
-		//   {
-		//      (<x> <y> <z>)
-		//      [*SomeFlag One|Two|Three:sf]
-		//      [*SomethingElse:se:!sf]
-		//      [*o2w {}]
-		//   }
-		//   ~>
-		// Templates are defined between <~ and ~>. White space after <~ and before ~> is ignored.
-		// Template definitions can be nested. Nested templates are only valid within the scope of the parent template.
-		// Templates should be multi-line, users can replace the \n characters with ' ' if needed.
-		// Literal text is text that is required.
-		// Text within <> is a field
-		// Text within [] is optional. [] can also nest.
-		// Text within () is a repeatable section.
-		// | means select one of the identifiers on either side of the bar.
-		// [] can also describe requirements: [text:label:requirements] where:
-		//    text:
-		//      the normal optional field text
-		//    label:
-		//      an identifier to label the optional
-		//    requirements:
-		//      !a = the optional labelled 'a' must be given for this optional to be available
-		//      ^a = the optional labelled 'a' must not be given for this optional to be available
-		//      there can be mutliple requirements, e.g. [text:c:!a^b] = must have 'a', must not have 'b'
-
-		std::wstring str;
-		str.reserve(4096);
-
-		// Modifiers
-		str.append(L""
-			"<~ *Clear {[(<ctx_id>)]} ~>\n"
-			"<~ *AllowMissingIncludes ~>\n"
-			"<~\n"
-			"*Camera\n"
-			"{\n"
-			"	*o2w {}\n"
-			"	[*LookAt {<x> <y> <z>}]\n"
-			"	[*Align {<x> <y> <z>}]\n"
-			"	[*Aspect {<aspect>}]\n"
-			"	[*FovX {<fovx>}]\n"
-			"	[*FovY {<fovy>}]\n"
-			"	[*Fov {<fovx> <fovy>}]\n"
-			"	[*Near {<near>}]\n"
-			"	[*Far {<far>}]\n"
-			"	[*Orthographic]\n"
-			"}\n"
-			"~>\n"
-			"<~\n"
-			"*DirLight [<name>] [<colour>]\n"
-			"{\n"
-			"	<dx> <dy> <dz>\n"
-			"	[*Specular {<colour> <power>}]\n"
-			"	[*CastShadow {<range>}]\n"
-			"	[*o2w {}]\n"
-			"}\n"
-			"~><~\n"
-			"*PointLight [<name>] [<colour>]\n"
-			"{\n"
-			"	<x> <y> <z>\n"
-			"	[*Specular {<colour> <power>}]\n"
-			"	[*Range {<range> <falloff>}]\n"
-			"	[*CastShadow {<range>}]\n"
-			"	[*o2w {}]\n"
-			"}\n"
-			"~><~\n"
-			"*SpotLight [<name>] [<colour>]\n"
-			"{\n"
-			"	<x> <y> <z>\n"
-			"	<dx> <dy> <dz>\n"
-			"	<inner angle deg> <outer angle deg>\n"
-			"	[*Specular {<colour> <power>}]\n"
-			"	[*Range {<range> <falloff>}]\n"
-			"	[*CastShadow {<range>}]\n"
-			"	[*o2w {}]\n"
-			"}\n"
-			"~>\n"
-			"<~\n"
-			"*o2w\n"
-			"{\n"
-			"	[*M4x4 {<xx> <xy> <xz> <xw>  <yx> <yy> <yz> <yw>  <zx> <zy> <zz> <zw>  <wx> <wy> <wz> <ww>}]\n"
-			"	[*M3x3 {<xx> <xy> <xz>  <yx> <yy> <yz>  <zx> <zy> <zz>}]\n"
-			"	[*Pos {<x> <y> <z>}]\n"
-			"	[*Euler {<pitch> <yaw> <roll>}]\n"
-			"	[*Align {<axis_id> <dx> <dy> <dz>}]\n"
-			"	[*Scale {<sx> [<sy> <sz>]}]\n"
-			"	[*Quat {<x> <y> <z> <s>}]\n"
-			"	[*QuatPos {<qx> <qy> <qz> <qs>  <px> <py> <pz>}]\n"
-			"	[*Rand4x4 {<x> <y> <z> <radius>}]\n"
-			"	[*RandPos {<x> <y> <z> <radius>}]\n"
-			"	[*RandOri]\n"
-			"	[*Normalise]\n"
-			"	[*Orthonormalise]\n"
-			"	[*Transpose]\n"
-			"	[*Inverse]\n"
-			"}\n"
-			"~>\n"
-			"<~ *Colour {<colour>} ~>\n"
-			"<~ *ColourMask {<mask>} ~>\n"
-			"<~ *Reflectivity {<amount>} ~>\n"
-			"<~ *RandColour ~>\n"
-			"<~ *Hidden ~>\n"
-			"<~ *Wireframe ~>\n"
-			"<~ *ScreenSpace ~>\n"
-			"<~ *NoZWrite ~>\n"
-			"<~ *NoZTest ~>\n"
-			"<~\n"
-			"*Animation\n"
-			"{\n"
-			"	*Style NoAnimation|PlayOnce|PlayReverse|PingPong|PlayContinuous\n"
-			"	*Period {<seconds>}\n"
-			"	*Velocity {<vx> <vy> <vz>}\n"
-			"	*AngVelocity {<ax> <ay> <az>}\n"
-			"}\n"
-			"~>\n"
-			"<~\n"
-			"*Texture\n"
-			"{\n"
-			"	\"<texture>\"\n"
-			"	[*Addr {Wrap|Mirror|Clamp|Border|MirrorOnce  Wrap|Mirror|Clamp|Border|MirrorOnce}]\n"
-			"	[*Filter {Point|Linear|Anisotropic}]\n"
-			"	[*Alpha]\n"
-			"	[*o2w {}]\n"
-			"}\n"
-			"~>\n"
-			"<~\n"
-			"*Font\n"
-			"{\n"
-			"	[*Name {\"<family>\"}]\n"
-			"	[*Size {<points>}]\n"
-			"	[*Weight {<weight_100_to_900>}]\n"
-			"	[*Style {Normal|Italic|Oblique}]\n"
-			"	[*Stretch {<stretch_1_to_9>}]\n"
-			"	[*Underline]\n"
-			"	[*Strikeout]\n"
-			"}\n"
-			"~>\n"
-		);
-
-		// Objects
-		str.append(L""
-			"<~\n"
-			"*Group [<name>] [<colour>]\n"
-			"{\n"
-			"}\n"
-			"~>\n"
-			"<~\n"
-			"*Point [<name>] [<colour>]\n"
-			"{\n"
-			"	(x y z)\n"
-			"	[*Width {<width>}:w]\n"
-			"	[*Style {Square|Circle|Star}:s:!w^t]\n"
-			"	[*Texture {\"<texture>\"}:t:!w^s]\n"
-			"}\n"
-			"~>\n"
-		);
-
-		return str;
 	}
 
 	// LdrObject ***********************************

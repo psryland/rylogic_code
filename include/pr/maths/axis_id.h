@@ -21,20 +21,20 @@ namespace pr
 
 		int value;
 
-		AxisId(int axis_id)
+		AxisId(int axis_id) noexcept
 			:value(axis_id)
 		{}
-		operator int const&() const
+		operator int const&() const noexcept
 		{
 			return value;
 		}
-		operator int&()
+		operator int&() noexcept
 		{
 			return value;
 		}
 		operator v4() const // Convert an axis id to an axis
 		{
-			//assert(IsValid(*this) && "axis_id must one of ±1, ±2, ±3");
+			//assert(IsValid(*this) && "axis_id must one of +/-1, +/-2, +/-3");
 			switch (value) {
 			default: return v4{};
 			case +1: return v4{+1,0,0,0};

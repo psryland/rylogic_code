@@ -7,7 +7,7 @@ using Rylogic.Maths;
 namespace Rylogic.Script
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class Reader
+	public class Reader :IDisposable
 	{
 		// Notes:
 		//  - The extract functions come in four forms:
@@ -33,6 +33,15 @@ namespace Rylogic.Script
 			Delimiters = " \t\r\n\v,;";
 			LastKeyword = string.Empty;
 			CaseSensitive = case_sensitive;
+		}
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool _)
+		{
+			Src.Dispose();
 		}
 
 		/// <summary>Access the underlying source</summary>
@@ -283,7 +292,7 @@ namespace Rylogic.Script
 		}
 		public string[] IdentifiersS(char sep = '.')
 		{
-			return IdentifiersS(out var ids) ? ids : Array.Empty<string>();
+			return IdentifiersS(out var ids, sep) ? ids : Array.Empty<string>();
 		}
 		public bool Identifiers(out string[] ids, char sep = '.')
 		{
@@ -867,12 +876,13 @@ namespace Rylogic.Script
 			}
 
 			// Buffer the section in 'Src'
+			var lit = new InLiteralString();
 			for (int nest = 1; Src[len] != 0;)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters
-				if (Src[len] == '\"' || Src[len] == '\'')
+				if (lit.WithinLiteralString(Src[len]))
 				{
-					len = Extract.BufferLiteralString(Src, len);
+					++len;
 					continue;
 				}
 				nest += Src[len] == '{' ? 1 : 0;
@@ -905,7 +915,7 @@ namespace Rylogic.Script
 		public string Description => Src.Description;
 
 		/// <summary>Random number source</summary>
-		private static Random m_rng = new Random((int)(Stopwatch.GetTimestamp() & 0x7FFFFFFF));
+		private static readonly Random m_rng = new Random((int)(Stopwatch.GetTimestamp() & 0x7FFFFFFF));
 	}
 }
 
@@ -943,7 +953,7 @@ namespace Rylogic.UnitTests
 				"*Token 123token\n" +
 				"*LastThing";
 
-			var reader = new Reader(new StringSrc(src), true);
+			using var reader = new Reader(new StringSrc(src), true);
 			Assert.Equal(true, reader.CaseSensitive);
 			Assert.True(reader.NextKeyword(out var kw)); Assert.Equal("Identifier", kw);
 			Assert.True(reader.Identifier(out var ident)); Assert.Equal("ident", ident);
@@ -996,7 +1006,7 @@ namespace Rylogic.UnitTests
 				"a.b.c\n" +
 				"A.B.C.D\n";
 
-			var reader = new Reader(new StringSrc(src));
+			using var reader = new Reader(new StringSrc(src));
 			{
 				var (a, b, _) = reader.Identifiers();
 				Assert.Equal("A", a);

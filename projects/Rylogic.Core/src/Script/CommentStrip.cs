@@ -10,8 +10,7 @@
 			LineComment = line_comment ?? string.Empty;
 			BlockCommentBeg = block_beg ?? string.Empty;
 			BlockCommentEnd = block_end ?? string.Empty;
-			m_in_literal_string = false;
-			m_escape = false;
+			m_literal_string = new InLiteralString();
 		}
 		protected override void Dispose(bool _)
 		{
@@ -37,18 +36,8 @@
 			for (; ; )
 			{
 				// Read through literal strings or characters
-				if (m_in_literal_string)
-				{
-					m_in_literal_string = m_escape || !(Src == '\"' || Src == '\'');
-					m_escape = Src == '\\';
+				if (m_literal_string.WithinLiteralString(Src))
 					break;
-				}
-				else if (Src == '\"' || Src == '\'')
-				{
-					m_in_literal_string = true;
-					m_escape = false;
-					break;
-				}
 
 				// Skip comments
 				if (LineComment.Length != 0 && Src == LineComment[0] && Src.Match(LineComment))
@@ -69,8 +58,7 @@
 			if (ch != 0) Src.Next();
 			return ch;
 		}
-		private bool m_in_literal_string;
-		private bool m_escape;
+		private InLiteralString m_literal_string;
 	}
 }
 

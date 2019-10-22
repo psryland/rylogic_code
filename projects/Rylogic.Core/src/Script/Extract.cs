@@ -15,7 +15,7 @@ namespace Rylogic.Script
 		public static bool Line(out string line, Src src, bool inc_cr, string? newline = null)
 		{
 			newline ??= "\n";
-			var len = src.ReadAhead(x => !newline.Contains(x));
+			var len = src.ReadAhead(x => newline.Contains(x) ? 0 : 1);
 			if (inc_cr && src[len] != 0) { len += newline.Length; src.ReadAhead(len); }
 			line = src.Buffer.ToString(0, len);
 			src += len;
@@ -33,7 +33,7 @@ namespace Rylogic.Script
 				return false;
 
 			// Copy up to the next delimiter
-			var len = src.ReadAhead(x => !delim.Contains(x));
+			var len = src.ReadAhead(x => delim.Contains(x) ? 0 : 1);
 			token = src.Buffer.ToString(0, len);
 			src += len;
 			return true;
@@ -54,7 +54,7 @@ namespace Rylogic.Script
 				return false;
 
 			// Copy up to the first non-identifier character
-			var len = src.ReadAhead(x => Str_.IsIdentifier(x, false), start: 1);
+			var len = src.ReadAhead(x => Str_.IsIdentifier(x, false) ? 1 : 0, 1);
 			id = src.Buffer.ToString(0, len);
 			src += len;
 			return true;
@@ -360,7 +360,7 @@ namespace Rylogic.Script
 
 				try
 				{
-					var len = src.ReadAhead(x => !delim.Contains(x));
+					var len = src.ReadAhead(x => delim.Contains(x) ? 0 : 1);
 					var str = src.Buffer.ToString(0, len);
 					data[start + i] = Convert.ToByte(str, radix);
 					src += len;
@@ -404,10 +404,8 @@ namespace Rylogic.Script
 			if (quote != '\"' && quote != '\'')
 				throw new Exception($"Don't call {nameof(BufferLiteralString)} unless 'src' is pointing at a literal string");
 
-			for (var esc = true; src[len] != 0 && (src[len] != quote || esc); esc = src[len] == escape, ++len) { }
-			if (src[len] == quote) ++len;
-			else throw new ScriptException(EResult.InvalidString, src.Location, "Incomplete literal string");
-			return len;
+			var lit = new InLiteralString();
+			return src.ReadAhead(x => lit.WithinLiteralString(x, src.Location) ? 1 : 0, len);
 		}
 
 		/// <summary>

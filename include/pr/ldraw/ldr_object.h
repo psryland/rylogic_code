@@ -60,7 +60,7 @@ namespace pr::ldr
 		x(Plane      ,= HashI("Plane"     ))\
 		x(Ribbon     ,= HashI("Ribbon"    ))\
 		x(Box        ,= HashI("Box"       ))\
-		x(BoxLine    ,= HashI("BoxLine"   ))\
+		x(Bar        ,= HashI("Bar"       ))\
 		x(BoxList    ,= HashI("BoxList"   ))\
 		x(FrustumWH  ,= HashI("FrustumWH" ))\
 		x(FrustumFA  ,= HashI("FrustumFA" ))\
@@ -116,6 +116,7 @@ namespace pr::ldr
 		x(Strikeout            ,= HashI("Strikeout"           ))\
 		x(NewLine              ,= HashI("NewLine"             ))\
 		x(CString              ,= HashI("CString"             ))\
+		x(AxisId               ,= HashI("AxisId"              ))\
 		x(Solid                ,= HashI("Solid"               ))\
 		x(Facets               ,= HashI("Facets"              ))\
 		x(CornerRadius         ,= HashI("CornerRadius"        ))\

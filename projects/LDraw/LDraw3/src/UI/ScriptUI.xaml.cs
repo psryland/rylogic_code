@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Microsoft.Win32;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+
 using Rylogic.Utility;
 
 namespace LDraw.UI
@@ -41,7 +38,7 @@ namespace LDraw.UI
 			ScriptName = name;
 			Editor = m_scintilla_control;
 			Scenes = new ListCollectionView(new List<SceneUIWrapper>());
-			LdrAutoComplete = new View3d.AutoComplete();
+			m_ldr_auto_complete = new View3d.AutoComplete();
 
 			Render = Command.Create(this, RenderInternal);
 			SaveScript = Command.Create(this, SaveScriptInternal);
@@ -165,18 +162,42 @@ namespace LDraw.UI
 				if (m_editor == value) return;
 				if (m_editor != null)
 				{
+					m_editor.CallTip -= HandleCallTip;
+					m_editor.AutoComplete -= HandleAutoComplete;
 					m_editor.TextChanged -= HandleTextChanged;
+					m_editor.HandleCreated -= HandleSCHandleCreated;
 				}
 				m_editor = value;
 				if (m_editor != null)
 				{
+					m_editor.HandleCreated += HandleSCHandleCreated;
 					m_editor.TextChanged += HandleTextChanged;
+					m_editor.AutoComplete += HandleAutoComplete;
+					m_editor.CallTip += HandleCallTip;
 				}
 
 				// Handler
+				void HandleSCHandleCreated(object sender, EventArgs e)
+				{
+					m_editor.AutoCompleteIgnoreCase = true;
+					m_editor.AutoCompleteSeparator = '\u001b';
+					m_editor.AutoCompleteMaxWidth = 80;
+				}
 				void HandleTextChanged(object sender, EventArgs e)
 				{
 					SaveNeeded = true;
+				}
+				void HandleAutoComplete(object sender, ScintillaControl.AutoCompleteEventArgs e)
+				{
+					e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => x.FullText));
+					//e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => $"*{x.Keyword}"));
+					e.Handled = true;
+				}
+				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
+				{
+					// Search backward from the caret position to the prior keyword
+					e.Definition = "*Testing [optional]\n{\t<field>\n}\n";
+					e.Handled = true;
 				}
 			}
 		}
@@ -213,7 +234,7 @@ namespace LDraw.UI
 		private string m_filepath = null!;
 
 		/// <summary>Auto complete provider for LDraw script</summary>
-		private View3d.AutoComplete LdrAutoComplete;
+		private View3d.AutoComplete m_ldr_auto_complete;
 
 		/// <summary>Text file types that can be edited in the script UI</summary>
 		private string EditableFilesFilter => Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");

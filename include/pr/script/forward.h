@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <type_traits>
 #include <filesystem>
+#include <regex>
 #include <locale>
 #include <cassert>
 #include "pr/common/exception.h"

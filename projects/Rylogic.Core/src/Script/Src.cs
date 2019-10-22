@@ -71,15 +71,18 @@ namespace Rylogic.Script
 		}
 
 		/// <summary>
-		/// Buffer until 'pred' returns false. Starts from src[start].
-		/// Returns the number of characters buffered.</summary>
-		public int ReadAhead(Func<char, bool> pred, int start = 0)
+		/// Buffer until 'adv' returns 0. Starts from src[start]. Returns the number of characters buffered.
+		/// 'adv' should return the number of characters to advance the buffer by. (typically 1)</summary>
+		public int ReadAhead(Func<char, int> adv, int start = 0)
 		{
 			int i = start;
-			for (; ; ++i)
+			for (; ; )
 			{
 				var ch = this[i];
-				if (ch == 0 || !pred(ch)) break;
+				if (ch == 0) break;
+				var inc = adv(ch);
+				if (inc == 0) break;
+				i += inc;
 			}
 			return i;
 		}

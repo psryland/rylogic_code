@@ -1,5 +1,20 @@
 Immediate ToDo:
 
+LDraw
+	- Clean up ldr_object.cpp
+		- Fix up *Spline
+		- Convert Src to mirror the C# implementation
+		- Use ReadAhead to allow IsMatch(regex)
+		- Use 'IsMatch' to remove the need for '*Coloured'
+		- Include comments in templates
+
+	- move ObjectManager to pr.view3d
+	- Auto complete in scripts
+	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
+	- shift+ctrl jumps back to the start of orientation, make it not do that
+	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
+
+
 CoinFlip
 	Candle Charts:
 		- Add measure tool to charts
@@ -29,26 +44,12 @@ EDTradeAdvisor
 	- Allow typing into station field with no system, to find system
 	
 		
-LDraw
-	- move ObjectManager to pr.view3d
-	- Auto complete in scripts
-	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
-	- Improve log UI
-	- shift+ctrl jumps back to the start of orientation, make it not do that
-	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
-
-
 RCT/RST
 	- Setup VREX to reply with incorrect sizes message, see why there isn't a log message about corruption
 	- UI to move config between regions (needs an enhancement ticket)
 	- Make reference data filepaths support relative or 'working directory' relative, so that moving configs up and down directories doesn't break file links? (doesn't work for non-repo configs)
 	- Save sets of logon data (url, working dir, user, pass) associated with a url
 	- System for creating graphs of data in session logs
-			
-RexLink
-	- Add stats for comms errors
-
-RAPT
 
 VRex
 	- Fix devices going offline
@@ -65,52 +66,34 @@ Physics
 	- Integrator
 	- Spatial vector/matrices
 	
+Renderer/View3d
+	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is
+	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
+	  pass the parametric value through)
+	- Merge View3d into the Renderer11 project and make view3d.dll just a build configuration
+	
 WinGUI
 	- OpenFolderUI
 	- Fix MsgBox icon not having a transparent background
 		
 Misc
-	- Merge View3d into the Renderer11 project
 	- Create a 'Dispatcher' in C++ using a HWND_MESSAGE window (see pr::Renderer)
 	- Implement pr::script in C#
 	- Better handling of native Settings
 	- Change ToolForm to have resizable but not NC border
-	- Write a C# version of clicket that is more heuristical, ie.
-		Find window:
-			Constraint: title = "My Window"
-			Constraint: size > 100,100 && size < 300,300
-		Find Child Window:
-			Constraint: text = "OK"
-			Constraint: type (i.e class name contains) = "button"
-		Action:
-			Mouse left click.
-			Type keys
-	- Create a program that continually builds and runs a C++ file displaying the output
 
 Old:
 convert linedrawer all to wingui
 ldr_object_dlg
 measure tool
 angle tool
-
-Implement pr::script in C#
-
 Make Scintilla+Ldr support a dll
-
 Implement a XElement-like tree reader/writer for pr-script
-
 Make a regex tester for C++ std::regex
-
 Implement Fmt() as a variadic template
-
 Fix non-pod types in pr::vector<>
 Fix crash in Diagram Control
-
-
 VS Extension - Align
  - stop at comment lines
  - Levistein distance rows (or maybe just use row 'form's)
-
 Add outline code only to VS Extension
-
-collect windowsfunctions.h into a better logical place
