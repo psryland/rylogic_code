@@ -5,15 +5,22 @@
 
 #pragma once
 
-#include <string.h>
-#include <math.h>
+#include <cmath>
+#include <cstring>
+#include <array>
+#include <string_view>
+#include <algorithm>
 #include <exception>
-#include <errno.h>
+#include <type_traits>
 #include <cassert>
+#include <cerrno>
+#include <charconv>
+#include "pr/common/hash.h"
+#include "pr/container/span.h"
 
 namespace pr
 {
-	namespace eval_impl
+	namespace eval
 	{
 		// Expression tokens
 		enum class ETok
@@ -40,7 +47,7 @@ namespace pr
 			Mul,
 			Div,
 			Mod,
-			UnaryAdd,
+			UnaryPlus,
 			UnaryMinus,
 			Comp,
 			Not,
@@ -73,6 +80,7 @@ namespace pr
 			Len4,
 			Deg,
 			Rad,
+			HashCT,
 			OpenParenthesis,
 			CloseParenthesis,
 			Value
@@ -81,6 +89,148 @@ namespace pr
 		// Constants
 		constexpr double const TAU = double(6.283185307179586476925286766559);
 		constexpr double const PHI = double(1.618033988749894848204586834);
+
+		// Convert a string into a character stream
+		template <typename Char> struct char_range
+		{
+			Char const* m_ptr;
+			Char const* m_end;
+
+			char_range(Char const* ptr, Char const* end)
+				:m_ptr(ptr)
+				,m_end(end)
+			{}
+			char_range(Char const* ptr)
+				:char_range(ptr, ptr + std::char_traits<Char>::length(ptr))
+			{}
+			char_range(std::basic_string_view<Char> sv)
+				:char_range(sv.data(), sv.data() + sv.size())
+			{}
+			operator bool() const
+			{
+				return m_ptr != m_end;
+			}
+			Char operator *() const
+			{
+				return m_ptr != m_end ? *m_ptr : '\0';
+			}
+			char_range& operator ++()
+			{
+				m_ptr += int(m_ptr != m_end);
+				return *this;
+			}
+			char_range& operator += (int n)
+			{
+				m_ptr += std::min(n, static_cast<int>(m_end - m_ptr));
+				return *this;
+			}
+			char_range operator + (int n) const
+			{
+				return char_range(m_ptr + std::min(n, static_cast<int>(m_end - m_ptr)), m_end);
+			}
+			size_t size() const
+			{
+				return m_end - m_ptr;
+			}
+			std::basic_string<Char> str() const
+			{
+				return std::basic_string<Char>(m_ptr, m_end);
+			}
+		};
+
+		// An integral or floating point value
+		struct Val
+		{
+			enum class EType { Unknown, Intg, Real, };
+
+			// The value
+			union
+			{
+				long long m_ll;
+				double m_db;
+			};
+			EType m_ty; // True if 'db' should be used, false if 'll'
+
+			Val() noexcept
+				:m_ll()
+				,m_ty(EType::Unknown)
+			{}
+			explicit Val(long long ll) noexcept
+				:m_ll(ll)
+				,m_ty(EType::Intg)
+			{}
+			explicit Val(double db) noexcept
+				:m_db(db)
+				,m_ty(EType::Real)
+			{}
+			Val& operator = (unsigned long long v) noexcept
+			{
+				m_ll = static_cast<long long>(v);
+				m_ty = EType::Intg;
+				return *this;
+			}
+			Val& operator = (long long v) noexcept
+			{
+				m_ll = v;
+				m_ty = EType::Intg;
+				return *this;
+			}
+			Val& operator = (double v) noexcept
+			{
+				m_db = v;
+				m_ty = EType::Real;
+				return *this;
+			}
+			Val& operator = (wchar_t v) noexcept
+			{
+				m_ll = v;
+				m_ty = EType::Intg;
+				return *this;
+			}
+			Val& operator = (char v) noexcept
+			{
+				m_ll = v;
+				m_ty = EType::Intg;
+				return *this;
+			}
+			Val& operator = (bool v) noexcept
+			{
+				m_ll = v;
+				m_ty = EType::Intg;
+				return *this;
+			}
+
+			// Read the value as a double or long long
+			double db() const
+			{
+				return
+					m_ty == EType::Real ? m_db :
+					m_ty == EType::Intg ? static_cast<double>(m_ll) :
+					throw std::runtime_error("Value not given. Value type is unknown");
+			}
+			long long ll() const
+			{
+				return
+					m_ty == EType::Intg ? m_ll :
+					m_ty == EType::Real ? static_cast<long long>(m_db) :
+					throw std::runtime_error("Value not given. Value type is unknown");
+			}
+
+			// True if a valid value has been assigned
+			bool valid() const
+			{
+				return m_ty != EType::Unknown;
+			}
+
+			// Operators
+			friend Val  operator +  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() + rhs.db()) : Val(lhs.ll() + rhs.ll()); }
+			friend Val  operator -  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() - rhs.db()) : Val(lhs.ll() - rhs.ll()); }
+			friend Val  operator *  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() * rhs.db()) : Val(lhs.ll() * rhs.ll()); }
+			friend Val  operator /  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() / rhs.db()) : Val(lhs.ll() / rhs.ll()); }
+			friend bool operator == (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll(); }
+			friend bool operator <  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() <  rhs.db() : lhs.ll() <  rhs.ll(); }
+			friend bool operator <= (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll(); }
+		};
 
 		// Returns the precedence of a token
 		// How to work out precedence:
@@ -91,7 +241,7 @@ namespace pr
 		//  Also the visa versa case.
 		// If NewOp should go on hold, then it has lower precedence (i.e. NewOp < RhsOp)
 		// If NewOp needs evaluating, then RhsOp has lower precedence (i.e. RhsOp > NewOp)
-		inline int Precedence(ETok tok)
+		template <typename = void> int Precedence(ETok tok)
 		{
 			switch (tok)
 			{
@@ -118,7 +268,7 @@ namespace pr
 			case ETok::Mul             : return 130;
 			case ETok::Div             : return 130;
 			case ETok::Mod             : return 130;
-			case ETok::UnaryAdd        : return 140;
+			case ETok::UnaryPlus       : return 140;
 			case ETok::UnaryMinus      : return 140;
 			case ETok::Comp            : return 140;
 			case ETok::Not             : return 140;
@@ -151,228 +301,341 @@ namespace pr
 			case ETok::Len4            : return 200;
 			case ETok::Deg             : return 200;
 			case ETok::Rad             : return 200;
+			case ETok::HashCT          : return 200;
 			case ETok::OpenParenthesis : return 300;
 			case ETok::CloseParenthesis: return 300;
 			case ETok::Value           : return 1000;
 			}
 		}
 
-		template <typename Char> struct traits_base;
-		template <> struct traits_base<char>
+		// Advance 'expr' to the next non-whitespace character
+		template <typename Char> char_range<Char> EatWS(char_range<Char>& expr)
 		{
-			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
-			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
-			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
-			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
-			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
-			static int                strnicmp(char const* lhs, char const* rhs, int count) { return ::_strnicmp(lhs, rhs, count); }
-			static char const*        str(char const* str, wchar_t const*)                  { return str; }
-		};
-		template <> struct traits_base<wchar_t>
+			for (; expr && std::isspace(*expr); ++expr) {}
+			return expr;
+		}
+
+		// Read a value (greedily) from 'expr'
+		template <typename Char> bool ReadValue(char_range<Char>& expr, Val& out)
 		{
-			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
-			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
-			static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
-			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
-			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
-			static int                strnicmp(wchar_t const* lhs, wchar_t const* rhs, int count) { return ::_wcsnicmp(lhs, rhs, count); }
-			static wchar_t const*     str(char const*, wchar_t const* str)                        { return str; }
-		};
-
-		// An integral or floating point value
-		struct Val
-		{
-			union { unsigned long long m_ul; long long m_ll; double m_db; };  // The value
-			bool m_fp; // True if 'db' should be used, false if 'll'
-
-			double             db() const { return m_fp ? m_db : m_ll; }
-			long long          ll() const { return m_fp ? static_cast<long long>(m_db) : m_ll; }
-			unsigned long long ul() const { return m_fp ? static_cast<unsigned long long>(m_db) : static_cast<unsigned long long>(m_ll); }
-
-			Val() :m_ll() ,m_fp() {}
-			explicit Val(long long ll) :m_ll(ll) ,m_fp(false) {}
-			explicit Val(double    db) :m_db(db) ,m_fp(true)  {}
-			Val& operator = (float                v) { m_db = v; m_fp = true; return *this; }
-			Val& operator = (double               v) { m_db = v; m_fp = true; return *this; }
-			Val& operator = (unsigned long long   v) { m_ul = v; m_fp = false; return *this; }
-			Val& operator = (unsigned long        v) { m_ul = v; m_fp = false; return *this; }
-			Val& operator = (long long            v) { m_ll = v; m_fp = false; return *this; }
-			Val& operator = (long                 v) { m_ll = v; m_fp = false; return *this; }
-			Val& operator = (bool                 v) { m_ll = v; m_fp = false; return *this; }
-
-			// Read a value (greedily) from 'expr'
-			template <typename Char> bool read(Char const*& expr)
+			// Conversion functions
+			auto ReadReal = [](char_range<Char> src, Val& v) -> size_t
 			{
-				using traits = traits_base<Char>;
-
-				// Read as a floating point number
-				Char* endf; errno = 0; double db = traits::strtod(expr, &endf);
-
-				// Read as a 32-bit int
-				Char* endi; errno = 0; long long ll = traits::strtol(expr, &endi, 0);
-
-				// If more chars are read as a float, then assume a float
-				if (endi == expr && endf == expr) return false;
-				if (endf > endi) { expr += (endf - expr); *this = db; return true; }
-
-				// Otherwise assume an integral type
-				// If an integral type, check for a type suffix
-				bool usign = *endi == 'u' || *endi == 'U'; endi += usign;
-				bool llong = *endi == 'l' || *endi == 'L'; endi += llong;
-				llong &=     *endi == 'l' || *endi == 'L'; endi += llong;
-				if (usign)
+				try
 				{
-					errno = 0;
-					if (!llong)                    ll = traits::strtoul(expr, nullptr, 0);
-					if ( llong || errno == ERANGE) ll = traits::strtoui64(expr, nullptr, 0);
+					size_t len;
+					v = std::stod(src.str(), &len);
+					return len;
+				}
+				catch (std::invalid_argument const&)
+				{
+					return 0;
+				}
+			};
+			auto RealIntegral = [](char_range<Char> src, Val& v) -> size_t
+			{
+				Val sval; size_t len0;
+				try { sval = std::stoll(src.str(), &len0, 0); }
+				catch (std::out_of_range const&) { len0 = 0; }
+				catch (std::invalid_argument const&) { len0 = 0; }
+				
+				Val uval; size_t len1;
+				try { uval = std::stoull(src.str(), &len1, 0); }
+				catch (std::out_of_range const&) { len1 = 0; }
+				catch (std::invalid_argument const&) { len1 = 0; }
+
+				auto len = std::max(len0, len1);
+				if (len == 0)
+					return 0;
+
+				// Ignore the optional suffix
+				src += static_cast<int>(len);
+				if (*src == 'u' || *src == 'U') { ++src; ++len; }
+				if (*src == 'l' || *src == 'L') { ++src; ++len; }
+				if (*src == 'l' || *src == 'L') { ++src; ++len; }
+
+				// Return the integral value
+				v = len0 != 0 ? sval :
+					len1 != 0 ? uval :
+					throw std::runtime_error("at least one is supposed to be valid");
+				return len;
+			};
+			auto ReadLiteral = [](char_range<Char> src, Val& v) -> size_t
+			{
+				auto beg = src.m_ptr;
+
+				if (*src != '\'')
+					return 0;
+
+				// Allow for escaped characters
+				if (*++src == '\\')
+				{
+					switch (*++src)
+					{
+					default: break;
+					case 'a':  v = '\a'; ++src; break;
+					case 'b':  v = '\b'; ++src; break;
+					case 'f':  v = '\f'; ++src; break;
+					case 'n':  v = '\n'; ++src; break;
+					case 'r':  v = '\r'; ++src; break;
+					case 't':  v = '\t'; ++src; break;
+					case 'v':  v = '\v'; ++src; break;
+					case '\'': v = '\''; ++src; break;
+					case '\"': v = '\"'; ++src; break;
+					case '\\': v = '\\'; ++src; break;
+					case '\?': v = '\?'; ++src; break;
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+						{
+							// ASCII character in octal
+							std::basic_string<Char> oct;
+							for (; *src && *src >= '0' && *src <= '7'; ++src) oct.append(1, *src);
+							try { v = std::stoll(oct, nullptr, 8); }
+							catch (std::out_of_range const&) { return 0; }
+							break;
+						}
+					case 'x':
+						{
+							// ASCII or UNICODE character in hex
+							std::basic_string<Char> hex;
+							for (; *src && std::isxdigit(*src); ++src) hex.append(1, *src);
+							try { v = std::stoll(hex, nullptr, 16); }
+							catch (std::out_of_range const&) { return 0; }
+							break;
+						}
+					}
 				}
 				else
 				{
-					if ( llong || errno == ERANGE) ll = traits::strtoi64(expr, nullptr, 0);
+					v = *src;
+					++src;
 				}
-				expr += (endi - expr);
-				*this = ll;
-				return true;
-			}
-		};
-		inline Val  operator +  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? Val(lhs.db() + rhs.db()) : Val(lhs.ll() + rhs.ll()); }
-		inline Val  operator -  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? Val(lhs.db() - rhs.db()) : Val(lhs.ll() - rhs.ll()); }
-		inline Val  operator *  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? Val(lhs.db() * rhs.db()) : Val(lhs.ll() * rhs.ll()); }
-		inline Val  operator /  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? Val(lhs.db() / rhs.db()) : Val(lhs.ll() / rhs.ll()); }
-		inline bool operator == (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll(); }
-		inline bool operator <  (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() <  rhs.db() : lhs.ll() <  rhs.ll(); }
-		inline bool operator <= (Val const& lhs, Val const& rhs) { return (lhs.m_fp || rhs.m_fp) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll(); }
+				
+				if (*src != '\'')
+					return 0;
+					
+				++src;
+				return src.m_ptr - beg;
+			};
+
+			// Greedy read, whichever consumes the most characters is the interpretted value
+			Val v; size_t len = 0;
+			if (auto l = ReadReal    (expr, v); l > len) { len = l; out = v; }
+			if (auto l = RealIntegral(expr, v); l > len) { len = l; out = v; }
+			if (auto l = ReadLiteral (expr, v); l > len) { len = l; out = v; }
+			if (len == 0)
+				return false;
+
+			expr += static_cast<int>(len);
+			return true;
+		}
 
 		// Extract a token from 'expr'
 		// If the token is a value then 'expr' is advanced past the value
 		// if it's an operator it isn't. This is so that operator precedence works
 		// 'follows_value' should be true if the preceding expression evaluates to a value
-		template <typename Char> ETok Token(Char const*& expr, Val& val, bool follows_value)
+		template <typename Char> ETok Token(char_range<Char>& expr, Val& val, bool follows_value)
 		{
-			using traits = traits_base<Char>;
-			auto cmp = traits::strnicmp;
-			#define str(s) traits::str(s, L##s)
-			static std::locale s_locale(""); // A static instance of the locale, because this thing takes ages to construct
+			// Case insensitive string compare
+			auto cmp = [](char_range<Char> s, char const* pattern)
+			{
+				for (; s && *pattern == std::tolower(*s); ++s, ++pattern) {}
+				return *pattern == 0;
+			};
 
 			// Skip any leading whitespace
-			while (*expr && std::isspace(*expr, s_locale)) { ++expr; }
+			if (!EatWS(expr))
+				return ETok::None;
 
 			// Look for an operator
-			switch (std::tolower(*expr, s_locale))
-			{
-			default: break;
 			// Convert Add/Sub to unary plus/minus by looking at the previous expression
 			// If the previous expression evaluates to a value then Add/Sub are binary expressions
-			case '+': return follows_value ? ETok::Add : ETok::UnaryAdd;
-			case '-': return follows_value ? ETok::Sub : ETok::UnaryMinus;
-			case '*': return ETok::Mul;
-			case '/': return ETok::Div;
-			case '%': return ETok::Mod;
-			case '~': return ETok::Comp;
-			case ',': return ETok::Comma;
-			case '^': return ETok::BitXOR;
-			case '(': return ETok::OpenParenthesis;
-			case ')': return ETok::CloseParenthesis;
-			case '?': return ETok::If;
-			case ':': return ETok::Else;
+			switch (std::tolower(*expr))
+			{
+			default: break;
+			case '+': 
+				{
+					return follows_value ? ETok::Add : ETok::UnaryPlus;
+				}
+			case '-': 
+				{
+					return follows_value ? ETok::Sub : ETok::UnaryMinus;
+				}
+			case '*': 
+				{
+					return ETok::Mul;
+				}
+			case '/': 
+				{
+					return ETok::Div;
+				}
+			case '%':
+				{
+					return ETok::Mod;
+				}
+			case '~':
+				{
+					return ETok::Comp;
+				}
+			case ',':
+				{
+					return ETok::Comma;
+				}
+			case '^':
+				{
+					return ETok::BitXOR;
+				}
+			case '(':
+				{
+					return ETok::OpenParenthesis;
+				}
+			case ')': 
+				{
+					return ETok::CloseParenthesis;
+				}
+			case '?':
+				{
+					return ETok::If;
+				}
+			case ':':
+				{
+					return ETok::Else;
+				}
 			case '<':
-				if      (cmp(expr, str("<<")    ,2) == 0) return ETok::LeftShift;
-				else if (cmp(expr, str("<=")    ,2) == 0) return ETok::LogLTEql;
-				else return ETok::LogLT;
+				{
+					if (cmp(expr, "<<")) return ETok::LeftShift;
+					if (cmp(expr, "<=")) return ETok::LogLTEql;
+					return ETok::LogLT;
+				}
 			case '>':
-				if      (cmp(expr, str(">>")    ,2) == 0) return ETok::RightShift;
-				else if (cmp(expr, str(">=")    ,2) == 0) return ETok::LogGTEql;
-				else return ETok::LogGT;
+				{
+					if (cmp(expr, ">>")) return ETok::RightShift;
+					if (cmp(expr, ">=")) return ETok::LogGTEql;
+					return ETok::LogGT;
+				}
 			case '|':
-				if      (cmp(expr, str("||")    ,2) == 0) return ETok::LogOR;
-				else return ETok::BitOR;
+				{
+					if (cmp(expr, "||")) return ETok::LogOR;
+					return ETok::BitOR;
+				}
 			case '&':
-				if      (cmp(expr, str("&&")    ,2) == 0) return ETok::LogAND;
-				else return ETok::BitAND;
+				{
+					if (cmp(expr, "&&")) return ETok::LogAND;
+					return ETok::BitAND;
+				}
 			case '=':
-				if      (cmp(expr, str("==")    ,2) == 0) return ETok::LogEql;
-				else break;
+				{
+					if (cmp(expr, "==")) return ETok::LogEql;
+					break;
+				}
 			case '!':
-				if      (cmp(expr, str("!=")    ,2) == 0) return ETok::LogNEql;
-				else return ETok::Not;
+				{
+					if (cmp(expr, "!=")) return ETok::LogNEql;
+					return ETok::Not;
+				}
 			case 'a':
-				if      (cmp(expr, str("abs")   ,3) == 0) return ETok::Abs;
-				else if (cmp(expr, str("asin")  ,4) == 0) return ETok::ASin;
-				else if (cmp(expr, str("acos")  ,4) == 0) return ETok::ACos;
-				else if (cmp(expr, str("atan2") ,5) == 0) return ETok::ATan2;
-				else if (cmp(expr, str("atan")  ,4) == 0) return ETok::ATan;
-				else break;
+				{
+					if (cmp(expr, "abs")) return ETok::Abs;
+					if (cmp(expr, "asin")) return ETok::ASin;
+					if (cmp(expr, "acos")) return ETok::ACos;
+					if (cmp(expr, "atan2")) return ETok::ATan2;
+					if (cmp(expr, "atan")) return ETok::ATan;
+					break;
+				}
 			case 'c':
-				if      (cmp(expr, str("clamp") ,5) == 0) return ETok::Clamp;
-				else if (cmp(expr, str("ceil")  ,4) == 0) return ETok::Ceil;
-				else if (cmp(expr, str("cosh")  ,4) == 0) return ETok::CosH;
-				else if (cmp(expr, str("cos")   ,3) == 0) return ETok::Cos;
-				else break;
+				{
+					if (cmp(expr, "clamp")) return ETok::Clamp;
+					if (cmp(expr, "ceil")) return ETok::Ceil;
+					if (cmp(expr, "cosh")) return ETok::CosH;
+					if (cmp(expr, "cos")) return ETok::Cos;
+					break;
+				}
 			case 'd':
-				if      (cmp(expr, str("deg")   ,3) == 0) return ETok::Deg;
-				else break;
+				{
+					if (cmp(expr, "deg")) return ETok::Deg;
+					break;
+				}
 			case 'e':
-				if      (cmp(expr, str("exp")   ,3) == 0) return ETok::Exp;
-				else break;
+				{
+					if (cmp(expr, "exp")) return ETok::Exp;
+					break;
+				}
 			case 'f':
-				if      (cmp(expr, str("floor") ,5) == 0) return ETok::Floor;
-				else if (cmp(expr, str("fmod")  ,3) == 0) return ETok::Fmod;
-				else if (cmp(expr, str("false") ,5) == 0) { expr += 5; val = 0.0; return ETok::Value; }
-				else break;
+				{
+					if (cmp(expr, "floor")) return ETok::Floor;
+					if (cmp(expr, "fmod")) return ETok::Fmod;
+					if (cmp(expr, "false")) { expr += 5; val = 0.0; return ETok::Value; }
+					break;
+				}
+			case 'h':
+				{
+					if (cmp(expr, "hashct")) return ETok::HashCT;
+					break;
+				}
 			case 'l':
-				if      (cmp(expr, str("log10") ,5) == 0) return ETok::Log10;
-				else if (cmp(expr, str("log")   ,3) == 0) return ETok::Log;
-				else if (cmp(expr, str("len2")  ,4) == 0) return ETok::Len2;
-				else if (cmp(expr, str("len3")  ,4) == 0) return ETok::Len3;
-				else if (cmp(expr, str("len4")  ,4) == 0) return ETok::Len4;
-				else break;
+				{
+					if (cmp(expr, "log10")) return ETok::Log10;
+					if (cmp(expr, "log")) return ETok::Log;
+					if (cmp(expr, "len2")) return ETok::Len2;
+					if (cmp(expr, "len3")) return ETok::Len3;
+					if (cmp(expr, "len4")) return ETok::Len4;
+					break;
+				}
 			case 'm':
-				if      (cmp(expr, str("min")   ,3) == 0) return ETok::Min;
-				else if (cmp(expr, str("max")   ,3) == 0) return ETok::Max;
-				else break;
+				{
+					if (cmp(expr, "min")) return ETok::Min;
+					if (cmp(expr, "max")) return ETok::Max;
+					break;
+				}
 			case 'p':
-				if      (cmp(expr, str("pow")   ,3) == 0) return ETok::Pow;
-				else if (cmp(expr, str("phi")   ,3) == 0) { expr += 3; val = PHI; return ETok::Value; }
-				else if (cmp(expr, str("pi")    ,2) == 0) { expr += 2; val = TAU/2.0; return ETok::Value; }
-				else break;
+				{
+					if (cmp(expr, "pow")) return ETok::Pow;
+					if (cmp(expr, "phi")) { expr += 3; val = PHI; return ETok::Value; }
+					if (cmp(expr, "pi")) { expr += 2; val = TAU / 2.0; return ETok::Value; }
+					break;
+				}
 			case 'r':
-				if      (cmp(expr, str("round") ,5) == 0) return ETok::Round;
-				else if (cmp(expr, str("rad")   ,3) == 0) return ETok::Rad;
-				else break;
+				{
+					if (cmp(expr, "round")) return ETok::Round;
+					if (cmp(expr, "rad")) return ETok::Rad;
+					break;
+				}
 			case 's':
-				if      (cmp(expr, str("sinh")  ,4) == 0) return ETok::SinH;
-				else if (cmp(expr, str("sin")   ,3) == 0) return ETok::Sin;
-				else if (cmp(expr, str("sqrt")  ,4) == 0) return ETok::Sqrt;
-				else if (cmp(expr, str("sqr")   ,3) == 0) return ETok::Sqr;
-				else break;
+				{
+					if (cmp(expr, "sinh")) return ETok::SinH;
+					if (cmp(expr, "sin")) return ETok::Sin;
+					if (cmp(expr, "sqrt")) return ETok::Sqrt;
+					if (cmp(expr, "sqr")) return ETok::Sqr;
+					break;
+				}
 			case 't':
-				if      (cmp(expr, str("tanh")  ,4) == 0) return ETok::TanH;
-				else if (cmp(expr, str("tan")   ,3) == 0) return ETok::Tan;
-				else if (cmp(expr, str("tau")   ,3) == 0) { expr += 3; val = TAU; return ETok::Value; }
-				else if (cmp(expr, str("true")  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
-				else break;
+				{
+					if (cmp(expr, "tanh")) return ETok::TanH;
+					if (cmp(expr, "tan")) return ETok::Tan;
+					if (cmp(expr, "tau")) { expr += 3; val = TAU; return ETok::Value; }
+					if (cmp(expr, "true")) { expr += 4; val = 1.0; return ETok::Value; }
+					break;
+				}
 			}
-			#undef str
 
 			// If it's not an operator, try extracting an operand
-			return val.read(expr) ? ETok::Value : ETok::None;
+			return ReadValue(expr, val) ? ETok::Value : ETok::None;
 		}
 
 		// Evaluate an expression.
 		// Called recursively for each operation within an expression.
 		// 'parent_op' is used to determine precedence order.
-		template <typename Char> bool Eval(Char const*& expr, Val* result, int rmax, int& ridx, ETok parent_op, bool l2r = true)
+		template <typename Char> bool Eval(char_range<Char>& expr, std::span<Val> result, int ridx, ETok parent_op, bool l2r = true)
 		{
-			if (ridx >= rmax)
-				throw std::exception("too many results");
-
 			// Each time round the while loop should result in a value.
 			// Operation tokens result in recursive calls.
 			bool follows_value = false;
-			while (*expr)
+			for (; expr; )
 			{
-				Val lhs, rhs;
-				ETok tok = Token(expr, lhs, follows_value);
+				Val val;
+				auto tok = Token(expr, val, follows_value);
 				follows_value = true;
 
 				// If the next token has lower precedence than the parent operation
@@ -384,305 +647,495 @@ namespace pr
 				if (prec0 == prec1 && l2r)
 					return true;
 				
-				int idx = 0;
 				switch (tok)
 				{
-				default:
-					throw std::exception("unknown expression token");
 				case ETok::None:
-					return *expr == 0;
+					{
+						return expr;
+					}
 				case ETok::Value:
-					result[ridx] = lhs;
-					break;
+					{
+						result[ridx] = val;
+						break;
+					}
 				case ETok::Add:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx] + rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx] + rhs[0];
+						break;
+					}
 				case ETok::Sub:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx] - rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx] - rhs[0];
+						break;
+					}
 				case ETok::Mul:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx] * rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx] * rhs[0];
+						break;
+					}
 				case ETok::Div:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx] / rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx] / rhs[0];
+						break;
+					}
 				case ETok::Mod:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() % rhs.ll();
-					break;
-				case ETok::UnaryAdd:
-					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
-					result[ridx] = rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() % rhs[0].ll();
+						break;
+					}
+				case ETok::UnaryPlus:
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok, false)) return false;
+						result[ridx] = rhs[0];
+						break;
+					}
 				case ETok::UnaryMinus:
-					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
-					if (rhs.m_fp) result[ridx] = -rhs.db(); // don't convert to ?: as the result will always be double
-					else          result[ridx] = -rhs.ll(); // result[ridx].ll() will get promoted to double
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok, false)) return false;
+						switch (rhs[0].m_ty) {
+						case Val::EType::Real: result[ridx] = -rhs[0].db(); break; // don't use ?: as the result will always be double
+						case Val::EType::Intg: result[ridx] = -rhs[0].ll(); break; // result[ridx].ll() will get promoted to double
+						default: throw std::runtime_error("Unknown result type for unary minus");
+						}
+						break;
+					}
 				case ETok::Comp:
-					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
-					if (rhs.ll() < 0) result[ridx] = ~rhs.ll();
-					else              result[ridx] = ~rhs.ul();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok, false)) return false;
+						result[ridx] = ~rhs[0].ll();
+						break;
+					}
 				case ETok::Not:
-					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
-					result[ridx] = !rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(++expr, rhs, 0, tok, false)) return false;
+						result[ridx] = !rhs[0].ll();
+						break;
+					}
 				case ETok::LogOR:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() || rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() || rhs[0].ll();
+						break;
+					}
 				case ETok::LogAND:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() && rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() && rhs[0].ll();
+						break;
+					}
 				case ETok::BitOR:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ul() | rhs.ul();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() | rhs[0].ll();
+						break;
+					}
 				case ETok::BitXOR:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ul() ^ rhs.ul();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() ^ rhs[0].ll();
+						break;
+					}
 				case ETok::BitAND:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ul() & rhs.ul();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() & rhs[0].ll();
+						break;
+					}
 				case ETok::LogEql:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx] == rhs;
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx] == rhs[0];
+						break;
+					}
 				case ETok::LogNEql:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = !(result[ridx] == rhs);
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = !(result[ridx] == rhs[0]);
+						break;
+					}
 				case ETok::LogLT:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() < rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() < rhs[0].ll();
+						break;
+					}
 				case ETok::LogLTEql:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() <= rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() <= rhs[0].ll();
+						break;
+					}
 				case ETok::LogGT:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() > rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() > rhs[0].ll();
+						break;
+					}
 				case ETok::LogGTEql:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ll() >= rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = result[ridx].ll() >= rhs[0].ll();
+						break;
+					}
 				case ETok::LeftShift:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ul() << rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = static_cast<int64_t>(static_cast<uint64_t>(result[ridx].ll()) << rhs[0].ll());
+						break;
+					}
 				case ETok::RightShift:
-					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
-					result[ridx] = result[ridx].ul() >> rhs.ll();
-					break;
+					{
+						std::array<Val, 1> rhs;
+						if (!Eval(expr += 2, rhs, 0, tok)) return false;
+						result[ridx] = static_cast<int64_t>(static_cast<uint64_t>(result[ridx].ll()) >> rhs[0].ll());
+						break;
+					}
 				case ETok::Fmod:
 					{
-						Val args[2];
-						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'mod'");
-						result[ridx] = ::fmod(args[0].db(), args[1].db());
-					}break;
+						std::array<Val, 2> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::fmod(args[0].db(), args[1].db());
+						break;
+					}
 				case ETok::Ceil:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::ceil(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::ceil(args[0].db());
+						break;
+					}
 				case ETok::Floor:
-					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::floor(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 5, args, 0, tok)) return false;
+						result[ridx] = std::floor(args[0].db());
+						break;
+					}
 				case ETok::Round:
-					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::floor(rhs.db() + 0.5);
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 5, args, 0, tok)) return false;
+						result[ridx] = std::round(args[0].db());
+						break;
+					}
 				case ETok::Min:
 					{
-						Val args[2];
-						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'min'");
+						std::array<Val, 2> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
 						result[ridx] = args[0] < args[1] ? args[0] : args[1];
-					}break;
+						break;
+					}
 				case ETok::Max:
 					{
-						Val args[2];
-						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'max'");
+						std::array<Val, 2> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
 						result[ridx] = args[0] < args[1] ? args[1] : args[0];
-					}break;
+						break;
+					}
 				case ETok::Clamp:
 					{
-						Val args[3];
-						if (!Eval(expr += 5, args, 3, idx, tok)) return false;
-						if (idx+1 != 3) throw std::exception("insufficient parameters for 'clamp'");
+						std::array<Val, 3> args;
+						if (!Eval(expr += 5, args, 0, tok)) return false;
 						result[ridx] = args[0] < args[1] ? args[1] : args[2] < args[0] ? args[2] : args[0];
-					}break;
+						break;
+					}
 				case ETok::Abs:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::abs(rhs.m_fp ? rhs.db() : rhs.ll());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = 
+							args[0].m_ty == Val::EType::Intg ? std::abs(args[0].ll()) :
+							args[0].m_ty == Val::EType::Real ? std::abs(args[0].db()) :
+							throw std::runtime_error("Invalid argument for 'abs'");
+						break;
+					}
 				case ETok::Sin:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::sin(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::sin(args[0].db());
+						break;
+					}
 				case ETok::Cos:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::cos(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::cos(args[0].db());
+						break;
+					}
 				case ETok::Tan:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::tan(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::tan(args[0].db());
+						break;
+					}
 				case ETok::ASin:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::asin(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::asin(args[0].db());
+						break;
+					}
 				case ETok::ACos:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::acos(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::acos(args[0].db());
+						break;
+					}
 				case ETok::ATan:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::atan(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::atan(args[0].db());
+						break;
+					}
 				case ETok::ATan2:
 					{
-						Val args[2];
-						if (!Eval(expr += 5, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'atan2'");
-						result[ridx] = ::atan2(args[0].db(), args[1].db());
-					}break;
+						std::array<Val, 2> args;
+						if (!Eval(expr += 5, args, 0, tok)) return false;
+						result[ridx] = std::atan2(args[0].db(), args[1].db());
+						break;
+					}
 				case ETok::SinH:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::sinh(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::sinh(args[0].db());
+						break;
+					}
 				case ETok::CosH:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::cosh(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::cosh(args[0].db());
+						break;
+					}
 				case ETok::TanH:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::tanh(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::tanh(args[0].db());
+						break;
+					}
 				case ETok::Exp:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::exp(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::exp(args[0].db());
+						break;
+					}
 				case ETok::Log:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::log(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::log(args[0].db());
+						break;
+					}
 				case ETok::Log10:
-					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::log10(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 5, args, 0, tok)) return false;
+						result[ridx] = std::log10(args[0].db());
+						break;
+					}
 				case ETok::Pow:
 					{
-						Val args[2];
-						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'pow'");
-						result[ridx] = ::pow(args[0].db(), args[1].db());
-					}break;
+						std::array<Val, 2> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = std::pow(args[0].db(), args[1].db());
+						break;
+					}
 				case ETok::Sqr:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = rhs * rhs;
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = args[0] * args[0];
+						break;
+					}
 				case ETok::Sqrt:
-					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
-					result[ridx] = ::sqrt(rhs.db());
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::sqrt(args[0].db());
+						break;
+					}
 				case ETok::Len2:
 					{
-						Val args[2];
-						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
-						if (idx+1 != 2) throw std::exception("insufficient parameters for 'len2'");
-						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db());
-					}break;
+						std::array<Val, 2> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db());
+						break;
+					}
 				case ETok::Len3:
 					{
-						Val args[3];
-						if (!Eval(expr += 4, args, 3, idx, tok)) return false;
-						if (idx+1 != 3) throw std::exception("insufficient parameters for 'len3'");
-						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db());
-					}break;
+						std::array<Val, 3> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db());
+						break;
+					}
 				case ETok::Len4:
 					{
-						Val args[4];
-						if (!Eval(expr += 4, args, 4, idx, tok)) return false;
-						if (idx+1 != 4) throw std::exception("insufficient parameters for 'len4'");
-						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db() + args[3].db()*args[3].db());
-					}break;
+						std::array<Val, 4> args;
+						if (!Eval(expr += 4, args, 0, tok)) return false;
+						result[ridx] = std::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db() + args[3].db()*args[3].db());
+						break;
+					}
 				case ETok::Deg:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = rhs.db() * (360.0 / TAU);
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = args[0].db() * (360.0 / TAU);
+						break;
+					}
 				case ETok::Rad:
-					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
-					result[ridx] = rhs.db() * (TAU / 360.0);
-					break;
+					{
+						std::array<Val, 1> args;
+						if (!Eval(expr += 3, args, 0, tok)) return false;
+						result[ridx] = args[0].db() * (TAU / 360.0);
+						break;
+					}
+				case ETok::HashCT:
+					{
+						std::basic_string<Char> str;
+						expr += 6;
+						EatWS(expr);
+						if (*expr == '(') ++expr; else return false;
+						EatWS(expr);
+						if (*expr == '"') ++expr; else return false;
+						for (bool esc = false; expr && (esc || *expr != '\"'); esc = !esc && *expr == '\\', ++expr) str.append(1, *expr);
+						if (*expr == '"') ++expr; else return false;
+						result[ridx] = static_cast<long long>(hash::HashCT(str.data(), str.data() + str.size()));
+						break;
+					}
 				case ETok::Comma:
-					if (ridx + 1 == rmax) throw std::exception("too many parameters");
-					++expr;
-					++ridx;
-					break;
+					{
+						if (ridx + 1 == static_cast<int>(result.size()))
+							throw std::runtime_error("too many parameters");
+
+						++expr;
+						++ridx;
+						follows_value = false;
+						break;
+					}
 				case ETok::OpenParenthesis:
-					if (!Eval(++expr, result, rmax, ridx, ETok::None)) return false;
-					break;
+					{
+						// Parent op is 'None' because it has the lowest precedence
+						if (!Eval(++expr, result, ridx, ETok::None)) return false;
+						break;
+					}
 				case ETok::CloseParenthesis:
-					if (parent_op == ETok::None) ++expr;
-					return true;
+					{
+						// Wait for the parent op to be the 'Open Parenthesis'
+						if (parent_op == ETok::None) ++expr;
+						return true;
+					}
 				case ETok::If:
 					{
-						Val vals[2]; int valc = 0;
-						if (!Eval(++expr, vals, 2, valc, ETok::None)) return false;
-						if (valc != 2) throw std::exception("incomplete if-else");
-						result[ridx] = result[ridx].ll() != 0 ? vals[0] : vals[1];
-					}break;
+						std::array<Val, 2> args;
+						if (!Eval(++expr, args, 0, ETok::None)) return false;
+						result[ridx] = result[ridx].ll() != 0 ? args[0] : args[1];
+						break;
+					}
 				case ETok::Else:
-					if (!Eval(++expr, result, rmax, ++ridx, ETok::Else)) return false;
-					++ridx;
-					return true;
+					{
+						if (ridx + 1 == static_cast<int>(result.size()))
+							throw std::runtime_error("result buffer too small");
+
+						if (!Eval(++expr, result, ++ridx, ETok::Else)) return false;
+						++ridx;
+						return true;
+					}
+				default:
+					{
+						throw std::runtime_error("unknown expression token");
+					}
 				}
 			}
 			return true;
 		}
+	
+		// Evaluate an expression.
+		template <typename Char>
+		inline Val Evaluate(char_range<Char> expr)
+		{
+			std::array<Val, 1> result;
+			Eval(expr, result, 0, ETok::None);
+			return result[0];
+		}
+		template <typename Char, typename ResType>
+		inline bool Evaluate(char_range<Char> expr, ResType& out)
+		{
+			try
+			{
+				auto val = Evaluate<Char>(expr);
+				if constexpr(std::is_integral_v<ResType>)
+					out = static_cast<ResType>(val.ll());
+				else if constexpr(std::is_floating_point_v<ResType>)
+					out = static_cast<ResType>(val.db());
+				else
+					static_assert(false, "Unsupported result type");
+
+				return true;
+			}
+			catch (std::exception const&)
+			{
+				return false;
+			}
+		}
 	}
 
-	// Evaluate a floating point expression
-	template <typename ResType, typename Char> inline ResType Evaluate(Char const* expr)
+	// The following functions are not templated on character type because
+	// type deduction cannot convert string types to 'basic_string_view<Char>'.
+
+	// Evaluate an expression. Throws on syntax error.
+	inline eval::Val Evaluate(std::string_view expr)
 	{
-		using namespace eval_impl;
-		Val result; int ridx = 0;
-		Eval(expr, &result, 1, ridx, ETok::None);
-		return static_cast<ResType>(result.db());
+		return eval::Evaluate<char>(expr);
 	}
-
-	// Evaluate an integral expression
-	template <typename ResType, typename Char> inline ResType EvaluateI(Char const* expr)
+	inline eval::Val Evaluate(std::wstring_view expr)
 	{
-		using namespace eval_impl;
-		Val result; int ridx = 0;
-		Eval(expr, &result, 1, ridx, ETok::None);
-		return static_cast<ResType>(result.ll());
+		return eval::Evaluate<wchar_t>(expr);
 	}
 
-	// Helper overloads
-	template <typename Char> inline bool Evaluate (Char const* expr, double&             out) { try {out = Evaluate <double             >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool Evaluate (Char const* expr, float&              out) { try {out = Evaluate <float              >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned long long& out) { try {out = EvaluateI<unsigned long long >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned long&      out) { try {out = EvaluateI<unsigned long      >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned int&       out) { try {out = EvaluateI<unsigned int       >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, long long&          out) { try {out = EvaluateI<long long          >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, long&               out) { try {out = EvaluateI<long               >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, int&                out) { try {out = EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
-	template <typename Char> inline bool EvaluateI(Char const* expr, bool&               out) { try {out=!!EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
+	// Try evaluate an expression.
+	template <typename ResType>
+	inline bool Evaluate(std::string_view expr, ResType& out)
+	{
+		return eval::Evaluate<char, ResType>(expr, out);
+	}
+	template <typename ResType>
+	inline bool Evaluate(std::wstring_view expr, ResType& out)
+	{
+		return eval::Evaluate<wchar_t, ResType>(expr, out);
+	}
 }
 
 #if PR_UNITTESTS
@@ -692,137 +1145,148 @@ namespace pr::common
 {
 	namespace unitests::expr_eval
 	{
-		template <typename ResType> bool Expr(char const* expr, ResType result);
-		template <> bool Expr(char const* expr, double     result) { double     val; return pr::Evaluate (expr, val) && pr::FEql(val, result); }
-		template <> bool Expr(char const* expr, float      result) { float      val; return pr::Evaluate (expr, val) && pr::FEql(val, result); }
-		template <> bool Expr(char const* expr, pr::uint64 result) { pr::uint64 val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, pr::int64  result) { pr::int64  val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, pr::ulong  result) { pr::ulong  val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, long       result) { long       val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, pr::uint   result) { pr::uint   val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, int        result) { int        val; return pr::EvaluateI(expr, val) && val == result; }
-		template <> bool Expr(char const* expr, bool       result) { bool       val; return pr::EvaluateI(expr, val) && val == result; }
+		template <typename ResType> bool Expr(std::string_view expr, ResType result) { static_assert(false); }
+		template <> bool Expr(std::string_view expr, double                  result) { double        val; return Evaluate(expr, val) && FEql(val, result); }
+		template <> bool Expr(std::string_view expr, float                   result) { float         val; return Evaluate(expr, val) && FEql(val, result); }
+		template <> bool Expr(std::string_view expr, uint64_t                result) { uint64_t      val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, int64_t                 result) { int64_t       val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, unsigned long           result) { unsigned long val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, long                    result) { long          val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, uint32_t                result) { uint32_t      val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, int                     result) { int           val; return Evaluate(expr, val) && val == result; }
+		template <> bool Expr(std::string_view expr, bool                    result) { bool          val; return Evaluate(expr, val) && val == result; }
 
-		#define EXPR(exp) Expr(#exp, (exp))
+		template <typename ValueType>
+		bool ReadValue(pr::eval::char_range<char> expr, ValueType expected_result)
+		{
+			pr::eval::Val val;
+			if (!pr::eval::ReadValue(expr, val))
+				return false;
 
-		bool Val(char const* expr, double     result) { pr::eval_impl::Val val; return val.read(expr) && result == val.db(); }
-		bool Val(char const* expr, long long  result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, int        result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::uint   result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::ulong  result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::uint64 result) { pr::eval_impl::Val val; return val.read(expr) && result == (pr::uint64)val.ll(); }
-
-		#define VAL(exp) Val(#exp, (exp))
+			if constexpr (std::is_integral_v<ValueType> && std::is_unsigned_v<ValueType>)
+				return static_cast<uint64_t>(expected_result) == static_cast<uint64_t>(val.ll());
+			else if constexpr (std::is_integral_v<ValueType>)
+				return expected_result == static_cast<ValueType>(val.ll());
+			else if constexpr (std::is_floating_point_v<ValueType>)
+				return expected_result == static_cast<ValueType>(val.db());
+			else
+				static_assert(false);
+		}
 	}
 
 	PRUnitTest(ExprEvalTests)
 	{
 		using namespace unitests::expr_eval;
-
-		PR_CHECK(VAL(1), true);
-		PR_CHECK(VAL(1.0), true);
-		PR_CHECK(VAL(-1), true);
-		PR_CHECK(VAL(-1.0), true);
-		PR_CHECK(VAL(10U), true);
-		PR_CHECK(VAL(100L), true);
-		PR_CHECK(VAL(-100L), true);
-		PR_CHECK(VAL(0x1000UL), true);
-		PR_CHECK(VAL(0x7FFFFFFF), true);
-		PR_CHECK(VAL(0x80000000), true);
-		PR_CHECK(VAL(0xFFFFFFFF), true);
-		PR_CHECK(VAL(0xFFFFFFFFU), true);
-		PR_CHECK(VAL(0xFFFFFFFFULL), true);
-		PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
-		PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
-
-		PR_CHECK(EXPR(1.0), true);
-		PR_CHECK(EXPR(+1.0), true);
-		PR_CHECK(EXPR(-1.0), true);
-		PR_CHECK(EXPR(-(1.0 + 2.0)), true);
-		PR_CHECK(EXPR(8.0 * -1.0), true);
-		PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
-		PR_CHECK(EXPR(1.0 + +2.0), true);
-		PR_CHECK(EXPR(1.0 - -2.0), true);
-		PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
-		PR_CHECK(EXPR(1.0 * +2.0), true);
-		PR_CHECK(EXPR(1 / 2), true);
-		PR_CHECK(EXPR(1.0 / 2.0), true);
-		PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
-		PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
-		PR_CHECK(EXPR((1 || 0) && 2), true);
-		PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
-		PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
-		PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
-		PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
-		PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
-		PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
-		PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
-		PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
-		PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
-		PR_CHECK(EXPR(~37 & ~0), true);
-		PR_CHECK(EXPR(!37 | !0), true);
-		PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
-		PR_CHECK(EXPR(~(4294967295 >> 2)), true);
-		PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
-		PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
-		PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))      ,true);
-		PR_CHECK(Expr("cos(TAU)"                ,::cos(eval_impl::TAU)) ,true);
-		PR_CHECK(Expr("tan(PHI)"                ,::tan(eval_impl::PHI)) ,true);
-		PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))           ,true);
-		PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))           ,true);
-		PR_CHECK(EXPR(11 % 3), true);
-		PR_CHECK(Expr("fmod(11.3, 3.1)"         ,::fmod(11.3, 3.1)) ,true);
-		PR_CHECK(EXPR(3.0*fmod(17.3, 2.1)), true);
-		PR_CHECK(EXPR(1 << 10), true);
-		PR_CHECK(EXPR(1024 >> 3), true);
-		PR_CHECK(Expr("ceil(3.4)"                ,::ceil(3.4))                                    ,true);
-		PR_CHECK(Expr("ceil(-3.4)"               ,::ceil(-3.4))                                   ,true);
-		PR_CHECK(Expr("floor(3.4)"               ,::floor(3.4))                                   ,true);
-		PR_CHECK(Expr("floor(-3.4)"              ,::floor(-3.4))                                  ,true);
-		PR_CHECK(Expr("asin(-0.8)"               ,::asin(-0.8))                                   ,true);
-		PR_CHECK(Expr("acos(0.2)"                ,::acos(0.2))                                    ,true);
-		PR_CHECK(Expr("atan(2.3/12.9)"           ,::atan(2.3/12.9))                               ,true);
-		PR_CHECK(Expr("atan2(2.3,-3.9)"          ,::atan2(2.3,-3.9))                              ,true);
-		PR_CHECK(Expr("sinh(0.8)"                ,::sinh(0.8))                                    ,true);
-		PR_CHECK(Expr("cosh(0.2)"                ,::cosh(0.2))                                    ,true);
-		PR_CHECK(Expr("tanh(2.3)"                ,::tanh(2.3))                                    ,true);
-		PR_CHECK(Expr("exp(2.3)"                 ,::exp(2.3))                                     ,true);
-		PR_CHECK(Expr("log(209.3)"               ,::log(209.3))                                   ,true);
-		PR_CHECK(Expr("log10(209.3)"             ,::log10(209.3))                                 ,true);
-		PR_CHECK(Expr("pow(2.3, -1.3)"           ,::pow(2.3, -1.3))                               ,true);
-		PR_CHECK(Expr("sqrt(2.3)"                ,::sqrt(2.3))                                    ,true);
-		PR_CHECK(Expr("sqr(-2.3)"                ,pr::Sqr(-2.3))                                  ,true);
-		PR_CHECK(Expr("len2(3,4)"                ,::sqrt(3.0*3.0 + 4.0*4.0))                      ,true);
-		PR_CHECK(Expr("len3(3,4,5)"              ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0))            ,true);
-		PR_CHECK(Expr("len4(3,4,5,6)"            ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0 + 6.0*6.0))  ,true);
-		PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * (360.0 / eval_impl::TAU))               ,true);
-		PR_CHECK(Expr("rad(241.32)"              ,241.32 * (eval_impl::TAU / 360.0))              ,true);
-		PR_CHECK(Expr("round( 3.5)"              ,::floor(3.5 + 0.5))                             ,true);
-		PR_CHECK(Expr("round(-3.5)"              ,::floor(-3.5 + 0.5))                            ,true);
-		PR_CHECK(Expr("round( 3.2)"              ,::floor(3.2 + 0.5))                             ,true);
-		PR_CHECK(Expr("round(-3.2)"              ,::floor(-3.2 + 0.5))                            ,true);
-		PR_CHECK(Expr("min(-3.2, -3.4)"          ,pr::Min(-3.2, -3.4))                            ,true);
-		PR_CHECK(Expr("max(-3.2, -3.4)"          ,pr::Max(-3.2, -3.4))                            ,true);
-		PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)"  ,pr::Clamp(10.0, -3.4, -3.2))                    ,true);
-		PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(eval_impl::TAU/-6))), true);
 		{
-			long long v1 = 0, v0 = 123456789000000LL / 2;
-			PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);
-			PR_CHECK(v0 == v1, true);
+			#define VAL(exp) ReadValue(#exp, (exp))
+			PR_CHECK(VAL(1), true);
+			PR_CHECK(VAL(1.0), true);
+			PR_CHECK(VAL(-1), true);
+			PR_CHECK(VAL(-1.0), true);
+			PR_CHECK(VAL(10U), true);
+			PR_CHECK(VAL(100L), true);
+			PR_CHECK(VAL(-100L), true);
+			PR_CHECK(VAL(0x1000UL), true);
+			PR_CHECK(VAL(0x7FFFFFFF), true);
+			PR_CHECK(VAL(0x80000000), true);
+			PR_CHECK(VAL(0xFFFFFFFF), true);
+			PR_CHECK(VAL(0xFFFFFFFFU), true);
+			PR_CHECK(VAL(0xFFFFFFFFULL), true);
+			PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
+			PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
+			#undef VAL
 		}
-		PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
-		PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
-		PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
-		PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
-		PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
-		PR_CHECK(Expr("-+1", -1),  true);
-		PR_CHECK(Expr("-++-1", 1),  true);
-		PR_CHECK(Expr("!!true", 1),  true);
-		PR_CHECK(Expr("-!!!false", -1),  true);
-		PR_CHECK(Expr("10 - 3 - 2", 5), true);
-
-		#undef EXPR
-		#undef VAL
+		{
+			#define EXPR(exp) Expr(#exp, (exp))
+			PR_CHECK(EXPR(1.0), true);
+			PR_CHECK(EXPR(+1.0), true);
+			PR_CHECK(EXPR(-1.0), true);
+			PR_CHECK(EXPR(-(1.0 + 2.0)), true);
+			PR_CHECK(EXPR(8.0 * -1.0), true);
+			PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
+			PR_CHECK(EXPR(1.0 + +2.0), true);
+			PR_CHECK(EXPR(1.0 - -2.0), true);
+			PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
+			PR_CHECK(EXPR(1.0 * +2.0), true);
+			PR_CHECK(EXPR(1 / 2), true);
+			PR_CHECK(EXPR(1.0 / 2.0), true);
+			PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
+			PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
+			PR_CHECK(EXPR((1 || 0) && 2), true);
+			PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
+			PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
+			PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
+			PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
+			PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
+			PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
+			PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
+			PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
+			PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
+			PR_CHECK(EXPR(~37 & ~0), true);
+			PR_CHECK(EXPR(!37 | !0), true);
+			PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
+			PR_CHECK(EXPR(~(4294967295 >> 2)), true);
+			PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
+			PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
+			PR_CHECK(Expr("sin(1.0 + 2.0)", std::sin(1.0 + 2.0)), true);
+			PR_CHECK(Expr("cos(TAU)", std::cos(eval::TAU)), true);
+			PR_CHECK(Expr("tan(PHI)", std::tan(eval::PHI)), true);
+			PR_CHECK(Expr("abs( 1.0)", std::abs(1.0)), true);
+			PR_CHECK(Expr("abs(-1.0)", std::abs(-1.0)), true);
+			PR_CHECK(EXPR(11 % 3), true);
+			PR_CHECK(Expr("fmod(11.3, 3.1)", std::fmod(11.3, 3.1)), true);
+			PR_CHECK(Expr("3.0 * fmod(17.3, 2.1)", 3.0 * std::fmod(17.3, 2.1)), true);
+			PR_CHECK(EXPR(1 << 10), true);
+			PR_CHECK(EXPR(1024 >> 3), true);
+			PR_CHECK(Expr("ceil(3.4)", std::ceil(3.4)), true);
+			PR_CHECK(Expr("ceil(-3.4)", std::ceil(-3.4)), true);
+			PR_CHECK(Expr("floor(3.4)", std::floor(3.4)), true);
+			PR_CHECK(Expr("floor(-3.4)", std::floor(-3.4)), true);
+			PR_CHECK(Expr("asin(-0.8)", std::asin(-0.8)), true);
+			PR_CHECK(Expr("acos(0.2)", std::acos(0.2)), true);
+			PR_CHECK(Expr("atan(2.3/12.9)", std::atan(2.3 / 12.9)), true);
+			PR_CHECK(Expr("atan2(2.3,-3.9)", std::atan2(2.3, -3.9)), true);
+			PR_CHECK(Expr("sinh(0.8)", std::sinh(0.8)), true);
+			PR_CHECK(Expr("cosh(0.2)", std::cosh(0.2)), true);
+			PR_CHECK(Expr("tanh(2.3)", std::tanh(2.3)), true);
+			PR_CHECK(Expr("exp(2.3)", std::exp(2.3)), true);
+			PR_CHECK(Expr("log(209.3)", std::log(209.3)), true);
+			PR_CHECK(Expr("log10(209.3)", std::log10(209.3)), true);
+			PR_CHECK(Expr("pow(2.3, -1.3)", std::pow(2.3, -1.3)), true);
+			PR_CHECK(Expr("sqrt(2.3)", std::sqrt(2.3)), true);
+			PR_CHECK(Expr("sqr(-2.3)", pr::Sqr(-2.3)), true);
+			PR_CHECK(Expr("len2(3,4)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0)), true);
+			PR_CHECK(Expr("len3(3,4,5)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0)), true);
+			PR_CHECK(Expr("len4(3,4,5,6)", std::sqrt(3.0 * 3.0 + 4.0 * 4.0 + 5.0 * 5.0 + 6.0 * 6.0)), true);
+			PR_CHECK(Expr("deg(-1.24)", -1.24 * (360.0 / eval::TAU)), true);
+			PR_CHECK(Expr("rad(241.32)", 241.32 * (eval::TAU / 360.0)), true);
+			PR_CHECK(Expr("round( 3.5)", std::round(3.5)), true);
+			PR_CHECK(Expr("round(-3.5)", std::round(-3.5)), true);
+			PR_CHECK(Expr("round( 3.2)", std::round(3.2)), true);
+			PR_CHECK(Expr("round(-3.2)", std::round(-3.2)), true);
+			PR_CHECK(Expr("min(-3.2, -3.4)", std::min(-3.2, -3.4)), true);
+			PR_CHECK(Expr("max(-3.2, -3.4)", std::max(-3.2, -3.4)), true);
+			PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)", pr::Clamp(10.0, -3.4, -3.2)), true);
+			PR_CHECK(Expr("hashct(\"A String\")", hash::HashCT("A String")), true);
+			PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(std::sqrt(2.3) * -std::abs(4 % 2) / 15.0 - std::tan(eval::TAU / -6))), true);
+			{
+				long long v1 = 0, v0 = 123456789000000LL / 2;
+				PR_CHECK(Evaluate("123456789000000 / 2", v1), true);
+				PR_CHECK(v0 == v1, true);
+			}
+			PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
+			PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
+			PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
+			PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
+			PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
+			PR_CHECK(Expr("-+1", -1), true);
+			PR_CHECK(Expr("-++-1", 1), true);
+			PR_CHECK(Expr("!!true", 1), true);
+			PR_CHECK(Expr("-!!!false", -1), true);
+			PR_CHECK(Expr("10 - 3 - 2", 5), true);
+			PR_CHECK(Expr("'1' + '2'", '1' + '2'), true);
+			#undef EXPR
+		}
 	}
 }
 #endif
