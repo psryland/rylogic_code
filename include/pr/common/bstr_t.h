@@ -16,6 +16,7 @@ namespace pr
 		// Notes:
 		//  BSTR's are allocated on a special heap that retains the length of the allocation.
 		//  This means BSTR's can contain embedded '\0'.
+		//  BSTR's are wchar_t strings
 
 		BSTR m_str;
 		bool m_own;

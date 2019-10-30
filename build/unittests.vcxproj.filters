@@ -294,12 +294,6 @@
     <ClInclude Include="..\include\pr\gui\graph_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\container\kdtree.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -362,18 +356,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\crypt\md5.h">
       <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_object.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
-      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\keystate.h">
       <Filter>pr\common</Filter>
@@ -915,9 +897,6 @@
     <ClInclude Include="..\include\pr\maths\fft.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h">
-      <Filter>pr\ldraw</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\threads\synchronise.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
@@ -925,9 +904,6 @@
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\crypt\sha1.h">
-      <Filter>pr\crypt</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\crypt\hash.h">
       <Filter>pr\crypt</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\sound\player.h">
@@ -1028,6 +1004,36 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\crypt\blake2b.h">
       <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\hash.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\src_stack.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\string_filter.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper_c.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_object.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_objects_dlg.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_script_editor_dlg.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_sources.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

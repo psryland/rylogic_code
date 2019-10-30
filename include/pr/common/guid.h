@@ -10,12 +10,12 @@
 #include <guiddef.h>
 #include <objbase.h>
 #include "pr/common/to.h"
+#include "pr/common/hash.h"
 #include "pr/common/scope.h"
 #include "pr/common/hresult.h"
 #include "pr/str/string.h"
 #include "pr/crypt/md5.h"
 #include "pr/crypt/sha1.h"
-#include "pr/crypt/hash.h"
 
 // Required lib: rpcrt4.lib
 #pragma comment(lib, "rpcrt4.lib")

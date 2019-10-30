@@ -49,7 +49,7 @@ namespace pr
 				static std::atomic_uint s_id = {};
 				auto id = s_id.load();
 				for (; !s_id.compare_exchange_weak(id, id + 1);) {}
-				return Sub(evt, id + 1);
+				return Sub(evt, Id(id) + 1);
 			}
 
 			// Boolean test for 'subscribed'
@@ -68,12 +68,12 @@ namespace pr
 			AutoSub(Sub sub)
 				:m_sub(sub)
 			{}
-			AutoSub(AutoSub&& rhs)
+			AutoSub(AutoSub&& rhs) noexcept
 				:m_sub(rhs.m_sub)
 			{
 				rhs.m_sub = Sub();
 			}
-			AutoSub& operator =(AutoSub&& rhs)
+			AutoSub& operator =(AutoSub&& rhs) noexcept
 			{
 				if (this == &rhs) return *this;
 				m_sub = rhs.m_sub;

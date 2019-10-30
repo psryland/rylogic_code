@@ -193,8 +193,8 @@ namespace pr::rdr
 		PR_ASSERT(PR_DBG_RDR, width*height != 0, "Do not resize textures to 0x0");
 		Texture2DDesc tdesc;
 		dx_tex()->GetDesc(&tdesc);
-		tdesc.Width = checked_cast<UINT>(width);
-		tdesc.Height = checked_cast<UINT>(height);
+		tdesc.Width = s_cast<UINT>(width);
+		tdesc.Height = s_cast<UINT>(height);
 		TexDesc(Image(0,0), tdesc, all_instances, preserve);
 	}
 

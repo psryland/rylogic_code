@@ -118,7 +118,7 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 	// Initialise the pair
 	pair.m_objA = &rbA;
 	pair.m_objB = &rbB;
-	pair.m_num_constraints = checked_cast<uint16>(num_constraints);
+	pair.m_num_constraints = s_cast<uint16>(num_constraints);
 	//pair.m_constraint_set = NoConstraintSet;
 	pair.pad = 0;
 	PR_EXPAND(PR_DBG_PHYSICS, pair.m_constraints = &pair[0]);

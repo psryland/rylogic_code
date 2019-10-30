@@ -169,9 +169,9 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 
 	// Update the mesh indices to use the non-degenerate vert indices
 	for (auto& idx : mesh.m_idx16)
-		idx = pr::checked_cast<p3d::u16>(map[idx].kept - verts.data());
+		idx = s_cast<p3d::u16>(map[idx].kept - verts.data());
 	for (auto& idx : mesh.m_idx32)
-		idx = pr::checked_cast<p3d::u32>(map[idx].kept - verts.data());
+		idx = s_cast<p3d::u32>(map[idx].kept - verts.data());
 
 	// Update the vrange for each nugget
 	for (auto& nug : mesh.m_nugget)

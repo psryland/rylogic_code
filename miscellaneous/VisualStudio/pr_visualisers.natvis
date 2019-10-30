@@ -309,7 +309,7 @@ old:
 		<DisplayString>[{m_buf}]{*m_src}</DisplayString>
 	</Type>
 	<Type Name="pr::script::Buf&lt;*,*,*&gt;">
-		<DisplayString>{m_ch}</DisplayString>
+		<DisplayString>{m_ch,bstr}</DisplayString>
 	</Type>
 	<Type Name="pr::script::Preprocessor&lt;*,*,*,*&gt;">
 		<DisplayString Condition="m_dbg_buf->m_first == m_dbg_buf->m_last">{m_dbg_src.wptr}</DisplayString>
@@ -319,14 +319,14 @@ old:
 		<DisplayString>{m_tag}={m_expansion}</DisplayString>
 	</Type>
 	<Type Name="pr::script::Token">
-		<DisplayString Condition="m_type.value == pr::script::EToken::Invalid">Invalid</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::EndOfStream">End Of Stream</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Identifier">Identifier {m_svalue}</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Keyword">Keyword {m_keyword.value}</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Symbol">Symbol {m_symbol.value}</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Constant &amp;&amp; m_constant.value == pr::script::EConstant::Integral">Constant {m_ivalue}</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Constant &amp;&amp; m_constant.value == pr::script::EConstant::FloatingPoint">Constant {m_fvalue}</DisplayString>
-		<DisplayString Condition="m_type.value == pr::script::EToken::Constant">Constant {m_svalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Invalid">Invalid</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::EndOfStream">End Of Stream</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Identifier">Identifier {m_svalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Keyword">Keyword {m_keyword}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Symbol">Symbol {m_symbol.value}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant &amp;&amp; m_constant == pr::script::EConstant::Integral">Constant {m_ivalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant &amp;&amp; m_constant == pr::script::EConstant::FloatingPoint">Constant {m_fvalue}</DisplayString>
+		<DisplayString Condition="m_type == pr::script::EToken::Constant">Constant {m_svalue}</DisplayString>
 		<DisplayString>{m_type}</DisplayString>
 	</Type>
 	<Type Name="pr::script::Location">

@@ -23,9 +23,6 @@ namespace Rylogic.Maths
 		/// <summary>Recursive expression to expression tree</summary>
 		private static bool Eval(string expr, ref int i, Vars vars, Expression[] result, int ridx, ETok parent_op, bool l2r = true)
 		{
-			if (ridx >= result.Length)
-				throw new Exception("too many results");
-
 			// Each time round the loop should result in a value.
 			// Operation tokens result in recursive calls.
 			bool follows_value = false;
@@ -503,16 +500,19 @@ namespace Rylogic.Maths
 
 						++i;
 						++ridx;
+						follows_value = false;
 						break;
 					}
 				case ETok.OpenParenthesis:
 					{
+						// Parent op is 'None' because it has the lowest precedence
 						++i;
 						if (!Eval(expr, ref i, vars, result, ridx, ETok.None)) return false;
 						break;
 					}
 				case ETok.CloseParenthesis:
 					{
+						// Wait for the parent op to be the 'Open Parenthesis'
 						if (parent_op == ETok.None) ++i;
 						return true;
 					}

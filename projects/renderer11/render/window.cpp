@@ -505,7 +505,7 @@ namespace pr
 			{
 				// Get the swap chain to resize itself
 				// Pass 0 for width and height, DirectX gets them from the associated window
-				pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
+				pr::Throw(m_swap_chain->ResizeBuffers(0, s_cast<UINT>(size.x), s_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
 			});
 		}
 

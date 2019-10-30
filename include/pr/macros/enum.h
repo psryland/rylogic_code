@@ -17,9 +17,12 @@
 #include <exception>
 #include <string>
 #include <type_traits>
+#include <optional>
 #include <iostream>
 #include <sstream>
 
+namespace pr
+{
 	#pragma region Enum field expansions
 	#define PR_ENUM_NULL(x)
 	#define PR_ENUM_EXPAND(x) x
@@ -74,6 +77,8 @@
 	};\
 	struct enum_name##_\
 	{\
+		using underlying_type_t = std::underlying_type_t<enum_name>;\
+\
 		/* The name of the enum as a string */\
 		template <typename Char> static constexpr Char const* Name()\
 		{\
@@ -114,8 +119,15 @@
 		}\
 		static constexpr char const*    ToStringA(enum_name e) { return ToString<char>(e); }\
 		static constexpr wchar_t const* ToStringW(enum_name e) { return ToString<wchar_t>(e); }\
+		static constexpr char const*    ToStringA(underlying_type_t e) { return ToString<char>(static_cast<enum_name>(e)); }\
+		static constexpr wchar_t const* ToStringW(underlying_type_t e) { return ToString<wchar_t>(static_cast<enum_name>(e)); }\
 \
 		/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
+		template <typename Char> static std::optional<enum_name> TryParse(Char const* name, bool match_case = true)\
+		{\
+			enum_name e;\
+			return TryParse(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
+		}\
 		template <typename Char> static bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
 		{\
 			using E = enum_name;\
@@ -211,35 +223,15 @@
 	};\
 \
 	/* Stream the enum value to/from basic streams */ \
-	template <typename Char> std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& stream, enum_name e)\
+	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& stream, enum_name e)\
 	{\
 		return stream << enum_name##_::ToString<Char>(e);\
 	}\
-	template <typename Char> std::basic_istream<Char>& operator >> (std::basic_istream<Char>& stream, enum_name& e)\
+	template <typename Char> inline std::basic_istream<Char>& operator >> (std::basic_istream<Char>& stream, enum_name& e)\
 	{\
 		std::string s; stream >> s;\
 		e = enum_name##_::Parse(s.c_str());\
 		return stream;\
-	}\
-\
-	/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
-	template <typename Char> inline constexpr Char const* ToString(enum_name e)\
-	{\
-		return enum_name##_::ToString<Char>(e);\
-	}\
-	inline constexpr char const* ToStringA(enum_name e)\
-	{\
-		return enum_name##_::ToStringA(e);\
-	}\
-	inline constexpr wchar_t const* ToStringW(enum_name e)\
-	{\
-		return enum_name##_::ToStringW(e);\
-	}\
-\
-	/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
-	template <typename Char> inline bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
-	{\
-		return enum_name##_::TryParse(e, name, match_case);\
 	}\
 \
 	/* reflected enum type trait functions*/\
@@ -260,14 +252,12 @@
 
 	#pragma endregion
 
-namespace pr
-{
 	std::false_type pr_impl_is_reflected_enum(void*);
 	std::false_type pr_impl_get_enum_metadata(void*);
 
 	// Enabler for reflected enums
 	template <typename T> using is_reflected_enum = decltype(pr_impl_is_reflected_enum((T*)nullptr));
-	template <typename T> using enable_if_reflected_enum = typename std::enable_if<is_reflected_enum<T>::value>::type;
+	template <typename T> using enable_if_reflected_enum = typename std::enable_if_t<is_reflected_enum<T>::value>;
 
 	// Common interface for accessing meta data for an enum
 	template <typename T> using Enum = decltype(pr_impl_get_enum_metadata((T*)nullptr));
@@ -404,7 +394,7 @@ namespace pr::common
 			for (auto e : Enum<TestEnum1>::Members())
 			{
 				PR_CHECK(e, Enum<TestEnum1>::Member(idx));
-				PR_CHECK(ToStringA(e), Enum<TestEnum1>::MemberNameA(idx));
+				PR_CHECK(Enum<TestEnum1>::ToStringA(e), Enum<TestEnum1>::MemberNameA(idx));
 				++idx;
 			}
 		}

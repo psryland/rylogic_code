@@ -68,14 +68,14 @@ namespace pr
 			// An event raised when the render button is clicked
 			pr::gui::EventHandler<ScriptEditorUI&, std::wstring const&> Render;
 
-			// Get/Set the text in the dialog
-			virtual std::wstring Text() const
+			// Get/Set the utf-8 text in the dialog
+			virtual std::string Text() const
 			{
-				return pr::Widen(m_edit.Text());
+				return m_edit.Text();
 			}
-			virtual void Text(wchar_t const* text)
+			virtual void Text(char const* utf8)
 			{
-				m_edit.Text(pr::Narrow(text).c_str());
+				m_edit.Text(utf8);
 			}
 
 		protected:

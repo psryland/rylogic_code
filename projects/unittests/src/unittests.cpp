@@ -20,16 +20,33 @@ namespace pr::unittests::your::namespace
 // and just include the header you care about
 #include "pr/common/unittests.h"
 #include "unittests/src/unittests.h" // all tests
+//#include "pr/common/reflection.h"
+//#include "pr/common/expr_eval.h"
+//#include "pr/macros/enum.h"
+//#include "pr/str/string_core.h"
+//#include "pr/str/string_filter.h"
+//#include "pr/str/string_util.h"
+//#include "pr/str/string.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/spatial.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
+//#include "pr/script/location.h"
+//#include "pr/script/script_core.h"
+//#include "pr/script/filter.h"
+//#include "pr/script/token.h"
+//#include "pr/script/tokeniser.h"
+//#include "pr/script/macros.h"
+//#include "pr/script/includes.h"
+//#include "pr/script/embedded_lua.h"
+//#include "pr/script/src_stack.h"
+//#include "pr/script/preprocessor.h"
+//#include "pr/script/reader.h"
 
 // Export a function for executing the tests
 extern "C"
 {
-	__declspec(dllexport) int __stdcall RunAllTests(BOOL wordy)
+	__declspec(dllexport) int __stdcall RunAllTests(int wordy)
 	{
 		return pr::unittests::RunAllTests(wordy != 0);
 	}
 }
-

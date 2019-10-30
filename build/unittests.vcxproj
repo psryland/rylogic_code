@@ -90,6 +90,7 @@
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
     <ClInclude Include="..\include\pr\common\handle.h" />
+    <ClInclude Include="..\include\pr\common\hash.h" />
     <ClInclude Include="..\include\pr\common\hresult.h" />
     <ClInclude Include="..\include\pr\common\ienumoutput.h" />
     <ClInclude Include="..\include\pr\common\imposter.h" />
@@ -149,7 +150,6 @@
     <ClInclude Include="..\include\pr\container\tri_table.h" />
     <ClInclude Include="..\include\pr\container\vector_map.h" />
     <ClInclude Include="..\include\pr\crypt\blake2b.h" />
-    <ClInclude Include="..\include\pr\crypt\hash.h" />
     <ClInclude Include="..\include\pr\crypt\md5.h" />
     <ClInclude Include="..\include\pr\crypt\monocypher.h" />
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
@@ -211,13 +211,14 @@
     <ClInclude Include="..\include\pr\hardware\comm_port_io.h" />
     <ClInclude Include="..\include\pr\hardware\cpuinfo.h" />
     <ClInclude Include="..\include\pr\hardware\find_bt_device.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_sources.h" />
-    <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper_c.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_object.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_objects_dlg.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_script_editor_dlg.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_sources.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_tools.h" />
+    <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\include\pr\macros\align.h" />
     <ClInclude Include="..\include\pr\macros\auto_do.h" />
     <ClInclude Include="..\include\pr\macros\constexpr.h" />
@@ -316,6 +317,7 @@
     <ClInclude Include="..\include\pr\script\reader.h" />
     <ClInclude Include="..\include\pr\script\script.h" />
     <ClInclude Include="..\include\pr\script\script_core.h" />
+    <ClInclude Include="..\include\pr\script\src_stack.h" />
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
     <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h" />
@@ -329,6 +331,7 @@
     <ClInclude Include="..\include\pr\str\extract.h" />
     <ClInclude Include="..\include\pr\str\string.h" />
     <ClInclude Include="..\include\pr\str\string_core.h" />
+    <ClInclude Include="..\include\pr\str\string_filter.h" />
     <ClInclude Include="..\include\pr\str\string_util.h" />
     <ClInclude Include="..\include\pr\str\to_string.h" />
     <ClInclude Include="..\include\pr\threads\concurrent_queue.h" />
@@ -342,7 +345,6 @@
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\include\pr\win32\windows_com.h" />
     <ClInclude Include="..\projects\unittests\src\pp_output.h" />
-    <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\projects\unittests\src\unittests.h" />
     <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
   </ItemGroup>
@@ -490,6 +492,7 @@
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -523,6 +526,7 @@
       <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <AdditionalIncludeDirectories>$(VCInstallDir)Auxiliary\VS\UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
 #include <windows.h>
 #include <pr/common/fmt.h>
 #include <pr/common/hresult.h>
@@ -57,14 +59,16 @@ namespace pr
 
 	namespace resource
 	{
-		// Check for the existence of a resource named 'name'
-		// module = 0 means 'this exe'
-		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
+		// Check for the existence of a resource named 'name'. module = 0 means 'this exe'
+		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function.
 		// Note: you can use pr::GetCurrentModule() for 'module'
-		inline bool Find(wchar_t const* name, wchar_t const* type, HMODULE module = nullptr)
+		inline bool Find(std::wstring_view name, wchar_t const* type, HMODULE module = nullptr)
 		{
+			// Notes:
+			//  - Using raw pointer for 'type' because it's typically a literal. e.g. "TEXT"
+
 			// Get a handle to the resource
-			auto handle = ::FindResourceW(module, name, type);
+			auto handle = ::FindResourceW(module, std::wstring(name).c_str(), type);
 			if (handle != nullptr)
 				return true;
 
@@ -82,10 +86,10 @@ namespace pr
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
 		// Note: you can use pr::GetCurrentModule() for 'module'
 		template <typename Type>
-		Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = nullptr)
+		Resource<Type> Read(std::wstring_view name, wchar_t const* type, HMODULE module = nullptr)
 		{
 			// Get a handle to the resource
-			auto handle = ::FindResourceW(module, name, type);
+			auto handle = ::FindResourceW(module, std::wstring(name).c_str(), type);
 			if (!handle)
 			{
 				auto last_error = ::GetLastError();

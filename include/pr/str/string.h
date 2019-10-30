@@ -892,7 +892,7 @@ namespace pr
 		int compare(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			assert(rofs <= right_size);
 
 			if (right_size - rofs < count) count = right_size - rofs;
@@ -937,7 +937,7 @@ namespace pr
 		string& replace(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count)
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			assert(ofs < size() && rofs <= right_size);
 
 			if (size()     - ofs  < n0   ) n0    = size()       - ofs; // trim n0 to size
@@ -1119,7 +1119,7 @@ namespace pr
 		size_type find(tarr const& right, size_type ofs = 0) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return find(right_cstr, ofs, right_size);
 		}
 
@@ -1148,7 +1148,7 @@ namespace pr
 		size_type rfind(tarr const& right, size_type ofs = npos) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return rfind(right_cstr, ofs, right_size);
 		}
 
@@ -1169,7 +1169,7 @@ namespace pr
 		size_type find_first_of(tarr const& right, size_type ofs = 0) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return find_first_of(right_cstr, ofs, right_size);
 		}
 
@@ -1204,7 +1204,7 @@ namespace pr
 		size_type find_last_of(tarr const& right, size_type ofs = npos) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return find_last_of(right_cstr, ofs, right_size);
 		}
 
@@ -1239,7 +1239,7 @@ namespace pr
 		size_type find_first_not_of(tarr const& right, size_type ofs = 0) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return find_first_not_of(right_cstr, ofs, right_size);
 		}
 
@@ -1274,7 +1274,7 @@ namespace pr
 		size_type find_last_not_of(tarr const& right, size_type ofs = npos) const
 		{
 			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::c_str(right);
+			auto right_cstr = str::traits<tarr>::ptr(right);
 			return find_last_not_of(right_cstr, ofs, right_size);
 		}
 

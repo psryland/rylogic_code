@@ -637,7 +637,7 @@ namespace pr
 							return add(vert.m_next->m_new_index, norm, col, sg);
 
 						// Otherwise, create a new Vert and add it to the linked list
-						auto new_index = checked_cast<pr::uint16>(size());
+						auto new_index = s_cast<pr::uint16>(size());
 						emplace_back(vert.m_orig_index, new_index, norm, col, sg);
 						vert.m_next = &back();
 						return new_index;
@@ -645,7 +645,7 @@ namespace pr
 				} verts;
 				
 				// Initialise the container 'verts'
-				for (pr::uint16 i = 0, iend = checked_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
+				for (pr::uint16 i = 0, iend = s_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
 					verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
 
 				// Loop over material groups, each material group is a nugget
@@ -690,7 +690,7 @@ namespace pr
 						vrange.encompass(i0);
 						vrange.encompass(i1);
 						vrange.encompass(i2);
-						irange.m_end = checked_cast<pr::uint32>(irange.m_end + 3);
+						irange.m_end = s_cast<pr::uint32>(irange.m_end + 3);
 
 						// Write out face indices
 						i_out(i0, i1, i2);

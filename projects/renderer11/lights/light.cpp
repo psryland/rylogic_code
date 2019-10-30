@@ -104,14 +104,15 @@ namespace pr::rdr
 	}
 	void Light::Settings(char const* settings)
 	{
+		using namespace pr::script;
 		try
 		{
 			// Parse the settings for light, if no errors are found update *this
 			Light light;
 
 			// Parse the settings
-			script::PtrA src(settings);
-			script::Reader reader(src, false);
+			StringSrc src(settings);
+			Reader reader(src, false);
 
 			ELightKW kw;
 			while (reader.NextKeywordH(kw))
@@ -136,7 +137,7 @@ namespace pr::rdr
 			}
 			*this = light;
 		}
-		catch (script::Exception const& e)
+		catch (ScriptException const& e)
 		{
 			throw Exception<HRESULT>(E_INVALIDARG, e.what());
 		}

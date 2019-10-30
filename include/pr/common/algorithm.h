@@ -199,7 +199,7 @@ namespace pr
 	template <typename TCont, typename Pred> inline auto get_if(TCont& cont, Pred pred) -> decltype(*std::begin(cont))
 	{
 		auto iter = find_if(cont, pred);
-		if (iter == std::end(cont)) throw std::exception("get_if() - no match found");
+		if (iter == std::end(cont)) throw std::runtime_error("get_if() - no match found");
 		return *iter;
 	}
 
@@ -452,7 +452,7 @@ namespace pr
 
 		// Includes and excludes have been given, but 'item' is not in either range.
 		// Filtering is ambiguous, the caller should ensure this case doesn't occur.
-		throw std::exception("Unknown filter case");
+		throw std::runtime_error("Unknown filter case");
 	}
 }
 

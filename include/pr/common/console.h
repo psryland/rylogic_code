@@ -378,7 +378,7 @@ namespace pr
 				std::string err; err.append(msg).append("\n").append(lpMsgBuf).append("\n");
 				LocalFree(lpMsgBuf);
 
-				throw std::exception(err.c_str());
+				throw std::runtime_error(err);
 			}
 
 			// Convert a stream of key event records into user input, handling special keys
@@ -554,7 +554,7 @@ namespace pr
 					{
 						switch (m_what)
 						{
-						default: throw std::exception("Unknown item type");
+						default: throw std::runtime_error("Unknown item type");
 						case Unknown:      break;
 						case NewLine:      break;
 						case AString:      m_linea  = new std::string(*rhs.m_linea); break;
@@ -891,7 +891,7 @@ namespace pr
 						switch (item.m_what)
 						{
 						default:
-							throw std::exception("Unknown pad item");
+							throw std::runtime_error("Unknown pad item");
 						case Pad::NewLine:
 						case Pad::SetColours:
 						case Pad::SetCursor:
@@ -938,7 +938,7 @@ namespace pr
 					{
 						switch (item.m_what)
 						{
-						default: throw std::exception("Unknown pad item");
+						default: throw std::runtime_error("Unknown pad item");
 						case Pad::SetColours:break;
 						case Pad::NewLine: ++h; w = 0; break;
 						case Pad::AString: w += (int)item.m_linea->size(); break;
@@ -1310,7 +1310,7 @@ namespace pr
 						switch (EEvent(in[i].EventType))
 						{
 						default:
-							throw std::exception("Unknown input event type");
+							throw std::runtime_error("Unknown input event type");
 						case EEvent::Key:
 							if (m_unicode_input)
 								TranslateKeyEvent(in[i].Event.KeyEvent, m_linew);

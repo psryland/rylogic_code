@@ -132,12 +132,12 @@ namespace pr::rdr
 		// The code that loads these models doesn't need to handle strings such as '#white' as a special case
 		if (resource_name[0] == '#')
 		{
-			EStockTexture stock;
-			if (!TryParse(stock, resource_name + 1, false))
+			auto stock = Enum<EStockTexture>::TryParse(resource_name + 1, false);
+			if (!stock)
 				throw std::runtime_error(pr::FmtS("Unknown stock texture name: %s", resource_name + 1));
 
 			// Return a clone of the stock texture
-			auto stock_tex = FindStockTexture(stock);
+			auto stock_tex = FindStockTexture(*stock);
 			assert(stock_tex != nullptr);
 			return CloneTexture2D(id, stock_tex.get(), &sdesc, name);
 		}
@@ -513,7 +513,7 @@ namespace pr::rdr
 		{
 		default:
 			{
-				throw std::runtime_error(pr::FmtS("Unknown stock texture: %s", ToStringA(stock)));
+				throw std::runtime_error(pr::FmtS("Unknown stock texture: %s", Enum<EStockTexture>::ToStringA(stock)));
 			}
 		case EStockTexture::Black:
 			{

@@ -79,8 +79,7 @@ namespace pr::rdr
 		{
 			auto rs = FindRStep<TRStep>();
 			if (rs != nullptr) return *rs;
-			PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ToStringA(TRStep::Id)).c_str());
-			throw std::exception("Render step not part of this scene");
+			throw std::runtime_error(Fmt("RenderStep %s is not part of this scene", Enum<ERenderStep>::ToStringA(TRStep::Id)));
 		}
 
 		// Clear/Populate the drawlists for each render step.

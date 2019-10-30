@@ -999,7 +999,7 @@ namespace pr::container
 			{
 				++ObjectCount();
 			}
-			Type(Type&& rhs)
+			Type(Type&& rhs) noexcept
 				:Type()
 			{
 				std::swap(val, rhs.val);
@@ -1011,7 +1011,7 @@ namespace pr::container
 			{
 				++ObjectCount();
 			}
-			Type& operator = (Type&& rhs)
+			Type& operator = (Type&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -1049,10 +1049,10 @@ namespace pr::container
 			NonCopyable(int w)
 				:Type(w)
 			{}
-			NonCopyable(NonCopyable&& rhs)
+			NonCopyable(NonCopyable&& rhs) noexcept
 				:Type(std::move(rhs))
 			{}
-			NonCopyable& operator = (NonCopyable&& rhs)
+			NonCopyable& operator = (NonCopyable&& rhs) noexcept
 			{
 				if (this == &rhs) return *this;
 				*static_cast<Type*>(this) = std::move(rhs);

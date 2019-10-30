@@ -20,10 +20,10 @@
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
+#include "pr/common/hash.h"
 #include "pr/filesys/file.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
-#include "pr/crypt/hash.h"
 #include "pr/script/reader.h"
 #include "pr/str/string.h"
 
@@ -257,9 +257,11 @@ namespace pr
 		// Import settings from a string using a default script reader
 		bool Import(std::string const& settings)
 		{
+			using namespace pr::script;
+
 			// Create a default reader from the import string
-			pr::script::PtrA src(settings.c_str());
-			pr::script::Reader reader(src);
+			StringSrc src(settings);
+			Reader reader(src);
 			return Import(reader);
 		}
 

@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cerrno>
 #include <windows.h>
+#include "pr/common/fmt.h"
 #include "pr/common/exception.h"
 
 // Support d3d errors if the header has been included before now.
@@ -38,7 +39,7 @@
 #endif
 
 // Map HRESULT to an enum type
-enum HResult
+enum class HResult :long long
 {
 	Ok   = HRESULT(S_OK),
 	Fail = HRESULT(E_FAIL),
@@ -101,10 +102,9 @@ namespace pr
 		result = HRESULT_FROM_WIN32(result);
 
 		// else ask windows
-		char msg[8192];
-		DWORD length(_countof(msg));
-		if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
-			sprintf_s(msg, "Unknown error code: 0x%80X", result);
+		std::string msg(4096, '\0');
+		auto len = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg.data(), DWORD(msg.size()), nullptr);
+		if (len != 0) msg.resize(len); else msg = Fmt("Unknown error code: 0x%80X", result);
 		return msg;
 	}
 
@@ -113,7 +113,7 @@ namespace pr
 	template <typename Result> std::string ToString(Result result);
 	template <> inline std::string ToString(HResult result)
 	{
-		return HrMsg(result);
+		return HrMsg(static_cast<HRESULT>(result));
 	}
 
 	// A string to put the last error message into
@@ -128,8 +128,8 @@ namespace pr
 	{
 		static_assert(std::is_enum<Result>::value, "Only enum result codes should be used as ToString() for other types has a different meaning");
 
-		if (result >= 0) return true;
-		Reason() = pr::ToString<Result>(result);
+		if (long long(result) >= 0) return true;
+		Reason() = ToString<Result>(result);
 		std::cerr << Reason();
 		return false;
 	}

@@ -61,7 +61,7 @@ namespace pr
 		{
 			assert("Data length mismatch" && int(data.size()) == cols * rows);
 			resize(cols, rows);
-			memcpy(m_data, data.begin(), cols * rows * sizeof(Real));
+			memcpy(m_data, data.begin(), size_t(cols) * size_t(rows) * sizeof(Real));
 			m_transposed = transposed;
 		}
 		Matrix(m4_cref<> m)
@@ -323,7 +323,7 @@ namespace pr
 			if (rows == m_rows)
 			{
 				if (data != m_data) memcpy(data, m_data, min_count * sizeof(Real));
-				memset(data + min_count, 0, (new_count - min_count) * sizeof(Real));
+				memset(data + min_count, 0, (size_t(new_count) - size_t(min_count)) * sizeof(Real));
 			}
 			else
 			{

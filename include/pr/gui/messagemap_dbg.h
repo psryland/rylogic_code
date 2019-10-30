@@ -1556,7 +1556,7 @@ namespace pr
 		// Convert a windows message to a string
 		inline char const* WMtoString(UINT uMsg)
 		{
-			return Enum<EWinMsg>::IsValue(uMsg) ? ToStringA(EWinMsg(uMsg)) : "";
+			return Enum<EWinMsg>::IsValue(uMsg) ? Enum<EWinMsg>::ToStringA(uMsg) : "";
 		}
 
 		// Return the Window Text for a window
@@ -1976,7 +1976,7 @@ namespace pr
 				{
 					return fmt("%s cmd=(%s) pos=(%d,%d)%s"
 						,hdr
-						,ToStringA(ESysCmd(wparam&0xFFF0))
+						,Enum<ESysCmd>::ToStringA(wparam&0xFFF0)
 						,GET_X_LPARAM(lparam) ,GET_Y_LPARAM(lparam)
 						,newline);
 				}

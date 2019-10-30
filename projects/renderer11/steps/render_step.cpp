@@ -106,7 +106,7 @@ namespace pr
 		void RenderStep::Execute(StateStack& ss)
 		{
 			PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
-				[&]{ ss.m_dbg->BeginEvent(ToStringW(GetId())); },
+				[&]{ ss.m_dbg->BeginEvent(Enum<ERenderStep>::ToStringW(GetId())); },
 				[&]{ ss.m_dbg->EndEvent(); }));
 
 			// Commit before the start of a render step to ensure changes

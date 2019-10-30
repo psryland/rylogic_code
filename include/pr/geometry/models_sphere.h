@@ -13,8 +13,8 @@ namespace pr::geometry
 	template <typename Tvr, typename Tir>
 	void GeosphereSize(int divisions, Tvr& vcount, Tir& icount)
 	{
-		vcount = checked_cast<Tvr>(3 + 10 * Pow2(2 * divisions) + 11 * Pow2(divisions));
-		icount = checked_cast<Tir>(3 * 10 * Pow2(2 * divisions + 1));
+		vcount = s_cast<Tvr>(3 + 10 * Pow2(2 * divisions) + 11 * Pow2(divisions));
+		icount = s_cast<Tir>(3 * 10 * Pow2(2 * divisions + 1));
 	}
 
 	namespace impl::geosphere
@@ -199,9 +199,9 @@ namespace pr::geometry
 		for (auto i = std::begin(faces), iend = std::end(faces); i != iend; ++i)
 		{
 			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
-			*out_indices = checked_cast<VIdx>(i->m_vidx[0]), ++out_indices;
-			*out_indices = checked_cast<VIdx>(i->m_vidx[1]), ++out_indices;
-			*out_indices = checked_cast<VIdx>(i->m_vidx[2]), ++out_indices;
+			*out_indices = s_cast<VIdx>(i->m_vidx[0]), ++out_indices;
+			*out_indices = s_cast<VIdx>(i->m_vidx[1]), ++out_indices;
+			*out_indices = s_cast<VIdx>(i->m_vidx[2]), ++out_indices;
 		}
 
 		return props;

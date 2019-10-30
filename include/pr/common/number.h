@@ -20,23 +20,23 @@ namespace pr
 		unsigned long long m_ul;
 		};
 		
-		enum EType { Unknown, FP, Int, UInt } m_type;
+		enum class EType { Unknown, FP, Int, UInt } m_type;
 
 		Number()
 			:m_db()
-			,m_type(Unknown)
+			,m_type(EType::Unknown)
 		{}
 		Number(double d)
 			:m_db(d)
-			,m_type(FP)
+			,m_type(EType::FP)
 		{}
 		Number(long long l)
 			:m_ll(l)
-			,m_type(Int)
+			,m_type(EType::Int)
 		{}
 		Number(unsigned long long u)
 			:m_ul(u)
-			,m_type(UInt)
+			,m_type(EType::UInt)
 		{}
 		explicit Number(char const* expr, char** end = nullptr, int radix = 0)
 		{
@@ -47,44 +47,44 @@ namespace pr
 			*this = From(expr, end, radix);
 		}
 
-		Number& operator = (float              v) { m_db = v; m_type = FP;   return *this; }
-		Number& operator = (double             v) { m_db = v; m_type = FP;   return *this; }
-		Number& operator = (unsigned long long v) { m_ul = v; m_type = UInt; return *this; }
-		Number& operator = (unsigned long      v) { m_ul = v; m_type = UInt; return *this; }
-		Number& operator = (long long          v) { m_ll = v; m_type = Int;  return *this; }
-		Number& operator = (long               v) { m_ll = v; m_type = Int;  return *this; }
-		Number& operator = (bool               v) { m_ll = v; m_type = Int;  return *this; }
+		Number& operator = (float              v) { m_db = v; m_type = EType::FP;   return *this; }
+		Number& operator = (double             v) { m_db = v; m_type = EType::FP;   return *this; }
+		Number& operator = (unsigned long long v) { m_ul = v; m_type = EType::UInt; return *this; }
+		Number& operator = (unsigned long      v) { m_ul = v; m_type = EType::UInt; return *this; }
+		Number& operator = (long long          v) { m_ll = v; m_type = EType::Int;  return *this; }
+		Number& operator = (long               v) { m_ll = v; m_type = EType::Int;  return *this; }
+		Number& operator = (bool               v) { m_ll = v; m_type = EType::Int;  return *this; }
 
 		// Access the value as a double
 		double db() const
 		{
-			assert(m_type != Unknown);
+			assert(m_type != EType::Unknown);
 			return
-				m_type == FP ? static_cast<double>(m_db) :
-				m_type == Int ? static_cast<double>(m_ll) :
-				m_type == UInt ? static_cast<double>(m_ul) :
+				m_type == EType::FP ? static_cast<double>(m_db) :
+				m_type == EType::Int ? static_cast<double>(m_ll) :
+				m_type == EType::UInt ? static_cast<double>(m_ul) :
 				0.0;
 		}
 
 		// Access the value as a signed integral type
 		long long ll() const
 		{
-			assert(m_type != Unknown);
+			assert(m_type != EType::Unknown);
 			return
-				m_type == FP ? static_cast<long long>(m_db) :
-				m_type == Int ? static_cast<long long>(m_ll) :
-				m_type == UInt ? static_cast<long long>(m_ul) :
+				m_type == EType::FP ? static_cast<long long>(m_db) :
+				m_type == EType::Int ? static_cast<long long>(m_ll) :
+				m_type == EType::UInt ? static_cast<long long>(m_ul) :
 				0LL;
 		}
 
 		// Access the value as an unsigned integral type
 		unsigned long long ul() const
 		{
-			assert(m_type != Unknown);
+			assert(m_type != EType::Unknown);
 			return
-				m_type == FP ? static_cast<unsigned long long>(m_db) :
-				m_type == Int ? static_cast<unsigned long long>(m_ll) :
-				m_type == UInt ? static_cast<unsigned long long>(m_ul) :
+				m_type == EType::FP ? static_cast<unsigned long long>(m_db) :
+				m_type == EType::Int ? static_cast<unsigned long long>(m_ll) :
+				m_type == EType::UInt ? static_cast<unsigned long long>(m_ul) :
 				0ULL;
 		}
 
@@ -142,7 +142,7 @@ namespace pr
 			if (endf > endi && endf > endu)
 			{
 				num.m_db = db;
-				num.m_type = FP;
+				num.m_type = EType::FP;
 
 				if (end)
 				{
@@ -155,7 +155,7 @@ namespace pr
 			else if (endu > endi)
 			{
 				num.m_ul = ul;
-				num.m_type = UInt;
+				num.m_type = EType::UInt;
 				if (end)
 				{
 					// Skip suffix characters
@@ -169,7 +169,7 @@ namespace pr
 			else
 			{
 				num.m_ll = ll;
-				num.m_type = Int;
+				num.m_type = EType::Int;
 				if (end)
 				{
 					// Skip suffix characters
@@ -181,63 +181,63 @@ namespace pr
 			}
 			return num;
 		}
+
+		// Comparison operators. Compare as floating point if either is floating point
+		friend bool operator == (Number const& lhs, Number const& rhs)
+		{
+			return (lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll();
+		}
+		friend bool operator != (Number const& lhs, Number const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+		friend bool operator < (Number const& lhs, Number const& rhs)
+		{
+			return (lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? lhs.db() <  rhs.db() : lhs.ll() <  rhs.ll();
+		}
+		friend bool operator > (Number const& lhs, Number const& rhs)
+		{
+			return (lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? lhs.db() >  rhs.db() : lhs.ll() >  rhs.ll();
+		}
+		friend bool operator <= (Number const& lhs, Number const& rhs)
+		{
+			return (lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll();
+		}
+		friend bool operator >= (Number const& lhs, Number const& rhs)
+		{
+			return (lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? lhs.db() >= rhs.db() : lhs.ll() >= rhs.ll();
+		}
+
+		// Binary operators
+		friend Number operator + (Number const& lhs, Number const& rhs)
+		{
+			return
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.db() + rhs.db()) :
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.ul() + rhs.ul()) :
+				Number(lhs.ll() + rhs.ll());
+		}
+		friend Number operator - (Number const& lhs, Number const& rhs)
+		{
+			return
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.db() - rhs.db()) :
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.ul() - rhs.ul()) :
+				Number(lhs.ll() - rhs.ll());
+		}
+		friend Number operator * (Number const& lhs, Number const& rhs)
+		{
+			return
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.db() * rhs.db()) :
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.ul() * rhs.ul()) :
+				Number(lhs.ll() * rhs.ll());
+		}
+		friend Number operator / (Number const& lhs, Number const& rhs)
+		{
+			return
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.db() / rhs.db()) :
+				(lhs.m_type == EType::FP || rhs.m_type == EType::FP) ? Number(lhs.ul() / rhs.ul()) :
+				Number(lhs.ll() / rhs.ll());
+		}
 	};
-
-	// Comparison operators. Compare as floating point if either is floating point
-	inline bool operator == (Number const& lhs, Number const& rhs)
-	{
-		return (lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll();
-	}
-	inline bool operator != (Number const& lhs, Number const& rhs)
-	{
-		return !(lhs == rhs);
-	}
-	inline bool operator < (Number const& lhs, Number const& rhs)
-	{
-		return (lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? lhs.db() <  rhs.db() : lhs.ll() <  rhs.ll();
-	}
-	inline bool operator > (Number const& lhs, Number const& rhs)
-	{
-		return (lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? lhs.db() >  rhs.db() : lhs.ll() >  rhs.ll();
-	}
-	inline bool operator <= (Number const& lhs, Number const& rhs)
-	{
-		return (lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll();
-	}
-	inline bool operator >= (Number const& lhs, Number const& rhs)
-	{
-		return (lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? lhs.db() >= rhs.db() : lhs.ll() >= rhs.ll();
-	}
-
-	// Binary operators
-	inline Number operator + (Number const& lhs, Number const& rhs)
-	{
-		return
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.db() + rhs.db()) :
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.ul() + rhs.ul()) :
-			Number(lhs.ll() + rhs.ll());
-	}
-	inline Number operator - (Number const& lhs, Number const& rhs)
-	{
-		return
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.db() - rhs.db()) :
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.ul() - rhs.ul()) :
-			Number(lhs.ll() - rhs.ll());
-	}
-	inline Number operator * (Number const& lhs, Number const& rhs)
-	{
-		return
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.db() * rhs.db()) :
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.ul() * rhs.ul()) :
-			Number(lhs.ll() * rhs.ll());
-	}
-	inline Number operator / (Number const& lhs, Number const& rhs)
-	{
-		return
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.db() / rhs.db()) :
-			(lhs.m_type == Number::FP || rhs.m_type == Number::FP) ? Number(lhs.ul() / rhs.ul()) :
-			Number(lhs.ll() / rhs.ll());
-	}
 }
 
 #if PR_UNITTESTS

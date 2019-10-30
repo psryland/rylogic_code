@@ -116,7 +116,7 @@ namespace pr
 	{
 		std::ifstream file(filename);
 		file.seekg(offset);
-		if (!file.good()) throw std::exception("failed to load file for crc");
+		if (!file.good()) throw std::runtime_error("failed to load file for crc");
 
 		char buf[4096];
 		for (std::streamsize c; count != 0; count -= c)

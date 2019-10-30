@@ -300,7 +300,7 @@ namespace pr
 
 				auto info = pr::gui::ListView::ItemInfo(obj_uidata->m_list_item);
 				m_list.Item(info.subitem((int)EColumn::Name     ).text(Widen(object.m_name).c_str()));
-				m_list.Item(info.subitem((int)EColumn::LdrType  ).text(ToStringW(object.m_type)));
+				m_list.Item(info.subitem((int)EColumn::LdrType  ).text(Enum<ELdrObject>::ToStringW(object.m_type)));
 				m_list.Item(info.subitem((int)EColumn::Colour   ).text(pr::FmtS(L"%8.8X", object.m_colour.argb)));
 				m_list.Item(info.subitem((int)EColumn::Visible  ).text(object.Visible() ? L"Visible" : L"Hidden"));
 				m_list.Item(info.subitem((int)EColumn::Wireframe).text(object.Wireframe() ? L"Wireframe" : L"Solid"));

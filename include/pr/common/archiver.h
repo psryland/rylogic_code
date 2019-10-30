@@ -42,7 +42,7 @@
 #include <algorithm>
 #include <typeinfo>
 #include "pr/common/fmt.h"
-#include "pr/crypt/hash.h"
+#include "pr/common/hash.h"
 
 #ifndef PR_ASSERT
 #	define PR_ASSERT_STR_DEFINED

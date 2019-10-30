@@ -104,6 +104,12 @@ namespace pr
 	{
 		return StateScope<decltype(doit()),Doit,Undo>(doit,undo);
 	}
+
+	// Create a scope that calls a lambda at exit
+	template <typename CleanUp> auto AtExit(CleanUp cleanup)
+	{
+		return CreateScope([] {}, cleanup);
+	}
 }
 
 #if PR_UNITTESTS
@@ -114,7 +120,7 @@ namespace pr::common
 	{
 		bool flag = false;
 		{
-			auto s = pr::CreateScope(
+			auto s = CreateScope(
 				[&]{ flag = true;  },
 				[&]{ flag = false; });
 
@@ -124,7 +130,7 @@ namespace pr::common
 
 		int value = 1;
 		{
-			auto s = pr::CreateStateScope(
+			auto s = CreateStateScope(
 				[=]{ return value; },
 				[&](int i){ value = i; });
 			PR_CHECK(s.m_state, 1);
@@ -133,6 +139,14 @@ namespace pr::common
 			PR_CHECK(value, 2);
 		}
 		PR_CHECK(value, 1);
+
+		flag = false;
+		{
+			flag = true;
+			auto s = AtExit([&] { flag = false; });
+			PR_CHECK(flag, true);
+		}
+		PR_CHECK(flag, false);
 	}
 }
 #endif

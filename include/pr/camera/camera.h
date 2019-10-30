@@ -737,7 +737,7 @@ namespace pr
 		void View(BBox const& bbox, v4 const& forward, v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
 			if (!bbox.valid())
-				throw std::exception("Camera: Cannot view an invalid bounding box");
+				throw std::runtime_error("Camera: Cannot view an invalid bounding box");
 			if (bbox.is_point())
 				return;
 

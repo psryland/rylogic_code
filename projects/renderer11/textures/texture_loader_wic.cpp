@@ -308,7 +308,7 @@ namespace pr::rdr
 				{
 					WICPixelFormatGUID pf;
 					Throw(wic->CreateBitmapScaler(&scaler.m_ptr));
-					Throw(scaler->Initialize(frame.get(), checked_cast<UINT>(twidth), checked_cast<UINT>(theight), WICBitmapInterpolationModeFant));
+					Throw(scaler->Initialize(frame.get(), s_cast<UINT>(twidth), s_cast<UINT>(theight), WICBitmapInterpolationModeFant));
 					Throw(scaler->GetPixelFormat(&pf));
 					conversion_needed = pf != dst_format;
 				}
@@ -321,19 +321,19 @@ namespace pr::rdr
 				}
 
 				// Copy the data with optional reformat and resize
-				Throw(converter->CopyPixels(0, checked_cast<UINT>(pitch), checked_cast<UINT>(image_size), buf.get()));
+				Throw(converter->CopyPixels(0, s_cast<UINT>(pitch), s_cast<UINT>(image_size), buf.get()));
 			}
-			images.push_back(SubResourceData(buf.get(), checked_cast<UINT>(pitch), checked_cast<UINT>(image_size)));
+			images.push_back(SubResourceData(buf.get(), s_cast<UINT>(pitch), s_cast<UINT>(image_size)));
 			image_data.emplace_back(std::move(buf));
 		}
 
 		// Create the texture description.
 		tdesc.dim = D3D11_RESOURCE_DIMENSION_TEXTURE2D;
 		tdesc.Tex2D.Format = format;
-		tdesc.Tex2D.Width = checked_cast<UINT>(twidth);
-		tdesc.Tex2D.Height = checked_cast<UINT>(theight);
-		tdesc.Tex2D.MipLevels = checked_cast<UINT>(mips);
-		tdesc.Tex2D.ArraySize = checked_cast<UINT>(images.size());
+		tdesc.Tex2D.Width = s_cast<UINT>(twidth);
+		tdesc.Tex2D.Height = s_cast<UINT>(theight);
+		tdesc.Tex2D.MipLevels = s_cast<UINT>(mips);
+		tdesc.Tex2D.ArraySize = s_cast<UINT>(images.size());
 		tdesc.Tex2D.SampleDesc.Count = 1;
 		tdesc.Tex2D.SampleDesc.Quality = 0;
 		tdesc.Tex2D.Usage = D3D11_USAGE_DEFAULT;

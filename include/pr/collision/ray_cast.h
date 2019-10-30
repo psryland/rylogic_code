@@ -484,7 +484,7 @@ namespace pr
 			}
 			#endif
 
-			throw std::exception("Not implemented");
+			throw std::runtime_error("Not implemented");
 		}
 
 		namespace impl

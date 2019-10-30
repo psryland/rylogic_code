@@ -25,6 +25,9 @@
     <Filter Include="src\pr\ldraw">
       <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\pr\str">
+      <UniqueIdentifier>{8240f6a8-10a3-4b0b-9c33-d808e5aafd0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h">
@@ -78,9 +81,6 @@
     <ClInclude Include="..\include\pr\view3d\pr_conv.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\str\extract.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\reader.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
@@ -125,6 +125,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\script\macros.h">
       <Filter>src\pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\extract.h">
+      <Filter>src\pr\str</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -32,9 +32,9 @@ namespace pr
 	{
 		inline void SetFace(ShapePolyFace& face, uint a, uint b, uint c)
 		{
-			face.m_index[0] = checked_cast<uint8>(a);
-			face.m_index[1] = checked_cast<uint8>(b);
-			face.m_index[2] = checked_cast<uint8>(c);
+			face.m_index[0] = s_cast<uint8>(a);
+			face.m_index[1] = s_cast<uint8>(b);
+			face.m_index[2] = s_cast<uint8>(c);
 			face.pad = 0;
 		}
 		inline void GetFace(ShapePolyFace const& face, uint& a, uint& b, uint& c)

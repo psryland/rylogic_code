@@ -80,11 +80,11 @@ namespace pr
 				std::vector<ChunkIndex> m_chunks;
 
 				ChunkIndex(EChunkId id, size_t data_length)
-					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
+					:ChunkHeader({id, s_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{}
 				ChunkIndex(EChunkId id, size_t data_length, std::initializer_list<ChunkIndex> chunks)
-					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
+					:ChunkHeader({id, s_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{
 					for (auto& c : chunks)
@@ -174,13 +174,13 @@ namespace pr
 
 				template <typename T> Range& operator = (pr::Range<T> rhs)
 				{
-					first = checked_cast<u32>(rhs.m_beg);
-					count = checked_cast<u32>(rhs.size());
+					first = s_cast<u32>(rhs.m_beg);
+					count = s_cast<u32>(rhs.size());
 					return *this;
 				}
 				template <typename T> operator pr::Range<T> () const
 				{
-					return pr::Range<T>(checked_cast<T>(first), checked_cast<T>(first + count));
+					return pr::Range<T>(s_cast<T>(first), s_cast<T>(first + count));
 				}
 				u32 begin() const { return first; }
 				u32 end() const   { return first + count; }
@@ -885,28 +885,28 @@ namespace pr
 					case EChunkId::MeshVertices:
 						{
 							Write<ChunkHeader>(out, idx);
-							Write<u32>(out, checked_cast<u32>(mesh.m_verts.size()));
+							Write<u32>(out, s_cast<u32>(mesh.m_verts.size()));
 							Write<Vert>(out, mesh.m_verts.data(), mesh.m_verts.size());
 							break;
 						}
 					case EChunkId::MeshIndices:
 						{
 							Write<ChunkHeader>(out, idx);
-							Write<u32>(out, checked_cast<u32>(mesh.m_idx16.size()));
+							Write<u32>(out, s_cast<u32>(mesh.m_idx16.size()));
 							Write<u16>(out, mesh.m_idx16.data(), mesh.m_idx16.size());
 							break;
 						}
 					case EChunkId::MeshIndices32:
 						{
 							Write<ChunkHeader>(out, idx);
-							Write<u32>(out, checked_cast<u32>(mesh.m_idx32.size()));
+							Write<u32>(out, s_cast<u32>(mesh.m_idx32.size()));
 							Write<u32>(out, mesh.m_idx32.data(), mesh.m_idx32.size());
 							break;
 						}
 					case EChunkId::MeshNuggets:
 						{
 							Write<ChunkHeader>(out, idx);
-							Write<u32>(out, checked_cast<u32>(mesh.m_nugget.size()));
+							Write<u32>(out, s_cast<u32>(mesh.m_nugget.size()));
 							Write<Nugget>(out, mesh.m_nugget.data(), mesh.m_nugget.size());
 							break;
 						}

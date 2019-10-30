@@ -142,9 +142,9 @@ namespace pr
 						face.m_idx[1] = *indices++;
 						face.m_idx[2] = *indices++;
 
-						v4 const& v0 = getv(checked_cast<VIdx>(face.m_idx[0]));
-						v4 const& v1 = getv(checked_cast<VIdx>(face.m_idx[1]));
-						v4 const& v2 = getv(checked_cast<VIdx>(face.m_idx[2]));
+						v4 const& v0 = getv(s_cast<VIdx>(face.m_idx[0]));
+						v4 const& v1 = getv(s_cast<VIdx>(face.m_idx[1]));
+						v4 const& v2 = getv(s_cast<VIdx>(face.m_idx[2]));
 
 						max_index = pr::max(max_index, face.m_idx[0], face.m_idx[1], face.m_idx[2]);
 						face.m_norm = Normalise3(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
@@ -330,8 +330,8 @@ namespace pr
 				// Output the original vertex index, and the normal.
 				// Callback function should duplicate the original vertex and set the normal to that provided.
 				vout(
-					checked_cast<VIdx>(vert.m_new_idx),
-					checked_cast<VIdx>(vert.m_orig_idx),
+					s_cast<VIdx>(vert.m_new_idx),
+					s_cast<VIdx>(vert.m_orig_idx),
 					Normalise3(norm, v4Zero));
 			}
 
@@ -340,9 +340,9 @@ namespace pr
 			{
 				// Output faces, should be the same number as provided via 'indices'
 				iout(
-					checked_cast<VIdx>(face.m_idx[0]),
-					checked_cast<VIdx>(face.m_idx[1]),
-					checked_cast<VIdx>(face.m_idx[2]));
+					s_cast<VIdx>(face.m_idx[0]),
+					s_cast<VIdx>(face.m_idx[1]),
+					s_cast<VIdx>(face.m_idx[2]));
 			}
 		}
 
