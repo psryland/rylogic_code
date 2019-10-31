@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <regex>
+#include <optional>
 #include <functional>
 #include <filesystem>
 #include <type_traits>
@@ -36,7 +37,6 @@
 #include "pr/macros/enum.h"
 #include "pr/macros/align.h"
 #include "pr/meta/alignment_of.h"
-#include "pr/meta/optional.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/build_options.h"
 #include "pr/common/assert.h"

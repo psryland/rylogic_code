@@ -282,7 +282,6 @@
     <ClInclude Include="..\include\pr\meta\is_char.h" />
     <ClInclude Include="..\include\pr\meta\min_max.h" />
     <ClInclude Include="..\include\pr\meta\not.h" />
-    <ClInclude Include="..\include\pr\meta\optional.h" />
     <ClInclude Include="..\include\pr\meta\or.h" />
     <ClInclude Include="..\include\pr\meta\remove_pointer.h" />
     <ClInclude Include="..\include\pr\network\bluetooth.h" />

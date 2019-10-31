@@ -658,7 +658,7 @@ namespace pr::script
 					BufferIdentifier(src, 0, &len);
 
 					// See if the identifier matches any macro definitions
-					auto macro = Macros->Find(string_t(src.View(0, len)));
+					auto macro = Macros->Find(string_t(src.Buffer(0, len)));
 					if (macro)
 					{
 						// This is a macro, so remove the macro identifier from the buffer

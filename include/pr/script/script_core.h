@@ -117,6 +117,17 @@ namespace pr::script
 			return m_buffer;
 		}
 
+		// Buffer up to (start + count) and return a string view within this range
+		string_view_t Buffer(int start, int count)
+		{
+			auto len = ReadAhead(start + count);
+			if (len < start + count)
+				throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not buffer %d characters. End of stream reached", start + count));
+
+			auto str = m_buffer.data();
+			return string_view_t(str + start, count);
+		}
+
 		// Peek
 		char_t operator *()
 		{
@@ -307,16 +318,6 @@ namespace pr::script
 			return hash::Hash(str + start, str + start + count);
 		}
 
-		// Buffer up to (start + count) and return a string view within this range
-		string_view_t View(int start, int count)
-		{
-			auto len = ReadAhead(start + count);
-			if (len < start + count)
-				throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not buffer %d characters. End of stream reached", start + count));
-
-			auto str = m_buffer.data();
-			return string_view_t(str + start, count);
-		}
 
 		// Read 'count' characters from the string and return them as a string
 		string_t ReadN(int count)

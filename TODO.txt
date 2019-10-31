@@ -1,11 +1,7 @@
 Immediate ToDo:
-
+	
 LDraw
 	- Clean up ldr_object.cpp
-		- Fix up *Spline
-		- Convert Src to mirror the C# implementation
-		- Use ReadAhead to allow IsMatch(regex)
-		- Use 'IsMatch' to remove the need for '*Coloured'
 		- Include comments in templates
 
 	- move ObjectManager to pr.view3d

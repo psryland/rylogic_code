@@ -167,10 +167,13 @@ namespace pr::script
 			return !IsKeyword() && !IsSectionEnd() && !IsSourceEnd();
 		}
 
-		// Return true if the next token matches the given regular expression
-		bool IsMatch(std::regex pattern)
+		// Buffer the next 'n' characters and test them against the given pattern.
+		bool IsMatch(int n, std::wregex pattern)
 		{
-			return false;
+			auto& src = m_pp;
+			EatDelimiters(src, m_delim.c_str());
+			auto len = src.ReadAhead(n);
+			return std::regex_match(string_t(src.Buffer(0, len)), pattern);
 		}
 
 		// Move to the start/end of a section and then one past it

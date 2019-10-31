@@ -81,18 +81,19 @@ namespace Rylogic.Gfx
 				var nest = 0;
 				var has_section = false;
 				var lit = new InLiteralString();
-				var len = src.ReadAhead(x =>
+				Extract.BufferWhile(src, (s,i) =>
 				{
-					if (lit.WithinLiteralString(x)) return 1;
-					nest += "{[(<".Contains(x) ? 1 : 0;
-					nest -= "}])>".Contains(x) ? 1 : 0;
-					has_section |= x == '{';
+					var ch = s[i];
+					if (lit.WithinLiteralString(ch)) return 1;
+					nest += "{[(<".Contains(ch) ? 1 : 0;
+					nest -= "}])>".Contains(ch) ? 1 : 0;
+					has_section |= ch == '{';
 					if (nest > 0) return 1;
 					if (nest < 0) return 0;
-					if (has_section && x == '}') return 0;
-					if (!has_section && (x == TemplateMark || x == ReferenceMark || x == ExpandMark)) return 0;
+					if (has_section && ch == '}') return 0;
+					if (!has_section && (ch == TemplateMark || ch == ReferenceMark || ch == ExpandMark)) return 0;
 					return 1;
-				}, 1);
+				}, 1, out var len);
 				if (has_section && src[len] == '}') ++len;
 				return len;
 			}
@@ -223,7 +224,7 @@ namespace Rylogic.Gfx
 							{
 								// Field
 								if (src == '>') throw new Exception($"Unexpected '>' character found in template: {Keyword}");
-								var len = src.ReadAhead(x => x == '>' ? 0 : 1, 1);
+								Extract.BufferWhile(src, (s,i) => s[i] != '>' ? 1 : 0, 1, out var len);
 								var field = src.Buffer.ToString(1, len - 1);
 								Tokens.Add(new Field(field));
 								src.Next(len + 1);
@@ -238,7 +239,7 @@ namespace Rylogic.Gfx
 						default:
 							{
 								// Literal text
-								var len = src.ReadAhead(x => " \n*@{}[]()<>|".Contains(x) ? 0 : 1);
+								Extract.BufferWhile(src, (s,i) => !" \n*@{}[]()<>|".Contains(s[i]) ? 1 : 0, 0, out var len);
 								var lit = src.Buffer.ToString(0, len);
 								Tokens.Add(new Literal(lit));
 								src.Next(len);

@@ -8,9 +8,9 @@
 #include <array>
 #include <unordered_set>
 #include <unordered_map>
+#include <optional>
 #include <mutex>
 #include <cwctype>
-#include "pr/meta/optional.h"
 #include "pr/ldraw/ldr_object.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
@@ -42,7 +42,6 @@ namespace pr::ldr
 	using Font = pr::rdr::ModelGenerator<>::Font;
 	using TextFormat = pr::rdr::ModelGenerator<>::TextFormat;
 	using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
-	template <typename T> using optional = pr::optional<T>;
 
 	// A global pool of 'Buffers' objects
 	#pragma region Buffer Pool / Cache
@@ -1208,39 +1207,32 @@ namespace pr::ldr
 	{
 		creation::Textured m_tex;
 		creation::PointSprite m_sprite;
-		bool m_per_point_colour;
+		std::optional<bool> m_per_point_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_tex()
 			,m_sprite()
-			,m_per_point_colour(false)
+			,m_per_point_colour()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
-			switch (kw)
-			{
-			default:
-				{
-					return
-						m_tex.ParseKeyword(p, kw) ||
-						m_sprite.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_point_colour = true;
-					return true;
-				}
-			}
+			return
+				m_tex.ParseKeyword(p, kw) ||
+				m_sprite.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
 		}
 		void Parse() override
 		{
 			pr::v4 pt;
 			p.m_reader.Vector3(pt, 1.0f);
 			m_verts.push_back(pt);
-			
-			if (m_per_point_colour)
+
+			// Look for the optional colour
+			if (!m_per_point_colour)
+				m_per_point_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
+			if (*m_per_point_colour)
 			{
 				pr::Colour32 col;
 				p.m_reader.Int(col.argb, 16);
@@ -1288,7 +1280,7 @@ namespace pr::ldr
 	{
 		v2 m_dashed;
 		float m_line_width;
-		bool m_per_line_colour;
+		std::optional<bool> m_per_line_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -1303,11 +1295,6 @@ namespace pr::ldr
 			default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_line_colour = true;
-					return true;
 				}
 			case EKeyword::Param:
 				{
@@ -1344,7 +1331,12 @@ namespace pr::ldr
 			p.m_reader.Vector3(p1, 1.0f);
 			m_verts.push_back(p0);
 			m_verts.push_back(p1);
-			if (m_per_line_colour)
+
+			// Look for the optional colour
+			if (!m_per_line_colour)
+				m_per_line_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
+			if (*m_per_line_colour)
 			{
 				pr::Colour32 col;
 				p.m_reader.Int(col.argb, 16);
@@ -1389,7 +1381,7 @@ namespace pr::ldr
 	{
 		v2 m_dashed;
 		float m_line_width;
-		bool m_per_line_colour;
+		std::optional<bool> m_per_line_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -1404,11 +1396,6 @@ namespace pr::ldr
 			default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_line_colour = true;
-					return true;
 				}
 			case EKeyword::Param:
 				{
@@ -1445,7 +1432,12 @@ namespace pr::ldr
 			p.m_reader.Vector3(p1, 0.0f);
 			m_verts.push_back(p0);
 			m_verts.push_back(p0 + p1);
-			if (m_per_line_colour)
+
+			// Look for the optional colour
+			if (!m_per_line_colour)
+				m_per_line_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
+			if (*m_per_line_colour)
 			{
 				pr::Colour32 col;
 				p.m_reader.Int(col.argb, 16);
@@ -1490,7 +1482,7 @@ namespace pr::ldr
 	{
 		v2 m_dashed;
 		float m_line_width;
-		bool m_per_vert_colour;
+		std::optional<bool> m_per_vert_colour;
 		bool m_smooth;
 
 		ObjectCreator(ParseParams& p)
@@ -1507,11 +1499,6 @@ namespace pr::ldr
 			default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
-					return true;
 				}
 			case EKeyword::Param:
 				{
@@ -1551,7 +1538,11 @@ namespace pr::ldr
 			pr::v4 pt;
 			p.m_reader.Vector3(pt, 1.0f);
 			m_verts.push_back(pt);
-				
+
+			// Look for the optional colour
+			if (!m_per_vert_colour)
+				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
 			if (m_per_vert_colour)
 			{
 				pr::Colour32 col;
@@ -1795,7 +1786,7 @@ namespace pr::ldr
 		pr::vector<pr::Spline> m_splines;
 		CCont m_spline_colours;
 		float m_line_width;
-		bool m_per_segment_colour;
+		std::optional<bool> m_per_segment_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -1812,11 +1803,6 @@ namespace pr::ldr
 				{
 					return IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Coloured:
-				{
-					m_per_segment_colour = true;
-					return true;
-				}
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
@@ -1832,6 +1818,10 @@ namespace pr::ldr
 			p.m_reader.Vector3(spline.z, 1.0f);
 			p.m_reader.Vector3(spline.w, 1.0f);
 			m_splines.push_back(spline);
+
+			// Look for the optional colour
+			if (!m_per_segment_colour)
+				m_per_segment_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
 
 			if (m_per_segment_colour)
 			{
@@ -1888,7 +1878,7 @@ namespace pr::ldr
 				}
 
 				// Colours
-				if (m_per_segment_colour)
+				if (*m_per_segment_colour)
 				{
 					auto ibeg = m_colours.size();
 					m_colours.reserve(m_colours.size() + raster.size());
@@ -1935,7 +1925,7 @@ namespace pr::ldr
 
 		EArrowType m_type;
 		float m_line_width;
-		bool m_per_vert_colour;
+		std::optional<bool> m_per_vert_colour;
 		bool m_smooth;
 
 		ObjectCreator(ParseParams& p)
@@ -1957,11 +1947,6 @@ namespace pr::ldr
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
-					return true;
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
 					return true;
 				}
 			case EKeyword::Smooth:
@@ -1990,7 +1975,11 @@ namespace pr::ldr
 				p.m_reader.Vector3(pt, 1.0f);
 				m_verts.push_back(pt);
 
-				if (m_per_vert_colour)
+				// Look for the optional colour
+				if (!m_per_vert_colour)
+					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
+				if (*m_per_vert_colour)
 				{
 					pr::Colour32 col;
 					p.m_reader.Int(col.argb, 16);
@@ -2454,7 +2443,7 @@ namespace pr::ldr
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
 		pr::vector<v2> m_poly;
-		bool m_per_line_colour;
+		std::optional<bool> m_per_vertex_colour;
 		bool m_solid;
 
 		ObjectCreator(ParseParams& p)
@@ -2462,7 +2451,7 @@ namespace pr::ldr
 			,m_tex()
 			,m_axis()
 			,m_poly()
-			,m_per_line_colour(false)
+			,m_per_vertex_colour()
 			,m_solid()
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -2475,11 +2464,6 @@ namespace pr::ldr
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_line_colour = true;
-					return true;
 				}
 			case EKeyword::Solid:
 				{
@@ -2496,7 +2480,11 @@ namespace pr::ldr
 				p.m_reader.Vector2(pt);
 				m_poly.push_back(pt);
 
-				if (m_per_line_colour)
+				// Look for the optional colour
+				if (!m_per_vertex_colour)
+					m_per_vertex_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+
+				if (*m_per_vertex_colour)
 				{
 					Colour32 col;
 					p.m_reader.Int(col.argb, 16);
@@ -2521,7 +2509,7 @@ namespace pr::ldr
 	{
 		creation::MainAxis m_axis;
 		creation::Textured m_tex;
-		bool m_per_vert_colour;
+		std::optional<bool> m_per_vert_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -2531,33 +2519,28 @@ namespace pr::ldr
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
-			switch (kw)
-			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
-					return true;
-				}
-			}
+			return
+				m_axis.ParseKeyword(p, kw) ||
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
 		}
 		void Parse() override
 		{
-			pr::v4 pt[3]; pr::Colour32 col[3];
-			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
-			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
-			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
+			v4 pt[3]; Colour32 col[3];
+			for (int i = 0; i != 3; ++i)
+			{
+				p.m_reader.Vector3(pt[i], 1.0f);
+				if (!m_per_vert_colour)
+					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+				if (*m_per_vert_colour)
+					p.m_reader.Int(col[i].argb, 16);
+			}
+
 			m_verts.push_back(pt[0]);
 			m_verts.push_back(pt[1]);
 			m_verts.push_back(pt[2]);
 			m_verts.push_back(pt[2]); // create a degenerate
-			if (m_per_vert_colour)
+			if (*m_per_vert_colour)
 			{
 				m_colours.push_back(col[0]);
 				m_colours.push_back(col[1]);
@@ -2592,7 +2575,7 @@ namespace pr::ldr
 	{
 		creation::MainAxis m_axis;
 		creation::Textured m_tex;
-		bool m_per_vert_colour;
+		std::optional<bool> m_per_vert_colour;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
@@ -2602,34 +2585,28 @@ namespace pr::ldr
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
-			switch (kw)
-			{
-			default:
-				{
-					return
-						m_axis.ParseKeyword(p, kw) ||
-						m_tex.ParseKeyword(p, kw) ||
-						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
-					return true;
-				}
-			}
+			return
+				m_axis.ParseKeyword(p, kw) ||
+				m_tex.ParseKeyword(p, kw) ||
+				IObjectCreator::ParseKeyword(kw);
 		}
 		void Parse() override
 		{
-			pr::v4 pt[4]; pr::Colour32 col[4];
-			p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].argb, 16));
-			p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].argb, 16));
-			p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].argb, 16));
-			p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].argb, 16));
+			v4 pt[4]; Colour32 col[4];
+			for (int i = 0; i != 4; ++i)
+			{
+				p.m_reader.Vector3(pt[i], 1.0f);
+				if (!m_per_vert_colour)
+					m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+				if (*m_per_vert_colour)
+					p.m_reader.Int(col[i].argb, 16);
+			}
+
 			m_verts.push_back(pt[0]);
 			m_verts.push_back(pt[1]);
 			m_verts.push_back(pt[2]);
 			m_verts.push_back(pt[3]);
-			if (m_per_vert_colour)
+			if (*m_per_vert_colour)
 			{
 				m_colours.push_back(col[0]);
 				m_colours.push_back(col[1]);
@@ -2713,7 +2690,7 @@ namespace pr::ldr
 		creation::Textured m_tex;
 		creation::MainAxis m_axis;
 		float m_width;
-		bool m_per_vert_colour;
+		std::optional<bool> m_per_vert_colour;
 		bool m_smooth;
 
 		ObjectCreator(ParseParams& p)
@@ -2735,11 +2712,6 @@ namespace pr::ldr
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
-					return true;
-				}
 			case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_width);
@@ -2758,7 +2730,10 @@ namespace pr::ldr
 			p.m_reader.Vector3(pt, 1.0f);
 			m_verts.push_back(pt);
 
-			if (m_per_vert_colour)
+			if (!m_per_vert_colour)
+				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+			
+			if (*m_per_vert_colour)
 			{
 				pr::Colour32 col;
 				p.m_reader.Int(col.argb, 16);
@@ -3226,7 +3201,7 @@ namespace pr::ldr
 		pr::vector<v2> m_cs;    // 2d cross section
 		float m_radx, m_rady;   // X,Y radii for implicit cross sections
 		int m_cs_facets;        // The number of divisions for Round cross sections
-		bool m_per_vert_colour; // Colour per vertex
+		std::optional<bool> m_per_vert_colour; // Colour per vertex
 		bool m_closed;          // True if the tube end caps should be filled in
 		bool m_cs_smooth;       // True if outward normals for the tube are smoothed
 		bool m_smooth;          // True if the extrusion path is smooth
@@ -3323,11 +3298,6 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Coloured:
-				{
-					m_per_vert_colour = true;
-					return true;
-				}
 			case EKeyword::Smooth:
 				{
 					m_smooth = true;
@@ -3345,14 +3315,16 @@ namespace pr::ldr
 			// Parse the extrusion path
 			v4 pt; Colour32 col;
 			p.m_reader.Vector3(pt, 1.0f);
-			if (m_per_vert_colour)
+			if (!m_per_vert_colour)
+				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
+			if (*m_per_vert_colour)
 				p.m_reader.Int(col.argb, 16);
 				
 			// Ignore degenerates
 			if (m_verts.empty() || !FEql(m_verts.back(), pt))
 			{
 				m_verts.push_back(pt);
-				if (m_per_vert_colour)
+				if (*m_per_vert_colour)
 					m_colours.push_back(col);
 			}
 		}
@@ -3757,8 +3729,8 @@ namespace pr::ldr
 		CCont m_colours;
 		int m_xcolumn;
 		float m_width;
-		optional<float> m_x0;
-		optional<float> m_y0;
+		std::optional<float> m_x0;
+		std::optional<float> m_y0;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)

@@ -149,7 +149,6 @@ namespace pr::ldr
 		x(Far                  ,= HashI("Far"                 ))\
 		x(Orthographic         ,= HashI("Orthographic"        ))\
 		x(Lock                 ,= HashI("Lock"                ))\
-		x(Coloured             ,= HashI("Coloured"            ))\
 		x(Width                ,= HashI("Width"               ))\
 		x(Dashed               ,= HashI("Dashed"              ))\
 		x(Smooth               ,= HashI("Smooth"              ))\
