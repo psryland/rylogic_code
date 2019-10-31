@@ -15,7 +15,7 @@ namespace Rylogic.Script
 		public static bool Line(out string line, Src src, bool inc_cr, string? newline = null)
 		{
 			newline ??= "\n";
-			var len = src.ReadAhead(x => newline.Contains(x) ? 0 : 1);
+			BufferWhile(src, (s,i) => !newline.Contains(s[i]) ? 1 : 0, 0, out var len);
 			if (inc_cr && src[len] != 0) { len += newline.Length; src.ReadAhead(len); }
 			line = src.Buffer.ToString(0, len);
 			src += len;
@@ -33,7 +33,7 @@ namespace Rylogic.Script
 				return false;
 
 			// Copy up to the next delimiter
-			var len = src.ReadAhead(x => delim.Contains(x) ? 0 : 1);
+			BufferWhile(src, (s,i) => !delim.Contains(s[i]) ? 1 : 0, 0, out var len);
 			token = src.Buffer.ToString(0, len);
 			src += len;
 			return true;
@@ -54,7 +54,7 @@ namespace Rylogic.Script
 				return false;
 
 			// Copy up to the first non-identifier character
-			var len = src.ReadAhead(x => Str_.IsIdentifier(x, false) ? 1 : 0, 1);
+			BufferWhile(src, (s,i) => Str_.IsIdentifier(s[i], false) ? 1 : 0, 1, out var len);
 			id = src.Buffer.ToString(0, len);
 			src += len;
 			return true;
@@ -212,8 +212,7 @@ namespace Rylogic.Script
 		{
 			intg = 0;
 
-			var len = BufferNumber(src, ref radix, ENumType.Int, delim);
-			if (len == 0)
+			if (!BufferNumber(src, ref radix, out var len, ENumType.Int, delim))
 				return false;
 
 			try
@@ -251,8 +250,7 @@ namespace Rylogic.Script
 			real = 0;
 
 			int radix = 10;
-			var len = BufferNumber(src, ref radix, ENumType.FP, delim);
-			if (len == 0)
+			if (!BufferNumber(src, ref radix, out var len, ENumType.FP, delim))
 				return false;
 
 			try
@@ -282,8 +280,7 @@ namespace Rylogic.Script
 		{
 			num = default!;
 
-			var len = BufferNumber(src, ref radix, ENumType.Any, delim);
-			if (len == 0)
+			if (!BufferNumber(src, ref radix, out var len, ENumType.Any, delim))
 				return false;
 
 			try
@@ -358,13 +355,13 @@ namespace Rylogic.Script
 				if (!AdvanceToNonDelim(src, delim))
 					return false;
 
-				try
-				{
-					var len = src.ReadAhead(x => delim.Contains(x) ? 0 : 1);
-					var str = src.Buffer.ToString(0, len);
-					data[start + i] = Convert.ToByte(str, radix);
-					src += len;
-				}
+				// Buffer contiguous characters
+				BufferWhile(src, (s, i) => !delim.Contains(s[i]) ? 1 : 0, 0, out var len);
+				var str = src.Buffer.ToString(0, len);
+				src += len;
+
+				// Convert the byte characters to bytes
+				try { data[start + i] = Convert.ToByte(str, radix); }
 				catch { return false; }
 			}
 			return true;
@@ -395,39 +392,117 @@ namespace Rylogic.Script
 		}
 
 		/// <summary>
-		/// Buffer the characters belonging to a literal string or character in 'src'.
-		/// Returns the number of characters buffered (i.e. start + the length of the literal string)</summary>
-		public static int BufferLiteralString(Src src, int start = 0, char escape = '\\')
+		/// Call '++src' until 'pred' returns false.
+		/// 'eat_initial' and 'eat_final' are the number of characters to consume before
+		/// applying the predicate 'pred' and the number to consume after 'pred' returns false.</summary>
+		public static void Eat(Src src, int eat_initial, int eat_final, Func<Src, bool> pred)
 		{
-			var len = start;
+			for (src += eat_initial; src != 0 && pred(src); ++src) { }
+			src += eat_final;
+		}
+		public static void EatLineSpace(Src src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, s => Str_.IsLineSpace(s));
+		}
+		public static void EatWhiteSpace(Src src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, s => Str_.IsWhiteSpace(s));
+		}
+		public static void EatLine(Src src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, s => !(s[0] == '\n') && !(s[0] == '\r' && s[1] == '\n'));
+		}
+		public static void EatBlock(Src src, string block_beg, string block_end)
+		{
+			if (block_beg.Length == 0)
+				throw new Exception($"The block start marker cannot have length = 0");
+			if (block_end.Length == 0)
+				throw new Exception($"The block end marker cannot have length = 0");
+			if (!src.Match(block_beg))
+				throw new Exception($"Don't call {nameof(EatBlock)} unless 'src' is pointing at the block start");
+
+			Eat(src, block_beg.Length, block_end.Length, s => !s.Match(block_end));
+		}
+		public static void EatLiteral(Src src)
+		{
+			if (src != '\"' && src != '\'')
+				throw new Exception($"Don't call {nameof(EatLiteral)} unless 'src' is pointing at a literal string");
+			
+			var quote = (char)src;
+			var escape = false;
+			Eat(src, 1, 0, s =>
+   			{
+				var end = s == quote && !escape;
+				escape = s == '\\';
+				return !end;
+			});
+			if (src == quote) ++src;
+		}
+		public static void EatDelimiters(Src src, string delim)
+		{
+			for (; delim.Contains(src); ++src) {}
+		}
+		public static void EatLineComment(Src src, string line_comment = "//")
+		{
+			if (!src.Match(line_comment))
+				throw new Exception($"Don't call {nameof(EatLineComment)} unless 'src' is pointing at a line comment");
+
+			EatLine(src, line_comment.Length, 0);
+		}
+		public static void EatBlockComment(Src src, string block_beg = "/*", string block_end = "*/")
+		{
+			if (!src.Match(block_beg))
+				throw new Exception($"Don't call {nameof(EatBlockComment)} unless 'src' is pointing at a block comment");
+
+			EatBlock(src, block_beg, block_end);
+		}
+
+		/// <summary>
+		/// Buffer an identifier in 'src'. Returns true if a valid identifier was buffered.
+		/// On return, 'len' contains the length of the buffer up to and including the end
+		/// of the identifier (i.e. start + strlen(identifier)).</summary>
+		public static bool BufferIdentifier(Src src, int start, out int len)
+		{
+			len = start;
+			if (!Str_.IsIdentifier(src[len], true)) return false;
+			for (++len; Str_.IsIdentifier(src[len], false); ++len) { }
+			return true;
+		}
+
+		/// <summary>
+		/// Buffer a literal string or character in 'src'. Returns true if a complete literal string or
+		/// character was buffered. On return, 'len' contains the length of the buffer up to, and
+		/// including, the literal. (i.e. start + strlen(literal))</summary>
+		public static bool BufferLiteral(Src src, int start, out int len)
+		{
+			len = start;
+
+			// Don't call this unless 'src' is pointing at a literal string
 			var quote = src[len];
 			if (quote != '\"' && quote != '\'')
-				throw new Exception($"Don't call {nameof(BufferLiteralString)} unless 'src' is pointing at a literal string");
+				return false;
 
-			var lit = new InLiteralString();
-			return src.ReadAhead(x => lit.WithinLiteralString(x, src.Location) ? 1 : 0, len);
+			// Find the end of the literal
+			for (bool esc = true; src[len] != '\0' && (esc || src[len] != quote); esc = !esc && src[len] == '\\', ++len) { }
+			if (src[len] == quote) ++len; else return false;
+			return true;
 		}
 
 		/// <summary>
 		/// Buffer characters for a number (real or int) in 'src'.
 		/// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E|p|P}[{+|-}]digits][U][L][L]
-		/// [in] 'src' = the forward only input stream
-		/// [out] 'num' = the extracted value
-		/// [in] 'radix' = the base of the number to read.
-		/// [in] 'type' = the number style to read.
-		/// [in] 'delim' = token delimiter characters.
-		/// Returns the number of characters buffered</summary>
-		public static int BufferNumber(Src src, ref int radix, ENumType type = ENumType.Any, string? delim = null)
+		/// Returns true if valid number characters where buffered</summary>
+		public static bool BufferNumber(Src src, ref int radix, out int len, ENumType type = ENumType.Any, string? delim = null)
 		{
+			len = 0;
 			delim ??= DefaultDelimiters;
-			var len = 0;
 
 			// Find the first non-delimiter
 			if (!AdvanceToNonDelim(src, delim))
-				return len;
+				return false;
 
 			// Convert a character to it's numerical value
-			static int digit(char ch)
+			static int digit(int ch)
 			{
 				if (ch >= '0' && ch <= '9') return ch - '0';
 				if (ch >= 'a' && ch <= 'z') return 10 + ch - 'a';
@@ -435,6 +510,7 @@ namespace Rylogic.Script
 				return int.MaxValue;
 			}
 
+			var digits_found = false;
 			var allow_fp = type.HasFlag(ENumType.FP);
 			var fp = false;
 
@@ -455,15 +531,20 @@ namespace Rylogic.Script
 			{
 				++len;
 				var radix_prefix = false;
-				if (false) {}
+				if (false) { }
 				else if (char.ToLower(src[len]) == 'x') { radix = 16; ++len; radix_prefix = true; }
 				else if (char.ToLower(src[len]) == 'o') { radix = 8; ++len; radix_prefix = true; }
 				else if (char.ToLower(src[len]) == 'b') { radix = 2; ++len; radix_prefix = true; }
-				else if (radix == 0) { radix = Str_.IsDigit(src[len]) ? 8 : 10; } // If no radix prefix is given, then assume octal (for conformance with C) 
+				else
+				{
+					// If no radix prefix is given, then assume octal zero (for conformance with C) 
+					if (radix == 0) radix = Str_.IsDigit(src[len]) ? 8 : 10;
+					digits_found = true;
+				}
 
 				// Check for the required integer
 				if (radix_prefix && digit(src[len]) >= radix)
-					return 0;
+					return false;
 			}
 			else if (radix == 0)
 			{
@@ -478,7 +559,10 @@ namespace Rylogic.Script
 				// e.g. 09.1 could be an invalid octal number or a FP number. 019 is assumed to be FP.
 				var d = digit(src[len]);
 				if (d < radix)
+				{
+					digits_found = true;
 					continue;
+				}
 
 				if (radix == 8 && allow_fp && d < 10)
 				{
@@ -506,6 +590,7 @@ namespace Rylogic.Script
 				if (src[len] == '.' && Str_.IsDecDigit(src[++len]))
 				{
 					fp = true;
+					digits_found = true;
 
 					// Read decimal digits up to a delimiter, sign, or exponent
 					for (; Str_.IsDecDigit(src[len]); ++len) { }
@@ -513,7 +598,7 @@ namespace Rylogic.Script
 
 				// Read an optional exponent
 				var ch = char.ToLower(src[len]);
-				if (ch == 'e' || ch == 'd' || (src == 'p' && radix == 16))
+				if (ch == 'e' || ch == 'd' || (ch == 'p' && radix == 16))
 				{
 					++len;
 
@@ -542,80 +627,43 @@ namespace Rylogic.Script
 				if (char.ToLower(src[len]) == 'l')
 					++len;
 			}
-			return len;
+			return digits_found;
 		}
 
 		/// <summary>
-		/// Call '++src' until 'pred' returns false.
-		/// 'eat_initial' and 'eat_final' are the number of characters to consume before
-		/// applying the predicate 'pred' and the number to consume after 'pred' returns false.</summary>
-		public static void Eat(Src src, int eat_initial, int eat_final, Func<char, bool> pred)
+		/// Buffer up to the next '\n' in 'src'. Returns true if a new line or at least one character is buffered.
+		/// if 'include_newline' is false, the new line is removed from the buffer once read.
+		/// On return, 'len' contains the length of the buffer up to, and including the new line character (even if the newline character is removed).</summary>
+		public static bool BufferLine(Src src, bool include_newline, int start, out int len)
 		{
-			for (src += eat_initial; src != 0 && pred(src); ++src) { }
-			src += eat_final;
-		}
-		public static void EatLineSpace(Src src, int eat_initial, int eat_final)
-		{
-			Eat(src, eat_initial, eat_final, Str_.IsLineSpace);
-		}
-		public static void EatWhiteSpace(Src src, int eat_initial, int eat_final)
-		{
-			Eat(src, eat_initial, eat_final, Str_.IsWhiteSpace);
-		}
-		public static void EatLine(Src src, int eat_initial, int eat_final)
-		{
-			Eat(src, eat_initial, eat_final, x => !(x == '\n') && !(x == '\r' && src[1] == '\n'));
-		}
-		public static void EatBlock(Src src, string block_beg, string block_end)
-		{
-			if (block_beg.Length == 0)
-				throw new Exception($"The block start marker cannot have length = 0");
-			if (block_end.Length == 0)
-				throw new Exception($"The block end marker cannot have length = 0");
-			if (!src.Match(block_beg))
-				throw new Exception($"Don't call {nameof(EatBlock)} unless 'src' is pointing at the block start");
-
-			var i = 0;
-			Eat(src, block_beg.Length, 1, x =>
-			{
-				var match_end = block_end[i] == x;
-				if (match_end) ++i; else i = 0;
-				return i != block_end.Length;
-			});
-		}
-		public static bool EatLiteralString(Src src)
-		{
-			if (src != '\"' && src != '\'')
-				throw new Exception($"Don't call {nameof(EatLiteralString)} unless 'src' is pointing at a literal string");
-			
-			var match = (char)src;
-			var escape = false;
-			Eat(src, 1, 0, x =>
-   			{
-				var end = x == match && !escape;
-				escape = x == '\\';
-				return !end;
-			});
-			if (src == match) ++src; else return false;
+			len = start;
+			if (src[len] == '\0') return false;
+			for (; src[len] != '\0' && src[len] != '\n'; ++len) { }
+			if (src[len] != '\0') { if (include_newline) len += 1; else src.Buffer.Remove(len, 1); }
 			return true;
 		}
-		public static void EatDelimiters(Src src, string delim)
-		{
-			for (; delim.Contains(src); ++src) {}
-		}
-		public static void EatLineComment(Src src, string line_comment = "//")
-		{
-			if (!src.Match(line_comment))
-				throw new Exception($"Don't call {nameof(EatLineComment)} unless 'src' is pointing at a line comment");
 
-			EatLine(src, line_comment.Length, 0);
-		}
-		public static void EatBlockComment(Src src, string block_beg = "/*", string block_end = "*/")
+		/// <summary>
+		/// Buffer up to and including 'end'. If 'include_end' is false, 'end' is removed from the buffer once read.
+		/// On return, 'len' contains the length of the buffer up to, and including 'end' (even if end is removed).</summary>
+		public static bool BufferTo(Src src, string end, bool include_end, int start, out int len)
 		{
-			if (!src.Match(block_beg))
-				throw new Exception($"Don't call {nameof(EatBlockComment)} unless 'src' is pointing at a block comment");
+			len = start;
+			for (; src[len] != '\0' && !src.Match(end, len); ++len) { }
+			if (src[len] != '\0') { if (include_end) len += end.Length; else src.Buffer.Remove(len, end.Length); }
+			return src[len] != '\0';
+		}
 
-			EatBlock(src, block_beg, block_end);
+		/// <summary>
+		/// Buffer until 'adv' returns 0. Signature for AdvFunc: int(Src&,int)
+		/// Returns true if buffered stopped due to 'adv' returning 0.
+		/// On return, 'len' contains the length of the buffer up to where 'adv' returned false.</summary>
+		public static bool BufferWhile(Src src, Func<Src, int, int> adv, int start, out int len)
+		{
+			len = start;
+			for (var inc = 0; src[len] != '\0' && (inc = adv(src, len)) != 0; len += inc) { }
+			if (src[len] == '\0') len = src.Buffer.Length;
+			return src[len] != '\0';
 		}
 
 		/// <summary>Used to filter the accepted characters when extracting number strings</summary>

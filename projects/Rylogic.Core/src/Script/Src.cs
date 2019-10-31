@@ -14,9 +14,22 @@ namespace Rylogic.Script
 		//  - The source is exhausted when 'Peek' returns 0
 		//  - This class supports local buffering.
 		//  - Don't make 'Read' public, that would by-pass the local buffering.
+		//  - The 'Read()' method returns int and EOS to indicate end of stream.
+		//    'Peek' however returns characters and returns '\0' to indicate end of stream.
+		//    (This is for consistency with the native implementation)
+		//  - The C# implementation does not need 'EOS' because the character sources always
+		//    return decoded characters from 'Read()'
 
-		protected Src()
+		protected Src(Loc location)
 		{
+			m_src = this;
+			m_loc = location;
+			Buffer = new StringBuilder(256);
+		}
+		protected Src(Src wrapped)
+		{
+			m_src = wrapped;
+			m_loc = new Loc();
 			Buffer = new StringBuilder(256);
 		}
 		public void Dispose()
@@ -25,17 +38,32 @@ namespace Rylogic.Script
 			GC.SuppressFinalize(this);
 		}
 		protected virtual void Dispose(bool _)
-		{}
+		{
+			if (m_src != this)
+				m_src.Dispose();
+		}
 
-		/// <summary>
-		/// The current position within the source.
-		/// Note: when buffering is used the might be past the current 'Peek' position</summary>
-		public abstract Loc Location { get; }
+		/// <summary>A reference to a wrapped source (or this)</summary>
+		protected Src m_src;
+
+		/// <summary>The current position in the root source.</summary>
+		public Loc Location
+		{
+			get
+			{
+				var s = this;
+				for (; s != s.m_src; s = s.m_src) { }
+				return s.m_loc;
+			}
+		}
+		private Loc m_loc;
 
 		/// <summary>A local cache of characters read from the source</summary>
 		public StringBuilder Buffer { get; }
 
-		/// <summary>Returns the next character in the character stream without advancing the stream position</summary>
+		/// <summary>
+		/// Returns the next character in the character stream without advancing the stream position.
+		/// '\0' indicates the end of the stream.</summary>
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		public char Peek => this[0];
 
@@ -49,6 +77,32 @@ namespace Rylogic.Script
 			}
 		}
 
+		/// <summary>Increment to the next character</summary>
+		public void Next(int n = 1)
+		{
+			if (n < 0)
+				throw new Exception("Cannot seek backwards");
+
+			for (; ; )
+			{
+				// Consume from the buffered characters first
+				var remove = Math.Min(n, Buffer.Length);
+				for (int i = 0; i != remove; ++i)
+				{
+					m_loc.inc(Buffer[i]);
+				}
+
+				Buffer.Remove(0, remove);
+				n -= remove;
+				if (n == 0)
+					break;
+
+				// Buffer and dump, since we need to read whole characters from the underlying source
+				if (ReadAhead(Math.Min(n, 4096)) == 0)
+					break;
+			}
+		}
+
 		/// <summary>
 		/// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF is hit.
 		/// Returns the number of characters actually buffered (a value in [0, n])</summary>
@@ -59,79 +113,72 @@ namespace Rylogic.Script
 				// Ensure 'Buffer's length grows with each loop
 				var count = Buffer.Length;
 
-				// Don't add '\0' to the buffer. 'TextBuffer' should never contain '\0' characters.
-				// Read() returns 0 when the source is exhausted, or if the Buffer has been modified
-				// directly. If the latter, we still need to check 'n' chars have been buffered.
+				// Read the next complete character from the underlying stream
 				var ch = Read();
-				if (ch != 0) { Buffer.Append(ch); continue; }
-				if (Buffer.Length > count) continue;
-				break;
+
+				// Buffer the read character
+				if (ch != '\0')
+				{
+					Buffer.Append((char)ch);
+					continue;
+				}
+
+				// Stop reading if the buffer isn't growing
+				if (Buffer.Length <= count)
+					break;
 			}
 			return Math.Min(n, Buffer.Length);
 		}
 
 		/// <summary>
-		/// Buffer until 'adv' returns 0. Starts from src[start]. Returns the number of characters buffered.
-		/// 'adv' should return the number of characters to advance the buffer by. (typically 1)</summary>
-		public int ReadAhead(Func<char, int> adv, int start = 0)
-		{
-			int i = start;
-			for (; ; )
-			{
-				var ch = this[i];
-				if (ch == 0) break;
-				var inc = adv(ch);
-				if (inc == 0) break;
-				i += inc;
-			}
-			return i;
-		}
-
-		/// <summary>Increment to the next character</summary>
-		public void Next(int n = 1)
-		{
-			if (n < 0)
-				throw new Exception("Cannot seek backwards");
-
-			// Consume from the buffered characters first
-			var remove = Math.Min(n, Buffer.Length);
-			Buffer.Remove(0, remove);
-			n -= remove;
-
-			// Consume any remaining from the underlying source
-			for (; n != 0 && Read() != 0; --n) {}
-		}
-
-		/// <summary>
-		/// Return the next valid character from the underlying stream or '\0' for the end of stream.
-		/// If you want to inject characters into the stream, modify 'Buffer' and return '\0' from Read().
+		/// Return the next valid character from the underlying stream or 'EOS' for the end of stream.
 		/// The stream is only considered empty when 'Buffer' is empty and Read returns 0.</summary>
-		protected abstract char Read();
+		protected abstract int Read();
 
 		/// <summary>Pointer-like interface</summary>
 		public static implicit operator char(Src src) { return src.Peek; }
 		public static Src operator ++(Src src) { src.Next(); return src; }
 		public static Src operator +(Src src, int n) { src.Next(n); return src; }
 
+		/// <summary>String compare. Note: asymmetric, i.e. src="abcd", str="ab", src.Match(str) == true</summary>
+		public bool Match(string str) => Match(str, 0);
+		public bool Match(string str, int start) => Match(str, start, str.Length);
+		public bool Match(string str, int start, int count)
+		{
+			ReadAhead(start + count);
+			if (Buffer.Length < start + count)
+				return false;
+
+			int i = start, iend = start + count;
+			for (; i != iend && str[i] == Buffer[i]; ++i) { }
+			return i == iend;
+		}
+
+		/// <summary>Read 'count' characters from the string and return them as a string</summary>
+		public string Read(int count)
+		{
+			var sb = new StringBuilder(count); int i = 0;
+			for (char ch; i != count && (ch = Peek) != '\0'; ++i, Next()) sb.Append(ch);
+			if (i != count) throw new ScriptException(EResult.UnexpectedEndOfFile, Location, $"Could not read {count} characters. End of stream reached");
+			return sb.ToString();
+		}
+
 		/// <summary>Reads all characters from the src and returns them as one string.</summary>
 		public string ReadToEnd()
 		{
 			var sb = new StringBuilder(4096);
-			for (char ch; (ch = Peek) != 0; Next()) sb.Append(ch);
+			for (char ch; (ch = Peek) != '\0'; Next()) sb.Append(ch);
 			return sb.ToString();
 		}
 
 		///<summary>
-		/// Reads a line. A line is defined as a sequence of characters followed by
-		/// a carriage return ('\r'), a line feed ('\n'), or a carriage return
-		/// immediately followed by a line feed. The resulting string does not
-		/// contain the terminating carriage return and/or line feed. The returned
-		/// value is null if the end of the input stream has been reached with no
-		/// characters being read (not even the new lines characters).</summary>
-		public string? ReadLine()
+		/// Reads a line. A line is defined as a sequence of characters followed by a carriage return ('\r'),
+		/// a line feed ('\n'), or a carriage return immediately followed by a line feed. The resulting string
+		/// does not contain the terminating carriage return and/or line feed.</summary>
+		public string ReadLine()
 		{
-			var sb = new StringBuilder(16);
-			for (char ch; (ch = Peek) != 0; Next())
+			var sb = new StringBuilder(256);
+			for (char ch; (ch = Peek) != '\0'; Next())
 			{
 				if (ch != '\r' && ch != '\n')
 				{
@@ -141,22 +188,9 @@ namespace Rylogic.Script
 
 				Next();
 				if (ch == '\r' && Peek == '\n') Next();
-				return sb.ToString();
+				break;
 			}
-			return sb.Length != 0 ? sb.ToString() : null;
-		}
-
-		/// <summary>String compare. Note: asymmetric, i.e. src="abcd", str="ab", src.Match(str) == true</summary>
-		public bool Match(string str) => Match(str, str.Length);
-		public bool Match(string str, int count)
-		{
-			ReadAhead(count);
-			if (Buffer.Length < count)
-				return false;
-
-			int i = 0;
-			for (; i != count && str[i] == Buffer[i]; ++i) { }
-			return i == count;
+			return sb.ToString();
 		}
 
 		/// <summary>Debugger description. Don't use Peek because that has side effects that make debugging confusing</summary>
@@ -166,8 +200,8 @@ namespace Rylogic.Script
 	/// <summary>A script source that always returns 0</summary>
 	public class NullSrc :Src
 	{
-		public override Loc Location => new Loc();
-		protected override char Read() { return '\0'; }
+		public NullSrc() :base(new Loc()) { }
+		protected override int Read() { return '\0'; }
 		public override string Description => "NullSrc";
 	}
 
@@ -175,33 +209,29 @@ namespace Rylogic.Script
 	public class StringSrc :Src
 	{
 		private readonly string m_str;
-		private int m_position;
+		private long m_position;
 
-		public StringSrc(string str, int position = 0)
+		public StringSrc(string str, long position = 0, int line = 1, int column = 1)
+			:base(new Loc(string.Empty, position, line, column))
 		{
 			m_str = str;
 			m_position = position;
-			Location = new Loc();
 		}
 		public StringSrc(StringSrc rhs)
-			: this(rhs.m_str, rhs.Position)
+			: this(rhs.m_str, rhs.Position, rhs.Location.Line, rhs.Location.Column)
 		{}
 
 		/// <summary>The current position in the string</summary>
-		public int Position
+		public long Position
 		{
 			get => m_position;
 			set => m_position = Math_.Clamp(value, 0, m_str.Length);
 		}
 
-		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get; }
-
-		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
-		protected override char Read()
+		/// <summary>Return the next valid character from the underlying stream or 'EOS' for the end of stream.</summary>
+		protected override int Read()
 		{
-			var ch = m_position != m_str.Length ? m_str[m_position++] : '\0';
-			return Location.inc(ch);
+			return m_position != m_str.Length ? m_str[(int)m_position++] : '\0';
 		}
 	}
 
@@ -211,15 +241,15 @@ namespace Rylogic.Script
 		private readonly string m_filepath;
 		private StreamReader m_stream;
 
-		public FileSrc(string filepath, long position = 0)
+		public FileSrc(string filepath, long position = 0, int line = 1, int column = 1)
+			:base(new Loc(filepath, position, line, column))
 		{
 			m_filepath = filepath;
 			m_stream = new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
 			m_stream.BaseStream.Position = position;
-			Location = new Loc();
 		}
 		public FileSrc(FileSrc rhs)
-			: this(rhs.m_filepath, rhs.m_stream.BaseStream.Position)
+			: this(rhs.m_filepath, rhs.m_stream.BaseStream.Position, rhs.Location.Line, rhs.Location.Column)
 		{ }
 		protected override void Dispose(bool _)
 		{
@@ -234,15 +264,12 @@ namespace Rylogic.Script
 			set => m_stream.BaseStream.Position = value;
 		}
 
-		/// <summary>The 'file position' within the source</summary>
-		public override Loc Location { get; }
-
 		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
-		protected override char Read()
+		protected override int Read()
 		{
 			var ch = m_stream.Read();
 			if (ch == -1) return '\0';
-			return Location.inc((char)ch);
+			return ch;
 		}
 	}
 }

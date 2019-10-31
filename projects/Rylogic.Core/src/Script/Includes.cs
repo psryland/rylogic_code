@@ -6,10 +6,32 @@ using System.Reflection;
 using System.Text;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Utility;
 
 namespace Rylogic.Script
 {
+	[Flags]
+	public enum EIncludeFlags
+	{
+		None = 0,
+
+		// True if the included data is binary data
+		Binary = 1 << 0,
+
+		// True for #include "file", false for #include <file>
+		IncludeLocalDir = 1 << 1,
+	};
+
+	/// <summary>The locations to search for includes</summary>
+	[Flags]
+	public enum EIncludeTypes
+	{
+		None = 0,
+		Files = 1 << 0,
+		Resources = 1 << 1,
+		Strings = 1 << 2,
+		All = Files | Resources | Strings,
+	}
+
 	public interface IIncludeHandler
 	{
 		/// <summary>Add a path to the include search paths</summary>
@@ -30,22 +52,44 @@ namespace Rylogic.Script
 		Stream OpenStream(string include, EIncludeFlags flags, Loc? loc = null);
 	}
 
-	[Flags]
-	public enum EIncludeFlags
+	/// <summary>An include handler that doesn't handle any includes.</summary>
+	public class NoIncludes :IIncludeHandler
 	{
-		None = 0,
+		public NoIncludes()
+		{ }
 
-		// True if the included data is binary data
-		Binary = 1 << 0,
+		/// <summary>Add a path to the include search paths</summary>
+		public void AddSearchPath(string path, int? index = null)
+		{
+			// Ignore
+		}
 
-		// True for #include "file", false for #include <file>
-		IncludeLocalDir = 1 << 1,
+		/// <summary>Resolve an include into a full path</summary>
+		public string ResolveInclude(string include, EIncludeFlags flags, Loc? loc = null)
+		{
+			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
+		}
+
+		/// <summary>
+		/// Returns a 'Src' corresponding to the string "include".
+		/// 'search_paths_only' is true for #include <desc> and false for #include "desc".
+		/// 'loc' is where in the current source the include comes from.</summary>
+		public Src Open(string include, EIncludeFlags flags, Loc? loc = null)
+		{
+			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
+		}
+
+		/// <summary>Open 'include' as a stream</summary>
+		public Stream OpenStream(string include, EIncludeFlags flags, Loc? loc = null)
+		{
+			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
+		}
 	};
 
 	/// <summary>An include handler that tries to open include files from resources, search paths, or a string table</summary>
 	public class Includes : IIncludeHandler
 	{
-		public Includes(EType types = EType.Files)
+		public Includes(EIncludeTypes types = EIncludeTypes.All)
 		{
 			Types = types;
 			SearchPaths = new List<string>();
@@ -53,25 +97,28 @@ namespace Rylogic.Script
 			StrTable = new Dictionary<string, string>();
 			FileOpened = null;
 		}
-		public Includes(string search_paths, EType types = EType.Files)
+		public Includes(string search_paths, EIncludeTypes types = EIncludeTypes.All)
 			:this(types)
 		{
 			SearchPathList = search_paths;
 		}
-		public Includes(IEnumerable<Assembly> assemblies, EType types = EType.Resources)
+		public Includes(IEnumerable<Assembly> assemblies, EIncludeTypes types = EIncludeTypes.All)
 			:this(types)
 		{
 			Assemblies.Assign(assemblies);
 		}
-		public Includes(string search_paths, IEnumerable<Assembly> assemblies, EType types = EType.Files|EType.Resources)
+		public Includes(string search_paths, IEnumerable<Assembly> assemblies, EIncludeTypes types = EIncludeTypes.All)
 			:this(types)
 		{
 			SearchPathList = search_paths;
 			Assemblies.Assign(assemblies);
 		}
 
+		/// <summary>Raised whenever a file is opened</summary>
+		public event EventHandler<ValueEventArgs>? FileOpened;
+
 		/// <summary>Types of includes supported</summary>
-		public EType Types { get; set; }
+		public EIncludeTypes Types { get; set; }
 
 		/// <summary>The directory paths to search</summary>
 		public List<string> SearchPaths { get; }
@@ -94,16 +141,7 @@ namespace Rylogic.Script
 				SearchPaths.Clear();
 				foreach (var path in value.Split(new[] { ',', ';', '\n' }, StringSplitOptions.RemoveEmptyEntries))
 					SearchPaths.Add(path);
-
-				if (SearchPaths.Count != 0)
-					Types |= EType.Files;
 			}
-		}
-
-		/// <summary> Convert 'name' into a resource string id</summary>
-		public static string ResId(string name)
-		{
-			return name.Replace(".", "_");
 		}
 
 		/// <summary>Add/Insert a path in the search paths</summary>
@@ -118,39 +156,27 @@ namespace Rylogic.Script
 		/// <summary>Resolve an include into a full path</summary>
 		public string ResolveInclude(string include, EIncludeFlags flags, Loc? loc = null)
 		{
-			// Try file includes
+			// Search files regardless of 'Types' since this function is specifically for resolving filepaths
 			var searched_paths = new List<string>();
-			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
+			if (ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
 				return result;
-
-			// TODO: this is broken, is 'result' a filepath or the content of the include??
-
-		//	// Try assemblies
-		//	if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(include, out result, out _))
-		//		return result;
-		//
-		//	// Try the string table
-		//	if (Types.HasFlag(EType.Strings) && ResolveStringInclude(include, out result))
-		//		return result;
 
 			// Ignore if missing includes flagged
 			if (IgnoreMissingIncludes)
 				return string.Empty;
 
-			throw new ScriptException(EResult.MissingInclude, loc ?? new Loc(), searched_paths.Count != 0
-				? $"Failed to resolve include '{include}'\n\nNot found in these search paths:\n{string.Join("\n", searched_paths)}"
-				: $"Failed to resolve include '{include}'");
+			var msg = new StringBuilder($"Failed to resolve include '{include}'");
+			if (searched_paths.Count != 0) msg.Append($"\n\nNot found in these search paths:");
+			foreach (var path in searched_paths) msg.Append("\n").Append(path);
+			throw new ScriptException(EResult.MissingInclude, loc ?? new Loc(), msg.ToString());
 		}
 
-		/// <summary>
-		/// Returns a 'Src' corresponding to the string "include".
-		/// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-		/// 'loc' is where in the current source the include comes from.</summary>
+		/// <summary>Returns a 'Src' corresponding to "include". 'loc' is where in the current source the include comes from.</summary>
 		public Src Open(string include, EIncludeFlags flags, Loc? loc = null)
 		{
 			// Try file includes
 			var searched_paths = new List<string>();
-			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
+			if (Types.HasFlag(EIncludeTypes.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var result, out searched_paths))
 			{
 				FileOpened?.Invoke(this, new ValueEventArgs(result));
 				return new FileSrc(result);
@@ -158,7 +184,7 @@ namespace Rylogic.Script
 
 			// Try resources
 			var id = ResId(include);
-			if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(id, out var assembly))
+			if (Types.HasFlag(EIncludeTypes.Resources) && ResolveResourceInclude(id, out var assembly))
 			{
 				using var stream = assembly!.GetManifestResourceStream(id) ?? throw new Exception("Resource not found");
 				using var reader = new StreamReader(stream, Encoding.UTF8, true);
@@ -167,7 +193,7 @@ namespace Rylogic.Script
 
 			// Try the string table
 			var key = include;
-			if (Types.HasFlag(EType.Strings) && ResolveStringInclude(key, out var strtab))
+			if (Types.HasFlag(EIncludeTypes.Strings) && ResolveStringInclude(key, out var strtab))
 			{
 				return new StringSrc(strtab![key]);
 			}
@@ -189,7 +215,7 @@ namespace Rylogic.Script
 		{
 			// Try file includes
 			var searched_paths = new List<string>();
-			if (Types.HasFlag(EType.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var fullpath, out searched_paths))
+			if (Types.HasFlag(EIncludeTypes.Files) && ResolveFileInclude(include, flags.HasFlag(EIncludeFlags.IncludeLocalDir), loc, out var fullpath, out searched_paths))
 			{
 				FileOpened?.Invoke(this, new ValueEventArgs(fullpath));
 				return new FileStream(fullpath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -197,14 +223,14 @@ namespace Rylogic.Script
 
 			// Try resources
 			var id = ResId(include);
-			if (Types.HasFlag(EType.Resources) && ResolveResourceInclude(id, out var assembly))
+			if (Types.HasFlag(EIncludeTypes.Resources) && ResolveResourceInclude(id, out var assembly))
 			{
 				return assembly!.GetManifestResourceStream(id) ?? throw new Exception("Resource not found");
 			}
 
 			// Try the string table
 			var key = include;
-			if (Types.HasFlag(EType.Strings) && ResolveStringInclude(key, out var strtab))
+			if (Types.HasFlag(EIncludeTypes.Strings) && ResolveStringInclude(key, out var strtab))
 			{
 				return new MemoryStream(Encoding.UTF8.GetBytes(strtab![key]));
 			}
@@ -221,8 +247,11 @@ namespace Rylogic.Script
 					: $"Failed to open include '{include}'");
 		}
 
-		/// <summary>Raised whenever a file is opened</summary>
-		public event EventHandler<ValueEventArgs>? FileOpened;
+		/// <summary> Convert 'name' into a resource string id</summary>
+		private static string ResId(string name)
+		{
+			return name.Replace(".", "_");
+		}
 
 		/// <summary>Resolve an include partial path into a full path</summary>
 		private bool ResolveFileInclude(string include, bool include_local_dir, Loc? loc, out string fullpath, out List<string> searched_paths)
@@ -266,50 +295,5 @@ namespace Rylogic.Script
 			str_table = StrTable.ContainsKey(tag) ? StrTable : null;
 			return str_table != null;
 		}
-
-		/// <summary>The locations to search for includes</summary>
-		[Flags]
-		public enum EType
-		{
-			None      = 0,
-			Files     = 1 << 0,
-			Resources = 1 << 1,
-			Strings   = 1 << 2,
-			All       = Files | Resources | Strings,
-		}
 	}
-
-	/// <summary>An include handler that doesn't handle any includes.</summary>
-	public class NoIncludes :IIncludeHandler
-	{
-		public NoIncludes()
-		{}
-
-		/// <summary>Add a path to the include search paths</summary>
-		public void AddSearchPath(string path, int? index = null)
-		{
-			// Ignore
-		}
-
-		/// <summary>Resolve an include into a full path</summary>
-		public string ResolveInclude(string include, EIncludeFlags flags, Loc? loc = null)
-		{
-			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
-		}
-
-		/// <summary>
-		/// Returns a 'Src' corresponding to the string "include".
-		/// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-		/// 'loc' is where in the current source the include comes from.</summary>
-		public Src Open(string include, EIncludeFlags flags, Loc? loc = null)
-		{
-			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
-		}
-
-		/// <summary>Open 'include' as a stream</summary>
-		public Stream OpenStream(string include, EIncludeFlags flags, Loc? loc = null)
-		{
-			throw new ScriptException(EResult.IncludesNotSupported, loc ?? new Loc(), "#include is not supported");
-		}
-	};
 }

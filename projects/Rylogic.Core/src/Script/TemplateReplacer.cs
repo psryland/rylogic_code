@@ -60,20 +60,22 @@ namespace Rylogic.Script
 			// field match. When == 0 we need to retest the pattern.
 			while (!Src.Empty && m_match_ofs == 0)
 			{
+				var top = Src.Top;
+
 				// Buffer the source in chunks
-				Src.ReadAhead(ChunkSize);
+				top.ReadAhead(ChunkSize);
 
 				// Find the index of the next match
-				var m = Pattern.Match(Src.Buffer.ToString());
-				m_match_ofs = m.Success ? m.Index : Src.Buffer.Length != ChunkSize ? Src.Buffer.Length : ChunkSize / 2;
+				var m = Pattern.Match(top.Buffer.ToString());
+				m_match_ofs = m.Success ? m.Index : top.Buffer.Length != ChunkSize ? top.Buffer.Length : ChunkSize / 2;
 
 				// If there is a match for the next character in the src,
 				// call the callback and do the substitution.
 				if (m.Success && m_match_ofs == 0)
 				{
-					Src.Buffer.Remove(0, m.Length);
+					top.Buffer.Remove(0, m.Length);
 					var replace = Substitute(this, m);
-					Src.Buffer.Insert(0, replace);
+					top.Buffer.Insert(0, replace);
 				}
 			}
 			var ch = Src.Peek;

@@ -6,6 +6,7 @@ namespace Rylogic.Script
 	public class Preprocessor :Src
 	{
 		public Preprocessor(IIncludeHandler? inc = null, IMacroHandler? mac = null, EmbeddedCodeFactory? emb = null)
+			:base(new Loc())
 		{
 			Stack = new SrcStack();
 			Includes = inc ?? new Includes();
@@ -27,13 +28,10 @@ namespace Rylogic.Script
 		private SrcStack Stack { get; }
 
 		/// <summary></summary>
-		public override Loc Location => Stack.Location;
-
-		/// <summary></summary>
-		protected override char Read()
+		protected override int Read()
 		{
 			var ch = Stack.Peek;
-			if (ch != 0) Stack.Next();
+			if (ch != '\0') Stack.Next();
 			return ch;
 		}
 	}

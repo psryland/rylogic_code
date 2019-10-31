@@ -102,9 +102,9 @@ namespace pr::script
 		// The current position in the root underlying source
 		virtual Loc Location() const noexcept
 		{
-			// Most subclasses will not need to override this, only those that switch between
-			// sources, such as the preprocessor's source stack.
-			return m_loc;
+			auto s = this;
+			for (; s != &m_src; s = &s->m_src) { }
+			return s->m_loc;
 		}
 
 		// A local cache of characters read from the source
@@ -623,6 +623,150 @@ namespace pr::script
 		return true;
 	}
 
+	// Buffer characters for a number (real or int) in 'src'.
+	// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E|p|P}[{+|-}]digits][U][L][L]
+	// Returns true if valid number characters where buffered
+	inline bool BufferNumber(Src& src, int& radix, int start = 0, int* len = nullptr, str::ENumType type = str::ENumType::Any)
+	{
+		// Notes:
+		//  - This duplicates the BufferNumber function in pr::str :-/
+		//    The pr::str version consumes characters from a stream where as this version
+		//    simply buffers the characters in 'src'. I don't want pr::str to depend on pr::script
+		//    and I don't want to change the behaviour of the pr::str version, so duplication is
+		//    the only option.
+
+		auto i = start;
+		auto x = AtExit([&] { if (len) *len = i; });
+
+		// Convert a character to it's numerical value
+		static auto digit = [](int ch)
+		{
+			if (ch >= '0' && ch <= '9') return ch - '0';
+			if (ch >= 'a' && ch <= 'z') return 10 + ch - 'a';
+			if (ch >= 'A' && ch <= 'Z') return 10 + ch - 'A';
+			return std::numeric_limits<int>::max();
+		};
+
+		auto digits_found = false;
+		auto allow_fp = AllSet(type, str::ENumType::FP);
+		auto fp = false;
+
+		// Look for the optional sign character
+		// Ideally we'd prefer not to advance 'src' passed the '+' or '-' if the next
+		// character is not the start of a number. However doing so means 'src' can't
+		// be a forward only input stream. Therefore, I'm pushing the responsibility
+		// back to the caller, they need to check that if *src is a '+' or '-' then
+		// the following char is a decimal digit.
+		if (src[i] == '+' || src[i] == '-')
+			++i;
+
+		// Look for a radix prefix on the number, this overrides 'radix'.
+		// If the first digit is zero, then the number may have a radix prefix.
+		// '0x' or '0b' must have at least one digit following the prefix
+		// Adding 'o' for octal, in addition to standard C literal syntax
+		if (src[i] == '0')
+		{
+			++i;
+			auto radix_prefix = false;
+			if (false) { }
+			else if (tolower(src[i]) == 'x') { radix = 16; ++i; radix_prefix = true; }
+			else if (tolower(src[i]) == 'o') { radix = 8; ++i; radix_prefix = true; }
+			else if (tolower(src[i]) == 'b') { radix = 2; ++i; radix_prefix = true; }
+			else
+			{
+				// If no radix prefix is given, then assume octal zero (for conformance with C) 
+				if (radix == 0) radix = str::IsDigit(src[i]) ? 8 : 10;
+				digits_found = true;
+			}
+
+			// Check for the required integer
+			if (radix_prefix && digit(src[i]) >= radix)
+				return false;
+		}
+		else if (radix == 0)
+		{
+			radix = 10;
+		}
+
+		// Read digits up to a delimiter, decimal point, or digit >= radix.
+		auto assumed_fp_len = 0; // the length of the number when we first assumed a FP number.
+		for (; src[i] != 0; ++i)
+		{
+			// If the character is greater than the radix, then assume a FP number.
+			// e.g. 09.1 could be an invalid octal number or a FP number. 019 is assumed to be FP.
+			auto d = digit(src[i]);
+			if (d < radix)
+			{
+				digits_found = true;
+				continue;
+			}
+
+			if (radix == 8 && allow_fp && d < 10)
+			{
+				if (assumed_fp_len == 0) assumed_fp_len = i;
+				continue;
+			}
+
+			break;
+		}
+
+		// If we're assuming this is a FP number but no decimal point is found,
+		// then truncate the string at the last valid character given 'radix'.
+		// If a decimal point is found, change the radix to base 10.
+		if (assumed_fp_len != 0)
+		{
+			if (src[i] == '.') radix = 10;
+			else i = assumed_fp_len;
+		}
+
+		// FP numbers can be in dec or hex, but not anything else...
+		allow_fp &= radix == 10 || radix == 16;
+		if (allow_fp)
+		{
+			// If floating point is allowed, read a decimal point followed by more digits, and an optional exponent
+			if (src[i] == '.' && str::IsDecDigit(src[++i]))
+			{
+				fp = true;
+				digits_found = true;
+
+				// Read decimal digits up to a delimiter, sign, or exponent
+				for (; str::IsDecDigit(src[i]); ++i) { }
+			}
+
+			// Read an optional exponent
+			auto ch = tolower(src[i]);
+			if (ch == 'e' || ch == 'd' || (ch == 'p' && radix == 16))
+			{
+				++i;
+
+				// Read the optional exponent sign
+				if (src[i] == '+' || src[i] == '-')
+					++i;
+
+				// Read decimal digits up to a delimiter, or suffix
+				for (; str::IsDecDigit(src[i]); ++i) { }
+			}
+		}
+
+		// Read the optional number suffixes
+		if (allow_fp && tolower(src[i]) == 'f')
+		{
+			fp = true;
+			++i;
+		}
+		if (!fp && tolower(src[i]) == 'u')
+		{
+			++i;
+		}
+		if (!fp && tolower(src[i]) == 'l')
+		{
+			++i;
+			if (tolower(src[i]) == 'l')
+				++i;
+		}
+		return digits_found;
+	}
+
 	// Buffer up to the next '\n' in 'src'. Returns true if a new line or at least one character is buffered.
 	// if 'include_newline' is false, the new line is removed from the buffer once read.
 	// On return, 'len' contains the length of the buffer up to, and including the new line character (even if the newline character is removed).
@@ -649,16 +793,16 @@ namespace pr::script
 		return src[i] != '\0';
 	}
 
-	// Buffer until 'pred' returns 0. Signature for Pred: int(Src&,int)
-	// Returns true if buffered stopped due to 'pred' returning 0.
-	// On return, 'len' contains the length of the buffer up to where 'pred' returned false.
-	template <typename Pred, typename = std::enable_if_t<std::is_invocable_r_v<int, Pred, Src&, int>>>
-	inline bool BufferWhile(Src& src, Pred pred, int start = 0, int* len = nullptr)
+	// Buffer until 'adv' returns 0. Signature for AdvFunc: int(Src&,int)
+	// Returns true if buffered stopped due to 'adv' returning 0.
+	// On return, 'len' contains the length of the buffer up to where 'adv' returned false.
+	template <typename AdvFunc, typename = std::enable_if_t<std::is_invocable_r_v<int, AdvFunc, Src&, int>>>
+	inline bool BufferWhile(Src& src, AdvFunc adv, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
 		auto x = AtExit([&]{ if (len) *len = i; });
 
-		for (auto inc = 0; src[i] != '\0' && (inc = pred(src, i)) != 0; i += inc) {}
+		for (auto inc = 0; src[i] != '\0' && (inc = adv(src, i)) != 0; i += inc) {}
 		if (src[i] == '\0') i = s_cast<int>(src.Buffer().size());
 		return src[i] != '\0';
 	}

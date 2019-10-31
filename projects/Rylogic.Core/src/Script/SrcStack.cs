@@ -10,6 +10,8 @@ namespace Rylogic.Script
 	{
 		// Notes:
 		//  - SrcStack is not a 'Src' subclass because the stack must not buffer.
+		//  - 'Buffer' and 'ReadAhead' is not defined because that gives the
+		//    impression this class is buffering, which it isn't.
 
 		public SrcStack()
 			: this(null)
@@ -31,9 +33,6 @@ namespace Rylogic.Script
 
 		/// <summary>The 'file position' within the source</summary>
 		public Loc Location => Top.Location;
-
-		/// <summary>The local cache buffer of the top source</summary>
-		public StringBuilder Buffer => Top.Buffer;
 
 		/// <summary>True if there are no sources on the stack</summary>
 		public bool Empty => Stack.Count == 0;
@@ -80,10 +79,6 @@ namespace Rylogic.Script
 					Pop();
 			}
 		}
-
-		/// <summary>Read ahead for the top sources</summary>
-		public int ReadAhead(int n) => Top.ReadAhead(n);
-		public int ReadAhead(Func<char, int> adv, int start = 0) => Top.ReadAhead(adv, start);
 
 		/// <summary>Pointer-like interface</summary>
 		public static implicit operator char(SrcStack src) { return src.Peek; }

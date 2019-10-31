@@ -135,7 +135,7 @@ namespace Rylogic.Script
 			for (; Src != 0 && Src != '{' && Src != '}';)
 			{
 				if (Src != '\"') ++Src;
-				else Extract.EatLiteralString(Src);
+				else Extract.EatLiteral(Src);
 			}
 			return Src == '{';
 		}
@@ -148,7 +148,7 @@ namespace Rylogic.Script
 		{
 			for (int nest = IsSectionStart ? 0 : 1; Src != 0;)
 			{
-				if (Src == '\"') { Extract.EatLiteralString(Src); continue; }
+				if (Src == '\"') { Extract.EatLiteral(Src); continue; }
 				nest += (Src == '{') ? 1 : 0;
 				nest -= (Src == '}') ? 1 : 0;
 				if (nest == 0) break;
@@ -167,7 +167,7 @@ namespace Rylogic.Script
 			kw = string.Empty;
 			for (; Src != 0 && Src != '}' && Src != '*';)
 			{
-				if (Src == '\"') { Extract.EatLiteralString(Src); continue; }
+				if (Src == '\"') { Extract.EatLiteral(Src); continue; }
 				if (Src == '{')  { Src += FindSectionEnd() ? 1 : 0; continue; }
 				++Src;
 			}

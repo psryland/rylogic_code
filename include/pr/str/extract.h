@@ -8,8 +8,8 @@
 #include <type_traits>
 #include <cerrno>
 #include "pr/common/number.h"
-#include "pr/str/string_core.h"
 #include "pr/common/flags_enum.h"
+#include "pr/str/string_core.h"
 
 namespace pr::str
 {
@@ -128,8 +128,14 @@ namespace pr::str
 	// Returns false if a valid number could not be read, or 'str' is too small
 	template <typename Ptr, typename Char = char_type_t<Ptr>> void BufferNumber(Ptr& src, wchar_t (&str)[256], int& len, int& radix, ENumType type = ENumType::Any, Char const* delim = nullptr)
 	{
-		delim = Delim(delim);
+		// Notes:
+		//  - This duplicates the BufferNumber function in pr::script :-/
+		//    The pr::script version does not consume characters but instead buffers them within
+		//    the source. I don't want pr::str to depend on pr::script and I don't want to change
+		//    the behaviour of the pr::script version, so duplication is the only option.
+
 		len = 0;
+		delim = Delim(delim);
 
 		// Find the first non-delimiter
 		if (!AdvanceToNonDelim(src, delim))
