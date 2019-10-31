@@ -13,7 +13,7 @@
 #include "pr/meta/optional.h"
 #include "pr/ldraw/ldr_object.h"
 #include "pr/common/assert.h"
-#include "pr/crypt/hash.h"
+#include "pr/common/hash.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convex_hull.h"
 #include "pr/renderer11/renderer.h"
@@ -171,13 +171,9 @@ namespace pr::ldr
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
-		void ReportError(EResult result)
+		void ReportError(EResult result, std::string const& msg = {})
 		{
-			m_reader.ReportError(result);
-		}
-		void ReportError(EResult result, char const* msg) 
-		{
-			m_reader.ReportError(result, msg);
+			m_reader.ReportError(result, m_reader.Location(), msg);
 		}
 
 		// Give a progress update
@@ -195,7 +191,7 @@ namespace pr::ldr
 
 			// Call the callback with the freshly minted object.
 			// If the callback returns false, abort parsing.
-			m_cancel = !m_progress_cb(m_context_id, m_result, m_reader.Loc(), false);
+			m_cancel = !m_progress_cb(m_context_id, m_result, m_reader.Location(), false);
 			m_last_progress_update = system_clock::now();
 		}
 	};
@@ -206,7 +202,7 @@ namespace pr::ldr
 	#pragma region Parse Common Elements
 
 	// Read the name, colour, and instance flag for an object
-	ObjectAttributes ParseAttributes(pr::script::Reader& reader, ELdrObject model_type)
+	ObjectAttributes ParseAttributes(ParseParams& p, ELdrObject model_type)
 	{
 		ObjectAttributes attr;
 		attr.m_type = model_type;
@@ -214,10 +210,10 @@ namespace pr::ldr
 			
 		// Read the next tokens up to the section start
 		wstring32 tok0, tok1; auto count = 0;
-		if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
-		if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
-		if (!reader.IsSectionStart())
-			reader.ReportError(pr::script::EResult::UnknownToken, "object attributes are invalid");
+		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok0, L"{}"); ++count; }
+		if (!p.m_reader.IsSectionStart()) { p.m_reader.Token(tok1, L"{}"); ++count; }
+		if (!p.m_reader.IsSectionStart())
+			p.ReportError(EResult::UnknownToken, "object attributes are invalid");
 
 		switch (count)
 		{
@@ -225,9 +221,9 @@ namespace pr::ldr
 			{
 				// Expect: *Type <name> <colour>
 				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-					reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+					p.ReportError(EResult::TokenNotFound, "object name is invalid");
 				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-					reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+					p.ReportError(EResult::TokenNotFound, "object colour is invalid");
 				break;
 			}
 		case 1:
@@ -238,19 +234,19 @@ namespace pr::ldr
 				{
 					attr.m_name = "";
 					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+						p.ReportError(EResult::TokenNotFound, "object colour is invalid");
 				}
 				else
 				{
 					attr.m_colour = 0xFFFFFFFF;
 					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+						p.ReportError(EResult::TokenNotFound, "object name is invalid");
 				}
 				break;
 			}
 		case 0:
 			{
-				attr.m_name = ToStringA(model_type);
+				attr.m_name = Enum<ELdrObject>::ToStringA(model_type);
 				attr.m_colour = 0xFFFFFFFF;
 				break;
 			}
@@ -259,22 +255,22 @@ namespace pr::ldr
 	}
 
 	// Parse a camera description
-	void ParseCamera(pr::script::Reader& reader, ParseResult& out)
+	void ParseCamera(ParseParams& p, ParseResult& out)
 	{
-		reader.SectionStart();
-		for (EKeyword kw; reader.NextKeywordH(kw);)
+		p.m_reader.SectionStart();
+		for (EKeyword kw; p.m_reader.NextKeywordH(kw);)
 		{
 			switch (kw)
 			{
 			default:
 				{
-					reader.ReportError(pr::script::EResult::UnknownToken);
+					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Camera", p.m_reader.LastKeyword().c_str()));
 					break;
 				}
 			case EKeyword::O2W:
 				{
 					auto c2w = pr::m4x4Identity;
-					reader.TransformS(c2w);
+					p.m_reader.TransformS(c2w);
 					out.m_cam.CameraToWorld(c2w);
 					out.m_cam_fields |= ECamField::C2W;
 					break;
@@ -282,7 +278,7 @@ namespace pr::ldr
 			case EKeyword::LookAt:
 				{
 					pr::v4 lookat;
-					reader.Vector3S(lookat, 1.0f);
+					p.m_reader.Vector3S(lookat, 1.0f);
 					pr::m4x4 c2w = out.m_cam.CameraToWorld();
 					out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
 					out.m_cam_fields |= ECamField::C2W;
@@ -292,7 +288,7 @@ namespace pr::ldr
 			case EKeyword::Align:
 				{
 					pr::v4 align;
-					reader.Vector3S(align, 0.0f);
+					p.m_reader.Vector3S(align, 0.0f);
 					out.m_cam.Align(align);
 					out.m_cam_fields |= ECamField::Align;
 					break;
@@ -300,7 +296,7 @@ namespace pr::ldr
 			case EKeyword::Aspect:
 				{
 					float aspect;
-					reader.RealS(aspect);
+					p.m_reader.RealS(aspect);
 					out.m_cam.Aspect(aspect);
 					out.m_cam_fields |= ECamField::Align;
 					break;
@@ -308,7 +304,7 @@ namespace pr::ldr
 			case EKeyword::FovX:
 				{
 					float fovX;
-					reader.RealS(fovX);
+					p.m_reader.RealS(fovX);
 					out.m_cam.FovX(fovX);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
@@ -316,7 +312,7 @@ namespace pr::ldr
 			case EKeyword::FovY:
 				{
 					float fovY;
-					reader.RealS(fovY);
+					p.m_reader.RealS(fovY);
 					out.m_cam.FovY(fovY);
 					out.m_cam_fields |= ECamField::FovY;
 					break;
@@ -324,7 +320,7 @@ namespace pr::ldr
 			case EKeyword::Fov:
 				{
 					float fov[2];
-					reader.RealS(fov, 2);
+					p.m_reader.RealS(fov, 2);
 					out.m_cam.Fov(fov[0], fov[1]);
 					out.m_cam_fields |= ECamField::Aspect;
 					out.m_cam_fields |= ECamField::FovY;
@@ -332,13 +328,13 @@ namespace pr::ldr
 				}
 			case EKeyword::Near:
 				{
-					reader.Real(out.m_cam.m_near);
+					p.m_reader.Real(out.m_cam.m_near);
 					out.m_cam_fields |= ECamField::Near;
 					break;
 				}
 			case EKeyword::Far:
 				{
-					reader.Real(out.m_cam.m_far);
+					p.m_reader.Real(out.m_cam.m_far);
 					out.m_cam_fields |= ECamField::Far;
 					break;
 				}
@@ -350,12 +346,14 @@ namespace pr::ldr
 				}
 			}
 		}
-		reader.SectionEnd();
+		p.m_reader.SectionEnd();
 	}
 
 	// Parse a font description
-	void ParseFont(pr::script::Reader& reader, Font& font)
+	void ParseFont(ParseParams& p, Font& font)
 	{
+		auto& reader = p.m_reader;
+
 		reader.SectionStart();
 		font.m_underline = false;
 		font.m_strikeout = false;
@@ -365,7 +363,7 @@ namespace pr::ldr
 			{
 			default:
 				{
-					reader.ReportError(pr::script::EResult::UnknownToken);
+					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Font", reader.LastKeyword().c_str()));
 					break;
 				}
 			case EKeyword::Name:
@@ -418,8 +416,10 @@ namespace pr::ldr
 	}
 
 	// Parse a simple animation description
-	void ParseAnimation(pr::script::Reader& reader, Animation& anim)
+	void ParseAnimation(ParseParams& p, Animation& anim)
 	{
+		auto& reader = p.m_reader;
+
 		reader.SectionStart();
 		for (EKeyword kw; reader.NextKeywordH(kw);)
 		{
@@ -427,7 +427,7 @@ namespace pr::ldr
 			{
 			default:
 				{
-					reader.ReportError(pr::script::EResult::UnknownToken);
+					p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Animation", reader.LastKeyword().c_str()));
 					break;
 				}
 			case EKeyword::Style:
@@ -464,44 +464,46 @@ namespace pr::ldr
 	// Parse a texture description. Returns a pointer to the Texture created in the renderer.
 	bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
 	{
+		auto& reader = p.m_reader;
+
 		std::wstring tex_resource;
 		auto t2s = pr::m4x4Identity;
 		bool has_alpha = false;
 		SamplerDesc sam;
 
-		p.m_reader.SectionStart();
-		while (!p.m_reader.IsSectionEnd())
+		reader.SectionStart();
+		while (!reader.IsSectionEnd())
 		{
-			if (p.m_reader.IsKeyword())
+			if (reader.IsKeyword())
 			{
-				auto kw = p.m_reader.NextKeywordH<EKeyword>();
+				auto kw = reader.NextKeywordH<EKeyword>();
 				switch (kw)
 				{
 				default:
 					{
-						p.ReportError(EResult::UnknownToken);
+						p.ReportError(EResult::UnknownToken, Fmt("Keyword '%S' is not valid within *Texture", reader.LastKeyword().c_str()));
 						break;
 					}
 				case EKeyword::O2W:
 					{
-						p.m_reader.TransformS(t2s);
+						reader.TransformS(t2s);
 						break;
 					}
 				case EKeyword::Addr:
 					{
 						char word[20];
-						p.m_reader.SectionStart();
-						p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
-						p.m_reader.SectionEnd();
+						reader.SectionStart();
+						reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+						reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+						reader.SectionEnd();
 						break;
 					}
 				case EKeyword::Filter:
 					{
 						char word[20];
-						p.m_reader.SectionStart();
-						p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)Enum<EFilter>::Parse(word, false);
-						p.m_reader.SectionEnd();
+						reader.SectionStart();
+						reader.Identifier(word); sam.Filter = (D3D11_FILTER)Enum<EFilter>::Parse(word, false);
+						reader.SectionEnd();
 						break;
 					}
 				case EKeyword::Alpha:
@@ -513,10 +515,10 @@ namespace pr::ldr
 			}
 			else
 			{
-				p.m_reader.String(tex_resource);
+				reader.String(tex_resource);
 			}
 		}
-		p.m_reader.SectionEnd();
+		reader.SectionEnd();
 
 		// Silently ignore missing texture files
 		if (!tex_resource.empty())
@@ -529,7 +531,7 @@ namespace pr::ldr
 			}
 			catch (std::exception const& e)
 			{
-				p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
+				p.ReportError(EResult::ValueNotFound, FmtS("Failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
 			}
 		}
 		return true;
@@ -538,9 +540,11 @@ namespace pr::ldr
 	// Parse a video texture
 	bool ParseVideo(ParseParams& p, Texture2DPtr& vid)
 	{
+		auto& reader = p.m_reader;
+
 		std::string filepath;
-		p.m_reader.SectionStart();
-		p.m_reader.String(filepath);
+		reader.SectionStart();
+		reader.String(filepath);
 		if (!filepath.empty())
 		{
 			(void)vid;
@@ -555,35 +559,37 @@ namespace pr::ldr
 			//' 	p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create video %s\nReason: %s" ,filepath.c_str() ,e.what()));
 			//' }
 		}
-		p.m_reader.SectionEnd();
+		reader.SectionEnd();
 		return true;
 	}
 
 	// Parse keywords that can appear in any section. Returns true if the keyword was recognised.
 	bool ParseProperties(ParseParams& p, EKeyword kw, LdrObject* obj)
 	{
+		auto& reader = p.m_reader;
+
 		switch (kw)
 		{
 		default: return false;
 		case EKeyword::O2W:
 		case EKeyword::Txfm:
 			{
-				p.m_reader.TransformS(obj->m_o2p);
+				reader.TransformS(obj->m_o2p);
 				return true;
 			}
 		case EKeyword::Colour:
 			{
-				p.m_reader.IntS(obj->m_base_colour.argb, 16);
+				reader.IntS(obj->m_base_colour.argb, 16);
 				return true;
 			}
 		case EKeyword::ColourMask:
 			{
-				p.m_reader.IntS(obj->m_colour_mask, 16);
+				reader.IntS(obj->m_colour_mask, 16);
 				return true;
 			}
 		case EKeyword::Reflectivity:
 			{
-				p.m_reader.RealS(obj->m_env);
+				reader.RealS(obj->m_env);
 				return true;
 			};
 		case EKeyword::RandColour:
@@ -593,7 +599,7 @@ namespace pr::ldr
 			}
 		case EKeyword::Animation:
 			{
-				ParseAnimation(p.m_reader, obj->m_anim);
+				ParseAnimation(p, obj->m_anim);
 				return true;
 			}
 		case EKeyword::Hidden:
@@ -624,7 +630,7 @@ namespace pr::ldr
 			}
 		case EKeyword::Font:
 			{
-				ParseFont(p.m_reader, p.m_font.back());
+				ParseFont(p, p.m_font.back());
 				return true;
 			}
 		}
@@ -936,7 +942,7 @@ namespace pr::ldr
 						p.m_reader.IdentifierS(ident);
 						switch (HashI(ident.c_str()))
 						{
-						default: p.m_reader.ReportError(pr::script::EResult::UnknownToken); break;
+						default: p.ReportError(EResult::UnknownToken, Fmt("'%s' is not a valid point sprite style", ident.c_str())); break;
 						case HashI("square"):   m_style = EStyle::Square; break;
 						case HashI("circle"):   m_style = EStyle::Circle; break;
 						case HashI("triangle"): m_style = EStyle::Triangle; break;
@@ -1189,7 +1195,7 @@ namespace pr::ldr
 			,m_nuggets(p.m_cache.m_nugts)
 		{}
 		virtual bool ParseKeyword(EKeyword) { return false; }
-		virtual void Parse() { p.ReportError(EResult::UnknownToken); }
+		virtual void Parse() { p.ReportError(EResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str())); }
 		virtual void CreateModel(LdrObject*) {}
 	};
 
@@ -1246,7 +1252,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 1)
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1351,7 +1357,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1452,7 +1458,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.size() < 2)
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("LineD object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1664,7 +1670,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("LineBox object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1755,7 +1761,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Grid object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1839,7 +1845,7 @@ namespace pr::ldr
 			// Validate
 			if (m_splines.empty())
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Spline object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -1858,7 +1864,7 @@ namespace pr::ldr
 				// Check for 16-bit index overflow
 				if (m_verts.size() + raster.size() >= 0xFFFF)
 				{
-					p.ReportError(EResult::Failed, pr::FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
+					p.ReportError(EResult::Failed, FmtS("Spline object '%s' is too large (index count >= 0xffff)", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -1976,7 +1982,7 @@ namespace pr::ldr
 				else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
 				else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
 				else if (pr::str::EqualNI(ty, "FwdBack")) m_type = EArrowType::FwdBack;
-				else { p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack"); return; }
+				else p.ReportError(EResult::UnknownValue, "arrow type must one of Line, Fwd, Back, FwdBack");
 			}
 			else
 			{
@@ -2145,7 +2151,7 @@ namespace pr::ldr
 			// Validate
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Matrix3x3 object '%s' description incomplete", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -3355,7 +3361,7 @@ namespace pr::ldr
 			// If no cross section or extrusion path is given
 			if (m_verts.empty())
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete. No extrusion path", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -3364,7 +3370,7 @@ namespace pr::ldr
 			{
 			default:
 				{
-					p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
+					p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete. No style given.", obj->TypeAndName().c_str()));
 					return;
 				}
 			case ECSType::Round:
@@ -3386,12 +3392,12 @@ namespace pr::ldr
 				{
 					if (m_cs.empty())
 					{
-						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
+						p.ReportError(EResult::Failed, FmtS("Tube object '%s' description incomplete", obj->TypeAndName().c_str()));
 						return;
 					}
 					if (pr::geometry::PolygonArea(m_cs.data(), int(m_cs.size())) < 0)
 					{
-						p.ReportError(EResult::Failed, pr::FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
+						p.ReportError(EResult::Failed, FmtS("Tube object '%s' cross section has a negative area (winding order is incorrect)", obj->TypeAndName().c_str()));
 						return;
 					}
 					break;
@@ -3907,7 +3913,7 @@ namespace pr::ldr
 			}
 			if (m_xcolumn < -2 || m_xcolumn >= int(m_table.size()))
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Chart object '%s', X axis column does not exist", obj->TypeAndName().c_str()));
+				p.ReportError(EResult::Failed, FmtS("Chart object '%s', X axis column does not exist", obj->TypeAndName().c_str()));
 				return;
 			}
 
@@ -4026,7 +4032,7 @@ namespace pr::ldr
 	// ELdrObject::Model
 	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
-		wstring256 m_filepath;
+		std::filesystem::path m_filepath;
 		m4x4 m_bake;
 		int m_part;
 		creation::GenNorms m_gen_norms;
@@ -4061,7 +4067,9 @@ namespace pr::ldr
 		}
 		void Parse() override
 		{
-			p.m_reader.String(m_filepath);
+			std::wstring filepath;
+			p.m_reader.String(filepath);
+			m_filepath = filepath;
 		}
 		void CreateModel(LdrObject* obj) override
 		{
@@ -4076,21 +4084,21 @@ namespace pr::ldr
 			}
 
 			// Determine the format from the file extension
-			auto format = GetModelFormat(m_filepath.c_str());
+			auto format = GetModelFormat(m_filepath);
 			if (format == EModelFileFormat::Unknown)
 			{
-				auto msg = pr::Fmt("Model file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
-				for (auto f : Enum<EModelFileFormat>::Members()) msg.append(ToStringA(f)).append(" ");
+				auto msg = Fmt("Model file '%S' is not supported.\nSupported Formats: ", m_filepath.c_str());
+				for (auto f : Enum<EModelFileFormat>::Members()) msg.append(Enum<EModelFileFormat>::ToStringA(f)).append(" ");
 				p.ReportError(EResult::Failed, msg.c_str());
 				return;
 			}
 
 			// Ask the include handler to turn the filepath into a stream.
 			// Load the stream in binary model. The model loading functions can convert binary to text if needed.
-			auto src = p.m_reader.Includes().OpenStreamA(m_filepath, IIncludeHandler::EFlags::Binary);
+			auto src = p.m_reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
 			if (!src || !*src)
 			{
-				p.ReportError(EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
+				p.ReportError(EResult::Failed, FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
 				return;
 			}
 
@@ -4467,7 +4475,7 @@ namespace pr::ldr
 		//    instancing relies on the map from object to model.
 
 		// Read the object attributes: name, colour, instance
-		auto attr = ParseAttributes(p.m_reader, ShapeType);
+		auto attr = ParseAttributes(p, ShapeType);
 		auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
 
 		// Push a font onto the font stack, so that fonts are scoped to object declarations
@@ -4586,7 +4594,7 @@ namespace pr::ldr
 	}
 
 	// Reads all ldr objects from a script returning 'result'
-	// 'add_cb' is 'bool function(int object_index, ParseResult& out, pr::script::Location const& loc)'
+	// 'add_cb' is 'bool function(int object_index, ParseResult& out, Location const& loc)'
 	template <typename AddCB>
 	void ParseLdrObjects(ParseParams& p, AddCB add_cb)
 	{
@@ -4607,7 +4615,7 @@ namespace pr::ldr
 					// Assume the keyword is an object and start parsing
 					if (!ParseLdrObject(p))
 					{
-						p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+						p.ReportError(EResult::UnknownToken, Fmt("Expected an object declaration"));
 						break;
 					}
 					assert("Objects removed but 'ParseLdrObject' didn't fail" && int(p.m_objects.size()) > object_count);
@@ -4620,7 +4628,7 @@ namespace pr::ldr
 			// Camera position description
 			case EKeyword::Camera:
 				{
-					ParseCamera(p.m_reader, p.m_result);
+					ParseCamera(p, p.m_result);
 					break;
 				}
 
@@ -4637,7 +4645,7 @@ namespace pr::ldr
 				}
 			case EKeyword::AllowMissingIncludes:
 				{
-					p.m_reader.Includes().m_ignore_missing_includes = true;
+					p.m_reader.Includes().IgnoreMissingIncludes = true;
 					break;
 				}
 			case EKeyword::Wireframe:
@@ -4647,7 +4655,7 @@ namespace pr::ldr
 				}
 			case EKeyword::Font:
 				{
-					ParseFont(p.m_reader, p.m_font.back());
+					ParseFont(p, p.m_font.back());
 					break;
 				}
 			case EKeyword::Lock:
@@ -4669,7 +4677,7 @@ namespace pr::ldr
 	void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
 	{
 		// Give initial and final progress updates
-		auto start_loc = reader.Loc();
+		auto start_loc = reader.Location();
 		auto exit = pr::CreateScope(
 			[&]
 			{
@@ -4714,13 +4722,13 @@ namespace pr::ldr
 
 	// Create an ldr object using a callback to populate the model data.
 	// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
-	LdrObjectPtr CreateEditCB(pr::Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
+	LdrObjectPtr CreateEditCB(Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
 
 		// Create buffers for a dynamic model
 		VBufferDesc vbs(vcount, sizeof(Vert), EUsage::Dynamic, ECPUAccess::Write);
-		IBufferDesc ibs(icount, sizeof(pr::uint16), DxFormat<pr::uint16>::value, EUsage::Dynamic, ECPUAccess::Write);
+		IBufferDesc ibs(icount, sizeof(uint16), DxFormat<uint16>::value, EUsage::Dynamic, ECPUAccess::Write);
 		MdlSettings settings(vbs, ibs);
 
 		// Create the model
@@ -4728,7 +4736,7 @@ namespace pr::ldr
 		obj->m_model->m_name = obj->TypeAndName();
 
 		// Create dummy nuggets
-		pr::rdr::NuggetProps nug(EPrim::PointList, EGeom::Vert);
+		rdr::NuggetProps nug(EPrim::PointList, EGeom::Vert);
 		nug.m_range_overlaps = true;
 		for (int i = ncount; i-- != 0;)
 			obj->m_model->CreateNugget(nug);
@@ -4739,14 +4747,14 @@ namespace pr::ldr
 	}
 
 	// Modify the geometry of an LdrObject
-	void Edit(pr::Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
+	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
 	{
 		edit_cb(object->m_model.get(), ctx, rdr);
 		pr::events::Send(Evt_LdrObjectChg(object));
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-	void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags)
+	void Update(Renderer& rdr, LdrObject* object, Reader& reader, EUpdateObject flags)
 	{
 		// Parsing parameters
 		ParseResult result;
@@ -4820,14 +4828,14 @@ namespace pr::ldr
 	// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 	// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
 	// 'excluded' is considered after 'doomed' so if any context ids are in both arrays, they will be excluded.
-	void Remove(ObjectCont& objects, pr::Guid const* doomed, std::size_t dcount, pr::Guid const* excluded, std::size_t ecount)
+	void Remove(ObjectCont& objects, Guid const* doomed, std::size_t dcount, Guid const* excluded, std::size_t ecount)
 	{
-		auto incl = std::initializer_list<pr::Guid>(doomed, doomed + dcount);
-		auto excl = std::initializer_list<pr::Guid>(excluded, excluded + ecount);
-		pr::erase_if_unstable(objects, [=](auto& ob)
+		auto incl = std::initializer_list<Guid>(doomed, doomed + dcount);
+		auto excl = std::initializer_list<Guid>(excluded, excluded + ecount);
+		erase_if_unstable(objects, [=](auto& ob)
 		{
-			if (doomed   && !pr::contains(incl, ob->m_context_id)) return false; // not in the doomed list
-			if (excluded &&  pr::contains(excl, ob->m_context_id)) return false; // saved by exclusion
+			if (doomed   && !contains(incl, ob->m_context_id)) return false; // not in the doomed list
+			if (excluded &&  contains(excl, ob->m_context_id)) return false; // saved by exclusion
 			return true;
 		});
 	}
@@ -4835,7 +4843,7 @@ namespace pr::ldr
 	// Remove 'obj' from 'objects'
 	void Remove(ObjectCont& objects, LdrObject* obj)
 	{
-		pr::erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
+		erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
 	}
 
 	// LdrObject ***********************************
@@ -4893,7 +4901,7 @@ namespace pr::ldr
 	} g_ldr_object_tracker;
 	#endif
 
-	LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id)
+	LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id)
 		:RdrInstance()
 		,m_o2p(m4x4Identity)
 		,m_type(attr.m_type)
@@ -4922,11 +4930,11 @@ namespace pr::ldr
 	// Return the declaration name of this object
 	string32 LdrObject::TypeAndName() const
 	{
-		return string32(ToStringA(m_type)) + " " + m_name;
+		return string32(Enum<ELdrObject>::ToStringA(m_type)) + " " + m_name;
 	}
 
 	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, float time_s, pr::m4x4 const* p2w)
+	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w)
 	{
 		// Set the instance to world.
 		// Take a copy in case the 'OnAddToScene' event changes it.
@@ -4952,7 +4960,7 @@ namespace pr::ldr
 
 	// Recursively add this object using 'bbox_model' instead of its
 	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, ModelPtr bbox_model, float time_s, pr::m4x4 const* p2w)
+	void LdrObject::AddBBoxToScene(Scene& scene, ModelPtr bbox_model, float time_s, m4x4 const* p2w)
 	{
 		// Set the instance to world for this object
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
@@ -4962,9 +4970,9 @@ namespace pr::ldr
 		{
 			// Find the object to world for the bbox
 			auto o2w = i2w * m4x4::Scale(
-				m_model->m_bbox.SizeX() + pr::maths::tiny,
-				m_model->m_bbox.SizeY() + pr::maths::tiny,
-				m_model->m_bbox.SizeZ() + pr::maths::tiny,
+				m_model->m_bbox.SizeX() + maths::tiny,
+				m_model->m_bbox.SizeY() + maths::tiny,
+				m_model->m_bbox.SizeZ() + maths::tiny,
 				m_model->m_bbox.Centre());
 
 			m_bbox_instance.m_model = bbox_model;
@@ -4986,16 +4994,16 @@ namespace pr::ldr
 	}
 	LdrObject* LdrObject::Child(int index) const
 	{
-		if (index < 0 || index >= int(m_child.size())) throw std::exception(pr::FmtS("LdrObject child index (%d) out of range [0,%d)", index, int(m_child.size())));
+		if (index < 0 || index >= int(m_child.size())) throw std::exception(FmtS("LdrObject child index (%d) out of range [0,%d)", index, int(m_child.size())));
 		return m_child[index].get();
 	}
 
 	// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
-	pr::m4x4 LdrObject::O2W(char const* name) const
+	m4x4 LdrObject::O2W(char const* name) const
 	{
 		auto obj = Child(name);
 		if (obj == nullptr)
-			return pr::m4x4Identity;
+			return m4x4Identity;
 
 		// Combine parent transforms back to the root
 		auto o2w = obj->m_o2p;
@@ -5004,28 +5012,28 @@ namespace pr::ldr
 
 		return o2w;
 	}
-	void LdrObject::O2W(pr::m4x4 const& o2w, char const* name)
+	void LdrObject::O2W(m4x4 const& o2w, char const* name)
 	{
 		Apply([&](LdrObject* o)
 		{
-			o->m_o2p = o->m_parent ? pr::InvertFast(o->m_parent->O2W()) * o2w : o2w;
-			assert(pr::FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
+			o->m_o2p = o->m_parent ? InvertFast(o->m_parent->O2W()) * o2w : o2w;
+			assert(FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
 			return true;
 		}, name);
 	}
 
 	// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
-	pr::m4x4 LdrObject::O2P(char const* name) const
+	m4x4 LdrObject::O2P(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? obj->m_o2p : pr::m4x4Identity;
+		return obj ? obj->m_o2p : m4x4Identity;
 	}
-	void LdrObject::O2P(pr::m4x4 const& o2p, char const* name)
+	void LdrObject::O2P(m4x4 const& o2p, char const* name)
 	{
 		Apply([&](LdrObject* o)
 		{
-			assert(pr::FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
-			assert(pr::IsFinite(o2p) && "Invalid instance transform");
+			assert(FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
+			assert(IsFinite(o2p) && "Invalid instance transform");
 			o->m_o2p = o2p;
 			return true;
 		}, name);
@@ -5258,7 +5266,7 @@ namespace pr::ldr
 		}, name);
 		return col;
 	}
-	void LdrObject::Colour(Colour32 colour, pr::uint mask, char const* name, EColourOp op, float op_value)
+	void LdrObject::Colour(Colour32 colour, uint mask, char const* name, EColourOp op, float op_value)
 	{
 		Apply([=](LdrObject* o)
 		{
@@ -5363,7 +5371,7 @@ namespace pr::ldr
 	LdrObjectPtr LdrObject::RemoveChild(LdrObjectPtr& child)
 	{
 		PR_ASSERT(PR_DBG, child->m_parent == this, "child is not a child of this object");
-		auto idx = pr::index_of(m_child, child);
+		auto idx = index_of(m_child, child);
 		return RemoveChild(idx);
 	}
 	LdrObjectPtr LdrObject::RemoveChild(size_t i)

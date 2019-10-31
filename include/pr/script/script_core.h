@@ -7,223 +7,497 @@
 
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
-#include "pr/script/buf8.h"
 #include "pr/script/fail_policy.h"
+#include "pr/script/buf8.h"
+#pragma warning(disable:4355) // this used in base member initializer list
 
 namespace pr::script
 {
-	// Interface to a stream of 'wchar_t's, essentially a pointer-like interface
+	// Base class for a stream of characters
 	struct Src
 	{
+		// Notes:
+		//  - The source is exhausted when 'Peek' returns '\0'
+		//    *Careful*, only Read() returns EOF, not *src.
+		//  - This class supports local buffering (through ReadAhead)
+		//  - Don't make 'Read' public, that would by-pass the local buffering.
+		//  - Windows strings (using wchar_t) are actually UTF-16 encoded.
+		//  - The stream operates on single characters so they have to be a fixed width.
+		//    Use wchar_t so that most characters are covered, any beyond that will have
+		//    to be treated as encoding errors.
+		//  - Src can also wrap another stream, 
+
+		static int const EOS = -1; // end of stream
+
 	protected:
 
-		ESrcType m_type;
-		Location m_loc;
+		// A reference to a wrapped source (or this). This member should not generally be
+		// used by 'Src' itself, its mainly a convenience for types that wrap a 'Src'.
+		Src& m_src;
 
-		Src(ESrcType type, Location const& loc)
-			:m_type(type)
+		// A local read ahead buffer
+		string_t m_buffer;
+
+		// Encoding of data returned from 'Read()'
+		EEncoding m_enc;
+
+		// Multi-byte read state
+		std::mbstate_t m_mb;
+
+		// Stream position (i.e. position of m_buffer[0])
+		Loc m_loc;
+
+		#if PR_DBG
+		BufW8 m_history;
+		#endif
+
+	protected:
+
+		// Constructor for character sources
+		Src(EEncoding enc, Loc const& loc = Loc()) noexcept
+			:m_src(*this)
+			,m_buffer()
+			,m_enc(enc)
+			,m_mb()
 			,m_loc(loc)
+			#if PR_DBG
+			,m_history()
+			#endif
 		{}
+
+		// Constructor for source wrappers
+		Src(Src& wrapped, EEncoding enc) noexcept
+			:m_src(wrapped)
+			,m_buffer()
+			,m_enc(enc)
+			,m_mb()
+			,m_loc()
+			#if PR_DBG
+			,m_history()
+			#endif
+		{}
+
+		// Return the next byte or decoded character from the underlying stream.
+		// The interpretation of what is returned from 'Read()' is based on 'm_enc'.
+		// For all encodings except 'already_decode', the 'ReadAhead()' function will assume 'Read()'
+		// returns bytes and convert encodings to utf-16. For these sources, returning EOS is needed
+		// because 0 maybe a valid byte in the encoding. If 'm_enc' is 'already_decoded' the 'Read()'
+		// is assumed to return already decoded utf-16 characters and so should never see an 'EOS'.
+		virtual int Read() = 0;
 
 	public:
 
-		virtual ~Src()
+		virtual ~Src() {}
+
+		// Move only
+		Src(Src&& rhs) noexcept
+			:m_src(&rhs == &rhs.m_src ? *this : rhs.m_src)
+			,m_buffer(std::move(rhs.m_buffer))
+			,m_enc(rhs.m_enc)
+			,m_mb(rhs.m_mb)
+			,m_loc(rhs.m_loc)
 		{}
+		Src(Src const& rhs) = delete;
 
-		// Source type
-		virtual ESrcType Type() const
+		// The current position in the root underlying source
+		virtual Loc Location() const noexcept
 		{
-			return m_type;
-		}
-
-		// Location within the source
-		virtual Location const& Loc() const
-		{
+			// Most subclasses will not need to override this, only those that switch between
+			// sources, such as the preprocessor's source stack.
 			return m_loc;
 		}
 
-		// Debugging helper interface
-		virtual SrcConstPtr DbgPtr() const = 0;
+		// A local cache of characters read from the source
+		string_t const& Buffer() const noexcept
+		{
+			return m_buffer;
+		}
+		string_t& Buffer() noexcept
+		{
+			return m_buffer;
+		}
 
-		// Pointer-like interface
-		virtual wchar_t operator * () const = 0;
-		virtual Src&    operator ++() = 0;
+		// Peek
+		char_t operator *()
+		{
+			return (*this)[0];
+		}
 
-		// Convenience methods
+		// Read ahead array access
+		char_t operator[](int i)
+		{
+			ReadAhead(i + 1);
+			return i < m_buffer.size() ? m_buffer[i] : '\0';
+		}
+
+		// Advance by 1 character
+		Src& operator ++()
+		{
+			Next();
+			return *this;
+		}
+
+		// Advance by n characters
 		Src& operator += (int n)
 		{
-			for (;n--;) ++*this;
+			Next(n);
 			return *this;
+		}
+
+		// Increment to the next character
+		void Next(int n = 1)
+		{
+			if (n < 0)
+				throw std::runtime_error("Cannot seek backwards");
+
+			for (;;)
+			{
+				// Consume from the buffered characters first
+				auto remove = std::min(n, static_cast<int>(m_buffer.size()));
+				for (int i = 0; i != remove; ++i)
+				{
+					#if PR_DBG
+					m_history.shift(m_buffer[i]);
+					#endif
+					m_loc.inc(m_buffer[i]);
+				}
+
+				m_buffer.erase(0, remove);
+				n -= remove;
+				if (n == 0)
+					break;
+
+				// Buffer and dump, since we need to read whole characters from the underlying source
+				if (ReadAhead(std::min(n, 4096)) == 0)
+					break;
+			}
+		}
+
+		// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOS is hit.
+		// Returns the number of characters actually buffered (a value in the range [0, n])
+		int ReadAhead(int n)
+		{
+			for (; n > m_buffer.size();)
+			{
+				// Ensure 'Buffer's length grows with each loop
+				auto count = m_buffer.size();
+
+				// Read the next complete character from the underlying stream
+				int ch = '\0';
+				switch (m_enc)
+				{
+				default:
+					{
+						throw std::runtime_error(FmtS("Unsupported character encoding: %d", m_enc));
+					}
+				case EEncoding::already_decoded:
+					{
+						ch = Read();
+						if (ch == EOS) throw std::runtime_error("Read() should not return EOS for 'already_decoded' streams.");
+						break;
+					}
+				case EEncoding::ascii:
+					{
+						auto b = Read();
+						if (b == EOS) break;
+						if (b > 127) throw ScriptException(EResult::WrongEncoding, Location(), Fmt(L"Source is not an ASCII character stream. Invalid character with value %d found", b));
+						ch = b;
+						break;
+					}
+				case EEncoding::utf8:
+					{
+						// Interpret a multi byte UTF8 character
+						for (auto mb = std::mbstate_t{};;)
+						{
+							// Read a byte at a time until a complete multibyte character is found (or EOS)
+							auto b = Read();
+							if (b == EOS) break;
+
+							char16_t c16;
+							auto c = static_cast<char>(b);
+							auto r = std::mbrtoc16(&c16, &c, 1, &mb);
+							if (r == static_cast<size_t>(-1)) throw ScriptException(EResult::WrongEncoding, Location(), "UTF-8 encoding error in source character stream");
+							if (r == static_cast<size_t>(-2)) continue;
+							ch = c16;
+							break;
+						}
+						break;
+					}
+				case EEncoding::utf16:
+					{
+						// This isn't correct, but I don't know of a function that converts utf16 to c16
+						int lo, hi;
+						if ((lo = Read()) == EOS) break;
+						if ((hi = Read()) == EOS) break;
+						ch = (hi << 8) | lo;
+						if (ch < 0 || ch > 0x7FF) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
+						break;
+					}
+				case EEncoding::ucs2:
+					{
+						int lo, hi;
+						if ((lo = Read()) == EOS) break;
+						if ((hi = Read()) == EOS) break;
+						ch = (hi << 8) | lo;
+						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
+						break;
+					}
+				case EEncoding::ucs2_be:
+					{
+						int lo, hi;
+						if ((hi = Read()) == EOS) break;
+						if ((lo = Read()) == EOS) break;
+						ch = (hi << 8) | lo;
+						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
+						break;
+					}
+				}
+
+				// Buffer the read character
+				if (ch != '\0')
+				{
+					assert(ch != EOS);
+					m_buffer.append(1, s_cast<char_t>(ch));
+					continue;
+				}
+				
+				// Stop reading if the buffer isn't growing
+				if (m_buffer.size() <= count)
+					break;
+			}
+			return std::min(n, s_cast<int>(m_buffer.size()));
+		}
+
+		// String compare. Note: asymmetric, i.e. src="abcd", str="ab", src.Match(str) == true
+		bool Match(string_view_t str) { return Match(str, 0); }
+		bool Match(string_view_t str, int start) { return Match(str, start, int(str.size())); }
+		bool Match(string_view_t str, int start, int count)
+		{
+			// 'start' is where to start looking in the buffer
+			// 'count' is the number of characters to compare.
+			if (count > s_cast<int>(str.size()))
+				throw std::runtime_error(Fmt("Src.Match comparing % characters but match string length is only %d", count, s_cast<int>(str.size())));
+
+			auto len = ReadAhead(start + count);
+			if (len < start + count)
+				return false;
+
+			int i = start;
+			int const iend = start + count;
+			for (; i != iend && str[size_t(i) - start] == m_buffer[i]; ++i) { }
+			return i == iend;
+		}
+
+		// String compare and consume if matched
+		bool Match(string_view_t str, bool consume)
+		{
+			if (!Match(str)) return false;
+			if (consume) Next(int(str.size()));
+			return true;
+		}
+		
+		// Buffer and hash characters on the range [start, start + count)
+		int Hash(int start, int count)
+		{
+			auto len = ReadAhead(start + count);
+			if (len < start + count)
+				throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not buffer %d characters. End of stream reached", start + count));
+
+			auto str = m_buffer.c_str();
+			return hash::Hash(str + start, str + start + count);
+		}
+
+		// Buffer up to (start + count) and return a string view within this range
+		string_view_t View(int start, int count)
+		{
+			auto len = ReadAhead(start + count);
+			if (len < start + count)
+				throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not buffer %d characters. End of stream reached", start + count));
+
+			auto str = m_buffer.data();
+			return string_view_t(str + start, count);
+		}
+
+		// Read 'count' characters from the string and return them as a string
+		string_t ReadN(int count)
+		{
+			string_t sb; sb.reserve(count);
+			int i = 0;
+
+			// Copy from the buffer in one block
+			auto buffered = std::min(count, s_cast<int>(m_buffer.size()));
+			sb.assign(m_buffer, 0, buffered);
+			Next(buffered);
+			i += buffered;
+
+			// Fill the remaining from the underlying source
+			for (char_t ch; i != count && (ch = **this) != '\0'; ++i, Next()) sb.append(1, ch);
+			if (i != count) throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not read %d characters. End of stream reached", count));
+			return sb;
+		}
+
+		// Reads all characters from the src and returns them as one string.
+		string_t ReadToEnd()
+		{
+			string_t sb; sb.reserve(4096);
+
+			// Copy from the buffer in one block
+			auto buffered = s_cast<int>(m_buffer.size());
+			sb.assign(m_buffer, 0, buffered);
+			Next(buffered);
+
+			// Fill the remaining from the underlying source
+			for (char_t ch; (ch = **this) != '\0'; Next()) sb.append(1, ch);
+			return sb;
+		}
+
+		// Reads characters up to and including a new-line. A new-line is a carriage return ('\r'),
+		// a line feed ('\n'), or a carriage return immediately followed by a line feed ('\r\n').
+		// If 'include_newline' is true, the returned string will include the newline character(s).
+		string_t ReadLine(bool include_newline)
+		{
+			string_t sb; sb.reserve(256);
+			for (char_t ch; (ch = **this) != '\0'; Next())
+			{
+				if (ch != '\r' && ch != '\n')
+				{
+					sb.append(1, ch);
+					continue;
+				}
+
+				if (include_newline) sb.append(1, ch);
+				Next();
+
+				if (ch == '\r' && (ch = **this) == '\n')
+				{
+					if (include_newline) sb.append(1, ch);
+					Next();
+				}
+
+				break;
+			}
+			return sb;
 		}
 	};
 
 	// An empty source
 	struct NullSrc :Src
 	{
-		NullSrc()
-			:Src(ESrcType::Null, Location())
+	protected:
+
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() noexcept override
+		{
+			return '\0';
+		}
+
+	public:
+
+		NullSrc() noexcept
+			:Src(EEncoding::already_decoded, m_loc)
 		{}
-		SrcConstPtr DbgPtr() const override
-		{
-			return SrcConstPtr();
-		}
-		wchar_t operator * () const override
-		{
-			return 0;
-		}
-		NullSrc& operator ++()
-		{
-			return *this;
-		}
 	};
 
-	// Allow any type that implements a pointer to implement 'Src'
-	template <typename TPtr, bool UTF8 = false> struct Ptr :Src
+	// A string source
+	struct StringSrc :Src
 	{
-		TPtr m_ptr; // The pointer-like data source
+		// Note:
+		//  - StringSrc only returns bytes so should *NOT* use the 'already_decoded' encoding.
+		//  - A useful techique is to default construct a StringSrc then push text into its buffer.
+		//    When the buffer is empty, 'Read()' will return EOS. Technically, the same would work
+		//    with 'NullSrc', but that's likely to be confusing.
+		enum class EFlags
+		{
+			None = 0,
+			BufferLocally = 1 << 0,
+			_bitwise_operators_allowed,
+		};
 
-		Ptr(TPtr ptr, Location* loc = nullptr, ESrcType src_type = ESrcType::Pointer)
-			:Src(src_type, loc ? *loc : Location())
-			,m_ptr(ptr)
+	protected:
+
+		char const* m_ptr;
+		char const* m_end;
+
+		// Return the next byte or decoded character from the underlying stream.
+		int Read() noexcept override
+		{
+			// We're returning bytes. Already decoded would mean we're returning utf-16 char_t's
+			assert(m_enc != EEncoding::already_decoded);
+			return m_ptr != m_end ? *m_ptr++ : EOS;
+		}
+
+		// Read all data into the local buffer
+		template <typename Char>
+		void BufferLocally(std::basic_string_view<Char> str)
+		{
+			// Special case for already decoded strings
+			if constexpr (std::is_same_v<std::basic_string_view<Char>, string_view_t>)
+			{
+				m_ptr = nullptr;
+				m_end = nullptr;
+				m_buffer.assign(str);
+			}
+			else
+			{
+				m_ptr = char_ptr(str.data());
+				m_end = char_ptr(str.data() + str.size());
+				ReadAhead(s_cast<int>(str.size()));
+			}
+		}
+
+	public:
+
+		explicit StringSrc(EEncoding enc = EEncoding::utf16, Loc const& loc = Loc())
+			:Src(enc, loc)
+			,m_ptr(nullptr)
+			,m_end(nullptr)
 		{}
-
-		// Debugging helper interface
-		SrcConstPtr DbgPtr() const override
+		explicit StringSrc(std::string_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf8, Loc const& loc = Loc())
+			:Src(enc, loc)
+			,m_ptr(str.data())
+			,m_end(str.data() + str.size())
 		{
-			return &*m_ptr;
+			if (AllSet(flags, EFlags::BufferLocally))
+				BufferLocally(str);
 		}
-
-		// Pointer-like interface
-		wchar_t operator * () const override
+		explicit StringSrc(std::wstring_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf16, Loc const& loc = Loc())
+			:Src(enc, loc)
+			,m_ptr(char_ptr(str.data()))
+			,m_end(char_ptr(str.data() + str.size()))
 		{
-			return output_char();
-		}
-		Ptr& operator ++() override
-		{
-			if (*m_ptr == 0) return *this;
-			m_loc.inc(*m_ptr);
-			++m_ptr;
-			return *this;
-		}
-
-	private:
-
-		// Convert a char stream into ASCII or utf8
-		template <typename = std::enable_if<!UTF8>> wchar_t output_char() const
-		{
-			return wchar_t(*m_ptr);
-		}
-		template <typename = std::enable_if<UTF8>> wchar_t output_char(int = 0) const
-		{
-			wchar_t ch;
-			auto state = std::mbstate_t{};
-			std::mbsrtowcs(&ch, &m_ptr, 1, &state);
-			return ch;
-		}
-	};
-	using PtrA    = Ptr<char const*, false>;
-	using PtrW    = Ptr<wchar_t const*, false>;
-	using PtrUTF8 = Ptr<char const*, true>;
-
-	// A pointer range char source
-	template <typename TPtr> struct PtrRange :Src
-	{
-		TPtr m_ptr;
-		TPtr m_beg, m_end;
-
-		PtrRange(TPtr beg, TPtr end, Location* loc = nullptr, ESrcType src_type = ESrcType::Range)
-			:Src(src_type, loc ? *loc : Location())
-			,m_ptr(beg)
-			,m_beg(beg)
-			,m_end(end)
-		{}
-
-		// Debugging helper interface
-		SrcConstPtr DbgPtr() const override
-		{
-			return &*m_ptr;
-		}
-
-		// Pointer-like interface
-		wchar_t operator * () const override
-		{
-			return m_ptr != m_end ? wchar_t(*m_ptr) : wchar_t();
-		}
-		PtrRange& operator ++() override
-		{
-			if (m_ptr == m_end) return *this;
-			m_loc.inc(*m_ptr);
-			++m_ptr;
-			return *this;
-		}
-
-		// Reset to the start of the range
-		void reset(std::streamoff ofs = 0, Location* loc = nullptr)
-		{
-			m_ptr = m_beg + ofs;
-			m_loc = loc ? *loc : Location();
-		}
-
-		// Iterator range
-		TPtr begin() const
-		{
-			return m_beg;
-		}
-		TPtr end() const
-		{
-			return m_end;
-		}
-
-		// Return a sub range of this range
-		PtrRange Subrange(std::streamoff ofs, std::streamoff count, Location* loc = nullptr) const
-		{
-			return PtrRange(m_beg + ofs, m_beg + ofs + count, loc);
+			// Make a local copy of 'str' in the buffer
+			if (AllSet(flags, EFlags::BufferLocally))
+				BufferLocally(str);
 		}
 	};
 
-	// A file char source
+	// A file source
 	struct FileSrc :Src
 	{
-		enum class EEncoding { ascii, utf8, ucs2, ucs2_be, auto_detect };
+	protected:
 
-		// Conversion from UTF encoded files to UCS-2 streams using wistream::imbue is very slow.
-		// It uses 'std::string' internally. Instead, treat the file as a binary stream and convert
-		// characters as needed.
+		// The open file stream
+		std::ifstream m_file;
 
-		char const*            m_ptr;     // The current position in 'm_buf'
-		char const*            m_end;     // The end position of valid data in 'm_buf'
-		mutable std::ifstream  m_file;    // The file stream source
-		pr::vector<char, 1024> m_buf;     // A local buffer of file data
-		EEncoding              m_enc;     // The detected file encoding
-		mutable wchar_t        m_ch;      // Cached converted char
-		mutable int            m_ch_len;  // The number of bytes used to get 'm_ch'
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
+		{
+			auto ch = m_file.get();
+			return m_file.good() ? ch : EOS;
+		}
 
-		FileSrc()
-			:Src(ESrcType::File, Location())
-			,m_ptr()
-			,m_end()
+	public:
+
+		FileSrc(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
+			:Src(enc, Loc())
 			,m_file()
-			,m_buf()
-			,m_enc()
-			,m_ch()
-			,m_ch_len(-1)
-		{}
-		explicit FileSrc(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
-			:Src(ESrcType::File, loc ? *loc : Location(filepath.c_str(), ofs))
-			,m_ptr()
-			,m_end()
-			,m_file()
-			,m_buf()
-			,m_enc()
-			,m_ch()
-			,m_ch_len(-1)
 		{
 			if (!filepath.empty())
 				Open(filepath, ofs, enc, loc);
 		}
 
 		// Open a file as a stream source
-		void Open(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Location* loc = nullptr)
+		void Open(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
 		{
 			Close();
 
@@ -232,687 +506,168 @@ namespace pr::script
 			auto bom_size = 0;
 			if (m_enc == EEncoding::auto_detect)
 			{
-				unsigned char bom[3];
+				std::array<unsigned char, 3> bom;
 				std::ifstream file(filepath, std::ios::binary);
-				auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
-				if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;        bom_size = 3; }
-				else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::ucs2_be;     bom_size = 2; }
-				else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::ucs2;        bom_size = 2; }
-				else                                                                      { m_enc = EEncoding::auto_detect; bom_size = 0; } // If no valid bomb is found, assume ASCII until an UTF-8 is found
+				auto read = file.good() ? file.read(reinterpret_cast<char*>(bom.data()), bom.size()).gcount() : 0;
+				if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;    bom_size = 3; }
+				else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::ucs2_be; bom_size = 2; }
+				else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::ucs2;    bom_size = 2; }
+				else                                                                      { m_enc = EEncoding::utf8;    bom_size = 0; } // If no valid bom is found, assume UTF-8
 			}
 
 			// Open the input file stream
-			m_file.open(filepath, std::ios::binary | std::ios::ate);
+			m_file.open(filepath, std::ios::binary);
 			if (!m_file.good())
-				throw pr::script::Exception(EResult::FileNotFound, Location(filepath), pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
+				throw ScriptException(EResult::FileNotFound, Loc(filepath), std::wstring(L"Failed to open file ").append(filepath));
 
-			// Get the file size
-			auto flen = size_t(m_file.tellg());
-
-			// Seek to the position to start reading from (may include the skip over the BOM)
+			// Seek to the offset position
 			m_file.seekg(bom_size + ofs);
-			m_loc = loc ? *loc : Location(filepath.c_str(), bom_size + ofs, 1, 1, ofs == 0);
-			flen -= size_t(m_file.tellg());
 
-			// Set the local buffer size
-			size_t const MaxBufferSize = size_t(1*1024*1024);
-			if (flen < m_buf.capacity()) flen = m_buf.capacity();
-			if (flen > MaxBufferSize) flen = MaxBufferSize;
-			m_buf.resize(flen);
-
-			// Pre-load the buffer
-			m_end = m_ptr = m_buf.data();
-			m_end += m_file.good() ? m_file.read(m_buf.data(), m_buf.size()).gcount() : 0;
+			// Update the location
+			m_loc = loc ? *loc : Loc(filepath, bom_size + ofs, 1, 1, ofs == 0);
 		}
 
 		// Close the file stream
 		void Close()
 		{
 			m_file.close();
-			m_buf.clear();
-			m_ptr = nullptr;
-			m_end = nullptr;
 			m_enc = EEncoding::auto_detect;
-			m_loc = Location();
-		}
-
-		// Debugging helper interface
-		bool IsOpen() const
-		{
-			return m_file.is_open();
-		}
-		SrcConstPtr DbgPtr() const override
-		{
-			return m_ptr;
-		}
-
-		// Pointer-like interface
-		wchar_t operator * () const override
-		{
-			return const_cast<FileSrc&>(*this).mb_to_wchar();
-		}
-		FileSrc& operator ++() override
-		{
-			m_loc.inc(**this); // Move the location (calls 'mb_to_wchar')
-			load(m_ch_len);    // Shift out the number of bytes used to decode 'm_ch'
-			m_ch_len = -1;     // Invalidate the cached character
-			return *this;
-		}
-
-		// Convert the current 'm_buf' contents to a wide character and record the number of bytes to consume
-		wchar_t mb_to_wchar()
-		{
-			// Return the cached converted character
-			if (m_ch_len >= 0)
-				return m_ch;
-
-			// If we're at the end of the buffer
-			if (m_ptr == m_end)
-			{
-				m_ch = 0;
-				m_ch_len = 0;
-				return m_ch;
-			}
-
-			// Assume ASCII, unless a UTF-8 char is found
-			auto enc = m_enc;
-			if (m_enc == EEncoding::auto_detect)
-			{
-				if ((*m_ptr & 0x80) != 0)
-					enc = (m_enc = EEncoding::utf8);
-				else
-					enc = EEncoding::ascii;
-			}
-
-			switch (enc)
-			{
-			default: throw std::exception("Unsupported file encoding");
-			case EEncoding::ascii:
-				{
-					m_ch_len = 1;
-					m_ch = *m_ptr;
-					break;
-				}
-			case EEncoding::utf8:
-				{
-					// Interpret a multi byte character
-					std::codecvt_utf8_utf16<wchar_t> f;
-					for (auto mb = std::mbstate_t{};;)
-					{
-						char const* in_end; wchar_t* out_end;
-						auto r = f.in(mb, m_ptr, m_end, in_end, &m_ch, &m_ch + 1, out_end);
-						if (r == std::codecvt_base::ok     ) { m_ch_len = int(in_end - m_ptr); break; }    // Successful conversion
-						if (r == std::codecvt_base::partial) { load(int(m_end - m_ptr)); continue; }       // Partial character, load more bytes and continue converting
-						if (r == std::codecvt_base::error  ) { load(1); mb = std::mbstate_t{}; continue; } // Conversion error
-						throw std::exception("unknown character encoding result");
-					}
-					break;
-				}
-			case EEncoding::ucs2:
-				{
-					m_ch_len = 2;
-					m_ch = wchar_t((m_ptr[1] << 8) | m_ptr[0]);
-					break;
-				}
-			case EEncoding::ucs2_be:
-				{
-					m_ch_len = 2;
-					m_ch = wchar_t((m_ptr[0] << 8) | m_ptr[1]);
-					break;
-				}
-			}
-			return m_ch;
-		}
-
-		// Shift out 'n' bytes from 'm_buf', while shifting in 'n' more from the file
-		void load(int n)
-		{
-			// Shift 'n' bytes "out" of the buffer
-			m_ptr += n;
-
-			// We can only buffer more data if the file was bigger than the buffer
-			if (m_end == m_buf.data() + m_buf.size())
-			{
-				// Ensure that at least N bytes are buffered (if possible)
-				const int N = 8;
-				if (m_end - m_ptr < N) // If 'm_ptr' is within or past 'N' bytes of end
-				{
-					auto remainder = m_end - m_ptr;
-					if (remainder >= 0)
-					{
-						// Move the last up-to-N bytes to the front of the buffer
-						assert(int(m_buf.size()) >= remainder);
-						std::memmove(m_buf.data(), m_ptr, remainder);
-						m_end -= m_buf.size() - remainder;
-						m_ptr -= m_buf.size() - remainder;
-					}
-					else
-					{
-						// Seek the file to the new read position
-						m_file.seekg(-remainder, std::ios_base::cur);
-						m_end -= m_buf.size();
-						m_ptr = m_end;
-						remainder = 0;
-					}
-
-					// Fill the rest of the buffer from the file
-					m_end += m_file.good() ? m_file.read(m_buf.data() + remainder, m_buf.size() - remainder).gcount() : 0;
-				}
-			}
-			else if (m_ptr > m_end)
-			{
-				// Clamp to the end of the buffer
-				m_ptr = m_end;
-			}
+			m_loc = Loc();
 		}
 	};
-
-	// A buffered char source. Provides random access within a buffered range.
-	// Handy debugging tip: call buffer_all(); on the buffers to preload them will all the data
-	// It makes them easier to read in the watch windows.
-	template <typename TBuf = pr::deque<wchar_t>> struct Buffer :Src
-	{
-		using value_type = typename TBuf::value_type;
-		using buffer_type = TBuf;
-
-		mutable TBuf m_buf; // The buffered stream data read from 'm_src'
-		Src* m_src;         // The character stream that feeds 'm_buf'
-		NullSrc m_null;     // Used when 'm_src' == nullptr;
-
-		Buffer()
-			:Buffer(ESrcType::Buffered)
-		{}
-		explicit Buffer(ESrcType type)
-			:Src(type, Location())
-			,m_buf()
-			,m_src(&m_null)
-			,m_null()
-		{}
-		explicit Buffer(Src& src)
-			:Buffer()
-		{
-			Source(src);
-		}
-		template <typename Iter> Buffer(ESrcType type, Iter first, Iter last)
-			:Src(type, Location())
-			,m_buf(first, last)
-			,m_src(&m_null)
-			,m_null()
-		{}
-		template <typename TPtr> Buffer(ESrcType type, TPtr ptr)
-			:Src(type, Location())
-			,m_buf()
-			,m_src(&m_null)
-			,m_null()
-		{
-			buffer_all(ptr);
-		}
-		Buffer(Buffer&& rhs) noexcept
-			:Src(rhs)
-			,m_buf()
-			,m_src(&m_null)
-			,m_null()
-		{
-			std::swap(m_buf, rhs.m_buf);
-			std::swap(m_src, rhs.m_src);
-			if (m_src == &rhs.m_null)
-				m_src = &m_null;
-			if (rhs.m_src == &m_null)
-				rhs.m_src = &rhs.m_null;
-		}
-		Buffer(Buffer const& rhs)
-			:Src(rhs)
-			,m_buf(rhs.m_buf)
-			,m_src(rhs.m_src)
-			,m_null()
-		{
-			if (m_src == &rhs.m_null)
-				m_src = &m_null;
-		}
-		Buffer& operator = (Buffer&& rhs) noexcept
-		{
-			if (this != &rhs)
-			{
-				std::swap(m_buf, rhs.m_buf);
-				std::swap(m_src, rhs.m_src);
-				if (m_src == &rhs.m_null)
-					m_src = &m_null;
-				if (rhs.m_src == &m_null)
-					rhs.m_src = &rhs.m_null;
-			}
-			return *this;
-		}
-		Buffer& operator = (Buffer const& rhs)
-		{
-			if (this != &rhs)
-			{
-				m_buf = rhs.m_buf;
-				m_src = rhs.m_src;
-				if (m_src == &rhs.m_null)
-					m_src = &m_null;
-			}
-			return *this;
-		}
-
-		// Set the source. Note, doesn't reset any buffered data
-		void Source(Src& src)
-		{
-			m_type = src.Type();
-			m_src = &src;
-		}
-
-		// Debugging helper interface
-		Location const& Loc() const override
-		{
-			return m_src->Loc();
-		}
-		SrcConstPtr DbgPtr() const override
-		{
-			return m_src->DbgPtr();
-		}
-		TBuf const* DbgBuf() const
-		{
-			return &m_buf;
-		}
-
-		// Pointer-like interface
-		wchar_t operator *() const override
-		{
-			return empty() ? **m_src : m_buf[0];
-		}
-		Buffer& operator ++() override
-		{
-			if (!empty()) pop_front();
-			else ++*m_src;
-			return *this;
-		}
-
-		// Array access to the buffered data. Buffer size grows to accommodate 'i'
-		value_type operator [](size_t i) const
-		{
-			if (i == 0) return **this;
-			ensure(i);
-			return m_buf[i];
-		}
-		value_type& operator [](size_t i)
-		{
-			// Returning a reference requires the character be buffered
-			ensure(i);
-			return m_buf[i];
-		}
-
-		// Returns true if no data is buffered
-		bool empty() const
-		{
-			return m_buf.empty();
-		}
-
-		// The count of buffered characters
-		size_t size() const
-		{
-			return m_buf.size();
-		}
-
-		// Removes all buffered data
-		void clear()
-		{
-			// don't define resize() as its confusing which portion is kept (front or back?)
-			m_buf.resize(0);
-		}
-
-		// Return the first buffered character
-		value_type front() const
-		{
-			return m_buf.front()
-		}
-
-		// Return the last buffered character
-		value_type back() const
-		{
-			return m_buf.back();
-		}
-
-		// Iterator range access to the buffer
-		auto begin() const -> decltype(std::begin(m_buf))
-		{
-			return std::begin(m_buf);
-		}
-		auto end() const -> decltype(std::end(m_buf))
-		{
-			return std::end(m_buf);
-		}
-
-		// Returns the source that is feeding the buffer
-		Src& stream() const
-		{
-			return *m_src;
-		}
-			
-		// Push a character onto the front of the buffer (making it the next character read)
-		void push_front(value_type ch)
-		{
-			//m_buf.push_front(ch);
-			m_buf.insert(std::begin(m_buf), ch);
-		}
-
-		// Pop n characters from the front of the buffer
-		void pop_front()
-		{
-			//m_buf.pop_front();
-			auto first = std::begin(m_buf);
-			m_buf.erase(first, first + 1);
-		}
-		void pop_front(size_t n)
-		{
-			auto first = std::begin(m_buf);
-			m_buf.erase(first, first + n);
-		}
-
-		// Pop n characters from the back of the buffer
-		void pop_back(size_t n = 1)
-		{
-			auto first = std::begin(m_buf);
-			auto count = m_buf.size();
-			m_buf.erase(first + count - n, first + count);
-		}
-
-		// Buffer the next 'n' characters from the source stream
-		void buffer(size_t n = 1) const
-		{
-			for (;n-- > 0; ++*m_src)
-				m_buf.push_back(**m_src);
-		}
-
-		// Read all the data from 'm_src' into the buffer
-		void buffer_all() const
-		{
-			buffer_all(*m_src);
-		}
-
-		// Read all data from 'ptr' into the buffer
-		template <typename TPtr> void buffer_all(TPtr& ptr) const
-		{
-			for (; *ptr != 0; ++ptr)
-				m_buf.push_back(wchar_t(*ptr));
-		}
-		template <typename TPtr> void buffer_all(TPtr const& ptr) const
-		{
-			auto p = ptr;
-			buffer_all(p);
-		}
-
-		// Ensure a total of 'n' characters are buffered
-		void ensure(size_t n) const
-		{
-			if (n < m_buf.size()) return;
-			buffer(1 + n - m_buf.size());
-		}
-
-		// Insert 'count' * 'ch's at 'ofs' in the buffer
-		void insert(size_t ofs, size_t count, value_type ch)
-		{
-			ensure(ofs);
-			m_buf.insert(std::begin(m_buf) + ofs, count, ch);
-		}
-
-		// Insert 'count' 'ch's at 'ofs' in the buffer
-		template <typename Iter> void insert(size_t ofs, Iter first, Iter last)
-		{
-			ensure(ofs);
-			m_buf.insert(std::begin(m_buf) + ofs, first, last);
-		}
-
-		// Erase a range within the buffered characters
-		void erase(size_t ofs = 0, size_t count = ~size_t())
-		{
-			auto first = std::begin(m_buf) + ofs;
-			count = std::min(count, m_buf.size() - ofs);
-			m_buf.erase(first, first + count);
-		}
-
-		// Return the buffered text as a string
-		pr::string<value_type> str(size_t ofs = 0, size_t count = ~size_t()) const
-		{
-			auto first = std::begin(m_buf) + ofs;
-			count = std::min(count, m_buf.size() - ofs);
-			return pr::string<value_type>(first, first + count);
-		}
-
-		// String compare - note asymmetric: i.e. 'buf="abcd", str="ab", buf.match(str) == true'
-		// Buffers the input stream and compares it to 'str' return true if they match.
-		// If 'adv_if_match' is true, the matching characters are popped from the buffer.
-		// Note: *only* buffers matching characters. This prevents the buffer containing extra
-		// data after a mismatch, and can be used to determine the length of a partial match.
-		// Returns the length of the match == Length(str) if successful, 0 if not a match.
-		// Not returning partial match length as that makes use as a boolean expression tricky.
-		template <typename Str> int match(Str const& str) const
-		{
-			// Cant use 'wcscmp()', m_buf is not guaranteed contiguous
-			size_t i = 0, count = pr::str::Length(str);
-
-			// If the buffer contains data already, test that first
-			for (auto buf_count = size_buf(); i != count && i < buf_count && str[i] == m_buf[i]; ++i) {}
-
-			// Buffer extra matching characters if needed
-			for (; i != count && str[i] == *stream(); buffer(), ++i) {}
-
-			// Return match success/fail
-			return i == count ? count : 0;
-		}
-		template <typename Char> int match(Char const* str) const
-		{
-			size_t i = 0;
-
-			// If the buffer contains data already, test that first
-			for (auto buf_count = size(); str[i] && i < buf_count && str[i] == m_buf[i]; ++i) {}
-
-			// Buffer extra matching characters if needed
-			for (; *stream() && *stream() == str[i]; buffer(), ++i) {}
-
-			// Return match success/fail
-			return str[i] == 0 ? int(i) : 0;
-		}
-		template <typename Str> int match(Str const& str, bool adv_if_match)
-		{
-			auto r = match(str);
-			if (adv_if_match && r) pop_front(r);
-			return r;
-		}
-	};
-	using StringSrcA = Buffer<std::string>;
-	using StringSrcW = Buffer<std::wstring>;
-
-	// A counter that never goes below 0. Used for holding the read position in Buffer<>
-	struct EmitCount
-	{
-		int m_value;
-
-		EmitCount()
-			:m_value()
-		{}
-		explicit EmitCount(int value)
-			:EmitCount()
-		{
-			assert(value >= 0);
-			assign(value);
-		}
-		EmitCount& operator = (int n)
-		{
-			return assign(n);
-		}
-		EmitCount& operator ++()
-		{
-			return assign(m_value + 1);
-		}
-		EmitCount& operator --()
-		{
-			return assign(m_value - 1);
-		}
-		EmitCount  operator ++(int)
-		{
-			auto x = *this;
-			++*this;
-			return x;
-		}
-		EmitCount  operator --(int)
-		{
-			auto x = *this;
-			--*this;
-			return x;
-		}
-		EmitCount& operator += (int n)
-		{
-			return assign(m_value + n);
-		}
-		EmitCount& operator -= (int n)
-		{
-			return assign(m_value - n);
-		}
-		operator size_t() const
-		{
-			return size_t(m_value);
-		}
-		EmitCount& assign(int value)
-		{
-			m_value = (value > 0) ? value : 0;
-			return *this;
-		}
-	};
-
-	#pragma region Global Functions
-
-	// Hash a raw string on the range [0, count)
-	template <typename Char> inline int Hash(Char const* str, Char const* end)
-	{
-		return pr::hash::Hash(str, end);
-	}
-
-	// Hash a std::string-like value using the default 'Hash' function
-	template <typename String> inline int Hash(String const& name, size_t ofs = 0, size_t count = ~size_t())
-	{
-		auto beg = std::begin(name);
-		auto end = std::end(name);
-
-		assert(ofs <= size_t(end - beg));
-		assert(count == ~size_t() || count <= size_t((end - beg) - ofs)); // If given, count must be within 'name'
-
-		auto first = beg + ofs;
-		auto last  = beg + ofs + (count != ~size_t() ? count : size_t((end - beg) - ofs));
-		return pr::hash::Hash(first, last);
-	}
-
-	// Buffer an identifier into 'buf'. 'emit' is the read position in 'buf'
-	template <typename TBuf> inline bool BufferIdentifier(TBuf& buf, EmitCount& emit)
-	{
-		// If the buffer is currently empty, peek at the next character so that it doesn't get buffered
-		if (!pr::str::IsIdentifier(emit == 0 ? *buf : buf[emit], true)) return false;
-		for (++emit; pr::str::IsIdentifier(buf[emit], false); ++emit) {}
-		return true;
-	}
-
-	// Buffer up to the next '\n' into 'buf'. 'emit' is the read position in 'buf'
-	template <typename TBuf> inline void BufferLine(TBuf& buf, EmitCount& emit)
-	{
-		// If the buffer is currently empty, peek at the next character so that it doesn't get buffered unecessarily
-		if (pr::str::IsNewLine(emit == 0 ? *buf : buf[emit])) return;
-		for (++emit; !pr::str::IsNewLine(buf[emit]); ++emit) {}
-	}
-
-	// Buffer a literal string or character into 'buf'. 'emit' is the read position in 'buf'
-	// Callers should check that 'buf[emit] == end' to verify a complete string has been read.
-	template <typename TBuf> inline void BufferLiteral(TBuf& buf, EmitCount& emit, wchar_t end = buf[emit])
-	{
-		++emit;
-		for (int esc = 0; buf[emit] && (buf[emit] != end || esc); esc = int(buf[emit] == L'\\'), ++emit) {}
-	}
-
-	// Buffer up to 'end'. If 'include_end' is false, 'end' is removed from
-	// the buffer once read. 'emit' is the read position in 'buf'.
-	template <typename TBuf> inline bool BufferTo(TBuf& buf, EmitCount& emit, wchar_t const* end, bool include_end)
-	{
-		int i = 0;
-		for (; end[i]; ++emit)
-		{
-			auto ch = buf[emit];
-			if      (ch == end[i]) ++i;
-			else if (ch == end[0]) i = 1;
-			else i = 0;
-		}
-		if (end[i] != 0) return false;
-		if (!include_end) buf.erase(emit - i, i);
-		return true;
-	}
-
-	// Buffer until 'pred' returns false. 'emit' is the read position in 'buf'.
-	template <typename TBuf, typename Pred> inline void BufferWhile(TBuf& buf, EmitCount& emit, Pred pred)
-	{
-		// If the buffer is currently empty, peek at the next character so that it doesn't get buffered unecessarily
-		if (!pred(emit == 0 ? *buf : buf[emit])) return;
-		for (++emit; buf[emit] && pred(buf[emit]); ++emit) {}
-	}
 
 	// Call '++src' until 'pred' returns false.
 	// 'eat_initial' and 'eat_final' are the number of characters to consume before
 	// applying the predicate 'pred' and the number to consume after 'pred' returns false.
+	template <typename TSrc, typename Char> inline void EatDelimiters(TSrc& src, Char const* delim)
+	{
+		for (; *str::FindChar(delim, *src) != 0; ++src) {}
+	}
 	template <typename TSrc, typename Pred> void Eat(TSrc& src, int eat_initial, int eat_final, Pred pred)
 	{
-		for (src += eat_initial; *src && pred(*src); ++src) {}
+		for (src += eat_initial; *src && pred(src); ++src) {}
 		src += eat_final;
 	}
 	template <typename TSrc> inline void EatLineSpace(TSrc& src, int eat_initial, int eat_final)
 	{
-		Eat(src, eat_initial, eat_final, pr::str::IsLineSpace<wchar_t>);
+		Eat(src, eat_initial, eat_final, [](TSrc& s) { return str::IsLineSpace(*s); });
 	}
 	template <typename TSrc> inline void EatWhiteSpace(TSrc& src, int eat_initial, int eat_final)
 	{
-		Eat(src, eat_initial, eat_final, pr::str::IsWhiteSpace<wchar_t>);
+		Eat(src, eat_initial, eat_final, [](TSrc& s) { return str::IsWhiteSpace(*s); });
 	}
 	template <typename TSrc> inline void EatLine(TSrc& src, int eat_initial, int eat_final)
 	{
-		Eat(src, eat_initial, eat_final, [](wchar_t ch){ return !pr::str::IsNewLine(ch); });
+		Eat(src, eat_initial, eat_final, [](TSrc& s){ return !(*s == '\n') && !(s[0] == '\r' && s[1] == '\n'); });
 	}
-	template <typename TSrc> inline bool EatLiteralString(TSrc& src)
+	template <typename TSrc> inline void EatBlock(TSrc& src, string_view_t block_beg, string_view_t block_end)
 	{
-		assert(*src == '\"' || *src == L'\''); // don't call this unless 'src' is pointing at a literal string
-		auto match = *src;
-		auto escape = false;
-		Eat(src, 1, 0, [&](wchar_t ch)
-		{
-			auto end = ch == match && !escape;
-			escape = ch == L'\\';
-			return !end;
-		});
-		if (*src == match) ++src; else return false;
-		return true;
+		if (block_beg.empty())
+			throw std::runtime_error("The block start marker cannot have length = 0");
+		if (block_end.empty())
+			throw std::runtime_error("The block end marker cannot have length = 0");
+		if (!src.Match(block_beg))
+			throw std::runtime_error("Don't call 'EatBlock' unless 'src' is pointing at the block start");
+
+		Eat(src, static_cast<int>(block_beg.size()), static_cast<int>(block_end.size()), [=](TSrc& s) { return !s.Match(block_end); });
 	}
-	template <typename TSrc, typename Char> inline void EatDelimiters(TSrc& src, Char const* delim)
+	template <typename TSrc> inline void EatLiteral(TSrc& src, Loc const& loc = Loc())
 	{
-		for (; *pr::str::FindChar(delim, *src) != 0; ++src) {}
+		// Don't call this unless 'src' is pointing at a literal string
+		auto quote = *src;
+		if (quote != '\"' && quote != '\'')
+			throw ScriptException(EResult::InvalidString, loc, Fmt(L"Expected the start of a string literal, but the next character is: %c", quote));
+
+		for (bool esc = true; *src != '\0' && (esc || *src != quote); esc = !esc && *src == '\\', ++src) {}
+		if (*src == quote) ++src; else throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
 	}
-	template <typename TSrc> inline void EatLineComment(TSrc& src)
+	template <typename TSrc> inline void EatLineComment(TSrc& src, string_view_t line_comment = "//")
 	{
-		assert(*src == '/'); // don't call this unless 'src' is pointing at a line comment
-		Eat(src, 2, 0, [&](wchar_t ch){ return ch != '\n'; });
+		assert(*src == line_comment[0]); // don't call this unless 'src' is pointing at a line comment
+		EatLine(src, static_cast<int>(line_comment.size()), 0);
 	}
-	template <typename TSrc> inline bool EatBlockComment(TSrc& src)
+	template <typename TSrc> inline void EatBlockComment(TSrc& src, string_view_t block_beg = "/*", string_view_t block_end = "*/")
 	{
-		assert(*src == '/'); // don't call this unless 'src' is pointing at a block comment
-		auto star = false;
-		Eat(src, 2, 0, [&](wchar_t ch)
-		{
-			auto end = star && ch == '/';
-			star = ch == '*';
-			return !end;
-		});
-		if (*src == '/') ++src; else return false;
+		assert(*src == block_beg[0]); // don't call this unless 'src' is pointing at a block comment
+		EatBlock(src, block_beg, block_end);
+	}
+
+	// Buffer an identifier in 'src'. Returns true if a valid identifier was buffered.
+	// On return, 'len' contains the length of the buffer up to and including the end
+	// of the identifier (i.e. start + strlen(identifier)).
+	inline bool BufferIdentifier(Src& src, int start = 0, int* len = nullptr)
+	{
+		auto i = start;
+		auto x = AtExit([&]{ if (len) *len = i; });
+		if (!str::IsIdentifier(src[i], true)) return false;
+		for (++i; str::IsIdentifier(src[i], false); ++i) {}
 		return true;
 	}
 
-	#pragma endregion
+	// Buffer a literal string or character in 'src'. Returns true if a complete literal string or
+	// character was buffered. On return, 'len' contains the length of the buffer up to, and
+	// including, the literal. (i.e. start + strlen(literal))
+	inline bool BufferLiteral(Src& src, int start = 0, int* len = nullptr)
+	{
+		auto i = start;
+		auto x = AtExit([&]{ if (len) *len = i; });
+
+		// Don't call this unless 'src' is pointing at a literal string
+		auto quote = src[i];
+		if (quote != '\"' && quote != '\'')
+			return false;
+
+		// Find the end of the literal
+		for (bool esc = true; src[i] != '\0' && (esc || src[i] != quote); esc = !esc && src[i] == '\\', ++i) {}
+		if (src[i] == quote) ++i; else return false;
+		return true;
+	}
+
+	// Buffer up to the next '\n' in 'src'. Returns true if a new line or at least one character is buffered.
+	// if 'include_newline' is false, the new line is removed from the buffer once read.
+	// On return, 'len' contains the length of the buffer up to, and including the new line character (even if the newline character is removed).
+	inline bool BufferLine(Src& src, bool include_newline, int start = 0, int* len = nullptr)
+	{
+		auto i = start;
+		auto x = AtExit([&]{ if (len) *len = i; });
+
+		if (src[i] == '\0') return false;
+		for (; src[i] != '\0' && src[i] != '\n'; ++i) {}
+		if (src[i] != '\0') { if (include_newline) i += 1; else src.Buffer().erase(i, 1); }
+		return true;
+	}
+
+	// Buffer up to and including 'end'. If 'include_end' is false, 'end' is removed from the buffer once read.
+	// On return, 'len' contains the length of the buffer up to, and including 'end' (even if end is removed).
+	inline bool BufferTo(Src& src, string_view_t end, bool include_end, int start = 0, int* len = nullptr)
+	{
+		auto i = start;
+		auto x = AtExit([&]{ if (len) *len = i; });
+
+		for (; src[i] != '\0' && !src.Match(end, i); ++i) {}
+		if (src[i] != '\0') { if (include_end) i += s_cast<int>(end.size()); else src.Buffer().erase(i, end.size()); }
+		return src[i] != '\0';
+	}
+
+	// Buffer until 'pred' returns 0. Signature for Pred: int(Src&,int)
+	// Returns true if buffered stopped due to 'pred' returning 0.
+	// On return, 'len' contains the length of the buffer up to where 'pred' returned false.
+	template <typename Pred, typename = std::enable_if_t<std::is_invocable_r_v<int, Pred, Src&, int>>>
+	inline bool BufferWhile(Src& src, Pred pred, int start = 0, int* len = nullptr)
+	{
+		auto i = start;
+		auto x = AtExit([&]{ if (len) *len = i; });
+
+		for (auto inc = 0; src[i] != '\0' && (inc = pred(src, i)) != 0; i += inc) {}
+		if (src[i] == '\0') i = s_cast<int>(src.Buffer().size());
+		return src[i] != '\0';
+	}
+
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/common/scope.h"
 #include "pr/str/string_core.h"
 namespace pr::script
 {
@@ -920,41 +675,35 @@ namespace pr::script
 	{
 		using namespace pr::str;
 
-		wchar_t const* script_utf = L"script_utf.txt";
-		auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(script_utf); });
+		std::filesystem::path const script_utf = L"script_utf.txt";
+		auto cleanup = pr::CreateScope([]{}, [&]{ std::filesystem::remove(script_utf); });
 
 		{// Simple buffering
 			char const str[] = "123abc";
-			PtrA ptr(str);
-			Buffer<> buf(ptr);
+			StringSrc ptr(str);
 
-			PR_CHECK(*buf  , L'1');
-			PR_CHECK(buf[5], L'c');
-			PR_CHECK(buf[0], L'1');
+			PR_CHECK(*ptr  , L'1');
+			PR_CHECK(ptr[5], L'c');
+			PR_CHECK(ptr[0], L'1');
 
-			PR_CHECK(*(++buf)   , L'2');
-			PR_CHECK(*(buf += 3), L'b');
-			PR_CHECK(*(++buf)   , L'c');
+			PR_CHECK(*(++ptr)   , L'2');
+			PR_CHECK(*(ptr += 3), L'b');
+			PR_CHECK(*(++ptr)   , L'c');
 
-			PR_CHECK(*(++buf),  0);
+			PR_CHECK(*(++ptr),  0);
 		}
 		{// Matching
 			wchar_t const str[] = L"0123456789";
-			PtrW ptr(str);
-			Buffer<> buf(ptr);
+			StringSrc ptr(str);
 
-			PR_CHECK(buf.match(L"0123") != 0, true);
-			PR_CHECK(buf.match(L"012345678910") != 0, false);
-			buf += 5;
-			PR_CHECK(buf.match(L"567") != 0, true);
+			PR_CHECK(ptr.Match(L"0123") != 0, true);
+			PR_CHECK(ptr.Match(L"012345678910") != 0, false);
+			ptr += 5;
+			PR_CHECK(ptr.Match(L"567") != 0, true);
 		}
-		{// Preload buffer
-			Buffer<> buf(ESrcType::Buffered, "abcd1234");
-			PR_CHECK(buf.match(L"abcd1234") != 0, true);
-		}
-		{// UTF8 big endian File source
+		{// UTF8 File source
 
-			// UTF-16be data (if host system is little-endian)
+			// UTF-8 data
 			unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao
 			wchar_t str[] = {0x4f60, 0x597d};
 
@@ -996,6 +745,145 @@ namespace pr::script
 			FileSrc file(script_utf);
 			PR_CHECK(*file, str[0]); ++file;
 			PR_CHECK(*file, str[1]); ++file;
+		}
+		{ // Eat functions
+			{
+				StringSrc src(" \t\n,Text");
+				EatDelimiters(src, "\n\t ,");
+				PR_CHECK(*src, 'T');
+			}
+			{
+				StringSrc src("991239Text");
+				Eat(src, 2, 1, [](auto& s) { return *s < '5'; });
+				PR_CHECK(*src, 'T');
+			}
+			{
+				StringSrc src0("01 \t \t \r\n");
+				EatLineSpace(src0, 2, 0);
+				PR_CHECK(*src0, '\n');
+
+				StringSrc src1("01 \t \t \r");
+				EatLineSpace(src1, 2, 1);
+				PR_CHECK(*src1, '\0');
+			}
+			{
+				StringSrc src("01 \t \t \rA");
+				EatWhiteSpace(src, 2, 0);
+				PR_CHECK(*src, 'A');
+			}
+			{
+				StringSrc src0("0123456\r\nABC");
+				EatLine(src0, 0, 2);
+				PR_CHECK(*src0, 'A');
+
+				StringSrc src1("0123456");
+				EatLine(src1, 0, 0);
+				PR_CHECK(*src1, '\0');
+			}
+			{
+				StringSrc src("{{ block }}#");
+				EatBlock(src, L"{{", L"}}");
+				PR_CHECK(*src, '#');
+			}
+			{
+				StringSrc src0("\"A \\\"string\\\" within a string\"#");
+				EatLiteral(src0);
+				PR_CHECK(*src0, '#');
+
+				StringSrc src1("\"A \\\\\"#  \"@ ");
+				EatLiteral(src1);
+				PR_CHECK(*src1, '#');
+			}
+			{
+				StringSrc src(";comment \r\n#");
+				EatLineComment(src, L";");
+				PR_CHECK(*src, '\r');
+			}
+			{
+				StringSrc src("<!-- comment \r\n -->#");
+				EatBlockComment(src, L"<!--", L"-->");
+				PR_CHECK(*src, '#');
+			}
+		}
+		{// Buffer functions
+			{
+				auto len = 0;
+				StringSrc src("_123abc#");
+				PR_CHECK(BufferIdentifier(src, 0, &len), true);
+				PR_CHECK(len, 7);
+				PR_CHECK(src.ReadN(len), L"_123abc");
+			}
+			{
+				auto len = 5;
+				StringSrc src("123abc#");
+				PR_CHECK(BufferIdentifier(src, 0, &len), false);
+				PR_CHECK(len, 0);
+			}
+			{
+				auto len = 0;
+				StringSrc src("  \"Lit\\\"er\\\"al\" ");
+				PR_CHECK(BufferLiteral(src, 2, &len), true);
+				PR_CHECK(len, 15);
+				src += 2; len -= 2;
+				PR_CHECK(src.ReadN(len), L"\"Lit\\\"er\\\"al\"");
+			}
+			{
+				auto len = 0;
+				StringSrc src("\"\\\\\"   \"");
+				PR_CHECK(BufferLiteral(src, 0, &len), true);
+				PR_CHECK(len, 4);
+				PR_CHECK(src.ReadN(len), L"\"\\\\\"");
+			}
+			{
+				auto len = 0;
+				StringSrc src("abc\ndef");
+				PR_CHECK(BufferLine(src, true, 0, &len), true);
+				PR_CHECK(len, 4);
+				PR_CHECK(src.ReadN(len), L"abc\n");
+			}
+			{
+				auto len = 0;
+				StringSrc src("  abc\ndef");
+				PR_CHECK(BufferLine(src, false, 2, &len), true);
+				PR_CHECK(len, 5);
+				src += 2; len -= 2;
+				PR_CHECK(src.ReadN(len), L"abc");
+			}
+			{
+				auto len = 0;
+				StringSrc src("a b\tc\nd,end;f");
+				PR_CHECK(BufferTo(src, L"end", true, 0, &len), true);
+				PR_CHECK(len, 11);
+				PR_CHECK(src.ReadN(len), L"a b\tc\nd,end");
+			}
+			{
+				auto len = 0;
+				StringSrc src("a b\tc\nd,");
+				PR_CHECK(BufferTo(src, L"end", false, 0, &len), false);
+				PR_CHECK(len, 8);
+				PR_CHECK(src.ReadN(len), L"a b\tc\nd,");
+			}
+			{
+				auto len = 0;
+				StringSrc src("a b\tc\nd,");
+				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return !s.Match(L"\tc\n", i); }, 0, &len), true);
+				PR_CHECK(len, 3);
+				PR_CHECK(src.ReadN(len), L"a b");
+			}
+			{
+				auto len = 0;
+				StringSrc src("abcde");
+				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return s[i] != 'f'; }, 0, &len), false);
+				PR_CHECK(len, 5);
+				PR_CHECK(src.ReadN(len), L"abcde");
+			}
+			{
+				auto len = 0;
+				StringSrc src("a_b_c_d");
+				PR_CHECK(BufferWhile(src, [](Src& s, int i) { return s[i] != '_' ? 2 : 0; }, 0, &len), false);
+				PR_CHECK(len, 7);
+				PR_CHECK(src.ReadN(len), L"a_b_c_d");
+			}
 		}
 	}
 }

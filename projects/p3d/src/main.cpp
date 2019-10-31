@@ -83,6 +83,8 @@ struct Main
 	// Convert the command line into a script source
 	std::unique_ptr<script::Src> ParseCommandLine(std::string args)
 	{
+		using namespace pr::script;
+
 		// If the command line is a script filepath, return a file source
 		if (!cmdline::IsOption(args))
 		{
@@ -95,17 +97,16 @@ struct Main
 				throw std::runtime_error("Script '"s + args + "' does not exist");
 
 			m_base_dir = script_filepath.parent_path();
-			auto ptr = std::make_unique<script::FileSrc>(script_filepath.wstring());
-			return std::move(ptr);
+			return std::unique_ptr<FileSrc>(new FileSrc(script_filepath));
 		}
 		else
 		{
 			// Otherwise, convert the command line parameters into a script
 			struct Parser :cmdline::IOptionReceiver<>
 			{
-				std::string& m_str;
-				Parser(std::string& str)
-					:m_str(str)
+				std::string m_str;
+				Parser()
+					:m_str()
 				{}
 
 				// Read the option passed to Cex
@@ -173,16 +174,14 @@ struct Main
 				}
 			};
 
-			// Create a string source
-			auto ptr = std::make_unique<script::StringSrcA>();
-
-			Parser p(ptr->m_buf);
+			Parser p;
 			EnumCommandLine(args.c_str(), p);
-			if (ptr->m_buf.empty())
+			if (p.m_str.empty())
 				throw std::runtime_error("Invalid command line");
 
+			// Create a string source
 			m_base_dir = current_path();
-			return std::move(ptr);
+			return std::unique_ptr<StringSrc>(new StringSrc(p.m_str, StringSrc::EFlags::BufferLocally));
 		}
 	}
 
@@ -242,7 +241,7 @@ struct Main
 					continue;
 				}
 				// NEW_COMMAND
-				throw std::runtime_error(FmtS("Unknown command: %s (line: %d)", kw, reader.Loc().Line()));
+				throw std::runtime_error(FmtS("Unknown command: %s (line: %d)", kw, reader.Location().Line()));
 			}
 		}
 		catch (std::exception const& ex)

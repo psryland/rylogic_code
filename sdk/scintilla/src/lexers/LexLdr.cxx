@@ -30,313 +30,328 @@
 using namespace Scintilla;
 #endif
 
-typedef unsigned int uint;
-enum class EWordList
-{
-	Keywords,
-	Preprocessor,
-	StringLiterals,
-	Numbers,
-};
-static const char * const LdrWordListDesc[] = {
-	"Keywords",
-	"Preprocessor",
-	"String literals",
-	"Numbers",
-	"user2",
-	"user3",
-	"user4",
-	"user5",
-	0
-};
-static CharacterSet identifier_start(CharacterSet::setAlpha, "_", 0x80, true);
-static CharacterSet identifier(CharacterSet::setAlphaNum, "_", 0x80, true);
-static CharacterSet number(CharacterSet::setDigits, ".-+abcdefABCDEF");
-static CharacterSet hexnumber(CharacterSet::setDigits, "abcdefABCDEF");
-//CharacterSet exponents(CharacterSet::setNone, "eEpP");
-//CharacterSet operators(CharacterSet::setNone, "*/-+()={}~[];<>,.^%:#");
-//CharacterSet escapechars(CharacterSet::setNone, "\"'\\");
+using namespace pr::ldr;
+using namespace pr::script;
 
-
-static void StyleNameAndColour(StyleContext& sc)
+namespace
 {
-	bool name = false, col = false;
-	for (; sc.More() && sc.ch != '{' && (!name || !col); sc.Forward())
+	enum class EWordList
 	{
-		switch (sc.state)
+		Keywords,
+		Preprocessor,
+		StringLiterals,
+		Numbers,
+	};
+	static const char* const LdrWordListDesc[] =
+	{
+		"Keywords",
+		"Preprocessor",
+		"String literals",
+		"Numbers",
+		"user2",
+		"user3",
+		"user4",
+		"user5",
+		0
+	};
+	static CharacterSet s_cs_identifier_start(CharacterSet::setAlpha, "_", 0x80, true);
+	static CharacterSet s_cs_identifier(CharacterSet::setAlphaNum, "_", 0x80, true);
+	static CharacterSet s_cs_number(CharacterSet::setDigits, ".-+abcdefABCDEF");
+	static CharacterSet s_cs_hex_number(CharacterSet::setDigits, "abcdefABCDEF");
+
+	// Style the name and colour fields of an LdrObject description
+	static void StyleNameAndColour(StyleContext& sc)
+	{
+		bool name = false, col = false;
+		for (; sc.More() && sc.ch != '{' && (!name || !col); sc.Forward())
 		{
-		case SCE_LDR_DEFAULT:
-			if (!name && identifier_start.Contains(sc.ch)) { sc.SetState(SCE_LDR_NAME); break; }
-			if (!col  && hexnumber.Contains(sc.ch)) { sc.SetState(SCE_LDR_COLOUR); break; }
-			break;
-		case SCE_LDR_NAME:
-			if (!identifier.Contains(sc.ch))
+			switch (sc.state)
 			{
-				name = true;
-				char s[100] = {};
-				sc.GetCurrent(s,sizeof(s));
-				char* end; ::strtoul(s, &end, 16);
-				bool is_colour = size_t(end - s) == strlen(s);
-				if (is_colour)
+			case SCE_LDR_DEFAULT:
 				{
-					sc.ChangeState(SCE_LDR_COLOUR);
-					col = true;
+					if (!name && s_cs_identifier_start.Contains(sc.ch)) { sc.SetState(SCE_LDR_NAME); break; }
+					if (!col && s_cs_hex_number.Contains(sc.ch)) { sc.SetState(SCE_LDR_COLOUR); break; }
+					break;
 				}
-				sc.SetState(SCE_LDR_DEFAULT);
+			case SCE_LDR_NAME:
+				{
+					if (!s_cs_identifier.Contains(sc.ch))
+					{
+						name = true;
+						char s[100] = {};
+						sc.GetCurrent(s, sizeof(s));
+						char* end; ::strtoul(s, &end, 16);
+						bool is_colour = size_t(end - s) == strlen(s);
+						if (is_colour)
+						{
+							sc.ChangeState(SCE_LDR_COLOUR);
+							col = true;
+						}
+						sc.SetState(SCE_LDR_DEFAULT);
+					}
+					break;
+				}
+			case SCE_LDR_COLOUR:
+				{
+					if (!s_cs_hex_number.Contains(sc.ch))
+					{
+						name = true;
+						col = true;
+						sc.SetState(SCE_LDR_DEFAULT);
+					}
+					break;
+				}
 			}
-			break;
-		case SCE_LDR_COLOUR:
-			if (!hexnumber.Contains(sc.ch))
-			{
-				name = true;
-				col = true;
-				sc.SetState(SCE_LDR_DEFAULT);
-			}
-			break;
 		}
+		sc.SetState(SCE_LDR_DEFAULT);
 	}
-	sc.SetState(SCE_LDR_DEFAULT);
-}
 
-// Colourise an ldr script
-static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor &styler)
-{
-	StyleContext sc(startPos, length, initStyle, styler);
-	for (; sc.More(); sc.Forward())
+	// Colourise an ldr script
+	static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor& styler)
 	{
-		switch (sc.state)
+		StyleContext sc(startPos, length, initStyle, styler);
+		for (; sc.More(); sc.Forward())
 		{
-		case SCE_LDR_DEFAULT:
-			switch (sc.ch)
+			switch (sc.state)
 			{
-			case '*':
-				sc.SetState(SCE_LDR_KEYWORD);
-				break;
-			case '#':
-				sc.SetState(SCE_LDR_PREPROC);
-				break;
-			case '/':
-				if (sc.chNext == '*') { sc.SetState(SCE_LDR_COMMENT_BLK); sc.Forward(); }
-				if (sc.chNext == '/') { sc.SetState(SCE_LDR_COMMENT_LINE); sc.Forward(); }
-				break;
-			case '"':
-				sc.SetState(SCE_LDR_STRING_LITERAL);
-				break;
-			case '\'':
-				sc.SetState(SCE_LDR_CHAR_LITERAL);
-				break;
-			}
-			break;
-		case SCE_LDR_COMMENT_LINE:
-			if (sc.atLineEnd && sc.chPrev != '\\')
-				sc.SetState(SCE_LDR_DEFAULT);
-			break;
-		case SCE_LDR_COMMENT_BLK:
-			if (sc.Match('*','/'))
-				sc.Forward(), sc.ForwardSetState(SCE_LDR_DEFAULT);
-			break;
-		case SCE_LDR_STRING_LITERAL:
-			if (sc.ch == '"' && sc.chPrev != '\\')
-				sc.ForwardSetState(SCE_LDR_DEFAULT);
-			break;
-		case SCE_LDR_CHAR_LITERAL:
-			if (sc.ch == '\'' && sc.chPrev != '\\')
-				sc.ForwardSetState(SCE_LDR_DEFAULT);
-			break;
-		case SCE_LDR_NUMBER:
-			if (!number.Contains(sc.ch))
-				sc.SetState(SCE_LDR_DEFAULT);
-			break;
-		case SCE_LDR_KEYWORD:
-			if (!identifier.Contains(sc.ch))
-			{
-				char s[100] = {}, *p = &s[1];
-				sc.GetCurrentLowered(s,sizeof(s));
-				
-				pr::ldr::ELdrObject obj;
-				if (TryParse(obj, p, false))
+			case SCE_LDR_DEFAULT:
+				switch (sc.ch)
 				{
-					sc.ChangeState(SCE_LDR_OBJECT);
-					sc.SetState(SCE_LDR_DEFAULT);
-					StyleNameAndColour(sc);
+				case '*':
+					sc.SetState(SCE_LDR_KEYWORD);
+					break;
+				case '#':
+					sc.SetState(SCE_LDR_PREPROC);
+					break;
+				case '/':
+					if (sc.chNext == '*') { sc.SetState(SCE_LDR_COMMENT_BLK); sc.Forward(); }
+					if (sc.chNext == '/') { sc.SetState(SCE_LDR_COMMENT_LINE); sc.Forward(); }
+					break;
+				case '"':
+					sc.SetState(SCE_LDR_STRING_LITERAL);
+					break;
+				case '\'':
+					sc.SetState(SCE_LDR_CHAR_LITERAL);
 					break;
 				}
-				pr::ldr::EKeyword kw;
-				if (TryParse(kw, p, false))
-				{
-					sc.ChangeState(SCE_LDR_KEYWORD);
+				break;
+			case SCE_LDR_COMMENT_LINE:
+				if (sc.atLineEnd && sc.chPrev != '\\')
 					sc.SetState(SCE_LDR_DEFAULT);
-					break;
-				}
-				sc.ChangeState(SCE_LDR_DEFAULT);
-			}
-			break;
-		case SCE_LDR_PREPROC:
-			if (!identifier.Contains(sc.ch))
-			{
-				char s[100] = {}, *p = s;
-				sc.GetCurrentLowered(s,sizeof(s));
-				for (++p; *p && IsASpaceOrTab(*p); ++p) {}
-				
-				pr::script::EPPKeyword kw;
-				if (!TryParse(kw, p, true))
+				break;
+			case SCE_LDR_COMMENT_BLK:
+				if (sc.Match('*', '/'))
+					sc.Forward(), sc.ForwardSetState(SCE_LDR_DEFAULT);
+				break;
+			case SCE_LDR_STRING_LITERAL:
+				if (sc.ch == '"' && sc.chPrev != '\\')
+					sc.ForwardSetState(SCE_LDR_DEFAULT);
+				break;
+			case SCE_LDR_CHAR_LITERAL:
+				if (sc.ch == '\'' && sc.chPrev != '\\')
+					sc.ForwardSetState(SCE_LDR_DEFAULT);
+				break;
+			case SCE_LDR_NUMBER:
+				if (!s_cs_number.Contains(sc.ch))
+					sc.SetState(SCE_LDR_DEFAULT);
+				break;
+			case SCE_LDR_KEYWORD:
+				if (!s_cs_identifier.Contains(sc.ch))
+				{
+					char s[100] = {}, *p = &s[1]; // Skip the '*'
+					sc.GetCurrentLowered(s, sizeof(s) - 1);
+
+					// When the text matches the keyword, go back to the default state
+					ELdrObject ldr;
+					if (pr::Enum<ELdrObject>::TryParse(ldr, p, false))
+					{
+						sc.ChangeState(SCE_LDR_OBJECT);
+						sc.SetState(SCE_LDR_DEFAULT);
+						StyleNameAndColour(sc);
+						break;
+					}
+					pr::ldr::EKeyword kw;
+					if (pr::Enum<pr::ldr::EKeyword>::TryParse(kw, p, false))
+					{
+						sc.ChangeState(SCE_LDR_KEYWORD);
+						sc.SetState(SCE_LDR_DEFAULT);
+						break;
+					}
 					sc.ChangeState(SCE_LDR_DEFAULT);
-
-				sc.SetState(SCE_LDR_DEFAULT);
-			}
-			break;
-		case SCE_LDR_NAME:
-			break;
-		case SCE_LDR_COLOUR:
-			break;
-		}
-	}
-	sc.Complete();
-}
-
-// Fold an ldr script
-static void FoldLdrDoc(unsigned int startPos, int length, int /* initStyle */, WordList *[], Accessor &styler)
-{
-	auto line_idx = styler.GetLine(startPos);
-	auto fold_level = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
-	auto fold_flags = SC_FOLDLEVELWHITEFLAG;
-
-	for (auto i = startPos, iend = startPos + length; i != iend; ++i)
-	{
-		auto ch_curr = styler.SafeGetCharAt(i);
-		auto ch_next = styler.SafeGetCharAt(i+1);
-		auto eol = ch_curr == '\n' || (ch_curr == '\r' && ch_next == '\n');
-
-		// Non-whitespace chars on the line?
-		if ((fold_flags & SC_FOLDLEVELWHITEFLAG) != 0 && !isspacechar(ch_curr))
-			fold_flags &= ~SC_FOLDLEVELWHITEFLAG;
-
-		switch (styler.StyleAt(i))
-		{
-		case SCE_LDR_COMMENT_BLK:
-		case SCE_LDR_COMMENT_LINE:
-			{
-				if (ch_curr == '/' && ch_next == '/')
+				}
+				break;
+			case SCE_LDR_PREPROC:
+				if (!s_cs_identifier.Contains(sc.ch))
 				{
-					if (styler.SafeGetCharAt(i+2) == '{' && styler.SafeGetCharAt(i+3) == '{')
+					char s[100] = {}, *p = &s[0];
+					sc.GetCurrentLowered(s, sizeof(s));
+					for (++p; *p && IsASpaceOrTab(*p); ++p) {} // skip the '#' and space between the # and keyword
+
+					// When the text matches the keyword, go back to the default state
+					EPPKeyword kw;
+					if (pr::Enum<EPPKeyword>::TryParse(kw, p))
+					{
+						sc.ChangeState(SCE_LDR_DEFAULT);
+						break;
+					}
+
+					sc.SetState(SCE_LDR_DEFAULT);
+				}
+				break;
+			case SCE_LDR_NAME:
+				break;
+			case SCE_LDR_COLOUR:
+				break;
+			}
+		}
+		sc.Complete();
+	}
+
+	// Fold an ldr script
+	static void FoldLdrDoc(unsigned int startPos, int length, int /* initStyle */, WordList* [], Accessor& styler)
+	{
+		auto line_idx = styler.GetLine(startPos);
+		auto fold_level = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
+		auto fold_flags = SC_FOLDLEVELWHITEFLAG;
+
+		for (auto i = startPos, iend = startPos + length; i != iend; ++i)
+		{
+			auto ch_curr = styler.SafeGetCharAt(i);
+			auto ch_next = styler.SafeGetCharAt(i + 1);
+			auto eol = ch_curr == '\n' || (ch_curr == '\r' && ch_next == '\n');
+
+			// Non-whitespace chars on the line?
+			if ((fold_flags & SC_FOLDLEVELWHITEFLAG) != 0 && !isspacechar(ch_curr))
+				fold_flags &= ~SC_FOLDLEVELWHITEFLAG;
+
+			switch (styler.StyleAt(i))
+			{
+			case SCE_LDR_COMMENT_BLK:
+			case SCE_LDR_COMMENT_LINE:
+				{
+					if (ch_curr == '/' && ch_next == '/')
+					{
+						if (styler.SafeGetCharAt(i + 2) == '{' && styler.SafeGetCharAt(i + 3) == '{')
+						{
+							++fold_level;
+							fold_flags |= SC_FOLDLEVELHEADERFLAG;
+						}
+						if (styler.SafeGetCharAt(i + 2) == '}' && styler.SafeGetCharAt(i + 3) == '}')
+						{
+							--fold_level;
+						}
+					}
+					break;
+				}
+			case SCE_LDR_DEFAULT:
+				{
+					if (ch_curr == '{')
 					{
 						++fold_level;
 						fold_flags |= SC_FOLDLEVELHEADERFLAG;
 					}
-					if (styler.SafeGetCharAt(i+2) == '}' && styler.SafeGetCharAt(i+3) == '}')
+					if (ch_curr == '}')
 					{
 						--fold_level;
 					}
+					break;
 				}
-				break;
 			}
-		case SCE_LDR_DEFAULT:
+
+			if (eol)
 			{
-				if (ch_curr == '{')
-				{
-					++fold_level;
-					fold_flags |= SC_FOLDLEVELHEADERFLAG;
-				}
-				if (ch_curr == '}')
-				{
-					--fold_level;
-				}
-				break;
-			}
-		}
-
-		if (eol)
-		{
-			auto lev = fold_flags & fold_level;
-			styler.SetLevel(line_idx, lev);
-			fold_flags = SC_FOLDLEVELWHITEFLAG;
-			line_idx++;
-		}
-	}
-/*	int line_idx = styler.GetLine(startPos);
-	int levelPrev = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
-	int levelCurrent = levelPrev;
-	int visibleChars = 0;
-	bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
-
-	char ch_next = styler.SafeGetCharAt(startPos);//[startPos];
-	int style_next = styler.StyleAt(startPos);
-	for (auto i = startPos, iend = startPos + length; i != iend; ++i)
-	{
-		// Get the current and next char
-		char ch = ch_next;
-		ch_next = styler.SafeGetCharAt(i + 1);
-
-		// Get the current and next style
-		int style = style_next;
-		style_next = styler.StyleAt(i + 1);
-
-		bool atEOL = (ch == '\r' && ch_next != '\n') || (ch == '\n');
-		if (style == SCE_LUA_WORD)
-		{
-			if (ch == 'i' || ch == 'd' || ch == 'f' || ch == 'e' || ch == 'r' || ch == 'u') {
-				char s[10] = "";
-				for (unsigned int j = 0; j < 8; j++) {
-					if (!iswordchar(styler[i + j])) {
-						break;
-					}
-					s[j] = styler[i + j];
-					s[j + 1] = '\0';
-				}
-
-				if ((strcmp(s, "if") == 0) || (strcmp(s, "do") == 0) || (strcmp(s, "function") == 0) || (strcmp(s, "repeat") == 0)) {
-					levelCurrent++;
-				}
-				if ((strcmp(s, "end") == 0) || (strcmp(s, "elseif") == 0) || (strcmp(s, "until") == 0)) {
-					levelCurrent--;
-				}
-			}
-		} else if (style == SCE_LUA_OPERATOR) {
-			if (ch == '{' || ch == '(') {
-				levelCurrent++;
-			} else if (ch == '}' || ch == ')') {
-				levelCurrent--;
-			}
-		} else if (style == SCE_LUA_LITERALSTRING || style == SCE_LUA_COMMENT) {
-			if (ch == '[') {
-				levelCurrent++;
-			} else if (ch == ']') {
-				levelCurrent--;
-			}
-		}
-
-		if (atEOL) {
-			int lev = levelPrev;
-			if (visibleChars == 0 && foldCompact) {
-				lev |= SC_FOLDLEVELWHITEFLAG;
-			}
-			if ((levelCurrent > levelPrev) && (visibleChars > 0)) {
-				lev |= SC_FOLDLEVELHEADERFLAG;
-			}
-			if (lev != styler.LevelAt(line_idx)) {
+				auto lev = fold_flags & fold_level;
 				styler.SetLevel(line_idx, lev);
+				fold_flags = SC_FOLDLEVELWHITEFLAG;
+				line_idx++;
 			}
-			line_idx++;
-			levelPrev = levelCurrent;
-			visibleChars = 0;
 		}
-		if (!isspacechar(ch)) {
-			visibleChars++;
-		}
-	}
-	// Fill in the real level of the next line, keeping the current flags as they will be filled in later
+		/*	int line_idx = styler.GetLine(startPos);
+			int levelPrev = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
+			int levelCurrent = levelPrev;
+			int visibleChars = 0;
+			bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
 
-	int flagsNext = styler.LevelAt(line_idx) & ~SC_FOLDLEVELNUMBERMASK;
-	styler.SetLevel(line_idx, levelPrev | flagsNext);
-	*/
+			char ch_next = styler.SafeGetCharAt(startPos);//[startPos];
+			int style_next = styler.StyleAt(startPos);
+			for (auto i = startPos, iend = startPos + length; i != iend; ++i)
+			{
+				// Get the current and next char
+				char ch = ch_next;
+				ch_next = styler.SafeGetCharAt(i + 1);
+
+				// Get the current and next style
+				int style = style_next;
+				style_next = styler.StyleAt(i + 1);
+
+				bool atEOL = (ch == '\r' && ch_next != '\n') || (ch == '\n');
+				if (style == SCE_LUA_WORD)
+				{
+					if (ch == 'i' || ch == 'd' || ch == 'f' || ch == 'e' || ch == 'r' || ch == 'u') {
+						char s[10] = "";
+						for (unsigned int j = 0; j < 8; j++) {
+							if (!iswordchar(styler[i + j])) {
+								break;
+							}
+							s[j] = styler[i + j];
+							s[j + 1] = '\0';
+						}
+
+						if ((strcmp(s, "if") == 0) || (strcmp(s, "do") == 0) || (strcmp(s, "function") == 0) || (strcmp(s, "repeat") == 0)) {
+							levelCurrent++;
+						}
+						if ((strcmp(s, "end") == 0) || (strcmp(s, "elseif") == 0) || (strcmp(s, "until") == 0)) {
+							levelCurrent--;
+						}
+					}
+				} else if (style == SCE_LUA_OPERATOR) {
+					if (ch == '{' || ch == '(') {
+						levelCurrent++;
+					} else if (ch == '}' || ch == ')') {
+						levelCurrent--;
+					}
+				} else if (style == SCE_LUA_LITERALSTRING || style == SCE_LUA_COMMENT) {
+					if (ch == '[') {
+						levelCurrent++;
+					} else if (ch == ']') {
+						levelCurrent--;
+					}
+				}
+
+				if (atEOL) {
+					int lev = levelPrev;
+					if (visibleChars == 0 && foldCompact) {
+						lev |= SC_FOLDLEVELWHITEFLAG;
+					}
+					if ((levelCurrent > levelPrev) && (visibleChars > 0)) {
+						lev |= SC_FOLDLEVELHEADERFLAG;
+					}
+					if (lev != styler.LevelAt(line_idx)) {
+						styler.SetLevel(line_idx, lev);
+					}
+					line_idx++;
+					levelPrev = levelCurrent;
+					visibleChars = 0;
+				}
+				if (!isspacechar(ch)) {
+					visibleChars++;
+				}
+			}
+			// Fill in the real level of the next line, keeping the current flags as they will be filled in later
+
+			int flagsNext = styler.LevelAt(line_idx) & ~SC_FOLDLEVELNUMBERMASK;
+			styler.SetLevel(line_idx, levelPrev | flagsNext);
+			*/
+	}
 }
 
+// Declare a lexer module instance for 'ldr' script
 LexerModule lmLdr(SCLEX_LDR, LexLdrDoc, "ldr", FoldLdrDoc, LdrWordListDesc);
 
 
 
 
-	/*
+#if 0 // lua example
 	WordList &keywords = *keywordlists[0];
 	WordList &keywords2 = *keywordlists[1];
 	WordList &keywords3 = *keywordlists[2];
@@ -622,4 +637,4 @@ LexerModule lmLdr(SCLEX_LDR, LexLdrDoc, "ldr", FoldLdrDoc, LdrWordListDesc);
 			sc.ChangeState(SCE_LUA_WORD8);
 		}
 	}
-	*/
+#endif

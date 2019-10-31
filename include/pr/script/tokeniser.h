@@ -30,29 +30,23 @@ namespace pr::script
 	// C Tokeniser
 	struct Tokeniser :TokenSrc
 	{
-		using Buffer = Buffer<pr::deque<wchar_t>>;
-
-		Buffer    m_buf;  // The character stream to read from
-		EmitCount m_emit; // The read position in 'm_buf'
-		Token     m_tok;  // The token last read from the stream
+		Src&  m_src;  // The character stream to read from
+		Token m_tok;  // The token last read from the stream
 
 		Tokeniser(Src& src)
-			:m_buf(src)
-			,m_emit()
+			:m_src(src)
 			,m_tok()
 		{
 			seek();
 		}
-		Tokeniser(Tokeniser&& rhs)
+		Tokeniser(Tokeniser&& rhs) noexcept
 			:TokenSrc(std::move(rhs))
-			,m_buf(std::move(rhs.m_buf))
-			,m_emit(std::move(rhs.m_emit))
+			,m_src(rhs.m_src)
 			,m_tok(std::move(rhs.m_tok))
 		{}
 		Tokeniser(Tokeniser const& rhs)
 			:TokenSrc(rhs)
-			,m_buf(rhs.m_buf)
-			,m_emit(rhs.m_emit)
+			,m_src(rhs.m_src)
 			,m_tok(rhs.m_tok)
 		{}
 
@@ -67,28 +61,32 @@ namespace pr::script
 			return *this;
 		}
 
+	private:
+
 		// Advance to the next token to output
 		void seek()
 		{
-			auto& src = m_buf;
-			auto& emit = m_emit;
+			auto& src = m_src;
 
 			// Line space does not generate tokens
 			EatLineSpace(src, 0, 0);
 			switch (*src)
 			{
 			default:
-			throw Exception(EResult::SyntaxError, src.Loc(), "Tokeniser failed to understand code starting here");
-
-			case 0:
-				m_tok = Token(EToken::EndOfStream);
-				break;
-
+				{
+					throw ScriptException(EResult::SyntaxError, src.Location(), "Tokeniser failed to understand code starting here");
+				}
+			case '\0':
+				{
+					m_tok = Token(EToken::EndOfStream);
+					break;
+				}
 			case '\n':
-				m_tok = Token(ESymbol::NewLine, src.Loc().Line()); // save the index of the line following this '\n'
-				++src;
-				break;
-
+				{
+					m_tok = Token(ESymbol::NewLine, src.Location().Line()); // save the index of the line following this '\n'
+					++src;
+					break;
+				}
 			case '_':
 			case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i':
 			case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
@@ -96,50 +94,48 @@ namespace pr::script
 			case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I':
 			case 'J': case 'K':           case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
 			case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
-				// extract an identifier that might be a keyword
-				tokeniser_extract_identitier:
+				tokeniser_extract_identitier: // extract an identifier that might be a keyword
 				{
 					// Read the identifier
-					BufferIdentifier(src, emit);
-					auto hash = Hash(src, 0, emit);
+					auto len = 0;
+					BufferIdentifier(src, 0, &len);
+					auto hash = static_cast<EKeyword>(src.Hash(0, len));
 					switch (hash)
 					{
-					default:                 m_tok = Token(EToken::Identifier, src.str(0, emit), hash); break;
-					case EKeyword::Auto:     m_tok = Token(EKeyword::Auto     ); break;
-					case EKeyword::Double:   m_tok = Token(EKeyword::Double   ); break;
-					case EKeyword::Int:      m_tok = Token(EKeyword::Int      ); break;
-					case EKeyword::Struct:   m_tok = Token(EKeyword::Struct   ); break;
-					case EKeyword::Break:    m_tok = Token(EKeyword::Break    ); break;
-					case EKeyword::Else:     m_tok = Token(EKeyword::Else     ); break;
-					case EKeyword::Long:     m_tok = Token(EKeyword::Long     ); break;
-					case EKeyword::Switch:   m_tok = Token(EKeyword::Switch   ); break;
-					case EKeyword::Case:     m_tok = Token(EKeyword::Case     ); break;
-					case EKeyword::Enum:     m_tok = Token(EKeyword::Enum     ); break;
-					case EKeyword::Register: m_tok = Token(EKeyword::Register ); break;
-					case EKeyword::Typedef:  m_tok = Token(EKeyword::Typedef  ); break;
-					case EKeyword::Char:     m_tok = Token(EKeyword::Char     ); break;
-					case EKeyword::Extern:   m_tok = Token(EKeyword::Extern   ); break;
-					case EKeyword::Return:   m_tok = Token(EKeyword::Return   ); break;
-					case EKeyword::Union:    m_tok = Token(EKeyword::Union    ); break;
-					case EKeyword::Const:    m_tok = Token(EKeyword::Const    ); break;
-					case EKeyword::Float:    m_tok = Token(EKeyword::Float    ); break;
-					case EKeyword::Short:    m_tok = Token(EKeyword::Short    ); break;
-					case EKeyword::Unsigned: m_tok = Token(EKeyword::Unsigned ); break;
-					case EKeyword::Continue: m_tok = Token(EKeyword::Continue ); break;
-					case EKeyword::For:      m_tok = Token(EKeyword::For      ); break;
-					case EKeyword::Signed:   m_tok = Token(EKeyword::Signed   ); break;
-					case EKeyword::Void:     m_tok = Token(EKeyword::Void     ); break;
-					case EKeyword::Default:  m_tok = Token(EKeyword::Default  ); break;
-					case EKeyword::Goto:     m_tok = Token(EKeyword::Goto     ); break;
-					case EKeyword::Sizeof:   m_tok = Token(EKeyword::Sizeof   ); break;
-					case EKeyword::Volatile: m_tok = Token(EKeyword::Volatile ); break;
-					case EKeyword::Do:       m_tok = Token(EKeyword::Do       ); break;
-					case EKeyword::If:       m_tok = Token(EKeyword::If       ); break;
-					case EKeyword::Static:   m_tok = Token(EKeyword::Static   ); break;
-					case EKeyword::While:    m_tok = Token(EKeyword::While    ); break;
+					default:                 m_tok = Token(EToken::Identifier, src.ReadN(len), int64(hash)); break;
+					case EKeyword::Auto:     m_tok = Token(EKeyword::Auto     ); src += len; break;
+					case EKeyword::Double:   m_tok = Token(EKeyword::Double   ); src += len; break;
+					case EKeyword::Int:      m_tok = Token(EKeyword::Int      ); src += len; break;
+					case EKeyword::Struct:   m_tok = Token(EKeyword::Struct   ); src += len; break;
+					case EKeyword::Break:    m_tok = Token(EKeyword::Break    ); src += len; break;
+					case EKeyword::Else:     m_tok = Token(EKeyword::Else     ); src += len; break;
+					case EKeyword::Long:     m_tok = Token(EKeyword::Long     ); src += len; break;
+					case EKeyword::Switch:   m_tok = Token(EKeyword::Switch   ); src += len; break;
+					case EKeyword::Case:     m_tok = Token(EKeyword::Case     ); src += len; break;
+					case EKeyword::Enum:     m_tok = Token(EKeyword::Enum     ); src += len; break;
+					case EKeyword::Register: m_tok = Token(EKeyword::Register ); src += len; break;
+					case EKeyword::Typedef:  m_tok = Token(EKeyword::Typedef  ); src += len; break;
+					case EKeyword::Char:     m_tok = Token(EKeyword::Char     ); src += len; break;
+					case EKeyword::Extern:   m_tok = Token(EKeyword::Extern   ); src += len; break;
+					case EKeyword::Return:   m_tok = Token(EKeyword::Return   ); src += len; break;
+					case EKeyword::Union:    m_tok = Token(EKeyword::Union    ); src += len; break;
+					case EKeyword::Const:    m_tok = Token(EKeyword::Const    ); src += len; break;
+					case EKeyword::Float:    m_tok = Token(EKeyword::Float    ); src += len; break;
+					case EKeyword::Short:    m_tok = Token(EKeyword::Short    ); src += len; break;
+					case EKeyword::Unsigned: m_tok = Token(EKeyword::Unsigned ); src += len; break;
+					case EKeyword::Continue: m_tok = Token(EKeyword::Continue ); src += len; break;
+					case EKeyword::For:      m_tok = Token(EKeyword::For      ); src += len; break;
+					case EKeyword::Signed:   m_tok = Token(EKeyword::Signed   ); src += len; break;
+					case EKeyword::Void:     m_tok = Token(EKeyword::Void     ); src += len; break;
+					case EKeyword::Default:  m_tok = Token(EKeyword::Default  ); src += len; break;
+					case EKeyword::Goto:     m_tok = Token(EKeyword::Goto     ); src += len; break;
+					case EKeyword::Sizeof:   m_tok = Token(EKeyword::Sizeof   ); src += len; break;
+					case EKeyword::Volatile: m_tok = Token(EKeyword::Volatile ); src += len; break;
+					case EKeyword::Do:       m_tok = Token(EKeyword::Do       ); src += len; break;
+					case EKeyword::If:       m_tok = Token(EKeyword::If       ); src += len; break;
+					case EKeyword::Static:   m_tok = Token(EKeyword::Static   ); src += len; break;
+					case EKeyword::While:    m_tok = Token(EKeyword::While    ); src += len; break;
 					}
-					src.pop_front(emit);
-					emit = 0;
 					break;
 				}
 			case 'L':
@@ -148,44 +144,38 @@ namespace pr::script
 					if (src[1] == '\'' || src[1] == '\"') goto tokeniser_extract_str_literal;
 					goto tokeniser_extract_identitier;
 				}
-
 			case '0': case '1': case '2': case '3': case '4':
 			case '5': case '6': case '7': case '8': case '9':
-				// Extract a numeric constant
-				tokeniser_extract_constant:
+				tokeniser_extract_constant: // Extract a numeric constant
 				{
-					pr::Number num;
-					if (!pr::str::ExtractNumber(num, src))
-						throw Exception(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
+					Number num;
+					if (!str::ExtractNumber(num, src))
+						throw ScriptException(EResult::SyntaxError, src.Location(), "Invalid numeric constant");
 
 					m_tok = num.m_type == Number::EType::FP ? Token(EConstant::FloatingPoint, num.db()) : Token(EConstant::Integral, num.ll());
 					break;
 				}
-
 			case '\'':
 			case '\"':
-				// Extract a literal c-string (possibly prefixed with 'L')
-				tokeniser_extract_str_literal:
+				tokeniser_extract_str_literal: // Extract a literal c-string (possibly prefixed with 'L')
 				{
 					auto is_wide = *src == 'L' ? ++src,true : false;
 					auto is_char = *src == '\'';
 						
-					string str;
-					if (!pr::str::ExtractString(str, src, L'\\', nullptr)) throw Exception(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
-					if      (is_char) m_tok = Token(EConstant::Integral, Token::int64(str[0])); // char literals are actually integral constants
+					string_t str;
+					if (!str::ExtractString(str, src, L'\\', nullptr)) throw ScriptException(EResult::SyntaxError, src.Location(), "Invalid literal constant");
+					if      (is_char) m_tok = Token(EConstant::Integral, int64_t(str[0])); // char literals are actually integral constants
 					else if (is_wide) m_tok = Token(EConstant::WStringLiteral, str);
 					else              m_tok = Token(EConstant::StringLiteral, str);
 					break;
 				}
-
 			case '.':
 				{
 					if (src[1] == '.' && src[2] == '.') { m_tok = Token(ESymbol::Ellipsis); src += 3; break; }
-					if (pr::str::IsDigit(src[1])) goto tokeniser_extract_constant; // '.' can be the start of a number
+					if (str::IsDigit(src[1])) goto tokeniser_extract_constant; // '.' can be the start of a number
 					m_tok = Token(ESymbol::Dot); ++src;
 					break;
 				}
-
 			case '<':
 				{
 					if (src[1] == '<' && src[2] == '=') { m_tok = Token(ESymbol::ShiftLAssign); src += 3; break; }
@@ -194,7 +184,6 @@ namespace pr::script
 					m_tok = Token(ESymbol::LessThan); ++src;
 					break;
 				}
-
 			case '>':
 				{
 					if (src[1] == '>' && src[2] == '=') { m_tok = Token(ESymbol::ShiftRAssign); src += 3; break; }
@@ -203,7 +192,6 @@ namespace pr::script
 					m_tok = Token(ESymbol::GtrThan); ++src;
 					break;
 				}
-
 			case '&':
 				{
 					if (src[1] == '&') { m_tok = Token(ESymbol::LogicalAnd); src += 2; break; }
@@ -211,7 +199,6 @@ namespace pr::script
 					m_tok = Token(ESymbol::AddressOf); ++src;
 					break;
 				}
-
 			case '|':
 				{
 					if (src[1] == '|') { m_tok = Token(ESymbol::LogicalOr); src += 2; break; }
@@ -219,28 +206,24 @@ namespace pr::script
 					m_tok = Token(ESymbol::BitOr); ++src;
 					break;
 				}
-
 			case '^':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::BitXorAssign); src += 2; break; }
 					m_tok = Token(ESymbol::BitXor); ++src;
 					break;
 				}
-
 			case '!':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::NotEqual); src += 2; break; }
 					m_tok = Token(ESymbol::Not); ++src;
 					break;
 				}
-
 			case '=':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::Equal); src += 2; break; }
 					m_tok = Token(ESymbol::Assign); ++src;
 					break;
 				}
-
 			case '+':
 				{
 					if (src[1] == '+') { m_tok = Token(ESymbol::Increment); src += 2; break; }
@@ -248,7 +231,6 @@ namespace pr::script
 					m_tok = Token(ESymbol::Plus); ++src;
 					break;
 				}
-
 			case '-':
 				{
 					if (src[1] == '-') { m_tok = Token(ESymbol::Decrement); src += 2; break; }
@@ -256,28 +238,24 @@ namespace pr::script
 					m_tok = Token(ESymbol::Minus); ++src;
 					break;
 				}
-
 			case '*':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::MulAssign); src += 2; break; }
 					m_tok = Token(ESymbol::Ptr); ++src;
 					break;
 				}
-
 			case '%':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::ModAssign); src += 2; break; }
 					m_tok = Token(ESymbol::Modulus); ++src;
 					break;
 				}
-
 			case '/':
 				{
 					if (src[1] == '=') { m_tok = Token(ESymbol::DivAssign); src += 2; break; }
 					m_tok = Token(ESymbol::Divide); ++src;
 					break;
 				}
-
 			case '(': m_tok = Token(ESymbol::ParenthOpen  ); ++src; break;
 			case ')': m_tok = Token(ESymbol::ParenthClose ); ++src; break;
 			case '[': m_tok = Token(ESymbol::BracketOpen  ); ++src; break;
@@ -293,10 +271,6 @@ namespace pr::script
 			case '$': m_tok = Token(ESymbol::Dollar       ); ++src; break;
 			case '@': m_tok = Token(ESymbol::At           ); ++src; break;
 			}
-
-			// Clear the buffer now that we have the token
-			src.pop_front(emit);
-			emit = 0;
 		}
 	};
 }
@@ -307,9 +281,7 @@ namespace pr::script
 {
 	PRUnitTest(TokeniserTests)
 	{
-		using namespace pr;
-
-		char const* str_in =
+		char const str_in[] =
 			"auto double int struct break else long switch case enum register typedef "
 			"char extern return union const float short unsigned continue for signed "
 			"void default goto sizeof volatile do if static while"
@@ -317,7 +289,7 @@ namespace pr::script
 			">= == != && || <<= >>= &= |= ^= += -= *= /= %= ..."
 			;
 
-		PtrA src(str_in);
+		StringSrc src(str_in);
 		Tokeniser tkr(src);
 		PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
 		PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;

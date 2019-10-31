@@ -49,11 +49,11 @@
 namespace pr::ldr
 {
 	// Return the auto completion templates
-	std::wstring AutoCompleteTemplates()
+	std::string AutoCompleteTemplates()
 	{
-		std::wstring str;
+		std::string str;
 		str.reserve(4096);
-		str.append(L""
+		str.append(""
 
 			// Global
 			"*Clear {[(<ctx_id>)]}\n"

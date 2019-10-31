@@ -8,6 +8,7 @@
 #include "pr/maths/maths.h"
 #include "pr/script/forward.h"
 #include "pr/script/script_core.h"
+#include "pr/script/filter.h"
 #include "pr/script/preprocessor.h"
 #include "pr/script/fail_policy.h"
 
@@ -28,41 +29,46 @@ namespace pr::script
 
 	private:
 		Preprocessor m_pp;
-		string m_delim;
-		string m_last_keyword;
+		string_t m_delim;
+		string_t m_last_keyword;
 		bool m_case_sensitive;
 
 	public:
 
-		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr) noexcept
+		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:m_pp(inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
+			,ReportError(DefaultErrorHandler)
 		{}
 		Reader(Src& src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:m_pp(src, inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
+			,ReportError(DefaultErrorHandler)
 		{}
 		Reader(Src* src, bool delete_on_pop, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:m_pp(src, delete_on_pop, inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
+			,ReportError(DefaultErrorHandler)
 		{}
 		Reader(char const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:m_pp(src, inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
+			,ReportError(DefaultErrorHandler)
 		{}
 		Reader(wchar_t const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:m_pp(src, inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
+			,ReportError(DefaultErrorHandler)
 		{}
 
 		// Access the underlying source
@@ -76,9 +82,9 @@ namespace pr::script
 		}
 
 		// Return the current source location
-		Location Loc() const
+		Loc Location() const
 		{
-			return Source().Loc();
+			return m_pp.Location();
 		}
 
 		// Access the include handler
@@ -172,13 +178,13 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			if (IsSectionStart()) { ++src; return true; }
-			return ReportError(EResult::TokenNotFound, src.Loc(), "expected '{'");
+			return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
 		}
 		bool SectionEnd()
 		{
 			auto& src = m_pp;
 			if (IsSectionEnd()) { ++src; return true; }
-			return ReportError(EResult::TokenNotFound, src.Loc(), "expected '}'");
+			return ReportError(EResult::TokenNotFound, Location(), "expected '}'");
 		}
 
 		// Move to the start of the next line
@@ -198,7 +204,7 @@ namespace pr::script
 			auto& src = m_pp;
 			for (;*src && *src != L'{' && *src != L'}';)
 			{
-				if (*src == L'\"') { EatLiteralString(src); continue; }
+				if (*src == L'\"') { EatLiteral(src); continue; }
 				else ++src;
 			}
 			return *src == L'{';
@@ -212,7 +218,7 @@ namespace pr::script
 			auto& src = m_pp;
 			for (int nest = IsSectionStart() ? 0 : 1; *src;)
 			{
-				if (*src == L'\"') { EatLiteralString(src); continue; }
+				if (*src == L'\"') { EatLiteral(src); continue; }
 				nest += (*src == L'{') ? 1 : 0;
 				nest -= (*src == L'}') ? 1 : 0;
 				if (nest == 0) break;
@@ -230,7 +236,7 @@ namespace pr::script
 			auto& src = m_pp;
 			for (;*src && *src != L'}' && *src != L'*';)
 			{
-				if (*src == L'\"') { EatLiteralString(src); continue; }
+				if (*src == L'\"') { EatLiteral(src); continue; }
 				if (*src == L'{')  { src += FindSectionEnd(); continue; }
 				++src;
 			}
@@ -245,7 +251,7 @@ namespace pr::script
 		// As above except the hash of the keyword is returned instead (converted to an enum value)
 		template <typename Enum> bool NextKeywordH(Enum& enum_kw)
 		{
-			string kw;
+			string_t kw;
 			if (!NextKeywordS(kw)) return false;
 			m_last_keyword = kw;
 			enum_kw = Enum(HashKeyword(kw.c_str()));
@@ -256,7 +262,7 @@ namespace pr::script
 		int NextKeywordH()
 		{
 			int kw = 0;
-			if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, m_pp.Loc(), "keyword expected");
+			if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, Location(), "keyword expected");
 			return kw;
 		}
 		template <typename Enum> Enum NextKeywordH()
@@ -265,7 +271,7 @@ namespace pr::script
 		}
 
 		// Return the last keyword reader from the stream
-		string LastKeyword() const
+		string_t LastKeyword() const
 		{
 			return m_last_keyword;
 		}
@@ -284,7 +290,7 @@ namespace pr::script
 		// Calls ReportError if not found.
 		Reader& Keyword(wchar_t const* named_kw)
 		{
-			FindKeyword(named_kw) || ReportError(EResult::KeywordNotFound, FmtS("keyword '%S' expected", named_kw));
+			FindKeyword(named_kw) || ReportError(EResult::KeywordNotFound, Location(), FmtS("keyword '%S' expected", named_kw));
 			return *this;
 		}
 
@@ -304,7 +310,7 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			str::Resize(token, 0);
-			return str::ExtractToken(token, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "token expected");
+			return str::ExtractToken(token, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "token expected");
 		}
 		template <typename StrType> bool TokenS(StrType& token)
 		{
@@ -326,7 +332,7 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			str::Resize(token, 0);
-			return str::ExtractToken(token, src, string(m_delim).append(delim).c_str()) || ReportError(EResult::TokenNotFound, "token expected");
+			return str::ExtractToken(token, src, string_t(m_delim).append(delim).c_str()) || ReportError(EResult::TokenNotFound, Location(), "token expected");
 		}
 		template <typename StrType> bool TokenS(StrType& token, wchar_t const* delim)
 		{
@@ -348,7 +354,7 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			str::Resize(word, 0);
-			return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "{identifier} expected");
+			return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "{identifier} expected");
 		}
 		template <typename StrType> bool IdentifierS(StrType& word)
 		{
@@ -360,14 +366,14 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			str::Resize(word, 0);
-			return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "identifier expected");
+			return str::ExtractIdentifier(word, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "identifier expected");
 		}
 		template <typename StrType, typename... StrTypes> bool Identifiers(char sep, StrType& word, StrTypes&&... words)
 		{
 			auto& src = m_pp;
 			str::Resize(word, 0);
-			if (!str::ExtractIdentifier(word, src, m_delim.c_str())) return ReportError(EResult::TokenNotFound, "identifier expected");
-			if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
+			if (!str::ExtractIdentifier(word, src, m_delim.c_str())) return ReportError(EResult::TokenNotFound, Location(), "identifier expected");
+			if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, Location(), "identifier separator expected");
 			return Identifiers(sep, std::forward<StrTypes>(words)...);
 		}
 		template <typename StrType, typename... StrTypes> bool IdentifiersS(char sep, StrType& word, StrTypes&&... words)
@@ -395,7 +401,7 @@ namespace pr::script
 				str::ProcessIndentedNewlines(string);
 				return true;
 			}
-			return ReportError(EResult::TokenNotFound, "string expected");
+			return ReportError(EResult::TokenNotFound, Location(), "string expected");
 		}
 		template <typename StrType> bool StringS(StrType& string)
 		{
@@ -417,7 +423,7 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			str::Resize(cstring, 0);
-			return str::ExtractString<StrType>(cstring, src, L'\\', nullptr, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "'cstring' expected");
+			return str::ExtractString<StrType>(cstring, src, L'\\', nullptr, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "'cstring' expected");
 		}
 		template <typename StrType> bool CStringS(StrType& cstring)
 		{
@@ -438,7 +444,7 @@ namespace pr::script
 		template <typename TBool> bool Bool(TBool& bool_)
 		{
 			auto& src = m_pp;
-			return str::ExtractBool(bool_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "bool expected");
+			return str::ExtractBool(bool_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "bool expected");
 		}
 		template <typename TBool> bool BoolS(TBool& bool_)
 		{
@@ -468,7 +474,7 @@ namespace pr::script
 		template <typename TInt> bool Int(TInt& int_, int radix)
 		{
 			auto& src = m_pp;
-			return str::ExtractInt(int_, radix, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "integral value expected");
+			return str::ExtractInt(int_, radix, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "integral value expected");
 		}
 		template <typename TInt> bool IntS(TInt& int_, int radix)
 		{
@@ -498,7 +504,7 @@ namespace pr::script
 		template <typename TReal> bool Real(TReal& real_)
 		{
 			auto& src = m_pp;
-			return str::ExtractReal(real_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "real expected");
+			return str::ExtractReal(real_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "real expected");
 		}
 		template <typename TReal> bool RealS(TReal& real_)
 		{
@@ -528,7 +534,7 @@ namespace pr::script
 		template <typename TEnum> bool EnumValue(TEnum& enum_)
 		{
 			auto& src = m_pp;
-			return str::ExtractEnumValue(enum_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "enum integral value expected");
+			return str::ExtractEnumValue(enum_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "enum integral value expected");
 		}
 		template <typename TEnum> bool EnumValueS(TEnum& enum_)
 		{
@@ -549,7 +555,7 @@ namespace pr::script
 		template <typename TEnum> bool Enum(TEnum& enum_)
 		{
 			auto& src = m_pp;
-			return str::ExtractEnum(enum_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, "enum member string name expected");
+			return str::ExtractEnum(enum_, src, m_delim.c_str()) || ReportError(EResult::TokenNotFound, Location(), "enum member string name expected");
 		}
 		template <typename TEnum> bool EnumS(TEnum& enum_)
 		{
@@ -822,7 +828,7 @@ namespace pr::script
 					Matrix4x4S(m);
 					if (m.w.w != 1)
 					{
-						ReportError(script::EResult::UnknownValue, "M4x4 must be an affine transform with: w.w == 1");
+						ReportError(script::EResult::UnknownValue, Location(), "M4x4 must be an affine transform with: w.w == 1");
 						break;
 					}
 					p2w = m * p2w;
@@ -854,7 +860,7 @@ namespace pr::script
 					v4 axis = AxisId(axis_id);
 					if (IsZero3(axis))
 					{
-						ReportError(script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
+						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of ±1, ±2, ±3");
 						break;
 					}
 
@@ -955,7 +961,7 @@ namespace pr::script
 					p2w = Orthonorm(p2w);
 					continue;
 				}
-				ReportError(script::EResult::UnknownToken);
+				ReportError(script::EResult::UnknownToken, Location(), Fmt("%S is not a valid Transform keyword", m_last_keyword.c_str()));
 				break;
 			}
 
@@ -978,20 +984,20 @@ namespace pr::script
 		{
 			// Do not str.resize(0) here, that's the callers decision
 			auto& src = m_pp;
-			StringLit lit;
-			if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, "expected '{'");
+			InLiteralString lit;
+			if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
 			if (include_braces) pr::str::Append(str, L'{');
 			for (int nest = 1; *src; ++src)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters
-				if (lit.inc(*src)) { pr::str::Append(str, *src); continue; }
+				if (lit.WithinLiteralString(*src)) { pr::str::Append(str, *src); continue; }
 				nest += int(*src == '{');
 				nest -= int(*src == '}');
 				if (nest == 0) break;
 				pr::str::Append(str, *src);
 			}
 			if (include_braces) pr::str::Append(str, '}');
-			if (IsSectionEnd()) ++src; else return ReportError(EResult::TokenNotFound, "expected '}'");
+			if (IsSectionEnd()) ++src; else return ReportError(EResult::TokenNotFound, Location(), "expected '}'");
 			return true;
 		}
 
@@ -1015,19 +1021,11 @@ namespace pr::script
 			return SectionStart() && ExtractS(type) && SectionEnd();
 		}
 
-		// Allow subclasses report errors
-		bool ReportError(EResult result)
+		// Allow override of error handling
+		std::function<bool(EResult, Loc const&, std::string const&)> ReportError;
+		static bool DefaultErrorHandler(EResult result, Loc const& loc, std::string const& msg)
 		{
-			return ReportError(result, ToStringA(result));
-		}
-		bool ReportError(EResult result, char const* msg)
-		{
-			auto const& src = m_pp;
-			return ReportError(result, src.Loc(), msg);
-		}
-		virtual bool ReportError(EResult result, Location const& loc, char const* msg)
-		{
-			throw Exception(result, loc, msg);
+			throw ScriptException(result, loc, msg);
 		}
 	};
 }

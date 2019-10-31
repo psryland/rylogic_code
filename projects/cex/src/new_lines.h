@@ -10,25 +10,19 @@ namespace cex
 {
 	struct NewLines :ICex
 	{
-		std::wstring m_infile;
-		std::wstring m_outfile;
-		size_t m_min, m_max;
+		std::filesystem::path m_infile;
+		std::filesystem::path m_outfile;
+		int m_min, m_max;
 		std::string m_lineends;
 		bool m_replace_infile;
-		pr::script::FileSrc m_filesrc;
-		pr::script::StripNewLines m_filter;
-		pr::script::Src* m_src;
 
 		NewLines()
 			:m_infile()
 			,m_outfile()
 			,m_min(0)
-			,m_max(~size_t())
+			,m_max(~0U >> 1)
 			,m_lineends()
 			,m_replace_infile()
-			,m_filesrc()
-			,m_filter()
-			,m_src()
 		{}
 
 		// Show the main help
@@ -66,8 +60,8 @@ namespace cex
 			if (pr::str::EqualI(option, "-limit"))
 			{
 				if (arg_end - arg < 2) throw std::exception("-limit command requires two arguments; min max");
-				m_min = pr::To<size_t>(*arg++, 10);
-				m_max = pr::To<size_t>(*arg++, 10);
+				m_min = pr::To<int>(*arg++, 10);
+				m_max = pr::To<int>(*arg++, 10);
 				return true;
 			}
 			if (pr::str::EqualI(option, "-lineends"))
@@ -85,19 +79,11 @@ namespace cex
 		void ValidateInput() override
 		{
 			m_replace_infile = m_outfile.empty();
-			if (m_replace_infile) m_outfile = m_infile + L".tmp";
+			if (m_replace_infile)
+				m_outfile = m_infile.append(".tmp");
 
-			if (!pr::filesys::FileExists(m_infile))
+			if (!std::filesystem::exists(m_infile))
 				throw std::exception(pr::FmtS("Input file '%s' doesn't exist", m_infile.c_str()));
-
-			m_filesrc.Open(m_infile);
-			m_src = &m_filesrc;
-			if (m_min != 0 || m_max != ~size_t())
-			{
-				m_filter.SetLimits(m_min, m_max);
-				m_filter.Source(m_filesrc);
-				m_src = &m_filter;
-			}
 
 			if (m_lineends.empty())
 				m_lineends = "\n";
@@ -106,14 +92,19 @@ namespace cex
 		// Run the command
 		int Run() override
 		{
+			using namespace pr::script;
+			using namespace std::filesystem;
+
 			// Run the formatters over the input file
 			std::cout << "Running formatting...";
-			
+
 			std::ofstream ofile(m_outfile.c_str());
 			if (ofile.bad())
 				throw std::exception(pr::FmtS("Failed to create output file '%s'\n", m_outfile.c_str()));
 
-			for (auto& src = *m_src; *src; ++src)
+			FileSrc filesrc(m_infile);
+			StripNewLines filter(filesrc, m_min, m_max);
+			for (auto& src = filter; *src; ++src)
 			{
 				if (*src == '\n')
 					ofile << m_lineends;
@@ -126,10 +117,10 @@ namespace cex
 			// If we're replacing the input file...
 			if (m_replace_infile)
 			{
-				if (!pr::filesys::RepFile(m_outfile, m_infile))
+				try { copy_file(m_outfile, m_infile, copy_options::overwrite_existing); }
+				catch (filesystem_error const& ex)
 				{
-					auto last = GetLastError();
-					std::cout << pr::FmtS("Failed to replace '%s' with '%s'\nError code: 0x%08X\n", m_infile.c_str(), m_outfile.c_str(), last);
+					std::cout << pr::FmtS("Failed to replace '%s' with '%s'\n%s\n", m_infile.c_str(), m_outfile.c_str(), ex.code().message().c_str());
 				}
 			}
 

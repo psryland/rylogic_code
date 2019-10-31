@@ -645,9 +645,6 @@
     <ClInclude Include="..\include\pr\network\sockets.h">
       <Filter>pr\network</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\common.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
@@ -1034,6 +1031,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
       <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

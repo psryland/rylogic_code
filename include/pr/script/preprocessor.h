@@ -5,9 +5,11 @@
 
 #pragma once
 
+#include "pr/script/forward.h"
 #include "pr/script/script_core.h"
 #include "pr/script/fail_policy.h"
 #include "pr/script/filter.h"
+#include "pr/script/src_stack.h"
 #include "pr/script/macros.h"
 #include "pr/script/includes.h"
 #include "pr/script/embedded.h"
@@ -15,191 +17,68 @@
 namespace pr::script
 {
 	// Takes a character stream and performs preprocessing on it.
-	// This is a super-set of a C/C++ preprocessor.
 	struct Preprocessor :Src
 	{
+		// Notes:
+		//  - This is a super-set of a C/C++ preprocessor.
+		//  - Line continuations have the highest precedence. They are applied to
+		//    the input stream before considering literals and preprocessor directives.
+		//  - 
+
 	private:
 
 		// A source wrapper that strips line continuations and comments
-		struct PPSource :Src
+		struct Input :Src
 		{
-			using BufType = pr::deque<wchar_t>;
-			using LnCnt   = StripLineContinuations;
-			using CmtStrp = StripComments;
-			using OutSrc  = Buffer<BufType>;
-			using Emit    = EmitCount;
+			// The number of characters to output before retesting 'IsOutputChar'
+			int m_emit;
 
-			Src*    m_in;
-			bool    m_del;
-			LnCnt   m_slc;
-			CmtStrp m_sc;
-			OutSrc  m_out;
-			Emit    m_emit; // The input or read position in 'm_out'
+			// True if 'm_src' should be deleted on destruction
+			bool m_owns_src;
 
-			~PPSource()
-			{
-				if (m_del)
-					delete m_in;
-			}
-			PPSource(Src* src, bool del)
-				:Src(src->Type(), Location())
-				,m_in (src)
-				,m_del(del)
-				,m_slc(*m_in)
-				,m_sc (m_slc)
-				,m_out(m_sc)
+			// True if this source is an expanded macro
+			bool m_is_macro;
+
+			// Source wrappers
+			StripLineContinuations m_slc;
+			StripComments m_out;
+
+			Input(Src& src, bool owns_src, bool is_macro)
+				:Src(src, EEncoding::already_decoded)
 				,m_emit()
+				,m_owns_src(owns_src)
+				,m_is_macro(is_macro)
+				,m_slc(m_src)
+				,m_out(m_slc)
 			{}
-			PPSource(PPSource&& rhs) noexcept
-				:Src   (std::move(rhs))
-				,m_in  (std::move(rhs.m_in ))
-				,m_del (std::move(rhs.m_del))
-				,m_slc (std::move(rhs.m_slc))
-				,m_sc  (std::move(rhs.m_sc ))
-				,m_out (std::move(rhs.m_out))
-				,m_emit(std::move(rhs.m_emit))
+			~Input()
 			{
-				m_slc.m_src = m_in;
-				m_sc.m_src  = &m_slc;
-				m_out.m_src = &m_sc;
-
-				rhs.m_in  = nullptr;
-				rhs.m_del = false;
-			}
-			PPSource(PPSource const&) = delete;
-			PPSource& operator =(PPSource&& rhs) noexcept
-			{
-				if (this != &rhs)
-				{
-					Src::operator=(std::move(rhs));
-					std::swap(m_in  , rhs.m_in);
-					std::swap(m_del , rhs.m_del);
-					std::swap(m_slc , rhs.m_slc);
-					std::swap(m_sc  , rhs.m_sc);
-					std::swap(m_out , rhs.m_out);
-					std::swap(m_emit, rhs.m_emit);
-						
-					m_slc.m_src = m_in;
-					m_sc.m_src  = &m_slc;
-					m_out.m_src = &m_sc;
-
-					rhs.m_slc.m_src = rhs.m_in;
-					rhs.m_sc.m_src  = &rhs.m_slc;
-					rhs.m_out.m_src = &rhs.m_sc;
-				}
-				return *this;
-			}
-			PPSource& operator =(PPSource const&) = delete;
-
-			// Debugging helper interface
-			Location const& Loc() const override
-			{
-				return m_out.Loc();
-			}
-			SrcConstPtr DbgPtr() const override
-			{
-				return m_out.DbgPtr();
-			}
-			BufType const* DbgBuf() const
-			{
-				return m_out.DbgBuf();
+				// Some wrapped sources are allocated with 'new'
+				// and ownership is passed to this object.
+				if (m_owns_src)
+					delete &m_src;
 			}
 
-			// Pointer-like interface
-			wchar_t operator * () const override
-			{
-				return *m_out;
-			}
-			PPSource& operator ++() override
-			{
-				++m_out;
+			// No copy or move
+			Input(Input&& rhs) = delete;
+			Input(Input const&) = delete;
 
-				// This must be a compiler bug:
-				// '--m_emit' causes a buffer overrun error on x64 release builds
-				// 'm_emit.assign(int(m_emit) - 1);' so does this
-				if (m_emit.m_value > 0)
-					--m_emit.m_value;
+		private:
 
-				return *this;
-			}
-
-			// Array access to the buffered data. Buffer size grows to accommodate 'i'
-			wchar_t operator [](size_t i) const
+			// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+			int Read() override
 			{
-				return m_out[i];
-			}
-			wchar_t& operator [](size_t i)
-			{
-				return m_out[i];
-			}
-
-			// Push a character back onto the stream
-			void push_front(wchar_t ch)
-			{
-				m_out.push_front(ch);
-				++m_emit;
-			}
-
-			// Pop 'count' characters from the front of the stream
-			void pop(size_t count = ~size_t())
-			{
-				if (count == ~size_t()) count = m_emit;
-				m_out.pop_front(count);
-				m_emit -= int(count);
-			}
-
-			// Returning [ofs, ofs+count) as a string
-			string str(size_t ofs = 0, size_t count = ~size_t())
-			{
-				if (count == ~size_t()) count = m_emit;
-				return m_out.str(ofs, count);
-			}
-
-			// Pop 'ofs + count' characters from the front of the stream returning [ofs, ofs+count) as a string
-			string pop_str(size_t ofs = 0, size_t count = ~size_t())
-			{
-				if (count == ~size_t()) count = m_emit;
-				auto s = str(ofs, count);
-				pop(count);
-				return s;
-			}
-
-			// Erase a range within the buffered characters
-			void erase(size_t ofs = 0, size_t count = ~size_t())
-			{
-				if (count == ~size_t())
-					count = m_emit;
-					
-				m_out.erase(ofs, count);
-					
-				if (m_emit >= ofs)
-					m_emit -= int(count);
-			}
-
-			// sub-string match
-			template <typename Str> int match_emit(Str const& str, bool emit_if_match = true)
-			{
-				auto r = m_out.match(str);
-				if (emit_if_match && int(m_emit) < r) m_emit = r;
-				return r;
-			}
-			template <typename Char> int match_emit(Char const* str, bool emit_if_match = true)
-			{
-				auto r = m_out.match(str);
-				if (emit_if_match && int(m_emit) < r) m_emit = r;
-				return r;
-			}
-			template <typename Str> int match_adv(Str const& str, bool adv_if_match = true)
-			{
-				auto r = m_out.match(str, adv_if_match);
-				if (adv_if_match) m_emit -= r;
-				return r;
+				auto const ch = *m_out;
+				if (ch != '\0') ++m_out;
+				return ch;
 			}
 		};
 
-		// The stack of input streams. Streams are pushed/popped from
-		// the stack as files are opened, or macros are evaluated.
-		using SourceStack = pr::vector<PPSource, 4>;
+		// The stack of input streams. Streams are pushed/popped from the stack as files are opened, or macros are evaluated.
+		// Not using 'SrcStack' because 'emplace_back' is needed. 'Input' does not allow copy due to potentially needing to
+		// delete the wrapped source in the destructor. Using 'list' because pushing a source needs to not invalidate sources
+		// lower on the stack.
+		using SourceStack = std::list<Input>;
 		SourceStack m_stack;
 
 		// A stack recording the 'inclusion' state of nested #if/#endif blocks
@@ -209,52 +88,47 @@ namespace pr::script
 		// A map of embedded code handlers
 		using EmbeddedCodeHandlerCont = pr::vector<std::unique_ptr<IEmbeddedCode>>;
 		EmbeddedCodeFactory m_emb_factory;
-		EmbeddedCodeHandlerCont m_emb;
+		EmbeddedCodeHandlerCont m_emb_handlers;
 
 		// Default handlers
 		MacroDB m_def_macros;
 		Includes m_def_includes;
 
-		// Debugging helpers for the watch window
-		SrcConstPtr m_dbg_src;
-		typename PPSource::OutSrc::buffer_type const* m_dbg_buf;
-
 	public:
 
 		Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Src(ESrcType::Preprocessor, Location())
+			:Src(EEncoding::already_decoded, Loc())
 			,m_stack()
 			,m_if_stack()
 			,m_emb_factory(emb)
-			,m_emb()
+			,m_emb_handlers()
 			,m_def_macros()
 			,m_def_includes()
-			,m_dbg_buf()
-			,m_dbg_src()
 			,Macros(mac ? mac : &m_def_macros)
 			,Includes(inc ? inc : &m_def_includes)
 		{}
 		Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:Preprocessor(inc, mac, emb)
 		{
-			Push(src, delete_on_pop);
+			Push(src, delete_on_pop, false);
 		}
 		Preprocessor(Src& src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:Preprocessor(inc, mac, emb)
 		{
 			Push(src);
 		}
-		Preprocessor(char const* src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+		Preprocessor(std::string_view src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:Preprocessor(inc, mac, emb)
 		{
 			Push(src);
 		}
-		Preprocessor(wchar_t const* src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+		Preprocessor(std::wstring_view src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:Preprocessor(inc, mac, emb)
 		{
 			Push(src);
 		}
 
+		// No copying or moving
 		Preprocessor(Preprocessor&& rhs) = delete;
 		Preprocessor(Preprocessor const&) = delete;
 		Preprocessor& operator =(Preprocessor&& rhs) = delete;
@@ -266,136 +140,110 @@ namespace pr::script
 		// Access the include handler
 		IIncludeHandler* const Includes;
 
+		// The current position in the root underlying source
+		Loc Location() const noexcept override
+		{
+			// The location within the source on the top of the stack
+			return !m_stack.empty() ? m_stack.back().Location() : Loc();
+		}
+
 		// Push a source owned externally onto the input stack
 		void Push(Src& src)
 		{
-			Push(&src, false);
+			Push(&src, false, false);
 		}
 
 		// Push a simple character string as a source
-		template <typename Char> void Push(Char const* src)
+		void Push(std::string_view src)
 		{
-			Push(new Ptr<Char const*>(src), true);
+			Push(new StringSrc(src), true, false);
+		}
+		void Push(std::wstring_view src)
+		{
+			Push(new StringSrc(src), true, false);
 		}
 
 		// Push a source onto the input stack
-		void Push(Src* src, bool delete_on_pop)
+		void Push(Src* src, bool delete_on_pop, bool is_macro)
 		{
-			m_stack.emplace_back(src, delete_on_pop);
-
-			// Assign helper pointer for the watch windows
-			m_dbg_src = m_stack.back().m_out.DbgPtr();
-			m_dbg_buf = m_stack.back().m_out.DbgBuf();
-
-			seek(0);
+			m_stack.emplace_back(*src, delete_on_pop, is_macro);
 		}
 
 		// Pop the top source off the input stack
 		void Pop()
 		{
 			m_stack.pop_back();
-
-			// Assign helper pointer for the watch windows
-			m_dbg_buf = !m_stack.empty() ? m_stack.back().m_out.DbgBuf() : nullptr;
-			m_dbg_src = !m_stack.empty() ? m_stack.back().m_out.DbgPtr() : SrcConstPtr();
-
-			seek(0);
-		}
-
-		// Source type is the type of the stream on the top of the stack
-		ESrcType Type() const override
-		{
-			return !m_stack.empty() ? m_stack.back().Type() : ESrcType::Unknown;
-		}
-		SrcConstPtr DbgPtr() const override
-		{
-			return !m_stack.empty() ? m_stack.back().DbgPtr() : SrcConstPtr();
-		}
-		Location const& Loc() const override
-		{
-			static Location s_null_loc;
-			return !m_stack.empty() ? m_stack.back().Loc() : s_null_loc;
-		}
-
-		// Pointer-like interface
-		wchar_t operator *() const override
-		{
-			return !m_stack.empty() ? *m_stack.back() : wchar_t();
-		}
-		Preprocessor& operator ++() override
-		{
-			seek(1);
-			return *this;
 		}
 
 	private:
 
-		// Advance by 'n' preprocessed characters, popping from the input stack as needed.
-		// Moves the source to the 'nth' preprocessed character from the current position.
-		void seek(int n)
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
 		{
-			// Use in watch windows:
-			//  'm_dbg_buf' <- buffered characters
-			//  'm_dbg_src' <- input stream
-
-			// Emit characters while 'm_emit' is > 0.
-			// 'm_emit' is a count of the number of characters that have been confirmed as ok to use.
-			for (;!m_stack.empty();)
+			for (; !m_stack.empty();)
 			{
-				// This reference can't be used after 'Pop' has been called.
-				// However, none of these tokens should span source boundaries.
+				// If the source is exhausted, pop from the stack until we
+				// find the next source with characters available.
 				auto& src = m_stack.back();
-				auto& emit = src.m_emit;
-
-				// If the source has expired, pop from the stack until we find the next non-expired source
-				if (*src == 0)
+				if (*src == '\0')
 				{
-					assert(src.m_emit == 0);
 					Pop();
 					continue;
 				}
 
 				// Parse the next character
-				if (src.m_emit != 0 || IsOutputChar(src, emit))
-				{
-					// Consumed enough characters?
-					if (n-- == 0)
-						break;
-					else
-						++src;
-				}
+				if (src.m_emit == 0 && !IsOutputChar(src, src.m_emit))
+					continue;
+
+				// Return the next valid character
+				assert(*src != '\0');
+				auto ch = *src; ++src;
+				src.m_emit -= int(src.m_emit != 0);
+				return ch;
 			}
-			assert(m_stack.empty() || *m_stack.back() != 0 && "Should never return an end of stream from here");
+			return '\0';
 		}
 
 		// Parse the character pointed to by 'src' as a possible preprocessor command.
 		// Returns true if the current position of 'src' is a character that should be emitted.
-		bool IsOutputChar(PPSource& src, EmitCount& emit)
+		bool IsOutputChar(Src& src, int& emit)
 		{
+			assert(emit == 0);
 			auto is_output = true;
 			switch (*src)
 			{
 			case '\"':
 			case '\'':
-				#pragma region Literal String/Char
+				#pragma region Literal String
 				{
-					for (;;)
+					// Note: consecutive strings are treated as a single string.
+					// Loop here joining consecutive strings into one buffered string.
+					auto quote = *src;
+					int end = 0, beg = 0; // end of the last string, beg of the next string
+					for (bool first = true; ; first = false)
 					{
 						// Buffer the literal string or char
-						auto beg = src.Loc();
-						BufferLiteral(src, emit, *src);
-						if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+						auto loc = src.Location();
+						if (!BufferLiteral(src, beg, &end))
+							throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
 
-						// Consecutive strings are treated as a single string
-						auto b = int(emit - 1); // The position of the closing '"' character
-						BufferWhile(src, emit, str::IsWhiteSpace<wchar_t>);
-						if (src[emit] != '\"' && src[emit] != '\'')
+						// If this is not the first consecutive string, delete the quotes between them
+						if (!first)
+						{
+							src.Buffer().erase(size_t(beg) - 1, 2);
+							end -= 2;
+						}
+
+						// Buffer to the next non-whitespace character
+						BufferWhile(src, [](Src& s, int i) { return str::IsWhiteSpace(s[i]); }, end, &beg);
+						if (src[beg] != quote)
 							break;
 
 						// Erase the whitespace between the strings
-						src.erase(b, emit - b + 1);
-						emit = b;
+						src.Buffer().erase(end, size_t(beg) - end);
+						beg = end;
 					}
+					emit = end;
 					break;
 				}
 				#pragma endregion
@@ -403,7 +251,7 @@ namespace pr::script
 				#pragma region PP Command
 				{
 					// Record the start of the PP command
-					auto loc_beg = src.Loc();
+					auto loc_beg = src.Location();
 
 					// Eat optional whitespace between the # and the keyword
 					EatLineSpace(src, 1, 0);
@@ -413,44 +261,50 @@ namespace pr::script
 					{
 					case 'd':
 						#pragma region Define
-						if (src.match_adv(L"define"))
+						if (src.Match(L"define", true))
 						{
 							EatLineSpace(src, 0, 0);
-							Macros->Add(Macro(src, src.Loc()));
+							Macros->Add(Macro(src, src.Location()));
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region DefIfNDef
-						if (src.match_adv(L"defifndef"))
+						if (src.Match(L"defifndef", true))
 						{
 							EatLineSpace(src, 0, 0);
-							Macro macro(src, src.Loc());
-							if (!Macros->Find(macro.m_hash))
+							Macro macro(src, src.Location());
+							if (!Macros->Find(macro.m_tag))
 								Macros->Add(macro);
+
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region Depend
-						if (src.match_adv(L"depend"))
+						if (src.Match(L"depend", true))
 						{
-							EatLineSpace(src, 1, 0);
-							loc_beg = src.Loc();
+							EatLineSpace(src, 0, 0);
+							if (*src != '<' && *src != '\"')
+								throw ScriptException(EResult::InvalidInclude, src.Location(), "expected a string following #depend");
 
-							if (*src != L'<' && *src != L'\"')
-								throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #depend");
+							// Save the end marker
+							auto end = *src == '<' ? '>' : '\"';
+							auto flags = *src == '\"' ? EIncludeFlags::IncludeLocalDir : EIncludeFlags::None;
+							++src; // skip the '<'
 
-							// Buffer up the dependent filepath
-							auto end = *src == L'<' ? L'>' : L'\"';
-							BufferLiteral(src, emit, end);
-							if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "depend string incomplete");
+							// Buffer the filepath string
+							auto len = 0;
+							BufferWhile(src, [=](Src& s, int i) { return s[i] != end; }, 0, &len);
+							if (src[len] != end) throw ScriptException(EResult::InvalidInclude, src.Location(), "#depend string incomplete");
 
-							// Open the dependent file but don't push it to the source stack.
-							// The include handler will see this as a referenced file but the content doesn't effect the script
-							auto path = src.str(1, emit - 2); src.pop();
-							auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
-							auto inc = Includes->Open(path, flags, src.Loc());
+							// Save the include filepath
+							auto path = src.ReadN(len);
+							++src; // skip the '>'. Don't eat the rest of the line
+
+							// Open the dependent file but don't push it onto the source stack. The include handler
+							// will see this as a referenced file but the content doesn't effect the script
+							auto inc = Includes->Open(path, flags, loc_beg);
 							inc = nullptr; // release the include immediately
 
 							is_output = false;
@@ -460,9 +314,9 @@ namespace pr::script
 						break;
 					case 'e':
 						#pragma region Else
-						if (src.match_adv(L"else"))
+						if (src.Match(L"else", true))
 						{
-							if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
+							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
 							if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
 							else { m_if_stack.top() = true; EatLine(src, 0, 1); }
 							is_output = false;
@@ -470,9 +324,9 @@ namespace pr::script
 						}
 						#pragma endregion
 						#pragma region ElIf
-						if (src.match_adv(L"elif"))
+						if (src.Match(L"elif", true))
 						{
-							if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
+							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
 							if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
 							else if (!PPDefined()) { SkipPreprocessorBlock(loc_beg); }
 							else { m_if_stack.top() = true; EatLine(src, 0, 1); }
@@ -481,9 +335,9 @@ namespace pr::script
 						}
 						#pragma endregion
 						#pragma region EndIf
-						if (src.match_adv(L"endif"))
+						if (src.Match(L"endif", true))
 						{
-							if (m_if_stack.empty()) throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
+							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
 							m_if_stack.pop();
 							EatLine(src, 0, 1);
 							is_output = false;
@@ -491,95 +345,89 @@ namespace pr::script
 						}
 						#pragma endregion
 						#pragma region Eval
-						if (src.match_adv(L"eval"))
+						if (src.Match(L"eval", true))
 						{
 							EatLineSpace(src, 0, 0);
-							string expr;
+							string_t expr;
 
 							// Extract text between '{' and '}'
-							if (*src == '{') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
+							if (*src == '{') ++src; else throw ScriptException(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
 							for (int nest = 1; *src; expr.push_back(*src), ++src)
 							{
 								nest += *src == '{';
 								nest -= *src == '}';
 								if (nest == 0) break;
 							}
-							if (*src == '}') ++src; else throw Exception(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
+							if (*src == '}') ++src; else throw ScriptException(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
 
 							// Expand any macros in the expression
 							RecursiveExpandMacros(expr, Macro::Ancestor(nullptr, nullptr), loc_beg);
 
 							// Replace any nested '#eval{exp}' with (exp)
-							pr::str::Replace(expr, L"#eval", L"");
-							pr::str::Replace(expr, L"{", L"(");
-							pr::str::Replace(expr, L"}", L")");
+							str::Replace(expr, L"#eval", L"");
+							str::Replace(expr, L"{", L"(");
+							str::Replace(expr, L"}", L")");
 
 							// Evaluate the expression and push the result as a string onto the stack
 							double result;
-							if (!pr::Evaluate(expr.c_str(), result))
-								throw Exception(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
+							if (!Evaluate(expr.c_str(), result))
+								throw ScriptException(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
 
 							// Convert the result to a string
-							expr = (static_cast<long long>(result) == result) ? pr::FmtS(L"%lld", static_cast<long long>(result)) : pr::FmtS(L"%f", result);
+							expr = (static_cast<long long>(result) == result)
+								? FmtS(L"%lld", static_cast<long long>(result))
+								: FmtS(L"%f", result);
 
-							// Push the 'eval' source onto the input stack
-							auto eval_src = std::make_unique<Buffer<>>(ESrcType::Eval, std::begin(expr), std::end(expr));
-							Push(eval_src.get(), true);
+							// Push the 'eval' result onto the input stack
+							auto eval_src = std::make_unique<StringSrc>(expr, StringSrc::EFlags::BufferLocally);
+							Push(eval_src.get(), true, false);
 							eval_src.release();
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region Embedded
-						if (src.match_adv(L"embedded"))
+						if (src.Match(L"embedded", true))
 						{
-							// Read the embedded language used
-							string lang; bool support;
-							if (*src == '(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
-							if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
+							// Read the embedded language used: #embedded(lang[,support])
+							string_t lang; int len;
+							if (*src == '(') ++src; else throw ScriptException(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang[,support]) ... #end");
+							if (BufferIdentifier(src, 0, &len)) lang = src.ReadN(len); else throw ScriptException(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang[,support]) ... #end");
 							EatLineSpace(src, 0, 0);
-							support = (*src == ',' && (++src).match_adv(L"support"));
-							if (*src == ')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
+							auto support = (*src == ',' && (++src).Match(L"support", true));
+							if (*src == ')') ++src; else throw ScriptException(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang[,support]) ... #end");
 
 							// Do not include the whitespace or blank line that follows #embedded(lang,support)
 							EatLineSpace(src, 0, 0);
-							if (pr::str::IsNewLine(*src)) ++src;
+							if (str::IsNewLine(*src)) ++src;
 
 							// Record the source location for the start of the code
-							auto code_beg = src.Loc();
+							auto code_beg = src.Location();
 
 							// Buffer the code section up to (but not including) the #end
-							if (!BufferTo(src, emit, L"#end", false))
-								throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded' does not have a closing '#end' marker");
-
-							// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
-							auto code = src.pop_str();
+							string_t code;
+							if (BufferTo(src, L"#end", false, 0, &len)) code = src.ReadN(len); else throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded' does not have a closing '#end' marker");
 
 							// Expand any macros in the buffered text
 							RecursiveExpandMacros(code, Macro::Ancestor(nullptr, nullptr), loc_beg);
 
-							// Get the code handler to transform the code into a result.
-							// Note, the code handler is expected to work or throw
-							string result;
+							// Get the code handler to transform the code into a result. The code handler is expected to succeed or throw
+							string_t result;
 							try
 							{
 								auto emb = FindEmbeddedCodeHandler(lang);
-								if (emb == nullptr || !emb->Execute(code, support, result))
-									throw Exception(EResult::EmbeddedCodeNotSupported, loc_beg, pr::FmtS("No support for embedded '%S' code available", lang.c_str()));
+								if (emb == nullptr || !emb->Execute(code.c_str(), support, result))
+									throw ScriptException(EResult::EmbeddedCodeNotSupported, loc_beg, pr::FmtS("No support for embedded '%S' code available", lang.c_str()));
 							}
-							catch (Exception const&)
-							{
-								throw;
-							}
-							catch (std::exception const& ex)
-							{
-								throw Exception(EResult::EmbeddedCodeError, code_beg, ex.what());
-							}
+							catch (ScriptException const&) { throw; }
+							catch (std::exception const& ex) { throw ScriptException(EResult::EmbeddedCodeError, code_beg, ex.what()); }
+							
+							// Push the code result as a new source
 							if (!result.empty())
 							{
-								// Push the code result as a source
-								auto code_src = std::make_unique<Buffer<>>(ESrcType::EmbeddedCode, std::begin(result), std::end(result));
-								Push(code_src.get(), true);
+								// Push the result into the buffer of the 'StringSrc' since 'result' will go out of scope.
+								auto code_src = std::make_unique<StringSrc>(result, StringSrc::EFlags::BufferLocally);
+								Push(code_src.get(), true, false);
 								code_src.release();
 							}
 							is_output = false;
@@ -587,89 +435,128 @@ namespace pr::script
 						}
 						#pragma endregion
 						#pragma region Error
-						if (src.match_adv(L"error"))
+						if (src.Match(L"error", true))
 						{
 							EatLineSpace(src, 0, 0);
-							BufferLine(src, emit);
-							throw Exception(EResult::PreprocessError, loc_beg, Narrow(src.str()));
+							auto msg = src.ReadLine(false);
+							throw ScriptException(EResult::PreprocessError, loc_beg, msg);
 						}
 						#pragma endregion
 						break;
 					case 'i':
 						#pragma region IfNDef
-						if (src.match_adv(L"ifndef"))
+						if (src.Match(L"ifndef", true))
 						{
+							auto len = 0;
 							EatLineSpace(src, 0, 0);
-							if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-							if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
-							else { m_if_stack.push(true); EatLine(src, 0, 1); }
+							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
+							auto tag = src.ReadN(len);
+							
+							if (Macros->Find(tag))
+							{
+								m_if_stack.push(false);
+								SkipPreprocessorBlock(loc_beg);
+							}
+							else
+							{
+								m_if_stack.push(true);
+								EatLine(src, 0, 1);
+							}
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region IfDef
-						if (src.match_adv(L"ifdef"))
+						if (src.Match(L"ifdef", true))
 						{
+							auto len = 0;
 							EatLineSpace(src, 0, 0);
-							if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-							if (Macros->Find(Hash(src.pop_str()))) { m_if_stack.push(true); EatLine(src, 0, 1); }
-							else { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
+							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
+							auto tag = src.ReadN(len);
+
+							if (Macros->Find(tag))
+							{
+								m_if_stack.push(true);
+								EatLine(src, 0, 1);
+							}
+							else
+							{
+								m_if_stack.push(false);
+								SkipPreprocessorBlock(loc_beg);
+							}
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region If
-						if (src.match_adv(L"if"))
+						if (src.Match(L"if", true))
 						{
 							EatLineSpace(src, 0, 0);
-							if (PPDefined()) { m_if_stack.push(true);  EatLine(src, 0, 1); }
-							else { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
+							if (PPDefined())
+							{
+								m_if_stack.push(true);
+								EatLine(src, 0, 1);
+							}
+							else
+							{
+								m_if_stack.push(false);
+								SkipPreprocessorBlock(loc_beg);
+							}
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region Include Path
-						if (src.match_adv(L"include_path"))
+						if (src.Match(L"include_path", true))
 						{
-							EatLineSpace(src, 1, 0);
-							if (*src != L'<' && *src != L'\"')
-								throw Exception(EResult::InvalidInclude, src.Loc(), "expected a string following #include_path");
+							EatLineSpace(src, 0, 0);
+							if (*src != '<' && *src != '\"')
+								throw ScriptException(EResult::InvalidInclude, src.Location(), "expected a string following #include_path");
 
-							// Buffer up the include path
-							auto end = *src == L'<' ? L'>' : L'\"';
-							BufferLiteral(src, emit, end);
-							if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, src.Loc(), "include path string incomplete");
+							// Save the end marker
+							auto end = *src == '<' ? '>' : '\"';
+							++src; // skip the '<'
+
+							// Buffer the include path string
+							auto len = 0;
+							BufferWhile(src, [=](Src& s, int i) { return s[i] != end; }, 0, &len);
+							if (src[len] != end) throw ScriptException(EResult::InvalidInclude, src.Location(), "#include_path string incomplete");
+
+							// Save the include path
+							auto path = src.ReadN(len);
+							++src; // skip the '>'. Don't eat the rest of the line
 
 							// Add the path to the include paths
-							auto path = src.str(1, emit - 2); src.pop();
 							Includes->AddSearchPath(path);
 
-							// Eat the rest of the line
-							EatLine(src, 0, 1);
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region Include
-						if (src.match_adv(L"include"))
+						if (src.Match(L"include", true))
 						{
-							EatLineSpace(src, 1, 0);
-							loc_beg = src.Loc();
+							EatLineSpace(src, 0, 0);
+							if (*src != '<' && *src != '\"')
+								throw ScriptException(EResult::InvalidInclude, src.Location(), "expected a string following #include");
 
-							if (*src != L'<' && *src != L'\"')
-								throw Exception(EResult::InvalidInclude, loc_beg, "expected a string following #include");
+							// Save the end marker
+							auto end = *src == '<' ? '>' : '\"';
+							auto flags = *src == '\"' ? EIncludeFlags::IncludeLocalDir : EIncludeFlags::None;
+							++src; // skip the '<'
 
-							// Buffer up the include filepath
-							auto end = *src == L'<' ? L'>' : L'\"';
-							BufferLiteral(src, emit, end);
-							if (src[emit] == end) ++emit; else throw Exception(EResult::InvalidInclude, loc_beg, "include string incomplete");
+							// Buffer the include filepath
+							auto len = 0;
+							BufferWhile(src, [=](Src& s, int i) { return s[i] != end; }, 0, &len);
+							if (src[len] != end) throw ScriptException(EResult::InvalidInclude, loc_beg, "#include string incomplete");
+
+							// Save the include filepath
+							auto path = src.ReadN(len);
+							++src; // skip the '>'. Don't eat the rest of the line
 
 							// Open the include
-							auto path = src.str(1, emit - 2); src.pop();
-							auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
-							auto inc = Includes->Open(path, flags, src.Loc());
-							if (inc)
-								Push(inc.release(), true);
+							auto inc = Includes->Open(path, flags, loc_beg);
+							if (inc) Push(inc.release(), true, false);
 
 							is_output = false;
 							break;
@@ -678,23 +565,26 @@ namespace pr::script
 						break;
 					case 'l':
 						#pragma region Lit
-						if (src.match_adv(L"lit"))
+						if (src.Match(L"lit", true))
 						{
-							// Do not include the single whitespace or blank line that follows #lit
+							// Do not include the whitespace or blank line that follows #lit
 							EatLineSpace(src, 0, 0);
-							if (pr::str::IsNewLine(*src)) ++src;
+							if (str::IsNewLine(*src)) ++src;
 
 							// Buffer a literal section up to (but not including) the #end
-							if (!BufferTo(src, emit, L"#end", false))
-								throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
-
+							auto len = 0;
+							if (!BufferTo(src, L"#end", false, 0, &len))
+								throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
+							
+							emit = len;
 							is_output = false;
 							break;
 						}
 						#pragma endregion
 						#pragma region Line
-						if (src.match_adv(L"line"))
+						if (src.Match(L"line", true))
 						{
+							// Ignore the #line directive
 							EatLine(src, 0, 1);
 							is_output = false;
 							break;
@@ -703,8 +593,9 @@ namespace pr::script
 						break;
 					case 'p':
 						#pragma region Pragma
-						if (src.match_adv(L"pragma"))
+						if (src.Match(L"pragma", true))
 						{
+							// Ignore the #pragma directive
 							EatLine(src, 0, 1);
 							is_output = false;
 							break;
@@ -713,13 +604,16 @@ namespace pr::script
 						break;
 					case 'u':
 						#pragma region Undef
-						if (src.match_adv(L"undef"))
+						if (src.Match(L"undef", true))
 						{
 							EatLineSpace(src, 0, 0);
 
 							// Read the macro tag
-							auto tag = Macro::ReadTag(src, src.Loc());
-							Macros->Remove(Hash(tag));
+							auto len = 0;
+							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
+							auto tag = src.ReadN(len);
+
+							Macros->Remove(tag);
 
 							EatLine(src, 0, 1);
 							is_output = false;
@@ -729,8 +623,9 @@ namespace pr::script
 						break;
 					case 'w':
 						#pragma region Warning
-						if (src.match_adv(L"warning"))
+						if (src.Match(L"warning", true))
 						{
+							// Ignore #warning directives
 							EatLine(src, 0, 1);
 							is_output = false;
 							break;
@@ -742,43 +637,47 @@ namespace pr::script
 					// Unknown pp command
 					if (is_output)
 					{
-						auto msg = pr::Fmt(L"Unknown preprocessor command '%s'\n%s", src.str().c_str(), src.Loc().ToString().c_str());
-						throw Exception(EResult::UnknownPreprocessorCommand, Loc(), pr::Narrow(msg));
+						auto len = 0;
+						BufferIdentifier(src, 0, &len);
+						throw ScriptException(EResult::UnknownPreprocessorCommand, loc_beg, Fmt(L"Unknown preprocessor command '%s'", src.ReadN(len).c_str()));
 					}
-
 					break;
 				}
 				#pragma endregion
+
 			default:
 				#pragma region Expand Macros
 				// Look for possible macro identifiers in the source (not within expanded macros)
-				if (src.Type() != ESrcType::Macro && pr::str::IsIdentifier(*src, true))
+				auto& input = static_cast<Input&>(src);
+				if (!input.m_is_macro && str::IsIdentifier(*src, true))
 				{
-					assert(emit == 0);
+					auto len = 0;
+					auto loc = src.Location();
 
 					// Buffer the identifier
-					BufferIdentifier(src, emit);
+					BufferIdentifier(src, 0, &len);
 
 					// See if the identifier matches any macro definitions
-					auto macro = Macros->Find(Hash(src.str()));
+					auto macro = Macros->Find(string_t(src.View(0, len)));
 					if (macro)
 					{
 						// This is a macro, so remove the macro identifier from the buffer
-						src.pop();
+						src += len;
 
 						// If the macro requires parameters see if we can read them from the source
 						Macro::Params params;
-						if (macro->ReadParams<false>(src, params, src.Loc()))
+						if (macro->ReadParams<false>(src, params, src.Location()))
 						{
 							// Create a buffered string source for the expanded macro
 							// and get the macro to generate it's expanded version.
-							string exp;
-							macro->Expand(exp, params);
-							RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
+							string_t exp;
+							macro->Expand(exp, params, loc);
+							RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Location());
 
-							// Push the expanded macro as a source
-							auto macro_src = std::make_unique<Buffer<>>(ESrcType::Macro, std::begin(exp), std::end(exp));
-							Push(macro_src.get(), true);
+							// Push the expanded macro as a source. Copy 'exp' into the buffer of
+							// the StringSrc since 'exp' is about to go out of scope.
+							auto macro_src = std::make_unique<StringSrc>(exp, StringSrc::EFlags::BufferLocally);
+							Push(macro_src.get(), true, true);
 							macro_src.release();
 							is_output = false;
 						}
@@ -793,24 +692,30 @@ namespace pr::script
 		}
 
 		// Recursively expand the expression in 'exp' with macro substitutions
-		void RecursiveExpandMacros(string& exp, Macro::Ancestor const& parent, Location const& loc)
+		void RecursiveExpandMacros(string_t& exp, Macro::Ancestor const& parent, Loc const& loc)
 		{
-			string subexp;
+			string_t tag;
+			string_t subexp;
 			Macro::Params params;
 
 			// Scan through 'exp' looking for macro identifiers
-			for (auto i = exp.c_str(); *i;)
+			for (auto ptr = exp.c_str(); *ptr;)
 			{
-				if (!pr::str::IsIdentifier(*i, true)) { ++i; continue; }
+				if (!str::IsIdentifier(*ptr, true))
+				{
+					++ptr;
+					continue;
+				}
 
-				auto beg = i;
+				auto beg = ptr;
 
 				// Found the start of an identifier, see if it's a macro identifier
-				for (++i; *i && pr::str::IsIdentifier(*i, false); ++i) {}
+				str::ExtractIdentifier(tag, ptr);
 
 				// Find the macro?
-				auto macro = Macros->Find(Hash(beg, i));
-				if (!macro) continue;
+				auto macro = Macros->Find(tag);
+				if (!macro)
+					continue;
 
 				// Check whether this macro is an ancestor
 				if (parent.IsRecursive(macro))
@@ -818,48 +723,44 @@ namespace pr::script
 
 				// Check the correct parameters have been given
 				params.clear();
-				if (!macro->ReadParams<false>(i, params, loc))
+				if (!macro->ReadParams<false>(ptr, params, loc))
 					continue;
 
 				// Recursively expand the macro into a temporary buffer
 				subexp.resize(0); // reuse
-				macro->Expand(subexp, params);
+				macro->Expand(subexp, params, loc);
 				RecursiveExpandMacros(subexp, Macro::Ancestor(macro, &parent), loc);
 
 				// Substitute the expanded macro into 'src'
-				auto len = i - beg;
-				auto ofs = beg - exp.c_str();
+				auto len = ptr - beg;
+				auto ofs = beg - exp.data();
 				exp.erase (ofs, len);
 				exp.insert(ofs, subexp);
-				i = exp.c_str() + ofs + subexp.size();
+				ptr = exp.c_str() + ofs + subexp.size();
 			}
 		}
 
 		// Parse the line following an #if or #elif statement, returning true if the expression evaluates to true
 		bool PPDefined()
 		{
-			auto& src = m_stack.back();
-			auto& emit = src.m_emit;
-			string expr, exp;
+			auto& src = (Src&)m_stack.back();
+			//auto& emit = src.m_emit;
+			string_t expr, exp;
 
-			// Read the whole line into a string generating a numeric expression
-			for (EatLineSpace(src, 0,0); !pr::str::IsNewLine(*src); EatLineSpace(src, 0,0))
+			// Read the whole line into a string, generating an expression that should evaluate to an integer
+			for (EatLineSpace(src, 0, 0); !str::IsNewLine(*src); EatLineSpace(src, 0, 0))
 			{
 				// Append operators to the expression
-				if (!pr::str::IsIdentifier(*src, true))
+				if (!str::IsIdentifier(*src, true))
 				{
 					expr.push_back(*src);
 					++src;
 					continue;
 				}
 
-				// Read the macro or keyword identifier
-				if (!BufferIdentifier(src, emit))
-					throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-
 				// If the identifier is the keyword 'defined' then it should be followed
 				// by an identifier optionally enclosed within '(' and ')'
-				if (src.match_adv(L"defined"))
+				if (src.Match(L"defined", true))
 				{
 					EatLineSpace(src, 0, 0);
 
@@ -868,34 +769,39 @@ namespace pr::script
 					if (wrapped) ++src;
 
 					// Read the identifier within the defined() expression
-					if (!BufferIdentifier(src, emit)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
-					auto hash = Hash(src.pop_str());
+					auto len = 0;
+					if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
+					auto tag = src.ReadN(len);
 
 					// Check the optional brackets are matched
-					if (wrapped) if (*src == ')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "unmatched ')'");
+					if (wrapped) if (*src == ')') ++src; else throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "unmatched ')'");
 
 					// If the macro is defined, add a 1 to the expression
-					expr.push_back(Macros->Find(hash) != nullptr ? '1' : '0');
+					expr.push_back(Macros->Find(tag) != nullptr ? '1' : '0');
 				}
-					
+
 				// Otherwise substitute the macro
 				else
 				{
-					auto macro = Macros->Find(Hash(src.str()));
-					if (!macro) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), pr::FmtS("Identifier '%s' is not defined", pr::Narrow(exp).c_str()));
-					src.pop();
+					auto loc = src.Location();
+
+					// Read the macro or keyword identifier
+					auto len = 0;
+					BufferIdentifier(src, 0, &len);
+					auto tag = src.ReadN(len);
+					auto macro = Macros->Find(tag);
+					if (macro == nullptr) throw ScriptException(EResult::InvalidPreprocessorDirective, loc, Fmt(L"Identifier '%s' is not defined", tag.c_str()));
 
 					// Read macro parameters if it has them
 					Macro::Params params;
-					if (!macro->ReadParams<false>(src, params, src.Loc()))
-						throw Exception(EResult::ParameterCountMismatch, src.Loc(), pr::FmtS("Missing parameters for macro %s. Expected %d", pr::Narrow(exp).c_str(), macro->m_params.size()));
+					if (!macro->ReadParams<false>(src, params, src.Location()))
+						throw ScriptException(EResult::ParameterCountMismatch, loc, Fmt(L"Missing parameters for macro %s. Expected %d", exp.c_str(), macro->m_params.size()));
 
 					// Expand the macro with the given parameters
-					exp.resize(0);
-					macro->Expand(exp, params);
+					macro->Expand(exp, params, loc);
 
 					// Recursively expand macros within 'exp'.
-					RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
+					RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), loc);
 
 					// Add the fully expanded macro to the expression
 					expr.append(exp);
@@ -904,46 +810,69 @@ namespace pr::script
 
 			// Evaluate the expression
 			int res;
-			if (!pr::EvaluateI(expr.c_str(), res)) throw Exception(EResult::InvalidPreprocessorDirective, src.Loc(), "Failed to evaluate conditional expression");
+			if (!Evaluate(expr, res)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "Failed to evaluate conditional expression");
 			return res != 0;
 		}
 
 		// Eat characters from the stream up to an #elif, #else, or #endif for a previous #ifdef, #ifndef, or #elif
-		void SkipPreprocessorBlock(Location const& beg)
+		void SkipPreprocessorBlock(Loc const& beg)
 		{
-			auto& src = m_stack.back();
-			for (int nest = 1; *src;)
+			// The parser behaviour for inactive code blocks is tricky. Consider this code:
+			//   #if 0
+			//   "string \
+			//   #endif/*
+			//   #endif
+			// Line continuations apply, so the first #endif is actually part of the second line.
+			// The /* is part of the string so is ignored. No closing " is needed, the end of the
+			// line automatically closes the string (similarly for '). If the third line was
+			// '#endif"/*', then the opening block comment is visible and the second #endif is not
+			// seen. The literal string handling in the comment stripper needs close strings when
+			// a newline characters is seen.
+
+			for (int nest = 1; !m_stack.empty();)
 			{
-				if (*src == L'\"')
+				// If the source is exhausted, pop from the stack until we
+				// find the next source with characters available.
+				auto& src = m_stack.back();
+				if (*src == '\0')
 				{
-					if (!EatLiteralString(src)) throw Exception(EResult::InvalidString, src.Loc(), "Literal string expected");
+					Pop();
 					continue;
 				}
-				if (*src != L'#')  { ++src; continue; }
 
-				++src;
+				// Find the first non-whitespace character on the line.
 				EatLineSpace(src, 0, 0);
-				nest += int(src.match_emit(L"ifndef") || src.match_emit(L"ifdef") || src.match_emit(L"if"));
-				nest -= int(src.match_emit(L"endif") || (nest == 1 && (src.match_emit(L"elif") || src.match_emit(L"else"))));
-				if (nest == 0)
+				if (*src != '#')
 				{
-					src.push_front(L'#');
-					src.m_emit = 0; // reset emit so the seek() loop processes this next pp command
-					break;
+					// If it's not a preprocessor directive, consume the line and carry on.
+					EatLine(src, 0, 1);
+					continue;
 				}
 
-				src.pop();
-				++src;
+				// Skip the '#' and find the next non-whitespace character
+				EatLineSpace(src, 1, 0); 
+
+				// Handle nested directives
+				nest += int(src.Match(L"ifndef") || src.Match(L"ifdef") || src.Match(L"if"));
+				nest -= int(src.Match(L"endif") || (nest == 1 && (src.Match(L"elif") || src.Match(L"else"))));
+				if (nest == 0)
+				{
+					// Add the '#' character back again
+					src.Buffer().insert(0, 1, '#');
+					return;
+				}
+
+				// Consume the rest of the line
+				EatLine(src, 0, 1);
 			}
-			if (*src == 0)
-				throw Exception(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
+			throw ScriptException(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
 		}
 
 		// Get/Create the embedded code handler for 'lang
-		IEmbeddedCode* FindEmbeddedCodeHandler(string const& lang)
+		IEmbeddedCode* FindEmbeddedCodeHandler(string_t const& lang)
 		{
 			// Look for the code handler for 'lang'
-			for (auto& handler : m_emb)
+			for (auto& handler : m_emb_handlers)
 			{
 				if (!str::EqualI(handler->Lang(), lang.c_str())) continue;
 				return handler.get();
@@ -956,12 +885,11 @@ namespace pr::script
 
 			// Store the code handler
 			auto ptr = handler.get();
-			m_emb.push_back(std::move(handler));
+			m_emb_handlers.push_back(std::move(handler));
 			return ptr;
 		}
 	};
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -991,6 +919,21 @@ namespace pr::script
 	}
 	PRUnitTest(PreprocessorTests)
 	{
+		{// Consecutive strings
+			char const* str_in = 
+				"\"consecutive \"  \t\"string\""
+				;
+			char const* str_out =
+				"\"consecutive string\""
+				;
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
+			}
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
 		{// ignored stuff
 			char const* str_in =
 				"\"#if ignore #define this stuff\"\n"
@@ -1173,6 +1116,10 @@ namespace pr::script
 				"#defifndef ONE 1\n"
 				"#defifndef ONE 2\n"
 				"ONE\n"
+				"#if 0\n"
+				"\"string \\\n" // This unclosed string doesn't matter when skipping inactive blocks
+				"#endif\n" // this is part of the previous line, so is ignored
+				"#endif\n"
 				;
 			char const* str_out =
 				"	output\n"
@@ -1204,7 +1151,7 @@ namespace pr::script
 			Includes inc;
 			inc.AddString(L"inc", "included ONE");
 			inc.AddString(L"dep", "Anything");
-			PtrA src(str_in);
+			StringSrc src(str_in);
 			Preprocessor pp(&src, false, &inc);
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
@@ -1230,6 +1177,7 @@ namespace pr::script
 				;
 			char const* str_out =
 				"\"#error this would throw an error\"\n"
+				"\n"
 				"lastword"
 				"4\n"
 				"2\n"
@@ -1247,7 +1195,7 @@ namespace pr::script
 			PR_CHECK(*str_out == 0 && *pp == 0, true);
 		}
 		{// Using a preloaded buffer
-			char const* str_in =
+			std::string str_in =
 				"#define BOB(x) #x\n"
 				"BOB(this is a string)\n"
 				;
@@ -1255,8 +1203,8 @@ namespace pr::script
 				"\"this is a string\"\n"
 				;
 
-			Buffer<> buf(ESrcType::Buffered, str_in);
-			Preprocessor pp(&buf, false);
+			StringSrc src(str_in, StringSrc::EFlags::BufferLocally); str_in.clear();
+			Preprocessor pp(src, false);
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
@@ -1277,21 +1225,6 @@ namespace pr::script
 				;
 			char const* str_out =
 				"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
-				;
-			Preprocessor pp(str_in);
-			for (;*pp && *str_out; ++pp, ++str_out)
-			{
-				if (*pp == *str_out) continue;
-				PR_CHECK(*pp, *str_out);
-			}
-			PR_CHECK(*str_out == 0 && *pp == 0, true);
-		}
-		{// Consecutive strings
-			char const* str_in = 
-				"\"consecutive \"  \t\"string\""
-				;
-			char const* str_out =
-				"\"consecutive string\""
 				;
 			Preprocessor pp(str_in);
 			for (;*pp && *str_out; ++pp, ++str_out)

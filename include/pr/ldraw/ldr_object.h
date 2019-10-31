@@ -11,6 +11,7 @@
 #include "pr/common/min_max_fix.h"
 #include "pr/common/new.h"
 #include "pr/common/guid.h"
+#include "pr/common/hash.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
@@ -18,7 +19,6 @@
 #include "pr/common/static_callback.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
-#include "pr/crypt/hash.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instances/instance.h"
@@ -32,7 +32,7 @@ namespace pr::ldr
 	using LdrObjectPtr  = RefPtr<LdrObject>;
 	using ObjectCont    = vector<LdrObjectPtr, 8>;
 	using string32      = string<char, 32>;
-	using Location      = script::Location;
+	using Location      = script::Loc;
 
 	// Map the compile time hash function to this namespace
 	using HashValue = hash::HashValue;
@@ -641,9 +641,9 @@ namespace pr::ldr
 	// LdrObject Creation functions *********************************************
 
 	// Callback function type used during script parsing
-	// 'bool function(Guid context_id, ParseResult& out, script::Location const& loc, bool complete)'
+	// 'bool function(Guid context_id, ParseResult& out, Location const& loc, bool complete)'
 	// Returns 'true' to continue parsing, false to abort parsing.
-	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, script::Location const&, bool>;
+	using ParseProgressCB = StaticCB<bool, Guid const&, ParseResult const&, Location const&, bool>;
 
 	// Parse the ldr script in 'reader' adding the results to 'out'.
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
@@ -684,8 +684,9 @@ namespace pr::ldr
 		Guid const& context_id = GuidZero,     // The context id to assign to each created object
 		ParseProgressCB progress_cb = nullptr) // Progress callback
 	{
-		script::Ptr<Char const*> src(ldr_script);
-		script::Reader reader(src);
+		using namespace pr::script;
+		StringSrc src(ldr_script);
+		Reader reader(src);
 		Parse(rdr, reader, out, context_id, progress_cb);
 	}
 
@@ -732,10 +733,10 @@ namespace pr::ldr
 	void Remove(ObjectCont& objects, LdrObject* obj);
 
 	// Generate a scene that demos the supported object types and modifiers.
-	std::wstring CreateDemoScene();
+	std::string CreateDemoScene();
 
 	// Return the auto completion templates
-	std::wstring AutoCompleteTemplates();
+	std::string AutoCompleteTemplates();
 }
 
 #if PR_UNITTESTS

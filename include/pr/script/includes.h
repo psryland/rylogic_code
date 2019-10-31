@@ -5,176 +5,220 @@
 
 #pragma once
 
-#include <map>
+#include <vector>
+#include <memory>
 #include <istream>
 #include <fstream>
 #include <sstream>
-#include "pr/filesys/filesys.h"
+#include <filesystem>
+#include <unordered_map>
 #include "pr/common/resource.h"
 #include "pr/common/memstream.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/flags_enum.h"
 #include "pr/maths/bit_fields.h"
+#include "pr/filesys/filesys.h"
 #include "pr/script/forward.h"
 #include "pr/script/fail_policy.h"
+#include "pr/script/location.h"
 
 namespace pr::script
 {
+	// Info about the data being included
+	enum class EIncludeFlags
+	{
+		None = 0,
+
+		// True if the included data is binary data
+		Binary = 1 << 0,
+
+		// True for #include "file", false for #include <file>
+		IncludeLocalDir = 1 << 1,
+
+		_bitwise_operators_allowed,
+	};
+
+	// Source locations for includes
+	enum class EIncludeTypes
+	{
+		None      = 0,
+		Files     = 1 << 0,
+		Resources = 1 << 1,
+		Strings   = 1 << 2,
+		All       = ~None,
+		_bitwise_operators_allowed,
+	};
+
 	// A base class and interface for an include handler
 	struct IIncludeHandler
 	{
-		enum class EFlags
-		{
-			None = 0,
-
-			// True if the included data is binary data
-			Binary = 1 << 0,
-
-			// True for #include "file", false for #include <file>
-			IncludeLocalDir = 1 << 1,
-
-			_bitwise_operators_allowed = -1,
-		};
-
-		bool m_ignore_missing_includes;
-
 		IIncludeHandler()
-			:m_ignore_missing_includes()
+			:IgnoreMissingIncludes()
 		{}
 		virtual ~IIncludeHandler() {}
 
+		// True if missing includes do not throw exceptions
+		bool IgnoreMissingIncludes;
+
 		// Add a path to the include search paths
-		virtual void AddSearchPath(string path, size_t index = ~size_t())
+		virtual void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t())
 		{
 			(void)path, index;
 		}
 
 		// Resolve an include into a full path
 		// 'search_paths_only' is true when the include is within angle brackets (i.e. #include <file>)
-		virtual string ResolveInclude(string const& include, EFlags flags, Location const& loc = Location()) = 0;
+		virtual std::filesystem::path ResolveInclude(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) = 0;
 
 		// Returns a 'Src' corresponding to the string "include".
 		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 		// 'loc' is where in the current source the include comes from.
-		virtual std::unique_ptr<Src> Open(string const& include, EFlags flags, Location const& loc = Location()) = 0;
+		virtual std::unique_ptr<Src> Open(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) = 0;
 
 		// Open 'include' as an ASCII stream
-		virtual std::unique_ptr<std::istream> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) = 0;
+		virtual std::unique_ptr<std::istream> OpenStreamA(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) = 0;
 	};
 
-	#pragma region General Includes
+	// An include handler that doesn't handle any includes.
+	struct NoIncludes :IIncludeHandler
+	{
+		// Resolve an include into a full path
+		std::filesystem::path ResolveInclude(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		{
+			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
+		}
+
+		// Returns a 'Src' corresponding to the string "include".
+		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
+		// 'loc' is where in the current source the include comes from.
+		std::unique_ptr<Src> Open(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		{
+			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
+		}
+
+		// Open 'include' as an ASCII stream
+		std::unique_ptr<std::istream> OpenStreamA(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		{
+			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
+		}
+	};
+
 	// An include handler that tries to open include files from resources, search paths, or a string table
 	struct Includes :IIncludeHandler
 	{
-		using Paths = pr::vector<string, 4>;
-		using Modules = pr::vector<HMODULE>;
-		using StrMap = std::unordered_map<string, std::string>;
-
-		enum class EType
-		{
-			None      = 0,
-			Files     = 1 << 0,
-			Resources = 1 << 1,
-			Strings   = 1 << 2,
-			All       = ~None,
-			_bitwise_operators_allowed,
-		};
+		using paths_t = std::vector<std::filesystem::path>;
+		using modules_t = std::vector<HMODULE>;
+		using strtable_t = std::unordered_map<string_t, std::string>;
 
 	private:
 
 		// Types of includes supported
-		EType m_types;
+		EIncludeTypes m_types;
 
 		// The search paths to resolve include files from
-		Paths m_paths;
+		paths_t m_paths;
 
 		// The binary modules containing resources
-		Modules m_modules;
+		modules_t m_modules;
 
-		// A map of include names to strings
-		// Have to use std::string because 'std::istringstream' expects it
-		StrMap m_strtab;
+		// A map of include names to utf-8 strings.
+		strtable_t m_strtab;
 
 	public:
 
-		explicit Includes(EType types = EType::Files)
+		explicit Includes(EIncludeTypes types = EIncludeTypes::All)
 			:m_types(types)
 			,m_paths()
 			,m_modules()
 			,m_strtab()
 			,FileOpened()
 		{}
-		explicit Includes(string const& search_paths, EType types = EType::Files)
+		explicit Includes(std::wstring_view const& search_paths, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
-			SearchPaths(search_paths);
+			SearchPathList(search_paths);
 		}
-		explicit Includes(std::initializer_list<HMODULE> modules, EType types = EType::Files)
+		explicit Includes(std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			ResourceModules(modules);
 		}
-		explicit Includes(string const& search_paths, std::initializer_list<HMODULE> modules, EType types = EType::None)
+		explicit Includes(std::wstring_view const& search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
-			SearchPaths(search_paths);
+			SearchPathList(search_paths);
 			ResourceModules(modules);
 		}
 
-		// Get/Set the search paths as a comma or semicolon separated list
-		virtual string SearchPaths() const
+		// Raised whenever a file is opened
+		MultiCast<std::function<void(std::filesystem::path const&)>> FileOpened;
+
+		// Get/Set the locations to look for includes
+		EIncludeTypes Types() const
 		{
-			string paths;
+			return m_types;
+		}
+		void Types(EIncludeTypes types)
+		{
+			m_types = types;
+		}
+
+		// Get/Set the search directories for include files
+		paths_t const& SearchPaths() const
+		{
+			return m_paths;
+		}
+		void SearchPaths(std::initializer_list<std::filesystem::path> paths)
+		{
+			m_paths.assign(paths);
+		}
+
+		// Get/Set the modules to check for resources
+		modules_t const& ResourceModules() const
+		{
+			return m_modules;
+		}
+		void ResourceModules(std::initializer_list<HMODULE> modules)
+		{
+			m_modules.assign(modules);
+		}
+
+		// Get/Set the string table
+		strtable_t const& StringTable() const
+		{
+			return m_strtab;
+		}
+		void StringTable(strtable_t const& strtab)
+		{
+			m_strtab = strtab;
+		}
+
+		// Get/Set the search paths as a delimited list
+		std::wstring SearchPathList() const
+		{
+			std::wstring paths;
 			for (auto& path : m_paths)
 				paths.append(paths.empty() ? L"" : L",").append(path);
+
 			return paths;
 		}
-		virtual void SearchPaths(string paths)
+		void SearchPathList(std::wstring_view paths)
 		{
 			m_paths.resize(0);
-			pr::str::Split<string>(paths, L",;", [&](string const& p, size_t s, size_t e, int)
+			str::Split<std::wstring_view>(paths, L",;\n", [&](auto& p, size_t s, size_t e, int)
 			{
 				m_paths.push_back(p.substr(s, e - s));
 			});
 
 			if (!m_paths.empty())
-				m_types |= EType::Files;
-		}
-
-		// Get/Set the modules to check for resources
-		virtual Modules const& ResourceModules() const
-		{
-			return m_modules;
-		}
-		virtual void ResourceModules(std::initializer_list<HMODULE> modules)
-		{
-			m_modules.assign(std::begin(modules), std::end(modules));
-
-			if (!m_modules.empty())
-				m_types |= EType::Resources;
-		}
-
-		// Get/Set the string table
-		virtual StrMap const& StringTable() const
-		{
-			return m_strtab;
-		}
-		virtual void StringTable(StrMap const& strtab)
-		{
-			m_strtab = strtab;
-
-			if (!m_strtab.empty())
-				m_types |= EType::Strings;
+				m_types |= EIncludeTypes::Files;
 		}
 
 		// Add a path to the include search paths. Ensures uniqueness of paths
-		void AddSearchPath(string path, size_t index = ~size_t()) override
+		void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t()) override
 		{
-			static_assert(has_bitwise_operators_allowed<EType>::value, "");
-			m_types |= EType::Files;
-
 			// Remove 'path' if already in the 'm_paths' collection
-			auto end = std::remove_if(std::begin(m_paths), std::end(m_paths), [&](string const& s) { return pr::str::EqualI(s, path); });
+			auto end = std::remove_if(std::begin(m_paths), std::end(m_paths), [=](auto const& s) { return std::filesystem::equivalent(s, path); });
 			m_paths.erase(end, std::end(m_paths));
 			m_paths.insert(std::begin(m_paths) + std::min(m_paths.size(), index), path);
 		}
@@ -182,75 +226,153 @@ namespace pr::script
 		// Add a module handle to the modules collection. Ensures uniqueness
 		void AddResourceModule(HMODULE module, size_t index = ~size_t())
 		{
-			m_types |= EType::Resources;
-
 			// Remove 'module' if already in the 'm_modules' collection
-			auto end = std::remove_if(std::begin(m_modules), std::end(m_modules), [&](HMODULE m) { return m == module; });
+			auto end = std::remove_if(std::begin(m_modules), std::end(m_modules), [&](auto m) { return m == module; });
 			m_modules.erase(end, std::end(m_modules));
 			m_modules.insert(std::begin(m_modules) + std::min(m_modules.size(), index), module);
 		}
 
 		// Add a string to the string include table
-		void AddString(string key, std::string value)
+		void AddString(string_t key, std::string_view value)
 		{
-			m_types |= EType::Strings;
 			m_strtab[key] = value;
 		}
 
-		// Convert 'name' into a resource string id
-		string ResId(string const& name) const
-		{
-			auto id = name;
-			pr::str::Replace(id, L".", L"_");
-			return pr::str::UpperCase(id);
-		}
-
-		// Resolve an include into a full path
+		// Resolve a partial include file path into a full path
 		// 'search_paths_only' is true when the include is within angle brackets (i.e. #include <file>)
-		string ResolveInclude(string const& include, EFlags flags, Location const& loc = Location()) override
+		std::filesystem::path ResolveInclude(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) override
 		{
-			string result, searched_paths;
-			HMODULE module;
-
-			// Try file includes
-			if (pr::AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
-				return result;
-
-			// Try resources
-			if (pr::AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
-				return result;
-
-			// Try the string table
-			if (pr::AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
-				return result;
+			// Search files regardless of 'm_types' since this function is specifically for resolving filepaths
+			std::filesystem::path fullpath;
+			std::vector<std::filesystem::path> searched_paths;
+			if (ResolveFileInclude(include, AllSet(flags, EIncludeFlags::IncludeLocalDir), loc, fullpath, searched_paths))
+				return fullpath;
 
 			// Ignore if missing includes flagged
-			if (m_ignore_missing_includes)
-				return string();
+			if (IgnoreMissingIncludes)
+				return std::filesystem::path{};
 
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to resolve include '%S'\n\nNot found in these search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
+			// Raise an include missing error
+			auto msg = Fmt(L"Failed to resolve include '%s'", include.c_str());
+			if (!searched_paths.empty()) msg.append(L"\n\nNot found in these search paths:");
+			for (auto& path : searched_paths) msg.append(L"\n").append(path);
+			throw ScriptException(EResult::MissingInclude, loc, msg);
 		}
 
-		// Resolve an include into a full path
-		bool ResolveFileInclude(string const& include, bool include_local_dir, Location const& loc, string& result, string& searched_paths)
+		// Returns a 'Src' corresponding to the string "include".
+		// 'loc' is where in the current source the include comes from.
+		// Although 'include' is a filesystem path, it can be an ordinary string for modules and string table includes.
+		std::unique_ptr<Src> Open(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) override
 		{
-			result.resize(0);
+			if (AllSet(flags, EIncludeFlags::Binary))
+				throw std::runtime_error("Binary includes cannot be opened with this method. 'Src' streams are text");
+
+			// Try file includes
+			std::filesystem::path fullpath;
+			std::vector<std::filesystem::path> searched_paths;
+			if (AllSet(m_types, EIncludeTypes::Files) && ResolveFileInclude(include, AllSet(flags, EIncludeFlags::IncludeLocalDir), loc, fullpath, searched_paths))
+			{
+				FileOpened.Raise(fullpath);
+				return std::make_unique<FileSrc>(fullpath);
+			}
+
+			// Try resources
+			HMODULE module;
+			auto id = ResId(include);
+			if (AllSet(m_types, EIncludeTypes::Resources) && ResolveResourceInclude(id, false, module))
+			{
+				// The resource remains in scope until the DLL is unloaded, so we don't need to
+				// copy the resource data to the buffer of the StringSrc.
+				auto res = resource::Read<char>(id, L"TEXT", module);
+				return std::make_unique<StringSrc>(std::string_view(res.m_data, res.m_len));
+			}
+
+			// Try the string table
+			strtable_t* strtab;
+			auto tag = include.wstring();
+			if (AllSet(m_types, EIncludeTypes::Strings) && ResolveStringInclude(tag, strtab))
+			{
+				// The string table string remains in scope for the lifetime of this includes instance.
+				auto const& str = (*strtab)[tag];
+				return std::make_unique<StringSrc>(str);
+			}
+
+			// If ignoring missing includes, return an empty source
+			if (IgnoreMissingIncludes)
+			{
+				return std::make_unique<NullSrc>();
+			}
+
+			// Raise an include missing error
+			auto msg = Fmt(L"Failed to open include '%s'", include.c_str());
+			if (!searched_paths.empty()) msg.append(L"\n\nNot found in these search paths:");
+			for (auto& path : searched_paths) msg.append(L"\n").append(path);
+			throw ScriptException(EResult::MissingInclude, loc, msg);
+		}
+
+		// Open 'include' as an text or binary stream
+		std::unique_ptr<std::basic_istream<char>> OpenStreamA(std::filesystem::path const& include, EIncludeFlags flags, Loc const& loc = Loc()) override
+		{
+			// Try file includes
+			std::filesystem::path fullpath;
+			std::vector<std::filesystem::path> searched_paths;
+			if (AllSet(m_types, EIncludeTypes::Files) && ResolveFileInclude(include, AllSet(flags, EIncludeFlags::IncludeLocalDir), loc, fullpath, searched_paths))
+			{
+				FileOpened.Raise(fullpath);
+				return std::make_unique<std::ifstream>(fullpath, AllSet(flags, EIncludeFlags::Binary) ? std::istream::binary : 0);
+			}
+
+			// Try resources
+			HMODULE module;
+			auto id = ResId(include);
+			if (AllSet(m_types, EIncludeTypes::Resources) && ResolveResourceInclude(id, AllSet(flags, EIncludeFlags::Binary), module))
+			{
+				auto res = resource::Read<char>(id, AllSet(flags, EIncludeFlags::Binary) ? L"BINARY" : L"TEXT", module);
+				return std::unique_ptr<std::basic_istream<char>>(new mem_istream<char>(res.m_data, res.size()));
+			}
+
+			// Try the string table
+			strtable_t* strtab;
+			auto tag = include.wstring();
+			if (AllSet(m_types, EIncludeTypes::Strings) && ResolveStringInclude(tag, strtab))
+			{
+				auto const& str = (*strtab)[tag];
+				return std::make_unique<std::istringstream>(str);
+			}
+
+			// If ignoring missing includes, return an empty source
+			if (IgnoreMissingIncludes)
+			{
+				return std::make_unique<std::istringstream>("");
+			}
+
+			// Raise an include missing error
+			auto msg = Fmt(L"Failed to open include stream '%s'", include.c_str());
+			if (!searched_paths.empty()) msg.append(L"\n\nNot found in these search paths:");
+			for (auto& path : searched_paths) msg.append(L"\n").append(path);
+			throw ScriptException(EResult::MissingInclude, loc, msg);
+		}
+
+	private:
+
+		// Resolve an include into a full path
+		bool ResolveFileInclude(std::filesystem::path const& include, bool include_local_dir, Loc const& loc, std::filesystem::path& result, std::vector<std::filesystem::path>& searched_paths)
+		{
+			result.clear();
 
 			// If we should search the local directory first, find the local directory name from 'loc'
-			string local_dir, *current_dir = nullptr;
-			if (include_local_dir)
+			std::filesystem::path local_dir, *local_dir_ptr = nullptr;
+			if (include_local_dir && std::filesystem::exists(loc.Filepath()))
 			{
 				// Note: 'local_dir' means the directory local to the current source location 'loc'.
 				// Don't use the executable local directory: "pr::filesys::CurrentDirectory<string>()"
 				// If the executable directory is wanted, add it manually before calling resolve.
-				local_dir = pr::filesys::GetDirectory(loc.StreamName());
-				current_dir = !local_dir.empty() ? &local_dir : nullptr;
+				local_dir = loc.Filepath().parent_path();
+				local_dir_ptr = !local_dir.empty() ? &local_dir : nullptr;
 			}
 
 			// Resolve the filepath
-			auto filepath = pr::filesys::ResolvePath<string>(include, m_paths, current_dir, false, &searched_paths);
+			auto filepath = filesys::ResolvePath(include, m_paths, local_dir_ptr, false, &searched_paths);
 			if (filepath.empty())
 				return false;
 
@@ -260,12 +382,11 @@ namespace pr::script
 		}
 
 		// Resolve an include from the available modules
-		bool ResolveResourceInclude(string const& include, string& result, bool binary, HMODULE& module)
+		bool ResolveResourceInclude(std::wstring_view id, bool binary, HMODULE& module)
 		{
-			result = ResId(include);
 			for (auto m : m_modules)
 			{
-				if (!pr::resource::Find(result.c_str(), binary ? L"BINARY" : L"TEXT", m)) continue;
+				if (!resource::Find(id, binary ? L"BINARY" : L"TEXT", m)) continue;
 				module = m;
 				return true;
 			}
@@ -273,114 +394,21 @@ namespace pr::script
 		}
 
 		// Resolve an include into a string that is in the string table
-		bool ResolveStringInclude(string const& include, string& result)
+		bool ResolveStringInclude(string_t const& tag, strtable_t*& strtab)
 		{
-			result = include;
-			return m_strtab.find(include) != std::end(m_strtab);
+			// Future version may have multiple string tables
+			strtab = m_strtab.find(tag) != std::end(m_strtab) ? &m_strtab : nullptr;
+			return strtab != nullptr;
 		}
 
-		// Returns a 'Src' corresponding to the string "include".
-		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-		// 'loc' is where in the current source the include comes from.
-		std::unique_ptr<Src> Open(string const& include, EFlags flags, Location const& loc = Location()) override
+		// Convert 'name' into a resource string id
+		static std::wstring ResId(std::filesystem::path const& name)
 		{
-			string result, searched_paths;
-			HMODULE module;
-
-			// Try file includes
-			if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
-			{
-				FileOpened.Raise(result);
-				return std::make_unique<FileSrc>(result.c_str());
-			}
-
-			// Try resources
-			if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
-			{
-				auto res = pr::resource::Read<char>(result.c_str(), L"TEXT", module);
-				return std::make_unique<PtrA>(res.m_data);
-			}
-
-			// Try the string table
-			if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
-			{
-				auto i = m_strtab.find(result);
-				return std::make_unique<PtrA>(i->second.c_str());
-			}
-
-			// If ignoring missing includes, return an empty source
-			if (m_ignore_missing_includes)
-			{
-				return std::make_unique<PtrA>("");
-			}
-
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to open include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to open include '%S'", include.c_str()));
-		}
-
-		// Open 'include' as an ASCII stream
-		std::unique_ptr<std::basic_istream<char>> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) override
-		{
-			string result, searched_paths;
-			HMODULE module;
-
-			// Try file includes
-			if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
-			{
-				FileOpened.Raise(result);
-				return std::make_unique<std::ifstream>(result.c_str(), AllSet(flags, EFlags::Binary) ? std::istream::binary : 0);
-			}
-
-			// Try resources
-			if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
-			{
-				auto res = pr::resource::Read<char>(result.c_str(), AllSet(flags, EFlags::Binary) ? L"BINARY" : L"TEXT", module);
-				return std::unique_ptr<std::basic_istream<char>>(new mem_istream<char>(res.m_data, res.size()));
-			}
-
-			// Try the string table
-			if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
-			{
-				auto i = m_strtab.find(result);
-				return std::make_unique<std::istringstream>(i->second);
-			}
-
-			throw Exception(EResult::MissingInclude, loc, !searched_paths.empty()
-				? pr::FmtS("Failed to resolve include '%S'\n\nFile not found in search paths:\n%S", include.c_str(), searched_paths.c_str())
-				: pr::FmtS("Failed to resolve include '%S'", include.c_str()));
-		}
-
-		// Raised whenever a file is opened
-		pr::MultiCast<std::function<void(string const&)>> FileOpened;
-	};
-	#pragma endregion
-
-	#pragma region No Includes
-	// An include handler that doesn't handle any includes.
-	struct NoIncludes :IIncludeHandler
-	{
-		// Resolve an include into a full path
-		string ResolveInclude(string const&, EFlags, Location const& loc = Location()) override
-		{
-			throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
-		}
-
-		// Returns a 'Src' corresponding to the string "include".
-		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-		// 'loc' is where in the current source the include comes from.
-		std::unique_ptr<Src> Open(string const&, EFlags, Location const& loc = Location()) override
-		{
-			throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
-		}
-
-		// Open 'include' as an ASCII stream
-		std::unique_ptr<std::istream> OpenStreamA(string const&, EFlags, Location const& loc = Location()) override
-		{
-			throw Exception(EResult::IncludesNotSupported, loc, "#include is not supported");
+			auto id = name.wstring();
+			str::Replace(id, L".", L"_");
+			return str::UpperCase(id);
 		}
 	};
-	#pragma endregion
 }
 
 #if PR_UNITTESTS
@@ -394,24 +422,27 @@ namespace pr::script
 		using namespace pr::str;
 		using string = pr::string<wchar_t>;
 
-		auto script_include = L"script_include.txt";
 		char data[] = "Included";
+		auto script_include = L"script_include.txt";
+		auto cleanup = CreateScope([] {}, [=] { std::filesystem::remove(script_include); });
+
 		{// Create the file
 			std::ofstream fout(script_include);
 			fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 		}
+
 		{
 			Includes inc;
-			inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
-			inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
 
-			auto src_ptr = inc.Open(script_include, IIncludeHandler::EFlags::None);
+			inc.AddSearchPath(win32::ExePath<std::filesystem::path>().parent_path());
+			inc.AddSearchPath(std::filesystem::current_path());
+
+			auto src_ptr = inc.Open(script_include, EIncludeFlags::None);
 			auto& src = *src_ptr;
 
 			std::wstring r; for (;*src; ++src) r.push_back(*src);
 			PR_CHECK(pr::str::Equal(r, data), true);
 		}
-		pr::filesys::EraseFile(script_include);
 	}
 }
 #endif

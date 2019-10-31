@@ -33,7 +33,7 @@ namespace pr::script
 		// 'result' is the output of the code after execution, converted to a string.
 		// Return true, if the code was executed successfully, false if not handled.
 		// If the code can be handled but has errors, throw 'std::exception's.
-		virtual bool Execute(string const& code, bool support, string& result) = 0;
+		virtual bool Execute(wchar_t const* code, bool support, string_t& result) = 0;
 	};
 
 	// A factory function for creating embedded code handler instances

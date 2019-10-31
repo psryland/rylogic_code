@@ -12,292 +12,174 @@
 
 namespace pr::script
 {
-	// String/Character literal helper
-	struct StringLit
-	{
-		wchar_t end;
-		bool escaped;
-
-		StringLit()
-			:end()
-			,escaped()
-		{}
-
-		// Boolean test for within a string/character literal
-		operator bool() const
-		{
-			return end != 0;
-		}
-
-		// Processes the current character in 'src'.
-		// Returns true if currently within a string/character literal
-		bool inc(wchar_t ch)
-		{
-			// If we're currently within a literal string or character then
-			// just return characters until the literal ends
-			if (*this)
-			{
-				if (ch == end && !escaped) end = 0;
-				else escaped = ch == L'\\';
-			}
-			else if (ch == L'\"' || ch == L'\'')
-			{
-				end = ch;
-			}
-			return *this;
-		}
-	};
-
-	// Base class for a 'Src' filter. Simple pass through filter.
-	// Filters are different to actual sources because they only contain
-	// a reference to the underlying source. This means they are copy constructable.
-	template <typename BufWN = BufW2> struct Filter :Src
-	{
-		Src* m_src; // The source character stream (used to feed TBuf)
-		BufWN m_reg; // The character "shift register"
-
-		Filter()
-			:Src(ESrcType::Unknown, Location())
-			,m_src()
-			,m_reg()
-		{}
-		explicit Filter(Src& src)
-			:Filter()
-		{
-			Source(src);
-		}
-
-		// Set the input source
-		void Source(Src& src)
-		{
-			m_type = src.Type();
-			m_src = &src;
-			m_reg.Load(*m_src);
-			seek(0);
-		}
-
-		// Debugging helper interface
-		SrcConstPtr DbgPtr() const override
-		{
-			return m_reg.m_ch;
-		}
-		Location const& Loc() const override
-		{
-			return m_src->Loc();
-		}
-
-		// Pointer-like interface
-		wchar_t operator *() const override
-		{
-			return m_reg.front();
-		}
-		Filter& operator ++() override
-		{
-			seek(1);
-			return *this;
-		}
-
-		// Array access into the buffer
-		wchar_t operator [](size_t i) const
-		{
-			return m_reg[i];
-		}
-		wchar_t& operator [](size_t i)
-		{
-			return m_reg[i];
-		}
-
-		// Advance the buffer
-		virtual void next(int n)
-		{
-			for (;n--;)
-			{
-				m_reg.shift(**m_src);
-				if (**m_src) ++*m_src;
-			}
-		}
-
-		// Seek to the next valid character to output
-		virtual void seek(int n)
-		{
-			next(n);
-		}
-	};
-
 	// Removes line continuation sequences in a character stream
-	struct StripLineContinuations :Filter<BufW4>
+	struct StripLineContinuations :Src
 	{
-		explicit StripLineContinuations(Src& src)
-			:Filter<BufW4>(src)
-		{
-			seek(0);
-		}
+	private:
 
-		// Seek to the next valid character to output
-		void seek(int n) override
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
 		{
-			auto& src = m_reg;
-			for (next(n);;)
+			for (;;)
 			{
-				if (src[0] == L'\\' && src[1] == L'\n')                    { next(2); continue; }
-				if (src[0] == L'\\' && src[1] == L'\r' && src[2] == L'\n') { next(3); continue; }
+				if (m_src.Match(L"\\\n")) { m_src.Next(2); continue; }
+				if (m_src.Match(L"\\\r\n")) { m_src.Next(3); continue; }
 				break;
 			}
+
+			auto ch = *m_src;
+			if (ch != '\0') ++m_src;
+			return ch;
 		}
+
+	public:
+		explicit StripLineContinuations(Src& src)
+			:Src(src, EEncoding::already_decoded)
+		{}
 	};
 
-	// Removes C++ style comments from a character stream
-	struct StripComments :Filter<BufW2>
+	// Removes comments from a character stream
+	struct StripComments :Src
 	{
-		StringLit m_literal;
-			
-		explicit StripComments(Src& src)
-			:Filter<BufW2>(src)
-			,m_literal()
-		{
-			seek(0);
-		}
+	private:
 
-		// Seek to the next valid character to output
-		void seek(int n) override
+		InLiteralString m_lit;
+		string_t m_line_comment;
+		string_t m_line_end;
+		string_t m_block_beg;
+		string_t m_block_end;
+
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
 		{
-			auto& src = m_reg;
-			for (next(n);;)
+			for (;;)
 			{
-				// If we're currently within a literal string or character then
-				// just return characters until the literal ends
-				if (m_literal.inc(*src))
+				// Read through literal strings or characters
+				if (m_lit.WithinLiteralString(*m_src))
 					break;
 
-				// Otherwise remove comments
-				if (*src == L'/')
+				// Skip comments
+				if (!m_line_comment.empty() && *m_src == m_line_comment[0] && m_src.Match(m_line_comment))
 				{
-					if (src[1] == L'/')
-					{
-						for (next(2); *src != L'\n' && *src; next(1)) {}
-						continue; // Don't eat the new line
-					}
-					if (src[1] == L'*')
-					{
-						auto loc_beg = m_src->Loc();
-						for (next(2); *src && !(src[0] == L'*' && src[1] == L'/'); next(1)) {}
-						if (*src) next(2); else throw Exception(EResult::SyntaxError, loc_beg, "Unmatched block comment");
-						continue;
-					}
+					EatLineComment(m_src, m_line_comment);
+					continue;
+				}
+				if (!m_block_beg.empty() && !m_block_end.empty() && *m_src == m_block_beg[0] && m_src.Match(m_block_beg))
+				{
+					EatBlockComment(m_src, m_block_beg, m_block_end);
+					continue;
 				}
 
-				// If we get here, then the next char is valid
 				break;
 			}
+
+			auto ch = *m_src;
+			if (ch != '\0') ++m_src;
+			return ch;
 		}
+
+	public:
+
+		explicit StripComments(Src& src, char_t const* line_comment = L"//", char_t const* line_end = L"\n", char_t const* block_beg = L"/*", char_t const* block_end = L"*/")
+			:Src(src, EEncoding::already_decoded)
+			,m_lit()
+			,m_line_comment(line_comment)
+			,m_line_end(line_end)
+			,m_block_beg(block_beg)
+			,m_block_end(block_end)
+		{}
 	};
 
 	// Removes newlines from a character stream
-	struct StripNewLines :Filter<BufW2>
+	struct StripNewLines :Src
 	{
-		Buffer<> m_lines;
-		size_t m_lines_max;
-		size_t m_lines_min;
-		StringLit m_literal;
-		EmitCount m_emit;
+		// Notes:
+		//  - Transforms consecutive blank lines.
+		//  - Look for consecutive lines that contain only whitespace characters.
+		//  - If the number of lines is less than 'm_lines_min' add lines up to 'm_lines_min'
+		//  - If the number of lines is greater than 'm_lines_max' delete lines back to 'm_lines_max'
+		//  - Blank lines are replaced with a single new line character
 
-		StripNewLines()
-			:Filter<BufW2>()
-			,m_lines()
-			,m_lines_max()
-			,m_lines_min()
-			,m_literal()
-			,m_emit()
-		{}
-		StripNewLines(Src& src, size_t lines_min = 0, size_t lines_max = 1)
-			:StripNewLines()
+	private:
+
+		int m_lines_max;
+		int m_lines_min;
+		InLiteralString m_lit;
+		InComment m_com;
+		int m_emit;
+		bool m_line_start;
+
+		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
+		int Read() override
 		{
-			SetLimits(lines_min, lines_max);
-			Source(src);
+			auto consecutive_lines = 0;
+			auto& buffer = m_src.Buffer();
+			for (auto len = 0;;)
+			{
+				// Don't retest until inserted new lines have been consumed.
+				if (m_emit != 0)
+					break;
+
+				// Read through literal strings or characters
+				if (m_lit.WithinLiteralString(*m_src))
+					break;
+
+				// Read through comments
+				if (m_com.WithinComment(m_src))
+					break;
+
+				// Don't trim white space from the end of lines
+				if (!m_line_start && *m_src != '\n')
+					break;
+
+				// Buffer up to the next non whitespace or line end character
+				BufferWhile(m_src, [](Src& s, int i) { return str::IsLineSpace(s[i]); }, 0, &len);
+				if (m_src[len] != '\n')
+					break;
+
+				// Consume the blank line and the new line character
+				++consecutive_lines;
+				m_src += len + 1;
+				m_line_start = true;
+			}
+
+			// Insert new lines into the to buffer to match the limits
+			if (consecutive_lines != 0)
+			{
+				consecutive_lines = std::max(m_lines_min, std::min(m_lines_max, consecutive_lines));
+				buffer.insert(std::begin(buffer), consecutive_lines, '\n');
+				m_emit = consecutive_lines;
+			}
+
+			auto ch = *m_src;
+			if (ch != '\0') ++m_src;
+			m_line_start = ch == '\n';
+			m_emit -= m_emit != 0;
+			return ch;
 		}
 
-		// Set the input source
-		void Source(Src& src)
+	public:
+
+		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, bool support_c_strings = false)
+			:Src(src, EEncoding::already_decoded)
+			,m_lines_max()
+			,m_lines_min()
+			,m_lit(support_c_strings, support_c_strings ? '\\' : '\0')
+			,m_com()
+			,m_emit()
+			,m_line_start(true)
 		{
-			m_type = src.Type();
-			m_src = &src; 
-			m_lines.Source(*m_src); // not using m_reg
-			seek(0);
+			SetLimits(lines_min, lines_max);
 		}
 
 		// Set the min/max line count
-		void SetLimits(size_t lines_min = 0, size_t lines_max = 1)
+		void SetLimits(int lines_min = 0, int lines_max = 1)
 		{
 			m_lines_max = lines_max;
 			m_lines_min = std::min(lines_min, lines_max);
 		}
-
-		// Pointer-like interface
-		wchar_t operator *() const override
-		{
-			return *m_lines;
-		}
-
-		// Advance the buffer
-		void next(int n) override
-		{
-			m_lines += n;
-		}
-
-		// Seek to the next valid character to output
-		void seek(int n) override
-		{
-			// Transforms consecutive blank lines.
-			// Look for consecutive lines that contain only whitespace characters.
-			// If the number of lines is less than 'm_lines_min' add lines up to 'm_lines_min'
-			// If the number of lines is greater than 'm_lines_max' delete lines back to 'm_lines_max'
-			// Blank lines are replaced with a single new line character
-			auto& src = m_lines;
-			for (src += n, m_emit -= n; m_emit == 0;)
-			{
-				// If we're currently within a literal string or character then
-				// just return characters until the literal ends
-				if (m_literal.inc(*src))
-					break;
-
-				// Transform new lines
-				if (*src == L'\n')
-				{
-					// Buffer lines up to the max line count or until the next non-whitespace
-					for (size_t i = m_emit; pr::str::IsWhiteSpace(src[i]); )
-					{
-						if (src[i] == L'\n')
-						{
-							// Fill the buffer with '\n' up to the max line count
-							if (m_emit < m_lines_max)
-								src[m_emit++] = L'\n';
-
-							// Erase the remaining blank line
-							src.erase(m_emit, (i+1) - m_emit);
-							i = m_emit;
-						}
-						else
-						{
-							++i;
-						}
-					}
-
-					// If below the minimum, insert lines
-					for (; m_emit < m_lines_min; ++m_emit)
-					{
-						src.push_front(L'\n');
-					}
-
-					continue;
-				}
-
-				// If we get here, it's a valid character
-				break;
-			}
-		}
 	};
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -307,23 +189,24 @@ namespace pr::script
 	PRUnitTest(FilterTests)
 	{
 		using namespace pr::str;
-
 		{// StripLineContinuations
-			char const* str_in = "Li\
+			char const str_in[] = "Li\
 				on";
-			char const* str_out = "Li				on";
+			char const str_out[] = "Li				on";
 
-			PtrA src(str_in);
+			StringSrc src(str_in);
 			StripLineContinuations strip(src);
-			for (;*strip; ++strip, ++str_out)
+
+			auto out = &str_out[0];
+			for (; *strip; ++strip, ++out)
 			{
-				if (*strip == *str_out) continue;
-				PR_CHECK(*strip, *str_out);
+				if (*strip == *out) continue;
+				PR_CHECK(*strip, *out);
 			}
-			PR_CHECK(*str_out, 0);
+			PR_CHECK(*out, 0);
 		}
 		{// StripComments
-			char const* str_in = 
+			char const str_in[] = 
 				"123// comment         \n"
 				"456/* blo/ck */789\n"
 				"// many               \n"
@@ -337,8 +220,9 @@ namespace pr::script
 				"*/\n"
 				"// multi\\\n"
 				" line\\\n"
-				" comment\n";
-			char const* str_out = 
+				" comment\n"
+				"/*/ comment */\n";
+			char const str_out[] = 
 				"123\n"
 				"456789\n"
 				"\n"
@@ -348,24 +232,27 @@ namespace pr::script
 				"\"string \\\" /*a*/ //b\"  \n"
 				"/not a comment\n"
 				"\n"
+				"\n"
 				"\n";
 
-			PtrA src(str_in);
-			StripLineContinuations cont(src);
-			StripComments strip(cont);
-			for (;*strip; ++strip, ++str_out)
+			StringSrc src0(str_in);
+			StripLineContinuations src1(src0);
+			StripComments strip(src1);
+
+			auto out = &str_out[0];
+			for (;*strip; ++strip, ++out)
 			{
-				if (*strip == *str_out) continue;
-				PR_CHECK(*strip, *str_out);
+				if (*strip == *out) continue;
+				PR_CHECK(*strip, *out);
 			}
-			PR_CHECK(*str_out, 0);
+			PR_CHECK(*out, 0);
 		}
 		{// StripNewLines
-			char const* str_in =
+			char const str_in[] =
 				"  \n"
 				"      \n"
 				"   \n"
-				"\" multi-line \n"
+				"  \" multi-line \n"
 				"\n"
 				"\n"
 				"string \"     \n"
@@ -375,63 +262,51 @@ namespace pr::script
 				"\n"
 				"\n"
 				"";
+
 			{// min 0, max 0 lines
-				char const* str_out =
+				char const str_out[] =
 					"  \" multi-line \n"
 					"\n"
 					"\n"
 					"string \"     abc  ";
 
-				PtrA src(str_in);
-				StripNewLines strip(src,0,0);
-				for (; *strip; ++strip, ++str_out)
+				StringSrc src0(str_in);
+				StripNewLines strip(src0, 0, 0);
+
+				auto out = &str_out[0];
+				for (; *strip; ++strip, ++out)
 				{
-					if (*strip == *str_out) continue;
-					PR_CHECK(*strip, *str_out);
+					if (*strip == *out) continue;
+					PR_CHECK(*strip, *out);
 				}
-				PR_CHECK(*str_out, 0);
+				PR_CHECK(*out, 0);
 			}
-			{
-				char const* str_out =
-					"  \n"
-					"\" multi-line \n"
+			{// min 0, max 1 lines
+				char const str_out[] =
+					"\n"
+					"  \" multi-line \n"
 					"\n"
 					"\n"
 					"string \"     \n"
 					"abc  \n"
 					"";
 
-				PtrA src(str_in);
-				StripNewLines strip(src);
-				for (; *strip; ++strip, ++str_out)
+				StringSrc src0(str_in);
+				StripNewLines strip(src0, 0, 1);
+
+				auto out = &str_out[0];
+				for (; *strip; ++strip, ++out)
 				{
-					if (*strip == *str_out) continue;
-					PR_CHECK(*strip, *str_out);
+					if (*strip == *out) continue;
+					PR_CHECK(*strip, *out);
 				}
-				PR_CHECK(*str_out, 0);
+				PR_CHECK(*out, 0);
 			}
-			{
-				char const* str_out =
+			{// min 2, max 2 lines
+				char const str_out[] =
+					"\n"
+					"\n"
 					"  \" multi-line \n"
-					"\n"
-					"\n"
-					"string \"     abc  ";
-
-				PtrA src(str_in);
-				StripNewLines strip(src, 0, 0);
-				for (; *strip; ++strip, ++str_out)
-				{
-					if (*strip == *str_out) continue;
-					PR_CHECK(*strip, *str_out);
-				}
-				PR_CHECK(*str_out, 0);
-
-			}
-			{
-				char const* str_out =
-					"  \n"
-					"\n"
-					"\" multi-line \n"
 					"\n"
 					"\n"
 					"string \"     \n"
@@ -440,14 +315,16 @@ namespace pr::script
 					"\n"
 					"";
 
-				PtrA src(str_in);
-				StripNewLines strip(src,2,2);
-				for (; *strip; ++strip, ++str_out)
+				StringSrc src0(str_in);
+				StripNewLines strip(src0,2,2);
+
+				auto out = &str_out[0];
+				for (; *strip; ++strip, ++out)
 				{
-					if (*strip == *str_out) continue;
-					PR_CHECK(*strip, *str_out);
+					if (*strip == *out) continue;
+					PR_CHECK(*strip, *out);
 				}
-				PR_CHECK(*str_out, 0);
+				PR_CHECK(*out, 0);
 			}
 		}
 	}

@@ -9,15 +9,13 @@
 
 namespace pr::script
 {
-	// The location within a stream of characters.
-	// By default, Loc is an empty object that passes characters straight through
-	// Derived versions of 'Loc' record file, line, and column position
-	struct Location
+	// A location within a script source
+	struct Loc
 	{
 	private:
 
-		// The name of the stream source
-		string m_stream_name;
+		// The path to the stream source
+		std::filesystem::path m_filepath;
 
 		// The character offset into the stream (0-based)
 		std::streamoff m_pos;
@@ -34,34 +32,16 @@ namespace pr::script
 		// True if the line and column values are valid
 		bool m_lc_valid;
 
-		// By default, 1 tab = 1 column. This allows for tabs = multiple columns tho
-		static int const DefTabSize = 1;
+		// By default, 1 tab = 4 columns.
+		static int const DefTabSize = 4;
 
 	public:
 
-		Location()
-			:Location(string())
+		Loc()
+			:Loc(std::wstring_view())
 		{}
-		explicit Location(string stream_name)
-			:Location(stream_name, 0, 1, 1, true)
-		{}
-		explicit Location(std::filesystem::path const& stream_name)
-			:Location(stream_name.c_str(), 0, 1, 1, true)
-		{}
-		explicit Location(std::streamoff pos)
-			:Location(nullptr, pos, 1, 1, pos == 0)
-		{}
-		Location(string stream_name, std::streamoff pos)
-			:Location(stream_name, pos, 1, 1, pos == 0)
-		{}
-		Location(std::streamoff pos, int line, int col)
-			:Location(nullptr, pos, line, col, true)
-		{}
-		Location(string stream_name, std::streamoff pos, int line, int col)
-			:Location(stream_name, pos, line, col, true)
-		{}
-		Location(string stream_name, std::streamoff pos, int line, int col, bool lc_valid, int tab_size = DefTabSize)
-			:m_stream_name(stream_name)
+		Loc(std::filesystem::path const& filepath, std::streamoff pos = 0, int line = 1, int col = 1, bool lc_valid = true, int tab_size = DefTabSize)
+			:m_filepath(filepath)
 			,m_pos(pos)
 			,m_line(std::max(line, 1))
 			,m_col(std::max(col, 1))
@@ -73,12 +53,13 @@ namespace pr::script
 		}
 
 		// Advance the location by interpreting 'ch'
-		wchar_t inc(wchar_t ch)
+		wchar_t inc(wchar_t ch) noexcept
 		{
+			// '0' means EOS
 			if (ch != 0)
-			{
 				++m_pos;
-			}
+
+			// If the line/column values are valid
 			if (m_lc_valid)
 			{
 				if (ch == L'\n')
@@ -97,31 +78,32 @@ namespace pr::script
 			}
 			return ch;
 		}
-		char inc(char ch)
+		char inc(char ch) noexcept
 		{
-			return char(inc(wchar_t(ch)));
+			inc(static_cast<wchar_t>(ch));
+			return ch;
 		}
 
-		// Output the stream name (usually file name)
-		string StreamName() const
+		// Get/Set the source path (usually file name)
+		std::filesystem::path Filepath() const noexcept
 		{
-			return m_stream_name;
+			return m_filepath;
 		}
-		void StreamName(string stream_name)
+		void Filepath(std::filesystem::path const& filepath) noexcept
 		{
-			m_stream_name = stream_name;
+			m_filepath = filepath;
 		}
 
-		// Output the character index
-		std::streamoff Pos() const
+		// Get/set the stream position
+		std::streamoff Pos() const noexcept
 		{
 			return m_pos;
 		}
-		void Pos(std::streamoff pos, bool lc_valid)
+		void Pos(std::streamoff pos, bool lc_valid) noexcept
 		{
 			Pos(pos, m_line, m_col, lc_valid);
 		}
-		void Pos(std::streamoff pos, int line, int col, bool lc_valid)
+		void Pos(std::streamoff pos, int line, int col, bool lc_valid) noexcept
 		{
 			assert("Line index should be natural number, 1-based" && line >= 1);
 			assert("Column index should be natural number, 1-based" && col >= 1);
@@ -132,59 +114,58 @@ namespace pr::script
 		}
 
 		// Get/Set the line number (as a natural number, 1-based)
-		int Line() const
+		int Line() const noexcept
 		{
 			return m_line;
 		}
-		void Line(int line)
+		void Line(int line) noexcept
 		{
 			assert("Line index should be natural number, 1-based" && line >= 1);
 			m_line = line;
 		}
 
 		// Get/Set the column number (as a natural number, 1-based)
-		int Col() const
+		int Col() const noexcept
 		{
 			return m_col;
 		}
-		void Col(int col)
+		void Col(int col) noexcept
 		{
 			assert("Column index should be natural number, 1-based" && col >= 1);
 			m_col = col;
 		}
 
 		// True if the line/column values are valid
-		bool LCValid() const
+		bool LCValid() const noexcept
 		{
 			return m_lc_valid;
 		}
 
 		// Output the location as a string
-		string ToString() const
+		std::wstring ToString() const
 		{
-			auto s = StreamName();
+			std::wstring s = Filepath().wstring();
 			if (LCValid()) s.append(Fmt(L"(%d:%d)", Line(), Col()));
 			s.append(Fmt(L" (offset:%d)", Pos()));
 			return s;
 		}
+
+		// The location within a stream of characters
+		friend bool operator == (Loc const& lhs, Loc const& rhs)
+		{
+			return lhs.Pos() == rhs.Pos() && lhs.Filepath() == rhs.Filepath();
+		}
+		friend bool operator != (Loc const& lhs, Loc const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+		friend bool operator < (Loc const& lhs, Loc const& rhs)
+		{
+			if (lhs.Filepath() != rhs.Filepath()) return lhs.Filepath() < rhs.Filepath();
+			return lhs.Pos() <= rhs.Pos();
+		}
 	};
-
-	// The location within a stream of characters
-	inline bool operator == (Location const& lhs, Location const& rhs)
-	{
-		return lhs.Pos() == rhs.Pos() && lhs.StreamName() == rhs.StreamName();
-	}
-	inline bool operator != (Location const& lhs, Location const& rhs)
-	{
-		return !(lhs == rhs);
-	}
-	inline bool operator <  (Location const& lhs, Location const& rhs)
-	{
-		if (lhs.StreamName() != rhs.StreamName()) return lhs.StreamName() < rhs.StreamName();
-		return lhs.Pos() <= rhs.Pos();
-	}
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -197,7 +178,7 @@ namespace pr::script
 			"abc\n"
 			"\tx";
 
-		Location loc(L"", 0, 1, 1, true, 4);
+		Loc loc(L"", 0, 1, 1, true, 4);
 		for (auto s = str; *s; ++s)
 			loc.inc(*s);
 

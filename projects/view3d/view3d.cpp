@@ -183,7 +183,7 @@ pr::script::Includes GetIncludes(View3DIncludes const* includes)
 	if (includes != nullptr)
 	{
 		if (includes->m_include_paths != nullptr)
-			inc.SearchPaths(pr::script::string(includes->m_include_paths));
+			inc.SearchPathList(includes->m_include_paths);
 
 		if (includes->m_module_count != 0)
 			inc.ResourceModules(std::initializer_list<HMODULE>(includes->m_modules, includes->m_modules + includes->m_module_count));
@@ -200,7 +200,7 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL 
 	{
 		// Concurrent entry is allowed.
 		//'DllLockGuard;
-		return Dll().LoadScriptSource(filepath, additional != 0, GetIncludes(includes));
+		return Dll().LoadScriptSource(filepath, pr::script::EEncoding::auto_detect, additional != 0, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
 }
@@ -212,7 +212,9 @@ VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file
 	try
 	{
 		DllLockGuard;
-		return Dll().LoadScript(ldr_script, file != 0, context_id, GetIncludes(includes));
+		auto is_file = file != 0;
+		auto enc = is_file ? pr::script::EEncoding::auto_detect : pr::script::EEncoding::utf16;
+		return Dll().LoadScript(ldr_script, is_file, enc, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
 }
@@ -383,22 +385,25 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char con
 {
 	try
 	{
+		using namespace pr::script;
+		using namespace pr::str;
+
 		if (!window) throw std::runtime_error("window is null");
 
 		// Parse the settings
-		pr::script::PtrA src(settings);
-		pr::script::Reader reader(src);
+		StringSrc src(settings);
+		Reader reader(src);
 
-		for (pr::script::string kw; reader.NextKeywordS(kw);)
+		for (string_t kw; reader.NextKeywordS(kw);)
 		{
-			if (pr::str::EqualI(kw, "SceneSettings"))
+			if (EqualI(kw, "SceneSettings"))
 			{
 				pr::string<> desc;
 				reader.Section(desc, false);
 				//window->m_obj_cont_ui.Settings(desc.c_str());
 				continue;
 			}
-			if (pr::str::EqualI(kw, "Light"))
+			if (EqualI(kw, "Light"))
 			{
 				pr::string<> desc;
 				reader.Section(desc, false);
@@ -1397,7 +1402,9 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 	try
 	{
 		DllLockGuard;
-		return Dll().ObjectCreateLdr(ldr_script, file != 0, context_id, GetIncludes(includes));
+		auto is_file = file != 0;
+		auto enc = is_file ? pr::script::EEncoding::auto_detect : pr::script::EEncoding::utf16;
+		return Dll().ObjectCreateLdr(ldr_script, is_file, enc, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1601,7 +1608,7 @@ VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(View3DObject object)
 	try
 	{
 		DllLockGuard;
-		auto name = ToStringW(object->m_type);
+		auto name = pr::Enum<pr::ldr::ELdrObject>::ToStringW(object->m_type);
 		return ::SysAllocStringLen(name, UINT(wcslen(name)));
 	}
 	CatchAndReport(View3D_ObjectTypeGetBStr, , BSTR());
@@ -1611,7 +1618,7 @@ VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(View3DObject object)
 	try
 	{
 		DllLockGuard;
-		return ToStringA(object->m_type);
+		return pr::Enum<pr::ldr::ELdrObject>::ToStringA(object->m_type);
 	}
 	CatchAndReport(View3D_ObjectTypeGet, , nullptr);
 }
@@ -3106,7 +3113,7 @@ VIEW3D_API BSTR __stdcall View3D_ExampleScriptBStr()
 	try
 	{
 		DllLockGuard;
-		auto example = pr::ldr::CreateDemoScene();
+		auto example = pr::Widen(pr::ldr::CreateDemoScene());
 		return ::SysAllocStringLen(example.c_str(), UINT(example.size()));
 	}
 	CatchAndReport(View3D_ExampleScriptBStr,,BSTR());
@@ -3118,7 +3125,7 @@ VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr()
 	try
 	{
 		DllLockGuard;
-		auto templates = pr::ldr::AutoCompleteTemplates();
+		auto templates = pr::Widen(pr::ldr::AutoCompleteTemplates());
 		return ::SysAllocStringLen(templates.c_str(), UINT(templates.size()));
 	}
 	CatchAndReport(View3D_AutoCompleteTemplatesBStr,,BSTR());
@@ -3132,8 +3139,10 @@ VIEW3D_API void __stdcall View3D_DemoScriptShow(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
+		
+		auto example = pr::ldr::CreateDemoScene();
 		window->EditorUI().Show();
-		window->EditorUI().Text(pr::ldr::CreateDemoScene().c_str());
+		window->EditorUI().Text(example.c_str());
 	}
 	CatchAndReport(View3D_DemoScriptShow, window,);
 }
@@ -3143,8 +3152,9 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
 	try
 	{
-		pr::script::PtrA src(ldr_script);
-		pr::script::Reader reader(src);
+		using namespace pr::script;
+		StringSrc src(ldr_script);
+		Reader reader(src);
 		
 		pr::m4x4 o2w;
 		reader.TransformS(o2w);

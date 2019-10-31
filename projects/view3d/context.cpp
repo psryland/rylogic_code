@@ -32,7 +32,7 @@ namespace view3d
 		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
 		{
 			auto context_id  = args.m_context_id;
-			auto filepath    = args.m_loc.StreamName();
+			auto filepath    = args.m_loc.Filepath();
 			auto file_offset = args.m_loc.Pos();
 			auto complete    = args.m_complete;
 			OnAddFileProgress.Raise(args.m_cancel, context_id, filepath.c_str(), file_offset, complete);
@@ -113,21 +113,26 @@ namespace view3d
 	}
 
 	// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScriptSource(wchar_t const* filepath, bool additional, Includes const& includes)
+	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::script::EEncoding enc, bool additional, Includes const& includes)
 	{
 		// Note: this can be called from a worker thread
-		return m_sources.AddFile(filepath, includes, additional);
+		return m_sources.AddFile(filepath, enc, includes, additional);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, Includes const& includes)
+	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
 	{
 		// Note: this can be called from a worker thread
-		return m_sources.AddScript(ldr_script, file, context_id, includes);
+		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
+	}
+	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
+	{
+		// Note: this can be called from a worker thread
+		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
 	}
 
 	// Load/Add ldr objects and return the first object from the script
-	LdrObject* Context::ObjectCreateLdr(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes const& includes)
+	LdrObject* Context::ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes)
 	{
 		// Get the context id for this script
 		auto id = context_id ? *context_id : pr::GenerateGUID();
@@ -138,7 +143,7 @@ namespace view3d
 		auto count = iter != std::end(srcs) ? iter->second.m_objects.size() : 0U;
 
 		// Load the ldr script
-		LoadScript(ldr_script, file, &id, includes);
+		LoadScript(ldr_script, file, enc, &id, includes);
 
 		// Return the first object. expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context
@@ -358,7 +363,7 @@ namespace view3d
 			wnd->Remove(object);
 
 		// Update the object model
-		PtrW src(ldr_script);
+		StringSrc src(ldr_script);
 		Reader reader(src, false);
 		Update(m_rdr, object, reader, flags);
 	}
@@ -549,7 +554,7 @@ namespace view3d
 		auto scene = pr::ldr::CreateDemoScene();
 
 		// Add the demo objects to the sources
-		m_sources.AddScript(scene.c_str(), false, &GuidDemoSceneObjects, Includes());
+		m_sources.AddScript(scene, false, EEncoding::utf8, &GuidDemoSceneObjects, Includes());
 
 		// Add the demo objects to 'window'
 		window->AddObjectsById(&GuidDemoSceneObjects, 1, false);
@@ -589,7 +594,7 @@ namespace view3d
 			// 'result' is the output of the code after execution, converted to a string.
 			// Return true, if the code was executed successfully, false if not handled.
 			// If the code can be handled but has errors, throw 'std::exception's.
-			bool Execute(string const& code, bool support, string& result) override
+			bool Execute(wchar_t const* code, bool support, string_t& result) override
 			{
 				if (support)
 				{
@@ -600,12 +605,12 @@ namespace view3d
 				{
 					// Return false if the handler did not handle the given code
 					pr::bstr_t res, err;
-					if (m_handler(code.c_str(), m_support.c_str(), res, err) == 0)
+					if (m_handler(code, m_support.c_str(), res, err) == 0)
 						return false;
 
 					// If errors are reported, raise them as an exception
 					if (err != nullptr)
-						throw std::exception(pr::Narrow(err.wstr()).c_str());
+						throw std::runtime_error(pr::Narrow(err.wstr()));
 
 					// Add the string result to 'result'
 					if (res != nullptr)

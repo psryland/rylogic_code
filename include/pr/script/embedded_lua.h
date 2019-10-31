@@ -15,7 +15,7 @@ namespace pr::script
 	// An embedded code handler that supports lua code
 	struct EmbeddedLua :IEmbeddedCode
 	{
-		pr::lua::Lua m_lua;
+		lua::Lua m_lua;
 
 		// The language code that this handler is for
 		wchar_t const* Lang() const override
@@ -30,19 +30,20 @@ namespace pr::script
 		// 'result' is the output of the code after execution, converted to a string
 		// Return true, if the code was executed successfully, false if not handled.
 		// If the code can be handled but has errors, throw 'Exception's.
-		bool Execute(string const& code, bool support, string& result) override
+		bool Execute(wchar_t const* code, bool support, string_t& result) override
 		{
 			// Record the number of items on the stack
 			int base = lua_gettop(m_lua);
 
 			// Convert the lua code to a compiled chunk
-			pr::string<> error_msg;
-			if (pr::lua::PushLuaChunk(m_lua, Narrow(code), error_msg) != pr::lua::EResult::Success)
-				throw std::exception(error_msg.c_str());
+			std::string error_msg;
+			auto code_utf8 = Narrow(code);
+			if (lua::PushLuaChunk(m_lua, code_utf8, error_msg) != pr::lua::EResult::Success)
+				throw std::runtime_error(error_msg);
 
 			// Execute the chunk
-			if (!pr::lua::CallLuaChunk(m_lua, 0, false))
-				throw std::exception("Error while attempting to execute lua code");
+			if (!lua::CallLuaChunk(m_lua, 0, false))
+				throw std::runtime_error("Error while attempting to execute lua code");
 
 			// If there's something still on the stack, copy it to result
 			if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))
@@ -55,7 +56,7 @@ namespace pr::script
 			if (lua_gettop(m_lua) != base)
 			{
 				lua_settop(m_lua, base);
-				throw std::exception("lua stack height not constant");
+				throw std::runtime_error("lua stack height not constant");
 			}
 
 			// Report 'handled'

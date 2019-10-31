@@ -11,13 +11,18 @@
 namespace pr::script
 {
 	// Script exception
-	struct Exception :pr::Exception<EResult>
+	struct ScriptException :std::runtime_error
 	{
-		Location m_loc;
+		EResult m_result;
+		Loc m_loc;
 
-		Exception(EResult result, Location const& loc, std::string msg)
-			:pr::Exception<EResult>(result, msg.append("\nError Code: ").append(ToStringA(result)).append("\nLocation: ").append(Narrow(loc.ToString())))
+		ScriptException(EResult result, Loc const& loc, std::string msg)
+			:std::runtime_error(msg.append("\nError Code: ").append(Enum<EResult>::ToStringA(result)).append("\nLocation: ").append(Narrow(loc.ToString())))
+			,m_result(result)
 			,m_loc(loc)
+		{}
+		ScriptException(EResult result, Loc const& loc, std::wstring msg)
+			:ScriptException(result, loc, Narrow(msg))
 		{}
 	};
 }

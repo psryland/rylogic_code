@@ -89,35 +89,43 @@ namespace pr
 			static Str To(float from)                          { return To(static_cast<double>(from)); }
 			static Str To(long double from)                    { std::basic_stringstream<Char> ss; ss << from; return ss.str().c_str(); } // careful with long double, it's non-standard
 			
-			// Narrow/Widen raw string types
-			template <typename = enable_if<is_same<Char, char>::value>>
-			static Str To(wchar_t const* from)
+			// Narrow/Widen string types - remember type deduction doesn't work for string views
+			template <typename = std::enable_if_t<std::is_same_v<Char, char>>>
+			static Str To(std::wstring_view from)
 			{
-				return Narrow(from, wcslen(from));
+				return Narrow(from);
 			}
-			template <typename = enable_if<is_same<Char, wchar_t>::value>>
-			static Str To(char const* from)
+			template <typename = std::enable_if_t<std::is_same_v<Char, wchar_t>>>
+			static Str To(std::string_view from)
 			{
-				return Widen(from, strlen(from));
+				return Widen(from);
 			}
-
-			// Convert between strings with the same character type
-			template <typename Str2, typename Char2 = Str2::value_type, typename = enable_if<is_same<Char,Char2>::value>>
-			static Str To(Str2 const& from)
-			{
-				return Str(std::begin(from), std::end(from));
-			}
-
-			// Convert between strings with different underlying character types
+			template <typename = std::enable_if_t<std::is_same_v<Char, char>>> 
+			static Str To(wchar_t const* from) 
+			{ 
+				return To(std::wstring_view(from)); 
+			} 
+			template <typename = std::enable_if_t<std::is_same_v<Char, wchar_t>>> 
+			static Str To(char const* from) 
+			{ 
+				return To(std::string_view(from)); 
+			} 
 			template <typename Str2, typename Char2 = Str2::value_type>
 			static Str To(Str2 const& from, enable_if<is_same<Char,char>::value && is_same<Char2,wchar_t>::value> = 0)
 			{
-				return Narrow(from.c_str(), from.size());
+				return Narrow(from);
 			}
 			template <typename Str2, typename Char2 = Str2::value_type>
 			static Str To(Str2 const& from, enable_if<is_same<Char,wchar_t>::value && is_same<Char2,char>::value> = 0)
 			{
-				return Widen(from.c_str(), from.size());
+				return Widen(from);
+			}
+
+			// Convert between strings with the same character type
+			template <typename Str2, typename Char2 = Str2::value_type, typename = std::enable_if_t<std::is_same_v<Char,Char2>>>
+			static Str To(Str2 const& from)
+			{
+				return Str(std::begin(from), std::end(from));
 			}
 		};
 

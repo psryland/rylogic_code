@@ -5,50 +5,98 @@
 
 #pragma once
 
-#include <string>
+#include <exception>
 #include <memory>
-#include <fstream>
+#include <cuchar>
+#include <string>
+#include <string_view>
+#include <array>
 #include <unordered_map>
+#include <fstream>
 #include <type_traits>
 #include <filesystem>
+#include <functional>
 #include <regex>
 #include <locale>
 #include <cassert>
-#include "pr/common/exception.h"
+#include "pr/common/assert.h"
 #include "pr/common/fmt.h"
+#include "pr/common/hash.h"
+#include "pr/common/cast.h"
 #include "pr/common/scope.h"
+#include "pr/common/flags_enum.h"
 #include "pr/common/expr_eval.h"
 #include "pr/container/vector.h"
-#include "pr/container/deque.h"
 #include "pr/container/stack.h"
-#include "pr/crypt/hash.h"
+#include "pr/maths/bit_fields.h"
 #include "pr/macros/enum.h"
-#include "pr/str/string.h"
 #include "pr/str/string_core.h"
 #include "pr/str/string_util.h"
+#include "pr/str/string_filter.h"
 #include "pr/str/extract.h"
-#include "pr/filesys/file.h"
-#include "pr/filesys/filesys.h"
 
 namespace pr::script
 {
-	using string = pr::string<wchar_t>;
+	using char_t = wchar_t;
+	using string_t = std::basic_string<char_t>; // pr::string<wchar_t>;
+	using string_view_t = std::basic_string_view<char_t>;
+	using InLiteralString = str::InLiteralString<char_t>;
+	using InComment = str::InComment;
 
-	#pragma region Enumerations
+	enum class EEncoding
+	{
+		ascii,
+		utf8,
+		utf16,
+		ucs2,
+		ucs2_be,
+		auto_detect,
+		already_decoded,
+	};
 
-	#pragma region Tokens
-	#define PR_ENUM(x) /*
-		*/x(Invalid    ) /* Unknown
-		*/x(EndOfStream) /* The end of the input stream
-		*/x(Identifier ) /* An identifier
-		*/x(Keyword    ) /* A script keyword
-		*/x(Symbol     ) /* An operator or punctuator, e.g *, ->, +, ;, {, }, etc
-		*/x(Constant   ) // A literal constant
-	PR_DEFINE_ENUM1(EToken, PR_ENUM);
+	#define PR_ENUM(x)\
+		x(Success                       )\
+		x(Failed                        )\
+		x(FileNotFound                  )\
+		x(WrongEncoding                 )\
+		x(InvalidIdentifier             )\
+		x(InvalidString                 )\
+		x(InvalidValue                  )\
+		x(ParameterCountMismatch        )\
+		x(UnexpectedEndOfFile           )\
+		x(UnknownPreprocessorCommand    )\
+		x(InvalidMacroDefinition        )\
+		x(MacroNotDefined               )\
+		x(MacroAlreadyDefined           )\
+		x(IncludesNotSupported          )\
+		x(InvalidInclude                )\
+		x(MissingInclude                )\
+		x(InvalidPreprocessorDirective  )\
+		x(UnmatchedPreprocessorDirective)\
+		x(PreprocessError               )\
+		x(SyntaxError                   )\
+		x(ExpressionSyntaxError         )\
+		x(EmbeddedCodeNotSupported      )\
+		x(EmbeddedCodeError             )\
+		x(KeywordNotFound               )\
+		x(TokenNotFound                 )\
+		x(ValueNotFound                 )\
+		x(UnknownKeyword                )\
+		x(UnknownToken                  )\
+		x(UnknownValue                  )
+	PR_DEFINE_ENUM1(EResult, PR_ENUM);
 	#undef PR_ENUM
-	#pragma endregion
 
-	#pragma region C keywords
+	#define PR_ENUM(x)\
+		x(Invalid    ) /* Unknown */\
+		x(EndOfStream) /* The end of the input stream */\
+		x(Identifier ) /* An identifier */\
+		x(Keyword    ) /* A script keyword */\
+		x(Symbol     ) /* An operator or punctuator, e.g *, ->, +, ;, {, }, etc */\
+		x(Constant   ) /* A literal constant  */
+	PR_DEFINE_ENUM1(EToken, PR_ENUM); 
+	#undef PR_ENUM
+
 	#define PR_ENUM(x)\
 		x(Invalid  ,""         ,= pr::hash::HashCT(""         ))\
 		x(Auto     ,"auto"     ,= pr::hash::HashCT("auto"     ))\
@@ -83,11 +131,9 @@ namespace pr::script
 		x(If       ,"if"       ,= pr::hash::HashCT("if"       ))\
 		x(Static   ,"static"   ,= pr::hash::HashCT("static"   ))\
 		x(While    ,"while"    ,= pr::hash::HashCT("while"    ))
-	PR_DEFINE_ENUM3(EKeyword, PR_ENUM);
+	PR_DEFINE_ENUM3(EKeyword, PR_ENUM); 
 	#undef PR_ENUM
-	#pragma endregion
 
-	#pragma region Preprocessor keywords
 	#define PR_ENUM(x)\
 		x(Invalid      ,""             ,= pr::hash::HashCT(""            ))\
 		x(Include      ,"include"      ,= pr::hash::HashCT("include"     ))\
@@ -112,153 +158,68 @@ namespace pr::script
 		x(Embedded     ,"embedded"     ,= pr::hash::HashCT("embedded"    ))
 	PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 	#undef PR_ENUM
-	#pragma endregion
 
-	#pragma region Script exception values/return codes
 	#define PR_ENUM(x)\
-		x(Success                         ,= 0)\
-		x(Failed                          ,= 0x80000000)\
-		x(InvalidIdentifier               ,)\
-		x(InvalidString                   ,)\
-		x(InvalidValue                    ,)\
-		x(ParameterCountMismatch          ,)\
-		x(UnexpectedEndOfFile             ,)\
-		x(UnknownPreprocessorCommand      ,)\
-		x(InvalidMacroDefinition          ,)\
-		x(MacroNotDefined                 ,)\
-		x(MacroAlreadyDefined             ,)\
-		x(IncludesNotSupported            ,)\
-		x(InvalidInclude                  ,)\
-		x(MissingInclude                  ,)\
-		x(InvalidPreprocessorDirective    ,)\
-		x(UnmatchedPreprocessorDirective  ,)\
-		x(PreprocessError                 ,)\
-		x(SyntaxError                     ,)\
-		x(ExpressionSyntaxError           ,)\
-		x(EmbeddedCodeNotSupported        ,)\
-		x(EmbeddedCodeError               ,)\
-		x(KeywordNotFound                 ,)\
-		x(TokenNotFound                   ,)\
-		x(ValueNotFound                   ,)\
-		x(UnknownKeyword                  ,)\
-		x(UnknownToken                    ,)\
-		x(UnknownValue                    ,)\
-		x(FileNotFound                    ,)
-	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, unsigned int);
-	#undef PR_ENUM
-	#pragma endregion
-
-	#pragma region Symbols
-	#define PR_ENUM(x)/*
-		*/x(Invalid        ,""    ,=   0 ) /*
-		*/x(WhiteSpace     ," "   ,= ' ' ) /* ' ', '\t', etc
-		*/x(NewLine        ,"\n"  ,= '\n') /* '\n'
-		*/x(Assign         ,"="   ,= '=' ) /* assign
-		*/x(SemiColon      ,";"   ,= ';' ) /*
-		*/x(Complement     ,"~"   ,= '~' ) /*
-		*/x(Not            ,"!"   ,= '!' ) /*
-		*/x(Ptr            ,"*"   ,= '*' ) /* pointer, dereference, or multiply
-		*/x(AddressOf      ,"&"   ,= '&' ) /* address of, or bitwise-AND
-		*/x(Plus           ,"+"   ,= '+' ) /* unary plus, or add
-		*/x(Minus          ,"-"   ,= '-' ) /* unary negate, or subtract
-		*/x(Divide         ,"/"   ,= '/' ) /* /
-		*/x(Modulus        ,"%"   ,= '%' ) /* %
-		*/x(LessThan       ,"<"   ,= '<' ) /* <
-		*/x(GtrThan        ,">"   ,= '>' ) /* >
-		*/x(BitOr          ,"|"   ,= '|' ) /* |
-		*/x(BitXor         ,"^"   ,= '^' ) /* ^
-		*/x(Comma          ,","   ,= ',' ) /* ,
-		*/x(Conditional    ,"?"   ,= '?' ) /* ? (as in (bool) ? (statement) : (statement)
-		*/x(BraceOpen      ,"{"   ,= '{' ) /* {
-		*/x(BraceClose     ,"}"   ,= '}' ) /* }
-		*/x(BracketOpen    ,"["   ,= '[' ) /* [
-		*/x(BracketClose   ,"]"   ,= ']' ) /* ]
-		*/x(ParenthOpen    ,"("   ,= '(' ) /* (
-		*/x(ParenthClose   ,")"   ,= ')' ) /* )
-		*/x(Dot            ,"."   ,= '.' ) /* .
-		*/x(Colon          ,":"   ,= ':' ) /* :
-		*/x(Hash           ,"#"   ,= '#' ) /* #
-		*/x(Dollar         ,"$"   ,= '$' ) /* $
-		*/x(At             ,"@"   ,= '@' ) /* @
-		*/x(Increment      ,"++"  ,= 128 ) /* ++
-		*/x(Decrement      ,"--"  ,= 129 ) /* --
-		*/x(ShiftL         ,"<<"  ,= 130 ) /* <<
-		*/x(ShiftR         ,">>"  ,= 131 ) /* >>
-		*/x(LessEql        ,"<="  ,= 132 ) /* <=
-		*/x(GtrEql         ,">="  ,= 133 ) /* >=
-		*/x(Equal          ,"=="  ,= 134 ) /* ==
-		*/x(NotEqual       ,"!="  ,= 135 ) /* !=
-		*/x(LogicalAnd     ,"&&"  ,= 136 ) /* &&
-		*/x(LogicalOr      ,"||"  ,= 137 ) /* ||
-		*/x(ShiftLAssign   ,"<<=" ,= 138 ) /* <<=
-		*/x(ShiftRAssign   ,">>=" ,= 139 ) /* >>=
-		*/x(BitAndAssign   ,"&="  ,= 140 ) /* &=
-		*/x(BitOrAssign    ,"|="  ,= 141 ) /* |=
-		*/x(BitXorAssign   ,"^="  ,= 142 ) /* ^=
-		*/x(AddAssign      ,"+="  ,= 143 ) /* +=
-		*/x(SubAssign      ,"-="  ,= 144 ) /* -=
-		*/x(MulAssign      ,"*="  ,= 145 ) /* *=
-		*/x(DivAssign      ,"/="  ,= 146 ) /* /=
-		*/x(ModAssign      ,"%="  ,= 147 ) /* %=
-		*/x(Ellipsis       ,"..." ,= 148 ) // ...
+		x(Invalid        ,""    ,=   0 )\
+		x(WhiteSpace     ," "   ,= ' ' )\
+		x(NewLine        ,"\n"  ,= '\n')\
+		x(Assign         ,"="   ,= '=' )\
+		x(SemiColon      ,";"   ,= ';' )\
+		x(Complement     ,"~"   ,= '~' )\
+		x(Not            ,"!"   ,= '!' )\
+		x(Ptr            ,"*"   ,= '*' )\
+		x(AddressOf      ,"&"   ,= '&' )\
+		x(Plus           ,"+"   ,= '+' )\
+		x(Minus          ,"-"   ,= '-' )\
+		x(Divide         ,"/"   ,= '/' )\
+		x(Modulus        ,"%"   ,= '%' )\
+		x(LessThan       ,"<"   ,= '<' )\
+		x(GtrThan        ,">"   ,= '>' )\
+		x(BitOr          ,"|"   ,= '|' )\
+		x(BitXor         ,"^"   ,= '^' )\
+		x(Comma          ,","   ,= ',' )\
+		x(Conditional    ,"?"   ,= '?' )\
+		x(BraceOpen      ,"{"   ,= '{' )\
+		x(BraceClose     ,"}"   ,= '}' )\
+		x(BracketOpen    ,"["   ,= '[' )\
+		x(BracketClose   ,"]"   ,= ']' )\
+		x(ParenthOpen    ,"("   ,= '(' )\
+		x(ParenthClose   ,")"   ,= ')' )\
+		x(Dot            ,"."   ,= '.' )\
+		x(Colon          ,":"   ,= ':' )\
+		x(Hash           ,"#"   ,= '#' )\
+		x(Dollar         ,"$"   ,= '$' )\
+		x(At             ,"@"   ,= '@' )\
+		x(Increment      ,"++"  ,= 128 )\
+		x(Decrement      ,"--"  ,= 129 )\
+		x(ShiftL         ,"<<"  ,= 130 )\
+		x(ShiftR         ,">>"  ,= 131 )\
+		x(LessEql        ,"<="  ,= 132 )\
+		x(GtrEql         ,">="  ,= 133 )\
+		x(Equal          ,"=="  ,= 134 )\
+		x(NotEqual       ,"!="  ,= 135 )\
+		x(LogicalAnd     ,"&&"  ,= 136 )\
+		x(LogicalOr      ,"||"  ,= 137 )\
+		x(ShiftLAssign   ,"<<=" ,= 138 )\
+		x(ShiftRAssign   ,">>=" ,= 139 )\
+		x(BitAndAssign   ,"&="  ,= 140 )\
+		x(BitOrAssign    ,"|="  ,= 141 )\
+		x(BitXorAssign   ,"^="  ,= 142 )\
+		x(AddAssign      ,"+="  ,= 143 )\
+		x(SubAssign      ,"-="  ,= 144 )\
+		x(MulAssign      ,"*="  ,= 145 )\
+		x(DivAssign      ,"/="  ,= 146 )\
+		x(ModAssign      ,"%="  ,= 147 )\
+		x(Ellipsis       ,"..." ,= 148 )
 	PR_DEFINE_ENUM3(ESymbol, PR_ENUM);
 	#undef PR_ENUM
-	#pragma endregion
 
-	#pragma region Literal types
 	#define PR_ENUM(x)\
 		x(Invalid       )\
 		x(StringLiteral )\
 		x(WStringLiteral)\
 		x(Integral      )\
 		x(FloatingPoint )
-	PR_DEFINE_ENUM1(EConstant, PR_ENUM);
-	#undef PR_ENUM
-	#pragma endregion
-
-	#pragma region Source types, mainly used for debugging
-	enum class ESrcType
-	{
-		Unknown,
-		Null,
-		Pointer,
-		Range,
-		Buffered,
-		File,
-		Eval,
-		EmbeddedCode,
-		Macro,
-		Preprocessor,
-	};
-	#pragma endregion
-
-	#pragma endregion
-
-	// Helper for a generic character pointer
-	union SrcConstPtr
-	{
-		wchar_t const* wptr;
-		char    const* aptr;
-		SrcConstPtr() :wptr() {}
-		SrcConstPtr(wchar_t const* p) :wptr(p) {}
-		SrcConstPtr(char const* p) :aptr(p) {}
-	};
+	PR_DEFINE_ENUM1(EConstant, PR_ENUM); 
+	#undef PR_ENUM 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

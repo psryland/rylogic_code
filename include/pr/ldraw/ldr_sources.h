@@ -7,9 +7,11 @@
 // A container of Ldr script sources that can watch for external change.
 
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#include <filesystem>
 #include <mutex>
 #include "pr/common/guid.h"
 #include "pr/container/vector.h"
@@ -34,10 +36,10 @@ namespace pr
 
 		public:
 
-			using filepath_t = pr::string<wchar_t>;
-			using Location = pr::script::Location;
+			using Location = pr::script::Loc;
 			using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 			using GuidCont = pr::vector<Guid>;
+			using EmbeddedCodeFactory = pr::script::EmbeddedCodeFactory;
 
 			// Reasons for changes to the sources collection
 			enum class EReason
@@ -50,16 +52,18 @@ namespace pr
 			// An Ldr script source
 			struct Source
 			{
-				ObjectCont           m_objects;    // Objects created by this source
-				pr::Guid             m_context_id; // Id for the group of files that this object is part of
-				filepath_t           m_filepath;   // The filepath of the source (if there is one)
-				pr::script::Includes m_includes;   // Include paths to use with this file
-				pr::Camera           m_cam;        // Camera properties associated with this source
-				ECamField            m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
+				ObjectCont            m_objects;    // Objects created by this source
+				Guid                  m_context_id; // Id for the group of files that this object is part of
+				std::filesystem::path m_filepath;   // The filepath of the source (if there is one)
+				script::EEncoding     m_encoding;   // The file encoding
+				script::Includes      m_includes;   // Include paths to use with this file
+				Camera                m_cam;        // Camera properties associated with this source
+				ECamField             m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
 
 				Source()
 					:m_context_id(pr::GuidZero)
 					,m_filepath()
+					,m_encoding(script::EEncoding::auto_detect)
 					,m_includes()
 					,m_cam()
 					,m_cam_fields(ECamField::None)
@@ -67,19 +71,21 @@ namespace pr
 				Source(Guid const& context_id)
 					:m_context_id(context_id)
 					,m_filepath()
+					,m_encoding(script::EEncoding::auto_detect)
 					,m_includes()
 					,m_cam()
 					,m_cam_fields(ECamField::None)
 				{}
-				Source(Guid const& context_id, wchar_t const* filepath, script::Includes const& includes)
+				Source(Guid const& context_id, std::filesystem::path const&  filepath, script::EEncoding enc, script::Includes const& includes)
 					:m_context_id(context_id)
-					,m_filepath(pr::filesys::Standardise<filepath_t>(filepath))
+					,m_filepath(std::filesystem::canonical(filepath))
+					,m_encoding(enc)
 					,m_includes(includes)
 					,m_cam()
 					,m_cam_fields(ECamField::None)
 				{
 					if (!m_filepath.empty())
-						m_includes.AddSearchPath(pr::filesys::GetDirectory(m_filepath));
+						m_includes.AddSearchPath(m_filepath.parent_path());
 				}
 				bool IsFile() const
 				{
@@ -154,17 +160,17 @@ namespace pr
 
 		private:
 
-			SourceCont                      m_srcs;           // The sources of ldr script
-			GizmoCont                       m_gizmos;         // The created ldr gizmos
-			pr::Renderer*                   m_rdr;            // Renderer used to create models
-			pr::script::EmbeddedCodeFactory m_emb_factory;    // Embedded code handler factory
-			GuidSet                         m_loading;        // File group ids in the process of being reloaded
-			pr::FileWatch                   m_watcher;        // The watcher of files
-			std::thread::id                 m_main_thread_id; // The main thread id
+			SourceCont          m_srcs;           // The sources of ldr script
+			GizmoCont           m_gizmos;         // The created ldr gizmos
+			pr::Renderer*       m_rdr;            // Renderer used to create models
+			EmbeddedCodeFactory m_emb_factory;    // Embedded code handler factory
+			GuidSet             m_loading;        // File group ids in the process of being reloaded
+			pr::FileWatch       m_watcher;        // The watcher of files
+			std::thread::id     m_main_thread_id; // The main thread id
 
 		public:
 
-			ScriptSources(pr::Renderer& rdr, pr::script::EmbeddedCodeFactory emb_factory)
+			ScriptSources(pr::Renderer& rdr, EmbeddedCodeFactory emb_factory)
 				:m_srcs()
 				,m_gizmos()
 				,m_rdr(&rdr)
@@ -304,7 +310,7 @@ namespace pr
 			}
 
 			// Remove a file source
-			void RemoveFile(wchar_t const* filepath, EReason reason = EReason::Removal)
+			void RemoveFile(std::filesystem::path const& filepath, EReason reason = EReason::Removal)
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -338,7 +344,7 @@ namespace pr
 					m_loading.insert(file.m_context_id);
 
 					// Fire off a thread to add the file
-					std::thread([=]{ AddFile(file.m_filepath.c_str(), EReason::Reload, file.m_context_id, file.m_includes, true); }).detach();
+					std::thread([=]{ AddFile(file.m_filepath, file.m_encoding, EReason::Reload, file.m_context_id, file.m_includes, true); }).detach();
 				}
 			}
 
@@ -364,19 +370,25 @@ namespace pr
 			// Add a file source.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddFile(wchar_t const* filepath, script::Includes const& includes, bool additional)
+			Guid AddFile(std::filesystem::path const& filepath, script::EEncoding enc, script::Includes const& includes, bool additional)
 			{
-				return AddFile(filepath, EReason::NewData, pr::GenerateGUID(), includes, additional);
+				return AddFile(filepath, enc, EReason::NewData, pr::GenerateGUID(), includes, additional);
 			}
 
 			// Add ldr objects from a script string or file (but not as a file source).
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddScript(wchar_t const* ldr_script, bool file, Guid const* context_id, script::Includes const& includes)
+			Guid AddScript(std::wstring_view ldr_script, bool file, script::EEncoding enc, Guid const* context_id, script::Includes const& includes)
 			{
 				// Create a context id if none given
 				auto guid = context_id ? *context_id : pr::GenerateGUID();
-				return AddScript(ldr_script, file, EReason::NewData, guid, includes);
+				return AddScript(ldr_script, file, enc, EReason::NewData, guid, includes);
+			}
+			Guid AddScript(std::string_view ldr_script, bool file, script::EEncoding enc, Guid const* context_id, script::Includes const& includes)
+			{
+				// Create a context id if none given
+				auto guid = context_id ? *context_id : pr::GenerateGUID();
+				return AddScript(ldr_script, file, enc, EReason::NewData, guid, includes);
 			}
 
 			// Create a gizmo object and add it to the gizmo collection
@@ -395,13 +407,13 @@ namespace pr
 			}
 
 			// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
-			Guid const* ContextIdFromFilepath(wchar_t const* filepath) const
+			Guid const* ContextIdFromFilepath(std::filesystem::path const& filepath) const
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
 				// Find the corresponding source in the sources collection
-				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
-				auto iter = pr::find_if(m_srcs, [=](auto& src){ return src.second.m_filepath == fpath; });
+				auto fpath = std::filesystem::canonical(filepath);
+				auto iter = pr::find_if(m_srcs, [=](auto& src){ return std::filesystem::equivalent(src.second.m_filepath, fpath); });
 				return iter != std::end(m_srcs) ? &iter->second.m_context_id : nullptr;
 			}
 
@@ -423,11 +435,12 @@ namespace pr
 
 				// Reload that file group (asynchronously)
 				auto filepath = root_file.m_filepath;
+				auto encoding = root_file.m_encoding;
 				auto ctx_id = root_file.m_context_id;
 				auto inc = root_file.m_includes;
 				std::thread([=]
 				{
-					auto id = AddFile(filepath.c_str(), EReason::Reload, ctx_id, inc, true);
+					auto id = AddFile(filepath.c_str(), encoding, EReason::Reload, ctx_id, inc, true);
 					if (id != pr::GuidZero)
 						return;
 
@@ -441,22 +454,22 @@ namespace pr
 			// Note: 'file' not passed by reference because it can be a file already in the collection, so we need a local copy.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddFile(wchar_t const* ldr_file, EReason reason, Guid const& context_id, script::Includes const& includes, bool additional) // worker thread context
+			Guid AddFile(std::filesystem::path const& ldr_file, script::EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes, bool additional) // worker thread context
 			{
 				using namespace pr::script;
-				assert(ldr_file && *ldr_file != 0);
+				assert(!ldr_file.empty());
 
 				// Create a file source
-				Source file(context_id, ldr_file, includes);
+				Source file(context_id, ldr_file, enc, includes);
 
 				// Record the files that get included so we can watch them for changes
-				pr::vector<filepath_t> filepaths;
+				pr::vector<std::filesystem::path> filepaths;
 				filepaths.push_back(file.m_filepath);
-				auto file_opened = [&](filepath_t const& fp)
+				auto file_opened = [&](std::filesystem::path const& fp)
 				{
 					// Add the directory of the included file to the paths
-					file.m_includes.AddSearchPath(filesys::GetDirectory(fp));
-					filepaths.push_back(filesys::Standardise(fp));
+					file.m_includes.AddSearchPath(fp.parent_path());
+					filepaths.push_back(std::filesystem::canonical(fp));
 				};
 
 				// Parse the contents of the file
@@ -466,32 +479,34 @@ namespace pr
 				try
 				{
 					// Add the file based on it's file type
-					auto extn = filesys::GetExtension(file.m_filepath);
-					if (str::EqualI(extn, "lua"))
+					auto extn = file.m_filepath.extension();
+					if (str::EqualI(extn.c_str(), ".lua"))
 					{
 						// Lua script that generates ldr script
 						//m_lua_src.Add(fpath.c_str());
 					}
-					else if (str::EqualI(extn, "p3d") || str::EqualI(extn, "stl"))
+					else if (str::EqualI(extn.c_str(), ".p3d") || str::EqualI(extn.c_str(), ".stl"))
 					{
 						// P3D = My custom binary model file format
 						// STL = "Stereolithography" model files (binary and text)
-						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
+						auto script = FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str());
+						StringSrc src(script, StringSrc::EFlags::BufferLocally);
 						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
-						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, out, file.m_context_id, StaticCallBack(AddFileProgressCB, this));
 					}
-					else if (str::EqualI(extn, "csv"))
+					else if (str::EqualI(extn.c_str(), ".csv"))
 					{
 						// CSV data, create a chart to graph the data
-						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str()));
+						auto script = FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str());
+						StringSrc src(script, StringSrc::EFlags::BufferLocally);
 						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else
 					{
 						// Assume an ldr script file
-						pr::LockFile lock(file.m_filepath, 10, 5000);
-						FileSrc src(file.m_filepath.c_str());
+						LockFile lock(file.m_filepath, 10, 5000);
+						FileSrc src(file.m_filepath, 0, enc);
 
 						// When the include handler opens files, add them to the watcher as well
 						file.m_includes.FileOpened = file_opened;
@@ -501,13 +516,13 @@ namespace pr
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 				}
-				catch (pr::script::Exception const& ex)
+				catch (ScriptException const& ex)
 				{
-					errors = ErrorEventArgs(pr::Fmt(L"Script error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
+					errors = ErrorEventArgs(Fmt(L"Script error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
 				}
 				catch (std::exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::Fmt(L"Error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
+					errors = ErrorEventArgs(Fmt(L"Error found while parsing source file '%s'.\r\n", file.m_filepath.c_str()) + Widen(ex.what()));
 				}
 				#pragma endregion
 
@@ -519,7 +534,7 @@ namespace pr
 					if (!additional)
 						ClearAll();
 					else
-						RemoveFile(file.m_filepath.c_str(), reason);
+						RemoveFile(file.m_filepath, reason);
 
 					// Remove from the 'loading' set
 					m_loading.erase(file.m_context_id);
@@ -558,7 +573,8 @@ namespace pr
 			// Add ldr objects from a script string or file (but not as a file source).
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to
-			Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, Guid const& context_id, script::Includes const& includes) // worker thread context
+			template <typename Char>
+			Guid AddScript(std::basic_string_view<Char> ldr_script, bool file, script::EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes) // worker thread context
 			{
 				using namespace pr::script;
 
@@ -573,26 +589,27 @@ namespace pr
 				{
 					if (file)
 					{
-						inc.AddSearchPath(filesys::GetDirectory<script::string>(ldr_script));
+						auto filepath = std::filesystem::path(ldr_script);
+						inc.AddSearchPath(filepath.parent_path());
 
-						FileSrc src(ldr_script);
+						FileSrc src(filepath, 0, enc);
 						Reader reader(src, false, &inc, nullptr, m_emb_factory);
 						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 					else // string
 					{
-						PtrW src(ldr_script);
+						StringSrc src(ldr_script, StringSrc::EFlags::None, enc);
 						Reader reader(src, false, &inc, nullptr, m_emb_factory);
 						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 				}
-				catch (pr::script::Exception const& ex)
+				catch (ScriptException const& ex)
 				{
-					errors = ErrorEventArgs(pr::Fmt(L"Script error found while parsing script.\r\n%S", ex.what()));
+					errors = ErrorEventArgs(Fmt(L"Script error found while parsing script.\r\n%S", ex.what()));
 				}
 				catch (std::exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::Fmt(L"Error found while parsing script.\r\n%S", ex.what()));
+					errors = ErrorEventArgs(Fmt(L"Error found while parsing script.\r\n%S", ex.what()));
 				}
 				#pragma endregion
 
@@ -616,7 +633,7 @@ namespace pr
 
 					// Throw on errors
 					if (!errors.m_msg.empty())
-						throw std::exception(Narrow(errors.m_msg).c_str());
+						throw std::runtime_error(Narrow(errors.m_msg));
 				};
 
 				// Marshal to the main thread if this is a worker thread context

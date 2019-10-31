@@ -40,40 +40,36 @@ namespace pr
 	}
 
 	// Narrow
-	inline std::string Narrow(char const* from, std::size_t len = 0)
+	inline std::string Narrow(std::string const& from)
 	{
-		if (!from) return std::string();
-		if (len == 0) len = strlen(from);
-		return std::string(from, from+len);
+		return from;
 	}
-	inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
+	inline std::string Narrow(std::string_view from)
 	{
-		if (!from) return std::string();
-		if (len == 0) len = wcslen(from);
-		std::vector<char> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
-		return std::string(&buffer[0], &buffer[len]);
+		return std::string(from);
 	}
-	inline std::string Narrow(std::string const& from)  { return from; }
-	inline std::string Narrow(std::wstring const& from) { return Narrow(from.c_str(), from.size()); }
+	inline std::string Narrow(std::wstring_view from)
+	{
+		std::string buffer(from.size(), '\0');
+		std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from.data(), from.data() + from.size(), '_', &buffer[0]);
+		return std::move(buffer);
+	}
 
 	// Widen
-	inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
+	inline std::wstring Widen(std::wstring const& from)
 	{
-		if (!from) return std::wstring();
-		if (len == 0) len = wcslen(from);
-		return std::wstring(from, from+len);
+		return from;
 	}
-	inline std::wstring Widen(char const* from, std::size_t len = 0)
+	inline std::wstring Widen(std::wstring_view from)
 	{
-		if (!from) return std::wstring();
-		if (len == 0) len = strlen(from);
-		std::vector<wchar_t> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
-		return std::wstring(&buffer[0], &buffer[len]);
+		return std::wstring(from);
 	}
-	inline std::wstring Widen(std::wstring const& from) { return from; }
-	inline std::wstring Widen(std::string const& from)  { return Widen(from.c_str(), from.size()); }
+	inline std::wstring Widen(std::string_view from)
+	{
+		std::wstring buffer(from.size(), '\0');
+		std::use_facet<std::ctype<wchar_t>>(locale()).widen(from.data(), from.data() + from.size(), &buffer[0]);
+		return std::move(buffer);
+	}
 
 	#pragma endregion
 
