@@ -1,11 +1,8 @@
 Immediate ToDo:
 	
 LDraw
-	- Clean up ldr_object.cpp
-		- Include comments in templates
-
-	- move ObjectManager to pr.view3d
 	- Auto complete in scripts
+	- move ObjectManager to pr.view3d
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
 	- shift+ctrl jumps back to the start of orientation, make it not do that
 	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z

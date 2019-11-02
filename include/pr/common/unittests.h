@@ -205,6 +205,16 @@ namespace pr::unittests
 	{
 		return Len1 == Len2 && memcmp(lhs, rhs, sizeof(T) * Len1) == 0;
 	}
+	template <typename T, typename U> inline bool UTEqual(T const* lhs, std::initializer_list<U> rhs)
+	{
+		int i = 0;
+		for (auto& r : rhs)
+		{
+			if (lhs[i++] == r) continue;
+			return false;
+		}
+		return true;
+	}
 	inline bool UTEqual(double lhs, double rhs)                 { return ::abs(rhs - lhs) < DBL_EPSILON; }
 	inline bool UTEqual(float lhs, float rhs)                   { return ::fabs(rhs - lhs) < FLT_EPSILON; }
 	inline bool UTEqual(char const* lhs, char const* rhs)       { return strcmp(lhs, rhs) == 0; }
@@ -281,8 +291,8 @@ namespace pr::unittests
 	#define PR_FAIL(msg)\
 		Assert::Fail(msg)
 
-	#define PR_CHECK(expr, expected_result)\
-		Assert::IsTrue(pr::unittests::UTEqual((expr), expected_result), L#expr)
+	#define PR_CHECK(expr, ...)\
+		Assert::IsTrue(pr::unittests::UTEqual((expr), __VA_ARGS__), L#expr)
 
 	#define PR_THROWS(func, what)\
 		Assert::ExpectException<what>(func, L#func)

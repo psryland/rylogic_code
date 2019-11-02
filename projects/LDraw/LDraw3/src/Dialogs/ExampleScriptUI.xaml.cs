@@ -5,11 +5,9 @@ namespace LDraw.Dialogs
 {
 	public partial class ExampleScriptUI :Window
 	{
-		public ExampleScriptUI(Window owner)
+		public ExampleScriptUI()
 		{
 			InitializeComponent();
-			Owner = owner;
-			Icon = owner?.Icon;
 			m_scintilla_control.Text = View3d.ExampleScript;
 		}
 	}

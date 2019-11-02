@@ -305,7 +305,7 @@ namespace pr::str
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractLine(Str& line, Ptr& src, bool inc_cr, Char const* newline = nullptr)
 	{
 		if (newline == nullptr) newline = PR_STRLITERAL(Char,"\n");
-		auto len = Length(line);
+		auto len = Size(line);
 		for (;*src && *FindChar(newline, *src) == 0; Append(line, len++, *src), ++src) {}
 		if (*src && inc_cr) { Append(line, len++, *src); ++src; }
 		return true;
@@ -327,7 +327,7 @@ namespace pr::str
 			return false;
 
 		// Copy up to the next delimiter
-		auto len = Length(token);
+		auto len = Size(token);
 		for (Append(token, len++, *src), ++src; *src && *FindChar(delim, *src) == 0; Append(token, len++, *src), ++src) {}
 		return true;
 	}

@@ -49,14 +49,14 @@ namespace view3d
 		void WindowDestroy(Window* window);
 
 		// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-		pr::Guid LoadScriptSource(std::filesystem::path const& filepath, pr::script::EEncoding enc, bool additional, pr::script::Includes const& includes);
+		pr::Guid LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, bool additional, pr::script::Includes const& includes);
 
 		// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-		pr::Guid LoadScript(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
-		pr::Guid LoadScript(std::string_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
+		pr::Guid LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
+		pr::Guid LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
 
 		// Load/Add ldr objects and return the first object from the script
-		pr::ldr::LdrObject* ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
+		pr::ldr::LdrObject* ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes);
 
 		// Create an object from geometry
 		pr::ldr::LdrObject* ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, pr::uint16 const* indices, View3DNugget const* nuggets, pr::Guid const& context_id);

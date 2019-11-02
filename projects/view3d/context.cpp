@@ -113,26 +113,26 @@ namespace view3d
 	}
 
 	// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::script::EEncoding enc, bool additional, Includes const& includes)
+	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, bool additional, Includes const& includes)
 	{
 		// Note: this can be called from a worker thread
 		return m_sources.AddFile(filepath, enc, includes, additional);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
+	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
 	{
 		// Note: this can be called from a worker thread
 		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
 	}
-	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
+	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
 	{
 		// Note: this can be called from a worker thread
 		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
 	}
 
 	// Load/Add ldr objects and return the first object from the script
-	LdrObject* Context::ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::script::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes)
+	LdrObject* Context::ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes)
 	{
 		// Get the context id for this script
 		auto id = context_id ? *context_id : pr::GenerateGUID();
@@ -554,7 +554,7 @@ namespace view3d
 		auto scene = pr::ldr::CreateDemoScene();
 
 		// Add the demo objects to the sources
-		m_sources.AddScript(scene, false, EEncoding::utf8, &GuidDemoSceneObjects, Includes());
+		m_sources.AddScript(scene, false, pr::EEncoding::utf8, &GuidDemoSceneObjects, Includes());
 
 		// Add the demo objects to 'window'
 		window->AddObjectsById(&GuidDemoSceneObjects, 1, false);

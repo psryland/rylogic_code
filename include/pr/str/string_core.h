@@ -18,19 +18,169 @@
 #include <functional>
 #include <type_traits>
 #include <locale>
-#include <cstring>
-#include <cstdarg>
-#include <cstdlib>
-#include <cassert>
 
 // Use this define to declare a string literal in a function templated on 'tchar'
 #ifndef PR_STRLITERAL
-#define PR_STRLITERAL(tchar,s)  pr::str::char_traits<tchar>::str(s, L##s)
+#define PR_STRLITERAL(tchar,s)  pr::char_traits<tchar>::str(s, L##s)
 #endif
 
 namespace pr
 {
-	#pragma region Locale
+	// Convert an int to a byte
+	inline constexpr char operator "" _uc(unsigned long long arg) noexcept
+	{
+		return static_cast<unsigned char>(arg & 0xFF);
+	}
+
+	// Convert an int to a char8
+	inline constexpr char operator "" _c8(unsigned long long arg) noexcept
+	{
+		return static_cast<char>(arg & 0xFF);
+	}
+
+	// Convert an int to a wchar_t
+	inline constexpr wchar_t operator "" _wc(unsigned long long arg) noexcept
+	{
+		return static_cast<wchar_t>(arg & 0xFFFF);
+	}
+
+	#pragma region Char Traits
+
+	// Is 'T' a char or wchar_t
+	template <typename T> struct is_char :std::false_type {};
+	template <typename T> constexpr bool is_char_v = is_char<T>::value;
+	template <> struct is_char<char> :std::true_type {};
+	template <> struct is_char<wchar_t> :std::true_type {};
+	template <> struct is_char<char16_t> :std::true_type {};
+	template <> struct is_char<char32_t> :std::true_type {};
+	template <typename T> using enable_if_char_t = typename std::enable_if_t<is_char<T>::value>;
+
+	// Extend char traits
+	template <typename TChar> struct char_traits;
+
+	// 'char' traits
+	template <> struct char_traits<char> :std::char_traits<char>
+	{
+		static constexpr char const* str(char const* str, wchar_t const*) { return str; }
+
+		static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
+		static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
+
+		static size_t strlen(char const* str)                               { return ::strlen(str); }
+		static size_t strnlen(char const* str, size_t max_count)            { return ::strnlen(str, max_count); }
+
+		static int strcmp(char const* lhs, char const* rhs)                     { return ::strcmp(lhs, rhs); }
+		static int strncmp(char const* lhs, char const* rhs, size_t max_count)  { return ::strncmp(lhs, rhs, max_count); }
+		static int strnicmp(char const* lhs, char const* rhs, size_t max_count) { return ::_strnicmp(lhs, rhs, max_count); }
+
+		static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
+		static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
+		static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
+		static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
+		static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
+	};
+	template <> struct char_traits<char&      > :char_traits<char> {};
+	template <> struct char_traits<char const > :char_traits<char> {};
+	template <> struct char_traits<char const&> :char_traits<char const> {};
+
+	// wchar_t traits
+	template <> struct char_traits<wchar_t> :std::char_traits<wchar_t>
+	{
+		static wchar_t const* str(char const*, wchar_t const* str) { return str; }
+
+		static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
+		static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
+
+		static size_t strlen(wchar_t const* str)                    { return ::wcslen(str); }
+		static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
+
+		static int strcmp(wchar_t const* lhs, wchar_t const* rhs)                     { return ::wcscmp(lhs, rhs); }
+		static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)  { return ::wcsncmp(lhs, rhs, max_count); }
+		static int strnicmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count) { return ::_wcsnicmp(lhs, rhs, max_count); }
+
+		static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
+		static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
+		static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
+		static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
+		static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
+	};
+	template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
+	template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
+	template <> struct char_traits<wchar_t const&> :char_traits<wchar_t const> {};
+
+	// char16_t traits
+	template <> struct char_traits<char16_t> : std::char_traits<char16_t> {};
+
+	// char32_t traits
+	template <> struct char_traits<char32_t> : std::char_traits<char32_t> {};
+
+	#pragma endregion
+
+	#pragma region String Traits
+
+	template <typename Str> struct string_traits :char_traits<typename Str::value_type>
+	{
+		using value_type = typename Str::value_type;
+
+		static value_type const* ptr(Str const& str) { return str.data(); }
+		static value_type* ptr(Str& str)             { return str.data(); }
+		static size_t size(Str const& str)           { return str.size(); }
+		static bool empty(Str const& str)            { return str.empty(); }
+		static void resize(Str& str, size_t n)       { str.resize(n); }  // note: does not guarantee to fill for all string types
+	};
+	template <typename Str> struct string_traits<Str const> :char_traits<typename Str::value_type>
+	{
+		using value_type = typename Str::value_type const;
+
+		static value_type const* ptr(Str const& str) { return str.data(); }
+		static value_type* ptr(Str& str)             { return str.data(); }
+		static size_t size(Str const& str)           { return str.size(); }
+		static bool empty(Str const& str)            { return str.empty(); }
+	};
+	template <typename Char> struct string_traits<Char const*> :char_traits<Char>
+	{
+		using value_type = Char const;
+
+		static value_type const* ptr(Char const* str) { return str; }
+		static value_type* ptr(Char* str)             { return str; }
+		static size_t size(Char const* str)           { return length(str); }
+		static bool empty(Char const* str)            { return *str == 0; }
+	};
+	template <typename Char> struct string_traits<Char*> :char_traits<Char>
+	{
+		using value_type = Char;
+
+		static value_type const* ptr(Char const* str) { return str; }
+		static value_type* ptr(Char* str)             { return str; }
+		static size_t size(Char const* str)           { return length(str); }
+		static bool empty(Char const* str)            { return *str == 0; }
+		static void resize(Char* str, size_t n)       { str[n] = 0; }
+	};
+	template <typename Char> struct string_traits<Char const* const> :string_traits<Char const*>
+	{};
+	template <typename Char> struct string_traits<Char* const> :string_traits<Char*>
+	{};
+	template <typename Char, size_t Len> struct string_traits<Char const[Len]> :string_traits<Char const*>
+	{};
+	template <typename Char, size_t Len> struct string_traits<Char[Len]> :string_traits<Char*>
+	{};
+
+	#pragma endregion
+
+	#pragma region Encoding
+
+	// String encodings
+	enum class EEncoding
+	{
+		ascii,
+		utf8,
+		utf16,
+		utf32,
+		ucs2,
+		ucs2_be,
+		auto_detect,
+		already_decoded,
+	};
 
 	// A static instance of the locale, because this thing takes ages to construct
 	inline std::locale const& locale()
@@ -39,178 +189,333 @@ namespace pr
 		return s_locale;
 	}
 
-	// Narrow
-	inline std::string Narrow(std::string const& from)
+	// Return 'str_in' as type 'ToStr' avoiding the copy if possible
+	template <typename ToStr, typename FromStr>
+	ToStr ReturnStr(FromStr const& str_in)
+	{
+		if constexpr (std::is_same_v<FromStr, ToStr>)
+		{
+			return str_in;
+		}
+		else if constexpr (std::is_convertible_v<FromStr, ToStr>)
+		{
+			return str_in;
+		}
+		else if constexpr (std::is_constructible_v<ToStr, FromStr>)
+		{
+			return ToStr(str_in);
+		}
+		else
+		{
+			ToStr str_out;
+			auto length = string_traits<FromStr>::size(str_in);
+			string_traits<ToStr>::resize(str_out, length);
+			auto s = string_traits<FromStr>::ptr(str_in);
+			auto d = string_traits<ToStr>::ptr(str_out);
+			for (;length-- != 0; ++s, ++d)
+				*d = static_cast<typename string_traits<ToStr>::value_type>(*s);
+			return str_out;
+		}
+	}
+
+	// Apply 'converter' to 'str_in'
+	template <typename ToStr, typename FromStr, typename Converter, typename = std::enable_if_t<std::is_base_of_v<std::codecvt_base, Converter>>>
+	ToStr ConvertEncoding(FromStr const& str_in, Converter& converter)
+	{
+		using in_traits  = string_traits<FromStr>;
+		using out_traits = string_traits<ToStr>;
+		using intern_type = typename Converter::intern_type;
+		using extern_type = typename Converter::extern_type;
+
+		// Create the string to be returned
+		ToStr str_out;
+		
+		// Set the initial string size based on the relative size of the characters
+		out_traits::resize(str_out, std::max(16ULL, in_traits::size(str_in)));
+
+		// Get pointers to the 'from' string
+		auto in_beg = in_traits::ptr(str_in);
+		auto in_end = in_beg + in_traits::size(str_in);
+		auto in_next = in_beg;
+		auto in = in_beg;
+
+		// Get pointers to the 'to' string
+		auto out_beg = out_traits::ptr(str_out);
+		auto out_end = out_beg + out_traits::size(str_out);
+		auto out_next = out_beg;
+		auto out = out_beg;
+
+		// Loop until all of 'str_in' has been converted
+		for (auto mb = std::mbstate_t{};;)
+		{
+			int r;
+
+			// Convert as many characters as will fit in 'out'
+			if constexpr (std::is_same_v<in_traits::value_type, intern_type>)
+			{
+				r = converter.out(mb, in, in_end, in_next, out, out_end, out_next);
+			}
+			else if constexpr (std::is_same_v<out_traits::value_type, intern_type>)
+			{
+				r = converter.in(mb, in, in_end, in_next, out, out_end, out_next);
+			}
+			else if constexpr (std::is_same_v<in_traits::value_type, wchar_t> && std::is_same_v<intern_type, char16_t>)
+			{
+				r = converter.out(mb,
+					reinterpret_cast<intern_type const*>(in), 
+					reinterpret_cast<intern_type const*>(in_end), 
+					reinterpret_cast<intern_type const*&>(in_next), 
+					out, out_end, out_next);
+			}
+			else if constexpr (std::is_same_v<out_traits::value_type, wchar_t> && std::is_same_v<intern_type, char16_t>)
+			{
+				r = converter.in(mb,
+					in, in_end, in_next, 
+					reinterpret_cast<intern_type*>(out),
+					reinterpret_cast<intern_type*>(out_end),
+					reinterpret_cast<intern_type*&>(out_next));
+			}
+			else
+			{
+				static_assert(false, "Converter type mismatch");
+			}
+
+			// 'str_in' has been completely converted
+			if (r == std::codecvt_base::ok && in_next == in_end)
+			{
+				// Trim the out string to the correct length
+				out_traits::resize(str_out, out_next - out_beg);
+				break;
+			}
+			
+			// 'Out' is not big enough, allocate more space and carry on
+			if (r == std::codecvt_base::ok || r == std::codecvt_base::partial)
+			{
+				// The number of characters converted so far
+				auto out_count = out_next - out_beg;
+
+				// Grow 'str_out' can continue converting
+				out_traits::resize(str_out, str_out.size() * 3 / 2);
+				out_beg = out_traits::ptr(str_out);
+				out_end = out_beg + out_traits::size(str_out);
+				out = out_beg + out_count;
+				in = in_next;
+				continue;
+			}
+
+			// 'str_in' contains an encoding error
+			r == std::codecvt_base::error
+				? throw std::runtime_error("Encoding error in input string")
+				: throw std::runtime_error("Unexpected encoding return code");
+		}
+
+		return str_out;
+	}
+
+	// String encoding conversion
+	template <EEncoding ToEnc, typename ToStr, EEncoding FromEnc, typename FromStr>
+	ToStr ConvertEncoding(FromStr const& str_in, [[maybe_unused]] char dflt = '_')
+	{
+		// Notes:
+		//  - The size of 'wchar_t' is platform specific (i.e. not portable)
+		//  - UCS2 is a subset of utf-16.
+		//  - Windows used UCS2 up to Windows 2000, after that utf-16 is used.
+		//  - char16_t is used for utf-16
+		//  - char8_t is used for utf-8, 
+		//  - char can be ascii or utf-8
+		//  - wchar_t can be utf-16, ucs2, or whatever
+		//  - the codecvt class seems to infer the encoding from the character type
+		//  - The windows API actually uses utf-16 but codecvt<wchar_t, char>,..> doesn't accept 
+		// Old Methods:
+		//   std::string buffer(from.size(), '\0');
+		//   std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from.data(), from.data() + from.size(), '_', &buffer[0]);
+		//   return std::move(buffer);
+		//   
+		//   std::wstring buffer(from.size(), '\0');
+		//   std::use_facet<std::ctype<wchar_t>>(locale()).widen(from.data(), from.data() + from.size(), &buffer[0]);
+		//   return std::move(buffer);
+		//   
+		//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
+		//   auto wide = convert.from_bytes(from.data(), from.data() + from.size());
+		//   return std::move(wide);
+
+		if constexpr (false) {}
+		else if constexpr (ToEnc == EEncoding::ascii)
+		{
+			if constexpr (false) {}
+			else if constexpr (FromEnc == EEncoding::ascii)
+			{
+				// ASCII to ASCII is a no-op
+				return ReturnStr<ToStr>(str_in);
+			}
+			else if constexpr (FromEnc == EEncoding::utf8)
+			{
+				// UTF-8 to ASCII
+				auto str_out = ReturnStr<ToStr>(str_in);
+				for (auto& ch : str_out) ch = ch <= 127 ? ch : dflt;
+				return str_out;
+			}
+			else if constexpr (FromEnc == EEncoding::utf16)
+			{
+				// UTF-16 to ASCII
+				auto str_out = ReturnStr<ToStr>(str_in);
+				for (auto& ch : str_out) ch = ch <= 127 ? ch : dflt;
+				return str_out;
+			}
+			else if constexpr (FromEnc == EEncoding::utf32)
+			{
+				// UTF-32 to ASCII
+				auto str_out = ReturnStr<ToStr>(str_in);
+				for (auto& ch : str_out) ch = ch <= 127 ? ch : dflt;
+				return str_out;
+			}
+			else
+			{
+				static_assert(false, "Unsupported encoding conversion");
+			}
+		}
+		else if constexpr (ToEnc == EEncoding::utf8)
+		{
+			if constexpr (false) {}
+			else if constexpr (FromEnc == EEncoding::ascii)
+			{
+				// ASCII to UTF-8 is a no-op
+				return ReturnStr<ToStr>(str_in);
+			}
+			else if constexpr (FromEnc == EEncoding::utf8)
+			{
+				// UTF-8 to UTF-8 is a no-op
+				return ReturnStr<ToStr>(str_in);
+			}
+			else if constexpr (FromEnc == EEncoding::utf16)
+			{
+				// UTF-16 to UTF-8
+				struct convert_t :std::codecvt<char16_t, char, std::mbstate_t> {} converter;
+				return ConvertEncoding<ToStr>(str_in, converter);
+			}
+			else if constexpr (FromEnc == EEncoding::utf32)
+			{
+				// UTF-32 to UTF-8
+				throw std::runtime_error("not implemented");
+			}
+			else if constexpr (FromEnc == EEncoding::ucs2)
+			{
+				// UCS2 to UTF-8
+				struct convert_t :std::codecvt<wchar_t, char, std::mbstate_t> {} converter;
+				return ConvertEncoding<ToStr>(str_in, converter);
+			}
+			else
+			{
+				static_assert(false, "Unsupported encoding conversion");
+			}
+		}
+		else if constexpr (ToEnc == EEncoding::utf16)
+		{
+			if constexpr (false) {}
+			else if constexpr (FromEnc == EEncoding::ascii)
+			{
+				// ASCII to UTF-16
+				return ReturnStr<ToStr>(str_in);
+			}
+			else if constexpr (FromEnc == EEncoding::utf8)
+			{
+				// UTF-8 to UTF-16
+				struct convert_t :std::codecvt<char16_t, char, std::mbstate_t> {} converter;
+				return ConvertEncoding<ToStr>(str_in, converter);
+			}
+			else if constexpr (FromEnc == EEncoding::utf16)
+			{
+				// UTF-16 to UTF-16 is a no-op
+				return ReturnStr(from);
+			}
+			else if constexpr (FromEnc == EEncoding::utf32)
+			{
+				// UTF-32 to UTF-16
+				throw std::runtime_error("not implemented");
+			}
+			else
+			{
+				static_assert(false, "Unsupported encoding conversion");
+			}
+		}
+		else if constexpr (ToEnc == EEncoding::utf32)
+		{
+			if constexpr (false) {}
+			else if constexpr (FromEnc == EEncoding::ascii)
+			{
+				// ASCII to UTF-32
+				return ReturnStr<ToStr>(str_in);
+			}
+			else if constexpr (FromEnc == EEncoding::utf8)
+			{
+				// UTF-8 to UTF-32
+				throw std::runtime_error("not implemented");
+			}
+			else if constexpr (FromEnc == EEncoding::utf16)
+			{
+				// UTF-16 to UTF-32
+				throw std::runtime_error("not implemented");
+			}
+			else if constexpr (FromEnc == EEncoding::utf32)
+			{
+				// UTF-32 to UTF-32 is a no-op
+				return ReturnStr(from);
+			}
+			else
+			{
+				static_assert(false, "Unsupported encoding conversion");
+			}
+		}
+		else
+		{
+			static_assert(false, "Unsupported encoding conversion");
+		}
+	}
+
+	// Narrow a string to utf-8
+	inline std::string Narrow(std::string const& from) // from ascii, utf8
 	{
 		return from;
 	}
 	inline std::string Narrow(std::string_view from)
 	{
-		return std::string(from);
+		// Needed because string_view is not implicitly convertible to std::string
+		return Narrow(std::string(from));
 	}
-	inline std::string Narrow(std::wstring_view from)
+	inline std::string Narrow(char const* from)
 	{
-		std::string buffer(from.size(), '\0');
-		std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from.data(), from.data() + from.size(), '_', &buffer[0]);
-		return std::move(buffer);
+		// Needed to disambiguate 'string_view' and 'std::string const&' overloads
+		return Narrow(std::string_view(from));
+	}
+	inline std::string Narrow(std::wstring_view from) // from utf16
+	{
+		return ConvertEncoding<EEncoding::utf8, std::string, EEncoding::utf16>(from);
 	}
 
-	// Widen
-	inline std::wstring Widen(std::wstring const& from)
+	// Widen string to utf16
+	inline std::wstring Widen(std::wstring const& from) // from usc2, utf-16
 	{
 		return from;
 	}
 	inline std::wstring Widen(std::wstring_view from)
 	{
-		return std::wstring(from);
+		// Needed because string_view is not implicitly convertible to std::string
+		return Widen(std::wstring(from));
 	}
-	inline std::wstring Widen(std::string_view from)
+	inline std::wstring Widen(wchar_t const* from)
 	{
-		std::wstring buffer(from.size(), '\0');
-		std::use_facet<std::ctype<wchar_t>>(locale()).widen(from.data(), from.data() + from.size(), &buffer[0]);
-		return std::move(buffer);
+		// Needed to disambiguate 'wstring_view' and 'std::wstring const&' overloads
+		return Widen(std::wstring_view(from));
+	}
+	inline std::wstring Widen(std::string_view from) // from utf-8
+	{
+		return ConvertEncoding<EEncoding::utf16, std::wstring, EEncoding::utf8>(from);
 	}
 
 	#pragma endregion
 
 	namespace str
 	{
-		#pragma region Char Traits
-
-		// Is 'T' a char or wchar_t
-		template <typename T> struct is_char :std::false_type {};
-		template <> struct is_char<char> :std::true_type {};
-		template <> struct is_char<wchar_t> :std::true_type {};
-		template <typename T> using enable_if_char_t = typename std::enable_if<is_char<T>::value>::type;
-
-		// char traits - Did you know about std::char_traits<>... 
-		template <typename TChar> struct char_traits;
-		
-		// char traits
-		template <> struct char_traits<char>
-		{
-			static char const* str(char const* str, wchar_t const*) { return str; }
-
-			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
-			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
-
-			static size_t strlen(char const* str)                               { return ::strlen(str); }
-			static size_t strnlen(char const* str, size_t max_count)            { return ::strnlen(str, max_count); }
-
-			static int strcmp(char const* lhs, char const* rhs)                     { return ::strcmp(lhs, rhs); }
-			static int strncmp(char const* lhs, char const* rhs, size_t max_count)  { return ::strncmp(lhs, rhs, max_count); }
-			static int strnicmp(char const* lhs, char const* rhs, size_t max_count) { return ::_strnicmp(lhs, rhs, max_count); }
-
-			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
-			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
-			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
-			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
-			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
-
-			static bool eq(char lhs, char rhs)                                       { return lhs == rhs; }
-			static void fill(char* ptr, size_t count, char ch)                       { ::memset(ptr, ch, count); }
-			static void copy(char* dst, char const* src, size_t count)               { ::memcpy(dst, src, count); }
-			static void move(char* dst, char const* src, size_t count)               { ::memmove(dst, src, count); }
-			static int compare(char const* first1, char const* first2, size_t count) { return ::strncmp(first1, first2, count); }
-			static char const* find(char const* first, size_t count, char ch)
-			{
-				for (; 0 < count; --count, ++first)
-					if (eq(*first, ch)) return first;
-				return nullptr;
-			}
-		};
-		template <> struct char_traits<char&      > :char_traits<char> {};
-		template <> struct char_traits<char const > :char_traits<char> {};
-		template <> struct char_traits<char const&> :char_traits<char const> {};
-
-		// wchar_t traits
-		template <> struct char_traits<wchar_t>
-		{
-			static wchar_t const* str(char const*, wchar_t const* str) { return str; }
-
-			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
-			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
-
-			static size_t strlen(wchar_t const* str)                    { return ::wcslen(str); }
-			static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
-
-			static int strcmp(wchar_t const* lhs, wchar_t const* rhs)                     { return ::wcscmp(lhs, rhs); }
-			static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)  { return ::wcsncmp(lhs, rhs, max_count); }
-			static int strnicmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count) { return ::_wcsnicmp(lhs, rhs, max_count); }
-
-			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
-			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
-			static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
-			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
-			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
-			
-			static bool eq(wchar_t lhs, wchar_t rhs)                                       { return lhs == rhs; }
-			static void fill(wchar_t* ptr, size_t count, wchar_t ch)                       { for (;count--;) *ptr++ = ch; }
-			static void copy(wchar_t* dst, wchar_t const* src, size_t count)               { ::memcpy(dst, src, count * sizeof(wchar_t)); }
-			static void move(wchar_t* dst, wchar_t const* src, size_t count)               { ::memmove(dst, src, count * sizeof(wchar_t)); }
-			static int compare(wchar_t const* first1, wchar_t const* first2, size_t count) { return ::wcsncmp(first1, first2, count); }
-			static wchar_t const* find(wchar_t const* first, size_t count, wchar_t ch)
-			{
-				for (; 0 < count; --count, ++first)
-					if (eq(*first, ch)) return first;
-				return nullptr;
-			}
-		};
-		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
-		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
-		template <> struct char_traits<wchar_t const&> :char_traits<wchar_t const> {};
-
-		#pragma endregion
-
-		#pragma region String Traits
-
-		template <typename Str> struct traits :char_traits<typename Str::value_type>
-		{
-			using value_type = typename Str::value_type;
-
-			static value_type const* ptr(Str const& str) { return str.data(); }
-			static value_type* ptr(Str& str)             { return str.data(); }
-			static size_t size(Str const& str)           { return str.size(); }
-			static bool empty(Str const& str)            { return str.empty(); }
-		};
-		template <typename Str> struct traits<Str const> :char_traits<typename Str::value_type>
-		{
-			using value_type = typename Str::value_type const;
-
-			static value_type const* ptr(Str const& str) { return str.data(); }
-			static value_type* ptr(Str& str)             { return str.data(); }
-			static size_t size(Str const& str)           { return str.size(); }
-			static bool empty(Str const& str)            { return str.empty(); }
-		};
-		template <typename Char> struct traits<Char const*> :char_traits<Char>
-		{
-			using value_type = Char const;
-
-			static value_type const* ptr(Char const* str) { return str; }
-			static value_type* ptr(Char* str)             { return str; }
-			static size_t size(Char const* str)           { return strlen(str); }
-			static bool empty(Char const* str)            { return *str == 0; }
-		};
-		template <typename Char> struct traits<Char*> :char_traits<Char>
-		{
-			using value_type = Char;
-
-			static value_type const* ptr(Char const* str) { return str; }
-			static value_type* ptr(Char* str)             { return str; }
-			static size_t size(Char const* str)           { return strlen(str); }
-			static bool empty(Char const* str)            { return *str == 0; }
-		};
-		template <typename Char> struct traits<Char const* const> :traits<Char const*>
-		{};
-		template <typename Char> struct traits<Char* const> :traits<Char*>
-		{};
-		template <typename Char, size_t Len> struct traits<Char const[Len]> :traits<Char const*>
-		{};
-		template <typename Char, size_t Len> struct traits<Char[Len]> :traits<Char*>
-		{};
-
-		#pragma endregion
-
 		#pragma region Standard Library Functions
 
 		// Variable arg 'sprintf', overloaded for all char type combinations
@@ -272,7 +577,7 @@ namespace pr
 		// Return a char const* for any string type
 		template <typename Str, typename Char = Str::value_type> inline Char const* c_str(Str const& str)
 		{
-			return traits<Str>::ptr(str);
+			return string_traits<Str>::ptr(str);
 		}
 		template <typename Char> inline Char const* c_str(Char const* str)
 		{
@@ -286,7 +591,7 @@ namespace pr
 		// Return true if 'str' is an empty string
 		template <typename Str, typename Char = Str::value_type> inline bool Empty(Str const& str)
 		{
-			return traits<Str>::empty(str);
+			return string_traits<Str>::empty(str);
 		}
 		template <typename Char> inline bool Empty(Char const* str)
 		{
@@ -295,21 +600,20 @@ namespace pr
 
 		#pragma endregion
 
-		#pragma region Length
+		#pragma region Size
 
-		// Return the length of the string, excluding the null terminator (same as 'strlen')
-		template <typename Str, typename = Str::value_type> inline size_t Length(Str const& str)
+		// Return the size of the string, excluding the null terminator (same as 'strlen'). Not necessarily the length of a multibyte encoded string
+		template <typename Str, typename = Str::value_type> inline size_t Size(Str const& str)
 		{
-			return traits<Str>::size(str);
+			return string_traits<Str>::size(str);
 		}
-		template <typename Str, typename = std::enable_if_t<std::is_pointer_v<Str>>> inline size_t Length(Str str)
+		template <typename Str, typename = std::enable_if_t<std::is_pointer_v<Str>>> inline size_t Size(Str str)
 		{
-			using Char = traits<Str>::value_type;
-			return char_traits<Char>::strlen(str);
+			return string_traits<Str>::size(str);
 		}
-		template <typename Char, size_t N> inline size_t Length(Char (&str)[N])
+		template <typename Char, size_t N> inline size_t Size(Char (&str)[N])
 		{
-			return char_traits<Char>::strnlen(str, N);
+			return string_traits<Char[N]>::size(str);
 		}
 
 		#pragma endregion
@@ -317,39 +621,39 @@ namespace pr
 		#pragma region Range
 
 		// Return a pointer to the start of the string
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char* Begin(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char* Begin(Str& str)
 		{
-			return traits<Str>::ptr(str);
+			return string_traits<Str>::ptr(str);
 		}
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char const* Begin(Str const& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char const* Begin(Str const& str)
 		{
-			return traits<Str>::ptr(str);
+			return string_traits<Str>::ptr(str);
 		}
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char const* BeginC(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char const* BeginC(Str& str)
 		{
 			return Begin<Str const>(str);
 		}
 
 		// Return a pointer to the end of the string
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char* End(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char* End(Str& str)
 		{
-			return Begin(str) + Length(str);
+			return Begin(str) + Size(str);
 		}
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char const* End(Str const& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char const* End(Str const& str)
 		{
-			return Begin(str) + Length(str);
+			return Begin(str) + Size(str);
 		}
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char const* EndC(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char const* EndC(Str& str)
 		{
 			return End<Str const>(str);
 		}
 
 		// Return a pointer to the 'N'th character or the end of the string, whichever is less
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char* End(Str& str, size_t N)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char* End(Str& str, size_t N)
 		{
-			return Begin(str) + std::min(N, Length(str));
+			return Begin(str) + std::min(N, Size(str));
 		}
-		template <typename Str, typename Char = traits<Str>::value_type> inline Char const* EndC(Str const& str, size_t N)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Char const* EndC(Str const& str, size_t N)
 		{
 			return End<Str const>(str, N);
 		}
@@ -463,7 +767,7 @@ namespace pr
 
 		#pragma region EqualNI
 		// Return true if lhs and rhs are equal, up to the given length
-		template <typename Str1, typename Str2, typename Char1 = traits<Str1>::value_type, typename Char2 = traits<Str2>::value_type> inline bool EqualNI(Str1 const& str1, Str2 const& str2, size_t length)
+		template <typename Str1, typename Str2, typename Char1 = string_traits<Str1>::value_type, typename Char2 = string_traits<Str2>::value_type> inline bool EqualNI(Str1 const& str1, Str2 const& str2, size_t length)
 		{
 			return EqualN(str1, str2, length, [](Char1 lhs, Char2 rhs)
 				{
@@ -517,7 +821,7 @@ namespace pr
 		template <typename Iter, typename Str, typename Pred> inline Iter FindStr(Iter first, Iter last, Str const& what, Pred pred)
 		{
 			if (Empty(what)) return last;
-			auto what_len = int(Length(what));
+			auto what_len = int(Size(what));
 			auto what_beg = BeginC(what);
 			for (; last - first >= what_len; ++first)
 				if (pred(first, first + what_len, what_beg, what_beg + what_len))
@@ -527,10 +831,10 @@ namespace pr
 		}
 		template <typename Iter, typename Str> inline Iter FindStr(Iter first, Iter last, Str const& what)
 		{
-			using Iter2 = typename traits<Str>::value_type const*;
+			using Iter2 = typename string_traits<Str>::value_type const*;
 			return FindStr(first, last, what, [](Iter i, Iter iend, Iter2 j, Iter2 jend){ return Equal(i, iend, j, jend); });
 		}
-		template <typename Str1, typename Str2, typename Char1 = traits<Str1>::value_type> inline Char1* FindStr(Str1& str, Str2 const& what)
+		template <typename Str1, typename Str2, typename Char1 = string_traits<Str1>::value_type> inline Char1* FindStr(Str1& str, Str2 const& what)
 		{
 			return FindStr(Begin(str), End(str), what);
 		}
@@ -539,10 +843,10 @@ namespace pr
 		// Returns an iterator to the sub string or to the end of the range.
 		template <typename Iter, typename Str> inline Iter FindStrI(Iter first, Iter last, Str const& what)
 		{
-			using Iter2 = typename traits<Str>::value_type const*;
+			using Iter2 = typename string_traits<Str>::value_type const*;
 			return FindStr(first, last, what, [](Iter i, Iter iend, Iter2 j, Iter2 jend){ return EqualI(i, iend, j, jend); });
 		}
-		template <typename Str1, typename Str2, typename Char = traits<Str1>::value_type> inline Char* FindStrI(Str1& str, Str2 const& what)
+		template <typename Str1, typename Str2, typename Char = string_traits<Str1>::value_type> inline Char* FindStrI(Str1& str, Str2 const& what)
 		{
 			return FindStrI(Begin(str), End(str), what);
 		}
@@ -558,13 +862,13 @@ namespace pr
 		}
 
 		// Returns a pointer to the first character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the end of the string or &str[offset+count]
-		template <typename Str, typename Pred, typename Char = traits<Str>::value_type> inline Char* FindFirst(Str& str, size_t offset, size_t count, Pred pred)
+		template <typename Str, typename Pred, typename Char = string_traits<Str>::value_type> inline Char* FindFirst(Str& str, size_t offset, size_t count, Pred pred)
 		{
 			return FindFirst(Begin(str) + offset, End(str, offset + count), pred);
 		}
 
 		// Returns a pointer to the first character in 'str' that satisfies 'pred', or a pointer to the end of the string
-		template <typename Str, typename Pred, typename Char = traits<Str>::value_type> inline Char* FindFirst(Str& str, Pred pred)
+		template <typename Str, typename Pred, typename Char = string_traits<Str>::value_type> inline Char* FindFirst(Str& str, Pred pred)
 		{
 			return FindFirst(str, 0, ~size_t(), pred);
 		}
@@ -577,13 +881,13 @@ namespace pr
 		}
 
 		// Returns a pointer to *one past* the last character in '[offset, offset+count)' that satisfies 'pred', or a pointer to the beginning of the string or &str[offset]
-		template <typename Str, typename Pred, typename Char = traits<Str>::value_type> inline Char* FindLast(Str& str, size_t offset, size_t count, Pred pred)
+		template <typename Str, typename Pred, typename Char = string_traits<Str>::value_type> inline Char* FindLast(Str& str, size_t offset, size_t count, Pred pred)
 		{
 			return FindLast(Begin(str) + offset, End(str, offset + count), pred);
 		}
 
 		// Returns a pointer to *one past* the last character in 'str' that satisfies 'pred', or a pointer to the beginning of the string
-		template <typename Str, typename Pred, typename Char = traits<Str>::value_type> inline Char* FindLast(Str& str, Pred pred)
+		template <typename Str, typename Pred, typename Char = string_traits<Str>::value_type> inline Char* FindLast(Str& str, Pred pred)
 		{
 			return FindLast(str, 0, ~size_t(), pred);
 		}
@@ -594,7 +898,7 @@ namespace pr
 			for (; beg != end && *FindChar(delim, *beg) == 0; ++beg) {}
 			return beg;
 		}
-		template <typename Str, typename Char1, typename Char2 = traits<Str>::value_type> inline Char2* FindFirstOf(Str& str, Char1 const* delim)
+		template <typename Str, typename Char1, typename Char2 = string_traits<Str>::value_type> inline Char2* FindFirstOf(Str& str, Char1 const* delim)
 		{
 			return FindFirstOf(Begin(str), End(str), delim);
 		}
@@ -611,7 +915,7 @@ namespace pr
 			for (;end != beg && *FindChar(delim, *(end-1)) == 0; --end) {}
 			return end;
 		}
-		template <typename Str, typename Char1, typename Char2 = traits<Str>::value_type> inline Char2* FindLastOf(Str& str, Char1 const* delim)
+		template <typename Str, typename Char1, typename Char2 = string_traits<Str>::value_type> inline Char2* FindLastOf(Str& str, Char1 const* delim)
 		{
 			return FindLastOf(Begin(str), End(str), delim);
 		}
@@ -622,7 +926,7 @@ namespace pr
 			for (; beg != end && *FindChar(delim, *beg) != 0; ++beg) {}
 			return beg;
 		}
-		template <typename Str, typename Char1, typename Char2 = traits<Str>::value_type> inline Char2* FindFirstNotOf(Str& str, Char1 const* delim)
+		template <typename Str, typename Char1, typename Char2 = string_traits<Str>::value_type> inline Char2* FindFirstNotOf(Str& str, Char1 const* delim)
 		{
 			return FindFirstNotOf(Begin(str), End(str), delim);
 		}
@@ -639,7 +943,7 @@ namespace pr
 			for (;end != beg && *FindChar(delim, *(end-1)) != 0; --end) {}
 			return end;
 		}
-		template <typename Str, typename Char1, typename Char2 = traits<Str>::value_type> inline Char2* FindLastNotOf(Str& str, Char1 const* delim)
+		template <typename Str, typename Char1, typename Char2 = string_traits<Str>::value_type> inline Char2* FindLastNotOf(Str& str, Char1 const* delim)
 		{
 			return FindLastNotOf(Begin(str), End(str), delim);
 		}
@@ -654,7 +958,7 @@ namespace pr
 		}
 		template <typename Str, typename Char2 = char, typename = std::enable_if_t<std::is_pointer<Str>::value>> inline void Resize(Str str, size_t new_size, Char2 ch)
 		{
-			using Char1 = traits<Str>::value_type;
+			using Char1 = string_traits<Str>::value_type;
 			auto i = End(str, new_size);
 			auto iend = str + new_size;
 			for (; i < iend; ++i) *i = Char1(ch);
@@ -678,17 +982,17 @@ namespace pr
 
 		#pragma region Append
 		// Append a char to the end of 'str'
-		// 'len' is an optimisation for pointer-like strings, so that Length() doesn't need to be called for each Append
+		// 'len' is an optimisation for pointer-like strings, so that Size() doesn't need to be called for each Append
 		// Returns 'str' for method chaining
-		template <typename Str, typename Char2, typename Char1 = traits<Str>::value_type> Str& Append(Str& str, size_t len, Char2 ch)
+		template <typename Str, typename Char2, typename Char1 = string_traits<Str>::value_type> Str& Append(Str& str, size_t len, Char2 ch)
 		{
 			Resize(str, len+1);
 			str[len] = Char1(ch);
 			return str;
 		}
-		template <typename Str, typename Char2, typename Char1 = traits<Str>::value_type> Str& Append(Str& str, Char2 ch)
+		template <typename Str, typename Char2, typename Char1 = string_traits<Str>::value_type> Str& Append(Str& str, Char2 ch)
 		{
-			return Append(str, Length(str), ch);
+			return Append(str, Size(str), ch);
 		}
 		#pragma endregion
 
@@ -699,7 +1003,7 @@ namespace pr
 		// 'count' is the maximum number of characters to copy. The capacity of dest *must* be >= offset + count
 		// 'first','last' the range of characters to assign to 'dest'
 		// On return, dest will be resized to 'offset + min(count, last-first)'.
-		template <typename Str, typename Iter, typename Char = traits<Str>::value_type> void Assign(Str& dest, size_t offset, size_t count, Iter first, Iter last)
+		template <typename Str, typename Iter, typename Char = string_traits<Str>::value_type> void Assign(Str& dest, size_t offset, size_t count, Iter first, Iter last)
 		{
 			// The number of characters to be copied to 'dest', clamped by 'count'
 			auto size = std::min(count, size_t(last - first));
@@ -732,7 +1036,7 @@ namespace pr
 
 		#pragma region Upper Case
 		// Convert a string to upper case
-		template <typename Str, typename Char = traits<Str>::value_type> inline Str& UpperCase(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Str& UpperCase(Str& str)
 		{
 			auto i = Begin(str); auto iend = End(str);
 			for (; i != iend; ++i) *i = char_traits<Char>::upr(*i);
@@ -752,7 +1056,7 @@ namespace pr
 
 		#pragma region Lower Case
 		// Convert a string to lower case
-		template <typename Str, typename Char = traits<Str>::value_type> inline Str& LowerCase(Str& str)
+		template <typename Str, typename Char = string_traits<Str>::value_type> inline Str& LowerCase(Str& str)
 		{
 			auto i = Begin(str); auto iend = End(str);
 			for (; i != iend; ++i) *i = char_traits<Char>::lwr(*i);
@@ -786,7 +1090,7 @@ namespace pr
 		// Returns the number of sub strings found.
 		template <typename Str, typename Char1, typename Out> inline int Split(Str const& str, Char1 const* delims, Out out)
 		{
-			int i = 0, j = 0, jend = int(Length(str)), n = 0;
+			int i = 0, j = 0, jend = int(Size(str)), n = 0;
 			for (; j != jend; ++j)
 			{
 				if (*FindChar(delims, str[j]) == 0) continue;
@@ -864,6 +1168,110 @@ namespace pr::str
 {
 	PRUnitTest(StringCoreTests)
 	{
+		using namespace std::string_view_literals;
+
+		// Notes:
+		//  - The encoding of this file is expected to be UTF-8 so characters like
+		//    "±" appear to the compiler as: ...,",-62,-79,",... in literal strings.
+		//    Depending on the string type, the compiler turns each of these bytes
+		//    into the character type, so: u"±" becomes char16_t[3] == {-62,-79,0}.
+		//  - C# uses utf-16 for its strings and "".Length returns the array size,
+		//    not the number of characters.
+
+		//unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao'
+		//wchar_t ucs2[] = {0x4f60, 0x597d};
+
+		{// Narrow
+			{
+				auto r = Narrow("Ab3");
+				PR_CHECK(r.size(), 3U);
+				PR_CHECK(r.c_str(), { 'A', 'b', '3', '\0' });
+			}
+			{
+				auto r = Narrow("±1"sv);
+				PR_CHECK(r.size(), 3U);
+				PR_CHECK(r.c_str(), { -62, -79, 49, 0 });
+			}
+			{
+				char const s[] = {0xe4_c8, 0xbd_c8, 0xa0_c8, 0xe5_c8, 0xa5_c8, 0xbd_c8, 0_c8}; // 'ni hao' in utf-8
+				auto r = Narrow(s);
+				PR_CHECK(r.size(), 6U);
+				PR_CHECK(r.c_str(), {-28, -67, -96, -27, -91, -67, 0});
+			}
+			{
+				wchar_t const s[] = {0x4f60, 0x597d, 0}; // 'ni hao' in utf-16
+				auto r = Narrow(s);
+				PR_CHECK(r.size(), 6U);
+				PR_CHECK(r.c_str(), {-28, -67, -96, -27, -91, -67, 0});
+			}
+			{
+				wchar_t const s0[] = L"z\u00df\u6c34\U0001f34c";
+				char const s1[] = "zß水🍌";
+				auto r0 = Narrow(s0);
+				auto r1 = Narrow(s1);
+				PR_CHECK(r0.size(), 10U);
+				PR_CHECK(r1.size(), 10U);
+				PR_CHECK(r0.c_str(), {0x7A_c8, 0xC3_c8, 0x9F_c8, 0xE6_c8, 0xB0_c8, 0xB4_c8, 0xF0_c8, 0x9F_c8, 0x8D_c8, 0x8C_c8, 0x00_c8});
+				PR_CHECK(r1.c_str(), {0x7A_c8, 0xC3_c8, 0x9F_c8, 0xE6_c8, 0xB0_c8, 0xB4_c8, 0xF0_c8, 0x9F_c8, 0x8D_c8, 0x8C_c8, 0x00_c8});
+			}
+		}
+		{// Widen
+			{
+				auto r = Widen("Ab3");
+				PR_CHECK(r.size(), 3U);
+				PR_CHECK(r.c_str(), { 'A', 'b', '3', '\0' });
+			}
+			{
+				auto r = Widen("±1"sv);
+				PR_CHECK(r.size(), 2U);
+				PR_CHECK(r.c_str(), { 177, 49, 0 });
+			}
+			{
+				char const s[] = {0xe4_c8, 0xbd_c8, 0xa0_c8, 0xe5_c8, 0xa5_c8, 0xbd_c8, 0_c8}; // 'ni hao' in utf-8
+				auto r = Widen(s);
+				PR_CHECK(r.size(), 2U);
+				PR_CHECK(r.c_str(), {0x4f60, 0x597d, 0});
+			}
+			{
+				wchar_t const s[] = {0x4f60, 0x597d, 0}; // 'ni hao' in utf-16
+				auto r = Widen(s);
+				PR_CHECK(r.size(), 2U);
+				PR_CHECK(r.c_str(), {0x4f60, 0x597d, 0});
+			}
+			{
+				wchar_t const s0[] = L"z\u00df\u6c34\U0001f34c";
+				char const s1[] = "zß水🍌";
+				auto r0 = Widen(s0);
+				auto r1 = Widen(s1);
+				PR_CHECK(r0.size(), 5U);
+				PR_CHECK(r1.size(), 5U);
+				PR_CHECK(r0.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
+				PR_CHECK(r1.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
+			}
+		}
+		{// ConvertEncoding
+			{// ASCII to ASCII
+				std::string s0 = "abc";
+				auto r0 = ConvertEncoding<EEncoding::ascii, std::string, EEncoding::ascii>(s0);
+				PR_CHECK(Equal(s0, r0), true);
+
+				std::wstring s1 = L"abc";
+				auto r1 = ConvertEncoding<EEncoding::ascii, std::string, EEncoding::ascii>(s1);
+				PR_CHECK(Equal(s1, r1), true);
+			}
+			{
+				char16_t s[] = u"\u00b1\U0001f34c";
+				auto r = ConvertEncoding<EEncoding::utf8, std::string, EEncoding::utf16>(s);
+				PR_CHECK(r.size(), 6U);
+				PR_CHECK(r.c_str(), { -62, -79, -16, -97, -115, -116, 0 });
+			}
+			{
+				char32_t s[] = U"\u00b1\U0001f34c";
+				auto r = ConvertEncoding<EEncoding::ascii, std::wstring, EEncoding::utf32>(s, char(1));
+				PR_CHECK(r.size(), 2U);
+				PR_CHECK(r.c_str(), { 1, 1, 0 });
+			}
+		}
 		{// Str
 			char const*     aptr   = "full";
 			char            aarr[] = "";
@@ -894,7 +1302,7 @@ namespace pr::str
 			PR_CHECK(!Empty(warr), true);
 			PR_CHECK(!Empty(wstr), true);
 		}
-		{// Length
+		{// Size
 			char const*     aptr   = "length7";
 			char            aarr[] = "length7";
 			std::string     astr   = "length7";
@@ -902,12 +1310,12 @@ namespace pr::str
 			wchar_t         warr[] = L"length7";
 			std::wstring    wstr   = L"length7";
 
-			PR_CHECK(Length(aptr), size_t(7));
-			PR_CHECK(Length(aarr), size_t(7));
-			PR_CHECK(Length(astr), size_t(7));
-			PR_CHECK(Length(wptr), size_t(7));
-			PR_CHECK(Length(warr), size_t(7));
-			PR_CHECK(Length(wstr), size_t(7));
+			PR_CHECK(Size(aptr), size_t(7));
+			PR_CHECK(Size(aarr), size_t(7));
+			PR_CHECK(Size(astr), size_t(7));
+			PR_CHECK(Size(wptr), size_t(7));
+			PR_CHECK(Size(warr), size_t(7));
+			PR_CHECK(Size(wstr), size_t(7));
 		}
 		{// Range
 			char const*     aptr   =  "range";
@@ -1303,5 +1711,6 @@ namespace pr::str
 	}
 }
 #endif
+
 
 

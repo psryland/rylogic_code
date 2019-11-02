@@ -39,12 +39,6 @@ namespace pr
 	template <bool Test, int N = 0> using enable_if = typename std::enable_if_t<Test, DummyType<N>>;
 	template <bool Test, typename TOut> using iif = typename std::enable_if_t<Test, TOut>;
 
-	// True is 'Ty' is a char or wchar_t
-	template <typename Ty> using is_char = std::integral_constant<bool, is_same<Ty,char>::value || is_same<Ty, char16_t>::value || is_same<Ty, char32_t>::value || is_same<Ty, wchar_t>::value>;
-	static_assert(is_char<char>::value, "");
-	static_assert(is_char<wchar_t>::value, "");
-	static_assert(!is_char<int>::value, "");
-
 	// True if 'Str' is a raw string
 	template <typename Str> struct is_raw_str :std::false_type {};
 	template <> struct is_raw_str<char const*> :std::true_type {};

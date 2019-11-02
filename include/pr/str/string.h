@@ -72,7 +72,7 @@ namespace pr
 		#pragma region Traits
 
 		// type specific traits
-		struct traits :pr::str::char_traits<Type> {};
+		struct traits :pr::char_traits<Type> {};
 
 		// true if 'tchar' is the same as 'Type', ignoring references
 		template <typename tchar> using same_char = std::is_same<typename std::decay<tchar>::type, Type>;
@@ -470,7 +470,7 @@ namespace pr
 			if (newsize > size())
 			{
 				ensure_space(newsize + 1, false);
-				traits::fill(m_ptr + m_count, newsize - m_count, ch);
+				traits::assign(m_ptr + m_count, newsize - m_count, ch);
 			}
 			m_count = newsize + 1;
 			m_ptr[size()] = 0;
@@ -570,7 +570,7 @@ namespace pr
 		string& assign(size_type count, value_type ch)
 		{
 			ensure_space(count + 1, true);
-			traits::fill(m_ptr, count, ch);
+			traits::assign(m_ptr, count, ch);
 			m_count = count + 1;
 			m_ptr[size()] = 0;
 			return *this;
@@ -618,9 +618,9 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& assign(tarr const& right, size_type rofs, size_type count)
 		{
-			assert(rofs <= str::traits<tarr>::size(right));
+			assert(rofs <= string_traits<tarr>::size(right));
 
-			size_type num = str::traits<tarr>::size(right) - rofs;
+			size_type num = string_traits<tarr>::size(right) - rofs;
 			if (count > num) count = num;
 			if (isthis(right)) // sub-range
 			{
@@ -696,9 +696,9 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& append(tarr const& right, size_type rofs, size_type count)
 		{
-			assert(rofs <= str::traits<tarr>::size(right));
+			assert(rofs <= string_traits<tarr>::size(right));
 
-			size_type num = str::traits<tarr>::size(right) - rofs;
+			size_type num = string_traits<tarr>::size(right) - rofs;
 			if (num < count) count = num;
 			if (count != 0)
 			{
@@ -738,7 +738,7 @@ namespace pr
 		string& append(size_type count, value_type ch)
 		{
 			ensure_space(m_count + count, true);
-			traits::fill(m_ptr + size(), count, ch);
+			traits::assign(m_ptr + size(), count, ch);
 			m_count += count;
 			m_ptr[size()] = 0;
 			return *this;
@@ -774,7 +774,7 @@ namespace pr
 			assert(ofs <= size() && "");
 			ensure_space(m_count + count, true);
 			traits::move(m_ptr + ofs + count, m_ptr + ofs, m_count - ofs);
-			traits::fill(m_ptr + ofs, count, ch);
+			traits::assign(m_ptr + ofs, count, ch);
 			m_count += count;
 			m_ptr[size()] = 0;
 			return *this;
@@ -891,8 +891,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		int compare(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			assert(rofs <= right_size);
 
 			if (right_size - rofs < count) count = right_size - rofs;
@@ -936,8 +936,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& replace(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count)
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			assert(ofs < size() && rofs <= right_size);
 
 			if (size()     - ofs  < n0   ) n0    = size()       - ofs; // trim n0 to size
@@ -949,7 +949,7 @@ namespace pr
 			if (!isthis(right)) // no overlap, just move down and copy in new stuff
 			{
 				traits::move(m_ptr + ofs + count, m_ptr + ofs + n0, rcount);      // empty hole
-				traits::copy(m_ptr + ofs, right_cstr + rofs, count);           // fill hole
+				traits::copy(m_ptr + ofs, right_cstr + rofs, count);              // fill hole
 			}
 			else if (count <= n0) // hole doesn't get larger, just copy in substring
 			{
@@ -1026,7 +1026,7 @@ namespace pr
 			{
 				ensure_space(m_count + count - n0, true);
 				if (n0 < count) traits::move(m_ptr + ofs + count, m_ptr + ofs + n0, rcount); // move tail down
-				traits::fill(m_ptr + ofs, count, ch); // fill hole
+				traits::assign(m_ptr + ofs, count, ch); // fill hole
 				m_count += count - n0;
 				m_ptr[size()] = 0;
 			}
@@ -1118,8 +1118,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type find(tarr const& right, size_type ofs = 0) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return find(right_cstr, ofs, right_size);
 		}
 
@@ -1147,8 +1147,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type rfind(tarr const& right, size_type ofs = npos) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return rfind(right_cstr, ofs, right_size);
 		}
 
@@ -1168,8 +1168,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type find_first_of(tarr const& right, size_type ofs = 0) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return find_first_of(right_cstr, ofs, right_size);
 		}
 
@@ -1203,8 +1203,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type find_last_of(tarr const& right, size_type ofs = npos) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return find_last_of(right_cstr, ofs, right_size);
 		}
 
@@ -1238,8 +1238,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type find_first_not_of(tarr const& right, size_type ofs = 0) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return find_first_not_of(right_cstr, ofs, right_size);
 		}
 
@@ -1273,8 +1273,8 @@ namespace pr
 		template <typename tarr, typename = enable_if_char_array<tarr>>
 		size_type find_last_not_of(tarr const& right, size_type ofs = npos) const
 		{
-			auto right_size = str::traits<tarr>::size(right);
-			auto right_cstr = str::traits<tarr>::ptr(right);
+			auto right_size = string_traits<tarr>::size(right);
+			auto right_cstr = string_traits<tarr>::ptr(right);
 			return find_last_not_of(right_cstr, ofs, right_size);
 		}
 
@@ -1316,6 +1316,12 @@ namespace pr
 			return std::basic_string<Type, std::char_traits<Type>, std::allocator<Type>>(begin(), end());
 		}
 
+		// Allow implicit cast to std::basic_string_view
+		operator std::basic_string_view<Type>() const
+		{
+			return std::basic_string_view<Type>(data(), size());
+		}
+
 		// equality operators - note: "friends" so the operators don't use ADL
 		bool operator == (type const& right) const { return compare(right) == 0; }
 		bool operator != (type const& right) const { return compare(right) != 0; }
@@ -1336,48 +1342,6 @@ namespace pr
 		//template <typename tstr> friend inline bool operator >= (tstr const& lhs, type const& rhs) { return !(rhs <  lhs); }
 		//template <typename tstr> friend inline bool operator >  (tstr const& lhs, type const& rhs) { return !(rhs <= lhs); }
 	};
-
-	namespace impl
-	{
-		// A static instance of the locale, because this thing takes ages to construct
-		inline std::locale const& locale()
-		{
-			static std::locale s_locale("");
-			return s_locale;
-		}
-		template <typename String> inline String narrow(wchar_t const* from, std::size_t len = 0)
-		{
-			if (len == 0) len = wcslen(from);
-			std::vector<char> buffer(len + 1);
-			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
-			return String(&buffer[0], &buffer[len]);
-		};
-		template <typename String> inline String widen(char const* from, std::size_t len = 0)
-		{
-			if (len == 0) len = strlen(from);
-			std::vector<wchar_t> buffer(len + 1);
-			std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
-			return String(&buffer[0], &buffer[len]);
-		}
-	}
-
-	// Overloads of pr::Narrow() and pr::Widen
-	template <int L, bool F, typename A> inline string<char> Narrow(string<char,L,F,A> const& from)
-	{
-		return from;
-	}
-	template <int L, bool F, typename A> inline string<char> Narrow(string<wchar_t,L,F,A> const& from)
-	{
-		return impl::narrow<string<char>>(from.c_str(), from.size());
-	}
-	template <int L, bool F, typename A> inline string<wchar_t> Widen(string<wchar_t,L,F,A> const& from)
-	{
-		return from;
-	}
-	template <int L, bool F, typename A> inline string<wchar_t> Widen(string<char,L,F,A> const& from)
-	{
-		return impl::widen<string<wchar_t>>(from.c_str(), from.size());
-	}
 
 	// string concatenation
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
@@ -1488,7 +1452,7 @@ namespace pr
 	}
 	template <int L, bool F, typename A> inline std::basic_ostream<char>& operator << (std::basic_ostream<char>& ostrm, string<wchar_t,L,F,A> const& str)
 	{
-		return ostrm << impl::narrow<string<char>>(str.c_str(), str.size());
+		return ostrm << Narrow(str);
 	}
 	template <int L, bool F, typename A> inline std::basic_ostream<wchar_t>& operator << (std::basic_ostream<wchar_t>& ostrm, string<char,L,F,A> const& str)
 	{
@@ -1670,7 +1634,7 @@ namespace pr::str
 		{
 			str0.insert(str0.begin() ,'A'+(i%24));
 			str0.insert(str0.end()   ,'A'+(i%24));
-			PR_CHECK(str0.size(), size_t((1+i) * 2));
+			PR_CHECK(str0.size(), (1ULL+i) * 2);
 		}
 
 		str4 = "abcdef";
@@ -1700,6 +1664,11 @@ namespace pr::str
 		PR_CHECK(str9.empty(), true);
 		PR_CHECK(str10, "very long string that has been allocated");
 		PR_CHECK(str9.c_str() == str10.c_str(), false);
+
+		// implicit cast to string view
+		pr::string<char, 16> str11 = "abcdef";
+		std::string_view sv = str11;
+		PR_CHECK(Equal(sv, "abcdef"), true);
 	}
 }
 #endif

@@ -55,7 +55,7 @@ namespace pr
 				ObjectCont            m_objects;    // Objects created by this source
 				Guid                  m_context_id; // Id for the group of files that this object is part of
 				std::filesystem::path m_filepath;   // The filepath of the source (if there is one)
-				script::EEncoding     m_encoding;   // The file encoding
+				EEncoding             m_encoding;   // The file encoding
 				script::Includes      m_includes;   // Include paths to use with this file
 				Camera                m_cam;        // Camera properties associated with this source
 				ECamField             m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
@@ -63,7 +63,7 @@ namespace pr
 				Source()
 					:m_context_id(pr::GuidZero)
 					,m_filepath()
-					,m_encoding(script::EEncoding::auto_detect)
+					,m_encoding(EEncoding::auto_detect)
 					,m_includes()
 					,m_cam()
 					,m_cam_fields(ECamField::None)
@@ -71,12 +71,12 @@ namespace pr
 				Source(Guid const& context_id)
 					:m_context_id(context_id)
 					,m_filepath()
-					,m_encoding(script::EEncoding::auto_detect)
+					,m_encoding(EEncoding::auto_detect)
 					,m_includes()
 					,m_cam()
 					,m_cam_fields(ECamField::None)
 				{}
-				Source(Guid const& context_id, std::filesystem::path const&  filepath, script::EEncoding enc, script::Includes const& includes)
+				Source(Guid const& context_id, std::filesystem::path const&  filepath, EEncoding enc, script::Includes const& includes)
 					:m_context_id(context_id)
 					,m_filepath(std::filesystem::canonical(filepath))
 					,m_encoding(enc)
@@ -370,7 +370,7 @@ namespace pr
 			// Add a file source.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddFile(std::filesystem::path const& filepath, script::EEncoding enc, script::Includes const& includes, bool additional)
+			Guid AddFile(std::filesystem::path const& filepath, EEncoding enc, script::Includes const& includes, bool additional)
 			{
 				return AddFile(filepath, enc, EReason::NewData, pr::GenerateGUID(), includes, additional);
 			}
@@ -378,13 +378,13 @@ namespace pr
 			// Add ldr objects from a script string or file (but not as a file source).
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddScript(std::wstring_view ldr_script, bool file, script::EEncoding enc, Guid const* context_id, script::Includes const& includes)
+			Guid AddScript(std::wstring_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes)
 			{
 				// Create a context id if none given
 				auto guid = context_id ? *context_id : pr::GenerateGUID();
 				return AddScript(ldr_script, file, enc, EReason::NewData, guid, includes);
 			}
-			Guid AddScript(std::string_view ldr_script, bool file, script::EEncoding enc, Guid const* context_id, script::Includes const& includes)
+			Guid AddScript(std::string_view ldr_script, bool file, EEncoding enc, Guid const* context_id, script::Includes const& includes)
 			{
 				// Create a context id if none given
 				auto guid = context_id ? *context_id : pr::GenerateGUID();
@@ -454,7 +454,7 @@ namespace pr
 			// Note: 'file' not passed by reference because it can be a file already in the collection, so we need a local copy.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			Guid AddFile(std::filesystem::path const& ldr_file, script::EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes, bool additional) // worker thread context
+			Guid AddFile(std::filesystem::path const& ldr_file, EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes, bool additional) // worker thread context
 			{
 				using namespace pr::script;
 				assert(!ldr_file.empty());
@@ -574,7 +574,7 @@ namespace pr
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to
 			template <typename Char>
-			Guid AddScript(std::basic_string_view<Char> ldr_script, bool file, script::EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes) // worker thread context
+			Guid AddScript(std::basic_string_view<Char> ldr_script, bool file, EEncoding enc, EReason reason, Guid const& context_id, script::Includes const& includes) // worker thread context
 			{
 				using namespace pr::script;
 

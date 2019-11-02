@@ -43,17 +43,6 @@ namespace pr::script
 	using InLiteralString = str::InLiteralString<char_t>;
 	using InComment = str::InComment;
 
-	enum class EEncoding
-	{
-		ascii,
-		utf8,
-		utf16,
-		ucs2,
-		ucs2_be,
-		auto_detect,
-		already_decoded,
-	};
-
 	#define PR_ENUM(x)\
 		x(Success                       )\
 		x(Failed                        )\

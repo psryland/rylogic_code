@@ -200,7 +200,7 @@ VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL 
 	{
 		// Concurrent entry is allowed.
 		//'DllLockGuard;
-		return Dll().LoadScriptSource(filepath, pr::script::EEncoding::auto_detect, additional != 0, GetIncludes(includes));
+		return Dll().LoadScriptSource(filepath, pr::EEncoding::auto_detect, additional != 0, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
 }
@@ -213,7 +213,7 @@ VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto enc = is_file ? pr::script::EEncoding::auto_detect : pr::script::EEncoding::utf16;
+		auto enc = is_file ? pr::EEncoding::auto_detect : pr::EEncoding::utf16;
 		return Dll().LoadScript(ldr_script, is_file, enc, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
@@ -1403,7 +1403,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 	{
 		DllLockGuard;
 		auto is_file = file != 0;
-		auto enc = is_file ? pr::script::EEncoding::auto_detect : pr::script::EEncoding::utf16;
+		auto enc = is_file ? pr::EEncoding::auto_detect : pr::EEncoding::utf16;
 		return Dll().ObjectCreateLdr(ldr_script, is_file, enc, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);

@@ -113,7 +113,7 @@ namespace pr
 	template <typename Str, typename = enable_if_raw_str<Str>>
 	inline Str To(log::ELevel lvl)
 	{
-		using Char = pr::str::traits<Str>::value_type;
+		using Char = pr::string_traits<Str>::value_type;
 		switch (lvl)
 		{
 		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);

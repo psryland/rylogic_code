@@ -219,7 +219,7 @@ namespace LDraw
 		{
 			if (m_example_script_ui == null)
 			{
-				m_example_script_ui = new ExampleScriptUI(this);
+				m_example_script_ui = new ExampleScriptUI { Icon = Icon };
 				m_example_script_ui.Closed += delegate { m_example_script_ui = null; };
 				m_example_script_ui.Show();
 			}

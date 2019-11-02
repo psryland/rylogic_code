@@ -56,7 +56,7 @@ namespace pr::ldr
 			"//\n"
 			"//  Definitions:\n"
 			"//    ctx_id - this is a GUID used to identify a source of objects. It allows\n"
-			"//             objects to be added/removed/refreshed in descrete sets.\n"
+			"//             objects to be added/removed/refreshed in discrete sets.\n"
 			"//    axis_id - is an integer describing an axis number. It must be one\n"
 			"//              of ±1, ±2, ±3 corresponding to ±X, ±Y, ±Z respectively.\n"
 			"//    [field] - fields in square brackets mean optional fields.\n"
