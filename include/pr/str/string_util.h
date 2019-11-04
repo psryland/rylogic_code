@@ -135,7 +135,7 @@ namespace pr::str
 			// Extract whole strings
 			if (*s == '\"' || *s == '\'')
 			{
-				InLiteral<typename string_traits<Str>::value_type> lit;
+				InLiteral lit;
 
 				auto e = s;
 				auto quote = *s;
@@ -404,7 +404,7 @@ namespace pr::str
 			auto iend = ofs + count;
 
 			// Find the start of the next identifier
-			InLiteral<Char> lit;
+			InLiteral lit;
 			for (; i != iend; ++i)
 			{
 				// Do not find identifiers within literal strings

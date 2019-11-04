@@ -19,25 +19,7 @@
 
 namespace pr::str
 {
-	// Flags for controlling the behaviour of the InLiteral class
-	enum class EInLitFlags
-	{
-		None = 0,
-
-		// Expected escape sequences in the string
-		Escaped = 1 << 0,
-
-		// 'WithinLiteralString' returns false for the initial and final quote characters
-		ExcludeQuotes = 1 << 1,
-
-		// New line characters end literal strings
-		SingleLineStrings = 1 << 2,
-
-		_bitwise_operators_allowed,
-	};
-
 	// A helper class for recognising literal strings in a stream of characters.
-	template <typename Char>
 	struct InLiteral
 	{
 		// Notes:
@@ -46,19 +28,34 @@ namespace pr::str
 		//    code blocks in the preprocessor, which ignores unclosed literal strings/characters.
 		//  - Escape sequences don't have to be for single characters (i.e. unicode sequences) but
 		//    that doesn't matter here because we only care about escaped quote characters.
-		
-		using char_t = Char;
 
-		EInLitFlags m_flags;
-		char_t m_escape_character;
-		char_t m_quote_character;
+		// Flags for controlling the behaviour of the InLiteral class
+		enum class EFlags
+		{
+			None = 0,
+
+			// Expected escape sequences in the string
+			Escaped = 1 << 0,
+
+			// 'WithinLiteralString' returns false for the initial and final quote characters
+			ExcludeQuotes = 1 << 1,
+
+			// New line characters end literal strings
+			SingleLineStrings = 1 << 2,
+
+			_bitwise_operators_allowed,
+		};
+
+		EFlags m_flags;
+		int m_escape_character;
+		int m_quote_character;
 		bool m_in_literal_string;
 		bool m_escape;
 
 		// 'include_quotes' means 
 		// 'single_line_strings' means literal strings end at '\n' characters. 
 		// 'escape_character' is the character used for escaping.
-		explicit InLiteral(EInLitFlags flags = EInLitFlags::Escaped, char_t escape_character = '\\') noexcept
+		explicit InLiteral(EFlags flags = EFlags::Escaped, int escape_character = '\\') noexcept
 			:m_flags(flags)
 			,m_escape_character(escape_character)
 			,m_quote_character()
@@ -75,7 +72,8 @@ namespace pr::str
 		// Processes the current character in 'src'.
 		// Returns true if currently within a string/character literal
 		// Returns true for the surrounding quotes as well.
-		bool WithinLiteralString(char_t ch) noexcept
+		template <typename Char>
+		bool WithinLiteralString(Char ch) noexcept
 		{
 			if (m_in_literal_string)
 			{
@@ -88,16 +86,16 @@ namespace pr::str
 				else if (ch == m_quote_character)
 				{
 					m_in_literal_string = false;
-					return !Has(m_flags, EInLitFlags::ExcludeQuotes); // terminating quote can be part of the literal
+					return !Has(m_flags, EFlags::ExcludeQuotes); // terminating quote can be part of the literal
 				}
-				else if (ch == '\n' && Has(m_flags, EInLitFlags::SingleLineStrings))
+				else if (ch == '\n' && Has(m_flags, EFlags::SingleLineStrings))
 				{
 					m_in_literal_string = false;
 					return false; // terminating '\n' is not part of the literal
 				}
 				else
 				{
-					m_escape = (ch == m_escape_character) && Has(m_flags, EInLitFlags::Escaped);
+					m_escape = (ch == m_escape_character) && Has(m_flags, EFlags::Escaped);
 					return true;
 				}
 			}
@@ -106,7 +104,7 @@ namespace pr::str
 				m_quote_character = static_cast<char>(ch);
 				m_in_literal_string = true;
 				m_escape = false;
-				return !Has(m_flags, EInLitFlags::ExcludeQuotes); // first quote can be part of the literal
+				return !Has(m_flags, EFlags::ExcludeQuotes); // first quote can be part of the literal
 			}
 			else
 			{
@@ -115,7 +113,7 @@ namespace pr::str
 		}
 	
 		// Helper for flags
-		constexpr bool Has(EInLitFlags lhs, EInLitFlags rhs)
+		constexpr bool Has(EFlags lhs, EFlags rhs)
 		{
 			return (static_cast<int>(lhs) & static_cast<int>(rhs)) != 0;
 		}
@@ -125,23 +123,36 @@ namespace pr::str
 	struct InComment
 	{
 		enum class EType { None = 0, Line = 1, Block = 2 };
+		static int const LineContinuation = '\\';
+		struct Patterns
+		{
+			std::wstring m_line_comment;
+			std::wstring m_line_end;
+			std::wstring m_block_beg;
+			std::wstring m_block_end;
 
+			Patterns(
+				std::wstring_view line_comment = L"//",
+				std::wstring_view line_end = L"\n",
+				std::wstring_view block_beg = L"/*",
+				std::wstring_view block_end = L"*/")
+				:m_line_comment(line_comment)
+				,m_line_end(line_end)
+				,m_block_beg(block_beg)
+				,m_block_end(block_end)
+			{}
+		};
+
+		Patterns m_pat;
+		InLiteral m_lit;
 		EType m_comment;
-		std::wstring m_line_comment;
-		std::wstring m_line_end;
-		std::wstring m_block_beg;
-		std::wstring m_block_end;
-		wchar_t m_line_continuation_character;
 		bool m_escape;
 		int m_emit;
 
-		explicit InComment(wchar_t const* line_comment = L"//", wchar_t const* line_end = L"\n", wchar_t const* block_beg = L"/*", wchar_t const* block_end = L"*/", wchar_t line_continuation_character = '\\')
-			:m_comment(EType::None)
-			,m_line_comment(line_comment)
-			,m_line_end(line_end)
-			,m_block_beg(block_beg)
-			,m_block_end(block_end)
-			,m_line_continuation_character(line_continuation_character)
+		explicit InComment(Patterns pat = Patterns(), InLiteral::EFlags literal_flags = InLiteral::EFlags::Escaped | InLiteral::EFlags::SingleLineStrings)
+			:m_pat(pat)
+			,m_lit(literal_flags)
+			,m_comment(EType::None)
 			,m_escape()
 			,m_emit()
 		{}
@@ -157,16 +168,19 @@ namespace pr::str
 			{
 			case EType::None:
 				{
-					if (m_emit == 0 && Match(src, m_line_comment))
+					if (m_lit.WithinLiteralString(*src))
+					{
+					}
+					else if (m_emit == 0 && Match(src, m_pat.m_line_comment))
 					{
 						m_comment = EType::Line;
-						m_emit = static_cast<int>(m_line_comment.size());
+						m_emit = static_cast<int>(m_pat.m_line_comment.size());
 						m_escape = false;
 					}
-					else if (m_emit == 0 && Match(src, m_block_beg))
+					else if (m_emit == 0 && Match(src, m_pat.m_block_beg))
 					{
 						m_comment = EType::Block;
-						m_emit = static_cast<int>(m_block_beg.size());
+						m_emit = static_cast<int>(m_pat.m_block_beg.size());
 					}
 					break;
 				}
@@ -177,12 +191,12 @@ namespace pr::str
 						m_comment = EType::None;
 						m_emit = 0;
 					}
-					else if (m_emit == 0 && !m_escape && Match(src, m_line_end))
+					else if (m_emit == 0 && !m_escape && Match(src, m_pat.m_line_end))
 					{
 						m_comment = EType::None;
 						m_emit = 0; // line comments don't include the line end
 					}
-					m_escape = *src == m_line_continuation_character;
+					m_escape = *src == LineContinuation;
 					break;
 				}
 			case EType::Block:
@@ -192,10 +206,10 @@ namespace pr::str
 						m_comment = EType::Block;
 						m_emit = 0;
 					}
-					else if (m_emit == 0 && Match(src, m_block_end))
+					else if (m_emit == 0 && Match(src, m_pat.m_block_end))
 					{
 						m_comment = EType::None;
-						m_emit = static_cast<int>(m_block_end.size());
+						m_emit = static_cast<int>(m_pat.m_block_end.size());
 					}
 					break;
 				}
@@ -213,7 +227,7 @@ namespace pr::str
 	private:
 
 		// True if 'src' starts with 'pattern'
-		template <typename TSrc> bool Match(TSrc& src, std::wstring_view pattern)
+		template <typename TSrc> static bool Match(TSrc& src, std::wstring_view pattern)
 		{
 			int i = 0, iend = static_cast<int>(pattern.size());
 			for (; i != iend && src[i] == pattern[i]; ++i) {}
@@ -482,128 +496,150 @@ namespace pr::str
 		{// InLiteral
 			{
 				// Escaped quotes are ignored
-				InLiteral<char> lit;
-				char const* ptr = " \"\\\"\" ";
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr), false);
-				PR_CHECK(*ptr, '\0');
+				char const* src = " \"\\\"\" ";
+				bool const exp[] = {0,1,1,1,1,0};
+
+				InLiteral lit;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (lit.WithinLiteralString(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
 			}
 			{
 				// Escape sequences are not always 1 character, but it doesn't
 				// matter because we only care about escaped quotes.
-				InLiteral<char> lit(EInLitFlags::Escaped | EInLitFlags::ExcludeQuotes); // Don't include the quotes
-				char const* ptr = " \"\\xB1\" ";
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr), false);
-				PR_CHECK(*ptr, '\0');
+				char const* src = " \"\\xB1\" ";
+				bool const exp[] = {0,0,1,1,1,1,0,0};
+
+				// Don't include the quotes
+				InLiteral lit(InLiteral::EFlags::Escaped | InLiteral::EFlags::ExcludeQuotes);
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (lit.WithinLiteralString(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
 			}
 			{
 				// Literals must match " to " and ' to '
-				InLiteral<char> lit;
-				char const* ptr = "\"'\" '\"' ";
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr), false);
-				PR_CHECK(*ptr, '\0');
+				char const* src = "\"'\" '\"' ";
+				bool const exp[] = {1,1,1,0,1,1,1,0};
+
+				InLiteral lit;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (lit.WithinLiteralString(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
 			}
 			{
 				// Literals *are* closed by '\n'
-				InLiteral<char> lit(EInLitFlags::Escaped | EInLitFlags::SingleLineStrings);
-				char const* ptr = "\" '\n ";
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
-				PR_CHECK(lit.WithinLiteralString(*ptr), false);
-				PR_CHECK(*ptr, '\0');
+				char const* src = "\" '\n ";
+				bool const exp[] = {1,1,1,0,0};
+
+				InLiteral lit(InLiteral::EFlags::Escaped | InLiteral::EFlags::SingleLineStrings);
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (lit.WithinLiteralString(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
 			}
 			{
 				// Literals are not closed by EOS
-				InLiteral<char> lit;
-				char const* ptr = "\" ";
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
-				PR_CHECK(lit.WithinLiteralString(*ptr), true);
-				PR_CHECK(*ptr, '\0');
+				char const* src = "\" ";
+				bool const exp[] = {1,1};
+
+				InLiteral lit;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (lit.WithinLiteralString(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+				}
+				PR_CHECK(lit.WithinLiteralString(*src), true);
+				PR_CHECK(*src, '\0');
 			}
 		}
 		{// InComment
 			{
 				// Simple block comment
-				InComment lit;
 				char const* src = " /**/ ";
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
+				bool const exp[] = {0,1,1,1,1,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
 				PR_CHECK(*src, '\0');
 			}
 			{
 				// No substring matching within block comment markers
-				InComment lit;
 				char const* src = "/*/*/ /**/*/";
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
+				bool const exp[] = {1,1,1,1,1,0,1,1,1,1,0,0,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
 				PR_CHECK(*src, '\0');
 			}
 			{
 				// Line comment ends at unescaped new line (exclusive)
-				InComment lit;
 				char const* src = " // \\\n \n ";
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
+				bool const exp[] = {0,1,1,1,1,1,1,0,0,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
 				PR_CHECK(*src, '\0');
 			}
 			{
 				// Line comment ends at EOS
-				InComment lit;
 				char const* src = " // ";
-				PR_CHECK(lit.WithinComment(src), false); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), true); ++src;
-				PR_CHECK(lit.WithinComment(src), false); ++src;
+				bool const exp[] = {0,1,1,1,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
+			}
+			{
+				// No comments within literal strings
+				char const* src = " \"// /* */\" ";
+				bool const exp[] = {0,0,0,0,0,0,0,0,0,0,0,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
+				PR_CHECK(*src, '\0');
+			}
+			{
+				// Ignore literal strings within comments
+				char const* src = " /* \" */ // \" \n ";
+				bool const exp[] = {0,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0};
+
+				InComment com;
+				for (int i = 0; *src != 0; ++i, ++src)
+				{
+					if (com.WithinComment(src) == exp[i]) continue;
+					PR_CHECK(com.WithinComment(src), exp[i]);
+				}
 				PR_CHECK(*src, '\0');
 			}
 		}

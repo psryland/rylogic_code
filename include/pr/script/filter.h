@@ -160,7 +160,7 @@ namespace pr::script
 
 	public:
 
-		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, str::EInLitFlags literal_flags = str::EInLitFlags::None)
+		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, InLiteral::EFlags literal_flags = InLiteral::EFlags::None)
 			:Src(src, EEncoding::already_decoded)
 			,m_lines_max()
 			,m_lines_min()
