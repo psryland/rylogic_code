@@ -20,16 +20,19 @@ namespace pr::unittests::your::namespace
 // and just include the header you care about
 #include "pr/common/unittests.h"
 #include "unittests/src/unittests.h" // all tests
-//#include "pr/common/reflection.h"
-//#include "pr/common/expr_eval.h"
-//#include "pr/macros/enum.h"
 //#include "pr/str/string_core.h"
-//#include "pr/str/string_filter.h"
 //#include "pr/str/string_util.h"
+//#include "pr/str/extract.h"
+//#include "pr/str/string_filter.h"
 //#include "pr/str/string.h"
+//#include "pr/str/to_string.h"
+//#include "pr/common/guid.h"
+//#include "pr/maths/conversion.h"
+//#include "pr/common/expr_eval.h"
+//#include "pr/common/colour.h"
+//#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/spatial.h"
-//#include "pr/physics2/rigid_body/rigid_body.h"
 //#include "pr/script/location.h"
 //#include "pr/script/script_core.h"
 //#include "pr/script/filter.h"
@@ -41,6 +44,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
+//#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests
 extern "C"

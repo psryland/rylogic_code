@@ -876,7 +876,7 @@ namespace Rylogic.Script
 			}
 
 			// Buffer the section in 'Src'
-			var lit = new InLiteralString();
+			var lit = new InLiteral();
 			for (int nest = 1; Src[len] != 0;)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters

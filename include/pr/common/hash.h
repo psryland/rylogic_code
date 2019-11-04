@@ -161,9 +161,31 @@ namespace pr::hash
 		return HashI32CT(str, end, h);
 	}
 
+	// string to hash value
+	constexpr HashValue operator "" _hash(char const* str, size_t n)
+	{
+		return HashCT(str, str + n);
+	}
+	constexpr HashValue operator "" _hashi(char const* str, size_t n)
+	{
+		return HashICT(str, str + n);
+	}
+	constexpr HashValue operator "" _hash(wchar_t const* str, size_t n)
+	{
+		return HashCT(str, str + n);
+	}
+	constexpr HashValue operator "" _hashi(wchar_t const* str, size_t n)
+	{
+		return HashICT(str, str + n);
+	}
+
 	//template <unsigned int N> class C; C<HashI("ABC")> c;
 	static_assert(HashCT("ABC") == 1552166763U, "Compile time CRC failed");
 	static_assert(HashICT("ABC") == 440920331U, "Compile time CRC failed");
+	static_assert("hash me!"_hash == pr::hash::HashCT("hash me!"));
+	static_assert("HaSh Me ToO!"_hashi == pr::hash::HashICT("hash me too!"));
+	static_assert(L"hash me!"_hash == pr::hash::HashCT(L"hash me!"));
+	static_assert(L"HaSh Me ToO!"_hashi == pr::hash::HashICT(L"hash me too!"));
 
 	// Run Time *******************************************************************************
 

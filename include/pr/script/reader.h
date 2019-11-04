@@ -987,7 +987,7 @@ namespace pr::script
 		{
 			// Do not str.resize(0) here, that's the callers decision
 			auto& src = m_pp;
-			InLiteralString lit;
+			InLiteral lit;
 			if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, Location(), "expected '{'");
 			if (include_braces) pr::str::Append(str, L'{');
 			for (int nest = 1; *src; ++src)

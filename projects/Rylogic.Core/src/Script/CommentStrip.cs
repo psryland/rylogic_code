@@ -9,7 +9,7 @@
 			LineComment = line_comment ?? string.Empty;
 			BlockBeg = block_beg ?? string.Empty;
 			BlockEnd = block_end ?? string.Empty;
-			m_literal_string = new InLiteralString();
+			m_literal_string = new InLiteral();
 		}
 
 		/// <summary>Comment patterns</summary>
@@ -45,7 +45,7 @@
 			if (ch != '\0') m_src.Next();
 			return ch;
 		}
-		private InLiteralString m_literal_string;
+		private InLiteral m_literal_string;
 	}
 }
 

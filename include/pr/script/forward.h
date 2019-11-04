@@ -40,7 +40,7 @@ namespace pr::script
 	using char_t = wchar_t;
 	using string_t = std::basic_string<char_t>; // pr::string<wchar_t>;
 	using string_view_t = std::basic_string_view<char_t>;
-	using InLiteralString = str::InLiteralString<char_t>;
+	using InLiteral = str::InLiteral<char_t>;
 	using InComment = str::InComment;
 
 	#define PR_ENUM(x)\

@@ -1,4 +1,7 @@
 Immediate ToDo:
+	- pr/common/number.h to use string_core
+	- string_util.h (136) - use InLiteral
+	- string_util.h (181) - use InComment
 	
 LDraw
 	- Auto complete in scripts

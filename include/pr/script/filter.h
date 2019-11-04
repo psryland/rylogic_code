@@ -43,7 +43,7 @@ namespace pr::script
 	{
 	private:
 
-		InLiteralString m_lit;
+		InLiteral m_lit;
 		string_t m_line_comment;
 		string_t m_line_end;
 		string_t m_block_beg;
@@ -104,7 +104,7 @@ namespace pr::script
 
 		int m_lines_max;
 		int m_lines_min;
-		InLiteralString m_lit;
+		InLiteral m_lit;
 		InComment m_com;
 		int m_emit;
 		bool m_line_start;

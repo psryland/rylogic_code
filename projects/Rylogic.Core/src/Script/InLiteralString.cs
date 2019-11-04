@@ -1,6 +1,6 @@
 ﻿namespace Rylogic.Script
 {
-	public class InLiteralString
+	public class InLiteral
 	{
 		// Notes:
 		//  - A helper class for recognising literal strings in a stream of characters.
@@ -9,7 +9,7 @@
 		private bool m_in_literal_string;
 		private bool m_escape;
 
-		public InLiteralString(char escape_character = '\\')
+		public InLiteral(char escape_character = '\\')
 		{
 			m_escape_character = escape_character;
 		}
@@ -48,7 +48,7 @@ namespace Rylogic.UnitTests
 		public void InLiteralString()
 		{
 			const string src = "00\"11\"00";
-			var lit = new InLiteralString();
+			var lit = new InLiteral();
 			foreach (var ch in src)
 			{
 				if (lit.WithinLiteralString(ch))

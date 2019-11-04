@@ -18,34 +18,35 @@
 
 namespace pr::str
 {
-	// Notes:
-	//  - Migrate the read-only functions to use std::basic_string_view
-
 	// Ensure 'str' has a newline character at its end
-	template <typename Str, typename Char = string_traits<Str>::value_type> inline Str& EnsureNewline(Str& str)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	inline Str& EnsureNewline(Str& str)
 	{
-		if (!Empty(str) && *(End(str) - 1) != Char('\n')) Append(str, '\n');
+		if (!Empty(str) && *(End(str) - 1) != '\n') Append(str, '\n');
 		return str;
 	}
-	template <typename Str, typename Char = Str::value_type> inline Str EnsureNewline(Str const& str)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	inline Str EnsureNewline(Str const& str)
 	{
 		auto s = str;
 		return EnsureNewline(s);
 	}
 
 	// Return true if 'src' contains 'what'
-	template <typename Str1, typename Str2> inline bool Contains(Str1& str, Str2& what)
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline bool Contains(Str1 const& str, Str2 const& what)
 	{
-		return FindStr(Begin(str), End(str), what) != EndC(str);
+		return FindStr(Begin(str), End(str), what) != End(str);
 	}
-	template <typename Str1, typename Str2> inline bool ContainsI(Str1& str, Str2& what)
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline bool ContainsI(Str1 const& str, Str2 const& what)
 	{
 		return FindStrI(Begin(str), End(str), what) != End(str);
 	}
 
-	// Return the lexicographical comparison of two strings.
 	// Returns 0 if equal, -1 if lhs < rhs, or +1 if lhs > rhs
-	template <typename Str1, typename Str2, typename Pred> inline int Compare(Str1& lhs, Str2& rhs, Pred pred)
+	template <typename Str1, typename Str2, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline int Compare(Str1 const& lhs, Str2 const& rhs, Pred pred)
 	{
 		auto l = Begin(lhs); auto lend = End(lhs);
 		auto r = Begin(rhs); auto rend = End(rhs);
@@ -57,37 +58,41 @@ namespace pr::str
 		}
 		return (r == rend) - (l == lend);
 	}
-	template <typename Str1, typename Str2> inline int Compare(Str1& lhs, Str2& rhs)
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline int Compare(Str1 const& lhs, Str2 const& rhs)
 	{
-		using Char1 = string_traits<Str1>::value_type;
-		using Char2 = string_traits<Str2>::value_type;
-		return Compare(lhs, rhs, [](Char1 lhs, Char2 rhs){ return (lhs > rhs) - (rhs > lhs); });
+		return Compare(lhs, rhs, [](auto lhs, auto rhs)
+		{
+			return (lhs > rhs) - (rhs > lhs);
+		});
 	}
-	template <typename Str1, typename Str2> inline int CompareI(Str1& lhs, Str2& rhs)
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline int CompareI(Str1 const& lhs, Str2 const& rhs)
 	{
-		using Char1 = string_traits<Str1>::value_type;
-		using Char2 = string_traits<Str2>::value_type;
-		return Compare(lhs, rhs, [](Char1 lhs, Char2 rhs)
-			{
-				auto l = char_traits<Char1>::lwr(lhs);
-				auto r = char_traits<Char2>::lwr(rhs);
-				return (l > r) - (r > l);
-			});
+		return Compare(lhs, rhs, [](auto lhs, auto rhs)
+		{
+			auto l = string_traits<Str1 const>::lwr(lhs);
+			auto r = string_traits<Str2 const>::lwr(rhs);
+			return (l > r) - (r > l);
+		});
 	}
 
 	// Return the number of occurrences of 'what' in 'str'
-	template <typename Str1, typename Str2> size_t Count(Str1& str, Str2& what)
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
+	inline size_t Count(Str1 const& str, Str2 const& what)
 	{
 		auto count = 0;
+		auto i = Begin(str);
+		auto iend = End(str);
 		auto what_len = Size(what);
-		auto i = Begin(str); auto iend = End(str);
 		for (i = FindStr(i, iend, what); i != iend; i = FindStr(i + what_len, iend, what), ++count) {}
 		return count;
 	}
 
 	// Replace blocks of delimiter characters with a single delimiter 'ws_char'
 	// 'preserve_newlines' if true, and '\n' is a delimiter, then a newline is added if 1 or more '\n' characters are found in a block
-	template <typename Str1, typename Char> void CompressDelimiters(Str1& str, Char const* delim, Char ws_char, bool preserve_newlines)
+	template <typename Str1, typename Char, typename = std::enable_if_t<is_string_v<Str1>>>
+	void CompressDelimiters(Str1& str, Char const* delim, Char ws_char, bool preserve_newlines)
 	{
 		auto beg = Begin(str);
 		auto end = End(str);
@@ -103,36 +108,40 @@ namespace pr::str
 			for (; beg != end && *FindChar(delim, *beg) == 0; ++beg) { *out++ = *beg; }
 
 			// While *beg is a delimiter, advance 'beg'
-			for (; beg != end && *FindChar(delim, *beg) != 0; ++beg) { nl |= *beg == Char('\n'); }
+			for (; beg != end && *FindChar(delim, *beg) != 0; ++beg) { nl |= *beg == '\n'; }
 
 			// If 1 or more newlines were detected, add a '\n'
 			if (beg != end)
-				*out++ = preserve_newlines && nl ? Char('\n') : ws_char;
+				*out++ = preserve_newlines && nl ? '\n' : ws_char;
 		}
 
 		// Shrink the string
 		Resize(str, size_t(out - Begin(str)));
 	}
-	template <typename Str, typename Char> inline void CompressDelimiters(Str& str, Char ws_char, bool preserve_newlines)
+	template <typename Str, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	inline void CompressDelimiters(Str& str, Char ws_char, bool preserve_newlines)
 	{
-		return CompressDelimiters(str, Delim<string_traits<Str>::value_type>(nullptr), ws_char, preserve_newlines);
+		return CompressDelimiters(str, Delim<Char>(nullptr), ws_char, preserve_newlines);
 	}
 
 	// Convert a string to tokens, returned each token via 'token_cb'.
 	// token_cb(char const* s, char const* e);
-	template <typename Str, typename TokenCB, typename Char = string_traits<Str>::value_type> void TokeniseCB(Str const& str, TokenCB token_cb, Char const* delim, bool remove_quotes = true)
+	template <typename Str, typename TokenCB, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	void TokeniseCB(Str const& str, TokenCB token_cb, Char const* delim, bool remove_quotes = true)
 	{
 		auto s = BeginC(str);
 		auto end = EndC(str);
 		for (; s != end; ++s)
 		{
+			// TODO: replace this with InLiteral from string_filter.h
+
 			// Extract whole strings
 			if (*s == '"')
 			{
 				auto e = s;
 				if (remove_quotes) ++s;
 				for (++e; e != end && *e != '"'; ++e) {}
-				if (*e != '"') throw std::exception("Partial literal string");
+				if (*e != '"') throw std::runtime_error("Partial literal string");
 				token_cb(s, e + !remove_quotes);
 				s = e;
 				continue;
@@ -149,20 +158,28 @@ namespace pr::str
 			}
 		}
 	}
-	template <typename Str, typename StrCont, typename Char = string_traits<Str>::value_type> void Tokenise(Str const& str, StrCont& tokens, Char const* delim, bool remove_quotes = true)
+	template <typename Str, typename StrCont, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
+	void Tokenise(Str const& str, StrCont& tokens, Char const* delim, bool remove_quotes = true)
 	{
-		using StrOut = StrCont::value_type;
-		TokeniseCB(str, [&](Char const* s, Char const* e){ tokens.push_back(StrOut(s, e)); }, delim, remove_quotes);
+		using StrOut = typename StrCont::value_type;
+		TokeniseCB(str, [&](Char const* s, Char const* e)
+		{
+			tokens.push_back(StrOut(s, e));
+		}, delim, remove_quotes);
 	}
-	template <typename Str, typename StrCont> inline void Tokenise(Str const& str, StrCont& tokens, bool remove_quotes = true)
+	template <typename Str, typename StrCont>
+	inline void Tokenise(Str const& str, StrCont& tokens, bool remove_quotes = true)
 	{
-		return Tokenise(str, tokens, Delim<string_traits<Str>::value_type>(), remove_quotes);
+		return Tokenise(str, tokens, Delim<typename string_traits<Str>::value_type>(), remove_quotes);
 	}
 
 	// Strip sections from a string
 	// Pass null to 'block_start','block_end' or 'line' to ignore that section type
-	template <typename Str, typename Char = string_traits<Str>::value_type> Str& Strip(Str& str, Char const* block_start, Char const* block_end, Char const* line)
+	template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+	Str& Strip(Str& str, Char const* block_start, Char const* block_end, Char const* line)
 	{
+		// TODO: replace this with the string_filter.h implementation
+
 		if (Empty(str))
 			return str;
 
@@ -196,9 +213,10 @@ namespace pr::str
 	}
 
 	// Strip C++ style comments from a string
-	template <typename Str> inline Str& StripCppComments(Str& str)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	inline Str& StripCppComments(Str& str)
 	{
-		using Char = string_traits<Str>::value_type;
+		using Char = typename string_traits<Str>::value_type;
 		Char const bs[] = {'/','*',0};
 		Char const be[] = {'*','/',0};
 		Char const ln[] = {'/','/',0};
@@ -207,7 +225,7 @@ namespace pr::str
 
 	// Replace instances of 'what' with 'with' in-place
 	// Returns the number of instances of 'what' that where replaced
-	template <typename Str1, typename Str2, typename Str3, typename Pred, typename Char1 = string_traits<Str1>::value_type>
+	template <typename Str1, typename Str2, typename Str3, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t Replace(Str1& str, Str2 const& what, Str3 const& with, Pred cmp)
 	{
 		if (Empty(str))
@@ -256,7 +274,7 @@ namespace pr::str
 		}
 		return count;
 	}
-	template <typename Str1, typename Str2, typename Str3, typename Pred>
+	template <typename Str1, typename Str2, typename Str3, typename Pred, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with, Pred cmp)
 	{
 		Assign(dst, BeginC(src), EndC(src));
@@ -264,133 +282,77 @@ namespace pr::str
 	}
 
 	// Replace all instances of 'what' with 'with' (case sensitive)
-	template <typename Str1, typename Str2, typename Str3, typename Char1 = string_traits<Str1>::value_type>
+	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
 	{
+		using Char1 = typename string_traits<Str1>::value_type;
 		return Replace(str, what, with, EqualN<Char1 const*, Str2>);
 	}
-	template <typename Str1, typename Str2, typename Str3>
+	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 	{
-		Assign(dst, BeginC(src), EndC(src));
+		using Char1 = typename string_traits<Str1>::value_type;
+		Assign(dst, Begin(src), End(src));
 		return Replace(dst, what, with, EqualN<Char1 const*, Str2>);
 	}
 
 	// Replace all instances of 'what' with 'with' (case insensitive)
-	template <typename Str1, typename Str2, typename Str3, typename Char1 = string_traits<Str1>::value_type>
+	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t ReplaceI(Str1& str, Str2 const& what, Str3 const& with)
 	{
+		using Char1 = typename string_traits<Str1>::value_type;
 		return Replace(str, what, with, EqualNI<Char1 const*, Str2>);
 	}
-	template <typename Str1, typename Str2, typename Str3>
+	template <typename Str1, typename Str2, typename Str3, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2> && is_string_v<Str3>>>
 	size_t ReplaceI(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 	{
-		Assign(dst, BeginC(src), EndC(src));
+		using Char1 = typename string_traits<Str1>::value_type;
+		Assign(dst, Begin(src), End(src));
 		return Replace(dst, what, with, EqualNI<Char1 const*, Str2>);
 	}
 
-	//// Hash the contents of a string using crc32
-	//template <typename Str, typename Char = string_traits<Str>::value_type> inline size_t Hash(Str const& src, size_t initial_crc = size_t(~0))
-	//{
-	//	if (Empty(src))
-	//		return initial_crc;
-
-	//	auto data = reinterpret_cast<void const*>(&src[0]);
-	//	auto size = size_t(Length(src) * sizeof(Char));
-	//	return Crc(data, size);
-	//}
-
 	// Convert a normal string into a C-style string
-	template <typename Str1>
-	inline Str1 StringToCString(Str1 const& src)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	inline Str StringToCString(Str const& src)
 	{
-		// This instance means 'Str2' has to be a std::string-like string
-		Str1 dst;
-		if (Empty(src)) return src;
+		if (Empty(src))
+			return src;
+
+		Str dst = {};
+		size_t len = 0;
+		Escape<typename string_traits<Str>::value_type> esc;
 		for (auto const* s = &src[0]; *s; ++s)
-		{
-			switch (*s)
-			{
-			default:   Append(dst,   *s); break;
-			case '\a': Append(dst, '\\'); Append(dst, 'a' ); break;
-			case '\b': Append(dst, '\\'); Append(dst, 'b' ); break;
-			case '\f': Append(dst, '\\'); Append(dst, 'f' ); break;
-			case '\n': Append(dst, '\\'); Append(dst, 'n' ); break;
-			case '\r': Append(dst, '\\'); Append(dst, 'r' ); break;
-			case '\t': Append(dst, '\\'); Append(dst, 't' ); break;
-			case '\v': Append(dst, '\\'); Append(dst, 'v' ); break;
-			case '\\': Append(dst, '\\'); Append(dst, '\\'); break;
-			case '\?': Append(dst, '\\'); Append(dst, '?' ); break;
-			case '\'': Append(dst, '\\'); Append(dst, '\''); break;
-			case '\"': Append(dst, '\\'); Append(dst, '"' ); break;
-			}
-		}
+			esc.Translate(*s, dst, len);
+
 		return dst;
 	}
 
 	// Convert a C-style string into a normal string
-	// This is the std::string -esk version. char* version not implemented yet...
-	template <typename Str1, typename Char = string_traits<Str1>::value_type>
-	inline Str1 CStringToString(Str1 const& src)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	inline Str CStringToString(Str const& src)
 	{
-		// This instance means 'Str2' has to be a std::string-like string
-		Str1 dst;
-		if (Empty(src)) return dst;
-		auto len = 0;
+		using traits = string_traits<Str>;
+		using Char = typename string_traits<Str>::value_type;
+
+		if (Empty(src)) 
+			return src;
+
+		Str dst = {};
+		size_t len = 0;
+		Unescape<typename string_traits<Str>::value_type> unesc;
 		for (auto const* s = &src[0]; *s; ++s)
-		{
-			if (*s == '\\')
-			{
-				switch (*++s)
-				{
-				default: break; // might be '0'
-				case 'a':  Append(dst, len++, '\a'); break;
-				case 'b':  Append(dst, len++, '\b'); break;
-				case 'f':  Append(dst, len++, '\f'); break;
-				case 'n':  Append(dst, len++, '\n'); break;
-				case 'r':  Append(dst, len++, '\r'); break;
-				case 't':  Append(dst, len++, '\t'); break;
-				case 'v':  Append(dst, len++, '\v'); break;
-				case '\'': Append(dst, len++, '\''); break;
-				case '\"': Append(dst, len++, '\"'); break;
-				case '\\': Append(dst, len++, '\\'); break;
-				case '?':  Append(dst, len++, '\?'); break;
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-					{
-						// ascii character in octal
-						Char oct[9] = {};
-						for (int i = 0; i != 8 && IsOctDigit(*s); ++i, ++s) oct[i] = Char(*s);
-						Append(dst, len++, Char(char_traits<Char>::strtoul(oct, nullptr, 8)));
-						break;
-					}
-				case 'x':
-					{
-						// ascii or unicode character in hex
-						Char hex[9] = {};
-						for (int i = 0; i != 8 && IsHexDigit(*s); ++i, ++s) hex[i] = Char(*s);
-						Append(dst, len++, Char(char_traits<Char>::strtoul(hex, nullptr, 16)));
-						break;
-					}
-				}
-			}
-			else
-			{
-				Append(dst, len++, *s);
-			}
-		}
+			unesc.Translate(*s, dst, len);
+
 		return dst;
 	}
 
 	// Look for 'identifier' within the range [ofs, ofs+count) of 'src'.
 	// Returns the index of it's position or ofs+count if not found.
 	// Identifier will be a complete identifier based on the character class IsIdentifier()
-	template <typename Str1, typename Str2>
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
 	{
-		auto beg = BeginC(src) + ofs;
+		auto beg = Begin(src) + ofs;
 		auto end = beg + count;
 		auto len = Size(identifier);
 		for (auto iter = beg; iter != end;)
@@ -412,16 +374,16 @@ namespace pr::str
 				continue;
 
 			// Found one
-			return size_t(ptr - BeginC(src));
+			return size_t(ptr - Begin(src));
 		}
 		return ofs + count;
 	}
-	template <typename Str1, typename Str2>
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs)
 	{
 		return FindIdentifier(src, identifier, ofs, Size(src) - ofs);
 	}
-	template <typename Str1, typename Str2>
+	template <typename Str1, typename Str2, typename = std::enable_if_t<is_string_v<Str1> && is_string_v<Str2>>>
 	inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier)
 	{
 		return FindIdentifier(src, identifier, 0);
@@ -442,7 +404,7 @@ namespace pr::str
 			auto iend = ofs + count;
 
 			// Find the start of the next identifier
-			InLiteralString<Char> lit;
+			InLiteral<Char> lit;
 			for (; i != iend; ++i)
 			{
 				// Do not find identifiers within literal strings
@@ -475,17 +437,16 @@ namespace pr::str
 	}
 
 	// Add/Remove quotes from a string if it doesn't already have them
-	template <typename Str, typename Char = string_traits<Str>::value_type>
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 	inline Str& Quotes(Str& str, bool add)
 	{
 		size_t i, len = Size(str);
-		auto begin = BeginC(str);
+		auto begin = Begin(str);
 		if ( add && (len >= 2 && *begin == '\"' && *(begin + len - 1) == '\"')) return str; // already quoted
 		if (!add && (len <  2 || *begin != '\"' || *(begin + len - 1) != '\"')) return str; // already not quoted
 		if (add)
 		{
-			Resize(str, len+2);
-			str[len+1] = '\"';
+			Resize(str, len+2, '\"');
 			for (i = len; i-- != 0;) str[i+1] = str[i];
 			str[0] = '\"';
 		}
@@ -496,7 +457,7 @@ namespace pr::str
 		}
 		return str;
 	}
-	template <typename Str>
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 	inline Str Quotes(Str const& str, bool add)
 	{
 		Str s(str);
@@ -507,14 +468,16 @@ namespace pr::str
 	// 'bytes' - the input data size
 	// 'si' - true to use 1000bytes = 1kb, false for 1024bytes = 1kb
 	// 'dp' - number of decimal places to use
-	template <typename Str = std::string, typename Char = string_traits<Str>::value_type>
+	template <typename Str = std::string, typename = std::enable_if_t<is_string_v<Str>>>
 	Str PrettyBytes(long long bytes, bool si, int dp)
 	{
+		using Char = typename string_traits<Str>::value_type;
+
 		auto unit = si ? 1000 : 1024;
 		if (bytes < unit)
 		{
-			Char dst[16];
-			sprintf(&dst[0], _countof(dst), "%lld%s", bytes, si?"B":"iB");
+			Char dst[17] = {};
+			sprintf(&dst[0], _countof(dst) - 1, "%lld%s", bytes, si?"B":"iB");
 			return dst;
 		}
 
@@ -522,14 +485,14 @@ namespace pr::str
 		auto pretty_size = bytes/::pow(unit, exp);
 		char prefix = "KMGTPE"[exp-1];
 
-		Char fmt[32];
-		if (sprintf(&fmt[0], _countof(fmt), "%%1.%df%%c%%s", dp) < 0)
-			throw std::exception("PrettySize failed");
+		Char fmt[33] = {};
+		if (sprintf(&fmt[0], _countof(fmt) - 1, "%%1.%df%%c%%s", dp) < 0)
+			throw std::runtime_error("PrettySize failed");
 			
-		Char buf[128];
-		auto len = sprintf(&buf[0], _countof(buf), fmt, pretty_size, prefix, si?"B":"iB");
-		if (len < 0 || len >= _countof(buf))
-			throw std::exception("PrettySize failed");
+		Char buf[129] = {};
+		auto len = sprintf(&buf[0], _countof(buf) - 1, fmt, pretty_size, prefix, si?"B":"iB");
+		if (len < 0 || len >= _countof(buf) - 1)
+			throw std::runtime_error("PrettySize failed");
 
 		return buf;
 	}
@@ -540,22 +503,24 @@ namespace pr::str
 	// 'decade' is the power of 10 to round to
 	// 'dp' is the number of decimal places to write
 	// 'sep' is the separator character to use
-	template <typename Str = std::string, typename Char = string_traits<Str>::value_type>
+	template <typename Str = std::string, typename = std::enable_if_t<is_string_v<Str>>>
 	Str PrettyNumber(double num, long decade, int dp, char sep = ',')
 	{
+		using Char = typename string_traits<Str>::value_type;
+
 		auto unit = ::pow(10, decade);
 		auto pretty_size = num / unit;
 
 		// Create the format string for the next sprintf
-		Char fmt[32];
-		if (sprintf(&fmt[0], _countof(fmt), "%%1.%df", dp) < 0)
-			throw std::exception("PrettyNumber failed");
+		Char fmt[33] = {};
+		if (sprintf(&fmt[0], _countof(fmt) - 1, "%%1.%df", dp) < 0)
+			throw std::runtime_error("PrettyNumber failed");
 
 		// Printf the number into buf
-		Char buf[128];
-		auto len = sprintf(&buf[0], _countof(buf), fmt, pretty_size);
-		if (len < 0 || len >= _countof(buf))
-			throw std::exception("PrettyNumber failed");
+		Char buf[129] = {};
+		auto len = sprintf(&buf[0], _countof(buf) - 1, fmt, pretty_size);
+		if (len < 0 || len >= _countof(buf) - 1)
+			throw std::runtime_error("PrettyNumber failed");
 
 		// Insert separators into buf
 		if (sep != 0)
@@ -567,7 +532,7 @@ namespace pr::str
 			auto sep_count = (len - 1 - dp - 1) / 3;
 			auto new_length = len + sep_count;
 			if (new_length >= _countof(buf))
-				throw std::exception("PrettyNumber failed");
+				throw std::runtime_error("PrettyNumber failed, number too long for internal buffer");
 
 			if (new_length >= 0)
 			{
@@ -586,11 +551,12 @@ namespace pr::str
 	}
 
 	// Remove leading white space and trailing tabs around '\n' characters.
-	template <typename Str> Str& ProcessIndentedNewlines(Str& str)
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	Str& ProcessIndentedNewlines(Str& str)
 	{
 		// Allow new lines in simple strings. 
-		int w = 0;
-		for (int i = 0, c = 0, end = int(Size(str)); i != end; )
+		size_t w = 0, c = 0;
+		for (int i = 0, iend = static_cast<int>(Size(str)); i != iend; )
 		{
 			// If this is a newline
 			if (str[i] == '\n')
@@ -602,7 +568,7 @@ namespace pr::str
 				w = c;
 
 				// Skip over trailing tab characters
-				for (++i; i != end && str[i] == '\t'; ++i) {}
+				for (++i; i != iend && str[i] == '\t'; ++i) {}
 			}
 			else
 			{

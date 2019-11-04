@@ -80,7 +80,7 @@ namespace Rylogic.Gfx
 				// template contains a section, when the section end is found.
 				var nest = 0;
 				var has_section = false;
-				var lit = new InLiteralString();
+				var lit = new InLiteral();
 				Extract.BufferWhile(src, (s,i) =>
 				{
 					var ch = s[i];

@@ -132,45 +132,65 @@ namespace pr
 	// Conversion
 	namespace convert
 	{
-		template <typename Str, typename Char = typename Str::value_type, bool Wide = is_same<Char,wchar_t>::value>
+		// GUID to string
+		template <typename Str>
 		struct GuidToString
 		{
-			template <typename = enable_if<!Wide>> static Str To(GUID const& guid, char = 0)
+			using Char = typename string_traits<Str>::value_type;
+			static Str To(GUID const& guid)
 			{
-				RPC_CSTR str = nullptr;
-				auto s = CreateScope([&]{ ::UuidToStringA(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeA(&str); });
-				return Str(reinterpret_cast<char const*>(str));
-			}
-			template <typename = enable_if<Wide>> static Str To(GUID const& guid, wchar_t = 0)
-			{
-				RPC_WSTR str = nullptr;
-				auto s = CreateScope([&]{ ::UuidToStringW(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeW(&str); });
-				return Str(reinterpret_cast<wchar_t const*>(str));
+				if constexpr (std::is_same_v<Char, char>)
+				{
+					RPC_CSTR str = nullptr;
+					auto s = CreateScope([&] { ::UuidToStringA(static_cast<UUID const*>(&guid), &str); }, [&] { ::RpcStringFreeA(&str); });
+					return Str(reinterpret_cast<char const*>(str));
+				}
+				if constexpr (std::is_same_v<Char, wchar_t>)
+				{
+					RPC_WSTR str = nullptr;
+					auto s = CreateScope([&]{ ::UuidToStringW(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeW(&str); });
+					return Str(reinterpret_cast<wchar_t const*>(str));
+				}
 			}
 		};
-		struct ToGuid
+
+		// string to GUID
+		struct StringToGuid
 		{
-			static GUID To(char const* s)
+			template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+			static GUID To(Str const& s)
 			{
-				GUID guid;
-				::UuidFromStringA(RPC_CSTR(s), &guid);
-				return guid;
-			}
-			static GUID To(wchar_t const* s)
-			{
-				GUID guid;
-				::UuidFromStringW(RPC_WSTR(s), &guid);
-				return guid;
-			}
-			template <typename Str, typename = enable_if_str_class<Str>> static GUID To(Str const& str)
-			{
-				return To(str.c_str());
+				using Char = typename string_traits<Str>::value_type;
+
+				if constexpr (std::is_same_v<Char, char>)
+				{
+					GUID guid;
+					auto r = ::UuidFromStringA(RPC_CSTR(string_traits<Str>::ptr(s)), &guid);
+					if (r != RPC_S_OK) throw std::runtime_error("GUID string is invalid");
+					return guid;
+				}
+				if constexpr (std::is_same_v<Char, wchar_t>)
+				{
+					GUID guid;
+					auto r = ::UuidFromStringW(RPC_WSTR(string_traits<Str>::ptr(s)), &guid);
+					if (r != RPC_S_OK) throw std::runtime_error("GUID string is invalid");
+					return guid;
+				}
 			}
 		};
 	}
-	template <typename Char>                struct Convert<std::basic_string<Char>, Guid> :convert::GuidToString<std::basic_string<Char>> {};
-	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Guid> :convert::GuidToString<pr::string<Char,L,F>> {};
-	template <typename TFrom>               struct Convert<Guid, TFrom>                   :convert::ToGuid {};
+
+	// GUID to std::basic_string
+	template <typename Char> struct Convert<std::basic_string<Char>, Guid> :convert::GuidToString<std::basic_string<Char>>
+	{};
+
+	// GUID to pr::string
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char, L, F>, Guid> :convert::GuidToString<pr::string<Char, L, F>>
+	{};
+
+	// Whatever to GUID
+	template <typename TFrom> struct Convert<Guid, TFrom> :convert::StringToGuid
+	{};
 }
 
 // Operators (==, != already defined)

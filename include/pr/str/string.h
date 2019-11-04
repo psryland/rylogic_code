@@ -1471,17 +1471,41 @@ namespace pr
 		return istrm;
 	}
 
-	// Trait for identifying pr::string<>
-	template <typename T> struct is_prstring
+	// 'string_traits' specialisation
+	template <typename T, int L, bool F, typename A>
+	struct string_traits<string<T,L,F,A>> :char_traits<T>
 	{
-		enum { value = false };
-	};
+		using value_type = T;
+		using string_type = string<T,L,F,A>;
+		static bool const null_terminated = true;
 
-	template <typename Type, int LocalCount, bool Fixed, typename Allocator>
-	struct is_prstring< pr::string<Type,LocalCount,Fixed,Allocator> >
-	{
-		enum { value = true };
+		static value_type const* c_str(string_type const& str) { return str.c_str(); }
+		static value_type const* ptr(string_type const& str)   { return str.data(); }
+		static value_type* ptr(string_type& str)               { return str.data(); }
+		static size_t size(string_type const& str)             { return str.size(); }
+		static bool empty(string_type const& str)              { return str.empty(); }
+		static void resize(string_type& str, size_t n)         { str.resize(n); }
 	};
+	template <typename T, int L, bool F, typename A>
+	struct string_traits<string<T,L,F,A> const> :char_traits<T>
+	{
+		using value_type = T const;
+		using string_type = string<T,L,F,A> const;
+		static bool const null_terminated = true;
+
+		static value_type* c_str(string_type& str)     { return str.c_str(); }
+		static value_type* ptr(string_type& str)       { return str.data(); }
+		static size_t size(string_type const& str)     { return str.size(); }
+		static bool empty(string_type const& str)      { return str.empty(); }
+		static void resize(string_type& str, size_t n) { static_assert(false, "Immutable string cannot be resized"); }
+	};
+	static_assert(std::is_same_v<string_traits<string<char>>::value_type, char>);
+	static_assert(std::is_same_v<string_traits<string<wchar_t>>::value_type, wchar_t>);
+
+	// 'is_string' trait
+	template <typename T, int L, bool F, typename A>
+	struct is_string<string<T,L,F,A>> :is_char<T> {};
+	static_assert(is_string_v<string<char>>);
 }
 
 // Specialise std:: types for pr::string

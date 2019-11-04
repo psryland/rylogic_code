@@ -694,8 +694,10 @@ namespace pr
 	#pragma endregion
 
 	#pragma region Conversion
+
 	namespace convert
 	{
+		// Colour to string
 		template <typename Str, typename Char = typename Str::value_type>
 		struct ColourToString
 		{
@@ -708,42 +710,44 @@ namespace pr
 				return To(static_cast<Colour32>(c));
 			}
 		};
+
+		// Whatever to Colour32
 		struct ToColour32
 		{
-			template <typename Char> static Colour32 To(Char const* s, Char** end = nullptr)
+			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+			static Colour32 To(Str const& s, Char const** end = nullptr)
 			{
-				return Colour32(pr::To<uint32>(s, 16, end));
-			}
-			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour32 To(Str const& s, Char** end = nullptr)
-			{
-				return To(s.c_str(), end);
+				auto ptr = string_traits<Str>::ptr(s);
+				auto argb = pr::To<unsigned int>(ptr, 16, end); // pr:: needed
+				return Colour32(argb);
 			}
 			static Colour32 To(Colour const& c)
 			{
 				return c.argb();
 			}
 		};
+
+		// Whatever to Colour
 		struct ToColour
 		{
-			template <typename Char> static Colour To(Char const* s, Char** end = nullptr)
+			template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
+			static Colour To(Str const& s, Char const** end = nullptr)
 			{
-				char* e;
-				auto r = To<float>(s, &e);
-				auto g = To<float>(e, &e);
-				auto b = To<float>(e, &e);
-				auto a = To<float>(e, &e);
+				Char* e;
+				auto r = pr::To<float>(s, &e);
+				auto g = pr::To<float>(e, &e);
+				auto b = pr::To<float>(e, &e);
+				auto a = pr::To<float>(e, &e);
 				if (end) *end = e;
 				return Colour(r,g,b,a);
-			}
-			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour To(Str const& s, Char** end = nullptr)
-			{
-				return To(s.c_str(), end);
 			}
 			static Colour To(Colour32 c)
 			{
 				return static_cast<Colour>(c);
 			}
 		};
+
+		// Whatever to D3DCOLORVALUE
 		#ifdef D3DCOLORVALUE_DEFINED
 		struct ToD3DCOLORVALUE
 		{
@@ -753,7 +757,7 @@ namespace pr
 			}
 			static D3DCOLORVALUE To(Colour32 c)
 			{
-				return To(static_cast<pr::Colour>(c));
+				return To(static_cast<Colour>(c));
 			}
 		};
 		#endif
@@ -781,9 +785,11 @@ namespace pr
 		auto str = To<std::basic_string<Char>>(Colour32(col));
 		return out << str.c_str();
 	}
+
 	#pragma endregion
 
 	#pragma region Interpolate
+
 	template <> struct Interpolate<Colour32>
 	{
 		struct Point
@@ -802,5 +808,6 @@ namespace pr
 			}
 		};
 	};
+
 	#pragma endregion
 }

@@ -36,12 +36,15 @@ namespace pr
 		~GdiPlus() { gdi::GdiplusShutdown(m_token); }
 	};
 
-	namespace convert_gdi
+	namespace convert
 	{
-		template <typename Str, typename Char = typename Str::value_type>
+		// GDI types to string
+		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 		struct GdiToString
 		{
 		};
+
+		// Whatever to GdiColour
 		struct ToGdiColor
 		{
 			static gdi::Color To(COLORREF col)
@@ -51,6 +54,8 @@ namespace pr
 				return c;
 			}
 		};
+
+		// Whatever to GdiRect
 		struct ToGdiRect
 		{
 			static gdi::Rect To(RECT const& r)
@@ -62,6 +67,8 @@ namespace pr
 				return gdi::Rect(int(r.X), int(r.Y), int(r.Width), int(r.Height));
 			}
 		};
+
+		// Whatever to GdiRectF
 		struct ToGdiRectF
 		{
 			static gdi::RectF To(RECT const& r)
@@ -69,23 +76,25 @@ namespace pr
 				return gdi::RectF(float(r.left), float(r.top), float(r.right - r.left), float(r.bottom - r.top));
 			}
 		};
-		struct ToRECT
+
+		// GdiRect to RECT
+		struct GdiRectToRECT
 		{
-			static RECT To(gdi::RectF const& r, DummyType<4> = 0)
+			static RECT To(gdi::RectF const& r)
 			{
 				return RECT{int(r.GetLeft()), int(r.GetTop()), int(r.GetRight()), int(r.GetBottom())};
 			}
-			static RECT To(gdi::Rect const& r, DummyType<5> = 0)
+			static RECT To(gdi::Rect const& r)
 			{
 				return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()};
 			}
 		};
 	}
-	template <typename TFrom> struct Convert<gdi::Color, TFrom> :convert_gdi::ToGdiColor {};
-	template <typename TFrom> struct Convert<gdi::Rect , TFrom> :convert_gdi::ToGdiRect {};
-	template <typename TFrom> struct Convert<gdi::RectF, TFrom> :convert_gdi::ToGdiRectF {};
-	template <> struct Convert<RECT, gdi::RectF> :convert_gdi::ToRECT {};
-	template <> struct Convert<RECT, gdi::Rect> :convert_gdi::ToRECT {};
+	template <typename TFrom> struct Convert<gdi::Color, TFrom> :convert::ToGdiColor {};
+	template <typename TFrom> struct Convert<gdi::Rect , TFrom> :convert::ToGdiRect {};
+	template <typename TFrom> struct Convert<gdi::RectF, TFrom> :convert::ToGdiRectF {};
+	template <> struct Convert<RECT, gdi::RectF> :convert::GdiRectToRECT {};
+	template <> struct Convert<RECT, gdi::Rect> :convert::GdiRectToRECT {};
 }
 
 namespace Gdiplus

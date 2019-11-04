@@ -110,10 +110,10 @@ namespace pr
 	}
 
 	// Log level to string
-	template <typename Str, typename = enable_if_raw_str<Str>>
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 	inline Str To(log::ELevel lvl)
 	{
-		using Char = pr::string_traits<Str>::value_type;
+		using Char = typename string_traits<Str>::value_type;
 		switch (lvl)
 		{
 		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);
