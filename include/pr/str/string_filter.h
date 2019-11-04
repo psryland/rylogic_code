@@ -19,6 +19,23 @@
 
 namespace pr::str
 {
+	// Flags for controlling the behaviour of the InLiteral class
+	enum class EInLitFlags
+	{
+		None = 0,
+
+		// Expected escape sequences in the string
+		Escaped = 1 << 0,
+
+		// 'WithinLiteralString' returns false for the initial and final quote characters
+		ExcludeQuotes = 1 << 1,
+
+		// New line characters end literal strings
+		SingleLineStrings = 1 << 2,
+
+		_bitwise_operators_allowed,
+	};
+
 	// A helper class for recognising literal strings in a stream of characters.
 	template <typename Char>
 	struct InLiteral
@@ -27,25 +44,37 @@ namespace pr::str
 		//  - Literal strings are closed automatically by newline characters. Higher level
 		//    logic handles the unmatched quote character. This is needed for parsing inactive
 		//    code blocks in the preprocessor, which ignores unclosed literal strings/characters.
+		//  - Escape sequences don't have to be for single characters (i.e. unicode sequences) but
+		//    that doesn't matter here because we only care about escaped quote characters.
 		
 		using char_t = Char;
 
-		bool m_single_line_strings;
+		EInLitFlags m_flags;
 		char_t m_escape_character;
 		char_t m_quote_character;
 		bool m_in_literal_string;
 		bool m_escape;
 
-		explicit InLiteral(bool single_line_strings = true, char_t escape_character = '\\') noexcept
-			:m_single_line_strings(single_line_strings)
+		// 'include_quotes' means 
+		// 'single_line_strings' means literal strings end at '\n' characters. 
+		// 'escape_character' is the character used for escaping.
+		explicit InLiteral(EInLitFlags flags = EInLitFlags::Escaped, char_t escape_character = '\\') noexcept
+			:m_flags(flags)
 			,m_escape_character(escape_character)
 			,m_quote_character()
 			,m_in_literal_string(false)
 			,m_escape(false)
 		{}
 
+		// True while within an escape sequence
+		bool WithinEscape() const
+		{
+			return m_escape;
+		}
+
 		// Processes the current character in 'src'.
 		// Returns true if currently within a string/character literal
+		// Returns true for the surrounding quotes as well.
 		bool WithinLiteralString(char_t ch) noexcept
 		{
 			if (m_in_literal_string)
@@ -59,16 +88,16 @@ namespace pr::str
 				else if (ch == m_quote_character)
 				{
 					m_in_literal_string = false;
-					return true; // terminating quote is part of the literal
+					return !Has(m_flags, EInLitFlags::ExcludeQuotes); // terminating quote can be part of the literal
 				}
-				else if (m_single_line_strings && ch == '\n')
+				else if (ch == '\n' && Has(m_flags, EInLitFlags::SingleLineStrings))
 				{
 					m_in_literal_string = false;
 					return false; // terminating '\n' is not part of the literal
 				}
 				else
 				{
-					m_escape = ch == m_escape_character;
+					m_escape = (ch == m_escape_character) && Has(m_flags, EInLitFlags::Escaped);
 					return true;
 				}
 			}
@@ -77,12 +106,18 @@ namespace pr::str
 				m_quote_character = static_cast<char>(ch);
 				m_in_literal_string = true;
 				m_escape = false;
-				return true;
+				return !Has(m_flags, EInLitFlags::ExcludeQuotes); // first quote can be part of the literal
 			}
 			else
 			{
 				return false;
 			}
+		}
+	
+		// Helper for flags
+		constexpr bool Has(EInLitFlags lhs, EInLitFlags rhs)
+		{
+			return (static_cast<int>(lhs) & static_cast<int>(rhs)) != 0;
 		}
 	};
 
@@ -459,6 +494,22 @@ namespace pr::str
 				PR_CHECK(*ptr, '\0');
 			}
 			{
+				// Escape sequences are not always 1 character, but it doesn't
+				// matter because we only care about escaped quotes.
+				InLiteral<char> lit(EInLitFlags::Escaped | EInLitFlags::ExcludeQuotes); // Don't include the quotes
+				char const* ptr = " \"\\xB1\" ";
+				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
+				PR_CHECK(lit.WithinLiteralString(*ptr++), false);
+				PR_CHECK(lit.WithinLiteralString(*ptr), false);
+				PR_CHECK(*ptr, '\0');
+			}
+			{
 				// Literals must match " to " and ' to '
 				InLiteral<char> lit;
 				char const* ptr = "\"'\" '\"' ";
@@ -475,7 +526,7 @@ namespace pr::str
 			}
 			{
 				// Literals *are* closed by '\n'
-				InLiteral<char> lit;
+				InLiteral<char> lit(EInLitFlags::Escaped | EInLitFlags::SingleLineStrings);
 				char const* ptr = "\" '\n ";
 				PR_CHECK(lit.WithinLiteralString(*ptr++), true);
 				PR_CHECK(lit.WithinLiteralString(*ptr++), true);

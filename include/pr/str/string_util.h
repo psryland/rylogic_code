@@ -124,25 +124,25 @@ namespace pr::str
 		return CompressDelimiters(str, Delim<Char>(nullptr), ws_char, preserve_newlines);
 	}
 
-	// Convert a string to tokens, returned each token via 'token_cb'.
-	// token_cb(char const* s, char const* e);
+	// Convert a string to tokens, returning each token via 'token_cb'. Sig: token_cb(char const* s, char const* e);
 	template <typename Str, typename TokenCB, typename Char, typename = std::enable_if_t<is_string_v<Str>>>
 	void TokeniseCB(Str const& str, TokenCB token_cb, Char const* delim, bool remove_quotes = true)
 	{
 		auto s = BeginC(str);
 		auto end = EndC(str);
-		for (; s != end; ++s)
+		for (; s != end; s += int(s != end))
 		{
-			// TODO: replace this with InLiteral from string_filter.h
-
 			// Extract whole strings
-			if (*s == '"')
+			if (*s == '\"' || *s == '\'')
 			{
+				InLiteral<typename string_traits<Str>::value_type> lit;
+
 				auto e = s;
-				if (remove_quotes) ++s;
-				for (++e; e != end && *e != '"'; ++e) {}
-				if (*e != '"') throw std::runtime_error("Partial literal string");
-				token_cb(s, e + !remove_quotes);
+				auto quote = *s;
+				lit.WithinLiteralString(*s);
+				for (++e; e != end && lit.WithinLiteralString(*e); ++e) {}
+				if (*(e - 1) != quote) throw std::runtime_error("Incomplete string/character literal");
+				token_cb(s + remove_quotes, e - remove_quotes);
 				s = e;
 				continue;
 			}
@@ -636,15 +636,16 @@ namespace pr::str
 			PR_CHECK(src, res);
 		}
 		{//Tokenise
-			char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4";
+			char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4 'tok5 & tok6'";
 			std::vector<std::string> tokens;
 			Tokenise(src, tokens);
-			PR_CHECK(tokens.size(), 5U);
+			PR_CHECK(tokens.size(), 6U);
 			PR_CHECK(tokens[0].c_str(), "tok0"          );
 			PR_CHECK(tokens[1].c_str(), "tok1"          );
 			PR_CHECK(tokens[2].c_str(), "tok2"          );
 			PR_CHECK(tokens[3].c_str(), "tok3 and tok3" );
 			PR_CHECK(tokens[4].c_str(), "tok4"          );
+			PR_CHECK(tokens[5].c_str(), "tok5 & tok6"   );
 		}
 		{//StripComments
 			char src[] =

@@ -160,11 +160,11 @@ namespace pr::script
 
 	public:
 
-		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, bool support_c_strings = false)
+		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, str::EInLitFlags literal_flags = str::EInLitFlags::None)
 			:Src(src, EEncoding::already_decoded)
 			,m_lines_max()
 			,m_lines_min()
-			,m_lit(support_c_strings, support_c_strings ? '\\' : '\0')
+			,m_lit(literal_flags)
 			,m_com()
 			,m_emit()
 			,m_line_start(true)
