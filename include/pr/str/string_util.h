@@ -173,41 +173,25 @@ namespace pr::str
 		return Tokenise(str, tokens, Delim<typename string_traits<Str>::value_type>(), remove_quotes);
 	}
 
-	// Strip sections from a string
-	// Pass null to 'block_start','block_end' or 'line' to ignore that section type
-	template <typename Str, typename Char = typename string_traits<Str>::value_type, typename = std::enable_if_t<is_string_v<Str>>>
-	Str& Strip(Str& str, Char const* block_start, Char const* block_end, Char const* line)
+	// Strip blocks or lines from a string. Pass empty strings to ignore those pattern types.
+	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
+	Str& Strip(Str& str, std::wstring_view block_beg, std::wstring_view block_end, std::wstring_view line, std::wstring_view line_end = L"\n")
 	{
-		// TODO: replace this with the string_filter.h implementation
-
 		if (Empty(str))
 			return str;
 
-		// Find the length of the block start/end and line section markers
-		auto block = block_start != 0 && block_end != 0;
-		auto lc_len  = line  ? Size(line)        : 0;
-		auto bcs_len = block ? Size(block_start) : 0;
-		auto bce_len = block ? Size(block_end)   : 0;
+		InComment com(InComment::Patterns(line, line_end, block_beg,block_end));
 
 		// Compress 'str' by stripping out the characters within the marked sections
-		Char* out = &str[0];
-		for (Char const *s = &str[0]; *s;)
+		auto in = &str[0];
+		auto out = &str[0];
+		auto len = Size(str);
+		for (; len-- != 0; ++in)
 		{
-			if (line && EqualN(line, s, lc_len))
-			{
-				for (; *s && (*s != '\n' && *s != '\r'); ++s) {}
-				for (; *s && (*s == '\n' || *s == '\r'); ++s) {}
-			}
-			else if (block && EqualN(block_start, s, bcs_len))
-			{
-				for (; *s && !EqualN(block_end, s, bce_len); ++s) {}
-				s += bce_len;
-			}
-			else
-			{
-				*out++ = *s++;
-			}
+			if (com.WithinComment(in)) continue;
+			*out++ = *in;
 		}
+
 		Resize(str, size_t(out - &str[0]));
 		return str;
 	}
@@ -216,11 +200,7 @@ namespace pr::str
 	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 	inline Str& StripCppComments(Str& str)
 	{
-		using Char = typename string_traits<Str>::value_type;
-		Char const bs[] = {'/','*',0};
-		Char const be[] = {'*','/',0};
-		Char const ln[] = {'/','/',0};
-		return Strip(str, bs, be, ln);
+		return Strip(str, L"/*", L"*/", L"//", L"\n");
 	}
 
 	// Replace instances of 'what' with 'with' in-place
@@ -653,7 +633,7 @@ namespace pr::str
 				"Not a comment\n"
 				"/* multi\n"
 				"-line comment*/";
-			char res[] = "Not a comment\n";
+			char res[] = "\nNot a comment\n";
 			PR_CHECK(StripCppComments(src), res);
 		}
 		{//Replace

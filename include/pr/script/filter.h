@@ -43,32 +43,16 @@ namespace pr::script
 	{
 	private:
 
-		InLiteral m_lit;
-		string_t m_line_comment;
-		string_t m_line_end;
-		string_t m_block_beg;
-		string_t m_block_end;
+		InComment m_com;
 
 		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
 		int Read() override
 		{
-			for (;;)
+			for (; *m_src; ++m_src)
 			{
-				// Read through literal strings or characters
-				if (m_lit.WithinLiteralString(*m_src))
-					break;
-
-				// Skip comments
-				if (!m_line_comment.empty() && *m_src == m_line_comment[0] && m_src.Match(m_line_comment))
-				{
-					EatLineComment(m_src, m_line_comment);
+				// Eat comments
+				if (m_com.WithinComment(m_src))
 					continue;
-				}
-				if (!m_block_beg.empty() && !m_block_end.empty() && *m_src == m_block_beg[0] && m_src.Match(m_block_beg))
-				{
-					EatBlockComment(m_src, m_block_beg, m_block_end);
-					continue;
-				}
 
 				break;
 			}
@@ -80,13 +64,9 @@ namespace pr::script
 
 	public:
 
-		explicit StripComments(Src& src, char_t const* line_comment = L"//", char_t const* line_end = L"\n", char_t const* block_beg = L"/*", char_t const* block_end = L"*/")
+		explicit StripComments(Src& src, InLiteral::EFlags literal_flags = InLiteral::EFlags::Escaped|InLiteral::EFlags::SingleLineStrings, InComment::Patterns const& comment_patterns = InComment::Patterns())
 			:Src(src, EEncoding::already_decoded)
-			,m_lit()
-			,m_line_comment(line_comment)
-			,m_line_end(line_end)
-			,m_block_beg(block_beg)
-			,m_block_end(block_end)
+			,m_com(comment_patterns, literal_flags)
 		{}
 	};
 
@@ -99,13 +79,13 @@ namespace pr::script
 		//  - If the number of lines is less than 'm_lines_min' add lines up to 'm_lines_min'
 		//  - If the number of lines is greater than 'm_lines_max' delete lines back to 'm_lines_max'
 		//  - Blank lines are replaced with a single new line character
+		//  - Does not handle comments, if you want comments handled, wrap the src in a 'StripComments' filter.
 
 	private:
 
+		InLiteral m_lit;
 		int m_lines_max;
 		int m_lines_min;
-		InLiteral m_lit;
-		InComment m_com;
 		int m_emit;
 		bool m_line_start;
 
@@ -122,10 +102,6 @@ namespace pr::script
 
 				// Read through literal strings or characters
 				if (m_lit.WithinLiteralString(*m_src))
-					break;
-
-				// Read through comments
-				if (m_com.WithinComment(m_src))
 					break;
 
 				// Don't trim white space from the end of lines
@@ -162,10 +138,9 @@ namespace pr::script
 
 		explicit StripNewLines(Src& src, int lines_min = 0, int lines_max = 1, InLiteral::EFlags literal_flags = InLiteral::EFlags::None)
 			:Src(src, EEncoding::already_decoded)
+			,m_lit(literal_flags)
 			,m_lines_max()
 			,m_lines_min()
-			,m_lit(literal_flags)
-			,m_com()
 			,m_emit()
 			,m_line_start(true)
 		{

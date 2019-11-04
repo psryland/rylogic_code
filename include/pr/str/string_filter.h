@@ -140,7 +140,12 @@ namespace pr::str
 				,m_line_end(line_end)
 				,m_block_beg(block_beg)
 				,m_block_end(block_end)
-			{}
+			{
+				if (m_line_comment.empty() != m_line_end.empty())
+					throw std::runtime_error("If line comments are detected, both start and end markers are required");
+				if (m_block_beg.empty() != m_block_end.empty())
+					throw std::runtime_error("If block comments are detected, both start and end markers are required");
+			}
 		};
 
 		Patterns m_pat;
@@ -171,13 +176,13 @@ namespace pr::str
 					if (m_lit.WithinLiteralString(*src))
 					{
 					}
-					else if (m_emit == 0 && Match(src, m_pat.m_line_comment))
+					else if (m_emit == 0 && !m_pat.m_line_comment.empty() && Match(src, m_pat.m_line_comment))
 					{
 						m_comment = EType::Line;
 						m_emit = static_cast<int>(m_pat.m_line_comment.size());
 						m_escape = false;
 					}
-					else if (m_emit == 0 && Match(src, m_pat.m_block_beg))
+					else if (m_emit == 0 && !m_pat.m_block_beg.empty() && Match(src, m_pat.m_block_beg))
 					{
 						m_comment = EType::Block;
 						m_emit = static_cast<int>(m_pat.m_block_beg.size());
