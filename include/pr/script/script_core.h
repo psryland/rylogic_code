@@ -191,7 +191,7 @@ namespace pr::script
 			for (; n > m_buffer.size();)
 			{
 				// Ensure 'Buffer's length grows with each loop
-				auto count = m_buffer.size();
+				auto const count = m_buffer.size();
 
 				// Read the next complete character from the underlying stream
 				int ch = '\0';
@@ -209,7 +209,7 @@ namespace pr::script
 					}
 				case EEncoding::ascii:
 					{
-						auto b = Read();
+						auto const b = Read();
 						if (b == EOS) break;
 						if (b > 127) throw ScriptException(EResult::WrongEncoding, Location(), Fmt(L"Source is not an ASCII character stream. Invalid character with value %d found", b));
 						ch = b;
@@ -221,12 +221,12 @@ namespace pr::script
 						for (auto mb = std::mbstate_t{};;)
 						{
 							// Read a byte at a time until a complete multibyte character is found (or EOS)
-							auto b = Read();
+							auto const b = Read();
 							if (b == EOS) break;
 
-							char16_t c16;
-							auto c = static_cast<char>(b);
-							auto r = std::mbrtoc16(&c16, &c, 1, &mb);
+							auto c = char(b);
+							char16_t c16 = 0;
+							auto const r = std::mbrtoc16(&c16, &c, 1, &mb);
 							if (r == static_cast<size_t>(-1)) throw ScriptException(EResult::WrongEncoding, Location(), "UTF-8 encoding error in source character stream");
 							if (r == static_cast<size_t>(-2)) continue;
 							ch = c16;
@@ -236,12 +236,11 @@ namespace pr::script
 					}
 				case EEncoding::utf16:
 					{
-						// This isn't correct, but I don't know of a function that converts utf16 to c16
 						int lo, hi;
 						if ((lo = Read()) == EOS) break;
 						if ((hi = Read()) == EOS) break;
-						ch = (hi << 8) | lo;
-						if (ch < 0 || ch > 0x7FF) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
+						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
+						if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
 				case EEncoding::ucs2:
@@ -249,7 +248,7 @@ namespace pr::script
 						int lo, hi;
 						if ((lo = Read()) == EOS) break;
 						if ((hi = Read()) == EOS) break;
-						ch = (hi << 8) | lo;
+						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
 						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
 						break;
 					}
@@ -258,7 +257,7 @@ namespace pr::script
 						int lo, hi;
 						if ((hi = Read()) == EOS) break;
 						if ((lo = Read()) == EOS) break;
-						ch = (hi << 8) | lo;
+						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
 						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
 						break;
 					}
