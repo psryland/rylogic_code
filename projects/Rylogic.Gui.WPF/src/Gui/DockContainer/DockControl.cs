@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -18,7 +19,7 @@ namespace Rylogic.Gui.WPF
 	/// Provides the implementation of the docking functionality.
 	/// Classes that implement IDockable have one of these as a public property.</summary>
 	[DebuggerDisplay("DockControl {TabText}")]
-	public sealed class DockControl : IDisposable
+	public sealed class DockControl : IDisposable, INotifyPropertyChanged
 	{
 		// Cut'n'Paste Boilerplate
 		// Inherit:
@@ -124,8 +125,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
 		public event EventHandler<DockContainerChangedEventArgs>? DockContainerChanged;
 
-		/// <summary>Hide this item in the dock container. (Use Remove() to make remove it completely)</summary>
-		public void Close()
+        /// <summary>Hide this item in the dock container. (Use Remove() to make remove it completely)</summary>
+        public void Close()
 		{
 			// Although removed from the UI, the dock container still remembers this instance.
 			// The 'Windows' menu can be used to reopen it. If 'DestroyOnClose' is true or the
@@ -430,7 +431,8 @@ namespace Rylogic.Gui.WPF
 				// Have to invalidate the whole tab strip, because the text length
 				// will change causing the other tabs to move.
 				m_tab_text = value;
-				TabButton?.InvalidateMeasure();
+                TabButton?.InvalidateMeasure();
+                NotifyPropertyChanged(nameof(TabText));
 			}
 		}
 		private string? m_tab_text;
@@ -444,8 +446,9 @@ namespace Rylogic.Gui.WPF
 				if (m_icon == value) return;
 				m_icon = value;
 				TabButton?.InvalidateArrange();
-			}
-		}
+                NotifyPropertyChanged(nameof(TabIcon));
+            }
+        }
 		private ImageSource? m_icon;
 
 		/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
@@ -461,13 +464,17 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The current state of the tab button associated with this content</summary>
 		public ETabState TabState
-		{
-			get { return TabButton?.TabState ?? ETabState.Inactive; }
-			set { if (TabButton is TabButton tb) tb.TabState = value; }
-		}
+        {
+            get => TabButton?.TabState ?? ETabState.Inactive;
+            set
+            {
+                if (TabButton is TabButton tb)
+                    tb.TabState = value;
+            }
+        }
 
-		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
-		public ContextMenu DefaultTabCMenu()
+        /// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
+        public ContextMenu DefaultTabCMenu()
 		{
 			var cmenu = new ContextMenu();
 			{
@@ -529,10 +536,17 @@ namespace Rylogic.Gui.WPF
 
 			return node;
 		}
-	}
 
-	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
-	public sealed class Dockable : DockPanel, IDisposable, IDockable
+        /// <summary></summary>
+        public event PropertyChangedEventHandler? PropertyChanged;
+        public void NotifyPropertyChanged(string prop_name)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+        }
+    }
+
+    /// <summary>A wrapper control that hosts a control and implements IDockable</summary>
+    public sealed class Dockable : DockPanel, IDisposable, IDockable
 	{
 		public Dockable(Control hostee, string persist_name, DockContainer.DockLocation? location = null)
 		{

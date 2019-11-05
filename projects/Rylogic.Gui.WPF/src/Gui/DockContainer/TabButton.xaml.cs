@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Rylogic.Common;
 
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
@@ -36,17 +37,34 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			: this()
 		{
 			DockControl = content;
-		}
-		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+            DockControl.PropertyChanged += WeakRef.MakeWeak(HandlePropertyChanged, h => DockControl.PropertyChanged -= h);
+            void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+            {
+				switch (e.PropertyName)
+				{
+				case nameof(DockControl.TabText):
+					{
+						NotifyPropertyChanged(nameof(TabText));
+						break;
+					}
+				case nameof(DockControl.TabIcon):
+					{
+						NotifyPropertyChanged(nameof(TabIcon));
+						break;
+					}
+				}
+            }
+        }
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			base.OnRenderSizeChanged(sizeInfo);
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Clipped)));
+			NotifyPropertyChanged(nameof(Clipped));
 		}
 		protected override void OnVisualParentChanged(DependencyObject oldParent)
 		{
 			base.OnVisualParentChanged(oldParent);
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EdgeBorder)));
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EdgeMargin)));
+			NotifyPropertyChanged(nameof(EdgeBorder));
+			NotifyPropertyChanged(nameof(EdgeMargin));
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
@@ -132,7 +150,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					ahp.PoppedOut = !ahp.PoppedOut;
 			}
 		}
-
+        
 		/// <summary>Control behaviour</summary>
 		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
@@ -145,8 +163,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The DockControl for the associated dockable item</summary>
 		public DockControl DockControl { get; }
 
-		/// <summary>True if the tab content is larger than the size of the tab</summary>
-		public bool Clipped => Math.Abs(ActualWidth - MaxWidth) < 0.0001;
+        /// <summary>True if the tab content is larger than the size of the tab</summary>
+        public bool Clipped => Math.Abs(ActualWidth - MaxWidth) < 0.0001;
 
 		/// <summary>The text displayed on this tab</summary>
 		public string TabText => DockControl?.TabText ?? m_def_tab_text;
@@ -204,12 +222,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				if (m_tab_state == value) return;
 				m_tab_state = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TabState)));
+				NotifyPropertyChanged(nameof(TabState));
 			}
 		}
 		private ETabState m_tab_state;
 
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

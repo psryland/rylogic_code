@@ -19,24 +19,8 @@ namespace Rylogic.Gui.WPF
 
 	public static class Scintilla_
 	{
-		/// <summary></summary>
-		private class StyleDesc
-		{
-			public StyleDesc(int id, Colour32 fore, Colour32 back, string font)
-			{
-				Id = id;
-				Fore = fore;
-				Back = back;
-				Font = font;
-			}
-			public int Id { get; }
-			public Colour32 Fore { get; }
-			public Colour32 Back { get; }
-			public string Font { get; }
-		};
-
 		/// <summary>Initialise with reasonable default style</summary>
-		public static void DefaultStyle(ScintillaControl sc)
+		public static ScintillaControl ConfigDefault(this ScintillaControl sc)
 		{
 			sc.CodePage = Sci.SC_CP_UTF8;
 			sc.ClearDocumentStyle();
@@ -104,12 +88,11 @@ namespace Rylogic.Gui.WPF
 			//DisplayLinenumbers(TRUE);
 			//SetDisplayFolding(TRUE);
 			//SetDisplaySelection(TRUE);
+			return sc;
 		}
 
 		/// <summary>Set up this control for Ldr script</summary>
-		public static void LdrStyleLight(ScintillaControl sc) => LdrStyle(sc, dark: false);
-		public static void LdrStyleDark(ScintillaControl sc) => LdrStyle(sc, dark: true);
-		public static void LdrStyle(ScintillaControl sc, bool dark)
+		public static ScintillaControl ConfigLdr(this ScintillaControl sc, bool dark)
 		{
 			sc.ClearDocumentStyle();
 			sc.StyleBits = 7;
@@ -126,52 +109,8 @@ namespace Rylogic.Gui.WPF
 			sc.AdditionalSelectionTyping = true;
 			sc.VirtualSpace = Sci.SCVS_RECTANGULARSELECTION;
 
-			var dark_style = new StyleDesc[]
-			{
-				new StyleDesc(Sci.STYLE_DEFAULT          , 0xc8c8c8 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.STYLE_LINENUMBER       , 0xc8c8c8 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.STYLE_INDENTGUIDE      , 0x484439 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.STYLE_BRACELIGHT       , 0x98642b , 0x5e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_DEFAULT        , 0xc8c8c8 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x4aa656 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x4aa656 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x859dd6 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x859dd6 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_NUMBER         , 0xf7f7f8 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xd69c56 , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_PREPROC        , 0xc563bd , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81c93d , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_NAME           , 0xffffff , 0x1e1e1e , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COLOUR         , 0x7c97c3 , 0x1e1e1e , "courier new"),
-			};
-			var light_style = new StyleDesc[]
-			{
-				new StyleDesc(Sci.STYLE_DEFAULT          , 0x120700 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.STYLE_LINENUMBER       , 0x120700 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.STYLE_INDENTGUIDE      , 0xc0c0c0 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.STYLE_BRACELIGHT       , 0x2b6498 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_DEFAULT        , 0x120700 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x008100 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x008100 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x154dc7 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x154dc7 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_NUMBER         , 0x1e1e1e , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xff0000 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_PREPROC        , 0x8a0097 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81962a , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_NAME           , 0x000000 , 0xffffff , "courier new"),
-				new StyleDesc(Sci.SCE_LDR_COLOUR         , 0x83573c , 0xffffff , "courier new"),
-			};
-			Debug.Assert(dark_style.Length == light_style.Length);
-
-			var style = dark ? dark_style : light_style;
-			for (int i = 0; i != style.Length; ++i)
-			{
-				var s = style[i];
-				sc.StyleSetFont(s.Id, s.Font);
-				sc.StyleSetFore(s.Id, s.Fore);
-				sc.StyleSetBack(s.Id, s.Back);
-			}
+			Debug.Assert(LdrDark.Length == LdrLight.Length);
+			sc.ApplyStyles(dark ? LdrDark : LdrLight);
 
 			sc.MarginTypeN(0, Sci.SC_MARGIN_NUMBER);
 			sc.MarginTypeN(1, Sci.SC_MARGIN_SYMBOL);
@@ -193,7 +132,54 @@ namespace Rylogic.Gui.WPF
 			sc.CodePage = Sci.SC_CP_UTF8;
 			sc.Lexer = Sci.SCLEX_LDR;
 			sc.LexerLanguage("ldr");
+
+			return sc;
 		}
+		public static ScintillaControl ConfigLdrLight(this ScintillaControl sc) => sc.ConfigLdr(dark: false);
+		public static ScintillaControl ConfigLdrDark(this ScintillaControl sc) => sc.ConfigLdr(dark: true);
+
+		/// <summary>Default font family for LdrScript</summary>
+		public const string LdrFontName = "consolas";
+
+		/// <summary>Style settings for dark mode</summary>
+		public static Sci.StyleDesc[] LdrLight { get; } = new[]
+		{
+			new StyleDesc(Sci.STYLE_DEFAULT          , 0x120700 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.STYLE_LINENUMBER       , 0x120700 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.STYLE_INDENTGUIDE      , 0xc0c0c0 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.STYLE_BRACELIGHT       , 0x2b6498 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_DEFAULT        , 0x120700 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x008100 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x008100 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x154dc7 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x154dc7 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_NUMBER         , 0x1e1e1e , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xff0000 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_PREPROC        , 0x8a0097 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81962a , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_NAME           , 0x000000 , 0xffffff , LdrFontName),
+			new StyleDesc(Sci.SCE_LDR_COLOUR         , 0x83573c , 0xffffff , LdrFontName),
+		};
+
+		/// <summary>Style settings for dark mode</summary>
+		public static Sci.StyleDesc[] LdrDark { get; } = new[]
+		{
+			new Sci.StyleDesc(Sci.STYLE_DEFAULT          , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.STYLE_LINENUMBER       , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.STYLE_INDENTGUIDE      , 0x484439 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.STYLE_BRACELIGHT       , 0x98642b , 0x5e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_DEFAULT        , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x4aa656 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x4aa656 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x859dd6 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x859dd6 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_NUMBER         , 0xf7f7f8 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xd69c56 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_PREPROC        , 0xc563bd , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81c93d , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_NAME           , 0xffffff , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.SCE_LDR_COLOUR         , 0x7c97c3 , 0x1e1e1e , LdrFontName),
+		};
 
 		/// <summary>Style Attached property</summary>
 		private const int Style = 0;
@@ -208,17 +194,17 @@ namespace Rylogic.Gui.WPF
 				{
 				case EScintillaStyles.Default:
 					{
-						sc.InitStyle = DefaultStyle;
+						sc.InitStyle = x => ConfigDefault(x);
 						break;
 					}
 				case EScintillaStyles.LdrLight:
 					{
-						sc.InitStyle = LdrStyleLight;
+						sc.InitStyle = x => ConfigLdrLight(x);
 						break;
 					}
 				case EScintillaStyles.LdrDark:
 					{
-						sc.InitStyle = LdrStyleDark;
+						sc.InitStyle = x => ConfigLdrDark(x);
 						break;
 					}
 				}

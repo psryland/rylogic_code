@@ -6,17 +6,89 @@ using System.Text;
 using Rylogic.Common;
 using Rylogic.Utility;
 using Rylogic.Interop.Win32;
+using Rylogic.Gfx;
 
 namespace Rylogic.Scintilla
 {
 	/// <summary>Typedef Scintilla.Scintilla to 'Sci' and add Rylogic specific features</summary>
-	public class Sci :global::Scintilla.Scintilla
+	public partial class Sci
 	{
+		/// <summary></summary>
 		public enum EEndOfLineMode
 		{
 			CR   = SC_EOL_CR,
 			LF   = SC_EOL_LF,
 			CRLF = SC_EOL_CRLF,
+		}
+
+		/// <summary></summary>
+		public enum ECase
+		{
+			Mixed = SC_CASE_MIXED,
+			Upper = SC_CASE_UPPER,
+			Lower = SC_CASE_LOWER,
+			//Camel = SC_CASE_CAMEL,
+		}
+
+		/// <summary></summary>
+		public enum ECaseInsensitiveBehaviour
+		{
+			RespectCase = SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE,
+			IgnoreCase = SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE,
+		}
+
+		/// <summary>Style id constants</summary>
+		public struct EStyleId
+		{
+			// Notes:
+			//  - There are 256 style ids available for use: [0,256).
+			//  - Scintilla predefines some styles, i.e. the following
+
+			private int m_id;
+
+			public const int First = 0;
+			public const int Default = STYLE_DEFAULT;
+			public const int LineNumber = STYLE_LINENUMBER;
+			public const int BraceLight = STYLE_BRACELIGHT;
+			public const int BraceBad = STYLE_BRACEBAD;
+			public const int ControlChar = STYLE_CONTROLCHAR;
+			public const int IndentGuide = STYLE_INDENTGUIDE;
+			public const int CallTip = STYLE_CALLTIP;
+			public const int LastPredefined = STYLE_LASTPREDEFINED;
+			public const int Max = STYLE_MAX;
+
+			public static implicit operator EStyleId(int id)
+			{
+				if (id < 0 || id > Max) throw new Exception($"Invalid style id: {id}");
+				return new EStyleId { m_id = id };
+			}
+			public static explicit operator int(EStyleId id)
+			{
+				return id.m_id;
+			}
+		}
+
+		/// <summary></summary>
+		public class StyleDesc
+		{
+			public StyleDesc(int id)
+			{
+				Id = id;
+			}
+			public Sci.EStyleId Id { get; }
+			public Colour32? Fore { get; set; }
+			public Colour32? Back { get; set; }
+			public string? Font { get; set; }
+			public int? Size { get; set; }
+			public bool? Bold { get; set; }
+			public bool? Italic { get; set; }
+			public bool? Underline { get; set; }
+			public bool? EOLFilled { get; set; }
+			public int? CharSet { get; set; }
+			public ECase? CaseForce { get; set; }
+			public bool? Visible { get; set; }
+			public bool? Changeable { get; set; }
+			public bool? HotSpot { get; set; }
 		}
 
 		/// <summary>Helper for sending text to scintilla</summary>

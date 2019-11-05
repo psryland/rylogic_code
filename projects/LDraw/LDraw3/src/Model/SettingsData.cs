@@ -9,6 +9,8 @@ namespace LDraw
 	{
 		public SettingsData()
 		{
+			FontName = "consolas";
+			FontSize = 10.0;
 			AutoRefresh = false;
 			ResetOnLoad = true;
 			ClearErrorLogOnReload = true;
@@ -31,6 +33,20 @@ namespace LDraw
 			: base(filepath, ESettingsLoadFlags.None)
 		{
 			AutoSaveOnChanges = true;
+		}
+
+		/// <summary>The font to use in scripts</summary>
+		public string FontName
+		{
+			get => get<string>(nameof(FontName));
+			set => set(nameof(FontName), value);
+		}
+
+		/// <summary>The font size</summary>
+		public double FontSize
+		{
+			get => get<double>(nameof(FontSize));
+			set => set(nameof(FontSize), value);
 		}
 
 		/// <summary>Auto reload script sources when changes are detected</summary>

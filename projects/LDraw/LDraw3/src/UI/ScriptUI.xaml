@@ -7,9 +7,11 @@
     xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
     xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
-    mc:Ignorable="d" 
+	xmlns:local="clr-namespace:LDraw.UI"
+	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
+    diag:PresentationTraceSources.TraceLevel="High"
 	>
 
 	<UserControl.Resources>
@@ -18,7 +20,7 @@
 				<MenuItem Header="_Rename"/>
 				<MenuItem Header="_Clear"/>
 				<Separator/>
-				<MenuItem Header="_Close"/>
+				<MenuItem Header="_Close" Command="{Binding CloseScript}"/>
 			</ContextMenu>
 		</ResourceDictionary>
 	</UserControl.Resources>
@@ -32,6 +34,7 @@
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
@@ -88,7 +91,6 @@
 
 				<!-- Combo of available scenes -->
 				<ComboBox
-					Grid.Row="2"
 					ToolBar.OverflowMode="Never"
 					ItemsSource="{Binding Scenes}"
 					SelectedItem="{Binding Scenes/, Mode=TwoWay}"
@@ -96,17 +98,36 @@
 					IsReadOnly="True"
 					MinWidth="80"
 					Margin="3,0,3,0"
-					Name="m_cb_scenes"
 					/>
 			</ToolBar>
 		</ToolBarTray>
 
 		<!-- Editor -->
 		<gui:ScintillaControl
-			Grid.Row="1"
+			Grid.Row="2"
 			gui:Scintilla_.Style="LdrLight"
 			Name="m_scintilla_control"
 			/>
 
+		<Popup
+			IsOpen="True"
+			Placement="Mouse"
+			>
+			<ListView
+				FontFamily="consolas"
+				>
+				<ListView.Items>
+					<TextBlock
+						Text="one"
+						/>
+					<TextBlock
+						Text="tio"
+						/>
+					<TextBlock
+						Text="three"
+						/>
+				</ListView.Items>
+			</ListView>
+		</Popup>
 	</Grid>
 </UserControl>

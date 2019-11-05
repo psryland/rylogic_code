@@ -26,6 +26,7 @@ namespace LDraw
 			OpenFileAdditional = Command.Create(this, OpenFileAdditionalInternal);
 			SaveFile = Command.Create(this, SaveFileInternal);
 			SaveFileAs = Command.Create(this, SaveFileAsInternal);
+			ShowPreferences = Command.Create(this, ShowPreferencesInternal);
 			ShowExampleScript = Command.Create(this, ShowExampleScriptInternal);
 			ShowAbout = Command.Create(this, ShowAboutInternal);
 			Exit = Command.Create(this, ExitInternal);
@@ -172,7 +173,7 @@ namespace LDraw
 			var name = Model.GenerateScriptName();
 			var filepath = Model.GenerateTempScriptFilepath(out var context_id);
 			var script = Model.Scripts.Add2(new ScriptUI(Model, name, filepath, context_id));
-			m_dc.Add(script, EDockSite.Centre);
+			m_dc.Add(script, EDockSite.Left);
 		}
 
 		/// <summary>Add a new Scene to the view</summary>
@@ -212,6 +213,20 @@ namespace LDraw
 			if (!(m_dc.ActiveDockable is ScriptUI script)) return;
 			script.SaveFile(null);
 		}
+
+		/// <summary>Show application perferences</summary>
+		public Command ShowPreferences { get; }
+		private void ShowPreferencesInternal()
+		{
+			if (m_settings_ui == null)
+			{
+				m_settings_ui = new SettingsUI(this, Model.Settings);
+				m_settings_ui.Closed += delegate { m_settings_ui = null; };
+				m_settings_ui.Show();
+			}
+			m_settings_ui.Focus();
+		}
+		private SettingsUI? m_settings_ui;
 
 		/// <summary>Show a dialog containing the example script</summary>
 		public Command ShowExampleScript { get; }

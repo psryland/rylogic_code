@@ -1,0 +1,148 @@
+﻿<Window
+	x:Class="LDraw.Dialogs.SettingsUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+	Title="Preferences"
+	WindowStartupLocation="CenterOwner"
+	ShowInTaskbar="True"
+	ResizeMode="CanResizeWithGrip"
+	Height="450"
+	Width="800"
+	>
+	<Grid
+		Margin="8"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		
+		<!-- Main Panel -->
+		<Grid
+			Grid.Row="0"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Left Column -->
+			<Grid
+				Grid.Column="0"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<!-- General -->
+				<GroupBox
+					Grid.Row="0"
+					Header="General"
+					Padding="3"
+					>
+					<StackPanel
+						Orientation="Horizontal"
+						>
+						<TextBlock
+							Text="Font: "
+							/>
+						<ComboBox
+							MinWidth="100"
+							/>
+						<TextBlock
+							Text="Size: "
+							/>
+						<TextBox
+							Text=""
+
+					</StackPanel>
+				</GroupBox>
+				
+				<!-- Scene -->
+				<GroupBox
+					Grid.Row="1"
+					Header="Scene"
+					Padding="3"
+					DataContext="{Binding Scene}"
+					>
+					<StackPanel>
+						<CheckBox
+							Content="Focus point visible"
+							IsChecked="{Binding FocusPointVisible}"
+							/>
+					</StackPanel>
+				</GroupBox>
+			</Grid>
+			
+			<!-- Right Column -->
+			<Grid
+				Grid.Column="1"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<!-- Refresh -->
+				<GroupBox
+					Grid.Row="0"
+					Grid.Column="1"
+					Header="Refresh / Reload"
+					Padding="3"
+					>
+					<StackPanel>
+						<CheckBox
+						Content="Reset the camera position on reload"
+						IsChecked="{Binding ResetOnLoad}"
+						/>
+						<CheckBox
+						Content="Automatically reload files when changes are detected"
+						IsChecked="{Binding AutoRefresh}"
+						/>
+						<CheckBox
+						Content="Clear the Log window on reload"
+						IsChecked="{Binding ClearErrorLogOnReload}"
+						/>
+					</StackPanel>
+				</GroupBox>
+
+				<!-- File searching -->
+				<GroupBox
+					Grid.Row="1"
+					Header="Files"
+					>
+					<StackPanel
+						>
+						<TextBlock
+							Text="Include Paths:"
+							/>
+						<ListBox
+							ItemsSource="{Binding IncludePaths}"
+							MinHeight="100"
+							/>
+
+					</StackPanel>
+				</GroupBox>
+			</Grid>
+		</Grid>
+
+		<!-- Buttons -->
+		<StackPanel
+			Grid.Row="2"
+			HorizontalAlignment="Right"
+			Margin="20"
+			>
+			<Button
+				Content="OK"
+				MinWidth="80"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>

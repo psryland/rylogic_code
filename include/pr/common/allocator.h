@@ -21,7 +21,8 @@
 namespace pr
 {
 	// A C++ standards compliant allocator for use in containers
-	template <typename T, int A = std::alignment_of<T>::value> struct aligned_alloc
+	template <typename T, int A = std::alignment_of_v<T>>
+	struct aligned_alloc
 	{
 		using value_type       = T;
 		using pointer          = T*;
@@ -39,10 +40,20 @@ namespace pr
 		template <typename U> struct rebind { typedef aligned_alloc<U, A> other; };
 
 		// std::allocator interface
-		size_type     max_size  () const throw()       { return std::numeric_limits<size_type>::max() / sizeof(T); }
-		pointer       address(reference x) const       { return &x; }
-		const_pointer address(const_reference x) const { return &x; }
+		constexpr size_type max_size() const
+		{
+			return std::numeric_limits<size_type>::max() / sizeof(T);
+		}
+		constexpr pointer address(reference x) const
+		{
+			return &x;
+		}
+		constexpr const_pointer address(const_reference x) const
+		{
+			return &x;
+		}
 
+		// Allocation
 		pointer allocate(size_type n, void const* = 0)
 		{
 			if (n == 0) return nullptr; // Avoid the undefined behaviour of _aligned_malloc(0)
@@ -130,12 +141,14 @@ namespace pr
 			deallocate(p, 1);
 		}
 	};
-	template <typename T, typename U> inline bool operator == (aligned_alloc<T> const&, aligned_alloc<U> const&) { return true; }
-	template <typename T, typename U> inline bool operator != (aligned_alloc<T> const&, aligned_alloc<U> const&) { return false; }
-	template <typename T, typename U> inline bool operator == (aligned_alloc<T> const&, U const&) { return false; }
-	template <typename T, typename U> inline bool operator != (aligned_alloc<T> const&, U const&) { return true; }
-	template <typename T, typename U> inline bool operator == (T const&, aligned_alloc<U> const&) { return false; }
-	template <typename T, typename U> inline bool operator != (T const&, aligned_alloc<U> const&) { return true; }
+
+	// Operators
+	template <typename T, typename U> constexpr bool operator == (aligned_alloc<T> const&, aligned_alloc<U> const&) { return true; }
+	template <typename T, typename U> constexpr bool operator != (aligned_alloc<T> const&, aligned_alloc<U> const&) { return false; }
+	template <typename T, typename U> constexpr bool operator == (aligned_alloc<T> const&, U const&) { return false; }
+	template <typename T, typename U> constexpr bool operator != (aligned_alloc<T> const&, U const&) { return true; }
+	template <typename T, typename U> constexpr bool operator == (T const&, aligned_alloc<U> const&) { return false; }
+	template <typename T, typename U> constexpr bool operator != (T const&, aligned_alloc<U> const&) { return true; }
 
 	// Deprecated:
 	// Use by physics still
@@ -144,22 +157,48 @@ namespace pr
 	typedef void* (*AllocFunction  )(std::size_t size, std::size_t alignment);
 	typedef void  (*DeallocFunction)(void* p);
 
-	inline void* DefaultAlloc  (std::size_t size, std::size_t alignment = 1) { return _aligned_malloc(size, alignment); }
-	inline void  DefaultDealloc(void* p)                                     { return _aligned_free(p); }
+	// Default allocation functions
+	inline void* DefaultAlloc(std::size_t size, std::size_t alignment = 1) noexcept
+	{
+		return _aligned_malloc(size, alignment);
+	}
+	inline void  DefaultDealloc(void* p) noexcept
+	{
+		return _aligned_free(p);
+	}
 
 	// A struct for allocating blocks of memory
 	struct DefaultAllocator
 	{
-		static void* Alloc(std::size_t size, std::size_t alignment = 1) { return DefaultAlloc(size, alignment); }
-		static void  Dealloc(void* p)                                   { return DefaultDealloc(p); }
+		static void* Alloc(std::size_t size, std::size_t alignment = 1) noexcept
+		{
+			return DefaultAlloc(size, alignment);
+		}
+		static void  Dealloc(void* p) noexcept
+		{
+			return DefaultDealloc(p);
+		}
+		friend bool operator == (DefaultAllocator const&, DefaultAllocator const&) noexcept
+		{
+			return true;
+		}
 	};
-	inline bool operator == (DefaultAllocator const&, DefaultAllocator const&) { return true; }
 
 	// An allocator that complains if allocation is requested
 	struct NoAllocationAllocator
 	{
-		static void* Alloc(std::size_t, std::size_t)                    { assert(false && "Allocation made."); return 0; }
-		static void  Dealloc(void*)                                     { assert(false && "What the hell are you deleting?!?"); }
+		static void* Alloc(std::size_t, std::size_t) noexcept
+		{
+			assert(false && "Allocation made.");
+			return nullptr;
+		}
+		static void  Dealloc(void*) noexcept
+		{
+			assert(false && "What the hell are you deleting?!?");
+		}
+		friend bool operator == (NoAllocationAllocator const&, NoAllocationAllocator const&) noexcept
+		{
+			return true;
+		}
 	};
-	inline bool operator == (NoAllocationAllocator const&, NoAllocationAllocator const&) { return true; }
 }

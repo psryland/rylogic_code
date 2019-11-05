@@ -62,7 +62,7 @@ namespace Rylogic.Gfx
 			public IEnumerable<Template> Lookup(string partial)
 			{
 				partial = partial.TrimStart('*');
-				var idx = partial.Length != 0 ? Templates.BinarySearch(x => string.Compare(x.FullText, partial, true), find_insert_position: true) : 0;
+				var idx = partial.Length != 0 ? Templates.BinarySearch(x => string.Compare(x.Keyword, partial, true), find_insert_position: true) : 0;
 				for (; idx != Templates.Count; ++idx)
 				{
 					if (string.Compare(partial, 0, Templates[idx].Keyword, 0, partial.Length, true) != 0) break;

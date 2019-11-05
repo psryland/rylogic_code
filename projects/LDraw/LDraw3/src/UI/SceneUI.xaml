@@ -13,10 +13,10 @@
 	<UserControl.Resources>
 		<ResourceDictionary>
 			<ContextMenu x:Key="TabCMenu">
-				<MenuItem Header="_Rename"/>
-				<MenuItem Header="_Clear"/>
+				<MenuItem Header="_Rename" Command="{Binding RenameScene}"/>
+				<MenuItem Header="_Clear" Command="{Binding ClearScene}"/>
 				<Separator/>
-				<MenuItem Header="_Close"/>
+				<MenuItem Header="_Close" Command="{Binding CloseScene}"/>
 			</ContextMenu>
 		</ResourceDictionary>
 	</UserControl.Resources>

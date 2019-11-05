@@ -132,28 +132,33 @@ namespace LDraw
 		/// <summary>Return a generated name for a new scene UI</summary>
 		public string GenerateSceneName()
 		{
-			var max = 0;
-			foreach (var scene in Scenes.Where(x => IsGeneratedSceneName(x.SceneName)))
-			{
-				var idx_string = scene.SceneName.Substring(UITag.Scene.Length);
-				var idx = int_.TryParse(idx_string) ?? 0;
-				max = Math.Max(max, idx);
-			}
-			return max > 0 ? $"{UITag.Scene}{max + 1}" : UITag.Scene;
+			return $"{UITag.Scene}{++m_scene_number}";
+
+			//var max = 0;
+			//foreach (var scene in Scenes.Where(x => IsGeneratedSceneName(x.SceneName)))
+			//{
+			//	var idx_string = scene.SceneName.Substring(UITag.Scene.Length);
+			//	var idx = int_.TryParse(idx_string) ?? 0;
+			//	max = Math.Max(max, idx);
+			//}
+			//return max > 0 ? $"{UITag.Scene}{max + 1}" : UITag.Scene;
 		}
+		private int m_scene_number;
 
 		/// <summary>Return a generated name for a new script UI</summary>
 		public string GenerateScriptName()
 		{
-			var max = 0;
-			foreach (var script in Scripts.Where(x => IsGeneratedScriptName(x.ScriptName)))
-			{
-				var idx_string = script.ScriptName.Substring(UITag.Script.Length);
-				var idx = int_.TryParse(idx_string) ?? 0;
-				max = Math.Max(max, idx);
-			}
-			return max > 1 ? $"{UITag.Script}{max + 1}" : UITag.Script;
+			return $"{UITag.Script}{++m_script_number}";
+			//var max = 0;
+			//foreach (var script in Scripts.Where(x => IsGeneratedScriptName(x.ScriptName)))
+			//{
+			//	var idx_string = script.ScriptName.Substring(UITag.Script.Length);
+			//	var idx = int_.TryParse(idx_string) ?? 0;
+			//	max = Math.Max(max, idx);
+			//}
+			//return max > 1 ? $"{UITag.Script}{max + 1}" : UITag.Script;
 		}
+		private int m_script_number;
 
 		/// <summary>Return the full filepath for a temporary script file</summary>
 		public string GenerateTempScriptFilepath(out Guid context_id)

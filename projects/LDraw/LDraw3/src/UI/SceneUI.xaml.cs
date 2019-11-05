@@ -21,16 +21,20 @@ namespace LDraw.UI
 			{
 				ShowTitle = false,
 				TabText = name,
-				TabCMenu = (ContextMenu)FindResource("TabCMenu"),
+				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
+			Bind = new BindingWrapper(this);
 			Model = model;
 			SceneName = name;
 			SceneView.Options = Settings.Scene;
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
 
+			RenameScene = Command.Create(this, RenameSceneInternal);
+			ClearScene = Command.Create(this, ClearSceneInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
+			CloseScene = Command.Create(this, CloseSceneInternal);
 
 			DataContext = this;
 		}
@@ -139,6 +143,41 @@ namespace LDraw.UI
 		}
 		public static readonly DependencyProperty AutoRangeProperty = Gui_.DPRegister<SceneUI>(nameof(AutoRange));
 
+		/// <summary>A wrapper for binding to this scene</summary>
+		public BindingWrapper Bind { get; }
+
+		/// <summary>Return the tab context menu</summary>
+		private ContextMenu TabCMenu()
+		{
+			var cmenu = (ContextMenu)FindResource("TabCMenu");
+			cmenu.DataContext = this;
+			return cmenu;
+		}
+
+		/// <summary>Rename the scene tab</summary>
+		public Command RenameScene { get; }
+		private void RenameSceneInternal()
+		{
+			var prompt = new PromptUI(Window.GetWindow(this))
+			{
+				Title = "Rename Scene",
+                Prompt = "Set the label for this scene",
+                Value = SceneName,
+                ShowWrapCheckbox = false,
+			};
+            if (prompt.ShowDialog() == true)
+            {
+                SceneName = prompt.Value;
+            }
+		}
+
+		/// <summary>Remove all objects from the scene</summary>
+		public Command ClearScene { get; }
+		private void ClearSceneInternal()
+		{
+			SceneView.Scene.RemoveAllObjects();
+		}
+
 		/// <summary>Show the lighting dialog</summary>
 		public Command ShowLightingUI { get; }
 		private void ShowLightingUIInternal()
@@ -153,11 +192,32 @@ namespace LDraw.UI
 		}
 		private LightingUI? m_lighting_ui;
 
+		/// <summary>Close and remove this scene</summary>
+		public Command CloseScene { get; }
+		private void CloseSceneInternal()
+		{
+			Model.Scenes.Remove(this);
+			Dispose();
+		}
+
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
+
+		/// <summary></summary>
+		public class BindingWrapper
+		{
+			// Notes:
+			//  - This wrapper is needed because when UIElement objects are used as the items
+			//    of a combo box it treats them as child controls, becoming their parent.
+
+			public BindingWrapper(SceneUI scene) { SceneUI = scene; }
+			public SceneUI SceneUI { get; }
+			public string SceneName => SceneUI.SceneName;
+			public static implicit operator SceneUI?(BindingWrapper? x) => x?.SceneUI;
 		}
 	}
 }

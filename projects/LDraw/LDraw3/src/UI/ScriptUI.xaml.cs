@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Markup;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -21,6 +23,8 @@ namespace LDraw.UI
 		// Notes:
 		//  - All scripts are created with an associated file. New scripts start with a
 		//    temporary script filepath and get saved to a new location by the user.
+		//  - The Scenes collection view uses a wrapper around SceneUI because Combobox.ItemsSource
+		//    treats the items as child controls and tried to become their parent.
 
 		public ScriptUI(Model model, string name, string filepath, Guid context_id)
 		{
@@ -29,20 +33,22 @@ namespace LDraw.UI
 			{
 				ShowTitle = false,
 				TabText = name,
-				TabCMenu = (ContextMenu)FindResource("TabCMenu"),
+				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
+			Bind = new BindingWrapper(this);
 			Model = model;
 			ContextId = context_id;
 			Filepath = filepath;
 			ScriptName = name;
 			Editor = m_scintilla_control;
-			Scenes = new ListCollectionView(new List<SceneUIWrapper>());
+			Scenes = new ListCollectionView(new List<SceneUI.BindingWrapper>());
 			m_ldr_auto_complete = new View3d.AutoComplete();
 
 			Render = Command.Create(this, RenderInternal);
 			SaveScript = Command.Create(this, SaveScriptInternal);
 			RemoveObjects = Command.Create(this, RemoveObjectsInternal);
+			CloseScript = Command.Create(this, CloseScriptInternal);
 
 			// If the temporary script exists, load it
 			if (Path_.FileExists(Filepath))
@@ -130,21 +136,17 @@ namespace LDraw.UI
 				{
 					// Don't add this script to m_model.Scripts, that's the caller's choice.
 					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
+					Dispatcher.BeginInvoke(() => HandleScenesCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)));
 				}
 
-				// Handler
+				// Handlers
 				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					if (Scenes.SourceCollection is List<SceneUIWrapper> scenes)
-					{
-						var current = Scene;
-						scenes.Assign(Model.Scenes.Select(x => new SceneUIWrapper(x)));
-						Scenes.Refresh();
-						if (Scene == null && scenes.FirstOrDefault(x => x.SceneUI == current) is SceneUIWrapper s)
-							Scenes.MoveCurrentToOrFirst(s);
-						else
-							Scenes.MoveCurrentToFirst();
-					}
+					// Refresh the scenes collection
+					var scenes = (List<SceneUI.BindingWrapper>)Scenes.SourceCollection;
+					using var restore_current = Scope.Create(() => Scenes.CurrentItem, s => Scenes.MoveCurrentToOrFirst(s));
+					scenes.Assign(Model.Scenes.Select(x => x.Bind));
+					Scenes.Refresh();
 				}
 			}
 		}
@@ -189,8 +191,7 @@ namespace LDraw.UI
 				}
 				void HandleAutoComplete(object sender, ScintillaControl.AutoCompleteEventArgs e)
 				{
-					e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => x.FullText));
-					//e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => $"*{x.Keyword}"));
+					e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => $"*{x.Keyword}"));
 					e.Handled = true;
 				}
 				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
@@ -207,7 +208,7 @@ namespace LDraw.UI
 		public ICollectionView Scenes { get; }
 
 		/// <summary>The scene that this script renders to</summary>
-		public SceneUI? Scene => Scenes.CurrentAs<SceneUIWrapper>()?.SceneUI;
+		public SceneUI? Scene => Scenes.CurrentAs<SceneUI.BindingWrapper>();
 
 		/// <summary>Context id for objects created by this scene</summary>
 		public Guid ContextId { get; }
@@ -238,6 +239,17 @@ namespace LDraw.UI
 
 		/// <summary>Text file types that can be edited in the script UI</summary>
 		private string EditableFilesFilter => Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");
+
+		/// <summary>A wrapper for binding to this scene</summary>
+		public BindingWrapper Bind { get; }
+
+		/// <summary>Return the tab context menu</summary>
+		private ContextMenu TabCMenu()
+		{
+			var cmenu = (ContextMenu)FindResource("TabCMenu");
+			cmenu.DataContext = this;
+			return cmenu;
+		}
 
 		/// <summary>Load script from a file</summary>
 		public void LoadFile(string? filepath = null)
@@ -327,6 +339,14 @@ namespace LDraw.UI
 			Model.Clear(new[] { Scene }, new[] { ContextId }, 1, 0);
 		}
 
+		/// <summary>Close and remove this script</summary>
+		public Command CloseScript { get; }
+		private void CloseScriptInternal()
+		{
+			Model.Scripts.Remove(this);
+			Dispose();
+		}
+
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		private void NotifyPropertyChanged(string prop_name)
@@ -334,12 +354,17 @@ namespace LDraw.UI
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
-		/// <summary>This is a fix for a weird bug that prevents SceneUI being used in a combo box</summary>
-		private class SceneUIWrapper
+		/// <summary></summary>
+		public class BindingWrapper
 		{
-			public SceneUIWrapper(SceneUI scene) { SceneUI = scene; }
-			public SceneUI SceneUI { get; }
-			public string SceneName => SceneUI.SceneName;
+			// Notes:
+			//  - This wrapper is needed because when UIElement objects are used as the items
+			//    of a combo box it treats them as child controls, becoming their parent.
+
+			public BindingWrapper(ScriptUI script) { ScriptUI = script; }
+			public ScriptUI ScriptUI { get; }
+			public string ScriptName => ScriptUI.ScriptName;
+			public static implicit operator ScriptUI?(BindingWrapper? x) => x?.ScriptUI;
 		}
 	}
 }

@@ -11,9 +11,9 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Scintilla
+namespace Rylogic.Scintilla
 {
-	public partial class Scintilla
+	public partial class Sci
 	{
 		/* SciLexer features - not in standard Scintilla */
 

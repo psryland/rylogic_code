@@ -10,7 +10,6 @@ using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
 using Rylogic.Utility;
-using Scintilla;
 
 namespace Rylogic.Gui.WPF
 {
@@ -844,15 +843,21 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Retrieves the text of the line containing the caret and returns the position within the line of the caret.</summary>
 		public string GetCurLine(out int caret_offset)
 		{
+			// Get the length of text on the current line
 			var len = Cmd(Sci.SCI_GETCURLINE);
 			var buf = new byte[len];
+
+			// Allocate a global heap buffer and read the line into it
 			using var t = GCHandle_.Alloc(buf, GCHandleType.Pinned);
 			caret_offset = Cmd(Sci.SCI_GETCURLINE, buf.Length, t.Handle.AddrOfPinnedObject());
+
+			// Trim null terminators
+			for (; len != 0 && buf[len - 1] == 0; --len) { }
 			return Encoding.UTF8.GetString(buf, 0, len);
 		}
 		public string GetCurLine()
 		{
-			return GetCurLine(out var caret_offset);
+			return GetCurLine(out _);
 		}
 
 		/// <summary></summary>
@@ -1433,84 +1438,105 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_STYLECLEARALL);
 		}
 
-		/// <summary>Set the font for style index 'idx'</summary>
-		public void StyleSetFont(int idx, string font_name)
-		{
-			var bytes = Encoding.UTF8.GetBytes(font_name);
-			using var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_STYLESETFONT, idx, handle.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary>Set the font size for style index 'idx'</summary>
-		public void StyleSetSize(int idx, int sizePoints)
-		{
-			Cmd(Sci.SCI_STYLESETSIZE, idx, sizePoints);
-		}
-
-		/// <summary>Set bold or regular for style index 'idx'</summary>
-		public void StyleSetBold(int idx, bool bold)
-		{
-			Cmd(Sci.SCI_STYLESETBOLD, idx, bold ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public void StyleSetItalic(int idx, bool italic)
-		{
-			Cmd(Sci.SCI_STYLESETITALIC, idx, italic ? 1 : 0);
-		}
-
-		/// <summary>Set underlined for style index 'idx'</summary>
-		public void StyleSetUnderline(int idx, bool underline)
-		{
-			Cmd(Sci.SCI_STYLESETUNDERLINE, idx, underline ? 1 : 0);
-		}
-
 		/// <summary>Set the text colour for style index 'idx'</summary>
-		public void StyleSetFore(int idx, Colour32 fore)
+		public void StyleSetFore(Sci.EStyleId id, Colour32 fore)
 		{
-			Cmd(Sci.SCI_STYLESETFORE, idx, (int)(fore.ARGB & 0x00FFFFFF));
+			Cmd(Sci.SCI_STYLESETFORE, (int)id, (int)(fore.ARGB & 0x00FFFFFF));
 		}
 
 		/// <summary>Set the background colour for style index 'idx'</summary>
-		public void StyleSetBack(int idx, Colour32 back)
+		public void StyleSetBack(Sci.EStyleId id, Colour32 back)
 		{
-			Cmd(Sci.SCI_STYLESETBACK, idx, (int)(back.ARGB & 0x00FFFFFF));
+			Cmd(Sci.SCI_STYLESETBACK, (int)id, (int)(back.ARGB & 0x00FFFFFF));
+		}
+
+		/// <summary>Set the font for style index 'idx'</summary>
+		public void StyleSetFont(Sci.EStyleId id, string font_name)
+		{
+			var bytes = Encoding.UTF8.GetBytes(font_name);
+			using var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_STYLESETFONT, (int)id, handle.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Set the font size for style index 'idx'</summary>
+		public void StyleSetSize(Sci.EStyleId id, int sizePoints)
+		{
+			Cmd(Sci.SCI_STYLESETSIZE, (int)id, sizePoints);
+		}
+
+		/// <summary>Set bold or regular for style index 'idx'</summary>
+		public void StyleSetBold(Sci.EStyleId id, bool bold)
+		{
+			Cmd(Sci.SCI_STYLESETBOLD, (int)id, bold ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetEOLFilled(int idx, bool filled)
+		public void StyleSetItalic(Sci.EStyleId id, bool italic)
 		{
-			Cmd(Sci.SCI_STYLESETEOLFILLED, idx, filled ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETITALIC, (int)id, italic ? 1 : 0);
+		}
+
+		/// <summary>Set underlined for style index 'idx'</summary>
+		public void StyleSetUnderline(Sci.EStyleId id, bool underline)
+		{
+			Cmd(Sci.SCI_STYLESETUNDERLINE, (int)id, underline ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetCharacterSet(int idx, int characterSet)
+		public void StyleSetEOLFilled(Sci.EStyleId id, bool filled)
 		{
-			Cmd(Sci.SCI_STYLESETCHARACTERSET, idx, characterSet);
+			Cmd(Sci.SCI_STYLESETEOLFILLED, (int)id, filled ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetCase(int idx, int caseForce)
+		public void StyleSetCharacterSet(Sci.EStyleId id, int characterSet)
 		{
-			Cmd(Sci.SCI_STYLESETCASE, idx, caseForce);
+			Cmd(Sci.SCI_STYLESETCHARACTERSET, (int)id, characterSet);
 		}
 
 		/// <summary></summary>
-		public void StyleSetVisible(int idx, bool visible)
+		public void StyleSetCase(Sci.EStyleId id, Sci.ECase caseForce)
 		{
-			Cmd(Sci.SCI_STYLESETVISIBLE, idx, visible ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETCASE, (int)id, (int)caseForce);
 		}
 
 		/// <summary></summary>
-		public void StyleSetChangeable(int idx, bool changeable)
+		public void StyleSetVisible(Sci.EStyleId id, bool visible)
 		{
-			Cmd(Sci.SCI_STYLESETCHANGEABLE, idx, changeable ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETVISIBLE, (int)id, visible ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void StyleSetHotSpot(int idx, bool hotspot)
+		public void StyleSetChangeable(Sci.EStyleId id, bool changeable)
 		{
-			Cmd(Sci.SCI_STYLESETHOTSPOT, idx, hotspot ? 1 : 0);
+			Cmd(Sci.SCI_STYLESETCHANGEABLE, (int)id, changeable ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public void StyleSetHotSpot(Sci.EStyleId id, bool hotspot)
+		{
+			Cmd(Sci.SCI_STYLESETHOTSPOT, (int)id, hotspot ? 1 : 0);
+		}
+
+		/// <summary>Apply the give styles</summary>
+		public void ApplyStyles(this ScintillaControl sc, IEnumerable<Sci.StyleDesc> styles)
+		{
+			foreach (var style in styles)
+			{
+				if (style.Fore is Colour32 fore) sc.StyleSetFore(style.Id, fore);
+				if (style.Back is Colour32 back) sc.StyleSetBack(style.Id, back);
+				if (style.Font is string font) sc.StyleSetFont(style.Id, font);
+				if (style.Size is int size) sc.StyleSetSize(style.Id, size);
+				if (style.Bold is bool bold) sc.StyleSetBold(style.Id, bold);
+				if (style.Italic is bool italic) sc.StyleSetItalic(style.Id, italic);
+				if (style.Underline is bool underline) sc.StyleSetUnderline(style.Id, underline);
+				if (style.EOLFilled is bool eol_filled) sc.StyleSetEOLFilled(style.Id, eol_filled);
+				if (style.CharSet is int char_set) sc.StyleSetCharacterSet(style.Id, char_set);
+				if (style.CaseForce is Sci.ECase case_force) sc.StyleSetCase(style.Id, case_force);
+				if (style.Visible is bool visible) sc.StyleSetVisible(style.Id, visible);
+				if (style.Changeable is bool changeable) sc.StyleSetChangeable(style.Id, changeable);
+				if (style.HotSpot is bool hot_spot) sc.StyleSetHotSpot(style.Id, hot_spot);
+			}
 		}
 
 		/// <summary></summary>

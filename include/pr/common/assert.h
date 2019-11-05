@@ -77,15 +77,15 @@
 		#if defined(_WIN32) && defined(_DEBUG)
 
 		// This is an actual function so that a breakpoint can be put in here
-		inline void AssertionFailed(char const* expr, char const* str, char const* file, int line)
+		inline void AssertionFailed(char const* expr, char const* str, char const* file, int line) noexcept
 		{
-			(_CrtDbgReport(_CRT_WARN, file, line, 0,
+			(_CrtDbgReport(_CRT_WARN, file, line, nullptr,
 				"*** ASSERTION FAILURE ***\n"
 				"Expression: %s\n"
 				"Comment: %s\n"
 				"%f(%d)\n"
 				,expr ,str ,file ,line) != 0) ||
-			(_CrtDbgReport(_CRT_ASSERT, file, line, 0,
+			(_CrtDbgReport(_CRT_ASSERT, file, line, nullptr,
 				"Expression: %s\n"
 				"Comment: %s\n"
 				"%f(%d)\n"
@@ -97,7 +97,7 @@
 
 		namespace impl
 		{
-			inline bool ConstantExpressionSink(bool value) { return value; }
+			inline bool ConstantExpressionSink(bool value) noexcept { return value; }
 		}
 	}
 

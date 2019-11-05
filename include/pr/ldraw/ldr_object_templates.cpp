@@ -371,7 +371,7 @@ namespace pr::ldr
 			"}\n"
 			"*BoxList [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> <height> <depth>.\n"
+			"	<width> <height> <depth>\n"
 			"	(<x> <y> <z>)\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"

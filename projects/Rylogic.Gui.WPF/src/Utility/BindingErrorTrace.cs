@@ -5,6 +5,11 @@ using System.Windows;
 
 namespace Rylogic.Gui.WPF
 {
+	// Notes:
+	//  - Use this in the root xaml node:
+	//    xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
+	//	  diag:PresentationTraceSources.TraceLevel="High"
+
 	public class BindingErrorTraceListener : DefaultTraceListener
 	{
 		// Notes:

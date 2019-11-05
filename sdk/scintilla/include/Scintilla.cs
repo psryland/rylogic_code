@@ -11,10 +11,10 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Scintilla
+namespace Rylogic.Scintilla
 {
 	using SurfaceID = System.IntPtr;
-	public partial class Scintilla
+	public partial class Sci
 	{
 		/// <summary>The scintilla direct function for non-message-based control</summary>
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
@@ -1120,12 +1120,5 @@ namespace Scintilla
 			public int annotationLinesAdded; // SCN_MODIFIED with SC_MOD_CHANGEANNOTATION
 			public int updated;              // SCN_UPDATEUI
 		}
-	}
-
-	/// <summary></summary>
-	public enum ECaseInsensitiveBehaviour
-	{
-		RespectCase = Scintilla.SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE,
-		IgnoreCase = Scintilla.SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE,
 	}
 }
