@@ -407,11 +407,11 @@ namespace pr::str
 			return src.substr(b, i - b);
 		}
 	}
-	inline std::string_view NextIdentifier(std::string_view src, size_t ofs, size_t count = ~0ULL)
+	inline std::string_view NextIdentifier(std::string_view src, size_t ofs, size_t count = ~size_t())
 	{
 		return impl::NextIdentifier<char>(src, ofs, count);
 	}
-	inline std::wstring_view NextIdentifier(std::wstring_view src, size_t ofs, size_t count = ~0ULL)
+	inline std::wstring_view NextIdentifier(std::wstring_view src, size_t ofs, size_t count = ~size_t())
 	{
 		return impl::NextIdentifier<wchar_t>(src, ofs, count);
 	}

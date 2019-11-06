@@ -107,7 +107,6 @@ namespace pr
 			{
 				CodePage(SC_CP_UTF8);
 				ClearDocumentStyle();
-				StyleBits(7);
 				IndentationGuides(true);
 				TabWidth(4);
 				Indent(4);
@@ -175,7 +174,6 @@ namespace pr
 			void InitLdrStyle(bool dark = false)
 			{
 				ClearDocumentStyle();
-				StyleBits(7);
 				IndentationGuides(true);
 				AutoIndent(true);
 				TabWidth(4);
@@ -388,8 +386,6 @@ namespace pr
 			int  GetStyleAt        (uint pos) const                           { return Cmd<int >(SCI_GETSTYLEAT, pos, 0L); }
 			int  GetStyledText     (Sci_TextRange & tr) const                 { return Cmd<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
 			int  GetStyledText     (char * text, long first, long last) const { TxtRng tr(text, first, last); return Cmd<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
-			int  StyleBits         () const                                   { return Cmd<int >(SCI_GETSTYLEBITS, 0, 0L); }
-			void StyleBits         (int bits)                                 { return Cmd<void>(SCI_SETSTYLEBITS, bits, 0L); }
 			int  TargetAsUTF8      (char * text)                              { return Cmd<int >(SCI_TARGETASUTF8, 0, text); }
 			int  EncodedFromUTF8   (const char * utf8, char * encoded)        { return Cmd<int >(SCI_ENCODEDFROMUTF8, ( WPARAM)utf8, (LPARAM )encoded); }
 			void SetLengthForEncode(int bytes)                                { return Cmd<void>(SCI_SETLENGTHFORENCODE, bytes, 0L); }
@@ -827,7 +823,7 @@ namespace pr
 			#pragma endregion
 
 			#pragma region Printing
-			uint FormatRange          (bool draw, RangeToFormat & fr) { return Cmd<uint>(SCI_FORMATRANGE, draw, &fr); }
+			uint FormatRange          (bool draw, Sci_RangeToFormat& fr) { return Cmd<uint>(SCI_FORMATRANGE, draw, &fr); }
 			int  GetPrintMagnification() const                        { return Cmd<int >(SCI_GETPRINTMAGNIFICATION, 0, 0L); }
 			void SetPrintMagnification(int magnification)             { return Cmd<void>(SCI_SETPRINTMAGNIFICATION, magnification, 0L); }
 			int  GetPrintColourMode   () const                        { return Cmd<int >(SCI_GETPRINTCOLOURMODE, 0, 0L); }
@@ -907,7 +903,6 @@ namespace pr
 			int  GetPropertyExpanded(const char * key, char * buf) const    { return Cmd<int >(SCI_GETPROPERTYEXPANDED, key, buf); }
 			int  GetPropertyInt     (const char * key) const                { return Cmd<int >(SCI_GETPROPERTYINT, key, 0L); }
 			void SetKeyWords        (int keywordSet, const char * keyWords) { return Cmd<void>(SCI_SETKEYWORDS, keywordSet, keyWords); }
-			int  GetStyleBitsNeeded () const                                { return Cmd<int >(SCI_GETSTYLEBITSNEEDED, 0, 0L); }
 			#pragma endregion
 
 			#pragma region Notifications
@@ -922,8 +917,6 @@ namespace pr
 			void SetSavePoint      ()                        { return Cmd<void>(SCI_SETTEXT, 0, 0L); }
 			bool BufferedDraw      () const                  { return Cmd<int >(SCI_GETBUFFEREDDRAW, 0, 0) != 0; }
 			void BufferedDraw      (bool buffered)           { return Cmd<void>(SCI_SETBUFFEREDDRAW, buffered, 0L); }
-			bool TwoPhaseDraw      () const                  { return Cmd<int >(SCI_GETTWOPHASEDRAW, 0, 0L) != 0; }
-			void TwoPhaseDraw      (bool twoPhase)           { return Cmd<void>(SCI_SETTWOPHASEDRAW, twoPhase, 0L); }
 			int  CodePage          () const                  { return Cmd<int >(SCI_GETCODEPAGE, 0, 0L); }
 			void CodePage          (int codePage)            { return Cmd<void>(SCI_SETCODEPAGE, codePage, 0L); }
 			void SetWordChars      (const char * characters) { return Cmd<void>(SCI_SETWORDCHARS, 0, characters); }

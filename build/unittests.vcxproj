@@ -327,6 +327,7 @@
     <ClInclude Include="..\include\pr\storage\sqlite.h" />
     <ClInclude Include="..\include\pr\storage\xml.h" />
     <ClInclude Include="..\include\pr\storage\zip_file.h" />
+    <ClInclude Include="..\include\pr\str\encoding.h" />
     <ClInclude Include="..\include\pr\str\extract.h" />
     <ClInclude Include="..\include\pr\str\string.h" />
     <ClInclude Include="..\include\pr\str\string_core.h" />

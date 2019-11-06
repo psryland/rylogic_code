@@ -131,6 +131,7 @@ namespace pr
 		template <typename Char> static bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
 		{\
 			using E = enum_name;\
+			if (*name == 0) return false;\
 			if constexpr (std::is_same_v<Char,char>)\
 			{\
 				if (match_case)\

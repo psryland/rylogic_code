@@ -138,7 +138,7 @@ namespace pr::script
 		char_t operator[](int i)
 		{
 			ReadAhead(i + 1);
-			return i < m_buffer.size() ? m_buffer[i] : '\0';
+			return i < s_cast<int>(m_buffer.size()) ? m_buffer[i] : '\0';
 		}
 
 		// Advance by 1 character
@@ -188,7 +188,7 @@ namespace pr::script
 		// Returns the number of characters actually buffered (a value in the range [0, n])
 		int ReadAhead(int n)
 		{
-			for (; n > m_buffer.size();)
+			for (; n > s_cast<int>(m_buffer.size());)
 			{
 				// Ensure 'Buffer's length grows with each loop
 				auto const count = m_buffer.size();
@@ -234,7 +234,7 @@ namespace pr::script
 						}
 						break;
 					}
-				case EEncoding::utf16:
+				case EEncoding::utf16_le:
 					{
 						int lo, hi;
 						if ((lo = Read()) == EOS) break;
@@ -243,22 +243,13 @@ namespace pr::script
 						if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
-				case EEncoding::ucs2:
-					{
-						int lo, hi;
-						if ((lo = Read()) == EOS) break;
-						if ((hi = Read()) == EOS) break;
-						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
-						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
-						break;
-					}
-				case EEncoding::ucs2_be:
+				case EEncoding::utf16_be:
 					{
 						int lo, hi;
 						if ((hi = Read()) == EOS) break;
 						if ((lo = Read()) == EOS) break;
 						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
-						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UCS2 encoding. Value %d is out of range", ch));
+						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
 				}
@@ -447,7 +438,7 @@ namespace pr::script
 
 	public:
 
-		explicit StringSrc(EEncoding enc = EEncoding::utf16, Loc const& loc = Loc())
+		explicit StringSrc(EEncoding enc = EEncoding::utf16_le, Loc const& loc = Loc())
 			:Src(enc, loc)
 			,m_ptr(nullptr)
 			,m_end(nullptr)
@@ -460,7 +451,7 @@ namespace pr::script
 			if (AllSet(flags, EFlags::BufferLocally))
 				BufferLocally(str);
 		}
-		explicit StringSrc(std::wstring_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf16, Loc const& loc = Loc())
+		explicit StringSrc(std::wstring_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf16_le, Loc const& loc = Loc())
 			:Src(enc, loc)
 			,m_ptr(char_ptr(str.data()))
 			,m_end(char_ptr(str.data() + str.size()))
@@ -509,10 +500,10 @@ namespace pr::script
 				std::array<unsigned char, 3> bom;
 				std::ifstream file(filepath, std::ios::binary);
 				auto read = file.good() ? file.read(reinterpret_cast<char*>(bom.data()), bom.size()).gcount() : 0;
-				if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;    bom_size = 3; }
-				else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::ucs2_be; bom_size = 2; }
-				else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::ucs2;    bom_size = 2; }
-				else                                                                      { m_enc = EEncoding::utf8;    bom_size = 0; } // If no valid bom is found, assume UTF-8
+				if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     bom_size = 3; }
+				else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16_le; bom_size = 2; }
+				else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; bom_size = 2; }
+				else                                                                      { m_enc = EEncoding::utf8;     bom_size = 0; } // If no valid bom is found, assume UTF-8
 			}
 
 			// Open the input file stream

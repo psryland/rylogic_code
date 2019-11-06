@@ -361,6 +361,7 @@
 #include "pr\storage\nugget_file\nuggetimpl.h"
 #include "pr\storage\nugget_file\nuggetreceivers.h"
 #include "pr\storage\nugget_file\types.h"
+#include "pr\str\encoding.h"
 #include "pr\str\extract.h"
 #include "pr\str\string.h"
 #include "pr\str\string_core.h"

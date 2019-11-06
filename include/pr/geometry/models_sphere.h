@@ -188,8 +188,8 @@ namespace pr::geometry
 		data.m_adjacent.reserve(vcount);
 		impl::geosphere::CreateIcosahedron(data);
 
-		PR_ASSERT(PR_DBG, verts.size() == vcount, "Number of verts in geosphere calculated incorrectly");
-		PR_ASSERT(PR_DBG, faces.size() == icount/3, "Number of faces in geosphere calculated incorrectly");
+		PR_ASSERT(PR_DBG, static_cast<int>(verts.size()) == vcount, "Number of verts in geosphere calculated incorrectly");
+		PR_ASSERT(PR_DBG, static_cast<int>(faces.size()) == icount/3, "Number of faces in geosphere calculated incorrectly");
 
 		// Output the verts and indices
 		for (auto i = std::begin(verts), iend = std::end(verts); i != iend; ++i)

@@ -185,7 +185,7 @@ namespace pr
 		{
 			if (str.size() == 0) return;
 			LockFile lock(filepath);
-			BufferToFile(str, filepath, EFileData::Utf8, EFileData::Ucs2, append);
+			BufferToFile(str, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
 		}
 		inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
 		{

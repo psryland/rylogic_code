@@ -45,6 +45,10 @@ namespace pr::str
 
 			_bitwise_operators_allowed,
 		};
+		friend constexpr EFlags operator | (EFlags lhs, EFlags rhs)
+		{
+			return static_cast<EFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
+		}
 
 		EFlags m_flags;
 		int m_escape_character;

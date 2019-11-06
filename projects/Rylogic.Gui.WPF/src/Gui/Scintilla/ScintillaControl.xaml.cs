@@ -65,7 +65,7 @@ namespace Rylogic.Gui.WPF
 			// Get the function pointer for direct calling the WndProc (rather than windows messages)
 			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
 			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
-			m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func) ?? throw new Exception("Failed to retrieve the direct call function");
+			m_func = Marshal_.PtrToDelegate<Sci.SciFnDirect>(func) ?? throw new Exception("Failed to retrieve the direct call function");
 
 			// Notify handled created
 			HandleCreated?.Invoke(this, EventArgs.Empty);
@@ -166,7 +166,7 @@ namespace Rylogic.Gui.WPF
 			if (m_func == null) throw new Exception("The scintilla control has not been created yet");
 			return m_func(m_ptr, code, wparam, lparam);
 		}
-		private Sci.DirectFunction? m_func;
+		private Sci.SciFnDirect? m_func;
 		private IntPtr m_ptr;
 
 		/// <summary>Handle messages from the native control</summary>
@@ -268,7 +268,6 @@ namespace Rylogic.Gui.WPF
 			sc.Cursor = Cursors.IBeam;
 			sc.ClearAll();
 			sc.ClearDocumentStyle();
-			sc.StyleBits = 7;
 			sc.TabWidth = 4;
 			sc.Indent = 4;
 		}
@@ -413,14 +412,13 @@ namespace Rylogic.Gui.WPF
 		/// When autocompletion is set to ignore case (SCI_AUTOCSETIGNORECASE), by default it will nonetheless select the first list member
 		/// that matches in a case sensitive way to entered characters. This corresponds to a behaviour property of SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE(0).
 		/// If you want autocompletion to ignore case at all, choose SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE(1).</summary>
-		public ECaseInsensitiveBehaviour AutoCompleteCaseSensitiveBehaviour
+		public Sci.ECaseInsensitiveBehaviour AutoCompleteCaseSensitiveBehaviour
 		{
-			get => (ECaseInsensitiveBehaviour)Cmd(Sci.SCI_AUTOCGETCASEINSENSITIVEBEHAVIOUR);
+			get => (Sci.ECaseInsensitiveBehaviour)Cmd(Sci.SCI_AUTOCGETCASEINSENSITIVEBEHAVIOUR);
 			set => Cmd(Sci.SCI_AUTOCSETCASEINSENSITIVEBEHAVIOUR, (int)value);
 		}
 
 		#endregion
-
 		#region Call Tips
 
 		// Notes:
@@ -495,7 +493,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Text
 
 		/// <summary>Allow the control to store the text content before and after the window handle has been created</summary>
@@ -596,7 +593,7 @@ namespace Rylogic.Gui.WPF
 			using var buffer = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
 			Marshal.StructureToPtr(new Sci.TextRange
 			{
-				chrg = new Sci.CharacterRange{cpMin = range.Beg, cpMax = range.End},
+				chrg = new Sci.CharacterRange{cpMin = range.Begi, cpMax = range.Endi},
 				lpstrText = text.Value.Ptr,
 			}, buffer.Value.Ptr, false);
 			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
@@ -687,13 +684,6 @@ namespace Rylogic.Gui.WPF
 			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
 		}
 
-		/// <summary>Get/Set style bits</summary>
-		public int StyleBits
-		{
-			get => Cmd(Sci.SCI_GETSTYLEBITS);
-			set => Cmd(Sci.SCI_SETSTYLEBITS, value);
-		}
-
 		/// <summary></summary>
 		public int TargetAsUTF8(StringBuilder text)
 		{
@@ -715,7 +705,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Selection/Navigation
 
 		/// <summary>Records a selection</summary>
@@ -1086,14 +1075,12 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Indenting
 
 		/// <summary>Enable/Disable auto indent mode</summary>
 		public bool AutoIndent { get; set; }
 
 		#endregion
-
 		#region Cut, Copy And Paste
 
 		/// <summary></summary>
@@ -1152,7 +1139,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Undo/Redo
 
 		/// <summary></summary>
@@ -1205,7 +1191,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Find/Search/Replace
 
 		/// <summary></summary>
@@ -1299,7 +1284,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Scrolling
 
 		/// <summary>Raised whenever a horizontal or vertical scrolling event occurs</summary>
@@ -1395,7 +1379,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region DragDrop
 
 		//public new bool AllowDrop
@@ -1405,7 +1388,6 @@ namespace Rylogic.Gui.WPF
 		//}
 
 		#endregion
-
 		#region End of Line
 
 		/// <summary>Get/Set the characters that are added into the document when the user presses the Enter key</summary>
@@ -1429,7 +1411,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Style
 
 		/// <summary>Clear all styles</summary>
@@ -1519,23 +1500,23 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Apply the give styles</summary>
-		public void ApplyStyles(this ScintillaControl sc, IEnumerable<Sci.StyleDesc> styles)
+		public void ApplyStyles(IEnumerable<Sci.StyleDesc> styles)
 		{
 			foreach (var style in styles)
 			{
-				if (style.Fore is Colour32 fore) sc.StyleSetFore(style.Id, fore);
-				if (style.Back is Colour32 back) sc.StyleSetBack(style.Id, back);
-				if (style.Font is string font) sc.StyleSetFont(style.Id, font);
-				if (style.Size is int size) sc.StyleSetSize(style.Id, size);
-				if (style.Bold is bool bold) sc.StyleSetBold(style.Id, bold);
-				if (style.Italic is bool italic) sc.StyleSetItalic(style.Id, italic);
-				if (style.Underline is bool underline) sc.StyleSetUnderline(style.Id, underline);
-				if (style.EOLFilled is bool eol_filled) sc.StyleSetEOLFilled(style.Id, eol_filled);
-				if (style.CharSet is int char_set) sc.StyleSetCharacterSet(style.Id, char_set);
-				if (style.CaseForce is Sci.ECase case_force) sc.StyleSetCase(style.Id, case_force);
-				if (style.Visible is bool visible) sc.StyleSetVisible(style.Id, visible);
-				if (style.Changeable is bool changeable) sc.StyleSetChangeable(style.Id, changeable);
-				if (style.HotSpot is bool hot_spot) sc.StyleSetHotSpot(style.Id, hot_spot);
+				if (style.Fore is Colour32 fore) StyleSetFore(style.Id, fore);
+				if (style.Back is Colour32 back) StyleSetBack(style.Id, back);
+				if (style.Font is string font) StyleSetFont(style.Id, font);
+				if (style.Size is int size) StyleSetSize(style.Id, size);
+				if (style.Bold is bool bold) StyleSetBold(style.Id, bold);
+				if (style.Italic is bool italic) StyleSetItalic(style.Id, italic);
+				if (style.Underline is bool underline) StyleSetUnderline(style.Id, underline);
+				if (style.EOLFilled is bool eol_filled) StyleSetEOLFilled(style.Id, eol_filled);
+				if (style.CharSet is int char_set) StyleSetCharacterSet(style.Id, char_set);
+				if (style.CaseForce is Sci.ECase case_force) StyleSetCase(style.Id, case_force);
+				if (style.Visible is bool visible) StyleSetVisible(style.Id, visible);
+				if (style.Changeable is bool changeable) StyleSetChangeable(style.Id, changeable);
+				if (style.HotSpot is bool hot_spot) StyleSetHotSpot(style.Id, hot_spot);
 			}
 		}
 
@@ -1587,7 +1568,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Control Char Symbol
 
 		/// <summary></summary>
@@ -1603,7 +1583,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Caret Style
 
 		/// <summary></summary>
@@ -1671,7 +1650,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Selection Style
 
 		/// <summary></summary>
@@ -1687,7 +1665,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Hotspot Style
 
 		/// <summary></summary>
@@ -1715,7 +1692,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Margins
 
 		/// <summary></summary>
@@ -1786,7 +1762,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Brace Highlighting
 
 		/// <summary></summary>
@@ -1808,7 +1783,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Tabs
 
 		/// <summary>
@@ -1883,7 +1857,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Markers
 
 		/// <summary></summary>
@@ -1966,7 +1939,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Context Menu
 
 		/// <summary>Set whether the built-in context menu is used</summary>
@@ -1976,7 +1948,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Macro Recording
 
 		/// <summary></summary>
@@ -1992,7 +1963,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Printing
 
 		/// <summary></summary>
@@ -2034,7 +2004,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Multiple Views
 
 		/// <summary></summary>
@@ -2068,7 +2037,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Folding
 
 		/// <summary></summary>
@@ -2174,7 +2142,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Line Wrapping
 
 		/// <summary></summary>
@@ -2231,7 +2198,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Zooming
 
 		/// <summary></summary>
@@ -2254,7 +2220,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Long Lines
 
 		/// <summary></summary>
@@ -2279,7 +2244,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Lexer
 
 		/// <summary></summary>
@@ -2350,14 +2314,7 @@ namespace Rylogic.Gui.WPF
 			//Cmd(Sci.SCI_SETKEYWORDS, keywordSet, keyWords);
 		}
 
-		/// <summary></summary>
-		public int GetStyleBitsNeeded()
-		{
-			return Cmd(Sci.SCI_GETSTYLEBITSNEEDED);
-		}
-
 		#endregion
-
 		#region Notifications
 
 		/// <summary></summary>
@@ -2375,7 +2332,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Misc
 
 		/// <summary></summary>
@@ -2395,13 +2351,6 @@ namespace Rylogic.Gui.WPF
 		{
 			get => Cmd(Sci.SCI_GETBUFFEREDDRAW) != 0;
 			set => Cmd(Sci.SCI_SETBUFFEREDDRAW, value ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public bool TwoPhaseDraw
-		{
-			get => Cmd(Sci.SCI_GETTWOPHASEDRAW) != 0;
-			set => Cmd(Sci.SCI_SETTWOPHASEDRAW, value ? 1 : 0);
 		}
 
 		/// <summary></summary>
@@ -2452,7 +2401,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-
 		#region Status/Errors
 
 		/// <summary></summary>

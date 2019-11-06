@@ -24,7 +24,6 @@ namespace Rylogic.Gui.WPF
 		{
 			sc.CodePage = Sci.SC_CP_UTF8;
 			sc.ClearDocumentStyle();
-			sc.StyleBits = 7;
 			sc.IndentationGuides = true;
 			sc.TabWidth = 4;
 			sc.Indent = 4;
@@ -95,7 +94,6 @@ namespace Rylogic.Gui.WPF
 		public static ScintillaControl ConfigLdr(this ScintillaControl sc, bool dark)
 		{
 			sc.ClearDocumentStyle();
-			sc.StyleBits = 7;
 			sc.IndentationGuides = true;
 			sc.AutoIndent = true;
 			sc.TabWidth = 4;
@@ -144,41 +142,41 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Style settings for dark mode</summary>
 		public static Sci.StyleDesc[] LdrLight { get; } = new[]
 		{
-			new StyleDesc(Sci.STYLE_DEFAULT          , 0x120700 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.STYLE_LINENUMBER       , 0x120700 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.STYLE_INDENTGUIDE      , 0xc0c0c0 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.STYLE_BRACELIGHT       , 0x2b6498 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_DEFAULT        , 0x120700 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x008100 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x008100 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x154dc7 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x154dc7 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_NUMBER         , 0x1e1e1e , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xff0000 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_PREPROC        , 0x8a0097 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81962a , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_NAME           , 0x000000 , 0xffffff , LdrFontName),
-			new StyleDesc(Sci.SCE_LDR_COLOUR         , 0x83573c , 0xffffff , LdrFontName),
+			new Sci.StyleDesc(Sci.STYLE_DEFAULT         ){ Fore = 0x120700 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_LINENUMBER      ){ Fore = 0x120700 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_INDENTGUIDE     ){ Fore = 0xc0c0c0 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_BRACELIGHT      ){ Fore = 0x2b6498 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_DEFAULT       ){ Fore = 0x120700 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_BLK   ){ Fore = 0x008100 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_LINE  ){ Fore = 0x008100 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_STRING_LITERAL){ Fore = 0x154dc7 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_CHAR_LITERAL  ){ Fore = 0x154dc7 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_NUMBER        ){ Fore = 0x1e1e1e , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_KEYWORD       ){ Fore = 0xff0000 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_PREPROC       ){ Fore = 0x8a0097 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_OBJECT        ){ Fore = 0x81962a , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_NAME          ){ Fore = 0x000000 , Back = 0xffffff , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COLOUR        ){ Fore = 0x83573c , Back = 0xffffff , Font = LdrFontName},
 		};
 
 		/// <summary>Style settings for dark mode</summary>
 		public static Sci.StyleDesc[] LdrDark { get; } = new[]
 		{
-			new Sci.StyleDesc(Sci.STYLE_DEFAULT          , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.STYLE_LINENUMBER       , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.STYLE_INDENTGUIDE      , 0x484439 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.STYLE_BRACELIGHT       , 0x98642b , 0x5e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_DEFAULT        , 0xc8c8c8 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_BLK    , 0x4aa656 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_LINE   , 0x4aa656 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_STRING_LITERAL , 0x859dd6 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_CHAR_LITERAL   , 0x859dd6 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_NUMBER         , 0xf7f7f8 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_KEYWORD        , 0xd69c56 , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_PREPROC        , 0xc563bd , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_OBJECT         , 0x81c93d , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_NAME           , 0xffffff , 0x1e1e1e , LdrFontName),
-			new Sci.StyleDesc(Sci.SCE_LDR_COLOUR         , 0x7c97c3 , 0x1e1e1e , LdrFontName),
+			new Sci.StyleDesc(Sci.STYLE_DEFAULT         ){ Fore = 0xc8c8c8 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_LINENUMBER      ){ Fore = 0xc8c8c8 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_INDENTGUIDE     ){ Fore = 0x484439 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.STYLE_BRACELIGHT      ){ Fore = 0x98642b , Back = 0x5e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_DEFAULT       ){ Fore = 0xc8c8c8 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_BLK   ){ Fore = 0x4aa656 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COMMENT_LINE  ){ Fore = 0x4aa656 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_STRING_LITERAL){ Fore = 0x859dd6 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_CHAR_LITERAL  ){ Fore = 0x859dd6 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_NUMBER        ){ Fore = 0xf7f7f8 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_KEYWORD       ){ Fore = 0xd69c56 , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_PREPROC       ){ Fore = 0xc563bd , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_OBJECT        ){ Fore = 0x81c93d , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_NAME          ){ Fore = 0xffffff , Back = 0x1e1e1e , Font = LdrFontName},
+			new Sci.StyleDesc(Sci.SCE_LDR_COLOUR        ){ Fore = 0x7c97c3 , Back = 0x1e1e1e , Font = LdrFontName},
 		};
 
 		/// <summary>Style Attached property</summary>

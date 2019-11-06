@@ -328,7 +328,7 @@ namespace pr
 		{
 			auto& me = *static_cast<mem_ostream*>(ctx);
 			me.data.resize(std::max(me.data.size(), size_to_count(size_t(ofs + count))));
-			std::memcpy(reinterpret_cast<char_type*>(me.data.data()) + ofs, bytes, count);
+			std::memcpy(reinterpret_cast<char_type*>(me.data.data()) + ofs, bytes, static_cast<size_t>(count));
 			return count;
 		}
 	};

@@ -108,7 +108,7 @@
 			gui:Scintilla_.Style="LdrLight"
 			Name="m_scintilla_control"
 			/>
-
+<!--
 		<Popup
 			IsOpen="True"
 			Placement="Mouse"
@@ -129,5 +129,6 @@
 				</ListView.Items>
 			</ListView>
 		</Popup>
+		-->
 	</Grid>
 </UserControl>

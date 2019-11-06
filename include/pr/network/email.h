@@ -133,7 +133,7 @@ namespace pr::network
 			{
 				msg.resize(msg.capacity());
 				auto len = ss.getline(msg.data(), int(msg.size())-2).gcount();
-				msg.resize(len);
+				msg.resize(static_cast<size_t>(len));
 				msg.append("\r\n");
 
 				result = send(server, msg.data(), int(msg.size()), 0);

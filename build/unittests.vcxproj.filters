@@ -1032,6 +1032,9 @@
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\str\encoding.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

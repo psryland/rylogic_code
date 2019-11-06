@@ -204,7 +204,7 @@ namespace pr::storage::zip
 			// uint8_t Data[CompressedSize];
 
 			LDH() = default;
-			LDH(size_t item_name_size, size_t extra_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp)
+			LDH(int item_name_size, int extra_size, int64_t uncompressed_size, int64_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp)
 				:Sig(Signature)
 				,Version(VersionFor(method))
 				,BitFlags(bit_flags)
@@ -273,7 +273,7 @@ namespace pr::storage::zip
 			// uint8_t ItemComment[ItemCommentSize];
 
 			CDH() = default;
-			CDH(size_t name_size, size_t extra_size, size_t comment_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp, size_t local_header_ofs, uint32_t ext_attributes, uint16_t int_attributes)
+			CDH(int name_size, int extra_size, int comment_size, int64_t uncompressed_size, int64_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp, int64_t local_header_ofs, uint32_t ext_attributes, uint16_t int_attributes)
 				:Sig(Signature)
 				,VersionMadeBy()
 				,VersionNeeded(VersionFor(method))
@@ -345,15 +345,15 @@ namespace pr::storage::zip
 			//   char Comment[CommentLength];
 
 			ECD() = default;
-			ECD(uint16_t disk_number, uint16_t cdir_disk_number, uint16_t num_entries_on_disk, uint16_t total_entries, uint32_t cdir_size, uint32_t cdir_offset, uint16_t comment_size)
+			ECD(int disk_number, int cdir_disk_number, int num_entries_on_disk, int total_entries, int64_t cdir_size, int64_t cdir_offset, int comment_size)
 				:Sig(Signature)
-				,DiskNumber(disk_number)
-				,CDirDiskNumber(cdir_disk_number)
-				,NumEntriesOnDisk(num_entries_on_disk)
-				,TotalEntries(total_entries)
-				,CDirSize(cdir_size)
-				,CDirOffset(cdir_offset)
-				,CommentSize(comment_size)
+				,DiskNumber(checked_cast<uint16_t>(disk_number))
+				,CDirDiskNumber(checked_cast<uint16_t>(cdir_disk_number))
+				,NumEntriesOnDisk(checked_cast<uint16_t>(num_entries_on_disk))
+				,TotalEntries(checked_cast<uint16_t>(total_entries))
+				,CDirSize(checked_cast<uint32_t>(cdir_size))
+				,CDirOffset(checked_cast<uint32_t>(cdir_offset))
+				,CommentSize(checked_cast<uint16_t>(comment_size))
 			{}
 		};
 		static_assert(sizeof(ECD) == 22);
@@ -406,8 +406,8 @@ namespace pr::storage::zip
 		vector_t<uint8_t> m_omem;            // Writeable output in-memory zip
 
 		// Read/Write functions that change depending on whether the archive is in memory or a file on disk.
-		using read_func_t = void(*)(ZipArchiveA const& me, int64_t file_ofs, void* buf, size_t n);
-		using write_func_t = void(*)(ZipArchiveA& me, int64_t file_ofs, void const* buf, size_t n);
+		using read_func_t = void(*)(ZipArchiveA const& me, int64_t file_ofs, void* buf, int64_t n);
+		using write_func_t = void(*)(ZipArchiveA& me, int64_t file_ofs, void const* buf, int64_t n);
 		read_func_t m_read;
 		write_func_t m_write;
 
@@ -1061,11 +1061,11 @@ namespace pr::storage::zip
 			EBitFlags bit_flags = EBitFlags::None;
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
-			uint64_t compressed_size = 0;
+			int64_t compressed_size = 0;
+			int64_t uncompressed_size = static_cast<int64_t>(std::filesystem::file_size(src_filepath));
 			uint32_t crc32 = InitialCrc;
 
 			// Don't compress if too small
-			auto uncompressed_size = std::filesystem::file_size(src_filepath);
 			if (uncompressed_size <= 3)
 				level = ECompressionLevel::None;
 
@@ -1108,7 +1108,7 @@ namespace pr::storage::zip
 				for (; src_file.good();)
 				{
 					auto n = src_file.read(buf.data(), buf.size()).gcount();
-					m_write(*this, item_ofs, buf.data(), n);
+					m_write(*this, item_ofs, buf.data(), static_cast<size_t>(n));
 					item_ofs += n;
 				}
 				
@@ -1136,11 +1136,11 @@ namespace pr::storage::zip
 			}
 
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp);
+			LDH ldh(static_cast<int>(item_name.size()), static_cast<int>(extra.size()), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
+			CDH cdh(static_cast<int>(item_name.size()), static_cast<int>(extra.size()), static_cast<int>(item_comment.size()), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
 			append(m_cdir, &cdh, &cdh + 1);
 			append(m_cdir, item_name);
 			append(m_cdir, extra);
@@ -1402,7 +1402,7 @@ namespace pr::storage::zip
 					// Search backwards for the ECD marker
 					for (; n-- != 0;)
 					{
-						sig = (sig << 8) | buf[n];
+						sig = (sig << 8) | buf[static_cast<size_t>(n)];
 						if (sig == ECD::Signature) break;
 					}
 					if (ofs == 0 && n == -1)
@@ -1880,7 +1880,7 @@ namespace pr::storage::zip
 		}
 
 		// Accumulate the crc of given data.
-		static uint32_t Crc(void const* ptr, size_t buf_len, uint32_t crc = InitialCrc)
+		static uint32_t Crc(void const* ptr, int64_t buf_len, uint32_t crc = InitialCrc)
 		{
 			// Karl Malbrain's compact CRC-32. See "A compact CCITT crc16 and crc32 C implementation that balances
 			// processor cache usage against speed": http://www.geocities.com/malbrain/
@@ -1988,21 +1988,24 @@ namespace pr::storage::zip
 		}
 
 		// Helper for detecting data lost when casting
-		template <typename T, typename U> static constexpr T checked_cast(U x)
+		template <typename T, typename U>
+		static constexpr T checked_cast(U x)
 		{
 			assert(static_cast<U>(static_cast<T>(x)) == x && "Cast loses data");
 			return static_cast<T>(x);
 		}
 
 		// True if 'ofs' is an aligned offset in the output stream
-		template <typename T> bool is_aligned(T ofs) const
+		template <typename T>
+		bool is_aligned(T ofs) const
 		{
 			if (m_entry_alignment == 0) return true;
 			return (ofs & (m_entry_alignment - 1)) == 0;
 		}
 
 		// True if (value & flags) == flags;
-		template <typename T> static constexpr bool has_flag(T value, T flags)
+		template <typename T>
+		static constexpr bool has_flag(T value, T flags)
 		{
 			if constexpr (std::is_enum_v<T>)
 			{
@@ -2033,29 +2036,29 @@ namespace pr::storage::zip
 		// Static IO functions
 		struct IO
 		{
-			static void NoRead(ZipArchiveA const&, int64_t, void*, size_t)
+			static void NoRead(ZipArchiveA const&, int64_t, void*, int64_t)
 			{
 				throw std::runtime_error("Archive is write-only");
 			}
-			static void ReadIMem(ZipArchiveA const& me, int64_t ofs, void* buf, size_t n)
+			static void ReadIMem(ZipArchiveA const& me, int64_t ofs, void* buf, int64_t n)
 			{
 				using namespace std::literals;
 
-				if (ofs < 0 || ofs + n > me.m_imem.size())
+				if (ofs < 0 || ofs + n > static_cast<int64_t>(me.m_imem.size()))
 					throw std::runtime_error("Out of bounds read at offset "s + std::to_string(ofs) + " from in-memory zip archive");
 
-				memcpy(buf, me.m_imem.data() + ofs, n);
+				std::memcpy(buf, me.m_imem.data() + ofs, static_cast<size_t>(n));
 			};
-			static void ReadOMem(ZipArchiveA const& me, int64_t ofs, void* buf, size_t n)
+			static void ReadOMem(ZipArchiveA const& me, int64_t ofs, void* buf, int64_t n)
 			{
 				using namespace std::literals;
 
-				if (ofs < 0 || ofs + n > me.m_omem.size())
+				if (ofs < 0 || ofs + n > static_cast<int64_t>(me.m_omem.size()))
 					throw std::runtime_error("Out of bounds read at offset "s + std::to_string(ofs) + " from internal in-memory zip archive");
 
-				memcpy(buf, me.m_omem.data() + ofs, n);
+				std::memcpy(buf, me.m_omem.data() + ofs, static_cast<size_t>(n));
 			}
-			static void ReadIStream(ZipArchiveA const& me, int64_t ofs, void* buf, size_t n)
+			static void ReadIStream(ZipArchiveA const& me, int64_t ofs, void* buf, int64_t n)
 			{
 				using namespace std::literals;
 
@@ -2063,20 +2066,20 @@ namespace pr::storage::zip
 					throw std::runtime_error("File read at offset "s + std::to_string(ofs) + " failed. Stream in error state.");
 				if (!me.m_istream.seekg(ofs).good())
 					throw std::runtime_error("File read at offset "s + std::to_string(ofs) + " failed. Seek failed.");
-				if (size_t c = me.m_istream.read(static_cast<char*>(buf), n).gcount(); c != n)
+				if (int64_t c = me.m_istream.read(static_cast<char*>(buf), n).gcount(); c != n)
 					throw std::runtime_error("File read at offset "s + std::to_string(ofs) + " failed. Stream truncated.");
 			}
 
-			static void NoWrite(ZipArchiveA&, int64_t, void const*, size_t)
+			static void NoWrite(ZipArchiveA&, int64_t, void const*, int64_t)
 			{
 				throw std::runtime_error("Archive is read-only");
 			}
-			static void WriteOMem(ZipArchiveA& me, int64_t ofs, void const* buf, size_t n)
+			static void WriteOMem(ZipArchiveA& me, int64_t ofs, void const* buf, int64_t n)
 			{
 				me.m_omem.resize(std::max<size_t>(size_t(ofs + n), me.m_omem.size()));
-				memcpy(me.m_omem.data() + ofs, buf, n);
+				std::memcpy(me.m_omem.data() + ofs, buf, static_cast<size_t>(n));
 			}
-			static void WriteOStream(ZipArchiveA& me, int64_t ofs, void const* buf, size_t n)
+			static void WriteOStream(ZipArchiveA& me, int64_t ofs, void const* buf, int64_t n)
 			{
 				using namespace std::literals;
 
@@ -2159,13 +2162,13 @@ namespace pr::storage::zip
 			using bit_buf_t = uint64_t;
 
 			// The maximum size of a block
-			static size_t const MaxBlockSize = 64U * 1024U;
+			static int64_t const MaxBlockSize = 64 * 1024;
 
 			// Huffman table sizes
-			static size_t const LitTableSize = 288;
-			static size_t const DstTableSize = 32;
-			static size_t const DynTableSize = 19;
-			static size_t const MaxTableSize = std::max({ LitTableSize, DstTableSize, DynTableSize });
+			static int64_t const LitTableSize = 288;
+			static int64_t const DstTableSize = 32;
+			static int64_t const DynTableSize = 19;
+			static int64_t const MaxTableSize = std::max({ LitTableSize, DstTableSize, DynTableSize });
 
 			// The compressor defaults to 128 dictionary probes per dictionary search. 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
 			static uint32_t const DefaultProbes = 0x080;
@@ -2319,7 +2322,7 @@ namespace pr::storage::zip
 			//   Callers should use the AdlerChecksum helper with their output iterator to calculate
 			//   the checksum then compare it to the 'adler_checksum' value.
 			template <typename Src, typename FlushCB>
-			void Decompress(Src stream, size_t length, FlushCB output, EDecompressFlags const flags = EDecompressFlags::None, uint32_t* adler_checksum = nullptr)
+			void Decompress(Src stream, int64_t length, FlushCB output, EDecompressFlags const flags = EDecompressFlags::None, uint32_t* adler_checksum = nullptr)
 			{
 				using namespace std::literals;
 
@@ -2492,7 +2495,7 @@ namespace pr::storage::zip
 			// 'flags' controls the compression output.
 			// 'probe_count' controls the level of compression and must be a value in the range [0,4096) where 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
 			template <typename Src, typename FlushCB>
-			void Compress(Src stream, size_t length, FlushCB output, ECompressFlags const flags = ECompressFlags::None, int probe_count = DefaultProbes)
+			void Compress(Src stream, int64_t length, FlushCB output, ECompressFlags const flags = ECompressFlags::None, int probe_count = DefaultProbes)
 			{
 				using namespace std::literals;
 
@@ -2782,24 +2785,24 @@ namespace pr::storage::zip
 			struct SymCount
 			{
 				std::array<uint16_t, MaxTableSize> m_data;
-				size_t m_alphabet_count;
+				int m_alphabet_count;
 
 				SymCount()
 					:SymCount(0)
 				{}
-				SymCount(size_t alphabet_count)
+				SymCount(int alphabet_count)
 					:m_data()
 					,m_alphabet_count(alphabet_count)
 				{
 					assert(alphabet_count <= MaxTableSize);
 				}
-				size_t size() const
+				int size() const
 				{
 					return m_alphabet_count;
 				}
 				void reset()
 				{
-					memset(m_data.data(), 0, sizeof(uint16_t) * m_alphabet_count);
+					std::memset(m_data.data(), 0, static_cast<size_t>(sizeof(uint16_t) * m_alphabet_count));
 				}
 				uint16_t operator[](int idx) const
 				{
@@ -2813,7 +2816,7 @@ namespace pr::storage::zip
 				}
 				operator span_t<uint16_t>() const
 				{
-					return span_t<uint16_t>(m_data.data(), m_alphabet_count);
+					return span_t<uint16_t>(m_data.data(), static_cast<size_t>(m_alphabet_count));
 				}
 			};
 
@@ -2887,14 +2890,14 @@ namespace pr::storage::zip
 			{
 				using value_type = typename std::iterator_traits<Src>::value_type;
 
-				Src m_ptr;       // Iterator to underlying sequence
-				ptrdiff_t m_len; // Remaining count
+				Src m_ptr;     // Iterator to underlying sequence
+				int64_t m_len; // Remaining count
 
 				SrcIter()
 					:m_ptr()
 					,m_len()
 				{}
-				SrcIter(Src src, ptrdiff_t len)
+				SrcIter(Src src, int64_t len)
 					:m_ptr(src)
 					,m_len(len)
 				{}

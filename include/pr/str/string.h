@@ -72,13 +72,11 @@ namespace pr
 		#pragma region Traits
 
 		// type specific traits
-		struct traits :pr::char_traits<Type> {};
+		struct traits :pr::char_traits<Type>
+		{};
 
 		// true if 'tchar' is the same as 'Type', ignoring references
-		template <typename tchar> using same_char = std::is_same<typename std::decay<tchar>::type, Type>;
-		template <typename tchar> using enable_if_same_char = typename std::enable_if<same_char<tchar>::value>::type;
-		static_assert(same_char<Type>::value, "");
-		static_assert(!same_char<int>::value, "");
+		template <typename tchar> using enable_if_same_char = std::enable_if_t<std::is_same_v<std::decay_t<tchar>,Type>>;
 
 		// true if 'tstr' is a 'pr::string<Type,...>' string
 		template <typename tstr> struct is_pr_str
@@ -595,7 +593,7 @@ namespace pr
 		string& assign(const_pointer ptr)
 		{
 			if (ptr != nullptr)
-				return assign(ptr, traits::strlen(ptr));
+				return assign(ptr, traits::length(ptr));
 
 			resize(0);
 			return *this;
@@ -731,7 +729,7 @@ namespace pr
 		// append [ptr, <null>)
 		string& append(const_pointer ptr)
 		{
-			return append(ptr, traits::strlen(ptr));
+			return append(ptr, traits::length(ptr));
 		}
 
 		// append count * ch
@@ -808,14 +806,14 @@ namespace pr
 		// insert [ptr, ptr + count) at ofs
 		string& insert(size_type ofs, Type const* ptr)
 		{
-			return insert(ofs, ptr, traits::strlen(ptr));
+			return insert(ofs, ptr, traits::length(ptr));
 		}
 
 		// insert [ptr, ptr + count) at ofs
 		string& insert(size_type ofs, Type const* ptr, size_type count)
 		{
 			assert(ofs < m_count && "offset off the end of this string");
-			assert(count <= traits::strlen(ptr) && "'count' is longer than the null terminated string 'ptr'");
+			assert(count <= traits::length(ptr) && "'count' is longer than the null terminated string 'ptr'");
 			assert(npos - size() > count && "result too long");
 
 			if (count == 0)
@@ -916,13 +914,13 @@ namespace pr
 		// compare [0, size()) with [ptr, <null>)
 		int compare(const_pointer ptr) const
 		{
-			return compare(0, size(), ptr, traits::strlen(ptr));
+			return compare(0, size(), ptr, traits::length(ptr));
 		}
 
 		// compare [ofs, ofs + n0) with [ptr, <null>)
 		int compare(size_type ofs, size_type n0, const_pointer ptr) const
 		{
-			return compare(ofs, n0, ptr, traits::strlen(ptr));
+			return compare(ofs, n0, ptr, traits::length(ptr));
 		}
 
 		// replace [ofs, ofs + n0) with right
@@ -1007,7 +1005,7 @@ namespace pr
 		string& replace(size_type ofs, size_type n0, const_pointer ptr)
 		{
 			assert(ptr != nullptr);
-			return replace(ofs, n0, ptr, traits::strlen(ptr));
+			return replace(ofs, n0, ptr, traits::length(ptr));
 		}
 
 		// replace [ofs, ofs + n0) with count * ch
@@ -1096,7 +1094,7 @@ namespace pr
 		size_type find(const_pointer ptr, size_type ofs = 0) const
 		{
 			assert(ptr != nullptr);
-			return find(ptr, ofs, traits::strlen(ptr));
+			return find(ptr, ofs, traits::length(ptr));
 		}
 
 		//// look for right beginnng at or after ofs
@@ -1190,7 +1188,7 @@ namespace pr
 		// look for one of [ptr, <null>) at or after ofs
 		size_type find_first_of(const_pointer ptr, size_type ofs = 0) const
 		{
-			return find_first_of(ptr, ofs, traits::strlen(ptr));
+			return find_first_of(ptr, ofs, traits::length(ptr));
 		}
 
 		// look for ch at or after ofs
@@ -1225,7 +1223,7 @@ namespace pr
 		// look for one of [ptr, <null>) before ofs
 		size_type find_last_of(const_pointer ptr, size_type ofs = npos) const
 		{
-			return find_last_of(ptr, ofs, traits::strlen(ptr));
+			return find_last_of(ptr, ofs, traits::length(ptr));
 		}
 
 		// look for ch before ofs
@@ -1260,7 +1258,7 @@ namespace pr
 		// look for one of [ptr, <null>) at or after ofs
 		size_type find_first_not_of(const_pointer ptr, size_type ofs = 0) const
 		{
-			return find_first_not_of(ptr, ofs, traits::strlen(ptr));
+			return find_first_not_of(ptr, ofs, traits::length(ptr));
 		}
 
 		// look for non ch at or after ofs
@@ -1295,7 +1293,7 @@ namespace pr
 		// look for none of [ptr, <null>) before ofs
 		size_type find_last_not_of(const_pointer ptr, size_type ofs = npos) const
 		{
-			return find_last_not_of(ptr, ofs, traits::strlen(ptr));
+			return find_last_not_of(ptr, ofs, traits::length(ptr));
 		}
 
 		// look for non ch before ofs
@@ -1361,7 +1359,7 @@ namespace pr
 		using tstr = string<T,L,F,A>;
 
 		tstr res;
-		res.reserve(tstr::traits::strlen(lhs) + rhs.size());
+		res.reserve(tstr::traits::length(lhs) + rhs.size());
 		res += lhs;
 		res += rhs;
 		return res;
@@ -1372,7 +1370,7 @@ namespace pr
 		using tstr = string<T,L,F,A>;
 
 		tstr res;
-		res.reserve(lhs.size() + tstr::traits::strlen(rhs));
+		res.reserve(lhs.size() + tstr::traits::length(rhs));
 		res += lhs;
 		res += rhs;
 		return res;
