@@ -181,19 +181,20 @@ namespace
 			case SCE_LDR_PREPROC:
 				if (!s_cs_identifier.Contains(sc.ch))
 				{
-					char s[100] = {}, *p = &s[0];
+					char s[100] = {}, *p = &s[1]; // Skip the '#'
 					sc.GetCurrentLowered(s, sizeof(s));
-					for (++p; *p && IsASpaceOrTab(*p); ++p) {} // skip the '#' and space between the # and keyword
+					for (; *p && IsASpaceOrTab(*p); ++p) {} // skip the space between the # and keyword
 
 					// When the text matches the keyword, go back to the default state
 					EPPKeyword kw;
 					if (pr::Enum<EPPKeyword>::TryParse(kw, p))
 					{
-						sc.ChangeState(SCE_LDR_DEFAULT);
+						sc.ChangeState(SCE_LDR_PREPROC);
+						sc.SetState(SCE_LDR_DEFAULT);
 						break;
 					}
 
-					sc.SetState(SCE_LDR_DEFAULT);
+					sc.ChangeState(SCE_LDR_DEFAULT);
 				}
 				break;
 			case SCE_LDR_NAME:

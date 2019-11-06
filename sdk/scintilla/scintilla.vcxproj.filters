@@ -133,6 +133,12 @@
     <ClCompile Include="lexlib\WordList.cxx">
       <Filter>src\lexlib</Filter>
     </ClCompile>
+    <ClCompile Include="src\Catalogue.cxx">
+      <Filter>src\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ExternalLexer.cxx">
+      <Filter>src\src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -339,6 +345,12 @@
     </ClInclude>
     <ClInclude Include="lexlib\WordList.h">
       <Filter>src\lexlib</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Catalogue.h">
+      <Filter>src\src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ExternalLexer.h">
+      <Filter>src\src</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

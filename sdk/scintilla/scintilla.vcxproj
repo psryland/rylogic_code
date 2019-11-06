@@ -84,7 +84,7 @@
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
@@ -115,7 +115,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
@@ -146,7 +146,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
@@ -176,7 +176,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
@@ -216,6 +216,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile Include="src\CallTip.cxx" />
     <ClCompile Include="src\CaseConvert.cxx" />
     <ClCompile Include="src\CaseFolder.cxx" />
+    <ClCompile Include="src\Catalogue.cxx" />
     <ClCompile Include="src\CellBuffer.cxx" />
     <ClCompile Include="src\CharClassify.cxx" />
     <ClCompile Include="src\ContractionState.cxx" />
@@ -225,6 +226,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile Include="src\EditModel.cxx" />
     <ClCompile Include="src\Editor.cxx" />
     <ClCompile Include="src\EditView.cxx" />
+    <ClCompile Include="src\ExternalLexer.cxx" />
     <ClCompile Include="src\Indicator.cxx" />
     <ClCompile Include="src\KeyMap.cxx" />
     <ClCompile Include="src\LineMarker.cxx" />
@@ -287,6 +289,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClInclude Include="src\CallTip.h" />
     <ClInclude Include="src\CaseConvert.h" />
     <ClInclude Include="src\CaseFolder.h" />
+    <ClInclude Include="src\Catalogue.h" />
     <ClInclude Include="src\CellBuffer.h" />
     <ClInclude Include="src\CharClassify.h" />
     <ClInclude Include="src\ContractionState.h" />
@@ -296,6 +299,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClInclude Include="src\EditModel.h" />
     <ClInclude Include="src\Editor.h" />
     <ClInclude Include="src\EditView.h" />
+    <ClInclude Include="src\ExternalLexer.h" />
     <ClInclude Include="src\Indicator.h" />
     <ClInclude Include="src\KeyMap.h" />
     <ClInclude Include="src\LineMarker.h" />
