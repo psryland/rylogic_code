@@ -21,12 +21,13 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
     <RootNamespace>scintilla</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -62,27 +63,32 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -95,7 +101,10 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
-      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
     <PostBuildEvent>
@@ -106,10 +115,12 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -121,7 +132,10 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
-      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
     <PostBuildEvent>
@@ -132,10 +146,11 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -147,7 +162,10 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <Link>
-      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
     <PostBuildEvent>
@@ -158,10 +176,11 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile />
     <Link />
     <ClCompile>
-      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+      <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -170,7 +189,10 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
-      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
+      <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent />
     <PostBuildEvent>
@@ -178,23 +200,35 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\lexers\LexCPP.cxx" />
-    <ClCompile Include="src\lexers\LexLdr.cxx" />
+    <ClCompile Include="lexers\LexCPP.cxx" />
+    <ClCompile Include="lexers\LexLdr.cxx" />
+    <ClCompile Include="lexlib\Accessor.cxx" />
+    <ClCompile Include="lexlib\CharacterCategory.cxx" />
+    <ClCompile Include="lexlib\CharacterSet.cxx" />
+    <ClCompile Include="lexlib\DefaultLexer.cxx" />
+    <ClCompile Include="lexlib\LexerBase.cxx" />
+    <ClCompile Include="lexlib\LexerModule.cxx" />
+    <ClCompile Include="lexlib\LexerSimple.cxx" />
+    <ClCompile Include="lexlib\PropSetSimple.cxx" />
+    <ClCompile Include="lexlib\StyleContext.cxx" />
+    <ClCompile Include="lexlib\WordList.cxx" />
     <ClCompile Include="src\AutoComplete.cxx" />
     <ClCompile Include="src\CallTip.cxx" />
     <ClCompile Include="src\CaseConvert.cxx" />
     <ClCompile Include="src\CaseFolder.cxx" />
-    <ClCompile Include="src\Catalogue.cxx" />
     <ClCompile Include="src\CellBuffer.cxx" />
     <ClCompile Include="src\CharClassify.cxx" />
     <ClCompile Include="src\ContractionState.cxx" />
+    <ClCompile Include="src\DBCS.cxx" />
     <ClCompile Include="src\Decoration.cxx" />
     <ClCompile Include="src\Document.cxx" />
+    <ClCompile Include="src\EditModel.cxx" />
     <ClCompile Include="src\Editor.cxx" />
-    <ClCompile Include="src\ExternalLexer.cxx" />
+    <ClCompile Include="src\EditView.cxx" />
     <ClCompile Include="src\Indicator.cxx" />
     <ClCompile Include="src\KeyMap.cxx" />
     <ClCompile Include="src\LineMarker.cxx" />
+    <ClCompile Include="src\MarginView.cxx" />
     <ClCompile Include="src\PerLine.cxx" />
     <ClCompile Include="src\PositionCache.cxx" />
     <ClCompile Include="src\RESearch.cxx" />
@@ -203,78 +237,19 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile Include="src\Selection.cxx" />
     <ClCompile Include="src\Style.cxx" />
     <ClCompile Include="src\UniConversion.cxx" />
+    <ClCompile Include="src\UniqueString.cxx" />
     <ClCompile Include="src\ViewStyle.cxx" />
     <ClCompile Include="src\XPM.cxx" />
-    <ClCompile Include="src\lexlib\Accessor.cxx" />
-    <ClCompile Include="src\lexlib\CharacterCategory.cxx" />
-    <ClCompile Include="src\lexlib\CharacterSet.cxx" />
-    <ClCompile Include="src\lexlib\LexerBase.cxx" />
-    <ClCompile Include="src\lexlib\LexerModule.cxx" />
-    <ClCompile Include="src\lexlib\LexerNoExceptions.cxx" />
-    <ClCompile Include="src\lexlib\LexerSimple.cxx" />
-    <ClCompile Include="src\lexlib\PropSetSimple.cxx" />
-    <ClCompile Include="src\lexlib\StyleContext.cxx" />
-    <ClCompile Include="src\lexlib\WordList.cxx" />
-    <ClCompile Include="src\win32\CheckD2D.cxx" />
-    <ClCompile Include="src\win32\PlatWin.cxx" />
-    <ClCompile Include="src\win32\ScintillaWin.cxx" />
+    <ClCompile Include="win32\HanjaDic.cxx" />
+    <ClCompile Include="win32\PlatWin.cxx" />
+    <ClCompile Include="win32\ScintillaDLL.cxx" />
+    <ClCompile Include="win32\ScintillaWin.cxx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\ILexer.h" />
-    <ClInclude Include="include\Platform.h" />
-    <ClInclude Include="include\SciLexer.h" />
-    <ClInclude Include="include\Scintilla.h" />
-    <ClInclude Include="include\ScintillaWidget.h" />
-    <ClInclude Include="src\AutoComplete.h" />
-    <ClInclude Include="src\CallTip.h" />
-    <ClInclude Include="src\CaseConvert.h" />
-    <ClInclude Include="src\CaseFolder.h" />
-    <ClInclude Include="src\Catalogue.h" />
-    <ClInclude Include="src\CellBuffer.h" />
-    <ClInclude Include="src\CharClassify.h" />
-    <ClInclude Include="src\ContractionState.h" />
-    <ClInclude Include="src\Decoration.h" />
-    <ClInclude Include="src\Document.h" />
-    <ClInclude Include="src\Editor.h" />
-    <ClInclude Include="src\ExternalLexer.h" />
-    <ClInclude Include="src\FontQuality.h" />
-    <ClInclude Include="src\Indicator.h" />
-    <ClInclude Include="src\KeyMap.h" />
-    <ClInclude Include="src\LineMarker.h" />
-    <ClInclude Include="src\Partitioning.h" />
-    <ClInclude Include="src\PerLine.h" />
-    <ClInclude Include="src\PositionCache.h" />
-    <ClInclude Include="src\RESearch.h" />
-    <ClInclude Include="src\RunStyles.h" />
-    <ClInclude Include="src\ScintillaBase.h" />
-    <ClInclude Include="src\Selection.h" />
-    <ClInclude Include="src\SplitVector.h" />
-    <ClInclude Include="src\Style.h" />
-    <ClInclude Include="src\UnicodeFromUTF8.h" />
-    <ClInclude Include="src\UniConversion.h" />
-    <ClInclude Include="src\ViewStyle.h" />
-    <ClInclude Include="src\XPM.h" />
-    <ClInclude Include="src\lexlib\Accessor.h" />
-    <ClInclude Include="src\lexlib\CharacterCategory.h" />
-    <ClInclude Include="src\lexlib\CharacterSet.h" />
-    <ClInclude Include="src\lexlib\LexAccessor.h" />
-    <ClInclude Include="src\lexlib\LexerBase.h" />
-    <ClInclude Include="src\lexlib\LexerModule.h" />
-    <ClInclude Include="src\lexlib\LexerNoExceptions.h" />
-    <ClInclude Include="src\lexlib\LexerSimple.h" />
-    <ClInclude Include="src\lexlib\OptionSet.h" />
-    <ClInclude Include="src\lexlib\PropSetSimple.h" />
-    <ClInclude Include="src\lexlib\SparseState.h" />
-    <ClInclude Include="src\lexlib\StringCopy.h" />
-    <ClInclude Include="src\lexlib\StyleContext.h" />
-    <ClInclude Include="src\lexlib\SubStyles.h" />
-    <ClInclude Include="src\lexlib\WordList.h" />
-    <ClInclude Include="src\win32\PlatWin.h" />
+    <ResourceCompile Include="win32\ScintRes.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="src\win32\ScintRes.rc" />
-  </ItemGroup>
-  <ItemGroup>
+    <None Include="include\SciLexer.cs" />
     <None Include="include\Scintilla.cs" />
     <None Include="include\Scintilla.iface" />
     <None Include="scripts\Face.py" />
@@ -286,7 +261,56 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <None Include="scripts\ScintillaData.py" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="src\lexers\_ReadMe.txt" />
+    <Text Include="lexers\_ReadMe.txt" />
+    <Text Include="License.txt" />
+    <Text Include="version.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\ILexer.h" />
+    <ClInclude Include="include\ILoader.h" />
+    <ClInclude Include="include\Platform.h" />
+    <ClInclude Include="include\SciLexer.h" />
+    <ClInclude Include="include\Scintilla.h" />
+    <ClInclude Include="include\ScintillaWidget.h" />
+    <ClInclude Include="include\Sci_Position.h" />
+    <ClInclude Include="lexlib\Accessor.h" />
+    <ClInclude Include="lexlib\CharacterCategory.h" />
+    <ClInclude Include="lexlib\CharacterSet.h" />
+    <ClInclude Include="lexlib\DefaultLexer.h" />
+    <ClInclude Include="lexlib\LexerBase.h" />
+    <ClInclude Include="lexlib\LexerModule.h" />
+    <ClInclude Include="lexlib\LexerSimple.h" />
+    <ClInclude Include="lexlib\PropSetSimple.h" />
+    <ClInclude Include="lexlib\StyleContext.h" />
+    <ClInclude Include="lexlib\WordList.h" />
+    <ClInclude Include="src\AutoComplete.h" />
+    <ClInclude Include="src\CallTip.h" />
+    <ClInclude Include="src\CaseConvert.h" />
+    <ClInclude Include="src\CaseFolder.h" />
+    <ClInclude Include="src\CellBuffer.h" />
+    <ClInclude Include="src\CharClassify.h" />
+    <ClInclude Include="src\ContractionState.h" />
+    <ClInclude Include="src\DBCS.h" />
+    <ClInclude Include="src\Decoration.h" />
+    <ClInclude Include="src\Document.h" />
+    <ClInclude Include="src\EditModel.h" />
+    <ClInclude Include="src\Editor.h" />
+    <ClInclude Include="src\EditView.h" />
+    <ClInclude Include="src\Indicator.h" />
+    <ClInclude Include="src\KeyMap.h" />
+    <ClInclude Include="src\LineMarker.h" />
+    <ClInclude Include="src\MarginView.h" />
+    <ClInclude Include="src\PerLine.h" />
+    <ClInclude Include="src\PositionCache.h" />
+    <ClInclude Include="src\RESearch.h" />
+    <ClInclude Include="src\RunStyles.h" />
+    <ClInclude Include="src\ScintillaBase.h" />
+    <ClInclude Include="src\Selection.h" />
+    <ClInclude Include="src\Style.h" />
+    <ClInclude Include="src\UniConversion.h" />
+    <ClInclude Include="src\UniqueString.h" />
+    <ClInclude Include="src\ViewStyle.h" />
+    <ClInclude Include="src\XPM.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

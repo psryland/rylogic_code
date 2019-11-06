@@ -30,15 +30,15 @@ def printLexCSFile(f):
 
 def printHFile(f):
 	out = []
-	previousCategory = ""
-	anyProvisional = False
+	#previousCategory = ""
+	#anyProvisional = False
 	for name in f.order:
 		v = f.features[name]
 		if v["Category"] != "Deprecated":
-			if v["Category"] == "Provisional" and previousCategory != "Provisional":
-				out.append("#ifndef SCI_DISABLE_PROVISIONAL")
-				anyProvisional = True
-			previousCategory = v["Category"]
+			#if v["Category"] == "Provisional" and previousCategory != "Provisional":
+			#	out.append("#ifndef SCI_DISABLE_PROVISIONAL")
+			#	anyProvisional = True
+			#previousCategory = v["Category"]
 			if v["FeatureType"] in ["fun", "get", "set"]:
 				featureDefineName = "SCI_" + name.upper()
 				out.append("#define " + featureDefineName + " " + v["Value"])
@@ -48,21 +48,21 @@ def printHFile(f):
 			elif v["FeatureType"] in ["val"]:
 				if not ("SCE_" in name or "SCLEX_" in name):
 					out.append("#define " + name + " " + v["Value"])
-	if anyProvisional:
-		out.append("#endif")
+	#if anyProvisional:
+	#	out.append("#endif")
 	return out
 
 def printCSFile(f):
 	out = []
-	previousCategory = ""
-	anyProvisional = False
+	#previousCategory = ""
+	#anyProvisional = False
 	for name in f.order:
 		v = f.features[name]
 		if v["Category"] != "Deprecated":
-			if v["Category"] == "Provisional" and previousCategory != "Provisional":
-				out.append("#ifndef SCI_DISABLE_PROVISIONAL")
-				anyProvisional = True
-			previousCategory = v["Category"]
+			#if v["Category"] == "Provisional" and previousCategory != "Provisional":
+			#	out.append("#ifndef SCI_DISABLE_PROVISIONAL")
+			#	anyProvisional = True
+			#previousCategory = v["Category"]
 			if v["FeatureType"] in ["fun", "get", "set"]:
 				featureDefineName = "SCI_" + name.upper()
 				out.append("\t\tpublic const int " + featureDefineName + " = unchecked((int)" + v["Value"] + ");")
@@ -72,17 +72,17 @@ def printCSFile(f):
 			elif v["FeatureType"] in ["val"]:
 				if not ("SCE_" in name or "SCLEX_" in name):
 					out.append("\t\tpublic const int " + name + " = unchecked((int)" + v["Value"] + ");")
-	if anyProvisional:
-		out.append("#endif")
+	#if anyProvisional:
+	#	out.append("#endif")
 	return out
 
 def RegenerateAll(root, showMaxID):
 	f = Face.Face()
-	f.ReadFromFile(os.path.abspath(os.path.join(root, "include", "Scintilla.iface")))
-	Regenerate(os.path.abspath(os.path.join(root, "include", "Scintilla.h" )), "/* ", printHFile(f))
-	Regenerate(os.path.abspath(os.path.join(root, "include", "SciLexer.h"  )), "/* ", printLexHFile(f))
-	Regenerate(os.path.abspath(os.path.join(root, "include", "Scintilla.cs")), "/* ", printCSFile(f))
-	Regenerate(os.path.abspath(os.path.join(root, "include", "SciLexer.cs" )), "/* ", printLexCSFile(f))
+	f.ReadFromFile(root + "include/Scintilla.iface")
+	Regenerate(root + "include/Scintilla.h", "/* ", printHFile(f))
+	Regenerate(root + "include/SciLexer.h", "/* ", printLexHFile(f))
+	Regenerate(root + "include/Scintilla.cs", "/* ", printCSFile(f))
+	Regenerate(root + "include/SciLexer.cs", "/* ", printLexCSFile(f))
 	if showMaxID:
 		valueSet = set(int(x) for x in f.values if int(x) < 3000)
 		maximumID = max(valueSet)
@@ -93,5 +93,5 @@ def RegenerateAll(root, showMaxID):
 			#~ print(v)
 
 if __name__ == "__main__":
-	root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-	RegenerateAll(root, False)
+	root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) + "/"
+	RegenerateAll(root, True)
