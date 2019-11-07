@@ -79,8 +79,6 @@
     <ClInclude Include="..\include\pr\common\crc.h" />
     <ClInclude Include="..\include\pr\common\d3dptr.h" />
     <ClInclude Include="..\include\pr\common\datetime.h" />
-    <ClInclude Include="..\include\pr\common\dependency.h" />
-    <ClInclude Include="..\include\pr\common\discretepidcontroller.h" />
     <ClInclude Include="..\include\pr\common\enumerable.h" />
     <ClInclude Include="..\include\pr\common\event.h" />
     <ClInclude Include="..\include\pr\common\events.h" />
@@ -128,7 +126,6 @@
     <ClInclude Include="..\include\pr\common\scoped.h" />
     <ClInclude Include="..\include\pr\common\singleton.h" />
     <ClInclude Include="..\include\pr\common\si_units.h" />
-    <ClInclude Include="..\include\pr\common\stackdump.h" />
     <ClInclude Include="..\include\pr\common\static_callback.h" />
     <ClInclude Include="..\include\pr\common\stop_watch.h" />
     <ClInclude Include="..\include\pr\common\to.h" />
@@ -155,14 +152,8 @@
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\include\pr\crypt\sha1.h" />
     <ClInclude Include="..\include\pr\crypt\sha512.h" />
-    <ClInclude Include="..\include\pr\filesys\autofile.h" />
-    <ClInclude Include="..\include\pr\filesys\file.h" />
-    <ClInclude Include="..\include\pr\filesys\fileex.h" />
     <ClInclude Include="..\include\pr\filesys\filesys.h" />
-    <ClInclude Include="..\include\pr\filesys\filesyswin.h" />
     <ClInclude Include="..\include\pr\filesys\filewatch.h" />
-    <ClInclude Include="..\include\pr\filesys\findfiles.h" />
-    <ClInclude Include="..\include\pr\filesys\recurse_directory.h" />
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\models_box.h" />
     <ClInclude Include="..\include\pr\geometry\closest_point.h" />
@@ -342,6 +333,7 @@
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h" />
     <ClInclude Include="..\include\pr\threads\synchronise.h" />
     <ClInclude Include="..\include\pr\threads\wait_state.h" />
+    <ClInclude Include="..\include\pr\win32\stackdump.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\include\pr\win32\windows_com.h" />
     <ClInclude Include="..\projects\unittests\src\pp_output.h" />

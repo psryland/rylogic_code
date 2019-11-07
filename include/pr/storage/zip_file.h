@@ -900,7 +900,7 @@ namespace pr::storage::zip
 			EBitFlags bit_flags = EBitFlags::None;
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
-			uint64_t compressed_size = 0;
+			int64_t compressed_size = 0;
 			uint32_t crc32 = InitialCrc;
 
 			// If the name has a directory divider at the end, set the directory bit
@@ -971,12 +971,17 @@ namespace pr::storage::zip
 				method = EMethod::Deflate;
 			}
 
+			auto item_name_size = static_cast<int>(item_name.size());
+			auto extra_size = static_cast<int>(extra.size());
+			auto item_comment_size = static_cast<int>(item_comment.size());
+			auto buf_size = static_cast<int64_t>(buf.size());
+
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_timestamp);
+			LDH ldh(item_name_size, extra_size, buf_size, compressed_size, crc32, method, bit_flags, dos_timestamp);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
+			CDH cdh(item_name_size, extra_size, item_comment_size, buf_size, compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
 			append(m_cdir, &cdh, &cdh + 1);
 			append(m_cdir, item_name);
 			append(m_cdir, extra);

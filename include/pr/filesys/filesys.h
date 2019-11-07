@@ -2,67 +2,32 @@
 // File path/File system operations
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************
-// Pathname  = full path e.g. Drive:/path/path/file.ext
-// Drive     = the drive e.g. "P". No ':'
-// Path      = the directory without the drive. No leading '/', no trailing '/'. e.g. Path/path
-// Directory = the drive + path. no trailing '/'. e.g P:/Path/path
-// Extension = the last string following a '.'
-// Filename  = file name including extension
-// FileTitle = file name not including extension
-// A full pathname = drive + ":/" + path + "/" + file-title + "." + extension
-//
+
 #pragma once
 
-#pragma warning(push, 1)
-#include <io.h>
-#include <direct.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#pragma warning(pop)
-#include <ctime>
 #include <string>
 #include <algorithm>
 #include <type_traits>
 #include <filesystem>
+#include <fstream>
+#include <locale>
+#include <codecvt>
+#include <ctime>
+#include <cstdint>
 #include <cassert>
+#include "pr/str/string_core.h"
+#include "pr/win32/win32.h"
 
 namespace pr::filesys
 {
-	enum class EAttrib
-	{
-		None        = 0,
-		Device      = 1 << 0,
-		File        = 1 << 1,
-		Directory   = 1 << 2,
-		Pipe        = 1 << 3,
-		WriteAccess = 1 << 4,
-		ReadAccess  = 1 << 5,
-		ExecAccess  = 1 << 6,
-		_bitwise_operators_allowed,
-	};
-	enum class Access
-	{
-		Exists    = 0,
-		Write     = 2,
-		Read      = 4,
-		ReadWrite = Write | Read
-	};
-
-	// Unix Time = seconds since midnight January 1, 1970 UTC
-	// FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
-	// File timestamp data for a file.
-	// Note: these timestamps are in UTC Unix time
-	struct FileTime
-	{
-		time_t m_last_access;   // Note: time_t is 64bit
-		time_t m_last_modified;
-		time_t m_created;
-	};
+	// Notes:
+	//  - Unix Time = seconds since midnight January 1, 1970 UTC
+	//  - FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
 
 	// Convert a UTC Unix time to a local time zone Unix time
 	inline time_t UTCtoLocal(time_t t)
 	{
-		struct tm utc,local;
+		struct tm utc, local;
 		if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert UTC time to local time");
 		return t + (mktime(&local) - mktime(&utc));
 	}
@@ -70,29 +35,35 @@ namespace pr::filesys
 	// Convert local time-zone Unix time to UTC Unix time
 	inline time_t LocaltoUTC(time_t t)
 	{
-		struct tm utc,local;
+		struct tm utc, local;
 		if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert local time to UTC time");
 		return t - (mktime(&local) - mktime(&utc));
 	}
 
 	// Convert between Unix time and i64. The resulting i64 can then be converted to FILETIME, SYSTEMTIME, etc
-	inline __int64 UnixTimetoI64(time_t  t) { return t * 10000000LL + 116444736000000000LL; }
-	inline time_t  I64toUnixTime(__int64 t) { return (t - 116444736000000000LL) / 10000000LL; }
+	constexpr int64_t UnixTimetoI64(time_t  t)
+	{
+		return t * 10000000LL + 116444736000000000LL;
+	}
+	constexpr time_t  I64toUnixTime(int64_t t)
+	{
+		return (t - 116444736000000000LL) / 10000000LL;
+	}
 
-	// Conversions between __int64, FILETIME, and SYSTEMTIME
+	// Conversions between int64_t, FILETIME, and SYSTEMTIME
 	// Requires <windows.h> to be included
-	// Note: the '__int64's here are not the same as the timestamps in 'FileTime'
+	// Note: the 'int64_t's here are not the same as the timestamps in 'FileTime'
 	// those values are in Unix time. Use 'UnixTimetoI64()'
 	struct FILETIME;
 	struct SYSTEMTIME;
-	template <typename = void> inline __int64 FTtoI64(FILETIME ft)
+	template <typename = void> inline int64_t FTtoI64(FILETIME ft)
 	{
-		__int64  n  = __int64(ft.dwHighDateTime) << 32 | __int64(ft.dwLowDateTime);
+		int64_t  n = int64_t(ft.dwHighDateTime) << 32 | int64_t(ft.dwLowDateTime);
 		return n;
 	}
-	template <typename = void> inline FILETIME I64toFT(__int64 n)
+	template <typename = void> inline FILETIME I64toFT(int64_t n)
 	{
-		FILETIME ft = {DWORD(n&0xFFFFFFFFULL), DWORD((n>>32)&0xFFFFFFFFULL)};
+		FILETIME ft = { DWORD(n & 0xFFFFFFFFULL), DWORD((n >> 32) & 0xFFFFFFFFULL) };
 		return ft;
 	}
 	template <typename = void> inline SYSTEMTIME FTtoST(FILETIME const& ft)
@@ -107,15 +78,704 @@ namespace pr::filesys
 		if (!::SystemTimeToFileTime(&st, &ft)) throw std::exception("SystemTimeToFileTime failed");
 		return ft;
 	}
-	template <typename = void> inline __int64 STtoI64(SYSTEMTIME const& st)
+	template <typename = void> inline int64_t STtoI64(SYSTEMTIME const& st)
 	{
 		return FTtoI64(STtoFT(st));
 	}
-	template <typename = void> inline SYSTEMTIME I64toST(__int64 n)
+	template <typename = void> inline SYSTEMTIME I64toST(int64_t n)
 	{
 		return FTtoST(I64toFT(n));
 	}
 
+	// Scoped object that blocks until it can create a file called 'filepath.locked'.
+	// 'filepath.locked' is deleted as soon as it goes out of scope.
+	// Used as a file system mutex-file
+	// Requires <windows.h> to be included
+	struct LockFile
+	{
+		win32::Handle m_handle;
+		LockFile(std::filesystem::path const& filepath, int max_attempts = 3, int max_block_time_ms = 1000)
+		{
+			// Arithmetic series: Sn = 1+2+3+..+n = n(1 + n)/2. 
+			// For n attempts, the i'th attempt sleep time is: max_block_time_ms * i / Sn
+			// because the sum of sleep times need to add up to max_block_time_ms.
+			//  sleep_time(a) = a * back_off = a * max_block_time_ms / Sn
+			//  back_off = max_block_time_ms / Sn = 2*max_block_time_ms / n(1+n)
+			auto max = static_cast<double>(max_attempts);
+			auto back_off = 2.0 * max_block_time_ms / (max * (1 + max));
+
+			auto fpath = filepath;
+			fpath += L".locked";
+			for (auto a = 0; a != max_attempts; ++a)
+			{
+				m_handle = win32::FileOpen(fpath, GENERIC_READ | GENERIC_WRITE, 0, CREATE_NEW, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_TEMPORARY, FILE_FLAG_DELETE_ON_CLOSE);
+				if (m_handle != INVALID_HANDLE_VALUE)
+					return;
+
+				// Back off delay
+				Sleep(DWORD(a * back_off));
+			}
+			throw std::runtime_error(std::string("Failed to lock file: '").append(filepath.string()).append("'").c_str());
+		}
+	};
+
+	// Compare two, possibly non-existent, paths.
+	inline int Compare(std::filesystem::path const& lhs, std::filesystem::path const& rhs, bool ignore_case)
+	{
+		auto n0 = lhs.lexically_normal();
+		auto n1 = rhs.lexically_normal();
+		if (ignore_case)
+		{
+			n0 = str::LowerCaseC(n0.wstring());
+			n1 = str::LowerCaseC(n1.wstring());
+		}
+		auto r = n0.compare(n1);
+		return r;
+	}
+
+	// Compare two, possibly non-existent, paths for equality.
+	inline bool Equal(std::filesystem::path const& lhs, std::filesystem::path const& rhs, bool ignore_case)
+	{
+		return Compare(lhs, rhs, ignore_case) == 0;
+	}
+
+	// Compare the contents of two files and return true if they are the same.
+	// Returns true if both files doesn't exist, or false if only one file exists.
+	template <typename = void>
+	bool EqualContents(std::filesystem::path const& lhs, std::filesystem::path const& rhs)
+	{
+		using namespace std::filesystem;
+
+		// Both must exist or not exist
+		auto e0 = exists(lhs);
+		auto e1 = exists(rhs);
+		if (!e0 || !e1)
+			return !e0 && !e1;
+		
+		// Both must be files
+		if (is_directory(lhs))
+			throw std::runtime_error("EqualContents: 'lhs' is a directory, file expected.");
+		if (is_directory(rhs))
+			throw std::runtime_error("EqualContents: 'lhs' is a directory, file expected.");
+
+		// Comparing the same file
+		if (equivalent(lhs, rhs))
+			return true; 
+
+		std::ifstream f0(lhs, std::ios::binary);
+		std::ifstream f1(rhs, std::ios::binary);
+
+		// Both must have the same lengh
+		auto s0 = f0.seekg(0, std::ifstream::end).tellg();
+		auto s1 = f1.seekg(0, std::ifstream::end).tellg();
+		if (s0 != s1)
+			return false;
+
+		f0.seekg(0, std::ifstream::beg);
+		f1.seekg(0, std::ifstream::beg);
+
+		// Both must have the same content
+		enum { BlockSize = 4096 };
+		char buf0[BlockSize];
+		char buf1[BlockSize];
+		for (; f0 && f1;)
+		{
+			auto r0 = static_cast<size_t>(f0.read(buf0, sizeof(buf0)).gcount());
+			auto r1 = static_cast<size_t>(f1.read(buf1, sizeof(buf1)).gcount());
+			if (r0 != r1) return false;
+			if (memcmp(buf0, buf1, r1) != 0) return false;
+		}
+		
+		// Both must reach EOF at the same time
+		return f0.eof() == f1.eof();
+	}
+
+	// Examines 'filepath' to guess at the file data encoding (assumes 'filepath' is a text file)
+	// On return 'bom_length' is the length of the byte order mask.
+	// Returns 'UTF-8' if unknown, since UTF-8 recommends not using BOMs
+	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath, int& bom_length)
+	{
+		std::ifstream file(filepath, std::ios::binary);
+
+		EEncoding enc;
+		unsigned char bom[3];
+		auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
+		if (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { enc = EEncoding::utf8;     bom_length = 3; }
+		else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF) { enc = EEncoding::utf16_be; bom_length = 2; }
+		else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE) { enc = EEncoding::utf16_le; bom_length = 2; }
+		else { enc = EEncoding::utf8;     bom_length = 0; }
+		return enc;
+	}
+	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath)
+	{
+		int bom_length;
+		return DetectFileEncoding(filepath, bom_length);
+	}
+
+	// Read the contents of a file into 'buf'
+	// 'buf_enc' is how to convert the file data. The encoding in the file is automatically detected and converted to 'buf_enc'
+	// 'file_enc' is used to say what the file encoding is. If equal to Text then the encoding is automatically detected
+	template <typename Buf>
+	inline bool FileToBuffer(std::filesystem::path const& filepath, Buf& buf, EEncoding buf_enc = EEncoding::binary, EEncoding file_enc = EEncoding::binary)
+	{
+		using Elem = std::decay_t<decltype(buf[0])>;
+
+		// Ensure the file exists
+		if (!std::filesystem::exists(filepath))
+			return false;
+
+		// Determine the file size in bytes
+		auto size = static_cast<size_t>(std::filesystem::file_size(filepath));
+
+		// If we need to do a text encoding conversion...
+		if (buf_enc != EEncoding::binary)
+		{
+			// Detect the file encoding
+			int bom_length = 0;
+			file_enc = (file_enc == EEncoding::binary || file_enc == EEncoding::auto_detect) ? DetectFileEncoding(filepath, bom_length) : file_enc;
+
+			// Open the file stream
+			std::basic_ifstream<Elem> file(filepath, std::ios::binary);
+			if (!file.good())
+				return false;
+
+			// Imbue the file if the file encoding doesn't match the buffer encoding
+			switch (file_enc)
+			{
+			case EEncoding::ascii:
+			case EEncoding::utf8:
+				{
+					if (buf_enc == EEncoding::ascii || buf_enc == EEncoding::utf8) {}
+					else if (buf_enc == EEncoding::utf16_le)
+					{
+						using cvt_t = std::codecvt_utf8_utf16<wchar_t>;
+						file.imbue(std::locale(file.getloc(), new cvt_t));
+					}
+					else if (buf_enc == EEncoding::ucs2_le)
+					{
+						using cvt_t = std::codecvt_utf8<wchar_t>;
+						file.imbue(std::locale(file.getloc(), new cvt_t));
+					}
+					else
+					{
+						throw std::exception("todo");
+					}
+					break;
+				}
+			case EEncoding::utf16_le:
+			case EEncoding::ucs2_le:
+				{
+					// Imbue the file if the file encoding doesn't match the buffer encoding
+					if (false) {}
+					else if (buf_enc == EEncoding::utf8 || buf_enc == EEncoding::ascii)
+					{
+						// There doesn't seem to be a codecvt instance that handles utf16 -> utf8
+						// Have to read utf16 into a string then convert it to utf8
+						std::wifstream wfile(filepath, std::ios::binary);
+						if (!wfile.good())
+							return false;
+
+						using cvt_t = std::codecvt_utf16<wchar_t, 0x10ffff, std::codecvt_mode::little_endian>;
+						wfile.imbue(std::locale(wfile.getloc(), new cvt_t));
+
+						// Skip the BOM
+						wfile.seekg(bom_length, std::ios::beg);
+						size -= bom_length;
+
+						// Read with formatting
+						if (size != 0)
+						{
+							std::wstring tmp(size, 0);
+							auto read = wfile.read(tmp.data(), size).gcount();
+							tmp.resize(static_cast<size_t>(read));
+
+							std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter;
+							auto u8 = converter.to_bytes(tmp);
+							auto ptr = reinterpret_cast<Elem const*>(u8.data());
+							assert(sizeof(Elem) == sizeof(char));
+							buf.insert(end(buf), ptr, ptr + u8.size());
+						}
+						return true;
+
+						// Tried:
+						//using cvt_t = std::codecvt_utf8_utf16<wchar_t>;
+						//using cvt_t = std::codecvt_utf8_utf16<char>;
+						//using cvt_t = std::codecvt<char16_t, Elem, std::mbstate_t>;
+						//using cvt_t = std::codecvt_utf8<wchar_t>;
+						//using cvt_t = std::codecvt_utf16<wchar_t, 0x10ffff, std::codecvt_mode::little_endian>;
+						//using cvt_t = std::codecvt_utf16<char16_t, 0x10ffff, std::codecvt_mode::little_endian>;
+						//file.imbue(std::locale(file.getloc(), new cvt_t));
+					}
+					else if (buf_enc == EEncoding::utf16_le || buf_enc == EEncoding::ucs2_le)
+					{
+						using cvt_t = std::codecvt_utf16<Elem, 0x10ffff, std::codecvt_mode::little_endian>;
+						file.imbue(std::locale(file.getloc(), new cvt_t));
+					}
+					else if (buf_enc == EEncoding::utf16_be || buf_enc == EEncoding::ucs2_be)
+					{
+						using cvt_t = std::codecvt_utf16<Elem>;
+						file.imbue(std::locale(file.getloc(), new cvt_t));
+					}
+					else
+					{
+						throw std::exception("todo");
+					}
+					break;
+				}
+			default:
+				{
+					throw std::exception("todo");
+				}
+			}
+
+			// Skip the BOM
+			file.seekg(bom_length, std::ios::beg);
+			size -= bom_length;
+
+			// Read with formatting
+			if (size != 0)
+			{
+				auto initial = buf.size();
+				buf.resize(size_t(initial + size));
+				auto read = file.read(reinterpret_cast<Elem*>(&buf[initial]), size).gcount();
+				buf.resize(size_t(initial + read));
+			}
+		}
+		else
+		{
+			// Open the file stream
+			std::ifstream file(filepath, std::ios::binary);
+			if (!file.good())
+				return false;
+
+			// Read unformatted
+			if (size != 0)
+			{
+				auto initial = buf.size();
+				buf.resize(size_t(initial + (size + sizeof(Elem) - 1) / sizeof(Elem)));
+				auto read = file.read(reinterpret_cast<char*>(&buf[initial]), size).gcount();
+				buf.resize(size_t(initial + (read + sizeof(Elem) - 1) / sizeof(Elem)));
+			}
+		}
+		return true;
+	}
+	template <typename Buf>
+	inline Buf FileToBuffer(std::filesystem::path const& filepath, EEncoding buf_enc = EEncoding::binary, EEncoding file_enc = EEncoding::binary)
+	{
+		Buf buf;
+		if (!FileToBuffer(filepath, buf, buf_enc, file_enc)) throw std::exception("Failed to read file");
+		return std::move(buf);
+	}
+
+	// Write a buffer to a file.
+	// 'buf' points to the contiguous block of data to write
+	// 'size' is the length to write (in bytes)
+	// 'filepath' is the name of the file to create
+	// 'file_enc' describes the encoding to be written to the file.
+	// 'buf_enc' describes the encoding used in 'buf'
+	// 'append' is true if the file should be appended to
+	// 'add_bom' is true if a byte order mask should be written to the file (applies to text encoding only, prefer not for UTF-8)
+	inline bool BufferToFile(void const* buf, size_t size, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	{
+		// Open the output file stream
+		std::ofstream file(filepath, std::ios::binary | (append ? std::ios::app : 0));
+		if (!file.good())
+			return false;
+
+		if (file_enc != EEncoding::binary)
+		{
+			// Add the byte order mask
+			if (add_bom && file_enc != EEncoding::auto_detect)
+			{
+				unsigned char bom[3] = {}; int bom_length = 0;
+				if (file_enc == EEncoding::utf8) { bom[0] = 0xEF; bom[1] = 0xBB; bom[2] = 0xBF; bom_length = 3; }
+				else if (file_enc == EEncoding::utf16_le) { bom[0] = 0xFF; bom[1] = 0xFE; bom_length = 2; }
+				else if (file_enc == EEncoding::utf16_be) { bom[0] = 0xFE; bom[1] = 0xFF; bom_length = 2; }
+				else throw std::exception("Cannot write the byte order mask for an unknown text encoding");
+				if (!file.write(reinterpret_cast<char const*>(&bom[0]), bom_length).good())
+					throw std::exception("Failed to write the byte order mask");
+			}
+
+			// Imbue the file stream if the buffer encoding doesn't match the file encoding
+			if (file_enc != buf_enc)
+			{
+				switch (file_enc)
+				{
+				case EEncoding::utf8:
+					{
+						if (false) {}
+						else if (buf_enc == EEncoding::utf16_le)
+						{
+							using cvt_t = std::codecvt<char16_t, char, std::mbstate_t>;
+							file.imbue(std::locale(file.getloc(), new cvt_t));
+						}
+						else
+						{
+							throw std::exception("todo");
+						}
+						break;
+					}
+				case EEncoding::utf16_le:
+					{
+						if (false) {}
+						else if (buf_enc == EEncoding::utf8)
+						{
+							using cvt_t = std::codecvt_utf16<wchar_t, 0x10ffff, std::codecvt_mode::little_endian>;
+							file.imbue(std::locale(file.getloc(), new cvt_t));
+						}
+						else
+						{
+							throw std::exception("todo");
+						}
+					}
+				default:
+					{
+						throw std::exception("todo");
+					}
+				}
+			}
+		}
+
+		// Write the data to the file
+		file.write(static_cast<char const*>(buf), size);
+		return true;
+	}
+
+	// Write a buffer to a file.
+	// 'ofs' and 'count' are the sub-range to write (in units of 'Elem')
+	template <typename Buf, typename = Buf::value_type>
+	inline bool BufferToFile(Buf const& buf, size_t ofs, size_t len, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	{
+		return buf.empty()
+			? BufferToFile((void const*)nullptr, 0U, filepath, buf_enc, file_enc, append, add_bom)
+			: BufferToFile(&buf[0], ofs, len, filepath, file_enc, buf_enc, append, add_bom);
+	}
+	template <typename Buf, typename = Buf::value_type>
+	inline bool BufferToFile(Buf const& buf, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	{
+		return BufferToFile(buf, 0, buf.size(), filepath, file_enc, buf_enc, append, add_bom);
+	}
+	template <typename Elem>
+	inline bool BufferToFile(Elem const* buf, int64_t ofs, int64_t count, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	{
+		return BufferToFile(buf + ofs, count * sizeof(Elem), filepath, file_enc, buf_enc, append, add_bom);
+	}
+	template <typename Elem>
+	inline bool BufferToFile(std::initializer_list<Elem> items, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	{
+		return BufferToFile(items.begin(), items.size() * sizeof(Elem), filepath, file_enc, buf_enc, append, add_bom);
+	}
+
+	// Write a string to a file
+	inline bool BufferToFile(std::string_view buf, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::utf8, EEncoding buf_enc = EEncoding::utf8, bool append = false, bool add_bom = false)
+	{
+		return BufferToFile(buf.data(), buf.size(), filepath, file_enc, buf_enc, append, add_bom);
+	}
+	inline bool BufferToFile(std::wstring_view buf, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::utf8, EEncoding buf_enc = EEncoding::utf16_le, bool append = false, bool add_bom = false)
+	{
+		return BufferToFile(buf.data(), buf.size(), filepath, file_enc, buf_enc, append, add_bom);
+	}
+
+	// Attempt to resolve a partial filepath given a list of directories to search
+	template <typename PathCont = std::vector<std::filesystem::path>>
+	std::filesystem::path ResolvePath(std::filesystem::path const& partial_path, PathCont const& search_paths = PathCont(), std::filesystem::path const* current_dir = nullptr, bool check_working_dir = true, PathCont* searched_paths = nullptr)
+	{
+		using namespace std::filesystem;
+
+		// If the partial path is actually a full path
+		if (partial_path.is_absolute() && exists(partial_path))
+		{
+			return partial_path;
+		}
+
+		// If 'current_dir' != null
+		if (current_dir != nullptr)
+		{
+			auto path = *current_dir / partial_path;
+			if (exists(path))
+				return path;
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Check the working directory
+		if (check_working_dir)
+		{
+			auto path = absolute(partial_path);
+			if (exists(path))
+				return path;
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Search the search paths
+		for (auto& dir : search_paths)
+		{
+			auto path = dir / partial_path;
+			if (exists(path))
+				return path;
+
+			// If the search paths contain partial paths, resolve recursively
+			if (!path.is_absolute())
+			{
+				auto paths = search_paths;
+				paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return equivalent(p, dir); }), end(paths));
+				path = ResolvePath(path, paths, current_dir, check_working_dir, searched_paths);
+				if (exists(path))
+					return path;
+			}
+
+			if (searched_paths)
+				searched_paths->push_back(path.parent_path());
+		}
+
+		// Return an empty string for unresolved
+		return path();
+	}
+}
+
+#if PR_UNITTESTS
+#include <fstream>
+#include "pr/common/unittests.h"
+namespace pr::filesys
+{
+	PRUnitTest(FilesysTests)
+	{
+		using namespace std::filesystem;
+
+		{// std::filesystem tests
+			auto p0 = path{ L"C:\\dir\\file.txt" };
+			auto p1 = path{ "C:/DIR/DIR2/../FiLE.TXT" };
+
+			// Just turns the path into normal form
+			auto n0 = p0.lexically_normal();
+			auto n1 = p1.lexically_normal();
+
+			// Weakly canonical resolves simlinks for the parts of the path that actually exist.
+			auto c0 = weakly_canonical(p0);
+			auto c1 = weakly_canonical(p1);
+
+			// equivalent requires the file/directory to exist
+			PR_THROWS([=] { [[maybe_unused]] auto _ = equivalent(p0, p1); }, filesystem_error);
+
+			// canonical requires the file/directory to exist
+			PR_THROWS([=] { [[maybe_unused]] auto _ = canonical(p0); }, filesystem_error);
+
+			//
+			try
+			{
+				//// Path compare is case insensitive (on windows)
+				//auto r0 = weakly_canonical(p0).compare(weakly_canonical(p1));
+				//PR_CHECK(r0 == 0, true);
+			
+			}
+			catch (filesystem_error const& ex)
+			{
+				unittests::out() << ex.what();
+				throw;
+			}
+		}
+		{// Equal paths
+			auto p0 = path{ L"C:\\dir\\file.txt" };
+			auto p1 = path{ "C:/DIR/DIR2/../FiLE.TXT" };
+			PR_CHECK(Equal(p0, p1, true), true);
+		}
+		{// Equal contents
+			auto file_content0 = temp_dir / L"file_content0.bin";
+			auto file_content1 = temp_dir / L"file_content1.bin";
+			auto file_content2 = temp_dir / L"file_content2.bin";
+
+			char const content0[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+			char const content1[] = { 0, 1, 2, 3, 'A', 5, 6, 7, 8, 9 };
+			{
+				std::ofstream file(file_content0);
+				PR_CHECK(file.write(&content0[0], sizeof(content0)).good(), true);
+			}
+			{
+				std::ofstream file(file_content1);
+				PR_CHECK(file.write(&content1[0], sizeof(content1)).good(), true);
+			}
+			{
+				std::ofstream file(file_content2);
+				PR_CHECK(file.write(&content0[0], sizeof(content0)).good(), true);
+			}
+
+			PR_CHECK(EqualContents(file_content0, file_content0), true);
+			PR_CHECK(EqualContents(file_content0, file_content1), false);
+			PR_CHECK(EqualContents(file_content0, file_content2), true);
+		}
+		{// Buffer to/from File
+			auto filepath = temp_dir / L"file_test.txt";
+			{// Write binary - Read binary
+				{// write bytes
+					unsigned char const data[] = { '0', '1', '2', '3', '4', '5' };
+					BufferToFile(data, 0, _countof(data), filepath, EEncoding::binary);
+
+					{// Read binary data into 'std::vector<byte>', no conversion
+						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EEncoding::binary);
+						PR_CHECK(read.size() == sizeof(data), true);
+						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+					}
+					{// Read binary data into 'std::wstring', no conversion
+						auto read = FileToBuffer<std::wstring>(filepath, EEncoding::binary);
+						PR_CHECK(read.size() == (sizeof(data) + 1) / 2, true);
+						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+					}
+				}
+				{// write !bytes
+					unsigned short const data[] = { '0', '1', '2', '3', '4', '5' };
+					BufferToFile(data, 0, _countof(data), filepath, EEncoding::binary);
+
+					{// Read binary data into 'std::vector<byte>', no conversion
+						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EEncoding::binary);
+						PR_CHECK(read.size() == sizeof(data), true);
+						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+					}
+					{// Read binary data into 'std::wstring', no conversion
+						auto read = FileToBuffer<std::wstring>(filepath, EEncoding::binary);
+						PR_CHECK(read.size() == sizeof(data) / 2, true);
+						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
+					}
+				}
+			}
+			{// Write UTF-8 text
+				unsigned char const utf8[] = { 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd }; // 'ni hao'
+				wchar_t const utf16[] = { 0x4f60, 0x597d, '\n', 0x4f60, 0x597d };
+
+				BufferToFile(utf8, 0, _countof(utf8), filepath, EEncoding::utf8, EEncoding::utf8, false, true);
+				PR_CHECK(DetectFileEncoding(filepath) == EEncoding::utf8, true);
+
+				{// Read UTF-8 - BOM automatically stripped
+					auto read = FileToBuffer<std::string>(filepath, EEncoding::utf8);
+					PR_CHECK(read.size() == _countof(utf8), true);
+					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+				}
+				{// Read UTF-8 to UTF-16 - BOM automatically stripped
+					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_le);
+					PR_CHECK(read.size() == _countof(utf16), true);
+					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+				}
+				{// Read UTF-8 to UCS2 - BOM automatically stripped
+					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::ucs2_le);
+					PR_CHECK(read.size() == _countof(utf16), true);
+					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+				}
+			}
+			{// Write UTF-16 text
+				unsigned char const utf8[] = { 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd }; // 'ni hao'
+				wchar_t const utf16[] = { 0x4f60, 0x597d, '\n', 0x4f60, 0x597d };
+				wchar_t const utf16be[] = { 0x604f, 0x7d59, 0x0A00, 0x604f, 0x7d59 };
+
+				BufferToFile(utf16, 0, _countof(utf16), filepath, EEncoding::utf16_le, EEncoding::utf16_le, false, true);
+				PR_CHECK(DetectFileEncoding(filepath) == EEncoding::utf16_le, true);
+
+				{// Read UTF-16 to UTF-16 - BOM automatically stripped
+					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_le);
+					PR_CHECK(read.size() == _countof(utf16), true);
+					PR_CHECK(memcmp(&read[0], utf16, sizeof(utf16)) == 0, true);
+				}
+				{// Read UTF-16 to UTF-16be - BOM automatically stripped
+					auto read = FileToBuffer<std::wstring>(filepath, EEncoding::utf16_be);
+					PR_CHECK(read.size() == _countof(utf16be), true);
+					PR_CHECK(memcmp(&read[0], utf16be, sizeof(utf16be)) == 0, true);
+				}
+				{// Read UTF-16 to UTF-8 - BOM automatically stripped
+					auto read = FileToBuffer<std::string>(filepath, EEncoding::utf8);
+					PR_CHECK(read.size() == _countof(utf8), true);
+					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+				}
+			}
+			{// todo...
+			}
+		}
+		{// Enumerate filesystem
+			// Create a folder tree
+			create_directories(temp_dir / L"dir1" / L"dir2");
+			BufferToFile({ 0, 1, 2, 3, 4 }, temp_dir / L"dir1" / L"bytes.bin");
+			BufferToFile("0123456789", temp_dir / L"dir1" / L"digits.txt");
+			BufferToFile("ABCDEFGHIJ", temp_dir / L"dir1" / L"dir2" / L"letters.txt");
+
+			std::vector<path> files;
+			std::vector<path> dirs;
+			for (auto& dir_entry : recursive_directory_iterator(temp_dir / L"dir1"))
+			{
+				if (dir_entry.is_directory())
+					dirs.push_back(dir_entry.path());
+				else
+					files.push_back(dir_entry.path());
+			}
+			PR_CHECK(files.size(), 3U);
+			PR_CHECK(Equal(files[0], temp_dir / L"dir1" / L"bytes.bin", true), true);
+			PR_CHECK(Equal(files[1], temp_dir / L"dir1" / L"digits.txt", true), true);
+			PR_CHECK(Equal(files[2], temp_dir / L"dir1" / L"dir2" / L"letters.txt", true), true);
+			PR_CHECK(dirs.size(), 1U);
+			PR_CHECK(Equal(dirs[0], temp_dir / L"dir1" / L"dir2", true), true);
+		}
+	}
+}
+#endif
+
+
+
+
+
+
+
+
+#define PR_FILESYS_NOT_DEPRECATED 0
+#if PR_FILESYS_NOT_DEPRECATED
+#pragma warning(disable:4996)
+//#pragma warning(push, 1)
+//#include <io.h>
+//#include <direct.h>
+//#include <sys/types.h>
+//#include <sys/stat.h>
+//#pragma warning(pop)
+
+// Pathname  = full path e.g. Drive:/path/path/file.ext
+// Drive     = the drive e.g. "P". No ':'
+// Path      = the directory without the drive. No leading '/', no trailing '/'. e.g. Path/path
+// Directory = the drive + path. no trailing '/'. e.g P:/Path/path
+// Extension = the last string following a '.'
+// Filename  = file name including extension
+// FileTitle = file name not including extension
+// A full pathname = drive + ":/" + path + "/" + file-title + "." + extension
+//
+#include "pr/str/string_core.h"
+
+namespace pr::filesys
+{
+	enum class EAttrib
+	{
+		None = 0,
+		Device = 1 << 0,
+		File = 1 << 1,
+		Directory = 1 << 2,
+		Pipe = 1 << 3,
+		WriteAccess = 1 << 4,
+		ReadAccess = 1 << 5,
+		ExecAccess = 1 << 6,
+		_bitwise_operators_allowed,
+	};
+	enum class Access
+	{
+		Exists = 0,
+		Write = 2,
+		Read = 4,
+		ReadWrite = Write | Read
+	};
+
+	// File timestamp data for a file. Note: these timestamps are in UTC Unix time
+	struct FileTime
+	{
+		time_t m_last_access;   // Note: time_t is 64bit
+		time_t m_last_modified;
+		time_t m_created;
+	};
+
+#if 0
 	#pragma region Traits
 	template <typename C> struct is_char :std::false_type {};
 	template <>           struct is_char<char> :std::true_type {};
@@ -124,25 +784,25 @@ namespace pr::filesys
 	#pragma endregion
 
 	#pragma region String helpers
-	template <typename Char, typename = enable_if_char<Char>> inline Char const* c_str(Char const* s)
+	template <typename Char, typename = std::enable_if_t<is_char_v<Char>>> inline Char const* c_str(Char const* s)
 	{
 		return s;
 	}
 
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Char const* c_str(Str const& s)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>> inline Char const* c_str(Str const& s)
 	{
 		return s.c_str();
 	}
 
 	// Returns a pointer in 's' of the first instance of 'x' or the null terminator
-	template <typename Char, typename = enable_if_char<Char>> inline Char const* find(Char const* s, Char x)
+	template <typename Char, typename = std::enable_if_t<is_char_v<Char>>> inline Char const* find(Char const* s, Char x)
 	{
 		for (; *s != 0 && *s != x; ++s) {}
 		return s;
 	}
 
 	// Returns a pointer into 's' of the first instance of any character in 'x'
-	template <typename Char, typename = enable_if_char<Char>> inline Char const* find_first(Char const* s, Char const* x)
+	template <typename Char, typename = std::enable_if_t<is_char_v<Char>>> inline Char const* find_first(Char const* s, Char const* x)
 	{
 		for (; *s != 0 && *find(x,*s) == 0; ++s) {}
 		return s;
@@ -186,29 +846,36 @@ namespace pr::filesys
 		inline errno_t mktemp(wchar_t* templ, int length) { return _wmktemp_s(templ, length); }
 	}
 	#pragma endregion
+#endif
 
 	// Return true if 'ch' is a directory marker
-	template <typename Char, typename = enable_if_char<Char>> inline bool DirMark(Char ch)
+	[[deprecated]] constexpr bool DirMark(int ch)
 	{
 		return ch == '\\' || ch == '/';
 	}
 
 	// Return true if two characters are the same as far as a path is concerned
-	template <typename Char, typename = enable_if_char<Char>> inline bool EqualPathChar(Char lhs, Char rhs)
+	[[deprecated]] inline bool EqualPathChar(int lhs, int rhs)
 	{
 		return tolower(lhs) == tolower(rhs) || (DirMark(lhs) && DirMark(rhs));
 	}
 
 	// Return true if 'path' is an absolute path. (i.e. contains a drive or is a UNC path)
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline bool IsFullPath(Str const& path)
+	[[deprecated]] inline bool IsFullPath(std::filesystem::path const& path)
 	{
-		return path.size() >= 2 && (
-			(str::IsAlpha(path[0]) && path[1] == ':') || // Rooted path
-			(path[0] == '\\' && path[1] == '\\')); // UNC path
+		if (path.is_absolute())
+			return true;
+		
+		// legacy...
+		auto path_str = path.native();
+		return path_str.size() >= 2 && (
+			(str::IsAlpha(path_str[0]) && path_str[1] == ':') || // Rooted path
+			(path_str[0] == '\\' && path_str[1] == '\\')); // UNC path
 	}
 
 	// Add quotes to the str if it doesn't already have them
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str AddQuotes(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str AddQuotes(Str str)
 	{
 		if (str.size() > 1 && str[0] == '"' && str[str.size()-1] == '"') return str;
 		str.insert(str.begin(), '"');
@@ -217,7 +884,8 @@ namespace pr::filesys
 	}
 
 	// Remove quotes from 'str' if it has them
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveQuotes(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str RemoveQuotes(Str str)
 	{
 		if (str.size() < 2 || str[0] != '"' || str[str.size()-1] != '"') return str;
 		str = str.substr(1, str.size()-2);
@@ -225,21 +893,24 @@ namespace pr::filesys
 	}
 
 	// Remove the leading back slash from 'str' if it exists
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveLeadingBackSlash(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str RemoveLeadingBackSlash(Str str)
 	{
 		if (!str.empty() && (str[0] == '\\' || str[0] == '/')) str.erase(0,1);
 		return str;
 	}
 
 	// Remove the last back slash from 'str' if it exists
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str RemoveLastBackSlash(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str RemoveLastBackSlash(Str str)
 	{
 		if (!str.empty() && (str[str.size()-1] == '\\' || str[str.size()-1] == '/')) str.erase(str.size()-1, 1);
 		return str;
 	}
 
 	// Convert 'C:\path0\.\path1\../path2\file.ext' into 'C:\path0\path2\file.ext'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str Canonicalise(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str Canonicalise(Str str)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -268,7 +939,8 @@ namespace pr::filesys
 	}
 
 	// Convert a path name into a standard format of "c:\dir\dir\filename.ext" i.e. back slashes, and lower case
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str Standardise(Str str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str Standardise(Str str)
 	{
 		str = RemoveQuotes(str);
 		str = RemoveLastBackSlash(str);
@@ -279,7 +951,8 @@ namespace pr::filesys
 	}
 
 	// Get the drive letter from a full path description.
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetDrive(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetDrive(Str const& str)
 	{
 		Char const colon[] = {Char(':'),0};
 
@@ -289,7 +962,8 @@ namespace pr::filesys
 	}
 
 	// Get the path from a full path description
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetPath(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetPath(Str const& str)
 	{
 		Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 		size_t p, first = 0, last = str.size();
@@ -308,7 +982,8 @@ namespace pr::filesys
 	}
 
 	// Get the directory including drive letter from a full path description
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetDirectory(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetDirectory(Str const& str)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -319,7 +994,8 @@ namespace pr::filesys
 	}
 
 	// Get the extension from a full path description (does not include the '.'). Note: std::filesystem::path.extension() *DOES* include the dot
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetExtension(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetExtension(Str const& str)
 	{
 		Char const dot[] = {Char('.'),0};
 
@@ -329,7 +1005,8 @@ namespace pr::filesys
 	}
 
 	// Returns a pointer to the extension part of a filepath (does not include the '.')
-	template <typename Char, typename = enable_if_char<Char>> inline Char const* GetExtensionInPlace(Char const* str)
+	template <typename Char, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Char const* GetExtensionInPlace(Char const* str)
 	{
 		Char const* extn = 0, *p;
 		for (p = str; *p; ++p)
@@ -339,7 +1016,8 @@ namespace pr::filesys
 	}
 
 	// Get the filename including extension from a full path description
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetFilename(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetFilename(Str const& str)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -350,7 +1028,8 @@ namespace pr::filesys
 	}
 
 	// Get the file title from a full path description
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str GetFiletitle(Str const& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str GetFiletitle(Str const& str)
 	{
 		Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -368,7 +1047,8 @@ namespace pr::filesys
 	}
 
 	// Remove the drive from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvDrive(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvDrive(Str& str)
 	{
 		Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -379,7 +1059,8 @@ namespace pr::filesys
 	}
 
 	// Remove the path from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvPath(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvPath(Str& str)
 	{
 		Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -399,7 +1080,8 @@ namespace pr::filesys
 	}
 
 	// Remove the directory from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvDirectory(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvDirectory(Str& str)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -411,7 +1093,8 @@ namespace pr::filesys
 	}
 
 	// Remove the extension from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvExtension(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvExtension(Str& str)
 	{
 		Char const dot[] = {Char('.'),0};
 
@@ -422,7 +1105,8 @@ namespace pr::filesys
 	}
 
 	// Remove the filename from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvFilename(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvFilename(Str& str)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -434,7 +1118,8 @@ namespace pr::filesys
 	}
 
 	// Remove the file title from 'str'
-	template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline Str& RmvFiletitle(Str& str)
+	template <typename Str, typename Char = Str::value_type, typename = std::enable_if_t<is_char_v<Char>>>
+	[[deprecated]] inline Str& RmvFiletitle(Str& str)
 	{
 		Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -453,31 +1138,36 @@ namespace pr::filesys
 	}
 
 	// Delete a file
-	template <typename Str> inline bool EraseFile(Str const& filepath)
+	template <typename Str>
+	[[deprecated]] inline bool EraseFile(Str const& filepath)
 	{
 		return impl::remove(c_str(filepath)) == 0;
 	}
 
 	// Delete an empty directory
-	template <typename Str> inline bool EraseDir(Str const& path)
+	template <typename Str>
+	[[deprecated]] inline bool EraseDir(Str const& path)
 	{
 		return impl::rmdir(c_str(path)) == 0;
 	}
 
 	// Delete a file or empty directory
-	template <typename Str> inline bool Erase(Str const& path)
+	template <typename Str>
+	[[deprecated]] inline bool Erase(Str const& path)
 	{
 		return EraseFile(path) || EraseDir(path);
 	}
 
 	// Rename a file
-	template <typename Str1, typename Str2> inline bool RenameFile(Str1 const& old_filepath, Str2 const& new_filepath)
+	template <typename Str1, typename Str2>
+	[[deprecated]] inline bool RenameFile(Str1 const& old_filepath, Str2 const& new_filepath)
 	{
 		return impl::rename(c_str(old_filepath), c_str(new_filepath)) == 0;
 	}
 
 	// Copy a file
-	template <typename Str1, typename Str2> inline bool CpyFile(Str1 const& src_filepath, Str2 const& dst_filepath)
+	template <typename Str1, typename Str2>
+	[[deprecated]] inline bool CpyFile(Str1 const& src_filepath, Str2 const& dst_filepath)
 	{
 		std::ifstream src (c_str(src_filepath), std::ios::binary);
 		std::ofstream dest(c_str(dst_filepath), std::ios::binary);
@@ -486,46 +1176,17 @@ namespace pr::filesys
 		return true;
 	}
 
-	// Compare the contents of two files and return true if they are the same.
-	// Returns true if both files doesn't exist, or false if only one file exists.
-	template <typename Str> inline bool EqualContents(Str const& lhs, Str const& rhs)
-	{
-		auto e0 = FileExists(lhs);
-		auto e1 = FileExists(rhs);
-		if (e0 != e1) return false;
-		if (!e0) return true;
-
-		std::ifstream f0(c_str(lhs), std::ios::binary);
-		std::ifstream f1(c_str(rhs), std::ios::binary);
-
-		auto s0 = f0.seekg(0, std::ifstream::end).tellg();
-		auto s1 = f1.seekg(0, std::ifstream::end).tellg();
-		if (s0 != s1) return false;
-		f0.seekg(0, std::ifstream::beg);
-		f1.seekg(0, std::ifstream::beg);
-
-		enum { BlockSize = 4096 };
-		char buf0[BlockSize];
-		char buf1[BlockSize];
-		for (;f0 && f1;)
-		{
-			auto r0 = static_cast<size_t>(f0.read(buf0, sizeof(buf0)).gcount());
-			auto r1 = static_cast<size_t>(f1.read(buf1, sizeof(buf1)).gcount());
-			if (r0 != r1) return false;
-			if (memcmp(buf0, buf1, r1) != 0) return false;
-		}
-		return f0.eof() == f1.eof(); // both files reached EOF at the same time
-	}
-
 	// Move 'src' to 'dst' replacing 'dst' if it already exists
-	template <typename Str> inline bool RepFile(Str const& src, Str const& dst)
+	template <typename Str>
+	[[deprecated]] inline bool RepFile(Str const& src, Str const& dst)
 	{
 		if (FileExists(dst)) EraseFile(dst);
 		return RenameFile(src, dst);
 	}
 
 	// Return the length of a file, without opening it
-	template <typename Str> inline __int64 FileLength(Str const& filepath)
+	template <typename Str>
+	[[deprecated]] inline int64_t FileLength(Str const& filepath)
 	{
 		struct __stat64 info;
 		if (impl::stat64(c_str(filepath), &info) != 0) return 0;
@@ -533,12 +1194,12 @@ namespace pr::filesys
 	}
 
 	// Return the amount of free disk space. 'drive' = 'A', 'B', 'C', etc
-	inline unsigned __int64 GetDiskFree(char drive)
+	[[deprecated]] inline uint64_t GetDiskFree(char drive)
 	{
 		_diskfree_t drive_info;
 		drive = char(toupper(drive));
 		if (_getdiskfree(drive - 'A' + 1, &drive_info) != 0) return 0;
-		unsigned __int64 size = 1;
+		uint64_t size = 1;
 		size *= drive_info.bytes_per_sector;
 		size *= drive_info.sectors_per_cluster;
 		size *= drive_info.avail_clusters;
@@ -546,12 +1207,12 @@ namespace pr::filesys
 	}
 
 	// Return the size of a disk. 'drive' = 'A', 'B', 'C', etc
-	inline unsigned __int64 GetDiskSize(char drive)
+	[[deprecated]] inline uint64_t GetDiskSize(char drive)
 	{
 		_diskfree_t drive_info;
 		drive = char(toupper(drive));
 		if (_getdiskfree(drive - 'A' + 1, &drive_info) != 0) return 0;
-		unsigned __int64 size = 1;
+		uint64_t size = 1;
 		size *= drive_info.bytes_per_sector;
 		size *= drive_info.sectors_per_cluster;
 		size *= drive_info.total_clusters;
@@ -559,10 +1220,10 @@ namespace pr::filesys
 	}
 
 	// Return a bitwise combination of Attributes for 'str'
-	template <typename Str> inline EAttrib GetAttribs(Str const& str)
+	[[deprecated]] inline EAttrib GetAttribs(std::filesystem::path const& str)
 	{
 		struct __stat64 info;
-		if (impl::stat64(c_str(str), &info) != 0)
+		if (_wstat64(str.c_str(), &info) != 0)
 			return EAttrib::None;
 
 		// Interpret the stats
@@ -579,12 +1240,14 @@ namespace pr::filesys
 
 	// Return the creation, last modified, and last access time of a file
 	// Note: these timestamps are in UTC Unix time
-	template <typename Str> inline FileTime FileTimeStats(Str const& str)
+	[[deprecated]] inline FileTime FileTimeStats(std::filesystem::path const& str)
 	{
 		FileTime file_time = {0, 0, 0};
 
 		struct __stat64 info;
-		if (impl::stat64(c_str(str), &info) != 0) return file_time;
+		if (_wstat64(str.c_str(), &info) != 0)
+			return file_time;
+
 		file_time.m_created       = info.st_ctime;
 		file_time.m_last_modified = info.st_mtime;
 		file_time.m_last_access   = info.st_atime;
@@ -592,19 +1255,20 @@ namespace pr::filesys
 	}
 
 	// Return true if 'filepath' is a file that exists
-	template <typename Str> inline bool FileExists(Str const& filepath)
+	[[deprecated]] inline bool FileExists(std::filesystem::path const& filepath)
 	{
-		return impl::access(c_str(filepath), Access::Exists) == 0;
+		return std::filesystem::exists(filepath);
 	}
 
 	// Return true if 'directory' exists
-	template <typename Str> inline bool DirectoryExists(Str const& directory)
+	[[deprecated]] inline bool DirectoryExists(std::filesystem::path const& directory)
 	{
-		return impl::access(c_str(directory), Access::Exists) == 0;
+		return std::filesystem::exists(directory);
 	}
 
 	// Recursively create 'directory'
-	template <typename Str, typename Char = Str::value_type> inline bool CreateDir(Str const& directory)
+	template <typename Str, typename Char = Str::value_type>
+	[[deprecated]] inline bool CreateDir(Str const& directory)
 	{
 		Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
@@ -618,8 +1282,10 @@ namespace pr::filesys
 		return impl::mkdir(c_str(dir)) == 0 || errno == EEXIST;
 	}
 
+#if 0
 	// Check the access on a file
-	template <typename Str> inline Access GetAccess(Str const& str)
+	template <typename Str>
+	inline Access GetAccess(Str const& str)
 	{
 		int acc = 0;
 		if (impl::access(c_str(str), Read ) == 0) acc |= Read;
@@ -635,24 +1301,25 @@ namespace pr::filesys
 		if (state & Write) mode |= _S_IWRITE;
 		return impl::chmod(c_str(str), mode) == 0;
 	}
+#endif
 
 	// Make a unique filename. Template should have the form: "FilenameXXXXXX". X's are replaced. Note, no extension
-	template <typename Str> inline Str MakeUniqueFilename(Str const& tmplate)
+	template <typename Str>
+	[[deprecated]] inline Str MakeUniqueFilename(Str const& tmplate)
 	{
 		auto str = tmplate;
 		return impl::mktemp(&str[0], impl::strlen(&str[0]) + 1) == 0 ? str : Str();
 	}
 
 	// Return the current directory
-	template <typename Str, typename Char = Str::value_type> inline Str CurrentDirectory()
+	[[deprecated]] inline std::filesystem::path CurrentDirectory()
 	{
-		Char buf[_MAX_PATH];
-		auto path = impl::getdcwd(_getdrive(), buf, _countof(buf));
-		return Standardise<Str>(path);
+		return std::filesystem::current_path();
 	}
 
 	// Replaces the extension of 'path' with 'new_extn'
-	template <typename Str, typename Char = Str::value_type> inline Str ChangeExtn(Str const& path, decltype(path) new_extn)
+	template <typename Str, typename Char = Str::value_type>
+	[[deprecated]] inline Str ChangeExtn(Str const& path, decltype(path) new_extn)
 	{
 		auto s = path;
 		RmvExtension(s);
@@ -662,7 +1329,8 @@ namespace pr::filesys
 	}
 
 	// Insert 'prefix' before, and 'postfix' after the file title in 'path', without modifying the extension
-	template <typename Str, typename Char = Str::value_type> inline Str ChangeFilename(Str const& path, decltype(path) prefix, decltype(path) postfix)
+	template <typename Str, typename Char = Str::value_type>
+	[[deprecated]] inline Str ChangeFilename(Str const& path, decltype(path) prefix, decltype(path) postfix)
 	{
 		auto s = path;
 		RmvFilename(s);
@@ -676,18 +1344,21 @@ namespace pr::filesys
 	}
 
 	// Combine two path fragments into a combined path
-	template <typename Str> inline Str CombinePath(Str const& lhs, decltype(lhs) rhs)
+	template <typename Str>
+	[[deprecated]] inline Str CombinePath(Str const& lhs, decltype(lhs) rhs)
 	{
 		if (IsFullPath(rhs)) return rhs;
 		return Canonicalise(RemoveLastBackSlash(lhs).append(1,'\\').append(RemoveLeadingBackSlash(rhs)));
 	}
-	template <typename Str, typename... Parts> inline Str CombinePath(Str const& lhs, decltype(lhs) rhs, Parts&&... rest)
+	template <typename Str, typename... Parts>
+	[[deprecated]] inline Str CombinePath(Str const& lhs, decltype(lhs) rhs, Parts&&... rest)
 	{
 		return CombinePath(CombinePath(lhs, rhs), rest...);
 	}
 
 	// Convert a relative path into a full path
-	template <typename Str, typename Char = Str::value_type> inline Str GetFullPath(Str const& str)
+	template <typename Str, typename Char = Str::value_type>
+	[[deprecated]] inline Str GetFullPath(Str const& str)
 	{
 		Char buf[_MAX_PATH];
 		Str path(const_cast<Char const*>(impl::fullpath(buf, c_str(str), _MAX_PATH)));
@@ -695,7 +1366,8 @@ namespace pr::filesys
 	}
 
 	// Make 'full_path' relative to 'relative_to'.  e.g.  C:/path1/path2/file relative to C:/path1/path3/ = ../path2/file
-	template <typename Str, typename Char = Str::value_type> inline Str GetRelativePath(Str const& full_path, Str const& relative_to)
+	template <typename Str, typename Char = Str::value_type>
+	[[deprecated]] inline Str GetRelativePath(Str const& full_path, Str const& relative_to)
 	{
 		Char const prev_dir[]  = {'.','.','/',0};
 		Char const dir_marks[] = {'\\','/',0};
@@ -729,66 +1401,8 @@ namespace pr::filesys
 		}
 		return path;
 	}
-
-	// Attempt to resolve a partial filepath given a list of directories to search
-	template <typename PathCont = std::vector<std::filesystem::path>>
-	std::filesystem::path ResolvePath(std::filesystem::path const& partial_path, PathCont const& search_paths = PathCont(), std::filesystem::path const* current_dir = nullptr, bool check_working_dir = true, PathCont* searched_paths = nullptr)
-	{
-		using namespace std::filesystem;
-
-		// If the partial path is actually a full path
-		if (partial_path.is_absolute() && exists(partial_path))
-		{
-			return partial_path;
-		}
-
-		// If 'current_dir' != null
-		if (current_dir != nullptr)
-		{
-			auto path = *current_dir / partial_path;
-			if (exists(path))
-				return path;
-
-			if (searched_paths)
-				searched_paths->push_back(path.parent_path());
-		}
-
-		// Check the working directory
-		if (check_working_dir)
-		{
-			auto path = absolute(partial_path);
-			if (exists(path))
-				return path;
-
-			if (searched_paths)
-				searched_paths->push_back(path.parent_path());
-		}
-
-		// Search the search paths
-		for (auto& dir : search_paths)
-		{
-			auto path = dir / partial_path;
-			if (exists(path))
-				return path;
-				
-			// If the search paths contain partial paths, resolve recursively
-			if (!path.is_absolute())
-			{
-				auto paths = search_paths;
-				paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return equivalent(p, dir); }), end(paths));
-				path = ResolvePath(path, paths, current_dir, check_working_dir, searched_paths);
-				if (exists(path))
-					return path;
-			}
-
-			if (searched_paths)
-				searched_paths->push_back(path.parent_path());
-		}
-
-		// Return an empty string for unresolved
-		return path();
-	}
 }
+
 
 #if PR_UNITTESTS
 #include <fstream>
@@ -796,7 +1410,7 @@ namespace pr::filesys
 #include "pr/common/flags_enum.h"
 namespace pr::filesys
 {
-	PRUnitTest(FilesysTests)
+	PRUnitTest(OldFilesysTests)
 	{
 		using namespace pr::filesys;
 
@@ -906,15 +1520,15 @@ namespace pr::filesys
 			PR_CHECK(P0, p0);
 		}
 		{//Files
-			std::string dir = CurrentDirectory<std::string>();
+			auto dir = CurrentDirectory();
 			PR_CHECK(DirectoryExists(dir), true);
 
-			std::string fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
+			auto fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
 			PR_CHECK(FileExists(fn), false);
 
-			std::string path = CombinePath(dir, fn);
+			auto path = dir / fn;
 
-			std::ofstream f(path.c_str());
+			std::ofstream f(path);
 			f << "Hello World";
 			f.close();
 
@@ -934,7 +1548,7 @@ namespace pr::filesys
 			PR_CHECK(FileExists(path2), false);
 			PR_CHECK(FileExists(path), true);
 
-			__int64 size = FileLength(path);
+			int64_t size = FileLength(path);
 			PR_CHECK(size, 11);
 
 			auto attr = GetAttribs(path);
@@ -946,8 +1560,8 @@ namespace pr::filesys
 			PR_CHECK(attr == flags, true);
 
 			std::string drive = GetDrive(path);
-			unsigned __int64 disk_free = GetDiskFree(drive[0]);
-			unsigned __int64 disk_size = GetDiskSize(drive[0]);
+			uint64_t disk_free = GetDiskFree(drive[0]);
+			uint64_t disk_size = GetDiskSize(drive[0]);
 			PR_CHECK(disk_size > disk_free, true);
 
 			EraseFile(path);
@@ -999,4 +1613,7 @@ namespace pr::filesys
 		}
 	}
 }
+#endif
+
+#pragma warning(default:4996)
 #endif

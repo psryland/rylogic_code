@@ -76,7 +76,7 @@ namespace pr
 
 	// Load and play an audio file synchronously.
 	// If the audio contains loops, 'loop_count' indicates how many times to loop
-	void AudioManager::PlaySynchronous(wchar_t const* filepath, int loop_count) const
+	void AudioManager::PlaySynchronous(std::filesystem::path const& filepath, int loop_count) const
 	{
 		// Read in the wave file into memory
 		audio::WavData wave_data;
@@ -87,7 +87,7 @@ namespace pr
 		// Create the source voice
 		IXAudio2SourceVoice* src_voice_;
 		pr::Throw(m_xaudio->CreateSourceVoice(&src_voice_, wave_data.wfx));
-		VoicePtr<IXAudio2SourceVoice> src_voice(src_voice_);
+		audio::VoicePtr<IXAudio2SourceVoice> src_voice(src_voice_);
 
 		// Submit the wave sample data using an XAUDIO2_BUFFER structure
 		XAUDIO2_BUFFER buffer = {0};
@@ -105,10 +105,10 @@ namespace pr
 			throw std::exception("This platform does not support xWMA or XMA2");
 
 		// Queue the buffer to be played on the voice
-		pr::Throw(src_voice->SubmitSourceBuffer(&buffer));
+		Throw(src_voice->SubmitSourceBuffer(&buffer));
 
 		// Start the source voice playing
-		pr::Throw(src_voice->Start(0));
+		Throw(src_voice->Start(0));
 
 		// Let the sound play
 		for (bool running = true; running;)

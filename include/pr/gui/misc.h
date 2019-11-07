@@ -5,12 +5,11 @@
 #pragma once
 
 #include <string>
-//#include <atlbase.h>
-//#include <atlapp.h>
+#include <filesystem>
 #include "pr/common/min_max_fix.h"
+#include "pr/common/cast.h"
 #include "pr/common/assert.h"
 #include "pr/container/byte_data.h"
-#include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 
@@ -25,7 +24,7 @@ namespace pr
 	// Return the window bounds as an IRect
 	inline pr::IRect WindowBounds(HWND hwnd)
 	{
-		PR_ASSERT(PR_DBG, hwnd, "window handle must be non-null");
+		if (hwnd == nullptr) throw std::runtime_error("window handle must be non-null");
 		RECT r; ::GetWindowRect(hwnd, &r);
 		return IRect(r.left, r.top, r.right, r.bottom);
 	}
@@ -33,7 +32,7 @@ namespace pr
 	// Return the client area of the window as an IRect
 	inline pr::IRect ClientArea(HWND hwnd)
 	{
-		PR_ASSERT(PR_DBG, hwnd, "window handle must be non-null");
+		if (hwnd == nullptr) throw std::runtime_error("window handle must be non-null");
 		RECT r; ::GetClientRect(hwnd, &r);
 		return IRect(r.left, r.top, r.right, r.bottom);
 	}
@@ -253,7 +252,7 @@ namespace pr
 
 	// Save an HBITMAP to a file
 	// 'hdc' is a device context that is compatible with the bitmap, used to extract device independent bits
-	inline void SaveBmp(char const* filepath, HBITMAP hbmp, HDC hdc)
+	inline void SaveBmp(std::filesystem::path const& filepath, HBITMAP hbmp, HDC hdc)
 	{
 		// Retrieve the bitmap color format, width, and height.
 		BITMAP bmp; if (!::GetObject(hbmp, sizeof(BITMAP), &bmp))
@@ -295,12 +294,12 @@ namespace pr
 			throw std::exception("failed to read bitmap bits");
 
 		// Write the bitmap file
-		pr::Handle file = pr::FileOpen(filepath, pr::EFileOpen::Writing);
-		if (file == INVALID_HANDLE_VALUE ||
-			!pr::FileWrite(file, &bmfh, sizeof(bmfh)) ||
-			!pr::FileWrite(file, &bmih, sizeof(bmih)) ||
-			!pr::FileWrite(file, &clrs[0], bmih.biClrUsed * sizeof(RGBQUAD)) ||
-			!pr::FileWrite(file, &bits[0], bmih.biSizeImage))
-			throw std::exception("failed to write bmp file");
+		std::ofstream file(filepath, std::ios::binary);
+		if (!file ||
+			!file.write(char_ptr(&bmfh), sizeof(bmfh)) ||
+			!file.write(char_ptr(&bmih), sizeof(bmih)) ||
+			!file.write(char_ptr(&clrs[0]), bmih.biClrUsed * sizeof(RGBQUAD)) ||
+			!file.write(char_ptr(&bits[0]), bmih.biSizeImage))
+			throw std::runtime_error("failed to write bmp file");
 	}
 }

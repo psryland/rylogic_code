@@ -38,7 +38,7 @@ namespace Rylogic.Gui.WinForms
 			public string font;
 		};
 
-		private Sci.DirectFunction m_func;
+		private Sci.SciFnDirect m_func;
 		private IntPtr m_ptr;
 
 		static ScintillaCtrl()
@@ -73,13 +73,12 @@ namespace Rylogic.Gui.WinForms
 				// Get the function pointer for direct calling the WndProc (rather than windows messages)
 				var func = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
 				m_ptr = Win32.SendMessage(Handle, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
-				m_func = Marshal_.PtrToDelegate<Sci.DirectFunction>(func);
+				m_func = Marshal_.PtrToDelegate<Sci.SciFnDirect>(func);
 
 				// Reset the style
 				CodePage = Sci.SC_CP_UTF8;
 				ClearAll();
 				ClearDocumentStyle();
-				StyleBits = 7;
 				TabWidth = 4;
 				Indent = 4;
 	
@@ -149,7 +148,6 @@ namespace Rylogic.Gui.WinForms
 		{
 			CodePage = Sci.SC_CP_UTF8;
 			ClearDocumentStyle();
-			StyleBits = 7;
 			IndentationGuides = true;
 			TabWidth = 4;
 			Indent = 4;
@@ -219,7 +217,6 @@ namespace Rylogic.Gui.WinForms
 		public void InitLdrStyle(bool dark = false)
 		{
 			ClearDocumentStyle();
-			StyleBits = 7;
 			IndentationGuides = true;
 			AutoIndent = true;
 			TabWidth = 4;
@@ -303,7 +300,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Handle notification from the native scintilla control</summary>
-		protected virtual void HandleSCNotification(ref Win32.NMHDR nmhdr, ref global::Scintilla.Scintilla.SCNotification notif)
+		protected virtual void HandleSCNotification(ref Win32.NMHDR nmhdr, ref Sci.SCNotification notif)
 		{
 			switch (notif.nmhdr.code)
 			{
@@ -559,14 +556,6 @@ namespace Rylogic.Gui.WinForms
 			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
 		}
 
-		/// <summary>Get/Set style bits</summary>
-		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public int StyleBits
-		{
-			get { return Cmd(Sci.SCI_GETSTYLEBITS); }
-			set {  Cmd(Sci.SCI_SETSTYLEBITS, value); }
-		}
-	
 		/// <summary></summary>
 		public int TargetAsUTF8(StringBuilder text)
 		{
@@ -2194,12 +2183,6 @@ namespace Rylogic.Gui.WinForms
 			//Cmd(Sci.SCI_SETKEYWORDS, keywordSet, keyWords);
 		}
 
-		/// <summary></summary>
-		public int GetStyleBitsNeeded()
-		{
-			return Cmd(Sci.SCI_GETSTYLEBITSNEEDED);
-		}
-
 		#endregion
 
 		#region Notifications
@@ -2242,14 +2225,6 @@ namespace Rylogic.Gui.WinForms
 		{
 			get { return Cmd(Sci.SCI_GETBUFFEREDDRAW) != 0; }
 			set { Cmd(Sci.SCI_SETBUFFEREDDRAW, value ? 1 : 0); }
-		}
-
-		/// <summary></summary>
-		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool TwoPhaseDraw
-		{
-			get { return Cmd(Sci.SCI_GETTWOPHASEDRAW) != 0; }
-			set { Cmd(Sci.SCI_SETTWOPHASEDRAW, value ? 1 : 0); }
 		}
 
 		/// <summary></summary>

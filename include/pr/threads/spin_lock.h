@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 #include "pr/common/fmt.h"
-#include "pr/common/stackdump.h"
+#include "pr/win32/stackdump.h"
 #endif
 
 namespace pr

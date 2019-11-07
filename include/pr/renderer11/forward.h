@@ -45,7 +45,6 @@
 #include "pr/common/fmt.h"
 #include "pr/common/cast.h"
 #include "pr/common/flags_enum.h"
-#include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
 #include "pr/common/log.h"
 #include "pr/common/refptr.h"
@@ -69,7 +68,6 @@
 #include "pr/camera/camera.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
-#include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
@@ -92,8 +90,8 @@
 #include "pr/threads/synchronise.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/win32/windows_com.h"
+#include "pr/win32/stackdump.h"
 #include "pr/script/reader.h"
-#include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/ldraw/ldr_helper.h"
 
 #define PR_DBG_RDR PR_DBG

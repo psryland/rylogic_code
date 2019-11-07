@@ -4,77 +4,101 @@
 //******************************************************
 
 #pragma once
-#ifndef PR_WEB_GET_H
-#define PR_WEB_GET_H
 
 #include <string>
-#include <wininet.h> // link to wininet.lib
-#include "pr/filesys/fileex.h"
-
+#include <fstream>
+#include <filesystem>
+#include <wininet.h>
 #pragma comment(lib, "wininet.lib")
 
-namespace pr
+namespace pr::network
 {
-	namespace network
+	struct InternetHandle
 	{
-		struct InternetHandle
+		HINTERNET m_hinet;
+		InternetHandle(HINTERNET hinet)
+			:m_hinet(hinet)
+		{}
+		~InternetHandle()
 		{
-			HINTERNET m_hinet;
-			InternetHandle(HINTERNET hinet) :m_hinet(hinet) {}
-			~InternetHandle()                 { if (m_hinet) InternetCloseHandle(m_hinet); }
-			operator HINTERNET const&() const { return m_hinet; }
-			operator HINTERNET&()             { return m_hinet; }
+			if (m_hinet)
+				InternetCloseHandle(m_hinet);
+		}
+		operator HINTERNET() const
+		{
+			return m_hinet;
+		}
+	};
+
+	// Read a file from the internet
+	template <typename Out>
+	bool WebGet(char const* url, Out& out)
+	{
+		InternetHandle hinet = InternetOpen("WebGet", INTERNET_OPEN_TYPE_PRECONFIG, 0, 0, 0);
+		if (!hinet)
+			return false;
+
+		InternetHandle hurl  = InternetOpenUrl(hinet, url, 0, 0, INTERNET_FLAG_RELOAD|INTERNET_FLAG_PRAGMA_NOCACHE|INTERNET_FLAG_NO_CACHE_WRITE, 0);
+		if (!hurl)
+			return false;
+
+		for(;;)
+		{
+			char buf[512]; DWORD read;
+			if (!InternetReadFile(hurl, buf, sizeof(buf), &read)) return false;
+			if (read == 0) return true;
+			out(buf, read);
+		}
+	}
+
+	// Read a text file from a URL, copying the text into 'data'
+	// Returns true if a file was successfully read from 'url'
+	inline bool WebGet(char const* url, std::string& data)
+	{
+		struct StrOut
+		{
+			std::string* m_str;
+			explicit StrOut(std::string& str)
+				:m_str(&str)
+			{}
+			void operator()(char const* buf, DWORD size)
+			{
+				m_str->append(buf, size);
+			}
 		};
 
-		// Read a file from the internet
-		template <typename Out> bool WebGet(char const* url, Out& out)
+		StrOut out(data);
+		return WebGet(url, out);
+	}
+
+	// Read a file from a URL saving it to 'filename'
+	inline bool WebGet(char const* url, std::filesystem::path const& filename)
+	{
+		struct FileOut
 		{
-			InternetHandle hinet = InternetOpen("WebGet", INTERNET_OPEN_TYPE_PRECONFIG, 0, 0, 0);
-			if (!hinet) return false;
-
-			InternetHandle hurl  = InternetOpenUrl(hinet, url, 0, 0, INTERNET_FLAG_RELOAD|INTERNET_FLAG_PRAGMA_NOCACHE|INTERNET_FLAG_NO_CACHE_WRITE, 0);
-			if (!hurl) return false;
-
-			for(;;)
+			std::ofstream m_file;
+			explicit FileOut(std::filesystem::path const& filename)
+				:m_file(filename)
+			{}
+			void operator()(char const* buf, DWORD size)
 			{
-				char buf[512]; DWORD read;
-				if (!InternetReadFile(hurl, buf, sizeof(buf), &read)) return false;
-				if (read == 0) return true;
-				out(buf, read);
+				m_file.write(buf, size);
 			}
-		}
+		};
 
-		// Helper output functions
-		namespace impl
-		{
-			struct StrOut
-			{
-				std::string* m_str;
-				explicit StrOut(std::string& str) :m_str(&str) {}
-				void operator()(char const* buf, DWORD size) { m_str->append(buf, size); }
-			};
-			struct FileOut
-			{
-				pr::Handle m_file;
-				explicit FileOut(char const* filename) :m_file(pr::FileOpen(filename, pr::EFileOpen::Writing)) {}
-				void operator()(char const* buf, DWORD size) { pr::FileWrite(m_file, buf, size); }
-			};
-		}
+		FileOut out(filename);
+		return WebGet(url, out);
+	}
+}
 
-		// Read a text file from a URL, copying the text into 'data'
-		// Returns true if a file was successfully read from 'url'
-		inline bool WebGet(char const* url, std::string& data)
-		{
-			impl::StrOut out(data);
-			return WebGet(url, out);
-		}
 
-		// Read a file from a URL saving it to 'filename'
-		inline bool WebGet(char const* url, char const* filename)
-		{
-			impl::FileOut out(filename);
-			return WebGet(url, out);
-		}
+
+
+
+
+
+
+
 //		
 //#define UPDATECHECK_BROWSER_STRING _T("Update search")
 //		class CUpdateCheck  
@@ -94,9 +118,6 @@ namespace pr
 //			virtual void MsgUpdateNotAvailable(DWORD dwMSlocal, DWORD dwLSlocal);
 //			virtual void MsgUpdateNoCheck(DWORD dwMSlocal, DWORD dwLSlocal);
 //		};
-	}
-}
-#endif
 
 //
 //BOOL CUpdateCheck::GetFileVersion(DWORD &dwMS, DWORD &dwLS)

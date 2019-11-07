@@ -6,12 +6,11 @@
 
 #include <vector>
 #include <mutex>
+#include <filesystem>
 #include "pr/common/guid.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/algorithm.h"
 #include "pr/container/vector.h"
-#include "pr/filesys/fileex.h"
-#include "pr/filesys/filesys.h"
 #include "pr/str/string.h"
 #include "pr/threads/synchronise.h"
 
@@ -43,43 +42,44 @@ namespace pr
 	{
 	public:
 
-		// Filepath strings
-		using string = pr::string<wchar_t>;
+		using path           = std::filesystem::path;
+		using file_time_type = std::filesystem::file_time_type;
 
 		// File time stamp info
 		struct File
 		{
-			pr::string<wchar_t>   m_filepath;  // The file to watch
-			pr::filesys::FileTime m_time;      // The last modified time stats
-			IFileChangedHandler*  m_onchanged; // The client to callback when a changed file is found
-			pr::Guid              m_id;        // A user provided id used to identify groups of watched files
-			void*                 m_user_data; // User data to provide in the callback
+			path                 m_filepath;  // The file to watch
+			file_time_type       m_time;      // The last modified time stats
+			IFileChangedHandler* m_onchanged; // The client to callback when a changed file is found
+			pr::Guid             m_id;        // A user provided id used to identify groups of watched files
+			void*                m_user_data; // User data to provide in the callback
 		
 			File() = default;
-			File(pr::string<wchar_t> const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
+			File(path const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data)
 				:m_filepath(filepath)
-				,m_time(pr::filesys::FileTimeStats(filepath))
+				,m_time(std::filesystem::last_write_time(filepath))
 				,m_onchanged(onchanged)
 				,m_id(id)
 				,m_user_data(user_data)
 			{}
 
-			bool operator == (string const& filepath) const { return pr::str::EqualI(m_filepath, filepath); }
-			bool operator == (pr::Guid const& id) const     { return m_id == id; }
+			bool operator == (path const& filepath) const
+			{
+				return std::filesystem::equivalent(m_filepath, filepath); 
+			}
+			bool operator == (pr::Guid const& id) const
+			{
+				return m_id == id; 
+			}
 		};
-		struct FileCont :pr::vector<File> {};
+		struct FileCont :pr::vector<File>
+		{};
 
 	private:
 
 		// The files being watched. Access via a Lock instance
 		FileCont m_impl_files;
 		std::mutex mutable m_mutex;
-
-		// Standardise a filepath
-		std::wstring Canonicalise(wchar_t const* filepath) const
-		{
-			return pr::filesys::Standardise<string>(filepath);
-		}
 
 	public:
 
@@ -110,9 +110,9 @@ namespace pr
 		};
 
 		// Return the Guid associated with the given filepath (or GuidZero, if not being watched)
-		pr::Guid FindId(wchar_t const* filepath) const
+		pr::Guid FindId(path const& filepath) const
 		{
-			auto fpath = Canonicalise(filepath);
+			auto fpath = std::filesystem::canonical(filepath);
 			
 			Lock lock(*this);
 			auto& files = lock.files();
@@ -121,34 +121,34 @@ namespace pr
 		}
 
 		// Mark a file as changed, to be caught on the next 'CheckForChangedFiles' call
-		void MarkAsChanged(wchar_t const* filepath)
+		void MarkAsChanged(path const& filepath)
 		{
-			auto fpath = Canonicalise(filepath);
+			auto fpath = std::filesystem::canonical(filepath);
 			
 			Lock lock(*this);
 			auto& files = lock.files();
 			auto iter = pr::find(files, fpath);
 			if (iter != std::end(files))
-				iter->m_time.m_last_modified--;
+				iter->m_time -= std::chrono::seconds(10);
 		}
 
 		// Add a file to be watched
-		void Add(wchar_t const* filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data = nullptr)
+		void Add(std::filesystem::path const& filepath, IFileChangedHandler* onchanged, pr::Guid const& id, void* user_data = nullptr)
 		{
 			// Remove if already added
 			Remove(filepath);
 
 			// Add to the files collection
 			Lock lock(*this);
-			auto fpath = Canonicalise(filepath);
+			auto fpath = std::filesystem::canonical(filepath);
 			lock.files().emplace_back(fpath, onchanged, id, user_data);
 		}
 
 		// Remove a watched file
-		void Remove(wchar_t const* filepath)
+		void Remove(std::filesystem::path const& filepath)
 		{
 			Lock lock(*this);
-			auto fpath = Canonicalise(filepath);
+			auto fpath = std::filesystem::canonical(filepath);
 			pr::erase_first(lock.files(), [&](File const& f){ return f == fpath; });
 		}
 
@@ -175,8 +175,8 @@ namespace pr
 				Lock lock(*this);
 				for (auto& file : lock.files())
 				{
-					auto stamp = pr::filesys::FileTimeStats(file.m_filepath);
-					if (file.m_time.m_last_modified != stamp.m_last_modified) changed_files.push_back(file);
+					auto stamp = std::filesystem::last_write_time(file.m_filepath);
+					if (file.m_time != stamp) changed_files.push_back(file);
 					file.m_time = stamp;
 				}
 			}

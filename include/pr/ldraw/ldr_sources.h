@@ -505,7 +505,7 @@ namespace pr
 					else
 					{
 						// Assume an ldr script file
-						LockFile lock(file.m_filepath, 10, 5000);
+						filesys::LockFile lock(file.m_filepath, 10, 5000);
 						FileSrc src(file.m_filepath, 0, enc);
 
 						// When the include handler opens files, add them to the watcher as well

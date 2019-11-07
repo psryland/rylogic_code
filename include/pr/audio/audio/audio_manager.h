@@ -30,7 +30,7 @@ namespace pr
 		{
 			Settings m_settings;
 			pr::RefPtr<IXAudio2> m_xaudio;
-			pr::VoicePtr<IXAudio2MasteringVoice> m_master;
+			pr::audio::VoicePtr<IXAudio2MasteringVoice> m_master;
 
 			State(Settings const& settings);
 			~State();
@@ -40,7 +40,6 @@ namespace pr
 	// The "Renderer" of Audio
 	class AudioManager :audio::State
 	{
-
 	public:
 
 		explicit AudioManager(audio::Settings const& settings);
@@ -48,7 +47,7 @@ namespace pr
 
 		// Load and play an audio file synchronously.
 		// If the audio contains loops, 'loop_count' indicates how many times to loop
-		void PlaySynchronous(wchar_t const* filepath, int loop_count = 0) const;
+		void PlaySynchronous(std::filesystem::path const& filepath, int loop_count = 0) const;
 
 	};
 }

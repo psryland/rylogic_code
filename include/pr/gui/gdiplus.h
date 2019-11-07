@@ -11,11 +11,11 @@
 #endif
 
 #include <vector>
+#include <filesystem>
 #pragma warning(push,3)
 #include <gdiplus.h>
 #pragma warning(pop)
 #include "pr/common/to.h"
-#include "pr/filesys/filesys.h"
 
 #pragma comment(lib, "gdiplus.lib")
 static_assert(GDIPVER == 0x0110, "");
@@ -139,14 +139,14 @@ namespace Gdiplus
 	};
 
 	// Helper for saving GDI Images that infers the codec from the file extension
-	inline Status Save(Image const& image, wchar_t const* filepath)
+	inline Status Save(Image const& image, std::filesystem::path const& filepath)
 	{
-		auto extn = pr::filesys::GetExtensionInPlace(filepath);
-		if (*extn == 0)
-			throw std::exception("Image save could not infer the image format from the file extension");
+		if (!filepath.has_extension())
+			throw std::runtime_error("Image save could not infer the image format from the file extension");
 
+		auto extn = filepath.extension().c_str() + 1; // skip the '.'
 		auto mime = std::wstring(L"image/").append(extn);
-		return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
+		return const_cast<Image&>(image).Save(filepath.c_str(), &ImageCodec::Clsid(mime.c_str()));
 	}
 
 	// Helper for checking GDI return codes

@@ -1408,7 +1408,7 @@ namespace pr
 			Database()
 				:m_db()
 			{}
-			Database(char const* db_file, int flags = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, char const* vfs = 0)
+			Database(std::filesystem::path const& db_file, int flags = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, char const* vfs = 0)
 				:m_db()
 			{
 				Open(db_file, flags, vfs);
@@ -1428,9 +1428,9 @@ namespace pr
 			}
 
 			// Open a database file
-			void Open(char const* db_file, int flags = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, char const* vfs = 0)
+			void Open(std::filesystem::path const& db_file, int flags = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, char const* vfs = 0)
 			{
-				int res = sqlite3_open_v2(db_file, &m_db, flags, vfs);
+				int res = sqlite3_open_v2(db_file.string().c_str(), &m_db, flags, vfs);
 				if (res != SQLITE_OK)
 					throw Exception(res, sqlite3_errmsg(m_db), false);
 				BusyTimeout(BusyTimeoutDefault);
@@ -1600,7 +1600,6 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/filesys/filesys.h"
 #include "pr/common/guid.h"
 namespace pr::sqlite
 {
@@ -1616,23 +1615,8 @@ namespace pr::sqlite
 
 		struct DB :pr::sqlite::Database
 		{
-			std::string m_dbfile;
-			DB(char const* dbfile = DB::TmpFile())
-				:pr::sqlite::Database(dbfile)
-				,m_dbfile(dbfile)
-			{}
-			~DB()
-			{
-				pr::filesys::EraseFile<std::string>(m_dbfile);
-			}
-			static char const* TmpFile()
-			{
-				static char f[MAX_PATH];
-				GetTempPathA(sizeof(f), f);
-				return strcat(f, "TmpDB.db");
-			}
+			DB() :pr::sqlite::Database(L":memory:") {}
 		};
-
 		inline void SqliteLog(void*, int code, char const* msg)
 		{
 			(void)code;
@@ -1640,13 +1624,14 @@ namespace pr::sqlite
 			//std::cout << "[Sqlite] " << code << " - " << msg << "\n";
 		}
 	}
-	PRUnitTest(pr_storage_sqlite)
+	PRUnitTest(SqliteTests)
 	{
 		using namespace unittests::sqlite;
 
 		// Set the log function
 		pr::sqlite::Configure((int)EConfig::Log, SqliteLog, 0);
 		sqlite3_log(-1, "%s", "test");
+
 
 		{//SimpleTypeStorage
 			struct Record

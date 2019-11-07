@@ -14,8 +14,7 @@
 #include "pr/str/to_string.h"
 #include "pr/str/string.h"
 #include "pr/str/string_util.h"
-#include "pr/filesys/file.h"
-#include "pr/filesys/fileex.h"
+#include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/conversion.h"
 #include "pr/maths/spatial.h"
@@ -181,11 +180,11 @@ namespace pr
 		}
 		#pragma endregion
 
-		inline void Write(TStr const& str, wchar_t const* filepath, bool append = false)
+		inline void Write(TStr const& str, std::filesystem::path const& filepath, bool append = false)
 		{
 			if (str.size() == 0) return;
-			LockFile lock(filepath);
-			BufferToFile(str, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
+			filesys::LockFile lock(filepath);
+			filesys::BufferToFile(str, filepath, EEncoding::utf8, EEncoding::utf16_le, append);
 		}
 		inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
 		{

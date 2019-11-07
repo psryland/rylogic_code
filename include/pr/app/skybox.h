@@ -46,7 +46,7 @@ namespace pr
 
 			// Constructs a sky box model and instance.
 			// 'texpath' should be an unrolled cube texture
-			Skybox(pr::Renderer& rdr, wstring const& texpath, EStyle tex_style, float scale = 1000.0f)
+			Skybox(pr::Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 1000.0f)
 				:m_inst()
 				,m_tex()
 				,m_scale(scale)
@@ -77,7 +77,7 @@ namespace pr
 		private:
 
 			// Create a model for a geosphere sky box
-			void InitGeosphere(pr::Renderer& rdr, wstring const& texpath)
+			void InitGeosphere(pr::Renderer& rdr, std::filesystem::path const& texpath)
 			{
 				using namespace pr::rdr;
 
@@ -92,7 +92,7 @@ namespace pr
 			}
 
 			// Create a model for a 5-sided cubic dome
-			void InitFiveSidedCube(pr::Renderer& rdr, wstring const& texpath)
+			void InitFiveSidedCube(pr::Renderer& rdr, std::filesystem::path const& texpath)
 			{
 				using namespace pr::rdr;
 
@@ -133,7 +133,7 @@ namespace pr
 			}
 
 			// Create a model for a 6-sided cube
-			void InitSixSidedCube(pr::Renderer& rdr, wstring const& texpath)
+			void InitSixSidedCube(pr::Renderer& rdr, std::filesystem::path  const& texpath)
 			{
 				using namespace pr::rdr;
 
@@ -182,8 +182,8 @@ namespace pr
 				NuggetProps ddata(EPrim::TriList, EGeom::Vert|EGeom::Tex0);
 
 				// One texture per nugget
-				wstring tpath = texpath;
-				size_t ofs    = tpath.find(L"??", 0, 2);
+				auto tpath = texpath.wstring();
+				size_t ofs = tpath.find(L"??", 0, 2);
 				PR_ASSERT(PR_DBG, ofs != string::npos, "Provided path does not include '??' characters");
 				wchar_t const axes[6][3] = {{L"+X"},{L"-X"},{L"+Y"},{L"-Y"},{L"+Z"},{L"-Z"}};
 				for (int i = 0; i != 6; ++i)

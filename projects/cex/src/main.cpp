@@ -83,14 +83,14 @@ namespace cex
 		int Run(std::wstring args)
 		{
 			// Get the name of this executable
-			auto exepath = pr::Win32<wchar_t>::ModuleFileName(nullptr);
-			auto path = pr::str::LowerCaseC(pr::filesys::GetDirectory(exepath));
-			auto name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
-			auto extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
+			auto exepath = pr::win32::ExePath();
+			auto path = exepath.parent_path();
+			auto name = exepath.stem();
+			auto extn = exepath.extension();
 
 			// Look for an XML file with the same name as this program in the local directory
-			auto config = path + L"\\" + name + L".xml";
-			if (pr::filesys::FileExists(config))
+			auto config = path / name.replace_extension(L".xml");
+			if (std::filesystem::exists(config))
 				return RunFromXml(config, args);
 
 			// If the name of the exe is not 'cex', assume an implicit -exename as the first command line argument
@@ -181,7 +181,7 @@ namespace cex
 		}
 
 		// Read 'config' and execute
-		int RunFromXml(std::wstring config, std::wstring args)
+		int RunFromXml(std::filesystem::path const& config, std::wstring args)
 		{
 			// Load the XML file
 			pr::xml::Node root;

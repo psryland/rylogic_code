@@ -34,7 +34,6 @@
 #include "pr/container/vector.h"
 #include "pr/container/span.h"
 #include "pr/container/byte_data.h"
-#include "pr/filesys/fileex.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/script/reader.h"
 #include "pr/script/embedded_lua.h"

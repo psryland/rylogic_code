@@ -6,11 +6,8 @@
 
 #include "pr/audio/audio/forward.h"
 
-namespace pr
+namespace pr::audio
 {
-	namespace audio
-	{
-		// Create a wave bank for a midi instrument
-		void CreateMidiInstrumentWaveBank(char const* bank_name, wchar_t const* root_dir, wchar_t const* xwb_filepath, wchar_t const* xml_instrument_filepath);
-	}
+	// Create a wave bank for a midi instrument
+	void CreateMidiInstrumentWaveBank(char const* bank_name, std::filesystem::path const& root_dir, std::filesystem::path const& xwb_filepath, std::filesystem::path const& xml_instrument_filepath);
 }

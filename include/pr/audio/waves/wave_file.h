@@ -36,8 +36,8 @@ namespace pr
 		void LoadWAVAudioInMemory(uint8_t const* wav_data, size_t wav_data_size, WavData& result);
 
 		// Load and parse a wave file from a file
-		void LoadWAVAudioFromFile(wchar_t const* filepath, std::unique_ptr<uint8_t[]>& wav_data, WAVEFORMATEX const*& wfx, uint8_t const*& audio_start, uint32_t& audio_bytes);
-		void LoadWAVAudioFromFile(wchar_t const* filepath, std::unique_ptr<uint8_t[]>& wav_data, WavData& result);
+		void LoadWAVAudioFromFile(std::filesystem::path const& filepath, std::unique_ptr<uint8_t[]>& wav_data, WAVEFORMATEX const*& wfx, uint8_t const*& audio_start, uint32_t& audio_bytes);
+		void LoadWAVAudioFromFile(std::filesystem::path const& filepath, std::unique_ptr<uint8_t[]>& wav_data, WavData& result);
 
 		// Return the string for a wave file tag
 		inline char const* FormatTagName(WORD wFormatTag)

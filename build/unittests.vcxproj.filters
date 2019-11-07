@@ -150,9 +150,6 @@
     <ClInclude Include="..\include\pr\macros\auto_do.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\autofile.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\base64.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -222,14 +219,8 @@
     <ClInclude Include="..\include\pr\common\datetime.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\dependency.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\container\deque.h">
       <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\discretepidcontroller.h">
-      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\enumerable.h">
       <Filter>pr\common</Filter>
@@ -237,16 +228,7 @@
     <ClInclude Include="..\include\pr\common\event.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\file.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\fileex.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\filesys\filesys.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\filesyswin.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\filesys\filewatch.h">
@@ -260,9 +242,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\exception.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\findfiles.h">
-      <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\font_helper.h">
       <Filter>pr\gui</Filter>
@@ -489,9 +468,6 @@
     <ClInclude Include="..\include\pr\container\queue.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\recurse_directory.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\recent_files.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -595,9 +571,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\static_callback.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\stackdump.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\utility.h">
@@ -1034,6 +1007,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\str\encoding.h">
       <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\win32\stackdump.h">
+      <Filter>pr\win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

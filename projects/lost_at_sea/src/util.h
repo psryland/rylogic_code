@@ -10,49 +10,28 @@
 
 namespace las
 {
-	// Return the directory that this app is running in
-	inline wstring ModuleDir()
+	// The directory that the app is running from
+	std::filesystem::path ModuleDir()
 	{
-		wchar_t temp[MAX_PATH]; GetModuleFileNameW(0, temp, MAX_PATH);
-		return pr::filesys::GetDirectory<wstring>(temp);
+		return pr::win32::ExeDir();
 	}
-	
+
 	// Return true if the app is running as a portable app
 	inline bool IsPortable()
 	{
 		// Look for a file called "portable" in the same directory as the main app
-		return pr::filesys::FileExists(pr::filesys::CombinePath<wstring>(ModuleDir(), L"portable"));
+		return std::filesystem::exists(ModuleDir() / L"portable");
 	}
 	
 	// Return the path to the settings file
-	inline std::string SettingsPath()
+	inline std::filesystem::path SettingsPath()
 	{
-		auto path = pr::filesys::CombinePath<wstring>(ModuleDir(), L"settings.xml");
-		return pr::To<std::string>(path);
-		//wstring dir = ModuleDir();
-		//
-		//// If portable use a local settings file
-		//if (IsPortable())
-		//	return pr::filesys::CombinePath<wstring>(dir, L"settings.cfg");
-		//
-		//// Otherwise find the user app data folder
-		//wchar_t temp[MAX_PATH];
-		//if (pr::Failed(SHGetFolderPathW(hwnd, CSIDL_LOCAL_APPDATA, 0, CSIDL_FLAG_CREATE, temp)))
-		//	throw Exception(EResult::SettingsPathNotFound, "The settings path could not be created");
-		//
-		//wstring path = temp;
-		//path += L"\\";
-		//path += pr::To<wstring>(AppVendor());
-		//path += L"\\";
-		//path += pr::To<wstring>(AppTitle());
-		//path += L"\\settings.cfg";
-		//return path;
+		return ModuleDir() / L"settings.xml";
 	}
 
 	// Return the full path
-	inline wstring DataPath(wstring const& relpath)
+	inline std::filesystem::path DataPath(std::filesystem::path const& relpath)
 	{
-		auto dir = ModuleDir();
-		return pr::filesys::CombinePath<wstring>(dir, relpath);
+		return ModuleDir() / relpath;
 	}
 }

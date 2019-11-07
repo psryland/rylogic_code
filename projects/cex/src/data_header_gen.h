@@ -10,8 +10,8 @@ namespace cex
 {
 	struct HData :ICex
 	{
-		std::string m_src;
-		std::string m_dst;
+		std::filesystem::path m_src;
+		std::filesystem::path m_dst;
 		bool m_binary;
 		bool m_verbose;
 

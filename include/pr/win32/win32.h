@@ -22,15 +22,12 @@
 #pragma once
 
 #include <string>
-
 #include <sdkddkver.h>
 #include <windows.h>
 #include <knownfolders.h>
 #include <shlobj.h>
-
 #include "pr/common/fmt.h"
 #include "pr/common/hresult.h"
-#include "pr/filesys/filesys.h"
 #include "pr/str/string_core.h"
 #include "pr/str/string_util.h"
 
@@ -40,21 +37,6 @@ namespace pr
 	template <typename Char> struct Win32;
 	template <> struct Win32<char>
 	{
-		// GetModuleFileName
-		static std::string ModuleFileName(HMODULE module = nullptr)
-		{
-			// Get the required buffer size
-			char buf[_MAX_PATH];
-			auto len = ::GetModuleFileNameA(module, &buf[0], _countof(buf));
-			if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				return std::string(buf, len);
-
-			std::string name(len, 0);
-			len = ::GetModuleFileNameA(module, &name[0], len);
-			Throw(len == name.size(), "GetModuleFileNameW failed");
-			return std::move(name);
-		}
-
 		// GetModuleHandleEx
 		static HMODULE ModuleHandleEx(DWORD flags, char const* module_name)
 		{
@@ -83,21 +65,6 @@ namespace pr
 	};
 	template <> struct Win32<wchar_t>
 	{
-		// GetModuleFileName
-		static std::wstring ModuleFileName(HMODULE module = nullptr)
-		{
-			// Get the required buffer size
-			wchar_t buf[_MAX_PATH];
-			auto len = ::GetModuleFileNameW(module, &buf[0], _countof(buf));
-			if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
-				return std::wstring(buf, len);
-
-			std::wstring name(len, 0);
-			len = ::GetModuleFileNameW(module, &name[0], len);
-			Throw(len == name.size(), "GetModuleFileNameW failed");
-			return std::move(name);
-		}
-
 		// GetModuleHandleEx
 		static HMODULE ModuleHandleEx(DWORD flags, wchar_t const* module_name)
 		{
@@ -127,15 +94,88 @@ namespace pr
 
 	namespace win32
 	{
-		// Return the name of the currently running executable
-		template <typename String, typename Char = String::value_type> inline String ExePath()
+		// RAII Windows handle
+		struct Handle
 		{
-			return std::move(String(Win32<Char>::ModuleFileName()));
+			struct Closer
+			{
+				void operator()(HANDLE h)
+				{
+					if (h == INVALID_HANDLE_VALUE) return;
+					if (h == nullptr) return;
+					::CloseHandle(h);
+				}
+			};
+			std::unique_ptr<void, Closer> m_handle;
+
+			Handle() noexcept
+				:m_handle(nullptr)
+			{}
+			Handle(HANDLE h) noexcept
+				:m_handle(h)
+			{}
+			operator HANDLE() const noexcept
+			{
+				return m_handle.get();
+			}
+			operator bool() const noexcept
+			{
+				return m_handle != nullptr && m_handle.get() != INVALID_HANDLE_VALUE;
+			}
+			bool operator == (HANDLE rhs) const noexcept
+			{
+				return m_handle.get() == rhs;
+			}
+			bool operator != (HANDLE rhs) const noexcept
+			{
+				return m_handle.get() != rhs;
+			}
+			void close()
+			{
+				m_handle = nullptr;
+			}
+		};
+
+		// Windows API 'CreateFile'
+		// 'dwDesiredAccess' = e.g. GENERIC_READ
+		// 'dwShareMode' = e.g. FILE_SHARE_READ
+		// 'dwCreationDisposition' = e.g. OPEN_EXISTING
+		inline Handle FileOpen(std::filesystem::path const& filepath, DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwCreationDisposition, DWORD dwAttributes = FILE_ATTRIBUTE_NORMAL, DWORD dwFlags = 0)
+		{
+			#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+			CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {};
+			CreateExParams.dwFileAttributes = dwAttributes;
+			CreateExParams.dwFileFlags = dwFlags;
+			auto h = CreateFile2(filepath.c_str(), dwDesiredAccess, dwShareMode, dwCreationDisposition, &CreateExParams);
+			#else
+			auto h = CreateFileW(filepath.c_str(), dwDesiredAccess, dwShareMode, nullptr, dwCreationDisposition, dwAttributes | dwFlags, nullptr);
+			#endif
+			return Handle(h);
 		}
-		template <typename String, typename Char = String::value_type> inline String ExeDir()
+
+		// GetModuleFileName
+		static std::filesystem::path ModuleFileName(HMODULE module = nullptr)
 		{
-			auto dir = pr::filesys::GetDirectory(ExePath<String>());
-			return std::move(dir);
+			// Get the required buffer size
+			wchar_t buf[_MAX_PATH];
+			auto len = ::GetModuleFileNameW(module, &buf[0], _countof(buf));
+			if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+				return std::filesystem::path(&buf[0], &buf[0] + len);
+
+			std::wstring name(len, 0);
+			len = ::GetModuleFileNameW(module, &name[0], len);
+			Throw(len == name.size(), "GetModuleFileNameW failed");
+			return std::move(name);
+		}
+
+		// Return the name of the currently running executable
+		inline std::filesystem::path ExePath()
+		{
+			return ModuleFileName();
+		}
+		inline std::filesystem::path ExeDir()
+		{
+			return ExePath().parent_path();
 		}
 
 		// Return the HMODULE for the current process. Note: XP and above only
@@ -146,14 +186,18 @@ namespace pr
 		}
 
 		// Return the window text for a window (sends WM_GETTEXTLENGTH and WM_GETTEXT)
-		template <typename String, typename Char = String::value_type> inline bool WindowText(HWND hwnd, String& text)
+		template <typename String, typename = std::enable_if_t<is_string_v<String>>>
+		inline bool WindowText(HWND hwnd, String& text)
 		{
+			using Char = typename = string_traits<String>::value_type;
+
 			auto len = Win32<Char>::WindowTextLength(hwnd);
 			String text(len, 0);
 			auto got = Win32<Char>::WindowText(hwnd, &text[0], DWORD(text.size()));
 			return len == got;
 		}
-		template <typename String, typename Char = String::value_type> inline String WindowText(HWND hwnd)
+		template <typename String, typename = std::enable_if_t<is_string_v<String>>>
+		inline String WindowText(HWND hwnd)
 		{
 			String text;
 			Throw(WindowText(hwnd, text), "WindowText failed");
@@ -162,23 +206,23 @@ namespace pr
 
 		// Retrieves the full path of a known folder identified by the folder's KNOWNFOLDERID.
 		// The returned path does not include a trailing backslash. For example, "C:\Users" is returned rather than "C:\Users\".
-		inline HRESULT FolderPath(KNOWNFOLDERID const& folder_id, DWORD flags, HANDLE token, std::wstring& path)
+		inline HRESULT FolderPath(KNOWNFOLDERID const& folder_id, DWORD flags, HANDLE token, std::filesystem::path& path)
 		{
 			// On return, 'path' contains the address of a pointer to a null-terminated Unicode string that specifies
 			// the path of the known folder. The calling process is responsible for freeing this resource once it is no
 			// longer needed by calling CoTaskMemFree. 
 			wchar_t* p;
 			auto hr = ::SHGetKnownFolderPath(folder_id, flags, token, &p);
-			if (pr::Failed(hr))
+			if (Failed(hr))
 				return hr;
 
 			path = p;
 			::CoTaskMemFree(p);
 			return hr;
 		}
-		inline std::wstring FolderPath(KNOWNFOLDERID const& folder_id, DWORD flags, HANDLE token)
+		inline std::filesystem::path FolderPath(KNOWNFOLDERID const& folder_id, DWORD flags, HANDLE token)
 		{
-			std::wstring path;
+			std::filesystem::path path;
 			Throw(FolderPath(folder_id, flags, token, path), "SHGetKnownFolderPath failed");
 			return std::move(path);
 		}
@@ -187,35 +231,36 @@ namespace pr
 		// Look for a file in the same directory as the running module called 'portable'.
 		// If found use the app directory to write settings otherwise use the users local app data directory
 		// If the local app data folder is used, 'subdir' creates a subdirectory within that folder, e.g. "\\Rylogic\\MyProgram\\"
-		inline std::wstring AppSettingsFilepath(bool portable, std::wstring const& subdir = std::wstring())
+		inline std::filesystem::path AppSettingsFilepath(bool portable, std::filesystem::path const& subdir = {})
 		{
-			using namespace pr::filesys;
+			using namespace std::filesystem;
 
 			// Determine the directory we're running in
-			auto module_path       = Win32<wchar_t>::ModuleFileName();
-			auto module_dir        = GetDirectory(module_path);
-			auto module_ftitle     = GetFiletitle(module_path);
-			auto settings_filename = module_ftitle + L".cfg";
+			auto module_path       = ModuleFileName();
+			auto module_dir        = module_path.parent_path();
+			auto module_ftitle     = module_path.stem();
+			auto settings_filename = module_ftitle.replace_extension(L".cfg");
 
 			// Does the file 'portable' exist? If so, return a filepath in the same dir as the module
-			if (portable || FileExists(module_dir + L"\\portable"))
-				return CombinePath(module_dir, settings_filename); // turn .\path\module.exe into .\path\module.cfg for settings
+			if (portable || exists(module_dir / L"portable"))
+				return module_dir / settings_filename; // turn .\path\module.exe into .\path\module.cfg for settings
 		
 			// Otherwise, return a filepath in the local app data for the current user
-			std::wstring local_app_data;
-			if (pr::Succeeded(FolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, local_app_data)))
+			path local_app_data;
+			if (Succeeded(FolderPath(FOLDERID_LocalAppData, KF_FLAG_CREATE, nullptr, local_app_data)))
 			{
-				if (subdir.empty()) local_app_data.append(L"\\Rylogic\\").append(module_ftitle).append(L"\\");
-				else                local_app_data.append(subdir);
-				return CombinePath(local_app_data, settings_filename);
+				if (subdir.empty()) local_app_data = local_app_data / L"Rylogic" / module_ftitle / L"";
+				else                local_app_data = local_app_data / subdir;
+				return local_app_data / settings_filename;
 			}
 		
 			// Return a filepath in the local directory
-			return CombinePath(module_path, settings_filename);
+			return module_path / settings_filename;
 		}
 
 		// Return the HWND for a window by name
-		template <typename Char> inline HWND WindowByName(Char const* title, bool partial = false)
+		template <typename Char>
+		inline HWND WindowByName(Char const* title, bool partial = false)
 		{
 			struct Data
 			{
@@ -240,7 +285,7 @@ namespace pr
 					return fa;se;
 				}
 			};
-			Data data = {0, title, pr::str::char_traits<Char>::strlen(title), partial};
+			Data data = {0, title, char_traits<Char>::length(title), partial};
 			EnumWindows(CallBacks::EnumWindowsProc, (LPARAM)&data);
 			return data.m_hwnd;
 		}
@@ -248,49 +293,63 @@ namespace pr
 		// Load a dependent dll
 		// 'dir' can use substitution values L".\\lib\\$(platform)\\$(config)\\"
 		// 'Context' is used to ensure the module handle for the dll only exists once for each dll
-		template <typename Context> inline HMODULE LoadDll(std::wstring const& dllname, std::wstring dir)
+		template <typename Context>
+		inline HMODULE LoadDll(std::filesystem::path const& dllname, std::wstring dir)
 		{
-			using namespace pr::filesys;
+			using namespace std::filesystem;
 
 			static HMODULE module = nullptr;
 			if (module != nullptr)
 				return module;
 
+			constexpr wchar_t const* platform =
+				sizeof(void*) == 8 ? L"x64" :
+				sizeof(void*) == 4 ? L"x86" :
+				L"";
+
 			#ifdef DEBUG
-			bool const debug = true;
+			constexpr wchar_t const* config = L"release";
 			#else
-			bool const debug = false;
+			constexpr wchar_t const* config = L"debug";
 			#endif
 
 			std::wstring searched;
 
 			// Try the lib folder. Load the appropriate dll for the platform
-			str::Replace(dir, L"$(platform)", sizeof(void*) == 8 ? L"x64" : sizeof(void*) == 4 ? L"x86" : throw std::runtime_error("Pointer size not supported. Platform unknown"));
-			str::Replace(dir, L"$(config)", debug ? L"debug" : L"release");
-			auto exe_dir = ExeDir<std::wstring>();
+			str::Replace(dir, L"$(platform)", platform);
+			str::Replace(dir, L"$(config)", config);
+			
+			auto exe_dir = ExeDir();
 
-			auto dllpath = CombinePath(exe_dir, dir, dllname);
-			searched.append(dllpath).append(L"\n");
-			if (FileExists(dllpath))
+			auto dllpath = exe_dir / dir / dllname;
+			if (exists(dllpath))
 			{
 				module = ::LoadLibraryW(dllpath.c_str());
 				if (module != nullptr)
 					return module;
 			}
+			else
+			{
+				searched.append(dllpath.wstring()).append(L"\n");
+			}
 
 			// Try the local directory
-			dllpath = CombinePath(exe_dir, dllname);
-			searched.append(dllpath).append(L"\n");
-			if (FileExists(dllpath))
+			dllpath = exe_dir / dllname;
+			if (exists(dllpath))
 			{
-				module = ::LoadLibraryW(dllname.c_str());
+				module = ::LoadLibraryW(dllpath.c_str());
 				if (module != nullptr)
 					return module;
 			}
+			else
+			{
+				searched.append(dllpath.wstring()).append(L"\n");
+			}
 
-			throw std::exception(pr::FmtS("Failed to load dependency '%S'\nSearched:\n%S", dllname.c_str(), searched.c_str()));
+			throw std::runtime_error(FmtS("Failed to load dependency '%S'\nSearched:\n%S", dllname.c_str(), searched.c_str()));
 		}
-		template <typename Context> inline HMODULE LoadDll(std::wstring const& dllname)
+		template <typename Context>
+		inline HMODULE LoadDll(std::filesystem::path const& dllname)
 		{
 			return LoadDll<Context>(dllname, L".\\lib\\$(platform)\\$(config)");
 		}

@@ -15,16 +15,16 @@
 #pragma once
 
 #include <string>
+#include <filesystem>
 #include <type_traits>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/common/hash.h"
-#include "pr/filesys/file.h"
-#include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
+#include "pr/str/string_util.h"
 #include "pr/str/string.h"
 
 namespace pr
@@ -79,7 +79,7 @@ namespace pr
 		inline string Write(wchar_t const* t)
 		{
 			auto s = pr::str::StringToCString<string>(t);
-			s = pr::filesys::AddQuotes(s);
+			s = str::Quotes(s, true);
 			return s;
 		}
 		template <typename Char> inline string Write(std::basic_string<Char> const& t)
@@ -178,12 +178,12 @@ namespace pr
 		// Create an event for this settings type
 		using Evt = typename pr::settings::Evt<TSettings>;
 
-		std::wstring m_filepath; // The file path to save the settings
-		std::size_t m_crc;       // The CRC of the settings last time they were saved
-		std::string m_comments;  // Comments to add to the head of the exported settings
+		std::filesystem::path m_filepath; // The file path to save the settings
+		std::size_t m_crc;                // The CRC of the settings last time they were saved
+		std::string m_comments;           // Comments to add to the head of the exported settings
 
 		// Settings constructor
-		SettingsBase(std::wstring filepath)
+		SettingsBase(std::filesystem::path const& filepath)
 			:m_filepath(filepath)
 			,m_crc()
 			,m_comments()
@@ -194,10 +194,10 @@ namespace pr
 		{
 			return Load(m_filepath);
 		}
-		bool Load(std::wstring file)
+		bool Load(std::filesystem::path const& file)
 		{
 			m_filepath = file;
-			if (!pr::filesys::FileExists(m_filepath))
+			if (!std::filesystem::exists(m_filepath))
 			{
 				pr::events::Send(Evt(pr::FmtS("User settings file '%S' not found", m_filepath.c_str()), Evt::Warning));
 				return false;
@@ -205,7 +205,7 @@ namespace pr
 
 			// Read the settings into a buffer
 			std::string settings;
-			if (!pr::FileToBuffer(m_filepath, settings))
+			if (!pr::filesys::FileToBuffer(m_filepath, settings))
 			{
 				pr::events::Send(Evt(pr::FmtS("User settings file '%S' could not be read", m_filepath.c_str()), Evt::Error));
 				return false;
@@ -219,19 +219,19 @@ namespace pr
 		{
 			return Save(m_filepath);
 		}
-		bool Save(std::wstring file)
+		bool Save(std::filesystem::path const& file)
 		{
 			m_filepath = file;
 
-			auto dir = pr::filesys::GetDirectory(m_filepath);
-			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir))
+			auto dir = m_filepath.parent_path();
+			if (!std::filesystem::exists(dir) && !std::filesystem::create_directories(dir))
 			{
 				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
 				return false;
 			}
 
 			auto settings = Export();
-			if (!pr::BufferToFile(settings, m_filepath.c_str()))
+			if (!pr::BufferToFile(settings, m_filepath))
 			{
 				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
 				return false;
@@ -242,7 +242,10 @@ namespace pr
 		}
 
 		// Returns true if the settings have changed since last saved
-		bool SaveRequired() const { return m_crc != Crc(Export()); }
+		bool SaveRequired() const
+		{
+			return m_crc != Crc(Export());
+		}
 
 		// Export the settings to a string
 		std::string Export() const

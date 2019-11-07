@@ -563,18 +563,11 @@ namespace pr
 			impl::Check(writer->WriteEndDocument());
 			impl::Check(writer->Flush());
 		}
-		inline void Save(char const* filename, Node const& in, EProperty properties = EProperty::Indent)
+		inline void Save(std::filesystem::path const& filename, Node const& in, EProperty properties = EProperty::Indent)
 		{
 			// Create an 'IStream' from a file
 			ATL::CComPtr<IStream> stream;
-			impl::Check(SHCreateStreamOnFileA(filename, STGM_WRITE | STGM_CREATE, &stream));
-			Save(stream, in, properties);
-		}
-		inline void Save(wchar_t const* filename, Node const& in, EProperty properties = EProperty::Indent)
-		{
-			// Create an 'IStream' from a file
-			ATL::CComPtr<IStream> stream;
-			impl::Check(SHCreateStreamOnFileW(filename, STGM_WRITE | STGM_CREATE, &stream));
+			impl::Check(SHCreateStreamOnFileW(filename.c_str(), STGM_WRITE | STGM_CREATE, &stream));
 			Save(stream, in, properties);
 		}
 

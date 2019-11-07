@@ -423,7 +423,7 @@ namespace pr::script
 		using string = pr::string<wchar_t>;
 
 		char data[] = "Included";
-		auto script_include = L"script_include.txt";
+		auto script_include = temp_dir / L"script_include.txt";
 		auto cleanup = CreateScope([] {}, [=] { std::filesystem::remove(script_include); });
 
 		{// Create the file
@@ -434,7 +434,7 @@ namespace pr::script
 		{
 			Includes inc;
 
-			inc.AddSearchPath(win32::ExePath<std::filesystem::path>().parent_path());
+			inc.AddSearchPath(win32::ExePath().parent_path());
 			inc.AddSearchPath(std::filesystem::current_path());
 
 			auto src_ptr = inc.Open(script_include, EIncludeFlags::None);

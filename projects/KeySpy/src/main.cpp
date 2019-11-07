@@ -215,7 +215,7 @@ extern "C"
 				// Decode collected data
 			}
 		}
-		catch (std::exception const& ex)
+		catch ([[maybe_unused]] std::exception const& ex)
 		{
 			assert(false && ex.what());
 		}
@@ -239,7 +239,7 @@ extern "C"
 			}
 			return 0;
 		}
-		catch (std::exception const& ex)
+		catch ([[maybe_unused]] std::exception const& ex)
 		{
 			assert(false && ex.what());
 			return -1;

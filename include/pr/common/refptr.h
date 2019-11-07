@@ -21,7 +21,7 @@
 	#include <d3d11.h>
 	#include "pr/common/fmt.h"
 	#include "pr/common/assert.h"
-	#include "pr/common/stackdump.h"
+	#include "pr/win32/stackdump.h"
 #endif
 
 namespace pr
@@ -31,7 +31,7 @@ namespace pr
 	// Example code:
 	// #define PR_REFPTR_TRACE 1
 	// #include "pr/common/assert.h"
-	// #include "pr/common/stackdump.h"
+	// #include "pr/win32/stackdump.h"
 	// template <typename T> inline long PtrRefCount(T*);
 	// template <typename T> inline void RefPtrTrace(bool, T*){}
 	// template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)

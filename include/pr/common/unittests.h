@@ -30,6 +30,7 @@ namespace pr::unittests
 #include <string>
 #include <sstream>
 #include <vector>
+#include <filesystem>
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -50,7 +51,34 @@ namespace pr::unittests
 
 namespace pr::unittests
 {
-	typedef std::function<void(void)> TestFunc;
+	using TestFunc = std::function<void(void)>;
+
+	struct UnitTestItem
+	{
+		char const* m_name;
+		TestFunc    m_func;
+		UnitTestItem(char const* name, TestFunc func)
+			:m_name(name)
+			, m_func(func)
+		{}
+		friend bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs)
+		{
+			return strcmp(lhs.m_name, rhs.m_name) < 0;
+		}
+	};
+
+	// Platform string constant
+	constexpr wchar_t const* const Platform =
+		sizeof(void*) == 8 ? L"x64" :
+		sizeof(void*) == 4 ? L"x86" :
+		L"";
+
+	// Config string constant
+	#ifdef NDEBUG
+	constexpr wchar_t const Config[] = L"release";
+	#else
+	constexpr wchar_t const Config[] = L"debug";
+	#endif
 
 	// A pointer to the stream that output is written to
 	inline std::ostream*& outstream()
@@ -58,15 +86,17 @@ namespace pr::unittests
 		static std::ostream* s_ostream = &std::cout;
 		return s_ostream;
 	}
-	inline std::ostream& out() { return *outstream(); }
-
-	struct UnitTestItem
+	inline std::ostream& out()
 	{
-		char const* m_name;
-		TestFunc    m_func;
-		UnitTestItem(char const* name, TestFunc func) :m_name(name) ,m_func(func) {}
-	};
-	inline bool operator < (UnitTestItem const& lhs, UnitTestItem const& rhs) { return strcmp(lhs.m_name, rhs.m_name) < 0; }
+		return *outstream();
+	}
+
+	// A directory for temporary files needed by unit tests. Note: automatically cleaned
+	inline std::filesystem::path create_temp_dir(wchar_t const* testname)
+	{
+		using namespace std::filesystem;
+		return weakly_canonical(path(__FILE__).parent_path() / L".." / L".." / L".." / L"obj" / L"unittests" / testname / Platform / Config / "");
+	}
 
 	// All registered tests
 	inline std::vector<UnitTestItem>& Tests()
@@ -96,12 +126,11 @@ namespace pr::unittests
 		try
 		{
 			out() << " **** Begin Unit Tests **** " << std::endl;
-
-			auto T0 = high_resolution_clock::now();
 			std::sort(std::begin(Tests()), std::end(Tests()));
 
-			int passed = 0;
-			int failed = 0;
+			// Run the tests
+			int passed = 0, failed = 0;
+			auto T0 = high_resolution_clock::now();
 			for (auto i = std::begin(Tests()), iend = std::end(Tests()); i != iend; ++i)
 			{
 				UnitTestItem const& test = *i;
@@ -123,12 +152,14 @@ namespace pr::unittests
 					++failed;
 				}
 			}
-
 			auto T1 = high_resolution_clock::now();
+
+			// Print the results
 			if (failed == 0)
 				out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count()*0.001f << "ms) ****" << std::endl;
 			else
 				out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
+
 			return failed == 0 ? 0 : -1;
 		}
 		catch (...)
@@ -197,6 +228,7 @@ namespace pr::unittests
 		}
 	}
 
+	// Unit test Equal functions
 	template <typename T, typename U> inline bool UTEqual(T const& lhs, U const& rhs)
 	{
 		return lhs == rhs;
@@ -282,11 +314,18 @@ namespace pr::unittests
 		TEST_CLASS(testname)\
 		{\
 		public:\
-			TEST_METHOD(UnitTest) { func<void>(); }\
-			template <typename T> static void func();\
+			TEST_METHOD(UnitTest) { func(); }\
+			static void func()\
+			{\
+				std::filesystem::remove_all(temp_dir);\
+				std::filesystem::create_directories(temp_dir);\
+				test<void>();\
+			}\
+			inline static std::filesystem::path const temp_dir = pr::unittests::create_temp_dir(L#testname);\
+			template <typename T> static void test();\
 		};\
-		static bool s_unittest_##testname = pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, testname::func<void>));\
-		template <typename T> void testname::func()
+		static bool s_unittest_##testname = pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, testname::func));\
+		template <typename T> void testname::test()
 
 	#define PR_FAIL(msg)\
 		Assert::Fail(msg)

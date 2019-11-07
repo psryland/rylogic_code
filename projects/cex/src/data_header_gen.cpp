@@ -42,16 +42,19 @@ namespace cex
 	}
 
 	// Write out binary header file data
-	void WriteBinary(pr::Handle& in_file, pr::Handle& out_file)
+	void WriteBinary(std::ifstream& in_file, std::ofstream& out_file)
 	{
 		// Write the data
-		pr::uint const BytesPerLine = 16;
+		int const BytesPerLine = 16;
 		unsigned char buffer[BytesPerLine + 1];
-		DWORD i, bytes_read;
-		do
+		DWORD i;
+		for (;;)
 		{
+			auto bytes_read = in_file.read(pr::char_ptr(&buffer[0]), BytesPerLine).gcount();
+			if (bytes_read == 0)
+				break;
+
 			std::string line;
-			pr::FileRead(in_file, buffer, BytesPerLine, &bytes_read);
 			for (i = 0; i != bytes_read; ++i)
 			{
 				line += pr::Fmt("0x%2.2x, ", buffer[i]);
@@ -59,30 +62,34 @@ namespace cex
 				if ((i % 8) == 7) line += " ";
 
 				// Convert the buffer element to a character
-				if (!isalnum(buffer[i])) { buffer[i] = '.'; }
+				if (!isalnum(buffer[i]))
+					buffer[i] = '.';
 			}
 			buffer[i] = 0;
 
 			// Add the comments
-			if (!line.empty()) line += pr::Fmt("// %s\n", reinterpret_cast<char*>(buffer));
+			if (!line.empty())
+				line += pr::Fmt("// %s\n", reinterpret_cast<char*>(buffer));
 
 			// Write the line
-			pr::FileWrite(out_file, line.c_str());
+			out_file.write(line.data(), line.size());
 		}
-		while (bytes_read == BytesPerLine);
 	}
 
 	// Write out text header file data
-	void WriteText(pr::Handle& in_file, pr::Handle& out_file)
+	void WriteText(std::ifstream& in_file, std::ofstream& out_file)
 	{
-		pr::uint const BlockReadSize = 4096;
-		char buffer[BlockReadSize];
-		DWORD bytes_read;
-		do
+		int const BlockReadSize = 4096;
+		std::array<char, BlockReadSize> buffer;
+
+		for (;;)
 		{
+			auto bytes_read = in_file.read(buffer.data(), BlockReadSize).gcount();
+			if (bytes_read == 0)
+				break;
+
 			std::string line = "\"";
-			pr::FileRead(in_file, buffer, BlockReadSize, &bytes_read);
-			for (char *c = buffer, *c_end = buffer + bytes_read; c != c_end; ++c)
+			for (char *c = buffer.data(), *c_end = c + bytes_read; c != c_end; ++c)
 			{
 				switch (*c)
 				{
@@ -103,10 +110,9 @@ namespace cex
 			line += "\"";
 
 			// Write the line
-			pr::FileWrite(out_file, line.c_str());
+			out_file.write(line.data(), line.size());
 		}
-		while (bytes_read == BlockReadSize);
-		pr::FileWrite(out_file, ";");
+		out_file.write(";", 1);
 	}
 
 	int HData::Run()
@@ -115,22 +121,24 @@ namespace cex
 		if (m_dst.empty()) { printf("No output filepath provided\n"); return -1; }
 
 		// Open the source file
-		pr::Handle in_file = pr::FileOpen(m_src.c_str(), pr::EFileOpen::Reading);
-		if (in_file == INVALID_HANDLE_VALUE) { printf("Failed to open the source file: '%s'\n", m_src.c_str()); return -1; }
+		std::ifstream in_file(m_src);
+		if (!in_file)
+			throw std::runtime_error(pr::FmtS("Failed to open the source file: '%S'\n", m_src.c_str()));
 
 		// Open the output file
-		pr::Handle out_file = pr::FileOpen(m_dst.c_str(), pr::EFileOpen::Writing);
-		if (out_file == INVALID_HANDLE_VALUE) { printf("Failed to open the output file: '%s'\n", m_dst.c_str()); return -1; }
+		std::ofstream out_file(m_dst);
+		if (!out_file)
+			throw std::runtime_error(pr::FmtS("Failed to open the output file: '%S'\n", m_dst.c_str()));
 
 		if (m_binary)
 		{
 			WriteBinary(in_file, out_file);
-			if (m_verbose) printf("Output binary header data: '%s'\n", m_dst.c_str());
+			if (m_verbose) printf("Output binary header data: '%S'\n", m_dst.c_str());
 		}
 		else
 		{
 			WriteText(in_file, out_file);
-			if (m_verbose) printf("Output text header data: '%s'\n", m_dst.c_str());
+			if (m_verbose) printf("Output text header data: '%S'\n", m_dst.c_str());
 		}
 		return 0;
 	}

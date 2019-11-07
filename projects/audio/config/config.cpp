@@ -12,75 +12,72 @@
 #include <ppltasks.h>
 #include <wrl.h>
 
-namespace pr
+namespace pr::audio
 {
-	namespace audio
+	SystemConfig::SystemConfig()
 	{
-		SystemConfig::SystemConfig()
-		{
-			// This code came from the XAudio2Enumerate sample.
-			// Search for 'XAudio2 Win32 Samples' on 'code.msdn.microsoft.com'
+		// This code came from the XAudio2Enumerate sample.
+		// Search for 'XAudio2 Win32 Samples' on 'code.msdn.microsoft.com'
 
-			// Enumerating with WinRT using WRL
-			using namespace Microsoft::WRL;
-			using namespace Microsoft::WRL::Wrappers;
-			using namespace ABI::Windows::Foundation;
-			using namespace ABI::Windows::Foundation::Collections;
-			using namespace ABI::Windows::Devices::Enumeration;
+		// Enumerating with WinRT using WRL
+		using namespace Microsoft::WRL;
+		using namespace Microsoft::WRL::Wrappers;
+		using namespace ABI::Windows::Foundation;
+		using namespace ABI::Windows::Foundation::Collections;
+		using namespace ABI::Windows::Devices::Enumeration;
 
-			// Create the XAudio interface
-			pr::RefPtr<IXAudio2> xaudio;
-			pr::Throw(XAudio2Create(&xaudio.m_ptr, 0));
+		// Create the XAudio interface
+		RefPtr<IXAudio2> xaudio;
+		Throw(XAudio2Create(&xaudio.m_ptr, 0));
 
-			// Initialise WinRT
-			RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
-			pr::Throw(initialize);
+		// Initialise WinRT
+		RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
+		Throw(initialize);
 
-			// Create the factory object for enumerating devices
-			ComPtr<IDeviceInformationStatics> device_info_factory;
-			pr::Throw(GetActivationFactory(HStringReference(RuntimeClass_Windows_Devices_Enumeration_DeviceInformation).Get(), &device_info_factory));
+		// Create the factory object for enumerating devices
+		ComPtr<IDeviceInformationStatics> device_info_factory;
+		Throw(GetActivationFactory(HStringReference(RuntimeClass_Windows_Devices_Enumeration_DeviceInformation).Get(), &device_info_factory));
 
-			// Create an event to signal the find is complete
-			Event find_completed(CreateEventExW(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, WRITE_OWNER | EVENT_ALL_ACCESS));
-			if (!find_completed.IsValid())
-				pr::Throw(HRESULT_FROM_WIN32(GetLastError()));
+		// Create an event to signal the find is complete
+		Event find_completed(CreateEventExW(nullptr, nullptr, CREATE_EVENT_MANUAL_RESET, WRITE_OWNER | EVENT_ALL_ACCESS));
+		if (!find_completed.IsValid())
+			Throw(HRESULT_FROM_WIN32(GetLastError()));
 
-			// Search for audio devices
-			ComPtr<IAsyncOperation<DeviceInformationCollection*>> operation;
-			pr::Throw(device_info_factory->FindAllAsyncDeviceClass(DeviceClass_AudioRender, operation.GetAddressOf()));
-			operation->put_Completed(Callback<IAsyncOperationCompletedHandler<DeviceInformationCollection*>>(
-				[&find_completed](IAsyncOperation<DeviceInformationCollection*>* aDevices, AsyncStatus status) -> HRESULT
-				{
-					SetEvent(find_completed.Get());
-					return S_OK;
-				}).Get());
-
-			// Wait till complete
-			WaitForSingleObject(find_completed.Get(), INFINITE);
-
-			// Copy the results to 'devices'
-			ComPtr<IVectorView<DeviceInformation*>> devices;
-			operation->GetResults(devices.GetAddressOf());
-
-			// Copy the device info to the 'm_devices' container
-			unsigned int count = 0;
-			pr::Throw(devices->get_Size(&count));
-			for (unsigned int j = 0; j < count; ++j)
+		// Search for audio devices
+		ComPtr<IAsyncOperation<DeviceInformationCollection*>> operation;
+		Throw(device_info_factory->FindAllAsyncDeviceClass(DeviceClass_AudioRender, operation.GetAddressOf()));
+		operation->put_Completed(Callback<IAsyncOperationCompletedHandler<DeviceInformationCollection*>>(
+			[&find_completed](IAsyncOperation<DeviceInformationCollection*>* aDevices, AsyncStatus status) -> HRESULT
 			{
-				ComPtr<IDeviceInformation> deviceInfo;
-				pr::Throw(devices->GetAt(j, deviceInfo.GetAddressOf()));
+				SetEvent(find_completed.Get());
+				return S_OK;
+			}).Get());
 
-				HString id;
-				deviceInfo->get_Id(id.GetAddressOf());
+		// Wait till complete
+		WaitForSingleObject(find_completed.Get(), INFINITE);
 
-				HString name;
-				deviceInfo->get_Name(name.GetAddressOf());
+		// Copy the results to 'devices'
+		ComPtr<IVectorView<DeviceInformation*>> devices;
+		operation->GetResults(devices.GetAddressOf());
 
-				AudioDevice device;
-				device.m_device_id = id.GetRawBuffer(nullptr);
-				device.m_description = name.GetRawBuffer(nullptr);
-				m_devices.emplace_back(device);
-			}
+		// Copy the device info to the 'm_devices' container
+		unsigned int count = 0;
+		Throw(devices->get_Size(&count));
+		for (unsigned int j = 0; j < count; ++j)
+		{
+			ComPtr<IDeviceInformation> deviceInfo;
+			Throw(devices->GetAt(j, deviceInfo.GetAddressOf()));
+
+			HString id;
+			deviceInfo->get_Id(id.GetAddressOf());
+
+			HString name;
+			deviceInfo->get_Name(name.GetAddressOf());
+
+			AudioDevice device;
+			device.m_device_id = id.GetRawBuffer(nullptr);
+			device.m_description = name.GetRawBuffer(nullptr);
+			m_devices.emplace_back(device);
 		}
 	}
 }

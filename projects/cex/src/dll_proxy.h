@@ -34,21 +34,21 @@ namespace cex
 {
 	struct DllProxy :ICex
 	{
-		std::string m_ifile;      // Input dll filepath
-		std::string m_ofile;      // Output dll filepath
-		std::string m_exports;    // The text file of function exports
-		std::string m_convention; // Calling convention
-		std::string m_cppfile;    // CPP filepath
-		std::string m_deffile;    // DEF filepath
-		bool        m_compile;
+		std::filesystem::path m_ifile;      // Input dll filepath
+		std::filesystem::path m_ofile;      // Output dll filepath
+		std::filesystem::path m_cppfile;    // CPP filepath
+		std::filesystem::path m_deffile;    // DEF filepath
+		std::string           m_exports;    // The text file of function exports
+		std::string           m_convention; // Calling convention
+		bool                  m_compile;
 		
 		DllProxy()
 			:m_ifile()
 			,m_ofile()
-			,m_exports()
-			,m_convention()
 			,m_cppfile()
 			,m_deffile()
+			,m_exports()
+			,m_convention()
 			,m_compile(false)
 		{}
 
@@ -117,7 +117,7 @@ namespace cex
 			}
 			if (m_ofile.empty())
 			{
-				m_ofile = pr::filesys::GetFiletitle(m_ifile) + std::string(".proxy.dll");
+				m_ofile = m_ifile.stem().replace_extension(L".proxy.dll");
 			}
 			if (m_exports.empty())
 			{
@@ -129,11 +129,11 @@ namespace cex
 			}
 			if (m_cppfile.empty())
 			{
-				m_cppfile= pr::filesys::GetFiletitle(m_ifile) + std::string(".cpp");
+				m_cppfile= m_ifile.stem().replace_extension(L".cpp");
 			}
 			if (m_deffile.empty())
 			{
-				m_deffile = pr::filesys::GetFiletitle(m_ifile) + std::string(".def");
+				m_deffile = m_ifile.stem().replace_extension(L".def");
 			}
 		}
 

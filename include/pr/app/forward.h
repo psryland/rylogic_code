@@ -31,6 +31,7 @@
 #include <vector>
 #include <list>
 #include <memory>
+#include <filesystem>
 #include <guiddef.h>
 #include <cguid.h>
 #include <thread>
@@ -51,7 +52,6 @@
 #include "pr/common/new.h"
 #include "pr/common/console.h"
 #include "pr/maths/maths.h"
-#include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
 #include "pr/gui/wingui.h"

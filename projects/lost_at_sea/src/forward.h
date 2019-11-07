@@ -17,6 +17,7 @@
 #include <mmreg.h>
 #include <dsound.h>
 #include <sstream>
+#include <filesystem>
 #include <knownfolders.h>
 
 #include "pr/app/forward.h"
@@ -39,8 +40,7 @@
 //#include "pr/common/hash.h"
 //#include "pr/common/stop_watch.h"
 #include "pr/maths/maths.h"
-//#include "pr/filesys/fileex.h"
-#include "pr/filesys/filesys.h"
+//#include "pr/filesys/filesys.h"
 //#include "pr/str/prstring.h"
 //#include "pr/str/tostring.h"
 //#include "pr/script/reader.h"
@@ -54,6 +54,7 @@
 #include "pr/audio/ogg/ogg_stream.h"
 //#include "pr/gui/misc.h"
 #include "pr/win32/windows_com.h"
+#include "pr/win32/win32.h"
 
 #define DBG PR_DBG_COMMON
 

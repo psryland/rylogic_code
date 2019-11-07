@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cassert>
+#include <exception>
 #include <type_traits>
 
 namespace pr
@@ -20,8 +21,8 @@ namespace pr
 	template <typename T> constexpr byte*       byte_ptr(T*       t) { return reinterpret_cast<byte*      >(t); }
 	template <typename T> constexpr char const* char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
 	template <typename T> constexpr char*       char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
-	constexpr byte const* byte_ptr(nullptr_t) { return reinterpret_cast<byte const*>(0); }
-	constexpr char const* char_ptr(nullptr_t) { return reinterpret_cast<char const*>(0); }
+	constexpr byte const* byte_ptr(nullptr_t) { return static_cast<byte const*>(nullptr); }
+	constexpr char const* char_ptr(nullptr_t) { return static_cast<char const*>(nullptr); }
 
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
 	template <typename T> constexpr T const* type_ptr(void const* t)
@@ -35,15 +36,25 @@ namespace pr
 		return static_cast<T*>(t);
 	}
 
-	// Casting between integral types
+	// Static cast for integral types with optional runtime checking.
 	// Use:
 	//  int16_t s = -1302;
 	//  uint8_t b = s_cast<uint8_t>(s); <- gives an assert because -1302 cannot be stored in a uint8_t
-	template <typename T, typename U> inline T s_cast(U x)
+	//  uint8_t b = s_cast<uint8_t,true>(s); <- throws an exception because -1302 cannot be stored in a uint8_t
+	template <typename T, bool RuntimeCheck = false, typename U> inline T s_cast(U x)
 	{
-		assert("Cast loses data" && static_cast<U>(static_cast<T>(x)) == x);
+		if constexpr (RuntimeCheck)
+		{
+			if (static_cast<U>(static_cast<T>(x)) != x)
+				throw std::runtime_error("Cast loses data");
+		}
+		else
+		{
+			assert("Cast loses data" && static_cast<U>(static_cast<T>(x)) == x);
+		}
 		return static_cast<T>(x);
 	}
+	
 	template <typename T, typename U> [[deprecated("use s_cast")]] inline T checked_cast(U x)
 	{
 		return s_cast<T,U>(x);
