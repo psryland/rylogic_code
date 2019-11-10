@@ -13,30 +13,6 @@ namespace Rylogic.Scintilla
 	/// <summary>Typedef Scintilla.Scintilla to 'Sci' and add Rylogic specific features</summary>
 	public partial class Sci
 	{
-		/// <summary></summary>
-		public enum EEndOfLineMode
-		{
-			CR   = SC_EOL_CR,
-			LF   = SC_EOL_LF,
-			CRLF = SC_EOL_CRLF,
-		}
-
-		/// <summary></summary>
-		public enum ECase
-		{
-			Mixed = SC_CASE_MIXED,
-			Upper = SC_CASE_UPPER,
-			Lower = SC_CASE_LOWER,
-			//Camel = SC_CASE_CAMEL,
-		}
-
-		/// <summary></summary>
-		public enum ECaseInsensitiveBehaviour
-		{
-			RespectCase = SC_CASEINSENSITIVEBEHAVIOUR_RESPECTCASE,
-			IgnoreCase = SC_CASEINSENSITIVEBEHAVIOUR_IGNORECASE,
-		}
-
 		/// <summary>Style id constants</summary>
 		public struct EStyleId
 		{
@@ -85,7 +61,7 @@ namespace Rylogic.Scintilla
 			public bool? Underline { get; set; }
 			public bool? EOLFilled { get; set; }
 			public int? CharSet { get; set; }
-			public ECase? CaseForce { get; set; }
+			public ECaseVisible? Case { get; set; }
 			public bool? Visible { get; set; }
 			public bool? Changeable { get; set; }
 			public bool? HotSpot { get; set; }

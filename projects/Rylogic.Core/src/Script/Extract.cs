@@ -761,12 +761,14 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void ExtractString()
 		{
-			var src1 = (Src)new StringSrc("\"string1\" \"str\\\"i\\ng2\"");
+			const string str = "\"string1\" \"str\\\"i\\ng2\"";
+
+			var src1 = (Src)new StringSrc(str);
 			Assert.True(Extract.String(out var str0, src1));
 			Assert.Equal("string1", str0);
 			Assert.Equal(' ', src1.Peek);
 
-			var src2 = (Src)new StringSrc((StringSrc)src1);
+			var src2 = (Src)new StringSrc(str, ((StringSrc)src1).Position);
 
 			Assert.True(Extract.String(out var str1, src1));
 			Assert.Equal("str\\", str1);

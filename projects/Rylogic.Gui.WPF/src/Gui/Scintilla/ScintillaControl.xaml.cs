@@ -137,7 +137,7 @@ namespace Rylogic.Gui.WPF
 					// Ctrl+Space shows the auto complete list
 					if (AutoComplete != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
 					{
-						DoAutoComplete();
+						OnAutoComplete();
 						e.Handled = true;
 					}
 
@@ -187,6 +187,8 @@ namespace Rylogic.Gui.WPF
 					var id = Win32.LoWord(wparam.ToInt32());
 					if (notif == Win32.EN_CHANGE && id == ScintillaId)
 					{
+						// This indicates the text buffer has changed via API functions.
+						// 'SCN_CHARADDED' indicates a key press resulted in a character added
 						TextChanged?.Invoke(this, EventArgs.Empty);
 						handled = true;
 					}
@@ -194,6 +196,7 @@ namespace Rylogic.Gui.WPF
 				}
 			case Win32.WM_NOTIFY:
 				{
+					System.Diagnostics.Debug.Assert(Environment.Is64BitProcess);
 					var notif = Marshal.PtrToStructure<Sci.SCNotification>(lparam);
 					switch (notif.nmhdr.code)
 					{
@@ -203,9 +206,9 @@ namespace Rylogic.Gui.WPF
 							{
 								var lem = EOLMode;
 								var lend =
-									(lem == Sci.EEndOfLineMode.CR && notif.ch == '\r') ||
-									(lem == Sci.EEndOfLineMode.LF && notif.ch == '\n') ||
-									(lem == Sci.EEndOfLineMode.CRLF && notif.ch == '\n');
+									(lem == Sci.EEndOfLine.Cr && notif.ch == '\r') ||
+									(lem == Sci.EEndOfLine.Lf && notif.ch == '\n') ||
+									(lem == Sci.EEndOfLine.Crlf && notif.ch == '\n');
 								if (lend)
 								{
 									var line = LineFromPosition(CurrentPos);
@@ -214,10 +217,12 @@ namespace Rylogic.Gui.WPF
 									GotoPos(FindColumn(line, indent));
 								}
 							}
+							OnCharAdded((char)notif.ch);
 							break;
 						}
 					case Sci.SCN_UPDATEUI:
 						{
+							// There is one of these messages every time the caret moves
 							switch (notif.updated)
 							{
 							case Sci.SC_UPDATE_SELECTION:
@@ -233,6 +238,16 @@ namespace Rylogic.Gui.WPF
 									break;
 								}
 							}
+							break;
+						}
+					case Sci.SCN_AUTOCSELECTION:
+						{
+							OnAutoCompleteSelection(notif.Position, notif.Text, (Sci.ECompletionMethods)notif.listCompletionMethod);
+							break;
+						}
+					case Sci.SCN_AUTOCCOMPLETED:
+						{
+							OnAutoCompleteDone(notif.Position, notif.Text, (Sci.ECompletionMethods)notif.listCompletionMethod);
 							break;
 						}
 					}
@@ -279,24 +294,24 @@ namespace Rylogic.Gui.WPF
 		}
 		public int Cmd(int code, long wparam, IntPtr lparam)
 		{
-			return Cmd(code, (IntPtr)wparam, lparam);
+			return (int)Call(code, (IntPtr)wparam, lparam);
 		}
 		public int Cmd(int code, long wparam, string lparam)
 		{
 			using var text = Marshal_.AllocAnsiString(lparam);
-			return Cmd(code, wparam, text.Value);
+			return (int)Call(code, (IntPtr)wparam, text.Value);
 		}
 		public int Cmd(int code, long wparam, long lparam)
 		{
-			return Cmd(code, (IntPtr)wparam, (IntPtr)lparam);
+			return (int)Call(code, (IntPtr)wparam, (IntPtr)lparam);
 		}
 		public int Cmd(int code, long wparam)
 		{
-			return Cmd(code, (IntPtr)wparam, IntPtr.Zero);
+			return (int)Call(code, (IntPtr)wparam, IntPtr.Zero);
 		}
 		public int Cmd(int code)
 		{
-			return Cmd(code, IntPtr.Zero, IntPtr.Zero);
+			return (int)Call(code, IntPtr.Zero, IntPtr.Zero);
 		}
 
 		#region Auto Complete
@@ -312,7 +327,7 @@ namespace Rylogic.Gui.WPF
 		//    example by the container sending SCI_AUTOCCANCEL.
 		//  - To make use of autocompletion you must monitor each character added to the document.See SciTEBase::CharAdded() in SciTEBase.cxx for an example of autocompletion.
 
-		/// <summary>Provider of auto complete functionality</summary>
+		/// <summary>Provider of auto completion lists based on a partial text match</summary>
 		public event EventHandler<AutoCompleteEventArgs>? AutoComplete;
 		public class AutoCompleteEventArgs :EventArgs
 		{
@@ -332,9 +347,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>True if auto completion data has been provided</summary>
 			public bool Handled { get; set; }
 		}
-
-		/// <summary></summary>
-		private void DoAutoComplete()
+		private void OnAutoComplete()
 		{
 			// Get the text near the caret
 			var line = GetCurLine(out var caret_offset);
@@ -353,6 +366,63 @@ namespace Rylogic.Gui.WPF
 				using var ptr = Marshal_.AllocAnsiString(word_list);
 				Cmd(Sci.SCI_AUTOCSHOW, args.Partial.Length, ptr.Value);
 			}
+		}
+
+		/// <summary>Notifies that a selection has been made from the auto complete list (before text is inserted). Callers can cancel text insertion and use their own text</summary>
+		public event EventHandler<AutoCompleteSelectionEventArgs>? AutoCompleteSelection;
+		public class AutoCompleteSelectionEventArgs :EventArgs
+		{
+			public AutoCompleteSelectionEventArgs(long position, string text, Sci.ECompletionMethods method)
+			{
+				Position = position;
+				Completion = text;
+				Method = method;
+				Cancel = false;
+			}
+
+			/// <summary>The start position of the text being completed</summary>
+			public long Position { get; }
+
+			/// <summary>The text of the selected completion</summary>
+			public string Completion { get; }
+
+			/// <summary>How the auto complete list was closed</summary>
+			public Sci.ECompletionMethods Method { get; }
+
+			/// <summary>True to close the auto complete box without inserting text</summary>
+			public bool Cancel { get; set; }
+		}
+		private void OnAutoCompleteSelection(long position, string text, Sci.ECompletionMethods method)
+		{
+			var args = new AutoCompleteSelectionEventArgs(position, text, method);
+			AutoCompleteSelection?.Invoke(this, args);
+			if (args.Cancel)
+				Cmd(Sci.SCI_AUTOCCANCEL);
+		}
+
+		/// <summary>Notification when an auto complete item has been selected</summary>
+		public event EventHandler<AutoCompleteDoneEventArgs>? AutoCompleteDone;
+		public class AutoCompleteDoneEventArgs :EventArgs
+		{
+			public AutoCompleteDoneEventArgs(long position, string completion, Sci.ECompletionMethods method)
+			{
+				Position = position;
+				Completion = completion;
+				Method = method;
+			}
+
+			/// <summary>The start position of the text being completed</summary>
+			public long Position { get; }
+
+			/// <summary>The text of the selected completion</summary>
+			public string Completion { get; }
+
+			/// <summary>How the auto complete list was closed</summary>
+			public Sci.ECompletionMethods Method { get; }
+		}
+		private void OnAutoCompleteDone(long position, string completion, Sci.ECompletionMethods method)
+		{
+			AutoCompleteDone?.Invoke(this, new AutoCompleteDoneEventArgs(position, completion, method));
 		}
 
 		/// <summary>The configured auto completion list separator character (defaults to ' ')</summary>
@@ -563,14 +633,31 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Raised when text in the control is changed</summary>
 		public event EventHandler? TextChanged;
 
+		/// <summary>Raised when a keypress results in a character added (Doesn't fire for delete)</summary>
+		public event EventHandler<CharAddedEventArgs>? CharAdded;
+		public class CharAddedEventArgs :EventArgs
+		{
+			public CharAddedEventArgs(char ch)
+			{
+				Char = ch;
+			}
+
+			/// <summary>The character that was added</summary>
+			public char Char { get; }
+		}
+		private void OnCharAdded(char ch)
+		{
+			CharAdded?.Invoke(this, new CharAddedEventArgs(ch));
+		}
+
 		/// <summary></summary>
-		public char GetCharAt(int pos)
+		public char GetCharAt(long pos)
 		{
 			return (char)(Cmd(Sci.SCI_GETCHARAT, pos) & 0xFF);
 		}
 
 		/// <summary>Return a line of text</summary>
-		public string GetLine(int line)
+		public string GetLine(long line)
 		{
 			var len = LineLength(line);
 			var bytes = new byte[len];
@@ -619,7 +706,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void InsertText(int pos, string text)
+		public void InsertText(long pos, string text)
 		{
 			// Ensure null termination
 			var bytes = Encoding.UTF8.GetBytes(text + "\0");
@@ -653,20 +740,20 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Insert text and style data into the document at 'pos'</summary>
-		public void InsertStyledText(int pos, Sci.CellBuf cells)
+		public void InsertStyledText(long pos, Sci.CellBuf cells)
 		{
 			using var c = cells.Pin();
 			Cmd(Sci.SCI_INSERTSTYLEDTEXT, pos, c.Pointer);
 		}
 
 		/// <summary>Delete a character range from the document</summary>
-		public void DeleteRange(int start, int length)
+		public void DeleteRange(long start, long length)
 		{
 			Cmd(Sci.SCI_DELETERANGE, start, length);
 		}
 
 		/// <summary></summary>
-		public int GetStyleAt(int pos)
+		public int GetStyleAt(long pos)
 		{
 			return Cmd(Sci.SCI_GETSTYLEAT, pos);
 		}
@@ -805,13 +892,13 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Set the range of selected text</summary>
-		public void SetSel(int start, int end)
+		public void SetSel(long start, long end)
 		{
 			Cmd(Sci.SCI_SETSEL, start, end);
 		}
 
 		/// <summary>This removes any selection and sets the caret at 'position'. The caret is not scrolled into view.</summary>
-		public void ClearSelection(int position)
+		public void ClearSelection(long position)
 		{
 			Cmd(Sci.SCI_SETEMPTYSELECTION, position);
 		}
@@ -850,13 +937,13 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int GetLineSelStartPosition(int line)
+		public int GetLineSelStartPosition(long line)
 		{
 			return Cmd(Sci.SCI_GETLINESELSTARTPOSITION, line);
 		}
 
 		/// <summary></summary>
-		public int GetLineSelEndPosition(int line)
+		public int GetLineSelEndPosition(long line)
 		{
 			return Cmd(Sci.SCI_GETLINESELENDPOSITION, line);
 		}
@@ -880,7 +967,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>
 		/// Removes any selection, sets the caret at caret and scrolls the view to make the caret visible, if necessary.
 		/// It is equivalent to SCI_SETSEL(caret, caret). The anchor position is set the same as the current position.</summary>
-		public void GotoPos(int pos)
+		public void GotoPos(long pos)
 		{
 			Cmd(Sci.SCI_GOTOPOS, pos);
 		}
@@ -889,31 +976,35 @@ namespace Rylogic.Gui.WPF
 		/// Removes any selection and sets the caret at the start of line number line and scrolls the view (if needed)
 		/// to make it visible. The anchor position is set the same as the current position. If line is outside the lines
 		/// in the document (first line is 0), the line set is the first or last.</summary>
-		public void GotoLine(int line)
+		public void GotoLine(long line)
 		{
 			Cmd(Sci.SCI_GOTOLINE, line);
 		}
 
 		/// <summary>Get the line index from a character index</summary>
-		public int LineFromPosition(int pos)
+		public int LineFromPosition(long pos)
 		{
 			return Cmd(Sci.SCI_LINEFROMPOSITION, pos);
 		}
 
 		/// <summary>Return the character index for the start of 'line'</summary>
-		public int PositionFromLine(int line)
+		public int PositionFromLine(long line)
 		{
 			return Cmd(Sci.SCI_POSITIONFROMLINE, line);
 		}
 
-		/// <summary></summary>
-		public int GetLineEndPosition(int line)
+		/// <summary>
+		/// Returns the position at the end of the line, before any line end characters.
+		/// If line is the last line in the document (which does not have any end of line
+		/// characters) or greater, the result is the size of the document. If line is
+		/// negative the result is undefined.</summary>
+		public int GetLineEndPosition(long line)
 		{
 			return Cmd(Sci.SCI_GETLINEENDPOSITION, line);
 		}
 
 		/// <summary>Return the length of line 'line'</summary>
-		public int LineLength(int line)
+		public int LineLength(long line)
 		{
 			return Cmd(Sci.SCI_LINELENGTH, line);
 		}
@@ -924,7 +1015,7 @@ namespace Rylogic.Gui.WPF
 		/// the last tab and pos. If there are no tab characters on the line, the return value is the number of characters
 		/// up to the position on the line. In both cases, double byte characters count as a single character.
 		/// This is probably only useful with mono-spaced fonts.</summary>
-		public int GetColumn(int pos)
+		public int GetColumn(long pos)
 		{
 			return Cmd(Sci.SCI_GETCOLUMN, pos);
 		}
@@ -932,11 +1023,11 @@ namespace Rylogic.Gui.WPF
 		/// <summary>
 		/// Returns the character position of a column on a line taking the width of tabs into account.
 		/// It treats a multi-byte character as a single column. Column numbers, like lines start at 0.</summary>
-		public int GetPos(int line, int column)
+		public int GetPos(long line, int column)
 		{
 			return FindColumn(line, column);
 		}
-		public int FindColumn(int line, int column)
+		public int FindColumn(long line, int column)
 		{
 			return Cmd(Sci.SCI_FINDCOLUMN, line, column);
 		}
@@ -954,13 +1045,13 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int PointXFromPosition(int pos)
+		public int PointXFromPosition(long pos)
 		{
 			return Cmd(Sci.SCI_POINTXFROMPOSITION, 0, pos);
 		}
 
 		/// <summary></summary>
-		public int PointYFromPosition(int pos)
+		public int PointYFromPosition(long pos)
 		{
 			return Cmd(Sci.SCI_POINTYFROMPOSITION, 0, pos);
 		}
@@ -984,25 +1075,25 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int WordStartPosition(int pos, bool onlyWordCharacters)
+		public int WordStartPosition(long pos, bool onlyWordCharacters)
 		{
 			return Cmd(Sci.SCI_WORDSTARTPOSITION, pos, onlyWordCharacters ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public int WordEndPosition(int pos, bool onlyWordCharacters)
+		public int WordEndPosition(long pos, bool onlyWordCharacters)
 		{
 			return Cmd(Sci.SCI_WORDENDPOSITION, pos, onlyWordCharacters ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public int PositionBefore(int pos)
+		public int PositionBefore(long pos)
 		{
 			return Cmd(Sci.SCI_POSITIONBEFORE, pos);
 		}
 
 		/// <summary></summary>
-		public int PositionAfter(int pos)
+		public int PositionAfter(long pos)
 		{
 			return Cmd(Sci.SCI_POSITIONAFTER, pos);
 		}
@@ -1018,7 +1109,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns the height (in pixels) of a particular line. Currently all lines are the same height.</summary>
-		public int TextHeight(int line)
+		public int TextHeight(long line)
 		{
 			return Cmd(Sci.SCI_TEXTHEIGHT, line);
 		}
@@ -1120,7 +1211,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void CopyText(StringBuilder text, int length)
+		public void CopyText(StringBuilder text, long length)
 		{
 			throw new NotImplementedException();
 			//Cmd(Sci.SCI_COPYTEXT, length, text);
@@ -1220,28 +1311,18 @@ namespace Rylogic.Gui.WPF
 			//return Cmd(Sci.SCI_SEARCHPREV, flags, text);
 		}
 
-		/// <summary></summary>
-		public int GetTargetStart()
+		/// <summary>
+		/// Get/Set the start and end of the target. When searching you can set start greater than end to find the last matching
+		/// text in the target rather than the first matching text. The target is also set by a successful SCI_SEARCHINTARGET.</summary>
+		public long TargetBeg
 		{
-			return Cmd(Sci.SCI_GETTARGETSTART);
+			get => Cmd(Sci.SCI_GETTARGETSTART);
+			set => Cmd(Sci.SCI_SETTARGETSTART, value);
 		}
-
-		/// <summary></summary>
-		public void SetTargetStart(int pos)
+		public long TargetEnd
 		{
-			Cmd(Sci.SCI_SETTARGETSTART, pos);
-		}
-
-		/// <summary></summary>
-		public int GetTargetEnd()
-		{
-			return Cmd(Sci.SCI_GETTARGETEND);
-		}
-
-		/// <summary></summary>
-		public void SetTargetEnd(int pos)
-		{
-			Cmd(Sci.SCI_SETTARGETEND, pos);
+			get => Cmd(Sci.SCI_GETTARGETEND);
+			set => Cmd(Sci.SCI_SETTARGETEND, value);
 		}
 
 		/// <summary></summary>
@@ -1262,25 +1343,41 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_SETSEARCHFLAGS, flags);
 		}
 
-		/// <summary></summary>
-		public int SearchInTarget(string text, int length)
+		/// <summary>
+		/// This searches for the first occurrence of a text string in the target defined by SCI_SETTARGETSTART and SCI_SETTARGETEND.
+		/// The text string is not zero terminated; the size is set by length. The search is modified by the search flags set by SCI_SETSEARCHFLAGS.
+		/// If the search succeeds, the target is set to the found text and the return value is the position of the start of
+		/// the matching text. If the search fails, the result is -1.</summary>
+		public int SearchInTarget(string text, long length = -1)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_SEARCHINTARGET, length, text);
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			return Cmd(Sci.SCI_SEARCHINTARGET, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
 		}
 
-		/// <summary></summary>
-		public int ReplaceTarget(string text, int length)
+		/// <summary>
+		/// If length is -1, text is a zero terminated string, otherwise length sets the number of character to replace
+		/// the target with. After replacement, the target range refers to the replacement text. The return value is the
+		/// length of the replacement string. Note, the recommended way to delete text in the document is to set the
+		/// target to the text to be removed, and to perform a replace target with an empty string.</summary>
+		public int ReplaceTarget(string text, long length = -1)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_REPLACETARGET, length, text);
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			return Cmd(Sci.SCI_REPLACETARGET, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
 		}
 
-		/// <summary></summary>
-		public int ReplaceTargetRE(string text, int length)
+		/// <summary>
+		/// This replaces the target using regular expressions. If length is -1, text is a zero terminated string,
+		/// otherwise length is the number of characters to use. The replacement string is formed from the text string with any
+		/// sequences of \1 through \9 replaced by tagged matches from the most recent regular expression search.
+		/// \0 is replaced with all the matched text from the most recent search. After replacement, the target range refers
+		/// to the replacement text. The return value is the length of the replacement string.</summary>
+		public int ReplaceTargetRE(string text, long length = -1)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_REPLACETARGETRE, length, text);
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			return Cmd(Sci.SCI_REPLACETARGETRE, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
 		}
 
 		#endregion
@@ -1313,7 +1410,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void ScrollToLine(int line)
+		public void ScrollToLine(long line)
 		{
 			LineScroll(0, line - LineFromPosition(CurrentPos));
 		}
@@ -1332,7 +1429,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void LineScroll(int columns, int lines)
+		public void LineScroll(int columns, long lines)
 		{
 			Cmd(Sci.SCI_LINESCROLL, columns, lines);
 		}
@@ -1391,14 +1488,14 @@ namespace Rylogic.Gui.WPF
 		#region End of Line
 
 		/// <summary>Get/Set the characters that are added into the document when the user presses the Enter key</summary>
-		public Sci.EEndOfLineMode EOLMode
+		public Sci.EEndOfLine EOLMode
 		{
-			get => (Sci.EEndOfLineMode)Cmd(Sci.SCI_GETEOLMODE);
+			get => (Sci.EEndOfLine)Cmd(Sci.SCI_GETEOLMODE);
 			set => Cmd(Sci.SCI_SETEOLMODE, (int)value);
 		}
 
 		/// <summary>Changes all the end of line characters in the document to match 'mode'</summary>
-		public void ConvertEOLs(Sci.EEndOfLineMode mode)
+		public void ConvertEOLs(Sci.EEndOfLine mode)
 		{
 			Cmd(Sci.SCI_CONVERTEOLS, (int)mode);
 		}
@@ -1476,9 +1573,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void StyleSetCase(Sci.EStyleId id, Sci.ECase caseForce)
+		public void StyleSetCase(Sci.EStyleId id, Sci.ECaseVisible @case)
 		{
-			Cmd(Sci.SCI_STYLESETCASE, (int)id, (int)caseForce);
+			Cmd(Sci.SCI_STYLESETCASE, (int)id, (int)@case);
 		}
 
 		/// <summary></summary>
@@ -1513,7 +1610,7 @@ namespace Rylogic.Gui.WPF
 				if (style.Underline is bool underline) StyleSetUnderline(style.Id, underline);
 				if (style.EOLFilled is bool eol_filled) StyleSetEOLFilled(style.Id, eol_filled);
 				if (style.CharSet is int char_set) StyleSetCharacterSet(style.Id, char_set);
-				if (style.CaseForce is Sci.ECase case_force) StyleSetCase(style.Id, case_force);
+				if (style.Case is Sci.ECaseVisible @case) StyleSetCase(style.Id, @case);
 				if (style.Visible is bool visible) StyleSetVisible(style.Id, visible);
 				if (style.Changeable is bool changeable) StyleSetChangeable(style.Id, changeable);
 				if (style.HotSpot is bool hot_spot) StyleSetHotSpot(style.Id, hot_spot);
@@ -1527,30 +1624,30 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void StartStyling(int pos, int mask)
+		public void StartStyling(long pos, int mask)
 		{
 			Cmd(Sci.SCI_STARTSTYLING, pos, mask);
 		}
 
 		/// <summary></summary>
-		public void SetStyling(int length, int style)
+		public void SetStyling(long length, int style)
 		{
 			Cmd(Sci.SCI_SETSTYLING, length, style);
 		}
 
 		/// <summary></summary>
-		public void SetStylingEx(int length, string styles)
+		public void SetStylingEx(long length, string styles)
 		{
 			throw new NotImplementedException();
 			//Cmd(Sci.SCI_SETSTYLINGEX, length, styles);
 		}
 
 		/// <summary></summary>
-		public int LineState(int line)
+		public int LineState(long line)
 		{
 			return Cmd(Sci.SCI_GETLINESTATE, line);
 		}
-		public void LineState(int line, int state)
+		public void LineState(long line, int state)
 		{
 			Cmd(Sci.SCI_SETLINESTATE, line, state);
 		}
@@ -1765,19 +1862,19 @@ namespace Rylogic.Gui.WPF
 		#region Brace Highlighting
 
 		/// <summary></summary>
-		public void BraceHighlight(int pos1, int pos2)
+		public void BraceHighlight(long pos1, long pos2)
 		{
 			Cmd(Sci.SCI_BRACEHIGHLIGHT, pos1, pos2);
 		}
 
 		/// <summary></summary>
-		public void BraceBadLight(int pos)
+		public void BraceBadLight(long pos)
 		{
 			Cmd(Sci.SCI_BRACEBADLIGHT, pos);
 		}
 
 		/// <summary></summary>
-		public int BraceMatch(int pos)
+		public int BraceMatch(long pos)
 		{
 			return Cmd(Sci.SCI_BRACEMATCH, pos);
 		}
@@ -1827,17 +1924,17 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int LineIndentation(int line)
+		public int LineIndentation(long line)
 		{
 			return Cmd(Sci.SCI_GETLINEINDENTATION, line);
 		}
-		public void LineIndentation(int line, int indentSize)
+		public void LineIndentation(long line, int indentSize)
 		{
 			Cmd(Sci.SCI_SETLINEINDENTATION, line, indentSize);
 		}
 
 		/// <summary></summary>
-		public int LineIndentPosition(int line)
+		public int LineIndentPosition(long line)
 		{
 			return Cmd(Sci.SCI_GETLINEINDENTPOSITION, line);
 		}
@@ -1885,19 +1982,19 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int MarkerAdd(int line, int markerNumber)
+		public int MarkerAdd(long line, int markerNumber)
 		{
 			return Cmd(Sci.SCI_MARKERADD, line, markerNumber);
 		}
 
 		/// <summary></summary>
-		public int MarkerAddSet(int line, int markerNumber)
+		public int MarkerAddSet(long line, int markerNumber)
 		{
 			return Cmd(Sci.SCI_MARKERADDSET, line, markerNumber);
 		}
 
 		/// <summary></summary>
-		public void MarkerDelete(int line, int markerNumber)
+		public void MarkerDelete(long line, int markerNumber)
 		{
 			Cmd(Sci.SCI_MARKERDELETE, line, markerNumber);
 		}
@@ -1909,19 +2006,19 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int MarkerGet(int line)
+		public int MarkerGet(long line)
 		{
 			return Cmd(Sci.SCI_MARKERGET, line);
 		}
 
 		/// <summary></summary>
-		public int MarkerNext(int lineStart, int markerMask)
+		public int MarkerNext(long lineStart, int markerMask)
 		{
 			return Cmd(Sci.SCI_MARKERNEXT, lineStart, markerMask);
 		}
 
 		/// <summary></summary>
-		public int MarkerPrevious(int lineStart, int markerMask)
+		public int MarkerPrevious(long lineStart, int markerMask)
 		{
 			return Cmd(Sci.SCI_MARKERPREVIOUS, lineStart, markerMask);
 		}
@@ -2040,43 +2137,43 @@ namespace Rylogic.Gui.WPF
 		#region Folding
 
 		/// <summary></summary>
-		public int VisibleFromDocLine(int line)
+		public int VisibleFromDocLine(long line)
 		{
 			return Cmd(Sci.SCI_VISIBLEFROMDOCLINE, line);
 		}
 
 		/// <summary></summary>
-		public int DocLineFromVisible(int lineDisplay)
+		public int DocLineFromVisible(long lineDisplay)
 		{
 			return Cmd(Sci.SCI_DOCLINEFROMVISIBLE, lineDisplay);
 		}
 
 		/// <summary></summary>
-		public void ShowLines(int lineStart, int lineEnd)
+		public void ShowLines(long lineStart, long lineEnd)
 		{
 			Cmd(Sci.SCI_SHOWLINES, lineStart, lineEnd);
 		}
 
 		/// <summary></summary>
-		public void HideLines(int lineStart, int lineEnd)
+		public void HideLines(long lineStart, long lineEnd)
 		{
 			Cmd(Sci.SCI_HIDELINES, lineStart, lineEnd);
 		}
 
 		/// <summary></summary>
-		public bool GetLineVisible(int line)
+		public bool GetLineVisible(long line)
 		{
 			return Cmd(Sci.SCI_GETLINEVISIBLE, line) != 0;
 		}
 
 		/// <summary></summary>
-		public int FoldLevel(int line)
+		public int FoldLevel(long line)
 		{
 			return Cmd(Sci.SCI_GETFOLDLEVEL, line);
 		}
 
 		/// <summary></summary>
-		public void FoldLevel(int line, int level)
+		public void FoldLevel(long line, int level)
 		{
 			Cmd(Sci.SCI_SETFOLDLEVEL, line, level);
 		}
@@ -2088,43 +2185,43 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int GetLastChild(int line, int level)
+		public int GetLastChild(long line, int level)
 		{
 			return Cmd(Sci.SCI_GETLASTCHILD, line, level);
 		}
 
 		/// <summary></summary>
-		public int GetFoldParent(int line)
+		public int GetFoldParent(long line)
 		{
 			return Cmd(Sci.SCI_GETFOLDPARENT, line);
 		}
 
 		/// <summary></summary>
-		public bool FoldExpanded(int line)
+		public bool FoldExpanded(long line)
 		{
 			return Cmd(Sci.SCI_GETFOLDEXPANDED, line) != 0;
 		}
 
 		/// <summary></summary>
-		public void FoldExpanded(int line, bool expanded)
+		public void FoldExpanded(long line, bool expanded)
 		{
 			Cmd(Sci.SCI_SETFOLDEXPANDED, line, expanded ? 1 : 0);
 		}
 
 		/// <summary></summary>
-		public void ToggleFold(int line)
+		public void ToggleFold(long line)
 		{
 			Cmd(Sci.SCI_TOGGLEFOLD, line);
 		}
 
 		/// <summary></summary>
-		public void EnsureVisible(int line)
+		public void EnsureVisible(long line)
 		{
 			Cmd(Sci.SCI_ENSUREVISIBLE, line);
 		}
 
 		/// <summary></summary>
-		public void EnsureVisibleEnforcePolicy(int line)
+		public void EnsureVisibleEnforcePolicy(long line)
 		{
 			Cmd(Sci.SCI_ENSUREVISIBLEENFORCEPOLICY, line);
 		}
@@ -2192,7 +2289,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int WrapCount(int line)
+		public int WrapCount(long line)
 		{
 			return Cmd(Sci.SCI_WRAPCOUNT, line);
 		}
@@ -2270,7 +2367,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public void Colourise(int start, int end)
+		public void Colourise(long start, long end)
 		{
 			Cmd(Sci.SCI_COLOURISE, start, end);
 		}

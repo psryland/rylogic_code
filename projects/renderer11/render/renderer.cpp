@@ -220,7 +220,7 @@ namespace pr
 	void Renderer::RunTasks()
 	{
 		if (GetCurrentThreadId() != m_main_thread_id)
-			throw std::exception("RunTasks must be called from the main thread");
+			throw std::runtime_error("RunTasks must be called from the main thread");
 
 		TaskQueue tasks;
 		{
@@ -230,6 +230,14 @@ namespace pr
 
 		// Execute each task
 		for (auto& task : tasks)
-			task.get();
+		{
+			try { task.get(); }
+			catch (std::exception const&)
+			{
+				// These tasks shouldn't throw exceptions because they won't be handled.
+				assert(false && "Unhandled task error");
+				throw;
+			}
+		}
 	}
 }

@@ -11,24 +11,23 @@
 //      [*SomethingElse:se:!sf]
 //      $ObjectModifiers
 //   }
-//   @pos { <x> <y> <z> }
-//   @o2w { <field> @pos } 
-//   @colour {<aarrggbb>}
-//   @ObjectModifiers
+//   **pos { <x> <y> <z> }
+//   **o2w { <field> @pos } 
+//   **colour {<aarrggbb>}
+//   **ObjectModifiers
 //   {
 //      [*Something]
 //      [@colour]
 //      [@o2w]
 //   }
 // 
-// Templates start with a keyword marked by '*', '@', or '$'
-// '*' templates are basic template definitions, available for use at the given hierarchy level.
-//     *templates at the root level go into the lookup table of shared templates.
-// '@' templates are shared definitions for child templates. They are only available when referenced within another template
-//     @templates at the root level go into the lookup table of shared templates.
-//     @templates at child levels are placeholder references to a shared template.
-// '$' templates are a reference to the children of a template.
-//     $templates get expanded by adding each child in the referenced template to the parent of the $template.
+// Templates start with a keyword marked by '*' or '**'
+// '*' templates are visible at the hierarchy level they're declared at.
+// '**' templates are not visible at the current hierarchy level, but can be referenced
+//     using '@' or '$' template references at or below the current hierarchy level.
+// '@' is a reference to a template. Only valid when used within a template.
+// '$' is a reference to the children of a template. Only valid when used within a template.
+//     $ references get expanded by adding each child in the referenced template to the parent
 // Literal text is text that is required.
 // Text within <> is a field
 //     <> fields cannot nest and must contain identifiers
@@ -41,6 +40,7 @@
 //     If the adjacent token is a [], or () select between the matched tokens.
 //     This form: [one] | [two] | [three] means one of the options is required.
 //     This form: [[one] | [two] | [three]] means the selection is optional.
+// ; means newline break
 // Templates should be multi-line, users can replace the \n characters with ' ' if needed.
 // Templates can contain comments, but comments must not contain: {}[]()<>|*@$
 
@@ -73,10 +73,10 @@ namespace pr::ldr
 			"} \n"
 
 			// Common
-			"@o2w\n"
+			"**o2w\n"
 			"{\n"
-			"	[*m4x4 {<xx> <xy> <xz> <xw>  <yx> <yy> <yz> <yw>  <zx> <zy> <zz> <zw>  <wx> <wy> <wz> <ww>}]\n"
-			"	[*m3x3 {<xx> <xy> <xz>  <yx> <yy> <yz>  <zx> <zy> <zz>}]\n"
+			"	[*m4x4 {<xx> <xy> <xz> <xw>; <yx> <yy> <yz> <yw>; <zx> <zy> <zz> <zw>; <wx> <wy> <wz> <ww>;}]\n"
+			"	[*m3x3 {<xx> <xy> <xz>; <yx> <yy> <yz>; <zx> <zy> <zz>;}]\n"
 			"	[*pos {<x> <y> <z>}]\n"
 			"	[*euler {<pitch> <yaw> <roll>}]\n"
 			"	[*Align {<axis_id> <dx> <dy> <dz>}]\n"
@@ -102,7 +102,7 @@ namespace pr::ldr
 			"	[*Underline]\n"
 			"	[*Strikeout]\n"
 			"}\n"
-			"@Texture\n"
+			"**Texture\n"
 			"{\n"
 			"	<texture_filepath>\n"
 			"	[*Addr {Wrap|Mirror|Clamp|Border|MirrorOnce  Wrap|Mirror|Clamp|Border|MirrorOnce}]\n"
@@ -110,11 +110,11 @@ namespace pr::ldr
 			"	[*Alpha]\n"
 			"	[@o2w]\n"
 			"}\n"
-			"@Video\n"
+			"**Video\n"
 			"{\n"
 			"	<video_filepath>\n"
 			"}\n"
-			"@ObjectModifiers\n"
+			"**ObjectModifiers\n"
 			"{\n"
 			"	[@o2w]\n"
 			"	[*Colour {<colour>}]\n"
@@ -135,17 +135,17 @@ namespace pr::ldr
 			"	}]\n"
 			"	[@Font]\n"
 			"}\n"
-			"@Textured\n"
+			"**Textured\n"
 			"{\n"
 			"	[@Texture]\n"
 			"	[@Video]\n"
 			"}\n"
-			"@Width {<thickness>}\n"
-			"@Dashed {<on_length> <off_length>}\n"
-			"@Param {<t0> <t1>}\n"
-			"@Smooth\n"
-			"@Solid\n"
-			"@AxisId {<axis_id>}\n"
+			"**Width {<thickness>}\n"
+			"**Dashed {<on_length> <off_length>}\n"
+			"**Param {<t0> <t1>}\n"
+			"**Smooth\n"
+			"**Solid\n"
+			"**AxisId {<axis_id>}\n"
 
 			// Special objects
 			"*Instance [<name>] [<colour>]\n"
@@ -158,7 +158,8 @@ namespace pr::ldr
 			"}\n"
 			"*Text [<name>] [<colour>]\n"
 			"{\n"
-			"	[*ScreenSpace|*Billboard]\n"
+			"	[*ScreenSpace]\n"
+			"	[*Billboard]\n"
 			"	([@Font])\n"
 			"	(<text>)\n"
 			"	([*CString {<c_style_string>}])\n"
@@ -233,15 +234,15 @@ namespace pr::ldr
 			"}\n"
 			"*LineBox [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> [<height> [<depth>]]\n"
+			"	<width> [<height> [<depth>]];\n"
 			"	[@Width]\n"
 			"	[@Dashed]\n"
 			"	$ObjectModifiers\n"
 			"}\n"
 			"*Grid [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> <height>\n"
-			"	[<width_divisions> <height_divisions>]\n"
+			"	<width> <height>;\n"
+			"	[<width_divisions> <height_divisions>;]\n"
 			"	[@Width]\n"
 			"	[@Dashed]\n"
 			"	$ObjectModifiers\n"
@@ -262,9 +263,9 @@ namespace pr::ldr
 			"}\n"
 			"*Matrix3x3 [<name>] [<colour>]\n"
 			"{\n"
-			"	<xx> <xy> <xz>\n"
-			"	<yx> <yy> <yz>\n"
-			"	<zx> <zy> <zz>\n"
+			"	<xx> <xy> <xz>;\n"
+			"	<yx> <yy> <yz>;\n"
+			"	<zx> <zy> <zz>;\n"
 			"	[@Width]\n"
 			"	$ObjectModifiers\n"
 			"}\n"
@@ -288,8 +289,8 @@ namespace pr::ldr
 			"}\n"
 			"*Pie [<name>] [<colour>]\n"
 			"{\n"
-			"	<angle0> <angle1>\n"
-			"	<inner_radius> <outer_radius>\n"
+			"	<angle0> <angle1>;\n"
+			"	<inner_radius> <outer_radius>;\n"
 			"	[*Facets {<facet_count>}]\n"
 			"	[*Scale {<sx> <sy>}]\n"
 			"	[@AxisId]\n"
@@ -319,28 +320,28 @@ namespace pr::ldr
 			// Quad shapes
 			"*Triangle [<name>] [<colour>]\n"
 			"{\n"
-			"	<pt0_x> <pt0_y> <pt0_z> [<colour>]\n"
-			"	<pt1_x> <pt1_y> <pt1_z> [<colour>]\n"
-			"	<pt2_x> <pt2_y> <pt2_z> [<colour>]\n"
+			"	<pt0_x> <pt0_y> <pt0_z> [<colour>];\n"
+			"	<pt1_x> <pt1_y> <pt1_z> [<colour>];\n"
+			"	<pt2_x> <pt2_y> <pt2_z> [<colour>];\n"
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
 			"}\n"
 			"*Quad [<name>] [<colour>]\n"
 			"{\n"
-			"	<pt0_x> <pt0_y> <pt0_z> [<colour>]\n"
-			"	<pt1_x> <pt1_y> <pt1_z> [<colour>]\n"
-			"	<pt2_x> <pt2_y> <pt2_z> [<colour>]\n"
-			"	<pt3_x> <pt3_y> <pt3_z> [<colour>]\n"
+			"	<pt0_x> <pt0_y> <pt0_z> [<colour>];\n"
+			"	<pt1_x> <pt1_y> <pt1_z> [<colour>];\n"
+			"	<pt2_x> <pt2_y> <pt2_z> [<colour>];\n"
+			"	<pt3_x> <pt3_y> <pt3_z> [<colour>];\n"
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
 			"}\n"
 			"*Plane [<name>] [<colour>]\n"
 			"{\n"
-			"	<centre_x> <centre_y> <centre_z>\n"
-			"	<normal_x> <normal_y> <normal_z>\n"
-			"	<width> <height>\n"
+			"	<centre_x> <centre_y> <centre_z>;\n"
+			"	<normal_x> <normal_y> <normal_z>;\n"
+			"	<width> <height>;\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
 			"}\n"
@@ -371,15 +372,15 @@ namespace pr::ldr
 			"}\n"
 			"*BoxList [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> <height> <depth>\n"
+			"	<width> <height> <depth>;\n"
 			"	(<x> <y> <z>)\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
 			"}\n"
 			"*FrustumWH [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> <height>\n"
-			"	<near> <far>\n"
+			"	<width> <height>;\n"
+			"	<near> <far>;\n"
 			"	[*ViewPlaneZ {<distance_of_width_height>}]\n"
 			"	[@AxisId]\n"
 			"	$Textured\n"
@@ -387,8 +388,8 @@ namespace pr::ldr
 			"}\n"
 			"*FrustumFA [<name>] [<colour>]\n"
 			"{\n"
-			"	<fovY> <aspect>\n"
-			"	<near> <far>\n"
+			"	<fovY> <aspect>;\n"
+			"	<near> <far>;\n"
 			"	[@AxisId]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"

@@ -527,7 +527,7 @@ namespace pr
 				#pragma endregion
 
 				// Raise events on the main thread
-				auto merge = [=]() mutable
+				auto merge = [=]() mutable noexcept
 				{
 					// If not additional, clear all sources.
 					// Otherwise, just remove any objects associated with 'file'.
@@ -614,7 +614,7 @@ namespace pr
 				#pragma endregion
 
 				// Merge the results
-				auto merge = [=]
+				auto merge = [=] () noexcept
 				{
 					// Don't remove previous 'context_id' objects.
 					// Objects for a set may be added with multiple AddScript calls
@@ -631,9 +631,9 @@ namespace pr
 					// Notify of the object container change
 					OnStoreChanged(*this, StoreChangedEventArgs(&context_id, 1, out, int(out.m_objects.size()), reason));
 
-					// Throw on errors
+					// Notify of any errors that occurred
 					if (!errors.m_msg.empty())
-						throw std::runtime_error(Narrow(errors.m_msg));
+						OnError(*this, errors);
 				};
 
 				// Marshal to the main thread if this is a worker thread context

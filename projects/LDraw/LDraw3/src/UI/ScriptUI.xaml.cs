@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
@@ -13,7 +14,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-
+using Rylogic.Script;
 using Rylogic.Utility;
 
 namespace LDraw.UI
@@ -166,6 +167,8 @@ namespace LDraw.UI
 				{
 					m_editor.CallTip -= HandleCallTip;
 					m_editor.AutoComplete -= HandleAutoComplete;
+					m_editor.AutoCompleteSelection -= HandleAutoCompleteSelection;
+					m_editor.SelectionChanged -= HandleSelectionChanged;
 					m_editor.TextChanged -= HandleTextChanged;
 					m_editor.HandleCreated -= HandleSCHandleCreated;
 				}
@@ -174,6 +177,8 @@ namespace LDraw.UI
 				{
 					m_editor.HandleCreated += HandleSCHandleCreated;
 					m_editor.TextChanged += HandleTextChanged;
+					m_editor.SelectionChanged += HandleSelectionChanged;
+					m_editor.AutoCompleteSelection += HandleAutoCompleteSelection;
 					m_editor.AutoComplete += HandleAutoComplete;
 					m_editor.CallTip += HandleCallTip;
 				}
@@ -189,15 +194,70 @@ namespace LDraw.UI
 				{
 					SaveNeeded = true;
 				}
+				void HandleSelectionChanged(object sender, EventArgs e)
+				{
+					// Caret moved
+				}
 				void HandleAutoComplete(object sender, ScintillaControl.AutoCompleteEventArgs e)
 				{
 					e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => $"*{x.Keyword}"));
 					e.Handled = true;
 				}
+				void HandleAutoCompleteSelection(object sender, ScintillaControl.AutoCompleteSelectionEventArgs e)
+				{
+					// Cancel the auto complete because adding the template text is manageed here
+					e.Cancel = true;
+
+					// Find the selected template
+					var template = m_ldr_auto_complete.Lookup(e.Completion).FirstOrDefault();
+					if (template == null)
+						return;
+
+					var line = Editor.GetCurLine(out var caret_offset);
+
+					// Determine the indent level and style
+					var indent_level = line.CountWhile(x => x == ' ' || x == '\t');
+					var indent_text = indent_level != 0 && line[0] == ' ' ? "    " : "\t";
+					if (indent_text[0] == ' ') indent_level /= indent_text.Length;
+
+					// Delete text from 'StartPosition' to the first white space after the caret position
+					Editor.TargetBeg = e.Position;
+					Editor.TargetEnd = Editor.CurrentPos + line.Skip(caret_offset).CountWhile(x => Str_.IsIdentifier(x, false));
+					Editor.ReplaceTarget(string.Empty);
+
+					// Create the auto complete handler
+					m_auto_completer = new AutoCompleter(template, e.Position, indent_level, indent_text);
+
+					// Add the initial auto complete text
+					using var caret = Editor.SelectionScope();
+					Editor.InsertText(e.Position, m_auto_completer.Text.ToString());
+
+					// todo:
+					//   restore caret position
+					//   
+				}
 				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
 				{
+					var line = Editor.GetCurLine(out var caret_offset);
+
 					// Search backward from the caret position to the prior keyword
-					e.Definition = "*Testing [optional]\n{\t<field>\n}\n";
+					for (; caret_offset != 0 && line[caret_offset] != '*'; --caret_offset) { }
+					if (line[caret_offset] != '*')
+						return;
+
+					// Read the keyword
+					if (!Extract.Identifier(out var keyword, new StringSrc(line, caret_offset + 1)))
+						return;
+
+					// Lookup the templates that match this keyword
+					int index = 0;
+					var def = new StringBuilder();
+					foreach (var template in m_ldr_auto_complete.Lookup(keyword))
+						def.Append((char)++index).Append(template.Description).Append('\n');
+
+					// todo: use a template description where child templates are named but not expanded
+
+					e.Definition = def.ToString().Summary(20);
 					e.Handled = true;
 				}
 			}
@@ -236,6 +296,9 @@ namespace LDraw.UI
 
 		/// <summary>Auto complete provider for LDraw script</summary>
 		private View3d.AutoComplete m_ldr_auto_complete;
+
+		/// <summary>Auto complete handler</summary>
+		private AutoCompleter? m_auto_completer;
 
 		/// <summary>Text file types that can be edited in the script UI</summary>
 		private string EditableFilesFilter => Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");

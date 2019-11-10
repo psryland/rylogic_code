@@ -76,8 +76,8 @@ namespace Rylogic.Gui.WPF
 			sc.StyleSetBack(Sci.STYLE_BRACELIGHT, new Colour32(0xFF, 0, 255, 0));
 
 			// Set end of line mode to CRLF
-			sc.ConvertEOLs(Sci.EEndOfLineMode.LF);
-			sc.EOLMode = Sci.EEndOfLineMode.LF;
+			sc.ConvertEOLs(Sci.EEndOfLine.Lf);
+			sc.EOLMode = Sci.EEndOfLine.Lf;
 			//SndMsg<void>(SCI_SETVIEWEOL, TRUE, 0);
 
 			// set marker symbol for marker type 0 - bookmark
@@ -100,8 +100,8 @@ namespace Rylogic.Gui.WPF
 			sc.Indent = 4;
 			sc.CaretFore = dark ? 0xFFffffff : 0xFF000000;
 			sc.CaretPeriod = 400;
-			sc.ConvertEOLs(Sci.EEndOfLineMode.LF);
-			sc.EOLMode = Sci.EEndOfLineMode.LF;
+			sc.ConvertEOLs(Sci.EEndOfLine.Lf);
+			sc.EOLMode = Sci.EEndOfLine.Lf;
 			sc.Property("fold", "1");
 			sc.MultipleSelection = true;
 			sc.AdditionalSelectionTyping = true;

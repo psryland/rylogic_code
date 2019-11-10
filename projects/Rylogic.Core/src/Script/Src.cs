@@ -208,36 +208,50 @@ namespace Rylogic.Script
 	/// <summary>A script character sequence from a string</summary>
 	public class StringSrc :Src
 	{
+		// Notes:
+		//  - Don't add copy constructors, the 'rhs' source may have buffered text
+		//    which will not be buffered in the copy. Instead create new instances.
 		private readonly string m_str;
+		private readonly long m_end;
 		private long m_position;
 
-		public StringSrc(string str, long position = 0, int line = 1, int column = 1)
-			:base(new Loc(string.Empty, position, line, column))
+		public StringSrc(string str, long? start = null, long? count = null, Loc? loc = null)
+			:base(loc ?? new Loc(string.Empty, start ?? 0, 1, 1))
 		{
+			start ??= 0;
+			count ??= str.Length - start.Value;
+
+			if (start < 0 || start > str.Length)
+				throw new ArgumentOutOfRangeException(nameof(start), "String source offset is out of range");
+			if (count < 0 || start + count > str.Length)
+				throw new ArgumentOutOfRangeException(nameof(count), "String source count is out of range");
+
 			m_str = str;
-			m_position = position;
+			m_end = (start + count).Value;
+			m_position = start.Value;
 		}
-		public StringSrc(StringSrc rhs)
-			: this(rhs.m_str, rhs.Position, rhs.Location.Line, rhs.Location.Column)
-		{}
 
 		/// <summary>The current position in the string</summary>
 		public long Position
 		{
 			get => m_position;
-			set => m_position = Math_.Clamp(value, 0, m_str.Length);
+			set => m_position = Math_.Clamp(value, 0, m_end);
 		}
 
 		/// <summary>Return the next valid character from the underlying stream or 'EOS' for the end of stream.</summary>
 		protected override int Read()
 		{
-			return m_position != m_str.Length ? m_str[(int)m_position++] : '\0';
+			return m_position != m_end ? m_str[(int)m_position++] : '\0';
 		}
 	}
 
 	/// <summary>A script character sequence from a file</summary>
 	public class FileSrc :Src
 	{
+		// Notes:
+		//  - Don't add copy constructors, the 'rhs' source may have buffered text
+		//    which will not be buffered in the copy. Instead create new instances.
+
 		private readonly string m_filepath;
 		private StreamReader m_stream;
 
@@ -248,9 +262,6 @@ namespace Rylogic.Script
 			m_stream = new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
 			m_stream.BaseStream.Position = position;
 		}
-		public FileSrc(FileSrc rhs)
-			: this(rhs.m_filepath, rhs.m_stream.BaseStream.Position, rhs.Location.Line, rhs.Location.Column)
-		{ }
 		protected override void Dispose(bool _)
 		{
 			m_stream.Dispose();
@@ -269,6 +280,32 @@ namespace Rylogic.Script
 		{
 			var ch = m_stream.Read();
 			if (ch == -1) return '\0';
+			return ch;
+		}
+	}
+
+	/// <summary>A wrapped source with truncated length</summary>
+	public class WrapSrc :Src
+	{
+		// Notes:
+		//  - This source type is useful for creating a subrange of an existing source
+		
+		private long m_count;
+
+		public WrapSrc(Src src, long count = long.MaxValue)
+			:base(src)
+		{
+			m_count = count;
+		}
+
+		protected override int Read()
+		{
+			if (m_count == 0)
+				return '\0';
+
+			var ch = m_src.Peek;
+			m_src.Next();
+			--m_count;
 			return ch;
 		}
 	}
