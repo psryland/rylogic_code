@@ -188,6 +188,7 @@ namespace LDraw
 		public Command OpenFile { get; }
 		private void OpenFileInternal()
 		{
+			Model.Clear();
 			Model.OpenFile();
 		}
 
@@ -195,7 +196,8 @@ namespace LDraw
 		public Command OpenFileAdditional { get; }
 		private void OpenFileAdditionalInternal()
 		{
-			Model.OpenFile(additional: true);
+			// Don't clear first
+			Model.OpenFile();
 		}
 
 		/// <summary>Save the currently focused script</summary>

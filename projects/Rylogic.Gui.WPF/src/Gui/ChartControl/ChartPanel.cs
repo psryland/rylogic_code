@@ -89,6 +89,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				context_ids[context_ids.Length - 1] = ChartControl.ChartTools.Id;
 				++exclude_count;
 			}
+
 			Window.RemoveObjects(context_ids, include_count, exclude_count);
 		}
 		public void RemoveAllObjects()

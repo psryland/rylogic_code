@@ -5,11 +5,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Str;
 using Rylogic.Utility;
 
 namespace Rylogic.Common
@@ -197,6 +196,14 @@ namespace Rylogic.Common
 				get { return new Style { m_col = 0x8F, m_sty = 0x00 }; }
 			}
 
+			public static bool operator ==(Style left, Style right)
+			{
+				return left.Equals(right);
+			}
+			public static bool operator !=(Style left, Style right)
+			{
+				return !(left == right);
+			}
 			public bool Equal(Style rhs)
 			{
 				return m_col == rhs.m_col && m_sty == rhs.m_sty;

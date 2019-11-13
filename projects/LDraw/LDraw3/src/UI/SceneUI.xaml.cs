@@ -24,7 +24,6 @@ namespace LDraw.UI
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
-			Bind = new BindingWrapper(this);
 			Model = model;
 			SceneName = name;
 			SceneView.Options = Settings.Scene;
@@ -143,9 +142,6 @@ namespace LDraw.UI
 		}
 		public static readonly DependencyProperty AutoRangeProperty = Gui_.DPRegister<SceneUI>(nameof(AutoRange));
 
-		/// <summary>A wrapper for binding to this scene</summary>
-		public BindingWrapper Bind { get; }
-
 		/// <summary>Return the tab context menu</summary>
 		private ContextMenu TabCMenu()
 		{
@@ -176,6 +172,7 @@ namespace LDraw.UI
 		private void ClearSceneInternal()
 		{
 			SceneView.Scene.RemoveAllObjects();
+			SceneView.Invalidate();
 		}
 
 		/// <summary>Show the lighting dialog</summary>
@@ -205,19 +202,6 @@ namespace LDraw.UI
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
-
-		/// <summary></summary>
-		public class BindingWrapper
-		{
-			// Notes:
-			//  - This wrapper is needed because when UIElement objects are used as the items
-			//    of a combo box it treats them as child controls, becoming their parent.
-
-			public BindingWrapper(SceneUI scene) { SceneUI = scene; }
-			public SceneUI SceneUI { get; }
-			public string SceneName => SceneUI.SceneName;
-			public static implicit operator SceneUI?(BindingWrapper? x) => x?.SceneUI;
 		}
 	}
 }

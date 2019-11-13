@@ -22,14 +22,12 @@ namespace Rylogic.Gui.WPF
 				Chart = chart;
 				AreaSelect = CreateAreaSelect();
 				Resizer = CreateResizeGrabber();
-				TapeMeasure = CreateTapeMeasure();
 			}
 			public void Dispose()
 			{
 				Chart = null!;
 				AreaSelect = null!;
 				Resizer = null!;
-				TapeMeasure = null!;
 			}
 
 			/// <summary>The owner of these tools</summary>
@@ -165,27 +163,6 @@ namespace Rylogic.Gui.WPF
 
 				/// <summary>Updates the position of the grabber</summary>
 				public Action<BRect, float> Update;
-			}
-
-			/// <summary>A line for measuring distances</summary>
-			public View3d.Object TapeMeasure
-			{
-				get => m_tape_measure;
-				private set
-				{
-					if (m_tape_measure == value) return;
-					Util.Dispose(ref m_tape_measure!);
-					m_tape_measure = value;
-				}
-			}
-			private View3d.Object m_tape_measure = null!;
-			private View3d.Object CreateTapeMeasure()
-			{
-				var col = Chart.Scene.BackgroundColor.InvertBW();
-				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
-				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
-				return obj;
 			}
 		}
 	}

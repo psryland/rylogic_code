@@ -21,10 +21,12 @@
 //      [@o2w]
 //   }
 // 
-// Templates start with a keyword marked by '*' or '**'
+// Templates start with a keyword marked by '*'
 // '*' templates are visible at the hierarchy level they're declared at.
 // '**' templates are not visible at the current hierarchy level, but can be referenced
 //     using '@' or '$' template references at or below the current hierarchy level.
+// '*!' templates are only allowed at root level and can not recursively include
+//     other root level templates.
 // '@' is a reference to a template. Only valid when used within a template.
 // '$' is a reference to the children of a template. Only valid when used within a template.
 //     $ references get expanded by adding each child in the referenced template to the parent
@@ -41,6 +43,7 @@
 //     This form: [one] | [two] | [three] means one of the options is required.
 //     This form: [[one] | [two] | [three]] means the selection is optional.
 // ; means newline break
+//
 // Templates should be multi-line, users can replace the \n characters with ' ' if needed.
 // Templates can contain comments, but comments must not contain: {}[]()<>|*@$
 
@@ -56,9 +59,10 @@ namespace pr::ldr
 		str.append(""
 
 			// Global
-			"*Clear {[(<ctx_id>)]}\n"
-			"*AllowMissingIncludes\n"
-			"*Camera\n"
+			"*!Clear {[(<ctx_id>)]}\n"
+			"*!AllowMissingIncludes\n"
+			"*!Wireframe\n"
+			"*!Camera\n"
 			"{\n"
 			"	[@o2w]\n"
 			"	[*LookAt {<x> <y> <z>}]\n"
@@ -71,6 +75,10 @@ namespace pr::ldr
 			"	[*Far {<far>}]\n"
 			"	[*Orthographic]\n"
 			"} \n"
+			"*!Font\n"
+			"{\n"
+			"	$Font\n"
+			"}\n"
 
 			// Common
 			"**o2w\n"
@@ -91,7 +99,7 @@ namespace pr::ldr
 			"	[*Transpose]\n"
 			"	[*Inverse]\n"
 			"}\n"
-			"*Font\n"
+			"**Font\n"
 			"{\n"
 			"	[*Name {<family_name>}]\n"
 			"	[*Size {<points>}]\n"
@@ -160,7 +168,6 @@ namespace pr::ldr
 			"{\n"
 			"	[*ScreenSpace]\n"
 			"	[*Billboard]\n"
-			"	([@Font])\n"
 			"	(<text>)\n"
 			"	([*CString {<c_style_string>}])\n"
 			"	([*NewLine])\n"
@@ -358,7 +365,7 @@ namespace pr::ldr
 			// 3D shapes
 			"*Box [<name>] [<colour>]\n"
 			"{\n"
-			"	<width> [<height> [depth]]\n"
+			"	<width> [<height> [<depth>]]\n"
 			"	$Textured\n"
 			"	$ObjectModifiers\n"
 			"}\n"

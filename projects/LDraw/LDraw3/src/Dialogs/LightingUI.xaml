@@ -14,7 +14,7 @@
 	Width="400"
 	Height="450"
 	MinWidth="360"
-	MinHeight="466"
+	MinHeight="480"
 	>
 	<Grid>
 		<Grid.RowDefinitions>
@@ -115,10 +115,22 @@
 						<TextBlock
 							Text="Direction: "
 							/>
-						<TextBox
-							Text="{Binding Light.Direction, Converter={conv:VecToString}, ConverterParameter=0}"
+						<DockPanel
 							Margin="20,0,0,0"
-							/>
+							>
+							<Button
+								DockPanel.Dock="Right"
+								Content="ñ"
+								Background="Transparent"
+								BorderThickness="0"
+								MinWidth="16"
+								Margin="2"
+								/>
+							<TextBox
+								Text="{Binding Light.Direction, Converter={conv:VecToString}, ConverterParameter=0}"
+								VerticalAlignment="Center"
+								/>
+						</DockPanel>
 					</StackPanel>
 					
 					<!-- Camera Relative -->

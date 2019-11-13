@@ -48,6 +48,21 @@
 				DisplayMemberPath="Name"
 				Margin="5"
 				/>
+			<ComboBox
+				ItemsSource="{Binding Things}"
+				SelectedItem="{Binding Things/}"
+				SelectedValue="{Binding SelectedDescription, Mode=OneWay}"
+				Margin="5"
+				>
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<CheckBox
+							Content="{Binding Name}"
+							IsChecked="{Binding IsChecked}"
+							/>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
 			<DataGrid
 				x:Name="m_grid"
 				AutoGenerateColumns="False"

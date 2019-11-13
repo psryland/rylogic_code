@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using Rylogic.Extn;
 using Rylogic.Script;
+using Rylogic.Str;
 
 namespace Rylogic.Gfx
 {
@@ -36,6 +38,8 @@ namespace Rylogic.Gfx
 			private const char TemplateMark = '*';
 			private const char ReferenceMark = '@';
 			private const char ExpandMark = '$';
+			private const char HiddenMark = '*';
+			private const char RootLevelOnlyMark = '!';
 			private class TemplateLookup :Dictionary<string, Template> { }
 
 			public AutoComplete(string? templates = null)
@@ -46,16 +50,18 @@ namespace Rylogic.Gfx
 				// Parse the templates
 				templates ??= AutoCompleteTemplates;
 				using var src = new StringSrc(templates);
-				foreach (var tok in Parse(src))
+				foreach (var tok in Parse(src, true))
 				{
 					if (tok is Template template)
 					{
-						// Add the template to the lookup map from keyword to template
-						lookup.Add(template.Keyword.ToLower(), template);
-
 						// Add 'TemplateMark' templates to the list of root-level templates
-						if (!template.Hidden)
+						if (!template.Flags.HasFlag(ETemplateFlags.Hidden))
 							Templates.Add(template);
+
+						// Add the template to the lookup map from keyword to template.
+						// All root level templates must be unique.
+						if (!template.Flags.HasFlag(ETemplateFlags.RootLevelOnly))
+							lookup.Add(template.Keyword.ToLower(), template);
 					}
 					else
 					{
@@ -63,9 +69,11 @@ namespace Rylogic.Gfx
 					}
 				}
 
-				// Replace template references
+				// Replace template references. '*!' templates can existing in 'Templates' and not in 'lookup'
 				foreach (var kv in lookup)
 					ReplaceTemplateReferences(kv.Value, lookup);
+				foreach (var tp in Templates)
+					ReplaceTemplateReferences(tp, lookup);
 
 				// Sort the top level templates to allow binary search
 				Templates.Sort();
@@ -74,20 +82,71 @@ namespace Rylogic.Gfx
 			/// <summary>A sorted list of templates</summary>
 			public List<Template> Templates { get; }
 
-			/// <summary>Match 'partial' to a template</summary>
-			public IEnumerable<Template> Lookup(string partial)
+			/// <summary>Return templates that match 'keyword'</summary>
+			public IEnumerable<Template> Lookup(string keyword, bool partial, Template? parent = null)
 			{
-				partial = partial.TrimStart('*');
-				var idx = partial.Length != 0 ? Templates.BinarySearch(x => string.Compare(x.Keyword, partial, true), find_insert_position: true) : 0;
-				for (; idx != Templates.Count; ++idx)
+				keyword = keyword.TrimStart('*');
+				if (keyword.Length == 0 && !partial)
+					yield break;
+
+				// If there is a parent template, return the child templates
+				if (parent != null)
 				{
-					if (string.Compare(partial, 0, Templates[idx].Keyword, 0, partial.Length, true) != 0) break;
-					yield return Templates[idx];
+					// Search the child templates of 'parent'
+					foreach (var child in parent.ChildTemplates)
+					{
+						if (IsMatch(keyword, partial, child))
+							yield return child;
+					}
+				}
+
+				// If 'parent' is null or a recursive template, check the root level templates
+				if (parent == null || parent.Flags.HasFlag(ETemplateFlags.Recursive))
+				{
+					// Find index of the first match
+					var idx = keyword.Length != 0 ? Templates.BinarySearch(x => string.Compare(x.Keyword, keyword, true), find_insert_position: true) : 0;
+					for (; idx != Templates.Count; ++idx)
+					{
+						// Return each matching template
+						var template = Templates[idx];
+						if (template.Flags.HasFlag(ETemplateFlags.RootLevelOnly) && parent != null) continue;
+						if (!IsMatch(keyword, partial, template)) break;
+						yield return template;
+					}
+				}
+
+				// Compare string to template
+				static bool IsMatch(string keyword, bool partial, Template template)
+				{
+					var lhs = keyword.ToLower();
+					var rhs = template.Keyword.ToLower();
+					return partial ? string.Compare(lhs, 0, rhs, 0, lhs.Length) == 0 : lhs == rhs;
+				}
+			}
+
+			/// <summary>Return the template associated with the given address</summary>
+			public Template? this[string address]
+			{
+				get
+				{
+					var parts = address.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
+
+					var template = (Template?)null;
+					foreach (var part in parts)
+					{
+						var next = Lookup(part, false, template).SingleOrDefault();
+						if (next == null)
+							return null;
+
+						template = next;
+					}
+
+					return template;
 				}
 			}
 
 			/// <summary>Parse a template description into tokens</summary>
-			private static IEnumerable<Token> Parse(Src src)
+			private static IEnumerable<Token> Parse(Src src, bool root = false)
 			{
 				// Recursively build the token tree
 				for (; Extract.AdvanceToNonDelim(src, " \t\r\n");)
@@ -97,15 +156,33 @@ namespace Rylogic.Gfx
 					case TemplateMark:
 						{
 							src.Next(); // Skip the '*'
-							var hidden = src == TemplateMark;
-							if (hidden) src.Next(); // Skip the '*'
+							var flags = ETemplateFlags.Recursive;
+							if (!root)
+							{
+								flags |= ETemplateFlags.Hidden;
+								flags &= ~ETemplateFlags.Recursive;
+							}
+							if (src == HiddenMark)
+							{
+								src.Next();
+								flags |= ETemplateFlags.Hidden;
+								flags &= ~ETemplateFlags.Recursive;
+							}
+							if (src == RootLevelOnlyMark)
+							{
+								src.Next();
+								flags |= ETemplateFlags.RootLevelOnly;
+								flags &= ~ETemplateFlags.Recursive;
+							}
 
 							// Read the template keyword
 							var keyword = Extract.Identifier(out var kw, src) ? kw : throw new ScriptException(Script.EResult.InvalidValue, src.Location, $"Invalid template keyword");
 
 							// Buffer the remaining template description
 							var len = BufferTemplateDeclaration(src);
-							yield return new Template(keyword, hidden, Parse(new WrapSrc(src, len)));
+
+							// Create the template instance
+							yield return new Template(keyword, flags, Parse(new WrapSrc(src, len)));
 							break;
 						}
 					case ReferenceMark:
@@ -205,6 +282,130 @@ namespace Rylogic.Gfx
 				}
 			}
 
+			/// <summary>Return a string representation of a recursively expanded template</summary>
+			public static string ExpandTemplate(Token tok, EExpandFlags flags, int indent_level = 0, string indent_text = "\t")
+			{
+				// Recursive expansion function
+				StringBuilder DoExpand(StringBuilder sb, Token token, int indent, bool root = false)
+				{
+					switch (token)
+					{
+					case Template template:
+						{
+							NewLine(sb);
+							Append(sb, $"*{template.Keyword}", indent);
+							if (root || flags.HasFlag(EExpandFlags.ExpandChildTemplates))
+							{
+								foreach (var child in template.Child)
+									DoExpand(sb, child, indent);
+							}
+							NewLine(sb);
+							break;
+						}
+					case Section section:
+						{
+							NewLine(sb);
+							Append(sb, "{", indent);
+							NewLine(sb);
+
+							foreach (var child in section.Child)
+								DoExpand(sb, child, indent + 1);
+
+							NewLine(sb);
+							Append(sb, "}", indent);
+							NewLine(sb);
+							break;
+						}
+					case Optional optional:
+						{
+							if (optional.Child.FirstOrDefault() is Template)
+								NewLine(sb);
+							else
+								Space(sb);
+
+							Append(sb, "[", indent);
+							foreach (var child in optional.Child)
+							{
+								if (flags.HasFlag(EExpandFlags.OptionalChildTemplates) && child is Template)
+									DoExpand(sb, child, indent);
+								if (flags.HasFlag(EExpandFlags.Optionals) && !(child is Template))
+									DoExpand(sb, child, indent);
+							}
+							Append(sb, "]", indent);
+							sb.TrimEnd("[]").TrimEnd('\n', '\t', ' ');
+							break;
+						}
+					case Repeat repeat:
+						{
+							foreach (var child in repeat.Child)
+								DoExpand(sb, child, indent);
+							Append(sb, "...", indent);
+							break;
+						}
+					case Field field:
+						{
+							Space(sb);
+							Append(sb, $"<{field.Name}>", indent);
+							break;
+						}
+					case Select select:
+						{
+							var sep = "";
+							NewLine(sb);
+							foreach (var child in select.Child)
+							{
+								Append(sb, sep, indent);
+								if (!(child is Literal)) NewLine(sb);
+								DoExpand(sb, child, indent);
+								sep = " | ";
+							}
+							break;
+						}
+					case Literal literal:
+						{
+							Space(sb);
+							Append(sb, literal.Text, indent);
+							break;
+						}
+					case LineBreak _:
+						{
+							NewLine(sb);
+							break;
+						}
+					default:
+						{
+							throw new Exception("Unknown token type");
+						}
+					}
+					return sb;
+				}
+				void Append(StringBuilder sb, string text, int indent)
+				{
+					if (sb.Length != 0 && sb.Back() == '\n' && !flags.HasFlag(EExpandFlags.SingleLine))
+						sb.Append(indent_text.Repeat(indent));
+
+					sb.Append(text);
+				}
+				void NewLine(StringBuilder sb)
+				{
+					// Trim whitespace from the end of a line
+					sb.TrimEnd(' ', '\t');
+					var last = sb.Length != 0 ? sb.Back() : '\0';
+					if (!flags.HasFlag(EExpandFlags.SingleLine) && last != '\0' && last != '\n' && last != '[' && last != '<')
+						sb.Append('\n');
+					if (flags.HasFlag(EExpandFlags.SingleLine) && last != '\0' && last != ' ' && last != '[' && last != '<')
+						sb.Append(' ');
+				}
+				void Space(StringBuilder sb)
+				{
+					var last = sb.Length != 0 ? sb.Back() : '\0';
+					if (last != '\0' && last != '\n' && last != '\t' && last != ' ' && last != '[' && last != '<')
+						sb.Append(' ');
+				}
+
+				return DoExpand(new StringBuilder(), tok, indent_level, true).ToString();
+			}
+
 			/// <summary>Buffer from the current position to the next keyword</summary>
 			private static int BufferTemplateDeclaration(Src src)
 			{
@@ -213,7 +414,7 @@ namespace Rylogic.Gfx
 				var nest = 0;
 				var has_section = false;
 				var lit = new InLiteral();
-				Extract.BufferWhile(src, (s,i) =>
+				Extract.BufferWhile(src, (s, i) =>
 				{
 					var ch = s[i];
 					if (lit.WithinLiteralString(ch)) return 1;
@@ -308,30 +509,76 @@ namespace Rylogic.Gfx
 
 				/// <summary>Debug view of the token</summary>
 				public virtual string Description => string.Join(" ", Child.Select(x => x.Description));
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Token tok && 
+						Equals(tok.Child, Child);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Template :Token, IComparable<Template>
 			{
-				public Template(string keyword, bool hidden, IEnumerable<Token> child_tokens)
-					:base(child_tokens)
+				public Template(string keyword, ETemplateFlags flags, IEnumerable<Token> child_tokens)
+					: base(child_tokens)
 				{
 					Keyword = keyword;
-					Hidden = hidden;
+					Flags = flags;
 				}
 
 				/// <summary>The keyword part of the template (excludes the '*')</summary>
 				public string Keyword { get; }
 
-				/// <summary>False if visible that the current level in the hierarchy</summary>
-				public bool Hidden { get; }
+				/// <summary>Properties of this template</summary>
+				public ETemplateFlags Flags { get; }
+
+				/// <summary>Enumerate the child templates (recursive)</summary>
+				public IEnumerable<Template> ChildTemplates
+				{
+					get
+					{
+						IEnumerable<Template> EnumChildren(Token tok)
+						{
+							foreach (var child in tok.Child)
+							{
+								if (child is Template templ)
+									yield return templ;
+								else if (child.Child.Count != 0)
+									foreach (var c in EnumChildren(child))
+										yield return c;
+							}
+						}
+						return EnumChildren(this);
+					}
+				}
 
 				/// <summary></summary>
-				public override string Description => $"{(Hidden ? "**" : "*")}{Keyword} {base.Description}";
+				public override string Description => $"*{Keyword} {base.Description}";
 
 				/// <summary>Define ordering for templates</summary>
 				public int CompareTo(Template rhs)
 				{
 					return Keyword.CompareTo(rhs.Keyword);
 				}
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Template rhs &&
+						rhs.Keyword == Keyword &&
+						rhs.Flags == Flags &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class TemplateRef :Token
 			{
@@ -340,46 +587,216 @@ namespace Rylogic.Gfx
 					Keyword = keyword;
 					Expand = expand;
 				}
+
+				/// <summary>The name of the referenced template</summary>
 				public string Keyword { get; }
+
+				/// <summary>Copy the children of the referenced template</summary>
 				public bool Expand { get; }
+
+				/// <summary></summary>
 				public override string Description => Expand ? $"${Keyword}" : $"@{Keyword}";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is TemplateRef rhs &&
+						rhs.Keyword == Keyword &&
+						rhs.Expand == Expand &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Section :Token
 			{
-				public Section(IEnumerable<Token> child_tokens) : base(child_tokens) {}
+				public Section(IEnumerable<Token> child_tokens)
+					:base(child_tokens)
+				{}
+
+				/// <summary></summary>
 				public override string Description => $"{{{base.Description}}}";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Section rhs &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Optional :Token
 			{
-				public Optional(IEnumerable<Token> child_tokens) : base(child_tokens) {}
+				public Optional(IEnumerable<Token> child_tokens)
+					: base(child_tokens)
+				{}
+
+				/// <summary></summary>
 				public override string Description => $"[{base.Description}]";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Optional rhs &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Repeat :Token
 			{
-				public Repeat(IEnumerable<Token> child_tokens) : base(child_tokens) {}
+				public Repeat(IEnumerable<Token> child_tokens)
+					:base(child_tokens)
+				{}
+
+				/// <summary></summary>
 				public override string Description => $"({base.Description})";
-			}
-			public class Field :Token
-			{
-				public Field(string name) { Name = name; }
-				public string Name { get; }
-				public override string Description => $"<{Name}>";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Repeat rhs &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Select :Token
 			{
-				public Select() { }
-				public Select(IEnumerable<Token> child_tokens) : base(child_tokens) { }
+				public Select()
+				{}
+				public Select(IEnumerable<Token> child_tokens)
+					:base(child_tokens)
+				{}
+
+				/// <summary></summary>
 				public override string Description => Child.Count != 0 ? string.Join("|", Child.Select(x => x.Description)) : "|";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Select rhs &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
+			}
+			public class Field :Token
+			{
+				public Field(string name)
+				{
+					Name = name;
+				}
+
+				/// <summary>The field name</summary>
+				public string Name { get; }
+
+				/// <summary></summary>
+				public override string Description => $"<{Name}>";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Field rhs &&
+						rhs.Name == Name &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class Literal :Token
 			{
-				public Literal(string text) { Text = text; }
+				public Literal(string text) 
+				{
+					Text = text;
+				}
+
+				/// <summary>The literal text</summary>
 				public string Text { get; }
+
+				/// <summary></summary>
 				public override string Description => Text;
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is Literal rhs &&
+						rhs.Text == Text &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
 			}
 			public class LineBreak :Token
 			{
+				/// <summary></summary>
 				public override string Description => ";";
+
+				#region Equals
+				public override bool Equals(object obj)
+				{
+					return obj is LineBreak rhs &&
+						base.Equals(obj);
+				}
+				public override int GetHashCode()
+				{
+					return base.GetHashCode();
+				}
+				#endregion
+			}
+
+			[Flags]
+			public enum ETemplateFlags
+			{
+				None = 0,
+
+				/// <summary>Set if the template is only used via 'TemplateRef'</summary>
+				Hidden = 1 << 0,
+
+				/// <summary>Set if this template can only be used at the root level</summary>
+				RootLevelOnly = 1 << 1,
+
+				/// <summary>Set if this template can recursively include other root level templates (except for RootLevelOnly ones)</summary>
+				Recursive = 1 << 2,
+			}
+			[Flags]
+			public enum EExpandFlags
+			{
+				None = 0,
+
+				/// <summary>Expand the template onto a single line</summary>
+				SingleLine = 1 << 0,
+
+				/// <summary>Include 'non-child-template' optionals</summary>
+				Optionals = 1 << 1,
+
+				/// <summary>Include 'child-template' optionals</summary>
+				OptionalChildTemplates = 1 << 2,
+
+				/// <summary>Recursively expand child templates</summary>
+				ExpandChildTemplates = 1 << 3,
 			}
 		}
 	}

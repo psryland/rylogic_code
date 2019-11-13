@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Str;
 
 namespace Rylogic.Script
 {
@@ -127,15 +128,19 @@ namespace Rylogic.Script
 		}
 
 		///<summary>
-		/// Advance the source to the next '{' within the current scope
-		/// On return the current position should be a section start character
-		/// or the end of the current section or end of the input stream if not found</summary>
+		/// Advance the source to the next '{' within the current scope.
+		/// If true is returned, the current position should be a section start character.
+		/// If false, then the current position will be '*', '}', or the end of the stream.</summary>
 		public bool FindSectionStart()
 		{
-			for (; Src != 0 && Src != '{' && Src != '}';)
+			for (; Src != 0 && Src != '{' && Src != '}' && Src != '*';)
 			{
-				if (Src != '\"') ++Src;
-				else Extract.EatLiteral(Src);
+				if (Src == '\"')
+				{
+					Extract.EatLiteral(Src);
+					continue;
+				}
+				++Src;
 			}
 			return Src == '{';
 		}

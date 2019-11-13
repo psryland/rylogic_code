@@ -157,6 +157,9 @@ namespace TestWPF
 		/// <summary>Some strings</summary>
 		public ICollectionView Things { get; }
 
+		/// <summary>Comma separated list of selected things</summary>
+		public string SelectedDescription => string.Join(",", m_things.Where(x => x.IsChecked).Select(x => x.Name));
+
 		/// <summary>Modify the strings collection</summary>
 		private void ComboBoxAutoComplete_Update(object sender, EventArgs e)
 		{
@@ -179,6 +182,7 @@ namespace TestWPF
 				Name = name;
 			}
 			public string Name { get; }
+			public bool IsChecked { get; set; }
 			public static implicit operator Thing(string name) { return new Thing(name); }
 		}
 

@@ -200,8 +200,8 @@ namespace Rylogic.Gui.WinForms
 			StyleSetBack(Sci.STYLE_BRACELIGHT, new Colour32(0xFF, 0, 255, 0));
 		
 			// Set end of line mode to CRLF
-			ConvertEOLs(Sci.EEndOfLineMode.LF);
-			EOLMode = Sci.EEndOfLineMode.LF;
+			ConvertEOLs(Sci.EEndOfLine.Lf);
+			EOLMode = Sci.EEndOfLine.Lf;
 			//   SndMsg<void>(SCI_SETVIEWEOL, TRUE, 0);
 
 			// set marker symbol for marker type 0 - bookmark
@@ -223,8 +223,8 @@ namespace Rylogic.Gui.WinForms
 			Indent = 4;
 			CaretFore = dark ? 0xFFffffff : 0xFF000000;
 			CaretPeriod = 400;
-			ConvertEOLs(Sci.EEndOfLineMode.LF);
-			EOLMode = Sci.EEndOfLineMode.LF;
+			ConvertEOLs(Sci.EEndOfLine.Lf);
+			EOLMode = Sci.EEndOfLine.Lf;
 			Property("fold", "1");
 			MultipleSelection = true;
 			AdditionalSelectionTyping = true;
@@ -312,9 +312,9 @@ namespace Rylogic.Gui.WinForms
 					{
 						var lem = EOLMode;
 						var lend =
-							(lem == Sci.EEndOfLineMode.CR   && notif.ch == '\r') ||
-							(lem == Sci.EEndOfLineMode.LF   && notif.ch == '\n') ||
-							(lem == Sci.EEndOfLineMode.CRLF && notif.ch == '\n');
+							(lem == Sci.EEndOfLine.Cr   && notif.ch == '\r') ||
+							(lem == Sci.EEndOfLine.Lf   && notif.ch == '\n') ||
+							(lem == Sci.EEndOfLine.Crlf && notif.ch == '\n');
 						if (lend)
 						{
 							var line = LineFromPosition(CurrentPos);
@@ -1245,14 +1245,14 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>Get/Set the characters that are added into the document when the user presses the Enter key</summary>
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public Sci.EEndOfLineMode EOLMode
+		public Sci.EEndOfLine EOLMode
 		{
-			get { return (Sci.EEndOfLineMode)Cmd(Sci.SCI_GETEOLMODE); }
+			get { return (Sci.EEndOfLine)Cmd(Sci.SCI_GETEOLMODE); }
 			set { Cmd(Sci.SCI_SETEOLMODE, (int)value); }
 		}
 
 		/// <summary>Changes all the end of line characters in the document to match 'mode'</summary>
-		public void ConvertEOLs(Sci.EEndOfLineMode mode)
+		public void ConvertEOLs(Sci.EEndOfLine mode)
 		{
 			Cmd(Sci.SCI_CONVERTEOLS, (int)mode);
 		}

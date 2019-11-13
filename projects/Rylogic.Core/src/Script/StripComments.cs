@@ -1,42 +1,27 @@
-﻿namespace Rylogic.Script
+﻿using Rylogic.Str;
+
+namespace Rylogic.Script
 {
 	/// <summary>Strips comments from a character stream</summary>
-	public class CommentStrip :Src
+	public class StripComments :Src
 	{
-		public CommentStrip(Src src, string? line_comment = "//", string? block_beg = "/*", string? block_end = "*/")
+		private InComment m_com;
+
+		public StripComments(Src src, InLiteral.EFlags literal_flags = InLiteral.EFlags.Escaped | InLiteral.EFlags.SingleLineStrings, InComment.Patterns? comment_patterns = null)
 			:base(src)
 		{
-			LineComment = line_comment ?? string.Empty;
-			BlockBeg = block_beg ?? string.Empty;
-			BlockEnd = block_end ?? string.Empty;
-			m_literal_string = new InLiteral();
+			m_com = new InComment(comment_patterns ?? new InComment.Patterns(), literal_flags);
 		}
-
-		/// <summary>Comment patterns</summary>
-		public string LineComment { get; }
-		public string BlockBeg { get; }
-		public string BlockEnd { get; }
 
 		/// <summary>Return the next valid character from the underlying stream or '\0' for the end of stream.</summary>
 		protected override int Read()
 		{
-			for (; ; )
+			for (; m_src != '\0'; ++m_src)
 			{
-				// Read through literal strings or characters
-				if (m_literal_string.WithinLiteralString(m_src))
-					break;
-
-				// Skip comments
-				if (LineComment.Length != 0 && m_src == LineComment[0] && m_src.Match(LineComment))
-				{
-					Extract.EatLineComment(m_src, LineComment);
+				// Eat comments
+				var len = m_src.ReadAhead(8);
+				if (m_com.WithinComment(m_src.Buffer.ToString(0,len), 0))
 					continue;
-				}
-				if (BlockBeg.Length != 0 && BlockEnd.Length != 0 && m_src == BlockBeg[0] && m_src.Match(BlockBeg))
-				{
-					Extract.EatBlockComment(m_src, BlockBeg, BlockEnd);
-					continue;
-				}
 
 				break;
 			}
@@ -45,7 +30,6 @@
 			if (ch != '\0') m_src.Next();
 			return ch;
 		}
-		private InLiteral m_literal_string;
 	}
 }
 
@@ -86,9 +70,12 @@ namespace Rylogic.UnitTests
 				" comment\n";
 
 			var src = new StringSrc(str_in);
-			var strip = new CommentStrip(src);
+			var strip = new StripComments(src);
 			for (int i = 0; i != str_out.Length; ++i, strip.Next())
+			{
+				if (str_out[i] == strip.Peek) continue;
 				Assert.Equal(str_out[i], strip.Peek);
+			}
 			Assert.Equal('\0', strip.Peek);
 		}
 		[Test]
@@ -104,9 +91,12 @@ namespace Rylogic.UnitTests
 				"ldr $a 2 ";
 
 			var src = new StringSrc(str_in);
-			var strip = new CommentStrip(src, ";", null, null);
+			var strip = new StripComments(src, comment_patterns:new InComment.Patterns(";", "\r\n", "", ""));
 			for (int i = 0; i != str_out.Length; ++i, strip.Next())
+			{
+				if (str_out[i] == strip.Peek) continue;
 				Assert.Equal(str_out[i], strip.Peek);
+			}
 			Assert.Equal('\0', strip.Peek);
 		}
 	}

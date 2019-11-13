@@ -2,19 +2,17 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Markup;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-using Rylogic.Script;
+using Rylogic.Scintilla;
 using Rylogic.Utility;
 
 namespace LDraw.UI
@@ -37,14 +35,13 @@ namespace LDraw.UI
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
-			Bind = new BindingWrapper(this);
 			Model = model;
 			ContextId = context_id;
 			Filepath = filepath;
 			ScriptName = name;
 			Editor = m_scintilla_control;
-			Scenes = new ListCollectionView(new List<SceneUI.BindingWrapper>());
-			m_ldr_auto_complete = new View3d.AutoComplete();
+			LdrAutoComplete = new View3d.AutoComplete();
+			AvailableScenes = new ListCollectionView(new List<SceneWrapper>());
 
 			Render = Command.Create(this, RenderInternal);
 			SaveScript = Command.Create(this, SaveScriptInternal);
@@ -144,10 +141,10 @@ namespace LDraw.UI
 				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					// Refresh the scenes collection
-					var scenes = (List<SceneUI.BindingWrapper>)Scenes.SourceCollection;
-					using var restore_current = Scope.Create(() => Scenes.CurrentItem, s => Scenes.MoveCurrentToOrFirst(s));
-					scenes.Assign(Model.Scenes.Select(x => x.Bind));
-					Scenes.Refresh();
+					var scenes = (List<SceneWrapper>)AvailableScenes.SourceCollection;
+					scenes.Sync(Model.Scenes.Select(x => new SceneWrapper(x, this)));
+					if (!SelectedScenes.Any() && scenes.Count != 0) scenes[0].Selected = true;
+					AvailableScenes.Refresh();
 				}
 			}
 		}
@@ -166,6 +163,7 @@ namespace LDraw.UI
 				if (m_editor != null)
 				{
 					m_editor.CallTip -= HandleCallTip;
+					m_editor.PreviewKeyDown -= HandlePreviewKeyDown;
 					m_editor.AutoComplete -= HandleAutoComplete;
 					m_editor.AutoCompleteSelection -= HandleAutoCompleteSelection;
 					m_editor.SelectionChanged -= HandleSelectionChanged;
@@ -180,6 +178,7 @@ namespace LDraw.UI
 					m_editor.SelectionChanged += HandleSelectionChanged;
 					m_editor.AutoCompleteSelection += HandleAutoCompleteSelection;
 					m_editor.AutoComplete += HandleAutoComplete;
+					m_editor.PreviewKeyDown += HandlePreviewKeyDown;
 					m_editor.CallTip += HandleCallTip;
 				}
 
@@ -200,75 +199,136 @@ namespace LDraw.UI
 				}
 				void HandleAutoComplete(object sender, ScintillaControl.AutoCompleteEventArgs e)
 				{
-					e.Completions.Assign(m_ldr_auto_complete.Lookup(e.Partial).Select(x => $"*{x.Keyword}"));
+					// Use 'IsWordChar' to set the partial word so that '*' characters are included.
+					var line = Editor.GetCurLine(out var caret_offset);
+					var i = caret_offset;
+					for (; i-- != 0 && IsWordChar(line[i]);) { }
+					e.PartialWord = line.Substring(i + 1, caret_offset - i - 1);
+
+					// Determine the ldr script object parent
+					var address = View3d.AddressAt(Editor.Text, e.Position - e.PartialWord.Length);
+
+					// Return child templates and root level templates
+					var templates = LdrAutoComplete.Lookup(e.PartialWord, true, LdrAutoComplete[address]);
+					e.Completions.Assign(templates.Select(x => $"*{x.Keyword}"));
 					e.Handled = true;
 				}
 				void HandleAutoCompleteSelection(object sender, ScintillaControl.AutoCompleteSelectionEventArgs e)
 				{
-					// Cancel the auto complete because adding the template text is manageed here
-					e.Cancel = true;
+					// Determine the ldr script object parent
+					var address = View3d.AddressAt(Editor.Text, e.Position);
+					address = $"{address}{(address.Length != 0 ? "." : "")}{e.Completion}";
 
 					// Find the selected template
-					var template = m_ldr_auto_complete.Lookup(e.Completion).FirstOrDefault();
+					var template = LdrAutoComplete[address];
 					if (template == null)
 						return;
 
-					var line = Editor.GetCurLine(out var caret_offset);
+					var line_index = Editor.LineIndexFromPosition(e.Position);
+					var line_start = Editor.LineRange(line_index).Beg;
+					var line = Editor.GetLine(line_index);
 
-					// Determine the indent level and style
-					var indent_level = line.CountWhile(x => x == ' ' || x == '\t');
-					var indent_text = indent_level != 0 && line[0] == ' ' ? "    " : "\t";
-					if (indent_text[0] == ' ') indent_level /= indent_text.Length;
+					// Use 'IsWordChar' to set the character range to be replaced
+					long beg = (int)(e.Position - line_start), end = beg;
+					for (; end != line.Length && IsWordChar(line[(int)end]); ++end) { }
+					e.ReplaceRange = new Range(line_start + beg, line_start + end);
 
-					// Delete text from 'StartPosition' to the first white space after the caret position
-					Editor.TargetBeg = e.Position;
-					Editor.TargetEnd = Editor.CurrentPos + line.Skip(caret_offset).CountWhile(x => Str_.IsIdentifier(x, false));
-					Editor.ReplaceTarget(string.Empty);
-
-					// Create the auto complete handler
-					m_auto_completer = new AutoCompleter(template, e.Position, indent_level, indent_text);
-
-					// Add the initial auto complete text
-					using var caret = Editor.SelectionScope();
-					Editor.InsertText(e.Position, m_auto_completer.Text.ToString());
-
-					// todo:
-					//   restore caret position
-					//   
+					// Set the completion text. The default caret position should still be correct
+					e.Completion = View3d.AutoComplete.ExpandTemplate(template, View3d.AutoComplete.EExpandFlags.Optionals, Editor.LineIndentationLevel(line_index), Editor.IndentString);
+					e.Handled = true;
 				}
 				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
 				{
-					var line = Editor.GetCurLine(out var caret_offset);
+#if false
+				var line = Editor.GetCurLine(out var caret_offset);
 
-					// Search backward from the caret position to the prior keyword
-					for (; caret_offset != 0 && line[caret_offset] != '*'; --caret_offset) { }
-					if (line[caret_offset] != '*')
-						return;
+				// Search backward from the caret position to the prior keyword
+				for (; caret_offset != 0 && line[caret_offset] != '*'; --caret_offset) { }
+				if (line[caret_offset] != '*')
+					return;
 
-					// Read the keyword
-					if (!Extract.Identifier(out var keyword, new StringSrc(line, caret_offset + 1)))
-						return;
+				// Read the keyword
+				if (!Extract.Identifier(out var keyword, new StringSrc(line, caret_offset + 1)))
+					return;
 
-					// Lookup the templates that match this keyword
-					int index = 0;
-					var def = new StringBuilder();
-					foreach (var template in m_ldr_auto_complete.Lookup(keyword))
-						def.Append((char)++index).Append(template.Description).Append('\n');
+				// Lookup the templates that match this keyword
+				int index = 0;
+				var def = new StringBuilder();
+				foreach (var template in m_ldr_auto_complete.Lookup(keyword))
+					def.Append((char)++index).Append(template.Description).Append('\n');
 
-					// todo: use a template description where child templates are named but not expanded
+				def.ToString().Summary(20)
+				// todo: use a template description where child templates are named but not expanded
+#endif
 
-					e.Definition = def.ToString().Summary(20);
+					e.Definition = string.Empty;
 					e.Handled = true;
+				}
+				void HandlePreviewKeyDown(object sender, KeyEventArgs e)
+				{
+					// On Tab key presses, look for "<field>" within the current scope.
+					if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+					{
+						var backward = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+
+						// Clear the selection so that find isn't limited to the selected text
+						if (backward)
+							Editor.CurrentPos = Editor.Anchor = Editor.SelectionStart;
+						else
+							Editor.CurrentPos = Editor.Anchor = Editor.SelectionEnd;
+
+						// Search for a field identifier
+						const string field_pattern = @"<\w+>";
+						var rng = backward
+							? Editor.Find(Sci.EFindOption.Regexp, field_pattern, new Range(Editor.CurrentPos, 0))
+							: Editor.Find(Sci.EFindOption.Regexp, field_pattern, new Range(Editor.CurrentPos, int.MaxValue));
+
+						// If found, select the field and consume the tab character
+						if (!rng.Empty)
+						{
+							// Expand the range to include '[' and ']' characters
+							var line = Editor.LineFromPosition(rng.Beg, out var line_range);
+							for (int i = (int)(rng.Beg - line_range.Beg); i - 1 != -1 && line[i - 1] == '['; --rng.Beg, --i) { }
+							for (int i = (int)(rng.End - line_range.Beg); i != line.Length && line[i] == ']'; ++rng.End, ++i) { }
+							Editor.Selection = rng;
+							Editor.ScrollCaret();
+							e.Handled = true;
+						}
+					}
+				}
+				static bool IsWordChar(char ch)
+				{
+					return char.IsLetterOrDigit(ch) || ch == '*' || ch == '_';
 				}
 			}
 		}
 		private ScintillaControl m_editor = null!;
 
 		/// <summary>The available scenes</summary>
-		public ICollectionView Scenes { get; }
+		public ICollectionView AvailableScenes { get; }
 
 		/// <summary>The scene that this script renders to</summary>
-		public SceneUI? Scene => Scenes.CurrentAs<SceneUI.BindingWrapper>();
+		public IEnumerable<SceneUI> SelectedScenes
+		{
+			get
+			{
+				var available = (List<SceneWrapper>)AvailableScenes.SourceCollection;
+				return available.Where(x => x.Selected).Select(x => x.SceneUI);
+			}
+		}
+
+		/// <summary>A string description of the output scenes for this script</summary>
+		public string SelectedScenesDescription
+		{
+			get
+			{
+				var desc = string.Join(",", SelectedScenes.Select(x => x.SceneName));
+				return desc.Length != 0 ? desc : "None";
+			}
+		}
+
+		/// <summary>True if there is a scene to render to</summary>
+		public bool CanRender => SelectedScenes.Any();
 
 		/// <summary>Context id for objects created by this scene</summary>
 		public Guid ContextId { get; }
@@ -295,16 +355,10 @@ namespace LDraw.UI
 		private string m_filepath = null!;
 
 		/// <summary>Auto complete provider for LDraw script</summary>
-		private View3d.AutoComplete m_ldr_auto_complete;
-
-		/// <summary>Auto complete handler</summary>
-		private AutoCompleter? m_auto_completer;
+		private View3d.AutoComplete LdrAutoComplete { get; }
 
 		/// <summary>Text file types that can be edited in the script UI</summary>
 		private string EditableFilesFilter => Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");
-
-		/// <summary>A wrapper for binding to this scene</summary>
-		public BindingWrapper Bind { get; }
 
 		/// <summary>Return the tab context menu</summary>
 		private ContextMenu TabCMenu()
@@ -383,8 +437,9 @@ namespace LDraw.UI
 		private void RenderInternal()
 		{
 			SaveFile();
-			if (Scene == null) return;
-			Model.AddScript(Editor.Text, scenes: new[] { Scene });
+			var scenes = SelectedScenes.ToArray();
+			if (scenes.Length == 0) return;
+			Model.AddScript(Editor.Text, scenes, ContextId);
 		}
 
 		/// <summary>Save the contents of the script to file</summary>
@@ -398,8 +453,9 @@ namespace LDraw.UI
 		public Command RemoveObjects { get; }
 		private void RemoveObjectsInternal()
 		{
-			if (Scene == null) return;
-			Model.Clear(new[] { Scene }, new[] { ContextId }, 1, 0);
+			var scenes = SelectedScenes.ToArray();
+			if (scenes.Length == 0) return;
+			Model.Clear(scenes, new[] { ContextId }, 1, 0);
 		}
 
 		/// <summary>Close and remove this script</summary>
@@ -417,17 +473,52 @@ namespace LDraw.UI
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
-		/// <summary></summary>
-		public class BindingWrapper
+		/// <summary>Binding wrapper for a scene</summary>
+		private class SceneWrapper
 		{
 			// Notes:
 			//  - This wrapper is needed because when UIElement objects are used as the items
 			//    of a combo box it treats them as child controls, becoming their parent.
 
-			public BindingWrapper(ScriptUI script) { ScriptUI = script; }
-			public ScriptUI ScriptUI { get; }
-			public string ScriptName => ScriptUI.ScriptName;
-			public static implicit operator ScriptUI?(BindingWrapper? x) => x?.ScriptUI;
+			private readonly ScriptUI m_owner;
+			public SceneWrapper(SceneUI scene, ScriptUI owner)
+			{
+				SceneUI = scene;
+				m_owner = owner;
+			}
+
+			/// <summary>The wrapped scene</summary>
+			public SceneUI SceneUI { get; }
+
+			/// <summary>The name of the wrapped scene</summary>
+			public string SceneName => SceneUI.SceneName;
+
+			/// <summary>True if the scene is selected</summary>
+			public bool Selected
+			{
+				get => m_selected;
+				set
+				{
+					m_selected = value;
+					m_owner.NotifyPropertyChanged(nameof(ScriptUI.SelectedScenes));
+					m_owner.NotifyPropertyChanged(nameof(ScriptUI.SelectedScenesDescription));
+					m_owner.NotifyPropertyChanged(nameof(ScriptUI.CanRender));
+				}
+			}
+			private bool m_selected;
+
+			/// <summary></summary>
+			public static implicit operator SceneUI?(SceneWrapper? x) => x?.SceneUI;
+
+			/// <summary></summary>
+			public override bool Equals(object obj)
+			{
+				return obj is SceneWrapper wrapper && ReferenceEquals(SceneUI, wrapper.SceneUI);
+			}
+			public override int GetHashCode()
+			{
+				return SceneUI.GetHashCode();
+			}
 		}
 	}
 }

@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>A floating window that hosts a tree of dock panes</summary>
 	[DebuggerDisplay("FloatingWindow")]
-	public partial class FloatingWindow : Window, ITreeHost
+	public partial class FloatingWindow : Window, ITreeHost, IPinnable
 	{
 		private Panel m_content;
 		public FloatingWindow(DockContainer dc)
@@ -29,6 +29,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			Content = m_content = new DockPanel { LastChildFill = true };
 
 			DockContainer = dc;
+			PinState = new PinData(this, EPin.Centre);
 			Root = new Branch(dc, DockSizeData.Quarters);
 		}
 		protected override void OnClosing(CancelEventArgs e)
@@ -81,6 +82,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		private DockContainer m_dc = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
+
+		/// <summary>Support pinning this window</summary>
+		public PinData PinState { get; }
 
 		/// <summary>The root level branch of the tree in this floating window</summary>
 		internal Branch Root

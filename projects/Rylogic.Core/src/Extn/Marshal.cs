@@ -49,6 +49,13 @@ namespace Rylogic.Common
 		{
 			return Alloc(mem, typeof(TStruct), count);
 		}
+		public static Scope<UnmanagedBuffer> Alloc<TStruct>(EHeap mem, TStruct init)
+			where TStruct : struct
+		{
+			var buf = Alloc(mem, typeof(TStruct), 1);
+			buf.Value.Init(init);
+			return buf;
+		}
 		public static Scope<UnmanagedBuffer> Alloc(EHeap mem, Type type, int count = 1)
 		{
 			return Scope.Create(
@@ -56,36 +63,46 @@ namespace Rylogic.Common
 				buf => buf.Dispose());
 		}
 
-		/// <summary>Copy a managed string into unmanaged memory, converting to ANSI format if required</summary>
-		public static Scope<IntPtr> AllocAnsiString(string str)
+		/// <summary>Copy a managed string into unmanaged memory, converting to UTF8 format if required</summary>
+		public static Scope<IntPtr> AllocUTF8String(EHeap mem, string str)
 		{
 			return Scope.Create(
-				() => Marshal.StringToHGlobalAnsi(str),
-				ptr => Marshal.FreeHGlobal(ptr));
+				() => mem switch
+				{
+					EHeap.HGlobal => Marshal.StringToHGlobalAnsi(str),
+					EHeap.CoTaskMem => Marshal.StringToCoTaskMemAnsi(str),
+					_ => throw new Exception($"Unknown global memory type: {mem}"),
+				},
+				ptr =>
+				{
+					switch (mem)
+					{
+					case EHeap.HGlobal: Marshal.FreeHGlobal(ptr); break;
+					case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(ptr); break;
+					default: throw new Exception($"Unknown global memory type: {mem}");
+					}
+				});
 		}
 
-		/// <summary>Convert to/from a structure to non-GC memory. Freeing on dispose</summary>
-		[Obsolete("Use 'Alloc' instead")]
-		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt, EHeap mem)
-			where TStruct : struct
+		/// <summary>Copy a managed string into unmanaged memory, converting to UTF16 format if required</summary>
+		public static Scope<IntPtr> AllocUTF16String(EHeap mem, string str)
 		{
 			return Scope.Create(
-				() =>
-					{
-						var ptr = Marshal.AllocCoTaskMem(Marshal.SizeOf(strukt));
-						Marshal.StructureToPtr(strukt, ptr, false);
-						return ptr;
-					},
+				() => mem switch
+				{
+					EHeap.HGlobal => Marshal.StringToHGlobalUni(str),
+					EHeap.CoTaskMem => Marshal.StringToCoTaskMemUni(str),
+					_ => throw new Exception($"Unknown global memory type: {mem}"),
+				},
 				ptr =>
+				{
+					switch (mem)
 					{
-						Marshal.FreeCoTaskMem(ptr);
-					});
-		}
-		[Obsolete("Use 'Marshal.PtrToStructure' instead")]
-		public static TStruct PtrToStructure<TStruct>(IntPtr ptr)
-			where TStruct : struct
-		{
-			return Marshal.PtrToStructure<TStruct>(ptr);
+					case EHeap.HGlobal: Marshal.FreeHGlobal(ptr); break;
+					case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(ptr); break;
+					default: throw new Exception($"Unknown global memory type: {mem}");
+					}
+				});
 		}
 
 		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
@@ -149,7 +166,7 @@ namespace Rylogic.Common
 				{
 					EHeap.CoTaskMem => Marshal.AllocCoTaskMem(Length),
 					EHeap.HGlobal => Marshal.AllocHGlobal(Length),
-					_ => throw new Exception($"Unknown global memory type: {mem}"),
+					_ => throw new Exception($"Unknown global memory type: {Type}"),
 				};
 			}
 			public void Dispose()
@@ -159,7 +176,7 @@ namespace Rylogic.Common
 				{
 				case EHeap.HGlobal: Marshal.FreeHGlobal(Ptr); break;
 				case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(Ptr); break;
-				default: throw new Exception("$Unknown global memory type: {mem}");
+				default: throw new Exception($"Unknown global memory type: {Type}");
 				}
 				Ptr = IntPtr.Zero;
 				Length = 0;
@@ -169,6 +186,15 @@ namespace Rylogic.Common
 			public EHeap Type;
 			public IntPtr Ptr;
 			public int Length;
+
+			/// <summary>Init the buffer from a structure</summary>
+			public void Init<TStruct>(TStruct init, bool replacing_valid_data = false)
+				where TStruct : struct
+			{
+				if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
+				if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
+				Marshal.StructureToPtr(init, Ptr, replacing_valid_data);
+			}
 
 			/// <summary>Interpret the buffer as a structure type</summary>
 			public TStruct As<TStruct>()

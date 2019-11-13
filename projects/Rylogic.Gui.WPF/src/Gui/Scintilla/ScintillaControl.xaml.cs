@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
@@ -22,7 +24,8 @@ namespace Rylogic.Gui.WPF
 		//  - Copy/port #pragma regions from the native control on demand
 		//  - Dispose is handled internally via the Closed event on the owning window.
 
-		private const int ScintillaId = 0x1;
+		private static int ScintillaCtrlId = 1;
+		private IntPtr CtrlId = new IntPtr(++ScintillaCtrlId);
 
 		static ScintillaControl()
 		{
@@ -46,7 +49,7 @@ namespace Rylogic.Gui.WPF
 
 			// Create the native scintilla window to fit within 'hwnd_parent'
 			Win32.GetClientRect(hwnd_parent.Handle, out var parent_rect);
-			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, (IntPtr)ScintillaId, IntPtr.Zero, IntPtr.Zero);
+			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, CtrlId, IntPtr.Zero, IntPtr.Zero);
 			if (Hwnd == IntPtr.Zero)
 				throw new Exception("Failed to create scintilla native control");
 
@@ -155,7 +158,10 @@ namespace Rylogic.Gui.WPF
 		}
 		private int m_in_wnd_proc;
 
-		/// <summary>The window handle of the Scintilla control</summary>
+		/// <summary>
+		/// The window handle of the Scintilla control.
+		/// This is the same as HwndHost.Handle but has a value as soon as the scintilla control is actually created
+		/// rather than just after the 'BuildWindowCore' function has completed.</summary>
 		private IntPtr Hwnd { get; set; }
 		public event EventHandler? HandleCreated;
 		private bool IsHandleCreated => Hwnd != IntPtr.Zero;
@@ -166,6 +172,31 @@ namespace Rylogic.Gui.WPF
 			if (m_func == null) throw new Exception("The scintilla control has not been created yet");
 			return m_func(m_ptr, code, wparam, lparam);
 		}
+		public long Cmd(int code, IntPtr wparam, IntPtr lparam)
+		{
+			return (int)Call(code, wparam, lparam);
+		}
+		public long Cmd(int code, long wparam, IntPtr lparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, lparam);
+		}
+		public long Cmd(int code, long wparam, string lparam)
+		{
+			using var text = Marshal_.AllocUTF8String(EHeap.HGlobal, lparam);
+			return (int)Call(code, (IntPtr)wparam, text.Value);
+		}
+		public long Cmd(int code, long wparam, long lparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, (IntPtr)lparam);
+		}
+		public long Cmd(int code, long wparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, IntPtr.Zero);
+		}
+		public long Cmd(int code)
+		{
+			return (int)Call(code, IntPtr.Zero, IntPtr.Zero);
+		}
 		private Sci.SciFnDirect? m_func;
 		private IntPtr m_ptr;
 
@@ -175,6 +206,8 @@ namespace Rylogic.Gui.WPF
 			// Notes:
 			//  - 'hwnd' is the window handle of the parent window of the native scintilla control.
 			//    Scintilla sends notifications to its parent, which is what we're handling here.
+			//  - WPF only has one HWND per window, so the Hook set up in 'BuildWindowCore' means
+			//    notification messages from all instances come through here.
 
 			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
 			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
@@ -182,10 +215,13 @@ namespace Rylogic.Gui.WPF
 			{
 			case Win32.WM_COMMAND:
 				{
+					var id = Win32.LoWord(wparam.ToInt32());
+					if (id != CtrlId.ToInt32())
+						break; // Not for this instance.
+
 					// Watch for edit notifications
 					var notif = Win32.HiWord(wparam.ToInt32());
-					var id = Win32.LoWord(wparam.ToInt32());
-					if (notif == Win32.EN_CHANGE && id == ScintillaId)
+					if (notif == Sci.SCEN_CHANGE)
 					{
 						// This indicates the text buffer has changed via API functions.
 						// 'SCN_CHARADDED' indicates a key press resulted in a character added
@@ -196,8 +232,10 @@ namespace Rylogic.Gui.WPF
 				}
 			case Win32.WM_NOTIFY:
 				{
-					System.Diagnostics.Debug.Assert(Environment.Is64BitProcess);
 					var notif = Marshal.PtrToStructure<Sci.SCNotification>(lparam);
+					if (notif.nmhdr.idFrom != CtrlId)
+						break; // Not for this instance.
+
 					switch (notif.nmhdr.code)
 					{
 					case Sci.SCN_CHARADDED:
@@ -211,7 +249,7 @@ namespace Rylogic.Gui.WPF
 									(lem == Sci.EEndOfLine.Crlf && notif.ch == '\n');
 								if (lend)
 								{
-									var line = LineFromPosition(CurrentPos);
+									var line = LineIndexFromPosition(CurrentPos);
 									var indent = line > 0 ? LineIndentation(line - 1) : 0;
 									LineIndentation(line, indent);
 									GotoPos(FindColumn(line, indent));
@@ -287,35 +325,671 @@ namespace Rylogic.Gui.WPF
 			sc.Indent = 4;
 		}
 
-		/// <summary>Call the direct function</summary>
-		public int Cmd(int code, IntPtr wparam, IntPtr lparam)
+		#region Text
+
+		/// <summary>Allow the control to store the text content before and after the window handle has been created</summary>
+		private string m_text = string.Empty;
+
+		/// <summary>Clear all text from the control</summary>
+		public void ClearAll()
 		{
-			return (int)Call(code, wparam, lparam);
-		}
-		public int Cmd(int code, long wparam, IntPtr lparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, lparam);
-		}
-		public int Cmd(int code, long wparam, string lparam)
-		{
-			using var text = Marshal_.AllocAnsiString(lparam);
-			return (int)Call(code, (IntPtr)wparam, text.Value);
-		}
-		public int Cmd(int code, long wparam, long lparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, (IntPtr)lparam);
-		}
-		public int Cmd(int code, long wparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, IntPtr.Zero);
-		}
-		public int Cmd(int code)
-		{
-			return (int)Call(code, IntPtr.Zero, IntPtr.Zero);
+			m_text = string.Empty;
+			if (IsHandleCreated)
+				Cmd(Sci.SCI_CLEARALL);
 		}
 
+		/// <summary>Clear style for the document</summary>
+		public void ClearDocumentStyle()
+		{
+			Cmd(Sci.SCI_CLEARDOCUMENTSTYLE);
+		}
+
+		/// <summary>Gets the length of the text in the control</summary>
+		public long TextLength => IsHandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
+
+		/// <summary>Get/Set the current text</summary>
+		public string Text
+		{
+			get
+			{
+				if (!IsHandleCreated)
+					return m_text;
+
+				var len = TextLength;
+				if (len == 0)
+					return string.Empty;
+
+				var bytes = new byte[len];
+				using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				var num = Cmd(Sci.SCI_GETTEXT, len + 1, h.Handle.AddrOfPinnedObject());
+				return Encoding.UTF8.GetString(bytes, 0, (int)num);
+			}
+			set
+			{
+				if (value.Length == 0)
+				{
+					ClearAll();
+				}
+				else if (!IsHandleCreated)
+				{
+					m_text = value;
+				}
+				else
+				{
+					// Convert the string to UTF-8
+					var bytes = Encoding.UTF8.GetBytes(value);
+					using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+					Cmd(Sci.SCI_SETTEXT, 0, h.Handle.AddrOfPinnedObject());
+				}
+
+				TextChanged?.Invoke(this, EventArgs.Empty);
+			}
+		}
+
+		/// <summary>Raised when text in the control is changed</summary>
+		public event EventHandler? TextChanged;
+
+		/// <summary>Raised when a keypress results in a character added (Doesn't fire for delete)</summary>
+		private void OnCharAdded(char ch)
+		{
+			CharAdded?.Invoke(this, new CharAddedEventArgs(ch));
+		}
+		public class CharAddedEventArgs :EventArgs
+		{
+			public CharAddedEventArgs(char ch)
+			{
+				Char = ch;
+			}
+
+			/// <summary>The character that was added</summary>
+			public char Char { get; }
+		}
+		public event EventHandler<CharAddedEventArgs>? CharAdded;
+
+		/// <summary></summary>
+		public char GetCharAt(long pos)
+		{
+			return (char)(Cmd(Sci.SCI_GETCHARAT, pos) & 0xFF);
+		}
+
+		/// <summary>Return a line of text</summary>
+		public string GetLine(long line_index)
+		{
+			var len = LineLength(line_index);
+			var bytes = new byte[len];
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			var num = Cmd(Sci.SCI_GETLINE, line_index, h.Handle.AddrOfPinnedObject());
+			return Encoding.UTF8.GetString(bytes, 0, (int)num);
+		}
+
+		/// <summary></summary>
+		public long LineCount => Cmd(Sci.SCI_GETLINECOUNT);
+
+		/// <summary>Returns the text in the given range</summary>
+		public string TextRange(Range range)
+		{
+			if (range.Beg < 0 || range.End > TextLength)
+				throw new Exception($"Invalid text range: [{range.Beg}, {range.End}). Current text length is {TextLength}");
+
+			// Create the 'TextRange' structure
+			using var text = Marshal_.Alloc(EHeap.HGlobal, range.Sizei + 1);
+			var text_range = new Sci.TextRange
+			{
+				chrg = new Sci.CharacterRange { cpMin = range.Begi, cpMax = range.Endi },
+				lpstrText = text.Value.Ptr,
+			};
+
+			// Request the text in the given range
+			using var buffer = Marshal_.Alloc(EHeap.HGlobal, text_range);
+			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
+
+			// Return the returned string
+			return Marshal.PtrToStringAnsi(text.Value.Ptr);
+		}
+
+		/// <summary></summary>
+		public void AppendText(string text)
+		{
+			// Convert the string to UTF-8
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_APPENDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Append text and style data to the document</summary>
+		public void AppendStyledText(Sci.CellBuf cells)
+		{
+			using var c = cells.Pin();
+			Cmd(Sci.SCI_APPENDSTYLEDTEXT, c.SizeInBytes, c.Pointer);
+		}
+
+		/// <summary></summary>
+		public void InsertText(long pos, string text)
+		{
+			// Ensure null termination
+			var bytes = Encoding.UTF8.GetBytes(text + "\0");
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_INSERTTEXT, pos, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void ReplaceSel(string text)
+		{
+			// Ensure null termination
+			var bytes = Encoding.UTF8.GetBytes(text + "\0");
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_REPLACESEL, 0, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void AddText(string text)
+		{
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_ADDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary></summary>
+		public void AddStyledText(string text)
+		{
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			Cmd(Sci.SCI_ADDSTYLEDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Insert text and style data into the document at 'pos'</summary>
+		public void InsertStyledText(long pos, Sci.CellBuf cells)
+		{
+			using var c = cells.Pin();
+			Cmd(Sci.SCI_INSERTSTYLEDTEXT, pos, c.Pointer);
+		}
+
+		/// <summary>Delete a character range from the document</summary>
+		public void DeleteRange(long start, long length)
+		{
+			Cmd(Sci.SCI_DELETERANGE, start, length);
+		}
+
+		/// <summary>Returns the style at 'pos' in the document, or 0 if pos is negative or past the end of the document.</summary>
+		public int GetStyleAt(long pos)
+		{
+			return (int)Cmd(Sci.SCI_GETSTYLEAT, pos);
+		}
+
+		/// <summary></summary>
+		public int GetStyledText(out Sci.TextRange tr)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
+		}
+		public int GetStyledText(StringBuilder text, long first, long last)
+		{
+			throw new NotImplementedException();
+			//TxtRng tr(text, first, last);
+			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
+		}
+
+		/// <summary></summary>
+		public int TargetAsUTF8(StringBuilder text)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_TARGETASUTF8, 0, text);
+		}
+
+		/// <summary></summary>
+		public int EncodedFromUTF8(byte[] utf8, byte[] encoded)
+		{
+			throw new NotImplementedException();
+			//return Cmd(Sci.SCI_ENCODEDFROMUTF8, (WPARAM)utf8, (LPARAM )encoded);
+		}
+
+		/// <summary></summary>
+		public void SetLengthForEncode(int bytes)
+		{
+			Cmd(Sci.SCI_SETLENGTHFORENCODE, bytes);
+		}
+
+		#endregion
+		#region Selection/Navigation
+
+		/// <summary>Raised whenever the selection changes</summary>
+		public event EventHandler? SelectionChanged;
+		private void OnSelectionChanged()
+		{
+			SelectionChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		/// <summary>
+		/// Get/Set the current caret position.
+		/// 'Set' sets the current position and creates a selection between the anchor and the current position.
+		/// The caret is not scrolled into view.</summary>
+		public long CurrentPos
+		{
+			get => Cmd(Sci.SCI_GETCURRENTPOS);
+			set => Cmd(Sci.SCI_SETCURRENTPOS, value);
+		}
+
+		/// <summary>
+		/// Get/Set the current anchor position.
+		/// 'Set' sets the anchor position and creates a selection between the anchor position and the current position.
+		/// The caret is not scrolled into view.</summary>
+		public long Anchor
+		{
+			get => Cmd(Sci.SCI_GETANCHOR);
+			set => Cmd(Sci.SCI_SETANCHOR, value);
+		}
+
+		/// <summary>The *unnormalised* range of selected text. Note: *not* [SelectionStart,SelectionEnd)</summary>
+		public Range Selection
+		{
+			get => new Range(Anchor, CurrentPos);
+			set => SetSel(value.Beg, value.End);
+		}
+
+		/// <summary>
+		/// Get/Set the selection start position.
+		/// 'Get' returns the start of the selection without regard to which end is the current position and which is the anchor.
+		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
+		/// SCI_GETSELECTIONEND returns the larger of the two values.
+		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
+		/// It does not make the caret visible. After set, the anchor position is unchanged, and the caret position is Max(anchor, current)</summary>
+		public long SelectionStart
+		{
+			get => Cmd(Sci.SCI_GETSELECTIONSTART);
+			set => Cmd(Sci.SCI_SETSELECTIONSTART, value);
+		}
+
+		/// <summary>
+		/// Get/Set the selection end position.
+		/// 'Get' returns the end of the selection without regard to which end is the current position and which is the anchor.
+		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
+		/// SCI_GETSELECTIONEND returns the larger of the two values.
+		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
+		/// It does not make the caret visible. After set, the anchor position is Min(anchor, caret), and the caret position is unchanged.</summary>
+		public long SelectionEnd
+		{
+			get => Cmd(Sci.SCI_GETSELECTIONEND);
+			set => Cmd(Sci.SCI_SETSELECTIONEND, value);
+		}
+
+		/// <summary>
+		/// Get/Set the selection mode, which can be stream (SC_SEL_STREAM=0) or rectangular (SC_SEL_RECTANGLE=1) or by lines (SC_SEL_LINES=2) or thin rectangular (SC_SEL_THIN=3).
+		/// When set in these modes, regular caret moves will extend or reduce the selection, until the mode is cancelled by a call with same value or with SCI_CANCEL.
+		/// The get function returns the current mode even if the selection was made by mouse or with regular extended moves.
+		/// SC_SEL_THIN is the mode after a rectangular selection has been typed into and ensures that no characters are selected.</summary>
+		public Sci.ESelectionMode SelectionMode
+		{
+			get => (Sci.ESelectionMode)Cmd(Sci.SCI_GETSELECTIONMODE);
+			set => Cmd(Sci.SCI_SETSELECTIONMODE, (long)value);
+		}
+
+		/// <summary>Set the range of selected text. 'caret' can be less than 'anchor'</summary>
+		public void SetSel(long anchor, long caret)
+		{
+			Cmd(Sci.SCI_SETSEL, anchor, caret);
+		}
+
+		/// <summary>This selects all the text in the document. The current position is not scrolled into view.</summary>
+		public void SelectAll()
+		{
+			Cmd(Sci.SCI_SELECTALL);
+		}
+
+		/// <summary>This removes any selection and sets the caret at 'position'. The caret is not scrolled into view.</summary>
+		public void ClearSelection(long position)
+		{
+			Cmd(Sci.SCI_SETEMPTYSELECTION, position);
+		}
+
+		/// <summary>RAII scope for a selection</summary>
+		public Scope<Range> PreserveSelection()
+		{
+			return Scope.Create(() => Selection, sel => Selection = sel);
+		}
+
+		/// <summary>
+		/// Returns the currently selected text. This method allows for rectangular and discontiguous
+		/// selections as well as simple selections. See Multiple Selection for information on how multiple
+		/// and rectangular selections and virtual space are copied.</summary>
+		public string GetSelText()
+		{
+			var len = Cmd(Sci.SCI_GETSELTEXT);
+			var buf = new byte[len];
+			using var t = GCHandle_.Alloc(buf, GCHandleType.Pinned);
+			len = Cmd(Sci.SCI_GETSELTEXT, 0, t.Handle.AddrOfPinnedObject());
+			return Encoding.UTF8.GetString(buf, 0, (int)len);
+		}
+
+		/// <summary>Retrieves the text of the line containing the caret and returns the position within the line of the caret.</summary>
+		public string GetCurLine(out int caret_offset)
+		{
+			// Get the length of text on the current line
+			var len = Cmd(Sci.SCI_GETCURLINE);
+			var buf = new byte[len];
+
+			// Allocate a global heap buffer and read the line into it
+			using var t = GCHandle_.Alloc(buf, GCHandleType.Pinned);
+			caret_offset = (int)Cmd(Sci.SCI_GETCURLINE, buf.Length, t.Handle.AddrOfPinnedObject());
+
+			// Trim null terminators
+			for (; len != 0 && buf[len - 1] == 0; --len) { }
+			return Encoding.UTF8.GetString(buf, 0, (int)len);
+		}
+		public string GetCurLine()
+		{
+			return GetCurLine(out _);
+		}
+
+		/// <summary>Get the position of the start and end of the selection at the given line with INVALID_POSITION returned if no selection on this line.</summary>
+		public Range GetLineSelectionPosition(long line)
+		{
+			return new Range(
+				Cmd(Sci.SCI_GETLINESELSTARTPOSITION, line),
+				Cmd(Sci.SCI_GETLINESELENDPOSITION, line));
+		}
+
+		/// <summary>Get/Set the index of the first visible line</summary>
+		public long FirstVisibleLine
+		{
+			get => Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+			set => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, value);
+		}
+
+		/// <summary>Get the number of lines visible on screen</summary>
+		public long LinesOnScreen => Cmd(Sci.SCI_LINESONSCREEN);
+
+		/// <summary></summary>
+		public bool GetModify()
+		{
+			return Cmd(Sci.SCI_GETMODIFY) != 0;
+		}
+
+		/// <summary>
+		/// Removes any selection, sets the caret at caret and scrolls the view to make the caret visible, if necessary.
+		/// It is equivalent to SCI_SETSEL(caret, caret). The anchor position is set the same as the current position.</summary>
+		public void GotoPos(long pos)
+		{
+			Cmd(Sci.SCI_GOTOPOS, pos);
+		}
+
+		/// <summary>
+		/// Removes any selection and sets the caret at the start of line number line and scrolls the view (if needed)
+		/// to make it visible. The anchor position is set the same as the current position. If line is outside the lines
+		/// in the document (first line is 0), the line set is the first or last.</summary>
+		public void GotoLine(long line_index)
+		{
+			Cmd(Sci.SCI_GOTOLINE, line_index);
+		}
+
+		/// <summary>Return the character index position for the start of 'line_index'</summary>
+		public long PositionFromLineIndex(long line_index)
+		{
+			return Cmd(Sci.SCI_POSITIONFROMLINE, line_index);
+		}
+
+		/// <summary>Get the line index from a character index</summary>
+		public long LineIndexFromPosition(long pos)
+		{
+			return Cmd(Sci.SCI_LINEFROMPOSITION, pos);
+		}
+
+		/// <summary>Get the text of the line that contains 'pos'</summary>
+		public string LineFromPosition(long pos)
+		{
+			var line_index = LineIndexFromPosition(pos);
+			return GetLine(line_index);
+		}
+		public string LineFromPosition(long pos, out Range range)
+		{
+			var line_index = LineIndexFromPosition(pos);
+			range = LineRange(line_index);
+			return GetLine(line_index);
+		}
+
+		/// <summary>
+		/// Returns the position at the end of the line, before any line end characters. If line is the last line in the document
+		/// (which does not have any end of line characters) or greater, the result is the size of the document. If line is
+		/// negative the result is undefined.</summary>
+		public long LineEndPosition(long line_index)
+		{
+			return Cmd(Sci.SCI_GETLINEENDPOSITION, line_index);
+		}
+
+		/// <summary>Gets the character range for a line (including new line characters)</summary>
+		public Range LineRange(long line_index)
+		{
+			return new Range(
+				PositionFromLineIndex(line_index),
+				PositionFromLineIndex(line_index + 1));
+		}
+
+		/// <summary>Return the length of line 'line'</summary>
+		public long LineLength(long line)
+		{
+			return Cmd(Sci.SCI_LINELENGTH, line);
+		}
+
+		/// <summary>
+		/// Returns the column number of a position 'pos' within the document taking the width of tabs into account.
+		/// This returns the column number of the last tab on the line before pos, plus the number of characters between
+		/// the last tab and pos. If there are no tab characters on the line, the return value is the number of characters
+		/// up to the position on the line. In both cases, double byte characters count as a single character.
+		/// This is probably only useful with mono-spaced fonts.</summary>
+		public int GetColumn(long pos)
+		{
+			return (int)Cmd(Sci.SCI_GETCOLUMN, pos);
+		}
+
+		/// <summary>
+		/// Returns the character position of a column on a line taking the width of tabs into account.
+		/// It treats a multi-byte character as a single column. Column numbers, like lines start at 0.</summary>
+		public long GetPos(long line, int column)
+		{
+			return FindColumn(line, column);
+		}
+		public long FindColumn(long line, int column)
+		{
+			return Cmd(Sci.SCI_FINDCOLUMN, line, column);
+		}
+
+		/// <summary>Gets the closest character position to a point.</summary>
+		public long PositionFromPoint(int x, int y)
+		{
+			return Cmd(Sci.SCI_POSITIONFROMPOINT, x, y);
+		}
+
+		/// <summary>Similar to PositionFromPoint, but returns -1 if the point is outside the window or not close to any characters.</summary>
+		public long PositionFromPointClose(int x, int y)
+		{
+			return Cmd(Sci.SCI_POSITIONFROMPOINTCLOSE, x, y);
+		}
+
+		/// <summary></summary>
+		public long PointXFromPosition(long pos)
+		{
+			return Cmd(Sci.SCI_POINTXFROMPOSITION, 0, pos);
+		}
+
+		/// <summary></summary>
+		public long PointYFromPosition(long pos)
+		{
+			return Cmd(Sci.SCI_POINTYFROMPOSITION, 0, pos);
+		}
+
+		/// <summary></summary>
+		public void HideSelection(bool normal)
+		{
+			Cmd(Sci.SCI_HIDESELECTION, normal ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public bool SelectionIsRectangle()
+		{
+			return Cmd(Sci.SCI_SELECTIONISRECTANGLE) != 0;
+		}
+
+		/// <summary></summary>
+		public void MoveCaretInsideView()
+		{
+			Cmd(Sci.SCI_MOVECARETINSIDEVIEW);
+		}
+
+		/// <summary></summary>
+		public long WordStartPosition(long pos, bool onlyWordCharacters)
+		{
+			return Cmd(Sci.SCI_WORDSTARTPOSITION, pos, onlyWordCharacters ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public long WordEndPosition(long pos, bool onlyWordCharacters)
+		{
+			return Cmd(Sci.SCI_WORDENDPOSITION, pos, onlyWordCharacters ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public long PositionBefore(long pos)
+		{
+			return Cmd(Sci.SCI_POSITIONBEFORE, pos);
+		}
+
+		/// <summary></summary>
+		public long PositionAfter(long pos)
+		{
+			return Cmd(Sci.SCI_POSITIONAFTER, pos);
+		}
+
+		/// <summary>
+		/// Returns the width (in pixels) of a string drawn in the given style.
+		/// Can be used, for example, to decide how wide to make the line number margin in order to display a given number of numerals.</summary>
+		public double TextWidth(int style, string text)
+		{
+			var text_bytes = Encoding.UTF8.GetBytes(text);
+			using var t = GCHandle_.Alloc(text_bytes, GCHandleType.Pinned);
+			return Cmd(Sci.SCI_TEXTWIDTH, style, t.Handle.AddrOfPinnedObject());
+		}
+
+		/// <summary>Returns the height (in pixels) of a particular line. Currently all lines are the same height.</summary>
+		public double TextHeight(long line)
+		{
+			return Cmd(Sci.SCI_TEXTHEIGHT, line);
+		}
+
+		/// <summary>
+		/// Scintilla remembers the x value of the last position horizontally moved to explicitly by the user
+		/// and this value is then used when moving vertically such as by using the up and down keys.
+		/// This message sets the current x position of the caret as the remembered value.</summary>
+		public void ChooseCaretX()
+		{
+			Cmd(Sci.SCI_CHOOSECARETX);
+		}
+
+		/// <summary>
+		/// Enable/disable multiple selection. When multiple selection is disabled, it is not
+		/// possible to select multiple ranges by holding down the Ctrl key while dragging with the mouse.</summary>
+		public bool MultipleSelection
+		{
+			get => Cmd(Sci.SCI_GETMULTIPLESELECTION) != 0;
+			set => Cmd(Sci.SCI_SETMULTIPLESELECTION, value ? 1 : 0);
+		}
+
+		/// <summary>Whether typing, backspace, or delete works with multiple selections simultaneously.</summary>
+		public bool AdditionalSelectionTyping
+		{
+			get => Cmd(Sci.SCI_GETADDITIONALSELECTIONTYPING) != 0;
+			set => Cmd(Sci.SCI_SETADDITIONALSELECTIONTYPING, value ? 1 : 0);
+		}
+
+		/// <summary>
+		/// When pasting into multiple selections, the pasted text can go into just the main selection
+		/// with SC_MULTIPASTE_ONCE=0 or into each selection with SC_MULTIPASTE_EACH=1. SC_MULTIPASTE_ONCE is the default.</summary>
+		public Sci.EMultiPaste MutliPaste
+		{
+			get => (Sci.EMultiPaste)Cmd(Sci.SCI_GETMULTIPASTE);
+			set => Cmd(Sci.SCI_SETMULTIPASTE, (long)value);
+		}
+
+		/// <summary>
+		/// Virtual space can be enabled or disabled for rectangular selections or in other circumstances or in both.
+		/// There are two bit flags SCVS_RECTANGULARSELECTION=1 and SCVS_USERACCESSIBLE=2 which can be set independently.
+		/// SCVS_NONE=0, the default, disables all use of virtual space.</summary>
+		public Sci.EVirtualSpace VirtualSpace
+		{
+			get => (Sci.EVirtualSpace)Cmd(Sci.SCI_GETVIRTUALSPACEOPTIONS);
+			set => Cmd(Sci.SCI_SETVIRTUALSPACEOPTIONS, (long)value);
+		}
+
+		/// <summary>Insert/Overwrite</summary>
+		public bool Overtype
+		{
+			get => Cmd(Sci.SCI_GETOVERTYPE) != 0;
+			set => Cmd(Sci.SCI_SETOVERTYPE, value ? 1 : 0);
+		}
+
+		#endregion
+		#region Cut, Copy And Paste
+
+		/// <summary></summary>
+		public void Cut()
+		{
+			Cmd(Sci.SCI_CUT);
+		}
+
+		/// <summary></summary>
+		public void Copy()
+		{
+			Cmd(Sci.SCI_COPY);
+		}
+
+		/// <summary></summary>
+		public void Paste()
+		{
+			Cmd(Sci.SCI_PASTE);
+		}
+
+		/// <summary></summary>
+		public bool CanPaste()
+		{
+			return Cmd(Sci.SCI_CANPASTE) != 0;
+		}
+
+		/// <summary>Clear the *selected* text</summary>
+		public void Clear()
+		{
+			Cmd(Sci.SCI_CLEAR);
+		}
+
+		/// <summary></summary>
+		public void CopyRange(int first, int last)
+		{
+			Cmd(Sci.SCI_COPYRANGE, first, last);
+		}
+
+		/// <summary></summary>
+		public void CopyText(StringBuilder text, long length)
+		{
+			throw new NotImplementedException();
+			//Cmd(Sci.SCI_COPYTEXT, length, text);
+		}
+
+		/// <summary></summary>
+		public void SetPasteConvertEndings(bool convert)
+		{
+			Cmd(Sci.SCI_SETPASTECONVERTENDINGS, convert ? 1 : 0);
+		}
+
+		/// <summary></summary>
+		public bool GetPasteConvertEndings()
+		{
+			return Cmd(Sci.SCI_GETPASTECONVERTENDINGS) != 0;
+		}
+
+		#endregion
 		#region Auto Complete
 
+		// Typical Usage:
+		//  - Handle 'AutoComplete' to provide the list of possible completions
+		//  - Handle 'AutoCompleteSelection' if you don't want default behaviour which is to replace the current word with the completion text.
+		//  - Handle 'AutoCompleteDone' if you just want to know when an auto complete has happened.
 		// Notes:
 		//  - Autocompletion displays a list box showing likely identifiers based upon the user's typing. The user chooses the currently selected item by pressing
 		//    the tab character or another character that is a member of the fillup character set defined with SCI_AUTOCSETFILLUPS. Autocompletion is triggered by
@@ -331,15 +1005,25 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler<AutoCompleteEventArgs>? AutoComplete;
 		public class AutoCompleteEventArgs :EventArgs
 		{
-			public AutoCompleteEventArgs(string partial)
+			// Notes:
+			//  - 'PartialWord' is set to a default value based on standard word characters,
+			//    callers can change it based on whatever criteria is needed.
+			//  - 'Position' is the current caret position. The start position for auto completion
+			//    equals 'Position - PartialWord.Length'
+
+			public AutoCompleteEventArgs(long position, string partial_word)
 			{
-				Partial = partial;
+				Position = position;
+				PartialWord = partial_word;
 				Completions = new List<string>();
 				Handled = false;
 			}
 
-			/// <summary>The partial text already typed</summary>
-			public string Partial { get; }
+			/// <summary>The current caret position</summary>
+			public long Position { get; }
+
+			/// <summary>Get/Set the partial text already typed</summary>
+			public string PartialWord { get; set; }
 
 			/// <summary>The list of possible completions</summary>
 			public List<string> Completions { get; }
@@ -349,22 +1033,26 @@ namespace Rylogic.Gui.WPF
 		}
 		private void OnAutoComplete()
 		{
-			// Get the text near the caret
+			// Leave the determination of the partial word to the event handler.
+			// I could use 'WordChars' but it doesn't really work for UTF-8, also
+			// users might want specific behaviour based on the nearby text.
+
+			// Determine a default for the partial word
 			var line = GetCurLine(out var caret_offset);
+			var word_chars = WordChars;
+			var i = caret_offset;
+			for (; i-- != 0 && word_chars.Contains(line[i]);) { }
+			var partial_word = line.Substring(i + 1, caret_offset - i - 1);
 
-			// Keep only the last non whitespace characters
-			int i; for (i = caret_offset; i-- != 0 && !char.IsWhiteSpace(line[i]);) { }
-			var text = line.Substring(i + 1, caret_offset - i - 1);
-
-			// Let auto complete be handled
-			var args = new AutoCompleteEventArgs(text);
+			// Request the completion list. If unhandled, auto complete is ignored.
+			var args = new AutoCompleteEventArgs(CurrentPos, partial_word);
 			AutoComplete?.Invoke(this, args);
-			if (args.Handled)
+			if (args.Handled && args.Completions.Count != 0)
 			{
 				// Create an unmanaged list of words and display them in the auto complete popup
 				var word_list = string.Join(new string(AutoCompleteSeparator, 1), args.Completions);
-				using var ptr = Marshal_.AllocAnsiString(word_list);
-				Cmd(Sci.SCI_AUTOCSHOW, args.Partial.Length, ptr.Value);
+				using var ptr = Marshal_.AllocUTF8String(EHeap.HGlobal, word_list);
+				Cmd(Sci.SCI_AUTOCSHOW, args.PartialWord.Length, ptr.Value);
 			}
 		}
 
@@ -372,35 +1060,79 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler<AutoCompleteSelectionEventArgs>? AutoCompleteSelection;
 		public class AutoCompleteSelectionEventArgs :EventArgs
 		{
-			public AutoCompleteSelectionEventArgs(long position, string text, Sci.ECompletionMethods method)
+			// Notes:
+			//  - Users should set 'ReplaceRange', 'Completion', and 'CaretPosition' appropriately.
+			//  - If 'Cancel' is set, no auto completion is done.
+
+			public AutoCompleteSelectionEventArgs(long position, Range replace_range, string completion, Sci.ECompletionMethods method)
 			{
 				Position = position;
-				Completion = text;
 				Method = method;
+				ReplaceRange = replace_range;
+				Completion = completion;
+				CaretPosition = ReplaceRange.Beg + completion.Length;
+				Handled = false;
 				Cancel = false;
 			}
 
 			/// <summary>The start position of the text being completed</summary>
 			public long Position { get; }
 
-			/// <summary>The text of the selected completion</summary>
-			public string Completion { get; }
-
 			/// <summary>How the auto complete list was closed</summary>
 			public Sci.ECompletionMethods Method { get; }
+
+			/// <summary>The range of text to replace with the completion text. Defaults to the word containing the caret position</summary>
+			public Range ReplaceRange { get; set; }
+
+			/// <summary>The replacement text</summary>
+			public string Completion { get; set; }
+
+			/// <summary>Where to position the caret after completion is done</summary>
+			public long CaretPosition { get; set; }
+
+			/// <summary>True to use the completion text provided in these args</summary>
+			public bool Handled { get; set; }
 
 			/// <summary>True to close the auto complete box without inserting text</summary>
 			public bool Cancel { get; set; }
 		}
-		private void OnAutoCompleteSelection(long position, string text, Sci.ECompletionMethods method)
+		private void OnAutoCompleteSelection(long position, string completion, Sci.ECompletionMethods method)
 		{
-			var args = new AutoCompleteSelectionEventArgs(position, text, method);
+			var line_index = LineIndexFromPosition(position);
+			var line_start = LineRange(line_index).Beg;
+			var line = GetLine(line_index);
+
+			// Determine a default for the range of characters to replace
+			var word_chars = WordChars;
+			long beg = (int)(position - line_start), end = beg;
+			for (; end < line.Length && word_chars.Contains(line[(int)end]); ++end) { }
+			var replace_range = new Range(line_start + beg, line_start + end);
+
+			// Request the completion text to use. If not handled, fall back to the default handling
+			var args = new AutoCompleteSelectionEventArgs(position, replace_range, completion, method);
 			AutoCompleteSelection?.Invoke(this, args);
 			if (args.Cancel)
+			{
+				// If canceled, don't do any auto completion
 				Cmd(Sci.SCI_AUTOCCANCEL);
+			}
+			else if (args.Handled)
+			{
+				// Replace the text
+				Target = args.ReplaceRange;
+				ReplaceTarget(args.Completion);
+
+				// Set the caret position
+				Anchor = args.CaretPosition;
+				CurrentPos = args.CaretPosition;
+
+				// Cancel default auto complete and notify that completion is done
+				Cmd(Sci.SCI_AUTOCCANCEL);
+				OnAutoCompleteDone(args.Position, args.Completion, args.Method);
+			}
 		}
 
-		/// <summary>Notification when an auto complete item has been selected</summary>
+		/// <summary>Notification of when auto complete has finished</summary>
 		public event EventHandler<AutoCompleteDoneEventArgs>? AutoCompleteDone;
 		public class AutoCompleteDoneEventArgs :EventArgs
 		{
@@ -458,13 +1190,12 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_AUTOCSETIGNORECASE, value ? 1 : 0);
 		}
 
-
 		/// <summary>
 		/// Get or set the maximum width of an autocompletion list expressed as the number of characters in the longest
 		/// item that will be totally visible. If zero (the default) then the list's width is calculated to fit the item
 		/// with the most characters. Any items that cannot be fully displayed within the available width are indicated
 		/// by the presence of ellipsis.</summary>
-		public int AutoCompleteMaxWidth
+		public long AutoCompleteMaxWidth
 		{
 			get => Cmd(Sci.SCI_AUTOCSETMAXWIDTH);
 			set => Cmd(Sci.SCI_AUTOCSETMAXWIDTH, value);
@@ -473,7 +1204,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get /Sset the maximum number of rows that will be visible in an autocompletion list.If there are more rows in the list, then a vertical scrollbar is shown.The default is 5.</summary>
 		public int AutoCompleteMaxHeight
 		{
-			get => Cmd(Sci.SCI_AUTOCSETMAXHEIGHT);
+			get => (int)Cmd(Sci.SCI_AUTOCSETMAXHEIGHT);
 			set => Cmd(Sci.SCI_AUTOCSETMAXHEIGHT, value);
 		}
 
@@ -563,673 +1294,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		#endregion
-		#region Text
-
-		/// <summary>Allow the control to store the text content before and after the window handle has been created</summary>
-		private string m_text = string.Empty;
-
-		/// <summary>Clear all text from the control</summary>
-		public void ClearAll()
-		{
-			m_text = string.Empty;
-			if (IsHandleCreated)
-				Cmd(Sci.SCI_CLEARALL);
-		}
-
-		/// <summary>Clear style for the document</summary>
-		public void ClearDocumentStyle()
-		{
-			Cmd(Sci.SCI_CLEARDOCUMENTSTYLE);
-		}
-
-		/// <summary>Gets the length of the text in the control</summary>
-		public int TextLength => IsHandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
-
-		/// <summary>Gets or sets the current text</summary>
-		public string Text
-		{
-			get => GetText();
-			set => SetText(value);
-		}
-
-		/// <summary>Read the text out of the control</summary>
-		private string GetText()
-		{
-			if (!IsHandleCreated)
-				return m_text;
-
-			var len = TextLength;
-			if (len == 0)
-				return string.Empty;
-
-			var bytes = new byte[len];
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			var num = Cmd(Sci.SCI_GETTEXT, len + 1, h.Handle.AddrOfPinnedObject());
-			return Encoding.UTF8.GetString(bytes, 0, num);
-		}
-
-		/// <summary>Set the text in the control</summary>
-		private void SetText(string text)
-		{
-			if (text.Length == 0)
-			{
-				ClearAll();
-			}
-			else if (!IsHandleCreated)
-			{
-				m_text = text;
-			}
-			else
-			{
-				// Convert the string to UTF-8
-				var bytes = Encoding.UTF8.GetBytes(text);
-				using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-				Cmd(Sci.SCI_SETTEXT, 0, h.Handle.AddrOfPinnedObject());
-			}
-
-			TextChanged?.Invoke(this, EventArgs.Empty);
-		}
-
-		/// <summary>Raised when text in the control is changed</summary>
-		public event EventHandler? TextChanged;
-
-		/// <summary>Raised when a keypress results in a character added (Doesn't fire for delete)</summary>
-		public event EventHandler<CharAddedEventArgs>? CharAdded;
-		public class CharAddedEventArgs :EventArgs
-		{
-			public CharAddedEventArgs(char ch)
-			{
-				Char = ch;
-			}
-
-			/// <summary>The character that was added</summary>
-			public char Char { get; }
-		}
-		private void OnCharAdded(char ch)
-		{
-			CharAdded?.Invoke(this, new CharAddedEventArgs(ch));
-		}
-
-		/// <summary></summary>
-		public char GetCharAt(long pos)
-		{
-			return (char)(Cmd(Sci.SCI_GETCHARAT, pos) & 0xFF);
-		}
-
-		/// <summary>Return a line of text</summary>
-		public string GetLine(long line)
-		{
-			var len = LineLength(line);
-			var bytes = new byte[len];
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			var num = Cmd(Sci.SCI_GETLINE, line, h.Handle.AddrOfPinnedObject());
-			return Encoding.UTF8.GetString(bytes, 0, num);
-		}
-
-		/// <summary></summary>
-		public int LineCount => Cmd(Sci.SCI_GETLINECOUNT);
-
-		/// <summary>Returns the text in the given range</summary>
-		public string TextRange(Range range)
-		{
-			if (range.Beg < 0 || range.End > TextLength)
-				throw new Exception($"Invalid text range: [{range.Beg}, {range.End}). Current text length is {TextLength}");
-
-			// Request the text in the given range
-			using var text = Marshal_.Alloc(EHeap.HGlobal, range.Sizei + 1);
-			using var buffer = Marshal_.Alloc<Sci.TextRange>(EHeap.HGlobal);
-			Marshal.StructureToPtr(new Sci.TextRange
-			{
-				chrg = new Sci.CharacterRange{cpMin = range.Begi, cpMax = range.Endi},
-				lpstrText = text.Value.Ptr,
-			}, buffer.Value.Ptr, false);
-			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
-
-			// Return the returned string
-			return Marshal.PtrToStringAnsi(text.Value.Ptr);
-		}
-
-		/// <summary></summary>
-		public void AppendText(string text)
-		{
-			// Convert the string to UTF-8
-			var bytes = Encoding.UTF8.GetBytes(text);
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_APPENDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary>Append text and style data to the document</summary>
-		public void AppendStyledText(Sci.CellBuf cells)
-		{
-			using var c = cells.Pin();
-			Cmd(Sci.SCI_APPENDSTYLEDTEXT, c.SizeInBytes, c.Pointer);
-		}
-
-		/// <summary></summary>
-		public void InsertText(long pos, string text)
-		{
-			// Ensure null termination
-			var bytes = Encoding.UTF8.GetBytes(text + "\0");
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_INSERTTEXT, pos, h.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary></summary>
-		public void ReplaceSel(string text)
-		{
-			// Ensure null termination
-			var bytes = Encoding.UTF8.GetBytes(text + "\0");
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_REPLACESEL, 0, h.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary></summary>
-		public void AddText(string text)
-		{
-			var bytes = Encoding.UTF8.GetBytes(text);
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_ADDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary></summary>
-		public void AddStyledText(string text)
-		{
-			var bytes = Encoding.UTF8.GetBytes(text);
-			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			Cmd(Sci.SCI_ADDSTYLEDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary>Insert text and style data into the document at 'pos'</summary>
-		public void InsertStyledText(long pos, Sci.CellBuf cells)
-		{
-			using var c = cells.Pin();
-			Cmd(Sci.SCI_INSERTSTYLEDTEXT, pos, c.Pointer);
-		}
-
-		/// <summary>Delete a character range from the document</summary>
-		public void DeleteRange(long start, long length)
-		{
-			Cmd(Sci.SCI_DELETERANGE, start, length);
-		}
-
-		/// <summary></summary>
-		public int GetStyleAt(long pos)
-		{
-			return Cmd(Sci.SCI_GETSTYLEAT, pos);
-		}
-
-		/// <summary></summary>
-		public int GetStyledText(out Sci.TextRange tr)
-		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
-		}
-		public int GetStyledText(StringBuilder text, long first, long last)
-		{
-			throw new NotImplementedException();
-			//TxtRng tr(text, first, last);
-			//return Cmd(Sci.SCI_GETSTYLEDTEXT, 0, &tr);
-		}
-
-		/// <summary></summary>
-		public int TargetAsUTF8(StringBuilder text)
-		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_TARGETASUTF8, 0, text);
-		}
-
-		/// <summary></summary>
-		public int EncodedFromUTF8(byte[] utf8, byte[] encoded)
-		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_ENCODEDFROMUTF8, (WPARAM)utf8, (LPARAM )encoded);
-		}
-
-		/// <summary></summary>
-		public void SetLengthForEncode(int bytes)
-		{
-			Cmd(Sci.SCI_SETLENGTHFORENCODE, bytes);
-		}
-
-		#endregion
-		#region Selection/Navigation
-
-		/// <summary>Records a selection</summary>
-		public struct Selection
-		{
-			public int m_current;
-			public int m_anchor;
-			public Selection(int current, int anchor)
-			{
-				m_current = current;
-				m_anchor = anchor;
-			}
-			public static Selection Save(ScintillaControl ctrl)
-			{
-				return new Selection(
-					ctrl.Cmd(Sci.SCI_GETCURRENTPOS),
-					ctrl.Cmd(Sci.SCI_GETANCHOR));
-			}
-			public static void Restore(ScintillaControl ctrl, Selection sel)
-			{
-				ctrl.Cmd(Sci.SCI_SETCURRENTPOS, sel.m_current);
-				ctrl.Cmd(Sci.SCI_SETANCHOR, sel.m_anchor);
-			}
-		}
-
-		/// <summary>RAII scope for a selection</summary>
-		public Scope<Selection> SelectionScope()
-		{
-			return Scope.Create(
-				() => Selection.Save(this),
-				sel => Selection.Restore(this, sel));
-		}
-
-		/// <summary>Raised whenever the selection changes</summary>
-		public event EventHandler? SelectionChanged;
-		protected virtual void OnSelectionChanged()
-		{
-			SelectionChanged?.Invoke(this, EventArgs.Empty);
-		}
-
-		/// <summary>This selects all the text in the document. The current position is not scrolled into view.</summary>
-		public void SelectAll()
-		{
-			Cmd(Sci.SCI_SELECTALL);
-		}
-
-		/// <summary></summary>
-		public int SelectionMode
-		{
-			get => Cmd(Sci.SCI_GETSELECTIONMODE);
-			set => Cmd(Sci.SCI_SETSELECTIONMODE, value);
-		}
-
-		/// <summary>
-		/// Get/Set the current caret position.
-		/// 'Set' sets the current position and creates a selection between the anchor and the current position.
-		/// The caret is not scrolled into view.</summary>
-		public int CurrentPos
-		{
-			get => Cmd(Sci.SCI_GETCURRENTPOS);
-			set => Cmd(Sci.SCI_SETCURRENTPOS, value);
-		}
-
-		/// <summary>
-		/// Get/Set the current anchor position.
-		/// 'Set' sets the anchor position and creates a selection between the anchor position and the current position.
-		/// The caret is not scrolled into view.</summary>
-		public int Anchor
-		{
-			get => Cmd(Sci.SCI_GETANCHOR);
-			set => Cmd(Sci.SCI_SETANCHOR, value);
-		}
-
-		/// <summary>
-		/// Get/Set the selection start position.
-		/// 'Get' returns the start of the selection without regard to which end is the current position and which is the anchor.
-		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
-		/// SCI_GETSELECTIONEND returns the larger of the two values.
-		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
-		/// It does not make the caret visible. After set, the anchor position is unchanged, and the caret position is Max(anchor, current)</summary>
-		public int SelectionStart
-		{
-			get => Cmd(Sci.SCI_GETSELECTIONSTART);
-			set => Cmd(Sci.SCI_SETSELECTIONSTART, value);
-		}
-
-		/// <summary>
-		/// Get/Set the selection end position.
-		/// 'Get' returns the end of the selection without regard to which end is the current position and which is the anchor.
-		/// SCI_GETSELECTIONSTART returns the smaller of the current position or the anchor position.
-		/// SCI_GETSELECTIONEND returns the larger of the two values.
-		/// 'Set' sets the selection based on the assumption that the anchor position is less than the current position.
-		/// It does not make the caret visible. After set, the anchor position is Min(anchor, caret), and the caret position is unchanged.</summary>
-		public int SelectionEnd
-		{
-			get => Cmd(Sci.SCI_GETSELECTIONEND);
-			set => Cmd(Sci.SCI_SETSELECTIONEND, value);
-		}
-
-		/// <summary>Set the range of selected text</summary>
-		public void SetSel(long start, long end)
-		{
-			Cmd(Sci.SCI_SETSEL, start, end);
-		}
-
-		/// <summary>This removes any selection and sets the caret at 'position'. The caret is not scrolled into view.</summary>
-		public void ClearSelection(long position)
-		{
-			Cmd(Sci.SCI_SETEMPTYSELECTION, position);
-		}
-
-		/// <summary>
-		/// Returns the currently selected text. This method allows for rectangular and discontiguous
-		/// selections as well as simple selections. See Multiple Selection for information on how multiple
-		/// and rectangular selections and virtual space are copied.</summary>
-		public string GetSelText()
-		{
-			var len = Cmd(Sci.SCI_GETSELTEXT);
-			var buf = new byte[len];
-			using var t = GCHandle_.Alloc(buf, GCHandleType.Pinned);
-			len = Cmd(Sci.SCI_GETSELTEXT, 0, t.Handle.AddrOfPinnedObject());
-			return Encoding.UTF8.GetString(buf, 0, len);
-		}
-
-		/// <summary>Retrieves the text of the line containing the caret and returns the position within the line of the caret.</summary>
-		public string GetCurLine(out int caret_offset)
-		{
-			// Get the length of text on the current line
-			var len = Cmd(Sci.SCI_GETCURLINE);
-			var buf = new byte[len];
-
-			// Allocate a global heap buffer and read the line into it
-			using var t = GCHandle_.Alloc(buf, GCHandleType.Pinned);
-			caret_offset = Cmd(Sci.SCI_GETCURLINE, buf.Length, t.Handle.AddrOfPinnedObject());
-
-			// Trim null terminators
-			for (; len != 0 && buf[len - 1] == 0; --len) { }
-			return Encoding.UTF8.GetString(buf, 0, len);
-		}
-		public string GetCurLine()
-		{
-			return GetCurLine(out _);
-		}
-
-		/// <summary></summary>
-		public int GetLineSelStartPosition(long line)
-		{
-			return Cmd(Sci.SCI_GETLINESELSTARTPOSITION, line);
-		}
-
-		/// <summary></summary>
-		public int GetLineSelEndPosition(long line)
-		{
-			return Cmd(Sci.SCI_GETLINESELENDPOSITION, line);
-		}
-
-		/// <summary>Get/Set the index of the first visible line</summary>
-		public int FirstVisibleLine
-		{
-			get => Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
-			set => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, value);
-		}
-
-		/// <summary>Get the number of lines visible on screen</summary>
-		public int LinesOnScreen => Cmd(Sci.SCI_LINESONSCREEN);
-
-		/// <summary></summary>
-		public bool GetModify()
-		{
-			return Cmd(Sci.SCI_GETMODIFY) != 0;
-		}
-
-		/// <summary>
-		/// Removes any selection, sets the caret at caret and scrolls the view to make the caret visible, if necessary.
-		/// It is equivalent to SCI_SETSEL(caret, caret). The anchor position is set the same as the current position.</summary>
-		public void GotoPos(long pos)
-		{
-			Cmd(Sci.SCI_GOTOPOS, pos);
-		}
-
-		/// <summary>
-		/// Removes any selection and sets the caret at the start of line number line and scrolls the view (if needed)
-		/// to make it visible. The anchor position is set the same as the current position. If line is outside the lines
-		/// in the document (first line is 0), the line set is the first or last.</summary>
-		public void GotoLine(long line)
-		{
-			Cmd(Sci.SCI_GOTOLINE, line);
-		}
-
-		/// <summary>Get the line index from a character index</summary>
-		public int LineFromPosition(long pos)
-		{
-			return Cmd(Sci.SCI_LINEFROMPOSITION, pos);
-		}
-
-		/// <summary>Return the character index for the start of 'line'</summary>
-		public int PositionFromLine(long line)
-		{
-			return Cmd(Sci.SCI_POSITIONFROMLINE, line);
-		}
-
-		/// <summary>
-		/// Returns the position at the end of the line, before any line end characters.
-		/// If line is the last line in the document (which does not have any end of line
-		/// characters) or greater, the result is the size of the document. If line is
-		/// negative the result is undefined.</summary>
-		public int GetLineEndPosition(long line)
-		{
-			return Cmd(Sci.SCI_GETLINEENDPOSITION, line);
-		}
-
-		/// <summary>Return the length of line 'line'</summary>
-		public int LineLength(long line)
-		{
-			return Cmd(Sci.SCI_LINELENGTH, line);
-		}
-
-		/// <summary>
-		/// Returns the column number of a position 'pos' within the document taking the width of tabs into account.
-		/// This returns the column number of the last tab on the line before pos, plus the number of characters between
-		/// the last tab and pos. If there are no tab characters on the line, the return value is the number of characters
-		/// up to the position on the line. In both cases, double byte characters count as a single character.
-		/// This is probably only useful with mono-spaced fonts.</summary>
-		public int GetColumn(long pos)
-		{
-			return Cmd(Sci.SCI_GETCOLUMN, pos);
-		}
-
-		/// <summary>
-		/// Returns the character position of a column on a line taking the width of tabs into account.
-		/// It treats a multi-byte character as a single column. Column numbers, like lines start at 0.</summary>
-		public int GetPos(long line, int column)
-		{
-			return FindColumn(line, column);
-		}
-		public int FindColumn(long line, int column)
-		{
-			return Cmd(Sci.SCI_FINDCOLUMN, line, column);
-		}
-
-		/// <summary></summary>
-		public int PositionFromPoint(int x, int y)
-		{
-			return Cmd(Sci.SCI_POSITIONFROMPOINT, x, y);
-		}
-
-		/// <summary></summary>
-		public int PositionFromPointClose(int x, int y)
-		{
-			return Cmd(Sci.SCI_POSITIONFROMPOINTCLOSE, x, y);
-		}
-
-		/// <summary></summary>
-		public int PointXFromPosition(long pos)
-		{
-			return Cmd(Sci.SCI_POINTXFROMPOSITION, 0, pos);
-		}
-
-		/// <summary></summary>
-		public int PointYFromPosition(long pos)
-		{
-			return Cmd(Sci.SCI_POINTYFROMPOSITION, 0, pos);
-		}
-
-		/// <summary></summary>
-		public void HideSelection(bool normal)
-		{
-			Cmd(Sci.SCI_HIDESELECTION, normal ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public bool SelectionIsRectangle()
-		{
-			return Cmd(Sci.SCI_SELECTIONISRECTANGLE) != 0;
-		}
-
-		/// <summary></summary>
-		public void MoveCaretInsideView()
-		{
-			Cmd(Sci.SCI_MOVECARETINSIDEVIEW);
-		}
-
-		/// <summary></summary>
-		public int WordStartPosition(long pos, bool onlyWordCharacters)
-		{
-			return Cmd(Sci.SCI_WORDSTARTPOSITION, pos, onlyWordCharacters ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public int WordEndPosition(long pos, bool onlyWordCharacters)
-		{
-			return Cmd(Sci.SCI_WORDENDPOSITION, pos, onlyWordCharacters ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public int PositionBefore(long pos)
-		{
-			return Cmd(Sci.SCI_POSITIONBEFORE, pos);
-		}
-
-		/// <summary></summary>
-		public int PositionAfter(long pos)
-		{
-			return Cmd(Sci.SCI_POSITIONAFTER, pos);
-		}
-
-		/// <summary>
-		/// Returns the width (in pixels) of a string drawn in the given style.
-		/// Can be used, for example, to decide how wide to make the line number margin in order to display a given number of numerals.</summary>
-		public int TextWidth(int style, string text)
-		{
-			var text_bytes = Encoding.UTF8.GetBytes(text);
-			using var t = GCHandle_.Alloc(text_bytes, GCHandleType.Pinned);
-			return Cmd(Sci.SCI_TEXTWIDTH, style, t.Handle.AddrOfPinnedObject());
-		}
-
-		/// <summary>Returns the height (in pixels) of a particular line. Currently all lines are the same height.</summary>
-		public int TextHeight(long line)
-		{
-			return Cmd(Sci.SCI_TEXTHEIGHT, line);
-		}
-
-		/// <summary>
-		/// Scintilla remembers the x value of the last position horizontally moved to explicitly by the user
-		/// and this value is then used when moving vertically such as by using the up and down keys.
-		/// This message sets the current x position of the caret as the remembered value.</summary>
-		public void ChooseCaretX()
-		{
-			Cmd(Sci.SCI_CHOOSECARETX);
-		}
-
-		/// <summary>
-		/// Enable/disable multiple selection. When multiple selection is disabled, it is not
-		/// possible to select multiple ranges by holding down the Ctrl key while dragging with the mouse.</summary>
-		public bool MultipleSelection
-		{
-			get => Cmd(Sci.SCI_GETMULTIPLESELECTION) != 0;
-			set => Cmd(Sci.SCI_SETMULTIPLESELECTION, value ? 1 : 0);
-		}
-
-		/// <summary>Whether typing, backspace, or delete works with multiple selections simultaneously.</summary>
-		public bool AdditionalSelectionTyping
-		{
-			get => Cmd(Sci.SCI_GETADDITIONALSELECTIONTYPING) != 0;
-			set => Cmd(Sci.SCI_SETADDITIONALSELECTIONTYPING, value ? 1 : 0);
-		}
-
-		/// <summary>
-		/// When pasting into multiple selections, the pasted text can go into just the main selection
-		/// with SC_MULTIPASTE_ONCE=0 or into each selection with SC_MULTIPASTE_EACH=1. SC_MULTIPASTE_ONCE is the default.</summary>
-		public int MutliPaste
-		{
-			get => Cmd(Sci.SCI_GETMULTIPASTE);
-			set => Cmd(Sci.SCI_SETMULTIPASTE, value);
-		}
-
-		/// <summary>
-		/// Virtual space can be enabled or disabled for rectangular selections or in other circumstances or in both.
-		/// There are two bit flags SCVS_RECTANGULARSELECTION=1 and SCVS_USERACCESSIBLE=2 which can be set independently.
-		/// SCVS_NONE=0, the default, disables all use of virtual space.</summary>
-		public int VirtualSpace
-		{
-			get => Cmd(Sci.SCI_GETVIRTUALSPACEOPTIONS);
-			set => Cmd(Sci.SCI_SETVIRTUALSPACEOPTIONS, value);
-		}
-
-		/// <summary>Insert/Overwrite</summary>
-		public bool Overtype
-		{
-			get => Cmd(Sci.SCI_GETOVERTYPE) != 0;
-			set => Cmd(Sci.SCI_SETOVERTYPE, value ? 1 : 0);
-		}
-
-		#endregion
-		#region Indenting
-
-		/// <summary>Enable/Disable auto indent mode</summary>
-		public bool AutoIndent { get; set; }
-
-		#endregion
-		#region Cut, Copy And Paste
-
-		/// <summary></summary>
-		public void Cut()
-		{
-			Cmd(Sci.SCI_CUT);
-		}
-
-		/// <summary></summary>
-		public void Copy()
-		{
-			Cmd(Sci.SCI_COPY);
-		}
-
-		/// <summary></summary>
-		public void Paste()
-		{
-			Cmd(Sci.SCI_PASTE);
-		}
-
-		/// <summary></summary>
-		public bool CanPaste()
-		{
-			return Cmd(Sci.SCI_CANPASTE) != 0;
-		}
-
-		/// <summary>Clear the *selected* text</summary>
-		public void Clear()
-		{
-			Cmd(Sci.SCI_CLEAR);
-		}
-
-		/// <summary></summary>
-		public void CopyRange(int first, int last)
-		{
-			Cmd(Sci.SCI_COPYRANGE, first, last);
-		}
-
-		/// <summary></summary>
-		public void CopyText(StringBuilder text, long length)
-		{
-			throw new NotImplementedException();
-			//Cmd(Sci.SCI_COPYTEXT, length, text);
-		}
-
-		/// <summary></summary>
-		public void SetPasteConvertEndings(bool convert)
-		{
-			Cmd(Sci.SCI_SETPASTECONVERTENDINGS, convert ? 1 : 0);
-		}
-
-		/// <summary></summary>
-		public bool GetPasteConvertEndings()
-		{
-			return Cmd(Sci.SCI_GETPASTECONVERTENDINGS) != 0;
-		}
-
-		#endregion
 		#region Undo/Redo
 
 		/// <summary></summary>
@@ -1284,36 +1348,71 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Find/Search/Replace
 
-		/// <summary></summary>
-		public int Find(int flags, out Sci.TextToFind ttf)
+		/// <summary>
+		/// This message searches for text in the document. It does not use or move the current selection. The searchFlags argument controls the search type,
+		/// which includes regular expression searches. You can search backwards to find the previous occurrence of a search string by setting the end of the
+		/// search range before the start. The Sci_TextToFind structure is defined in Scintilla.h; set chrg.cpMin and chrg.cpMax with the range of positions
+		/// in the document to search. You can search backwards by setting chrg.cpMax less than chrg.cpMin. Set the lpstrText member of Sci_TextToFind to point
+		/// at a zero terminated text string holding the search pattern. If your language makes the use of Sci_TextToFind difficult, you should consider using
+		/// SCI_SEARCHINTARGET instead.
+		/// The return value is -1 if the search fails or the position of the start of the found text if it succeeds. The chrgText.cpMin and chrgText.cpMax
+		/// members of Sci_TextToFind are filled in with the start and end positions of the found text.
+		/// See also: SCI_SEARCHINTARGET
+		/// Returns an empty range if no match is found</summary>
+		public Range Find(Sci.EFindOption flags, string pattern, Range search_range)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_FINDTEXT, flags, &ttf);
+			// Create the 'TextToFind' structure
+			using var text = Marshal_.AllocUTF8String(EHeap.HGlobal, pattern);
+			using var buffer = Marshal_.Alloc(EHeap.HGlobal, new Sci.TextToFind
+			{
+				chrg = new Sci.CharacterRange { cpMin = search_range.Begi, cpMax = search_range.Endi },
+				lpstrText = text.Value,
+				chrgText = new Sci.CharacterRange(),
+			});
+
+			// Do the find
+			var pos = Cmd(Sci.SCI_FINDTEXT, (long)flags, buffer.Value.Ptr);
+			if (pos == -1)
+				return new Range();
+
+			var text_to_find = buffer.Value.As<Sci.TextToFind>();
+			return new Range(text_to_find.chrgText.cpMin, text_to_find.chrgText.cpMax);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Sets the search start point used by SCI_SEARCHNEXT and SCI_SEARCHPREV to the start of the current selection, that is, the end of the selection
+		/// that is nearer to the start of the document. You should always call this before calling either of SCI_SEARCHNEXT or SCI_SEARCHPREV.</summary>
 		public void SearchAnchor()
 		{
 			Cmd(Sci.SCI_SEARCHANCHOR);
 		}
 
-		/// <summary></summary>
-		public int SearchNext(int flags, string text)
+		/// <summary>
+		/// SCI_SEARCHNEXT and SCI_SEARCHPREV search for the next and previous occurrence of the zero terminated search string pointed at by text.
+		/// The search is modified by the searchFlags. The return value is -1 if nothing is found, otherwise the return value is the start position
+		/// of the matching text.The selection is updated to show the matched text, but is not scrolled into view.</summary>
+		public long Search(Sci.EFindOption flags, string text, bool forward)
 		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_SEARCHNEXT, flags, text);
-		}
+			var cmd = forward ? Sci.SCI_SEARCHNEXT : Sci.SCI_SEARCHPREV;
 
-		/// <summary></summary>
-		public int SearchPrev(int flags, string text)
-		{
-			throw new NotImplementedException();
-			//return Cmd(Sci.SCI_SEARCHPREV, flags, text);
+			// Convert the search string to UTF-8
+			var bytes = Encoding.UTF8.GetBytes(text);
+			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+			return Cmd(cmd, (long)flags, h.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>
 		/// Get/Set the start and end of the target. When searching you can set start greater than end to find the last matching
 		/// text in the target rather than the first matching text. The target is also set by a successful SCI_SEARCHINTARGET.</summary>
+		public Range Target
+		{
+			get => new Range(TargetBeg, TargetEnd);
+			set
+			{
+				TargetBeg = value.Beg;
+				TargetEnd = value.End;
+			}
+		}
 		public long TargetBeg
 		{
 			get => Cmd(Sci.SCI_GETTARGETSTART);
@@ -1325,22 +1424,17 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_SETTARGETEND, value);
 		}
 
-		/// <summary></summary>
+		/// <summary>Set the target start and end to the start and end positions of the selection.</summary>
 		public void TargetFromSelection()
 		{
 			Cmd(Sci.SCI_TARGETFROMSELECTION);
 		}
 
 		/// <summary></summary>
-		public int GetSearchFlags()
+		public Sci.EFindOption SearchFlags
 		{
-			return Cmd(Sci.SCI_GETSEARCHFLAGS);
-		}
-
-		/// <summary></summary>
-		public void SetSearchFlags(int flags)
-		{
-			Cmd(Sci.SCI_SETSEARCHFLAGS, flags);
+			get => (Sci.EFindOption)Cmd(Sci.SCI_GETSEARCHFLAGS);
+			set => Cmd(Sci.SCI_SETSEARCHFLAGS, (long)value);
 		}
 
 		/// <summary>
@@ -1348,11 +1442,12 @@ namespace Rylogic.Gui.WPF
 		/// The text string is not zero terminated; the size is set by length. The search is modified by the search flags set by SCI_SETSEARCHFLAGS.
 		/// If the search succeeds, the target is set to the found text and the return value is the position of the start of
 		/// the matching text. If the search fails, the result is -1.</summary>
-		public int SearchInTarget(string text, long length = -1)
+		public long SearchInTarget(string text, long length = -1)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
+			length = length != -1 ? length : text.Length;
 			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			return Cmd(Sci.SCI_SEARCHINTARGET, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
+			return Cmd(Sci.SCI_SEARCHINTARGET, length, h.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>
@@ -1360,11 +1455,12 @@ namespace Rylogic.Gui.WPF
 		/// the target with. After replacement, the target range refers to the replacement text. The return value is the
 		/// length of the replacement string. Note, the recommended way to delete text in the document is to set the
 		/// target to the text to be removed, and to perform a replace target with an empty string.</summary>
-		public int ReplaceTarget(string text, long length = -1)
+		public long ReplaceTarget(string text, long length = -1)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
+			length = length != -1 ? length : text.Length;
 			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			return Cmd(Sci.SCI_REPLACETARGET, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
+			return Cmd(Sci.SCI_REPLACETARGET, length, h.Handle.AddrOfPinnedObject());
 		}
 
 		/// <summary>
@@ -1373,11 +1469,12 @@ namespace Rylogic.Gui.WPF
 		/// sequences of \1 through \9 replaced by tagged matches from the most recent regular expression search.
 		/// \0 is replaced with all the matched text from the most recent search. After replacement, the target range refers
 		/// to the replacement text. The return value is the length of the replacement string.</summary>
-		public int ReplaceTargetRE(string text, long length = -1)
+		public long ReplaceTargetRE(string text, long length = -1)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
+			length = length != -1 ? length : text.Length;
 			using var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
-			return Cmd(Sci.SCI_REPLACETARGETRE, length != -1 ? length : text.Length, h.Handle.AddrOfPinnedObject());
+			return Cmd(Sci.SCI_REPLACETARGETRE, length, h.Handle.AddrOfPinnedObject());
 		}
 
 		#endregion
@@ -1391,7 +1488,7 @@ namespace Rylogic.Gui.WPF
 		//}
 
 		/// <summary>Returns an RAII object that preserves (where possible) the currently visible line</summary>
-		public Scope<int> ScrollScope()
+		public Scope<long> ScrollScope()
 		{
 			return Scope.Create(
 				() => FirstVisibleLine,
@@ -1412,7 +1509,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public void ScrollToLine(long line)
 		{
-			LineScroll(0, line - LineFromPosition(CurrentPos));
+			LineScroll(0, line - LineIndexFromPosition(CurrentPos));
 		}
 
 		/// <summary>Scroll the last line into view</summary>
@@ -1434,7 +1531,7 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_LINESCROLL, columns, lines);
 		}
 
-		/// <summary></summary>
+		/// <summary>If the current position (this is the caret if there is no selection) is not visible, the view is scrolled to make it visible according to the current caret policy.</summary>
 		public void ScrollCaret()
 		{
 			Cmd(Sci.SCI_SCROLLCARET);
@@ -1454,18 +1551,20 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_SETVSCROLLBAR, value ? 1 : 0);
 		}
 
-		/// <summary></summary>
-		public int XOffset
+		/// <summary>
+		/// Get the horizontal scroll position in pixels of the start of the text view.
+		/// A value of 0 is the normal position with the first text column visible at the left of the view.</summary>
+		public double XOffset
 		{
 			get => Cmd(Sci.SCI_GETXOFFSET);
-			set => Cmd(Sci.SCI_SETXOFFSET, value);
+			set => Cmd(Sci.SCI_SETXOFFSET, (long)value);
 		}
 
 		/// <summary>Scroll width (in pixels)</summary>
-		public int ScrollWidth
+		public double ScrollWidth
 		{
 			get => Cmd(Sci.SCI_GETSCROLLWIDTH);
-			set => Cmd(Sci.SCI_SETSCROLLWIDTH, value);
+			set => Cmd(Sci.SCI_SETSCROLLWIDTH, (long)value);
 		}
 
 		/// <summary>Allow/Disallow scrolling up to one page past the last line</summary>
@@ -1617,8 +1716,12 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary></summary>
-		public int GetEndStyled()
+		/// <summary>
+		/// Scintilla keeps a record of the last character that is likely to be styled correctly. This is moved forwards when characters after
+		/// it are styled and moved backwards if changes are made to the text of the document before it. Before drawing text, this position is
+		/// checked to see if any styling is needed and, if so, a SCN_STYLENEEDED notification message is sent to the container. The container
+		/// can send SCI_GETENDSTYLED to work out where it needs to start styling. Scintilla will always ask to style whole lines.</summary>
+		public long GetEndStyled()
 		{
 			return Cmd(Sci.SCI_GETENDSTYLED);
 		}
@@ -1642,18 +1745,21 @@ namespace Rylogic.Gui.WPF
 			//Cmd(Sci.SCI_SETSTYLINGEX, length, styles);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// As well as the 8 bits of lexical state stored for each character there is also an integer stored for each line. This can be used for longer
+		/// lived parse states such as what the current scripting language is in an ASP page. Use SCI_SETLINESTATE to set the integer value and
+		/// SCI_GETLINESTATE to get the value. Changing the value produces a SC_MOD_CHANGELINESTATE notification.</summary>
 		public int LineState(long line)
 		{
-			return Cmd(Sci.SCI_GETLINESTATE, line);
+			return (int)Cmd(Sci.SCI_GETLINESTATE, line);
 		}
 		public void LineState(long line, int state)
 		{
 			Cmd(Sci.SCI_SETLINESTATE, line, state);
 		}
 
-		/// <summary></summary>
-		public int GetMaxLineState()
+		/// <summary>Gets the last line that has any line state.</summary>
+		public long GetMaxLineState()
 		{
 			return Cmd(Sci.SCI_GETMAXLINESTATE);
 		}
@@ -1667,16 +1773,14 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Control Char Symbol
 
-		/// <summary></summary>
-		public int GetControlCharSymbol()
+		/// <summary>
+		/// The mnemonics may be replaced by a nominated symbol with an ASCII code in the range 32 to 255. If you set a symbol value less than 32, all control
+		/// characters are displayed as mnemonics. The symbol you set is rendered in the font of the style set for the character. You can read back the current
+		/// symbol with the SCI_GETCONTROLCHARSYMBOL message. The default symbol value is 0.</summary>
+		public char ControlCharSymbol
 		{
-			return Cmd(Sci.SCI_GETCONTROLCHARSYMBOL);
-		}
-
-		/// <summary></summary>
-		public void SetControlCharSymbol(int symbol)
-		{
-			Cmd(Sci.SCI_SETCONTROLCHARSYMBOL, symbol);
+			get => (char)Cmd(Sci.SCI_GETCONTROLCHARSYMBOL);
+			set => Cmd(Sci.SCI_SETCONTROLCHARSYMBOL, value & 0xFF);
 		}
 
 		#endregion
@@ -1728,15 +1832,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Caret blink period (in ms)</summary>
 		public int CaretPeriod
 		{
-			get => Cmd(Sci.SCI_GETCARETPERIOD);
+			get => (int)Cmd(Sci.SCI_GETCARETPERIOD);
 			set => Cmd(Sci.SCI_SETCARETPERIOD, value);
 		}
 
-		/// <summary></summary>
-		public int CaretWidth
+		/// <summary>
+		/// The width of the line caret can be set with SCI_SETCARETWIDTH to a value of 0, 1, 2 or 3 pixels. The default width is 1 pixel.
+		/// You can read back the current width with SCI_GETCARETWIDTH. A width of 0 makes the caret invisible (added at version 1.50),
+		/// similar to setting the caret style to CARETSTYLE_INVISIBLE (though not interchangeable). This setting only affects the width
+		/// of the cursor when the cursor style is set to line caret mode, it does not affect the width for a block caret.</summary>
+		public double CaretWidth
 		{
 			get => Cmd(Sci.SCI_GETCARETWIDTH);
-			set => Cmd(Sci.SCI_SETCARETWIDTH, value);
+			set => Cmd(Sci.SCI_SETCARETWIDTH, (long)value);
 		}
 
 		/// <summary></summary>
@@ -1791,71 +1899,79 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Margins
 
-		/// <summary></summary>
-		public int MarginTypeN(int margin)
+		/// <summary>
+		/// Get/Set the type of a margin. The margin argument should be 0, 1, 2, 3 or 4. You can use the predefined constants SC_MARGIN_SYMBOL (0) and
+		/// SC_MARGIN_NUMBER (1) to set a margin as either a line number or a symbol margin. A margin with application defined text may use SC_MARGIN_TEXT (4)
+		/// or SC_MARGIN_RTEXT (5) to right justify the text. By convention, margin 0 is used for line numbers and the next two are used for symbols.
+		/// You can also use the constants SC_MARGIN_BACK (2), SC_MARGIN_FORE (3), and SC_MARGIN_COLOUR (6) for symbol margins that set their background
+		/// colour to match the STYLE_DEFAULT background and foreground colours or a specified colour.</summary>
+		public Sci.EMarginType MarginTypeN(int margin)
 		{
-			return Cmd(Sci.SCI_GETMARGINTYPEN, margin);
+			return (Sci.EMarginType)Cmd(Sci.SCI_GETMARGINTYPEN, margin);
+		}
+		public void MarginTypeN(int margin, Sci.EMarginType marginType)
+		{
+			Cmd(Sci.SCI_SETMARGINTYPEN, margin, (long)marginType);
 		}
 
-		/// <summary></summary>
-		public void MarginTypeN(int margin, int marginType)
-		{
-			Cmd(Sci.SCI_SETMARGINTYPEN, margin, marginType);
-		}
-
-		/// <summary></summary>
-		public int MarginWidthN(int margin)
+		/// <summary>
+		/// Get/Set the width of a margin in pixels. A margin with zero width is invisible. By default, Scintilla sets margin 1 for symbols with a width
+		/// of 16 pixels, so this is a reasonable guess if you are not sure what would be appropriate. Line number margins widths should take into account
+		/// the number of lines in the document and the line number style. You could use something like SCI_TEXTWIDTH(STYLE_LINENUMBER, "_99999") to get a suitable width.</summary>
+		public double MarginWidthN(int margin)
 		{
 			return Cmd(Sci.SCI_GETMARGINWIDTHN, margin);
 		}
-
-		/// <summary></summary>
-		public void MarginWidthN(int margin, int pixelWidth)
+		public void MarginWidthN(int margin, double pixelWidth)
 		{
-			Cmd(Sci.SCI_SETMARGINWIDTHN, margin, pixelWidth);
+			Cmd(Sci.SCI_SETMARGINWIDTHN, margin, (long)pixelWidth);
 		}
 
-		/// <summary></summary>
-		public int MarginMaskN(int margin)
+		/// <summary>
+		/// The mask is a 32-bit value. Each bit corresponds to one of 32 logical symbols that can be displayed in a margin that is enabled for symbols.
+		/// There is a useful constant, SC_MASK_FOLDERS (0xFE000000 or -33554432), that is a mask for the 7 logical symbols used to denote folding.
+		/// You can assign a wide range of symbols and colours to each of the 32 logical symbols, see Markers for more information. If (mask & SC_MASK_FOLDERS)==0,
+		/// the margin background colour is controlled by style 33 (STYLE_LINENUMBER).
+		/// You add logical markers to a line with SCI_MARKERADD.If a line has an associated marker that does not appear in the mask of any margin with a non-zero width,
+		/// the marker changes the background colour of the line.For example, suppose you decide to use logical marker 10 to mark lines with a syntax error and you want
+		/// to show such lines by changing the background colour.The mask for this marker is 1 shifted left 10 times (1<<10) which is 0x400. If you make sure that no
+		/// symbol margin includes 0x400 in its mask, any line with the marker gets the background colour changed.
+		/// To set a non-folding margin 1 use SCI_SETMARGINMASKN(1, ~SC_MASK_FOLDERS) which is the default set by Scintilla. To set a folding margin 2 use
+		/// SCI_SETMARGINMASKN(2, SC_MASK_FOLDERS). ~SC_MASK_FOLDERS is 0x1FFFFFF in hexadecimal or 33554431 decimal. Of course, you may need to display all 32 symbols in
+		/// a margin, in which case use SCI_SETMARGINMASKN(margin, -1).</summary>
+		public uint MarginMaskN(int margin)
 		{
-			return Cmd(Sci.SCI_GETMARGINMASKN, margin);
+			return (uint)Cmd(Sci.SCI_GETMARGINMASKN, margin);
 		}
-
-		/// <summary></summary>
-		public void MarginMaskN(int margin, int mask)
+		public void MarginMaskN(int margin, uint mask)
 		{
 			Cmd(Sci.SCI_SETMARGINMASKN, margin, mask);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Each of the five margins can be set sensitive or insensitive to mouse clicks. A click in a sensitive margin sends a SCN_MARGINCLICK or SCN_MARGINRIGHTCLICK
+		/// notification to the container. Margins that are not sensitive act as selection margins which make it easy to select ranges of lines. By default, all margins are insensitive.</summary>
 		public bool MarginSensitiveN(int margin)
 		{
 			return Cmd(Sci.SCI_GETMARGINSENSITIVEN, margin) != 0;
 		}
-
-		/// <summary></summary>
 		public void MarginSensitiveN(int margin, bool sensitive)
 		{
 			Cmd(Sci.SCI_SETMARGINSENSITIVEN, margin, sensitive ? 1 : 0);
 		}
 
-		/// <summary></summary>
-		public int MarginLeft()
+		/// <summary>Get/Set the width of the blank margin on the left side of the text in pixels. The default is to one pixel on each side.</summary>
+		public double MarginLeft
 		{
-			return Cmd(Sci.SCI_GETMARGINLEFT);
+			get => Cmd(Sci.SCI_GETMARGINLEFT);
+			set => Cmd(Sci.SCI_SETMARGINLEFT, 0, (long)value);
 		}
 
-		/// <summary></summary>
-		public void MarginLeft(int pixelWidth)
-		{
-			Cmd(Sci.SCI_SETMARGINLEFT, 0, pixelWidth);
-		}
-
-		/// <summary></summary>
-		public int MarginRight
+		/// <summary>Get/Set the width of the blank margin on the right side of the text in pixels. The default is to one pixel on each side.</summary>
+		public double MarginRight
 		{
 			get => Cmd(Sci.SCI_GETMARGINRIGHT);
-			set => Cmd(Sci.SCI_SETMARGINRIGHT, 0, value);
+			set => Cmd(Sci.SCI_SETMARGINRIGHT, 0, (long)value);
 		}
 
 		#endregion
@@ -1873,14 +1989,24 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_BRACEBADLIGHT, pos);
 		}
 
-		/// <summary></summary>
-		public int BraceMatch(long pos)
+		/// <summary>
+		/// The SCI_BRACEMATCH message finds a corresponding matching brace given pos, the position of one brace.
+		/// The brace characters handled are '(', ')', '[', ']', '{', '}', '<', and '>'. The search is forwards from an opening
+		/// brace and backwards from a closing brace. If the character at position is not a brace character, or a matching brace
+		/// cannot be found, the return value is -1. Otherwise, the return value is the position of the matching brace.
+		/// A match only occurs if the style of the matching brace is the same as the starting brace or the matching brace is beyond
+		/// the end of styling. Nested braces are handled correctly. The maxReStyle parameter must currently be 0 - it may be used in
+		/// the future to limit the length of brace searches.</summary>
+		public long BraceMatch(long pos, int max_re_style = 0)
 		{
-			return Cmd(Sci.SCI_BRACEMATCH, pos);
+			return Cmd(Sci.SCI_BRACEMATCH, pos, max_re_style);
 		}
 
 		#endregion
-		#region Tabs
+		#region Tabs / Indenting
+
+		/// <summary>Enable/Disable auto indent mode</summary>
+		public bool AutoIndent { get; set; }
 
 		/// <summary>
 		/// Gets/Sets the size of a tab as a multiple of the size of a space character in STYLE_DEFAULT.
@@ -1888,11 +2014,14 @@ namespace Rylogic.Gui.WPF
 		/// 1 or large values may have undesirable effects.</summary>
 		public int TabWidth
 		{
-			get => Cmd(Sci.SCI_GETTABWIDTH);
+			get => (int)Cmd(Sci.SCI_GETTABWIDTH);
 			set => Cmd(Sci.SCI_SETTABWIDTH, value);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Get/Set whether indentation should be created out of a mixture of tabs and spaces or be based purely on spaces.
+		/// Set UseTabs to false (0) to create all tabs and indents out of spaces. The default is true. You can use SCI_GETCOLUMN
+		/// to get the column of a position taking the width of a tab into account.</summary>
 		public bool UseTabs
 		{
 			get => Cmd(Sci.SCI_GETUSETABS) != 0;
@@ -1905,8 +2034,51 @@ namespace Rylogic.Gui.WPF
 		/// on indent sizes, but values less than 0 or large values may have undesirable effects.</summary>
 		public int Indent
 		{
-			get => Cmd(Sci.SCI_GETINDENT);
+			get => (int)Cmd(Sci.SCI_GETINDENT);
 			set => Cmd(Sci.SCI_SETINDENT, value);
+		}
+
+		/// <summary>Returns a string representing one unit of indentation</summary>
+		public string IndentString => UseTabs ? "\t" : new string(' ', Indent);
+
+		/// <summary>Gets the indentation level in units of the indent string</summary>
+		public int LineIndentationLevel(long line_index)
+		{
+			return LineIndentation(line_index) / Indent;
+		}
+
+		/// <summary>Get/Set the amount of indentation on a line. The indentation is measured in character columns, which correspond to the width of space characters.</summary>
+		public int LineIndentation(long line_index)
+		{
+			return (int)Cmd(Sci.SCI_GETLINEINDENTATION, line_index);
+		}
+		public void LineIndentation(long line_index, int indentSize)
+		{
+			Cmd(Sci.SCI_SETLINEINDENTATION, line_index, indentSize);
+		}
+
+		/// <summary>Returns the position at the end of indentation of a line</summary>
+		public long LineIndentPosition(long line)
+		{
+			return Cmd(Sci.SCI_GETLINEINDENTPOSITION, line);
+		}
+
+		/// <summary>
+		/// Indentation guides are dotted vertical lines that appear within indentation white space every indent size columns.
+		/// They make it easy to see which constructs line up especially when they extend over multiple pages.
+		/// Style STYLE_INDENTGUIDE (37) is used to specify the foreground and background colour of the indentation guides.
+		/// There are 4 indentation guide views. SC_IV_NONE turns the feature off but the other 3 states determine how far the guides appear on empty lines.
+		///   SC_IV_NONE - No indentation guides are shown.
+		///   SC_IV_REAL - Indentation guides are shown inside real indentation white space.
+		///   SC_IV_LOOKFORWARD - Indentation guides are shown beyond the actual indentation up to the level of the next non-empty line.
+		///      If the previous non-empty line was a fold header then indentation guides are shown for one more level of indent than that line.
+		///      This setting is good for Python.
+		///   SC_IV_LOOKBOTH - Indentation guides are shown beyond the actual indentation up to the level of the next non-empty line or
+		///      previous non-empty line whichever is the greater. This setting is good for most languages.</summary>
+		public Sci.EIndentView IndentationGuides
+		{
+			get => (Sci.EIndentView)Cmd(Sci.SCI_GETINDENTATIONGUIDES);
+			set => Cmd(Sci.SCI_SETINDENTATIONGUIDES, (long)value);
 		}
 
 		/// <summary>Inside indentation white space, gets/sets whether the tab key indents rather than inserts a tab character.</summary>
@@ -1923,33 +2095,12 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_SETBACKSPACEUNINDENTS, value ? 1 : 0);
 		}
 
-		/// <summary></summary>
-		public int LineIndentation(long line)
-		{
-			return Cmd(Sci.SCI_GETLINEINDENTATION, line);
-		}
-		public void LineIndentation(long line, int indentSize)
-		{
-			Cmd(Sci.SCI_SETLINEINDENTATION, line, indentSize);
-		}
-
-		/// <summary></summary>
-		public int LineIndentPosition(long line)
-		{
-			return Cmd(Sci.SCI_GETLINEINDENTPOSITION, line);
-		}
-
-		/// <summary></summary>
-		public bool IndentationGuides
-		{
-			get => Cmd(Sci.SCI_GETINDENTATIONGUIDES) != 0;
-			set => Cmd(Sci.SCI_SETINDENTATIONGUIDES, value ? 1 : 0);
-		}
-
-		/// <summary></summary>
+		/// <summary>
+		/// When brace highlighting occurs, the indentation guide corresponding to the braces may be highlighted with the brace highlighting style,
+		/// STYLE_BRACELIGHT (34). Set column to 0 to cancel this highlight.</summary>
 		public int HighlightGuide
 		{
-			get => Cmd(Sci.SCI_GETHIGHLIGHTGUIDE);
+			get => (int)Cmd(Sci.SCI_GETHIGHLIGHTGUIDE);
 			set => Cmd(Sci.SCI_SETHIGHLIGHTGUIDE, value);
 		}
 
@@ -1981,14 +2132,18 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_MARKERSETBACK, markerNumber, (int)back.ARGB);
 		}
 
-		/// <summary></summary>
-		public int MarkerAdd(long line, int markerNumber)
+		/// <summary>
+		/// This message adds marker number markerNumber to a line. The message returns -1 if this fails (illegal line number, out of memory)
+		/// or it returns a marker handle number that identifies the added marker. You can use this returned handle with SCI_MARKERLINEFROMHANDLE
+		/// to find where a marker is after moving or combining lines and with SCI_MARKERDELETEHANDLE to delete the marker based on its handle.
+		/// The message does not check the value of markerNumber, nor does it check if the line already contains the marker.</summary>
+		public long MarkerAdd(long line, int markerNumber)
 		{
 			return Cmd(Sci.SCI_MARKERADD, line, markerNumber);
 		}
 
 		/// <summary></summary>
-		public int MarkerAddSet(long line, int markerNumber)
+		public long MarkerAddSet(long line, int markerNumber)
 		{
 			return Cmd(Sci.SCI_MARKERADDSET, line, markerNumber);
 		}
@@ -2006,31 +2161,31 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
-		public int MarkerGet(long line)
+		public long MarkerGet(long line)
 		{
 			return Cmd(Sci.SCI_MARKERGET, line);
 		}
 
 		/// <summary></summary>
-		public int MarkerNext(long lineStart, int markerMask)
+		public long MarkerNext(long lineStart, int markerMask)
 		{
 			return Cmd(Sci.SCI_MARKERNEXT, lineStart, markerMask);
 		}
 
 		/// <summary></summary>
-		public int MarkerPrevious(long lineStart, int markerMask)
+		public long MarkerPrevious(long lineStart, int markerMask)
 		{
 			return Cmd(Sci.SCI_MARKERPREVIOUS, lineStart, markerMask);
 		}
 
 		/// <summary></summary>
-		public int MarkerLineFromHandle(int handle)
+		public long MarkerLineFromHandle(long handle)
 		{
 			return Cmd(Sci.SCI_MARKERLINEFROMHANDLE, handle);
 		}
 
 		/// <summary></summary>
-		public void MarkerDeleteHandle(int handle)
+		public void MarkerDeleteHandle(long handle)
 		{
 			Cmd(Sci.SCI_MARKERDELETEHANDLE, handle);
 		}
@@ -2069,35 +2224,26 @@ namespace Rylogic.Gui.WPF
 			//return Cmd(Sci.SCI_FORMATRANGE, draw, &fr);
 		}
 
-		/// <summary></summary>
-		public int GetPrintMagnification()
+		/// <summary>Get/Set a different size to print at instead of the screen font. magnification is the number of points to add to the size of each screen font.
+		/// A value of -3 or -4 gives reasonably small print. You can get this value with SCI_GETPRINTMAGNIFICATION.</summary>
+		public int PrintMagnification
 		{
-			return Cmd(Sci.SCI_GETPRINTMAGNIFICATION);
+			get => (int)Cmd(Sci.SCI_GETPRINTMAGNIFICATION);
+			set => Cmd(Sci.SCI_SETPRINTMAGNIFICATION, value);
 		}
 
 		/// <summary></summary>
-		public void SetPrintMagnification(int magnification)
+		public Sci.EPrintOption PrintColourMode
 		{
-			Cmd(Sci.SCI_SETPRINTMAGNIFICATION, magnification);
+			get => (Sci.EPrintOption)Cmd(Sci.SCI_GETPRINTCOLOURMODE);
+			set => Cmd(Sci.SCI_SETPRINTCOLOURMODE, (long)value);
 		}
 
 		/// <summary></summary>
-		public int GetPrintColourMode()
+		public Sci.EWrap PrintWrapMode
 		{
-			return Cmd(Sci.SCI_GETPRINTCOLOURMODE);
-		}
-
-		/// <summary></summary>
-		public void SetPrintColourMode(int mode)
-		{
-			Cmd(Sci.SCI_SETPRINTCOLOURMODE, mode);
-		}
-
-		/// <summary></summary>
-		public int PrintWrapMode
-		{
-			get => Cmd(Sci.SCI_GETPRINTWRAPMODE);
-			set => Cmd(Sci.SCI_SETPRINTWRAPMODE, value);
+			get => (Sci.EWrap)Cmd(Sci.SCI_GETPRINTWRAPMODE);
+			set => Cmd(Sci.SCI_SETPRINTWRAPMODE, (long)value);
 		}
 
 		#endregion
@@ -2136,14 +2282,23 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Folding
 
-		/// <summary></summary>
-		public int VisibleFromDocLine(long line)
+		/// <summary>
+		/// When some lines are hidden and/or annotations are displayed, then a particular line in the document may be displayed at a different position
+		/// to its document position. If no lines are hidden and there are no annotations, this message returns docLine. Otherwise, this returns the display
+		/// line (counting the very first visible line as 0). The display line of an invisible line is the same as the previous visible line. The display line
+		/// number of the first line in the document is 0. If lines are hidden and docLine is outside the range of lines in the document, the return value is -1.
+		/// Lines can occupy more than one display line if they wrap.</summary>
+		public long VisibleFromDocLine(long line)
 		{
 			return Cmd(Sci.SCI_VISIBLEFROMDOCLINE, line);
 		}
 
-		/// <summary></summary>
-		public int DocLineFromVisible(long lineDisplay)
+		/// <summary>
+		/// When some lines are hidden and/or annotations are displayed, then a particular line in the document may be displayed at a different position to its
+		/// document position. This message returns the document line number that corresponds to a display line (counting the display line of the first line in
+		/// the document as 0). If displayLine is less than or equal to 0, the result is 0. If displayLine is greater than or equal to the number of displayed
+		/// lines, the result is the number of lines in the document.</summary>
+		public long DocLineFromVisible(long lineDisplay)
 		{
 			return Cmd(Sci.SCI_DOCLINEFROMVISIBLE, lineDisplay);
 		}
@@ -2169,7 +2324,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public int FoldLevel(long line)
 		{
-			return Cmd(Sci.SCI_GETFOLDLEVEL, line);
+			return (int)Cmd(Sci.SCI_GETFOLDLEVEL, line);
 		}
 
 		/// <summary></summary>
@@ -2184,14 +2339,17 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_SETFOLDFLAGS, flags);
 		}
 
-		/// <summary></summary>
-		public int GetLastChild(long line, int level)
+		/// <summary>
+		/// This message searches for the next line after line, that has a folding level that is less than or equal to level and then returns the previous line number.
+		/// If you set level to -1, level is set to the folding level of line line. If from is a fold point, SCI_GETLASTCHILD(from, -1) returns the last line that would
+		/// be in made visible or hidden by toggling the fold state.</summary>
+		public long GetLastChild(long line, int level)
 		{
 			return Cmd(Sci.SCI_GETLASTCHILD, line, level);
 		}
 
 		/// <summary></summary>
-		public int GetFoldParent(long line)
+		public long GetFoldParent(long line)
 		{
 			return Cmd(Sci.SCI_GETFOLDPARENT, line);
 		}
@@ -2241,39 +2399,42 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Line Wrapping
 
-		/// <summary></summary>
-		public int WrapMode
+		/// <summary>
+		/// Set wrapMode to SC_WRAP_WORD (1) to enable wrapping on word or style boundaries, SC_WRAP_CHAR (2) to enable wrapping between any characters,
+		/// SC_WRAP_WHITESPACE (3) to enable wrapping on whitespace, and SC_WRAP_NONE (0) to disable line wrapping. SC_WRAP_CHAR is preferred for Asian
+		/// languages where there is no white space between words.</summary>
+		public Sci.EWrap WrapMode
 		{
-			get => Cmd(Sci.SCI_GETWRAPMODE);
-			set => Cmd(Sci.SCI_SETWRAPMODE, value);
+			get => (Sci.EWrap)Cmd(Sci.SCI_GETWRAPMODE);
+			set => Cmd(Sci.SCI_SETWRAPMODE, (long)value);
+		}
+
+		/// <summary>Enable the drawing of visual flags to indicate a line is wrapped. Bits set in wrapVisualFlags determine which visual flags are drawn.</summary>
+		public Sci.EWrapVisualFlag WrapVisualFlags
+		{
+			get => (Sci.EWrapVisualFlag)Cmd(Sci.SCI_GETWRAPVISUALFLAGS);
+			set => Cmd(Sci.SCI_SETWRAPVISUALFLAGS, (long)value);
 		}
 
 		/// <summary></summary>
-		public int WrapVisualFlags
+		public Sci.EWrapVisualLocation WrapVisualFlagsLocation
 		{
-			get => Cmd(Sci.SCI_GETWRAPVISUALFLAGS);
-			set => Cmd(Sci.SCI_SETWRAPVISUALFLAGS, value);
+			get => (Sci.EWrapVisualLocation)Cmd(Sci.SCI_GETWRAPVISUALFLAGSLOCATION);
+			set => Cmd(Sci.SCI_SETWRAPVISUALFLAGSLOCATION, (long)value);
 		}
 
 		/// <summary></summary>
-		public int WrapVisualFlagsLocation
+		public Sci.EWrapIndentMode WrapStartIndent
 		{
-			get => Cmd(Sci.SCI_GETWRAPVISUALFLAGSLOCATION);
-			set => Cmd(Sci.SCI_SETWRAPVISUALFLAGSLOCATION, value);
+			get => (Sci.EWrapIndentMode)Cmd(Sci.SCI_GETWRAPSTARTINDENT);
+			set => Cmd(Sci.SCI_SETWRAPSTARTINDENT, (long)value);
 		}
 
 		/// <summary></summary>
-		public int WrapStartIndent
+		public Sci.ELineCache LayoutCache
 		{
-			get => Cmd(Sci.SCI_GETWRAPSTARTINDENT);
-			set => Cmd(Sci.SCI_SETWRAPSTARTINDENT, value);
-		}
-
-		/// <summary></summary>
-		public int LayoutCache
-		{
-			get => Cmd(Sci.SCI_GETLAYOUTCACHE);
-			set => Cmd(Sci.SCI_SETLAYOUTCACHE, value);
+			get => (Sci.ELineCache)Cmd(Sci.SCI_GETLAYOUTCACHE);
+			set => Cmd(Sci.SCI_SETLAYOUTCACHE, (long)value);
 		}
 
 		/// <summary></summary>
@@ -2288,10 +2449,10 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_LINESJOIN);
 		}
 
-		/// <summary></summary>
+		/// <summary>Document lines can occupy more than one display line if they wrap and this returns the number of display lines needed to wrap a document line.</summary>
 		public int WrapCount(long line)
 		{
-			return Cmd(Sci.SCI_WRAPCOUNT, line);
+			return (int)Cmd(Sci.SCI_WRAPCOUNT, line);
 		}
 
 		#endregion
@@ -2309,27 +2470,32 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_ZOOMOUT);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// These messages let you set and get the zoom factor directly. There is no limit set on the factors you can set, so limiting yourself to
+		/// -10 to +20 to match the incremental zoom functions is a good idea.</summary>
 		public int Zoom
 		{
-			get => Cmd(Sci.SCI_GETZOOM);
+			get => (int)Cmd(Sci.SCI_GETZOOM);
 			set => Cmd(Sci.SCI_SETZOOM, value);
 		}
 
 		#endregion
 		#region Long Lines
 
-		/// <summary></summary>
-		public int EdgeMode
+		/// <summary>Get/Set the mode used to display long lines</summary>
+		public Sci.EEdgeVisualStyle EdgeMode
 		{
-			get => Cmd(Sci.SCI_GETEDGEMODE);
-			set => Cmd(Sci.SCI_SETEDGEMODE, value);
+			get => (Sci.EEdgeVisualStyle)Cmd(Sci.SCI_GETEDGEMODE);
+			set => Cmd(Sci.SCI_SETEDGEMODE, (long)value);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// These messages set and get the column number at which to display the long line marker. When drawing lines, the column sets a position
+		/// in units of the width of a space character in STYLE_DEFAULT. When setting the background colour, the column is a character count
+		/// (allowing for tabs) into the line.</summary>
 		public int EdgeColumn
 		{
-			get => Cmd(Sci.SCI_GETEDGECOLUMN);
+			get => (int)Cmd(Sci.SCI_GETEDGECOLUMN);
 			set => Cmd(Sci.SCI_SETEDGECOLUMN, value);
 		}
 
@@ -2344,10 +2510,10 @@ namespace Rylogic.Gui.WPF
 		#region Lexer
 
 		/// <summary></summary>
-		public int Lexer
+		public Sci.ELexer Lexer
 		{
-			get => Cmd(Sci.SCI_GETLEXER);
-			set => Cmd(Sci.SCI_SETLEXER, value);
+			get => (Sci.ELexer)Cmd(Sci.SCI_GETLEXER);
+			set => Cmd(Sci.SCI_SETLEXER, (long)value);
 		}
 
 		/// <summary></summary>
@@ -2381,7 +2547,7 @@ namespace Rylogic.Gui.WPF
 			var buf = new byte[len + 1];
 			using var b = GCHandle_.Alloc(buf, GCHandleType.Pinned);
 			len = Cmd(Sci.SCI_GETPROPERTY, k.Handle.AddrOfPinnedObject(), b.Handle.AddrOfPinnedObject());
-			return Encoding.UTF8.GetString(buf, 0, len);
+			return Encoding.UTF8.GetString(buf, 0, (int)len);
 		}
 		public void Property(string key, string value)
 		{
@@ -2414,17 +2580,24 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Notifications
 
-		/// <summary></summary>
-		public int ModEventMask
+		/// <summary>
+		/// Get/Set the event mask that determines which document change events are notified to the container with SCN_MODIFIED and SCEN_CHANGE.
+		/// For example, a container may decide to see only notifications about changes to text and not styling changes by calling SCI_SETMODEVENTMASK(SC_MOD_INSERTTEXT|SC_MOD_DELETETEXT).
+		/// The possible notification types are the same as the modificationType bit flags used by SCN_MODIFIED: SC_MOD_INSERTTEXT, SC_MOD_DELETETEXT, SC_MOD_CHANGESTYLE, SC_MOD_CHANGEFOLD,
+		/// SC_PERFORMED_USER, SC_PERFORMED_UNDO, SC_PERFORMED_REDO, SC_MULTISTEPUNDOREDO, SC_LASTSTEPINUNDOREDO, SC_MOD_CHANGEMARKER, SC_MOD_BEFOREINSERT, SC_MOD_BEFOREDELETE,
+		/// SC_MULTILINEUNDOREDO, and SC_MODEVENTMASKALL.</summary>
+		public long ModEventMask
 		{
 			get => Cmd(Sci.SCI_GETMODEVENTMASK);
 			set => Cmd(Sci.SCI_SETMODEVENTMASK, value);
 		}
 
-		/// <summary>(in ms)</summary>
+		/// <summary>
+		/// Get/Set the time the mouse must sit still, in milliseconds, to generate a SCN_DWELLSTART notification.
+		/// If set to SC_TIME_FOREVER, the default, no dwell events are generated.</summary>
 		public int MouseDwellTime
 		{
-			get => Cmd(Sci.SCI_GETMOUSEDWELLTIME);
+			get => (int)Cmd(Sci.SCI_GETMOUSEDWELLTIME);
 			set => Cmd(Sci.SCI_SETMOUSEDWELLTIME, value);
 		}
 
@@ -2450,28 +2623,103 @@ namespace Rylogic.Gui.WPF
 			set => Cmd(Sci.SCI_SETBUFFEREDDRAW, value ? 1 : 0);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Scintilla supports UTF-8, Japanese, Chinese and Korean DBCS along with single byte encodings like Latin-1. UTF-8 (SC_CP_UTF8) is the default.
+		/// Use this message with codePage set to the code page number to set Scintilla to use code page information to ensure multiple byte characters
+		/// are treated as one character rather than multiple. This also stops the caret from moving between the bytes in a multi-byte character.
+		/// Do not use this message to choose between different single byte character sets - use SCI_STYLESETCHARACTERSET. Call with codePage set
+		/// to zero to disable multi-byte support.
+		/// Code page SC_CP_UTF8(65001) sets Scintilla into Unicode mode with the document treated as a sequence of characters expressed in UTF-8.
+		/// The text is converted to the platform's normal Unicode encoding before being drawn by the OS and thus can display Hebrew, Arabic, Cyrillic,
+		/// and Han characters. Languages which can use two characters stacked vertically in one horizontal space, such as Thai, will mostly work but there
+		/// are some issues where the characters are drawn separately leading to visual glitches. Bi-directional text is not supported.
+		/// Code page can be set to 65001 (UTF-8), 932 (Japanese Shift-JIS), 936 (Simplified Chinese GBK), 949 (Korean Unified Hangul Code),
+		/// 950 (Traditional Chinese Big5), or 1361 (Korean Johab).</summary>
 		public int CodePage
 		{
-			get => Cmd(Sci.SCI_GETCODEPAGE);
+			get => (int)Cmd(Sci.SCI_GETCODEPAGE);
 			set => Cmd(Sci.SCI_SETCODEPAGE, value);
 		}
 
-		/// <summary></summary>
-		public void SetWordChars(string characters)
+		/// <summary>
+		/// Get/Set the characters that are members of the word category. The character categories are set to default values before processing this function.
+		/// For example, if you don't allow '_' in your set of characters use: SCI_SETWORDCHARS(0, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+		/// NOTE: For multi-byte encodings, this API will not return meaningful values for 0x80 and above.</summary>
+		public string WordChars => Encoding.UTF8.GetString(WordCharsBytes.Where(x => x < 0x80).ToArray());
+		public byte[] WordCharsBytes
 		{
-			throw new NotImplementedException();
-			//Cmd(Sci.SCI_SETWORDCHARS, 0, characters);
+			get
+			{
+				// 'Get' fills the characters parameter with all the characters included in words. The characters parameter must be large enough to hold all of the characters.
+				// If the characters parameter is 0 then the length that should be allocated to store the entire set is returned.
+				var len = Cmd(Sci.SCI_GETWORDCHARS);
+
+				var bytes = new byte[len];
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				len = Cmd(Sci.SCI_GETWORDCHARS, 0, b.Handle.AddrOfPinnedObject());
+				return bytes;
+			}
+			set
+			{
+				var bytes = value;
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				Cmd(Sci.SCI_SETWORDCHARS, 0, b.Handle.AddrOfPinnedObject());
+			}
 		}
 
-		/// <summary></summary>
-		public void SetWhitespaceChars(string characters)
+		/// <summary>
+		/// Similar to SCI_SETWORDCHARS, this message allows the user to define which chars Scintilla considers as whitespace. Setting the whitespace chars allows the user
+		/// to fine-tune Scintilla's behaviour doing such things as moving the cursor to the start or end of a word; for example, by defining punctuation chars as whitespace,
+		/// they will be skipped over when the user presses ctrl+left or ctrl+right. This function should be called after SCI_SETWORDCHARS as it will reset the whitespace
+		/// characters to the default set. SCI_GETWHITESPACECHARS behaves similarly to SCI_GETWORDCHARS.</summary>
+		public string WhitespaceChars => Encoding.UTF8.GetString(WhitespaceCharsBytes.Where(x => x < 0x80).ToArray());
+		public byte[] WhitespaceCharsBytes
 		{
-			throw new NotImplementedException();
-			//Cmd(Sci.SCI_SETWHITESPACECHARS, 0, characters);
+			get
+			{
+				var len = Cmd(Sci.SCI_GETWHITESPACECHARS);
+
+				var bytes = new byte[len];
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				len = Cmd(Sci.SCI_GETWHITESPACECHARS, 0, b.Handle.AddrOfPinnedObject());
+				return bytes;
+			}
+			set
+			{
+				var bytes = value;
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				Cmd(Sci.SCI_SETWHITESPACECHARS, 0, b.Handle.AddrOfPinnedObject());
+			}
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Similar to SCI_SETWORDCHARS and SCI_SETWHITESPACECHARS, this message allows the user to define which chars Scintilla considers as punctuation. SCI_GETPUNCTUATIONCHARS
+		/// behaves similarly to SCI_GETWORDCHARS.</summary>
+		public string PunctuationChars => Encoding.UTF8.GetString(PunctuationCharsBytes.Where(x => x < 0x80).ToArray());
+		public byte[] PunctuationCharsBytes
+		{
+			get
+			{
+				// 'Get' fills the characters parameter with all the characters included in words. The characters parameter must be large enough to hold all of the characters.
+				// If the characters parameter is 0 then the length that should be allocated to store the entire set is returned.
+				var len = Cmd(Sci.SCI_GETPUNCTUATIONCHARS);
+
+				var bytes = new byte[len];
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				len = Cmd(Sci.SCI_GETPUNCTUATIONCHARS, 0, b.Handle.AddrOfPinnedObject());
+				return bytes;
+			}
+			set
+			{
+				var bytes = value;
+				using var b = GCHandle_.Alloc(bytes, GCHandleType.Pinned);
+				Cmd(Sci.SCI_SETPUNCTUATIONCHARS, 0, b.Handle.AddrOfPinnedObject());
+			}
+		}
+
+		/// <summary>
+		/// Use the default sets of word and whitespace characters. This sets whitespace to space, tab and other characters with codes less than 0x20, with word characters
+		/// set to alphanumeric and '_'.</summary>
 		public void SetCharsDefault()
 		{
 			Cmd(Sci.SCI_SETCHARSDEFAULT);
@@ -2500,8 +2748,15 @@ namespace Rylogic.Gui.WPF
 		#endregion
 		#region Status/Errors
 
-		/// <summary></summary>
-		public int Status
+		/// <summary>
+		/// If an error occurs, Scintilla may set an internal error number that can be retrieved with SCI_GETSTATUS.
+		/// To clear the error status call SCI_SETSTATUS(0). Status values from 1 to 999 are errors and status SC_STATUS_WARN_START (1000)
+		/// and above are warnings. The currently defined statuses are:
+		///    SC_STATUS_OK 0 No failures
+		///    SC_STATUS_FAILURE 1 Generic failure
+		///    SC_STATUS_BADALLOC 2 Memory is exhausted
+		///    SC_STATUS_WARN_REGEX 1001 Regular expression is invalid</summary>
+		public long Status
 		{
 			get => Cmd(Sci.SCI_GETSTATUS);
 			set => Cmd(Sci.SCI_SETSTATUS, value);

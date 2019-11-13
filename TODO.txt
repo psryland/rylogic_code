@@ -1,13 +1,13 @@
 Immediate ToDo:
 	
 LDraw
-	- Auto complete in scripts
 	- move ObjectManager to pr.view3d
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
 	- shift+ctrl jumps back to the start of orientation, make it not do that
 	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
-
-
+	- Replace area select view3d objects with WPF primitives
+	- Replace resizer view3d objects with WPF primitives
+	
 CoinFlip
 	Candle Charts:
 		- Add measure tool to charts
@@ -30,7 +30,6 @@ CoinFlip
 		- Better back testing playback controls: sub step count, playback speed, pause with space bar
 	
 EDTradeAdvisor
-	- ED Style
 	- Settings UI
 	- History of origin's 
 	- Swap Origin<->Destination button
@@ -90,3 +89,8 @@ VS Extension - Align
  - stop at comment lines
  - Levistein distance rows (or maybe just use row 'form's)
 Add outline code only to VS Extension
+
+YouTube speed:
+   vid = document.getElementsByClassName("video-stream html5-main-video")[0];
+   vid.playbackRate=3.0;
+   

@@ -720,7 +720,8 @@ namespace Rylogic.Extn
 			return list;
 		}
 
-		/// <summary>Remove adjacent duplicate elements within the range [begin, end).
+		/// <summary>
+		/// Remove *adjacent* duplicate elements within the range [begin, end).
 		/// Returns the end of the unique range (i.e. a value in the range [begin,end]</summary>
 		public static int Unique<T>(this IList<T> list, int begin, int end, IEqualityComparer<T>? comparer = null)
 		{

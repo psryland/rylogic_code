@@ -202,37 +202,51 @@ namespace LDraw
 			return new Guid(m.Groups[1].Value);
 		}
 
-		/// <summary>Clear the instances from one or more scenes</summary>
-		public void Clear(IList<SceneUI> scenes, Guid[]? delete_ids, int include_count, int exclude_count)
+		/// <summary>Clear all instances from all scenes</summary>
+		public void Clear()
 		{
-			// Remove objects from the scene
+			foreach (var scene in Scenes)
+			{
+				var view = scene.SceneView;
+				view.Scene.RemoveAllObjects();
+				view.Scene.Invalidate();
+			}
+		}
+
+		/// <summary>Clear all instances from one or more scenes</summary>
+		public void Clear(IList<SceneUI> scenes)
+		{
+			Clear(scenes, Array.Empty<Guid>(), 0, 0);
+		}
+
+		/// <summary>Clear instances from one or more scenes</summary>
+		public void Clear(IList<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
+		{
+			// Remove objects from the scenes
 			foreach (var scene in scenes)
 			{
 				var view = scene.SceneView;
-				view.Scene.RemoveObjects(Array.Empty<Guid>(), 0, 0);
+				view.Scene.RemoveObjects(context_ids, include_count, exclude_count);
+				view.Scene.Invalidate();
 			}
 
 			// Delete unused objects
-			if (delete_ids != null)
+			if (context_ids.Length != 0)
 			{
 				if (include_count == 0)
 				{
 					// Exclude the chart tools if this is a 'clear all' type of clear.
-					Array.Resize(ref delete_ids, delete_ids.Length + 1);
-					delete_ids[delete_ids.Length - 1] = ChartControl.ChartTools.Id;
+					Array.Resize(ref context_ids, context_ids.Length + 1);
+					context_ids[context_ids.Length - 1] = ChartControl.ChartTools.Id;
 					exclude_count++;
 				}
-				View3d.DeleteUnused(delete_ids, include_count, exclude_count);
+				View3d.DeleteUnused(context_ids, include_count, exclude_count);
 			}
 		}
 
 		// Add objects associated with 'id' to the scenes
-		public void AddObjects(IList<SceneUI> scenes, Guid id, bool additional)
+		public void AddObjects(IList<SceneUI> scenes, Guid id)
 		{
-			// Remove other objects from the scene if this is not an additional add
-			if (!additional)
-				Clear(scenes, new[] { id }, 0, 1);
-
 			// Add the objects from 'id' this scene.
 			foreach (var scene in scenes)
 			{
@@ -248,7 +262,7 @@ namespace LDraw
 		}
 
 		/// <summary>Add objects from a file to one or more scenes</summary>
-		public void OpenFile(string? filepath = null, bool additional = false, IList<SceneUI>? scenes = null)
+		public void OpenFile(string? filepath = null, IList<SceneUI>? scenes = null)
 		{
 			// Prompt for a filepath if none provided
 			if (filepath == null || filepath.Length == 0)
@@ -283,24 +297,28 @@ namespace LDraw
 			var ctx_id = View3d.ContextIdFromFilepath(filepath);
 			if (ctx_id != null)
 			{
-				AddObjects(scenes, ctx_id.Value, additional);
+				AddObjects(scenes, ctx_id.Value);
 			}
 			else
 			{
 				// Otherwise, load the source in a background thread
-				var sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context");
 				var include_paths = Settings.IncludePaths;
 				ThreadPool.QueueUserWorkItem(x =>
 				{
 					// Load a source file and save the context id for that file
-					var id = View3d.LoadScriptSource(filepath, true, include_paths);
-					sync.Post(_ => AddObjects(scenes, id, additional), null);
+					View3d.LoadScriptSource(filepath, include_paths, OnAdd);
+					bool OnAdd(IntPtr _, ref Guid id, bool add_complete)
+					{
+						if (add_complete)
+							AddObjects(scenes!, id);
+						return true;
+					}
 				});
 			}
 		}
 
 		/// <summary>Add objects from a script string to one or more scenes</summary>
-		public void AddScript(string text, bool additional = false, IList<SceneUI>? scenes = null, Guid? context_id = null)
+		public void AddScript(string text, IList<SceneUI>? scenes = null, Guid? context_id = null)
 		{
 			if (text == null || text.Length == 0)
 				return;
@@ -311,13 +329,21 @@ namespace LDraw
 				return;
 
 			// Load the source in a background thread
-			var sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context");
 			var include_paths = Settings.IncludePaths;
 			ThreadPool.QueueUserWorkItem(x =>
 			{
 				// Load a script and save the context id for that file
-				var id = View3d.LoadScript(text, file:false, context_id, include_paths);
-				sync.Post(_ => AddObjects(scenes, id, additional), null);
+				View3d.LoadScript(text, file: false, context_id, include_paths, OnAdd);
+				bool OnAdd(IntPtr _, ref Guid id, bool add_complete)
+				{
+					// If 'context_id' is given, erase objects from that context
+					// id before adding new objects when 'add_complete' is true
+					if (add_complete)
+						AddObjects(scenes!, id);
+					else if (context_id != null)
+						Clear(scenes!, new Guid[] { context_id.Value }, 1, 0);
+					return true;
+				}
 			});
 		}
 

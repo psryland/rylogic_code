@@ -9,13 +9,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Rylogic.Utility
+namespace Rylogic.Str
 {
-	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
-	public abstract class IString :IEnumerable<char>
+	/// <summary>Basic interface for a string</summary>
+	public interface IStringView
 	{
-		protected readonly int m_ofs, m_length;
-		protected IString() :this(0, 0) {}
+		int Length { get; }
+		char this[int i] { get; }
+	}
+
+	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
+	public abstract class IString :IEnumerable<char>, IStringView
+	{
+		protected readonly int m_ofs;
+		protected readonly int m_length;
+
+		protected IString()
+			:this(0, 0)
+		{}
 		protected IString(int ofs, int length)
 		{
 			m_ofs = ofs;
@@ -70,10 +81,11 @@ namespace Rylogic.Utility
 		public static implicit operator IString(string s)        { return new StringProxy(s); }
 		public static implicit operator IString(StringBuilder s) { return new StringBuilderProxy(s); }
 		public static implicit operator IString(char[] s)        { return new CharArrayProxy(s); }
+		public static implicit operator IString(List<char> s)    { return new CharArrayProxy(s); }
 
 		public static IString From(string s        , int ofs = 0, int length = int.MaxValue) { return new StringProxy(s, ofs, length); }
 		public static IString From(StringBuilder s , int ofs = 0, int length = int.MaxValue) { return new StringBuilderProxy(s, ofs, length); }
-		public static IString From(char[] s        , int ofs = 0, int length = int.MaxValue) { return new CharArrayProxy(s, ofs, length); }
+		public static IString From(IList<char> s   , int ofs = 0, int length = int.MaxValue) { return new CharArrayProxy(s, ofs, length); }
 
 		private class StringProxy :IString
 		{
@@ -83,22 +95,10 @@ namespace Rylogic.Utility
 			{
 				m_str = s;
 			}
-			public override int Length
-			{
-				get { return m_length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new StringProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return m_str.Substring(m_ofs, m_length);
-			}
+			public override int Length => m_length;
+			public override char this[int i] => m_str[m_ofs + i];
+			public override IString Substring(int ofs, int length) => new StringProxy(m_str, m_ofs + ofs, length);
+			public override string ToString() => m_str.Substring(m_ofs, m_length);
 		}
 		private class StringBuilderProxy :IString
 		{
@@ -108,54 +108,30 @@ namespace Rylogic.Utility
 			{
 				m_str = s;
 			}
-			public override int Length
-			{
-				get { return m_str.Length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new StringBuilderProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return m_str.ToString(m_ofs, m_length);
-			}
+			public override int Length => m_str.Length;
+			public override char this[int i] => m_str[m_ofs + i];
+			public override IString Substring(int ofs, int length) => new StringBuilderProxy(m_str, m_ofs + ofs, length);
+			public override string ToString() => m_str.ToString(m_ofs, m_length);
 		}
 		private class CharArrayProxy :IString
 		{
-			private readonly char[] m_str;
-			public CharArrayProxy(char[] s, int ofs = 0, int length = int.MaxValue)
-				:base(ofs, Math.Min(s.Length, length))
+			private readonly IList<char> m_str;
+			public CharArrayProxy(IList<char> s, int ofs = 0, int length = int.MaxValue)
+				:base(ofs, Math.Min(s.Count, length))
 			{
 				m_str = s;
 			}
-			public override int Length
-			{
-				get { return m_str.Length; }
-			}
-			public override char this[int i]
-			{
-				get { return m_str[m_ofs + i]; }
-			}
-			public override IString Substring(int ofs, int length)
-			{
-				return new CharArrayProxy(m_str, m_ofs + ofs, length);
-			}
-			public override string ToString()
-			{
-				return new string(m_str, m_ofs, m_length);
-			}
+			public override int Length => m_str.Count;
+			public override char this[int i] => m_str[m_ofs + i];
+			public override IString Substring(int ofs, int length) => new CharArrayProxy(m_str, m_ofs + ofs, length);
+			public override string ToString() => new string(m_str.ToArray(), m_ofs, m_length);
 		}
 	}
 }
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using Utility;
+	using Str;
 
 	[TestFixture]
 	public class TestIString

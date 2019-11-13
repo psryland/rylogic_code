@@ -494,21 +494,11 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A mouse operation for zooming (Middle Button)</summary>
 		public class MouseOpDefaultMButton : MouseOp
 		{
-			//private HintBalloon m_tape_measure_balloon;
-			private bool m_tape_measure_graphic_added;
 			private IDisposable? m_defer_nav_checkpoint;
 
 			public MouseOpDefaultMButton(ChartControl chart)
 				: base(chart)
-			{
-				//m_tape_measure_balloon = new HintBalloon
-				//{
-				//	AutoSizeMode = AutoSizeMode.GrowOnly,
-				//	Font = new Font(FontFamily.GenericMonospace, 8f),
-				//	Owner = chart.TopLevelControl as Form,
-				//};
-				m_tape_measure_graphic_added = false;
-			}
+			{}
 			public override void MouseDown(MouseButtonEventArgs? e)
 			{
 				if (e == null) throw new Exception("This mouse op should start on mouse down");
@@ -526,28 +516,8 @@ namespace Rylogic.Gui.WPF
 				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-				if (IsClick(location) && !m_tape_measure_graphic_added)
+				if (IsClick(location))
 					return;
-
-				// Position the tape measure graphic
-				var pt0 = Chart.Camera.O2W * Chart.ChartToCamera(GrabChart);
-				var pt1 = Chart.Camera.O2W * Chart.ChartToCamera(Chart.ClientToChart(location));
-				var delta = pt1 - pt0;
-				Chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
-				//m_tape_measure_balloon.Location = Chart.PointToScreen(e.Location);
-				//m_tape_measure_balloon.Text =
-				//	$"dX:  {delta.x}\r\n" +
-				//	$"dY:  {delta.y}\r\n" +
-				//	$"dZ:  {delta.z}\r\n" +
-				//	$"Len: {delta.Length}\r\n";
-
-				// Show the tape measure graphic (after the text has been initialised)
-				if (!m_tape_measure_graphic_added)
-				{
-					Chart.Scene.AddObject(Chart.Tools.TapeMeasure);
-					m_tape_measure_graphic_added = true;
-					//m_tape_measure_balloon.Visible = true;
-				}
 
 				Chart.Invalidate();
 			}
@@ -577,13 +547,6 @@ namespace Rylogic.Gui.WPF
 				// Otherwise this is a drag action
 				else
 				{
-				}
-
-				// Remove the tape measure graphic
-				if (m_tape_measure_graphic_added)
-				{
-					Chart.Scene.RemoveObject(Chart.Tools.TapeMeasure);
-					//m_tape_measure_balloon.Visible = false;
 				}
 
 				Chart.Cursor = Cursors.Arrow;

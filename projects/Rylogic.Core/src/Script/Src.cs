@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Rylogic.Maths;
+using Rylogic.Str;
 
 namespace Rylogic.Script
 {
@@ -206,16 +207,16 @@ namespace Rylogic.Script
 	}
 
 	/// <summary>A script character sequence from a string</summary>
-	public class StringSrc :Src
+	public class StringSrc :Src, IStringView
 	{
 		// Notes:
 		//  - Don't add copy constructors, the 'rhs' source may have buffered text
 		//    which will not be buffered in the copy. Instead create new instances.
-		private readonly string m_str;
+		private readonly IString m_str;
 		private readonly long m_end;
 		private long m_position;
 
-		public StringSrc(string str, long? start = null, long? count = null, Loc? loc = null)
+		public StringSrc(IString str, long? start = null, long? count = null, Loc? loc = null)
 			:base(loc ?? new Loc(string.Empty, start ?? 0, 1, 1))
 		{
 			start ??= 0;
@@ -238,6 +239,9 @@ namespace Rylogic.Script
 			set => m_position = Math_.Clamp(value, 0, m_end);
 		}
 
+		/// <summary>The remaining characters in this string source</summary>
+		public int Length => (int)(m_end - m_position);
+
 		/// <summary>Return the next valid character from the underlying stream or 'EOS' for the end of stream.</summary>
 		protected override int Read()
 		{
@@ -252,13 +256,11 @@ namespace Rylogic.Script
 		//  - Don't add copy constructors, the 'rhs' source may have buffered text
 		//    which will not be buffered in the copy. Instead create new instances.
 
-		private readonly string m_filepath;
 		private StreamReader m_stream;
-
 		public FileSrc(string filepath, long position = 0, int line = 1, int column = 1)
 			:base(new Loc(filepath, position, line, column))
 		{
-			m_filepath = filepath;
+			Filepath = filepath;
 			m_stream = new StreamReader(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
 			m_stream.BaseStream.Position = position;
 		}
@@ -267,6 +269,9 @@ namespace Rylogic.Script
 			m_stream.Dispose();
 			base.Dispose(_);
 		}
+
+		/// <summary>The file path of the source</summary>
+		public string Filepath { get; }
 
 		/// <summary>The current position in the file</summary>
 		public long Position

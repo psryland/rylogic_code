@@ -6223,7 +6223,7 @@ sptr_t Editor::WndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) {
 				insertPos = CurrentPosition();
 			Sci::Position newCurrent = CurrentPosition();
 			const char *sz = CharPtrFromSPtr(lParam);
-			const Sci::Position lengthInserted = InsertText(sz, insertPos, strlen(sz), iMessage == SCI_INSERTSTYLEDTEXT);
+			const Sci::Position lengthInserted = InsertText(sz, insertPos, -1, iMessage == SCI_INSERTSTYLEDTEXT);
 			if (newCurrent > insertPos)
 				newCurrent += lengthInserted;
 			SetEmptySelection(newCurrent);

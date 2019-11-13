@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WPF
 		{
 			sc.CodePage = Sci.SC_CP_UTF8;
 			sc.ClearDocumentStyle();
-			sc.IndentationGuides = true;
+			sc.IndentationGuides = Sci.EIndentView.Lookboth;
 			sc.TabWidth = 4;
 			sc.Indent = 4;
 			sc.CaretPeriod = 400;
@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF
 			sc.FoldFlags(16);
 
 			// Set margin 2 = folding margin to display folding symbols
-			sc.MarginMaskN(2, Sci.SC_MASK_FOLDERS);
+			sc.MarginMaskN(2, unchecked((uint)Sci.SC_MASK_FOLDERS));
 
 			// allow notifications for folding actions
 			sc.ModEventMask = Sci.SC_MOD_INSERTTEXT | Sci.SC_MOD_DELETETEXT;
@@ -94,7 +94,7 @@ namespace Rylogic.Gui.WPF
 		public static ScintillaControl ConfigLdr(this ScintillaControl sc, bool dark)
 		{
 			sc.ClearDocumentStyle();
-			sc.IndentationGuides = true;
+			sc.IndentationGuides = Sci.EIndentView.Lookboth;
 			sc.AutoIndent = true;
 			sc.TabWidth = 4;
 			sc.Indent = 4;
@@ -105,16 +105,14 @@ namespace Rylogic.Gui.WPF
 			sc.Property("fold", "1");
 			sc.MultipleSelection = true;
 			sc.AdditionalSelectionTyping = true;
-			sc.VirtualSpace = Sci.SCVS_RECTANGULARSELECTION;
+			sc.VirtualSpace = Sci.EVirtualSpace.Rectangularselection;
 
 			Debug.Assert(LdrDark.Length == LdrLight.Length);
 			sc.ApplyStyles(dark ? LdrDark : LdrLight);
 
-			sc.MarginTypeN(0, Sci.SC_MARGIN_NUMBER);
-			sc.MarginTypeN(1, Sci.SC_MARGIN_SYMBOL);
-
-			sc.MarginMaskN(1, Sci.SC_MASK_FOLDERS);
-
+			sc.MarginTypeN(0, Sci.EMarginType.Number);
+			sc.MarginTypeN(1, Sci.EMarginType.Symbol);
+			sc.MarginMaskN(1, unchecked((uint)Sci.SC_MASK_FOLDERS));
 			sc.MarginWidthN(0, sc.TextWidth(Sci.STYLE_LINENUMBER, "_9999"));
 			sc.MarginWidthN(1, 0);
 
@@ -128,7 +126,7 @@ namespace Rylogic.Gui.WPF
 
 			// Initialise UTF-8 with the ldr lexer
 			sc.CodePage = Sci.SC_CP_UTF8;
-			sc.Lexer = Sci.SCLEX_LDR;
+			sc.Lexer = Sci.ELexer.Ldr;
 			sc.LexerLanguage("ldr");
 
 			return sc;

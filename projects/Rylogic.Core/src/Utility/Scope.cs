@@ -19,12 +19,11 @@ namespace Rylogic.Utility
 		}
 		protected virtual void Dispose(bool _)
 		{
-			if (m_on_exit != null)
-				m_on_exit();
+			OnExit?.Invoke();
 		}
 
 		/// <summary>Clean up delegate</summary>
-		private Action? m_on_exit;
+		public Action? OnExit;
 
 		/// <summary>Construct the scope object</summary>
 		public static Scope Create(Action? on_enter, Action? on_exit)
@@ -58,14 +57,13 @@ namespace Rylogic.Utility
 		protected void Init(Action? on_enter, Action? on_exit)
 		{
 			// Note: important to save 'on_exit' before calling 'on_enter' in case it throws
-			m_on_exit = on_exit;
-			if (on_enter != null)
-				on_enter();
+			OnExit = on_exit;
+			on_enter?.Invoke();
 		}
 		protected async Task<Scope> InitAsync(Func<Task> on_enter, Action on_exit)
 		{
 			// Note: important to save 'on_exit' before calling 'on_enter' in case it throws
-			m_on_exit = on_exit;
+			OnExit = on_exit;
 			if (on_enter != null) await on_enter();
 			return this;
 		}
