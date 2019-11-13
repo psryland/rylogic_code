@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,11 +13,11 @@ using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using HContext = System.IntPtr;
+using HCubeMap = System.IntPtr;
 using HGizmo = System.IntPtr;
 using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
-using HCubeMap = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
@@ -952,6 +951,9 @@ namespace Rylogic.Gfx
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
 		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
 
+		/// <summary>Callback for continuations after adding scripts/files</summary>
+		public delegate bool OnAddCB(IntPtr ctx, ref Guid context_id, bool add_complete);
+
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
 
@@ -1213,23 +1215,23 @@ namespace ldr
 		/// The objects are created with the context Id that is returned from this function.
 		/// Callers should then add objects to a window using AddObjectsById.
 		/// 'include_paths' is a list of paths to use to resolve #include directives (or nullptr)</summary>
-		public Guid LoadScriptSource(string ldr_filepath, bool additional = false, string[]? include_paths = null)
+		public Guid LoadScriptSource(string ldr_filepath, string[]? include_paths = null, OnAddCB? on_add = null)
 		{
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScriptSource(ldr_filepath, additional, ref inc);
+			return View3D_LoadScriptSource(ldr_filepath, ref inc, on_add, IntPtr.Zero);
 		}
 
 		/// <summary>
 		/// Add an ldr script string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
-		/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
+		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null)
 		/// This is different to 'LoadScriptSource' because if 'ldr_script' is a file it is not added to
-		/// the collection of script sources. It's a one-off method to add objects</summary>
-		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null)
+		/// the collection of script sources. It's a one-off method to add objects.</summary>
+		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null, OnAddCB? on_add = null)
 		{
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
 			var ctx = context_id ?? Guid.NewGuid();
-			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc);
+			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, on_add, IntPtr.Zero);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1291,6 +1293,14 @@ namespace ldr
 		/// <summary>Template descriptions for auto complete of LDraw script</summary>
 		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
 
+		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
+		public static string AddressAt(string ldr_script, long position)
+		{
+			// 'script' should start from a root level position.
+			// 'position' should be relative to 'script'
+			return View3D_ObjectAddressAt(ldr_script, position);
+		}
+
 		/// <summary>Flush any pending commands to the graphics card</summary>
 		public static void Flush()
 		{
@@ -1315,8 +1325,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
 		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern Guid            View3D_LoadScriptSource      ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid            View3D_LoadScriptSource      ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
+		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
 		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     (IntPtr context_ids, int include_count, int exclude_count);
@@ -1535,8 +1545,10 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_DemoSceneDelete          ();
 		[DllImport(Dll)] private static extern void              View3D_DemoScriptShow           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ObjectManagerShow        (HWindow window, bool show);
-		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
+		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script);
 		[DllImport(Dll)] private static extern ulong             View3D_RefCount                 (IntPtr pointer);
+		[return: MarshalAs(UnmanagedType.BStr)]
+		[DllImport(Dll)] private static extern string            View3D_ObjectAddressAt          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, long position);
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ExampleScriptBStr();
 		[return: MarshalAs(UnmanagedType.BStr)]

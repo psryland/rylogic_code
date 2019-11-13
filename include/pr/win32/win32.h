@@ -142,8 +142,9 @@ namespace pr
 		// 'dwCreationDisposition' = e.g. OPEN_EXISTING
 		inline Handle FileOpen(std::filesystem::path const& filepath, DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwCreationDisposition, DWORD dwAttributes = FILE_ATTRIBUTE_NORMAL, DWORD dwFlags = 0)
 		{
+			// Note: don't throw on errors in this function. Leave that to the caller
 			#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
-			CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {};
+			CREATEFILE2_EXTENDED_PARAMETERS CreateExParams = {sizeof(CREATEFILE2_EXTENDED_PARAMETERS)};
 			CreateExParams.dwFileAttributes = dwAttributes;
 			CreateExParams.dwFileFlags = dwFlags;
 			auto h = CreateFile2(filepath.c_str(), dwDesiredAccess, dwShareMode, dwCreationDisposition, &CreateExParams);

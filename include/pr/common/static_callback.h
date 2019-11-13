@@ -8,8 +8,16 @@
 
 namespace pr
 {
-	template <typename Ret, typename... Args> struct StaticCB
+	template <typename Ret, typename... Args>
+	struct StaticCB
 	{
+		// Notes:
+		//  - This type is basically just a pair containing a function pointer and context pointer.
+		//    It's makes passing callback functions as parameters easier.
+		//  - Remember, parameters can be constructed like this:
+		//      void MyFunc(StaticCB<void, int> cb) {...}
+		//      MyFunc({func, this});
+
 		using func = Ret (__stdcall *)(void*, Args...);
 
 		func m_cb;

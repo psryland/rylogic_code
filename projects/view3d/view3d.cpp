@@ -194,27 +194,28 @@ pr::script::Includes GetIncludes(View3DIncludes const* includes)
 // Add an Ldr source file. This file will be watched and the object store updated whenever
 // it, or any of it's included dependencies change. The returned GUID is the context id for
 // all objects added as a result of 'filepath' and its dependencies.
-VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, BOOL additional, View3DIncludes const* includes)
+VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx)
 {
 	try
 	{
 		// Concurrent entry is allowed.
 		//'DllLockGuard;
-		return Dll().LoadScriptSource(filepath, pr::EEncoding::auto_detect, additional != 0, GetIncludes(includes));
+		return Dll().LoadScriptSource(filepath, pr::EEncoding::auto_detect, GetIncludes(includes), { on_add, ctx });
 	}
 	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
 }
 
 // Add an ldr script string. This will create all objects declared in 'ldr_script'
 // with context id 'context_id' if given, otherwise an id will be created
-VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes)
+VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx)
 {
 	try
 	{
-		DllLockGuard;
+		// Concurrent entry is allowed
+		//'DllLockGuard;
 		auto is_file = file != 0;
 		auto enc = is_file ? pr::EEncoding::auto_detect : pr::EEncoding::utf16_le;
-		return Dll().LoadScript(ldr_script, is_file, enc, context_id, GetIncludes(includes));
+		return Dll().LoadScript(ldr_script, is_file, enc, context_id, GetIncludes(includes), { on_add, ctx });
 	}
 	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
 }
@@ -3124,7 +3125,6 @@ VIEW3D_API BSTR __stdcall View3D_AutoCompleteTemplatesBStr()
 {
 	try
 	{
-		DllLockGuard;
 		auto templates = pr::Widen(pr::ldr::AutoCompleteTemplates());
 		return ::SysAllocStringLen(templates.c_str(), UINT(templates.size()));
 	}
@@ -3148,7 +3148,7 @@ VIEW3D_API void __stdcall View3D_DemoScriptShow(View3DWindow window)
 }
 
 // Parse an ldr *o2w {} description returning the transform
-VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
+VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(wchar_t const* ldr_script)
 {
 	try
 	{
@@ -3161,6 +3161,23 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 		return view3d::To<View3DM4x4>(o2w);
 	}
 	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
+}
+
+// Return the hierarchy "address" for a position in an ldr script file.
+// The format of the returned address is: "keyword.keyword.keyword..."
+// e.g. Group.Box.O2W.Pos
+VIEW3D_API BSTR __stdcall View3D_ObjectAddressAt(wchar_t const* ldr_script, int64_t position)
+{
+	try
+	{
+		// 'script' should start from a root level position.
+		// 'position' should be relative to 'script'
+
+		using namespace pr::script;
+		auto address = Reader::AddressAt<wchar_t>({ ldr_script, static_cast<size_t>(position) });
+		return ::SysAllocStringLen(address.c_str(), UINT(address.size()));
+	}
+	CatchAndReport(View3D_ObjectAddressAt, , BSTR());
 }
 
 // Return the current ref count of a COM pointer

@@ -35,7 +35,7 @@ namespace pr::script
 
 	public:
 
-		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr) noexcept
 			:m_pp(inc, mac, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
@@ -82,7 +82,7 @@ namespace pr::script
 		}
 
 		// Return the current source location
-		Loc Location() const
+		Loc Location() const noexcept
 		{
 			return m_pp.Location();
 		}
@@ -100,7 +100,7 @@ namespace pr::script
 		}
 
 		// Get/Set delimiter characters
-		wchar_t const* Delimiters() const
+		wchar_t const* Delimiters() const noexcept
 		{
 			return m_delim.c_str();
 		}
@@ -172,7 +172,7 @@ namespace pr::script
 		{
 			auto& src = m_pp;
 			EatDelimiters(src, m_delim.c_str());
-			auto len = src.ReadAhead(n);
+			auto const len = src.ReadAhead(n);
 			return std::regex_match(string_t(src.Buffer(0, len)), pattern);
 		}
 
@@ -199,18 +199,22 @@ namespace pr::script
 			return true;
 		}
 
-		// Advance the source to the next '{' within the current scope
-		// On return the current position should be a section start character
-		// or the end of the current section or end of the input stream if not found
+		// Advance the source to the next '{' within the current scope.
+		// If true is returned, the current position should be a section start character.
+		// If false, then the current position will be '*', '}', or the end of the stream.
 		bool FindSectionStart()
 		{
 			auto& src = m_pp;
-			for (;*src && *src != L'{' && *src != L'}';)
+			for (;*src && *src != '{' && *src != '}' && *src != '*';)
 			{
-				if (*src == L'\"') { EatLiteral(src); continue; }
-				else ++src;
+				if (*src == '\"')
+				{
+					EatLiteral(src);
+					continue;
+				}
+				++src;
 			}
-			return *src == L'{';
+			return *src == '{';
 		}
 
 		// Advance the source to the end of the current section
@@ -1030,9 +1034,62 @@ namespace pr::script
 		{
 			throw ScriptException(result, loc, msg);
 		}
+
+		// Return the hierarchy "address" for a position in 'script'.
+		template <typename Char>
+		static string_t AddressAt(std::basic_string_view<Char> script, int position = -1)
+		{
+			// The format of the returned address is: "keyword.keyword.keyword..."
+			// e.g. example
+			//   *Group { *Width {1} *Smooth *Box
+			//   {
+			//       *other {}
+			//       /* *something { */
+			//       // *something {
+			//       "my { string"
+			//       *o2w { *pos { <-- Address should be: Group.Box.o2w.pos
+
+			StringSrc src(position != -1 ? script.substr(0, static_cast<size_t>(position)) : script);
+			Reader reader(src, true);
+
+			string_t path, kw;
+			for (; !reader.IsSourceEnd(); )
+			{
+				// Find the next keyword in the current scope
+				if (reader.NextKeywordS(kw))
+				{
+					// Look for a section start
+					if (reader.FindSectionStart())
+					{
+						// Add to the path while within this section
+						path.append(path.empty() ? L"" : L".").append(kw);
+						reader.SectionStart();
+					}
+				}
+				else
+				{
+					// If we've reached the end of the scope, pop that last keyword
+					// from the path since 'position' is not within this scope.
+					if (reader.IsSectionEnd())
+					{
+						for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
+						if (!path.empty()) path.pop_back();
+						reader.SectionEnd();
+					}
+				}
+			}
+			return path;
+		}
+		static string_t AddressAt(std::string_view script, int position = -1)
+		{
+			return AddressAt<char>(script, position);
+		}
+		static string_t AddressAt(std::wstring_view script, int position = -1)
+		{
+			return AddressAt<wchar_t>(script, position);
+		}
 	};
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -1040,43 +1097,43 @@ namespace pr::script
 {
 	PRUnitTest(ReaderTests)
 	{
-		char const* src =
-			"#define NUM 23\n"
-			"*Identifier ident\n"
-			"*String \"simple string\"\n"
-			"*CString \"C:\\\\Path\\\\Filename.txt\"\n"
-			"*Bool true\n"
-			"*Intg -NUM\n"
-			"*Intg16 ABCDEF00\n"
-			"*Real -2.3e+3\n"
-			"*BoolArray 1 0 true false\n"
-			"*IntArray -3 2 +1 -0\n"
-			"*RealArray 2.3 -1.0e-1 2 -0.2\n"
-			"*Vector3 1.0 2.0 3.0\n"
-			"*Vector4 4.0 3.0 2.0 1.0\n"
-			"*Quaternion 0.0 -1.0 -2.0 -3.0\n"
-			"*M3x3 1.0 0.0 0.0  0.0 1.0 0.0  0.0 0.0 1.0\n"
-			"*M4x4 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0\n"
-			"*Data 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 00\n"
-			"*Junk\n"
-			"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
-			"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
-			"*Token 123token\n"
-			"*LastThing";
-
-		char kw[50];
-		int hashed_kw = 0;
-		std::string str;
-		bool bval = false, barray[4];
-		int ival = 0, iarray[4];
-		unsigned int uival = 0;
-		float fval = 0.0f, farray[4];
-		pr::v4 vec = pr::v4Zero;
-		pr::quat q = pr::QuatIdentity;
-		pr::m3x4 mat3;
-		pr::m4x4 mat4;
-
 		{// basic extract methods
+			char const* src =
+				"#define NUM 23\n"
+				"*Identifier ident\n"
+				"*String \"simple string\"\n"
+				"*CString \"C:\\\\Path\\\\Filename.txt\"\n"
+				"*Bool true\n"
+				"*Intg -NUM\n"
+				"*Intg16 ABCDEF00\n"
+				"*Real -2.3e+3\n"
+				"*BoolArray 1 0 true false\n"
+				"*IntArray -3 2 +1 -0\n"
+				"*RealArray 2.3 -1.0e-1 2 -0.2\n"
+				"*Vector3 1.0 2.0 3.0\n"
+				"*Vector4 4.0 3.0 2.0 1.0\n"
+				"*Quaternion 0.0 -1.0 -2.0 -3.0\n"
+				"*M3x3 1.0 0.0 0.0  0.0 1.0 0.0  0.0 0.0 1.0\n"
+				"*M4x4 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0\n"
+				"*Data 41 42 43 44 45 46 47 48 49 4A 4B 4C 4D 4E 4F 00\n"
+				"*Junk\n"
+				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+				"*Token 123token\n"
+				"*LastThing";
+
+			char kw[50];
+			int hashed_kw = 0;
+			std::string str;
+			bool bval = false, barray[4];
+			int ival = 0, iarray[4];
+			unsigned int uival = 0;
+			float fval = 0.0f, farray[4];
+			pr::v4 vec = pr::v4Zero;
+			pr::quat q = pr::QuatIdentity;
+			pr::m3x4 mat3;
+			pr::m4x4 mat4;
+
 			Reader reader(src, true);
 			PR_CHECK(reader.CaseSensitive()         ,true);
 			PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
@@ -1134,7 +1191,7 @@ namespace pr::script
 			PR_CHECK(!reader.IsSectionEnd()             ,true);
 			PR_CHECK(reader.IsSourceEnd()               ,true);
 		}
-		{
+		{// Dot delimited identifiers
 			char const* s =
 				"A.B\n"
 				"a.b.c\n"
@@ -1146,6 +1203,22 @@ namespace pr::script
 			reader.Identifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
 			reader.Identifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
 			reader.Identifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
+		}
+		{// AddressAt
+			wchar_t const* str = L""
+				L"*Group { *Width {1} *Smooth *Box\n"
+				L"{\n" //35
+				L"	*other {}\n"
+				L"	/* *something { */\n"
+				L"	// *something {\n"
+				L"	\"my { string\"\n"
+				L"	*o2w { *pos {";
+
+			PR_CHECK(str::Equal(Reader::AddressAt(str, 0), ""), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str, 18), "Group.Width"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str, 19), "Group"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str, 35), "Group.Box"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str), "Group.Box.o2w.pos"), true);
 		}
 	}
 }

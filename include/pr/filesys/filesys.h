@@ -112,8 +112,11 @@ namespace pr::filesys
 				if (m_handle != INVALID_HANDLE_VALUE)
 					return;
 
-				// Back off delay
-				Sleep(DWORD(a * back_off));
+				auto err = GetLastError();
+				if (err == ERROR_SHARING_VIOLATION || err == ERROR_FILE_EXISTS)
+					Sleep(DWORD(a * back_off));
+				else
+					break;
 			}
 			throw std::runtime_error(std::string("Failed to lock file: '").append(filepath.string()).append("'").c_str());
 		}

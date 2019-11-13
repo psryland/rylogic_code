@@ -64,9 +64,15 @@ namespace pr::script
 
 	public:
 
-		explicit StripComments(Src& src, InLiteral::EFlags literal_flags = InLiteral::EFlags::Escaped|InLiteral::EFlags::SingleLineStrings, InComment::Patterns const& comment_patterns = InComment::Patterns())
+		explicit StripComments(Src& src, InLiteral::EFlags literal_flags, InComment::Patterns const& comment_patterns)
 			:Src(src, EEncoding::already_decoded)
 			,m_com(comment_patterns, literal_flags)
+		{}
+		explicit StripComments(Src& src, InComment::Patterns const& comment_patterns)
+			:StripComments(src, InLiteral::EFlags::Escaped | InLiteral::EFlags::SingleLineStrings, comment_patterns)
+		{}
+		explicit StripComments(Src& src)
+			:StripComments(src, InComment::Patterns())
 		{}
 	};
 
@@ -196,7 +202,8 @@ namespace pr::script
 				"// multi\\\n"
 				" line\\\n"
 				" comment\n"
-				"/*/ comment */\n";
+				"/*/ comment */\n"
+				"/*back to*//*back*/ comment\n";
 			char const str_out[] = 
 				"123\n"
 				"456789\n"
@@ -208,7 +215,8 @@ namespace pr::script
 				"/not a comment\n"
 				"\n"
 				"\n"
-				"\n";
+				"\n"
+				" comment\n";
 
 			StringSrc src0(str_in);
 			StripLineContinuations src1(src0);
@@ -216,6 +224,27 @@ namespace pr::script
 
 			auto out = &str_out[0];
 			for (;*strip; ++strip, ++out)
+			{
+				if (*strip == *out) continue;
+				PR_CHECK(*strip, *out);
+			}
+			PR_CHECK(*out, 0);
+		}
+		{// Strip ASM comments
+			char const str_in[] =
+				"; asm comments start with a ; character\r\n"
+				"mov 43 2\r\n"
+				"ldr $a 2 ; imaginary asm";
+			char const str_out[] =
+				"\r\n"
+				"mov 43 2\r\n"
+				"ldr $a 2 ";
+
+			StringSrc src0(str_in);
+			StripComments strip(src0, InComment::Patterns(L";", L"\r\n", L"", L""));
+
+			auto out = &str_out[0];
+			for (; *strip; ++strip, ++out)
 			{
 				if (*strip == *out) continue;
 				PR_CHECK(*strip, *out);

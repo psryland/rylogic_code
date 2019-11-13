@@ -4224,15 +4224,6 @@ namespace pr::ldr
 			,m_layout()
 			,m_axis(AxisId::PosZ)
 		{}
-		void Parse() override
-		{
-			wstring256 text;
-			p.m_reader.String(text);
-			m_text.append(text);
-
-			// Record the formatting state
-			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
-		}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
@@ -4320,6 +4311,15 @@ namespace pr::ldr
 					return true;
 				}
 			}
+		}
+		void Parse() override
+		{
+			wstring256 text;
+			p.m_reader.String(text);
+			m_text.append(text);
+
+			// Record the formatting state
+			m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
 		}
 		void CreateModel(LdrObject* obj) override
 		{

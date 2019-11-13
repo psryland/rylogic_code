@@ -113,22 +113,22 @@ namespace view3d
 	}
 
 	// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, bool additional, Includes const& includes)
+	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, Includes const& includes, OnAddCB on_add)
 	{
 		// Note: this can be called from a worker thread
-		return m_sources.AddFile(filepath, enc, includes, additional);
+		return m_sources.AddFile(filepath, enc, includes, on_add);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
+	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add)
 	{
 		// Note: this can be called from a worker thread
-		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
+		return m_sources.AddScript(ldr_script, file, enc, context_id, includes, on_add);
 	}
-	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes)
+	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add)
 	{
 		// Note: this can be called from a worker thread
-		return m_sources.AddScript(ldr_script, file, enc, context_id, includes);
+		return m_sources.AddScript(ldr_script, file, enc, context_id, includes, on_add);
 	}
 
 	// Load/Add ldr objects and return the first object from the script
@@ -143,7 +143,7 @@ namespace view3d
 		auto count = iter != std::end(srcs) ? iter->second.m_objects.size() : 0U;
 
 		// Load the ldr script
-		LoadScript(ldr_script, file, enc, &id, includes);
+		LoadScript(ldr_script, file, enc, &id, includes, nullptr);
 
 		// Return the first object. expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context
@@ -554,7 +554,7 @@ namespace view3d
 		auto scene = pr::ldr::CreateDemoScene();
 
 		// Add the demo objects to the sources
-		m_sources.AddScript(scene, false, pr::EEncoding::utf8, &GuidDemoSceneObjects, Includes());
+		m_sources.AddScript(scene, false, pr::EEncoding::utf8, &GuidDemoSceneObjects, Includes(), nullptr);
 
 		// Add the demo objects to 'window'
 		window->AddObjectsById(&GuidDemoSceneObjects, 1, false);

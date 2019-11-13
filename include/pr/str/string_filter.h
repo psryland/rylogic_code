@@ -56,9 +56,6 @@ namespace pr::str
 		bool m_in_literal_string;
 		bool m_escape;
 
-		// 'include_quotes' means 
-		// 'single_line_strings' means literal strings end at '\n' characters. 
-		// 'escape_character' is the character used for escaping.
 		explicit InLiteral(EFlags flags = EFlags::Escaped, int escape_character = '\\') noexcept
 			:m_flags(flags)
 			,m_escape_character(escape_character)
@@ -73,9 +70,8 @@ namespace pr::str
 			return m_escape;
 		}
 
-		// Processes the current character in 'src'.
+		// Consider the next character in the stream 'ch'.
 		// Returns true if currently within a string/character literal
-		// Returns true for the surrounding quotes as well.
 		template <typename Char>
 		bool WithinLiteralString(Char ch) noexcept
 		{

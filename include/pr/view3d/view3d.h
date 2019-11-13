@@ -540,6 +540,7 @@ extern "C"
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
+	using View3D_OnAddCB               = BOOL (__stdcall *)(void* ctx, GUID const& context_id, BOOL add_complete);
 	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, EView3DSourcesChangedReason reason, BOOL before);
 	using View3D_InvalidatedCB         = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
@@ -568,8 +569,8 @@ extern "C"
 	VIEW3D_API void          __stdcall View3D_Shutdown              (View3DContext context);
 	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet      (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
 	VIEW3D_API void          __stdcall View3D_SourceEnumGuids       (View3D_EnumGuidsCB enum_guids_cb, void* ctx);
-	VIEW3D_API GUID          __stdcall View3D_LoadScriptSource      (wchar_t const* filepath, BOOL additional, View3DIncludes const* includes);
-	VIEW3D_API GUID          __stdcall View3D_LoadScript            (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API GUID          __stdcall View3D_LoadScriptSource      (wchar_t const* filepath, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx);
+	VIEW3D_API GUID          __stdcall View3D_LoadScript            (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx);
 	VIEW3D_API void          __stdcall View3D_ReloadScriptSources   ();
 	VIEW3D_API void          __stdcall View3D_ObjectsDeleteAll      ();
 	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int include_count, int exclude_count);
@@ -791,7 +792,8 @@ extern "C"
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
 	VIEW3D_API BSTR       __stdcall View3D_AutoCompleteTemplatesBStr();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);
-	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
+	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (wchar_t const* ldr_script);
+	VIEW3D_API BSTR       __stdcall View3D_ObjectAddressAt          (wchar_t const* ldr_script, int64_t position);
 	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);
 
 	// Ldr Editor Ctrl
