@@ -47,6 +47,9 @@ namespace pr::script
 		// Stream position (i.e. position of m_buffer[0])
 		Loc m_loc;
 
+		// Remaining characters to read.
+		int64_t m_remaining;
+
 		#if PR_DBG
 		BufW8 m_history;
 		#endif
@@ -60,6 +63,7 @@ namespace pr::script
 			,m_enc(enc)
 			,m_mb()
 			,m_loc(loc)
+			,m_remaining(std::numeric_limits<int64_t>::max())
 			#if PR_DBG
 			,m_history()
 			#endif
@@ -72,6 +76,7 @@ namespace pr::script
 			,m_enc(enc)
 			,m_mb()
 			,m_loc()
+			,m_remaining(std::numeric_limits<int64_t>::max())
 			#if PR_DBG
 			,m_history()
 			#endif
@@ -128,6 +133,16 @@ namespace pr::script
 			return string_view_t(str + start, count);
 		}
 
+		// Get/Set the maximum number of characters to emit from this stream (can be less than that underlying source length)
+		int64_t Limit() const
+		{
+			return m_remaining;
+		}
+		void Limit(int64_t remaining)
+		{
+			m_remaining = remaining >= 0 ? remaining : std::numeric_limits<int64_t>::max();
+		}
+
 		// Peek
 		char_t operator *()
 		{
@@ -174,6 +189,7 @@ namespace pr::script
 				}
 
 				m_buffer.erase(0, remove);
+				m_remaining -= remove;
 				n -= remove;
 				if (n == 0)
 					break;
@@ -188,6 +204,8 @@ namespace pr::script
 		// Returns the number of characters actually buffered (a value in the range [0, n])
 		int ReadAhead(int n)
 		{
+			assert(m_remaining >= 0);
+			if (n > m_remaining) n = static_cast<int>(m_remaining);
 			for (; n > s_cast<int>(m_buffer.size());)
 			{
 				// Ensure 'Buffer's length grows with each loop
@@ -855,6 +873,21 @@ namespace pr::script
 			PR_CHECK(*(++ptr)   , L'c');
 
 			PR_CHECK(*(++ptr),  0);
+		}
+		{// Limited source
+			char const str[] = "1234567890";
+			StringSrc ptr(str);
+			ptr.Limit(3);
+
+			PR_CHECK(ptr[0], L'1');
+			PR_CHECK(ptr[1], L'2');
+			PR_CHECK(ptr[2], L'3');
+			PR_CHECK(ptr[3], L'\0');
+
+			PR_CHECK(*ptr, L'1'); ++ptr;
+			PR_CHECK(*ptr, L'2'); ++ptr;
+			PR_CHECK(*ptr, L'3'); ++ptr;
+			PR_CHECK(*ptr, L'\0'); ++ptr;
 		}
 		{// Matching
 			wchar_t const str[] = L"0123456789";

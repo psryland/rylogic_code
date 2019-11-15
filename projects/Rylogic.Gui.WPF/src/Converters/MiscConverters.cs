@@ -104,6 +104,29 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
+	/// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
+	public class VisibleIfType :MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value == null)
+				return null;
+			if (!(parameter is string type_name))
+				return null;
+
+			// Get the type of 'value'
+			var ty = value.GetType();
+			return ty.FullName.EndsWith(type_name) ? Visibility.Visible : Visibility.Collapsed;
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException($"MarkupExtension '{nameof(VisibleIfType)}' cannot convert visibility back to '{targetType.Name}'");
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
 
 	///// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
 	//public class WithUnits : MarkupExtension, IValueConverter

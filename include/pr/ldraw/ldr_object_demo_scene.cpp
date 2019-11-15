@@ -72,12 +72,8 @@ namespace pr::ldr
 			"\n"
 
 			// Global flags, commands, includes, cameras, and lights
-			"// Clear existing data.\n"
-			"// Context ids can be listed within a section to clear objects from a specific source.\n"
-			"*Clear /*{ctx_id ...}*/\n"
-			"\n"
 			"// Allow missing includes to be ignored and not cause errors\n"
-			"*AllowMissingIncludes\n"
+			"#ignore_missing \"on\"\n"
 			"#include \"missing_file.ldr\"\n"
 			"\n"
 			"// Add an explicit dependency on another file. This is basically the same as an #include except\n"

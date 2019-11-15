@@ -299,7 +299,10 @@ namespace Rylogic.Gfx
 								foreach (var child in template.Child)
 									DoExpand(sb, child, indent);
 							}
-							NewLine(sb);
+							else
+							{
+								NewLine(sb);
+							}
 							break;
 						}
 					case Section section:
@@ -331,6 +334,7 @@ namespace Rylogic.Gfx
 								if (flags.HasFlag(EExpandFlags.Optionals) && !(child is Template))
 									DoExpand(sb, child, indent);
 							}
+							sb.TrimEnd(' ', '\t', '\n');
 							Append(sb, "]", indent);
 							sb.TrimEnd("[]").TrimEnd('\n', '\t', ' ');
 							break;
@@ -340,12 +344,6 @@ namespace Rylogic.Gfx
 							foreach (var child in repeat.Child)
 								DoExpand(sb, child, indent);
 							Append(sb, "...", indent);
-							break;
-						}
-					case Field field:
-						{
-							Space(sb);
-							Append(sb, $"<{field.Name}>", indent);
 							break;
 						}
 					case Select select:
@@ -359,6 +357,13 @@ namespace Rylogic.Gfx
 								DoExpand(sb, child, indent);
 								sep = " | ";
 							}
+							NewLine(sb);
+							break;
+						}
+					case Field field:
+						{
+							Space(sb);
+							Append(sb, $"<{field.Name}>", indent);
 							break;
 						}
 					case Literal literal:

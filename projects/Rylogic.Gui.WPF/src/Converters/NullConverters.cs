@@ -90,6 +90,23 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
+	/// <summary>If the value is null, return Hidden</summary>
+	public class NullToHidden :MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value == null || (value is string s && s.Length == 0) ? Visibility.Hidden : Visibility.Visible;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>If the value is null, return Collapsed</summary>
 	public class NullToCollapsed : MarkupExtension, IValueConverter
 	{

@@ -59,8 +59,6 @@ namespace pr::ldr
 		str.append(""
 
 			// Global
-			"*!Clear {[(<ctx_id>)]}\n"
-			"*!AllowMissingIncludes\n"
 			"*!Wireframe\n"
 			"*!Camera\n"
 			"{\n"

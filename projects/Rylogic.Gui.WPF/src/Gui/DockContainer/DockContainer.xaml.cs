@@ -590,9 +590,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>
 		/// Update the layout of this dock container using the data in 'node'
 		/// Use 'content_factory' to create content on demand during loading.
-		/// 'content_factory(string persist_name, string type_name, XElement user_data)'</summary>
-		public void LoadLayout(XElement node, Func<string, string, XElement, DockControl>? content_factory = null)
+		/// Signature: 'content_factory(string persist_name, string type_name, XElement user_data)'</summary>
+		public void LoadLayout(XElement? node, Func<string, string, XElement, DockControl?>? content_factory = null)
 		{
+			// Null is allowed to make first-run scenarios easier
+			if (node == null)
+				return;
 			if (node.Name != XmlTag.DockContainerLayout)
 				throw new Exception("XML data does not contain dock container layout information");
 

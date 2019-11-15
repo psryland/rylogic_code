@@ -447,6 +447,9 @@ namespace Rylogic.Gui.WPF
 		public ObservableCollection<HLPattern> m_highlighting = null!;
 		private int m_highlighting_issue;
 
+		/// <summary>Access to the columns of the log grid</summary>
+		public IEnumerable<DataGridColumn> Columns => m_view.Columns;
+
 		/// <summary>Use the log entry pattern to create columns</summary>
 		private void CreateColumns()
 		{
@@ -552,6 +555,59 @@ namespace Rylogic.Gui.WPF
 			var last = LogEntriesView.CurrentItem;
 			if (last != null)
 				m_view.ScrollIntoView(last);
+		}
+
+		/// <summary>Load/Save settings</summary>
+		public XElement SaveSettings(XElement? node = null)
+		{
+			node ??= new XElement("Log");
+			node.Add2(nameof(FilterLevel), FilterLevel, false);
+
+			// Only save column info if the layout is valid
+			if (IsArrangeValid)
+			{
+				// Save column info
+				var columns_node = node.Add2(new XElement("Columns"));
+				foreach (var col in Columns)
+				{
+					if (!(col.Header is string header)) continue;
+					columns_node.Add2("Column", $"{header},{col.DisplayIndex},{col.Width},{col.Visibility}", false);
+				}
+			}
+
+			return node;
+		}
+		public void LoadSettings(XElement? node)
+		{
+			// Allow null to make first-run scenarios easier
+			if (node == null)
+				return;
+
+			FilterLevel = node.Element(nameof(FilterLevel)).As(FilterLevel);
+
+			// Build a settings map from the column settings
+			var column_settings = node.Elements("Columns", "Column")
+				.Select(x => x.As<string>().Split(','))
+				.Where(x => x.Length == 4)
+				.Select(x => new
+				{
+					Header = x[0],
+					Idx = int.Parse(x[1]),
+					Width = DataGrid_.ParseDataGridLength(x[2]),
+					Visibility = Enum<Visibility>.Parse(x[3]),
+				})
+				.ToList();
+
+			// Apply the settings to the columns
+			foreach (var col in Columns)
+			{
+				if (!(col.Header is string header)) continue;
+				var settings = column_settings.FirstOrDefault(x => x.Header == header);
+				if (settings == null) continue;
+				col.DisplayIndex = settings.Idx;
+				col.Width = settings.Width;
+				col.Visibility = settings.Visibility;
+			}
 		}
 
 		/// <summary>Browse for a log file to display</summary>

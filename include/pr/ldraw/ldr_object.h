@@ -136,8 +136,6 @@ namespace pr::ldr
 		x(Hidden               ,= HashI("Hidden"              ))\
 		x(Wireframe            ,= HashI("Wireframe"           ))\
 		x(Delimiters           ,= HashI("Delimiters"          ))\
-		x(Clear                ,= HashI("Clear"               ))\
-		x(AllowMissingIncludes ,= HashI("AllowMissingIncludes"))\
 		x(Camera               ,= HashI("Camera"              ))\
 		x(LookAt               ,= HashI("LookAt"              ))\
 		x(Align                ,= HashI("Align"               ))\
@@ -389,9 +387,8 @@ namespace pr::ldr
 
 		ObjectCont  m_objects;    // Reference to the objects container to fill
 		ModelLookup m_models;     // A lookup map for models based on hashed object name
-		Camera  m_cam;        // Camera description has been read
+		Camera      m_cam;        // Camera description has been read
 		ECamField   m_cam_fields; // Bitmask of fields in 'm_cam' that were given in the camera description
-		bool        m_clear;      // True if '*Clear' was read in the script
 		bool        m_wireframe;  // True if '*Wireframe' was read in the script
 			
 		ParseResult()
@@ -399,7 +396,6 @@ namespace pr::ldr
 			,m_models()
 			,m_cam()
 			,m_cam_fields()
-			,m_clear()
 			,m_wireframe()
 		{}
 	};

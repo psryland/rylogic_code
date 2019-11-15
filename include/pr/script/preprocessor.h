@@ -93,6 +93,9 @@ namespace pr::script
 		// Default handlers
 		MacroDB m_def_macros;
 		Includes m_def_includes;
+		
+		// Ignore missing includes or embedded code without handlers
+		bool m_ignore_missing;
 
 	public:
 
@@ -104,6 +107,7 @@ namespace pr::script
 			,m_emb_handlers()
 			,m_def_macros()
 			,m_def_includes()
+			,m_ignore_missing()
 			,Macros(mac ? mac : &m_def_macros)
 			,Includes(inc ? inc : &m_def_includes)
 		{}
@@ -304,6 +308,7 @@ namespace pr::script
 
 							// Open the dependent file but don't push it onto the source stack. The include handler
 							// will see this as a referenced file but the content doesn't effect the script
+							if (m_ignore_missing) flags |= EIncludeFlags::IgnoreMissing;
 							auto inc = Includes->Open(path, flags, loc_beg);
 							inc = nullptr; // release the include immediately
 
@@ -416,8 +421,10 @@ namespace pr::script
 							try
 							{
 								auto emb = FindEmbeddedCodeHandler(lang);
-								if (emb == nullptr || !emb->Execute(code.c_str(), support, result))
+								if (emb == nullptr && !m_ignore_missing)
 									throw ScriptException(EResult::EmbeddedCodeNotSupported, loc_beg, pr::FmtS("No support for embedded '%S' code available", lang.c_str()));
+								if (emb != nullptr && !emb->Execute(code.c_str(), support, result))
+									throw ScriptException(EResult::EmbeddedCodeError, loc_beg, pr::FmtS("Embedded '%S' code could not be executed", lang.c_str()));
 							}
 							catch (ScriptException const&) { throw; }
 							catch (std::exception const& ex) { throw ScriptException(EResult::EmbeddedCodeError, code_beg, ex.what()); }
@@ -432,6 +439,12 @@ namespace pr::script
 							}
 							is_output = false;
 							break;
+						}
+						#pragma endregion
+						#pragma region End
+						if (src.Match(L"end", true))
+						{
+							throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "#end directive is unmatched");
 						}
 						#pragma endregion
 						#pragma region Error
@@ -506,6 +519,28 @@ namespace pr::script
 							break;
 						}
 						#pragma endregion
+						#pragma region Ignore Missing
+						if (src.Match(L"ignore_missing", true))
+						{
+							EatLineSpace(src, 0, 0);
+							if (*src == '\"') ++src; else throw ScriptException(EResult::InvalidInclude, src.Location(), "expected a string following #ignore_missing");
+
+							// Buffer the state string
+							auto len = 0;
+							BufferWhile(src, [=](Src& s, int i) { return s[i] != '\"'; }, 0, & len);
+							if (src[len] != '\"') throw ScriptException(EResult::InvalidInclude, src.Location(), "#ignore_missing string incomplete");
+
+							// Save the state string
+							auto state = src.ReadN(len);
+							++src; // skip the quote. Don't eat the rest of the line
+
+							// Set the 'ignore missing' state
+							m_ignore_missing = str::EqualI(state, "on");
+
+							is_output = false;
+							break;
+						}
+						#pragma endregion
 						#pragma region Include Path
 						if (src.Match(L"include_path", true))
 						{
@@ -555,6 +590,7 @@ namespace pr::script
 							++src; // skip the '>'. Don't eat the rest of the line
 
 							// Open the include
+							if (m_ignore_missing) flags |= EIncludeFlags::IgnoreMissing;
 							auto inc = Includes->Open(path, flags, loc_beg);
 							if (inc) Push(inc.release(), true, false);
 
@@ -644,7 +680,6 @@ namespace pr::script
 					break;
 				}
 				#pragma endregion
-
 			default:
 				#pragma region Expand Macros
 				// Look for possible macro identifiers in the source (not within expanded macros)

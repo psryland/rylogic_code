@@ -43,6 +43,22 @@ namespace Rylogic.Gui.WPF
 			};
 		}
 
+		/// <summary>Parse a string representation of a DataGridLength</summary>
+		public static DataGridLength ParseDataGridLength(string length)
+		{
+			if (length.ToLower() == "auto")
+				return new DataGridLength(1.0, DataGridLengthUnitType.Auto);
+			if (length.ToLower() == "sizetocells")
+				return new DataGridLength(1.0, DataGridLengthUnitType.SizeToCells);
+			if (length.ToLower() == "sizetoheader")
+				return new DataGridLength(1.0, DataGridLengthUnitType.SizeToHeader);
+			if (length.EndsWith("*"))
+				return new DataGridLength(double.Parse(length.TrimEnd('*')), DataGridLengthUnitType.Star);
+			if (double.TryParse(length, out var pixels))
+				return new DataGridLength(pixels, DataGridLengthUnitType.Pixel);
+			throw new Exception($"Failed to parse DataGridLength string: {length}");
+		}
+
 		#region Column Visibility
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>

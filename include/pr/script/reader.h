@@ -867,7 +867,7 @@ namespace pr::script
 					v4 axis = AxisId(axis_id);
 					if (IsZero3(axis))
 					{
-						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of �1, �2, �3");
+						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of ±1, ±2, ±3");
 						break;
 					}
 
@@ -1037,7 +1037,7 @@ namespace pr::script
 
 		// Return the hierarchy "address" for a position in 'script'.
 		template <typename Char>
-		static string_t AddressAt(std::basic_string_view<Char> script, int position = -1)
+		static string_t AddressAt(std::basic_string_view<Char> script, int64_t position = -1)
 		{
 			// The format of the returned address is: "keyword.keyword.keyword..."
 			// e.g. example
@@ -1049,34 +1049,47 @@ namespace pr::script
 			//       "my { string"
 			//       *o2w { *pos { <-- Address should be: Group.Box.o2w.pos
 
-			StringSrc src(position != -1 ? script.substr(0, static_cast<size_t>(position)) : script);
-			Reader reader(src, true);
+			// position does not take into account Utf8
+
+			// Use a case sensitive reader so that the reported address matches the case.
+			NoIncludes inc;
+			StringSrc src(script); src.Limit(position);
+			Reader reader(src, true, &inc);
 
 			string_t path, kw;
-			for (; !reader.IsSourceEnd(); )
+			try
 			{
-				// Find the next keyword in the current scope
-				if (reader.NextKeywordS(kw))
+				for (; !reader.IsSourceEnd(); )
 				{
-					// Look for a section start
-					if (reader.FindSectionStart())
+					// Find the next keyword in the current scope
+					if (reader.NextKeywordS(kw))
 					{
-						// Add to the path while within this section
-						path.append(path.empty() ? L"" : L".").append(kw);
-						reader.SectionStart();
+						// Look for a section start
+						if (reader.FindSectionStart())
+						{
+							// Add to the path while within this section
+							path.append(path.empty() ? L"" : L".").append(kw);
+							reader.SectionStart();
+						}
+					}
+					else
+					{
+						// If we've reached the end of the scope, pop that last keyword
+						// from the path since 'position' is not within this scope.
+						if (reader.IsSectionEnd())
+						{
+							for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
+							if (!path.empty()) path.pop_back();
+							reader.SectionEnd();
+						}
 					}
 				}
-				else
-				{
-					// If we've reached the end of the scope, pop that last keyword
-					// from the path since 'position' is not within this scope.
-					if (reader.IsSectionEnd())
-					{
-						for (; !path.empty() && path.back() != '.'; path.pop_back()) {}
-						if (!path.empty()) path.pop_back();
-						reader.SectionEnd();
-					}
-				}
+			}
+			catch (std::exception const&)
+			{
+				// If the script contains errors, we can't be sure that 'path' is correct.
+				// Return an empty path, rather than hoping that the path is right.
+				path.resize(0);
 			}
 			return path;
 		}
@@ -1205,20 +1218,28 @@ namespace pr::script
 			reader.Identifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
 		}
 		{// AddressAt
-			wchar_t const* str = L""
-				L"*Group { *Width {1} *Smooth *Box\n"
+			wchar_t const* str0 = L""
+				L"*Group { *Width {1} *Smooth *Box\n" //33
 				L"{\n" //35
-				L"	*other {}\n"
-				L"	/* *something { */\n"
-				L"	// *something {\n"
-				L"	\"my { string\"\n"
-				L"	*o2w { *pos {";
+				L"	*other {}\n" // 46
+				L"	/* *something { */\n" //66
+				L"	// *something {\n" //83
+				L"	\"my { string\"\n" //98
+				L"	*o2w { *pos {"; // 112
 
-			PR_CHECK(str::Equal(Reader::AddressAt(str, 0), ""), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str, 18), "Group.Width"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str, 19), "Group"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str, 35), "Group.Box"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str), "Group.Box.o2w.pos"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str0, 0), ""), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str0, 18), "Group.Width"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str0, 19), "Group"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str0, 35), "Group.Box"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str0, 88), ""), true); // because partway through a literal string
+			PR_CHECK(str::Equal(Reader::AddressAt(str0), "Group.Box.o2w.pos"), true);
+
+			char const str1[] = "*One { \"💩🍌\" \"💩🍌\" }";
+			PR_CHECK(str::Equal(Reader::AddressAt(str1, 6), "One"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str1, 9), ""), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str1, 11), "One"), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str1, 14), ""), true);
+			PR_CHECK(str::Equal(Reader::AddressAt(str1, 16), "One"), true);
 		}
 	}
 }

@@ -284,6 +284,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private DockControl? m_visible_content;
 		private int m_in_visible_content;
 
+		/// <summary>Cycle though the visible content in this pane. 'steps' can be negative</summary>
+		public void CycleVisibleContent(int steps)
+		{
+			if (AllContent.Count == 0)
+				return;
+
+			var idx0 = VisibleContent != null ? AllContent.IndexOf(VisibleContent) : 0;
+			if (idx0 == -1)
+				return;
+
+			var idx = ((idx0 + steps % AllContent.Count) + AllContent.Count) % AllContent.Count;
+			VisibleContent = AllContent[idx];
+		}
+
 		/// <summary>Get the text to display in the title bar for this pane</summary>
 		public string CaptionText => VisibleContent?.TabText ?? string.Empty;
 

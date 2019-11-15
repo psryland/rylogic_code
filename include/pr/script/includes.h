@@ -35,6 +35,9 @@ namespace pr::script
 		// True for #include "file", false for #include <file>
 		IncludeLocalDir = 1 << 1,
 
+		// True if missing includes do not throw errors
+		IgnoreMissing = 1 << 2,
+
 		_bitwise_operators_allowed,
 	};
 
@@ -52,13 +55,7 @@ namespace pr::script
 	// A base class and interface for an include handler
 	struct IIncludeHandler
 	{
-		IIncludeHandler()
-			:IgnoreMissingIncludes()
-		{}
 		virtual ~IIncludeHandler() {}
-
-		// True if missing includes do not throw exceptions
-		bool IgnoreMissingIncludes;
 
 		// Add a path to the include search paths
 		virtual void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t())
@@ -83,22 +80,34 @@ namespace pr::script
 	struct NoIncludes :IIncludeHandler
 	{
 		// Resolve an include into a full path
-		std::filesystem::path ResolveInclude(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		std::filesystem::path ResolveInclude(std::filesystem::path const&, EIncludeFlags flags, Loc const& loc = Loc()) override
 		{
+			// Ignore if missing includes flagged
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
+				return std::filesystem::path{};
+
 			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
 		}
 
 		// Returns a 'Src' corresponding to the string "include".
 		// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 		// 'loc' is where in the current source the include comes from.
-		std::unique_ptr<Src> Open(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		std::unique_ptr<Src> Open(std::filesystem::path const&, EIncludeFlags flags, Loc const& loc = Loc()) override
 		{
+			// Ignore if missing includes flagged
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
+				return nullptr;
+
 			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
 		}
 
 		// Open 'include' as an ASCII stream
-		std::unique_ptr<std::istream> OpenStreamA(std::filesystem::path const&, EIncludeFlags, Loc const& loc = Loc()) override
+		std::unique_ptr<std::istream> OpenStreamA(std::filesystem::path const&, EIncludeFlags flags, Loc const& loc = Loc()) override
 		{
+			// Ignore if missing includes flagged
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
+				return nullptr;
+
 			throw ScriptException(EResult::IncludesNotSupported, loc, "#include is not supported");
 		}
 	};
@@ -249,7 +258,7 @@ namespace pr::script
 				return fullpath;
 
 			// Ignore if missing includes flagged
-			if (IgnoreMissingIncludes)
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
 				return std::filesystem::path{};
 
 			// Raise an include missing error
@@ -298,10 +307,8 @@ namespace pr::script
 			}
 
 			// If ignoring missing includes, return an empty source
-			if (IgnoreMissingIncludes)
-			{
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
 				return std::make_unique<NullSrc>();
-			}
 
 			// Raise an include missing error
 			auto msg = Fmt(L"Failed to open include '%s'", include.c_str());
@@ -341,10 +348,8 @@ namespace pr::script
 			}
 
 			// If ignoring missing includes, return an empty source
-			if (IgnoreMissingIncludes)
-			{
+			if (AllSet(flags, EIncludeFlags::IgnoreMissing))
 				return std::make_unique<std::istringstream>("");
-			}
 
 			// Raise an include missing error
 			auto msg = Fmt(L"Failed to open include stream '%s'", include.c_str());

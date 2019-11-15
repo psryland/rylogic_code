@@ -124,27 +124,29 @@ namespace pr::script
 	#undef PR_ENUM
 
 	#define PR_ENUM(x)\
-		x(Invalid      ,""             ,= pr::hash::HashCT(""            ))\
-		x(Include      ,"include"      ,= pr::hash::HashCT("include"     ))\
-		x(IncludePath  ,"include_path" ,= pr::hash::HashCT("include_path"))\
-		x(Depend       ,"depend"       ,= pr::hash::HashCT("depend"      ))\
-		x(Define       ,"define"       ,= pr::hash::HashCT("define"      ))\
-		x(Undef        ,"undef"        ,= pr::hash::HashCT("undef"       ))\
-		x(Defifndef    ,"defifndef"    ,= pr::hash::HashCT("defifndef"   ))\
-		x(If           ,"if"           ,= pr::hash::HashCT("if"          ))\
-		x(Ifdef        ,"ifdef"        ,= pr::hash::HashCT("ifdef"       ))\
-		x(Ifndef       ,"ifndef"       ,= pr::hash::HashCT("ifndef"      ))\
-		x(Elif         ,"elif"         ,= pr::hash::HashCT("elif"        ))\
-		x(Else         ,"else"         ,= pr::hash::HashCT("else"        ))\
-		x(Endif        ,"endif"        ,= pr::hash::HashCT("endif"       ))\
-		x(Pragma       ,"pragma"       ,= pr::hash::HashCT("pragma"      ))\
-		x(Line         ,"line"         ,= pr::hash::HashCT("line"        ))\
-		x(Error        ,"error"        ,= pr::hash::HashCT("error"       ))\
-		x(Warning      ,"warning"      ,= pr::hash::HashCT("warning"     ))\
-		x(Defined      ,"defined"      ,= pr::hash::HashCT("defined"     ))\
-		x(Eval         ,"eval"         ,= pr::hash::HashCT("eval"        ))\
-		x(Lit          ,"lit"          ,= pr::hash::HashCT("lit"         ))\
-		x(Embedded     ,"embedded"     ,= pr::hash::HashCT("embedded"    ))
+		x(Invalid       ,""               ,= pr::hash::HashCT(""              ))\
+		x(Include       ,"include"        ,= pr::hash::HashCT("include"       ))\
+		x(IncludePath   ,"include_path"   ,= pr::hash::HashCT("include_path"  ))\
+		x(IgnoreMissing ,"ignore_missing" ,= pr::hash::HashCT("ignore_missing"))\
+		x(Depend        ,"depend"         ,= pr::hash::HashCT("depend"        ))\
+		x(Define        ,"define"         ,= pr::hash::HashCT("define"        ))\
+		x(Undef         ,"undef"          ,= pr::hash::HashCT("undef"         ))\
+		x(Defifndef     ,"defifndef"      ,= pr::hash::HashCT("defifndef"     ))\
+		x(If            ,"if"             ,= pr::hash::HashCT("if"            ))\
+		x(Ifdef         ,"ifdef"          ,= pr::hash::HashCT("ifdef"         ))\
+		x(Ifndef        ,"ifndef"         ,= pr::hash::HashCT("ifndef"        ))\
+		x(End           ,"end"            ,= pr::hash::HashCT("end"           ))\
+		x(Elif          ,"elif"           ,= pr::hash::HashCT("elif"          ))\
+		x(Else          ,"else"           ,= pr::hash::HashCT("else"          ))\
+		x(Endif         ,"endif"          ,= pr::hash::HashCT("endif"         ))\
+		x(Pragma        ,"pragma"         ,= pr::hash::HashCT("pragma"        ))\
+		x(Line          ,"line"           ,= pr::hash::HashCT("line"          ))\
+		x(Error         ,"error"          ,= pr::hash::HashCT("error"         ))\
+		x(Warning       ,"warning"        ,= pr::hash::HashCT("warning"       ))\
+		x(Defined       ,"defined"        ,= pr::hash::HashCT("defined"       ))\
+		x(Eval          ,"eval"           ,= pr::hash::HashCT("eval"          ))\
+		x(Lit           ,"lit"            ,= pr::hash::HashCT("lit"           ))\
+		x(Embedded      ,"embedded"       ,= pr::hash::HashCT("embedded"      ))
 	PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 	#undef PR_ENUM
 

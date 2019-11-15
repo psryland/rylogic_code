@@ -1298,7 +1298,7 @@ namespace ldr
 		{
 			// 'script' should start from a root level position.
 			// 'position' should be relative to 'script'
-			return View3D_ObjectAddressAt(ldr_script, position);
+			return View3D_ObjectAddressAt(ldr_script, position) ?? string.Empty;
 		}
 
 		/// <summary>Flush any pending commands to the graphics card</summary>

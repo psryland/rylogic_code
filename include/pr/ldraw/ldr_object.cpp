@@ -4596,28 +4596,10 @@ namespace pr::ldr
 					add_cb(object_count);
 					break;
 				}
-
-			// Camera position description
 			case EKeyword::Camera:
 				{
+					// Camera position description
 					ParseCamera(p, p.m_result);
-					break;
-				}
-
-			// Application commands
-			case EKeyword::Clear:
-				{
-					// Clear resets the scene up to the point of the clear, that includes
-					// objects we may have already parsed. A use for this is for a script
-					// that might be a work in progress, *Clear can be used to remove everything
-					// above a point in the script.
-					p.m_objects.clear();
-					p.m_result.m_clear = true;
-					break;
-				}
-			case EKeyword::AllowMissingIncludes:
-				{
-					p.m_reader.Includes().IgnoreMissingIncludes = true;
 					break;
 				}
 			case EKeyword::Wireframe:
