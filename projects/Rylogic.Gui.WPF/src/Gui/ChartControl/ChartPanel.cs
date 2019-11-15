@@ -48,7 +48,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			{
 				if (m_chart == value) return;
 				m_chart = value;
-				ContextMenu.DataContext = m_chart;
+				DataContext = m_chart;
 			}
 		}
 		private ChartControl m_chart = null!;

@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using LDraw.Dialogs;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -27,6 +28,8 @@ namespace LDraw.UI
 			Model = model;
 			SceneName = name;
 			SceneView.Options = Settings.Scene;
+			SceneView.Scene.ContextMenu = (ContextMenu)FindResource("LDrawCMenu");
+			SceneView.Scene.ContextMenu.DataContext = this;
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
 
@@ -55,11 +58,13 @@ namespace LDraw.UI
 				{
 					m_dock_control.ActiveChanged -= HandleSceneActive;
 					m_dock_control.SavingLayout -= HandleSavingLayout;
+					m_dock_control.LoadingLayout -= HandleLoadingLayout;
 					Util.Dispose(ref m_dock_control!);
 				}
 				m_dock_control = value;
 				if (m_dock_control != null)
 				{
+					m_dock_control.LoadingLayout += HandleLoadingLayout;
 					m_dock_control.SavingLayout += HandleSavingLayout;
 					m_dock_control.ActiveChanged += HandleSceneActive;
 				}
@@ -70,9 +75,15 @@ namespace LDraw.UI
 					//	Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
 					//	Invalidate();
 				}
-				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+				void HandleLoadingLayout(object sender, DockContainerLoadingLayoutEventArgs e)
 				{
-					//	args.Node.Add2(nameof(Camera), Camera, false);
+					var camera_xml = e.UserData.Element(nameof(SceneView.Camera));
+					if (camera_xml != null)
+						SceneView.Camera.Load(camera_xml);
+				}
+				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
+				{
+					e.Node.Add2(nameof(SceneView.Camera), SceneView.Camera, false);
 				}
 			}
 		}

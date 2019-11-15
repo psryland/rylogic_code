@@ -14,6 +14,8 @@ namespace Rylogic.Gui.WPF
 		private void InitCommands()
 		{
 			// Objects Menu
+			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
+			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
 			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
 			ToggleAxes = Command.Create(this, ToggleAxesInternal);
 
@@ -35,10 +37,20 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle visibility of the origin point</summary>
-		public Command ToggleOriginPoint => Scene.ToggleOriginPoint;
+		public Command ToggleOriginPoint { get; private set; } = null!;
+		private void ToggleOriginPointInternal()
+		{
+			Options.OriginPointVisible = !Options.OriginPointVisible;
+			Invalidate();
+		}
 
 		/// <summary>Toggle visibility of the focus point</summary>
-		public Command ToggleFocusPoint => Scene.ToggleFocusPoint;
+		public Command ToggleFocusPoint { get; private set; } = null!;
+		private void ToggleFocusPointInternal()
+		{
+			Options.FocusPointVisible = !Options.FocusPointVisible;
+			Invalidate();
+		}
 
 		/// <summary>Toggle visibility of the grid lines</summary>
 		public Command ToggleGridLines { get; private set; } = null!;

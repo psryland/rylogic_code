@@ -76,7 +76,7 @@ namespace LDraw.UI
 				if (m_dock_control == value) return;
 				if (m_dock_control != null)
 				{
-					m_dock_control.ActiveChanged -= HandleSceneActive;
+					m_dock_control.ActiveChanged -= HandleActiveChanged;
 					m_dock_control.SavingLayout -= HandleSavingLayout;
 					Util.Dispose(ref m_dock_control!);
 				}
@@ -84,18 +84,23 @@ namespace LDraw.UI
 				if (m_dock_control != null)
 				{
 					m_dock_control.SavingLayout += HandleSavingLayout;
-					m_dock_control.ActiveChanged += HandleSceneActive;
+					m_dock_control.ActiveChanged += HandleActiveChanged;
 				}
 
 				// Handlers
-				void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
+				void HandleActiveChanged(object sender, ActiveContentChangedEventArgs e)
 				{
+					// When activated, restore focus to the editor
+					if (DockControl.IsActiveContent)
+						Editor.Focus();
+
 					//	Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
 					//	Invalidate();
 				}
-				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
 				{
-					//	args.Node.Add2(nameof(Camera), Camera, false);
+					if (!Model.IsTempScriptFilepath(Filepath))
+						e.Node.Add2(nameof(Filepath), Filepath, false);
 				}
 			}
 		}
@@ -168,12 +173,15 @@ namespace LDraw.UI
 					m_editor.AutoCompleteSelection -= HandleAutoCompleteSelection;
 					m_editor.SelectionChanged -= HandleSelectionChanged;
 					m_editor.TextChanged -= HandleTextChanged;
-					m_editor.HandleCreated -= HandleSCHandleCreated;
+					m_editor.Name = string.Empty;
 				}
 				m_editor = value;
 				if (m_editor != null)
 				{
-					m_editor.HandleCreated += HandleSCHandleCreated;
+					m_editor.Name = ScriptName;
+					m_editor.AutoCompleteIgnoreCase = true;
+					m_editor.AutoCompleteSeparator = '\u001b';
+					m_editor.AutoCompleteMaxWidth = 80;
 					m_editor.TextChanged += HandleTextChanged;
 					m_editor.SelectionChanged += HandleSelectionChanged;
 					m_editor.AutoCompleteSelection += HandleAutoCompleteSelection;
@@ -183,12 +191,6 @@ namespace LDraw.UI
 				}
 
 				// Handler
-				void HandleSCHandleCreated(object sender, EventArgs e)
-				{
-					m_editor.AutoCompleteIgnoreCase = true;
-					m_editor.AutoCompleteSeparator = '\u001b';
-					m_editor.AutoCompleteMaxWidth = 80;
-				}
 				void HandleTextChanged(object sender, EventArgs e)
 				{
 					SaveNeeded = true;
@@ -206,7 +208,7 @@ namespace LDraw.UI
 					e.PartialWord = line.Substring(i + 1, caret_offset - i - 1);
 
 					// Determine the ldr script object parent
-					var address = View3d.AddressAt(Editor.Text, e.Position - e.PartialWord.Length);
+					var address = View3d.AddressAt(Editor.TextRange(0L, e.Position - e.PartialWord.Length));
 
 					// Return child templates and root level templates
 					var templates = LdrAutoComplete.Lookup(e.PartialWord, true, LdrAutoComplete[address]);
@@ -216,7 +218,7 @@ namespace LDraw.UI
 				void HandleAutoCompleteSelection(object sender, ScintillaControl.AutoCompleteSelectionEventArgs e)
 				{
 					// Determine the ldr script object parent
-					var address = View3d.AddressAt(Editor.Text, e.Position);
+					var address = View3d.AddressAt(Editor.TextRange(0L, e.Position));
 					address = $"{address}{(address.Length != 0 ? "." : "")}{e.Completion}";
 
 					// Find the selected template
@@ -239,49 +241,33 @@ namespace LDraw.UI
 				}
 				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
 				{
-#if false
-				var line = Editor.GetCurLine(out var caret_offset);
+					// Determine the ldr script object parent and lookup the template
+					// Note: text.Length != Editor.CurrentPos because of multi-byte characters
+					var address = View3d.AddressAt(Editor.TextRange(0L, Editor.CurrentPos));
+					var template = LdrAutoComplete[address];
+					if (template == null)
+						return;
 
-				// Search backward from the caret position to the prior keyword
-				for (; caret_offset != 0 && line[caret_offset] != '*'; --caret_offset) { }
-				if (line[caret_offset] != '*')
-					return;
-
-				// Read the keyword
-				if (!Extract.Identifier(out var keyword, new StringSrc(line, caret_offset + 1)))
-					return;
-
-				// Lookup the templates that match this keyword
-				int index = 0;
-				var def = new StringBuilder();
-				foreach (var template in m_ldr_auto_complete.Lookup(keyword))
-					def.Append((char)++index).Append(template.Description).Append('\n');
-
-				def.ToString().Summary(20)
-				// todo: use a template description where child templates are named but not expanded
-#endif
-
-					e.Definition = string.Empty;
+					var flags = View3d.AutoComplete.EExpandFlags.OptionalChildTemplates | View3d.AutoComplete.EExpandFlags.Optionals;
+					e.Definition = View3d.AutoComplete.ExpandTemplate(template, flags, 0, "  ");
 					e.Handled = true;
 				}
 				void HandlePreviewKeyDown(object sender, KeyEventArgs e)
 				{
-					// On Tab key presses, look for "<field>" within the current scope.
-					if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+					// Quickly navigate to "<field>" or "Se|ect" fields
+					if ((e.Key == Key.Down || e.Key == Key.Up) && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
 					{
-						var backward = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-
 						// Clear the selection so that find isn't limited to the selected text
-						if (backward)
+						if (e.Key == Key.Up)
 							Editor.CurrentPos = Editor.Anchor = Editor.SelectionStart;
 						else
 							Editor.CurrentPos = Editor.Anchor = Editor.SelectionEnd;
 
 						// Search for a field identifier
-						const string field_pattern = @"<\w+>";
-						var rng = backward
-							? Editor.Find(Sci.EFindOption.Regexp, field_pattern, new Range(Editor.CurrentPos, 0))
-							: Editor.Find(Sci.EFindOption.Regexp, field_pattern, new Range(Editor.CurrentPos, int.MaxValue));
+						const string field_pattern = @"(<\w+>)|((?:\w+\s*\|\s*)+\w+)";
+						var rng = e.Key == Key.Up
+							? Editor.Find(Sci.EFindOption.Regexp | Sci.EFindOption.Cxx11regex, field_pattern, new Range(Editor.CurrentPos, 0))
+							: Editor.Find(Sci.EFindOption.Regexp | Sci.EFindOption.Cxx11regex, field_pattern, new Range(Editor.CurrentPos, int.MaxValue));
 
 						// If found, select the field and consume the tab character
 						if (!rng.Empty)

@@ -1035,9 +1035,8 @@ namespace pr::script
 			throw ScriptException(result, loc, msg);
 		}
 
-		// Return the hierarchy "address" for a position in 'script'.
-		template <typename Char>
-		static string_t AddressAt(std::basic_string_view<Char> script, int64_t position = -1)
+		// Return the hierarchy "address" for the position at the end of 'src'.
+		static string_t AddressAt(Src& src)
 		{
 			// The format of the returned address is: "keyword.keyword.keyword..."
 			// e.g. example
@@ -1048,12 +1047,12 @@ namespace pr::script
 			//       // *something {
 			//       "my { string"
 			//       *o2w { *pos { <-- Address should be: Group.Box.o2w.pos
-
-			// position does not take into account Utf8
+			// Notes:
+			//  - Use Src::Limit() to set the maximum number of characters to read from 'src'.
+			//    This allows for utf-8 rather than the underlying available data.
 
 			// Use a case sensitive reader so that the reported address matches the case.
 			NoIncludes inc;
-			StringSrc src(script); src.Limit(position);
 			Reader reader(src, true, &inc);
 
 			string_t path, kw;
@@ -1092,14 +1091,6 @@ namespace pr::script
 				path.resize(0);
 			}
 			return path;
-		}
-		static string_t AddressAt(std::string_view script, int position = -1)
-		{
-			return AddressAt<char>(script, position);
-		}
-		static string_t AddressAt(std::wstring_view script, int position = -1)
-		{
-			return AddressAt<wchar_t>(script, position);
 		}
 	};
 }

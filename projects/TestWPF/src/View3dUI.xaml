@@ -30,6 +30,7 @@
 			Grid.Row="0"
 			Grid.Column="0"
 			Stretch="Fill"
+			ContextMenu="{StaticResource View3dCMenu}"
 			/>
 		<!--
 		<gui2:View3dControl

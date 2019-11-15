@@ -1,6 +1,8 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-					xmlns:local="clr-namespace:TestWPF">
+﻿<ResourceDictionary
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:local="clr-namespace:TestWPF"
+	>
 
 	<BitmapImage x:Key ="check_accept" UriSource="../res/check_accept.png"/>
 	<BitmapImage x:Key ="check_reject" UriSource="../res/check_reject.png"/>
@@ -40,4 +42,3 @@
 	</Style>
 
 </ResourceDictionary>
-

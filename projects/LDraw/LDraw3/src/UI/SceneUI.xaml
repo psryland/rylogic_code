@@ -5,19 +5,218 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	>
-	
 	<UserControl.Resources>
 		<ResourceDictionary>
-			<ContextMenu x:Key="TabCMenu">
-				<MenuItem Header="_Rename" Command="{Binding RenameScene}"/>
-				<MenuItem Header="_Clear" Command="{Binding ClearScene}"/>
+			
+			<!-- A context menu for the 3D scene -->
+			<ContextMenu
+				x:Key="LDrawCMenu"
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
+				<MenuItem
+					Header="_Clear"
+					Command="{Binding ClearScene}"
+					/>
 				<Separator/>
-				<MenuItem Header="_Close" Command="{Binding CloseScene}"/>
+				<MenuItem
+					Header="Tools"
+					>
+					<MenuItem
+						Header="Origin"
+						IsChecked="{Binding SceneView.Options.OriginPointVisible}"
+						Command="{Binding SceneView.ToggleOriginPoint}"
+						/>
+					<MenuItem
+						Header="Focus"
+						IsChecked="{Binding SceneView.Options.FocusPointVisible}"
+						Command="{Binding SceneView.ToggleFocusPoint}"
+						/>
+					<MenuItem
+						Header="Show Cross Hair"
+						IsChecked="{Binding SceneView.ShowCrossHair}"
+						Command="{Binding SceneView.ToggleShowCrossHair}"
+						/>
+					<MenuItem
+						Header="Show Value"
+						IsChecked="{Binding SceneView.ShowValueAtPointer}"
+						Command="{Binding SceneView.ToggleShowValue}"
+						/>
+					<MenuItem
+						Header="Axes"
+						IsChecked="{Binding SceneView.Options.ShowAxes}"
+						Command="{Binding SceneView.ToggleAxes}"
+						/>
+					<MenuItem
+						Header="Grid Lines"
+						IsChecked="{Binding SceneView.Options.ShowGridLines}"
+						Command="{Binding SceneView.ToggleGridLines}"
+						/>
+					<MenuItem
+						Header="Measure Tool..."
+						Command="{Binding SceneView.Scene.ShowMeasureTool}"
+						>
+						<MenuItem.Icon>
+							<Image Source="{StaticResource set_square}"/>
+						</MenuItem.Icon>
+					</MenuItem>
+				</MenuItem>
+				<MenuItem
+					Header="Camera"
+					>
+					<MenuItem
+						Header="Reset"
+						Command="{Binding SceneView.DoAutoRange}"
+						/>
+					<MenuItem
+						Header="Aspect 1:1"
+						Command="{Binding SceneView.DoAspect11}"
+						/>
+					<MenuItem
+						Header="Lock Aspect"
+						IsChecked="{Binding SceneView.LockAspect}"
+						Command="{Binding SceneView.ToggleLockAspect}"
+						/>
+					<MenuItem
+						Header="Orthographic"
+						IsChecked="{Binding SceneView.Options.Orthographic}"
+						Command="{Binding SceneView.ToggleOrthographic}"
+						/>
+					<MenuItem
+						Header="Mouse Centred Zoom"
+						IsCheckable="{Binding SceneView.Options.MouseCentredZoom}"
+						Command="{Binding SceneView.ToggleMouseCentredZoom}"
+						/>
+					<MenuItem
+						Header="Align Camera"
+						>
+						<ComboBox
+							ItemsSource="{Binding SceneView.Scene.AlignDirections}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							MinWidth="80"
+							Margin="1,1,20,1"
+							>
+							<ComboBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding Path=., Converter={conv:EnumToDesc}}"/>
+								</DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
+					</MenuItem>
+					<MenuItem
+						Header="Pre-set View"
+						>
+						<ComboBox
+							ItemsSource="{Binding SceneView.Scene.ViewPresets}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							MinWidth="80"
+							Margin="1,1,20,1"
+							>
+							<ComboBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding Path=., Converter={conv:EnumToDesc}}"/>
+								</DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
+					</MenuItem>
+					<MenuItem
+						Header="View Mode"
+						>
+						<ComboBox
+							ItemsSource="{Binding SceneView.Options.NavigationMode, Converter={conv:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding SceneView.Options.NavigationMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Margin="1,1,20,1"
+							/>
+					</MenuItem>
+				</MenuItem>
+				<MenuItem
+					Header="Rendering"
+					>
+					<MenuItem
+						Header="Background Colour..."
+						Background="{Binding SceneView.Options.BackgroundColour, Converter={conv:ColourToBrush}}"
+						Foreground="{Binding SceneView.Options.BackgroundColour, Converter={conv:TextOverColourBrush}}"
+						Command="{Binding SceneView.SetBackgroundColour}"
+						/>
+					<MenuItem
+						Header="Lighting..."
+						Command="{Binding ShowLightingUI}"
+						>
+						<MenuItem.Icon>
+							<Image Source="{StaticResource light_bulb}"/>
+						</MenuItem.Icon>
+					</MenuItem>
+					<MenuItem
+						Header="Antialiasing"
+						IsChecked="{Binding SceneView.Options.AntiAliasing}"
+						Command="{Binding SceneView.ToggleAntiAliasing}"
+						/>
+					<MenuItem
+						Header="Fill Mode"
+						>
+						<ComboBox
+							ItemsSource="{Binding SceneView.Options.FillMode, Converter={conv:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding SceneView.Options.FillMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Padding="1,1,20,1"
+							/>
+					</MenuItem>
+					<MenuItem
+						Header="Cull Mode"
+						>
+						<ComboBox
+							ItemsSource="{Binding SceneView.Options.CullMode, Converter={conv:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding SceneView.Options.CullMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Padding="1,1,20,1"
+							/>
+					</MenuItem>
+				</MenuItem>
+				<Separator/>
+				<MenuItem
+					Header="Object Manager"
+					Command="{Binding SceneView.Scene.ShowObjectManager}"
+					>
+					<MenuItem.Icon>
+						<Image Source="{StaticResource display}"/>
+					</MenuItem.Icon>
+				</MenuItem>
 			</ContextMenu>
+			
+			<!-- A context menu for the scene tab -->
+			<ContextMenu
+				x:Key="TabCMenu"
+				>
+				<MenuItem
+					Header="_Rename"
+					Command="{Binding RenameScene}"
+					/>
+				<MenuItem
+					Header="_Clear"
+					Command="{Binding ClearScene}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="_Close"
+					Command="{Binding CloseScene}"
+					/>
+			</ContextMenu>
+			
 		</ResourceDictionary>
 	</UserControl.Resources>
 
@@ -27,36 +226,7 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<ToolBarTray
-			Grid.Row="0"
-			ToolBarTray.IsLocked="True"
-			>
-			<ToolBar
-				MaxHeight="32"
-				>
-				<Button
-					Command="{Binding ShowLightingUI}"
-					ToolTip="Display lighting properties for this scene"
-					>
-					<Image
-						Source="{StaticResource light_bulb}"
-						RenderOptions.BitmapScalingMode="HighQuality"
-						/>
-				</Button>
-				<ToggleButton
-					ToolTip="Auto range the view on new data"
-					IsChecked="{Binding AutoRange}"
-					>
-					<Image
-						Source="{StaticResource auto_range}"
-						RenderOptions.BitmapScalingMode="HighQuality"
-						Stretch="Fill"
-						StretchDirection="DownOnly"
-						/>
-				</ToggleButton>
-			</ToolBar>
-		</ToolBarTray>
-		
+		<!-- Main 3D View -->
 		<gui:ChartControl
 			Grid.Row="1"
 			Name="m_scene"

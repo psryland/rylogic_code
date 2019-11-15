@@ -4,29 +4,34 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	>
     <Application.Resources>
-		<BitmapImage x:Key="auto_range" UriSource="/LDraw;component/res/auto_range.png" />
-		<BitmapImage x:Key="bin" UriSource="/LDraw;component/res/bin.png" />
-		<BitmapImage x:Key="colour_wheel" UriSource="/LDraw;component/res/colour_wheel.png" />
-		<BitmapImage x:Key="display" UriSource="/LDraw;component/res/display.png" />
-		<BitmapImage x:Key="light_bulb" UriSource="/LDraw;component/res/light_bulb.png" />
-		<BitmapImage x:Key="save" UriSource="/LDraw;component/res/edit_save.png" />
-		<BitmapImage x:Key="set_square" UriSource="/LDraw;component/res/set_square.png" />
-		<BitmapImage x:Key="green_left_right" UriSource="/LDraw;component/res/green_left_right.png" />
-		<BitmapImage x:Key="green_up_down" UriSource="/LDraw;component/res/green_up_down.png" />
-		<BitmapImage x:Key="green_in_out" UriSource="/LDraw;component/res/green_in_out.png" />
-		<BitmapImage x:Key="green_rotate" UriSource="/LDraw;component/res/green_rotate.png" />
-		<BitmapImage x:Key="xaxis" UriSource="/LDraw;component/res/xaxis.png" />
-		<BitmapImage x:Key="yaxis" UriSource="/LDraw;component/res/yaxis.png" />
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/res/ContextMenus.xaml"/>
+			</ResourceDictionary.MergedDictionaries>
 
-		<!-- Fix for Library binding bugs -->
-		<Style TargetType="ComboBoxItem">
-			<Setter Property="HorizontalContentAlignment" Value="Left" />
-			<Setter Property="VerticalContentAlignment" Value="Center" />
-		</Style>
-		<Style TargetType="MenuItem">
-			<Setter Property="HorizontalContentAlignment" Value="Left" />
-			<Setter Property="VerticalContentAlignment" Value="Center" />
-		</Style>
+			<BitmapImage x:Key="auto_range" UriSource="/LDraw;component/res/auto_range.png" />
+			<BitmapImage x:Key="bin" UriSource="/LDraw;component/res/bin.png" />
+			<BitmapImage x:Key="colour_wheel" UriSource="/LDraw;component/res/colour_wheel.png" />
+			<BitmapImage x:Key="display" UriSource="/LDraw;component/res/display.png" />
+			<BitmapImage x:Key="light_bulb" UriSource="/LDraw;component/res/light_bulb.png" />
+			<BitmapImage x:Key="save" UriSource="/LDraw;component/res/edit_save.png" />
+			<BitmapImage x:Key="set_square" UriSource="/LDraw;component/res/set_square.png" />
+			<BitmapImage x:Key="green_left_right" UriSource="/LDraw;component/res/green_left_right.png" />
+			<BitmapImage x:Key="green_up_down" UriSource="/LDraw;component/res/green_up_down.png" />
+			<BitmapImage x:Key="green_in_out" UriSource="/LDraw;component/res/green_in_out.png" />
+			<BitmapImage x:Key="green_rotate" UriSource="/LDraw;component/res/green_rotate.png" />
+			<BitmapImage x:Key="xaxis" UriSource="/LDraw;component/res/xaxis.png" />
+			<BitmapImage x:Key="yaxis" UriSource="/LDraw;component/res/yaxis.png" />
 
+			<!-- Fix for Library binding bugs -->
+			<Style TargetType="ComboBoxItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+			<Style TargetType="MenuItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+		</ResourceDictionary>
 	</Application.Resources>
 </Application>

@@ -110,9 +110,9 @@ namespace Rylogic.Gui.WPF.Converters
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
-				return null;
+				return Visibility.Collapsed;
 			if (!(parameter is string type_name))
-				return null;
+				return Visibility.Collapsed;
 
 			// Get the type of 'value'
 			var ty = value.GetType();

@@ -1,6 +1,19 @@
 Immediate ToDo:
 	
 LDraw
+	- Recent files not working
+	- Drop onto view
+	- Open file opens a script window
+	- Closing a temp script delete's it from disk too
+	- Saved views
+	- Linked cameras
+	- Linked axes
+	- Show selection
+	- Show bounds
+	- Investigate using a clipping region to manually clip scintilla when autohide panels overlap it.
+	- Status bar shows pointer position when ActiveScene != null
+	- Animation support
+	- move LightingUI to pr.view3d
 	- move ObjectManager to pr.view3d
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
 	- shift+ctrl jumps back to the start of orientation, make it not do that

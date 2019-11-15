@@ -341,7 +341,9 @@ namespace pr
 				ss.m_gs = m_gs_vert.get();
 				break;
 			case EPrim::LineList:
+			case EPrim::LineListAdj:
 			case EPrim::LineStrip:
+			case EPrim::LineStripAdj:
 				ss.m_gs = m_gs_edge.get();
 				break;
 			case EPrim::TriList:

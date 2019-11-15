@@ -544,36 +544,6 @@ namespace pr::script
 		}
 	};
 
-	// A wrapped source with truncated length
-	struct WrapSrc :Src
-	{
-		// Notes:
-		//  - This source type is useful for creating a subrange of an existing source
-
-	protected:
-
-		int m_count;
-
-		// Return the next byte or decoded character from the underlying stream, or EOS for the end of the stream.
-		int Read() override
-		{
-			if (m_count == 0)
-				return 0;
-
-			auto ch = *m_src;
-			++m_src;
-			--m_count;
-			return ch;
-		}
-
-	public:
-
-		WrapSrc(Src& src, int count = std::numeric_limits<int>::max())
-			:Src(src, EEncoding::already_decoded)
-			,m_count(count)
-		{}
-	};
-
 	// Call '++src' until 'pred' returns false.
 	// 'eat_initial' and 'eat_final' are the number of characters to consume before
 	// applying the predicate 'pred' and the number to consume after 'pred' returns false.

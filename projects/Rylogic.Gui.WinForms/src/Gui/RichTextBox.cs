@@ -7,6 +7,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 using Rylogic.Interop.Win32;
+using Rylogic.Str;
 
 namespace Rylogic.Gui.WinForms
 {

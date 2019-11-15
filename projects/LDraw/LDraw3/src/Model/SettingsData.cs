@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -26,6 +27,7 @@ namespace LDraw
 				NavigationMode = ChartControl.ENavMode.Scene3D,
 				LockAspect = 1.0,
 			};
+			UILayout = null;
 
 			AutoSaveOnChanges = true;
 		}
@@ -89,6 +91,13 @@ namespace LDraw
 		{
 			get => get<ChartControl.OptionsData>(nameof(Scene));
 			set => set(nameof(Scene), value);
+		}
+
+		/// <summary>Layout state of the main UI</summary>
+		public XElement? UILayout
+		{
+			get => get<XElement>(nameof(UILayout));
+			set => set(nameof(UILayout), value);
 		}
 	}
 }

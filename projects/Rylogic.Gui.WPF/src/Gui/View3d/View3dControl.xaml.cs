@@ -620,7 +620,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Directions to align the camera up-axis to</summary>
 		public ICollectionView AlignDirections
 		{
-			get { return m_align_directions; }
+			get => m_align_directions;
 			private set
 			{
 				if (m_align_directions == value) return;
@@ -632,13 +632,13 @@ namespace Rylogic.Gui.WPF
 				if (m_align_directions != null)
 				{
 					// Set the current align direction
-					if      (Camera.AlignAxis == +v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosX);
+					if (Camera.AlignAxis == +v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosX);
 					else if (Camera.AlignAxis == -v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegX);
 					else if (Camera.AlignAxis == +v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosY);
 					else if (Camera.AlignAxis == -v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegY);
 					else if (Camera.AlignAxis == +v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosZ);
 					else if (Camera.AlignAxis == -v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegZ);
-					else                                    m_align_directions.MoveCurrentTo(EAlignDirections.None);
+					else m_align_directions.MoveCurrentTo(EAlignDirections.None);
 					m_align_directions.CurrentChanged += HandleAlignAxisChanged;
 				}
 

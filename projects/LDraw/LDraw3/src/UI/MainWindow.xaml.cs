@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Input;
+using System.Xml.Linq;
 using LDraw.Dialogs;
 using LDraw.UI;
 using Rylogic.Common;
@@ -37,6 +39,11 @@ namespace LDraw
 
 			DataContext = this;
 		}
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			Model.Settings.UILayout = m_dc.SaveLayout();
+			base.OnClosing(e);
+		}
 		protected override void OnClosed(EventArgs e)
 		{
 			Model.CleanTemporaryScripts();
@@ -44,6 +51,16 @@ namespace LDraw
 			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
 			Log.Dispose();
 			base.OnClosed(e);
+		}
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && m_dc.ActivePane != null)
+			{
+				var steps = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : +1;
+				m_dc.ActivePane.CycleVisibleContent(steps);
+				e.Handled = true;
+			}
+			base.OnPreviewKeyDown(e);
 		}
 
 		/// <summary>App logic</summary>
@@ -99,8 +116,11 @@ namespace LDraw
 						script.PropertyChanged -= HandleScriptPropertyChanged;
 				}
 
+				NotifyPropertyChanged(nameof(ActiveScene));
+				NotifyPropertyChanged(nameof(ActiveScript));
 				NotifyPropertyChanged(nameof(ScriptHasFocus));
 				NotifyPropertyChanged(nameof(ScriptHasFocusAndNeedsSave));
+				NotifyPropertyChanged(nameof(ActiveContent));
 
 				void HandleScriptPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
@@ -111,6 +131,10 @@ namespace LDraw
 			}
 		}
 		private IDockable? m_active_content;
+
+		/// <summary>The active content cast to specific types for binding</summary>
+		public SceneUI? ActiveScene => ActiveContent as SceneUI;
+		public ScriptUI? ActiveScript => ActiveContent as ScriptUI;
 
 		/// <summary>True if the active content in the dock container is a script ui</summary>
 		public bool ScriptHasFocus => m_dc.ActiveDockable is ScriptUI;
@@ -153,14 +177,29 @@ namespace LDraw
 			}
 
 			// Add a log window
-			m_dc.Add(new LogUI(), EDockSite.Right).IsAutoHide = true;
+			m_dc.Add(new LogUI(Model), EDockSite.Right).IsAutoHide = true;
 
 			// Add a main scene window
 			var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
 			m_dc.Add(scene, EDockSite.Centre).Activated = true;
 
+			// Restore the layout
+			m_dc.LoadLayout(Model.Settings.UILayout, (name, type, udat) =>
+			{
+				// Create scenes that are saved in the layout
+				if (type == typeof(SceneUI).FullName)
+					return new SceneUI(Model, name).DockControl;
+
+				// Ignore scripts that are in the settings, 
+				
+				return null;
+			});
+
 			// Update our reference to the active content whenever it changes in the dock container
-			m_dc.ActiveContentChanged += delegate { ActiveContent = m_dc.ActiveDockable; };
+			m_dc.ActiveContentChanged += delegate
+			{
+				ActiveContent = m_dc.ActiveDockable;
+			};
 
 			// Add the menu for dock container windows
 			m_menu.Items.Insert(m_menu.Items.Count - 1, m_dc.WindowsMenu());

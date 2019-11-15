@@ -1243,6 +1243,20 @@ namespace Rylogic.Interop.Win32
 
 		}
 
+		/// <summary>A lazy created HWND for a STATIC window</summary>
+		public static IntPtr ProxyParentHwnd
+		{
+			get
+			{
+				// This window is used to allow child windows to be created before the actual parent HWND is available.
+				// See ScintillaControl as an example.
+				if (m_proxy_parent_hwnd == IntPtr.Zero)
+					m_proxy_parent_hwnd = CreateWindowEx(0, "STATIC", string.Empty, 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+				return m_proxy_parent_hwnd;
+			}
+		}
+		private static IntPtr m_proxy_parent_hwnd;
+
 		/// <summary>Returns the upper 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
 		public static int HiWord(long dword)
 		{

@@ -3174,7 +3174,8 @@ VIEW3D_API BSTR __stdcall View3D_ObjectAddressAt(wchar_t const* ldr_script, int6
 		// 'position' should be relative to 'script'
 
 		using namespace pr::script;
-		auto address = Reader::AddressAt<wchar_t>(ldr_script, position);
+		StringSrc src({ ldr_script, static_cast<size_t>(position) });
+		auto address = Reader::AddressAt(src);
 		return ::SysAllocStringLen(address.c_str(), UINT(address.size()));
 	}
 	CatchAndReport(View3D_ObjectAddressAt, , BSTR());

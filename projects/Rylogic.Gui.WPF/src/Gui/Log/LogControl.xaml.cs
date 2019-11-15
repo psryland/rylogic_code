@@ -135,16 +135,28 @@ namespace Rylogic.Gui.WPF
 				{
 					m_dock_control.ActiveChanged -= HandleActiveChanged;
 					m_dock_control.DockContainerChanged -= HandleDockContainerChanged;
+					m_dock_control.SavingLayout -= HandleSavingLayout;
+					m_dock_control.LoadingLayout -= HandleLoadingLayout;
 					Util.Dispose(ref m_dock_control!);
 				}
 				m_dock_control = value;
 				if (m_dock_control != null)
 				{
+					m_dock_control.LoadingLayout += HandleLoadingLayout;
+					m_dock_control.SavingLayout += HandleSavingLayout;
 					m_dock_control.DockContainerChanged += HandleDockContainerChanged;
 					m_dock_control.ActiveChanged += HandleActiveChanged;
 				}
 
 				// Handlers
+				void HandleLoadingLayout(object sender, DockContainerLoadingLayoutEventArgs e)
+				{
+					LoadSettings(e.UserData);
+				}
+				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
+				{
+					SaveSettings(e.Node);
+				}
 				void HandleActiveChanged(object sender, EventArgs e)
 				{
 					if (DockControl.IsActiveContent)
@@ -558,25 +570,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Load/Save settings</summary>
-		public XElement SaveSettings(XElement? node = null)
-		{
-			node ??= new XElement("Log");
-			node.Add2(nameof(FilterLevel), FilterLevel, false);
-
-			// Only save column info if the layout is valid
-			if (IsArrangeValid)
-			{
-				// Save column info
-				var columns_node = node.Add2(new XElement("Columns"));
-				foreach (var col in Columns)
-				{
-					if (!(col.Header is string header)) continue;
-					columns_node.Add2("Column", $"{header},{col.DisplayIndex},{col.Width},{col.Visibility}", false);
-				}
-			}
-
-			return node;
-		}
 		public void LoadSettings(XElement? node)
 		{
 			// Allow null to make first-run scenarios easier
@@ -608,6 +601,23 @@ namespace Rylogic.Gui.WPF
 				col.Width = settings.Width;
 				col.Visibility = settings.Visibility;
 			}
+		}
+		public XElement SaveSettings(XElement? node = null)
+		{
+			node ??= new XElement("Log");
+			node.Add2(nameof(FilterLevel), FilterLevel, false);
+
+			// Only save column info if the layout is valid
+			var columns_node = node.Add2(new XElement("Columns"));
+			if (IsArrangeValid)
+			{
+				foreach (var col in Columns)
+				{
+					if (!(col.Header is string header)) continue;
+					columns_node.Add2("Column", $"{header},{col.DisplayIndex},{col.Width},{col.Visibility}", false);
+				}
+			}
+			return node;
 		}
 
 		/// <summary>Browse for a log file to display</summary>

@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -76,7 +77,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Get the control we're providing docking functionality for</summary>
-		public UIElement Owner { get; set; }
+		public FrameworkElement Owner { get; set; }
 
 		/// <summary>Get/Set the dock container that manages this content.</summary>
 		public DockContainer? DockContainer
@@ -121,6 +122,9 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
 		public event EventHandler<DockContainerSavingLayoutEventArgs>? SavingLayout;
+
+		/// <summary>Raised when a layout is being applied to the dock container</summary>
+		public event EventHandler<DockContainerLoadingLayoutEventArgs>? LoadingLayout;
 
 		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
 		public event EventHandler<DockContainerChangedEventArgs>? DockContainerChanged;
@@ -509,7 +513,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Save/Restore the control (possibly child control) that had input focus when the content was last active</summary>
 		internal void SaveFocus()
 		{
+			// Save the WPF element with keyboard focus
 			m_kb_focus = Owner.IsKeyboardFocusWithin ? Keyboard.FocusedElement : null;
+
+			// If focus is held by a child win32 control, record it
+			var hwnd = Win32.GetFocus();
+			m_win32_focus = Win32.IsChild(Owner.Hwnd(), hwnd) ? hwnd : IntPtr.Zero;
 		}
 		internal void RestoreFocus()
 		{
@@ -517,9 +526,15 @@ namespace Rylogic.Gui.WPF
 			if (m_kb_focus is DependencyObject dep && Owner.IsVisualDescendant(dep))
 				Keyboard.Focus(m_kb_focus);
 
+			// Restore the win32 focus if the control is still a child of the WPF window
+			if (m_win32_focus != IntPtr.Zero && Win32.IsChild(Owner.Hwnd(), m_win32_focus))
+				Win32.SetFocus(m_win32_focus);
+
 			m_kb_focus = null;
+			m_win32_focus = IntPtr.Zero;
 		}
 		private IInputElement? m_kb_focus;
+		private IntPtr m_win32_focus;
 
 		/// <summary>Save to XML</summary>
 		public XElement ToXml(XElement node)
@@ -535,6 +550,10 @@ namespace Rylogic.Gui.WPF
 			node.Add2(user);
 
 			return node;
+		}
+		public void LoadLayout(XElement user_data)
+		{
+			LoadingLayout?.Invoke(this, new DockContainerLoadingLayoutEventArgs(user_data));
 		}
 
         /// <summary></summary>

@@ -369,7 +369,7 @@ namespace pr::ldr
 			"}\n"
 			"*Bar [<name>] [<colour>]\n"
 			"{\n"
-			"	<x0> <y0> <z0>  <x1> <y1> <z1>\n"
+			"	<x0> <y0> <z0>  <x1> <y1> <z1>;\n"
 			"	<width> [<height>]\n"
 			"	[*Up {<dx> <dy> <dz>}]\n"
 			"	$Textured\n"

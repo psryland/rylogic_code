@@ -89,6 +89,18 @@ namespace Rylogic.Gui.WPF
 		public XElement Node { get; }
 	}
 
+	/// <summary>Args for when layout is being applied</summary>
+	public class DockContainerLoadingLayoutEventArgs :EventArgs
+	{
+		public DockContainerLoadingLayoutEventArgs(XElement user_data)
+		{
+			UserData = user_data;
+		}
+
+		/// <summary>User data saved when SavingLayout was called</summary>
+		public XElement UserData { get; }
+	}
+
 	/// <summary>Args for when panes or branches are added to a tree</summary>
 	internal class TreeChangedEventArgs : EventArgs
 	{

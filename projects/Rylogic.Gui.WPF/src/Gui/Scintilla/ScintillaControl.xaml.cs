@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -15,7 +16,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ScintillaControl :HwndHost
+	public partial class ScintillaControl :HwndHost, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - See http://www.scintilla.org/ScintillaDoc.html for documentation
@@ -27,6 +28,26 @@ namespace Rylogic.Gui.WPF
 		private static int ScintillaCtrlId = 1;
 		private IntPtr CtrlId = new IntPtr(++ScintillaCtrlId);
 
+		void HACK(string what)
+		{
+#if false
+			var focus = Win32.GetFocus();
+			var who =
+				focus == IntPtr.Zero ? "null" :
+				focus == ParentHwnd ? "LD" :
+				focus == Hwnd ? "SC" :
+				"Other";
+
+			System.Diagnostics.Debug.WriteLine(
+				$"{what}  " +
+				$"Focused={who}  " +
+				$"IsFocused={IsFocused}  " +
+				$"KBWithin={IsKeyboardFocusWithin}  " +
+				$"Element={Keyboard.FocusedElement?.GetType().Name ?? "null"}  " +
+				$"");
+#endif
+		}
+
 		static ScintillaControl()
 		{
 			Sci.LoadDll(throw_if_missing: false);
@@ -34,185 +55,85 @@ namespace Rylogic.Gui.WPF
 		public ScintillaControl()
 		{
 			InitializeComponent();
-		}
-		protected override HandleRef BuildWindowCore(HandleRef hwnd_parent)
-		{
+
 			// Notes:
 			//  - The examples suggest creating the scintilla control as a child of a static control
 			//    in order to fix some issue with notification messages sent from the native control.
 			//    I haven't seen any issue so I'm just creating the native control directly. Doing so
 			//    means resizing and general interaction with FrameworkElements works properly.
+
+			// The Scintilla dll must have been loaded already
 			if (!Sci.ModuleLoaded)
 				throw new Exception("Scintilla DLL must be loaded before attempting to create the scintilla control");
-			if (hwnd_parent.Handle == IntPtr.Zero)
-				throw new Exception("Expected this control to be a child");
 
 			// Create the native scintilla window to fit within 'hwnd_parent'
-			Win32.GetClientRect(hwnd_parent.Handle, out var parent_rect);
-			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, parent_rect.width, parent_rect.height, hwnd_parent.Handle, CtrlId, IntPtr.Zero, IntPtr.Zero);
+			var rect = Win32.RECT.FromLTRB(0, 0, 1, 1);
+			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, rect.width, rect.height, Win32.ProxyParentHwnd, CtrlId, IntPtr.Zero, IntPtr.Zero);
 			if (Hwnd == IntPtr.Zero)
-				throw new Exception("Failed to create scintilla native control");
-
-			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
-			var parent = HwndSource.FromHwnd(hwnd_parent.Handle);
-			parent.AddHook(HandleNotifications);
-
-			// When the owning window is closed, call dispose on the native control
-			var owner = Window.GetWindow(this) ?? throw new Exception("Native scintilla control must be a child of a window");
-			owner.Closed += delegate
-			{
-				parent.RemoveHook(HandleNotifications);
-				Dispose();
-			};
+				throw new Win32Exception(Win32.GetLastError(), $"Failed to create the scintilla native control. {Win32.GetLastErrorString()}");
 
 			// Get the function pointer for direct calling the WndProc (rather than windows messages)
 			var func = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTFUNCTION, IntPtr.Zero, IntPtr.Zero);
 			m_ptr = Win32.SendMessage(Hwnd, Sci.SCI_GETDIRECTPOINTER, IntPtr.Zero, IntPtr.Zero);
 			m_func = Marshal_.PtrToDelegate<Sci.SciFnDirect>(func) ?? throw new Exception("Failed to retrieve the direct call function");
 
-			// Notify handled created
-			HandleCreated?.Invoke(this, EventArgs.Empty);
-
 			// Reset the style
 			InitStyle(this);
+		}
+		protected override void OnGotFocus(RoutedEventArgs e)
+		{
+			// Although there is only one WPF window handle,
+			// this method is only called when this control gets focus.
+			base.OnGotFocus(e);
 
-			// Set the pending text
-			Text = m_text;
-			m_text = string.Empty;
+			// When this 'ScintillaControl' receives focus, forward it on to the native control
+			HACK("LD got focus");
+			FocusHosted();
+		}
+		protected virtual IntPtr WndProcHost(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			// Host WndProc - This is a wnd proc for the WPF window that owns this hwndhost.
+			// Remember this function gets called for each ScintillaControl instance that exists
 
-			// Return the host window handle
-			return new HandleRef(this, Hwnd);
-		}
-		protected override void DestroyWindowCore(HandleRef hwnd)
-		{
-			m_func = null;
-			m_ptr = IntPtr.Zero;
-			Win32.DestroyWindow(hwnd.Handle);
-		}
-		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-		{
-			// Notes:
-			//  - This is a wnd proc for the native scintilla control
-
-			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
-			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
-			switch (msg)
-			{
-			case Win32.WM_SETFOCUS:
-				{
-					if (m_in_wnd_proc != 0) break;
-					using (Scope.Create(() => ++m_in_wnd_proc, () => --m_in_wnd_proc))
-					{
-						Keyboard.Focus(this);
-						Win32.SetFocus(Hwnd);
-						handled = true;
-					}
-					break;
-				}
-			case Win32.WM_CLOSE:
-				{
-					m_text = Text;
-					break;
-				}
-			}
-			return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
-		}
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			switch (e.Key)
-			{
-			case Key.Tab:
-			case Key.Up:
-			case Key.Down:
-			case Key.Left:
-			case Key.Right:
-				{
-					// Forward navigation keys to the native control.
-					// This cannot be done in WndProc because navigation keys never make
-					// it to the native control.
-					var vk = (int)Win32.ToVKey(e.Key);
-					Win32.SendMessage(Hwnd, Win32.WM_KEYDOWN, vk, 1);
-					e.Handled = true;
-					break;
-				}
-			case Key.Space:
-				{
-					// Ctrl+Space shows the auto complete list
-					if (AutoComplete != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-					{
-						OnAutoComplete();
-						e.Handled = true;
-					}
-
-					// Ctrl+Shift+Space shows the 'call tips'
-					if (CallTip != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
-					{
-						DoCallTips();
-						e.Handled = true;
-					}
-
-					break;
-				}
-			}
-			base.OnKeyDown(e);
-		}
-		private int m_in_wnd_proc;
-
-		/// <summary>
-		/// The window handle of the Scintilla control.
-		/// This is the same as HwndHost.Handle but has a value as soon as the scintilla control is actually created
-		/// rather than just after the 'BuildWindowCore' function has completed.</summary>
-		private IntPtr Hwnd { get; set; }
-		public event EventHandler? HandleCreated;
-		private bool IsHandleCreated => Hwnd != IntPtr.Zero;
-
-		/// <summary>Call the direct function</summary>
-		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
-		{
-			if (m_func == null) throw new Exception("The scintilla control has not been created yet");
-			return m_func(m_ptr, code, wparam, lparam);
-		}
-		public long Cmd(int code, IntPtr wparam, IntPtr lparam)
-		{
-			return (int)Call(code, wparam, lparam);
-		}
-		public long Cmd(int code, long wparam, IntPtr lparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, lparam);
-		}
-		public long Cmd(int code, long wparam, string lparam)
-		{
-			using var text = Marshal_.AllocUTF8String(EHeap.HGlobal, lparam);
-			return (int)Call(code, (IntPtr)wparam, text.Value);
-		}
-		public long Cmd(int code, long wparam, long lparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, (IntPtr)lparam);
-		}
-		public long Cmd(int code, long wparam)
-		{
-			return (int)Call(code, (IntPtr)wparam, IntPtr.Zero);
-		}
-		public long Cmd(int code)
-		{
-			return (int)Call(code, IntPtr.Zero, IntPtr.Zero);
-		}
-		private Sci.SciFnDirect? m_func;
-		private IntPtr m_ptr;
-
-		/// <summary>Handle messages from the native control</summary>
-		private IntPtr HandleNotifications(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-		{
 			// Notes:
 			//  - 'hwnd' is the window handle of the parent window of the native scintilla control.
 			//    Scintilla sends notifications to its parent, which is what we're handling here.
 			//  - WPF only has one HWND per window, so the Hook set up in 'BuildWindowCore' means
-			//    notification messages from all instances come through here.
+			//    notification messages from all scintilla control instances come through here.
 
 			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
-			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine(str);
+			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine($"Host: {str}");
 			switch (msg)
 			{
+			case Win32.WM_KILLFOCUS:
+				{
+					// This is a work around for a keyboard focus issue when hosting win32 api controls within a WPF app.
+					// The problem is WPF windows only have one HWND for the whole window and WPF tracks the keyboard focus
+					// within the app. When a win32 control is used, it has its own HWND, so when it gets focus the WPF app
+					// thinks it has lost focus. As a work-around, suppress the WM_KILLFOCUS message if the hwnd receiving
+					// focus is actually the hosted win32 control.
+					if (wparam == Hwnd && Hwnd != IntPtr.Zero)
+					{
+						// If we're losing focus to the native control but we don't have keyboard focus,
+						// call 'FocusHosted' to give this control keyboard focus.
+						if (!IsKeyboardFocusWithin)
+							FocusHosted();
+
+						// Suppress this kill focus message so we keep IsKeyboardFocusWithin
+						HACK("LD kill focus suppressed");
+						handled = true;
+					}
+					break;
+				}
+			case Win32.WM_ACTIVATEAPP:
+				{
+					if (wparam != IntPtr.Zero) // Activate
+					{
+						if (IsKeyboardFocusWithin)
+							FocusHosted();
+					}
+					break;
+				}
 			case Win32.WM_COMMAND:
 				{
 					var id = Win32.LoWord(wparam.ToInt32());
@@ -226,6 +147,8 @@ namespace Rylogic.Gui.WPF
 						// This indicates the text buffer has changed via API functions.
 						// 'SCN_CHARADDED' indicates a key press resulted in a character added
 						TextChanged?.Invoke(this, EventArgs.Empty);
+						NotifyPropertyChanged(nameof(Text));
+						NotifyPropertyChanged(nameof(TextLength));
 						handled = true;
 					}
 					break;
@@ -266,6 +189,11 @@ namespace Rylogic.Gui.WPF
 							case Sci.SC_UPDATE_SELECTION:
 								{
 									OnSelectionChanged();
+									NotifyPropertyChanged(nameof(Selection));
+									NotifyPropertyChanged(nameof(CurrentPos));
+									NotifyPropertyChanged(nameof(CurrentLineIndex));
+									NotifyPropertyChanged(nameof(CurrentColumn));
+									NotifyPropertyChanged(nameof(Anchor));
 									break;
 								}
 							case Sci.SC_UPDATE_H_SCROLL:
@@ -295,6 +223,148 @@ namespace Rylogic.Gui.WPF
 			}
 			return IntPtr.Zero;
 		}
+		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			// Native Control WndProc - This is a wnd proc for the native scintilla control
+
+			//var str = Win32.DebugMessage(hwnd, msg, wparam, lparam);
+			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine("Native: {str}");
+			switch (msg)
+			{
+			case Win32.WM_SETFOCUS:
+				{
+					// When the hosted control receives focus, give focus to the
+					// host momentarily so that 'IsKeyboardFocusWithin' gets updated.
+					if (!IsKeyboardFocusWithin)
+					{
+						HACK($"Sc {Name} got focus");
+						FocusHosted();
+						handled = true;
+					}
+					break;
+				}
+			}
+			return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
+		}
+		protected override HandleRef BuildWindowCore(HandleRef parent_hwnd)
+		{
+			// 'parent_hwnd' is the HWND of the WPF main window.
+			if (parent_hwnd.Handle == IntPtr.Zero)
+				throw new Exception("Expected this control to be a child");
+
+			// Reparent the native control to 'parent_hwnd'
+			ParentHwnd = parent_hwnd.Handle;
+			if (Win32.SetParent(Hwnd, ParentHwnd) == IntPtr.Zero)
+				throw new Win32Exception(Win32.GetLastError(), "Failed to reparent the native scintilla control");
+
+			// Resize to fit the parent
+			Win32.GetClientRect(ParentHwnd, out var parent_rect);
+			Win32.MoveWindow(Hwnd, parent_rect.left, parent_rect.top, parent_rect.width, parent_rect.height, true);
+
+			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
+			var parent_src = HwndSource.FromHwnd(ParentHwnd);
+			parent_src.AddHook(WndProcHost);
+			Window.GetWindow(this).Closed += delegate { Dispose(); };// When the owning window is closed, call dispose on the native control
+
+			// Return the host window handle
+			return new HandleRef(this, Hwnd);
+		}
+		protected override void DestroyWindowCore(HandleRef hwnd)
+		{
+			var parent_src = HwndSource.FromHwnd(ParentHwnd);
+			parent_src.RemoveHook(WndProcHost);
+
+			m_func = null;
+			m_ptr = IntPtr.Zero;
+			Win32.DestroyWindow(hwnd.Handle);
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			switch (e.Key)
+			{
+			case Key.Tab:
+			case Key.Up:
+			case Key.Down:
+			case Key.Left:
+			case Key.Right:
+				{
+					// Forward navigation keys to the native control.
+					// This cannot be done in WndProc because navigation keys never make
+					// it to the native control.
+					var vk = (int)Win32.ToVKey(e.Key);
+					Win32.SendMessage(Hwnd, Win32.WM_KEYDOWN, vk, 1);
+					e.Handled = true;
+					break;
+				}
+			case Key.Space:
+				{
+					// Ctrl+Space shows the auto complete list
+					if (AutoComplete != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+					{
+						OnAutoComplete();
+						e.Handled = true;
+					}
+
+					// Ctrl+Shift+Space shows the 'call tips'
+					if (CallTip != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+					{
+						DoCallTips();
+						e.Handled = true;
+					}
+
+					break;
+				}
+			}
+			base.OnKeyDown(e);
+		}
+		private void FocusHosted()
+		{
+			HACK("Setting focus to Sc");
+			Keyboard.Focus(this);
+			Win32.SetFocus(Hwnd);
+			HACK("Sc Focused");
+		}
+
+		/// <summary>
+		/// The window handle of the Scintilla control.
+		/// This is the same as HwndHost.Handle but has a value as soon as the scintilla control is
+		/// actually created rather than after the 'BuildWindowCore' function has completed.</summary>
+		private IntPtr Hwnd { get; set; }
+		private IntPtr ParentHwnd { get; set; }
+
+		/// <summary>Call the direct function</summary>
+		public IntPtr Call(int code, IntPtr wparam, IntPtr lparam)
+		{
+			if (m_func == null) throw new Exception("The scintilla control has not been created yet");
+			return m_func(m_ptr, code, wparam, lparam);
+		}
+		public long Cmd(int code, IntPtr wparam, IntPtr lparam)
+		{
+			return (int)Call(code, wparam, lparam);
+		}
+		public long Cmd(int code, long wparam, IntPtr lparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, lparam);
+		}
+		public long Cmd(int code, long wparam, string lparam)
+		{
+			using var text = Marshal_.AllocUTF8String(EHeap.HGlobal, lparam);
+			return (int)Call(code, (IntPtr)wparam, text.Value);
+		}
+		public long Cmd(int code, long wparam, long lparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, (IntPtr)lparam);
+		}
+		public long Cmd(int code, long wparam)
+		{
+			return (int)Call(code, (IntPtr)wparam, IntPtr.Zero);
+		}
+		public long Cmd(int code)
+		{
+			return (int)Call(code, IntPtr.Zero, IntPtr.Zero);
+		}
+		private Sci.SciFnDirect? m_func;
+		private IntPtr m_ptr;
 
 		/// <summary>A callback function used to reset the style of the control</summary>
 		public Action<ScintillaControl> InitStyle
@@ -325,17 +395,19 @@ namespace Rylogic.Gui.WPF
 			sc.Indent = 4;
 		}
 
-		#region Text
+		/// <summary>Property changed notification</summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
-		/// <summary>Allow the control to store the text content before and after the window handle has been created</summary>
-		private string m_text = string.Empty;
+		#region Text
 
 		/// <summary>Clear all text from the control</summary>
 		public void ClearAll()
 		{
-			m_text = string.Empty;
-			if (IsHandleCreated)
-				Cmd(Sci.SCI_CLEARALL);
+			Cmd(Sci.SCI_CLEARALL);
 		}
 
 		/// <summary>Clear style for the document</summary>
@@ -344,17 +416,14 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_CLEARDOCUMENTSTYLE);
 		}
 
-		/// <summary>Gets the length of the text in the control</summary>
-		public long TextLength => IsHandleCreated ? Cmd(Sci.SCI_GETTEXTLENGTH) : m_text.Length;
+		/// <summary>Gets the length of the text *IN BYTES*.</summary>
+		public long TextLength => Cmd(Sci.SCI_GETTEXTLENGTH);
 
 		/// <summary>Get/Set the current text</summary>
 		public string Text
 		{
 			get
 			{
-				if (!IsHandleCreated)
-					return m_text;
-
 				var len = TextLength;
 				if (len == 0)
 					return string.Empty;
@@ -369,10 +438,6 @@ namespace Rylogic.Gui.WPF
 				if (value.Length == 0)
 				{
 					ClearAll();
-				}
-				else if (!IsHandleCreated)
-				{
-					m_text = value;
 				}
 				else
 				{
@@ -426,6 +491,7 @@ namespace Rylogic.Gui.WPF
 		public long LineCount => Cmd(Sci.SCI_GETLINECOUNT);
 
 		/// <summary>Returns the text in the given range</summary>
+		public string TextRange(long beg, long end) => TextRange(new Range(beg, end));
 		public string TextRange(Range range)
 		{
 			if (range.Beg < 0 || range.End > TextLength)
@@ -433,18 +499,31 @@ namespace Rylogic.Gui.WPF
 
 			// Create the 'TextRange' structure
 			using var text = Marshal_.Alloc(EHeap.HGlobal, range.Sizei + 1);
-			var text_range = new Sci.TextRange
+			using var buff = Marshal_.Alloc(EHeap.HGlobal, new Sci.TextRange
 			{
 				chrg = new Sci.CharacterRange { cpMin = range.Begi, cpMax = range.Endi },
 				lpstrText = text.Value.Ptr,
-			};
+			});
 
 			// Request the text in the given range
-			using var buffer = Marshal_.Alloc(EHeap.HGlobal, text_range);
-			Cmd(Sci.SCI_GETTEXTRANGE, 0, buffer.Value.Ptr);
+			Cmd(Sci.SCI_GETTEXTRANGE, 0, buff.Value.Ptr);
 
 			// Return the returned string
 			return Marshal.PtrToStringAnsi(text.Value.Ptr);
+		}
+
+		/// <summary>Return the number of whole characters in the range [beg,end)</summary>
+		public long CharacterCount(long beg, long end)
+		{
+			// This will need a message added to Scintilla
+			throw new NotImplementedException();
+		}
+
+		/// <summary>Return the byte offset to the start of the 'character_index'th character.</summary>
+		public long PositionFromCharacter(long character_index)
+		{
+			// This will need a message added to Scintilla
+			throw new NotImplementedException();
 		}
 
 		/// <summary></summary>
@@ -577,6 +656,18 @@ namespace Rylogic.Gui.WPF
 		{
 			get => Cmd(Sci.SCI_GETANCHOR);
 			set => Cmd(Sci.SCI_SETANCHOR, value);
+		}
+
+		/// <summary>Get the current line at the caret position</summary>
+		public long CurrentLineIndex
+		{
+			get => LineIndexFromPosition(CurrentPos);
+		}
+
+		/// <summary>Get the current column at the caret position</summary>
+		public long CurrentColumn
+		{
+			get => ColumnFromPosition(CurrentPos);
 		}
 
 		/// <summary>The *unnormalised* range of selected text. Note: *not* [SelectionStart,SelectionEnd)</summary>
@@ -775,7 +866,7 @@ namespace Rylogic.Gui.WPF
 		/// the last tab and pos. If there are no tab characters on the line, the return value is the number of characters
 		/// up to the position on the line. In both cases, double byte characters count as a single character.
 		/// This is probably only useful with mono-spaced fonts.</summary>
-		public int GetColumn(long pos)
+		public int ColumnFromPosition(long pos)
 		{
 			return (int)Cmd(Sci.SCI_GETCOLUMN, pos);
 		}
@@ -1241,11 +1332,15 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler<CallTipEventArgs>? CallTip;
 		public class CallTipEventArgs :EventArgs
 		{
-			public CallTipEventArgs()
+			public CallTipEventArgs(long position)
 			{
+				Position = position;
 				Definition = string.Empty;
 				Handled = false;
 			}
+
+			/// <summary>The caret position for where the call tip is required</summary>
+			public long Position { get; }
 
 			/// <summary>The definition to display for the call tip</summary>
 			public string Definition { get; set; }
@@ -1253,11 +1348,9 @@ namespace Rylogic.Gui.WPF
 			/// <summary></summary>
 			public bool Handled { get; set; }
 		}
-
-		/// <summary></summary>
 		private void DoCallTips()
 		{
-			var args = new CallTipEventArgs();
+			var args = new CallTipEventArgs(CurrentPos);
 			CallTip?.Invoke(this, args);
 			if (args.Handled && args.Definition.Length != 0)
 			{
@@ -2725,17 +2818,14 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_SETCHARSDEFAULT);
 		}
 
-		/// <summary></summary>
+		/// <summary>
+		/// Scintilla can be told to grab the focus with SCI_GRABFOCUS. This is needed more on GTK where focus handling is more complicated than on Windows.
+		/// The internal focus flag can be set with SCI_SETFOCUS. This is used by clients that have complex focus requirements such as having their own window
+		/// that gets the real focus but with the need to indicate that Scintilla has the logical focus.</summary>
 		public void GrabFocus()
 		{
+			// Note: don't expose SCI_GETFOCUS/SCI_SETFOCUS, there'll not needed on windows
 			Cmd(Sci.SCI_GRABFOCUS);
-		}
-
-		/// <summary></summary>
-		public new bool Focus
-		{
-			get => Cmd(Sci.SCI_GETFOCUS) != 0;
-			set => Cmd(Sci.SCI_SETFOCUS, value ? 1 : 0);
 		}
 
 		/// <summary></summary>

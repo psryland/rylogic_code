@@ -49,6 +49,10 @@
 		<Resource Include="res\minus1.png" />
 		<Resource Include="res\pencil.png" />
 		<Resource Include="res\plus1.png" />
+		<Resource Include="res\ContextMenus.xaml">
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		  <Generator></Generator>
+		</Resource>
 	</ItemGroup>
 
 	<ItemGroup>

@@ -619,6 +619,9 @@ namespace Rylogic.Gui.WPF
 						Add(content, loc);
 					else
 						content.DockPane = null;
+
+					// Inform the dock control that layout is being loaded
+					content.LoadLayout(udat);
 				}
 			}
 

@@ -1094,7 +1094,7 @@ $@"//
 //Assembly: .\Rylogic.Core.dll
 //Assembly: .\Rylogic.Core.Windows.dll
 //Assembly: .\Rylogic.View3d.dll
-//Assembly: .\LDraw.exe
+//--todo Assembly: .\LDraw.exe
 using System;
 using System.Drawing;
 using System.IO;
@@ -1294,11 +1294,11 @@ namespace ldr
 		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
 
 		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
-		public static string AddressAt(string ldr_script, long position)
+		public static string AddressAt(string ldr_script, long position = -1)
 		{
 			// 'script' should start from a root level position.
 			// 'position' should be relative to 'script'
-			return View3D_ObjectAddressAt(ldr_script, position) ?? string.Empty;
+			return View3D_ObjectAddressAt(ldr_script, position != -1 ? position : ldr_script.Length) ?? string.Empty;
 		}
 
 		/// <summary>Flush any pending commands to the graphics card</summary>

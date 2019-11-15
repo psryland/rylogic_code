@@ -80,9 +80,9 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Construct from a range</summary>
-		public Range(long begin, long end)
+		public Range(long beg, long end)
 		{
-			Beg = begin;
+			Beg = beg;
 			End = end;
 		}
 
