@@ -997,7 +997,7 @@ namespace pr::script
 			for (int nest = 1; *src; ++src)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters
-				if (lit.WithinLiteralString(*src)) { pr::str::Append(str, *src); continue; }
+				if (lit.WithinLiteral(*src)) { pr::str::Append(str, *src); continue; }
 				nest += int(*src == '{');
 				nest -= int(*src == '}');
 				if (nest == 0) break;
@@ -1217,20 +1217,52 @@ namespace pr::script
 				L"	// *something {\n" //83
 				L"	\"my { string\"\n" //98
 				L"	*o2w { *pos {"; // 112
-
-			PR_CHECK(str::Equal(Reader::AddressAt(str0, 0), ""), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str0, 18), "Group.Width"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str0, 19), "Group"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str0, 35), "Group.Box"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str0, 88), ""), true); // because partway through a literal string
-			PR_CHECK(str::Equal(Reader::AddressAt(str0), "Group.Box.o2w.pos"), true);
+			{
+				StringSrc src({ str0, 0 });
+				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+			}
+			{
+				StringSrc src({ str0, 18 });
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Width"), true);
+			}
+			{
+				StringSrc src({ str0, 19 });
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group"), true);
+			}
+			{
+				StringSrc src({ str0, 35 });
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Box"), true);
+			}
+			{
+				StringSrc src({ str0, 88 });
+				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true); // because partway through a literal string
+			}
+			{
+				StringSrc src(str0);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "Group.Box.o2w.pos"), true);
+			}
 
 			char const str1[] = "*One { \"💩🍌\" \"💩🍌\" }";
-			PR_CHECK(str::Equal(Reader::AddressAt(str1, 6), "One"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str1, 9), ""), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str1, 11), "One"), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str1, 14), ""), true);
-			PR_CHECK(str::Equal(Reader::AddressAt(str1, 16), "One"), true);
+			{
+				StringSrc src(str1); src.Limit(6);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+			}
+			{
+				StringSrc src(str1); src.Limit(9);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+			}
+			{
+				StringSrc src(str1); src.Limit(11);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+			}
+			{
+				StringSrc src(str1); src.Limit(14);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), ""), true);
+			}
+			{
+				StringSrc src(str1); src.Limit(16);
+				PR_CHECK(str::Equal(Reader::AddressAt(src), "One"), true);
+			}
 		}
 	}
 }

@@ -8,6 +8,7 @@
     xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
 	xmlns:local="clr-namespace:LDraw.UI"
+	xmlns:avalon="http://icsharpcode.net/sharpdevelop/avalonedit"
 	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
@@ -16,6 +17,25 @@
 
 	<UserControl.Resources>
 		<ResourceDictionary>
+			<ContextMenu x:Key="ScriptCMenu">
+				<MenuItem
+					Header="Clear"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Cut"
+					/>
+				<MenuItem
+					Header="Copy"
+					/>
+				<MenuItem
+					Header="Paste"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Properties..."
+					/>
+			</ContextMenu>
 			<ContextMenu x:Key="TabCMenu">
 				<MenuItem Header="_Rename"/>
 				<MenuItem Header="_Clear"/>
@@ -31,13 +51,11 @@
 		<KeyBinding Command="{Binding Render}" Key="F5"/>
 	</UserControl.InputBindings>
 	
-	<Grid
-		Background="{Binding IsKeyboardFocusWithin, Converter={conv:BoolSelect}, ConverterParameter='#0F0|#F00'}">
+	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
-			<RowDefinition Height="20"/>
 		</Grid.RowDefinitions>
 
 		<!-- Tool bar -->
@@ -140,12 +158,21 @@
 		</ToolBarTray>
 
 		<!-- Editor -->
+		<avalon:TextEditor
+			Grid.Row="2"
+			ShowLineNumbers="True"
+			FontFamily="Consolas"
+			SyntaxHighlighting="Ldr"
+			IsModified="{Binding SaveNeeded, Mode=TwoWay}"
+			ContextMenu="{StaticResource ScriptCMenu}"
+			Name="m_editor"
+			/>
+		<!--
 		<gui:ScintillaControl
 			Grid.Row="2"
 			gui:Scintilla_.Style="LdrLight"
 			Name="m_scintilla_control"
 			/>
-<!--
 		<Popup
 			IsOpen="True"
 			Placement="Mouse"

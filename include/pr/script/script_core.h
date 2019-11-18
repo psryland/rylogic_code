@@ -36,6 +36,8 @@ namespace pr::script
 		Src& m_src;
 
 		// A local read ahead buffer
+		// Note: the length of this buffer can be greater than the
+		// number of characters available when 'Limit()' is used.
 		string_t m_buffer;
 
 		// Encoding of data returned from 'Read()'
@@ -133,7 +135,7 @@ namespace pr::script
 			return string_view_t(str + start, count);
 		}
 
-		// Get/Set the maximum number of characters to emit from this stream (can be less than that underlying source length)
+		// Get/Set the maximum number of characters to emit from this stream (can be less than the underlying source length)
 		int64_t Limit() const
 		{
 			return m_remaining;
@@ -152,8 +154,8 @@ namespace pr::script
 		// Read ahead array access
 		char_t operator[](int i)
 		{
-			ReadAhead(i + 1);
-			return i < s_cast<int>(m_buffer.size()) ? m_buffer[i] : '\0';
+			auto len = ReadAhead(i + 1);
+			return i < len ? m_buffer[i] : '\0';
 		}
 
 		// Advance by 1 character
@@ -175,6 +177,8 @@ namespace pr::script
 		{
 			if (n < 0)
 				throw std::runtime_error("Cannot seek backwards");
+			if (n > m_remaining)
+				n = static_cast<int>(m_remaining);
 
 			for (;;)
 			{
@@ -189,7 +193,10 @@ namespace pr::script
 				}
 
 				m_buffer.erase(0, remove);
+
 				m_remaining -= remove;
+				assert(m_remaining >= 0);
+
 				n -= remove;
 				if (n == 0)
 					break;
@@ -200,12 +207,16 @@ namespace pr::script
 			}
 		}
 
-		// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOS is hit.
-		// Returns the number of characters actually buffered (a value in the range [0, n])
+		// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF or Limit is hit.
+		// Returns the number of characters available (a value in [0, n])
+		// Do *not* use Buffer.Length as the number available, then can be greater than 'Limit'
 		int ReadAhead(int n)
 		{
-			assert(m_remaining >= 0);
-			if (n > m_remaining) n = static_cast<int>(m_remaining);
+			if (n < 0)
+				throw std::runtime_error("Cannot read backwards");
+			if (n > m_remaining)
+				n = static_cast<int>(m_remaining);
+
 			for (; n > s_cast<int>(m_buffer.size());)
 			{
 				// Ensure 'Buffer's length grows with each loop
@@ -802,16 +813,16 @@ namespace pr::script
 	}
 
 	// Buffer until 'adv' returns 0. Signature for AdvFunc: int(Src&,int)
-	// Returns true if buffered stopped due to 'adv' returning 0.
-	// On return, 'len' contains the length of the buffer up to where 'adv' returned false.
+	// Returns true if buffering stopped due to 'adv' returning 0.
+	// On return, 'len' contains the length of the buffer up to where 'adv' returned 0.
 	template <typename AdvFunc, typename = std::enable_if_t<std::is_invocable_r_v<int, AdvFunc, Src&, int>>>
 	inline bool BufferWhile(Src& src, AdvFunc adv, int start = 0, int* len = nullptr)
 	{
 		auto i = start;
 		auto x = AtExit([&]{ if (len) *len = i; });
-
+		
 		for (auto inc = 0; src[i] != '\0' && (inc = adv(src, i)) != 0; i += inc) {}
-		if (src[i] == '\0') i = s_cast<int>(src.Buffer().size());
+		if (src[i] == '\0') i = static_cast<int>(std::min<int64_t>(src.Limit(), static_cast<int64_t>(src.Buffer().size()))); // Occurs if 'start' > 'src.Limit' or EOS
 		return src[i] != '\0';
 	}
 
@@ -853,20 +864,49 @@ namespace pr::script
 			PR_CHECK(ptr[1], L'2');
 			PR_CHECK(ptr[2], L'3');
 			PR_CHECK(ptr[3], L'\0');
+			PR_CHECK(ptr[4], L'\0');
 
 			PR_CHECK(*ptr, L'1'); ++ptr;
 			PR_CHECK(*ptr, L'2'); ++ptr;
 			PR_CHECK(*ptr, L'3'); ++ptr;
 			PR_CHECK(*ptr, L'\0'); ++ptr;
+			PR_CHECK(*ptr, L'\0'); ++ptr;
+
+			ptr.Limit(2);
+
+			PR_CHECK(ptr[0], L'4');
+			PR_CHECK(ptr[1], L'5');
+			PR_CHECK(ptr[2], L'\0');
+			PR_CHECK(ptr[3], L'\0');
+
+			PR_CHECK(*ptr, L'4'); ++ptr;
+			PR_CHECK(*ptr, L'5'); ++ptr;
+			PR_CHECK(*ptr, L'\0'); ++ptr;
+			PR_CHECK(*ptr, L'\0'); ++ptr;
+
+			ptr.Limit(5);
+
+			auto len0 = ptr.ReadAhead(5);
+			PR_CHECK(len, 5);
+			PR_CHECK(ptr.Buffer().size(), 5ULL);
+
+			ptr.Limit(3);
+
+			// Setting the limit after characters have been buffered does not change the buffer.
+			// Because of this, Buffer().size() should not be used to determine the available characters
+			// after a call to ReadAhead()
+			auto len1 = ptr.ReadAhead(5);
+			PR_CHECK(len, 3);
+			PR_CHECK(ptr.Buffer().size(), 5ULL);
 		}
 		{// Matching
 			wchar_t const str[] = L"0123456789";
 			StringSrc ptr(str);
 
-			PR_CHECK(ptr.Match(L"0123") != 0, true);
-			PR_CHECK(ptr.Match(L"012345678910") != 0, false);
+			PR_CHECK(ptr.Match(L"0123"), true);
+			PR_CHECK(ptr.Match(L"012345678910"), false);
 			ptr += 5;
-			PR_CHECK(ptr.Match(L"567") != 0, true);
+			PR_CHECK(ptr.Match(L"567"), true);
 		}
 		{// UTF8 File source
 

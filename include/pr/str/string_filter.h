@@ -28,6 +28,8 @@ namespace pr::str
 		//    code blocks in the preprocessor, which ignores unclosed literal strings/characters.
 		//  - Escape sequences don't have to be for single characters (i.e. unicode sequences) but
 		//    that doesn't matter here because we only care about escaped quote characters.
+		//  - 'm_in_literal' is the last reported state of "WithinLiteral".
+		//  - 'm_in_literal_state' is an internal variable used to track the state changes
 
 		// Flags for controlling the behaviour of the InLiteral class
 		enum class EFlags
@@ -37,7 +39,7 @@ namespace pr::str
 			// Expected escape sequences in the string
 			Escaped = 1 << 0,
 
-			// 'WithinLiteralString' returns false for the initial and final quote characters
+			// 'WithinLiteral' returns false for the initial and final quote characters
 			ExcludeQuotes = 1 << 1,
 
 			// New line characters end literal strings
@@ -53,19 +55,27 @@ namespace pr::str
 		EFlags m_flags;
 		int m_escape_character;
 		int m_quote_character;
-		bool m_in_literal_string;
+		bool m_in_literal_state;
+		bool m_in_literal;
 		bool m_escape;
 
 		explicit InLiteral(EFlags flags = EFlags::Escaped, int escape_character = '\\') noexcept
 			:m_flags(flags)
 			,m_escape_character(escape_character)
 			,m_quote_character()
-			,m_in_literal_string(false)
+			,m_in_literal_state(false)
+			,m_in_literal(false)
 			,m_escape(false)
 		{}
 
+		// True while within a string or character literal
+		bool IsWithinLiteral() const
+		{
+			return m_in_literal;
+		}
+
 		// True while within an escape sequence
-		bool WithinEscape() const
+		bool IsWithinEscape() const
 		{
 			return m_escape;
 		}
@@ -73,42 +83,42 @@ namespace pr::str
 		// Consider the next character in the stream 'ch'.
 		// Returns true if currently within a string/character literal
 		template <typename Char>
-		bool WithinLiteralString(Char ch) noexcept
+		bool WithinLiteral(Char ch) noexcept
 		{
-			if (m_in_literal_string)
+			if (m_in_literal_state)
 			{
 				if (m_escape)
 				{
 					// If escaped, then still within the literal
 					m_escape = false;
-					return true;
+					return m_in_literal = true;
 				}
 				else if (ch == m_quote_character)
 				{
-					m_in_literal_string = false;
-					return !Has(m_flags, EFlags::ExcludeQuotes); // terminating quote can be part of the literal
+					m_in_literal_state = false;
+					return m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // terminating quote can be part of the literal
 				}
 				else if (ch == '\n' && Has(m_flags, EFlags::SingleLineStrings))
 				{
-					m_in_literal_string = false;
-					return false; // terminating '\n' is not part of the literal
+					m_in_literal_state = false;
+					return m_in_literal = false; // terminating '\n' is not part of the literal
 				}
 				else
 				{
 					m_escape = (ch == m_escape_character) && Has(m_flags, EFlags::Escaped);
-					return true;
+					return m_in_literal = true;
 				}
 			}
 			else if (ch == '\"' || ch == '\'')
 			{
 				m_quote_character = static_cast<char>(ch);
-				m_in_literal_string = true;
+				m_in_literal_state = true;
 				m_escape = false;
-				return !Has(m_flags, EFlags::ExcludeQuotes); // first quote can be part of the literal
+				return m_in_literal = !Has(m_flags, EFlags::ExcludeQuotes); // first quote can be part of the literal
 			}
 			else
 			{
-				return false;
+				return m_in_literal = false;
 			}
 		}
 	
@@ -151,6 +161,7 @@ namespace pr::str
 		Patterns m_pat;
 		InLiteral m_lit;
 		EType m_comment;
+		bool m_in_comment;
 		bool m_escape;
 		int m_emit;
 
@@ -158,9 +169,16 @@ namespace pr::str
 			:m_pat(pat)
 			,m_lit(literal_flags)
 			,m_comment(EType::None)
+			,m_in_comment()
 			,m_escape()
 			,m_emit()
 		{}
+
+		// True if the current state is "within comment"
+		bool IsWithinComment() const
+		{
+			return m_in_comment;
+		}
 
 		// Processes the current character in 'src'.
 		// Returns true if currently within a string/character literal
@@ -173,7 +191,7 @@ namespace pr::str
 			{
 			case EType::None:
 				{
-					if (m_lit.WithinLiteralString(*src))
+					if (m_lit.WithinLiteral(*src))
 					{
 					}
 					else if (m_emit == 0 && !m_pat.m_line_comment.empty() && Match(src, m_pat.m_line_comment))
@@ -224,9 +242,9 @@ namespace pr::str
 				}
 			}
 
-			auto in_comment = m_comment != EType::None || m_emit != 0;
+			m_in_comment = m_comment != EType::None || m_emit != 0;
 			m_emit -= static_cast<int>(m_emit != 0);
-			return in_comment;
+			return m_in_comment;
 		}
 
 	private:
@@ -507,8 +525,8 @@ namespace pr::str
 				InLiteral lit;
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
-					if (lit.WithinLiteralString(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+					if (lit.WithinLiteral(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
 				}
 				PR_CHECK(*src, '\0');
 			}
@@ -522,8 +540,8 @@ namespace pr::str
 				InLiteral lit(InLiteral::EFlags::Escaped | InLiteral::EFlags::ExcludeQuotes);
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
-					if (lit.WithinLiteralString(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+					if (lit.WithinLiteral(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
 				}
 				PR_CHECK(*src, '\0');
 			}
@@ -535,8 +553,8 @@ namespace pr::str
 				InLiteral lit;
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
-					if (lit.WithinLiteralString(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+					if (lit.WithinLiteral(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
 				}
 				PR_CHECK(*src, '\0');
 			}
@@ -548,8 +566,8 @@ namespace pr::str
 				InLiteral lit(InLiteral::EFlags::Escaped | InLiteral::EFlags::SingleLineStrings);
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
-					if (lit.WithinLiteralString(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+					if (lit.WithinLiteral(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
 				}
 				PR_CHECK(*src, '\0');
 			}
@@ -561,10 +579,10 @@ namespace pr::str
 				InLiteral lit;
 				for (int i = 0; *src != 0; ++i, ++src)
 				{
-					if (lit.WithinLiteralString(*src) == exp[i]) continue;
-					PR_CHECK(lit.WithinLiteralString(*src), exp[i]);
+					if (lit.WithinLiteral(*src) == exp[i]) continue;
+					PR_CHECK(lit.WithinLiteral(*src), exp[i]);
 				}
-				PR_CHECK(lit.WithinLiteralString(*src), true);
+				PR_CHECK(lit.WithinLiteral(*src), true);
 				PR_CHECK(*src, '\0');
 			}
 		}

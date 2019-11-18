@@ -15,7 +15,8 @@ namespace Rylogic.Str
 		private readonly EFlags m_flags;
 		private readonly char m_escape_character;
 		private char m_quote_character;
-		private bool m_in_literal_string;
+		private bool m_in_literal_state;
+		private bool m_in_literal;
 		private bool m_escape;
 
 		public InLiteral(EFlags flags = EFlags.Escaped, char escape_character = '\\')
@@ -23,52 +24,56 @@ namespace Rylogic.Str
 			m_flags = flags;
 			m_escape_character = escape_character;
 			m_quote_character = '\0';
-			m_in_literal_string = false;
+			m_in_literal_state = false;
+			m_in_literal = false;
 			m_escape = false;
 		}
 
+		/// <summary>True if the last reported state was 'within literal'</summary>
+		public bool IsWithinLiteral => m_in_literal;
+
 		/// <summary>True while within an escape sequence</summary>
-		public bool WithinEscape => m_escape;
+		public bool IsWithinEscape => m_escape;
 
 		/// <summary>
 		/// Consider the next character in the stream 'ch'.
 		/// Returns true if currently within a string/character literal.</summary>
-		public bool WithinLiteralString(char ch)
+		public bool WithinLiteral(char ch)
 		{
-			if (m_in_literal_string)
+			if (m_in_literal_state)
 			{
 				if (m_escape)
 				{
 					// If escaped, then still within the literal
 					m_escape = false;
-					return true;
+					return m_in_literal = true;
 				}
 				else if (ch == m_quote_character)
 				{
-					m_in_literal_string = false;
-					return !m_flags.HasFlag(EFlags.ExcludeQuotes); // terminating quote can be part of the literal
+					m_in_literal_state = false;
+					return m_in_literal = !m_flags.HasFlag(EFlags.ExcludeQuotes); // terminating quote can be part of the literal
 				}
 				else if (ch == '\n' && m_flags.HasFlag(EFlags.SingleLineStrings))
 				{
-					m_in_literal_string = false;
-					return false; // terminating '\n' is not part of the literal
+					m_in_literal_state = false;
+					return m_in_literal = false; // terminating '\n' is not part of the literal
 				}
 				else
 				{
 					m_escape = (ch == m_escape_character) && m_flags.HasFlag(EFlags.Escaped);
-					return true;
+					return m_in_literal = true;
 				}
 			}
 			else if (ch == '\"' || ch == '\'')
 			{
 				m_quote_character = ch;
-				m_in_literal_string = true;
+				m_in_literal_state = true;
 				m_escape = false;
-				return !m_flags.HasFlag(EFlags.ExcludeQuotes); // first quote can be part of the literal
+				return m_in_literal = !m_flags.HasFlag(EFlags.ExcludeQuotes); // first quote can be part of the literal
 			}
 			else
 			{
-				return false;
+				return m_in_literal = false;
 			}
 		}
 
@@ -107,7 +112,7 @@ namespace Rylogic.UnitTests
 
 			var lit = new InLiteral();
 			for (int i = 0; i != src.Length; ++i)
-				Assert.Equal(exp[i], lit.WithinLiteralString(src[i]) ? 1 : 0);
+				Assert.Equal(exp[i], lit.WithinLiteral(src[i]) ? 1 : 0);
 		}
 		[Test]
 		public void ExcludeQuotes()
@@ -120,7 +125,7 @@ namespace Rylogic.UnitTests
 			// Don't include the quotes
 			var lit = new InLiteral(InLiteral.EFlags.Escaped | InLiteral.EFlags.ExcludeQuotes);
 			for (int i = 0; i != src.Length; ++i)
-				Assert.Equal(exp[i], lit.WithinLiteralString(src[i]) ? 1 : 0);
+				Assert.Equal(exp[i], lit.WithinLiteral(src[i]) ? 1 : 0);
 		}
 		[Test]
 		public void MatchSameQuoteMark()
@@ -131,7 +136,7 @@ namespace Rylogic.UnitTests
 
 			var lit = new InLiteral();
 			for (int i = 0; i != src.Length; ++i)
-				Assert.Equal(exp[i], lit.WithinLiteralString(src[i]) ? 1 : 0);
+				Assert.Equal(exp[i], lit.WithinLiteral(src[i]) ? 1 : 0);
 		}
 		[Test]
 		public void ClosedByNewLine()
@@ -142,7 +147,7 @@ namespace Rylogic.UnitTests
 
 			var lit = new InLiteral(InLiteral.EFlags.Escaped | InLiteral.EFlags.SingleLineStrings);
 			for (int i = 0; i != src.Length; ++i)
-				Assert.Equal(exp[i], lit.WithinLiteralString(src[i]) ? 1 : 0);
+				Assert.Equal(exp[i], lit.WithinLiteral(src[i]) ? 1 : 0);
 		}
 		[Test]
 		public void NotClosedByEoS()
@@ -153,9 +158,9 @@ namespace Rylogic.UnitTests
 
 			var lit = new InLiteral();
 			for (int i = 0; i != src.Length; ++i)
-				Assert.Equal(exp[i], lit.WithinLiteralString(src[i]) ? 1 : 0);
+				Assert.Equal(exp[i], lit.WithinLiteral(src[i]) ? 1 : 0);
 
-			Assert.Equal(1, lit.WithinLiteralString('\0') ? 1 : 0);
+			Assert.Equal(1, lit.WithinLiteral('\0') ? 1 : 0);
 		}
 	}
 }

@@ -885,7 +885,7 @@ namespace Rylogic.Script
 			for (int nest = 1; Src[len] != 0;)
 			{
 				// If we're in a string/character literal, then ignore any '{''}' characters
-				if (lit.WithinLiteralString(Src[len]))
+				if (lit.WithinLiteral(Src[len]))
 				{
 					++len;
 					continue;

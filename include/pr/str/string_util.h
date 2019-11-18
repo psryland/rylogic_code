@@ -139,8 +139,8 @@ namespace pr::str
 
 				auto e = s;
 				auto quote = *s;
-				lit.WithinLiteralString(*s);
-				for (++e; e != end && lit.WithinLiteralString(*e); ++e) {}
+				lit.WithinLiteral(*s);
+				for (++e; e != end && lit.WithinLiteral(*e); ++e) {}
 				if (*(e - 1) != quote) throw std::runtime_error("Incomplete string/character literal");
 				token_cb(s + remove_quotes, e - remove_quotes);
 				s = e;
@@ -388,7 +388,7 @@ namespace pr::str
 			for (; i != iend; ++i)
 			{
 				// Do not find identifiers within literal strings
-				if (lit.WithinLiteralString(src[i]))
+				if (lit.WithinLiteral(src[i]))
 					continue;
 
 				// Identifiers cannot have digits preceeding them

@@ -107,7 +107,7 @@ namespace pr::script
 					break;
 
 				// Read through literal strings or characters
-				if (m_lit.WithinLiteralString(*m_src))
+				if (m_lit.WithinLiteral(*m_src))
 					break;
 
 				// Don't trim white space from the end of lines

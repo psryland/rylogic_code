@@ -31,38 +31,21 @@
 	<!-- Resources -->
 	<ItemGroup>
 		<Resource Include="res\*.png" />
+		<None Remove="res\LdrSyntaxRules.xshd" />
+		<EmbeddedResource Include="res\LdrSyntaxRules.xshd" />
 		<Resource Include="res\Licence.rtf" />
-		<EmbeddedResource Update="res\Resources.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
-			<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
-		</EmbeddedResource>
-		<Compile Update="res\Resources.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resources.resx</DependentUpon>
-		</Compile>
 	</ItemGroup>
 	
 	<!-- References -->
 	<ItemGroup>
 		<ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-		<ProjectReference Include="..\..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
 		<ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj" />
 		<ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
 	</ItemGroup>
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Content Include="..\..\..\lib\x64\debug\scintilla.dll">
-			<Link>lib\x64\debug\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-		<Content Include="..\..\..\lib\x64\release\scintilla.dll">
-			<Link>lib\x64\release\scintilla.dll</Link>
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
 
 		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
 			<Link>lib\x64\debug\view3d.dll</Link>
@@ -80,6 +63,9 @@
 			<Link>lib\x86\release\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>-->
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="AvalonEdit" Version="6.0.0" />
 	</ItemGroup>
 
 </Project>

@@ -209,7 +209,7 @@
 						Margin="2,0,2,0"
 						/>
 					<TextBlock
-						Text="{Binding ActiveScript.Editor.Selection, StringFormat=Sel: {0}, FallbackValue=''}"
+						Text="{Binding ActiveScript.Editor.SelectionStart, StringFormat=Sel: {0}, FallbackValue=''}"
 						Background="White"
 						Padding="2,0,2,0"
 						Margin="2,0,2,0"

@@ -656,13 +656,13 @@ namespace Rylogic.Script
 
 		/// <summary>
 		/// Buffer until 'adv' returns 0. Signature for AdvFunc: int(Src&,int)
-		/// Returns true if buffered stopped due to 'adv' returning 0.
-		/// On return, 'len' contains the length of the buffer up to where 'adv' returned false.</summary>
+		/// Returns true if buffering stopped due to 'adv' returning 0.
+		/// On return, 'len' contains the length of the buffer up to where 'adv' returned 0.</summary>
 		public static bool BufferWhile(Src src, Func<Src, int, int> adv, int start, out int len)
 		{
 			len = start;
 			for (var inc = 0; src[len] != '\0' && (inc = adv(src, len)) != 0; len += inc) { }
-			if (src[len] == '\0') len = src.Buffer.Length;
+			if (src[len] == '\0') len = (int)Math.Min(src.Limit, src.Buffer.Length); // Occurs if 'start' > 'src.Limit' or EOS
 			return src[len] != '\0';
 		}
 

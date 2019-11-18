@@ -23,6 +23,9 @@ namespace Rylogic.Str
 			m_emit = 0;
 		}
 
+		/// <summary>True if the current state is "within comment"</summary>
+		public bool IsWithinComment { get; private set; }
+
 		/// <summary>
 		/// Processes the 'ith' character in 'src'.
 		/// Returns true if currently within a string/character literal</summary>
@@ -36,7 +39,7 @@ namespace Rylogic.Str
 			{
 			case EType.None:
 				{
-					if (m_lit.WithinLiteralString(src[i]))
+					if (m_lit.WithinLiteral(src[i]))
 					{
 					}
 					else if (m_emit == 0 && m_pat.m_line_comment.Length != 0 && Match(src, i, m_pat.m_line_comment))
@@ -87,9 +90,9 @@ namespace Rylogic.Str
 				}
 			}
 
-			var in_comment = m_comment != EType.None || m_emit != 0;
+			IsWithinComment = m_comment != EType.None || m_emit != 0;
 			m_emit -= m_emit != 0 ? 1 : 0;
-			return in_comment;
+			return IsWithinComment;
 		}
 
 		// True if 'src' starts with 'pattern'

@@ -6,6 +6,7 @@ using System.Text;
 using Rylogic.Extn;
 using Rylogic.Script;
 using Rylogic.Str;
+using Rylogic.Utility;
 
 namespace Rylogic.Gfx
 {
@@ -182,7 +183,10 @@ namespace Rylogic.Gfx
 							var len = BufferTemplateDeclaration(src);
 
 							// Create the template instance
-							yield return new Template(keyword, flags, Parse(new WrapSrc(src, len)));
+							var remaining = src.Limit - len;
+							using (var limit = Scope.Create(() => src.Limit = len, () => src.Limit = remaining))
+								yield return new Template(keyword, flags, Parse(src));
+
 							break;
 						}
 					case ReferenceMark:
@@ -210,7 +214,11 @@ namespace Rylogic.Gfx
 								nest -= src[len] == '}' ? 1 : 0;
 							}
 							if (src[len - 1] != '}') throw new ScriptException(Script.EResult.TokenNotFound, src.Location, "Unmatched '{' token");
-							yield return new Section(Parse(new WrapSrc(src, len - 1)));
+
+							var remaining = src.Limit - (len - 1);
+							using (var limit = Scope.Create(() => src.Limit = len - 1, () => src.Limit = remaining))
+								yield return new Section(Parse(src));
+
 							src.Next();
 							break;
 						}
@@ -227,7 +235,11 @@ namespace Rylogic.Gfx
 								nest -= src[len] == ']' ? 1 : 0;
 							}
 							if (src[len - 1] != ']') throw new ScriptException(Script.EResult.TokenNotFound, src.Location, "Unmatched '[' token");
-							yield return new Optional(Parse(new WrapSrc(src, len - 1)));
+
+							var remaining = src.Limit - (len - 1);
+							using (var limit = Scope.Create(() => src.Limit = len - 1, () => src.Limit = remaining))
+								yield return new Optional(Parse(src));
+
 							src.Next();
 							break;
 						}
@@ -244,7 +256,11 @@ namespace Rylogic.Gfx
 								nest -= src[len] == ')' ? 1 : 0;
 							}
 							if (src[len - 1] != ')') throw new ScriptException(Script.EResult.TokenNotFound, src.Location, $"Unmatched '(' token");
-							yield return new Repeat(Parse(new WrapSrc(src, len - 1)));
+
+							var remaining = src.Limit - (len - 1);
+							using (var limit = Scope.Create(() => src.Limit = len - 1, () => src.Limit = remaining))
+								yield return new Repeat(Parse(src));
+
 							src.Next();
 							break;
 						}
@@ -422,7 +438,7 @@ namespace Rylogic.Gfx
 				Extract.BufferWhile(src, (s, i) =>
 				{
 					var ch = s[i];
-					if (lit.WithinLiteralString(ch)) return 1;
+					if (lit.WithinLiteral(ch)) return 1;
 					nest += "{[(<".Contains(ch) ? 1 : 0;
 					nest -= "}])>".Contains(ch) ? 1 : 0;
 					has_section |= ch == '{';

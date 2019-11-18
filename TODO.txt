@@ -10,9 +10,12 @@ LDraw
 	- Linked axes
 	- Show selection
 	- Show bounds
-	- Investigate using a clipping region to manually clip scintilla when autohide panels overlap it.
+	- Status bar shows line/column/selection ActiveScript != null
 	- Status bar shows pointer position when ActiveScene != null
 	- Animation support
+	- No brace folding within comments
+	- Support line continuation for highlighting
+	- Fix the measurement tool not detecting mouse clicks
 	- move LightingUI to pr.view3d
 	- move ObjectManager to pr.view3d
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
@@ -20,6 +23,7 @@ LDraw
 	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
 	- Replace area select view3d objects with WPF primitives
 	- Replace resizer view3d objects with WPF primitives
+	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	
 CoinFlip
 	Candle Charts:

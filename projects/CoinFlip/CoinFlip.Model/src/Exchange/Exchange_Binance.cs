@@ -151,7 +151,15 @@ namespace CoinFlip
 
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var orders = Api.UserData.Orders[cp];
-				existing_orders.AddRange(orders);
+				foreach (var order in orders)
+				{
+					if (order.AmountBase == 0)
+					{
+						Debug.Assert(false); // Sanity check
+						continue;
+					}
+					existing_orders.Add(order);
+				}
 			}
 
 			// Request all the existing completed orders since 'm_history_last'

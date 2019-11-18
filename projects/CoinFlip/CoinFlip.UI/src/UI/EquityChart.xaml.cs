@@ -671,7 +671,7 @@ namespace CoinFlip.UI
 				// Move the existing chart menu into a sub menu
 				var chart_options_menu = new MenuItem { Header = "Chart Options" };
 				{
-					var items = cmenu.Items.Cast<MenuItem>().ToList();
+					var items = cmenu.Items.Cast<object>().ToList();
 					cmenu.Items.Clear();
 					chart_options_menu.Items.AddRange(items);
 				}

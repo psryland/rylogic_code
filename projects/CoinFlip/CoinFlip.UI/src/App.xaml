@@ -90,8 +90,9 @@
 				<ResourceDictionary Source="../skin/Default.xaml" />
 				<local:SkinResourceDictionary SourceDefault="../skin/Default.xaml" SourceDark="../skin/Dark.xaml"/>
 				<ResourceDictionary Source="../skin/Styles.xaml" />
+				<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/res/ContextMenus.xaml"/>
 			</ResourceDictionary.MergedDictionaries>
-			
+
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

@@ -4,7 +4,6 @@ using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
-using Rylogic.Scintilla;
 
 namespace LDraw
 {
@@ -15,7 +14,6 @@ namespace LDraw
 			base.OnStartup(e);
 			try
 			{
-				Sci.LoadDll();
 				View3d.LoadDll();
 				Xml_.Config
 					.SupportRylogicMathsTypes()

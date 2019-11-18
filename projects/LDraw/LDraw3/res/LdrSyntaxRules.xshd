@@ -1,0 +1,226 @@
+﻿<?xml version="1.0"?>
+<SyntaxDefinition
+	name="Ldr"
+	extensions=".ldr"
+	xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008"
+	>
+	<Color name="Comment" foreground="#008100" />
+	<Color name="StringLiteral" foreground="#c74d15" />
+	<Color name="CharacterLiteral" foreground="#c74d15" />
+	<Color name="Number" foreground="#1e1e1e" />
+	<Color name="Keyword" foreground="#0000ff"/>
+	<Color name="Preprocessor" foreground="#97008a"/>
+	<Color name="Object" foreground="#2a9681"/>
+	<Color name="Name" foreground="#000000"/>
+	<Color name="Colour" foreground="#3c5783"/>
+
+	<!-- This is the main ruleset. -->
+	<RuleSet ignoreCase="true">
+		
+		<!-- Ldr Objects -->
+		<Keywords color="Object">
+			<Word>*Point</Word>
+			<Word>*Line</Word>
+			<Word>*LineD</Word>
+			<Word>*LineStrip</Word>
+			<Word>*LineBox</Word>
+			<Word>*Grid</Word>
+			<Word>*Spline</Word>
+			<Word>*Arrow</Word>
+			<Word>*Circle</Word>
+			<Word>*Pie</Word>
+			<Word>*Rect</Word>
+			<Word>*Polygon</Word>
+			<Word>*Matrix3x3</Word>
+			<Word>*CoordFrame</Word>
+			<Word>*Triangle</Word>
+			<Word>*Quad</Word>
+			<Word>*Plane</Word>
+			<Word>*Ribbon</Word>
+			<Word>*Box</Word>
+			<Word>*Bar</Word>
+			<Word>*BoxList</Word>
+			<Word>*FrustumWH</Word>
+			<Word>*FrustumFA</Word>
+			<Word>*Sphere</Word>
+			<Word>*CylinderHR</Word>
+			<Word>*ConeHA</Word>
+			<Word>*Tube</Word>
+			<Word>*Mesh</Word>
+			<Word>*ConvexHull</Word>
+			<Word>*Model</Word>
+			<Word>*Chart</Word>
+			<Word>*Group</Word>
+			<Word>*Text</Word>
+			<Word>*Instance</Word>
+			<Word>*DirLight</Word>
+			<Word>*PointLight</Word>
+			<Word>*SpotLight</Word>
+			<Word>*Custom</Word>
+		</Keywords>
+
+		<!-- Ldr Object Name/Colour -->
+		<Rule color="Name">(?&lt;=\*\w+\s+)[_\w][_\w\d]*</Rule>
+		<Rule color="Colour">(?&lt;=\*\w+\s+([_\w\d]*\s+)?)[0-9A-Fa-f]+</Rule>
+		
+		<!-- Ldr Modifier Keywords -->
+		<Keywords color="Keyword">
+			<Word>*Name</Word>
+			<Word>*Txfm</Word>
+			<Word>*O2W</Word>
+			<Word>*M4x4</Word>
+			<Word>*M3x3</Word>
+			<Word>*Pos</Word>
+			<Word>*Up</Word>
+			<Word>*Direction</Word>
+			<Word>*Quat</Word>
+			<Word>*QuatPos</Word>
+			<Word>*Rand4x4</Word>
+			<Word>*RandPos</Word>
+			<Word>*RandOri</Word>
+			<Word>*Euler</Word>
+			<Word>*Dim</Word>
+			<Word>*Scale</Word>
+			<Word>*Size</Word>
+			<Word>*Weight</Word>
+			<Word>*Transpose</Word>
+			<Word>*Inverse</Word>
+			<Word>*Normalise</Word>
+			<Word>*Orthonormalise</Word>
+			<Word>*Colour</Word>
+			<Word>*ForeColour</Word>
+			<Word>*BackColour</Word>
+			<Word>*Font</Word>
+			<Word>*Stretch</Word>
+			<Word>*Underline</Word>
+			<Word>*Strikeout</Word>
+			<Word>*NewLine</Word>
+			<Word>*CString</Word>
+			<Word>*AxisId</Word>
+			<Word>*Solid</Word>
+			<Word>*Facets</Word>
+			<Word>*CornerRadius</Word>
+			<Word>*RandColour</Word>
+			<Word>*ColourMask</Word>
+			<Word>*Reflectivity</Word>
+			<Word>*Animation</Word>
+			<Word>*Style</Word>
+			<Word>*Format</Word>
+			<Word>*TextLayout</Word>
+			<Word>*Anchor</Word>
+			<Word>*Padding</Word>
+			<Word>*Period</Word>
+			<Word>*Velocity</Word>
+			<Word>*AngVelocity</Word>
+			<Word>*Axis</Word>
+			<Word>*Hidden</Word>
+			<Word>*Wireframe</Word>
+			<Word>*Delimiters</Word>
+			<Word>*Camera</Word>
+			<Word>*LookAt</Word>
+			<Word>*Align</Word>
+			<Word>*Aspect</Word>
+			<Word>*FovX</Word>
+			<Word>*FovY</Word>
+			<Word>*Fov</Word>
+			<Word>*Near</Word>
+			<Word>*Far</Word>
+			<Word>*Orthographic</Word>
+			<Word>*Lock</Word>
+			<Word>*Width</Word>
+			<Word>*Dashed</Word>
+			<Word>*Smooth</Word>
+			<Word>*XAxis</Word>
+			<Word>*YAxis</Word>
+			<Word>*XColumn</Word>
+			<Word>*Closed</Word>
+			<Word>*Param</Word>
+			<Word>*Texture</Word>
+			<Word>*Video</Word>
+			<Word>*Divisions</Word>
+			<Word>*Layers</Word>
+			<Word>*Wedges</Word>
+			<Word>*ViewPlaneZ</Word>
+			<Word>*Verts</Word>
+			<Word>*Normals</Word>
+			<Word>*Colours</Word>
+			<Word>*TexCoords</Word>
+			<Word>*Lines</Word>
+			<Word>*Faces</Word>
+			<Word>*Tetra</Word>
+			<Word>*Part</Word>
+			<Word>*GenerateNormals</Word>
+			<Word>*BakeTransform</Word>
+			<Word>*Step</Word>
+			<Word>*Addr</Word>
+			<Word>*Filter</Word>
+			<Word>*Alpha</Word>
+			<Word>*Range</Word>
+			<Word>*Specular</Word>
+			<Word>*ScreenSpace</Word>
+			<Word>*NoZTest</Word>
+			<Word>*NoZWrite</Word>
+			<Word>*Billboard</Word>
+			<Word>*Depth</Word>
+			<Word>*LeftHanded</Word>
+			<Word>*CastShadow</Word>
+		</Keywords>
+
+		<!-- Preprocessor -->
+		<Keywords color="Preprocessor">
+			<Word>#include</Word>
+			<Word>#include_path</Word>
+			<Word>#ignore_missing</Word>
+			<Word>#depend</Word>
+			<Word>#define</Word>
+			<Word>#undef</Word>
+			<Word>#defifndef</Word>
+			<Word>#if</Word>
+			<Word>#ifdef</Word>
+			<Word>#ifndef</Word>
+			<Word>#end</Word>
+			<Word>#elif</Word>
+			<Word>#else</Word>
+			<Word>#endif</Word>
+			<Word>#pragma</Word>
+			<Word>#line</Word>
+			<Word>#error</Word>
+			<Word>#warning</Word>
+			<Word>#defined</Word>
+			<Word>#eval</Word>
+			<Word>#lit</Word>
+			<Word>#embedded</Word>
+		</Keywords>
+
+		<!-- Literals -->
+		<Span color="StringLiteral">
+			<Begin>"</Begin>
+			<End>"</End>
+			<RuleSet>
+				<Span begin="\\" end="." />
+			</RuleSet>
+		</Span>
+		<Span color="CharacterLiteral">
+			<Begin>'</Begin>
+			<End>'</End>
+			<RuleSet>
+				<Span begin="\\" end="." />
+			</RuleSet>
+		</Span>
+
+		<!-- Digits -->
+		<Rule color="Number">
+			\b0[xX][0-9a-fA-F]+  # hex number
+			|\b
+			(    \d+(\.[0-9]+)?   #number with optional floating point
+			|    \.[0-9]+         #or just starting with floating point
+			)
+			([eE][+-]?[0-9]+)? # optional exponent
+		</Rule>
+
+		<!-- Comments -->
+		<Span color="Comment" begin="//" />
+		<Span color="Comment" multiline="true" begin="/\*" end="\*/" />
+
+	</RuleSet>
+</SyntaxDefinition>
