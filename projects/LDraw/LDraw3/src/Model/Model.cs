@@ -29,6 +29,7 @@ namespace LDraw
 			Settings = new SettingsData(StartupOptions.SettingsPath);
 			Scenes = new ObservableCollection<SceneUI>();
 			Scripts = new ObservableCollection<ScriptUI>();
+			Assets = new ObservableCollection<AssetUI>();
 		}
 		public void Dispose()
 		{
@@ -109,11 +110,18 @@ namespace LDraw
 		/// <summary>The scene instances</summary>
 		public ObservableCollection<SceneUI> Scenes { get; }
 
-		/// <summary>The scene instances</summary>
+		/// <summary>The script instances</summary>
 		public ObservableCollection<ScriptUI> Scripts { get; }
+
+		/// <summary>The asset instances</summary>
+		public ObservableCollection<AssetUI> Assets { get; }
 
 		/// <summary>Notify of a file about to be opened</summary>
 		public event EventHandler<ValueEventArgs<string>>? FileOpening;
+		public void NotifyFileOpening(string filepath)
+		{
+			FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
+		}
 
 		/// <summary>Progress updates for parsing. Null while not parsing</summary>
 		public ParsingProgressData? ParsingProgress
@@ -133,15 +141,6 @@ namespace LDraw
 		public string GenerateSceneName()
 		{
 			return $"{UITag.Scene}{++m_scene_number}";
-
-			//var max = 0;
-			//foreach (var scene in Scenes.Where(x => IsGeneratedSceneName(x.SceneName)))
-			//{
-			//	var idx_string = scene.SceneName.Substring(UITag.Scene.Length);
-			//	var idx = int_.TryParse(idx_string) ?? 0;
-			//	max = Math.Max(max, idx);
-			//}
-			//return max > 0 ? $"{UITag.Scene}{max + 1}" : UITag.Scene;
 		}
 		private int m_scene_number;
 
@@ -149,14 +148,6 @@ namespace LDraw
 		public string GenerateScriptName()
 		{
 			return $"{UITag.Script}{++m_script_number}";
-			//var max = 0;
-			//foreach (var script in Scripts.Where(x => IsGeneratedScriptName(x.ScriptName)))
-			//{
-			//	var idx_string = script.ScriptName.Substring(UITag.Script.Length);
-			//	var idx = int_.TryParse(idx_string) ?? 0;
-			//	max = Math.Max(max, idx);
-			//}
-			//return max > 1 ? $"{UITag.Script}{max + 1}" : UITag.Script;
 		}
 		private int m_script_number;
 
@@ -214,13 +205,15 @@ namespace LDraw
 		}
 
 		/// <summary>Clear all instances from one or more scenes</summary>
-		public void Clear(IList<SceneUI> scenes)
+		public void Clear(IEnumerable<SceneUI> scenes)
 		{
 			Clear(scenes, Array.Empty<Guid>(), 0, 0);
 		}
 
 		/// <summary>Clear instances from one or more scenes</summary>
-		public void Clear(IList<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
+		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, new[] { context_id }, 1, 0);
+		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, new[] { context_id }, 1, 0);
+		public void Clear(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Remove objects from the scenes
 			foreach (var scene in scenes)
@@ -245,13 +238,15 @@ namespace LDraw
 		}
 
 		// Add objects associated with 'id' to the scenes
-		public void AddObjects(IList<SceneUI> scenes, Guid id)
+		public void AddObjects(SceneUI scene, Guid context_id) => AddObjects(new[] { scene }, new[] { context_id }, 1, 0);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Guid context_id) => AddObjects(scenes, new[] { context_id }, 1, 0);
+		public void AddObjects(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)
 		{
 			// Add the objects from 'id' this scene.
 			foreach (var scene in scenes)
 			{
 				var view = scene.SceneView;
-				view.Scene.AddObjects(new[] { id }, 1, 0);
+				view.Scene.AddObjects(context_ids, include_count, exclude_count);
 
 				// Auto range the view
 				if (scene.AutoRange)
@@ -259,92 +254,6 @@ namespace LDraw
 				else
 					view.Invalidate();
 			}
-		}
-
-		/// <summary>Add objects from a file to one or more scenes</summary>
-		public void OpenFile(string? filepath = null, IList<SceneUI>? scenes = null)
-		{
-			// Prompt for a filepath if none provided
-			if (filepath == null || filepath.Length == 0)
-			{
-				var filter = Util.FileDialogFilter(
-					"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
-					"Ldr Script", "*.ldr",
-					"Binary Model File", "*.p3d",
-					"3D Studio Max Model File", "*.3ds",
-					"STL CAD Model File", "*.stl",
-					"Comma Separated Values", "*.csv",
-					"All Files", "*.*");
-
-				var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = filter };
-				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
-				filepath = dlg.FileName ?? throw new FileNotFoundException($"A invalid filepath was selected");
-			}
-
-			// If the file doesn't exist reject it
-			if (!Path_.FileExists(filepath))
-				throw new FileNotFoundException($"File '{filepath}' does not exist");
-
-			// If no scene is provided, prompt for one if there are multiple choices
-			scenes ??= ChooseScenes("Select the scene(s) to add objects to");
-			if (scenes.Count == 0)
-				return;
-
-			// Notify of the file open (so it can be added to the recent file history)
-			FileOpening?.Invoke(this, new ValueEventArgs<string>(filepath));
-
-			// If the file has already been loaded in another scene, just add instances to 'scenes'
-			var ctx_id = View3d.ContextIdFromFilepath(filepath);
-			if (ctx_id != null)
-			{
-				AddObjects(scenes, ctx_id.Value);
-			}
-			else
-			{
-				// Otherwise, load the source in a background thread
-				var include_paths = Settings.IncludePaths;
-				ThreadPool.QueueUserWorkItem(x =>
-				{
-					// Load a source file and save the context id for that file
-					View3d.LoadScriptSource(filepath, include_paths, OnAdd);
-					bool OnAdd(IntPtr _, ref Guid id, bool add_complete)
-					{
-						if (add_complete)
-							AddObjects(scenes!, id);
-						return true;
-					}
-				});
-			}
-		}
-
-		/// <summary>Add objects from a script string to one or more scenes</summary>
-		public void AddScript(string text, IList<SceneUI>? scenes = null, Guid? context_id = null)
-		{
-			if (text == null || text.Length == 0)
-				return;
-
-			// If no scene is provided, prompt for one if there are multiple choices
-			scenes ??= ChooseScenes("Select the scene(s) to add objects to");
-			if (scenes.Count == 0)
-				return;
-
-			// Load the source in a background thread
-			var include_paths = Settings.IncludePaths;
-			ThreadPool.QueueUserWorkItem(x =>
-			{
-				// Load a script and save the context id for that file
-				View3d.LoadScript(text, file: false, context_id, include_paths, OnAdd);
-				bool OnAdd(IntPtr _, ref Guid id, bool add_complete)
-				{
-					// If 'context_id' is given, erase objects from that context
-					// id before adding new objects when 'add_complete' is true
-					if (add_complete)
-						AddObjects(scenes!, id);
-					else if (context_id != null)
-						Clear(scenes!, new Guid[] { context_id.Value }, 1, 0);
-					return true;
-				}
-			});
 		}
 
 		/// <summary>Delete temporary scripts that are not currently open</summary>
@@ -373,7 +282,7 @@ namespace LDraw
 		}
 
 		/// <summary>Return a collection of scenes to add objects to</summary>
-		private IList<SceneUI> ChooseScenes(string prompt_text)
+		public IList<SceneUI> ChooseScenes(string prompt_text)
 		{
 			if (Scenes.Count == 0)
 				throw new Exception($"No 3D scenes available");

@@ -887,7 +887,7 @@ namespace pr::script
 			ptr.Limit(5);
 
 			auto len0 = ptr.ReadAhead(5);
-			PR_CHECK(len, 5);
+			PR_CHECK(len0, 5);
 			PR_CHECK(ptr.Buffer().size(), 5ULL);
 
 			ptr.Limit(3);
@@ -896,7 +896,7 @@ namespace pr::script
 			// Because of this, Buffer().size() should not be used to determine the available characters
 			// after a call to ReadAhead()
 			auto len1 = ptr.ReadAhead(5);
-			PR_CHECK(len, 3);
+			PR_CHECK(len1, 3);
 			PR_CHECK(ptr.Buffer().size(), 5ULL);
 		}
 		{// Matching

@@ -50,8 +50,11 @@ namespace view3d
 			for (auto& wnd : m_wnd_cont)
 				wnd->RemoveObjectsById(&args.m_context_id, 1, false, reload);
 		};
-		m_sources.OnStoreChanged += [&](ScriptSources&, ScriptSources::StoreChangedEventArgs const& args)
+		m_sources.OnStoreChange += [&](ScriptSources&, ScriptSources::StoreChangeEventArgs const& args)
 		{
+			if (args.m_before)
+				return;
+
 			switch (args.m_reason)
 			{
 			default:
@@ -68,7 +71,7 @@ namespace view3d
 			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
 			case ScriptSources::EReason::Reload:
 				for (auto& wnd : m_wnd_cont)
-					wnd->AddObjectsById(std::begin(args.m_context_ids), int(args.m_context_ids.size()), false);
+					wnd->AddObjectsById(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
 
 				break;
 			}
@@ -112,23 +115,14 @@ namespace view3d
 		pr::erase_first(m_wnd_cont, [=](auto& wnd){ return wnd.get() == window; });
 	}
 
-	// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, Includes const& includes, OnAddCB on_add)
-	{
-		// Note: this can be called from a worker thread
-		return m_sources.AddFile(filepath, enc, includes, on_add);
-	}
-
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
-	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add)
+	pr::Guid Context::LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add) // worker thread context
 	{
-		// Note: this can be called from a worker thread
-		return m_sources.AddScript(ldr_script, file, enc, context_id, includes, on_add);
+		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
-	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add)
+	pr::Guid Context::LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add) // worker thread context
 	{
-		// Note: this can be called from a worker thread
-		return m_sources.AddScript(ldr_script, file, enc, context_id, includes, on_add);
+		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
 
 	// Load/Add ldr objects and return the first object from the script
@@ -554,10 +548,13 @@ namespace view3d
 		auto scene = pr::ldr::CreateDemoScene();
 
 		// Add the demo objects to the sources
-		m_sources.AddScript(scene, false, pr::EEncoding::utf8, &GuidDemoSceneObjects, Includes(), nullptr);
-
-		// Add the demo objects to 'window'
-		window->AddObjectsById(&GuidDemoSceneObjects, 1, false);
+		m_sources.Add(scene, false, pr::EEncoding::utf8, ScriptSources::EReason::NewData, &GuidDemoSceneObjects, Includes(), [=](pr::Guid const& id, bool before)
+		{
+			if (before)
+				window->RemoveObjectsById(&id, 1, 0);
+			else
+				window->AddObjectsById(&id, 1, 0);
+		});
 
 		// Position the camera to look at the scene
 		View3D_ResetView(window, View3DV4{0.0f, 0.0f, -1.0f, 0.0f}, View3DV4{0.0f, 1.0f, 0.0f, 0.0f}, 0, TRUE, TRUE);

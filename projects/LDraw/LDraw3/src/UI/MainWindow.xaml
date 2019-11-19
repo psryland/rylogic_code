@@ -33,10 +33,6 @@
 					Command="{Binding OpenFile}"
 					ToolTip="View 3D objects from a file in a scene"
 					/>
-				<MenuItem Header="_Open File Additional"
-					Command="{Binding OpenFileAdditional}"
-					ToolTip="Add 3D objects from a file to a scene"
-					/>
 				<MenuItem Header="_Save File"
 					Command="{Binding SaveFile}"
 					IsEnabled="{Binding ScriptHasFocusAndNeedsSave}"
@@ -48,14 +44,14 @@
 					ToolTip="Save the current script to a new location"
 					/>
 				<Separator/>
-				<MenuItem
-					Header="_Preferences..."
-					Command="{Binding ShowPreferences}"
-					/>
-				<Separator/>
 				<gui:RecentFilesMenuItem
 					Header= "_Recent Files"
 					Name="m_recent_files"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="_Preferences..."
+					Command="{Binding ShowPreferences}"
 					/>
 				<Separator/>
 				<MenuItem
@@ -196,20 +192,20 @@
 				<StackPanel
 					Orientation="Horizontal"
 					>
-					<TextBlock
-						Text="{Binding ActiveScript.Editor.CurrentLineIndex, StringFormat=Ln: {0}, FallbackValue=''}"
+					<TextBox
+						Text="{Binding ActiveScript.Location.Line, StringFormat=Ln: {0}, FallbackValue='', Mode=OneWay}"
 						Background="White"
 						Padding="2,0,2,0"
 						Margin="2,0,2,0"
 						/>
-					<TextBlock
-						Text="{Binding ActiveScript.Editor.CurrentColumn, StringFormat=Col: {0}, FallbackValue=''}"
+					<TextBox
+						Text="{Binding ActiveScript.Location.Column, StringFormat=Col: {0}, FallbackValue='', Mode=OneWay}"
 						Background="White"
 						Padding="2,0,2,0"
 						Margin="2,0,2,0"
 						/>
-					<TextBlock
-						Text="{Binding ActiveScript.Editor.SelectionStart, StringFormat=Sel: {0}, FallbackValue=''}"
+					<TextBox
+						Text="{Binding ActiveScript.CaretPositionDescription, FallbackValue='', Mode=OneWay}"
 						Background="White"
 						Padding="2,0,2,0"
 						Margin="2,0,2,0"

@@ -919,33 +919,42 @@ namespace pr
 			}
 		}
 
-		// Implicit conversion to a type that can be constructed from begin/end iterators
-		// This allows cast to std::vector<> among others.
-		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the
-		// default alignment causes a compiler error because of std::vector.resize().
-		template <typename ArrayType> operator ArrayType() const
+		// Implicit conversion to a type that can be constructed from begin/end iterators 
+		// This allows cast to std::vector<> among others. 
+		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the 
+		// default alignment causes a compiler error because of std::vector.resize(). 
+		template <typename ArrayType, typename = std::enable_if_t<std::is_same_v<typename ArrayType::value_type, value_type>>>
+		operator ArrayType() const
 		{
 			return ArrayType(begin(), end());
 		}
-	};
 
-	// Operators
-	template <typename T1,int L1,bool F1,typename A1, typename T2,int L2,bool F2,typename A2> 
-	inline bool operator == (vector<T1,L1,F1,A1> const& lhs, vector<T2,L2,F2,A2> const& rhs)
-	{
-		if (lhs.size() != rhs.size()) return false;
-		auto lptr = std::begin(lhs);
-		auto rptr = std::begin(rhs);
-		for (auto n = lhs.size(); n-- != 0;)
-			if (!(*lptr == *rptr)) return false;
-		
-		return true;
-	}
-	template <typename T1,int L1,bool F1,typename A1, typename T2,int L2,bool F2,typename A2> 
-	inline bool operator != (vector<T1,L1,F1,A1> const& lhs, vector<T2,L2,F2,A2> const& rhs)
-	{
-		return !(lhs == rhs);
-	}
+		// Implicit conversion to initialiser list.
+		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the
+		// default alignment causes a compiler error because of std::vector.resize().
+		operator std::initializer_list<Type const>() const
+		{
+			return std::initializer_list<Type const>(data(), data() + size());
+		}
+
+		// Operators
+		template <typename T, int L, bool F, typename A>
+		friend bool operator == (vector const& lhs, vector<T, L, F, A> const& rhs)
+		{
+			if (lhs.size() != rhs.size()) return false;
+			auto lptr = std::begin(lhs);
+			auto rptr = std::begin(rhs);
+			for (auto n = lhs.size(); n-- != 0;)
+				if (!(*lptr == *rptr)) return false;
+
+			return true;
+		}
+		template <typename T, int L, bool F, typename A> 
+		friend bool operator != (vector const& lhs, vector<T, L, F, A> const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+	};
 
 	#ifdef PR_NOEXCEPT_DEFINED
 	#   undef PR_NOEXCEPT_DEFINED

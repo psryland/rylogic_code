@@ -11,9 +11,9 @@ namespace view3d
 	// Global data for this dll
 	struct Context :pr::AlignTo<16>
 	{
+		struct EmbCodeCB { int m_lang; EmbeddedCodeHandlerCB m_cb; };
 		using InitSet = std::unordered_set<View3DContext>;
 		using WindowCont = std::vector<std::unique_ptr<Window>>;
-		struct EmbCodeCB { int m_lang; EmbeddedCodeHandlerCB m_cb; };
 		using EmbCodeCBCont = pr::vector<EmbCodeCB>;
 		using IEmbeddedCode = pr::script::IEmbeddedCode;
 		using Includes = pr::script::Includes;
@@ -50,10 +50,7 @@ namespace view3d
 		Window* WindowCreate(HWND hwnd, View3DWindowOptions const& opts);
 		void WindowDestroy(Window* window);
 
-		// Load/Add a script source. Returns the Guid of the context that the objects were added to.
-		pr::Guid LoadScriptSource(std::filesystem::path const& filepath, pr::EEncoding enc, Includes const& includes, OnAddCB on_add);
-
-		// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
+		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add);
 		pr::Guid LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add);
 

@@ -98,7 +98,7 @@
 						x:Name="m_btn_toggle_scene_select"
 						/>
 					<TextBlock
-						Text="{Binding SelectedScenesDescription}"
+						Text="{Binding Context.SelectedScenesDescription}"
 						VerticalAlignment="Center"
 						Background="White"
 						MinWidth="80"
@@ -109,12 +109,13 @@
 						Placement="Bottom"
 						PlacementTarget="{Binding ElementName=m_tb_selected_scenes}"
 						IsOpen="{Binding IsChecked, ElementName=m_btn_toggle_scene_select}"
+						StaysOpen="False"
 						PopupAnimation="Fade"
 						x:Name="m_popup_scene_list"
 						>
 						<ListBox
-							ItemsSource="{Binding AvailableScenes}"
-							SelectedItem="{Binding AvailableScenes/, Mode=TwoWay}"
+							ItemsSource="{Binding Context.AvailableScenes}"
+							SelectedItem="{Binding Context.AvailableScenes/, Mode=TwoWay}"
 							>
 							<ListBox.ItemTemplate>
 								<DataTemplate>
@@ -135,7 +136,7 @@
 				<Button
 					ToolTip="Display this script in the selected scene. [F5]"
 					Command="{Binding Render}"
-					IsEnabled="{Binding CanRender}"
+					IsEnabled="{Binding Context.CanRender}"
 					>
 					<Image
 						Source="{StaticResource display}"
@@ -147,7 +148,7 @@
 				<Button
 					ToolTip="Remove script objects from the selected scene. [Ctrl+D]"
 					Command="{Binding RemoveObjects}"
-					IsEnabled="{Binding CanRender}"
+					IsEnabled="{Binding Context.CanRender}"
 					>
 					<Image
 						Source="{StaticResource bin}"

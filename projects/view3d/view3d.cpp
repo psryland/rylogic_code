@@ -191,31 +191,18 @@ pr::script::Includes GetIncludes(View3DIncludes const* includes)
 	return std::move(inc);
 }
 
-// Add an Ldr source file. This file will be watched and the object store updated whenever
-// it, or any of it's included dependencies change. The returned GUID is the context id for
-// all objects added as a result of 'filepath' and its dependencies.
-VIEW3D_API GUID __stdcall View3D_LoadScriptSource(wchar_t const* filepath, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx)
-{
-	try
-	{
-		// Concurrent entry is allowed.
-		//'DllLockGuard;
-		return Dll().LoadScriptSource(filepath, pr::EEncoding::auto_detect, GetIncludes(includes), { on_add, ctx });
-	}
-	CatchAndReport(View3D_LoadScriptSource, (View3DWindow)nullptr, pr::GuidZero);
-}
-
 // Add an ldr script string. This will create all objects declared in 'ldr_script'
 // with context id 'context_id' if given, otherwise an id will be created
-VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx)
+VIEW3D_API GUID __stdcall View3D_LoadScript(wchar_t const* ldr_script, BOOL is_file, GUID const* context_id, View3DIncludes const* includes, View3D_OnAddCB on_add, void* ctx)
 {
 	try
 	{
 		// Concurrent entry is allowed
-		//'DllLockGuard;
-		auto is_file = file != 0;
-		auto enc = is_file ? pr::EEncoding::auto_detect : pr::EEncoding::utf16_le;
-		return Dll().LoadScript(ldr_script, is_file, enc, context_id, GetIncludes(includes), { on_add, ctx });
+		auto enc = is_file != 0 ? pr::EEncoding::auto_detect : pr::EEncoding::utf16_le;
+		return Dll().LoadScript(ldr_script, is_file != 0, enc, context_id, GetIncludes(includes), [=](pr::Guid const& id, bool before)
+			{
+				on_add(ctx, id, before);
+			});
 	}
 	CatchAndReport(View3D_LoadScript, (View3DWindow)nullptr, pr::GuidZero);
 }

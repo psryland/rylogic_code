@@ -35,36 +35,36 @@ namespace pr::script
 
 	public:
 
-		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr) noexcept
-			:m_pp(inc, mac, emb)
+		Reader(bool case_sensitive = false, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr) noexcept
+			:m_pp(inc, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
 			,ReportError(DefaultErrorHandler)
 		{}
-		Reader(Src& src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:m_pp(src, inc, mac, emb)
+		Reader(Src& src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:m_pp(src, inc, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
 			,ReportError(DefaultErrorHandler)
 		{}
-		Reader(Src* src, bool delete_on_pop, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:m_pp(src, delete_on_pop, inc, mac, emb)
+		Reader(Src* src, bool delete_on_pop, bool case_sensitive = false, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:m_pp(src, delete_on_pop, inc, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
 			,ReportError(DefaultErrorHandler)
 		{}
-		Reader(char const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:m_pp(src, inc, mac, emb)
+		Reader(char const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:m_pp(src, inc, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
 			,ReportError(DefaultErrorHandler)
 		{}
-		Reader(wchar_t const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:m_pp(src, inc, mac, emb)
+		Reader(wchar_t const* src, bool case_sensitive = false, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:m_pp(src, inc, emb)
 			,m_delim(L" \t\r\n\v,;")
 			,m_last_keyword()
 			,m_case_sensitive(case_sensitive)
@@ -91,12 +91,6 @@ namespace pr::script
 		IIncludeHandler& Includes() const noexcept
 		{
 			return *m_pp.Includes;
-		}
-
-		// Access the macro handler
-		IMacroHandler& Macros() const noexcept
-		{
-			return *m_pp.Macros;
 		}
 
 		// Get/Set delimiter characters

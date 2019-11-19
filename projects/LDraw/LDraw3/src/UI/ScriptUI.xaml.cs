@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -38,6 +39,8 @@ namespace LDraw.UI
 		//    temporary script filepath and get saved to a new location by the user.
 		//  - The Scenes collection view uses a wrapper around SceneUI because Combobox.ItemsSource
 		//    treats the items as child controls and tried to become their parent.
+		//  - Each ScriptUI is responsible for the objects it creates and the scenes those objects are
+		//    added to. Closing a ScriptUI removes its objects from any associated scenes.
 
 		static ScriptUI()
 		{
@@ -58,13 +61,10 @@ namespace LDraw.UI
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
-			Model = model;
-			ContextId = context_id;
-			Filepath = filepath;
-			ScriptName = name;
-			Editor = m_editor;
+			Context = new Context(model, name, context_id);
 			LdrAutoComplete = new View3d.AutoComplete();
-			AvailableScenes = new ListCollectionView(new List<SceneWrapper>());
+			Filepath = filepath;
+			Editor = m_editor;
 
 			Render = Command.Create(this, RenderInternal);
 			SaveScript = Command.Create(this, SaveScriptInternal);
@@ -79,13 +79,12 @@ namespace LDraw.UI
 		}
 		public void Dispose()
 		{
-			// Delete empty temporary scripts
-			//todo if (Model != null && Editor != null && Editor.TextLength == 0 && Model.IsTempScriptFilepath(Filepath))
-			//todo 	Path_.DelFile(Filepath, fail_if_missing: false);
+			// Remove objects from all scenes
+			Context.SelectedScenes = Array.Empty<SceneUI>();
+			Model.Scripts.Remove(this);
 
-			//Scene = null;
-			Model = null!;
 			Editor = null!;
+			Context = null!;
 			DockControl = null!;
 			GC.SuppressFinalize(this);
 		}
@@ -129,57 +128,76 @@ namespace LDraw.UI
 		}
 		private DockControl m_dock_control = null!;
 
-		/// <summary>The name assigned to this script UI</summary>
-		public string ScriptName
+		/// <summary>The context id and scenes that associated objects are added to</summary>
+		public Context Context
 		{
-			get => m_script_name;
-			set
-			{
-				if (m_script_name == value) return;
-				m_script_name = value;
-				if (DockControl != null)
-					DockControl.TabText = m_script_name ?? string.Empty;
-
-				NotifyPropertyChanged(nameof(ScriptName));
-			}
-		}
-		private string m_script_name = null!;
-
-		/// <summary>App logic</summary>
-		public Model Model
-		{
-			get => m_model;
+			get => m_context;
 			private set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
+				if (m_context == value) return;
+				if (m_context != null)
 				{
-					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
-					m_model.Scripts.Remove(this);
+					m_context.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref m_context!);
 				}
-				m_model = value;
-				if (m_model != null)
+				m_context = value;
+				if (m_context != null)
 				{
-					// Don't add this script to m_model.Scripts, that's the caller's choice.
-					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
-					Dispatcher.BeginInvoke(() => HandleScenesCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)));
+					m_context.PropertyChanged += HandlePropertyChanged;
 				}
 
 				// Handlers
-				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
-					// Refresh the scenes collection
-					var scenes = (List<SceneWrapper>)AvailableScenes.SourceCollection;
-					scenes.Sync(Model.Scenes.Select(x => new SceneWrapper(x, this)));
-					if (!SelectedScenes.Any() && scenes.Count != 0) scenes[0].Selected = true;
-					AvailableScenes.Refresh();
+					switch (e.PropertyName)
+					{
+					case nameof(Context.Name):
+						{
+							// Update the tab text
+							if (DockControl != null)
+								DockControl.TabText = ScriptName ?? string.Empty;
+
+							NotifyPropertyChanged(nameof(ScriptName));
+							break;
+						}
+					}
 				}
 			}
 		}
-		private Model m_model = null!;
+		private Context m_context = null!;
 
-		/// <summary>Add settings</summary>
-		public SettingsData Settings => Model.Settings;
+		/// <summary>Auto complete provider for LDraw script</summary>
+		private View3d.AutoComplete LdrAutoComplete { get; }
+
+		/// <summary>App logic</summary>
+		private Model Model => Context.Model;
+
+		/// <summary>The name assigned to this script UI</summary>
+		public string ScriptName => Context.Name;
+
+		/// <summary>Context id for objects created by this scene</summary>
+		public Guid ContextId => Context.ContextId;
+
+		/// <summary>The filepath for this script</summary>
+		public string Filepath
+		{
+			get => m_filepath;
+			set
+			{
+				if (m_filepath == value) return;
+
+				// Update the ScriptName if the new filepath isn't a temp script, and the old name was not set by the user
+				var update_name = !Model.IsTempScriptFilepath(value) && (Model.IsGeneratedScriptName(ScriptName) || ScriptName == Path_.FileTitle(m_filepath));
+
+				// Set the new filepath
+				m_filepath = value;
+
+				// Update the script name if it hasn't been changed by the user
+				if (update_name)
+					Context.Name = Path_.FileName(m_filepath);
+			}
+		}
+		private string m_filepath = null!;
 
 		/// <summary>The text editor control</summary>
 		public TextEditor Editor
@@ -191,6 +209,8 @@ namespace LDraw.UI
 				if (m_text_editor != null)
 				{
 					// Unhook handlers
+					m_text_editor.TextArea.Caret.PositionChanged -= HandleCaretPositionChanged;
+					m_text_editor.TextArea.SelectionChanged -= HandleSelectionChanged;
 					m_text_editor.PreviewKeyDown -= HandleKeyDown;
 
 					// Release the template fields collection
@@ -225,6 +245,8 @@ namespace LDraw.UI
 
 					// Hook up handlers
 					m_text_editor.PreviewKeyDown += HandleKeyDown;
+					m_text_editor.TextArea.SelectionChanged += HandleSelectionChanged;
+					m_text_editor.TextArea.Caret.PositionChanged += HandleCaretPositionChanged;
 				}
 
 				// Handlers
@@ -310,6 +332,15 @@ namespace LDraw.UI
 							break;
 						}
 					}
+				}
+				void HandleSelectionChanged(object sender, EventArgs e)
+				{
+					NotifyPropertyChanged(nameof(CaretPositionDescription));
+				}
+				void HandleCaretPositionChanged(object sender, EventArgs e)
+				{
+					NotifyPropertyChanged(nameof(CaretPositionDescription));
+					NotifyPropertyChanged(nameof(Location));
 				}
 				void ShowAutoComplete()
 				{
@@ -421,61 +452,39 @@ namespace LDraw.UI
 		private DispatcherTimer m_folding_timer = null!;
 		private TextSegmentCollection<TextSegment> m_fields = null!;
 
-		/// <summary>The available scenes</summary>
-		public ICollectionView AvailableScenes { get; }
+		/// <summary>The current position in the editor</summary>
+		public TextLocation Location => Editor.Document.GetLocation(Editor.CaretOffset);
 
-		/// <summary>The scene that this script renders to</summary>
-		public IEnumerable<SceneUI> SelectedScenes
+		/// <summary>The range of selected characters</summary>
+		public string CaretPositionDescription
 		{
 			get
 			{
-				var available = (List<SceneWrapper>)AvailableScenes.SourceCollection;
-				return available.Where(x => x.Selected).Select(x => x.SceneUI);
+				var ss = Editor.SelectionStart;
+				var sl = Editor.SelectionLength;
+				return sl == 0 ? $"Pos: {Editor.CaretOffset}" : $"Sel: {ss}..{ss+sl} ({sl})";
 			}
 		}
 
-		/// <summary>A string description of the output scenes for this script</summary>
-		public string SelectedScenesDescription
+		/// <summary>Update the objects associated with 'ContextId' within View3D's object store</summary>
+		private void UpdateObjects()
 		{
-			get
+			var scenes = Context.SelectedScenes.ToArray();
+			var include_paths = Model.Settings.IncludePaths;
+
+			// Load the script file in a background thread
+			ThreadPool.QueueUserWorkItem(x =>
 			{
-				var desc = string.Join(",", SelectedScenes.Select(x => x.SceneName));
-				return desc.Length != 0 ? desc : "None";
-			}
+				Model.View3d.LoadScript(Filepath, true, ContextId, include_paths, OnAdd);
+				void OnAdd(Guid id, bool before)
+				{
+					if (before)
+						Model.Clear(scenes, id);
+					else
+						Model.AddObjects(scenes, id);
+				}
+			});
 		}
-
-		/// <summary>True if there is a scene to render to</summary>
-		public bool CanRender => SelectedScenes.Any();
-
-		/// <summary>Context id for objects created by this scene</summary>
-		public Guid ContextId { get; }
-
-		/// <summary>The filepath for this script</summary>
-		public string Filepath
-		{
-			get => m_filepath;
-			set
-			{
-				if (m_filepath == value) return;
-
-				// Update the ScriptName if the new filepath isn't a temp script, and the old name was not set by the user
-				var update_name = !Model.IsTempScriptFilepath(value) && (Model.IsGeneratedScriptName(ScriptName) || ScriptName == Path_.FileTitle(m_filepath));
-
-				// Set the new filepath
-				m_filepath = value;
-
-				// Update the script name if it hasn't been changed by the user
-				if (update_name)
-					ScriptName = Path_.FileTitle(m_filepath);
-			}
-		}
-		private string m_filepath = null!;
-
-		/// <summary>Auto complete provider for LDraw script</summary>
-		private View3d.AutoComplete LdrAutoComplete { get; }
-
-		/// <summary>Text file types that can be edited in the script UI</summary>
-		private string EditableFilesFilter => Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");
 
 		/// <summary>Return the tab context menu</summary>
 		private ContextMenu TabCMenu()
@@ -553,10 +562,14 @@ namespace LDraw.UI
 		public Command Render { get; }
 		private void RenderInternal()
 		{
-			SaveFile();
-			var scenes = SelectedScenes.ToArray();
-			if (scenes.Length == 0) return;
-			Model.AddScript(Editor.Text, scenes, ContextId);
+			if (SaveNeeded)
+				SaveFile();
+
+			var scenes = Context.SelectedScenes.ToArray();
+			if (scenes.Length == 0)
+				return;
+
+			UpdateObjects();
 		}
 
 		/// <summary>Save the contents of the script to file</summary>
@@ -566,20 +579,19 @@ namespace LDraw.UI
 			SaveFile();
 		}
 
-		/// <summary>Remove objects associated with this script from the scene</summary>
+		/// <summary>Remove objects associated with this script from the selected scenes</summary>
 		public Command RemoveObjects { get; }
 		private void RemoveObjectsInternal()
 		{
-			var scenes = SelectedScenes.ToArray();
+			var scenes = Context.SelectedScenes.ToArray();
 			if (scenes.Length == 0) return;
-			Model.Clear(scenes, new[] { ContextId }, 1, 0);
+			Model.Clear(scenes, ContextId);
 		}
 
 		/// <summary>Close and remove this script</summary>
 		public Command CloseScript { get; }
 		private void CloseScriptInternal()
 		{
-			Model.Scripts.Remove(this);
 			Dispose();
 		}
 
@@ -596,53 +608,8 @@ namespace LDraw.UI
 			return char.IsLetterOrDigit(ch) || ch == '*' || ch == '_';
 		}
 
-		/// <summary>Binding wrapper for a scene</summary>
-		private class SceneWrapper
-		{
-			// Notes:
-			//  - This wrapper is needed because when UIElement objects are used as the items
-			//    of a combo box it treats them as child controls, becoming their parent.
-
-			private readonly ScriptUI m_owner;
-			public SceneWrapper(SceneUI scene, ScriptUI owner)
-			{
-				SceneUI = scene;
-				m_owner = owner;
-			}
-
-			/// <summary>The wrapped scene</summary>
-			public SceneUI SceneUI { get; }
-
-			/// <summary>The name of the wrapped scene</summary>
-			public string SceneName => SceneUI.SceneName;
-
-			/// <summary>True if the scene is selected</summary>
-			public bool Selected
-			{
-				get => m_selected;
-				set
-				{
-					m_selected = value;
-					m_owner.NotifyPropertyChanged(nameof(ScriptUI.SelectedScenes));
-					m_owner.NotifyPropertyChanged(nameof(ScriptUI.SelectedScenesDescription));
-					m_owner.NotifyPropertyChanged(nameof(ScriptUI.CanRender));
-				}
-			}
-			private bool m_selected;
-
-			/// <summary></summary>
-			public static implicit operator SceneUI?(SceneWrapper? x) => x?.SceneUI;
-
-			/// <summary></summary>
-			public override bool Equals(object obj)
-			{
-				return obj is SceneWrapper wrapper && ReferenceEquals(SceneUI, wrapper.SceneUI);
-			}
-			public override int GetHashCode()
-			{
-				return SceneUI.GetHashCode();
-			}
-		}
+		/// <summary>Text file types that can be edited in the script UI</summary>
+		private static readonly string EditableFilesFilter = Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");
 
 		/// <summary>Auto completion item</summary>
 		private class CompletionItem :ICompletionData

@@ -1,19 +1,15 @@
 Immediate ToDo:
 	
 LDraw
-	- Recent files not working
-	- Drop onto view
-	- Open file opens a script window
-	- Closing a temp script delete's it from disk too
 	- Saved views
 	- Linked cameras
 	- Linked axes
 	- Show selection
 	- Show bounds
-	- Status bar shows line/column/selection ActiveScript != null
+	- Highlight errors in editor
+	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null
 	- Animation support
-	- No brace folding within comments
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
 	- move LightingUI to pr.view3d
@@ -24,6 +20,7 @@ LDraw
 	- Replace area select view3d objects with WPF primitives
 	- Replace resizer view3d objects with WPF primitives
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
+	- Script parsing performance profiling
 	
 CoinFlip
 	Candle Charts:

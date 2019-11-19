@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
 using LDraw.Dialogs;
 using LDraw.UI;
+using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -25,7 +28,6 @@ namespace LDraw
 			NewScript = Command.Create(this, NewScriptInternal);
 			NewScene = Command.Create(this, NewSceneInternal);
 			OpenFile = Command.Create(this, OpenFileInternal);
-			OpenFileAdditional = Command.Create(this, OpenFileAdditionalInternal);
 			SaveFile = Command.Create(this, SaveFileInternal);
 			SaveFileAs = Command.Create(this, SaveFileAsInternal);
 			ShowPreferences = Command.Create(this, ShowPreferencesInternal);
@@ -34,6 +36,7 @@ namespace LDraw
 			Exit = Command.Create(this, ExitInternal);
 
 			m_recent_files.Import(Model.Settings.RecentFiles);
+			m_recent_files.RecentFileSelected = fp => OpenFileCore(fp);
 
 			InitDockContainer();
 
@@ -41,14 +44,14 @@ namespace LDraw
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
-			Model.Settings.UILayout = m_dc.SaveLayout();
+			m_dc.LayoutChanged -= SaveLayout;
 			base.OnClosing(e);
 		}
 		protected override void OnClosed(EventArgs e)
 		{
 			Model.CleanTemporaryScripts();
-			Model = null!;
 			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
+			Model = null!;
 			Log.Dispose();
 			base.OnClosed(e);
 		}
@@ -61,6 +64,29 @@ namespace LDraw
 				e.Handled = true;
 			}
 			base.OnPreviewKeyDown(e);
+		}
+		protected override void OnPreviewDrop(DragEventArgs e)
+		{
+			if (e.Data.GetDataPresent(DataFormats.FileDrop) &&
+				e.Data.GetData(DataFormats.FileDrop) is string[] files)
+			{
+				// If dropped on a specific scene, make that the selected scene for the scriptUI
+				var scenes = e.Source is SceneUI scene
+					? new[] { scene }
+					: null;
+
+				// Open each dropped file
+				foreach (var file in files)
+				{
+					var script = OpenFileCore(file, scenes);
+					if (script != null)
+						script.Render.Execute();
+				}
+
+				e.Handled = true;
+			}
+
+			base.OnPreviewDrop(e);
 		}
 
 		/// <summary>App logic</summary>
@@ -179,30 +205,95 @@ namespace LDraw
 			// Add a log window
 			m_dc.Add(new LogUI(Model), EDockSite.Right).IsAutoHide = true;
 
+			// Add the asset list window
+			m_dc.Add(new AssetListUI(Model), EDockSite.Right).IsAutoHide = true;
+
 			// Add a main scene window
 			var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
-			m_dc.Add(scene, EDockSite.Centre).Activated = true;
+			m_dc.Add(scene, EDockSite.Centre);
 
 			// Restore the layout
 			m_dc.LoadLayout(Model.Settings.UILayout, (name, type, udat) =>
 			{
 				// Create scenes that are saved in the layout
 				if (type == typeof(SceneUI).FullName)
-					return new SceneUI(Model, name).DockControl;
+					return Model.Scenes.Add2(new SceneUI(Model, name)).DockControl;
 
-				// Ignore scripts that are in the settings, 
-				
+				// Ignore scripts that are in the settings
 				return null;
 			});
 
 			// Update our reference to the active content whenever it changes in the dock container
-			m_dc.ActiveContentChanged += delegate
-			{
-				ActiveContent = m_dc.ActiveDockable;
-			};
+			m_dc.ActiveContentChanged += delegate { ActiveContent = m_dc.ActiveDockable; };
+			m_dc.LayoutChanged += SaveLayout;
+			scene.DockControl.IsActiveContent = true;
 
 			// Add the menu for dock container windows
 			m_menu.Items.Insert(m_menu.Items.Count - 1, m_dc.WindowsMenu());
+		}
+
+		/// <summary>Persist the current layout to settings</summary>
+		private void SaveLayout(object? sender = null, EventArgs? args = null)
+		{
+			Model.Settings.UILayout = m_dc.SaveLayout();
+		}
+
+		/// <summary>Open a file</summary>
+		private ScriptUI? OpenFileCore(string? filepath = null, IList<SceneUI>? scenes = null)
+		{
+			try
+			{
+				// Prompt for a filepath if none provided
+				if (filepath == null || filepath.Length == 0)
+				{
+					var filter = Util.FileDialogFilter(
+						"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
+						"Ldr Script", "*.ldr",
+						"Binary Model File", "*.p3d",
+						"3D Studio Max Model File", "*.3ds",
+						"STL CAD Model File", "*.stl",
+						"Comma Separated Values", "*.csv",
+						"All Files", "*.*");
+
+					var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = filter };
+					if (dlg.ShowDialog(App.Current.MainWindow) != true)
+						return null;
+					
+					filepath = dlg.FileName ?? throw new FileNotFoundException($"A invalid filepath was selected");
+				}
+
+				// If the file doesn't exist reject it
+				if (!Path_.FileExists(filepath))
+					throw new FileNotFoundException($"File '{filepath}' does not exist");
+
+				// Notify
+				Model.NotifyFileOpening(filepath);
+
+				var script = (ScriptUI?)null;
+				var name = Path_.FileName(filepath);
+
+				// Open script files in an editor
+				if (Path_.Extn(filepath).ToLower() == ".ldr")
+				{
+					script = Model.Scripts.Add2(new ScriptUI(Model, name, filepath, Guid.NewGuid()));
+					if (scenes != null) script.Context.SelectedScenes = scenes;
+					m_dc.Add(script, EDockSite.Left);
+				}
+				// Open non-script files directly into the selected scenes
+				else
+				{
+					var asset = Model.Assets.Add2(new AssetUI(Model, name, filepath, Guid.NewGuid()));
+					if (scenes != null) asset.Context.SelectedScenes = scenes;
+				}
+
+				return script;
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Info, ex, "File open failed.");
+				MsgBox.Show(this, $"File open failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
+				return null;
+			}
 		}
 
 		/// <summary>Add a new Script to the view</summary>
@@ -227,16 +318,7 @@ namespace LDraw
 		public Command OpenFile { get; }
 		private void OpenFileInternal()
 		{
-			Model.Clear();
-			Model.OpenFile();
-		}
-
-		/// <summary>Open a file</summary>
-		public Command OpenFileAdditional { get; }
-		private void OpenFileAdditionalInternal()
-		{
-			// Don't clear first
-			Model.OpenFile();
+			OpenFileCore();
 		}
 
 		/// <summary>Save the currently focused script</summary>

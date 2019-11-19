@@ -303,8 +303,11 @@ namespace LDraw
 				ThreadPool.QueueUserWorkItem(x =>
 				{
 					// Load a source file and save the context id for that file
-					var id = View3d.LoadScriptSource(filepath, true, include_paths: Model.IncludePaths.ToArray());
-					Model.Dispatcher.BeginInvoke(() => AddObjects(id));
+					View3d.LoadScript(filepath, true, null, Model.IncludePaths.ToArray(), (id,before) =>
+					{
+						if (before) return;
+						AddObjects(id);
+					});
 				});
 			}
 

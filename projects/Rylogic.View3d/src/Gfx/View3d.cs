@@ -952,7 +952,8 @@ namespace Rylogic.Gfx
 		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
 
 		/// <summary>Callback for continuations after adding scripts/files</summary>
-		public delegate bool OnAddCB(IntPtr ctx, ref Guid context_id, bool add_complete);
+		public delegate void OnAddCB(IntPtr ctx, ref Guid context_id, bool before);
+		public delegate void LoadScriptCompleteCB(Guid context_id, bool before);
 
 		/// <summary>Callback when the sources are reloaded</summary>
 		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
@@ -997,8 +998,10 @@ namespace Rylogic.Gfx
 		private readonly int m_thread_id;                 // The main thread id
 		private ReportErrorCB m_error_cb;                 // Reference to callback
 		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
+		private OnAddCB m_on_add_cb;                      // Reference to callback
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
+		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
 		#if PR_VIEW3D_CREATE_STACKTRACE
 		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
@@ -1033,6 +1036,7 @@ namespace Rylogic.Gfx
 			m_dispatcher = Dispatcher.CurrentDispatcher;
 			m_thread_id = Thread.CurrentThread.ManagedThreadId;
 			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
+			m_load_script_handlers = new List<LoadScriptCompleteCB>();
 
 			try
 			{
@@ -1060,6 +1064,15 @@ namespace Rylogic.Gfx
 					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
 					AddFileProgress?.Invoke(this, args);
 					return args.Cancel;
+				}
+
+				// Load script 'OnAdd' callbacks
+				m_on_add_cb = HandleLoadScript;
+				void HandleLoadScript(IntPtr ctx, ref Guid context_id, bool before)
+				{
+					var cb = Marshal.GetDelegateForFunctionPointer<LoadScriptCompleteCB>(ctx);
+					if (cb != null && !before) m_load_script_handlers.Remove(cb);
+					cb?.Invoke(context_id, before);
 				}
 
 				// Sign up for notification of the sources changing
@@ -1211,27 +1224,17 @@ namespace ldr
 		}
 
 		/// <summary>
-		/// Create multiple objects from a source script file and store the script file in the collection of sources.
-		/// The objects are created with the context Id that is returned from this function.
-		/// Callers should then add objects to a window using AddObjectsById.
-		/// 'include_paths' is a list of paths to use to resolve #include directives (or nullptr)</summary>
-		public Guid LoadScriptSource(string ldr_filepath, string[]? include_paths = null, OnAddCB? on_add = null)
-		{
-			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScriptSource(ldr_filepath, ref inc, on_add, IntPtr.Zero);
-		}
-
-		/// <summary>
-		/// Add an ldr script string. This will create all objects declared in 'ldr_script'
+		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
-		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null)
-		/// This is different to 'LoadScriptSource' because if 'ldr_script' is a file it is not added to
-		/// the collection of script sources. It's a one-off method to add objects.</summary>
-		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null, OnAddCB? on_add = null)
+		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
+		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
 		{
-			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
+			// Note: this method is asynchronous, it returns before objects have been added to the object manager
+			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
 			var ctx = context_id ?? Guid.NewGuid();
-			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, on_add, IntPtr.Zero);
+			if (on_add != null) m_load_script_handlers.Add(on_add);
+			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
+			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, m_on_add_cb, Marshal.GetFunctionPointerForDelegate(on_add));
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1325,8 +1328,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
 		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern Guid            View3D_LoadScriptSource      ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
-		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
+		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
 		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     (IntPtr context_ids, int include_count, int exclude_count);

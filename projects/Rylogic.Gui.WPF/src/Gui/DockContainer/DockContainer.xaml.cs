@@ -220,6 +220,8 @@ namespace Rylogic.Gui.WPF
 							foreach (var dc in affected)
 								dc.NotifyPaneChanged();
 
+							// Notify globally that the layout has changed
+							NotifyLayoutChanged();
 							break;
 						}
 					}
@@ -327,18 +329,32 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Raised whenever the active pane changes in this dock container or associated floating window or auto hide panel</summary>
-		public event EventHandler<ActivePaneChangedEventArgs> ActivePaneChanged
+		public event EventHandler<ActivePaneChangedEventArgs>? ActivePaneChanged
 		{
 			add { ActiveContentManager.ActivePaneChanged += value; }
 			remove { ActiveContentManager.ActivePaneChanged -= value; }
 		}
 
 		/// <summary>Raised whenever the active content changes in this dock container or associated floating window or auto hide panel</summary>
-		public event EventHandler<ActiveContentChangedEventArgs> ActiveContentChanged
+		public event EventHandler<ActiveContentChangedEventArgs>? ActiveContentChanged
 		{
 			add { ActiveContentManager.ActiveContentChanged += value; }
 			remove { ActiveContentManager.ActiveContentChanged -= value; }
 		}
+
+		/// <summary>Raised when a pane is added, removed, or moved within the tree of branches</summary>
+		public event EventHandler<EventArgs>? LayoutChanged;
+		private void NotifyLayoutChanged()
+		{
+			if (m_layout_changed_notify_pending) return;
+			m_layout_changed_notify_pending = true;
+			Dispatcher.BeginInvoke(() =>
+			{
+				LayoutChanged?.Invoke(this, EventArgs.Empty);
+				m_layout_changed_notify_pending = false;
+			});
+		}
+		private bool m_layout_changed_notify_pending;
 
 		/// <summary>Initiate dragging of a pane or content</summary>
 		internal static void DragBegin(DockControl draggee, Point ss_start_pt)

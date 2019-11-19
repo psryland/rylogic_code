@@ -90,8 +90,10 @@ namespace pr::script
 		EmbeddedCodeFactory m_emb_factory;
 		EmbeddedCodeHandlerCont m_emb_handlers;
 
+		// Preprocessor macro handler
+		MacroDB m_macros;
+
 		// Default handlers
-		MacroDB m_def_macros;
 		Includes m_def_includes;
 		
 		// Ignore missing includes or embedded code without handlers
@@ -99,35 +101,34 @@ namespace pr::script
 
 	public:
 
-		Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+		Preprocessor(IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
 			:Src(EEncoding::already_decoded, Loc())
 			,m_stack()
 			,m_if_stack()
 			,m_emb_factory(emb)
 			,m_emb_handlers()
-			,m_def_macros()
+			, m_macros()
 			,m_def_includes()
 			,m_ignore_missing()
-			,Macros(mac ? mac : &m_def_macros)
 			,Includes(inc ? inc : &m_def_includes)
 		{}
-		Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, mac, emb)
+		Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:Preprocessor(inc, emb)
 		{
 			Push(src, delete_on_pop, false);
 		}
-		Preprocessor(Src& src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, mac, emb)
+		Preprocessor(Src& src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:Preprocessor(inc, emb)
 		{
 			Push(src);
 		}
-		Preprocessor(std::string_view src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, mac, emb)
+		Preprocessor(std::string_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:Preprocessor(inc, emb)
 		{
 			Push(src);
 		}
-		Preprocessor(std::wstring_view src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, mac, emb)
+		Preprocessor(std::wstring_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+			:Preprocessor(inc, emb)
 		{
 			Push(src);
 		}
@@ -137,9 +138,6 @@ namespace pr::script
 		Preprocessor(Preprocessor const&) = delete;
 		Preprocessor& operator =(Preprocessor&& rhs) = delete;
 		Preprocessor& operator =(Preprocessor const& rhs) = delete;
-
-		// Access the macro handler
-		IMacroHandler* const Macros;
 
 		// Access the include handler
 		IIncludeHandler* const Includes;
@@ -268,7 +266,7 @@ namespace pr::script
 						if (src.Match(L"define", true))
 						{
 							EatLineSpace(src, 0, 0);
-							Macros->Add(Macro(src, src.Location()));
+							m_macros.Add(Macro(src, src.Location()));
 							is_output = false;
 							break;
 						}
@@ -278,8 +276,8 @@ namespace pr::script
 						{
 							EatLineSpace(src, 0, 0);
 							Macro macro(src, src.Location());
-							if (!Macros->Find(macro.m_tag))
-								Macros->Add(macro);
+							if (!m_macros.Find(macro.m_tag))
+								m_macros.Add(macro);
 
 							is_output = false;
 							break;
@@ -465,7 +463,7 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 							
-							if (Macros->Find(tag))
+							if (m_macros.Find(tag))
 							{
 								m_if_stack.push(false);
 								SkipPreprocessorBlock(loc_beg);
@@ -487,7 +485,7 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 
-							if (Macros->Find(tag))
+							if (m_macros.Find(tag))
 							{
 								m_if_stack.push(true);
 								EatLine(src, 0, 1);
@@ -649,7 +647,7 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 
-							Macros->Remove(tag);
+							m_macros.Remove(tag);
 
 							EatLine(src, 0, 1);
 							is_output = false;
@@ -693,7 +691,7 @@ namespace pr::script
 					BufferIdentifier(src, 0, &len);
 
 					// See if the identifier matches any macro definitions
-					auto macro = Macros->Find(string_t(src.Buffer(0, len)));
+					auto macro = m_macros.Find(string_t(src.Buffer(0, len)));
 					if (macro)
 					{
 						// This is a macro, so remove the macro identifier from the buffer
@@ -748,7 +746,7 @@ namespace pr::script
 				str::ExtractIdentifier(tag, ptr);
 
 				// Find the macro?
-				auto macro = Macros->Find(tag);
+				auto macro = m_macros.Find(tag);
 				if (!macro)
 					continue;
 
@@ -812,7 +810,7 @@ namespace pr::script
 					if (wrapped) if (*src == ')') ++src; else throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "unmatched ')'");
 
 					// If the macro is defined, add a 1 to the expression
-					expr.push_back(Macros->Find(tag) != nullptr ? '1' : '0');
+					expr.push_back(m_macros.Find(tag) != nullptr ? '1' : '0');
 				}
 
 				// Otherwise substitute the macro
@@ -824,7 +822,7 @@ namespace pr::script
 					auto len = 0;
 					BufferIdentifier(src, 0, &len);
 					auto tag = src.ReadN(len);
-					auto macro = Macros->Find(tag);
+					auto macro = m_macros.Find(tag);
 					if (macro == nullptr) throw ScriptException(EResult::InvalidPreprocessorDirective, loc, Fmt(L"Identifier '%s' is not defined", tag.c_str()));
 
 					// Read macro parameters if it has them
@@ -1221,7 +1219,7 @@ namespace pr::script
 				;
 
 			Includes inc;
-			Preprocessor pp(str_in, &inc, nullptr, [](auto){ return std::make_unique<EmbeddedLua>(); });
+			Preprocessor pp(str_in, &inc, [](auto){ return std::make_unique<EmbeddedLua>(); });
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;
