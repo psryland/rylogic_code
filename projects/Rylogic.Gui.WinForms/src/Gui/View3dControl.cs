@@ -97,7 +97,7 @@ namespace Rylogic.Gui.WinForms
 		public event EventHandler<ReportErrorEventArgs> ReportError;
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
-		public event EventHandler<View3d.SettingChangeEventArgs> OnSettingsChanged
+		[Obsolete("Sign up to the window one directly")] public event EventHandler<View3d.SettingChangeEventArgs> OnSettingsChanged
 		{
 			add    { Window.OnSettingsChanged += value; }
 			remove { Window.OnSettingsChanged -= value; }

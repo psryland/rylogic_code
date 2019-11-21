@@ -1,4 +1,9 @@
-﻿using System.Windows;
+﻿using System;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Data;
+using System.Windows.Input;
+using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF
 {
@@ -33,7 +38,11 @@ namespace Rylogic.Gui.WPF
 			// Rendering
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
-			ToggleAntiAliasing = Command.Create(this, ToggleAntiAliasingInternal);
+			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
+
+			Scene.ContextMenu = this.FindCMenu("ChartCMenu", new ChartCMenuBinding(this));
+			XAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new AxisCMenuBinding(XAxisPanel));
+			YAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new AxisCMenuBinding(YAxisPanel));
 		}
 
 		/// <summary>Toggle visibility of the origin point</summary>
@@ -90,7 +99,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Display the measurement tool</summary>
-		public Command ShowMeasureTool => Scene.ShowMeasureTool;
+		public Command ShowMeasureToolUI => Scene.ShowMeasureToolUI;
 
 		/// <summary>Auto range the chart</summary>
 		public Command DoAutoRange { get; private set; } = null!;
@@ -138,10 +147,291 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Toggle antialiasing on/off</summary>
-		public Command ToggleAntiAliasing { get; private set; } = null!;
+		public Command ToggleAntialiasing { get; private set; } = null!;
 		private void ToggleAntiAliasingInternal()
 		{
-			Options.AntiAliasing = !Options.AntiAliasing;
+			Options.Antialiasing = !Options.Antialiasing;
+		}
+
+		/// <summary>Context menu binding</summary>
+		public class ChartCMenuBinding :IView3dCMenu, IChartCMenu
+		{
+			// Notes:
+			//  - Don't sign up to events on 'm_owner' because that causes leaked references.
+			//    When the context menu gets replaced. Instead, have the owner call
+			//    'NotifyPropertyChanged'.
+
+			private readonly ChartControl m_owner;
+			public ChartCMenuBinding(ChartControl owner)
+			{
+				m_owner = owner;
+			}
+
+			/// <summary></summary>
+			public event PropertyChangedEventHandler? PropertyChanged;
+			public void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
+
+			#region IView3dCMenu
+
+			/// <inheritdoc/>
+			public bool OriginPointVisible
+			{
+				get => m_owner.Options.OriginPointVisible;
+				set => m_owner.Options.OriginPointVisible = value;
+			}
+			public ICommand ToggleOriginPoint
+			{
+				get => m_owner.ToggleOriginPoint;
+			}
+
+			/// <inheritdoc/>
+			public bool FocusPointVisible
+			{
+				get => m_owner.Options.FocusPointVisible;
+				set => m_owner.Options.FocusPointVisible = value;
+			}
+			public ICommand ToggleFocusPoint
+			{
+				get => m_owner.ToggleFocusPoint;
+			}
+
+			/// <summary>Toggle visibility of the focus point</summary>
+			public bool BBoxesVisible
+			{
+				get => m_owner.Window.BBoxesVisible;
+				set => m_owner.Window.BBoxesVisible = value;
+			}
+			public ICommand ToggleBBoxesVisible
+			{
+				get => m_owner.Scene.ToggleBBoxesVisible;
+			}
+
+			/// <inheritdoc/>
+			public ICommand ResetView
+			{
+				get => m_owner.DoAutoRange;
+			}
+
+			/// <inheritdoc/>
+			public bool Orthographic
+			{
+				get => m_owner.Options.Orthographic;
+				set => m_owner.Options.Orthographic = value;
+			}
+			public ICommand ToggleOrthographic
+			{
+				get => m_owner.ToggleOrthographic;
+			}
+
+			/// <inheritdoc/>
+			public EAlignDirection AlignDirection
+			{
+				get => EAlignDirection.None;
+				set { }
+			}
+
+			/// <inheritdoc/>
+			public EViewPreset ViewPreset
+			{
+				get => EViewPreset.Current;
+				set { }
+			}
+
+			/// <inheritdoc/>
+			public Colour32 BackgroundColour
+			{
+				get => m_owner.Options.BackgroundColour;
+				set => m_owner.Options.BackgroundColour = value;
+			}
+			public ICommand SetBackgroundColour
+			{
+				get => m_owner.SetBackgroundColour;
+			}
+
+			/// <inheritdoc/>
+			public bool Antialiasing
+			{
+				get => m_owner.Options.Antialiasing;
+				set => m_owner.Options.Antialiasing = value;
+			}
+			public ICommand ToggleAntialiasing
+			{
+				get => m_owner.ToggleAntialiasing;
+			}
+
+			/// <inheritdoc/>
+			public View3d.EFillMode FillMode
+			{
+				get => m_owner.Options.FillMode;
+				set => m_owner.Options.FillMode = value;
+			}
+
+			/// <inheritdoc/>
+			public View3d.ECullMode CullMode
+			{
+				get => m_owner.Options.CullMode;
+				set => m_owner.Options.CullMode = value;
+			}
+
+			/// <inheritdoc/>
+			public ICommand ShowLightingUI
+			{
+				get => Command.NoOp;
+			}
+
+			/// <inheritdoc/>
+			public ICommand ShowMeasureToolUI
+			{
+				get => Command.NoOp;
+			}
+
+			/// <inheritdoc/>
+			public ICommand ShowObjectManagerUI
+			{
+				get => Command.NoOp;
+			}
+
+			#endregion
+
+			#region IChartCMenu
+
+			/// <inheritdoc/>
+			public bool ShowGridLines
+			{
+				get => m_owner.Options.ShowGridLines;
+				set => m_owner.Options.ShowGridLines = value;
+			}
+			public ICommand ToggleGridLines
+			{
+				get => m_owner.ToggleGridLines;
+			}
+
+			/// <inheritdoc/>
+			public bool ShowAxes
+			{
+				get => m_owner.Options.ShowAxes;
+				set => m_owner.Options.ShowAxes = value;
+			}
+			public ICommand ToggleAxes
+			{
+				get => m_owner.ToggleAxes;
+			}
+
+			/// <inheritdoc/>
+			public bool ShowValueAtPointer
+			{
+				get => m_owner.ShowValueAtPointer;
+				set => m_owner.ShowValueAtPointer = value;
+			}
+			public ICommand ToggleShowValueAtPointer
+			{
+				get => m_owner.ToggleShowValue;
+			}
+
+			/// <inheritdoc/>
+			public bool ShowCrossHair
+			{
+				get => m_owner.ShowCrossHair;
+				set => m_owner.ShowCrossHair = value;
+			}
+			public ICommand ToggleShowCrossHair
+			{
+				get => m_owner.ToggleShowCrossHair;
+			}
+
+			/// <inheritdoc/>
+			public ENavMode NavigationMode
+			{
+				get => m_owner.Options.NavigationMode;
+				set => m_owner.Options.NavigationMode = value;
+			}
+
+			/// <inheritdoc/>
+			public ICommand DoAutoRange
+			{
+				get => m_owner.DoAutoRange;
+			}
+
+			/// <inheritdoc/>
+			public ICommand DoAspect11
+			{
+				get => m_owner.DoAspect11;
+			}
+
+			/// <inheritdoc/>
+			public bool LockAspect
+			{
+				get => m_owner.LockAspect;
+				set => m_owner.LockAspect = value;
+			}
+			public ICommand ToggleLockAspect
+			{
+				get => m_owner.ToggleLockAspect;
+			}
+
+			/// <inheritdoc/>
+			public bool MouseCentredZoom
+			{
+				get => m_owner.Options.MouseCentredZoom;
+				set => m_owner.Options.MouseCentredZoom = value;
+			}
+			public ICommand ToggleMouseCentredZoom
+			{
+				get => m_owner.ToggleMouseCentredZoom;
+			}
+
+			#endregion
+		}
+		public class AxisCMenuBinding :IChartAxisCMenu
+		{
+			private readonly ChartDetail.AxisPanel m_owner;
+			public AxisCMenuBinding(ChartDetail.AxisPanel owner)
+			{
+				m_owner = owner;
+			}
+
+			/// <summary></summary>
+			public event PropertyChangedEventHandler? PropertyChanged;
+			public void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
+
+			/// <inheritdoc/>
+			public bool AllowScroll
+			{
+				get => m_owner.AllowScroll;
+				set => m_owner.AllowScroll = value;
+			}
+			public ICommand ToggleScrollLock
+			{
+				get => m_owner.ToggleScrollLock;
+			}
+
+			/// <inheritdoc/>
+			public bool AllowZoom
+			{
+				get => m_owner.AllowZoom;
+				set => m_owner.AllowZoom = value;
+			}
+			public ICommand ToggleZoomLock
+			{
+				get => m_owner.ToggleZoomLock;
+			}
+
+			/// <inheritdoc/>
+			public ICollectionView LinkableCharts
+			{
+				get => new ListCollectionView(Array.Empty<IChartProxy>());
+			}
+			public IChartProxy? LinkToChart
+			{
+				get => null;
+				set { }
+			}
 		}
 	}
 }

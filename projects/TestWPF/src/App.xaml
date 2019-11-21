@@ -10,7 +10,7 @@
 		<ResourceDictionary>
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="Res.xaml"/>
-				<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/res/ContextMenus.xaml"/>
+				<x:Static Member="gui:ContextMenus.Instance"/>
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>

@@ -4,47 +4,89 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignHeight="200"
 	d:DesignWidth="220"
 	Title="Select a Colour"
 	WindowStartupLocation="CenterOwner"
+	WindowStyle="ToolWindow"
     ShowInTaskbar="False"
 	MinWidth="200"
 	MinHeight="100"
 	Width="220"
 	Height="200"
 	>
-	<DockPanel>
-		<DockPanel
-			DockPanel.Dock="Bottom"
-			Background="{x:Static SystemColors.ControlBrush}"
-			LastChildFill="False"
-			>
-			<Button
-				DockPanel.Dock="Right"
-				Content="Cancel"
-				MinWidth="60"
-				Margin="8"
-				IsCancel="True"
-				/>
-			<Button
-				DockPanel.Dock="Right"
-				Content="OK"
-				MinWidth="60"
-				Margin="8"
-				IsDefault="True"
-				Command="{Binding Accept}"
-				/>
-		</DockPanel>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
 
-		<gui2:ColourWheel
+		<!-- Colour Wheel -->
+		<gui:ColourWheel
 			x:Name="m_colour_wheel"
 			Orientation="Horizontal"
 			HorizontalAlignment="Center"
 			Colour="{Binding Colour}"
 			Margin="8"
 			/>
-	</DockPanel>
+
+		<!-- Type In -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			Margin="4"
+			>
+			<TextBlock
+				Text="Value: "
+				VerticalAlignment="Center"
+				HorizontalAlignment="Right"
+				/>
+			<TextBox
+				Text="{Binding Colour, Converter={conv:ColourToString}}"
+				HorizontalContentAlignment="Center"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				/>
+			<Border
+				Background="{Binding Colour, Converter={conv:ColourToBrush}}"
+				VerticalAlignment="Center"
+				BorderThickness="1"
+				BorderBrush="Black"
+				MinWidth="32"
+				MinHeight="16"
+				Margin="3"
+				/>
+		</StackPanel>
+		
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="2"
+			Background="{x:Static SystemColors.ControlBrush}"
+			>
+			<StackPanel
+				Orientation="Horizontal"
+				HorizontalAlignment="Right"
+				>
+				<Button
+					Content="OK"
+					MinWidth="60"
+					Margin="8"
+					IsDefault="True"
+					Command="{Binding Accept}"
+					/>
+				<Button
+					Content="Cancel"
+					MinWidth="60"
+					Margin="8"
+					IsCancel="True"
+					/>
+			</StackPanel>
+		</Grid>
+	</Grid>
 </Window>

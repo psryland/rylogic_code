@@ -123,6 +123,9 @@ namespace LDraw
 		}
 		private Model m_model = null!;
 
+		/// <summary>App settings</summary>
+		public SettingsData Settings => Model.Settings;
+
 		/// <summary>The current active content in the dock container</summary>
 		public IDockable? ActiveContent
 		{

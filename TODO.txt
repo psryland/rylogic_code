@@ -1,16 +1,15 @@
 Immediate ToDo:
 	
 LDraw
-	- Saved views
 	- Linked cameras
-	- Linked axes
 	- Show selection
-	- Show bounds
+	- Saved views
 	- Highlight errors in editor
 	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null
 	- Animation support
 	- Support line continuation for highlighting
+	- CMenu for Asset panel, to add asset files (filter excluding .ldr)
 	- Fix the measurement tool not detecting mouse clicks
 	- move LightingUI to pr.view3d
 	- move ObjectManager to pr.view3d
@@ -21,6 +20,7 @@ LDraw
 	- Replace resizer view3d objects with WPF primitives
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	- Script parsing performance profiling
+	- Installer
 	
 CoinFlip
 	Candle Charts:

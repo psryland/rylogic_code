@@ -206,7 +206,7 @@ namespace CoinFlip.UI
 				if (m_chart != null)
 				{
 					// Customise the chart for candles
-					m_chart.Options.AntiAliasing = true;
+					m_chart.Options.Antialiasing = true;
 					m_chart.Options.Orthographic = true;
 					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);
 					//m_chart.Options.CrossHairZOffset = ZOrder.Cursors;

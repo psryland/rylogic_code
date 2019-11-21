@@ -117,17 +117,29 @@ namespace view3d
 		OnError.Raise(msg);
 	}
 
-	// Get/Set the window background colour
-	Colour32 Window::BackgroundColour() const
+	// Get/Set the scene viewport
+	View3DViewport Window::Viewport() const
 	{
-		return m_background_colour;
+		auto& scene_vp = m_scene.m_viewport;
+		View3DViewport vp = {};
+		vp.m_x = scene_vp.TopLeftX;
+		vp.m_y = scene_vp.TopLeftY;
+		vp.m_width = scene_vp.Width;
+		vp.m_height = scene_vp.Height;
+		vp.m_min_depth = scene_vp.MinDepth;
+		vp.m_max_depth = scene_vp.MaxDepth;
+		return vp;
 	}
-	void Window::BackgroundColour(Colour32 colour)
+	void Window::Viewport(View3DViewport vp)
 	{
-		if (m_background_colour == colour) return;
-		m_background_colour = colour;
-		NotifySettingsChanged(EView3DWindowSettings::BackgroundColour);
-		Invalidate();
+		auto& scene_vp = m_scene.m_viewport;
+		scene_vp.TopLeftX = vp.m_x;
+		scene_vp.TopLeftY = vp.m_y;
+		scene_vp.Width = vp.m_width;
+		scene_vp.Height = vp.m_height;
+		scene_vp.MinDepth = vp.m_min_depth;
+		scene_vp.MaxDepth = vp.m_max_depth;
+		NotifySettingsChanged(EView3DSettings::Scene_Viewport);
 	}
 
 	// Render this window into whatever render target is currently set
@@ -689,7 +701,7 @@ namespace view3d
 	}
 
 	// Invoke the settings changed callback
-	void Window::NotifySettingsChanged(EView3DWindowSettings setting)
+	void Window::NotifySettingsChanged(EView3DSettings setting)
 	{
 		OnSettingsChanged.Raise(this, setting);
 	}
@@ -766,26 +778,93 @@ namespace view3d
 		ui.Visible(show);
 	}
 
+	// Get/Set the window fill mode
+	EView3DFillMode Window::FillMode() const
+	{
+		return m_fill_mode;
+	}
+	void Window::FillMode(EView3DFillMode fill_mode)
+	{
+		if (m_fill_mode == fill_mode) return;
+		m_fill_mode = fill_mode;
+		NotifySettingsChanged(EView3DSettings::Scene_FilllMode);
+		Invalidate();
+	}
+
+	// Get/Set the window cull mode
+	EView3DCullMode Window::CullMode() const
+	{
+		return m_cull_mode;
+	}
+	void Window::CullMode(EView3DCullMode cull_mode)
+	{
+		if (m_cull_mode == cull_mode) return;
+		m_cull_mode = cull_mode;
+		NotifySettingsChanged(EView3DSettings::Scene_CullMode);
+		Invalidate();
+	}
+
+	// Get/Set the window background colour
+	Colour32 Window::BackgroundColour() const
+	{
+		return m_background_colour;
+	}
+	void Window::BackgroundColour(Colour32 colour)
+	{
+		if (m_background_colour == colour) return;
+		m_background_colour = colour;
+		NotifySettingsChanged(EView3DSettings::Scene_BackgroundColour);
+		Invalidate();
+	}
+
+	// Get/Set the window background colour
+	int Window::MultiSampling() const
+	{
+		return m_wnd.MultiSampling().Count;
+	}
+	void Window::MultiSampling(int multisampling)
+	{
+		if (MultiSampling() == multisampling) return;
+		MultiSamp ms(multisampling);
+		m_wnd.MultiSampling(ms);
+		NotifySettingsChanged(EView3DSettings::Scene_Multisampling);
+		Invalidate();
+	}
+
 	// Show/Hide the focus point
-	bool Window::FocusPointVisible()
+	bool Window::FocusPointVisible() const
 	{
 		return m_focus_point_visible;
 	}
 	void Window::FocusPointVisible(bool vis)
 	{
+		if (m_focus_point_visible == vis) return;
 		m_focus_point_visible = vis;
-		NotifySettingsChanged(EView3DWindowSettings::FocusPointVisible);
+		NotifySettingsChanged(EView3DSettings::General_FocusPointVisible);
 	}
 
 	// Show/Hide the origin point
-	bool Window::OriginPointVisible()
+	bool Window::OriginPointVisible() const
 	{
 		return m_origin_point_visible;
 	}
 	void Window::OriginPointVisible(bool vis)
 	{
+		if (m_origin_point_visible == vis) return;
 		m_origin_point_visible = vis;
-		NotifySettingsChanged(EView3DWindowSettings::OriginPointVisible);
+		NotifySettingsChanged(EView3DSettings::General_OriginPointVisible);
+	}
+
+	// Show/Hide the bounding boxes
+	bool Window::BBoxesVisible() const
+	{
+		return m_bboxes_visible;
+	}
+	void Window::BBoxesVisible(bool vis)
+	{
+		if (m_bboxes_visible == vis) return;
+		m_bboxes_visible = vis;
+		NotifySettingsChanged(EView3DSettings::General_BBoxesVisible);
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray

@@ -25,7 +25,7 @@ namespace Rylogic.Gui.WPF
 				FocusPointVisible = false;
 				OriginPointVisible = false;
 				ShowAxes = true;
-				AntiAliasing = true;
+				Antialiasing = true;
 				FillMode = View3d.EFillMode.Solid;
 				CullMode = View3d.ECullMode.Back;
 				Orthographic = false;
@@ -123,10 +123,10 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
-			public bool AntiAliasing
+			public bool Antialiasing
 			{
-				get => get<bool>(nameof(AntiAliasing));
-				set => set(nameof(AntiAliasing), value);
+				get => get<bool>(nameof(Antialiasing));
+				set => set(nameof(Antialiasing), value);
 			}
 
 			/// <summary>Fill mode, solid, wire, or both</summary>

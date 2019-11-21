@@ -1,0 +1,364 @@
+﻿<ResourceDictionary
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+	x:Class="Rylogic.Gui.WPF.ContextMenus"
+	>
+	<BitmapImage x:Key ="light_bulb" UriSource="/Rylogic.Gui.WPF;component/res/light_bulb.png"/>
+	<BitmapImage x:Key ="tape_measure" UriSource="/Rylogic.Gui.WPF;component/res/tape_measure_coloured.png"/>
+	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
+	<BitmapImage x:Key ="chain" UriSource="/Rylogic.Gui.WPF;component/res/chain.png"/>
+
+	<!-- View3d Control Context Menu -->
+	<MenuItem x:Key="View3dMenuItem_Origin" x:Shared="False"
+		Header="Origin"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding OriginPointVisible, Mode=OneWay}"
+		Command="{Binding ToggleOriginPoint}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_Focus" x:Shared="False"
+		Header="Focus"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding FocusPointVisible, Mode=OneWay}"
+		Command="{Binding ToggleFocusPoint}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_BoundingBoxes" x:Shared="False"
+		Header="Bounding Boxes"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding BBoxesVisible, Mode=OneWay}"
+		Command="{Binding ToggleBBoxesVisible}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_ResetView" x:Shared="False"
+		Header="Reset View"
+		Command="{Binding ResetView}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_Orthographic" x:Shared="False"
+		Header="Orthographic"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding Orthographic, Mode=OneWay}"
+		Command="{Binding ToggleOrthographic}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_AlignUp" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Align Up: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding AlignDirection, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding AlignDirection}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					>
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Path=., Converter={conv:EnumToDesc}}"/>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_ViewPresets" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Pre-set View: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding ViewPreset, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding ViewPreset}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					>
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Path=., Converter={conv:EnumToDesc}}"/>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_BackgroundColour" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Background: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<Button
+					Command="{Binding SetBackgroundColour}"
+					VerticalAlignment="Center"
+					Background="White"
+					BorderBrush="#DDD"
+					Content="{Binding BackgroundColour, Converter={conv:ColourToString}}"
+					Padding="5,1,5,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+		<MenuItem.Icon>
+			<Border
+				Background="{Binding BackgroundColour, Converter={conv:ColourToBrush}}"
+				BorderBrush="Black"
+				BorderThickness="1"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_Antialiasing" x:Shared="False"
+		Header="Antialiasing"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding Antialiasing, Mode=OneWay}"
+		Command="{Binding ToggleAntialiasing}"
+		/>
+	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Fill Mode: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding FillMode, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding FillMode}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_CullMode" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Cull Mode: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding CullMode, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding CullMode}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_Lighting" x:Shared="False"
+		Header="Lighting..."
+		Command="{Binding ShowLightingUI}"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource light_bulb}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_MeasureTool" x:Shared="False"
+		Header="Measure Tool..."
+		Command="{Binding ShowMeasureToolUI}"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource tape_measure}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_ObjectManager" x:Shared="False"
+		Header="Object Manager..."
+		Command="{Binding ShowObjectManagerUI}"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource objects}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
+
+	<ContextMenu x:Key="View3dCMenu">
+		<MenuItem Header="Objects">
+			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
+			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
+			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
+		</MenuItem>
+		<MenuItem Header="Camera">
+			<StaticResource ResourceKey="View3dMenuItem_ResetView"/>
+			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
+			<StaticResource ResourceKey="View3dMenuItem_AlignUp"/>
+			<StaticResource ResourceKey="View3dMenuItem_ViewPresets"/>
+		</MenuItem>
+		<MenuItem Header="Rendering">
+			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
+			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
+		</MenuItem>
+		<MenuItem Header="Tools">
+			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
+			<StaticResource ResourceKey="View3dMenuItem_ObjectManager"/>
+		</MenuItem>
+	</ContextMenu>
+
+	<!-- ChartControl Context Menu Items -->
+	<MenuItem x:Key="ChartMenuItem_GridLines" x:Shared="False"
+		Header="Grid Lines"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding ShowGridLines, Mode=OneWay}"
+		Command="{Binding ToggleGridLines}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_Axes" x:Shared="False"
+		Header="Axes"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding ShowAxes, Mode=OneWay}"
+		Command="{Binding ToggleAxes}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_ValueAtPointer" x:Shared="False"
+		Header="Show Value"
+		IsChecked="{Binding ShowValueAtPointer, Mode=OneWay}"
+		Command="{Binding ToggleShowValueAtPointer}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_CrossHair" x:Shared="False"
+		Header="Show Cross Hair"
+		IsChecked="{Binding ShowCrossHair, Mode=OneWay}"
+		Command="{Binding ToggleShowCrossHair}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_NavMode" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Mode: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding NavigationMode, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding NavigationMode}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					>
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Path=., Converter={conv:EnumToDesc}}"/>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="ChartMenuItem_AutoRange" x:Shared="False"
+		Header="Auto Range"
+		Command="{Binding DoAutoRange}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_Aspect11" x:Shared="False"
+		Header="Aspect 1:1"
+		Command="{Binding DoAspect11}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_LockAspect" x:Shared="False"
+		Header="Lock Aspect"
+		IsChecked="{Binding LockAspect, Mode=OneWay}"
+		Command="{Binding ToggleLockAspect}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_MouseCentredZoom" x:Shared="False"
+		Header="Mouse Centred Zoom"
+		IsCheckable="{Binding MouseCentredZoom}"
+		Command="{Binding ToggleMouseCentredZoom}"
+		/>
+	<MenuItem x:Key="ChartMenuItem_LinkCamera" x:Shared="False"
+		Header="Link Camera..."
+		Command="{Binding LinkCamera}"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource chain}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
+	<MenuItem x:Key="ChartAxisMenuItem_AllowScroll" x:Shared="False"
+		Header="Allow Scroll"
+		IsChecked="{Binding AllowScroll, Mode=OneWay}"
+		Command="{Binding ToggleScrollLock}"
+		/>
+	<MenuItem x:Key="ChartAxisMenuItem_AllowZoom" x:Shared="False"
+		Header="Allow Zoom"
+		IsChecked="{Binding AllowZoom, Mode=OneWay}"
+		Command="{Binding ToggleZoomLock}"
+		/>
+	<MenuItem x:Key="ChartAxisMenuItem_LinkAxis" x:Shared="False"
+		IsEnabled="{Binding LinkableCharts.Count, Converter={conv:Compare}, ConverterParameter='!=0'}"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Link To: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding LinkableCharts}"
+					SelectedItem="{Binding LinkToChart}"
+					DisplayMemberPath="Name"
+					HorizontalAlignment="Stretch"
+					BorderThickness="0"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+
+	<ContextMenu x:Key="ChartCMenu">
+		<MenuItem Header="Objects">
+			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
+			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
+			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
+			<StaticResource ResourceKey="ChartMenuItem_GridLines"/>
+			<StaticResource ResourceKey="ChartMenuItem_Axes"/>
+		</MenuItem>
+		<MenuItem Header="Tools">
+			<StaticResource ResourceKey="ChartMenuItem_ValueAtPointer"/>
+			<StaticResource ResourceKey="ChartMenuItem_CrossHair"/>
+		</MenuItem>
+		<MenuItem Header="Navigation">
+			<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
+			<StaticResource ResourceKey="ChartMenuItem_AutoRange"/>
+			<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
+			<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
+			<StaticResource ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+		</MenuItem>
+		<MenuItem Header="Rendering">
+			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
+			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
+			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+		</MenuItem>
+	</ContextMenu>
+	<ContextMenu x:Key="ChartAxisCMenu">
+		<StaticResource ResourceKey="ChartAxisMenuItem_AllowScroll"/>
+		<StaticResource ResourceKey="ChartAxisMenuItem_AllowZoom"/>
+	</ContextMenu>
+
+</ResourceDictionary>

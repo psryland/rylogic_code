@@ -3174,6 +3174,8 @@ namespace pr::ldr
 			p.m_reader.Real(h1);
 			p.m_reader.Real(a);
 
+			a = DegreesToRadians(a);
+
 			m_dim.z = h1 - h0;
 			m_dim.x = h0 * Tan(a);
 			m_dim.y = h1 * Tan(a);

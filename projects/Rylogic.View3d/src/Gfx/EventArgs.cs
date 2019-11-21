@@ -65,13 +65,13 @@ namespace Rylogic.Gfx
 
 		public class SettingChangeEventArgs :EventArgs
 		{
-			public SettingChangeEventArgs(EWindowSettings setting)
+			public SettingChangeEventArgs(ESettings setting)
 			{
 				Setting = setting;
 			}
 
 			/// <summary>The setting that changed</summary>
-			public EWindowSettings Setting { get; }
+			public ESettings Setting { get; }
 		}
 	}
 }

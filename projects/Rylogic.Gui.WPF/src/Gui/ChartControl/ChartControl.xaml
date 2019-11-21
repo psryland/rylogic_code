@@ -64,7 +64,6 @@
 		Height="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
 		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
 		Background="{Binding Background}"
-		ContextMenu="{StaticResource ChartAxisCMenu}"
 		/>
 
 	<!-- Y Axis -->
@@ -86,7 +85,6 @@
 		Width="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
 		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
 		Background="{Binding Background}"
-		ContextMenu="{StaticResource ChartAxisCMenu}"
 		/>
 
 	<!-- Chart area -->
@@ -94,7 +92,6 @@
 		Grid.Row="3"
 		Grid.Column="2"
 		UseLayoutRounding="True"
-		ContextMenu="{StaticResource ChartCMenu}"
 		Stretch="Fill"
 		x:Name="m_chart_panel"
 		/>

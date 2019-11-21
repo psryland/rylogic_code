@@ -736,8 +736,10 @@ namespace pr
 	// then a vector perpendicular to 'dir' will be chosen.
 	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id, v4_cref<> up_)
 	{
+		assert("'dir' cannot be a zero vector" && dir != v4{});
+
 		// Get the preferred up direction (handling parallel cases)
-		auto up = Parallel(up_, dir) ? Perpendicular(dir) : up_;
+		auto up = Perpendicular(dir, up_);
 
 		Mat3x4<A,B> ori = {};
 		ori.z = Normalise3(Sign(float(axis_id)) * dir);

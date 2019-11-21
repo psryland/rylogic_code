@@ -38,8 +38,8 @@ namespace CoinFlip.UI.GfxObjects
 			{
 				Text = string.Empty,
 				FontSize = 10.0,
-				Foreground = Chart.Scene.BackgroundColor.ToMediaBrush(),
-				Background = Chart.Scene.BackgroundColor.InvertBW(0xFF333333, 0xFFCCCCCC).ToMediaBrush(),
+				Foreground = Chart.Scene.BackgroundColour.ToMediaBrush(),
+				Background = Chart.Scene.BackgroundColour.InvertBW(0xFF333333, 0xFFCCCCCC).ToMediaBrush(),
 				IsHitTestVisible = false,
 				Margin= new Thickness(2),
 			};

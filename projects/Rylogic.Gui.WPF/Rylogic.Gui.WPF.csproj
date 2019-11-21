@@ -29,32 +29,24 @@
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
+	<!-- Resources -->
 	<ItemGroup>
-		<Resource Include="res\bottom.png" />
-		<Resource Include="res\check_reject.png" />
-		<Resource Include="res\dock_close.png" />
-		<Resource Include="res\dock_menu.png" />
-		<Resource Include="res\dock_pinned.png" />
-		<Resource Include="res\dock_site_bottom.png" />
-		<Resource Include="res\dock_site_cross_lg.png" />
-		<Resource Include="res\dock_site_cross_sm.png" />
-		<Resource Include="res\dock_site_left.png" />
-		<Resource Include="res\dock_site_right.png" />
-		<Resource Include="res\dock_site_top.png" />
-		<Resource Include="res\dock_unpinned.png" />
-		<Resource Include="res\edit_add.png" />
-		<Resource Include="res\edit_save.png" />
-		<Resource Include="res\folder.png" />
-		<Resource Include="res\line_wrap.png" />
-		<Resource Include="res\minus1.png" />
-		<Resource Include="res\pencil.png" />
-		<Resource Include="res\plus1.png" />
-		<Resource Include="res\ContextMenus.xaml">
-		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-		  <Generator></Generator>
-		</Resource>
+		<Resource Include="res\*.png" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Update="res\Resources.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+		<EmbeddedResource Update="res\Resources.resx">
+			<Generator>ResXFileCodeGenerator</Generator>
+			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
+			<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
+		</EmbeddedResource>
 	</ItemGroup>
 
+	<!-- Dependencies -->
 	<ItemGroup>
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
@@ -71,22 +63,6 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView" Version="5.1.1" />
 		<PackageReference Include="WindowsBase" Version="4.6.1055" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Update="res\Resources.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Resources.resx</DependentUpon>
-		</Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-		<EmbeddedResource Update="res\Resources.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
-			<CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
-		</EmbeddedResource>
 	</ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">

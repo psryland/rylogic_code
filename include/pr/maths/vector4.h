@@ -480,7 +480,7 @@ namespace pr
 		return Vec4<T>{static_cast<float>(!x_aligned), 0.0f, static_cast<float>(x_aligned), v.w};
 	}
 
-	// Returns a vector perpendicular to 'v'
+	// Returns a vector perpendicular to 'v' with the same length of 'v'
 	template <typename T> inline Vec4<T> pr_vectorcall Perpendicular(v4_cref<T> v)
 	{
 		assert("Cannot make a perpendicular to a zero vector" && v != v4{});
@@ -489,18 +489,28 @@ namespace pr
 		return vec;
 	}
 
-	// Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular
+	// Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular.
+	// The length of the returned vector will be 'Length(vec)' or 'Length(previous)' (typically they'd be the same)
+	// Either 'vec' or 'previous' can be zero, but not both.
 	template <typename T> inline Vec4<T> pr_vectorcall Perpendicular(v4_cref<T> vec, v4_cref<T> previous)
 	{
-		assert("Cannot make a perpendicular to a zero vector" && !FEql3(vec, v4Zero));
-
-		// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
-		if (Parallel(vec, previous))
-			return Perpendicular(vec);
-
-		// If 'previous' is still perpendicular, keep it
-		if (FEql(Dot3(vec, previous), 0))
+		if (vec == v4{})
+		{
+			// Both 'vec' and 'previous' cannot be zero
+			assert("Cannot make a perpendicular to a zero vector" && previous != v4{});
 			return previous;
+		}
+		if (Parallel(vec, previous)) // includes 'previous' == zero
+		{
+			// If 'previous' is parallel to 'vec', choose a new perpendicular
+			return Perpendicular(vec);
+		}
+
+		// If 'previous' is still perpendicular, reuse it
+		if (FEql(Dot3(vec, previous), 0))
+		{
+			return previous;
+		}
 
 		// Otherwise, make a perpendicular that is close to 'previous'
 		return Normalise3(Cross3(Cross3(vec, previous), vec));

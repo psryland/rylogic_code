@@ -31,7 +31,6 @@
 	<!-- Resources -->
 	<ItemGroup>
 		<Resource Include="res\*.png" />
-		<None Remove="res\LdrSyntaxRules.xshd" />
 		<EmbeddedResource Include="res\LdrSyntaxRules.xshd" />
 		<Resource Include="res\Licence.rtf" />
 	</ItemGroup>

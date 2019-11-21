@@ -82,9 +82,21 @@ namespace LDraw
 		{
 			// Refresh the scenes collection
 			var scenes = (List<SceneWrapper>)AvailableScenes.SourceCollection;
-			scenes.Sync(Model.Scenes.Select(x => new SceneWrapper(x, this)));
+			scenes.Sync(Model.Scenes.Select(x => new SceneWrapper(x, HandleSelected)));
 			if (!SelectedScenes.Any() && scenes.Count != 0) scenes[0].Selected = true;
 			AvailableScenes.Refresh();
+
+			void HandleSelected(SceneUI scene, bool is_selected)
+			{
+				if (is_selected)
+					Model.AddObjects(scene, ContextId);
+				else
+					Model.Clear(scene, ContextId);
+
+				NotifyPropertyChanged(nameof(SelectedScenes));
+				NotifyPropertyChanged(nameof(SelectedScenesDescription));
+				NotifyPropertyChanged(nameof(CanRender));
+			}
 		}
 
 		/// <summary>The scene that this context renders to</summary>
@@ -93,14 +105,14 @@ namespace LDraw
 			get
 			{
 				var available = (List<SceneWrapper>)AvailableScenes.SourceCollection;
-				return available.Where(x => x.Selected).Select(x => x.SceneUI);
+				return available.Where(x => x.SceneUI != null && x.Selected).Select(x => x.SceneUI!);
 			}
 			set
 			{
 				var set = value.ToHashSet(0);
 				var available = (List<SceneWrapper>)AvailableScenes.SourceCollection;
 				foreach (var scene in available)
-					scene.Selected = set.Contains(scene.SceneUI);
+					scene.Selected = set.Contains(scene.SceneUI!);
 			}
 		}
 
@@ -122,63 +134,6 @@ namespace LDraw
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
-
-		/// <summary>Binding wrapper for a scene</summary>
-		private class SceneWrapper
-		{
-			// Notes:
-			//  - This wrapper is needed because when UIElement objects are used as the items
-			//    of a combo box it treats them as child controls, becoming their parent.
-
-			private readonly Context m_owner;
-			public SceneWrapper(SceneUI scene, Context owner)
-			{
-				SceneUI = scene;
-				m_owner = owner;
-			}
-
-			/// <summary>The wrapped scene</summary>
-			public SceneUI SceneUI { get; }
-
-			/// <summary>The name of the wrapped scene</summary>
-			public string SceneName => SceneUI.SceneName;
-
-			/// <summary>True if the scene is selected</summary>
-			public bool Selected
-			{
-				get => m_selected;
-				set
-				{
-					if (m_selected == value) return;
-					if (m_selected)
-					{
-						m_owner.Model.Clear(SceneUI, m_owner.ContextId);
-					}
-					m_selected = value;
-					if (m_selected)
-					{
-						m_owner.Model.AddObjects(SceneUI, m_owner.ContextId);
-					}
-					m_owner.NotifyPropertyChanged(nameof(SelectedScenes));
-					m_owner.NotifyPropertyChanged(nameof(SelectedScenesDescription));
-					m_owner.NotifyPropertyChanged(nameof(CanRender));
-				}
-			}
-			private bool m_selected;
-
-			/// <summary></summary>
-			public static implicit operator SceneUI?(SceneWrapper? x) => x?.SceneUI;
-
-			/// <summary></summary>
-			public override bool Equals(object obj)
-			{
-				return obj is SceneWrapper wrapper && ReferenceEquals(SceneUI, wrapper.SceneUI);
-			}
-			public override int GetHashCode()
-			{
-				return SceneUI.GetHashCode();
-			}
 		}
 	}
 }

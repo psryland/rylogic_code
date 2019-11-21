@@ -751,28 +751,48 @@ namespace pr::rdr
 		// Extrude ****************************************************************************
 		static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, v4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
+			assert(path_count >= 2);
+
 			// Calculate the required buffer sizes
 			int vcount, icount;
 			geometry::ExtrudeSize(cs_count, path_count, closed, smooth_cs, vcount, icount);
 
 			// Convert a stream of points into a stream of transforms
-			m4x4 ori; int p = -1;
+			// At each vertex, ori.z should be the tangent to the extrusion path.
+			int p = -1;
+			auto ori = m4x4Identity;
+			auto yaxis = Perpendicular(path[1] - path[0], v4YAxis);
 			auto make_path = [&]
 			{
 				++p;
 				if (p == 0)
 				{
-					ori.rot = OriFromDir(path[1] - path[0], AxisId::PosZ, v4YAxis);
+					auto tang = path[1] - path[0];
+					if (!FEql(tang, v4Zero))
+					{
+						yaxis = Perpendicular(tang, yaxis);
+						ori.rot = OriFromDir(tang, AxisId::PosZ, yaxis);
+					}
 				}
 				else if (p == path_count - 1)
 				{
-					ori.rot = OriFromDir(path[p] - path[p - 1], AxisId::PosZ, v4YAxis);
+					auto tang = path[p] - path[p - 1];
+					if (!FEql(tang, v4Zero))
+					{
+						yaxis = Perpendicular(tang, yaxis);
+						ori.rot = OriFromDir(tang, AxisId::PosZ, yaxis);
+					}
 				}
 				else
 				{
 					auto a = Normalise3(path[p] - path[p - 1], v4Zero);
 					auto b = Normalise3(path[p + 1] - path[p], v4Zero);
-					ori.rot = OriFromDir(a + b, AxisId::PosZ, v4YAxis);
+					auto tang = a + b;
+					if (!FEql(tang, v4Zero))
+					{
+						yaxis = Perpendicular(tang, yaxis);
+						ori.rot = OriFromDir(tang, AxisId::PosZ, yaxis);
+					}
 				}
 				ori.pos = path[p];
 				return ori;

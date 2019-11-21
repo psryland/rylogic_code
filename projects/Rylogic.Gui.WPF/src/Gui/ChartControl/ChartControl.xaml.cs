@@ -123,7 +123,7 @@ namespace Rylogic.Gui.WPF
 					Window.BackgroundColour = Options.BackgroundColour;
 					Window.FocusPointVisible = Options.FocusPointVisible;
 					Window.OriginPointVisible = Options.OriginPointVisible;
-					Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
+					Scene.MultiSampling = Options.Antialiasing ? 4 : 1;
 					PositionAxisPanels();
 
 					m_options.PropertyChanged += HandleOptionsChanged;
@@ -133,43 +133,89 @@ namespace Rylogic.Gui.WPF
 
 				void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
 				{
+					var view3d_cmenu = Scene.ContextMenu?.DataContext as IView3dCMenu;
+					var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
 					switch (e.PropertyName)
 					{
+					case nameof(OptionsData.ShowGridLines):
+						{
+							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowGridLines));
+							break;
+						}
 					case nameof(OptionsData.ShowAxes):
-						m_xaxis_panel.Invalidate();
-						m_yaxis_panel.Invalidate();
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(XAxisLabelVisibility)));
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(YAxisLabelVisibility)));
-						break;
-					case nameof(OptionsData.AntiAliasing):
-						Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
-						Invalidate();
-						break;
+						{
+							m_xaxis_panel.Invalidate();
+							m_yaxis_panel.Invalidate();
+							NotifyPropertyChanged(nameof(XAxisLabelVisibility));
+							NotifyPropertyChanged(nameof(YAxisLabelVisibility));
+							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowAxes));
+							break;
+						}
+					case nameof(OptionsData.Antialiasing):
+						{
+							Scene.MultiSampling = Options.Antialiasing ? 4 : 1;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.Orthographic):
-						Camera.Orthographic = Options.Orthographic;
-						Invalidate();
-						break;
+						{
+							Camera.Orthographic = Options.Orthographic;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.FillMode):
-						Window.FillMode = Options.FillMode;
-						Invalidate();
-						break;
+						{
+							Window.FillMode = Options.FillMode;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FillMode));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.CullMode):
-						Window.CullMode = Options.CullMode;
-						Invalidate();
-						break;
+						{
+							Window.CullMode = Options.CullMode;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.CullMode));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.BackgroundColour):
-						Window.BackgroundColour = Options.BackgroundColour;
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartBackground)));
-						Invalidate();
-						break;
+						{
+							Window.BackgroundColour = Options.BackgroundColour;
+							NotifyPropertyChanged(nameof(ChartBackground));
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.FocusPointVisible):
-						Window.FocusPointVisible = Options.FocusPointVisible;
-						Invalidate();
-						break;
+						{
+							Window.FocusPointVisible = Options.FocusPointVisible;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
+							Invalidate();
+							break;
+						}
 					case nameof(OptionsData.OriginPointVisible):
-						Window.OriginPointVisible = Options.OriginPointVisible;
-						Invalidate();
-						break;
+						{
+							Window.OriginPointVisible = Options.OriginPointVisible;
+							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
+							Invalidate();
+							break;
+						}
+					case nameof(OptionsData.NavigationMode):
+						{
+							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.NavigationMode));
+							break;
+						}
+					case nameof(OptionsData.LockAspect):
+						{
+							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.LockAspect));
+							break;
+						}
+					case nameof(OptionsData.MouseCentredZoom):
+						{
+							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.MouseCentredZoom));
+							break;
+						}
 					}
 				}
 				void HandleAxisOptionsChanged(object sender, PropertyChangedEventArgs e)
@@ -243,6 +289,22 @@ namespace Rylogic.Gui.WPF
 		public RangeData.Axis YAxis => Range.YAxis;
 		public AxisPanel YAxisPanel => m_yaxis_panel;
 
+		/// <summary>Accessor to the current Y axis</summary>
+		public RangeData.Axis GetAxis(EAxis axis)
+		{
+			return
+				axis == EAxis.XAxis ? XAxis :
+				axis == EAxis.YAxis ? YAxis :
+				throw new Exception($"Cannot return the axis associated with {axis}");
+		}
+		public AxisPanel GetAxisPanel(EAxis axis)
+		{
+			return
+				axis == EAxis.XAxis ? XAxisPanel :
+				axis == EAxis.YAxis ? YAxisPanel :
+				throw new Exception($"Cannot return the axis panel associated with {axis}");
+		}
+
 		/// <summary>Default X axis range of the chart</summary>
 		public RangeF BaseRangeX { get; set; }
 
@@ -308,6 +370,24 @@ namespace Rylogic.Gui.WPF
 		internal void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			
+			var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
+			if (chart_cmenu != null)
+			{
+				switch (prop_name)
+				{
+				case nameof(ShowValueAtPointer):
+					{
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowValueAtPointer));
+						break;
+					}
+				case nameof(ShowCrossHair):
+					{
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowCrossHair));
+						break;
+					}
+				}
+			}
 		}
 
 		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>

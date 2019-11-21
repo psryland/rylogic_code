@@ -396,7 +396,7 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char con
 				pr::string<> desc;
 				reader.Section(desc, false);
 				window->m_light.Settings(desc.c_str());
-				window->NotifySettingsChanged(EView3DWindowSettings::Lighting);
+				window->NotifySettingsChanged(EView3DSettings::Lighting_All);
 				continue;
 			}
 		}
@@ -775,7 +775,7 @@ VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL
 
 		DllLockGuard;
 		window->m_camera.m_orthographic = on != 0;
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_Orthographic);
 	}
 	CatchAndReport(View3D_CameraOrthographicSet, window,);
 }
@@ -800,7 +800,7 @@ VIEW3D_API void __stdcall View3D_CameraFocusDistanceSet(View3DWindow window, flo
 
 		DllLockGuard;
 		window->m_camera.FocusDist(dist);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist);
 	}
 	CatchAndReport(View3D_CameraFocusDistanceSet, window,);
 }
@@ -825,7 +825,7 @@ VIEW3D_API void __stdcall View3D_CameraFocusPointSet(View3DWindow window, View3D
 
 		DllLockGuard;
 		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist);
 	}
 	CatchAndReport(View3D_CameraFocusPointSet, window,);
 }
@@ -839,7 +839,7 @@ VIEW3D_API void __stdcall View3D_CameraViewRectSet(View3DWindow window, float wi
 
 		DllLockGuard;
 		window->m_camera.View(width, height, dist);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist | EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraViewRectSet, window,);
 }
@@ -864,7 +864,7 @@ VIEW3D_API void __stdcall View3D_CameraAspectSet(View3DWindow window, float aspe
 
 		DllLockGuard;
 		window->m_camera.Aspect(aspect);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_Aspect);
 	}
 	CatchAndReport(View3D_CameraAspectSet, window,);
 }
@@ -889,7 +889,7 @@ VIEW3D_API void __stdcall View3D_CameraFovXSet(View3DWindow window, float fovX)
 
 		DllLockGuard;
 		window->m_camera.FovX(fovX);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraFovXSet, window,);
 }
@@ -914,7 +914,7 @@ VIEW3D_API void __stdcall View3D_CameraFovYSet(View3DWindow window, float fovY)
 
 		DllLockGuard;
 		window->m_camera.FovY(fovY);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraFovYSet, window,);
 }
@@ -928,7 +928,7 @@ VIEW3D_API void __stdcall View3D_CameraFovSet(View3DWindow window, float fovX, f
 
 		DllLockGuard;
 		window->m_camera.Fov(fovX, fovY);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraFovSet, window,);
 }
@@ -942,7 +942,7 @@ VIEW3D_API void __stdcall View3D_CameraBalanceFov(View3DWindow window, float fov
 
 		DllLockGuard;
 		window->m_camera.BalanceFov(fov);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist | EView3DSettings::Camera_Fov);
 	}
 	CatchAndReport(View3D_CameraBalanceFov, window,);
 }
@@ -969,7 +969,7 @@ VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(View3DWindow window, float 
 
 		DllLockGuard;
 		window->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_ClipPlanes);
 	}
 	CatchAndReport(View3D_CameraClipPlanesSet, window,);
 }
@@ -994,7 +994,7 @@ VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DC
 
 		DllLockGuard;
 		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_LockMask);
 	}
 	CatchAndReport(View3D_CameraLockMaskSet, window,);
 }
@@ -1019,7 +1019,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV
 
 		DllLockGuard;
 		window->m_camera.Align(view3d::To<pr::v4>(axis));
-		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+		window->NotifySettingsChanged(EView3DSettings::Camera_AlignAxis);
 	}
 	CatchAndReport(View3D_CameraAlignAxisSet, window,);
 }
@@ -1358,7 +1358,7 @@ VIEW3D_API void __stdcall View3D_LightShowDialog(View3DWindow window)
 		View3D_Render(window);
 		View3D_Present(window);
 
-		window->NotifySettingsChanged(EView3DWindowSettings::Lighting);
+		window->NotifySettingsChanged(EView3DSettings::Lighting_All);
 	}
 	CatchAndReport(View3D_LightShowDialog, window,);
 }
@@ -2454,15 +2454,7 @@ VIEW3D_API View3DViewport __stdcall View3D_Viewport(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		auto& scene_vp = window->m_scene.m_viewport;
-		View3DViewport vp = {};
-		vp.m_x         = scene_vp.TopLeftX;
-		vp.m_y         = scene_vp.TopLeftY;
-		vp.m_width     = scene_vp.Width;
-		vp.m_height    = scene_vp.Height;
-		vp.m_min_depth = scene_vp.MinDepth;
-		vp.m_max_depth = scene_vp.MaxDepth;
-		return vp;
+		return window->Viewport();
 	}
 	CatchAndReport(View3D_Viewport, window, View3DViewport());
 }
@@ -2473,13 +2465,7 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DWindow window, View3DViewport
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		auto& scene_vp = window->m_scene.m_viewport;
-		scene_vp.TopLeftX = vp.m_x        ;
-		scene_vp.TopLeftY = vp.m_y        ;
-		scene_vp.Width    = vp.m_width    ;
-		scene_vp.Height   = vp.m_height   ;
-		scene_vp.MinDepth = vp.m_min_depth;
-		scene_vp.MaxDepth = vp.m_max_depth;
+		window->Viewport(vp);
 	}
 	CatchAndReport(View3D_SetViewport, window,);
 }
@@ -2517,7 +2503,7 @@ VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_cull_mode;
+		return window->CullMode();
 	}
 	CatchAndReport(View3D_CullModeGet, window, EView3DCullMode());
 }
@@ -2528,8 +2514,7 @@ VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMod
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_cull_mode = mode;
-		window->Invalidate();
+		window->CullMode(mode);
 	}
 	CatchAndReport(View3D_CullModeSet, window,);
 }
@@ -2566,7 +2551,7 @@ VIEW3D_API int  __stdcall View3D_MultiSamplingGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_wnd.MultiSampling().Count;
+		return window->MultiSampling();
 	}
 	CatchAndReport(View3D_MultiSamplingGet, window, 1);
 }
@@ -2577,9 +2562,7 @@ VIEW3D_API void __stdcall View3D_MultiSamplingSet(View3DWindow window, int multi
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		pr::rdr::MultiSamp ms(multisampling);
-		window->m_wnd.MultiSampling(ms);
-		window->Invalidate();
+		window->MultiSampling(multisampling);
 	}
 	CatchAndReport(View3D_MultiSamplingSet, window, );
 }
@@ -3003,7 +2986,7 @@ VIEW3D_API BOOL __stdcall View3D_BBoxesVisibleGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_bboxes_visible;
+		return window->BBoxesVisible();
 	}
 	CatchAndReport(View3D_BBoxesVisibleGet, window, FALSE);
 }
@@ -3014,7 +2997,7 @@ VIEW3D_API void __stdcall View3D_BBoxesVisibleSet(View3DWindow window, BOOL visi
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_bboxes_visible = visible != 0;
+		window->BBoxesVisible(visible != 0);
 	}
 	CatchAndReport(View3D_BBoxesVisibleSet, window, );
 }

@@ -13,7 +13,7 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WPF.Converters
 {
 	/// <summary>Convert an unknown type to 'targetType' using a TypeDescriptor converter</summary>
-	public class ToValue : MarkupExtension, IValueConverter
+	public class ConvertTo : MarkupExtension, IValueConverter
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -22,6 +22,23 @@ namespace Rylogic.Gui.WPF.Converters
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return Util.ConvertTo(value, targetType);
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Convert an unknown type to a string</summary>
+	public class ToString :MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value?.ToString() ?? "null";
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{

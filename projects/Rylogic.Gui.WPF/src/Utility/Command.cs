@@ -6,6 +6,9 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Command base class for 'ICommand'</summary>
 	public abstract class Command : ICommand
 	{
+		/// <summary>No op command</summary>
+		public static readonly Command NoOp = new Command<object>(new object(), null, null);
+
 		/// <summary>Can execute changed</summary>
 		public event EventHandler? CanExecuteChanged;
 		protected void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
@@ -54,7 +57,7 @@ namespace Rylogic.Gui.WPF
 		protected TOwner Owner { get; }
 
 		/// <summary>True if the command is available</summary>
-		public override bool CanExecute(object? parameter) => m_can_execute?.Invoke(Owner, parameter) ?? true;
+		public override bool CanExecute(object? parameter) => m_can_execute?.Invoke(Owner, parameter) ?? (m_execute != null);
 		private readonly Func<TOwner, object?, bool>? m_can_execute;
 
 		/// <summary>Execute the command</summary>

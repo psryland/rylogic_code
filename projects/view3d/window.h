@@ -76,9 +76,9 @@ namespace view3d
 		// Report an error for this window
 		void ReportError(wchar_t const* msg);
 
-		// Get/Set the window background colour
-		pr::Colour32 BackgroundColour() const;
-		void BackgroundColour(pr::Colour32 colour);
+		// Get/Set the scene viewport
+		View3DViewport Viewport() const;
+		void Viewport(View3DViewport vp);
 
 		// Render this window into whatever render target is currently set
 		void Render();
@@ -180,7 +180,7 @@ namespace view3d
 		pr::v2 NSSPointToSSPoint(pr::v2 const& nss_point) const;
 
 		// Invoke the settings changed callback
-		void NotifySettingsChanged(EView3DWindowSettings setting);
+		void NotifySettingsChanged(EView3DSettings setting);
 
 		// Invoke the rendering event
 		void NotifyRendering();
@@ -204,13 +204,33 @@ namespace view3d
 		// Show/Hide the angle tool
 		void ShowAngleTool(bool show);
 
+		// Get/Set the window fill mode
+		EView3DFillMode FillMode() const;
+		void FillMode(EView3DFillMode fill_mode);
+
+		// Get/Set the window cull mode
+		EView3DCullMode CullMode() const;
+		void CullMode(EView3DCullMode cull_mode);
+
+		// Get/Set the window background colour
+		pr::Colour32 BackgroundColour() const;
+		void BackgroundColour(pr::Colour32 colour);
+
+		// Get/Set the window background colour
+		int MultiSampling() const;
+		void MultiSampling(int multisampling);
+
 		// Show/Hide the focus point
-		bool FocusPointVisible();
+		bool FocusPointVisible() const;
 		void FocusPointVisible(bool vis);
 
 		// Show/Hide the origin point
-		bool OriginPointVisible();
+		bool OriginPointVisible() const;
 		void OriginPointVisible(bool vis);
+
+		// Show/Hide the bounding boxes
+		bool BBoxesVisible() const;
+		void BBoxesVisible(bool vis);
 
 		// Cast a ray into the scene, returning hit info
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);

@@ -35,13 +35,14 @@ namespace Rylogic.Gui.WPF
 			// Initialise commands
 			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
 			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
 			ResetView = Command.Create(this, ResetViewInternal);
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
-			ShowMeasureTool = Command.Create(this, ShowMeasureToolInternal);
+			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
-			ShowObjectManager = Command.Create(this, ShowObjectManagerInternal);
+			ShowObjectManagerUI = Command.Create(this, ShowObjectManagerInternal);
 
 			if (DesignerProperties.GetIsInDesignMode(this))
 				return;
@@ -60,15 +61,14 @@ namespace Rylogic.Gui.WPF
 				// Create a D3D11 off-screen render target image source
 				Source = D3DImage = new D3D11Image();
 
-				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
-				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
-
 				// Set defaults
-				BackgroundColor = Colour32.LightGray;
+				ContextMenu = this.FindCMenu("View3dCMenu", new View3dCMenu(this));
+				BackgroundColour = Colour32.LightGray;
 				DesiredPixelAspect = 1;
 				ClickTimeMS = 180;
 				MouseNavigation = true;
 				DefaultKeyboardShortcuts = true;
+				ViewPreset = EViewPreset.Current;
 
 				DataContext = this;
 			}
@@ -146,11 +146,43 @@ namespace Rylogic.Gui.WPF
 				// Handlers
 				void HandleSettingsChanged(object sender, View3d.SettingChangeEventArgs e)
 				{
-					switch (e.Setting)
+					if (ContextMenu?.DataContext is IView3dCMenu cmenu)
 					{
-					case View3d.EWindowSettings.BackgroundColour:
-						BackgroundColor = Window.BackgroundColour;
-						break;
+						if (Bit.AllSet(e.Setting, View3d.ESettings.General))
+						{
+							if (Bit.AllSet(e.Setting, View3d.ESettings.General_OriginPointVisible))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.General_FocusPointVisible))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.General_BBoxesVisible))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.BBoxesVisible));
+						}
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Scene))
+						{
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_BackgroundColour))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_Multisampling))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_FilllMode))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FillMode));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_CullMode))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.CullMode));
+						}
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Camera))
+						{
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Camera_Orthographic))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Camera_AlignAxis))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.AlignDirection));
+						}
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Lighting))
+						{
+						}
+					}
+					if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_BackgroundColour))
+					{
+						BackgroundColour = Window.BackgroundColour;
+						NotifyPropertyChanged(nameof(BackgroundColour));
 					}
 				}
 				void HandleInvalidated(object sender, EventArgs e)
@@ -220,18 +252,17 @@ namespace Rylogic.Gui.WPF
 		public void Invalidate() => Window.Invalidate();
 
 		/// <summary>Set the background colour of the control</summary>
-		public Colour32 BackgroundColor
+		public Colour32 BackgroundColour
 		{
-			get { return (Colour32)GetValue(BackgroundColorProperty); }
-			set { SetValue(BackgroundColorProperty, value); }
+			get { return (Colour32)GetValue(BackgroundColourProperty); }
+			set { SetValue(BackgroundColourProperty, value); }
 		}
-		private void BackgroundColor_Changed(Colour32 new_value)
+		private void BackgroundColour_Changed(Colour32 new_value)
 		{
 			Window.BackgroundColour = new_value;
-			NotifyPropertyChanged(nameof(BackgroundColor));
 		}
-		public Brush BackgroundColorBrush => BackgroundColor.ToMediaBrush();
-		public static readonly DependencyProperty BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colour32.LightGray);
+		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();
+		public static readonly DependencyProperty BackgroundColourProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColour), def: Colour32.LightGray);
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
@@ -239,9 +270,20 @@ namespace Rylogic.Gui.WPF
 			get { return D3DImage.MultiSampling; }
 			set
 			{
+				// Since, in WPF, we're rendering to an off-screen render target, multisampling
+				// is done by changing the render target size, not the Dx11 multisampling settings.
+				// This means the normal View3d.Window multisampling setting isn't changed.
 				D3DImage.MultiSampling = value;
 				NotifyPropertyChanged(nameof(MultiSampling));
+				NotifyPropertyChanged(nameof(Antialiasing));
+				if (ContextMenu?.DataContext is IView3dCMenu cmenu)
+					cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
 			}
+		}
+		public bool Antialiasing
+		{
+			get => MultiSampling != 1;
+			set => MultiSampling = value ? 4 : 1;
 		}
 
 		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
@@ -477,6 +519,14 @@ namespace Rylogic.Gui.WPF
 			Invalidate();
 		}
 
+		/// <summary>Toggle the visibility of object bounding boxes</summary>
+		public Command ToggleBBoxesVisible { get; }
+		private void ToggleBBoxesVisibleInternal()
+		{
+			Window.BBoxesVisible = !Window.BBoxesVisible;
+			Invalidate();
+		}
+
 		/// <summary>Toggle between orthographic and perspective projection</summary>
 		public Command ToggleOrthographic { get; }
 		private void ToggleOrthographicInternal()
@@ -523,7 +573,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Show a measurement tool window</summary>
-		public Command ShowMeasureTool { get; }
+		public Command ShowMeasureToolUI { get; }
 		private void ShowMeasureToolInternal()
 		{
 			if (m_measurement_ui == null)
@@ -560,7 +610,7 @@ namespace Rylogic.Gui.WPF
 		private View3dLightingUI? m_lighting_ui;
 
 		/// <summary>Show the UI for objects in the scene</summary>
-		public Command ShowObjectManager { get; }
+		public Command ShowObjectManagerUI { get; }
 		private void ShowObjectManagerInternal()
 		{
 			if (m_object_manager_ui == null)
@@ -574,120 +624,59 @@ namespace Rylogic.Gui.WPF
 		private View3dObjectManagerUI? m_object_manager_ui;
 
 		/// <summary>Pre-set view directions</summary>
-		public ICollectionView ViewPresets
+		public EViewPreset ViewPreset
 		{
-			get { return m_view_presets; }
-			private set
+			get => m_view_preset;
+			set
 			{
-				if (m_view_presets == value) return;
-				if (m_view_presets != null)
+				if (m_view_preset == value) return;
+				m_view_preset = value;
+				if (m_view_preset != EViewPreset.Current)
 				{
-					m_view_presets.CurrentChanged -= HandleViewChanged;
-				}
-				m_view_presets = value;
-				if (m_view_presets != null)
-				{
-					m_view_presets.CurrentChanged += HandleViewChanged;
-				}
-
-				// Handler
-				void HandleViewChanged(object sender, EventArgs e)
-				{
-					var view = (EViewPresets)ViewPresets.CurrentItem;
-					if (view == EViewPresets.Current)
-						return;
-
 					var pos = Camera.FocusPoint;
-					switch (view)
+					switch (m_view_preset)
 					{
-					default: throw new Exception($"Unknown view pre-set: {view}");
-					case EViewPresets.PosX: Camera.ResetView(+v4.XAxis); break;
-					case EViewPresets.NegX: Camera.ResetView(-v4.XAxis); break;
-					case EViewPresets.PosY: Camera.ResetView(+v4.YAxis); break;
-					case EViewPresets.NegY: Camera.ResetView(-v4.YAxis); break;
-					case EViewPresets.PosZ: Camera.ResetView(+v4.ZAxis); break;
-					case EViewPresets.NegZ: Camera.ResetView(-v4.ZAxis); break;
-					case EViewPresets.PosXYZ: Camera.ResetView(+v4.XAxis + v4.YAxis + v4.ZAxis); break;
-					case EViewPresets.NegXYZ: Camera.ResetView(-v4.XAxis - v4.YAxis - v4.ZAxis); break;
+					default: throw new Exception($"Unknown view pre-set: {m_view_preset}");
+					case EViewPreset.PosX: Camera.ResetView(+v4.XAxis); break;
+					case EViewPreset.NegX: Camera.ResetView(-v4.XAxis); break;
+					case EViewPreset.PosY: Camera.ResetView(+v4.YAxis); break;
+					case EViewPreset.NegY: Camera.ResetView(-v4.YAxis); break;
+					case EViewPreset.PosZ: Camera.ResetView(+v4.ZAxis); break;
+					case EViewPreset.NegZ: Camera.ResetView(-v4.ZAxis); break;
+					case EViewPreset.PosXYZ: Camera.ResetView(+v4.XAxis + v4.YAxis + v4.ZAxis); break;
+					case EViewPreset.NegXYZ: Camera.ResetView(-v4.XAxis - v4.YAxis - v4.ZAxis); break;
 					}
 					Camera.FocusPoint = pos;
 					Invalidate();
-				};
+				}
 			}
 		}
-		private ICollectionView m_view_presets = null!;
+		private EViewPreset m_view_preset;
 
 		/// <summary>Directions to align the camera up-axis to</summary>
-		public ICollectionView AlignDirections
+		public EAlignDirection AlignDirection
 		{
-			get => m_align_directions;
-			private set
+			get => m_align_direction;
+			set
 			{
-				if (m_align_directions == value) return;
-				if (m_align_directions != null)
-				{
-					m_align_directions.CurrentChanged -= HandleAlignAxisChanged;
-				}
-				m_align_directions = value;
-				if (m_align_directions != null)
-				{
-					// Set the current align direction
-					if (Camera.AlignAxis == +v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosX);
-					else if (Camera.AlignAxis == -v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegX);
-					else if (Camera.AlignAxis == +v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosY);
-					else if (Camera.AlignAxis == -v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegY);
-					else if (Camera.AlignAxis == +v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosZ);
-					else if (Camera.AlignAxis == -v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegZ);
-					else m_align_directions.MoveCurrentTo(EAlignDirections.None);
-					m_align_directions.CurrentChanged += HandleAlignAxisChanged;
-				}
+				if (m_align_direction == value) return;
+				m_align_direction = value;
 
-				// Handlers
-				void HandleAlignAxisChanged(object sender, EventArgs e)
+				switch (m_align_direction)
 				{
-					var align = (EAlignDirections)AlignDirections.CurrentItem;
-					switch (align)
-					{
-					default: throw new Exception($"Unknown align axis direction: {align}");
-					case EAlignDirections.None: Camera.AlignAxis = v4.Zero; break;
-					case EAlignDirections.PosX: Camera.AlignAxis = +v4.XAxis; break;
-					case EAlignDirections.NegX: Camera.AlignAxis = -v4.XAxis; break;
-					case EAlignDirections.PosY: Camera.AlignAxis = +v4.YAxis; break;
-					case EAlignDirections.NegY: Camera.AlignAxis = -v4.YAxis; break;
-					case EAlignDirections.PosZ: Camera.AlignAxis = +v4.ZAxis; break;
-					case EAlignDirections.NegZ: Camera.AlignAxis = -v4.ZAxis; break;
-					}
-					Invalidate();
+				default: throw new Exception($"Unknown align axis direction: {m_align_direction}");
+				case EAlignDirection.None: Camera.AlignAxis = v4.Zero; break;
+				case EAlignDirection.PosX: Camera.AlignAxis = +v4.XAxis; break;
+				case EAlignDirection.NegX: Camera.AlignAxis = -v4.XAxis; break;
+				case EAlignDirection.PosY: Camera.AlignAxis = +v4.YAxis; break;
+				case EAlignDirection.NegY: Camera.AlignAxis = -v4.YAxis; break;
+				case EAlignDirection.PosZ: Camera.AlignAxis = +v4.ZAxis; break;
+				case EAlignDirection.NegZ: Camera.AlignAxis = -v4.ZAxis; break;
 				}
+				Invalidate();
 			}
 		}
-		private ICollectionView m_align_directions = null!;
-
-		/// <summary>Pre-set view directions</summary>
-		public enum EViewPresets
-		{
-			[Desc("Current View")] Current,
-			[Desc("+X Axis")] PosX,
-			[Desc("-X Axis")] NegX,
-			[Desc("+Y Axis")] PosY,
-			[Desc("-Y Axis")] NegY,
-			[Desc("+Z Axis")] PosZ,
-			[Desc("-Z Axis")] NegZ,
-			[Desc("+X,+Y,+Z Axis")] PosXYZ,
-			[Desc("-X,-Y,-Z Axis")] NegXYZ,
-		}
-
-		/// <summary>Directions to align the camera up axis to</summary>
-		public enum EAlignDirections
-		{
-			[Desc("No Align")] None,
-			[Desc("+X Axis")] PosX,
-			[Desc("-X Axis")] NegX,
-			[Desc("+Y Axis")] PosY,
-			[Desc("-Y Axis")] NegY,
-			[Desc("+Z Axis")] PosZ,
-			[Desc("-Z Axis")] NegZ,
-		}
+		private EAlignDirection m_align_direction;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

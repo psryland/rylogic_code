@@ -3,13 +3,14 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
-	public sealed partial class AxisPanel : Canvas, IDisposable, INotifyPropertyChanged
+	public sealed partial class AxisPanel :Canvas, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - Represents the tick marks and tick labels of an axis.
@@ -176,6 +177,30 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		}
 		private double? m_axis_size;
 
+		/// <summary>True if scrolling is allowed on this axis</summary>
+		public bool AllowScroll
+		{
+			get => Axis?.AllowScroll ?? true;
+			set
+			{
+				if (AllowScroll == value) return;
+				if (Axis != null) Axis.AllowScroll = value;
+				NotifyPropertyChanged(nameof(AllowScroll));
+			}
+		}
+
+		/// <summary>True if zooming is allowed on this axis</summary>
+		public bool AllowZoom
+		{
+			get => Axis?.AllowZoom ?? true;
+			set
+			{
+				if (AllowZoom == value) return;
+				if (Axis != null) Axis.AllowZoom = value;
+				NotifyPropertyChanged(nameof(AllowZoom));
+			}
+		}
+
 		/// <summary>Update the tick marks and labels</summary>
 		public void Invalidate()
 		{
@@ -336,19 +361,36 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public Command ToggleScrollLock { get; }
 		private void ToggleScrollLockInternal()
 		{
-			if (Axis == null) return;
-			Axis.AllowScroll = !Axis.AllowScroll;
+			AllowScroll = !AllowScroll;
 		}
 
 		/// <summary>Toggle the scroll locked state of the axis</summary>
 		public Command ToggleZoomLock { get; }
 		private void ToggleZoomLockInternal()
 		{
-			if (Axis == null) return;
-			Axis.AllowZoom = !Axis.AllowZoom;
+			AllowZoom = !AllowZoom;
 		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+
+			var axis_cmenu = ContextMenu.DataContext as IChartAxisCMenu;
+			switch (prop_name)
+			{
+			case nameof(AllowScroll):
+				{
+					axis_cmenu?.NotifyPropertyChanged(nameof(IChartAxisCMenu.AllowScroll));
+					break;
+				}
+			case nameof(AllowZoom):
+				{
+					axis_cmenu?.NotifyPropertyChanged(nameof(IChartAxisCMenu.AllowZoom));
+					break;
+				}
+			}
+		}
 	}
 }

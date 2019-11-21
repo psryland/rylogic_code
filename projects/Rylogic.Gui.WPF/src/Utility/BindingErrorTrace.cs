@@ -8,7 +8,14 @@ namespace Rylogic.Gui.WPF
 	// Notes:
 	//  - Use this in the root xaml node:
 	//    xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
-	//	  diag:PresentationTraceSources.TraceLevel="High"
+	//    diag:PresentationTraceSources.TraceLevel="High"
+	//
+	// Handy Tips:
+	//  - Add a TextBlock like this to see what the binding source is:
+	//        <TextBlock
+	//            Text = "{Binding DataContext, Converter={conv:ToString}}"
+	//            />
+
 
 	public class BindingErrorTraceListener : DefaultTraceListener
 	{

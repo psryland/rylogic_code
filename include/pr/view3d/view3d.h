@@ -335,13 +335,38 @@ extern "C"
 		Edge,
 		Face,
 	};
-	enum class EView3DWindowSettings :int
+	enum class EView3DSettings :int
 	{
-		BackgroundColour,
-		Lighting,
-		Camera,
-		FocusPointVisible,
-		OriginPointVisible,
+		// Upper 2-bytes = category
+		// Lower 2-bytes = specific property that changed.
+		None = 0,
+
+		General                    = 1 << 16,
+		General_FocusPointVisible  = General | 1 << 0,
+		General_OriginPointVisible = General | 1 << 1,
+		General_BBoxesVisible      = General | 1 << 2,
+
+		Scene                  = 1 << 17,
+		Scene_BackgroundColour = Scene | 1 << 0,
+		Scene_Multisampling    = Scene | 1 << 1,
+		Scene_FilllMode        = Scene | 1 << 2,
+		Scene_CullMode         = Scene | 1 << 3,
+		Scene_Viewport         = Scene | 1 << 4,
+
+		Camera              = 1 << 18,
+		Camera_Position     = Camera | 1 << 0,
+		Camera_FocusDist    = Camera | 1 << 1,
+		Camera_Orthographic = Camera | 1 << 2,
+		Camera_Aspect       = Camera | 1 << 3,
+		Camera_Fov          = Camera | 1 << 4,
+		Camera_ClipPlanes   = Camera | 1 << 5,
+		Camera_LockMask     = Camera | 1 << 6,
+		Camera_AlignAxis    = Camera | 1 << 7,
+
+		Lighting     = 1 << 19,
+		Lighting_All = Lighting | 1 << 0,
+
+		_bitwise_operators_allowed = 0x7FFFFFF,
 	};
 
 	struct View3DV2
@@ -536,7 +561,7 @@ extern "C"
 		View3DObject m_object;
 	};
 
-	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window, EView3DWindowSettings setting);
+	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window, EView3DSettings setting);
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);

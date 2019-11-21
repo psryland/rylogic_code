@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using LDraw.Dialogs;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -22,22 +26,24 @@ namespace LDraw.UI
 			{
 				ShowTitle = false,
 				TabText = name,
-				TabCMenu = TabCMenu(),
+				TabCMenu = this.FindCMenu("TabCMenu", this),
 				DestroyOnClose = true,
 			};
+			OtherScenes = new ListCollectionView(new List<SceneWrapper>());
 			Model = model;
 			SceneName = name;
 			SceneView.Options = Settings.Scene;
-			SceneView.Scene.ContextMenu = (ContextMenu)FindResource("LDrawCMenu");
-			SceneView.Scene.ContextMenu.DataContext = this;
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
 
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			ClearScene = Command.Create(this, ClearSceneInternal);
+			LinkCamera = Command.Create(this, LinkCameraInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
 
+			InitCMenus();
+			PopulateOtherScenes();
 			DataContext = this;
 		}
 		public void Dispose()
@@ -99,6 +105,7 @@ namespace LDraw.UI
 				if (m_model != null)
 				{
 					m_model.Settings.SettingChange -= HandleSettingChange;
+					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
 					m_model.Scenes.Remove(this);
 				}
 				m_model = value;
@@ -106,6 +113,7 @@ namespace LDraw.UI
 				{
 					// Don't add to m_model.Scenes, that's the caller's choice
 					m_model.Settings.SettingChange += HandleSettingChange;
+					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
 				}
 
 				// Handlers
@@ -120,6 +128,10 @@ namespace LDraw.UI
 							break;
 						}
 					}
+				}
+				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					PopulateOtherScenes();
 				}
 			}
 		}
@@ -153,12 +165,23 @@ namespace LDraw.UI
 		}
 		public static readonly DependencyProperty AutoRangeProperty = Gui_.DPRegister<SceneUI>(nameof(AutoRange));
 
-		/// <summary>Return the tab context menu</summary>
-		private ContextMenu TabCMenu()
+		/// <summary>Other available scenes</summary>
+		public ICollectionView OtherScenes { get; }
+		private void PopulateOtherScenes()
 		{
-			var cmenu = (ContextMenu)FindResource("TabCMenu");
-			cmenu.DataContext = this;
-			return cmenu;
+			var list = (List<SceneWrapper>)OtherScenes.SourceCollection;
+			list.Sync(Model.Scenes.Except(this).Select(x => new SceneWrapper(x)).Prepend(SceneWrapper.NullScene));
+			if (OtherScenes.CurrentItem == null) OtherScenes.MoveCurrentToFirst();
+			OtherScenes.Refresh();
+			NotifyPropertyChanged(nameof(OtherScenes));
+		}
+
+		/// <summary>Set up the context menus</summary>
+		private void InitCMenus()
+		{
+			SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", new SceneCMenu(this));
+			SceneView.XAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", new SceneAxisCMenu(this, ChartControl.EAxis.XAxis));
+			SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", new SceneAxisCMenu(this, ChartControl.EAxis.YAxis));
 		}
 
 		/// <summary>Rename the scene tab</summary>
@@ -184,6 +207,13 @@ namespace LDraw.UI
 		{
 			SceneView.Scene.RemoveAllObjects();
 			SceneView.Invalidate();
+		}
+
+		/// <summary>Link the camera for this scene to the camera of another scene</summary>
+		public Command LinkCamera { get; }
+		private void LinkCameraInternal()
+		{
+
 		}
 
 		/// <summary>Show the lighting dialog</summary>

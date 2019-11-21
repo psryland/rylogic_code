@@ -38,23 +38,23 @@ namespace Rylogic.Gfx
 
 				// Attach the global error handler
 				View3D_WindowErrorCBSet(Handle, m_error_cb = HandleError, IntPtr.Zero, true);
-				void HandleError(IntPtr ctx, string msg) { Error?.Invoke(this, new ErrorEventArgs(msg)); }
+				void HandleError(IntPtr ctx, string msg) => Error?.Invoke(this, new ErrorEventArgs(msg));
 
 				// Set up a callback for when settings are changed
 				View3D_WindowSettingsChangedCB(Handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
-				void HandleSettingsChanged(IntPtr ctx, HWindow wnd, EWindowSettings setting) { OnSettingsChanged?.Invoke(this, new SettingChangeEventArgs(setting)); }
+				void HandleSettingsChanged(IntPtr ctx, HWindow wnd, ESettings setting) => OnSettingsChanged?.Invoke(this, new SettingChangeEventArgs(setting));
 
 				// Set up a callback for when the window is invalidated
 				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb = HandleInvalidated, IntPtr.Zero, true);
-				void HandleInvalidated(IntPtr ctx, HWindow wnd) { OnInvalidated?.Invoke(this, EventArgs.Empty); }
+				void HandleInvalidated(IntPtr ctx, HWindow wnd) => OnInvalidated?.Invoke(this, EventArgs.Empty);
 
 				// Set up a callback for when a render is about to happen
 				View3D_WindowRenderingCB(Handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
-				void HandleRendering(IntPtr ctx, HWindow wnd) { OnRendering?.Invoke(this, EventArgs.Empty); }
+				void HandleRendering(IntPtr ctx, HWindow wnd) => OnRendering?.Invoke(this, EventArgs.Empty);
 
 				// Set up a callback for when the object store for this window changes
 				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
-				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) { OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args)); }
+				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
 
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);

@@ -75,9 +75,8 @@
 		<!-- Tool bar -->
 		<ToolBarTray
 			DockPanel.Dock="Top"
-			ToolBarTray.IsLocked="True"
 			>
-			<!-- Linked Scenes tool bar -->
+			<!-- Linked Scenes tool bar 
 			<ToolBar
 				Visibility="Visible"
 				MaxHeight="32"
@@ -90,8 +89,8 @@
 					<Image
 						Source="{StaticResource green_left_right}"
 						RenderOptions.BitmapScalingMode="HighQuality"
-						Stretch="Fill"
 						StretchDirection="DownOnly"
+						Stretch="Fill"
 						/>
 				</Button>
 				<Button>
@@ -118,7 +117,14 @@
 						StretchDirection="DownOnly"
 						/>
 				</Button>
-				<Separator/>
+			</ToolBar>
+			-->
+
+			<!-- Link Axis toolbar
+			<ToolBar
+				Visibility="{Binding Settings.Scene.ShowAxes, Converter={conv:BoolToVisible}}"
+				MaxHeight="32"
+				>
 				<Label
 					Content="Link Axes:"
 					/>
@@ -139,11 +145,18 @@
 						/>
 				</Button>
 			</ToolBar>
-
-			<!-- Animation tool bar -->
-			<ToolBar>
-				
+			-->
+			
+			<!-- Animation tool bar 
+			<ToolBar
+				Visibility="{Binding Settings.Scene.ShowAxes, Converter={conv:BoolToVisible}}"
+				MaxHeight="32"
+				>
+				<Label
+					Content="Animation:"
+					/>
 			</ToolBar>
+				-->
 		</ToolBarTray>
 		
 		<!-- Status bar -->
