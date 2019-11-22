@@ -12,7 +12,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Move the current position to 'item' or the first item if 'item' is not found</summary>
-		public static bool MoveCurrentToOrFirst(this ICollectionView collection, object item)
+		public static bool MoveCurrentToOrFirst(this ICollectionView collection, object? item)
 		{
 			return item != null
 				? collection.MoveCurrentTo(item)

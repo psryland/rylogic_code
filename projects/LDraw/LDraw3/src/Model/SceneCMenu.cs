@@ -201,6 +201,10 @@ namespace LDraw
 		}
 
 		/// <inheritdoc/>
+		public bool CanLinkCamera
+		{
+			get => m_owner.Model.Scenes.Count > 1;
+		}
 		public ICommand LinkCamera
 		{
 			get => m_owner.LinkCamera;
@@ -289,31 +293,6 @@ namespace LDraw
 		public ICommand ToggleZoomLock
 		{
 			get => m_axis_panel.ToggleZoomLock;
-		}
-
-		/// <summary></summary>
-		public ICollectionView LinkableCharts
-		{
-			get => m_owner.OtherScenes;
-		}
-		public IChartProxy? LinkToChart
-		{
-			get
-			{
-				if (!(m_axis_panel.Axis?.LinkTo is ChartControl.AxisLinkData link)) return SceneWrapper.NullScene;
-				var scene = link.Chart.FindVisualParent<SceneUI>();
-				return new SceneWrapper(scene);
-			}
-			set
-			{
-				if (LinkToChart == value || m_axis_panel.Axis == null) return;
-				if (value != null && value.Chart?.GetAxis(m_axis) is ChartControl.RangeData.Axis axis)
-					m_axis_panel.Axis.LinkTo = axis != null ? new ChartControl.AxisLinkData(axis) : null;
-				else
-					m_axis_panel.Axis.LinkTo = null;
-
-				NotifyPropertyChanged(nameof(LinkToChart));
-			}
 		}
 	}
 }

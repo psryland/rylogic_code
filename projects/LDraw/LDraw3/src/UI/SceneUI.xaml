@@ -57,8 +57,6 @@
 			<ContextMenu x:Key="LDrawAxisCMenu" x:Shared="False"> <!-- Not shared because we need two of them -->
 				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowScroll"/>
 				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowZoom"/>
-				<Separator/>
-				<StaticResource	ResourceKey="ChartAxisMenuItem_LinkAxis"/>
 			</ContextMenu>
 
 			<!-- A context menu for the scene tab -->

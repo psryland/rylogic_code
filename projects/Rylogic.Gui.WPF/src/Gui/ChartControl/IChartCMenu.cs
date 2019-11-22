@@ -40,6 +40,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set whether zoom zooms in toward the mouse</summary>
 		bool MouseCentredZoom { get; set; }
 		ICommand ToggleMouseCentredZoom { get; }
+
+		/// <summary>Link camera to another scene camera</summary>
+		bool CanLinkCamera { get; }
+		ICommand LinkCamera { get; }
 	}
 	public interface IChartAxisCMenu :INotifyPropertyChanged
 	{
@@ -53,9 +57,5 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Allow zooming</summary>
 		bool AllowZoom { get; set; }
 		ICommand ToggleZoomLock { get; }
-
-		/// <summary></summary>
-		ICollectionView LinkableCharts { get; }
-		IChartProxy? LinkToChart { get; set; }
 	}
 }

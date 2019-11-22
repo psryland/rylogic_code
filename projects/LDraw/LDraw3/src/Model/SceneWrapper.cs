@@ -1,11 +1,12 @@
 ﻿using System;
+using System.ComponentModel;
 using LDraw.UI;
 using Rylogic.Gui.WPF;
 
 namespace LDraw
 {
 	/// <summary>Binding wrapper for a scene</summary>
-	public class SceneWrapper :IChartProxy
+	public class SceneWrapper :IChartProxy, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This wrapper is needed because when UIElement objects are used as the items
@@ -36,10 +37,18 @@ namespace LDraw
 				if (m_selected == value || SceneUI == null) return;
 				m_selected = value;
 				m_selected_cb?.Invoke(SceneUI, value);
+				NotifyPropertyChanged(nameof(Selected));
 			}
 		}
 		private bool m_selected;
 		private readonly Action<SceneUI, bool>? m_selected_cb;
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary></summary>
 		public static implicit operator SceneUI?(SceneWrapper? x) => x?.SceneUI;

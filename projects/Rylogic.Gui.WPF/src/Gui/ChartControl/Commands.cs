@@ -383,6 +383,16 @@ namespace Rylogic.Gui.WPF
 				get => m_owner.ToggleMouseCentredZoom;
 			}
 
+			/// <inheritdoc/>
+			public bool CanLinkCamera
+			{
+				get => false;
+			}
+			public ICommand LinkCamera
+			{
+				get => Command.NoOp;
+			}
+
 			#endregion
 		}
 		public class AxisCMenuBinding :IChartAxisCMenu
@@ -420,17 +430,6 @@ namespace Rylogic.Gui.WPF
 			public ICommand ToggleZoomLock
 			{
 				get => m_owner.ToggleZoomLock;
-			}
-
-			/// <inheritdoc/>
-			public ICollectionView LinkableCharts
-			{
-				get => new ListCollectionView(Array.Empty<IChartProxy>());
-			}
-			public IChartProxy? LinkToChart
-			{
-				get => null;
-				set { }
 			}
 		}
 	}

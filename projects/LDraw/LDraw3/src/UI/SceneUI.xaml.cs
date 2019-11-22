@@ -35,6 +35,7 @@ namespace LDraw.UI
 			SceneView.Options = Settings.Scene;
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
+			Links = new List<ChartLink>();
 
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			ClearScene = Command.Create(this, ClearSceneInternal);
@@ -132,6 +133,7 @@ namespace LDraw.UI
 				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					PopulateOtherScenes();
+					CleanupLinks();
 				}
 			}
 		}
@@ -176,6 +178,13 @@ namespace LDraw.UI
 			NotifyPropertyChanged(nameof(OtherScenes));
 		}
 
+		/// <summary>The links to other scenes</summary>
+		public List<ChartLink> Links { get; }
+		public void CleanupLinks()
+		{
+			Links.RemoveAll(x => x.Source == null || x.Target == null || (x.CamLink == ELinkCameras.None && x.AxisLink == ELinkAxes.None));
+		}
+
 		/// <summary>Set up the context menus</summary>
 		private void InitCMenus()
 		{
@@ -213,8 +222,16 @@ namespace LDraw.UI
 		public Command LinkCamera { get; }
 		private void LinkCameraInternal()
 		{
-
+			if (m_link_cameras_ui == null)
+			{
+				m_link_cameras_ui = new LinkCamerasUI(Window.GetWindow(this), Model);
+				m_link_cameras_ui.Closed += delegate { m_link_cameras_ui = null; };
+				m_link_cameras_ui.Show();
+			}
+			m_link_cameras_ui.Source = new SceneWrapper(this);
+			m_link_cameras_ui.Focus();
 		}
+		private static LinkCamerasUI? m_link_cameras_ui;
 
 		/// <summary>Show the lighting dialog</summary>
 		public Command ShowLightingUI { get; }
@@ -222,7 +239,7 @@ namespace LDraw.UI
 		{
 			if (m_lighting_ui == null)
 			{
-				m_lighting_ui = new LightingUI(App.Current.MainWindow, SceneView.Scene.Window);
+				m_lighting_ui = new LightingUI(Window.GetWindow(this), SceneView.Scene.Window);
 				m_lighting_ui.Closed += delegate { m_lighting_ui = null; };
 				m_lighting_ui.Show();
 			}
@@ -243,6 +260,19 @@ namespace LDraw.UI
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+
+			var cmenu = SceneView.Scene.ContextMenu?.DataContext as IChartCMenu;
+			if (cmenu != null)
+			{
+				switch (prop_name)
+				{
+				case nameof(OtherScenes):
+					{
+						cmenu.NotifyPropertyChanged(nameof(IChartCMenu.CanLinkCamera));
+						break;
+					}
+				}
+			}
 		}
 	}
 }

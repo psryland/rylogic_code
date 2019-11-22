@@ -1,22 +1,311 @@
 ﻿<Window
-	x:Class="LDraw.src.Dialogs.LinkCamerasUI"
+	x:Class="LDraw.Dialogs.LinkCamerasUI"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
 	Title="Link Cameras"
+	WindowStartupLocation="CenterOwner"
+	WindowStyle="ToolWindow"
 	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
 	Height="250"
 	Width="400"
 	>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
+
+		<!-- The scene that will be linked -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			Margin="3"
+			>
+			<TextBlock
+				Text="Source Scene:"
+				VerticalAlignment="Center"
+				HorizontalAlignment ="Right"
+				MinWidth="80"
+				/>
+			<ComboBox
+				ItemsSource="{Binding SourceScenes}"
+				SelectedItem="{Binding Source}"
+				VerticalAlignment="Center"
+				MinWidth="100"
+				>
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<StackPanel
+							Orientation="Horizontal"
+							MaxHeight="16"
+							>
+							<TextBlock
+								Text="{Binding Name}"
+								VerticalAlignment="Center"
+								/>
+							<Image
+								Visibility="{Binding Selected, Converter={conv:BoolToVisible}}"
+								Source="{StaticResource chain}"
+								RenderOptions.BitmapScalingMode="HighQuality"
+								VerticalAlignment="Center"
+								Margin="6,0,0,0"
+								/>
+						</StackPanel>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+		</StackPanel>
 		
+		<!-- Select the scene to display linking information for -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			Margin="3"
+			>
+			<TextBlock
+				Text="Target Scene: "
+				VerticalAlignment="Center"
+				HorizontalAlignment="Right"
+				MinWidth="80"
+				/>
+			<ComboBox
+				ItemsSource="{Binding TargetScenes}"
+				SelectedItem="{Binding Target}"
+				VerticalAlignment="Center"
+				MinWidth="100"
+				>
+				<ComboBox.ItemTemplate>
+					<DataTemplate>
+						<StackPanel
+							Orientation="Horizontal"
+							MaxHeight="16"
+							>
+							<TextBlock
+								Text="{Binding Name}"
+								VerticalAlignment="Center"
+								/>
+							<Image
+								Visibility="{Binding Selected, Converter={conv:BoolToVisible}}"
+								Source="{StaticResource chain}"
+								RenderOptions.BitmapScalingMode="HighQuality"
+								VerticalAlignment="Center"
+								Margin="6,0,0,0"
+								/>
+						</StackPanel>
+					</DataTemplate>
+				</ComboBox.ItemTemplate>
+			</ComboBox>
+		</StackPanel>
+
+		<!-- Two way link -->
+		<CheckBox
+			Grid.Row="2"
+			IsChecked="{Binding BiDirectional}"
+			Content="Link in both directions"
+			HorizontalAlignment="Center"
+			Margin="3"
+			/>
+
+		<!-- Camera Linking Properties  -->
+		<StackPanel
+			Grid.Row="3"
+			Orientation="Vertical"
+			Margin="16,3,16,3"
+			>
+			<TextBlock
+				Text="Camera Transform Linking:"
+				/>
+			<StackPanel
+				Orientation="Vertical"
+				Margin="20,3,3,3"
+				>
+				<!-- Pan X Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding XPanLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource green_left_right}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link camera horizontal panning movement"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Pan Y Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding YPanLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource green_up_down}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link camera vertical panning movement"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Zoom Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding ZPanLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource green_in_out}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link camera zoom movement"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Rotation Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding RotateLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource green_rotate}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link camera rotation"
+						Margin="3"
+						/>
+				</StackPanel>
+
+			</StackPanel>
+		</StackPanel>
 		
+		<!-- Axis Linking Properties -->
+		<StackPanel
+			Grid.Row="4"
+			Orientation="Vertical"
+			Margin="16,3,16,3"
+			>
+			<TextBlock
+				Text="Axis Linking:"
+				/>
+			<StackPanel
+				Orientation="Vertical"
+				Margin="20,3,3,3"
+				>
+				<!-- X Axis Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding XAxisLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource xaxis}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link the X axis range"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Y Axis Linking -->
+				<StackPanel
+					Orientation="Horizontal"
+					MaxHeight="32"
+					Margin="1"
+					>
+					<ToggleButton
+						IsChecked="{Binding YAxisLinked}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource yaxis}"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							/>
+					</ToggleButton>
+					<TextBlock
+						Text="Link the Y axis range"
+						Margin="3"
+						/>
+				</StackPanel>
+
+			</StackPanel>
+		</StackPanel>
+
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="10"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			
+			<Button
+				Grid.Column="0"
+				Content="Reset Links"
+				Command="{Binding ResetLinks}"
+				Margin="16"
+				MinWidth="80"
+				/>
+			<Button
+				Grid.Column="2"
+				Content="OK"
+				IsDefault="True"
+				Command="{Binding Accept}"
+				Margin="16"
+				MinWidth="80"
+				/>
+		</Grid>
 	</Grid>
 </Window>

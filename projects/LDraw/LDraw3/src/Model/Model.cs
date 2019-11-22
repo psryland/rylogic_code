@@ -140,14 +140,24 @@ namespace LDraw
 		/// <summary>Return a generated name for a new scene UI</summary>
 		public string GenerateSceneName()
 		{
-			return $"{UITag.Scene}{++m_scene_number}";
+			for (; ; )
+			{
+				var name = $"{UITag.Scene}{++m_scene_number}";
+				if (!Scenes.Any(x => string.Compare(x.SceneName, name, true) == 0))
+					return name;
+			}
 		}
 		private int m_scene_number;
 
 		/// <summary>Return a generated name for a new script UI</summary>
 		public string GenerateScriptName()
 		{
-			return $"{UITag.Script}{++m_script_number}";
+			for (; ; )
+			{
+				var name = $"{UITag.Script}{++m_script_number}";
+				if (!Scripts.Any(x => string.Compare(x.ScriptName, name, true) == 0))
+					return name;
+			}
 		}
 		private int m_script_number;
 

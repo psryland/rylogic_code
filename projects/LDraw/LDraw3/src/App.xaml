@@ -12,6 +12,7 @@
 
 			<BitmapImage x:Key="auto_range" UriSource="/LDraw;component/res/auto_range.png" />
 			<BitmapImage x:Key="bin" UriSource="/LDraw;component/res/bin.png" />
+			<BitmapImage x:Key="chain" UriSource="/LDraw;component/res/chain.png" />
 			<BitmapImage x:Key="colour_wheel" UriSource="/LDraw;component/res/colour_wheel.png" />
 			<BitmapImage x:Key="display" UriSource="/LDraw;component/res/display.png" />
 			<BitmapImage x:Key="light_bulb" UriSource="/LDraw;component/res/light_bulb.png" />

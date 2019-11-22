@@ -120,7 +120,7 @@
 							<ListBox.ItemTemplate>
 								<DataTemplate>
 									<CheckBox
-										Content="{Binding SceneName}"
+										Content="{Binding Name}"
 										IsChecked="{Binding Selected}"
 										Background="White"
 										/>

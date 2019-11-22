@@ -98,11 +98,12 @@
 					MinWidth="80"
 					/>
 				<Button
+					Content="{Binding BackgroundColour, Converter={conv:ColourToString}}"
+					Background="{Binding BackgroundColour, Converter={conv:ColourToBrush}}"
+					TextBlock.Foreground="{Binding BackgroundColour, Converter={conv:TextOverColourBrush}}"
 					Command="{Binding SetBackgroundColour}"
 					VerticalAlignment="Center"
-					Background="White"
 					BorderBrush="#DDD"
-					Content="{Binding BackgroundColour, Converter={conv:ColourToString}}"
 					Padding="5,1,5,1"
 					MinWidth="100"
 					/>
@@ -287,6 +288,7 @@
 		/>
 	<MenuItem x:Key="ChartMenuItem_LinkCamera" x:Shared="False"
 		Header="Link Camera..."
+		IsEnabled="{Binding CanLinkCamera}"
 		Command="{Binding LinkCamera}"
 		>
 		<MenuItem.Icon>
@@ -306,28 +308,6 @@
 		IsChecked="{Binding AllowZoom, Mode=OneWay}"
 		Command="{Binding ToggleZoomLock}"
 		/>
-	<MenuItem x:Key="ChartAxisMenuItem_LinkAxis" x:Shared="False"
-		IsEnabled="{Binding LinkableCharts.Count, Converter={conv:Compare}, ConverterParameter='!=0'}"
-		>
-		<MenuItem.Header>
-			<StackPanel Orientation="Horizontal">
-				<TextBlock
-					Text="Link To: "
-					VerticalAlignment="Center"
-					MinWidth="80"
-					/>
-				<ComboBox
-					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-					ItemsSource="{Binding LinkableCharts}"
-					SelectedItem="{Binding LinkToChart}"
-					DisplayMemberPath="Name"
-					HorizontalAlignment="Stretch"
-					BorderThickness="0"
-					MinWidth="100"
-					/>
-			</StackPanel>
-		</MenuItem.Header>
-	</MenuItem>
 
 	<ContextMenu x:Key="ChartCMenu">
 		<MenuItem Header="Objects">

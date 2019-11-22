@@ -1,7 +1,6 @@
 Immediate ToDo:
 	
 LDraw
-	- Linked cameras
 	- Show selection
 	- Saved views
 	- Highlight errors in editor
