@@ -323,6 +323,31 @@ namespace LDraw
 		private string TempScriptDirectory => Path_.CombinePath(StartupOptions.UserDataDir, "Temporary Scripts");
 
 		/// <summary></summary>
+		public static readonly string SupportedFilesFilter = Util.FileDialogFilter(
+			"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
+			"Ldr Script", "*.ldr",
+			"Binary Model File", "*.p3d",
+			"3D Studio Max Model File", "*.3ds",
+			"STL CAD Model File", "*.stl",
+			"Comma Separated Values", "*.csv",
+			"All Files", "*.*");
+
+		/// <summary>Text file types that can be edited in the script UI</summary>
+		public static readonly string EditableFilesFilter = Util.FileDialogFilter(
+			"Script Files", "*.ldr",
+			"Text Files", "*.txt",
+			"Comma Separated Values", "*.csv",
+			"All Files", "*.*");
+
+		/// <summary>Text file types that can be edited in the script UI</summary>
+		public static readonly string AssetFilesFilter = Util.FileDialogFilter(
+			"Binary Model File", "*.p3d",
+			"3D Studio Max Model File", "*.3ds",
+			"STL CAD Model File", "*.stl",
+			"Comma Separated Values", "*.csv",
+			"All Files", "*.*");
+
+		/// <summary></summary>
 		private static class UITag
 		{
 			public const string Scene = "Scene";

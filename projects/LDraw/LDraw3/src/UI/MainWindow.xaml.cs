@@ -249,16 +249,7 @@ namespace LDraw
 				// Prompt for a filepath if none provided
 				if (filepath == null || filepath.Length == 0)
 				{
-					var filter = Util.FileDialogFilter(
-						"Supported Files", "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
-						"Ldr Script", "*.ldr",
-						"Binary Model File", "*.p3d",
-						"3D Studio Max Model File", "*.3ds",
-						"STL CAD Model File", "*.stl",
-						"Comma Separated Values", "*.csv",
-						"All Files", "*.*");
-
-					var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = filter };
+					var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Model.SupportedFilesFilter };
 					if (dlg.ShowDialog(App.Current.MainWindow) != true)
 						return null;
 					

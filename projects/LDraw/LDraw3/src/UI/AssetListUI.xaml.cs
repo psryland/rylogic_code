@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using Microsoft.Win32;
+using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
+using Rylogic.Utility;
 
 namespace LDraw.UI
 {
@@ -21,17 +26,16 @@ namespace LDraw.UI
 			{
 				ShowTitle = false,
 				TabText = "Assets",
-				//TabCMenu = TabCMenu(),
 				DestroyOnClose = false,
 			};
 			Model = model;
 			Assets = CollectionViewSource.GetDefaultView(Model.Assets);
 			
+			AddAsset = Command.Create(this, AddAssetInternal);
 			DataContext = this;
 		}
 		public void Dispose()
 		{
-			Model = null!;
 			DockControl = null!;
 			GC.SuppressFinalize(this);
 		}
@@ -43,69 +47,41 @@ namespace LDraw.UI
 			private set
 			{
 				if (m_dock_control == value) return;
-				if (m_dock_control != null)
-				{
-				//	m_dock_control.ActiveChanged -= HandleActiveChanged;
-				//	m_dock_control.SavingLayout -= HandleSavingLayout;
-				//	Util.Dispose(ref m_dock_control!);
-				}
+				Util.Dispose(ref m_dock_control!);
 				m_dock_control = value;
-				if (m_dock_control != null)
-				{
-				//	m_dock_control.SavingLayout += HandleSavingLayout;
-				//	m_dock_control.ActiveChanged += HandleActiveChanged;
-				}
-
-				// Handlers
-				//void HandleActiveChanged(object sender, ActiveContentChangedEventArgs e)
-				//{
-				//	//// When activated, restore focus to the editor
-				//	//if (DockControl.IsActiveContent)
-				//	//	Editor.Focus();
-				//	//
-				//	//	Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
-				//	//	Invalidate();
-				//}
-				//void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
-				//{
-				//	if (!Model.IsTempScriptFilepath(Filepath))
-				//		e.Node.Add2(nameof(Filepath), Filepath, false);
-				//}
 			}
 		}
 		private DockControl m_dock_control = null!;
 
 		/// <summary>App logic</summary>
-		public Model Model
-		{
-			get => m_model;
-			private set
-			{
-				if (m_model == value) return;
-				//if (m_model != null)
-				//{
-				//	m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
-				//	m_model.Scripts.Remove(this);
-				//}
-				m_model = value;
-				//if (m_model != null)
-				//{
-				////	// Don't add this script to m_model.Scripts, that's the caller's choice.
-				////	m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
-				////	Dispatcher.BeginInvoke(() => HandleScenesCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)));
-				//}
-
-				// Handlers
-				//void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-				//{
-				//	PopulateAvailableScenes();
-				//}
-			}
-		}
-		private Model m_model = null!;
+		private Model Model { get; }
 
 		/// <summary>The loaded assets</summary>
 		public ICollectionView Assets { get; }
+
+		/// <summary>Load an asset from a file</summary>
+		public void LoadFile(string? filepath = null, IList<SceneUI>? scenes = null)
+		{
+			// Prompt for a filepath if not given
+			if (filepath == null || filepath.Length == 0)
+			{
+				var dlg = new OpenFileDialog { Title = "Load Script", Filter = Model.AssetFilesFilter };
+				if (dlg.ShowDialog(Window.GetWindow(this)) != true) return;
+				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
+			}
+
+			// Load the asset file
+			var name = Path_.FileName(filepath);
+			var asset = Model.Assets.Add2(new AssetUI(Model, name, filepath, Guid.NewGuid()));
+			if (scenes != null) asset.Context.SelectedScenes = scenes;
+		}
+
+		/// <summary></summary>
+		public Command AddAsset { get; }
+		private void AddAssetInternal()
+		{
+			LoadFile();
+		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

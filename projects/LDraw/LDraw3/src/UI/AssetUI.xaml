@@ -12,11 +12,8 @@
 	>
 	<UserControl.Resources>
 		<ResourceDictionary>
-			
 			<!-- Context menu for assets -->
-			<ContextMenu
-				x:Key="AssetCMenu"
-				>
+			<ContextMenu x:Key="AssetCMenu">
 				<MenuItem
 					Header="Close"
 					Command="{Binding CloseAsset}"
@@ -84,6 +81,7 @@
 			</Button>
 		</Grid>
 
+		<!-- Available scenes -->
 		<StackPanel
 			Grid.Row="1"
 			Orientation="Horizontal"
@@ -91,7 +89,6 @@
 			MaxHeight="24"
 			Margin="20,0,0,0"
 			>
-			<!-- Combo of available scenes -->
 			<DockPanel>
 				<ToggleButton
 					DockPanel.Dock="Right"
@@ -127,7 +124,7 @@
 						<ListBox.ItemTemplate>
 							<DataTemplate>
 								<CheckBox
-									Content="{Binding SceneName}"
+									Content="{Binding Name}"
 									IsChecked="{Binding Selected}"
 									Background="White"
 									/>

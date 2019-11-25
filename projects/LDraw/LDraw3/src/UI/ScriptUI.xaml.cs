@@ -505,7 +505,7 @@ namespace LDraw.UI
 			// Prompt for a filepath if not given
 			if (filepath == null || filepath.Length == 0)
 			{
-				var dlg = new OpenFileDialog { Title = "Load Script", Filter = EditableFilesFilter };
+				var dlg = new OpenFileDialog { Title = "Load Script", Filter = Model.EditableFilesFilter };
 				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
 				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
 			}
@@ -528,7 +528,7 @@ namespace LDraw.UI
 			// Prompt for a filepath if not given
 			if (filepath == null || filepath.Length == 0)
 			{
-				var dlg = new SaveFileDialog { Title = "Save Script", Filter = EditableFilesFilter };
+				var dlg = new SaveFileDialog { Title = "Save Script", Filter = Model.EditableFilesFilter };
 				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
 				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
 			}
@@ -612,9 +612,6 @@ namespace LDraw.UI
 		{
 			return char.IsLetterOrDigit(ch) || ch == '*' || ch == '_';
 		}
-
-		/// <summary>Text file types that can be edited in the script UI</summary>
-		private static readonly string EditableFilesFilter = Util.FileDialogFilter("Script Files", "*.ldr", "Text Files", "*.txt", "Comma Separated Values", "*.csv");
 
 		/// <summary>Auto completion item</summary>
 		private class CompletionItem :ICompletionData
