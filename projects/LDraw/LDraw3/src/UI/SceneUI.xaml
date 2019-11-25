@@ -40,6 +40,7 @@
 					<StaticResource	ResourceKey="View3dMenuItem_AlignUp"/>
 					<StaticResource	ResourceKey="View3dMenuItem_ViewPresets"/>
 					<StaticResource	ResourceKey="ChartMenuItem_NavMode"/>
+					<StaticResource	ResourceKey="View3dMenuItem_SavedViews"/>
 				</MenuItem>
 				<MenuItem Header="Rendering">
 					<StaticResource	ResourceKey="View3dMenuItem_BackgroundColour"/>

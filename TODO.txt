@@ -2,7 +2,6 @@ Immediate ToDo:
 	
 LDraw
 	- Show selection
-	- Saved views
 	- Highlight errors in editor
 	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null

@@ -244,6 +244,24 @@ namespace LDraw
 			set => m_owner.SceneView.Options.CullMode = value;
 		}
 
+		/// <summary>Saved views</summary>
+		public ICollectionView SavedViews
+		{
+			get => m_owner.SceneView.Scene.SavedViews;
+		}
+		public ICommand ApplySavedView
+		{
+			get => m_owner.SceneView.Scene.ApplySavedView;
+		}
+		public ICommand SaveCurrentView
+		{
+			get => m_owner.SceneView.Scene.SaveCurrentView;
+		}
+		public ICommand RemoveSavedView
+		{
+			get => m_owner.SceneView.Scene.RemoveSavedView;
+		}
+
 		/// <inheritdoc/>
 		public ChartControl.ENavMode NavigationMode
 		{

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -15,14 +17,14 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class View3dControl : Image, IDisposable, INotifyPropertyChanged
+	public partial class View3dControl :Image, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This control subclasses 'Image' because the D3DImage is an 'ImageSource'
 
 		static View3dControl()
 		{
-			View3d.LoadDll(throw_if_missing:false);
+			View3d.LoadDll(throw_if_missing: false);
 		}
 		public View3dControl()
 		{
@@ -40,6 +42,9 @@ namespace Rylogic.Gui.WPF
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
 			ResetView = Command.Create(this, ResetViewInternal);
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+			ApplySavedView = Command.Create(this, ApplySavedViewInternal);
+			RemoveSavedView = Command.Create(this, RemoveSavedViewInternal);
+			SaveCurrentView = Command.Create(this, SaveCurrentViewInternal);
 			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
 			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
@@ -64,6 +69,7 @@ namespace Rylogic.Gui.WPF
 
 				// Set defaults
 				ContextMenu = this.FindCMenu("View3dCMenu", new View3dCMenu(this));
+				SavedViews = new ListCollectionView(new ObservableCollection<SavedView>());
 				BackgroundColour = Colour32.LightGray;
 				DesiredPixelAspect = 1;
 				ClickTimeMS = 180;
@@ -497,12 +503,16 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_render_pending;
 
-		// Allow objects to be added/removed from the scene
+		/// <summary>Allow objects to be added/removed from the scene</summary>
 		public event EventHandler<BuildSceneEventArgs>? BuildScene;
 		protected virtual void OnBuildScene()
 		{
 			BuildScene?.Invoke(this, new BuildSceneEventArgs(Window));
 		}
+
+		/// <summary>Saved camera views</summary>
+		public ICollectionView SavedViews { get; }
+		public ObservableCollection<SavedView> SavedViewsList => (ObservableCollection<SavedView>)SavedViews.SourceCollection;
 
 		/// <summary>Toggle visibility of the origin point</summary>
 		public Command ToggleOriginPoint { get; }
@@ -572,6 +582,48 @@ namespace Rylogic.Gui.WPF
 			else
 				Window.BackgroundColour = bg;
 		}
+
+		/// <summary>Apply a saved view to the camera</summary>
+		public Command ApplySavedView { get; }
+		private void ApplySavedViewInternal()
+		{
+			if (SavedViews.CurrentAs<SavedView>() is SavedView view)
+			{
+				view.Apply(Camera);
+				Invalidate();
+			}
+		}
+
+		/// <summary>Remove the current saved view from the collection of saved views</summary>
+		public Command RemoveSavedView { get; }
+		private void RemoveSavedViewInternal()
+		{
+			if (SavedViews.CurrentAs<SavedView>() is SavedView view)
+				SavedViewsList.Remove(view);
+		}
+
+		/// <summary>Save the current view</summary>
+		public Command SaveCurrentView { get; }
+		private void SaveCurrentViewInternal()
+		{
+			// Generate a name for the saved view
+			var name = $"View {++m_saved_view_id}";
+			for (; SavedViewsList.Any(x => string.Compare(x.Name, name) == 0); name = $"View {++m_saved_view_id}") { }
+
+			var ui = new PromptUI
+			{
+				Owner = System.Windows.Window.GetWindow(this),
+				Title = "Saved View Name",
+				Prompt = "Label this view",
+				ShowWrapCheckbox = false,
+				Value = name,
+			};
+			if (ui.ShowDialog() == true)
+			{
+				SavedViewsList.Add(new SavedView(ui.Value, Camera));
+			}
+		}
+		private int m_saved_view_id;
 
 		/// <summary>Show a measurement tool window</summary>
 		public Command ShowMeasureToolUI { get; }

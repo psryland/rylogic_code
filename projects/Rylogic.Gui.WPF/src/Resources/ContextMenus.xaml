@@ -10,6 +10,9 @@
 	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
 	<BitmapImage x:Key ="animation" UriSource="/Rylogic.Gui.WPF;component/res/movie_film.png"/>
 	<BitmapImage x:Key ="chain" UriSource="/Rylogic.Gui.WPF;component/res/chain.png"/>
+	<BitmapImage x:Key ="accept" UriSource="/Rylogic.Gui.WPF;component/res/check_accept.png"/>
+	<BitmapImage x:Key ="plus" UriSource="/Rylogic.Gui.WPF;component/res/plus1.png"/>
+	<BitmapImage x:Key ="minus" UriSource="/Rylogic.Gui.WPF;component/res/minus1.png"/>
 
 	<!-- View3d Control Context Menu -->
 	<MenuItem x:Key="View3dMenuItem_Origin" x:Shared="False"
@@ -87,6 +90,70 @@
 						</DataTemplate>
 					</ComboBox.ItemTemplate>
 				</ComboBox>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_SavedViews" x:Shared="False"
+		StaysOpenOnClick="True"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal"
+				MaxHeight="22"
+				>
+				<StackPanel.Resources>
+					<Style x:Key="SavedViewButtonStyle" TargetType="{x:Type Button}">
+						<Setter Property="Background" Value="Transparent"/>
+						<Setter Property="BorderThickness" Value="0"/>
+						<Setter Property="VerticalAlignment" Value="Center"/>
+						<Setter Property="Margin" Value="1"/>
+					</Style>
+				</StackPanel.Resources>
+				<TextBlock
+					Text="Saved Views: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding SavedViews}"
+					DisplayMemberPath="Name"
+					BorderThickness="0"
+					MinWidth="60"
+					Margin="1"
+					/>
+				<Button
+					Command="{Binding ApplySavedView}"
+					ToolTip="Restore the camera to this view position"
+					IsEnabled="{Binding SavedViews/, Converter={conv:NotNull}}"
+					Style="{StaticResource SavedViewButtonStyle}"
+					>
+					<Image
+						Source="{StaticResource accept}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
+				</Button>
+				<Button
+					Command="{Binding SaveCurrentView}"
+					ToolTip="Record the current camera position"
+					Style="{StaticResource SavedViewButtonStyle}"
+					>
+					<Image
+						Source="{StaticResource plus}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
+				</Button>
+				<Button
+					Command="{Binding RemoveSavedView}"
+					ToolTip="Removed the current stored view"
+					IsEnabled="{Binding SavedViews/, Converter={conv:NotNull}}"
+					Style="{StaticResource SavedViewButtonStyle}"
+					>
+					<Image
+						Source="{StaticResource minus}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
+				</Button>
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
@@ -218,6 +285,7 @@
 			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
 			<StaticResource ResourceKey="View3dMenuItem_AlignUp"/>
 			<StaticResource ResourceKey="View3dMenuItem_ViewPresets"/>
+			<StaticResource	ResourceKey="View3dMenuItem_SavedViews"/>
 		</MenuItem>
 		<MenuItem Header="Rendering">
 			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>

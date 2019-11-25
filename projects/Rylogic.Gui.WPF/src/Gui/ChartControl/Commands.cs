@@ -276,6 +276,24 @@ namespace Rylogic.Gui.WPF
 				set => m_owner.Options.CullMode = value;
 			}
 
+			/// <summary>Saved views</summary>
+			public ICollectionView SavedViews
+			{
+				get => m_owner.Scene.SavedViews;
+			}
+			public ICommand ApplySavedView
+			{
+				get => m_owner.Scene.ApplySavedView;
+			}
+			public ICommand RemoveSavedView
+			{
+				get => m_owner.Scene.RemoveSavedView;
+			}
+			public ICommand SaveCurrentView
+			{
+				get => m_owner.Scene.SaveCurrentView;
+			}
+
 			/// <inheritdoc/>
 			public ICommand ShowAnimationUI
 			{

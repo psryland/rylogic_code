@@ -68,6 +68,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Face culling</summary>
 		View3d.ECullMode CullMode { get; set; }
 
+		/// <summary>Saved views</summary>
+		ICollectionView SavedViews { get; }
+		ICommand ApplySavedView { get; }
+		ICommand SaveCurrentView { get; }
+		ICommand RemoveSavedView { get; }
+
 		/// <summary>Show the animation controls</summary>
 		ICommand ShowAnimationUI { get; }
 

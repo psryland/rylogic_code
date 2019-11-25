@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Windows.Data;
 using System.Windows.Input;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -136,6 +137,24 @@ namespace Rylogic.Gui.WPF
 			{
 				get => m_owner.Window.CullMode;
 				set => m_owner.Window.CullMode = value;
+			}
+
+			/// <summary>Saved views</summary>
+			public ICollectionView SavedViews
+			{
+				get => m_owner.SavedViews;
+			}
+			public ICommand ApplySavedView
+			{
+				get => m_owner.ApplySavedView;
+			}
+			public ICommand SaveCurrentView
+			{
+				get => m_owner.SaveCurrentView;
+			}
+			public ICommand RemoveSavedView
+			{
+				get => m_owner.RemoveSavedView;
 			}
 
 			/// <inheritdoc/>
