@@ -6,7 +6,6 @@ LDraw
 	- Highlight errors in editor
 	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null
-	- Animation support
 	- Support line continuation for highlighting
 	- CMenu for Asset panel, to add asset files (filter excluding .ldr)
 	- Fix the measurement tool not detecting mouse clicks

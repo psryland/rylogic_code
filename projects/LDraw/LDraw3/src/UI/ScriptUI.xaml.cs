@@ -471,11 +471,16 @@ namespace LDraw.UI
 		{
 			var scenes = Context.SelectedScenes.ToArray();
 			var include_paths = Model.Settings.IncludePaths;
+			var selection = Editor.SelectionLength != 0 ? Editor.TextArea.Selection.GetText() : null;
 
 			// Load the script file in a background thread
 			ThreadPool.QueueUserWorkItem(x =>
 			{
-				Model.View3d.LoadScript(Filepath, true, ContextId, include_paths, OnAdd);
+				if (selection == null)
+					Model.View3d.LoadScript(Filepath, true, ContextId, include_paths, OnAdd);
+				else
+					Model.View3d.LoadScript(selection, false, ContextId, include_paths, OnAdd);
+
 				void OnAdd(Guid id, bool before)
 				{
 					if (before)
