@@ -40,9 +40,9 @@ namespace Rylogic.Gui.WPF
 			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
 
-			Scene.ContextMenu = this.FindCMenu("ChartCMenu", new ChartCMenuBinding(this));
-			XAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new AxisCMenuBinding(XAxisPanel));
-			YAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new AxisCMenuBinding(YAxisPanel));
+			Scene.ContextMenu = this.FindCMenu("ChartCMenu", new ChartCMenu(this));
+			XAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new ChartAxisCMenu(XAxisPanel));
+			YAxisPanel.ContextMenu = this.FindCMenu("ChartAxisCMenu", new ChartAxisCMenu(YAxisPanel));
 		}
 
 		/// <summary>Toggle visibility of the origin point</summary>
@@ -154,7 +154,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Context menu binding</summary>
-		public class ChartCMenuBinding :IView3dCMenu, IChartCMenu
+		public class ChartCMenu :IView3dCMenu, IChartCMenu
 		{
 			// Notes:
 			//  - Don't sign up to events on 'm_owner' because that causes leaked references.
@@ -162,7 +162,7 @@ namespace Rylogic.Gui.WPF
 			//    'NotifyPropertyChanged'.
 
 			private readonly ChartControl m_owner;
-			public ChartCMenuBinding(ChartControl owner)
+			public ChartCMenu(ChartControl owner)
 			{
 				m_owner = owner;
 			}
@@ -274,6 +274,12 @@ namespace Rylogic.Gui.WPF
 			{
 				get => m_owner.Options.CullMode;
 				set => m_owner.Options.CullMode = value;
+			}
+
+			/// <inheritdoc/>
+			public ICommand ShowAnimationUI
+			{
+				get => Command.NoOp;
 			}
 
 			/// <inheritdoc/>
@@ -395,10 +401,10 @@ namespace Rylogic.Gui.WPF
 
 			#endregion
 		}
-		public class AxisCMenuBinding :IChartAxisCMenu
+		public class ChartAxisCMenu :IChartAxisCMenu
 		{
 			private readonly ChartDetail.AxisPanel m_owner;
-			public AxisCMenuBinding(ChartDetail.AxisPanel owner)
+			public ChartAxisCMenu(ChartDetail.AxisPanel owner)
 			{
 				m_owner = owner;
 			}

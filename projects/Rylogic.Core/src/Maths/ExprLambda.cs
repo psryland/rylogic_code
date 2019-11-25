@@ -10,11 +10,18 @@ namespace Rylogic.Maths
 		/// <summary>Convert a maths equation of one variable into a lambda expression</summary>
 		public static Func<double, double> Create(string expr, string variable_name = "x")
 		{
-			var i = 0;
-			var result = new Expression[1];
 			var vars = new Vars(variable_name);
-			if (!Eval(expr, ref i, vars, result, 0, ETok.None))
-				throw new Exception("Expression syntax error");
+			var result = new Expression[1];
+			if (!string.IsNullOrEmpty(expr))
+			{
+				var i = 0;
+				if (!Eval(expr, ref i, vars, result, 0, ETok.None))
+					throw new Exception("Expression syntax error");
+			}
+			else
+			{
+				result[0] = Expression.Constant(0.0);
+			}
 			
 			// Compile the lambda
 			return Expression.Lambda<Func<double, double>>(result[0], vars[variable_name]).Compile();

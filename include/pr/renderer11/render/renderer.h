@@ -188,7 +188,7 @@ namespace pr
 		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
 		// 'policy' can be a bitwise OR of both deferred and async
 		template <typename Func, typename... Args>
-		inline void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)
+		void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)
 		{
 			{
 				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
@@ -210,7 +210,8 @@ namespace pr
 				throw std::exception(msg.c_str());
 			}
 		}
-		template <typename Func, typename... Args> inline void RunOnMainThread(Func&& func, Args&&... args)
+		template <typename Func, typename... Args>
+		void RunOnMainThread(Func&& func, Args&&... args)
 		{
 			static_assert(noexcept(func(args...)));
 			RunOnMainThread(std::launch::deferred, func, args...);

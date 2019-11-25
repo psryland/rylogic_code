@@ -139,6 +139,12 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <inheritdoc/>
+			public ICommand ShowAnimationUI
+			{
+				get => m_owner.ShowAnimationUI;
+			}
+
+			/// <inheritdoc/>
 			public ICommand ShowLightingUI
 			{
 				get => m_owner.ShowLightingUI;

@@ -8,6 +8,7 @@
 	<BitmapImage x:Key ="light_bulb" UriSource="/Rylogic.Gui.WPF;component/res/light_bulb.png"/>
 	<BitmapImage x:Key ="tape_measure" UriSource="/Rylogic.Gui.WPF;component/res/tape_measure_coloured.png"/>
 	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
+	<BitmapImage x:Key ="animation" UriSource="/Rylogic.Gui.WPF;component/res/movie_film.png"/>
 	<BitmapImage x:Key ="chain" UriSource="/Rylogic.Gui.WPF;component/res/chain.png"/>
 
 	<!-- View3d Control Context Menu -->
@@ -68,7 +69,7 @@
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
-					Text="Pre-set View: "
+					Text="View Presets: "
 					VerticalAlignment="Center"
 					MinWidth="80"
 					/>
@@ -172,6 +173,17 @@
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_Animation" x:Shared="False"
+		Header="Animation..."
+		Command="{Binding ShowAnimationUI}"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource animation}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_MeasureTool" x:Shared="False"
 		Header="Measure Tool..."
 		Command="{Binding ShowMeasureToolUI}"
@@ -196,7 +208,7 @@
 	</MenuItem>
 
 	<ContextMenu x:Key="View3dCMenu">
-		<MenuItem Header="Objects">
+		<MenuItem Header="Tools">
 			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
 			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
 			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
@@ -212,6 +224,7 @@
 			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_Animation"/>
 			<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
 		</MenuItem>
 		<MenuItem Header="Tools">
@@ -310,27 +323,26 @@
 		/>
 
 	<ContextMenu x:Key="ChartCMenu">
-		<MenuItem Header="Objects">
+		<MenuItem Header="Tools">
 			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
 			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
 			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
-			<StaticResource ResourceKey="ChartMenuItem_GridLines"/>
-			<StaticResource ResourceKey="ChartMenuItem_Axes"/>
-		</MenuItem>
-		<MenuItem Header="Tools">
-			<StaticResource ResourceKey="ChartMenuItem_ValueAtPointer"/>
 			<StaticResource ResourceKey="ChartMenuItem_CrossHair"/>
+			<StaticResource ResourceKey="ChartMenuItem_ValueAtPointer"/>
+			<StaticResource ResourceKey="ChartMenuItem_Axes"/>
+			<StaticResource ResourceKey="ChartMenuItem_GridLines"/>
+			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 		</MenuItem>
-		<MenuItem Header="Navigation">
-			<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
+		<MenuItem Header="Camera">
 			<StaticResource ResourceKey="ChartMenuItem_AutoRange"/>
 			<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
 			<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
+			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
 			<StaticResource ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+			<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
 		</MenuItem>
 		<MenuItem Header="Rendering">
 			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
-			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
 			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>

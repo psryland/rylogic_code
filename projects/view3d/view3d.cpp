@@ -640,27 +640,67 @@ VIEW3D_API View3DBBox __stdcall View3D_WindowSceneBounds(View3DWindow window, EV
 }
 
 // Get/Set the animation time
-VIEW3D_API float __stdcall View3D_WindowAnimTimeGet(View3DWindow window)
+VIEW3D_API BOOL __stdcall View3D_WindowAnimating(View3DWindow window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_anim_time_s;
+		return window->Animating();
+	}
+	CatchAndReport(View3D_WindowAnimating, window, FALSE);
+}
+VIEW3D_API double __stdcall View3D_WindowAnimTimeGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->AnimTime().count();
 	}
 	CatchAndReport(View3D_WindowAnimTimeGet, window, 0.0f);
 }
-VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, float time_s)
+VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, double time_s)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_anim_time_s = time_s;
+		window->AnimTime(seconds_t(time_s));
 	}
 	CatchAndReport(View3D_WindowAnimTimeSet, window, );
+}
+
+// Control animation
+VIEW3D_API void __stdcall View3D_WindowAnimControl(View3DWindow window, EView3DAnimCommand command, double time_s)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->AnimControl(command, seconds_t(time_s));
+	}
+	CatchAndReport(View3D_WindowAnimControl, window, );
+}
+
+// Set the callback for animation events
+VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(View3DWindow window, View3D_AnimationCB anim_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		if (add)
+			window->OnAnimationEvent += pr::StaticCallBack(anim_cb, ctx);
+		else
+			window->OnAnimationEvent -= pr::StaticCallBack(anim_cb, ctx);
+	}
+	CatchAndReport(View3D_AnimationEventCBSet, , );
 }
 
 // Cast a ray into the scene, returning information about what it hit

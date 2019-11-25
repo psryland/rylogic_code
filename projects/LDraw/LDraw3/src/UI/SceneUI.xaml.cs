@@ -40,6 +40,7 @@ namespace LDraw.UI
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			ClearScene = Command.Create(this, ClearSceneInternal);
 			LinkCamera = Command.Create(this, LinkCameraInternal);
+			ToggleAnimationUI = Command.Create(this, ToggleAnimationUIInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
 
@@ -167,6 +168,19 @@ namespace LDraw.UI
 		}
 		public static readonly DependencyProperty AutoRangeProperty = Gui_.DPRegister<SceneUI>(nameof(AutoRange));
 
+		/// <summary>Show/Hide the animation controls</summary>
+		public bool ShowAnimationUI
+		{
+			get => m_show_anim_ui;
+			set
+			{
+				if (ShowAnimationUI == value) return;
+				m_show_anim_ui = value;
+				NotifyPropertyChanged(nameof(ShowAnimationUI));
+			}
+		}
+		private bool m_show_anim_ui;
+
 		/// <summary>Other available scenes</summary>
 		public ICollectionView OtherScenes { get; }
 		private void PopulateOtherScenes()
@@ -232,6 +246,13 @@ namespace LDraw.UI
 			m_link_cameras_ui.Focus();
 		}
 		private static LinkCamerasUI? m_link_cameras_ui;
+
+		/// <summary>Show/Hide the animation UI</summary>
+		public Command ToggleAnimationUI { get; }
+		private void ToggleAnimationUIInternal()
+		{
+			ShowAnimationUI = !ShowAnimationUI;
+		}
 
 		/// <summary>Show the lighting dialog</summary>
 		public Command ShowLightingUI { get; }

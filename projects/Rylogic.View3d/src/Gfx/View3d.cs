@@ -348,6 +348,13 @@ namespace Rylogic.Gfx
 			Point,
 			Spot
 		}
+		public enum EAnimCommand
+		{
+			Reset, // Reset the the 'time' value
+			Play,  // Run continuously using 'time' as the step size, or real time if 'time' == 0
+			Stop,  // Stop at the current time.
+			Step,  // Step by 'time' (can be positive or negative)
+		}
 		public enum EFillMode
 		{
 			Default = 0,
@@ -984,6 +991,9 @@ namespace Rylogic.Gfx
 		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
 		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args);
 
+		/// <summary>Callback notification of animation commands</summary>
+		public delegate void AnimationCB(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock);
+
 		/// <summary>Callback for when the window is invalidated</summary>
 		public delegate void InvalidatedCB(IntPtr ctx, HWindow wnd);
 
@@ -1386,8 +1396,11 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[]? except);
-		[DllImport(Dll)] private static extern float           View3D_WindowAnimTimeGet         (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, float time_s);
+		[DllImport(Dll)] private static extern bool            View3D_WindowAnimating           (HWindow window);
+		[DllImport(Dll)] private static extern double          View3D_WindowAnimTimeGet         (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, double time_s);
+		[DllImport(Dll)] private static extern void            View3D_WindowAnimControl         (HWindow window, EAnimCommand command, double time_s);
+		[DllImport(Dll)] private static extern void            View3D_WindowAnimEventCBSet      (HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
 
 		// Camera

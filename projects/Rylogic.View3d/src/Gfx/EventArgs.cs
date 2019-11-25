@@ -63,6 +63,21 @@ namespace Rylogic.Gfx
 			public Object? Object { get; }
 		}
 
+		public class AnimationEventArgs :EventArgs
+		{
+			public AnimationEventArgs(EAnimCommand command, double clock)
+			{
+				Command = command;
+				Clock = clock;
+			}
+
+			/// <summary>The state change for the update</summary>
+			public EAnimCommand Command { get; }
+
+			/// <summary>The current animation clock value</summary>
+			public double Clock { get; }
+		}
+
 		public class SettingChangeEventArgs :EventArgs
 		{
 			public SettingChangeEventArgs(ESettings setting)

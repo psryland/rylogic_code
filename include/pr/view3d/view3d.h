@@ -189,6 +189,13 @@ extern "C"
 		Point,
 		Spot
 	};
+	enum class EView3DAnimCommand : int
+	{
+		Reset, // Reset the the 'time' value
+		Play,  // Run continuously using 'time' as the step size, or real time if 'time' == 0
+		Stop,  // Stop at the current time.
+		Step,  // Step by 'time' (can be positive or negative)
+	};
 	enum class EView3DLogLevel :int
 	{
 		Debug,
@@ -560,6 +567,14 @@ extern "C"
 		// Pointer to the object that changed (for single object changes only)
 		View3DObject m_object;
 	};
+	struct View3DAnimEvent
+	{
+		// The state change type
+		EView3DAnimCommand m_command;
+
+		// The current animation clock value
+		double m_clock;
+	};
 
 	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window, EView3DSettings setting);
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
@@ -570,6 +585,7 @@ extern "C"
 	using View3D_InvalidatedCB         = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
+	using View3D_AnimationCB           = void (__stdcall *)(void* ctx, View3DWindow window, EView3DAnimCommand command, double clock);
 	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
 	using View3D_EditObjectCB          = void (__stdcall *)(
 		void* ctx,             // User callback context pointer
@@ -629,8 +645,11 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveGizmo        (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API View3DBBox   __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
-	VIEW3D_API float        __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
-	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, float time_s);
+	VIEW3D_API BOOL         __stdcall View3D_WindowAnimating          (View3DWindow window);
+	VIEW3D_API double       __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, double time_s);
+	VIEW3D_API void         __stdcall View3D_WindowAnimControl        (View3DWindow window, EView3DAnimCommand command, double time);
+	VIEW3D_API void         __stdcall View3D_WindowAnimEventCBSet     (View3DWindow window, View3D_AnimationCB anim_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void         __stdcall View3D_WindowEnvMapSet          (View3DWindow window, View3DCubeMap env_map);
 

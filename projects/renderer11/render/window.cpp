@@ -484,6 +484,7 @@ namespace pr
 		iv2 Window::BackBufferSize() const
 		{
 			PR_ASSERT(PR_DBG_RDR, m_swap_chain != nullptr, "The back buffer size is meaningless when there is no swap chain");
+			if (m_swap_chain == nullptr) return iv2{}; // This happens when the WPF designer does something
 
 			DXGI_SWAP_CHAIN_DESC desc;
 			Throw(m_swap_chain->GetDesc(&desc));

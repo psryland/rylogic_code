@@ -19,6 +19,8 @@ LDraw
 	- Replace resizer view3d objects with WPF primitives
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	- Script parsing performance profiling
+	- Finish implementing the object manager
+	- Finish implementing the preferences dialog
 	- Installer
 	
 CoinFlip

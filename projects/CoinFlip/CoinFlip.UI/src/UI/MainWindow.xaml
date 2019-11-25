@@ -127,7 +127,12 @@
 					BorderThickness="0"
 					Name="m_btn_back_testing_options"
 					>
-					<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
+					<Image
+						Source="{StaticResource options}"
+						Stretch="UniformToFill"
+						StretchDirection="DownOnly"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
 				</Button>
 
 				<!-- Reset to starting time -->

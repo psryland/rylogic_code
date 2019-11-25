@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Markup;
+using Rylogic.Extn;
 
 namespace Rylogic.Gui.WPF.Converters
 {
@@ -46,7 +47,57 @@ namespace Rylogic.Gui.WPF.Converters
 			return this;
 		}
 	}
-
+	public class ToPrettyString :MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value is DateTimeOffset dto)
+			{
+				return dto.ToString("yyyy-MM-dd HH:mm:ss");
+			}
+			if (value is double db)
+			{
+				return (parameter is string s
+					? s switch
+					{
+						"d"            => TimeSpan.FromDays(db),
+						"days"         => TimeSpan.FromDays(db),
+						"h"            => TimeSpan.FromHours(db),
+						"hrs"          => TimeSpan.FromHours(db),
+						"hours"        => TimeSpan.FromHours(db),
+						"m"            => TimeSpan.FromMinutes(db),
+						"min"          => TimeSpan.FromMinutes(db),
+						"minutes"      => TimeSpan.FromMinutes(db),
+						"s"            => TimeSpan.FromSeconds(db),
+						"sec"          => TimeSpan.FromSeconds(db),
+						"seconds"      => TimeSpan.FromSeconds(db),
+						"ms"           => TimeSpan.FromMilliseconds(db),
+						"msec"         => TimeSpan.FromMilliseconds(db),
+						"milliseconds" => TimeSpan.FromMilliseconds(db),
+						_              => throw new Exception($"Unknown time unit given for parameter: {s}"),
+					}
+					: TimeSpan.FromMilliseconds(db))
+					.ToPrettyString();
+			}
+			if (value is TimeSpan ts)
+			{
+				var short_format = parameter is bool sf ? sf : true;
+				return ts.ToPrettyString(short_format);
+			}
+			else
+			{
+				return string.Empty;
+			}
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
 	public class TimeSpanToDouble : MarkupExtension, IValueConverter
 	{
 		// Notes:

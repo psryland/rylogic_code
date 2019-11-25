@@ -330,8 +330,8 @@ namespace pr::ldr
 	{
 		EAnimStyle m_style;
 		float      m_period;       // Seconds
-		v4     m_velocity;     // Linear velocity of the animation in m/s
-		v4     m_ang_velocity; // Angular velocity of the animation in rad/s
+		v4         m_velocity;     // Linear velocity of the animation in m/s
+		v4         m_ang_velocity; // Angular velocity of the animation in rad/s
 
 		Animation()
 			:m_style(EAnimStyle::NoAnimation)

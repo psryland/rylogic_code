@@ -14,6 +14,7 @@ namespace view3d
 		using LdrObjectManagerUIPtr = std::unique_ptr<pr::ldr::LdrObjectManagerUI>;
 		using LdrMeasureUIPtr       = std::unique_ptr<pr::ldr::LdrMeasureUI>;
 		using LdrAngleUIPtr         = std::unique_ptr<pr::ldr::LdrAngleUI>;
+		using AnimData              = struct { seconds_t m_clock; std::atomic_int m_issue; std::thread m_thread; };
 
 		Context*              m_dll;                      // The dll context
 		HWND                  m_hwnd;                     // The associated window handle
@@ -31,7 +32,7 @@ namespace view3d
 		view3d::PointInstance m_origin_point;             // Origin point graphics
 		view3d::Instance      m_bbox_model;               // Bounding box graphics
 		view3d::Instance      m_selection_box;            // Selection box graphics
-		float                 m_anim_time_s;              // Animation time in seconds
+		AnimData              m_anim_data;                // Animation time in seconds
 		float                 m_focus_point_size;         // The base size of the focus point object
 		float                 m_origin_point_size;        // The base size of the origin instance
 		bool                  m_focus_point_visible;      // True if we should draw the focus point
@@ -72,6 +73,9 @@ namespace view3d
 
 		// Scene changed event
 		pr::MultiCast<SceneChangedCB> OnSceneChanged;
+
+		// Animation event
+		pr::MultiCast<AnimationCB> OnAnimationEvent;
 
 		// Report an error for this window
 		void ReportError(wchar_t const* msg);
@@ -174,6 +178,12 @@ namespace view3d
 
 		// Position the selection box to include the selected objects
 		void SelectionBoxFitToSelected();
+
+		// Control object animation
+		bool Animating() const;
+		seconds_t AnimTime() const;
+		void AnimTime(seconds_t clock);
+		void AnimControl(EView3DAnimCommand command, seconds_t time = seconds_t::zero());
 
 		// Convert a screen space point to a normalised screen space point
 		pr::v2 SSPointToNSSPoint(pr::v2 const& ss_point) const;

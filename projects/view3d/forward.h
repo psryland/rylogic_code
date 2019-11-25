@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <mutex>
 #include <thread>
+#include <chrono>
 
 #include <sdkddkver.h>
 #include <windows.h>
@@ -61,6 +62,7 @@ namespace view3d
 {
 	struct Context;
 	struct Window;
+	using seconds_t             = std::chrono::duration<double, std::ratio<1, 1>>;
 	using GuidCont              = pr::vector<GUID>;
 	using EditorPtr             = std::unique_ptr<pr::ldr::ScriptEditorUI>;
 	using CodeHandlerPtr        = std::unique_ptr<pr::script::IEmbeddedCode>;
@@ -78,6 +80,7 @@ namespace view3d
 	using InvalidatedCB         = pr::StaticCB<void, Window*>;
 	using RenderingCB           = pr::StaticCB<void, Window*>;
 	using SceneChangedCB        = pr::StaticCB<void, Window*, View3DSceneChanged const&>;
+	using AnimationCB           = pr::StaticCB<void, Window*, EView3DAnimCommand, double>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 
 	// An instance type for other models used in LDraw

@@ -52,7 +52,7 @@ namespace view3d
 		,m_origin_point()
 		,m_bbox_model()
 		,m_selection_box()
-		,m_anim_time_s(0.0f)
+		,m_anim_data()
 		,m_focus_point_size(1.0f)
 		,m_origin_point_size(1.0f)
 		,m_focus_point_visible(false)
@@ -104,6 +104,8 @@ namespace view3d
 	}
 	Window::~Window()
 	{
+		AnimControl(EView3DAnimCommand::Stop);
+
 		Close();
 		m_scene.RemoveInstance(m_focus_point);
 		m_scene.RemoveInstance(m_origin_point);
@@ -242,7 +244,7 @@ namespace view3d
 
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)
-			obj->AddToScene(m_scene, m_anim_time_s);
+			obj->AddToScene(m_scene, (float)m_anim_data.m_clock.count());
 
 		// Add gizmos from the window to the scene
 		for (auto& giz : m_gizmos)
@@ -688,6 +690,85 @@ namespace view3d
 			}, "");
 		}
 		SetSelectionBox(bbox);
+	}
+
+	// Control object animation
+	bool Window::Animating() const
+	{
+		return m_anim_data.m_thread.joinable();
+	}
+	seconds_t Window::AnimTime() const
+	{
+		return m_anim_data.m_clock;
+	}
+	void Window::AnimTime(seconds_t clock)
+	{
+		m_anim_data.m_clock = clock;
+	}
+	void Window::AnimControl(EView3DAnimCommand command, seconds_t time)
+	{
+		using namespace std::chrono;
+		constexpr double tick_size_s = 0.01;
+
+		switch (command)
+		{
+		case EView3DAnimCommand::Reset:
+			{
+				AnimControl(EView3DAnimCommand::Stop);
+				m_anim_data.m_clock = time;
+				Invalidate();
+				break;
+			}
+		case EView3DAnimCommand::Play:
+			{
+				AnimControl(EView3DAnimCommand::Stop);
+
+				// Use a worker thread to advance the animation time
+				// 'time' is the amount to advance per second.
+				auto rdr = m_wnd.m_rdr;
+				auto issue = m_anim_data.m_issue.load();
+				auto step = duration_cast<system_clock::duration>(time * tick_size_s);
+				m_anim_data.m_thread = std::thread([=]
+				{
+					auto start = system_clock::now();
+					for (; issue == m_anim_data.m_issue; std::this_thread::sleep_for(seconds_t(tick_size_s)))
+					{
+						// Every loop is a tick, and the step size is 'time'.
+						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed'
+						auto increment = time == seconds_t::zero() ? system_clock::now() - start : step;
+						if (time == seconds_t::zero()) start = system_clock::now();
+						rdr->RunOnMainThread([=] () noexcept
+						{
+							m_anim_data.m_clock += increment;
+							Invalidate();
+							OnAnimationEvent.Raise(this, EView3DAnimCommand::Step, m_anim_data.m_clock.count());
+						});
+					}
+				});
+				break;
+			}
+		case EView3DAnimCommand::Stop:
+			{
+				if (m_anim_data.m_thread.joinable())
+				{
+					++m_anim_data.m_issue;
+					m_anim_data.m_thread.join();
+				}
+				break;
+			}
+		case EView3DAnimCommand::Step:
+			{
+				AnimControl(EView3DAnimCommand::Stop);
+				m_anim_data.m_clock += time;
+				Invalidate();
+				break;
+			}
+		default:
+			throw std::runtime_error(FmtS("Unknown animation command: %d", command));
+		}
+
+		// Notify of the animation event
+		OnAnimationEvent.Raise(this, command, m_anim_data.m_clock.count());
 	}
 
 	// Convert a screen space point to a normalised screen space point

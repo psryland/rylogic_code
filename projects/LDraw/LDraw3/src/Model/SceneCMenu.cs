@@ -177,6 +177,12 @@ namespace LDraw
 		}
 
 		/// <inheritdoc/>
+		public ICommand ShowAnimationUI
+	{
+			get => m_owner.ToggleAnimationUI;
+		}
+
+		/// <inheritdoc/>
 		public ICommand ShowLightingUI
 		{
 			get => m_owner.ShowLightingUI;

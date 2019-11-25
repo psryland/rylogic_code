@@ -433,11 +433,11 @@ namespace pr::ldr
 				{
 					char style[50];
 					reader.Identifier(style);
-					if      (pr::str::EqualI(style, "NoAnimation"   )) anim.m_style = EAnimStyle::NoAnimation;
-					else if (pr::str::EqualI(style, "PlayOnce"      )) anim.m_style = EAnimStyle::PlayOnce;
-					else if (pr::str::EqualI(style, "PlayReverse"   )) anim.m_style = EAnimStyle::PlayReverse;
-					else if (pr::str::EqualI(style, "PingPong"      )) anim.m_style = EAnimStyle::PingPong;
-					else if (pr::str::EqualI(style, "PlayContinuous")) anim.m_style = EAnimStyle::PlayContinuous;
+					if      (str::EqualI(style, "NoAnimation"   )) anim.m_style = EAnimStyle::NoAnimation;
+					else if (str::EqualI(style, "PlayOnce"      )) anim.m_style = EAnimStyle::PlayOnce;
+					else if (str::EqualI(style, "PlayReverse"   )) anim.m_style = EAnimStyle::PlayReverse;
+					else if (str::EqualI(style, "PingPong"      )) anim.m_style = EAnimStyle::PingPong;
+					else if (str::EqualI(style, "PlayContinuous")) anim.m_style = EAnimStyle::PlayContinuous;
 					break;
 				}
 			case EKeyword::Period:

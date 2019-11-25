@@ -24,6 +24,7 @@ namespace Rylogic.Gfx
 			private readonly InvalidatedCB m_invalidated_cb;    // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
+			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
@@ -55,6 +56,10 @@ namespace Rylogic.Gfx
 				// Set up a callback for when the object store for this window changes
 				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
 				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
+
+				// Set up a callback for animation events
+				View3D_WindowAnimEventCBSet(Handle, m_animation_cb = HandleAnimationEvent, IntPtr.Zero, true);
+				void HandleAnimationEvent(IntPtr ctx, HWindow wnd, EAnimCommand command, double clock) => OnAnimationEvent?.Invoke(this, new AnimationEventArgs(command, clock));
 
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -92,6 +97,9 @@ namespace Rylogic.Gfx
 
 			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
 			public event EventHandler<SceneChangedEventArgs>? OnSceneChanged;
+
+			/// <summary>Event notifying of state changes for animation</summary>
+			public event EventHandler<AnimationEventArgs>? OnAnimationEvent;
 
 			/// <summary>Triggers the 'OnInvalidated' event on the first call. Future calls are ignored until 'Present' or 'Validate' are called</summary>
 			public void Invalidate()
@@ -469,10 +477,19 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Get/Set the animation clock</summary>
-			public float AnimTime
+			public double AnimTime
 			{
 				get => View3D_WindowAnimTimeGet(Handle);
 				set => View3D_WindowAnimTimeSet(Handle, value);
+			}
+
+			/// <summary>Is animation currently running</summary>
+			public bool Animating => View3D_WindowAnimating(Handle);
+
+			/// <summary>Control animation</summary>
+			public void AnimControl(EAnimCommand command, double time_s = 0.0)
+			{
+				View3D_WindowAnimControl(Handle, command, time_s);
 			}
 
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>

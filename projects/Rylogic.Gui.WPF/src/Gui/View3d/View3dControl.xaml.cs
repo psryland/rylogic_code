@@ -41,6 +41,7 @@ namespace Rylogic.Gui.WPF
 			ResetView = Command.Create(this, ResetViewInternal);
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ShowMeasureToolUI = Command.Create(this, ShowMeasureToolInternal);
+			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
 			ShowObjectManagerUI = Command.Create(this, ShowObjectManagerInternal);
 
@@ -586,6 +587,34 @@ namespace Rylogic.Gui.WPF
 		}
 		private View3dMeasurementUI? m_measurement_ui;
 
+		/// <summary>Show the animation controls</summary>
+		public Command ShowAnimationUI { get; }
+		private void ShowAnimationUIInternal()
+		{
+			if (m_animation_ui == null)
+			{
+				m_animation_ui = new Window
+				{
+					WindowStyle = WindowStyle.ToolWindow, 
+					WindowStartupLocation = WindowStartupLocation.CenterOwner,
+					Owner = System.Windows.Window.GetWindow(this),
+					Icon = System.Windows.Window.GetWindow(this)?.Icon,
+					Title = "Animation Controls",
+					SizeToContent = SizeToContent.WidthAndHeight,
+					ResizeMode = ResizeMode.CanResizeWithGrip,
+					ShowInTaskbar = false,
+				};
+				m_animation_ui.Content = new View3dAnimControls
+				{
+					ViewWindow = Window
+				};
+				m_animation_ui.Closed += delegate { m_animation_ui = null; };
+				m_animation_ui.Show();
+			}
+			m_animation_ui.Focus();
+		}
+		private Window? m_animation_ui;
+
 		/// <summary>Show the UI for changing the lighting</summary>
 		public Command ShowLightingUI { get; }
 		private void ShowLightingUIInternal()
@@ -601,7 +630,7 @@ namespace Rylogic.Gui.WPF
 				};
 
 				m_lighting_ui = new View3dLightingUI(this);
-				m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
+				m_lighting_ui.Closed += delegate { m_lighting_ui = null; };
 				m_lighting_ui.Light = light;
 				m_lighting_ui.Show();
 			}
@@ -616,7 +645,7 @@ namespace Rylogic.Gui.WPF
 			if (m_object_manager_ui == null)
 			{
 				m_object_manager_ui = new View3dObjectManagerUI(this);
-				m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
+				m_object_manager_ui.Closed += delegate { m_object_manager_ui = null; };
 				m_object_manager_ui.Show();
 			}
 			m_object_manager_ui.Focus();

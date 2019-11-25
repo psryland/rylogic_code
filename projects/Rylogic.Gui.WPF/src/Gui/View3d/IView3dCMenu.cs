@@ -68,6 +68,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Face culling</summary>
 		View3d.ECullMode CullMode { get; set; }
 
+		/// <summary>Show the animation controls</summary>
+		ICommand ShowAnimationUI { get; }
+
 		/// <summary>Show lighting properties</summary>
 		ICommand ShowLightingUI { get; }
 

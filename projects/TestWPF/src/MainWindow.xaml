@@ -8,108 +8,124 @@
 	Left="-800"
 	Top="100"
 	>
-	<!-- 
-	-->
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+	
+		<!-- Menu -->
+		<Menu
+			Grid.Row="0">
+			<MenuItem Header="_File">
+				<MenuItem Header="_Open"/>
+				<Separator/>
+				<gui:RecentFilesMenuItem Header="_Recent Files" Name="m_recent_files" />
+				<Separator/>
+				<MenuItem Header="_Close" Command="{Binding Exit}"/>
+			</MenuItem>
+			<MenuItem Header="_UI Elements">
+				<MenuItem Header="_Chart" Command="{Binding ShowChart}"/>
+				<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>
+				<MenuItem Header="_Dock Container" Command="{Binding ShowDockContainer}"/>
+				<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
+				<MenuItem Header="_Scintilla" Command="{Binding ScintillaUI}"/>
+				<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
+			</MenuItem>
+			<MenuItem Header="_Dialogs">
+				<MenuItem Header="_Colour Picker UI" Command="{Binding ShowColourPicker}"/>
+				<MenuItem Header="_List UI" Command="{Binding ShowListUI}"/>
+				<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
+				<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
+				<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
+				<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>
+				<MenuItem Header="_Tool Window" Command="{Binding ShowToolWindow }"/>
+			</MenuItem>
+		</Menu>
 
-	<ScrollViewer
-		VerticalScrollBarVisibility="Auto"
-		>
-		<StackPanel>
-			<Menu>
-				<MenuItem Header="_File">
-					<MenuItem Header="_Open"/>
-					<Separator/>
-					<gui:RecentFilesMenuItem Header="_Recent Files" Name="m_recent_files" />
-					<Separator/>
-					<MenuItem Header="_Close" Command="{Binding Exit}"/>
-				</MenuItem>
-				<MenuItem Header="_UI Elements">
-					<MenuItem Header="_Chart" Command="{Binding ShowChart}"/>
-					<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>
-					<MenuItem Header="_Dock Container" Command="{Binding ShowDockContainer}"/>
-					<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
-					<MenuItem Header="_Scintilla" Command="{Binding ScintillaUI}"/>
-					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
-				</MenuItem>
-				<MenuItem Header="_Dialogs">
-					<MenuItem Header="_Colour Picker UI" Command="{Binding ShowColourPicker}"/>
-					<MenuItem Header="_List UI" Command="{Binding ShowListUI}"/>
-					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
-					<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
-					<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
-					<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>
-					<MenuItem Header="_Tool Window" Command="{Binding ShowToolWindow }"/>
-				</MenuItem>
-			</Menu>
-			<gui:ComboBoxAutoComplete
-				ItemsSource="{Binding Things}"
-				SelectedItem="{Binding Things/}"
-				UpdateAutoCompleteList="ComboBoxAutoComplete_Update"
-				DisplayMemberPath="Name"
-				Margin="5"
-				/>
-			<ComboBox
-				ItemsSource="{Binding Things}"
-				SelectedItem="{Binding Things/}"
-				SelectedValue="{Binding SelectedDescription, Mode=OneWay}"
-				Margin="5"
-				>
-				<ComboBox.ItemTemplate>
-					<DataTemplate>
-						<CheckBox
-							Content="{Binding Name}"
-							IsChecked="{Binding IsChecked}"
+		<!-- ToolBar -->
+		<ToolBarTray
+			Grid.Row="1"
+			>
+		</ToolBarTray>
+
+		<!-- Content -->
+		<ScrollViewer
+			Grid.Row="2"
+			VerticalScrollBarVisibility="Auto"
+			>
+			<StackPanel>
+				<gui:ComboBoxAutoComplete
+					ItemsSource="{Binding Things}"
+					SelectedItem="{Binding Things/}"
+					UpdateAutoCompleteList="ComboBoxAutoComplete_Update"
+					DisplayMemberPath="Name"
+					Margin="5"
+					/>
+				<ComboBox
+					ItemsSource="{Binding Things}"
+					SelectedItem="{Binding Things/}"
+					SelectedValue="{Binding SelectedDescription, Mode=OneWay}"
+					Margin="5"
+					>
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<CheckBox
+								Content="{Binding Name}"
+								IsChecked="{Binding IsChecked}"
+								/>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+				<DataGrid
+					x:Name="m_grid"
+					AutoGenerateColumns="False"
+					ItemsSource="{Binding Things}"
+					GridLinesVisibility="None"
+					CanUserResizeRows="False"
+					RowHeaderWidth="20"
+					CanUserSortColumns="False"
+					gui:DataGrid_.ReorderRowsWithDragDrop="True"
+					gui:DataGrid_.ReorderRowDrop="HandleReorderRowDrop"
+					Height="Auto"
+					>
+					<DataGrid.Columns>
+						<DataGridTextColumn
+							Header="Col1"
+							Binding="{Binding Name, Mode=OneWay}"
+							Width="1*"
 							/>
-					</DataTemplate>
-				</ComboBox.ItemTemplate>
-			</ComboBox>
-			<DataGrid
-				x:Name="m_grid"
-				AutoGenerateColumns="False"
-				ItemsSource="{Binding Things}"
-				GridLinesVisibility="None"
-				CanUserResizeRows="False"
-				RowHeaderWidth="20"
-				CanUserSortColumns="False"
-				gui:DataGrid_.ReorderRowsWithDragDrop="True"
-				gui:DataGrid_.ReorderRowDrop="HandleReorderRowDrop"
-				Height="Auto"
-				>
-				<DataGrid.Columns>
-					<DataGridTextColumn
-						Header="Col1"
-						Binding="{Binding Name, Mode=OneWay}"
-						Width="1*"
-						/>
-					<DataGridTextColumn
-						Header="Col2"
-						Binding="{Binding Name, StringFormat={}{0} - Ah ah ahhh, Mode=OneWay}"
-						Width="1*"
-						/>
-				</DataGrid.Columns>
-			</DataGrid>
-			<!--
-			<local:ImageButton
-				Text="Hello World?"
-				Source="pack://application:,,,/res/pencil.png"
-				Height="32"
-				Background="{x:Static Brushes.Aqua}"/>
-			<local:ImageButtonRaw
-				Text="Roar!"
-				Source="pack://application:,,,/res/check_accept.png"
-				Height="32"
-				Background="{x:Static Brushes.Beige}"/>
-			<gui2:ColourWheel
-				Margin="3"
-				Orientation="Horizontal"
-				/>
-			-->
-			<Button
-				Content="OK"
-				HorizontalAlignment="Right"
-				MinWidth="80"
-				Margin="8"
-				/>
-		</StackPanel>
-	</ScrollViewer>
+						<DataGridTextColumn
+							Header="Col2"
+							Binding="{Binding Name, StringFormat={}{0} - Ah ah ahhh, Mode=OneWay}"
+							Width="1*"
+							/>
+					</DataGrid.Columns>
+				</DataGrid>
+				<!--
+				<local:ImageButton
+					Text="Hello World?"
+					Source="pack://application:,,,/res/pencil.png"
+					Height="32"
+					Background="{x:Static Brushes.Aqua}"/>
+				<local:ImageButtonRaw
+					Text="Roar!"
+					Source="pack://application:,,,/res/check_accept.png"
+					Height="32"
+					Background="{x:Static Brushes.Beige}"/>
+				<gui2:ColourWheel
+					Margin="3"
+					Orientation="Horizontal"
+					/>
+				-->
+				<Button
+					Content="OK"
+					HorizontalAlignment="Right"
+					MinWidth="80"
+					Margin="8"
+					/>
+			</StackPanel>
+		</ScrollViewer>
+	</Grid>
 </Window>

@@ -1,0 +1,148 @@
+﻿<Grid
+	x:Class="Rylogic.Gui.WPF.View3dAnimControls"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+	mc:Ignorable="d"
+	>
+	<WrapPanel
+		x:Name="m_root"
+		IsEnabled="{Binding ViewWindow, Converter={conv:NotNull}}"
+		>
+		<TextBlock
+			Text="Animation:"
+			VerticalAlignment="Center"
+			Margin="3,0,3,0"
+			/>
+
+		<!-- Buttons -->
+		<StackPanel
+			Orientation="Horizontal"
+			MaxHeight="22"
+			>
+			<StackPanel.Resources>
+				<BitmapImage x:Key="media_reset" UriSource="/Rylogic.Gui.WPF;component/res/media_player_start.png" />
+				<BitmapImage x:Key="media_stop" UriSource="/Rylogic.Gui.WPF;component/res/media_player_stop.png" />
+				<BitmapImage x:Key="media_play" UriSource="/Rylogic.Gui.WPF;component/res/media_player_play.png" />
+				<BitmapImage x:Key="media_pause" UriSource="/Rylogic.Gui.WPF;component/res/media_player_pause.png" />
+				<BitmapImage x:Key="media_step_fwd" UriSource="/Rylogic.Gui.WPF;component/res/media_player_step_fwd.png" />
+				<BitmapImage x:Key="media_step_bck" UriSource="/Rylogic.Gui.WPF;component/res/media_player_step_bck.png" />
+
+				<Style x:Key="AnimBtnStyle" TargetType="{x:Type Button}">
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="BorderThickness" Value="0"/>
+					<Setter Property="Margin" Value="1"/>
+				</Style>
+			</StackPanel.Resources>
+
+			<!-- Reset -->
+			<Button
+				Style="{StaticResource AnimBtnStyle}"
+				Command="{Binding Reset}"
+				>
+				<Image
+					Source="{StaticResource media_reset}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+
+			<!-- Play -->
+			<Button
+				Style="{StaticResource AnimBtnStyle}"
+				Visibility="{Binding Animating, Converter={conv:BoolToCollapsed}}"
+				IsEnabled="{Binding Animating, Converter={conv:Not}}"
+				Command="{Binding Play}"
+				>
+				<Image
+					Source="{StaticResource media_play}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+
+			<!-- Pause -->
+			<Button
+				Style="{StaticResource AnimBtnStyle}"
+				Visibility="{Binding Animating, Converter={conv:BoolToVisible}}"
+				IsEnabled="{Binding Animating}"
+				Command="{Binding Pause}"
+				>
+				<Image
+					Source="{StaticResource media_pause}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+
+			<!-- Step Back -->
+			<Button
+				Style="{StaticResource AnimBtnStyle}"
+				Command="{Binding StepBack}"
+				>
+				<Image
+					Source="{StaticResource media_step_bck}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+
+			<!-- Step Forward -->
+			<Button
+			Style="{StaticResource AnimBtnStyle}"
+			Command="{Binding StepForward}"
+			>
+			<Image
+				Source="{StaticResource media_step_fwd}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</Button>
+		</StackPanel>
+	
+		<!-- Clock -->
+		<StackPanel
+			Orientation="Horizontal"
+			VerticalAlignment="Center"
+			Margin="3"
+			>
+			<TextBlock
+				Text="Clock: "
+				VerticalAlignment="Center"
+				/>
+			<TextBox
+				Text="{Binding AnimClock, StringFormat={}{0:N1}, FallbackValue='0.0'}"
+				ToolTip="Animation clock value."
+				HorizontalContentAlignment="Center"
+				MinWidth="60"
+				/>
+		</StackPanel>
+	
+		<!-- Step Size -->
+		<StackPanel
+			Orientation="Horizontal"
+			VerticalAlignment="Center"
+			Margin="3"
+			>
+			<TextBlock
+				Text="Step: "
+				VerticalAlignment="Center"
+				/>
+			<TextBox
+				Text="{Binding StepSize, StringFormat={}{0:N3}}"
+				ToolTip="Time increment per step. Set to zero for real-time."
+				HorizontalContentAlignment="Center"
+				VerticalAlignment="Center"
+				MinWidth="60"
+				/>
+			<gui:SliderFunction
+				Minimum="0"
+				Maximum="3.162277660168379332"
+				FunctionExpr="sqr(x)"
+				InverseExpr="sqrt(x)"
+				ValueFn="{Binding StepSize}"
+				VerticalAlignment="Center"
+				MinWidth="60"
+				Margin="3,0,3,0"
+				/>
+		</StackPanel>
+	</WrapPanel>
+</Grid>
