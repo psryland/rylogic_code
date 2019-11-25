@@ -49,6 +49,16 @@ namespace TestWPF
 			{
 				new DiagramUI().Show();
 			});
+			ShowDirectionPicker = Command.Create(this, () =>
+			{
+				var win = new Window
+				{
+					Owner = this,
+					WindowStartupLocation = WindowStartupLocation.CenterOwner,
+				};
+				win.Content = new DirectionPicker();
+				win.ShowDialog();
+			});
 			ShowDockContainer = Command.Create(this, () =>
 			{
 				new DockContainerUI().Show();
@@ -142,6 +152,7 @@ namespace TestWPF
 		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }
 		public Command ShowDiagram { get; }
+		public Command ShowDirectionPicker { get; }
 		public Command ShowDockContainer { get; }
 		public Command ShowMsgBox { get; }
 		public Command ShowListUI { get; }

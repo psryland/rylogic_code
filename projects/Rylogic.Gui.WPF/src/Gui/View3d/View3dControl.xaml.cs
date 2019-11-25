@@ -694,7 +694,7 @@ namespace Rylogic.Gui.WPF
 					Invalidate();
 				};
 
-				m_lighting_ui = new View3dLightingUI(this);
+				m_lighting_ui = new View3dLightingUI(System.Windows.Window.GetWindow(this), Window);
 				m_lighting_ui.Closed += delegate { m_lighting_ui = null; };
 				m_lighting_ui.Light = light;
 				m_lighting_ui.Show();

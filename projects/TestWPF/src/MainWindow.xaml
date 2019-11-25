@@ -35,6 +35,7 @@
 			</MenuItem>
 			<MenuItem Header="_Dialogs">
 				<MenuItem Header="_Colour Picker UI" Command="{Binding ShowColourPicker}"/>
+				<MenuItem Header="_Direction Picker UI" Command="{Binding ShowDirectionPicker}"/>
 				<MenuItem Header="_List UI" Command="{Binding ShowListUI}"/>
 				<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
 				<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>

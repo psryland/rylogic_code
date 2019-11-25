@@ -32,12 +32,13 @@
 	<!-- Resources -->
 	<ItemGroup>
 		<Resource Include="res\*.png" />
-	</ItemGroup>
-	<ItemGroup>
 		<Compile Update="res\Resources.Designer.cs">
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
 			<DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+		<Compile Update="src\Gui\View3d\View3dLightingUI.xaml.cs">
+		  <SubType>Code</SubType>
 		</Compile>
 		<EmbeddedResource Update="res\Resources.resx">
 			<Generator>ResXFileCodeGenerator</Generator>

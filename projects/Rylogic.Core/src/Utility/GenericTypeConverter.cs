@@ -55,6 +55,6 @@ namespace Rylogic.Utility
 		/// <summary>
 		/// Gets whether the property grid will try to clone 'T' rather than changing the original.
 		/// Note: if this returns true, the object must be ICloneable or a new instance still won't be created</summary>
-		protected virtual bool AllowCreateInstance { get { return false; } }
+		protected virtual bool AllowCreateInstance => false;
 	}
 }

@@ -260,13 +260,13 @@ namespace LDraw.UI
 		{
 			if (m_lighting_ui == null)
 			{
-				m_lighting_ui = new LightingUI(Window.GetWindow(this), SceneView.Scene.Window);
+				m_lighting_ui = new View3dLightingUI(Window.GetWindow(this), SceneView.Scene.Window);
 				m_lighting_ui.Closed += delegate { m_lighting_ui = null; };
 				m_lighting_ui.Show();
 			}
 			m_lighting_ui.Focus();
 		}
-		private LightingUI? m_lighting_ui;
+		private View3dLightingUI? m_lighting_ui;
 
 		/// <summary>Close and remove this scene</summary>
 		public Command CloseScene { get; }

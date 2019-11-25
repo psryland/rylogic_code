@@ -1,0 +1,58 @@
+﻿<UserControl
+	x:Class="Rylogic.Gui.WPF.DirectionPicker"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+	mc:Ignorable="d" 
+	d:DesignHeight="100"
+	d:DesignWidth="100"
+	>
+	<Grid
+		x:Name="m_root"
+		>
+		<Grid.Resources>
+			<RadialGradientBrush x:Key="DirectionFill"
+				GradientOrigin="{Binding Origin, FallbackValue='0.5,0.5'}"
+				Center="0.5, 0.5"
+				RadiusX="0.5"
+				RadiusY="0.5"
+				>
+				<RadialGradientBrush.GradientStops>
+					<GradientStop
+						Color="#FFF"
+						Offset="0"
+						/>
+					<GradientStop
+						Color="{Binding PerimeterColour, FallbackValue='#444'}"
+						Offset="1"
+						/>
+				</RadialGradientBrush.GradientStops>
+			</RadialGradientBrush>
+		</Grid.Resources>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		
+		<!-- Direction picker -->
+		<Ellipse
+			Grid.Row="0"
+			Fill="{StaticResource DirectionFill}"
+			MouseDown="HandleMouseDown"
+			MouseMove="HandleMouseMove"
+			MouseUp="HandleMouseUp"
+			/>
+
+		<!-- Direction Value -->
+		<TextBox
+			Grid.Row="1"
+			Text="{Binding Direction, Converter={conv:VecToString}, ConverterParameter=0}"
+			Visibility="{Binding ShowTextValue, Converter={conv:BoolToVisible}}"
+			HorizontalContentAlignment="Center"
+			Margin="3"
+			/>
+
+	</Grid>
+</UserControl>
