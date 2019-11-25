@@ -1,12 +1,10 @@
 Immediate ToDo:
 	
 LDraw
-	- Show selection
 	- Highlight errors in editor
 	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null
 	- Support line continuation for highlighting
-	- CMenu for Asset panel, to add asset files (filter excluding .ldr)
 	- Fix the measurement tool not detecting mouse clicks
 	- move LightingUI to pr.view3d
 	- move ObjectManager to pr.view3d

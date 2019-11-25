@@ -34,10 +34,14 @@ namespace Rylogic.Gui.WPF
 			UseLayoutRounding = true;
 			Focusable = true;
 
+			// Collections
+			SavedViews = new ListCollectionView(new ObservableCollection<SavedView>());
+
 			// Initialise commands
 			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
 			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
+			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
 			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
 			ResetView = Command.Create(this, ResetViewInternal);
@@ -69,7 +73,6 @@ namespace Rylogic.Gui.WPF
 
 				// Set defaults
 				ContextMenu = this.FindCMenu("View3dCMenu", new View3dCMenu(this));
-				SavedViews = new ListCollectionView(new ObservableCollection<SavedView>());
 				BackgroundColour = Colour32.LightGray;
 				DesiredPixelAspect = 1;
 				ClickTimeMS = 180;
@@ -163,6 +166,8 @@ namespace Rylogic.Gui.WPF
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
 							if (Bit.AllSet(e.Setting, View3d.ESettings.General_BBoxesVisible))
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.BBoxesVisible));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.General_SelectionBoxVisible))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.SelectionBoxVisible));
 						}
 						if (Bit.AllSet(e.Setting, View3d.ESettings.Scene))
 						{
@@ -535,6 +540,14 @@ namespace Rylogic.Gui.WPF
 		private void ToggleBBoxesVisibleInternal()
 		{
 			Window.BBoxesVisible = !Window.BBoxesVisible;
+			Invalidate();
+		}
+
+		/// <summary>Toggle the visibility of the selection box</summary>
+		public Command ToggleSelectionBox { get; }
+		private void ToggleSelectionBoxInternal()
+		{
+			Window.SelectionBoxVisible = !Window.SelectionBoxVisible;
 			Invalidate();
 		}
 

@@ -72,6 +72,17 @@ namespace Rylogic.Gui.WPF
 				get => m_owner.ToggleBBoxesVisible;
 			}
 
+			/// <summary>Selection box</summary>
+			public bool SelectionBoxVisible
+			{
+				get => m_owner.Window.SelectionBoxVisible;
+				set => m_owner.Window.SelectionBoxVisible = value;
+			}
+			public ICommand ToggleSelectionBox
+			{
+				get => m_owner.ToggleSelectionBox;
+			}
+
 			/// <inheritdoc/>
 			public ICommand ResetView
 			{

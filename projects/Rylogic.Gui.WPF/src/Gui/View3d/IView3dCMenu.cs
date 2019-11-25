@@ -41,6 +41,10 @@ namespace Rylogic.Gui.WPF
 		bool BBoxesVisible { get; set; }
 		ICommand ToggleBBoxesVisible { get; }
 
+		/// <summary>Selection box</summary>
+		bool SelectionBoxVisible { get; set; }
+		ICommand ToggleSelectionBox { get; }
+
 		/// <summary>Camera Reset</summary>
 		ICommand ResetView { get; }
 

@@ -3050,7 +3050,7 @@ VIEW3D_API BOOL __stdcall View3D_SelectionBoxVisibleGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_selection_box_visible;
+		return window->SelectionBoxVisible();
 	}
 	CatchAndReport(View3D_SelectionBoxVisibleGet, window, FALSE);
 }
@@ -3061,7 +3061,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxVisibleSet(View3DWindow window, BOO
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_selection_box_visible = visible != 0;
+		window->SelectionBoxVisible(visible != 0);
 	}
 	CatchAndReport(View3D_SelectionBoxVisibleSet, window, );
 }

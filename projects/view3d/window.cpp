@@ -229,6 +229,8 @@ namespace view3d
 		{
 			// Transform is updated by the user or by a call to SetSelectionBoxToSelected()
 			// 'm_selection_box.m_i2w.pos.w' is zero when there is no selection.
+			// Update the selection box if necessary
+			SelectionBoxFitToSelected();
 			if (m_selection_box.m_i2w.pos.w != 0)
 				m_scene.AddInstance(m_selection_box);
 		}
@@ -946,6 +948,19 @@ namespace view3d
 		if (m_bboxes_visible == vis) return;
 		m_bboxes_visible = vis;
 		NotifySettingsChanged(EView3DSettings::General_BBoxesVisible);
+	}
+
+
+	// Show/Hide the selection box
+	bool Window::SelectionBoxVisible() const
+	{
+		return m_selection_box_visible;
+	}
+	void Window::SelectionBoxVisible(bool vis)
+	{
+		if (m_selection_box_visible == vis) return;
+		m_selection_box_visible = vis;
+		NotifySettingsChanged(EView3DSettings::General_SelectionBoxVisible);
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray

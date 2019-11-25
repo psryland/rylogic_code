@@ -490,10 +490,11 @@ namespace Rylogic.Gfx
 			// Lower 2-bytes = specific property that changed.
 			None = 0,
 
-			General                    = 1 << 16,
-			General_FocusPointVisible  = General | 1 << 0,
-			General_OriginPointVisible = General | 1 << 1,
-			General_BBoxesVisible      = General | 1 << 2,
+			General                     = 1 << 16,
+			General_FocusPointVisible   = General | 1 << 0,
+			General_OriginPointVisible  = General | 1 << 1,
+			General_BBoxesVisible       = General | 1 << 2,
+			General_SelectionBoxVisible = General | 1 << 3,
 
 			Scene                  = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,

@@ -71,6 +71,17 @@ namespace LDraw
 			get => m_owner.SceneView.Scene.ToggleBBoxesVisible;
 		}
 
+		/// <summary>Selection box</summary>
+		public bool SelectionBoxVisible
+		{
+			get => m_owner.SceneView.Scene.Window.SelectionBoxVisible;
+			set => m_owner.SceneView.Scene.Window.SelectionBoxVisible = value;
+		}
+		public ICommand ToggleSelectionBox
+		{
+			get => m_owner.SceneView.Scene.ToggleSelectionBox;
+		}
+
 		/// <inheritdoc/>
 		public bool ShowCrossHair
 		{

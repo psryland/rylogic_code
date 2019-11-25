@@ -242,6 +242,10 @@ namespace view3d
 		bool BBoxesVisible() const;
 		void BBoxesVisible(bool vis);
 
+		// Show/Hide the selection box
+		bool SelectionBoxVisible() const;
+		void SelectionBoxVisible(bool vis);
+
 		// Cast a ray into the scene, returning hit info
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
