@@ -5,9 +5,11 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Toolkit.Wpf.UI.Controls;
 using Rylogic.Common;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -46,7 +48,7 @@ namespace Rylogic.Gui.WPF
 	}
 
 	/// <summary>A control for editing patterns</summary>
-	public partial class PatternEditor : UserControl ,INotifyPropertyChanged
+	public partial class PatternEditor :UserControl, INotifyPropertyChanged
 	{
 		public PatternEditor()
 		{
@@ -54,17 +56,23 @@ namespace Rylogic.Gui.WPF
 			CaptureGroups = new ObservableCollection<CaptureGroup>();
 			Original = null;
 			Pattern = new Pattern();
-			TestText =
-				"Enter text here to test your pattern.\n" +
-				"The pattern to applied to each line separately\n" +
-				"so that you can test multiple cases simultaneously.\n";
 
 			CommitChanges = Command.Create(this, CommitChangesInternal);
 			ShowHelp = Command.Create(this, ShowHelpInternal);
-
-			// Bind
 			DataContext = this;
 			ApplyPattern();
+
+			Loaded += delegate
+			{
+				_ = MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+			};
+		}
+
+		/// <summary>Raised when the 'Commit' button is hit and the pattern field contains a valid pattern</summary>
+		public event EventHandler? Commit;
+		public void NotifyCommit()
+		{
+			Commit?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Set a new pattern for the UI</summary>
@@ -88,12 +96,15 @@ namespace Rylogic.Gui.WPF
 			private set
 			{
 				if (m_pattern == value) return;
-				m_pattern = value;
-				if (m_pattern != null)
+				m_pattern = value ?? new Pattern();
+				m_pattern.PropertyChanged += WeakRef.MakeWeak(HandlePatternPropertyChanged, h => m_pattern.PropertyChanged -= h);
+				NotifyPropertyChanged(string.Empty);
+				
+				// Handler
+				void HandlePatternPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
-					IgnoreCase = m_pattern.IgnoreCase;
-					WholeLine = m_pattern.WholeLine;
-					Invert = m_pattern.Invert;
+					ApplyPattern();
+					Dirty = true;
 				}
 			}
 		}
@@ -111,81 +122,6 @@ namespace Rylogic.Gui.WPF
 		}
 		private IPattern? m_original;
 
-		/// <summary>Pattern test area text</summary>
-		public string PatternExpr
-		{
-			get => (string)GetValue(PatternExprProperty);
-			set => SetValue(PatternExprProperty, value);
-		}
-		private void PatternExpr_Changed(string value)
-		{
-			if (Pattern == null) return;
-			Pattern.Expr = value;
-			Touched = true;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty PatternExprProperty = Gui_.DPRegister<PatternEditor>(nameof(PatternExpr));
-
-		/// <summary>The current pattern type</summary>
-		public EPattern PatnType
-		{
-			get => (EPattern)GetValue(PatnTypeProperty);
-			set => SetValue(PatnTypeProperty, value);
-		}
-		private void PatnType_Changed(EPattern patn_type)
-		{
-			if (Pattern == null) return;
-			Pattern.PatnType = patn_type;
-			Touched = true;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty PatnTypeProperty = Gui_.DPRegister<PatternEditor>(nameof(PatnType));
-
-		/// <summary>The ignore case flag</summary>
-		public bool IgnoreCase
-		{
-			get => (bool)GetValue(IgnoreCaseProperty);
-			set => SetValue(IgnoreCaseProperty, value);
-		}
-		private void IgnoreCase_Changed(bool value)
-		{
-			if (Pattern == null) return;
-			Pattern.IgnoreCase = value;
-			Touched = true;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty IgnoreCaseProperty = Gui_.DPRegister<PatternEditor>(nameof(IgnoreCase));
-
-		/// <summary>The whole line flag</summary>
-		public bool WholeLine
-		{
-			get => (bool)GetValue(WholeLineProperty);
-			set => SetValue(WholeLineProperty, value);
-		}
-		private void WholeLine_Changed(bool value)
-		{
-			if (Pattern == null) return;
-			Pattern.WholeLine = value;
-			Touched = true;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty WholeLineProperty = Gui_.DPRegister<PatternEditor>(nameof(WholeLine));
-
-		/// <summary>The invert flag</summary>
-		public bool Invert
-		{
-			get => (bool)GetValue(InvertProperty);
-			set => SetValue(InvertProperty, value);
-		}
-		private void Invert_Changed(bool value)
-		{
-			if (Pattern == null) return;
-			Pattern.Invert = value;
-			Touched = true;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty InvertProperty = Gui_.DPRegister<PatternEditor>(nameof(Invert));
-
 		/// <summary>Test text for trying output patterns</summary>
 		public string TestText
 		{
@@ -197,13 +133,27 @@ namespace Rylogic.Gui.WPF
 			if (Pattern == null) return;
 			ApplyPattern();
 		}
-		public static readonly DependencyProperty TestTextProperty = Gui_.DPRegister<PatternEditor>(nameof(TestText));
+		public static readonly DependencyProperty TestTextProperty = Gui_.DPRegister<PatternEditor>(nameof(TestText), DefaultTestText);
+		private const string DefaultTestText =
+			"Enter text here to test your pattern.\n" +
+			"The pattern is applied to each line separately\n" +
+			"so that you can test multiple cases simultaneously.\n";
 
 		/// <summary>The capture groups</summary>
 		public ObservableCollection<CaptureGroup> CaptureGroups { get; }
 
 		/// <summary>True when user activity has changed something in the UI</summary>
-		public bool Touched { get; set; }
+		public bool Dirty
+		{
+			get => m_dirty;
+			set
+			{
+				if (m_dirty == value) return;
+				m_dirty = value;
+				NotifyPropertyChanged(nameof(Dirty));
+			}
+		}
+		private bool m_dirty;
 
 		/// <summary>True if the pattern currently contained is a new instance, vs editing an existing pattern</summary>
 		public bool IsNew => Original is null;
@@ -211,25 +161,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if the pattern contains unsaved changes</summary>
 		public bool HasUnsavedChanges =>
 			Pattern != null &&
-			((IsNew && Pattern.Expr.Length != 0 && Touched) ||
+			((IsNew && Pattern.Expr.Length != 0 && Dirty) ||
 			(!IsNew && !Equals(Original, Pattern)));
 
 		/// <summary>True if the contained pattern is valid and therefore can be saved</summary>
 		public bool PatternValid => Pattern?.IsValid ?? false;
 
-		/// <summary>Raised when the 'Commit' button is hit and the pattern field contains a valid pattern</summary>
-		public event EventHandler? Commit;
-
-		/// <summary>Property changed notification</summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
-
 		/// <summary>Apply highlighting to the test text</summary>
 		private void ApplyPattern()
 		{
+			if (m_in_apply_pattern != 0) return;
+			using var in_apply_pattern = Scope.Create(() => ++m_in_apply_pattern, () => --m_in_apply_pattern);
+
 			// Notify when 'CommentEnabled' changes
 			if (PatternValid != m_last_pattern_valid)
 			{
@@ -298,6 +241,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_last_pattern_valid;
 		private bool m_last_has_unsaved_changes;
+		private int m_in_apply_pattern;
 
 		/// <summary>Update the collection of capture groups</summary>
 		private void UpdateCaptureGroups()
@@ -308,7 +252,7 @@ namespace Rylogic.Gui.WPF
 				// Get the line that the caret is position is on
 				var this_line = m_rtb.CaretPosition.GetLineStartPosition(0) ?? m_rtb.CaretPosition.DocumentStart;
 				var next_line = m_rtb.CaretPosition.GetLineStartPosition(1) ?? m_rtb.CaretPosition.DocumentEnd;
-				var line = new TextRange(this_line, next_line).Text.Trim('\n','\r');
+				var line = new TextRange(this_line, next_line).Text.Trim('\n', '\r');
 
 				// Update the capture groups data
 				var groups = new Dictionary<string, string>();
@@ -323,7 +267,7 @@ namespace Rylogic.Gui.WPF
 		public Command CommitChanges { get; }
 		private void CommitChangesInternal()
 		{
-			Commit?.Invoke(this, EventArgs.Empty);
+			NotifyCommit();
 		}
 
 		/// <summary>Show a help dialog</summary>
@@ -349,6 +293,13 @@ namespace Rylogic.Gui.WPF
 			m_help_ui.Focus();
 		}
 		private Window? m_help_ui;
+
+		/// <summary>Property changed notification</summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>Capture group key/value pair</summary>
 		public class CaptureGroup

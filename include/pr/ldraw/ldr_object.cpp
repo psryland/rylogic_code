@@ -5157,10 +5157,10 @@ namespace pr::ldr
 	rdr::ENuggetFlag LdrObject::NuggetFlags(char const* name, int index) const
 	{
 		auto obj = Child(name);
-		if (obj != nullptr && obj->m_model != nullptr)
+		if (obj == nullptr || obj->m_model == nullptr)
 			return rdr::ENuggetFlag::None;
 
-		if (index >= obj->m_model->m_nuggets.size())
+		if (index >= static_cast<int>(obj->m_model->m_nuggets.size()))
 			throw std::runtime_error("nugget index out of range");
 
 		auto nug = obj->m_model->m_nuggets.begin();
@@ -5185,10 +5185,10 @@ namespace pr::ldr
 	Colour32 LdrObject::NuggetTint(char const* name, int index) const
 	{
 		auto obj = Child(name);
-		if (obj != nullptr && obj->m_model != nullptr)
+		if (obj == nullptr || obj->m_model == nullptr)
 			return Colour32White;
 
-		if (index >= obj->m_model->m_nuggets.size())
+		if (index >= static_cast<int>(obj->m_model->m_nuggets.size()))
 			throw std::runtime_error("nugget index out of range");
 
 		auto nug = obj->m_model->m_nuggets.begin();

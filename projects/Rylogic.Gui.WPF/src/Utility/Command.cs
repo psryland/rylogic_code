@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Windows.Input;
 
 namespace Rylogic.Gui.WPF
@@ -11,7 +12,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Can execute changed</summary>
 		public event EventHandler? CanExecuteChanged;
-		protected void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+		protected void NotifyCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 
 		/// <summary>True if the command is available</summary>
 		public virtual bool CanExecute(object? _) => true;
@@ -63,5 +64,36 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Execute the command</summary>
 		public override void Execute(object? parameter) => m_execute?.Invoke(Owner, parameter);
 		private readonly Action<TOwner, object?>? m_execute;
+	}
+
+	/// <summary>A wrapper that invokes a command on 'data_context'</summary>
+	public class ReflectedCommand :Command
+	{
+		private readonly object? m_command;
+		private readonly MethodInfo? m_execute;
+		private readonly MethodInfo? m_can_execute;
+
+		public ReflectedCommand(object data_context, string command)
+		{
+			// Locate the command within the data context. Silently ignore missing commands
+			var command_pi = data_context.GetType().GetProperty(command);
+			if (command_pi == null || !typeof(ICommand).IsAssignableFrom(command_pi.PropertyType))
+				return;
+
+			// Find the Execute and CanExecute methods
+			m_command = command_pi.GetValue(data_context);
+			m_execute = command_pi.PropertyType.GetMethod(nameof(ICommand.Execute), new Type[] { typeof(object) });
+			m_can_execute = command_pi.PropertyType.GetMethod(nameof(ICommand.CanExecute), new Type[] { typeof(object) });
+		}
+		public override bool CanExecute(object? parameter)
+		{
+			if (m_command == null || m_can_execute == null) return false;
+			return (bool)m_can_execute.Invoke(m_command, new object?[] { parameter });
+		}
+		public override void Execute(object? parameter)
+		{
+			if (m_command == null || m_execute == null) return;
+			m_execute.Invoke(m_command, new object?[] { parameter });
+		}
 	}
 }

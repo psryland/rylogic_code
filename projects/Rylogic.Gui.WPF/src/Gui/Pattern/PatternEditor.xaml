@@ -15,6 +15,18 @@
 		<ResourceDictionary>
 			<BitmapImage x:Key="edit_add" UriSource="/Rylogic.Gui.WPF;component/res/edit_add.png"/>
 			<BitmapImage x:Key="edit_save" UriSource="/Rylogic.Gui.WPF;component/res/edit_save.png"/>
+
+			<Style x:Key="PatternTextBoxStyle" TargetType="{x:Type TextBox}">
+				<Style.Triggers>
+					<DataTrigger Binding="{Binding PatternValid}" Value="True">
+						<Setter Property="Background" Value="{x:Static Brushes.LightGreen}"/>
+					</DataTrigger>
+					<DataTrigger Binding="{Binding PatternValid}" Value="False">
+						<Setter Property="Background" Value="{x:Static Brushes.LightSalmon}"/>
+					</DataTrigger>
+				</Style.Triggers>
+			</Style>
+
 		</ResourceDictionary>
 	</UserControl.Resources>
 
@@ -59,16 +71,16 @@
 					/>
 				<RadioButton
 					Content="Substring"
-					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
-					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="1"/>
-				<RadioButton
-					Content="Wildcard"
-					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
+					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="2"/>
 				<RadioButton
-					Content="Regular Expression"
-					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
+					Content="Wildcard"
+					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="3"/>
+				<RadioButton
+					Content="Regular Expression"
+					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
+					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="4"/>
 			</StackPanel>
 
 			<!-- Pattern field -->
@@ -99,25 +111,13 @@
 
 				<!-- Pattern expression -->
 				<TextBox
-					Text="{Binding PatternExpr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					Text="{Binding Pattern.Expr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					Style="{StaticResource PatternTextBoxStyle}"
 					HorizontalAlignment="Stretch"
 					VerticalAlignment="Center"
 					Margin="2"
-					TabIndex="4"
-					>
-					<TextBox.Style>
-						<Style TargetType="TextBox">
-							<Style.Triggers>
-								<DataTrigger Binding="{Binding PatternValid}" Value="True">
-									<Setter Property="Background" Value="{x:Static Brushes.LightGreen}"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding PatternValid}" Value="False">
-									<Setter Property="Background" Value="{x:Static Brushes.LightSalmon}"/>
-								</DataTrigger>
-							</Style.Triggers>
-						</Style>
-					</TextBox.Style>
-				</TextBox>
+					TabIndex="1"
+					/>
 			</DockPanel>
 
 			<!-- Flags -->
@@ -141,7 +141,7 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Ignore Case" 
-					IsChecked="{Binding IgnoreCase, Mode=TwoWay}"
+					IsChecked="{Binding Pattern.IgnoreCase, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					FontSize="11"
 					TabIndex="5"
@@ -152,7 +152,7 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Whole Line"
-					IsChecked="{Binding WholeLine, Mode=TwoWay}"
+					IsChecked="{Binding Pattern.WholeLine, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					FontSize="11"
 					TabIndex="6"
@@ -163,7 +163,7 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Invert Match"
-					IsChecked="{Binding Invert, Mode=TwoWay}"
+					IsChecked="{Binding Pattern.Invert, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					Margin="2"
 					FontSize="11"
@@ -217,9 +217,9 @@
 			Grid.Row="1"
 			>
 			<Grid.ColumnDefinitions>
-				<ColumnDefinition MinWidth="10"/>
+				<ColumnDefinition Width="3*" MinWidth="10"/>
 				<ColumnDefinition Width="auto"/>
-				<ColumnDefinition MinWidth="10"/>
+				<ColumnDefinition Width="1*" MinWidth="10"/>
 			</Grid.ColumnDefinitions>
 
 			<!-- Test text -->

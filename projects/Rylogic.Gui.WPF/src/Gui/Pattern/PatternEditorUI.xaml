@@ -8,13 +8,17 @@
 	mc:Ignorable="d"
 	Title="Edit Pattern"
 	WindowStartupLocation="CenterOwner"
+	ResizeMode="CanResizeWithGrip"
 	ShowInTaskbar="False"
 	Width="400"
 	Height="200"
 	>
-	<DockPanel>
-		<gui:PatternEditor
-			x:Name="m_pattern_editor"
-			/>
-	</DockPanel>
+	<Window.InputBindings>
+		<KeyBinding Key="Esc" Command="{Binding Cancel}" />
+		<KeyBinding Key="Return" Modifiers="Ctrl" Command="{Binding Accept}" />
+	</Window.InputBindings>
+	
+	<Grid>
+		<gui:PatternEditor />
+	</Grid>
 </Window>

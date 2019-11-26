@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
@@ -7,61 +8,64 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class View3dObjectManagerUI : Window
+	public partial class View3dObjectManagerUI : Window, INotifyPropertyChanged
 	{
-		public View3dObjectManagerUI(View3dControl owner)
+		public View3dObjectManagerUI(Window owner, View3d.Window window, IEnumerable<Guid>? exclude = null)
 		{
 			InitializeComponent();
-			Owner = GetWindow(owner);
+			Owner = owner;
+			Icon = Owner?.Icon;
 
-			View3dCtrl = owner;
-			ObjectManager = new ObjectManager(owner.Window, new Guid[0] { });
 			PinState = new PinData(this, EPin.Centre);
+			ObjectManager = new ObjectManager(window, exclude ?? Array.Empty<Guid>());
+			Objects = new ListCollectionView(ObjectManager.Objects);
 
 			ExpandAll = Command.Create(this, ExpandAllInternal);
 			CollapseAll = Command.Create(this, CollapseAllInternal);
-
-			Objects = new ListCollectionView(ObjectManager.Objects);
+			ApplyFilter = Command.Create(this, ApplyFilterInternal);
 			DataContext = this;
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			ObjectManager = null;
-			View3dCtrl = null!;
+			ObjectManager = null!;
 			PinState = null;
 			base.OnClosed(e);
 		}
 
-		/// <summary>The View3d Control that contains the 3d scene</summary>
-		public View3dControl View3dCtrl
-		{
-			get => m_view3d_ctrl;
-			private set
-			{
-				if (m_view3d_ctrl == value) return;
-				if (m_view3d_ctrl != null)
-				{
-				}
-				m_view3d_ctrl = value;
-				if (m_view3d_ctrl != null)
-				{
-				}
-			}
-		}
-		private View3dControl m_view3d_ctrl = null!;
-
 		/// <summary>The view model for the object manager behaviour</summary>
-		public ObjectManager? ObjectManager
+		public ObjectManager ObjectManager
 		{
 			get => m_object_manager;
 			private set
 			{
 				if (m_object_manager == value) return;
-				Util.Dispose(ref m_object_manager);
+				if (m_object_manager != null)
+				{
+					m_object_manager.PropertyChanged -= HandlePropertyChanged;
+					Util.Dispose(ref m_object_manager!);
+				}
 				m_object_manager = value;
+				if (m_object_manager != null)
+				{
+					m_object_manager.PropertyChanged += HandlePropertyChanged;
+				}
+
+				// Handler
+				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+					case nameof(Gfx.ObjectManager.Objects):
+						{
+							Objects.Refresh();
+							NotifyPropertyChanged(nameof(Objects));
+							break;
+						}
+					}
+				}
 			}
 		}
-		private ObjectManager? m_object_manager;
+		private ObjectManager m_object_manager = null!;
 
 		/// <summary>Pinned window support</summary>
 		private PinData? PinState
@@ -91,5 +95,17 @@ namespace Rylogic.Gui.WPF
 		{
 		}
 
+		/// <summary></summary>
+		public Command ApplyFilter { get; }
+		private void ApplyFilterInternal()
+		{
+		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

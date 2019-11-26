@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gfx
 {
-	public sealed class ObjectManager : IDisposable
+	public sealed class ObjectManager : IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This class provides the functionality for the object manager
@@ -18,7 +20,7 @@ namespace Rylogic.Gfx
 			m_window = null!;
 			Window = window;
 			Exclude = new HashSet<Guid>(excluded);
-			Objects = new BindingListEx<View3d.Object>();
+			Objects = new List<View3d.Object>();
 
 			SyncObjectsWithScene();
 		}
@@ -61,49 +63,22 @@ namespace Rylogic.Gfx
 		public HashSet<Guid> Exclude { get; }
 
 		/// <summary>The collection of objects in this scene (top level tree nodes)</summary>
-		public BindingListEx<View3d.Object> Objects { get; }
+		public List<View3d.Object> Objects { get; }
 
 		/// <summary>Update the 'Objects' collection to match the objects in the scene</summary>
 		private void SyncObjectsWithScene()
 		{
-			// Flag the source data as possibly out of sync between the tree and grid
-			SrcUpdating = true;
-
-			// Suspend tree and grid updates until the changes have been made to the 'Objects' collection
-			//using (m_tree.SuspendRedraw(true))
-			//using (m_grid.SuspendRedraw(true))
-			using (Objects.SuspendEvents(reset_bindings_on_resume: true))
-			{
-				//m_tree.CurrentCell = null;
-				//m_grid.CurrentCell = null;
-
-				// Read the objects from the scene
-				var objects = new HashSet<View3d.Object>();
-				Window.EnumObjects(obj => objects.Add(obj), Exclude.ToArray(), 0, Exclude.Count);
-
-				// Remove objects that are no longer in the scene
-				Objects.RemoveIf(x => !objects.Contains(x));
-
-				// Remove objects from 'objects' that are still in the scene
-				Objects.ForEach(x => objects.Remove(x));
-
-				// Add whatever is left
-				objects.ForEach(x => Objects.Add(x));
-
-				// Sort the objects alphabetically
-				Objects.Sort(Cmp<View3d.Object>.From((l, r) => l.Name.CompareTo(r.Name)));
-			}
-			//Debug.Assert(m_tree.RowCount == Objects.Count);
-
-			// After the objects collection has been changed, the tree should
-			// update due to it's data binding. We need to update the grid as well.
-			//UpdateRowCount();
+			// Read the objects from the scene
+			var objects = new HashSet<View3d.Object>();
+			Window.EnumObjects(obj => objects.Add(obj), Exclude.ToArray(), 0, Exclude.Count);
+			Objects.Sync(objects);
+			NotifyPropertyChanged(nameof(Objects));
 		}
 
 		/// <summary>True while the tree and grid are out of sync</summary>
 		private bool SrcUpdating
 		{
-			get { return m_src_updating; }
+			get => m_src_updating;
 			set
 			{
 				if (m_src_updating == value) return;
@@ -112,5 +87,12 @@ namespace Rylogic.Gfx
 			}
 		}
 		private bool m_src_updating;
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

@@ -709,7 +709,7 @@ namespace Rylogic.Gui.WPF
 		{
 			if (m_object_manager_ui == null)
 			{
-				m_object_manager_ui = new View3dObjectManagerUI(this);
+				m_object_manager_ui = new View3dObjectManagerUI(System.Windows.Window.GetWindow(this), Window);
 				m_object_manager_ui.Closed += delegate { m_object_manager_ui = null; };
 				m_object_manager_ui.Show();
 			}

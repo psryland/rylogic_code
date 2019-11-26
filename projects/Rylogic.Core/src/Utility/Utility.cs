@@ -521,11 +521,12 @@ namespace Rylogic.Utility
 			// Ensure the history doesn't grow too long
 			history.RemoveToEnd(max_history_length);
 		}
-		public static void AddToHistoryList<T>(IList<T> history, T item, bool ignore_case, int max_history_length, int index = 0)
+		public static void AddToHistoryList<T>(IList<T> history, T item, bool ignore_case, int max_history_length, int index = 0, Func<T, T, bool>? cmp = null)
 		{
+			// Note: this is the 'ignore case' overload, which implies it's a string compare by default
 			var flags = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-			bool Cmp(T left, T right) => string.Compare(left?.ToString() ?? string.Empty, right?.ToString() ?? string.Empty, flags) == 0;
-			AddToHistoryList(history, item, max_history_length, index, Cmp);
+			cmp ??= (left, right) => string.Compare(left?.ToString() ?? string.Empty, right?.ToString() ?? string.Empty, flags) == 0;
+			AddToHistoryList(history, item, max_history_length, index, cmp);
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>

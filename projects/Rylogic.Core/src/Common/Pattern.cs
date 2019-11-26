@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -8,6 +9,7 @@ using Rylogic.Extn;
 
 namespace Rylogic.Common
 {
+	/// <summary>Support pattern types</summary>
 	public enum EPattern
 	{
 		Substring,
@@ -15,7 +17,8 @@ namespace Rylogic.Common
 		RegularExpression
 	};
 
-	public interface IPattern :ICloneable
+	/// <summary>Pattern interface</summary>
+	public interface IPattern :ICloneable, INotifyPropertyChanged
 	{
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
 		EPattern PatnType { get; set; }
@@ -67,19 +70,9 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A handy regex helper that converts wildcard and substring searches into regex's as well</summary>
-	[DebuggerDisplay("{PatnType}: {Expr}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Pattern :IPattern
 	{
-		private static class XmlTag
-		{
-			public const string Expr       = "expr";
-			public const string PatnType   = "patntype";
-			public const string Active     = "active";
-			public const string IgnoreCase = "ignorecase";
-			public const string Invert     = "invert";
-			public const string WholeLine  = "wholeline";
-		}
-
 		public Pattern()
 			:this(EPattern.Substring, string.Empty)
 		{}
@@ -94,7 +87,7 @@ namespace Rylogic.Common
 		}
 		public Pattern(Pattern rhs)
 		{
-			m_expr        = rhs.Expr;
+			m_expr      = rhs.Expr;
 			Active      = rhs.Active;
 			PatnType    = rhs.PatnType;
 			IgnoreCase  = rhs.IgnoreCase;
@@ -130,7 +123,7 @@ namespace Rylogic.Common
 		public EPattern PatnType
 		{
 			get => m_patn_type;
-			set => SetProp(ref m_patn_type, value, invalidate_patn: true);
+			set => SetProp(ref m_patn_type, value, nameof(PatnType), invalidate_patn: true);
 		}
 		private EPattern m_patn_type;
 
@@ -138,7 +131,7 @@ namespace Rylogic.Common
 		public string Expr
 		{
 			get => m_expr;
-			set => SetProp(ref m_expr, value, invalidate_patn: true);
+			set => SetProp(ref m_expr, value, nameof(Expr), invalidate_patn: true);
 		}
 		private string m_expr;
 
@@ -146,7 +139,7 @@ namespace Rylogic.Common
 		public bool IgnoreCase
 		{
 			get => m_ignore_case;
-			set => SetProp(ref m_ignore_case, value, invalidate_patn: true);
+			set => SetProp(ref m_ignore_case, value, nameof(IgnoreCase), invalidate_patn: true);
 		}
 		private bool m_ignore_case;
 
@@ -154,7 +147,7 @@ namespace Rylogic.Common
 		public bool Invert
 		{
 			get => m_invert;
-			set => SetProp(ref m_invert, value, invalidate_patn: false);
+			set => SetProp(ref m_invert, value, nameof(Invert), invalidate_patn: false);
 		}
 		private bool m_invert;
 
@@ -162,7 +155,7 @@ namespace Rylogic.Common
 		public bool WholeLine
 		{
 			get => m_whole_line;
-			set => SetProp(ref m_whole_line, value, invalidate_patn: false);
+			set => SetProp(ref m_whole_line, value, nameof(WholeLine), invalidate_patn: false);
 		}
 		private bool m_whole_line;
 
@@ -170,12 +163,12 @@ namespace Rylogic.Common
 		public bool Active
 		{
 			get => m_active;
-			set => SetProp(ref m_active, value, invalidate_patn: false);
+			set => SetProp(ref m_active, value, nameof(Active), invalidate_patn: false);
 		}
 		private bool m_active;
 
 		/// <summary>Update a property value</summary>
-		private void SetProp<T>(ref T prop, T value, bool invalidate_patn)
+		private void SetProp<T>(ref T prop, T value, string prop_name, bool invalidate_patn)
 		{
 			if (Equals(prop, value)) return;
 			prop = value;
@@ -184,15 +177,11 @@ namespace Rylogic.Common
 				m_compiled_patn = null;
 				m_validation_exception = null;
 			}
-			RaisePatternChanged();
-		}
-
-		/// <summary>Raised whenever data on this pattern changes</summary>
-		public event EventHandler? PatternChanged;
-		private void RaisePatternChanged()
-		{
-			if (PatternChanged == null) return;
-			PatternChanged(this, EventArgs.Empty);
+			NotifyPropertyChanged(prop_name);
+			NotifyPropertyChanged(nameof(RegexString));
+			NotifyPropertyChanged(nameof(CaptureGroupNames));
+			NotifyPropertyChanged(nameof(IsValid));
+			NotifyPropertyChanged(nameof(SyntaxErrorDescription));
 		}
 
 		/// <summary>Returns the match template as a compiled regular expression</summary>
@@ -254,26 +243,17 @@ namespace Rylogic.Common
 
 				// Compile the expression
 				var opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
-				return m_compiled_patn = new Regex(expr, opts);
+				m_compiled_patn = new Regex(expr, opts);
+				return m_compiled_patn;
 			}
 		}
 		private Regex? m_compiled_patn;
 
 		/// <summary>Allows derived patterns to optionally keep whitespace in Substring/wildcard patterns</summary>
-		protected virtual bool PreserveWhitespace
-		{
-			get { return false; }
-		}
+		protected virtual bool PreserveWhitespace => false;
 
 		/// <summary>Return the compiled regex string for reference</summary>
-		public string RegexString
-		{
-			get
-			{
-				var ex = ValidateExpr();
-				return ex == null ? Regex.ToString() : $"Expression invalid - {ex.Message}";
-			}
-		}
+		public string RegexString => ValidateExpr() is Exception ex ? $"Expression invalid - {ex.Message}" : Regex.ToString();
 
 		/// <summary>Returns null if the match field is valid, otherwise an exception describing what's wrong</summary>
 		public Exception? ValidateExpr()
@@ -299,16 +279,10 @@ namespace Rylogic.Common
 		private Exception? m_validation_exception;
 
 		/// <summary>Returns true if the match expression is valid</summary>
-		public virtual bool IsValid
-		{
-			get { return ValidateExpr() == null; }
-		}
+		public virtual bool IsValid => ValidateExpr() == null;
 
 		/// <summary>Returns a string describing what's wrong with the expression</summary>
-		public string SyntaxErrorDescription
-		{
-			get { var ex = ValidateExpr(); return ex == null ? string.Empty : ex.Message; }
-		}
+		public string SyntaxErrorDescription => ValidateExpr() is Exception ex ? ex.Message : string.Empty;
 
 		/// <summary>Returns the names of the capture groups in this pattern</summary>
 		public string[] CaptureGroupNames
@@ -316,7 +290,7 @@ namespace Rylogic.Common
 			get
 			{
 				try { return Regex.GetGroupNames(); }
-				catch { return new string[0]; }
+				catch { return Array.Empty<string>(); }
 			}
 		}
 
@@ -412,15 +386,16 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Creates a new object that is a copy of the current instance.</summary>
-		public virtual object Clone()
-		{
-			return new Pattern(this);
-		}
+		public virtual object Clone() => new Pattern(this);
 
 		/// <summary>Expression</summary>
-		public override string ToString()
+		public string Description => $"{PatnType}: {Expr}";
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
 		{
-			return $"{PatnType}: {Expr}";
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		#region Equals
@@ -458,6 +433,16 @@ namespace Rylogic.Common
 				m_whole_line  .GetHashCode();
 		}
 		#endregion
+
+		private static class XmlTag
+		{
+			public const string Expr = "expr";
+			public const string PatnType = "patntype";
+			public const string Active = "active";
+			public const string IgnoreCase = "ignorecase";
+			public const string Invert = "invert";
+			public const string WholeLine = "wholeline";
+		}
 	}
 }
 
