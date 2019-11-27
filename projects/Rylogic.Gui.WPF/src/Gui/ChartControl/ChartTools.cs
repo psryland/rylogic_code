@@ -20,13 +20,11 @@ namespace Rylogic.Gui.WPF
 			internal ChartTools(ChartControl chart)
 			{
 				Chart = chart;
-				AreaSelect = CreateAreaSelect();
 				Resizer = CreateResizeGrabber();
 			}
 			public void Dispose()
 			{
 				Chart = null!;
-				AreaSelect = null!;
 				Resizer = null!;
 			}
 
@@ -37,54 +35,10 @@ namespace Rylogic.Gui.WPF
 				set
 				{
 					if (m_chart == value) return;
-					if (m_chart != null)
-					{
-						m_chart.Options.PropertyChanged -= HandleOptionsChanged;
-					}
 					m_chart = value;
-					if (m_chart != null)
-					{
-						m_chart.Options.PropertyChanged += HandleOptionsChanged;
-					}
-
-					// Handlers
-					void HandleOptionsChanged(object? sender, PropertyChangedEventArgs e)
-					{
-						switch (e.PropertyName)
-						{
-						case nameof(OptionsData.SelectionColour):
-							{
-								AreaSelect.ColourSet(Options.SelectionColour);
-								break;
-							}
-						}
-					}
 				}
 			}
 			private ChartControl m_chart = null!;
-
-			/// <summary>Chart options</summary>
-			private OptionsData Options => Chart?.Options ?? new OptionsData();
-
-			/// <summary>Graphic for area selection</summary>
-			public View3d.Object AreaSelect
-			{
-				get => m_area_select;
-				private set
-				{
-					if (m_area_select == value) return;
-					Util.Dispose(ref m_area_select!);
-					m_area_select = value;
-				}
-			}
-			private View3d.Object m_area_select = null!;
-			private View3d.Object CreateAreaSelect()
-			{
-				var ldr = Ldr.Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, pos: v4.Origin);
-				var obj = new View3d.Object(ldr, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
-				return obj;
-			}
 
 			/// <summary>Graphics for the resizing grab zones</summary>
 			public ResizeGrabber[] Resizer

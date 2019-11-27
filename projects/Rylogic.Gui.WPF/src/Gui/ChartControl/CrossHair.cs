@@ -10,7 +10,7 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl
 	{
 		/// <summary>Helper object for drawing a horizontal and vertical line on the chart, with accompanying labels on the axes</summary>
-		public class CrossHair :IDisposable
+		public sealed class CrossHair :IDisposable
 		{
 			public CrossHair(ChartControl chart)
 			{

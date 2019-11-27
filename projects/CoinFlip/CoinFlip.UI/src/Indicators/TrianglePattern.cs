@@ -8,6 +8,7 @@ using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Drawing_ = Rylogic.Extn.Windows.Drawing_;
@@ -451,9 +452,9 @@ namespace CoinFlip.UI.Indicators
 				// Find the nearest point to 'client_point' on the line
 				Point? HitEdge(Point pt0, Point pt1)
 				{
-					var p0 = Drawing_.ToV2(pt0);
-					var p1 = Drawing_.ToV2(pt1);
-					var pt = Drawing_.ToV2(client_point);
+					var p0 = pt0.ToV2();
+					var p1 = pt1.ToV2();
+					var pt = client_point.ToV2();
 
 					var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 					var closest = p0 * (1f - t) + p1 * (t);

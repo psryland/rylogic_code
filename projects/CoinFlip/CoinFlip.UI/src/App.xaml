@@ -2,6 +2,7 @@
 	x:Class="CoinFlip.UI.App"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:CoinFlip.UI"
 	StartupUri="UI/MainWindow.xaml"
 	ShutdownMode="OnMainWindowClose"
@@ -90,7 +91,7 @@
 				<ResourceDictionary Source="../skin/Default.xaml" />
 				<local:SkinResourceDictionary SourceDefault="../skin/Default.xaml" SourceDark="../skin/Dark.xaml"/>
 				<ResourceDictionary Source="../skin/Styles.xaml" />
-				<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/res/ContextMenus.xaml"/>
+				<x:Static Member="gui:ContextMenus.Instance"/>
 			</ResourceDictionary.MergedDictionaries>
 
 		</ResourceDictionary>

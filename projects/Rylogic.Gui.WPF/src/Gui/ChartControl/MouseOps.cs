@@ -266,7 +266,7 @@ namespace Rylogic.Gui.WPF
 		public class MouseOpDefaultLButton : MouseOp
 		{
 			private HitTestResult.Hit? m_hit_selected;
-			private IDisposable? m_cleanup_selection_graphic;
+			private AreaSelection? m_gfx_area_selection;
 			private IDisposable? m_defer_nav_checkpoint;
 			private Element? m_dragging_element;
 			private EDragState m_drag_state;
@@ -278,7 +278,7 @@ namespace Rylogic.Gui.WPF
 			{}
 			protected override void Dispose(bool _)
 			{
-				Util.Dispose(ref m_cleanup_selection_graphic);
+				Util.Dispose(ref m_gfx_area_selection);
 				base.Dispose(_);
 			}
 			public override void MouseDown(MouseButtonEventArgs? e)
@@ -347,23 +347,14 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Otherwise, interpret drag as a navigation
-				if (args.Handled)
-				{ }
+				if (args.Handled) { }
 				else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
 					if (Chart.DoChartAreaSelect(HitResult.ModifierKeys))
 					{
-						// Otherwise change the selection area
-						if (m_cleanup_selection_graphic == null)
-						{
-							m_cleanup_selection_graphic = Scope.Create(
-								() => Chart.Scene.AddObject(Chart.Tools.AreaSelect),
-								() => Chart.Scene.RemoveObject(Chart.Tools.AreaSelect));
-						}
-
 						// Position the selection graphic
-						var selection_area = BRect.FromBounds(GrabChart.ToV2(), Chart.ClientToChart(location).ToV2());
-						Chart.Tools.AreaSelect.O2P = m4x4.Scale(selection_area.SizeX, selection_area.SizeY, 1f, new v4(selection_area.Centre, Chart.HighestZ, 1));
+						m_gfx_area_selection ??= new AreaSelection(Chart);
+						m_gfx_area_selection.Selection = new Rect(GrabChart, Chart.ClientToChart(location));
 					}
 				}
 				else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
@@ -443,12 +434,11 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// Otherwise, interpret drag as a navigation
-					if (args.Handled)
-					{}
+					if (args.Handled) {}
 					else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (HitResult.Zone.HasFlag(EZone.Chart) && m_cleanup_selection_graphic != null)
+						if (HitResult.Zone.HasFlag(EZone.Chart) && m_gfx_area_selection != null)
 						{
 							var selection_area = BBox.From(new v4(GrabChart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
 							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area, e.ToMouseBtns()));
@@ -464,7 +454,7 @@ namespace Rylogic.Gui.WPF
 					e.Handled = args.Handled;
 				}
 
-				Util.Dispose(ref m_cleanup_selection_graphic);
+				Util.Dispose(ref m_gfx_area_selection);
 				Chart.Cursor = Cursors.Arrow;
 				Chart.Invalidate();
 			}
@@ -483,7 +473,7 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// Remove the selection graphics
-					Util.Dispose(ref m_cleanup_selection_graphic);
+					Util.Dispose(ref m_gfx_area_selection);
 
 					// Refresh
 					Chart.Invalidate();

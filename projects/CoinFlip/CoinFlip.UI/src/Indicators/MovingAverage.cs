@@ -9,6 +9,7 @@ using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -146,7 +147,7 @@ namespace CoinFlip.UI.Indicators
 		}
 
 		/// <summary>A MA data set based on an instrument</summary>
-		public class Context :IDisposable
+		public sealed class Context :IDisposable
 		{
 			// Notes:
 			//  - Calculate the MA for the full range (or perhaps limit to 1,000,000).

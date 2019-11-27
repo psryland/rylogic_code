@@ -8,6 +8,7 @@ using System.Xml.Linq;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -351,9 +352,9 @@ namespace CoinFlip.UI.Indicators
 					return null;
 
 				// Find the nearest point to 'client_point' on the line
-				var p0 = Drawing_.ToV2(ScnPt0);
-				var p1 = Drawing_.ToV2(ScnPt1);
-				var pt = Drawing_.ToV2(client_point);
+				var p0 = ScnPt0.ToV2();
+				var p1 = ScnPt1.ToV2();
+				var pt = client_point.ToV2();
 				var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 				var closest = p0 * (1f - t) + p1 * (t);
 
