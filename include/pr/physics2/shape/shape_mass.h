@@ -120,7 +120,7 @@ namespace pr::physics
 	{
 		auto volume = float((2.0/3.0) * maths::tau * shape.m_radius * shape.m_radius * shape.m_radius);
 
-		MassProperties mp    = {};
+		MassProperties mp;
 		mp.m_centre_of_mass  = v4{};
 		mp.m_mass            = volume * density;
 		mp.m_os_unit_inertia = UnitInertia(shape);
