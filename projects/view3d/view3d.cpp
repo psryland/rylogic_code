@@ -2868,7 +2868,8 @@ VIEW3D_API void __stdcall View3D_Flush()
 	CatchAndReport(View3D_Flush, , );
 }
 
-// Handle standard keyboard shortcuts
+// Handle standard keyboard shortcuts.
+// 'key_code' should be a standard VK_ key code with modifiers included in the hi word. See 'EKeyCodes'
 VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 {
 	try
@@ -2876,40 +2877,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		switch (key_code)
-		{
-		case VK_F7:
-			{
-				auto up = View3D_CameraAlignAxisGet(window);
-				if (pr::Length3Sq(up) == 0)
-					up = {0.0f, 1.0f, 0.0f, 0.0f};
-
-				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, -1.0f, 0.0f};
-
-				View3D_ResetView(window, forward, up, 0, TRUE, TRUE);
-				View3D_Invalidate(window, FALSE);
-				return TRUE;
-			}
-		case VK_SPACE:
-			{
-				View3D_ObjectManagerShow(window, true);
-				return TRUE;
-			}
-		case 'W':
-			{
-				if (pr::KeyDown(VK_CONTROL))
-				{
-					switch (View3D_FillModeGet(window)) {
-					case EView3DFillMode::Solid:     View3D_FillModeSet(window, EView3DFillMode::Wireframe); break;
-					case EView3DFillMode::Wireframe: View3D_FillModeSet(window, EView3DFillMode::SolidWire); break;
-					case EView3DFillMode::SolidWire: View3D_FillModeSet(window, EView3DFillMode::Solid); break;
-					}
-					View3D_Invalidate(window, FALSE);
-				}
-				return TRUE;
-			}
-		}
-		return FALSE;
+		return window->TranslateKey(static_cast<pr::EKeyCodes>(key_code)) ? TRUE : FALSE;
 	}
 	CatchAndReport(View3D_TranslateKey, window, FALSE);
 }

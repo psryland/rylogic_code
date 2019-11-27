@@ -103,9 +103,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Auto range the chart</summary>
 		public Command DoAutoRange { get; private set; } = null!;
-		private void DoAutoRangeInternal()
+		private void DoAutoRangeInternal(object? parameter)
 		{
-			AutoRange();
+			var bounds = parameter is View3d.ESceneBounds b ? b : View3d.ESceneBounds.All;
+			AutoRange(who:bounds);
 		}
 
 		/// <summary>Set the pixel aspect ratio to 1:1</summary>
@@ -221,7 +222,18 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <inheritdoc/>
-			public ICommand ResetView
+			public View3d.ESceneBounds AutoRangeBounds
+			{
+				get => m_AutoRangeBounds;
+				set
+				{
+					if (m_AutoRangeBounds == value) return;
+					m_AutoRangeBounds = value;
+					NotifyPropertyChanged(nameof(AutoRangeBounds));
+				}
+			}
+			private View3d.ESceneBounds m_AutoRangeBounds;
+			public ICommand AutoRange
 			{
 				get => m_owner.DoAutoRange;
 			}
@@ -382,12 +394,6 @@ namespace Rylogic.Gui.WPF
 			{
 				get => m_owner.Options.NavigationMode;
 				set => m_owner.Options.NavigationMode = value;
-			}
-
-			/// <inheritdoc/>
-			public ICommand DoAutoRange
-			{
-				get => m_owner.DoAutoRange;
 			}
 
 			/// <inheritdoc/>

@@ -53,6 +53,14 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty CommandProperty = Gui_.DPRegister<PatternFilter>(nameof(Command), flags:FrameworkPropertyMetadataOptions.None);
 
+		/// <summary>Parameter to pass to 'Command'</summary>
+		public object CommandParameter
+		{
+			get => GetValue(CommandParameterProperty);
+			set => SetValue(CommandParameterProperty, value);
+		}
+		public static readonly DependencyProperty CommandParameterProperty = Gui_.DPRegister<PatternFilter>(nameof(CommandParameter));
+
 		/// <summary>Pop open the history list</summary>
 		public Command ShowHistoryList { get; }
 		private void ShowHistoryListInternal()
@@ -90,7 +98,7 @@ namespace Rylogic.Gui.WPF
 
 			// Call the 'Command'
 			if (Command != null && Command.CanExecute(null))
-				Command.Execute(null);
+				Command.Execute(CommandParameter ?? Pattern);
 		}
 
 		/// <summary>Display the pattern editor</summary>

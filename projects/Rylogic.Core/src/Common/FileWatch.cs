@@ -32,7 +32,7 @@ namespace Rylogic.Common
 	//      queue, in which case they might as well just poll the FileWatch object.
 
 	/// <summary>File watcher</summary>
-	public class FileWatch :IDisposable
+	public sealed class FileWatch :IDisposable
 	{
 		private readonly List<IWatcher> m_watched;
 		private readonly List<IWatcher> m_changed; // Recycle the changed files collection
@@ -55,7 +55,7 @@ namespace Rylogic.Common
 			foreach (string file in files)
 				m_watched.Add(new WatchedFile(file, on_changed, id, ctx));
 		}
-		public virtual void Dispose()
+		public void Dispose()
 		{
 			PollPeriod = TimeSpan.Zero;
 			m_disposed = true;

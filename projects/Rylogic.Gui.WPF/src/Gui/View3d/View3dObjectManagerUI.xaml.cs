@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
+using Rylogic.Common;
 using Rylogic.Gfx;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -17,12 +21,16 @@ namespace Rylogic.Gui.WPF
 			Icon = Owner?.Icon;
 
 			PinState = new PinData(this, EPin.Centre);
-			ObjectManager = new ObjectManager(window, exclude ?? Array.Empty<Guid>());
-			Objects = new ListCollectionView(ObjectManager.Objects);
+			ObjectManager = new View3d.ObjectManager(window, exclude ?? Array.Empty<Guid>());
+			ObjectsView = new ListCollectionView(ObjectManager.Objects);
 
 			ExpandAll = Command.Create(this, ExpandAllInternal);
 			CollapseAll = Command.Create(this, CollapseAllInternal);
 			ApplyFilter = Command.Create(this, ApplyFilterInternal);
+			SetVisible = Command.Create(this, SetVisibleInternal);
+			SetWireframe = Command.Create(this, SetWireframeInternal);
+			UpdateSelected = Command.Create(this, UpdateSelectedInternal);
+			InvertSelection = Command.Create(this, InvertSelectionInternal);
 			DataContext = this;
 		}
 		protected override void OnClosed(EventArgs e)
@@ -32,8 +40,21 @@ namespace Rylogic.Gui.WPF
 			base.OnClosed(e);
 		}
 
+		/// <summary>Pinned window support</summary>
+		private PinData? PinState
+		{
+			get => m_pin_state;
+			set
+			{
+				if (m_pin_state == value) return;
+				Util.Dispose(ref m_pin_state);
+				m_pin_state = value;
+			}
+		}
+		private PinData? m_pin_state;
+
 		/// <summary>The view model for the object manager behaviour</summary>
-		public ObjectManager ObjectManager
+		public View3d.ObjectManager ObjectManager
 		{
 			get => m_object_manager;
 			private set
@@ -55,9 +76,9 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(Gfx.ObjectManager.Objects):
+					case nameof(View3d.ObjectManager.Objects):
 						{
-							Objects.Refresh();
+							ObjectsView.Refresh();
 							NotifyPropertyChanged(nameof(Objects));
 							break;
 						}
@@ -65,23 +86,17 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private ObjectManager m_object_manager = null!;
+		private View3d.ObjectManager m_object_manager = null!;
 
-		/// <summary>Pinned window support</summary>
-		private PinData? PinState
-		{
-			get => m_pin_state;
-			set
-			{
-				if (m_pin_state == value) return;
-				Util.Dispose(ref m_pin_state);
-				m_pin_state = value;
-			}
-		}
-		private PinData? m_pin_state;
+		/// <summary>Access to the object container</summary>
+		public IList<View3d.Object> Objects => ObjectManager.Objects;
+		public IEnumerable<View3d.Object> SelectedObjects => Objects.Where(x => Bit.AllSet(x.Flags, View3d.EFlags.Selected));
 
 		/// <summary>A view of the top-level objects in the scene</summary>
-		public ICollectionView Objects { get; }
+		public ICollectionView ObjectsView { get; private set; }
+
+		/// <summary>Refresh</summary>
+		private void Invalidate() => ObjectManager.Window.Invalidate();
 
 		/// <summary></summary>
 		public Command ExpandAll { get; }
@@ -97,8 +112,80 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary></summary>
 		public Command ApplyFilter { get; }
-		private void ApplyFilterInternal()
+		private void ApplyFilterInternal(object? parameter)
 		{
+			if (parameter is Pattern pattern && pattern.Expr.Length != 0 && pattern.IsValid)
+				ObjectsView.Filter = x => pattern.IsMatch(((View3d.Object)x).Name);
+			else
+				ObjectsView.Filter = null;
+		}
+
+		/// <summary>Show/Hide objects</summary>
+		public Command SetVisible { get; }
+		private void SetVisibleInternal(object? parameter)
+		{
+			if (parameter is ESetVisibleCmd vis)
+			{
+				foreach (var x in Objects)
+				{
+					var selected = x.Flags.HasFlag(View3d.EFlags.Selected);
+					var visible = x.Flags.HasFlag(View3d.EFlags.Hidden) == false;
+					var show = vis switch
+					{
+						ESetVisibleCmd.ShowSelected => selected ? true : visible,
+						ESetVisibleCmd.HideSelected => selected ? false : visible,
+						ESetVisibleCmd.ToggleSelected => selected ? !visible : visible,
+						ESetVisibleCmd.ShowOthers => selected ? visible : true,
+						ESetVisibleCmd.HideOthers => selected ? visible : false,
+						ESetVisibleCmd.ToggleOthers => selected ? visible : !visible,
+						_ => throw new Exception($"Unknown visibility command {vis}"),
+					};
+					x.FlagsSet(View3d.EFlags.Hidden, !show, string.Empty);
+				}
+				Invalidate();
+				return;
+			}
+			throw new Exception($"SetVisible parameter '{parameter}' is invalid. Expected +1, 0, or -1");
+		}
+
+		/// <summary>Switch between wireframe and solid</summary>
+		public Command SetWireframe { get; }
+		private void SetWireframeInternal(object? parameter)
+		{
+			if (parameter is string wf && int.TryParse(wf, out var wireframe))
+			{
+				foreach (var x in SelectedObjects)
+				{
+					var wire = wireframe == +1 || (wireframe == 0 && !Bit.AllSet(x.Flags, View3d.EFlags.Wireframe));
+					x.FlagsSet(View3d.EFlags.Wireframe, wire, string.Empty);
+				}
+				Invalidate();
+				return;
+			}
+			throw new Exception($"SetWireframe parameter '{parameter}' is invalid. Expected +1, 0, or -1");
+		}
+
+		/// <summary>Set the 'selected' state for the objects</summary>
+		public Command UpdateSelected { get; }
+		private void UpdateSelectedInternal(object? parameter)
+		{
+			if (parameter is SelectionChangedEventArgs args)
+			{
+				foreach (var x in args.RemovedItems.Cast<View3d.Object>())
+					x.Flags = Bit.SetBits(x.Flags, View3d.EFlags.Selected, false);
+				foreach (var x in args.AddedItems.Cast<View3d.Object>())
+					x.Flags = Bit.SetBits(x.Flags, View3d.EFlags.Selected, true);
+
+				Invalidate();
+			}
+		}
+
+		/// <summary>Invert the selection status of each object</summary>
+		public Command InvertSelection { get; }
+		private void InvertSelectionInternal()
+		{
+			foreach (var obj in Objects)
+				obj.Flags = Bit.SetBits(obj.Flags, View3d.EFlags.Selected, !obj.Flags.HasFlag(View3d.EFlags.Selected));
 		}
 
 		/// <summary></summary>
@@ -106,6 +193,17 @@ namespace Rylogic.Gui.WPF
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
+
+		/// <summary></summary>
+		public enum ESetVisibleCmd
+		{
+			ShowSelected,
+			HideSelected,
+			ToggleSelected,
+			ShowOthers,
+			HideOthers,
+			ToggleOthers,
 		}
 	}
 }

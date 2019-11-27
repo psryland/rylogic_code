@@ -1104,7 +1104,7 @@ namespace Rylogic.Gfx
 				m_on_add_cb = HandleLoadScript;
 				void HandleLoadScript(IntPtr ctx, ref Guid context_id, bool before)
 				{
-					var cb = Marshal.GetDelegateForFunctionPointer<LoadScriptCompleteCB>(ctx);
+					var cb = ctx != IntPtr.Zero ? Marshal.GetDelegateForFunctionPointer<LoadScriptCompleteCB>(ctx) : null;
 					if (cb != null && !before) m_load_script_handlers.Remove(cb);
 					cb?.Invoke(context_id, before);
 				}
@@ -1261,14 +1261,15 @@ namespace ldr
 		/// Add objects from an ldr file or string. This will create all objects declared in 'ldr_script'
 		/// with context id 'context_id' if given, otherwise an id will be created.
 		/// 'include_paths' is a list of include paths to use to resolve #include directives (or null).</summary>
-		public Guid LoadScript(string ldr_script, bool file, Guid? context_id, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
+		public Guid LoadScript(string ldr_script, bool file, Guid? context_id = null, string[]? include_paths = null, LoadScriptCompleteCB? on_add = null)
 		{
 			// Note: this method is asynchronous, it returns before objects have been added to the object manager
 			// in view3d. The 'on_add' callback should be used to add objects to windows once they are available.
 			var ctx = context_id ?? Guid.NewGuid();
 			if (on_add != null) m_load_script_handlers.Add(on_add);
+			var on_add_ctx = on_add != null ? Marshal.GetFunctionPointerForDelegate(on_add) : IntPtr.Zero;
 			var inc = new View3DIncludes { m_include_paths = string.Join(",", include_paths ?? Array.Empty<string>()) };
-			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, m_on_add_cb, Marshal.GetFunctionPointerForDelegate(on_add));
+			return View3D_LoadScript(ldr_script, file, ref ctx, ref inc, m_on_add_cb, on_add_ctx);
 		}
 
 		/// <summary>Force a reload of all script sources</summary>
@@ -1565,7 +1566,7 @@ namespace ldr
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_Flush                    ();
-		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, int key_code);
+		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, EKeyCodes key_code);
 		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabledGet    (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DepthBufferEnabledSet    (HWindow window, bool enabled);
 		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisibleGet     (HWindow window);

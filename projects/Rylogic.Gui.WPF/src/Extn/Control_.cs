@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Windows;
@@ -56,36 +57,58 @@ namespace Rylogic.Gui.WPF
 			//      gui:Control_.EventToCommand="PreviewMouseDoubleClick:MyCommand"
 			//      />
 			// Notes:
-			//  - The DataContext is null during construction, so we need to defer finding the command
-			//    until the event is invoked.
+			//  - The DataContext is null during construction, so we need to defer
+			//    finding the command until the event is invoked.
 
 			var evt2cmd = GetEventToCommand(obj) ?? string.Empty;
 			var parts = evt2cmd.Split(':');
 			if (parts.Length != 2)
-				throw new FormatException("EventToCommand required syntax is 'EventName:CommandName'");
+			{
+				Debug.WriteLine($"EventToCommand required syntax is 'EventName:CommandName'. '{evt2cmd}' is invalid");
+				return; // Silent because of hot editing
+			}
 
 			// Locate the event on 'obj'
 			var ty = obj.GetType();
 			var evt = ty.GetEvent(parts[0]);
 			if (evt == null)
-				throw new Exception($"No event named '{parts[0]}' found on type {ty.Name}");
-
-			ReflectedCommand? reflected_command = null;
-			
-			// Attach an event handler.
-			// I think the only alternative to this is a dynamic assembly, feel free to try...
-			var handler =
-				evt.EventHandlerType == typeof(EventHandler)            ? (Delegate)new EventHandler(ForwardEventToCommand) :
-				evt.EventHandlerType == typeof(MouseButtonEventHandler) ? (Delegate)new MouseButtonEventHandler(ForwardEventToCommand) :
-				throw new Exception("Unsupported event handler type. Please extend");
-
-			evt.AddEventHandler(obj, handler);
-			void ForwardEventToCommand<TArgs>(object sender, TArgs args) where TArgs:EventArgs
 			{
-				if (reflected_command == null && sender is FrameworkElement elem && elem.DataContext != null)
-					reflected_command = new ReflectedCommand(elem.DataContext, parts[1]);
-				if (reflected_command != null && reflected_command.CanExecute(args))
-					reflected_command.Execute(args);
+				Debug.WriteLine($"No event named '{parts[0]}' found on type {ty.Name}");
+				return; // Silent because of hot editing
+			}
+
+			// Attach an event handler.
+			// Get the 'invoke' method on the event handler type to extract the parameter types.
+			// Then, create an instance of the generic helper type so that we can supply an event
+			// handler with the correct signature type.
+			var invoke_mi = evt.EventHandlerType.GetMethod(nameof(EventHandler.Invoke));
+			var parms = invoke_mi.GetParameters().Select(x => x.ParameterType).ToArray();
+			var fwd = Activator.CreateInstance(typeof(EventToCommandData<,>).MakeGenericType(parms), parts[1]);
+			evt.AddEventHandler(obj, Delegate.CreateDelegate(evt.EventHandlerType, fwd, "Handler"));
+		}
+		private class EventToCommandData<TSender, TArgs>
+		{
+			private readonly string m_command_name;
+			private ReflectedCommand? m_reflected_command;
+			private object? m_data_context;
+			public EventToCommandData(string command_name)
+			{
+				m_command_name = command_name;
+				m_reflected_command = null;
+				m_data_context = null;
+			}
+			public void Handler(TSender sender, TArgs args)
+			{
+				// The reflected command can only be created once the data context has been set
+				if (m_reflected_command == null && sender is FrameworkElement elem && elem.DataContext != m_data_context)
+				{
+					m_data_context = elem.DataContext;
+					m_reflected_command = new ReflectedCommand(m_data_context, m_command_name);
+				}
+				if (m_reflected_command != null && m_reflected_command.CanExecute(args))
+				{
+					m_reflected_command.Execute(args);
+				}
 			}
 		}
 

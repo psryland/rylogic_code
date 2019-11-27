@@ -72,10 +72,12 @@ namespace pr
 	class Renderer :rdr::RdrState
 	{
 		using TaskQueue = pr::vector<std::future<void>>;
+		using PollCBList = pr::vector<pr::StaticCB<void>>;
 		DWORD m_main_thread_id;
 		std::recursive_mutex m_d3d_mutex;
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
+		PollCBList m_poll_callbacks;
 		HWND m_dummy_hwnd;
 		std::atomic_int m_id32_src;
 		
@@ -187,6 +189,8 @@ namespace pr
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
 		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
 		// 'policy' can be a bitwise OR of both deferred and async
+		// WARNING: be careful with shutdown. Although functions are called on the main thread, than can still be called after
+		// referenced data has been destructed.
 		template <typename Func, typename... Args>
 		void RunOnMainThread(std::launch policy, Func&& func, Args&&... args)
 		{
@@ -219,6 +223,26 @@ namespace pr
 
 		// Execute any pending tasks in the task queue. Must be called from the Main/GUI thread
 		void RunTasks();
+
+		// Add/Remove a callback function that will be polled as fast as the windows message queue will allow
+		void AddPollCB(pr::StaticCB<void> cb)
+		{
+			if (GetCurrentThreadId() != m_main_thread_id)
+				throw std::runtime_error("RunTasks must be called from the main thread");
+
+			m_poll_callbacks.push_back(cb);
+			Poll();
+		}
+		void RemovePollCB(pr::StaticCB<void> cb)
+		{
+			if (GetCurrentThreadId() != m_main_thread_id)
+				throw std::runtime_error("RunTasks must be called from the main thread");
+
+			pr::erase(m_poll_callbacks, cb);
+		}
+
+		// Call all registered poll event callbacks
+		void Poll();
 
 		// These manager classes form part of the public interface of the renderer
 		// Declared last so that events are fully constructed first.

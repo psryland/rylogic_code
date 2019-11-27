@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WinForms
 			KeyPreview = true;
 
 			m_pat = new Pattern();
-			m_pat.PatternChanged += UpdateUI;
+			m_pat.PropertyChanged += UpdateUI;
 
 			// Button images
 			m_il.TransparentColor = Color.Transparent;

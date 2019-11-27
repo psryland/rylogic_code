@@ -36,7 +36,7 @@ namespace LDraw.Dialogs
 				$"*Box b0 FFFF0000 {{ 1.003 {anim} }}\n" +
 				$"*Box b1 FF00FF00 {{ 1.002 {anim} }}\n" +
 				$"*Box b2 FF0000FF {{ 1.001 {anim} }}\n",
-				false, null, null);
+				false);
 
 			m_view.Window.AddObjects(id);
 			m_view.Window.SetLightSource(v4.Origin, new v4(-1, -1, -2, 0), true);

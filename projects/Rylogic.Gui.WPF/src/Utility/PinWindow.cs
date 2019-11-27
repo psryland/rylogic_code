@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using Rylogic.Interop.Win32;
@@ -53,6 +49,7 @@ namespace Rylogic.Gui.WPF
 			m_pin_window = null!;
 			PinSite = pin_site;
 			PinWindow = window;
+			PinTarget = window.Owner ?? Application.Current.MainWindow;
 			Pinned = pinned;
 		}
 		public void Dispose()
@@ -65,12 +62,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Pin or Unpin the window from the target</summary>
 		public bool Pinned
 		{
-			get { return m_pinned; }
+			get => m_pinned;
 			set
 			{
-				if (m_pinned == value) return;
+				// Note: this represents the requested state, not the actual state.
+				// Actual pinned'ness depends on whether there is a PinTarget and PinOffset.
+				// For this reason, there is no if (m_pinned == value) return check.
 				m_pinned = value;
-				RecordOffset();
+				PinOffset = null;
 				UpdatePinMenuCheckState();
 			}
 		}
@@ -79,7 +78,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The point on the target window that we move relative to</summary>
 		public EPin PinSite
 		{
-			get { return m_pin_site; }
+			get => m_pin_site;
 			set
 			{
 				if (m_pin_site == value) return;
@@ -88,7 +87,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private EPin m_pin_site;
 
-		/// <summary>The window whose position we're controlling</summary>
+		/// <summary>The window whose position is being controlled</summary>
 		private Window PinWindow
 		{
 			get => m_pin_window;
@@ -120,29 +119,34 @@ namespace Rylogic.Gui.WPF
 				// Handlers
 				void HandleLoaded(object sender, EventArgs e)
 				{
+					if (double.IsNaN(PinWindow.ActualWidth) || double.IsNaN(PinWindow.ActualHeight))
+						return;
+
 					// On first load, set the initial position based on the pin location
-					switch (PinSite)
+					PinOffset = PinSite switch
 					{
-					default: throw new Exception($"Unknown pin location '{PinSite}'");
-					case EPin.TopLeft: PinOffset = new Vector(-PinWindow.ActualWidth, 0); break;
-					case EPin.TopCentre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, 0); break;
-					case EPin.TopRight: PinOffset = new Vector(0, 0); break;
-					case EPin.BottomLeft: PinOffset = new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight); break;
-					case EPin.BottomCentre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight); break;
-					case EPin.BottomRight: PinOffset = new Vector(0, -PinWindow.ActualHeight); break;
-					case EPin.CentreLeft: PinOffset = new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight / 2); break;
-					case EPin.Centre: PinOffset = new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2); break;
-					case EPin.CentreRight: PinOffset = new Vector(0, -PinWindow.ActualHeight / 2); break;
-					}
+						EPin.TopLeft      => new Vector(-PinWindow.ActualWidth, 0),
+						EPin.TopCentre    => new Vector(-PinWindow.ActualWidth / 2, 0),
+						EPin.TopRight     => new Vector(0, 0),
+						EPin.BottomLeft   => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight),
+						EPin.BottomCentre => new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight),
+						EPin.BottomRight  => new Vector(0, -PinWindow.ActualHeight),
+						EPin.CentreLeft   => new Vector(-PinWindow.ActualWidth, -PinWindow.ActualHeight / 2),
+						EPin.Centre       => new Vector(-PinWindow.ActualWidth / 2, -PinWindow.ActualHeight / 2),
+						EPin.CentreRight  => new Vector(0, -PinWindow.ActualHeight / 2),
+						_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
+					};
 				}
 				void HandleMoved(object sender, EventArgs e)
 				{
-					// When the location of the controlled window changes,
-					// record the offset from the target window
-					RecordOffset();
+					// When the location of the controlled window changes, record the offset from
+					// the target window, but only if it's not us setting the controlled window's location.
+					if (!UpdatingLocation)
+						PinOffset = MeasureOffset();
 				}
 				void HandleClosed(object sender, EventArgs e)
 				{
+					// Dispose when the controlled window closes
 					Dispose();
 				}
 			}
@@ -152,14 +156,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The window to position relative to (defaults to the Owner of PinWindow)</summary>
 		public Window? PinTarget
 		{
-			get
-			{
-				// If a target has not been set explicitly, use the PinWindow's owner
-				if (m_pin_target == null)
-					PinTarget = PinWindow.Owner;
-
-				return m_pin_target;
-			}
+			get => m_pin_target;
 			set
 			{
 				if (m_pin_target == value) return;
@@ -181,88 +178,100 @@ namespace Rylogic.Gui.WPF
 				void HandleMoved(object sender, EventArgs e)
 				{
 					// When the target window moves, update the position of the pinned window.
-					SignalUpdateLocation();
+					if (Pinned)
+						SignalUpdateLocation();
 				}
 			}
 		}
 		private Window? m_pin_target;
 
-		/// <summary>The offset from the PinTarget</summary>
-		public Vector PinOffset
+		/// <summary>The offset from the PinTarget to the desired location of the PinWindow</summary>
+		public Vector? PinOffset
 		{
-			get { return m_pin_offset; }
+			get => m_pin_offset;
 			set
 			{
 				if (m_pin_offset == value) return;
 				m_pin_offset = value;
+				UpdatePinMenuCheckState();
 				UpdateLocation();
 			}
 		}
-		private Vector m_pin_offset;
+		private Vector? m_pin_offset;
 
 		/// <summary>The window handle of the pinned window</summary>
 		private IntPtr PinWindowHandle { get; set; }
 
-		/// <summary>Record the offset from the target window</summary>
-		private void RecordOffset()
-		{
-			if (!Pinned || PinWindow == null || PinTarget == null)
-				return;
+		/// <summary>True if actually pinned</summary>
+		private bool ActuallyPinned => Pinned && PinTarget != null && PinOffset != null;
 
-			if (m_block_updates != 0) return;
-			using (Scope.Create(() => ++m_block_updates, () => --m_block_updates))
+		/// <summary>Measure the offset from the target window</summary>
+		private Vector? MeasureOffset()
+		{
+			// Target or controlled is not visible
+			if (PinWindow == null || PinWindow.Visibility != Visibility.Visible ||
+				PinTarget == null || PinTarget.Visibility != Visibility.Visible)
+				return null;
+
+			// Target does not have measurement data yet
+			if (double.IsNaN(PinTarget.Left) ||
+				double.IsNaN(PinTarget.Top) ||
+				double.IsNaN(PinTarget.ActualWidth) ||
+				double.IsNaN(PinTarget.ActualHeight))
+				return null;
+
+			// Measure the offset from the reference point
+			var rect = new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight);
+			var pt = new Point(PinWindow.Left, PinWindow.Top);
+			return PinSite switch
 			{
-				// Measure the offset from the reference point
-				var rect = new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight);
-				var pt = new Point(PinWindow.Left, PinWindow.Top);
-				switch (PinSite)
-				{
-				default: throw new Exception($"Unknown pin site '{PinSite}'");
-				case EPin.TopLeft:      PinOffset = new Vector(pt.X - rect.Left                    , pt.Y - rect.Top); break;
-				case EPin.TopCentre:    PinOffset = new Vector(pt.X - (rect.Left + rect.Right) / 2 , pt.Y - rect.Top); break;
-				case EPin.TopRight:     PinOffset = new Vector(pt.X - rect.Right                   , pt.Y - rect.Top); break;
-				case EPin.BottomLeft:   PinOffset = new Vector(pt.X - rect.Left                    , pt.Y - rect.Bottom); break;
-				case EPin.BottomCentre: PinOffset = new Vector(pt.X - (rect.Left + rect.Right) / 2 , pt.Y - rect.Bottom); break;
-				case EPin.BottomRight:  PinOffset = new Vector(pt.X - rect.Right                   , pt.Y - rect.Bottom); break;
-				case EPin.CentreLeft:   PinOffset = new Vector(pt.X - rect.Left                    , pt.Y - (rect.Top + rect.Bottom) / 2); break;
-				case EPin.Centre:       PinOffset = new Vector(pt.X - (rect.Left + rect.Right) / 2 , pt.Y - (rect.Top + rect.Bottom) / 2); break;
-				case EPin.CentreRight:  PinOffset = new Vector(pt.X - rect.Right                   , pt.Y - (rect.Top + rect.Bottom) / 2); break;
-				}
-			}
+				EPin.TopLeft      => new Vector(pt.X - rect.Left                         , pt.Y - rect.Top),
+				EPin.TopCentre    => new Vector(pt.X - (rect.Left + rect.Right) / 2      , pt.Y - rect.Top),
+				EPin.TopRight     => new Vector(pt.X - rect.Right                        , pt.Y - rect.Top),
+				EPin.BottomLeft   => new Vector(pt.X - rect.Left                         , pt.Y - rect.Bottom),
+				EPin.BottomCentre => new Vector(pt.X - (rect.Left + rect.Right) / 2      , pt.Y - rect.Bottom),
+				EPin.BottomRight  => new Vector(pt.X - rect.Right                        , pt.Y - rect.Bottom),
+				EPin.CentreLeft   => new Vector(pt.X - rect.Left                         , pt.Y - (rect.Top + rect.Bottom) / 2),
+				EPin.Centre       => new Vector(pt.X - (rect.Left + rect.Right) / 2      , pt.Y - (rect.Top + rect.Bottom) / 2),
+				EPin.CentreRight  => new Vector(pt.X - rect.Right                        , pt.Y - (rect.Top + rect.Bottom) / 2),
+				_                 => throw new Exception($"Unknown pin site '{PinSite}'"),
+			};
 		}
 
-		/// <summary>Update the position of the window relative to the reference point on the target</summary>
-		private void UpdateLocation()
+		/// <summary>Return the location for the PinWindow based on the current PinTarget position and PinOffset</summary>
+		private Point? Location()
 		{
-			m_location_update_pending = false;
-			if (!Pinned || PinWindow == null || PinTarget == null)
-				return;
+			// The location is unknown if either window is not visible
+			if (PinWindow == null || PinWindow.Visibility != Visibility.Visible ||
+				PinTarget == null || PinTarget.Visibility != Visibility.Visible)
+				return null;
 
-			if (m_block_updates != 0) return;
-			using (Scope.Create(() => ++m_block_updates, () => --m_block_updates))
+			// If there is no pin offset, then the location is unknown
+			PinOffset ??= MeasureOffset();
+			if (PinOffset == null)
+				return null;
+
+			// Calculate the position
+			var rect = new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight);
+			var pin_offset = PinOffset.Value;
+			var pt = PinSite switch
 			{
-				var pt = Point_.Zero;
-				var rect = new Rect(PinTarget.Left, PinTarget.Top, PinTarget.ActualWidth, PinTarget.ActualHeight);
-				switch (PinSite)
-				{
-				default: throw new Exception($"Unknown pin location '{PinSite}'");
-				case EPin.TopLeft:      pt = new Point(rect.Left                    , rect.Top) + PinOffset; break;
-				case EPin.TopCentre:    pt = new Point((rect.Left + rect.Right) / 2 , rect.Top) + PinOffset; break;
-				case EPin.TopRight:     pt = new Point(rect.Right                   , rect.Top) + PinOffset; break;
-				case EPin.BottomLeft:   pt = new Point(rect.Left                    , rect.Bottom) + PinOffset; break;
-				case EPin.BottomCentre: pt = new Point((rect.Left + rect.Right) / 2 , rect.Bottom) + PinOffset; break;
-				case EPin.BottomRight:  pt = new Point(rect.Right                   , rect.Bottom) + PinOffset; break;
-				case EPin.CentreLeft:   pt = new Point(rect.Left                    , (rect.Top + rect.Bottom) / 2) + PinOffset; break;
-				case EPin.Centre:       pt = new Point((rect.Left + rect.Right) / 2 , (rect.Top + rect.Bottom) / 2) + PinOffset; break;
-				case EPin.CentreRight:  pt = new Point(rect.Right                   , (rect.Top + rect.Bottom) / 2) + PinOffset; break;
-				}
+				EPin.TopLeft      => new Point(rect.Left                    , rect.Top) + pin_offset,
+				EPin.TopCentre    => new Point((rect.Left + rect.Right) / 2 , rect.Top) + pin_offset,
+				EPin.TopRight     => new Point(rect.Right                   , rect.Top) + pin_offset,
+				EPin.BottomLeft   => new Point(rect.Left                    , rect.Bottom) + pin_offset,
+				EPin.BottomCentre => new Point((rect.Left + rect.Right) / 2 , rect.Bottom) + pin_offset,
+				EPin.BottomRight  => new Point(rect.Right                   , rect.Bottom) + pin_offset,
+				EPin.CentreLeft   => new Point(rect.Left                    , (rect.Top + rect.Bottom) / 2) + pin_offset,
+				EPin.Centre       => new Point((rect.Left + rect.Right) / 2 , (rect.Top + rect.Bottom) / 2) + pin_offset,
+				EPin.CentreRight  => new Point(rect.Right                   , (rect.Top + rect.Bottom) / 2) + pin_offset,
+				_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
+			};
 
-				// Keep the window on-screen
-				pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
-				PinWindow.SetLocation(pt);
-			}
+			// Keep the window on-screen
+			pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
+			return pt;
 		}
-		private int m_block_updates;
 
 		/// <summary>BeginInvoke a location update</summary>
 		private void SignalUpdateLocation()
@@ -273,7 +282,21 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_location_update_pending;
 
-		/// <summary>Handle for the pin pop-up menu</summary>
+		/// <summary>Return the location for the PinWindow based on the current PinTarget position and PinOffset</summary>
+		private void UpdateLocation()
+		{
+			m_location_update_pending = false;
+			if (Location() is Point pt)
+			{
+				using var s = Scope.Create(() => UpdatingLocation = true, () => UpdatingLocation = false);
+				PinWindow.SetLocation(pt);
+			}
+		}
+
+		/// <summary>True when 'PinWindow' is being moved by us</summary>
+		private bool UpdatingLocation { get; set; }
+
+		/// <summary>Add or remove the 'Pin Window' menu option in the system menu</summary>
 		private void PinOptionInSysMenu(bool add)
 		{
 			var wih = new WindowInteropHelper(m_pin_window);
@@ -315,7 +338,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (msg == Win32.WM_SYSCOMMAND && wParam.ToInt32() == MenuCmd_Pinned)
 				{
-					Pinned = !Pinned;
+					Pinned = !ActuallyPinned;
 					handled = true;
 				}
 				return IntPtr.Zero;
@@ -326,7 +349,7 @@ namespace Rylogic.Gui.WPF
 		private void UpdatePinMenuCheckState()
 		{
 			var sys_menu_handle = Win32.GetSystemMenu(PinWindowHandle, false);
-			Win32.CheckMenuItem(sys_menu_handle, MenuCmd_Pinned, Win32.MF_BYCOMMAND | (Pinned ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+			Win32.CheckMenuItem(sys_menu_handle, MenuCmd_Pinned, Win32.MF_BYCOMMAND | (ActuallyPinned ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
 		}
 
 		/// <summary>The command id for the Pin menu item</summary>

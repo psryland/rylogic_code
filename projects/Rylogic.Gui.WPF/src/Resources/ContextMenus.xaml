@@ -38,10 +38,28 @@
 		IsChecked="{Binding SelectionBoxVisible, Mode=OneWay}"
 		Command="{Binding ToggleSelectionBox}"
 		/>
-	<MenuItem x:Key="View3dMenuItem_ResetView" x:Shared="False"
-		Header="Reset View"
-		Command="{Binding ResetView}"
-		/>
+	<MenuItem x:Key="View3dMenuItem_AutoRange" x:Shared="False"
+		Command="{Binding AutoRange}"
+		CommandParameter="{Binding AutoRangeBounds}"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Auto Range: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding AutoRangeBounds, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding AutoRangeBounds}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_Orthographic" x:Shared="False"
 		Header="Orthographic"
 		StaysOpenOnClick="True"
@@ -287,7 +305,7 @@
 			<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
 		</MenuItem>
 		<MenuItem Header="Camera">
-			<StaticResource ResourceKey="View3dMenuItem_ResetView"/>
+			<StaticResource ResourceKey="View3dMenuItem_AutoRange"/>
 			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
 			<StaticResource ResourceKey="View3dMenuItem_AlignUp"/>
 			<StaticResource ResourceKey="View3dMenuItem_ViewPresets"/>
@@ -355,10 +373,6 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="ChartMenuItem_AutoRange" x:Shared="False"
-		Header="Auto Range"
-		Command="{Binding DoAutoRange}"
-		/>
 	<MenuItem x:Key="ChartMenuItem_Aspect11" x:Shared="False"
 		Header="Aspect 1:1"
 		Command="{Binding DoAspect11}"
@@ -408,7 +422,7 @@
 			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 		</MenuItem>
 		<MenuItem Header="Camera">
-			<StaticResource ResourceKey="ChartMenuItem_AutoRange"/>
+			<StaticResource ResourceKey="View3dMenuItem_AutoRange"/>
 			<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
 			<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
 			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>

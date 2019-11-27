@@ -3,6 +3,7 @@ using System.Windows;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 
 namespace LDraw
@@ -19,7 +20,9 @@ namespace LDraw
 					.SupportRylogicMathsTypes()
 					.SupportRylogicGraphicsTypes()
 					.SupportSystemDrawingPrimitiveTypes()
-					.SupportSystemDrawingCommonTypes();
+					.SupportSystemDrawingCommonTypes()
+					.SupportWPFTypes()
+					;
 
 				MainWindow = new MainWindow(new Model(e.Args));
 				MainWindow.Show();

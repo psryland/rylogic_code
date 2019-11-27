@@ -72,6 +72,8 @@ namespace Rylogic.Gui.WPF
 		}
 		public void Dispose()
 		{
+			FloatingWindows = null!;
+			AutoHidePanels = null!;
 			Root = null!;
 		}
 
@@ -344,7 +346,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Raised when a pane is added, removed, or moved within the tree of branches</summary>
 		public event EventHandler<EventArgs>? LayoutChanged;
-		private void NotifyLayoutChanged()
+		public void NotifyLayoutChanged()
 		{
 			if (m_layout_changed_notify_pending) return;
 			m_layout_changed_notify_pending = true;
@@ -369,10 +371,30 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The floating windows associated with this dock container</summary>
-		public FloatingWindowCollection FloatingWindows { get; }
+		public FloatingWindowCollection FloatingWindows
+		{
+			get => m_floating_windows;
+			set
+			{
+				if (m_floating_windows == value) return;
+				Util.Dispose(ref m_floating_windows!);
+				m_floating_windows = value;
+			}
+		}
+		private FloatingWindowCollection m_floating_windows = null!;
 
 		/// <summary>Panels that auto hide when their contained tree does not contain the active pane</summary>
-		public AutoHidePanelCollection AutoHidePanels { get; private set; }
+		public AutoHidePanelCollection AutoHidePanels
+		{
+			get => m_auto_hide_panels;
+			private set
+			{
+				if (m_auto_hide_panels == value) return;
+				Util.Dispose(ref m_auto_hide_panels!);
+				m_auto_hide_panels = value;
+			}
+		}
+		private AutoHidePanelCollection m_auto_hide_panels = null!;
 
 		/// <summary>A command to load a UI layout</summary>
 		public ICommand CmdLoadLayout { get; }
@@ -509,8 +531,7 @@ namespace Rylogic.Gui.WPF
 				if (pane.TreeHost is FloatingWindow fw)
 				{
 					fw.Bounds = Gui_.OnScreen(fw.Bounds);
-					fw.Visibility = Visibility.Collapsed;
-					//fw.BringToFront();
+					fw.Visibility = Visibility.Visible;
 					if (fw.WindowState == WindowState.Minimized)
 						fw.WindowState = WindowState.Normal;
 				}
@@ -710,9 +731,8 @@ namespace Rylogic.Gui.WPF
 			return sb.ToString();
 		}
 
-		public sealed class AutoHidePanelCollection : IEnumerable<AutoHidePanel>, IDisposable
+		public sealed class AutoHidePanelCollection : IDisposable, IEnumerable<AutoHidePanel>
 		{
-			private readonly AutoHidePanel[] m_auto_hide;
 			public AutoHidePanelCollection(DockContainer dc, Canvas centre)
 			{
 				m_auto_hide = new AutoHidePanel[DockSiteCount];
@@ -760,9 +780,9 @@ namespace Rylogic.Gui.WPF
 						throw new Exception($"No auto hide panel for dock site {ds}");
 				}
 			}
+			private readonly AutoHidePanel[] m_auto_hide;
 
-			/// <summary>Enumerable auto hide panels</summary>
-			/// <returns></returns>
+			#region IEnumerable
 			public IEnumerator<AutoHidePanel> GetEnumerator()
 			{
 				return m_auto_hide.Skip(1).GetEnumerator();
@@ -771,15 +791,21 @@ namespace Rylogic.Gui.WPF
 			{
 				return GetEnumerator();
 			}
+			#endregion
 		}
-		public class FloatingWindowCollection : IEnumerable<FloatingWindow>
+		public sealed class FloatingWindowCollection :IDisposable, IEnumerable<FloatingWindow>
 		{
 			private readonly DockContainer m_dc;
-			private readonly ObservableCollection<FloatingWindow> m_floaters;
+			private readonly List<FloatingWindow> m_floaters;
 			public FloatingWindowCollection(DockContainer dc)
 			{
 				m_dc = dc;
-				m_floaters = new ObservableCollection<FloatingWindow>();
+				m_floaters = new List<FloatingWindow>();
+			}
+			public void Dispose()
+			{
+				foreach (var fw in m_floaters) fw.Close();
+				m_floaters.Clear();
 			}
 
 			/// <summary>Return the floating window with Id = 'id'</summary>
@@ -799,12 +825,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Returns an existing floating window that satisfies 'pred', or a new floating window</summary>
 			public FloatingWindow GetOrAdd(Func<FloatingWindow, bool> pred)
 			{
-				foreach (var fw in m_floaters)
-				{
-					if (!pred(fw)) continue;
-					return fw;
-				}
-				return m_floaters.Add2(new FloatingWindow(m_dc));
+				var fw = m_floaters.FirstOrDefault(pred);
+				fw ??= m_floaters.Add2(new FloatingWindow(m_dc));
+				return fw;
+			}
+
+			/// <summary>Remove a floating window</summary>
+			public bool Remove(FloatingWindow win)
+			{
+				return m_floaters.Remove(win);
 			}
 
 			/// <summary>Release floating windows that have no content</summary>
@@ -812,13 +841,13 @@ namespace Rylogic.Gui.WPF
 			{
 				foreach (var fw in m_floaters.ToArray())
 				{
-					if (fw.ActiveContent != null) continue;
+					if (!fw.AllContent.Any()) continue;
 					m_floaters.Remove(fw);
 					fw.Close();
 				}
 			}
 
-			/// <summary></summary>
+			#region IEnumerable
 			public IEnumerator<FloatingWindow> GetEnumerator()
 			{
 				return m_floaters.GetEnumerator();
@@ -827,6 +856,7 @@ namespace Rylogic.Gui.WPF
 			{
 				return GetEnumerator();
 			}
+			#endregion
 		}
 	}
 }

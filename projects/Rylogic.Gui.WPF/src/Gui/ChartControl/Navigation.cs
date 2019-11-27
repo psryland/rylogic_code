@@ -277,6 +277,8 @@ namespace Rylogic.Gui.WPF
 			// see if it's a default keyboard shortcut.
 			if (!args.Handled && DefaultKeyboardShortcuts)
 				OnTranslateKey(args);
+
+			base.OnKeyDown(args);
 		}
 		protected override void OnKeyUp(KeyEventArgs args)
 		{
@@ -285,6 +287,8 @@ namespace Rylogic.Gui.WPF
 			var op = MouseOperations.Active;
 			if (op != null && !args.Handled)
 				op.OnKeyUp(args);
+
+			base.OnKeyUp(args);
 		}
 
 		/// <summary>Set the mouse cursor based on key state</summary>
@@ -385,20 +389,30 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Handle navigation keyboard shortcuts</summary>
 		public virtual void OnTranslateKey(KeyEventArgs e)
 		{
-			if (e.Handled) return;
+			// Notes:
+			//  - Default chart key bindings. These are intended as default key bindings
+			//    Applications should probably set DefaultKeyboardShortcuts to false and
+			//    handle key bindings themselves.
+
+			if (e.Handled)
+				return;
 
 			// Allow users to handle the key
 			TranslateKey?.Invoke(this, e);
-			if (e.Handled) return;
+			if (e.Handled)
+				return;
 
+			// Fall back to default
 			switch (e.Key)
 			{
 			case Key.Escape:
 				{
+					// Deselect all on escape
 					if (AllowSelection)
 					{
 						Selected.Clear();
 						Invalidate();
+						e.Handled = true;
 					}
 					break;
 				}
@@ -431,12 +445,19 @@ namespace Rylogic.Gui.WPF
 				{
 					View3d.ReloadScriptSources();
 					Invalidate();
+					e.Handled = true;
 					break;
 				}
 			case Key.F7:
 				{
-					AutoRange();
+					var bounds =
+						Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? Gfx.View3d.ESceneBounds.Selected :
+						Keyboard.Modifiers.HasFlag(ModifierKeys.Control) ? Gfx.View3d.ESceneBounds.Visible :
+						Gfx.View3d.ESceneBounds.All;
+
+					AutoRange(who:bounds);
 					Invalidate();
+					e.Handled = true;
 					break;
 				}
 			case Key.A:
@@ -447,6 +468,7 @@ namespace Rylogic.Gui.WPF
 						Selected.AddRange(Elements);
 						Invalidate();
 						Debug.Assert(CheckConsistency());
+						e.Handled = true;
 					}
 					break;
 				}

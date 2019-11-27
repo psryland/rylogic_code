@@ -28,6 +28,12 @@ namespace pr
 					rdr.RunTasks();
 					break;
 				}
+			case WM_TIMER:
+				{
+					auto& rdr = *reinterpret_cast<pr::Renderer*>(wparam);
+					rdr.Poll();
+					break;
+				}
 			}
 			return DefWindowProcW(hwnd, message, wparam, lparam);
 		}
@@ -239,5 +245,16 @@ namespace pr
 				throw;
 			}
 		}
+	}
+
+	// Call all registered poll event callbacks
+	void Renderer::Poll()
+	{
+		for (auto& cb : m_poll_callbacks)
+			cb();
+
+		// Keep polling while 'm_poll_callbacks' is not empty
+		if (!m_poll_callbacks.empty())
+			::SetTimer(m_dummy_hwnd, UINT_PTR(this), 0, nullptr);
 	}
 }

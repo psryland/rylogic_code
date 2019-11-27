@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
-using System.Xml.Linq;
 using LDraw.Dialogs;
 using LDraw.UI;
 using Microsoft.Win32;
@@ -51,6 +50,7 @@ namespace LDraw
 		{
 			Model.CleanTemporaryScripts();
 			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
+			m_dc.Dispose();
 			Model = null!;
 			Log.Dispose();
 			base.OnClosed(e);
@@ -122,9 +122,6 @@ namespace LDraw
 			}
 		}
 		private Model m_model = null!;
-
-		/// <summary>App settings</summary>
-		public SettingsData Settings => Model.Settings;
 
 		/// <summary>The current active content in the dock container</summary>
 		public IDockable? ActiveContent

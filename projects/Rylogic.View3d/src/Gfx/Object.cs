@@ -1,6 +1,7 @@
 ﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -14,7 +15,7 @@ namespace Rylogic.Gfx
 	{
 		/// <summary>Object resource wrapper</summary>
 		[DebuggerDisplay("{Description}")]
-		public class Object :IDisposable
+		public class Object :IDisposable, INotifyPropertyChanged
 		{
 			/// <summary>
 			/// Create objects given in an ldr string or file.
@@ -96,11 +97,18 @@ namespace Rylogic.Gfx
 			public string Name
 			{
 				get => View3D_ObjectNameGetBStr(Handle);
-				set => View3D_ObjectNameSet(Handle, value);
+				set
+				{
+					View3D_ObjectNameSet(Handle, value);
+					NotifyPropertyChanged(nameof(Name));
+				}
 			}
 
 			/// <summary>Get the type of Ldr object this is</summary>
-			public string Type => View3D_ObjectTypeGetBStr(Handle);
+			public string Type
+			{
+				get => View3D_ObjectTypeGetBStr(Handle);
+			}
 
 			/// <summary>Get/Set the visibility of this object (set applies to all child objects as well)</summary>
 			public bool Visible
@@ -167,7 +175,10 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>The context id that this object belongs to</summary>
-			public Guid ContextId => View3D_ObjectContextIdGet(Handle);
+			public Guid ContextId
+			{
+				get => View3D_ObjectContextIdGet(Handle);
+			}
 
 			/// <summary>Change the model for this object</summary>
 			public void UpdateModel(string ldr_script, EUpdateObject flags = EUpdateObject.All)
@@ -184,13 +195,8 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the object to parent transform of the root object</summary>
 			public m4x4 O2P
 			{
-				get { return View3D_ObjectO2PGet(Handle, null); }
-				set
-				{
-					Util.BreakIf(value.w.w != 1.0f, "Invalid object transform");
-					Util.BreakIf(!Math_.IsFinite(value), "Invalid object transform");
-					View3D_ObjectO2PSet(Handle, ref value, null);
-				}
+				get => O2PGet(null);
+				set => O2PSet(value, null);
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
@@ -256,6 +262,15 @@ namespace Rylogic.Gfx
 				return new Object(handle, true);
 			}
 
+			// Notes:
+			//  - Methods with a 'name' parameter apply an operation on this object
+			//    or any of its child objects that match 'name'. If 'name' is null,
+			//    then the change is applied to this object only. If 'name' is "",
+			//    then the change is applied to this object and all children recursively.
+			//	  Otherwise, the change is applied to all child objects that match name.
+			//  - If 'name' begins with '#' then the name parameter is treated as a regular
+			//    expression.
+
 			/// <summary>
 			/// Get/Set the object to world transform for this object or the first child object that matches 'name'.
 			/// If 'name' is null, then the state of the root object is returned
@@ -268,7 +283,10 @@ namespace Rylogic.Gfx
 			}
 			public void O2WSet(m4x4 o2w, string? name = null)
 			{
+				Util.BreakIf(o2w.w.w != 1.0f, "Invalid object transform");
+				Util.BreakIf(!Math_.IsFinite(o2w), "Invalid object transform");
 				View3D_ObjectO2WSet(Handle, ref o2w, name);
+				NotifyPropertyChanged(nameof(O2P));
 			}
 
 			/// <summary>
@@ -283,7 +301,10 @@ namespace Rylogic.Gfx
 			}
 			public void O2PSet(m4x4 o2p, string? name = null)
 			{
+				Util.BreakIf(o2p.w.w != 1.0f, "Invalid object transform");
+				Util.BreakIf(!Math_.IsFinite(o2p), "Invalid object transform");
 				View3D_ObjectO2PSet(Handle, ref o2p, name);
+				NotifyPropertyChanged(nameof(O2P));
 			}
 
 			/// <summary>
@@ -299,6 +320,8 @@ namespace Rylogic.Gfx
 			public void VisibleSet(bool vis, string? name = null)
 			{
 				View3D_ObjectVisibilitySet(Handle, vis, name);
+				NotifyPropertyChanged(nameof(Visible));
+				NotifyPropertyChanged(nameof(Flags));
 			}
 
 			/// <summary>
@@ -314,6 +337,8 @@ namespace Rylogic.Gfx
 			public void WireframeSet(bool vis, string? name = null)
 			{
 				View3D_ObjectWireframeSet(Handle, vis, name);
+				NotifyPropertyChanged(nameof(Wireframe));
+				NotifyPropertyChanged(nameof(Flags));
 			}
 
 			/// <summary>
@@ -326,6 +351,9 @@ namespace Rylogic.Gfx
 			public void FlagsSet(EFlags flags, bool state, string? name = null)
 			{
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
+				NotifyPropertyChanged(nameof(Flags));
+				NotifyPropertyChanged(nameof(Wireframe));
+				NotifyPropertyChanged(nameof(Visible));
 			}
 
 			/// <summary>
@@ -338,6 +366,7 @@ namespace Rylogic.Gfx
 			public void SortGroupSet(ESortGroup group, string? name = null)
 			{
 				View3D_ObjectSortGroupSet(Handle, group, name);
+				NotifyPropertyChanged(nameof(SortGroup));
 			}
 
 			/// <summary>
@@ -350,6 +379,7 @@ namespace Rylogic.Gfx
 			public void NuggetFlagsSet(ENuggetFlag flags, bool state, string? name = null, int index = 0)
 			{
 				View3D_ObjectNuggetFlagsSet(Handle, flags, state, name, index);
+				NotifyPropertyChanged(nameof(NuggetFlags));
 			}
 
 			/// <summary>
@@ -362,6 +392,7 @@ namespace Rylogic.Gfx
 			public void NuggetTintSet(Colour32 tint, string? name = null, int index = 0)
 			{
 				View3D_ObjectNuggetTintSet(Handle, tint, name, index);
+				NotifyPropertyChanged(nameof(NuggetTint));
 			}
 
 			/// <summary>
@@ -378,6 +409,7 @@ namespace Rylogic.Gfx
 			public void ColourSet(Colour32 colour, uint mask, string? name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
 				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
+				NotifyPropertyChanged(nameof(Colour));
 			}
 			public void ColourSet(Colour32 colour, string? name = null)
 			{
@@ -393,6 +425,7 @@ namespace Rylogic.Gfx
 			public void ResetColour(string? name = null)
 			{
 				View3D_ObjectResetColour(Handle, name);
+				NotifyPropertyChanged(nameof(Colour));
 			}
 
 			/// <summary>
@@ -408,6 +441,7 @@ namespace Rylogic.Gfx
 			public void ReflectivitySet(float reflectivity, string? name = null)
 			{
 				View3D_ObjectReflectivitySet(Handle, reflectivity, name);
+				NotifyPropertyChanged(nameof(Reflectivity));
 			}
 
 			/// <summary>
@@ -422,14 +456,19 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>String description of the object</summary>
-			public string Description
-			{
-				get { return $"{Name} ChildCount={ChildCount} Vis={Visible} Flags={Flags}"; }
-			}
+			public string Description => $"{Name} ChildCount={ChildCount} Vis={Visible} Flags={Flags}";
 			public override string ToString()
 			{
 				return Description;
 			}
+
+			/// <summary>Binding support</summary>
+			public event PropertyChangedEventHandler? PropertyChanged;
+			public void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
+			public void Refresh() => NotifyPropertyChanged(string.Empty);
 
 			#region Equals
 			public static bool operator ==(Object? lhs, Object? rhs)

@@ -360,6 +360,7 @@
 #include "pr\threads\wait_state.h"
 #include "pr\view3d\pr_conv.h"
 #include "pr\view3d\view3d.h"
+#include "pr\win32\key_codes.h"
 #include "pr\win32\stackdump.h"
 #include "pr\win32\win32.h"
 #include "pr\win32\windows_com.h"

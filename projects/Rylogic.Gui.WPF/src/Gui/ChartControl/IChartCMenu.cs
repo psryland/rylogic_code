@@ -27,9 +27,6 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Navigation control mode</summary>
 		ChartControl.ENavMode NavigationMode { get; set; }
 
-		/// <summary>Auto Range</summary>
-		ICommand DoAutoRange { get; }
-
 		/// <summary>Reset the aspect ratio to 1:1</summary>
 		ICommand DoAspect11 { get; }
 

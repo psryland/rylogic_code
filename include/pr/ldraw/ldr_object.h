@@ -441,11 +441,16 @@ namespace pr::ldr
 		// located and scaled to the transform and box of this object
 		void AddBBoxToScene(rdr::Scene& scene, rdr::ModelPtr bbox_model, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
 
-		// Apply an operation on this object or any of its child objects that match 'name'
-		// If 'name' is null, then 'func' is applied to this object only
-		// If 'name' is "", then 'func' is applied to this object and all children recursively
-		// Otherwise, 'func' is applied to all child objects that match name.
-		// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
+		// Notes:
+		//  - Methods with a 'name' parameter apply an operation on this object
+		//    or any of its child objects that match 'name'. If 'name' is null,
+		//    then the change is applied to this object only. If 'name' is "",
+		//    then the change is applied to this object and all children recursively.
+		//	  Otherwise, the change is applied to all child objects that match name.
+		//  - If 'name' begins with '#' then the name parameter is treated as a regular
+		//    expression.
+
+		// Apply an operation on this object or any of its child objects that match 'name'.
 		// 'func' should have a signature: 'bool func(ldr::LdrObject* obj);' returning false to 'quick-out'.
 		// 'obj' is a recursion parameter, callers should use 'nullptr'
 		// Returns 'true' if 'func' always returns 'true'.

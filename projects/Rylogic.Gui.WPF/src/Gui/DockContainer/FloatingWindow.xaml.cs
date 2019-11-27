@@ -15,33 +15,26 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	[DebuggerDisplay("FloatingWindow")]
 	public partial class FloatingWindow : Window, ITreeHost, IPinnable
 	{
-		private Panel m_content;
 		public FloatingWindow(DockContainer dc)
 		{
+			// Don't set 'Owner' to 'Window.GetWindow(dc)', 'dc' may not have an owner
+			// window yet. Also, it's nice to allow floating windows behind the main window.
 			InitializeComponent();
-
-			Owner = GetWindow(dc);
-			ShowInTaskbar = true;
-			ResizeMode = ResizeMode.CanResizeWithGrip;
-			WindowStartupLocation = WindowStartupLocation.CenterOwner;
-			Width = Owner.Width * 0.8;
-			Height = Owner.Height * 0.8;
-			Content = m_content = new DockPanel { LastChildFill = true };
+			Content = new DockPanel { LastChildFill = true };
 
 			DockContainer = dc;
 			PinState = new PinData(this, EPin.Centre);
 			Root = new Branch(dc, DockSizeData.Quarters);
+
+			SizeChanged += delegate { DockContainer.NotifyLayoutChanged(); };
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
-			base.OnClosing(e);
-
 			// Move all the content back to the main dock container
 			foreach (var dc in AllContent.ToArray())
 				dc.IsFloating = false;
 
-			e.Cancel = true;
-			Hide();
+			base.OnClosing(e);
 		}
 		protected override void OnClosed(EventArgs e)
 		{
@@ -63,6 +56,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (m_dc != null)
 				{
 					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
+					m_dc.FloatingWindows?.Remove(this);
 				}
 				m_dc = value;
 				if (m_dc != null)
@@ -73,15 +67,24 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				/// <summary>Handler for when the active content changes</summary>
 				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 				{
-					var dc = e.ContentNew?.DockControl;
-					var content_title = dc?.TabText ?? string.Empty;
-					Title = $"{Owner.Title}:{content_title}";
-					Icon = dc?.TabIcon ?? Window.GetWindow(DockContainer)?.Icon;
+					// If the new active content is within this floating window, update the window title
+					if (ActiveContentManager.ActivePane?.RootBranch == Root)
+					{
+						var dc = e.ContentNew?.DockControl;
+						var win = GetWindow(DockContainer);
+						var window_title = win?.Title ?? string.Empty;
+						var content_title = dc?.TabText ?? string.Empty;
+						Title = $"{window_title}:{content_title}";
+						Icon = dc?.TabIcon ?? win?.Icon;
+					}
 				}
 			}
 		}
 		private DockContainer m_dc = null!;
 		DockContainer ITreeHost.DockContainer => DockContainer;
+
+		/// <summary>The window content as a control container</summary>
+		private Panel ContentPanel => (Panel)Content;
 
 		/// <summary>Support pinning this window</summary>
 		public PinData PinState { get; }
@@ -96,13 +99,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (m_root != null)
 				{
 					m_root.TreeChanged -= HandleTreeChanged;
-					m_content.Children.Remove(m_root);
+					ContentPanel.Children.Remove(m_root);
 					Util.Dispose(ref m_root!);
 				}
 				m_root = value;
 				if (m_root != null)
 				{
-					m_content.Children.Add(m_root);
+					ContentPanel.Children.Add(m_root);
 					m_root.TreeChanged += HandleTreeChanged;
 				}
 
@@ -111,23 +114,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					switch (args.Action)
 					{
-					//case TreeChangedEventArgs.EAction.ActiveContent:
-					//	{
-					//		UpdateUI();
-					//		break;
-					//	}
 					case TreeChangedEventArgs.EAction.Added:
-						{
-							if (Root.AllContent.CountAtMost(2) == 1)
-								ActivePane = Root.AllPanes.First();
-
-							break;
-						}
 					case TreeChangedEventArgs.EAction.Removed:
 						{
-							if (!Root.AllContent.Any())
-								Hide();
+							// This should be done by the mover, not here...
+							//// Grab 'active' when the window gets its first pane
+							//if (Root.AllContent.CountAtMost(2) == 1)
+							//	ActiveContentManager.ActivePane = Root.AllPanes.First();
 
+							// Don't bother with auto-closing the window when there is no content.
+							// It's kinda handy to be able to have empty windows around for docking things into.
+							// If you change your mind, don't close from here. The tree can become empty transiently.
+
+							DockContainer.NotifyLayoutChanged();
 							break;
 						}
 					}
@@ -142,22 +141,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>Enumerate the dockables in this sub-tree (breadth first, order = order of EDockSite)</summary>
 		public IEnumerable<DockControl> AllContent => Root.AllContent;
-
-		/// <summary>
-		/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
-		/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
-		public DockControl? ActiveContent
-		{
-			get => ActiveContentManager.ActiveContent;
-			set => ActiveContentManager.ActiveContent = value;
-		}
-
-		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
-		public DockPane? ActivePane
-		{
-			get => ActiveContentManager.ActivePane;
-			set => ActiveContentManager.ActivePane = value;
-		}
 
 		/// <summary>The current screen location and size of this window</summary>
 		public Rect Bounds

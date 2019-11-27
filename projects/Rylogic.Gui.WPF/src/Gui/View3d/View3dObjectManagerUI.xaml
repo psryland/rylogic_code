@@ -26,7 +26,40 @@
 				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
 				>
 				<MenuItem
-					/>
+					Header="Visibility"
+					>
+					<MenuItem
+						Header="Show Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
+						/>
+					<MenuItem
+						Header="Hide Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
+						/>
+					<MenuItem
+						Header="Toggle Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
+						/>
+					<Separator/>
+					<MenuItem
+						Header="Show Others"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.ShowOthers}"
+						/>
+					<MenuItem
+						Header="Hide Others"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.HideOthers}"
+						/>
+					<MenuItem
+						Header="Toggle Others"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static gui:View3dObjectManagerUI+ESetVisibleCmd.ToggleOthers}"
+						/>
+				</MenuItem>
 			</ContextMenu>
 
 		</ResourceDictionary>
@@ -80,14 +113,15 @@
 					RenderOptions.BitmapScalingMode="HighQuality"
 					/>
 			</Button>
-			
+
 			<!-- Filter Pattern -->
 			<gui:PatternFilter
 				Grid.Column="2"
 				Command="{Binding ApplyFilter}"
 				Height="24"
-				Margin="2"
+				Margin="1"
 				/>
+
 		</Grid>
 		
 		<!-- Tree and Grid -->
@@ -103,7 +137,7 @@
 			<!-- Object Hierarchy -->
 			<TreeView
 				Grid.Column="0"
-				ItemsSource="{Binding Objects}"
+				ItemsSource="{Binding ObjectsView}"
 				>
 				<TreeView.ItemTemplate>
 					<HierarchicalDataTemplate DataType="{x:Type gfx:View3d+Object}" ItemsSource="{Binding Children}">
@@ -130,10 +164,19 @@
 				AutoGenerateColumns="False"
 				GridLinesVisibility="None"
 				HeadersVisibility="Column"
-				ItemsSource="{Binding Objects}"
+				ItemsSource="{Binding ObjectsView}"
 				ContextMenu="{StaticResource ObjectManagerListCMenu}"
+				gui:Control_.EventToCommand="SelectionChanged:UpdateSelected"
 				IsReadOnly="True"
 				>
+				<DataGrid.InputBindings>
+					<KeyBinding Key="Space" Command="{Binding SetVisible}" CommandParameter="0"/>
+					<KeyBinding Key="Space" Modifiers="Ctrl" Command="{Binding SetVisible}" CommandParameter="+1"/>
+					<KeyBinding Key="Space" Modifiers="Ctrl+Shift" Command="{Binding SetVisible}" CommandParameter="-1"/>
+					<KeyBinding Key="W" Command="{Binding SetWireframe}" CommandParameter="0"/>
+					<KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding SetWireframe}" CommandParameter="+1"/>
+					<KeyBinding Key="W" Modifiers="Ctrl+Shift" Command="{Binding SetWireframe}" CommandParameter="-1"/>
+				</DataGrid.InputBindings>
 				<DataGrid.Resources>
 					<SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#000000"/>
 					<SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0E0E0"/>
@@ -176,11 +219,6 @@
 						Width="*"
 						/>
 					<DataGridTextColumn
-						Header="Visible"
-						Binding="{Binding Visible}"
-						Width="*"
-						/>
-					<DataGridTextColumn
 						Header="Colour"
 						Binding="{Binding Colour}"
 						Width="*"
@@ -192,6 +230,11 @@
 							</Style>
 						</DataGridTextColumn.ElementStyle>
 					</DataGridTextColumn>
+					<!--<DataGridTextColumn
+						Header="Visible"
+						Binding="{Binding Visible}"
+						Width="*"
+						/>-->
 					<DataGridTextColumn
 						Header="Flags"
 						Binding="{Binding Flags}"

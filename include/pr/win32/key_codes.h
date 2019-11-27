@@ -1,9 +1,12 @@
-﻿using System;
+//**********************************************
+// Win32 API
+//  Copyright (c) Rylogic Ltd 2004
+//**********************************************
+#pragma once
 
-namespace Rylogic.Common
+namespace pr
 {
-	[Flags]
-	public enum EKeyCodes
+	enum class EKeyCodes
 	{
 		// Notes:
 		// - VK_ constants (mostly)
@@ -595,5 +598,7 @@ namespace Rylogic.Common
 
 		// The ALT modifier key.
 		Alt = 262144,
-	}
+
+		_bitwise_operators_allowed,
+	};
 }

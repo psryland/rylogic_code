@@ -246,7 +246,7 @@ namespace view3d
 
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)
-			obj->AddToScene(m_scene, (float)m_anim_data.m_clock.count());
+			obj->AddToScene(m_scene, (float)m_anim_data.m_clock.load().count());
 
 		// Add gizmos from the window to the scene
 		for (auto& giz : m_gizmos)
@@ -645,12 +645,9 @@ namespace view3d
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
+					if (pr::AllSet(obj->m_flags, ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					obj->Apply([&](LdrObject* o)
-					{
-						pr::Encompass(bbox, o->BBoxWS(false, pred));
-						return true;
-					}, "");
+					pr::Encompass(bbox, obj->BBoxWS(true, pred));
 				}
 				break;
 			}
@@ -694,11 +691,13 @@ namespace view3d
 		SetSelectionBox(bbox);
 	}
 
-	// Control object animation
+	// True if animation is currently active
 	bool Window::Animating() const
 	{
 		return m_anim_data.m_thread.joinable();
 	}
+	
+	// Get/Set the value of the animation clock
 	seconds_t Window::AnimTime() const
 	{
 		return m_anim_data.m_clock;
@@ -707,10 +706,20 @@ namespace view3d
 	{
 		m_anim_data.m_clock = clock;
 	}
+
+	// Control animation
 	void Window::AnimControl(EView3DAnimCommand command, seconds_t time)
 	{
 		using namespace std::chrono;
-		constexpr double tick_size_s = 0.01;
+		static constexpr auto tick_size_s = seconds_t(0.01);
+
+		// Callback function that is polled as fast as the message queue will allow
+		static auto const AnimTick = [](void* ctx)
+		{
+			auto this_ = reinterpret_cast<Window*>(ctx);
+			this_->Invalidate();
+			this_->OnAnimationEvent.Raise(this_, EView3DAnimCommand::Step, this_->m_anim_data.m_clock.load().count());
+		};
 
 		switch (command)
 		{
@@ -724,44 +733,39 @@ namespace view3d
 		case EView3DAnimCommand::Play:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
-
-				// Use a worker thread to advance the animation time
-				// 'time' is the amount to advance per second.
-				auto rdr = m_wnd.m_rdr;
-				auto issue = m_anim_data.m_issue.load();
-				auto step = duration_cast<system_clock::duration>(time * tick_size_s);
-				m_anim_data.m_thread = std::thread([=]
+				m_anim_data.m_thread = std::thread([&]
 				{
+					// 'time' is the seconds/second step rate
+					auto rate = time.count();
 					auto start = system_clock::now();
-					for (; issue == m_anim_data.m_issue; std::this_thread::sleep_for(seconds_t(tick_size_s)))
+					auto issue = m_anim_data.m_issue.load();
+					for (; issue == m_anim_data.m_issue; std::this_thread::sleep_for(tick_size_s))
 					{
-						// Every loop is a tick, and the step size is 'time'.
-						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed'
-						auto increment = time == seconds_t::zero() ? system_clock::now() - start : step;
-						if (time == seconds_t::zero()) start = system_clock::now();
-						rdr->RunOnMainThread([=] () noexcept
-						{
-							m_anim_data.m_clock += increment;
-							Invalidate();
-							OnAnimationEvent.Raise(this, EView3DAnimCommand::Step, m_anim_data.m_clock.count());
-						});
+						// Every loop is a tick, and the step size is 'time'. 
+						// If 'time' is zero, then stepping is real-time and the step size is 'elapsed' 
+						auto increment = rate == 0.0 ? system_clock::now() - start : tick_size_s * rate;
+						start = system_clock::now();
+
+						// Update the animation clock
+						m_anim_data.m_clock = m_anim_data.m_clock.load() + increment;
 					}
 				});
+				m_wnd.m_rdr->AddPollCB({ AnimTick, this });
 				break;
 			}
 		case EView3DAnimCommand::Stop:
 			{
+				m_wnd.m_rdr->RemovePollCB({ AnimTick, this });
+				++m_anim_data.m_issue;
 				if (m_anim_data.m_thread.joinable())
-				{
-					++m_anim_data.m_issue;
 					m_anim_data.m_thread.join();
-				}
+				
 				break;
 			}
 		case EView3DAnimCommand::Step:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
-				m_anim_data.m_clock += time;
+				m_anim_data.m_clock = m_anim_data.m_clock.load() + time;
 				Invalidate();
 				break;
 			}
@@ -770,7 +774,7 @@ namespace view3d
 		}
 
 		// Notify of the animation event
-		OnAnimationEvent.Raise(this, command, m_anim_data.m_clock.count());
+		OnAnimationEvent.Raise(this, command, m_anim_data.m_clock.load().count());
 	}
 
 	// Convert a screen space point to a normalised screen space point
@@ -950,7 +954,6 @@ namespace view3d
 		NotifySettingsChanged(EView3DSettings::General_BBoxesVisible);
 	}
 
-
 	// Show/Hide the selection box
 	bool Window::SelectionBoxVisible() const
 	{
@@ -1027,6 +1030,55 @@ namespace view3d
 	void Window::EnvMap(View3DCubeMap env_map)
 	{
 		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
+	}
+
+	// Implements standard key bindings. Returns true if handled
+	bool Window::TranslateKey(EKeyCodes key)
+	{
+		// Notes:
+		//  - This method is intended as a simple default for key bindings. Applications should
+		//    probably not call this, but handled the keys bindings separately. This helps to show
+		//    the expected behaviour of some common bindings though.
+
+		auto code = key & EKeyCodes::KeyCode;
+		auto modifiers = key & EKeyCodes::Modifiers;
+		switch (code)
+		{
+		case EKeyCodes::F7:
+			{
+				auto up = Length3Sq(m_camera.m_align) > maths::tiny ? m_camera.m_align : v4YAxis;
+				auto forward = up.z > up.y ? v4YAxis : -v4ZAxis;
+
+				auto bounds =
+					(modifiers & EKeyCodes::Shift) != 0 ? EView3DSceneBounds::Selected :
+					(modifiers & EKeyCodes::Control) != 0 ? EView3DSceneBounds::Visible :
+					EView3DSceneBounds::All;
+
+				ResetView(SceneBounds(bounds, 0, nullptr), forward, up, 0, true, true);
+				Invalidate();
+				return true;
+			}
+		case EKeyCodes::Space:
+			{
+				ShowObjectManager(true);
+				return true;
+			}
+		case EKeyCodes::W:
+			{
+				if ((modifiers & EKeyCodes::Control) != 0)
+				{
+					switch (FillMode())
+					{
+					case EView3DFillMode::Solid:     FillMode(EView3DFillMode::Wireframe); break;
+					case EView3DFillMode::Wireframe: FillMode(EView3DFillMode::SolidWire); break;
+					case EView3DFillMode::SolidWire: FillMode(EView3DFillMode::Solid); break;
+					}
+					Invalidate();
+				}
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// Create stock models such as the focus point, origin, etc

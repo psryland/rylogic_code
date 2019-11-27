@@ -54,6 +54,7 @@
 #include "pr/ldraw/ldr_sources.h"
 #include "pr/ldraw/ldr_helper.h"
 #include "pr/win32/win32.h"
+#include "pr/win32/key_codes.h"
 
 #include "pr/view3d/view3d.h"
 #include "pr/view3d/pr_conv.h"
@@ -63,6 +64,7 @@ namespace view3d
 	struct Context;
 	struct Window;
 	using seconds_t             = std::chrono::duration<double, std::ratio<1, 1>>;
+	using time_point_t          = std::chrono::system_clock::time_point;
 	using GuidCont              = pr::vector<GUID>;
 	using EditorPtr             = std::unique_ptr<pr::ldr::ScriptEditorUI>;
 	using CodeHandlerPtr        = std::unique_ptr<pr::script::IEmbeddedCode>;

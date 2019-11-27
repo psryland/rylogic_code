@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows;
 
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
@@ -60,6 +61,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_active_pane = value;
 				if (m_active_pane != null)
 				{
+					// Ensure the containing window is visible
+					if (Window.GetWindow(m_active_pane) is Window wnd)
+						wnd.Visibility = Visibility.Visible;
+
 					m_active_pane.VisibleContent?.RestoreFocus();
 					m_active_pane.VisibleContentChanged += HandleActiveContentChanged;
 				}

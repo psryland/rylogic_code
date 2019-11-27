@@ -75,6 +75,8 @@ namespace Rylogic.Gfx
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HWindow.Zero) return;
+				View3D_WindowAnimControl(Handle, EAnimCommand.Stop, 0.0);
+				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, IntPtr.Zero, false);
 				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
 				View3D_WindowRenderingCB(Handle, m_render_cb, IntPtr.Zero, false);
 				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, IntPtr.Zero, false);
@@ -579,7 +581,7 @@ namespace Rylogic.Gfx
 			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>
 			public bool TranslateKey(EKeyCodes key_code)
 			{
-				return View3D_TranslateKey(Handle, (int)key_code);
+				return View3D_TranslateKey(Handle, key_code);
 			}
 
 			/// <summary>Handy method for creating random objects</summary>

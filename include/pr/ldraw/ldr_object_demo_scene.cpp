@@ -681,7 +681,7 @@ namespace pr::ldr
 			"// A cone given by axis number, two heights, and solid angle\n"
 			"*ConeHA coneha FF00FFFF\n"
 			"{\n"
-			"	0.1 1.2 0.5                       // tip-to-top distance, tip-to-base distance, solid angle(rad).\n"
+			"	0.1 1.2 25                        // tip-to-top distance, tip-to-base distance, solid angle(deg).\n"
 			"	*AxisId {2}                       // Optional. Major axis: ±1 = ±x, ±2 = ±y, ±3 = ±z (default +3)\n"
 			"	*Facets {3,50}                    // Optional. layers, wedges. controls the faceting of the cylinder\n"
 			"	*Scale {1 1}                      // Optional. X,Y scale factors\n"

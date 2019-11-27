@@ -45,8 +45,9 @@ namespace Rylogic.Gui.WPF
 		bool SelectionBoxVisible { get; set; }
 		ICommand ToggleSelectionBox { get; }
 
-		/// <summary>Camera Reset</summary>
-		ICommand ResetView { get; }
+		/// <summary>Camera Reset/Auto range</summary>
+		View3d.ESceneBounds AutoRangeBounds { get; set; }
+		ICommand AutoRange { get; }
 
 		/// <summary>Camera orthographic</summary>
 		bool Orthographic { get; set; }

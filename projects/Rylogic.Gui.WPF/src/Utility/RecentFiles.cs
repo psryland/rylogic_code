@@ -4,6 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF
 {

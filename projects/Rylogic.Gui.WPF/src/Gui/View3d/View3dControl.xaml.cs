@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Rylogic.Attrib;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
@@ -95,6 +96,7 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void Dispose(bool _)
 		{
+			++m_resize_issue;
 			Source = null;
 			D3DImage = null!;
 			Window = null!;
@@ -105,18 +107,27 @@ namespace Rylogic.Gui.WPF
 			m_resized = true;
 			base.OnRenderSizeChanged(size_info);
 			D3DImage.Invalidate();
-			var resize_issue = ++m_resize_issue;
-			Dispatcher_.BeginInvokeDelayed(() =>
+
+			// Invalidate after the last resize
+			if (!m_resize_invalidate_pending)
 			{
-				if (resize_issue != m_resize_issue) return;
-				Invalidate();
-			}, TimeSpan.FromMilliseconds(10), System.Windows.Threading.DispatcherPriority.Background);
+				m_resize_invalidate_pending = true;
+				var resize_issue = ++m_resize_issue;
+				Dispatcher_.BeginInvokeDelayed(FinalInvalidate, TimeSpan.FromMilliseconds(1), DispatcherPriority.Background);
+				void FinalInvalidate()
+				{
+					m_resize_invalidate_pending = false;
+					if (resize_issue != m_resize_issue || Window == null) return;
+					Invalidate();
+				}
+			}
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			Keyboard.Focus(this);
 			base.OnMouseDown(e);
 		}
+		private bool m_resize_invalidate_pending;
 		private int m_resize_issue;
 		private bool m_resized;
 
@@ -569,9 +580,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Reset the camera to the default view for the scene</summary>
 		public Command ResetView { get; }
-		private void ResetViewInternal()
+		private void ResetViewInternal(object? parameter)
 		{
-			Camera.ResetView();
+			var bounds = parameter is View3d.ESceneBounds b ? b : View3d.ESceneBounds.All;
+			Camera.ResetView(Window.SceneBounds(bounds));
 			Invalidate();
 		}
 

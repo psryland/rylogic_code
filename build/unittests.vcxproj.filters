@@ -1011,6 +1011,9 @@
     <ClInclude Include="..\include\pr\win32\stackdump.h">
       <Filter>pr\win32</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\win32\key_codes.h">
+      <Filter>pr\win32</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

@@ -41,14 +41,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			var dc = draggee as DockControl;
 			var dp = draggee as DockPane;
-			var owner = dc?.DockContainer ?? dp?.DockContainer ?? throw new Exception("Dragged object must belong to a DockContainer");
+			var tree_host = dc?.TreeHost ?? dp?.TreeHost ?? throw new Exception("Dragged object must have an initial tree host");
+			var container = dc?.DockContainer ?? dp?.DockContainer ?? throw new Exception("Dragged object must belong to a DockContainer");
 			var item_name = dc?.TabText ?? dp?.CaptionText;
 			var item_icon = dc?.TabIcon ?? dp?.VisibleContent?.TabIcon;
 
 			m_ss_start_pt = ss_start_pt;
 			m_ghost_button = new TabButton(item_name, item_icon) { Opacity = 0.5 };
-			Owner = GetWindow(owner);
-			DockContainer = owner;
+			DockContainer = container;
+			DraggedFromTree = tree_host;
 			DraggedItem = draggee;
 			TreeHost = null;
 			DropAddress = Array.Empty<EDockSite>();
@@ -107,13 +108,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			base.OnMouseUp(e);
 			HitTestDropLocations(PointToScreen(e.GetPosition(this)));
-			DialogResult = true;
-			Close();
+			if (DialogResult == null)
+				DialogResult = true;
 		}
 		protected override void OnLostMouseCapture(MouseEventArgs e)
 		{
 			base.OnLostMouseCapture(e);
-			Close();
+			if (DialogResult == null)
+				DialogResult = false;
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -210,10 +212,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The dock container that created this drop handler</summary>
-		private DockContainer DockContainer { get; set; }
+		private DockContainer DockContainer { get; }
+
+		/// <summary>The tree host that the item is being dragged from</summary>
+		private ITreeHost DraggedFromTree { get; }
 
 		/// <summary>The item being dragged (either a DockPane or IDockable)</summary>
-		private object DraggedItem { get; set; }
+		private object DraggedItem { get; }
 
 		/// <summary>The tree to drop into</summary>
 		private ITreeHost? TreeHost { get; set; }
@@ -359,7 +364,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Look for the dock pane under the mouse
 			if (pane == null)
 			{
-				foreach (var tree in DockContainer.AllTreeHosts)
+				var tree_hosts = DockContainer.AllTreeHosts.Except(DraggedFromTree).Prepend(DraggedFromTree);
+				foreach (var tree in tree_hosts)
 				{
 					var hit = VisualTreeHelper.HitTest(tree.Root, tree.Root.PointFromScreen(screen_pt));
 					pane = hit?.VisualHit is DependencyObject dp ? dp.FindVisualParent<DockPane>(root: tree.Root) : null;
@@ -447,6 +453,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				TreeHost = pane.TreeHost;
 				DropIndex = index;
 			}
+
+			// Ensure the drop target is in the foreground
+			if (pane != null)
+				GetWindow(pane).BringIntoView();
 
 			// Update the position of the ghost
 			PositionGhost(screen_pt);

@@ -32,7 +32,7 @@
 					<StaticResource	ResourceKey="View3dMenuItem_MeasureTool"/>
 				</MenuItem>
 				<MenuItem Header="Camera">
-					<StaticResource	ResourceKey="ChartMenuItem_AutoRange"/>
+					<StaticResource	ResourceKey="View3dMenuItem_AutoRange"/>
 					<StaticResource	ResourceKey="ChartMenuItem_Aspect11"/>
 					<StaticResource	ResourceKey="ChartMenuItem_LockAspect"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Orthographic"/>

@@ -181,34 +181,32 @@ namespace Rylogic.Gfx
 				View3D_CameraViewRectSet(m_window.Handle, width, height, dist);
 			}
 
-			/// <summary>Move the camera to a position that can see the whole scene</summary>
-			public void ResetView()
-			{
-				var up = AlignAxis;
-				if (up.LengthSq == 0f) up = v4.YAxis;
-				var forward = up.z > up.y ? -v4.YAxis : -v4.ZAxis;
-				ResetView(forward, up);
-			}
-
-			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
-			public void ResetView(v4 forward)
-			{
-				var up = AlignAxis;
-				if (up.LengthSq == 0f) up = v4.YAxis;
-				if (Math_.Parallel(up, forward)) up = Math_.Perpendicular(forward);
-				ResetView(forward, up);
-			}
-
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
-			public void ResetView(v4 forward, v4 up, float dist = 0f, bool preserve_aspect = true, bool commit = true)
+			public void ResetView(v4? forward = null, v4? up = null, float dist = 0f, bool preserve_aspect = true, bool commit = true)
 			{
-				View3D_ResetView(m_window.Handle, forward, up, dist, preserve_aspect, commit);
+				up ??= AlignAxis;
+				if (up.Value.LengthSq == 0f)
+					up = v4.YAxis;
+				
+				forward ??= up.Value.z > up.Value.y ? -v4.YAxis : -v4.ZAxis;
+				if (Math_.Parallel(up.Value, forward.Value))
+					up = Math_.Perpendicular(forward.Value);
+
+				View3D_ResetView(m_window.Handle, forward.Value, up.Value, dist, preserve_aspect, commit);
 			}
 
 			/// <summary>Reset the camera to view a bbox</summary>
-			public void ResetView(BBox bbox, v4 forward, v4 up, float dist = 0f, bool preserve_aspect = true, bool commit = true)
+			public void ResetView(BBox bbox, v4? forward = null, v4? up = null, float dist = 0f, bool preserve_aspect = true, bool commit = true)
 			{
-				View3D_ResetViewBBox(m_window.Handle, bbox, forward, up, dist, preserve_aspect, commit);
+				up ??= AlignAxis;
+				if (up.Value.LengthSq == 0f)
+					up = v4.YAxis;
+
+				forward ??= up.Value.z > up.Value.y ? -v4.YAxis : -v4.ZAxis;
+				if (Math_.Parallel(up.Value, forward.Value))
+					up = Math_.Perpendicular(forward.Value);
+
+				View3D_ResetViewBBox(m_window.Handle, bbox, forward.Value, up.Value, dist, preserve_aspect, commit);
 			}
 
 			/// <summary>Reset the zoom factor to 1f</summary>

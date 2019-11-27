@@ -2959,25 +2959,26 @@ namespace Rylogic.Gui.WinForms
 						if (m_pattern == value) return;
 						if (m_pattern != null)
 						{
-							m_pattern.PatternChanged -= HandlePatternChanged;
+							m_pattern.PropertyChanged -= HandlePatternChanged;
 						}
 						m_pattern = value;
 						if (m_pattern != null)
 						{
-							m_pattern.PatternChanged += HandlePatternChanged;
+							m_pattern.PropertyChanged += HandlePatternChanged;
 						}
 						HandlePatternChanged();
+
+						void HandlePatternChanged(object sender = null, EventArgs args = null)
+						{
+							PatternChanged?.Invoke(this, EventArgs.Empty);
+							ToolTipText = Pattern != null && !Pattern.IsValid ? Pattern.ValidateExpr().Message : null;
+						}
 					}
 				}
 				private Pattern m_pattern;
 
 				/// <summary>Raised when the pattern expression changes</summary>
 				public event EventHandler PatternChanged;
-				private void HandlePatternChanged(object sender = null, EventArgs args = null)
-				{
-					PatternChanged?.Invoke(this, EventArgs.Empty);
-					ToolTipText = Pattern != null && !Pattern.IsValid ? Pattern.ValidateExpr().Message : null;
-				}
 
 				/// <summary>The text box for the filter string in this cell</summary>
 				public TextBox FilterTextBox

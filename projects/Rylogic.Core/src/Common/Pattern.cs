@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -74,34 +74,34 @@ namespace Rylogic.Common
 	public class Pattern :IPattern
 	{
 		public Pattern()
-			:this(EPattern.Substring, string.Empty)
-		{}
+			: this(EPattern.Substring, string.Empty)
+		{ }
 		public Pattern(EPattern patn_type, string expr)
 		{
-			m_expr      = expr;
-			PatnType    = patn_type;
-			IgnoreCase  = false;
-			Active      = true;
-			Invert      = false;
-			WholeLine   = false;
+			m_expr = expr;
+			PatnType = patn_type;
+			IgnoreCase = false;
+			Active = true;
+			Invert = false;
+			WholeLine = false;
 		}
 		public Pattern(Pattern rhs)
 		{
-			m_expr      = rhs.Expr;
-			Active      = rhs.Active;
-			PatnType    = rhs.PatnType;
-			IgnoreCase  = rhs.IgnoreCase;
-			Invert      = rhs.Invert;
-			WholeLine   = rhs.WholeLine;
+			m_expr = rhs.Expr;
+			Active = rhs.Active;
+			PatnType = rhs.PatnType;
+			IgnoreCase = rhs.IgnoreCase;
+			Invert = rhs.Invert;
+			WholeLine = rhs.WholeLine;
 		}
 		public Pattern(XElement node)
 		{
-			m_expr      = node.Element(XmlTag.Expr      ).As<string>();
-			PatnType    = node.Element(XmlTag.PatnType  ).As<EPattern>();
-			Active      = node.Element(XmlTag.Active    ).As<bool>();
-			IgnoreCase  = node.Element(XmlTag.IgnoreCase).As<bool>();
-			Invert      = node.Element(XmlTag.Invert    ).As<bool>();
-			WholeLine   = node.Element(XmlTag.WholeLine ).As<bool>();
+			m_expr = node.Element(XmlTag.Expr).As<string>();
+			PatnType = node.Element(XmlTag.PatnType).As<EPattern>();
+			Active = node.Element(XmlTag.Active).As<bool>();
+			IgnoreCase = node.Element(XmlTag.IgnoreCase).As<bool>();
+			Invert = node.Element(XmlTag.Invert).As<bool>();
+			WholeLine = node.Element(XmlTag.WholeLine).As<bool>();
 		}
 
 		/// <summary>Export this pattern as XML</summary>
@@ -109,12 +109,12 @@ namespace Rylogic.Common
 		{
 			node.Add
 			(
-				Expr       .ToXml(XmlTag.Expr       , false),
-				Active     .ToXml(XmlTag.Active     , false),
-				PatnType   .ToXml(XmlTag.PatnType   , false),
-				IgnoreCase .ToXml(XmlTag.IgnoreCase , false),
-				Invert     .ToXml(XmlTag.Invert     , false),
-				WholeLine  .ToXml(XmlTag.WholeLine  , false)
+				Expr.ToXml(XmlTag.Expr, false),
+				Active.ToXml(XmlTag.Active, false),
+				PatnType.ToXml(XmlTag.PatnType, false),
+				IgnoreCase.ToXml(XmlTag.IgnoreCase, false),
+				Invert.ToXml(XmlTag.Invert, false),
+				WholeLine.ToXml(XmlTag.WholeLine, false)
 			);
 			return node;
 		}

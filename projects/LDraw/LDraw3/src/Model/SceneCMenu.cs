@@ -206,7 +206,18 @@ namespace LDraw
 		}
 
 		/// <inheritdoc/>
-		public ICommand DoAutoRange
+		public View3d.ESceneBounds AutoRangeBounds
+		{
+			get => m_AutoRangeBounds;
+			set
+			{
+				if (m_AutoRangeBounds == value) return;
+				m_AutoRangeBounds = value;
+				NotifyPropertyChanged(nameof(AutoRangeBounds));
+			}
+		}
+		private View3d.ESceneBounds m_AutoRangeBounds;
+		public ICommand AutoRange
 		{
 			get => m_owner.SceneView.DoAutoRange;
 		}

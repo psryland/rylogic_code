@@ -8,7 +8,7 @@ namespace LDraw.Dialogs
 		public ExampleScriptUI()
 		{
 			InitializeComponent();
-			m_scintilla_control.Text = View3d.ExampleScript;
+			m_editor.Text = View3d.ExampleScript;
 		}
 	}
 }

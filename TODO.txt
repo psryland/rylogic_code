@@ -6,8 +6,6 @@ LDraw
 	- Status bar shows pointer position when ActiveScene != null
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
-	- move LightingUI to pr.view3d
-	- move ObjectManager to pr.view3d
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
 	- shift+ctrl jumps back to the start of orientation, make it not do that
 	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
@@ -15,7 +13,6 @@ LDraw
 	- Replace resizer view3d objects with WPF primitives
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	- Script parsing performance profiling
-	- Finish implementing the object manager
 	- Finish implementing the preferences dialog
 	- Installer
 	
@@ -74,6 +71,9 @@ Renderer/View3d
 	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
 	  pass the parametric value through)
 	- Merge View3d into the Renderer11 project and make view3d.dll just a build configuration
+
+DockContainer
+	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
 	
 WinGUI
 	- OpenFolderUI

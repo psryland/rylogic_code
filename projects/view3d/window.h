@@ -14,7 +14,12 @@ namespace view3d
 		using LdrObjectManagerUIPtr = std::unique_ptr<pr::ldr::LdrObjectManagerUI>;
 		using LdrMeasureUIPtr       = std::unique_ptr<pr::ldr::LdrMeasureUI>;
 		using LdrAngleUIPtr         = std::unique_ptr<pr::ldr::LdrAngleUI>;
-		using AnimData              = struct { seconds_t m_clock; std::atomic_int m_issue; std::thread m_thread; };
+		using AnimData              = struct
+		{
+			std::thread  m_thread;
+			std::atomic_int m_issue;
+			std::atomic<seconds_t> m_clock;
+		};
 
 		Context*              m_dll;                      // The dll context
 		HWND                  m_hwnd;                     // The associated window handle
@@ -252,6 +257,9 @@ namespace view3d
 		// Get/Set the global environment map for this window
 		View3DCubeMap EnvMap() const;
 		void EnvMap(View3DCubeMap env_map);
+
+		// Implements standard key bindings. Returns true if handled
+		bool TranslateKey(pr::EKeyCodes vk_key);
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockModels();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using Rylogic.Maths;
 
 namespace Rylogic.Extn.Windows
 {
@@ -103,23 +104,15 @@ namespace Rylogic.Extn.Windows
 		{
 			return new System.Drawing.PointF((float)pt.X, (float)pt.Y);
 		}
-		public static Maths.v2 ToV2(this Point pt)
-		{
-			return new Maths.v2((float)pt.X, (float)pt.Y);
-		}
-		public static Maths.v2 ToV2(this Vector v)
-		{
-			return new Maths.v2((float)v.X, (float)v.Y);
-		}
 		public static Point ToPointD(this System.Drawing.PointF pt)
 		{
 			return new Point(pt.X, pt.Y);
 		}
-		public static Point ToPointD(this Maths.v2 pt)
+		public static Point ToPointD(this v2 pt)
 		{
 			return new Point(pt.x, pt.y);
 		}
-		public static Vector ToVectorD(this Maths.v2 pt)
+		public static Vector ToVectorD(this v2 pt)
 		{
 			return new Vector(pt.x, pt.y);
 		}
@@ -156,6 +149,45 @@ namespace Rylogic.Extn.Windows
 				return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
 			};
 			return cfg;
+		}
+	}
+
+	public static class Point_
+	{
+		/// <summary>(0,0)</summary>
+		public static Point Zero => new Point();
+
+		/// <summary>Infinite vector</summary>
+		public static Point Infinity => new Point(double.PositiveInfinity, double.PositiveInfinity);
+
+		/// <summary>Convert to v2</summary>
+		public static v2 ToV2(this Point p)
+		{
+			return new v2((float)p.X, (float)p.Y);
+		}
+
+		/// <summary>True if any component of the point is NaN</summary>
+		public static bool IsNaN(Point v)
+		{
+			return double.IsNaN(v.X) || double.IsNaN(v.Y);
+		}
+	}
+
+	public static class Vector_
+	{
+		/// <summary>Infinite vector</summary>
+		public static Vector Infinity => new Vector(double.PositiveInfinity, double.PositiveInfinity);
+
+		/// <summary>Convert to v2</summary>
+		public static v2 ToV2(this Vector v)
+		{
+			return new v2((float)v.X, (float)v.Y);
+		}
+
+		/// <summary>True if any component of the vector is NaN</summary>
+		public static bool IsNaN(Vector v)
+		{
+			return double.IsNaN(v.X) || double.IsNaN(v.Y);
 		}
 	}
 }

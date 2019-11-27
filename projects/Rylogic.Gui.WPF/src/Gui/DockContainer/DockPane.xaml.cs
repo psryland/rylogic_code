@@ -114,6 +114,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					// Note: The DockPane does not own the content
 					ContentView = null!;
+					m_content.Clear();
 					m_content.CollectionChanged -= HandleCollectionChanged;
 				}
 				m_content = value;
