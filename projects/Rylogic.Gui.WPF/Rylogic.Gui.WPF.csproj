@@ -37,9 +37,6 @@
 			<AutoGen>True</AutoGen>
 			<DependentUpon>Resources.resx</DependentUpon>
 		</Compile>
-		<Compile Update="src\Gui\View3d\View3dLightingUI.xaml.cs">
-		  <SubType>Code</SubType>
-		</Compile>
 		<EmbeddedResource Update="res\Resources.resx">
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -51,8 +48,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
-		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

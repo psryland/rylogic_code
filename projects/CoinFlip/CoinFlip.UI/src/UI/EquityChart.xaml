@@ -6,6 +6,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gfx="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d" 
 	d:DesignHeight="450"
@@ -220,7 +221,7 @@
 	</Grid>
 
 	<!-- Equity Chart -->
-	<gui:ChartControl
+	<gfx:ChartControl
 		Grid.Row="1"
 		x:Name="m_chart_equity"
 		ChartBackground="White"

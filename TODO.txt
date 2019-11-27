@@ -12,7 +12,6 @@ LDraw
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	- Script parsing performance profiling
 	- Finish implementing the preferences dialog
-	- Installer
 	
 CoinFlip
 	Candle Charts:

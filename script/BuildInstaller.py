@@ -49,13 +49,13 @@ def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, direc
 
 	# Create the component to contain the file
 	cmp_attr = {}
-	cmp_attr["Id"] = f"Cmp_{file}_{uid}"
+	cmp_attr["Id"] = f"Cmp_{file}_{uid}"[:72]
 	cmp_attr["Guid"] = "*"
 	if directory_id: cmp_attr["Directory"] = directory_id
 	cmp = xml.SubElement(elem, "Component", cmp_attr)
 
 	fcp_attr = {}
-	fcp_attr["Id"] = f"{file}_{uid}"
+	fcp_attr["Id"] = f"{file}_{uid}"[:72]
 	fcp_attr["Source"] = os.path.abspath(filepath)
 	if keypath: fcp_attr["KeyPath"] = "yes"
 	_ = xml.SubElement(cmp, "File", fcp_attr)

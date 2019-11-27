@@ -461,7 +461,7 @@ namespace pr::filesys
 	template <typename Elem>
 	inline bool BufferToFile(Elem const* buf, int64_t ofs, int64_t count, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
 	{
-		return BufferToFile(buf + ofs, count * sizeof(Elem), filepath, file_enc, buf_enc, append, add_bom);
+		return BufferToFile(buf + ofs, static_cast<size_t>(count * sizeof(Elem)), filepath, file_enc, buf_enc, append, add_bom);
 	}
 	template <typename Elem>
 	inline bool BufferToFile(std::initializer_list<Elem> items, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)

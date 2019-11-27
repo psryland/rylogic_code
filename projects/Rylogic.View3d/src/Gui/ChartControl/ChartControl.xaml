@@ -1,0 +1,130 @@
+﻿<Grid
+	x:Class="Rylogic.Gui.WPF.ChartControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:Rylogic.Gui.WPF.ChartDetail"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d" 
+	d:DesignWidth="800"
+	d:DesignHeight="450"
+	UseLayoutRounding="True"
+	Background="#EEE"
+	x:Name="m_root"
+	>
+	<Grid.Resources>
+		<ResourceDictionary>
+			<TransformGroup x:Key="YAxisTransform">
+				<RotateTransform Angle="-90"/>
+			</TransformGroup>
+		</ResourceDictionary>
+	</Grid.Resources>
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/> <!-- Title -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Top) -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Panel (Dock=Top) -->
+		<RowDefinition Height="*"/>    <!-- Chart area-->
+		<RowDefinition Height="Auto"/> <!-- XAxis Panel (Dock=Bottom) -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Bottom) -->
+	</Grid.RowDefinitions>
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Left) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Left) -->
+		<ColumnDefinition Width="*"/>    <!-- Chart area-->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Right) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Right) -->
+	</Grid.ColumnDefinitions>
+
+	<!-- Title -->
+	<Label
+		x:Name="m_title_label"
+		Grid.Row="0"
+		Grid.Column="2"
+		Content="{Binding Title}"
+		Visibility="{Binding Title, Converter={conv:NullToCollapsed}}"
+		HorizontalAlignment="Center"
+		FontWeight="Bold"
+		/>
+	
+	<!-- X Axis -->
+	<TextBlock
+		x:Name="m_xaxis_label"
+		Grid.Row="5"
+		Grid.Column="2"
+		Text="{Binding XAxis.Label}"
+		Visibility="{Binding XAxisLabelVisibility}"
+		HorizontalAlignment="Center"
+		/>
+	<local:AxisPanel
+		x:Name="m_xaxis_panel"
+		Grid.Row="4"
+		Grid.Column="2"
+		Axis="{Binding XAxis}"
+		Height="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
+		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
+		Background="{Binding Background}"
+		/>
+
+	<!-- Y Axis -->
+	<TextBlock
+		x:Name="m_yaxis_label"
+		Grid.Row="3"
+		Grid.Column="0"
+		Text="{Binding YAxis.Label}"
+		Visibility="{Binding YAxisLabelVisibility}"
+		VerticalAlignment="Center"
+		RenderTransformOrigin="0.0,0.0"
+		LayoutTransform="{StaticResource YAxisTransform}"
+		/>
+	<local:AxisPanel
+		x:Name="m_yaxis_panel"
+		Grid.Row="3"
+		Grid.Column="1"
+		Axis="{Binding YAxis}"
+		Width="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
+		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
+		Background="{Binding Background}"
+		/>
+
+	<!-- Chart area -->
+	<local:ChartPanel
+		Grid.Row="3"
+		Grid.Column="2"
+		UseLayoutRounding="True"
+		Stretch="Fill"
+		x:Name="m_chart_panel"
+		/>
+	<Canvas
+		Grid.Row="3"
+		Grid.Column="2"
+		UseLayoutRounding="True"
+		ClipToBounds="True"
+		>
+		<Canvas
+			x:Name="m_chart_overlay"
+			/>
+	</Canvas>
+	
+	<!-- Show Value pop up -->
+	<Popup
+		Name="m_popup_show_value"
+		HorizontalAlignment="Left"
+		VerticalAlignment="Center"
+		Placement="Relative"
+		PlacementTarget="{Binding ElementName=m_chart_panel}"
+		MinWidth="80"
+		>
+		<Border
+			BorderThickness="1"
+			BorderBrush="Black"
+			>
+			<TextBlock
+				Background="LightYellow"
+				Padding="5"
+				Text="{Binding ValueAtPointer}"
+				/>
+		</Border>
+	</Popup>
+
+</Grid>

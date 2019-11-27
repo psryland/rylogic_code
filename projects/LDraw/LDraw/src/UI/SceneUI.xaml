@@ -1,0 +1,105 @@
+<UserControl
+	x:Class="LDraw.UI.SceneUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	AllowDrop="True"
+	>
+	<UserControl.Resources>
+		<ResourceDictionary>
+			
+			<!-- A context menu for the 3D scene -->
+			<ContextMenu x:Key="LDrawCMenu">
+				<MenuItem Header="_Clear"
+					Command="{Binding ClearScene}"
+					/>
+				<Separator/>
+				<MenuItem Header="Tools">
+					<StaticResource	ResourceKey="View3dMenuItem_Origin"/>
+					<StaticResource	ResourceKey="View3dMenuItem_Focus"/>
+					<StaticResource	ResourceKey="View3dMenuItem_BoundingBoxes"/>
+					<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
+					<StaticResource	ResourceKey="ChartMenuItem_CrossHair"/>
+					<StaticResource	ResourceKey="ChartMenuItem_ValueAtPointer"/>
+					<StaticResource	ResourceKey="ChartMenuItem_Axes"/>
+					<StaticResource	ResourceKey="ChartMenuItem_GridLines"/>
+					<StaticResource	ResourceKey="View3dMenuItem_MeasureTool"/>
+				</MenuItem>
+				<MenuItem Header="Camera">
+					<StaticResource	ResourceKey="View3dMenuItem_AutoRange"/>
+					<StaticResource	ResourceKey="ChartMenuItem_Aspect11"/>
+					<StaticResource	ResourceKey="ChartMenuItem_LockAspect"/>
+					<StaticResource	ResourceKey="View3dMenuItem_Orthographic"/>
+					<StaticResource	ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+					<StaticResource	ResourceKey="ChartMenuItem_LinkCamera"/>
+					<StaticResource	ResourceKey="View3dMenuItem_AlignUp"/>
+					<StaticResource	ResourceKey="View3dMenuItem_ViewPresets"/>
+					<StaticResource	ResourceKey="ChartMenuItem_NavMode"/>
+					<StaticResource	ResourceKey="View3dMenuItem_SavedViews"/>
+				</MenuItem>
+				<MenuItem Header="Rendering">
+					<StaticResource	ResourceKey="View3dMenuItem_BackgroundColour"/>
+					<StaticResource	ResourceKey="View3dMenuItem_Antialiasing"/>
+					<StaticResource	ResourceKey="View3dMenuItem_FillMode"/>
+					<StaticResource	ResourceKey="View3dMenuItem_CullMode"/>
+					<StaticResource	ResourceKey="View3dMenuItem_Animation"/>
+					<StaticResource	ResourceKey="View3dMenuItem_Lighting"/>
+				</MenuItem>
+				<Separator/>
+				<StaticResource	ResourceKey="View3dMenuItem_ObjectManager"/>
+			</ContextMenu>
+
+			<!-- A context menu for axes -->
+			<ContextMenu x:Key="LDrawAxisCMenu" x:Shared="False"> <!-- Not shared because we need two of them -->
+				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowScroll"/>
+				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowZoom"/>
+			</ContextMenu>
+
+			<!-- A context menu for the scene tab -->
+			<ContextMenu
+				x:Key="TabCMenu"
+				>
+				<MenuItem
+					Header="_Rename"
+					Command="{Binding RenameScene}"
+					/>
+				<MenuItem
+					Header="_Clear"
+					Command="{Binding ClearScene}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="_Close"
+					Command="{Binding CloseScene}"
+					/>
+			</ContextMenu>
+			
+		</ResourceDictionary>
+	</UserControl.Resources>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<!-- Tool bars -->
+		<gui:View3dAnimControls
+			Grid.Row="0"
+			Visibility="{Binding ShowAnimationUI, Converter={conv:BoolToVisible}}"
+			ViewWindow = "{Binding SceneView.Scene.Window}"
+			/>
+
+		<!-- Main 3D View -->
+		<gui:ChartControl
+			Grid.Row="1"
+			Name="m_scene"
+			/>
+	</Grid>
+</UserControl>

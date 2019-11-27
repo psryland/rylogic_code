@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;netcoreapp3.0</TargetFrameworks>
@@ -10,7 +10,8 @@
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
 	</PropertyGroup>
-	
+
+	<!-- Assembly properties -->
 	<PropertyGroup>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
@@ -24,6 +25,7 @@
 		<AssemblyVersion>1.1.0</AssemblyVersion>
 	</PropertyGroup>
 
+	<!-- Build Options -->
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE</DefineConstants>
 		<Optimize>true</Optimize>
@@ -38,9 +40,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<!-- 
-		<PackageReference Include="System.Drawing.Common" Version="4.6.0" />
-		-->
 	</ItemGroup>
 	<ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.0' ">
 		<!-- Using 3.2.1 because that the latest version used in powershell, needed to run the unit tests -->

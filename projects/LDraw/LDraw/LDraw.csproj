@@ -1,0 +1,72 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net472</TargetFramework>
+		<RootNamespace>LDraw</RootNamespace>
+		<AssemblyName>LDraw</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>3D Visualization tool created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<Version>6.0.0</Version>
+		<FileVersion>6.0.0</FileVersion>
+		<AssemblyVersion>6.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Code -->
+	<ItemGroup>
+		<ApplicationDefinition Include="src\App.xaml" />
+	</ItemGroup>
+
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png" />
+		<EmbeddedResource Include="res\LdrSyntaxRules.xshd" />
+		<Resource Include="res\Licence.rtf" />
+	</ItemGroup>
+	
+	<!-- References -->
+	<ItemGroup>
+		<ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj" />
+		<ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+	</ItemGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+
+		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\view3d.dll">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<!--
+		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
+			<Link>lib\x86\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x86\release\view3d.dll">
+			<Link>lib\x86\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		-->
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="AvalonEdit" Version="6.0.0" />
+	</ItemGroup>
+
+</Project>
