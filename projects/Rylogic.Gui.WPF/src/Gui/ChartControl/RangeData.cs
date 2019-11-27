@@ -465,7 +465,7 @@ namespace Rylogic.Gui.WPF
 
 					// Grid nugget
 					nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr);
-					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
+					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, CtxId);
 					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZWrite, true);
 					return gridlines;
 				}

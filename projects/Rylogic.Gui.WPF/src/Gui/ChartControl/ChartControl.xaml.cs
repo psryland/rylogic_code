@@ -57,7 +57,6 @@ namespace Rylogic.Gui.WPF
 			Elements = new ElementCollection(this);
 			Selected = new SelectedCollection(this);
 			Hovered = new HoveredCollection(this);
-			Tools = new ChartTools(this);
 
 			AllowSelection = false;
 			AllowElementDragging = false;
@@ -92,7 +91,6 @@ namespace Rylogic.Gui.WPF
 		protected virtual void Dispose(bool _)
 		{
 			MouseOperations = null!;
-			Tools = null!;
 			Range = null!;
 			Options = null!;
 			Scene.Dispose();
@@ -677,8 +675,7 @@ namespace Rylogic.Gui.WPF
 			OnAutoRanging(args);
 
 			// Get the bounding box, either from the event or from the scene bounds
-			var bbox = args.Handled ? args.ViewBBox
-				: Window.SceneBounds(who, except: new[] { ChartTools.Id });
+			var bbox = args.Handled ? args.ViewBBox : Window.SceneBounds(who);
 
 			// Check it's valid
 			if (!bbox.IsValid || bbox.Radius == v4.Zero)
@@ -1054,18 +1051,8 @@ namespace Rylogic.Gui.WPF
 		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 		public Visibility YAxisLabelVisibility => Options.ShowAxes && YAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 
-		/// <summary>Chart graphics</summary>
-		public ChartTools Tools
-		{
-			get => m_tools;
-			private set
-			{
-				if (m_tools == value) return;
-				Util.Dispose(ref m_tools!);
-				m_tools = value;
-			}
-		}
-		private ChartTools m_tools = null!;
+		/// <summary>Chart control graphics context id</summary>
+		public static readonly Guid CtxId = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
 		#region Self Consistency
 

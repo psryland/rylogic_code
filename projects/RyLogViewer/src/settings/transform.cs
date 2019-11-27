@@ -21,14 +21,14 @@ namespace RyLogViewer
 		{
 			Subs = new Dictionary<string, ITransformSubstitution>();
 			Replace = replace;
-			PatternChanged += HandlePatternChanged;
+			PropertyChanged += HandlePatternChanged;
 			UpdateSubs();
 		}
 		public Transform(Transform rhs) :base(rhs)
 		{
 			Subs = new Dictionary<string, ITransformSubstitution>(rhs.Subs);
 			Replace = rhs.Replace;
-			PatternChanged += HandlePatternChanged;
+			PropertyChanged += HandlePatternChanged;
 			UpdateSubs();
 		}
 		public Transform(XElement node) :base(node)
@@ -59,7 +59,7 @@ namespace RyLogViewer
 				}
 			}
 
-			PatternChanged += HandlePatternChanged;
+			PropertyChanged += HandlePatternChanged;
 			UpdateSubs();
 		}
 

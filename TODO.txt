@@ -1,7 +1,6 @@
 Immediate ToDo:
 	
 LDraw
-	- Replace resizer view3d objects with WPF primitives
 	- Highlight errors in editor
 	- Handle scriptUI files changing externally
 	- Status bar shows pointer position when ActiveScene != null
@@ -28,6 +27,7 @@ CoinFlip
 		- TD sequential
 	Bots:
 	General:
+		- Fix up chart CMenu
 		- Shade the price axis background based on the bullish/bearish-ness of the position with price at those levels (include pending orders)
 		- Figure out how to isolate the monitored orders between back testing and live mode
 		- Add spot price support to Poloniex and Bittrex

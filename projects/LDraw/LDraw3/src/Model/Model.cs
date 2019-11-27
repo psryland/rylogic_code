@@ -236,13 +236,6 @@ namespace LDraw
 			// Delete unused objects
 			if (context_ids.Length != 0)
 			{
-				if (include_count == 0)
-				{
-					// Exclude the chart tools if this is a 'clear all' type of clear.
-					Array.Resize(ref context_ids, context_ids.Length + 1);
-					context_ids[context_ids.Length - 1] = ChartControl.ChartTools.Id;
-					exclude_count++;
-				}
 				View3d.DeleteUnused(context_ids, include_count, exclude_count);
 			}
 		}
