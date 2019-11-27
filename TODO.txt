@@ -1,9 +1,8 @@
 Immediate ToDo:
 	
 LDraw
-	- Highlight errors in editor
 	- Handle scriptUI files changing externally
-	- Status bar shows pointer position when ActiveScene != null
+	- Highlight errors in editor
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.

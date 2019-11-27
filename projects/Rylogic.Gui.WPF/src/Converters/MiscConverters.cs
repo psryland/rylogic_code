@@ -128,12 +128,18 @@ namespace Rylogic.Gui.WPF.Converters
 		{
 			if (value == null)
 				return Visibility.Collapsed;
-			if (!(parameter is string type_name))
-				return Visibility.Collapsed;
 
-			// Get the type of 'value'
 			var ty = value.GetType();
-			return ty.FullName.EndsWith(type_name) ? Visibility.Visible : Visibility.Collapsed;
+			if (parameter is string type_name)
+			{
+				// Get the type of 'value'
+				return ty.FullName.EndsWith(type_name) ? Visibility.Visible : Visibility.Collapsed;
+			}
+			if (parameter is Type type)
+			{
+				return ty == type ? Visibility.Visible : Visibility.Collapsed;
+			}
+			return Visibility.Collapsed;
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
