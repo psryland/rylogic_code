@@ -35,6 +35,7 @@ namespace LDraw.UI
 			SceneView.Options = Settings.Scene;
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
+			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
 			Links = new List<ChartLink>();
 
 			RenameScene = Command.Create(this, RenameSceneInternal);
@@ -145,6 +146,19 @@ namespace LDraw.UI
 
 		/// <summary>The 3d part of the scene (i.e. the chart control)</summary>
 		public ChartControl SceneView => m_scene;
+
+		/// <summary>The camera focus point</summary>
+		public v4 FocusPoint
+		{
+			get => SceneView.Camera.FocusPoint;
+			set
+			{
+				if (FocusPoint == value) return;
+				SceneView.Camera.FocusPoint = value;
+				NotifyPropertyChanged(nameof(FocusPoint));
+				SceneView.Invalidate();
+			}
+		}
 
 		/// <summary>The name assigned to this scene UI</summary>
 		public string SceneName
@@ -274,6 +288,12 @@ namespace LDraw.UI
 		{
 			Model.Scenes.Remove(this);
 			Dispose();
+		}
+
+		/// <summary>Event from the view3d window during rendering</summary>
+		private void HandleSceneRendering(object sender, EventArgs e)
+		{
+			NotifyPropertyChanged(nameof(FocusPoint));
 		}
 
 		/// <summary></summary>
