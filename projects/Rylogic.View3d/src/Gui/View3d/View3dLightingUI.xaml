@@ -154,6 +154,8 @@
 						</StackPanel>
 						<gui:DirectionPicker
 							Direction="{Binding Light.Direction}"
+							ScaleX="-1"
+							ScaleY="-1"
 							HorizontalAlignment="Center"
 							ShowTextValue="False"
 							BorderThickness="0"

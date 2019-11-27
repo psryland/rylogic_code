@@ -3,6 +3,7 @@ Immediate ToDo:
 LDraw
 	- Handle scriptUI files changing externally
 	- Highlight errors in editor
+	- Fix tabs for inserted auto complete text
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.

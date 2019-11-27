@@ -29,25 +29,49 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty DirectionProperty = Gui_.DPRegister<DirectionPicker>(nameof(Direction));
 
-		/// <summary>The sign of the Z component of the direction vector</summary>
-		public double Sign
+		/// <summary>The sign of the X component of the direction vector</summary>
+		public double ScaleX
 		{
-			get => (double)GetValue(SignProperty);
-			set => SetValue(SignProperty, value);
+			get => (double)GetValue(ScaleXProperty);
+			set => SetValue(ScaleXProperty, value);
 		}
-		private void Sign_Changed()
+		private void ScaleX_Changed()
 		{
 			NotifyPropertyChanged(nameof(Direction));
 		}
-		public static readonly DependencyProperty SignProperty = Gui_.DPRegister<DirectionPicker>(nameof(Sign), -1.0);
+		public static readonly DependencyProperty ScaleXProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleX), +1.0);
+
+		/// <summary>The sign of the Y component of the direction vector</summary>
+		public double ScaleY
+		{
+			get => (double)GetValue(ScaleYProperty);
+			set => SetValue(ScaleYProperty, value);
+		}
+		private void ScaleY_Changed()
+		{
+			NotifyPropertyChanged(nameof(Direction));
+		}
+		public static readonly DependencyProperty ScaleYProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleY), +1.0);
+
+		/// <summary>The sign of the Z component of the direction vector</summary>
+		public double ScaleZ
+		{
+			get => (double)GetValue(ScaleZProperty);
+			set => SetValue(ScaleZProperty, value);
+		}
+		private void ScaleZ_Changed()
+		{
+			NotifyPropertyChanged(nameof(Direction));
+		}
+		public static readonly DependencyProperty ScaleZProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleZ), -1.0);
 
 		/// <summary></summary>
 		public Point Origin
 		{
 			get
 			{
-				var x = 0.5 * (+Direction.x + 1.0);
-				var y = 0.5 * (-Direction.y + 1.0);
+				var x = 0.5 * (+Direction.x / ScaleX + 1.0);
+				var y = 0.5 * (-Direction.y / ScaleY + 1.0);
 				return new Point(x, y);
 			}
 		}
@@ -89,17 +113,23 @@ namespace Rylogic.Gui.WPF
 		}
 		private void PointToDirection(Ellipse ellipse, Point pt)
 		{
-			pt.X = -1.0 + 2.0 * (pt.X / ellipse.ActualWidth);
-			pt.Y = +1.0 - 2.0 * (pt.Y / ellipse.ActualHeight);
-			var xy = Math.Sqrt(pt.X * pt.X + pt.Y * pt.Y);
-			var Z = Sign * (1.0 - xy);
-			if (xy > 1.0)
+			var x = -1.0 + 2.0 * (pt.X / ellipse.ActualWidth);
+			var y = +1.0 - 2.0 * (pt.Y / ellipse.ActualHeight);
+
+			double z;
+			var xy_sq = Math_.Len2Sq(x, y);
+			if (xy_sq <= 1.0)
 			{
+				z = Math.Sqrt(1.0 - xy_sq);
+			}
+			else
+			{
+				var xy = Math.Sqrt(xy_sq);
 				pt.X /= xy;
 				pt.Y /= xy;
-				Z = 0.0;
+				z = 0.0;
 			}
-			Direction = new v4((float)pt.X, (float)pt.Y, (float)Z, 0f);
+			Direction = new v4((float)(ScaleX * x), (float)(ScaleY * y), (float)(ScaleZ * z), 0f);
 		}
 
 		/// <summary></summary>
