@@ -11,44 +11,44 @@ namespace view3d
 	// Global data for this dll
 	struct Context :pr::AlignTo<16>
 	{
-		struct EmbCodeCB { int m_lang; EmbeddedCodeHandlerCB m_cb; };
 		using InitSet = std::unordered_set<View3DContext>;
 		using WindowCont = std::vector<std::unique_ptr<Window>>;
+		using EmbCodeCB = struct { int m_lang; EmbeddedCodeHandlerCB m_cb; };
 		using EmbCodeCBCont = pr::vector<EmbCodeCB>;
 		using IEmbeddedCode = pr::script::IEmbeddedCode;
+		using ScriptSources = pr::ldr::ScriptSources;
 		using Includes = pr::script::Includes;
 
 		static pr::Guid const GuidDemoSceneObjects;
 
-		InitSet                  m_inits;         // A unique id assigned to each Initialise call
-		bool                     m_compatible;    // True if the renderer will work on this system
-		pr::Renderer             m_rdr;           // The renderer
-		WindowCont               m_wnd_cont;      // The created windows
-		pr::ldr::ScriptSources   m_sources;       // A container of Ldr objects and a file watcher
-		EmbCodeCBCont            m_emb;           // Embedded code execution callbacks
-		std::recursive_mutex     m_mutex;
+		InitSet              m_inits;           // A unique id assigned to each Initialise call
+		pr::Renderer         m_rdr;             // The renderer
+		WindowCont           m_wnd_cont;        // The created windows
+		ScriptSources        m_sources;         // A container of Ldr objects and a file watcher
+		EmbCodeCBCont        m_emb;             // Embedded code execution callbacks
+		std::recursive_mutex m_mutex;
 
-		explicit Context(HINSTANCE instance, D3D11_CREATE_DEVICE_FLAG device_flags);
+		explicit Context(HINSTANCE instance, ReportErrorCB global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags);
 
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;
 		Context* This() { return this; }
 
-		// Report an error to the global error handler
-		void ReportError(wchar_t const* msg);
-
-		// Error event. Can be called in a worker thread context
-		pr::MultiCast<ReportErrorCB> OnError;
+		// Global error callback. Can be called in a worker thread context
+		pr::MultiCast<ReportErrorCB, true> ReportError;
 
 		// Event raised when script sources are parsed during adding/updating
-		pr::MultiCast<AddFileProgressCB> OnAddFileProgress;
+		pr::MultiCast<AddFileProgressCB, true> OnAddFileProgress;
 
 		// Event raised when the script sources are updated
-		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
+		pr::MultiCast<SourcesChangedCB, true> OnSourcesChanged;
 
 		// Create/Destroy windows
 		Window* WindowCreate(HWND hwnd, View3DWindowOptions const& opts);
 		void WindowDestroy(Window* window);
+
+		// Report an error handled at the DLL API layer
+		void ReportAPIError(char const* func_name, View3DWindow wnd, std::exception const* ex);
 
 		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add);

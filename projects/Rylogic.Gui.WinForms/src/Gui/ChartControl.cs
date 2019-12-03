@@ -952,24 +952,17 @@ namespace Rylogic.Gui.WinForms
 				try
 				{
 					// No GDI compatible back buffer, cause we want anti aliasing...
-					var opts = new View3d.WindowOptions(null, IntPtr.Zero)
-					{
-						DbgName = "Chart",
-						Multisampling = owner.Options.AntiAliasing ? 4 : 1,
-					};
-
 					m_owner = owner;
-					m_view3d = View3d.Create();
-					m_window = new View3d.Window(m_view3d, Handle, opts)
+					View3d = View3d.Create();
+					Window = new View3d.Window(View3d, Handle, gdi_compatible_backbuffer:false, multi_sampling: owner.Options.AntiAliasing ? 4 : 1, dbg_name:"Chart")
 					{
 						LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f),
 						FocusPointVisible = false,
 						OriginPointVisible = false,
 					};
-					m_camera = m_window.Camera;
-					m_camera.Orthographic = true;
-					m_camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
-					m_camera.ClipPlanes(0.01f, 1000f, true);
+					Camera.Orthographic = true;
+					Camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
+					Camera.ClipPlanes(0.01f, 1000f, true);
 				}
 				catch
 				{
@@ -979,8 +972,8 @@ namespace Rylogic.Gui.WinForms
 			}
 			protected override void Dispose(bool disposing)
 			{
-				Util.Dispose(ref m_window);
-				Util.Dispose(ref m_view3d);
+				Util.Dispose(Window);
+				Util.Dispose(View3d);
 				base.Dispose(disposing);
 			}
 			protected override void OnResize(EventArgs e)
@@ -1028,25 +1021,13 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			/// <summary>Renderer</summary>
-			public View3d View3d
-			{
-				[DebuggerStepThrough] get { return m_view3d; }
-			}
-			private View3d m_view3d;
+			public View3d View3d { get; }
 
 			/// <summary>The view3d window for this control instance</summary>
-			public View3d.Window Window
-			{
-				[DebuggerStepThrough] get { return m_window; }
-			}
-			private View3d.Window m_window;
+			public View3d.Window Window { get; }
 
 			/// <summary>The view of the chart</summary>
-			public View3d.Camera Camera
-			{
-				[DebuggerStepThrough] get { return m_camera; }
-			}
-			private View3d.Camera m_camera;
+			public View3d.Camera Camera => Window.Camera;
 
 			/// <summary>Add an object to the scene</summary>
 			public void AddObject(View3d.Object obj)
@@ -1066,19 +1047,15 @@ namespace Rylogic.Gui.WinForms
 				if (Window == null || this.IsInDesignMode())
 					return;
 
-				// Block scene changed events while clearing/re-adding objects to the window
-				//using (Window.SuspendSceneChanged())
-				{
-					// Update axis graphics
-					m_owner.Range.AddToScene(Window);
+				// Update axis graphics
+				m_owner.Range.AddToScene(Window);
 
-					// Add/Remove all chart elements
-					foreach (var elem in m_owner.Elements)
-						elem.UpdateScene(Window);
+				// Add/Remove all chart elements
+				foreach (var elem in m_owner.Elements)
+					elem.UpdateScene(Window);
 
-					// Add/Remove user graphics
-					m_owner.OnChartRendering(new ChartRenderingEventArgs(m_owner, Window));
-				}
+				// Add/Remove user graphics
+				m_owner.OnChartRendering(new ChartRenderingEventArgs(m_owner, Window));
 
 				// Start the render
 				Window.BackgroundColour = m_owner.Options.ChartBkColour;

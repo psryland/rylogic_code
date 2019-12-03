@@ -17,6 +17,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 #include <memory>
 #include <chrono>
 #include <atomic>
@@ -26,6 +27,7 @@
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/common/datetime.h"
+#include "pr/macros/enum.h"
 #include "pr/str/string_core.h"
 #include "pr/threads/concurrent_queue.h"
 #include "pr/threads/name_thread.h"
@@ -42,16 +44,14 @@ namespace pr
 		#define PR_LOGE(logger, level, except, message) do { (void)(except); } while (0)
 		#endif
 
-		enum class ELevel
-		{
-			Debug,
-			Info,
-			Warn,
-			Error,
-		};
-
-		// String
-		using string = pr::string<char>;
+		// Log levels
+		#define PR_ENUM(x)\
+			x(Debug)\
+			x(Info)\
+			x(Warn)\
+			x(Error)
+		PR_DEFINE_ENUM1(ELevel, PR_ENUM);
+		#undef PR_ENUM
 
 		// Timer
 		using RTC = std::chrono::high_resolution_clock;
@@ -59,11 +59,14 @@ namespace pr
 		// An individual log event
 		struct Event
 		{
+			using string = std::wstring;
+			using path = std::filesystem::path;
+
 			ELevel        m_level;
 			RTC::duration m_timestamp;
 			string        m_context;
 			string        m_msg;
-			string        m_file;
+			path          m_file;
 			size_t        m_line;
 			int           m_occurrences;
 
@@ -76,7 +79,7 @@ namespace pr
 				,m_line()
 				,m_occurrences()
 			{}
-			Event(ELevel level, RTC::time_point tzero, string& ctx, string& msg, string file, size_t line)
+			Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, std::wstring_view msg, path const& file, size_t line)
 				:m_level(level)
 				,m_timestamp(RTC::now() - tzero)
 				,m_context(ctx)
@@ -85,7 +88,7 @@ namespace pr
 				,m_line(line)
 				,m_occurrences(1)
 			{}
-			Event(ELevel level, RTC::time_point tzero, string& ctx, string&& msg, string file, size_t line)
+			Event(ELevel level, RTC::time_point tzero, std::wstring_view ctx, string&& msg, path const& file, size_t line)
 				:m_level(level)
 				,m_timestamp(RTC::now() - tzero)
 				,m_context(ctx)
@@ -107,49 +110,30 @@ namespace pr
 
 		// Producer/Consumer queue for log events
 		using LogQueue = pr::threads::ConcurrentQueue<log::Event>;
-	}
 
-	// Log level to string
-	template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
-	inline Str To(log::ELevel lvl)
-	{
-		using Char = typename string_traits<Str>::value_type;
-		switch (lvl)
-		{
-		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);
-		case log::ELevel::Debug: return PR_STRLITERAL(Char, "Debug");
-		case log::ELevel::Info : return PR_STRLITERAL(Char, "Info" );
-		case log::ELevel::Warn : return PR_STRLITERAL(Char, "Warn" );
-		case log::ELevel::Error: return PR_STRLITERAL(Char, "Error");
-		}
-	}
-
-	// Log output functors
-	namespace log
-	{
 		// Helper object for writing log output to a 'stdout'
 		struct ToStdout
 		{
 			void operator ()(Event const& ev)
 			{
-				char const* delim = "";
+				wchar_t const* delim = L"";
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim = " "; }
-				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim = " "; }
-				auto lvl = pr::To<char const*>(ev.m_level);
-				auto ts = To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff");
-				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
-				std::cout << s;
+				if (!ev.m_file.empty()) { std::wcout << ev.m_file;                delim = L" "; }
+				if (ev.m_line != -1)    { std::wcout << "(" << ev.m_line << "):"; delim = L" "; }
+				auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
+				auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
+				auto s = FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
+				std::wcout << s;
 			}
 		};
 
 		// Helper object for writing log output to a file
 		struct ToFile
 		{
-			std::wstring m_filepath;
+			std::filesystem::path m_filepath;
 			std::shared_ptr<std::wofstream> m_outf;
 
-			ToFile(std::wstring filepath, std::ios_base::openmode mode = std::ios_base::out)
+			ToFile(std::filesystem::path const& filepath, std::ios_base::openmode mode = std::ios_base::out)
 				:m_filepath(filepath)
 				,m_outf(std::make_shared<std::wofstream>(filepath, mode))
 			{}
@@ -158,10 +142,12 @@ namespace pr
 				auto& fp = *m_outf;
 				fp.seekp(0, std::ios_base::end);
 
-				char const* delim = "";
-				if (!ev.m_file.empty()) { fp << ev.m_file.c_str(); delim = " "; }
-				if (ev.m_line != -1)    { fp << FmtS("(%d):", ev.m_line); delim = " "; }
-				fp << FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
+				wchar_t const* delim = L"";
+				if (!ev.m_file.empty()) { fp << ev.m_file.c_str(); delim = L" "; }
+				if (ev.m_line != -1)    { fp << FmtS(L"(%d):", ev.m_line); delim = L" "; }
+				auto lvl = Enum<ELevel>::ToStringW(ev.m_level);
+				auto ts = To<std::wstring>(ev.m_timestamp, L"%h:%mm:%ss:%fff");
+				fp << FmtS(L"%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
 				fp.flush();
 			}
 		};
@@ -171,7 +157,7 @@ namespace pr
 		{
 			HANDLE m_ipc_mutex;
 
-			explicit ToFileIPC(std::wstring filepath, wchar_t const* mutex_name, std::ios_base::openmode mode = std::ios_base::out)
+			explicit ToFileIPC(std::filesystem::path const& filepath, wchar_t const* mutex_name, std::ios_base::openmode mode = std::ios_base::out)
 				:ToFile(filepath, mode)
 				,m_ipc_mutex(CreateMutexW(nullptr, FALSE, mutex_name))
 			{}
@@ -331,21 +317,21 @@ namespace pr
 		std::shared_ptr<Context> m_context;
 
 		// An id to use in log messages
-		log::string Tag;
+		std::wstring Tag;
 
 		// On/Off switch for logging
 		std::atomic_bool Enabled;
 
 		//void OutputCB(pr::log::Event const& ev);
 		template <typename OutputCB>
-		Logger(log::string tag, OutputCB log_cb, int occurrences_batch_size)
+		Logger(std::wstring_view tag, OutputCB log_cb, int occurrences_batch_size)
 			:m_context(new Context(log_cb, occurrences_batch_size))
 			,Tag(tag)
 			,Enabled()
 		{
 			Enabled = true;
 		}
-		Logger(Logger const& rhs, log::string tag)
+		Logger(Logger const& rhs, std::wstring_view tag)
 			:m_context(rhs.m_context)
 			,Tag(tag)
 			,Enabled()
@@ -360,7 +346,11 @@ namespace pr
 		}
 
 		// Log a message
-		void Write(log::ELevel level, log::string msg, char const* file = "", int line = -1)
+		void Write(log::ELevel level, std::string_view msg, std::filesystem::path const& file = L"", int line = -1)
+		{
+			Write(level, Widen(msg), file, line);
+		}
+		void Write(log::ELevel level, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1)
 		{
 			if (!Enabled) return;
 			log::Event evt(level, m_context->m_time_zero, Tag, msg, file, line);
@@ -368,10 +358,15 @@ namespace pr
 		}
 
 		// Log an exception with message 'msg'
-		void Write(log::ELevel level, std::exception const& ex, log::string msg, char const* file = "", int line = -1)
+		void Write(log::ELevel level, std::exception const& ex, std::string_view msg, std::filesystem::path const& file = L"", int line = -1)
+		{
+			Write(level, ex, Widen(msg), file, line);
+		}
+		void Write(log::ELevel level, std::exception const& ex, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1)
 		{
 			if (!Enabled) return;
-			log::Event evt(level, m_context->m_time_zero, Tag, msg + " - Exception: " + ex.what(), file, line);
+			auto message = std::wstring(msg).append(L" - Exception: ").append(Widen(ex.what()));
+			log::Event evt(level, m_context->m_time_zero, Tag, message, file, line);
 			m_context->Enqueue(std::move(evt));
 		}
 
@@ -390,38 +385,38 @@ namespace pr::log
 {
 	PRUnitTest(LogTests)
 	{
-		std::string str;
+		std::wstring str;
 
 		{// Single instance
 			str.resize(0);
-			Logger log("test", [&](pr::log::Event const& ev)
+			Logger log(L"test", [&](Event const& ev)
 			{
-				std::stringstream s;
-				s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+				std::wstringstream s;
+				s << Enum<ELevel>::ToStringW(ev.m_level) << L"," << ev.m_context << L": " << ev.m_msg << L"," << ev.m_occurrences << std::endl;
 				str += s.str();
 			}, 0);
 			log.Write(ELevel::Debug, "event 1");
 			log.Flush();
-			PR_CHECK(str, "Debug,test: event 1,1\n");
+			PR_CHECK(str, L"Debug,test: event 1,1\n");
 		}
 		{// Copied instances
 			str.resize(0);
-			Logger log1("log1", [&](pr::log::Event const& ev)
+			Logger log1(L"log1", [&](pr::log::Event const& ev)
 			{
-				std::stringstream s;
-				s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+				std::wstringstream s;
+				s << Enum<ELevel>::ToStringW(ev.m_level) << L"," << ev.m_context << L": " << ev.m_msg << L"," << ev.m_occurrences << std::endl;
 				str += s.str();
 			}, 0);
-			Logger log2(log1, "log2");
+			Logger log2(log1, L"log2");
 
 			log1.Write(ELevel::Info, "event 1");
 			log2.Write(ELevel::Debug, "event 2");
 			log1.Write(ELevel::Info, "event 3");
 			log1.Flush();
 			PR_CHECK(str,
-				"Info,log1: event 1,1\n"
-				"Debug,log2: event 2,1\n"
-				"Info,log1: event 3,1\n"
+				L"Info,log1: event 1,1\n"
+				L"Debug,log2: event 2,1\n"
+				L"Info,log1: event 3,1\n"
 				);
 		}
 	}

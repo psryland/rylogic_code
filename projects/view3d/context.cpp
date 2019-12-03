@@ -8,6 +8,7 @@
 #include "view3d/window.h"
 #include "pr/view3d/view3d.h"
 
+using namespace pr;
 using namespace pr::rdr;
 using namespace pr::ldr;
 using namespace pr::script;
@@ -17,16 +18,17 @@ namespace view3d
 	pr::Guid const Context::GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 	// Constructor
-	Context::Context(HINSTANCE instance, D3D11_CREATE_DEVICE_FLAG device_flags)
+	Context::Context(HINSTANCE instance, ReportErrorCB global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags)
 		:m_inits()
-		,m_compatible(TestSystemCompatibility())
 		,m_rdr(RdrSettings(instance, device_flags))
 		,m_wnd_cont()
 		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
 		,m_emb()
 		,m_mutex()
+		,ReportError()
 	{
 		PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
+		ReportError += global_error_cb;
 
 		// Hook up the sources events
 		m_sources.OnAddFileProgress += [&](ScriptSources&, ScriptSources::AddFileProgressEventArgs& args)
@@ -35,11 +37,13 @@ namespace view3d
 			auto filepath    = args.m_loc.Filepath();
 			auto file_offset = args.m_loc.Pos();
 			auto complete    = args.m_complete;
-			OnAddFileProgress.Raise(args.m_cancel, context_id, filepath.c_str(), file_offset, complete);
+			BOOL cancel      = FALSE;
+			OnAddFileProgress(context_id, filepath.c_str(), file_offset, complete, &cancel);
+			args.m_cancel = cancel != 0;
 		};
-		m_sources.OnReload += [&](ScriptSources&, pr::EmptyArgs const&)
+		m_sources.OnReload += [&](ScriptSources&, EmptyArgs const&)
 		{
-			OnSourcesChanged.Raise(EView3DSourcesChangedReason::Reload, true);
+			OnSourcesChanged(EView3DSourcesChangedReason::Reload, true);
 		};
 		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
 		{
@@ -76,18 +80,12 @@ namespace view3d
 				break;
 			}
 
-			OnSourcesChanged.Raise(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
+			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
 		};
 		m_sources.OnError += [&](ScriptSources&, pr::ErrorEventArgs const& args)
 		{
 			ReportError(args.m_msg.c_str());
 		};
-	}
-
-	// Report an error to the global error handler
-	void Context::ReportError(wchar_t const* msg)
-	{
-		OnError.Raise(msg);
 	}
 
 	// Create/Destroy windows
@@ -113,6 +111,22 @@ namespace view3d
 	void Context::WindowDestroy(Window* window)
 	{
 		pr::erase_first(m_wnd_cont, [=](auto& wnd){ return wnd.get() == window; });
+	}
+
+	// Report an error handled at the DLL API layer
+	void Context::ReportAPIError(char const* func_name, View3DWindow wnd, std::exception const* ex)
+	{
+		// Create the error message
+		auto msg = pr::Fmt<pr::string<wchar_t>>(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
+		if (msg.last() != '\n')
+			msg.push_back('\n');
+
+		// If a window handle is provided, report via the window's event.
+		// Otherwise, fallback to the global error handler
+		if (wnd != nullptr)
+			wnd->ReportError(msg.c_str());
+		else
+			ReportError(msg.c_str());
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.
@@ -163,8 +177,8 @@ namespace view3d
 			nug.m_geom = static_cast<EGeom>(n->m_geom);
 			if (n->m_cull_mode != EView3DCullMode::Default) nug.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(n->m_cull_mode));
 			if (n->m_fill_mode != EView3DFillMode::Default) nug.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(n->m_fill_mode));
-			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
-			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
+			nug.m_vrange = n->m_v0 != n->m_v1 ? rdr::Range(n->m_v0, n->m_v1) : rdr::Range(0, vcount);
+			nug.m_irange = n->m_i0 != n->m_i1 ? rdr::Range(n->m_i0, n->m_i1) : rdr::Range(0, icount);
 			nug.m_flags = static_cast<ENuggetFlag>(n->m_flags);
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			nug.m_range_overlaps = n->m_range_overlaps;

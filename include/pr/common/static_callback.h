@@ -38,9 +38,9 @@ namespace pr
 			return m_cb(m_ctx, std::forward<A>(args)...);
 		}
 
-		operator func() const
+		explicit operator bool() const
 		{
-			return m_cb;
+			return m_cb != nullptr;
 		}
 
 		// Comparisons for call backs
@@ -52,29 +52,29 @@ namespace pr
 		{
 			return !(*this == nullptr);
 		}
-		bool operator == (StaticCB rhs) const
+		friend bool operator == (StaticCB lhs, StaticCB rhs)
 		{
-			return m_cb == rhs.m_cb && m_ctx == rhs.m_ctx;
+			return lhs.m_cb == rhs.m_cb && lhs.m_ctx == rhs.m_ctx;
 		}
-		bool operator != (StaticCB rhs) const
+		friend bool operator != (StaticCB lhs, StaticCB rhs)
 		{
-			return !(*this == rhs);
+			return !(lhs == rhs);
 		}
-		bool operator <  (StaticCB rhs) const
+		friend bool operator <  (StaticCB lhs, StaticCB rhs)
 		{
-			return m_cb != rhs.m_cb ? m_cb < rhs.m_cb : m_ctx < rhs.m_ctx;
+			return lhs.m_cb != rhs.m_cb ? lhs.m_cb < rhs.m_cb : lhs.m_ctx < rhs.m_ctx;
 		}
-		bool operator >  (StaticCB rhs) const
+		friend bool operator >  (StaticCB lhs, StaticCB rhs)
 		{
-			return m_cb != rhs.m_cb ? m_cb > rhs.m_cb : m_ctx > rhs.m_ctx;
+			return lhs.m_cb != rhs.m_cb ? lhs.m_cb > rhs.m_cb : lhs.m_ctx > rhs.m_ctx;
 		}
-		bool operator <= (StaticCB rhs) const
+		friend bool operator <= (StaticCB lhs, StaticCB rhs)
 		{
-			return m_cb != rhs.m_cb ? m_cb <= rhs.m_cb : m_ctx <= rhs.m_ctx;
+			return lhs.m_cb != rhs.m_cb ? lhs.m_cb <= rhs.m_cb : lhs.m_ctx <= rhs.m_ctx;
 		}
-		bool operator >= (StaticCB rhs) const
+		friend bool operator >= (StaticCB lhs, StaticCB rhs)
 		{
-			return m_cb != rhs.m_cb ? m_cb >= rhs.m_cb : m_ctx >= rhs.m_ctx;
+			return lhs.m_cb != rhs.m_cb ? lhs.m_cb >= rhs.m_cb : lhs.m_ctx >= rhs.m_ctx;
 		}
 	};
 

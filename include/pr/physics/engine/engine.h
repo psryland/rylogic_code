@@ -48,6 +48,7 @@
 #include "pr/physics/rigidbody/rigidbody.h"
 #include "pr/physics/solver/constraintaccumulator.h"
 #include "pr/physics/collision/collisioncache.h"
+#include "pr/physics/utility/event_types.h"
 #include "pr/physics/utility/events.h"
 
 namespace pr

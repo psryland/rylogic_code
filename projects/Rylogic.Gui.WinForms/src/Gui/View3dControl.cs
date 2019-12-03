@@ -40,9 +40,9 @@ namespace Rylogic.Gui.WinForms
 				if (this.IsInDesignMode()) return;
 				SetStyle(ControlStyles.Selectable, false);
 
-				m_view3d = View3d.Create();
-				var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
-				m_window = new View3d.Window(View3d, Handle, opts);
+				View3d = View3d.Create();
+				Window = new View3d.Window(View3d, Handle, gdi_compatible_backbuffer, dbg_name:name);
+				Window.Error += (s,a) => ReportError?.Invoke(this, new ReportErrorEventArgs(a.Message));
 
 				InitializeComponent();
 
@@ -60,10 +60,10 @@ namespace Rylogic.Gui.WinForms
 		protected override void Dispose(bool disposing)
 		{
 			ShowMeasurementUI = false;
-			Util.BreakIf(m_window != null && Util.IsGCFinalizerThread);
-			Util.BreakIf(m_view3d != null && Util.IsGCFinalizerThread);
-			Util.Dispose(ref m_window);
-			Util.Dispose(ref m_view3d);
+			Util.BreakIf(Window != null && Util.IsGCFinalizerThread);
+			Util.BreakIf(View3d != null && Util.IsGCFinalizerThread);
+			Util.Dispose(Window);
+			Util.Dispose(View3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -74,24 +74,13 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>The underlying interop wrapper</summary>
-		public View3d View3d
-		{
-			[DebuggerStepThrough] get { return m_view3d; }
-		}
-		private View3d m_view3d;
+		public View3d View3d { get; }
 
 		/// <summary>The binding to this control</summary>
-		public View3d.Window Window
-		{
-			[DebuggerStepThrough] get { return m_window; }
-		}
-		private View3d.Window m_window;
+		public View3d.Window Window { get; }
 
 		/// <summary>The main camera</summary>
-		public View3d.Camera Camera
-		{
-			[DebuggerStepThrough] get { return Window.Camera; }
-		}
+		public View3d.Camera Camera => Window.Camera;
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
 		public event EventHandler<ReportErrorEventArgs> ReportError;
@@ -442,16 +431,6 @@ namespace Rylogic.Gui.WinForms
 		protected virtual void OnCustomiseContextMenu(CustomContextMenuEventArgs e)
 		{
 			CustomiseContextMenu?.Invoke(this, e);
-		}
-
-		/// <summary>Raises the Error event</summary>
-		protected virtual void OnReportError(ReportErrorEventArgs e)
-		{
-			ReportError?.Invoke(this, e);
-		}
-		private void HandleReportError(IntPtr ctx, string msg)
-		{
-			OnReportError(new ReportErrorEventArgs(msg));
 		}
 
 		/// <summary>Render and present the scene</summary>

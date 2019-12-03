@@ -410,7 +410,7 @@ namespace pr::audio
 			throw std::runtime_error("LoadAudioFromFile: Insufficient data.");
 
 		// Create enough space for the file data
-		wav_data.reset(new (std::nothrow) uint8_t[file_size]);
+		wav_data.reset(new (std::nothrow) uint8_t[static_cast<size_t>(file_size)]);
 		if (!wav_data)
 			throw std::runtime_error(pr::FmtS("LoadAudioFromFile: Allocation of %u bytes failed", file_size));
 

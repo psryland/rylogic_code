@@ -68,15 +68,13 @@ namespace view3d
 		,m_settings()
 		,m_bbox_scene(pr::BBoxReset)
 		,m_main_thread_id(std::this_thread::get_id())
+		,ReportError()
 	{
 		try
 		{
 			// Notes:
 			// - Don't observe the Context sources store for changes. The context handles this for us
-
-			// Attach the error handler
-			if (opts.m_error_cb != nullptr)
-				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
+			ReportError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
 
 			// Set the initial aspect ratio
 			auto rt_area = m_wnd.RenderTargetSize();
@@ -111,12 +109,6 @@ namespace view3d
 		m_scene.RemoveInstance(m_origin_point);
 		m_scene.RemoveInstance(m_bbox_model);
 		m_scene.RemoveInstance(m_selection_box);
-	}
-
-	// Report an error for this window
-	void Window::ReportError(wchar_t const* msg)
-	{
-		OnError.Raise(msg);
 	}
 
 	// Get/Set the scene viewport
@@ -448,20 +440,6 @@ namespace view3d
 		// Notify if changed
 		if (m_objects.size() != count)
 			ObjectContainerChanged(EView3DSceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
-
-		// Sanity check, make sure there are no other references to 'object' still
-		#if PR_DBG
-		{
-			pr::MultiCast<RenderingCB>::Lock mclock(OnRendering);
-			for (auto& cb : mclock)
-				assert(cb.m_ctx != object);
-		}
-		{
-			pr::MultiCast<SceneChangedCB>::Lock mclock(OnSceneChanged);
-			for (auto& cb : mclock)
-				assert(cb.m_ctx != object);
-		}
-		#endif
 	}
 
 	// Add/Remove a gizmo to this window
@@ -716,9 +694,9 @@ namespace view3d
 		// Callback function that is polled as fast as the message queue will allow
 		static auto const AnimTick = [](void* ctx)
 		{
-			auto this_ = reinterpret_cast<Window*>(ctx);
-			this_->Invalidate();
-			this_->OnAnimationEvent.Raise(this_, EView3DAnimCommand::Step, this_->m_anim_data.m_clock.load().count());
+			auto& me = *reinterpret_cast<Window*>(ctx);
+			me.Invalidate();
+			me.OnAnimationEvent(&me, EView3DAnimCommand::Step, me.m_anim_data.m_clock.load().count());
 		};
 
 		switch (command)
@@ -774,7 +752,7 @@ namespace view3d
 		}
 
 		// Notify of the animation event
-		OnAnimationEvent.Raise(this, command, m_anim_data.m_clock.load().count());
+		OnAnimationEvent(this, command, m_anim_data.m_clock.load().count());
 	}
 
 	// Convert a screen space point to a normalised screen space point
@@ -790,13 +768,13 @@ namespace view3d
 	// Invoke the settings changed callback
 	void Window::NotifySettingsChanged(EView3DSettings setting)
 	{
-		OnSettingsChanged.Raise(this, setting);
+		OnSettingsChanged(this, setting);
 	}
 
 	// Invoke the rendering event
 	void Window::NotifyRendering()
 	{
-		OnRendering.Raise(this);
+		OnRendering(this);
 	}
 
 	// Call InvalidateRect on the HWND associated with this window
@@ -806,7 +784,7 @@ namespace view3d
 			::InvalidateRect(m_hwnd, rect, erase);
 		
 		if (!m_invalidated)
-			OnInvalidated.Raise(this);
+			OnInvalidated(this);
 
 		// The window becomes validated again when 'Present()' or 'Validate()' is called.
 		m_invalidated = true;
@@ -834,7 +812,7 @@ namespace view3d
 
 		// Notify scene changed
 		View3DSceneChanged args = {change_type, context_ids, count, object};
-		OnSceneChanged.Raise(this, args);
+		OnSceneChanged(this, args);
 	}
 
 	// Show/Hide the object manager for the scene

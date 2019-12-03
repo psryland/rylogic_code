@@ -87,7 +87,7 @@ struct MainUI :Form
 			objB.VelocityWS(v4{0,0,0,0}, v4{-10,-10, 0, 0});
 
 			// Self detaching handler
-			static EventSub sub;
+			static Sub sub;
 			sub = m_physics.PostCollisionDetection += [&](Physics const&, std::vector<physics::Contact>& contacts)
 			{
 				(void)contacts;

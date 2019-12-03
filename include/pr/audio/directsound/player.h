@@ -28,9 +28,13 @@ namespace pr::sound
 		virtual void IDataStream_Close() = 0;
 	};
 		
-	// An type that plays a sound and manages filling a dsound buffer from a data stream
-	struct Player :pr::events::IRecv<Evt_SoundUpdate>
+	// A type that plays a sound and manages filling a dsound buffer from a data stream
+	struct Player
 	{
+		// Notes:
+		//  - A Player lives for the duration of a sound being played. For long running sounds (i.e. infinite loops)
+		//    the application main loop needs to periodically call 'Update' to keep the DX sound buffer filled.
+
 		D3DPtr<IDirectSoundBuffer8> m_buf; // The buffer this player is filling
 		IDataStream* m_src;                // The source of data
 		size_t m_buf_size;                 // The size of the buffer pointed to by 'm_buf'
@@ -53,11 +57,11 @@ namespace pr::sound
 			if (m_src)
 				m_src->IDataStream_Close();
 		}
-			
+
 		// Set this decoder to copy data from 'src' to 'buf'
-		// 'src' may be 0, in which case 'buf' will be filled with zeros
-		// 'buf' may be 0 to release the reference held by 'm_buf'
-		// looping is handled by the IDataStream. Is should wrap internally giving the impression of an infinitely long buffer
+		// 'src' may be nullptr, in which case 'buf' will be filled with zeros
+		// 'buf' may be nullptr to release the reference held by 'm_buf'
+		// Looping is handled by the IDataStream. It should wrap internally giving the impression of an infinitely long buffer
 		void Set(IDataStream* src, D3DPtr<IDirectSoundBuffer8>& buf)
 		{
 			if (m_src) m_src->IDataStream_Close();
@@ -65,23 +69,27 @@ namespace pr::sound
 			m_buf = buf;
 			m_buf_size = GetBufferSize(buf);
 			SetVolume(m_volume);
-			pr::Throw(m_buf->SetCurrentPosition(0));
+			Throw(m_buf->SetCurrentPosition(0));
 			Update(true);
 		}
-			
+
 		// Returns true while this player is playing
 		bool IsPlaying() const
 		{
-			if (!m_buf) return false;
-			DWORD status; pr::Throw(m_buf->GetStatus(&status));
+			if (!m_buf)
+				return false;
+
+			DWORD status;
+			Throw(m_buf->GetStatus(&status));
 			return (status & DSBSTATUS_PLAYING) != 0;
 		}
-			
+
 		// Set the playback volume
 		void SetVolume(float vol)
 		{
 			m_volume = vol;
-			if (m_buf) pr::sound::SetVolume(m_buf, vol);
+			if (m_buf)
+				sound::SetVolume(m_buf, vol);
 		}
 			
 		// Start the sample playing
@@ -90,7 +98,7 @@ namespace pr::sound
 			// The dsound buffer is played as looping because its size is independent of the src data size.
 			// For non-looped sounds we will call stop during Update() after all data has been read from the stream.
 			PR_ASSERT(PR_DBG_SND, m_buf, "");
-			pr::Throw(m_buf->Play(0, priority, DSBPLAY_LOOPING));
+			Throw(m_buf->Play(0, priority, DSBPLAY_LOOPING));
 			m_src_end = false;
 			m_loop = loop;
 		}
@@ -101,12 +109,14 @@ namespace pr::sound
 		void Stop()
 		{
 			if (!m_buf) return;
-			pr::Throw(m_buf->Stop());
+			Throw(m_buf->Stop());
 		}
-			
+
 		// Transfers more data from the source stream into the dsound buffer
 		void Update(bool force = false)
 		{
+			// This method should be called when the Sound raises the update event
+
 			// Only update if the sound is playing (under normal conditions)
 			if (!m_buf || !(force || IsPlaying()))
 				return;
@@ -136,8 +146,9 @@ namespace pr::sound
 			m_pos = (m_pos + read) % m_buf_size;
 			m_src_end = read == 0;
 		}
-			
+
 	private:
+
 		// Read 'count' bytes into 'ptr'. If the source stream returns less than
 		// 'count' bytes the remaining bytes in 'ptr' are filled with zeros.
 		// Returns the number of bytes read from the source stream.
@@ -158,9 +169,6 @@ namespace pr::sound
 			memset(ptr, 0, count); // Fill any remaining space with zeros
 			return src_read;
 		}
-			
-		// On the update event, call the update method
-		void OnEvent(Evt_SoundUpdate const&) { Update(); }
 	};
 		
 	// Some default DataStream implementations

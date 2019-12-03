@@ -387,9 +387,6 @@
     <ClInclude Include="..\include\pr\common\msgbox.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\multi_cast.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\threads\name_thread.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
@@ -1013,6 +1010,12 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\win32\key_codes.h">
       <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\event_handler.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\space_invaders.h">
+      <Filter>pr\app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

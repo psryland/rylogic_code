@@ -980,7 +980,7 @@ namespace Rylogic.Gfx
 		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
 
 		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
+		public delegate void AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete, ref bool cancel);
 
 		/// <summary>Callback for continuations after adding scripts/files</summary>
 		public delegate void OnAddCB(IntPtr ctx, ref Guid context_id, bool before);
@@ -1075,14 +1075,8 @@ namespace Rylogic.Gfx
 			try
 			{
 				// Initialise view3d
-				var init_error = (string?)null;
-				void ErrorCB(HTexture ctx, string msg) => init_error = msg;
-				m_context = View3D_Initialise(ErrorCB, IntPtr.Zero, CreateDeviceFlags);
-				if (m_context == HContext.Zero)
-					throw new Exception(init_error ?? "Failed to initialised View3d");
-
-				// Attach the global error handler
-				View3D_GlobalErrorCBSet(m_error_cb = HandleError, IntPtr.Zero, true);
+				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero, CreateDeviceFlags);
+				if (m_context == HContext.Zero) throw new Exception("Failed to initialised View3d");
 				void HandleError(IntPtr ctx, string msg)
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
@@ -1093,11 +1087,11 @@ namespace Rylogic.Gfx
 
 				// Sign up for progress reports
 				View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
-				bool HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete)
+				void HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete, ref bool cancel)
 				{
 					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
 					AddFileProgress?.Invoke(this, args);
-					return args.Cancel;
+					cancel = args.Cancel;
 				}
 
 				// Load script 'OnAdd' callbacks
@@ -1359,7 +1353,7 @@ namespace ldr
 		}
 
 		// Context
-		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB initialise_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
+		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB global_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
 		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
 		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);
@@ -1384,7 +1378,6 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowInvalidatedCB       (HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_WindowRenderingCB         (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3d_WindowSceneChangedCB      (HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowSceneChangedSuspend (HWindow window, bool suspend);
 		[DllImport(Dll)] private static extern void            View3D_WindowAddObject           (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObject        (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects    (HWindow window);
@@ -1549,8 +1542,7 @@ namespace ldr
 		// Gizmos
 		[DllImport(Dll)] private static extern HGizmo            View3D_GizmoCreate              (Gizmo.EMode mode, ref m4x4 o2w);
 		[DllImport(Dll)] private static extern void              View3D_GizmoDelete              (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoAttachCB            (HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void              View3D_GizmoDetachCB            (HGizmo gizmo, Gizmo.Callback cb);
+		[DllImport(Dll)] private static extern void              View3D_GizmoMovedCBSet          (HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_GizmoAttach              (HGizmo gizmo, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_GizmoDetach              (HGizmo gizmo, HObject obj);
 		[DllImport(Dll)] private static extern float             View3D_GizmoScaleGet            (HGizmo gizmo);

@@ -30,7 +30,7 @@ namespace pr
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
 			ShaderPtr                        m_vs;
 			ShaderPtr                        m_ps;
-			EventAutoSub                     m_eh_resize;    // RT resize
+			AutoSub                          m_eh_resize;    // RT resize
 
 			explicit GBuffer(Scene& scene);
 

@@ -1,7 +1,5 @@
 ﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using HGizmo = System.IntPtr;
@@ -22,31 +20,37 @@ namespace Rylogic.Gfx
 			//  is provided by the window it's been added to
 
 			public enum EMode { Translate, Rotate, Scale, };
-			public enum EEvent { StartManip, Moving, Commit, Revert };
+			public enum EState { StartManip, Moving, Commit, Revert };
 
 			public HGizmo m_handle; // The handle to the gizmo
 			private Callback m_cb;
 			private bool m_owned;   // True if 'm_handle' was created with this class
 
-			public Gizmo(EMode mode, m4x4 o2w)
+			private Gizmo(HGizmo handle, bool owned)
 			{
-				m_handle = View3D_GizmoCreate(mode, ref o2w);
-				if (m_handle == IntPtr.Zero) throw new Exception("View3D.Gizmo creation failed");
-				m_owned = true;
-				View3D_GizmoAttachCB(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero);
+				if (handle == IntPtr.Zero)
+					throw new ArgumentNullException("handle");
+
+				m_handle = handle;
+				m_owned = owned;
+				View3D_GizmoMovedCBSet(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero, true);
+				void HandleGizmoMoved(IntPtr ctx, HGizmo gizmo, EState state)
+				{
+					if (gizmo != m_handle) throw new Exception("Gizmo move event from a different gizmo instance received");
+					Moved?.Invoke(this, new MovedEventArgs(state));
+				}
 			}
 			public Gizmo(HGizmo handle)
-			{
-				if (handle == IntPtr.Zero) throw new ArgumentNullException("handle");
-				m_handle = handle;
-				m_owned = false;
-				View3D_GizmoAttachCB(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero);
-			}
+				:this(handle, false)
+			{}
+			public Gizmo(EMode mode, m4x4 o2w)
+				:this(View3D_GizmoCreate(mode, ref o2w), true)
+			{}
 			public void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HObject.Zero) return;
-				View3D_GizmoDetachCB(m_handle, m_cb);
+				View3D_GizmoMovedCBSet(m_handle, m_cb, IntPtr.Zero, false);
 				if (m_owned) View3D_GizmoDelete(m_handle);
 				m_cb = null!;
 				m_handle = HObject.Zero;
@@ -91,17 +95,6 @@ namespace Rylogic.Gfx
 
 			/// <summary>Raised whenever the gizmo is manipulated</summary>
 			public event EventHandler<MovedEventArgs>? Moved;
-			public class MovedEventArgs : EventArgs
-			{
-				/// <summary>The type of movement event this is</summary>
-				public EEvent Type { get; private set; }
-
-				[DebuggerStepThrough]
-				public MovedEventArgs(EEvent type)
-				{
-					Type = type;
-				}
-			}
 
 			/// <summary>Attach an object directly to the gizmo that will move with it</summary>
 			public void Attach(Object obj)
@@ -115,22 +108,8 @@ namespace Rylogic.Gfx
 				View3D_GizmoDetach(m_handle, obj.Handle);
 			}
 
-			/// <summary>Handle the callback from the native code for when the gizmo moves</summary>
-			private void HandleGizmoMoved(HGizmo ctx, ref Evt_Gizmo args)
-			{
-				if (args.m_gizmo != m_handle) throw new Exception("Gizmo move event from a different gizmo instance received");
-				Moved?.Invoke(this, new MovedEventArgs(args.m_state));
-			}
-
 			/// <summary>Callback function type and data from the native gizmo object</summary>
-			internal delegate void Callback(IntPtr ctx, ref Evt_Gizmo args);
-
-			[StructLayout(LayoutKind.Sequential)]
-			internal struct Evt_Gizmo
-			{
-				public IntPtr m_gizmo;
-				public EEvent m_state;
-			}
+			internal delegate void Callback(IntPtr ctx, HGizmo gizmo, EState state);
 
 			#region Equals
 			public static bool operator ==(Gizmo? lhs, Gizmo? rhs)
@@ -152,6 +131,19 @@ namespace Rylogic.Gfx
 			public override int GetHashCode()
 			{
 				return m_handle.GetHashCode();
+			}
+			#endregion
+
+			#region EventArgs
+			public class MovedEventArgs :EventArgs
+			{
+				public MovedEventArgs(EState type)
+				{
+					Type = type;
+				}
+
+				/// <summary>The type of movement event this is</summary>
+				public EState Type { get; }
 			}
 			#endregion
 		}

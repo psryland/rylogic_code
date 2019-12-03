@@ -22,6 +22,7 @@ namespace las
 	//	Ship           m_ship;
 	//	Terrain        m_terrain;
 
+		static wchar_t const* AppName() { return L"LostAtSea"; }
 		Main(MainGUI& gui);
 
 		// Advance the game by one frame
@@ -37,8 +38,8 @@ namespace las
 	// Main app window
 	struct MainGUI :pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>
 	{
+		static wchar_t const* AppTitle() { return L"Lost at Sea"; }
 		MainGUI(wchar_t const* lpstrCmdLine, int nCmdShow);
-		static char const* AppName() { return "Lost At Sea"; }
 
 		//BOOL    OnIdle(int);
 		//LRESULT OnCreate(LPCREATESTRUCT);

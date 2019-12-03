@@ -77,6 +77,7 @@ namespace pr
 		std::recursive_mutex m_d3d_mutex;
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
+		bool m_last_task;
 		PollCBList m_poll_callbacks;
 		HWND m_dummy_hwnd;
 		std::atomic_int m_id32_src;
@@ -196,6 +197,7 @@ namespace pr
 		{
 			{
 				std::lock_guard<std::mutex> lock(m_mutex_task_queue);
+				if (m_last_task) return; // Don't add further tasks after 'LastTask' has been called.
 				m_task_queue.emplace_back(std::async(policy, func, args...));
 			}
 
@@ -223,6 +225,9 @@ namespace pr
 
 		// Execute any pending tasks in the task queue. Must be called from the Main/GUI thread
 		void RunTasks();
+
+		// Call this during shutdown to flush the task queue and prevent any further tasks from being added.
+		void LastTask();
 
 		// Add/Remove a callback function that will be polled as fast as the windows message queue will allow
 		void AddPollCB(pr::StaticCB<void> cb)

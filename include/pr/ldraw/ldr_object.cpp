@@ -624,7 +624,7 @@ namespace pr::ldr
 		case EKeyword::ScreenSpace:
 			{
 				// Use a magic number to signal screen space mode to the ApplyState function
-				obj->m_screen_space = EventSub((evt::IEventHandler*)1, 0);
+				obj->m_screen_space = Sub((multicast::IMultiCast*)1, 0);
 				return true;
 			}
 		case EKeyword::Font:
@@ -4706,7 +4706,7 @@ namespace pr::ldr
 	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
 	{
 		edit_cb(object->m_model.get(), ctx, rdr);
-		pr::events::Send(Evt_LdrObjectChg(object));
+		//pr::events::Send(Evt_LdrObjectChg(object));
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
@@ -4778,7 +4778,7 @@ namespace pr::ldr
 			return false;
 		});
 
-		pr::events::Send(Evt_LdrObjectChg(object));
+		//pr::events::Send(Evt_LdrObjectChg(object));
 	}
 
 	// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
@@ -4879,7 +4879,6 @@ namespace pr::ldr
 	}
 	LdrObject::~LdrObject()
 	{
-		PR_EXPAND(PR_DBG, pr::events::Send(Evt_LdrObjectDestruct(this)));
 		PR_EXPAND(PR_DBG, g_ldr_object_tracker.remove(this));
 	}
 
@@ -5021,7 +5020,7 @@ namespace pr::ldr
 	bool LdrObject::ScreenSpace() const
 	{
 		auto obj = Child("");
-		return obj ? obj->m_screen_space : false;
+		return obj ? static_cast<bool>(obj->m_screen_space) : false;
 	}
 	void LdrObject::ScreenSpace(bool screen_space)
 	{

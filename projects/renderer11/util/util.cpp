@@ -316,19 +316,5 @@ namespace pr
 			}
 			*num_bytes = *row_bytes * *num_rows;
 		}
-
-		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
-		bool TestSystemCompatibility()
-		{
-			try
-			{
-				pr::events::Send(Evt_CompatibilityTest());
-				return true;
-			}
-			catch (std::exception const&)
-			{
-				return false;
-			}
-		}
 	}
 }

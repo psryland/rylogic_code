@@ -170,6 +170,8 @@ namespace pr
 		,m_d3d_mutex()
 		,m_mutex_task_queue()
 		,m_task_queue()
+		,m_last_task(false)
+		,m_poll_callbacks()
 		,m_dummy_hwnd()
 		,m_id32_src()
 		,m_bs_mgr(m_settings.m_mem, This())
@@ -211,6 +213,8 @@ namespace pr
 	}
 	Renderer::~Renderer()
 	{
+		LastTask();
+
 		// Release the dummy window
 		if (m_dummy_hwnd != nullptr)
 		{
@@ -245,6 +249,25 @@ namespace pr
 				throw;
 			}
 		}
+	}
+
+	// Call this during shutdown to flush the task queue and prevent any further tasks from being added.
+	void Renderer::LastTask()
+	{
+		if (GetCurrentThreadId() != m_main_thread_id)
+			throw std::runtime_error("LastTask must be called from the main thread");
+
+		// Idempotent
+		if (m_last_task)
+			return;
+
+		{// Block any further tasks being added
+			std::lock_guard<std::mutex> lock(m_mutex_task_queue);
+			m_last_task = true;
+		}
+
+		// Run tasks left in the queue
+		RunTasks();
 	}
 
 	// Call all registered poll event callbacks

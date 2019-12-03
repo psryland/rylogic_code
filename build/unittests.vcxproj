@@ -46,6 +46,7 @@
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
     <ClInclude Include="..\include\pr\app\skybox.h" />
+    <ClInclude Include="..\include\pr\app\space_invaders.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
     <ClInclude Include="..\include\pr\collision\collision.h" />
@@ -103,7 +104,7 @@
     <ClInclude Include="..\include\pr\common\memstream.h" />
     <ClInclude Include="..\include\pr\common\min_max_fix.h" />
     <ClInclude Include="..\include\pr\common\msgbox.h" />
-    <ClInclude Include="..\include\pr\common\multi_cast.h" />
+    <ClInclude Include="..\include\pr\common\event_handler.h" />
     <ClInclude Include="..\include\pr\common\new.h" />
     <ClInclude Include="..\include\pr\common\number.h" />
     <ClInclude Include="..\include\pr\common\objectpool.h" />

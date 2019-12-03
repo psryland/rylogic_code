@@ -21,8 +21,6 @@
 #define _RICHEDIT_VER 0x0300//0x0200
 #endif
 
-#include "pr/common/min_max_fix.h"
-
 // std
 #include <iostream>
 #include <string>
@@ -37,6 +35,7 @@
 #include <thread>
 
 // pr
+#include "pr/common/min_max_fix.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/count_of.h"
 #include "pr/common/assert.h"
@@ -44,7 +43,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/fmt.h"
 #include "pr/common/command_line.h"
-#include "pr/common/events.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/stop_watch.h"
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"
@@ -74,11 +73,15 @@ namespace pr::app
 	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
 	#undef PR_ENUM
 
-	typedef pr::Exception<EResult> Exception;
-	typedef pr::string<wchar_t> wstring;
-	typedef pr::string<char>    string;
+	using Exception = pr::Exception<EResult>;
 
 	struct IAppMainGui;
-	template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
 	template <typename UserSettings, typename MainGUI> struct Main;
+	template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
+
+	// Forward declaration of the function to create the gui instance. Apps must implement this function.
+	std::unique_ptr<IAppMainGui> CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow);
+	//{
+	//	return std::unique_ptr<IAppMainGui>(new MyAppMainGui(cmdline, nCmdShow));
+	//}
 }

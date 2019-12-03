@@ -28,7 +28,7 @@
 #include "pr/common/new.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/static_callback.h"
-#include "pr/common/multi_cast.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/cast.h"
 #include "pr/common/bstr_t.h"
 #include "pr/common/flags_enum.h"
@@ -74,9 +74,8 @@ namespace view3d
 	using EditorCont            = std::unordered_set<EditorPtr>;
 	using LockGuard             = std::lock_guard<std::recursive_mutex>;
 	using OnAddCB               = std::function<void(pr::Guid const&, bool)>;
-	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 	using SettingsChangedCB     = pr::StaticCB<void, Window*, EView3DSettings>;
-	using AddFileProgressCB     = pr::StaticCB<BOOL, pr::Guid const&, wchar_t const*, long long, BOOL>;
+	using AddFileProgressCB     = pr::StaticCB<void, pr::Guid const&, wchar_t const*, long long, BOOL, BOOL*>;
 	using SourcesChangedCB      = pr::StaticCB<void, EView3DSourcesChangedReason, BOOL>;
 	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
 	using InvalidatedCB         = pr::StaticCB<void, Window*>;
@@ -99,4 +98,30 @@ namespace view3d
 		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
 	PR_RDR_DEFINE_INSTANCE(PointInstance, PR_RDR_INST)
 	#undef PR_RDR_INST
+}
+
+// Maths type traits
+namespace pr
+{
+	namespace maths
+	{
+		template <> struct is_vec<View3DV2> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 2;
+		};
+		template <> struct is_vec<View3DV4> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<View3DM4x4> :std::true_type
+		{
+			using elem_type = View3DV4;
+			using cp_type = typename is_vec<View3DV4>::cp_type;
+			static int const dim = 4;
+		};
+	}
 }

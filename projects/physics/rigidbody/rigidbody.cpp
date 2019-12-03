@@ -6,6 +6,7 @@
 #include "physics/utility/stdafx.h"
 #include "pr/physics/rigidbody/rigidbody.h"
 #include "pr/physics/utility/globalfunctions.h"
+#include "pr/physics/utility/event_types.h"
 #include "pr/physics/utility/events.h"
 #include "physics/utility/assert.h"
 #include "physics/utility/debug.h"

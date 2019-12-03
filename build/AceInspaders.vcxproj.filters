@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{744660b6-01bd-40a7-9dcd-78b86d78dbb9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\app">
+      <UniqueIdentifier>{15ff241f-7570-4209-b772-b7c849b3632d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\pr\app\gfx_1bit.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\AceInspaders\src\space_invaders.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\forward.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\main.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\main_gui.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\default_setup.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\include\pr\app\entry_point.cpp">
+      <Filter>pr\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\AceInspaders\src\ace_inspaders.h">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

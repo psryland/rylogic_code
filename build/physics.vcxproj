@@ -107,6 +107,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\pr\physics\broadphase\bpentity.h" />
     <ClInclude Include="..\include\pr\physics\collision\collisioncache.h" />
+    <ClInclude Include="..\include\pr\physics\utility\events.h" />
     <ClInclude Include="..\projects\physics\broadphase\bppair.h" />
     <ClInclude Include="..\include\pr\physics\broadphase\broadphasebrute.h" />
     <ClInclude Include="..\include\pr\physics\broadphase\broadphasesnp.h" />
@@ -148,7 +149,7 @@
     <ClInclude Include="..\include\pr\physics\types\forward.h" />
     <ClInclude Include="..\projects\physics\utility\assert.h" />
     <ClInclude Include="..\projects\physics\utility\debug.h" />
-    <ClInclude Include="..\include\pr\physics\utility\events.h" />
+    <ClInclude Include="..\include\pr\physics\utility\event_types.h" />
     <ClInclude Include="..\include\pr\physics\utility\globalfunctions.h" />
     <ClInclude Include="..\include\pr\physics\utility\ldrhelper.h" />
     <ClInclude Include="..\projects\physics\utility\ldrhelper_private.h" />

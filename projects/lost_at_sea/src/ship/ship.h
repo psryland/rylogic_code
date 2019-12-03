@@ -11,17 +11,17 @@
 namespace las
 {
 	struct Ship
-		:pr::events::IRecv<Evt_AddToViewport>
 	{
 		#define PR_RDR_INST(x)\
-			x(pr::rdr::ModelPtr ,m_model ,EInstComp::ModelPtr)\
-			x(pr::m4x4          ,m_i2w   ,EInstComp::I2WTransform)
+			x(rdr::ModelPtr ,m_model ,rdr::EInstComp::ModelPtr)\
+			x(m4x4          ,m_i2w   ,rdr::EInstComp::I2WTransform)
 		PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
-		Instance m_inst;           // The ship instance
-		
-		Ship(pr::Renderer& rdr);
-		void OnEvent(las::Evt_AddToViewport const& e);
+		// The ship instance
+		Instance m_inst;
+
+		Ship(Renderer& rdr);
+		void AddToScene(Scene& scene);
 	};
 }

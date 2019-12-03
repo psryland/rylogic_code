@@ -1,4 +1,4 @@
-﻿//#define PR_VIEW3D_CREATE_STACKTRACE
+//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,26 +19,28 @@ namespace Rylogic.Gfx
 		public sealed class Window :IDisposable
 		{
 			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error call back)
-			private readonly ReportErrorCB m_error_cb;          // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly InvalidatedCB m_invalidated_cb;    // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private readonly AnimationCB m_animation_cb;        // A local reference to prevent the callback being garbage collected
 
-			public Window(View3d view, HWND hwnd, WindowOptions opts)
+			public Window(View3d view, HWND hwnd, bool? gdi_compatible_backbuffer = null, int? multi_sampling = null, string? dbg_name = null)
 			{
 				View = view;
 				Hwnd = hwnd;
-				m_opts = opts;
+				m_opts = new WindowOptions
+				{
+					ErrorCB = HandleError,
+					ErrorCBCtx = IntPtr.Zero,
+					GdiCompatibleBackBuffer = gdi_compatible_backbuffer ?? false,
+					Multisampling = multi_sampling ?? 4,
+					DbgName = dbg_name ?? string.Empty,
+				};
 
 				// Create the window
-				Handle = View3D_WindowCreate(hwnd, ref opts);
-				if (Handle == null)
-					throw new Exception("Failed to create View3D window");
-
-				// Attach the global error handler
-				View3D_WindowErrorCBSet(Handle, m_error_cb = HandleError, IntPtr.Zero, true);
+				Handle = View3D_WindowCreate(hwnd, ref m_opts);
+				if (Handle == null) throw new Exception("Failed to create View3D window");
 				void HandleError(IntPtr ctx, string msg) => Error?.Invoke(this, new ErrorEventArgs(msg));
 
 				// Set up a callback for when settings are changed
@@ -79,8 +81,8 @@ namespace Rylogic.Gfx
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, IntPtr.Zero, false);
 				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
 				View3D_WindowRenderingCB(Handle, m_render_cb, IntPtr.Zero, false);
+				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb, IntPtr.Zero, false);
 				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, IntPtr.Zero, false);
-				View3D_WindowErrorCBSet(Handle, m_error_cb, IntPtr.Zero, false);
 				View3D_WindowDestroy(Handle);
 				Handle = HWindow.Zero;
 			}
@@ -272,14 +274,6 @@ namespace Rylogic.Gfx
 					EnumObjects(x => objs.Add(x));
 					return objs.ToArray();
 				}
-			}
-
-			/// <summary>Suspend scene changed events</summary>
-			public Scope SuspendSceneChanged()
-			{
-				return Scope.Create(
-					() => View3D_WindowSceneChangedSuspend(Handle, true),
-					() => View3D_WindowSceneChangedSuspend(Handle, false));
 			}
 
 			/// <summary>Add an object to the window</summary>

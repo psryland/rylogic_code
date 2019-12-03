@@ -32,9 +32,9 @@
 #include "pr/common/exception.h"
 //#include "pr/common/hresult.h"
 //#include "pr/common/d3dptr.h"
-#include "pr/str/to_string.h"
-#include "pr/common/events.h"
 #include "pr/common/fmt.h"
+#include "pr/common/event_handler.h"
+#include "pr/str/to_string.h"
 //#include "pr/common/refcount.h"
 //#include "pr/common/refptr.h"
 //#include "pr/common/hash.h"
@@ -60,6 +60,8 @@
 
 namespace las
 {
+	using namespace pr;
+	using namespace pr::rdr;
 	using namespace pr::gui;
 	using namespace pr::app;
 
@@ -72,14 +74,11 @@ namespace las
 	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, UINT);
 	#undef PR_ENUM
 
-	typedef pr::Exception<EResult> Exception;
-	typedef pr::string<> string;
-	typedef pr::string<wchar_t> wstring;
+	using Exception = pr::Exception<EResult>;
 
 	struct Main;
 	struct MainGUI;
 
-	wchar_t const* AppTitle();
 	wchar_t const* AppVersionW();
 	char const*    AppVersionA();
 	wchar_t const* AppVendor();

@@ -19,175 +19,166 @@
 #include <type_traits>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
-#include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/common/hash.h"
+#include "pr/common/event_handler.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
 #include "pr/str/string_util.h"
 #include "pr/str/string.h"
 
-namespace pr
+namespace pr::settings
 {
-	namespace settings
+	// Export/Import function overloads - overload as necessary (with appropriate return types)
+	//template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable pr::settings::Write() overload for this type"); return t; }
+	//template <typename T> inline bool     Read(pr::script::Reader& reader, T& t) { static_assert(false, "No suitable pr::settings::Read() overload for this type"); }
+}
+namespace pr::settings
+{
+	using string = pr::string<wchar_t>;
+	using Reader = pr::script::Reader;
+
+	// Export function overloads
+	inline string Write(bool t)
 	{
-		// Export/Import function overloads - overload as necessary (with appropriate return types)
-		//template <typename T> inline T const& Write(T const& t)                      { static_assert(false, "No suitable pr::settings::Write() overload for this type"); return t; }
-		//template <typename T> inline bool     Read(pr::script::Reader& reader, T& t) { static_assert(false, "No suitable pr::settings::Read() overload for this type"); }
+		return t ? L"true" : L"false";
+	}
+	inline string Write(float t)
+	{
+		return pr::FmtS(L"%g", t);
+	}
+	inline string Write(int t)
+	{
+		return pr::FmtS(L"%d", t);
+	}
+	inline string Write(unsigned int t)
+	{
+		return pr::FmtS(L"%u", t);
+	}
+	inline string Write(unsigned __int64 t)
+	{
+		return pr::FmtS(L"%u", t);
+	}
+	inline string Write(pr::v2 const& t)
+	{
+		return pr::FmtS(L"%f %f", t.x, t.y);
+	}
+	inline string Write(pr::v4 const& t)
+	{
+		return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w);
+	}
+	inline string Write(pr::Colour32 t)
+	{
+		return pr::FmtS(L"%08X", t.argb);
+	}
+	inline string Write(wchar_t const* t)
+	{
+		auto s = pr::str::StringToCString<string>(t);
+		s = str::Quotes(s, true);
+		return s;
+	}
+	template <typename Char> inline string Write(std::basic_string<Char> const& t)
+	{
+		return Write(t.c_str());
+	}
+	inline string Write(char const* t)
+	{
+		return Write(Widen(t));
+	}
+	template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		if constexpr (is_reflected_enum<TEnum>::value)
+		{
+			return Enum<TEnum>::ToStringW(x);
+		}
+		else
+		{
+			return Write(ut(x));
+		}
+	}
+
+	// Import function helper overloads
+	inline bool Read(Reader& reader, bool& t)
+	{
+		return reader.BoolS(t);
+	}
+	inline bool Read(Reader& reader, float& t)
+	{
+		return reader.RealS(t);
+	}
+	inline bool Read(Reader& reader, int& t)
+	{
+		return reader.IntS(t, 10);
+	}
+	inline bool Read(Reader& reader, unsigned int& t)
+	{
+		return reader.IntS(t, 10);
+	}
+	inline bool Read(Reader& reader, unsigned __int64& t)
+	{
+		return reader.IntS(t, 10);
+	}
+	inline bool Read(Reader& reader, pr::v2& t)
+	{
+		return reader.Vector2S(t);
+	}
+	inline bool Read(Reader& reader, pr::v4& t)
+	{
+		return reader.Vector4S(t);
+	}
+	inline bool Read(Reader& reader, pr::Colour32& t)
+	{
+		return reader.IntS(t.argb, 16);
+	}
+	inline bool Read(Reader& reader, std::string& t)
+	{
+		return reader.CStringS(t);
+	}
+	inline bool Read(Reader& reader, std::wstring& t)
+	{
+		return reader.CStringS(t);
+	}
+	template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		if constexpr (is_reflected_enum<TEnum>::value)
+		{
+			std::string ident;
+			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
+		}
+		else
+		{
+			return reader.IntS(reinterpret_cast<ut&>(x), 10);
+		}
 	}
 }
 namespace pr
 {
-	namespace settings
-	{
-		using string = pr::string<wchar_t>;
-		using Reader = pr::script::Reader;
-
-		// Export function overloads
-		inline string Write(bool t)
-		{
-			return t ? L"true" : L"false";
-		}
-		inline string Write(float t)
-		{
-			return pr::FmtS(L"%g", t);
-		}
-		inline string Write(int t)
-		{
-			return pr::FmtS(L"%d", t);
-		}
-		inline string Write(unsigned int t)
-		{
-			return pr::FmtS(L"%u", t);
-		}
-		inline string Write(unsigned __int64 t)
-		{
-			return pr::FmtS(L"%u", t);
-		}
-		inline string Write(pr::v2 const& t)
-		{
-			return pr::FmtS(L"%f %f", t.x, t.y);
-		}
-		inline string Write(pr::v4 const& t)
-		{
-			return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w);
-		}
-		inline string Write(pr::Colour32 t)
-		{
-			return pr::FmtS(L"%08X", t.argb);
-		}
-		inline string Write(wchar_t const* t)
-		{
-			auto s = pr::str::StringToCString<string>(t);
-			s = str::Quotes(s, true);
-			return s;
-		}
-		template <typename Char> inline string Write(std::basic_string<Char> const& t)
-		{
-			return Write(t.c_str());
-		}
-		inline string Write(char const* t)
-		{
-			return Write(Widen(t));
-		}
-		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			if constexpr (is_reflected_enum<TEnum>::value)
-			{
-				return Enum<TEnum>::ToStringW(x);
-			}
-			else
-			{
-				return Write(ut(x));
-			}
-		}
-
-		// Import function helper overloads
-		inline bool Read(Reader& reader, bool& t)
-		{
-			return reader.BoolS(t);
-		}
-		inline bool Read(Reader& reader, float& t)
-		{
-			return reader.RealS(t);
-		}
-		inline bool Read(Reader& reader, int& t)
-		{
-			return reader.IntS(t, 10);
-		}
-		inline bool Read(Reader& reader, unsigned int& t)
-		{
-			return reader.IntS(t, 10);
-		}
-		inline bool Read(Reader& reader, unsigned __int64& t)
-		{
-			return reader.IntS(t, 10);
-		}
-		inline bool Read(Reader& reader, pr::v2& t)
-		{
-			return reader.Vector2S(t);
-		}
-		inline bool Read(Reader& reader, pr::v4& t)
-		{
-			return reader.Vector4S(t);
-		}
-		inline bool Read(Reader& reader, pr::Colour32& t)
-		{
-			return reader.IntS(t.argb, 16);
-		}
-		inline bool Read(Reader& reader, std::string& t)
-		{
-			return reader.CStringS(t);
-		}
-		inline bool Read(Reader& reader, std::wstring& t)
-		{
-			return reader.CStringS(t);
-		}
-		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			if constexpr (is_reflected_enum<TEnum>::value)
-			{
-				std::string ident;
-				return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
-			}
-			else
-			{
-				return reader.IntS(reinterpret_cast<ut&>(x), 10);
-			}
-		}
-
-		// An event generated if there is an error parsing the settings
-		// Specialised by each settings type.
-		template <typename TSettings> struct Evt
-		{
-			enum ELevel { Warning, Error };
-			std::string m_msg;
-			ELevel m_level;
-			Evt(std::string msg, ELevel level)
-				:m_msg(msg)
-				,m_level(level)
-			{}
-		};
-	}
-
 	// A base class for settings types
 	template<typename TSettings> struct SettingsBase
 	{
-		// Create an event for this settings type
-		using Evt = typename pr::settings::Evt<TSettings>;
-
 		std::filesystem::path m_filepath; // The file path to save the settings
 		std::size_t m_crc;                // The CRC of the settings last time they were saved
 		std::string m_comments;           // Comments to add to the head of the exported settings
 
 		// Settings constructor
-		SettingsBase(std::filesystem::path const& filepath)
+		SettingsBase(std::filesystem::path const& filepath, bool throw_on_error = true)
 			:m_filepath(filepath)
 			,m_crc()
 			,m_comments()
-		{}
+		{
+			if (throw_on_error)
+			{
+				OnError += [](auto&, ErrorEventArgs const& err)
+				{
+					throw std::runtime_error(Narrow(err.m_msg));
+				};
+			}
+		}
+
+		// Raised on error conditions
+		EventHandler<SettingsBase&, ErrorEventArgs const&> OnError;
 
 		// Load settings from file
 		bool Load()
@@ -198,18 +189,12 @@ namespace pr
 		{
 			m_filepath = file;
 			if (!std::filesystem::exists(m_filepath))
-			{
-				pr::events::Send(Evt(pr::FmtS("User settings file '%S' not found", m_filepath.c_str()), Evt::Warning));
-				return false;
-			}
+				OnError(*this, { Fmt(L"User settings file '%s' not found", m_filepath.c_str()) });
 
 			// Read the settings into a buffer
 			std::string settings;
 			if (!pr::filesys::FileToBuffer(m_filepath, settings))
-			{
-				pr::events::Send(Evt(pr::FmtS("User settings file '%S' could not be read", m_filepath.c_str()), Evt::Error));
-				return false;
-			}
+				OnError(*this, { Fmt(L"User settings file '%s' could not be read", m_filepath.c_str()) });
 
 			return Import(settings);
 		}
@@ -226,14 +211,14 @@ namespace pr
 			auto dir = m_filepath.parent_path();
 			if (!std::filesystem::exists(dir) && !std::filesystem::create_directories(dir))
 			{
-				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
+				OnError(*this, { Fmt(L"Failed to save user settings file '%S'", m_filepath.c_str()) });
 				return false;
 			}
 
 			auto settings = Export();
 			if (!pr::BufferToFile(settings, m_filepath))
 			{
-				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%S'",m_filepath.c_str()), Evt::Error));
+				OnError(*this, { Fmt(L"Failed to save user settings file '%S'", m_filepath.c_str()) });
 				return false;
 			}
 
@@ -300,7 +285,7 @@ namespace pr
 			}
 			catch (std::exception const& e)
 			{
-				pr::events::Send(Evt(pr::FmtS("Error found while parsing user settings.\n%s", e.what()), Evt::Error));
+				OnError(*this, { Fmt(L"Error found while parsing user settings.\n%S", e.what()) });
 			}
 
 			// Initialise to defaults on failure

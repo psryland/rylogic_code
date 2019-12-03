@@ -36,7 +36,7 @@
 #include "pr/common/log.h"
 #include "pr/common/hresult.h"
 #include "pr/common/refptr.h"
-#include "pr/common/multi_cast.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/static_callback.h"
 #include "pr/common/cast.h"
 #include "pr/common/scope.h"

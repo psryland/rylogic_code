@@ -218,7 +218,7 @@ extern "C"
 		Animation    = 1 << 8,
 		_bitwise_operators_allowed,
 	};
-	enum class EView3DGizmoEvent :int // ELdrGizmoEvent 
+	enum class EView3DGizmoState :int // ELdrGizmoEvent 
 	{
 		StartManip,
 		Moving,
@@ -542,11 +542,6 @@ extern "C"
 		float m_min_depth;
 		float m_max_depth;
 	};
-	struct View3DGizmoEvent
-	{
-		View3DGizmo       m_gizmo;
-		EView3DGizmoEvent m_state;
-	};
 	struct View3DIncludes
 	{
 		wchar_t const* m_include_paths; // A comma or semicolon separated list of search directories
@@ -580,14 +575,14 @@ extern "C"
 	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window, EView3DSettings setting);
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
-	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
+	using View3D_AddFileProgressCB     = void (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete, BOOL* cancel);
 	using View3D_OnAddCB               = void (__stdcall *)(void* ctx, GUID const& context_id, BOOL before);
 	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, EView3DSourcesChangedReason reason, BOOL before);
 	using View3D_InvalidatedCB         = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
 	using View3D_AnimationCB           = void (__stdcall *)(void* ctx, View3DWindow window, EView3DAnimCommand command, double clock);
-	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
+	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmo gizmo, EView3DGizmoState state);
 	using View3D_EditObjectCB          = void (__stdcall *)(
 		void* ctx,             // User callback context pointer
 		UINT32 vcount,         // The maximum size of 'verts'
@@ -632,7 +627,6 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_WindowInvalidatedCB      (View3DWindow window, View3D_InvalidatedCB invalidated_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3d_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void         __stdcall View3D_WindowSceneChangedSuspend(View3DWindow window, BOOL suspend);
 	VIEW3D_API void         __stdcall View3D_WindowAddObject          (View3DWindow window, View3DObject object);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveObject       (View3DWindow window, View3DObject object);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
@@ -797,22 +791,21 @@ extern "C"
 	VIEW3D_API void __stdcall View3D_ShowAngleTool            (View3DWindow window, BOOL show);
 
 	// Gizmos
-	VIEW3D_API View3DGizmo      __stdcall View3D_GizmoCreate              (EView3DGizmoMode mode, View3DM4x4 const& o2w);
-	VIEW3D_API void             __stdcall View3D_GizmoDelete              (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoAttachCB            (View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx);
-	VIEW3D_API void             __stdcall View3D_GizmoDetachCB            (View3DGizmo gizmo, View3D_GizmoMovedCB cb);
-	VIEW3D_API void             __stdcall View3D_GizmoAttach              (View3DGizmo gizmo, View3DObject obj);
-	VIEW3D_API void             __stdcall View3D_GizmoDetach              (View3DGizmo gizmo, View3DObject obj);
-	VIEW3D_API float            __stdcall View3D_GizmoScaleGet            (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoScaleSet            (View3DGizmo gizmo, float scale);
-	VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode             (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetMode             (View3DGizmo gizmo, EView3DGizmoMode mode);
-	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetO2W              (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetO2W              (View3DGizmo gizmo, View3DM4x4 const& o2w);
-	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetOffset           (View3DGizmo gizmo);
-	VIEW3D_API BOOL             __stdcall View3D_GizmoEnabled             (View3DGizmo gizmo);
-	VIEW3D_API void             __stdcall View3D_GizmoSetEnabled          (View3DGizmo gizmo, BOOL enabled);
-	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating        (View3DGizmo gizmo);
+	VIEW3D_API View3DGizmo      __stdcall View3D_GizmoCreate       (EView3DGizmoMode mode, View3DM4x4 const& o2w);
+	VIEW3D_API void             __stdcall View3D_GizmoDelete       (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoMovedCBSet   (View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx, BOOL add);
+	VIEW3D_API void             __stdcall View3D_GizmoAttach       (View3DGizmo gizmo, View3DObject obj);
+	VIEW3D_API void             __stdcall View3D_GizmoDetach       (View3DGizmo gizmo, View3DObject obj);
+	VIEW3D_API float            __stdcall View3D_GizmoScaleGet     (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoScaleSet     (View3DGizmo gizmo, float scale);
+	VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode      (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoSetMode      (View3DGizmo gizmo, EView3DGizmoMode mode);
+	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetO2W       (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoSetO2W       (View3DGizmo gizmo, View3DM4x4 const& o2w);
+	VIEW3D_API View3DM4x4       __stdcall View3D_GizmoGetOffset    (View3DGizmo gizmo);
+	VIEW3D_API BOOL             __stdcall View3D_GizmoEnabled      (View3DGizmo gizmo);
+	VIEW3D_API void             __stdcall View3D_GizmoSetEnabled   (View3DGizmo gizmo, BOOL enabled);
+	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating (View3DGizmo gizmo);
 
 	// Miscellaneous
 	VIEW3D_API void       __stdcall View3D_Flush                    ();

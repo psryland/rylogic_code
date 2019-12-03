@@ -3,7 +3,9 @@
 #include <sdkddkver.h>
 
 // Headers to unit test
+#include "pr\app\default_setup.h"
 #include "pr\app\forward.h"
+#include "pr\app\gfx_1bit.h"
 #include "pr\app\gimble.h"
 #include "pr\app\main.h"
 #include "pr\app\main_gui.h"
@@ -60,8 +62,7 @@
 #include "pr\common\d3dptr.h"
 #include "pr\common\datetime.h"
 #include "pr\common\enumerable.h"
-#include "pr\common\event.h"
-#include "pr\common\events.h"
+#include "pr\common\event_handler.h"
 #include "pr\common\exception.h"
 #include "pr\common\expr_eval.h"
 #include "pr\common\flags_enum.h"
@@ -80,7 +81,6 @@
 #include "pr\common\memstream.h"
 #include "pr\common\min_max_fix.h"
 #include "pr\common\msgbox.h"
-#include "pr\common\multi_cast.h"
 #include "pr\common\new.h"
 #include "pr\common\number.h"
 #include "pr\common\objectpool.h"

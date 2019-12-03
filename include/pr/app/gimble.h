@@ -8,34 +8,34 @@
 namespace pr::app
 {
 	// A gimble model
-	struct Gimble :pr::events::IRecv<pr::rdr::Evt_UpdateScene>
+	struct Gimble
 	{
 		// A renderer instance type for the body
 		#define PR_RDR_INST(x)\
-			x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
-			x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr    )
+			x(m4x4          ,m_i2w   ,rdr::EInstComp::I2WTransform)\
+			x(rdr::ModelPtr ,m_model ,rdr::EInstComp::ModelPtr    )
 		PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
 		Instance m_inst;    // The gimble instance
-		pr::v4   m_ofs_pos; // The offset position from the camera focus point
+		v4       m_ofs_pos; // The offset position from the camera focus point
 		float    m_scale;   // A model size scaler.
 
 		// Constructs a gimble model and instance.
-		Gimble(pr::Renderer& rdr)
-		:m_inst()
-		,m_ofs_pos(pr::v4Zero)
-		,m_scale(1.0f)
+		Gimble(Renderer& rdr)
+			:m_inst()
+			,m_ofs_pos(v4Zero)
+			,m_scale(1.0f)
 		{
 			InitModel(rdr);
 		}
 
-		// Add the gimble to a viewport
-		void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
+		// Handler for adding this object to the scene
+		void HandleUpdateScene(rdr::Scene& scene, EmptyArgs const&)
 		{
-			pr::rdr::SceneView const& view = e.m_scene.m_view;
+			auto const& view = scene.m_view;
 			m_inst.m_i2w = m4x4::Scale(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
-			e.m_scene.AddInstance(m_inst);
+			scene.AddInstance(m_inst);
 		}
 
 	private:

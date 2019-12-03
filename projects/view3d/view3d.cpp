@@ -50,76 +50,24 @@ static Context& Dll()
 	throw std::runtime_error("View3d not initialised");
 }
 
-// Default error callback
-void __stdcall DefaultErrorCB(void*, wchar_t const* msg)
-{
-	std::wcerr << msg << std::endl;
-}
-
-// Find the error callback to use
-pr::MultiCast<ReportErrorCB>& GetErrorCB(View3DWindow wnd)
-{
-	return (wnd != nullptr && wnd->OnError != nullptr) ? wnd->OnError : Dll().OnError;
-}
-
-// Report a basic error message
-inline void ReportError(wchar_t const* msg, View3DWindow wnd)
-{
-	GetErrorCB(wnd).Raise(msg);
-}
-
-// Report an error message via the window error callback
-inline void ReportError(char const* func_name, View3DWindow wnd, std::exception const* ex)
-{
-	// Report the error
-	auto msg = pr::Fmt<pr::string<wchar_t>>(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
-	if (msg.last() != '\n') msg.push_back('\n');
-	GetErrorCB(wnd).Raise(msg.c_str());
-}
-
-// Maths type traits
-namespace pr
-{
-	namespace maths
-	{
-		template <> struct is_vec<View3DV2> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 2;
-		};
-		template <> struct is_vec<View3DV4> :std::true_type
-		{
-			using elem_type = float;
-			using cp_type = float;
-			static int const dim = 4;
-		};
-		template <> struct is_vec<View3DM4x4> :std::true_type
-		{
-			using elem_type = View3DV4;
-			using cp_type = typename is_vec<View3DV4>::cp_type;
-			static int const dim = 4;
-		};
-	}
-}
-
 #define DllLockGuard LockGuard lock(Dll().m_mutex)
 #define CatchAndReport(func_name, wnd, ret)\
-	catch (std::exception const& ex) { ReportError(#func_name, View3DWindow(wnd), &ex); }\
-	catch (...)                      { ReportError(#func_name, View3DWindow(wnd), nullptr); }\
+	catch (std::exception const& ex) { Dll().ReportAPIError(#func_name, View3DWindow(wnd), &ex); }\
+	catch (...)                      { Dll().ReportAPIError(#func_name, View3DWindow(wnd), nullptr); }\
 	return ret
 
 // Initialise the dll
 // Initialise calls are reference counted and must be matched with Shutdown calls
 // 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags)
 {
+	auto error_cb = pr::StaticCallBack(global_error_cb, ctx);
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, device_flags);
+			g_ctx = new Context(g_hInstance, error_cb, device_flags);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -128,12 +76,12 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initia
 	}
 	catch (std::exception const& e)
 	{
-		if (initialise_error_cb) initialise_error_cb(ctx, pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()));
+		error_cb(pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()));
 		return nullptr;
 	}
 	catch (...)
 	{
-		if (initialise_error_cb) initialise_error_cb(ctx, L"Failed to initialise View3D.\nReason: An unknown exception occurred\n");
+		error_cb(L"Failed to initialise View3D.\nReason: An unknown exception occurred\n");
 		return nullptr;
 	}
 }
@@ -149,18 +97,18 @@ VIEW3D_API void __stdcall View3D_Shutdown(View3DContext context)
 	g_ctx = nullptr;
 }
 
-// Add/Remove a global error callback.
-// Note: The callback function can be called in a worker thread context if errors occur during LoadScriptSource
+// Replace the global error handler
 VIEW3D_API void __stdcall View3D_GlobalErrorCBSet(View3D_ReportErrorCB error_cb, void* ctx, BOOL add)
 {
 	try
 	{
+		DllLockGuard;
 		if (add)
-			Dll().OnError += pr::StaticCallBack(error_cb, ctx);
+			Dll().ReportError += ReportErrorCB(error_cb, ctx);
 		else
-			Dll().OnError -= pr::StaticCallBack(error_cb, ctx);
+			Dll().ReportError -= ReportErrorCB(error_cb, ctx);
 	}
-	CatchAndReport(View3D_GlobalErrorCBSet,,);
+	CatchAndReport(View3D_GlobalErrorCBSet, , );
 }
 
 // Enumerate the Guids of objects in the sources collection
@@ -346,11 +294,11 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(View3DWindow window, View3D_Re
 	{
 		if (!window) throw std::runtime_error("window is null");
 		if (add)
-			window->OnError += pr::StaticCallBack(error_cb, ctx);
+			window->ReportError += pr::StaticCallBack(error_cb, ctx);
 		else
-			window->OnError -= pr::StaticCallBack(error_cb, ctx);
+			window->ReportError -= pr::StaticCallBack(error_cb, ctx);
 	}
-	CatchAndReport(View3D_WindowErrorCBSet,window,);
+	CatchAndReport(View3D_WindowErrorCBSet, window, );
 }
 
 // Generate/Parse a settings string for the view
@@ -458,22 +406,6 @@ VIEW3D_API void __stdcall View3d_WindowSceneChangedCB(View3DWindow window, View3
 			window->OnSceneChanged -= pr::StaticCallBack(scene_changed_cb, ctx);
 	}
 	CatchAndReport(View3d_WindowSceneChangedCB, window, );
-}
-
-// Suspend/Resume the scene changed notification event. Typically used during rendering a frame
-VIEW3D_API void __stdcall View3D_WindowSceneChangedSuspend(View3DWindow window, BOOL suspend)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		pr::MultiCast<SceneChangedCB>::Lock lock(window->OnSceneChanged);
-		if (suspend != 0)
-			lock.suspend();
-		else
-			lock.resume();
-	}
-	CatchAndReport(View3D_WindowSceneChangedSuspend, window, );
 }
 
 // Add/Remove objects to/from a window
@@ -2699,29 +2631,22 @@ VIEW3D_API void __stdcall View3D_GizmoDelete(View3DGizmo gizmo)
 }
 
 // Attach?Detach callbacks that are called when the gizmo moves
-VIEW3D_API void __stdcall View3D_GizmoAttachCB(View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx)
+VIEW3D_API void __stdcall View3D_GizmoMovedCBSet(View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx, BOOL add)
 {
 	try
 	{
 		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		if (!cb) throw std::runtime_error("Callback function is null");
-
+		
+		// Cast the static function pointer from View3D types to pr::ldr types
+		auto c = reinterpret_cast<void(__stdcall*)(void*, pr::ldr::LdrGizmo*, pr::ldr::ELdrGizmoState)>(cb);
 		DllLockGuard;
-		gizmo->Attach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb), ctx);
+		if (add)
+			gizmo->Manipulated += pr::ldr::GizmoMovedCB(c, ctx);
+		else
+			gizmo->Manipulated -= pr::ldr::GizmoMovedCB(c, ctx);
 	}
-	CatchAndReport(View3D_GizmoAttachCB, ,);
-}
-VIEW3D_API void __stdcall View3D_GizmoDetachCB(View3DGizmo gizmo, View3D_GizmoMovedCB cb)
-{
-	try
-	{
-		if (!gizmo) throw std::runtime_error("Gizmo is null");
-		if (!cb) throw std::runtime_error("Callback function is null");
-
-		DllLockGuard;
-		gizmo->Detach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb));
-	}
-	CatchAndReport(View3D_GizmoDetachCB, ,);
+	CatchAndReport(View3D_GizmoMovedCBSet, ,);
 }
 
 // Attach/Detach an object to the gizmo that will be moved as the gizmo moves
@@ -3277,10 +3202,10 @@ static_assert(int(EView3DStockTexture::Checker3     ) == int(pr::rdr::EStockText
 static_assert(int(EView3DStockTexture::WhiteSpot    ) == int(pr::rdr::EStockTexture::WhiteSpot    ));
 static_assert(int(EView3DStockTexture::WhiteTriangle) == int(pr::rdr::EStockTexture::WhiteTriangle));
 
-static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
-static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));
-static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ));
-static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ));
+static_assert(int(EView3DGizmoState::StartManip) == int(pr::ldr::ELdrGizmoState::StartManip));
+static_assert(int(EView3DGizmoState::Moving    ) == int(pr::ldr::ELdrGizmoState::Moving    ));
+static_assert(int(EView3DGizmoState::Commit    ) == int(pr::ldr::ELdrGizmoState::Commit    ));
+static_assert(int(EView3DGizmoState::Revert    ) == int(pr::ldr::ELdrGizmoState::Revert    ));
 
 static_assert(int(EView3DNavOp::None     ) == int(pr::camera::ENavOp::None     ));
 static_assert(int(EView3DNavOp::Translate) == int(pr::camera::ENavOp::Translate));
@@ -3330,11 +3255,6 @@ static_assert(int(EView3DUpdateObject::Reflectivity) == int(pr::ldr::EUpdateObje
 static_assert(int(EView3DUpdateObject::Flags       ) == int(pr::ldr::EUpdateObject::Flags       ));
 static_assert(int(EView3DUpdateObject::Animation   ) == int(pr::ldr::EUpdateObject::Animation   ));
 
-static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
-static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));
-static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ));
-static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ));
-
 static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::Translate));
 static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ));
 static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ));
@@ -3365,6 +3285,5 @@ static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ));
 // View3DUpdateModelKeep - only used in this file
 // View3DMaterial - only used in this file
 // View3DViewport - only used in this file
-static_assert(equal_size_and_alignment<View3DGizmoEvent, pr::ldr::Evt_Gizmo>::value);
 
 #pragma endregion

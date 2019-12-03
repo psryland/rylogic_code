@@ -26,12 +26,18 @@ namespace pr::ldr
 		// Notes:
 		//  - A collection of sources of ldr objects.
 		//  - Typically ldr sources are files, but string sources are also supported.
-		//  - This class maintains a map from context ids to a collection of objects.
+		//  - This class maintains a map from context ids to a collection of files/strings.
 		//  - The 'Additional' flag is no longer supported. File scripts each have a
 		//    unique context id. When reloaded, objects previously associated with that
 		//    file context id are removed. String scripts have a user provided id. String
 		//    scripts are not reloaded because they shouldn't change externally. Callers
 		//    should manage the removal of objects associated with string script sources.
+		//  - This class manages the file watching/reload mechanism because when an included
+		//    file changes, and reload of the root file is needed, even if unchanged.
+		//  - If a file in a context id set has changed, an event is raised allowing the
+		//    change to be ignored. The event args contain the context id and list of
+		//    associated files.
+
 
 	public:
 
@@ -66,7 +72,7 @@ namespace pr::ldr
 			ECamField             m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
 
 			Source()
-				:m_context_id(pr::GuidZero)
+				:m_context_id(GuidZero)
 				,m_filepath()
 				,m_encoding(EEncoding::auto_detect)
 				,m_includes()
@@ -152,12 +158,12 @@ namespace pr::ldr
 		struct SourceRemovedEventArgs
 		{
 			// The Guid of the source to be removed
-			pr::Guid m_context_id;
+			Guid m_context_id;
 
 			// The origin of the object container change
 			EReason m_reason;
 
-			SourceRemovedEventArgs(pr::Guid context_id, EReason reason)
+			SourceRemovedEventArgs(Guid context_id, EReason reason)
 				:m_context_id(context_id)
 				,m_reason(reason)
 			{}
@@ -167,15 +173,15 @@ namespace pr::ldr
 
 		SourceCont          m_srcs;           // The sources of ldr script
 		GizmoCont           m_gizmos;         // The created ldr gizmos
-		pr::Renderer*       m_rdr;            // Renderer used to create models
+		Renderer*           m_rdr;            // Renderer used to create models
 		EmbeddedCodeFactory m_emb_factory;    // Embedded code handler factory
 		GuidSet             m_loading;        // File group ids in the process of being reloaded
-		pr::FileWatch       m_watcher;        // The watcher of files
+		FileWatch           m_watcher;        // The watcher of files
 		std::thread::id     m_main_thread_id; // The main thread id
 
 	public:
 
-		ScriptSources(pr::Renderer& rdr, EmbeddedCodeFactory emb_factory)
+		ScriptSources(Renderer& rdr, EmbeddedCodeFactory emb_factory)
 			:m_srcs()
 			,m_gizmos()
 			,m_rdr(&rdr)
@@ -187,7 +193,7 @@ namespace pr::ldr
 			// Handle notification of changed files from the watcher.
 			// 'OnFilesChanged' is raised before any of the 'FileWatch_OnFileChanged'
 			// callbacks are made. So this notifies of the reload before anything starts changing.
-			m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
+			m_watcher.OnFilesChanged += [&](FileWatch&, FileWatch::FileCont&)
 			{
 				OnReload(*this, EmptyArgs());
 			};
@@ -206,19 +212,19 @@ namespace pr::ldr
 		}
 
 		// Parse error event.
-		pr::EventHandler<ScriptSources&, ErrorEventArgs const&> OnError;
+		EventHandler<ScriptSources&, ErrorEventArgs const&, true> OnError;
 
 		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-		pr::EventHandler<ScriptSources&, EmptyArgs const&> OnReload;
+		EventHandler<ScriptSources&, EmptyArgs const&, true> OnReload;
 
 		// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
-		pr::EventHandler<ScriptSources&, AddFileProgressEventArgs&> OnAddFileProgress;
+		EventHandler<ScriptSources&, AddFileProgressEventArgs&, true> OnAddFileProgress;
 
 		// Store change event. Called before and after a change to the collection of objects in the store.
-		pr::EventHandler<ScriptSources&, StoreChangeEventArgs&> OnStoreChange;
+		EventHandler<ScriptSources&, StoreChangeEventArgs&, true> OnStoreChange;
 
 		// Source removed event (i.e. objects deleted by Id)
-		pr::EventHandler<ScriptSources&, SourceRemovedEventArgs const&> OnSourceRemoved;
+		EventHandler<ScriptSources&, SourceRemovedEventArgs const&, true> OnSourceRemoved;
 
 		// Remove all objects and sources
 		void ClearAll()
@@ -270,7 +276,7 @@ namespace pr::ldr
 			// Remove the object from the source it belongs to
 			auto& src = m_srcs[id];
 			auto count = src.m_objects.size();
-			pr::ldr::Remove(src.m_objects, object);
+			ldr::Remove(src.m_objects, object);
 
 			// Notify of the object container change
 			if (src.m_objects.size() != count)
@@ -412,7 +418,7 @@ namespace pr::ldr
 		void RemoveGizmo(LdrGizmo* gizmo)
 		{
 			// Delete the gizmo from the gizmo container (removing the last reference)
-			pr::erase_first(m_gizmos, [&](LdrGizmoPtr const& p){ return p.m_ptr == gizmo; });
+			erase_first(m_gizmos, [&](LdrGizmoPtr const& p){ return p.m_ptr == gizmo; });
 		}
 
 		// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
@@ -422,7 +428,7 @@ namespace pr::ldr
 
 			// Find the corresponding source in the sources collection
 			auto fpath = filepath.lexically_normal();
-			auto iter = pr::find_if(m_srcs, [=](auto& src){ return filesys::Equal(fpath, src.second.m_filepath, true); });
+			auto iter = find_if(m_srcs, [=](auto& src){ return filesys::Equal(fpath, src.second.m_filepath, true); });
 			return iter != std::end(m_srcs) ? &iter->second.m_context_id : nullptr;
 		}
 
@@ -434,7 +440,7 @@ namespace pr::ldr
 			assert(std::this_thread::get_id() == m_main_thread_id);
 
 			// Look for the root file for group 'context_id'
-			auto iter = pr::find_if(m_srcs, [=](auto& src){ return src.second.m_context_id == context_id; });
+			auto iter = find_if(m_srcs, [=](auto& src){ return src.second.m_context_id == context_id; });
 			if (iter == std::end(m_srcs))
 				return;
 
@@ -480,7 +486,7 @@ namespace pr::ldr
 
 			// Monitor the files that get included so we can watch them for changes
 			vector<path> filepaths;
-			source.m_includes.FileOpened = [&](path const& fp)
+			source.m_includes.FileOpened = [&](auto&, path const& fp)
 			{
 				// Add the directory of the included file to the paths
 				source.m_includes.AddSearchPath(fp.parent_path());
@@ -488,7 +494,7 @@ namespace pr::ldr
 			};
 			if (source.IsFile())
 			{
-				source.m_includes.FileOpened.Raise(filepath);
+				source.m_includes.FileOpened(source.m_includes, filepath);
 			}
 
 			// Parse the contents of the script

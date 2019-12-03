@@ -18,7 +18,7 @@ namespace pr::rdr
 	// A scene is a view into the 3D world. Typically most applications only have one scene.
 	// Examples of multiple scenes are: the rear vision mirror in a car, map view, etc.
 	// A scene contains an ordered collection of render steps.
-	struct Scene :pr::AlignTo<16>
+	struct alignas(16) Scene
 	{
 		// Fixed container of render steps. Doesn't really need to be fixed,
 		// but non-fixed means we need the pr::rdr::Allocator to construct it.
@@ -41,13 +41,16 @@ namespace pr::rdr
 		DSBlock        m_dsb;           // Scene-wide states
 		RSBlock        m_rsb;           // Scene-wide states
 		BSBlock        m_bsb;           // Scene-wide states
-		EventAutoSub   m_eh_resize;     // RT resize event handler subscription
+		AutoSub        m_eh_resize;     // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
 
 		// Renderer access
 		Renderer& rdr() const;
 		Window& wnd() const;
+
+		// Raised just before the drawlist is sorted. Handlers should add/remove instances from the scene, or add/remove render steps as required
+		EventHandler<Scene&, EmptyArgs> OnUpdateScene;
 
 		// Set the render steps to use for rendering the scene
 		void SetRenderSteps(std::initializer_list<ERenderStep> rsteps);

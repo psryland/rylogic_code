@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include "pr/common/resource.h"
 #include "pr/common/memstream.h"
-#include "pr/common/multi_cast.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/flags_enum.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/filesys/filesys.h"
@@ -160,7 +160,7 @@ namespace pr::script
 		}
 
 		// Raised whenever a file is opened
-		MultiCast<std::function<void(std::filesystem::path const&)>> FileOpened;
+		EventHandler<Includes&, std::filesystem::path const&, true> FileOpened;
 
 		// Get/Set the locations to look for includes
 		EIncludeTypes Types() const
@@ -281,7 +281,7 @@ namespace pr::script
 			std::vector<std::filesystem::path> searched_paths;
 			if (AllSet(m_types, EIncludeTypes::Files) && ResolveFileInclude(include, AllSet(flags, EIncludeFlags::IncludeLocalDir), loc, fullpath, searched_paths))
 			{
-				FileOpened.Raise(fullpath);
+				FileOpened(*this, fullpath);
 				return std::make_unique<FileSrc>(fullpath);
 			}
 
@@ -325,7 +325,7 @@ namespace pr::script
 			std::vector<std::filesystem::path> searched_paths;
 			if (AllSet(m_types, EIncludeTypes::Files) && ResolveFileInclude(include, AllSet(flags, EIncludeFlags::IncludeLocalDir), loc, fullpath, searched_paths))
 			{
-				FileOpened.Raise(fullpath);
+				FileOpened(*this, fullpath);
 				return std::make_unique<std::ifstream>(fullpath, AllSet(flags, EIncludeFlags::Binary) ? std::istream::binary : 0);
 			}
 

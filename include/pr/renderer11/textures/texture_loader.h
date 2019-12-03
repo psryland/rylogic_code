@@ -94,6 +94,7 @@ namespace pr::rdr
 	}
 	inline void CreateTextureFromFile(ID3D11Device* device, std::filesystem::path const& filepath, int mips, bool is_cube_map, TextureDesc& tdesc, D3DPtr<ID3D11Resource>& res, D3DPtr<ID3D11ShaderResourceView>& srv, size_t max_dimension = 0)
 	{
+		vector<std::filesystem::path> paths;
 		if (is_cube_map)
 		{
 			auto pattern = filepath.wstring();
@@ -102,7 +103,6 @@ namespace pr::rdr
 				throw std::runtime_error("Expected cubemap texture filepath pattern to contain '??'");
 
 			// Create the collection of filepaths in the required order
-			vector<std::filesystem::path> paths;
 			for (auto face : { L"+x", L"-x", L"+y", L"-y", L"+z", L"-z" })
 			{
 				pattern[idx + 0] = face[0];
@@ -119,7 +119,8 @@ namespace pr::rdr
 		}
 		else
 		{
-			CreateTextureFromFile(device, { filepath }, mips, false, tdesc, res, srv, max_dimension);
+			paths.push_back(filepath);
+			CreateTextureFromFile(device, paths, mips, false, tdesc, res, srv, max_dimension);
 		}
 	}
 

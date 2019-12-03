@@ -5,6 +5,12 @@
 
 #include "pr/app/main.h"
 #include "pr/app/main_gui.h"
+#ifdef PR_APP_MAIN_INCLUDE
+#include PR_APP_MAIN_INCLUDE
+#endif
+
+using namespace pr;
+using namespace pr::app;
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
@@ -12,26 +18,26 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR l
 	int nRet;
 	{
 		std::string err_msg;
-		std::shared_ptr<pr::app::IAppMainGui> gui;
+		std::unique_ptr<IAppMainGui> gui;
 		try
 		{
 			// CoInitialise COM
-			pr::InitCom init_com;
+			InitCom init_com;
 
 			// Create an instance of the main window and start it running
-			auto cmd_line = pr::Widen(lpstrCmdLine);
+			auto cmd_line = Widen(lpstrCmdLine);
 			gui = pr::app::CreateGUI(cmd_line.c_str(), nCmdShow);
 			nRet = gui->Run();
 		}
 		catch (std::exception const& ex)
 		{
-			DWORD last_error = GetLastError();
-			HRESULT res = HRESULT_FROM_WIN32(last_error);
+			auto last_error = GetLastError();
+			auto res = HRESULT_FROM_WIN32(last_error);
 
 			std::string ex_msg(ex.what());
 			ex_msg.substr(0, ex_msg.find_last_not_of(" \t\r\n") + 1).swap(ex_msg);
-			err_msg = pr::Fmt("Application shutdown due to unhandled error:\r\nError Message: '%s'", ex_msg.c_str());
-			if (res != S_OK) err_msg += pr::Fmt("\r\nLast Error Code: %X - %s", res, pr::HrMsg(res).c_str());
+			err_msg = Fmt("Application shutdown due to unhandled error:\r\nError Message: '%s'", ex_msg.c_str());
+			if (res != S_OK) err_msg += Fmt("\r\nLast Error Code: %X - %s", res, HrMsg(res).c_str());
 			nRet = -1;
 		}
 		catch (...)

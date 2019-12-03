@@ -12,14 +12,13 @@ using namespace pr::app;
 using namespace pr::gui;
 
 // Create the GUI window
-extern std::shared_ptr<IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
+std::unique_ptr<IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
 {
-	return pr::app::CreateGUI<las::MainGUI>(lpstrCmdLine, nCmdShow);
+	return std::unique_ptr<IAppMainGui>(new las::MainGUI(lpstrCmdLine, nCmdShow));
 }
 
 namespace las
 {
-	wchar_t const* AppTitle()     { return L"Lost at Sea"; }
 	wchar_t const* AppVersionW()  { return L"v0.00.01"; }
 	char const*    AppVersionA()  { return "v0.00.01"; }
 	wchar_t const* AppVendor()    { return L"Rylogic Ltd"; }
@@ -137,7 +136,7 @@ namespace las
 ////	player.Play(true);
 ////	
 ////	// Main loop 
-////	for (;!_kbhit(); Sleep(10) ) { pr::events::Send(pr::sound::Evt_SoundUpdate()); }
+////	for (;!_kbhit(); Sleep(10) ) { player.Update(); }
 ////	return 0;
 ////}
 

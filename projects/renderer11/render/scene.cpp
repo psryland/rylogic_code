@@ -176,10 +176,7 @@ namespace pr::rdr
 	// Populate the drawlist for each render step
 	void Scene::UpdateDrawlists()
 	{
-		// Raise the Update scene event.
-		// Observers should add/remove instances from the scene
-		// or specific render steps as required
-		pr::events::Send(Evt_UpdateScene(*this));
+		OnUpdateScene(*this);
 	}
 
 	// Add an instance. The instance must be resident for the entire time that it is

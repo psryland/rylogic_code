@@ -468,7 +468,7 @@ namespace pr
 		auto out = out_beg;
 
 		// Loop until all of 'str_in' has been converted
-		for (auto mb = std::mbstate_t{};;)
+		for (auto mb = std::mbstate_t{}; in_next != in_end;)
 		{
 			int r;
 
@@ -506,11 +506,7 @@ namespace pr
 
 			// 'str_in' has been completely converted
 			if (r == std::codecvt_base::ok && in_next == in_end)
-			{
-				// Trim the out string to the correct length
-				out_traits::resize(str_out, out_next - out_beg);
 				break;
-			}
 			
 			// 'Out' is not big enough, allocate more space and carry on
 			if (r == std::codecvt_base::ok || r == std::codecvt_base::partial)
@@ -519,7 +515,7 @@ namespace pr
 				auto out_count = out_next - out_beg;
 
 				// Grow 'str_out' can continue converting
-				out_traits::resize(str_out, out_size *= 3 / 2);
+				out_traits::resize(str_out, out_size = (3 * out_size) / 2);
 				out_beg = out_traits::ptr(str_out);
 				out_end = out_beg + out_size;
 				out = out_beg + out_count;
@@ -533,6 +529,8 @@ namespace pr
 				: throw std::runtime_error("Unexpected encoding return code");
 		}
 
+		// Trim the out string to the correct length
+		out_traits::resize(str_out, out_next - out_beg);
 		return str_out;
 	}
 
@@ -1523,7 +1521,11 @@ namespace pr::str
 
 		{// Narrow
 			{
-				auto r = Narrow("Ab3");
+				auto r = Narrow(L"");
+				PR_CHECK(r.size(), 0U);
+			}
+			{
+				auto r = Narrow(L"Ab3");
 				PR_CHECK(r.size(), 3U);
 				PR_CHECK(r.c_str(), { 'A', 'b', '3', '\0' });
 			}
@@ -1556,6 +1558,10 @@ namespace pr::str
 			}
 		}
 		{// Widen
+			{
+				auto r = Widen("");
+				PR_CHECK(r.size(), 0U);
+			}
 			{
 				auto r = Widen("Ab3");
 				PR_CHECK(r.size(), 3U);

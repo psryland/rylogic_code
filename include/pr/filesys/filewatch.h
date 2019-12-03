@@ -8,7 +8,7 @@
 #include <mutex>
 #include <filesystem>
 #include "pr/common/guid.h"
-#include "pr/common/multi_cast.h"
+#include "pr/common/event_handler.h"
 #include "pr/common/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/str/string.h"
@@ -89,7 +89,7 @@ namespace pr
 		{}
 
 		// Raised when changed files are detected. Allows modification of file list
-		pr::MultiCast<std::function<void(FileCont&)>> OnFilesChanged;
+		pr::EventHandler<FileWatch&, FileCont&> OnFilesChanged;
 
 		// Synchronise access to the file container
 		struct Lock :threads::Synchronise<FileWatch>
@@ -184,7 +184,7 @@ namespace pr
 			if (!changed_files.empty())
 			{
 				// Notify of detected changes and allow changes
-				OnFilesChanged.Raise(changed_files);
+				OnFilesChanged(*this, changed_files);
 
 				// Report each changed file
 				for (auto& file : changed_files)

@@ -420,7 +420,7 @@ namespace pr::ldr
 		uint         m_colour_mask;   // A bit mask for applying the base colour to child objects
 		Animation    m_anim;          // Animation data
 		BBoxInstance m_bbox_instance; // Used for rendering the bounding box for this instance
-		EventSub     m_screen_space;  // True if this object should be rendered in screen space
+		Sub          m_screen_space;  // True if this object should be rendered in screen space
 		ELdrFlags    m_flags;         // Property flags controlling meta behaviour of the object
 		UserData     m_user_data;     // User data
 
@@ -432,7 +432,7 @@ namespace pr::ldr
 
 		// Called just prior to this object being added to a scene.
 		// Allows handlers to change the object's 'i2w' transform, visibility, etc.
-		EventHandler<LdrObject&, rdr::Scene const&> OnAddToScene;
+		EventHandler<LdrObject&, rdr::Scene const&, true> OnAddToScene;
 
 		// Recursively add this object and its children to a scene
 		void AddToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
@@ -616,27 +616,6 @@ namespace pr::ldr
 		long AddRef() const;
 		long Release() const;
 	};
-
-	#pragma region Events
-
-	// Depreciate event use, globals are yuck
-	// use EventHandler<> instead
-
-	// An ldr object has been modified
-	struct Evt_LdrObjectChg
-	{
-		LdrObject* m_obj; // The object that was changed.
-		Evt_LdrObjectChg(LdrObject* obj) :m_obj(obj) {}
-	};
-
-	// Debugging only! - Notify of object destructed
-	struct Evt_LdrObjectDestruct
-	{
-		LdrObject* m_obj; // The object that is to be destructed
-		Evt_LdrObjectDestruct(LdrObject* obj) :m_obj(obj) {}
-	};
-
-	#pragma endregion
 
 	// LdrObject Creation functions *********************************************
 

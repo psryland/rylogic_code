@@ -144,7 +144,4 @@ namespace pr::rdr
 		Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
 		#endif
 	}
-
-	// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
-	bool TestSystemCompatibility();
 }

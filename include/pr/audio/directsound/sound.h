@@ -10,7 +10,6 @@
 #include "pr/common/assert.h"
 #include "pr/common/d3dptr.h"
 #include "pr/common/hresult.h"
-#include "pr/common/events.h"
 #include "pr/maths/maths.h"
 
 #ifndef PR_DBG_SND
@@ -19,18 +18,15 @@
 
 namespace pr::sound
 {
-	// An event used to update all sound decoders
-	struct Evt_SoundUpdate {};
-		
 	// RAII sound buffer lock
 	struct Lock
 	{
 		D3DPtr<IDirectSoundBuffer8> m_buf;
-		pr::uint8* m_ptr0;
-		pr::uint8* m_ptr1;
+		uint8_t* m_ptr0;
+		uint8_t* m_ptr1;
 		DWORD m_size0;
 		DWORD m_size1;
-			
+
 		// Flags:
 		//  0 - Lock from [offset, offset+count)
 		//  DSBLOCK_FROMWRITECURSOR - Start the lock at the write cursor. The offset parameter is ignored.
@@ -49,7 +45,7 @@ namespace pr::sound
 			pr::Throw(m_buf->Unlock(m_ptr0, m_size0, m_ptr1, m_size1));
 		}
 	};
-		
+
 	// Helper function for initialising dsound for an app
 	// Device:
 	//   0 = use the primary sound driver
@@ -68,20 +64,20 @@ namespace pr::sound
 	inline D3DPtr<IDirectSound8> InitDSound(HWND hwnd, GUID const* device = 0, DWORD coop_flags = DSSCL_EXCLUSIVE)
 	{
 		D3DPtr<IDirectSound8> dsound;
-		pr::Throw(::DirectSoundCreate8(device, &dsound.m_ptr, 0));
-		dsound->Initialize(0);
-		dsound->SetCooperativeLevel(hwnd, coop_flags);
+		Throw(::DirectSoundCreate8(device, &dsound.m_ptr, 0));
+		Throw(dsound->Initialize(0));
+		Throw(dsound->SetCooperativeLevel(hwnd, coop_flags));
 		return dsound;
 	}
-		
+
 	// Return the direct sound caps
 	inline DSCAPS GetCaps(D3DPtr<IDirectSound8> dsound)
 	{
 		DSCAPS caps;
-		pr::Throw(dsound->GetCaps(&caps));
+		Throw(dsound->GetCaps(&caps));
 		return caps;
 	}
-		
+
 	// Helper function for allocating a dsound buffer
 	// Flags:
 	//  DSBCAPS_CTRL3D - The buffer has 3D control capability.
@@ -150,7 +146,7 @@ namespace pr::sound
 		wf.wBitsPerSample  = WORD(bits_per_sample);
 		wf.nBlockAlign     = WORD(wf.wFormatTag == WAVE_FORMAT_PCM ? (wf.nChannels * wf.wBitsPerSample)/8 : block_align);
 		wf.nAvgBytesPerSec = DWORD(wf.wFormatTag == WAVE_FORMAT_PCM ? (wf.nSamplesPerSec * wf.nBlockAlign) : avr_bytes_per_sec);
-			
+
 		// Set up the buffer description
 		DSBUFFERDESC desc = {};
 		desc.dwSize          = sizeof(desc);
@@ -158,25 +154,25 @@ namespace pr::sound
 		desc.dwFlags         = flags;
 		desc.lpwfxFormat     = &wf;
 		desc.guid3DAlgorithm = _3dalg;
-			
+
 		// Get a standard buffer
 		D3DPtr<IDirectSoundBuffer> buf;
-		pr::Throw(dsound->CreateSoundBuffer(&desc, &buf.m_ptr, 0));
-			
+		Throw(dsound->CreateSoundBuffer(&desc, &buf.m_ptr, 0));
+
 		// Query for the IDirectSoundBuffer8 interface
 		D3DPtr<IDirectSoundBuffer8> buf8;
-		pr::Throw(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)&buf8.m_ptr));
+		Throw(buf->QueryInterface(IID_IDirectSoundBuffer8, (void**)&buf8.m_ptr));
 		return buf8;
 	}
-		
+
 	// Set the volume level for a sample (in 0->1 range)
 	inline void SetVolume(D3DPtr<IDirectSoundBuffer8>& buf, float vol)
 	{
 		PR_ASSERT(PR_DBG_SND, 0.0f <= vol && vol <= 1.0f, "'vol' must be in the range [0,1]");
 		double v = Clamp(vol, 0.0f, 1.0f) * log10(double(DSBVOLUME_MAX - DSBVOLUME_MIN));
-		pr::Throw(buf->SetVolume(-long(pow(10.0, v))));
+		Throw(buf->SetVolume(-long(pow(10.0, v))));
 	}
-		
+
 	// Return the allocated size of a dsound buffer
 	inline size_t GetBufferSize(D3DPtr<IDirectSoundBuffer8>& buf)
 	{
@@ -184,7 +180,7 @@ namespace pr::sound
 		Lock lock(buf, 0, 0, DSBLOCK_ENTIREBUFFER);
 		return lock.m_size0;
 	}
-		
+
 	// Return the required buffer size for the given format at the given update rate
 	inline size_t GetMinRequiredBufferSize(int updates_per_sec, int channels, int samples_per_sec, int bits_per_sample)
 	{

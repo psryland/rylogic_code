@@ -196,14 +196,16 @@ namespace pr
 	// e.g. %sss for 23seconds = 023
 	namespace convert
 	{
-		template <typename Str, typename Char = typename Str::value_type>
+		template <typename Str, typename = std::enable_if_t<is_string_v<Str>>>
 		struct DateTimeToString
 		{
+			using Char = typename Str::value_type;
+
 			template <typename TRep, typename TPeriod>
 			static Str To(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
 			{
 				fmt = fmt ? fmt : PR_STRLITERAL(Char, "%s");
-				return pr::FmtF(fmt, [=](Char const*& code)
+				return FmtF(fmt, [=](Char const*& code)
 				{
 					using namespace std::chrono;
 					auto f = PR_STRLITERAL(Char, "%0*d");
@@ -211,7 +213,6 @@ namespace pr
 					for (auto start = code; *(code + 1) == *start; ++code) { ++dp; }
 					switch (*code)
 					{
-					default: throw std::exception("unknown string format code");
 					case 'Y': return pr::Fmt(f, dp, duration_cast<years        >(duration).count()       );
 					case 'y': return pr::Fmt(f, dp, duration_cast<years        >(duration).count()       );
 					case 'D': return pr::Fmt(f, dp, duration_cast<days         >(duration).count()       );
@@ -228,13 +229,18 @@ namespace pr
 					case 'u': return pr::Fmt(f, dp, duration_cast<microseconds >(duration).count() % 1000);
 					case 'N': return pr::Fmt(f, dp, duration_cast<nanoseconds  >(duration).count()       );
 					case 'n': return pr::Fmt(f, dp, duration_cast<nanoseconds  >(duration).count() % 1000);
+					default: throw std::runtime_error("unknown string format code");
 					}
 				});
 			}
 		};
 	}
-	template <typename TRep, typename TPeriod, typename Char>                struct Convert<std::basic_string<Char>, std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<std::basic_string<Char>> {};
-	template <typename TRep, typename TPeriod, typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<pr::string<Char,L,F>> {};
+	template <typename TRep, typename TPeriod, typename Char>
+	struct Convert<std::basic_string<Char>, std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<std::basic_string<Char>>
+	{};
+	template <typename TRep, typename TPeriod, typename Char, int L, bool F>
+	struct Convert<pr::string<Char,L,F>, std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<pr::string<Char,L,F>>
+	{};
 
 	// Helper wrapper around 'tm'
 	struct DateTimeStruct :tm

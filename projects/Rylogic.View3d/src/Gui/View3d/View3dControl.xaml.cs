@@ -9,7 +9,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Rylogic.Attrib;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
@@ -60,12 +59,10 @@ namespace Rylogic.Gui.WPF
 
 			try
 			{
-				// Error callback
-				void ReportErrorCB(IntPtr ctx, string msg) => OnReportError(new ReportErrorEventArgs(msg));
-
 				// Initialise View3d in off-screen only mode (i.e. no window handle)
 				View3d = View3d.Create();
-				Window = new View3d.Window(View3d, IntPtr.Zero, new View3d.WindowOptions(ReportErrorCB, IntPtr.Zero));
+				Window = new View3d.Window(View3d, IntPtr.Zero);
+				Window.Error += (s,a) => OnReportError(new ReportErrorEventArgs(a.Message));
 				Camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
 				Camera.ClipPlanes(0.01f, 1000f, true);
 

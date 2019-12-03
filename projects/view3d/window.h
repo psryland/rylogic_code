@@ -65,7 +65,7 @@ namespace view3d
 		Window& operator=(Window const&) = delete;
 
 		// Error event. Can be called in a worker thread context
-		pr::MultiCast<ReportErrorCB> OnError;
+		pr::MultiCast<ReportErrorCB> ReportError;
 
 		// Settings changed event
 		pr::MultiCast<SettingsChangedCB> OnSettingsChanged;
@@ -81,9 +81,6 @@ namespace view3d
 
 		// Animation event
 		pr::MultiCast<AnimationCB> OnAnimationEvent;
-
-		// Report an error for this window
-		void ReportError(wchar_t const* msg);
 
 		// Get/Set the scene viewport
 		View3DViewport Viewport() const;

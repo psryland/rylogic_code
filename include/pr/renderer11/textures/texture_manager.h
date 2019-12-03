@@ -39,7 +39,7 @@ namespace pr::rdr
 		DxTexLookup              m_lookup_dxtex;     // A map from hash of resource uri to existing dx texture pointers
 		pr::vector<Texture2DPtr> m_stock_textures;   // A collection of references to the stock textures
 		pr::GdiPlus              m_gdiplus;          // Context scope for GDI
-		EventAutoSub             m_eh_resize;        // Event handler subscription for the RT resize event
+		AutoSub                  m_eh_resize;        // Event handler subscription for the RT resize event
 		int                      m_gdi_dc_ref_count; // Used to detect outstanding DC references
 
 	public:

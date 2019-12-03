@@ -256,9 +256,6 @@
     <ClInclude Include="..\include\pr\physics\material\imaterial.h">
       <Filter>material</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics\utility\events.h">
-      <Filter>utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\physics\collision\collisioncache.h">
       <Filter>collision</Filter>
     </ClInclude>
@@ -300,6 +297,12 @@
     </ClInclude>
     <ClInclude Include="..\projects\physics\collision\simplex.h">
       <Filter>collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics\utility\event_types.h">
+      <Filter>utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics\utility\events.h">
+      <Filter>utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

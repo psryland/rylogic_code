@@ -15,170 +15,141 @@
 #include "pr/common/new.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
-#include "pr/common/events.h"
+#include "pr/common/event_handler.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 #include "pr/renderer11/instances/instance.h"
 
-namespace pr
+namespace pr::ldr
 {
-	namespace ldr
+	// Forwards
+	struct LdrGizmo;
+
+	// Manipulation states
+	enum class ELdrGizmoState
 	{
-		// Forwards
-		struct LdrGizmo;
-		typedef pr::RefPtr<LdrGizmo> LdrGizmoPtr;
-		typedef pr::vector<LdrGizmoPtr, 8> GizmoCont;
+		StartManip,
+		Moving,
+		Commit,
+		Revert,
+	};
 
-		enum class ELdrGizmoEvent
+	using LdrGizmoPtr = pr::RefPtr<LdrGizmo>;
+	using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
+	using GizmoMovedCB = pr::StaticCB<void, LdrGizmo*, ELdrGizmoState>;
+
+	// Graphics and functionality for a manipulator gizmo.
+	struct alignas(16) LdrGizmo :RefCount<LdrGizmo>
+	{
+		enum class EMode { Translate, Rotate, Scale, };
+		enum class EComponent { None, X, Y, Z, };
+		using M4x4RefCont = pr::vector<m4x4>;
+		using AttacheeCont = pr::vector<m4x4*>;
+
+		// Graphics instance for the gizmo
+		#define PR_RDR_INST(x)\
+			x(m4x4            ,m_i2w    ,rdr::EInstComp::I2WTransform   )\
+			x(rdr::ModelPtr   ,m_model  ,rdr::EInstComp::ModelPtr       )\
+			x(Colour32        ,m_colour ,rdr::EInstComp::TintColour32   )\
+			x(rdr::SKOverride ,m_sko    ,rdr::EInstComp::SortkeyOverride)\
+			x(rdr::BSBlock    ,m_bsb    ,rdr::EInstComp::BSBlock        )\
+			x(rdr::DSBlock    ,m_dsb    ,rdr::EInstComp::DSBlock        )\
+			x(rdr::RSBlock    ,m_rsb    ,rdr::EInstComp::RSBlock        )
+		PR_RDR_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
+		#undef PR_RDR_INST
+
+		struct alignas(16) Gfx
 		{
-			StartManip,
-			Moving,
-			Commit,
-			Revert,
-		};
-
-		// Events
-		struct Evt_Gizmo
-		{
-			LdrGizmo*      m_gizmo;
-			ELdrGizmoEvent m_state;
-
-			Evt_Gizmo(LdrGizmo& gizmo, ELdrGizmoEvent state)
-				:m_gizmo(&gizmo)
-				,m_state(state)
+			m4x4          m_o2w;     // The gizmo object to world
+			rdr::ModelPtr m_model;   // Single component model
+			RdrInstance   m_axis[3]; // An instance of the model for each component axis
+			Gfx()
+				:m_o2w(m4x4Identity)
+				,m_model()
+				,m_axis()
 			{}
 		};
 
-		// Static callback function
-		struct LdrGizmoCB
-		{
-			typedef void (__stdcall *Func)(void* ctx, Evt_Gizmo const& args);
-			Func m_func;
-			void* m_ctx;
-			LdrGizmoCB(Func func, void* ctx)
-				:m_func(func)
-				,m_ctx(ctx)
-			{}
-			void operator ()(Evt_Gizmo const& args) const
-			{
-				m_func(m_ctx, args);
-			}
-		};
+		M4x4RefCont  m_attached_ref; // A reference matrix for each attachee
+		AttacheeCont m_attached_ptr; // Pointers to the transform of the attachee object
+		Renderer*    m_rdr;          // The renderer, used to create the gizmo graphics
+		EMode        m_mode;         // The mode the gizmo is in
+		Gfx          m_gfx;          // The graphics object for the gizmo
+		float        m_scale;        // Scale factor for the gizmo
+		m4x4         m_offset;       // The world-space offset transform between when manipulation began and now
+		v2           m_ref_pt;       // The normalised screen space location of where manipulation began
+		Colour32     m_col_hover;    // The colour the component axis has doing hover
+		Colour32     m_col_manip;    // The colour the component axis has doing manipulation
+		EComponent   m_last_hit;     // The axis component last hit with the mouse
+		EComponent   m_component;    // The axis component being manipulated
+		bool         m_manipulating; // True while a manipulation is in progress
+		bool         m_impl_enabled; // True if this gizmo should respond to mouse interaction
 
-		// Graphics and functionality for a manipulator gizmo.
-		struct LdrGizmo
-			:pr::AlignTo<16>
-			,pr::RefCount<LdrGizmo>
-		{
-			enum class EMode { Translate, Rotate, Scale, };
-			enum class EComponent { None, X, Y, Z, };
-			typedef pr::vector<pr::m4x4>  M4x4RefCont;
-			typedef pr::vector<pr::m4x4*> AttacheeCont;
-			typedef pr::vector<LdrGizmoCB> CallbackCont;
+		// Create a manipulator gizmo
+		// 'camera' is needed so that we can perform ray casts into the scene
+		// to check for intersection with the gizmo.
+		// 'rdr' is used to create the graphics for the gizmo
+		// 'mode' is the initial mode for the gizmo
+		LdrGizmo(Renderer& rdr, EMode mode, m4x4 const& o2w);
 
-			// Graphics instance for the gizmo
-			#define PR_RDR_INST(x)\
-				x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform   )\
-				x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr       )\
-				x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32   )\
-				x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride)\
-				x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock        )\
-				x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock        )\
-				x(pr::rdr::RSBlock    ,m_rsb    ,pr::rdr::EInstComp::RSBlock        )
-			PR_RDR_DEFINE_INSTANCE(RdrInstance, PR_RDR_INST);
-			#undef PR_RDR_INST
+		// Raised whenever the gizmo is manipulated
+		MultiCast<GizmoMovedCB> Manipulated;
 
-			struct Gfx :pr::AlignTo<16>
-			{
-				pr::m4x4          m_o2w;     // The gizmo object to world
-				pr::rdr::ModelPtr m_model;   // Single component model
-				RdrInstance       m_axis[3]; // An instance of the model for each component axis
-				Gfx() :m_o2w(pr::m4x4Identity) ,m_model() ,m_axis() {}
-			};
+		// Get/Set the mode the gizmo is in
+		bool Enabled() const;
+		void Enabled(bool enabled);
 
-			M4x4RefCont      m_attached_ref; // A reference matrix for each attachee
-			AttacheeCont     m_attached_ptr; // Pointers to the transform of the attachee object
-			CallbackCont     m_callbacks;    // Callback functions to call as the gizmo is manipulated
-			pr::Renderer*    m_rdr;          // The renderer, used to create the gizmo graphics
-			EMode            m_mode;         // The mode the gizmo is in
-			Gfx              m_gfx;          // The graphics object for the gizmo
-			float            m_scale;        // Scale factor for the gizmo
-			pr::m4x4         m_offset;       // The world-space offset transform between when manipulation began and now
-			pr::v2           m_ref_pt;       // The normalised screen space location of where manipulation began
-			pr::Colour32     m_col_hover;    // The colour the component axis has doing hover
-			pr::Colour32     m_col_manip;    // The colour the component axis has doing manipulation
-			EComponent       m_last_hit;     // The axis component last hit with the mouse
-			EComponent       m_component;    // The axis component being manipulated
-			bool             m_manipulating; // True while a manipulation is in progress
-			bool             m_impl_enabled; // True if this gizmo should respond to mouse interaction
+		// True while manipulation is in progress
+		bool Manipulating() const;
 
-			// Create a manipulator gizmo
-			// 'camera' is needed so that we can perform ray casts into the scene
-			// to check for intersection with the gizmo.
-			// 'rdr' is used to create the graphics for the gizmo
-			// 'mode' is the initial mode for the gizmo
-			LdrGizmo(pr::Renderer& rdr, EMode mode, pr::m4x4 const& o2w);
+		// Get/Set the mode the gizmo is in
+		EMode Mode() const;
+		void Mode(EMode mode);
 
-			// Get/Set the mode the gizmo is in
-			bool Enabled() const;
-			void Enabled(bool enabled);
+		// Get/Set the gizmo object to world transform (scale is allowed)
+		m4x4 const& O2W() const;
+		void O2W(m4x4 const& o2w);
 
-			// True while manipulation is in progress
-			bool Manipulating() const;
+		// Attach/Detach objects by direct reference to their transform which will be moved as the gizmo moves
+		void Attach(m4x4& o2w);
+		void Detach(m4x4 const& o2w);
 
-			// Get/Set the mode the gizmo is in
-			EMode Mode() const;
-			void Mode(EMode mode);
+		// Record the current matrices as the reference
+		void Reference(v2 const& nss_point);
 
-			// Get/Set the gizmo object to world transform (scale is allowed)
-			pr::m4x4 const& O2W() const;
-			void O2W(pr::m4x4 const& o2w);
+		// Reset all attached objects back to the reference position and end manipulation
+		void Revert();
 
-			// Attach/Detach objects by direct reference to their transform which will be moved as the gizmo moves
-			void Attach(pr::m4x4& o2w);
-			void Detach(pr::m4x4 const& o2w);
+		// Set the ref matrices equal to the controlled matrices
+		void Commit();
 
-			// Attach/Detach a callback that will be called whenever the gizmo moves
-			void Attach(LdrGizmoCB::Func func, void* ctx);
-			void Detach(LdrGizmoCB::Func func);
+		// Returns the world space to world space offset transform between the position
+		// when manipulation started and the current gizmo position (in world space)
+		// Use: new_o2w = Offset() * old_o2w;
+		m4x4 Offset() const;
 
-			// Record the current matrices as the reference
-			void Reference(pr::v2 const& nss_point);
+		// Interact with the gizmo based on mouse movement.
+		// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
+		// The start of a mouse movement is indicated by 'btn_state' being non-zero
+		// The end of the mouse movement is indicated by 'btn_state' being zero
+		// 'nav_op' is a navigation/manipulation verb
+		// 'ref_point' should be true on the mouse down/up event, false while dragging
+		// Returns true if the gizmo has moved or changed colour
+		bool MouseControl(Camera& camera, v2 const& nss_point, camera::ENavOp nav_op, bool ref_point);
 
-			// Reset all attached objects back to the reference position and end manipulation
-			void Revert();
+		// Perform a hit test given a normalised screen-space point
+		EComponent HitTest(Camera& camera, v2 const& nss_point);
 
-			// Set the ref matrices equal to the controlled matrices
-			void Commit();
+		// Resets the other axes to the base colour and sets 'cp' to 'colour'
+		void SetAxisColour(EComponent cp, Colour const& colour = ColourZero);
 
-			// Returns the world space to world space offset transform between the position
-			// when manipulation started and the current gizmo position (in world space)
-			// Use: new_o2w = Offset() * old_o2w;
-			pr::m4x4 Offset() const;
+		// Add this gizmo to a scene
+		void AddToScene(rdr::Scene& scene);
 
-			// Interact with the gizmo based on mouse movement.
-			// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
-			// The start of a mouse movement is indicated by 'btn_state' being non-zero
-			// The end of the mouse movement is indicated by 'btn_state' being zero
-			// 'nav_op' is a navigation/manipulation verb
-			// 'ref_point' should be true on the mouse down/up event, false while dragging
-			// Returns true if the gizmo has moved or changed colour
-			bool MouseControl(pr::Camera& camera, pr::v2 const& nss_point, pr::camera::ENavOp nav_op, bool ref_point);
+	private:
 
-			// Perform a hit test given a normalised screen-space point
-			EComponent HitTest(pr::Camera& camera, pr::v2 const& nss_point);
-
-			// Resets the other axes to the base colour and sets 'cp' to 'colour'
-			void SetAxisColour(EComponent cp, pr::Colour const& colour = pr::ColourZero);
-
-			// Add this gizmo to a scene
-			void AddToScene(pr::rdr::Scene& scene);
-
-		private:
-
-			void DoTranslation(pr::Camera& camera, pr::v2 const& nss_point);
-			void DoRotation(pr::Camera& camera, pr::v2 const& nss_point);
-			void DoScale(pr::Camera& camera, pr::v2 const& nss_point);
-		};
-	}
+		void DoTranslation(Camera& camera, v2 const& nss_point);
+		void DoRotation(Camera& camera, v2 const& nss_point);
+		void DoScale(Camera& camera, v2 const& nss_point);
+	};
 }
