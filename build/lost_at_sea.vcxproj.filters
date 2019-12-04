@@ -4,9 +4,6 @@
     <ClCompile Include="..\projects\lost_at_sea\src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\lost_at_sea\src\stdafx.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\sdk\vorbis\vorbis.c">
       <Filter>src\sound</Filter>
     </ClCompile>
@@ -39,16 +36,7 @@
     <ClInclude Include="..\projects\lost_at_sea\src\main.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\sound\player.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\lost_at_sea\src\settings.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\sound\sound.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\lost_at_sea\src\stdafx.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\lost_at_sea\src\util.h">
@@ -82,6 +70,9 @@
       <Filter>src\app</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\app\main_gui.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\default_setup.h">
       <Filter>src\app</Filter>
     </ClInclude>
   </ItemGroup>

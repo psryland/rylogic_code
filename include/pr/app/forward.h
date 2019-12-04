@@ -75,13 +75,20 @@ namespace pr::app
 
 	using Exception = pr::Exception<EResult>;
 
-	struct IAppMainGui;
-	template <typename UserSettings, typename MainGUI> struct Main;
-	template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
+	// App interface
+	struct IAppMainUI
+	{
+		virtual ~IAppMainUI() {}
+		virtual int Run() = 0;
+	};
 
-	// Forward declaration of the function to create the gui instance. Apps must implement this function.
-	std::unique_ptr<IAppMainGui> CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow);
+	// App main base classes
+	template <typename Derived, typename MainUI, typename UserSettings> struct Main;
+	template <typename DerivedUI, typename Main, typename MessageLoop> struct MainUI;
+
+	// Forward declaration of the function to create the main window instance. Apps must implement this function.
+	std::unique_ptr<IAppMainUI> CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow);
 	//{
-	//	return std::unique_ptr<IAppMainGui>(new MyAppMainGui(cmdline, nCmdShow));
+	//	return std::unique_ptr<IAppMainUI>(new MyAppMainUI(cmdline, nCmdShow));
 	//}
 }

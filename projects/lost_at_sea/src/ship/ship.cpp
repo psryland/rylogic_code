@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2015
 //************************************
 
-#include "lost_at_sea/src/stdafx.h"
+#include "lost_at_sea/src/forward.h"
 #include "lost_at_sea/src/ship/ship.h"
 #include "lost_at_sea/src/event.h"
 

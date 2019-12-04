@@ -63,7 +63,7 @@ namespace pr::app
 		}
 
 		// Add the sky box to a viewport
-		void HandleUpdateScene(rdr::Scene& scene, EmptyArgs const&)
+		void AddToScene(rdr::Scene& scene)
 		{
 			auto& view = scene.m_view;
 			m_inst.m_i2w = m_i2w;
@@ -94,22 +94,22 @@ namespace pr::app
 			using namespace pr::rdr;
 
 			float const s = 0.5f;
-			Vert const verts[] =
+			static Vert const verts[] =
 			{
-				{{-s,  s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 0.25f}}, //0
-				{{-s,  s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 0.75f}}, //1
-				{{ s,  s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 0.75f}}, //2
-				{{ s,  s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 0.25f}}, //3
-				{{-s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, {-0.25f, 0.25f}}, //4
-				{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {-0.25f, 0.75f}}, //5
-				{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 1.25f}}, //6
-				{{ s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 1.25f}}, //7
-				{{ s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 1.25f, 0.75f}}, //8
-				{{ s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 1.25f, 0.25f}}, //9
-				{{ s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f,-0.25f}}, //10
-				{{-s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f,-0.25f}}, //11
+				{{-s,  s,  s, 1}, ColourWhite, v4Zero, { 0.25f, 0.25f}}, //0
+				{{-s,  s, -s, 1}, ColourWhite, v4Zero, { 0.25f, 0.75f}}, //1
+				{{ s,  s, -s, 1}, ColourWhite, v4Zero, { 0.75f, 0.75f}}, //2
+				{{ s,  s,  s, 1}, ColourWhite, v4Zero, { 0.75f, 0.25f}}, //3
+				{{-s, -s,  s, 1}, ColourWhite, v4Zero, {-0.25f, 0.25f}}, //4
+				{{-s, -s, -s, 1}, ColourWhite, v4Zero, {-0.25f, 0.75f}}, //5
+				{{-s, -s, -s, 1}, ColourWhite, v4Zero, { 0.25f, 1.25f}}, //6
+				{{ s, -s, -s, 1}, ColourWhite, v4Zero, { 0.75f, 1.25f}}, //7
+				{{ s, -s, -s, 1}, ColourWhite, v4Zero, { 1.25f, 0.75f}}, //8
+				{{ s, -s,  s, 1}, ColourWhite, v4Zero, { 1.25f, 0.25f}}, //9
+				{{ s, -s,  s, 1}, ColourWhite, v4Zero, { 0.75f,-0.25f}}, //10
+				{{-s, -s,  s, 1}, ColourWhite, v4Zero, { 0.25f,-0.25f}}, //11
 			};
-			pr::uint16 const indices[] =
+			static uint16_t const indices[] =
 			{
 				0,  1,  2,  0,  2,  3,
 				0,  4,  5,  0,  5,  1,
@@ -134,35 +134,35 @@ namespace pr::app
 		{
 			using namespace pr::rdr;
 
-			float const s = 0.5f, t0 = 0.0f, t1 = 1.0f;
-			Vert const verts[] =
+			constexpr float s = 0.5f, t0 = 0.0f, t1 = 1.0f;
+			static Vert const verts[] =
 			{
-				{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  0 // +X
-				{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  1
-				{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, //  2
-				{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, //  3
-				{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  4 // -X
-				{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  5
-				{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, //  6
-				{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, //  7
-				{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  8 // +Y
-				{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  9
-				{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 10
-				{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 11
-				{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 12 // -Y
-				{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 13
-				{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 14
-				{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 15
-				{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 16 // +Z
-				{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 17
-				{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 18
-				{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 19
-				{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 20 // -Z
-				{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 21
-				{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 22
-				{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 23
+				{{+s, +s, -s, 1}, ColourWhite, v4Zero, {t0, t0}}, //  0 // +X
+				{{+s, -s, -s, 1}, ColourWhite, v4Zero, {t0, t1}}, //  1
+				{{+s, -s, +s, 1}, ColourWhite, v4Zero, {t1, t1}}, //  2
+				{{+s, +s, +s, 1}, ColourWhite, v4Zero, {t1, t0}}, //  3
+				{{-s, +s, +s, 1}, ColourWhite, v4Zero, {t0, t0}}, //  4 // -X
+				{{-s, -s, +s, 1}, ColourWhite, v4Zero, {t0, t1}}, //  5
+				{{-s, -s, -s, 1}, ColourWhite, v4Zero, {t1, t1}}, //  6
+				{{-s, +s, -s, 1}, ColourWhite, v4Zero, {t1, t0}}, //  7
+				{{+s, +s, +s, 1}, ColourWhite, v4Zero, {t0, t0}}, //  8 // +Y
+				{{-s, +s, +s, 1}, ColourWhite, v4Zero, {t0, t1}}, //  9
+				{{-s, +s, -s, 1}, ColourWhite, v4Zero, {t1, t1}}, // 10
+				{{+s, +s, -s, 1}, ColourWhite, v4Zero, {t1, t0}}, // 11
+				{{+s, -s, -s, 1}, ColourWhite, v4Zero, {t0, t0}}, // 12 // -Y
+				{{-s, -s, -s, 1}, ColourWhite, v4Zero, {t0, t1}}, // 13
+				{{-s, -s, +s, 1}, ColourWhite, v4Zero, {t1, t1}}, // 14
+				{{+s, -s, +s, 1}, ColourWhite, v4Zero, {t1, t0}}, // 15
+				{{+s, +s, +s, 1}, ColourWhite, v4Zero, {t0, t0}}, // 16 // +Z
+				{{+s, -s, +s, 1}, ColourWhite, v4Zero, {t0, t1}}, // 17
+				{{-s, -s, +s, 1}, ColourWhite, v4Zero, {t1, t1}}, // 18
+				{{-s, +s, +s, 1}, ColourWhite, v4Zero, {t1, t0}}, // 19
+				{{-s, +s, -s, 1}, ColourWhite, v4Zero, {t0, t0}}, // 20 // -Z
+				{{-s, -s, -s, 1}, ColourWhite, v4Zero, {t0, t1}}, // 21
+				{{+s, -s, -s, 1}, ColourWhite, v4Zero, {t1, t1}}, // 22
+				{{+s, +s, -s, 1}, ColourWhite, v4Zero, {t1, t0}}, // 23
 			};
-			pr::uint16 const indices[] =
+			static uint16_t const indices[] =
 			{
 				0, 1, 2,  0, 2, 3, // 0 - 6
 				4, 5, 6,  4, 6, 7, // 6 - 12

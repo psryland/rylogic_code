@@ -282,6 +282,10 @@ namespace pr
 			{
 				return IRect(0, 0, x.x, x.y);
 			}
+			static IRect To(FRect const& x)
+			{
+				return IRect(static_cast<int>(x.m_min.x), static_cast<int>(x.m_min.y), static_cast<int>(x.m_max.x), static_cast<int>(x.m_max.y));
+			}
 
 			#ifdef _WINDEF_
 			static IRect To(RECT const& x)
@@ -295,6 +299,30 @@ namespace pr
 			#endif
 		};
 
+		// Whatever to FRect conversion
+		struct ToFRect
+		{
+			static FRect To(v2 const& x)
+			{
+				return FRect(0, 0, x.x, x.y);
+			}
+			static FRect To(IRect const& x)
+			{
+				return FRect(static_cast<float>(x.m_min.x), static_cast<float>(x.m_min.y), static_cast<float>(x.m_max.x), static_cast<float>(x.m_max.y));
+			}
+
+			#ifdef _WINDEF_
+			static FRect To(RECT const& x)
+			{
+				return FRect(static_cast<float>(x.left), static_cast<float>(x.top), static_cast<float>(x.right), static_cast<float>(x.bottom));
+			}
+			static FRect To(SIZE const& x)
+			{
+				return FRect(0, 0, static_cast<float>(x.cx), static_cast<float>(x.cy));
+			}
+			#endif
+		};
+
 		#ifdef _WINDEF_
 		// Whatever to SIZE conversion
 		struct ToSIZE
@@ -302,6 +330,10 @@ namespace pr
 			static SIZE To(IRect const& x)
 			{
 				return SIZE{x.SizeX(), x.SizeY()};
+			}
+			static SIZE To(FRect const& x)
+			{
+				return SIZE{ static_cast<int>(x.SizeX()), static_cast<int>(x.SizeY()) };
 			}
 			static SIZE To(RECT const& x)
 			{
@@ -315,6 +347,10 @@ namespace pr
 			static RECT To(IRect const& x)
 			{
 				return RECT{x.m_min.x, x.m_min.y, x.m_max.x, x.m_max.y};
+			}
+			static RECT To(FRect const& x)
+			{
+				return RECT{ static_cast<int>(x.m_min.x), static_cast<int>(x.m_min.y), static_cast<int>(x.m_max.x), static_cast<int>(x.m_max.y) };
 			}
 			static RECT To(SIZE const& x)
 			{
@@ -362,6 +398,9 @@ namespace pr
 
 	// Whatever to IRect
 	template <typename TFrom> struct Convert<IRect, TFrom> :convert::ToIRect {};
+
+	// Whatever to FRect
+	template <typename TFrom> struct Convert<FRect, TFrom> :convert::ToFRect {};
 
 	#ifdef _WINDEF_
 	// Whatever to SIZE

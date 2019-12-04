@@ -496,6 +496,11 @@ namespace pr::rdr
 		}
 
 		// Quad *******************************************************************************
+		static ModelPtr Quad(Renderer& rdr, NuggetProps const* mat = nullptr)
+		{
+			v4 const verts[] = { v4{-1,-1,0,1}, v4{+1,-1,0,1}, v4{-1,+1,0,1}, v4{+1,+1,0,1} };
+			return Quad(rdr, 1, &verts[0], 0, nullptr, m4x4Identity, mat);
+		}
 		static ModelPtr Quad(Renderer& rdr, int num_quads, v4 const* verts, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes

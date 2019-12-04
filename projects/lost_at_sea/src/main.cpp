@@ -3,18 +3,19 @@
 //  Copyright (c) Rylogic Ltd 2011
 //************************************
 
-#include "lost_at_sea/src/stdafx.h"
+#include "lost_at_sea/src/forward.h"
 #include "lost_at_sea/src/main.h"
-//#include "lost_at_sea/src/event.h"
 #include "lost_at_sea/src/util.h"
 
+using namespace pr;
 using namespace pr::app;
 using namespace pr::gui;
+using namespace pr::rdr;
 
 // Create the GUI window
-std::unique_ptr<IAppMainGui> pr::app::CreateGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
+std::unique_ptr<IAppMainUI> pr::app::CreateUI(wchar_t const* lpstrCmdLine, int nCmdShow)
 {
-	return std::unique_ptr<IAppMainGui>(new las::MainGUI(lpstrCmdLine, nCmdShow));
+	return std::unique_ptr<IAppMainUI>(new las::MainUI(lpstrCmdLine, nCmdShow));
 }
 
 namespace las
@@ -26,18 +27,21 @@ namespace las
 
 	struct Setup
 	{
-		MainGUI* m_gui;
+		using RSettings = pr::rdr::RdrSettings;
+		using WSettings = pr::rdr::WndSettings;
 
-		Setup(MainGUI& gui)
-			:m_gui(&gui)
+		MainUI* m_ui;
+
+		Setup(MainUI& ui)
+			:m_ui(&ui)
 		{}
 
 		std::wstring UserSettings() const { return L""; }
 
 		// Return configuration settings for the renderer
-		pr::rdr::RdrSettings RdrSettings()
+		RSettings RdrSettings()
 		{
-			pr::rdr::RdrSettings s(GetModuleHandleW(nullptr), D3D11_CREATE_DEVICE_FLAG(0));
+			RSettings s(GetModuleHandleW(nullptr), D3D11_CREATE_DEVICE_FLAG(0));
 			//s.m_window_handle      = hwnd;
 			//s.m_device_config      = settings.m_fullscreen ?
 			//	pr::rdr::GetDefaultDeviceConfigFullScreen(settings.m_res_x, settings.m_res_y, D3DDEVTYPE_HAL) :
@@ -55,68 +59,42 @@ namespace las
 		}
 
 		// Return settings for the renderer window
-		pr::rdr::WndSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
+		WSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
 		{
-			return pr::rdr::WndSettings(hwnd, true, false, client_area);
+			return WSettings(hwnd, true, false, client_area);
 		}
 	};
 
 	// Main ****************************************************
-	Main::Main(MainGUI& gui)
+
+	Main::Main(MainUI& gui)
 		:base(Setup(gui), gui)
-		//:m_settings(SettingsPath(), true)
-		//,m_gui(gui)
-		//,m_rdr(RdrSettings())
-		//,m_window(m_rdr, RdrWndSettings(*gui, m_settings, pr::ClientArea(*gui).Size()))
-		//,m_scene(m_window,{pr::rdr::ERenderStep::ForwardRender})
-//,m_cam(pr::maths::tau_by_8, m_rdr.ClientArea().Aspect())
-//,m_cam_ctrl(new las::DevCam(m_cam, gui->m_hInstance, gui->m_hWnd, m_rdr.ClientArea()))
-		,m_skybox(m_rdr, DataPath(L"data\\skybox\\SkyBox-Clouds-Few-Noon.png"), Skybox::EStyle::FiveSidedCube)
-//,m_ship(m_rdr)
-//,m_terrain(m_rdr)
+		,m_skybox(m_rdr, DataPath(L"data\\skybox\\SkyBox-Clouds-Few-Noon.png"), Skybox::EStyle::FiveSidedCube, 100.0f)
+		//,m_ship(m_rdr)
+		//,m_terrain(m_rdr)
 	{
-		// Position the camera
-		m_cam.LookAt(
-			pr::v4(0, 0, 10.0f, 1.0f),
-			pr::v4Origin, 
-			pr::v4YAxis, true);
-	//	m_view.CameraToWorld(m_cam.CameraToWorld());
+		// Watch for scene drawlist updates
+		m_scene.OnUpdateScene += std::bind(&Main::AddToScene, this, _1);
+	}
+	Main::~Main()
+	{
+		// Clear the drawlists so that destructing models
+		// don't assert because they're still in a drawlist.
+		m_scene.ClearDrawlists();
 	}
 	
 	// Advance the game by one frame
-	void Main::Step(double /*elapsed_seconds*/)
+	void Main::Step(double elapsed_seconds)
 	{
-		//pr::events::Send(las::Evt_Step(elapsed_s));
+		(void)elapsed_seconds;
 	}
 
-//// Draw the scene
-//void las::Main::Render()
-//{
-//	// Render the viewports
-//	if (pr::Failed(m_rdr.RenderStart()))
-//		return;
-//	
-//	// Set the viewport view
-//	m_view.SetView(m_cam);
-//	
-//	// Add objects to the viewport
-//	m_view.ClearDrawlist();
-//	pr::events::Send(las::Evt_AddToViewport(m_view, m_cam));
-//	
-//	// Render the view
-//	m_view.Render();
-//	m_rdr.RenderEnd();
-//	m_rdr.Present();
-//}
-//
-//// The size of the window has changed
-//void las::Main::Resize(pr::IRect const& client_area)
-//{
-//	m_rdr.Resize(client_area);
-//	m_cam.Aspect(client_area.Aspect());
-//}
-//
-////		
+	// Add instances to the scene
+	void Main::AddToScene(Scene& scene)
+	{
+		m_skybox.AddToScene(scene);
+	}
+
 ////	AllocConsole();
 ////	HWND hwnd = GetConsoleWindow();
 ////	D3DPtr<IDirectSound8> dsound = pr::sound::InitDSound(hwnd);
@@ -141,45 +119,22 @@ namespace las
 ////}
 
 
-	// MainGUI ****************************************************
-	MainGUI::MainGUI(wchar_t const* lpstrCmdLine, int nCmdShow)
-		:pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>(Params().title(AppTitle()))
+	// MainUI ****************************************************
+
+	MainUI::MainUI(wchar_t const*, int)
+		:base(Params().title(AppTitle()))
 	{
-		(void)lpstrCmdLine,nCmdShow;
 		m_msg_loop.AddStepContext("render", [this](double)  { m_main->DoRender(true); }, 60.0f, false);
 		m_msg_loop.AddStepContext("step"  , [this](double s){ m_main->Step(s); }, 60.0f, true);
 	}
 }
 
-//// Entry point
-//int __stdcall _tWinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
-//{
-//	int res = 0;
-//	try
-//	{
-//		// CoInitialise
-//		pr::InitCom init_com;
-//
-//		las::MainGUI main;
-//		
-//		pr::SimMsgLoop loop;
-//		loop.AddStepContext("Step", [&](double s){ main.Step(s); }, 30.0f, true);
-//		loop.AddStepContext("Render", [&](double){ main.Render(); }, 60.0f, true);
-//		
-//		return loop.Run();
-//	}
-//	catch (std::exception const& ex)
-//	{
-//		DWORD last_error = GetLastError();
-//		HRESULT res = HRESULT_FROM_WIN32(last_error);
-//		auto err = pr::Fmt("%s\nCode: %X - %s", ex.what(), res, pr::HrMsg(res).c_str());
-//		::MessageBoxA(0, err.c_str(), "LAS error", MB_OK|MB_ICONERROR);
-//		res = -1;
-//	}
-//	catch (...)
-//	{
-//		::MessageBoxA(0, "Shutting down due to an unknown exception", "LAS error", MB_OK|MB_ICONERROR);
-//		res = -1;
-//	}
-//	return res;
-//}
+#if defined _M_IX86
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif

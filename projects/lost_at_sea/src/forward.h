@@ -11,8 +11,6 @@
 //#define  WINVER       0x0600
 //#define DIRECTINPUT_VERSION 0x0800
 
-#include "pr/common/min_max_fix.h"
-
 #include <d3d11.h>
 #include <mmreg.h>
 #include <dsound.h>
@@ -22,7 +20,7 @@
 
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
-#include "pr/app/main_gui.h"
+#include "pr/app/main_ui.h"
 #include "pr/app/skybox.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/sim_message_loop.h"
@@ -77,7 +75,7 @@ namespace las
 	using Exception = pr::Exception<EResult>;
 
 	struct Main;
-	struct MainGUI;
+	struct MainUI;
 
 	wchar_t const* AppVersionW();
 	char const*    AppVersionA();

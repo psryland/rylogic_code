@@ -583,7 +583,8 @@ namespace pr
 		// Viewport description
 		struct Viewport :D3D11_VIEWPORT
 		{
-			// View ports are in render target space
+			// Viewports represent an area on the backbuffer, *not* the target HWND.
+			// Viewports are in render target space
 			// e.g.
 			//  x,y          = 0,0 (not -0.5f,-0.5f)
 			//  width,height = 800,600 (not 1.0f,1.0f)

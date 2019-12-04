@@ -50,7 +50,7 @@ namespace pr::rdr
 		Window& wnd() const;
 
 		// Raised just before the drawlist is sorted. Handlers should add/remove instances from the scene, or add/remove render steps as required
-		EventHandler<Scene&, EmptyArgs> OnUpdateScene;
+		EventHandler<Scene&, EmptyArgs const&> OnUpdateScene;
 
 		// Set the render steps to use for rendering the scene
 		void SetRenderSteps(std::initializer_list<ERenderStep> rsteps);

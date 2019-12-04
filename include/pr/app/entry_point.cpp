@@ -4,7 +4,7 @@
 //*****************************************************************************************
 
 #include "pr/app/main.h"
-#include "pr/app/main_gui.h"
+#include "pr/app/main_ui.h"
 #ifdef PR_APP_MAIN_INCLUDE
 #include PR_APP_MAIN_INCLUDE
 #endif
@@ -18,7 +18,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR l
 	int nRet;
 	{
 		std::string err_msg;
-		std::unique_ptr<IAppMainGui> gui;
+		std::unique_ptr<IAppMainUI> gui;
 		try
 		{
 			// CoInitialise COM
@@ -26,7 +26,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR l
 
 			// Create an instance of the main window and start it running
 			auto cmd_line = Widen(lpstrCmdLine);
-			gui = pr::app::CreateGUI(cmd_line.c_str(), nCmdShow);
+			gui = pr::app::CreateUI(cmd_line.c_str(), nCmdShow);
 			nRet = gui->Run();
 		}
 		catch (std::exception const& ex)

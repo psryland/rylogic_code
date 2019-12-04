@@ -75,7 +75,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>lost_at_sea/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -89,7 +89,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>lost_at_sea/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -103,7 +103,7 @@
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>lost_at_sea/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -122,7 +122,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>lost_at_sea/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -152,17 +152,17 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\projects\lost_at_sea\src\cam\cam.cpp" />
-    <ClCompile Include="..\projects\lost_at_sea\src\main.cpp" />
-    <ClCompile Include="..\projects\lost_at_sea\src\ship\ship.cpp" />
-    <ClCompile Include="..\projects\lost_at_sea\src\stdafx.cpp">
+    <ClCompile Include="..\projects\lost_at_sea\src\main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\ship\ship.cpp" />
     <ClCompile Include="..\projects\lost_at_sea\src\world\terrain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\app\default_setup.h" />
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
@@ -170,16 +170,13 @@
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camctrl_dinput_wasd.h" />
     <ClInclude Include="..\include\pr\input\dinput.h" />
-    <ClInclude Include="..\include\pr\sound\player.h" />
     <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h" />
-    <ClInclude Include="..\include\pr\sound\sound.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\cam\cam.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\event.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\forward.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\main.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\settings.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\ship\ship.h" />
-    <ClInclude Include="..\projects\lost_at_sea\src\stdafx.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\util.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\world\terrain.h" />
   </ItemGroup>

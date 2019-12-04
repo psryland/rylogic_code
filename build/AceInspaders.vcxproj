@@ -101,7 +101,7 @@
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\gfx_1bit.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
-    <ClInclude Include="..\include\pr\app\main_gui.h" />
+    <ClInclude Include="..\include\pr\app\main_ui.h" />
     <ClInclude Include="..\projects\AceInspaders\src\space_invaders.h" />
   </ItemGroup>
   <ItemGroup>

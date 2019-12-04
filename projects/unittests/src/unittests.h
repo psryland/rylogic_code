@@ -8,7 +8,7 @@
 #include "pr\app\gfx_1bit.h"
 #include "pr\app\gimble.h"
 #include "pr\app\main.h"
-#include "pr\app\main_gui.h"
+#include "pr\app\main_ui.h"
 #include "pr\app\skybox.h"
 #include "pr\audio\audio.h"
 #include "pr\audio\audio\audio_manager.h"

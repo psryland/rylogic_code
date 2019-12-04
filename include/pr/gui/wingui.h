@@ -2612,7 +2612,7 @@ namespace pr
 				// Auto size to the parent
 				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 				{
-					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent) : MinMaxInfo().Bounds();
+					if (id == 0) return p.m_parent.hwnd() != nullptr ? Control::ClientRect(p.m_parent, true) : MinMaxInfo().Bounds();
 					if (id == -1) throw std::exception("Auto size not supported for dialog templates");
 					throw std::exception("DlgTemplate can only be positioned related to the screen or owner window");
 				});
@@ -4137,21 +4137,30 @@ namespace pr
 
 			// Get the client rect [TL,BR) for the window in this controls client space.
 			// Note: Menus are part of the non-client area, you don't need to offset the client rect for the menu.
-			virtual Rect ClientRect() const
+			// ClientRect also includes padding by default. Use 'padded' = false for the unpadded client area.
+			Rect ClientRect() const
 			{
-				return ClientRect(m_hwnd);
+				return ClientRect(true);
 			}
-			static Rect ClientRect(HWND hwnd)
+			Rect ClientRect(bool padded) const
+			{
+				// Call the protected virtual implementation
+				return ClientRectCore(padded);
+			}
+			static Rect ClientRect(HWND hwnd, bool padded)
 			{
 				assert(::IsWindow(hwnd));
+
 				Rect r;
 				Throw(::GetClientRect(hwnd, &r), "GetClientRect failed.");
 				
 				// If 'hwnd' is a 'Control', adjust for it's padding
-				auto wr = WndRefC(hwnd);
-				if (wr.ctrl() != nullptr)
-					r = r.Adjust(wr->cp().m_padding);
-
+				if (padded)
+				{
+					auto wr = WndRefC(hwnd);
+					if (wr.ctrl() != nullptr)
+						r = r.Adjust(wr->cp().m_padding);
+				}
 				return r;
 			}
 
@@ -4722,7 +4731,6 @@ namespace pr
 							// Resize all descendants
 							if (is_resize || is_move)
 							{
-								//Controls stack = m_child;
 								auto client = ClientRect();
 								auto screen = ScreenRect();
 								for (auto c : m_child)
@@ -5401,7 +5409,7 @@ namespace pr
 			void ResizeToParent(bool repaint = false)
 			{
 				if (m_parent.hwnd() == nullptr) return;
-				ResizeToParent(ClientRect(m_parent), repaint);
+				ResizeToParent(ClientRect(m_parent, true), repaint);
 			}
 
 			// Handle auto position/size
@@ -5466,7 +5474,7 @@ namespace pr
 					return;
 
 				// Record the offset relative to the parent
-				auto p = cp().top_level() ? ScreenRect(m_parent) : ClientRect(m_parent);
+				auto p = cp().top_level() ? ScreenRect(m_parent) : ClientRect(m_parent, true);
 				auto c = ParentRect().Adjust(cp().m_margin);
 				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
 			}
@@ -5494,6 +5502,13 @@ namespace pr
 				if (max_width != 0) flags |= DT_WORDBREAK;
 				Throw(DrawTextW(dc, text.c_str(), int(text.size()), &sz, flags | DT_CALCRECT), "DrawTextW failed");
 				return sz.size();
+			}
+
+			// Return the client area of this control, including or excluding padding
+			virtual Rect ClientRectCore(bool padded) const
+			{
+				// By default, call the static implementation
+				return Control::ClientRect(m_hwnd, padded);
 			}
 
 		private:
@@ -8037,22 +8052,6 @@ namespace pr
 				TabSwitch(*this, args);
 			}
 
-			// The client rect for a tab control, excludes the tabs
-			Rect ClientRect() const override
-			{
-				auto cr = Control::ClientRect();
-				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&cr));
-
-				// TC has built in padding, we want to remove that and use our own padding
-				// There is also a 2px 3D border
-				auto style = Style();
-				if      ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +1); // Bottom
-				else if ((style & TCS_RIGHT ) &&  (style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +4); // Right
-				else if (                         (style & TCS_VERTICAL)) cr = cr.Adjust(-2, -4, +4, +4); // Left
-				else                                                      cr = cr.Adjust(-3, -1, +1, +2); // Top
-				return cr;
-			}
-
 		protected:
 
 			// Message map function
@@ -8168,6 +8167,21 @@ namespace pr
 				{
 					::SendMessageW(m_hwnd, TCM_SETCURSEL, neu, 0);
 				}
+			}
+
+			// The client rect for a tab control, excludes the tabs
+			Rect ClientRectCore(bool padded) const override
+			{
+				auto cr = Control::ClientRectCore(padded);
+				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&cr));
+
+				// TC has built in padding, we want to remove that and use our own padding. There is also a 2px 3D border
+				auto style = Style();
+				if ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL))    cr = cr.Adjust(-4, -4, +2, +1); // Bottom
+				else if ((style & TCS_RIGHT) && (style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +4); // Right
+				else if ((style & TCS_VERTICAL))                        cr = cr.Adjust(-2, -4, +4, +4); // Left
+				else                                                    cr = cr.Adjust(-3, -1, +1, +2); // Top
+				return cr;
 			}
 		};
 		struct Splitter :Control

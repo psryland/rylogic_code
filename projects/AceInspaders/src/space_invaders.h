@@ -56,14 +56,14 @@ namespace pr
 			virtual void PlaySound(ESound) = 0;
 		};
 
-	private:
-
 		// Screen dimensions
 		constexpr static int ScreenDimX = 128;
 		constexpr static int ScreenDimY = 96;
 		using Screen = gfx_1bit::Screen<ScreenDimX, ScreenDimY, uint8_t>;
 		using Sprite = gfx_1bit::Sprite<uint8_t>;
 		using EditableSprite = gfx_1bit::EditableSprite<8, uint8_t>;
+
+	private:
 
 		#pragma region Sprites
 		static gfx_1bit::Sprite<uint32_t> sprite_ship()
@@ -309,6 +309,7 @@ namespace pr
 			case EState::MainRun:
 				{
 					auto elapsed = m_system->ClockMS() - m_last_step_ms;
+					(void)elapsed;
 					break;
 				}
 			}

@@ -2,7 +2,7 @@
 // Lost at Sea
 //  Copyright (c) Rylogic Ltd 2011
 //************************************
-#include "lost_at_sea/src/stdafx.h"
+#include "lost_at_sea/src/forward.h"
 #include "lost_at_sea/src/world/terrain.h"
 //#include "pr/geometry/hex_patch.h"
 //#include "pr/linedrawer/ldr_helper.h"
