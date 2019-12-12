@@ -83,7 +83,7 @@ namespace pr
 		constexpr static int ScreenDimX = 128;
 		constexpr static int ScreenDimY = 96;
 		constexpr static int StartGameDelayMS = 1000; // The length of the pause between the start game sound and starting
-		constexpr static int EndGameDelayMS = 2000; // The length of the pause between the start game sound and starting
+		constexpr static int EndLevelDelayMS = 2000; // The length of the pause between the start game sound and starting
 
 		// Player
 		constexpr static int PlayerMaxSpeed = 1000; // The max speed of the player in pixels/second
@@ -676,6 +676,7 @@ namespace pr
 		Bullet m_bullets[MaxBullets];
 		UserInputData m_user_input;
 		int m_score;
+		int m_level;
 		int m_fire_button_issue;
 		int m_clock_ms;
 		int m_timer_start_ms;
@@ -694,6 +695,7 @@ namespace pr
 			, m_bullets()
 			, m_user_input()
 			, m_score()
+			, m_level()
 			, m_clock_ms()
 			, m_timer_start_ms()
 			, m_rng(FNV_offset_basis32)
@@ -716,11 +718,13 @@ namespace pr
 			case EState::StartNewGame:
 				{
 					m_score = 0;
+					m_level = 0;
 					ChangeState(EState::StartNewLevel);
 					break;
 				}
 			case EState::StartNewLevel:
 				{
+					++m_level;
 					SetupGame();
 					m_system->PlaySound(ESound::LevelStart);
 					ChangeState(EState::StartDelay);
@@ -750,20 +754,21 @@ namespace pr
 					UpdateBombs(elapsed_ms);
 
 					// Leave this state after a delay
-					if (m_state == EState::AliensDefeated && m_clock_ms - m_timer_start_ms > EndGameDelayMS)
+					if (m_state == EState::AliensDefeated && m_clock_ms - m_timer_start_ms > EndLevelDelayMS)
 						ChangeState(EState::LevelComplete);
-					if (m_state == EState::PlayerHit && m_clock_ms - m_timer_start_ms > EndGameDelayMS)
+					if (m_state == EState::PlayerHit && m_clock_ms - m_timer_start_ms > EndLevelDelayMS)
 						ChangeState(EState::GameOver);
 					break;
 				}
 			case EState::LevelComplete:
 				{
-					ChangeState(EState::StartNewGame);
+					ChangeState(EState::StartNewLevel);
 					break;
 				}
 			case EState::GameOver:
 				{
-					ChangeState(EState::StartNewGame);
+					if (m_user_input.FireButton)
+						ChangeState(EState::StartNewGame);
 					break;
 				}
 			}
