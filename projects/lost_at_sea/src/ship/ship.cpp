@@ -5,7 +5,6 @@
 
 #include "lost_at_sea/src/forward.h"
 #include "lost_at_sea/src/ship/ship.h"
-#include "lost_at_sea/src/event.h"
 
 namespace las
 {

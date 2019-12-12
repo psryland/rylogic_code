@@ -115,7 +115,7 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i != 2; ++i)
 			{
 				var s = (MemoryStream?)null;
-				void func() { Assert.Equal(str.Length, s.Capacity); }
+				void func() => Assert.Equal(str.Length, s?.Capacity);
 
 				using (s = new MemoryStream(Encoding.ASCII.GetBytes(str)))
 				{

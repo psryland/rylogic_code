@@ -172,7 +172,6 @@
     <ClInclude Include="..\include\pr\input\dinput.h" />
     <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\cam\cam.h" />
-    <ClInclude Include="..\projects\lost_at_sea\src\event.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\forward.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\main.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\settings.h" />

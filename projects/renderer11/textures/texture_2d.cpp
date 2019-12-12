@@ -198,6 +198,29 @@ namespace pr::rdr
 		TexDesc(Image(0,0), tdesc, all_instances, preserve);
 	}
 
+	// Access the raw pixel data of this texture.
+	// If EMapFlags::DoNotWait is used, the returned image may contain a null
+	// pointer for the pixel data. This is because the resource is not available.
+	Image Texture2D::GetPixels(Lock& lock, UINT sub, EMap map_type, EMapFlags flags, Range range)
+	{
+		PR_ASSERT(PR_DBG_RDR, lock.m_dc == nullptr, "lock should be a default constructed instance. It gets 'Mapped' in this function");
+		Renderer::Lock rlock(m_mgr->rdr());
+
+		// Get the texture info
+		auto tdesc = TexDesc();
+
+		// Create the image
+		Image img(static_cast<int>(tdesc.Width), static_cast<int>(tdesc.Height), nullptr, tdesc.Format);
+		
+		// Access the pixel data
+		if (!lock.Map(rlock.ImmediateDC(), dx_tex(), sub, img.m_pitch.x, map_type, flags, range))
+			return img;
+
+		// Set the image data pointer
+		img.m_pixels = lock.data();
+		return img;
+	}
+
 	// Get the GDI DC from the surface
 	HDC Texture2D::GetDC(bool discard)
 	{

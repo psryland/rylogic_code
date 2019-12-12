@@ -43,7 +43,7 @@ namespace pr::app
 
 		// Constructs a sky box model and instance.
 		// 'texpath' should be an unrolled cube texture
-		Skybox(Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 1000.0f)
+		Skybox(Renderer& rdr, std::filesystem::path const& texpath, EStyle tex_style, float scale = 100.0f)
 			:m_inst()
 			,m_tex()
 			,m_scale(scale)

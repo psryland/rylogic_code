@@ -98,6 +98,9 @@
     <Filter Include="pr\container">
       <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\gfx">
+      <UniqueIdentifier>{b28a32bf-1c6a-45f9-8fcb-3469e8be6811}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
@@ -1016,6 +1019,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\app\space_invaders.h">
       <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gfx\onebit.h">
+      <Filter>pr\gfx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

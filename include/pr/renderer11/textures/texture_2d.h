@@ -50,6 +50,11 @@ namespace pr::rdr
 		// texture and optionally preserving the current content of the texture
 		void Resize(size_t width, size_t height, bool all_instances, bool preserve);
 
+		// Access the raw pixel data of this texture.
+		// If EMapFlags::DoNotWait is used, the returned image may contain a null
+		// pointer for the pixel data. This is because the resource is not available.
+		Image GetPixels(Lock& lock, UINT sub = 0, EMap map_type = EMap::WriteDiscard, EMapFlags flags = EMapFlags::None, Range range = Range::Zero());
+
 		// Get/Release the DC (prefer the Gfx class for RAII)
 		// Note: Only works for textures created with GDI compatibility
 		HDC GetDC(bool discard);

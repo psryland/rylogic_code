@@ -67,7 +67,7 @@ namespace pr::rdr
 
 		// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 		void SetView(SceneView const& view) { m_view = view; }
-		void SetView(pr::Camera const& cam) { SetView(SceneView(cam)); }
+		void SetView(Camera const& cam) { SetView(SceneView(cam)); }
 
 		// Access the render step by Id
 		RenderStep* FindRStep(ERenderStep id) const;

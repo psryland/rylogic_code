@@ -517,7 +517,7 @@ namespace view3d
 		PR_ASSERT(PR_DBG, new_ncount <= nuggets.size(), "");
 
 		{// Lock and update the model
-			MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
+			MLock mlock(model, EMap::WriteDiscard);
 			model->m_bbox.reset();
 
 			// Copy the model data into the model

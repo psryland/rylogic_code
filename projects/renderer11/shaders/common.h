@@ -159,11 +159,15 @@ namespace pr::rdr
 	}
 
 	// Set the lighting constants
-	inline void SetLightingConstants(Light const& light, hlsl::Light& cb)
+	inline void SetLightingConstants(Light const& light, SceneView const& view, hlsl::Light& cb)
 	{
+		// If the global light is camera relative, adjust the position and direction appropriately
+		auto pos = light.m_cam_relative ? view.CameraToWorld() * light.m_position : light.m_position;
+		auto dir = light.m_cam_relative ? view.CameraToWorld() * light.m_direction : light.m_direction;
+
 		cb.m_info         = iv4(int(light.m_type),0,0,0);
-		cb.m_ws_direction = light.m_direction;
-		cb.m_ws_position  = light.m_position;
+		cb.m_ws_direction = dir;
+		cb.m_ws_position  = pos;
 		cb.m_ambient      = Colour(light.m_ambient).rgba;
 		cb.m_colour       = Colour(light.m_diffuse).rgba;
 		cb.m_specular     = Colour(light.m_specular, light.m_specular_power).rgba;
@@ -195,8 +199,8 @@ namespace pr::rdr
 		// Copy the buffer to the dx buffer
 		if (cbuf != nullptr)
 		{
-			LockT<TCBuf> lock(dc, cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-			*lock.ptr() = cb;
+			Lock lock(dc, cbuf, 0, sizeof(TCBuf), EMap::WriteDiscard, EMapFlags::None);
+			*lock.ptr<TCBuf>() = cb;
 		}
 
 		// Bind the constants to the shaders

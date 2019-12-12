@@ -40,13 +40,13 @@ namespace pr
 		}
 
 		// Access to the vertex/index buffers
-		bool Model::MapVerts(Lock& lock, D3D11_MAP map_type, uint flags, Range vrange)
+		bool Model::MapVerts(Lock& lock, EMap map_type, EMapFlags flags, Range vrange)
 		{
 			if (vrange == RangeZero) vrange  = m_vrange;
 			else vrange.shift((int)m_vrange.m_beg);
 			return m_model_buffer->MapVerts(lock, map_type, flags, vrange);
 		}
-		bool Model::MapIndices(Lock& lock, D3D11_MAP map_type, uint flags, Range irange)
+		bool Model::MapIndices(Lock& lock, EMap map_type, EMapFlags flags, Range irange)
 		{
 			if (irange == RangeZero) irange  = m_irange;
 			else irange.shift((int)m_irange.m_beg);

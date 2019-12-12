@@ -73,7 +73,7 @@ namespace pr
 
 		// Access to the vertex/index buffers
 		// Only return false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-		bool ModelBuffer::MapVerts(Lock& lock, D3D11_MAP map_type, UINT flags, Range vrange)
+		bool ModelBuffer::MapVerts(Lock& lock, EMap map_type, EMapFlags flags, Range vrange)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_vb, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
@@ -83,9 +83,9 @@ namespace pr
 			if (vrange == RangeZero) vrange = m_vb.m_used;
 
 			auto dc = rdrlock.ImmediateDC();
-			return lock.Map(dc, m_vb.get(), 0, map_type, flags, m_vb.m_stride, vrange);
+			return lock.Map(dc, m_vb.get(), 0, m_vb.m_stride, map_type, flags, vrange);
 		}
-		bool ModelBuffer::MapIndices(Lock& lock, D3D11_MAP map_type, UINT flags, Range irange)
+		bool ModelBuffer::MapIndices(Lock& lock, EMap map_type, EMapFlags flags, Range irange)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_ib, "This model buffer has not been created");
 			PR_ASSERT(PR_DBG_RDR, lock.m_res == 0, "This lock has already been used, make a new one");
@@ -95,7 +95,7 @@ namespace pr
 			if (irange == RangeZero) irange = m_ib.m_used;
 
 			auto dc = rdrlock.ImmediateDC();
-			return lock.Map(dc, m_ib.get(), 0, map_type, flags, BytesPerPixel(m_ib.m_format), irange);
+			return lock.Map(dc, m_ib.get(), 0, BytesPerPixel(m_ib.m_format), map_type, flags, irange);
 		}
 
 		// Ref counting clean up function

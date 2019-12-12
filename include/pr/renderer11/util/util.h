@@ -10,7 +10,6 @@
 namespace pr::rdr
 {
 	// Helper for getting the ref count of a COM pointer.
-	// Don't inline so that it can be used in the Immediate window during debugging
 	ULONG RefCount(IUnknown* ptr);
 	template <typename T> ULONG RefCount(RefPtr<T> ptr)
 	{
@@ -25,11 +24,10 @@ namespace pr::rdr
 		return ++s_id;
 	}
 
-	// Make a RdrId from a pointer
-	// Careful, don't make a templated MakeId(T const& obj) function. It will be selected
-	// in preference to this function.
+	// Make a RdrId from a pointer.
 	inline RdrId MakeId(void const* ptr)
 	{
+		// Careful, don't make a templated MakeId(T const& obj) function. It will be selected in preference to this function.
 		return static_cast<RdrId>(byte_ptr(ptr) - byte_ptr(nullptr));
 	}
 
@@ -50,13 +48,25 @@ namespace pr::rdr
 	}
 
 	// Compile time type to 'DXGI_FORMAT' conversion
-	template <typename Fmt> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char  ); };
-	template <> struct DxFormat<uint16>     { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16); };
-	template <> struct DxFormat<uint32>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32); };
-	template <> struct DxFormat<v2    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2    ); };
-	template <> struct DxFormat<v3    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3    ); };
-	template <> struct DxFormat<v4    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4    ); };
-	template <> struct DxFormat<Colour>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour); };
+	template <typename Type> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
+	template <> struct DxFormat<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16  ); };
+	template <> struct DxFormat<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32  ); };
+	template <> struct DxFormat<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
+	template <> struct DxFormat<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
+	template <> struct DxFormat<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
+	template <> struct DxFormat<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
+	template <> struct DxFormat<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
+
+	// Compile 'DXGI_FORMAT' to pixel type conversion
+	template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
+	template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
+	template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
+	template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };
+	template <> struct type_for<DXGI_FORMAT_R32G32B32_FLOAT   >{ using type = v3;       };
+	template <> struct type_for<DXGI_FORMAT_R32G32B32A32_FLOAT>{ using type = Colour;   };
+	template <> struct type_for<DXGI_FORMAT_R8G8B8A8_UNORM    >{ using type = Colour32; };
+	template <DXGI_FORMAT Fmt> using type_for_t = typename type_for<Fmt>::type;
+	static_assert(std::is_same_v<type_for_t<DXGI_FORMAT_R32G32B32A32_FLOAT>, Colour>) ;
 
 	// Shader type to enum map
 	template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
@@ -86,8 +96,8 @@ namespace pr::rdr
 	size_t IndexCount(size_t pcount, EPrim topo);
 
 	// Returns the number of bits per pixel for a given dx format
-	size_t BitsPerPixel(DXGI_FORMAT fmt);
-	inline size_t BytesPerPixel(DXGI_FORMAT fmt)
+	int BitsPerPixel(DXGI_FORMAT fmt);
+	inline int BytesPerPixel(DXGI_FORMAT fmt)
 	{
 		return BitsPerPixel(fmt) >> 3;
 	}
@@ -103,13 +113,9 @@ namespace pr::rdr
 	// Returns the dimensions of a mip level 'levels' below the given texture size
 	iv2 MipDimensions(iv2 size, size_t levels);
 
-	// Returns the number of pixels needed contain the data for a mip chain with 'levels' levels
-	// If 'levels' is 0, all mips down to 1x1 are assumed
-	// Note, size.x should be the pitch rather than width of the texture
+	// Returns the number of pixels needed contain the data for a mip chain with 'levels' levels.
+	// If 'levels' is 0, all mips down to 1x1 are assumed. Note, size.x should be the pitch rather than width of the texture
 	size_t MipChainSize(iv2 size, size_t levels);
-
-	// Return information about a surface determined from its dimensions and format. Any of the pointer parameters can be null
-	void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
 
 	// Helper for checking values are not overwritten in a lookup table
 	template <class Table, typename Key, typename Value>

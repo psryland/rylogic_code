@@ -85,7 +85,7 @@ namespace pr
 			}
 			{// Set lighting constants
 				hlsl::ds::CBufLighting cb = {};
-				SetLightingConstants(m_scene->m_global_light, cb.m_light);
+				SetLightingConstants(m_scene->m_global_light, m_scene->m_view, cb.m_light);
 				WriteConstants(dc, m_cbuf_lighting.get(), cb, EShaderType::PS);
 			}
 

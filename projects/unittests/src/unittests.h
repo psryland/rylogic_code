@@ -5,7 +5,6 @@
 // Headers to unit test
 #include "pr\app\default_setup.h"
 #include "pr\app\forward.h"
-#include "pr\app\gfx_1bit.h"
 #include "pr\app\gimble.h"
 #include "pr\app\main.h"
 #include "pr\app\main_ui.h"
@@ -157,6 +156,7 @@
 #include "pr\geometry\triangle.h"
 #include "pr\geometry\utility.h"
 #include "pr\geometry\volume.h"
+#include "pr\gfx\onebit.h"
 #include "pr\hardware\comm_port_io.h"
 #include "pr\hardware\cpuinfo.h"
 #include "pr\hardware\find_bt_device.h"

@@ -165,7 +165,7 @@ namespace pr::dinput
 		DeviceEnum(IDirectInput8* dinput, EDeviceClass device_class, EEnumDevicesFlags device_flags, Cont const& cont = Cont())
 			:m_devices(cont)
 		{
-			dinput->EnumDevices(device_class, EnumDevicesCB, this, device_flags);
+			dinput->EnumDevices(static_cast<DWORD>(device_class), EnumDevicesCB, this, static_cast<DWORD>(device_flags));
 		}
 		static BOOL CALLBACK EnumDevicesCB(LPCDIDEVICEINSTANCE lpddi, LPVOID ctx)
 		{
@@ -248,7 +248,7 @@ namespace pr::dinput
 			:m_data_format(fmt_cont)
 			,m_obj_inst(inst_cont)
 		{
-			Throw(device->EnumObjects(EnumDeviceObjectsCB, this, flags));
+			Throw(device->EnumObjects(EnumDeviceObjectsCB, this, static_cast<DWORD>(flags)));
 		}
 		static BOOL CALLBACK EnumDeviceObjectsCB(DIDEVICEOBJECTINSTANCE const* lpddoi, LPVOID ctx)
 		{
@@ -477,7 +477,7 @@ namespace pr::dinput
 				read += static_cast<int>(count);
 
 				// Copy the data into the key buffer
-				for (auto i = 0; i != count; ++i)
+				for (auto i = 0; i != static_cast<int>(count); ++i)
 				{
 					auto& data = buf[i];
 					assert(data.dwOfs < 256);
@@ -706,7 +706,7 @@ namespace pr::dinput
 				read += static_cast<int>(count);
 
 				// Copy the data into the state buffer
-				for (int i = 0; i != count; ++i)
+				for (int i = 0; i != static_cast<int>(count); ++i)
 				{
 					auto& data = buf[i];
 					assert(data.dwOfs < m_state.size());

@@ -26,7 +26,7 @@ namespace pr
 	template <typename T> using enable_if_col = typename std::enable_if<is_colour<T>::value>::type;
 	template <> struct is_colour<Colour32> :std::true_type
 	{
-		using elem_type = uint8;
+		using elem_type = uint8_t;
 	};
 	template <> struct is_colour<Colour> :std::true_type
 	{
@@ -37,8 +37,8 @@ namespace pr
 	{
 		template <> struct is_vec<Colour32> :std::true_type
 		{
-			using elem_type = uint8;
-			using cp_type = uint8;
+			using elem_type = uint8_t;
+			using cp_type = uint8_t;
 			static int const dim = 4;
 		};
 		template <> struct is_vec<Colour> :std::true_type
@@ -190,7 +190,7 @@ namespace pr
 		x(WhiteSmoke           , = 0xFFF5F5F5)\
 		x(Yellow               , = 0xFFFFFF00)\
 		x(YellowGreen          , = 0xFF9ACD32)
-	PR_DEFINE_ENUM2_BASE(EColours, PR_ENUM, uint32);
+	PR_DEFINE_ENUM2_BASE(EColours, PR_ENUM, uint32_t);
 	#undef PR_ENUM
 	#pragma endregion
 
@@ -203,40 +203,40 @@ namespace pr
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{	// Note: 'argb' is little endian
-			struct { uint32 argb; };
-			struct { uint16 gb,ar; };
-			struct { uint8 b,g,r,a; };
-			// struct { uint8 arr[4]; }; - Removed because endian order causes this to be confusing
+			struct { uint32_t argb; };
+			struct { uint16_t gb,ar; };
+			struct { uint8_t b,g,r,a; };
+			// struct { uint8_t arr[4]; }; - Removed because endian order causes this to be confusing
 		};
 		#pragma warning(pop)
 
 		// Construct
 		Colour32() = default;
-		Colour32(uint32 aarrggbb)
+		Colour32(uint32_t aarrggbb)
 			:argb(aarrggbb)
 		{}
 		Colour32(int aarrggbb)
-			:Colour32(static_cast<uint32>(aarrggbb))
+			:Colour32(static_cast<uint32_t>(aarrggbb))
 		{}
 		Colour32(EColours col)
-			:Colour32(static_cast<uint32>(col))
+			:Colour32(static_cast<uint32_t>(col))
 		{}
-		Colour32(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
-			:Colour32(uint32((a_ << 24) | (r_ << 16) | (g_ << 8) | (b_)))
+		Colour32(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+			:Colour32(uint32_t((a_ << 24) | (r_ << 16) | (g_ << 8) | (b_)))
 		{}
 		Colour32(int r_, int g_, int b_, int a_)
 			:Colour32(
-				uint8(Clamp(r_, 0, 255)),
-				uint8(Clamp(g_, 0, 255)),
-				uint8(Clamp(b_, 0, 255)),
-				uint8(Clamp(a_, 0, 255)))
+			uint8_t(Clamp(r_, 0, 255)),
+			uint8_t(Clamp(g_, 0, 255)),
+			uint8_t(Clamp(b_, 0, 255)),
+			uint8_t(Clamp(a_, 0, 255)))
 		{}
 		Colour32(float r_, float g_, float b_, float a_)
 			:Colour32(
-				uint8(Clamp(r_ * 255.0f + 0.5f, 0.0f, 255.0f)),
-				uint8(Clamp(g_ * 255.0f + 0.5f, 0.0f, 255.0f)),
-				uint8(Clamp(b_ * 255.0f + 0.5f, 0.0f, 255.0f)),
-				uint8(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)))
+			uint8_t(Clamp(r_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+			uint8_t(Clamp(g_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+			uint8_t(Clamp(b_ * 255.0f + 0.5f, 0.0f, 255.0f)),
+			uint8_t(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)))
 		{}
 		template <typename T, typename = enable_if_col<T>> Colour32(T const& c)
 			:Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c))
@@ -245,10 +245,10 @@ namespace pr
 		// Operators
 		Colour32& operator = (int i)
 		{
-			argb = uint32(i);
+			argb = uint32_t(i);
 			return *this;
 		}
-		Colour32& operator = (uint32 i)
+		Colour32& operator = (uint32_t i)
 		{
 			argb = i;
 			return *this;
@@ -261,7 +261,7 @@ namespace pr
 		{
 			return Colour32((argb & 0xFF000000) | (argb ^ 0xFFFFFFFF));
 		}
-		operator uint32() const
+		operator uint32_t() const
 		{
 			return argb;
 		}
@@ -474,7 +474,7 @@ namespace pr
 			// Note: Do not clamp values, use 'Clamp' if that's what you want
 			assert(maths::is_aligned(this));
 		}
-		Colour(uint8 r_, uint8 g_, uint8 b_, uint8 a_)
+		Colour(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
 			:Colour(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f)
 		{}
 		Colour(Colour32 c32)
@@ -688,7 +688,7 @@ namespace pr
 	// Treat COLORREF as a colour type
 	template <> struct is_colour<COLORREF> :std::true_type
 	{
-		using elem_type = uint8;
+		using elem_type = uint8_t;
 	};
 	#endif
 	#pragma endregion

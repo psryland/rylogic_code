@@ -140,8 +140,7 @@ namespace pr::app
 			m_rdr_pending = true;
 		}
 
-		// The actual call to d3d present.
-		// This is left to the derived app to call when appropriate.
+		// Render the scene. This is left to the derived app to call when appropriate.
 		// For game-style apps that use a SimMsgLoop, DoRender can be called in a step context
 		//  e.g.
 		//   m_msg_loop.AddStepContext("render loop", [this](double){ m_main->DoRender(true); }, 60.0f, false);
@@ -169,20 +168,10 @@ namespace pr::app
 			Present();
 		}
 
-		// Show the result
+		// Show the last rendered scene
 		void Present()
 		{
 			m_window.Present();
 		}
-
-	protected:
-
-		//todo // Pre-scene render. Set up a simple default scene. Derived apps will override this
-		//todo void OnEvent(rdr::Evt_UpdateScene const& e) override
-		//todo {
-		//todo 	e.m_scene.m_bkgd_colour = Colour(0.5f,0.5f,0.5f,1.0f);
-		//todo 	e.m_scene.m_global_light.m_on = true;
-		//todo 	e.m_scene.SetView(m_cam);
-		//todo }
 	};
 }

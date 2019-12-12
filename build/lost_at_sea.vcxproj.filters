@@ -24,12 +24,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\input\dinput.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\lost_at_sea\src\event.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\lost_at_sea\src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -75,6 +69,9 @@
     <ClInclude Include="..\include\pr\app\default_setup.h">
       <Filter>src\app</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\input\dinput.h">
+      <Filter>src\pr\input</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -103,6 +100,12 @@
     </Filter>
     <Filter Include="data\skybox">
       <UniqueIdentifier>{56f6b981-618d-43ec-a01e-359b442c7bcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\pr">
+      <UniqueIdentifier>{b1511dfe-5c80-453b-a989-689e7affd512}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\pr\input">
+      <UniqueIdentifier>{7bc1d740-d413-4008-a159-19949b7f3df2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

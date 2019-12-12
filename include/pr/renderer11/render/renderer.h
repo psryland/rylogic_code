@@ -27,7 +27,11 @@ namespace pr
 				StdBuildOptions   m_std;
 				MathsBuildOptions m_maths;
 				int RunTimeShaders;
-				BuildOptions() :m_std() ,m_maths() ,RunTimeShaders(PR_RDR_RUNTIME_SHADERS) {}
+				BuildOptions()
+					:m_std()
+					,m_maths()
+					,RunTimeShaders(PR_RDR_RUNTIME_SHADERS)
+				{}
 			};
 			
 			HINSTANCE                     m_instance;              // Executable instance 

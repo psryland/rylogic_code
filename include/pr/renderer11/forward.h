@@ -99,174 +99,173 @@
 namespace pr
 {
 	class Renderer;
+}
+namespace pr::rdr
+{
+	using byte      = unsigned char;
+	using RdrId     = std::uintptr_t;
+	using SortKeyId = pr::uint16;
+	using Range     = pr::Range<size_t>;
+	template <typename T> using RefCounted = pr::RefCount<T>;
 
-	namespace rdr
-	{
-		using byte      = unsigned char;
-		using RdrId     = std::uintptr_t;
-		using SortKeyId = pr::uint16;
-		using Range     = pr::Range<size_t>;
-		template <typename T> using RefCounted = pr::RefCount<T>;
+	using string32   = pr::string<char, 32>;
+	using string512  = pr::string<char, 512>;
+	using wstring32  = pr::string<wchar_t, 32>;
+	using wstring256 = pr::string<wchar_t, 256>;
 
-		using string32   = pr::string<char, 32>;
-		using string512  = pr::string<char, 512>;
-		using wstring32  = pr::string<wchar_t, 32>;
-		using wstring256 = pr::string<wchar_t, 256>;
+	static Range const RangeZero = {0,0};
+	static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
+	static RdrId const InvalidId = RdrId();
 
-		static Range const RangeZero = {0,0};
-		static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
-		static RdrId const InvalidId = RdrId();
+	using EGeom = pr::geometry::EGeom;
+	using EPrim = pr::geometry::EPrim;
 
-		using EGeom = pr::geometry::EGeom;
-		using EPrim = pr::geometry::EPrim;
+	// Render
+	struct Window;
+	struct Scene;
+	struct SceneView;
 
-		// Render
-		struct Window;
-		struct Scene;
-		struct SceneView;
+	// Rendering
+	struct SortKey;
+	struct DrawListElement;
+	struct BSBlock;
+	struct DSBlock;
+	struct RSBlock;
+	struct StateStack;
+	struct DeviceState;
+	struct RenderStep;
+	struct ForwardRender;
+	struct GBuffer;
+	struct DSLighting;
+	struct ShadowMap;
+	struct RayCast;
+	using RenderStepPtr = std::unique_ptr<RenderStep>;
 
-		// Rendering
-		struct SortKey;
-		struct DrawListElement;
-		struct BSBlock;
-		struct DSBlock;
-		struct RSBlock;
-		struct StateStack;
-		struct DeviceState;
-		struct RenderStep;
-		struct ForwardRender;
-		struct GBuffer;
-		struct DSLighting;
-		struct ShadowMap;
-		struct RayCast;
-		using RenderStepPtr = std::shared_ptr<RenderStep>;
+	// Models
+	class  ModelManager;
+	struct ModelBuffer;
+	struct Model;
+	struct NuggetProps;
+	struct Nugget;
+	struct MdlSettings;
+	using ModelBufferPtr = pr::RefPtr<ModelBuffer>;
+	using ModelPtr = pr::RefPtr<Model>;
+	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
 
-		// Models
-		class  ModelManager;
-		struct ModelBuffer;
-		struct Model;
-		struct NuggetProps;
-		struct Nugget;
-		struct MdlSettings;
-		using ModelBufferPtr = pr::RefPtr<ModelBuffer>;
-		using ModelPtr = pr::RefPtr<Model>;
-		using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;
+	// Instances
+	struct BaseInstance;
 
-		// Instances
-		struct BaseInstance;
+	// Shaders
+	struct Vert;
+	class  ShaderManager;
+	struct ShaderDesc;
+	struct Shader;
+	struct ShaderSet0;
+	struct ShaderSet1;
+	struct ShaderMap;
+	using ShaderPtr = pr::RefPtr<Shader>;
 
-		// Shaders
-		struct Vert;
-		class  ShaderManager;
-		struct ShaderDesc;
-		struct Shader;
-		struct ShaderSet0;
-		struct ShaderSet1;
-		struct ShaderMap;
-		using ShaderPtr = pr::RefPtr<Shader>;
+	// Textures
+	class  TextureManager;
+	struct TextureDesc;
+	struct Texture1DDesc;
+	struct Texture2DDesc;
+	struct Texture3DDesc;
+	struct TextureBase;
+	struct Texture2D;
+	struct TextureCube;
+	struct Image;
+	struct AllocPres;
+	struct ProjectedTexture;
+	using Texture2DPtr = pr::RefPtr<Texture2D>;
+	using TextureCubePtr = pr::RefPtr<TextureCube>;
 
-		// Textures
-		class  TextureManager;
-		struct TextureDesc;
-		struct Texture1DDesc;
-		struct Texture2DDesc;
-		struct Texture3DDesc;
-		struct TextureBase;
-		struct Texture2D;
-		struct TextureCube;
-		struct Image;
-		struct AllocPres;
-		struct ProjectedTexture;
-		using Texture2DPtr = pr::RefPtr<Texture2D>;
-		using TextureCubePtr = pr::RefPtr<TextureCube>;
+	// Video
+	//struct Video;
+	//struct AllocPres;
+	//typedef pr::RefPtr<Video> VideoPtr;
+	//typedef pr::RefPtr<AllocPres> AllocPresPtr;
 
-		// Video
-		//struct Video;
-		//struct AllocPres;
-		//typedef pr::RefPtr<Video> VideoPtr;
-		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
+	// Lighting
+	struct Light;
 
-		// Lighting
-		struct Light;
+	// Utility
+	class BlendStateManager;
+	class DepthStateManager;
+	class RasterStateManager;
+	struct Lock;
+	struct MLock;
+	template <class T> struct Allocator;
+	using InvokeFunc = void (__stdcall *)(void* ctx);
 
-		// Utility
-		class BlendStateManager;
-		class DepthStateManager;
-		class RasterStateManager;
-		struct Lock;
-		struct MLock;
-		template <class T> struct Allocator;
-		using InvokeFunc = void (__stdcall *)(void* ctx);
+	// EResult
+	#define PR_ENUM(x)\
+		x(Success       ,= 0         )\
+		x(Failed        ,= 0x80000000)\
+		x(InvalidValue  ,)
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
+	#undef PR_ENUM
 
-		// EResult
-		#define PR_ENUM(x)\
-			x(Success       ,= 0         )\
-			x(Failed        ,= 0x80000000)\
-			x(InvalidValue  ,)
-		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
-		#undef PR_ENUM
+	// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
+	#define PR_ENUM(x)\
+		x(Invalid ,= 0)\
+		x(VS      ,= 1 << 0)\
+		x(PS      ,= 1 << 1)\
+		x(GS      ,= 1 << 2)\
+		x(CS      ,= 1 << 3)\
+		x(HS      ,= 1 << 4)\
+		x(DS      ,= 1 << 5)\
+		x(All     ,= ~0)\
+		x(_bitwise_operators_allowed, = 0x7FFFFFFF)
+	PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
+	#undef PR_ENUM
 
-		// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
-		#define PR_ENUM(x)\
-			x(Invalid ,= 0)\
-			x(VS      ,= 1 << 0)\
-			x(PS      ,= 1 << 1)\
-			x(GS      ,= 1 << 2)\
-			x(CS      ,= 1 << 3)\
-			x(HS      ,= 1 << 4)\
-			x(DS      ,= 1 << 5)\
-			x(All     ,= ~0)\
-			x(_bitwise_operators_allowed, = 0x7FFFFFFF)
-		PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
-		#undef PR_ENUM
+	// ETexAddrMode
+	#define PR_ENUM(x)\
+		x(Wrap       ,= D3D11_TEXTURE_ADDRESS_WRAP)\
+		x(Mirror     ,= D3D11_TEXTURE_ADDRESS_MIRROR)\
+		x(Clamp      ,= D3D11_TEXTURE_ADDRESS_CLAMP)\
+		x(Border     ,= D3D11_TEXTURE_ADDRESS_BORDER)\
+		x(MirrorOnce ,= D3D11_TEXTURE_ADDRESS_MIRROR_ONCE)
+	PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
+	#undef PR_ENUM
 
-		// ETexAddrMode
-		#define PR_ENUM(x)\
-			x(Wrap       ,= D3D11_TEXTURE_ADDRESS_WRAP)\
-			x(Mirror     ,= D3D11_TEXTURE_ADDRESS_MIRROR)\
-			x(Clamp      ,= D3D11_TEXTURE_ADDRESS_CLAMP)\
-			x(Border     ,= D3D11_TEXTURE_ADDRESS_BORDER)\
-			x(MirrorOnce ,= D3D11_TEXTURE_ADDRESS_MIRROR_ONCE)
-		PR_DEFINE_ENUM2(ETexAddrMode, PR_ENUM);
-		#undef PR_ENUM
+	// EFilter - MinMagMip
+	#define PR_ENUM(x)\
+		x(Point             ,= D3D11_FILTER_MIN_MAG_MIP_POINT)\
+		x(PointPointLinear  ,= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
+		x(PointLinearPoint  ,= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
+		x(PointLinearLinear ,= D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR)\
+		x(LinearPointPoint  ,= D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT)\
+		x(LinearPointLinear ,= D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR)\
+		x(LinearLinearPoint ,= D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
+		x(Linear            ,= D3D11_FILTER_MIN_MAG_MIP_LINEAR)\
+		x(Anisotropic       ,= D3D11_FILTER_ANISOTROPIC)
+	PR_DEFINE_ENUM2(EFilter, PR_ENUM);
+	#undef PR_ENUM
 
-		// EFilter - MinMagMip
-		#define PR_ENUM(x)\
-			x(Point             ,= D3D11_FILTER_MIN_MAG_MIP_POINT)\
-			x(PointPointLinear  ,= D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR)\
-			x(PointLinearPoint  ,= D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT)\
-			x(PointLinearLinear ,= D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR)\
-			x(LinearPointPoint  ,= D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT)\
-			x(LinearPointLinear ,= D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR)\
-			x(LinearLinearPoint ,= D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT)\
-			x(Linear            ,= D3D11_FILTER_MIN_MAG_MIP_LINEAR)\
-			x(Anisotropic       ,= D3D11_FILTER_ANISOTROPIC)
-		PR_DEFINE_ENUM2(EFilter, PR_ENUM);
-		#undef PR_ENUM
+	// ELight
+	#define PR_ENUM(x)\
+		x(Ambient    )\
+		x(Directional)\
+		x(Point      )\
+		x(Spot       )
+	PR_DEFINE_ENUM1(ELight, PR_ENUM);
+	#undef PR_ENUM
 
-		// ELight
-		#define PR_ENUM(x)\
-			x(Ambient    )\
-			x(Directional)\
-			x(Point      )\
-			x(Spot       )
-		PR_DEFINE_ENUM1(ELight, PR_ENUM);
-		#undef PR_ENUM
+	// EEye
+	#define PR_ENUM(x)\
+		x(Left )\
+		x(Right)
+	PR_DEFINE_ENUM1(EEye, PR_ENUM);
+	#undef PR_ENUM
 
-		// EEye
-		#define PR_ENUM(x)\
-			x(Left )\
-			x(Right)
-		PR_DEFINE_ENUM1(EEye, PR_ENUM);
-		#undef PR_ENUM
-
-		// ERadial
-		#define PR_ENUM(x)\
-			x(Spherical)\
-			x(Cylindrical)
-		PR_DEFINE_ENUM1(ERadial, PR_ENUM);
-		#undef PR_ENUM
-	}
+	// ERadial
+	#define PR_ENUM(x)\
+		x(Spherical)\
+		x(Cylindrical)
+	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
+	#undef PR_ENUM
 }
 
 #if PR_UNITTESTS

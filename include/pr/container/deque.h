@@ -6,59 +6,50 @@
 // and proper type alignment.
 #pragma once
 
-// <type_traits> was introduced in sp1
-#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
-#error VS2008 SP1 or greater is required to build this file
-#endif
-
 #include <memory>
 #include <iterator>
 #include <stdexcept>
 #include <algorithm>
 #include <type_traits>
+#include <utility>
 #include <cassert>
 #include "pr/common/allocator.h"
+
 #pragma intrinsic(memcmp, memcpy, memset, strcmp)
 
-#include <deque>
 namespace pr
 {
-	#if _MSC_VER < 1900
-	#   define noexcept throw()
-	#   define PR_NOEXCEPT_DEFINED
-	#endif
-
 	namespace impl::deque
 	{
 		// Map of pointers to blocks
-		template <typename Type, std::size_t BlockSize, typename Allocator> struct BlockPtrMap
+		template <typename T, size_t B, typename A>
+		struct BlockPtrMap
 		{
-			using alloc_traits    = typename std::allocator_traits<Allocator>;
-			using PtrsAlloc       = typename alloc_traits::template rebind_alloc<Type*>;
-			using allocator_type  = Allocator;
-			using size_type       = std::size_t;
-			using difference_type = std::ptrdiff_t;
-			using value_type      = Type;
-			using const_pointer   = Type const*;
-			using pointer         = Type*;
-			using const_reference = Type const&;
-			using reference       = Type&;
-			using byte            = unsigned char;
-			using block           = Type[BlockSize];
+			using allocator_type   = A;
+			using alloc_traits     = std::allocator_traits<std::remove_pointer_t<allocator_type>>;
+			using value_type       = typename alloc_traits::value_type;
+			using pointer          = typename alloc_traits::pointer;
+			using const_pointer    = typename alloc_traits::const_pointer;
+			using difference_type  = typename alloc_traits::difference_type;
+			using size_type        = typename alloc_traits::size_type;
+			using alloc_ptrs_t     = typename alloc_traits::template rebind_alloc<value_type*>;
+			using alloc_ptr_traits = std::allocator_traits<alloc_ptrs_t>;
+			using block            = value_type[B];
+			using byte             = unsigned char;
 
-			enum { CountPerBlock = BlockSize };
+			static constexpr size_t CountPerBlock = B;
 
 			union {
-			block**    m_blocks;     // The array of block pointers
-			Type**     m_ptrs;       // The array of block pointers, size always pow2
+			block**        m_blocks;     // The array of block pointers
+			value_type**   m_ptrs;       // The array of block pointers, size always pow2
 			};
-			size_type  m_first;      // Index of the first in-use block
-			size_type  m_last;       // Index of one past the last in-use block
-			size_type  m_capacity;   // The length of 'm_ptrs', either 0 or pow2
-			Allocator  m_alloc_type; // Allocator for allocating blocks (Type[])
-			PtrsAlloc  m_alloc_ptrs; // Allocator for allocating the block pointer array
+			size_type      m_first;      // Index of the first in-use block
+			size_type      m_last;       // Index of one past the last in-use block
+			size_type      m_capacity;   // The length of 'm_ptrs', either 0 or pow2
+			allocator_type m_alloc_type; // Allocator for allocating blocks (value_type[])
+			alloc_ptrs_t   m_alloc_ptrs; // Allocator for allocating the block pointer array
 
-			BlockPtrMap(Allocator const& allocator)
+			BlockPtrMap(allocator_type const& allocator)
 				:m_ptrs()
 				,m_first()
 				,m_last()
@@ -74,11 +65,11 @@ namespace pr
 			// The number of in-use blocks
 			size_type count() const
 			{
-				return size_type(m_last - m_first);
+				return static_cast<size_type>(m_last - m_first);
 			}
 
 			// Move assign the block ptr array (only valid if allocators are compatible)
-			template <size_type B> BlockPtrMap& operator = (BlockPtrMap<Type,B,Allocator>&& rhs)
+			template <size_type B> BlockPtrMap& operator = (BlockPtrMap<value_type,B, allocator_type>&& rhs)
 			{
 				assert(m_alloc_type == rhs.m_alloc_type && "this implementation only supports same allocators");
 				std::swap(m_ptrs     , rhs.m_ptrs    );
@@ -92,12 +83,15 @@ namespace pr
 			// Note: assumes that m_ptr[m_first][0] == element index zero, remember to add 'm_first'
 			difference_type block_index(difference_type element_index) const
 			{
-				return element_index >= 0 ? (element_index / CountPerBlock) : (-element_index / CountPerBlock - 1);
+				auto const count = static_cast<difference_type>(CountPerBlock);
+				return element_index >= 0
+					? element_index / count
+					: -~element_index / count - 1;
 			}
 
 			// Return the block for the given element index. Automatically grows the map.
 			// Note: assumes that m_ptr[m_first][0] == element index zero, remember to add 'm_first'
-			Type* operator[](difference_type element_index)
+			value_type* operator[](difference_type element_index)
 			{
 				// Convert the element index into a block index
 				auto blk_idx = block_index(element_index);
@@ -109,9 +103,9 @@ namespace pr
 				assert(size_type(blk_idx) < count() && "ensure space didn't work");
 				return m_ptrs[m_first + blk_idx];
 			}
-			Type const* operator[](difference_type element_index) const
+			value_type const* operator[](difference_type element_index) const
 			{
-				assert(size_type(element_index) < count()*CountPerBlock && "element index out of range");
+				assert(size_type(element_index) < count() * CountPerBlock && "element index out of range");
 
 				// Convert the element index into a block index
 				auto blk_idx = block_index(element_index);
@@ -126,7 +120,7 @@ namespace pr
 				for (size_type i = 0; i != m_capacity; ++i)
 					m_alloc_type.deallocate(m_ptrs[i], CountPerBlock);
 
-				m_alloc_ptrs.deallocate(m_ptrs, m_capacity);
+				alloc_ptr_traits::deallocate(m_alloc_ptrs, m_ptrs, m_capacity);
 				m_ptrs     = nullptr;
 				m_first    = 0;
 				m_last     = 0;
@@ -145,7 +139,7 @@ namespace pr
 				}
 
 				// Free unused blocks at the end
-				while (count()*CountPerBlock - last >= CountPerBlock)
+				while (count()* CountPerBlock - last >= CountPerBlock)
 				{
 					m_alloc_type.deallocate(m_ptrs[--m_last], CountPerBlock);
 					m_ptrs[m_last] = nullptr;
@@ -157,10 +151,10 @@ namespace pr
 				{
 					auto new_capacity = m_capacity/2;
 					for (; new_capacity/2 > inuse; new_capacity /= 2) {}
-					Type** mem = m_alloc_ptrs.allocate(new_capacity);
+					value_type** mem = alloc_ptr_traits::allocate(m_alloc_ptrs, new_capacity);
 
-					::memcpy(mem, m_ptrs + m_first, inuse * sizeof(Type*));
-					::memset(mem + inuse, 0, (new_capacity - inuse) * sizeof(Type*));
+					::memcpy(mem, m_ptrs + m_first, inuse * sizeof(value_type*));
+					::memset(mem + inuse, 0, (new_capacity - inuse) * sizeof(value_type*));
 
 					std::swap(m_ptrs, mem);
 					m_first    = 0;
@@ -184,13 +178,13 @@ namespace pr
 					// If there isn't space, reallocate the block ptr map
 					if (to_add > m_first)
 					{
-						grow_map(to_add + count(), [](Type** mem, size_type new_capacity, BlockPtrMap& map)
+						grow_map(to_add + count(), [](value_type** mem, size_type new_capacity, BlockPtrMap& map)
 						{
 							// Fill the front with nullptr and the end from the old map
 							auto keep_count = map.m_capacity - map.m_first;
 							auto fill_count = new_capacity - keep_count;
-							::memset(mem, 0, fill_count * sizeof(Type*));
-							::memcpy(mem + fill_count, map.m_ptrs + map.m_first, keep_count * sizeof(Type*));
+							::memset(mem, 0, fill_count * sizeof(value_type*));
+							::memcpy(mem + fill_count, map.m_ptrs + map.m_first, keep_count * sizeof(value_type*));
 							return fill_count;
 						});
 					}
@@ -208,13 +202,13 @@ namespace pr
 					// If there isn't space, reallocate the block ptr map
 					if (to_add > m_capacity - m_last)
 					{
-						grow_map(to_add + count(), [](Type** mem, size_type new_capacity, BlockPtrMap& map)
+						grow_map(to_add + count(), [](value_type** mem, size_type new_capacity, BlockPtrMap& map)
 						{
 							// Fill the front from the old map, and the end with nullptr
 							auto keep_count = map.m_last;
 							auto fill_count = new_capacity - keep_count;
-							::memset(mem + keep_count, 0, fill_count * sizeof(Type*));
-							::memcpy(mem, map.m_ptrs, keep_count * sizeof(Type*));
+							::memset(mem + keep_count, 0, fill_count * sizeof(value_type*));
+							::memcpy(mem, map.m_ptrs, keep_count * sizeof(value_type*));
 							return map.m_first;
 						});
 					}
@@ -234,14 +228,14 @@ namespace pr
 				for (; new_capacity < min_count; new_capacity *= 2) {}
 
 				// Allocate a new pointer map
-				Type** mem = m_alloc_ptrs.allocate(new_capacity);
+				value_type** mem = alloc_ptr_traits::allocate(m_alloc_ptrs, new_capacity);
 				
 				// Copy from the old map to the new
 				auto new_count = count(); // same as old count
 				auto new_first = copy(mem, new_capacity, *this);
 				
 				// Swap the pointers
-				m_alloc_ptrs.deallocate(m_ptrs, m_capacity);
+				alloc_ptr_traits::deallocate(m_alloc_ptrs, m_ptrs, m_capacity);
 				m_ptrs     = mem;
 				m_first    = new_first;
 				m_last     = new_first + new_count;
@@ -268,162 +262,377 @@ namespace pr
 			}
 		};
 
-		// deque iterators
-		template <typename Type, std::size_t BlockSize, typename Allocator, typename Ref, typename Ptr, typename BPMapPtr> struct iter
+		// Iterators
+		template <typename T, size_t B, typename A> struct citer // const iterator
 		{
-			typedef std::random_access_iterator_tag iterator_category;
-			typedef std::size_t size_type;
-			typedef std::ptrdiff_t difference_type;
-			typedef BPMapPtr map_ptr;
-			typedef Type value_type;
-			typedef Ptr pointer;
-			typedef Ref reference;
-			enum { pr_deque_iter = true };
+			using allocator_type    = A;
+			using alloc_traits      = std::allocator_traits<allocator_type>;
+			using iterator_category = std::random_access_iterator_tag;
+			using value_type        = typename alloc_traits::value_type;
+			using pointer           = typename alloc_traits::pointer;
+			using difference_type   = typename alloc_traits::difference_type;
+			using size_type         = typename alloc_traits::size_type;
+			using reference         = value_type const&;
+			using map_ptr_t         = BlockPtrMap<T, B, A> const*;
 
 			size_type m_idx; // element index + deque.m_first
-			map_ptr m_map; // pointer to the block pointer array
+			map_ptr_t m_map; // pointer to the block pointer array
 
-			iter() :m_idx() ,m_map() {}
-			iter(size_type idx, map_ptr map) :m_idx(idx) ,m_map(map) {}
-
-			reference       operator * () const                    { return (*m_map)[m_idx][m_idx % BlockSize]; }
-			pointer         operator ->() const                    { return std::pointer_traits<pointer>::pointer_to(**this); }
-			iter&           operator ++()                          { ++m_idx; return *this; }
-			iter            operator ++(int)                       { iter tmp = *this; ++*this; return tmp; }
-			iter&           operator --()                          { --m_idx; return *this; }
-			iter            operator --(int)                       { iter tmp = *this; --*this; return tmp; }
-			reference       operator [](difference_type ofs) const { return *(*this + ofs); }
-		};
-		template <typename T, std::size_t B, typename A> struct citer // const iterator
-			:iter<T, B, A, T const&, T const*, BlockPtrMap<T,B,A> const*>
-		{
-			using size_type = typename iter<T, B, A, T const&, T const*, BlockPtrMap<T, B, A> const*>::size_type;
-			citer(size_type idx, BlockPtrMap<T,B,A> const& map) :iter(idx, &map) {}
-		};
-		template <typename T, std::size_t B, typename A> struct miter // mutable iterator
-			:iter<T, B, A, T&, T*, BlockPtrMap<T,B,A>*>
-		{
-			using size_type = typename iter<T, B, A, T&, T*, BlockPtrMap<T, B, A>*>::size_type;
-			miter(size_type idx, BlockPtrMap<T,B,A>& map) :iter(idx, &map) {}
-			operator citer<T,B,A>() const { return citer<T,B,A>(m_idx, *m_map); }
-		};
-
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator == (L lhs, R rhs) { return lhs.m_idx == rhs.m_idx; }
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator != (L lhs, R rhs) { return lhs.m_idx != rhs.m_idx; }
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator <  (L lhs, R rhs) { return lhs.m_idx <  rhs.m_idx; }
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator >  (L lhs, R rhs) { return lhs.m_idx >  rhs.m_idx; }
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator <= (L lhs, R rhs) { return lhs.m_idx <= rhs.m_idx; }
-		template <typename L, typename R, typename = std::enable_if_t<L::pr_deque_iter>> inline bool operator >= (L lhs, R rhs) { return lhs.m_idx >= rhs.m_idx; }
-
-		template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L& operator += (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx += ofs; return lhs; }
-		template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L& operator -= (L& lhs, std::ptrdiff_t ofs) { lhs.m_idx -= ofs; return lhs; }
-		template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L operator +  (L lhs, std::ptrdiff_t ofs) { auto tmp = lhs; return tmp += ofs; }
-		template <typename L, typename = std::enable_if_t<L::pr_deque_iter>> inline L operator -  (L lhs, std::ptrdiff_t ofs) { auto tmp = lhs; return tmp -= ofs; }
-
-		template <typename L,typename R, typename = std::enable_if_t<L::pr_deque_iter>, typename = std::enable_if_t<R::pr_deque_iter>>
-		inline std::ptrdiff_t operator - (L lhs, R rhs)
-		{
-			return rhs.m_idx <= lhs.m_idx ? lhs.m_idx - rhs.m_idx : -ptrdiff_t(rhs.m_idx - lhs.m_idx);
-		}
-
-		// std::aligned_type doesn't work for alignments > 8 on VC++
-		template <int Alignment> struct aligned_type {};
-		template <> struct aligned_type<1>   {                        struct type { char   a;      }; };
-		template <> struct aligned_type<2>   {                        struct type { short  a;      }; };
-		template <> struct aligned_type<4>   {                        struct type { int    a;      }; };
-		template <> struct aligned_type<8>   {                        struct type { double a;      }; };
-		template <> struct aligned_type<16>  { __declspec(align(16 )) struct type { char   a[16];  }; };
-		template <> struct aligned_type<32>  { __declspec(align(32 )) struct type { char   a[32];  }; };
-		template <> struct aligned_type<64>  { __declspec(align(64 )) struct type { char   a[64];  }; };
-		template <> struct aligned_type<128> { __declspec(align(128)) struct type { char   a[128]; }; };
-
-		template <int Size, int Alignment> struct aligned_storage
-		{
-			union type
+			citer()
+				:m_idx()
+				, m_map()
+			{}
+			citer(size_type idx, map_ptr_t map)
+				:m_idx(idx)
+				,m_map(map)
+			{}
+			value_type const& operator [](difference_type ofs) const
 			{
-				unsigned char bytes[Size];
-				typename aligned_type<Alignment>::type aligner;
-			};
+				return *(*this + ofs);
+			}
+			value_type const& operator * () const
+			{
+				return (*m_map)[m_idx][m_idx % B];
+			}
+			pointer operator ->() const
+			{
+				return std::pointer_traits<pointer>::pointer_to(**this);
+			}
+			citer& operator ++()
+			{
+				++m_idx;
+				return *this;
+			}
+			citer operator ++(int)
+			{
+				auto tmp = *this;
+				++*this;
+				return tmp;
+			}
+			citer& operator --()
+			{
+				--m_idx;
+				return *this;
+			}
+			citer operator --(int)
+			{
+				auto tmp = *this;
+				--*this;
+				return tmp;
+			}
+
+			friend bool operator == (citer lhs, citer rhs)
+			{
+				return lhs.m_idx == rhs.m_idx;
+			}
+			friend bool operator != (citer lhs, citer rhs)
+			{
+				return lhs.m_idx != rhs.m_idx;
+			}
+			friend bool operator <  (citer lhs, citer rhs)
+			{
+				return lhs.m_idx < rhs.m_idx;
+			}
+			friend bool operator >  (citer lhs, citer rhs)
+			{
+				return lhs.m_idx > rhs.m_idx;
+			}
+			friend bool operator <= (citer lhs, citer rhs)
+			{
+				return lhs.m_idx <= rhs.m_idx;
+			}
+			friend bool operator >= (citer lhs, citer rhs)
+			{
+				return lhs.m_idx >= rhs.m_idx;
+			}
+
+			friend citer& operator += (citer& lhs, difference_type ofs)
+			{
+				lhs.m_idx += ofs;
+				return lhs;
+			}
+			friend citer& operator -= (citer& lhs, difference_type ofs)
+			{
+				lhs.m_idx -= ofs;
+				return lhs;
+			}
+			friend citer operator +  (citer lhs, difference_type ofs)
+			{
+				auto tmp = lhs;
+				return tmp += ofs;
+			}
+			friend citer operator -  (citer lhs, difference_type ofs)
+			{
+				auto tmp = lhs;
+				return tmp -= ofs;
+			}
+			friend difference_type operator - (citer lhs, citer rhs)
+			{
+				return rhs.m_idx <= lhs.m_idx
+					? lhs.m_idx - rhs.m_idx
+					: -ptrdiff_t(rhs.m_idx - lhs.m_idx);
+			}
 		};
+		template <typename T, size_t B, typename A> struct miter // mutable iterator
+		{
+			using allocator_type    = A;
+			using alloc_traits      = std::allocator_traits<allocator_type>;
+			using iterator_category = std::random_access_iterator_tag;
+			using value_type        = typename alloc_traits::value_type;
+			using pointer           = typename alloc_traits::pointer;
+			using difference_type   = typename alloc_traits::difference_type;
+			using size_type         = typename alloc_traits::size_type;
+			using reference         = value_type&;
+			using map_ptr_t         = BlockPtrMap<T, B, A>*;
+
+			size_type m_idx; // element index + deque.m_first
+			map_ptr_t m_map; // pointer to the block pointer array
+
+			miter()
+				:m_idx()
+				,m_map()
+			{}
+			miter(size_type idx, map_ptr_t map)
+				:m_idx(idx)
+				,m_map(map)
+			{}
+			operator citer<T,B,A>() const
+			{
+				return citer<T,B,A>(m_idx, m_map);
+			}
+			value_type& operator [](difference_type ofs) const
+			{
+				return *(*this + ofs);
+			}
+			value_type& operator * () const
+			{
+				return (*m_map)[m_idx][m_idx % B];
+			}
+			pointer operator ->() const
+			{
+				return std::pointer_traits<pointer>::pointer_to(**this);
+			}
+			miter& operator ++()
+			{
+				++m_idx;
+				return *this;
+			}
+			miter operator ++(int)
+			{
+				auto tmp = *this;
+				++* this;
+				return tmp;
+			}
+			miter& operator --()
+			{
+				--m_idx;
+				return *this;
+			}
+			miter operator --(int)
+			{
+				auto tmp = *this;
+				--* this;
+				return tmp;
+			}
+
+			friend bool operator == (miter lhs, miter rhs)
+			{
+				return lhs.m_idx == rhs.m_idx;
+			}
+			friend bool operator != (miter lhs, miter rhs)
+			{
+				return lhs.m_idx != rhs.m_idx;
+			}
+			friend bool operator <  (miter lhs, miter rhs)
+			{
+				return lhs.m_idx < rhs.m_idx;
+			}
+			friend bool operator >  (miter lhs, miter rhs)
+			{
+				return lhs.m_idx > rhs.m_idx;
+			}
+			friend bool operator <= (miter lhs, miter rhs)
+			{
+				return lhs.m_idx <= rhs.m_idx;
+			}
+			friend bool operator >= (miter lhs, miter rhs)
+			{
+				return lhs.m_idx >= rhs.m_idx;
+			}
+
+			friend miter& operator += (miter& lhs, difference_type ofs)
+			{
+				lhs.m_idx += ofs;
+				return lhs;
+			}
+			friend miter& operator -= (miter& lhs, difference_type ofs)
+			{
+				lhs.m_idx -= ofs;
+				return lhs;
+			}
+			friend miter operator +  (miter lhs, difference_type ofs)
+			{
+				auto tmp = lhs;
+				return tmp += ofs;
+			}
+			friend miter operator -  (miter lhs, difference_type ofs)
+			{
+				auto tmp = lhs;
+				return tmp -= ofs;
+			}
+			friend difference_type operator - (miter lhs, miter rhs)
+			{
+				return rhs.m_idx <= lhs.m_idx
+					? lhs.m_idx - rhs.m_idx
+					: -ptrdiff_t(rhs.m_idx - lhs.m_idx);
+			}
+		};
+		using test_citer = citer<int, 1, std::allocator<int>>;
+		using test_miter = miter<int, 1, std::allocator<int>>;
+		static_assert(std::is_convertible_v<test_miter, test_citer>);
+		static_assert(std::is_same_v<test_miter, decltype(std::declval<test_miter>() + 3ULL)>);
 	}
 
 	// Not intended to be a complete replacement, just a 90% substitute
-	template <typename Type, std::size_t BlockSize=16, typename Allocator=pr::aligned_alloc<Type>>
+	template <typename Type, size_t BlockSize=16, typename Allocator=aligned_alloc<Type>>
 	class deque
 	{
-	public:
-		using type            = deque<Type,BlockSize,Allocator>;
-		using BlockPtrMap     = impl::deque::BlockPtrMap<Type, BlockSize, Allocator>;
-		using const_iterator  = impl::deque::citer<Type, BlockSize, Allocator>;
-		using iterator        = impl::deque::miter<Type, BlockSize, Allocator>;
-		using alloc_traits    = typename BlockPtrMap::alloc_traits;
-		using allocator_type  = typename BlockPtrMap::allocator_type;
-		using value_type      = typename BlockPtrMap::value_type;
-		using size_type       = typename BlockPtrMap::size_type;
-		using difference_type = typename BlockPtrMap::difference_type;
-		using const_pointer   = typename BlockPtrMap::const_pointer;
-		using pointer         = typename BlockPtrMap::pointer;
-		using const_reference = typename BlockPtrMap::const_reference;
-		using reference       = typename BlockPtrMap::reference;
+		static_assert(((BlockSize - 1)& BlockSize) == 0, "BlockSize must be a power of two");
 
-		static_assert(((BlockSize - 1) & BlockSize) == 0, "BlockSize must be a power of two");
-		static bool const TypeIsPod               = std::is_pod<Type>::value;
-		static std::size_t const TypeSizeInBytes  = sizeof(Type);
-		static std::size_t const TypeAlignment    = std::alignment_of<Type>::value;
-		static std::size_t const CountPerBlock    = BlockSize;
-		static std::size_t const BlockSizeInBytes = BlockSize * TypeSizeInBytes;
-		static std::size_t const BlockIndexMask   = BlockSize - 1U;
+	public:
+
+		using allocator_type = Allocator;
+		using alloc_traits = std::allocator_traits<allocator_type>;
+		using value_type = typename alloc_traits::value_type;
+		using pointer = typename alloc_traits::pointer;
+		using const_pointer = typename alloc_traits::const_pointer;
+		using difference_type = typename alloc_traits::difference_type;
+		using size_type = typename alloc_traits::size_type;
+		using iterator = pr::impl::deque::miter<value_type, BlockSize, allocator_type>;
+		using const_iterator = pr::impl::deque::citer<value_type, BlockSize, allocator_type>;
+		using block_ptr_map_t = pr::impl::deque::BlockPtrMap<value_type, BlockSize, allocator_type>;
+
+		static_assert(std::is_same_v<typename std::iterator_traits<iterator>::value_type, Type>);
+
+		static constexpr bool type_is_pod_v = std::is_pod_v<value_type>;
+		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<value_type>;
+		static constexpr int type_alignment_v = std::alignment_of_v<value_type>;
+		static constexpr size_type CountPerBlock = BlockSize;
+		static constexpr size_type BlockIndexMask = BlockSize - 1U;
 
 	private:
 
 		// Any combination of type, block size, and allocator is a friend
-		template <class T, std::size_t B, class A> friend class deque;
+		template <class T, size_t B, class A> friend class deque;
 
-		// type specific traits
-		template <bool pod> struct base_traits;
-		template <> struct base_traits<false>
+		struct traits
 		{
-			static void destruct     (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.destroy(first++); } }
-			static void construct    (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.default_construct(first++); } }
-			static void copy_constr  (Allocator& alloc, Type* first, Type const* src, size_type count) { for (; count--;) { alloc.copy_construct(first++, *src++); } }
-			static void move_constr  (Allocator& alloc, Type* first, Type* src, size_type count)       { for (; count--;) { alloc.move_construct(first++, std::move(*src++)); } }
-			static void copy_assign  (Type* first, Type const* src, size_type count)                   { for (; count--;) { *first++ = *src++; } }
-			static void move_assign  (Type* first, Type* src, size_type count)                         { for (; count--;) { *first++ = std::move(*src++); } }
-		};
-		template <> struct base_traits<true>
-		{
-			static void destruct     (Allocator&, Type* first, size_type count)                  { assert((::memset(first, 0xdd, sizeof(Type) * count), true)); (void)first,count; }
-			static void construct    (Allocator&, Type* first, size_type count)                  { assert((::memset(first, 0xcd, sizeof(Type) * count), true)); (void)first,count; }
-			static void copy_constr  (Allocator&, Type* first, Type const* src, size_type count) { ::memcpy(first, src, sizeof(Type) * count); }
-			static void move_constr  (Allocator&, Type* first, Type* src, size_type count)       { ::memcpy(first, src, sizeof(Type) * count); }
-			static void copy_assign  (Type* first, Type const* src, size_type count)             { ::memcpy(first, src, sizeof(Type) * count); }
-			static void move_assign  (Type* first, Type* src, size_type count)                   { ::memcpy(first, src, sizeof(Type) * count); }
-		};
-		struct traits :base_traits<TypeIsPod>
-		{
-			static void destruct_range(Allocator& alloc, iterator first, size_type count)              { for (;count--; ++first) destruct(alloc, &*first, 1); }
-			static void fill_constr(Allocator& alloc, Type* first, size_type count, Type const& val)   { for (; count--;) { copy_constr(alloc, first++, &val, 1); } }
-			static void fill_assign(                  Type* first, size_type count, Type const& val)   { for (; count--;) { copy_assign(first++, &val, 1); } }
-			
-			// construct at 'first'
-			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args)
+			static void destruct(allocator_type& alloc, value_type* first, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					assert((::memset(first, 0xdd, sizeof(value_type) * count), true));
+					(void)alloc, first, count;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::destroy(alloc, first++);
+				}
+			}
+			static void construct(allocator_type& alloc, value_type* first, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					(void)alloc, first, count;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++);
+				}
+			}
+			static void copy_constr(allocator_type& alloc, value_type* first, value_type const* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(value_type) * count);
+					(void)alloc;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++, *src++);
+				}
+			}
+			static void move_constr(allocator_type& alloc, value_type* first, value_type* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(value_type) * count);
+					(void)alloc;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++, std::move(*src++));
+				}
+			}
+			static void copy_assign(value_type* first, value_type const* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(value_type) * count);
+				}
+				else
+				{
+					for (; count--; ++first, ++src)
+						*first = *src;
+				}
+			}
+			static void move_assign(value_type* first, value_type* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(value_type) * count);
+				}
+				else
+				{
+					for (; count--; ++first, ++src)
+						*first = std::move(*src);
+				}
+			}
+			static void destruct_range(allocator_type& alloc, iterator first, size_type count)
+			{
+				for (; count--; ++first)
+					destruct(alloc, &*first, 1);
+			}
+			static void fill_constr(allocator_type& alloc, value_type* first, size_type count, value_type const& val)
+			{
+				for (; count--;)
+					copy_constr(alloc, first++, &val, 1);
+			}
+			static void fill_assign(value_type* first, size_type count, value_type const& val)
+			{
+				for (; count--;)
+					copy_assign(first++, &val, 1);
+			}
+			template <class... Args> static void constr(allocator_type& alloc, value_type* first, Args&&... args)
 			{
 				alloc_traits::construct(alloc, first, std::forward<Args>(args)...);
 			}
-
-			// move [first, last) to [dest, ...)
-			static iterator move(const_iterator first, const_iterator last, iterator dest)
-			{	
-				for (; first != last; ++dest, ++first)
-					*dest = std::move(*first);
+			static iterator move_left(const_iterator first, const_iterator last, iterator dest)
+			{
+				// move [first, last) backwards to [..., dest)
+				for (; first != last; )
+					*--dest = std::move(*--last);
 				return dest;
 			}
-
-			// move [first, last) backwards to [..., dest)
-			static iterator move_backward(const_iterator first, const_iterator last, iterator dest)
+			static iterator move_right(const_iterator first, const_iterator last, iterator dest)
 			{
-				while (first != last)
-					*--dest = std::move(*--last);
+				// move [first, last) to [dest, ...)
+				for (; first != last; ++dest, ++first)
+					*dest = std::move(*first);
 				return dest;
 			}
 		};
@@ -431,32 +640,28 @@ namespace pr
 		// Debugging view
 		#ifndef NDEBUG
 		template <typename T> struct DbgPtr { using type = T const (*)[CountPerBlock]; };
-		template <> struct DbgPtr<char>     { using type = char const *; };
-		template <> struct DbgPtr<wchar_t>  { using type = wchar_t const *; };
-		typename DbgPtr<Type>::type m_data;
+		template <> struct DbgPtr<char> { using type = char const*; };
+		template <> struct DbgPtr<wchar_t> { using type = wchar_t const*; };
+		typename DbgPtr<value_type>::type m_data;
 		bool set_dbg_ptr()
 		{
 			auto ptr = &m_map[m_first][m_first & BlockIndexMask];
-			m_data = reinterpret_cast<DbgPtr<Type>::type>(ptr);
+			m_data = reinterpret_cast<DbgPtr<value_type>::type>(ptr);
 			return true;
 		}
 		#endif
 
-		BlockPtrMap m_map; // The array of block pointers
+		block_ptr_map_t m_map; // The array of block pointers
 		size_type m_first; // Element index of the first element == The offset from 'm_map.m_ptr' to the first element
 		size_type m_last;  // Element index of the last+1 element == The offset from 'm_map.m_ptr' to one passed the last element
 
 	public:
 
-		// The memory allocator
-		Allocator const& allocator() const { return m_map.m_alloc_type; }
-		Allocator&       allocator()       { return m_map.m_alloc_type; }
-
 		// construct empty
 		deque()
 			:m_map(allocator_type())
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			assert(set_dbg_ptr());
 		}
@@ -466,19 +671,19 @@ namespace pr
 		}
 
 		// construct with custom allocator
-		explicit deque(Allocator const& allocator)
+		explicit deque(allocator_type const& allocator)
 			:m_map(allocator)
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			assert(set_dbg_ptr());
 		}
 
-		// construct from count * Type()
+		// construct from count * value_type()
 		explicit deque(size_type count)
 			:m_map(allocator_type())
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			resize(count);
 			assert(set_dbg_ptr());
@@ -487,8 +692,8 @@ namespace pr
 		// construct from count * val
 		deque(size_type count, value_type const& val)
 			:m_map(allocator_type())
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			for (; count-- != 0;)
 				push_back(val);
@@ -497,77 +702,87 @@ namespace pr
 
 		// copy construct (explicit copy constructor needed to prevent auto generated one even tho there's a template one that would work)
 		deque(deque const& right)
-			:m_map(right.allocator())
-			,m_first()
-			,m_last()
+			:m_map(right.alloc())
+			, m_first()
+			, m_last()
 		{
 			for (auto& r : right)
 				push_back(r);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// copy construct from any pr::deque type
-		template <std::size_t B> deque(deque<Type,B,Allocator> const& right)
-			:m_map(right.allocator())
-			,m_first()
-			,m_last()
+		template <size_type B> deque(deque<value_type, B, allocator_type> const& right)
+			:m_map(right.alloc())
+			, m_first()
+			, m_last()
 		{
 			for (auto& r : right)
 				push_back(r);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// construct from [first, last), with optional allocator
-		template <class iter> deque(iter first, iter last, Allocator const& allocator = Allocator())
+		template <class iter> deque(iter first, iter last, allocator_type const& allocator = allocator_type())
 			:m_map(allocator)
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
-			for (;!(first == last); ++first)
+			for (; !(first == last); ++first)
 				push_back(*first);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// construct from initialiser list
-		deque(std::initializer_list<value_type> list, Allocator const& allocator = Allocator())
+		deque(std::initializer_list<value_type> list, allocator_type const& allocator = allocator_type())
 			:m_map(allocator)
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			insert(begin(), list.begin(), list.end());
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// construct from another container-like object
 		// 2nd parameter used to prevent overload issues with deque(count) (using SFINAE)
-		template <class tcont> deque(tcont const& rhs,  typename tcont::size_type = 0, Allocator const& allocator = Allocator())
+		template <class tcont> deque(tcont const& rhs, typename tcont::size_type = 0, allocator_type const& allocator = allocator_type())
 			:m_map(allocator)
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			for (auto& elem : rhs)
 				emplace_back(elem);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// construct by moving right
 		deque(deque&& rhs)
-			:m_map(rhs.allocator())
-			,m_first()
-			,m_last()
+			:m_map(rhs.alloc())
+			, m_first()
+			, m_last()
 		{
 			*this = std::move(rhs);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 		}
 
 		// construct by moving right with allocator
-		deque(deque&& rhs, Allocator const& allocator)
+		deque(deque&& rhs, allocator_type const& allocator)
 			:m_map(allocator)
-			,m_first()
-			,m_last()
+			, m_first()
+			, m_last()
 		{
 			*this = std::move(rhs);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
+		}
+
+		// The memory allocator
+		allocator_type const& get_allocator() const
+		{
+			return alloc();
+		}
+		allocator_type& get_allocator()
+		{
+			return alloc();
 		}
 
 		// assign by moving rhs
@@ -575,12 +790,12 @@ namespace pr
 		{
 			if (this != &rhs)
 				impl_assign(std::move(rhs));
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 			return *this;
 		}
 
 		// assign rhs
-		template <size_type B> deque& operator = (deque<Type,B,Allocator>&& rhs)
+		template <size_type B> deque& operator = (deque<value_type, B, allocator_type>&& rhs)
 		{
 			impl_assign(std::move(rhs));
 			assert(set_dbg_ptr());
@@ -592,12 +807,12 @@ namespace pr
 		{
 			if (this != &rhs)
 				impl_assign(rhs);
-			assert(set_dbg_ptr()); 
+			assert(set_dbg_ptr());
 			return *this;
 		}
 
 		// assign rhs
-		template <size_type B> deque& operator = (deque<Type,B,Allocator> const& rhs)
+		template <size_type B> deque& operator = (deque<value_type, B, allocator_type> const& rhs)
 		{
 			impl_assign(rhs);
 			assert(set_dbg_ptr());
@@ -625,13 +840,13 @@ namespace pr
 		}
 
 		// element at position
-		const_reference at(size_type idx) const
+		value_type const& at(size_type idx) const
 		{
 			assert(idx < size() && "out of range");
 			idx += m_first;
 			return m_map[idx][idx & BlockIndexMask];
 		}
-		reference at(size_type idx)
+		value_type& at(size_type idx)
 		{
 			assert(idx < size() && "out of range");
 			idx += m_first;
@@ -639,11 +854,11 @@ namespace pr
 		}
 
 		// index operator
-		const_reference operator[](size_type idx) const
+		value_type const& operator[](size_type idx) const
 		{
 			return at(idx);
 		}
-		reference operator[](size_type idx)
+		value_type& operator[](size_type idx)
 		{
 			return at(idx);
 		}
@@ -651,47 +866,47 @@ namespace pr
 		// return iterator for beginning of mutable sequence
 		iterator begin() noexcept
 		{
-			return iterator(m_first, m_map);
+			return iterator(m_first, &m_map);
 		}
 
 		// return iterator for beginning of non-mutable sequence
 		const_iterator begin() const noexcept
 		{
-			return const_iterator(m_first, m_map);
+			return const_iterator(m_first, &m_map);;
 		}
 
 		// return iterator for end of mutable sequence
 		iterator end() noexcept
 		{
-			return iterator(m_first + size(), m_map);
+			return iterator(m_first + size(), &m_map);;
 		}
 
 		// return iterator for end of non-mutable sequence
 		const_iterator end() const noexcept
 		{
-			return const_iterator(m_first + size(), m_map);
+			return const_iterator(m_first + size(), &m_map);;
 		}
 
 		// return first element of mutable sequence
-		reference front()
+		value_type& front()
 		{
 			return *begin();
 		}
 
 		// return first element of non-mutable sequence
-		const_reference front() const
+		value_type const& front() const
 		{
 			return *begin();
 		}
 
 		// return last element of mutable sequence
-		reference back()
+		value_type& back()
 		{
 			return *(end() - 1);
 		}
 
 		// return last element of non-mutable sequence
-		const_reference back() const
+		value_type const& back() const
 		{
 			return *(end() - 1);
 		}
@@ -703,7 +918,7 @@ namespace pr
 			m_map.free_all();
 		}
 
-		// set new length, padding with Type() as needed
+		// set new length, padding with value_type() as needed
 		void resize(size_type count)
 		{
 			while (size() < count) emplace_back();
@@ -711,7 +926,7 @@ namespace pr
 		}
 
 		// set new length, padding with 'val' as needed
-		void resize(size_type count, const_reference val)
+		void resize(size_type count, value_type const& val)
 		{
 			while (size() < count) push_back(val);
 			while (size() > count) pop_back();
@@ -740,7 +955,7 @@ namespace pr
 		{
 			auto block = m_map[m_last];
 			auto idx = m_last & BlockIndexMask;
-			traits::copy_constr(allocator(), block + idx, &val, 1);
+			traits::copy_constr(alloc(), block + idx, &val, 1);
 			++m_last;
 		}
 
@@ -749,7 +964,7 @@ namespace pr
 		{
 			auto block = m_map[m_last];
 			auto idx = m_last & BlockIndexMask;
-			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
+			traits::constr(alloc(), block + idx, std::forward<Args>(args)...);
 			++m_last;
 		}
 
@@ -758,7 +973,7 @@ namespace pr
 		{
 			auto block = m_map[m_first - 1];
 			auto idx = (m_first - 1 + CountPerBlock) & BlockIndexMask;
-			traits::copy_constr(allocator(), block + idx, &val, 1);
+			traits::copy_constr(alloc(), block + idx, &val, 1);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
 		}
@@ -768,7 +983,7 @@ namespace pr
 		{
 			auto block = m_map[m_first - 1];
 			auto idx = (m_first - 1 + CountPerBlock) & BlockIndexMask;
-			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
+			traits::constr(alloc(), block + idx, std::forward<Args>(args)...);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
 		}
@@ -779,18 +994,18 @@ namespace pr
 			assert(!empty() && "pop_back() on empty deque");
 			auto block = m_map[m_last - 1];
 			auto idx = (m_last - 1 + CountPerBlock) & BlockIndexMask;
-			traits::destruct(allocator(), block + idx, 1);
+			traits::destruct(alloc(), block + idx, 1);
 			--m_last; // last can't be 0 unless m_first > m_last
 			if (m_first == m_last) m_first = m_last = 0;
 		}
 
 		// erase the element at the beginning
 		void pop_front()
-		{	
+		{
 			assert(!empty() && "pop_front() on empty deque");
 			auto block = m_map[m_first];
 			auto idx = m_first & BlockIndexMask;
-			traits::destruct(allocator(), block + idx, 1);
+			traits::destruct(alloc(), block + idx, 1);
 			++m_first;
 			if (m_first == m_last) m_first = m_last = 0;
 		}
@@ -825,7 +1040,7 @@ namespace pr
 			else // closer to back, push to back then copy
 			{
 				push_back(val);
-				if (ofs != size()-1) std::rotate(begin() + ofs, end() - 1, end());
+				if (ofs != size() - 1) std::rotate(begin() + ofs, end() - 1, end());
 			}
 			return begin() + ofs;
 		}
@@ -833,7 +1048,7 @@ namespace pr
 		// insert count * val at 'at'
 		iterator insert(const_iterator at, size_type count, value_type const& val)
 		{
-			size_type ofs = at - begin();
+			auto ofs = at - begin();
 			impl_insert(at, count, val);
 			return begin() + ofs;
 		}
@@ -846,7 +1061,8 @@ namespace pr
 			size_type old_size = size();
 
 			if (first == last)
-			{}
+			{
+			}
 			else if (ofs <= size() / 2) // closer to front, push to front then rotate
 			{
 				try
@@ -900,15 +1116,15 @@ namespace pr
 
 			if (b < e) // closer to front, move begin() forward
 			{
-				traits::move_backward(begin(), first, make_iter(last)); // move [begin,first) to [..,last)
-				traits::destruct_range(allocator(), begin(), c);
+				traits::move_left(begin(), first, make_iter(last)); // move [begin,first) to [..,last)
+				traits::destruct_range(alloc(), begin(), c);
 				m_first += c;
 				if (m_first == m_last) m_first = m_last = 0;
 			}
 			else // closer to back, move end() backward
 			{
-				traits::move(last, end(), make_iter(first));
-				traits::destruct_range(allocator(), end() - c, c);
+				traits::move_right(last, end(), make_iter(first));
+				traits::destruct_range(alloc(), end() - c, c);
 				m_last -= c;
 				if (m_first == m_last) m_first = m_last = 0;
 			}
@@ -919,36 +1135,47 @@ namespace pr
 		void swap(deque& rhs)
 		{
 			if (this == &rhs) // same object, do nothing
-			{}
-			else if (allocator() == rhs.allocator() || alloc_traits::propagate_on_container_swap::value)
+			{
+			}
+			else if (alloc() == rhs.alloc() || alloc_traits::propagate_on_container_swap::value)
 			{
 				// same allocators or allocator allows swap
-				std::swap(m_map  , rhs.m_map  );
+				std::swap(m_map, rhs.m_map);
 				std::swap(m_first, rhs.m_first);
-				std::swap(m_last , rhs.m_last );
+				std::swap(m_last, rhs.m_last);
 			}
 			else // containers are incompatible
 			{
- 				assert(false && "deque containers incompatible for swap");
+				assert(false && "deque containers incompatible for swap");
 			}
 		}
 
-		// Implicit conversion to a type that can be constructed from begin/end iterators
+		// Conversion to a type that can be constructed from begin/end iterators
 		// This allows cast to std::vector<> amoung others.
-		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the
+		// Note: converting to a std::vector<> when 'value_type' has an alignment greater than the
 		// default alignment causes a compiler error because of std::vector.resize().
-		template <typename Cont> operator Cont() const
+		template <typename TCont, typename = std::enable_if_t<std::is_same_v<TCont::value_type, value_type>>>
+		explicit operator TCont() const
 		{
-			return Cont(begin(), end());
+			return TCont(begin(), end());
 		}
 
 	private:
 
+		allocator_type const& alloc() const
+		{
+			return m_map.m_alloc_type;
+		}
+		allocator_type& alloc()
+		{
+			return m_map.m_alloc_type;
+		}
+
 		// copy assign rhs
-		template <size_type B> void impl_assign(deque<Type,B,Allocator> const & rhs)
+		template <size_type B> void impl_assign(deque<value_type, B, allocator_type> const& rhs)
 		{
 			// change allocator before copying
-			auto same_alloc = allocator() == rhs.allocator();
+			auto same_alloc = alloc() == rhs.alloc();
 			if (!same_alloc && alloc_traits::propagate_on_container_copy_assignment::value)
 			{
 				clear();
@@ -974,12 +1201,12 @@ namespace pr
 		}
 
 		// move assign rhs
-		template <size_type B> void impl_assign(deque<Type,B,Allocator>&& rhs)
+		template <size_type B> void impl_assign(deque<value_type, B, allocator_type>&& rhs)
 		{
 			clear();
 			m_map = std::move(rhs.m_map);
-			std::swap(m_first , rhs.m_first);
-			std::swap(m_last  , rhs.m_last );
+			std::swap(m_first, rhs.m_first);
+			std::swap(m_last, rhs.m_last);
 		}
 
 		// insert count * val at 'at'
@@ -991,7 +1218,7 @@ namespace pr
 			size_type old_size = size();
 
 			assert(ofs <= size() && "deque insert iterator outside range");
- 
+
 			if (ofs < rem) // closer to front
 			{
 				try
@@ -1001,7 +1228,7 @@ namespace pr
 					{
 						// push excess values
 						for (num = count - ofs; 0 < num; --num)
-							push_front(val); 
+							push_front(val);
 
 						// push prefix
 						for (num = ofs; 0 < num; --num)
@@ -1009,7 +1236,7 @@ namespace pr
 
 						// fill in rest of values
 						auto mid = begin() + count;
-						std::fill(mid, mid + ofs, val);
+						std::fill<iterator>(mid, mid + ofs, val);
 					}
 					else // insert not longer than prefix
 					{
@@ -1020,8 +1247,8 @@ namespace pr
 						// in case val is in sequence
 						auto mid = begin() + count;
 						auto tmp = val;
-						traits::move(mid + count, mid + ofs, mid); // copy rest of prefix
-						std::fill(begin() + ofs, mid + ofs, tmp); // fill in values
+						traits::move_right(mid + count, mid + ofs, mid); // copy rest of prefix
+						std::fill<iterator>(begin() + ofs, mid + ofs, tmp); // fill in values
 					}
 				}
 				catch (...)
@@ -1049,7 +1276,7 @@ namespace pr
 
 						// fill in rest of values
 						auto mid = begin() + ofs;
-						std::fill(mid, mid + rem, val);
+						std::fill<iterator>(mid, mid + rem, val);
 					}
 					else // insert not longer than prefix
 					{
@@ -1060,8 +1287,8 @@ namespace pr
 						// copy rest of prefix
 						auto mid = begin() + ofs;
 						auto tmp = val; // in case val is in sequence
-						traits::move_backward(mid, mid + rem - count, mid + rem);
-						std::fill(mid, mid + count, tmp); // fill in values
+						traits::move_left(mid, mid + rem - count, mid + rem);
+						std::fill<iterator>(mid, mid + count, tmp); // fill in values
 					}
 				}
 				catch (...)
@@ -1078,44 +1305,39 @@ namespace pr
 		iterator make_iter(const_iterator i)
 		{
 			assert(i.m_map == &m_map && "iterator not for this deque");
-			return iterator(i.m_idx, m_map);
+			return iterator(i.m_idx, &m_map);;
 		}
 	};
 
 	// operators
-	template <class T, std::size_t B, typename A> inline void swap(deque<T,B,A>& lhs, deque<T,B,A>& rhs)
+	template <class T, size_t B, typename A> inline void swap(deque<T,B,A>& lhs, deque<T,B,A>& rhs)
 	{
 		lhs.swap(rhs);
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator == (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator == (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator != (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator != (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return !(lhs == rhs);
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator <  (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator <  (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator <= (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator <= (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return !(rhs < lhs);
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator >  (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator >  (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return rhs < lhs;
 	}
-	template <class T1, std::size_t B1, typename A1, class T2, std::size_t B2, typename A2> inline bool operator >= (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
+	template <class T1, size_t B1, typename A1, class T2, size_t B2, typename A2> inline bool operator >= (deque<T1,B1,A1> const& lhs, deque<T2,B2,A2> const& rhs)
 	{
 		return !(lhs < rhs);
 	}
-
-	#ifdef PR_NOEXCEPT_DEFINED
-	#   undef PR_NOEXCEPT_DEFINED
-	#   undef noexcept
-	#endif
 }
 
 #if PR_UNITTESTS
@@ -1123,32 +1345,52 @@ namespace pr
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/maths/maths.h"
-
+#include <deque>
 namespace pr::container
 {
 	namespace unittests::deque
 	{
-		typedef unsigned int uint;
+		inline static int object_count;
 
-		struct Single :pr::RefCount<Single>
+		// A ref-counted singleton
+		struct Single :RefCount<Single>
 		{
 			static void RefCountZero(RefCount<Single>*) {}
+			static Single& instance()
+			{
+				static Single single;
+				return single;
+			}
 		};
 
-		inline int& StartObjectCount() { static int start_object_count; return start_object_count; }
-		inline int& ObjectCount() { static int object_count; return object_count; }
-		inline Single& Refs() { static Single single; return single; }
-
+		// A copy constructable type
 		struct Type
 		{
-			uint val;
-			pr::RefPtr<Single> ptr;
+			int val;
+			RefPtr<Single> ptr;
 
-			Type() :val(0) ,ptr(&Refs(), true)                { ++ObjectCount(); }
-			Type(uint w) :val(w) ,ptr(&Refs(), true)          { ++ObjectCount(); }
-			Type(Type&& rhs) :val(rhs.val) ,ptr(rhs.ptr)      { ++ObjectCount(); }
-			Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ++ObjectCount(); }
-			Type& operator = (Type&& rhs)
+			Type()
+				:Type(0)
+			{}
+			Type(int w)
+				:val(w)
+				, ptr(&Single::instance(), true)
+			{
+				++object_count;
+			}
+			Type(Type&& rhs) noexcept
+				:Type()
+			{
+				std::swap(val, rhs.val);
+				std::swap(ptr, rhs.ptr);
+			}
+			Type(Type const& rhs)
+				:val(rhs.val)
+				, ptr(rhs.ptr)
+			{
+				++object_count;
+			}
+			Type& operator = (Type&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -1168,449 +1410,472 @@ namespace pr::container
 			}
 			virtual ~Type()
 			{
-				--ObjectCount();
-				PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
-				val = 0xcccccccc;
+				--object_count;
+				PR_CHECK(ptr.m_ptr == &Single::instance(), true); // destructing an invalid Type
+				val = 0xdddddddd;
+			}
+			friend bool operator == (Type const& lhs, Type const& rhs)
+			{
+				return lhs.val == rhs.val;
 			}
 		};
-		static_assert(std::is_move_constructible<Type>::value, "");
-		static_assert(std::is_copy_constructible<Type>::value, "");
-		static_assert(std::is_move_assignable<Type>::value, "");
-		static_assert(std::is_copy_assignable<Type>::value, "");
+		static_assert(std::is_move_constructible<Type>::value);
+		static_assert(std::is_copy_constructible<Type>::value);
+		static_assert(std::is_move_assignable<Type>::value);
+		static_assert(std::is_copy_assignable<Type>::value);
 
+		// A move-only type
 		struct NonCopyable :Type
 		{
-			NonCopyable() :Type() {}
-			NonCopyable(uint w) :Type(w) {}
-			NonCopyable(NonCopyable const&) = delete;
-			NonCopyable(NonCopyable&& rhs) :Type(std::forward<Type&&>(rhs)) {}
-			NonCopyable& operator = (NonCopyable const&) = delete;
-			NonCopyable& operator = (NonCopyable&& rhs)
+			NonCopyable()
+				:Type()
+			{}
+			NonCopyable(int w)
+				:Type(w)
+			{}
+			NonCopyable(NonCopyable&& rhs) noexcept
+				:Type(std::move(rhs))
+			{}
+			NonCopyable& operator = (NonCopyable&& rhs) noexcept
 			{
-				*static_cast<Type*>(this) = std::move(rhs);
+				Type::operator=(std::move(rhs));
 				return *this;
 			}
+			NonCopyable(NonCopyable const&) = delete;
+			NonCopyable& operator = (NonCopyable const&) = delete;
 		};
-	//	static_assert( std::is_move_constructible<NonCopyable>::value, "");
-	//	static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
-	//	static_assert( std::is_move_assignable<NonCopyable>::value, "");
-	//	static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+		static_assert(std::is_move_constructible<NonCopyable>::value);
+		static_assert(!std::is_copy_constructible<NonCopyable>::value);
+		static_assert(std::is_move_assignable<NonCopyable>::value);
+		static_assert(!std::is_copy_assignable<NonCopyable>::value);
 
-		inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
+		// Leaked objects checker
+		struct Check
+		{
+			int m_count;
+			long m_refs;
 
-		typedef pr::deque<Type, 8> Deque0;
-		typedef pr::deque<Type, 16> Deque1;
-		typedef pr::deque<NonCopyable, 4> Deque2;
+			Check()
+				:m_count(object_count)
+				, m_refs(Single::instance().m_ref_count)
+			{}
+			~Check()
+			{
+				PR_CHECK(object_count, m_count);
+				PR_CHECK(Single::instance().m_ref_count, m_refs);
+			}
+		};
+
+		using Deque0 = pr::deque<Type, 8>;
+		using Deque1 = pr::deque<Type, 16>;
+		using Deque2 = pr::deque<NonCopyable, 4>;
 	}
 	PRUnitTest(DequeTests)
 	{
 		using namespace unittests::deque;
-
-		std::vector<uint> uints; uints.resize(16);
-		std::vector<Type> types; types.resize(16);
-		for (uint i = 0; i != 16; ++i)
+		
+		Check global_chk;
 		{
-			uints[i] = i;
-			types[i] = Type(i);
-		}
+			std::vector<int> ints;
+			std::vector<Type> types;
+			for (int i = 0; i != 16; ++i)
+			{
+				ints.push_back(i);
+				types.push_back(Type(i));
+			}
 
-		StartObjectCount() = ObjectCount();
-		{
-			// default constructor
-			Deque0 deq;
-			PR_CHECK(deq.empty(), true);
-			PR_CHECK(deq.size(), 0U);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
- 		StartObjectCount() = ObjectCount();
-		{
-			// construct with allocator
-			std::allocator<int> al;
-			pr::deque<int, 16, std::allocator<int>> deq0(al);
-			deq0.push_back(42);
-				
-			// copy to deque of different type
-			pr::deque<int, 8, std::allocator<int>> deq1;
-			deq1 = deq0;
-			PR_CHECK(deq0.size(), 1U);
-			PR_CHECK(deq0[0], 42);
-			PR_CHECK(deq1.size(), 1U);
-			PR_CHECK(deq1[0], 42);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// count constructor
-			Deque1 deq(15);
-			PR_CHECK(!deq.empty(), true);
-			PR_CHECK(deq.size(), 15U);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// count + instance constructor
-			Deque0 deq(5U, 3);
-			PR_CHECK(deq.size(), 5U);
-			for (size_t i = 0; i != 5; ++i)
-				PR_CHECK(deq[i].val, 3U);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// copy constructor
-			Deque0 deq0(5U,3);
-			Deque1 deq1(deq0);
-			PR_CHECK(deq1.size(), deq0.size());
-			for (size_t i = 0; i != deq0.size(); ++i)
-				PR_CHECK(deq1[i].val, deq0[i].val);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// Construct from a std::deque
-			std::deque<uint> deq0(4U, 6);
-			Deque0 deq1(deq0);
-			PR_CHECK(deq1.size(), deq0.size());
-			for (size_t i = 0; i != deq0.size(); ++i)
-				PR_CHECK(deq1[i].val, deq0[i]);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// Construct from range
-			uint r[] = {1,2,3,4};
-			Deque0 deq1(std::begin(r), std::end(r));
-			PR_CHECK(deq1.size(), 4U);
-			PR_CHECK(deq1[0].val, r[0]);
-			PR_CHECK(deq1[1].val, r[1]);
-			PR_CHECK(deq1[2].val, r[2]);
-			PR_CHECK(deq1[3].val, r[3]);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		StartObjectCount() = ObjectCount();
-		{
-			// Move construct
-			Deque0 deq0(4U, 6);
-			Deque0 deq1 = std::move(deq0);
-			PR_CHECK(deq0.size(), 0U);
-			PR_CHECK(deq1.size(), 4U);
-			for (size_t i = 0; i != deq1.size(); ++i)
-				PR_CHECK(deq1[i].val, 6U);
-		}
-		PR_CHECK(ObjectCount(), StartObjectCount());
-		{//RefCounting0
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Assign
-			StartObjectCount() = ObjectCount();
-			{
-				// Copy assign
-				Deque0 deq0(4U, 5);
-				Deque1 deq1;
-				deq1 = deq0;
-				PR_CHECK(deq0.size(), deq1.size());
-				for (size_t i = 0; i != deq0.size(); ++i)
-					PR_CHECK(deq1[i].val, deq0[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// Move assign
-				Deque0 deq0(4U, 5);
-				Deque1 deq1;
-				deq1 = std::move(deq0);
-				PR_CHECK(deq0.size(), 0U);
-				PR_CHECK(deq1.size(), 4U);
-				for (auto& i : deq1)
-					PR_CHECK(i.val, 5U);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// assign method
-				Deque0 deq0;
-				deq0.assign(3U, 5);
-				PR_CHECK(deq0.size(), 3U);
-				for (size_t i = 0; i != 3; ++i)
-					PR_CHECK(deq0[i].val, 5U);
+			{// Constructors
+				{
+					Check chk;
+					{
+						// default constructor
+						Deque0 deq;
+						PR_CHECK(deq.empty(), true);
+						PR_CHECK(deq.size(), 0U);
+					}
+				}
+				{
+					Check chk;
+					{
+						// construct with allocator
+						std::allocator<int> al;
+						pr::deque<int, 16, std::allocator<int>> deq0(al);
+						deq0.push_back(42);
 
-				// assign range method
-				Deque1 deq1;
-				deq1.assign(&types[0], &types[8]);
-				PR_CHECK(deq1.size(), 8U);
-				for (size_t i = 0; i != 8; ++i)
-					PR_CHECK(deq1[i].val, types[i].val);
+						// copy to deque of different type
+						pr::deque<int, 8, std::allocator<int>> deq1;
+						deq1 = deq0;
+						PR_CHECK(deq0.size(), 1U);
+						PR_CHECK(deq0[0], 42);
+						PR_CHECK(deq1.size(), 1U);
+						PR_CHECK(deq1[0], 42);
+					}
+				}
+				{
+					Check chk;
+					{
+						// count constructor
+						Deque1 deq(15);
+						PR_CHECK(!deq.empty(), true);
+						PR_CHECK(deq.size(), 15U);
+					}
+				}
+				{
+					Check chk;
+					{
+						// count + instance constructor
+						Deque0 deq(5U, 3);
+						PR_CHECK(deq.size(), 5U);
+						for (size_t i = 0; i != 5; ++i)
+							PR_CHECK(deq[i].val, 3);
+					}
+				}
+				{
+					Check chk;
+					{
+						// copy constructor
+						Deque0 deq0(5U, 3);
+						Deque1 deq1(deq0);
+						PR_CHECK(deq1.size(), deq0.size());
+						for (size_t i = 0; i != deq0.size(); ++i)
+							PR_CHECK(deq1[i].val, deq0[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// Construct from a std::deque
+						std::deque<int> deq0(4U, 6);
+						Deque0 deq1(deq0);
+						PR_CHECK(deq1.size(), deq0.size());
+						for (size_t i = 0; i != deq0.size(); ++i)
+							PR_CHECK(deq1[i].val, deq0[i]);
+					}
+				}
+				{
+					Check chk;
+					{
+						// Construct from range
+						int r[] = { 1, 2, 3, 4 };
+						Deque0 deq1(std::begin(r), std::end(r));
+						PR_CHECK(deq1.size(), 4U);
+						PR_CHECK(deq1[0].val, r[0]);
+						PR_CHECK(deq1[1].val, r[1]);
+						PR_CHECK(deq1[2].val, r[2]);
+						PR_CHECK(deq1[3].val, r[3]);
+					}
+				}
+				{
+					Check chk;
+					{
+						// Move construct
+						Deque0 deq0(4U, 6);
+						Deque0 deq1 = std::move(deq0);
+						PR_CHECK(deq0.size(), 0U);
+						PR_CHECK(deq1.size(), 4U);
+						for (size_t i = 0; i != deq1.size(); ++i)
+							PR_CHECK(deq1[i].val, 6);
+					}
+				}
 			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting1
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Clear
-			StartObjectCount() = ObjectCount();
-			{
-				pr::deque<int,8> deq0({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15});
-				PR_CHECK(!deq0.empty(), true);
-				PR_CHECK(deq0.front(), 0);
-				PR_CHECK(deq0.back(), 15);
-				deq0.clear();
-				PR_CHECK(deq0.empty(), true);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting2
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Erase
-			StartObjectCount() = ObjectCount();
-			{
-				// erase range non-pods
-				Deque0 deq0(std::begin(types), std::end(types));
-				auto b = deq0.begin();
-				deq0.erase(b + 3, b + 13);
-				PR_CHECK(deq0.size(), 6U);
-				for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i].val, types[i]   .val);
-				for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i].val, types[i+10].val);
-			}
-			PR_CHECK(ObjectCount(),StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// erase range pods
-				pr::deque<uint,8> deq0(std::begin(uints), std::end(uints));
-				auto b = deq0.begin();
-				deq0.erase(b + 3, b + 13);
-				PR_CHECK(deq0.size(), 6U);
-				for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], uints[i]   );
-				for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], uints[i+10]);
-			}
-			PR_CHECK(ObjectCount(),StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// erase at
-				Deque1 deq1(types.begin(), types.begin() + 4);
-				deq1.erase(deq1.begin() + 2);
-				PR_CHECK(deq1.size(), 3U);
-				for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, types[i]  .val);
-				for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i].val, types[i+1].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting3
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Insert
-			StartObjectCount() = ObjectCount();
-			{
-				// insert count*val at 'at'
-				Deque0 deq0;
-				deq0.insert(deq0.end(), 4U, 9);
-				PR_CHECK(deq0.size(), 4U);
-				for (size_t i = 0; i != 4; ++i)
-					PR_CHECK(deq0[i].val, 9U);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// insert range
-				Deque1 deq1(4U, 6);
-				deq1.insert(deq1.begin() + 2, &types[2], &types[7]);
-				PR_CHECK(deq1.size(), 9U);
-				for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, 6U);
-				for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i].val, types[i].val);
-				for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i].val, 6U);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting4
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//PushPop
-			StartObjectCount() = ObjectCount();
-			{
-				// pop_back
-				Deque0 deq;
-				deq.insert(std::end(deq), std::begin(types), std::begin(types) + 3);
-				auto addr = &deq[1];
-				deq.insert(std::end(deq), std::begin(types) + 3, std::end(types));
-				PR_CHECK(deq.size(), 16U);
-				PR_CHECK(&deq[1], addr);
-				deq.pop_back();
-				deq.pop_back();
-				deq.pop_back();
-				deq.pop_back();
-				PR_CHECK(deq.size(), 12U);
-				PR_CHECK(&deq[1], addr);
-				for (size_t i = 0; i != deq.size(); ++i)
-					PR_CHECK(deq[i].val, types[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// push_back
-				Deque1 deq;
-				deq.emplace_back(0);
-				auto addr = &deq[0];
-				PR_CHECK(deq.size(), 1U);
-					
-				for (int i = 1; i != 4; ++i) deq.emplace_back(i);
-				PR_CHECK(deq.size(), 4U);
-				PR_CHECK(&deq[0], addr);
+			{//Assign
+				{
+					Check chk;
+					{
+						// Copy assign
+						Deque0 deq0(4U, 5);
+						Deque1 deq1;
+						deq1 = deq0;
+						PR_CHECK(deq0.size(), deq1.size());
+						for (size_t i = 0; i != deq0.size(); ++i)
+							PR_CHECK(deq1[i].val, deq0[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// Move assign
+						Deque0 deq0(4U, 5);
+						Deque1 deq1;
+						deq1 = std::move(deq0);
+						PR_CHECK(deq0.size(), 0U);
+						PR_CHECK(deq1.size(), 4U);
+						for (auto& i : deq1)
+							PR_CHECK(i.val, 5);
+					}
+				}
+				{
+					Check chk;
+					{
+						// assign method
+						Deque0 deq0;
+						deq0.assign(3U, 5);
+						PR_CHECK(deq0.size(), 3U);
+						for (size_t i = 0; i != 3; ++i)
+							PR_CHECK(deq0[i].val, 5);
 
-				for (int i = 4; i != 9; ++i) deq.push_back(i);
-				PR_CHECK(deq.size(), 9U);
-				PR_CHECK(&deq[0], addr);
+						// assign range method
+						Deque1 deq1;
+						deq1.assign(&types[0], &types[8]);
+						PR_CHECK(deq1.size(), 8U);
+						for (size_t i = 0; i != 8; ++i)
+							PR_CHECK(deq1[i].val, types[i].val);
+					}
+				}
+			}
+			{//Clear
+				{
+					Check chk;
+					{
+						pr::deque<int, 8> deq0({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
+						PR_CHECK(!deq0.empty(), true);
+						PR_CHECK(deq0.front(), 0);
+						PR_CHECK(deq0.back(), 15);
+						deq0.clear();
+						PR_CHECK(deq0.empty(), true);
+					}
+				}
+			}
+			{//Erase
+				{
+					Check chk;
+					{
+						// erase range non-pods
+						Deque0 deq0(std::begin(types), std::end(types));
+						auto b = deq0.begin();
+						deq0.erase(b + 3, b + 13);
+						PR_CHECK(deq0.size(), 6U);
+						for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i].val, types[i].val);
+						for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i].val, types[i + 10].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// erase range pods
+						pr::deque<int, 8> deq0(std::begin(ints), std::end(ints));
+						auto b = deq0.begin();
+						deq0.erase(b + 3, b + 13);
+						PR_CHECK(deq0.size(), 6U);
+						for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], ints[i]);
+						for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], ints[i + 10]);
+					}
+				}
+				{
+					Check chk;
+					{
+						// erase at
+						Deque1 deq1(types.begin(), types.begin() + 4);
+						deq1.erase(deq1.begin() + 2);
+						PR_CHECK(deq1.size(), 3U);
+						for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, types[i].val);
+						for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i].val, types[i + 1].val);
+					}
+				}
+			}
+			{//Insert
+				{
+					Check chk;
+					{
+						// insert count*val at 'at'
+						Deque0 deq0;
+						deq0.insert(deq0.end(), 4U, 9);
+						PR_CHECK(deq0.size(), 4U);
+						for (size_t i = 0; i != 4; ++i)
+							PR_CHECK(deq0[i].val, 9);
+					}
+				}
+				{
+					Check chk;
+					{
+						// insert range
+						Deque1 deq1(4U, 6);
+						deq1.insert(deq1.begin() + 2, &types[2], &types[7]);
+						PR_CHECK(deq1.size(), 9U);
+						for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, 6);
+						for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i].val, types[i].val);
+						for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i].val, 6);
+					}
+				}
+			}
+			{//PushPop
+				{
+					Check chk;
+					{
+						// pop_back
+						Deque0 deq;
+						deq.insert(std::end(deq), std::begin(types), std::begin(types) + 3);
+						auto addr = &deq[1];
+						deq.insert(std::end(deq), std::begin(types) + 3, std::end(types));
+						PR_CHECK(deq.size(), 16U);
+						PR_CHECK(&deq[1], addr);
+						deq.pop_back();
+						deq.pop_back();
+						deq.pop_back();
+						deq.pop_back();
+						PR_CHECK(deq.size(), 12U);
+						PR_CHECK(&deq[1], addr);
+						for (size_t i = 0; i != deq.size(); ++i)
+							PR_CHECK(deq[i].val, types[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// push_back
+						Deque1 deq;
+						deq.emplace_back(0);
+						auto addr = &deq[0];
+						PR_CHECK(deq.size(), 1U);
 
-				for (size_t i = 0; i != deq.size(); ++i)
-					PR_CHECK(deq[i].val, types[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// pop_front
-				Deque0 deq;
-				deq.insert(std::end(deq), std::begin(types), std::begin(types) + 8);
-				auto addr = &deq[7];
-				deq.insert(std::end(deq), std::begin(types) + 8, std::end(types));
-				PR_CHECK(deq.size(), 16U);
-				PR_CHECK(&deq[7], addr);
-				deq.pop_front();
-				deq.pop_front();
-				deq.pop_front();
-				deq.pop_front();
-				PR_CHECK(deq.size(), 12U);
-				PR_CHECK(&deq[3], addr);
-				for (size_t i = 0; i != deq.size(); ++i)
-					PR_CHECK(deq[i].val, types[i+4].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// push_front
-				Deque1 deq;
-				deq.emplace_front(0);
-				auto addr = &deq[0];
-				PR_CHECK(deq.size(), 1U);
-					
-				for (int i = 1; i != 4; ++i) deq.emplace_front(i);
-				PR_CHECK(deq.size(), 4U);
-				PR_CHECK(&deq[3], addr);
+						for (int i = 1; i != 4; ++i) deq.emplace_back(i);
+						PR_CHECK(deq.size(), 4U);
+						PR_CHECK(&deq[0], addr);
 
-				for (int i = 4; i != 9; ++i) deq.push_front(i);
-				PR_CHECK(deq.size(), 9U);
-				PR_CHECK(&deq[8], addr);
+						for (int i = 4; i != 9; ++i) deq.push_back(i);
+						PR_CHECK(deq.size(), 9U);
+						PR_CHECK(&deq[0], addr);
 
-				for (size_t i = 0; i != deq.size(); ++i)
-					PR_CHECK(deq[i].val, 8 - types[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// resize
-				Deque0 deq;
-				deq.insert(std::begin(deq), types.data(), types.data() + 16);
-				PR_CHECK(deq.size(), 16U);
-				deq.resize(7);
-				PR_CHECK(deq.size(), 7U);
-				for (size_t i = 0; i != deq.size(); ++i)
-					PR_CHECK(deq[i].val, types[i].val);
-				deq.resize(12);
-				PR_CHECK(deq.size(), 12U);
-				for (size_t i = 0; i != 7U; ++i)
-					PR_CHECK(deq[i].val, types[i].val);
-				for (size_t i = 7U; i != 12U; ++i)
-					PR_CHECK(deq[i].val, 0U);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting5
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Operators
-			StartObjectCount() = ObjectCount();
-			{
-				// assign and equality
-				Deque0 deq0(4U, 1);
-				Deque0 deq1(3U, 2);
-				deq1 = deq0;
-				PR_CHECK(deq0 == deq1, true);
-				PR_CHECK(deq0.size(), 4U);
-				PR_CHECK(deq1.size(), 4U);
-				for (size_t i = 0; i != 4; ++i)
-					PR_CHECK(deq1[i].val, deq0[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// inequality between different types
-				Deque0 deq0(4U, 1);
-				Deque1 deq1;
-				deq1 = deq0;
-				PR_CHECK(deq0 != deq1, false);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-			StartObjectCount() = ObjectCount();
-			{
-				// implicit conversion to std::deque
-				struct L {
-				static std::deque<Type> Conv(std::deque<Type> v) { return v; }
-				};
+						for (size_t i = 0; i != deq.size(); ++i)
+							PR_CHECK(deq[i].val, types[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// pop_front
+						Deque0 deq;
+						deq.insert(std::end(deq), std::begin(types), std::begin(types) + 8);
+						auto addr = &deq[7];
+						deq.insert(std::end(deq), std::begin(types) + 8, std::end(types));
+						PR_CHECK(deq.size(), 16U);
+						PR_CHECK(&deq[7], addr);
+						deq.pop_front();
+						deq.pop_front();
+						deq.pop_front();
+						deq.pop_front();
+						PR_CHECK(deq.size(), 12U);
+						PR_CHECK(&deq[3], addr);
+						for (size_t i = 0; i != deq.size(); ++i)
+							PR_CHECK(deq[i].val, types[i + 4].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// push_front
+						Deque1 deq;
+						deq.emplace_front(0);
+						auto addr = &deq[0];
+						PR_CHECK(deq.size(), 1U);
 
-				Deque0 deq0(4U, 1);
-				std::deque<Type> deq1 = L::Conv(deq0);
-				PR_CHECK(deq1.size(), 4U);
-				for (size_t i = 0; i != 4; ++i)
-					PR_CHECK(deq1[i].val, deq0[i].val);
-			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting6
-			PR_CHECK(Refs().m_ref_count, 16);
-		}
-		{//Mem
-			StartObjectCount() = ObjectCount();
-			{
-				pr::deque<int,8> deq0;
-				const int count = 20;
-				for (int i = 0; i != count; ++i) deq0.push_back(i);
-				PR_CHECK(deq0.capacity_front(), 0U);
-				PR_CHECK(deq0.capacity_back(), 4U);
-					
-				deq0.push_front(-1);
-				PR_CHECK(deq0.capacity_front(), 7U);
-				PR_CHECK(deq0.capacity_back(), 4U);
-					
-				deq0.erase(std::begin(deq0) + 10, std::end(deq0));
-				PR_CHECK(deq0.capacity_front(), 7U);
-				PR_CHECK(deq0.capacity_back(), 15U);
-				deq0.erase(std::begin(deq0) + 9, std::end(deq0));
-				PR_CHECK(deq0.capacity_front(), 7U);
-				PR_CHECK(deq0.capacity_back(), 16U);
-				deq0.emplace_back(9);
+						for (int i = 1; i != 4; ++i) deq.emplace_front(i);
+						PR_CHECK(deq.size(), 4U);
+						PR_CHECK(&deq[3], addr);
 
-				deq0.shrink_to_fit();
-				PR_CHECK(deq0.capacity_front(), 7U);
-				PR_CHECK(deq0.capacity_back(), 7U);
-					
-				deq0.pop_front();
-				deq0.pop_back();
-				deq0.shrink_to_fit();
-				PR_CHECK(deq0.capacity_front(), 0U);
-				PR_CHECK(deq0.capacity_back(), 0U);
+						for (int i = 4; i != 9; ++i) deq.push_front(i);
+						PR_CHECK(deq.size(), 9U);
+						PR_CHECK(&deq[8], addr);
 
-				deq0.resize(0);
-				deq0.shrink_to_fit();
-				PR_CHECK(deq0.capacity_front(), 0U);
-				PR_CHECK(deq0.capacity_front(), 0U);
+						for (size_t i = 0; i != deq.size(); ++i)
+							PR_CHECK(deq[i].val, 8 - types[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// resize
+						Deque0 deq;
+						deq.insert(std::begin(deq), types.data(), types.data() + 16);
+						PR_CHECK(deq.size(), 16U);
+						deq.resize(7);
+						PR_CHECK(deq.size(), 7U);
+						for (size_t i = 0; i != deq.size(); ++i)
+							PR_CHECK(deq[i].val, types[i].val);
+						deq.resize(12);
+						PR_CHECK(deq.size(), 12U);
+						for (size_t i = 0; i != 7U; ++i)
+							PR_CHECK(deq[i].val, types[i].val);
+						for (size_t i = 7U; i != 12U; ++i)
+							PR_CHECK(deq[i].val, 0);
+					}
+				}
 			}
-			PR_CHECK(ObjectCount(), StartObjectCount());
-		}
-		{//RefCounting
-			types.clear();
-			PR_CHECK(Refs().m_ref_count, 0);
-		}
-		{//GlobalConstrDestrCount
-			PR_CHECK(ObjectCount(), 0);
+			{//Operators
+				{
+					Check chk;
+					{
+						// assign and equality
+						Deque0 deq0(4U, 1);
+						Deque0 deq1(3U, 2);
+						deq1 = deq0;
+						PR_CHECK(deq0 == deq1, true);
+						PR_CHECK(deq0.size(), 4U);
+						PR_CHECK(deq1.size(), 4U);
+						for (size_t i = 0; i != 4; ++i)
+							PR_CHECK(deq1[i].val, deq0[i].val);
+					}
+				}
+				{
+					Check chk;
+					{
+						// inequality between different types
+						Deque0 deq0(4U, 1);
+						Deque1 deq1;
+						deq1 = deq0;
+						PR_CHECK(deq0 != deq1, false);
+					}
+				}
+				{
+					Check chk;
+					{
+						// explicit conversion to std::deque
+						Deque0 deq0(4U, 1);
+						std::deque<Type> d(deq0.begin(), deq0.end());
+						auto deq1 = static_cast<std::deque<Type>>(deq0);
+						PR_CHECK(deq1.size(), 4U);
+						for (size_t i = 0; i != 4; ++i)
+							PR_CHECK(deq1[i].val, deq0[i].val);
+					}
+				}
+			}
+			{//Mem
+				Check chk;
+				{
+					pr::deque<int, 8> deq0;
+					const int count = 20;
+					for (int i = 0; i != count; ++i) deq0.push_back(i);
+					PR_CHECK(deq0.capacity_front(), 0U);
+					PR_CHECK(deq0.capacity_back(), 4U);
+
+					deq0.push_front(-1);
+					PR_CHECK(deq0.capacity_front(), 7U);
+					PR_CHECK(deq0.capacity_back(), 4U);
+
+					deq0.erase(std::begin(deq0) + 10, std::end(deq0));
+					PR_CHECK(deq0.capacity_front(), 7U);
+					PR_CHECK(deq0.capacity_back(), 15U);
+					deq0.erase(std::begin(deq0) + 9, std::end(deq0));
+					PR_CHECK(deq0.capacity_front(), 7U);
+					PR_CHECK(deq0.capacity_back(), 16U);
+					deq0.emplace_back(9);
+
+					deq0.shrink_to_fit();
+					PR_CHECK(deq0.capacity_front(), 7U);
+					PR_CHECK(deq0.capacity_back(), 7U);
+
+					deq0.pop_front();
+					deq0.pop_back();
+					deq0.shrink_to_fit();
+					PR_CHECK(deq0.capacity_front(), 0U);
+					PR_CHECK(deq0.capacity_back(), 0U);
+
+					deq0.resize(0);
+					deq0.shrink_to_fit();
+					PR_CHECK(deq0.capacity_front(), 0U);
+					PR_CHECK(deq0.capacity_front(), 0U);
+				}
+			}
 		}
 	}
 }

@@ -517,7 +517,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::Black:
 			{
-				pr::uint const data[] = {0};
+				uint32_t const data[] = {0};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				Texture2DDesc tdesc(src, 1, EUsage::Immutable);
 				tex = CreateTexture2D(RdrId(EStockTexture::Black), src, tdesc, SamplerDesc::LinearClamp(), false, "#black");
@@ -525,7 +525,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::White:
 			{
-				pr::uint const data[] = {0xFFFFFFFF};
+				uint32_t const data[] = {0xFFFFFFFF};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				Texture2DDesc tdesc(src, 1, EUsage::Immutable);
 				tex = CreateTexture2D(RdrId(EStockTexture::White), src, tdesc, SamplerDesc::LinearClamp(), false, "#white");
@@ -533,7 +533,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::Gray:
 			{
-				pr::uint const data[] = {0xFF808080};
+				uint32_t const data[] = {0xFF808080};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				Texture2DDesc tdesc(src, 1, EUsage::Immutable);
 				tex = CreateTexture2D(RdrId(EStockTexture::Gray), src, tdesc, SamplerDesc::LinearClamp(), false, "#gray");
@@ -541,7 +541,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::Checker:
 			{
-				pr::uint const data[] =
+				uint32_t const data[] =
 				{
 					#define X 0xFFFFFFFF
 					#define O 0x00000000
@@ -565,7 +565,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::Checker2:
 			{
-				pr::uint const data[] =
+				uint32_t const data[] =
 				{
 					#define X 0xFFFFFFFF
 					#define O 0xFFAAAAAA
@@ -589,7 +589,7 @@ namespace pr::rdr
 			}
 		case EStockTexture::Checker3:
 			{
-				pr::uint const data[] =
+				uint32_t const data[] =
 				{
 					#define O 0xFFFFFFFF
 					#define X 0xFFEEEEEE

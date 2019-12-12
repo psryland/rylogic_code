@@ -228,13 +228,7 @@ namespace view3d
 		}
 
 		// Set the light source
-		auto& light = m_scene.m_global_light;
-		light = m_light;
-		if (m_light.m_cam_relative)
-		{
-			light.m_direction = m_camera.CameraToWorld() * m_light.m_direction;
-			light.m_position  = m_camera.CameraToWorld() * m_light.m_position;
-		}
+		m_scene.m_global_light = m_light;
 
 		// Add objects from the window to the scene
 		for (auto& obj : m_objects)

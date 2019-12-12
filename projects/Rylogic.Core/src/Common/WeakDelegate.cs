@@ -527,7 +527,7 @@ namespace Rylogic.UnitTests
 		{
 			Target? bob = new Target("bob", collected, hit);
 			bob.PropertyChanged += WeakRef.MakeWeak(HandlePropChanged, h => bob.PropertyChanged -= h);
-			void HandlePropChanged(object sender, PropertyChangedEventArgs e) => prop_change.Add($"{bob.Name} {e.PropertyName}");
+			void HandlePropChanged(object sender, PropertyChangedEventArgs e) => prop_change.Add($"{bob?.Name} {e.PropertyName}");
 
 			gun.Bang += WeakRef.MakeWeak<Gun>(bob.OnHit, eh => gun.Bang -= eh);
 			gun.Shoot();

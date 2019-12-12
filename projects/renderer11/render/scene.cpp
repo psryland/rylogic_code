@@ -64,11 +64,11 @@ namespace pr::rdr
 			switch (rs)
 			{
 			default: throw std::exception("Unknown render step");
-			case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
-			case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer      >(*this)); break;
-			case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting   >(*this)); break;
-			case ERenderStep::ShadowMap:     m_render_steps.push_back(std::make_shared<ShadowMap    >(*this, m_global_light, iv2(4096,4096))); break;
-			case ERenderStep::RayCast:       m_render_steps.push_back(std::make_shared<RayCastStep  >(*this, true)); break;
+			case ERenderStep::ForwardRender: m_render_steps.emplace_back(new ForwardRender(*this)); break;
+			case ERenderStep::GBuffer:       m_render_steps.emplace_back(new GBuffer      (*this)); break;
+			case ERenderStep::DSLighting:    m_render_steps.emplace_back(new DSLighting   (*this)); break;
+			case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new ShadowMap    (*this, m_global_light, iv2(4096,4096))); break;
+			case ERenderStep::RayCast:       m_render_steps.emplace_back(new RayCastStep  (*this, true)); break;
 			}
 		}
 	}
@@ -120,9 +120,9 @@ namespace pr::rdr
 			if (rs == nullptr)
 			{
 				// Add the ray cast step first so that 'CopyResource' can happen while we render the rest of the scene
-				auto step = std::make_shared<RayCastStep>(*this, true);
-				m_render_steps.insert(std::begin(m_render_steps), step);
-				rs = step.get();
+				std::unique_ptr<RayCastStep> step(new RayCastStep(*this, true));
+				auto iter = m_render_steps.insert(std::begin(m_render_steps), std::move(step));
+				rs = static_cast<RayCastStep*>(iter->get());
 			}
 
 			// Set the rays to cast.
@@ -132,7 +132,7 @@ namespace pr::rdr
 		else
 		{
 			// Remove the ray cast step if there are no rays to cast
-			pr::erase_if(m_render_steps, [](auto rs){ return rs->GetId() == ERenderStep::RayCast; });
+			pr::erase_if(m_render_steps, [](auto& rs){ return rs->GetId() == ERenderStep::RayCast; });
 		}
 	}
 

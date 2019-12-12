@@ -129,76 +129,6 @@ namespace pr::rdr
 		return img.size >= 4 && *static_cast<uint32_t const*>(img.data) == dds::Sentinal;
 	}
 
-	// Get surface information for a particular format
-	void GetSurfaceInfo(size_t width, size_t height, DXGI_FORMAT fmt, size_t& out_num_bytes, size_t& out_row_bytes, size_t& out_num_rows)
-	{
-		bool bc = false;
-		bool packed  = false;
-		size_t num_bytes_per_block = 0;
-		switch (fmt)
-		{
-		case DXGI_FORMAT_BC1_TYPELESS:
-		case DXGI_FORMAT_BC1_UNORM:
-		case DXGI_FORMAT_BC1_UNORM_SRGB:
-		case DXGI_FORMAT_BC4_TYPELESS:
-		case DXGI_FORMAT_BC4_UNORM:
-		case DXGI_FORMAT_BC4_SNORM:
-			bc=true;
-			num_bytes_per_block = 8;
-			break;
-
-		case DXGI_FORMAT_BC2_TYPELESS:
-		case DXGI_FORMAT_BC2_UNORM:
-		case DXGI_FORMAT_BC2_UNORM_SRGB:
-		case DXGI_FORMAT_BC3_TYPELESS:
-		case DXGI_FORMAT_BC3_UNORM:
-		case DXGI_FORMAT_BC3_UNORM_SRGB:
-		case DXGI_FORMAT_BC5_TYPELESS:
-		case DXGI_FORMAT_BC5_UNORM:
-		case DXGI_FORMAT_BC5_SNORM:
-		case DXGI_FORMAT_BC6H_TYPELESS:
-		case DXGI_FORMAT_BC6H_UF16:
-		case DXGI_FORMAT_BC6H_SF16:
-		case DXGI_FORMAT_BC7_TYPELESS:
-		case DXGI_FORMAT_BC7_UNORM:
-		case DXGI_FORMAT_BC7_UNORM_SRGB:
-			bc = true;
-			num_bytes_per_block = 16;
-			break;
-
-		case DXGI_FORMAT_R8G8_B8G8_UNORM:
-		case DXGI_FORMAT_G8R8_G8B8_UNORM:
-			packed = true;
-			break;
-		}
-
-		size_t row_bytes = 0;
-		size_t num_rows = 0;
-		if (bc)
-		{
-			auto blocks_wide = width  > 0 ? std::max<size_t>(1, (width  + 3) / 4) : 0;
-			auto blocks_high = height > 0 ? std::max<size_t>(1, (height + 3) / 4) : 0;
-			row_bytes = blocks_wide * num_bytes_per_block;
-			num_rows = blocks_high;
-		}
-		else if (packed)
-		{
-			row_bytes = ((width + 1) >> 1) * 4;
-			num_rows = height;
-		}
-		else
-		{
-			auto bpp = BitsPerPixel(fmt);
-			row_bytes = (width * bpp + 7) / 8; // round up to nearest byte
-			num_rows = height;
-		}
-
-		// Return values
-		out_num_bytes = row_bytes * num_rows;
-		out_row_bytes = row_bytes;
-		out_num_rows = num_rows;
-	}
-
 	// Convert a DDS pixel format to a DXGI format
 	DXGI_FORMAT GetDXGIFormat(dds::PixelFormat const& ddpf)
 	{
@@ -446,9 +376,8 @@ namespace pr::rdr
 			for (int i = 0, iend = int(mip_count); i != iend; ++i)
 			{
 				// Get the image dimensions for the given width and height
-				size_t num_bytes, row_bytes, num_rows;
-				GetSurfaceInfo(w, h, format, num_bytes, row_bytes, num_rows);
-				if (bits_beg + (num_bytes*d) > bits_end)
+				auto pitch = Pitch(iv2{static_cast<int>(w), static_cast<int>(h)}, format);
+				if (bits_beg + (pitch.y * d) > bits_end)
 					throw std::runtime_error("Insufficient image data provided");
 
 				SubResourceData data;
@@ -465,8 +394,8 @@ namespace pr::rdr
 					}
 
 					data.pSysMem = bits_beg;
-					data.SysMemPitch = static_cast<UINT>(row_bytes);
-					data.SysMemSlicePitch = static_cast<UINT>(num_bytes);
+					data.SysMemPitch = static_cast<UINT>(pitch.x);
+					data.SysMemSlicePitch = static_cast<UINT>(pitch.y);
 				}
 
 				// Add the mip initialisation data
@@ -476,7 +405,7 @@ namespace pr::rdr
 				w = std::max<size_t>(w >> 1, 1ULL);
 				h = std::max<size_t>(h >> 1, 1ULL);
 				d = std::max<size_t>(d >> 1, 1ULL);
-				bits_beg += num_bytes * d;
+				bits_beg += pitch.y * d;
 			}
 		}
 	}

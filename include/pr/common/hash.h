@@ -184,7 +184,7 @@ namespace pr::hash
 	static_assert(HashICT("ABC") == 440920331U, "Compile time CRC failed");
 	static_assert("hash me!"_hash == pr::hash::HashCT("hash me!"));
 	static_assert("HaSh Me ToO!"_hashi == pr::hash::HashICT("hash me too!"));
-	static_assert(L"hash me!"_hash == pr::hash::HashCT(L"hash me!"));
+	static_assert(  "hash me!"_hash == pr::hash::HashCT(L"hash me!"));
 	static_assert(L"HaSh Me ToO!"_hashi == pr::hash::HashICT(L"hash me too!"));
 
 	// Run Time *******************************************************************************

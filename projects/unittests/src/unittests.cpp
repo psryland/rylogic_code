@@ -21,9 +21,12 @@ namespace pr::unittests::your::namespace
 #include "pr/common/unittests.h"
 #include "unittests/src/unittests.h" // all tests
 //#include "pr/common/guid.h"
+//#include "pr/common/allocator.h"
+//#include "pr/container/vector.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
 //#include "pr/common/colour.h"
+//#include "pr/container/deque.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
 //#include "pr/maths/spatial.h"
@@ -46,6 +49,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
+//#include "pr/gfx/onebit.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests

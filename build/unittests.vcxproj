@@ -179,6 +179,7 @@
     <ClInclude Include="..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\include\pr\geometry\utility.h" />
     <ClInclude Include="..\include\pr\geometry\volume.h" />
+    <ClInclude Include="..\include\pr\gfx\onebit.h" />
     <ClInclude Include="..\include\pr\gui\atlgdix.h" />
     <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\context_menu.h" />

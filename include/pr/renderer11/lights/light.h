@@ -38,8 +38,14 @@ namespace pr::rdr
 		// throws pr::Exception<HRESULT> if the settings are invalid
 		std::string Settings() const;
 		void Settings(char const* settings);
-	};
 
-	inline bool operator == (Light const& lhs, Light const& rhs) { return memcmp(&lhs, &rhs, sizeof(Light)) == 0; }
-	inline bool operator != (Light const& lhs, Light const& rhs) { return !(lhs == rhs); }
+		friend bool operator == (Light const& lhs, Light const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(Light)) == 0;
+		}
+		friend bool operator != (Light const& lhs, Light const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+	};
 }

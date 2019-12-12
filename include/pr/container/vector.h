@@ -4,13 +4,13 @@
 //******************************************
 // A version of std::vector with configurable local caching
 // and proper type alignment.
-// Note: this file is made to match pr::string<> as much as possible
+//
+// Notes:
+//  - this file is made to match pr::string<> as much as possible
+//  - This class cannot be replaced by a suitably designed allocator because the allocator would
+//    have to be a value type for the local buffer. That, however, means when large vectors are copied
+//    the heap allocations would have to be reallocated.
 #pragma once
-
-// <type_traits> was introduced in sp1
-#if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
-#error VS2008 SP1 or greater is required to build this file
-#endif
 
 #include <memory>
 #include <iterator>
@@ -24,217 +24,385 @@
 
 namespace pr
 {
-	namespace impl
+	namespace impl::vector
 	{
-		namespace vector
+		template <typename Type> struct citer // const iterator
 		{
-			template <typename Type> struct citer // const iterator
+			using value_type = Type;
+			using pointer = Type const*;
+			using reference = Type const&;
+			using difference_type = typename std::pointer_traits<pointer>::difference_type;
+			using iterator_category = std::random_access_iterator_tag;
+
+			pointer m_ptr;
+
+			citer()
+			{}
+			citer(pointer ptr)
+				:m_ptr(ptr)
+			{}
+			pointer operator ->() const
 			{
-				typedef std::random_access_iterator_tag iterator_category;
-				typedef std::ptrdiff_t                  difference_type;
-				typedef Type                            value_type;
-				typedef Type const&                     reference;
-				typedef Type const*                     pointer;
-
-				pointer m_ptr;
-
-				citer()                                 {}
-				citer(pointer ptr) : m_ptr(ptr)         {}
-				pointer   operator ->() const           { return  m_ptr; }
-				reference operator * () const           { return *m_ptr; }
-				citer&    operator ++()                 { ++m_ptr; return *this; }
-				citer&    operator --()                 { --m_ptr; return *this; }
-				citer     operator ++(int)              { citer i(m_ptr); ++m_ptr; return i; }
-				citer     operator --(int)              { citer i(m_ptr); --m_ptr; return i; }
-			};
-			template <typename Type> struct miter // mutable iterator
+				return m_ptr;
+			}
+			reference operator *() const
 			{
-				typedef std::random_access_iterator_tag iterator_category;
-				typedef std::ptrdiff_t                  difference_type;
-				typedef Type                            value_type;
-				typedef Type&                           reference;
-				typedef Type*                           pointer;
-
-				pointer m_ptr;
-
-				miter()                                 {}
-				miter(pointer ptr) : m_ptr(ptr)         {}
-				pointer   operator ->() const           { return  m_ptr; }
-				reference operator * () const           { return *m_ptr; }
-				miter&    operator ++()                 { ++m_ptr; return *this; }
-				miter&    operator --()                 { --m_ptr; return *this; }
-				miter     operator ++(int)              { miter i(m_ptr); ++m_ptr; return i; }
-				miter     operator --(int)              { miter i(m_ptr); --m_ptr; return i; }
-				operator citer<Type>() const            { return citer<Type>(m_ptr); }
-			};
-
-			template <typename Type> inline bool operator == (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr == rhs.m_ptr; }
-			template <typename Type> inline bool operator == (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr == rhs.m_ptr; }
-			template <typename Type> inline bool operator == (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr == rhs.m_ptr; }
-			template <typename Type> inline bool operator == (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr == rhs.m_ptr; }
-			template <typename Type> inline bool operator != (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr != rhs.m_ptr; }
-			template <typename Type> inline bool operator != (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr != rhs.m_ptr; }
-			template <typename Type> inline bool operator != (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr != rhs.m_ptr; }
-			template <typename Type> inline bool operator != (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr != rhs.m_ptr; }
-			template <typename Type> inline bool operator <  (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr <  rhs.m_ptr; }
-			template <typename Type> inline bool operator <  (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr <  rhs.m_ptr; }
-			template <typename Type> inline bool operator <  (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr <  rhs.m_ptr; }
-			template <typename Type> inline bool operator <  (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr <  rhs.m_ptr; }
-			template <typename Type> inline bool operator <= (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr <= rhs.m_ptr; }
-			template <typename Type> inline bool operator <= (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr <= rhs.m_ptr; }
-			template <typename Type> inline bool operator <= (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr <= rhs.m_ptr; }
-			template <typename Type> inline bool operator <= (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr <= rhs.m_ptr; }
-			template <typename Type> inline bool operator >  (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr >  rhs.m_ptr; }
-			template <typename Type> inline bool operator >  (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr >  rhs.m_ptr; }
-			template <typename Type> inline bool operator >  (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr >  rhs.m_ptr; }
-			template <typename Type> inline bool operator >  (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr >  rhs.m_ptr; }
-			template <typename Type> inline bool operator >= (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr >= rhs.m_ptr; }
-			template <typename Type> inline bool operator >= (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr >= rhs.m_ptr; }
-			template <typename Type> inline bool operator >= (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr >= rhs.m_ptr; }
-			template <typename Type> inline bool operator >= (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr >= rhs.m_ptr; }
-
-			template <typename Type> inline citer<Type>& operator += (citer<Type>& lhs, typename citer<Type>::difference_type rhs) { lhs.m_ptr += rhs; return lhs; }
-			template <typename Type> inline miter<Type>& operator += (miter<Type>& lhs, typename miter<Type>::difference_type rhs) { lhs.m_ptr += rhs; return lhs; }
-			template <typename Type> inline citer<Type>& operator -= (citer<Type>& lhs, typename citer<Type>::difference_type rhs) { lhs.m_ptr -= rhs; return lhs; }
-			template <typename Type> inline miter<Type>& operator -= (miter<Type>& lhs, typename miter<Type>::difference_type rhs) { lhs.m_ptr -= rhs; return lhs; }
-
-			template <typename Type> inline citer<Type> operator +  (citer<Type>  lhs, typename citer<Type>::difference_type rhs) { return lhs.m_ptr + rhs; }
-			template <typename Type> inline miter<Type> operator +  (miter<Type>  lhs, typename miter<Type>::difference_type rhs) { return lhs.m_ptr + rhs; }
-			template <typename Type> inline citer<Type> operator -  (citer<Type>  lhs, typename citer<Type>::difference_type rhs) { return lhs.m_ptr - rhs; }
-			template <typename Type> inline miter<Type> operator -  (miter<Type>  lhs, typename miter<Type>::difference_type rhs) { return lhs.m_ptr - rhs; }
-
-			template <typename Type> inline typename citer<Type>::difference_type operator - (citer<Type> lhs, citer<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
-			template <typename Type> inline typename miter<Type>::difference_type operator - (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
-			template <typename Type> inline typename citer<Type>::difference_type operator - (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
-			template <typename Type> inline typename citer<Type>::difference_type operator - (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
-
-			// std::aligned_type doesn't work for alignments > 8 on VC++
-			template <int Alignment> struct aligned_type {};
-
-			template <> struct aligned_type<1>   {                        struct type { char   a;      }; };
-			template <> struct aligned_type<2>   {                        struct type { short  a;      }; };
-			template <> struct aligned_type<4>   {                        struct type { int    a;      }; };
-			template <> struct aligned_type<8>   {                        struct type { double a;      }; };
-			template <> struct aligned_type<16>  { __declspec(align(16 )) struct type { char   a[16];  }; };
-			template <> struct aligned_type<32>  { __declspec(align(32 )) struct type { char   a[32];  }; };
-			template <> struct aligned_type<64>  { __declspec(align(64 )) struct type { char   a[64];  }; };
-			template <> struct aligned_type<128> { __declspec(align(128)) struct type { char   a[128]; }; };
-
-			template <int Size, int Alignment> struct aligned_storage
+				return *m_ptr;
+			}
+			citer& operator ++()
 			{
-				union type
-				{
-					unsigned char bytes[Size];
-					typename aligned_type<Alignment>::type aligner;
-				};
-			};
-		}
+				++m_ptr;
+				return *this;
+			}
+			citer& operator --()
+			{
+				--m_ptr;
+				return *this;
+			}
+			citer operator ++(int)
+			{
+				citer i(m_ptr);
+				++m_ptr;
+				return i;
+			}
+			citer operator --(int)
+			{
+				citer i(m_ptr);
+				--m_ptr;
+				return i;
+			}
+
+			friend bool operator == (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr == rhs.m_ptr;
+			}
+			friend bool operator != (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr != rhs.m_ptr;
+			}
+			friend bool operator <  (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr < rhs.m_ptr;
+			}
+			friend bool operator <= (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr <= rhs.m_ptr;
+			}
+			friend bool operator >  (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr > rhs.m_ptr;
+			}
+			friend bool operator >= (citer<Type> lhs, citer<Type> rhs)
+			{
+				return lhs.m_ptr >= rhs.m_ptr;
+			}
+
+			friend citer<Type>& operator += (citer& lhs, difference_type rhs)
+			{
+				lhs.m_ptr += rhs;
+				return lhs;
+			}
+			friend citer<Type>& operator -= (citer& lhs, difference_type rhs)
+			{
+				lhs.m_ptr -= rhs;
+				return lhs;
+			}
+			friend citer<Type> operator + (citer lhs, difference_type rhs)
+			{
+				return lhs.m_ptr + rhs;
+			}
+			friend citer<Type> operator - (citer lhs, difference_type rhs)
+			{
+				return lhs.m_ptr - rhs;
+			}
+			friend difference_type operator - (citer lhs, citer rhs)
+			{
+				return lhs.m_ptr - rhs.m_ptr;
+			}
+		};
+		template <typename Type> struct miter // mutable iterator
+		{
+			using value_type = Type;
+			using pointer = Type*;
+			using reference = Type&;
+			using difference_type = typename std::pointer_traits<pointer>::difference_type;
+			using iterator_category = std::random_access_iterator_tag;
+
+			pointer m_ptr;
+
+			miter()
+			{}
+			miter(pointer ptr)
+				:m_ptr(ptr)
+			{}
+			pointer operator ->() const
+			{
+				return m_ptr;
+			}
+			reference operator *() const
+			{
+				return *m_ptr;
+			}
+			miter& operator ++()
+			{
+				++m_ptr;
+				return *this;
+			}
+			miter& operator --()
+			{
+				--m_ptr;
+				return *this;
+			}
+			miter operator ++(int)
+			{
+				miter i(m_ptr);
+				++m_ptr;
+				return i;
+			}
+			miter operator --(int)
+			{
+				miter i(m_ptr);
+				--m_ptr;
+				return i;
+			}
+			operator citer<Type>() const
+			{
+				return citer<Type>(m_ptr);
+			}
+
+			friend bool operator == (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr == rhs.m_ptr;
+			}
+			friend bool operator != (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr != rhs.m_ptr;
+			}
+			friend bool operator <  (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr < rhs.m_ptr;
+			}
+			friend bool operator <= (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr <= rhs.m_ptr;
+			}
+			friend bool operator >  (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr > rhs.m_ptr;
+			}
+			friend bool operator >= (miter<Type> lhs, miter<Type> rhs)
+			{
+				return lhs.m_ptr >= rhs.m_ptr;
+			}
+
+			friend miter<Type>& operator += (miter& lhs, difference_type rhs)
+			{
+				lhs.m_ptr += rhs; return lhs;
+			}
+			friend miter<Type>& operator -= (miter& lhs, difference_type rhs)
+			{
+				lhs.m_ptr -= rhs; return lhs;
+			}
+			friend miter<Type> operator + (miter lhs, difference_type rhs)
+			{
+				return lhs.m_ptr + rhs;
+			}
+			friend miter<Type> operator - (miter lhs, difference_type rhs)
+			{
+				return lhs.m_ptr - rhs;
+			}
+			friend difference_type operator - (miter lhs, miter rhs)
+			{
+				return lhs.m_ptr - rhs.m_ptr;
+			}
+		};
 	}
-
-	#ifndef PR_NOEXCEPT
-	#   define PR_NOEXCEPT_DEFINED
-	#   if _MSC_VER >= 1900
-	#      define PR_NOEXCEPT noexcept
-	#   else
-	#      define PR_NOEXCEPT throw()
-	#   endif
-	#endif
 
 	// Not intended to be a complete replacement, just a 90% substitute
 	// Allocator = the type to do the allocation/deallocation. *Can be a pointer to an std::allocator like object*
-	template <typename Type, int LocalCount=16, bool Fixed=false, typename Allocator=pr::aligned_alloc<Type> >
+	template <typename Type, int LocalCount=16, bool Fixed=false, typename Allocator=aligned_alloc<Type>>
 	class vector
 	{
 	public:
-		typedef vector<Type, LocalCount, Fixed, Allocator> type;
-		typedef pr::impl::vector::citer<Type> const_iterator;    // A type that provides a random-access iterator that can read a const element in a array.
-		typedef pr::impl::vector::miter<Type> iterator;          // A type that provides a random-access iterator that can read or modify any element in a array.
-		typedef Type const*                   const_pointer;     // A type that provides a pointer to a const element in a array.
-		typedef Type*                         pointer;           // A type that provides a pointer to an element in a array.
-		typedef Type const&                   const_reference;   // A type that provides a reference to a const element stored in a array for reading and performing const operations.
-		typedef Type&                         reference;         // A type that provides a reference to an element stored in a array.
-		typedef std::size_t                   size_type;         // A type that counts the number of elements in a array.
-		typedef std::ptrdiff_t                difference_type;   // A type that provides the difference between the addresses of two elements in a array.
-		typedef Type                          value_type;        // A type that represents the data type stored in a array.
-		typedef Allocator                     allocator_type;    // A type that represents the allocator class for the array object.
-		typedef typename std::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
+		using type            = vector<Type, LocalCount, Fixed, Allocator>;
+		using allocator_type  = Allocator;
+		using alloc_traits    = std::allocator_traits<std::remove_pointer_t<allocator_type>>;
+		using const_iterator  = pr::impl::vector::citer<Type>;
+		using iterator        = pr::impl::vector::miter<Type>;
+		using value_type      = typename alloc_traits::value_type;
+		using pointer         = typename alloc_traits::pointer;
+		using const_pointer   = typename alloc_traits::const_pointer;
+		using difference_type = typename alloc_traits::difference_type;
+		using size_type       = typename alloc_traits::size_type;
 
-		enum
-		{
-			TypeSizeInBytes  = sizeof(Type),
-			TypeIsPod        = std::is_pod<Type>::value,
-			TypeAlignment    = std::alignment_of<Type>::value,
-			TypeCopyable     = std::is_copy_constructible<Type>::value,
-			LocalLength      = LocalCount,
-			LocalSizeInBytes = LocalCount * TypeSizeInBytes,
-		};
+		static constexpr bool type_is_pod_v      = std::is_pod_v<Type>;
+		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
+		static constexpr int  type_alignment_v   = std::alignment_of_v<Type>;
+		static constexpr int  local_size_v       = LocalCount;
 
-		// type specific traits
-		template <bool pod> struct base_traits;
-		template <> struct base_traits<false>
+		struct traits
 		{
-			static void destruct     (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.destroy(first++); } }
-			static void construct    (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.default_construct(first++); } }
-			static void copy_constr  (Allocator& alloc, Type* first, Type const* src, size_type count) { for (; count--;) { alloc.copy_construct(first++, *src++); } }
-			static void move_constr  (Allocator& alloc, Type* first, Type* src, size_type count)       { for (; count--;) { alloc.move_construct(first++, std::move(*src++)); } }
-			static void copy_assign  (Type* first, Type const* src, size_type count)                   { for (; count--;) { *first++ = *src++; } }
-			static void move_assign  (Type* first, Type* src, size_type count)                         { for (; count--;) { *first++ = std::move(*src++); } }
-			static void move_left    (Type* first, Type* src, size_type count)                         { assert(first < src); for (; count--; ++first, ++src) { *first = std::move(*src); } }
-			static void move_right   (Type* first, Type* src, size_type count)                         { assert(first > src); for (first+=count, src+=count; count--;) { *--first = std::move(*--src); } }
-		};
-		template <> struct base_traits<true>
-		{
-			static void destruct     (Allocator&, Type*, size_type)                              {}
-			static void construct    (Allocator&, Type*, size_type)                              {}
-			static void copy_constr  (Allocator&, Type* first, Type const* src, size_type count) { ::memcpy(first, src, sizeof(Type) * count); }
-			static void move_constr  (Allocator&, Type* first, Type* src, size_type count)       { ::memcpy(first, src, sizeof(Type) * count); }
-			static void copy_assign  (Type* first, Type const* src, size_type count)             { ::memcpy(first, src, sizeof(Type) * count); }
-			static void move_assign  (Type* first, Type* src, size_type count)                   { ::memcpy(first, src, sizeof(Type) * count); }
-			static void move_left    (Type* first, Type* src, size_type count)                   { ::memmove(first, src, sizeof(Type) * count); }
-			static void move_right   (Type* first, Type* src, size_type count)                   { ::memmove(first, src, sizeof(Type) * count); }
-		};
-		struct traits :base_traits<TypeIsPod>
-		{
-			static void fill_constr  (Allocator& alloc, Type* first, size_type count, Type const& val) { for (; count--;) { copy_constr(alloc, first++, &val, 1); } }
-			static void fill_assign  (                  Type* first, size_type count, Type const& val) { for (; count--;) { copy_assign(first++, &val, 1); } }
-			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args) { alloc.construct(first, std::forward<Args>(args)...); }
+			static void destruct(allocator_type& alloc, Type* first, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					assert((::memset(first, 0xdd, sizeof(Type) * count), true));
+					(void)alloc, first, count;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::destroy(alloc, first++);
+				}
+			}
+			static void construct(allocator_type& alloc, Type* first, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					(void)alloc, first, count;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++);
+				}
+			}
+			static void copy_constr(allocator_type& alloc, Type* first, Type const* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(Type) * count);
+					(void)alloc;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++, *src++);
+				}
+			}
+			static void move_constr(allocator_type& alloc, Type* first, Type* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(Type) * count);
+					(void)alloc;
+				}
+				else
+				{
+					for (; count--;)
+						alloc_traits::construct(alloc, first++, std::move(*src++));
+				}
+			}
+			static void copy_assign(Type* first, Type const* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(Type) * count);
+				}
+				else
+				{
+					for (; count--; ++first, ++src)
+						*first = *src;
+				}
+			}
+			static void move_assign(Type* first, Type* src, size_type count)
+			{
+				if constexpr (type_is_pod_v)
+				{
+					::memcpy(first, src, sizeof(Type) * count);
+				}
+				else
+				{
+					for (; count--; ++first, ++src)
+						*first = std::move(*src);
+				}
+			}
+			static void move_left(Type* first, Type* src, size_type count)
+			{
+				assert(first < src);
+				if constexpr (type_is_pod_v)
+				{
+					::memmove(first, src, sizeof(Type) * count);
+				}
+				else
+				{
+					for (; count--; ++first, ++src)
+						*first = std::move(*src);
+				}
+			}
+			static void move_right(Type* first, Type* src, size_type count)
+			{
+				assert(first > src);
+				if constexpr (type_is_pod_v)
+				{
+					::memmove(first, src, sizeof(Type) * count);
+				}
+				else
+				{
+					for (first += count, src += count; count--;)
+						*--first = std::move(*--src);
+				}
+			}
+			static void fill_constr(allocator_type& alloc, Type* first, size_type count, Type const& val)
+			{
+				for (; count--;)
+					copy_constr(alloc, first++, &val, 1);
+			}
+			static void fill_assign(Type* first, size_type count, Type const& val)
+			{
+				for (; count--;)
+					copy_assign(first++, &val, 1);
+			}
+			template <class... Args> static void constr(allocator_type& alloc, Type* first, Args&&... args)
+			{
+				alloc_traits::construct(alloc, first, std::forward<Args>(args)...);
+			}
 		};
 
 	private:
-		typedef typename pr::impl::vector::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
-		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage doesn't have the correct alignment");
 
-		union {
-		Type      (*m_data)[LocalLength]; // Debugging helper for viewing the data as an array
-		Type*       m_ptr;                // Pointer to the array of data
-		};
-		TLocalStore m_local[LocalLength]; // Local cache for small arrays
-		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
-		size_type   m_count;              // The number of used elements in the array
-		Allocator   m_allocator;          // The memory allocator
+		using TLocalStore = typename std::aligned_storage_t<sizeof(Type), type_alignment_v>;
+		static_assert((std::alignment_of_v<TLocalStore> % type_alignment_v) == 0, "Local storage doesn't have the correct alignment");
+
+		TLocalStore m_local[local_size_v]; // Local cache for small arrays
+		union {                            //
+		Type      (*m_data)[local_size_v]; // Debugging helper for viewing the data as an array
+		Type*       m_ptr;                 // Pointer to the array of data
+		};                                 //
+		size_type m_capacity;              // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.
+		size_type m_count;                 // The number of used elements in the array
+		allocator_type m_alloc;            // The memory allocator
 
 		// Any combination of type, local count, fixed, and allocator is a friend
 		template <class T, int L, bool F, class A> friend class vector;
 
-		// Access to the allocator object (independent of whether its a pointer or instance)
-		// (enable_if requires type inference to work, hence the 'A' template parameter)
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
-		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
-		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
-
 		// return true if 'ptr' points with the current container
-		bool inside(const_pointer ptr) const { return m_ptr <= ptr && ptr < m_ptr + m_count; }
+		bool inside(const_pointer ptr) const
+		{
+			return m_ptr <= ptr && ptr < m_ptr + m_count;
+		}
 
 		// return a pointer to the local buffer
-		Type const* local_ptr() const { return reinterpret_cast<Type const*>(&m_local[0]); }
-		Type*       local_ptr()       { return reinterpret_cast<Type*>      (&m_local[0]); }
+		Type const* local_ptr() const
+		{
+			return reinterpret_cast<Type const*>(&m_local[0]);
+		}
+		Type* local_ptr()
+		{
+			return reinterpret_cast<Type*>(&m_local[0]);
+		}
 
 		// return true if 'm_ptr' points to our local buffer
-		bool local() const { return m_ptr == local_ptr(); }
+		bool local() const
+		{
+			return m_ptr == local_ptr();
+		}
 
 		// return true if 'arr' is actually this object
-		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
+		template <typename tarr> bool isthis(tarr const& arr) const
+		{
+			return static_cast<void const*>(this) == static_cast<void const*>(&arr);
+		}
 
 		// reverse a range of elements
 		void reverse(Type *first, Type* last)
@@ -243,36 +411,44 @@ namespace pr
 				std::swap(*first, *last);
 		}
 
-		// return the iterator category for 'iter'
-		template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const { typename std::iterator_traits<iter>::iterator_category cat; return cat; }
+		//// return the iterator category for 'iter'
+		//template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const
+		//{
+		//	typename std::iterator_traits<iter>::iterator_category cat;
+		//	return cat;
+		//}
 
 		// Make sure 'm_ptr' is big enough to hold 'new_count' elements
-		void ensure_space(size_type new_count, bool autogrow)
+		void ensure_space(size_type new_count, [[maybe_unused]] bool autogrow)
 		{
-			struct ConstExpr { static bool Sink(bool b) {return b;} };
-			if (!ConstExpr::Sink(Fixed))
+			if constexpr (!Fixed)
 			{
-				assert(m_capacity >= LocalLength);
-				if (new_count <= m_capacity) return;
+				assert(m_capacity >= local_size_v);
+				if (new_count <= m_capacity)
+					return;
 
 				// Allocate 50% more space
 				size_type bigger, new_cap = new_count;
-				if (autogrow && new_cap < (bigger = m_count*3/2)) { new_cap = bigger; }
+				if (autogrow && new_cap < (bigger = m_count * 3 / 2))
+					new_cap = bigger;
+
 				assert(autogrow || new_count >= m_count && "don't use ensure_space to trim the allocated memory");
-				void* mem = alloc().allocate(new_cap);
-				assert(((static_cast<char*>(mem) - (char*)nullptr) % TypeAlignment) == 0 && "allocated array has incorrect alignment");
+				
+				void* mem = alloc_traits::allocate(alloc(), new_cap);
+				assert(((static_cast<char*>(mem) - static_cast<char*>(nullptr)) % type_alignment_v) == 0 && "allocated array has incorrect alignment");
 				auto new_array = static_cast<Type*>(mem);
 
 				// Move elements from the old array to the new array
 				traits::move_constr(alloc(), new_array, m_ptr, m_count);
-
-				// Destruct the old array
 				traits::destruct(alloc(), m_ptr, m_count);
-				if (!local()) alloc().deallocate(m_ptr, m_capacity);
+
+				// Deallocate the old array if not the local buffer
+				if (!local())
+					alloc_traits::deallocate(alloc(), m_ptr, m_capacity);
 
 				m_ptr = new_array;
 				m_capacity = new_cap;
-				assert(m_capacity >= LocalLength);
+				assert(m_capacity >= local_size_v);
 			}
 			else
 			{
@@ -284,26 +460,20 @@ namespace pr
 
 	public:
 
-		// The memory allocator
-		AllocType const& alloc() const     { return alloc(m_allocator); }
-		AllocType&       alloc()           { return alloc(m_allocator); }
-		Allocator const& allocator() const { return m_allocator; }
-		Allocator&       allocator()       { return m_allocator; }
-
 		// construct empty collection
 		vector()
 			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
+			,m_capacity(local_size_v)
 			,m_count(0)
-			,m_allocator()
+			,m_alloc()
 		{}
 
 		// construct with custom allocator
-		explicit vector(Allocator const& allocator)
+		explicit vector(allocator_type const& allocator)
 			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
+			,m_capacity(local_size_v)
 			,m_count(0)
-			,m_allocator(allocator)
+			,m_alloc(allocator)
 		{}
 
 		// construct from count * Type()
@@ -323,7 +493,7 @@ namespace pr
 		}
 
 		// construct from count * value, with allocator
-		vector(size_type count, Type const& value, Allocator const& allocator = Allocator())
+		vector(size_type count, Type const& value, allocator_type const& allocator = allocator_type())
 			:vector(allocator)
 		{
 			ensure_space(count, false);
@@ -333,50 +503,75 @@ namespace pr
 
 		// copy construct (explicit copy constructor needed to prevent auto generated one even tho there's a template one that would work)
 		vector(vector const& right)
-			:vector(right.m_allocator)
+			:vector(right.m_alloc)
 		{
-			_Assign(right);
+			impl_assign(right);
 		}
 
 		// copy construct from any pr::vector type
 		template <int L, bool F, class A> vector(vector<Type,L,F,A> const& right)
-			:vector(right.m_allocator)
+			:vector(right.m_alloc)
 		{
-			_Assign(right);
+			impl_assign(right);
 		}
 
 		// construct from [first, last), with optional allocator
-		template <class iter> vector(iter first, iter last, Allocator const& allocator = Allocator())
+		template <class iter> vector(iter first, iter last, allocator_type const& allocator = allocator_type())
 			:vector(allocator)
 		{
 			insert(end(), first, last);
 		}
 
 		// construct from another array-like object. 2nd parameter used to prevent overload issues with vector(count)
-		template <class tarr> vector(tarr const& right, typename tarr::size_type = 0, Allocator const& allocator = Allocator())
+		template <class tarr> vector(tarr const& right, typename tarr::size_type = 0, allocator_type const& allocator = allocator_type())
 			:vector(allocator)
 		{
 			insert(end(), std::begin(right), std::end(right));
 		}
 
 		// move construct
-		vector(vector&& right) PR_NOEXCEPT
-			:vector(right.m_allocator)
+		vector(vector&& right) noexcept
+			:vector(right.m_alloc)
 		{
-			_Assign(std::forward<vector>(right));
+			impl_assign(std::forward<vector>(right));
 		}
 
 		// move construct from similar vector
-		template <int L, bool F, class A> vector(vector<Type,L,F,A>&& right) PR_NOEXCEPT
-			:vector(right.m_allocator)
+		template <int L, bool F, class A> vector(vector<Type,L,F,A>&& right) noexcept
+			:vector(right.m_alloc)
 		{
-			_Assign(std::forward< vector<Type,L,F,A> >(right));
+			impl_assign(std::forward< vector<Type,L,F,A> >(right));
 		}
 
 		// destruct
 		~vector()
 		{
 			clear();
+		}
+
+		// Access to the allocator object (independent of whether its a pointer or instance)
+		// (enable_if requires type inference to work, hence the 'A' template parameter)
+		allocator_type const& get_allocator() const
+		{
+			if constexpr (std::is_pointer_v<allocator_type>)
+				return *m_alloc;
+			else
+				return m_alloc;
+		}
+		allocator_type& get_allocator()
+		{
+			if constexpr (std::is_pointer_v<allocator_type>)
+				return *m_alloc;
+			else
+				return m_alloc;
+		}
+		allocator_type const& alloc() const
+		{
+			return get_allocator();
+		}
+		allocator_type& alloc()
+		{
+			return get_allocator();
 		}
 
 		// iterators
@@ -398,22 +593,22 @@ namespace pr
 		}
 
 		// front/back accessors
-		const_reference front() const
+		value_type const& front() const
 		{
 			assert(!empty() && "container empty");
 			return m_ptr[0];
 		}
-		const_reference back() const
+		value_type const& back() const
 		{
 			assert(!empty() && "container empty");
 			return m_ptr[m_count - 1];
 		}
-		reference front()
+		value_type& front()
 		{
 			assert(!empty() && "container empty");
 			return m_ptr[0];
 		}
-		reference back()
+		value_type& back()
 		{
 			assert(!empty() && "container empty");
 			return m_ptr[m_count - 1];
@@ -425,7 +620,7 @@ namespace pr
 			// insert by moving into element at end, provide strong guarantee
 			emplace_back(std::move(value));
 		}
-		void push_back(const_reference value)
+		void push_back(value_type const& value)
 		{
 			if (inside(&value))
 			{
@@ -441,7 +636,7 @@ namespace pr
 		}
 
 		// add an element to the end of the array without "ensure_space" first
-		void push_back_fast(const_reference value)
+		void push_back_fast(value_type const& value)
 		{
 			static_assert(std::is_copy_constructible<Type>::value, "Cannot copy construct 'Type'");
 			assert(m_count + 1 <= m_capacity && "Container overflow");
@@ -508,16 +703,19 @@ namespace pr
 		// return maximum possible length of sequence
 		size_type max_size() const
 		{
-			return Fixed ? m_capacity : 0xFFFFFFFF;
+			if constexpr (Fixed)
+				return m_capacity;
+			else
+				return std::numeric_limits<size_type>::max() / sizeof(Type);
 		}
 
 		// indexed access
-		const_reference at(size_type pos) const
+		value_type const& at(size_type pos) const
 		{
 			assert(pos < size() && "out of range");
 			return m_ptr[pos];
 		}
-		reference at(size_type pos)
+		value_type& at(size_type pos)
 		{
 			assert(pos < size() && "out of range");
 			return m_ptr[pos];
@@ -529,7 +727,7 @@ namespace pr
 			traits::destruct(alloc(), m_ptr, m_count);
 			if (!local()) alloc().deallocate(m_ptr, m_capacity);
 			m_ptr      = local_ptr();
-			m_capacity = LocalLength;
+			m_capacity = local_size_v;
 			m_count    = 0;
 		}
 
@@ -579,12 +777,12 @@ namespace pr
 		}
 
 		// Index operator
-		const_reference operator [](size_type i) const
+		value_type const& operator [](size_type i) const
 		{
 			assert(i < size() && "out of range");
 			return m_ptr[i];
 		}
-		reference operator [](size_type i)
+		value_type& operator [](size_type i)
 		{
 			assert(i < size() && "out of range");
 			return m_ptr[i];
@@ -593,14 +791,14 @@ namespace pr
 		// assign right (explicit assignment operator needed to prevent auto generated one even tho there's a template one that would work)
 		vector& operator = (vector const& right)
 		{
-			_Assign(right);
+			impl_assign(right);
 			return *this;
 		}
 
 		// assign right from any pr::vector<Type,...>
 		template <int L,bool F,typename A> vector& operator = (vector<Type,L,F,A> const& right)
 		{
-			_Assign(right);
+			impl_assign(right);
 			return *this;
 		}
 
@@ -623,23 +821,23 @@ namespace pr
 		}
 
 		// move right
-		vector& operator = (vector&& right) PR_NOEXCEPT
+		vector& operator = (vector&& right) noexcept
 		{
-			_Assign(std::forward<vector>(right));
+			impl_assign(std::forward<vector>(right));
 			return *this;
 		}
 
 		// move right from any pr::vector<>
-		template <int L,bool F,typename A> vector& operator = (vector<Type,L,F,A>&& right) PR_NOEXCEPT
+		template <int L,bool F,typename A> vector& operator = (vector<Type,L,F,A>&& right) noexcept
 		{
-			_Assign(std::forward< vector<Type,L,F,A> >(right));
+			impl_assign(std::forward< vector<Type,L,F,A> >(right));
 			return *this;
 		}
 
 		// assign count * value
 		void assign(size_type count, Type const& value)
 		{
-			_Assign(count, value);
+			impl_assign(count, value);
 		}
 
 		// assign [first, last), iterators
@@ -652,24 +850,41 @@ namespace pr
 		// insert value at pos
 		iterator insert(const_iterator pos, Type const& value)
 		{
-			difference_type ofs = pos - begin();
-			insert(pos, size_type(1), value);
+			return insert(pos, size_type(1), value);
+		}
+
+		// insert value at pos
+		iterator insert(const_iterator pos, Type&& value)
+		{
+			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
+			size_type ofs = pos - begin();
+			if (ofs == m_count)
+			{
+				emplace_back(std::move(value));
+			}
+			else
+			{
+				ensure_space(m_count + 1, true);
+				auto ins = m_ptr + ofs;                          // The insert point
+				auto end = m_ptr + m_count;                      // The current end of the array
+				traits::move_constr(alloc(), end, end-1, 1);     // move construct into the hole at the end
+				traits::move_right(ins + 1, ins, end - ins - 1); // move those right of the insert point
+				traits::move_assign(ins, &value, 1);             // fill in the hole
+				m_count += 1;
+			}
 			return begin() + ofs;
 		}
 
 		// insert count * value at pos
-		void insert(const_iterator pos, size_type count, Type const& value)
+		iterator insert(const_iterator pos, size_type count, Type const& value)
 		{
 			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
 			size_type ofs = pos - begin();
-			if (count == 0)
-			{
-			}
-			else if (count > max_size() - size())
+			if (count > max_size() - size())
 			{
 				throw std::overflow_error("pr::vector<> size too large");
 			}
-			else
+			else if (count != 0)
 			{
 				ensure_space(m_count + count, true);
 				Type* ins = m_ptr + ofs;                                   // The insert point
@@ -682,6 +897,7 @@ namespace pr
 				traits::fill_assign(ins, n, value);                        // fill in the hole
 			}
 			m_count += count;
+			return begin() + ofs;
 		}
 
 		// insert [first, last) at pos
@@ -770,15 +986,15 @@ namespace pr
 		// Requests the removal of unused capacity
 		void shrink_to_fit()
 		{
-			assert(m_capacity >= LocalLength);
-			if (m_capacity != LocalLength)
+			assert(m_capacity >= local_size_v);
+			if (m_capacity != local_size_v)
 			{
 				assert(!local());
 
 				Type* new_array; size_type new_count;
-				if (m_count <= LocalLength)
+				if (m_count <= local_size_v)
 				{
-					new_count = LocalLength;
+					new_count = local_size_v;
 					new_array = local_ptr();
 				}
 				else
@@ -802,7 +1018,7 @@ namespace pr
 		// Implementation ****************************************************
 
 		// Assign count * value
-		void _Assign(size_type count, Type const& value)
+		void impl_assign(size_type count, Type const& value)
 		{
 			Type const& val = inside(&value) ? Type(value) : value;
 			if (count == 0) // new sequence empty, erase existing sequence
@@ -829,7 +1045,7 @@ namespace pr
 		}
 
 		// Assign right of any pr::vector<>
-		template <int L,bool F,typename A> void _Assign(vector<Type,L,F,A> const& right)
+		template <int L,bool F,typename A> void impl_assign(vector<Type,L,F,A> const& right)
 		{
 			// Notes:
 			//  - copying does not copy right.capacity() (same as std::vector)
@@ -861,7 +1077,7 @@ namespace pr
 		}
 
 		// Assign by moving right
-		template <int L,bool F,typename A> void _Assign(vector<Type,L,F,A>&& right) PR_NOEXCEPT
+		template <int L,bool F,typename A> void impl_assign(vector<Type,L,F,A>&& right) noexcept
 		{
 			// Notes:
 			// - moving *does* move right.capacity() (same as std::vector)
@@ -871,7 +1087,7 @@ namespace pr
 				// If using different allocators => can't steal
 				// If right is locally buffered => can't steal
 				// If right's capacity is <= our local buffer size, no point in stealing
-				if (!(allocator() == right.allocator()) || right.local() || right.capacity() <= LocalCount)
+				if (!(alloc() == right.alloc()) || right.local() || right.capacity() <= local_size_v)
 				{
 					// Move the elements of right
 					if (right.size() == 0) // new sequence empty, erase existing sequence
@@ -913,7 +1129,7 @@ namespace pr
 
 					// Set right to empty. 'right's elements don't need destructing in this case because we're grabbed them
 					right.m_ptr      = right.local_ptr();
-					right.m_capacity = right.LocalLength;
+					right.m_capacity = right.local_size_v;
 					right.m_count    = 0;
 				}
 			}
@@ -955,11 +1171,6 @@ namespace pr
 			return !(lhs == rhs);
 		}
 	};
-
-	#ifdef PR_NOEXCEPT_DEFINED
-	#   undef PR_NOEXCEPT_DEFINED
-	#   undef PR_NOEXCEPT
-	#endif
 }
 
 #if PR_UNITTESTS
@@ -969,44 +1180,38 @@ namespace pr
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/maths/maths.h"
-
 namespace pr::container
 {
 	namespace unittests::vector
 	{
-		typedef unsigned int uint;
-		inline int& ObjectCount()
-		{
-			static int object_count;
-			return object_count;
-		}
+		// The number of 'Type' instances in existence
+		inline static int object_count = 0;
 
-		struct Single :pr::RefCount<Single>
+		// A ref-counted singleton
+		struct Single :RefCount<Single>
 		{
 			static void RefCountZero(RefCount<Single>*) {}
+			static Single& instance()
+			{
+				static Single single;
+				return single;
+			}
 		};
-		inline Single& Refs()
-		{
-			static Single single;
-			return single;
-		}
 
+		// A copy constructable type
 		struct Type
 		{
 			int val;
-			pr::RefPtr<Single> ptr;
+			RefPtr<Single> ptr;
 
 			Type()
-				:val(0)
-				,ptr(&Refs(), true)
-			{
-				++ObjectCount();
-			}
+				:Type(0)
+			{}
 			Type(int w)
 				:val(w)
-				,ptr(&Refs(), true)
+				, ptr(&Single::instance(), true)
 			{
-				++ObjectCount();
+				++object_count;
 			}
 			Type(Type&& rhs) noexcept
 				:Type()
@@ -1016,9 +1221,9 @@ namespace pr::container
 			}
 			Type(Type const& rhs)
 				:val(rhs.val)
-				,ptr(rhs.ptr)
+				, ptr(rhs.ptr)
 			{
-				++ObjectCount();
+				++object_count;
 			}
 			Type& operator = (Type&& rhs) noexcept
 			{
@@ -1040,16 +1245,21 @@ namespace pr::container
 			}
 			virtual ~Type()
 			{
-				--ObjectCount();
-				PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
-				val = 0xcccccccc;
+				--object_count;
+				PR_CHECK(ptr.m_ptr == &Single::instance(), true); // destructing an invalid Type
+				val = 0xdddddddd;
+			}
+			friend bool operator == (Type const& lhs, Type const& rhs)
+			{
+				return lhs.val == rhs.val;
 			}
 		};
-		static_assert(std::is_move_constructible<Type>::value, "");
-		static_assert(std::is_copy_constructible<Type>::value, "");
-		static_assert(std::is_move_assignable<Type>::value, "");
-		static_assert(std::is_copy_assignable<Type>::value, "");
+		static_assert(std::is_move_constructible<Type>::value);
+		static_assert(std::is_copy_constructible<Type>::value);
+		static_assert(std::is_move_assignable<Type>::value);
+		static_assert(std::is_copy_assignable<Type>::value);
 
+		// A move-only type
 		struct NonCopyable :Type
 		{
 			NonCopyable()
@@ -1063,42 +1273,41 @@ namespace pr::container
 			{}
 			NonCopyable& operator = (NonCopyable&& rhs) noexcept
 			{
-				if (this == &rhs) return *this;
-				*static_cast<Type*>(this) = std::move(rhs);
+				Type::operator=(std::move(rhs));
 				return *this;
 			}
 			NonCopyable(NonCopyable const&) = delete;
 			NonCopyable& operator = (NonCopyable const&) = delete;
 		};
-		inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
-		static_assert( std::is_move_constructible<NonCopyable>::value, "");
-		static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
-		static_assert( std::is_move_assignable<NonCopyable>::value, "");
-		static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+		static_assert(std::is_move_constructible<NonCopyable>::value);
+		static_assert(!std::is_copy_constructible<NonCopyable>::value);
+		static_assert(std::is_move_assignable<NonCopyable>::value);
+		static_assert(!std::is_copy_assignable<NonCopyable>::value);
+
+		// Leaked objects checker
+		struct Check
+		{
+			int m_count;
+			long m_refs;
+
+			Check()
+				:m_count(object_count)
+				,m_refs(Single::instance().m_ref_count)
+			{}
+			~Check()
+			{
+				PR_CHECK(object_count, m_count);
+				PR_CHECK(Single::instance().m_ref_count, m_refs);
+			}
+		};
 
 		using Array0 = pr::vector<Type, 8, false>;
 		using Array1 = pr::vector<Type, 16, true>;
 		using Array2 = pr::vector<NonCopyable, 4, false>;
 	}
-	PRUnitTest(pr_container_vector)
+	PRUnitTest(VectorTests)
 	{
 		using namespace unittests::vector;
-		struct Check
-		{
-			int m_count;
-			long m_refs;
-				
-			Check()
-				:m_count(ObjectCount())
-				,m_refs(Refs().m_ref_count)
-			{}
-			~Check()
-			{
-				PR_CHECK(ObjectCount(), m_count);
-				PR_CHECK(Refs().m_ref_count, m_refs); 
-			}
-		};
-
 		std::vector<Type> ints;
 		for (int i = 0; i != 16; ++i)
 			ints.push_back(Type(i));
@@ -1379,25 +1588,7 @@ namespace pr::container
 					PR_CHECK(arr0.capacity(), 50U);
 					arr0.resize(1);
 					arr0.shrink_to_fit();
-					PR_CHECK(arr0.capacity(), (size_t)arr0.LocalLength);
-				}
-			}
-		}
-		{//AlignedTypes
-			{
-				Check chk;
-				{
-					std::default_random_engine rng;
-					auto spline = Spline(Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f));
-
-					pr::vector<v4> arr0;
-					Raster(spline, arr0, 100);
-
-					PR_CHECK(arr0.capacity() > arr0.LocalLength, true);
-					arr0.resize(5);
-					arr0.shrink_to_fit();
-					PR_CHECK(arr0.size(), 5U);
-					PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
+					PR_CHECK(arr0.capacity(), (size_t)arr0.local_size_v);
 				}
 			}
 		}
@@ -1516,6 +1707,35 @@ namespace pr::container
 					PR_CHECK(arr0.size(), 4U);
 					for (int i = 0; i != int(arr0.size()); ++i)
 						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					Array2 arr0;
+					arr0.emplace_back(0);
+					arr0.emplace_back(1);
+					arr0.emplace_back(2);
+					arr0.emplace_back(3);
+					arr0.emplace_back(4);
+
+					NonCopyable ins1(100);
+					arr0.insert(arr0.begin() + 2, std::move(ins1));
+
+					NonCopyable ins2(200);
+					arr0.insert(arr0.begin(), std::move(ins2));
+
+					NonCopyable ins3(300);
+					arr0.insert(arr0.end(), std::move(ins3));
+
+					PR_CHECK(arr0.size(), 8U);
+					PR_CHECK(arr0[0].val, 200);
+					PR_CHECK(arr0[1].val, 0);
+					PR_CHECK(arr0[2].val, 1);
+					PR_CHECK(arr0[3].val, 100);
+					PR_CHECK(arr0[4].val, 2);
+					PR_CHECK(arr0[5].val, 3);
+					PR_CHECK(arr0[6].val, 4);
+					PR_CHECK(arr0[7].val, 300);
 				}
 			}
 		}
