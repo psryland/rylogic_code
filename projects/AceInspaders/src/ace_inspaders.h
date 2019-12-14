@@ -127,7 +127,7 @@ namespace ace
 		SpaceInvaders::UserInputData SpaceInvaders::ISystem::UserInput()
 		{
 			SpaceInvaders::UserInputData data = {};
-			data.JoystickX = 0;// static_cast<int>(1000 * sin(GetTickCount64() * pr::maths::tauf / 4000.0));
+			data.JoystickX = static_cast<int>(1000 * sin(GetTickCount64() * pr::maths::tauf / 4000.0));
 			data.FireButton = (GetTickCount64() % 10) == 0;
 			return data;
 		}

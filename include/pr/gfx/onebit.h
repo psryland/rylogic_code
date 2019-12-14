@@ -73,7 +73,7 @@ namespace pr::onebit
 		}
 
 		// Write the bitmap to a file
-		void DumpToFile(std::filesystem::path const& filepath)
+		void DumpToFile(std::filesystem::path const& filepath) const
 		{
 			std::ofstream out(filepath);
 			for (int y = 0; y != m_dimy; ++y)
@@ -96,12 +96,12 @@ namespace pr::onebit
 	{
 		using BitmapR = BitmapR<TWord>;
 		using Word = typename BitmapR::Word;
-		static_assert(DimX > 0 && DimY > 0);
 		constexpr static int WordSize = sizeof(Word) * 8;
 
 		// The capacity of the bitmap
 		constexpr static int DimX = DimX;
 		constexpr static int DimY = DimY;
+		static_assert(DimX > 0 && DimY > 0);
 
 		// The height of the bitmap in blocks
 		constexpr static int BlockHeight = (DimY + WordSize - 1) / WordSize;
@@ -111,26 +111,11 @@ namespace pr::onebit
 		Bitmap() noexcept
 			:BitmapR(&m_buf[0], DimX, DimY, DimX)
 			,m_buf()
-		{
-			assert(m_data == &m_buf[0]);
-		}
+		{}
 		Bitmap(Word const* data, int dimx, int dimy, int stride = 0) noexcept
-			:BitmapR(&m_buf[0], dimx, dimy, DimX)
-			,m_buf()
+			:Bitmap()
 		{
-			stride = stride ? stride : dimx;
-			assert(dimx <= stride);
-			assert(dimx >= 0 && dimx <= DimX);
-			assert(dimy >= 0 && dimy <= DimY);
-
-			// Copy by block rows if the width of 'data' != 'DimX'
-			if (stride == DimX)
-				memcpy(&m_buf[0], &data[0], sizeof(m_buf));
-			else
-				for (int b = 0; b != BlockHeight; ++b)
-					memcpy(&m_buf[b * DimX], &data[b * stride], dimx * sizeof(Word));
-		
-			assert(m_data == &m_buf[0]);
+			Init(data, dimx, dimy, stride);
 		}
 		Bitmap(Bitmap const& rhs) noexcept
 			:Bitmap(rhs.m_data, rhs.m_dimx, rhs.m_dimy, rhs.m_stride)
@@ -147,6 +132,28 @@ namespace pr::onebit
 			m_stride = rhs.m_stride;
 			memcpy(&m_buf[0], &rhs.m_buf[0], sizeof(m_buf));
 			return *this;
+		}
+
+		// Populate this bitmap with the given data
+		void Init(Word const* data, int dimx, int dimy, int stride = 0)
+		{
+			stride = stride ? stride : dimx;
+			assert(dimx <= stride);
+			assert(dimx >= 0 && dimx <= DimX);
+			assert(dimy >= 0 && dimy <= DimY);
+
+			if (stride == DimX)
+			{
+				memcpy(&m_buf[0], &data[0], sizeof(m_buf));
+			}
+			else
+			{
+				for (int b = 0; b != BlockHeight; ++b)
+					memcpy(&m_buf[b * DimX], &data[b * stride], dimx * sizeof(Word));
+			}
+			m_dimx = dimx;
+			m_dimy = dimy;
+			m_stride = stride;
 		}
 
 		// Write access to a block of image data
