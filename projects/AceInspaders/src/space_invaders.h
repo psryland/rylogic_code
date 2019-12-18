@@ -58,6 +58,9 @@ namespace pr
 
 			// Game over sound
 			GameOver,
+
+			// Sound count
+			NumberOf,
 		};
 
 		// User input data
@@ -87,7 +90,7 @@ namespace pr
 		constexpr static int ScreenDimX = 128;
 		constexpr static int ScreenDimY = 96;
 		constexpr static int StartGameDelayMS = 1000; // The length of the pause between the start game sound and starting
-		constexpr static int EndLevelDelayMS = 2000; // The length of the pause between the start game sound and starting
+		constexpr static int EndLevelDelayMS = 1000; // The length of the pause between the start game sound and starting
 
 		// Player
 		constexpr static int PlayerMaxSpeed = 1000; // The max speed of the player in pixels/second
@@ -105,10 +108,9 @@ namespace pr
 		constexpr static int AlienInitialYPos = ScreenDimY / 10; // The initial vertical position of the highest alien
 		constexpr static int AlienFinalYPos = ScreenDimY - 26;   // The high the aliens need to reach
 		constexpr static int AlienInitialStepPeriodMS = 500;     // The time between each advance step at the start
-		constexpr static int AlienStepPeriodDeltaMS = 30;        // The increase in speed with each vertical advance
-		constexpr static int AlienMinStepPeriodMS = 10;          // The minimum time between each advance step
+		constexpr static int AlienFinalStepPeriodMS = 20;        // The minimum time between each advance step
 		constexpr static int AlienAdvanceX = 2;                  // The number of pixels the aliens advance at the
-		constexpr static int AlienAdvanceY = 2;                  // The number of pixels the aliens advance at the
+		constexpr static int AlienAdvanceY = 5;                  // The number of pixels the aliens advance at the
 
 		// Bunkers
 		constexpr static int BunkerCount = 4;   // The number of bunkers
@@ -246,6 +248,18 @@ namespace pr
 			};
 			return SpriteR(&data[0], 26, 5);
 		}
+		static SpriteR sprite_hiscore()
+		{
+			static uint8_t const data[] =
+			{
+				0x1F, 0x04,
+				0x04, 0x1F,
+				0x00, 0x11,
+				0x1F, 0x11,
+				0x00, 0x0A,
+			};
+			return SpriteR(&data[0], 10, 5);
+		}
 		static SpriteR sprite_digit(int n)
 		{
 			static uint8_t const data[] =
@@ -286,12 +300,12 @@ namespace pr
 		};
 		struct Bomb :Entity
 		{
-			EEntityState m_state;
 			Coord m_pos;
+			EEntityState m_state;
 
 			Bomb()
-				: m_state(EEntityState::Dead)
-				, m_pos()
+				: m_pos()
+				, m_state(EEntityState::Dead)
 			{}
 			Coord Position() const override
 			{
@@ -311,12 +325,12 @@ namespace pr
 		};
 		struct Bullet :Entity
 		{
-			EEntityState m_state;
 			Coord m_pos;
+			EEntityState m_state;
 
 			Bullet()
-				: m_state(EEntityState::Dead)
-				, m_pos()
+				: m_pos()
+				, m_state(EEntityState::Dead)
 			{}
 			Coord Position() const override
 			{
@@ -336,14 +350,14 @@ namespace pr
 		};
 		struct Player :Entity
 		{
-			EEntityState m_state;
 			Coord m_pos;
 			int m_xtarget_mpx; // The target x position
+			EEntityState m_state;
 
 			Player()
-				: m_state(EEntityState::Alive)
-				, m_pos(mpx(ScreenDimX / 2), mpx(PlayerYPos))
+				: m_pos(mpx(ScreenDimX / 2), mpx(PlayerYPos))
 				, m_xtarget_mpx(mpx(ScreenDimX / 2))
+				, m_state(EEntityState::Alive)
 			{}
 			Coord Position() const override
 			{
@@ -363,12 +377,12 @@ namespace pr
 		};
 		struct Bunker :Entity
 		{
-			SpriteW<11,8> m_gfx;
 			Coord m_pos;
+			SpriteW<11,8> m_gfx;
 
 			Bunker()
-				: m_gfx(sprite_bunker())
-				, m_pos()
+				: m_pos()
+				, m_gfx(sprite_bunker())
 			{}
 			Coord Position() const override
 			{
@@ -441,16 +455,16 @@ namespace pr
 
 			Coord m_pos;                  // The position of the upper/left corner for the block of aliens
 			StateWord m_state[AlienCols]; // Bitmask of vertical columns of aliens states. LSB = highest because row0 is the highest. 2-bits per alien
-			int m_direction;              // The direction the aliens are moving in
 			int m_last_step_ms;           // The clock value when the aliens last moved;
 			int m_last_bomb_ms;           // Time since the last bomb was dropped
+			int m_direction;              // The direction the aliens are moving in
 
 			Aliens()
 				: m_pos(mpx(AlienEdgeMargin), mpx(AlienInitialYPos))
 				, m_state()
-				, m_direction(+1)
 				, m_last_step_ms()
 				, m_last_bomb_ms()
+				, m_direction(+1)
 			{
 				static_assert(AlienRows <= static_cast<int>(sizeof(m_state[0]) * 4), "2-bits per alien means 8 rows max");
 				static_assert(static_cast<int>(EEntityState::Alive) == 3, "2-bits per alien state");
@@ -710,6 +724,7 @@ namespace pr
 		Bomb m_bombs[MaxBombs];
 		Bullet m_bullets[MaxBullets];
 		UserInputData m_user_input;
+		int m_hiscore;
 		int m_score;
 		int m_level;
 		int m_fire_button_issue;
@@ -729,6 +744,7 @@ namespace pr
 			, m_bombs()
 			, m_bullets()
 			, m_user_input()
+			, m_hiscore()
 			, m_score()
 			, m_level()
 			, m_clock_ms()
@@ -740,6 +756,7 @@ namespace pr
 		// Reset the game
 		void Reset()
 		{
+			Init();
 			ChangeState(EState::StartNewGame);
 		}
 
@@ -749,6 +766,7 @@ namespace pr
 			// Update the game clock and user input
 			m_clock_ms += elapsed_ms;
 			m_user_input = m_system->UserInput();
+			m_hiscore = m_score > m_hiscore ? m_score : m_hiscore;
 
 			// Update the random number generator from the user input
 			m_rng = (m_rng << 8) | (m_rng >> 24);
@@ -767,7 +785,7 @@ namespace pr
 			case EState::StartNewLevel:
 				{
 					++m_level;
-					SetupGame();
+					Init();
 					m_system->PlaySound(ESound::LevelStart);
 					ChangeState(EState::StartDelay);
 					break;
@@ -830,13 +848,28 @@ namespace pr
 
 			// Draw the score
 			{
-				char score[16] = {};
-				snprintf(&score[0], sizeof(score), "%d", m_score);
-
 				int x = 1;
 				auto const& s = sprite_score();
 				m_screen.Draw(s, x, 1);
 				x += s.m_dimx + 2;
+
+				char score[16] = {};
+				snprintf(&score[0], sizeof(score), "%d", m_score);
+				for (char const* p = &score[0]; *p != '\0'; ++p)
+				{
+					auto const& d = sprite_digit(*p - '0');
+					m_screen.Draw(d, x, 1);
+					x += d.m_dimx;
+				}
+			}
+			{
+				int x = ScreenDimX / 2;
+				auto const& s = sprite_hiscore();
+				m_screen.Draw(s, x, 1);
+				x += s.m_dimx + 2;
+
+				char score[16] = {};
+				snprintf(&score[0], sizeof(score), "%d", m_hiscore);
 				for (char const* p = &score[0]; *p != '\0'; ++p)
 				{
 					auto const& d = sprite_digit(*p - '0');
@@ -900,7 +933,7 @@ namespace pr
 		}
 
 		// Set up to start a new game
-		void SetupGame()
+		void Init()
 		{
 			// Initialise the player 
 			m_player = Player();
@@ -917,6 +950,12 @@ namespace pr
 				bunker.m_pos.x = mpx(ScreenDimX * (b + 1) / (BunkerCount + 1));
 				bunker.m_pos.y = mpx(BunkerYPos);
 			}
+
+			// Reset all bombs/bullets
+			for (int b = 0; b != MaxBombs; ++b)
+				m_bombs[b].m_state = EEntityState::Dead;
+			for (int b = 0; b != MaxBullets; ++b)
+				m_bullets[b].m_state = EEntityState::Dead;
 		}
 
 		// Draw 'obj' into 'm_screen'
@@ -987,13 +1026,13 @@ namespace pr
 			// Advance alien positions
 			for (;;)
 			{
-				// The number of vertical steps
-				auto y_step = (px(m_aliens.m_pos.y) - AlienInitialYPos) / AlienAdvanceY;
-			
-				// The time between each advance step for the current height
-				auto step_period_ms = AlienInitialStepPeriodMS - y_step * AlienStepPeriodDeltaMS;
-				if (step_period_ms < AlienMinStepPeriodMS)
-					step_period_ms = AlienMinStepPeriodMS;
+				// Lerp the step period from the Y position
+				auto yrange = AlienFinalYPos - AlienInitialYPos;
+				auto dperiod = AlienFinalStepPeriodMS - AlienInitialStepPeriodMS;
+				auto dy = (px(m_aliens.m_pos.y) - AlienInitialYPos) + (m_level - 1);
+				auto step_period_ms = AlienInitialStepPeriodMS + dperiod * dy / yrange;
+				if (step_period_ms < AlienFinalStepPeriodMS)
+					step_period_ms = AlienFinalStepPeriodMS;
 
 				// Not time for a step yet?
 				if (m_clock_ms - m_aliens.m_last_step_ms < step_period_ms) break;
@@ -1002,7 +1041,10 @@ namespace pr
 				// Aliens only move while the player is alive
 				bool dropped = false;
 				if (m_player.m_state == EEntityState::Alive)
+				{
 					m_aliens.Advance(true, dropped);
+					m_system->PlaySound(ESound::AlienAdvance);
+				}
 
 				// If the lowest alien reaches the final Y position, then game over
 				if (dropped && px(m_aliens.LowestPosition().y) > AlienFinalYPos)
@@ -1012,10 +1054,6 @@ namespace pr
 					ChangeState(EState::PlayerHit);
 					break;
 				}
-				else
-				{
-					m_system->PlaySound(ESound::AlienAdvance);
-				}
 			}
 
 			// Update alien states
@@ -1023,7 +1061,8 @@ namespace pr
 
 			// Drop a bomb randomly within the bomb period if the player is alive
 			if (m_player.m_state == EEntityState::Alive &&
-				RandEvent(100 * (m_clock_ms - m_aliens.m_last_bomb_ms) / BombPeriodMS))
+				RandEvent(100 * (m_clock_ms - m_aliens.m_last_bomb_ms) / BombPeriodMS) &&
+				m_aliens.AliveColumnsCount() != 0)
 			{
 				int b = 0;
 				for (; b != MaxBombs && m_bombs[b].m_state != EEntityState::Dead; ++b) {}
@@ -1171,7 +1210,7 @@ namespace pr
 				// Bomb vs. Player
 				if (bomb.m_state == EEntityState::Alive)
 				{
-					if (false&&CollisionTest(m_player, bomb))
+					if (CollisionTest(m_player, bomb))
 					{
 						bomb.m_state = EEntityState::Exploding1;
 						m_player.m_state = EEntityState::Exploding1;

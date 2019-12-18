@@ -101,6 +101,15 @@
     <Filter Include="pr\gfx">
       <UniqueIdentifier>{b28a32bf-1c6a-45f9-8fcb-3469e8be6811}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\input">
+      <UniqueIdentifier>{14605648-63c5-4086-9c68-32375db3fbf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\audio">
+      <UniqueIdentifier>{ffdbac98-60bd-46b2-b85d-d3731cb7f342}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\audio\synth">
+      <UniqueIdentifier>{a19241ed-7637-4875-8c66-2cd31e159015}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
@@ -361,9 +370,6 @@
       <Filter>pr\lua</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\app\main.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\app\main_gui.h">
       <Filter>pr\app</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\memstream.h">
@@ -1017,11 +1023,20 @@
     <ClInclude Include="..\include\pr\common\event_handler.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\app\space_invaders.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gfx\onebit.h">
       <Filter>pr\gfx</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\input\dinput.h">
+      <Filter>pr\input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\main_ui.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\synth\note.h">
+      <Filter>pr\audio\synth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\synth\synth.h">
+      <Filter>pr\audio\synth</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -126,10 +126,10 @@ namespace pr::onebit
 		Bitmap& operator =(Bitmap const& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
-			m_data = &m_buf[0];
-			m_dimx = rhs.m_dimx;
-			m_dimy = rhs.m_dimy;
-			m_stride = rhs.m_stride;
+			this->m_data = &m_buf[0];
+			this->m_dimx = rhs.m_dimx;
+			this->m_dimy = rhs.m_dimy;
+			this->m_stride = rhs.m_stride;
 			memcpy(&m_buf[0], &rhs.m_buf[0], sizeof(m_buf));
 			return *this;
 		}
@@ -151,9 +151,9 @@ namespace pr::onebit
 				for (int b = 0; b != BlockHeight; ++b)
 					memcpy(&m_buf[b * DimX], &data[b * stride], dimx * sizeof(Word));
 			}
-			m_dimx = dimx;
-			m_dimy = dimy;
-			m_stride = stride;
+			this->m_dimx = dimx;
+			this->m_dimy = dimy;
+			this->m_stride = stride;
 		}
 
 		// Write access to a block of image data
@@ -164,7 +164,7 @@ namespace pr::onebit
 		Word& Block(int b, int x)
 		{
 			assert(b >= 0 && b < BlockHeight);
-			assert(x >= 0 && x < m_dimx);
+			assert(x >= 0 && x < this->m_dimx);
 			return m_buf[b * DimX + x];
 		}
 

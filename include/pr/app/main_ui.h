@@ -32,13 +32,21 @@ namespace pr::app
 		int         m_exit_code;                 // Exit code
 
 		// WinGui form construction parameters
-		struct Params :gui::MakeFormParams<FormParams>
+		template <typename Derived = void>
+		struct Params :gui::Form::Params<not_void_t<Derived, Params<Derived>>>
 		{
+			bool m_default_mouse_navigation;
 			Params()
 			{
-				wndclass(RegisterWndClass<DerivedUI>())
+				this->wndclass(RegisterWndClass<DerivedUI>())
 					.main_wnd(true)
-					.padding(50);
+					.padding(8)
+					.default_mouse_navigation(true);
+			}
+			Params& default_mouse_navigation(bool on)
+			{
+				m_default_mouse_navigation = on;
+				return this->me();
 			}
 		};
 
@@ -49,7 +57,8 @@ namespace pr::app
 		MainUI()
 			:MainUI(Params())
 		{}
-		MainUI(FormParams const& p)
+		template <typename TParams>
+		explicit MainUI(TParams const& p)
 			:Form(p)
 			,m_msg_loop()
 			,m_main(new Main(*static_cast<DerivedUI*>(&CreateHandle())))
@@ -129,7 +138,7 @@ namespace pr::app
 		virtual void OnMouseButton(gui::MouseEventArgs& args) override
 		{
 			base::OnMouseButton(args);
-			if (args.m_handled) return;
+			if (args.m_handled || !cp<Params<>>().m_default_mouse_navigation) return;
 
 			m_nav_enabled = args.m_down;
 			m_main->Nav(NormalisePoint(*this, args.m_point), args.m_down ? args.m_button : gui::EMouseKey::None, true);
@@ -138,7 +147,7 @@ namespace pr::app
 		virtual void OnMouseClick(gui::MouseEventArgs& args) override
 		{
 			base::OnMouseClick(args);
-			if (args.m_handled) return;
+			if (args.m_handled || !cp<Params<>>().m_default_mouse_navigation) return;
 
 			m_main->NavRevert(); // If a mouse single click is detected, revert any navigation
 			Invalidate();
@@ -146,7 +155,7 @@ namespace pr::app
 		virtual void OnMouseMove(gui::MouseEventArgs& args) override
 		{
 			base::OnMouseMove(args);
-			if (args.m_handled) return;
+			if (args.m_handled || !cp<Params<>>().m_default_mouse_navigation) return;
 
 			if (m_nav_enabled)
 			{
@@ -158,7 +167,7 @@ namespace pr::app
 		virtual void OnMouseWheel(gui::MouseWheelArgs& args) override
 		{
 			base::OnMouseWheel(args);
-			if (args.m_handled) return;
+			if (args.m_handled || !cp<Params<>>().m_default_mouse_navigation) return;
 
 			auto pt = NormalisePoint(*this, args.m_point);
 			m_main->NavZ(pt, args.m_delta, true);

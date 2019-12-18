@@ -65,7 +65,7 @@ namespace pr::app
 			:m_log(Derived::AppName(), log::ToFile(FmtS(L"%s.log", Derived::AppName())), 0)
 			,m_settings(setup.UserSettings())
 			,m_rdr(setup.RdrSettings())
-			,m_window(m_rdr, setup.RdrWindowSettings(ui, ClientArea(ui).Size()))
+			,m_window(m_rdr, setup.RdrWindowSettings(ui))
 			,m_scene(m_window,{rdr::ERenderStep::ForwardRender})
 			,m_cam()
 			,m_ui(ui)
@@ -83,11 +83,14 @@ namespace pr::app
 
 			// Initialise the viewport to the padded client area
 			auto area = To<FRect>(m_ui.ClientRect());
-			m_cam.Aspect(area.Aspect());
-			m_scene.m_viewport.TopLeftX = area.Left();
-			m_scene.m_viewport.TopLeftY = area.Top();
-			m_scene.m_viewport.Width    = area.SizeX();
-			m_scene.m_viewport.Height   = area.SizeY();
+			if (area.SizeX() != 0 && area.SizeY() != 0)
+			{
+				m_cam.Aspect(area.Aspect());
+				m_scene.m_viewport.TopLeftX = area.Left();
+				m_scene.m_viewport.TopLeftY = area.Top();
+				m_scene.m_viewport.Width = area.SizeX();
+				m_scene.m_viewport.Height = area.SizeY();
+			}
 
 			// The first frame is needed
 			RenderNeeded();

@@ -22,7 +22,7 @@ namespace pr
 	}
 
 	// Return the window bounds as an IRect
-	inline pr::IRect WindowBounds(HWND hwnd)
+	inline IRect WindowBounds(HWND hwnd)
 	{
 		if (hwnd == nullptr) throw std::runtime_error("window handle must be non-null");
 		RECT r; ::GetWindowRect(hwnd, &r);
@@ -30,8 +30,9 @@ namespace pr
 	}
 
 	// Return the client area of the window as an IRect
-	inline pr::IRect ClientArea(HWND hwnd)
+	inline IRect ClientArea(HWND hwnd)
 	{
+		// Note: Consider using gui::Control::ClientRect(), it takes padding into account
 		if (hwnd == nullptr) throw std::runtime_error("window handle must be non-null");
 		RECT r; ::GetClientRect(hwnd, &r);
 		return IRect(r.left, r.top, r.right, r.bottom);
@@ -39,7 +40,7 @@ namespace pr
 
 	// Modifies a rectangle so that it's within 'bounds'
 	// Returns true if 'rect' was modified. If 'bounds' is null the screen
-	inline bool AdjRectWithin(pr::IRect& rect, pr::IRect const& bounds)
+	inline bool AdjRectWithin(IRect& rect, IRect const& bounds)
 	{
 		int w = rect.SizeX();
 		int h = rect.SizeY();
@@ -55,7 +56,7 @@ namespace pr
 	// Return the string in an edit control as a std::string
 	template <typename Char, typename Ctrl> inline std::basic_string<Char> GetCtrlText(Ctrl const& ctrl)
 	{
-		using Win32 = pr::gui::Win32<Char>;
+		using Win32 = gui::Win32<Char>;
 
 		std::basic_string<Char> str;
 		str.resize(Win32::WindowTextLength(ctrl) + 1);
@@ -73,9 +74,9 @@ namespace pr
 	}
 
 	// Convert a client space point to a normalised point
-	inline pr::v2 NormalisePoint(HWND hwnd, POINT const& pt)
+	inline v2 NormalisePoint(HWND hwnd, POINT const& pt)
 	{
-		return pr::NormalisePoint(ClientArea(hwnd), pr::To<pr::v2>(pt), 1.0f, -1.0f);
+		return NormalisePoint(ClientArea(hwnd), To<v2>(pt), 1.0f, -1.0f);
 	}
 
 	#if 0
@@ -86,7 +87,7 @@ namespace pr
 		CWndClassInfo& ci = T::GetWndClassInfo();
 		if (ci.m_atom != 0) return ci.m_atom;
 
-		pr::threads::CSLock lock(&app_module.m_csWindowCreate);
+		threads::CSLock lock(&app_module.m_csWindowCreate);
 		if (ci.m_atom != 0) return ci.m_atom;
 
 		if (ci.m_lpszOrigName != 0) // Windows SuperClassing
@@ -173,7 +174,7 @@ namespace pr
 				// Get the menu item name and length
 				// Check the item name matches the first part of the address
 				Char item_name[256] = {};
-				auto item_name_len = pr::gui::Win32<Char>::MenuString(root, UINT(i), item_name, _countof(item_name), MF_BYPOSITION);
+				auto item_name_len = gui::Win32<Char>::MenuString(root, UINT(i), item_name, _countof(item_name), MF_BYPOSITION);
 				if (item_name_len != end - addr || std::char_traits<Char>::compare(addr, item_name, item_name_len) != 0)
 					continue;
 

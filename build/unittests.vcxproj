@@ -44,9 +44,10 @@
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\gimble.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
-    <ClInclude Include="..\include\pr\app\main_gui.h" />
+    <ClInclude Include="..\include\pr\app\main_ui.h" />
     <ClInclude Include="..\include\pr\app\skybox.h" />
-    <ClInclude Include="..\include\pr\app\space_invaders.h" />
+    <ClInclude Include="..\include\pr\audio\synth\note.h" />
+    <ClInclude Include="..\include\pr\audio\synth\synth.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
     <ClInclude Include="..\include\pr\collision\collision.h" />
@@ -204,6 +205,7 @@
     <ClInclude Include="..\include\pr\hardware\comm_port_io.h" />
     <ClInclude Include="..\include\pr\hardware\cpuinfo.h" />
     <ClInclude Include="..\include\pr\hardware\find_bt_device.h" />
+    <ClInclude Include="..\include\pr\input\dinput.h" />
     <ClInclude Include="..\include\pr\ldraw\ldr_helper.h" />
     <ClInclude Include="..\include\pr\ldraw\ldr_helper_c.h" />
     <ClInclude Include="..\include\pr\ldraw\ldr_object.h" />

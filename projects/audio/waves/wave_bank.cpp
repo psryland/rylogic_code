@@ -2,15 +2,29 @@
 // Audio
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
+// Simple tool for building wave banks from 1 or more .WAV files.
+// This generates binary wave banks compliant with XACT 3's Wave Bank .XWB format.
+// The .WAV files are not format converted or compressed.
+//
+// For a more full-featured builder, see XACT 3 and the XACTBLD tool in the legacy
+// DirectX SDK (June 2010) release.
+//
+// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+// PARTICULAR PURPOSE.
+//
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// http://go.microsoft.com/fwlink/?LinkId=248929
 
-#include "audio/util/stdafx.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/waves/wave_bank.h"
 #include "pr/audio/waves/wave_file.h"
 
+#pragma warning(disable:4201) // nameless structs
+
 namespace pr::audio
 {
-	#pragma region Constants
-
 	static const uint32_t DVD_SECTOR_SIZE = 2048;
 	static const uint32_t DVD_BLOCK_SIZE = DVD_SECTOR_SIZE * 16;
 
@@ -23,13 +37,7 @@ namespace pr::audio
 	static const int NAME_LENGTH = 64;
 	static const DWORD XACT_CONTENT_VERSION = 46; // DirectX SDK (June 2010)
 
-	#pragma endregion
-
-	#pragma region Structures
-
 	#pragma pack(push, 1)
-	#pragma warning(disable:4201) // nameless structs
-
 	struct REGION
 	{
 		uint32_t    dwOffset;   // Region offset, in bytes.
@@ -319,23 +327,16 @@ namespace pr::audio
 			}
 		}
 	};
-
-	#pragma warning(default:4201) // nameless structs
-
-	static_assert( sizeof(REGION)==8        , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(SAMPLEREGION)==8  , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(HEADER)==52       , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(ENTRY)==24        , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(MINIWAVEFORMAT)==4, "Mismatch with xact3wb.h" );
-	static_assert( sizeof(ENTRY)==24        , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(ENTRYCOMPACT)==4  , "Mismatch with xact3wb.h" );
-	static_assert( sizeof(BANKDATA)==96     , "Mismatch with xact3wb.h" );
-
 	#pragma pack(pop)
 
-	#pragma endregion
-
-	#pragma region Helpers
+	static_assert(sizeof(REGION) == 8, "Mismatch with xact3wb.h");
+	static_assert(sizeof(SAMPLEREGION) == 8, "Mismatch with xact3wb.h");
+	static_assert(sizeof(HEADER) == 52, "Mismatch with xact3wb.h");
+	static_assert(sizeof(ENTRY) == 24, "Mismatch with xact3wb.h");
+	static_assert(sizeof(MINIWAVEFORMAT) == 4, "Mismatch with xact3wb.h");
+	static_assert(sizeof(ENTRY) == 24, "Mismatch with xact3wb.h");
+	static_assert(sizeof(ENTRYCOMPACT) == 4, "Mismatch with xact3wb.h");
+	static_assert(sizeof(BANKDATA) == 96, "Mismatch with xact3wb.h");
 
 	struct handle_closer
 	{
@@ -347,21 +348,8 @@ namespace pr::audio
 		return (h == INVALID_HANDLE_VALUE) ? 0 : h;
 	}
 
-	#pragma endregion
-
 	#pragma region Wave Bank Reader
 		
-	// Functions for loading audio data from Wave Banks
-	//
-	// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-	// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-	// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-	// PARTICULAR PURPOSE.
-	//
-	// Copyright (c) Microsoft Corporation. All rights reserved.
-	// http://go.microsoft.com/fwlink/?LinkId=248929
-
-	#pragma region Implementation
 	struct WaveBankReader::Impl
 	{
 		using NameMap = std::unordered_map<std::string, uint32_t>;
@@ -851,9 +839,7 @@ namespace pr::audio
 			return m_prepared;
 		}
 	};
-	#pragma endregion
 
-	#pragma region Interface
 	WaveBankReader::WaveBankReader()
 		:pImpl(new Impl)
 	{}
@@ -955,26 +941,8 @@ namespace pr::audio
 
 	#pragma endregion
 
-	#pragma endregion
-
 	#pragma region Wave Bank Builder
 
-	// Simple tool for building wave banks from 1 or more .WAV files.
-	// This generates binary wave banks compliant with XACT 3's Wave Bank .XWB format.
-	// The .WAV files are not format converted or compressed.
-	//
-	// For a more full-featured builder, see XACT 3 and the XACTBLD tool in the legacy
-	// DirectX SDK (June 2010) release.
-	//
-	// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-	// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-	// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-	// PARTICULAR PURPOSE.
-	//
-	// Copyright (c) Microsoft Corporation. All rights reserved.
-	// http://go.microsoft.com/fwlink/?LinkId=248929
-
-	#pragma region Implementation
 	struct WaveBankBuilder::Impl
 	{
 		struct WaveFile
@@ -1505,9 +1473,7 @@ namespace pr::audio
 				<< "static int const " << bank_name << "Count = " << index << ";\r\n";
 		}
 	};
-	#pragma endregion
 
-	#pragma region Interface
 	WaveBankBuilder::WaveBankBuilder()
 		:pImpl(new Impl)
 	{}
@@ -1559,7 +1525,8 @@ namespace pr::audio
 		std::ofstream hdr(header_filepath);
 		WriteHeader(bank_name, hdr);
 	}
-	#pragma endregion
 
 	#pragma endregion
 }
+#pragma warning(default:4201) // nameless structs
+

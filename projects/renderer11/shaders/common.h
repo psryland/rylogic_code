@@ -127,8 +127,8 @@ namespace pr::rdr
 	// Set the tint properties of a constants buffer
 	template <typename TCBuf> void SetTint(BaseInstance const& inst, NuggetData const& nug, TCBuf& cb)
 	{
-		pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
-		pr::Colour c = (col ? *col : pr::ColourWhite) * nug.m_tint;
+		auto col = inst.find<Colour32>(EInstComp::TintColour32);
+		auto c = Colour((col ? *col : pr::Colour32White) * nug.m_tint);
 		cb.m_tint = c.rgba;
 	}
 

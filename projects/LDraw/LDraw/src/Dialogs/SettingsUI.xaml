@@ -10,136 +10,176 @@
 	ShowInTaskbar="True"
 	ResizeMode="CanResizeWithGrip"
 	Height="450"
-	Width="800"
+	Width="500"
 	>
 	<Grid
-		Margin="8"
+		Margin="8,0,8,8"
 		>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 		
-		<!-- Main Panel -->
-		<Grid
+		<TabControl
 			Grid.Row="0"
+			Margin="8,8,8,8"
 			>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="*"/>
-			</Grid.ColumnDefinitions>
-
-			<!-- Left Column -->
-			<Grid
-				Grid.Column="0"
+			<TabItem
+				Header="General"
 				>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="*"/>
-				</Grid.RowDefinitions>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
 
-				<!-- General -->
-				<GroupBox
-					Grid.Row="0"
-					Header="General"
-					Padding="3"
-					>
+					<!-- Font -->
 					<StackPanel
 						Orientation="Horizontal"
+						Margin="8"
 						>
 						<TextBlock
 							Text="Font: "
+							VerticalAlignment="Center"
+							Margin="3"
 							/>
 						<ComboBox
 							MinWidth="100"
+							ItemsSource="{Binding AvailableFonts}"
+							Text="{Binding Settings.FontName}"
+							Margin="3"
 							/>
 						<TextBlock
 							Text="Size: "
+							VerticalAlignment="Center"
+							Margin="3"
 							/>
 						<TextBox
-							Text=""
+							Text="{Binding Settings.FontSize}"
+							VerticalAlignment="Center"
+							HorizontalContentAlignment="Center"
+							MinWidth="30"
+							Margin="3"
 							/>
 					</StackPanel>
-				</GroupBox>
-				
-				<!-- Scene -->
-				<GroupBox
-					Grid.Row="1"
-					Header="Scene"
-					Padding="3"
-					DataContext="{Binding Scene}"
-					>
-					<StackPanel>
-						<CheckBox
-							Content="Focus point visible"
-							IsChecked="{Binding FocusPointVisible}"
-							/>
-					</StackPanel>
-				</GroupBox>
-			</Grid>
-			
-			<!-- Right Column -->
-			<Grid
-				Grid.Column="1"
-				>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="*"/>
-				</Grid.RowDefinitions>
 
-				<!-- Refresh -->
-				<GroupBox
-					Grid.Row="0"
-					Grid.Column="1"
-					Header="Refresh / Reload"
-					Padding="3"
-					>
-					<StackPanel>
-						<CheckBox
-						Content="Reset the camera position on reload"
-						IsChecked="{Binding ResetOnLoad}"
-						/>
-						<CheckBox
-						Content="Automatically reload files when changes are detected"
-						IsChecked="{Binding AutoRefresh}"
-						/>
-						<CheckBox
-						Content="Clear the Log window on reload"
-						IsChecked="{Binding ClearErrorLogOnReload}"
-						/>
-					</StackPanel>
-				</GroupBox>
-
-				<!-- File searching -->
-				<GroupBox
-					Grid.Row="1"
-					Header="Files"
-					>
-					<StackPanel
+					<!-- Include Paths -->
+					<GroupBox
+						Grid.Row="1"
+						Header="Include Paths:"
 						>
-						<TextBlock
-							Text="Include Paths:"
-							/>
-						<ListBox
-							ItemsSource="{Binding IncludePaths}"
-							MinHeight="100"
-							/>
+						<DockPanel
+							>
+							<!-- Modify buttons -->
+							<StackPanel
+								DockPanel.Dock="Right"
+								MaxWidth="28"
+								>
+								<Button
+									Command="{Binding MoveIncludePathUp}"
+									CommandParameter="{Binding SelectedIndex, ElementName=m_lb_include_paths}"
+									Background="Transparent"
+									BorderThickness="0"
+									Margin="2"
+									>
+									<Image
+										Source="{StaticResource green_up}"
+										RenderOptions.BitmapScalingMode="HighQuality"
+										/>
+								</Button>
+								<Button
+									Command="{Binding MoveIncludePathDown}"
+									CommandParameter="{Binding SelectedIndex, ElementName=m_lb_include_paths}"
+									Background="Transparent"
+									BorderThickness="0"
+									Margin="2"
+									>
+									<Image
+										Source="{StaticResource green_down}"
+										RenderOptions.BitmapScalingMode="HighQuality"
+										/>
+								</Button>
+								<Button
+									Command="{Binding RemoveIncludePath}"
+									CommandParameter="{Binding SelectedValue, ElementName=m_lb_include_paths}"
+									Background="Transparent"
+									BorderThickness="0"
+									Margin="2"
+									>
+									<Image
+										Source="{StaticResource reject}"
+										RenderOptions.BitmapScalingMode="HighQuality"
+										/>
+								</Button>
+								<Button
+									Command="{Binding AddIncludePath}"
+									Background="Transparent"
+									BorderThickness="0"
+									Margin="2"
+									>
+									<Image
+										Source="{StaticResource add}"
+										RenderOptions.BitmapScalingMode="HighQuality"
+										/>
+								</Button>
+							</StackPanel>
 
-					</StackPanel>
-				</GroupBox>
-			</Grid>
-		</Grid>
+							<!-- Paths List -->
+							<ListBox
+								ItemsSource="{Binding Settings.IncludePaths}"
+								MinHeight="100"
+								Name="m_lb_include_paths"
+								/>
+
+						</DockPanel>
+					</GroupBox>
+				</Grid>
+			</TabItem>
+			<TabItem
+				Header="Scene"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+					
+					<!-- Reset/Reload -->
+					<GroupBox
+						Grid.Row="0"
+						Grid.Column="1"
+						Header="Refresh / Reload"
+						Padding="3"
+						>
+						<StackPanel>
+							<CheckBox
+								Content="Reset the camera position on reload"
+								IsChecked="{Binding ResetOnLoad}"
+								Margin="3"
+								/>
+							<CheckBox
+								Content="Automatically reload files when changes are detected"
+								IsChecked="{Binding AutoRefresh}"
+								Margin="3"
+								/>
+							<CheckBox
+								Content="Clear the Log window on reload"
+								IsChecked="{Binding ClearErrorLogOnReload}"
+								Margin="3"
+								/>
+						</StackPanel>
+					</GroupBox>
+				</Grid>
+			</TabItem>
+		</TabControl>
 
 		<!-- Buttons -->
 		<StackPanel
-			Grid.Row="2"
+			Grid.Row="1"
 			HorizontalAlignment="Right"
-			Margin="20"
+			Margin="20,8,8,8"
 			>
 			<Button
+				Command="{Binding Accept}"
 				Content="OK"
 				MinWidth="80"
 				/>

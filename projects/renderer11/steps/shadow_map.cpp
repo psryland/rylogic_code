@@ -2,7 +2,7 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
@@ -15,398 +15,395 @@
 
 #define SMAP_TEST 0//PR_DBG_RDR
 
-namespace pr
+namespace pr::rdr
 {
-	namespace rdr
+	// Algorithm:
+	// - Create 5 projection transforms from the light onto each of the planes of the shadow frustum (= view frustum with nearer far plane).
+	// - Vertex shader: transform verts to world space
+	// - Geometry Shader: replicates the geometry 5 times, transforming each primitive by the corresponding projection transform
+	// - Pixel Shader: use the id to write the depth into the appropriate place on the render target
+	// - Use no depth buffer with blend mode min to avoid depth buffer issues
+	// - Render the scene writing distance-to-frustum data. (this solves the problem of directional
+	//   lights being at infinity)
+	// - In the lighting pass, project ray from 'ws_pos' to frustum, measure distance and compare to
+	//   texture to detect shadow
+
+	ShadowMap::ShadowMap(Scene& scene, Light& light, pr::iv2 size)
+		:RenderStep(scene)
+		,m_light(light)
+		,m_tex()
+		,m_rtv()
+		,m_srv()
+		,m_samp()
+		,m_main_rtv()
+		,m_main_dsv()
+		,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::smap::CBufFrame >("smap::CBufFrame"))
+		,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::smap::CBufNugget>("smap::CBufNugget"))
+		,m_smap_size(size)
+		,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapVS)))
+		,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapPS)))
+		,m_gs_face(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapFaceGS)))
+		,m_gs_line(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapLineGS)))
 	{
-		// Algorithm:
-		// - Create 5 projection transforms from the light onto each of the planes of the shadow frustum (= view frustum with nearer far plane).
-		// - Vertex shader: transform verts to world space
-		// - Geometry Shader: replicates the geometry 5 times, transforming each primitive by the corresponding projection transform
-		// - Pixel Shader: use the id to write the depth into the appropriate place on the render target
-		// - Use no depth buffer with blend mode min to avoid depth buffer issues
-		// - Render the scene writing distance-to-frustum data. (this solves the problem of directional
-		//   lights being at infinity)
-		// - In the lighting pass, project ray from 'ws_pos' to frustum, measure distance and compare to
-		//   texture to detect shadow
-
-		ShadowMap::ShadowMap(Scene& scene, Light& light, pr::iv2 size)
-			:RenderStep(scene)
-			,m_light(light)
-			,m_tex()
-			,m_rtv()
-			,m_srv()
-			,m_samp()
-			,m_main_rtv()
-			,m_main_dsv()
-			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::smap::CBufFrame >("smap::CBufFrame"))
-			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::smap::CBufNugget>("smap::CBufNugget"))
-			,m_smap_size(size)
-			,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapVS)))
-			,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapPS)))
-			,m_gs_face(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapFaceGS)))
-			,m_gs_line(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapLineGS)))
-		{
-			InitRT(size);
+		InitRT(size);
 			
-			m_dsb.Set(EDS::DepthEnable, FALSE);
-			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
-			m_bsb.Set(EBS::BlendEnable, TRUE, 0);
-			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MAX, 0);
-			m_bsb.Set(EBS::DestBlend, D3D11_BLEND_DEST_COLOR, 0);
-			m_bsb.Set(EBS::SrcBlend, D3D11_BLEND_SRC_COLOR, 0);
-		}
+		m_dsb.Set(EDS::DepthEnable, FALSE);
+		m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+		m_bsb.Set(EBS::BlendEnable, TRUE, 0);
+		m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MAX, 0);
+		m_bsb.Set(EBS::DestBlend, D3D11_BLEND_DEST_COLOR, 0);
+		m_bsb.Set(EBS::SrcBlend, D3D11_BLEND_SRC_COLOR, 0);
+	}
 
-		// Create the render target for the smap
-		void ShadowMap::InitRT(pr::iv2 size)
+	// Create the render target for the smap
+	void ShadowMap::InitRT(pr::iv2 size)
+	{
+		// Release any existing RTs
+		m_tex = nullptr;
+		m_rtv = nullptr;
+		m_srv = nullptr;
+
+		Renderer::Lock lock(m_scene->rdr());
+		auto device = lock.D3DDevice();
+
+		// Create the smap texture
+		Texture2DDesc tdesc;
+		tdesc.Width          = size.x;
+		tdesc.Height         = size.y;
+		tdesc.Format         = DXGI_FORMAT_R16G16_FLOAT; // R = z depth, G = -z depth
+		tdesc.MipLevels      = 1;
+		tdesc.ArraySize      = 1;
+		tdesc.SampleDesc     = MultiSamp(1,0);
+		tdesc.Usage          = D3D11_USAGE_DEFAULT;
+		tdesc.BindFlags      = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		tdesc.CPUAccessFlags = 0;
+		tdesc.MiscFlags      = 0;
+		pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
+		PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap tex"));
+
+		// Get the render target view
+		RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
+		rtvdesc.Texture2D.MipSlice = 0;
+		pr::Throw(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
+
+		// Get the shader res view
+		ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+		srvdesc.Texture2D.MostDetailedMip = 0;
+		srvdesc.Texture2D.MipLevels = 1;
+		pr::Throw(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
+
+		// Create a sampler for sampling the shadow map
+		auto sdesc = SamplerDesc::LinearClamp();
+		pr::Throw(device->CreateSamplerState(&sdesc, &m_samp.m_ptr));
+	}
+
+	// Bind the smap RT to the output merger
+	void ShadowMap::BindRT(bool bind)
+	{
+		Renderer::Lock lock(m_scene->rdr());
+		auto dc = lock.ImmediateDC();
+		if (bind)
 		{
-			// Release any existing RTs
-			m_tex = nullptr;
-			m_rtv = nullptr;
-			m_srv = nullptr;
+			// Save a reference to the main render target/depth buffer
+			dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
 
-			Renderer::Lock lock(m_scene->rdr());
-			auto device = lock.D3DDevice();
-
-			// Create the smap texture
-			Texture2DDesc tdesc;
-			tdesc.Width          = size.x;
-			tdesc.Height         = size.y;
-			tdesc.Format         = DXGI_FORMAT_R16G16_FLOAT; // R = z depth, G = -z depth
-			tdesc.MipLevels      = 1;
-			tdesc.ArraySize      = 1;
-			tdesc.SampleDesc     = MultiSamp(1,0);
-			tdesc.Usage          = D3D11_USAGE_DEFAULT;
-			tdesc.BindFlags      = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-			tdesc.CPUAccessFlags = 0;
-			tdesc.MiscFlags      = 0;
-			pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap tex"));
-
-			// Get the render target view
-			RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
-			rtvdesc.Texture2D.MipSlice = 0;
-			pr::Throw(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
-
-			// Get the shader res view
-			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-			srvdesc.Texture2D.MostDetailedMip = 0;
-			srvdesc.Texture2D.MipLevels = 1;
-			pr::Throw(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
-
-			// Create a sampler for sampling the shadow map
-			auto sdesc = SamplerDesc::LinearClamp();
-			pr::Throw(device->CreateSamplerState(&sdesc, &m_samp.m_ptr));
+			// Bind the smap RT to the OM
+			dc->OMSetRenderTargets(1, &m_rtv.m_ptr, nullptr);
 		}
-
-		// Bind the smap RT to the output merger
-		void ShadowMap::BindRT(bool bind)
+		else
 		{
-			Renderer::Lock lock(m_scene->rdr());
-			auto dc = lock.ImmediateDC();
-			if (bind)
-			{
-				// Save a reference to the main render target/depth buffer
-				dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+			// Restore the main RT and depth buffer
+			dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 
-				// Bind the smap RT to the OM
-				dc->OMSetRenderTargets(1, &m_rtv.m_ptr, nullptr);
-			}
-			else
-			{
-				// Restore the main RT and depth buffer
-				dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
-
-				// Release our reference to the main rtv/dsv
-				m_main_rtv = nullptr;
-				m_main_dsv = nullptr;
-			}
+			// Release our reference to the main rtv/dsv
+			m_main_rtv = nullptr;
+			m_main_dsv = nullptr;
 		}
+	}
 
-		// Add model nuggets to the draw list for this render step
-		void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
+	// Add model nuggets to the draw list for this render step
+	void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
+	{
+		Lock lock(*this);
+		auto& drawlist = lock.drawlist();
+
+		// Add a drawlist element for each nugget in the instance's model
+		drawlist.reserve(drawlist.size() + nuggets.size());
+		for (auto& nug : nuggets)
+			nug.AddToDrawlist(drawlist, inst, nullptr, Id);
+
+		m_sort_needed = true;
+	}
+
+	// Update the provided shader set appropriate for this render step
+	void ShadowMap::ConfigShaders(ShaderSet1& ss, EPrim topo) const
+	{
+		switch (topo)
 		{
-			Lock lock(*this);
-			auto& drawlist = lock.drawlist();
-
-			// Add a drawlist element for each nugget in the instance's model
-			drawlist.reserve(drawlist.size() + nuggets.size());
-			for (auto& nug : nuggets)
-				nug.AddToDrawlist(drawlist, inst, nullptr, Id);
-
-			m_sort_needed = true;
+		case EPrim::PointList:
+			break; // Ignore point lists.. can a point cast a shadow anyway?
+		case EPrim::LineList:
+		case EPrim::LineStrip:
+			ss.m_gs = m_gs_line.get();
+			break;
+		case EPrim::TriList:
+		case EPrim::TriStrip:
+			ss.m_gs = m_gs_face.get();
+			break;
+		default:
+			throw std::exception("Unsupported primitive type");
 		}
+	}
 
-		// Update the provided shader set appropriate for this render step
-		void ShadowMap::ConfigShaders(ShaderSet1& ss, EPrim topo) const
-		{
-			switch (topo)
-			{
-			case EPrim::PointList:
-				break; // Ignore point lists.. can a point cast a shadow anyway?
-			case EPrim::LineList:
-			case EPrim::LineStrip:
-				ss.m_gs = m_gs_line.get();
-				break;
-			case EPrim::TriList:
-			case EPrim::TriStrip:
-				ss.m_gs = m_gs_face.get();
-				break;
-			default:
-				throw std::exception("Unsupported primitive type");
-			}
-		}
+	// Perform the render step
+	void ShadowMap::ExecuteInternal(StateStack& ss)
+	{
+		auto dc = ss.m_dc;
 
-		// Perform the render step
-		void ShadowMap::ExecuteInternal(StateStack& ss)
-		{
-			auto dc = ss.m_dc;
+		// Sort the draw list if needed
+		SortIfNeeded();
 
-			// Sort the draw list if needed
-			SortIfNeeded();
+		// Bind the render target to the OM
+		auto bind_smap = pr::CreateScope(
+			[this]{ BindRT(true); },
+			[this]{ BindRT(false); });
 
-			// Bind the render target to the OM
-			auto bind_smap = pr::CreateScope(
-				[this]{ BindRT(true); },
-				[this]{ BindRT(false); });
+		// Clear the render target/depth buffer.
+		// The depth data is the fractional distance between the frustum plane (0) and the light (1).
+		// We only care about points in front of the frustum faces => reset depths to zero.
+		dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero.arr);
 
-			// Clear the render target/depth buffer.
-			// The depth data is the fractional distance between the frustum plane (0) and the light (1).
-			// We only care about points in front of the frustum faces => reset depths to zero.
-			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero.arr);
+		// Viewport = the whole smap
+		Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
+		dc->RSSetViewports(1, &vp);
 
-			// Viewport = the whole smap
-			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
-			dc->RSSetViewports(1, &vp);
-
-			{// Set the frame constants
-				auto& c2w = m_scene->m_view.m_c2w;
-				auto shadow_frustum = m_scene->m_view.ShadowFrustum();
+		{// Set the frame constants
+			auto& c2w = m_scene->m_view.m_c2w;
+			auto shadow_frustum = m_scene->m_view.ShadowFrustum();
 				
-				hlsl::smap::CBufFrame cb = {};
-				CreateProjection(shadow_frustum, 0, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[0]);
-				CreateProjection(shadow_frustum, 1, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[1]);
-				CreateProjection(shadow_frustum, 2, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[2]);
-				CreateProjection(shadow_frustum, 3, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[3]);
-				CreateProjection(shadow_frustum, 4, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[4]);
+			hlsl::smap::CBufFrame cb = {};
+			CreateProjection(shadow_frustum, 0, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[0]);
+			CreateProjection(shadow_frustum, 1, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[1]);
+			CreateProjection(shadow_frustum, 2, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[2]);
+			CreateProjection(shadow_frustum, 3, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[3]);
+			CreateProjection(shadow_frustum, 4, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[4]);
 
-				cb.m_frust_dim = shadow_frustum.Dim();
-				cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
-				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
-			}
-
-			// Draw each element in the draw list
-			Lock lock(*this);
-			for (auto& dle : lock.drawlist())
-			{
-				StateStack::DleFrame frame(ss, dle);
-				ss.Commit();
-
-				auto const& nugget = *dle.m_nugget;
-
-				// Set the per-nugget constants
-				hlsl::smap::CBufNugget cb = {};
-				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
-				WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS);
-
-				// Draw the nugget
-				dc->DrawIndexed(
-					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_beg),
-					0);
-			}
-
-			PR_EXPAND(SMAP_TEST, Debugging(ss));
+			cb.m_frust_dim = shadow_frustum.Dim();
+			cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
+			WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 		}
 
-		// Create a projection transform that will take points in world space and project them
-		// onto a surface parallel to the frustum plane for the given face (based on light type).
-		// 'shadow_frustum' - the volume in which objects receive shadows. It should be aligned with
-		//  the camera frustum but with a nearer far plane.
-		// 'face' - the face index of the shadow frustum (see pr::Frustum::EPlane)
-		// 'light' - the light source that we're creating the projection transform for
-		// 'c2w' - the camera to world (and => shadow_frustum to world) transform
-		// 'max_range' - is the maximum distance of any shadow casting object from the shadow frustum
-		// plane. Effectively the projection near plane for directional lights or for point lights further
-		// than this distance. Objects further than this distance don't result in pixels in the smap.
-		// This should be the distance that depth information is normalised into the range [0,1) by.
-		bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
+		// Draw each element in the draw list
+		Lock lock(*this);
+		for (auto& dle : lock.drawlist())
 		{
-			#define DBG_PROJ 0 //PR_DBG_RDR
-			#if DBG_PROJ
-			auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
-			{
-				v4 tl = tl_ / tl_.w;
-				v4 tr = tr_ / tr_.w;
-				v4 bl = bl_ / bl_.w;
-				v4 br = br_ / br_.w;
-				std::string str;
-				// This is the screen space view volume for a light-camera looking at 'face' of the frustum
-				pr::ldr::LineBox("view_volume", 0xFFFFFFFF, pr::v4(0,0,0.5f,1), pr::v4(2,2,1,0), str);
-				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.04f, str);
-				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.04f, str);
-				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.04f, str);
-				pr::ldr::Box("br", 0xFFFFFF00, br, 0.04f, str);
-				pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
-				pr::ldr::Write(str, "d:/dump/smap_proj_screen.ldr");
-			};
-			auto Frust = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
-			{
-				std::string str;
-				pr::ldr::Frustum("shadow_frustum", 0xffffffff, shadow_frustum, c2w * Translation4x4(0,0,-shadow_frustum.ZDist()), str);
-				pr::ldr::Rect("obj", 0xFFFF00FF, 3, 2, 2, true, pr::m4x4Identity, str);
-				pr::ldr::Box("tl", 0xFFFF0000, tl_, 0.04f, str);
-				pr::ldr::Box("tr", 0xFF00FF00, tr_, 0.04f, str);
-				pr::ldr::Box("bl", 0xFF0000FF, bl_, 0.04f, str);
-				pr::ldr::Box("br", 0xFFFFFF00, br_, 0.04f, str);
-				pr::ldr::Line("l", 0xFFA0A0E0, bl_, tr_, str);
-				pr::ldr::Line("l", 0xFFA0A0E0, br_, tl_, str);
-				pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
-				pr::ldr::Write(str, "d:/dump/smap_proj_frust.ldr");
-			};
-			#endif
+			StateStack::DleFrame frame(ss, dle);
+			ss.Commit();
 
-			// TL,TR,BL,BR below refer to the corners of a quad that, for the first four faces,
-			// has the camera position in the centre with two points in front of the camera and
-			// two behind. (Note: in front of the camera means down the -z axis). We only care
-			// about the wedge on the quad that goes from the camera to the two corners positioned
-			// in front of the camera.
-			float sign_z[4] =
-			{
-				pr::SignF(face==1||face==3),
-				pr::SignF(face==0||face==3),
-				pr::SignF(face==1||face==2),
-				pr::SignF(face==0||face==2),
-			};
+			auto const& nugget = *dle.m_nugget;
 
-			// Get the corners of the plane that will be the far clip plane (in world space).
-			// Note, the non-far plane faces of the frustum will actually result in a left
-			// handed projection because I'm just reflecting the verts through the z-plane.
-			// To compensate for this, the geometry shader reverses the winding order of the
-			// faces. The reason for doing this is to simplify texture lookup, pixels on the
-			// left of the screen will be on the left of the texture, rather than on the right.
-			v4 fdim = shadow_frustum.Dim();
-			v4 tl, TL, tr, TR, bl, BL, br, BR;
-			TL = c2w * v4(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
-			TR = c2w * v4( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
-			BL = c2w * v4(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
-			BR = c2w * v4( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
-			PR_EXPAND(DBG_PROJ, Frust(TL,TR,BL,BR,light.m_direction));
+			// Set the per-nugget constants
+			hlsl::smap::CBufNugget cb = {};
+			SetTxfm(*dle.m_instance, m_scene->m_view, cb);
+			WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS);
 
-			w2s = m4x4Zero;
-
-			// Get the frustum normal for 'face'
-			pr::v4 ws_norm = c2w * shadow_frustum.Normal(face);
-
-			// Construct the projection transform based on the light type
-			switch (light.m_type)
-			{
-			case ELight::Directional:
-				{
-					// The surface must face the light source
-					if (pr::Dot3(light.m_direction, ws_norm) >= 0)
-						return false;
-
-					// This is a parallel projection, so it doesn't matter where we "position"
-					// the light-camera. On the projection plane with the far plane at 0.0f and
-					// the near plane at -max_range is as good as anywhere.
-
-					// Create a light to world transform.
-					auto centre = (TL + TR + BL + BR) * 0.25f;
-					auto lt2w = m4x4::LookAt(centre, centre + light.m_direction, Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
-					w2s = InvertFast(lt2w);
-
-					// Create an orthographic projection
-					auto lt2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -max_range, 0.0f, true);
-					w2s = lt2s * w2s;
-
-					// Project the four corners of the plane
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-
-					// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
-					auto ledge = Normalise2((tl - bl).xy);
-					auto R = m4x4Identity;
-					R.x = v4( ledge.y,  ledge.x, 0, 0);
-					R.y = v4(-ledge.x,  ledge.y, 0, 0);
-					w2s = R * w2s;
-
-					// Project the four corners of the plane
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-
-					// Scale the face of the frustum into the viewport
-					auto S = m4x4::Scale(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, v4Origin);
-					w2s = S * w2s;
-
-					// Project the four corners of the plane
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-
-					// Shear to make the projected plane square
-					auto H1 = m4x4::Shear((tl.y - tr.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, v4Origin);
-					w2s = H1 * w2s;
-
-					// Shear to make the projection plane perpendicular to the light direction
-					auto H2 = m4x4::Shear(0, 0.5f*(tl.z + bl.z) - 1.0f, 0, 0.5f*(bl.z + br.z) - 1.0f, 0, 0, v4Origin);
-					w2s = H2 * w2s;
-
-					#if DBG_PROJ
-					// Project the four corners of the plane
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-					#endif
-					return true;
-				}
-			case ELight::Spot:
-			case ELight::Point:
-				{
-					// The surface must face the light source
-					float dist_to_light = pr::Dot3(light.m_position - c2w.pos, ws_norm) + (face == 4)*shadow_frustum.ZDist();
-					if (dist_to_light <= 0)
-						return false;
-
-					// Create a light to world transform
-					// Position the light camera at the light position looking in the -frustum plane normal direction
-					auto lt2w = m4x4::LookAt(light.m_position, light.m_position - ws_norm, Parallel(ws_norm,c2w.y) ? c2w.z : c2w.y);
-					w2s = Invert(lt2w);
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-
-					// Create a perspective projection
-					float zr = 0.001f, zf = dist_to_light, zn = zf*zr;
-					auto lt2s = m4x4::ProjectionPerspective(tl.x*zr, tr.x*zr, tl.y*zr, bl.y*zr, zn, zf, true);
-					w2s = lt2s * w2s;
-
-					#if DBG_PROJ
-					// Project the four corners of the plane
-					tl = w2s * TL;
-					tr = w2s * TR;
-					bl = w2s * BL;
-					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
-					#endif
-					return true;
-				}
-			}
-			return false;
-			#undef DBG_PROJ
+			// Draw the nugget
+			dc->DrawIndexed(
+				UINT(nugget.m_irange.size()),
+				UINT(nugget.m_irange.m_beg),
+				0);
 		}
+
+		PR_EXPAND(SMAP_TEST, Debugging(ss));
+	}
+
+	// Create a projection transform that will take points in world space and project them
+	// onto a surface parallel to the frustum plane for the given face (based on light type).
+	// 'shadow_frustum' - the volume in which objects receive shadows. It should be aligned with
+	//  the camera frustum but with a nearer far plane.
+	// 'face' - the face index of the shadow frustum (see pr::Frustum::EPlane)
+	// 'light' - the light source that we're creating the projection transform for
+	// 'c2w' - the camera to world (and => shadow_frustum to world) transform
+	// 'max_range' - is the maximum distance of any shadow casting object from the shadow frustum
+	// plane. Effectively the projection near plane for directional lights or for point lights further
+	// than this distance. Objects further than this distance don't result in pixels in the smap.
+	// This should be the distance that depth information is normalised into the range [0,1) by.
+	bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
+	{
+		#define DBG_PROJ 0 //PR_DBG_RDR
+		#if DBG_PROJ
+		auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
+		{
+			v4 tl = tl_ / tl_.w;
+			v4 tr = tr_ / tr_.w;
+			v4 bl = bl_ / bl_.w;
+			v4 br = br_ / br_.w;
+			std::string str;
+			// This is the screen space view volume for a light-camera looking at 'face' of the frustum
+			pr::ldr::LineBox("view_volume", 0xFFFFFFFF, pr::v4(0,0,0.5f,1), pr::v4(2,2,1,0), str);
+			pr::ldr::Box("tl", 0xFFFF0000, tl, 0.04f, str);
+			pr::ldr::Box("tr", 0xFF00FF00, tr, 0.04f, str);
+			pr::ldr::Box("bl", 0xFF0000FF, bl, 0.04f, str);
+			pr::ldr::Box("br", 0xFFFFFF00, br, 0.04f, str);
+			pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
+			pr::ldr::Write(str, "d:/dump/smap_proj_screen.ldr");
+		};
+		auto Frust = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
+		{
+			std::string str;
+			pr::ldr::Frustum("shadow_frustum", 0xffffffff, shadow_frustum, c2w * Translation4x4(0,0,-shadow_frustum.ZDist()), str);
+			pr::ldr::Rect("obj", 0xFFFF00FF, 3, 2, 2, true, pr::m4x4Identity, str);
+			pr::ldr::Box("tl", 0xFFFF0000, tl_, 0.04f, str);
+			pr::ldr::Box("tr", 0xFF00FF00, tr_, 0.04f, str);
+			pr::ldr::Box("bl", 0xFF0000FF, bl_, 0.04f, str);
+			pr::ldr::Box("br", 0xFFFFFF00, br_, 0.04f, str);
+			pr::ldr::Line("l", 0xFFA0A0E0, bl_, tr_, str);
+			pr::ldr::Line("l", 0xFFA0A0E0, br_, tl_, str);
+			pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
+			pr::ldr::Write(str, "d:/dump/smap_proj_frust.ldr");
+		};
+		#endif
+
+		// TL,TR,BL,BR below refer to the corners of a quad that, for the first four faces,
+		// has the camera position in the centre with two points in front of the camera and
+		// two behind. (Note: in front of the camera means down the -z axis). We only care
+		// about the wedge on the quad that goes from the camera to the two corners positioned
+		// in front of the camera.
+		float sign_z[4] =
+		{
+			pr::SignF(face==1||face==3),
+			pr::SignF(face==0||face==3),
+			pr::SignF(face==1||face==2),
+			pr::SignF(face==0||face==2),
+		};
+
+		// Get the corners of the plane that will be the far clip plane (in world space).
+		// Note, the non-far plane faces of the frustum will actually result in a left
+		// handed projection because I'm just reflecting the verts through the z-plane.
+		// To compensate for this, the geometry shader reverses the winding order of the
+		// faces. The reason for doing this is to simplify texture lookup, pixels on the
+		// left of the screen will be on the left of the texture, rather than on the right.
+		v4 fdim = shadow_frustum.Dim();
+		v4 tl, TL, tr, TR, bl, BL, br, BR;
+		TL = c2w * v4(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
+		TR = c2w * v4( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
+		BL = c2w * v4(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
+		BR = c2w * v4( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
+		PR_EXPAND(DBG_PROJ, Frust(TL,TR,BL,BR,light.m_direction));
+
+		w2s = m4x4Zero;
+
+		// Get the frustum normal for 'face'
+		pr::v4 ws_norm = c2w * shadow_frustum.Normal(face);
+
+		// Construct the projection transform based on the light type
+		switch (light.m_type)
+		{
+		case ELight::Directional:
+			{
+				// The surface must face the light source
+				if (pr::Dot3(light.m_direction, ws_norm) >= 0)
+					return false;
+
+				// This is a parallel projection, so it doesn't matter where we "position"
+				// the light-camera. On the projection plane with the far plane at 0.0f and
+				// the near plane at -max_range is as good as anywhere.
+
+				// Create a light to world transform.
+				auto centre = (TL + TR + BL + BR) * 0.25f;
+				auto lt2w = m4x4::LookAt(centre, centre + light.m_direction, Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
+				w2s = InvertFast(lt2w);
+
+				// Create an orthographic projection
+				auto lt2s = m4x4::ProjectionOrthographic(1.0f, 1.0f, -max_range, 0.0f, true);
+				w2s = lt2s * w2s;
+
+				// Project the four corners of the plane
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+
+				// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
+				auto ledge = Normalise2((tl - bl).xy);
+				auto R = m4x4Identity;
+				R.x = v4( ledge.y,  ledge.x, 0, 0);
+				R.y = v4(-ledge.x,  ledge.y, 0, 0);
+				w2s = R * w2s;
+
+				// Project the four corners of the plane
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+
+				// Scale the face of the frustum into the viewport
+				auto S = m4x4::Scale(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, v4Origin);
+				w2s = S * w2s;
+
+				// Project the four corners of the plane
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+
+				// Shear to make the projected plane square
+				auto H1 = m4x4::Shear((tl.y - tr.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, v4Origin);
+				w2s = H1 * w2s;
+
+				// Shear to make the projection plane perpendicular to the light direction
+				auto H2 = m4x4::Shear(0, 0.5f*(tl.z + bl.z) - 1.0f, 0, 0.5f*(bl.z + br.z) - 1.0f, 0, 0, v4Origin);
+				w2s = H2 * w2s;
+
+				#if DBG_PROJ
+				// Project the four corners of the plane
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+				#endif
+				return true;
+			}
+		case ELight::Spot:
+		case ELight::Point:
+			{
+				// The surface must face the light source
+				float dist_to_light = pr::Dot3(light.m_position - c2w.pos, ws_norm) + (face == 4)*shadow_frustum.ZDist();
+				if (dist_to_light <= 0)
+					return false;
+
+				// Create a light to world transform
+				// Position the light camera at the light position looking in the -frustum plane normal direction
+				auto lt2w = m4x4::LookAt(light.m_position, light.m_position - ws_norm, Parallel(ws_norm,c2w.y) ? c2w.z : c2w.y);
+				w2s = Invert(lt2w);
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+
+				// Create a perspective projection
+				float zr = 0.001f, zf = dist_to_light, zn = zf*zr;
+				auto lt2s = m4x4::ProjectionPerspective(tl.x*zr, tr.x*zr, tl.y*zr, bl.y*zr, zn, zf, true);
+				w2s = lt2s * w2s;
+
+				#if DBG_PROJ
+				// Project the four corners of the plane
+				tl = w2s * TL;
+				tr = w2s * TR;
+				bl = w2s * BL;
+				br = w2s * BR;
+				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
+				#endif
+				return true;
+			}
+		}
+		return false;
+		#undef DBG_PROJ
 	}
 }
 

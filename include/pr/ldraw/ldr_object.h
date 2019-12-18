@@ -523,7 +523,7 @@ namespace pr::ldr
 		void SortGroup(rdr::ESortGroup grp, char const* name = nullptr);
 
 		// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
-		rdr::ENuggetFlag LdrObject::NuggetFlags(char const* name, int index) const;
+		rdr::ENuggetFlag NuggetFlags(char const* name, int index) const;
 		void NuggetFlags(rdr::ENuggetFlag flags, bool state, char const* name, int index);
 
 		// Get/Set the nugget tint colour for this object or child objects matching 'name' (see Apply)

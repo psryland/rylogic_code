@@ -18,10 +18,11 @@ namespace pr
 	template <typename Elem>
 	class view_streambuf :public std::basic_streambuf<Elem>
 	{
-		using char_type = typename std::basic_streambuf<Elem>::char_type;
-		using int_type = typename std::basic_streambuf<Elem>::int_type;
-		using pos_type = typename std::basic_streambuf<Elem>::pos_type;
-		using off_type = typename std::basic_streambuf<Elem>::off_type;
+		using traits_type = typename view_streambuf::traits_type;
+		using char_type   = typename view_streambuf::char_type;
+		using int_type    = typename view_streambuf::int_type;
+		using pos_type    = typename view_streambuf::pos_type;
+		using off_type    = typename view_streambuf::off_type;
 
 		char_type const* m_beg;
 		char_type const* m_end;
@@ -109,16 +110,18 @@ namespace pr
 	template <typename Elem>
 	class callback_streambuf :public std::basic_streambuf<Elem>
 	{
-	public:
-
 		// Notes:
 		//  - the callback functions shouldn't throw, but return 0 bytes read/written.
 		//  - the end of the buffer is determined implicitly from the success of reading/writting.
 		//  - read/write can be null if only writing/reading respectively.
-		using char_type = typename std::basic_streambuf<Elem>::char_type;
-		using int_type = typename std::basic_streambuf<Elem>::int_type;
-		using pos_type = typename std::basic_streambuf<Elem>::pos_type;
-		using off_type = typename std::basic_streambuf<Elem>::off_type;
+
+	public:
+
+		using traits_type = typename callback_streambuf::traits_type;
+		using char_type   = typename callback_streambuf::char_type;
+		using int_type    = typename callback_streambuf::int_type;
+		using pos_type    = typename callback_streambuf::pos_type;
+		using off_type    = typename callback_streambuf::off_type;
 		static_assert(sizeof(char_type) == sizeof(uint8_t));
 
 		// Callback signature. Returns the number of characters successfully read/written.
@@ -274,8 +277,7 @@ namespace pr
 	template<typename Elem = uint8_t>
 	struct mem_istream :public std::basic_istream<Elem>
 	{
-		using base_t = typename std::basic_istream<Elem>;
-		using char_type = typename base_t::char_type;
+		using char_type = typename mem_istream::char_type;
 
 		view_streambuf<Elem> buf;
 		mem_istream(void const* data, std::size_t size)

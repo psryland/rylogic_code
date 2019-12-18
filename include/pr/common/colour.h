@@ -204,8 +204,8 @@ namespace pr
 		union
 		{	// Note: 'argb' is little endian
 			struct { uint32_t argb; };
-			struct { uint16_t gb,ar; };
-			struct { uint8_t b,g,r,a; };
+			struct { uint16_t gb, ar; };
+			struct { uint8_t b, g, r, a; };
 			// struct { uint8_t arr[4]; }; - Removed because endian order causes this to be confusing
 		};
 		#pragma warning(pop)
@@ -281,6 +281,111 @@ namespace pr
 		{
 			return Colour32(argb | 0xFF000000);
 		}
+
+		// Operators
+		friend bool operator == (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb == rhs.argb;
+		}
+		friend bool operator != (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb != rhs.argb;
+		}
+		friend bool operator <  (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb < rhs.argb;
+		}
+		friend bool operator >  (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb > rhs.argb;
+		}
+		friend bool operator <= (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb <= rhs.argb;
+		}
+		friend bool operator >= (Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.argb >= rhs.argb;
+		}
+		friend bool EqualNoA(Colour32 lhs, Colour32 rhs)
+		{
+			return lhs.a0() == rhs.a0();
+		}
+
+		friend Colour32 operator + (Colour32 lhs, Colour32 rhs)
+		{
+			return Colour32(
+				lhs.r + rhs.r,
+				lhs.g + rhs.g,
+				lhs.b + rhs.b,
+				lhs.a + rhs.a);
+		}
+		friend Colour32 operator - (Colour32 lhs, Colour32 rhs)
+		{
+			return Colour32(
+				lhs.r - rhs.r,
+				lhs.g - rhs.g,
+				lhs.b - rhs.b,
+				lhs.a - rhs.a);
+		}
+		friend Colour32 operator * (Colour32 lhs, float s)
+		{
+			return Colour32(
+				lhs.r * s,
+				lhs.g * s,
+				lhs.b * s,
+				lhs.a * s);
+		}
+		friend Colour32 operator * (float s, Colour32 rhs)
+		{
+			return rhs * s;
+		}
+		friend Colour32 operator * (Colour32 lhs, Colour32 rhs)
+		{
+			return Colour32(
+				lhs.r * rhs.r / 255,
+				lhs.g * rhs.g / 255,
+				lhs.b * rhs.b / 255,
+				lhs.a * rhs.a / 255);
+		}
+		friend Colour32 operator / (Colour32 lhs, float s)
+		{
+			assert("divide by zero" && s != 0);
+			return lhs * 1.0f / s;
+		}
+		friend Colour32 operator % (Colour32 lhs, int s)
+		{
+			assert("divide by zero" && s != 0);
+			return Colour32(
+				lhs.r % s,
+				lhs.g % s,
+				lhs.b % s,
+				lhs.a % s);
+		}
+		friend Colour32& operator += (Colour32& lhs, Colour32 rhs)
+		{
+			return lhs = lhs + rhs;
+		}
+		friend Colour32& operator -= (Colour32& lhs, Colour32 rhs)
+		{
+			return lhs = lhs - rhs;
+		}
+		friend Colour32& operator *= (Colour32& lhs, float s)
+		{
+			return lhs = lhs * s;
+		}
+		friend Colour32& operator *= (Colour32& lhs, Colour32 rhs)
+		{
+			return lhs = lhs * rhs;
+		}
+		friend Colour32& operator /= (Colour32& lhs, float s)
+		{
+			return lhs = lhs / s;
+		}
+		friend Colour32& operator %= (Colour32& lhs, int s)
+		{
+			return lhs = lhs % s;
+		}
 	};
 	static_assert(std::is_pod<Colour32>::value, "Colour32 should be a pod type");
 	static_assert(is_colour<Colour32>::value, "");
@@ -307,93 +412,6 @@ namespace pr
 	Colour32 const Colour32Yellow = { 0xFFFFFF00 };
 	Colour32 const Colour32Purple = { 0xFFFF00FF };
 	Colour32 const Colour32Gray   = { 0xFF808080 };
-	#pragma endregion
-
-	#pragma region Operators
-	inline bool operator == (Colour32 lhs, Colour32 rhs) { return lhs.argb == rhs.argb; }
-	inline bool operator != (Colour32 lhs, Colour32 rhs) { return lhs.argb != rhs.argb; }
-	inline bool operator <  (Colour32 lhs, Colour32 rhs) { return lhs.argb <  rhs.argb; }
-	inline bool operator >  (Colour32 lhs, Colour32 rhs) { return lhs.argb >  rhs.argb; }
-	inline bool operator <= (Colour32 lhs, Colour32 rhs) { return lhs.argb <= rhs.argb; }
-	inline bool operator >= (Colour32 lhs, Colour32 rhs) { return lhs.argb >= rhs.argb; }
-	inline bool EqualNoA    (Colour32 lhs, Colour32 rhs)
-	{
-		return lhs.a0() == rhs.a0();
-	}
-	inline Colour32 operator + (Colour32 lhs, Colour32 rhs)
-	{
-		return Colour32(
-			lhs.r + rhs.r,
-			lhs.g + rhs.g,
-			lhs.b + rhs.b,
-			lhs.a + rhs.a);
-	}
-	inline Colour32 operator - (Colour32 lhs, Colour32 rhs)
-	{
-		return Colour32(
-			lhs.r - rhs.r,
-			lhs.g - rhs.g,
-			lhs.b - rhs.b,
-			lhs.a - rhs.a);
-	}
-	inline Colour32 operator * (Colour32 lhs, float s)
-	{
-		return Colour32(
-			lhs.r * s,
-			lhs.g * s,
-			lhs.b * s,
-			lhs.a * s);
-	}
-	inline Colour32 operator * (float s, Colour32 rhs)
-	{
-		return rhs * s;
-	}
-	inline Colour32 operator * (Colour32 lhs, Colour32 rhs)
-	{
-		return Colour32(
-			lhs.r * rhs.r / 255,
-			lhs.g * rhs.g / 255,
-			lhs.b * rhs.b / 255,
-			lhs.a * rhs.a / 255);
-	}
-	inline Colour32 operator / (Colour32 lhs, float s)
-	{
-		assert("divide by zero" && s != 0);
-		return lhs * 1.0f/s;
-	}
-	inline Colour32 operator % (Colour32 lhs, int s)
-	{
-		assert("divide by zero" && s != 0);
-		return Colour32(
-			lhs.r % s,
-			lhs.g % s,
-			lhs.b % s,
-			lhs.a % s);
-	}
-	inline Colour32& operator += (Colour32& lhs, Colour32 rhs)
-	{
-		return lhs = lhs + rhs;
-	}
-	inline Colour32& operator -= (Colour32& lhs, Colour32 rhs)
-	{
-		return lhs = lhs - rhs;
-	}
-	inline Colour32& operator *= (Colour32& lhs, float s)
-	{
-		return lhs = lhs * s;
-	}
-	inline Colour32& operator *= (Colour32& lhs, Colour32 rhs)
-	{
-		return lhs = lhs * rhs;
-	}
-	inline Colour32& operator /= (Colour32& lhs, float s)
-	{
-		return lhs = lhs / s;
-	}
-	inline Colour32& operator %= (Colour32& lhs, int s)
-	{
-		return lhs = lhs % s;
-	}
 	#pragma endregion
 
 	#pragma region Functions
@@ -450,7 +468,7 @@ namespace pr
 		#pragma warning(disable:4201) // nameless struct/union
 		union
 		{
-			struct { float r,g,b,a; };
+			struct { float r, g, b, a; };
 			struct { v4 rgba; };
 			struct { v3 rgb; float a; };
 			struct { float arr[4]; };
@@ -462,33 +480,33 @@ namespace pr
 
 		Colour() = default;
 		Colour(float r_, float g_, float b_, float a_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps(a_,b_,g_,r_))
-		#else
-			:r(r_)
-			,g(g_)
-			,b(b_)
-			,a(a_)
-		#endif
+			#if PR_MATHS_USE_INTRINSICS
+			:vec(_mm_set_ps(a_, b_, g_, r_))
+			#else
+			: r(r_)
+			, g(g_)
+			, b(b_)
+			, a(a_)
+			#endif
 		{
 			// Note: Do not clamp values, use 'Clamp' if that's what you want
 			assert(maths::is_aligned(this));
 		}
 		Colour(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
-			:Colour(r_/255.0f, g_/255.0f, b_/255.0f, a_/255.0f)
+			:Colour(r_ / 255.0f, g_ / 255.0f, b_ / 255.0f, a_ / 255.0f)
 		{}
 		Colour(Colour32 c32)
 			:Colour(c32.r, c32.g, c32.b, c32.a)
 		{}
 		Colour(Colour32 c32, float alpha)
-			:Colour(c32.r/255.0f, c32.g/255.0f, c32.b/255.0f, alpha)
+			:Colour(c32.r / 255.0f, c32.g / 255.0f, c32.b / 255.0f, alpha)
 		{}
 		template <typename T, typename = enable_if_col<T>> Colour(T const& v)
-			:Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
+			: Colour(r_cp(v), g_cp(v), b_cp(v), a_cp(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
 		Colour(__m128 v)
-			:vec(v)
+			: vec(v)
 		{
 			assert(maths::is_aligned(this));
 		}
@@ -519,17 +537,109 @@ namespace pr
 		// Component accessors
 		Colour32 argb() const
 		{
-			return Colour32(r,g,b,a);
+			return Colour32(r, g, b, a);
 		}
 
 		// Set alpha channel
 		Colour a0() const
 		{
-			return Colour(r,g,b,0.0f);
+			return Colour(r, g, b, 0.0f);
 		}
 		Colour a1() const
 		{
-			return Colour(r,g,b,1.0f);
+			return Colour(r, g, b, 1.0f);
+		}
+
+		// Note: operators do not clamp values, use 'Clamp' if that's what you want
+		friend bool operator == (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+		}
+		friend bool operator != (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) != 0;
+		}
+		friend bool operator <  (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) < 0;
+		}
+		friend bool operator >  (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) > 0;
+		}
+		friend bool operator <= (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0;
+		}
+		friend bool operator >= (Colour const& lhs, Colour const& rhs)
+		{
+			return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0;
+		}
+		friend bool EqualNoA(Colour const& lhs, Colour const& rhs)
+		{
+			return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b;
+		}
+
+		friend Colour pr_vectorcall operator + (Colour const& lhs, Colour const& rhs)
+		{
+			return Colour(
+				lhs.r + rhs.r,
+				lhs.g + rhs.g,
+				lhs.b + rhs.b,
+				lhs.a + rhs.a);
+		}
+		friend Colour pr_vectorcall operator - (Colour const& lhs, Colour const& rhs)
+		{
+			return Colour(
+				lhs.r - rhs.r,
+				lhs.g - rhs.g,
+				lhs.b - rhs.b,
+				lhs.a - rhs.a);
+		}
+		friend Colour pr_vectorcall operator * (Colour const& lhs, float s)
+		{
+			return Colour(
+				lhs.r * s,
+				lhs.g * s,
+				lhs.b * s,
+				lhs.a * s);
+		}
+		friend Colour pr_vectorcall operator * (float s, Colour const& rhs)
+		{
+			return rhs * s;
+		}
+		friend Colour pr_vectorcall operator * (Colour const& lhs, Colour const& rhs)
+		{
+			return Colour32(
+				lhs.r * rhs.r,
+				lhs.g * rhs.g,
+				lhs.b * rhs.b,
+				lhs.a * rhs.a);
+		}
+		friend Colour pr_vectorcall operator / (Colour const& lhs, float s)
+		{
+			assert("divide by zero" && s != 0);
+			return Colour(
+				lhs.r / s,
+				lhs.g / s,
+				lhs.b / s,
+				lhs.a / s);
+		}
+		friend Colour& pr_vectorcall operator += (Colour& lhs, Colour const& rhs)
+		{
+			return lhs = lhs + rhs;
+		}
+		friend Colour& pr_vectorcall operator -= (Colour& lhs, Colour const& rhs)
+		{
+			return lhs = lhs - rhs;
+		}
+		friend Colour& pr_vectorcall operator *= (Colour& lhs, float s)
+		{
+			return lhs = lhs * s;
+		}
+		friend Colour& pr_vectorcall operator /= (Colour& lhs, float s)
+		{
+			return lhs = lhs / s;
 		}
 	};
 	static_assert(is_colour<Colour>::value, "");
@@ -560,73 +670,6 @@ namespace pr
 	Colour const ColourRed    = {1.0f, 0.0f, 0.0f, 1.0f};
 	Colour const ColourGreen  = {0.0f, 1.0f, 0.0f, 1.0f};
 	Colour const ColourBlue   = {0.0f, 0.0f, 1.0f, 1.0f};
-	#pragma endregion
-
-	#pragma region Operators
-	// Note: operators do not clamp values, use 'Clamp' if that's what you want
-	inline bool	operator == (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool	operator != (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (Colour const& lhs, Colour const& rhs)      { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline bool	EqualNoA    (Colour const& lhs, Colour const& rhs)
-	{
-		return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b;
-	}
-	inline Colour pr_vectorcall operator + (Colour const& lhs, Colour_cref rhs)
-	{
-		return Colour(
-			lhs.r + rhs.r,
-			lhs.g + rhs.g,
-			lhs.b + rhs.b,
-			lhs.a + rhs.a);
-	}
-	inline Colour pr_vectorcall operator - (Colour const& lhs, Colour_cref rhs)
-	{
-		return Colour(
-			lhs.r - rhs.r,
-			lhs.g - rhs.g,
-			lhs.b - rhs.b,
-			lhs.a - rhs.a);
-	}
-	inline Colour pr_vectorcall operator * (Colour_cref lhs, float s)
-	{
-		return Colour(
-			lhs.r * s,
-			lhs.g * s,
-			lhs.b * s,
-			lhs.a * s);
-	}
-	inline Colour pr_vectorcall operator * (float s, Colour_cref rhs)
-	{
-		return rhs * s;
-	}
-	inline Colour pr_vectorcall operator / (Colour_cref lhs, float s)
-	{
-		assert("divide by zero" && s != 0);
-		return Colour(
-			lhs.r / s,
-			lhs.g / s,
-			lhs.b / s,
-			lhs.a / s);
-	}
-	inline Colour& pr_vectorcall operator += (Colour& lhs, Colour_cref rhs)
-	{
-		return lhs = lhs + rhs;
-	}
-	inline Colour& pr_vectorcall operator -= (Colour& lhs, Colour_cref rhs)
-	{
-		return lhs = lhs - rhs;
-	}
-	inline Colour& pr_vectorcall operator *= (Colour& lhs, float s)
-	{
-		return lhs = lhs * s;
-	}
-	inline Colour& pr_vectorcall operator /= (Colour& lhs, float s)
-	{
-		return lhs = lhs / s;
-	}
 	#pragma endregion
 
 	#pragma region Functions

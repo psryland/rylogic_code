@@ -316,11 +316,6 @@ namespace pr
 	static_assert(maths::is_mat4<Mat4x4<void,void>>::value, "");
 	static_assert(std::is_pod<Mat4x4<void,void>>::value, "Should be a pod type");
 	static_assert(std::alignment_of<Mat4x4<void,void>>::value == 16, "Should be 16 byte aligned");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A,B> const;
-	#else
-	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A,B> const&;
-	#endif
 
 	// Define component accessors for pointer types
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall x_cp(m4_cref<A,B> v) { return v.x; }

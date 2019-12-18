@@ -2,7 +2,7 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/input_layout.h"

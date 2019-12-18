@@ -185,6 +185,156 @@ namespace pr
 		return i == iend;
 	}
 
+	// Absolute value
+	constexpr float Abs(float x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	constexpr double Abs(double x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	constexpr int Abs(int x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	constexpr long Abs(long x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	constexpr long long Abs(long long x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	constexpr unsigned int Abs(unsigned int x)
+	{
+		return x;
+	}
+	constexpr unsigned long Abs(unsigned long x)
+	{
+		return x;
+	}
+	constexpr unsigned long long Abs(unsigned long long x)
+	{
+		return x;
+	}
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T Abs(T x)
+	{
+		return x >= 0 ? x : -x;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Abs(T const& v)
+	{
+		auto r = v;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(r[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v4<T>> constexpr T Abs4(T const& v)
+	{
+		auto r = v;
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
+		r[2] = Abs(z_cp(r));
+		r[3] = Abs(w_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v3<T>> constexpr T Abs3(T const& v)
+	{
+		auto r = v;
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
+		r[2] = Abs(z_cp(r));
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_v2<T>> constexpr T Abs2(T const& v)
+	{
+		auto r = v;
+		r[0] = Abs(x_cp(r));
+		r[1] = Abs(y_cp(r));
+		return r;
+	}
+
+	// Absolute value of an array
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>, N> Abs(T(&v)[N])
+	{
+		std::array<std::remove_cv_t<T>, N> r = {};
+		for (int i = 0, iend = N; i != iend; ++i) r[i] = Abs(v[i]);
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>, N> Abs4(T(&v)[N])
+	{
+		std::array<std::remove_cv_t<T>, N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		r[2] = Abs(v[2]);
+		r[3] = Abs(v[3]);
+		for (int i = 4; i != N; ++i) r[i] = v[i];
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>, N> Abs3(T(&v)[N])
+	{
+		std::array<std::remove_cv_t<T>, N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		r[2] = Abs(v[2]);
+		for (int i = 3; i != N; ++i) r[i] = v[i];
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>, N> Abs2(T(&v)[N])
+	{
+		std::array<std::remove_cv_t<T>, N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		for (int i = 2; i != N; ++i) r[i] = v[i];
+		return r;
+	}
+
+	// Min/Max/Clamp
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Min(T x, T y)
+	{
+		return (x > y) ? y : x;
+	}
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Max(T x, T y)
+	{
+		return (x > y) ? x : y;
+	}
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Clamp(T x, T mn, T mx)
+	{
+		assert("[min,max] must be a positive range" && mn <= mx);
+		return (mx < x) ? mx : (x < mn) ? mn : x;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Min(T const& x, T const& y)
+	{
+		T r;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Min(x[i], y[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Max(T const& x, T const& y)
+	{
+		T r;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Max(x[i], y[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, T const& mn, T const& mx)
+	{
+		T r;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn[i], mx[i]);
+		return r;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
+	{
+		T r;
+		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn, mx);
+		return r;
+	}
+	template <typename T, typename... A> constexpr T Min(T const& x, T const& y, A&&... a)
+	{
+		return Min(Min(x, y), std::forward<A>(a)...);
+	}
+	template <typename T, typename... A> constexpr T Max(T const& x, T const& y, A&&... a)
+	{
+		return Max(Max(x, y), std::forward<A>(a)...);
+	}
+
 	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
 
 	// Floating point comparisons
@@ -431,109 +581,6 @@ namespace pr
 			: All(value, [](auto x){ return IsFinite(x); });
 	}
 
-	// Absolute value
-	constexpr float Abs(float x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr double Abs(double x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr int Abs(int x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr long Abs(long x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr long long Abs(long long x)
-	{
-		return x >= 0 ? x : -x;
-	}
-	constexpr unsigned int Abs(unsigned int x)
-	{
-		return x;
-	}
-	constexpr unsigned long Abs(unsigned long x)
-	{
-		return x;
-	}
-	constexpr unsigned long long Abs(unsigned long long x)
-	{
-		return x;
-	}
-	template <typename T, typename = maths::enable_if_arith<T>> constexpr T Abs(T v)
-	{
-		return x >= 0 ? x : -x;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Abs(T const& v)
-	{
-		auto r = v;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(r[i]);
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_v4<T>> constexpr T Abs4(T const& v)
-	{
-		auto r = v;
-		r[0] = Abs(x_cp(r));
-		r[1] = Abs(y_cp(r));
-		r[2] = Abs(z_cp(r));
-		r[3] = Abs(w_cp(r));
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_v3<T>> constexpr T Abs3(T const& v)
-	{
-		auto r = v;
-		r[0] = Abs(x_cp(r));
-		r[1] = Abs(y_cp(r));
-		r[2] = Abs(z_cp(r));
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_v2<T>> constexpr T Abs2(T const& v)
-	{
-		auto r = v;
-		r[0] = Abs(x_cp(r));
-		r[1] = Abs(y_cp(r));
-		return r;
-	}
-
-	// Absolute value of an array
-	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs(T (& v)[N])
-	{
-		std::array<std::remove_cv_t<T>,N> r = {};
-		for (int i = 0, iend = N; i != iend; ++i) r[i] = Abs(v[i]);
-		return r;
-	}
-	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs4(T (& v)[N])
-	{
-		std::array<std::remove_cv_t<T>,N> r = {};
-		r[0] = Abs(v[0]);
-		r[1] = Abs(v[1]);
-		r[2] = Abs(v[2]);
-		r[3] = Abs(v[3]);
-		for (int i = 4; i != N; ++i) r[i] = v[i];
-		return r;
-	}
-	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs3(T (& v)[N])
-	{
-		std::array<std::remove_cv_t<T>,N> r = {};
-		r[0] = Abs(v[0]);
-		r[1] = Abs(v[1]);
-		r[2] = Abs(v[2]);
-		for (int i = 3; i != N; ++i) r[i] = v[i];
-		return r;
-	}
-	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs2(T (& v)[N])
-	{
-		std::array<std::remove_cv_t<T>,N> r = {};
-		r[0] = Abs(v[0]);
-		r[1] = Abs(v[1]);
-		for (int i = 2; i != N; ++i) r[i] = v[i];
-		return r;
-	}
-
 	// Ceil
 	template <typename T, typename = maths::enable_if_arith<T>> inline T Ceil(T x)
 	{
@@ -763,11 +810,11 @@ namespace pr
 	{
 		return Sqrt(static_cast<double>(x));
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Sqrt(T const& x)
+	template <typename T, typename = maths::enable_if_vN<T>> inline T Sqrt(T const&)
 	{
 		// Sqrt is ill-defined for non-square vectors
 		// Matrices have an overload that finds the matrix whose product is 'x'.
-		static_assert(typename is_same<T, std::false_type>::value, "Sqrt is not defined for general vector types");
+		static_assert(std::is_same_v<T, std::false_type>, "Sqrt is not defined for general vector types");
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T SqrtCmp(T const& x) // Component Sqrt
 	{
@@ -981,53 +1028,6 @@ namespace pr
 	template <typename T> inline T Length(std::complex<T> const& x)
 	{
 		return Sqrt(LengthSq(x));
-	}
-
-	// Min/Max/Clamp
-	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Min(T x, T y)
-	{
-		return (x > y) ? y : x;
-	}
-	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Max(T x, T y)
-	{
-		return (x > y) ? x : y;
-	}
-	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Clamp(T x, T mn, T mx)
-	{
-		assert("[min,max] must be a positive range" && mn <= mx);
-		return (mx < x) ? mx : (x < mn) ? mn : x;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Min(T const& x, T const& y)
-	{
-		T r;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Min(x[i], y[i]);
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Max(T const& x, T const& y)
-	{
-		T r;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Max(x[i], y[i]);
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, T const& mn, T const& mx)
-	{
-		T r;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn[i], mx[i]);
-		return r;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
-	{
-		T r;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn, mx);
-		return r;
-	}
-	template <typename T, typename... A> constexpr T Min(T const& x, T const& y, A&&... a)
-	{
-		return Min(Min(x,y), std::forward<A>(a)...);
-	}
-	template <typename T, typename... A> constexpr T Max(T const& x, T const& y, A&&... a)
-	{
-		return Max(Max(x,y), std::forward<A>(a)...);
 	}
 
 	// Normalise - 2,3,4 variants scale all elements in the vector (consistent with DirectX)

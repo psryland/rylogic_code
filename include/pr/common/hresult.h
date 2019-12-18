@@ -128,7 +128,7 @@ namespace pr
 	{
 		static_assert(std::is_enum<Result>::value, "Only enum result codes should be used as ToString() for other types has a different meaning");
 
-		if (long long(result) >= 0) return true;
+		if (static_cast<long long>(result) >= 0) return true;
 		Reason() = ToString<Result>(result);
 		std::cerr << Reason();
 		return false;

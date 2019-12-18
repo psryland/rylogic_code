@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
 
-#include "audio/util/stdafx.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/midi/midi.h"
 #include "pr/audio/waves/wave_bank.h"
 

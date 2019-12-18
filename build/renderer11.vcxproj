@@ -70,7 +70,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pr/renderer11/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -85,9 +85,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pr/renderer11/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -104,9 +103,8 @@
     <ClCompile />
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pr/renderer11/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <CustomBuild>
       <AdditionalInputs>%(AdditionalInputs)</AdditionalInputs>
@@ -120,9 +118,8 @@
     <ClCompile />
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pr/renderer11/forward.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <CustomBuild>
       <AdditionalInputs>%(AdditionalInputs)</AdditionalInputs>
@@ -202,7 +199,6 @@
     <ClInclude Include="..\projects\renderer11\shaders\common.h" />
     <ClInclude Include="..\projects\renderer11\shaders\shader_forward.h" />
     <ClInclude Include="..\projects\renderer11\util\forward_private.h" />
-    <ClInclude Include="..\projects\renderer11\util\stdafx.h" />
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
     <ClCompile Include="..\projects\renderer11\render\state_block.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp" />
@@ -248,17 +244,16 @@
     <ClCompile Include="..\projects\renderer11\models\model.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_buffer.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_manager.cpp" />
-    <ClCompile Include="..\projects\renderer11\render\renderer.cpp" />
-    <ClCompile Include="..\projects\renderer11\render\scene.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\texture_manager.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\texture_loader_wic.cpp" />
-    <ClCompile Include="..\projects\renderer11\util\lock.cpp" />
-    <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
+    <ClCompile Include="..\projects\renderer11\render\renderer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\scene.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_manager.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_loader_wic.cpp" />
+    <ClCompile Include="..\projects\renderer11\util\lock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\renderer11\directxtex\DirectXTex.inl" />

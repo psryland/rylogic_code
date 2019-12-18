@@ -62,9 +62,9 @@ namespace pr::ldr
 			static UIData* get(LdrObject* obj) { return obj ? get(*obj) : nullptr; }
 		};
 		enum { ID_BTN_EXPAND = 100, ID_BTN_COLLAPSE, ID_BTN_FILTER, ID_TB_FILTER };
-		static pr::gui::FormParams Params(HWND parent)
+		static Params<> Params(HWND parent)
 		{
-			return MakeFormParams<>().wndclass(RegisterWndClass<LdrObjectManagerUI>())
+			return Form::Params<>().wndclass(RegisterWndClass<LdrObjectManagerUI>())
 				.name("ldr-object-manager").title(L"Scene Object Manager").wh(430, 380)
 				.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
 				.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))

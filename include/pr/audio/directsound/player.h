@@ -4,7 +4,7 @@
 //*********************************************
 #pragma once
 
-#include "pr/filesys/filesys.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/directsound/sound.h"
 
 namespace pr::sound
@@ -152,7 +152,7 @@ namespace pr::sound
 		// Read 'count' bytes into 'ptr'. If the source stream returns less than
 		// 'count' bytes the remaining bytes in 'ptr' are filled with zeros.
 		// Returns the number of bytes read from the source stream.
-		size_t Read(pr::uint8* ptr, size_t count)
+		size_t Read(uint8_t* ptr, size_t count)
 		{
 			size_t src_read = 0;
 			for (size_t read = 0; count != 0; ptr += read, count -= read, src_read += read)
@@ -176,21 +176,25 @@ namespace pr::sound
 	// A local buffer containing the sound file data
 	struct MemDataStream :IDataStream
 	{
-		std::vector<pr::uint8> m_data;
+		std::vector<uint8_t> m_data;
 		size_t m_pos;
 		bool m_delete_on_close;
 
 		MemDataStream(bool delete_on_close = false)
-			:m_data()
+			: m_data()
 			, m_pos(0)
 			, m_delete_on_close(delete_on_close)
 		{}
-		MemDataStream(char const* filepath, bool delete_on_close = false)
-			:m_data()
+		MemDataStream(std::filesystem::path const& filepath, bool delete_on_close = false)
+			: m_data()
 			, m_pos(0)
 			, m_delete_on_close(delete_on_close)
 		{
-			pr::filesys::FileToBuffer(filepath, m_data); // Fill 'm_data' from the file
+			// Fill 'm_data' from the file
+			m_data.resize(s_cast<size_t, true>(std::filesystem::file_size(filepath)));
+			std::ifstream file(filepath, std::ios::binary);
+			if (file.read(char_ptr(m_data.data()), m_data.size()).gcount() != static_cast<std::streamsize>(m_data.size()))
+				throw std::runtime_error(Fmt("Failed to read audio file: '%S'", filepath.c_str()));
 		}
 		size_t IDataStream_Read(void* ptr, size_t byte_size, size_t size_to_read)
 		{
@@ -199,12 +203,22 @@ namespace pr::sound
 			if (count != 0) { memcpy(ptr, &m_data[m_pos], count); m_pos += count; }
 			return count;
 		}
-		int  IDataStream_Seek(long offset, int seek_from)
+		int IDataStream_Seek(long offset, int seek_from)
 		{
-			if (seek_from == SEEK_SET) { m_pos = size_t(offset);                 return 0; }
-			if (seek_from == SEEK_CUR) { m_pos += size_t(offset);                 return 0; }
-			if (seek_from == SEEK_END) { m_pos = m_data.size() - size_t(offset); return 0; }
-			return -1;
+			switch (seek_from)
+			{
+			case SEEK_SET:
+				m_pos = size_t(offset);
+				return 0;
+			case SEEK_CUR:
+				m_pos += size_t(offset);
+				return 0;
+			case SEEK_END:
+				m_pos = m_data.size() - size_t(offset);
+				return 0;
+			default:
+				return -1;
+			}
 		}
 		long IDataStream_Tell() const
 		{

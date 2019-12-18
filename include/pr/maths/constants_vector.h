@@ -53,7 +53,7 @@ namespace pr
 	static v4 const v4ZAxis   = v4{0.0f, 0.0f, 1.0f, 0.0f};
 	static v4 const v4Origin  = v4{0.0f, 0.0f, 0.0f, 1.0f};
 
-	static v8 const v8Zero = v8{v4Zero, v4Zero};
+	static v8 const v8Zero = v8{0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f};
 
 	static quat const QuatZero     = quat{0.0f, 0.0f, 0.0f, 0.0f};
 	static quat const QuatIdentity = quat{0.0f, 0.0f, 0.0f, 1.0f};

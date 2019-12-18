@@ -82,11 +82,6 @@ namespace pr
 	static_assert(maths::is_vec<Vec8<void>>::value, "");
 	static_assert(std::is_pod<Vec8<void>>::value, "v8 must be a pod type");
 	static_assert(std::alignment_of<Vec8<void>>::value == 16, "v8 should have 16 byte alignment");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	template <typename T = void> using v8_cref = Vec8<T> const;
-	#else
-	template <typename T = void> using v8_cref = Vec8<T> const&;
-	#endif
 
 	//// Define component accessors
 	//template <typename T> inline float x_cp(v8_cref<T> v) { return v.lin.x; }

@@ -62,21 +62,21 @@ namespace pr
 		}
 
 		// Array of column vectors
-		Vec8<void> operator [](int i) const
+		v8 operator [](int i) const
 		{
 			// Note: Creating a Vec8Proxy doesn't work because by default the compiler selects the
 			// mutable overload for non-const instances, so swap-style assignments don't work.
 			assert("index out of range" && i >= 0 && i < 6);
 			return i < 3
-				? Vec8<void>{m00[i  ], m10[i  ]}
-				: Vec8<void>{m01[i-3], m11[i-3]};
+				? v8{m00[i  ], m10[i  ]}
+				: v8{m01[i-3], m11[i-3]};
 		}
-		Vec8<void> col(int i) const
+		v8 col(int i) const
 		{
 			assert("index out of range" && i >= 0 && i < 6);
 			return (*this)[i];
 		}
-		void col(int i, Vec8<void> const& rhs)
+		void col(int i, v8_cref<> rhs)
 		{
 			assert("index out of range" && i >= 0 && i < 6);
 			if (i < 3) { m00[i  ] = rhs.ang; m10[i  ] = rhs.lin; }
@@ -86,7 +86,6 @@ namespace pr
 	static_assert(maths::is_vec<Mat6x8<void,void>>::value, "");
 	static_assert(std::is_pod<Mat6x8<void,void>>::value, "m6x8 must be a pod type");
 	static_assert(std::alignment_of<Mat6x8<void, void>>::value == 16, "m6x8 should have 16 byte alignment");
-	template <typename A = void, typename B = void> using m6_cref = Mat6x8<A,B> const&;
 	
 	#pragma region Operators
 	template <typename A, typename B> inline Mat6x8<A, B> operator + (m6_cref<A,B> m)

@@ -42,9 +42,18 @@ namespace pr::maths
 			,m_count()
 		{}
 
-		uint Count() const { return m_count; }
-		Type Mean() const  { return m_mean; }
-		Type Sum() const   { return m_mean * m_count; }
+		uint Count() const
+		{
+			return m_count;
+		}
+		Type Mean() const
+		{
+			return m_mean;
+		}
+		Type Sum() const
+		{
+			return m_mean * m_count;
+		}
 
 		// Reset the average
 		void Reset()

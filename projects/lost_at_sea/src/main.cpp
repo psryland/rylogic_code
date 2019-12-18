@@ -59,9 +59,9 @@ namespace las
 		}
 
 		// Return settings for the renderer window
-		WSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
+		WSettings RdrWindowSettings(HWND hwnd)
 		{
-			return WSettings(hwnd, true, false, client_area);
+			return WSettings(hwnd);
 		}
 	};
 

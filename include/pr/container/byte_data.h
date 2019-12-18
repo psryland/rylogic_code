@@ -29,7 +29,7 @@ namespace pr
 		data.insert(data.end(), static_cast<const unsigned char*>(begin), static_cast<const unsigned char*>(end));
 		return data;
 	}
-	inline ByteCont& AppendData(ByteCont& data, void const* buffer, std::size_t buffer_size)
+	inline ByteCont& AppendData(ByteCont& data, void const* buffer, size_t buffer_size)
 	{
 		auto p = static_cast<unsigned char const*>(buffer);
 		data.insert(data.end(), p, p + buffer_size);
@@ -46,9 +46,9 @@ namespace pr
 	{
 		using value_type = unsigned char;
 
-		void*       m_ptr;
-		std::size_t m_size;
-		std::size_t m_capacity;
+		void*  m_ptr;
+		size_t m_size;
+		size_t m_capacity;
 
 		ByteData()
 			:m_ptr(0)
@@ -112,32 +112,38 @@ namespace pr
 		}
 
 		// Return the size of the data in the container in multiples of 'Type'
-		template <typename Type> std::size_t size() const
+		template <typename Type> size_t size() const
 		{
 			return m_size / sizeof(Type);
 		}
-		std::size_t size() const
+		size_t size() const
 		{
 			return m_size;
 		}
 
 		// Resize the container to contain 'new_size' multiples of 'Type'
-		template <typename Type> void resize(std::size_t new_size)
+		template <typename Type> void resize(size_t new_size)
 		{
 			resize(new_size * sizeof(Type));
 		}
-		void resize(std::size_t new_size)
+		void resize(size_t new_size)
 		{
 			if (m_capacity < new_size)
 				grow(new_size * 3 / 2);
 			m_size = new_size;
 		}
-		void resize(std::size_t new_size, unsigned char fill)
+		void resize(size_t new_size, unsigned char fill)
 		{
 			auto old_size = m_size;
 			resize(new_size);
 			if (old_size < new_size)
 				memset(begin() + old_size, fill, new_size - old_size);
+		}
+
+		// Pre-allocate space
+		void reserve(size_t new_capacity)
+		{
+			grow(new_capacity);
 		}
 
 		// Append the contents of 'rhs' to this container
@@ -155,7 +161,7 @@ namespace pr
 		{
 			push_back(&type, sizeof(type));
 		}
-		void push_back(void const* data, std::size_t size)
+		void push_back(void const* data, size_t size)
 		{
 			if (m_capacity < m_size + size)
 				grow(((m_size + size) * 3) / 2);
@@ -239,39 +245,39 @@ namespace pr
 		}
 
 		// Indexed addressing in the buffer interpreted as an array of 'Type'
-		template <typename Type> Type const& at(std::size_t index) const
+		template <typename Type> Type const& at(size_t index) const
 		{
 			return begin<Type>()[index];
 		}
-		unsigned char const& at(std::size_t index) const
+		unsigned char const& at(size_t index) const
 		{
 			return begin()[index];
 		}
-		template <typename Type> Type& at(std::size_t index)
+		template <typename Type> Type& at(size_t index)
 		{
 			return begin<Type>()[index];
 		}
-		unsigned char& at(std::size_t index)
+		unsigned char& at(size_t index)
 		{
 			return begin()[index];
 		}
 
 		// Return a reference to 'Type' at a byte offset into the container
-		template <typename Type> Type const& at_byte_ofs(std::size_t index) const
+		template <typename Type> Type const& at_byte_ofs(size_t index) const
 		{
 			return *reinterpret_cast<Type const*>(begin()[index]);
 		}
-		template <typename Type> Type& at_byte_ofs(std::size_t index)
+		template <typename Type> Type& at_byte_ofs(size_t index)
 		{
 			return *reinterpret_cast<Type*>(begin()[index]);
 		}
 
 		// Array access to bytes
-		unsigned char const& operator[](std::size_t index) const
+		unsigned char const& operator[](size_t index) const
 		{
 			return at(index);
 		}
-		unsigned char& operator[](std::size_t index)
+		unsigned char& operator[](size_t index)
 		{
 			return at(index);
 		}
@@ -281,7 +287,7 @@ namespace pr
 		unsigned char*       data()       { return begin(); }
 
 		// Streaming access
-		template <typename Type> Type const& read(std::size_t& ofs)
+		template <typename Type> Type const& read(size_t& ofs)
 		{
 			assert(ofs + sizeof(Type) <= size());
 			auto& r = at_byte_ofs<Type>(ofs);
@@ -290,7 +296,7 @@ namespace pr
 		}
 
 	private:
-		void grow(std::size_t capacity)
+		void grow(size_t capacity)
 		{
 			void* ptr = 0;
 			if (capacity > 0)

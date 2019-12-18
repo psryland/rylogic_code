@@ -82,8 +82,6 @@ namespace pr
 		static_assert(_WIN32_WINNT >= _WIN32_WINNT_WIN6, "Windows version not >= win6");
 
 		// Forwards
-		struct CtrlParams;
-		struct FormParams;
 		struct DlgTemplate;
 		struct Control;
 		struct Form;
@@ -226,7 +224,7 @@ namespace pr
 		};
 
 		// Control key state
-		enum class EControlKey
+		enum class EModifierKey
 		{
 			None   = 0,
 			LShift = 1 << 0,
@@ -445,8 +443,7 @@ namespace pr
 			throw std::exception(message.c_str());
 		}
 
-		// Initialise common controls (makes them look modern)
-		// Must be called before creating any controls
+		// Initialise common controls (makes them look modern). Must be called before creating any controls
 		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
 		{
 			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
@@ -486,7 +483,8 @@ namespace pr
 		}
 
 		// Select 'Lhs' if not void, otherwise 'Rhs'
-		template <typename Lhs, typename Rhs> using choose_non_void = typename std::conditional<!std::is_same<Lhs,void>::value, Lhs, Rhs>::type;
+		template <typename Lhs, typename Rhs>
+		using not_void_t = std::conditional_t<std::is_void_v<Lhs>, Rhs, Lhs>;
 
 		// Helper for changing the state of a variable, restoring it on destruction
 		template <typename T> struct RAII
@@ -2585,12 +2583,12 @@ namespace pr
 				:m_mem()
 				,m_item_base()
 			{}
-			template <typename TParams> DlgTemplate(TParams const& p_)
+			template <typename TParams, typename = typename TParams::this_type>
+			DlgTemplate(TParams const& p)
 				:m_mem()
 				,m_item_base()
 				,m_has_menu()
 			{
-				auto const& p = p_.params;
 				m_has_menu = p.m_menu != nullptr;  // m_menu just has to be non-null
 
 				// In a standard template for a dialog box, the DLGTEMPLATE structure is always immediately followed
@@ -2690,13 +2688,12 @@ namespace pr
 			}
 
 			// Add a control to the template
-			template <typename TParams>
-			DlgTemplate& Add(TParams const& p_, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
+			template <typename TParams, typename = typename TParams::this_type>
+			DlgTemplate& Add(TParams const& p, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
 			{
 				// In a standard template for a dialog box, the DLGITEMTEMPLATE structure is always immediately followed by three
 				// variable-length arrays specifying the class, title, and creation data for the control. Each array consists of
 				// one or more 16-bit elements.
-				auto const& p = p_.params;
 
 				// Each DLGITEMTEMPLATE structure in the template must be aligned on a DWORD boundary. The class and title arrays
 				// must be aligned on WORD boundaries. The creation data array must be aligned on a WORD boundary.
@@ -2827,18 +2824,22 @@ namespace pr
 		#pragma region CreateParams
 
 		// Notes:
-		//  All controls should be designed for 96x96 DPI, controls auto scale to the system DPI (no per-monitor support yet)
-		//  All controls use the DEFAULT_GUI_FONT, this ensures auto scaling works properly.
-		//
-		// 'ThisParams' types should use simple class inheritance of 'BaseParams'
-		// 'MakeThisParams' types should inherit the associated base 'MakeBaseParams'
-		// 'TParams' is the 'ThisParams' type
-		// 'Derived' should be left as void
-		// The inherited base class should be: MakeBaseParams<TParams, choose_non_void<Derived, MakeThisParams<>>>
+		//  - 'Derived' should be the type at the bottom of the inheritance hierarchy subclassed from 'CtrlParams' (i.e. CRTP).
+		//      e.g.
+		//         struct CustomParams :CtrlParams<CustomParams> {};
+		//  - If you're implementing a parameters type that may be further subclassed, use this pattern:
+		//     e.g.
+		//         template <typename Derived = void>
+		//         struct CustomParams :CtrlParams<not_void_t<Derived, CustomParams<Derived>> {};
+		//     This forwards the derived type to the base class, or uses 'CustomParams'
+		//     automatically if CustomParams has not been subclassed.
 
 		// Control parameters
+		template <typename Derived = void>
 		struct CtrlParams
 		{
+			using this_type = typename not_void_t<Derived, CtrlParams<Derived>>;
+
 			char              m_name[64];       // A name for the control. Mainly for debugging
 			HINSTANCE         m_hinst;          // The owning module handle
 			wchar_t const*    m_wcn;            // Window class name
@@ -2866,6 +2867,9 @@ namespace pr
 			Rect              m_margin;         // Stored as an addition to the bounding rect (i.e. negative l,t)
 			Rect              m_padding;        // Stored as an addition to the bounding rect (i.e. negative r,b)
 			MinMaxInfo        m_min_max_info;   // The size limits on the control
+
+			// Parameter copy static function - prevents all derived types needing to overload a virtual clone function
+			this_type* (*clone)(this_type const&);
 
 			CtrlParams()
 				:m_name()
@@ -2897,13 +2901,26 @@ namespace pr
 				,m_margin(-0, -0, 0, 0)
 				,m_padding()
 				,m_min_max_info()
+				,clone(Clone)
 			{}
 			virtual ~CtrlParams() {}
-
-			// Allocate a new copy of these parameters
-			virtual CtrlParams* clone() const
+			template <typename TParams> TParams const& as() const
 			{
-				return new CtrlParams(*this);
+				using param_type = typename TParams::this_type;
+				return *reinterpret_cast<param_type const*>(this);
+			}
+			template <typename TParams> TParams& as()
+			{
+				using param_type = typename TParams::this_type;
+				return *reinterpret_cast<param_type*>(this);
+			}
+			static this_type* Clone(this_type const& p)
+			{
+				return new this_type(p);
+			}
+			this_type& me()
+			{
+				return *static_cast<this_type*>(this);
 			}
 
 			// Return the window class ATOM
@@ -2923,11 +2940,233 @@ namespace pr
 			{
 				return !AllSet(m_style, WS_CHILD);
 			}
+
+			// Fluent initialisation
+			this_type& name(char const* n)
+			{
+				StrCopy(m_name, n);
+				return me();
+			}
+			this_type& hinst(HINSTANCE i)
+			{
+				m_hinst = i;
+				return me();
+			}
+			this_type& wndclass(wchar_t const* wcn)
+			{
+				m_wcn = wcn;
+				return me();
+			}
+			this_type& wndclass(WndClassEx const& wci)
+			{
+				m_wci = &wci;
+				return me();
+			}
+			this_type& wndclass(nullptr_t)
+			{
+				m_wci = nullptr;
+				m_wcn = nullptr;
+				return me();
+			}
+			this_type& text(wchar_t const* t)
+			{
+				m_text = t ? t : L"";
+				return me();
+			}
+			this_type& dpi(gdi::PointF dpi)
+			{
+				m_dpi = dpi;
+				return me();
+			}
+			this_type& dlu() // Dialog units
+			{
+				// Note: If you're transferring a resource dialog to code, this scaling factor assumes
+				// the dialog resource uses 'MS Shell Dlg (8)'. If not, then the scaling factor will be different
+				m_client_wh = true;
+				return dpi(gdi::PointF(4 * 96 / 6.0f, 8 * 96 / 13.0f));
+			}
+			this_type& xy(int x, int y)
+			{
+				m_x = x;
+				m_y = y;
+				return me();
+			}
+			this_type& w(int w_)
+			{
+				return wh(w_, m_h, m_client_wh);
+			}
+			this_type& h(int h_)
+			{
+				return wh(m_w, h_, m_client_wh);
+			}
+			this_type& wh(int w, int h)
+			{
+				return wh(w, h, m_client_wh);
+			}
+			this_type& wh(int w, int h, bool client)
+			{
+				m_w = w;
+				m_h = h;
+				m_client_wh = client;
+				return me();
+			}
+			this_type& id(int id_)
+			{
+				m_id = id_;
+				return me();
+			}
+			this_type& parent(WndRef p)
+			{
+				m_parent = p;
+				return me();
+			}
+			this_type& anchor(EAnchor a)
+			{
+				m_anchor = a;
+				return me();
+			}
+			this_type& dock(EDock d)
+			{
+				m_dock = d;
+				return me();
+			}
+			this_type& style(char op, DWORD s)
+			{
+				switch (op)
+				{
+				case '=': m_style = s; break;
+				case '+': m_style |= s; break;
+				case '-': m_style &= ~s; break;
+				}
+				return me();
+			}
+			this_type& style_ex(char op, DWORD s)
+			{
+				switch (op)
+				{
+				case '=': m_style_ex = s; break;
+				case '+': m_style_ex |= s; break;
+				case '-': m_style_ex &= ~s; break;
+				}
+				return me();
+			}
+			this_type& menu(Menu::ItemList const& items)
+			{
+				m_menu.m_handle = Menu(Menu::EKind::Strip, items, false);
+				return me();
+			}
+			this_type& menu(ResId<HMENU> m)
+			{
+				m_menu = m;
+				return me();
+			}
+			this_type& icon(ResId<HICON> i)
+			{
+				return icon_sm(i).icon_bg(i);
+			}
+			this_type& icon_bg(ResId<HICON> i)
+			{
+				m_icon_bg = i;
+				return me();
+			}
+			this_type& icon_sm(ResId<HICON> i)
+			{
+				m_icon_sm = i;
+				return me();
+			}
+			this_type& fr_col(COLORREF c)
+			{
+				assert((c & 0xFF000000) == 0 && "Don't use alpha");
+				m_colour_fore = c;
+				return me();
+			}
+			this_type& bk_col(COLORREF c)
+			{
+				assert((c & 0xFF000000) == 0 && "Don't use alpha");
+				m_colour_back = c;
+				return me();
+			}
+			this_type& selectable(bool on = true)
+			{
+				m_selectable = on;
+				return me();
+			}
+			this_type& allow_drop(bool on = true)
+			{
+				m_allow_drop = on;
+				return me();
+			}
+			this_type& border(bool on = true)
+			{
+				return style(on ? '+' : '-', WS_BORDER);
+			}
+			this_type& visible(bool yes = true)
+			{
+				return style(yes ? '+' : '-', WS_VISIBLE);
+			}
+			this_type& dbl_buffer(bool yes = true)
+			{
+				m_dbl_buffer = yes;
+				return me();
+			}
+			this_type& init_param(void* ip)
+			{
+				m_init_param = ip;
+				return me();
+			}
+			this_type& margin(int m)
+			{
+				return margin(m, m, m, m);
+			}
+			this_type& margin(int lr, int tb)
+			{
+				return margin(lr, tb, lr, tb);
+			}
+			this_type& margin(int l, int t, int r, int b)
+			{
+				m_margin = Rect(-l, -t, r, b);
+				return me();
+			}
+			this_type& padding(int p)
+			{
+				return padding(p, p, p, p);
+			}
+			this_type& padding(int lr, int tb)
+			{
+				return padding(lr, tb, lr, tb);
+			}
+			this_type& padding(int l, int t, int r, int b)
+			{
+				m_padding = Rect(l, t, -r, -b);
+				return me();
+			}
+			this_type& size_min(int w, int h)
+			{
+				m_min_max_info.m_mask |= MinMaxInfo::EMask::MinTrackSize;
+				m_min_max_info.ptMinTrackSize.x = w;
+				m_min_max_info.ptMinTrackSize.y = h;
+				return me();
+			}
+			this_type& size_max(int w, int h)
+			{
+				m_min_max_info.m_mask |= MinMaxInfo::EMask::MaxTrackSize;
+				m_min_max_info.ptMaxTrackSize.x = w;
+				m_min_max_info.ptMaxTrackSize.y = h;
+				return me();
+			}
+			this_type& resizeable(bool yes = true)
+			{
+				return style(yes ? '+' : '-', WS_THICKFRAME);
+			}
 		};
 
 		// Form parameters
-		struct FormParams :CtrlParams
+		template <typename Derived = void>
+		struct FormParams :CtrlParams<not_void_t<Derived, FormParams<Derived>>>
 		{
+			using this_type = typename FormParams::this_type;
+			using base_type = typename CtrlParams<not_void_t<Derived, FormParams<Derived>>>;
+
 			EStartPosition     m_start_pos;     // Where the form should
 			DlgTemplate const* m_templ;         // A dialog template for creating dialogs without a resource
 			MessageLoop*       m_msg_loop;      // The thread message pump
@@ -2938,8 +3177,7 @@ namespace pr
 			bool               m_pin_window;    // True if this form moves with it's parent
 
 			FormParams()
-				:CtrlParams()
-				,m_start_pos    (EStartPosition::Default)
+				:m_start_pos    (EStartPosition::Default)
 				,m_templ        ()
 				,m_msg_loop     ()
 				,m_accel        ()
@@ -2948,371 +3186,113 @@ namespace pr
 				,m_hide_on_close(false)
 				,m_pin_window   (false)
 			{
-				m_style = DefaultFormStyle;
-				m_style_ex = DefaultFormStyleEx;
+				this->m_style = DefaultFormStyle;
+				this->m_style_ex = DefaultFormStyleEx;
 
 				// Default start position and size
-				m_x = CW_USEDEFAULT;
-				m_y = CW_USEDEFAULT;
-				m_w = CW_USEDEFAULT;
-				m_h = CW_USEDEFAULT;
+				this->m_x = CW_USEDEFAULT;
+				this->m_y = CW_USEDEFAULT;
+				this->m_w = CW_USEDEFAULT;
+				this->m_h = CW_USEDEFAULT;
 
-				m_text = L"Form";
-				m_main_wnd = true;
-				m_padding = Rect(8,8,-8,-8);
+				this->m_text = L"Form";
+				this->m_main_wnd = true;
+				this->m_padding = Rect(8,8,-8,-8);
 			}
-
-			// Allocate a new copy of these parameters
-			FormParams* clone() const override
+			this_type& dlg()
 			{
-				return new FormParams(*this);
+				// Default dialog parameters
+				return main_wnd(false).wh(640, 480).style('=', DefaultDialogStyle).style_ex('=', DefaultDialogStyleEx).dlg_behaviour();
+			}
+			this_type& parent(WndRef p)
+			{
+				m_main_wnd &= p.hwnd() == nullptr;
+				return base_type::parent(p);
+			}
+			this_type& xy(int x, int y)
+			{
+				m_start_pos = EStartPosition::Manual;
+				return base_type::xy(x, y);
+			}
+			this_type& title(wchar_t const* t)
+			{
+				return this->text(t).style('+', WS_CAPTION);
+			}
+			this_type& start_pos(EStartPosition pos)
+			{
+				m_start_pos = pos;
+				return this->me();
+			}
+			this_type& templ(DlgTemplate const& t)
+			{
+				m_templ = t.valid() ? &t : nullptr;
+				return this->me();
+			}
+			this_type& msg_loop(MessageLoop* ml)
+			{
+				m_msg_loop = ml;
+				return this->me();
+			}
+			this_type& accel(ResId<HACCEL> a)
+			{
+				m_accel = a;
+				return this->me();
+			}
+			this_type& main_wnd(bool mw = true)
+			{
+				m_main_wnd = mw;
+				return this->me();
+			}
+			this_type& tool_window(bool on = true)
+			{
+				return style(on ? '+' : '-', WS_EX_TOOLWINDOW);
+			}
+			this_type& mdi_child(bool mdi = true)
+			{
+				return style(mdi ? '+' : '-', WS_CHILD);
+			}
+			this_type& dlg_behaviour(bool on = true)
+			{
+				m_dlg_behaviour = on;
+				return this->me();
+			}
+			this_type& hide_on_close(bool h = true)
+			{
+				m_hide_on_close = h;
+				return this->me();
+			}
+			this_type& pin_window(bool p = true)
+			{
+				m_pin_window = p;
+				this->m_anchor = p ? EAnchor::TopLeft : EAnchor::None;
+				return this->me();
 			}
 		};
 
-		// Helper wrapper for creating CtrlParams
-		template <typename TParams = CtrlParams, typename Derived = void> struct MakeCtrlParams
-		{
-			using This = choose_non_void<Derived, MakeCtrlParams<>>;
-			TParams params;
-
-			MakeCtrlParams() :params() {}
-			MakeCtrlParams(TParams const& p) :params(p) {}
-			operator CtrlParams const&() const { return params; }
-			This& me()
-			{
-				return *reinterpret_cast<This*>(this);
-			}
-			This& name(char const* n)
-			{
-				StrCopy(params.m_name, n);
-				return me();
-			}
-			This& hinst(HINSTANCE i)
-			{
-				params.m_hinst = i;
-				return me();
-			}
-			This& wndclass(wchar_t const* wcn)
-			{
-				params.m_wcn = wcn;
-				return me();
-			}
-			This& wndclass(WndClassEx const& wci)
-			{
-				params.m_wci = &wci;
-				return me();
-			}
-			This& wndclass(nullptr_t)
-			{
-				params.m_wci = nullptr;
-				params.m_wcn = nullptr;
-				return me();
-			}
-			This& text(wchar_t const* t)
-			{
-				params.m_text = t ? t : L"";
-				return me();
-			}
-			This& dpi(gdi::PointF dpi)
-			{
-				params.m_dpi = dpi;
-				return me();
-			}
-			This& dlu() // Dialog units
-			{
-				// Note: If you're transferring a resource dialog to code, this scaling factor assumes
-				// the dialog resource uses 'MS Shell Dlg (8)'. If not, then the scaling factor will be different
-				params.m_client_wh = true;
-				return dpi(gdi::PointF(4*96/6.0f, 8*96/13.0f));
-			}
-			This& xy(int x, int y)
-			{
-				params.m_x = x;
-				params.m_y = y;
-				return me();
-			}
-			This& w(int w_)
-			{
-				return wh(w_, params.m_h, params.m_client_wh);
-			}
-			This& h(int h_)
-			{
-				return wh(params.m_w, h_, params.m_client_wh);
-			}
-			This& wh(int w, int h)
-			{
-				return wh(w, h, params.m_client_wh);
-			}
-			This& wh(int w, int h, bool client)
-			{
-				params.m_w = w;
-				params.m_h = h;
-				params.m_client_wh = client;
-				return me();
-			}
-			This& id(int id_)
-			{
-				params.m_id = id_;
-				return me();
-			}
-			This& parent(WndRef p)
-			{
-				params.m_parent = p;
-				return me();
-			}
-			This& anchor(EAnchor a)
-			{
-				params.m_anchor = a;
-				return me();
-			}
-			This& dock(EDock d)
-			{
-				params.m_dock = d;
-				return me();
-			}
-			This& style(char op, DWORD s)
-			{
-				switch (op) {
-				case '=': params.m_style = s; break;
-				case '+': params.m_style |= s; break;
-				case '-': params.m_style &= ~s; break;
-				}
-				return me();
-			}
-			This& style_ex(char op, DWORD s)
-			{
-				switch (op) {
-				case '=': params.m_style_ex = s; break;
-				case '+': params.m_style_ex |= s; break;
-				case '-': params.m_style_ex &= ~s; break;
-				}
-				return me();
-			}
-			This& menu(Menu::ItemList const& items)
-			{
-				params.m_menu.m_handle = Menu(Menu::EKind::Strip, items, false);
-				return me();
-			}
-			This& menu(ResId<HMENU> m)
-			{
-				params.m_menu = m;
-				return me();
-			}
-			This& icon(ResId<HICON> i)
-			{
-				return icon_sm(i).icon_bg(i);
-			}
-			This& icon_bg(ResId<HICON> i)
-			{
-				params.m_icon_bg = i;
-				return me();
-			}
-			This& icon_sm(ResId<HICON> i)
-			{
-				params.m_icon_sm = i;
-				return me();
-			}
-			This& fr_col(COLORREF c)
-			{
-				assert((c & 0xFF000000) == 0 && "Don't use alpha");
-				params.m_colour_fore = c;
-				return me();
-			}
-			This& bk_col(COLORREF c)
-			{
-				assert((c & 0xFF000000) == 0 && "Don't use alpha");
-				params.m_colour_back = c;
-				return me();
-			}
-			This& selectable(bool on = true)
-			{
-				params.m_selectable = on;
-				return me();
-			}
-			This& allow_drop(bool on = true)
-			{
-				params.m_allow_drop = on;
-				return me();
-			}
-			This& border(bool on = true)
-			{
-				return style(on?'+':'-', WS_BORDER);
-			}
-			This& visible(bool yes = true)
-			{
-				return style(yes?'+':'-', WS_VISIBLE);
-			}
-			This& dbl_buffer(bool yes = true)
-			{
-				params.m_dbl_buffer = yes;
-				return me();
-			}
-			This& init_param(void* ip)
-			{
-				params.m_init_param = ip;
-				return me();
-			}
-			This& margin(int m)
-			{
-				return margin(m, m, m, m);
-			}
-			This& margin(int lr, int tb)
-			{
-				return margin(lr, tb, lr, tb);
-			}
-			This& margin(int l, int t, int r, int b)
-			{
-				params.m_margin = Rect(-l, -t, r, b);
-				return me();
-			}
-			This& padding(int p)
-			{
-				return padding(p, p, p, p);
-			}
-			This& padding(int lr, int tb)
-			{
-				return padding(lr, tb, lr, tb);
-			}
-			This& padding(int l, int t, int r, int b)
-			{
-				params.m_padding = Rect(l, t, -r, -b);
-				return me();
-			}
-			This& size_min(int w, int h)
-			{
-				params.m_min_max_info.m_mask |= MinMaxInfo::EMask::MinTrackSize;
-				params.m_min_max_info.ptMinTrackSize.x = w;
-				params.m_min_max_info.ptMinTrackSize.y = h;
-				return me();
-			}
-			This& size_max(int w, int h)
-			{
-				params.m_min_max_info.m_mask |= MinMaxInfo::EMask::MaxTrackSize;
-				params.m_min_max_info.ptMaxTrackSize.x = w;
-				params.m_min_max_info.ptMaxTrackSize.y = h;
-				return me();
-			}
-			This& resizeable(bool yes = true)
-			{
-				return style(yes?'+':'-', WS_THICKFRAME);
-			}
-		};
-
-		// Helper wrapper for creating FormParams
-		template <typename TParams = FormParams, typename Derived = void> struct MakeFormParams :MakeCtrlParams<TParams, choose_non_void<Derived, MakeFormParams<>>>
-		{
-			using base = MakeCtrlParams<TParams, choose_non_void<Derived, MakeFormParams<>>>;
-			using This = typename base::This;
-
-			MakeFormParams()
-			{
-				wh(800, 600).style('=',DefaultFormStyle).style_ex('=',DefaultFormStyleEx);
-			}
-			MakeFormParams(TParams const& p)
-				:base(p)
-			{}
-			operator FormParams const&() const
-			{
-				return params;
-			}
-			This& parent(WndRef p)
-			{
-				params.m_main_wnd &= p.hwnd() == nullptr;
-				return base::parent(p);
-			}
-			This& xy(int x, int y)
-			{
-				params.m_start_pos = EStartPosition::Manual;
-				return base::xy(x,y);
-			}
-			This& title(wchar_t const* t)
-			{
-				return text(t).style('+',WS_CAPTION);
-			}
-			This& start_pos(EStartPosition pos)
-			{
-				params.m_start_pos = pos;
-				return me();
-			}
-			This& templ(DlgTemplate const& t)
-			{
-				params.m_templ = t.valid() ? &t : nullptr;
-				return me();
-			}
-			This& msg_loop(MessageLoop* ml)
-			{
-				params.m_msg_loop = ml;
-				return me();
-			}
-			This& accel(ResId<HACCEL> a)
-			{
-				params.m_accel = a;
-				return me();
-			}
-			This& main_wnd(bool mw = true)
-			{
-				params.m_main_wnd = mw;
-				return me();
-			}
-			This& tool_window(bool on = true)
-			{
-				return style(on?'+':'-', WS_EX_TOOLWINDOW);
-			}
-			This& mdi_child(bool mdi = true)
-			{
-				return style(mdi?'+':'-', WS_CHILD);
-			}
-			This& dlg_behaviour(bool on = true)
-			{
-				params.m_dlg_behaviour = on;
-				return me();
-			}
-			This& hide_on_close(bool h = true)
-			{
-				params.m_hide_on_close = h;
-				return me();
-			}
-			This& pin_window(bool p = true)
-			{
-				params.m_pin_window = p;
-				params.m_anchor = p ? EAnchor::TopLeft : EAnchor::None;
-				return me();
-			}
-		};
-
-		// Parameters for creating modal dialogs
-		template <typename TParams = FormParams, typename Derived = void> struct MakeDlgParams :MakeFormParams<TParams, choose_non_void<Derived, MakeDlgParams<>>>
-		{
-			using base = MakeFormParams<TParams, choose_non_void<Derived, MakeDlgParams<>>>;
-			MakeDlgParams()
-			{
-				main_wnd(false).wh(640, 480).style('=',DefaultDialogStyle).style_ex('=',DefaultDialogStyleEx).dlg_behaviour();
-			}
-			MakeDlgParams(TParams const& p)
-				:base(p)
-			{}
-		};
 		#pragma endregion
 
 		#pragma region Control
 		// Base class for all windows/controls
 		struct Control
 		{
+			// Notes:
+			//  - All controls should be designed for 96x96 DPI, controls auto scale to the system DPI (no per-monitor support yet)
+			//  - All controls use the DEFAULT_GUI_FONT, this ensures auto scaling works properly.
+
 			// These are here to import the types within Control
 			using EAnchor        = pr::gui::EAnchor;
 			using EDock          = pr::gui::EDock;
 			using EDialogResult  = pr::gui::EDialogResult;
 			using EStartPosition = pr::gui::EStartPosition;
-			using Controls       = std::vector<Control*>;
 			using WndRef         = pr::gui::WndRef;
-			using CtrlParams     = pr::gui::CtrlParams;
-			using Params         = pr::gui::MakeCtrlParams<>;
+			using Controls       = std::vector<Control*>;
 
-			template <typename Lhs, typename Rhs> using choose_non_void = pr::gui::choose_non_void<Lhs,Rhs>;
-			template <typename P = CtrlParams, typename D = void> using MakeCtrlParams = pr::gui::MakeCtrlParams<P, D>;
-			template <typename P = FormParams, typename D = void> using MakeFormParams = pr::gui::MakeFormParams<P, D>;
-			template <typename P = FormParams, typename D = void> using MakeDlgParams  = pr::gui::MakeDlgParams<P, D>;
-			template <typename P> using Ptr = std::unique_ptr<P>;
+			template <typename Lhs, typename Rhs>
+			using not_void_t = pr::gui::not_void_t<Lhs, Rhs>;
+			template <typename Derived = void>
+			using Params = CtrlParams<Derived>;
+			template <typename P>
+			using Ptr = std::unique_ptr<P>;
 
 			decltype(std::placeholders::_1) const _1{};
 			decltype(std::placeholders::_2) const _2{};
@@ -3352,7 +3332,7 @@ namespace pr
 		protected:
 			using BtnDownMap = std::unordered_map<EMouseKey, LONG>;
 
-			Ptr<CtrlParams>    m_cp;              // Initial creation parameters for the control
+			Ptr<Params<>>      m_cp;              // Initial creation parameters for the control
 			HWND               m_hwnd;            // Window handle for the control
 			WndRef             m_parent;          // The parent that contains this control, or owner form
 			Controls           m_child;           // The controls nested with this control
@@ -3378,8 +3358,11 @@ namespace pr
 			Control* this_; // Use to prevent the 'this' used in base member initializer list' warning
 
 			// Create the control
-			Control() :Control(CtrlParams()) {}
-			Control(CtrlParams const& p)
+			Control()
+				:Control(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Control(TParams const& p)
 				:m_cp()
 				,m_hwnd()
 				,m_parent()
@@ -3408,7 +3391,7 @@ namespace pr
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
 
 				// Save the creation parameters
-				SaveParams(p);
+				SaveParams(p.as<Params<>>());
 
 				// Record the parent
 				Parent(p.m_parent);
@@ -3416,7 +3399,7 @@ namespace pr
 
 			// Allow construction from existing handle
 			Control(HWND hwnd)
-				:Control(MakeCtrlParams<>()
+				:Control(Params<>()
 					.id(::GetDlgCtrlID(hwnd))
 					.style('=', cast<DWORD>(::GetWindowLongPtrW(hwnd, GWL_STYLE)))
 					.style_ex('=', cast<DWORD>(::GetWindowLongPtrW(m_hwnd, GWL_EXSTYLE)))
@@ -3425,7 +3408,6 @@ namespace pr
 				m_handle_only = true;
 				m_hwnd = hwnd;
 			}
-
 			virtual ~Control()
 			{
 				if (!m_handle_only)
@@ -3458,9 +3440,13 @@ namespace pr
 			}
 
 			// The parameters used to create this control (but updated to the current state)
-			template <typename TParams = CtrlParams> TParams& cp() const
+			template <typename TParams = Params<>> TParams const& cp() const
 			{
-				return static_cast<TParams&>(*m_cp);
+				return m_cp->as<TParams>();
+			}
+			template <typename TParams = Params<>> TParams& cp()
+			{
+				return m_cp->as<TParams>();
 			}
 
 			// Create this control. If the control has a parent, then creation starts with the 
@@ -3495,7 +3481,7 @@ namespace pr
 			}
 
 			// Create the hwnd for this control.
-			virtual void Create(CtrlParams const& p_)
+			virtual void Create(Params<> const& p_)
 			{
 				assert("Window handle already exists" && m_hwnd == nullptr);
 				assert("No window class given. Called p.wndclass(RegisterWndClass<>()) before create" && p_.atom() != nullptr);
@@ -3582,7 +3568,7 @@ namespace pr
 				// Determine the value to pass as the HMENU parameter in CreateWindowEx.
 				// For pop-up and overlapped windows this should be a valid menu handle or null
 				// Otherwise, it should be the id of the control being created
-				auto menu = p.top_level() ? m_menu : (HMENU() + p.m_id);
+				auto menu = p.top_level() ? static_cast<HMENU>(m_menu) : (HMENU() + p.m_id);
 
 				// Break just before a control/form is created
 				//if (strcmp(p.m_name, "ldr-measure-ui") == 0) _CrtDbgBreak();
@@ -4159,7 +4145,11 @@ namespace pr
 				{
 					auto wr = WndRefC(hwnd);
 					if (wr.ctrl() != nullptr)
+					{
 						r = r.Adjust(wr->cp().m_padding);
+						if (r.right < r.left) r.right = r.left;
+						if (r.bottom < r.top) r.bottom = r.top;
+					}
 				}
 				return r;
 			}
@@ -4385,15 +4375,15 @@ namespace pr
 			}
 
 			// Return the key state at the time of the last message
-			EControlKey KeyState() const
+			EModifierKey ModifierKeys() const
 			{
-				auto state = EControlKey::None;
-				if (::GetKeyState(VK_LSHIFT  ) & 0x8000) state = state | EControlKey::LShift;
-				if (::GetKeyState(VK_RSHIFT  ) & 0x8000) state = state | EControlKey::RShift;
-				if (::GetKeyState(VK_LCONTROL) & 0x8000) state = state | EControlKey::LCtrl;
-				if (::GetKeyState(VK_RCONTROL) & 0x8000) state = state | EControlKey::RCtrl;
-				if (::GetKeyState(VK_LMENU   ) & 0x8000) state = state | EControlKey::LAlt;
-				if (::GetKeyState(VK_RMENU   ) & 0x8000) state = state | EControlKey::RAlt;
+				auto state = EModifierKey::None;
+				if (::GetKeyState(VK_LSHIFT  ) & 0x8000) state = state | EModifierKey::LShift;
+				if (::GetKeyState(VK_RSHIFT  ) & 0x8000) state = state | EModifierKey::RShift;
+				if (::GetKeyState(VK_LCONTROL) & 0x8000) state = state | EModifierKey::LCtrl;
+				if (::GetKeyState(VK_RCONTROL) & 0x8000) state = state | EModifierKey::RCtrl;
+				if (::GetKeyState(VK_LMENU   ) & 0x8000) state = state | EModifierKey::LAlt;
+				if (::GetKeyState(VK_RMENU   ) & 0x8000) state = state | EModifierKey::RAlt;
 				return state;
 			}
 			bool KeyState(int vk_key) const
@@ -4553,43 +4543,32 @@ namespace pr
 				switch (message)
 				{
 				case WM_GETCTRLPTR:
-					#pragma region
 					{
 						return LRESULT(this);
 					}
-					#pragma endregion
 				case WM_CREATE:
-					#pragma region
 					{
 						OnCreate(*rcast<CreateStruct const*>(lparam));
 						if (wparam) return S_OK; // 'wparam != 0' indicates 'WM_CREATE' is being called manually so don't pass to DefWndProc
 						break;
 					}
-					#pragma endregion
 				case WM_DESTROY:
-					#pragma region
 					{
 						OnDestroy();
 						Detach();
 						break;
 					}
-					#pragma endregion
 				case WM_ACTIVATE:
-					#pragma region
 					{
 						UpdateWindow(*this);
 						break;
 					}
-					#pragma endregion
 				case WM_ERASEBKGND:
-					#pragma region
 					{
 						// Always prevent erase background. It results in flickering.
 						return S_FALSE;
 					}
-					#pragma endregion
 				case WM_PAINT:
-					#pragma region
 					{
 						// Notes:
 						//  Only create a pr::gui::PaintStruct if you intend to do all the painting yourself,
@@ -4605,7 +4584,8 @@ namespace pr
 						// The Border is part of the non-client area of the control.
 
 						// Create arguments for the paint event
-						PaintEventArgs args(m_hwnd, HDC(wparam), m_brush_back != nullptr ? m_brush_back : m_wci.hbrBackground);
+						auto back_brush = m_brush_back != nullptr ? m_brush_back : Brush(m_wci.hbrBackground);
+						PaintEventArgs args(m_hwnd, HDC(wparam), back_brush);
 
 						// If double buffering, do all drawing in a memory DC
 						if (cp().m_dbl_buffer)
@@ -4671,10 +4651,8 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				case WM_WINDOWPOSCHANGING:
 				case WM_WINDOWPOSCHANGED:
-					#pragma region
 					{
 						// WM_WINDOWPOSCHANGING/ED is sent to a form/control when it is resized using SetWindowPos (or similar).
 						// It is not recursive, i.e. if a window is resized, then only that window receives the WM_WINDOWPOSCHANGED
@@ -4763,9 +4741,7 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				case WM_GETMINMAXINFO:
-					#pragma region
 					{
 						auto& a = *reinterpret_cast<MinMaxInfo*>(lparam);
 						auto& b = cp().m_min_max_info;
@@ -4775,10 +4751,8 @@ namespace pr
 						if ((b.m_mask & MinMaxInfo::EMask::MaxTrackSize) != 0) a.ptMaxTrackSize = b.ptMaxTrackSize; else b.ptMaxTrackSize = a.ptMaxTrackSize;
 						break;
 					}
-					#pragma endregion
 				case WM_KEYDOWN:
 				case WM_KEYUP:
-					#pragma region
 					{
 						// Key down/up is sent to the window that has keyboard focus. Typically this is a text
 						// box, etc. However, if the window has focus but no controls with keyboard focus, the
@@ -4804,9 +4778,7 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
 				case WM_COMMAND:
-					#pragma region
 					{
 						// WM_COMMAND, when sent from a button, is sent to the parent control/window.
 						// Typically this would be a Form but it can be any container control such as Panel,GroupBox.
@@ -4817,7 +4789,6 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
 				case WM_LBUTTONDOWN:
 				case WM_RBUTTONDOWN:
 				case WM_MBUTTONDOWN:
@@ -4826,7 +4797,6 @@ namespace pr
 				case WM_RBUTTONUP:
 				case WM_MBUTTONUP:
 				case WM_XBUTTONUP:
-					#pragma region
 					{
 						Point pt(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
@@ -4852,9 +4822,7 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
 				case WM_MOUSEWHEEL:
-					#pragma region
 					{
 						auto pt = PointToClient(Point(lparam));
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
@@ -4866,9 +4834,7 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
 				case WM_MOUSEMOVE:
-					#pragma region
 					{
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
@@ -4879,9 +4845,7 @@ namespace pr
 
 						break;
 					}
-					#pragma endregion
 				case WM_MOUSEACTIVATE:
-					#pragma region
 					{
 						if (cp().m_selectable)
 						{
@@ -4890,9 +4854,7 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				case WM_DROPFILES:
-					#pragma region
 					{
 						// Remember to call 'AllowDrop()' on this control
 
@@ -4914,7 +4876,6 @@ namespace pr
 						OnDropFiles(drop);
 						return true;
 					}
-					#pragma endregion
 				}
 				return DefWndProc(message, wparam, lparam);
 			}
@@ -4944,7 +4905,6 @@ namespace pr
 				switch (message)
 				{
 				case WM_INITDIALOG:
-					#pragma region
 					{
 						// When the parent dialog is initialising (i.e. it's received this WM_INITDIALOG message and
 						// forwarded it on to this child control), make sure the WndProc is set.
@@ -4968,9 +4928,7 @@ namespace pr
 						}
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
-					#pragma endregion
 				case WM_DESTROY:
-					#pragma region
 					{
 						// Notify children of the WM_DESTROY before destroying this window so that destruction
 						// occurs from leaves to root of the control tree
@@ -4984,29 +4942,23 @@ namespace pr
 						// Allow WM_DESTROY to be passed to the parent window's WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_WINDOWPOSCHANGED:
-					#pragma region
 					{
 						// See the notes in Control::WndProc for this message
 						return false;
 					}
-					#pragma endregion
 				case WM_TIMER:
-					#pragma region
 					{
 						// Timer event, forwarded to all child controls
 						auto event_id = UINT_PTR(wparam);
 						OnTimer(TimerEventArgs(event_id));
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
-					#pragma endregion
 				case WM_CTLCOLORSTATIC:
 				case WM_CTLCOLORBTN:
 				case WM_CTLCOLOREDIT:
 				case WM_CTLCOLORLISTBOX:
 				case WM_CTLCOLORSCROLLBAR:
-					#pragma region
 					{
 						// WM_CTLCOLORDLG is sent to the dialog itself, all other WM_CTLCOLOR messages
 						// are sent to the parent window of the control that they refer to. 
@@ -5039,9 +4991,7 @@ namespace pr
 						// Not for this control, forward to children
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
 					}
-					#pragma endregion
 				case WM_MOUSEWHEEL:
-					#pragma region
 					{
 						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse
 						// button/move messages which are sent to the control with focus.
@@ -5061,10 +5011,8 @@ namespace pr
 						// Pass to WndProc, I don't think it does anything, but doesn't hurt either
 						return false;
 					}
-					#pragma endregion
 				case WM_KEYDOWN:
 				case WM_KEYUP:
-					#pragma region
 					{
 						// Don't forward key events to child controls. (see the notes in WndProc)
 						// Key events are sent directly to the window with keyboard focus. This may
@@ -5072,14 +5020,11 @@ namespace pr
 						// receives the events can choose to forward it to child controls
 						return false;
 					}
-					#pragma endregion
 				default:
-					#pragma region
 					{
 						// By default, forward the parent window message to the child controls only
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
 					}
-					#pragma endregion
 				}
 			}
 
@@ -5122,16 +5067,29 @@ namespace pr
 				}
 				return false;
 			}
-			static bool AllChildren(Control const*) { return true; }
-			static bool IsForm (Control const* c) { assert(c != nullptr); return c->cp().top_level(); }
-			static bool IsChild(Control const* c) { return !IsForm(c); }
-			static bool IsPinnedForm(Control const* c) { return IsForm(c) && c->cp<FormParams>().m_pin_window; }
+			static bool AllChildren(Control const*)
+			{
+				return true;
+			}
+			static bool IsForm (Control const* c)
+			{
+				assert(c != nullptr);
+				return c->cp().top_level();
+			}
+			static bool IsChild(Control const* c)
+			{
+				return !IsForm(c);
+			}
+			static bool IsPinnedForm(Control const* c)
+			{
+				return IsForm(c) && c->cp<FormParams<>>().m_pin_window;
+			}
 
 			// Save a copy of 'p' to 'm_cp'
-			void SaveParams(CtrlParams const& p)
+			void SaveParams(Params<> const& p)
 			{
 				if (m_cp.get() == &p) return;
-				auto cp = p.clone();
+				auto cp = p.clone(p);
 				assert("You've forgotten to overload 'clone' for this Params type" && typeid(*cp).hash_code() == typeid(p).hash_code());
 				m_cp.reset(cp);
 			}
@@ -5546,10 +5504,6 @@ namespace pr
 		// A common, non-template, base class for all forms
 		struct Form :Control ,IMessageFilter
 		{
-			using FormParams = pr::gui::FormParams;
-			using ParamsForm = MakeFormParams<>;
-			using ParamsDlg = MakeDlgParams<>;
-
 		protected:
 			// Notes:
 			// Neither Form or Control define a load of OnXYZ handlers. This is because it adds a
@@ -5570,6 +5524,7 @@ namespace pr
 		public:
 
 			enum { DefW = 800, DefH = 600 };
+			template <typename Derived = void> using Params = FormParams<Derived>;
 
 			// Form Constructor
 			// The creation of the window is kept for the Form class to do, rather than the control,
@@ -5579,31 +5534,33 @@ namespace pr
 			// Callers should use m_create == ECreate::Create for modeless frame windows, ECreate::Defer
 			// for windows that will be created later (either with Create() or ShowDialog()). ECreate::Auto
 			// should not typically be used for forms.
-			Form() :Form(FormParams()) {}
-			Form(FormParams const& p)
+			Form()
+				:Form(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Form(TParams const& p)
 				:Control(p)
 				,m_dialog_result()
 				,m_accel()
 				,m_modal()
 			{}
-
-			// Close on destruction
 			virtual ~Form()
 			{
+				// Close on destruction
 				HideOnClose(false);
 				Close();
 			}
 
 			// The parameters used to create this form (but updated to the current state)
-			template <typename TParams = FormParams> TParams& cp() const
+			template <typename TParams = FormParams<>> TParams& cp() const
 			{
-				return static_cast<TParams&>(*m_cp);
+				return m_cp->as<TParams>();
 			}
 
 			// Create the HWND for this window
 			// After calling this, only 'Show()' can be used.
 			// This function should be called after construction with m_create == ECreate::Defer
-			void Create(CtrlParams const& p_) override
+			void Create(Control::Params<> const& p_) override
 			{
 				// Save the creation data
 				SaveParams(p_);
@@ -5643,7 +5600,7 @@ namespace pr
 				}
 				else // Otherwise create as a normal window
 				{
-					Control::Create(p);
+					Control::Create(p.as<Control::Params<>>());
 				}
 
 				// Initialise the offset an menu state for pinned windows
@@ -5760,9 +5717,9 @@ namespace pr
 			DlgTemplate GenerateDlgTemplate()
 			{
 				// The dialog template must use the dialog window class
-				auto templ = DlgTemplate(MakeFormParams<>(cp()).parent(m_parent).wndclass(nullptr));
+				auto templ = DlgTemplate(Params<>(cp()).parent(m_parent).wndclass(nullptr));
 				for (auto& child : m_child)
-					templ.Add(MakeCtrlParams<>(child->cp()).parent(this));
+					templ.Add(Control::Params<>(child->cp()).parent(this));
 
 				return templ;
 			}
@@ -5912,14 +5869,11 @@ namespace pr
 				switch (message)
 				{
 				case WM_CREATE:
-					#pragma region
 					{
 						// Pass WM_CREATE to WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_INITDIALOG:
-					#pragma region
 					{
 						// Get the dialog window class information
 						m_wci = WndClassEx(hwnd);
@@ -5944,9 +5898,7 @@ namespace pr
 						// Return false so that WM_INITDIALOG is passed to the WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_CLOSE:
-					#pragma region
 					{
 						// If this form is running modally, disable the parent
 						auto parent = ::GetParent(m_hwnd);
@@ -5966,9 +5918,7 @@ namespace pr
 						// Don't null m_hwnd here, that happens in WM_DESTROY
 						return false;
 					}
-					#pragma endregion
 				case WM_DESTROY:
-					#pragma region
 					{
 						// Let children know the parent is destroying
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren))
@@ -5986,18 +5936,14 @@ namespace pr
 						// while unhook the thunk and null the 'm_hwnd'
 						return false;
 					}
-					#pragma endregion
 				case WM_CTLCOLORDLG:
-					#pragma region
 					{
 						// Our background brush is only valid if we have valid wndclass info
 						// otherwise, let the default handle it.
 						result = LRESULT(m_wci.hbrBackground);
 						return m_wci.m_atom != 0;
 					}
-					#pragma endregion
 				case WM_COMMAND:
-					#pragma region
 					{
 						auto ctrl_hwnd = HWND(lparam); // Only valid if sent from a control (i.e. not sent from a menu or accelerator)
 						if (ctrl_hwnd == nullptr)
@@ -6010,9 +5956,7 @@ namespace pr
 						// Otherwise fall through to the control's WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_SYSCOMMAND:
-					#pragma region
 					{
 						auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
 						if (id == IDC_PINWINDOW_OPT)
@@ -6027,9 +5971,7 @@ namespace pr
 						// Pass the WM_SYSCOMMAND to the WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_WINDOWPOSCHANGED:
-					#pragma region
 					{
 						auto& wp = *rcast<WindowPos*>(lparam);
 
@@ -6052,7 +5994,6 @@ namespace pr
 						// Let the WM_WINDOWPOSCHANGED message fall through to be handled by Control::WndProc
 						return false;
 					}
-					#pragma endregion
 				case WM_DROPFILES:
 				case WM_NOTIFY:
 				case WM_MOUSEWHEEL:
@@ -6066,21 +6007,17 @@ namespace pr
 				case WM_CTLCOLOREDIT:
 				case WM_CTLCOLORLISTBOX:
 				case WM_CTLCOLORSCROLLBAR:
-					#pragma region
 					{
 						// Form messages that get here will be forwarded to child controls as well
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
-					#pragma endregion
 				default:
-					#pragma region
 					{
 						// By default, Form messages aren't forwarded to child controls.
 						// Returning false will cause this message to get passed to the
 						// Control::WndProc for this form.
 						return false;
 					}
-					#pragma endregion
 				}
 			}
 
@@ -6140,40 +6077,38 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT | SS_NOPREFIX) & ~(WS_TABSTOP | WS_CLIPSIBLINGS) };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"STATIC"; }
-			struct LabelParams :CtrlParams
+			
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				LabelParams()
-					:CtrlParams()
-				{}
-				LabelParams* clone() const override
-				{
-					return new LabelParams(*this);
-				}
-			};
-			template <typename TParams = LabelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
+				using this_type = typename Params::this_type;
 
-				Params() { wndclass(WndClassName()).name("lbl").wh(Auto,Auto).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
-				operator LabelParams const&() const
+				Params()
 				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("lbl")
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.wh(Auto, Auto)
+						.margin(3);
 				}
-				This& align(int ss)
+				this_type& align(int ss)
 				{
 					// use one of SS_LEFT, SS_RIGHT, SS_CENTER, SS_LEFTNOWORDWRAP
 					return style('-', SS_TYPEMASK).style('+', ss);
 				}
-				This& centre_v(bool on = true)
+				this_type& centre_v(bool on = true)
 				{
-					return style(on?'+':'-',SS_CENTERIMAGE);
+					return style(on ? '+' : '-', SS_CENTERIMAGE);
 				}
 			};
 
 			// Construct
-			Label() :Label(Params<>()) {}
-			Label(LabelParams const& p)
+			Label()
+				:Label(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Label(TParams const& p)
 				:Control(p)
 			{}
 
@@ -6196,59 +6131,67 @@ namespace pr
 
 			using EType = gui::Image::EType;
 			using EFit  = gui::Image::EFit;
-			struct ButtonParams :CtrlParams
+
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				ResId<>       m_img;
 				EType         m_img_type;
 				EFit          m_img_fit;
 				EDialogResult m_dlg_result;
 
-				ButtonParams()
+				Params()
 					:m_img()
 					,m_img_type()
 					,m_img_fit(EFit::Zoom)
 					,m_dlg_result(EDialogResult::None)
-				{}
-				ButtonParams* clone() const override
 				{
-					return new ButtonParams(*this);
+					this->wndclass(WndClassName())
+						.name("btn")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.margin(3);
 				}
-			};
-			template <typename TParams = ButtonParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("btn").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
-				operator ButtonParams const&() const
+				this_type& def_btn(bool on = true)
 				{
-					return params;
+					return this->style(on ? '+' : '-', BS_DEFPUSHBUTTON);
 				}
-				This& def_btn(bool on = true) { return style(on?'+':'-', BS_DEFPUSHBUTTON); }
-				This& chk_box(bool on = true) { return style(on?'+':'-', BS_AUTOCHECKBOX); }
-				This& radio(bool on = true)   { return style(on?'+':'-', BS_RADIOBUTTON); }
-				This& image(ResId<> img, EType img_type, EFit img_fit = EFit::Zoom, bool show_text = false)
+				this_type& chk_box(bool on = true)
+				{
+					return this->style(on ? '+' : '-', BS_AUTOCHECKBOX);
+				}
+				this_type& radio(bool on = true)
+				{
+					return this->style(on ? '+' : '-', BS_RADIOBUTTON);
+				}
+				this_type& image(ResId<> img, EType img_type, EFit img_fit = EFit::Zoom, bool show_text = false)
 				{
 					// BS_BITMAP == text only
 					// BS_BITMAP + SendMsg(BM_SETIMAGE) == icon only
 					// BS_TEXT + SendMsg(BM_SETIMAGE) == icon + text
-					params.m_img = img;
-					params.m_img_type = img_type;
-					params.m_img_fit = img_fit;
-					return style(img != nullptr && !show_text ? '+':'-', BS_BITMAP);
+					m_img = img;
+					m_img_type = img_type;
+					m_img_fit = img_fit;
+					return this->style(img != nullptr && !show_text ? '+' : '-', BS_BITMAP);
 				}
-				This& dlg_result(EDialogResult dlg_result)
+				this_type& dlg_result(EDialogResult dlg_result)
 				{
-					params.m_dlg_result = dlg_result;
-					return me();
+					m_dlg_result = dlg_result;
+					return this->me();
 				}
 			};
 
 			gui::Image m_img;
 
 			// Construct
-			Button() :Button(Params<>()) {}
-			Button(ButtonParams const& p)
+			Button()
+				:Button(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Button(TParams const& p)
 				:Control(p)
 				,m_img()
 			{}
@@ -6289,11 +6232,11 @@ namespace pr
 			// Get/Set the dialog result associated with this button
 			EDialogResult DlgResult() const
 			{
-				return cp<ButtonParams>().m_dlg_result;
+				return cp<Params<>>().m_dlg_result;
 			}
 			void DlgResult(EDialogResult r)
 			{
-				cp<ButtonParams>().m_dlg_result = r;
+				cp<Params<>>().m_dlg_result = r;
 			}
 
 			// Events
@@ -6307,7 +6250,7 @@ namespace pr
 				Click(*this, EmptyArgs());
 
 				// If this button as a non-None dialog result, send a WM_CLOSE to the top level control
-				auto dlg_result = cp<ButtonParams>().m_dlg_result;
+				auto dlg_result = cp<Params<>>().m_dlg_result;
 				if (dlg_result != EDialogResult::None)
 				{
 					auto top = TopLevelForm();
@@ -6341,18 +6284,15 @@ namespace pr
 				switch (message)
 				{
 				case WM_CREATE:
-					#pragma region
 					{
 						// Set the button image
-						auto& p = cp<ButtonParams>();
+						auto& p = cp<Params<>>();
 						if (p.m_img != nullptr)
 							Image(p.m_img, p.m_img_type, p.m_img_fit);
 
 						break;
 					}
-					#pragma endregion
 				case WM_COMMAND:
-					#pragma region
 					{
 						// Need to test this before any handler possibly closes the window
 						auto is_chk = AllSet(Style(), BS_AUTOCHECKBOX);
@@ -6365,7 +6305,6 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				}
 				return Control::WndProc(message, wparam, lparam);
 			}
@@ -6379,40 +6318,65 @@ namespace pr
 			static wchar_t const* WndClassName() { return L"EDIT"; }
 			static HBRUSH WndBackground() { return (HBRUSH)::GetStockObject(WHITE_BRUSH); }// ::GetSysColorBrush(COLOR_WINDOW); }
 
-			struct TextBoxParams :CtrlParams
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				TextBoxParams()
-					:CtrlParams()
-				{}
-				TextBoxParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new TextBoxParams(*this);
+					this->wndclass(WndClassName())
+						.name("edit")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.bk_col(0xFFFFFF)
+						.fr_col(0)
+						.margin(3);
 				}
-			};
-			template <typename TParams = TextBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).bk_col(0xFFFFFF).fr_col(0).margin(3); }
-				operator TextBoxParams const&() const
+				this_type& align(int ss)
 				{
-					return params;
+					return this->style('-', ES_LEFT | ES_CENTER | ES_RIGHT).style('+', ss);
 				}
-				This& align(int ss)               { return style('-', ES_LEFT|ES_CENTER|ES_RIGHT).style('+', ss); }
-				This& multiline(bool on = true)   { return style(on?'+':'-', ES_MULTILINE); }
-				This& upper_case(bool on = true)  { return style(on?'+':'-', ES_UPPERCASE).style(on?'-':'+',ES_LOWERCASE); }
-				This& lower_case(bool on = true)  { return style(on?'+':'-', ES_LOWERCASE).style(on?'-':'+',ES_UPPERCASE); }
-				This& password(bool on = true)    { return style(on?'+':'-', ES_PASSWORD); }
-				This& hide_sel(bool on = false)   { return style(on?'-':'+', ES_NOHIDESEL); }
-				This& read_only(bool on = true)   { return style(on?'+':'-', ES_READONLY); }
-				This& want_return(bool on = true) { return style(on?'+':'-', ES_WANTRETURN); }
-				This& number(bool on = true)      { return style(on?'+':'-', ES_NUMBER); }
+				this_type& multiline(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_MULTILINE);
+				}
+				this_type& upper_case(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_UPPERCASE).style(on ? '-' : '+', ES_LOWERCASE);
+				}
+				this_type& lower_case(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_LOWERCASE).style(on ? '-' : '+', ES_UPPERCASE);
+				}
+				this_type& password(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_PASSWORD);
+				}
+				this_type& hide_sel(bool on = false)
+				{
+					return this->style(on ? '-' : '+', ES_NOHIDESEL);
+				}
+				this_type& read_only(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_READONLY);
+				}
+				this_type& want_return(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_WANTRETURN);
+				}
+				this_type& number(bool on = true)
+				{
+					return this->style(on ? '+' : '-', ES_NUMBER);
+				}
 			};
 
 			// Construct
-			TextBox() :TextBox(Params<>()) {}
-			TextBox(TextBoxParams const& p)
+			TextBox()
+				:TextBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type> 
+			explicit TextBox(TParams const& p)
 				:Control(p)
 			{}
 
@@ -6536,62 +6500,46 @@ namespace pr
 		struct NumberBox :TextBox
 		{
 			enum class ENumberStyle { Integer, FloatingPoint, };
-			struct NumberBoxParams :TextBoxParams
+
+			template <typename Derived = void>
+			struct Params :TextBox::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				ENumberStyle m_num_style;
 				int          m_radix;
 				bool         m_lower_case;
 
-				NumberBoxParams()
-					:TextBoxParams()
-					,m_num_style(ENumberStyle::Integer)
+				Params()
+					:m_num_style(ENumberStyle::Integer)
 					,m_radix(10)
 					,m_lower_case(false)
 				{}
-				NumberBoxParams* clone() const override
+				this_type& number_style(ENumberStyle style)
 				{
-					return new NumberBoxParams(*this);
+					m_num_style = style;
+					return this->me();
 				}
-			};
-			template <typename TParams = NumberBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params()
-				{}
-				operator NumberBoxParams const&() const
+				this_type& radix(int r)
 				{
-					return params;
+					m_radix = r;
+					return this->me();
 				}
-				This& number_style(ENumberStyle style)
+				this_type& upper_case(bool on = true)
 				{
-					params.m_num_style = style;
-					return me();
-				}
-				This& radix(int r)
-				{
-					params.m_radix = r;
-					return me();
-				}
-				This& upper_case(bool on = true)
-				{
-					params.m_lower_case = on;
-					return me();
+					m_lower_case = on;
+					return this->me();
 				}
 			};
 
-			NumberBox() :NumberBox(NumberBoxParams()) {}
-			NumberBox(NumberBoxParams const& p)
+			NumberBox()
+				:NumberBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit NumberBox(TParams const& p)
 				:TextBox(p)
 			{
 				assert(p.m_num_style == ENumberStyle::Integer && "not supported");
-			}
-
-			// The parameters used to create this control (but updated to the current state)
-			NumberBoxParams& cp() const
-			{
-				return static_cast<NumberBoxParams&>(*m_cp);
 			}
 
 			// Get/Set the text content as an integer
@@ -6602,7 +6550,7 @@ namespace pr
 					return 0;
 
 				errno = 0;
-				auto val = ::wcstoll(text.c_str(), nullptr, cp().m_radix);
+				auto val = ::wcstoll(text.c_str(), nullptr, cp<Params<>>().m_radix);
 				if (errno == ERANGE) throw std::exception("Value is out of range");
 				if (errno != 0) throw std::exception("Value is not a number");
 				return val;
@@ -6610,21 +6558,21 @@ namespace pr
 			void Value(long long value)
 			{
 				wchar_t buf[128] = {};
-				if (::_i64tow_s(value, buf, _countof(buf), cp().m_radix) != 0) throw std::exception("Failed to convert number to text");
-				if (cp().m_lower_case) _wcslwr(buf); else _wcsupr(buf);
+				if (::_i64tow_s(value, buf, _countof(buf), cp<Params<>>().m_radix) != 0) throw std::exception("Failed to convert number to text");
+				if (cp<Params<>>().m_lower_case) _wcslwr(buf); else _wcsupr(buf);
 				Text(buf);
 			}
 
 			// Get/Set the radix of the number field
 			int Radix() const
 			{
-				return cp().m_radix;
+				return cp<Params<>>().m_radix;
 			}
 			void Radix(int radix)
 			{
-				if (radix == cp().m_radix) return;
+				if (radix == cp<Params<>>().m_radix) return;
 				auto val = Value();
-				cp().m_radix = radix;
+				cp<Params<>>().m_radix = radix;
 				Value(val);
 			}
 
@@ -6633,7 +6581,7 @@ namespace pr
 			{
 				if (message == WM_CHAR)
 				{
-					auto radix = cp().m_radix;
+					auto radix = cp<Params<>>().m_radix;
 					if (wparam == '-' || wparam == '+' || wparam == '.')
 						{}
 					else if (radix <= 10 &&
@@ -6645,7 +6593,7 @@ namespace pr
 						!(wparam >= 'A' && wparam < WPARAM('A'+radix-10)))
 						return 0;
 
-					if (cp().m_lower_case)
+					if (cp<Params<>>().m_lower_case)
 						wparam = tolower(int(wparam));
 					else
 						wparam = toupper(int(wparam));
@@ -6659,41 +6607,38 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"COMBOBOX"; }
-			struct ComboBoxParams :CtrlParams
-			{
-				ComboBoxParams()
-					:CtrlParams()
-				{}
-				ComboBoxParams* clone() const override
-				{
-					return new ComboBoxParams(*this);
-				}
-			};
-			template <typename TParams = ComboBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
 
-				Params() { wndclass(WndClassName()).name("combo").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
-				operator ComboBoxParams const&() const
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
+			{
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("combo")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.margin(3);
 				}
-				This& editable(bool on = true)
+				this_type& editable(bool on = true)
 				{
-					return style('-',CBS_SIMPLE|CBS_DROPDOWN|CBS_DROPDOWNLIST).style('+',on?CBS_DROPDOWN:CBS_DROPDOWNLIST);
+					return style('-', CBS_SIMPLE | CBS_DROPDOWN | CBS_DROPDOWNLIST).style('+', on ? CBS_DROPDOWN : CBS_DROPDOWNLIST);
 				}
-				This& sorted(bool on = true)
+				this_type& sorted(bool on = true)
 				{
-					return style(on?'+':'-', CBS_SORT);
+					return style(on ? '+' : '-', CBS_SORT);
 				}
 			};
 
 			int m_prev_sel_index;
 
 			// Construct
-			ComboBox() :ComboBox(Params<>()) {}
-			ComboBox(ComboBoxParams const& p)
+			ComboBox()
+				:ComboBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit ComboBox(TParams const& p)
 				:Control(p)
 				,m_prev_sel_index(-1)
 			{}
@@ -6785,7 +6730,6 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
-					#pragma region
 					{
 						switch (HiWord(wparam))
 						{
@@ -6798,7 +6742,6 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				}
 				return Control::WndProc(message, wparam, lparam);
 			}
@@ -6852,34 +6795,40 @@ namespace pr
 			};
 
 			// Creation parameters
-			struct ListViewParams :CtrlParams
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				ListViewParams()
-					:CtrlParams()
-				{}
-				ListViewParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new ListViewParams(*this);
+					this->wndclass(WndClassName())
+						.name("listview")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.mode(EViewType::Report)
+						.dbl_buffer();
 				}
-			};
-			template <typename TParams = ListViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("listview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).mode(EViewType::Report).dbl_buffer(); }
-				operator ListViewParams const&() const
+				this_type& mode(EViewType mode)
 				{
-					return params;
+					return this->style('-', LVS_TYPEMASK).style('+', DWORD(mode) & LVS_TYPEMASK);
 				}
-				This& mode(EViewType mode) { return style('-',LVS_TYPEMASK).style('+', DWORD(mode) & LVS_TYPEMASK); }
-				This& report()             { return style('+',LVS_REPORT); }
-				This& no_hdr_sort()        { return style('+',LVS_NOSORTHEADER); }
+				this_type& report()
+				{
+					return this->style('+', LVS_REPORT);
+				}
+				this_type& no_hdr_sort()
+				{
+					return this->style('+', LVS_NOSORTHEADER);
+				}
 			};
 
 			// Construct
-			ListView() :ListView(Params<>()) {}
-			ListView(ListViewParams const& p)
+			ListView()
+				:ListView(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit ListView(TParams const& p)
 				:Control(p)
 			{}
 
@@ -7059,7 +7008,6 @@ namespace pr
 				switch (message)
 				{
 				case WM_NOTIFY:
-					#pragma region
 					{
 						auto notification_hdr = (LPNMHDR)lparam;
 						if (notification_hdr->hwndFrom == m_hwnd)
@@ -7068,7 +7016,6 @@ namespace pr
 							switch (hdr->hdr.code)
 							{
 							case LVN_ITEMCHANGING:
-								#pragma region
 								{
 									ItemChangingEventArgs args(*hdr);
 									OnItemChanging(args);
@@ -7080,9 +7027,7 @@ namespace pr
 									result = args.m_cancel ? TRUE : FALSE;
 									return true;
 								}
-								#pragma endregion
 							case LVN_ITEMCHANGED:
-								#pragma region
 								{
 									ItemChangedEventArgs args(*hdr);
 									OnItemChanged(args);
@@ -7093,12 +7038,10 @@ namespace pr
 
 									return true;
 								}
-								#pragma endregion
 							}
 						}
 						break;
 					}
-					#pragma endregion
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
@@ -7109,23 +7052,18 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | TVS_EDITLABELS | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | TVS_FULLROWSELECT | TVS_NOSCROLL };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTreeView32"; }
-			struct TreeViewParams :CtrlParams
+		
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				TreeViewParams()
-					:CtrlParams()
-				{}
-				TreeViewParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new TreeViewParams(*this);
-				}
-			};
-			template <typename TParams = TreeViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("tree-view").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator TreeViewParams const&() const
-				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("tree-view")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
 			};
 
@@ -7175,8 +7113,11 @@ namespace pr
 			};
 
 			// Construct
-			TreeView() :TreeView(Params<>()) {}
-			TreeView(TreeViewParams const& p)
+			TreeView()
+				:TreeView(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit TreeView(TParams const& p)
 				:Control(p)
 			{}
 
@@ -7282,28 +7223,26 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | PBS_SMOOTH) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"msctls_progress32"; }
-			struct ProgressBarParams :CtrlParams
+
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				ProgressBarParams()
-					:CtrlParams()
-				{}
-				ProgressBarParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new ProgressBarParams(*this);
-				}
-			};
-			template <typename TParams = ProgressBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("progress").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator ProgressBarParams const&() const
-				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("progress")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
 			};
 
-			ProgressBar() :ProgressBar(Params<>()) {}
-			ProgressBar(ProgressBarParams const& p)
+			ProgressBar()
+				:ProgressBar(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit ProgressBar(TParams const& p)
 				:Control(p)
 			{}
 
@@ -7444,28 +7383,25 @@ namespace pr
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"pr::gui::Panel"; }
 
-			struct PanelParams :CtrlParams
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				PanelParams()
-					:CtrlParams()
-				{}
-				PanelParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new PanelParams(*this);
-				}
-			};
-			template <typename TParams = PanelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(RegisterWndClass<Panel>()).name("panel").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator PanelParams const&() const
-				{
-					return params;
+					this->wndclass(RegisterWndClass<Panel>())
+						.name("panel")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
 			};
 
-			Panel() :Panel(Params<>()) {}
-			Panel(PanelParams const& p)
+			Panel()
+				:Panel(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Panel(TParams const& p)
 				:Control(p)
 			{}
 		};
@@ -7475,28 +7411,26 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | BS_GROUPBOX };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | WS_EX_CONTROLPARENT };
 			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, group-box's use the button window class
-			struct GroupBoxParams :CtrlParams
+
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				GroupBoxParams()
-					:CtrlParams()
-				{}
-				GroupBoxParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new GroupBoxParams(*this);
-				}
-			};
-			template <typename TParams = GroupBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("grp").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator GroupBoxParams const&() const
-				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("grp")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
 			};
 
-			GroupBox() :GroupBox(Params<>()) {}
-			GroupBox(GroupBoxParams const& p)
+			GroupBox()
+				:GroupBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit GroupBox(TParams const& p)
 				:Control(p)
 			{}
 		};
@@ -7511,50 +7445,44 @@ namespace pr
 				return richedit_lib ? L"RICHEDIT50W" : L"RICHEDIT20W";
 			}
 
-			struct RichTextBoxParams :TextBoxParams
+			template <typename Derived = void>
+			struct Params :TextBox::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				bool m_word_wrap;
 				bool m_detect_urls;
 
-				RichTextBoxParams()
-					:TextBoxParams()
-					,m_detect_urls(false)
+				Params()
+					:m_detect_urls(false)
 					,m_word_wrap(false)
-				{}
-				RichTextBoxParams* clone() const override
 				{
-					return new RichTextBoxParams(*this);
+					this->wndclass(WndClassName())
+						.name("rtb")
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
-			};
-			template <typename TParams = RichTextBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("rtb").style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator RichTextBoxParams const&() const
-				{
-					return params;
-				}
-				This& border(bool on = true)
+				this_type& border(bool on = true)
 				{
 					return style_ex(on?'+':'-', WS_EX_STATICEDGE);
 				}
-				This& word_wrap(bool on = true)
+				this_type& word_wrap(bool on = true)
 				{
-					params.m_word_wrap = on;
-					return me();
+					m_word_wrap = on;
+					return this->me();
 				}
-				This& detect_urls(bool on = true)
+				this_type& detect_urls(bool on = true)
 				{
-					params.m_detect_urls = on;
-					return me();
+					m_detect_urls = on;
+					return this->me();
 				}
-
 			};
 
-			RichTextBox() :RichTextBox(Params<>()) {}
-			RichTextBox(RichTextBoxParams const& p)
+			RichTextBox()
+				:RichTextBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit RichTextBox(TParams const& p)
 				:TextBox(p)
 			{}
 			#if 0
@@ -7573,16 +7501,14 @@ namespace pr
 				switch (message)
 				{
 				case WM_CREATE:
-					#pragma region
 					{
-						auto& p = cp<RichTextBoxParams>();
+						auto& p = cp<Params<>>();
 						#if _RICHEDIT_VER >= 0x0800
 						if (p.m_detect_urls) SendMsg<int>(EM_AUTOURLDETECT, AURL_ENABLEURL, 0);
 						#endif
 						if (p.m_word_wrap)   SendMsg<int>(EM_SETTARGETDEVICE, 0, 0);
 						break;
 					}
-					#pragma endregion
 				}
 				return TextBox::WndProc(message, wparam, lparam);
 			}
@@ -7597,38 +7523,34 @@ namespace pr
 
 			using EType = gui::Image::EType;
 			using EFit  = gui::Image::EFit;
-			struct ImageBoxParams :CtrlParams
+
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				ResId<> m_img;
 				EType   m_img_type;
 				EFit    m_img_fit;
 
-				ImageBoxParams()
+				Params()
 					:m_img()
 					,m_img_type()
 					,m_img_fit(EFit::Zoom)
-				{}
-				ImageBoxParams* clone() const override
 				{
-					return new ImageBoxParams(*this);
+					this->wndclass(WndClassName())
+						.name("img")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.margin(3);
 				}
-			};
-			template <typename TParams = ImageBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("img").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
-				operator ImageBoxParams const&() const
+				this_type& image(ResId<> img, EType img_type, EFit img_fit = EFit::Zoom)
 				{
-					return params;
-				}
-				This& image(ResId<> img, EType img_type, EFit img_fit = EFit::Zoom)
-				{
-					params.m_img = img;
-					params.m_img_type = img_type;
-					params.m_img_fit = img_fit;
-					return style('-',SS_TYPEMASK).style('+',
+					m_img = img;
+					m_img_type = img_type;
+					m_img_fit = img_fit;
+					return this->style('-', SS_TYPEMASK).style('+',
 						img_type == EType::Icon ? SS_ICON :
 						img_type == EType::EnhMetaFile ? SS_ENHMETAFILE :
 						SS_BITMAP);
@@ -7638,8 +7560,11 @@ namespace pr
 			gui::Image m_img;
 
 			// Construct
-			ImageBox() :ImageBox(Params<>()) {}
-			ImageBox(ImageBoxParams const& p)
+			ImageBox()
+				:ImageBox(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit ImageBox(TParams const& p)
 				:Control(p)
 				,m_img()
 			{}
@@ -7680,7 +7605,7 @@ namespace pr
 				case WM_CREATE:
 					{
 						// Set the button image
-						auto& p = cp<ImageBoxParams>();
+						auto& p = cp<Params<>>();
 						if (p.m_img != nullptr)
 							Image(p.m_img, p.m_img_type, p.m_img_fit);
 						break;
@@ -7695,38 +7620,36 @@ namespace pr
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
-			struct StatusBarParams :CtrlParams
+
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				std::initializer_list<int> m_parts;
 
-				StatusBarParams()
-					:CtrlParams()
-					,m_parts()
-				{}
-				StatusBarParams* clone() const override
+				Params()
+					:m_parts()
 				{
-					return new StatusBarParams(*this);
+					this->wndclass(WndClassName())
+						.name("status")
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx)
+						.anchor(EAnchor::LeftBottomRight)
+						.dock(EDock::Bottom);
 				}
-			};
-			template <typename TParams = StatusBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
-				operator StatusBarParams const&() const
+				this_type& parts(std::initializer_list<int> p)
 				{
-					return params;
-				}
-				This& parts(std::initializer_list<int> p)
-				{
-					params.m_parts = p;
+					m_parts = p;
 					return me();
 				}
 			};
 
-			StatusBar() :StatusBar(Params<>()) {}
-			StatusBar(StatusBarParams const& p)
+			StatusBar()
+				:StatusBar(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit StatusBar(TParams const& p)
 				:Control(p)
 			{}
 
@@ -7764,7 +7687,7 @@ namespace pr
 			}
 
 			// Get the client area of a pane in the status bar
-			pr::gui::Rect Rect(int pane) const
+			gui::Rect Rect(int pane) const
 			{
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
 				pr::gui::Rect rect;
@@ -7773,7 +7696,7 @@ namespace pr
 			}
 
 			// 
-			void ResizeToParent(pr::gui::Rect const& parent_client, bool repaint = false) override
+			void ResizeToParent(gui::Rect const& parent_client, bool repaint = false) override
 			{
 				// Ignore padding in the parent
 				auto rect = parent_client;
@@ -7788,7 +7711,7 @@ namespace pr
 				{
 				case WM_CREATE:
 					{
-						auto& p = cp<StatusBarParams>();
+						auto& p = cp<Params<>>();
 						if (p.m_parts.size() != 0)
 							Parts(int(p.m_parts.size()), std::begin(p.m_parts));
 						break;
@@ -7840,31 +7763,28 @@ namespace pr
 				{}
 			};
 
-			struct TabControlParams :CtrlParams
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				TabControlParams()
-					:CtrlParams()
-				{}
-				TabControlParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new TabControlParams(*this);
-				}
-			};
-			template <typename TParams = TabControlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				Params() { wndclass(WndClassName()).name("tab-ctrl").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator TabControlParams const&() const
-				{
-					return params;
+					this->wndclass(WndClassName())
+						.name("tab-ctrl")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
 			};
 
 			// The tab pages. Owned externally
 			std::vector<Control*> m_tabs;
 
-			TabControl() :TabControl(Params<>()) {}
-			TabControl(TabControlParams const& p)
+			TabControl()
+				:TabControl(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit TabControl(TParams const& p)
 				:Control(p)
 				,m_tabs()
 			{}
@@ -8060,7 +7980,6 @@ namespace pr
 				switch (message)
 				{
 				case WM_NCCALCSIZE:
-					#pragma region
 					{
 						// todo: Should be using to set the effective client rect.
 						if (wparam != 0)
@@ -8076,9 +7995,7 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				case WM_NOTIFY:
-					#pragma region
 					{
 						auto hdr = reinterpret_cast<NMHDR*>(lparam);
 						if (hdr->hwndFrom == m_hwnd)
@@ -8107,7 +8024,6 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
@@ -8191,15 +8107,18 @@ namespace pr
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"pr::gui::Splitter"; }
 
-			struct SplitterParams :CtrlParams
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
+				using this_type = typename Params::this_type;
+
 				int   m_bar_width;
 				float m_bar_pos;
 				int   m_min_pane_size;
 				bool  m_vertical;
 				bool  m_full_drag;
 
-				SplitterParams()
+				Params()
 					:m_bar_width(4)
 					,m_bar_pos(0.5f)
 					,m_min_pane_size(20)
@@ -8207,53 +8126,40 @@ namespace pr
 					,m_full_drag()
 				{
 					::SystemParametersInfoW(SPI_GETDRAGFULLWINDOWS, 0, &m_full_drag, 0);
+					this->wndclass(RegisterWndClass<Splitter>())
+						.name("split")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
-				SplitterParams* clone() const override
+				this_type& width(int w)
 				{
-					return new SplitterParams(*this);
-				}
-			};
-			template <typename TParams = SplitterParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params()
-				{
-					wndclass(RegisterWndClass<Splitter>()).name("split").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx);
-				}
-				operator SplitterParams const&() const
-				{
-					return params;
-				}
-				This& width(int w)
-				{
-					params.m_bar_width = w;
+					m_bar_width = w;
 					return me();
 				}
-				This& pos(float p)
+				this_type& pos(float p)
 				{
-					params.m_bar_pos = std::min(1.0f, std::max(0.0f, p));
+					m_bar_pos = std::min(1.0f, std::max(0.0f, p));
 					return me();
 				}
-				This& min_pane_width(int w)
+				this_type& min_pane_width(int w)
 				{
-					params.m_min_pane_size = w;
+					m_min_pane_size = w;
 					return me();
 				}
-				This& vertical()
+				this_type& vertical()
 				{
-					params.m_vertical = true;
+					m_vertical = true;
+					return this->me();
+				}
+				this_type& horizontal()
+				{
+					m_vertical = false;
 					return me();
 				}
-				This& horizontal()
+				this_type& full_drag(bool fd = true)
 				{
-					params.m_vertical = false;
-					return me();
-				}
-				This& full_drag(bool fd = true)
-				{
-					params.m_full_drag = fd;
+					m_full_drag = fd;
 					return me();
 				}
 			};
@@ -8267,8 +8173,11 @@ namespace pr
 			int m_min_pane_size;
 			HCURSOR m_cursor;
 
-			Splitter() :Splitter(SplitterParams()) {}
-			Splitter(SplitterParams const& p)
+			Splitter()
+				:Splitter(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit Splitter(TParams const& p)
 				:Control(p)
 				,Pane0(Panel::Params<>().parent(this_).name(FmtS("%s-L", p.m_name)).anchor(EAnchor::None).bk_col(::GetSysColor(COLOR_APPWORKSPACE)))
 				,Pane1(Panel::Params<>().parent(this_).name(FmtS("%s-R", p.m_name)).anchor(EAnchor::None).bk_col(::GetSysColor(COLOR_APPWORKSPACE)))
@@ -8421,7 +8330,8 @@ namespace pr
 				if (BarPos() != 0.0f && BarPos() != 1.0f)
 				{
 					auto rect = BarRect();
-					::FillRect(args.m_dc, &rect, args.m_bsh_back ? args.m_bsh_back : WndBackground());
+					auto back_brush = args.m_bsh_back ? static_cast<HBRUSH>(args.m_bsh_back) : WndBackground();
+					::FillRect(args.m_dc, &rect, back_brush);
 				}
 
 				// Painting is done
@@ -8509,32 +8419,32 @@ namespace pr
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"tooltips_class32"; }
-			struct ToolTipParams :CtrlParams
+		
+			template <typename Derived = void>
+			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
-				ToolTipParams()
-					:CtrlParams()
-				{}
-				ToolTipParams* clone() const override
+				using this_type = typename Params::this_type;
+				Params()
 				{
-					return new ToolTipParams(*this);
+					this->wndclass(WndClassName())
+						.name("tt")
+						.wh(DefW, DefH)
+						.style('=', DefaultStyle)
+						.style_ex('=', DefaultStyleEx);
 				}
-			};
-			template <typename TParams = ToolTipParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
-			{
-				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-				using This = typename base::This;
-
-				Params() { wndclass(WndClassName()).name("tt").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
-				operator ToolTipParams const&() const
+				this_type& show_always(bool on = true)
 				{
-					return params;
+					style('+',TTS_ALWAYSTIP);
+					return me(); 
 				}
-				This& show_always(bool on = true) { style('+',TTS_ALWAYSTIP); return *me; }
 			};
 
 			// Construct
-			ToolTip() :ToolTip(Params<>()) {}
-			ToolTip(ToolTipParams const& p)
+			ToolTip()
+				:ToolTip(Params<>())
+			{}
+			template <typename TParams, typename = typename TParams::this_type>
+			explicit ToolTip(TParams const& p)
 				:Control(p)
 			{}
 		};
@@ -8773,15 +8683,14 @@ namespace pr
 
 			enum { ID_IMAGE = 100 };
 			MsgBox(HWND parent, wchar_t const* message, wchar_t const* title, EButtons btns = EButtons::Ok, EIcon icon = EIcon::None, int def_btn = 0, bool reflow =  true, float reflow_aspect = DefaultReflowAspect())
-				:Form(MakeDlgParams<>().name("msg-box").start_pos(EStartPosition::CentreParent ).title(title).wh(316,176).padding(0).wndclass(RegisterWndClass<MsgBox>()))
+				:Form          (Form       ::Params<>().name("msg-box"   ).dlg().start_pos(EStartPosition::CentreParent ).title(title).wh(316,176).padding(0).wndclass(RegisterWndClass<MsgBox>()))
 				,m_panel_btns  (Panel      ::Params<>().name("panel-btns").parent(this_        ).wh(Fill, 52).dock(EDock::Bottom).border())
 				,m_btn_negative(Button     ::Params<>().name("btn-neg"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==0))
 				,m_btn_neutral (Button     ::Params<>().name("btn-neu"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==1))
 				,m_btn_positive(Button     ::Params<>().name("btn-pos"   ).parent(&m_panel_btns).wh(86,23).dock(EDock::Right).margin(8,12,8,12).def_btn(def_btn==2))
 				,m_panel_msg   (Panel      ::Params<>().name("panel-msg" ).parent(this_        ).dock(EDock::Fill).bk_col(0xFFFFFF).border())
 				,m_image       (ImageBox   ::Params<>().name("img-icon"  ).parent(&m_panel_msg ).wh(48,48).xy(25,25).margin(8,0,8,0).visible(icon != EIcon::None).id(ID_IMAGE))
-				,m_message     (RichTextBox::Params<>().name("tb-msg"    ).parent(&m_panel_msg ).wh(Fill,Fill).xy(Left|RightOf|ID_IMAGE,Top|TopOf|ID_IMAGE).margin(0,0,8,12)
-					.style('-',WS_HSCROLL).word_wrap().detect_urls().read_only().anchor(EAnchor::All))
+				,m_message     (RichTextBox::Params<>().name("tb-msg"    ).parent(&m_panel_msg ).wh(Fill,Fill).xy(Left|RightOf|ID_IMAGE,Top|TopOf|ID_IMAGE).margin(0,0,8,12).style('-',WS_HSCROLL).word_wrap().detect_urls().read_only().anchor(EAnchor::All))
 				,m_accept_button()
 				,m_cancel_button()
 				,m_reflow(reflow)

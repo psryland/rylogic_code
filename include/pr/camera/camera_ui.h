@@ -38,7 +38,7 @@ namespace pr
 			Camera m_cam;
 
 			PositionUI(HWND parent, Camera& cam, bool allow_preview = false)
-				:Form(MakeDlgParams<>().wndclass(RegisterWndClass<PositionUI>()).name("cam-position-ui").title(L"Position Camera").wh(169, 93).style_ex('+',WS_EX_TOOLWINDOW).parent(parent))
+				:Form(Params<>().dlg().wndclass(RegisterWndClass<PositionUI>()).name("cam-position-ui").title(L"Position Camera").wh(169, 93).style_ex('+',WS_EX_TOOLWINDOW).parent(parent))
 
 				,m_lbl_position(gui::Label  ::Params<>().parent(this_).name("lbl-position"     ).text(L"Position:"       ).xy(12, 11).wh(28, 8).style('+',SS_RIGHT))
 				,m_lbl_lookat  (gui::Label  ::Params<>().parent(this_).name("lbl-lookat"       ).text(L"Look At:"        ).xy(12, 27).wh(28, 8).style('+',SS_RIGHT))

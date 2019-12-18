@@ -13,7 +13,7 @@
 // http://go.microsoft.com/fwlink/?LinkId=248926
 //-------------------------------------------------------------------------------------
 
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "directxtexp.h"
 
 //-------------------------------------------------------------------------------------
@@ -489,8 +489,9 @@ static HRESULT _EncodeSingleFrame( _In_ const Image& image, _In_ DWORD flags,
     if ( memcmp( &guidContainerFormat, &GUID_ContainerFormatBmp, sizeof(WICPixelFormatGUID) ) == 0  )
     {
         // Opt-in to the Windows 8 support for writing 32-bit Windows BMP files with an alpha channel if supported
+        wchar_t str[] = L"EnableV5Header32bppBGRA";
         PROPBAG2 option = { 0 };
-        option.pstrName = L"EnableV5Header32bppBGRA";
+        option.pstrName = &str[0];
 
         VARIANT varValue;    
         varValue.vt = VT_BOOL;

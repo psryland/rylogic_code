@@ -4,7 +4,7 @@
 //***************************************************************************************************
 #pragma once
 
-#include "audio/util/stdafx.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/config/config.h"
 
 #define _HIDE_GLOBAL_ASYNC_STATUS

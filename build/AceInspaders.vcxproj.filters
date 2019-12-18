@@ -11,6 +11,15 @@
     <Filter Include="pr\app">
       <UniqueIdentifier>{15ff241f-7570-4209-b772-b7c849b3632d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{87ae57fc-bf58-4bd0-82a6-d91e2932433c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\audio">
+      <UniqueIdentifier>{7f80021c-39d8-4fa2-ac96-60e1cbf77701}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\audio\waves">
+      <UniqueIdentifier>{122a3463-41a1-47c7-9edd-1b589a22cf61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\app\gfx_1bit.h">
@@ -28,9 +37,17 @@
     <ClInclude Include="..\include\pr\app\default_setup.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\AceInspaders\src\ace_inspaders.h" />
     <ClInclude Include="..\include\pr\app\main_ui.h">
       <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\AceInspaders\src\ace_inspaders.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\waves\wave_file.h">
+      <Filter>pr\audio\waves</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

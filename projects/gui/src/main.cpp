@@ -9,9 +9,7 @@
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/win32/win32.h"
 
-#include "pr/network/bluetooth_ui.h"
-
-#define USE_ATL
+//#define USE_ATL
 #ifdef USE_ATL
 #include <atlapp.h>
 //#include <atldwm.h>
@@ -84,7 +82,7 @@ struct Main :Form
 	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_MSGBOX, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
 	Main()
-		:Form(MakeFormParams<>()
+		:Form(Params<>()
 			.name("main")
 			.title(L"Pauls Window")
 			.icon(IDR_MAINFRAME)
@@ -110,7 +108,7 @@ struct Main :Form
 		,m_scint       (ScintillaCtrl::Params<>().name("m_scint").parent(&m_tc).dock(EDock::Fill).id(IDC_SCINT))
 
 		,m_modeless    (this_)
-		,m_nm_progress (ProgressUI::Params<>().parent(this_).hide_on_close())
+		,m_nm_progress (ProgressUI::Params().parent(this_).hide_on_close())
 	{
 		CreateHandle();
 
@@ -217,7 +215,7 @@ struct Test :Form
 	Panel    m_panel;
 	Splitter m_split;
 	Test()
-		:Form(MakeFormParams<>()
+		:Form(Params<>()
 			.name("test")
 			.title(L"Paul's Window")
 			.xy(2000,100)
@@ -238,7 +236,7 @@ struct Test2 :Form
 	ScintillaCtrl m_scint;
 
 	Test2()
-		:Form(MakeFormParams<>().name("test").title(L"Paul's Window").start_pos(EStartPosition::CentreParent).wh(320,256).wndclass(RegisterWndClass<Test2>()))
+		:Form(Params<>().name("test").title(L"Paul's Window").start_pos(EStartPosition::CentreParent).wh(320,256).wndclass(RegisterWndClass<Test2>()))
 		,m_tc(TabControl::Params<>().parent(this_).dock(EDock::Fill))
 		,m_scint(ScintillaCtrl::Params<>().parent(&m_tc).dock(EDock::Fill))
 	{
@@ -256,6 +254,7 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 	pr::InitCom com;
 	pr::GdiPlus gdi;
 
+	pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 	InitCtrls();
 
 	try
@@ -269,7 +268,6 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		CBitmap bm;
 		#endif
 
-		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
 		//About about1;
 		//about1.Show();
@@ -279,10 +277,9 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		//ProgressUI main(ProgressUI::Params<>().title(L"Progress").desc(L"This is not a drill").xy(2000,100).main_wnd());
 		//return main.ShowDialog();
 
-		//Main main; main.Show();
+		Main main; main.Show();
 		//Test test1; auto& main = test1; test1.Show();
 		//Test2 test2; auto& main = test2; test2.Show();
-		pr::network::BTDevicePickerUI main; main.Show();
 
 		MessageLoop loop;
 		loop.AddMessageFilter(main);

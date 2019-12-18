@@ -28,7 +28,7 @@
 // We could load multi-frame images (TIFF/GIF) into a texture array.
 // For now, we just load the first frame (note: DirectXTex supports multi-frame images)
 
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "pr/renderer11/textures/texture_loader.h"
 #include "pr/renderer11/util/wrappers.h"
 #include <memory>

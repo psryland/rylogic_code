@@ -141,11 +141,6 @@ namespace pr
 	static_assert(maths::is_vec4<Vec4<void>>::value, "");
 	static_assert(std::is_pod<Vec4<void>>::value, "Vec4 must be a pod type");
 	static_assert(std::alignment_of<Vec4<void>>::value == 16, "Vec4 should have 16 byte alignment");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	template <typename T = void> using v4_cref = Vec4<T> const;
-	#else
-	template <typename T = void> using v4_cref = Vec4<T> const&;
-	#endif
 
 	// Define component accessors
 	template <typename T> inline float pr_vectorcall x_cp(v4_cref<T> v) { return v.x; }

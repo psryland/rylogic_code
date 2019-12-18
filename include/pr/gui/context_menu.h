@@ -421,7 +421,7 @@ namespace pr
 				void CreateHostedControls() override
 				{
 					HWND parent = *static_cast<ContextMenu*>(m_menu);
-					m_edit.Create(TBox::Params<>().text(m_value.c_str()).parent(parent).wh(50, 18));
+					m_edit.Create(TBox::Params<>().text(m_value.c_str()).parent(parent).wh(50, 18).as<Control::Params<>>());
 				}
 				Size MeasureItem(gdi::Graphics& gfx) override
 				{
@@ -639,12 +639,12 @@ namespace pr
 			}
 			static DlgTemplate const& Templ()
 			{
-				static DlgTemplate cmenu_templ(MakeDlgParams<>().wndclass(RegWndClass()).xy(0,0).wh(50,50).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
+				static DlgTemplate cmenu_templ(Params<>().dlg().wndclass(RegWndClass()).xy(0,0).wh(50,50).name("ctx-menu").style('=',WS_POPUP|WS_BORDER).style_ex('=',0));
 				return cmenu_templ;
 			}
 
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form(MakeDlgParams<>().templ(Templ()))
+				:Form(Params<>().templ(Templ()))
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()

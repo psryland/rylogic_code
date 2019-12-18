@@ -40,12 +40,12 @@ namespace pr
 			:Mat2x2(x_as<Vec2<void>>(v), y_as<Vec2<void>>(v))
 		{}
 		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat2x2(CP const* v)
-			:Mat2x3(x_as<Vec2<T>>(v), y_as<Vec2<T>>(v))
+			:Mat2x2(x_as<Vec2<void>>(v), y_as<Vec2<void>>(v))
 		{}
 		template <typename V2, typename = maths::enable_if_v2<V2>> Mat2x2& operator = (V2 const& rhs)
 		{
-			x = x_as<Vec2<T>>(rhs);
-			y = y_as<Vec2<T>>(rhs);
+			x = x_as<Vec2<void>>(rhs);
+			y = y_as<Vec2<void>>(rhs);
 			return *this;
 		}
 
@@ -71,13 +71,12 @@ namespace pr
 	};
 	static_assert(maths::is_mat2<Mat2x2<void,void>>::value, "");
 	static_assert(std::is_pod<Mat2x2<void,void>>::value, "m2x2 must be a pod type");
-	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A,B> const&;
 
 	// Define component accessors
 	template <typename A, typename B> inline v2_cref<> x_cp(m2_cref<A,B> v) { return v.x; }
 	template <typename A, typename B> inline v2_cref<> y_cp(m2_cref<A,B> v) { return v.y; }
-	template <typename A, typename B> inline v2_cref<> z_cp(m2_cref<A,B>)   { return v2Zero; }
-	template <typename A, typename B> inline v2_cref<> w_cp(m2_cref<A,B>)   { return v2Zero; }
+	template <typename A, typename B> inline v2_cref<> z_cp(m2_cref<A,B>)   { return v2{}; }
+	template <typename A, typename B> inline v2_cref<> w_cp(m2_cref<A,B>)   { return v2{}; }
 
 	#pragma region Operators
 	template <typename A, typename B> inline Mat2x2<A,B> operator + (m2_cref<A,B> mat)
@@ -187,16 +186,16 @@ namespace pr
 	// Using 'Denman-Beavers' square root iteration. Should converge quadratically
 	template <typename A, typename B> inline Mat2x2<A,B> Sqrt(m2_cref<A,B> mat)
 	{
-		auto A = mat;           // Converges to mat^0.5
-		auto B = m2x2Identity;  // Converges to mat^-0.5
+		auto a = mat;              // Converges to mat^0.5
+		auto b = m2x2{1, 0, 0, 1}; // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
 		{
-			auto A_next = 0.5f * (A + Invert(B));
-			auto B_next = 0.5f * (B + Invert(A));
-			A = A_next;
-			B = B_next;
+			auto a_next = 0.5f * (a + Invert(b));
+			auto b_next = 0.5f * (b + Invert(a));
+			a = a_next;
+			b = b_next;
 		}
-		return A;
+		return a;
 	}
 
 	#pragma endregion

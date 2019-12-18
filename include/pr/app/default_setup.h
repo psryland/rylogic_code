@@ -34,7 +34,7 @@ namespace pr::app
 		}
 
 		// Return settings for the render window
-		WSettings RdrWindowSettings(HWND hwnd, iv2 const& client_area)
+		WSettings RdrWindowSettings(HWND hwnd, iv2 const& client_area = iv2Zero)
 		{
 			return WSettings(hwnd, TRUE, D3D11_CREATE_DEVICE_FLAG(0), client_area);
 		}

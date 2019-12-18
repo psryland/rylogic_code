@@ -40,7 +40,7 @@ namespace pr
 		public:
 
 			LdrMeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
-				:Form(MakeFormParams<>()
+				:Form(Params<>()
 					.parent(parent).name("ldr-measure-ui").title(L"Measure Distances")
 					.wh(300, 150).style_ex('+',WS_EX_TOOLWINDOW)
 					.hide_on_close(true).pin_window(true)
@@ -177,7 +177,7 @@ namespace pr
 		public:
 
 			LdrAngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
-				:Form(MakeFormParams<>()
+				:Form(Params<>()
 					.parent(parent).name("ldr-angle-ui").title(L"Measure Angles")
 					.wh(220, 186).style_ex('+',WS_EX_TOOLWINDOW)
 					.hide_on_close(true).pin_window(true)

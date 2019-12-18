@@ -10,14 +10,18 @@
 				<x:Static Member="gui:ContextMenus.Instance"/>
 			</ResourceDictionary.MergedDictionaries>
 
+			<BitmapImage x:Key="add" UriSource="/LDraw;component/res/edit_add2.png" />
 			<BitmapImage x:Key="auto_range" UriSource="/LDraw;component/res/auto_range.png" />
 			<BitmapImage x:Key="bin" UriSource="/LDraw;component/res/bin.png" />
 			<BitmapImage x:Key="chain" UriSource="/LDraw;component/res/chain.png" />
+			<BitmapImage x:Key="reject" UriSource="/LDraw;component/res/check_reject.png" />
 			<BitmapImage x:Key="colour_wheel" UriSource="/LDraw;component/res/colour_wheel.png" />
 			<BitmapImage x:Key="display" UriSource="/LDraw;component/res/display.png" />
 			<BitmapImage x:Key="light_bulb" UriSource="/LDraw;component/res/light_bulb.png" />
 			<BitmapImage x:Key="save" UriSource="/LDraw;component/res/edit_save.png" />
 			<BitmapImage x:Key="set_square" UriSource="/LDraw;component/res/set_square.png" />
+			<BitmapImage x:Key="green_up" UriSource="/LDraw;component/res/green_up.png" />
+			<BitmapImage x:Key="green_down" UriSource="/LDraw;component/res/green_down.png" />
 			<BitmapImage x:Key="green_left_right" UriSource="/LDraw;component/res/green_left_right.png" />
 			<BitmapImage x:Key="green_up_down" UriSource="/LDraw;component/res/green_up_down.png" />
 			<BitmapImage x:Key="green_in_out" UriSource="/LDraw;component/res/green_in_out.png" />

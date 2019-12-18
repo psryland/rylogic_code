@@ -71,6 +71,8 @@ namespace LDraw.UI
 			RemoveObjects = Command.Create(this, RemoveObjectsInternal);
 			CloseScript = Command.Create(this, CloseScriptInternal);
 
+			//todo Settings.SettingChanged += HandleFontChanged;
+
 			// If the temporary script exists, load it
 			if (Path_.FileExists(Filepath))
 				LoadFile();

@@ -3,15 +3,19 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
+#include <type_traits>
+#include <initializer_list>
 #include <array>
 
-// Until C++20 is supported
+// std::span - Until C++20 is supported
 namespace std
 {
-	// std::span
-	// Remember 'T' can be const
 	template <class T> class span
 	{
+		// Notes:
+		//  - Remember 'T' can be const.
+		//    Span parameters should probably be 'std::span<T const>'.
+
 	public:
 		using element_type = T;
 		using value_type = std::remove_cv_t<T>;

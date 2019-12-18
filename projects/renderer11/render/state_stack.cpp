@@ -2,7 +2,7 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/common.h"
 #include "pr/renderer11/models/model_buffer.h"

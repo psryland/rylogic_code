@@ -175,10 +175,10 @@ namespace pr
 		}\
 \
 		/* Returns true if 'val' is convertible to one of the values in this enum */ \
-		template <typename T> static constexpr bool IsValue(T val)\
+		static constexpr bool IsValue(underlying_type_t val)\
 		{\
 			using E = enum_name;\
-			switch (val) {\
+			switch (static_cast<E>(val)) {\
 			default: return false;\
 			enum_vals1(PR_ENUM_TOTRUE1)\
 			enum_vals2(PR_ENUM_TOTRUE2)\
@@ -189,7 +189,8 @@ namespace pr
 		/* Convert an integral type to an enum value, throws if 'val' is not a valid value */ \
 		template <typename T> static constexpr enum_name From(T val)\
 		{\
-			if (!IsValue(val)) throw std::exception("value is not a valid member of enum "#enum_name);\
+			auto ut_value = static_cast<underlying_type_t>(val);\
+			if (!IsValue(ut_value)) throw std::runtime_error("value is not a valid member of enum "#enum_name);\
 			return static_cast<enum_name>(val);\
 		}\
 \

@@ -13,7 +13,7 @@
 // http://go.microsoft.com/fwlink/?LinkId=248926
 //-------------------------------------------------------------------------------------
 
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "directxtexp.h"
 
 // Experiemental encoding variants, not enabled by default

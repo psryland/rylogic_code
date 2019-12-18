@@ -2,71 +2,76 @@
 // Audio
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
-
-#include "audio/util/stdafx.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/audio/audio_manager.h"
 #include "pr/audio/waves/wave_file.h"
 
-namespace pr
+#pragma comment(lib, "xaudio2.lib")
+#pragma comment(lib, "runtimeobject.lib")
+
+#if PR_LOGGING
+#pragma message("PR_LOGGING enabled")
+#endif
+
+namespace pr::audio
 {
-	namespace audio
+	State::State(Settings const& settings)
+		:m_settings(settings)
+		,m_xaudio()
+		,m_master()
 	{
-		State::State(Settings const& settings)
-			:m_settings(settings)
-			,m_xaudio()
-			,m_master()
+		// Note: 'XAUDIO2_DEBUG_ENGINE' is not supported on Win8+
+
+		// Check for compatibility
+		if (m_settings.m_channels != XAUDIO2_DEFAULT_CHANNELS && !(m_settings.m_channels >= 1 && m_settings.m_channels <= XAUDIO2_MAX_AUDIO_CHANNELS))
+			Throw(false, FmtS("Too many audio channels: %d. Maximum is %d", m_settings.m_channels, XAUDIO2_MAX_AUDIO_CHANNELS));
+		if (m_settings.m_sample_rate != XAUDIO2_DEFAULT_SAMPLERATE && !(m_settings.m_sample_rate >= XAUDIO2_MIN_SAMPLE_RATE && m_settings.m_sample_rate <= XAUDIO2_MAX_SAMPLE_RATE))
+			Throw(false, FmtS("Unsupported sample rate: %d. Supported range: [%d,%d]", m_settings.m_sample_rate, XAUDIO2_MIN_SAMPLE_RATE, XAUDIO2_MAX_SAMPLE_RATE));
+
+		// Note:
+		//  IXAudio2 is the only XAudio2 interface that is derived from the COM IUnknown interface.
+		//  It controls the lifetime of the XAudio2 object using two methods derived from IUnknown: AddRef and Release.
+		//  No other XAudio2 objects are reference-counted; their lifetimes are explicitly controlled using create and destroy calls,
+		//  and are bounded by the lifetime of the XAudio2 object that owns them.
+
+		// Create The XAudio2 interface
+		Throw(XAudio2Create(&m_xaudio.m_ptr, 0, XAUDIO2_DEFAULT_PROCESSOR));
+
+		// To see the trace output, you need to view ETW logs for this application:
+		// Go to Control Panel, Administrative Tools, Event Viewer.
+		// View->Show Analytic and Debug Logs.
+		// Applications and Services Logs / Microsoft / Windows / XAudio2. 
+		// Right click on Microsoft Windows XAudio2 debug logging, Properties, then Enable Logging, and hit OK 
+		#if PR_DBG_AUDIO
+		XAUDIO2_DEBUG_CONFIGURATION debug = {0};
+		debug.TraceMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
+		debug.BreakMask = XAUDIO2_LOG_ERRORS;
+		m_xaudio->SetDebugConfiguration(&debug, 0);
+		#endif
+
+		// Create the mastering voice, the staging buffer that goes to the hardware
+		IXAudio2MasteringVoice* mastering_voice;
+		Throw(m_xaudio->CreateMasteringVoice(
+			&mastering_voice,
+			m_settings.m_channels,
+			m_settings.m_sample_rate,
+			0,
+			m_settings.m_device_id));
+		m_master.reset(mastering_voice);
+	}
+	State::~State()
+	{
+		m_master = nullptr;
+		if (m_xaudio != nullptr)
 		{
-			// Note: 'XAUDIO2_DEBUG_ENGINE' is not supported on Win8+
-
-			// Check for compatibility
-			if (m_settings.m_channels != XAUDIO2_DEFAULT_CHANNELS && !(m_settings.m_channels >= 1 && m_settings.m_channels <= XAUDIO2_MAX_AUDIO_CHANNELS))
-				throw std::exception(pr::FmtS("Too many audio channels: %d. Maximum is %d", m_settings.m_channels, XAUDIO2_MAX_AUDIO_CHANNELS));
-			if (m_settings.m_sample_rate != XAUDIO2_DEFAULT_SAMPLERATE && !(m_settings.m_sample_rate >= XAUDIO2_MIN_SAMPLE_RATE && m_settings.m_sample_rate <= XAUDIO2_MAX_SAMPLE_RATE))
-				throw std::exception(pr::FmtS("Unsupported sample rate: %d. Supported range: [%d,%d]", m_settings.m_sample_rate, XAUDIO2_MIN_SAMPLE_RATE, XAUDIO2_MAX_SAMPLE_RATE));
-
-			// Note:
-			//  IXAudio2 is the only XAudio2 interface that is derived from the COM IUnknown interface.
-			//  It controls the lifetime of the XAudio2 object using two methods derived from IUnknown: AddRef and Release.
-			//  No other XAudio2 objects are reference-counted; their lifetimes are explicitly controlled using create and destroy calls,
-			//  and are bounded by the lifetime of the XAudio2 object that owns them.
-
-			// Create The XAudio2 interface
-			pr::Throw(XAudio2Create(&m_xaudio.m_ptr, 0, XAUDIO2_DEFAULT_PROCESSOR));
-
-			// To see the trace output, you need to view ETW logs for this application:
-			// Go to Control Panel, Administrative Tools, Event Viewer.
-			// View->Show Analytic and Debug Logs.
-			// Applications and Services Logs / Microsoft / Windows / XAudio2. 
-			// Right click on Microsoft Windows XAudio2 debug logging, Properties, then Enable Logging, and hit OK 
-			#if PR_DBG_AUDIO
-			XAUDIO2_DEBUG_CONFIGURATION debug = {0};
-			debug.TraceMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS;
-			debug.BreakMask = XAUDIO2_LOG_ERRORS;
-			m_xaudio->SetDebugConfiguration(&debug, 0);
-			#endif
-
-			// Create the mastering voice, the staging buffer that goes to the hardware
-			IXAudio2MasteringVoice* mastering_voice;
-			pr::Throw(m_xaudio->CreateMasteringVoice(
-				&mastering_voice,
-				m_settings.m_channels,
-				m_settings.m_sample_rate,
-				0,
-				m_settings.m_device_id));
-			m_master.reset(mastering_voice);
-		}
-		State::~State()
-		{
-			m_master = nullptr;
-			if (m_xaudio != nullptr)
-			{
-				PR_EXPAND(PR_DBG_AUDIO, int rcnt);
-				PR_ASSERT(PR_DBG_AUDIO, (rcnt = m_xaudio.RefCount()) == 1, "Outstanding references to the XAudio device context");
-				m_xaudio = nullptr;
-			}
+			PR_EXPAND(PR_DBG_AUDIO, int rcnt);
+			PR_ASSERT(PR_DBG_AUDIO, (rcnt = m_xaudio.RefCount()) == 1, "Outstanding references to the XAudio device context");
+			m_xaudio = nullptr;
 		}
 	}
-	
+}
+namespace pr
+{
 	// Construct the Audio Manager
 	AudioManager::AudioManager(audio::Settings const& settings)
 		:State(settings)
@@ -86,7 +91,7 @@ namespace pr
 		// Play the wave using a XAudio2SourceVoice
 		// Create the source voice
 		IXAudio2SourceVoice* src_voice_;
-		pr::Throw(m_xaudio->CreateSourceVoice(&src_voice_, wave_data.wfx));
+		Throw(m_xaudio->CreateSourceVoice(&src_voice_, wave_data.wfx));
 		audio::VoicePtr<IXAudio2SourceVoice> src_voice(src_voice_);
 
 		// Submit the wave sample data using an XAUDIO2_BUFFER structure
@@ -101,8 +106,8 @@ namespace pr
 			buffer.LoopCount = loop_count;
 		}
 
-		if (wave_data.seek)
-			throw std::exception("This platform does not support xWMA or XMA2");
+		// Check for platform support
+		Throw(wave_data.seek == 0, "This platform does not support xWMA or XMA2");
 
 		// Queue the buffer to be played on the voice
 		Throw(src_voice->SubmitSourceBuffer(&buffer));
@@ -120,3 +125,4 @@ namespace pr
 		}
 	}
 }
+

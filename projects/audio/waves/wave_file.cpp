@@ -4,7 +4,7 @@
 //***************************************************************************************************
 #pragma once
 
-#include "audio/util/stdafx.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/waves/wave_file.h"
 
 using namespace std::filesystem;

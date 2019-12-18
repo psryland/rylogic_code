@@ -13,9 +13,6 @@
     <Filter Include="src\config">
       <UniqueIdentifier>{3b4bfac9-c599-416d-92f6-a71b0a7564fd}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\dll">
-      <UniqueIdentifier>{4a15f862-ee33-454b-8544-9beee33afad1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\waves">
       <UniqueIdentifier>{cbd49513-d5c9-4a5c-b3cc-abe734261021}</UniqueIdentifier>
     </Filter>
@@ -25,14 +22,11 @@
     <Filter Include="src\midi">
       <UniqueIdentifier>{8d7b1e3f-a9a1-4160-b6a4-00bb30d3a4a2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\synth">
+      <UniqueIdentifier>{97d4739a-d10b-413a-9d70-94c4fe505079}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\audio\context.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\audio\util\stdafx.h">
-      <Filter>src\util</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\audio\config\config.h">
       <Filter>src\config</Filter>
     </ClInclude>
@@ -54,26 +48,23 @@
     <ClInclude Include="..\include\pr\audio\midi\midi.h">
       <Filter>src\midi</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\audio\dll\audio.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\audio\audio.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\audio\audio\audio_manager.h">
       <Filter>src\audio</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\audio\audio\forward.h">
-      <Filter>src\audio</Filter>
+    <ClInclude Include="..\include\pr\audio\synth\note.h">
+      <Filter>src\synth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\synth\synth.h">
+      <Filter>src\synth</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\forward.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\audio\util\stdafx.cpp">
-      <Filter>src\util</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\audio\dll\audio.cpp">
-      <Filter>src\dll</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\audio\waves\wave_bank.cpp">
       <Filter>src\waves</Filter>
     </ClCompile>
@@ -86,10 +77,5 @@
     <ClCompile Include="..\projects\audio\audio\audio_manager.cpp">
       <Filter>src\audio</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\projects\Rylogic\audio\audio.cs">
-      <Filter>src\dll</Filter>
-    </None>
   </ItemGroup>
 </Project>

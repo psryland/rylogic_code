@@ -18,7 +18,7 @@
 // http://go.microsoft.com/fwlink/?LinkId=248926
 // http://go.microsoft.com/fwlink/?LinkId=248929
 
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "pr/renderer11/textures/texture_loader.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/util.h"

@@ -188,7 +188,7 @@ namespace pr::network
 	inline bool DeviceAddrToBluetoothAddr(wchar_t const* addr_string, SOCKADDR_BTH& addr)
 	{
 		std::wstring addr_str = addr_string;
-		addr_str.append(L'\0');
+		addr_str.append(1, L'\0');
 			
 		int len = sizeof(addr);
 		auto r = WSAStringToAddressW(&addr_str[0], AF_BTH, nullptr, (SOCKADDR*)&addr, &len);

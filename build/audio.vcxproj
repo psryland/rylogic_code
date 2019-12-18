@@ -21,31 +21,25 @@
   <ItemGroup>
     <ClInclude Include="..\include\pr\audio\audio.h" />
     <ClInclude Include="..\include\pr\audio\audio\audio_manager.h" />
-    <ClInclude Include="..\include\pr\audio\audio\forward.h" />
     <ClInclude Include="..\include\pr\audio\config\config.h" />
     <ClInclude Include="..\include\pr\audio\directsound\player.h" />
     <ClInclude Include="..\include\pr\audio\directsound\sound.h" />
-    <ClInclude Include="..\include\pr\audio\dll\audio.h" />
+    <ClInclude Include="..\include\pr\audio\forward.h" />
     <ClInclude Include="..\include\pr\audio\midi\midi.h" />
+    <ClInclude Include="..\include\pr\audio\synth\note.h" />
+    <ClInclude Include="..\include\pr\audio\synth\synth.h" />
     <ClInclude Include="..\include\pr\audio\waves\wave_bank.h" />
     <ClInclude Include="..\include\pr\audio\waves\wave_file.h" />
     <ClInclude Include="..\projects\audio\config\config.cpp" />
-    <ClInclude Include="..\projects\audio\context.h" />
-    <ClInclude Include="..\projects\audio\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\Rylogic\audio\audio.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\projects\audio\audio\audio_manager.cpp" />
-    <ClCompile Include="..\projects\audio\dll\audio.cpp" />
-    <ClCompile Include="..\projects\audio\midi\midi.cpp" />
-    <ClCompile Include="..\projects\audio\util\stdafx.cpp">
+    <ClCompile Include="..\projects\audio\audio\audio_manager.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\projects\audio\midi\midi.cpp" />
     <ClCompile Include="..\projects\audio\waves\wave_bank.cpp" />
     <ClCompile Include="..\projects\audio\waves\wave_file.cpp" />
   </ItemGroup>
@@ -59,36 +53,36 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="props/release.x86.dll.props" />
+    <Import Project="props\release.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="props/release.x64.dll.props" />
+    <Import Project="props\release.x64.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="props/debug.x86.dll.props" />
+    <Import Project="props\debug.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="props/debug.x64.dll.props" />
+    <Import Project="props\debug.x64.lib.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -114,7 +108,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>AUDIO_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>audio/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -136,7 +130,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>AUDIO_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>audio/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -158,7 +152,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>AUDIO_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>audio/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -180,7 +174,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>AUDIO_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>audio/util/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\sdk\wtl\v8.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

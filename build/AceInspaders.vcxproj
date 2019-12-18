@@ -82,7 +82,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_APP_MAIN_INCLUDE="AceInspaders/src/ace_inspaders.h";NDEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;NOMINMAX;WIN32_LEAN_AND_MEAN;GDIPVER=0x0110</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_APP_MAIN_INCLUDE="AceInspaders/src/ace_inspaders.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -90,7 +90,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PreprocessorDefinitions>PR_APP_MAIN_INCLUDE="AceInspaders/src/ace_inspaders.h";NDEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;NOMINMAX;WIN32_LEAN_AND_MEAN;GDIPVER=0x0110</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_APP_MAIN_INCLUDE="AceInspaders/src/ace_inspaders.h";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -102,6 +102,8 @@
     <ClInclude Include="..\include\pr\app\gfx_1bit.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_ui.h" />
+    <ClInclude Include="..\include\pr\audio\waves\wave_file.h" />
+    <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\projects\AceInspaders\src\space_invaders.h" />
   </ItemGroup>
   <ItemGroup>

@@ -60,9 +60,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\renderer11\util\stdafx.h">
-      <Filter>util</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\render\renderer.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -277,9 +274,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
-      <Filter>util</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\renderer11\render\renderer.cpp">
       <Filter>render</Filter>
     </ClCompile>
@@ -506,13 +500,7 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
       <Filter>shaders\hlsl\utility</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_list.hlsl">
-      <Filter>shaders\hlsl\screenspace</Filter>
-    </FxCompile>
-    <FxCompile Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_strip.hlsl">
-      <Filter>shaders\hlsl\screenspace</Filter>
-    </FxCompile>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_list.hlsl" />
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_strip.hlsl" />
   </ItemGroup>
 </Project>

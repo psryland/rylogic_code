@@ -274,7 +274,7 @@ namespace pr
 
 		static value_type const* c_str(string_type const str) { return str; }
 		static value_type* ptr(string_type str)               { return str; }
-		static size_t size(string_type const str)             { return length(str); }
+		static size_t size(string_type const str)             { return char_traits<Char>::length(str); }
 		static bool empty(string_type const str)              { return *str == 0; }
 		static void resize(string_type str, size_t n)         { str[n] = 0; }
 	};
@@ -287,7 +287,7 @@ namespace pr
 
 		static value_type* c_str(string_type str) { return str; }
 		static value_type* ptr(string_type str)   { return str; }
-		static size_t size(string_type str)       { return length(str); }
+		static size_t size(string_type str)       { return char_traits<Char>::length(str); }
 		static bool empty(string_type str)        { return *str == 0; }
 		static void resize(string_type, size_t)   { static_assert(false, "Immutable strings cannot be resized"); }
 	};
@@ -322,7 +322,7 @@ namespace pr
 
 		static value_type* c_str(string_type& str) { return str; }
 		static value_type* ptr(string_type& str)   { return str; }
-		static size_t size(string_type& str)       { return length(str, Len); }
+		static size_t size(string_type& str)       { return char_traits<Char>::length(str, Len); }
 		static bool empty(string_type& str)        { return *str == 0; }
 		static void resize(string_type&, size_t)   { static_assert(false, "Immutable string cannot be resized"); }
 	};
@@ -353,7 +353,7 @@ namespace pr
 
 		static value_type* c_str(string_type& str) { return str.data(); }
 		static value_type* ptr(string_type& str)   { return str.data(); }
-		static size_t size(string_type& str)       { return length(str.data(), Len); }
+		static size_t size(string_type& str)       { return char_traits<Char>::length(str.data(), Len); }
 		static bool empty(string_type& str)        { return str[0] == 0; }
 		static void resize(string_type&, size_t)   { static_assert(false, "Immutable string cannot be resized"); }
 	};

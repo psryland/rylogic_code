@@ -68,7 +68,7 @@ namespace pr::rdr
 		// Show the lighting UI with preview callback: Preview(Light const& light, bool cam_rel);
 		template <typename Preview>
 		LightingUI(HWND parent, Light const& light, Preview preview)
-			:Form(MakeDlgParams<>()
+			:Form(Params<>().dlg()
 				.parent(parent)
 				.name("rdr-lighting-ui")
 				.title(L"Lighting Options")

@@ -91,7 +91,6 @@ namespace pr
 	};
 	static_assert(maths::is_vec3<Vec3<void>>::value, "");
 	static_assert(std::is_pod<Vec3<void>>::value, "v3 must be a pod type");
-	template <typename T = void> using v3_cref = Vec3<T> const&;
 
 	// Define component accessors for pointer types
 	template <typename T> inline float x_cp(v3_cref<T> v) { return v.x; }

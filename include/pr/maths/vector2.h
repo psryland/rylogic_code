@@ -69,7 +69,6 @@ namespace pr
 	};
 	static_assert(maths::is_vec2<Vec2<void>>::value, "");
 	static_assert(std::is_pod<Vec2<void>>::value, "Vec2 must be a pod type");
-	template <typename T = void> using v2_cref = Vec2<T> const&;
 
 	// Define component accessors
 	template <typename T> inline float x_cp(v2_cref<T> v) { return v.x; }

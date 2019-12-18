@@ -12,66 +12,65 @@
 #include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/util/allocator.h"
 
-namespace pr
+namespace pr::rdr
 {
-	namespace rdr
+	// Registered windows message for BeginInvoke
+	static UINT const WM_BeginInvoke = WM_USER + 0x1976;
+
+	// Settings for constructing the renderer
+	struct RdrSettings
 	{
-		// Registered windows message for BeginInvoke
-		static UINT const WM_BeginInvoke = WM_USER + 0x1976;
-
-		// Settings for constructing the renderer
-		struct RdrSettings
+		struct BuildOptions
 		{
-			struct BuildOptions
-			{
-				StdBuildOptions   m_std;
-				MathsBuildOptions m_maths;
-				int RunTimeShaders;
-				BuildOptions()
-					:m_std()
-					,m_maths()
-					,RunTimeShaders(PR_RDR_RUNTIME_SHADERS)
-				{}
-			};
-			
-			HINSTANCE                     m_instance;              // Executable instance 
-			BuildOptions                  m_build_options;         // The state of #defines. Used to check for incompatibilities
-			MemFuncs                      m_mem;                   // The manager of allocations/deallocations
-			D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
-			D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
-			UINT                          m_device_layers;         // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
-			pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.1
-			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
-
-			// Keep this inline so that m_build_options can be verified.
-			RdrSettings(HINSTANCE inst, D3D11_CREATE_DEVICE_FLAG device_flags)
-				:m_instance(inst)
-				,m_build_options()
-				,m_mem()
-				,m_adapter()
-				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(device_flags)
-				,m_feature_levels()
-				,m_fallback_to_sw_device(true)
+			StdBuildOptions   m_std;
+			MathsBuildOptions m_maths;
+			int RunTimeShaders;
+			BuildOptions()
+				:m_std()
+				,m_maths()
+				,RunTimeShaders(PR_RDR_RUNTIME_SHADERS)
 			{}
 		};
+			
+		HINSTANCE                     m_instance;              // Executable instance 
+		BuildOptions                  m_build_options;         // The state of #defines. Used to check for incompatibilities
+		MemFuncs                      m_mem;                   // The manager of allocations/deallocations
+		D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
+		D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
+		UINT                          m_device_layers;         // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
+		pr::vector<D3D_FEATURE_LEVEL> m_feature_levels;        // Features to support. Empty implies 9.1 -> 11.1
+		bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
-		// Renderer state variables
-		struct RdrState
-		{
-			RdrSettings                  m_settings;
-			D3D_FEATURE_LEVEL            m_feature_level;
-			D3DPtr<ID3D11Device>         m_d3d_device;
-			D3DPtr<ID3D11DeviceContext1> m_immediate;
-			D3DPtr<ID2D1Factory1>        m_d2dfactory;
-			D3DPtr<IDWriteFactory>       m_dwrite;
-			D3DPtr<ID2D1Device>          m_d2d_device;
+		// Keep this inline so that m_build_options can be verified.
+		RdrSettings(HINSTANCE inst, D3D11_CREATE_DEVICE_FLAG device_flags)
+			:m_instance(inst)
+			,m_build_options()
+			,m_mem()
+			,m_adapter()
+			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
+			,m_device_layers(device_flags)
+			,m_feature_levels()
+			,m_fallback_to_sw_device(true)
+		{}
+	};
 
-			RdrState(RdrSettings const& settings);
-			~RdrState();
-		};
-	}
+	// Renderer state variables
+	struct RdrState
+	{
+		RdrSettings                  m_settings;
+		D3D_FEATURE_LEVEL            m_feature_level;
+		D3DPtr<ID3D11Device>         m_d3d_device;
+		D3DPtr<ID3D11DeviceContext1> m_immediate;
+		D3DPtr<ID2D1Factory1>        m_d2dfactory;
+		D3DPtr<IDWriteFactory>       m_dwrite;
+		D3DPtr<ID2D1Device>          m_d2d_device;
 
+		RdrState(RdrSettings const& settings);
+		~RdrState();
+	};
+}
+namespace pr
+{
 	// The main renderer object
 	class Renderer :rdr::RdrState
 	{

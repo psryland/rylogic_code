@@ -327,10 +327,14 @@ namespace pr::gui
 		using SeriesRdrOptions = typename Series::RdrOptions;
 
 		static wchar_t const* WndClassName() { return L"pr::gui::GraphCtrl"; }
-		template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
+
+		template <typename Derived = void>
+		struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 		{
-			using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
-			Params() { wndclass(RegisterWndClass<GraphCtrl>()); }
+			Params()
+			{
+				this->wndclass(RegisterWndClass<GraphCtrl>());
+			}
 		};
 
 	protected:

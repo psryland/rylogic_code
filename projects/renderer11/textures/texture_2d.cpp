@@ -2,7 +2,7 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
-#include "renderer11/util/stdafx.h"
+#include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/textures/texture_2d.h"
 #include "pr/renderer11/textures/texture_manager.h"

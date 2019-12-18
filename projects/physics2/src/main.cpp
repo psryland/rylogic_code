@@ -27,9 +27,9 @@ struct MainUI :Form
 	ShapeBox m_box;
 
 	MainUI()
-		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
+		:Form(Params<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
 		,m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
-		,m_view3d(View3DPanel::Params<>().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
+		,m_view3d(View3DPanel::Params().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
 		,m_clock()
 		,m_steps()
 		,m_body()

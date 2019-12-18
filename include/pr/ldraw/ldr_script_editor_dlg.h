@@ -29,7 +29,7 @@ namespace pr
 
 			// This code expects the scintilla.dll to be loaded already
 			ScriptEditorUI(HWND parent)
-				:Form(MakeFormParams<>()
+				:Form(Params<>()
 					.name("ldr-script-editor").title(L"Script Editor").wh(430, 380).start_pos(EStartPosition::CentreParent)
 					.menu({{L"&File", pr::gui::Menu(pr::gui::Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {pr::gui::MenuItem::Separator}, {L"&Close", IDCANCEL}})}})
 					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))

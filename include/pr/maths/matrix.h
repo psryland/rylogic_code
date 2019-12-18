@@ -383,8 +383,8 @@ namespace pr
 
 		struct LProxy
 		{
-			Matrix const* m_mat;
-			LProxy(Matrix const& m)
+			Matrix<Real> const* m_mat;
+			LProxy(Matrix<Real> const& m)
 				:m_mat(&m)
 			{}
 			Real operator ()(int col, int row) const
@@ -396,8 +396,8 @@ namespace pr
 		};
 		struct UProxy
 		{
-			Matrix const* m_mat;
-			UProxy(Matrix const& m)
+			Matrix<Real> const* m_mat;
+			UProxy(Matrix<Real> const& m)
 				:m_mat(&m)
 			{}
 			Real operator ()(int col, int row) const
@@ -424,7 +424,7 @@ namespace pr
 		// Access to the upper diagonal matrix
 		UProxy U;
 
-		MatrixLU(Matrix const& m)
+		MatrixLU(Matrix<Real> const& m)
 			:Matrix<Real>(m) // Note: after construction base != m
 			,DetOfP(1.0f)
 			,pi(std::make_unique<int[]>(m.rows()))
@@ -485,7 +485,7 @@ namespace pr
 	private:
 
 		// Work around to prevent warning
-		Matrix const& This() const
+		Matrix<Real> const& This() const
 		{
 			return *this;
 		}

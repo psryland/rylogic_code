@@ -3,9 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
 
-#include "audio/util/stdafx.h"
-#include "pr/audio/dll/audio.h"
+#include "pr/audio/forward.h"
 #include "pr/audio/audio.h"
+#include "pr/audio/dll/audio.h"
 #include "audio/dll/context.h"
 
 using namespace pr::audio;
@@ -118,7 +118,7 @@ AUDIO_API void __stdcall Audio_WaveBankCreateMidiInstrument(char const* bank_nam
 	CatchAndReport(Audio_WaveBankCreateMidiInstrument,);
 }
 
-// Misc **&****************************************************************************************
+// Misc *******************************************************************************************
 
 // Play an audio file
 AUDIO_API void __stdcall Audio_PlayFile(wchar_t const* filepath)
@@ -129,3 +129,4 @@ AUDIO_API void __stdcall Audio_PlayFile(wchar_t const* filepath)
 	}
 	CatchAndReport(Audio_PlayFile,);
 }
+

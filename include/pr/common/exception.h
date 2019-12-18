@@ -4,7 +4,7 @@
 //**********************************
 #pragma once
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 
 namespace pr
@@ -16,28 +16,22 @@ namespace pr
 	};
 
 	template <typename CodeType = int>
-	struct Exception :std::exception
+	struct Exception :std::runtime_error
 	{
+		using base = std::runtime_error;
 		CodeType m_code;
-		std::string m_msg;
 
-		Exception()
-			:std::exception()
-			,m_code()
+		Exception() = default;
+		explicit Exception(std::string msg)
+			:Exception(0, msg)
 		{}
-		Exception(std::string msg)
-			:std::exception(msg.c_str())
-			,m_code()
+		explicit Exception(CodeType code)
+			:Exception(code, std::string("Error code ").append(std::to_string(code)))
 		{}
-		Exception(CodeType code)
-			:std::exception(std::string("Error code ").append(std::to_string(code)).c_str())
+		explicit Exception(CodeType code, std::string msg)
+			:base(msg)
 			,m_code(code)
 		{}
-		Exception(CodeType code, std::string msg)
-			:std::exception(msg.c_str()) // Don't add the error code here. The caller will have added it to 'msg'
-			,m_code(code)
-		{}
-
 		virtual CodeType code() const
 		{
 			return m_code;
