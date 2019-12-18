@@ -159,7 +159,7 @@ namespace pr::chain
 			m_owner = nullptr;
 			if (rhs.m_owner != nullptr)
 			{
-				auto byte_offset = reinterpret_cast<char*>(&rhs) - reinterpret_cast<char*>(rhs.m_owner);
+				auto byte_offset = reinterpret_cast<char const*>(&rhs) - reinterpret_cast<char const*>(rhs.m_owner);
 				m_owner = reinterpret_cast<Owner*>(reinterpret_cast<char*>(this) - byte_offset);
 			}
 

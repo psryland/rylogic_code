@@ -18,7 +18,7 @@
 #include "pr/common/event_handler.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
-#include "pr/renderer11/instances/instance.h"
+#include "pr/view3d/instances/instance.h"
 
 namespace pr::ldr
 {

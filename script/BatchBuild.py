@@ -18,7 +18,7 @@ try:
 
 	# e.g: "\"folder\proj_name:Rebuild\""
 	native_libs = [
-		"Rylogic\\renderer11",
+		"Rylogic\\view3d",
 		"Rylogic\\audio",
 		"Rylogic\\physics",
 		"Rylogic\\physics2",
@@ -26,7 +26,7 @@ try:
 	native_dlls = [
 		"SDK\\scintilla",
 		"SDK\\sqlite3",
-		"Rylogic\\view3d",
+		"Rylogic\\view3d.dll",
 		"Rylogic\\audio.dll",
 		"VSExtensions\\prautoexp",
 		]

@@ -1237,7 +1237,7 @@ namespace pr::script
 				;
 
 			StringSrc src(str_in, StringSrc::EFlags::BufferLocally); str_in.clear();
-			Preprocessor pp(src, false);
+			Preprocessor pp(&src, false);
 			for (;*pp && *str_out; ++pp, ++str_out)
 			{
 				if (*pp == *str_out) continue;

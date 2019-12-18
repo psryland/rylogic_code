@@ -10,7 +10,7 @@
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
 #include "pr/ldraw/ldr_object.h"
-#include "pr/renderer11/forward.h"
+#include "pr/view3d/forward.h"
 
 namespace pr
 {

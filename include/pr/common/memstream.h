@@ -278,16 +278,17 @@ namespace pr
 	struct mem_istream :public std::basic_istream<Elem>
 	{
 		using char_type = typename mem_istream::char_type;
+		using base_type = std::basic_istream<char_type>;
 
 		view_streambuf<Elem> buf;
 		mem_istream(void const* data, std::size_t size)
-			:std::basic_istream<char_type>(&buf)
+			:base_type(&buf)
 			,buf(data, size)
 		{}
 
 		mem_istream& read(char_type* src, std::streamsize count)
 		{
-			auto& base = *static_cast<base_t*>(this);
+			auto& base = *static_cast<base_type*>(this);
 			base.read(reinterpret_cast<char_type*>(src), count);
 			return *this;
 		}

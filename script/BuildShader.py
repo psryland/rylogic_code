@@ -52,7 +52,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	ftitle,extn  = os.path.splitext(fname)
 	if trace: print("File: " + ftitle + extn)
 
-	outdir = os.path.join(UserVars.root, "projects", "renderer11", "shaders", "hlsl", "compiled", config)
+	outdir = os.path.join(UserVars.root, "projects", "view3d", "shaders", "hlsl", "compiled", config)
 	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 

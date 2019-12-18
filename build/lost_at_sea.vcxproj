@@ -79,7 +79,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>py $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
@@ -93,7 +93,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>py $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
@@ -107,7 +107,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>py $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
@@ -126,7 +126,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>view3d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>py $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>

@@ -60,7 +60,7 @@
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/win32/windows_com.h"
 #include "pr/script/forward.h"
-#include "pr/renderer11/renderer.h"
+#include "pr/view3d/renderer.h"
 
 namespace pr::app
 {

@@ -21,8 +21,8 @@
 #include "pr/maths/maths.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
-#include "pr/renderer11/instances/instance.h"
-#include "pr/renderer11/models/model_generator.h"
+#include "pr/view3d/instances/instance.h"
+#include "pr/view3d/models/model_generator.h"
 
 namespace pr::ldr
 {

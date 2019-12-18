@@ -839,10 +839,11 @@ namespace pr
 		struct ColumnMetaDataImpl :ColumnMetaData<RecordType>
 		{
 			//typedef typename Adapter::FieldType  FieldType;  // The type of the member in 'RecordType'
-			typedef typename Adapter::ColumnType ColumnType; // The type that the member is converted to when stored in the db
+			using ColumnType = typename Adapter::ColumnType; // The type that the member is converted to when stored in the db
+			using base_type = ColumnMetaData<RecordType>;
 
 			ColumnMetaDataImpl(char const* name, char const* datatype, char const* column_constraints)
-				:ColumnMetaData(name, datatype, column_constraints)
+				:base_type(name, datatype, column_constraints)
 			{}
 
 			// Bind the value of this column in 'item' to a query parameter

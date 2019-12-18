@@ -45,7 +45,7 @@
 //#include "pr/camera/camera.h"
 ////#include "pr/camera/camctrl_dinput_wasd.h"
 //#include "pr/input/dinput.h"
-#include "pr/renderer11/renderer.h"
+#include "pr/view3d/renderer.h"
 #include "pr/storage/settings.h"
 #include "pr/audio/directsound/sound.h"
 #include "pr/audio/directsound/player.h"

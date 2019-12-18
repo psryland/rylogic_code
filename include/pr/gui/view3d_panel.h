@@ -5,7 +5,7 @@
 #pragma once
 
 #include "pr/gui/wingui.h"
-#include "pr/view3d/view3d.h"
+#include "pr/view3d/dll/view3d.h"
 
 namespace pr::gui
 {

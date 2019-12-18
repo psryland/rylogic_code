@@ -4,162 +4,631 @@
     <Filter Include="src">
       <UniqueIdentifier>{3e08be3d-fae2-4b9f-8d67-5a37e3dd4c73}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr">
+    <Filter Include="src\dll">
+      <UniqueIdentifier>{c7cc43b8-48be-44d4-939f-00251f2a39b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\config">
+      <UniqueIdentifier>{83c0f597-c740-41f5-8ea5-1b7f2c080c46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\instances">
+      <UniqueIdentifier>{3ae22964-5525-41b0-b9e9-ec99049a5a89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lights">
+      <UniqueIdentifier>{31ef76eb-3cf8-497e-bcb1-38da4442df23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\models">
+      <UniqueIdentifier>{d02007cc-f89c-463a-b791-d0a68bf5b314}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\render">
+      <UniqueIdentifier>{fd96ad48-d7ab-4b0e-979c-9ccaa40e516e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders">
+      <UniqueIdentifier>{be25aa95-ef53-4ae9-892a-8f09a74b64cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr">
       <UniqueIdentifier>{2e13382c-2c9f-488d-8851-229d4321e08b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\lua">
+    <Filter Include="pr\lua">
       <UniqueIdentifier>{289d033a-d7cd-42ce-8422-6ed91b5659b7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\script">
+    <Filter Include="pr\script">
       <UniqueIdentifier>{f6a00def-486d-441f-a6c6-4d47ca0a53d5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\camera">
+    <Filter Include="pr\camera">
       <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\gui">
+    <Filter Include="pr\gui">
       <UniqueIdentifier>{5a5d25db-8b40-43ab-b93e-6590684aa9b8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\win32">
+    <Filter Include="pr\win32">
       <UniqueIdentifier>{3283cba4-3b91-4635-a737-050334dd9891}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\ldraw">
+    <Filter Include="pr\ldraw">
       <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\str">
+    <Filter Include="pr\str">
       <UniqueIdentifier>{8240f6a8-10a3-4b0b-9c33-d808e5aafd0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\steps">
+      <UniqueIdentifier>{e922882a-3de2-45b4-8ff6-d2608ce1ade3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\textures">
+      <UniqueIdentifier>{110ed93c-60ed-42fe-97d8-dc4520e71805}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\util">
+      <UniqueIdentifier>{f7418a8d-854d-4411-ae33-044a49fd7746}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{85798288-f941-4df4-965f-46f491b6243c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl">
+      <UniqueIdentifier>{2ebd7319-03f7-44ed-822f-3080da6ee019}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\screenspace">
+      <UniqueIdentifier>{b63d2c91-23d9-4279-ab1c-62966ca20e96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\common">
+      <UniqueIdentifier>{ee439197-4375-44fc-8e75-7de00570a104}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\compiled">
+      <UniqueIdentifier>{dfb1ad4f-6d3a-4e7b-8f39-4813f3b507b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\deferred">
+      <UniqueIdentifier>{b065db85-fa44-4c61-9c02-80af8d9bc692}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\dx9">
+      <UniqueIdentifier>{fdb0437a-1244-4473-ad06-5f3473157b72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\forward">
+      <UniqueIdentifier>{7aafe157-9267-4e98-ad2f-184c07463a33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\lighting">
+      <UniqueIdentifier>{cb36f77f-6783-4bbd-89d8-79e0bd2acbc4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\shadow">
+      <UniqueIdentifier>{556626d4-43e9-4a74-8944-fe91fba7312d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders\hlsl\utility">
+      <UniqueIdentifier>{75312df4-3c8e-43ab-8941-f2aff981b3b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\directxtex">
+      <UniqueIdentifier>{2d5e2817-c237-4f57-b6a4-316cffaa377f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h">
-      <Filter>src\pr\camera</Filter>
+      <Filter>pr\camera</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\embedded_lua.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\includes.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\lua\lua.h">
-      <Filter>src\pr\lua</Filter>
+      <Filter>pr\lua</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\preprocessor.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\view3d\context.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\view3d\forward.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\view3d.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\view3d\window.h">
-      <Filter>src</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\script.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\script_core.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\tokeniser.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\token.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
-      <Filter>src\pr\gui</Filter>
+      <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\win32\win32.h">
-      <Filter>src\pr\win32</Filter>
+      <Filter>pr\win32</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\wingui.h">
-      <Filter>src\pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\pr_conv.h">
-      <Filter>src</Filter>
+      <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\reader.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_gizmo.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_helper.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_object.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_objects_dlg.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_script_editor_dlg.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_sources.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
-      <Filter>src\pr\ldraw</Filter>
+      <Filter>pr\ldraw</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\buf8.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\embedded.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\fail_policy.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\filter.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\forward.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\location.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\macros.h">
-      <Filter>src\pr\script</Filter>
+      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\str\extract.h">
-      <Filter>src\pr\str</Filter>
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\allocator.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\directxtex\BC.h">
+      <Filter>src\directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\common.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\shaders\common.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\config\config.h">
+      <Filter>src\config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\directxtex\DDS.h">
+      <Filter>src\directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\demo_scene.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\directxtex\DirectXTex.h">
+      <Filter>src\directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\directxtex\DirectXTexP.h">
+      <Filter>src\directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\drawlist_element.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\dslighting.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\dx9_context.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\event_args.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\util\forward_private.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\forward_render.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\gbuffer.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\image.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\input_layout.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\instances\instance.h">
+      <Filter>src\instances</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\lights\light.h">
+      <Filter>src\lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\lights\light_ui.h">
+      <Filter>src\lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\lock.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\lookup.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model_buffer.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\model_file.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model_settings.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model_generator.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model_manager.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_box.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_sphere.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_cylinder.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_extrude.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_line.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_mesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_point.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_quad.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_shape2d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\nugget.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\dll\pr_conv.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\projected_texture.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\ray_cast.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\render_step.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\renderer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\renderer.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\scene.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\scene_view.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\directxtex\scoped.h">
+      <Filter>src\directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\shaders\shader_forward.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shader.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shader_manager.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shader_set.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\steps\shadow_map.h">
+      <Filter>src\steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shdr_fwd.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shdr_screen_space.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\sortkey.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\state_block.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\render\state_stack.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\view3d\render\stereo.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\stl.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\stock_resources.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\texture_2d.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\texture_base.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\texture_cube.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\texture_loader.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\textures\texture_manager.h">
+      <Filter>src\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\util.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\dll\view3d.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\render\window.h">
+      <Filter>src\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\wrappers.h">
+      <Filter>src\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <Filter>src\pr\lua</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <Filter>src\pr\lua</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\BC4BC5.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\view3d.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\BC6HBC7.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\context.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="..\projects\view3d\config\config.cpp">
+      <Filter>src\config</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\window.cpp">
-      <Filter>src</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexCompress.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
-      <Filter>src\pr\ldraw</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexConvert.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object.cpp">
-      <Filter>src\pr\ldraw</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexD3D11.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
-      <Filter>src\pr\ldraw</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexDDS.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object_templates.cpp">
-      <Filter>src\pr\ldraw</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexFlipRotate.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object_demo_scene.cpp">
-      <Filter>src\pr\ldraw</Filter>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexImage.cpp">
+      <Filter>src\directxtex</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMipmaps.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMisc.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexNormalMaps.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexResize.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexTGA.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexUtil.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexWIC.cpp">
+      <Filter>src\directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\dslighting.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\forward_render.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\gbuffer.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\lights\light.cpp">
+      <Filter>src\lights</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\util\lock.cpp">
+      <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\models\model.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\models\model_buffer.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\models\model_manager.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\models\nugget.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\ray_cast.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\render_step.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\renderer.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\scene.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\scene_view.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shader.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shader_manager.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\steps\shadow_map.cpp">
+      <Filter>src\steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_shadow_map.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_dslighting.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_fwd.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_gbuffer.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_screen_space.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\state_block.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\state_stack.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\stereo.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_2d.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_base.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_cube.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_loader_dds.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_loader_wic.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\textures\texture_manager.cpp">
+      <Filter>src\textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\util\util.cpp">
+      <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\render\window.cpp">
+      <Filter>src\render</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\dslighting.hlsl">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsl">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward_radial_fade.hlsl">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsl">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\ray_cast.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli">
+      <Filter>src\shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\view3d\directxtex\DirectXTex.inl">
+      <Filter>src\directxtex</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\utility\env_map.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsli">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\forward\forward_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\common\functions.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsli">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\common\geometry.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\lighting\phong_lighting.hlsli">
+      <Filter>src\shaders\hlsl\lighting</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_cast.hlsli">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\types.hlsli">
+      <Filter>src\shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\common\vector.hlsli">
+      <Filter>src\shaders\hlsl\common</Filter>
+    </None>
   </ItemGroup>
 </Project>

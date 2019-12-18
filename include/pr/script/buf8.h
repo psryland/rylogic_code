@@ -5,8 +5,10 @@
 
 #pragma once
 
+#include <type_traits>
 #include <intrin.h>
 #include <cassert>
+#include "pr/str/string_core.h"
 
 #if _MSC_VER < 1900
 #  ifndef alignas
@@ -21,98 +23,79 @@ namespace pr::script
 	struct Buf
 	{
 		using value_type = Char;
+		using storage_type = TStore;
 
 		// Constants
-		enum
-		{
-			Capacity = sizeof(TStore) / sizeof(Char),
-			Front    = 0,
-			Back     = Capacity - 1,
-		};
+		static constexpr int Capacity = sizeof(storage_type) / sizeof(value_type);
+		static constexpr int Back = Capacity - 1;
+		static constexpr int Front = 0;
 
 		// Shift register storage
-		union { Char m_ch[Capacity]; TStore m_ui; }; Char const m_term; // Used to ensure 'm_ch' is null terminated
-		static_assert(sizeof(TStore) == sizeof(Char[Capacity]), "");
-
-		// Char traits
-		template <typename Ch> struct base_traits;
-		template <> struct base_traits<char>
+		union
 		{
-			static size_t strlen(char const* str)                    { return ::strlen(str); }
-			static size_t strnlen(char const* str, size_t max_count) { return ::strnlen(str, max_count); }
+			value_type m_ch[Capacity];
+			storage_type m_ui;
+			static_assert(sizeof(storage_type) == sizeof(value_type[Capacity]));
 		};
-		template <> struct base_traits<wchar_t>
-		{
-			static size_t strlen(wchar_t const* str)                    { return ::wcslen(str); }
-			static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
-		};
-		struct traits :base_traits<Char> {};
+		value_type const m_term; // Used to ensure 'm_ch' is null terminated
 
 		Buf()
 			:m_ui()
-			,m_term()
-		{}
-		Buf(Buf&& rhs)
-			:m_ui(rhs.m_ui)
 			,m_term()
 		{}
 		Buf(Buf const& rhs)
 			:m_ui(rhs.m_ui)
 			,m_term()
 		{}
-		Buf& operator =(Buf&& rhs)
+		template <typename Ptr>
+		explicit Buf(Ptr&& src)
+			:Buf()
 		{
-			if (this != &rhs)
-				std::swap(m_ui, rhs.m_ui);
-			return *this;
+			Load(std::forward<Ptr>(src));
 		}
 		Buf& operator =(Buf const& rhs)
 		{
-			if (this != &rhs)
-			{
-				m_ui = rhs.m_ui;
-			}
+			if (this == &rhs) return *this;
+			m_ui = rhs.m_ui;
 			return *this;
-		}
-		template <typename Ptr> explicit Buf(Ptr& src) :Buf()
-		{
-			Load(src);
 		}
 
 		// Load the buffer from a source
-		//  If 'src' has less than 2 characters then 0s are shifted into the buffer
-		template <typename Ptr> void Load(Ptr& src)
+		template <typename Ptr>
+		void Load(Ptr& src)
 		{
 			int n = Capacity;
-			for (; *src != 0 && n--; ++src) shift(*src);
-			for (; n-- > 0;) shift(Char());
+			for (; *src != 0 && n--; ++src)
+				shift(*src);
+			for (; n-- > 0;)
+				shift(value_type());
 		}
-		template <typename Ptr> void Load(Ptr const* src)
+		template <typename Ptr>
+		void Load(Ptr const& src)
 		{
-			int n = Capacity;
-			for (; *src != 0 && n--; ++src) shift(*src);
-			for (; n-- > 0;) shift(Char());
+			std::decay_t<Ptr const> ptr = src;
+			Load(ptr);
 		}
 
 		// Reset the buffer
 		void clear()
 		{
-			m_ui = TStore();
+			m_ui = storage_type();
 		}
 
 		// Shift a character into the buffer
-		void shift(Char ch)
+		void shift(value_type ch)
 		{
 			m_ui = Derived::right_shift(m_ui);
 			m_ch[Back] = ch;
 		}
 
 		// Access elements in the buffer
-		Char front() const
+		value_type front() const
 		{
 			return m_ch[Front];
 		}
-		Char back() const
+		value_type back() const
 		{
 			return m_ch[Back];
 		}
@@ -120,38 +103,37 @@ namespace pr::script
 		// Allow dereference to mean the front of the buffer
 		// Note, no operator++() however since we don't know
 		// the source that feeds this buffer
-		Char operator *() const
+		value_type operator *() const
 		{
 			return front();
 		}
 
 		// Array access into the buffer
-		Char operator [](size_t i) const
+		value_type operator [](size_t i) const
 		{
 			assert(i < Capacity);
 			return m_ch[i];
 		}
-		Char& operator [](size_t i)
+		value_type& operator [](size_t i)
 		{
 			assert(i < Capacity);
 			return m_ch[i];
 		}
 
 		// String access (std::string-like interface)
-		Char const* c_str() const
+		value_type const* c_str() const
 		{
 			return m_ch;
 		}
 		size_t size() const
 		{
-			return traits::strnlen(m_ch, Capacity);
+			return pr::char_traits<value_type>::length(m_ch, Capacity);
 		}
 
 		// This returns true if 'buf' *contains* 'this', i.e. 'this' is a substring of 'buf' starting at m_ch[0].
 		// Note: buf1.match(buf2) != buf2.match(buf1) generally
 		bool match(Buf const& buf) const
 		{
-			// return m_ui != 0 && (m_ui & buf.m_ui) == m_ui;
 			if (!front()) return false;
 			return Derived::lhs_bits_set(m_ui, buf.m_ui);
 		}
@@ -167,15 +149,15 @@ namespace pr::script
 		}
 
 		// Default implementation
-		static TStore right_shift(TStore const& ui)
+		static storage_type right_shift(storage_type const& ui)
 		{
-			return ui >> 8 * sizeof(Char);
+			return ui >> 8 * sizeof(value_type);
 		}
-		static bool lhs_bits_set(TStore const& lhs, TStore const& rhs)
+		static bool lhs_bits_set(storage_type const& lhs, storage_type const& rhs)
 		{
 			return (lhs & rhs) == lhs;
 		}
-		static bool equal(TStore const& lhs, TStore const& rhs)
+		static bool equal(storage_type const& lhs, storage_type const& rhs)
 		{
 			return lhs == rhs;
 		}
@@ -184,33 +166,49 @@ namespace pr::script
 	// A "shift register" of 8 narrow characters
 	struct Buf8 :Buf<Buf8, unsigned long long, char>
 	{
-		Buf8() :Buf() {}
-		template <typename Ptr> explicit Buf8(Ptr const& src) :Buf(src) {}
-		template <typename Ptr> explicit Buf8(Ptr& src) :Buf(src) {}
+		Buf8()
+			:Buf()
+		{}
+		template <typename Ptr>
+		explicit Buf8(Ptr&& src)
+			:Buf(std::forward<Ptr>(src))
+		{}
 	};
 
 	// A "shift register" of 2 wide characters
 	struct BufW2 :Buf<BufW2, unsigned int, wchar_t>
 	{
-		BufW2() :Buf() {}
-		template <typename Ptr> explicit BufW2(Ptr const& src) :Buf(src) {}
-		template <typename Ptr> explicit BufW2(Ptr& src) :Buf(src) {}
+		BufW2()
+			:Buf()
+		{}
+		template <typename Ptr>
+		explicit BufW2(Ptr&& src)
+			:Buf(std::forward<Ptr>(src))
+		{}
 	};
 
 	// A "shift register" of 4 wide characters
 	struct BufW4 :Buf<BufW4, unsigned long long, wchar_t>
 	{
-		BufW4() :Buf() {}
-		template <typename Ptr> explicit BufW4(Ptr const& src) :Buf(src) {}
-		template <typename Ptr> explicit BufW4(Ptr& src) :Buf(src) {}
+		BufW4()
+			:Buf()
+		{}
+		template <typename Ptr>
+		explicit BufW4(Ptr&& src)
+			:Buf(std::forward<Ptr>(src))
+		{}
 	};
 
 	// A "shift register" of 8 wide characters
 	struct alignas(16) BufW8 :Buf<BufW8, __m128i, wchar_t>
 	{
-		BufW8() :Buf() {}
-		template <typename Ptr> explicit BufW8(Ptr const& src) :Buf(src) {}
-		template <typename Ptr> explicit BufW8(Ptr& src) :Buf(src) {}
+		BufW8()
+			:Buf()
+		{}
+		template <typename Ptr>
+		explicit BufW8(Ptr&& src)
+			:Buf(src)
+		{}
 
 		// Default implementation
 		static __m128i right_shift(__m128i const& ui)
@@ -231,6 +229,7 @@ namespace pr::script
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
+#include "pr/script/script_core.h"
 namespace pr::script
 {
 	PRUnitTest(Buf8Tests)
@@ -238,13 +237,17 @@ namespace pr::script
 		using namespace pr::str;
 
 		{// BufW2
-			wchar_t const src[] = L"0123456789";
+			wchar_t const data[] = L"0123456789";
+			wchar_t const* const src = &data[0];
 			BufW2 buf(src);
 			PR_CHECK(buf[0], L'0');
 			PR_CHECK(buf[1], L'1');
+			PR_CHECK(*src, L'0');
+
 		}
 		{// BufW4
-			wchar_t* src = L"0123456789";
+			wchar_t const data[] = L"0123456789";
+			wchar_t const* src = &data[0];
 			BufW4 buf(src);
 			PR_CHECK(*src, L'4');
 			PR_CHECK(buf[0], L'0');
@@ -263,6 +266,20 @@ namespace pr::script
 			PR_CHECK(BufW8(L"Paul"       ).match(BufW8(L"PaulWasHere")), true);
 			PR_CHECK(BufW8(L"PaulWasHere").match(BufW8(L"Paul"       )), false);
 			PR_CHECK(BufW8(L"ABC") == BufW8(L"ABC"), true);
+		}
+		{// Src
+			script::StringSrc src("0123456789");
+			BufW4 buf(src);
+			PR_CHECK(*src, L'4');
+			PR_CHECK(buf[0], L'0');
+			PR_CHECK(buf[1], L'1');
+			PR_CHECK(buf[2], L'2');
+			PR_CHECK(buf[3], L'3');
+			buf.shift(*src);
+			PR_CHECK(buf[0], L'1');
+			PR_CHECK(buf[1], L'2');
+			PR_CHECK(buf[2], L'3');
+			PR_CHECK(buf[3], L'4');
 		}
 	}
 }

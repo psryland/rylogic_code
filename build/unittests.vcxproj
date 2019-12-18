@@ -297,7 +297,7 @@
     <ClInclude Include="..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
-    <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
+    <ClInclude Include="..\include\pr\view3d\textures\projected_texture.h" />
     <ClInclude Include="..\include\pr\script\buf8.h" />
     <ClInclude Include="..\include\pr\script\embedded.h" />
     <ClInclude Include="..\include\pr\script\embedded_lua.h" />
