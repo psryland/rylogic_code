@@ -554,6 +554,27 @@
     <ClCompile Include="..\projects\view3d\render\window.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
+      <Filter>pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_object.cpp">
+      <Filter>pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_object_demo_scene.cpp">
+      <Filter>pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_object_templates.cpp">
+      <Filter>pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
+      <Filter>pr\ldraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\lua\lua_core.c">
+      <Filter>pr\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\lua\lua_lib.c">
+      <Filter>pr\lua</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">

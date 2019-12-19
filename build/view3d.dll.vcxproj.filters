@@ -4,119 +4,11 @@
     <Filter Include="src">
       <UniqueIdentifier>{3e08be3d-fae2-4b9f-8d67-5a37e3dd4c73}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr">
-      <UniqueIdentifier>{2e13382c-2c9f-488d-8851-229d4321e08b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\lua">
-      <UniqueIdentifier>{289d033a-d7cd-42ce-8422-6ed91b5659b7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\script">
-      <UniqueIdentifier>{f6a00def-486d-441f-a6c6-4d47ca0a53d5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\camera">
-      <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\gui">
-      <UniqueIdentifier>{5a5d25db-8b40-43ab-b93e-6590684aa9b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\win32">
-      <UniqueIdentifier>{3283cba4-3b91-4635-a737-050334dd9891}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\ldraw">
-      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="src\pr\str">
-      <UniqueIdentifier>{8240f6a8-10a3-4b0b-9c33-d808e5aafd0d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\dll">
       <UniqueIdentifier>{c7cc43b8-48be-44d4-939f-00251f2a39b3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\camera\camera.h">
-      <Filter>src\pr\camera</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\embedded_lua.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\includes.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\lua\lua.h">
-      <Filter>src\pr\lua</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\preprocessor.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\script.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\script_core.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\tokeniser.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\token.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
-      <Filter>src\pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\win32\win32.h">
-      <Filter>src\pr\win32</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\gui\wingui.h">
-      <Filter>src\pr\gui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\reader.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_gizmo.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_object.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_objects_dlg.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_script_editor_dlg.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_sources.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
-      <Filter>src\pr\ldraw</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\buf8.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\embedded.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\fail_policy.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\filter.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\forward.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\location.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\macros.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\extract.h">
-      <Filter>src\pr\str</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\view3d\dll\context.h">
       <Filter>src\dll</Filter>
     </ClInclude>
@@ -134,27 +26,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <Filter>src\pr\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <Filter>src\pr\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
-      <Filter>src\pr\ldraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object.cpp">
-      <Filter>src\pr\ldraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
-      <Filter>src\pr\ldraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object_templates.cpp">
-      <Filter>src\pr\ldraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\ldraw\ldr_object_demo_scene.cpp">
-      <Filter>src\pr\ldraw</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\view3d\dll\context.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>

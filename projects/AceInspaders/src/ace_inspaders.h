@@ -86,6 +86,7 @@ namespace ace
 			// Add the quad to the scene
 			m_scene.OnUpdateScene += std::bind(&Main::UpdateScene, this, _1);
 
+			// Load sounds
 			InitSounds();
 
 			// Initialise the display
