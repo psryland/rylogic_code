@@ -25,7 +25,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/container/vector.h"
 //#include "pr/common/event_handler.h"
 //#include "pr/common/expr_eval.h"
-//#include "pr/common/colour.h"
+//#include "pr/gfx/colour.h"
 //#include "pr/container/deque.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"

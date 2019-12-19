@@ -101,7 +101,9 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities
 	// during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
 
 	// Sweep the array looking for overlaps
 	v4 sum = v4Zero, sum_sq = v4Zero;
@@ -151,7 +153,9 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void
 
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
 
 	BPEntity const& entityB = entity;
 	BBox const& bboxB = *entityB.m_bbox;
@@ -189,7 +193,9 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, Ray const& ray, void* contex
 
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
 
 	float ray_max = pr::Max(ray.m_point[m_axis], ray.m_point[m_axis] + ray.m_direction[m_axis]);
 

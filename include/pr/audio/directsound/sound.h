@@ -2,9 +2,9 @@
 // DSound
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
-// Legacy direct sound
+// Notes:
+//   - DirectSound8 is deprecated, prefer XAudio2
 #pragma once
-
 #include <mmreg.h>
 #include <dsound.h>
 #include "pr/common/assert.h"

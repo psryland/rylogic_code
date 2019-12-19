@@ -4,6 +4,12 @@
 //***************************************************************************************************
 #pragma once
 
+#ifndef _WIN32_WINNT 
+#define _WIN32_WINNT _WIN32_WINNT_WIN8
+#elif _WIN32_WINNT < _WIN32_WINNT_WIN8 
+#error "_WIN32_WINNT >= _WIN32_WINNT_WIN8 required"
+#endif
+
 #include <memory>
 #include <vector>
 #include <string>
@@ -24,6 +30,7 @@
 #include <sdkddkver.h>
 #include <windows.h>
 #include <mmreg.h>
+#include <xaudio2.h>
 
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"

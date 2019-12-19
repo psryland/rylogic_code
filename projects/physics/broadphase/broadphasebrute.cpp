@@ -59,7 +59,9 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 	PR_DECLARE_PROFILE(PR_PROFILE_BROADPHASE, phBroadphaseBrute);
 	PR_PROFILE_SCOPE(PR_PROFILE_BROADPHASE, phBroadphaseBrute);
 	PR_ASSERT(PR_DBG_PHYSICS, !m_enumerating, "Pair enumeration is not reentrant");
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
 
 	// An O(N^2) test for colliding pairs 
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
@@ -80,7 +82,10 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 // Enumerate all overlaps with 'entity'
 void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* context)
 {
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
+
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{	
 		if (Intersect_BBoxToBBox(*(*i)->m_bbox, *entity.m_bbox))
@@ -96,7 +101,10 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* c
 // Enumerate all overlaps with 'ray'
 void BPBruteForce::EnumPairs(EnumPairsFunc func, Ray const& ray, void* context)
 {
-	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
+	PR_EXPAND(PR_DBG_PHYSICS, auto enumer = pr::CreateScope(
+		[&] { m_enumerating = true; },
+		[&] { m_enumerating = false; }));
+
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{	
 		if (Intersect_LineSegmentToBoundingBox(ray.m_point, ray.m_point + ray.m_direction, *(*i)->m_bbox))

@@ -33,7 +33,6 @@
 #include <new>
 #include "pr/meta/if.h"
 #include "pr/meta/is_pod.h"
-#include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 
 #ifdef MEMPOOL_THREADSAFE

@@ -14,7 +14,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/scope.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/maths/maths.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/triangle.h"

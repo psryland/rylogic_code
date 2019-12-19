@@ -169,12 +169,10 @@ namespace pr
 			return *this;
 		}
 
-		// Implicit conversion to bool
-		struct bool_tester { int x; };
-		using bool_type = int bool_tester::*;
-		operator bool_type() const
+		// Conversion to bool
+		explicit operator bool() const
 		{
-			return m_ptr != nullptr ? &bool_tester::x : static_cast<bool_type>(nullptr);
+			return m_ptr != nullptr;
 		}
 
 		// Implicit conversion to base class
@@ -235,19 +233,23 @@ namespace pr
 			assert(pr::PtrRefCount(ptr) > 0 && "Pointer reference count is 0");
 			ptr->Release();
 		}
+
+	public:
+
+		friend bool operator == (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr == rhs.m_ptr; }
+		friend bool operator != (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr != rhs.m_ptr; }
+		friend bool operator <  (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr < rhs.m_ptr; }
+		friend bool operator >  (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr > rhs.m_ptr; }
+		friend bool operator <= (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr <= rhs.m_ptr; }
+		friend bool operator >= (RefPtr const& lhs, RefPtr const& rhs) { return lhs.m_ptr >= rhs.m_ptr; }
+		friend bool operator == (RefPtr const& lhs, T const* rhs) { return lhs.m_ptr == rhs; }
+		friend bool operator != (RefPtr const& lhs, T const* rhs) { return lhs.m_ptr != rhs; }
+		friend bool operator == (T const* lhs, RefPtr const& rhs) { return lhs == rhs.m_ptr; }
+		friend bool operator != (T const* lhs, RefPtr const& rhs) { return lhs != rhs.m_ptr; }
+		friend bool operator == (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr == nullptr; }
+		friend bool operator != (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr != nullptr; }
 	};
 	static_assert(sizeof(RefPtr<void>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
-
-	template <typename T> inline bool operator == (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr == rhs.m_ptr; }
-	template <typename T> inline bool operator != (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr != rhs.m_ptr; }
-	template <typename T> inline bool operator <  (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <  rhs.m_ptr; }
-	template <typename T> inline bool operator >  (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >  rhs.m_ptr; }
-	template <typename T> inline bool operator <= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <= rhs.m_ptr; }
-	template <typename T> inline bool operator >= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >= rhs.m_ptr; }
-	template <typename T> inline bool operator == (RefPtr<T> const& lhs, T const* rhs) { return lhs.m_ptr == rhs; }
-	template <typename T> inline bool operator != (RefPtr<T> const& lhs, T const* rhs) { return lhs.m_ptr != rhs; }
-	template <typename T> inline bool operator == (T const* lhs, RefPtr<T> const& rhs) { return lhs == rhs.m_ptr; }
-	template <typename T> inline bool operator != (T const* lhs, RefPtr<T> const& rhs) { return lhs != rhs.m_ptr; }
 
 	// The interface required by RefPtr.
 	// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface

@@ -2,9 +2,13 @@
 // Sound IDecoder
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
-#pragma once
+// Notes:
+//   - DirectSound8 is deprecated, prefer XAudio2
 
-#include "pr/audio/forward.h"
+#pragma once
+#include <fstream>
+#include <filesystem>
+#include "pr/common/cast.h"
 #include "pr/audio/directsound/sound.h"
 
 namespace pr::sound

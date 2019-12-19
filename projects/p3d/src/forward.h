@@ -12,7 +12,6 @@
 #include <windows.h>
 #include <consoleapi.h>
 
-#include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"

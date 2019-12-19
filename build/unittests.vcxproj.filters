@@ -186,9 +186,6 @@
     <ClInclude Include="..\include\pr\common\clipboard.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\colour.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\hardware\comm_port_io.h">
       <Filter>pr\hardware</Filter>
     </ClInclude>
@@ -455,9 +452,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\container\quadtree.h">
       <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\prtypes.h">
-      <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\property.h">
       <Filter>pr\common</Filter>
@@ -951,9 +945,6 @@
     <ClInclude Include="..\include\pr\physics2\integrator\impulse.h">
       <Filter>pr\physics\integrater</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\handle.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\storage\zip_file.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
@@ -1037,6 +1028,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\textures\projected_texture.h">
       <Filter>pr\view3d\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gfx\colour.h">
+      <Filter>pr\gfx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

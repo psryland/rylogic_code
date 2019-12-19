@@ -24,55 +24,51 @@
 //	if (!pr::EnumCommandLine(GetCommandLine(), thing)) return false;
 //
 #pragma once
-#ifndef PR_COMMAND_LINE_H
-#define PR_COMMAND_LINE_H
-
 #include <string>
 #include <vector>
 #include "pr/str/string_util.h" // for pr::str::Tokenise()
 
+namespace pr::cmdline
+{
+	// Helper to test if 'str' is of the form '-xyz'
+	template <typename Char> inline bool IsOption(std::basic_string<Char> const& str)
+	{
+		return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
+	}
+
+	// Interface for receiving command line options
+	// Return true for more options
+	template <typename Char = char>
+	struct IOptionReceiver
+	{
+		using OptionString = std::basic_string<Char>;
+		using TArgs        = std::vector<OptionString>;
+		using TArgIter     = typename TArgs::const_iterator;
+
+		virtual ~IOptionReceiver() {}
+
+		// Helper to test if 'str' is of the form '-xyz'
+		virtual bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
+
+		// Called for anything not preceded by '-'.
+		// The caller should advance 'arg' for each argument read.
+		// Return true to continue parsing, false to abort parsing, or
+		// set arg = arg_end to end parsing and have true returned.
+		virtual bool CmdLineData(TArgIter& arg, TArgIter /*arg_end*/) { ++arg; return true; }
+
+		// Called when an option is found. An option is anything preceded by a '-'.
+		// 'option' is the name of the option, including the '-'.
+		// 'arg' is an iterator to the next command line value after 'option'
+		// 'arg_end' is the end of the argument vector
+		// e.g. -Option arg0 arg1 arg2
+		// The caller should advance 'arg' for each argument read.
+		// Return true to continue parsing, false to abort parsing, or
+		// set arg = arg_end to end parsing and have true returned.
+		virtual bool CmdLineOption(OptionString const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
+	};
+}
 namespace pr
 {
-	namespace cmdline
-	{
-		// Helper to test if 'str' is of the form '-xyz'
-		template <typename Char> inline bool IsOption(std::basic_string<Char> const& str)
-		{
-			return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
-		}
-
-		// Interface for receiving command line options
-		// Return true for more options
-		template <typename Char = char>
-		struct IOptionReceiver
-		{
-			using OptionString = std::basic_string<Char>;
-			using TArgs        = std::vector<OptionString>;
-			using TArgIter     = typename TArgs::const_iterator;
-
-			virtual ~IOptionReceiver() {}
-
-			// Helper to test if 'str' is of the form '-xyz'
-			virtual bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
-
-			// Called for anything not preceded by '-'.
-			// The caller should advance 'arg' for each argument read.
-			// Return true to continue parsing, false to abort parsing, or
-			// set arg = arg_end to end parsing and have true returned.
-			virtual bool CmdLineData(TArgIter& arg, TArgIter /*arg_end*/) { ++arg; return true; }
-
-			// Called when an option is found. An option is anything preceded by a '-'.
-			// 'option' is the name of the option, including the '-'.
-			// 'arg' is an iterator to the next command line value after 'option'
-			// 'arg_end' is the end of the argument vector
-			// e.g. -Option arg0 arg1 arg2
-			// The caller should advance 'arg' for each argument read.
-			// Return true to continue parsing, false to abort parsing, or
-			// set arg = arg_end to end parsing and have true returned.
-			virtual bool CmdLineOption(OptionString const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
-		};
-	}
-	
 	// Parse a range of command line arguments
 	// Returns true if all command line parameters were parsed
 	template <typename Char = char, typename TArgIter = cmdline::IOptionReceiver<Char>::TArgIter>
@@ -119,6 +115,3 @@ namespace pr
 		return args.empty() || EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 }
-
-#endif
-

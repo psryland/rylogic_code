@@ -74,7 +74,6 @@
     <ClInclude Include="..\include\pr\common\cast.h" />
     <ClInclude Include="..\include\pr\common\chain.h" />
     <ClInclude Include="..\include\pr\common\clipboard.h" />
-    <ClInclude Include="..\include\pr\common\colour.h" />
     <ClInclude Include="..\include\pr\common\command_line.h" />
     <ClInclude Include="..\include\pr\common\compress.h" />
     <ClInclude Include="..\include\pr\common\console.h" />
@@ -89,7 +88,6 @@
     <ClInclude Include="..\include\pr\common\flags_enum.h" />
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
-    <ClInclude Include="..\include\pr\common\handle.h" />
     <ClInclude Include="..\include\pr\common\hash.h" />
     <ClInclude Include="..\include\pr\common\hresult.h" />
     <ClInclude Include="..\include\pr\common\ienumoutput.h" />
@@ -118,7 +116,6 @@
     <ClInclude Include="..\include\pr\common\property.h" />
     <ClInclude Include="..\include\pr\common\proxy.h" />
     <ClInclude Include="..\include\pr\common\prsortkey.h" />
-    <ClInclude Include="..\include\pr\common\prtypes.h" />
     <ClInclude Include="..\include\pr\common\range.h" />
     <ClInclude Include="..\include\pr\common\refcount.h" />
     <ClInclude Include="..\include\pr\common\refptr.h" />
@@ -180,6 +177,7 @@
     <ClInclude Include="..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\include\pr\geometry\utility.h" />
     <ClInclude Include="..\include\pr\geometry\volume.h" />
+    <ClInclude Include="..\include\pr\gfx\colour.h" />
     <ClInclude Include="..\include\pr\gfx\onebit.h" />
     <ClInclude Include="..\include\pr\gui\atlgdix.h" />
     <ClInclude Include="..\include\pr\gui\colour_ctrl.h" />

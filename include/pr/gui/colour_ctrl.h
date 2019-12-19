@@ -10,7 +10,7 @@
 //#include <thread>
 //#include <cassert>
 
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/gdiplus.h"
 

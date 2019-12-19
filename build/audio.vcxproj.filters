@@ -25,6 +25,9 @@
     <Filter Include="src\synth">
       <UniqueIdentifier>{97d4739a-d10b-413a-9d70-94c4fe505079}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\voice">
+      <UniqueIdentifier>{32b64672-c1bf-4f5f-9275-24c54c64bdd3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\audio\config\config.h">

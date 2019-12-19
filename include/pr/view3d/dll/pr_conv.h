@@ -6,7 +6,7 @@
 #pragma once
 
 #include "pr/maths/maths.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/view3d/dll/view3d.h"
 
 namespace view3d

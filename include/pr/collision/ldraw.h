@@ -5,7 +5,7 @@
 #pragma once
 
 #include "pr/maths/maths.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/collision/shapes.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"

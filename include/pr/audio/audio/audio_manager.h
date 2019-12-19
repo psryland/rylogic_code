@@ -3,32 +3,13 @@
 //  Copyright (c) Rylogic Ltd 2017
 //***************************************************************************************************
 #pragma once
-
-// 'xaudio.2.h' is not in forward.h because not every project
-// uses audio.lib. Some just need headers from the audio module.
-#include <xaudio2.h>
 #include "pr/audio/forward.h"
-
-#ifndef _WIN32_WINNT 
-#define _WIN32_WINNT _WIN32_WINNT_WIN8
-#elif _WIN32_WINNT < _WIN32_WINNT_WIN8 
-#error "_WIN32_WINNT >= _WIN32_WINNT_WIN8 required"
-#endif
 
 namespace pr::audio
 {
-	// unique_ptr deleted for voices
-	struct VoiceDeleter
-	{
-		void operator()(IXAudio2Voice* voice)
-		{
-			voice->DestroyVoice();
-		}
-	};
-
 	// Ownership pointer for 'IXAudio2Voice' instances
-	template <typename TVoice>
-	using VoicePtr = std::unique_ptr<TVoice, VoiceDeleter>;
+	struct DestroyVoice { void operator()(IXAudio2Voice* x) { x->DestroyVoice(); } };
+	template <typename TVoice> using VoicePtr = std::unique_ptr<TVoice, DestroyVoice>;
 
 	// Settings for constructing the audio manager
 	struct Settings

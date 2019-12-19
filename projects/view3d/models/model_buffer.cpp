@@ -31,7 +31,7 @@ namespace pr::rdr
 	// Returns true if 'settings' describe a model format that is compatible with this model buffer
 	bool ModelBuffer::IsCompatible(MdlSettings const& settings) const
 	{
-		if (m_vb == 0 || m_ib == 0)
+		if (m_vb == nullptr || m_ib == nullptr)
 			return false;
 
 		for (int i = 0; i != 2; ++i)

@@ -19,7 +19,7 @@
 #include <type_traits>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/common/hash.h"
 #include "pr/common/event_handler.h"
 #include "pr/maths/maths.h"

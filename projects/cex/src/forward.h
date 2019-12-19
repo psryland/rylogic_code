@@ -25,7 +25,6 @@
 #include <io.h>
 #include <shellapi.h>
 
-#include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/cast.h"

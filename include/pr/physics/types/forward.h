@@ -16,7 +16,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
 #include "pr/common/chain.h"
-#include "pr/common/scoped.h"
+#include "pr/common/scope.h"
 #include "pr/common/allocator.h"
 #include "pr/physics/utility/events.h"
 #include "pr/container/tri_table.h"

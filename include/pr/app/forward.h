@@ -46,7 +46,7 @@
 #include "pr/common/event_handler.h"
 #include "pr/common/stop_watch.h"
 #include "pr/common/keystate.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/common/log.h"
 #include "pr/common/new.h"
 #include "pr/common/console.h"

@@ -15,7 +15,7 @@
 #include <cassert>
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
-#include "pr/common/colour.h"
+#include "pr/gfx/colour.h"
 #include "pr/common/range.h"
 #include "pr/common/scope.h"
 #include "pr/maths/maths.h"
