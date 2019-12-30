@@ -8,7 +8,7 @@
 
 namespace view3d
 {
-	struct Window :pr::AlignTo<16>
+	struct alignas(16) Window
 	{
 		using ScriptEditorUIPtr     = std::unique_ptr<pr::ldr::ScriptEditorUI>;
 		using LdrObjectManagerUIPtr = std::unique_ptr<pr::ldr::LdrObjectManagerUI>;

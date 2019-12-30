@@ -36,7 +36,7 @@ namespace pr::physics
 		};
 
 		// Instances of primitives
-		struct Prim :pr::AlignTo<16>
+		struct alignas(16) Prim
 		{
 			ByteData<16>    m_data;  // Data containing the shape
 			MassProperties  m_mp;    // Mass properties for the primitive
@@ -52,7 +52,7 @@ namespace pr::physics
 		};
 
 		// A collision model
-		struct Model :pr::AlignTo<16>
+		struct alignas(16) Model
 		{
 			using PrimList = std::vector<std::unique_ptr<Prim>>;
 			PrimList       m_prim_list; // The primitives in the model

@@ -89,7 +89,6 @@
 #include "pr/view3d/lights/light.h"
 
 // Utility
-#include "pr/view3d/util/allocator.h"
 #include "pr/view3d/util/wrappers.h"
 #include "pr/view3d/util/lock.h"
 #include "pr/view3d/util/util.h"

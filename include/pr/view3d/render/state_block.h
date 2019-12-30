@@ -159,9 +159,9 @@ namespace pr
 			Renderer* m_rdr;
 			Lookup m_lookup;
 
-			StateManager(pr::rdr::MemFuncs& mem, Renderer& rdr)
+			explicit StateManager(Renderer& rdr)
 				:m_rdr(&rdr)
-				,m_lookup(mem)
+				,m_lookup()
 			{}
 			~StateManager()
 			{
@@ -251,7 +251,7 @@ namespace pr
 		class BlendStateManager :private StateManager<BSBlock, ID3D11BlendState>
 		{
 		public:
-			BlendStateManager(pr::rdr::MemFuncs& mem, Renderer& rdr);
+			explicit BlendStateManager(Renderer& rdr);
 
 			// Get/Create a state object for 'desc'
 			D3DPtr<ID3D11BlendState> State(pr::rdr::BSBlock const& desc);
@@ -295,7 +295,7 @@ namespace pr
 		class DepthStateManager :private StateManager<DSBlock, ID3D11DepthStencilState>
 		{
 		public:
-			DepthStateManager(MemFuncs& mem, Renderer& rdr);
+			explicit DepthStateManager(Renderer& rdr);
 
 			// Get/Create a state object for 'desc'
 			D3DPtr<ID3D11DepthStencilState> State(DSBlock const& desc);
@@ -344,7 +344,7 @@ namespace pr
 		class RasterStateManager :private StateManager<RSBlock, ID3D11RasterizerState>
 		{
 		public:
-			RasterStateManager(MemFuncs& mem, Renderer& rdr);
+			explicit RasterStateManager(Renderer& rdr);
 
 			// Get/Create a state object for 'desc'
 			D3DPtr<ID3D11RasterizerState> State(RSBlock const& desc);

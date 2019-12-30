@@ -9,7 +9,7 @@
 namespace view3d
 {
 	// Global data for this dll
-	struct Context :pr::AlignTo<16>
+	struct Context
 	{
 		using InitSet = std::unordered_set<View3DContext>;
 		using WindowCont = std::vector<std::unique_ptr<Window>>;
@@ -21,10 +21,10 @@ namespace view3d
 
 		static pr::Guid const GuidDemoSceneObjects;
 
-		InitSet              m_inits;           // A unique id assigned to each Initialise call
-		pr::Renderer         m_rdr;             // The renderer
+		Renderer             m_rdr;             // The renderer
 		WindowCont           m_wnd_cont;        // The created windows
 		ScriptSources        m_sources;         // A container of Ldr objects and a file watcher
+		InitSet              m_inits;           // A unique id assigned to each Initialise call
 		EmbCodeCBCont        m_emb;             // Embedded code execution callbacks
 		std::recursive_mutex m_mutex;
 
@@ -98,7 +98,7 @@ namespace view3d
 
 		// Callback function called from pr::ldr::CreateEditCB to populate the model data
 		struct ObjectEditCBData { View3D_EditObjectCB edit_cb; void* ctx; };
-		void static __stdcall ObjectEditCB(pr::rdr::Model* model, void* ctx, pr::Renderer&);
+		void static __stdcall ObjectEditCB(pr::rdr::Model* model, void* ctx, Renderer&);
 
 		// Create the demo scene objects
 		pr::Guid CreateDemoScene(Window* window);

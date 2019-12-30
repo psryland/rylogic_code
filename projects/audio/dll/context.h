@@ -14,7 +14,7 @@ namespace pr::audio
 		using InitSet = std::unordered_set<AudioContext>;
 
 		InitSet m_inits;         // A unique id assigned to each Initialise call
-		pr::AudioManager m_audio;
+		AudioManager m_audio;
 
 		Context()
 			:m_inits()

@@ -6,7 +6,6 @@
 
 #include <unordered_map>
 #include "pr/view3d/forward.h"
-#include "pr/view3d/util/allocator.h"
 #include "pr/view3d/util/lookup.h"
 #include "pr/view3d/util/event_args.h"
 #include "pr/view3d/util/stock_resources.h"
@@ -32,7 +31,6 @@ namespace pr::rdr
 		// 'AutoId' is a special value that tells the create texture functions to not look for an
 		// existing texture and create a new dx resource for the texture.
 
-		MemFuncs                 m_mem_funcs;        // Allocation function pointers
 		AllocationsTracker       m_mem_tracker;      // Texture allocation tracker
 		Renderer&                m_rdr;              // The owning renderer instance
 		TextureLookup            m_lookup_tex;       // A map from texture id to existing texture instances
@@ -44,7 +42,7 @@ namespace pr::rdr
 
 	public:
 
-		TextureManager(MemFuncs mem, Renderer& rdr);
+		explicit TextureManager(Renderer& rdr);
 		TextureManager(TextureManager const&) = delete;
 		TextureManager& operator = (TextureManager const&) = delete;
 

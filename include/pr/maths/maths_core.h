@@ -1597,13 +1597,13 @@ namespace pr
 	}
 
 	// Returns the number to add to pad 'size' up to 'alignment'
-	template <typename T> constexpr T Pad(T size, T alignment)
+	constexpr int Pad(int size, int alignment)
 	{
 		return (alignment - (size % alignment)) % alignment;
 	}
 
 	// Returns 'size' increased to a multiple of 'alignment'
-	template <typename T> constexpr T PadTo(T size, T alignment)
+	constexpr int PadTo(int size, int alignment)
 	{
 		return size + Pad(size, alignment);
 	}

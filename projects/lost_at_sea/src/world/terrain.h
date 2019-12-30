@@ -17,7 +17,7 @@ namespace las
 	//	);
 	//	Instance m_inst; // The patch under the camera
 	//	
-	//	Terrain(pr::Renderer& rdr);
+	//	Terrain(Renderer& rdr);
 	//	// This will be queried for heights anywhere
 	//};
 }

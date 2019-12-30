@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include "pr/view3d/forward.h"
 #include "pr/view3d/shaders/shader.h"
-#include "pr/view3d/util/allocator.h"
 #include "pr/view3d/util/lookup.h"
 #include "pr/view3d/util/stock_resources.h"
 
@@ -38,7 +37,6 @@ namespace pr::rdr
 		using AllocationsTracker = AllocationsTracker<Shader>;
 		friend struct Shader;
 
-		MemFuncs              m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 		AllocationsTracker    m_dbg_mem;       // Allocation tracker
 		Renderer&             m_rdr;           // The owner renderer instance
 		IPLookup              m_lookup_ip;     // Map from id to D3D input layout
@@ -67,7 +65,7 @@ namespace pr::rdr
 
 			// Release memory
 			assert(m_dbg_mem.remove(shdr));
-			Allocator<ShaderType>(m_mem).Delete(shdr);
+			rdr::Delete<ShaderType>(shdr);
 		}
 
 		// Get/Create a 'cbuffer' object for 'id' of size 'sz'
@@ -75,7 +73,7 @@ namespace pr::rdr
 
 	public:
 
-		ShaderManager(MemFuncs& mem, Renderer& rdr);
+		explicit ShaderManager(Renderer& rdr);
 		ShaderManager(ShaderManager const&) = delete;
 		~ShaderManager();
 
@@ -98,7 +96,7 @@ namespace pr::rdr
 			auto sort_id = SortKeyId(ptrdiff_t(d3d_shdr.get() - 0) % SortKey::MaxShaderId);
 
 			// Allocate the shader instance
-			pr::RefPtr<ShaderType> shdr(Allocator<ShaderType>(m_mem).New(this, id, sort_id, name, d3d_shdr), true);
+			RefPtr<ShaderType> shdr(rdr::New<ShaderType>(this, id, sort_id, name, d3d_shdr), true);
 			assert(m_dbg_mem.add(shdr.m_ptr));
 
 			// Store a weak reference to the instance

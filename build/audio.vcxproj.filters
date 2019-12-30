@@ -25,7 +25,7 @@
     <Filter Include="src\synth">
       <UniqueIdentifier>{97d4739a-d10b-413a-9d70-94c4fe505079}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\voice">
+    <Filter Include="src\sound">
       <UniqueIdentifier>{32b64672-c1bf-4f5f-9275-24c54c64bdd3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -66,6 +66,12 @@
     <ClInclude Include="..\include\pr\audio\forward.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\audio\sound\sound.h">
+      <Filter>src\sound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\audio\util\util.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\audio\waves\wave_bank.cpp">
@@ -79,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="..\projects\audio\audio\audio_manager.cpp">
       <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\audio\sound\sound.cpp">
+      <Filter>src\sound</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

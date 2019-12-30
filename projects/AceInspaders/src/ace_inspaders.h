@@ -35,7 +35,7 @@ namespace ace
 		using Texture2DPtr = pr::rdr::Texture2DPtr;
 		using SpaceInvaders = pr::SpaceInvaders;
 		using SoundBank = std::vector<pr::ByteData<4>>;
-		using AudioManager = pr::AudioManager;
+		using AudioManager = pr::audio::AudioManager;
 		static wchar_t const* AppName() { return L"AceInspaders"; };
 
 		#define PR_FIELDS(x)\

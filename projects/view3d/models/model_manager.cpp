@@ -7,17 +7,13 @@
 #include "pr/view3d/models/model_settings.h"
 #include "pr/view3d/shaders/input_layout.h"
 #include "pr/view3d/render/renderer.h"
-#include "pr/view3d/util/allocator.h"
 #include "pr/view3d/util/wrappers.h"
 #include "pr/view3d/util/util.h"
 
 namespace pr::rdr
 {
-	ModelManager::ModelManager(MemFuncs& mem, Renderer& rdr)
-		:m_alex_mdlbuf(Allocator<ModelBuffer>(mem))
-		,m_alex_model (Allocator<Model>(mem))
-		,m_alex_nugget(Allocator<Nugget>(mem))
-		,m_dbg_mem_mdlbuf()
+	ModelManager::ModelManager(Renderer& rdr)
+		:m_dbg_mem_mdlbuf()
 		,m_dbg_mem_mdl()
 		,m_dbg_mem_nugget()
 		,m_rdr(rdr)
@@ -37,7 +33,7 @@ namespace pr::rdr
 		auto& device = *lock.D3DDevice();
 
 		// Create a new model buffer
-		ModelBufferPtr mb(m_alex_mdlbuf.New(), true);
+		ModelBufferPtr mb(rdr::New<ModelBuffer>(), true);
 		assert(m_dbg_mem_mdlbuf.add(mb.m_ptr));
 		mb->m_mdl_mgr = this;
 		{// Create a vertex buffer
@@ -66,15 +62,14 @@ namespace pr::rdr
 		return CreateModel(settings, mb);
 	}
 
-	// Create a model within the provided model buffer
-	// The buffer must contain sufficient space for the model
+	// Create a model within the provided model buffer. The buffer must contain sufficient space for the model
 	ModelPtr ModelManager::CreateModel(MdlSettings const& settings, ModelBufferPtr& model_buffer)
 	{
 		PR_ASSERT(PR_DBG_RDR, model_buffer->IsCompatible(settings), "Incompatible model buffer provided");
 		PR_ASSERT(PR_DBG_RDR, model_buffer->IsRoomFor(settings.m_vb.ElemCount, settings.m_ib.ElemCount), "Insufficient room for a model of this size in this model buffer");
 		Renderer::Lock lock(m_rdr);
 
-		ModelPtr ptr(m_alex_model.New(settings, model_buffer), true);
+		ModelPtr ptr(rdr::New<Model>(settings, model_buffer), true);
 		assert(m_dbg_mem_mdl.add(ptr.m_ptr));
 		return ptr;
 	}
@@ -83,7 +78,7 @@ namespace pr::rdr
 	Nugget* ModelManager::CreateNugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* model)
 	{
 		Renderer::Lock lock(m_rdr);
-		Nugget* ptr(m_alex_nugget.New(ndata, model_buffer, model));
+		auto ptr = rdr::New<Nugget>(ndata, model_buffer, model);
 		assert(m_dbg_mem_nugget.add(ptr));
 		return ptr;
 	}
@@ -94,7 +89,7 @@ namespace pr::rdr
 		if (!model_buffer) return;
 		Renderer::Lock lock(m_rdr);
 		assert(m_dbg_mem_mdlbuf.remove(model_buffer));
-		m_alex_mdlbuf.Delete(model_buffer);
+		rdr::Delete<ModelBuffer>(model_buffer);
 	}
 
 	// Return a model to the allocator
@@ -104,7 +99,7 @@ namespace pr::rdr
 		ModelDeleted(*model);
 		Renderer::Lock lock(m_rdr);
 		assert(m_dbg_mem_mdl.remove(model));
-		m_alex_model.Delete(model);
+		rdr::Delete<Model>(model);
 	}
 
 	// Return a render nugget to the allocator
@@ -113,7 +108,7 @@ namespace pr::rdr
 		if (!nugget) return;
 		Renderer::Lock lock(m_rdr);
 		assert(m_dbg_mem_nugget.remove(nugget));
-		m_alex_nugget.Delete(nugget);
+		rdr::Delete<Nugget>(nugget);
 	}
 
 	// Create stock models

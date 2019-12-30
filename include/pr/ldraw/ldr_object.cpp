@@ -45,7 +45,7 @@ namespace pr::ldr
 
 	// A global pool of 'Buffers' objects
 	#pragma region Buffer Pool / Cache
-	struct Buffers :AlignTo<16>
+	struct alignas(16) Buffers
 	{
 		VCont m_point;
 		NCont m_norms;
@@ -122,7 +122,7 @@ namespace pr::ldr
 		using time_point   = std::chrono::time_point<system_clock>;
 		using FontStack    = pr::vector<Font>;
 
-		pr::Renderer&   m_rdr;
+		Renderer&       m_rdr;
 		Reader&         m_reader;
 		ParseResult&    m_result;
 		ObjectCont&     m_objects;
@@ -136,7 +136,7 @@ namespace pr::ldr
 		time_point      m_last_progress_update;
 		bool&           m_cancel;
 
-		ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
+		ParseParams(Renderer& rdr, Reader& reader, ParseResult& result, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
 			:m_rdr(rdr)
 			,m_reader(reader)
 			,m_result(result)
@@ -4630,7 +4630,7 @@ namespace pr::ldr
 	// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 	// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 	// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-	void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
+	void Parse(Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
 	{
 		// Give initial and final progress updates
 		auto start_loc = reader.Location();
@@ -4655,7 +4655,7 @@ namespace pr::ldr
 	}
 
 	// Create an ldr object from creation data.
-	LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
+	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 

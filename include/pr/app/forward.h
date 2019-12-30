@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
 // Files in the "pr/app/" form a starting point for building line-drawer style graphics
-// apps based on pr::gui::wingui and pr::Renderer.
+// apps based on pr::gui::wingui and pr::rdr::Renderer.
 //
 #pragma once
 
@@ -48,7 +48,6 @@
 #include "pr/common/keystate.h"
 #include "pr/gfx/colour.h"
 #include "pr/common/log.h"
-#include "pr/common/new.h"
 #include "pr/common/console.h"
 #include "pr/maths/maths.h"
 #include "pr/filesys/filesys.h"
@@ -73,6 +72,7 @@ namespace pr::app
 	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
 	#undef PR_ENUM
 
+	using Renderer = pr::rdr::Renderer;
 	using Exception = pr::Exception<EResult>;
 
 	// App interface

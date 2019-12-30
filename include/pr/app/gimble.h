@@ -41,7 +41,7 @@ namespace pr::app
 	private:
 
 		// Create a model for a 'gimble'
-		void InitModel(pr::Renderer& rdr)
+		void InitModel(Renderer& rdr)
 		{
 			using namespace pr::rdr;
 

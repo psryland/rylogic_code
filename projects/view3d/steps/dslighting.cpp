@@ -21,10 +21,10 @@ namespace pr::rdr
 {
 	DSLighting::DSLighting(Scene& scene)
 		:RenderStep(scene)
+		,m_unit_quad()
 		,m_gbuffer(scene.RStep<GBuffer>())
 		,m_cbuf_camera  (m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera  >("ds::CBufCamera"))
 		,m_cbuf_lighting(m_shdr_mgr->GetCBuf<hlsl::ds::CBufLighting>("ds::CBufLighting"))
-		,m_unit_quad()
 		,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::DSLightingVS)))
 		,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::DSLightingPS)))
 	{

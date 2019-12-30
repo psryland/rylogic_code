@@ -476,13 +476,12 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/common/new.h"
 #include "pr/macros/count_of.h"
 namespace pr::geometry
 {
 	PRUnitTest(GenerateNormalsTests)
 	{
-		struct Vert :pr::AlignTo<16>
+		struct alignas(16) Vert
 		{
 			pr::v4 m_pos;
 			pr::v4 m_norm;

@@ -68,7 +68,6 @@ Renderer/View3d
 	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is
 	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
 	  pass the parametric value through)
-	- Merge View3d into the Renderer11 project and make view3d.dll just a build configuration
 
 DockContainer
 	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
@@ -84,13 +83,11 @@ Misc
 	- Change ToolForm to have resizable but not NC border
 
 Old:
-convert linedrawer all to wingui
 ldr_object_dlg
 measure tool
 angle tool
 Make Scintilla+Ldr support a dll
 Implement a XElement-like tree reader/writer for pr-script
-Make a regex tester for C++ std::regex
 Implement Fmt() as a variadic template
 Fix non-pod types in pr::vector<>
 Fix crash in Diagram Control

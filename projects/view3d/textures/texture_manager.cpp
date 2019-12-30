@@ -10,7 +10,6 @@
 #include "pr/view3d/textures/image.h"
 #include "pr/view3d/render/sortkey.h"
 #include "pr/view3d/render/renderer.h"
-#include "pr/view3d/util/allocator.h"
 #include "pr/view3d/util/util.h"
 
 namespace pr::rdr
@@ -60,12 +59,11 @@ namespace pr::rdr
 	}
 
 	// Constructor
-	TextureManager::TextureManager(MemFuncs mem, Renderer& rdr)
-		:m_mem_funcs(mem)
-		,m_mem_tracker()
+	TextureManager::TextureManager(Renderer& rdr)
+		:m_mem_tracker()
 		,m_rdr(rdr)
-		,m_lookup_tex(mem)
-		,m_lookup_dxtex(mem)
+		,m_lookup_tex()
+		,m_lookup_dxtex()
 		,m_stock_textures()
 		,m_gdiplus()
 		,m_eh_resize()
@@ -95,7 +93,7 @@ namespace pr::rdr
 
 		// Allocate a new texture instance and DX texture resource
 		SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add the texture instance to the lookup table
@@ -202,7 +200,7 @@ namespace pr::rdr
 		auto sort_id = static_cast<SortKeyId>(m_lookup_tex.size() % SortKey::MaxTextureId);
 
 		// Allocate the texture instance
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, tex.get(), srv.get(), sdesc, sort_id, has_alpha, tex_name.c_str()), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, tex.get(), srv.get(), sdesc, sort_id, has_alpha, tex_name.c_str()), true);
 		assert(m_mem_tracker.add(inst.get()));
 		inst->m_src_id = src_id;
 		AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
@@ -223,7 +221,7 @@ namespace pr::rdr
 
 		// Allocate a new texture instance that reuses the DX texture resource
 		SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, existing_tex, existing_srv, sdesc, sort_id, has_alpha, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, existing_tex, existing_srv, sdesc, sort_id, has_alpha, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add the texture instance to the lookup table
@@ -243,7 +241,7 @@ namespace pr::rdr
 
 		// Allocate a new texture instance and wrap the shared resource
 		SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, shared_resource, sdesc, sort_id, has_alpha, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, shared_resource, sdesc, sort_id, has_alpha, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add the texture instance to the lookup table
@@ -305,7 +303,7 @@ namespace pr::rdr
 
 		// Allocate a new texture instance and DX texture resource
 		SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add the texture instance to the lookup table
@@ -418,7 +416,7 @@ namespace pr::rdr
 		Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 
 		// Allocate the texture instance
-		TextureCubePtr inst(Allocator<TextureCube>(m_mem_funcs).New(this, id, tex.get(), srv.get(), sdesc, tex_name.c_str()), true);
+		TextureCubePtr inst(rdr::New<TextureCube>(this, id, tex.get(), srv.get(), sdesc, tex_name.c_str()), true);
 		assert(m_mem_tracker.add(inst.get()));
 		inst->m_src_id = src_id;
 		AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
@@ -438,7 +436,7 @@ namespace pr::rdr
 			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
 
 		// Allocate a new texture instance that reuses the DX texture resource
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, *existing, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, *existing, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Assign a new sort id since it will be used with a different sampler state
@@ -464,7 +462,7 @@ namespace pr::rdr
 
 		// Allocate a new texture instance and wrap the shared resource
 		SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, shared_handle, sdesc, sort_id, has_alpha, name), true);
+		Texture2DPtr inst(rdr::New<Texture2D>(this, id, shared_handle, sdesc, sort_id, has_alpha, name), true);
 		assert(m_mem_tracker.add(inst.get()));
 
 		// Add the texture instance to the lookup table
@@ -495,7 +493,7 @@ namespace pr::rdr
 
 		// Delete the texture and remove the entry from the RdrId lookup map
 		assert(m_mem_tracker.remove(iter->second));
-		Allocator<TextureBase>(m_mem_funcs).Delete(iter->second);
+		rdr::Delete<TextureBase>(iter->second);
 		m_lookup_tex.erase(iter);
 	}
 

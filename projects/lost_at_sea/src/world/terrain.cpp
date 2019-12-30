@@ -11,7 +11,7 @@
 //
 ////namespace pr { namespace rdr { namespace model
 ////{
-////	pr::rdr::ModelPtr HexPatch(pr::Renderer& rdr)
+////	pr::rdr::ModelPtr HexPatch(Renderer& rdr)
 ////	{
 ////		pr::rdr::ModelPtr model = rdr.m_mdl_mgr.CreateModel(pr::rdr::model::Settings(1,1));
 ////		pr::rdr::model::MLock lock(model);
@@ -21,7 +21,7 @@
 ////	}
 ////}}}
 //
-//las::Terrain::Terrain(pr::Renderer& rdr)
+//las::Terrain::Terrain(Renderer& rdr)
 //:m_inst()
 //{
 //	(void)rdr;

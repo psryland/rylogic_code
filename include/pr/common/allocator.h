@@ -6,6 +6,7 @@
 
 #include <new>
 #include <type_traits>
+#include <unordered_set>
 #include <malloc.h>
 #include <cassert>
 
@@ -24,6 +25,11 @@ namespace pr
 	template <typename T, int A = std::alignment_of_v<T>>
 	struct aligned_alloc
 	{
+		// Notes:
+		//  - Allocator's are created as temporary objects. Their allocations out-live
+		//    the allocator so leak detection cannot be implemented in the allocator.
+		//    Also, the allocator can't have any state.
+
 		using value_type = T;
 		using propagate_on_container_copy_assignment = std::true_type;
 		using propagate_on_container_move_assignment = std::true_type;
@@ -86,7 +92,74 @@ namespace pr
 		friend constexpr bool operator != (aligned_alloc const&, aligned_alloc const&) { return false; }
 	};
 
+	// Allocation tracker/memory leak detector
+	template <typename T = void>
+	struct AllocationsTracker
+	{
+		static bool const RecordCallStacks = false;
+
+		struct Allocation
+		{
+			using call_stack_t = typename std::conditional<RecordCallStacks, std::string, void*>::type;
+
+			T* m_ptr;
+			call_stack_t m_callstack;
+
+			Allocation(T* ptr = nullptr)
+				:m_ptr(ptr)
+				, m_callstack()
+			{}
+
+			constexpr size_t operator()(Allocation const& val) const
+			{
+				// std::hash
+				static uint8_t const* zero = nullptr;
+				return size_t(reinterpret_cast<uint8_t const*>(val.m_ptr) - zero);
+			}
+			constexpr bool operator()(Allocation const& lhs, Allocation const& rhs) const
+			{
+				// std::equal_to
+				return lhs.m_ptr == rhs.m_ptr;
+			}
+		};
+		using allocation_container_t = std::unordered_set<Allocation, Allocation, Allocation>;
+		allocation_container_t m_live;
+
+		AllocationsTracker()
+			:m_live()
+		{}
+		~AllocationsTracker()
+		{
+			assert("Memory leaks detected" && m_live.empty());
+		}
+		AllocationsTracker(AllocationsTracker const&) = delete;
+		AllocationsTracker& operator =(AllocationsTracker const&) = delete;
+
+		// Returning bool so these can be used in asserts
+		bool add(T* ptr)
+		{
+			Allocation al(ptr);
+			if constexpr (RecordCallStacks)
+				pr::DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
+
+			m_live.insert(al);
+			return true;
+		}
+		bool remove(T* ptr)
+		{
+			auto iter = m_live.find(ptr);
+			assert("'ptr' is not a tracked allocation" && iter != std::end(m_live));
+			m_live.erase(iter);
+			return true;
+		}
+	};
+
+
+
+
 	// Deprecated:
+	#pragma region Old Allocation
+
 	// Use by physics still
 
 	// Allocation interface
@@ -137,4 +210,5 @@ namespace pr
 			return true;
 		}
 	};
+	#pragma endregion
 }

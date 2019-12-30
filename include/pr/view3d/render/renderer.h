@@ -10,7 +10,6 @@
 #include "pr/view3d/shaders/shader_manager.h"
 #include "pr/view3d/textures/texture_manager.h"
 #include "pr/view3d/render/state_block.h"
-#include "pr/view3d/util/allocator.h"
 
 namespace pr::rdr
 {
@@ -31,10 +30,9 @@ namespace pr::rdr
 				,RunTimeShaders(PR_RDR_RUNTIME_SHADERS)
 			{}
 		};
-			
+
 		HINSTANCE                     m_instance;              // Executable instance 
 		BuildOptions                  m_build_options;         // The state of #defines. Used to check for incompatibilities
-		MemFuncs                      m_mem;                   // The manager of allocations/deallocations
 		D3DPtr<IDXGIAdapter>          m_adapter;               // The adapter to use. nullptr means use the default
 		D3D_DRIVER_TYPE               m_driver_type;           // HAL, REF, etc
 		UINT                          m_device_layers;         // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
@@ -45,7 +43,6 @@ namespace pr::rdr
 		RdrSettings(HINSTANCE inst, D3D11_CREATE_DEVICE_FLAG device_flags)
 			:m_instance(inst)
 			,m_build_options()
-			,m_mem()
 			,m_adapter()
 			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
 			,m_device_layers(device_flags)
@@ -68,14 +65,13 @@ namespace pr::rdr
 		RdrState(RdrSettings const& settings);
 		~RdrState();
 	};
-}
-namespace pr
-{
+
 	// The main renderer object
-	class Renderer :rdr::RdrState
+	class Renderer :RdrState
 	{
 		using TaskQueue = pr::vector<std::future<void>>;
 		using PollCBList = pr::vector<pr::StaticCB<void>>;
+
 		DWORD m_main_thread_id;
 		std::recursive_mutex m_d3d_mutex;
 		std::mutex m_mutex_task_queue;
@@ -89,7 +85,7 @@ namespace pr
 
 	public:
 
-		explicit Renderer(rdr::RdrSettings const& settings);
+		explicit Renderer(RdrSettings const& settings);
 		~Renderer();
 
 		// Synchronise access to D3D/D2D interfaces
@@ -166,14 +162,8 @@ namespace pr
 			return Dpi() / 96.0f;
 		}
 
-		// Returns an allocator object suitable for allocating instances of 'T'
-		template <class Type> rdr::Allocator<Type> Allocator() const
-		{
-			return rdr::Allocator<Type>(m_settings.m_mem);
-		}
-
 		// Read access to the initialisation settings
-		rdr::RdrSettings const& Settings() const
+		RdrSettings const& Settings() const
 		{
 			return m_settings;
 		}
@@ -187,7 +177,7 @@ namespace pr
 		// Raised when a window resizes it's back buffer.
 		// This is provided on the renderer so that other managers can receive notification
 		// without having to sign up to ever window that gets created.
-		pr::EventHandler<rdr::Window&, rdr::BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
+		EventHandler<Window&, BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
 
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
@@ -205,7 +195,7 @@ namespace pr
 			}
 
 			// Post a message to notify of the new task
-			for (; !::PostMessageW(m_dummy_hwnd, pr::rdr::WM_BeginInvoke, WPARAM(this), LPARAM());)
+			for (; !::PostMessageW(m_dummy_hwnd, WM_BeginInvoke, WPARAM(this), LPARAM());)
 			{
 				auto err = GetLastError();
 				if (err == ERROR_NOT_ENOUGH_QUOTA)
@@ -255,11 +245,11 @@ namespace pr
 		// These manager classes form part of the public interface of the renderer
 		// Declared last so that events are fully constructed first.
 		// Note: model manager is declared last so that it is destructed first
-		rdr::BlendStateManager m_bs_mgr;
-		rdr::DepthStateManager m_ds_mgr;
-		rdr::RasterStateManager m_rs_mgr;
-		rdr::TextureManager m_tex_mgr;
-		rdr::ShaderManager m_shdr_mgr;
-		rdr::ModelManager m_mdl_mgr;
+		BlendStateManager m_bs_mgr;
+		DepthStateManager m_ds_mgr;
+		RasterStateManager m_rs_mgr;
+		TextureManager m_tex_mgr;
+		ShaderManager m_shdr_mgr;
+		ModelManager m_mdl_mgr;
 	};
 }

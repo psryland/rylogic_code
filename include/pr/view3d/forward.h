@@ -51,10 +51,10 @@
 #include "pr/common/chain.h"
 #include "pr/common/crc.h"
 #include "pr/common/alloca.h"
+#include "pr/common/allocator.h"
 #include "pr/common/range.h"
 #include "pr/gfx/colour.h"
 #include "pr/common/hash.h"
-#include "pr/common/new.h"
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
 #include "pr/common/algorithm.h"
@@ -95,10 +95,6 @@
 
 #define PR_DBG_RDR PR_DBG
 
-namespace pr
-{
-	class Renderer;
-}
 namespace pr::rdr
 {
 	using byte      = unsigned char;
@@ -106,6 +102,8 @@ namespace pr::rdr
 	using SortKeyId = pr::uint16;
 	using Range     = pr::Range<size_t>;
 	template <typename T> using RefCounted = pr::RefCount<T>;
+	template <typename T> using Allocator = pr::aligned_alloc<T>;
+	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
 
 	using string32   = pr::string<char, 32>;
 	using string512  = pr::string<char, 512>;
@@ -120,6 +118,7 @@ namespace pr::rdr
 	using EPrim = pr::geometry::EPrim;
 
 	// Render
+	class Renderer;
 	struct Window;
 	struct Scene;
 	struct SceneView;
@@ -194,7 +193,6 @@ namespace pr::rdr
 	class RasterStateManager;
 	struct Lock;
 	struct MLock;
-	template <class T> struct Allocator;
 	using InvokeFunc = void (__stdcall *)(void* ctx);
 
 	// EResult

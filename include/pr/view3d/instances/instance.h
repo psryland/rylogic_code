@@ -16,7 +16,6 @@
 //  component
 //  component
 #pragma once
-
 #include "pr/view3d/forward.h"
 #include "pr/view3d/models/model.h"
 #include "pr/view3d/render/sortkey.h"
@@ -27,23 +26,23 @@ namespace pr::rdr
 	// Instance component types
 	enum class EInstComp :pr::uint8
 	{
-		None               , // invalid entry
-		ModelPtr           , // pr::rdr::ModelPtr
-		I2WTransform       , // pr::m4x4
-		I2WTransformPtr    , // pr::m4x4*
+		None,                // invalid entry (used for padding)
+		ModelPtr,            // pr::rdr::ModelPtr
+		I2WTransform,        // pr::m4x4
+		I2WTransformPtr,     // pr::m4x4*
 		I2WTransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
-		C2STransform       , // pr::m4x4
-		C2SOptional        , // pr::m4x4 (set to m4x4Zero to indicate not used)
-		C2STransformPtr    , // pr::m4x4*
+		C2STransform,        // pr::m4x4
+		C2SOptional,         // pr::m4x4 (set to m4x4Zero to indicate not used)
+		C2STransformPtr,     // pr::m4x4*
 		C2STransformFuncPtr, // pr::m4x4 const& (*func)(void* context);
-		SortkeyOverride    , // pr::rdr::SKOverride
-		BSBlock            , // pr::rdr::BSBlock
-		DSBlock            , // pr::rdr::DSBlock
-		RSBlock            , // pr::rdr::RSBlock
-		TintColour32       , // pr::Colour32
-		EnvMapReflectivity , // float
-		UniqueId           , // int32
-		SSSize             , // pr::v2 (screen space size)
+		SortkeyOverride,     // pr::rdr::SKOverride
+		BSBlock,             // pr::rdr::BSBlock
+		DSBlock,             // pr::rdr::DSBlock
+		RSBlock,             // pr::rdr::RSBlock
+		TintColour32,        // pr::Colour32
+		EnvMapReflectivity,  // float
+		UniqueId,            // int32
+		SSSize,              // pr::v2 (screen space size)
 	};
 	constexpr size_t SizeOf(EInstComp comp)
 	{
@@ -100,7 +99,7 @@ namespace pr::rdr
 		// Find the 'index'th component of type 'comp' in this instance. Returns non-null if the component was found
 		template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 		{
-			auto byte_ofs = pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
+			auto byte_ofs = pr::PadTo(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
 			for (auto& c : *this)
 			{
 				if (c == comp && index-- == 0) return get<Comp>(byte_ofs);
@@ -110,7 +109,7 @@ namespace pr::rdr
 		}
 		template <typename Comp> Comp* find(EInstComp comp, int index = 0)
 		{
-			auto byte_ofs = pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
+			auto byte_ofs = pr::PadTo(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
 			for (auto& c : *this)
 			{
 				if (c == comp && index-- == 0) return get<Comp>(byte_ofs);
@@ -246,9 +245,9 @@ namespace pr::rdr
 		struct name\
 		{\
 			pr::rdr::BaseInstance m_base;\
-			pr::rdr::EInstComp m_cpt[pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) fields(PR_RDR_INST_MEMBER_COUNT), 16) - sizeof(pr::rdr::BaseInstance)];\
+			pr::rdr::EInstComp m_cpt[pr::PadTo(sizeof(pr::rdr::BaseInstance) fields(PR_RDR_INST_MEMBER_COUNT), 16)];\
 			fields(PR_RDR_INST_MEMBERS)\
-	\
+			\
 			name()\
 				:m_base()\
 				,m_cpt()\
@@ -261,15 +260,7 @@ namespace pr::rdr
 				m_base.m_cpt_count = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
 				fields(PR_RDR_INST_INIT_COMPONENTS)\
 			}\
-	\
-			/* Overload operator new/delete to ensure alignment*/\
-			static void* __cdecl operator new(size_t count)\
-			{\
-				return pr::impl::AlignedAlloc<16>(count);\
-			}\
-			static void __cdecl operator delete (void* obj)\
-			{\
-				pr::impl::AlignedFree<16>(obj);\
-			}\
 		};
+
+	static_assert(sizeof(EInstComp) == 1, "Padding of Instance types relies on this");
 }

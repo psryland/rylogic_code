@@ -19,10 +19,10 @@ namespace view3d
 
 	// Constructor
 	Context::Context(HINSTANCE instance, ReportErrorCB global_error_cb, D3D11_CREATE_DEVICE_FLAG device_flags)
-		:m_inits()
-		,m_rdr(RdrSettings(instance, device_flags))
+		:m_rdr(RdrSettings(instance, device_flags))
 		,m_wnd_cont()
 		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
+		,m_inits()
 		,m_emb()
 		,m_mutex()
 		,ReportError()
@@ -468,7 +468,7 @@ namespace view3d
 	}
 
 	// Callback function called from CreateEditCB to populate the model data
-	void Context::ObjectEditCB(Model* model, void* ctx, pr::Renderer&)
+	void Context::ObjectEditCB(Model* model, void* ctx, Renderer&)
 	{
 		using namespace pr::rdr;
 

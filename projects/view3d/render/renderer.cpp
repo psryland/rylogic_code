@@ -32,13 +32,13 @@ namespace pr::rdr
 		{
 		case WM_BeginInvoke:
 			{
-				auto& rdr = *reinterpret_cast<pr::Renderer*>(wparam);
+				auto& rdr = *reinterpret_cast<Renderer*>(wparam);
 				rdr.RunTasks();
 				break;
 			}
 		case WM_TIMER:
 			{
-				auto& rdr = *reinterpret_cast<pr::Renderer*>(wparam);
+				auto& rdr = *reinterpret_cast<Renderer*>(wparam);
 				rdr.Poll();
 				break;
 			}
@@ -169,11 +169,9 @@ namespace pr::rdr
 			m_d3d_device = nullptr;
 		}
 	}
-}
-namespace pr
-{
+
 	// Construct the renderer
-	Renderer::Renderer(rdr::RdrSettings const& settings)
+	Renderer::Renderer(RdrSettings const& settings)
 		:RdrState(settings)
 		,m_main_thread_id(GetCurrentThreadId())
 		,m_d3d_mutex()
@@ -183,12 +181,12 @@ namespace pr
 		,m_poll_callbacks()
 		,m_dummy_hwnd()
 		,m_id32_src()
-		,m_bs_mgr(m_settings.m_mem, This())
-		,m_ds_mgr(m_settings.m_mem, This())
-		,m_rs_mgr(m_settings.m_mem, This())
-		,m_tex_mgr(m_settings.m_mem, This())
-		,m_shdr_mgr(m_settings.m_mem, This())
-		,m_mdl_mgr(m_settings.m_mem, This())
+		,m_bs_mgr(This())
+		,m_ds_mgr(This())
+		,m_rs_mgr(This())
+		,m_tex_mgr(This())
+		,m_shdr_mgr(This())
+		,m_mdl_mgr(This())
 	{
 		try
 		{
@@ -203,8 +201,8 @@ namespace pr
 			wc.hCursor       = nullptr;
 			wc.hbrBackground = nullptr;
 			wc.lpszMenuName  = nullptr;
-			wc.lpfnWndProc   = &rdr::BeginInvokeWndProc;
-			wc.lpszClassName = rdr::BeginInvokeWndClassName;
+			wc.lpfnWndProc   = &BeginInvokeWndProc;
+			wc.lpszClassName = BeginInvokeWndClassName;
 			auto atom = ATOM(::RegisterClassExW(&wc));
 			if (atom == 0)
 				throw std::exception(pr::HrMsg(GetLastError()).c_str());
@@ -232,7 +230,7 @@ namespace pr
 		}
 
 		// Un-register the dummy window class
-		::UnregisterClassW(rdr::BeginInvokeWndClassName, m_settings.m_instance);
+		::UnregisterClassW(BeginInvokeWndClassName, m_settings.m_instance);
 	}
 
 	// Execute any pending tasks in the task queue

@@ -9,7 +9,6 @@
 #include <regex>
 #include "pr/macros/enum.h"
 #include "pr/common/min_max_fix.h"
-#include "pr/common/new.h"
 #include "pr/common/guid.h"
 #include "pr/common/hash.h"
 #include "pr/common/refcount.h"
@@ -33,6 +32,7 @@ namespace pr::ldr
 	using ObjectCont    = vector<LdrObjectPtr, 8>;
 	using string32      = string<char, 32>;
 	using Location      = script::Loc;
+	using Renderer      = pr::rdr::Renderer;
 
 	// Map the compile time hash function to this namespace
 	using HashValue = hash::HashValue;

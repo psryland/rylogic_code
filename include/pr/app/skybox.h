@@ -74,7 +74,7 @@ namespace pr::app
 	private:
 
 		// Create a model for a geosphere sky box
-		void InitGeosphere(pr::Renderer& rdr, std::filesystem::path const& texpath)
+		void InitGeosphere(Renderer& rdr, std::filesystem::path const& texpath)
 		{
 			using namespace pr::rdr;
 
@@ -89,7 +89,7 @@ namespace pr::app
 		}
 
 		// Create a model for a 5-sided cubic dome
-		void InitFiveSidedCube(pr::Renderer& rdr, std::filesystem::path const& texpath)
+		void InitFiveSidedCube(Renderer& rdr, std::filesystem::path const& texpath)
 		{
 			using namespace pr::rdr;
 
@@ -130,7 +130,7 @@ namespace pr::app
 		}
 
 		// Create a model for a 6-sided cube
-		void InitSixSidedCube(pr::Renderer& rdr, std::filesystem::path  const& texpath)
+		void InitSixSidedCube(Renderer& rdr, std::filesystem::path  const& texpath)
 		{
 			using namespace pr::rdr;
 

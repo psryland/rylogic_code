@@ -25,7 +25,6 @@
 #include "pr/common/log.h"
 #include "pr/common/hresult.h"
 #include "pr/common/assert.h"
-#include "pr/common/new.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/static_callback.h"
 #include "pr/common/event_handler.h"
@@ -63,6 +62,7 @@ namespace view3d
 {
 	struct Context;
 	struct Window;
+	using Renderer              = pr::rdr::Renderer;
 	using seconds_t             = std::chrono::duration<double, std::ratio<1, 1>>;
 	using time_point_t          = std::chrono::system_clock::time_point;
 	using GuidCont              = pr::vector<GUID>;

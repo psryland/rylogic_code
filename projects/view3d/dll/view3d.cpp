@@ -2183,7 +2183,7 @@ VIEW3D_API void __stdcall View3D_TextureResolveAA(View3DTexture dst, View3DTextu
 		if (src_tdesc.Format != dst_tdesc.Format)
 			throw std::runtime_error("Source and destination textures must has the same format");
 
-		pr::Renderer::Lock lock(Dll().m_rdr);
+		Renderer::Lock lock(Dll().m_rdr);
 		lock.ImmediateDC()->ResolveSubresource(dst->m_res.get(), 0U, src->m_res.get(), 0U, src_tdesc.Format);
 	}
 	CatchAndReport(View3D_TextureResolveAA, , );
@@ -2787,7 +2787,7 @@ VIEW3D_API void __stdcall View3D_Flush()
 {
 	try
 	{
-		pr::Renderer::Lock lock(Dll().m_rdr);
+		Renderer::Lock lock(Dll().m_rdr);
 		lock.ImmediateDC()->Flush();
 	}
 	CatchAndReport(View3D_Flush, , );

@@ -4,7 +4,9 @@
 //***************************************************************************************************
 #include "pr/audio/forward.h"
 #include "pr/audio/audio/audio_manager.h"
+#include "pr/audio/sound/sound.h"
 #include "pr/audio/waves/wave_file.h"
+#include "pr/audio/util/util.h"
 
 #pragma comment(lib, "xaudio2.lib")
 #pragma comment(lib, "runtimeobject.lib")
@@ -69,12 +71,12 @@ namespace pr::audio
 			m_xaudio = nullptr;
 		}
 	}
-}
-namespace pr
-{
+
 	// Construct the Audio Manager
 	AudioManager::AudioManager(audio::Settings const& settings)
 		:State(settings)
+		,m_mutex()
+		,m_dbg_mem_snd()
 	{}
 	AudioManager::~AudioManager()
 	{}
@@ -97,8 +99,8 @@ namespace pr
 		// Submit the wave sample data using an XAUDIO2_BUFFER structure
 		XAUDIO2_BUFFER buffer = {0};
 		buffer.pAudioData = wave_data.audio_start;
-		buffer.Flags = XAUDIO2_END_OF_STREAM;  // Tell the source voice not to expect any data after this buffer
 		buffer.AudioBytes = wave_data.audio_bytes;
+		buffer.Flags = XAUDIO2_END_OF_STREAM;  // Tell the source voice not to expect any data after this buffer
 		if (wave_data.loop_length > 0)
 		{
 			buffer.LoopBegin = wave_data.loop_start;
@@ -123,6 +125,23 @@ namespace pr
 			running = state.BuffersQueued > 0;
 			Sleep(10);
 		}
+	}
+
+	// Create a sound instance
+	SoundPtr AudioManager::CreateSound()
+	{
+		//Think 'Texture'
+		return nullptr;
+	}
+
+	// Return a model to the allocator
+	void AudioManager::Delete(Sound* sound)
+	{
+		if (!sound) return;
+		SoundDeleted(*sound);
+		AudioManager::Lock lock(*this);
+		assert(m_dbg_mem_snd.remove(sound));
+		audio::Delete<Sound>(sound);
 	}
 }
 

@@ -16,7 +16,7 @@ namespace pr::rdr
 	RenderStep::RenderStep(Scene& scene)
 		:m_scene(&scene)
 		,m_shdr_mgr(&scene.wnd().shdr_mgr())
-		,m_impl_drawlist(scene.rdr().Allocator<DrawListElement>())
+		,m_impl_drawlist()
 		,m_sort_needed(true)
 		,m_bsb()
 		,m_rsb()

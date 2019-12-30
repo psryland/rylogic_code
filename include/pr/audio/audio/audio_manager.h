@@ -7,10 +7,6 @@
 
 namespace pr::audio
 {
-	// Ownership pointer for 'IXAudio2Voice' instances
-	struct DestroyVoice { void operator()(IXAudio2Voice* x) { x->DestroyVoice(); } };
-	template <typename TVoice> using VoicePtr = std::unique_ptr<TVoice, DestroyVoice>;
-
 	// Settings for constructing the audio manager
 	struct Settings
 	{
@@ -36,19 +32,53 @@ namespace pr::audio
 		State(Settings const& settings);
 		~State();
 	};
-}
-namespace pr
-{
+
 	// The "Renderer" of Audio
-	class AudioManager :audio::State
+	class AudioManager :State
 	{
+		// Notes:
+		//  - A voice wraps a buffer of audio data. There are source voices, submix voices, and mastering voices
+		//    arranged like this:
+		//       source_voice1 -->  submix_voice --> mastering voice --> hardware
+		//       source_voice2 --------^                 ^
+		//       source_voice3 --------------------------+
+		//  - Source voices to *not* copy the audio data, user code must keep the audio data in scope until
+		//    indicated by the 'IXAudio2VoiceCallback::OnBufferEnd' callback.
+
+		std::recursive_mutex m_mutex;
+		AllocationsTracker<Sound> m_dbg_mem_snd;
+
+		// Delete methods that models/model buffers call to clean themselves up
+		friend struct Sound;
+		void Delete(Sound* sound);
+
 	public:
 
-		explicit AudioManager(audio::Settings const& settings = audio::Settings());
+		explicit AudioManager(Settings const& settings = Settings());
 		~AudioManager();
+
+		// Synchronise access to XAudio2 interfaces
+		class Lock
+		{
+			AudioManager& m_mgr;
+			std::lock_guard<std::recursive_mutex> m_lock;
+
+		public:
+
+			Lock(AudioManager& mgr)
+				: m_mgr(mgr)
+				, m_lock(mgr.m_mutex)
+			{}
+		};
 
 		// Load and play an audio file synchronously.
 		// If the audio contains loops, 'loop_count' indicates how many times to loop
 		void PlaySynchronous(std::filesystem::path const& filepath, int loop_count = 0) const;
+
+		// Create a sound instance
+		SoundPtr CreateSound();
+
+		// Raised when a sound is deleted
+		EventHandler<Sound&, EmptyArgs const&> SoundDeleted;
 	};
 }

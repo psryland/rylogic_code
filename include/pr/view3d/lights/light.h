@@ -8,7 +8,7 @@
 
 namespace pr::rdr
 {
-	struct Light :pr::AlignTo<16>
+	struct alignas(16) Light
 	{
 		v4       m_position;       // Position, only valid for point,spot lights
 		v4       m_direction;      // Direction, only valid for directional,spot lights

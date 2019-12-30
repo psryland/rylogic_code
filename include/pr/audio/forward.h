@@ -44,6 +44,7 @@
 #include "pr/common/scope.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/algorithm.h"
+#include "pr/common/allocator.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/bit_fields.h"
 #include "pr/storage/xml.h"
@@ -55,9 +56,12 @@ namespace pr::audio
 {
 	struct State;
 	struct Settings;
+	struct Sound;
 	class AudioManager;
-
+	using SoundPtr = pr::RefPtr<Sound>;
 	using ReportErrorCB = pr::StaticCB<void, wchar_t const*>;
+	template <typename T> using Allocator = pr::aligned_alloc<T>;
+	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
 
 	// Sample rates (in samples/sec)
 	struct ESampleRate
@@ -394,4 +398,8 @@ namespace pr::audio
 		DRMWAVEFORMAT m_drm;
 		DVIADPCMWAVEFORMAT m_dviadp;
 	};
+
+	// Ownership pointer for 'IXAudio2Voice' instances
+	struct DestroyVoice { void operator()(IXAudio2Voice* x) { x->DestroyVoice(); } };
+	template <typename TVoice> using VoicePtr = std::unique_ptr<TVoice, DestroyVoice>;
 }

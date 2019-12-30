@@ -133,8 +133,6 @@ namespace pr::rdr
 
 	protected:
 
-		friend struct Allocator<Shader>;
-
 		// Use the shader manager 'CreateShader' factory method to create new shaders
 		template <typename DxShaderType>
 		Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)

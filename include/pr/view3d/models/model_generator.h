@@ -166,7 +166,7 @@ namespace pr::rdr
 		private:
 
 			// The cached buffers
-			struct Buffers :AlignTo<16>
+			struct alignas(16) Buffers
 			{
 				std::string m_name;  // Model name
 				VCont       m_vcont; // Model verts

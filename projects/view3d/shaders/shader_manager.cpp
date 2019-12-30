@@ -12,17 +12,16 @@
 
 namespace pr::rdr
 {
-	ShaderManager::ShaderManager(MemFuncs& mem, Renderer& rdr)
-		:m_mem(mem)
-		,m_dbg_mem()
+	ShaderManager::ShaderManager(Renderer& rdr)
+		:m_dbg_mem()
 		,m_rdr(rdr)
-		,m_lookup_ip(mem)
-		,m_lookup_vs(mem)
-		,m_lookup_ps(mem)
-		,m_lookup_gs(mem)
-		,m_lookup_cs(mem)
-		,m_lookup_shader(mem)
-		,m_lookup_cbuf(mem)
+		,m_lookup_ip()
+		,m_lookup_vs()
+		,m_lookup_ps()
+		,m_lookup_gs()
+		,m_lookup_cs()
+		,m_lookup_shader()
+		,m_lookup_cbuf()
 		,m_stock_shaders()
 		,m_mutex()
 	{

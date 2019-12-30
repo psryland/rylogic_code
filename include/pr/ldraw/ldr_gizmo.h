@@ -12,7 +12,6 @@
 
 #include <memory>
 #include "pr/macros/enum.h"
-#include "pr/common/new.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/event_handler.h"
@@ -34,6 +33,7 @@ namespace pr::ldr
 		Revert,
 	};
 
+	using Renderer = pr::rdr::Renderer;
 	using LdrGizmoPtr = pr::RefPtr<LdrGizmo>;
 	using GizmoCont = pr::vector<LdrGizmoPtr, 8>;
 	using GizmoMovedCB = pr::StaticCB<void, LdrGizmo*, ELdrGizmoState>;

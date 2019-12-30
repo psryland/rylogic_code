@@ -96,8 +96,8 @@ namespace pr::rdr
 		return *this;
 	}
 
-	BlendStateManager::BlendStateManager(pr::rdr::MemFuncs& mem, Renderer& rdr)
-		:base(mem, rdr)
+	BlendStateManager::BlendStateManager(Renderer& rdr)
+		:base(rdr)
 	{}
 
 	// Get/Create a state object for 'desc'
@@ -219,8 +219,8 @@ namespace pr::rdr
 		return *this;
 	}
 
-	DepthStateManager::DepthStateManager(MemFuncs& mem, Renderer& rdr)
-		:base(mem, rdr)
+	DepthStateManager::DepthStateManager(Renderer& rdr)
+		:base(rdr)
 	{}
 
 	// Get/Create a state object for 'desc'
@@ -316,8 +316,8 @@ namespace pr::rdr
 		return *this;
 	}
 
-	RasterStateManager::RasterStateManager(MemFuncs& mem, Renderer& rdr)
-		:base(mem, rdr)
+	RasterStateManager::RasterStateManager(Renderer& rdr)
+		:base(rdr)
 	{}
 
 	// Get/Create a state object for 'desc'

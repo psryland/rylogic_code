@@ -20,7 +20,7 @@ namespace pr
 		typedef v4 (__stdcall *ReadPointCB)(void* ctx);
 
 		// A UI for measuring distances within a 3D environment
-		struct LdrMeasureUI :gui::Form ,AlignTo<16>
+		struct alignas(16) LdrMeasureUI :gui::Form
 		{
 		private:
 			enum { ID_BTN_SET0 = 100, ID_BTN_SET1, ID_TB_VALUES };
@@ -155,7 +155,7 @@ namespace pr
 		};
 
 		// A UI for measuring angles within a 3D environment
-		struct LdrAngleUI :gui::Form ,AlignTo<16>
+		struct alignas(16) LdrAngleUI :gui::Form
 		{
 		private:
 			enum { ID_BTN_ORIG = 100, ID_BTN_SET0, ID_BTN_SET1, ID_TB_VALUES };
