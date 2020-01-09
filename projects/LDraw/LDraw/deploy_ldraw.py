@@ -22,7 +22,7 @@ def Deploy():
 
 	# Check versions
 	version = Tools.Extract(os.path.join(srcdir, "LDraw.csproj"), r"<Version>(.*)</Version>").group(1)
-	print(f"Version: {version}\n");
+	print(f"Version: {version}\n")
 
 	# Publish to WWW
 	publish = input("Publish to web site? ") == "y"
