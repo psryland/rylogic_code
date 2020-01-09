@@ -162,7 +162,7 @@
 		<avalon:TextEditor
 			Grid.Row="2"
 			ShowLineNumbers="True"
-			FontFamily="Consolas"
+			FontFamily="{Binding Model.Settings.FontName, FallbackValue=Consolas}"
 			SyntaxHighlighting="Ldr"
 			IsModified="{Binding SaveNeeded, Mode=TwoWay}"
 			ContextMenu="{StaticResource ScriptCMenu}"

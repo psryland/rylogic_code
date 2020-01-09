@@ -1,0 +1,6 @@
+Use signed, not unsigned, for size/length variables:
+   https://channel9.msdn.com/Events/GoingNative/2013/Interactive-Panel-Ask-Us-Anything  (approx 12:30)
+   
+   https://www.youtube.com/watch?v=yG1OZ69H_-o (approx 39:18 - 52:00) 
+   Cost of using unsigned: (approx: 41:50)
+   Why is size_t unsigned: (approx: 46:00)

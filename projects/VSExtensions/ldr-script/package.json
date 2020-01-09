@@ -1,0 +1,24 @@
+{
+	"name": "ldr-script",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": ">=0.9.0-pre.1"
+	},
+	"publisher": "Rylogic",
+	"contributes": {
+		"languages": [
+			{
+				"id": "ldr-script",
+				"aliases": ["LdrScript", "ldr"],
+				"extensions": [".ldr"]
+			}
+		],
+		"grammars": [
+			{
+				"language": "ldr-script",
+				"scopeName": "source.ldr",
+				"path": "./syntaxes/ldr.tmLanguage.json"
+			}
+		]
+	}
+}

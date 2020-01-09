@@ -1,7 +1,7 @@
 Immediate ToDo:
 	
 LDraw
-	- Handle scriptUI files changing externally
+	- Handle scriptUI/assetUI files changing externally
 	- Highlight errors in editor
 	- Fix tabs for inserted auto complete text
 	- Support line continuation for highlighting

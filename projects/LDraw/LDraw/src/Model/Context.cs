@@ -15,6 +15,7 @@ namespace LDraw
 		// Notes:
 		//  - A 'Context' contains a context id and the scenes that objects,
 		//    associated with that context id, are added to.
+		//  - It is basically the shared code between ScriptUI and AssetUI.
 
 		public Context(Model model, string name, Guid context_id)
 		{

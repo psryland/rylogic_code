@@ -44,7 +44,7 @@ namespace pr::rdr
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
 	};
-	constexpr size_t SizeOf(EInstComp comp)
+	constexpr int SizeOf(EInstComp comp)
 	{
 		switch (comp)
 		{
@@ -72,9 +72,9 @@ namespace pr::rdr
 	// The header for an instance. All instances must start with one of these
 	struct BaseInstance
 	{
-		pr::uint m_cpt_count;
+		int m_cpt_count;
 
-		static BaseInstance make(pr::uint cpt_count)
+		static BaseInstance make(int cpt_count)
 		{
 			BaseInstance b = {cpt_count};
 			return b;
@@ -244,8 +244,9 @@ namespace pr::rdr
 	#define PR_RDR_DEFINE_INSTANCE(name, fields)\
 		struct name\
 		{\
+			static constexpr int CompCount = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
 			pr::rdr::BaseInstance m_base;\
-			pr::rdr::EInstComp m_cpt[pr::PadTo(sizeof(pr::rdr::BaseInstance) fields(PR_RDR_INST_MEMBER_COUNT), 16)];\
+			pr::rdr::EInstComp m_cpt[CompCount + pr::Pad(sizeof(pr::rdr::BaseInstance) + CompCount, 16)];\
 			fields(PR_RDR_INST_MEMBERS)\
 			\
 			name()\
@@ -254,10 +255,9 @@ namespace pr::rdr
 				fields(PR_RDR_INST_INITIALISERS)\
 			{\
 				using namespace pr::rdr;\
-				using inst_type = name;\
-				static_assert(offsetof(inst_type, m_base) == 0, "'m_base' must be be the first member");\
+				static_assert(offsetof(name, m_base) == 0, "'m_base' must be be the first member");\
 				int i = 0;\
-				m_base.m_cpt_count = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
+				m_base.m_cpt_count = CompCount;\
 				fields(PR_RDR_INST_INIT_COMPONENTS)\
 			}\
 		};

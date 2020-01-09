@@ -12,7 +12,7 @@ namespace LDraw.UI
 	public sealed partial class AssetUI :UserControl, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
-		//  - An asset is a non-script geometry source.
+		//  - An asset is a non-script geometry source such as p3d models etc.
 		//  - This object is analogous to a 'ScriptUI', but for binary files.
 		//  - AssetUI is a list item, not a fully dockable UI element.
 

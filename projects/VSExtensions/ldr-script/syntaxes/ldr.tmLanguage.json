@@ -1,0 +1,351 @@
+{
+	"information_for_contributors": [
+		"Rylogic Ldr Script",
+		"Most if this was copied from 'csharp.tmLanguage.json'"
+	],
+	"version": "1.0.0",
+	"name": "Ldr",
+	"scopeName": "source.ldr",
+	"patterns": [
+		{
+			"include": "#comment"
+		},
+		{
+			"include": "#preprocessor"
+		},
+		{
+			"include": "#object-declaration"
+		},
+		{
+			"include": "#block"
+		}
+	],
+	"repository": {
+		"block": {
+			"begin": "\\{",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.curlybrace.open.cs"
+				}
+			},
+			"end": "\\}",
+			"endCaptures": {
+				"0": {
+					"name": "punctuation.curlybrace.close.cs"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#object-declaration"
+				},
+				{
+					"include": "#object-modifier"
+				},
+				{
+					"include": "#number-literal"
+				},
+				{
+					"include": "#string-literal"
+				},
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#preprocessor"
+				}
+			]
+		},
+		"object-declaration": {
+			"patterns": [
+				{
+					"include": "#object-type"
+				},
+				{
+					"include": "#object-colour"
+				},
+				{
+					"include": "#object-name"
+				},
+				{
+					"include": "#block"
+				}
+			]
+		},
+		"object-type": {
+			"match": "(?i)(\\*(Point|Line|LineD|LineStrip|LineBox|Grid|Spline|Arrow|Circle|Pie|Rect|Polygon|Matrix3x3|CoordFrame|Triangle|Quad|Plane|Ribbon|Box|Bar|BoxList|FrustumWH|FrustumFA|Sphere|CylinderHR|ConeHA|Tube|Mesh|ConvexHull|Model|Chart|Group|Text|Instance|DirLight|PointLight|SpotLight|Custom|Camera))\\b",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.ldr"
+				}
+			}
+		},
+		"object-name": {
+			"name": "entity.name.function.definition.ldr",
+			"match": "[_A-Za-z][_A-Za-z0-9]*\\b"
+		},
+		"object-colour": {
+			"name": "constant.numeric.hexadecimal.ldr",
+			"match": "[A-Fa-f0-9][A-Fa-f0-9]*\\b"
+		},
+		"object-modifier": {
+			"match": "(?i)(\\*(Name|Txfm|O2W|M4x4|M3x3|Pos|Up|Direction|Quat|QuatPos|Rand4x4|RandPos|RandOri|Euler|Dim|Scale|Size|Weight|Transpose|Inverse|Normalise|Orthonormalise|Colour|ForeColour|BackColour|Font|Stretch|Underline|Strikeout|NewLine|CString|AxisId|Solid|Facets|CornerRadius|RandColour|ColourMask|Reflectivity|Animation|Style|Format|TextLayout|Anchor|Padding|Period|Velocity|AngVelocity|Axis|Hidden|Wireframe|Delimiters|Camera|LookAt|Align|Aspect|FovX|FovY|Fov|Near|Far|Orthographic|Lock|Width|Dashed|Smooth|XAxis|YAxis|XColumn|Closed|Param|Texture|Video|Divisions|Layers|Wedges|ViewPlaneZ|Verts|Normals|Colours|TexCoords|Lines|Faces|Tetra|Part|GenerateNormals|BakeTransform|Step|Addr|Filter|Alpha|Range|Specular|ScreenSpace|NoZTest|NoZWrite|Billboard|Depth|LeftHanded|CastShadow))\\b",
+			"captures": {
+				"1": {
+					"name": "keyword.ldr"
+				}
+			}
+		},
+		"preprocessor": {
+			"patterns": [
+				{
+					"match": "^\\s*(#include|#include_path|#depend)\\b\\s*(.+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						},
+						"2": {
+							"patterns": [
+								{
+									"include": "#string-literal"
+								}
+							]
+						}
+					}
+				},
+				{
+					"match": "^\\s*(#ignore_missing)\\b\\s*(.+)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						},
+						"2": {
+							"patterns": [
+								{
+									"match": "(?i)\"on\"",
+									"name": "string.quoted.double.ldr"
+								},
+								{
+									"match": "(?i)\"off\"",
+									"name": "string.quoted.double.ldr"
+								}
+							]
+						}
+					}
+				},
+				{
+					"begin": "\\s*(#embedded)\\((?i)(lua),?(\\w*)?\\)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						},
+						"2": {
+							"name": "entity.name.type.ldr"
+						},
+						"3": {
+							"name": "entity.name.type.ldr"
+						}
+					},
+					"end": "\\s*(#end)",
+					"endCaptures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						}
+					},
+					"patterns": [
+						{
+							"include": "source.lua"
+						}
+					]
+				},
+				{
+					"begin": "\\s*(#embedded)\\((?i)(csharp),?(\\w*)?\\)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						},
+						"2": {
+							"name": "entity.name.type.ldr"
+						},
+						"3": {
+							"name": "entity.name.type.ldr"
+						}
+					},
+					"end": "\\s*(#end)",
+					"endCaptures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						}
+					},
+					"patterns": [
+						{
+							"include": "source.cs"
+						}
+					]
+				},
+				{
+					"begin": "\\s*(#lit)",
+					"end": "\\s*(#end)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.pragma.ldr"
+						}
+					}
+				},
+				{
+					"match": "^\\s*(#define|#undef|#defifndef)\\b\\s*([_A-Za-z][_A-Za-z0-9]*)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.directive.macro.ldr"
+						},
+						"2": {
+							"name": "entity.name.variable.preprocessor.symbol.ldr"
+						}
+					}
+				},
+				{
+					"begin": "^\\s*(#if|#elif|#else|#endif)",
+					"end": "(?=$)",
+					"beginCaptures": {
+						"1": {
+							"name": "meta.preprocessor.conditional.ldr"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#comment"
+						}
+					]
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.block.ldr",
+					"begin": "\\s*+(\\/\\*)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.ldr"
+						}
+					},
+					"end": "(\\*\\/)",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.ldr"
+						}
+					}
+				},
+				{
+					"name": "comment.line.ldr",
+					"begin": "\\s*+(\\/\\/)",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.comment.ldr"
+						}
+					},
+					"end": "(?<=\\n)(?<!\\\\\\n)",
+					"patterns": [
+						{
+							"include": "#line-continuation"
+						}
+					]
+				},
+				{
+					"name": "invalid.illegal.unexpected.punctuation.definition.comment.end.ldr",
+					"match": "\\*\\/"
+				}
+			]
+		},
+		"line-continuation": {
+			"match": "\\\\\\n",
+			"name": "constant.character.escape.line-continuation.ldr"
+		},
+		"string-literal": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.ldr",
+					"begin": "(\")",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.begin.ldr"
+						}
+					},
+					"end": "(\")",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.end.ldr"
+						}
+					},
+					"patterns": [
+						{
+							"match": "(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8})",
+							"name": "constant.character.escape.ldr"
+						},
+						{
+							"match": "\\\\['\"?\\\\abfnrtv]",
+							"name": "constant.character.escape.ldr"
+						},
+						{
+							"match": "\\\\[0-7]{1,3}",
+							"name": "constant.character.escape.ldr"
+						},
+						{
+							"match": "\\\\x[0-9a-fA-F]{2,2}",
+							"name": "constant.character.escape.ldr"
+						},
+						{
+							"include": "#string-escapes"
+						}
+					]
+				},
+				{
+					"name": "string.quoted.single.ldr",
+					"begin": "(')",
+					"beginCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.begin.ldr"
+						}
+					},
+					"end": "('|$)",
+					"endCaptures": {
+						"1": {
+							"name": "punctuation.definition.string.end.ldr"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#string-escapes"
+						},
+						{
+							"include": "#line-continuation"
+						}
+					]
+				}
+			]
+		},
+		"string-escapes": {
+			"patterns": [
+				{
+					"name": "constant.character.escape.ldr",
+					"match": "(?x)\\\\ (\n\\\\\t\t\t |\n[abefnprtv'\"?]   |\n[0-3]\\d{,2}\t |\n[4-7]\\d?\t\t|\nx[a-fA-F0-9]{,2} |\nu[a-fA-F0-9]{,4} |\nU[a-fA-F0-9]{,8} )"
+				},
+				{
+					"name": "invalid.illegal.unknown-escape.ldr",
+					"match": "\\\\."
+				}
+			]
+		},
+		"number-literal": {
+			"patterns": [
+				{
+					"name": "constant.numeric.decimal.ldr",
+					"match": "(?:\\+|-)?(\\d*\\.?\\d+(?:[eEpP](?:\\+|-)?\\d*)?)"
+				},
+				{
+					"name": "constant.numeric.hexadecimal.ldr",
+					"match": "[A-Fa-f0-9]+\\b"
+				}
+			]
+		}
+	}
+}

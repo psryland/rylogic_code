@@ -58,6 +58,7 @@ namespace LDraw.UI
 			{
 				ShowTitle = false,
 				TabText = name,
+				TabToolTip = filepath,
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
@@ -70,8 +71,6 @@ namespace LDraw.UI
 			SaveScript = Command.Create(this, SaveScriptInternal);
 			RemoveObjects = Command.Create(this, RemoveObjectsInternal);
 			CloseScript = Command.Create(this, CloseScriptInternal);
-
-			//todo Settings.SettingChanged += HandleFontChanged;
 
 			// If the temporary script exists, load it
 			if (Path_.FileExists(Filepath))
@@ -172,7 +171,7 @@ namespace LDraw.UI
 		private View3d.AutoComplete LdrAutoComplete { get; }
 
 		/// <summary>App logic</summary>
-		private Model Model => Context.Model;
+		public Model Model => Context.Model;
 
 		/// <summary>The name assigned to this script UI</summary>
 		public string ScriptName => Context.Name;
@@ -197,6 +196,8 @@ namespace LDraw.UI
 				// Update the script name if it hasn't been changed by the user
 				if (update_name)
 					Context.Name = Path_.FileName(m_filepath);
+				
+				DockControl.TabToolTip = m_filepath;
 			}
 		}
 		private string m_filepath = null!;

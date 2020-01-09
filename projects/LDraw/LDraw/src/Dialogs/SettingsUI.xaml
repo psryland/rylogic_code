@@ -153,17 +153,17 @@
 						<StackPanel>
 							<CheckBox
 								Content="Reset the camera position on reload"
-								IsChecked="{Binding ResetOnLoad}"
+								IsChecked="{Binding Settings.ResetOnLoad}"
 								Margin="3"
 								/>
 							<CheckBox
 								Content="Automatically reload files when changes are detected"
-								IsChecked="{Binding AutoRefresh}"
+								IsChecked="{Binding Settings.AutoRefresh}"
 								Margin="3"
 								/>
 							<CheckBox
 								Content="Clear the Log window on reload"
-								IsChecked="{Binding ClearErrorLogOnReload}"
+								IsChecked="{Binding Settings.ClearErrorLogOnReload}"
 								Margin="3"
 								/>
 						</StackPanel>
