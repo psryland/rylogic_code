@@ -1,12 +1,11 @@
 # Ldr Script for Visual Studio Code
 
-This extension adds language support for Rylogic Ldr Script
+This extension adds language support for Rylogic Ldr Script.
 
 ## Contributors
 
-- [Stanislav Ionascu](https://github.com/stanionascu)
-- [Rostislav Kondratenko](https://github.com/rkondratenko)
+- [Paul Ryland](https://github.com/psryland)
 
 ## License
 
-[MIT](https://github.com/twxs/vs.language.cmake/blob/master/LICENSE)
+- [MIT](https://github.com/rylogic_code/src/master/projects/VSExtensions/ldr-script/licence.txt)

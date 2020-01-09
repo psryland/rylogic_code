@@ -49,7 +49,7 @@ namespace pr::str
 		};
 		friend constexpr EFlags operator | (EFlags lhs, EFlags rhs)
 		{
-			return static_cast<EFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
+			return static_cast<InLiteral::EFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
 		}
 
 		EFlags m_flags;
