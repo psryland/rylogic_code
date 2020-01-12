@@ -4,10 +4,11 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+    xmlns:local="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
     mc:Ignorable="d" 
-	d:DesignWidth="360"
-	d:DesignHeight="230" 
+	d:DesignWidth="960"
+	d:DesignHeight="180" 
 	Title="Message Box"
 	WindowStartupLocation="CenterOwner"
 	SizeToContent="WidthAndHeight"
@@ -17,43 +18,150 @@
 	MinWidth="330"
 	MinHeight="100"
 	>
-
 	<DockPanel
 		LastChildFill="True"
 		>
-		
+
 		<!-- Buttons -->
-		<StackPanel
+		<Grid
 			DockPanel.Dock="Bottom"
-			Orientation="Horizontal"
-			FlowDirection="RightToLeft"
 			Background="{x:Static SystemColors.ControlBrush}"
 			>
-			<Button
-				Name="m_btn_negative"
-				Content="{Binding NegativeBtnText}"
-				MinWidth="80"
-				MinHeight="22"
-				Margin="12,8,4,8"
-				IsCancel="True"
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			
+			<CheckBox
+				Grid.Column="0"
+				Content="Always"
+				Visibility="{Binding ShowAlwaysCheckbox, Converter={conv:BoolToVisible}}"
+				IsChecked="{Binding Always, Mode=TwoWay}"
+				VerticalAlignment="Center"
+				Margin="8,8,4,8"
 				/>
-			<Button
-				Name="m_btn_neutral"
-				Content="{Binding NeutralBtnText}"
-				MinWidth="80"
-				MinHeight="22"
-				Margin="12,8,4,8"
-				/>
-			<Button
-				Name="m_btn_positive"
-				Content="{Binding PositiveBtnText}"
-				MinWidth="80"
-				MinHeight="22"
-				Margin="12,8,4,8"
-				IsDefault="True"
-				/>
-		</StackPanel>
-		
+			<StackPanel
+				Grid.Column="2"
+				Orientation="Horizontal"
+				Margin="8"
+				x:Name="m_btn_panel"
+				>
+				<Button
+					Name="m_btn_ok"
+					Content="_OK"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.OK}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.OK}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.OK}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_yes"
+					Content="_Yes"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Yes}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Yes}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Yes}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_reload"
+					Content="_Reload"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Reload}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Reload}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Reload}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_overwrite"
+					Content="_Overwrite"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Overwrite}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Overwrite}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Overwrite}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_discard"
+					Content="_Discard"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Discard}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Discard}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Discard}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_abort"
+					Content="_Abort"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Abort}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Abort}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Abort}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_retry"
+					Content="_Retry"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Retry}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Retry}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Retry}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_ignore"
+					Content="_Ignore"
+					Command="{Binding Accept}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Ignore}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Ignore}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Ignore}}"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_no"
+					Content="_No"
+					Command="{Binding Cancel}"
+					CommandParameter="{x:Static local:MsgBox+EResult.No}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.No}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.No}}"
+					IsCancel="True"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+				<Button
+					Name="m_btn_cancel"
+					Content="_Cancel"
+					Command="{Binding Cancel}"
+					CommandParameter="{x:Static local:MsgBox+EResult.Cancel}"
+					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Cancel}}"
+					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Cancel}}"
+					IsCancel="True"
+					MinWidth="80"
+					MinHeight="22"
+					Margin="4,0,4,0"
+					/>
+			</StackPanel>
+		</Grid>
+
 		<!-- Body -->
 		<Grid
 			Background="{x:Static SystemColors.WindowBrush}"
@@ -82,6 +190,7 @@
 				Grid.Column="1"
 				MinWidth="50"
 				MinHeight="50"
+				x:Name="m_content"
 				>
 				<TextBox
 					BorderThickness="0"

@@ -41,6 +41,9 @@ namespace LDraw.UI
 		//    treats the items as child controls and tried to become their parent.
 		//  - Each ScriptUI is responsible for the objects it creates and the scenes those objects are
 		//    added to. Closing a ScriptUI removes its objects from any associated scenes.
+		//  - Watching for changed script files is independent of the Ldr sources CheckForChangedSources
+		//    because a script is not necessarily rendered in the view and therefore not a source. Both
+		//    file watching systems are needed, since assets need to update as well.
 
 		static ScriptUI()
 		{
@@ -77,6 +80,11 @@ namespace LDraw.UI
 				LoadFile();
 
 			DataContext = this;
+		}
+		protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+		{
+			base.OnPreviewGotKeyboardFocus(e);
+			CheckForChangedScript();
 		}
 		public void Dispose()
 		{
@@ -196,11 +204,13 @@ namespace LDraw.UI
 				// Update the script name if it hasn't been changed by the user
 				if (update_name)
 					Context.Name = Path_.FileName(m_filepath);
-				
+
 				DockControl.TabToolTip = m_filepath;
 			}
 		}
+		private FileInfo? FileInfo => Path_.FileExists(Filepath) ? new FileInfo(Filepath) : null;
 		private string m_filepath = null!;
+		private FileInfo? m_last_fileinfo;
 
 		/// <summary>The text editor control</summary>
 		public TextEditor Editor
@@ -465,7 +475,7 @@ namespace LDraw.UI
 			{
 				var ss = Editor.SelectionStart;
 				var sl = Editor.SelectionLength;
-				return sl == 0 ? $"Pos: {Editor.CaretOffset}" : $"Sel: {ss}..{ss+sl} ({sl})";
+				return sl == 0 ? $"Pos: {Editor.CaretOffset}" : $"Sel: {ss}..{ss + sl} ({sl})";
 			}
 		}
 
@@ -513,11 +523,16 @@ namespace LDraw.UI
 				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
 			}
 
+			// Load the file into the editor
+			Editor.Text = File.ReadAllText(filepath);
+
 			// Save the filepath
 			Filepath = filepath;
 
-			// Load the file into the editor
-			Editor.Text = File.ReadAllText(filepath);
+			// Record the file state when last loaded
+			m_last_fileinfo = FileInfo;
+
+			// Sync'd with disk
 			SaveNeeded = false;
 		}
 		public void LoadFile()
@@ -536,16 +551,92 @@ namespace LDraw.UI
 				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
 			}
 
+			// Save the file from the editor
+			File.WriteAllText(filepath, Editor.Text);
+
 			// Save the filepath
 			Filepath = filepath;
 
-			// Save the file from the editor
-			File.WriteAllText(filepath, Editor.Text);
+			// Record the file state when last saved
+			m_last_fileinfo = FileInfo;
+
+			// Sync'd with disk
 			SaveNeeded = false;
 		}
 		public void SaveFile()
 		{
 			SaveFile(Filepath);
+		}
+
+		/// <summary>Test the script file for external changes</summary>
+		public void CheckForChangedScript()
+		{
+			// Look for changes
+			var fileinfo = FileInfo;
+			if (m_last_fileinfo != null && fileinfo != null &&
+				((m_last_fileinfo.LastWriteTimeUtc == fileinfo.LastWriteTimeUtc) ||
+				(m_last_fileinfo.Length == fileinfo.Length && Editor.Text == File.ReadAllText(Filepath))))
+			{
+				m_last_fileinfo = fileinfo;
+				return;
+			}
+
+			// The file has changed. Prompt if needed.
+			if (SaveNeeded)
+			{
+				var dlg = new MsgBox(Window.GetWindow(this),
+					$"{Path_.FileName(Filepath)} has changed on disk.\n" +
+					$"\n" +
+					$"'Overwrite' = save and replace the version on disk.\n" +
+					$"'Discard' = discard local changes and reload from disk.\n" +
+					$"'Ignore' = continue with the local version without saving.\n",
+					"Script Changed on Disk", MsgBox.EButtons.OverwriteDiscardIgnore);
+				dlg.ShowDialog();
+				switch (dlg.Result)
+				{
+				case MsgBox.EResult.Overwrite:
+					SaveFile(Filepath);
+					break;
+				case MsgBox.EResult.Discard:
+					LoadFile(Filepath);
+					break;
+				case MsgBox.EResult.Ignore:
+					m_last_fileinfo = fileinfo;
+					SaveNeeded = true;
+					break;
+				default:
+					throw new Exception($"{dlg.Result} unexpected");
+				}
+			}
+			else if (!(Model.Settings.ReloadChangedScripts is bool reload))
+			{
+				var dlg = new MsgBox(Window.GetWindow(this),
+					$"'{Filepath}' has changed on disk.\n" +
+					$"\n" +
+					$"'Reload' = reload the script from disk.\n" +
+					$"'Ignore' = continue with the local version.\n",
+					"Script Changed on Disk", MsgBox.EButtons.ReloadIgnore)
+				{ ShowAlwaysCheckbox = true };
+				dlg.ShowDialog();
+				switch (dlg.Result)
+				{
+				case MsgBox.EResult.Reload:
+					LoadFile(Filepath);
+					if (dlg.Always) Model.Settings.ReloadChangedScripts = true;
+					break;
+				case MsgBox.EResult.Ignore:
+					if (dlg.Always) Model.Settings.ReloadChangedScripts = false;
+					m_last_fileinfo = fileinfo;
+					SaveNeeded = true;
+					break;
+				default:
+					throw new Exception($"{dlg.Result} unexpected");
+				}
+			}
+			else if (reload)
+			{
+				LoadFile(Filepath);
+			}
 		}
 
 		/// <summary>True if the script has been edited without being saved</summary>

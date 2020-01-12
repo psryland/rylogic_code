@@ -74,10 +74,14 @@ namespace view3d
 
 			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
 			case ScriptSources::EReason::Reload:
-				for (auto& wnd : m_wnd_cont)
-					wnd->AddObjectsById(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
-
-				break;
+				{
+					for (auto& wnd : m_wnd_cont)
+					{
+						wnd->AddObjectsById(args.m_context_ids.data(), static_cast<int>(args.m_context_ids.size()), 0);
+						wnd->Invalidate();
+					}
+					break;
+				}
 			}
 
 			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);

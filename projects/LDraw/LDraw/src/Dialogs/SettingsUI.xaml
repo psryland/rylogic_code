@@ -152,6 +152,11 @@
 						>
 						<StackPanel>
 							<CheckBox
+								Content="Clear the Log window on reload"
+								IsChecked="{Binding Settings.ClearErrorLogOnReload}"
+								Margin="3"
+								/>
+							<CheckBox
 								Content="Reset the camera position on reload"
 								IsChecked="{Binding Settings.ResetOnLoad}"
 								Margin="3"
@@ -161,11 +166,20 @@
 								IsChecked="{Binding Settings.AutoRefresh}"
 								Margin="3"
 								/>
-							<CheckBox
-								Content="Clear the Log window on reload"
-								IsChecked="{Binding Settings.ClearErrorLogOnReload}"
-								Margin="3"
-								/>
+							<StackPanel
+								Orientation="Horizontal"
+								Margin="30,0,3,0"
+								>
+								<TextBlock
+									Text="Detect changed files polling interval (sec): "
+									VerticalAlignment="Center"
+									/>
+								<TextBox
+									Text="{Binding Settings.CheckForChangesPollPeriodS, StringFormat={}{0:N2}}"
+									VerticalAlignment="Center"
+									MinWidth="50"
+									/>
+							</StackPanel>
 						</StackPanel>
 					</GroupBox>
 				</Grid>

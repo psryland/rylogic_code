@@ -89,20 +89,35 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Compares a value to the parameter, return true if (value & parameter) != 0</summary>
+	/// <summary>Compares a value to the parameter, return true or 'visible' if (value & parameter) != 0</summary>
 	[ValueConversion(typeof(object), typeof(bool))]
 	public class HasFlag : MarkupExtension, IValueConverter
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value == null && parameter == null)
-				return true;
-			if (value == null || parameter == null)
-				return false;
+			if (targetType == typeof(bool))
+			{
+				if (value == null && parameter == null)
+					return true;
+				if (value == null || parameter == null)
+					return false;
 
-			var lhs = Util.ConvertTo<long>(value);
-			var rhs = Util.ConvertTo<long>(parameter);
-			return (lhs & rhs) != 0;
+				var lhs = Util.ConvertTo<long>(value);
+				var rhs = Util.ConvertTo<long>(parameter);
+				return (lhs & rhs) != 0;
+			}
+			if (targetType == typeof(Visibility))
+			{
+				if (value == null && parameter == null)
+					return Visibility.Visible;
+				if (value == null || parameter == null)
+					return Visibility.Collapsed;
+
+				var lhs = Util.ConvertTo<long>(value);
+				var rhs = Util.ConvertTo<long>(parameter);
+				return (lhs & rhs) != 0 ? Visibility.Visible : Visibility.Collapsed;
+			}
+			throw new Exception("Unsupported target type");
 		}
 		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{

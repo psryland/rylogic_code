@@ -14,7 +14,9 @@ namespace LDraw
 			FontSize = 10.0;
 			AutoRefresh = false;
 			ResetOnLoad = true;
+			ReloadChangedScripts = null;
 			ClearErrorLogOnReload = true;
+			CheckForChangesPollPeriodS = 1.0;
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
 			Scene = new ChartControl.OptionsData
@@ -65,11 +67,25 @@ namespace LDraw
 			set => set(nameof(ResetOnLoad), value);
 		}
 
+		/// <summary>Where scripts changed externally are automatically reloaded. Null means prompt</summary>
+		public bool? ReloadChangedScripts
+		{
+			get => get<bool?>(nameof(ReloadChangedScripts));
+			set => set(nameof(ReloadChangedScripts), value);
+		}
+
 		/// <summary>Clear the error log when source data is reloaded</summary>
 		public bool ClearErrorLogOnReload
 		{
 			get => get<bool>(nameof(ClearErrorLogOnReload));
 			set => set(nameof(ClearErrorLogOnReload), value);
+		}
+
+		/// <summary>The period between checking for changed files</summary>
+		public double CheckForChangesPollPeriodS
+		{
+			get => get<double>(nameof(CheckForChangesPollPeriodS));
+			set => set(nameof(CheckForChangesPollPeriodS), value);
 		}
 
 		/// <summary>Recently loaded files</summary>

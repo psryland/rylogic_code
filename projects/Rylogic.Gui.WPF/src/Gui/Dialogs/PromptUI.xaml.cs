@@ -8,6 +8,10 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class PromptUI : Window, INotifyPropertyChanged
 	{
+		// Notes:
+		//  - This is used to get simple data from the user.
+		//  - Use 'MsgBox' if you just want to display some info.
+
 		public PromptUI(Window? owner = null)
 		{
 			InitializeComponent();
@@ -117,12 +121,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if the user input is valid</summary>
 		public bool IsValid
 		{
-			get { return m_is_valid; }
+			get => m_is_valid;
 			private set
 			{
 				if (m_is_valid == value) return;
 				m_is_valid = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsValid)));
+				NotifyPropertyChanged(nameof(IsValid));
 			}
 		}
 		private bool m_is_valid;
@@ -130,17 +134,21 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Make the "wrap" checkbox vislble</summary>
 		public bool ShowWrapCheckbox
 		{
-			get { return m_show_wrap_checkbox; }
+			get => m_show_wrap_checkbox;
 			set
 			{
 				if (m_show_wrap_checkbox == value) return;
 				m_show_wrap_checkbox = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowWrapCheckbox)));
+				NotifyPropertyChanged(nameof(ShowWrapCheckbox));
 			}
 		}
 		private bool m_show_wrap_checkbox;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

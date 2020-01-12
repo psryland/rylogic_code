@@ -47,7 +47,7 @@ namespace pr::rdr
 		// Delegates to call when the texture is destructed
 		// WARNING: Don't add lambdas that capture a ref counted pointer to the texture
 		// or the texture will never get destructed, since the ref will never hit zero.
-		EventHandler<TextureBase&, EmptyArgs const&> OnDestruction;
+		EventHandler<TextureBase&, EmptyArgs const&, true> OnDestruction;
 
 		// Ref counting clean up
 		static void RefCountZero(RefCounted<TextureBase>* doomed);

@@ -65,7 +65,8 @@ namespace TestWPF
 			});
 			ShowMsgBox = Command.Create(this, () =>
 			{
-				MsgBox.Show(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation);
+				var dlg = new MsgBox(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation) { ShowAlwaysCheckbox = true };
+				dlg.ShowDialog();
 			});
 			ShowListUI = Command.Create(this, () =>
 			{

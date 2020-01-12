@@ -26,6 +26,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			DockControl = null!;
 			m_def_tab_text = string.Empty;
 			m_def_tab_icon = null;
+			
 		}
 		public TabButton(string? text, ImageSource? icon)
 			: this()
@@ -45,6 +46,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				case nameof(DockControl.TabText):
 					{
 						NotifyPropertyChanged(nameof(TabText));
+						NotifyPropertyChanged(nameof(TabToolTip));
+						break;
+					}
+				case nameof(DockControl.TabToolTip):
+					{
+						NotifyPropertyChanged(nameof(TabToolTip));
 						break;
 					}
 				case nameof(DockControl.TabIcon):

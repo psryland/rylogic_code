@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Controls;
-using System.Windows.Data;
+using System.Windows.Threading;
 using LDraw.UI;
-using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -23,16 +20,18 @@ namespace LDraw
 	{
 		public Model(string[] args)
 		{
-			View3d = View3d.Create();
 			Sync = SynchronizationContext.Current ?? throw new Exception("No synchronisation context available");
+			View3d = View3d.Create();
 			StartupOptions = new StartupOptions(args);
 			Settings = new SettingsData(StartupOptions.SettingsPath);
+			FileWatchTimer = new DispatcherTimer(DispatcherPriority.ApplicationIdle);
 			Scenes = new ObservableCollection<SceneUI>();
 			Scripts = new ObservableCollection<ScriptUI>();
 			Assets = new ObservableCollection<AssetUI>();
 		}
 		public void Dispose()
 		{
+			FileWatchTimer = null!;
 			View3d = null!;
 			GC.SuppressFinalize(this);
 		}
@@ -105,7 +104,38 @@ namespace LDraw
 		public StartupOptions StartupOptions { get; }
 
 		/// <summary>Application settings</summary>
-		public SettingsData Settings { get; }
+		public SettingsData Settings
+		{
+			get => m_settings;
+			set
+			{
+				if (m_settings == value) return;
+				if (m_settings != null)
+				{
+					m_settings.SettingChange -= HandleSettingChange;
+				}
+				m_settings = value;
+				if (m_settings != null)
+				{
+					m_settings.SettingChange += HandleSettingChange;
+				}
+
+				// Handlers
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					switch (e.Key)
+					{
+					case nameof(SettingsData.CheckForChangesPollPeriodS):
+						{
+							FileWatchTimer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
+							break;
+						}
+					}
+				}
+			}
+		}
+		private SettingsData m_settings = null!;
 
 		/// <summary>The scene instances</summary>
 		public ObservableCollection<SceneUI> Scenes { get; }
@@ -136,6 +166,39 @@ namespace LDraw
 		}
 		private ParsingProgressData? m_parsing_progress;
 		public event EventHandler? ParsingProgressChanged;
+
+		/// <summary>Timer used to watch for file changes</summary>
+		public DispatcherTimer FileWatchTimer
+		{
+			get => m_file_watch_timer;
+			set
+			{
+				if (m_file_watch_timer == value) return;
+				if (m_file_watch_timer != null)
+				{
+					m_file_watch_timer.Stop();
+					m_file_watch_timer.Tick -= HandleCheckForChangedFiles;
+				}
+				m_file_watch_timer = value;
+				if (m_file_watch_timer != null)
+				{
+					m_file_watch_timer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
+					m_file_watch_timer.Tick += HandleCheckForChangedFiles;
+					m_file_watch_timer.Start();
+				}
+
+				// Handlers
+				void HandleCheckForChangedFiles(object sender, EventArgs e)
+				{
+					foreach (var script in Scripts)
+						script.CheckForChangedScript();
+
+					if (Settings.AutoRefresh)
+						m_view3d.CheckForChangedSources();
+				}
+			}
+		}
+		private DispatcherTimer m_file_watch_timer = null!;
 
 		/// <summary>Return a generated name for a new scene UI</summary>
 		public string GenerateSceneName()

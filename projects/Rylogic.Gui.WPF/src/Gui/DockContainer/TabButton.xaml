@@ -113,7 +113,6 @@
 	<Button.ToolTip>
 		<ToolTip
 			Content="{Binding TabToolTip}"
-			Visibility="{Binding Clipped, Converter={conv:BoolToVisible}}"
 			/>
 	</Button.ToolTip>
 </Button>
