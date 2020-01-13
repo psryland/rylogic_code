@@ -16,6 +16,7 @@
 #include "pr/script/forward.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/ldraw/ldr_object.h"
+#include "pr/ldraw/ldr_gizmo.h"
 #include "pr/threads/synchronise.h"
 
 namespace pr::ldr
@@ -131,6 +132,33 @@ namespace pr::ldr
 			{}
 		};
 
+		// Parse error event args
+		struct ParseErrorEventArgs
+		{
+			// Error message
+			std::wstring m_msg;
+
+			// Script error code
+			script::EResult m_result;
+
+			// The filepath of the source that contains the error (if there is one)
+			script::Loc m_loc;
+
+			ParseErrorEventArgs()
+				:m_msg()
+				,m_result(script::EResult::Success)
+				,m_loc()
+			{}
+			ParseErrorEventArgs(std::wstring_view msg, script::EResult result, script::Loc const& loc)
+				:m_msg(msg)
+				,m_result(result)
+				,m_loc(loc)
+			{}
+			explicit ParseErrorEventArgs(script::ScriptException const& ex)
+				:ParseErrorEventArgs(pr::Widen(ex.what()), ex.m_result, ex.m_loc)
+			{}
+		};
+
 		// Store change event args
 		struct StoreChangeEventArgs
 		{
@@ -212,7 +240,7 @@ namespace pr::ldr
 		}
 
 		// Parse error event.
-		EventHandler<ScriptSources&, ErrorEventArgs const&, true> OnError;
+		EventHandler<ScriptSources&, ParseErrorEventArgs const&, true> OnError;
 
 		// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
 		EventHandler<ScriptSources&, EmptyArgs const&, true> OnReload;
@@ -499,7 +527,7 @@ namespace pr::ldr
 
 			// Parse the contents of the script
 			ParseResult out;
-			ErrorEventArgs errors;
+			vector<ParseErrorEventArgs> errors;
 			#pragma region Parse
 			try
 			{
@@ -543,15 +571,11 @@ namespace pr::ldr
 			}
 			catch (ScriptException const& ex)
 			{
-				errors = is_file
-					? ErrorEventArgs(Fmt(L"Script error found while parsing source file '%s'.\r\n%S", filepath.c_str(), ex.what()))
-					: ErrorEventArgs(Fmt(L"Script error found while parsing script string.\r\n%S", ex.what()));
+				errors.emplace_back(ex);
 			}
 			catch (std::exception const& ex)
 			{
-				errors = is_file
-					? ErrorEventArgs(Fmt(L"Error found while parsing source file '%s'.\r\n%S", filepath.c_str(), ex.what()))
-					: ErrorEventArgs(Fmt(L"Error found while parsing script.\r\n%S", ex.what()));
+				errors.emplace_back(pr::Widen(ex.what()), EResult::Failed, Loc());
 			}
 			#pragma endregion
 
@@ -587,8 +611,8 @@ namespace pr::ldr
 				}
 
 				// Notify of any errors that occurred
-				if (!errors.m_msg.empty())
-					OnError(*this, errors);
+				for (auto& err : errors)
+					OnError(*this, err);
 
 				// Notify of the store change
 				args.m_before = false;

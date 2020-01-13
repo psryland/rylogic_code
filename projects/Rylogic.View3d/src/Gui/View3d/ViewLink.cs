@@ -30,7 +30,7 @@ namespace Rylogic.Gui.WPF
 			CamLink = cam;
 
 			// Watch for navigation events on 'source' and apply them to 'target'
-			source.Window.MouseNavigating += WeakRef.MakeWeak<View3d.Window.MouseNavigateEventArgs>(OnSourceNavigation, h => source.Window.MouseNavigating -= h);
+			source.Window.MouseNavigating += WeakRef.MakeWeak<View3d.MouseNavigateEventArgs>(OnSourceNavigation, h => source.Window.MouseNavigating -= h);
 		}
 
 		/// <summary>The scene that is the source of navigation</summary>
@@ -43,7 +43,7 @@ namespace Rylogic.Gui.WPF
 		public virtual ELinkCameras CamLink { get; set; }
 
 		/// <summary>Handle a navigation event from 'Source'</summary>
-		protected virtual void OnSourceNavigation(object sender, View3d.Window.MouseNavigateEventArgs e)
+		protected virtual void OnSourceNavigation(object sender, View3d.MouseNavigateEventArgs e)
 		{
 			if (!Target.TryGetTarget(out var target))
 				return;

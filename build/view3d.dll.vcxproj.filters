@@ -15,13 +15,13 @@
     <ClInclude Include="..\projects\view3d\dll\forward.h">
       <Filter>src\dll</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\pr_conv.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\view3d.h">
-      <Filter>src\dll</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\view3d\dll\window.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\dll\view3d.h">
+      <Filter>src\dll</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\dll\pr_conv.h">
       <Filter>src\dll</Filter>
     </ClInclude>
   </ItemGroup>

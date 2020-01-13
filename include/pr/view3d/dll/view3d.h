@@ -67,7 +67,7 @@ extern "C"
 	struct View3DViewport;
 	struct View3DGizmoEvent;
 	using View3DColour = unsigned int;
-	using View3D_ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg);
+	using View3D_ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t pos);
 
 	enum class EView3DResult :int
 	{

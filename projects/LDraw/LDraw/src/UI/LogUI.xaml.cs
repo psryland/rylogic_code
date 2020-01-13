@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Xml.Linq;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -51,9 +51,12 @@ namespace LDraw
 		}
 		private Model m_model = null!;
 
+		/// <summary>The collection of log entries displayed in the UI</summary>
+		public ObservableCollection<LogControl.LogEntry> LogEntries => m_log.LogEntries;
+
 		/// <summary>Log line pattern</summary>
 		private static readonly Regex LogEntryPatternRegex = new Regex(
-			@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",
+			@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",
 			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
 

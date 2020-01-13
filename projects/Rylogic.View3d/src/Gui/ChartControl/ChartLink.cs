@@ -80,7 +80,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc />
-		protected override void OnSourceNavigation(object sender, View3d.Window.MouseNavigateEventArgs e)
+		protected override void OnSourceNavigation(object sender, View3d.MouseNavigateEventArgs e)
 		{
 			base.OnSourceNavigation(sender, e);
 			if (!Target.TryGetTarget(out var target))

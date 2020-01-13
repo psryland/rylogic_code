@@ -76,12 +76,12 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB global
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()));
+		error_cb(pr::FmtS(L"Failed to initialise View3D.\nReason: %S\n", e.what()), L"", 0, 0);
 		return nullptr;
 	}
 	catch (...)
 	{
-		error_cb(L"Failed to initialise View3D.\nReason: An unknown exception occurred\n");
+		error_cb(L"Failed to initialise View3D.\nReason: An unknown exception occurred\n", L"", 0, 0);
 		return nullptr;
 	}
 }

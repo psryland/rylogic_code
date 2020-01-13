@@ -86,9 +86,9 @@ namespace view3d
 
 			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
 		};
-		m_sources.OnError += [&](ScriptSources&, pr::ErrorEventArgs const& args)
+		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)
 		{
-			ReportError(args.m_msg.c_str());
+			ReportError(args.m_msg.c_str(), args.m_loc.Filepath().c_str(), args.m_loc.Line(), args.m_loc.Pos());
 		};
 	}
 
@@ -103,12 +103,12 @@ namespace view3d
 		}
 		catch (std::exception const& e)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\n%S", e.what()));
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\n%S", e.what()), L"", 0, 0);
 			return nullptr;
 		}
 		catch (...)
 		{
-			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\nUnknown reason"));
+			if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS(L"Failed to create View3D Window.\nUnknown reason"), L"", 0, 0);
 			return nullptr;
 		}
 	}
@@ -128,9 +128,9 @@ namespace view3d
 		// If a window handle is provided, report via the window's event.
 		// Otherwise, fallback to the global error handler
 		if (wnd != nullptr)
-			wnd->ReportError(msg.c_str());
+			wnd->ReportError(msg.c_str(), L"", 0, 0);
 		else
-			ReportError(msg.c_str());
+			ReportError(msg.c_str(), L"", 0, 0);
 	}
 
 	// Load/Add ldr objects from a script string. Returns the Guid of the context that the objects were added to.

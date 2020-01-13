@@ -968,7 +968,7 @@ namespace Rylogic.Gfx
 		#region Callback Functions
 
 		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
+		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg, [MarshalAs(UnmanagedType.LPWStr)] string filepath, int line, long pos);
 
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, ESettings setting);
@@ -1077,12 +1077,12 @@ namespace Rylogic.Gfx
 				// Initialise view3d
 				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero, CreateDeviceFlags);
 				if (m_context == HContext.Zero) throw new Exception("Failed to initialised View3d");
-				void HandleError(IntPtr ctx, string msg)
+				void HandleError(IntPtr ctx, string msg, string filepath, int line, long pos)
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-						m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
+						m_dispatcher.BeginInvoke(m_error_cb, ctx, msg, filepath, line, pos);
 					else
-						Error?.Invoke(this, new MessageEventArgs(msg));
+						Error?.Invoke(this, new ErrorEventArgs(msg, filepath, line, pos));
 				}
 
 				// Sign up for progress reports
@@ -1228,7 +1228,7 @@ namespace ldr
 		}
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
-		public event EventHandler<MessageEventArgs>? Error;
+		public event EventHandler<ErrorEventArgs>? Error;
 
 		/// <summary>Progress update when a file is being parsed</summary>
 		public event EventHandler<AddFileProgressEventArgs>? AddFileProgress;

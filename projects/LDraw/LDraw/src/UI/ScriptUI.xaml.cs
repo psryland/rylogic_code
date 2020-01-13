@@ -2,17 +2,20 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
 using ICSharpCode.AvalonEdit;
+using ICSharpCode.AvalonEdit.AddIn;
 using ICSharpCode.AvalonEdit.CodeCompletion;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Editing;
@@ -20,6 +23,7 @@ using ICSharpCode.AvalonEdit.Folding;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Indentation;
+using ICSharpCode.AvalonEdit.Rendering;
 using ICSharpCode.AvalonEdit.Search;
 using Microsoft.Win32;
 using Rylogic.Common;
@@ -146,6 +150,7 @@ namespace LDraw.UI
 				if (m_context == value) return;
 				if (m_context != null)
 				{
+					m_context.Model.LogEntriesChanged -= HandleLogEntriesChanged;
 					m_context.PropertyChanged -= HandlePropertyChanged;
 					Util.Dispose(ref m_context!);
 				}
@@ -153,6 +158,7 @@ namespace LDraw.UI
 				if (m_context != null)
 				{
 					m_context.PropertyChanged += HandlePropertyChanged;
+					m_context.Model.LogEntriesChanged += HandleLogEntriesChanged;
 				}
 
 				// Handlers
@@ -169,6 +175,20 @@ namespace LDraw.UI
 							NotifyPropertyChanged(nameof(ScriptName));
 							break;
 						}
+					}
+				}
+				void HandleLogEntriesChanged(object sender, EventArgs e)
+				{
+					// Refresh the error markers
+					m_text_marker_service.RemoveAll(_ => true);
+					foreach (var le in Model.LogEntries)
+					{
+						if (Path_.Compare(le.File, Filepath) != 0) continue;
+						var line = Editor.Document.GetLineByNumber(le.Line);
+						var marker = m_text_marker_service.Create(line.Offset, line.Length);
+						marker.MarkerTypes = ETextMarkerTypes.SquigglyUnderline | ETextMarkerTypes.LineInScrollBar;
+						marker.MarkerColor = Colors.Red;
+						marker.ToolTip = le.Message;
 					}
 				}
 			}
@@ -222,9 +242,14 @@ namespace LDraw.UI
 				if (m_text_editor != null)
 				{
 					// Unhook handlers
+					m_text_editor.MouseHoverStopped += HandleMouseHoverStopped;
+					m_text_editor.MouseHover += HandleMouseHover;
 					m_text_editor.TextArea.Caret.PositionChanged -= HandleCaretPositionChanged;
 					m_text_editor.TextArea.SelectionChanged -= HandleSelectionChanged;
 					m_text_editor.PreviewKeyDown -= HandleKeyDown;
+
+					// Drop the text marker service
+					m_text_marker_service = null!;
 
 					// Release the template fields collection
 					m_fields = null!;
@@ -251,7 +276,14 @@ namespace LDraw.UI
 					m_folding_timer.Start();
 
 					// Add indentation support
-					m_text_editor.TextArea.IndentationStrategy = new DefaultIndentationStrategy();
+					m_text_editor.TextArea.IndentationStrategy = new IndentStrategy(m_text_editor);
+
+					// Add underline errors support
+					m_text_marker_service = new TextMarkerService(m_text_editor.Document);
+					m_text_editor.TextArea.TextView.BackgroundRenderers.Add(m_text_marker_service);
+					m_text_editor.TextArea.TextView.LineTransformers.Add(m_text_marker_service);
+					var services = (IServiceContainer)m_text_editor.Document.ServiceProvider.GetService(typeof(IServiceContainer));
+					services.AddService(typeof(ITextMarkerService), m_text_marker_service);
 
 					// Template fields
 					m_fields = new TextSegmentCollection<TextSegment>(m_text_editor.Document);
@@ -260,6 +292,8 @@ namespace LDraw.UI
 					m_text_editor.PreviewKeyDown += HandleKeyDown;
 					m_text_editor.TextArea.SelectionChanged += HandleSelectionChanged;
 					m_text_editor.TextArea.Caret.PositionChanged += HandleCaretPositionChanged;
+					m_text_editor.MouseHover += HandleMouseHover;
+					m_text_editor.MouseHoverStopped += HandleMouseHoverStopped;
 				}
 
 				// Handlers
@@ -355,6 +389,38 @@ namespace LDraw.UI
 					NotifyPropertyChanged(nameof(CaretPositionDescription));
 					NotifyPropertyChanged(nameof(Location));
 				}
+				void HandleMouseHover(object sender, MouseEventArgs e)
+				{
+					var view = m_text_editor.TextArea.TextView;
+					var pt = e.GetPosition(view);
+
+					// If the mouse is hovering over an error marker, display a tooltip with the error message
+					if (view.GetPositionFloor(pt + view.ScrollOffset) is TextViewPosition pos)
+					{
+						// Look for error markers at the mouse position
+						var ofs = Editor.Document.GetOffset(pos.Line, pos.Column);
+						if (m_text_marker_service.GetMarkersAtOffset(ofs).FirstOrDefault() is ITextMarker marker)
+						{
+							m_tt_errors ??= new ToolTip();
+							m_tt_errors.Closed += delegate { m_tt_errors = null; };
+							m_tt_errors.PlacementTarget = view;
+							m_tt_errors.Placement = PlacementMode.Mouse;
+							m_tt_errors.StaysOpen = true;
+							m_tt_errors.Content = new TextBlock
+							{
+								Text = (string?)marker.ToolTip,
+								TextWrapping = TextWrapping.Wrap,
+							};
+							m_tt_errors.IsOpen = true;
+							e.Handled = true;
+						}
+					}
+				}
+				void HandleMouseHoverStopped(object sender, MouseEventArgs e)
+				{
+					if (m_tt_errors != null)
+						m_tt_errors.IsOpen = false;
+				}
 				void ShowAutoComplete()
 				{
 					// Find the start of the word
@@ -403,8 +469,13 @@ namespace LDraw.UI
 					var end = completion.StartOffset;
 					for (; end != text_length && IsLdrObjectTypeChar(doc.GetCharAt(end)); ++end) { }
 
-					// Replace with the expanded template
+					// Determine the current indent level
 					var indent_level = 0;
+					var current_indent = doc.GetText(TextUtilities.GetLeadingWhitespace(doc, doc.GetLineByOffset(completion.StartOffset)));
+					for (; current_indent.StartsWith(Editor.Options.IndentationString); ++indent_level)
+						current_indent = current_indent.Substring(Editor.Options.IndentationString.Length);
+
+					// Replace with the expanded template
 					var text = View3d.AutoComplete.ExpandTemplate(completion.Template, View3d.AutoComplete.EExpandFlags.Optionals, indent_level, Editor.Options.IndentationString);
 					doc.Replace(completion.StartOffset, end - completion.StartOffset, text);
 
@@ -464,6 +535,8 @@ namespace LDraw.UI
 		private FoldingManager m_folding_mgr = null!;
 		private DispatcherTimer m_folding_timer = null!;
 		private TextSegmentCollection<TextSegment> m_fields = null!;
+		private TextMarkerService m_text_marker_service = null!;
+		private ToolTip? m_tt_errors;
 
 		/// <summary>The current position in the editor</summary>
 		public TextLocation Location => Editor.Document.GetLocation(Editor.CaretOffset);
@@ -728,144 +801,46 @@ namespace LDraw.UI
 			public double Priority => 1.0;
 			public void Complete(TextArea text_area, ISegment completionSegment, EventArgs e) => m_on_complete(this);
 		}
-	}
-}
 
-
-
-
-
-
-#if false
-		/// <summary>The text editor control</summary>
-		public ScintillaControl Editor
+		/// <summary>Indentation strategy for the script editor</summary>
+		private class IndentStrategy :IIndentationStrategy
 		{
-			get => m_editor;
-			set
+			private readonly TextEditor m_editor;
+			public IndentStrategy(TextEditor editor)
 			{
-				if (m_editor == value) return;
-				if (m_editor != null)
+				m_editor = editor;
+			}
+			public void IndentLine(TextDocument document, DocumentLine line)
+			{
+				if (line.PreviousLine != null)
 				{
-					m_editor.CallTip -= HandleCallTip;
-					m_editor.PreviewKeyDown -= HandlePreviewKeyDown;
-					m_editor.AutoComplete -= HandleAutoComplete;
-					m_editor.AutoCompleteSelection -= HandleAutoCompleteSelection;
-					m_editor.SelectionChanged -= HandleSelectionChanged;
-					m_editor.TextChanged -= HandleTextChanged;
-					m_editor.Name = string.Empty;
-				}
-				m_editor = value;
-				if (m_editor != null)
-				{
-					m_editor.Name = ScriptName;
-					m_editor.AutoCompleteIgnoreCase = true;
-					m_editor.AutoCompleteSeparator = '\u001b';
-					m_editor.AutoCompleteMaxWidth = 80;
-					m_editor.TextChanged += HandleTextChanged;
-					m_editor.SelectionChanged += HandleSelectionChanged;
-					m_editor.AutoCompleteSelection += HandleAutoCompleteSelection;
-					m_editor.AutoComplete += HandleAutoComplete;
-					m_editor.PreviewKeyDown += HandlePreviewKeyDown;
-					m_editor.CallTip += HandleCallTip;
-				}
+					// Read the indent from the previous line
+					var prev_indent_seg = TextUtilities.GetLeadingWhitespace(document, line.PreviousLine);
 
-				// Handler
-				void HandleTextChanged(object sender, EventArgs e)
-				{
-					SaveNeeded = true;
-				}
-				void HandleSelectionChanged(object sender, EventArgs e)
-				{
-					// Caret moved
-				}
-				void HandleAutoComplete(object sender, ScintillaControl.AutoCompleteEventArgs e)
-				{
-					// Use 'IsWordChar' to set the partial word so that '*' characters are included.
-					var line = Editor.GetCurLine(out var caret_offset);
-					var i = caret_offset;
-					for (; i-- != 0 && IsWordChar(line[i]);) { }
-					e.PartialWord = line.Substring(i + 1, caret_offset - i - 1);
+					// Get the current indentation from 'line'
+					var curr_indent_seg = TextUtilities.GetLeadingWhitespace(document, line);
+					
+					// The indent text from the previous line
+					var indent = document.GetText(prev_indent_seg);
 
-					// Determine the ldr script object parent
-					var address = View3d.AddressAt(Editor.TextRange(0L, e.Position - e.PartialWord.Length));
+					// If the previous line starts with '{', add one indent
+					if (prev_indent_seg.EndOffset < document.TextLength &&
+						document.GetText(prev_indent_seg.EndOffset, 1) == "{")
+						indent += m_editor.Options.IndentationString;
 
-					// Return child templates and root level templates
-					var templates = LdrAutoComplete.Lookup(e.PartialWord, true, LdrAutoComplete[address]);
-					e.Completions.Assign(templates.Select(x => $"*{x.Keyword}"));
-					e.Handled = true;
-				}
-				void HandleAutoCompleteSelection(object sender, ScintillaControl.AutoCompleteSelectionEventArgs e)
-				{
-					// Determine the ldr script object parent
-					var address = View3d.AddressAt(Editor.TextRange(0L, e.Position));
-					address = $"{address}{(address.Length != 0 ? "." : "")}{e.Completion}";
+					// If the current line starts with '}', remove one indent
+					if (curr_indent_seg.EndOffset < document.TextLength && 
+						document.GetText(curr_indent_seg.EndOffset, 1) == "}" &&
+						indent.EndsWith(m_editor.Options.IndentationString))
+						indent = indent.Substring(0, indent.Length - m_editor.Options.IndentationString.Length);
 
-					// Find the selected template
-					var template = LdrAutoComplete[address];
-					if (template == null)
-						return;
-
-					var line_index = Editor.LineIndexFromPosition(e.Position);
-					var line_start = Editor.LineRange(line_index).Beg;
-					var line = Editor.GetLine(line_index);
-
-					// Use 'IsWordChar' to set the character range to be replaced
-					long beg = (int)(e.Position - line_start), end = beg;
-					for (; end != line.Length && IsWordChar(line[(int)end]); ++end) { }
-					e.ReplaceRange = new Range(line_start + beg, line_start + end);
-
-					// Set the completion text. The default caret position should still be correct
-					e.Completion = View3d.AutoComplete.ExpandTemplate(template, View3d.AutoComplete.EExpandFlags.Optionals, Editor.LineIndentationLevel(line_index), Editor.IndentString);
-					e.Handled = true;
-				}
-				void HandleCallTip(object sender, ScintillaControl.CallTipEventArgs e)
-				{
-					// Determine the ldr script object parent and lookup the template
-					// Note: text.Length != Editor.CurrentPos because of multi-byte characters
-					var address = View3d.AddressAt(Editor.TextRange(0L, Editor.CurrentPos));
-					var template = LdrAutoComplete[address];
-					if (template == null)
-						return;
-
-					var flags = View3d.AutoComplete.EExpandFlags.OptionalChildTemplates | View3d.AutoComplete.EExpandFlags.Optionals;
-					e.Definition = View3d.AutoComplete.ExpandTemplate(template, flags, 0, "  ");
-					e.Handled = true;
-				}
-				void HandlePreviewKeyDown(object sender, KeyEventArgs e)
-				{
-					// Quickly navigate to "<field>" or "Se|ect" fields
-					if ((e.Key == Key.Down || e.Key == Key.Up) && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-					{
-						// Clear the selection so that find isn't limited to the selected text
-						if (e.Key == Key.Up)
-							Editor.CurrentPos = Editor.Anchor = Editor.SelectionStart;
-						else
-							Editor.CurrentPos = Editor.Anchor = Editor.SelectionEnd;
-
-						// Search for a field identifier
-						const string field_pattern = @"(<\w+>)|((?:\w+\s*\|\s*)+\w+)";
-						var rng = e.Key == Key.Up
-							? Editor.Find(Sci.EFindOption.Regexp | Sci.EFindOption.Cxx11regex, field_pattern, new Range(Editor.CurrentPos, 0))
-							: Editor.Find(Sci.EFindOption.Regexp | Sci.EFindOption.Cxx11regex, field_pattern, new Range(Editor.CurrentPos, int.MaxValue));
-
-						// If found, select the field and consume the tab character
-						if (!rng.Empty)
-						{
-							// Expand the range to include '[' and ']' characters
-							var line = Editor.LineFromPosition(rng.Beg, out var line_range);
-							for (int i = (int)(rng.Beg - line_range.Beg); i - 1 != -1 && line[i - 1] == '['; --rng.Beg, --i) { }
-							for (int i = (int)(rng.End - line_range.Beg); i != line.Length && line[i] == ']'; ++rng.End, ++i) { }
-							Editor.Selection = rng;
-							Editor.ScrollCaret();
-							e.Handled = true;
-						}
-					}
-				}
-				static bool IsWordChar(char ch)
-				{
-					return char.IsLetterOrDigit(ch) || ch == '*' || ch == '_';
+					// Copy the indentation to 'line'. 'OffsetChangeMappingType.RemoveAndInsert' guarantees the caret moves behind the new indentation.
+					document.Replace(curr_indent_seg.Offset, curr_indent_seg.Length, indent, OffsetChangeMappingType.RemoveAndInsert);
 				}
 			}
+			public void IndentLines(TextDocument document, int beginLine, int endLine)
+			{
+			}
 		}
-		private ScintillaControl m_editor = null!;
-#endif
+	}
+}

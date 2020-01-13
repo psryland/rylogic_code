@@ -203,10 +203,13 @@ namespace LDraw
 			}
 
 			// Add a log window
-			m_dc.Add(new LogUI(Model), EDockSite.Right).IsAutoHide = true;
+			var log = new LogUI(Model);
+			m_dc.Add(log, EDockSite.Right).IsAutoHide = true;
+			Model.LogEntries = log.LogEntries;
 
 			// Add the asset list window
-			m_dc.Add(new AssetListUI(Model), EDockSite.Right).IsAutoHide = true;
+			var assets = new AssetListUI(Model);
+			m_dc.Add(assets, EDockSite.Right).IsAutoHide = true;
 
 			// Add a main scene window
 			var scene = Model.Scenes.Add2(new SceneUI(Model, Model.GenerateSceneName()));
