@@ -323,10 +323,15 @@ namespace Rylogic.Gui.WPF
 				if (IsClick(location))
 					return;
 
+				// Capture the mouse if this is the start of a drag operation
+				if (m_drag_state != EDragState.Dragging)
+					Chart.Scene.CaptureMouse();
+
+				m_drag_state = EDragState.Dragging;
+
 				// Pass the drag event out to users first
 				var delta = Chart.ClientToChart(location) - GrabChart;
 				var args = new ChartDraggedEventArgs(HitResult, delta, m_drag_state);
-				m_drag_state = EDragState.Dragging;
 				Chart.OnChartDragged(args);
 
 				// See if the selected element handles dragging
@@ -451,6 +456,7 @@ namespace Rylogic.Gui.WPF
 						Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 					}
 
+					Chart.Scene.ReleaseMouseCapture();
 					e.Handled = args.Handled;
 				}
 
@@ -548,6 +554,7 @@ namespace Rylogic.Gui.WPF
 		public class MouseOpDefaultRButton : MouseOp
 		{
 			private EAxis m_drag_axis_allow; // The allowed motion based on where the chart was grabbed
+			private EDragState m_drag_state;
 			private IDisposable? m_defer_nav_checkpoint;
 
 			public MouseOpDefaultRButton(ChartControl chart)
@@ -568,6 +575,7 @@ namespace Rylogic.Gui.WPF
 				var point_ss = e.GetPosition(Chart.Scene).ToPointF();
 				Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
 
+				m_drag_state = EDragState.Start;
 				m_defer_nav_checkpoint = Chart.DeferNavCheckpoints();
 			}
 			public override void MouseMove(MouseEventArgs e)
@@ -578,14 +586,20 @@ namespace Rylogic.Gui.WPF
 				if (IsClick(location))
 					return;
 
-				// Change the cursor once dragging
-				Chart.Cursor = Cursors.SizeAll;
+				// Capture the mouse if this is the start of a drag operation
+				if (m_drag_state != EDragState.Dragging)
+					Chart.Scene.CaptureMouse();
+
+				m_drag_state = EDragState.Dragging;
 
 				// Limit the drag direction
 				var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
 				var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, GrabClient);
 				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
 				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
+
+				// Change the cursor once dragging
+				Chart.Cursor = Cursors.SizeAll;
 
 				Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
 				Chart.SetRangeFromCamera();
@@ -606,6 +620,10 @@ namespace Rylogic.Gui.WPF
 				}
 				else
 				{
+					// Commit if dragging hasn't been cancelled
+					if (m_drag_state == EDragState.Dragging)
+						m_drag_state = EDragState.Commit;
+
 					// Limit the drag direction
 					var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
 					var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, GrabClient);
@@ -613,9 +631,21 @@ namespace Rylogic.Gui.WPF
 					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
 					Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
+					Chart.Scene.ReleaseMouseCapture();
 					Chart.SetRangeFromCamera();
 					Chart.Invalidate();
 					e.Handled = true;
+				}
+			}
+			public override void OnKeyDown(KeyEventArgs e)
+			{
+				base.OnKeyDown(e);
+				if (Cancelled)
+				{
+					m_drag_state = EDragState.Cancel;
+
+					// Refresh
+					Chart.Invalidate();
 				}
 			}
 		}

@@ -343,7 +343,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Hook up mouse navigation</summary>
 		public bool MouseNavigation
 		{
-			get { return m_mouse_navigation; }
+			get => m_mouse_navigation;
 			set
 			{
 				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(MouseNavigation))))

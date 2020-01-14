@@ -76,6 +76,7 @@ namespace Rylogic.Gui.WPF
 			//    down the tree to the leaves. If 'e.Handled = true' in a PreviewMouseDown handler
 			//    then MouseDown is never raised, and override OnMouseDown isn't called.
 
+			base.OnMouseDown(args);
 			var location = args.GetPosition(this);
 
 			// If a mouse op is already active, ignore mouse down
@@ -103,15 +104,19 @@ namespace Rylogic.Gui.WPF
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
 			{
+				// Don't capture the mouse here in mouse down because that prevents
+				// mouse up messages getting to subscribers of the MouseUp event.
+				// Only capture the mouse when we know it's a drag operation.
+
 				op.GrabClient = op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
 				op.GrabChart = op.DropChart = ClientToChart(location);
 				op.HitResult = HitTestCS(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
-				CaptureMouse();
 			}
 		}
 		protected override void OnMouseMove(MouseEventArgs args)
 		{
+			base.OnMouseMove(args);
 			var location = args.GetPosition(this);
 
 			// Look for the mouse op to perform
@@ -151,9 +156,7 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnMouseUp(MouseButtonEventArgs args)
 		{
-			// Only release the mouse when all buttons are up
-			if (args.ToMouseBtns() == EMouseBtns.None)
-				ReleaseMouseCapture();
+			base.OnMouseUp(args);
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
@@ -164,6 +167,8 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnMouseWheel(MouseWheelEventArgs args)
 		{
+			base.OnMouseWheel(args);
+
 			// If there is a mouse op in progress, forward the event
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)

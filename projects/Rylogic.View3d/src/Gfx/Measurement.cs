@@ -308,14 +308,14 @@ namespace Rylogic.Gfx
 		public void MouseMove(v2 point_cs, double drag_threshold = 5.0)
 		{
 			if (ActiveHit == null) return;
-			m_is_drag |= m_mouse_down_at != null && (point_cs - m_mouse_down_at.Value).Length > drag_threshold;
 			UpdateActiveHitPosition(point_cs);
+			m_is_drag |= m_mouse_down_at != null && (point_cs - m_mouse_down_at.Value).Length > drag_threshold;
 		}
 		public void MouseUp()
 		{
 			m_mouse_down_at = null;
-			if (ActiveHit == null) return;
 			if (m_is_drag) return;
+			if (ActiveHit == null) return;
 
 			// Lock the hit position
 			if (ActiveHit == Hit0)
@@ -524,9 +524,9 @@ namespace Rylogic.Gfx
 			[Desc("X Distance")] DistanceX,
 			[Desc("Y Distance")] DistanceY,
 			[Desc("Z Distance")] DistanceZ,
-			[Desc("XY Angle")] AngleXY,
-			[Desc("XZ Angle")] AngleXZ,
-			[Desc("YZ Angle")] AngleYZ,
+			[Desc("ATan(Y/X)")] AngleXY,
+			[Desc("ATan(Z/X)")] AngleXZ,
+			[Desc("ATan(Z/Y)")] AngleYZ,
 			[Desc("Object 1")] Instance0,
 			[Desc("Object 2")] Instance1,
 		}

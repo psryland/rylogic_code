@@ -183,10 +183,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Binding for the spot colour</summary>
-		public Brush SpotColourBrush
-		{
-			get { return new SolidColorBrush(Measurement.SpotColour.ToMediaColor()); }
-		}
+		public Brush SpotColourBrush => new SolidColorBrush(Measurement.SpotColour.ToMediaColor());
 
 		/// <summary>Change the measurement spot colour</summary>
 		public ICommand ChangeSpotColour { get; }

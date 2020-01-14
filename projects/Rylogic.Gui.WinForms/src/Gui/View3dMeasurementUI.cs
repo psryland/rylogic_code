@@ -715,9 +715,9 @@ namespace Rylogic.Gui.WinForms
 			[Desc("X Distance")] DistanceX,
 			[Desc("Y Distance")] DistanceY,
 			[Desc("Z Distance")] DistanceZ,
-			[Desc("XY Angle")] AngleXY,
-			[Desc("XZ Angle")] AngleXZ,
-			[Desc("YZ Angle")] AngleYZ,
+			[Desc("ATan(Y/X)")] AngleXY,
+			[Desc("ATan(Z/X)")] AngleXZ,
+			[Desc("ATan(Z/Y)")] AngleYZ,
 			[Desc("Object 1")] Instance0,
 			[Desc("Object 2")] Instance1,
 		}
