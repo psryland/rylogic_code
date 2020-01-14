@@ -47,7 +47,12 @@ namespace pr::camera
 	{
 		int m_bindings[int(ENavKey::NumberOf)];
 		int operator[](ENavKey key) const { return m_bindings[int(key)]; }
+
 		NavKeyBindings()
+		{
+			ArrowKeys();
+		}
+		void ArrowKeys()
 		{
 			m_bindings[int(ENavKey::Left          )] = VK_LEFT;
 			m_bindings[int(ENavKey::Up            )] = VK_UP;
@@ -59,6 +64,20 @@ namespace pr::camera
 			m_bindings[int(ENavKey::TranslateZ    )] = VK_CONTROL;
 			m_bindings[int(ENavKey::Accurate      )] = VK_SHIFT;
 			m_bindings[int(ENavKey::SuperAccurate )] = VK_CONTROL;
+			m_bindings[int(ENavKey::PerpendicularZ)] = VK_MENU;
+		}
+		void WASDKeys()
+		{
+			m_bindings[int(ENavKey::Left)] = 'A';
+			m_bindings[int(ENavKey::Up)] = 'W';
+			m_bindings[int(ENavKey::Right)] = 'D';
+			m_bindings[int(ENavKey::Down)] = 'S';
+			m_bindings[int(ENavKey::In)] = 'Q';
+			m_bindings[int(ENavKey::Out)] = 'E';
+			m_bindings[int(ENavKey::Rotate)] = VK_SHIFT;
+			m_bindings[int(ENavKey::TranslateZ)] = VK_CONTROL;
+			m_bindings[int(ENavKey::Accurate)] = VK_SHIFT;
+			m_bindings[int(ENavKey::SuperAccurate)] = VK_CONTROL;
 			m_bindings[int(ENavKey::PerpendicularZ)] = VK_MENU;
 		}
 	};
@@ -163,8 +182,9 @@ namespace pr
 		float          m_near;              // The near plane as a multiple of the focus distance
 		float          m_far;               // The near plane as a multiple of the focus distance
 		float          m_accuracy_scale;    // Scale factor for high accuracy control
-		NavKeyBindings m_key;               // Key bindings
+		int            m_accuracy_mode;     // The last accuracy mode: 0 = normal, 1 = accurate, 2 = super accurate
 		ELockMask      m_lock_mask;         // Locks on the allowed motion
+		NavKeyBindings m_key;               // Key bindings
 		bool           m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		bool           m_moved;             // Dirty flag for when the camera moves
 
@@ -190,8 +210,9 @@ namespace pr
 			,m_near(near_)
 			,m_far(far_)
 			,m_accuracy_scale(0.1f)
-			,m_key()
+			,m_accuracy_mode()
 			,m_lock_mask()
+			,m_key()
 			,m_orthographic(orthographic)
 			,m_moved(false)
 		{
@@ -345,8 +366,7 @@ namespace pr
 			FovY(2.0f * ATan(Tan(fovX * 0.5f) / m_aspect));
 		}
 
-		// Get/Set the vertical field of view (in radians).
-		// FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
+		// Get/Set the vertical field of view (in radians). FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		float FovY() const
 		{
 			return m_fovY;
@@ -510,13 +530,16 @@ namespace pr
 			bool translate = int(nav_op & ENavOp::Translate) != 0;
 			bool rotate    = int(nav_op & ENavOp::Rotate   ) != 0;
 			bool zoom      = int(nav_op & ENavOp::Zoom     ) != 0;
+			auto acc_mode  = KeyDown(m_key[ENavKey::Accurate]) + KeyDown(m_key[ENavKey::SuperAccurate]);
 
-			if (ref_point)
+			// On mouse down, mouse up, or a change in accuracy mode, record the reference point
+			if (ref_point || acc_mode != m_accuracy_mode)
 			{
-				Commit();
 				if (int(nav_op & ENavOp::Translate) != 0) m_nav.m_Tref = point;
 				if (int(nav_op & ENavOp::Rotate) != 0) m_nav.m_Rref = point;
 				if (int(nav_op & ENavOp::Zoom) != 0) m_nav.m_Zref = point;
+				m_accuracy_mode = acc_mode;
+				Commit();
 			}
 
 			if (zoom || (translate && rotate))
@@ -899,25 +922,27 @@ namespace pr
 			m_moved = true;
 		}
 
-		// Keyboard navigation. Remember to use 'if (GetForegroundWindow() == GetConsoleWindow())' for navigation only while the window has focus
+		// Keyboard navigation.
 		void KBNav(float mov, float rot)
 		{
-			// Control translates
-			if (!KeyDown(VK_CONTROL))
+			// Notes:
+			//  - Remember to use 'if (GetForegroundWindow() == GetConsoleWindow())' for navigation only while the window has focus
+
+			if (KeyDown(m_key[ENavKey::Rotate]))
 			{
-				if (KeyDown(VK_LEFT )) Rotate(0, rot,0,true);
-				if (KeyDown(VK_RIGHT)) Rotate(0,-rot,0,true);
-				if (KeyDown(VK_UP   )) Rotate(-rot,0,0,true);
-				if (KeyDown(VK_DOWN )) Rotate( rot,0,0,true);
-				if (KeyDown(VK_HOME )) Translate(0, mov,0,true);
-				if (KeyDown(VK_END  )) Translate(0,-mov,0,true);
+				if (KeyDown(m_key[ENavKey::Left ])) Rotate(0, +rot, 0, true);
+				if (KeyDown(m_key[ENavKey::Right])) Rotate(0, -rot, 0, true);
+				if (KeyDown(m_key[ENavKey::Up   ])) Rotate(-rot, 0, 0, true);
+				if (KeyDown(m_key[ENavKey::Down ])) Rotate(+rot, 0, 0, true);
+				if (KeyDown(m_key[ENavKey::In   ])) Translate(0, +mov, 0, true);
+				if (KeyDown(m_key[ENavKey::Out  ])) Translate(0, -mov, 0, true);
 			}
 			else
 			{
-				if (KeyDown(VK_LEFT )) Translate(-mov,0,0,true);
-				if (KeyDown(VK_RIGHT)) Translate( mov,0,0,true);
-				if (KeyDown(VK_UP   )) Translate(0,0,-mov,true);
-				if (KeyDown(VK_DOWN )) Translate(0,0, mov,true);
+				if (KeyDown(m_key[ENavKey::Left ])) Translate(-mov, 0, 0, true);
+				if (KeyDown(m_key[ENavKey::Right])) Translate(+mov, 0, 0, true);
+				if (KeyDown(m_key[ENavKey::Up   ])) Translate(0, 0, -mov, true);
+				if (KeyDown(m_key[ENavKey::Down ])) Translate(0, 0, +mov, true);
 			}
 		}
 	};

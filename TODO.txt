@@ -4,7 +4,6 @@ LDraw
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
-	- shift+ctrl jumps back to the start of orientation, make it not do that
 	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
 	- Add support for streaming ldr script via TCP/IP (add *Clear command back)
 	- Script parsing performance profiling
