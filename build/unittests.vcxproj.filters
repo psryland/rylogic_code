@@ -1032,6 +1032,9 @@
     <ClInclude Include="..\include\pr\gfx\colour.h">
       <Filter>pr\gfx</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\common\value_ptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

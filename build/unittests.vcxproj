@@ -132,6 +132,7 @@
     <ClInclude Include="..\include\pr\common\tstring.h" />
     <ClInclude Include="..\include\pr\common\unittests.h" />
     <ClInclude Include="..\include\pr\common\user_data.h" />
+    <ClInclude Include="..\include\pr\common\value_ptr.h" />
     <ClInclude Include="..\include\pr\container\span.h" />
     <ClInclude Include="..\include\pr\container\deque.h" />
     <ClInclude Include="..\include\pr\container\vector.h" />

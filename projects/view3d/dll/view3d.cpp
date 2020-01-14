@@ -1072,10 +1072,10 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 
 // General mouse navigation
 // 'ss_pos' is the mouse pointer position in 'window's screen space
-// 'button_state' is the state of the mouse buttons and control keys (i.e. MF_LBUTTON, etc)
+// 'nav_op' is the navigation type
 // 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
-// void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nFlags, TRUE); }
-// void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
+// void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nav_op, TRUE); }
+// void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nav_op, FALSE); } if 'nav_op' is None, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
 VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_pos, EView3DNavOp nav_op, BOOL nav_start_or_end)

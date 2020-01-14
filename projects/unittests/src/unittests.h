@@ -105,6 +105,7 @@
 #include "pr\common\tstring.h"
 #include "pr\common\unittests.h"
 #include "pr\common\user_data.h"
+#include "pr\common\value_ptr.h"
 #include "pr\container\bit_array.h"
 #include "pr\container\byte_data.h"
 #include "pr\container\deque.h"
