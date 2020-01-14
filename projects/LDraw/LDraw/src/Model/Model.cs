@@ -72,6 +72,11 @@ namespace LDraw
 					// Just prior to reloading sources
 					if (e.Before && Settings.ClearErrorLogOnReload)
 						Log.Clear();
+					
+					// After a source change, reset
+					if (e.After && Settings.ResetOnLoad)
+						foreach (var scene in Scenes)
+							scene.SceneView.AutoRange();
 				}
 				void HandleAddFileProgress(object sender, View3d.AddFileProgressEventArgs e) // worker thread context
 				{
@@ -145,47 +150,6 @@ namespace LDraw
 
 		/// <summary>The asset instances</summary>
 		public ObservableCollection<AssetUI> Assets { get; }
-
-		/// <summary>Log events collection</summary>
-		public ObservableCollection<LogControl.LogEntry> LogEntries
-		{ 
-			get => m_log_entries;
-			set
-			{
-				if (m_log_entries == value) return;
-				if (m_log_entries != null)
-				{
-					m_log_entries.CollectionChanged -= HandleLogEntriesChanged;
-				}
-				m_log_entries = value ?? new ObservableCollection<LogControl.LogEntry>();
-				if (m_log_entries != null)
-				{
-					m_log_entries.CollectionChanged += HandleLogEntriesChanged;
-				}
-
-				// Handlers
-				void HandleLogEntriesChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					if (!m_log_update_signalled && (
-						e.Action == NotifyCollectionChangedAction.Add ||
-						e.Action == NotifyCollectionChangedAction.Remove ||
-						e.Action == NotifyCollectionChangedAction.Reset))
-					{
-						m_log_update_signalled = true;
-						Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
-						{
-							LogEntriesChanged?.Invoke(this, EventArgs.Empty);
-							m_log_update_signalled = false;
-						}));
-					}
-				}
-			}
-		}
-		private ObservableCollection<LogControl.LogEntry> m_log_entries = null!;
-		private bool m_log_update_signalled;
-
-		/// <summary>Raised when new log entries are added</summary>
-		public event EventHandler? LogEntriesChanged;
 
 		/// <summary>Notify of a file about to be opened</summary>
 		public event EventHandler<ValueEventArgs<string>>? FileOpening;
@@ -356,7 +320,7 @@ namespace LDraw
 				view.Scene.AddObjects(context_ids, include_count, exclude_count);
 
 				// Auto range the view
-				if (scene.AutoRange)
+				if (Settings.ResetOnLoad)
 					view.AutoRange();
 				else
 					view.Invalidate();

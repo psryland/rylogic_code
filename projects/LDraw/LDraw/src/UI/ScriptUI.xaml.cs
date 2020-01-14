@@ -69,6 +69,7 @@ namespace LDraw.UI
 				TabCMenu = TabCMenu(),
 				DestroyOnClose = true,
 			};
+			LastUpdateTime = TimeSpan.Zero;
 			Context = new Context(model, name, context_id);
 			LdrAutoComplete = new View3d.AutoComplete();
 			Filepath = filepath;
@@ -78,6 +79,9 @@ namespace LDraw.UI
 			SaveScript = Command.Create(this, SaveScriptInternal);
 			RemoveObjects = Command.Create(this, RemoveObjectsInternal);
 			CloseScript = Command.Create(this, CloseScriptInternal);
+			IndentSelection = Command.Create(this, IndentSelectionInternal);
+			CommentOutSelection = Command.Create(this, CommentOutSelectionInternal);
+			UncommentSelection = Command.Create(this, UncommentSelectionInternal);
 
 			// If the temporary script exists, load it
 			if (Path_.FileExists(Filepath))
@@ -150,7 +154,7 @@ namespace LDraw.UI
 				if (m_context == value) return;
 				if (m_context != null)
 				{
-					m_context.Model.LogEntriesChanged -= HandleLogEntriesChanged;
+					Log.EntriesChanged -= HandleLogEntriesChanged;
 					m_context.PropertyChanged -= HandlePropertyChanged;
 					Util.Dispose(ref m_context!);
 				}
@@ -158,7 +162,7 @@ namespace LDraw.UI
 				if (m_context != null)
 				{
 					m_context.PropertyChanged += HandlePropertyChanged;
-					m_context.Model.LogEntriesChanged += HandleLogEntriesChanged;
+					Log.EntriesChanged += HandleLogEntriesChanged;
 				}
 
 				// Handlers
@@ -179,17 +183,7 @@ namespace LDraw.UI
 				}
 				void HandleLogEntriesChanged(object sender, EventArgs e)
 				{
-					// Refresh the error markers
-					m_text_marker_service.RemoveAll(_ => true);
-					foreach (var le in Model.LogEntries)
-					{
-						if (Path_.Compare(le.File, Filepath) != 0) continue;
-						var line = Editor.Document.GetLineByNumber(le.Line);
-						var marker = m_text_marker_service.Create(line.Offset, line.Length);
-						marker.MarkerTypes = ETextMarkerTypes.SquigglyUnderline | ETextMarkerTypes.LineInScrollBar;
-						marker.MarkerColor = Colors.Red;
-						marker.ToolTip = le.Message;
-					}
+					RefreshErrorMarkers();
 				}
 			}
 		}
@@ -287,6 +281,10 @@ namespace LDraw.UI
 
 					// Template fields
 					m_fields = new TextSegmentCollection<TextSegment>(m_text_editor.Document);
+
+					// Adjust key bindings
+					AvalonEditCommands.DeleteLine.InputGestures.Clear();
+					AvalonEditCommands.IndentSelection.InputGestures.Clear();
 
 					// Hook up handlers
 					m_text_editor.PreviewKeyDown += HandleKeyDown;
@@ -539,7 +537,18 @@ namespace LDraw.UI
 		private ToolTip? m_tt_errors;
 
 		/// <summary>The current position in the editor</summary>
-		public TextLocation Location => Editor.Document.GetLocation(Editor.CaretOffset);
+		public TextLocation Location
+		{
+			get => Editor.Document.GetLocation(Editor.CaretOffset);
+			set => Editor.CaretOffset = Editor.Document.GetOffset(value);
+		}
+		public void ScrollTo(int line, int column, bool move_caret)
+		{
+			if (move_caret)
+				Editor.CaretOffset = Editor.Document.GetOffset(line, column);
+
+			Editor.ScrollTo(line, column);
+		}
 
 		/// <summary>The range of selected characters</summary>
 		public string CaretPositionDescription
@@ -555,6 +564,9 @@ namespace LDraw.UI
 		/// <summary>Update the objects associated with 'ContextId' within View3D's object store</summary>
 		private void UpdateObjects()
 		{
+			LastUpdateTime = Log.Timestamp;
+			Log.Clear(x => Path_.Compare(x.File, Filepath) == 0);
+
 			var scenes = Context.SelectedScenes.ToArray();
 			var include_paths = Model.Settings.IncludePaths;
 			var selection = Editor.SelectionLength != 0 ? Editor.TextArea.Selection.GetText() : null;
@@ -573,9 +585,12 @@ namespace LDraw.UI
 						Model.Clear(scenes, id);
 					else
 						Model.AddObjects(scenes, id);
+
+					RefreshErrorMarkers();
 				}
 			});
 		}
+		private TimeSpan LastUpdateTime;
 
 		/// <summary>Return the tab context menu</summary>
 		private ContextMenu TabCMenu()
@@ -712,6 +727,23 @@ namespace LDraw.UI
 			}
 		}
 
+		/// <summary>Update the error markers into this script</summary>
+		private void RefreshErrorMarkers()
+		{
+			m_text_marker_service.RemoveAll(_ => true);
+			foreach (var le in Log.Entries)
+			{
+				if (Path_.Compare(le.File, Filepath) != 0) continue;
+				if (le.Timestamp < LastUpdateTime) continue;
+
+				var line = Editor.Document.GetLineByNumber(le.Line);
+				var marker = m_text_marker_service.Create(line.Offset, line.Length);
+				marker.MarkerTypes = ETextMarkerTypes.SquigglyUnderline | ETextMarkerTypes.LineInScrollBar;
+				marker.MarkerColor = Colors.Red;
+				marker.ToolTip = le.Message;
+			}
+		}
+
 		/// <summary>True if the script has been edited without being saved</summary>
 		public bool SaveNeeded
 		{
@@ -765,6 +797,51 @@ namespace LDraw.UI
 		private void CloseScriptInternal()
 		{
 			Dispose();
+		}
+
+		/// <summary>Indent the selected text</summary>
+		public Command IndentSelection { get; }
+		private void IndentSelectionInternal()
+		{
+			AvalonEditCommands.IndentSelection.Execute(null, null);
+		}
+
+		/// <summary>Comment out the selected lines using line comments</summary>
+		public Command CommentOutSelection { get; }
+		private void CommentOutSelectionInternal()
+		{
+			var doc = Editor.Document;
+			var beg = doc.GetLineByOffset(Editor.SelectionStart);
+			var end = doc.GetLineByOffset(Editor.SelectionStart + Editor.SelectionLength);
+
+			// Find the smallest indent whitespace
+			int len = int.MaxValue;
+			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			{
+				var segment = TextUtilities.GetLeadingWhitespace(doc, line);
+				if (segment.Length > len) continue;
+				len = segment.Length;
+			}
+			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			{
+				var segment = doc.GetText(line.Offset, len);
+				doc.Replace(line.Offset, len, segment + "//");
+			}
+		}
+
+		/// <summary>Remove one layer of line comments from the selected lines</summary>
+		public Command UncommentSelection  { get; }
+		private void UncommentSelectionInternal()
+		{
+			var doc = Editor.Document;
+			var beg = doc.GetLineByOffset(Editor.SelectionStart);
+			var end = doc.GetLineByOffset(Editor.SelectionStart + Editor.SelectionLength);
+			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			{
+				var segment = TextUtilities.GetLeadingWhitespace(doc, line);
+				if (line.EndOffset - segment.EndOffset >= 2 && doc.GetText(segment.EndOffset, 2) == "//")
+					doc.Replace(segment.EndOffset, 2, string.Empty);
+			}
 		}
 
 		/// <summary></summary>
@@ -838,8 +915,13 @@ namespace LDraw.UI
 					document.Replace(curr_indent_seg.Offset, curr_indent_seg.Length, indent, OffsetChangeMappingType.RemoveAndInsert);
 				}
 			}
-			public void IndentLines(TextDocument document, int beginLine, int endLine)
+			public void IndentLines(TextDocument document, int line_beg, int line_end)
 			{
+				for (var i = line_beg; i != line_end; ++i)
+				{
+					var line = document.GetLineByNumber(i);
+					IndentLine(document, line);
+				}
 			}
 		}
 	}

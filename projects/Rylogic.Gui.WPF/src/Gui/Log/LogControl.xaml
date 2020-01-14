@@ -30,7 +30,7 @@
 				</Style.Triggers>
 			</Style>
 			<Style x:Key="LogEntryStyle" TargetType="{x:Type TextBlock}">
-				<Setter Property="TextWrapping" Value="{Binding LineWrap, Converter={conv:BoolToWrap}}"/>
+				<Setter Property="TextWrapping" Value="{Binding LineWrap, Converter={conv:BoolToWrap}, RelativeSource={RelativeSource AncestorType={x:Type local:LogControl}}}"/>
 				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
 			</Style>
 		</ResourceDictionary>
@@ -108,6 +108,7 @@
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
 			SelectionChanged="HandleSelectionChanged"
+			MouseDoubleClick="HandleMouseDoubleClick"
 			>
 			<DataGrid.ContextMenu>
 				<ContextMenu>

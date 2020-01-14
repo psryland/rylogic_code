@@ -174,14 +174,6 @@ namespace LDraw.UI
 		}
 		private string m_scene_name = null!;
 
-		/// <summary>True if this view should auto range on new data</summary>
-		public bool AutoRange
-		{
-			get { return (bool)GetValue(AutoRangeProperty); }
-			set { SetValue(AutoRangeProperty, value); }
-		}
-		public static readonly DependencyProperty AutoRangeProperty = Gui_.DPRegister<SceneUI>(nameof(AutoRange));
-
 		/// <summary>Show/Hide the animation controls</summary>
 		public bool ShowAnimationUI
 		{

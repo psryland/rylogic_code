@@ -22,7 +22,7 @@ namespace pr::gui
 			bool                     m_gdi_compat;       // True if 'GDI' compatibility is enabled
 
 			Params()
-				:m_error_cb([](void*, wchar_t const* msg){ throw std::exception(pr::gui::Narrow(msg).c_str()); })
+				:m_error_cb(DefaultErrorHandler)
 				,m_error_ctx()
 				,m_device_flags()
 				,m_show_focus_point(false)
@@ -57,6 +57,11 @@ namespace pr::gui
 			{
 				m_show_focus_point = on;
 				return me();
+			}
+		
+			static void DefaultErrorHandler(void*, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
+			{
+				throw std::runtime_error(Fmt("%S(%d): %S", filepath, line, msg));
 			}
 		};
 

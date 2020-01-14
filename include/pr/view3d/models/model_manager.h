@@ -54,7 +54,7 @@ namespace pr::rdr
 		Nugget* CreateNugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* model);
 
 		// Raised when a model is deleted
-		EventHandler<Model&, EmptyArgs const&> ModelDeleted;
+		EventHandler<Model&, EmptyArgs const&, true> ModelDeleted;
 
 		// Stock models
 		ModelPtr m_unit_quad;

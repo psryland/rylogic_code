@@ -204,10 +204,11 @@ struct MainUI :Form
 	}
 
 	// Handle errors reported within view3d
-	static void __stdcall ReportErrorCB(void* ctx, wchar_t const* msg)
+	static void __stdcall ReportErrorCB(void* ctx, wchar_t const* msg, wchar_t const* filepath, int line, int64_t)
 	{
 		auto this_ = static_cast<MainUI*>(ctx);
-		::MessageBoxW(this_->m_hwnd, msg, L"Error", MB_OK);
+		auto message = pr::FmtS(L"%s(%d): %s", filepath, line, msg);
+		::MessageBoxW(this_->m_hwnd, message, L"Error", MB_OK);
 	}
 };
 

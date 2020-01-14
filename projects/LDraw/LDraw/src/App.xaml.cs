@@ -5,6 +5,7 @@ using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace LDraw
 {
@@ -29,7 +30,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(Rylogic.Utility.ELogLevel.Fatal, ex, $"LDraw failed to start");
+				Log.Write(ELogLevel.Fatal, ex, $"LDraw failed to start", string.Empty, 0);
 				#if DEBUG
 				throw;
 				#endif

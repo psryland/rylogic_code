@@ -21,11 +21,12 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF.DockContainerDetail;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class LogControl : UserControl, IDockable, IDisposable, INotifyPropertyChanged
+	public partial class LogControl : UserControl, IDockable, IDisposable, INotifyPropertyChanged, LogControl.ILogEntryPatternProvider
 	{
 		// Notes:
 		//   This component can be used in two ways, one is as a simple text
@@ -69,7 +70,6 @@ namespace Rylogic.Gui.WPF
 			// A buffer of the log entries.
 			// This is populated by calls to AddMessage or from the log file.
 			LogEntries = new ObservableCollection<LogEntry>();
-			LogEntriesView = new ListCollectionView(LogEntries) { Filter = obj => obj is LogEntry le && le.Level >= FilterLevel };
 
 			// Define a line in the log
 			LogEntryPattern = null;
@@ -367,16 +367,19 @@ namespace Rylogic.Gui.WPF
 		public ObservableCollection<LogEntry> LogEntries
 		{
 			get => m_log_entries;
-			private set
+			set
 			{
+				// Allow public set so that the observable collection can be provided externally.
 				if (m_log_entries == value) return;
 				if (m_log_entries != null)
 				{
 					m_log_entries.CollectionChanged -= HandleLogEntriesChanged;
+					LogEntriesView = new ListCollectionView(Array.Empty<LogEntry>());
 				}
 				m_log_entries = value;
 				if (m_log_entries != null)
 				{
+					LogEntriesView = new ListCollectionView(m_log_entries);
 					m_log_entries.CollectionChanged += HandleLogEntriesChanged;
 				}
 
@@ -416,7 +419,19 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ObservableCollection<LogEntry> m_log_entries = null!;
-		public ICollectionView LogEntriesView { get; }
+
+		/// <summary>Binding view of the log entries</summary>
+		public ICollectionView LogEntriesView
+		{
+			get => m_log_entries_view;
+			private set
+			{
+				if (m_log_entries_view == value) return;
+				m_log_entries_view = value;
+				m_log_entries_view.Filter = obj => obj is LogEntry le && le.Level >= FilterLevel;
+			}
+		}
+		private ICollectionView m_log_entries_view = null!;
 
 		// Trigger a refresh
 		private void SignalRefresh()
@@ -451,13 +466,16 @@ namespace Rylogic.Gui.WPF
 				// Handler
 				void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					++m_highlighting_issue;
+					// Invalidate all the highlighting patterns
+					foreach (var le in LogEntries)
+						le.Highlight = null;
+
 					SignalRefresh();
 				}
 			}
 		}
 		public ObservableCollection<HLPattern> m_highlighting = null!;
-		private int m_highlighting_issue;
+		IEnumerable<HLPattern> ILogEntryPatternProvider.Highlighting => Highlighting;
 
 		/// <summary>Access to the columns of the log grid</summary>
 		public IEnumerable<DataGridColumn> Columns => m_view.Columns;
@@ -545,10 +563,7 @@ namespace Rylogic.Gui.WPF
 			if (Thread.CurrentThread.ManagedThreadId != m_main_thread_id)
 			{
 				Debug.Assert(Dispatcher.Thread.ManagedThreadId == m_main_thread_id);
-				Dispatcher.BeginInvoke(() =>
-				{
-					AddMessage(text);
-				});
+				Dispatcher.BeginInvoke(() => AddMessage(text));
 			}
 			else
 			{
@@ -594,12 +609,19 @@ namespace Rylogic.Gui.WPF
 			// Apply the settings to the columns
 			foreach (var col in Columns)
 			{
-				if (!(col.Header is string header)) continue;
+				if (!(col.Header is string header))
+					continue;
+
 				var settings = column_settings.FirstOrDefault(x => x.Header == header);
-				if (settings == null) continue;
+				if (settings == null)
+					continue;
+
+				if (settings.Idx >= m_view.Columns.Count)
+					continue;
+
 				col.DisplayIndex = settings.Idx;
-				col.Width = settings.Width;
 				col.Visibility = settings.Visibility;
+				col.Width = settings.Width;
 			}
 		}
 		public XElement SaveSettings(XElement? node = null)
@@ -674,22 +696,50 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary></summary>
+		private void HandleMouseDoubleClick(object sender, MouseButtonEventArgs e)
+		{
+			if (LogEntriesView.CurrentItem is LogEntry le)
+				LogEntryDoubleClick?.Invoke(this, new LogEntryDoubleClickEventArgs(le));
+		}
+
+		/// <summary>Raised when a log entry is double clicked</summary>
+		public event EventHandler<LogEntryDoubleClickEventArgs>? LogEntryDoubleClick;
+		public class LogEntryDoubleClickEventArgs :EventArgs
+		{
+			public LogEntryDoubleClickEventArgs(LogEntry le)
+			{
+				Entry = le;
+			}
+			public LogEntry Entry { get; }
+		}		
+
+		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+
+		/// <summary>Provides a regex that describes the format of the log entry</summary>
+		public interface ILogEntryPatternProvider
+		{
+			/// <summary>A regex that describes the format of the log entry</summary>
+			Regex? LogEntryPattern { get; }
+
+			/// <summary>The highlighting patterns</summary>
+			IEnumerable<HLPattern> Highlighting { get; }
+		}
 
 		/// <summary>A single log entry</summary>
 		[DebuggerDisplay("[{FPos}] {Text}")]
 		public class LogEntry
 		{
-			private readonly LogControl m_this;
-			public LogEntry(LogControl @this, long fpos, string text, bool from_file)
+			private readonly ILogEntryPatternProvider m_provider;
+			public LogEntry(ILogEntryPatternProvider provider, long fpos, string text, bool from_file)
 			{
-				m_this = @this;
+				m_provider = provider;
 				FPos = fpos;
 				Text = text;
 				FromFile = from_file;
 			}
 
-			/// <summary>Log file offset (byte index of the log entry delimiter)</summary>
+			/// <summary>Log file offset (byte index of the log entry delimiter). Used for sorting</summary>
 			public long FPos { get; }
 
 			/// <summary>The text for the log entry</summary>
@@ -710,7 +760,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Lazy regex pattern match</summary>
 			private T Read<T>(string grp, Func<string, T> parse)
 			{
-				m_match ??= m_this.LogEntryPattern?.Match(Text);
+				m_match ??= m_provider.LogEntryPattern?.Match(Text);
 				if (m_match != null && m_match.Success)
 				{
 					try
@@ -724,24 +774,21 @@ namespace Rylogic.Gui.WPF
 			}
 			private Match? m_match;
 
-			/// <summary>The lighting pattern suitable for this log entry (or null)</summary>
-			public HLPattern Highlight
+			/// <summary>The highlighting pattern suitable for this log entry (or null)</summary>
+			public HLPattern? Highlight
 			{
 				get
 				{
-					if (m_highlight_issue != m_this.m_highlighting_issue)
-					{
-						m_highlight = m_this.Highlighting.FirstOrDefault(x => x.IsMatch(Text));
-						m_highlight_issue = m_this.m_highlighting_issue;
-					}
-					return m_highlight ?? new HLPattern(Colors.Transparent, Colors.Black);
+					m_highlight ??= m_provider.Highlighting.FirstOrDefault(x => x.IsMatch(Text));
+					m_highlight ??= new HLPattern(Colors.Transparent, Colors.Black);
+					return m_highlight;
+				}
+				set
+				{
+					m_highlight = value;
 				}
 			}
 			private HLPattern? m_highlight;
-			private int m_highlight_issue;
-
-			/// <summary>Line wrapping</summary>
-			public bool LineWrap => m_this.LineWrap;
 		}
 
 		/// <summary>Patterns for highlighting rows in the log</summary>

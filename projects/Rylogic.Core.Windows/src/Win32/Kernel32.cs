@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace Rylogic.Interop.Win32
 {
@@ -7,7 +8,13 @@ namespace Rylogic.Interop.Win32
 	{
 		public const int ATTACH_PARENT_PROCESS = -1;
 
-		[DllImport("Kernel32.dll", SetLastError = true)] public static extern IntPtr LoadLibrary(string path);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+
+        [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern SafeFileHandle CreateFile(string lpFileName, int dwDesiredAccess, int dwShareMode, IntPtr SecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, IntPtr hTemplateFile);
+
+        [DllImport("Kernel32.dll", SetLastError = true)] public static extern IntPtr LoadLibrary(string path);
 		[DllImport("Kernel32.dll", SetLastError = true)] public static extern bool   FreeLibrary(IntPtr module);
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   AllocConsole();
 		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   FreeConsole();

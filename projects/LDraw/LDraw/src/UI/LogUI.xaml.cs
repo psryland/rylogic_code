@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Rylogic.Common;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -15,10 +15,11 @@ namespace LDraw
 			InitializeComponent();
 			DockControl.Owner = this;
 			Model = model;
-			m_log.LogEntryPattern = LogEntryPatternRegex;
+			m_log.LogEntries = Log.Entries;
+			m_log.LogEntryPattern = Log.PatternRegex;
 			m_log.PopOutOnNewMessages = false;
-			m_log.LogFilepath = Log.Filepath;
 			m_log.FilterLevel = ELogLevel.Debug;
+			m_log.LogEntryDoubleClick += HandleLogEntryDoubleClick;
 
 			// Hide all columns except the Message column initially
 			foreach (var col in m_log.Columns)
@@ -27,6 +28,7 @@ namespace LDraw
 		public void Dispose()
 		{
 			Model = null!;
+			m_log.LogEntryDoubleClick -= HandleLogEntryDoubleClick;
 			m_log.Dispose();
 		}
 
@@ -51,23 +53,16 @@ namespace LDraw
 		}
 		private Model m_model = null!;
 
-		/// <summary>The collection of log entries displayed in the UI</summary>
-		public ObservableCollection<LogControl.LogEntry> LogEntries => m_log.LogEntries;
+		/// <summary>Handle a log entry being double clicked in the log view</summary>
+		private void HandleLogEntryDoubleClick(object sender, LogControl.LogEntryDoubleClickEventArgs e)
+		{
+			// Find the script associated with the file, bring it into view, and scroll to the associated line
+			var script = Model.Scripts.FirstOrDefault(x => Path_.Compare(e.Entry.File, x.Filepath) == 0);
+			if (script == null)
+				return;
 
-		/// <summary>Log line pattern</summary>
-		private static readonly Regex LogEntryPatternRegex = new Regex(
-			@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",
-			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-
-
-		/// <summary>Single entry highlights</summary>
-		//public static readonly HLPattern[] LogHighlighting = new[]
-		//{
-		//	new HLPattern(Color_.FromArgb(0xffb5ffd2), Color.Black, EPattern.Substring, "Fishing started"),
-		//	new HLPattern(Color_.FromArgb(0xffb5ffd2), Color.Black, EPattern.Substring, "Fishing stopped"),
-		//	new HLPattern(Color_.FromArgb(0xffe7a5ff), Color.Black, EPattern.Substring, "!Profit!"),
-		//	new HLPattern(Color_.FromArgb(0xfffcffae), Color.Black, EPattern.Substring, "filled"),
-		//	new HLPattern(Color_.FromArgb(0xffff7e39), Color.Black, EPattern.Substring, "ignored"),
-		//};
+			script.DockControl.IsActiveContent = true;
+			script.ScrollTo(e.Entry.Line, 0, true);
+		}
 	}
 }

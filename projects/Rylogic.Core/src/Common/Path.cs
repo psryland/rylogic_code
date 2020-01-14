@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Rylogic.Extn;
@@ -140,18 +138,6 @@ namespace Rylogic.Common
 			return p.StartsWith(d);
 		}
 
-		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
-		public static string RelativePath(string full_file_path, string rel_path)
-		{
-			const int FILE_ATTRIBUTE_DIRECTORY = 0x10;
-			const int FILE_ATTRIBUTE_NORMAL = 0x80;
-			var path_builder = new StringBuilder(260); // MAX_PATH
-			PathRelativePathTo(path_builder, rel_path, FILE_ATTRIBUTE_DIRECTORY, full_file_path, FILE_ATTRIBUTE_NORMAL);
-			var path = path_builder.ToString();
-			return path.Length == 0 ? full_file_path : path;
-		}
-		[DllImport("shlwapi.dll")] private static extern int PathRelativePathTo(StringBuilder pszPath, string pszFrom, int dwAttrFrom, string pszTo, int dwAttrTo);
-
 		/// <summary>Return the directory part of 'path' (or empty string)</summary>
 		public static string Directory(string path)
 		{
@@ -225,6 +211,12 @@ namespace Rylogic.Common
 				Path.GetFullPath(lhs).ToLowerInvariant().TrimEnd(Path.PathSeparator, Path.AltDirectorySeparatorChar),
 				Path.GetFullPath(rhs).ToLowerInvariant().TrimEnd(Path.PathSeparator, Path.AltDirectorySeparatorChar),
 				StringComparison.InvariantCultureIgnoreCase);
+		}
+
+		/// <summary>Test two paths for equality</summary>
+		public static bool Equal(string lhs, string rhs)
+		{
+			return Compare(lhs, rhs) == 0;
 		}
 
 		/// <summary>Remove the invalid chars from a potential filename</summary>
@@ -541,8 +533,8 @@ namespace Rylogic.UnitTests
 		{
 			string path;
 
-			path = Path_.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
-			Assert.Equal(@".\subdir\file.ext", path);
+			//path = Path_.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
+			//Assert.Equal(@".\subdir\file.ext", path);
 
 			path = Path_.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
 			Assert.Equal(@"A:\dir\subdir\file.ext", path);

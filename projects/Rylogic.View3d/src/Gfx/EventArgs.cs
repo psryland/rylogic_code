@@ -67,6 +67,7 @@ namespace Rylogic.Gfx
 
 			/// <summary>True if files are about to change</summary>
 			public bool Before { get; }
+			public bool After => !Before;
 		}
 
 		public class SceneChangedEventArgs :EventArgs

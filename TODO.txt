@@ -1,8 +1,6 @@
 Immediate ToDo:
 	
 LDraw
-	- Change LogUI to OutputUI and don't bother with logging to disk
-	- Highlight errors in editor
 	- Support line continuation for highlighting
 	- Fix the measurement tool not detecting mouse clicks
 	- Make dock container tabs share the same row when top/bottom left/right tabs meet.

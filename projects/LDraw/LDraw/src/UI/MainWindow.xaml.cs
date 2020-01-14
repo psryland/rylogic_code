@@ -52,7 +52,6 @@ namespace LDraw
 			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());
 			m_dc.Dispose();
 			Model = null!;
-			Log.Dispose();
 			base.OnClosed(e);
 		}
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -205,7 +204,6 @@ namespace LDraw
 			// Add a log window
 			var log = new LogUI(Model);
 			m_dc.Add(log, EDockSite.Right).IsAutoHide = true;
-			Model.LogEntries = log.LogEntries;
 
 			// Add the asset list window
 			var assets = new AssetListUI(Model);
@@ -284,7 +282,7 @@ namespace LDraw
 			}
 			catch (Exception ex)
 			{
-				Log.Write(ELogLevel.Info, ex, "File open failed.");
+				Log.Write(ELogLevel.Info, ex, "File open failed.", filepath ?? string.Empty, 0);
 				MsgBox.Show(this, $"File open failed.\n{ex.Message}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Information);
 				return null;
 			}
