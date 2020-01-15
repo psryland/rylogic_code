@@ -1,17 +1,16 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
-import os, sys, imp, re, subprocess, shutil
+import os, sys, re, subprocess, shutil
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 
 def Deploy():
-	print("""
-		*************************************************************************
-		  Csex Deploy
-		    Copyright (c) Rylogic 2013
-		*************************************************************************
-		""")
+	print(
+		"*************************************************************************\n"
+		" Csex Deploy \n"
+		" Copyright (c) Rylogic 2013\n"
+		"*************************************************************************\n")
 
 	dstdir = os.path.join(UserVars.root, "bin", "Csex")
 	srcdir = os.path.join(UserVars.root, "projects", "Csex")
@@ -35,6 +34,7 @@ def Deploy():
 	Tools.Copy(os.path.join(targetdir, "Rylogic.View3d.dll"), os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "Rylogic.Scintilla.dll"), os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "Rylogic.Gui.WinForms.dll"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.Gui.WPF.dll"), os.path.join(dstdir, ""))
 	return
 
 # Entry Point

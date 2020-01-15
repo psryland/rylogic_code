@@ -384,6 +384,7 @@ namespace Rylogic.Gfx
 					var dist_z = Math.Abs(pt1.z - pt0.z);
 					var dist = (pt1 - pt0).Length;
 
+					// This is a bit slow, creating this model each frame...
 					var sb = new StringBuilder();
 					sb.Append(
 						$"*Group Measurement \n" +

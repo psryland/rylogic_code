@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -50,18 +52,31 @@ namespace Rylogic.Gui.WPF
 	/// <summary>A control for editing patterns</summary>
 	public partial class PatternEditor :UserControl, INotifyPropertyChanged
 	{
+		private const string DefaultTestText =
+			"Enter text here to test your pattern.\n" +
+			"The pattern is applied to each line separately\n" +
+			"so that you can test multiple cases simultaneously.\n";
+
 		public PatternEditor()
 		{
 			InitializeComponent();
-			CaptureGroups = new ObservableCollection<CaptureGroup>();
 			Original = null;
+			CaptureGroups = new ObservableCollection<CaptureGroup>();
 			Pattern = new Pattern();
 
 			CommitChanges = Command.Create(this, CommitChangesInternal);
 			ShowHelp = Command.Create(this, ShowHelpInternal);
+			
 			DataContext = this;
+			TestText = DefaultTestText;
 			ApplyPattern();
 
+			m_rtb.LostFocus += delegate
+			{
+				using var mem = new MemoryStream();
+				new TextRange(m_rtb.Document.ContentStart, m_rtb.Document.ContentEnd).Save(mem, DataFormats.Text);
+				TestText = Encoding.UTF8.GetString(mem.ToArray());
+			};
 			Loaded += delegate
 			{
 				_ = MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
@@ -125,19 +140,23 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Test text for trying output patterns</summary>
 		public string TestText
 		{
-			get => (string)GetValue(TestTextProperty);
-			set => SetValue(TestTextProperty, value);
+			get => m_test_text;
+			set
+			{
+				if (m_test_text == value) return;
+				m_test_text = value;
+
+				// Apply the text to the flow document as plain text
+				using var text = new MemoryStream(Encoding.UTF8.GetBytes(m_test_text));
+				new TextRange(m_rtb.Document.ContentStart, m_rtb.Document.ContentEnd).Load(text, DataFormats.Text);
+
+				if (Pattern != null)
+					ApplyPattern();
+
+				NotifyPropertyChanged(nameof(TestText));
+			}
 		}
-		private void TestText_Changed(string value)
-		{
-			if (Pattern == null) return;
-			ApplyPattern();
-		}
-		public static readonly DependencyProperty TestTextProperty = Gui_.DPRegister<PatternEditor>(nameof(TestText), DefaultTestText);
-		private const string DefaultTestText =
-			"Enter text here to test your pattern.\n" +
-			"The pattern is applied to each line separately\n" +
-			"so that you can test multiple cases simultaneously.\n";
+		private string m_test_text = null!;
 
 		/// <summary>The capture groups</summary>
 		public ObservableCollection<CaptureGroup> CaptureGroups { get; }
@@ -185,12 +204,17 @@ namespace Rylogic.Gui.WPF
 				m_last_has_unsaved_changes = HasUnsavedChanges;
 			}
 
+			// Split the test text into lines if dot doesn't match new lines
+			var lines = Pattern.SingleLine ? new[] { TestText } : TestText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+			// Reset the document
+			var doc = m_rtb.Document;
+			doc.Blocks.Clear();
+
 			// Apply the pattern to the test text
-			var doc = new FlowDocument();
 			if (Pattern != null && Pattern.IsValid && Pattern.CaptureGroupNames.Length >= 1)
 			{
-				// Process each line of the test text
-				foreach (var line in TestText.Split('\n'))
+				foreach (var line in lines)
 				{
 					var par = new Paragraph() { Margin = new Thickness(0) };
 					var grp = Pattern.Match(line).GetEnumerator();
@@ -231,10 +255,9 @@ namespace Rylogic.Gui.WPF
 			}
 			else
 			{
-				foreach (var line in TestText.Split('\n'))
+				foreach (var line in lines)
 					doc.Blocks.Add(new Paragraph(new Run(line)) { Margin = new Thickness(0) });
 			}
-			m_rtb.Document = doc;
 
 			// Update the capture groups
 			UpdateCaptureGroups();

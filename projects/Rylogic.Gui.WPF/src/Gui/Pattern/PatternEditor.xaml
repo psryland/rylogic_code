@@ -152,7 +152,20 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Whole Line"
+					ToolTip="The match must span all of the text to be considered a match"
 					IsChecked="{Binding Pattern.WholeLine, Mode=TwoWay}"
+					VerticalAlignment="Center"
+					FontSize="11"
+					TabIndex="6"
+					Margin="2"
+					/>
+
+				<!-- Multi line -->
+				<CheckBox
+					DockPanel.Dock="Left"
+					Content="Single Line"
+					ToolTip="Check to have the dot(.) character match new line characters"
+					IsChecked="{Binding Pattern.SingleLine, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					FontSize="11"
 					TabIndex="6"
@@ -225,8 +238,8 @@
 			<!-- Test text -->
 			<RichTextBox
 				Grid.Column="0"
-				Background="{x:Static SystemColors.WindowBrush}"
 				ToolTip="An area for testing your pattern.&#x0a;Add any text you like here"
+				Background="{x:Static SystemColors.WindowBrush}"
 				SelectionChanged="{gui2:MethodBinding UpdateCaptureGroups}"
 				AcceptsReturn="True"
 				IsHitTestVisible="True"

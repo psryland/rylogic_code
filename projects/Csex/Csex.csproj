@@ -59,7 +59,7 @@
     <Compile Include="Cmd\GenActivationCode.cs" />
     <Compile Include="Cmd\MarkupExpand.cs" />
     <Compile Include="Cmd\NewCommand.cs" />
-    <Compile Include="Cmd\PatternUI.cs" />
+    <Compile Include="Cmd\Regex\RegexTest.cs" />
     <Compile Include="Cmd\ShowExif.cs" />
     <Compile Include="Cmd\ShowTree.cs" />
     <Compile Include="Cmd\SignFile.cs" />
@@ -109,6 +109,10 @@
     <ProjectReference Include="..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
       <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
       <Name>Rylogic.Gui.WinForms</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
+      <Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
+      <Name>Rylogic.Gui.WPF</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

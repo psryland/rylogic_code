@@ -35,6 +35,9 @@ namespace Rylogic.Common
 		/// <summary>Only match if the whole line matches</summary>
 		bool WholeLine { get; set; }
 
+		/// <summary>True if the dot (.) character matches the new line character</summary>
+		bool SingleLine { get; set; }
+
 		/// <summary>Returns the names of the capture groups in this pattern</summary>
 		string[] CaptureGroupNames { get; }
 
@@ -84,6 +87,7 @@ namespace Rylogic.Common
 			Active = true;
 			Invert = false;
 			WholeLine = false;
+			SingleLine = false;
 		}
 		public Pattern(Pattern rhs)
 		{
@@ -93,6 +97,7 @@ namespace Rylogic.Common
 			IgnoreCase = rhs.IgnoreCase;
 			Invert = rhs.Invert;
 			WholeLine = rhs.WholeLine;
+			SingleLine = rhs.SingleLine;
 		}
 		public Pattern(XElement node)
 		{
@@ -102,6 +107,7 @@ namespace Rylogic.Common
 			IgnoreCase = node.Element(XmlTag.IgnoreCase).As<bool>();
 			Invert = node.Element(XmlTag.Invert).As<bool>();
 			WholeLine = node.Element(XmlTag.WholeLine).As<bool>();
+			SingleLine = node.Element(XmlTag.SingleLine).As<bool>();
 		}
 
 		/// <summary>Export this pattern as XML</summary>
@@ -114,7 +120,8 @@ namespace Rylogic.Common
 				PatnType.ToXml(XmlTag.PatnType, false),
 				IgnoreCase.ToXml(XmlTag.IgnoreCase, false),
 				Invert.ToXml(XmlTag.Invert, false),
-				WholeLine.ToXml(XmlTag.WholeLine, false)
+				WholeLine.ToXml(XmlTag.WholeLine, false),
+				SingleLine.ToXml(XmlTag.SingleLine, false)
 			);
 			return node;
 		}
@@ -158,6 +165,14 @@ namespace Rylogic.Common
 			set => SetProp(ref m_whole_line, value, nameof(WholeLine), invalidate_patn: false);
 		}
 		private bool m_whole_line;
+
+		/// <summary>True when the dot (.) character matches the new line character</summary>
+		public bool SingleLine
+		{
+			get => m_single_line;
+			set => SetProp(ref m_single_line, value, nameof(SingleLine), invalidate_patn: true);
+		}
+		private bool m_single_line;
 
 		/// <summary>True if the pattern is active</summary>
 		public bool Active
@@ -242,7 +257,9 @@ namespace Rylogic.Common
 				}
 
 				// Compile the expression
-				var opts = (IgnoreCase ? RegexOptions.IgnoreCase : RegexOptions.None) | RegexOptions.Compiled;
+				var opts = RegexOptions.Compiled;
+				if (IgnoreCase) opts |= RegexOptions.IgnoreCase;
+				if (SingleLine) opts |= RegexOptions.Singleline;
 				m_compiled_patn = new Regex(expr, opts);
 				return m_compiled_patn;
 			}
@@ -410,13 +427,14 @@ namespace Rylogic.Common
 		public bool Equals(Pattern? rhs)
 		{
 			return
-				rhs != null &&
-				m_patn_type     == rhs.m_patn_type   && 
-				m_expr          == rhs.m_expr        && 
-				m_ignore_case   == rhs.m_ignore_case && 
-				m_active        == rhs.m_active      && 
-				m_invert        == rhs.m_invert      && 
-				m_whole_line    == rhs.m_whole_line; 
+				rhs           != null &&
+				m_patn_type   == rhs.m_patn_type   && 
+				m_expr        == rhs.m_expr        && 
+				m_ignore_case == rhs.m_ignore_case && 
+				m_active      == rhs.m_active      && 
+				m_invert      == rhs.m_invert      && 
+				m_whole_line  == rhs.m_whole_line  &&
+				m_single_line == rhs.m_single_line; 
 		}
 		public override bool Equals(object? obj)
 		{
@@ -430,7 +448,8 @@ namespace Rylogic.Common
 				m_ignore_case .GetHashCode()^
 				m_active      .GetHashCode()^
 				m_invert      .GetHashCode()^
-				m_whole_line  .GetHashCode();
+				m_whole_line  .GetHashCode()^
+				m_single_line .GetHashCode();
 		}
 		#endregion
 
@@ -442,6 +461,7 @@ namespace Rylogic.Common
 			public const string IgnoreCase = "ignorecase";
 			public const string Invert = "invert";
 			public const string WholeLine = "wholeline";
+			public const string SingleLine = "singleline";
 		}
 	}
 }
@@ -680,6 +700,15 @@ namespace Rylogic.UnitTests
 			// AllMatches returns only whole expr matches but all occurrences in the string
 			var r2 = p.AllMatches(s).ToList();
 			Assert.True(r2.SequenceEqual(new[]{ new Range(0,1), new Range(2,3), new Range(4,5) }));
+		}
+		[Test] public void RegexMatches11()
+		{
+			const string s = "multi\nline";
+			var p = new Pattern(EPattern.RegularExpression, @"(ti.li)") { SingleLine = true };
+
+			// Match returns the whole expr match, then the capture group
+			var r1 = p.Match(s).ToList();
+			Assert.True(r1.SequenceEqual(new[] { new Range(3, 8), new Range(3, 8) }));
 		}
 	}
 }

@@ -22,6 +22,7 @@ class EProjects():
 	Scintilla = "Scintilla"
 	View3d = "View3d"
 	Rylogic = "Rylogic"
+	Csex = "Csex"
 
 	# Print all available projects
 	@staticmethod
@@ -140,6 +141,25 @@ def CleanRylogic(workspace:str, platforms:[str], configs:[str]):
 	CleanDotNet(os.path.join(workspace, "projects", "Rylogic.Gui.WPF")     , platforms, configs)
 	return
 
+# Build Csex
+def BuildCsex(workspace:str, platforms:[str], configs:[str]):
+	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+	platforms = platforms if platforms else ["Any CPU"]
+	configs = configs if configs else ["Release", "Debug"]
+
+	# Build the rylogic assemblies
+	projects = [
+		"Tools\\Csex",
+		]
+
+	Tools.SetupVcEnvironment()
+	Tools.Exec([UserVars.nuget, "restore", rylogic_sln])
+	MSBuild("Csex", rylogic_sln, projects, platforms, configs)
+	return
+def CleanCsex(workspace:str, platforms:[str], configs:[str]):
+	CleanDotNet(os.path.join(workspace, "projects", "Csex"), platforms, configs)
+	return
+
 # Build all Software projects
 # 'workspace' is the root of a freshly checked out repo
 def BuildAll(workspace:str, platforms:[str]=None, configs:[str]=None):
@@ -148,12 +168,14 @@ def BuildAll(workspace:str, platforms:[str]=None, configs:[str]=None):
 	BuildScintilla(workspace, platforms, configs)
 	BuildView3d(workspace, platforms, configs)
 	BuildRylogic(workspace, platforms, configs)
+	BuildCsex(workspace, platforms, configs)
 	return
 def CleanAll(workspace:str, platforms:[str]=None, configs:[str]=None):
 	CleanSqlite3(workspace, platforms, configs)
 	CleanScintilla(workspace, platforms, configs)
 	CleanView3d(workspace, platforms, configs)
 	CleanRylogic(workspace, platforms, configs)
+	CleanCsex(workspace, platforms, configs)
 	return
 
 # Main
@@ -224,6 +246,8 @@ def Main(args:[str]):
 			BuildView3d(workspace, platforms, configs)
 		elif project == EProjects.Rylogic:
 			BuildRylogic(workspace, platforms, configs)
+		elif project == EProjects.Csex:
+			BuildCsex(workspace, platforms, configs)
 		else:
 			raise RuntimeError(f"Unknown project name {project}")
 

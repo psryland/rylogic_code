@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
@@ -19,13 +20,13 @@ namespace Csex
 		}
 
 		private const string VersionString = "v1.0";
-		private readonly string[] m_args;
+		private readonly List<string> m_args;
 		private IList<Type> m_available_cmds;
 		private Cmd m_cmd;
 
 		public Program(string[] args)
 		{
-			m_args = args;
+			m_args = args.ToList();
 			m_available_cmds = typeof(Program).Assembly.GetExportedTypes()
 				.Where(x => typeof(Cmd).IsAssignableFrom(x))
 				.Except(typeof(Cmd))
@@ -38,14 +39,22 @@ namespace Csex
 		public override int Run()
 		{
 			// Check the name of the exe and do behaviour based on that.
-			//var name = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-			//switch (name.ToLowerInvariant())
-			//{
-			//default: break;
-			//}
+			var name = Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+			switch (name.ToLowerInvariant())
+			{
+			case "RegexTest":
+				{
+					m_args.Insert(0, "-regex_test");
+					break;
+				}
+			default:
+				{
+					break;
+				}
+			}
 
 			// Invalid arguments, error exit
-			if (CmdLine.Parse(this, m_args) != CmdLine.Result.Success)
+			if (CmdLine.Parse(this, m_args.ToArray()) != CmdLine.Result.Success)
 				return 1;
 
 			try
@@ -103,7 +112,7 @@ namespace Csex
 			$"    -expand_template\n" +
 			$"       Expand specific comments in a markup language (xml,html) file\n" +
 			$"\n" +
-			$"    -PatternUI\n" +
+			$"    -regex_test\n" +
 			$"       Show the Regex pattern testing ui\n" +
 			$"\n" +
 			$"    -find_duplicate_files\n" +
@@ -138,7 +147,7 @@ namespace Csex
 				case "-signfile":                m_cmd = new SignFile(); break;
 				case "-find_assembly_conflicts": m_cmd = new FindAssemblyConflicts(); break;
 				case "-expand_template":         m_cmd = new MarkupExpand(); break;
-				case "-patternui":               m_cmd = new PatternUI(); break;
+				case "-regex_test":              m_cmd = new RegexTest(); break;
 				case "-find_duplicate_files":    m_cmd = new FindDuplicateFiles(); break;
 				case "-showexif":                m_cmd = new ShowExif(); break;
 				case "-showtree":                m_cmd = new ShowTree(); break;
