@@ -35,7 +35,7 @@ def Deploy():
 	# Build the project
 	print("\nBuilding...")
 	sln = os.path.join(UserVars.root, "build", "Rylogic.sln")
-	Tools.MSBuild(sln, ["Rylogic\\renderer11", "Rylogic\\view3d"], ["x86","x64"], ["release"], False, True)
+	Tools.MSBuild(sln, ["Rylogic\\view3d", "Rylogic\\view3d.dll"], ["x86","x64"], ["release"], False, True)
 	Tools.MSBuild(sln, ["LDraw\\LDraw"], ["Any CPU"], ["release"], False, True)
 
 	# Copy build products to the output directory
