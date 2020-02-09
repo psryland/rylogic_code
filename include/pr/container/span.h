@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <initializer_list>
 #include <array>
+#include <vector>
 
 // std::span - Until C++20 is supported
 namespace std
@@ -33,6 +34,10 @@ namespace std
 			:m_arr(arr)
 			,m_count(count)
 		{}
+		template <int N> constexpr span(T(&arr)[N]) noexcept
+			:m_arr(&arr[0])
+			, m_count(N)
+		{}
 		constexpr span(std::initializer_list<T> list) noexcept
 			:m_arr(list.begin())
 			,m_count(list.size())
@@ -45,9 +50,13 @@ namespace std
 			:m_arr(arr.data())
 			,m_count(arr.size())
 		{}
-		template <int N> constexpr span(T (&arr)[N]) noexcept
-			:m_arr(&arr[0])
-			,m_count(N)
+		constexpr span(std::vector<std::remove_const_t<T>>& vec) noexcept
+			:m_arr(vec.data())
+			,m_count(vec.size())
+		{}
+		constexpr span(std::vector<std::remove_const_t<T>> const& vec) noexcept
+			:m_arr(vec.data())
+			,m_count(vec.size())
 		{}
 
 		bool empty() const

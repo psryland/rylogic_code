@@ -34,8 +34,10 @@ enum EChunkId
 	MeshName       = 0x00003101, /*          ├─ Name (cstr)                               */
 	MeshBBox       = 0x00003102, /*          ├─ Bounding box (BBox)                       */
 	MeshVertices   = 0x00003110, /*          ├─ Vertex list (u32 count, count * [Vert])   */
-	MeshIndices    = 0x00003120, /*          ├─ Index list (u32 count, count * [u16 i])   */
+	MeshIndices16  = 0x00003120, /*          ├─ Index list (u32 count, count * [u16 i])   */
 	MeshIndices32  = 0x00003121, /*          ├─ Index list (u32 count, count * [u32 i])   */
+	MeshIndices    = 0x00003125, /*          +- Index list (u32 count, u32 stride, count * [Idx i]) */\
+	MeshIndicesV   = 0x00003126, /*          +- Index list (u32 count, u32 stride, count * [Idx i]) */\
 	MeshNuggets    = 0x00003200, /*          └─ Nugget list (u32 count, count * [Nugget]) */
 };
 
@@ -112,6 +114,28 @@ struct VertsChunk
 	FSeek(fpos + length);
 };
 
+struct IdxChunk
+{
+    local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	u32 stride;
+	u8 index_data[length - 12];
+	FSeek(fpos + length);
+};
+
+struct IdxVChunk
+{
+    local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	u32 stride;
+	u8 index_data[length - 12];
+	FSeek(fpos + length);
+};
+
 struct Idx16Chunk
 {
 	local int64 fpos = FTell();
@@ -160,10 +184,12 @@ void SubChunks(uint end)
 		case Meshes         : Chunk meshes; break;
 		case Mesh           : Chunk mesh; break;
 		case MeshName       : CStrChunk name; break;
-		case MeshBBox       : BBoxChunk name; break;
+		case MeshBBox       : BBoxChunk bbox; break;
 		case MeshVertices   : VertsChunk verts; break;
-		case MeshIndices    : Idx16Chunk idx16; break;
+		case MeshIndices16  : Idx16Chunk idx16; break;
 		case MeshIndices32  : Idx32Chunk idx32; break;
+		case MeshIndices    : IdxChunk idx; break;
+		case MeshIndicesV   : IdxVChunk idx; break;
 		case MeshNuggets    : NuggetsChunk nuggets; break;
 		default: UnknownChunk chunk; break;
 		}

@@ -8,6 +8,46 @@
 
 namespace pr
 {
+	// Compress a normalised 3-vector into a v2 (almost) losslessly
+	inline v2 CompressNorm3(v4 const& norm)
+	{
+		// Drop the largest component
+		auto i = MaxElementIndex3(Abs(norm));
+		
+		// Save the sign of the dropped component
+		auto sign = norm[i] < 0.0f;
+		auto w = norm.w != 0.0f;
+
+		v2 result;
+		result.x = norm[(i + 1) % 3];
+		result.y = norm[(i + 2) % 3];
+
+		// Encode the sign and 'w' value in the LSB
+		reinterpret_cast<uint32_t&>(result.x) = SetBits(reinterpret_cast<uint32_t const&>(result.x), 0x1, sign);
+		reinterpret_cast<uint32_t&>(result.y) = SetBits(reinterpret_cast<uint32_t const&>(result.y), 0x1, w);
+
+		return result;
+	}
+	inline v4 DecompressNorm3(v2 const& packed_norm)
+	{
+		auto sign = AllSet(reinterpret_cast<uint32_t const&>(packed_norm.x), 0x1);
+		auto w = AllSet(reinterpret_cast<uint32_t const&>(packed_norm.y), 0x1);
+		
+
+		switch (bits)
+		{
+		case 0:
+			{
+				auto x = packed_norm;
+				auto y = 1.0f;
+
+			}
+		case 1:
+		case 2:
+		default: throw std::runtime_error("Invalid encoded normal")
+		}
+	}
+
 	// Returns a direction in 5 bits. (Actually a number < 27)
 	// Note: this can be converted into 4 bits if sign information isn't needed
 	// using: if( idx > 13 ) idx = 26 - idx; Doing so, does not effect the DecompressNormal() function

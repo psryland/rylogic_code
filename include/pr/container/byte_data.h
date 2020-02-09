@@ -7,6 +7,7 @@
 
 #include <malloc.h>
 #include <vector>
+#include "pr/container/span.h"
 
 namespace pr
 {
@@ -42,7 +43,7 @@ namespace pr
 	// of the container can be interpreted as different types as needed.
 	// Also note: this container is intended as a byte bucket, so don't expect
 	// constructors/destructors/etc to be called on types you add to this container.
-	template <int Alignment = 1> struct ByteData
+	template <int Alignment = 4> struct ByteData
 	{
 		using value_type = unsigned char;
 
@@ -283,8 +284,28 @@ namespace pr
 		}
 
 		// A pointer to the data
-		unsigned char const* data() const { return begin(); }
-		unsigned char*       data()       { return begin(); }
+		template <typename Type> Type const* data() const
+		{
+			return begin<Type>();
+		}
+		template <typename Type> Type* data()
+		{
+			return begin<Type>();
+		}
+		unsigned char const* data() const
+		{
+			return begin();
+		}
+		unsigned char* data()
+		{
+			return begin();
+		}
+
+		// Facade access
+		template <typename Type> std::span<Type const> span() const
+		{
+			return std::span<Type const>(begin<Type>(), size<Type>());
+		}
 
 		// Streaming access
 		template <typename Type> Type const& read(size_t& ofs)

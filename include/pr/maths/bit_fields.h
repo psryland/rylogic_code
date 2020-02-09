@@ -21,11 +21,11 @@ namespace pr
 	}
 
 	// Bit manipulation functions
-	inline uint Bit32(int n)
+	inline uint32_t Bit32(int n)
 	{
 		return 1U << n;
 	}
-	inline uint64 Bit64(int n)
+	inline uint64_t Bit64(int n)
 	{
 		return 1i64 << n;
 	}
@@ -66,7 +66,7 @@ namespace pr
 	}
 
 	// Reverse the order of bits in 'v'
-	inline uint ReverseBits32(uint v)
+	inline uint32_t ReverseBits32(uint32_t v)
 	{
 		v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);	// swap odd and even bits
 		v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);	// swap consecutive pairs
@@ -77,13 +77,13 @@ namespace pr
 	}
 
 	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
-	inline uint ReverseBits32(uint v, int n)
+	inline uint32_t ReverseBits32(uint32_t v, int n)
 	{
 		return (v & (0xFFFFFFFFU << n)) | (ReverseBits32(v) >> (32 - n));
 	}
 
 	// Reverse the order of bits in 'v'
-	inline uint64 ReverseBits64(uint64 v)
+	inline uint64_t ReverseBits64(uint64_t v)
 	{
 		v = ((v >>  1) & 0x5555555555555555ULL) | ((v & 0x5555555555555555ULL) <<  1); // swap odd and even bits
 		v = ((v >>  2) & 0x3333333333333333ULL) | ((v & 0x3333333333333333ULL) <<  2); // swap consecutive pairs
@@ -95,7 +95,7 @@ namespace pr
 	}
 
 	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
-	inline uint64 ReverseBits64(uint64 v, int n)
+	inline uint64_t ReverseBits64(uint64_t v, int n)
 	{
 		return (v & (0xFFFFFFFFFFFFFFFFULL << n)) | (ReverseBits64(v) >> (64 - n));
 	}
@@ -115,7 +115,7 @@ namespace pr
 	// Also, is the floor of the log base 2 for a 32 bit integer
 	template <typename T> inline T HighBitIndex(T n)
 	{
-		typedef std::make_unsigned<T>::type UT;
+		using UT = std::make_unsigned<T>::type;
 
 		T pos = 0;
 		int bits = 4 * sizeof(T);
@@ -127,7 +127,7 @@ namespace pr
 		}
 		return pos;
 	}
-	inline uint HighBitIndex(uint n)
+	inline uint32_t HighBitIndex(uint32_t n)
 	{
 		unsigned int shift, pos = 0;
 		shift = ((n & 0xFFFF0000) != 0) << 4; n >>= shift; pos |= shift;
@@ -142,6 +142,16 @@ namespace pr
 	template <typename T> inline T LowBitIndex(T n)
 	{
 		return HighBitIndex(LowBit(n));
+	}
+
+	// Return the integer log2 of 'n'
+	inline int IntegerLog2(uint64_t n)
+	{
+		// This only works for IEEE floats
+		assert(n != 0);
+		auto v = static_cast<double const>(n);
+		auto c = *reinterpret_cast<long long const*>(&v);
+		return (c >> 52) - 511;
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
@@ -172,9 +182,9 @@ namespace pr
 	}
 
 	// Returns the number of set bits in 'n'
-	template <typename T> inline uint CountBits(T n)
+	template <typename T> inline uint32_t CountBits(T n)
 	{
-		uint count = 0;
+		uint32_t count = 0;
 		while (n)
 		{
 			++count;
@@ -186,7 +196,7 @@ namespace pr
 	// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
 	// Constant time bit count works for 32-bit numbers only.
 	// Fix last line for 64-bit numbers
-	template <> inline uint CountBits(unsigned int n)
+	template <> inline uint32_t CountBits(unsigned int n)
 	{
 		unsigned int tmp;
 		tmp = n - ((n >> 1) & 033333333333)
@@ -284,7 +294,7 @@ namespace pr::maths
 	PRUnitTest(BitFunctionTest)
 	{
 		{
-			uint hi,lo;
+			uint32_t hi,lo;
 			BreakLL(0x0123456789abcdef, hi, lo);
 			PR_CHECK(hi, 0x01234567U);
 			PR_CHECK(lo, 0x89abcdefU);
@@ -309,8 +319,14 @@ namespace pr::maths
 			PR_CHECK(bits[4], 1U << 9);
 		}
 		{
+			auto n0 = 0b1010101;
+			PR_CHECK(IntegerLog2(n0), 6);
+			auto n1 = 0b101010101010101ULL;
+			PR_CHECK(IntegerLog2(n1), 14);
+		}
+		{
 			char const* mask_str = "1001110010";
-			auto mask = Bits<uint>(mask_str);
+			auto mask = Bits<uint32_t>(mask_str);
 			PR_CHECK(mask, 626U);
 			PR_CHECK(BitStr(mask), mask_str);
 			PR_CHECK(HighBitIndex(mask), 9U);
