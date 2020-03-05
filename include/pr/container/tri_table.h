@@ -25,27 +25,24 @@
 //	flag[TriTableIndexInc<4, 6>::Index] = true;
 //
 #pragma once
-#include "pr/common/assert.h"
+#include <cstdint>
 
-namespace pr
+namespace pr::tri_table
 {
-	namespace tri_table
-	{
-		enum class EType : int { Inclusive = 1, Exclusive = -1 };
+	enum class EType : int { Inclusive = 1, Exclusive = -1 };
 
-		// Runtime inclusive/exclusive tri-table count
-		constexpr size_t Size(EType inc, int num_elements)
-		{
-			return num_elements * (num_elements + int(inc)) / 2;
-		}
+	// Runtime inclusive/exclusive tri-table count
+	constexpr size_t Size(EType inc, int num_elements)
+	{
+		return num_elements * (num_elements + int(inc)) / 2;
+	}
 		
-		// Runtime inclusive/exclusive tri-table index
-		constexpr size_t Index(EType inc, int indexA, int indexB)
-		{
-			return (indexA < indexB)
-				? indexB * (indexB + int(inc)) / 2 + indexA
-				: indexA * (indexA + int(inc)) / 2 + indexB;
-		}
+	// Runtime inclusive/exclusive tri-table index
+	constexpr size_t Index(EType inc, int indexA, int indexB)
+	{
+		return (indexA < indexB)
+			? indexB * (indexB + int(inc)) / 2 + indexA
+			: indexA * (indexA + int(inc)) / 2 + indexB;
 	}
 }
 
@@ -58,10 +55,10 @@ namespace pr::common
 		using namespace pr::tri_table;
 
 		// Compile time checks
-		static_assert(Index(EType::Inclusive, 2, 2) + 1 == Size(EType::Inclusive, 3), "");
-		static_assert(Index(EType::Exclusive, 2, 1) + 1 == Size(EType::Exclusive, 3), "");
-		static_assert(Index(EType::Inclusive, 3, 3) + 1 == Size(EType::Inclusive, 4), "");
-		static_assert(Index(EType::Exclusive, 3, 2) + 1 == Size(EType::Exclusive, 4), "");
+		static_assert(Index(EType::Inclusive, 2, 2) + 1 == Size(EType::Inclusive, 3));
+		static_assert(Index(EType::Exclusive, 2, 1) + 1 == Size(EType::Exclusive, 3));
+		static_assert(Index(EType::Inclusive, 3, 3) + 1 == Size(EType::Inclusive, 4));
+		static_assert(Index(EType::Exclusive, 3, 2) + 1 == Size(EType::Exclusive, 4));
 	}
 }
 #endif

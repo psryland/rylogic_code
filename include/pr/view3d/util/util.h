@@ -66,16 +66,20 @@ namespace pr::rdr
 
 	// Compile time type to 'DXGI_FORMAT' conversion
 	template <typename Type> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char    ); };
-	template <> struct DxFormat<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16  ); };
-	template <> struct DxFormat<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32  ); };
+	template <> struct DxFormat<uint8_t >    { static const DXGI_FORMAT value = DXGI_FORMAT_R8_UINT;            static const int size = sizeof(uint8_t ); };
+	template <> struct DxFormat<uint16_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16_t); };
+	template <> struct DxFormat<uint32_t>    { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32_t); };
 	template <> struct DxFormat<v2      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2      ); };
 	template <> struct DxFormat<v3      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3      ); };
 	template <> struct DxFormat<v4      >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4      ); };
 	template <> struct DxFormat<Colour  >    { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour  ); };
 	template <> struct DxFormat<Colour32>    { static const DXGI_FORMAT value = DXGI_FORMAT_R8G8B8A8_UNORM;     static const int size = sizeof(Colour32); };
+	template <typename Type> static constexpr DXGI_FORMAT dx_format_v = DxFormat<Type>::value;
+	static_assert(dx_format_v<uint32_t> == DXGI_FORMAT_R32_UINT);
 
 	// Compile 'DXGI_FORMAT' to pixel type conversion
 	template <DXGI_FORMAT Fmt> struct type_for                 { using type = void;     };
+	template <> struct type_for<DXGI_FORMAT_R8_UINT           >{ using type = uint8_t;  };
 	template <> struct type_for<DXGI_FORMAT_R16_UINT          >{ using type = uint16_t; };
 	template <> struct type_for<DXGI_FORMAT_R32_UINT          >{ using type = uint32_t; };
 	template <> struct type_for<DXGI_FORMAT_R32G32_FLOAT      >{ using type = v2;       };

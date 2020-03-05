@@ -102,6 +102,18 @@ old:
 			</ArrayItems>
 		</Expand>
 	</Type>
+	<Type Name="pr::ByteData&lt;*&gt;">
+		<DisplayString Condition="m_size == 0">empty</DisplayString>
+		<DisplayString>[{m_size}] {m_ptr}</DisplayString>
+		<Expand>
+			<Item Name="[count]">m_size</Item>
+			<Item Name="[capacity]">m_capacity</Item>
+			<ArrayItems>
+				<Size>m_size</Size>
+				<ValuePointer>m_ptr</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
 	
 	<!-- Expression Evaluator -->
 	<Type Name="pr::impl::Val">

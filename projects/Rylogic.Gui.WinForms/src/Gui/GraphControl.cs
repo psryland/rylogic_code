@@ -21,6 +21,7 @@ using Rylogic.Maths;
 using Rylogic.Utility;
 using Rylogic.Interop.Win32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
+using System.Windows.Threading;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -1783,6 +1784,8 @@ namespace Rylogic.Gui.WinForms
 					m_tmp.m_xrange = XAxis.Range;
 					m_tmp.m_yrange = YAxis.Range;
 
+					var dispatcher = Dispatcher.CurrentDispatcher;
+
 					// Plot rendering (done in a background thread).
 					// This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
 					ThreadPool.QueueUserWorkItem(x =>
@@ -1802,14 +1805,14 @@ namespace Rylogic.Gui.WinForms
 						}
 
 						// Swap the bitmaps on the GUI thread
-						Dispatcher_.BeginInvoke(() =>
+						dispatcher.BeginInvoke(() =>
 						{
 							// If the render was cancelled, ignore the result
 							if (rdr_issue != m_rdr_issue)
 								return;
 
 							// Otherwise get the main thread to do something with the plot bitmap
-							Utility.Util.Swap(ref m_snap, ref m_tmp);
+							Util.Swap(ref m_snap, ref m_tmp);
 
 							// Cause a refresh
 							Refresh();

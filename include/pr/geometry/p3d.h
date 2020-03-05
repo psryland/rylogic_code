@@ -20,6 +20,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/range.h"
 #include "pr/common/scope.h"
+#include "pr/common/compress.h"
 #include "pr/maths/maths.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
@@ -241,13 +242,6 @@ namespace pr::geometry::p3d
 		Vec4 norm;
 		Vec2 uv;
 		Vec2 pad;
-	};
-	struct VertPacked
-	{
-		float pos[3];
-		float norm[2];
-		float uv[2];
-		u32 col;
 	};
 	struct Range
 	{
@@ -689,80 +683,223 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVertices chunk data
-	template <typename TSrc> Mesh::VCont ReadMeshVertices(TSrc& src, u32 data_len, bool decompress)
+	template <typename TSrc> Mesh::VCont ReadMeshVertices(TSrc& src, u32 data_len, EChunkId id)
 	{
 		Mesh::VCont cont;
-
-		// Read the vertex count
-		size_t count = Read<u32>(src);
-		data_len -= sizeof(u32);
-
-		// If the verts are compressed, decompress them
-		if (decompress)
+		switch (id)
 		{
-		}
-		else
-		{
-			if (count * sizeof(Vert) != data_len)
-				throw std::runtime_error(Fmt("Vertex list count is invalid. Vertex count is %d, data available for %d verts.", count, data_len/sizeof(Vert)));
+		case EChunkId::MeshVertices:
+			{
+				// Read the vertex count
+				auto count = Read<u32>(src);
+				data_len -= sizeof(u32);
 
-			// Read the vertex data into memory
-			cont.resize(count);
-			Read(src, cont.data(), count);
+				if (count * sizeof(Vert) != data_len)
+					throw std::runtime_error(Fmt("Vertex list count is invalid. Vertex count is %d, data available for %d verts.", count, data_len/sizeof(Vert)));
+
+				// Read the vertex data into memory
+				cont.resize(count);
+				Read(src, cont.data(), count);
+				break;
+			}
+		case EChunkId::MeshVerticesV:
+			{
+				// Read the vertex count
+				auto count = Read<u32>(src);
+				data_len -= sizeof(u32);
+
+				// Read the geometry data flags
+				auto geom = static_cast<EGeom>(Read<u32>(src));
+				data_len -= sizeof(u32);
+
+				// Allocate space for 'count' vertices
+				cont.resize(count);
+
+				// Populate the vertex data
+				if (AllSet(geom, EGeom::Vert))
+				{
+					if (count * sizeof(float) * 3 > data_len)
+						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex positions, data available for %d verts.", count, data_len/(3*sizeof(float))));
+
+					for (auto& v : cont)
+					{
+						v.pos.x = Read<float>(src);
+						v.pos.y = Read<float>(src);
+						v.pos.z = Read<float>(src);
+						v.pos.w = 1.0f;
+					}
+					data_len -= count * sizeof(float) * 3;
+				}
+				else
+				{
+					for (auto& v : cont)
+						v.pos = v4Origin;
+				}
+				
+				// Populate the normals
+				if (AllSet(geom, EGeom::Norm))
+				{
+					if (count * sizeof(u32) > data_len)
+						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex normals, data available for %d normals.", count, data_len/sizeof(u32)));
+
+					for (auto& v : cont)
+						v.norm = Norm32bit::Decompress(Read<u32>(src));
+
+					data_len -= count * sizeof(u32);
+				}
+				else
+				{
+					for (auto& v : cont)
+						v.norm = v4Zero;
+				}
+
+				// Populate the vertex colours
+				if (AllSet(geom, EGeom::Colr))
+				{
+					if (count * sizeof(Colour32) > data_len)
+						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex colours, data available for %d colours.", count, data_len/sizeof(Colour32)));
+
+					for (auto& v : cont)
+					{
+						auto col = Read<Colour32>(src);
+						v.col.r = r_cp(col);
+						v.col.g = g_cp(col);
+						v.col.b = b_cp(col);
+						v.col.a = a_cp(col);
+					}
+					data_len -= count * sizeof(Colour32);
+				}
+				else
+				{
+					for (auto& v : cont)
+						v.col = v4One;
+				}
+
+				// Populate the texture coordinates
+				if (AllSet(geom, EGeom::Tex0))
+				{
+					if (count * sizeof(Colour32) > data_len)
+						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex texture coordinates, data available for %d coords.", count, data_len/(2*sizeof(float))));
+
+					for (auto& v : cont)
+					{
+						v.uv.x = Read<float>(src);
+						v.uv.y = Read<float>(src);
+					}
+					data_len -= count * sizeof(float) * 2;
+				}
+				else
+				{
+					for (auto& v : cont)
+						v.uv = v2Zero;
+				}
+
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported Mesh Vertex format");
+			}
 		}
 
 		return std::move(cont);
 	}
 
 	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::MeshIndices8/16/32 chunk data
-	template <typename TSrc> Mesh::ICont ReadMeshIndices(TSrc& src, u32 data_len, bool decompress)
+	template <typename TSrc> Mesh::ICont ReadMeshIndices(TSrc& src, u32 data_len, EChunkId id)
 	{
-		// Read the index count
-		auto count = Read<u32>(src);
-		data_len -= sizeof(u32);
-
-		// Read the stride
-		auto stride = Read<u32>(src);
-		data_len -= sizeof(u32);
-
 		Mesh::ICont cont;
-		cont.m_stride = stride;
-
-		// If the indices are compressed, decompress them
-		if (decompress)
+		switch (id)
 		{
-			// Create a temporary buffer for holding the compressed indices
-			std::vector<u8> buf(data_len);
-			Read(src, buf.data(), buf.size());
-
-			int64_t prev = 0;
-			for (u8 const* p = buf.data(), *pend = p + buf.size(); p != pend; ++p)
+		case EChunkId::MeshIndices:
 			{
-				int s = 0;
-				uint64_t zz = 0;
-				for (; p != pend && (*p & 0x80); ++p, s += 7)
-					zz |= static_cast<uint64_t>(*p & 0x7F) << s;
-				if (p != pend)
-					zz |= static_cast<uint64_t>(*p & 0x7F) << s;
+				// Read the index count
+				auto count = Read<u32>(src);
+				data_len -= sizeof(u32);
 
-				// ZigZag decode
-				auto delta = static_cast<int64_t>((zz & 1) ? (zz >> 1) ^ -1 : (zz >> 1));
+				// Read the stride
+				auto stride = Read<u32>(src);
+				data_len -= sizeof(u32);
 
-				// Get the index value from the delta
-				auto idx = prev + delta;
-				cont.push_back(reinterpret_cast<u8 const*>(&idx), stride);
+				if (count * stride != data_len)
+					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / stride));
 
-				prev += delta;
+				// Read the index data into memory
+				cont.resize(data_len);
+				cont.m_stride = stride;
+				Read(src, cont.data(), data_len);
+				break;
 			}
-		}
-		else
-		{
-			if (count * stride != data_len)
-				throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / stride));
+		case EChunkId::MeshIndicesV:
+			{
+				// Read the index count
+				auto count = Read<u32>(src);
+				data_len -= sizeof(u32);
 
-			// Read the index data into memory
-			cont.resize(data_len);
-			Read(src, cont.data(), data_len);
+				// Read the stride
+				auto stride = Read<u32>(src);
+				data_len -= sizeof(u32);
+
+				// Create a temporary buffer for holding the compressed indices
+				std::vector<u8> buf(data_len);
+				Read(src, buf.data(), buf.size());
+
+				int64_t prev = 0;
+				for (u8 const* p = buf.data(), *pend = p + buf.size(); p != pend; ++p)
+				{
+					int s = 0;
+					uint64_t zz = 0;
+					for (; p != pend && (*p & 0x80); ++p, s += 7)
+						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
+					if (p != pend)
+						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
+
+					// ZigZag decode
+					auto delta = static_cast<int64_t>((zz & 1) ? (zz >> 1) ^ -1 : (zz >> 1));
+
+					// Get the index value from the delta
+					auto idx = prev + delta;
+					cont.push_back(reinterpret_cast<u8 const*>(&idx), stride);
+
+					prev += delta;
+				}
+
+				if (cont.size() != count * stride)
+					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, %d indices provided.", count, static_cast<u32>(cont.size() / stride)));
+
+				cont.m_stride = stride;
+				break;
+			}
+		case EChunkId::MeshIndices16: // deprecated
+			{
+				using Idx = u16;
+				size_t count = Read<u32>(src);
+				data_len -= sizeof(u32);
+				if (count * sizeof(Idx) != data_len)
+					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
+
+				cont.resize<Idx>(count);
+				cont.m_stride = sizeof(Idx);
+				Read(src, cont.data<Idx>(), count);
+				break;
+			}
+		case EChunkId::MeshIndices32: // deprecated
+			{
+				using Idx = u32;
+				size_t count = Read<u32>(src);
+				data_len -= sizeof(u32);
+				if (count * sizeof(Idx) != data_len)
+					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
+
+				cont.resize<Idx>(count);
+				cont.m_stride = sizeof(Idx);
+				Read(src, cont.data<Idx>(), count);
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported Mesh Index format");
+			}
 		}
 		return std::move(cont);
 	}
@@ -804,44 +941,20 @@ namespace pr::geometry::p3d
 			case EChunkId::MeshVertices:
 			case EChunkId::MeshVerticesV:
 				{
-					mesh.m_verts = ReadMeshVertices(src, data_len, hdr.m_id == EChunkId::MeshVerticesV);
+					mesh.m_verts = ReadMeshVertices(src, data_len, hdr.m_id);
 					break;
 				}
 			case EChunkId::MeshIndices:
 			case EChunkId::MeshIndicesV:
+			case EChunkId::MeshIndices16:
+			case EChunkId::MeshIndices32:
 				{
-					mesh.m_idx = ReadMeshIndices(src, data_len, hdr.m_id == EChunkId::MeshIndicesV);
+					mesh.m_idx = ReadMeshIndices(src, data_len, hdr.m_id);
 					break;
 				}
 			case EChunkId::MeshNuggets:
 				{
 					mesh.m_nugget = ReadMeshNuggets(src, data_len);
-					break;
-				}
-			case EChunkId::MeshIndices16: // deprecated
-				{
-					using Idx = u16;
-					size_t count = Read<u32>(src);
-					data_len -= sizeof(u32);
-					if (count * sizeof(Idx) != data_len)
-						throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
-
-					mesh.m_idx.resize<Idx>(count);
-					mesh.m_idx.m_stride = sizeof(Idx);
-					Read(src, mesh.m_idx.data<Idx>(), count);
-					break;
-				}
-			case EChunkId::MeshIndices32: // deprecated
-				{
-					using Idx = u32;
-					size_t count = Read<u32>(src);
-					data_len -= sizeof(u32);
-					if (count * sizeof(Idx) != data_len)
-						throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
-
-					mesh.m_idx.resize<Idx>(count);
-					mesh.m_idx.m_stride = sizeof(Idx);
-					Read(src, mesh.m_idx.data<Idx>(), count);
 					break;
 				}
 			}
@@ -1112,7 +1225,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write vertices to 'out'
-	template <typename TOut> u32 WriteVertices(TOut& out, std::span<Vert const> verts, EFlags flags)
+	template <typename TOut> u32 WriteVertices(TOut& out, std::span<Vert const> verts, EFlags flags, EGeom geom)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
@@ -1123,24 +1236,44 @@ namespace pr::geometry::p3d
 		hdr.m_length += Write<u32>(out, s_cast<u32>(verts.size()));
 
 		// Vertex data
-		if (int(flags & EFlags::Compress) != 0)
+		if (AllSet(flags, EFlags::Compress))
 		{
-			std::vector<VertPacked> buf;
-			buf.reserve(verts.size());
+			ByteData<> buf;
+			buf.reserve(verts.size() * sizeof(float) * 3);
 
-			for (auto& v : verts)
+			// Record what geometry data is added
+			buf.push_back(static_cast<u32>(geom));
+
+			if (AllSet(geom, EGeom::Vert))
 			{
-				VertPacked p = {};
-				p.pos[0] = v.pos.x;
-				p.pos[1] = v.pos.y;
-				p.pos[2] = v.pos.z;
-
-				// Drop
-				p.norm = pr::MinElement3
+				for (auto& v : verts)
+				{
+					buf.push_back(v.pos.x);
+					buf.push_back(v.pos.y);
+					buf.push_back(v.pos.z);
+				}
+			}
+			if (AllSet(geom, EGeom::Norm))
+			{
+				for (auto& v : verts)
+					buf.push_back(Norm32bit::Compress(v.norm));
+			}
+			if (AllSet(geom, EGeom::Colr))
+			{
+				for (auto& v : verts)
+					buf.push_back(Colour32(v.col.r, v.col.g, v.col.b, v.col.a));
+			}
+			if (AllSet(geom, EGeom::Tex0))
+			{
+				for (auto& v : verts)
+				{
+					buf.push_back(v.uv.x);
+					buf.push_back(v.uv.y);
+				}
 			}
 
 			hdr.m_id = EChunkId::MeshVerticesV;
-			hdr.m_length += Write<VertPacked>(out, buf.data(), buf.size());
+			hdr.m_length += Write<u8>(out, buf.data(), buf.size());
 		}
 		else
 		{
@@ -1168,7 +1301,7 @@ namespace pr::geometry::p3d
 		hdr.m_length += Write<u32>(out, s_cast<u32>(sizeof(Idx)));
 
 		// Compress the indices using variable length ints
-		if (int(flags & EFlags::Compress) != 0)
+		if (AllSet(flags, EFlags::Compress))
 		{
 			constexpr int BitWidth = sizeof(Idx) * 8;
 
@@ -1241,6 +1374,11 @@ namespace pr::geometry::p3d
 	{
 		auto offset = traits<TOut>::tellp(out);
 
+		// Determine the union of geometry from the nuggets
+		auto geom = EGeom::Vert;
+		for (auto const& nug : mesh.m_nugget)
+			geom |= nug.m_geom;
+
 		// TriMesh chunk header
 		ChunkHeader hdr(EChunkId::Mesh, 0U);
 		Write<ChunkHeader>(out, hdr);
@@ -1252,7 +1390,7 @@ namespace pr::geometry::p3d
 		hdr.m_length += WriteMeshBBox(out, mesh.m_bbox);
 
 		// Mesh vertex data
-		hdr.m_length += WriteVertices(out, mesh.m_verts, flags);
+		hdr.m_length += WriteVertices(out, mesh.m_verts, flags, geom);
 
 		// Mesh index data
 		switch (mesh.m_idx.m_stride)
@@ -1384,12 +1522,12 @@ namespace pr::geometry
 {
 	PRUnitTest(P3dTests)
 	{
-		{
-			std::ifstream ifile("S:\\software\\PC\\vrex\\res\\lod1\\lh_foot.p3d", std::ios::binary);
-			std::ofstream ofile("P:\\dump\\lh_foot.p3d", std::ios::binary);
-			auto m = p3d::Read(ifile);
-			p3d::Write(ofile, m, p3d::EFlags::Compress);
-		}
+		//{
+		//	std::ifstream ifile("S:\\software\\PC\\vrex\\res\\lod1\\lh_foot.p3d", std::ios::binary);
+		//	std::ofstream ofile("P:\\dump\\lh_foot.p3d", std::ios::binary);
+		//	auto m = p3d::Read(ifile);
+		//	p3d::Write(ofile, m, p3d::EFlags::Compress);
+		//}
 
 		using namespace pr::geometry;
 		p3d::File file;
@@ -1415,13 +1553,19 @@ namespace pr::geometry
 		nug.m_irange.count = 4;
 		nug.m_mat = "mat1";
 
+		p3d::Vert vert = {};
+		vert.pos = v4(1,2,3,1);
+		vert.norm = v4(0,0,1,0);
+		vert.col = v4(1,1,1,1);
+		vert.uv = v2(1,1);
+
 		p3d::Mesh mesh;
 		mesh.m_name = "mesh";
 		mesh.m_bbox = pr::BBox(v4Origin, v4(1,2,3,0));
-		mesh.m_verts.push_back(p3d::Vert());
-		mesh.m_verts.push_back(p3d::Vert());
-		mesh.m_verts.push_back(p3d::Vert());
-		mesh.m_verts.push_back(p3d::Vert());
+		mesh.m_verts.push_back(vert);
+		mesh.m_verts.push_back(vert);
+		mesh.m_verts.push_back(vert);
+		mesh.m_verts.push_back(vert);
 		mesh.m_idx.m_stride = sizeof(uint16_t);
 		mesh.m_idx.push_back<uint16_t>(0);
 		mesh.m_idx.push_back<uint16_t>(1);

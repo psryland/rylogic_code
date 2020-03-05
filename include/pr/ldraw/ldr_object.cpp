@@ -2014,12 +2014,12 @@ namespace pr::ldr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Generate the model
-			// 'm_point' should contain line strip data
-			ModelGenerator<>::Cache<> cache(int(m_verts.size() + 2), int(m_verts.size() + 2));
+			// 'm_verts' should contain line strip data
+			ModelGenerator<>::Cache<> cache(int(m_verts.size() + 2), int(m_verts.size() + 2), 0, 2);
 
-			auto v_in  = std::begin(m_verts);
-			auto v_out = std::begin(cache.m_vcont);
-			auto i_out = std::begin(cache.m_icont);
+			auto v_in  = m_verts.data();
+			auto v_out = cache.m_vcont.data();
+			auto i_out = cache.m_icont.data<uint16_t>();
 			pr::Colour32 c = pr::Colour32White;
 			pr::uint16 index = 0;
 

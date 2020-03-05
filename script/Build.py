@@ -21,8 +21,11 @@ class EProjects():
 	Sqlite3 = "Sqlite3"
 	Scintilla = "Scintilla"
 	View3d = "View3d"
+	Audio = "Audio"
 	Rylogic = "Rylogic"
-	Csex = "Csex"
+	CSex = "CSex"
+	P3D = "P3D"
+	LDraw = "LDraw"
 
 	# Print all available projects
 	@staticmethod
@@ -98,6 +101,20 @@ def CleanScintilla(workspace:str, platforms:[str], configs:[str]):
 	CleanNative(os.path.join(obj_dir, "scintilla"), platforms, configs)
 	return
 
+# Build the Audio native dll
+def BuildAudio(workspace:str, platforms:[str], configs:[str]):
+	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+	platforms = platforms if platforms else ["x64", "x86"]
+	configs = configs if configs else ["Release", "Debug"]
+	MSBuild("Audio", rylogic_sln, ["Rylogic\\audio"], platforms, configs)
+	MSBuild("Audio.dll", rylogic_sln, ["Rylogic\\audio.dll"], platforms, configs)
+	return
+def CleanAudio(workspace:str, platforms:[str], configs:[str]):
+	obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
+	CleanNative(os.path.join(obj_dir, "audio"), platforms, configs)
+	CleanNative(os.path.join(obj_dir, "audio.dll"), platforms, configs)
+	return
+
 # Build the View3d native dll
 def BuildView3d(workspace:str, platforms:[str], configs:[str]):
 	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
@@ -141,23 +158,49 @@ def CleanRylogic(workspace:str, platforms:[str], configs:[str]):
 	CleanDotNet(os.path.join(workspace, "projects", "Rylogic.Gui.WPF")     , platforms, configs)
 	return
 
-# Build Csex
-def BuildCsex(workspace:str, platforms:[str], configs:[str]):
+# Build CSex
+def BuildCSex(workspace:str, platforms:[str], configs:[str]):
+	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+	platforms = platforms if platforms else ["Any CPU"]
+	configs = configs if configs else ["Release", "Debug"]
+
+	Tools.SetupVcEnvironment()
+	Tools.Exec([UserVars.nuget, "restore", rylogic_sln])
+	MSBuild("CSex", rylogic_sln, ["Tools\\Csex"], platforms, configs)
+	return
+def CleanCSex(workspace:str, platforms:[str], configs:[str]):
+	CleanDotNet(os.path.join(workspace, "projects", "CSex"), platforms, configs)
+	return
+
+# Build P3D
+def BuildP3D(workspace:str, platforms:[str], configs:[str]):
+	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+	platforms = platforms if platforms else ["x64", "x86"]
+	configs = configs if configs else ["Release", "Debug"]
+	MSBuild("p3d", rylogic_sln, ["Tools\\p3d"], platforms, configs)
+	return
+def CleanP3D(workspace:str, platforms:[str], configs:[str]):
+	obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
+	CleanNative(os.path.join(obj_dir, "p3d"), platforms, configs)
+	return
+
+# Build LDraw
+def BuildLDraw(workspace:str, platforms:[str], configs:[str]):
 	rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
 	platforms = platforms if platforms else ["Any CPU"]
 	configs = configs if configs else ["Release", "Debug"]
 
 	# Build the rylogic assemblies
 	projects = [
-		"Tools\\Csex",
+		"LDraw\\LDraw",
 		]
 
 	Tools.SetupVcEnvironment()
 	Tools.Exec([UserVars.nuget, "restore", rylogic_sln])
-	MSBuild("Csex", rylogic_sln, projects, platforms, configs)
+	MSBuild("LDraw", rylogic_sln, projects, platforms, configs)
 	return
-def CleanCsex(workspace:str, platforms:[str], configs:[str]):
-	CleanDotNet(os.path.join(workspace, "projects", "Csex"), platforms, configs)
+def CleanLDraw(workspace:str, platforms:[str], configs:[str]):
+	CleanDotNet(os.path.join(workspace, "projects", "LDraw", "LDraw"), platforms, configs)
 	return
 
 # Build all Software projects
@@ -167,15 +210,19 @@ def BuildAll(workspace:str, platforms:[str]=None, configs:[str]=None):
 	BuildSqlite3(workspace, platforms, configs)
 	BuildScintilla(workspace, platforms, configs)
 	BuildView3d(workspace, platforms, configs)
+	BuildAudio(workspace, platforms, configs)
 	BuildRylogic(workspace, platforms, configs)
-	BuildCsex(workspace, platforms, configs)
+	BuildCSex(workspace, platforms, configs)
+	BuildP3D(workspace, platforms, configs)
 	return
 def CleanAll(workspace:str, platforms:[str]=None, configs:[str]=None):
 	CleanSqlite3(workspace, platforms, configs)
 	CleanScintilla(workspace, platforms, configs)
 	CleanView3d(workspace, platforms, configs)
+	CleanAudio(workspace, platforms, configs)
 	CleanRylogic(workspace, platforms, configs)
-	CleanCsex(workspace, platforms, configs)
+	CleanCSex(workspace, platforms, configs)
+	CleanP3D(workspace, platforms, configs)
 	return
 
 # Main
@@ -197,19 +244,19 @@ def Main(args:[str]):
 		elif args[i].lower() == "-workspace":
 			workspace = args[i+1]
 			i = i + 2
-		elif args[i].lower() == "-project":
+		elif args[i].lower() == "-project" or args[i].lower() == "-projects":
 			if len(args) > i+1:
 				project = args[i+1]
 				i = i + 2
 			else:
 				EProjects.ListProjects()
 				return
-		elif args[i].lower() == "-platforms":
+		elif args[i].lower() == "-platform" or args[i].lower() == "-platforms":
 			for a in args[i+1:]:
 				if a[0] == '-': break
 				else: platforms.append(a)
 			i = i + 1 + len(platforms)
-		elif args[i].lower() == "-configs":
+		elif args[i].lower() == "-config" or args[i].lower() == "-configs":
 			for a in args[i+1:]:
 				if a[0] == '-': break
 				else: configs.append(a)
@@ -244,10 +291,16 @@ def Main(args:[str]):
 			BuildScintilla(workspace, platforms, configs)
 		elif project == EProjects.View3d:
 			BuildView3d(workspace, platforms, configs)
+		elif project == EProjects.Audio:
+			BuildAudio(workspace, platforms, configs)
 		elif project == EProjects.Rylogic:
 			BuildRylogic(workspace, platforms, configs)
-		elif project == EProjects.Csex:
-			BuildCsex(workspace, platforms, configs)
+		elif project == EProjects.CSex:
+			BuildCSex(workspace, platforms, configs)
+		elif project == EProjects.P3D:
+			BuildP3D(workspace, platforms, configs)
+		elif project == EProjects.LDraw:
+			BuildLDraw(workspace, platforms, configs)
 		else:
 			raise RuntimeError(f"Unknown project name {project}")
 

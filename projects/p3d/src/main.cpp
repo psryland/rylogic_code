@@ -45,16 +45,20 @@ struct Main
 			"     p3d.exe script.ldr\n"
 			"     p3d.exe [ordered sequence of commands]\n"
 			"\n"
+			"  ** NOTE: ORDER OF PARAMETERS IS IMPORTANT **\n"
+			"  i.e. you probably want -fo as the LAST option\n"
+			"\n"
 			"  Commands:\n"
-			"    -verbosity <level>:\n"
+			"    -verbosity <level>\n"
 			"        Set the level of feedback from this tool (0 .. 3).\n"
 			"\n"
-			"    -fi <filepath>:\n"
+			"    -fi <filepath>\n"
 			"        Load a model into memory.\n"
 			"        Supported formats: p3d, 3ds, stl (so far)\n"
 			"\n"
-			"    -fo <filepath>:\n"
+			"    -fo <filepath> [Compress]\n"
 			"        Export a p3d format model file.\n"
+			"        Compress - Optional. Compress vertex and index data\n"
 			"\n"
 			"    -RemoveDegenerates [<Tolerance>:<NormalSmoothingAngle>:<ColourDistance>:<UVDistance>]\n"
 			"        Simplify a model by removing degenerate verticies.\n"
@@ -105,15 +109,29 @@ struct Main
 			struct Parser :cmdline::IOptionReceiver<>
 			{
 				std::string m_str;
+				int m_verbosity;
+				bool m_ends_with_fileout;
 				Parser()
 					:m_str()
+					,m_verbosity()
+					,m_ends_with_fileout()
 				{}
 
 				// Read the option passed to Cex
 				bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 				{
+					m_ends_with_fileout = false;
 					for (;;)
 					{
+						if (str::EqualI(option, "-verbosity"))
+						{
+							if (arg == arg_end || IsOption(*arg) || !str::ExtractIntC(m_verbosity, 10, arg->c_str()) || m_verbosity < 0 || m_verbosity > 3)
+								throw std::runtime_error("Verbosity level must be in the range [0..3]");
+
+							auto verb = ldr::Section(m_str, "*Verbosity");
+							ldr::Append(m_str, m_verbosity);
+							break;
+						}
 						if (str::EqualI(option, "-fi"))
 						{
 							auto fi = ldr::Section(m_str, "*fi");
@@ -124,6 +142,9 @@ struct Main
 						{
 							auto fo = ldr::Section(m_str, "*fo");
 							ldr::Append(m_str, ldr::Str(*arg++));
+							if (arg != arg_end && str::EqualI(*arg, "compress"))
+								ldr::Append(m_str, "*Compress");
+							m_ends_with_fileout = true;
 							break;
 						}
 						if (str::EqualI(option, "-RemoveDegenerates"))
@@ -136,7 +157,7 @@ struct Main
 								{
 									switch (field++)
 									{
-									case 0: if (i != j) ldr::Append(m_str, "*Quantistation", "{", s.substr(i, j - i), "}"); break;
+									case 0: if (i != j) ldr::Append(m_str, "*Quantisation", "{", s.substr(i, j - i), "}"); break;
 									case 1: if (i != j) ldr::Append(m_str, "*NormalSmoothingAngle", "{", s.substr(i, j - i), "}"); break;
 									case 2: if (i != j) ldr::Append(m_str, "*ColourDistance", "{", s.substr(i, j - i), "}"); break;
 									case 3: if (i != j) ldr::Append(m_str, "*UVDistance", "{", s.substr(i, j - i), "}"); break;
@@ -166,6 +187,18 @@ struct Main
 							ldr::Append(m_str, "*m4x4 { ", m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15], "}");
 							break;
 						}
+						if (str::EqualI(option, "--help"))
+						{
+							return false;
+						}
+						if (str::EqualI(option, "-h"))
+						{
+							return false;
+						}
+						if (str::EqualI(option, "/?"))
+						{
+							return false;
+						}
 
 						// NEW_COMMAND
 						throw std::runtime_error(FmtS("Unknown command line option: %S", option.c_str()));
@@ -178,6 +211,14 @@ struct Main
 			EnumCommandLine(args.c_str(), p);
 			if (p.m_str.empty())
 				throw std::runtime_error("Invalid command line");
+
+			// Warn if -fo is not the last operation
+			if (!p.m_ends_with_fileout)
+				std::cout << "WARNING: The command sequence does not end with a file output command (-fo).\n";
+
+			// Dump the script
+			if (p.m_verbosity >= 3)
+				std::cout << "Command Script:\n" << p.m_str << "\n";
 
 			// Create a string source
 			m_base_dir = current_path();
@@ -292,24 +333,36 @@ struct Main
 	// Export a p3d model file
 	void ExportFile(script::Reader& reader) const
 	{
-		// Generate an output filepath based on 'infile'
 		std::string outfile, extn = "p3d";
+		p3d::EFlags p3d_flags = p3d::EFlags::None;
+
+		// Generate an output filepath based on 'infile'
 		if (reader.IsSectionStart())
 		{
 			// Parse the optional *fo section
 			reader.SectionStart();
 
-			// If a filepath is given, read it
-			if (!reader.IsKeyword())
-				reader.String(outfile);
-
-			// Parse optional keywords
-			for (char kw[32]; reader.NextKeywordS(kw);)
+			for (;!reader.IsSectionEnd(); )
 			{
-				if (str::EqualI(kw, "Code"))
+				// If a filepath is given, read it
+				if (!reader.IsKeyword())
 				{
-					extn = "cpp";
+					reader.String(outfile);
 					continue;
+				}
+				if (char kw[32]; reader.NextKeywordS(kw))
+				{
+					// Parse optional keywords
+					if (str::EqualI(kw, "Code"))
+					{
+						extn = "cpp";
+						continue;
+					}
+					if (str::EqualI(kw, "Compress"))
+					{
+						p3d_flags |= p3d::EFlags::Compress;
+						continue;
+					}
 				}
 			}
 
@@ -335,10 +388,21 @@ struct Main
 
 		// Determine the output format from the extn
 		extn = outpath.extension().string();
-		str::EqualI(extn, ".p3d") ? WriteP3d(m_model, outpath) :
+		str::EqualI(extn, ".p3d") ? WriteP3d(m_model, outpath, p3d_flags) :
 		str::EqualI(extn, ".cpp") ? WriteCpp(m_model, outpath, "\t") :
 		throw std::runtime_error("Unsupported output file format: "s + extn);
 
+		if (m_verbosity >= 3)
+		{
+			for (auto& mesh : m_model->m_scene.m_meshes)
+			{
+				std::cout
+					<< "  Mesh: " << mesh.m_name.c_str() << "\n"
+					<< "    V Count: " << mesh.m_verts.size() << "\n"
+					<< "    I Count: " << mesh.m_idx.size() / mesh.m_idx.m_stride << "\n"
+					<< "    N Count: " << mesh.m_nugget.size() << "\n";
+			}
+		}
 		if (m_verbosity >= 1)
 			std::cout << "'" << outpath << "' saved." << std::endl;
 	}

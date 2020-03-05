@@ -10,22 +10,20 @@ using namespace pr;
 using namespace pr::geometry;
 
 // Generate normals for 16 or 32 bit indices
-template <typename VCont, typename ICont>
-void GenerateVertNormals(p3d::Nugget& nug, float smoothing_angle, VCont& vcont, ICont& icont)
+template <typename VIdx>
+void GenerateVertNormals(p3d::Nugget& nug, float smoothing_angle, p3d::Mesh::VCont& vcont, VIdx* icont)
 {
-	typedef std::remove_reference<decltype(icont[0])>::type VIdx;
-
 	// Pointer to the first index of this nugget
-	auto iptr = std::begin(icont) + nug.m_irange.first;
+	auto iptr = &icont[nug.m_irange.first];
 
 	// Reset the vrange in the nugget, since generating normals will create new verts
-	VIdx mn = pr::limits<VIdx>::max();
-	VIdx mx = pr::limits<VIdx>::min();
+	auto mn = pr::limits<VIdx>::max();
+	auto mx = pr::limits<VIdx>::min();
 
 	// Generate the normals
-	GenerateNormals(nug.m_irange.count, iptr, pr::DegreesToRadians(smoothing_angle),
+	GenerateNormals(nug.m_irange.count, iptr, DegreesToRadians(smoothing_angle),
 		[&](VIdx idx) { return vcont[idx].pos; }, vcont.size(),
-		[&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
+		[&](VIdx new_idx, VIdx orig_idx, v4 const& normal)
 		{
 			if (new_idx >= vcont.size()) vcont.resize(size_t(new_idx) + 1, vcont[orig_idx]);
 			vcont[new_idx].norm = normal;
@@ -48,7 +46,7 @@ void GenerateVertNormals(p3d::Nugget& nug, float smoothing_angle, VCont& vcont, 
 void GenerateVertNormals(p3d::Mesh& mesh, float smoothing_angle, int verbosity)
 {
 	// No verts, no normals
-	if (mesh.m_verts.empty())
+	if (mesh.m_verts.empty() || mesh.m_idx.empty())
 		return;
 
 	if (verbosity >= 2)
@@ -61,8 +59,17 @@ void GenerateVertNormals(p3d::Mesh& mesh, float smoothing_angle, int verbosity)
 		if (nug.m_topo != EPrim::TriList)
 			continue;
 
-		if (!mesh.m_idx16.empty()) GenerateVertNormals(nug, smoothing_angle, mesh.m_verts, mesh.m_idx16);
-		if (!mesh.m_idx32.empty()) GenerateVertNormals(nug, smoothing_angle, mesh.m_verts, mesh.m_idx32);
+		switch (mesh.m_idx.m_stride)
+		{
+		case sizeof(uint16_t):
+			GenerateVertNormals(nug, smoothing_angle, mesh.m_verts, mesh.m_idx.data<uint16_t>());
+			break;
+		case sizeof(uint32_t):
+			GenerateVertNormals(nug, smoothing_angle, mesh.m_verts, mesh.m_idx.data<uint32_t>());
+			break;
+		default:
+			throw std::runtime_error("Unsupported index format");
+		}
 	}
 }
 

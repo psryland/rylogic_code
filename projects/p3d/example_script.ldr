@@ -42,6 +42,9 @@
 		// Optional. The file path to write the file to.
 		// If omitted, defaults to the input file, but with the p3d extension.
 		"<filepath_or_directory_of_where_to_write_the_file>"
+	
+		// Optional. Output a p3d file with compressed vertex and index data
+		*Compress
 		
 		// Optional. Output a '*.cpp' file that statically defines the model
 		*Code

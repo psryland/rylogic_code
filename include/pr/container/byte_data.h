@@ -11,32 +11,6 @@
 
 namespace pr
 {
-	// Handy typedef of a vector of bytes
-	using ByteCont = std::vector<unsigned char>;
-
-	// Append data to a byte container
-	template <typename T> inline ByteCont& AppendData(ByteCont& data, const T& object)
-	{
-		data.insert(data.end(), reinterpret_cast<const unsigned char*>(&object), reinterpret_cast<const unsigned char*>(&object + 1));
-		return data;
-	}
-	template <> inline ByteCont& AppendData(ByteCont& data, ByteCont const& more_data)
-	{
-		data.insert(data.end(), more_data.begin(), more_data.end());
-		return data;
-	}
-	inline ByteCont& AppendData(ByteCont& data, void const* begin, void const* end)
-	{
-		data.insert(data.end(), static_cast<const unsigned char*>(begin), static_cast<const unsigned char*>(end));
-		return data;
-	}
-	inline ByteCont& AppendData(ByteCont& data, void const* buffer, size_t buffer_size)
-	{
-		auto p = static_cast<unsigned char const*>(buffer);
-		data.insert(data.end(), p, p + buffer_size);
-		return data;
-	}
-	
 	// A dynamically allocating container of bytes with alignment.
 	// Loosely like 'std::vector<unsigned char>' except the buffer is aligned.
 	// Note: 'Type' is not a class template parameter here so that the contents
@@ -142,6 +116,10 @@ namespace pr
 		}
 
 		// Pre-allocate space
+		template <typename Type> void reserve(size_t new_capacity)
+		{
+			reserve(new_capacity * sizeof(Type));
+		}
 		void reserve(size_t new_capacity)
 		{
 			grow(new_capacity);
@@ -413,4 +391,31 @@ namespace pr
 			return ByteDataCPtr(m_beg, m_end);
 		}
 	};
+
+	// Handy typedef of a vector of bytes
+	using bytes_t = std::vector<unsigned char>;
+	using ByteCont = bytes_t;
+
+	// Append data to a byte container
+	template <typename T> inline bytes_t& AppendData(bytes_t& data, const T& object)
+	{
+		data.insert(data.end(), reinterpret_cast<const unsigned char*>(&object), reinterpret_cast<const unsigned char*>(&object + 1));
+		return data;
+	}
+	template <> inline bytes_t& AppendData(bytes_t& data, bytes_t const& more_data)
+	{
+		data.insert(data.end(), more_data.begin(), more_data.end());
+		return data;
+	}
+	inline bytes_t& AppendData(bytes_t& data, void const* begin, void const* end)
+	{
+		data.insert(data.end(), static_cast<const unsigned char*>(begin), static_cast<const unsigned char*>(end));
+		return data;
+	}
+	inline bytes_t& AppendData(bytes_t& data, void const* buffer, size_t buffer_size)
+	{
+		auto p = static_cast<unsigned char const*>(buffer);
+		data.insert(data.end(), p, p + buffer_size);
+		return data;
+	}
 }

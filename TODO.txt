@@ -40,6 +40,7 @@ RCT/RST
 	- System for creating graphs of data in session logs
 
 VRex
+	- Add a quick way to put REX in one of the available stances
 	- Fix devices going offline
 	- Fix assert_param macro - threading issues
 	- Add named-pipe RexLink connection type

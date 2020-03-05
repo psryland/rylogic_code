@@ -168,10 +168,18 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 	});
 
 	// Update the mesh indices to use the non-degenerate vert indices
-	for (auto& idx : mesh.m_idx16)
-		idx = s_cast<p3d::u16>(map[idx].kept - verts.data());
-	for (auto& idx : mesh.m_idx32)
-		idx = s_cast<p3d::u32>(map[idx].kept - verts.data());
+	auto remap_mesh_indices = [&](size_t count, auto* idx)
+	{
+		using VIdx = std::decay_t<decltype(*idx)>;
+		for (size_t i = 0; i != count; ++i, ++idx)
+			*idx = s_cast<VIdx>(map[*idx].kept - verts.data());
+	};
+	switch (mesh.m_idx.m_stride)
+	{
+	case sizeof(uint16_t): remap_mesh_indices(mesh.m_idx.size<uint16_t>(), mesh.m_idx.data<uint16_t>()); break;
+	case sizeof(uint32_t): remap_mesh_indices(mesh.m_idx.size<uint32_t>(), mesh.m_idx.data<uint32_t>()); break;
+	default: throw std::runtime_error("Unsupported index format");
+	}
 
 	// Update the vrange for each nugget
 	for (auto& nug : mesh.m_nugget)

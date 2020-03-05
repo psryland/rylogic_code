@@ -46,17 +46,18 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 
 		// Reserve space
 		mesh.m_verts.reserve(o.m_mesh.m_vert.size());
-		mesh.m_idx16.reserve(o.m_mesh.m_face.size() * 3);
 		mesh.m_nugget.reserve(o.m_mesh.m_matgroup.size());
+		mesh.m_idx.reserve<uint16_t>(o.m_mesh.m_face.size() * 3);
+		mesh.m_idx.m_stride = sizeof(uint16_t);
 
-		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a pr::BBox)
-		pr::BBox bbox = pr::BBoxReset;
-		auto bb = [&](pr::v4 const& v) { pr::Encompass(bbox, v); return v; };
+		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a BBox)
+		BBox bbox = BBoxReset;
+		auto bb = [&](v4 const& v) { Encompass(bbox, v); return v; };
 
 		// Get the 3ds code to extract the verts/faces/normals/nuggets
 		// We may regenerate the normals later
 		max_3ds::CreateModel(o, matlookup,
-			[&](max_3ds::Material const& mat, EGeom geom, pr::Range<pr::uint16> vrange, pr::Range<pr::uint32> irange) // nugget out
+			[&](max_3ds::Material const& mat, EGeom geom, Range<uint16_t> vrange, Range<uint32_t> irange) // nugget out
 			{
 				p3d::Nugget nug = {};
 				nug.m_topo = EPrim::TriList;
@@ -66,7 +67,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 				nug.m_mat = mat.m_name;
 				mesh.m_nugget.push_back(nug);
 			},
-			[&](pr::v4 const& p, pr::Colour const& c, pr::v4 const& n, pr::v2 const& t) // vertex out
+			[&](v4 const& p, Colour const& c, v4 const& n, v2 const& t) // vertex out
 			{
 				p3d::Vert vert = {};
 				vert.pos = bb(p);
@@ -75,11 +76,11 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 				vert.uv = t;
 				mesh.m_verts.push_back(vert);
 			},
-			[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2) // index out
+			[&](uint16_t i0, uint16_t i1, uint16_t i2) // index out
 			{
-				mesh.m_idx16.push_back(i0);
-				mesh.m_idx16.push_back(i1);
-				mesh.m_idx16.push_back(i2);
+				mesh.m_idx.push_back<uint16_t>(i0);
+				mesh.m_idx.push_back<uint16_t>(i1);
+				mesh.m_idx.push_back<uint16_t>(i2);
 			});
 		mesh.m_bbox = bbox;
 
@@ -120,9 +121,9 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
 		p3d.m_scene.m_meshes.emplace_back(o.m_header);
 		auto& mesh = p3d.m_scene.m_meshes.back();
 
-		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a pr::BBox)
-		pr::BBox bbox = pr::BBoxReset;
-		auto bb = [&](pr::v4 const& v) { pr::Encompass(bbox, v); return v; };
+		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a BBox)
+		BBox bbox = BBoxReset;
+		auto bb = [&](v4 const& v) { Encompass(bbox, v); return v; };
 
 		// Copy the verts
 		mesh.m_verts.reserve(o.m_verts.size());
@@ -130,9 +131,9 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
 		{
 			p3d::Vert vert = {};
 			vert.pos = bb(o.m_verts[i]);
-			vert.col = pr::Colour32White;
+			vert.col = Colour32White;
 			vert.norm = o.m_norms[i / 3];
-			vert.uv = pr::v2Zero;
+			vert.uv = v2Zero;
 			mesh.m_verts.push_back(vert);
 		}
 		mesh.m_bbox = bbox;
@@ -142,43 +143,45 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
 		if (vcount < 0x10000)
 		{
 			// Use 16bit indices
-			mesh.m_idx16.resize(vcount);
-			auto ibuf = mesh.m_idx16.data();
-			for (pr::uint16 i = 0; vcount-- != 0;)
-				* ibuf++ = i++;
+			mesh.m_idx.resize<uint16_t>(vcount);
+			mesh.m_idx.m_stride = sizeof(uint16_t);
+			auto ibuf = mesh.m_idx.data<uint16_t>();
+			for (uint16_t i = 0; vcount-- != 0;)
+				*ibuf++ = i++;
 		}
 		else
 		{
 			// Use 32bit indices
-			mesh.m_idx32.resize(vcount);
-			auto ibuf = mesh.m_idx32.data();
-			for (pr::uint32 i = 0; vcount-- != 0;)
-				* ibuf++ = i++;
+			mesh.m_idx.resize<uint32_t>(vcount);
+			mesh.m_idx.m_stride = sizeof(uint32_t);
+			auto ibuf = mesh.m_idx.data<uint32_t>();
+			for (uint32_t i = 0; vcount-- != 0;)
+				*ibuf++ = i++;
 		}
 
 		// Generate a nugget
 		p3d::Nugget nug = {};
 		nug.m_topo = EPrim::TriList;
 		nug.m_geom = EGeom::Vert | EGeom::Norm;
-		nug.m_vrange = pr::Range<size_t>(0, mesh.m_verts.size());
-		nug.m_irange = pr::Range<size_t>(0, mesh.m_verts.size());
+		nug.m_vrange = Range<size_t>(0, mesh.m_verts.size());
+		nug.m_irange = Range<size_t>(0, mesh.m_verts.size());
 		nug.m_mat = "default";
 		mesh.m_nugget.push_back(nug);
 
 		// Generate a material
 		p3d::Material mat = {};
 		mat.m_id = "default";
-		mat.m_diffuse = pr::Colour32White;
+		mat.m_diffuse = Colour32White;
 		p3d.m_scene.m_materials.push_back(mat);
 	});
 	return std::make_unique<p3d::File>(p3d);
 }
 
 // Write 'p3d' as a p3d format file
-void WriteP3d(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const& outfile)
+void WriteP3d(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const& outfile, pr::geometry::p3d::EFlags flags)
 {
 	std::ofstream ofile(outfile, std::ofstream::binary);
-	p3d::Write(ofile, *p3d);
+	p3d::Write(ofile, *p3d, flags);
 }
 
 // Write 'p3d' as a cpp source file

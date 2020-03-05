@@ -404,4 +404,41 @@ namespace pr
 	//			u32Array[i] |= ((unsigned int)fgetc(file)) << (j << 3);
 	//	}
 	//}
+
+	// Russian multiplication method
+	inline long long RussianMultiply(long a, long b)
+	{
+		if (a == 0 || b == 0)
+			return 0;
+
+		int sign = +1;
+		if (a < 0) { a = -a; sign *= -1; }
+		if (b < 0) { b = -b; sign *= -1; }
+
+		long long result = 0;
+		for (; a != 0; a >>= 1, b <<= 1)
+		{
+			if (!(a & 1)) continue;
+			result += b;
+		}
+		result *= sign;
+		return result;
+	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::maths
+{
+	PRUnitTest(LargeIntTests)
+	{
+		{
+			// Russian multiply
+			PR_CHECK(RussianMultiply(+1423, +321), +1423LL * +321LL);
+			PR_CHECK(RussianMultiply(-1423, +321), -1423LL * +321LL);
+			PR_CHECK(RussianMultiply(+1423, -321), +1423LL * -321LL);
+			PR_CHECK(RussianMultiply(-1423, -321), -1423LL * -321LL);
+		}
+	}
+}
+#endif

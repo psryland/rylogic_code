@@ -98,4 +98,6 @@ UTF-8 CODES:
 Emoji
 	Poo 💩 (U+1f4a9)
 	Banana 🍌 (U+1f34c)
+	Music Flat Sign ♭ (U+266D)
+	Music Sharp Sign ♯ (U+266F)
 	

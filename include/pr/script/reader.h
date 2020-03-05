@@ -230,10 +230,30 @@ namespace pr::script
 
 		// Scans forward until a keyword identifier is found within the current scope.
 		// Non-keyword tokens are skipped. If a section is found it is skipped.
-		// If a keyword is found, the source is position at the next character after the keyword
+		// If a keyword is found, the source is positioned at the next character after the keyword.
 		// Returns true if a keyword is found, false otherwise.
 		template <typename StrType> bool NextKeywordS(StrType& kw)
 		{
+			// Note:
+			//  Typical control flow:
+			//      reader.SectionStart();
+			//      for (;!reader.IsSectionEnd();)
+			//      {
+			//      	if (!reader.IsKeyword())
+			//      	{
+			//      		reader.StringC(...);
+			//      	}
+			//      	else if (char kw[20]; reader.NextKeyword(kw))
+			//      	{
+			//      		if (str::EqualI(kw, "Option1"))
+			//      		{
+			//      			//...
+			//      			continue;
+			//      		}
+			//      	}
+			//      }
+			//      reader.SectionEnd();
+
 			auto& src = m_pp;
 			for (;*src && *src != L'}' && *src != L'*';)
 			{

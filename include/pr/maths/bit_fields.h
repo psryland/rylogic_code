@@ -10,9 +10,9 @@
 namespace pr
 {
 	// Convert to/from uint64 to uint32[2]
-	inline uint64_t MakeLL(uint32_t hi, uint32_t lo)
+	constexpr uint64_t MakeLL(uint32_t hi, uint32_t lo)
 	{
-		return ((uint64_t(hi) << 32L) | lo);
+		return (static_cast<uint64_t>(hi) << 32) | lo;
 	}
 	inline void BreakLL(uint64_t ll, uint32_t& hi, uint32_t& lo)
 	{
@@ -21,23 +21,23 @@ namespace pr
 	}
 
 	// Bit manipulation functions
-	inline uint32_t Bit32(int n)
+	constexpr uint32_t Bit32(int n)
 	{
 		return 1U << n;
 	}
-	inline uint64_t Bit64(int n)
+	constexpr uint64_t Bit64(int n)
 	{
 		return 1i64 << n;
 	}
 
 	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
-	template <typename T, typename U> inline T SetBits(T value, U mask, bool state)
+	template <typename T, typename U> constexpr T SetBits(T value, U mask, bool state)
 	{
 		return state ? value | static_cast<T>(mask) : value & ~static_cast<T>(mask);
 	}
 
 	// Sets the masked bits of 'value' to the state 'bitfield'
-	template <typename T, typename U> inline T SetBits(T value, U mask, U bitfield)
+	template <typename T, typename U> constexpr T SetBits(T value, U mask, U bitfield)
 	{
 		value &= ~mask;            // clear masked bits to zero
 		value |=  mask & bitfield; // set bits from bit field
@@ -45,19 +45,19 @@ namespace pr
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
-	template <typename T, typename U> inline bool AnySet(T value, U mask)
+	template <typename T, typename U> constexpr bool AnySet(T value, U mask)
 	{
 		return (value & T(mask)) != T();
 	}
 
 	// Return true if all bits in 'value & mask == mask'
-	template <typename T, typename U> inline bool AllSet(T value, U mask)
+	template <typename T, typename U> constexpr bool AllSet(T value, U mask)
 	{
 		return (value & T(mask)) == T(mask);
 	}
 
 	// Reverse the order of bits in 'v'
-	inline uint8 ReverseBits8(uint8 v)
+	constexpr uint8 ReverseBits8(uint8 v)
 	{
 		//if constexpr(sizeof(void*) == 8)
 			return static_cast<uint8>(((v * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32);
@@ -66,7 +66,7 @@ namespace pr
 	}
 
 	// Reverse the order of bits in 'v'
-	inline uint32_t ReverseBits32(uint32_t v)
+	constexpr uint32_t ReverseBits32(uint32_t v)
 	{
 		v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);	// swap odd and even bits
 		v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);	// swap consecutive pairs
@@ -77,13 +77,13 @@ namespace pr
 	}
 
 	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
-	inline uint32_t ReverseBits32(uint32_t v, int n)
+	constexpr uint32_t ReverseBits32(uint32_t v, int n)
 	{
 		return (v & (0xFFFFFFFFU << n)) | (ReverseBits32(v) >> (32 - n));
 	}
 
 	// Reverse the order of bits in 'v'
-	inline uint64_t ReverseBits64(uint64_t v)
+	constexpr uint64_t ReverseBits64(uint64_t v)
 	{
 		v = ((v >>  1) & 0x5555555555555555ULL) | ((v & 0x5555555555555555ULL) <<  1); // swap odd and even bits
 		v = ((v >>  2) & 0x3333333333333333ULL) | ((v & 0x3333333333333333ULL) <<  2); // swap consecutive pairs
@@ -95,80 +95,69 @@ namespace pr
 	}
 
 	// Reverse the order of the lower 'n' bits in 'v'. e.g. ReverseBits32(0b00101101, 4) returns 0b00101011
-	inline uint64_t ReverseBits64(uint64_t v, int n)
+	constexpr uint64_t ReverseBits64(uint64_t v, int n)
 	{
 		return (v & (0xFFFFFFFFFFFFFFFFULL << n)) | (ReverseBits64(v) >> (64 - n));
 	}
 
 	// Returns a bit mask containing only the lowest bit of 'n'
-	template <typename T, typename = maths::enable_if_intg<T>> inline T LowBit(T n)
+	template <typename T, typename = maths::enable_if_intg<T>> constexpr T LowBit(T n)
 	{
 		return n - ((n - 1) & n);
 	}
-	template <typename T, typename = maths::enable_if_enum<T>> inline T LowBit(T n, int = 0)
+	template <typename T, typename = maths::enable_if_enum<T>> constexpr T LowBit(T n, int = 0)
 	{
 		auto x = static_cast<std::underlying_type<T>::type>(n);
 		return static_cast<T>(LowBit(x));
 	}
 
 	// Returns the bit position of the highest bit
-	// Also, is the floor of the log base 2 for a 32 bit integer
-	template <typename T> inline T HighBitIndex(T n)
+	constexpr int HighBitIndex(uint64_t n)
 	{
-		using UT = std::make_unsigned<T>::type;
-
-		T pos = 0;
-		int bits = 4 * sizeof(T);
-		for (UT mask = UT(~0) >> bits; bits; bits >>= 1, mask >>= bits)
-		{
-			auto shift = ((n & ~mask) != 0) * bits;
-			n >>= shift;
-			pos |= shift;
-		}
-		return pos;
-	}
-	inline uint32_t HighBitIndex(uint32_t n)
-	{
-		unsigned int shift, pos = 0;
-		shift = ((n & 0xFFFF0000) != 0) << 4; n >>= shift; pos |= shift;
-		shift = ((n &     0xFF00) != 0) << 3; n >>= shift; pos |= shift;
-		shift = ((n &       0xF0) != 0) << 2; n >>= shift; pos |= shift;
-		shift = ((n &        0xC) != 0) << 1; n >>= shift; pos |= shift;
-		shift = ((n &        0x2) != 0) << 0; n >>= shift; pos |= shift;
+		unsigned int shift = 0, pos = 0;
+		shift = ((n & 0xFFFFFFFF00000000ULL) != 0) << 5; n >>= shift; pos |= shift;
+		shift = ((n &         0xFFFF0000ULL) != 0) << 4; n >>= shift; pos |= shift;
+		shift = ((n &             0xFF00ULL) != 0) << 3; n >>= shift; pos |= shift;
+		shift = ((n &               0xF0ULL) != 0) << 2; n >>= shift; pos |= shift;
+		shift = ((n &                0xCULL) != 0) << 1; n >>= shift; pos |= shift;
+		shift = ((n &                0x2ULL) != 0) << 0; n >>= shift; pos |= shift;
 		return pos;
 	}
 
 	// Returns the bit position of the lowest bit
-	template <typename T> inline T LowBitIndex(T n)
+	constexpr int LowBitIndex(uint64_t n)
 	{
 		return HighBitIndex(LowBit(n));
 	}
 
 	// Return the integer log2 of 'n'
-	inline int IntegerLog2(uint64_t n)
+	constexpr int IntegerLog2(uint64_t n)
 	{
-		// This only works for IEEE floats
-		assert(n != 0);
-		auto v = static_cast<double const>(n);
-		auto c = *reinterpret_cast<long long const*>(&v);
-		return (c >> 52) - 511;
+		return HighBitIndex(n);
+
+		// Doesn't work for values greater than (1 << 52)
+		// // This only works for IEEE 64bit floats: [1:sign][11:exponent][52:fraction]
+		// assert(n != 0);
+		// auto v = static_cast<double const>(n);
+		// auto c = *reinterpret_cast<long long const*>(&v);
+		// return ((c >> 52) & 0x7FF) - 1023;
 	}
 
 	// Return a bit mask contain only the highest bit of 'n'
-	// Must be a faster way?
-	template <typename T> inline T HighBit(T n)
+	template <typename T, typename = maths::enable_if_intg<T>> constexpr T HighBit(T n)
 	{
+		// Must be a faster way?
 		return T(1) << HighBitIndex(n);
 	}
 
 	// Returns true if 'n' is a exact power of two
-	template <typename T> constexpr inline bool IsPowerOfTwo(T n)
+	template <typename T> constexpr bool IsPowerOfTwo(T n)
 	{
 		return ((n - 1) & n) == 0;
 	}
 
 	// Return the next highest power of two greater than 'n'
-	template <typename T, typename = maths::enable_if_intg<T>> inline T PowerOfTwoGreaterThan(T n)
+	template <typename T, typename = maths::enable_if_intg<T>> constexpr T PowerOfTwoGreaterThan(T n)
 	{
 		n--;
 		n |= n >> 1;
@@ -182,9 +171,9 @@ namespace pr
 	}
 
 	// Returns the number of set bits in 'n'
-	template <typename T> inline uint32_t CountBits(T n)
+	template <typename T> constexpr int CountBits(T n)
 	{
-		uint32_t count = 0;
+		int count = 0;
 		while (n)
 		{
 			++count;
@@ -192,15 +181,14 @@ namespace pr
 		}
 		return count;
 	}
-
-	// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
-	// Constant time bit count works for 32-bit numbers only.
-	// Fix last line for 64-bit numbers
-	template <> inline uint32_t CountBits(unsigned int n)
+	template <> constexpr int CountBits(unsigned int n)
 	{
-		unsigned int tmp;
-		tmp = n - ((n >> 1) & 033333333333)
-				- ((n >> 2) & 011111111111);
+		// http://infolab.stanford.edu/~manku/bitcount/bitcount.html
+		// Constant time bit count works for 32-bit numbers only.
+		// Fix last line for 64-bit numbers
+		unsigned int tmp = n
+			- ((n >> 1) & 033333333333)
+			- ((n >> 2) & 011111111111);
 		return ((tmp + (tmp >> 3)) & 030707070707) % 63;
 	}
 
@@ -319,18 +307,24 @@ namespace pr::maths
 			PR_CHECK(bits[4], 1U << 9);
 		}
 		{
-			auto n0 = 0b1010101;
-			PR_CHECK(IntegerLog2(n0), 6);
-			auto n1 = 0b101010101010101ULL;
-			PR_CHECK(IntegerLog2(n1), 14);
+			auto n0 = 0b1; // 1
+			PR_CHECK(IntegerLog2(n0), 0);
+			auto n1 = 0b10; // 2
+			PR_CHECK(IntegerLog2(n1), 1);
+			auto n2 = 0b1000000; // 64
+			PR_CHECK(IntegerLog2(n2), 6);
+			auto n3 = 0b101010101010101ULL; // 21845
+			PR_CHECK(IntegerLog2(n3), 14);
+			auto n4 = 0xFFFFFFFFFFFFFFFFULL; // 18446744073709551615
+			PR_CHECK(IntegerLog2(n4), 63);
 		}
 		{
 			char const* mask_str = "1001110010";
 			auto mask = Bits<uint32_t>(mask_str);
 			PR_CHECK(mask, 626U);
 			PR_CHECK(BitStr(mask), mask_str);
-			PR_CHECK(HighBitIndex(mask), 9U);
-			PR_CHECK(LowBitIndex(mask), 1U);
+			PR_CHECK(HighBitIndex(mask), 9);
+			PR_CHECK(LowBitIndex(mask), 1);
 			PR_CHECK(LowBit(mask), 2U);
 			PR_CHECK(HighBit(mask), 0x200U);
 		}
@@ -348,7 +342,7 @@ namespace pr::maths
 			auto mask = Bits<unsigned long long>(mask_str);
 			PR_CHECK(mask, 0x9332A94E965761A4ULL);
 			PR_CHECK(HighBitIndex(mask), 63);
-			PR_CHECK(LowBitIndex(mask), 2U);
+			PR_CHECK(LowBitIndex(mask), 2);
 			PR_CHECK(LowBit(mask), 4);
 			PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
 		}

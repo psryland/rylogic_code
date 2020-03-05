@@ -19,7 +19,7 @@ namespace pr::rdr
 		int m_ccount; // The length of the 'colours' array. 0, 1, or 'vcount'
 		int m_ncount; // The length of the 'normals' array. 0, 1, or 'vcount'
 		v4          const* m_verts;      // The vertex data for the model
-		uint16      const* m_indices;    // The index data for the model
+		uint16_t    const* m_indices;    // The index data for the model
 		NuggetProps const* m_nuggets;    // The nugget data for the model
 		Colour32    const* m_colours;    // The colour data for the model. Typically nullptr, 1, or 'vcount' colours
 		v4          const* m_normals;    // The normal data for the model. Typically nullptr or a pointer to 'vcount' normals
@@ -34,7 +34,7 @@ namespace pr::rdr
 			m_verts = vbuf;
 			return *this;
 		}
-		MeshCreationData& indices(uint16 const* ibuf, int count)
+		MeshCreationData& indices(uint16_t const* ibuf, int count)
 		{
 			assert(count == 0 || ibuf != nullptr);
 			m_icount = count;
@@ -81,7 +81,7 @@ namespace pr::rdr
 			m_verts = vbuf.begin();
 			return *this;
 		}
-		MeshCreationData& indices(std::initializer_list<uint16> ibuf)
+		MeshCreationData& indices(std::initializer_list<uint16_t> ibuf)
 		{
 			m_icount = int(ibuf.size());
 			m_indices = ibuf.begin();
@@ -118,7 +118,7 @@ namespace pr::rdr
 		{
 			return verts(&vbuf[0], N);
 		}
-		template <int N> MeshCreationData& indices(uint16 const (&ibuf)[N])
+		template <int N> MeshCreationData& indices(uint16_t const (&ibuf)[N])
 		{
 			return indices(&ibuf[0], N);
 		}
@@ -154,14 +154,9 @@ namespace pr::rdr
 			//  reinterpret_cast and fill the buffer with u32's, and set the 'm_idx32' flag.
 
 			using VType = VertexType;
-
 			using VCont = vector<VType>;
-			using ICont = vector<uint16>;
+			using ICont = ByteData<4>;
 			using NCont = vector<NuggetProps>;
-
-			using VIter = typename VCont::iterator;
-			using IIter = typename ICont::iterator;
-			using NIter = typename NCont::iterator;
 
 		private:
 
@@ -197,21 +192,24 @@ namespace pr::rdr
 			ICont& m_icont; // Model faces/lines/points/etc
 			NCont& m_ncont; // Model nuggets
 			BBox& m_bbox;  // Model bounding box
-			bool         m_idx32; // Interpret 'm_icont' as a buffer of uint32's
+			int m_idx_stride; // 0 = variable, n = bytes per index
 
-			Cache(int vcount = 0, int icount = 0, int ncount = 0)
+			Cache()
+				:Cache(0,0,0,1)
+			{}
+			Cache(int vcount, int icount, int ncount, int idx_stride)
 				:m_buffers(this_thread_instance())
-				, m_in_use(this_thread_cache_in_use())
-				, m_name(m_buffers.m_name)
-				, m_vcont(m_buffers.m_vcont)
-				, m_icont(m_buffers.m_icont)
-				, m_ncont(m_buffers.m_ncont)
-				, m_bbox(m_buffers.m_bbox)
-				, m_idx32(false)
+				,m_in_use(this_thread_cache_in_use())
+				,m_name(m_buffers.m_name)
+				,m_vcont(m_buffers.m_vcont)
+				,m_icont(m_buffers.m_icont)
+				,m_ncont(m_buffers.m_ncont)
+				,m_bbox(m_buffers.m_bbox)
+				,m_idx_stride(idx_stride)
 			{
-				assert(vcount >= 0 && icount >= 0 && ncount >= 0);
+				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
 				m_vcont.resize(vcount);
-				m_icont.resize(icount);
+				m_icont.resize(icount * idx_stride);
 				m_ncont.resize(ncount);
 				m_in_use = true;
 			}
@@ -231,16 +229,24 @@ namespace pr::rdr
 				m_icont.resize(0);
 				m_ncont.resize(0);
 				m_bbox = BBoxReset;
-				m_idx32 = false;
 			}
 
 			// Container item counts
 			size_t VCount() const { return m_vcont.size(); }
-			size_t ICount() const { return m_icont.size() / (m_idx32 ? 2 : 1); }
+			size_t ICount() const { return m_icont.size() / m_idx_stride; }
 			size_t NCount() const { return m_ncont.size(); }
 
-			// Helper for accessing the index buffer as 32 or 16 bit indices
-			template <typename IType> IType* idx() { return reinterpret_cast<IType*>(m_icont.data()); }
+			// Return the buffer format associated with the index stride
+			DXGI_FORMAT IdxFormat() const
+			{
+				switch (m_idx_stride)
+				{
+				case 4: return dx_format_v<uint32_t>;
+				case 2: return dx_format_v<uint16_t>;
+				case 1: return dx_format_v<uint8_t>;
+				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", m_idx_stride));
+				}
+			}
 
 			// Add a nugget to 'm_ncont' (helper)
 			void AddNugget(EPrim topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
@@ -285,18 +291,22 @@ namespace pr::rdr
 						{
 						case EPrim::TriList:
 							{
-								if (cache.m_idx32)
-									FlipTriListFaces<VType, uint32>(cache, nug.m_irange);
-								else
-									FlipTriListFaces<VType, uint16>(cache, nug.m_irange);
+								switch (cache.m_idx_stride)
+								{
+								case sizeof(uint32_t): FlipTriListFaces<VType, uint32_t>(cache, nug.m_irange); break;
+								case sizeof(uint16_t): FlipTriListFaces<VType, uint16_t>(cache, nug.m_irange); break;
+								default: throw std::runtime_error("Unsupported index stride");
+								}
 								break;
 							}
 						case EPrim::TriStrip:
 							{
-								if (cache.m_idx32)
-									FlipTriStripFaces<VType, uint32>(cache, nug.m_irange);
-								else
-									FlipTriStripFaces<VType, uint16>(cache, nug.m_irange);
+								switch (cache.m_idx_stride)
+								{
+								case sizeof(uint32_t): FlipTriStripFaces<VType, uint32_t>(cache, nug.m_irange); break;
+								case sizeof(uint16_t): FlipTriStripFaces<VType, uint16_t>(cache, nug.m_irange); break;
+								default: throw std::runtime_error("Unsupported index stride");
+								}
 								break;
 							}
 						}
@@ -309,7 +319,7 @@ namespace pr::rdr
 			static void FlipTriListFaces(Cache<VType>& cache, Range irange)
 			{
 				assert((irange.size() % 3) == 0);
-				auto ibuf = cache.idx<IType>();
+				auto ibuf = cache.m_icont.data<IType>();
 				for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 3)
 					std::swap(ibuf[i + 1], ibuf[i + 2]);
 			}
@@ -319,7 +329,7 @@ namespace pr::rdr
 			static void FlipTriStripFaces(Cache<VType>& cache, Range irange)
 			{
 				assert((irange.size() % 2) == 0);
-				auto ibuf = cache.idx<IType>();
+				auto ibuf = cache.m_icont.data<IType>();
 				for (size_t i = irange.begin(), iend = irange.end(); i != iend; i += 2)
 					std::swap(ibuf[i + 0], ibuf[i + 1]);
 			}
@@ -337,10 +347,12 @@ namespace pr::rdr
 					{
 					case EPrim::TriList:
 						{
-							if (cache.m_idx32)
-								GenerateNormals<VType, uint32>(cache, nug.m_irange, gen_normals);
-							else
-								GenerateNormals<VType, uint16>(cache, nug.m_irange, gen_normals);
+							switch (cache.m_idx_stride)
+							{
+							case sizeof(uint32_t): GenerateNormals<VType, uint32_t>(cache, nug.m_irange, gen_normals); break;
+							case sizeof(uint16_t): GenerateNormals<VType, uint16_t>(cache, nug.m_irange, gen_normals); break;
+							default: throw std::runtime_error("Unsupported index stride");
+							}
 							break;
 						}
 					case EPrim::TriStrip:
@@ -355,25 +367,25 @@ namespace pr::rdr
 			template <typename VType, typename IType>
 			static void GenerateNormals(Cache<VType>& cache, Range irange, float gen_normals)
 			{
-				auto ibuf = cache.idx<IType>() + irange.begin();
+				auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 				geometry::GenerateNormals(
 					irange.size(), ibuf, gen_normals,
 					[&](IType idx)
-				{
-					return GetP(cache.m_vcont[idx]);
-				},
+					{
+						return GetP(cache.m_vcont[idx]);
+					},
 					cache.m_vcont.size(),
 					[&](IType idx, IType orig, v4 const& norm)
-				{
-					if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
-					SetN(cache.m_vcont[idx], norm);
-				},
+					{
+						if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
+						SetN(cache.m_vcont[idx], norm);
+					},
 					[&](IType i0, IType i1, IType i2)
-				{
-					*ibuf++ = i0;
-					*ibuf++ = i1;
-					*ibuf++ = i2;
-				});
+					{
+						*ibuf++ = i0;
+						*ibuf++ = i1;
+						*ibuf++ = i2;
+					});
 			}
 		};
 
@@ -406,7 +418,7 @@ namespace pr::rdr
 
 			// Create the model
 			VBufferDesc vb(cache.VCount(), cache.m_vcont.data());
-			IBufferDesc ib(cache.ICount(), cache.m_icont.data(), cache.m_idx32 ? sizeof(uint32) : sizeof(uint16), cache.m_idx32 ? DxFormat<uint32>::value : DxFormat<uint16>::value);
+			IBufferDesc ib(cache.ICount(), cache.m_icont.data(), cache.m_idx_stride, cache.IdxFormat());
 			auto model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, cache.m_bbox));
 			model->m_name = cache.m_name;
 
@@ -433,8 +445,8 @@ namespace pr::rdr
 			auto icount = num_points;
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Points(num_points, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Points(num_points, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::PointList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -456,8 +468,8 @@ namespace pr::rdr
 			geometry::LineSize(num_lines, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Lines(num_lines, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Lines(num_lines, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -471,8 +483,8 @@ namespace pr::rdr
 			geometry::LineSize(num_lines, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::LinesD(num_lines, points, directions, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::LinesD(num_lines, points, directions, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -486,8 +498,8 @@ namespace pr::rdr
 			geometry::LineStripSize(num_lines, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -508,8 +520,8 @@ namespace pr::rdr
 			geometry::QuadSize(num_quads, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Quad(num_quads, verts, num_colours, colours, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Quad(num_quads, verts, num_colours, colours, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -523,8 +535,8 @@ namespace pr::rdr
 			geometry::QuadSize(divisions, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -538,8 +550,8 @@ namespace pr::rdr
 			geometry::QuadSize(divisions, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -553,8 +565,8 @@ namespace pr::rdr
 			geometry::QuadStripSize(num_quads, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -570,8 +582,8 @@ namespace pr::rdr
 			geometry::EllipseSize(solid, facets, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Ellipse(dimx, dimy, solid, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Ellipse(dimx, dimy, solid, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -585,8 +597,8 @@ namespace pr::rdr
 			geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -600,8 +612,8 @@ namespace pr::rdr
 			geometry::RoundedRectangleSize(solid, corner_radius, facets, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -615,8 +627,8 @@ namespace pr::rdr
 			geometry::PolygonSize(num_points, solid, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Polygon(num_points, points, solid, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Polygon(num_points, points, solid, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -632,8 +644,8 @@ namespace pr::rdr
 			geometry::BoxSize(num_boxes, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Boxes(num_boxes, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Boxes(num_boxes, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -647,8 +659,8 @@ namespace pr::rdr
 			geometry::BoxSize(num_boxes, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Boxes(num_boxes, points, o2w, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Boxes(num_boxes, points, o2w, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -662,8 +674,8 @@ namespace pr::rdr
 			geometry::BoxSize(1, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Box(rad, o2w, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Box(rad, o2w, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -681,8 +693,8 @@ namespace pr::rdr
 			geometry::BoxSize(num_boxes, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::BoxList(num_boxes, positions, rad, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::BoxList(num_boxes, positions, rad, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -698,8 +710,8 @@ namespace pr::rdr
 			geometry::GeosphereSize(divisions, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Geosphere(radius, divisions, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Geosphere(radius, divisions, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -717,8 +729,8 @@ namespace pr::rdr
 			geometry::SphereSize(wedges, layers, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Sphere(radius, wedges, layers, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Sphere(radius, wedges, layers, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -738,8 +750,8 @@ namespace pr::rdr
 			geometry::CylinderSize(wedges, layers, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -804,8 +816,8 @@ namespace pr::rdr
 			};
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -823,8 +835,8 @@ namespace pr::rdr
 			auto make_path = [&] { return *p++; };
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
@@ -840,18 +852,19 @@ namespace pr::rdr
 			geometry::MeshSize(cdata.m_vcount, cdata.m_icount, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
+			Cache cache(vcount, icount, 0, 2);
 			auto props = geometry::Mesh(
 				cdata.m_vcount, cdata.m_icount,
 				cdata.m_verts, cdata.m_indices,
 				cdata.m_ccount, cdata.m_colours,
 				cdata.m_ncount, cdata.m_normals,
 				cdata.m_tex_coords,
-				std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_vcont.data(),
+				cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 
 			// Create the nuggets
-			cache.m_ncont.insert(std::begin(cache.m_ncont), cdata.m_nuggets, cdata.m_nuggets + cdata.m_gcount);
+			cache.m_ncont.insert(cache.m_ncont.begin(), cdata.m_nuggets, cdata.m_nuggets + cdata.m_gcount);
 
 			// Create the model
 			return Create(rdr, cache);
@@ -867,8 +880,8 @@ namespace pr::rdr
 			geometry::SkyboxGeosphereSize(divisions, vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::SkyboxGeosphere(radius, divisions, colour, begin(cache.m_vcont), begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::SkyboxGeosphere(radius, divisions, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 
 			// Model nugget properties for the sky box
@@ -893,8 +906,8 @@ namespace pr::rdr
 			geometry::SkyboxFiveSidedCubicDomeSize(vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::SkyboxFiveSidedCubicDome(radius, colour, begin(cache.m_vcont), begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::SkyboxFiveSidedCubicDome(radius, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 
 			// Model nugget properties for the sky box
@@ -919,8 +932,8 @@ namespace pr::rdr
 			geometry::SkyboxSixSidedCubeSize(vcount, icount);
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::SkyboxSixSidedCube(radius, colour, begin(cache.m_vcont), begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::SkyboxSixSidedCube(radius, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 
 			// Create the nuggets, one per face. Expected order: +X, -X, +Y, -Y, +Z, -Z
@@ -987,17 +1000,9 @@ namespace pr::rdr
 				memcpy(cache.m_vcont.data(), mesh.m_verts.data(), sizeof(p3d::Vert) * mesh.m_verts.size());
 
 				// Copy the indices
-				if (!mesh.m_idx16.empty())
-				{
-					cache.m_icont.resize(mesh.m_idx16.size());
-					memcpy(cache.m_icont.data(), mesh.m_idx16.data(), sizeof(p3d::u16) * mesh.m_idx16.size());
-				}
-				else
-				{
-					cache.m_idx32 = true;
-					cache.m_icont.resize(mesh.m_idx32.size() * 2);
-					memcpy(cache.m_icont.data(), mesh.m_idx32.data(), sizeof(p3d::u32) * mesh.m_idx32.size());
-				}
+				cache.m_idx_stride = mesh.m_idx.m_stride;
+				cache.m_icont.resize(mesh.m_idx.size());
+				memcpy(cache.m_icont.data(), mesh.m_idx.data(), mesh.m_idx.size());
 
 				// Copy the nuggets
 				cache.m_ncont.reserve(mesh.m_nugget.size());
@@ -1045,11 +1050,11 @@ namespace pr::rdr
 				SetPCNT(vert, bb(p), c, n, t);
 				cache.m_vcont.push_back(vert);
 			};
-			auto iout = [&](uint16 i0, uint16 i1, uint16 i2)
+			auto iout = [&](uint16_t i0, uint16_t i1, uint16_t i2)
 			{
-				cache.m_icont.push_back(i0);
-				cache.m_icont.push_back(i1);
-				cache.m_icont.push_back(i2);
+				cache.m_icont.push_back<uint16_t>(i0);
+				cache.m_icont.push_back<uint16_t>(i1);
+				cache.m_icont.push_back<uint16_t>(i2);
 			};
 			auto nout = [&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
 			{
@@ -1125,18 +1130,19 @@ namespace pr::rdr
 				if (vcount < 0x10000)
 				{
 					// Use 16bit indices
-					cache.m_icont.resize(vcount);
-					auto ibuf = cache.idx<uint16>();
-					for (uint16 i = 0; vcount-- != 0;)
+					cache.m_idx_stride = sizeof(uint16_t);
+					cache.m_icont.resize<uint16_t>(vcount);
+					auto ibuf = cache.m_icont.data<uint16_t>();
+					for (uint16_t i = 0; vcount-- != 0;)
 						*ibuf++ = i++;
 				}
 				else
 				{
 					// Use 32bit indices
-					cache.m_idx32 = true;
-					cache.m_icont.resize(vcount * 2);
-					auto ibuf = cache.idx<uint32>();
-					for (uint32 i = 0; vcount-- != 0;)
+					cache.m_idx_stride = sizeof(uint32_t);
+					cache.m_icont.resize<uint32_t>(vcount);
+					auto ibuf = cache.m_icont.data<uint32_t>();
+					for (uint32_t i = 0; vcount-- != 0;)
 						*ibuf++ = i++;
 				}
 
@@ -1370,8 +1376,8 @@ namespace pr::rdr
 			mat.m_tex_diffuse = tex;
 
 			// Generate the geometry
-			Cache cache(vcount, icount);
-			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+			Cache cache(vcount, icount, 0, 2);
+			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
 			cache.m_bbox = props.m_bbox;
 			cache.AddNugget(EPrim::TriList, props.m_geom & ~EGeom::Norm
 				, props.m_has_alpha, false, &mat);
