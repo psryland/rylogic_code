@@ -42,7 +42,7 @@ namespace TestCS
 			{
 				Name        = "m_view3d",
 				BorderStyle = BorderStyle.FixedSingle,
-				Dock        = DockStyle.Fill
+				Dock        = DockStyle.Fill,
 			};
 			Controls.Add(m_view3d);
 			m_demo_objs = m_view3d.Window.CreateDemoScene();
@@ -55,8 +55,12 @@ namespace TestCS
 			m_obj0.O2P = m4x4.Transform(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
 
+			m_obj0.ShowNormals = true;
+			m_view3d.Window.Diag.NormalsLength = 0.5f;
+			m_view3d.Window.Diag.NormalsColour = Colour32.Yellow;
+
 			// Create a texture and assign it to an object
-			m_tex0 = new View3d.Texture(100,100);
+			m_tex0 = new View3d.Texture(100,100, new View3d.TextureOptions { GdiCompatible = true });
 			using (var tex = new View3d.Texture.Lock(m_tex0, discard:true))
 			{
 				tex.Gfx.Clear(Color.DarkBlue);
@@ -76,7 +80,7 @@ namespace TestCS
 			m_view3d.Window.AddObject(m_obj2);
 
 			// Create a texture and use it as a render target
-			m_tex2 = new View3d.Texture(200,200,new View3d.TextureOptions
+			m_tex2 = new View3d.Texture(200, 200, new View3d.TextureOptions
 			{
 				Format        = View3d.EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
 				Mips          = 1U,
@@ -132,8 +136,6 @@ namespace TestCS
 				m_obj3 = new View3d.Object("Obj3", 0xFFFFFFFF, 3, 3, 1, verts, indcs, nuggets, null);
 				m_view3d.Window.AddObject(m_obj3);
 			}
-
-			//m_view3d.View3d.CreateDemoScene();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -168,7 +170,7 @@ namespace TestCS
 			nuggets[new_ncount++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert);
 		}
 
-		#region Windows Form Designer generated code
+#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
@@ -256,6 +258,6 @@ namespace TestCS
 
 		}
 
-		#endregion
+#endregion
 	}
 }

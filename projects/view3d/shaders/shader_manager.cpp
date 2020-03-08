@@ -69,6 +69,9 @@ namespace pr::rdr
 		CreateShader<ThickLineListGS>();
 		CreateShader<ThickLineStripGS>();
 		CreateShader<ArrowHeadGS>();
+
+		// Diagnostic shaders
+		CreateShader<ShowNormalsGS>();
 	}
 
 	// Get/Create a d3d resource of type 'TRes'.

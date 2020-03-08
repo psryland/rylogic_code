@@ -202,8 +202,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Toggle visibility of the focus point</summary>
 			public bool BBoxesVisible
 			{
-				get => m_owner.Window.BBoxesVisible;
-				set => m_owner.Window.BBoxesVisible = value;
+				get => m_owner.Window.Diag.BBoxesVisible;
+				set => m_owner.Window.Diag.BBoxesVisible = value;
 			}
 			public ICommand ToggleBBoxesVisible
 			{
@@ -271,7 +271,7 @@ namespace Rylogic.Gui.WPF
 			}
 			public ICommand SetBackgroundColour
 			{
-				get => m_owner.SetBackgroundColour;
+				get => m_owner.Scene.SetBackgroundColour;
 			}
 
 			/// <inheritdoc/>
@@ -297,6 +297,24 @@ namespace Rylogic.Gui.WPF
 			{
 				get => m_owner.Options.CullMode;
 				set => m_owner.Options.CullMode = value;
+			}
+
+			/// <inheritdoc/>
+			public float NormalsLength
+			{
+				get => m_owner.Window.Diag.NormalsLength;
+				set => m_owner.Window.Diag.NormalsLength = value;
+			}
+
+			/// <inheritdoc/>
+			public Colour32 NormalsColour
+			{
+				get => m_owner.Window.Diag.NormalsColour;
+				set => m_owner.Window.Diag.NormalsColour = value;
+			}
+			public ICommand SetNormalsColour
+			{
+				get => m_owner.Scene.SetNormalsColour;
 			}
 
 			/// <summary>Saved views</summary>

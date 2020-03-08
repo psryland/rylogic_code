@@ -72,7 +72,6 @@
     <ClInclude Include="..\include\pr\common\assert.h" />
     <ClInclude Include="..\include\pr\common\base64.h" />
     <ClInclude Include="..\include\pr\common\cast.h" />
-    <ClInclude Include="..\include\pr\common\chain.h" />
     <ClInclude Include="..\include\pr\common\clipboard.h" />
     <ClInclude Include="..\include\pr\common\command_line.h" />
     <ClInclude Include="..\include\pr\common\compress.h" />
@@ -134,6 +133,7 @@
     <ClInclude Include="..\include\pr\common\user_data.h" />
     <ClInclude Include="..\include\pr\common\value_ptr.h" />
     <ClInclude Include="..\include\pr\container\span.h" />
+    <ClInclude Include="..\include\pr\container\chain.h" />
     <ClInclude Include="..\include\pr\container\deque.h" />
     <ClInclude Include="..\include\pr\container\vector.h" />
     <ClInclude Include="..\include\pr\container\bit_array.h" />

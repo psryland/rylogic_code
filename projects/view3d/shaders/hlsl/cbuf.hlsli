@@ -20,6 +20,11 @@
 	#define voidp uint2
 
 #else
+	
+	// Note:
+	//   This error: "error X3000: syntax error: unexpected token 'enum'"
+	//   means you have an hlsl file somewhere that hasn't been set to 'Custom Build Tool'.
+	//   It will be using the HLSL Compiler build type, which doesn't know about the 'SHADER_BUILD' define
 
 	enum class ERegister
 	{ 

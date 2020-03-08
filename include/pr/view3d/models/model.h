@@ -12,13 +12,21 @@ namespace pr::rdr
 	// A graphics model containing vertices and indices
 	struct Model :pr::RefCount<Model>
 	{
-		ModelBufferPtr m_model_buffer;  // The buffer that contains this model's vertex and index data
-		Range          m_vrange;        // The first and number of vertices for this model within 'm_model_buffer'
-		Range          m_irange;        // The first and number of indices for this model within 'm_model_buffer'
-		TNuggetChain   m_nuggets;       // The nuggets for this model
-		pr::BBox       m_bbox;          // A bounding box for the model. Set by the client
-		string32       m_name;          // A human readable name for the model
-		mutable int    m_dbg_flags;     // Flags used by PR_DBG_RDR to output info once only
+		enum class EDbgFlags
+		{
+			None                  = 0,
+			WarnedNoRenderNuggets = 1 << 0,
+			NormalsVisible        = 1 << 1,
+			_bitwise_operators_allowed,
+		};
+
+		ModelBufferPtr    m_model_buffer; // The buffer that contains this model's vertex and index data
+		Range             m_vrange;       // The first and number of vertices for this model within 'm_model_buffer'
+		Range             m_irange;       // The first and number of indices for this model within 'm_model_buffer'
+		TNuggetChain      m_nuggets;      // The nuggets for this model
+		pr::BBox          m_bbox;         // A bounding box for the model. Set by the client
+		string32          m_name;         // A human readable name for the model
+		mutable EDbgFlags m_dbg_flags;    // Flags used by PR_DBG_RDR to output info once only
 
 		// Only the model manager should be creating these
 		Model(MdlSettings const& settings, ModelBufferPtr& model_buffer);

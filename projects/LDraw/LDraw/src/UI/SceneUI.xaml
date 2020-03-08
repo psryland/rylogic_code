@@ -23,7 +23,6 @@
 				<MenuItem Header="Tools">
 					<StaticResource	ResourceKey="View3dMenuItem_Origin"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Focus"/>
-					<StaticResource	ResourceKey="View3dMenuItem_BoundingBoxes"/>
 					<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
 					<StaticResource	ResourceKey="ChartMenuItem_CrossHair"/>
 					<StaticResource	ResourceKey="ChartMenuItem_ValueAtPointer"/>
@@ -50,6 +49,11 @@
 					<StaticResource	ResourceKey="View3dMenuItem_CullMode"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Animation"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Lighting"/>
+				</MenuItem>
+				<MenuItem Header="Diagnostics">
+					<StaticResource	ResourceKey="View3dMenuItem_BoundingBoxes"/>
+					<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
+					<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
 				</MenuItem>
 				<Separator/>
 				<StaticResource	ResourceKey="View3dMenuItem_ObjectManager"/>

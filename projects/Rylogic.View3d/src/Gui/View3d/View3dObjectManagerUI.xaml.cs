@@ -31,6 +31,8 @@ namespace Rylogic.Gui.WPF
 			SetWireframe = Command.Create(this, SetWireframeInternal);
 			UpdateSelected = Command.Create(this, UpdateSelectedInternal);
 			InvertSelection = Command.Create(this, InvertSelectionInternal);
+			ToggleShowNormals = Command.Create(this, InternalToggleShowNormals);
+
 			DataContext = this;
 		}
 		protected override void OnClosed(EventArgs e)
@@ -63,11 +65,13 @@ namespace Rylogic.Gui.WPF
 				if (m_object_manager != null)
 				{
 					m_object_manager.PropertyChanged -= HandlePropertyChanged;
+					View3d.Object.ObjectChanged -= HandleObjectPropertyChanged;
 					Util.Dispose(ref m_object_manager!);
 				}
 				m_object_manager = value;
 				if (m_object_manager != null)
 				{
+					View3d.Object.ObjectChanged += HandleObjectPropertyChanged;
 					m_object_manager.PropertyChanged += HandlePropertyChanged;
 				}
 
@@ -84,6 +88,17 @@ namespace Rylogic.Gui.WPF
 						}
 					}
 				}
+				void HandleObjectPropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+					case nameof(View3d.Object.Flags):
+						{
+							NotifyPropertyChanged(nameof(FirstSelected));
+							break;
+						}
+					}
+				}
 			}
 		}
 		private View3d.ObjectManager m_object_manager = null!;
@@ -91,6 +106,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Access to the object container</summary>
 		public IList<View3d.Object> Objects => ObjectManager.Objects;
 		public IEnumerable<View3d.Object> SelectedObjects => Objects.Where(x => Bit.AllSet(x.Flags, View3d.EFlags.Selected));
+
+		/// <summary>True if one or more objects is selected</summary>
+		public View3d.Object FirstSelected => SelectedObjects.FirstOrDefault();
 
 		/// <summary>A view of the top-level objects in the scene</summary>
 		public ICollectionView ObjectsView { get; private set; }
@@ -132,6 +150,8 @@ namespace Rylogic.Gui.WPF
 					var visible = x.Flags.HasFlag(View3d.EFlags.Hidden) == false;
 					var show = vis switch
 					{
+						ESetVisibleCmd.ShowAll => true,
+						ESetVisibleCmd.HideAll => false,
 						ESetVisibleCmd.ShowSelected => selected ? true : visible,
 						ESetVisibleCmd.HideSelected => selected ? false : visible,
 						ESetVisibleCmd.ToggleSelected => selected ? !visible : visible,
@@ -187,6 +207,20 @@ namespace Rylogic.Gui.WPF
 			foreach (var obj in Objects)
 				obj.Flags = Bit.SetBits(obj.Flags, View3d.EFlags.Selected, !obj.Flags.HasFlag(View3d.EFlags.Selected));
 		}
+		
+		/// <summary>Toggle show normals mode on selected objects</summary>
+		public Command ToggleShowNormals { get; }
+		private void InternalToggleShowNormals()
+		{
+			bool? show = null;
+			foreach (var obj in SelectedObjects)
+			{
+				show = show ?? !obj.ShowNormals;
+				obj.ShowNormals = show.Value;
+			}
+			Invalidate();
+			return;
+		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
@@ -198,6 +232,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary></summary>
 		public enum ESetVisibleCmd
 		{
+			ShowAll,
+			HideAll,
 			ShowSelected,
 			HideSelected,
 			ToggleSelected,

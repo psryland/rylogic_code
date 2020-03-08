@@ -2046,8 +2046,8 @@ namespace pr::ldr
 			}
 
 			// Create the model
-			VBufferDesc vb(cache.m_vcont.size(), &cache.m_vcont[0]);
-			IBufferDesc ib(cache.m_icont.size(), &cache.m_icont[0]);
+			VBufferDesc vb(cache.m_vcont.size(), cache.m_vcont.data());
+			IBufferDesc ib(cache.m_icont.size(), cache.m_icont.data<uint16_t>());
 			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -4915,7 +4915,7 @@ namespace pr::ldr
 
 	// Recursively add this object using 'bbox_model' instead of its
 	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, ModelPtr bbox_model, float time_s, m4x4 const* p2w)
+	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w)
 	{
 		// Set the instance to world for this object
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
@@ -4924,20 +4924,14 @@ namespace pr::ldr
 		if (m_model && !AnySet(m_flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 		{
 			// Find the object to world for the bbox
-			auto o2w = i2w * m4x4::Scale(
-				m_model->m_bbox.SizeX() + maths::tiny,
-				m_model->m_bbox.SizeY() + maths::tiny,
-				m_model->m_bbox.SizeZ() + maths::tiny,
-				m_model->m_bbox.Centre());
-
-			m_bbox_instance.m_model = bbox_model;
-			m_bbox_instance.m_i2w = o2w;
-			scene.AddInstance(m_bbox_instance); // Could add occlusion culling here...
+			m_bbox_instance.m_model = scene.rdr().m_mdl_mgr.m_bbox_model;
+			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
+			scene.AddInstance(m_bbox_instance);
 		}
 
 		// Rinse and repeat for all children
 		for (auto& child : m_child)
-			child->AddBBoxToScene(scene, bbox_model, time_s, &m_i2w);
+			child->AddBBoxToScene(scene, time_s, &i2w);
 	}
 
 	// Get the first child object of this object that matches 'name' (see Apply)
@@ -5015,7 +5009,18 @@ namespace pr::ldr
 	{
 		Flags(ELdrFlags::Wireframe, wireframe, name);
 	}
-
+	
+	// Get/Set the visibility of normals for this object or child objects matching 'name' (see Apply)
+	bool LdrObject::Normals(char const* name) const
+	{
+		auto obj = Child(name);
+		return obj ? AllSet(obj->m_flags, ELdrFlags::Normals) : false;
+	}
+	void LdrObject::Normals(bool show, char const* name)
+	{
+		Flags(ELdrFlags::Normals, show, name);
+	}
+	
 	// Get/Set screen space rendering mode for this object and all child objects
 	bool LdrObject::ScreenSpace() const
 	{
@@ -5131,6 +5136,12 @@ namespace pr::ldr
 			{
 				o->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ALL);
 				o->m_sko = SKOverride();
+			}
+
+			// Normals
+			if (o->m_model != nullptr)
+			{
+				ShowNormals(o->m_model.get(), AllSet(o->m_flags, ELdrFlags::Normals));
 			}
 
 			return true;

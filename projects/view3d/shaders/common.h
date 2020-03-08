@@ -50,18 +50,32 @@ namespace pr::rdr
 		namespace fwd
 		{
 			#include "view3d/shaders/hlsl/forward/forward_cbuf.hlsli"
+			static_assert((sizeof(CBufFrame) % 16) == 0);
+			static_assert((sizeof(CBufModel) % 16) == 0);
+			static_assert((sizeof(CBufFade) % 16) == 0);
 		}
 		namespace ds
 		{
 			#include "view3d/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
+			static_assert((sizeof(CBufCamera  ) % 16) == 0);
+			static_assert((sizeof(CBufLighting) % 16) == 0);
+			static_assert((sizeof(CBufModel   ) % 16) == 0);
 		}
 		namespace ss
 		{
 			#include "view3d/shaders/hlsl/screenspace/screen_space_cbuf.hlsli"
+			static_assert((sizeof(CBufFrame) % 16) == 0);
 		}
 		namespace smap
 		{
 			#include "view3d/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
+			static_assert((sizeof(CBufFrame) % 16) == 0);
+			static_assert((sizeof(CBufNugget) % 16) == 0);
+		}
+		namespace diag
+		{
+			#include "view3d/shaders/hlsl/utility/diagnostic_cbuf.hlsli"
+			static_assert((sizeof(CBufFrame) % 16) == 0);
 		}
 	}
 

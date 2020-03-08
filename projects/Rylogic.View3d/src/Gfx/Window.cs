@@ -29,6 +29,7 @@ namespace Rylogic.Gfx
 			{
 				View = view;
 				Hwnd = hwnd;
+				Diag = new Diagnostics(this);
 				m_opts = new WindowOptions
 				{
 					ErrorCB = HandleError,
@@ -385,13 +386,6 @@ namespace Rylogic.Gfx
 				set => View3D_OriginSizeSet(Handle, value);
 			}
 
-			/// <summary>Get/Set whether object bounding boxes are visible</summary>
-			public bool BBoxesVisible
-			{
-				get => View3D_BBoxesVisibleGet(Handle);
-				set => View3D_BBoxesVisibleSet(Handle, value);
-			}
-
 			/// <summary>Get/Set whether the selection box is visible</summary>
 			public bool SelectionBoxVisible
 			{
@@ -625,6 +619,40 @@ namespace Rylogic.Gfx
 			public void ShowObjectManager(bool show)
 			{
 				View3D_ObjectManagerShow(Handle, show);
+			}
+
+			/// <summary>Diagnostic settings</summary>
+			public Diagnostics Diag { get; }
+
+			/// <summary>Namespace for diagnostic settings</summary>
+			public class Diagnostics
+			{
+				private readonly Window m_window;
+				internal Diagnostics(Window window)
+				{
+					m_window = window;
+				}
+
+				/// <summary>Get/Set whether object bounding boxes are visible</summary>
+				public bool BBoxesVisible
+				{
+					get => View3D_DiagBBoxesVisibleGet(m_window.Handle);
+					set => View3D_DiagBBoxesVisibleSet(m_window.Handle, value);
+				}
+
+				/// <summary>Get/Set the length of vertex normals (when visible)</summary>
+				public float NormalsLength
+				{
+					get => View3D_DiagNormalsLengthGet(m_window.Handle);
+					set => View3D_DiagNormalsLengthSet(m_window.Handle, value);
+				}
+
+				/// <summary>Get/Set the length of vertex normals (when visible)</summary>
+				public Colour32 NormalsColour
+				{
+					get => View3D_DiagNormalsColourGet(m_window.Handle);
+					set => View3D_DiagNormalsColourSet(m_window.Handle, value);
+				}
 			}
 
 			#region Equals

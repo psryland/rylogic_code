@@ -199,7 +199,7 @@ namespace Rylogic.Gfx
 
 			try
 			{
-				var opts = View3d.TextureOptions.New(
+				var opts = new View3d.TextureOptions(
 					format: View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
 					mips: 1,
 					bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET | View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,

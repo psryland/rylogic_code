@@ -60,17 +60,6 @@ namespace LDraw
 			get => m_owner.SceneView.ToggleFocusPoint;
 		}
 
-		/// <inheritdoc/>
-		public bool BBoxesVisible
-		{
-			get => m_owner.SceneView.Scene.Window.BBoxesVisible;
-			set => m_owner.SceneView.Scene.Window.BBoxesVisible = value;
-		}
-		public ICommand ToggleBBoxesVisible
-		{
-			get => m_owner.SceneView.Scene.ToggleBBoxesVisible;
-		}
-
 		/// <summary>Selection box</summary>
 		public bool SelectionBoxVisible
 		{
@@ -290,6 +279,36 @@ namespace LDraw
 			get => m_owner.SceneView.Options.NavigationMode;
 			set => m_owner.SceneView.Options.NavigationMode = value;
 		}
+
+		/// <inheritdoc/>
+		public bool BBoxesVisible
+		{
+			get => m_owner.SceneView.Scene.Window.Diag.BBoxesVisible;
+			set => m_owner.SceneView.Scene.Window.Diag.BBoxesVisible = value;
+		}
+		public ICommand ToggleBBoxesVisible
+		{
+			get => m_owner.SceneView.Scene.ToggleBBoxesVisible;
+		}
+
+		/// <inheritdoc/>
+		public float NormalsLength
+		{
+			get => m_owner.SceneView.Scene.Window.Diag.NormalsLength;
+			set => m_owner.SceneView.Scene.Window.Diag.NormalsLength = value;
+		}
+
+		/// <inheritdoc/>
+		public Colour32 NormalsColour
+		{
+			get => m_owner.SceneView.Scene.Window.Diag.NormalsColour;
+			set => m_owner.SceneView.Scene.Window.Diag.NormalsColour = value;
+		}
+		public ICommand SetNormalsColour
+		{
+			get => m_owner.SceneView.Scene.SetNormalsColour;
+		}
+
 	}
 	public class SceneAxisCMenu :IChartAxisCMenu
 	{

@@ -6,7 +6,30 @@ namespace Rylogic.Gui.WPF
 {
 	public interface IView3dCMenu :INotifyPropertyChanged
 	{
-		// Note:
+		// Architecture:
+		//   Rylogic.Gui.WPF.Resources.ContextMenus - contains the XML for View3d and Chart menu items.
+		//     These menu items are used in the context menus for View3dControl and ChartControl.
+		// 
+		//   IView3dCMenu - is the binding interface for context menu items common to View3d.
+		//   IChartCMenu - is the binding interface for context menu items related to Charts.
+		//      These interfaces declare the properties and commands referenced by the ContextMenu XML.
+		//      An app needs to provide an object that implements these interfaces as the DataContext of
+		//      a context menu that contains menu items from 'WPF.Resources.ContextMenus'.
+		//   
+		//   View3dCMenu - is an implementation of 'IView3DCMenu' used by basic View3dControls.
+		//     View3dControl creates an instance of this object for its context menu.
+		//     The View3dCMenu properties operate on the runtime state of 'View3dControl' and are not saved across restarts.
+		//
+		//   ChartControl.ChartCMenu - is an implementation of 'IView3DCMenu' and 'IChartCMenu'.
+		//     ChartControl creates an instance of this object for its context menu.
+		//     Most of the ChartCMenu properties forward to persisted Options properties which trigger refreshes when changed.
+		//     Some of the properties of 'ChartControl.ChartCMenu' forward through to 'Scene.View3dCMenu' if they are not persisted.
+		//
+		//   LDraw.SceneCMenu - is LDraw's implementation of 'IView3DCMenu' and 'IChartCMenu'.
+		//     ChartControl creates an instance of this object for its context menu.
+		//     Some of the properties of SceneCMenu forward through to View3dCMenu.
+		//
+		// Notes:
 		//  - If adding a new context menu option, you'll need to do:
 		//       - Add a MenuItem resource to 'ContextMenus.xaml'
 		//       - Add any binding variables to 'IView3dCMenu'
@@ -36,10 +59,6 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Focus</summary>
 		bool FocusPointVisible { get; set; }
 		ICommand ToggleFocusPoint { get; }
-
-		/// <summary>Bounding boxes</summary>
-		bool BBoxesVisible { get; set; }
-		ICommand ToggleBBoxesVisible { get; }
 
 		/// <summary>Selection box</summary>
 		bool SelectionBoxVisible { get; set; }
@@ -72,6 +91,17 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Face culling</summary>
 		View3d.ECullMode CullMode { get; set; }
+
+		/// <summary>Bounding boxes</summary>
+		bool BBoxesVisible { get; set; }
+		ICommand ToggleBBoxesVisible { get; }
+
+		/// <summary>The length of displayed vertex normals</summary>
+		float NormalsLength { get; set; }
+
+		/// <summary>The colour of displayed vertex normals</summary>
+		Colour32 NormalsColour { get; set; }
+		ICommand SetNormalsColour { get; }
 
 		/// <summary>Saved views</summary>
 		ICollectionView SavedViews { get; }

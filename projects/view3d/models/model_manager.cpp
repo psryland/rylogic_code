@@ -17,6 +17,8 @@ namespace pr::rdr
 		,m_dbg_mem_mdl()
 		,m_dbg_mem_nugget()
 		,m_rdr(rdr)
+		,m_unit_quad()
+		,m_bbox_model()
 	{
 		CreateStockModels();
 	}
@@ -25,9 +27,11 @@ namespace pr::rdr
 	ModelBufferPtr ModelManager::CreateModelBuffer(MdlSettings const& settings)
 	{
 		if (settings.m_vb.ElemCount == 0)
-			throw std::exception("Attempt to create 0-length model vertex buffer");
+			throw std::runtime_error("Attempt to create 0-length model vertex buffer");
 		if (settings.m_ib.ElemCount == 0)
-			throw std::exception("Attempt to create 0-length model index buffer");
+			throw std::runtime_error("Attempt to create 0-length model index buffer");
+		if (settings.m_ib.Format != DXGI_FORMAT_R16_UINT && settings.m_ib.Format != DXGI_FORMAT_R32_UINT)
+			throw std::runtime_error(Fmt("Index buffer format %d is not supported", settings.m_ib.Format));
 
 		Renderer::Lock lock(m_rdr);
 		auto& device = *lock.D3DDevice();
@@ -115,24 +119,50 @@ namespace pr::rdr
 	void ModelManager::CreateStockModels()
 	{
 		{// Unit quad in Z = 0 plane
-			Vert verts[4] =
+			Vert const verts[4] =
 			{
 				{v4(-0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.9999f)},
 				{v4( 0.5f,-0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.9999f)},
 				{v4( 0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.9999f,0.0000f)},
 				{v4(-0.5f, 0.5f, 0, 1), ColourWhite, v4ZAxis, v2(0.0000f,0.0000f)},
 			};
-			uint16 idxs[] =
+			uint16_t const idxs[] =
 			{
 				0, 1, 2, 0, 2, 3
 			};
-			auto bbox = BBox(v4Origin, v4(1,1,0,0));
+			BBox const bbox(v4Origin, v4(1,1,0,0));
 
 			MdlSettings s(verts, idxs, bbox, "unit quad");
 			m_unit_quad = CreateModel(s);
 
-			NuggetProps ddata(EPrim::TriList, Vert::GeomMask);
-			m_unit_quad->CreateNugget(ddata);
+			NuggetProps n(EPrim::TriList, Vert::GeomMask);
+			m_unit_quad->CreateNugget(n);
+		}
+		{// Bounding box cube
+			Vert const verts[] =
+			{
+				{v4(-0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, -0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(-0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(+0.5f, -0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(+0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+				{v4(-0.5f, +0.5f, +0.5f, 1.0f), Colour32Blue, v4Zero, v2Zero},
+			};
+			uint16_t const idxs[] =
+			{
+				0, 1, 1, 2, 2, 3, 3, 0,
+				4, 5, 5, 6, 6, 7, 7, 4,
+				0, 4, 1, 5, 2, 6, 3, 7,
+			};
+			BBox const bbox(v4Origin, v4(1,1,1,0));
+
+			MdlSettings s(verts, idxs, bbox, "bbox cube");
+			m_bbox_model = CreateModel(s);
+
+			NuggetProps n(EPrim::LineList, EGeom::Vert|EGeom::Colr);
+			m_bbox_model->CreateNugget(n);
 		}
 	}
 }

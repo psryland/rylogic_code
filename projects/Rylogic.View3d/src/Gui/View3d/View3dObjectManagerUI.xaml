@@ -30,6 +30,17 @@
 					Header="Visibility"
 					>
 					<MenuItem
+						Header="Show All"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowAll}"
+						/>
+					<MenuItem
+						Header="Hide All"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideAll}"
+						/>
+					<Separator/>
+					<MenuItem
 						Header="Show Selected"
 						Command="{Binding SetVisible}"
 						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
@@ -59,6 +70,16 @@
 						Header="Toggle Others"
 						Command="{Binding SetVisible}"
 						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleOthers}"
+						/>
+				</MenuItem>
+				<MenuItem
+					Header="State"
+					IsEnabled="{Binding FirstSelected, Converter={conv:NotNull}}"
+					>
+					<MenuItem
+						Header="Show Normals"
+						IsChecked="{Binding FirstSelected.ShowNormals, FallbackValue=False}"
+						Command="{Binding ToggleShowNormals}"
 						/>
 				</MenuItem>
 			</ContextMenu>

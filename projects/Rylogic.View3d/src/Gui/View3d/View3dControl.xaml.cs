@@ -46,6 +46,7 @@ namespace Rylogic.Gui.WPF
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
 			ResetView = Command.Create(this, ResetViewInternal);
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+			SetNormalsColour = Command.Create(this, SetNormalsColourInternal);
 			ApplySavedView = Command.Create(this, ApplySavedViewInternal);
 			RemoveSavedView = Command.Create(this, RemoveSavedViewInternal);
 			SaveCurrentView = Command.Create(this, SaveCurrentViewInternal);
@@ -172,8 +173,6 @@ namespace Rylogic.Gui.WPF
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
 							if (Bit.AllSet(e.Setting, View3d.ESettings.General_FocusPointVisible))
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
-							if (Bit.AllSet(e.Setting, View3d.ESettings.General_BBoxesVisible))
-								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.BBoxesVisible));
 							if (Bit.AllSet(e.Setting, View3d.ESettings.General_SelectionBoxVisible))
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.SelectionBoxVisible));
 						}
@@ -197,6 +196,15 @@ namespace Rylogic.Gui.WPF
 						}
 						if (Bit.AllSet(e.Setting, View3d.ESettings.Lighting))
 						{
+						}
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics))
+						{
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_BBoxesVisible))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.BBoxesVisible));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_NormalsLength))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.NormalsLength));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_NormalsColour))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.NormalsColour));
 						}
 					}
 					if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_BackgroundColour))
@@ -547,7 +555,7 @@ namespace Rylogic.Gui.WPF
 		public Command ToggleBBoxesVisible { get; }
 		private void ToggleBBoxesVisibleInternal()
 		{
-			Window.BBoxesVisible = !Window.BBoxesVisible;
+			Window.Diag.BBoxesVisible = !Window.Diag.BBoxesVisible;
 			Invalidate();
 		}
 
@@ -603,6 +611,27 @@ namespace Rylogic.Gui.WPF
 				Window.BackgroundColour = dlg.Colour;
 			else
 				Window.BackgroundColour = bg;
+		}
+
+		/// <summary>Show a dialog for changing the background colour</summary>
+		public Command SetNormalsColour { get; }
+		private void SetNormalsColourInternal()
+		{
+			var col = Window.Diag.NormalsColour;
+			var dlg = new ColourPickerUI
+			{
+				Title = "Normals Colour",
+				Owner = System.Windows.Window.GetWindow(this),
+				Colour = col,
+			};
+			dlg.ColorChanged += (s, a) =>
+			{
+				Window.Diag.NormalsColour = a.Colour;
+			};
+			if (dlg.ShowDialog() == true)
+				Window.Diag.NormalsColour = dlg.Colour;
+			else
+				Window.Diag.NormalsColour = col;
 		}
 
 		/// <summary>Apply a saved view to the camera</summary>

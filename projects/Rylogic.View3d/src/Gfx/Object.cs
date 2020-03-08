@@ -124,21 +124,28 @@ namespace Rylogic.Gfx
 				set => ColourSet(value, string.Empty);
 			}
 
-			/// <summary>Get/Set the reflectivity of this object (set applies to all child objects as well)</summary>
+			/// <summary>Get/Set the reflectivity for this object (set applies to all child objects as well)</summary>
 			public float Reflectivity
 			{
 				get => ReflectivityGet(string.Empty);
 				set => ReflectivitySet(value, string.Empty);
 			}
 
-			/// <summary>Get/Set wire-frame mode of this object (set applies to all child objects as well)</summary>
+			/// <summary>Get/Set wire-frame mode for this object(set applies to all child objects as well)</summary>
 			public bool Wireframe
 			{
 				get => WireframeGet(string.Empty);
 				set => WireframeSet(value, string.Empty);
 			}
 
-			/// <summary>Get/Set the state flags of this object</summary>
+			/// <summary>Get/Set 'show normals' mode for this object(set applies to all child objects as well)</summary>
+			public bool ShowNormals
+			{
+				get => ShowNormalsGet(string.Empty);
+				set => ShowNormalsSet(value, string.Empty);
+			}
+
+			/// <summary>Get/Set the state flags for this object</summary>
 			public EFlags Flags
 			{
 				get => FlagsGet(string.Empty);
@@ -149,14 +156,14 @@ namespace Rylogic.Gfx
 				}
 			}
 
-			/// <summary>Get/Set sort group of this object</summary>
+			/// <summary>Get/Set sort group for this object</summary>
 			public ESortGroup SortGroup
 			{
 				get => SortGroupGet(string.Empty);
 				set => SortGroupSet(value, string.Empty);
 			}
 
-			/// <summary>Get/Set the nugget flags for the first nugget of this object</summary>
+			/// <summary>Get/Set the nugget flags for the first nugget for this object</summary>
 			public ENuggetFlag NuggetFlags
 			{
 				get => NuggetFlagsGet(string.Empty);
@@ -167,7 +174,7 @@ namespace Rylogic.Gfx
 				}
 			}
 
-			/// <summary>Get/Set the nugget tint colour for the first nugget of this object</summary>
+			/// <summary>Get/Set the nugget tint colour for the first nugget for this object</summary>
 			public Colour32 NuggetTint
 			{
 				get => NuggetTintGet(string.Empty);
@@ -325,7 +332,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>
-			/// Get/Set wireframe mode of this object or any of its child objects that match 'name'.
+			/// Get/Set wireframe mode for this objector any of its child objects that match 'name'.
 			/// If 'name' is null, then the state change is applied to this object only
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
@@ -342,6 +349,22 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>
+			/// Get/Set 'show normals' mode for this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public bool ShowNormalsGet(string? name = null)
+			{
+				return View3D_ObjectNormalsGet(Handle, name);
+			}
+			public void ShowNormalsSet(bool vis, string? name = null)
+			{
+				View3D_ObjectNormalsSet(Handle, vis, name);
+				NotifyPropertyChanged(nameof(ShowNormals));
+				NotifyPropertyChanged(nameof(Flags));
+			}
+			/// <summary>
 			/// Get/Set the object flags
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
 			public EFlags FlagsGet(string? name = null)
@@ -353,6 +376,7 @@ namespace Rylogic.Gfx
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
 				NotifyPropertyChanged(nameof(Flags));
 				NotifyPropertyChanged(nameof(Wireframe));
+				NotifyPropertyChanged(nameof(ShowNormals));
 				NotifyPropertyChanged(nameof(Visible));
 			}
 
@@ -467,8 +491,12 @@ namespace Rylogic.Gfx
 			public void NotifyPropertyChanged(string prop_name)
 			{
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+				ObjectChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 			}
 			public void Refresh() => NotifyPropertyChanged(string.Empty);
+
+			/// <summary>Raised when any object is changed</summary>
+			public static event PropertyChangedEventHandler? ObjectChanged;
 
 			#region Equals
 			public static bool operator ==(Object? lhs, Object? rhs)

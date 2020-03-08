@@ -171,8 +171,8 @@
     <ClInclude Include="..\..\include\pr\common\cast.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\pr\common\chain.h">
-      <Filter>pr\common</Filter>
+    <ClInclude Include="..\..\include\pr\container\chain.h">
+      <Filter>pr\container</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\pr\common\clipboard.h">
       <Filter>pr\common</Filter>

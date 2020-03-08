@@ -94,6 +94,9 @@
     <Filter Include="src\directxtex">
       <UniqueIdentifier>{2d5e2817-c237-4f57-b6a4-316cffaa377f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{2475fa44-7efc-4a0a-8e19-325094177e16}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h">
@@ -224,9 +227,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\forward.h">
       <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\view3d\util\forward_private.h">
-      <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\steps\forward_render.h">
       <Filter>src\steps</Filter>
@@ -402,6 +402,15 @@
     <ClInclude Include="..\include\pr\view3d\util\wrappers.h">
       <Filter>src\util</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\util\diagnostic.h">
+      <Filter>src\util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shdr_diagnostic.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\chain.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">
@@ -575,6 +584,12 @@
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
       <Filter>pr\lua</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\view3d\util\diagnostic.cpp">
+      <Filter>src\util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\shaders\shdr_diagnostic.cpp">
+      <Filter>src\shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
@@ -601,6 +616,7 @@
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli">
@@ -636,9 +652,6 @@
     <None Include="..\projects\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
-      <Filter>src\shaders\hlsl\screenspace</Filter>
-    </None>
     <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_cast.hlsli">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </None>
@@ -651,5 +664,19 @@
     <None Include="..\projects\view3d\shaders\hlsl\common\vector.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
     </None>
+    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </None>
+    <None Include="..\projects\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </FxCompile>
+    <FxCompile Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

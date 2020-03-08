@@ -61,17 +61,6 @@ namespace Rylogic.Gui.WPF
 				get => m_owner.ToggleFocusPoint;
 			}
 
-			/// <inheritdoc/>
-			public bool BBoxesVisible
-			{
-				get => m_owner.Window.BBoxesVisible;
-				set => m_owner.Window.BBoxesVisible = value;
-			}
-			public ICommand ToggleBBoxesVisible
-			{
-				get => m_owner.ToggleBBoxesVisible;
-			}
-
 			/// <summary>Selection box</summary>
 			public bool SelectionBoxVisible
 			{
@@ -159,6 +148,35 @@ namespace Rylogic.Gui.WPF
 			{
 				get => m_owner.Window.CullMode;
 				set => m_owner.Window.CullMode = value;
+			}
+
+			/// <inheritdoc/>
+			public bool BBoxesVisible
+			{
+				get => m_owner.Window.Diag.BBoxesVisible;
+				set => m_owner.Window.Diag.BBoxesVisible = value;
+			}
+			public ICommand ToggleBBoxesVisible
+			{
+				get => m_owner.ToggleBBoxesVisible;
+			}
+
+			/// <inheritdoc/>
+			public float NormalsLength
+			{
+				get => m_owner.Window.Diag.NormalsLength;
+				set => m_owner.Window.Diag.NormalsLength = value;
+			}
+
+			/// <inheritdoc/>
+			public Colour32 NormalsColour
+			{
+				get => m_owner.Window.Diag.NormalsColour;
+				set => m_owner.Window.Diag.NormalsColour = value;
+			}
+			public ICommand SetNormalsColour
+			{
+				get => m_owner.SetNormalsColour;
 			}
 
 			/// <summary>Saved views</summary>

@@ -20,7 +20,7 @@ namespace pr::rdr
 		,m_nuggets()
 		,m_bbox(settings.m_bbox)
 		,m_name(settings.m_name)
-		,m_dbg_flags(0)
+		,m_dbg_flags(EDbgFlags::None)
 	{}
 	Model::~Model()
 	{

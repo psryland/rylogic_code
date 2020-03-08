@@ -30,6 +30,7 @@ namespace pr::rdr
 		,m_dsb()
 		,m_rsb()
 		,m_bsb()
+		,m_diag()
 		,m_eh_resize()
 	{
 		SetRenderSteps(rsteps);

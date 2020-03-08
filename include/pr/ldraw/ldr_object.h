@@ -249,6 +249,9 @@ namespace pr::ldr
 		// Render the object without effecting the depth buffer
 		NoZWrite = 1 << 3,
 
+		// The object has normals shown
+		Normals = 1 << 4,
+
 		// Set when an object is selected. The meaning of 'selected' is up to the application
 		Selected = 1 << 8,
 
@@ -439,7 +442,7 @@ namespace pr::ldr
 
 		// Recursively add the bounding box instance for this object using 'bbox_model'
 		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(rdr::Scene& scene, rdr::ModelPtr bbox_model, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
+		void AddBBoxToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
 
 		// Notes:
 		//  - Methods with a 'name' parameter apply an operation on this object
@@ -509,6 +512,10 @@ namespace pr::ldr
 		// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
 		bool Wireframe(char const* name = nullptr) const;
 		void Wireframe(bool wireframe, char const* name = nullptr);
+
+		// Get/Set the visibility of normals for this object or child objects matching 'name' (see Apply)
+		bool Normals(char const* name = nullptr) const;
+		void Normals(bool wireframe, char const* name = nullptr);
 
 		// Get/Set screen space rendering mode for this object (and all child objects)
 		bool ScreenSpace() const;

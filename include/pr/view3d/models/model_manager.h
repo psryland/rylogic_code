@@ -58,5 +58,6 @@ namespace pr::rdr
 
 		// Stock models
 		ModelPtr m_unit_quad;
+		ModelPtr m_bbox_model;
 	};
 }

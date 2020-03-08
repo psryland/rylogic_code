@@ -1833,6 +1833,31 @@ VIEW3D_API void __stdcall View3D_ObjectWireframeSet(View3DObject object, BOOL wi
 	CatchAndReport(View3D_ObjectWireframeSet, , );
 }
 
+// Get/Set 'show normals' mode for an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API BOOL __stdcall View3D_ObjectNormalsGet(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return const_cast<pr::ldr::LdrObject const*>(object)->Normals(name);
+	}
+	CatchAndReport(View3D_ObjectNormalsGet, , FALSE);
+}
+VIEW3D_API void __stdcall View3D_ObjectNormalsSet(View3DObject object, BOOL show, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		// Normals length is a scene-wide property set in View3D_WindowNormalsLength
+		DllLockGuard;
+		object->Normals(show, name);
+	}
+	CatchAndReport(View3D_ObjectNormalsSet, , );
+}
+
 // Reset the object colour back to its default
 VIEW3D_API void __stdcall View3D_ObjectResetColour(View3DObject object, char const* name)
 {
@@ -2780,6 +2805,80 @@ VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(View3DGizmo gizmo)
 	CatchAndReport(View3D_GizmoManipulating, ,FALSE);
 }
 
+// Diagnostics **********************************************************************
+
+// Get/Set whether object bounding boxes are visible
+VIEW3D_API BOOL __stdcall View3D_DiagBBoxesVisibleGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->BBoxesVisible();
+	}
+	CatchAndReport(View3D_DiagBBoxesVisibleGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_DiagBBoxesVisibleSet(View3DWindow window, BOOL visible)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->BBoxesVisible(visible != 0);
+	}
+	CatchAndReport(View3D_DiagBBoxesVisibleSet, window, );
+}
+
+// Get/Set the length of the vertex normals
+VIEW3D_API float __stdcall View3D_DiagNormalsLengthGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->NormalsLength();
+	}
+	CatchAndReport(View3D_DiagNormalsLengthGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_DiagNormalsLengthSet(View3DWindow window, float length)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->NormalsLength(length);
+	}
+	CatchAndReport(View3D_DiagNormalsLengthSet, window, );
+}
+
+// Get/Set the colour of the vertex normals
+VIEW3D_API View3DColour __stdcall View3D_DiagNormalsColourGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return window->NormalsColour();
+	}
+	CatchAndReport(View3D_DiagNormalsColourGet, window, FALSE);
+}
+VIEW3D_API void __stdcall View3D_DiagNormalsColourSet(View3DWindow window, View3DColour colour)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->NormalsColour(colour);
+	}
+	CatchAndReport(View3D_DiagNormalsColourSet, window, );
+}
+
 // Miscellaneous **********************************************************************
 
 // Flush any pending commands to the graphics card. Basically 'Present' but for off-screen rendering
@@ -2909,30 +3008,6 @@ VIEW3D_API void __stdcall View3D_OriginSizeSet(View3DWindow window, float size)
 		window->m_origin_point_size = size;
 	}
 	CatchAndReport(View3D_OriginSizeSet, window,);
-}
-
-// Get/Set whether object bounding boxes are visible
-VIEW3D_API BOOL __stdcall View3D_BBoxesVisibleGet(View3DWindow window)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		return window->BBoxesVisible();
-	}
-	CatchAndReport(View3D_BBoxesVisibleGet, window, FALSE);
-}
-VIEW3D_API void __stdcall View3D_BBoxesVisibleSet(View3DWindow window, BOOL visible)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->BBoxesVisible(visible != 0);
-	}
-	CatchAndReport(View3D_BBoxesVisibleSet, window, );
 }
 
 // Get/Set the visibility of the selection box
@@ -3158,6 +3233,7 @@ static_assert(int(EView3DFlags::Hidden            ) == int(pr::ldr::ELdrFlags::H
 static_assert(int(EView3DFlags::Wireframe         ) == int(pr::ldr::ELdrFlags::Wireframe         ));
 static_assert(int(EView3DFlags::NoZTest           ) == int(pr::ldr::ELdrFlags::NoZTest           ));
 static_assert(int(EView3DFlags::NoZWrite          ) == int(pr::ldr::ELdrFlags::NoZWrite          ));
+static_assert(int(EView3DFlags::Normals           ) == int(pr::ldr::ELdrFlags::Normals           ));
 static_assert(int(EView3DFlags::Selected          ) == int(pr::ldr::ELdrFlags::Selected          ));
 static_assert(int(EView3DFlags::BBoxExclude       ) == int(pr::ldr::ELdrFlags::BBoxExclude       ));
 static_assert(int(EView3DFlags::SceneBoundsExclude) == int(pr::ldr::ELdrFlags::SceneBoundsExclude));

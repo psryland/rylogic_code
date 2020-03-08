@@ -5111,7 +5111,7 @@ namespace Rylogic.Gui.WinForms
 				TextureScale = texture_scale;
 				sx = Math.Max(1, sx * TextureScale);
 				sy = Math.Max(1, sy * TextureScale);
-				Surf = new View3d.Texture(sx, sy, View3d.TextureOptions.GdiCompat(dbg_name: dbg_name));// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { GdiCompatible = true, DbgName = dbg_name });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public Surface(XElement node)
 			{
@@ -5119,7 +5119,7 @@ namespace Rylogic.Gui.WinForms
 				var sz = node.Element(XmlTag.Size).As<v2>();
 				var sx = Math.Max(1, (int)(sz.x + 0.5f));
 				var sy = Math.Max(1, (int)(sz.y + 0.5f));
-				Surf = new View3d.Texture(sx, sy, View3d.TextureOptions.GdiCompat());// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions { GdiCompatible = true });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
 			{

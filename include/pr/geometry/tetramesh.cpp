@@ -14,7 +14,7 @@
 // Note: this software is confidential and property of Rylogic Limited and cannot
 // be used without the express permission of the author.
 
-#include "pr/common/chain.h"
+#include "pr/container/chain.h"
 #include "pr/container/byte_data.h"
 #include "pr/geometry/tetramesh.h"
 #include "pr/geometry/closest_point.h"

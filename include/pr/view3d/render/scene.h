@@ -12,6 +12,7 @@
 #include "pr/view3d/util/stock_resources.h"
 #include "pr/view3d/util/event_args.h"
 #include "pr/view3d/util/wrappers.h"
+#include "pr/view3d/util/diagnostic.h"
 
 namespace pr::rdr
 {
@@ -38,9 +39,10 @@ namespace pr::rdr
 		Colour         m_bkgd_colour;   // The background colour for the scene
 		Light          m_global_light;  // The global light settings
 		TextureCubePtr m_global_envmap; // A global environment map
-		DSBlock        m_dsb;           // Scene-wide states
-		RSBlock        m_rsb;           // Scene-wide states
-		BSBlock        m_bsb;           // Scene-wide states
+		DSBlock        m_dsb;           // Scene-wide depth states
+		RSBlock        m_rsb;           // Scene-wide render states
+		BSBlock        m_bsb;           // Scene-wide blend states
+		DiagState      m_diag;          // Diagnostic variables
 		AutoSub        m_eh_resize;     // RT resize event handler subscription
 
 		Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());

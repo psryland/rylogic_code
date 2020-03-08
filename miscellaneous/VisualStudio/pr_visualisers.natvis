@@ -121,12 +121,21 @@ old:
 	</Type>
 
 	<!-- Chain -->
-	<Type Name="pr::chain::head&lt;*,*&gt;">
-		<DisplayString>count={size()} first={*m_next->m_obj}</DisplayString>
+	<Type Name="pr::chain::head&lt;*,*&gt;" Inheritable="false">
+		<DisplayString Condition="m_next == this">empty</DisplayString>
+		<DisplayString>first={*m_next->m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>*m_next->m_obj</ExpandedItem>
+			<Item Name="[next]">m_next->m_next,na</Item>
+		</Expand>
 	</Type>
-	<Type Name="pr::chain::link&lt;*,*&gt;">
-		<DisplayString Condition="m_obj == 0">empty</DisplayString>
+	<Type Name="pr::chain::link&lt;*,*&gt;" Inheritable="false">
+		<DisplayString Condition="m_obj == 0">head</DisplayString>
 		<DisplayString>{*m_obj}</DisplayString>
+		<Expand>
+			<ExpandedItem>*m_obj</ExpandedItem>
+			<Item Name="[next]">m_next,na</Item>
+		</Expand>
 	</Type>
 
 	<!-- Maths -->

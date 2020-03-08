@@ -31,18 +31,18 @@ namespace Rylogic.Gfx
 
 			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
 			public CubeMap(string resource)
-				: this(resource, 0, 0, TextureOptions.New())
+				: this(resource, 0, 0, new TextureOptions())
 			{ }
 			public CubeMap(string resource, TextureOptions options)
 				: this(resource, 0, 0, options)
 			{ }
 			public CubeMap(string resource, int width, int height)
-				: this(resource, width, height, TextureOptions.New())
+				: this(resource, width, height, new TextureOptions())
 			{ }
 			public CubeMap(string resource, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_CubeMapCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				Handle = View3D_CubeMapCreateFromUri(resource, (uint)width, (uint)height, ref options.Data);
 				if (Handle == HCubeMap.Zero) throw new Exception($"Failed to create cube map texture from {resource}");
 				//View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);

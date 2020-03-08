@@ -410,7 +410,7 @@ namespace Rylogic.Gfx
 			Animation = 1 << 7,
 			All = Name | Model | Transform | Children | Colour | ColourMask | Flags | Animation,
 		}
-		[Flags] public enum EFlags
+		[Flags] public enum EFlags // sync with 'EView3DFlags'
 		{
 			None = 0,
 
@@ -425,6 +425,9 @@ namespace Rylogic.Gfx
 
 			// Render the object without effecting the depth buffer
 			NoZWrite = 1 << 3,
+
+			// The object has normals shown
+			Normals = 1 << 4,
 
 			// Set when an object is selected. The meaning of 'selected' is up to the application
 			Selected = 1 << 8,
@@ -493,8 +496,7 @@ namespace Rylogic.Gfx
 			General                     = 1 << 16,
 			General_FocusPointVisible   = General | 1 << 0,
 			General_OriginPointVisible  = General | 1 << 1,
-			General_BBoxesVisible       = General | 1 << 2,
-			General_SelectionBoxVisible = General | 1 << 3,
+			General_SelectionBoxVisible = General | 1 << 2,
 
 			Scene                  = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,
@@ -515,6 +517,11 @@ namespace Rylogic.Gfx
 
 			Lighting     = 1 << 19,
 			Lighting_All = Lighting | 1 << 0,
+
+			Diagnostics = 1 << 20,
+			Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
+			Diagnostics_NormalsLength = Diagnostics | 1 << 1,
+			Diagnostics_NormalsColour = Diagnostics | 1 << 2,
 		}
 		#endregion
 
@@ -662,24 +669,28 @@ namespace Rylogic.Gfx
 			public float m_aspect { get { return (float)m_width / m_height; } }
 		}
 
-		[StructLayout(LayoutKind.Sequential)]
-		public struct TextureOptions
+		public class TextureOptions
 		{
-			public m4x4 T2S;
-			public EFormat Format;
-			public uint Mips;
-			public EFilter Filter;
-			public EAddrMode AddrU;
-			public EAddrMode AddrV;
-			public EBindFlags BindFlags;
-			public EResMiscFlags MiscFlags;
-			public uint MultiSamp;
-			public uint ColourKey;
-			public bool HasAlpha;
-			public bool GdiCompatible;
-			public string DbgName;
+			[StructLayout(LayoutKind.Sequential)]
+			public struct InteropData
+			{
+				public m4x4 T2S;
+				public EFormat Format;
+				public uint Mips;
+				public EFilter Filter;
+				public EAddrMode AddrU;
+				public EAddrMode AddrV;
+				public EBindFlags BindFlags;
+				public EResMiscFlags MiscFlags;
+				public uint MultiSamp;
+				public uint ColourKey;
+				public bool HasAlpha;
+				public bool GdiCompatible;
+				public string DbgName;
+			}
+			public InteropData Data;
 
-			public static TextureOptions New(
+			public TextureOptions(
 				m4x4? t2s = null,
 				EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
 				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
@@ -693,7 +704,7 @@ namespace Rylogic.Gfx
 				bool has_alpha = false,
 				string? dbg_name = null)
 			{
-				return new TextureOptions
+				Data = new InteropData
 				{
 					T2S = t2s ?? m4x4.Identity,
 					Format = format,
@@ -706,40 +717,90 @@ namespace Rylogic.Gfx
 					MiscFlags = misc_flags,
 					ColourKey = colour_key,
 					HasAlpha = has_alpha,
-					GdiCompatible = false,
 					DbgName = dbg_name ?? string.Empty,
+					GdiCompatible = false,
 				};
 			}
-			public static TextureOptions GdiCompat(
-				m4x4? t2s = null,
-				EFormat format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
-				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
-				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
-				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
-				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET,
-				EResMiscFlags misc_flags = EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE,
-				uint msaa = 1U,
-				uint mips = 1U,
-				uint colour_key = 0U,
-				bool has_alpha = true,
-				string? dbg_name = null)
+
+			public m4x4 T2S
 			{
-				return new TextureOptions
+				get => Data.T2S;
+				set => Data.T2S = value;
+			}
+			public EFormat Format
+			{
+				get => Data.Format;
+				set => Data.Format = value;
+			}
+			public uint Mips
+			{
+				get => Data.Mips;
+				set => Data.Mips = value;
+			}
+			public EFilter Filter
+			{
+				get => Data.Filter;
+				set => Data.Filter = value;
+			}
+			public EAddrMode AddrU
+			{
+				get => Data.AddrU;
+				set => Data.AddrU = value;
+			}
+			public EAddrMode AddrV
+			{
+				get => Data.AddrV;
+				set => Data.AddrV = value;
+			}
+			public EBindFlags BindFlags
+			{
+				get => Data.BindFlags;
+				set => Data.BindFlags = value;
+			}
+			public EResMiscFlags MiscFlags
+			{
+				get => Data.MiscFlags;
+				set => Data.MiscFlags = value;
+			}
+			public uint MultiSamp
+			{
+				get => Data.MultiSamp;
+				set => Data.MultiSamp = Math.Min(1U, value);
+			}
+			public uint ColourKey
+			{
+				get => Data.ColourKey;
+				set => Data.ColourKey = value;
+			}
+			public bool HasAlpha
+			{
+				get => Data.HasAlpha;
+				set => Data.HasAlpha = value;
+			}
+			public bool GdiCompatible
+			{
+				get => (Data.MiscFlags & EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE) != 0;
+				set
 				{
-					T2S = t2s ?? m4x4.Identity,
-					Format = format,
-					Mips = mips,
-					Filter = filter,
-					AddrU = addrU,
-					AddrV = addrV,
-					MultiSamp = msaa,
-					BindFlags = bind_flags,
-					MiscFlags = misc_flags,
-					ColourKey = colour_key,
-					HasAlpha = has_alpha,
-					GdiCompatible = true,
-					DbgName = dbg_name ?? string.Empty,
-				};
+					if (value)
+					{
+						Data.Format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+						Data.BindFlags |= EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET;
+						Data.MiscFlags |= EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
+						Data.MultiSamp = 1U;
+						Data.Mips = 1U;
+						Data.HasAlpha = true;
+					}
+					else
+					{
+						Data.MiscFlags &= ~EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
+					}
+				}
+			}
+			public string DbgName
+			{
+				get => Data.DbgName;
+				set => Data.DbgName = value ?? string.Empty;
 			}
 		}
 
@@ -1485,15 +1546,17 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_ObjectReflectivitySet    (HObject obj, float reflectivity, string? name);
 		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string? name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string? name);
+		[DllImport(Dll)] private static extern bool              View3D_ObjectNormalsGet         (HObject obj, string? name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNormalsSet         (HObject obj, bool show, string? name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string? name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string? name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
 
 		// Materials
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromStock            (EStockTexture tex);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
-		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions.InteropData options);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
+		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[]? dst_rect, Rectangle[]? src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureRelease              (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
@@ -1508,8 +1571,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern ulong             View3D_TextureRefCount             (HTexture tex);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_TextureResolveAA            (HTexture dst, HTexture src);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions options);
-		[DllImport(Dll)] private static extern HTexture          View3D_CreateDx9RenderTarget       (HWND hwnd, uint width, uint height, ref TextureOptions options, out IntPtr shared_handle);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions.InteropData options);
+		[DllImport(Dll)] private static extern HTexture          View3D_CreateDx9RenderTarget       (HWND hwnd, uint width, uint height, ref TextureOptions.InteropData options, out IntPtr shared_handle);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Invalidate               (HWindow window, bool erase);
@@ -1556,6 +1619,14 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_GizmoSetEnabled          (HGizmo gizmo, bool enabled);
 		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
 
+		// Diagnostics
+		[DllImport(Dll)] private static extern bool     View3D_DiagBBoxesVisibleGet(HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagBBoxesVisibleSet(HWindow window, bool visible);
+		[DllImport(Dll)] private static extern float    View3D_DiagNormalsLengthGet(HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagNormalsLengthSet(HWindow window, float length);
+		[DllImport(Dll)] private static extern Colour32 View3D_DiagNormalsColourGet(HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagNormalsColourSet(HWindow window, Colour32 colour);
+
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_Flush                    ();
 		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, EKeyCodes key_code);
@@ -1567,8 +1638,6 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool              View3D_OriginVisibleGet         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_OriginVisibleSet         (HWindow window, bool show);
 		[DllImport(Dll)] private static extern void              View3D_OriginSizeSet            (HWindow window, float size);
-		[DllImport(Dll)] private static extern bool              View3D_BBoxesVisibleGet         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_BBoxesVisibleSet         (HWindow window, bool visible);
 		[DllImport(Dll)] private static extern bool              View3D_SelectionBoxVisibleGet   (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SelectionBoxVisibleSet   (HWindow window, bool visible);
 		[DllImport(Dll)] private static extern void              View3D_SelectionBoxPosition     (HWindow window, ref BBox box, ref m4x4 o2w);

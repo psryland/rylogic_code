@@ -260,7 +260,7 @@ extern "C"
 		CameraRelative = 1 << 7,
 		All            = (1 << 7) - 1, // Not including camera relative
 	};
-	enum class EView3DFlags :int
+	enum class EView3DFlags :int // sync with 'ELdrFlags'
 	{
 		None = 0,
 
@@ -275,6 +275,9 @@ extern "C"
 
 		// Render the object without effecting the depth buffer
 		NoZWrite = 1 << 3,
+
+		// The object has normals shown
+		Normals = 1 << 4,
 
 		// Set when an object is selected. The meaning of 'selected' is up to the application
 		Selected = 1 << 8,
@@ -351,8 +354,7 @@ extern "C"
 		General                     = 1 << 16,
 		General_FocusPointVisible   = General | 1 << 0,
 		General_OriginPointVisible  = General | 1 << 1,
-		General_BBoxesVisible       = General | 1 << 2,
-		General_SelectionBoxVisible = General | 1 << 3,
+		General_SelectionBoxVisible = General | 1 << 2,
 
 		Scene                  = 1 << 17,
 		Scene_BackgroundColour = Scene | 1 << 0,
@@ -373,6 +375,11 @@ extern "C"
 
 		Lighting     = 1 << 19,
 		Lighting_All = Lighting | 1 << 0,
+
+		Diagnostics = 1 << 20,
+		Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
+		Diagnostics_NormalsLength = Diagnostics | 1 << 1,
+		Diagnostics_NormalsColour = Diagnostics | 1 << 2,
 
 		_bitwise_operators_allowed = 0x7FFFFFF,
 	};
@@ -735,6 +742,8 @@ extern "C"
 	VIEW3D_API void              __stdcall View3D_ObjectReflectivitySet    (View3DObject object, float reflectivity, char const* name);
 	VIEW3D_API BOOL              __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
+	VIEW3D_API BOOL              __stdcall View3D_ObjectNormalsGet         (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectNormalsSet         (View3DObject object, BOOL show, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
 	VIEW3D_API View3DBBox        __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
@@ -807,6 +816,14 @@ extern "C"
 	VIEW3D_API void             __stdcall View3D_GizmoSetEnabled   (View3DGizmo gizmo, BOOL enabled);
 	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating (View3DGizmo gizmo);
 
+	// Diagnostics
+	VIEW3D_API BOOL         __stdcall View3D_DiagBBoxesVisibleGet(View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagBBoxesVisibleSet(View3DWindow window, BOOL visible);
+	VIEW3D_API float        __stdcall View3D_DiagNormalsLengthGet(View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagNormalsLengthSet(View3DWindow window, float length);
+	VIEW3D_API View3DColour __stdcall View3D_DiagNormalsColourGet(View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet(View3DWindow window, View3DColour colour);
+
 	// Miscellaneous
 	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
@@ -818,8 +835,6 @@ extern "C"
 	VIEW3D_API BOOL       __stdcall View3D_OriginVisibleGet         (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_OriginVisibleSet         (View3DWindow window, BOOL show);
 	VIEW3D_API void       __stdcall View3D_OriginSizeSet            (View3DWindow window, float size);
-	VIEW3D_API BOOL       __stdcall View3D_BBoxesVisibleGet         (View3DWindow window);
-	VIEW3D_API void       __stdcall View3D_BBoxesVisibleSet         (View3DWindow window, BOOL visible);
 	VIEW3D_API BOOL       __stdcall View3D_SelectionBoxVisibleGet   (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxVisibleSet   (View3DWindow window, BOOL visible);
 	VIEW3D_API void       __stdcall View3D_SelectionBoxPosition     (View3DWindow window, View3DBBox const& bbox, View3DM4x4 const& o2w);

@@ -106,10 +106,19 @@ namespace pr::rdr
 			WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 			// Draw the nugget
-			dc->DrawIndexed(
-				UINT(nugget.m_irange.size()),
-				UINT(nugget.m_irange.m_beg),
-				0);
+			if (!nugget.m_irange.empty())
+			{
+				dc->DrawIndexed(
+					UINT(nugget.m_irange.size()),
+					UINT(nugget.m_irange.m_beg),
+					0);
+			}
+			else
+			{
+				dc->Draw(
+					UINT(nugget.m_vrange.size()),
+					UINT(nugget.m_vrange.m_beg));
+			}
 		}
 	}
 }

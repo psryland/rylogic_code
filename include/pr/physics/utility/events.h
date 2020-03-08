@@ -9,7 +9,7 @@
 #include <mutex>
 #include <thread>
 #include <type_traits>
-#include "pr/common/chain.h"
+#include "pr/container/chain.h"
 
 #pragma warning (push)
 #pragma warning (disable:4127 4101) // constant conditional, 'lock' unreferenced

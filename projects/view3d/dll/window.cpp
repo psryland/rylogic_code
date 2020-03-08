@@ -57,7 +57,6 @@ namespace view3d
 		,m_origin_point_size(1.0f)
 		,m_focus_point_visible(false)
 		,m_origin_point_visible(false)
-		,m_bboxes_visible(false)
 		,m_selection_box_visible(false)
 		,m_invalidated(false)
 		,m_editor_ui()
@@ -205,17 +204,6 @@ namespace view3d
 			}
 		}
 
-		// Bounding boxes
-		if (m_bboxes_visible)
-		{
-			for (auto& obj : m_objects)
-			{
-				// Only show bounding boxes for things that contribute to the scene bounds.
-				if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
-				obj->AddBBoxToScene(m_scene, m_bbox_model.m_model);
-			}
-		}
-
 		// Selection box
 		if (m_selection_box_visible)
 		{
@@ -231,8 +219,15 @@ namespace view3d
 		m_scene.m_global_light = m_light;
 
 		// Add objects from the window to the scene
+		auto anim_time = (float)m_anim_data.m_clock.load().count();
 		for (auto& obj : m_objects)
-			obj->AddToScene(m_scene, (float)m_anim_data.m_clock.load().count());
+		{
+			obj->AddToScene(m_scene, anim_time);
+
+			// Only show bounding boxes for things that contribute to the scene bounds.
+			if (m_scene.m_diag.m_bboxes_visible && !AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude))
+				obj->AddBBoxToScene(m_scene, anim_time);
+		}
 
 		// Add gizmos from the window to the scene
 		for (auto& giz : m_gizmos)
@@ -917,13 +912,39 @@ namespace view3d
 	// Show/Hide the bounding boxes
 	bool Window::BBoxesVisible() const
 	{
-		return m_bboxes_visible;
+		return m_scene.m_diag.m_bboxes_visible;
 	}
 	void Window::BBoxesVisible(bool vis)
 	{
-		if (m_bboxes_visible == vis) return;
-		m_bboxes_visible = vis;
-		NotifySettingsChanged(EView3DSettings::General_BBoxesVisible);
+		if (m_scene.m_diag.m_bboxes_visible == vis) return;
+		m_scene.m_diag.m_bboxes_visible = vis;
+		NotifySettingsChanged(EView3DSettings::Diagnostics_BBoxesVisible);
+	}
+
+	// Get/Set the length of the displayed vertex normals
+	float Window::NormalsLength() const
+	{
+		return m_scene.m_diag.m_normal_lengths;
+	}
+	void Window::NormalsLength(float length)
+	{
+		if (m_scene.m_diag.m_normal_lengths == length) return;
+		m_scene.m_diag.m_normal_lengths = length;
+		Invalidate();
+		NotifySettingsChanged(EView3DSettings::Diagnostics_NormalsLength);
+	}
+
+	// Get/Set the colour of the displayed vertex normals
+	Colour32 Window::NormalsColour() const
+	{
+		return m_scene.m_diag.m_normal_colour;
+	}
+	void Window::NormalsColour(Colour32 colour)
+	{
+		if (m_scene.m_diag.m_normal_colour == colour) return;
+		m_scene.m_diag.m_normal_colour = colour;
+		Invalidate();
+		NotifySettingsChanged(EView3DSettings::Diagnostics_NormalsColour);
 	}
 
 	// Show/Hide the selection box
@@ -1121,39 +1142,6 @@ namespace view3d
 			m_selection_box.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
 			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
-		}
-		{
-			// Create a bounding box model
-			static pr::v4 const verts[] =
-			{
-				pr::v4(-0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4(+0.5f, -0.5f, -0.5f, 1.0f),
-				pr::v4(+0.5f, +0.5f, -0.5f, 1.0f),
-				pr::v4(-0.5f, +0.5f, -0.5f, 1.0f),
-				pr::v4(-0.5f, -0.5f, +0.5f, 1.0f),
-				pr::v4(+0.5f, -0.5f, +0.5f, 1.0f),
-				pr::v4(+0.5f, +0.5f, +0.5f, 1.0f),
-				pr::v4(-0.5f, +0.5f, +0.5f, 1.0f),
-			};
-			static pr::uint16 const indices[] =
-			{
-				0, 1, 1, 2, 2, 3, 3, 0,
-				4, 5, 5, 6, 6, 7, 7, 4,
-				0, 4, 1, 5, 2, 6, 3, 7,
-			};
-			static pr::Colour32 const colours[] =
-			{
-				pr::Colour32Blue,
-			};
-			static NuggetProps const nuggets[] =
-			{
-				NuggetProps(EPrim::LineList),
-			};
-
-			auto cdata = pr::rdr::MeshCreationData().verts(verts).indices(indices).colours(colours).nuggets(nuggets);
-			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-			m_bbox_model.m_model->m_name = "bbox";
-			m_bbox_model.m_i2w   = pr::m4x4Identity;
 		}
 	}
 }

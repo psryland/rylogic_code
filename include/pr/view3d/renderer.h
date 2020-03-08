@@ -77,6 +77,7 @@
 #include "pr/view3d/shaders/shader.h"
 #include "pr/view3d/shaders/shdr_fwd.h"
 #include "pr/view3d/shaders/shdr_screen_space.h"
+#include "pr/view3d/shaders/shdr_diagnostic.h"
 
 // Textures
 #include "pr/view3d/textures/texture_manager.h"
@@ -94,5 +95,6 @@
 #include "pr/view3d/util/util.h"
 #include "pr/view3d/util/stock_resources.h"
 #include "pr/view3d/util/event_args.h"
+#include "pr/view3d/util/diagnostic.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE

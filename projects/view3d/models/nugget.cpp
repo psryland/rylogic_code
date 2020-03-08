@@ -98,6 +98,12 @@ namespace pr::rdr
 		Alpha(RequiresAlpha());
 	}
 
+	// Delete this nugget, removing it from the owning model
+	void Nugget::Delete()
+	{
+		m_owner->mdl_mgr().Delete(this);
+	}
+
 	// Enable/Disable alpha for this nugget
 	void Nugget::Alpha(bool enable)
 	{
@@ -144,7 +150,7 @@ namespace pr::rdr
 			// Find and delete the dependent nugget
 			auto iter = pr::find_if(m_nuggets, [](auto& nug) { return nug.m_sort_key.Group() == ESortGroup::AlphaBack; });
 			if (iter != m_nuggets.end())
-				m_model_buffer->m_mdl_mgr->Delete(&*iter);
+				iter->Delete();
 		}
 	}
 }

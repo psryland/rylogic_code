@@ -31,7 +31,7 @@ namespace Rylogic.Gfx
 
 			/// <summary>Construct an uninitialised texture</summary>
 			public Texture(int width, int height)
-				:this(width, height, IntPtr.Zero, 0, TextureOptions.New())
+				:this(width, height, IntPtr.Zero, 0, new TextureOptions())
 			{}
 			public Texture(int width, int height, TextureOptions options)
 				:this(width, height, IntPtr.Zero, 0, options)
@@ -39,7 +39,7 @@ namespace Rylogic.Gfx
 			public Texture(int width, int height, IntPtr data, uint data_size, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options);
+				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options.Data);
 				if (Handle == HTexture.Zero) throw new Exception($"Failed to create {width}x{height} texture");
 				
 				View3D_TextureGetInfo(Handle, out Info);
@@ -48,18 +48,18 @@ namespace Rylogic.Gfx
 
 			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
 			public Texture(string resource)
-				:this(resource, 0, 0, TextureOptions.New())
+				:this(resource, 0, 0, new TextureOptions())
 			{}
 			public Texture(string resource, TextureOptions options)
 				:this(resource, 0, 0, options)
 			{}
 			public Texture(string resource, int width, int height)
-				:this(resource, width, height, TextureOptions.New())
+				:this(resource, width, height, new TextureOptions())
 			{}
 			public Texture(string resource, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options.Data);
 				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {resource}");
 				View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
@@ -159,7 +159,7 @@ namespace Rylogic.Gfx
 			public static Texture FromShared(IntPtr shared_resource, TextureOptions options)
 			{
 				// Not all of the texture options are used, just sampler description, has alpha, and dbg name
-				return new Texture(View3D_TextureFromShared(shared_resource, ref options), owned:true);
+				return new Texture(View3D_TextureFromShared(shared_resource, ref options.Data), owned:true);
 			}
 
 			/// <summary>Create a render target texture based on a shared Dx9 texture</summary>
@@ -170,7 +170,7 @@ namespace Rylogic.Gfx
 					throw new Exception("DirectX 9 requires a window handle");
 
 				// Try to create the texture. This can fail if the window handle is 'ready'
-				var handle = View3D_CreateDx9RenderTarget(hwnd, (uint)width, (uint)height, ref options, out shared_handle);
+				var handle = View3D_CreateDx9RenderTarget(hwnd, (uint)width, (uint)height, ref options.Data, out shared_handle);
 				if (handle == IntPtr.Zero)
 					throw new Exception("Failed to create DirectX 9 render target texture");
 

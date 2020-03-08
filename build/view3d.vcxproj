@@ -44,15 +44,19 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <!-- Property Sheets -->
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="props/fxc_build_rule.props" />
     <Import Project="props/debug.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="props/fxc_build_rule.props" />
     <Import Project="props/debug.x64.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="props/fxc_build_rule.props" />
     <Import Project="props/release.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="props/fxc_build_rule.props" />
     <Import Project="props/release.x64.lib.props" />
   </ImportGroup>
   <!-- Build options -->
@@ -87,6 +91,7 @@
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h" />
+    <ClInclude Include="..\include\pr\container\chain.h" />
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\common.h" />
     <ClInclude Include="..\include\pr\geometry\models_box.h" />
@@ -128,6 +133,8 @@
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\include\pr\str\extract.h" />
+    <ClInclude Include="..\include\pr\view3d\shaders\shdr_diagnostic.h" />
+    <ClInclude Include="..\include\pr\view3d\util\diagnostic.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
@@ -231,12 +238,13 @@
     <ClInclude Include="..\projects\view3d\render\stereo.h" />
     <ClInclude Include="..\projects\view3d\shaders\common.h" />
     <ClInclude Include="..\projects\view3d\shaders\shader_forward.h" />
-    <ClInclude Include="..\projects\view3d\util\forward_private.h" />
     <ClCompile Include="..\projects\view3d\models\nugget.cpp" />
     <ClCompile Include="..\projects\view3d\render\state_block.cpp" />
+    <ClCompile Include="..\projects\view3d\shaders\shdr_diagnostic.cpp" />
     <ClCompile Include="..\projects\view3d\steps\ray_cast.cpp" />
     <ClCompile Include="..\projects\view3d\textures\texture_base.cpp" />
     <ClCompile Include="..\projects\view3d\textures\texture_cube.cpp" />
+    <ClCompile Include="..\projects\view3d\util\diagnostic.cpp" />
     <ClCompile Include="..\projects\view3d\util\util.cpp" />
     <ClCompile Include="..\projects\view3d\config\config.cpp" />
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp" />
@@ -292,6 +300,7 @@
     <None Include="..\projects\view3d\directxtex\DirectXTex.inl" />
     <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsli" />
+    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\common\geometry.hlsli" />
@@ -302,9 +311,9 @@
     <None Include="..\projects\view3d\shaders\hlsl\lighting\phong_lighting.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screenspace_cbuf.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
     <None Include="..\projects\view3d\shaders\hlsl\utility\env_map.hlsli" />
+    <None Include="..\projects\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\dslighting.hlsl">
@@ -329,6 +338,17 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

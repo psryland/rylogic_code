@@ -42,7 +42,6 @@ namespace view3d
 		float                 m_origin_point_size;        // The base size of the origin instance
 		bool                  m_focus_point_visible;      // True if we should draw the focus point
 		bool                  m_origin_point_visible;     // True if we should draw the origin point
-		bool                  m_bboxes_visible;           // True if we should draw object bounding boxes
 		bool                  m_selection_box_visible;    // True if we should draw the selection box
 		bool                  m_invalidated;              // True after Invalidate has been called but before Render has been called
 		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
@@ -243,6 +242,14 @@ namespace view3d
 		// Show/Hide the bounding boxes
 		bool BBoxesVisible() const;
 		void BBoxesVisible(bool vis);
+
+		// The length of vertex normals (when displayed)
+		float NormalsLength() const;
+		void NormalsLength(float length);
+
+		// The colour of vertex normals (when displayed)
+		pr::Colour32 NormalsColour() const;
+		void NormalsColour(pr::Colour32 colour);
 
 		// Show/Hide the selection box
 		bool SelectionBoxVisible() const;

@@ -8,7 +8,6 @@
 #include "pr/view3d/render/window.h"
 #include "pr/view3d/render/scene.h"
 #include "pr/view3d/instances/instance.h"
-#include "view3d/util/forward_private.h"
 #include "view3d/render/state_stack.h"
 
 namespace pr::rdr
@@ -60,10 +59,10 @@ namespace pr::rdr
 		// Get the nuggets for this render step
 		auto& nuggets = model->m_nuggets;
 		#if PR_DBG_RDR
-		if (nuggets.empty() && !AllSet(model->m_dbg_flags, EDbgRdrFlags::WarnedNoRenderNuggets))
+		if (nuggets.empty() && !AllSet(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets))
 		{
 			PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
-			model->m_dbg_flags = SetBits(model->m_dbg_flags, EDbgRdrFlags::WarnedNoRenderNuggets, true);
+			model->m_dbg_flags = SetBits(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets, true);
 		}
 		#endif
 
