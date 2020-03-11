@@ -240,13 +240,14 @@ namespace LDraw.UI
 					m_text_editor.MouseHover += HandleMouseHover;
 					m_text_editor.TextArea.Caret.PositionChanged -= HandleCaretPositionChanged;
 					m_text_editor.TextArea.SelectionChanged -= HandleSelectionChanged;
+					m_text_editor.Document.TextChanged -= HandleTextChanged;
 					m_text_editor.PreviewKeyDown -= HandleKeyDown;
 
 					// Drop the text marker service
 					m_text_marker_service = null!;
 
-					// Release the template fields collection
-					m_fields = null!;
+					// Release the fields collection
+					m_fields = null;
 
 					// Uninstall folding support
 					m_folding_timer.Stop();
@@ -279,15 +280,13 @@ namespace LDraw.UI
 					var services = (IServiceContainer)m_text_editor.Document.ServiceProvider.GetService(typeof(IServiceContainer));
 					services.AddService(typeof(ITextMarkerService), m_text_marker_service);
 
-					// Template fields
-					m_fields = new TextSegmentCollection<TextSegment>(m_text_editor.Document);
-
 					// Adjust key bindings
 					AvalonEditCommands.DeleteLine.InputGestures.Clear();
 					AvalonEditCommands.IndentSelection.InputGestures.Clear();
 
 					// Hook up handlers
 					m_text_editor.PreviewKeyDown += HandleKeyDown;
+					m_text_editor.Document.TextChanged += HandleTextChanged;
 					m_text_editor.TextArea.SelectionChanged += HandleSelectionChanged;
 					m_text_editor.TextArea.Caret.PositionChanged += HandleCaretPositionChanged;
 					m_text_editor.MouseHover += HandleMouseHover;
@@ -295,6 +294,15 @@ namespace LDraw.UI
 				}
 
 				// Handlers
+				TextSegmentCollection<TextSegment> FindFields()
+				{
+					var doc = Editor.Document;
+					const string field_pattern = @"(<\w+>)|((?:\w+\s*\|\s*)+\w+)";
+					var search = SearchStrategyFactory.Create(field_pattern, true, false, SearchMode.RegEx);
+					var fields = new TextSegmentCollection<TextSegment>();
+					fields.AddRange(search.FindAll(doc, 0, doc.TextLength).Cast<TextSegment>());
+					return fields;
+				}
 				void HandleKeyDown(object sender, KeyEventArgs e)
 				{
 					switch (e.Key)
@@ -316,25 +324,33 @@ namespace LDraw.UI
 					case Key.Down:
 						{
 							// Quickly navigate to "<field>" or "Se|ect" fields
-							if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && m_fields.Count != 0)
+							if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
 							{
+								var doc = Editor.Document;
+								var text_length = doc.TextLength;
+
 								// Clear the selection so that find isn't limited to the selected text
 								if (e.Key == Key.Up)
 									Editor.Select(Editor.SelectionStart, 0);
 								else
 									Editor.Select(Editor.SelectionStart + Editor.SelectionLength, 0);
 
+								// Update the cache of field text segments
+								m_fields ??= FindFields();
+
 								// Search for a field identifier
 								var seg = m_fields.FindFirstSegmentWithStartAfter(Editor.CaretOffset);
 								if (e.Key == Key.Down)
-									seg = seg != null ? seg : m_fields.FirstSegment;
+								{
+									seg ??= m_fields.FirstSegment;
+								}
 								if (e.Key == Key.Up)
-									seg = seg != null ? m_fields.GetPreviousSegment(seg) : m_fields.LastSegment;
+								{
+									if (seg != null) seg = m_fields.GetPreviousSegment(seg);
+									seg ??= m_fields.LastSegment;
+								}
 								if (seg == null)
 									break;
-
-								var doc = Editor.Document;
-								var text_length = doc.TextLength;
 
 								// Expand the range to include '[' and ']' characters
 								int beg = seg.StartOffset, end = seg.EndOffset;
@@ -377,6 +393,11 @@ namespace LDraw.UI
 							break;
 						}
 					}
+				}
+				void HandleTextChanged(object sender, EventArgs e)
+				{
+					// Invalidate cached field matches
+					m_fields = null;
 				}
 				void HandleSelectionChanged(object sender, EventArgs e)
 				{
@@ -476,12 +497,6 @@ namespace LDraw.UI
 					// Replace with the expanded template
 					var text = View3d.AutoComplete.ExpandTemplate(completion.Template, View3d.AutoComplete.EExpandFlags.Optionals, indent_level, Editor.Options.IndentationString);
 					doc.Replace(completion.StartOffset, end - completion.StartOffset, text);
-
-					// Update the collection of fields
-					m_fields.Clear();
-					const string field_pattern = @"(<\w+>)|((?:\w+\s*\|\s*)+\w+)";
-					var search = SearchStrategyFactory.Create(field_pattern, true, false, SearchMode.RegEx);
-					m_fields.AddRange(search.FindAll(doc, 0, doc.TextLength).Cast<TextSegment>());
 				}
 				void UpdateFoldings(object sender, EventArgs e)
 				{
@@ -532,7 +547,7 @@ namespace LDraw.UI
 		private SearchPanel m_search_ui = null!;
 		private FoldingManager m_folding_mgr = null!;
 		private DispatcherTimer m_folding_timer = null!;
-		private TextSegmentCollection<TextSegment> m_fields = null!;
+		private TextSegmentCollection<TextSegment>? m_fields = null;
 		private TextMarkerService m_text_marker_service = null!;
 		private ToolTip? m_tt_errors;
 
@@ -900,16 +915,16 @@ namespace LDraw.UI
 					// The indent text from the previous line
 					var indent = document.GetText(prev_indent_seg);
 
-					// If the previous line starts with '{', add one indent
-					if (prev_indent_seg.EndOffset < document.TextLength &&
-						document.GetText(prev_indent_seg.EndOffset, 1) == "{")
-						indent += m_editor.Options.IndentationString;
-
-					// If the current line starts with '}', remove one indent
-					if (curr_indent_seg.EndOffset < document.TextLength && 
-						document.GetText(curr_indent_seg.EndOffset, 1) == "}" &&
-						indent.EndsWith(m_editor.Options.IndentationString))
-						indent = indent.Substring(0, indent.Length - m_editor.Options.IndentationString.Length);
+					//// If the previous line starts with '{', add one indent
+					//if (prev_indent_seg.EndOffset < document.TextLength &&
+					//	document.GetText(prev_indent_seg.EndOffset, 1) == "{")
+					//	indent += m_editor.Options.IndentationString;
+					//
+					//// If the current line starts with '}', remove one indent
+					//if (curr_indent_seg.EndOffset < document.TextLength && 
+					//	document.GetText(curr_indent_seg.EndOffset, 1) == "}" &&
+					//	indent.EndsWith(m_editor.Options.IndentationString))
+					//	indent = indent.Substring(0, indent.Length - m_editor.Options.IndentationString.Length);
 
 					// Copy the indentation to 'line'. 'OffsetChangeMappingType.RemoveAndInsert' guarantees the caret moves behind the new indentation.
 					document.Replace(curr_indent_seg.Offset, curr_indent_seg.Length, indent, OffsetChangeMappingType.RemoveAndInsert);

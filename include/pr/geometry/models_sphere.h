@@ -146,12 +146,12 @@ namespace pr::geometry
 			float ang1 = 0.0f, ang2 = dAng * 0.5f;
 			for (uint w = 0; w != 6; ++w, ang1 += dAng, ang2 += dAng)
 			{
-				v4 norm_a = v4(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
-				v4 norm_b = v4(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);
-				AddVertex( v4ZAxis ,ub[w] ,true  ,data);
-				AddVertex( norm_a  ,ua[w] ,false ,data);
-				AddVertex( norm_b  ,ub[w] ,false ,data);
-				AddVertex(-v4ZAxis ,ua[w+1] ,true  ,data);
+				auto norm_a = v4(R * Cos(ang1), R * Sin(ang1), H1, 0.0f);
+				auto norm_b = v4(R * Cos(ang2), R * Sin(ang2), H2, 0.0f);
+				AddVertex(v4ZAxis, ub[w], true, data);
+				AddVertex(norm_a, ua[w], false, data);
+				AddVertex(norm_b, ub[w], false, data);
+				AddVertex(-v4ZAxis, ua[w + 1], true, data);
 			}
 
 			// Add the faces

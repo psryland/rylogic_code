@@ -222,7 +222,6 @@ namespace Rylogic.Gui.WPF
 					Side = Dock.Left;
 					AxisColour = Colour32.Black;
 					LabelColour = Colour32.Black;
-					GridColour = Colour32.WhiteSmoke;
 					TickColour = Colour32.Black;
 					DrawTickMarks = true;
 					DrawTickLabels = true;
@@ -260,13 +259,6 @@ namespace Rylogic.Gui.WPF
 				{
 					get => get<Colour32>(nameof(LabelColour));
 					set => set(nameof(LabelColour), value);
-				}
-
-				/// <summary>The colour of the grid lines</summary>
-				public Colour32 GridColour
-				{
-					get => get<Colour32>(nameof(GridColour));
-					set => set(nameof(GridColour), value);
 				}
 
 				/// <summary>The colour of the tick text</summary>

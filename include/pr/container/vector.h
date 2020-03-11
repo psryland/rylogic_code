@@ -759,7 +759,7 @@ namespace pr
 				static_assert(std::is_copy_constructible<Type>::value, "Cannot copy construct 'Type'");
 				if (inside(&value))
 				{
-					auto idx = &value - &front();
+					auto idx = &value - data();
 					ensure_space(newsize, false);
 					traits::fill_constr(alloc(), m_ptr + m_count, newsize - m_count, (*this)[idx]);
 				}
@@ -857,6 +857,8 @@ namespace pr
 		iterator insert(const_iterator pos, Type&& value)
 		{
 			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
+			assert(!inside(&value) && "Don't move insert a value already in this array");
+
 			size_type ofs = pos - begin();
 			if (ofs == m_count)
 			{
@@ -879,23 +881,43 @@ namespace pr
 		iterator insert(const_iterator pos, size_type count, Type const& value)
 		{
 			assert(begin() <= pos && pos <= end() && "insert position must be within the array");
-			size_type ofs = pos - begin();
+			auto ofs = pos - begin();
 			if (count > max_size() - size())
-			{
 				throw std::overflow_error("pr::vector<> size too large");
+			if (count == 0)
+				return begin() + ofs;
+
+			// Algorithm:
+			//   Grow the allocation
+			//   Copy the last min(rem, count) elements to the end.
+			//     If 'count' > 'rem' then there is an unconstructed hole between the old end
+			//       and 'end-rem' which needs to be filled with copies of 'value'
+			//     If 'rem' > 'count' then only some of the remainder can be moved to the added
+			//       space, the others need to be moved right.
+			//   Fill with 'count' copies of 'value' from 'ofs'
+
+			auto* elem = &value;
+			if (inside(&value))
+			{
+				// The index of 'value' after inserting space
+				auto idx = (&value - data());
+				idx += int(idx >= ofs) * count;    
+				ensure_space(m_count + count, true);
+				elem = &m_ptr[idx];
 			}
-			else if (count != 0)
+			else
 			{
 				ensure_space(m_count + count, true);
-				Type* ins = m_ptr + ofs;                                   // The insert point
-				Type* end = m_ptr + m_count;                               // The current end of the array
-				size_type rem = size() - ofs;                              // The number of remaining elements after 'ofs'
-				size_type n = rem > count ? count : rem;                   // min(count, rem)
-				traits::copy_constr(alloc(), end + count - n, end - n, n); // copy construct the last 'n' elements
-				traits::fill_constr(alloc(), end, count - n, value);       // fill from the current end to the element that was at ofs but has now moved. (might be nothing)
-				traits::move_right (ins + count, ins, rem - n);            // move those right of the insert point to butt up with the now moved remainder
-				traits::fill_assign(ins, n, value);                        // fill in the hole
 			}
+
+			auto ins = m_ptr + ofs;                                    // The insert point
+			auto end = m_ptr + m_count;                                // The current end of the array
+			auto rem = size() - ofs;                                   // The number of remaining elements after 'ofs'
+			auto n = rem > count ? count : rem;                        // min(count, rem)
+			traits::move_constr(alloc(), end + count - n, end - n, n); // move the last 'n' elements
+			traits::fill_constr(alloc(), end, count - n, *elem);       // fill from the current end to the element that was at ofs but has now moved. (count - n is zero if rem > count)
+			traits::move_right (ins + count, ins, rem - n);            // move those right of the insert point to butt up with the now moved remainder
+			traits::fill_assign(ins, n, *elem);                        // fill in the hole
 			m_count += count;
 			return begin() + ofs;
 		}
@@ -903,25 +925,26 @@ namespace pr
 		// insert [first, last) at pos
 		template <typename iter> void insert(const_iterator pos, iter first, iter last)
 		{
-			// Can't assume 'first' and 'last' define operators < or -
-			// assert(first <= last && "last must follow first");
-			assert(begin() <= pos && pos <= end() && "pos must be within the array");
-			size_type ofs = pos - begin();
-			if (first != last)
-			{
-				size_type old_count = m_count;
-				for (; first != last; ++first, ++m_count)
-				{
-					ensure_space(m_count + 1, true);
-					traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
-				}
+			if (first == last)
+				return;
 
-				if (ofs != old_count)
-				{
-					reverse(m_ptr + ofs, m_ptr + old_count);
-					reverse(m_ptr + old_count, m_ptr + m_count);
-					reverse(m_ptr + ofs, m_ptr + m_count);
-				}
+			// assert(first <= last && "last must follow first"); <- Can't assume 'first' and 'last' define operators < or -
+			assert(begin() <= pos && pos <= end() && "pos must be within the array");
+			assert(!inside(&*first) && "Cannot insert a subrange because iterators are invalidated after the allocation grows");
+
+			auto ofs = pos - begin();
+			auto old_count = static_cast<ptrdiff_t>(m_count);
+			for (; first != last; ++first, ++m_count)
+			{
+				ensure_space(m_count + 1, true);
+				traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
+			}
+
+			if (ofs != old_count)
+			{
+				reverse(m_ptr + ofs, m_ptr + old_count);
+				reverse(m_ptr + old_count, m_ptr + m_count);
+				reverse(m_ptr + ofs, m_ptr + m_count);
 			}
 		}
 
@@ -1348,7 +1371,7 @@ namespace pr::container
 			}{
 				Check chk;
 				{
-					std::vector<int> vec0(4U, 6);
+					std::vector<Type> vec0(4U, Type(6));
 					Array0 arr1(vec0);
 					PR_CHECK(arr1.size(), vec0.size());
 					for (int i = 0; i != int(vec0.size()); ++i)
@@ -1500,6 +1523,21 @@ namespace pr::container
 					for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, 6);
 					for (int i = 2; i != 7; ++i) PR_CHECK(arr1[i].val, ints[i].val);
 					for (int i = 7; i != 9; ++i) PR_CHECK(arr1[i].val, 6);
+				}
+			}{
+				Check chk;
+				{ // Insert aliased element
+					Array1 arr1;
+					arr1.push_back(0);
+					arr1.push_back(1);
+					arr1.push_back(2);
+					arr1.insert(arr1.begin() + 1, 3U, arr1[2]);
+					PR_CHECK(arr1[0].val, 0);
+					PR_CHECK(arr1[1].val, 2);
+					PR_CHECK(arr1[2].val, 2);
+					PR_CHECK(arr1[3].val, 2);
+					PR_CHECK(arr1[4].val, 1);
+					PR_CHECK(arr1[5].val, 2);
 				}
 			}
 		}

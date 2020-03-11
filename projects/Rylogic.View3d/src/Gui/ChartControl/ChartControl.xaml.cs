@@ -182,6 +182,15 @@ namespace Rylogic.Gui.WPF
 							Window.BackgroundColour = Options.BackgroundColour;
 							NotifyPropertyChanged(nameof(ChartBackground));
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
+
+							// Invalidate grid lines and crosshair because their colour depends on the background colour
+							XAxis.GridLineGfx = null;
+							YAxis.GridLineGfx = null;
+							if (ShowCrossHair)
+							{
+								ShowCrossHair = false;
+								ShowCrossHair = true;
+							}
 							Invalidate();
 							break;
 						}

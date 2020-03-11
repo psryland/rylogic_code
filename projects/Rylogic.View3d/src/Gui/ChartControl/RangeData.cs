@@ -432,6 +432,9 @@ namespace Rylogic.Gui.WPF
 					var v = 0;
 					var i = 0;
 
+					// Choose a suitable grid colour
+					var colour = Chart.Scene.BackgroundColour.Lerp(Chart.Scene.BackgroundColour.InvertBW(), 0.15);
+
 					// Grid verts
 					if (AxisType == EAxis.XAxis)
 					{
@@ -439,8 +442,8 @@ namespace Rylogic.Gui.WPF
 						var x = 0f; var y0 = 0f; var y1 = (float)Chart.YAxis.Span;
 						for (int l = 0; l != num_lines; ++l)
 						{
-							verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), Options.GridColour.ARGB);
-							verts[v++] = new View3d.Vertex(new v4(x, y1, 0f, 1f), Options.GridColour.ARGB);
+							verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), colour);
+							verts[v++] = new View3d.Vertex(new v4(x, y1, 0f, 1f), colour);
 							x += (float)step;
 						}
 					}
@@ -450,8 +453,8 @@ namespace Rylogic.Gui.WPF
 						var y = 0f; var x0 = 0f; var x1 = (float)Chart.XAxis.Span;
 						for (int l = 0; l != num_lines; ++l)
 						{
-							verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), Options.GridColour.ARGB);
-							verts[v++] = new View3d.Vertex(new v4(x1, y, 0f, 1f), Options.GridColour.ARGB);
+							verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), colour);
+							verts[v++] = new View3d.Vertex(new v4(x1, y, 0f, 1f), colour);
 							y += (float)step;
 						}
 					}
