@@ -20,7 +20,7 @@ void pr::ph::SphereVsCylinder(Shape const& sphere, m4x4 const& a2w, Shape const&
 	ShapeCylinder const& cyl = shape_cast<ShapeCylinder>(cylinder);
 
 	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, std::string str);
-	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, ldr::CylinderHR("Cylinder", "FF0000FF", b2w, cyl.m_radius, cyl.m_height*2, str));
+	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, ldr::Cylinder("Cylinder", "FF0000FF", b2w, cyl.m_radius, cyl.m_height*2, str));
 	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, ldr::Sphere("Sphere", "FFFF0000", a2w.pos, sph.m_radius, str));
 	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, StringToFile(str, "C:/Deleteme/collision_spherecylinder.pr_script"); str.clear());
 	

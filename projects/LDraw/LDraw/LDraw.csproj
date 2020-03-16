@@ -18,9 +18,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
-		<Version>6.1.1</Version>
-		<FileVersion>6.1.1</FileVersion>
-		<AssemblyVersion>6.1.1</AssemblyVersion>
+		<Version>6.2.0</Version>
+		<FileVersion>6.2.0</FileVersion>
+		<AssemblyVersion>6.2.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Code -->
@@ -66,5 +66,8 @@
 		</Content>
 		-->
 	</ItemGroup>
+	<Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+	  <Exec Command="py $(ProjectDir)update_syntax_rules.py" />
+	</Target>
 
 </Project>

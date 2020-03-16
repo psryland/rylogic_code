@@ -232,52 +232,47 @@ namespace pr
 			//' sin(x) == sqrt(1 - cos²(x))
 			return Sqrt(1.0f - Sqr(CosAngle()));
 		}
+
+		#pragma region Operators
+
+		// Quaternion multiply
+		// Note about 'quat multiply' vs. 'r = q*v*conj(q)':
+		// To rotate a vector or another quaternion, use the "sandwich product"
+		// However, combining rotations is done using q1 * q2.
+		// This is because:
+		//'  r1 = a * v * conj(a)  - first rotation 
+		//'  r2 = b * r1 * conj(b) - second rotation
+		//'  r2 = b * a * v * conj(a) * conj(b)     
+		//'  r2 = (b*a) * v * conj(b*a)             
+		template <typename C> friend Quat<A,C> pr_vectorcall operator * (quat_cref<B,C> lhs, quat_cref<A,B> rhs)
+		{
+			auto q = Quat<A,C>{};
+			q.x = lhs.w*rhs.x + lhs.x*rhs.w + lhs.y*rhs.z - lhs.z*rhs.y;
+			q.y = lhs.w*rhs.y - lhs.x*rhs.z + lhs.y*rhs.w + lhs.z*rhs.x;
+			q.z = lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w;
+			q.w = lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z;
+			return q;
+		}
+
+		// Quaternion rotate. i.e. 'r = q*v*conj(q)' the "sandwich product"
+		// This is not really correct, since it's actually two multiplies
+		// but it makes the code look nicer.
+		friend Vec4<B> pr_vectorcall operator * (quat_cref<A,B> lhs, v4_cref<A> rhs)
+		{
+			return Rotate(lhs, rhs);
+		}
+
+		#pragma endregion
 	};
 	static_assert(maths::is_vec4<Quat<void,void>>::value, "");
 	static_assert(std::is_pod<Quat<void,void>>::value, "Should be a pod type");
 	static_assert(std::alignment_of<Quat<void,void>>::value == 16, "Should have 16 byte alignment");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	template <typename A = void, typename B = void> using quat_cref = Quat<A,B> const;
-	#else
-	template <typename A = void, typename B = void> using quat_cref = Quat<A,B> const&;
-	#endif
 
 	// Define component accessors for pointer types
 	template <typename A, typename B> inline float x_cp(quat_cref<A,B> v) { return v.x; }
 	template <typename A, typename B> inline float y_cp(quat_cref<A,B> v) { return v.y; }
 	template <typename A, typename B> inline float z_cp(quat_cref<A,B> v) { return v.z; }
 	template <typename A, typename B> inline float w_cp(quat_cref<A,B> v) { return v.w; }
-
-	#pragma region Operators
-
-	// Quaternion multiply
-	// Note about 'quat multiply' vs. 'r = q*v*conj(q)':
-	// To rotate a vector or another quaternion, use the "sandwich product"
-	// However, combining rotations is done using q1 * q2.
-	// This is because:
-	//'  r1 = a * v * conj(a)  - first rotation 
-	//'  r2 = b * r1 * conj(b) - second rotation
-	//'  r2 = b * a * v * conj(a) * conj(b)     
-	//'  r2 = (b*a) * v * conj(b*a)             
-	template <typename A, typename B, typename C> inline Quat<A,C> pr_vectorcall operator * (quat_cref<B,C> lhs, quat_cref<A,B> rhs)
-	{
-		auto q = Quat<A,C>{};
-		q.x = lhs.w*rhs.x + lhs.x*rhs.w + lhs.y*rhs.z - lhs.z*rhs.y;
-		q.y = lhs.w*rhs.y - lhs.x*rhs.z + lhs.y*rhs.w + lhs.z*rhs.x;
-		q.z = lhs.w*rhs.z + lhs.x*rhs.y - lhs.y*rhs.x + lhs.z*rhs.w;
-		q.w = lhs.w*rhs.w - lhs.x*rhs.x - lhs.y*rhs.y - lhs.z*rhs.z;
-		return q;
-	}
-
-	// Quaternion rotate. i.e. 'r = q*v*conj(q)' the "sandwich product"
-	// This is not really correct, since it's actually two multiplies
-	// but it makes the code look nicer.
-	template <typename A, typename B> inline Vec4<B> pr_vectorcall operator * (quat_cref<A,B> lhs, v4_cref<A> rhs)
-	{
-		return Rotate(lhs, rhs);
-	}
-
-	#pragma endregion
 
 	#pragma region Functions
 

@@ -21,6 +21,7 @@
 		<ResourceDictionary>
 			<BitmapImage x:Key="plus" UriSource="/Rylogic.Gui.WPF;component/res/plus1.png"/>
 			<BitmapImage x:Key="minus" UriSource="/Rylogic.Gui.WPF;component/res/minus1.png"/>
+			<BitmapImage x:Key="refresh" UriSource="/Rylogic.Gui.WPF;component/res/refresh.png"/>
 
 			<!-- Context menu for the data grid part of the object manager -->
 			<ContextMenu x:Key="ObjectManagerListCMenu"
@@ -41,22 +42,6 @@
 						/>
 					<Separator/>
 					<MenuItem
-						Header="Show Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
-						/>
-					<MenuItem
-						Header="Hide Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
-						/>
-					<MenuItem
-						Header="Toggle Selected"
-						Command="{Binding SetVisible}"
-						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
-						/>
-					<Separator/>
-					<MenuItem
 						Header="Show Others"
 						Command="{Binding SetVisible}"
 						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowOthers}"
@@ -70,6 +55,22 @@
 						Header="Toggle Others"
 						Command="{Binding SetVisible}"
 						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleOthers}"
+						/>
+					<Separator/>
+					<MenuItem
+						Header="Show Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
+						/>
+					<MenuItem
+						Header="Hide Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
+						/>
+					<MenuItem
+						Header="Toggle Selected"
+						Command="{Binding SetVisible}"
+						CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
 						/>
 				</MenuItem>
 				<MenuItem
@@ -100,6 +101,7 @@
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
@@ -114,7 +116,7 @@
 
 			<!-- Expand All button -->
 			<Button
-				Grid.Column="0"
+				Grid.Column="1"
 				Command="{Binding ExpandAll}"
 				Style="{StaticResource ExpandButtonStyle}"
 				>
@@ -126,7 +128,7 @@
 
 			<!-- Collapse All button -->
 			<Button
-				Grid.Column="1"
+				Grid.Column="2"
 				Command="{Binding CollapseAll}"
 				Style="{StaticResource ExpandButtonStyle}"
 				>
@@ -138,7 +140,7 @@
 
 			<!-- Filter Pattern -->
 			<gui:PatternFilter
-				Grid.Column="2"
+				Grid.Column="3"
 				Command="{Binding ApplyFilter}"
 				Height="24"
 				Margin="1"

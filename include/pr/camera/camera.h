@@ -463,10 +463,15 @@ namespace pr
 			return v2(dist * h * m_aspect, dist * h);
 		}
 
-		// Return the view frustum for this camera
+		// Return the view frustum for this camera.
 		Frustum ViewFrustum(float zfar) const
 		{
-			return Frustum::MakeFA(m_fovY, m_aspect, m_focus_dist, zfar);
+			// Note: the frustum is stored with the apex (i.e. camera position) on the +Z axis at 'zfar'
+			// and the far plane at (0,0,0). However, the 'Intersect_LineToFrustum' function allows for this
+			// meaning clipping can be done in camera space assuming the frustum apex is at (0,0,0)
+			return Orthographic()
+				? Frustum::MakeOrtho(ViewArea(m_focus_dist))
+				: Frustum::MakeFA(m_fovY, m_aspect, zfar);
 		}
 		Frustum ViewFrustum() const
 		{

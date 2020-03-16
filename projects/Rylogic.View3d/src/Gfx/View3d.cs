@@ -357,10 +357,11 @@ namespace Rylogic.Gfx
 		}
 		public enum EFillMode
 		{
-			Default = 0,
-			SolidWire = 1,
+			Default   = 0,
+			Points    = 1,
 			Wireframe = 2, // D3D11_FILL_WIREFRAME
-			Solid = 3, // D3D11_FILL_SOLID
+			Solid     = 3, // D3D11_FILL_SOLID
+			SolidWire = 4,
 		}
 		public enum ECullMode
 		{
@@ -518,10 +519,11 @@ namespace Rylogic.Gfx
 			Lighting     = 1 << 19,
 			Lighting_All = Lighting | 1 << 0,
 
-			Diagnostics = 1 << 20,
-			Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
-			Diagnostics_NormalsLength = Diagnostics | 1 << 1,
-			Diagnostics_NormalsColour = Diagnostics | 1 << 2,
+			Diagnostics                    = 1 << 20,
+			Diagnostics_BBoxesVisible      = Diagnostics | 1 << 0,
+			Diagnostics_NormalsLength      = Diagnostics | 1 << 1,
+			Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
+			Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
 		}
 		#endregion
 
@@ -765,7 +767,7 @@ namespace Rylogic.Gfx
 			public uint MultiSamp
 			{
 				get => Data.MultiSamp;
-				set => Data.MultiSamp = Math.Min(1U, value);
+				set => Data.MultiSamp = Math.Max(1U, value);
 			}
 			public uint ColourKey
 			{
@@ -1620,12 +1622,14 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
 
 		// Diagnostics
-		[DllImport(Dll)] private static extern bool     View3D_DiagBBoxesVisibleGet(HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagBBoxesVisibleSet(HWindow window, bool visible);
-		[DllImport(Dll)] private static extern float    View3D_DiagNormalsLengthGet(HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagNormalsLengthSet(HWindow window, float length);
-		[DllImport(Dll)] private static extern Colour32 View3D_DiagNormalsColourGet(HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagNormalsColourSet(HWindow window, Colour32 colour);
+		[DllImport(Dll)] private static extern bool     View3D_DiagBBoxesVisibleGet     (HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagBBoxesVisibleSet     (HWindow window, bool visible);
+		[DllImport(Dll)] private static extern float    View3D_DiagNormalsLengthGet     (HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagNormalsLengthSet     (HWindow window, float length);
+		[DllImport(Dll)] private static extern Colour32 View3D_DiagNormalsColourGet     (HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagNormalsColourSet     (HWindow window, Colour32 colour);
+		[DllImport(Dll)] private static extern v2       View3D_DiagFillModePointsSizeGet(HWindow window);
+		[DllImport(Dll)] private static extern void     View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_Flush                    ();

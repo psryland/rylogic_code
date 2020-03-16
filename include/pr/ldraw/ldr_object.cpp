@@ -2949,18 +2949,20 @@ namespace pr::ldr
 		}
 		void CreateModel(LdrObject* obj) override
 		{
+			// Construct pointing down -z, then rotate the points based on axis id.
+			// Do this because frustums are commonly used for camera views and cameras point down -z.
 			float w = m_width  * 0.5f / m_view_plane;
 			float h = m_height * 0.5f / m_view_plane;
 			float n = m_near, f = m_far;
 
-			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
-			m_pt[1] = v4(-n*w, +n*h, n, 1.0f);
-			m_pt[2] = v4(+n*w, -n*h, n, 1.0f);
-			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
-			m_pt[4] = v4(+f*w, -f*h, f, 1.0f);
-			m_pt[5] = v4(+f*w, +f*h, f, 1.0f);
-			m_pt[6] = v4(-f*w, -f*h, f, 1.0f);
-			m_pt[7] = v4(-f*w, +f*h, f, 1.0f);
+			m_pt[0] = v4(-f*w, -f*h, -f, 1.0f);
+			m_pt[1] = v4(+f*w, -f*h, -f, 1.0f);
+			m_pt[2] = v4(-f*w, +f*h, -f, 1.0f);
+			m_pt[3] = v4(+f*w, +f*h, -f, 1.0f);
+			m_pt[4] = v4(-n*w, -n*h, -n, 1.0f);
+			m_pt[5] = v4(+n*w, -n*h, -n, 1.0f);
+			m_pt[6] = v4(-n*w, +n*h, -n, 1.0f);
+			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
@@ -3002,18 +3004,20 @@ namespace pr::ldr
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			// Construct pointed down +z, then rotate the points based on axis id
+			// Construct pointing down -z, then rotate the points based on axis id.
+			// Do this because frustums are commonly used for camera views and cameras point down -z.
 			float h = Tan(DegreesToRadians(m_fovY * 0.5f));
 			float w = m_aspect * h;
 			float n = m_near, f = m_far;
-			m_pt[0] = v4(-n*w, -n*h, n, 1.0f);
-			m_pt[1] = v4(+n*w, -n*h, n, 1.0f);
-			m_pt[2] = v4(-n*w, +n*h, n, 1.0f);
-			m_pt[3] = v4(+n*w, +n*h, n, 1.0f);
-			m_pt[4] = v4(-f*w, -f*h, f, 1.0f);
-			m_pt[5] = v4(+f*w, -f*h, f, 1.0f);
-			m_pt[6] = v4(-f*w, +f*h, f, 1.0f);
-			m_pt[7] = v4(+f*w, +f*h, f, 1.0f);
+			
+			m_pt[0] = v4(-f*w, -f*h, -f, 1.0f);
+			m_pt[1] = v4(+f*w, -f*h, -f, 1.0f);
+			m_pt[2] = v4(-f*w, +f*h, -f, 1.0f);
+			m_pt[3] = v4(+f*w, +f*h, -f, 1.0f);
+			m_pt[4] = v4(-n*w, -n*h, -n, 1.0f);
+			m_pt[5] = v4(+n*w, -n*h, -n, 1.0f);
+			m_pt[6] = v4(-n*w, +n*h, -n, 1.0f);
+			m_pt[7] = v4(+n*w, +n*h, -n, 1.0f);
 
 			obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_axis.O2W(), 0, 0, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
@@ -3063,8 +3067,8 @@ namespace pr::ldr
 		}
 	};
 
-	// ELdrObject::CylinderHR
-	template <> struct ObjectCreator<ELdrObject::CylinderHR> :IObjectCreator
+	// ELdrObject::Cylinder
+	template <> struct ObjectCreator<ELdrObject::Cylinder> :IObjectCreator
 	{
 		creation::MainAxis m_axis;
 		creation::Textured m_tex;
@@ -3122,8 +3126,8 @@ namespace pr::ldr
 		}
 	};
 
-	// ELdrObject::ConeHA
-	template <> struct ObjectCreator<ELdrObject::ConeHA> :IObjectCreator
+	// ELdrObject::Cone
+	template <> struct ObjectCreator<ELdrObject::Cone> :IObjectCreator
 	{
 		creation::MainAxis m_axis;
 		creation::Textured m_tex;
@@ -4507,6 +4511,8 @@ namespace pr::ldr
 		// Report progress
 		p.ReportProgress();
 	}
+	template <> void Parse<ELdrObject::Unknown>(ParseParams&) {}
+	template <> void Parse<ELdrObject::Custom>(ParseParams&) {}
 
 	// Reads a single ldr object from a script adding object (+ children) to 'p.m_objects'.
 	// Returns true if an object was read or false if the next keyword is unrecognised
@@ -4519,44 +4525,10 @@ namespace pr::ldr
 		auto kw = ELdrObject(p.m_keyword);
 		switch (kw)
 		{
+		#define PR_LDR_PARSE_IMPL(name, hash) case ELdrObject::name: Parse<ELdrObject::name>(p); break;
+		#define PR_LDR_PARSE(x) x(PR_LDR_PARSE_IMPL)
+		PR_LDR_PARSE(PR_ENUM_LDROBJECTS)
 		default: return false;
-		case ELdrObject::Point:      Parse<ELdrObject::Point     >(p); break;
-		case ELdrObject::Line:       Parse<ELdrObject::Line      >(p); break;
-		case ELdrObject::LineD:      Parse<ELdrObject::LineD     >(p); break;
-		case ELdrObject::LineStrip:  Parse<ELdrObject::LineStrip >(p); break;
-		case ELdrObject::LineBox:    Parse<ELdrObject::LineBox   >(p); break;
-		case ELdrObject::Grid:       Parse<ELdrObject::Grid      >(p); break;
-		case ELdrObject::Spline:     Parse<ELdrObject::Spline    >(p); break;
-		case ELdrObject::Arrow:      Parse<ELdrObject::Arrow     >(p); break;
-		case ELdrObject::Circle:     Parse<ELdrObject::Circle    >(p); break;
-		case ELdrObject::Rect:       Parse<ELdrObject::Rect      >(p); break;
-		case ELdrObject::Polygon:    Parse<ELdrObject::Polygon   >(p); break;
-		case ELdrObject::Pie:        Parse<ELdrObject::Pie       >(p); break;
-		case ELdrObject::Matrix3x3:  Parse<ELdrObject::Matrix3x3 >(p); break;
-		case ELdrObject::CoordFrame: Parse<ELdrObject::CoordFrame>(p); break;
-		case ELdrObject::Triangle:   Parse<ELdrObject::Triangle  >(p); break;
-		case ELdrObject::Quad:       Parse<ELdrObject::Quad      >(p); break;
-		case ELdrObject::Plane:      Parse<ELdrObject::Plane     >(p); break;
-		case ELdrObject::Ribbon:     Parse<ELdrObject::Ribbon    >(p); break;
-		case ELdrObject::Box:        Parse<ELdrObject::Box       >(p); break;
-		case ELdrObject::Bar:        Parse<ELdrObject::Bar       >(p); break;
-		case ELdrObject::BoxList:    Parse<ELdrObject::BoxList   >(p); break;
-		case ELdrObject::FrustumWH:  Parse<ELdrObject::FrustumWH >(p); break;
-		case ELdrObject::FrustumFA:  Parse<ELdrObject::FrustumFA >(p); break;
-		case ELdrObject::Sphere:     Parse<ELdrObject::Sphere    >(p); break;
-		case ELdrObject::CylinderHR: Parse<ELdrObject::CylinderHR>(p); break;
-		case ELdrObject::ConeHA:     Parse<ELdrObject::ConeHA    >(p); break;
-		case ELdrObject::Tube:       Parse<ELdrObject::Tube      >(p); break;
-		case ELdrObject::Mesh:       Parse<ELdrObject::Mesh      >(p); break;
-		case ELdrObject::ConvexHull: Parse<ELdrObject::ConvexHull>(p); break;
-		case ELdrObject::Model:      Parse<ELdrObject::Model     >(p); break;
-		case ELdrObject::Chart:      Parse<ELdrObject::Chart     >(p); break;
-		case ELdrObject::DirLight:   Parse<ELdrObject::DirLight  >(p); break;
-		case ELdrObject::PointLight: Parse<ELdrObject::PointLight>(p); break;
-		case ELdrObject::SpotLight:  Parse<ELdrObject::SpotLight >(p); break;
-		case ELdrObject::Group:      Parse<ELdrObject::Group     >(p); break;
-		case ELdrObject::Text:       Parse<ELdrObject::Text      >(p); break;
-		case ELdrObject::Instance:   Parse<ELdrObject::Instance  >(p); break;
 		}
 
 		// Apply properties to each object added
@@ -4706,7 +4678,6 @@ namespace pr::ldr
 	void Edit(Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
 	{
 		edit_cb(object->m_model.get(), ctx, rdr);
-		//pr::events::Send(Evt_LdrObjectChg(object));
 	}
 
 	// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
@@ -4777,8 +4748,6 @@ namespace pr::ldr
 			// Only want one object
 			return false;
 		});
-
-		//pr::events::Send(Evt_LdrObjectChg(object));
 	}
 
 	// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'

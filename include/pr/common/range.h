@@ -34,6 +34,12 @@ namespace pr
 			return Range(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest());
 		}
 
+		// A range containing the maximum interval
+		static Range Max()
+		{
+			return Range(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max());
+		}
+
 		// Construct a range
 		Range() = default;
 		Range(T beg, T end)

@@ -14,11 +14,14 @@ namespace Rylogic.Gfx
 			//  - This class provides the functionality for the object manager
 			//  - UI frameworks need to provide binding wrappers
 
+			/// <summary>Context IDs of objects to always exclude</summary>
+			public static HashSet<Guid> ExcludeCtxIds { get; } = new HashSet<Guid>();
+
 			public ObjectManager(Window window, IEnumerable<Guid> excluded)
 			{
 				m_window = null!;
 				Window = window;
-				Exclude = new HashSet<Guid>(excluded);
+				Exclude = new HashSet<Guid>(Enumerable.Concat(ExcludeCtxIds, excluded));
 				Objects = new List<Object>();
 
 				SyncObjectsWithScene();

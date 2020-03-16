@@ -2475,7 +2475,7 @@ VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_fill_mode;
+		return static_cast<EView3DFillMode>(window->FillMode());
 	}
 	CatchAndReport(View3D_FillModeGet, window, EView3DFillMode());
 }
@@ -2486,7 +2486,7 @@ VIEW3D_API void __stdcall View3D_FillModeSet(View3DWindow window, EView3DFillMod
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_fill_mode = mode;
+		window->FillMode(static_cast<pr::rdr::EFillMode>(mode));
 		window->Invalidate();
 	}
 	CatchAndReport(View3D_FillModeSet, window,);
@@ -2500,7 +2500,7 @@ VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->CullMode();
+		return static_cast<EView3DCullMode>(window->CullMode());
 	}
 	CatchAndReport(View3D_CullModeGet, window, EView3DCullMode());
 }
@@ -2511,7 +2511,7 @@ VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMod
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->CullMode(mode);
+		window->CullMode(static_cast<pr::rdr::ECullMode>(mode));
 	}
 	CatchAndReport(View3D_CullModeSet, window,);
 }
@@ -2879,6 +2879,30 @@ VIEW3D_API void __stdcall View3D_DiagNormalsColourSet(View3DWindow window, View3
 	CatchAndReport(View3D_DiagNormalsColourSet, window, );
 }
 
+// Get/Set the size of the 'Points' fill mode points
+VIEW3D_API View3DV2 __stdcall View3D_DiagFillModePointsSizeGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV2>(window->FillModePointsSize());
+	}
+	CatchAndReport(View3D_DiagFillModePointsSizeGet, window, View3DV2());
+}
+VIEW3D_API void __stdcall View3D_DiagFillModePointsSizeSet(View3DWindow window, View3DV2 size)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->FillModePointsSize(view3d::To<pr::v2>(size));
+	}
+	CatchAndReport(View3D_DiagFillModePointsSizeSet, window, );
+}
+
 // Miscellaneous **********************************************************************
 
 // Flush any pending commands to the graphics card. Basically 'Present' but for off-screen rendering
@@ -3226,8 +3250,6 @@ template <typename T, typename U> struct equal_size_and_alignment
 	enum { value = sizeof(T) == sizeof(U) && std::alignment_of<T>::value == std::alignment_of<U>::value };
 };
 
-// EView3DFillMode - only used in this file
-
 static_assert(int(EView3DFlags::None              ) == int(pr::ldr::ELdrFlags::None              ));
 static_assert(int(EView3DFlags::Hidden            ) == int(pr::ldr::ELdrFlags::Hidden            ));
 static_assert(int(EView3DFlags::Wireframe         ) == int(pr::ldr::ELdrFlags::Wireframe         ));
@@ -3311,6 +3333,17 @@ static_assert(int(EView3DPrim::LineList ) == int(pr::rdr::EPrim::LineList ));
 static_assert(int(EView3DPrim::LineStrip) == int(pr::rdr::EPrim::LineStrip));
 static_assert(int(EView3DPrim::TriList  ) == int(pr::rdr::EPrim::TriList  ));
 static_assert(int(EView3DPrim::TriStrip ) == int(pr::rdr::EPrim::TriStrip ));
+
+static_assert(int(EView3DFillMode::Default  ) == int(pr::rdr::EFillMode::Default  ));
+static_assert(int(EView3DFillMode::SolidWire) == int(pr::rdr::EFillMode::SolidWire));
+static_assert(int(EView3DFillMode::Wireframe) == int(pr::rdr::EFillMode::Wireframe));
+static_assert(int(EView3DFillMode::Solid    ) == int(pr::rdr::EFillMode::Solid    ));
+static_assert(int(EView3DFillMode::Points   ) == int(pr::rdr::EFillMode::Points   ));
+
+static_assert(int(EView3DCullMode::Default) == int(pr::rdr::ECullMode::Default));
+static_assert(int(EView3DCullMode::None   ) == int(pr::rdr::ECullMode::None   ));
+static_assert(int(EView3DCullMode::Front  ) == int(pr::rdr::ECullMode::Front  ));
+static_assert(int(EView3DCullMode::Back   ) == int(pr::rdr::ECullMode::Back   ));
 
 static_assert(int(EView3DLight::Ambient    ) == int(pr::rdr::ELight::Ambient    ));
 static_assert(int(EView3DLight::Directional) == int(pr::rdr::ELight::Directional));

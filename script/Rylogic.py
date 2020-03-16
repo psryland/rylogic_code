@@ -384,12 +384,18 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 # Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 # Returns the regex match object for the first match or null
 # Encoding can be: ascii, utf-8, cp1250, etc
-def Extract(filepath, regex, encoding="utf-8"):
-	pat = re.compile(regex)
+def Extract(filepath, regex, encoding="utf-8", regex_flags=re.DOTALL, by_line:bool=True):
+	pat = re.compile(regex, regex_flags)
 	with open(filepath, mode="r", encoding=encoding) as f:
-		for line in f:
-			m = pat.search(line)
+		if by_line:
+			for line in f:
+				m = pat.search(line)
+				if m: return m
+		else:
+			s = f.read()
+			m = pat.search(s)
 			if m: return m
+
 	return None
 
 # Extract data from a text file using a regex
@@ -452,12 +458,29 @@ def UpdateFileByLine(filepath:str, regex:str, repl:str, all=False):
 
 # Modify a whole file using regex.
 def UpdateFile(filepath:str, regex:str, repl:str, regex_flags=re.DOTALL):
+	pat = re.compile(regex, regex_flags)
 	with open(filepath) as f: s = f.read()
-	s = re.sub(regex, repl, s, 0, regex_flags)
+	s = pat.sub(repl, s, 0)
 	with open(filepath+".tmp", mode="w") as f: f.write(s)
 	os.unlink(filepath)
 	os.rename(filepath+".tmp", filepath)
-	
+
+# Replace a tagged section within a file
+def UpdateTaggedSection(filepath:str, tag_beg:str, tag_end:str, repl:str):
+	# Check the file exists
+	if not os.path.exists(filepath):
+		raise FileNotFoundError(f"Cannot update tagged section in '{filepath}'.")
+
+	# Create the string to replace with
+	section = f"{tag_beg}{repl}{tag_end}"
+
+	# The tagged section pattern
+	pat = f"{tag_beg}(.*?){tag_end}"
+
+	# Replace the tagged section in 'filepath'
+	UpdateFile(filepath, pat, section, re.S)
+	return
+
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	try:

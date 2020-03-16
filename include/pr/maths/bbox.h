@@ -98,23 +98,47 @@ namespace pr
 		}
 
 		// Return the lower corner (-x,-y,-z) of the bounding box
-		v4 Lower() const
+		float LowerX() const
 		{
-			return m_centre - m_radius;
+			return m_centre.x - m_radius.x;
+		}
+		float LowerY() const
+		{
+			return m_centre.y - m_radius.y;
+		}
+		float LowerZ() const
+		{
+			return m_centre.z - m_radius.z;
 		}
 		float Lower(int axis) const
 		{
 			return m_centre[axis] - m_radius[axis];
 		}
+		v4 Lower() const
+		{
+			return m_centre - m_radius;
+		}
 
 		// Return the upper corner (+x,+y,+z) of the bounding box
-		v4 Upper() const
+		float UpperX() const
 		{
-			return m_centre + m_radius;
+			return m_centre.x + m_radius.x;
+		}
+		float UpperY() const
+		{
+			return m_centre.y + m_radius.y;
+		}
+		float UpperZ() const
+		{
+			return m_centre.z + m_radius.z;
 		}
 		float Upper(int axis) const
 		{
 			return m_centre[axis] + m_radius[axis];
+		}
+		v4 Upper() const
+		{
+			return m_centre + m_radius;
 		}
 
 		// Return the size of the bounding box
@@ -134,6 +158,71 @@ namespace pr
 		{
 			return 2.0f * m_radius[axis];
 		}
+
+		#pragma region Operators
+		friend bool operator == (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+		friend bool operator != (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+		friend bool operator <  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+		friend bool operator >  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+		friend bool operator <= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+		friend bool operator >= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+		friend BBox& pr_vectorcall operator += (BBox& lhs, v4_cref<> offset)
+		{
+			lhs.m_centre += offset;
+			return lhs;
+		}
+		friend BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref<> offset)
+		{
+			lhs.m_centre -= offset;
+			return lhs;
+		}
+		friend BBox& pr_vectorcall operator *= (BBox& lhs, float s)
+		{
+			lhs.m_radius *= s;
+			return lhs;
+		}
+		friend BBox& pr_vectorcall operator /= (BBox& lhs, float s)
+		{
+			lhs *= (1.0f / s);
+			return lhs;
+		}
+		friend BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref<> offset)
+		{
+			auto bb = lhs;
+			return bb += offset;
+		}
+		friend BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref<> offset)
+		{
+			auto bb = lhs;
+			return bb -= offset;
+		}
+		friend BBox pr_vectorcall operator * (m4_cref<> m, BBox_cref rhs)
+		{
+			assert("Transforming an invalid bounding box" && rhs.valid());
+
+			BBox bb(m.pos, v4Zero);
+			m4x4 mat = Transpose3x3(m);
+			for (int i = 0; i != 3; ++i)
+			{
+				bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
+				bb.m_radius[i] += Dot4(Abs(mat[i]), rhs.m_radius);
+			}
+			return bb;
+		}
+		friend BBox pr_vectorcall operator * (m3_cref<> m, BBox_cref rhs)
+		{
+			assert("Transforming an invalid bounding box" && rhs.valid());
+
+			BBox bb(v4Origin, v4Zero);
+			auto mat = Transpose(m);
+			for (int i = 0; i != 3; ++i)
+			{
+				bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
+				bb.m_radius[i] += Dot4(Abs(mat[i]), rhs.m_radius);
+			}
+			return bb;
+		}
+		#pragma endregion
 
 		// Create a bounding box from lower/upper corners
 		static BBox Make(v4 const& lower, v4 const& upper)
@@ -159,80 +248,10 @@ namespace pr
 	};
 	static_assert(std::is_pod<BBox>::value, "Should be a pod type");
 	static_assert(std::alignment_of<BBox>::value == 16, "Should be 16 byte aligned");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	using BBox_cref = BBox const;
-	#else
-	using BBox_cref = BBox const&;
-	#endif
 
 	#pragma region Constants
 	static BBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
 	static BBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
-	#pragma endregion
-
-	#pragma region Operators
-	inline bool	operator == (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool	operator != (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline BBox& pr_vectorcall operator += (BBox& lhs, v4_cref<> offset)
-	{
-		lhs.m_centre += offset;
-		return lhs;
-	}
-	inline BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref<> offset)
-	{
-		lhs.m_centre -= offset;
-		return lhs;
-	}
-	inline BBox& operator *= (BBox& lhs, float s)
-	{
-		lhs.m_radius *= s;
-		return lhs;
-	}
-	inline BBox& operator /= (BBox& lhs, float s)
-	{
-		lhs *= (1.0f / s);
-		return lhs;
-	}
-	inline BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref<> offset)
-	{
-		auto bb = lhs;
-		return bb += offset;
-	}
-	inline BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref<> offset)
-	{
-		auto bb = lhs;
-		return bb -= offset;
-	}
-	inline BBox pr_vectorcall operator * (m4_cref<> m, BBox_cref rhs)
-	{
-		assert("Transforming an invalid bounding box" && rhs.valid());
-
-		BBox bb(m.pos, v4Zero);
-		m4x4 mat = Transpose3x3(m);
-		for (int i = 0; i != 3; ++i)
-		{
-			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
-			bb.m_radius[i] += Dot4(Abs(mat[i]), rhs.m_radius);
-		}
-		return bb;
-	}
-	inline BBox pr_vectorcall operator * (m3_cref<> m, BBox_cref rhs)
-	{
-		assert("Transforming an invalid bounding box" && rhs.valid());
-
-		BBox bb(v4Origin, v4Zero);
-		auto mat = Transpose(m);
-		for (int i = 0; i != 3; ++i)
-		{
-			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
-			bb.m_radius[i] += Dot4(Abs(mat[i]), rhs.m_radius);
-		}
-		return bb;
-	}
 	#pragma endregion
 
 	#pragma region Functions

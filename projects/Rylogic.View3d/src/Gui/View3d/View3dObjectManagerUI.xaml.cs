@@ -83,7 +83,6 @@ namespace Rylogic.Gui.WPF
 					case nameof(View3d.ObjectManager.Objects):
 						{
 							ObjectsView.Refresh();
-							NotifyPropertyChanged(nameof(Objects));
 							break;
 						}
 					}

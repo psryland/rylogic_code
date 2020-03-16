@@ -63,6 +63,53 @@ namespace pr
 			return reinterpret_cast<Vec8<U> const&>(*this);
 		}
 
+		#pragma region Operators
+		friend Vec8<T> pr_vectorcall operator + (v8_cref<T> lhs)
+		{
+			return lhs;
+		}
+		friend Vec8<T> pr_vectorcall operator - (v8_cref<T> lhs)
+		{
+			return Vec8<T>{-lhs.ang, -lhs.lin};
+		}
+		friend Vec8<T> pr_vectorcall operator * (float lhs, v8_cref<T> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Vec8<T> pr_vectorcall operator * (v8_cref<T> lhs, float rhs)
+		{
+			return Vec8<T>{lhs.ang * rhs, lhs.lin * rhs};
+		}
+		friend Vec8<T> pr_vectorcall operator / (v8_cref<T> lhs, float rhs)
+		{
+			return Vec8<T>{lhs.ang / rhs, lhs.lin / rhs};
+		}
+		friend Vec8<T> pr_vectorcall operator % (v8_cref<T> lhs, float rhs)
+		{
+			return Vec8<T>{lhs.ang % rhs, lhs.lin % rhs};
+		}
+		friend Vec8<T> pr_vectorcall operator + (v8_cref<T> lhs, v8_cref<T> rhs)
+		{
+			return Vec8<T>{lhs.ang + rhs.ang, lhs.lin + rhs.lin};
+		}
+		friend Vec8<T> pr_vectorcall operator - (v8_cref<T> lhs, v8_cref<T> rhs)
+		{
+			return Vec8<T>{lhs.ang - rhs.ang, lhs.lin - rhs.lin};
+		}
+		friend Vec8<T> pr_vectorcall operator * (v8_cref<T> lhs, v8_cref<T> rhs)
+		{
+			return Vec8<T>{lhs.ang * rhs.ang, lhs.lin * rhs.lin};
+		}
+		friend Vec8<T> pr_vectorcall operator / (v8_cref<T> lhs, v8_cref<T> rhs)
+		{
+			return Vec8<T>{lhs.ang / rhs.ang, lhs.lin / rhs.lin};
+		}
+		friend Vec8<T> pr_vectorcall operator % (v8_cref<T> lhs, v8_cref<T> rhs)
+		{
+			return Vec8<T>{lhs.ang % rhs.ang, lhs.lin % rhs.lin};
+		}
+		#pragma endregion
+
 		// Sample the vector field at 'ofs'
 		// Returns the direction and magnitude of the vector field at 'ofs'
 		v4 LinAt(v4_cref<> ofs) const
@@ -88,53 +135,6 @@ namespace pr
 	//template <typename T> inline float y_cp(v8_cref<T> v) { return v.lin.y; }
 	//template <typename T> inline float z_cp(v8_cref<T> v) { return v.lin.z; }
 	//template <typename T> inline float w_cp(v8_cref<T> v) { return v.lin.w; }
-
-	#pragma region Operators
-	template <typename T> inline Vec8<T> pr_vectorcall operator + (v8_cref<T> lhs)
-	{
-		return lhs;
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator - (v8_cref<T> lhs)
-	{
-		return Vec8<T>{-lhs.ang, -lhs.lin};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator * (float lhs, v8_cref<T> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator * (v8_cref<T> lhs, float rhs)
-	{
-		return Vec8<T>{lhs.ang * rhs, lhs.lin * rhs};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator / (v8_cref<T> lhs, float rhs)
-	{
-		return Vec8<T>{lhs.ang / rhs, lhs.lin / rhs};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator % (v8_cref<T> lhs, float rhs)
-	{
-		return Vec8<T>{lhs.ang % rhs, lhs.lin % rhs};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator + (v8_cref<T> lhs, v8_cref<T> rhs)
-	{
-		return Vec8<T>{lhs.ang + rhs.ang, lhs.lin + rhs.lin};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator - (v8_cref<T> lhs, v8_cref<T> rhs)
-	{
-		return Vec8<T>{lhs.ang - rhs.ang, lhs.lin - rhs.lin};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator * (v8_cref<T> lhs, v8_cref<T> rhs)
-	{
-		return Vec8<T>{lhs.ang * rhs.ang, lhs.lin * rhs.lin};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator / (v8_cref<T> lhs, v8_cref<T> rhs)
-	{
-		return Vec8<T>{lhs.ang / rhs.ang, lhs.lin / rhs.lin};
-	}
-	template <typename T> inline Vec8<T> pr_vectorcall operator % (v8_cref<T> lhs, v8_cref<T> rhs)
-	{
-		return Vec8<T>{lhs.ang % rhs.ang, lhs.lin % rhs.lin};
-	}
-	#pragma endregion
 
 	#pragma region Functions
 

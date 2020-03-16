@@ -471,10 +471,18 @@ namespace view3d
 		m_sources.RemoveGizmo(gizmo);
 	}
 
+	// Thread local storage for editing dynamic models
+	thread_local static pr::vector<View3DVertex> cache_vbuf;
+	thread_local static pr::vector<uint16_t>     cache_ibuf;
+	thread_local static pr::vector<View3DNugget> cache_nbuf;
+
 	// Callback function called from CreateEditCB to populate the model data
 	void Context::ObjectEditCB(Model* model, void* ctx, Renderer&)
 	{
 		using namespace pr::rdr;
+		auto& vbuf = cache_vbuf;
+		auto& ibuf = cache_ibuf;
+		auto& nbuf = cache_nbuf;
 
 		PR_ASSERT(PR_DBG, model != nullptr, "");
 		if (!model) throw std::exception("model is null");
@@ -485,13 +493,14 @@ namespace view3d
 		// reading from video memory (slow, or not possible for some model types).
 		auto vrange = model->m_vrange;
 		auto irange = model->m_irange;
-		pr::vector<View3DVertex> verts(vrange.size());
-		pr::vector<pr::uint16>   indices(irange.size());
-		pr::vector<View3DNugget> nuggets;
+		vbuf.resize(vrange.size());
+		ibuf.resize(irange.size());
+		nbuf.resize(1);
 
-		// If the model already has nuggets, initialise 'nuggets' with them
+		// If the model already has nuggets, initialise 'nbuf' with them
 		if (!model->m_nuggets.empty())
 		{
+			nbuf.resize(0);
 			for (auto& nug : model->m_nuggets)
 			{
 				View3DNugget n = {};
@@ -505,58 +514,65 @@ namespace view3d
 				n.m_i1 = pr::s_cast<UINT32>(nug.m_irange.end());
 				n.m_mat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
 				n.m_mat.m_relative_reflectivity = nug.m_relative_reflectivity;
-				nuggets.push_back(n);
+				nbuf.push_back(n);
 			}
-		}
-		else
-		{
-			nuggets.push_back(View3DNugget());
 		}
 
 		// Get the user to generate/update the model
 		UINT32 new_vcount, new_icount, new_ncount;
-		cbdata.edit_cb(cbdata.ctx, UINT32(vrange.size()), UINT32(irange.size()), UINT32(nuggets.size()), &verts[0], &indices[0], &nuggets[0], new_vcount, new_icount, new_ncount);
-		PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
-		PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
-		PR_ASSERT(PR_DBG, new_ncount <= nuggets.size(), "");
+		cbdata.edit_cb(cbdata.ctx,
+			static_cast<uint32_t>(vbuf.size()),
+			static_cast<uint32_t>(ibuf.size()),
+			static_cast<uint32_t>(nbuf.size()),
+			vbuf.data(), ibuf.data(), nbuf.data(),
+			new_vcount, new_icount, new_ncount);
+		
+		if (new_vcount > vbuf.size()) throw std::runtime_error("Dynamic model buffer overrun (vbuf)");
+		if (new_icount > ibuf.size()) throw std::runtime_error("Dynamic model buffer overrun (ibuf)");
+		if (new_ncount > nbuf.size()) throw std::runtime_error("Dynamic model buffer overrun (nbuf)");
 
 		{// Lock and update the model
 			MLock mlock(model, EMap::WriteDiscard);
 			model->m_bbox.reset();
 
+			auto vin = vbuf.data();
+			auto iin = ibuf.data();
+
 			// Copy the model data into the model
-			auto vin = std::begin(verts);
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			for (size_t i = 0; i != new_vcount; ++i, ++vin)
 			{
-				SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
-				pr::Encompass(model->m_bbox, view3d::To<pr::v4>(vin->pos));
+				SetPCNT(*vout++, view3d::To<v4>(vin->pos), Colour32(vin->col), view3d::To<v4>(vin->norm), view3d::To<v2>(vin->tex));
+				Encompass(model->m_bbox, view3d::To<v4>(vin->pos));
 			}
-			auto iin = std::begin(indices);
-			auto iout = mlock.m_ilock.ptr<pr::uint16>();
+			auto iout = mlock.m_ilock.ptr<uint16_t>();
 			for (size_t i = 0; i != new_icount; ++i, ++iin)
 			{
 				*iout++ = *iin;
 			}
 		}
-		{// Update the model nuggets
-			model->DeleteNuggets();
 
-			for (auto& nug : nuggets)
-			{
-				NuggetProps mat;
-				mat.m_topo = static_cast<EPrim>(nug.m_topo);
-				mat.m_geom = static_cast<EGeom>(nug.m_geom);
-				mat.m_vrange = vrange;
-				mat.m_irange = irange;
-				mat.m_vrange.resize(new_vcount);
-				mat.m_irange.resize(new_icount);
-				mat.m_tex_diffuse = Texture2DPtr(nug.m_mat.m_diff_tex, true);
-				if (nug.m_cull_mode != EView3DCullMode::Default) mat.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(nug.m_cull_mode));
-				if (nug.m_fill_mode != EView3DFillMode::Default) mat.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(nug.m_fill_mode));
-				model->CreateNugget(mat);
-			}
+		// Update the model nuggets
+		model->DeleteNuggets();
+		for (auto& nug : nbuf)
+		{
+			NuggetProps mat;
+			mat.m_topo = static_cast<EPrim>(nug.m_topo);
+			mat.m_geom = static_cast<EGeom>(nug.m_geom);
+			mat.m_vrange = vrange;
+			mat.m_irange = irange;
+			mat.m_vrange.resize(new_vcount);
+			mat.m_irange.resize(new_icount);
+			mat.m_tex_diffuse = Texture2DPtr(nug.m_mat.m_diff_tex, true);
+			if (nug.m_cull_mode != EView3DCullMode::Default) mat.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(nug.m_cull_mode));
+			if (nug.m_fill_mode != EView3DFillMode::Default) mat.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(nug.m_fill_mode));
+			model->CreateNugget(mat);
 		}
+
+		// Release memory after large allocations
+		if (vbuf.capacity() > 0x100000) vbuf.clear();
+		if (ibuf.capacity() > 0x100000) ibuf.clear();
+		if (nbuf.capacity() > 0x100000) nbuf.clear();
 	}
 
 	// Create the demo scene objects

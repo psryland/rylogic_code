@@ -179,6 +179,13 @@ namespace Rylogic.Gui.WPF
 				get => m_owner.SetNormalsColour;
 			}
 
+			/// <inheritdoc/>
+			public float FillModePointsSize
+			{
+				get => m_owner.Window.Diag.FillModePointsSize.x;
+				set => m_owner.Window.Diag.FillModePointsSize = new Maths.v2(value, value);
+			}
+
 			/// <summary>Saved views</summary>
 			public ICollectionView SavedViews
 			{

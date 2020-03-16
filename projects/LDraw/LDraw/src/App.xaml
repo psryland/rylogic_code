@@ -38,6 +38,10 @@
 				<Setter Property="HorizontalContentAlignment" Value="Left" />
 				<Setter Property="VerticalContentAlignment" Value="Center" />
 			</Style>
+			<Style TargetType="TreeViewItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>

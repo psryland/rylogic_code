@@ -5,6 +5,7 @@ using LDraw.UI;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Gui.WPF.ChartDetail;
+using Rylogic.Maths;
 
 namespace LDraw
 {
@@ -309,6 +310,12 @@ namespace LDraw
 			get => m_owner.SceneView.Scene.SetNormalsColour;
 		}
 
+		/// <inheritdoc/>
+		public float FillModePointsSize
+		{
+			get => m_owner.SceneView.Scene.Window.Diag.FillModePointsSize.x;
+			set => m_owner.SceneView.Scene.Window.Diag.FillModePointsSize = new v2(value, value);
+		}
 	}
 	public class SceneAxisCMenu :IChartAxisCMenu
 	{

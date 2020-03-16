@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using Rylogic.Gfx;
+using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
@@ -315,6 +316,13 @@ namespace Rylogic.Gui.WPF
 			public ICommand SetNormalsColour
 			{
 				get => m_owner.Scene.SetNormalsColour;
+			}
+
+			/// <inheritdoc/>
+			public float FillModePointsSize
+			{
+				get => m_owner.Window.Diag.FillModePointsSize.x;
+				set => m_owner.Window.Diag.FillModePointsSize = new v2(value, value);
 			}
 
 			/// <summary>Saved views</summary>

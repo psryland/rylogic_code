@@ -242,6 +242,25 @@ namespace pr::rdr
 	PR_DEFINE_ENUM2(EFilter, PR_ENUM);
 	#undef PR_ENUM
 
+	// EFillMode
+	#define PR_ENUM(x)\
+		x(Default   ,= 0)\
+		x(Points    ,= 1)\
+		x(Wireframe ,= D3D11_FILL_WIREFRAME)\
+		x(Solid     ,= D3D11_FILL_SOLID)\
+		x(SolidWire ,= 4)
+	PR_DEFINE_ENUM2(EFillMode , PR_ENUM);
+	#undef PR_ENUM
+
+	// ECullMode
+	#define PR_ENUM(x)\
+		x(Default ,= 0)\
+		x(None    ,= D3D11_CULL_NONE)\
+		x(Front   ,= D3D11_CULL_FRONT)\
+		x(Back    ,= D3D11_CULL_BACK)
+	PR_DEFINE_ENUM2(ECullMode , PR_ENUM);
+	#undef PR_ENUM
+
 	// ELight
 	#define PR_ENUM(x)\
 		x(Ambient    )\
@@ -265,13 +284,3 @@ namespace pr::rdr
 	PR_DEFINE_ENUM1(ERadial, PR_ENUM);
 	#undef PR_ENUM
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::rdr
-{
-	PRUnitTest(ForwardTests)
-	{
-	}
-}
-#endif

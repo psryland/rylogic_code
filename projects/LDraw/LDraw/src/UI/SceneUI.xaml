@@ -54,6 +54,7 @@
 					<StaticResource	ResourceKey="View3dMenuItem_BoundingBoxes"/>
 					<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
 					<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
+					<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>
 				</MenuItem>
 				<Separator/>
 				<StaticResource	ResourceKey="View3dMenuItem_ObjectManager"/>

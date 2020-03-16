@@ -21,37 +21,37 @@ namespace view3d
 			std::atomic<seconds_t> m_clock;
 		};
 
-		Context*              m_dll;                      // The dll context
-		HWND                  m_hwnd;                     // The associated window handle
-		pr::rdr::Window       m_wnd;                      // The window being drawn on
-		pr::rdr::Scene        m_scene;                    // Scene manager
-		view3d::ObjectSet     m_objects;                  // References to objects to draw (note: objects are owned by the context, not the window)
-		view3d::GizmoSet      m_gizmos;                   // References to gizmos to draw (note: objects are owned by the context, not the window)
-		view3d::GuidSet       m_guids;                    // The context ids added to this window
-		pr::Camera            m_camera;                   // Camera control
-		pr::rdr::Light        m_light;                    // Light source for the set
-		EView3DFillMode       m_fill_mode;                // Fill mode
-		EView3DCullMode       m_cull_mode;                // Face culling mode
-		pr::Colour32          m_background_colour;        // The background colour for this draw set
-		view3d::PointInstance m_focus_point;              // Focus point graphics
-		view3d::PointInstance m_origin_point;             // Origin point graphics
-		view3d::Instance      m_bbox_model;               // Bounding box graphics
-		view3d::Instance      m_selection_box;            // Selection box graphics
-		AnimData              m_anim_data;                // Animation time in seconds
-		float                 m_focus_point_size;         // The base size of the focus point object
-		float                 m_origin_point_size;        // The base size of the origin instance
-		bool                  m_focus_point_visible;      // True if we should draw the focus point
-		bool                  m_origin_point_visible;     // True if we should draw the origin point
-		bool                  m_selection_box_visible;    // True if we should draw the selection box
-		bool                  m_invalidated;              // True after Invalidate has been called but before Render has been called
-		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
-		LdrObjectManagerUIPtr m_obj_cont_ui;              // Object manager for objects added to this window
-		LdrMeasureUIPtr       m_measure_tool_ui;          // A UI for measuring distances between points within the 3d environment
-		LdrAngleUIPtr         m_angle_tool_ui;            // A UI for measuring angles between points within the 3d environment
-		EditorCont            m_editors;                  // User created editors
-		std::string           m_settings;                 // Allows a char const* to be returned
-		mutable pr::BBox      m_bbox_scene;               // Bounding box for all objects in the scene (Lazy updated)
-		std::thread::id       m_main_thread_id;           // The thread that created this window
+		Context*              m_dll;                   // The dll context
+		HWND                  m_hwnd;                  // The associated window handle
+		pr::rdr::Window       m_wnd;                   // The window being drawn on
+		pr::rdr::Scene        m_scene;                 // Scene manager
+		view3d::ObjectSet     m_objects;               // References to objects to draw (note: objects are owned by the context, not the window)
+		view3d::GizmoSet      m_gizmos;                // References to gizmos to draw (note: objects are owned by the context, not the window)
+		view3d::GuidSet       m_guids;                 // The context ids added to this window
+		pr::Camera            m_camera;                // Camera control
+		pr::rdr::Light        m_light;                 // Light source for the set
+		pr::rdr::EFillMode    m_fill_mode;             // Global fill mode
+		pr::rdr::ECullMode    m_cull_mode;             // Global cull mode
+		pr::Colour32          m_background_colour;     // The background colour for this draw set
+		view3d::PointInstance m_focus_point;           // Focus point graphics
+		view3d::PointInstance m_origin_point;          // Origin point graphics
+		view3d::Instance      m_bbox_model;            // Bounding box graphics
+		view3d::Instance      m_selection_box;         // Selection box graphics
+		AnimData              m_anim_data;             // Animation time in seconds
+		float                 m_focus_point_size;      // The base size of the focus point object
+		float                 m_origin_point_size;     // The base size of the origin instance
+		bool                  m_focus_point_visible;   // True if we should draw the focus point
+		bool                  m_origin_point_visible;  // True if we should draw the origin point
+		bool                  m_selection_box_visible; // True if we should draw the selection box
+		bool                  m_invalidated;           // True after Invalidate has been called but before Render has been called
+		ScriptEditorUIPtr     m_editor_ui;             // A editor for editing Ldr script
+		LdrObjectManagerUIPtr m_obj_cont_ui;           // Object manager for objects added to this window
+		LdrMeasureUIPtr       m_measure_tool_ui;       // A UI for measuring distances between points within the 3d environment
+		LdrAngleUIPtr         m_angle_tool_ui;         // A UI for measuring angles between points within the 3d environment
+		EditorCont            m_editors;               // User created editors
+		std::string           m_settings;              // Allows a char const* to be returned
+		mutable pr::BBox      m_bbox_scene;            // Bounding box for all objects in the scene (Lazy updated)
+		std::thread::id       m_main_thread_id;        // The thread that created this window
 
 		// Default window construction settings
 		static pr::rdr::WndSettings Settings(HWND hwnd, View3DWindowOptions const& opts);
@@ -216,12 +216,12 @@ namespace view3d
 		void ShowAngleTool(bool show);
 
 		// Get/Set the window fill mode
-		EView3DFillMode FillMode() const;
-		void FillMode(EView3DFillMode fill_mode);
+		pr::rdr::EFillMode FillMode() const;
+		void FillMode(pr::rdr::EFillMode fill_mode);
 
 		// Get/Set the window cull mode
-		EView3DCullMode CullMode() const;
-		void CullMode(EView3DCullMode cull_mode);
+		pr::rdr::ECullMode CullMode() const;
+		void CullMode(pr::rdr::ECullMode cull_mode);
 
 		// Get/Set the window background colour
 		pr::Colour32 BackgroundColour() const;
@@ -250,6 +250,10 @@ namespace view3d
 		// The colour of vertex normals (when displayed)
 		pr::Colour32 NormalsColour() const;
 		void NormalsColour(pr::Colour32 colour);
+
+		// Get/Set the size of the 'Points' fill mode points
+		pr::v2 FillModePointsSize() const;
+		void FillModePointsSize(pr::v2 size);
 
 		// Show/Hide the selection box
 		bool SelectionBoxVisible() const;

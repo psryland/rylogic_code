@@ -109,11 +109,16 @@ namespace pr::rdr
 	// DrawIndexed call for any possible shader.
 	struct Nugget :pr::chain::link<Nugget, ChainGroupNugget>, NuggetData
 	{
+		static constexpr RdrId AlphaNuggetId = hash::HashCT("AlphaNugget");
+
 		ModelBuffer* m_model_buffer;  // The vertex and index buffers.
 		size_t       m_prim_count;    // The number of primitives in this nugget
 		Model*       m_owner;         // The model that this nugget belongs to (for debugging mainly)
 		TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget
-		bool         m_alpha_enabled; // True if the nugget is configured for alpha blending
+		bool         m_alpha_enabled; // Alpha blending is enabled for this nugget
+		EFillMode    m_fill_mode;     // Fill mode for this nugget
+		ECullMode    m_cull_mode;     // Cull mode for this nugget
+		RdrId        m_id;            // An id to allow identification of procedurally added nuggets
 
 		Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner);
 		~Nugget();
@@ -148,15 +153,36 @@ namespace pr::rdr
 
 			// Recursively add dependent nuggets
 			for (auto& nug : m_nuggets)
+			{
+				// Don't add alpha back faces when using 'Points' fill mode
+				if (nug.m_id == AlphaNuggetId && m_fill_mode == EFillMode::Points) continue;
 				nug.AddToDrawlist(drawlist, inst, sko, id);
+			}
 		}
 
 		// True if this nugget requires alpha blending
 		bool RequiresAlpha() const;
 		void UpdateAlphaStates();
 
+		// Get/Set the fill mode for this nugget
+		EFillMode FillMode() const;
+		void FillMode(EFillMode fill_mode);
+
+		// Get/Set the cull mode for this nugget
+		ECullMode CullMode() const;
+		void CullMode(ECullMode fill_mode);
+
 		// Delete this nugget, removing it from the owning model
 		void Delete();
+
+		// Delete any dependent nuggets based on 'pred'
+		template <typename Pred>
+		void DeleteDependent(Pred pred)
+		{
+			auto nuggets = chain::filter(m_nuggets, pred);
+			for (;!nuggets.empty();)
+				nuggets.front().Delete();
+		}
 
 	private:
 

@@ -11,11 +11,12 @@ namespace pr::rdr
 {
 	struct DiagState
 	{
-		float m_normal_lengths;
-		Colour32 m_normal_colour;
-		bool m_bboxes_visible;           // True if we should draw object bounding boxes
+		float     m_normal_lengths;
+		Colour32  m_normal_colour;
+		bool      m_bboxes_visible;     // True if we should draw object bounding boxes
+		ShaderPtr m_gs_fillmode_points; // The GS for point fill mode
 
-		DiagState();
+		explicit DiagState(Renderer& rdr);
 	};
 
 	// Enable/Disable normals on 'model'. Set length to 0 to disable

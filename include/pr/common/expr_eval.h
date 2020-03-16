@@ -350,7 +350,7 @@ namespace pr
 
 					// Any arguments not given remain as their defaults
 					auto args = m_args;
-					for (int i = 0; i != values.size(); ++i)
+					for (int i = 0, iend = static_cast<int>(values.size()); i != iend; ++i)
 						args[i].m_value = values[i];
 
 					return call(args);
@@ -1752,7 +1752,7 @@ namespace pr
 				case ETok::Identifier:
 					{
 						auto name = Narrow(ident.str_view());
-						auto count = static_cast<uint8_t>(std::min(255ULL, name.size()));
+						auto count = static_cast<uint8_t>(std::min<size_t>(255, name.size()));
 						compiled.m_op.append(tok);
 						compiled.m_op.append(count);
 						compiled.m_op.append(name.c_str(), count);

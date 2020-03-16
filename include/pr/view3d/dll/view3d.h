@@ -76,17 +76,18 @@ extern "C"
 	};
 	enum class EView3DFillMode :int
 	{
-		Default = 0,
-		SolidWire = 1,
+		Default   = 0,
+		Points    = 1,
 		Wireframe = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,
-		Solid = D3D11_FILL_MODE::D3D11_FILL_SOLID,
+		Solid     = D3D11_FILL_MODE::D3D11_FILL_SOLID,
+		SolidWire = 4,
 	};
 	enum class EView3DCullMode :int
 	{
 		Default = 0,
-		None = D3D11_CULL_MODE::D3D11_CULL_NONE,
-		Front = D3D11_CULL_MODE::D3D11_CULL_FRONT,
-		Back = D3D11_CULL_MODE::D3D11_CULL_BACK,
+		None    = D3D11_CULL_MODE::D3D11_CULL_NONE,
+		Front   = D3D11_CULL_MODE::D3D11_CULL_FRONT,
+		Back    = D3D11_CULL_MODE::D3D11_CULL_BACK,
 	};
 	enum class EView3DGeom :int // pr::rdr::EGeom
 	{
@@ -376,10 +377,11 @@ extern "C"
 		Lighting     = 1 << 19,
 		Lighting_All = Lighting | 1 << 0,
 
-		Diagnostics = 1 << 20,
-		Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
-		Diagnostics_NormalsLength = Diagnostics | 1 << 1,
-		Diagnostics_NormalsColour = Diagnostics | 1 << 2,
+		Diagnostics                    = 1 << 20,
+		Diagnostics_BBoxesVisible      = Diagnostics | 1 << 0,
+		Diagnostics_NormalsLength      = Diagnostics | 1 << 1,
+		Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
+		Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
 
 		_bitwise_operators_allowed = 0x7FFFFFF,
 	};
@@ -817,12 +819,14 @@ extern "C"
 	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating (View3DGizmo gizmo);
 
 	// Diagnostics
-	VIEW3D_API BOOL         __stdcall View3D_DiagBBoxesVisibleGet(View3DWindow window);
-	VIEW3D_API void         __stdcall View3D_DiagBBoxesVisibleSet(View3DWindow window, BOOL visible);
-	VIEW3D_API float        __stdcall View3D_DiagNormalsLengthGet(View3DWindow window);
-	VIEW3D_API void         __stdcall View3D_DiagNormalsLengthSet(View3DWindow window, float length);
-	VIEW3D_API View3DColour __stdcall View3D_DiagNormalsColourGet(View3DWindow window);
-	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet(View3DWindow window, View3DColour colour);
+	VIEW3D_API BOOL         __stdcall View3D_DiagBBoxesVisibleGet     (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagBBoxesVisibleSet     (View3DWindow window, BOOL visible);
+	VIEW3D_API float        __stdcall View3D_DiagNormalsLengthGet     (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagNormalsLengthSet     (View3DWindow window, float length);
+	VIEW3D_API View3DColour __stdcall View3D_DiagNormalsColourGet     (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagNormalsColourSet     (View3DWindow window, View3DColour colour);
+	VIEW3D_API View3DV2     __stdcall View3D_DiagFillModePointsSizeGet(View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_DiagFillModePointsSizeSet(View3DWindow window, View3DV2 size);
 
 	// Miscellaneous
 	VIEW3D_API void       __stdcall View3D_Flush                    ();

@@ -231,7 +231,10 @@ old:
 		<DisplayString>{m_geometry}</DisplayString>
 	</Type>
 	<Type Name="pr::Frustum">
-		<DisplayString>{m_frustum}</DisplayString>
+		<DisplayString>{m_Tplanes}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_Tplanes</ExpandedItem>
+		</Expand>
 	</Type>
 	<Type Name="pr::Rand">
 		<DisplayString>{m_value}</DisplayString>

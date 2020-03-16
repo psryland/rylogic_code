@@ -137,6 +137,109 @@ namespace pr
 		{
 			return Normalise4(Vec4<T>{x, y, z, w});
 		}
+
+		#pragma region Operators
+		friend bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
+			#else
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+			#endif
+		}
+		friend bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			return !(lhs == rhs);
+		}
+		friend Vec4<T> pr_vectorcall operator + (v4_cref<T> vec)
+		{
+			return vec;
+		}
+		friend Vec4<T> pr_vectorcall operator - (v4_cref<T> vec)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
+			#else
+			return Vec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator * (float lhs, v4_cref<T> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Vec4<T> pr_vectorcall operator * (v4_cref<T> lhs, float rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_mul_ps(lhs.vec, _mm_set_ps1(rhs))};
+			#else
+			return Vec4<T>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
+			#else
+			return Vec4<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Vec4<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
+		}
+		friend Vec4<T> pr_vectorcall operator / (float lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_div_ps(_mm_set_ps1(lhs), rhs.vec)};
+			#else
+			return Vec4<T>{lhs / rhs.x, lhs / rhs.y, lhs / rhs.z, lhs / rhs.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator % (float lhs, v4_cref<T> rhs)
+		{
+			return Vec4<T>{Fmod(lhs, rhs.x), Fmod(lhs, rhs.y), Fmod(lhs, rhs.z), Fmod(lhs, rhs.w)};
+		}
+		friend Vec4<T> pr_vectorcall operator + (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_add_ps(lhs.vec, rhs.vec)};
+			#else
+			return Vec4<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator - (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_sub_ps(lhs.vec, rhs.vec)};
+			#else
+			return Vec4<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator * (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_mul_ps(lhs.vec, rhs.vec)};
+			#else
+			return Vec4<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			assert("divide by zero" && !Any4(rhs, IsZero<float>));
+			#if PR_MATHS_USE_INTRINSICS
+			return Vec4<T>{_mm_div_ps(lhs.vec, rhs.vec)};
+			#else
+			return Vec4<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
+			#endif
+		}
+		friend Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			assert("divide by zero" && !Any4(rhs, IsZero<float>));
+			return Vec4<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
+		}
+		#pragma endregion
 	};
 	static_assert(maths::is_vec4<Vec4<void>>::value, "");
 	static_assert(std::is_pod<Vec4<void>>::value, "Vec4 must be a pod type");
@@ -147,97 +250,6 @@ namespace pr
 	template <typename T> inline float pr_vectorcall y_cp(v4_cref<T> v) { return v.y; }
 	template <typename T> inline float pr_vectorcall z_cp(v4_cref<T> v) { return v.z; }
 	template <typename T> inline float pr_vectorcall w_cp(v4_cref<T> v) { return v.w; }
-
-	#pragma region Operators
-	template <typename T> inline bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
-		#else
-		return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
-		#endif
-	}
-	template <typename T> inline bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		return !(lhs == rhs);
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator + (v4_cref<T> vec)
-	{
-		return vec;
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator - (v4_cref<T> vec)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
-		#else
-		return Vec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator * (float lhs, v4_cref<T> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator * (v4_cref<T> lhs, float rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_mul_ps(lhs.vec, _mm_set_ps1(rhs))};
-		#else
-		return Vec4<T>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
-		#else
-		return Vec4<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Vec4<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator + (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_add_ps(lhs.vec, rhs.vec)};
-		#else
-		return Vec4<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator - (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_sub_ps(lhs.vec, rhs.vec)};
-		#else
-		return Vec4<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator * (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_mul_ps(lhs.vec, rhs.vec)};
-		#else
-		return Vec4<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any4(rhs, IsZero<float>));
-		#if PR_MATHS_USE_INTRINSICS
-		return Vec4<T>{_mm_div_ps(lhs.vec, rhs.vec)};
-		#else
-		return Vec4<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
-		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, v4_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any4(rhs, IsZero<float>));
-		return Vec4<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
-	}
-	#pragma endregion
 
 	#pragma region Functions
 
@@ -540,6 +552,20 @@ namespace pr
 		return Octant(v.xyz);
 	}
 
+	// Return the component sum
+	template <typename T> inline float pr_vectorcall ComponentSum(v4_cref<T> v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto sum = v.vec;
+		sum = _mm_hadd_ps(sum, sum);
+		sum = _mm_hadd_ps(sum, sum);
+		float s; _mm_store_ss(&s, sum);
+		return s;
+		#else
+		return v.x + v.y + v.z + v.w;
+		#endif
+	}
+
 	#pragma endregion
 }
 
@@ -561,6 +587,17 @@ namespace pr::maths
 			PR_CHECK(V0.w, VX0.f[3]);
 		}
 		#endif
+		{// Operators
+			auto a = v4{1, 2, 3, 4};
+			auto b = v4{-4, -3, -2, -1};
+
+			PR_CHECK(a + b, v4{-3, -1, +1, +3});
+			PR_CHECK(a - b, v4{+5, +5, +5, +5});
+			PR_CHECK(3 * a, v4{+3, +6, +9, +12});
+			PR_CHECK(a % 2, v4{+1, +0, +1, +0});
+			PR_CHECK(a/2.0f, v4{1.0f/2.0f, 2.0f/2.0f, 3.0f/2.0f, 4.0f/2.0f});
+			PR_CHECK(1.0f/a, v4{1.0f/1.0f, 1.0f/2.0f, 1.0f/3.0f, 1.0f/4.0f});
+		}
 		{// Largest/Smallest element
 			auto v1 = v4{1,-2,-3,4};
 			PR_CHECK(MinElement(v1) == -3, true);
@@ -569,10 +606,10 @@ namespace pr::maths
 			PR_CHECK(MaxElementIndex(v1) == 3, true);
 		}
 		{// FEql
-			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
 			auto a = v4{0, 0, -1, 0.5f};
 			auto b = v4{0, 0, -1, 0.5f};
 			
+			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
 			a.x = a.y = 1.0e-5f;
 			b.x = b.y = 1.1e-5f;
 			PR_CHECK(FEql(MinElement(a), -1.0f), true);
@@ -651,6 +688,10 @@ namespace pr::maths
 			v4 b = { 3, -5,  2, -4};
 			PR_CHECK(Dot4(a,b), -46);
 			PR_CHECK(Dot3(a,b), -22);
+		}
+		{ // ComponentSum
+			v4 a = {1, 2, 3, 4};
+			PR_CHECK(ComponentSum(a), 1+2+3+4);
 		}
 		{
 			char c0;

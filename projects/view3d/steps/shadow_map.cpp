@@ -180,16 +180,17 @@ namespace pr::rdr
 		{// Set the frame constants
 			auto& c2w = m_scene->m_view.m_c2w;
 			auto shadow_frustum = m_scene->m_view.ShadowFrustum();
-				
-			hlsl::smap::CBufFrame cb = {};
-			CreateProjection(shadow_frustum, 0, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[0]);
-			CreateProjection(shadow_frustum, 1, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[1]);
-			CreateProjection(shadow_frustum, 2, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[2]);
-			CreateProjection(shadow_frustum, 3, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[3]);
-			CreateProjection(shadow_frustum, 4, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[4]);
+			auto zfar = shadow_frustum.zfar();
+			auto wh = shadow_frustum.area(zfar);
 
-			cb.m_frust_dim = shadow_frustum.Dim();
-			cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
+			hlsl::smap::CBufFrame cb = {};
+			CreateProjection(shadow_frustum, Frustum::EPlane::XPos, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[0]);
+			CreateProjection(shadow_frustum, Frustum::EPlane::XNeg, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[1]);
+			CreateProjection(shadow_frustum, Frustum::EPlane::YPos, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[2]);
+			CreateProjection(shadow_frustum, Frustum::EPlane::YNeg, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[3]);
+			CreateProjection(shadow_frustum, Frustum::EPlane::ZFar, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[4]);
+
+			cb.m_frust_dim = v4(0.5f * wh.x, 0.5f * wh.y, zfar, m_scene->m_view.m_shadow_max_caster_dist);
 			WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 		}
 
@@ -228,7 +229,7 @@ namespace pr::rdr
 	// plane. Effectively the projection near plane for directional lights or for point lights further
 	// than this distance. Objects further than this distance don't result in pixels in the smap.
 	// This should be the distance that depth information is normalised into the range [0,1) by.
-	bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
+	bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, Frustum::EPlane face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
 	{
 		#define DBG_PROJ 0 //PR_DBG_RDR
 		#if DBG_PROJ
@@ -271,10 +272,10 @@ namespace pr::rdr
 		// in front of the camera.
 		float sign_z[4] =
 		{
-			pr::SignF(face==1||face==3),
-			pr::SignF(face==0||face==3),
-			pr::SignF(face==1||face==2),
-			pr::SignF(face==0||face==2),
+			pr::SignF(face == Frustum::EPlane::XNeg || face == Frustum::EPlane::YNeg),
+			pr::SignF(face == Frustum::EPlane::XPos || face == Frustum::EPlane::YNeg),
+			pr::SignF(face == Frustum::EPlane::XNeg || face == Frustum::EPlane::YPos),
+			pr::SignF(face == Frustum::EPlane::XPos || face == Frustum::EPlane::YPos),
 		};
 
 		// Get the corners of the plane that will be the far clip plane (in world space).
@@ -283,7 +284,9 @@ namespace pr::rdr
 		// To compensate for this, the geometry shader reverses the winding order of the
 		// faces. The reason for doing this is to simplify texture lookup, pixels on the
 		// left of the screen will be on the left of the texture, rather than on the right.
-		v4 fdim = shadow_frustum.Dim();
+		auto zfar = shadow_frustum.zfar();
+		auto wh = shadow_frustum.area(zfar);
+		auto fdim = v4(0.5f * wh.x, 0.5f * wh.y, zfar, 0);
 		v4 tl, TL, tr, TR, bl, BL, br, BR;
 		TL = c2w * v4(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
 		TR = c2w * v4( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
@@ -294,7 +297,7 @@ namespace pr::rdr
 		w2s = m4x4Zero;
 
 		// Get the frustum normal for 'face'
-		pr::v4 ws_norm = c2w * shadow_frustum.Normal(face);
+		v4 ws_norm = c2w * shadow_frustum.face_normal(face);
 
 		// Construct the projection transform based on the light type
 		switch (light.m_type)
@@ -372,7 +375,7 @@ namespace pr::rdr
 		case ELight::Point:
 			{
 				// The surface must face the light source
-				float dist_to_light = pr::Dot3(light.m_position - c2w.pos, ws_norm) + (face == 4)*shadow_frustum.ZDist();
+				float dist_to_light = Dot3(light.m_position - c2w.pos, ws_norm) + (face == Frustum::EPlane::ZFar)*shadow_frustum.zfar();
 				if (dist_to_light <= 0)
 					return false;
 

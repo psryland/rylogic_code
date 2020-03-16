@@ -1,17 +1,22 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
-using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
 	public static class Control_
 	{
+		// Notes:
+		//  - If you're trying to fix the binding errors for 'HorizontalContentAlignment' and 'VerticalContentAlignment'
+		//    add this to your App.xaml:
+		//    <Style TargetType="ComboBoxItem"|"MenuItem"|"TreeViewItem">
+		//        <Setter Property = "HorizontalContentAlignment" Value="Left" />
+		//        <Setter Property = "VerticalContentAlignment" Value="Center" />
+		//    </Style>
+
 		/// <summary>Foreground Attached property</summary>
 		public const int Foreground = 0;
 		public static readonly DependencyProperty ForegroundProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(Foreground));

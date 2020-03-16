@@ -195,11 +195,18 @@ namespace LDraw
 				// Handlers
 				void HandleCheckForChangedFiles(object sender, EventArgs e)
 				{
-					foreach (var script in Scripts)
-						script.CheckForChangedScript();
+					try
+					{
+						foreach (var script in Scripts)
+							script.CheckForChangedScript();
 
-					if (Settings.AutoRefresh)
-						m_view3d.CheckForChangedSources();
+						if (Settings.AutoRefresh)
+							m_view3d.CheckForChangedSources();
+					}
+					catch (Exception ex)
+					{
+						Log.Write(ELogLevel.Error, ex, "Error during CheckForChangedFiles", string.Empty, 0);
+					}
 				}
 			}
 		}

@@ -67,6 +67,8 @@ namespace Rylogic.Gui.WPF
 			Overlay.PreviewKeyUp += (s, a) => OnKeyUp(a);
 			Scene.BuildScene += OnBuildScene;
 
+			// Prevent the object manager seeing anything created in the 'CtxId' context
+			View3d.ObjectManager.ExcludeCtxIds.Add(CtxId);
 			if (DesignerProperties.GetIsInDesignMode(this))
 				return;
 
@@ -151,7 +153,7 @@ namespace Rylogic.Gui.WPF
 						}
 					case nameof(OptionsData.Antialiasing):
 						{
-							Scene.MultiSampling = Options.Antialiasing ? 4 : 1;
+							Scene.Antialiasing = Options.Antialiasing;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
 							Invalidate();
 							break;
@@ -184,8 +186,8 @@ namespace Rylogic.Gui.WPF
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
 
 							// Invalidate grid lines and crosshair because their colour depends on the background colour
-							XAxis.GridLineGfx = null;
-							YAxis.GridLineGfx = null;
+							XAxis.Gfx.Invalidate();
+							YAxis.Gfx.Invalidate();
 							if (ShowCrossHair)
 							{
 								ShowCrossHair = false;

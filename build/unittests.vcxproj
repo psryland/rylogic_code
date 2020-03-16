@@ -170,10 +170,10 @@
     <ClInclude Include="..\include\pr\geometry\models_skybox.h" />
     <ClInclude Include="..\include\pr\geometry\model_file.h" />
     <ClInclude Include="..\include\pr\geometry\p3d.h" />
-    <ClInclude Include="..\include\pr\geometry\point.h" />
     <ClInclude Include="..\include\pr\geometry\models_quad.h" />
     <ClInclude Include="..\include\pr\geometry\models_shape2d.h" />
     <ClInclude Include="..\include\pr\geometry\models_sphere.h" />
+    <ClInclude Include="..\include\pr\geometry\point.h" />
     <ClInclude Include="..\include\pr\geometry\tetramesh.h" />
     <ClInclude Include="..\include\pr\geometry\triangle.h" />
     <ClInclude Include="..\include\pr\geometry\utility.h" />
@@ -239,6 +239,7 @@
     <ClInclude Include="..\include\pr\maths\limits.h" />
     <ClInclude Include="..\include\pr\maths\matrix.h" />
     <ClInclude Include="..\include\pr\maths\matrix6x8.h" />
+    <ClInclude Include="..\include\pr\maths\plane.h" />
     <ClInclude Include="..\include\pr\maths\rectangle.h" />
     <ClInclude Include="..\include\pr\maths\frustum.h" />
     <ClInclude Include="..\include\pr\maths\interpolate.h" />
@@ -252,7 +253,6 @@
     <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
     <ClInclude Include="..\include\pr\maths\oriented_box.h" />
     <ClInclude Include="..\include\pr\maths\perlin_noise.h" />
-    <ClInclude Include="..\include\pr\maths\plane.h" />
     <ClInclude Include="..\include\pr\maths\polynomial.h" />
     <ClInclude Include="..\include\pr\maths\primes.h" />
     <ClInclude Include="..\include\pr\maths\pr_to_ode.h" />

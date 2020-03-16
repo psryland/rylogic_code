@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <d3dcommon.h>
 #include "pr/common/cast.h"
-#include "pr/gfx/colour.h"
 #include "pr/common/range.h"
 #include "pr/common/fmt.h"
 #include "pr/common/repeater.h"
@@ -17,6 +16,7 @@
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
 #include "pr/container/ring.h"
+#include "pr/gfx/colour.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/interpolate.h"
 
@@ -51,11 +51,21 @@ namespace pr::geometry
 		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
 	};
 
+	// EPrimGroup
+	enum class EPrimGroup
+	{
+		None,
+		Points,
+		Lines,
+		Triangles,
+	};
+
+	// Geometry properties
 	struct Props
 	{
-		BBox m_bbox;  // Bounding box in model space of the generated model
-		EGeom m_geom;     // The components of the generated geometry
-		bool m_has_alpha; // True if the model contains any alpha
+		BBox  m_bbox;      // Bounding box in model space of the generated model
+		EGeom m_geom;      // The components of the generated geometry
+		bool  m_has_alpha; // True if the model contains any alpha
 
 		Props()
 			:m_bbox(BBoxReset)
@@ -63,6 +73,18 @@ namespace pr::geometry
 			,m_has_alpha(false)
 		{}
 	};
+
+	// Classify primitive types
+	constexpr EPrimGroup PrimGroup(EPrim prim)
+	{
+		return
+			prim == EPrim::TriList || prim == EPrim::TriListAdj ? EPrimGroup::Triangles :
+			prim == EPrim::TriStrip || prim == EPrim::TriStripAdj ? EPrimGroup::Triangles :
+			prim == EPrim::LineList || prim == EPrim::LineListAdj ? EPrimGroup::Lines :
+			prim == EPrim::LineStrip || prim == EPrim::LineStripAdj ? EPrimGroup::Lines :
+			prim == EPrim::PointList ? EPrimGroup::Points :
+			EPrimGroup::None;
+	}
 
 	// An iterator wrapper for applying a transform to 'points'
 	template <typename TVertCIter> struct Transformer

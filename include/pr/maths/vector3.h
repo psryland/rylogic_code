@@ -88,6 +88,57 @@ namespace pr
 		{
 			return Normalise3(Vec3<T>(x,y,z));
 		}
+
+		#pragma region Operators
+		friend Vec3<T> operator + (v3_cref<T> vec)
+		{
+			return vec;
+		}
+		friend Vec3<T> operator - (v3_cref<T> vec)
+		{
+			return Vec3<T>(-vec.x, -vec.y, -vec.z);
+		}
+		friend Vec3<T> operator * (float lhs, v3_cref<T> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Vec3<T> operator * (v3_cref<T> lhs, float rhs)
+		{
+			return Vec3<T>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
+		}
+		friend Vec3<T> operator / (v3_cref<T> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Vec3<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
+		}
+		friend Vec3<T> operator % (v3_cref<T> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Vec3<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs)};
+		}
+		friend Vec3<T> operator + (v3_cref<T> lhs, v3_cref<T> rhs)
+		{
+			return Vec3<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+		}
+		friend Vec3<T> operator - (v3_cref<T> lhs, v3_cref<T> rhs)
+		{
+			return Vec3<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+		}
+		friend Vec3<T> operator * (v3_cref<T> lhs, v3_cref<T> rhs)
+		{
+			return Vec3<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
+		}
+		friend Vec3<T> operator / (v3_cref<T> lhs, v3_cref<T> rhs)
+		{
+			assert("divide by zero" && !Any3(rhs, IsZero<float>));
+			return Vec3<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
+		}
+		friend Vec3<T> operator % (v3_cref<T> lhs, v3_cref<T> rhs)
+		{
+			assert("divide by zero" && !Any3(rhs, IsZero<float>));
+			return Vec3<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z)};
+		}
+		#pragma endregion
 	};
 	static_assert(maths::is_vec3<Vec3<void>>::value, "");
 	static_assert(std::is_pod<Vec3<void>>::value, "v3 must be a pod type");
@@ -97,57 +148,6 @@ namespace pr
 	template <typename T> inline float y_cp(v3_cref<T> v) { return v.y; }
 	template <typename T> inline float z_cp(v3_cref<T> v) { return v.z; }
 	template <typename T> inline float w_cp(v3_cref<T>)   { return 0; }
-
-	#pragma region Operators
-	template <typename T> inline Vec3<T> operator + (v3_cref<T> vec)
-	{
-		return vec;
-	}
-	template <typename T> inline Vec3<T> operator - (v3_cref<T> vec)
-	{
-		return Vec3<T>(-vec.x, -vec.y, -vec.z);
-	}
-	template <typename T> inline Vec3<T> operator * (float lhs, v3_cref<T> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename T> inline Vec3<T> operator * (v3_cref<T> lhs, float rhs)
-	{
-		return Vec3<T>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
-	}
-	template <typename T> inline Vec3<T> operator / (v3_cref<T> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Vec3<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
-	}
-	template <typename T> inline Vec3<T> operator % (v3_cref<T> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Vec3<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs)};
-	}
-	template <typename T> inline Vec3<T> operator + (v3_cref<T> lhs, v3_cref<T> rhs)
-	{
-		return Vec3<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-	}
-	template <typename T> inline Vec3<T> operator - (v3_cref<T> lhs, v3_cref<T> rhs)
-	{
-		return Vec3<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-	}
-	template <typename T> inline Vec3<T> operator * (v3_cref<T> lhs, v3_cref<T> rhs)
-	{
-		return Vec3<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
-	}
-	template <typename T> inline Vec3<T> operator / (v3_cref<T> lhs, v3_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any3(rhs, IsZero<float>));
-		return Vec3<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
-	}
-	template <typename T> inline Vec3<T> operator % (v3_cref<T> lhs, v3_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any3(rhs, IsZero<float>));
-		return Vec3<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z)};
-	}
-	#pragma endregion
 
 	#pragma region Functions
 

@@ -414,7 +414,7 @@ namespace Rylogic.LDraw
 		}
 		public void Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*CylinderHR ",name," ",colour," {",axis_id," ",height," ",radius," ",Ldr.Transform(o2w,pos),"}\n");
+			Append("*Cylinder ",name," ",colour," {",axis_id," ",height," ",radius," ",Ldr.Transform(o2w,pos),"}\n");
 		}
 
 		public void Circle()

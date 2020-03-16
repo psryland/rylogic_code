@@ -316,6 +316,26 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
+	<MenuItem x:Key="View3dMenuItem_FillModePointsSize" x:Shared="False">
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Fill Mode Points Size: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<gui:SliderFunction
+					Minimum="-1"
+					Maximum="2"
+					FunctionExpr="pow(10, x)"
+					InverseExpr="log10(x)"
+					ValueFn="{Binding FillModePointsSize}"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_MeasureTool" x:Shared="False"
 		Header="Measure Tool..."
 		Command="{Binding ShowMeasureToolUI}"

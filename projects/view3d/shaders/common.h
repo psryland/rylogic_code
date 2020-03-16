@@ -199,12 +199,13 @@ namespace pr::rdr
 	inline void SetShadowMapConstants(SceneView const& view, int smap_count, hlsl::Shadow& cb)
 	{
 		auto shadow_frustum = view.ShadowFrustum();
+		auto zfar = shadow_frustum.zfar();
+		auto wh = shadow_frustum.area(zfar);
 		auto max_range = view.m_shadow_max_caster_dist;
 
 		cb.m_info        = iv4(smap_count, 0, 0, 0);
-		cb.m_frust_dim   = shadow_frustum.Dim();
-		cb.m_frust_dim.w = max_range;
-		cb.m_frust       = shadow_frustum.m_Tnorms;
+		cb.m_frust_dim   = v4(0.5f * wh.x, 0.5f * wh.y, zfar, max_range);
+		cb.m_frust       = shadow_frustum.m_Tplanes;
 	}
 
 	// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders

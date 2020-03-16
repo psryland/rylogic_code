@@ -8,6 +8,8 @@
 
 namespace pr::rdr
 {
+	// NuggetData *************************************************
+
 	NuggetData::NuggetData(EPrim topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:m_topo(topo)
 		,m_geom(geom)
@@ -24,6 +26,8 @@ namespace pr::rdr
 		,m_irange(irange)
 	{}
 
+	// NuggetProps ************************************************
+
 	NuggetProps::NuggetProps(EPrim topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:NuggetData(topo, geom, smap, vrange, irange)
 		,m_range_overlaps(false)
@@ -33,13 +37,18 @@ namespace pr::rdr
 		,m_range_overlaps(false)
 	{}
 
+	// Nugget *****************************************************
+
 	Nugget::Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner)
 		:NuggetData(ndata)
 		,m_model_buffer(model_buffer)
 		,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
 		,m_owner(owner)
 		,m_nuggets()
-		,m_alpha_enabled(false)
+		,m_fill_mode(EFillMode::Default)
+		,m_cull_mode(ECullMode::Default)
+		,m_alpha_enabled()
+		,m_id()
 	{
 		// Enable alpha if the geometry or the diffuse texture map contains alpha
 		Alpha(RequiresAlpha());
@@ -98,17 +107,27 @@ namespace pr::rdr
 		Alpha(RequiresAlpha());
 	}
 
-	// Delete this nugget, removing it from the owning model
-	void Nugget::Delete()
-	{
-		m_owner->mdl_mgr().Delete(this);
-	}
-
 	// Enable/Disable alpha for this nugget
 	void Nugget::Alpha(bool enable)
 	{
 		if (m_alpha_enabled == enable) return;
 		m_alpha_enabled = enable;
+
+		// Clear the alpha blending states 
+		m_sort_key.Group(ESortGroup::Default);
+		m_bsb.Clear(EBS::BlendEnable, 0);
+		m_bsb.Clear(EBS::BlendOp, 0);
+		m_bsb.Clear(EBS::SrcBlend, 0);
+		m_bsb.Clear(EBS::DestBlend, 0);
+		m_bsb.Clear(EBS::BlendOpAlpha, 0);
+		m_bsb.Clear(EBS::SrcBlendAlpha, 0);
+		m_bsb.Clear(EBS::DestBlendAlpha, 0);
+		m_dsb.Clear(EDS::DepthWriteMask);
+		m_rsb.Clear(ERS::CullMode);
+
+		// Find and delete the dependent alpha nugget
+		DeleteDependent([](auto& nug) { return nug.m_id == AlphaNuggetId; });
+
 		if (enable)
 		{
 			// Set this nugget to do the front faces
@@ -130,27 +149,54 @@ namespace pr::rdr
 				nug.m_sort_key.Group(ESortGroup::AlphaBack);
 				nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
 				nug.m_owner = m_owner;
+				nug.m_id = AlphaNuggetId;
 				m_nuggets.push_back(nug);
 			}
 		}
-		else
-		{
-			// Clear the alpha blending states 
-			m_sort_key.Group(ESortGroup::Default);
-			m_bsb.Clear(EBS::BlendEnable, 0);
-			m_bsb.Clear(EBS::BlendOp, 0);
-			m_bsb.Clear(EBS::SrcBlend, 0);
-			m_bsb.Clear(EBS::DestBlend, 0);
-			m_bsb.Clear(EBS::BlendOpAlpha, 0);
-			m_bsb.Clear(EBS::SrcBlendAlpha, 0);
-			m_bsb.Clear(EBS::DestBlendAlpha, 0);
-			m_dsb.Clear(EDS::DepthWriteMask);
-			m_rsb.Clear(ERS::CullMode);
+	}
 
-			// Find and delete the dependent nugget
-			auto iter = pr::find_if(m_nuggets, [](auto& nug) { return nug.m_sort_key.Group() == ESortGroup::AlphaBack; });
-			if (iter != m_nuggets.end())
-				iter->Delete();
+	// Get/Set the fill mode for this nugget
+	EFillMode Nugget::FillMode() const
+	{
+		return m_fill_mode;
+	}
+	void Nugget::FillMode(EFillMode fill_mode)
+	{
+		if (m_fill_mode == fill_mode) return;
+		m_fill_mode = fill_mode;
+		switch (m_fill_mode)
+		{
+		case EFillMode::Default:
+		case EFillMode::Solid:     m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EFillMode::Wireframe: m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+		case EFillMode::SolidWire: m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EFillMode::Points:    m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		default: throw std::runtime_error(Fmt("Unknown fill mode: %d", fill_mode));
 		}
+	}
+
+	// Get/Set the cull mode for this nugget
+	ECullMode Nugget::CullMode() const
+	{
+		return m_cull_mode;
+	}
+	void Nugget::CullMode(ECullMode cull_mode)
+	{
+		if (m_cull_mode == cull_mode) return;
+		m_cull_mode = cull_mode;
+		switch (m_cull_mode)
+		{
+		case ECullMode::Default:
+		case ECullMode::None:  m_rsb.Set(ERS::CullMode, D3D11_CULL_NONE); break;
+		case ECullMode::Back:  m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK); break;
+		case ECullMode::Front: m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT); break;
+		default: throw std::runtime_error(Fmt("Unknown cull mode: %d", cull_mode));
+		}
+	}
+
+	// Delete this nugget, removing it from the owning model
+	void Nugget::Delete()
+	{
+		m_owner->mdl_mgr().Delete(this);
 	}
 }

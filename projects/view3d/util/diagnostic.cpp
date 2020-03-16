@@ -11,6 +11,7 @@
 #include "pr/view3d/shaders/shader.h"
 #include "pr/view3d/shaders/shader_set.h"
 #include "pr/view3d/shaders/shdr_diagnostic.h"
+#include "pr/view3d/shaders/shdr_screen_space.h"
 #include "pr/view3d/models/model_manager.h"
 #include "pr/view3d/models/model.h"
 #include "pr/view3d/models/nugget.h"
@@ -18,36 +19,35 @@
 
 namespace pr::rdr
 {
-	DiagState::DiagState()
+	constexpr RdrId ShowNormalsId = hash::HashCT("ShowNormals");
+
+	DiagState::DiagState(Renderer& rdr)
 		:m_normal_lengths(0.1f)
 		,m_normal_colour(Colour32Purple)
 		,m_bboxes_visible(false)
+		,m_gs_fillmode_points()
 	{
+		auto shdr = rdr.m_shdr_mgr.GetShader<PointSpritesGS>(RdrId(hash::Hash("PointFillMode")), RdrId(EStockShader::PointSpritesGS), "Point FillMode");
+		shdr->m_size = v2(5.0f, 5.0f);
+		shdr->m_depth = false;
+		m_gs_fillmode_points = shdr;
 	}
 
-	// Enable/Disable normals on 'model'. Set length to 0 to disable
+	// Enable/Disable normals on 'model'
 	void ShowNormals(Model* model, bool show)
 	{
-		// The length property is controlled independently
-		auto id = pr::hash::Hash("ShowNormals");
+		// Notes:
+		//  - The normals length property is controlled independently
 
 		// Remove dependent nuggets used to show normals
 		for (auto& nug : model->m_nuggets)
-		{
-			auto nuggets = chain::filter(nug.m_nuggets, [=](auto& n)
-			{
-				auto& gs = n.m_smap[ERenderStep::ForwardRender].m_gs;
-				return gs != nullptr && gs->m_id == id;
-			});
-			for (;!nuggets.empty();)
-				nuggets.front().Delete();
-		}
+			nug.DeleteDependent([](Nugget& n) { return n.m_id == ShowNormalsId; });
 
 		// If showing normals, add a dependent nugget for each nugget that has valid vertex normals
 		if (show)
 		{
 			// Get or create an instance of the ShowNormals shader
-			auto shdr = model->rdr().m_shdr_mgr.GetShader<ShowNormalsGS>(id, RdrId(EStockShader::ShowNormalsGS));
+			auto shdr = model->rdr().m_shdr_mgr.GetShader<ShowNormalsGS>(ShowNormalsId, RdrId(EStockShader::ShowNormalsGS));
 
 			// Add a dependent nugget for each existing nugget that has vertex normals
 			for (auto& nug : model->m_nuggets)
@@ -62,6 +62,7 @@ namespace pr::rdr
 				dep.m_geom = EGeom::Vert | EGeom::Colr;
 				dep.m_owner = nug.m_owner;
 				dep.m_irange = RangeZero;
+				dep.m_id = ShowNormalsId;
 				nug.m_nuggets.push_back(dep);
 			}
 		}

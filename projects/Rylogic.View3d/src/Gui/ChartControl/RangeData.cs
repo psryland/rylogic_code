@@ -97,26 +97,17 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
 			internal void UpdateScene(View3d.Window window)
 			{
-				// Position the grid lines so that they line up with the axis tick marks
-				// Grid lines are modelled from the bottom left corner
-				if (XAxis.Options.ShowGridLines)
-					XAxis.AddToScene(window);
-				else if (XAxis.GridLineGfx != null)
-					window.RemoveObject(XAxis.GridLineGfx);
-
-				if (YAxis.Options.ShowGridLines)
-					YAxis.AddToScene(window);
-				else if (YAxis.GridLineGfx != null)
-					window.RemoveObject(YAxis.GridLineGfx);
+				XAxis.Gfx.UpdateScene(window);
+				YAxis.Gfx.UpdateScene(window);
 			}
 
 			/// <summary>Notify of the axis zooming</summary>
 			private void HandleAxisZoomed(object? sender, EventArgs e)
 			{
-				// Invalidate the cached grid line graphics on zoom for both axes, since the
+				// Invalidate the grid line graphics on zoom for both axes, since the
 				// model will need to change size even if only zoomed on one axis.
-				XAxis.GridLineGfx = null;
-				YAxis.GridLineGfx = null;
+				XAxis.Gfx.Invalidate();
+				YAxis.Gfx.Invalidate();
 
 				// If a moved event is pending, ensure zoomed is added to the args
 				if (m_moved_args == null)
@@ -169,6 +160,7 @@ namespace Rylogic.Gui.WPF
 					AllowScroll = true;
 					AllowZoom = true;
 					TickText = DefaultTickText;
+					Gfx = new GridLines(this);
 				}
 				public Axis(Axis rhs)
 				{
@@ -179,11 +171,12 @@ namespace Rylogic.Gui.WPF
 					AllowScroll = rhs.AllowScroll;
 					AllowZoom = rhs.AllowZoom;
 					TickText = rhs.TickText;
+					Gfx = new GridLines(this);
 				}
 				public void Dispose()
 				{
 					LinkTo = null;
-					GridLineGfx = null;
+					Gfx = null!;
 				}
 
 				/// <summary>Render options for the axis</summary>
@@ -404,94 +397,17 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>The graphics object used for grid lines</summary>
-				internal View3d.Object? GridLineGfx
+				internal GridLines Gfx
 				{
 					get => m_gridlines;
-					set
+					private set
 					{
 						if (m_gridlines == value) return;
-						Util.Dispose(ref m_gridlines);
+						Util.Dispose(ref m_gridlines!);
 						m_gridlines = value;
 					}
 				}
-				private View3d.Object? m_gridlines;
-				private View3d.Object CreateGridLineGfx()
-				{
-					// Create a model for the grid lines
-					// Need to allow for one step in either direction because we only create the
-					// grid lines model when scaling and we can translate by a max of one step in
-					// either direction.
-					GridLines(out var min, out var max, out var step);
-					var num_lines = (int)(2 + (max - min) / step);
-
-					// Create the grid lines at the origin, they get positioned as the camera moves
-					var verts = new View3d.Vertex[num_lines * 2];
-					var indices = new ushort[num_lines * 2];
-					var nuggets = new View3d.Nugget[1];
-					var name = string.Empty;
-					var v = 0;
-					var i = 0;
-
-					// Choose a suitable grid colour
-					var colour = Chart.Scene.BackgroundColour.Lerp(Chart.Scene.BackgroundColour.InvertBW(), 0.15);
-
-					// Grid verts
-					if (AxisType == EAxis.XAxis)
-					{
-						name = "xaxis_grid";
-						var x = 0f; var y0 = 0f; var y1 = (float)Chart.YAxis.Span;
-						for (int l = 0; l != num_lines; ++l)
-						{
-							verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), colour);
-							verts[v++] = new View3d.Vertex(new v4(x, y1, 0f, 1f), colour);
-							x += (float)step;
-						}
-					}
-					if (AxisType == EAxis.YAxis)
-					{
-						name = "yaxis_grid";
-						var y = 0f; var x0 = 0f; var x1 = (float)Chart.XAxis.Span;
-						for (int l = 0; l != num_lines; ++l)
-						{
-							verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), colour);
-							verts[v++] = new View3d.Vertex(new v4(x1, y, 0f, 1f), colour);
-							y += (float)step;
-						}
-					}
-
-					// Grid indices
-					for (int l = 0; l != num_lines; ++l)
-					{
-						indices[i] = (ushort)i++;
-						indices[i] = (ushort)i++;
-					}
-
-					// Grid nugget
-					nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr);
-					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, CtxId);
-					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZWrite, true);
-					return gridlines;
-				}
-
-				/// <summary>Add graphics for this axis to the scene</summary>
-				internal void AddToScene(View3d.Window window)
-				{
-					GridLineGfx ??= CreateGridLineGfx();
-
-					var cam = window.Camera;
-					var wh = cam.ViewArea(cam.FocusDist);
-					GridLines(out var min, out _, out _);
-					var pos =
-						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, (float)(cam.FocusDist * Chart.Options.GridZOffset), 0) :
-						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), (float)(cam.FocusDist * Chart.Options.GridZOffset), 0) :
-						throw new Exception("Unknown axis type");
-
-					var o2w = cam.O2W;
-					o2w.pos = cam.FocusPoint - o2w * pos;
-
-					GridLineGfx.O2WSet(o2w);
-					window.AddObject(GridLineGfx);
-				}
+				private GridLines m_gridlines = null!;
 
 				/// <summary>Default value to text conversion</summary>
 				public string DefaultTickText(double x, double? step = null)

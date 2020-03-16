@@ -36,7 +36,7 @@ namespace pr
 		}
 		template <typename TStr> void PhShape(char const* name, unsigned int colour, ph::ShapeCylinder const& shape, m4x4 const& o2w, TStr& str)
 		{
-			//CylinderHR(name, colour, o2w, shape.m_radius, shape.m_height * 2.0f, str);
+			//Cylinder(name, colour, o2w, shape.m_radius, shape.m_height * 2.0f, str);
 		}
 		template <typename TStr> void PhShape(char const* name, unsigned int colour, ph::ShapePolytope const& poly, m4x4 const& o2w, TStr& str)
 		{

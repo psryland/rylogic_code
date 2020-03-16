@@ -132,6 +132,122 @@ namespace pr
 			return Mat4x4<A,B>{*this, pos};
 		}
 
+		#pragma region Operators
+		friend Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> mat)
+		{
+			return mat;
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> mat)
+		{
+			return Mat3x4<A,B>{-mat.x, -mat.y, -mat.z};
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator * (float lhs, m3_cref<A,B> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator * (m3_cref<A,B> lhs, float rhs)
+		{
+			return Mat3x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator / (m3_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat3x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator % (m3_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat3x4<A,B>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs};
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat3x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+		}
+		friend Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat3x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+		}
+		friend Vec4<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v4_cref<A> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+
+			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+			auto ans = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_add_ps(
+					_mm_mul_ps(brod3, z),
+					_mm_set_ps(rhs.w, 0, 0, 0))
+			);
+		
+			return Vec4<B>{ans};
+			#else
+			auto lhsT = Transpose(lhs);
+			return Vec4<B>{Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w};
+			#endif
+		}
+		friend Vec3<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v3_cref<A> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+
+			auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+			auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+			auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+			auto ans = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_mul_ps(brod3, z));
+		
+			return Vec3<B>{ans.m128_f32[0], ans.m128_f32[1], ans.m128_f32[2]};
+			#else
+			auto lhsT = Transpose3x3(lhs);
+			return Vec3<B>{Dot3(lhsT.x.xyz, rhs), Dot3(lhsT.y.xyz, rhs), Dot3(lhsT.z.xyz, rhs)};
+			#endif
+		}
+		template <typename C> friend Mat3x4<A,C> pr_vectorcall operator * (m3_cref<B,C> lhs, m3_cref<A,B> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			auto ans = Mat3x4<A,C>{};
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+			for (int i = 0; i != 3; ++i)
+			{
+				auto brod1 = _mm_set_ps(0, rhs.arr[i].x, rhs.arr[i].x, rhs.arr[i].x);
+				auto brod2 = _mm_set_ps(0, rhs.arr[i].y, rhs.arr[i].y, rhs.arr[i].y);
+				auto brod3 = _mm_set_ps(0, rhs.arr[i].z, rhs.arr[i].z, rhs.arr[i].z);
+				auto row = _mm_add_ps(
+					_mm_add_ps(
+						_mm_mul_ps(brod1, x),
+						_mm_mul_ps(brod2, y)),
+					_mm_mul_ps(brod3, z));
+
+				_mm_store_ps(ans.arr[i].arr, row);
+			}
+			return ans;
+			#else
+			auto ans = Mat3x4<A,C>{};
+			auto lhsT = Transpose(lhs);
+			ans.x = Vec4<void>{Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0};
+			ans.y = Vec4<void>{Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0};
+			ans.z = Vec4<void>{Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0};
+			return ans;
+			#endif
+		}
+		#pragma endregion
+
 		// Construct a rotation matrix. Order is: roll, pitch, yaw (to match DirectX)
 		static Mat3x4 Rotation(float pitch, float yaw, float roll)
 		{
@@ -275,122 +391,6 @@ namespace pr
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall y_cp(m3_cref<A,B> v) { return v.y; }
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall z_cp(m3_cref<A,B> v) { return v.z; }
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall w_cp(m3_cref<A,B>)   { return v4Origin; }
-
-	#pragma region Operators
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> mat)
-	{
-		return mat;
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> mat)
-	{
-		return Mat3x4<A,B>{-mat.x, -mat.y, -mat.z};
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator * (float lhs, m3_cref<A,B> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator * (m3_cref<A,B> lhs, float rhs)
-	{
-		return Mat3x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator / (m3_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat3x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator % (m3_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat3x4<A,B>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs};
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator + (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
-	{
-		return Mat3x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-	}
-	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall operator - (m3_cref<A,B> lhs, m3_cref<A,B> rhs)
-	{
-		return Mat3x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-	}
-	template <typename A, typename B, typename C> inline Mat3x4<A,C> pr_vectorcall operator * (m3_cref<B,C> lhs, m3_cref<A,B> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto ans = Mat3x4<A,C>{};
-		auto x = _mm_load_ps(lhs.x.arr);
-		auto y = _mm_load_ps(lhs.y.arr);
-		auto z = _mm_load_ps(lhs.z.arr);
-		for (int i = 0; i != 3; ++i)
-		{
-			auto brod1 = _mm_set_ps(0, rhs.arr[i].x, rhs.arr[i].x, rhs.arr[i].x);
-			auto brod2 = _mm_set_ps(0, rhs.arr[i].y, rhs.arr[i].y, rhs.arr[i].y);
-			auto brod3 = _mm_set_ps(0, rhs.arr[i].z, rhs.arr[i].z, rhs.arr[i].z);
-			auto row = _mm_add_ps(
-				_mm_add_ps(
-					_mm_mul_ps(brod1, x),
-					_mm_mul_ps(brod2, y)),
-				_mm_mul_ps(brod3, z));
-
-			_mm_store_ps(ans.arr[i].arr, row);
-		}
-		return ans;
-		#else
-		auto ans = Mat3x4<A,C>{};
-		auto lhsT = Transpose(lhs);
-		ans.x = Vec4<void>{Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0};
-		ans.y = Vec4<void>{Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0};
-		ans.z = Vec4<void>{Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0};
-		return ans;
-		#endif
-	}
-	template <typename A, typename B> inline Vec4<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v4_cref<A> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto x = _mm_load_ps(lhs.x.arr);
-		auto y = _mm_load_ps(lhs.y.arr);
-		auto z = _mm_load_ps(lhs.z.arr);
-
-		auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
-		auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
-		auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
-
-		auto ans = _mm_add_ps(
-			_mm_add_ps(
-				_mm_mul_ps(brod1, x),
-				_mm_mul_ps(brod2, y)),
-			_mm_add_ps(
-				_mm_mul_ps(brod3, z),
-				_mm_set_ps(rhs.w, 0, 0, 0))
-		);
-		
-		return Vec4<B>{ans};
-		#else
-		auto lhsT = Transpose(lhs);
-		return Vec4<B>{Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w};
-		#endif
-	}
-	template <typename A, typename B> inline Vec3<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v3_cref<A> rhs)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		auto x = _mm_load_ps(lhs.x.arr);
-		auto y = _mm_load_ps(lhs.y.arr);
-		auto z = _mm_load_ps(lhs.z.arr);
-
-		auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
-		auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
-		auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
-
-		auto ans = _mm_add_ps(
-			_mm_add_ps(
-				_mm_mul_ps(brod1, x),
-				_mm_mul_ps(brod2, y)),
-			_mm_mul_ps(brod3, z));
-		
-		return Vec3<B>{ans.m128_f32[0], ans.m128_f32[1], ans.m128_f32[2]};
-		#else
-		auto lhsT = Transpose3x3(lhs);
-		return Vec3<B>{Dot3(lhsT.x.xyz, rhs), Dot3(lhsT.y.xyz, rhs), Dot3(lhsT.z.xyz, rhs)};
-		#endif
-	}
-	#pragma endregion
 
 	#pragma region Functions
 

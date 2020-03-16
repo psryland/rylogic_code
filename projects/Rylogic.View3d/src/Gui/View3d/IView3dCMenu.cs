@@ -103,6 +103,9 @@ namespace Rylogic.Gui.WPF
 		Colour32 NormalsColour { get; set; }
 		ICommand SetNormalsColour { get; }
 
+		/// <summary>The size of 'Points' fill mode points</summary>
+		float FillModePointsSize { get; set; }
+
 		/// <summary>Saved views</summary>
 		ICollectionView SavedViews { get; }
 		ICommand ApplySavedView { get; }

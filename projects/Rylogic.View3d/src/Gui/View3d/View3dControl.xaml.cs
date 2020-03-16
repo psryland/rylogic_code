@@ -205,6 +205,8 @@ namespace Rylogic.Gui.WPF
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.NormalsLength));
 							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_NormalsColour))
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.NormalsColour));
+							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_FillModePointsSize))
+								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FillModePointsSize));
 						}
 					}
 					if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_BackgroundColour))
@@ -295,7 +297,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
 		{
-			get { return D3DImage.MultiSampling; }
+			get => D3DImage.MultiSampling;
 			set
 			{
 				// Since, in WPF, we're rendering to an off-screen render target, multisampling

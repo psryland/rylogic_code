@@ -92,8 +92,6 @@ namespace pr::rdr
 		for (auto& dle : lock.drawlist())
 		{
 			StateStack::DleFrame frame(ss, dle);
-			ss.Commit();
-
 			auto const& nugget = *dle.m_nugget;
 
 			// Set the per-nugget constants
@@ -106,23 +104,72 @@ namespace pr::rdr
 			WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 			// Draw the nugget
-			if (!nugget.m_irange.empty())
+			DrawNugget(dc, nugget, ss);
+		}
+	}
+
+	// Call draw for a nugget
+	void ForwardRender::DrawNugget(ID3D11DeviceContext* dc, Nugget const& nugget, StateStack& ss)
+	{
+		// Render solid or wireframe nuggets
+		if (nugget.m_fill_mode == EFillMode::Default ||
+			nugget.m_fill_mode == EFillMode::Solid ||
+			nugget.m_fill_mode == EFillMode::Wireframe ||
+			nugget.m_fill_mode == EFillMode::SolidWire)
+		{
+			ss.Commit();
+			if (nugget.m_irange.empty())
+			{
+				dc->Draw(
+					UINT(nugget.m_vrange.size()),
+					UINT(nugget.m_vrange.m_beg));
+			}
+			else
 			{
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_beg),
 					0);
 			}
-			else
-			{
-				dc->Draw(
-					UINT(nugget.m_vrange.size()),
-					UINT(nugget.m_vrange.m_beg));
-			}
+		}
+
+		// Render wire frame over solid for 'SolidWire' mode
+		if (!nugget.m_irange.empty() && 
+			nugget.m_fill_mode == EFillMode::SolidWire && (
+			nugget.m_topo == EPrim::TriList ||
+			nugget.m_topo == EPrim::TriListAdj ||
+			nugget.m_topo == EPrim::TriStrip ||
+			nugget.m_topo == EPrim::TriStripAdj))
+		{
+			m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+			m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+
+			ss.Commit();
+			dc->DrawIndexed(
+				UINT(nugget.m_irange.size()),
+				UINT(nugget.m_irange.m_beg),
+				0);
+
+			m_rsb.Clear(ERS::FillMode);
+			m_bsb.Clear(EBS::BlendEnable, 0);
+		}
+
+		// Render points for 'Points' mode
+		if (nugget.m_fill_mode == EFillMode::Points)
+		{
+			ss.m_pending.m_topo = EPrim::PointList;
+			ss.m_pending.m_shdrs.m_gs = m_scene->m_diag.m_gs_fillmode_points.get();
+			ss.Commit();
+			dc->Draw(
+				UINT(nugget.m_vrange.size()),
+				UINT(nugget.m_vrange.m_beg));
 		}
 	}
 }
 
+
+
+		
 
 //// Projected textures
 //void SetProjectedTextures(D3DPtr<ID3D11DeviceContext>& dc, CBufFrame_Forward& buf, ForwardRender::ProjTextCont const& proj_tex)

@@ -281,6 +281,15 @@ namespace pr
 		}
 		return true;
 	}
+	
+	// Intersect the line passing through 's' with direction 'd' to 'frustum' returning parametric values 't0' and 't1'.
+	// 's' and 'd' must be in 'frustum' space where the frustum apex is at (0,0,0) and grows down the -z axis. (i.e. camera space).
+	// Note: this is an accumulative function, 't0' and 't1' must be initialised.
+	// Returns true if t0 < t1 i.e. some of the line is within the frustum.
+	inline bool pr_vectorcall Intersect_LineToFrustum(v4_cref<> s, v4_cref<> d, Frustum const& frustum, bool accumulative, float& t0, float& t1, bool include_zfar)
+	{
+		return frustum.clip(s, d, accumulative, t0, t1, include_zfar);
+	}
 
 	// Test if the line segment starting at 's' and ending at 'e' with initial
 	// parametric values 't0' and 't1' to the infinite plane described by 'plane'.
@@ -395,15 +404,14 @@ namespace pr
 	// Returns true if 'bbox' intersects 'plane'
 	inline bool pr_vectorcall Intersect_BBoxToPlane(BBox_cref bbox, Plane const& plane)
 	{
-		// If the eight corners of the box are on the same side of the plane then there's no intersect
-		bool first_side = Dot(plane, GetCorner(bbox, 0)) > 0.0f;
-		for (uint corner = 1; corner != 8; ++corner)
-		{
-			bool this_side = Dot(plane, GetCorner(bbox, corner)) > 0.0f;
-			if (this_side != first_side)
-				return false;
-		}
-		return true;
+		// Project the box onto the plane normal
+		auto r = Dot(Abs(plane.w0()), bbox.m_radius);
+
+		// Compute distance of box center from plane
+		auto s = Dot(plane, bbox.m_centre);
+
+		// Intersection occurs when distance s falls within [-r,+r] interval
+		return Abs(s) <= r;
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
@@ -604,6 +612,42 @@ namespace pr::geometry
 
 			s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 			r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
+			PR_CHECK(r, false);
+		}
+		{ // Intersect_BBoxToPlane
+			auto p = pr::plane::make(v4(0.1f, 0.4f, -0.3f, 1), v4::Normal3(0.3f,-0.4f,0.5f,0));
+			auto b = BBox(v4(0.0f, 0.2f, 0.0f, 1.0f), v4(0.25f, 0.15f, 0.2f, 0));
+			auto r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, true);
+
+			b.m_centre = v4(0.0f, 0.1f, 0.0f, 1.0f);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, false);
+
+			b.m_centre = v4(0.0f, 0.4f, -0.7f, 1.0f);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, true);
+
+			b.m_centre = v4(0.0f, 0.4f, -0.72f, 1.0f);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, false);
+
+			// Degenerate cases
+			p = pr::plane::make(v4Origin, v4XAxis);
+			b.m_centre = v4(-0.250001f, 0, 0, 1);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, false);
+
+			b.m_centre = v4(-0.2499f, 0, 0, 1);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, true);
+
+			b.m_centre = v4(+0.2499f, 0, 0, 1);
+			r = Intersect_BBoxToPlane(b, p);
+			PR_CHECK(r, true);
+
+			b.m_centre = v4(+0.250001f, 0, 0, 1);
+			r = Intersect_BBoxToPlane(b, p);
 			PR_CHECK(r, false);
 		}
 	}

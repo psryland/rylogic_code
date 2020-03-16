@@ -61,6 +61,61 @@ namespace pr
 			return arr[i];
 		}
 
+		#pragma region Operators
+		friend Mat2x2<A,B> operator + (m2_cref<A,B> mat)
+		{
+			return mat;
+		}
+		friend Mat2x2<A,B> operator - (m2_cref<A,B> mat)
+		{
+			return Mat2x2<A,B>{-mat.x, -mat.y};
+		}
+		friend Mat2x2<A,B> operator * (float lhs, m2_cref<A,B> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Mat2x2<A,B> operator * (m2_cref<A,B> lhs, float rhs)
+		{
+			return Mat2x2<A,B>{lhs.x * rhs, lhs.y * rhs};
+		}
+		friend Mat2x2<A,B> operator / (m2_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat2x2<A,B>{lhs.x / rhs, lhs.y / rhs};
+		}
+		friend Mat2x2<A,B> operator % (m2_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat2x2<A,B>{lhs.x % rhs, lhs.y % rhs};
+		}
+		friend Mat2x2<A,B> operator + (m2_cref<A,B> lhs, m2_cref<A,B> rhs)
+		{
+			return Mat2x2<A,B>{lhs.x + rhs.x, lhs.y + rhs.y};
+		}
+		friend Mat2x2<A,B> operator - (m2_cref<A,B> lhs, m2_cref<A,B> rhs)
+		{
+			return Mat2x2<A,B>{lhs.x - rhs.x, lhs.y - rhs.y};
+		}
+		friend Vec2<B> operator * (m2_cref<A,B> lhs, v2_cref<A> rhs)
+		{
+			auto ans = Vec2<B>{};
+			auto lhsT = Transpose_(lhs);
+			ans.x = Dot2(lhsT.x, rhs);
+			ans.y = Dot2(lhsT.y, rhs);
+			return ans;
+		}
+		template <typename C> friend Mat2x2<A,C> operator * (m2_cref<B,C> lhs, m2_cref<A,B> rhs)
+		{
+			auto ans = Mat2x2<A,C>{};
+			auto lhsT = Transpose(lhs);
+			ans.x.x = Dot2(lhsT.x, rhs.x);
+			ans.x.y = Dot2(lhsT.y, rhs.x);
+			ans.y.x = Dot2(lhsT.x, rhs.y);
+			ans.y.y = Dot2(lhsT.y, rhs.y);
+			return ans;
+		}
+		#pragma endregion
+
 		// Create a rotation matrix
 		static Mat2x2<A,B> Rotation(float angle)
 		{
@@ -77,61 +132,6 @@ namespace pr
 	template <typename A, typename B> inline v2_cref<> y_cp(m2_cref<A,B> v) { return v.y; }
 	template <typename A, typename B> inline v2_cref<> z_cp(m2_cref<A,B>)   { return v2{}; }
 	template <typename A, typename B> inline v2_cref<> w_cp(m2_cref<A,B>)   { return v2{}; }
-
-	#pragma region Operators
-	template <typename A, typename B> inline Mat2x2<A,B> operator + (m2_cref<A,B> mat)
-	{
-		return mat;
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator - (m2_cref<A,B> mat)
-	{
-		return Mat2x2<A,B>{-mat.x, -mat.y};
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> pr_vectorcall operator * (float lhs, m2_cref<A,B> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator * (m2_cref<A,B> lhs, float rhs)
-	{
-		return Mat2x2<A,B>{lhs.x * rhs, lhs.y * rhs};
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator / (m2_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat2x2<A,B>{lhs.x / rhs, lhs.y / rhs};
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator % (m2_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat2x2<A,B>{lhs.x % rhs, lhs.y % rhs};
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator + (m2_cref<A,B> lhs, m2_cref<A,B> rhs)
-	{
-		return Mat2x2<A,B>{lhs.x + rhs.x, lhs.y + rhs.y};
-	}
-	template <typename A, typename B> inline Mat2x2<A,B> operator - (m2_cref<A,B> lhs, m2_cref<A,B> rhs)
-	{
-		return Mat2x2<A,B>{lhs.x - rhs.x, lhs.y - rhs.y};
-	}
-	template <typename A, typename B, typename C> inline Mat2x2<A,C> operator * (m2_cref<B,C> lhs, m2_cref<A,B> rhs)
-	{
-		auto ans = Mat2x2<A,C>{};
-		auto lhsT = Transpose(lhs);
-		ans.x.x = Dot2(lhsT.x, rhs.x);
-		ans.x.y = Dot2(lhsT.y, rhs.x);
-		ans.y.x = Dot2(lhsT.x, rhs.y);
-		ans.y.y = Dot2(lhsT.y, rhs.y);
-		return ans;
-	}
-	template <typename A, typename B> inline Vec2<B> operator * (m2_cref<A,B> lhs, v2_cref<A> rhs)
-	{
-		auto ans = Vec2<B>{};
-		auto lhsT = Transpose_(lhs);
-		ans.x = Dot2(lhsT.x, rhs);
-		ans.y = Dot2(lhsT.y, rhs);
-		return ans;
-	}
-	#pragma endregion
 
 	#pragma region Functions
 	

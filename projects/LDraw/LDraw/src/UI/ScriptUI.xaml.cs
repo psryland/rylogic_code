@@ -625,6 +625,10 @@ namespace LDraw.UI
 				if (dlg.ShowDialog(App.Current.MainWindow) != true) return;
 				filepath = dlg.FileName ?? throw new Exception("Invalid filepath selected");
 			}
+			if (!File.Exists(filepath))
+			{
+				throw new FileNotFoundException("Load script file failed", filepath);
+			}
 
 			// Load the file into the editor
 			Editor.Text = File.ReadAllText(filepath);
@@ -674,6 +678,10 @@ namespace LDraw.UI
 		/// <summary>Test the script file for external changes</summary>
 		public void CheckForChangedScript()
 		{
+			// If this script has never been saved, no changes
+			if (!File.Exists(Filepath))
+				return;
+
 			// Look for changes
 			var fileinfo = FileInfo;
 			if (m_last_fileinfo != null && fileinfo != null &&

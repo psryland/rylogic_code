@@ -653,6 +653,13 @@ namespace Rylogic.Gfx
 					get => View3D_DiagNormalsColourGet(m_window.Handle);
 					set => View3D_DiagNormalsColourSet(m_window.Handle, value);
 				}
+
+				/// <summary>Get/Set the size of the points in EFillMode::Points mode</summary>
+				public v2 FillModePointsSize
+				{
+					get => View3D_DiagFillModePointsSizeGet(m_window.Handle);
+					set => View3D_DiagFillModePointsSizeSet(m_window.Handle, value);
+				}
 			}
 
 			#region Equals

@@ -33,6 +33,11 @@ namespace pr
 		};
 		#pragma warning(pop)
 
+		// Notes:
+		//  - Don't add Mat4x4(v4 const& v) or equivalent. It's ambiguous between being this:
+		//    x = v4(v.x, v.x, v.x, v.x), y = v4(v.y, v.y, v.y, v.y), etc and
+		//    x = v4(v.x, v.y, v.z, v.w), y = v4(v.x, v.y, v.z, v.w), etc...
+
 		// Construct
 		Mat4x4() = default;
 		Mat4x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_, v4_cref<> w_)
@@ -58,20 +63,9 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Mat4x4(V4 const& v)
-			:Mat4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
+		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Mat4x4(float x, float y, float z, float w)
+			:Mat4x4(v4(x), v4(y), v4(z), v4(w))
 		{}
-		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat4x4(CP const* v)
-			:Mat4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
-		{}
-		template <typename V4, typename = maths::enable_if_v4<V4>> Mat4x4& operator = (V4 const& rhs)
-		{
-			x = x_as<v4>(rhs);
-			y = y_as<v4>(rhs);
-			z = z_as<v4>(rhs);
-			w = w_as<v4>(rhs);
-			return *this;
-		}
 		#if PR_MATHS_USE_INTRINSICS
 		Mat4x4(__m128 const (&mat)[4])
 		{
@@ -163,6 +157,116 @@ namespace pr
 			assert("'pos' must be a position vector" && xyz.w == 1);
 			return Mat4x4{rot, xyz};
 		}
+
+		#pragma region Operators
+		friend Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> mat)
+		{
+			return mat;
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> mat)
+		{
+			return Mat4x4<A,B>{-mat.x, -mat.y, -mat.z, -mat.w};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator * (float lhs, m4_cref<A,B> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator * (m4_cref<A,B> lhs, float rhs)
+		{
+			return Mat4x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator / (m4_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator % (m4_cref<A,B> lhs, float rhs)
+		{
+			assert("divide by zero" && rhs != 0);
+			return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
+		{
+			return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
+		{
+			return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
+		}
+		friend Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
+		{
+			return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
+		}
+		friend Vec4<B> pr_vectorcall operator * (m4_cref<A,B> lhs, v4_cref<A> rhs)
+		{
+			#if PR_MATHS_USE_DIRECTMATH
+			return Vec4<B>{DirectX::XMVector4Transform(rhs.vec, lhs)};
+			#elif PR_MATHS_USE_INTRINSICS
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+			auto w = _mm_load_ps(lhs.w.arr);
+
+			auto brod1 = _mm_set_ps1(rhs.x);
+			auto brod2 = _mm_set_ps1(rhs.y);
+			auto brod3 = _mm_set_ps1(rhs.z);
+			auto brod4 = _mm_set_ps1(rhs.w);
+
+			auto ans = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_add_ps(
+					_mm_mul_ps(brod3, z),
+					_mm_mul_ps(brod4, w)));
+		
+			return Vec4<B>{ans};
+			#else
+			auto lhsT = Transpose4x4(lhs);
+			return Vec4<B>{Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs)};
+			#endif
+		}
+		template <typename C> friend Mat4x4<A,C> pr_vectorcall operator * (m4_cref<B,C> lhs, m4_cref<A,B> rhs)
+		{
+			#if PR_MATHS_USE_DIRECTMATH
+			return Mat4x4<A,C>{DirectX::XMMatrixMultiply(rhs, lhs)};
+			#elif PR_MATHS_USE_INTRINSICS
+			auto ans = Mat4x4<A,C>{};
+			auto x = _mm_load_ps(lhs.x.arr);
+			auto y = _mm_load_ps(lhs.y.arr);
+			auto z = _mm_load_ps(lhs.z.arr);
+			auto w = _mm_load_ps(lhs.w.arr);
+			for (int i = 0; i != 4; ++i)
+			{
+				auto brod1 = _mm_set_ps1(rhs.arr[i].x);
+				auto brod2 = _mm_set_ps1(rhs.arr[i].y);
+				auto brod3 = _mm_set_ps1(rhs.arr[i].z);
+				auto brod4 = _mm_set_ps1(rhs.arr[i].w);
+				auto row = _mm_add_ps(
+					_mm_add_ps(
+						_mm_mul_ps(brod1, x),
+						_mm_mul_ps(brod2, y)),
+					_mm_add_ps(
+						_mm_mul_ps(brod3, z),
+						_mm_mul_ps(brod4, w)));
+				_mm_store_ps(ans.arr[i].arr, row);
+			}
+			return ans;
+			#else
+			auto ans = Mat4x4<A,C>{};
+			auto lhsT = Transpose4x4(lhs);
+			ans.x = Vec4<void>(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
+			ans.y = Vec4<void>(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
+			ans.z = Vec4<void>(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
+			ans.w = Vec4<void>(Dot4(lhsT.x, rhs.w), Dot4(lhsT.y, rhs.w), Dot4(lhsT.z, rhs.w), Dot4(lhsT.w, rhs.w));
+			return ans;
+			#endif
+		}
+		#pragma endregion
 
 		// Create a translation matrix
 		static Mat4x4 Translation(v4_cref<> xyz)
@@ -323,116 +427,6 @@ namespace pr
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall z_cp(m4_cref<A,B> v) { return v.z; }
 	template <typename A, typename B> inline v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
 
-	#pragma region Operators
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> mat)
-	{
-		return mat;
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> mat)
-	{
-		return Mat4x4<A,B>{-mat.x, -mat.y, -mat.z, -mat.w};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator * (float lhs, m4_cref<A,B> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator * (m4_cref<A,B> lhs, float rhs)
-	{
-		return Mat4x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator / (m4_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator % (m4_cref<A,B> lhs, float rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
-	{
-		return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
-	{
-		return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
-	{
-		return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-	}
-	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
-	{
-		return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-	}
-	template <typename A, typename B, typename C> inline Mat4x4<A,C> pr_vectorcall operator * (m4_cref<B,C> lhs, m4_cref<A,B> rhs)
-	{
-		#if PR_MATHS_USE_DIRECTMATH
-		return Mat4x4<A,C>{DirectX::XMMatrixMultiply(rhs, lhs)};
-		#elif PR_MATHS_USE_INTRINSICS
-		auto ans = Mat4x4<A,C>{};
-		auto x = _mm_load_ps(lhs.x.arr);
-		auto y = _mm_load_ps(lhs.y.arr);
-		auto z = _mm_load_ps(lhs.z.arr);
-		auto w = _mm_load_ps(lhs.w.arr);
-		for (int i = 0; i != 4; ++i)
-		{
-			auto brod1 = _mm_set_ps1(rhs.arr[i].x);
-			auto brod2 = _mm_set_ps1(rhs.arr[i].y);
-			auto brod3 = _mm_set_ps1(rhs.arr[i].z);
-			auto brod4 = _mm_set_ps1(rhs.arr[i].w);
-			auto row = _mm_add_ps(
-				_mm_add_ps(
-					_mm_mul_ps(brod1, x),
-					_mm_mul_ps(brod2, y)),
-				_mm_add_ps(
-					_mm_mul_ps(brod3, z),
-					_mm_mul_ps(brod4, w)));
-			_mm_store_ps(ans.arr[i].arr, row);
-		}
-		return ans;
-		#else
-		auto ans = Mat4x4<A,C>{};
-		auto lhsT = Transpose4x4(lhs);
-		ans.x = Vec4<void>(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
-		ans.y = Vec4<void>(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
-		ans.z = Vec4<void>(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
-		ans.w = Vec4<void>(Dot4(lhsT.x, rhs.w), Dot4(lhsT.y, rhs.w), Dot4(lhsT.z, rhs.w), Dot4(lhsT.w, rhs.w));
-		return ans;
-		#endif
-	}
-	template <typename A, typename B> inline Vec4<B> pr_vectorcall operator * (m4_cref<A,B> lhs, v4_cref<A> rhs)
-	{
-		#if PR_MATHS_USE_DIRECTMATH
-		return Vec4<B>{DirectX::XMVector4Transform(rhs.vec, lhs)};
-		#elif PR_MATHS_USE_INTRINSICS
-		auto x = _mm_load_ps(lhs.x.arr);
-		auto y = _mm_load_ps(lhs.y.arr);
-		auto z = _mm_load_ps(lhs.z.arr);
-		auto w = _mm_load_ps(lhs.w.arr);
-
-		auto brod1 = _mm_set_ps1(rhs.x);
-		auto brod2 = _mm_set_ps1(rhs.y);
-		auto brod3 = _mm_set_ps1(rhs.z);
-		auto brod4 = _mm_set_ps1(rhs.w);
-
-		auto ans = _mm_add_ps(
-			_mm_add_ps(
-				_mm_mul_ps(brod1, x),
-				_mm_mul_ps(brod2, y)),
-			_mm_add_ps(
-				_mm_mul_ps(brod3, z),
-				_mm_mul_ps(brod4, w)));
-		
-		return Vec4<B>{ans};
-		#else
-		auto lhsT = Transpose4x4(lhs);
-		return Vec4<B>{Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs)};
-		#endif
-	}
-	#pragma endregion
-
 	#pragma region Functions
 
 	// Return true if 'mat' is an affine transform
@@ -494,6 +488,16 @@ namespace pr
 	template <typename A, typename B> inline float pr_vectorcall Trace4(m4_cref<A,B> mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z + mat.w.w;
+	}
+
+	// Scale each component of 'mat' by the values in 'scale'
+	template <typename A, typename B> inline Mat4x4<A, B> pr_vectorcall CompMul(m4_cref<A, B> mat, v4_cref<> scale)
+	{
+		return Mat4x4<A,B>(
+			mat.x * scale.x,
+			mat.y * scale.y,
+			mat.z * scale.z,
+			mat.w * scale.w);
 	}
 
 	// The kernel of the matrix
@@ -809,6 +813,13 @@ namespace pr::maths
 			auto m2 = m4x4{v4{1,1,1,1}, v4{2,2,2,2}, v4{-1,-1,-1,-1}, v4{-2,-2,-2,-2}};
 			auto m3 = m4x4{v4{4,4,4,4}, v4{8,8,8,8}, v4{-4,-4,-4,-4}, v4{-8,-8,-8,-8}};
 			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
+		{// Component multiply
+			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
+			auto m2 = v4(2,1,-2,-1);
+			auto m3 = m4x4{v4{2,4,6,8}, v4{1,1,1,1}, v4{+4,+4,+4,+4}, v4{-4,-3,-2,-1}};
+			auto r = CompMul(m1, m2);
 			PR_CHECK(FEql(r, m3), true);
 		}
 		{//m4x4Translation

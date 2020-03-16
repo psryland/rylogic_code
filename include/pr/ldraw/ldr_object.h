@@ -39,7 +39,7 @@ namespace pr::ldr
 	constexpr HashValue HashI(char const* str) { return hash::HashICT(str); }
 
 	#pragma region Ldr object types
-	#define PR_ENUM(x)\
+	#define PR_ENUM_LDROBJECTS(x)\
 		x(Unknown    ,= HashI("Unknown"   ))\
 		x(Point      ,= HashI("Point"     ))\
 		x(Line       ,= HashI("Line"      ))\
@@ -65,12 +65,13 @@ namespace pr::ldr
 		x(FrustumWH  ,= HashI("FrustumWH" ))\
 		x(FrustumFA  ,= HashI("FrustumFA" ))\
 		x(Sphere     ,= HashI("Sphere"    ))\
-		x(CylinderHR ,= HashI("CylinderHR"))\
-		x(ConeHA     ,= HashI("ConeHA"    ))\
+		x(Cylinder   ,= HashI("Cylinder"  ))\
+		x(Cone       ,= HashI("Cone"      ))\
 		x(Tube       ,= HashI("Tube"      ))\
 		x(Mesh       ,= HashI("Mesh"      ))\
 		x(ConvexHull ,= HashI("ConvexHull"))\
 		x(Model      ,= HashI("Model"     ))\
+		x(Equation   ,= HashI("Equation"  ))\
 		x(Chart      ,= HashI("Chart"     ))\
 		x(Group      ,= HashI("Group"     ))\
 		x(Text       ,= HashI("Text"      ))\
@@ -79,12 +80,11 @@ namespace pr::ldr
 		x(PointLight ,= HashI("PointLight"))\
 		x(SpotLight  ,= HashI("SpotLight" ))\
 		x(Custom     ,= HashI("Custom"    ))
-	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM);
-	#undef PR_ENUM
+	PR_DEFINE_ENUM2(ELdrObject, PR_ENUM_LDROBJECTS);
 	#pragma endregion
 
 	#pragma region Ldr script keywords
-	#define PR_ENUM(x)\
+	#define PR_ENUM_LDRKEYWORDS(x)\
 		x(Name                 ,= HashI("Name"                ))\
 		x(Txfm                 ,= HashI("Txfm"                ))\
 		x(O2W                  ,= HashI("O2W"                 ))\
@@ -184,8 +184,7 @@ namespace pr::ldr
 		x(Depth                ,= HashI("Depth"               ))\
 		x(LeftHanded           ,= HashI("LeftHanded"          ))\
 		x(CastShadow           ,= HashI("CastShadow"          ))
-	PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
-	#undef PR_ENUM
+	PR_DEFINE_ENUM2(EKeyword, PR_ENUM_LDRKEYWORDS);
 	#pragma endregion
 
 	#pragma region Enums
