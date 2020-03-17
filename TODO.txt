@@ -1,7 +1,12 @@
 Immediate ToDo:
 	
 LDraw
-	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
+	- Switch geometry model generators to use output functions, not iterators
+	- Bounding box frustum to get x,y,z range
+	- Implement dynamic range for *Equation
+	- Add *Equation, a system for plotting 1D,2D functions of X, Y, or Z
+	- Add a python function to update LdrSyntaxRules.xshd based on ELdrObject
+	- Make FocusPoint a stock model
 	
 CoinFlip
 	Candle Charts:

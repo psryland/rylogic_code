@@ -717,7 +717,9 @@ namespace pr::ldr
 		auto& data = GizmoModelData[int(mode)];
 			
 		// Create the model
-		MdlSettings s(VBufferDesc(data.vcount, data.vdata), IBufferDesc(data.icount, data.idata), *data.bbox, data.name);
+		VBufferDesc vdesc(data.vcount, data.vdata);
+		IBufferDesc idesc(data.icount, data.idata, dx_format_v<uint16_t>);
+		MdlSettings s(vdesc, idesc, *data.bbox, data.name);
 		m_gfx.m_model = m_rdr->m_mdl_mgr.CreateModel(s);
 
 		// Create render nuggets for the model.

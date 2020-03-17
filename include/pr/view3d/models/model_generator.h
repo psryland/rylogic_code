@@ -418,7 +418,7 @@ namespace pr::rdr
 
 			// Create the model
 			VBufferDesc vb(cache.VCount(), cache.m_vcont.data());
-			IBufferDesc ib(cache.ICount(), cache.m_icont.data(), cache.m_idx_stride, cache.IdxFormat());
+			IBufferDesc ib(cache.ICount(), cache.m_icont.data(), cache.IdxFormat());
 			auto model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, cache.m_bbox));
 			model->m_name = cache.m_name;
 
@@ -516,14 +516,19 @@ namespace pr::rdr
 		static ModelPtr Quad(Renderer& rdr, int num_quads, v4 const* verts, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::QuadSize(num_quads, vcount, icount);
+			auto [vcount, icount] = geometry::QuadSize(num_quads);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Quad(num_quads, verts, num_colours, colours, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Quad(num_quads, verts, num_colours, colours, t2q,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -531,14 +536,19 @@ namespace pr::rdr
 		static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::QuadSize(divisions, vcount, icount);
+			auto [vcount, icount] = geometry::QuadSize(divisions);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -546,14 +556,19 @@ namespace pr::rdr
 		static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::QuadSize(divisions, vcount, icount);
+			auto [vcount, icount] = geometry::QuadSize(divisions);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -561,14 +576,39 @@ namespace pr::rdr
 		static ModelPtr QuadStrip(Renderer& rdr, int num_quads, v4 const* verts, float width, int num_normals = 0, v4 const* normals = nullptr, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::QuadStripSize(num_quads, vcount, icount);
+			auto [vcount, icount] = geometry::QuadStripSize(num_quads);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
+
+			// Create the model
+			return Create(rdr, cache);
+		}
+		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy)
+		{
+			// Calculate the required buffer sizes
+			auto [vcount, icount] = geometry::QuadPatchSize(num_quads);
+
+			// Generate the geometry
+			Cache cache(vcount, icount, 0, 2);
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::QuadPatch(dimx, dimy,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
+			cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -1362,8 +1402,7 @@ namespace pr::rdr
 			Throw(dc->EndDraw());
 
 			// Create a quad using this texture
-			int vcount, icount;
-			geometry::QuadSize(1, vcount, icount);
+			auto [vcount, icount] = geometry::QuadSize(1);
 
 			// Return the size of the quad and the texture
 			dim_out = v4(text_size, texture_size);
@@ -1371,16 +1410,19 @@ namespace pr::rdr
 			// Set the texture coordinates to match the text metrics and the quad size
 			auto t2q = m4x4::Scale(text_size.x/texture_size.x, text_size.y/texture_size.y, 1.0f, v4Origin) * m4x4(v4XAxis, -v4YAxis, v4ZAxis, v4(0, 1, 0, 1));
 
-			// Create a quad with this size
-			NuggetProps mat(EPrim::TriList);
-			mat.m_tex_diffuse = tex;
-
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
+			NuggetProps mat(EPrim::TriList);
+			mat.m_tex_diffuse = tex;
+			cache.AddNugget(EPrim::TriList, props.m_geom & ~EGeom::Norm, props.m_has_alpha, false, &mat);
 			cache.m_bbox = props.m_bbox;
-			cache.AddNugget(EPrim::TriList, props.m_geom & ~EGeom::Norm
-				, props.m_has_alpha, false, &mat);
 
 			// Create the model
 			return Create(rdr, cache, bake);

@@ -74,6 +74,18 @@ namespace pr::geometry
 		{}
 	};
 
+	// Vertex and Index buffer sizes
+	struct BufSizes
+	{
+		int vcount;
+		int icount;
+
+		constexpr BufSizes(int nv, int ni)
+			:vcount(nv)
+			,icount(ni)
+		{}
+	};
+
 	// Classify primitive types
 	constexpr EPrimGroup PrimGroup(EPrim prim)
 	{

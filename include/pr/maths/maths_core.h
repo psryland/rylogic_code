@@ -1503,9 +1503,17 @@ namespace pr
 
 	// Scale a value on the range [0,1] such that f(0) = 0, f(1) = 1, and df(0.5) = 0
 	// This is used to weight values so that values near 0.5 are favoured
+	inline float UnitCubic(float x)
+	{
+		return 4.0f * Cube(x - 0.5f) + 0.5f;
+	}
 	inline double UnitCubic(double x)
 	{
 		return 4.0 * Cube(x - 0.5) + 0.5;
+	}
+	template <typename T> inline T UnitCubic(T x)
+	{
+		return 4.0f * Cube(x - 0.5f) + 0.5f;
 	}
 
 	// Low precision reciprocal square root
@@ -1643,8 +1651,8 @@ namespace pr
 	template <typename Type> struct ArithmeticSequence
 	{
 		// A sequence defined by:
-		//  an = a0 + (n - 1) * d
-		//  Sn = (n/2) * (a0 + an)
+		//  an = a0 + n * step
+		//  Sn = (n + 1) * (a0 + an) / 2
 		Type a0, step, a;
 
 		ArithmeticSequence(Type initial_value = 0, Type step = 0)
@@ -1664,22 +1672,21 @@ namespace pr
 		}
 		Type sum(int n) const
 		{
-			auto an = (*this)(n);
-			return static_cast<Type>(n * (a0 + an) / 2);
+			return ArithmeticSum(a0, step, n);
 		}
 	};
 	template <typename Type> constexpr Type ArithmeticSum(Type a0, Type step, int n)
 	{
-		auto an = static_cast<Type>(a0 + (n - 1) * step);
-		return static_cast<Type>((n * (a0 + an)) / 2);
+		auto an = a0 + n * step;
+		return static_cast<Type>((n + 1) * (a0 + an) / 2);
 	}
 
 	// Function object for generating an geometric sequence
 	template <typename Type> struct GeometricSequence
 	{
 		// A sequence defined by:
-		//  an = a(n-1) * r = a0 * r^(n -1)
-		//  Sn = a0.(1 - r^n) / (1 - r)
+		//  an = am * r = a0 * r^n, (where m = n - 1)
+		//  Sn = a0.(1 - r^(n+1)) / (1 - r)
 		Type a0, ratio, a;
 
 		GeometricSequence(Type initial_value = 0, Type ratio = Type(1))
@@ -1689,7 +1696,7 @@ namespace pr
 		{}
 		Type operator()(int n) const
 		{
-			return static_cast<Type>(a0 * Pow(ratio, n));
+			return static_cast<Type>(a0 * Pow<double>(ratio, n + 1));
 		}
 		Type operator()()
 		{
@@ -1699,13 +1706,13 @@ namespace pr
 		}
 		Type sum(int n) const
 		{
-			return static_cast<Type>(a0 * (1 - Pow(ratio, n)) / (1 - ratio));
+			return GeometricSum(a0, ratio, n);
 		}
 	};
 	template <typename Type> constexpr Type GeometricSum(Type a0, Type ratio, int n)
 	{
-		auto an = static_cast<Type>(a0 + (n - 1) * step);
-		return static_cast<Type>((n * (a0 + an)) / 2);
+		auto rn = Pow<double>(ratio, n + 1);
+		return static_cast<Type>(a0 * (1 - rn) / (1 - ratio));
 	}
 }
 
@@ -2137,6 +2144,30 @@ namespace pr::maths
 			auto a = 1.23456789123456789;
 			auto b = Cubert(a * a * a);
 			PR_CHECK(FEqlRelative(a,b,0.000000000001), true);
+		}
+		{// Arithmetic sequence
+			ArithmeticSequence a(2, 5);
+			PR_CHECK(a(), 2);
+			PR_CHECK(a(), 7);
+			PR_CHECK(a(), 12);
+			PR_CHECK(a(), 17);
+
+			PR_CHECK(ArithmeticSum(0, 2, 4), 20);
+			PR_CHECK(ArithmeticSum(4, 2, 2), 18);
+			PR_CHECK(ArithmeticSum(1, 2, 0), 1);
+			PR_CHECK(ArithmeticSum(1, 2, 5), 36);
+		}
+		{// Geometric sequence
+			GeometricSequence g(2, 5);
+			PR_CHECK(g(), 2);
+			PR_CHECK(g(), 10);
+			PR_CHECK(g(), 50);
+			PR_CHECK(g(), 250);
+
+			PR_CHECK(GeometricSum(1, 2, 4), 31);
+			PR_CHECK(GeometricSum(4, 2, 2), 28);
+			PR_CHECK(GeometricSum(1, 3, 0), 1);
+			PR_CHECK(GeometricSum(1, 3, 5), 364);
 		}
 	}
 }

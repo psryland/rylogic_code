@@ -29,11 +29,14 @@ namespace pr::unittests::your::namespace
 //#include "pr/container/deque.h"
 //#include "pr/macros/enum.h"
 //#include "pr/maths/maths.h"
+//#include "pr/maths/maths_core.h"
 //#include "pr/maths/spatial.h"
 //#include "pr/maths/frustum.h"
 //#include "pr/maths/conversion.h"
 //#include "pr/gfx/colour.h"
+//#include "pr/gfx/onebit.h"
 //#include "pr/geometry/intersect.h"
+//#include "pr/geometry/point.h"
 //#include "pr/filesys/filesys.h"
 //#include "pr/str/string_core.h"
 //#include "pr/str/string_util.h"
@@ -52,7 +55,6 @@ namespace pr::unittests::your::namespace
 //#include "pr/script/src_stack.h"
 //#include "pr/script/preprocessor.h"
 //#include "pr/script/reader.h"
-//#include "pr/gfx/onebit.h"
 //#include "pr/physics2/rigid_body/rigid_body.h"
 
 // Export a function for executing the tests

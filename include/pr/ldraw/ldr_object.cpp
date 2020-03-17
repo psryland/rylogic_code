@@ -16,6 +16,8 @@
 #include "pr/common/hash.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convex_hull.h"
+#include "pr/maths/frustum.h"
+#include "pr/geometry/intersect.h"
 #include "pr/view3d/renderer.h"
 #include "pr/storage/csv.h"
 #include "pr/str/extract.h"
@@ -2047,7 +2049,7 @@ namespace pr::ldr
 
 			// Create the model
 			VBufferDesc vb(cache.m_vcont.size(), cache.m_vcont.data());
-			IBufferDesc ib(cache.m_icont.size(), cache.m_icont.data<uint16_t>());
+			IBufferDesc ib(cache.m_icont.size(), cache.m_icont.data(), dx_format_v<uint16_t>);
 			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -4086,6 +4088,248 @@ namespace pr::ldr
 		}
 	};
 
+	// ELdrObject::Equation
+	template <> struct ObjectCreator<ELdrObject::Equation> :IObjectCreator
+	{
+		eval::Expression m_eq;
+		int m_resolution;
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_eq()
+			,m_resolution(1000)
+		{}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+			default:
+				{
+					return
+						IObjectCreator::ParseKeyword(kw);
+				}
+			case EKeyword::Param:
+				{
+					eval::Arg arg;
+					p.m_reader.SectionStart();
+					p.m_reader.String(arg.m_name);
+					p.m_reader.Real(arg.m_value);
+					p.m_reader.SectionEnd();
+					m_eq.AddVariable(arg);
+					return true;
+				}
+			case EKeyword::Resolution:
+				{
+					p.m_reader.IntS(m_resolution, 10);
+					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
+					return true;
+				}
+			}
+		}
+		void Parse() override
+		{
+			// Read the equation expression
+			std::wstring equation;
+			p.m_reader.String(equation);
+
+			// Compile the equation
+			try { m_eq = eval::Compile<wchar_t>(equation); }
+			catch (std::exception const& ex)
+			{
+				p.ReportError(EResult::ExpressionSyntaxError, Fmt("Equation expression is invalid: %s", ex.what()));
+				return;
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			using namespace pr::rdr;
+			using namespace pr::geometry;
+
+			// Validate
+			if (!m_eq)
+			{
+				p.ReportError(EResult::Failed, "Equation not given");
+				return;
+			}
+
+			// Store the expression in the object user data
+			obj->m_user_data.get<eval::Expression>() = m_eq;
+
+			// Update the model before each render so the range depends on the visible area at the focus point
+			obj->OnAddToScene += UpdateModel;
+
+			// Choose suitable vcount, icount based on the equation dimension and resolution
+			int vcount, icount, dim = m_eq.Dimension();
+			switch (dim)
+			{
+			case 1: vcount = icount = m_resolution; break;
+			case 2: vcount = m_resolution; icount = 2 * m_resolution; break;
+			case 3: vcount = icount = m_resolution; break;
+			default: throw std::runtime_error(Fmt("Unsupported equation dimension: %d", dim));
+			}
+
+			// Create buffers for a dynamic model
+			VBufferDesc vbs(vcount, sizeof(Vert), EUsage::Dynamic, ECPUAccess::Write);
+			IBufferDesc ibs(icount, dx_format_v<uint32_t>, EUsage::Dynamic, ECPUAccess::Write);
+			MdlSettings settings(vbs, ibs);
+
+			// Create the model
+			obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(settings);
+			obj->m_model->m_name = obj->TypeAndName();
+		}
+
+		// Generate the model based on the visible range
+		static void UpdateModel(LdrObject& ob, rdr::Scene const& scene)
+		{
+			using namespace pr::rdr;
+
+			// Notes:
+			//  - This code attempts to give the effect of an infinite function or surface by creating graphics
+			//    within the view frustum as the camera moves. It evaluates the equation within a cube centred
+			//    of the focus point.
+			// - no backface culling
+			// - only update the model when the camera moves by ? distance.
+			// - functions can have infinities and divide by zero
+			// - set the bbox to match the view volume so that auto range doesn't zoom out to infinity
+
+			auto& model = *ob.m_model.get();
+			auto init = model.m_nuggets.empty();
+
+			// Find the range to plot the equation over
+			auto fp = scene.m_view.FocusPoint();
+			auto fd = scene.m_view.FocusDist();
+
+			// Determine the intervals on the world space x,y,z axes that are within the view frustum
+			auto range = BBoxReset;
+			Encompass(range, BSphere(fp, fd));
+
+			// Functions can have infinities and divide by zeros. Set the bbox
+			// to match the view volume so that auto-range doesn't zoom out to infinity.
+			model.m_bbox.reset();
+			model.m_bbox = range;
+
+			// Update the model by evaluating the equation
+			auto& eq = ob.m_user_data.get<eval::Expression>();
+			switch (eq.Dimension())
+			{
+			case 1: // Line plot
+				{
+					LinePlot(model, range, eq, init);
+					break;
+				}
+			case 2: // Surface plot
+				{
+					SurfacePlot(model, range, eq, init);
+					break;
+				}
+			case 3:
+				{
+					// Todo: CloutPlot(model, range, eq, init);
+					break;
+				}
+			default:
+				{
+					assert(false && "Unsupported equation dimension");
+					break;
+				}
+			}
+		}
+		static void LinePlot(Model& model, BBox_cref range, eval::Expression const& eq, bool init)
+		{
+			auto vcount = static_cast<int>(model.m_vrange.size());
+			auto icount = static_cast<int>(model.m_irange.size());
+			auto count = std::min(vcount, icount);
+			
+			// Populate verts
+			{
+				Lock vlock;
+				model.MapVerts(vlock, EMap::WriteDiscard);
+				auto vout = vlock.ptr<Vert>();
+				for (int i = 0; i != count; ++i)
+				{
+					auto f = static_cast<float>(UnitCubic((1.0 * i) / count));
+					auto x = Lerp(range.LowerX(), range.UpperX(), f);
+					auto y = static_cast<float>(eq(x).db());
+					SetPC(*vout, v4(x, y, 0,1), Colour32White);
+					++vout;
+				}
+			}
+
+			// Populate faces
+			if (init)
+			{
+				Lock ilock;
+				model.MapIndices(ilock, EMap::WriteDiscard);
+				auto iout = ilock.ptr<uint16_t>();
+				for (int i = 0; i != count; ++i)
+				{
+					*iout = static_cast<uint16_t>(i);
+					++iout;
+				}
+			}
+
+			// Populate nuggets
+			if (init)
+			{
+				// Create a nugget
+				NuggetProps n = {};
+				n.m_topo = EPrim::LineStrip;
+				n.m_geom = EGeom::Vert;
+				n.m_vrange = rdr::Range(0, count);
+				n.m_irange = rdr::Range(0, count);
+				model.DeleteNuggets();
+				model.CreateNugget(n);
+			}
+		}
+		static void SurfacePlot(Model& model, BBox_cref range, eval::Expression const& eq, bool init)
+		{
+			// Determine the largest hex patch that can be made with the available model size:
+			//  i.e. solve for the minimum value for 'rings' in:
+			//    vcount = ArithmeticSum(0, 6, rings) + 1;
+			//    icount = ArithmeticSum(0, 12, rings) + 2*rings;
+			// ArithmeticSum := (n + 1) * (a0 + an) / 2, where an = (a0 + n * step)
+			//    3r² + 3r + 1-vcount = 0  =>  r = (-3 ± sqrt(-3 + 12*vcount)) / 6
+			//    6r² + 8r - icount = 0    =>  r = (-8 ± sqrt(64 + 24*icount)) / 12
+			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vrange.size())) / 6;
+			auto irings = (-8 + sqrt(64 + 24 * model.m_irange.size())) / 12;
+			auto rings = static_cast<int>(std::min(vrings, irings));
+
+			auto [nv, ni] = geometry::HexPatchSize(rings);
+			assert(nv <= (int)model.m_vrange.size());
+			assert(ni <= (int)model.m_irange.size());
+
+			MLock mlock(&model, EMap::WriteDiscard);
+			auto vout = mlock.m_vlock.ptr<Vert>();
+			auto iout = mlock.m_ilock.ptr<uint32_t>();
+			auto props = geometry::HexPatch(rings,
+				[&](v4_cref<> pos, Colour32 c, v4_cref<> n, v2_cref<> t)
+				{
+					// Increase point density around the focus point
+					//auto len = Length3Sq(pos);
+					auto p = pos;//range.Centre() + range.Radius() * Cube(pos.w0());
+					p.z = static_cast<float>(eq(pos.x, pos.y).db());
+					SetPCNT(*vout++, p, c, n, t);
+				},
+				[&](auto idx)
+				{
+					*iout++ = idx;
+				});
+
+			// Generate nuggets if initialising
+			if (init)
+			{
+				auto [vcount, icount] = geometry::HexPatchSize(rings);
+
+				NuggetProps n = {};
+				n.m_topo = EPrim::TriStrip;
+				n.m_geom = props.m_geom;
+				n.m_vrange = rdr::Range(0, vcount);
+				n.m_irange = rdr::Range(0, icount);
+				model.CreateNugget(n);
+			}
+		}
+	};
+
 	#pragma endregion
 
 	#pragma region Special Objects
@@ -4656,7 +4900,7 @@ namespace pr::ldr
 
 		// Create buffers for a dynamic model
 		VBufferDesc vbs(vcount, sizeof(Vert), EUsage::Dynamic, ECPUAccess::Write);
-		IBufferDesc ibs(icount, sizeof(uint16), DxFormat<uint16>::value, EUsage::Dynamic, ECPUAccess::Write);
+		IBufferDesc ibs(icount, dx_format_v<uint16>, EUsage::Dynamic, ECPUAccess::Write);
 		MdlSettings settings(vbs, ibs);
 
 		// Create the model

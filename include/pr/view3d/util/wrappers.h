@@ -97,8 +97,7 @@ namespace pr
 			BufferDesc(D3DPtr<ID3D11Buffer> const& buf)
 				:BufferDesc()
 			{
-				// Would need to 'Map' to get the 'Data' in 'buf'
-				// Just get the description.
+				// Would need to 'Map' to get the 'Data' in 'buf'. Just get the description.
 				buf->GetDesc(this);
 			}
 			BufferDesc(size_t count, int element_size_in_bytes, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
@@ -110,16 +109,6 @@ namespace pr
 				:BufferDesc()
 			{
 				Init(count, element_size_in_bytes, data, usage, bind_flags, cpu_access, res_flag);
-			}
-			template <typename Elem> BufferDesc(size_t count, Elem const* data, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc()
-			{
-				Init(count, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
-			}
-			template <typename Elem, size_t Sz> BufferDesc(Elem const (&data)[Sz], EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc()
-			{
-				Init(Sz, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
 			}
 			void Init(size_t count, int element_size_in_bytes, void const* data, EUsage usage, EBind bind_flags, ECPUAccess cpu_access, EResMisc res_flag)
 			{
@@ -149,10 +138,10 @@ namespace pr
 				:BufferDesc(count, element_size_in_bytes, usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
 			template <typename Elem> VBufferDesc(size_t count, Elem const* data, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(count, data, usage, EBind::VertexBuffer, cpu_access, res_flag)
+				:BufferDesc(count, data, sizeof(Elem), usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
 			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(Sz, data, usage, EBind::VertexBuffer, cpu_access, res_flag)
+				:BufferDesc(Sz, &data[0], sizeof(Elem), usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
 			template <typename Elem> static VBufferDesc Of(size_t count)
 			{
@@ -169,20 +158,16 @@ namespace pr
 				:BufferDesc()
 				,Format(DXGI_FORMAT_UNKNOWN)
 			{}
-			IBufferDesc(size_t count, int element_size_in_bytes, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(count, element_size_in_bytes, usage, EBind::IndexBuffer, cpu_access, res_flag)
+			IBufferDesc(size_t count, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, BytesPerPixel(format), usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
-			IBufferDesc(size_t count, void const* data, int element_size_in_bytes, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(count, data, element_size_in_bytes, usage, EBind::IndexBuffer, cpu_access, res_flag)
+			IBufferDesc(size_t count, void const* data, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, data, BytesPerPixel(format), usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = DxFormat<Elem>::value, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(count, data, usage, EBind::IndexBuffer, cpu_access, res_flag)
-				,Format(format)
-			{}
-			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = DxFormat<Elem>::value, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(Sz, data, usage, EBind::IndexBuffer, cpu_access, res_flag)
+			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = dx_format_v<Elem>, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(Sz, &data[0], BytesPerPixel(format), usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
 			template <typename Elem> static IBufferDesc Of(size_t count)
@@ -198,7 +183,7 @@ namespace pr
 				:BufferDesc()
 			{}
 			CBufferDesc(size_t size, EUsage usage = EUsage::Dynamic, ECPUAccess cpu_access = ECPUAccess::Write, EResMisc res_flag = EResMisc::None)
-				:BufferDesc(size, (byte*)0, usage, EBind::ConstantBuffer, cpu_access, res_flag)
+				:BufferDesc(size, sizeof(byte), usage, EBind::ConstantBuffer, cpu_access, res_flag)
 			{
 				if ((size % 16) != 0)
 					throw std::exception("Constant buffers must be a multiple of 16 bytes");
