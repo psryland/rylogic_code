@@ -21,16 +21,16 @@ void pr::ph::SphereVsSphere(Shape const& objA, m4x4 const& a2w, Shape const& obj
 
 	v4 b2a = a2w.pos - b2w.pos;
 	float b2a_len = Length3(b2a);
-	if( b2a_len < maths::tiny ) { b2a_len = b2a.y = 0.001f; }
+	if (b2a_len < maths::tinyf) { b2a_len = b2a.y = 0.001f; }
 	float sep = b2a_len - shapeA.m_radius - shapeB.m_radius;
-	if( sep > 0.0f ) return;
+	if (sep > 0.0f) return;
 
 	Contact contact;
-	contact.m_normal		= b2a / b2a_len;
-	contact.m_pointA		= b2a * (shapeA.m_radius / -b2a_len) + a2w.pos;
-	contact.m_pointB		= b2a * (shapeB.m_radius /  b2a_len) + b2w.pos;
-	contact.m_material_idA	= shapeA.m_base.m_material_id;
-	contact.m_material_idB	= shapeB.m_base.m_material_id;
-	contact.m_depth			= -sep;
+	contact.m_normal = b2a / b2a_len;
+	contact.m_pointA = b2a * (shapeA.m_radius / -b2a_len) + a2w.pos;
+	contact.m_pointB = b2a * (shapeB.m_radius / b2a_len) + b2w.pos;
+	contact.m_material_idA = shapeA.m_base.m_material_id;
+	contact.m_material_idB = shapeB.m_base.m_material_id;
+	contact.m_depth = -sep;
 	manifold.Add(contact);
 }

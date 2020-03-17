@@ -208,32 +208,32 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 	ShapeBox      const& box = shape_cast<ShapeBox>     (objA);
 	ShapeTriangle const& tri = shape_cast<ShapeTriangle>(objB);
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_boxtri.pr_script");)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Box("box", "FFFF0000", a2w, box.m_radius * 2.0f);)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Triangle("tri", "FF0000FF", b2w, tri.m_v.x, tri.m_v.y, tri.m_v.z);)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Box("box", "FFFF0000", a2w, box.m_radius * 2.0f);)
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Triangle("tri", "FF0000FF", b2w, tri.m_v.x, tri.m_v.y, tri.m_v.z);)
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
 
-	Overlap data(box, a2w, tri, b2w);
+		Overlap data(box, a2w, tri, b2w);
 	v4 const& a_to_b = b2w.pos - a2w.pos;
 
 	// Test the box against the plane of the triangle
 	{
 		v4 axis = data.m_b2w * tri.m_v.w;
 		float sep = Dot3(axis, a_to_b);
-		if( sep < 0.0f ) { axis = -axis; sep = -sep; }
+		if (sep < 0.0f) { axis = -axis; sep = -sep; }
 		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_sepaxis.pr_script");)
-		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", b2w.pos, axis);)
-		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
+			PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", b2w.pos, axis);)
+			PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
 
-		Point pointA(data.m_a2w.pos);
+			Point pointA(data.m_a2w.pos);
 		float proj = ProjectBox(data.m_box_radii, axis, pointA);
 		float overlap = -sep + proj;
-		if( overlap < 0.0f )
+		if (overlap < 0.0f)
 			return; // No collision
 
-		data.m_penetration	= overlap;
-		data.m_axis			= axis;
-		data.m_pointA		= pointA;
-		data.m_pointB		.set(b2w.pos, EPointType_Face, 0, 0);
+		data.m_penetration = overlap;
+		data.m_axis = axis;
+		data.m_pointA = pointA;
+		data.m_pointB.set(b2w.pos, EPointType_Face, 0, 0);
 	}
 
 	// Convert the triangle into box space
@@ -241,69 +241,69 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 
 	m4x4 tri_bs = t2b * tri.m_v;
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_boxtri2.pr_script");)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Box("box", "FFFF0000", m4x4Identity, box.m_radius * 2.0f);)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Triangle("tri", "FF0000FF", tri_bs.x, tri_bs.y, tri_bs.z);)
-	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
-	tri_bs = Transpose3x3(tri_bs);
-	
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Box("box", "FFFF0000", m4x4Identity, box.m_radius * 2.0f);)
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Triangle("tri", "FF0000FF", tri_bs.x, tri_bs.y, tri_bs.z);)
+		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
+		tri_bs = Transpose3x3(tri_bs);
+
 	// Test against the faces of the box
-	for( int i = 0; i != 3; ++i )
+	for (int i = 0; i != 3; ++i)
 	{
 		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_sepaxis.pr_script");)
-		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", a2w.pos, Sign(t2b.pos[i]) * a2w[i]);)
-		PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
+			PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", a2w.pos, Sign(t2b.pos[i]) * a2w[i]);)
+			PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
 
-		int tri_vert_idx;
+			int tri_vert_idx;
 		float sep = t2b.pos[i];
-		if( sep > 0.0f )	{ tri_vert_idx = MinElementIndex3(tri_bs[i]); }
-		else				{ tri_vert_idx = MaxElementIndex3(tri_bs[i]); }
+		if (sep > 0.0f) { tri_vert_idx = MinElementIndex3(tri_bs[i]); }
+		else { tri_vert_idx = MaxElementIndex3(tri_bs[i]); }
 		float overlap = -Abs(sep) + box.m_radius[i] + Abs(tri_bs[i][tri_vert_idx]);
-		if( overlap < 0.0f )
+		if (overlap < 0.0f)
 			return; // No collision
 
-		if( overlap < data.m_penetration )
+		if (overlap < data.m_penetration)
 		{
 			float sign = Sign(t2b.pos[i]);
-			data.m_penetration	= overlap;
-			data.m_axis			= sign * a2w[i];
-			data.m_pointA		.set(a2w.pos + sign*data.m_box_radii[i], EPointType_Face, (i+1)%3, (i+2)%3);
-			data.m_pointB		.set(b2w.pos + b2w*tri.m_v[tri_vert_idx], EPointType_Point, 0, 0);
-		}		
+			data.m_penetration = overlap;
+			data.m_axis = sign * a2w[i];
+			data.m_pointA.set(a2w.pos + sign * data.m_box_radii[i], EPointType_Face, (i + 1) % 3, (i + 2) % 3);
+			data.m_pointB.set(b2w.pos + b2w * tri.m_v[tri_vert_idx], EPointType_Point, 0, 0);
+		}
 	}
 
 	// Test against the cross products of the triangle edges and box axes
 	// The penetration is the 'other' vertex of the triangle dot'ed with the edge cross product
-	for( int j = 0; j != 3; ++j )
+	for (int j = 0; j != 3; ++j)
 	{
-		v4 edge = data.m_tri_verts[(j+1)%3] - data.m_tri_verts[j];
-		for( int i = 0; i != 3; ++i )
+		v4 edge = data.m_tri_verts[(j + 1) % 3] - data.m_tri_verts[j];
+		for (int i = 0; i != 3; ++i)
 		{
 			v4 axis = Cross3(a2w[i], edge);
 			float len = Length3(axis);
-			if( len > maths::tiny )
+			if (len > maths::tinyf)
 			{
 				axis /= len;
 				float sep = Dot3(axis, a_to_b);
-				if( sep < 0.0f ) { axis = -axis; sep = -sep; }
+				if (sep < 0.0f) { axis = -axis; sep = -sep; }
 				PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, StartFile("C:/Deleteme/collision_sepaxis.pr_script");)
-				PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", a2w.pos, axis);)
-				PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
+					PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", a2w.pos, axis);)
+					PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
 
-				Point pointA(data.m_a2w.pos);
+					Point pointA(data.m_a2w.pos);
 				Point pointB(data.m_b2w.pos);
-				float projA = ProjectBox(data.m_box_radii,  axis, pointA);
+				float projA = ProjectBox(data.m_box_radii, axis, pointA);
 				float projB = ProjectTri(data.m_tri_verts, -axis, pointB);
 				float overlap = -sep + projA + projB;
-				if( overlap < 0.0f )
+				if (overlap < 0.0f)
 					return; // No collision
 
-				if( overlap < data.m_penetration )
+				if (overlap < data.m_penetration)
 				{
-					data.m_penetration	= overlap;
-					data.m_axis			= axis;
-					data.m_pointA		= pointA;
-					data.m_pointB		= pointB;
-				}		
+					data.m_penetration = overlap;
+					data.m_axis = axis;
+					data.m_pointA = pointA;
+					data.m_pointB = pointB;
+				}
 			}
 		}
 	}
@@ -311,10 +311,10 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 	// If there was a collision fill in the collision manifold
 	PR_ASSERT(PR_DBG_PHYSICS, data.m_penetration >= 0.0f, "Collision with no penetration?");
 	Contact contact;
-	contact.m_normal		= -data.m_axis;
-	contact.m_depth			= data.m_penetration;
-	contact.m_material_idA	= box.m_base.m_material_id;
-	contact.m_material_idB	= tri.m_base.m_material_id;
+	contact.m_normal = -data.m_axis;
+	contact.m_depth = data.m_penetration;
+	contact.m_material_idA = box.m_base.m_material_id;
+	contact.m_material_idB = tri.m_base.m_material_id;
 	::GetPointOfContactBoxVsTri(contact.m_pointA, contact.m_pointB, data);
 	manifold.Add(contact);
 }

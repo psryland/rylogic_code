@@ -1039,7 +1039,7 @@ namespace view3d
 		{
 		case EKeyCodes::F7:
 			{
-				auto up = Length3Sq(m_camera.m_align) > maths::tiny ? m_camera.m_align : v4YAxis;
+				auto up = Length3Sq(m_camera.m_align) > maths::tinyf ? m_camera.m_align : v4YAxis;
 				auto forward = up.z > up.y ? v4YAxis : -v4ZAxis;
 
 				auto bounds =

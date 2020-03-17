@@ -443,7 +443,7 @@ namespace pr::gui
 			,m_base_xrange()
 			,m_base_yrange()
 			,m_zoom(1.0f)
-			,m_zoom_limits({pr::maths::tiny, pr::maths::float_max})
+			,m_zoom_limits({pr::maths::tinyf, pr::maths::float_max})
 			,m_cur_arrow()
 			,m_cur_cross()
 			,m_cur_grab()

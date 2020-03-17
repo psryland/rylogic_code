@@ -207,7 +207,7 @@ namespace pr
 		bary.y *= denom;
 		bary.z *= denom; // w = 1.0f - u - v;
 		front_to_back = (denom > 0.0f) * 2.0f - 1.0f;
-		return bary.x > -maths::tiny && bary.y > -maths::tiny && bary.z > -maths::tiny;
+		return bary.x > -maths::tinyf && bary.y > -maths::tinyf && bary.z > -maths::tinyf;
 	}
 
 	// Given a line passing through 's' with direction 'd', and initial parametric range '[tmin,tmax]',
@@ -218,7 +218,7 @@ namespace pr
 	inline bool pr_vectorcall Intersect_LineToSphere(v4_cref<> s, v4_cref<> d, float radius, float& tmin, float& tmax)
 	{
 		auto d_sq = Dot3(d,d);
-		if (d_sq < maths::tiny)
+		if (d_sq < maths::tinyf)
 			return false; // zero length line
 
 		// Find the closest point to the line
@@ -342,9 +342,9 @@ namespace pr
 
 		// Add in an epsilon term to counteract arithmetic errors when segment is
 		// (near) parallel to a coordinate axis
-		adx += maths::tiny;
-		ady += maths::tiny;
-		adz += maths::tiny;
+		adx += maths::tinyf;
+		ady += maths::tinyf;
+		adz += maths::tinyf;
 
 		// Try cross products of segment direction vector with coordinate axes
 		// This might be wrong. Compare with 'ClosestPoint_LineSegmentToBBox'
@@ -366,10 +366,10 @@ namespace pr
 		float d0 = Distance_PointToPlane(s, plane);
 		float d1 = Distance_PointToPlane(e, plane);
 		float T = 0.0f;
-		if (Abs(d0) > maths::tiny)
+		if (Abs(d0) > maths::tinyf)
 		{
 			float d = d1 - d0;
-			if (Abs(d) < maths::tiny) { return false; } // Line and plane are parallel
+			if (Abs(d) < maths::tinyf) { return false; } // Line and plane are parallel
 			T = -d0 / d; // Use similar triangles to find 't'
 		}
 		if (t) {*t = T;}
@@ -434,7 +434,7 @@ namespace pr
 
 		// Compute common sub expressions. Add in an epsilon term to counteract arithmetic
 		// errors when two edges are parallel and their cross product is (near) 0
-		auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
+		auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tinyf);
 
 		// Lambda for returning a separating axis with the correct sign
 		auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(r2l.pos, sa)) * sa; };

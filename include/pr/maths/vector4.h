@@ -301,15 +301,15 @@ namespace pr
 	}
 	template <typename T> inline bool pr_vectorcall FEql(v4_cref<T> a, v4_cref<T> b)
 	{
-		return FEqlRelative(a, b, maths::tiny);
+		return FEqlRelative(a, b, maths::tinyf);
 	}
 	template <typename T> inline bool pr_vectorcall FEql4(v4_cref<T> a, v4_cref<T> b)
 	{
-		return FEqlRelative(a, b, maths::tiny);
+		return FEqlRelative(a, b, maths::tinyf);
 	}
 	template <typename T> inline bool pr_vectorcall FEql3(v4_cref<T> a, v4_cref<T> b)
 	{
-		return FEqlRelative(a.w0(), b.w0(), maths::tiny);
+		return FEqlRelative(a.w0(), b.w0(), maths::tinyf);
 	}
 
 	// Abs
@@ -474,7 +474,7 @@ namespace pr
 	}
 
 	// Returns true if 'a' and 'b' parallel
-	template <typename T> inline bool pr_vectorcall Parallel(v4_cref<T> v0, v4_cref<T> v1, float tol = maths::tiny)
+	template <typename T> inline bool pr_vectorcall Parallel(v4_cref<T> v0, v4_cref<T> v1, float tol = maths::tinyf)
 	{
 		// '<=' to allow for 'tol' == 0.0
 		return Length3Sq(Cross3(v0, v1)) <= Sqr(tol);
@@ -626,7 +626,7 @@ namespace pr::maths
 		}
 		{// FEql
 			v4 a(1,1,-1,-1);
-			auto t2 = maths::tiny * 2.0f;
+			auto t2 = maths::tinyf * 2.0f;
 			PR_CHECK(FEql (a, v4(1   ,1,-1,-1)), true);
 			PR_CHECK(FEql (a, v4(1+t2,1,-1,-1)), false);
 			PR_CHECK(FEql4(a, v4(1   ,1,-1,-1)), true);

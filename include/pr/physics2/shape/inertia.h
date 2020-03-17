@@ -712,7 +712,7 @@ namespace pr::physics
 		//   I3 = m3U3 = m1U1 + m2U2
 		//   U3 = (m1U1 + m2U2)/m3
 		Inertia sum = {};
-		if (mass < maths::tiny)
+		if (mass < maths::tinyf)
 		{
 			sum.m_diagonal = (Ia.m_diagonal + Ib.m_diagonal) / 2.0f;
 			sum.m_products = (Ia.m_products + Ib.m_products) / 2.0f;

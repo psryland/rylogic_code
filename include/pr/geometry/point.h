@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-
 #include "pr/maths/maths.h"
 #include "pr/geometry/distance.h"
 
@@ -127,7 +126,7 @@ namespace pr
 	}
 
 	// Returns true if 'point' is on the positive side of all of 'planes'
-	template <typename = void> inline bool pr_vectorcall PointWithinHalfSpaces(v4_cref<> point, Plane const* planes, int count, float tol = pr::maths::tiny)
+	template <typename = void> inline bool pr_vectorcall PointWithinHalfSpaces(v4_cref<> point, Plane const* planes, int count, float tol = maths::tinyf)
 	{
 		for (auto i = 0; i != count; ++i)
 		{
@@ -145,12 +144,12 @@ namespace pr::geometry
 	PRUnitTest(PointTests)
 	{
 		{// PointWithinConvexPolygon
-			pr::v4 poly[] =
+			v4 poly[] =
 			{
-				pr::v4(-2.0f, -1.0f, 0.0f, 1.0f),
-				pr::v4(+2.5f, -1.5f, 0.0f, 1.0f),
-				pr::v4(+2.0f, +0.5f, 0.0f, 1.0f),
-				pr::v4(-0.5f, +2.0f, 0.0f, 1.0f),
+				v4(-2.0f, -1.0f, 0.0f, 1.0f),
+				v4(+2.5f, -1.5f, 0.0f, 1.0f),
+				v4(+2.0f, +0.5f, 0.0f, 1.0f),
+				v4(-0.5f, +2.0f, 0.0f, 1.0f),
 			};
 			PR_CHECK(PointWithinConvexPolygon(v4Origin, poly, _countof(poly)), true);
 			PR_CHECK(PointWithinConvexPolygon(poly[0], poly, _countof(poly)), false);

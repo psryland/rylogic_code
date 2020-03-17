@@ -270,36 +270,49 @@ namespace pr
 		{
 			Ident m_name;
 			Val m_value;
+			bool m_fixed;
 
 			Arg()
 				:m_name()
 				,m_value()
+				,m_fixed()
 			{}
 			Arg(Arg&& rhs)
 				:m_name(std::move(rhs.m_name))
 				,m_value(std::move(rhs.m_value))
+				,m_fixed(rhs.m_fixed)
 			{}
 			Arg(Arg const& rhs)
 				:m_name(rhs.m_name)
 				,m_value(rhs.m_value)
+				,m_fixed(rhs.m_fixed)
 			{}
-			Arg(Val a)
-				:m_name()
-				,m_value(a)
+			Arg(std::string_view name)
+				:m_name(Narrow(name))
+				,m_value()
+				,m_fixed(false)
 			{}
-			Arg(std::string_view name, Val value = {})
+			Arg(std::wstring_view name)
+				:m_name(Narrow(name))
+				,m_value()
+				,m_fixed(false)
+			{}
+			Arg(std::string_view name, Val value)
 				:m_name(Narrow(name))
 				,m_value(value)
+				,m_fixed(true)
 			{}
-			Arg(std::wstring_view name, Val value = {})
+			Arg(std::wstring_view name, Val value)
 				:m_name(Narrow(name))
 				,m_value(value)
+				,m_fixed(true)
 			{}
 			Arg& operator = (Arg&& rhs)
 			{
 				if (this == &rhs) return *this;
 				std::swap(m_name, rhs.m_name);
 				std::swap(m_value, rhs.m_value);
+				std::swap(m_fixed, rhs.m_fixed);
 				return *this;
 			}
 			Arg& operator = (Arg const& rhs)
@@ -307,6 +320,7 @@ namespace pr
 				if (this == &rhs) return *this;
 				m_name = rhs.m_name;
 				m_value = rhs.m_value;
+				m_fixed = rhs.m_fixed;
 				return *this;
 			}
 			bool operator == (std::string_view name) const
@@ -324,6 +338,26 @@ namespace pr
 			// The names (and default values) of unique identifiers in the
 			// expression (in order of discovery from left to right).
 			std::vector<Arg> m_args;
+
+			// The number of non-fixed arguments
+			int Dimension() const
+			{
+				int dim = 0;
+				for (auto& a : m_args)
+					dim += int(a.m_fixed == false);
+
+				return dim;
+			}
+
+			// Add or replace an independent variable
+			void AddVariable(Arg const& arg)
+			{
+				auto iter = pr::find_if(m_args, [&](auto& a) { return a.m_name == arg.m_name; });
+				if (iter != std::end(m_args))
+					*iter = arg;
+				else
+					m_args.push_back(arg);
+			}
 
 			// Is callable/valid test
 			explicit operator bool() const
@@ -1756,9 +1790,7 @@ namespace pr
 						compiled.m_op.append(tok);
 						compiled.m_op.append(count);
 						compiled.m_op.append(name.c_str(), count);
-						
-						if (!pr::contains(compiled.m_args, name))
-							compiled.m_args.push_back(Arg(name));
+						compiled.AddVariable(Arg(name));
 						break;
 					}
 				case ETok::Value:

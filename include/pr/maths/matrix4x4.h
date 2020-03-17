@@ -619,7 +619,7 @@ namespace pr
 			if (j <= 1 && val < Abs(A.y[j])) { pivot = 1; val = Abs(A.y[j]); }
 			if (j <= 2 && val < Abs(A.z[j])) { pivot = 2; val = Abs(A.z[j]); }
 			if (j <= 3 && val < Abs(A.w[j])) { pivot = 3; val = Abs(A.w[j]); }
-			if (val < maths::tiny)
+			if (val < maths::tinyf)
 			{
 				assert("Matrix has no inverse" && false);
 				return mat;

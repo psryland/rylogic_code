@@ -61,69 +61,69 @@ namespace pr
 			{
 				v4 sep_axis = data.m_a2w[i];
 				float depth = Dot3(sep_axis, data.m_diff);
-				if( depth < 0.0f )	sep_axis = -sep_axis;
+				if (depth < 0.0f)	sep_axis = -sep_axis;
 				else				depth = -depth;
-				float ratio     = Dot3(sep_axis, data.m_cyl_axis);
+				float ratio = Dot3(sep_axis, data.m_cyl_axis);
 				float cos_angle = Clamp(Abs(ratio), 0.0f, 1.0f);
 				float sin_angle = Sqrt(1.0f - Sqr(cos_angle));
-				depth += data.m_box.m_radius[i] + data.m_cyl.m_height*cos_angle + data.m_cyl.m_radius*sin_angle;
+				depth += data.m_box.m_radius[i] + data.m_cyl.m_height * cos_angle + data.m_cyl.m_radius * sin_angle;
 
 				// Separate on this axis
-				if( depth < 0.0f )
+				if (depth < 0.0f)
 					return false;
 
 				// Can give up if the overlap is already greater than the current minimum
-				if( depth >= data.m_penetration )
+				if (depth >= data.m_penetration)
 					return true;
 
 				// Find the nearest point on the cylinder
-				v4 cyl_point = data.m_cyl_pos - (Sign(ratio)*data.m_cyl.m_height)*data.m_cyl_axis;
-				if( 1.0 - cos_angle > maths::tiny )
+				v4 cyl_point = data.m_cyl_pos - (Sign(ratio) * data.m_cyl.m_height) * data.m_cyl_axis;
+				if (1.0f - cos_angle > maths::tinyf)
 				{
 					v4 radius = Normalise3(Cross3(data.m_cyl_axis, Cross3(data.m_cyl_axis, sep_axis)));
 					cyl_point += data.m_cyl.m_radius * radius;
-					data.m_penetration	= depth;
-					data.m_axis			= -sep_axis;
-					data.m_pointA		= cyl_point + depth * sep_axis;
-					data.m_pointB		= cyl_point;
+					data.m_penetration = depth;
+					data.m_axis = -sep_axis;
+					data.m_pointA = cyl_point + depth * sep_axis;
+					data.m_pointB = cyl_point;
 				}
 				// Otherwise find a common point on the contacting faces
 				else
 				{
-					uint j = (i+1)%3;
-					uint k = (i+2)%3;
+					uint j = (i + 1) % 3;
+					uint k = (i + 2) % 3;
 					v4 box_point = data.m_box_pos + sep_axis * data.m_box.m_radius[i];
 
 					// Check the centre point of the box for being within 
 					// end of the cylinder and visa versa
 					v4 diff = box_point - cyl_point;
 					diff -= Dot3(diff, data.m_cyl_axis) * data.m_cyl_axis;
-					if( Length3Sq(diff) < Sqr(data.m_cyl.m_radius) )
+					if (Length3Sq(diff) < Sqr(data.m_cyl.m_radius))
 					{
-						data.m_penetration	= depth;
-						data.m_axis			= -sep_axis;
-						data.m_pointA		= box_point;
-						data.m_pointB		= box_point - depth * sep_axis;
+						data.m_penetration = depth;
+						data.m_axis = -sep_axis;
+						data.m_pointA = box_point;
+						data.m_pointB = box_point - depth * sep_axis;
 					}
 					else
 					{
 						float dj = Dot3(diff, data.m_a2w[j]);
 						float dk = Dot3(diff, data.m_a2w[k]);
-						if( Abs(dj) < data.m_box.m_radius[j] && Abs(dk) < data.m_box.m_radius[k] )
+						if (Abs(dj) < data.m_box.m_radius[j] && Abs(dk) < data.m_box.m_radius[k])
 						{
-							data.m_penetration	= depth;
-							data.m_axis			= -sep_axis;
-							data.m_pointA		= cyl_point + depth * sep_axis;
-							data.m_pointB		= cyl_point;
+							data.m_penetration = depth;
+							data.m_axis = -sep_axis;
+							data.m_pointA = cyl_point + depth * sep_axis;
+							data.m_pointB = cyl_point;
 						}
 						else
 						{
 							// In this case, just use the cylinder rim
 							v4 pt = cyl_point + diff * data.m_cyl.m_radius;
-							data.m_penetration	= depth;
-							data.m_axis			= -sep_axis;
-							data.m_pointA		= pt + depth * sep_axis;
-							data.m_pointB		= pt;
+							data.m_penetration = depth;
+							data.m_axis = -sep_axis;
+							data.m_pointA = pt + depth * sep_axis;
+							data.m_pointB = pt;
 						}
 					}
 				}
@@ -140,7 +140,7 @@ namespace pr
 			{
 				v4 sep_axis = data.m_cyl_axis;
 				float depth = Dot3(sep_axis, data.m_diff);
-				if( depth < 0.0f )	sep_axis = -sep_axis;
+				if (depth < 0.0f)	sep_axis = -sep_axis;
 				else				depth = -depth;
 				depth += data.m_cyl.m_height;
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, StartFile("C:/DeleteMe/collision_sepaxis.pr_script"));
@@ -148,20 +148,20 @@ namespace pr
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, EndFile());
 
 				// Can give up if the overlap is already greater than the current minimum
-				if( depth >= data.m_penetration )
+				if (depth >= data.m_penetration)
 					return true;
 
 				v4 point = data.m_box_pos;
-				for( int i = 0; i != 3; ++i )
+				for (int i = 0; i != 3; ++i)
 				{
 					float d = Dot3(data.m_a2w[i], sep_axis);
 					float r = data.m_box.m_radius[i];
-					if( d < -maths::tiny )
+					if (d < -maths::tinyf)
 					{
 						depth -= d * r;
 						point -= r * data.m_a2w[i];
 					}
-					else if( d > maths::tiny )
+					else if (d > maths::tinyf)
 					{
 						depth += d * r;
 						point += r * data.m_a2w[i];
@@ -169,21 +169,21 @@ namespace pr
 				}
 
 				// Separate on this axis
-				if( depth < 0.0f )
-					return false; 
+				if (depth < 0.0f)
+					return false;
 
 				// Can give up if the overlap is already greater than the current minimum
-				if( depth >= data.m_penetration )
+				if (depth >= data.m_penetration)
 					return true;
 
-				data.m_penetration	= depth;
-				data.m_axis			= -sep_axis;
-				data.m_pointA		= point;
-				data.m_pointB		= point - depth * sep_axis;
+				data.m_penetration = depth;
+				data.m_axis = -sep_axis;
+				data.m_pointA = point;
+				data.m_pointB = point - depth * sep_axis;
 
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, StartFile("C:/DeleteMe/collision_points.pr_script"));
-				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::Box ("pointA", "FFFF0000", data.m_pointA, 0.02f));
-				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::Box ("pointB", "FF0000FF", data.m_pointB, 0.02f));
+				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::Box("pointA", "FFFF0000", data.m_pointA, 0.02f));
+				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::Box("pointB", "FF0000FF", data.m_pointB, 0.02f));
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, EndFile());
 				return true;
 			}

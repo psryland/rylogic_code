@@ -476,7 +476,7 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 	PR_EXPAND(PR_DBG_COLLISION, std::string str);
 
 	uint first_to_solve = pair.m_num_constraints;
-	float max_error_sq = maths::tiny;
+	float max_error_sq = maths::tinyf;
 
 	// Calculate the desired final relative velocities for each constraint
 	// before we start applying impulses

@@ -248,7 +248,7 @@ namespace pr::rdr
 				(ESnapType)r.snap_type == ESnapType::Face)
 			{
 				// At least one of the intercepts is a face, sort by distance
-				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > maths::tiny)
+				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > maths::tinyf)
 					return l.ws_intercept.w < r.ws_intercept.w;
 
 				// If the intercepts are at the same distance, prioritise by snap type

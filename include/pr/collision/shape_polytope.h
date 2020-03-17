@@ -174,7 +174,7 @@ namespace pr
 		inline v4 SupportVertex(ShapePolytope const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
 		{
 			assert("Invalid hint vertex index" && hint_vert_id >= 0 && hint_vert_id < shape.m_vert_count);
-			assert("Direction is too short" && Length3(direction) > maths::tiny);
+			assert("Direction is too short" && Length3(direction) > maths::tinyf);
 
 			// Find the support vertex using a 'hill-climbing' search
 			// Start at the hint vertex and look for a neighbour that is more extreme in the
@@ -206,7 +206,7 @@ namespace pr
 					{
 	 					skip_first_nbr = true;
 						auto dist = Dot3(shape.vertex(*n), direction);
-						if (dist > sup_dist + maths::tiny)
+						if (dist > sup_dist + maths::tinyf)
 						{
 							sup_vert_id    = *n;
 							sup_dist       = dist;
@@ -258,7 +258,7 @@ namespace pr
 		{
 			assert(hint_vert_id  >= 0 && hint_vert_id < shape.m_vert_count);
 
-			auto eps = major ? maths::tiny : -maths::tiny;
+			auto eps = major ? maths::tinyf : -maths::tinyf;
 
 			vert_id0 = hint_vert_id;
 			auto V1 = &shape.vertex(vert_id0);

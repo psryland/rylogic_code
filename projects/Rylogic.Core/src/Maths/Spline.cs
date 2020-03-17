@@ -186,7 +186,7 @@ namespace Rylogic.Maths
 		}
 
 		///// <summary>Fill a container of points with a rastered version of this spline</summary>
-		//void Raster(pr::Spline const& spline, Cont& points, int max_points, float tol = pr::maths::tiny)
+		//void Raster(pr::Spline const& spline, Cont& points, int max_points, float tol = pr::maths::tinyf)
 		//{
 		//	{
 		//		namespace spline

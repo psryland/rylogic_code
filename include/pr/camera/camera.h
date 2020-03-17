@@ -375,7 +375,7 @@ namespace pr
 		{
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && IsFinite(fovY), "");
 			
-			fovY = Clamp(fovY, maths::tiny, float(maths::tau_by_2));
+			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
 			m_moved |= fovY != m_fovY;
 			m_fovY = fovY;
 		}
@@ -384,9 +384,9 @@ namespace pr
 		void Fov(float fovX, float fovY)
 		{
 			PR_ASSERT(PR_DBG, IsFinite(fovX) && IsFinite(fovY), "");
-			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2 && fovY < maths::tau_by_2, "");
-			fovX = Clamp(fovX, maths::tiny, float(maths::tau_by_2));
-			fovY = Clamp(fovY, maths::tiny, float(maths::tau_by_2));
+			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2f && fovY < maths::tau_by_2f, "");
+			fovX = Clamp(fovX, maths::tinyf, maths::tau_by_2f);
+			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
 			auto aspect = Tan(fovX/2) / Tan(fovY/2);
 			Aspect(aspect);
 			FovY(fovY);
@@ -430,7 +430,7 @@ namespace pr
 		void Align(v4 const& up)
 		{
 			m_align = up;
-			if (Length3Sq(m_align) > maths::tiny)
+			if (Length3Sq(m_align) > maths::tinyf)
 			{
 				if (Parallel(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
 				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
@@ -441,7 +441,7 @@ namespace pr
 		// Return true if the align axis has been set for the camera
 		bool IsAligned() const
 		{
-			return Length3Sq(m_align) > maths::tiny;
+			return Length3Sq(m_align) > maths::tinyf;
 		}
 
 		// Get/Set orthographic projection mode
@@ -721,7 +721,7 @@ namespace pr
 			m_c2w.pos = old_focus + m_c2w.z * m_focus_dist;
 
 			// If an align axis is given, align up to it
-			if (Length3Sq(m_align) > maths::tiny)
+			if (Length3Sq(m_align) > maths::tinyf)
 			{
 				auto up = Perpendicular(m_c2w.pos - old_focus, m_align);
 				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, up);
@@ -751,7 +751,7 @@ namespace pr
 			}
 
 			m_fovY = (1.0f + zoom) * m_nav.m_fovY0;
-			m_fovY = Clamp(m_fovY, maths::tiny, float(maths::tau_by_2 - maths::tiny));
+			m_fovY = Clamp(m_fovY, maths::tinyf, maths::tau_by_2f - maths::tinyf);
 
 			// Set the base values
 			if (commit)
@@ -838,8 +838,8 @@ namespace pr
 				// Handle degeneracy
 				if (aspect < maths::float_eps || !IsFinite(aspect))
 				{
-					const float min_aspect = maths::tiny;
-					const float max_aspect = 1 / maths::tiny;
+					const float min_aspect = maths::tinyf;
+					const float max_aspect = 1 / maths::tinyf;
 					if      (width  > maths::float_eps) height = width / max_aspect;
 					else if (height > maths::float_eps) width = min_aspect / height;
 					else { width = 1; height = 1; }

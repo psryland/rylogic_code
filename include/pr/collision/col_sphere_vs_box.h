@@ -50,7 +50,7 @@ namespace pr::collision
 	
 		// If 'dist_sq' is zero then the centre of the sphere is inside the box
 		// The separating axis is in one of the box axis directions
-		if (dist_sq < maths::tiny)
+		if (dist_sq < maths::tinyf)
 		{
 			auto i = MaxElementIndex3(Abs(l2r));
 

@@ -35,16 +35,16 @@ inline float R(float x)
 {
 	return
 		isnan(x) ? x :
-		x < -maths::tiny ? x :
-		x > +maths::tiny ? x :
+		x < -maths::tinyf ? x :
+		x > +maths::tinyf ? x :
 		x < 0 ? -0 : +0;
 }
 inline double R(double x)
 {
 	return 
 		isnan(x) ? x :
-		x < -maths::tiny ? x :
-		x > +maths::tiny ? x :
+		x < -maths::tinyd ? x :
+		x > +maths::tinyd ? x :
 		x < 0 ? -0 : +0;
 }
 inline int R(int x)

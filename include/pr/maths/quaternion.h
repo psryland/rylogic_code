@@ -285,7 +285,7 @@ namespace pr
 	}
 	template <typename A, typename B> inline bool pr_vectorcall FEql(quat_cref<A,B> lhs, quat_cref<A,B> rhs)
 	{
-		return FEqlRelative(lhs, rhs, maths::tiny);
+		return FEqlRelative(lhs, rhs, maths::tinyf);
 	}
 
 	// Component add

@@ -1069,7 +1069,7 @@ namespace pr::ldr
 		// Get the axis of rotation from the gizmo and normalised it
 		auto axis = d;
 		auto axis_lensq = Length3Sq(axis);
-		if (axis_lensq < pr::maths::tiny) return;
+		if (axis_lensq < pr::maths::tinyf) return;
 		axis /= sqrt(axis_lensq);
 
 		// Project the component axis back into normalised screen space

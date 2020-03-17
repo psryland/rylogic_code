@@ -65,7 +65,7 @@ void pr::ph::SphereVsBox(Shape const& sphere, m4x4 const& a2w, Shape const& box,
 	contact.m_material_idB	= box_shape   .m_base.m_material_id;
 
 	// If 'dist_sq' is zero then the centre of the sphere is inside the box
-	if( dist_sq < maths::tiny )
+	if (dist_sq < maths::tinyf)
 	{
 		// Find the closest point on the box to the centre of the sphere
 		int largest = MaxElementIndex3(Abs(b2s));
@@ -85,7 +85,7 @@ void pr::ph::SphereVsBox(Shape const& sphere, m4x4 const& a2w, Shape const& box,
 		contact.m_normal = v4Zero;
 		contact.m_normal[largest] = sign * 1.0f;
 		contact.m_normal = b2w * contact.m_normal;
-		contact.m_depth  = sphere_shape.m_radius + box_shape.m_radius[largest] - Abs(b2s[largest]);
+		contact.m_depth = sphere_shape.m_radius + box_shape.m_radius[largest] - Abs(b2s[largest]);
 	}
 	// Otherwise the centre of the sphere is outside of the box
 	else

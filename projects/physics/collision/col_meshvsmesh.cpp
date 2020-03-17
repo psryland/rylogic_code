@@ -146,26 +146,26 @@ namespace pr
 			// and all other vectors have a positive dot product with the cross of those 2
 			bool FindHalfPlaneBruteForce(v4 const* r, uint r_size, bool should_exist)
 			{
-				for( uint j = 0; j != r_size; ++j )
+				for (uint j = 0; j != r_size; ++j)
 				{
-					for( uint i = 0; i != r_size; ++i )
+					for (uint i = 0; i != r_size; ++i)
 					{
-						if( i == j ) continue;
+						if (i == j) continue;
 						v4 half_space_normal = Cross3(r[i], r[j]);
-						if( !IsZero3(half_space_normal) )
+						if (!IsZero3(half_space_normal))
 						{
 							half_space_normal = Normalise3(half_space_normal);
 							bool all_positive = true;
-							for( uint k = 0; k != r_size; ++k )
+							for (uint k = 0; k != r_size; ++k)
 							{
-								if( ( should_exist && Dot3(half_space_normal, r[k]) < -maths::tiny) ||
-									(!should_exist && Dot3(half_space_normal, r[k]) <  maths::tiny) )
+								if ((should_exist && Dot3(half_space_normal, r[k]) < -maths::tinyf) ||
+									(!should_exist && Dot3(half_space_normal, r[k]) < maths::tinyf))
 								{
 									all_positive = false;
 									break;
 								}
 							}
-							if( all_positive )
+							if (all_positive)
 							{
 								return true;
 							}
@@ -558,12 +558,12 @@ namespace pr
 				PR_ASSERT(PR_DBG_PHYSICS, r_size >= 2, "");
 
 				// Initialise the half space normal if 'first_new_r' is position zero
-				if( first_new_r == 0 )
+				if (first_new_r == 0)
 				{
 					// Initialise the half space normal once we have two r's
 					// If the product is zero, then any vector perpendicular to 'r[0]' should do
 					half_space_normal = r[0] + r[1];
-					if (FEql3(half_space_normal,pr::v4Zero)) half_space_normal = Perpendicular(r[0]);
+					if (FEql3(half_space_normal, pr::v4Zero)) half_space_normal = Perpendicular(r[0]);
 					else                                     half_space_normal = Normalise3(half_space_normal);
 					first_new_r = 2;
 
@@ -571,10 +571,10 @@ namespace pr
 				}
 
 				// Add each of the new vectors to the half space. (It doesn't work to find the depthest and use that)
-				for( ; first_new_r != r_size; ++first_new_r )
+				for (; first_new_r != r_size; ++first_new_r)
 				{
 					// Ignore vectors already above the half space
-					if( Dot3(half_space_normal, r[first_new_r]) >= -maths::tiny ) continue;
+					if (Dot3(half_space_normal, r[first_new_r]) >= -maths::tinyf) continue;
 
 					v4 const& new_r = r[first_new_r];
 
@@ -583,7 +583,7 @@ namespace pr
 					// If we project all previous 'r' into the plane perpendicular to 'new_r' and there
 					// is a line for which all other projected 'r's are on one side of, then this line is
 					// the another constraint for the half space and a valid half space still exists
-				
+
 					// Local inline function for evaluating 'line' at 'pt'
 					struct Line { static float Eqn(v2 const& line, v2 const& pt) { return pt.x * line.y - pt.y * line.x; } };
 
@@ -610,7 +610,7 @@ namespace pr
 					//		M.z.Set(-(x*x + y*y)/d,  0.0f, z, 0.0f);
 					//	}
 					//}
-				
+
 					// 'ra' and 'rb' are bounds for the line in the XY place
 					int i = 0;
 					v2 ra = v2Zero, rb = v2Zero;
@@ -618,27 +618,27 @@ namespace pr
 					for (; i != first_new_r && FEql2(rb, v2Zero);) { rb = (M * r[i++]).xy; }
 
 					// We need to ensure 'rb' is on the positive side of 'ra'
-					if( Line::Eqn(ra, rb) < 0.0f )
+					if (Line::Eqn(ra, rb) < 0.0f)
 					{
 						v2 tmp = ra; ra = rb; rb = tmp;	// swap
 					}
 
 					// Project the remaining 'r' into the XY plane
-					for( i = 2; i != first_new_r + 1; ++i )
+					for (i = 2; i != first_new_r + 1; ++i)
 					{
 						v2 t = (M * r[i]).xy;
-						if( !FEql2(t, v2Zero) )
+						if (!FEql2(t, v2Zero))
 						{
-							if( Line::Eqn(ra, t) >= 0.0f )
+							if (Line::Eqn(ra, t) >= 0.0f)
 							{
-								if( Line::Eqn(rb, t) > 0.0f )
+								if (Line::Eqn(rb, t) > 0.0f)
 								{
 									rb = t;
 								}
 							}
 							else
 							{
-								if( Line::Eqn(rb, t) > 0.0f )
+								if (Line::Eqn(rb, t) > 0.0f)
 								{
 									PR_ASSERT(PR_DBG_MESH_COLLISION, !FindHalfPlaneBruteForce(r, r_size, false), "");
 									return false;	// Cannot find a half space, there must be a collision
@@ -651,21 +651,21 @@ namespace pr
 						}
 					}
 					// If we get here then a half space is possible. i.e. rb should still be on the positive side of 'ra'
-					PR_ASSERT(PR_DBG_PHYSICS, Line::Eqn(ra, rb) >= -maths::tiny, "");
+					PR_ASSERT(PR_DBG_PHYSICS, Line::Eqn(ra, rb) >= -maths::tinyf, "");
 
 					// Calculate a new half space normal. Use the perpendicular to 'ra' unless
 					// that's zero in which case, use the perpendicular to 'rb'. If that's zero
 					// as well then is doesn't matter what we use, might as well be the x axis
 					v2 rn = v2(ra[1], -ra[0]);
-					if( !FEql2(rn, v2Zero) )		{ rn = Normalise2(rn); }
+					if (!FEql2(rn, v2Zero)) { rn = Normalise2(rn); }
 					else
 					{
 						rn = v2(-rb[1], rb[0]);
-						if( !FEql2(rn, v2Zero) )	{ rn = Normalise2(rn); }
-						else						{ rn = v2XAxis; }
+						if (!FEql2(rn, v2Zero)) { rn = Normalise2(rn); }
+						else { rn = v2XAxis; }
 					}
 					half_space_normal = Transpose(M) * v4(rn, 0.0f, 0.0f);
-					
+
 					PR_ASSERT(PR_DBG_MESH_COLLISION, VerifyHalfSpace(r, first_new_r + 1, half_space_normal), "");
 					PR_ASSERT(PR_DBG_MESH_COLLISION, FindHalfPlaneBruteForce(r, first_new_r + 1, true), "");
 				}
@@ -710,7 +710,7 @@ namespace pr
 					// If the closest point to the simplex is the origin then the
 					// simplex surrounds the origin and the shapes are in collision
 					//if( nearest_point.IsApproxZero3() )
-					if( nearest_distanceSq < maths::tiny * maths::tiny )
+					if( nearest_distanceSq < maths::tinyf*maths::tinyf )
 					{
 						PR_EXPAND(PR_DBG_MESH_COLLISION, DebugOutput(Fmt("GJK: COLLISION detected after %d iterations\n", k).c_str());)
 						return true;
@@ -794,7 +794,7 @@ namespace pr
 					// Get the world space vector between these two vertices
 					r[k] = v4Origin - col.m_vertex.m_r;
 					float dp = Dot3(col.m_separating_axis, r[k]);
-					if( dp >= -maths::tiny )	// Lemma 1
+					if( dp >= -maths::tinyf )	// Lemma 1
 					{
 						PR_EXPAND(PR_DBG_MESH_COLLISION, DebugOutput(Fmt("CW: Collision rejected in %d iterations\n", k).c_str());)
 						return false; // non-collision

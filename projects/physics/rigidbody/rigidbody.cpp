@@ -136,7 +136,7 @@ void Rigidbody::SetMass(float mass)
 	PR_EXPAND(PR_LOG_RB, Log(*this, "SetMass");)
 	PR_ASSERT(PR_DBG_PHYSICS, mass > 0.0f, "");
 	m_mass                  = mass;
-	m_inv_mass              = (1.0f/mass > maths::tiny) ? 1.0f/mass : 0.0f;
+	m_inv_mass              = (1.0f/mass > maths::tinyf) ? 1.0f/mass : 0.0f;
 }
 
 // Set the mass properties of a rigidbody

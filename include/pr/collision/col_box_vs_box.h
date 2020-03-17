@@ -26,7 +26,7 @@ namespace pr::collision
 
 		// Compute common sub expressions. Add in an epsilon term to counteract arithmetic
 		// errors when two edges are parallel and their cross product is (near) 0
-		auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
+		auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tinyf);
 
 		// Lambda for returning a separating axis with the correct sign
 		auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(r2l.pos, sa)) * sa; };

@@ -141,6 +141,7 @@
 			<Word>*Param</Word>
 			<Word>*Texture</Word>
 			<Word>*Video</Word>
+			<Word>*Resolution</Word>
 			<Word>*Divisions</Word>
 			<Word>*Layers</Word>
 			<Word>*Wedges</Word>

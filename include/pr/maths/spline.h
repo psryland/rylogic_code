@@ -119,7 +119,7 @@ namespace pr
 	}
 
 	// Return the length of a spline from t0 to t1
-	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tiny)
+	inline float Length(Spline const& spline, float t0, float t1, float tol = maths::tinyf)
 	{
 		struct L { static float Len(Spline const& s, float tol)
 		{
@@ -185,7 +185,7 @@ namespace pr
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
 	template <typename PCont, typename TCont>
-	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tiny)
+	void Raster(Spline const& spline, PCont& points, TCont& times, int max_points, float tol = maths::tinyf)
 	{
 		struct L
 		{
@@ -258,7 +258,7 @@ namespace pr
 		L::Raster(points, times, &elem, pts_remaining, tol);
 	}
 	template <typename PCont>
-	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tiny)
+	void Raster(Spline const& spline, PCont& points, int max_points, float tol = maths::tinyf)
 	{
 		// Dummy container for the time values
 		struct TCont
@@ -301,7 +301,7 @@ namespace pr
 
 	// Fill a container of points with a smoothed spline based on 'points
 	template <typename Cont, typename VOut, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, VOut out, float tol = maths::tiny)
+	void Smooth(Cont const& points, VOut out, float tol = maths::tinyf)
 	{
 		if (points.size() < 3)
 		{
@@ -325,7 +325,7 @@ namespace pr
 		});
 	}
 	template <typename Cont, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, Cont& out, float tol = maths::tiny)
+	void Smooth(Cont const& points, Cont& out, float tol = maths::tinyf)
 	{
 		Smooth(points, [&](v4 const* vert, float const*, size_t count)
 		{

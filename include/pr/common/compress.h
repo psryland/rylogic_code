@@ -71,7 +71,7 @@ namespace pr
 			auto iy = int((1.0f - y) * MaxYDiv);
 			auto xz_scale = 1.0f - y;
 			auto MaxXZDiv = 2 * iy;
-			auto ixz = xz_scale > maths::tiny ? int((z / xz_scale) * float(MaxXZDiv)) : 0;
+			auto ixz = xz_scale > maths::tinyf ? int((z / xz_scale) * float(MaxXZDiv)) : 0;
 			assert(ixz <= MaxXZDiv);
 
 			auto index = iy * iy + ixz;
@@ -178,7 +178,7 @@ namespace pr
 			auto iy = int((1.0f - y) * MaxYDiv);
 			auto xz_scale = 1.0f - y;
 			auto MaxXZDiv = 2 * iy;
-			auto ixz = xz_scale > maths::tiny ? int((z / xz_scale) * float(MaxXZDiv)) : 0;
+			auto ixz = xz_scale > maths::tinyf ? int((z / xz_scale) * float(MaxXZDiv)) : 0;
 			assert(ixz <= MaxXZDiv);
 
 			auto index = iy * iy + ixz;

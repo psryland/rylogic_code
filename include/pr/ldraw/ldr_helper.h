@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
 #pragma once
-
 #include <string>
 #include <algorithm>
 #include <type_traits>
@@ -44,12 +43,14 @@ namespace pr::ldr
 		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
 		O2W(m4x4 const& mat) :m_mat(mat) {}
 	};
-	union Col
+	struct Col
 	{
-		Colour32 c;
-		unsigned int ui;
-		Col(Colour32 c_) :c(c_) {}
-		Col(unsigned int ui_) :ui(ui_) {}
+		union {
+		Colour32 m_col;
+		unsigned int m_ui;
+		};
+		Col(Colour32 c) :m_col(c) {}
+		Col(unsigned int ui) :m_ui(ui) {}
 	};
 	struct Width
 	{
@@ -125,8 +126,8 @@ namespace pr::ldr
 	}
 	inline TStr& Append(TStr& str, Col c)
 	{
-		if (c.ui == 0xFFFFFFFF) return str;
-		return AppendSpace(str).append(To<TStr>(c.c));
+		if (c.m_ui == 0xFFFFFFFF) return str;
+		return AppendSpace(str).append(To<TStr>(c.m_col));
 	}
 	inline TStr& Append(TStr& str, Width w)
 	{
@@ -440,7 +441,8 @@ namespace pr::ldr
 	inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float point_radius = 0)
 	{
 		auto g = Group(str, name, colour);
-		LineD(str, "Ang", Lerp(colour.c,Colour32Black,0.5f), pos, vec.ang);
+		auto c = Lerp(colour.m_col, Colour32Black, 0.5f);
+		LineD(str, "Ang", c, pos, vec.ang);
 		LineD(str, "Lin", colour, pos, vec.lin);
 		if (point_radius > 0) Box(str, "", colour, point_radius, pos);
 		return str;
@@ -534,6 +536,7 @@ namespace pr::ldr
 }
 
 #if PR_UNITTESTS
+#include "pr/common/unittests.h"
 namespace pr::ldr
 {
 	PRUnitTest(LdrHelperTests)

@@ -649,7 +649,7 @@ namespace pr
 			for (int i = 0; i != 4; ++i)
 			{
 				vout[i].ss_vert = proj * verts[i].m_vert;
-				vout[i].ss_vert.w += (vout[i].ss_vert.w == 0.0f) * pr::maths::tiny;
+				vout[i].ss_vert.w += (vout[i].ss_vert.w == 0.0f) * pr::maths::tinyf;
 				vout[i].ws_vert = vout[i].ss_vert / vout[i].ss_vert.w;
 				vout[i].ws_vert.w = float(face);
 			}

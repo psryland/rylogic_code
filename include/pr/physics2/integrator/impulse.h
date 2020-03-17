@@ -387,7 +387,7 @@ namespace pr::physics
 			objA.Mass(10);
 			objB.Mass(10);
 			objA.VelocityWS(v4{0, 0, -1, 0}, v4{});
-			objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tiny, 0, 0, 0});
+			objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tinyf, 0, 0, 0});
 			c.m_axis = v4{1,0,0,0};
 			c.m_point = v4{0.5f, 0, 0, 0};
 			c.m_mat.m_friction_static = 1.0f; // sticky
@@ -408,7 +408,7 @@ namespace pr::physics
 			objA.Mass(10);
 			objB.Mass(10);
 			objA.VelocityWS(v4{0, 0, +1, 0}, v4{});
-			objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tiny, 0, 0, 0});
+			objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tinyf, 0, 0, 0});
 			c.m_axis = v4{1,0,0,0};
 			c.m_point = v4{0.5f, 0, 0, 0};
 			c.m_mat.m_friction_static = 1.0f; // sticky
@@ -428,7 +428,7 @@ namespace pr::physics
 		//	objA.Mass(10);
 		//	objB.Mass(10);
 		//	objA.VelocityWS(v4{0, 0, -1, 0}, v4{});
-		//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tiny, 0, 0, 0});
+		//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{-maths::tinyf, 0, 0, 0});
 		//	c.m_axis = v4{1,0,0,0};
 		//	c.m_point = v4{0.5f, 0, 0, 0};
 		//	c.m_mat.m_friction_static = 1.0f;

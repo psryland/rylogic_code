@@ -131,7 +131,7 @@ namespace pr::physics
 		// Extrapolate the position based on the current momentum and forces
 		m4x4 O2W(float dt) const
 		{
-			return Abs(dt) > maths::tiny
+			return Abs(dt) > maths::tinyf
 				? ExtrapolateO2W(O2W(), MomentumWS(), ForceWS(), InertiaInvWS(), dt)
 				: O2W();
 		}

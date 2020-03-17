@@ -841,7 +841,7 @@ namespace pr
 	}
 	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 	{
-		return FEqlRelative(lhs, rhs, maths::tiny);
+		return FEqlRelative(lhs, rhs, maths::tinyf);
 	}
 	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, m4_cref<> rhs, Real tol)
 	{
@@ -855,7 +855,7 @@ namespace pr
 	}
 	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4_cref<> rhs)
 	{
-		return FEqlRelative(lhs, rhs, maths::tiny);
+		return FEqlRelative(lhs, rhs, maths::tinyf);
 	}
 
 	// Return the transpose of matrix 'm'

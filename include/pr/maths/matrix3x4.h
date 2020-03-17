@@ -305,7 +305,7 @@ namespace pr
 		{
 			assert("'angular_displacement' should be a scaled direction vector" && angular_displacement.w == 0);
 			auto len = Length3(angular_displacement);
-			return len > maths::tiny
+			return len > maths::tinyf
 				? Mat3x4::Rotation(angular_displacement/len, len)
 				: Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
@@ -318,8 +318,8 @@ namespace pr
 			auto len = Length3(from) * Length3(to);
 
 			auto cos_angle = Dot3(from, to) / len;
-			if (cos_angle >= 1.0f - maths::tiny) return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
-			if (cos_angle <= maths::tiny - 1.0f) return Rotation(Normalise3(Perpendicular(from - to)), float(maths::tau_by_2));
+			if (cos_angle >= 1.0f - maths::tinyf) return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
+			if (cos_angle <= maths::tinyf - 1.0f) return Rotation(Normalise3(Perpendicular(from - to)), maths::tau_by_2f);
 
 			auto axis_size_angle = Cross3(from, to) / len;
 			auto axis_norm = Normalise3(axis_size_angle);
@@ -595,7 +595,7 @@ namespace pr
 
 		}
 		// Z aligned with the Y axis
-		if (abs(mat.z.y) > 1.0f - maths::tiny)
+		if (abs(mat.z.y) > 1.0f - maths::tinyf)
 		{
 			euler.x = Sign(mat.z.y) * maths::tau_by_4;
 			euler.y = 0.0f;
@@ -754,7 +754,7 @@ namespace pr
 	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up)
 	{
 		auto len = Length3(dir);
-		return len > pr::maths::tiny ? OriFromDir(dir, axis, up) * Mat3x4<A,B>::Scale(len) : m3x4Zero;
+		return len > pr::maths::tinyf ? OriFromDir(dir, axis, up) * Mat3x4<A,B>::Scale(len) : m3x4Zero;
 	}
 	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis)
 	{

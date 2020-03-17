@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
 #pragma once
-
 #include <string>
 #include <type_traits>
 #include "pr/maths/maths.h"
@@ -691,7 +690,7 @@ namespace pr
 	}
 	inline bool pr_vectorcall FEql(Colour_cref lhs, Colour_cref rhs)
 	{
-		return FEqlRelative(lhs, rhs, maths::tiny);
+		return FEqlRelative(lhs, rhs, maths::tinyf);
 	}
 	inline bool pr_vectorcall FEqlNoA(Colour_cref lhs, Colour_cref rhs)
 	{
@@ -854,3 +853,15 @@ namespace pr
 
 	#pragma endregion
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr::gfx
+{
+	PRUnitTest(ColourTests)
+	{
+		Colour32 c0(0xFF, 0xFF, 0xFF, 0xFF);
+		PR_CHECK(c0.argb, 0xFFFFFFFFU);
+	}
+}
+#endif

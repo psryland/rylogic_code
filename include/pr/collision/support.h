@@ -59,8 +59,8 @@ namespace pr::collision
 		{
 			float d = Dot3(direction, shape.m_base.m_s2p[i]);
 
-			if      (d > +maths::tiny) vert += shape.m_base.m_s2p[i] * shape.m_radius[i];
-			else if (d < -maths::tiny) vert -= shape.m_base.m_s2p[i] * shape.m_radius[i];
+			if      (d > +maths::tinyf) vert += shape.m_base.m_s2p[i] * shape.m_radius[i];
+			else if (d < -maths::tinyf) vert -= shape.m_base.m_s2p[i] * shape.m_radius[i];
 			else feature_type = EFeature(int(feature_type) << 1);
 		}
 		return vert;
@@ -78,8 +78,8 @@ namespace pr::collision
 
 		feature_type = EFeature::Vert;
 		auto vert = shape.m_base.m_s2p.pos;
-		if      (d > +maths::tiny) vert += r;
-		else if (d < -maths::tiny) vert -= r;
+		if      (d > +maths::tinyf) vert += r;
+		else if (d < -maths::tinyf) vert -= r;
 		else feature_type = EFeature::Edge;
 		return vert;
 	}
@@ -100,12 +100,12 @@ namespace pr::collision
 		for (int i = 0; i != 3; ++i)
 		{
 			float d = Dot3(axis, shape.m_base.m_s2p[i]);
-			if (d > +maths::tiny)
+			if (d > +maths::tinyf)
 			{
 				for (int f = 0; f != int(feature_type); ++f)
 					points[f] += shape.m_base.m_s2p[i] * shape.m_radius[i];
 			}
-			else if (d < -maths::tiny)
+			else if (d < -maths::tinyf)
 			{
 				for (int f = 0; f != int(feature_type); ++f)
 					points[f] -= shape.m_base.m_s2p[i] * shape.m_radius[i];
@@ -139,13 +139,13 @@ namespace pr::collision
 	{
 		auto d = Dot(axis, shape.m_base.m_s2p.z);
 		auto r = shape.m_base.m_s2p.z * shape.m_radius;
-		if (d > +maths::tiny)
+		if (d > +maths::tinyf)
 		{
 			// Line points in the direction of the axis, return the end point
 			feature_type = EFeature::Vert;
 			points[0] = shape.m_base.m_s2p.pos + r;
 		}
-		else if (d < -maths::tiny)
+		else if (d < -maths::tinyf)
 		{
 			// Line points against the direction of the axis, return the start point
 			feature_type = EFeature::Vert;

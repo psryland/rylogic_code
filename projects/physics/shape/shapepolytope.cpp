@@ -28,17 +28,17 @@ ShapePolytope& ShapePolytope::set(std::size_t vert_count, std::size_t face_count
 float pr::ph::CalcVolume(ShapePolytope const& shape)
 {
 	float volume = 0;
-	for( ShapePolyFace const *f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f )
+	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
 		v4 const& a = shape.vertex(f->m_index[0]);
-		v4 const& b	= shape.vertex(f->m_index[1]);
+		v4 const& b = shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
 		volume += Triple(a, b, c); // Triple product is volume x 6
 	}
-	if( volume < maths::tiny )
+	if (volume < maths::tinyf)
 	{
 		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
-		volume = maths::tiny;
+		volume = maths::tinyf;
 	}
 	return volume / 6.0f;
 }
@@ -46,21 +46,21 @@ float pr::ph::CalcVolume(ShapePolytope const& shape)
 // Return the centre of mass position of the polytope
 v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 {
-	float volume		= 0;
-	v4 centre_of_mass	= v4Zero;
-	for( ShapePolyFace const *f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f )
+	float volume = 0;
+	v4 centre_of_mass = v4Zero;
+	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
 		v4 const& a = shape.vertex(f->m_index[0]);
 		v4 const& b = shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
 		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
-		centre_of_mass	+= vol_x6 * (a + b + c);	// Divide by 4 at end
-		volume			+= vol_x6;
+		centre_of_mass += vol_x6 * (a + b + c);	// Divide by 4 at end
+		volume += vol_x6;
 	}
-	if( volume < maths::tiny )
+	if (volume < maths::tinyf)
 	{
 		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
-		volume = Abs(volume + maths::tiny);
+		volume = Abs(volume + maths::tinyf);
 	}
 	centre_of_mass /= volume * 4.0f;
 	centre_of_mass.w = 0.0f;	// 'centre_of_mass' is an offset from the current model origin
@@ -95,17 +95,17 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 {
 	// Assume mass == 1.0, you can multiply by mass later.
 	// For improved accuracy the next 3 variables, the determinant vol, and its calculation should be changed to double
-	float	volume					= 0;		// Technically this variable accumulates the volume times 6
-	v4		diagonal_integrals		= v4Zero;	// Accumulate matrix main diagonal integrals [x*x, y*y, z*z]
-	v4		off_diagonal_integrals	= v4Zero;	// Accumulate matrix off-diagonal  integrals [y*z, x*z, x*y]
-	for( ShapePolyFace const *f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f )
+	float	volume = 0;		// Technically this variable accumulates the volume times 6
+	v4		diagonal_integrals = v4Zero;	// Accumulate matrix main diagonal integrals [x*x, y*y, z*z]
+	v4		off_diagonal_integrals = v4Zero;	// Accumulate matrix off-diagonal  integrals [y*z, x*z, x*y]
+	for (ShapePolyFace const* f = shape.face_begin(), *f_end = shape.face_end(); f != f_end; ++f)
 	{
 		v4 const& a = shape.vertex(f->m_index[0]);
 		v4 const& b = shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
 		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 		volume += vol_x6;
-		for( int i=0, j=1, k=2; i!=3; ++i, (++j)%=3, (++k)%=3 )
+		for (int i = 0, j = 1, k = 2; i != 3; ++i, (++j) %= 3, (++k) %= 3)
 		{
 			diagonal_integrals[i] += (
 				a[i] * b[i] +
@@ -128,19 +128,19 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 				) * vol_x6; // Divide by 120.0f later
 		}
 	}
-	if( volume < maths::tiny )
+	if (volume < maths::tinyf)
 	{
 		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
-		volume = maths::tiny;
+		volume = maths::tinyf;
 	}
 
-	volume					/= 6.0f;
-	diagonal_integrals		/= volume * 60.0f;  // Divide by total volume
-	off_diagonal_integrals	/= volume * 120.0f;
+	volume /= 6.0f;
+	diagonal_integrals /= volume * 60.0f;  // Divide by total volume
+	off_diagonal_integrals /= volume * 120.0f;
 	return m3x4(
-		v4(diagonal_integrals.y + diagonal_integrals.z  , -off_diagonal_integrals.z                   , -off_diagonal_integrals.y                 ,0),
-		v4(-off_diagonal_integrals.z                    , diagonal_integrals.x + diagonal_integrals.z , -off_diagonal_integrals.x                 ,0),
-		v4(-off_diagonal_integrals.y                    , -off_diagonal_integrals.x                   , diagonal_integrals.x+diagonal_integrals.y ,0));
+		v4(diagonal_integrals.y + diagonal_integrals.z, -off_diagonal_integrals.z, -off_diagonal_integrals.y, 0),
+		v4(-off_diagonal_integrals.z, diagonal_integrals.x + diagonal_integrals.z, -off_diagonal_integrals.x, 0),
+		v4(-off_diagonal_integrals.y, -off_diagonal_integrals.x, diagonal_integrals.x + diagonal_integrals.y, 0));
 }
 
 // Return mass properties for the polytope
@@ -159,7 +159,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertPoly);
 
 	PR_ASSERT(PR_DBG_PHYSICS, hint_vert_id < shape.m_vert_count, "Invalid hint vertex index");
-	PR_ASSERT(PR_DBG_PHYSICS, Length3(direction) > maths::tiny, "Direction is too short");
+	PR_ASSERT(PR_DBG_PHYSICS, Length3(direction) > maths::tinyf, "Direction is too short");
 		PR_EXPAND(PR_PH_DBG_SUPVERT, StartFile("C:/DeleteMe/collision_supverttrace.pr_script");)
 		PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::PhShape("polytope", "8000FF00", shape, m4x4Identity);)
 		PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Line("sup_direction", "FFFFFF00", v4Origin, direction);)
@@ -189,7 +189,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 			{
 	 			use_first_nbr = false;
 				float dist = Dot3(shape.vertex(*n), direction);
-				if( dist > sup_dist + maths::tiny )
+				if( dist > sup_dist + maths::tinyf )
 				{
 					sup_vert_id	   = *n;
 					sup_dist	   = dist;
@@ -233,7 +233,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 	//#if PR_DBG_PHYSICS == 1
 	//v4 const* sup_vert = support_vertex;
 	//for( v4 const *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )
-	//	if( Dot3(*v - *sup_vert, direction) > maths::tiny )
+	//	if( Dot3(*v - *sup_vert, direction) > maths::tinyf )
 	//		sup_vert = v;
 	//PR_ASSERT(PR_DBG_PHYSICS, support_vertex == sup_vert);
 	//#endif//PR_DBG_PHYSICS == 1
@@ -247,7 +247,7 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 {
 	PR_ASSERT(PR_DBG_PHYSICS, hint_vert_id < shape.m_vert_count, "");
 
-	float eps = major ? maths::tiny : -maths::tiny;
+	float eps = major ? maths::tinyf : -maths::tinyf;
 	vert_id0 = hint_vert_id;
 	v4 const* V1 = &shape.vertex(vert_id0);
 	v4 const* V2 = &shape.vertex(*shape.nbr(vert_id0).begin());	// The first neighbour is always the most distant

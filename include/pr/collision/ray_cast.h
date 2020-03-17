@@ -76,7 +76,7 @@ namespace pr
 			result.m_shape = &shape.m_base;
 			for (auto i = 0; i != 3; ++i)
 			{
-				if (Abs(ray.m_direction[i]) < maths::tiny)
+				if (Abs(ray.m_direction[i]) < maths::tinyf)
 				{
 					if (Abs(ray.m_point[i]) > shape.m_radius[i])
 						return result;
@@ -406,7 +406,7 @@ namespace pr
 					// separating axis 'dir' than 'nearest' then the line does not intersect the
 					// polytope and the distance is the distance from the nearest point to the line
 					float v_dist = Dot3(dir, vert);
-					float n_dist = Dot3(dir, smplx.m_nearest) + maths::tiny;
+					float n_dist = Dot3(dir, smplx.m_nearest) + maths::tinyf;
 					if( v_dist <= n_dist )
 					{
 						if( smplx.m_intersects ) break;

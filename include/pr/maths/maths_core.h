@@ -464,11 +464,11 @@ namespace pr
 		return FEqlAbsolute<T>(a, b, tol * abs_max_element);
 	}
 
-	// FEqlRelative using 'tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
+	// FEqlRelative using 'tinyf'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
 	constexpr bool FEql(float a, float b)
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
-		return FEqlRelative(a, b, maths::tiny);
+		return FEqlRelative(a, b, maths::tinyf);
 	}
 	constexpr bool FEql(double a, double b)
 	{
@@ -476,23 +476,23 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> constexpr bool FEql(T const& a, T const& b)
 	{
-		return FEqlRelative(a, b, maths::tiny);
+		return FEqlRelative(a, b, maths::tinyf);
 	}
 	template <typename T, typename = maths::enable_if_v2<T>> constexpr bool FEql2(T const& lhs, T const& rhs)
 	{
-		return FEqlRelative2(lhs, rhs, maths::tiny);
+		return FEqlRelative2(lhs, rhs, maths::tinyf);
 	}
 	template <typename T, typename = maths::enable_if_v3<T>> constexpr bool FEql3(T const& lhs, T const& rhs)
 	{
-		return FEqlRelative3(lhs, rhs, maths::tiny);
+		return FEqlRelative3(lhs, rhs, maths::tinyf);
 	}
 	template <typename T, typename = maths::enable_if_v4<T>> constexpr bool FEql4(T const& lhs, T const& rhs)
 	{
-		return FEqlRelative4(lhs, rhs, maths::tiny);
+		return FEqlRelative4(lhs, rhs, maths::tinyf);
 	}
 	template <typename T> inline bool FEql(std::span<T> const& a, std::span<T> const& b)
 	{
-		return FEqlRelative<T>(a, b, maths::tiny);
+		return FEqlRelative<T>(a, b, maths::tinyf);
 	}
 
 	#pragma warning (default:4756)
@@ -785,6 +785,30 @@ namespace pr
 	template <typename T> constexpr T Sqr(T const& x)
 	{
 		return x * x;
+	}
+
+	// Cube a value
+	constexpr float Cube(float x)
+	{
+		return x * x * x;
+	}
+	constexpr double Cube(double x)
+	{
+		return x * x * x;
+	}
+	constexpr long Cube(long x)
+	{
+		assert("Overflow" && Abs(x) <= 1625L);
+		return x * x * x;
+	}
+	constexpr long long Cube(long long x)
+	{
+		assert("Overflow" && Abs(x) <= 2642245LL);
+		return x * x * x;
+	}
+	template <typename T> constexpr T Cube(T const& x)
+	{
+		return x * x * x;
 	}
 
 	// Square root
@@ -1477,6 +1501,13 @@ namespace pr
 		return T(ATan(x/n) / maths::tau_by_4);
 	}
 
+	// Scale a value on the range [0,1] such that f(0) = 0, f(1) = 1, and df(0.5) = 0
+	// This is used to weight values so that values near 0.5 are favoured
+	inline double UnitCubic(double x)
+	{
+		return 4.0 * Cube(x - 0.5) + 0.5;
+	}
+
 	// Low precision reciprocal square root
 	inline float Rsqrt0(float x)
 	{
@@ -1611,38 +1642,71 @@ namespace pr
 	// Function object for generating an arithmetic sequence
 	template <typename Type> struct ArithmeticSequence
 	{
-		Type m_value;
-		Type m_step;
+		// A sequence defined by:
+		//  an = a0 + (n - 1) * d
+		//  Sn = (n/2) * (a0 + an)
+		Type a0, step, a;
 
 		ArithmeticSequence(Type initial_value = 0, Type step = 0)
-			:m_value(initial_value)
-			,m_step(step)
+			:a0(initial_value)
+			,step(step)
+			,a(a0)
 		{}
+		Type operator()(int n) const
+		{
+			return static_cast<Type>(a0 + (n - 1) * step);
+		}
 		Type operator()()
 		{
-			Type v = m_value;
-			m_value = static_cast<Type>(m_value + m_step);
+			auto v = a;
+			a = static_cast<Type>(a + step);
 			return v;
 		}
+		Type sum(int n) const
+		{
+			auto an = (*this)(n);
+			return static_cast<Type>(n * (a0 + an) / 2);
+		}
 	};
+	template <typename Type> constexpr Type ArithmeticSum(Type a0, Type step, int n)
+	{
+		auto an = static_cast<Type>(a0 + (n - 1) * step);
+		return static_cast<Type>((n * (a0 + an)) / 2);
+	}
 
 	// Function object for generating an geometric sequence
 	template <typename Type> struct GeometricSequence
 	{
-		Type m_value;
-		Type m_ratio;
+		// A sequence defined by:
+		//  an = a(n-1) * r = a0 * r^(n -1)
+		//  Sn = a0.(1 - r^n) / (1 - r)
+		Type a0, ratio, a;
 
 		GeometricSequence(Type initial_value = 0, Type ratio = Type(1))
-			:m_value(initial_value)
-			,m_ratio(ratio)
+			:a0(initial_value)
+			,ratio(ratio)
+			,a(a0)
 		{}
+		Type operator()(int n) const
+		{
+			return static_cast<Type>(a0 * Pow(ratio, n));
+		}
 		Type operator()()
 		{
-			Type v = m_value;
-			m_value = static_cast<Type>(m_value * m_ratio);
+			auto v = a;
+			a = static_cast<Type>(a * ratio);
 			return v;
 		}
+		Type sum(int n) const
+		{
+			return static_cast<Type>(a0 * (1 - Pow(ratio, n)) / (1 - ratio));
+		}
 	};
+	template <typename Type> constexpr Type GeometricSum(Type a0, Type ratio, int n)
+	{
+		auto an = static_cast<Type>(a0 + (n - 1) * step);
+		return static_cast<Type>((n * (a0 + an)) / 2);
+	}
 }
 
 // Specialise ::std
@@ -1796,16 +1860,16 @@ namespace pr::maths
 		}
 		{// FEql arrays
 			auto t0 = 0.0f;
-			auto t1 = maths::tiny * 0.5f;
-			auto t2 = maths::tiny * 1.5f;
-			float arr0[] = {t0, 0, maths::tiny, -1};
-			float arr1[] = {t1, 0, maths::tiny, -1};
-			float arr2[] = {t2, 0, maths::tiny, -1};
+			auto t1 = maths::tinyf * 0.5f;
+			auto t2 = maths::tinyf * 1.5f;
+			float arr0[] = {t0, 0, maths::tinyf, -1};
+			float arr1[] = {t1, 0, maths::tinyf, -1};
+			float arr2[] = {t2, 0, maths::tinyf, -1};
 
 			PR_CHECK(FEql(arr0, arr1), true ); // Different by 1.000005%
 			PR_CHECK(FEql(arr0, arr2), false); // Different by 1.000015%
 			PR_CHECK(FEql2(arr0, arr1), true); // Different by 100% but comparing with zero
-			PR_CHECK(FEql2(arr0, arr2), false); // Different by 100%, comparing with zero, but greater than 'tiny'
+			PR_CHECK(FEql2(arr0, arr2), false); // Different by 100%, comparing with zero, but greater than 'tinyf'
 			PR_CHECK(FEql3(arr0, arr1), false); // Different by 50%
 			PR_CHECK(FEql3(arr0, arr2), false); // Different by 50%
 			PR_CHECK(FEql4(arr0, arr1), true);
@@ -1813,7 +1877,7 @@ namespace pr::maths
 		}
 		{// Is Zero
 			auto t0 = 0.0f;
-			auto t1 = maths::tiny * 0.5f;
+			auto t1 = maths::tinyf * 0.5f;
 
 			float arr5[] = {t0, t0, t0, t0};
 			float arr6[] = {t0, t0, t1, t1};

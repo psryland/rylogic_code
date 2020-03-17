@@ -157,6 +157,7 @@ namespace pr::ldr
 		x(Param                ,= HashI("Param"               ))\
 		x(Texture              ,= HashI("Texture"             ))\
 		x(Video                ,= HashI("Video"               ))\
+		x(Resolution           ,= HashI("Resolution"          ))\
 		x(Divisions            ,= HashI("Divisions"           ))\
 		x(Layers               ,= HashI("Layers"              ))\
 		x(Wedges               ,= HashI("Wedges"              ))\

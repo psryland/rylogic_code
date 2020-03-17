@@ -98,7 +98,7 @@ namespace pr
 				
 				// Limit velocities
 				float lvel_sq = pr::Length3Sq(m_velocity);
-				if      (lvel_sq < pr::maths::tiny) m_velocity = pr::v4Zero;
+				if      (lvel_sq < pr::maths::tinyf) m_velocity = pr::v4Zero;
 				else if (lvel_sq > m_max_lvel)      m_velocity *= m_max_lvel / pr::Sqrt(lvel_sq);
 				
 				// Integrate velocity

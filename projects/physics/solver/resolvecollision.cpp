@@ -79,8 +79,8 @@ void pr::ph::SetMaterialProperties(Contact& contact)
 	{
 		float momA_sq = contact.m_objectA->Momentum().Length3Sq();
 		float momB_sq = contact.m_objectB->Momentum().Length3Sq();		
-		float micro_momA_sq = contact.m_objectA->m_micro_mom_sq + maths::tiny;
-		float micro_momB_sq = contact.m_objectB->m_micro_mom_sq + maths::tiny;
+		float micro_momA_sq = contact.m_objectA->m_micro_mom_sq + maths::tinyf;
+		float micro_momB_sq = contact.m_objectB->m_micro_mom_sq + maths::tinyf;
 		float elasticityA = materialA.m_elasticity * Maximum(0.0f, momA_sq/micro_momA_sq - 0.5f*micro_momA_sq);
 		float elasticityB = materialB.m_elasticity * Maximum(0.0f, momB_sq/micro_momB_sq - 0.5f*micro_momB_sq);
 		contact.m_elasticity_n = (elasticityA + elasticityB) * 0.5f;
