@@ -172,7 +172,7 @@
       <Version>2.0.30</Version>
     </PackageReference>
     <PackageReference Include="System.Data.SQLite.Core">
-      <Version>1.0.111</Version>
+      <Version>1.0.112</Version>
     </PackageReference>
     <PackageReference Include="WindowsBase">
       <Version>4.6.1055</Version>

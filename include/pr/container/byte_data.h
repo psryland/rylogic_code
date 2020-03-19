@@ -418,24 +418,32 @@ namespace pr
 		// Grow/Shrink the allocation size of the container
 		void set_capacity(size_t capacity)
 		{
-			// Allocate a buffer with the desired capacity
-			void* ptr = capacity != 0 ? _aligned_malloc(capacity, Alignment) : nullptr;
-			if (ptr == nullptr && capacity != 0)
-				throw std::bad_alloc();
+			// Round up to the alignment size.
+			// Setting the capacity smaller than the size, truncates the data.
+			auto new_capacity = PadTo(capacity, static_cast<size_t>(Alignment));
+			auto new_size = std::min(m_size, capacity);
+			if (m_capacity == new_capacity)
+				return;
 
-			// Copy the current buffer contents to the new location
-			if (capacity != 0)
-				memcpy(ptr, m_ptr, m_size);
+			// Allocate a new buffer with the desired capacity
+			void* ptr = nullptr;
+			if (new_capacity != 0)
+			{
+				ptr = _aligned_malloc(new_capacity, Alignment);
+				if (ptr == nullptr)
+					throw std::bad_alloc();
 
-			// Set the new capacity and truncate the size if the capacity is now smaller
-			m_capacity = capacity;
-			m_size = std::min(m_size, m_capacity);
+				// Copy the current buffer contents to the new location
+				memcpy(ptr, m_ptr, new_size);
+			}
 
 			// Release the old buffer
 			if (m_ptr != nullptr)
 				_aligned_free(m_ptr);
 
-			// Move the pointer
+			// Point to the new buffer
+			m_capacity = new_capacity;
+			m_size = new_size;
 			m_ptr = ptr;
 		}
 	};

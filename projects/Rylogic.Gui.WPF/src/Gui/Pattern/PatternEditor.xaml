@@ -5,7 +5,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:common="clr-namespace:Rylogic.Common;assembly=Rylogic.Core"
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignWidth="450"
@@ -29,7 +29,9 @@
 
 		</ResourceDictionary>
 	</UserControl.Resources>
-
+	<UserControl.InputBindings>
+		<KeyBinding Key="Return" Modifiers="Ctrl" Command="{Binding CommitChanges}" />
+	</UserControl.InputBindings>
 	<Grid
 		Name="m_root"
 		Background="{x:Static SystemColors.ControlBrush}"
@@ -201,6 +203,7 @@
 				Grid.Row="0"
 				Grid.RowSpan="2"
 				Grid.Column="1"
+				ToolTip="Commit changes [Ctrl+Enter]"
 				Command="{Binding CommitChanges}"
 				IsEnabled="{Binding PatternValid}"
 				Width="48"
@@ -212,11 +215,11 @@
 					<Image.Style>
 						<Style TargetType="{x:Type Image}">
 							<Style.Triggers>
-								<DataTrigger Binding="{Binding HasUnsavedChanges}" Value="True">
-									<Setter Property="Source" Value="{StaticResource edit_save}"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding HasUnsavedChanges}" Value="False">
+								<DataTrigger Binding="{Binding IsNew}" Value="True">
 									<Setter Property="Source" Value="{StaticResource edit_add}"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding IsNew}" Value="False">
+									<Setter Property="Source" Value="{StaticResource edit_save}"/>
 								</DataTrigger>
 							</Style.Triggers>
 						</Style>
@@ -240,7 +243,7 @@
 				Grid.Column="0"
 				ToolTip="An area for testing your pattern.&#x0a;Add any text you like here"
 				Background="{x:Static SystemColors.WindowBrush}"
-				SelectionChanged="{gui2:MethodBinding UpdateCaptureGroups}"
+				SelectionChanged="{gui:MethodBinding UpdateCaptureGroups}"
 				AcceptsReturn="True"
 				IsHitTestVisible="True"
 				BorderThickness="1"

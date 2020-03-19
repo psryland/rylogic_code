@@ -1,0 +1,45 @@
+﻿<Window
+	x:Class="Rylogic.TextAligner.PatternEditorUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Edit Alignment Pattern"
+	WindowStartupLocation="CenterScreen"
+	ResizeMode="CanResizeWithGrip"
+	Height="350"
+	Width="500"
+	>
+	<Window.InputBindings>
+		<KeyBinding Key="Esc" Command="{Binding Cancel}" />
+	</Window.InputBindings>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="3*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="1*"/>
+		</Grid.RowDefinitions>
+
+		<!-- Align pattern editor -->
+		<gui:PatternEditor
+			Grid.Row="0"
+			/>
+
+		<!-- Splitter -->
+		<GridSplitter
+			Grid.Row="1"
+			Height="3"
+			HorizontalAlignment="Stretch"
+			/>
+		
+		<!-- Comment box -->
+		<TextBox
+			Grid.Row="2"
+			Text="{Binding Comment, Mode=TwoWay}"
+			AcceptsReturn="True"
+			Margin="2"
+			/>
+	</Grid>
+</Window>

@@ -1,0 +1,136 @@
+﻿<Window
+	x:Class="Rylogic.TextAligner.HelpUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	Title="Text Aligner Help"
+	ResizeMode="CanResizeWithGrip"
+	WindowStartupLocation="CenterScreen"
+	Height="600"
+	Width="600"
+	>
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="logo" UriSource="/Rylogic.TextAligner;component/res/icon_128x128.png" />
+			<BitmapImage x:Key="donate" UriSource="/Rylogic.TextAligner;component/res/paypal_donate_logo.png" />
+		</ResourceDictionary>
+	</Window.Resources>
+	<Grid
+		Margin="16">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Help Text -->
+		<RichTextBox
+			Grid.Row="0"
+			>
+			<FlowDocument>
+				<Paragraph>
+					<Bold>Alignment Groups</Bold>
+				</Paragraph>
+				<List>
+					<ListItem>
+						<Paragraph>Each group contains patterns that are all considered equivalent.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>Select a group to show its patterns in the table below.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>The order of groups is the order used when looking for potential alignment candidates.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>Change the order by selecting a group and clicking the up/down arrows.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>'Leading Space' is the number of white space characters added in front of the aligned text.</Paragraph>
+					</ListItem>
+				</List>
+				<Paragraph>
+					<Bold>Alignment Patterns:</Bold>
+				</Paragraph>
+				<List>
+					<ListItem>
+						<Paragraph>A pattern can be a simple substring, wildcard pattern, or a regular expression.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>'Offset' controls the relative position of each matched text block relative to the other patterns in the group.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>'Min. Width' causes matched text to be padded with whitespace characters up to the minimum width.</Paragraph>
+					</ListItem>
+					<ListItem>
+						<Paragraph>The order of alignment patterns is not important.</Paragraph>
+					</ListItem>
+				</List>
+			</FlowDocument>
+		</RichTextBox>
+		
+		<!-- About Info -->
+		<Grid
+			Grid.Row="1"
+			MaxHeight="64"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Rylogic Icon -->
+			<Image
+				Grid.Column="0"
+				Source="{StaticResource logo}"
+				VerticalAlignment="Center"
+				/>
+
+			<!-- About text -->
+			<TextBlock
+				Grid.Column="1"
+				Text="{Binding AboutText, FallbackValue='About Text'}"
+				VerticalAlignment="Center"
+				/>
+
+			<!-- Donate Button -->
+			<Button
+				Grid.Column="2"
+				Command="{Binding DoDonate}"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				BorderThickness="0"
+				MaxHeight="36"
+				>
+				<Image
+					Source="{StaticResource donate}"
+					RenderOptions.BitmapScalingMode="HighQuality"
+					/>
+			</Button>
+		</Grid>
+
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="2"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- OK Button -->
+			<Button
+				Grid.Column="2"
+				Content="OK"
+				Command="{Binding Accept}"
+				VerticalAlignment="Bottom"
+				MinWidth="80"
+				Padding="8,2,8,2"
+				Margin="12,0,0,0"
+				/>
+		</Grid>
+	</Grid>
+</Window>

@@ -1,26 +1,39 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Windows.Input;
 
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>Command base class for 'ICommand'</summary>
-	public abstract class Command : ICommand
+	public abstract class Command : ICommand, INotifyPropertyChanged
 	{
 		/// <summary>No op command</summary>
 		public static readonly Command NoOp = new Command<object>(new object(), null, null);
 
 		/// <summary>Can execute changed</summary>
 		public event EventHandler? CanExecuteChanged;
-		protected void NotifyCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+		public void NotifyCanExecuteChanged()
+		{
+			CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+			NotifyPropertyChanged(nameof(Available));
+		}
 
 		/// <summary>True if the command is available</summary>
 		public virtual bool CanExecute(object? _) => true;
-		public void CanExecute() => CanExecute(null);
+		public bool CanExecute() => CanExecute(null);
+		public bool Available => CanExecute();
 
 		/// <summary>Execute the command</summary>
 		public virtual void Execute(object? _) { }
 		public void Execute() => Execute(null);
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>Construct a command from a delegate</summary>
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action execute)
@@ -34,6 +47,10 @@ namespace Rylogic.Gui.WPF
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner, object?> execute)
 		{
 			return new Command<TOwner>(owner, (o, p) => execute(o,p), null);
+		}
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action execute, Func<bool> can_execute)
+		{
+			return new Command<TOwner>(owner, (o, p) => execute(), (o, p) => can_execute());
 		}
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object?> execute, Func<object?, bool> can_execute)
 		{

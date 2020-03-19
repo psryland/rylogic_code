@@ -1,0 +1,506 @@
+﻿<UserControl
+	x:Class="Rylogic.TextAligner.AlignOptionsUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d" 
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	Focusable="True"
+	>
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="help" UriSource="/Rylogic.TextAligner;component/res/help_blue.png" />
+			<BitmapImage x:Key="add" UriSource="/Rylogic.TextAligner;component/res/edit_add.png" />
+			<BitmapImage x:Key="remove" UriSource="/Rylogic.TextAligner;component/res/red_x.png" />
+			<BitmapImage x:Key="move_up" UriSource="/Rylogic.TextAligner;component/res/green_up.png" />
+			<BitmapImage x:Key="move_down" UriSource="/Rylogic.TextAligner;component/res/green_down.png" />
+			<BitmapImage x:Key="edit" UriSource="/Rylogic.TextAligner;component/res/pencil.png" />
+			<BitmapImage x:Key="enabled" UriSource="/Rylogic.TextAligner;component/res/green_tick.png" />
+			<BitmapImage x:Key="disabled" UriSource="/Rylogic.TextAligner;component/res/gray_cross.png" />
+
+			<!-- Data Grid Style -->
+			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
+			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
+			<Style x:Key="StyleDataGridCell" TargetType="{x:Type DataGridCell}">
+				<Setter Property="VerticalAlignment" Value="Center"/>
+				<Setter Property="MinHeight" Value="22"/>
+				<Style.Triggers>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+			<Style x:Key="TextBlockCentred" TargetType="{x:Type TextBlock}">
+				<Setter Property="HorizontalAlignment" Value="Center"/>
+			</Style>
+		</ResourceDictionary>
+	</UserControl.Resources>
+	<Grid
+		x:Name="m_root"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="3*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="2*"/>
+		</Grid.RowDefinitions>
+
+		<!-- General Settings -->
+		<Grid
+			Grid.Row="0"
+			Margin="8"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			
+			<!-- Alignment style -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="0"
+				Orientation="Horizontal"
+				>
+				<TextBlock
+					Text="Alignment Style: "
+					VerticalAlignment="Center"
+					/>
+				<ComboBox
+					VerticalAlignment="Center"
+					ToolTip="Select whether alignment inserts spaces, tabs, or a mixture of both"
+					ItemsSource="{Binding AlignStyle, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding AlignStyle}"
+					MinWidth="80"
+					/>
+			</StackPanel>
+
+			<!-- Buttons -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="2"
+				Orientation="Horizontal"
+				VerticalAlignment="Top"
+				Height="26"
+				>
+
+				<!-- Help Button -->
+				<Button
+					Grid.Column="2"
+					Command="{Binding ShowHelp}"
+					MinWidth="60"
+					Margin="3"
+					>
+					<Button.Content>
+						<StackPanel
+							Orientation="Horizontal"
+							>
+							<Image
+								Source="{StaticResource help}"
+								RenderOptions.BitmapScalingMode="HighQuality"
+								VerticalAlignment="Center"
+								/>
+							<TextBlock
+								Text="Help"
+								VerticalAlignment="Center"
+								Margin="3,0,3,0"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
+
+				<!-- Reset Button -->
+				<Button
+					Grid.Column="3"
+					Command="{Binding ResetToDefaults}"
+					MinWidth="60"
+					Margin="3"
+					>
+					<Button.Content>
+						<StackPanel>
+							<TextBlock
+								Text="Reset to Defaults"
+								VerticalAlignment="Center"
+								Margin="3,0,3,0"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
+			</StackPanel>
+		</Grid>
+		
+		<!-- Top pane -->
+		<Grid
+			Grid.Row="1"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+
+			<!-- Title block -->
+			<Grid
+				Grid.Row="0"
+				Height="22"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Title Text -->
+				<TextBlock
+					Grid.Column="0"
+					Text="Alignment Groups:"
+					VerticalAlignment="Center"
+					Margin="3"
+					/>
+			</Grid>
+
+			<!-- Alignment Groups -->
+			<Grid
+				Grid.Row="1"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Alignment Groups Grid -->
+				<DataGrid
+					Grid.Column="0"
+					ItemsSource="{Binding GroupsView}"
+					SelectedItem="{Binding GroupsView/, Mode=TwoWay}"
+					CellStyle="{StaticResource StyleDataGridCell}"
+					Background="{x:Static SystemColors.WindowBrush}"
+					GridLinesVisibility="None"
+					AutoGenerateColumns="False"
+					HeadersVisibility="Column"
+					CanUserSortColumns="False"
+					CanUserDeleteRows="False"
+					CanUserAddRows="False"
+					>
+					<DataGrid.Columns>
+						<DataGridTextColumn
+							Header="Name"
+							Binding="{Binding Name}"
+							MinWidth="50"
+							Width="3*"
+							/>
+						<DataGridTextColumn
+							Binding="{Binding LeadingSpace}"
+							ElementStyle="{StaticResource TextBlockCentred}"
+							MinWidth="90"
+							Width="0.5*"
+							>
+							<DataGridTextColumn.Header>
+								<TextBlock
+									Text="Leading Space"
+									ToolTip="The minimum number of whitespace characters before all text after aligning"
+									/>
+							</DataGridTextColumn.Header>
+						</DataGridTextColumn>
+					</DataGrid.Columns>
+				</DataGrid>
+
+				<!-- Add, Remove, Order buttons -->
+				<StackPanel
+					Grid.Column="1"
+					Orientation="Vertical"
+					MaxWidth="28"
+					>
+
+					<!-- Add Button -->
+					<Button
+						Command="{Binding AddGroup}"
+						Margin="3"
+						>
+						<Button.Content>
+							<Image
+								Source="{StaticResource add}"
+								RenderOptions.BitmapScalingMode="HighQuality"
+								/>
+						</Button.Content>
+					</Button>
+
+					<!-- Remove Button -->
+					<Button
+						Command="{Binding DelGroup}"
+						IsEnabled="{Binding DelGroup.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<Image
+								Source="{StaticResource remove}"
+								RenderOptions.BitmapScalingMode="HighQuality"
+								/>
+						</Button.Content>
+					</Button>
+
+					<!-- Move Up Button -->
+					<Button
+						Command="{Binding MoveGroupUp}"
+						IsEnabled="{Binding MoveGroupUp.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource move_up}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<!-- Move Down Button -->
+					<Button
+						Command="{Binding MoveGroupDown}"
+						IsEnabled="{Binding MoveGroupDown.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource move_down}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+				</StackPanel>
+			</Grid>
+		</Grid>
+
+		<!-- Splitter -->
+		<GridSplitter
+			Grid.Row="2"
+			Height="5"
+			HorizontalAlignment="Stretch"
+			/>
+
+		<!-- Bottom pane -->
+		<Grid
+			Grid.Row="3"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+			
+			<!-- Title block -->
+			<Grid
+				Grid.Row="0"
+				Height="22"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Title Text -->
+				<TextBlock
+					Grid.Column="0"
+					Text="Alignment Patterns:"
+					VerticalAlignment="Center"
+					Margin="3"
+					/>
+			</Grid>
+			
+			<!-- Alignment Patterns -->
+			<Grid
+				Grid.Row="1"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Alignment Patterns Grid -->
+				<DataGrid
+					Grid.Column="0"
+					ItemsSource="{Binding PatternsView}"
+					SelectedItem="{Binding PatternsView/, Mode=TwoWay}"
+					CellStyle="{StaticResource StyleDataGridCell}"
+					Background="{x:Static SystemColors.WindowBrush}"
+					AutoGenerateColumns="False"
+					GridLinesVisibility="None"
+					HeadersVisibility="Column"
+					CanUserSortColumns="False"
+					CanUserDeleteRows="False"
+					CanUserAddRows="False"
+					>
+					<DataGrid.Columns>
+						<DataGridCheckBoxColumn
+							Binding="{Binding Active, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+							MinWidth="50"
+							Width="0.5*"
+							>
+							<DataGridCheckBoxColumn.Header>
+								<TextBlock
+									Text="Active"
+									ToolTip="Enable or disable the pattern within the group"
+									/>
+							</DataGridCheckBoxColumn.Header>
+						</DataGridCheckBoxColumn>
+						<DataGridTemplateColumn
+							Header="Pattern"
+							MinWidth="50"
+							Width="10*"
+							>
+							<DataGridTemplateColumn.CellTemplate>
+								<DataTemplate>
+									<TextBlock
+										Text="{Binding Description}"
+										ToolTip="{Binding Comment}"
+										/>
+								</DataTemplate>
+							</DataGridTemplateColumn.CellTemplate>
+						</DataGridTemplateColumn>
+						<DataGridTextColumn
+							Binding="{Binding Offset}"
+							ElementStyle="{StaticResource TextBlockCentred}"
+							MinWidth="42"
+							Width="1*"
+							>
+							<DataGridTextColumn.Header>
+								<TextBlock
+									Text="Offset"
+									ToolTip="The horizontal offset to apply when aligning text using this pattern"
+									/>
+							</DataGridTextColumn.Header>
+						</DataGridTextColumn>
+						<DataGridTextColumn
+							Binding="{Binding MinWidth}"
+							ElementStyle="{StaticResource TextBlockCentred}"
+							MinWidth="70"
+							Width="1*"
+							>
+							<DataGridTextColumn.Header>
+								<TextBlock
+									Text="Min. Width"
+									ToolTip="Matched text will be padded with whitespace characters up to the minimum width"
+									/>
+							</DataGridTextColumn.Header>
+						</DataGridTextColumn>
+						<DataGridTemplateColumn
+							MinWidth="40"
+							Width="0.5*"
+							>
+							<DataGridTemplateColumn.Header>
+								<TextBlock
+									Text="Edit"
+									ToolTip="Modify the pattern in the pattern editor"
+									/>
+							</DataGridTemplateColumn.Header>
+							<DataGridTemplateColumn.CellTemplate>
+								<DataTemplate>
+									<Button
+										Command="{Binding Path=DataContext.EditPattern, ElementName=m_root}"
+										CommandParameter="{Binding}"
+										Background="Transparent"
+										BorderThickness="0"
+										MaxWidth="20"
+										>
+										<Button.Content>
+											<Image
+												Source="{StaticResource edit}"
+												RenderOptions.BitmapScalingMode="HighQuality"
+												/>
+										</Button.Content>
+									</Button>
+								</DataTemplate>
+							</DataGridTemplateColumn.CellTemplate>
+						</DataGridTemplateColumn>
+					</DataGrid.Columns>
+				</DataGrid>
+
+				<!-- Add, Remove, Order buttons -->
+				<StackPanel
+					Grid.Column="1"
+					Orientation="Vertical"
+					MaxWidth="28"
+					>
+
+					<!-- Add Button -->
+					<Button
+						Command="{Binding AddPattern}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource add}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<!-- Remove Button -->
+					<Button
+						Command="{Binding DelPattern}"
+						IsEnabled="{Binding DelPattern.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource remove}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<!-- Move Up Button -->
+					<Button
+						Command="{Binding MovePatternUp}"
+						IsEnabled="{Binding MovePatternUp.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource move_up}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+					<!-- Move Down Button -->
+					<Button
+						Command="{Binding MovePatternDown}"
+						IsEnabled="{Binding MovePatternDown.Available}"
+						Margin="3"
+						>
+						<Button.Content>
+							<StackPanel>
+								<Image
+									Source="{StaticResource move_down}"
+									RenderOptions.BitmapScalingMode="HighQuality"
+									/>
+							</StackPanel>
+						</Button.Content>
+					</Button>
+
+				</StackPanel>
+			</Grid>
+
+		</Grid>
+
+	</Grid>
+</UserControl>

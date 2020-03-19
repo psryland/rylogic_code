@@ -165,7 +165,7 @@ namespace Rylogic.Common
 			return
 				value is Value v ? v :
 				value != null ? Util.ConvertTo<Value>(value) :
-				default;
+				default!;
 		}
 
 		/// <summary>Write a settings value</summary>

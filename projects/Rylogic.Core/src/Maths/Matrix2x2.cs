@@ -345,7 +345,10 @@ namespace Rylogic.UnitTests
 			//	Assert.True(m3x4.FEql(inv_m0, inv_m1, 0.001f));
 			//}
 			{
-				var m = m2x2.Random(rng, -5.0f, +5.0f);
+				//m2x2.Random(rng, -5.0f, +5.0f);
+				var m = new m2x2(
+					new v2(-3.0f, +4.2f),
+					new v2( 1.2f, -0.3f));
 				var inv_m = Math_.Invert(m);
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;

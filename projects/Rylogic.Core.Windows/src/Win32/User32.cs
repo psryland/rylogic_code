@@ -50,6 +50,7 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)]                                      public static extern bool   GetIconInfo(IntPtr hIcon, ref IconInfo pIconInfo);
 		[DllImport("user32.dll")]                                                                             public static extern int    GetKeyboardState(byte[] pbKeyState);
 		[DllImport("user32.dll")]                                                                             public static extern short  GetKeyState(EKeyCodes vKey);
+		[DllImport("user32.dll", ExactSpelling = true)]                                                       public static extern IntPtr GetNextDlgTabItem(IntPtr hDlg, IntPtr hCtl, [MarshalAs(UnmanagedType.Bool)] bool bPrevious);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetParent(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
 		[DllImport("user32.dll")]                                                                             public static extern int    GetScrollPos(HWND hWnd, int nBar);

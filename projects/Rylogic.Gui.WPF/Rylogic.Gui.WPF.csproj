@@ -54,7 +54,6 @@
 		<Reference Include="PresentationFramework" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-		<PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView" Version="5.1.1" />
 		<PackageReference Include="WindowsBase" Version="4.6.1055" />
 	</ItemGroup>
 

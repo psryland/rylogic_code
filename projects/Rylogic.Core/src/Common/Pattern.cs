@@ -101,13 +101,13 @@ namespace Rylogic.Common
 		}
 		public Pattern(XElement node)
 		{
-			m_expr = node.Element(XmlTag.Expr).As<string>();
-			PatnType = node.Element(XmlTag.PatnType).As<EPattern>();
-			Active = node.Element(XmlTag.Active).As<bool>();
-			IgnoreCase = node.Element(XmlTag.IgnoreCase).As<bool>();
-			Invert = node.Element(XmlTag.Invert).As<bool>();
-			WholeLine = node.Element(XmlTag.WholeLine).As<bool>();
-			SingleLine = node.Element(XmlTag.SingleLine).As<bool>();
+			m_expr     = node.Element(XmlTag.Expr).As<string>(string.Empty);
+			PatnType   = node.Element(XmlTag.PatnType).As<EPattern>(EPattern.Substring);
+			Active     = node.Element(XmlTag.Active).As<bool>(true);
+			IgnoreCase = node.Element(XmlTag.IgnoreCase).As<bool>(false);
+			Invert     = node.Element(XmlTag.Invert).As<bool>(false);
+			WholeLine  = node.Element(XmlTag.WholeLine).As<bool>(false);
+			SingleLine = node.Element(XmlTag.SingleLine).As<bool>(false);
 		}
 
 		/// <summary>Export this pattern as XML</summary>
@@ -115,12 +115,12 @@ namespace Rylogic.Common
 		{
 			node.Add
 			(
-				Expr.ToXml(XmlTag.Expr, false),
-				Active.ToXml(XmlTag.Active, false),
-				PatnType.ToXml(XmlTag.PatnType, false),
+				Expr      .ToXml(XmlTag.Expr, false),
+				Active    .ToXml(XmlTag.Active, false),
+				PatnType  .ToXml(XmlTag.PatnType, false),
 				IgnoreCase.ToXml(XmlTag.IgnoreCase, false),
-				Invert.ToXml(XmlTag.Invert, false),
-				WholeLine.ToXml(XmlTag.WholeLine, false),
+				Invert    .ToXml(XmlTag.Invert, false),
+				WholeLine .ToXml(XmlTag.WholeLine, false),
 				SingleLine.ToXml(XmlTag.SingleLine, false)
 			);
 			return node;
@@ -406,11 +406,11 @@ namespace Rylogic.Common
 		public virtual object Clone() => new Pattern(this);
 
 		/// <summary>Expression</summary>
-		public string Description => $"{PatnType}: {Expr}";
+		public string Description => $"{PatnType}: {(Invert?"NOT ":"")}{Expr}";
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
+		public void NotifyPropertyChanged(string? prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}

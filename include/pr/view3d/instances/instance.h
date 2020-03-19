@@ -99,7 +99,7 @@ namespace pr::rdr
 		// Find the 'index'th component of type 'comp' in this instance. Returns non-null if the component was found
 		template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 		{
-			auto byte_ofs = pr::PadTo(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
+			auto byte_ofs = pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
 			for (auto& c : *this)
 			{
 				if (c == comp && index-- == 0) return get<Comp>(byte_ofs);
@@ -246,7 +246,7 @@ namespace pr::rdr
 		{\
 			static constexpr int CompCount = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
 			pr::rdr::BaseInstance m_base;\
-			pr::rdr::EInstComp m_cpt[CompCount + pr::Pad(sizeof(pr::rdr::BaseInstance) + CompCount, 16)];\
+			pr::rdr::EInstComp m_cpt[CompCount + pr::Pad<size_t>(sizeof(pr::rdr::BaseInstance) + CompCount, 16U)];\
 			fields(PR_RDR_INST_MEMBERS)\
 			\
 			name()\

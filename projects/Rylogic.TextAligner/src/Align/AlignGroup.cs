@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Extn;
@@ -6,13 +6,13 @@ using Rylogic.Extn;
 namespace Rylogic.TextAligner
 {
 	/// <summary>Represents a set of patterns that all align together</summary>
-	internal class AlignGroup
+	public class AlignGroup
 	{
 		public AlignGroup()
 		{
 			Name = string.Empty;
 			LeadingSpace = 1;
-			Patterns = new BindingList<AlignPattern> { AllowNew = true, AllowRemove = true, AllowEdit = true, RaiseListChangedEvents = true };
+			Patterns = new ObservableCollection<AlignPattern>();
 		}
 		public AlignGroup(string name, int leading_space, params AlignPattern[] patterns)
 			:this()
@@ -43,12 +43,9 @@ namespace Rylogic.TextAligner
 		public int LeadingSpace { get; set; }
 
 		/// <summary>The patterns belonging to the group</summary>
-		public BindingList<AlignPattern> Patterns { get; set; }
+		public ObservableCollection<AlignPattern> Patterns { get; set; }
 
 		/// <summary></summary>
-		public override string ToString()
-		{
-			return Name;
-		}
+		public override string ToString() => Name;
 	}
 }

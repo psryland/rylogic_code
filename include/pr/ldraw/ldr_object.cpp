@@ -4304,6 +4304,7 @@ namespace pr::ldr
 			auto props = geometry::HexPatch(rings,
 				[&](v4_cref<> pos, Colour32 c, v4_cref<> n, v2_cref<> t)
 				{
+					(void)range;
 					// Increase point density around the focus point
 					//auto len = Length3Sq(pos);
 					auto p = pos;//range.Centre() + range.Radius() * Cube(pos.w0());

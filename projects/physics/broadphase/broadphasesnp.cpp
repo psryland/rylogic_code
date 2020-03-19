@@ -19,17 +19,6 @@ BPSweepAndPrune::BPSweepAndPrune()
 ,m_enumerating(false)
 {}
 
-// Predicate used to sort the entity array
-struct Pred_SnP
-{
-	int m_axis;
-	Pred_SnP(int axis) : m_axis(axis) {}
-	bool operator ()(BPEntity const* lhs, BPEntity const* rhs) const
-	{
-		return lhs->m_bbox->Lower(m_axis) < rhs->m_bbox->Lower(m_axis);
-	}
-};
-
 // Sort the entity array on 'm_axis' if needed
 inline void BPSweepAndPrune::Sort()
 {
@@ -37,7 +26,8 @@ inline void BPSweepAndPrune::Sort()
 	PR_ASSERT(PR_DBG_PHYSICS, !m_enumerating || m_sorted, "We should not be sorting the entities while enumerating pairs");
 
 	// No point in sorting zero or one elements
-	m_sorted = m_sorted || (std::sort(m_entity.begin(), m_entity.end(), Pred_SnP(m_axis)), true);
+	auto pred = [=](BPEntity const* lhs, BPEntity const* rhs) { return lhs->m_bbox->Lower(m_axis) < rhs->m_bbox->Lower(m_axis); };
+	m_sorted = m_sorted || (std::sort(std::begin(m_entity), std::end(m_entity), pred), true);
 
 	#if PR_DBG_PHYSICS
 	for (BPEntityCont::iterator i = m_entity.begin(), i_end = m_entity.end() - 1; i != i_end; ++i)
@@ -66,8 +56,8 @@ void BPSweepAndPrune::Remove(BPEntity& entity)
 	if (m_entity.size() > 1) Sort();
 
 	// There may be several targets with the same lower bound.
-	Pred_SnP pred(m_axis);
-	BPEntityCont::iterator target = std::lower_bound(m_entity.begin(), m_entity.end(), &entity, pred);
+	auto pred = [=](BPEntity const* lhs, BPEntity const* rhs) { return lhs->m_bbox->Lower(m_axis) < rhs->m_bbox->Lower(m_axis); };
+	auto target = std::lower_bound(m_entity.begin(), m_entity.end(), &entity, pred);
 	for (; target != m_entity.end() && *target != &entity && !pred(&entity, *target); ++target){}
 	PR_ASSERT(PR_DBG_PHYSICS, target != m_entity.end() && *target == &entity, "Object not in broadphase");
 

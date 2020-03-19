@@ -9,7 +9,6 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using Microsoft.Toolkit.Wpf.UI.Controls;
 using Rylogic.Common;
 using Rylogic.Utility;
 
@@ -52,10 +51,18 @@ namespace Rylogic.Gui.WPF
 	/// <summary>A control for editing patterns</summary>
 	public partial class PatternEditor :UserControl, INotifyPropertyChanged
 	{
+		// Notes:
+		//  - 'Pattern' is updated as changes are made. The 'Commit' event is only needed to
+		//    allow callers to close the containing window or update something.
+		//  - 'Pattern' is usually a new instance; either new, or cloned from the given pattern.
+		//  - Using 'clone = false' in EditPattern allows the given instance to be modified.
+		//  - Once the editor is closed, the caller decides whether to use 'Pattern' or 'Original'.
+
 		private const string DefaultTestText =
 			"Enter text here to test your pattern.\n" +
 			"The pattern is applied to each line separately\n" +
-			"so that you can test multiple cases simultaneously.\n";
+			"so that you can test multiple cases simultaneously.\n" +
+			"Select a line to see the capture groups for that line.\n";
 
 		public PatternEditor()
 		{
@@ -69,7 +76,6 @@ namespace Rylogic.Gui.WPF
 			
 			DataContext = this;
 			TestText = DefaultTestText;
-			ApplyPattern();
 
 			m_rtb.LostFocus += delegate
 			{
@@ -80,6 +86,7 @@ namespace Rylogic.Gui.WPF
 			Loaded += delegate
 			{
 				_ = MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+				ApplyPattern();
 			};
 		}
 
@@ -97,11 +104,11 @@ namespace Rylogic.Gui.WPF
 			Pattern = pattern;
 		}
 
-		/// <summary>Select a pattern into the UI for editing</summary>
-		public void EditPattern(IPattern pattern)
+		/// <summary>Select a pattern into the UI for editing. If 'clone' is false, the given pattern is the one that's modified</summary>
+		public void EditPattern(IPattern pattern, bool clone = true)
 		{
 			Original = pattern;
-			Pattern = (IPattern)Original.Clone();
+			Pattern = clone ? (IPattern)Original.Clone() : pattern;
 		}
 
 		/// <summary>The pattern being edited</summary>
@@ -170,6 +177,7 @@ namespace Rylogic.Gui.WPF
 				if (m_dirty == value) return;
 				m_dirty = value;
 				NotifyPropertyChanged(nameof(Dirty));
+				NotifyPropertyChanged(nameof(HasUnsavedChanges));
 			}
 		}
 		private bool m_dirty;
@@ -179,9 +187,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>True if the pattern contains unsaved changes</summary>
 		public bool HasUnsavedChanges =>
-			Pattern != null &&
-			((IsNew && Pattern.Expr.Length != 0 && Dirty) ||
-			(!IsNew && !Equals(Original, Pattern)));
+			Pattern != null && (
+			(IsNew && Pattern.Expr.Length != 0 && Dirty) ||
+			(!IsNew && (!Equals(Original, Pattern) || ReferenceEquals(Original, Pattern)))
+			);
 
 		/// <summary>True if the contained pattern is valid and therefore can be saved</summary>
 		public bool PatternValid => Pattern?.IsValid ?? false;
@@ -212,7 +221,7 @@ namespace Rylogic.Gui.WPF
 			doc.Blocks.Clear();
 
 			// Apply the pattern to the test text
-			if (Pattern != null && Pattern.IsValid && Pattern.CaptureGroupNames.Length >= 1)
+			if (Pattern != null && Pattern.IsValid && Pattern.CaptureGroupNames.Length >= 1 && !m_rtb.IsKeyboardFocused)
 			{
 				foreach (var line in lines)
 				{
@@ -290,6 +299,7 @@ namespace Rylogic.Gui.WPF
 		public Command CommitChanges { get; }
 		private void CommitChangesInternal()
 		{
+			if (!PatternValid) return;
 			NotifyCommit();
 		}
 
@@ -297,25 +307,10 @@ namespace Rylogic.Gui.WPF
 		public Command ShowHelp { get; }
 		private void ShowHelpInternal()
 		{
-			if (m_help_ui == null)
-			{
-				var browser = new WebView();
-				var panel = new DockPanel { LastChildFill = true };
-				panel.Children.Add(browser);
-
-				m_help_ui = new Window
-				{
-					Title = "Regular Expressions Quick Reference",
-					Icon = Window.GetWindow(this)?.Icon,
-					Content = panel,
-				};
-				m_help_ui.Loaded += (s, a) => { browser.NavigateToString(WPF.Resources.regex_quick_ref); };
-				m_help_ui.Closed += (s, a) => { m_help_ui = null; };
-				m_help_ui.Show();
-			}
-			m_help_ui.Focus();
+			var help_filepath = Path.Combine(Path.GetTempPath(), "RegularExpressionQuickReference.html");
+			File.WriteAllText(help_filepath, WPF.Resources.regex_quick_ref);
+			System.Diagnostics.Process.Start(help_filepath);
 		}
-		private Window? m_help_ui;
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

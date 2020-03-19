@@ -71,6 +71,10 @@ namespace pr
 				--m_ptr;
 				return i;
 			}
+			reference operator[](difference_type i) const
+			{
+				return m_ptr[i];
+			}
 
 			friend bool operator == (citer<Type> lhs, citer<Type> rhs)
 			{
@@ -164,6 +168,10 @@ namespace pr
 				miter i(m_ptr);
 				--m_ptr;
 				return i;
+			}
+			reference operator[](difference_type i) const
+			{
+				return m_ptr[i];
 			}
 			operator citer<Type>() const
 			{

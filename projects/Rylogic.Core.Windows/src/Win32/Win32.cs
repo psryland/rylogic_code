@@ -1182,6 +1182,20 @@ namespace Rylogic.Interop.Win32
 		public const int CWP_SKIPTRANSPARENT = 0x0004; // Skips transparent child windows
 		#endregion
 
+		#region Dialog get codes
+		public const int DLGC_WANTARROWS      = 0x0001; // Direction keys.
+		public const int DLGC_WANTTAB         = 0x0002; // TAB key.
+		public const int DLGC_WANTALLKEYS     = 0x0004; // All keyboard input.
+		public const int DLGC_WANTMESSAGE     = 0x0004; // All keyboard input (the application passes this message in the MSG structure to the control).
+		public const int DLGC_HASSETSEL       = 0x0008; // EM_SETSEL messages.
+		public const int DLGC_DEFPUSHBUTTON   = 0x0010; // Default push button.
+		public const int DLGC_UNDEFPUSHBUTTON = 0x0020; // Non-default push button.
+		public const int DLGC_RADIOBUTTON     = 0x0040; // Radio button.
+		public const int DLGC_WANTCHARS       = 0x0080; // WM_CHAR messages.
+		public const int DLGC_STATIC          = 0x0100; //Static control.
+		public const int DLGC_BUTTON          = 0x2000; // Button.
+		#endregion
+
 		#endregion
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>

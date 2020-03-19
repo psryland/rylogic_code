@@ -1,5 +1,10 @@
 Immediate ToDo:
 	
+TextAligner
+	- Implement add/remove/up/down buttons
+	- Fix missing 'Align' option in edit menu
+	- Add support for tabs/mixed
+	
 LDraw
 	- Switch geometry model generators to use output functions, not iterators
 	- Bounding box frustum to get x,y,z range

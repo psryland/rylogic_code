@@ -31,15 +31,14 @@ namespace Rylogic.TextAligner
 		}
 
 		/// <summary>Get the view host for the currently selected text editor</summary>
-		protected IWpfTextViewHost CurrentViewHost
+		protected IWpfTextViewHost? CurrentViewHost
 		{
 			get
 			{
 				// Code to get access to the editor's currently selected text cribbed from
 				// http://msdn.microsoft.com/en-us/library/dd884850.aspx
-				var txtMgr = Package.GetService<VsTextManagerClass>() as IVsTextManager;
-
-				txtMgr.GetActiveView(fMustHaveFocus: 1, pBuffer: null, ppView: out var text_view);
+				var text_manager = (IVsTextManager)Package.GetService<VsTextManagerClass>();
+				text_manager.GetActiveView(fMustHaveFocus: 1, pBuffer: null, ppView: out var text_view);
 				if (text_view is IVsUserData user_data)
 				{
 					var guidViewHost = DefGuidList.guidIWpfTextViewHost;

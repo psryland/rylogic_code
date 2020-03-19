@@ -41,7 +41,7 @@
 		<ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
 		<ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj" />
 		<ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
-		<PackageReference Include="AvalonEdit" Version="6.0.0" />
+		<PackageReference Include="AvalonEdit" Version="6.0.1" />
 	</ItemGroup>
 
 	<!-- Dependencies -->

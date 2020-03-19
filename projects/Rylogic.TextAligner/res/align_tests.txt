@@ -1,0 +1,30 @@
+//
+// A file for testing Text Alignments
+//
+
+enum Values
+{
+	One = 0x0001,
+	Two = 0x0002,
+	Three = 0x004,
+	Four = 0x0008,
+	Five = 0x0010,
+	Six = 0x0200,
+	Seven = 0x0400,
+}
+
+static void Main(string[] args)
+{
+	var variable1 = "My Variable";
+	var parameter2 = 1234;
+	var value = 6.28f;
+}
+
+apple = red, 32;
+banana = yellow, 512;
+carrot = orange, 256;
+cucumber = green, 16;
+pea = green, 8;
+
+wor      t kds ado w da test
+ fe efsef En ffef

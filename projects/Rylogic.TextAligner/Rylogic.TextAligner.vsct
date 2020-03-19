@@ -1,22 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-	<!--  This is the file that defines the actual layout and type of the commands.
-		It is divided in different sections (e.g. command definition, command
-		placement, ...), with each defining a specific set of properties.
-		See the comment before each section for more details about how to
-		use it. -->
+	<!--
+	This is the file that defines the actual layout and type of the commands.
+	It is divided in different sections (e.g. command definition, command
+	placement, ...), with each defining a specific set of properties.
+	See the comment before each section for more details about how to
+	use it.
+	-->
 
-	<!--  The VSCT compiler (the tool that translates this file into the binary
-		format that VisualStudio will consume) has the ability to run a preprocessor
-		on the vsct file; this preprocessor is (usually) the C++ preprocessor, so
-		it is possible to define includes and macros with the same syntax used
-		in C++ files. Using this ability of the compiler here, we include some files
-		defining some of the constants that we will use inside the file. -->
+	<!--
+	The VSCT compiler (the tool that translates this file into the binary
+	format that VisualStudio will consume) has the ability to run a preprocessor
+	on the vsct file; this preprocessor is (usually) the C++ preprocessor, so
+	it is possible to define includes and macros with the same syntax used
+	in C++ files. Using this ability of the compiler here, we include some files
+	defining some of the constants that we will use inside the file.
+	-->
 
-	<!-- Look in:
-		D:\Program Files (x86)\Microsoft Visual Studio 11.0\VSSDK\VisualStudioIntegration\Common\Inc\SharedCmdPlace.vsct
-		for definitions of existing VS menus and sub menus -->
+	<!--
+	Look in:
+	D:\Program Files (x86)\Microsoft Visual Studio 11.0\VSSDK\VisualStudioIntegration\Common\Inc\SharedCmdPlace.vsct
+	for definitions of existing VS menus and sub menus
+	-->
 	
 	<!--This is the file that defines the IDs for all the commands exposed by VisualStudio. -->
 	<Extern href="stdidcmd.h"/>
@@ -24,10 +30,13 @@
 	<!--This header contains the command ids for the menus provided by the shell. -->
 	<Extern href="vsshlids.h"/>
 
-	<!--The Commands section is where we the commands, menus and menu groups are defined.
-		This section uses a Guid to identify the package that provides the command defined inside it. -->
+	<!--
+	The Commands section is where we the commands, menus and menu groups are defined.
+	This section uses a Guid to identify the package that provides the command defined inside it. -->
 	<Commands package="RylogicTextAlignerPkg">
-		<!-- Inside this section we have different sub-sections: one for the menus, another
+		
+		<!--
+		Inside this section we have different sub-sections: one for the menus, another
 		for the menu groups, one for the buttons (the actual commands), one for the combos
 		and the last one for the bitmaps used. Each element is identified by a command id that
 		is a unique pair of guid and numeric identifier; the guid part of the identifier is usually
@@ -35,10 +44,12 @@
 		group; your package should define its own command set in order to avoid collisions
 		with command ids defined by other packages. -->
 
-		<!-- In this section you can define new menu groups. A menu group is a container for
+		<!--
+		In this section you can define new menu groups. A menu group is a container for
 		other menus or buttons (commands); from a visual point of view you can see the
 		group as the part of a menu contained between two lines. The parent of a group
 		must be a menu.-->
+		
 		<!--<Groups>
 			<Group guid="guidRylogicTextAlignerCmdSet" id="RylogicMenuGroup" priority="0xF000">
 				<Parent guid ="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
@@ -57,21 +68,11 @@
 					<ButtonText>&amp;Align</ButtonText>
 				</Strings>
 			</Button>
-			<Button guid="guidRylogicTextAlignerCmdSet" id="cmdidOutlineCodeOnly" priority="0x0100" type="Button">
-				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_OUTLINING_CMDS"/>
-				<Icon guid="guidOutlineCodeIcon" id="bmpBtn"/>
-				<Strings>
-					<ToolTipText>Outline code only, leaving comments visible</ToolTipText>
-					<CommandName>OutlineCode</CommandName>
-					<ButtonText>Outline &amp;Code</ButtonText>
-				</Strings>
-			</Button>
 		</Buttons>
 
 		<!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
 		<Bitmaps>
-			<Bitmap guid="guidAlignIcon" href="Resources\exchange.png"/>
-			<Bitmap guid="guidOutlineCodeIcon" href="Resources\outline_code.png"/>
+			<Bitmap guid="guidAlignIcon" href="res\exchange.png"/>
 		</Bitmaps>
 	</Commands>
 
@@ -83,14 +84,10 @@
 		<GuidSymbol name="guidRylogicTextAlignerCmdSet" value="{E695E21D-48BB-4B3E-B442-DF64253991A5}">
 			<IDSymbol name="RylogicMenuGroup" value="0x1020"/>
 			<IDSymbol name="cmdidAlign" value="0x0100"/>
-			<IDSymbol name="cmdidOutlineCodeOnly" value="0x0101"/>
 		</GuidSymbol>
 
 		<!-- Menu item bitmaps -->
 		<GuidSymbol name="guidAlignIcon" value="{1c4ba5d5-cc4a-4b0f-92a7-d35914c34c13}">
-			<IDSymbol name="bmpBtn" value="1"/>
-		</GuidSymbol>
-		<GuidSymbol name="guidOutlineCodeIcon" value="{8ED7330A-DF6E-4517-892E-4FF646F52F0E}">
 			<IDSymbol name="bmpBtn" value="1"/>
 		</GuidSymbol>
 	</Symbols>

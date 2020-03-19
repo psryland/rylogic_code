@@ -47,7 +47,7 @@ namespace Rylogic.Common
 		public int Count => Math.Max(0, History.Count - Capacity);
 
 		/// <summary>The current history snapshot</summary>
-		public TRecord Current => End != 0 ? History[End - 1] : default;
+		public TRecord Current => End != 0 ? History[End - 1] : default!;
 
 		/// <summary>Clear all history</summary>
 		public void Clear()

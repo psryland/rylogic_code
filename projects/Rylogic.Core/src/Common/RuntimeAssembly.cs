@@ -1,4 +1,4 @@
-﻿#if NETCOREAPP3_0
+﻿#if NETCOREAPP3_1
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -216,7 +216,8 @@ namespace Rylogic.UnitTests
 {
 	using Common;
 
-	[TestFixture]
+	//Disabled because pwsh can't find Microsoft.CodeAnalysis.CSharp
+	//[TestFixture]
 	public class TestCompile
 	{
 		[Test]

@@ -51,6 +51,7 @@
 	<ItemGroup>
 		<Reference Include="PresentationCore" />
 		<Reference Include="PresentationFramework" />
+		<Reference Include="System.Xaml" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
 		<ProjectReference Include="..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />

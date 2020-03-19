@@ -71,8 +71,8 @@ namespace Rylogic.TextAligner
 			// Make a copy of the groups
 			var groups = m_groups.ToList();
 
-			// If the cursor is next to an alignment pattern, move that pattern to the front of the priority list
-			// Only do this when there isn't a multi line selection as the 'near-pattern' behaviour is confusing
+			// If the cursor is next to an alignment pattern, move that pattern to the front of the priority list.
+			// Only do this when there isn't a multi line selection as the 'near-pattern' behaviour is confusing.
 			if (selection.IsEmpty)
 			{
 				var line = selection.SLine;
@@ -81,9 +81,9 @@ namespace Rylogic.TextAligner
 				Debug.Assert(column >= 0 && column <= (line.End.Position - line.Start.Position));
 
 				// Find matches that span, are immediately to the right, or immediately to the left (priority order)
-				AlignGroup spanning = null;
-				AlignGroup rightof = null;
-				AlignGroup leftof  = null;
+				AlignGroup? spanning = null;
+				AlignGroup? rightof = null;
+				AlignGroup? leftof  = null;
 				for (var i = 0; i != groups.Count; ++i)
 				{
 					var grp = groups[i];
@@ -162,9 +162,8 @@ namespace Rylogic.TextAligner
 			// Sort the boundaries by pattern priority, then by distance from the caret
 			var ordered = boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.CurrentCharIndex);
 
-			var edits = new List<Token>();
-
 			// Find the first boundary that can be aligned
+			var edits = new List<Token>();
 			foreach (var align in ordered)
 			{
 				// Each time we come round, the previous 'align' should have resulted in nothing
@@ -217,7 +216,7 @@ namespace Rylogic.TextAligner
 				var boundaries = FindAlignBoundariesOnLine(i, grps);
 
 				// Look for a token that matches 'align' at 'token_index' position
-				var match = (Token)null;
+				var match = (Token?)null;
 				var idx = -1;
 				foreach (var b in boundaries)
 				{
@@ -251,10 +250,11 @@ namespace Rylogic.TextAligner
 				edits[0].SetNoLeftShift();
 
 			// Create an undo scope
-			using (ITextEdit text = m_snapshot.TextBuffer.CreateEdit())
+			using (var text = m_snapshot.TextBuffer.CreateEdit())
 			{
+
 				// Sort in descending line order
-				edits.Sort((l,r) => r.LineNumber.CompareTo(l.LineNumber));
+				edits.Sort((l, r) => r.LineNumber.CompareTo(l.LineNumber));
 
 				// Find the column to align to
 				var pos = FindAlignColumn(edits);
@@ -325,8 +325,9 @@ namespace Rylogic.TextAligner
 			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
 			public int Distance(int caret_pos)
 			{
-				return Span.Contains(caret_pos) ? 0 
-					: (int)Math.Min(Math.Abs(Span.Beg - caret_pos), Math.Abs(Span.End - caret_pos));
+				return !Span.Contains(caret_pos)
+					? (int)Math.Min(Math.Abs(Span.Beg - caret_pos), Math.Abs(Span.End - caret_pos)) 
+					: 0;
 			}
 
 			/// <summary>The minimum character index that this token can be left shifted to</summary>
@@ -364,10 +365,7 @@ namespace Rylogic.TextAligner
 			}
 
 			/// <summary></summary>
-			public override string ToString()
-			{
-				return $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
-			}
+			public override string ToString() => $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
 		}
 
 		/// <summary></summary>
@@ -400,20 +398,9 @@ namespace Rylogic.TextAligner
 				Debug.Assert(Pos.Size >= 0);
 				Debug.Assert(Lines.Size >= 0);
 			}
-
-			public bool IsEmpty
-			{
-				get { return Pos.Empty; }
-			}
-			public bool IsSingleLine
-			{
-				get { return Lines.Empty; }
-			}
-			public bool IsWholeLines
-			{
-				// >= because ELine.End.Position doesn't include the newline
-				get { return Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; }
-			}
+			public bool IsEmpty => Pos.Empty;
+			public bool IsSingleLine => Lines.Empty;
+			public bool IsWholeLines => Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; // >= because ELine.End.Position doesn't include the newline
 		}
 
 		/// <summary></summary>
@@ -432,10 +419,7 @@ namespace Rylogic.TextAligner
 			public readonly Range Span;
 
 			/// <summary></summary>
-			public override string ToString()
-			{
-				return $"Col {Column} {Span}";
-			}
+			public override string ToString() => $"Col {Column} {Span}";
 		}
 	}
 }

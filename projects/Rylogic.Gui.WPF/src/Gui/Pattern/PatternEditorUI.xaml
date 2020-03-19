@@ -15,11 +15,8 @@
 	>
 	<Window.InputBindings>
 		<KeyBinding Key="Esc" Command="{Binding Cancel}" />
-		<KeyBinding Key="Return" Modifiers="Ctrl" Command="{Binding Accept}" />
 	</Window.InputBindings>
-	
 	<Grid>
-		<gui:PatternEditor
-			/>
+		<gui:PatternEditor/>
 	</Grid>
 </Window>

@@ -385,7 +385,9 @@ namespace Rylogic.Utility
 			var sz = Marshal.SizeOf(typeof(T));
 			using var ptr = Marshal_.Alloc(EHeap.HGlobal, sz);
 			Marshal.Copy(arr, offset, ptr.Value.Ptr, sz);
-			return Marshal.PtrToStructure<T>(ptr.Value.Ptr);
+			var strukt = Marshal.PtrToStructure<T>(ptr.Value.Ptr);
+			if (strukt == null) throw new Exception("FromBytes<T>: Failed to convert pointer");
+			return strukt;
 		}
 
 		/// <summary>Convert an array of bytes to a structure</summary>
@@ -393,7 +395,9 @@ namespace Rylogic.Utility
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
-			return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
+			var strukt = Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
+			if (strukt == null) throw new Exception("FromBytes<T>: Failed to convert pointer");
+			return strukt;
 		}
 
 		/// <summary>Simple binary serialise</summary>

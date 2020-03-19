@@ -773,6 +773,7 @@ namespace pr
 			}
 			ColumnMetaData(ColumnMetaData const&) = delete;
 			ColumnMetaData& operator=(ColumnMetaData const&) = delete;
+			virtual ~ColumnMetaData() {}
 
 			// Return the column definition for this column
 			std::string ColumnDef() const

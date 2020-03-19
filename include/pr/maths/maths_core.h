@@ -1636,15 +1636,15 @@ namespace pr
 	}
 
 	// Returns the number to add to pad 'size' up to 'alignment'
-	constexpr int Pad(int size, int alignment)
+	template <typename T, typename = maths::enable_if_intg<T>> constexpr T Pad(T size, T alignment)
 	{
 		return (alignment - (size % alignment)) % alignment;
 	}
 
 	// Returns 'size' increased to a multiple of 'alignment'
-	constexpr int PadTo(int size, int alignment)
+	template <typename T, typename = maths::enable_if_intg<T>> constexpr T PadTo(T size, T alignment)
 	{
-		return size + Pad(size, alignment);
+		return size + Pad<T>(size, alignment);
 	}
 
 	// Function object for generating an arithmetic sequence

@@ -17,7 +17,7 @@ namespace pr
 	{
 		class BPSweepAndPrune :public IBroadphase
 		{
-			typedef pr::vector<BPEntity*, 256> BPEntityCont;
+			using BPEntityCont = pr::vector<BPEntity*, 256>;
 			BPEntityCont m_entity;        // Pointers to the entities in the broadphase
 			int          m_axis;          // Sort axis
 			bool         m_sorted;        // 'Dirty' flag for sorting the entity array
