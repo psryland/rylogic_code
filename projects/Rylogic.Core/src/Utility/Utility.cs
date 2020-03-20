@@ -230,6 +230,18 @@ namespace Rylogic.Utility
 			return $"{caller_filepath}({caller_line_number})";
 		}
 
+		// Returns the number to add to pad 'size' up to 'alignment'
+		public static long Pad(long size, long alignment)
+		{
+			return (alignment - (size % alignment)) % alignment;
+		}
+
+		// Returns 'size' increased to a multiple of 'alignment'
+		public static long PadTo(long size, long alignment)
+		{
+			return size + Pad(size, alignment);
+		}
+
 		/// <summary>Swap two values</summary>
 		public static void Swap<T>(ref T lhs, ref T rhs)
 		{

@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.TextAligner
 {
@@ -15,12 +16,16 @@ namespace Rylogic.TextAligner
 		private readonly IWpfTextView m_view;
 		private readonly ITextSnapshot m_snapshot;
 		private readonly List<AlignGroup> m_groups;
+		private readonly EAlignCharacters m_style;
+		private readonly int m_tab_size;
 
-		public Align(IEnumerable<AlignGroup> groups, IWpfTextView view)
+		public Align(IEnumerable<AlignGroup> groups, EAlignCharacters style, IWpfTextView view)
 		{
 			m_view     = view;
 			m_groups   = groups.ToList();
 			m_snapshot = m_view.TextSnapshot;
+			m_tab_size = m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
+			m_style    = style;
 
 			// Get the current line number, line, line position, and selection
 			var selection = new Selection(m_view);
@@ -47,7 +52,16 @@ namespace Rylogic.TextAligner
 				min_column = Math.Max(min_column, tok.MinColumnIndex);
 				leading_ws = Math.Max(leading_ws, tok.Grp.LeadingSpace);
 			}
-			if (min_column != 0) min_column += leading_ws; // Add leading whitespace, unless at column 0
+
+			// Add the leading whitespace to the minimum column, unless at column 0
+			if (min_column != 0)
+			{
+				min_column += leading_ws;
+
+				// Round up to the next tab boundary
+				if (m_style == EAlignCharacters.Tabs)
+					min_column = Util.PadTo(min_column, m_tab_size);
+			}
 			return new AlignPos(min_column, span);
 		}
 
@@ -80,10 +94,11 @@ namespace Rylogic.TextAligner
 				var column = selection.Pos.Begi - line.Start.Position;
 				Debug.Assert(column >= 0 && column <= (line.End.Position - line.Start.Position));
 
+				var spanning = (AlignGroup?)null;
+				var rightof = (AlignGroup?)null;
+				var leftof = (AlignGroup?)null;
+
 				// Find matches that span, are immediately to the right, or immediately to the left (priority order)
-				AlignGroup? spanning = null;
-				AlignGroup? rightof = null;
-				AlignGroup? leftof  = null;
 				for (var i = 0; i != groups.Count; ++i)
 				{
 					var grp = groups[i];
@@ -117,7 +132,6 @@ namespace Rylogic.TextAligner
 		private List<Token> FindAlignBoundariesOnLine(int line_number, IEnumerable<AlignGroup> grps)
 		{
 			var tokens = new List<Token>();
-			var tab_size = m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
 
 			if (line_number < 0 || line_number >= m_snapshot.LineCount)
 				return tokens;
@@ -134,7 +148,7 @@ namespace Rylogic.TextAligner
 				{
 					++patn_index;
 					foreach (var match in patn.AllMatches(line_text))
-						tokens.Add(new Token(grp, grp_index, patn_index, line, line_number, match, tab_size));
+						tokens.Add(new Token(grp, grp_index, patn_index, line, line_number, match, m_tab_size));
 				}
 			}
 
@@ -250,39 +264,84 @@ namespace Rylogic.TextAligner
 				edits[0].SetNoLeftShift();
 
 			// Create an undo scope
-			using (var text = m_snapshot.TextBuffer.CreateEdit())
+			using var text = m_snapshot.TextBuffer.CreateEdit();
+
+			// Sort in descending line order so that the edits are applied from end to start,
+			// meaning character index positions aren't invalidated as each line is edited.
+			edits.Sort((l, r) => r.LineNumber.CompareTo(l.LineNumber));
+
+			// Find the column to align to
+			var pos = FindAlignColumn(edits);
+			var col = pos.Column - pos.Span.Begi;
+			Debug.Assert(pos.Span.Begi <= 0, "0 should be included in the span");
+
+			foreach (var edit in edits)
 			{
+				// Careful with order, this order is choosen so that edits are
+				// applied from right to left, preventing indices being invalidated.
 
-				// Sort in descending line order
-				edits.Sort((l, r) => r.LineNumber.CompareTo(l.LineNumber));
-
-				// Find the column to align to
-				var pos = FindAlignColumn(edits);
-				var col = pos.Column - pos.Span.Begi;
-				Debug.Assert(pos.Span.Begi <= 0, "0 should be included in the span");
-
-				foreach (var edit in edits)
+				// Insert whitespace after the pattern if needed
+				var ws_tail = Math.Max(0, pos.Span.Endi - (edit.Patn.Offset + edit.Span.Sizei));
+				if (ws_tail > 0)
 				{
-					// Careful with order, we need to apply the edits assuming 'line' isn't changed with each one
-
-					// Insert whitespace after the pattern if needed
-					var ws_tail = Math.Max(0, pos.Span.Endi - (edit.Patn.Offset + edit.Span.Sizei));
-					if (ws_tail > 0)
-						text.Insert(edit.Line.Start.Position + edit.Span.Endi, new string(' ', ws_tail));
-
-					// Delete all preceding whitespace
-					text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begi - edit.MinCharIndex);
-
-					// Insert whitespace to align
-					var ws_head = col - edit.MinColumnIndex + edit.Patn.Offset;
-					if (ws_head > 0)
-						text.Insert(edit.Line.Start.Position + edit.MinCharIndex, new string(' ', ws_head));
+					// Always use space characters for trailing padding
+					var ins = edit.Line.Start.Position + edit.Span.Endi;
+					text.Insert(ins, new string(' ', ws_tail));
 				}
-				text.Apply();
+
+				// Delete all preceding whitespace
+				text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.Span.Begi - edit.MinCharIndex);
+
+				// Create the aligning whitespace based on the alignment style
+				string ws = string.Empty;
+				switch (m_style)
+				{
+				case EAlignCharacters.Spaces:
+					{
+						// In 'spaces' mode, simply pad from MinColumnIndex to 'col', adjusting for offset
+						var count = col - edit.MinColumnIndex + edit.Patn.Offset;
+						ws = new string(' ', count);
+						break;
+					}
+				case EAlignCharacters.Tabs:
+					{
+						// In 'tabs' mode, the alignment column 'col' will be a multiple of the tab size.
+						// Add tabs between 'MinColumnIndex' and 'col', then adjust by 'Offset' using spaces if needed.
+						// Note: Don't simplify, 'tab_count' relies on integer truncation here.
+						var tab_count = ((col - edit.MinColumnIndex + m_tab_size - 1) / m_tab_size) + (edit.Patn.Offset / m_tab_size);
+						var spc_count = (m_tab_size + edit.Patn.Offset % m_tab_size) % m_tab_size;
+						ws = new string('\t', tab_count) + new string(' ', spc_count);
+						break;
+					}
+				case EAlignCharacters.Mixed:
+					{
+						// In 'mixed' mode. the alignment column 'col' will be the same as for 'spaces' mode.
+						// Insert tabs up to the nearest tab boundary, then spaces after that.
+						// Note: Don't simplify, 'tab_count' relies on integer truncation here.
+						var tab_count = (col / m_tab_size) - (edit.MinColumnIndex / m_tab_size) + (edit.Patn.Offset / m_tab_size);
+						var spc_count = (col + edit.Patn.Offset) % m_tab_size;
+						if (tab_count == 0) spc_count -= (edit.MinColumnIndex % m_tab_size);
+						ws = new string('\t', tab_count) + new string(' ', spc_count);
+						break;
+					}
+				default:
+					{
+						throw new Exception($"Unsupported whitespace style: {m_style}");
+					}
+				}
+
+				// Insert whitespace to align
+				if (ws.Length != 0)
+				{
+					var ins = edit.Line.Start.Position + edit.MinCharIndex;
+					text.Insert(ins, ws);
+				}
 			}
+			text.Apply();
 		}
 
 		/// <summary></summary>
+		[DebuggerDisplay("{Description,nq}")]
 		private class Token
 		{
 			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, Range span, int tab_size)
@@ -365,7 +424,7 @@ namespace Rylogic.TextAligner
 			}
 
 			/// <summary></summary>
-			public override string ToString() => $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
+			public string Description => $"Line: {LineNumber} Grp: {Grp} Patn: {Patn.Description} Span: {Span}";
 		}
 
 		/// <summary></summary>

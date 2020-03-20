@@ -1,9 +1,7 @@
 Immediate ToDo:
 	
 TextAligner
-	- Implement add/remove/up/down buttons
-	- Fix missing 'Align' option in edit menu
-	- Add support for tabs/mixed
+	- Sign with code signing certificate
 	
 LDraw
 	- Switch geometry model generators to use output functions, not iterators

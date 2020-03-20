@@ -16,18 +16,11 @@ namespace Rylogic.TextAligner
 		protected override void Execute()
 		{
 			var view_host = CurrentViewHost;
-			if (view_host != null)
-				new Align(Groups, view_host.TextView);
-		}
+			if (view_host == null) return;
 
-		/// <summary>The align patterns</summary>
-		private IEnumerable<AlignGroup> Groups
-		{
-			get
-			{
-				var align_options = Package.GetDialogPage<AlignOptions>();
-				return align_options.Groups;
-			}
+			// Get the align patterns
+			var options = Package.GetDialogPage<AlignOptions>();
+			new Align(options.Groups, options.AlignStyle, view_host.TextView);
 		}
 	}
 }

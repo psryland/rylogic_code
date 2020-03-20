@@ -26,5 +26,16 @@ carrot = orange, 256;
 cucumber = green, 16;
 pea = green, 8;
 
-wor      t kds ado w da test
- fe efsef En ffef
+struct Type
+{
+	int m_member1;
+	float m_member2;
+	unsigned long m_member3;
+};
+
+aaaaaaaaa>= b
+a      <= b
+aaa > b
+aaaaa < b
+aa != b
+a== b

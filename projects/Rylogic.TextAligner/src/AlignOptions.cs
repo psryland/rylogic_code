@@ -5,17 +5,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Forms;
-using System.Windows.Forms.Integration;
 using System.Xml.Linq;
-using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.TextAligner
 {
-    [ClassInterface(ClassInterfaceType.AutoDual)]
+	[ClassInterface(ClassInterfaceType.AutoDual)]
 	[Guid("C0392BF9-56C7-4D4E-9669-5C4B2B38366C")]
 	internal sealed class AlignOptions :UIElementDialogPage
 	{
@@ -33,7 +30,7 @@ namespace Rylogic.TextAligner
 		public ObservableCollection<AlignGroup> Groups { get; }
 
 		/// <summary>The method to use for aligning</summary>
-		public EAlignStyle AlignStyle { get; set; }
+		public EAlignCharacters AlignStyle { get; set; }
 
 		/// <summary>Should be overridden to reset settings to their default values.</summary>
 		public override void ResetSettings()
@@ -90,7 +87,7 @@ namespace Rylogic.TextAligner
 				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z_]*", 0, 1, "Matches class members that being with 'm_'"),
 				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)_[0-9a-zA-Z_]*", 0, 1, "Matches class members that being with '_'")));
 
-			AlignStyle = EAlignStyle.Spaces;
+			AlignStyle = EAlignCharacters.Spaces;
 		}
 
 		/// <summary>Load settings from AppData</summary>
@@ -111,7 +108,7 @@ namespace Rylogic.TextAligner
 				Groups.Assign(grps);
 
 				// Load other settings
-				AlignStyle = root.Element(nameof(AlignStyle)).As<EAlignStyle>(EAlignStyle.Spaces);
+				AlignStyle = root.Element(nameof(AlignStyle)).As<EAlignCharacters>(EAlignCharacters.Spaces);
 			}
 			catch { } // Don't allow anything to throw from here, otherwise VS locks up... :-/
 		}

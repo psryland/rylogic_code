@@ -1,6 +1,6 @@
 ﻿namespace Rylogic.TextAligner
 {
-	public enum EAlignStyle
+	public enum EAlignCharacters
 	{
 		Spaces,
 		Tabs,

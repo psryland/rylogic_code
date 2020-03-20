@@ -107,7 +107,7 @@ namespace Rylogic.TextAligner
 		private ICollectionView m_patterns_view = null!;
 
 		/// <summary>Alignment style</summary>
-		public EAlignStyle AlignStyle
+		public EAlignCharacters AlignStyle
 		{
 			get => m_options.AlignStyle;
 			set => m_options.AlignStyle = value;

@@ -62,7 +62,7 @@
     <Compile Include="src\Align\AlignGroup.cs" />
     <Compile Include="src\Align\AlignMenuCommand.cs" />
     <Compile Include="src\Align\AlignPattern.cs" />
-    <Compile Include="src\Align\EAlignStyle.cs" />
+    <Compile Include="src\Align\EAlignCharacters.cs" />
     <Compile Include="src\BaseCommand.cs" />
     <Compile Include="src\RylogicTextAlignerPackage.cs" />
     <Compile Include="src\AlignOptions.cs">
@@ -97,8 +97,14 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="deploy.py" />
-    <Content Include="icon.png" />
-    <Content Include="licence.txt" />
+    <Content Include="res\icon.png">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\licence.txt">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="res\align_tests.txt" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
@@ -133,6 +139,7 @@
     <Reference Include="WindowsFormsIntegration" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.204" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.5.2044" />
+    <PackageReference Include="Microsoft.VSSDK.Vsixsigntool" Version="16.2.29116.78" />
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>

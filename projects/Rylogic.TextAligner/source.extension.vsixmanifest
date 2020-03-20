@@ -4,7 +4,9 @@
         <Identity Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="1.09" Language="en-US" Publisher="Rylogic" />
         <DisplayName>Rylogic.TextAligner</DisplayName>
         <Description>Text aligning extension for Visual Studio by Rylogic</Description>
-        <Icon>icon.png</Icon>
+		<License>res\licence.txt</License>
+		<Icon>res\icon.png</Icon>
+		<Tags>Align Aligner Alignment Column Text Vertical</Tags>
     </Metadata>
     <Installation InstalledByMsi="false" AllUsers="true" SystemComponent="false" Scope="ProductExtension">
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[11.0,)" />
