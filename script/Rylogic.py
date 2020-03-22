@@ -686,6 +686,18 @@ def NugetPackage(proj:str, publish:bool):
 		Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
 	return
 
+# Sign a VSIX extension package
+def SignVsix(vsix_filepath:str, algo:str):
+	# Use 'dotnet tool install -g OpenVsixSignTool' to install 'OpenVsixSignTool'
+	# 'OpenVsixSignTool' is an open source (and better) version of 'VsixSignTool' (https://github.com/vcsjones/OpenOpcSignTool)
+	# 'e1053e6fa1aeb7bd4ee453302116a129ca4112f9' is the thumbprint of the code signing certificate installed on the machine.
+	#    Run 'mmc' then add 'Certificates' to the console. Find your code signing cert (Rylogic Limited, Sectigo RSA Code Signing CA),
+	#    and open it. Under 'details' find 'Thumbprint'. The OpenVsixSignTool uses this hash value to find the cert in the store.
+	# If the vsix supports VS versions less than 14.0, you need to use "-fd sha1" or the cert shows up as invalid. If the VSIX only
+	#    supports VS versions >= 14.0, use sha256 instead.
+	Exec(["openvsixsigntool", "sign", "--sha1", "e1053e6fa1aeb7bd4ee453302116a129ca4112f9", "-fd", algo, vsix_filepath])
+	return
+
 # Create a zip of a directory
 def ZipDirectory(zip_path, root_dir):
 	zipf = zipfile.ZipFile(zip_path, 'w')

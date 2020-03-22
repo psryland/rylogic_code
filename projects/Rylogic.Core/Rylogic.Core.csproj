@@ -24,6 +24,7 @@
 		<FileVersion>1.1.0</FileVersion>
 		<AssemblyVersion>1.1.0</AssemblyVersion>
 		<SignAssembly>false</SignAssembly>
+		<DelaySign>false</DelaySign>
 	</PropertyGroup>
 
 	<!-- Build Options -->

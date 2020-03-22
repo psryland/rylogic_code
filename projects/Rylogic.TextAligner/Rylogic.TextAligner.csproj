@@ -3,6 +3,7 @@
   <PropertyGroup>
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -128,6 +129,21 @@
     <Resource Include="res\red_x.png" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="VSSDK.Editor">
+      <Version>12.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="VSSDK.IDE.12">
+      <Version>12.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="VSSDK.Shell.12">
+      <Version>12.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="VSSDK.Text">
+      <Version>12.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="VSSDK.Threading.12">
+      <Version>12.0.4</Version>
+    </PackageReference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
@@ -137,8 +153,6 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsFormsIntegration" />
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="16.0.204" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="16.5.2044" />
     <PackageReference Include="Microsoft.VSSDK.Vsixsigntool" Version="16.2.29116.78" />
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
