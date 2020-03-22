@@ -39,3 +39,14 @@ aaa > b
 aaaaa < b
 aa != b
 a== b
+
+	// Comment
+	// Comment
+		// Comment
+   // Comment
+		   // Comment
+
+	  m_one
+		  m_two
+      m_three
+	m_four

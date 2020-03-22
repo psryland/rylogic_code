@@ -3,8 +3,11 @@ using System.ComponentModel.Design;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
+using Rylogic.Common;
 using Task = System.Threading.Tasks.Task;
 
 namespace Rylogic.TextAligner
@@ -27,16 +30,17 @@ namespace Rylogic.TextAligner
 	/// </para>
 	/// </remarks>
 	[Guid(PackageGuidString)]
-	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]                    // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
+	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
 	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.1", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                 // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                        // This attribute is needed to let the shell know that this package exposes an options page.
-	public sealed class RylogicTextAlignerPackage :AsyncPackage, IOleCommandTarget
+	[ProvideBindingPath]                                                                                     // Include the local directory when resolving dependent assemblies
+	public sealed class RylogicTextAlignerPackage :Package, IOleCommandTarget
 	{
 		/// <summary>
 		/// Rylogic.TextAlignerPackage GUID string.
 		/// </summary>
-		public const string PackageGuidString = "DF402917-6013-40CA-A4C6-E1640DA86B90";//796c6df2-f3b7-4c45-a9bb-901ba178d81a";
+		public const string PackageGuidString = "DF402917-6013-40CA-A4C6-E1640DA86B90";
 
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
@@ -45,29 +49,28 @@ namespace Rylogic.TextAligner
 		/// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
 		/// <param name="progress">A provider for progress updates.</param>
 		/// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-		protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+		//protected override async Task Initialize(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+		protected override void Initialize()
 		{
+			var root = Path_.Directory(Assembly.GetExecutingAssembly().Location);
 			AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-			Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+			Assembly? CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
 			{
-				if (args.Name.StartsWith("Rylogic.Gui.WPF"))
-					return Assembly.LoadFrom("Rylogic.Gui.WPF.dll");
-				if (args.Name.StartsWith("Rylogic.Core.Windows"))
-					return Assembly.LoadFrom("Rylogic.Core.Windows.dll");
-				if (args.Name.StartsWith("Rylogic.Core"))
-					return Assembly.LoadFrom("Rylogic.Core.dll");
-				throw new System.IO.FileNotFoundException($"Could not load assembly: {args.Name}");
+				var path = Path_.CombinePath(root, new AssemblyName(args.Name).Name + ".dll");
+				if (!Path_.FileExists(path)) return null;
+				return Assembly.LoadFrom(path);
 			}
 
 			// When initialized asynchronously, the current thread may be a background thread at this point.
 			// Do any initialization that requires the UI thread after switching to the UI thread.
-			await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+			//await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+			base.Initialize();
 
 			// Add our command handlers for menu
-			if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService mcs)
-			{
+			//if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService mcs)
+			//	mcs.AddCommand(new AlignMenuCommand(this));
+			if (GetService<IMenuCommandService>() is OleMenuCommandService mcs)
 				mcs.AddCommand(new AlignMenuCommand(this));
-			}
 		}
 
 		/// <summary>Return the VS service of type 'TService'</summary>

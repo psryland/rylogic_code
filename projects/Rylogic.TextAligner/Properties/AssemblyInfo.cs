@@ -20,5 +20,5 @@ using Microsoft.VisualStudio.Shell;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyVersion("1.09")]
-[assembly: AssemblyFileVersion("1.09")]
+[assembly: AssemblyVersion("1.10")]
+[assembly: AssemblyFileVersion("1.10")]

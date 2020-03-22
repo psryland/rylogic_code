@@ -62,11 +62,7 @@ try:
 	# Sign the vsix
 	do_sign = input("Sign the VSIX (default is no)? ")
 	if do_sign == "y":
-		pw = input("Password for 'Rylogic.pfx': ")
-		# Use dotnet tool install -g OpenVsixSignTool
-		# then:
-		# openvsixsigntool sign --sha1 <thumb print of code signing cert> -fd sha1 P:\pr\bin\Rylogic.TextAligner.vsix
-		#Tools.Exec([UserVars.vsixsigntool, "sign", "/f", os.path.join(srcdir, "..", "Rylogic.pfx"), "/sha1", "becacfb644f8e6796ca53235270df64c887ce9ff", "/p", pw, "/fd", "sha1", os.path.join(dstdir, vsix_name)])
+		Tools.SignVsix(os.path.join(dstdir, vsix_name), "sha1")
 
 	#Ask to install
 	dstfile = os.path.join(dstdir, vsix_name)
