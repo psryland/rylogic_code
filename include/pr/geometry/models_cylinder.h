@@ -3,19 +3,20 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-
 #include "pr/geometry/common.h"
 
 namespace pr::geometry
 {
 	// Returns the number of verts and number of indices needed to hold geometry for a cylinder
-	template <typename Tvr, typename Tir>
-	void CylinderSize(int wedges, int layers, Tvr& vcount, Tir& icount)
+	constexpr BufSizes CylinderSize(int wedges, int layers)
 	{
 		if (wedges < 3) wedges = 3;
 		if (layers < 1) layers = 1;
-		vcount = s_cast<Tvr>(2 + (wedges + 1) * (layers + 3));
-		icount = s_cast<Tir>(6 * (wedges + 0) * (layers + 1));
+		return
+		{
+			2 + (wedges + 1) * (layers + 3),
+			6 * (wedges + 0) * (layers + 1),
+		};
 	}
 
 	// Generate a cylinder given by a height and radius at each end, orientated with the long axis along 'Z'
@@ -29,15 +30,12 @@ namespace pr::geometry
 	// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 	// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
 	// on the ends of the cylinder since this is the most likely way it would be textured
-	template <typename TVertIter, typename TIdxIter>
-	Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+	template <typename VOut, typename IOut>
+	Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
 	{
-		using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
-
-		int vcount,icount;
 		if (wedges < 3) wedges = 3;
 		if (layers < 1) layers = 1;
-		CylinderSize(wedges, layers, vcount, icount);
+		auto [vcount,icount] = CylinderSize(wedges, layers);
 
 		Props props;
 		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
@@ -48,8 +46,8 @@ namespace pr::geometry
 		Encompass(props.m_bbox, v4(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 		// Colour iterator wrapper
-		auto col = pr::CreateRepeater(colours, num_colours, vcount, pr::Colour32White);
-		auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+		auto col = CreateRepeater(colours, num_colours, vcount, Colour32White);
+		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		auto z  = -height * 0.5f;
 		auto dz = height / layers;
@@ -57,73 +55,73 @@ namespace pr::geometry
 		int verts_per_layer = wedges + 1;
 		int ibase = 0, last = vcount - 1;
 
-		v4 pt = v4(0, 0, z, 1.0f);
-		v4 nm = -v4ZAxis;
-		v2 uv = v2(0.5f, 0.5f);
+		auto pt = v4(0, 0, z, 1.0f);
+		auto uv = v2(0.5f, 0.5f);
+		auto nm = -v4ZAxis;
 
 		// Verts
-		SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
+		vout(pt, cc(*col++), nm, uv);
 		for (int w = 0; w <= wedges; ++w) // Bottom face
 		{
-			float a = da*w;
+			auto a = da*w;
 			pt = v4(cos(a) * radius0 * xscale, sin(a) * radius0 * yscale, z, 1.0f);
 			uv = v2(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
-			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
+			vout(pt, cc(*col++), nm, uv);
 		}
 		for (int l = 0; l <= layers; ++l) // The walls
 		{
-			float r  = Lerp(radius0, radius1, l/(float)layers);
-			float nz = radius0 - radius1;
+			auto r  = Lerp(radius0, radius1, l/(float)layers);
+			auto nz = radius0 - radius1;
 			for (int w = 0; w <= wedges; ++w)
 			{
-				float a = da*w + (l%2)*da*0.5f;
+				auto a = da*w + (l%2)*da*0.5f;
 				pt = v4(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
 				nm = v4::Normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
 				uv = v2(a / float(maths::tau), 1.0f - (z + height*0.5f) / height);
-				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
+				vout(pt, cc(*col++), nm, uv);
 			}
 			if (l != layers) z += dz;
 		}
 		nm = v4ZAxis;
 		for (int w = 0; w <= wedges; ++w) // Top face
 		{
-			float a = da*w + (layers%2)*da*0.5f;
+			auto a = da*w + (layers%2)*da*0.5f;
 			pt = v4(cos(a) * radius1 * xscale, sin(a) * radius1 * yscale, z, 1.0f);
 			uv = v2(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
-			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
+			vout(pt, cc(*col++), nm, uv);
 		}
 		pt = v4(0 ,0 ,z ,1.0f);
 		uv = v2(0.5, 0.5f);
-		SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
+		vout(pt, cc(*col++), nm, uv);
 
 		// Faces
 		ibase = 1;
 		for (int w = 0; w != wedges; ++w) // Bottom face
 		{
-			*i_out++ = s_cast<VIdx>(0);
-			*i_out++ = s_cast<VIdx>(ibase + w + 1);
-			*i_out++ = s_cast<VIdx>(ibase + w);
+			iout(0);
+			iout(ibase + w + 1);
+			iout(ibase + w);
 		}
 		ibase += verts_per_layer;
 		for (int l = 0; l != layers; ++l) // The walls
 		{
 			for (int w = 0; w != wedges; ++w)
 			{
-				*i_out++ = s_cast<VIdx>(ibase + w);
-				*i_out++ = s_cast<VIdx>(ibase + w + 1);
-				*i_out++ = s_cast<VIdx>(ibase + w + verts_per_layer);
-				*i_out++ = s_cast<VIdx>(ibase + w + verts_per_layer);
-				*i_out++ = s_cast<VIdx>(ibase + w + 1);
-				*i_out++ = s_cast<VIdx>(ibase + w + verts_per_layer + 1);
+				iout(ibase + w);
+				iout(ibase + w + 1);
+				iout(ibase + w + verts_per_layer);
+				iout(ibase + w + verts_per_layer);
+				iout(ibase + w + 1);
+				iout(ibase + w + verts_per_layer + 1);
 			}
 			ibase += verts_per_layer;
 		}
 		ibase += verts_per_layer;
 		for (int w = 0; w != wedges; ++w) // Top face
 		{
-			*i_out++ = s_cast<VIdx>(ibase + w);
-			*i_out++ = s_cast<VIdx>(ibase + w + 1);
-			*i_out++ = s_cast<VIdx>(last);
+			iout(ibase + w);
+			iout(ibase + w + 1);
+			iout(last);
 		}
 
 		return props;

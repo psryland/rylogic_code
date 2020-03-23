@@ -10,16 +10,18 @@
 namespace pr::geometry
 {
 	// Returns the number of verts and number of indices needed to hold geometry for a geosphere
-	template <typename Tvr, typename Tir>
-	void GeosphereSize(int divisions, Tvr& vcount, Tir& icount)
+	constexpr BufSizes GeosphereSize(int divisions)
 	{
-		vcount = s_cast<Tvr>(3 + 10 * Pow2(2 * divisions) + 11 * Pow2(divisions));
-		icount = s_cast<Tir>(3 * 10 * Pow2(2 * divisions + 1));
+		return
+		{
+			3 + 10 * Pow2(2 * divisions) + 11 * Pow2(divisions),
+			3 * 10 * Pow2(2 * divisions + 1),
+		};
 	}
 
 	namespace impl::geosphere
 	{
-		typedef std::size_t VIndex;
+		using VIndex = std::size_t;
 		struct GeosphereVert
 		{
 			pr::v4 m_vert;
@@ -166,8 +168,8 @@ namespace pr::geometry
 	}
 
 	// Generate an ellipsoid geosphere
-	template <typename TVertIter, typename TIdxIter>
-	Props Geosphere(v4 const& radius, int divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+	template <typename VOut, typename IOut>
+	Props Geosphere(v4 const& radius, int divisions, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_bbox = BBox(pr::v4Origin, radius);
@@ -175,8 +177,7 @@ namespace pr::geometry
 		props.m_has_alpha = HasAlpha(colour);
 
 		// Preallocate buffers to compile the geosphere into
-		int vcount, icount;
-		GeosphereSize(divisions, vcount, icount);
+		auto [vcount, icount] = GeosphereSize(divisions);
 		impl::geosphere::TVertCont verts; verts.reserve(vcount);
 		impl::geosphere::TFaceCont faces; faces.reserve(icount / 3);
 
@@ -194,39 +195,40 @@ namespace pr::geometry
 		// Output the verts and indices
 		for (auto i = std::begin(verts), iend = std::end(verts); i != iend; ++i)
 		{
-			SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, v2(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
+			vout(i->m_vert, colour, i->m_norm, v2(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
 		}
 		for (auto i = std::begin(faces), iend = std::end(faces); i != iend; ++i)
 		{
-			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
-			*out_indices = s_cast<VIdx>(i->m_vidx[0]), ++out_indices;
-			*out_indices = s_cast<VIdx>(i->m_vidx[1]), ++out_indices;
-			*out_indices = s_cast<VIdx>(i->m_vidx[2]), ++out_indices;
+			iout(i->m_vidx[0]);
+			iout(i->m_vidx[1]);
+			iout(i->m_vidx[2]);
 		}
 
 		return props;
 	}
 
 	// Generate a spherical geosphere
-	template <typename TVertIter, typename TIdxIter>
-	Props Geosphere(float radius, int divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+	template <typename VOut, typename IOut>
+	Props Geosphere(float radius, int divisions, Colour32 colour, VOut vout, IOut iout)
 	{
-		return Geosphere(v4(radius, radius, radius, 0.0f), divisions, colour, out_verts, out_indices);
+		return Geosphere(v4(radius, radius, radius, 0.0f), divisions, colour, vout, iout);
 	}
 
 	// Returns the number of verts and number of indices needed to hold geometry for a sphere
-	template <typename Tvr, typename Tir>
-	void SphereSize(int wedges, int layers, Tvr& vcount, Tir& icount)
+	constexpr BufSizes SphereSize(int wedges, int layers)
 	{
 		if (wedges < 3) wedges = 3;
 		if (layers < 2) layers = 2;
-		vcount = checked_cast<Tvr>((wedges + 1) * (layers + 1));
-		icount = checked_cast<Tir>(3 * wedges * (2 * layers - 2));
+		return
+		{
+			(wedges + 1) * (layers + 1),
+			3 * wedges * (2 * layers - 2),
+		};
 	}
 
 	// Generate a standard sphere
-	template <typename TVertIter, typename TIdxIter>
-	Props Sphere(v4 const& radius, int wedges, int layers, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
+	template <typename VOut, typename IOut>
+	Props Sphere(v4 const& radius, int wedges, int layers, Colour32 colour, VOut vout, IOut iout)
 	{
 		Props props;
 		props.m_bbox = BBox(pr::v4Origin, radius);
@@ -238,46 +240,45 @@ namespace pr::geometry
 		// Verts
 		for (std::size_t w = 0; w <= wedges; ++w)
 		{
-			v4 norm = v4ZAxis;
-			v2 uv   = v2(float(w + 0.5f) / wedges, 0.0f);
-			SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+			auto norm = v4ZAxis;
+			auto uv   = v2(float(w + 0.5f) / wedges, 0.0f);
+			vout((radius * norm).w1(), colour, norm, uv);
 
 			for (std::size_t l = 1; l < layers; ++l)
 			{
-				auto a = float(maths::tau * w / wedges);
-				auto b = float(maths::tau_by_2 * l / layers);
+				auto a = float(maths::tauf * w / wedges);
+				auto b = float(maths::tau_by_2f * l / layers);
 				norm = v4(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
 				uv   = v2(float(w) / wedges, (1.0f - norm.z) * 0.5f);
-				SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+				vout((radius * norm).w1(), colour, norm, uv);
 			}
 
 			norm = -v4ZAxis;
 			uv   = v2(float(w + 0.5f) / wedges, 1.0f);
-			SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
+			vout((radius * norm).w1(), colour, norm, uv);
 		}
 
 		// Faces
-		using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 		std::size_t ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
 		for (std::size_t w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
 		{
-			*out_indices = checked_cast<VIdx>(ilayer + 0), ++out_indices;
-			*out_indices = checked_cast<VIdx>(ilayer + 1), ++out_indices;
-			*out_indices = checked_cast<VIdx>(ilayer + 1 + verts_per_wedge), ++out_indices;
+			iout(ilayer + 0);
+			iout(ilayer + 1);
+			iout(ilayer + 1 + verts_per_wedge);
 			++ilayer;
 			for (std::size_t l = 1; l != layers - 1; ++l)
 			{
-				*out_indices = checked_cast<VIdx>(ilayer + 0), ++out_indices;
-				*out_indices = checked_cast<VIdx>(ilayer + 1), ++out_indices;
-				*out_indices = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge), ++out_indices;
-				*out_indices = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge), ++out_indices;
-				*out_indices = checked_cast<VIdx>(ilayer + 1), ++out_indices;
-				*out_indices = checked_cast<VIdx>(ilayer + 1 + verts_per_wedge), ++out_indices;
+				iout(ilayer + 0);
+				iout(ilayer + 1);
+				iout(ilayer + 0 + verts_per_wedge);
+				iout(ilayer + 0 + verts_per_wedge);
+				iout(ilayer + 1);
+				iout(ilayer + 1 + verts_per_wedge);
 				++ilayer;
 			}
-			*out_indices = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge), ++out_indices;
-			*out_indices = checked_cast<VIdx>(ilayer + 0 ), ++out_indices;
-			*out_indices = checked_cast<VIdx>(ilayer + 1 ), ++out_indices;
+			iout(ilayer + 0 + verts_per_wedge);
+			iout(ilayer + 0 );
+			iout(ilayer + 1 );
 		}
 
 		return props;

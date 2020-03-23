@@ -15,7 +15,7 @@ export class AlignGroup
 	/** The name of the group */
 	public readonly name :string;
 
-	/** The number leading whitespaces the group should have */
+	/** The number of leading whitespaces the group should have */
 	public readonly leading_space: number;
 
 	/** Patterns belonging to the align group */

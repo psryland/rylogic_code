@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 #include "pr/view3d/models/model.h"
 #include "pr/view3d/shaders/input_layout.h"
@@ -441,14 +440,19 @@ namespace pr::rdr
 		static ModelPtr Points(Renderer& rdr, int num_points, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			auto vcount = num_points;
-			auto icount = num_points;
+			auto [vcount, icount] = geometry::PointSize(num_points);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Points(num_points, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Points(num_points, points, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c) { SetPC(*vptr++, p, c); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::PointList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -464,14 +468,19 @@ namespace pr::rdr
 		static ModelPtr Lines(Renderer& rdr, int num_lines, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::LineSize(num_lines, vcount, icount);
+			auto [vcount, icount] = geometry::LineSize(num_lines);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Lines(num_lines, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Lines(num_lines, points, num_colours, colours, 
+				[&](v4_cref<> p, Colour32 c) { SetPC(*vptr++, p, c); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -479,14 +488,19 @@ namespace pr::rdr
 		static ModelPtr LinesD(Renderer& rdr, int num_lines, v4 const* points, v4 const* directions, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::LineSize(num_lines, vcount, icount);
+			auto [vcount, icount] = geometry::LineSize(num_lines);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::LinesD(num_lines, points, directions, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::LinesD(num_lines, points, directions, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c) { SetPC(*vptr++, p, c); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+		
+			// Create a nugget
 			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -494,14 +508,19 @@ namespace pr::rdr
 		static ModelPtr LineStrip(Renderer& rdr, int num_lines, v4 const* points, int num_colours = 0, Colour32 const* colour = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::LineStripSize(num_lines, vcount, icount);
+			auto [vcount, icount] = geometry::LineStripSize(num_lines);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour,
+				[&](v4_cref<> p, Colour32 c) { SetPC(*vptr++, p, c); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -618,14 +637,19 @@ namespace pr::rdr
 		static ModelPtr Ellipse(Renderer& rdr, float dimx, float dimy, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::EllipseSize(solid, facets, vcount, icount);
+			auto [vcount, icount] = geometry::EllipseSize(solid, facets);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Ellipse(dimx, dimy, solid, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Ellipse(dimx, dimy, solid, facets, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -633,14 +657,19 @@ namespace pr::rdr
 		static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);
+			auto [vcount, icount] = geometry::PieSize(solid, ang0, ang1, facets);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -648,14 +677,19 @@ namespace pr::rdr
 		static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::RoundedRectangleSize(solid, corner_radius, facets, vcount, icount);
+			auto [vcount, icount] = geometry::RoundedRectangleSize(solid, corner_radius, facets);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -663,14 +697,19 @@ namespace pr::rdr
 		static ModelPtr Polygon(Renderer& rdr, int num_points, v2 const* points, bool solid, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::PolygonSize(num_points, solid, vcount, icount);
+			auto [vcount, icount] = geometry::PolygonSize(num_points, solid);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Polygon(num_points, points, solid, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Polygon(num_points, points, solid, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -680,14 +719,19 @@ namespace pr::rdr
 		static ModelPtr Boxes(Renderer& rdr, int num_boxes, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::BoxSize(num_boxes, vcount, icount);
+			auto [vcount, icount] = geometry::BoxSize(num_boxes);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Boxes(num_boxes, points, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Boxes(num_boxes, points, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -695,14 +739,19 @@ namespace pr::rdr
 		static ModelPtr Boxes(Renderer& rdr, int num_boxes, v4 const* points, m4x4 const& o2w, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::BoxSize(num_boxes, vcount, icount);
+			auto [vcount, icount] = geometry::BoxSize(num_boxes);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Boxes(num_boxes, points, o2w, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Boxes(num_boxes, points, o2w, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -710,14 +759,19 @@ namespace pr::rdr
 		static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::BoxSize(1, vcount, icount);
+			auto [vcount, icount] = geometry::BoxSize(1);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Box(rad, o2w, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Box(rad, o2w, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -729,14 +783,19 @@ namespace pr::rdr
 		static ModelPtr BoxList(Renderer& rdr, int num_boxes, v4 const* positions, v4 const& rad, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::BoxSize(num_boxes, vcount, icount);
+			auto [vcount, icount] = geometry::BoxSize(num_boxes);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::BoxList(num_boxes, positions, rad, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::BoxList(num_boxes, positions, rad, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -746,14 +805,19 @@ namespace pr::rdr
 		static ModelPtr Geosphere(Renderer& rdr, v4 const& radius, int divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::GeosphereSize(divisions, vcount, icount);
+			auto [vcount, icount] = geometry::GeosphereSize(divisions);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Geosphere(radius, divisions, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Geosphere(radius, divisions, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -765,14 +829,19 @@ namespace pr::rdr
 		static ModelPtr Sphere(Renderer& rdr, v4 const& radius, int wedges = 20, int layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::SphereSize(wedges, layers, vcount, icount);
+			auto [vcount, icount] = geometry::SphereSize(wedges, layers);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Sphere(radius, wedges, layers, colour, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Sphere(radius, wedges, layers, colour,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);
@@ -786,14 +855,19 @@ namespace pr::rdr
 		static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, int wedges = 20, int layers = 1, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::CylinderSize(wedges, layers, vcount, icount);
+			auto [vcount, icount] = geometry::CylinderSize(wedges, layers);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -811,8 +885,7 @@ namespace pr::rdr
 			assert(path_count >= 2);
 
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::ExtrudeSize(cs_count, path_count, closed, smooth_cs, vcount, icount);
+			auto [vcount, icount] = geometry::ExtrudeSize(cs_count, path_count, closed, smooth_cs);
 
 			// Convert a stream of points into a stream of transforms
 			// At each vertex, ori.z should be the tangent to the extrusion path.
@@ -857,9 +930,15 @@ namespace pr::rdr
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -867,8 +946,7 @@ namespace pr::rdr
 		static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, m4x4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::ExtrudeSize(cs_count, path_count, closed, smooth_cs, vcount, icount);
+			auto [vcount, icount] = geometry::ExtrudeSize(cs_count, path_count, closed, smooth_cs);
 
 			// Path transform stream source
 			auto p = path;
@@ -876,9 +954,15 @@ namespace pr::rdr
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
-			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, cache.m_vcont.data(), cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
+			auto props = geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours,
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+
+			// Create a nugget
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache, o2w);
@@ -888,23 +972,24 @@ namespace pr::rdr
 		static ModelPtr Mesh(Renderer& rdr, MeshCreationData const& cdata)
 		{
 			// Calculate the required buffer sizes
-			int vcount, icount;
-			geometry::MeshSize(cdata.m_vcount, cdata.m_icount, vcount, icount);
+			auto [vcount, icount] = geometry::MeshSize(cdata.m_vcount, cdata.m_icount);
 
 			// Generate the geometry
 			Cache cache(vcount, icount, 0, 2);
+			auto vptr = cache.m_vcont.data();
+			auto iptr = cache.m_icont.data<uint16_t>();
 			auto props = geometry::Mesh(
 				cdata.m_vcount, cdata.m_icount,
 				cdata.m_verts, cdata.m_indices,
 				cdata.m_ccount, cdata.m_colours,
 				cdata.m_ncount, cdata.m_normals,
 				cdata.m_tex_coords,
-				cache.m_vcont.data(),
-				cache.m_icont.data<uint16_t>());
-			cache.m_bbox = props.m_bbox;
+				[&](v4_cref<> p, Colour32 c, v4_cref<> n, v2_cref<> t) { SetPCNT(*vptr++, p, c, n, t); },
+				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create the nuggets
 			cache.m_ncont.insert(cache.m_ncont.begin(), cdata.m_nuggets, cdata.m_nuggets + cdata.m_gcount);
+			cache.m_bbox = props.m_bbox;
 
 			// Create the model
 			return Create(rdr, cache);

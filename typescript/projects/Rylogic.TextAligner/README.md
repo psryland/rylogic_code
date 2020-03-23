@@ -1,10 +1,15 @@
 # Rylogic Text Aligner
 
-Rylogic Text Aligner is an extension that adds a command for vertically aligning text. More than simply satisfying the obsessive compulsives out there, vertical text alignment is a powerful productivity aid when used in combination with column selection. Vertically aligned text also leverages your subconscious ability to spot patterns, making pattern-breaking bugs much easier to spot.
+Rylogic Text Aligner is an extension that adds a command for vertically aligning text.
+More than simply satisfying the obsessive compulsives out there, vertical text alignment
+is a powerful productivity aid when used in combination with column selection. Vertically
+aligned text also leverages your subconscious ability to spot patterns, making
+pattern-breaking bugs much easier to spot.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+Describe specific features of your extension including screenshots of your extension
+in action. Image paths are relative to this README file.
 
 For example if there is an image subfolder under your extension project workspace:
 
