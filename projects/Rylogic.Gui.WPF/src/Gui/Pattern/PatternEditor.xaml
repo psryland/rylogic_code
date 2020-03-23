@@ -74,15 +74,27 @@
 				<RadioButton
 					Content="Substring"
 					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
-					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="2"/>
+					VerticalAlignment="Center"
+					FontSize="11"
+					TabIndex="1"
+					Margin="2"
+					/>
 				<RadioButton
 					Content="Wildcard"
 					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
-					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="3"/>
+					VerticalAlignment="Center"
+					FontSize="11"
+					TabIndex="2"
+					Margin="2"
+					/>
 				<RadioButton
 					Content="Regular Expression"
 					IsChecked="{Binding Pattern.PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
-					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="4"/>
+					VerticalAlignment="Center"
+					FontSize="11"
+					TabIndex="3"
+					Margin="2"
+					/>
 			</StackPanel>
 
 			<!-- Pattern field -->
@@ -106,9 +118,12 @@
 				<Button
 					DockPanel.Dock="Right"
 					Content="?"
-					Width="18" Height="18"
-					VerticalAlignment="Center" Padding="0,0,0,3" TabIndex="7"
 					Command="{Binding ShowHelp}"
+					VerticalAlignment="Center"
+					Padding="0,0,0,3"
+					Width="18"
+					Height="18"
+					TabIndex="11"
 					/>
 
 				<!-- Pattern expression -->
@@ -117,8 +132,9 @@
 					Style="{StaticResource PatternTextBoxStyle}"
 					HorizontalAlignment="Stretch"
 					VerticalAlignment="Center"
+					TabIndex="4"
 					Margin="2"
-					TabIndex="1"
+					x:Name="m_tb_expr"
 					/>
 			</DockPanel>
 
@@ -143,6 +159,7 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Ignore Case" 
+					ToolTip="Pattern characters are not case sensitive"
 					IsChecked="{Binding Pattern.IgnoreCase, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					FontSize="11"
@@ -162,7 +179,7 @@
 					Margin="2"
 					/>
 
-				<!-- Multi line -->
+				<!-- Single line -->
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Single Line"
@@ -170,7 +187,7 @@
 					IsChecked="{Binding Pattern.SingleLine, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					FontSize="11"
-					TabIndex="6"
+					TabIndex="7"
 					Margin="2"
 					/>
 
@@ -178,11 +195,12 @@
 				<CheckBox
 					DockPanel.Dock="Left"
 					Content="Invert Match"
+					ToolTip="Match anything that does not match the pattern"
 					IsChecked="{Binding Pattern.Invert, Mode=TwoWay}"
 					VerticalAlignment="Center"
 					Margin="2"
 					FontSize="11"
-					TabIndex="6"
+					TabIndex="8"
 					/>
 
 				<!-- Capture groups label -->
@@ -209,7 +227,7 @@
 				Width="48"
 				Height="48"
 				Margin="2"
-				TabIndex="8"
+				TabIndex="10"
 				>
 				<Image>
 					<Image.Style>
@@ -239,18 +257,34 @@
 			</Grid.ColumnDefinitions>
 
 			<!-- Test text -->
-			<RichTextBox
+			<Grid
 				Grid.Column="0"
-				ToolTip="An area for testing your pattern.&#x0a;Add any text you like here"
-				Background="{x:Static SystemColors.WindowBrush}"
-				SelectionChanged="{gui:MethodBinding UpdateCaptureGroups}"
-				AcceptsReturn="True"
-				IsHitTestVisible="True"
-				BorderThickness="1"
 				Margin="2,2,0,2"
-				TabIndex="9"
-				Name="m_rtb"
-				/>
+				>
+				<Canvas
+					Background="{x:Static SystemColors.WindowBrush}"
+					ClipToBounds="True"
+					>
+					<Canvas
+						x:Name="m_highlight"
+						Margin="0"
+						/>
+				</Canvas>
+				<TextBox
+					ToolTip="An area for testing your pattern.&#x0a;Add any text you like here"
+					Text="{Binding TestText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					SelectionChanged="{gui:MethodBinding UpdateCaptureGroups}"
+					ScrollViewer.ScrollChanged="TestTextScrolled"
+					IsHitTestVisible="True"
+					HorizontalScrollBarVisibility="Auto"
+					VerticalScrollBarVisibility="Auto"
+					Background="Transparent"
+					AcceptsReturn="True"
+					BorderThickness="1"
+					TabIndex="9"
+					x:Name="m_tb_testtext"
+					/>
+			</Grid>
 
 			<!-- Capture groups -->
 			<DataGrid

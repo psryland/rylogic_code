@@ -197,6 +197,7 @@ namespace Rylogic.Common
 			NotifyPropertyChanged(nameof(CaptureGroupNames));
 			NotifyPropertyChanged(nameof(IsValid));
 			NotifyPropertyChanged(nameof(SyntaxErrorDescription));
+			NotifyPropertyChanged(nameof(Description));
 		}
 
 		/// <summary>Returns the match template as a compiled regular expression</summary>
@@ -306,23 +307,26 @@ namespace Rylogic.Common
 		{
 			get
 			{
-				try { return Regex.GetGroupNames(); }
-				catch { return Array.Empty<string>(); }
+				try
+				{
+					var names = Regex.GetGroupNames();
+					if (Invert) names = new[] { "0-", "0+" }.Concat(names.Skip(1)).ToArray();
+					return names;
+				}
+				catch
+				{
+					return Array.Empty<string>();
+				}
 			}
 		}
 
 		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
 		public IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text)
 		{
-			if (!IsMatch(text) || !IsValid) yield break;
-			var match = Regex.Match(text);
-			if (match.Success)
-			{
-				var names = Regex.GetGroupNames();
-				var grps = match.Groups;
-				for (int i = 0; i != grps.Count; ++i)
-					yield return new KeyValuePair<string, string>(names[i], grps[i].Value);
-			}
+			var grps = Match(text);
+			var names = CaptureGroupNames;
+			foreach (var (grp, i) in grps.WithIndex())
+				yield return new KeyValuePair<string, string>(names[i], text.Substring(grp.Begi, grp.Sizei));
 		}
 
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
@@ -348,8 +352,6 @@ namespace Rylogic.Common
 			if (!Active || text == null) yield break;
 
 			var x = new List<int>();
-
-			if (Invert) x.Add(0);
 			try
 			{
 				var match = Regex.Match(text, start, length == -1 ? text.Length - start : length);
@@ -375,15 +377,29 @@ namespace Rylogic.Common
 			catch (ArgumentException) {}
 			if (Invert)
 			{
-				x.Add(text.Length);
-
-				// Add the global match
-				x.Insert(0, text.Length);
-				x.Insert(0, 0);
+				// An inverted pattern returns matches for text ranges that don't match the pattern.
+				// For regular expressions, invert the global match, but keep the capture groups.
+				// Ensure there is always two "global" matches for the start and end.
+				if (x.Count != 0)
+				{
+					x.Insert(2, text.Length);
+					x.Insert(0, 0);
+				}
+				else
+				{
+					x.Add(0);
+					x.Add(text.Length);
+					x.Add(text.Length);
+					x.Add(text.Length);
+				}
 			}
 
+			// Convert the indices into ranges
 			for (int i = 0; i != x.Count; i += 2)
-				yield return new Range(x[i], x[i+1]);
+			{
+				Debug.Assert(x[i] <= x[i + 1]);
+				yield return new Range(x[i], x[i + 1]);
+			}
 		}
 
 		/// <summary>
@@ -442,14 +458,13 @@ namespace Rylogic.Common
 		}
 		public override int GetHashCode()
 		{
-			return
-				m_patn_type   .GetHashCode()^
-				m_expr        .GetHashCode()^
-				m_ignore_case .GetHashCode()^
-				m_active      .GetHashCode()^
-				m_invert      .GetHashCode()^
-				m_whole_line  .GetHashCode()^
-				m_single_line .GetHashCode();
+			// From MSDN's entry on 'Object.GetHashCode()'
+			// In general, for mutable reference types, you should override GetHashCode *only* if:
+			//  1) You can compute the hash code from fields that are **not mutable**; or
+			//  2) You can ensure that the hash code of a mutable object does not change while
+			//     the object is contained in a collection that relies on its hash code.
+			return base.GetHashCode();
+			//return new { m_patn_type, m_expr, m_ignore_case, m_active, m_invert, m_whole_line, m_single_line }.GetHashCode();
 		}
 		#endregion
 

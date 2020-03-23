@@ -39,6 +39,22 @@ namespace Rylogic.Extn
 			return !string.IsNullOrEmpty(str);
 		}
 
+		/// <summary>Return the index of the first character to satisfy 'pred' or str.Length</summary>
+		public static int Find(this string str, Func<char, bool> pred)
+		{
+			return Find(str, pred, 0);
+		}
+		public static int Find(this string str, Func<char, bool> pred, int start_index)
+		{
+			// This is not called 'IndexOf' because it doesn't return -1 when not found.
+			// Silently handing 'start_index' being out of range to make use of this
+			// function in for loops more convenient;
+			int i = start_index;
+			if (i < 0 || i >= str.Length) return str.Length;
+			for (; i != str.Length && !pred(str[i]); ++i) {}
+			return i;
+		}
+
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
 		public static string Substring(this string str, string? start_pattern, string? end_pattern, StringComparison cmp_type = StringComparison.InvariantCulture)
 		{

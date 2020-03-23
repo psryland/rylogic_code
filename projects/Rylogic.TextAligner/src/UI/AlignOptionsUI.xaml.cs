@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -65,14 +66,19 @@ namespace Rylogic.TextAligner
 					m_groups_view.CurrentChanged += HandleCurrentChanged;
 				}
 				NotifyPropertyChanged(nameof(GroupsView));
+				HandleCurrentChanged(null, null);
 
 				// Handlers
-				void HandleCurrentChanged(object sender, EventArgs e)
+				void HandleCurrentChanged(object? sender, EventArgs? e)
 				{
-					var patterns = GroupsView.CurrentAs<AlignGroup>()?.Patterns;
-					PatternsView = new ListCollectionView(patterns ?? new ObservableCollection<AlignPattern>());
-					MoveGroupUp.NotifyCanExecuteChanged();
-					MoveGroupDown.NotifyCanExecuteChanged();
+					MoveGroupUp?.NotifyCanExecuteChanged();
+					MoveGroupDown?.NotifyCanExecuteChanged();
+
+					var gidx = GroupsView.CurrentPosition;
+					if (gidx >= 0 && gidx < m_options.Groups.Count)
+						PatternsView = new ListCollectionView(m_options.Groups[gidx].Patterns);
+					else
+						PatternsView = new ListCollectionView(Array.Empty<AlignPattern>());
 				}
 			}
 		}
@@ -95,12 +101,13 @@ namespace Rylogic.TextAligner
 					m_patterns_view.CurrentChanged += HandleCurrentChanged;
 				}
 				NotifyPropertyChanged(nameof(PatternsView));
+				HandleCurrentChanged(null, null);
 
 				// Handlers
-				void HandleCurrentChanged(object sender, EventArgs e)
+				void HandleCurrentChanged(object? sender, EventArgs? e)
 				{
-					MovePatternUp.NotifyCanExecuteChanged();
-					MovePatternDown.NotifyCanExecuteChanged();
+					MovePatternUp?.NotifyCanExecuteChanged();
+					MovePatternDown?.NotifyCanExecuteChanged();
 				}
 			}
 		}
@@ -172,32 +179,34 @@ namespace Rylogic.TextAligner
 		public Command MoveGroupUp { get; }
 		private void MoveGroupUpInternal()
 		{
-			var idx = GroupsView.CurrentPosition;
-			if (idx > 0)
+			var gidx = GroupsView.CurrentPosition;
+			if (gidx > 0 && gidx < m_options.Groups.Count)
 			{
-				m_options.Groups.Swap(idx, idx - 1);
-				GroupsView.MoveCurrentToPosition(idx - 1);
+				m_options.Groups.Swap(gidx, gidx - 1);
+				GroupsView.MoveCurrentToPosition(gidx - 1);
 			}
 		}
 		private bool MoveGroupUpAvailable()
 		{
-			return GroupsView.CurrentItem != null && GroupsView.CurrentPosition > 0;
+			var gidx = GroupsView.CurrentPosition;
+			return gidx > 0 && gidx < m_options.Groups.Count;
 		}
 
 		/// <summary>Move the selected group down</summary>
 		public Command MoveGroupDown { get; }
 		private void MoveGroupDownInternal()
 		{
-			var idx = GroupsView.CurrentPosition;
-			if (idx < m_options.Groups.Count - 1)
+			var gidx = GroupsView.CurrentPosition;
+			if (gidx >= 0 && gidx < m_options.Groups.Count - 1)
 			{
-				m_options.Groups.Swap(idx, idx + 1);
-				GroupsView.MoveCurrentToPosition(idx + 1);
+				m_options.Groups.Swap(gidx, gidx + 1);
+				GroupsView.MoveCurrentToPosition(gidx + 1);
 			}
 		}
 		private bool MoveGroupDownAvailable()
 		{
-			return GroupsView.CurrentItem != null && GroupsView.CurrentPosition != m_options.Groups.Count - 1;
+			var gidx = GroupsView.CurrentPosition;
+			return gidx >= 0 && gidx < m_options.Groups.Count - 1;
 		}
 
 		/// <summary>Add another alignment pattern</summary>
@@ -231,35 +240,50 @@ namespace Rylogic.TextAligner
 		public Command MovePatternUp { get; }
 		private void MovePatternUpInternal()
 		{
-			var idx = PatternsView.CurrentPosition;
-			if (idx > 0)
+			var gidx = GroupsView.CurrentPosition;
+			if (gidx < 0 || gidx >= m_options.Groups.Count)
+				return;
+
+			var pidx = PatternsView.CurrentPosition;
+			var patterns = m_options.Groups[gidx].Patterns;
+			if (pidx > 0 && pidx < patterns.Count)
 			{
-				var patterns = (ObservableCollection<AlignPattern>)PatternsView.SourceCollection;
-				patterns.Swap(idx, idx - 1);
-				PatternsView.MoveCurrentToPosition(idx - 1);
+				patterns.Swap(pidx, pidx - 1);
+				PatternsView.MoveCurrentToPosition(pidx - 1);
 			}
 		}
 		private bool MovePatternUpAvailable()
 		{
-			return PatternsView.CurrentItem != null && PatternsView.CurrentPosition > 0;
+			var gidx = GroupsView.CurrentPosition;
+			var pidx = PatternsView.CurrentPosition;
+			return
+				gidx >= 0 && gidx < m_options.Groups.Count &&
+				pidx > 0 && pidx < m_options.Groups[gidx].Patterns.Count;
 		}
 
 		/// <summary>Move the selected pattern down</summary>
 		public Command MovePatternDown { get; }
 		private void MovePatternDownInternal()
 		{
-			var idx = PatternsView.CurrentPosition;
-			var patterns = (ObservableCollection<AlignPattern>)PatternsView.SourceCollection;
-			if (idx < patterns.Count - 1)
+			var gidx = GroupsView.CurrentPosition;
+			if (gidx < 0 || gidx >= m_options.Groups.Count)
+				return;
+
+			var pidx = PatternsView.CurrentPosition;
+			var patterns = m_options.Groups[gidx].Patterns;
+			if (pidx >= 0 && pidx < patterns.Count - 1)
 			{
-				patterns.Swap(idx, idx + 1);
-				PatternsView.MoveCurrentToPosition(idx + 1);
+				patterns.Swap(pidx, pidx + 1);
+				PatternsView.MoveCurrentToPosition(pidx + 1);
 			}
 		}
 		private bool MovePatternDownAvailable()
 		{
-			var patterns = (ObservableCollection<AlignPattern>)PatternsView.SourceCollection;
-			return PatternsView.CurrentItem != null && PatternsView.CurrentPosition != patterns.Count - 1;
+			var gidx = GroupsView.CurrentPosition;
+			var pidx = PatternsView.CurrentPosition;
+			return
+				gidx >= 0 && gidx < m_options.Groups.Count &&
+				pidx >= 0 && pidx < m_options.Groups[gidx].Patterns.Count - 1;
 		}
 
 		/// <summary></summary>
@@ -267,6 +291,17 @@ namespace Rylogic.TextAligner
 		public void NotifyPropertyChanged(string? prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
+
+		/// <summary></summary>
+		private void MouseDoubleClick_AlignmentPatterns(object sender, MouseButtonEventArgs e)
+		{
+			var cell = DataGrid_.FindCell((DependencyObject)e.OriginalSource);
+			if (cell != null && cell.Column.Header is string header && header == "Pattern" && cell.DataContext is AlignPattern pattern)
+			{
+				EditPattern.Execute(pattern);
+				e.Handled = true;
+			}
 		}
 	}
 }

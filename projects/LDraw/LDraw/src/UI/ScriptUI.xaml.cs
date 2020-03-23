@@ -508,33 +508,33 @@ namespace LDraw.UI
 					var last_newline_offset = 0;
 					var start_offsets = new Stack<int>();
 					var embedded_offset = int.MaxValue;
-					foreach (var ch in src.WithIndex())
+					foreach (var (ch, i) in src.WithIndex())
 					{
 						if (com.WithinComment(src, 0))
 							continue;
 
 						if (ch == '\n')
 						{
-							last_newline_offset = ch.Index + 1;
+							last_newline_offset = i + 1;
 						}
 						else if (ch == '{')
 						{
-							start_offsets.Push(ch.Index);
+							start_offsets.Push(i);
 						}
 						else if (ch == '}' && start_offsets.Count != 0)
 						{
 							var start = start_offsets.Pop();
 							if (start < last_newline_offset)
-								foldings.Add(new NewFolding(start, ch.Index + 1));
+								foldings.Add(new NewFolding(start, i + 1));
 						}
 						else if (src.Match("#embedded"))
 						{
-							embedded_offset = ch.Index + "#embedded".Length;
+							embedded_offset = i + "#embedded".Length;
 						}
 						else if (src.Match("#end"))
 						{
 							if (embedded_offset < last_newline_offset)
-								foldings.Add(new NewFolding(embedded_offset, ch.Index + "#end".Length));
+								foldings.Add(new NewFolding(embedded_offset, i + "#end".Length));
 							embedded_offset = int.MaxValue;
 						}
 					}

@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -77,16 +80,10 @@ namespace Rylogic.Gui.WPF
 			DataContext = this;
 			TestText = DefaultTestText;
 
-			m_rtb.LostFocus += delegate
-			{
-				using var mem = new MemoryStream();
-				new TextRange(m_rtb.Document.ContentStart, m_rtb.Document.ContentEnd).Save(mem, DataFormats.Text);
-				TestText = Encoding.UTF8.GetString(mem.ToArray());
-			};
 			Loaded += delegate
 			{
-				_ = MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-				ApplyPattern();
+				m_tb_expr.Focus();
+				ApplyHighlighting();
 			};
 		}
 
@@ -125,7 +122,7 @@ namespace Rylogic.Gui.WPF
 				// Handler
 				void HandlePatternPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
-					ApplyPattern();
+					ApplyHighlighting();
 					Dirty = true;
 				}
 			}
@@ -150,20 +147,17 @@ namespace Rylogic.Gui.WPF
 			get => m_test_text;
 			set
 			{
-				if (m_test_text == value) return;
+				if (TestText == value) return;
 				m_test_text = value;
 
-				// Apply the text to the flow document as plain text
-				using var text = new MemoryStream(Encoding.UTF8.GetBytes(m_test_text));
-				new TextRange(m_rtb.Document.ContentStart, m_rtb.Document.ContentEnd).Load(text, DataFormats.Text);
-
+				// Update the highlighting
 				if (Pattern != null)
-					ApplyPattern();
+					ApplyHighlighting();
 
 				NotifyPropertyChanged(nameof(TestText));
 			}
 		}
-		private string m_test_text = null!;
+		private string m_test_text = string.Empty;
 
 		/// <summary>The capture groups</summary>
 		public ObservableCollection<CaptureGroup> CaptureGroups { get; }
@@ -196,11 +190,8 @@ namespace Rylogic.Gui.WPF
 		public bool PatternValid => Pattern?.IsValid ?? false;
 
 		/// <summary>Apply highlighting to the test text</summary>
-		private void ApplyPattern()
+		private void ApplyHighlighting()
 		{
-			if (m_in_apply_pattern != 0) return;
-			using var in_apply_pattern = Scope.Create(() => ++m_in_apply_pattern, () => --m_in_apply_pattern);
-
 			// Notify when 'CommentEnabled' changes
 			if (PatternValid != m_last_pattern_valid)
 			{
@@ -213,59 +204,63 @@ namespace Rylogic.Gui.WPF
 				m_last_has_unsaved_changes = HasUnsavedChanges;
 			}
 
-			// Split the test text into lines if dot doesn't match new lines
-			var lines = Pattern.SingleLine ? new[] { TestText } : TestText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+			// Remove all highlighting
+			m_highlight.Children.Clear();
 
-			// Reset the document
-			var doc = m_rtb.Document;
-			doc.Blocks.Clear();
-
-			// Apply the pattern to the test text
-			if (Pattern != null && Pattern.IsValid && Pattern.CaptureGroupNames.Length >= 1 && !m_rtb.IsKeyboardFocused)
+			// Remove all highlighting if the pattern is invalid
+			if (PatternValid)
 			{
-				foreach (var line in lines)
+				// If the pattern is a single line pattern, merge all paragraphs into one
+				int c = 0, s = 0, e = Pattern.SingleLine ? TestText.Length : TestText.Find(x => x == '\r' || x == '\n');
+				for (;s != TestText.Length;)
 				{
-					var par = new Paragraph() { Margin = new Thickness(0) };
-					var grp = Pattern.Match(line).GetEnumerator();
-					if (grp.MoveNext())
+					// Apply the pattern to each line
+					var text = TestText.Substring(s, e - s);
+
+					// Add highlights for matches
+					foreach (var match in Pattern.Match(text).Where(x => !x.Empty))
+						DoHighlight(match.Shift(s), BkColors[c++ % BkColors.Length]);
+
+					s = TestText.Find(x => x != '\r' && x != '\n', e);
+					e = TestText.Find(x => x == '\r' || x == '\n', s);
+					c = 0;
+
+					// Add a rectangle to highlight a region of text
+					void DoHighlight(Range r, Brush fill)
 					{
-						var no_match_colour = Brushes.Transparent;
-						var global_match_colour = BkColors[0];
+						var l0 = m_tb_testtext.GetLineIndexFromCharacterIndex(r.Begi);
+						var l1 = m_tb_testtext.GetLineIndexFromCharacterIndex(r.Endi);
 
-						// Add text from 0 to start of global match
-						var r0 = grp.Current;
-						if (r0.Begi != 0)
-							par.Inlines.Add(new Run(line.Substring(0, r0.Begi)) { Background = no_match_colour });
-
-						// Add matches within global match
-						var c = 1;
-						for (; grp.MoveNext();)
+						// Same line
+						if (l0 == l1)
 						{
-							var r = grp.Current;
-							if (r0.Begi != r.Begi) par.Inlines.Add(new Run(line.Substring(r0.Begi, r.Begi - r0.Begi)) { Background = global_match_colour });
-							if (r.Begi != r.Endi) par.Inlines.Add(new Run(line.Substring(r.Begi, r.Endi - r.Begi)) { Background = BkColors[c++ % BkColors.Length] });
-							r0.Beg = r.End;
-							r0.End = Math.Max(r0.Beg, r0.End);
+							var x0 = m_tb_testtext.GetRectFromCharacterIndex(r.Begi, false);
+							var x1 = m_tb_testtext.GetRectFromCharacterIndex(r.Endi, false);
+							var rect = new Rectangle { Width = x1.X - x0.X, Height = x0.Height, Fill = fill };
+							Canvas.SetLeft(rect, x0.X + m_tb_testtext.HorizontalOffset);
+							Canvas.SetTop(rect, x0.Y + m_tb_testtext.VerticalOffset);
+							m_highlight.Children.Add(rect);
 						}
-						if (r0.Begi != r0.Endi) par.Inlines.Add(new Run(line.Substring(r0.Begi, r0.Endi - r0.Begi)) { Background = global_match_colour });
+						// Multiple lines
+						else
+						{
+							for (var l = l0; l <= l1; ++l)
+							{
+								var x0 = l == l0
+									? m_tb_testtext.GetRectFromCharacterIndex(r.Begi, false)
+									: m_tb_testtext.GetRectFromCharacterIndex(m_tb_testtext.GetCharacterIndexFromLineIndex(l), false);
+								var x1 = l == l1
+									? m_tb_testtext.GetRectFromCharacterIndex(r.Endi, false)
+									: m_tb_testtext.GetRectFromCharacterIndex(m_tb_testtext.GetCharacterIndexFromLineIndex(l) + Math.Max(0, m_tb_testtext.GetLineLength(l) - 1), false);
 
-						// Add text after end of global match
-						if (r0.Endi != line.Length)
-							par.Inlines.Add(new Run(line.Substring(r0.Endi)) { Background = no_match_colour });
+								var rect = new Rectangle { Width = x1.X - x0.X, Height = x0.Height, Fill = fill };
+								Canvas.SetLeft(rect, x0.X + m_tb_testtext.HorizontalOffset);
+								Canvas.SetTop(rect, x0.Y + m_tb_testtext.VerticalOffset);
+								m_highlight.Children.Add(rect);
+							}
+						}
 					}
-					else
-					{
-						par.Inlines.Add(new Run(line));
-					}
-
-					// Add the line to the doc
-					doc.Blocks.Add(par);
 				}
-			}
-			else
-			{
-				foreach (var line in lines)
-					doc.Blocks.Add(new Paragraph(new Run(line)) { Margin = new Thickness(0) });
 			}
 
 			// Update the capture groups
@@ -273,7 +268,6 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_last_pattern_valid;
 		private bool m_last_has_unsaved_changes;
-		private int m_in_apply_pattern;
 
 		/// <summary>Update the collection of capture groups</summary>
 		private void UpdateCaptureGroups()
@@ -281,15 +275,22 @@ namespace Rylogic.Gui.WPF
 			CaptureGroups.Clear();
 			if (Pattern != null && Pattern.IsValid)
 			{
-				// Get the line that the caret is position is on
-				var this_line = m_rtb.CaretPosition.GetLineStartPosition(0) ?? m_rtb.CaretPosition.DocumentStart;
-				var next_line = m_rtb.CaretPosition.GetLineStartPosition(1) ?? m_rtb.CaretPosition.DocumentEnd;
-				var line = new TextRange(this_line, next_line).Text.Trim('\n', '\r');
+				string text;
+				if (Pattern.SingleLine)
+				{
+					text = TestText;
+				}
+				else
+				{
+					// Get the line that the caret is positioned on
+					var line_index = m_tb_testtext.GetLineIndexFromCharacterIndex(m_tb_testtext.CaretIndex);
+					text = line_index != -1 ? m_tb_testtext.GetLineText(line_index).Trim('\r','\n') : string.Empty;
+				}
 
 				// Update the capture groups data
 				var groups = new Dictionary<string, string>();
 				foreach (var name in Pattern.CaptureGroupNames) groups[name] = string.Empty;
-				foreach (var cap in Pattern.CaptureGroups(line)) groups[cap.Key] = cap.Value;
+				foreach (var cap in Pattern.CaptureGroups(text)) groups[cap.Key] = cap.Value;
 				foreach (var group in groups)
 					CaptureGroups.Add(new CaptureGroup(group.Key, group.Value));
 			}
@@ -307,7 +308,7 @@ namespace Rylogic.Gui.WPF
 		public Command ShowHelp { get; }
 		private void ShowHelpInternal()
 		{
-			var help_filepath = Path.Combine(Path.GetTempPath(), "RegularExpressionQuickReference.html");
+			var help_filepath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "RegularExpressionQuickReference.html");
 			File.WriteAllText(help_filepath, WPF.Resources.regex_quick_ref);
 			System.Diagnostics.Process.Start(help_filepath);
 		}
@@ -337,5 +338,12 @@ namespace Rylogic.Gui.WPF
 			Brushes.LightGreen, Brushes.LightBlue, Brushes.LightCoral, Brushes.LightSalmon, Brushes.Violet, Brushes.LightSkyBlue,
 			Brushes.Aquamarine, Brushes.Yellow, Brushes.Orchid, Brushes.GreenYellow, Brushes.PaleGreen, Brushes.Goldenrod, Brushes.MediumTurquoise,
 		};
+
+		/// <summary>Links the highlighting canvas can test text textbox together</summary>
+		private void TestTextScrolled(object sender, ScrollChangedEventArgs e)
+		{
+			Canvas.SetLeft(m_highlight, -m_tb_testtext.HorizontalOffset);
+			Canvas.SetTop(m_highlight, -m_tb_testtext.VerticalOffset);
+		}
 	}
 }
