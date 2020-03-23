@@ -10,17 +10,21 @@ namespace pr::geometry
 {
 	// Returns the number of verts and number of indices needed to hold geometry for an
 	// array of 'num_lines' lines. (Lines given as start point, end point pairs)
-	template <typename Tvr, typename Tir>
-	void LineSize(int num_lines, Tvr& vcount, Tir& icount)
+	constexpr BufSizes LineSize(int num_lines)
 	{
-		vcount = s_cast<Tvr>(2 * num_lines);
-		icount = s_cast<Tir>(2 * num_lines);
+		return
+		{
+			2 * num_lines,
+			2 * num_lines,
+		};
 	}
-	template <typename Tvr, typename Tir>
-	void LineStripSize(int num_lines, Tvr& vcount, Tir& icount)
+	constexpr BufSizes LineStripSize(int num_lines)
 	{
-		vcount = s_cast<Tvr>(1 + num_lines);
-		icount = s_cast<Tir>(1 + num_lines);
+		return
+		{
+			1 + num_lines,
+			1 + num_lines,
+		};
 	}
 
 	// Generate lines from an array of start point, end point pairs.
@@ -30,72 +34,76 @@ namespace pr::geometry
 	// 'colours' is an input array of colour values, a pointer to a single colour, or null.
 	// 'out_verts' is an output iterator to receive the [vert,colour] data
 	// 'out_indices' is an output iterator to receive the index data
-	template <typename TVertIter, typename TIdxIter>
-	Props Lines(int num_lines, v4 const* points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
+	template <typename VOut, typename IOut>
+	Props Lines(int num_lines, v4 const* points, int num_colours, Colour32 const* colours, VOut vout, IOut iout)
 	{
-		using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 		Props props;
 		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = pr::CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
-		auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+		auto col = CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
+		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
 
-		v4 const* v_in  = points;
-		TVertIter v_out = out_verts;
-		TIdxIter  i_out = out_indices;
-		VIdx index = 0;
-
+		int index = 0;
 		for (int i = 0; i != num_lines; ++i)
 		{
-			SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
-			SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
+			vout(bb(*points++), cc(*col++));
+			vout(bb(*points++), cc(*col++));
+			iout(index++);
+			iout(index++);
 		}
 
 		return props;
 	}
 
 	// Create lines using collections of points and directions
-	template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
-	inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, int num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
+	template <typename TVertCIter, typename TColCIter, typename VOut, typename IOut>
+	inline Props LinesD(int num_lines, TVertCIter points, TVertCIter directions, int num_colours, TColCIter colours, VOut vout, IOut iout)
 	{
-		std::vector<v4> buf(num_lines * 2);
-		auto dst = begin(buf);
-		for (int i = 0; i != num_lines; ++i, ++points, ++directions)
-		{
-			*dst++ = *points;
-			*dst++ = *points + *directions;
-		}
-		return Lines(num_lines, &buf[0], num_colours, colours, out_verts, out_indices);
-	}
-
-	// Create a line strip
-	template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
-	inline Props LinesStrip(int num_lines, TVertCIter points, int num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
-	{
-		using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 		Props props;
 		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 
 		// Colour iterator
-		auto col = pr::CreateLerpRepeater(colours, num_colours, 1+num_lines, Colour32White);
-		auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+		auto col = CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
+		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
 
-		auto v_in  = points;
-		auto v_out = out_verts;
-		auto i_out = out_indices;
-		VIdx index = 0;
-
-		for (int i = 0; i != num_lines + 1; ++i)
+		int index = 0;
+		for (int i = 0; i != num_lines; ++i, ++points, ++directions, ++col)
 		{
-			SetPC(*v_out++, bb(*v_in++), cc(*col++));
-			*i_out++ = index++;
+			vout(bb(*points), cc(*col));
+			vout(bb(*points + *directions), cc(*col));
+			iout(index++);
+			iout(index++);
+		}
+
+		return props;
+	}
+
+	// Create a line strip
+	template <typename TVertCIter, typename TColCIter, typename VOut, typename IOut>
+	inline Props LinesStrip(int num_lines, TVertCIter points, int num_colours, TColCIter colours, VOut vout, IOut iout)
+	{
+		Props props;
+		props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
+
+		// Colour iterator
+		auto col = CreateLerpRepeater(colours, num_colours, 1+num_lines, Colour32White);
+		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
+
+		// Bounding box
+		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+
+		auto index = 0;
+		for (int i = 0; i != num_lines + 1; ++i, ++points, ++col)
+		{
+			vout(bb(*points), cc(*col));
+			iout(index++);
 		}
 
 		return props;
