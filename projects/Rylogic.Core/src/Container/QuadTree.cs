@@ -34,20 +34,16 @@ namespace Rylogic.Container
 			}
 			public override bool Equals(object? obj)
 			{
-				return obj is Coord rhs
-					&& Equals(m_level, rhs.m_level)
-					&& Equals(m_x, rhs.m_x)
-					&& Equals(m_y, rhs.m_y);
+				return obj is Coord rhs &&
+					m_level == rhs.m_level &&
+					m_x == rhs.m_x &&
+					m_y == rhs.m_y;
 			}
 			public override int GetHashCode()
 			{
-				return
-					base.GetHashCode()^
-					m_level.GetHashCode()^
-					m_x.GetHashCode()^
-					m_y.GetHashCode();
+				return new { m_level, m_x, m_y }.GetHashCode();
 			}
-			public override string ToString() { return "Level:" + m_level + " X:" + m_x + " Y:" + m_y; }
+			public override string ToString() => $"Level:{m_level} X:{m_x} Y:{m_y}";
 		};
 
 		/// <summary>Quad tree node</summary>

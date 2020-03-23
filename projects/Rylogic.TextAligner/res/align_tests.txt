@@ -30,7 +30,8 @@ struct Type
 {
 	int m_member1;
 	float m_member2;
-	unsigned long m_member3;
+	unsigned long m_member3; // comment
+	short member4_; /* comment */
 };
 
 aaaaaaaaa>= b
@@ -50,3 +51,8 @@ a== b
 		  m_two
       m_three
 	m_four
+
+// 	boris
+//		harris
+//  yaris
+// 	  feris

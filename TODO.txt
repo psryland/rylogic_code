@@ -1,7 +1,7 @@
 Immediate ToDo:
 	
 TextAligner
-	- Sign with code signing certificate
+	- Test on vs2013,vs2015,vs2017,vs2019
 	
 LDraw
 	- Switch geometry model generators to use output functions, not iterators

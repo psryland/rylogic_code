@@ -79,7 +79,10 @@ namespace Rylogic.Maths
 		public static bool operator ==(BBox lhs, BBox rhs) { return lhs.Centre == rhs.Centre; }
 		public static bool operator !=(BBox lhs, BBox rhs) { return !(lhs == rhs); }
 		public override bool Equals(object? o) { return o is BBox box && box == this; }
-		public override int GetHashCode() { unchecked { return Centre.GetHashCode() ^ Radius.GetHashCode(); } }
+		public override int GetHashCode()
+		{
+			return new { Centre, Radius }.GetHashCode();
+		}
 
 		/// <summary>Returns true if the bounding box represents a point or volume</summary>
 		public bool IsValid

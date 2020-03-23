@@ -87,40 +87,34 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>True if the range spans zero elements</summary>
-		public bool Empty
-		{
-			get { return End == Beg; }
-		}
+		public bool Empty => End == Beg;
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public long Count
 		{
-			get { return End - Beg; }
-			set { End = Beg + value; }
+			get => End - Beg;
+			set => End = Beg + value;
 		}
 		public long Size
 		{
-			get { return Count; }
-			set { Count = value; }
+			get => Count;
+			set => Count = value;
 		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
 		public long Mid
 		{
-			get { return (Beg + End) / 2; }
+			get => (Beg + End) / 2;
 			set
 			{
 				var count = Size;
-				Beg = value - count/2;
-				End = value + (count+1)/2;
+				Beg = value - count / 2;
+				End = value + (count + 1) / 2;
 			}
 		}
 
 		/// <summary>Exact mid point</summary>
-		public double Midf
-		{
-			get { return 0.5 * (Beg + End);  }
-		}
+		public double Midf => 0.5 * (Beg + End);
 
 		/// <summary>Empty the range and reset to [0,0)</summary>
 		public void Clear()
@@ -129,11 +123,11 @@ namespace Rylogic.Common
 		}
 
 		// Casting helpers
-		public int Begi   { get { return (int)Beg;   } }
-		public int Endi   { get { return (int)End;   } }
-		public int Counti { get { return (int)Count; } }
-		public int Sizei  { get { return (int)Size;  } }
-		public int Midi   { get { return (int)Mid;   } }
+		public int Begi => (int)Beg;
+		public int Endi => (int)End;
+		public int Counti => (int)Count;
+		public int Sizei => (int)Size;
+		public int Midi => (int)Mid;
 
 		/// <summary>Enumerator for iterating over the range</summary>
 		public IEnumerable<long> Enumerate

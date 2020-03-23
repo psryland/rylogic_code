@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace Rylogic.Gui.WPF
@@ -115,6 +116,19 @@ namespace Rylogic.Gui.WPF
 					m_reflected_command.Execute(args);
 				}
 			}
+		}
+
+		/// <summary>VerticalOffset property</summary>
+		public const int VerticalOffset = 0;
+		public static readonly DependencyProperty VerticalOffsetProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(VerticalOffset));
+		public static double GetVerticalOffset(DependencyObject obj) => (double)obj.GetValue(VerticalOffsetProperty);
+		public static void SetVerticalOffset(DependencyObject obj, double value) => obj.SetValue(VerticalOffsetProperty, value);
+		private static void VerticalOffset_Changed(DependencyObject obj)
+		{
+			if (obj is ScrollViewer sv)
+				sv.ScrollToVerticalOffset(GetVerticalOffset(obj));
+			if (obj is TextBoxBase tb)
+				tb.ScrollToVerticalOffset(GetVerticalOffset(obj));
 		}
 
 		/// <summary>Find a context menu resource and set it's data context to the given object</summary>

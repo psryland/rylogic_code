@@ -614,20 +614,10 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Enumerate with an included index</summary>
-		public static IEnumerable<ItemWithIndex<T>> WithIndex<T>(this IEnumerable<T> source)
+		public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> source)
 		{
 			int index = 0;
-			foreach (var item in source)
-			{
-				yield return new ItemWithIndex<T> { Item = item, Index = index };
-				++index;
-			}
-		}
-		public struct ItemWithIndex<T>
-		{
-			public T Item;
-			public int Index;
-			public static implicit operator T(ItemWithIndex<T> p) { return p.Item; }
+			return source.Select(x => (x, index++));
 		}
 
 		/// <summary>Batches items in a collection in groups >= 'batch_size'.</summary>
@@ -695,6 +685,13 @@ namespace Rylogic.UnitTests
 	[TestFixture]
 	public class TestEnumerableExtns
 	{
+		[Test]
+		public void WithIndex()
+		{
+			var ints = new[] { 1, 2, 3, 4, 5 };
+			foreach (var (i, idx) in ints.WithIndex())
+				Assert.Equal(i, idx + 1);
+		}
 		[Test]
 		public void InPairs()
 		{
