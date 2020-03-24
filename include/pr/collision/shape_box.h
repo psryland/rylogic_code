@@ -55,7 +55,7 @@ namespace pr::collision
 	// Shift the centre of a box shape
 	inline void ShiftCentre(ShapeBox&, v4& shift)
 	{
-		assert("impossible to shift the centre of an implicit object" && FEql3(shift, v4Zero));
+		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
 		(void)shift; 
 	}
 

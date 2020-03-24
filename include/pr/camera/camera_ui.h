@@ -86,7 +86,7 @@ namespace pr
 				auto up       = To<v3>(m_tb_up      .Text()).w0();
 				auto hfov     = DegreesToRadians(To<float>(m_tb_horz_fov.Text()));
 
-				if (FEql3(lookat - position, v4Zero))
+				if (FEql(lookat - position, v4Zero))
 					lookat = position + v4ZAxis;
 				if (Parallel(lookat - position, up))
 					up = Perpendicular(up);

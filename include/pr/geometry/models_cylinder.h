@@ -76,7 +76,7 @@ namespace pr::geometry
 			{
 				auto a = da*w + (l%2)*da*0.5f;
 				pt = v4(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
-				nm = v4::Normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
+				nm = v4::Normal(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
 				uv = v2(a / float(maths::tau), 1.0f - (z + height*0.5f) / height);
 				vout(pt, cc(*col++), nm, uv);
 			}

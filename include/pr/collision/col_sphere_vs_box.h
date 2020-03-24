@@ -52,7 +52,7 @@ namespace pr::collision
 		// The separating axis is in one of the box axis directions
 		if (dist_sq < maths::tinyf)
 		{
-			auto i = MaxElementIndex3(Abs(l2r));
+			auto i = MaxElementIndex(Abs(l2r).xyz);
 
 			// Find the penetration depth
 			auto depth = sph.m_radius + box.m_radius[i] - Abs(l2r[i]);

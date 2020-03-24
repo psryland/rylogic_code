@@ -24,7 +24,7 @@ namespace pr::collision
 
 		// Distance between centres
 		auto r2l = r2w.pos - l2w.pos;
-		auto len = Length3(r2l);
+		auto len = Length(r2l);
 		auto sep = lhs.m_radius + rhs.m_radius - len;
 		pen(sep, [&]{ return r2l/len; }, lhs_.m_material_id, rhs_.m_material_id);
 	}

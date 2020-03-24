@@ -27,7 +27,7 @@ namespace pr
 		assert(point.w == 1.0f && start.w == 1.0f && end.w == 1.0f);
 		assert(start != end);
 		v4 line = end - start;
-		t = Dot3(point - start, line) / Length3Sq(line);
+		t = Dot3(point - start, line) / LengthSq(line);
 		return start + t * line;
 	}
 	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, v4_cref<> start, v4_cref<> end)
@@ -51,7 +51,7 @@ namespace pr
 		assert(point.w == 1.0f && s.w == 1.0f && e.w == 1.0f);
 		auto line = e - s;
 
-		// Project 'point' onto 'line', but defer divide by 'line.Length3Sq()'
+		// Project 'point' onto 'line', but defer divide by 'line.LengthSq()'
 		t = Dot3(point - s, line);
 		if (t <= 0.0f)
 		{
@@ -60,7 +60,7 @@ namespace pr
 			return s;
 		}
 
-		auto denom = Length3Sq(line);
+		auto denom = LengthSq(line);
 		if (t >= denom)
 		{
 			// 'point' projects outside 'line', clamp to 1.0f
@@ -107,8 +107,8 @@ namespace pr
 			auto centre = bbox.Centre();
 			auto upr = upper - point;
 			auto lwr = point - lower;
-			auto i0 = MinElementIndex3(upr);
-			auto i1 = MinElementIndex3(lwr);
+			auto i0 = MinElementIndex(upr.xyz);
+			auto i1 = MinElementIndex(lwr.xyz);
 			if (upr[i0] < lwr[i1]) result[i0] = upper[i0];
 			else                   result[i1] = lower[i1];
 		}
@@ -255,28 +255,28 @@ namespace pr
 		{
 			v4 bary;
 			v4 q = ClosestPoint_PointToTriangle(p, a, b, c, bary);
-			float dist_sq = Length3Sq(q - p);
+			float dist_sq = LengthSq(q - p);
 			if (dist_sq < best_dist_sq) { best_dist_sq  = dist_sq; closest_point = q; barycentric = v4(bary.x, bary.y, bary.z, 0.0f); point_is_inside = false; }
 		}
 		if (PointInFrontOfPlane(p, a, c, d)) // Test face acd
 		{
 			v4 bary;
 			v4 q = ClosestPoint_PointToTriangle(p, a, c, d, bary);
-			float dist_sq = Length3Sq(q - p);
+			float dist_sq = LengthSq(q - p);
 			if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(bary.x, 0.0f, bary.y, bary.z); point_is_inside = false; }
 		}
 		if (PointInFrontOfPlane(p, a, d, b)) // Test face adb
 		{
 			v4 bary;
 			v4 q = ClosestPoint_PointToTriangle(p, a, d, b, bary);
-			float dist_sq = Length3Sq(q - p);
+			float dist_sq = LengthSq(q - p);
 			if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(bary.x, bary.z, 0.0f, bary.y); point_is_inside = false; }
 		}
 		if (PointInFrontOfPlane(p, d, c, b)) // Test face dcb
 		{
 			v4 bary;
 			v4 q = ClosestPoint_PointToTriangle(p, d, c, b, bary);
-			float dist_sq = Length3Sq(q - p);
+			float dist_sq = LengthSq(q - p);
 			if (dist_sq < best_dist_sq) { best_dist_sq = dist_sq; closest_point = q; barycentric = v4(0.0f, bary.z, bary.y, bary.x); point_is_inside = false; }
 		}
 		if (point_is_inside)
@@ -310,8 +310,8 @@ namespace pr
 		auto line0   = e0 - s0;
 		auto line1   = e1 - s1;
 		auto sep     = s0 - s1;
-		auto len_sq0 = Length3Sq(line0);
-		auto len_sq1 = Length3Sq(line1);
+		auto len_sq0 = LengthSq(line0);
+		auto len_sq1 = LengthSq(line1);
 		auto f       = Dot3(line1, sep);
 		auto c       = Dot3(line0, sep);
 
@@ -365,7 +365,7 @@ namespace pr
 		ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, t0, t1);
 		v4 pt0 = (1.0f - t0) * s0 + t0 * e0;
 		v4 pt1 = (1.0f - t1) * s1 + t1 * e1;
-		dist_sq = Length3Sq(pt1 - pt0);
+		dist_sq = LengthSq(pt1 - pt0);
 	}
 
 	// Returns the parametric values of the closest point between a line segment '(s0,e0)'
@@ -373,11 +373,11 @@ namespace pr
 	template <typename = void> void pr_vectorcall ClosestPoint_LineSegmentToInfiniteLine(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
 	{
 		assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && line1.w == 0.0f);
-		assert(!IsZero3(line1) && "The infinite line should not be degenerate");
+		assert(line1 != v4Zero && "The infinite line should not be degenerate");
 
 		auto line0 = e0 - s0;
-		auto line0_length_sq = Length3Sq(line0);
-		auto line1_length_sq = Length3Sq(line1);
+		auto line0_length_sq = LengthSq(line0);
+		auto line1_length_sq = LengthSq(line1);
 		auto separation = s0 - s1;
 		auto s1_on_line0 = -Dot3(separation, line0);
 		auto s0_on_line1 = Dot3(separation, line1);
@@ -407,15 +407,15 @@ namespace pr
 		ClosestPoint_LineSegmentToInfiniteLine(s0, e0, s1, line1, t0, t1);
 		v4 pt0 = (1.0f - t0) * s0 + t0 * e0;
 		v4 pt1 = s1 + t1 * line1;
-		dist_sq = Length3Sq(pt0 - pt1);
+		dist_sq = LengthSq(pt0 - pt1);
 	}
 
 	// Returns the parametric values of the closest points on two infinite lines
 	template <typename = void> void pr_vectorcall ClosestPoint_InfiniteLineToInfiniteLine(v4_cref<> s0, v4_cref<> line0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
 	{
 		// Degenerate lines should not be passed to this function
-		assert(!IsZero3(line0));
-		assert(!IsZero3(line1));
+		assert(line0 != v4Zero);
+		assert(line1 != v4Zero);
 		assert(s0.w == 1.0f && line0.w == 0.0f && s1.w == 1.0f && line1.w == 0.0f);
 
 		v4 r    = s0 - s1;
@@ -470,7 +470,7 @@ namespace pr
 		{
 			// Defer the sqrt by comparing squared depths.
 			// Need to preserve the sign however.
-			auto len_sq = Length3Sq(axis);
+			auto len_sq = LengthSq(axis);
 			auto d_sq = SignedSqr(depth) / len_sq;
 			if (d_sq < m_depth_sq)
 			{

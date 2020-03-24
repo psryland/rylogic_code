@@ -128,10 +128,10 @@ namespace pr
 				auto dx   = m_point1.x - m_point0.x;
 				auto dy   = m_point1.y - m_point0.y;
 				auto dz   = m_point1.z - m_point0.z;
-				auto len  = Len3(dx, dy, dz);
-				auto dxy  = Len2(dx, dy);
-				auto dyz  = Len2(dy, dz);
-				auto dzx  = Len2(dz, dx);
+				auto len  = Len(dx, dy, dz);
+				auto dxy  = Len(dx, dy);
+				auto dyz  = Len(dy, dz);
+				auto dzx  = Len(dz, dx);
 				auto angx = dyz > tinyf && fabs(dy) > tinyf ? RadiansToDegrees(Angle(dyz, fabs(dy), fabs(dz))) : 0.0f;
 				auto angy = dzx > tinyf && fabs(dx) > tinyf ? RadiansToDegrees(Angle(dzx, fabs(dx), fabs(dz))) : 0.0f;
 				auto angz = dxy > tinyf && fabs(dx) > tinyf ? RadiansToDegrees(Angle(dxy, fabs(dx), fabs(dy))) : 0.0f;
@@ -265,9 +265,9 @@ namespace pr
 				auto  e0    = m_point0 - m_origin;
 				auto  e1    = m_point1 - m_origin;
 				auto  e2    = m_point1 - m_point0;
-				float edge0 = Length3(e0);
-				float edge1 = Length3(e1);
-				float edge2 = Length3(e2);
+				float edge0 = Length(e0);
+				float edge1 = Length(e1);
+				float edge2 = Length(e2);
 				float ang   = (edge0 < tinyf || edge1 < tinyf) ? 0.0f : RadiansToDegrees(ACos(Clamp(Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
 
 				// Update the text description

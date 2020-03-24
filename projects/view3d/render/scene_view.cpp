@@ -34,7 +34,7 @@ namespace pr::rdr
 		auto lc2w = m4x4::LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
 		auto rc2w = m4x4::LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
 
-		eye[(int)EEye::Left ] = SceneView(lc2w, m_fovY, m_aspect, Length3(lc2w.pos - focus_point), m_orthographic);
-		eye[(int)EEye::Right] = SceneView(rc2w, m_fovY, m_aspect, Length3(rc2w.pos - focus_point), m_orthographic);
+		eye[(int)EEye::Left ] = SceneView(lc2w, m_fovY, m_aspect, Length(lc2w.pos - focus_point), m_orthographic);
+		eye[(int)EEye::Right] = SceneView(rc2w, m_fovY, m_aspect, Length(rc2w.pos - focus_point), m_orthographic);
 	}
 }

@@ -296,7 +296,7 @@ namespace pr::maths
 		}
 		{// Projection/Reflect
 			auto v = v8{0, 0, 1, 0, 1, 0};
-			auto n = v4::Normal3(-1,-1,-1,0);
+			auto n = v4::Normal(-1,-1,-1,0);
 			auto r = v8{-0.6666666f, -0.6666666f, 0.3333333f, -0.6666666f, 0.3333333f, -0.6666666f};
 			auto R = Reflect(v, n);
 			PR_CHECK(FEql(r, R), true);

@@ -67,7 +67,7 @@ extern "C"
 			"{%+g %+g} Len2=%g"
 			,R(vec.x)
 			,R(vec.y)
-			,R(Length2(vec))
+			,R(Length(vec))
 		);
 		return S_OK;
 	}
@@ -81,7 +81,7 @@ extern "C"
 			,R(vec.x)
 			,R(vec.y)
 			,R(vec.z)
-			,R(Length3(vec))
+			,R(Length(vec))
 		);
 		return S_OK;
 	}
@@ -96,8 +96,8 @@ extern "C"
 			,R(vec.y)
 			,R(vec.z)
 			,R(vec.w)
-			,R(Length3(vec))
-			,R(Length4(vec))
+			,R(Length(vec.xyz))
+			,R(Length(vec))
 		);
 		return S_OK;
 	}
@@ -126,7 +126,7 @@ extern "C"
 			"{%+d %+d} Len2=%g"
 			,R(vec.x)
 			,R(vec.y)
-			,R(Length2(vec))
+			,R(Length(vec))
 		);
 		return S_OK;
 	}
@@ -141,8 +141,8 @@ extern "C"
 			,R(vec.y)
 			,R(vec.z)
 			,R(vec.w)
-			,R(Length3(vec))
-			,R(Length4(vec))
+			,R(Length(vec.w0()))
+			,R(Length(vec))
 		);
 		return S_OK;
 	}
@@ -152,8 +152,8 @@ extern "C"
 		int64 vec[4];
 		if (FAILED(pHelper->Read(vec))) return E_FAIL;
 		
-		auto len3 = Len3(double(vec[0]), double(vec[1]), double(vec[2]));
-		auto len4 = Len4(double(vec[0]), double(vec[1]), double(vec[2]), double(vec[3]));
+		auto len3 = Len(double(vec[0]), double(vec[1]), double(vec[2]));
+		auto len4 = Len(double(vec[0]), double(vec[1]), double(vec[2]), double(vec[3]));
 		_snprintf(pResult, max,
 			"{%+lld %+lld %+lld %+lld} Len3=%g Len4=%g"
 			,R(vec[0])
@@ -177,7 +177,7 @@ extern "C"
 			_snprintf(pResult, max, "zero");
 		else
 		{
-			auto ortho = Cross2(Normalise2(mat.x), Normalise2(mat.y));
+			auto ortho = Cross(Normalise(mat.x), Normalise(mat.y));
 			auto det = Determinant(mat);
 			_snprintf(pResult, max,
 				"{%+g %+g} \n"
@@ -186,8 +186,8 @@ extern "C"
 				"Orth=%g Det=%g \n"
 				,R(mat.x.x) , R(mat.x.y)
 				,R(mat.y.x) , R(mat.y.y)
-				,R(Length2(mat.x))
-				,R(Length2(mat.y))
+				,R(Length(mat.x))
+				,R(Length(mat.y))
 				,ortho
 				,det
 			);
@@ -206,7 +206,7 @@ extern "C"
 			_snprintf(pResult, max, "zero");
 		else
 		{
-			auto ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
+			auto ortho = Length(Cross3(Normalise(mat.x), Normalise(mat.y)) - Normalise(mat.z));
 			auto det = Determinant(mat);
 			_snprintf(pResult, max,
 				"{%+g %+g %+g} \n"
@@ -217,9 +217,9 @@ extern "C"
 				,R(mat.x.x) , R(mat.x.y) , R(mat.x.z)
 				,R(mat.y.x) , R(mat.y.y) , R(mat.y.z)
 				,R(mat.z.x) , R(mat.z.y) , R(mat.z.z)
-				,R(Length3(mat.x))
-				,R(Length3(mat.y))
-				,R(Length3(mat.z))
+				,R(Length(mat.x))
+				,R(Length(mat.y))
+				,R(Length(mat.z))
 				,ortho
 				,det
 			);
@@ -238,7 +238,7 @@ extern "C"
 			_snprintf(pResult, max, "zero");
 		else
 		{
-			auto ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
+			auto ortho = Length(Cross3(Normalise(mat.x), Normalise(mat.y)) - Normalise(mat.z));
 			auto det = Determinant4(mat);
 			_snprintf(pResult, max,
 				"{%+g %+g %+g %+g} \n"
@@ -251,10 +251,10 @@ extern "C"
 				,R(mat.y.x) , R(mat.y.y) , R(mat.y.z) , R(mat.y.w)
 				,R(mat.z.x) , R(mat.z.y) , R(mat.z.z) , R(mat.z.w)
 				,R(mat.w.x) , R(mat.w.y) , R(mat.w.z) , R(mat.w.w)
-				,R(Length3(mat.x))
-				,R(Length3(mat.y))
-				,R(Length3(mat.z))
-				,R(Length3(mat.w))
+				,R(Length(mat.x))
+				,R(Length(mat.y))
+				,R(Length(mat.z))
+				,R(Length(mat.w))
 				,R(ortho)
 				,R(det)
 			);
@@ -306,7 +306,7 @@ extern "C"
 			,R(q.z)
 			,R(q.w)
 			,R(RadiansToDegrees(angle))
-			,R(Length4(q))
+			,R(Length(q))
 		);
 		return S_OK;
 	}

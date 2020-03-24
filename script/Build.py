@@ -26,6 +26,7 @@ class EProjects():
 	CSex = "CSex"
 	P3D = "P3D"
 	LDraw = "LDraw"
+	Native = "Native"
 
 	# Print all available projects
 	@staticmethod
@@ -54,7 +55,7 @@ def MSBuild(name:str, sln:str, projects:[str], platforms:[str], configs:[str], p
 	raise RuntimeError(f"Building {name} failed")
 
 # Ensure the directory 'dir' exists and is empty
-def CleanNative(dir:str, platforms:[str]=None, configs:[str]=None):
+def CleanObj(dir:str, platforms:[str]=None, configs:[str]=None):
 	if not platforms and not configs:
 		CleanDir(dir)
 	else:
@@ -86,7 +87,7 @@ def BuildSqlite3(workspace:str, platforms:[str], configs:[str]):
 	MSBuild("Sqlite3", rylogic_sln, ["SDK\\sqlite3"], platforms, configs)
 	return
 def CleanSqlite3(workspace:str, platforms:[str], configs:[str]):
-	CleanNative(os.path.join(workspace, "sdk", "sqlite", "obj"), platforms, configs)
+	CleanObj(os.path.join(workspace, "sdk", "sqlite", "obj"), platforms, configs)
 	return
 
 # Build the Scintilla native dll
@@ -98,7 +99,7 @@ def BuildScintilla(workspace:str, platforms:[str], configs:[str]):
 	return
 def CleanScintilla(workspace:str, platforms:[str], configs:[str]):
 	obj_dir = os.path.join(workspace, "sdk", "scintilla", "obj", UserVars.platform_toolset)
-	CleanNative(os.path.join(obj_dir, "scintilla"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "scintilla"), platforms, configs)
 	return
 
 # Build the Audio native dll
@@ -111,8 +112,8 @@ def BuildAudio(workspace:str, platforms:[str], configs:[str]):
 	return
 def CleanAudio(workspace:str, platforms:[str], configs:[str]):
 	obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
-	CleanNative(os.path.join(obj_dir, "audio"), platforms, configs)
-	CleanNative(os.path.join(obj_dir, "audio.dll"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "audio"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "audio.dll"), platforms, configs)
 	return
 
 # Build the View3d native dll
@@ -125,8 +126,8 @@ def BuildView3d(workspace:str, platforms:[str], configs:[str]):
 	return
 def CleanView3d(workspace:str, platforms:[str], configs:[str]):
 	obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
-	CleanNative(os.path.join(obj_dir, "view3d"), platforms, configs)
-	CleanNative(os.path.join(obj_dir, "view3d.dll"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "view3d"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "view3d.dll"), platforms, configs)
 	return
 
 # Build Rylogic .NET assemblies
@@ -181,7 +182,7 @@ def BuildP3D(workspace:str, platforms:[str], configs:[str]):
 	return
 def CleanP3D(workspace:str, platforms:[str], configs:[str]):
 	obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
-	CleanNative(os.path.join(obj_dir, "p3d"), platforms, configs)
+	CleanObj(os.path.join(obj_dir, "p3d"), platforms, configs)
 	return
 
 # Build LDraw
@@ -201,6 +202,23 @@ def BuildLDraw(workspace:str, platforms:[str], configs:[str]):
 	return
 def CleanLDraw(workspace:str, platforms:[str], configs:[str]):
 	CleanDotNet(os.path.join(workspace, "projects", "LDraw", "LDraw"), platforms, configs)
+	return
+
+# Build the native projects
+def BuildNative(workspace:str, platforms:[str]=None, configs:[str]=None):
+
+	BuildSqlite3(workspace, platforms, configs)
+	BuildScintilla(workspace, platforms, configs)
+	BuildView3d(workspace, platforms, configs)
+	BuildAudio(workspace, platforms, configs)
+	BuildP3D(workspace, platforms, configs)
+	return
+def CleanNative(workspace:str, platforms:[str]=None, configs:[str]=None):
+	CleanSqlite3(workspace, platforms, configs)
+	CleanScintilla(workspace, platforms, configs)
+	CleanView3d(workspace, platforms, configs)
+	CleanAudio(workspace, platforms, configs)
+	CleanP3D(workspace, platforms, configs)
 	return
 
 # Build all Software projects
@@ -301,6 +319,8 @@ def Main(args:[str]):
 			BuildP3D(workspace, platforms, configs)
 		elif project == EProjects.LDraw:
 			BuildLDraw(workspace, platforms, configs)
+		elif project == EProjects.Native:
+			BuildNative(workspace, platforms, configs)
 		else:
 			raise RuntimeError(f"Unknown project name {project}")
 

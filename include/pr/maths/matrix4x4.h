@@ -288,7 +288,7 @@ namespace pr
 		// Create from an axis and angle. 'axis' should be normalised
 		static Mat4x4 Transform(v4_cref<> axis, float angle, v4_cref<> pos)
 		{
-			assert("'axis' should be normalised" && IsNormal3(axis));
+			assert("'axis' should be normalised" && IsNormal(axis));
 			#if PR_MATHS_USE_DIRECTMATH
 			return Mat4x4(DirectX::XMMatrixRotationNormal(axis.vec, angle), pos);
 			#else
@@ -305,7 +305,7 @@ namespace pr
 		// Create from quaternion
 		static Mat4x4 Transform(Quat<A,B> const& q, v4_cref<> pos)
 		{
-			assert("'q' should be a normalised quaternion" && IsNormal4(q));
+			assert("'q' should be a normalised quaternion" && IsNormal(q));
 			#if PR_MATHS_USE_DIRECTMATH
 			return Mat4x4(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
 			#else
@@ -348,8 +348,8 @@ namespace pr
 			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4Zero);
 			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, 0));
 			auto mat = Mat4x4{};
-			mat.z = Normalise3(eye - at);
-			mat.x = Normalise3(Cross3(up, mat.z));
+			mat.z = Normalise(eye - at);
+			mat.x = Normalise(Cross3(up, mat.z));
 			mat.y = Cross3(mat.z, mat.x);
 			mat.pos = eye;
 			return mat;
@@ -549,9 +549,9 @@ namespace pr
 	template <typename A, typename B> inline bool pr_vectorcall IsOrthonormal(m4_cref<A,B> mat)
 	{
 		return
-			FEql(Length3Sq(mat.x), 1.0f) &&
-			FEql(Length3Sq(mat.y), 1.0f) &&
-			FEql(Length3Sq(mat.z), 1.0f) &&
+			FEql(LengthSq(mat.x), 1.0f) &&
+			FEql(LengthSq(mat.y), 1.0f) &&
+			FEql(LengthSq(mat.z), 1.0f) &&
 			FEql(Abs(Determinant3(mat)), 1.0f);
 	}
 
@@ -703,8 +703,8 @@ namespace pr
 	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Orthonorm(m4_cref<A,B> mat)
 	{
 		auto m = mat;
-		m.x = Normalise3(m.x);
-		m.y = Normalise3(Cross3(m.z, m.x));
+		m.x = Normalise(m.x);
+		m.y = Normalise(Cross3(m.z, m.x));
 		m.z = Cross3(m.x, m.y);
 		assert(IsOrthonormal(m));
 		return m;
@@ -829,15 +829,15 @@ namespace pr::maths
 		}
 		{//m4x4CreateFrom
 			auto V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
-			auto a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
-			auto b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
+			auto a2b = m4x4::Transform(v4::Normal(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
+			auto b2c = m4x4::Transform(v4::Normal(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
 			PR_CHECK(IsOrthonormal(a2b), true);
 			PR_CHECK(IsOrthonormal(b2c), true);
 			v4 V2 = a2b * V1;
 			v4 V3 = b2c * V2; V3;
 			m4x4 a2c = b2c * a2b;
 			v4 V4 = a2c * V1; V4;
-			PR_CHECK(FEql4(V3, V4), true);
+			PR_CHECK(FEql(V3, V4), true);
 		}
 		{//m4x4CreateFrom2
 			auto q = quat(1.0f, 0.5f, 0.7f);
@@ -857,7 +857,7 @@ namespace pr::maths
 			PR_CHECK(FEql(m1, m2), true);
 		}
 		{// Invert
-			m4x4 a2b = m4x4::Transform(v4::Normal3(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
+			m4x4 a2b = m4x4::Transform(v4::Normal(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
 			m4x4 b2a = Invert(a2b);
 			m4x4 a2a = b2a * a2b;
 			PR_CHECK(FEql(m4x4Identity, a2a), true);

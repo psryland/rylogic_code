@@ -155,7 +155,7 @@ namespace pr
 		else
 		{
 			// Only grow if outside the current bounds
-			auto len_sq = Length3Sq(point - bsphere.Centre());
+			auto len_sq = LengthSq(point - bsphere.Centre());
 			if (len_sq > bsphere.RadiusSq())
 			{
 				// Move the centre and increase the radius by the minimum
@@ -185,7 +185,7 @@ namespace pr
 		else
 		{
 			// Only grow if 'rhs' extends beyond the current radius
-			auto separation = Length3(rhs.Centre() - lhs.Centre());
+			auto separation = Length(rhs.Centre() - lhs.Centre());
 			if (separation + rhs.Radius() > lhs.Radius())
 			{
 				// Move the centre and increase the radius by the minimum
@@ -212,7 +212,7 @@ namespace pr
 		}
 		else
 		{
-			auto len_sq = Length3Sq(point - bsphere.Centre());
+			auto len_sq = LengthSq(point - bsphere.Centre());
 			if (len_sq > bsphere.RadiusSq())
 				bsphere.m_ctr_rad.w = Sqrt(len_sq);
 		}
@@ -233,7 +233,7 @@ namespace pr
 		}
 		else
 		{
-			auto new_radius = Length3(rhs.Centre() - lhs.Centre()) + rhs.Radius();
+			auto new_radius = Length(rhs.Centre() - lhs.Centre()) + rhs.Radius();
 			if (new_radius > lhs.Radius())
 				lhs.m_ctr_rad.w = new_radius;
 		}
@@ -248,17 +248,17 @@ namespace pr
 	// Return true if 'point' is within the bounding sphere
 	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, v4_cref<> point, float tol = 0)
 	{
-		return Length3Sq(point - bsphere.Centre()) <= bsphere.RadiusSq() + tol;
+		return LengthSq(point - bsphere.Centre()) <= bsphere.RadiusSq() + tol;
 	}
 	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, BSphere_cref test, float tol = 0)
 	{
-		return Length3Sq(test.Centre() - bsphere.Centre()) <= Sqr(bsphere.Radius() - test.Radius() + tol);
+		return LengthSq(test.Centre() - bsphere.Centre()) <= Sqr(bsphere.Radius() - test.Radius() + tol);
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
 	inline bool pr_vectorcall IsIntersection(BSphere_cref lhs, BSphere_cref rhs)
 	{
-		return Length3Sq(rhs.Centre() - lhs.Centre()) < Sqr(lhs.Radius() + rhs.Radius());
+		return LengthSq(rhs.Centre() - lhs.Centre()) < Sqr(lhs.Radius() + rhs.Radius());
 	}
 
 	#pragma endregion

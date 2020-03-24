@@ -94,7 +94,7 @@ namespace pr
 			v4 e0 = data.m_vcont[*(data.m_vbegin + b)] - A;
 			v4 e1 = data.m_vcont[*(data.m_vbegin + c)] - A;
 			v4& plane = *data.m_hs_last;
-			plane = Normalise3(Cross3(e0, e1));
+			plane = Normalise(Cross3(e0, e1));
 			plane.w = -Dot3(plane, A);
 			++data.m_hs_last;
 
@@ -145,14 +145,14 @@ namespace pr
 			std::swap(*vmax, *data.m_vhull_last++);
 
 			v4 const& zmin = data.m_vcont[*data.m_vbegin];
-			float zaxis_lensq = Length3Sq(zaxis);
+			float zaxis_lensq = LengthSq(zaxis);
 
 			{// Find the most radially distant vertex from the zaxis
 				float dmax = 0.0f;
 				for (typename HData::VertIter i = data.m_vhull_last; i != data.m_vend; ++i)
 				{
 					v4 vert = data.m_vcont[*i] - zmin;
-					float d = Length3Sq(vert) - Sqr(Dot3(vert, zaxis)) / zaxis_lensq;
+					float d = LengthSq(vert) - Sqr(Dot3(vert, zaxis)) / zaxis_lensq;
 					if (d > dmax) { dmax = d; vmax = i; }
 				}
 

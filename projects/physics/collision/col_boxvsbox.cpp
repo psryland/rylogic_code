@@ -226,9 +226,9 @@ namespace pr
 					for( int j = 0; j != 3; ++j )
 					{
 						v4 axis = Cross3(data.m_a2w[i], data.m_b2w[j]);
-						if( !FEql3(axis,pr::v4Zero) )
+						if( !FEql(axis, pr::v4Zero) )
 						{
-							axis = Normalise3(axis);
+							axis = Normalise(axis);
 							Point pointA(data.m_a2w.pos);
 							Point pointB(data.m_b2w.pos);
 							float sep = Dot3(axis, a_to_b);

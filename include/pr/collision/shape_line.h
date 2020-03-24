@@ -49,7 +49,7 @@ namespace pr
 		// Shift the centre of a line
 		inline void ShiftCentre(ShapeLine&, v4& shift)
 		{
-			assert("impossible to shift the centre of an implicit object" && FEql3(shift, v4Zero));
+			assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
 			(void)shift; 
 		}
 
@@ -66,12 +66,12 @@ namespace pr
 			if (Abs(point.z) < shape.m_radius)
 			{
 				closest = v4(0, 0, point.z, 1);
-				distance = Len2(point.x, point.y);
+				distance = Len(point.x, point.y);
 			}
 			else
 			{
 				closest = v4(0, 0, Sign(point.z) * shape.m_radius, 1);
-				distance = Length3(point - closest);
+				distance = Length(point - closest);
 			}
 		}
 	}

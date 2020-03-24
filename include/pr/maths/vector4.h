@@ -129,13 +129,9 @@ namespace pr
 		}
 
 		// Construct normalised
-		static Vec4<T> Normal3(float x, float y, float z, float w)
+		static Vec4 Normal(float x, float y, float z, float w)
 		{
-			return Normalise3(Vec4<T>{x, y, z, w});
-		}
-		static Vec4 Normal4(float x, float y, float z, float w)
-		{
-			return Normalise4(Vec4<T>{x, y, z, w});
+			return Normalise(Vec4<T>{x, y, z, w});
 		}
 
 		#pragma region Operators
@@ -227,7 +223,7 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, v4_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any4(rhs, IsZero<float>));
+			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			#if PR_MATHS_USE_INTRINSICS
 			return Vec4<T>{_mm_div_ps(lhs.vec, rhs.vec)};
 			#else
@@ -236,7 +232,7 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, v4_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any4(rhs, IsZero<float>));
+			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec4<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
 		}
 		#pragma endregion
@@ -270,14 +266,6 @@ namespace pr
 			FEqlAbsolute(lhs.w, rhs.w, tol);
 		#endif
 	}
-	template <typename T> inline bool pr_vectorcall FEqlAbsolute4(v4_cref<T> a, v4_cref<T> b, float tol)
-	{
-		return FEqlAbsolute(a, b, tol);
-	}
-	template <typename T> inline bool pr_vectorcall FEqlAbsolute3(v4_cref<T> a, v4_cref<T> b, float tol)
-	{
-		return FEqlAbsolute(a.w0(), b.w0(), tol);
-	}
 	template <typename T> inline bool pr_vectorcall FEqlRelative(v4_cref<T> a, v4_cref<T> b, float tol)
 	{
 		// Handles tests against zero where relative error is meaningless
@@ -291,25 +279,9 @@ namespace pr
 		auto abs_max_element = Max(MaxElementAbs(a), MaxElementAbs(b));
 		return FEqlAbsolute(a, b, tol * abs_max_element);
 	}
-	template <typename T> inline bool pr_vectorcall FEqlRelative4(v4_cref<T> a, v4_cref<T> b, float tol)
-	{
-		return FEqlRelative(a, b, tol);
-	}
-	template <typename T> inline bool pr_vectorcall FEqlRelative3(v4_cref<T> a, v4_cref<T> b, float tol)
-	{
-		return FEqlRelative(a.w0(), b.w0(), tol);
-	}
 	template <typename T> inline bool pr_vectorcall FEql(v4_cref<T> a, v4_cref<T> b)
 	{
 		return FEqlRelative(a, b, maths::tinyf);
-	}
-	template <typename T> inline bool pr_vectorcall FEql4(v4_cref<T> a, v4_cref<T> b)
-	{
-		return FEqlRelative(a, b, maths::tinyf);
-	}
-	template <typename T> inline bool pr_vectorcall FEql3(v4_cref<T> a, v4_cref<T> b)
-	{
-		return FEqlRelative(a.w0(), b.w0(), maths::tinyf);
 	}
 
 	// Abs
@@ -321,29 +293,9 @@ namespace pr
 		return Vec4<T>{Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w)};
 		#endif
 	}
-	template <typename T> inline Vec4<T> pr_vectorcall Abs4(v4_cref<T> v)
-	{
-		return Abs(v);
-	}
 
 	// V4 length squared
-	template <typename T> inline float pr_vectorcall Length2Sq(v4_cref<T> v)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_dp_ps(v.vec, v.vec, 0x31).m128_f32[0];
-		#else
-		return Len2Sq(v.x, v.y);
-		#endif
-	}
-	template <typename T> inline float pr_vectorcall Length3Sq(v4_cref<T> v)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		return _mm_dp_ps(v.vec, v.vec, 0x71).m128_f32[0];
-		#else
-		return Len3Sq(v.x, v.y, v.z);
-		#endif
-	}
-	template <typename T> inline float pr_vectorcall Length4Sq(v4_cref<T> v)
+	template <typename T> inline float pr_vectorcall LengthSq(v4_cref<T> v)
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		return _mm_dp_ps(v.vec, v.vec, 0xF1).m128_f32[0];
@@ -366,10 +318,6 @@ namespace pr
 		return MinElement4<Vec4<T>, float>(v);
 		#endif
 	}
-	template <typename T> inline float pr_vectorcall MinElement4(v4_cref<T> const& v)
-	{
-		return MinElement(v);
-	}
 	template <typename T> inline float pr_vectorcall MaxElement(v4_cref<T> const& v)
 	{
 		#if PR_MATHS_USE_INTRINSICS
@@ -383,38 +331,17 @@ namespace pr
 		return MaxElement4<Vec4<T>, float>(v);
 		#endif
 	}
-	template <typename T> inline float pr_vectorcall MaxElement4(v4_cref<T> const& v)
-	{
-		return MaxElement(v);
-	}
-
-	// Normalise the 'xyz' components of 'v'. Note: 'w' is also scaled
-	template <typename T> inline Vec4<T> pr_vectorcall Normalise3(v4_cref<T> v)
-	{
-		#if PR_MATHS_USE_DIRECTMATH
-		return Vec4<T>{DirectX::XMVector3Normalize(v.vec)};
-		#elif PR_MATHS_USE_INTRINSICS
-		// _mm_rsqrt_ps isn't accurate enough
-		return Vec4<T>{_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0x7F)))};
-		#else
-		return v / Length3(v);
-		#endif
-	}
 
 	// Normalise all components of 'v'
-	template <typename T> inline Vec4<T> pr_vectorcall Normalise4(v4_cref<T> v)
+	template <typename T> inline Vec4<T> pr_vectorcall Normalise(v4_cref<T> v)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
 		return Vec4<T>{DirectX::XMVector4Normalize(v.vec)};
 		#elif PR_MATHS_USE_INTRINSICS
 		return Vec4<T>{_mm_div_ps(v.vec, _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF)))};
 		#else
-		return v / Length4(v);
+		return v / Length(v);
 		#endif
-	}
-	template <typename T> inline Vec4<T> pr_vectorcall Normalise(v4_cref<T> v)
-	{
-		return Normalise4(v);
 	}
 
 	// Square: v * v
@@ -477,7 +404,7 @@ namespace pr
 	template <typename T> inline bool pr_vectorcall Parallel(v4_cref<T> v0, v4_cref<T> v1, float tol = maths::tinyf)
 	{
 		// '<=' to allow for 'tol' == 0.0
-		return Length3Sq(Cross3(v0, v1)) <= Sqr(tol);
+		return LengthSq(Cross3(v0, v1)) <= Sqr(tol);
 	}
 
 	// Returns a vector guaranteed not parallel to 'v'
@@ -492,7 +419,7 @@ namespace pr
 	{
 		assert("Cannot make a perpendicular to a zero vector" && v != v4{});
 		auto vec = Cross3(v, CreateNotParallelTo(v));
-		vec *= Length3(v) / Length3(vec);
+		vec *= Sqrt(LengthSq(v) / LengthSq(vec));
 		return vec;
 	}
 
@@ -520,7 +447,7 @@ namespace pr
 		}
 
 		// Otherwise, make a perpendicular that is close to 'previous'
-		return Normalise3(Cross3(Cross3(vec, previous), vec));
+		return Normalise(Cross3(Cross3(vec, previous), vec));
 	}
 
 	// Returns a vector with the 'xyz' values permuted 'n' times. '0=xyzw, 1=yzxw, 2=zxyw'
@@ -627,14 +554,10 @@ namespace pr::maths
 		{// FEql
 			v4 a(1,1,-1,-1);
 			auto t2 = maths::tinyf * 2.0f;
-			PR_CHECK(FEql (a, v4(1   ,1,-1,-1)), true);
-			PR_CHECK(FEql (a, v4(1+t2,1,-1,-1)), false);
-			PR_CHECK(FEql4(a, v4(1   ,1,-1,-1)), true);
-			PR_CHECK(FEql4(a, v4(1+t2,1,-1,-1)), false);
-			PR_CHECK(FEql3(a, v4(1   ,1,-1, 0)), true);
-			PR_CHECK(FEql3(a, v4(1+t2,1,-1, 0)), false);
-			PR_CHECK(FEql2(a, v4(1   ,1, 0, 0)), true);
-			PR_CHECK(FEql2(a, v4(1+t2,1, 0, 0)), false);
+			PR_CHECK(FEql(a, v4(1   ,1,-1,-1)), true);
+			PR_CHECK(FEql(a, v4(1+t2,1,-1,-1)), false);
+			PR_CHECK(FEql(v4(1e-20f,0,0,1).xyz, v4Zero.xyz), true);
+			PR_CHECK(FEql(v4(1e-20f,0,0,1e-19f), v4Zero), true);
 		}
 		{
 			v4 a(3,-1,2,-4);
@@ -649,30 +572,18 @@ namespace pr::maths
 		}
 		{
 			v4 a(3,-1,2,-4);
-			PR_CHECK(Length2Sq(a), a.x*a.x + a.y*a.y);
-			PR_CHECK(Length2(a), sqrt(Length2Sq(a)));
-			PR_CHECK(Length3Sq(a), a.x*a.x + a.y*a.y + a.z*a.z);
-			PR_CHECK(Length3(a), sqrt(Length3Sq(a)));
-			PR_CHECK(Length4Sq(a), a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w);
-			PR_CHECK(Length4(a), sqrt(Length4Sq(a)));
+			PR_CHECK(LengthSq(a), a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w);
+			PR_CHECK(Length(a), sqrt(LengthSq(a)));
 		}
 		{
 			v4 a(3,-1,2,-4);
-			v4 b = Normalise3(a);
-			v4 c = Normalise4(a);
-			PR_CHECK(Length3(b), 1.0f);
-			PR_CHECK(b.w, a.w / Length3(a));
-			PR_CHECK(sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f);
-			PR_CHECK(IsNormal3(a), false);
-			PR_CHECK(IsNormal4(a), false);
-			PR_CHECK(IsNormal3(b), true);
-			PR_CHECK(IsNormal4(c), true);
-		}
-		{
-			PR_CHECK(IsZero3(v4(0,0,0,1)), true);
-			PR_CHECK(IsZero4(v4Zero), true);
-			PR_CHECK(FEql3(v4(1e-20f,0,0,1)     , v4Zero), true);
-			PR_CHECK(FEql4(v4(1e-20f,0,0,1e-19f), v4Zero), true);
+			v4 b = Normalise(a.w0());
+			v4 c = Normalise(a);
+			PR_CHECK(Length(b), 1.0f);
+			PR_CHECK(Length(c), 1.0f);
+			PR_CHECK(IsNormal(a), false);
+			PR_CHECK(IsNormal(b), true);
+			PR_CHECK(IsNormal(c), true);
 		}
 		{
 			v4 a = {-2,  4,  2,  6};
@@ -681,7 +592,7 @@ namespace pr::maths
 
 			v4 c = Cross3(a,b);
 			v4 d = a2b * b;
-			PR_CHECK(FEql3(c,d), true);
+			PR_CHECK(FEql(c.xyz, d.xyz), true);
 		}
 		{
 			v4 a = {-2,  4,  2,  6};

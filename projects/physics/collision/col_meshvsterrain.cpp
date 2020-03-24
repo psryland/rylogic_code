@@ -38,7 +38,7 @@ bool MeshVsTerrainResult(terrain::Result const& result, void* context)
 	contact.m_normal		= result.m_normal;
 	contact.m_material_idA	= ctx.m_objA->m_material_id;
 	contact.m_material_idB	= result.m_material_id;
-	contact.m_depth			= Length3(result.m_sample->m_point - result.m_terrain_point) - result.m_sample->m_radius;
+	contact.m_depth			= Length(result.m_sample->m_point - result.m_terrain_point) - result.m_sample->m_radius;
 	ctx.m_manifold->Add(contact);
 	return true;
 }

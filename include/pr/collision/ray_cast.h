@@ -496,10 +496,10 @@ namespace pr
 				if (ray.m_thickness == 0.0f)
 					return ray;
 
-				auto direction_len  = Length3(ray.m_direction);
+				auto direction_len  = Length(ray.m_direction);
 				auto forward        = ray.m_direction / direction_len;
 				auto sideways       = (forward * Dot3(ray.m_point, forward) - ray.m_point).w0();
-				auto sideways_len   = Length3(sideways);
+				auto sideways_len   = Length(sideways);
 				sideways           /= sideways_len;
 
 				return Ray(

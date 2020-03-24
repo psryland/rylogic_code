@@ -915,8 +915,8 @@ namespace pr::rdr
 				}
 				else
 				{
-					auto a = Normalise3(path[p] - path[p - 1], v4Zero);
-					auto b = Normalise3(path[p + 1] - path[p], v4Zero);
+					auto a = Normalise(path[p] - path[p - 1], v4Zero);
+					auto b = Normalise(path[p + 1] - path[p], v4Zero);
 					auto tang = a + b;
 					if (!FEql(tang, v4Zero))
 					{

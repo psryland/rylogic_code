@@ -216,7 +216,7 @@ namespace pr::rdr
 
 			// Transform
 			m_light.m_position       = To<v4>(m_tb_position.Text(), 1.0f);
-			m_light.m_direction      = Normalise3(To<v4>(m_tb_direction.Text(), 0.0f));
+			m_light.m_direction      = Normalise(To<v4>(m_tb_direction.Text(), 0.0f));
 			m_light.m_cam_relative   = m_chk_cam_rel.Checked();
 			m_light.m_range          = To<float>(m_tb_range.Text());
 			m_light.m_falloff        = To<float>(m_tb_falloff.Text());

@@ -33,7 +33,7 @@ namespace pr
 
 				void set(Vert& vert)
 				{
-					PR_ASSERT(PR_DBG_PHYSICS, IsNormal3(vert.m_direction), "");
+					PR_ASSERT(PR_DBG_PHYSICS, IsNormal(vert.m_direction), "");
 					*m_vert				= vert;
 					m_distance			= Dot3(m_vert->m_r, m_vert->m_direction);
 					m_offset			= m_vert->m_r - m_distance * m_vert->m_direction;

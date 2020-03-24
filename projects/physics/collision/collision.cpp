@@ -17,7 +17,7 @@ using namespace pr::ph::collision;
 // Returns the distance from the centre of the box to 'point' along 'axis'
 float pr::ph::ProjectBox(m3x4 const& box, v4 const& axis, collision::Point& point)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, FEql(Length3(axis), 1.0f), "");
+	PR_ASSERT(PR_DBG_PHYSICS, FEql(Length(axis), 1.0f), "");
 
 	point.m_type = EPointType_Point;
 	float dist = 0.0f;

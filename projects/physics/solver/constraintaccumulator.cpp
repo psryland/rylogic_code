@@ -180,18 +180,18 @@ void ConstraintAccumulator::AddContact(Rigidbody& rbA, Rigidbody& rbB, ContactMa
 	v4 contact_centre		= manifold.ContactCentre();
 	v4 gravity				= GetGravitationalAcceleration(contact_centre);
 	pair.m_grav_potential	= GetGravitationalPotential(contact_centre);
-	float grav_accel		= Length3(gravity);
+	float grav_accel		= Length(gravity);
 
 	// Calculate the resting contact speed due to gravity.
 	pair.m_resting_contact_speed = grav_accel * m_step_size;
 	//float rest_speed_sq = Sqr(pair.m_resting_contact_speed);
-	//if( pair.m_objA->Velocity().Length3Sq() < rest_speed_sq )
+	//if( pair.m_objA->Velocity().LengthSq() < rest_speed_sq )
 	//	pair.m_objA->SetVelocity(v4Zero);
-	//if( pair.m_objB->Velocity().Length3Sq() < rest_speed_sq )
+	//if( pair.m_objB->Velocity().LengthSq() < rest_speed_sq )
 	//	pair.m_objB->SetVelocity(v4Zero);
-	//if( pair.m_objA->AngMomentum().Length3Sq() < rest_speed_sq )
+	//if( pair.m_objA->AngMomentum().LengthSq() < rest_speed_sq )
 	//	pair.m_objA->SetAngMomentum(v4Zero);
-	//if( pair.m_objB->AngMomentum().Length3Sq() < rest_speed_sq )
+	//if( pair.m_objB->AngMomentum().LengthSq() < rest_speed_sq )
 	//	pair.m_objB->SetAngMomentum(v4Zero);
 
 	// Fill out the constraints for the pair
@@ -457,7 +457,7 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 			PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF0000FF", pair.m_objA->Position() + cons1.m_pointA, -relative_velocity1, str));
 			PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_relvelocity.pr_script", true); str.clear());
 
-			float vel_error_sq = Length3Sq(relative_velocity1 - cons1.m_desired_final_rel_velocity);
+			float vel_error_sq = LengthSq(relative_velocity1 - cons1.m_desired_final_rel_velocity);
 			if( vel_error_sq > max_error_sq )
 			{
 				max_error_sq = vel_error_sq;
@@ -496,7 +496,7 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 
 		// Find the desired relative normal and tangential speeds
 		float rel_norm_speed = Dot3(relative_velocity, cons.m_normal);
-		float rel_tang_speed = Length3(relative_velocity - rel_norm_speed * cons.m_normal);
+		float rel_tang_speed = Length(relative_velocity - rel_norm_speed * cons.m_normal);
 
 		// The desired post-collision velocity for this contact is basically the incident
 		// velocity reflected through the collision normal but with elasticity and friction
@@ -548,7 +548,7 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 
 		// Find the constraint with the greatest error in normal speed.
 		// We solve sequentially in order from greatest to smallest
-		float vel_error_sq = Length3Sq(relative_velocity - cons.m_desired_final_rel_velocity);
+		float vel_error_sq = LengthSq(relative_velocity - cons.m_desired_final_rel_velocity);
 		if( vel_error_sq > max_error_sq )
 		{
 			max_error_sq = vel_error_sq;

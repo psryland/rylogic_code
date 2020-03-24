@@ -246,7 +246,7 @@ void Engine::ObjectVsTerrainConstraints()
 		// Do a bounding sphere test first
 		terrain::Sample point;
 		point.m_point  = rb.m_ws_bbox.Centre();
-		point.m_radius = Length3(rb.m_ws_bbox.Radius());
+		point.m_radius = Length(rb.m_ws_bbox.Radius());
 		bool bounds_contact = false;
 		m_settings.m_terrain->CollideSpheres(&point, 1, BoundingSphereTest, &bounds_contact);
 		if( !bounds_contact ) continue;
@@ -378,7 +378,7 @@ void Engine::OnEvent(RBEvent const& e)
 //		// Do a bounding sphere test first
 //		terrain::Sample point;
 //		point.m_point  = rb.m_ws_bbox.Centre();
-//		point.m_radius = rb.m_ws_bbox.Radius().Length3();
+//		point.m_radius = rb.m_ws_bbox.Radius().Length();
 //		bool bounds_contact = false;
 //		m_settings.m_terrain->CollideSpheres(&point, 1, BoundingSphereTest, &bounds_contact);
 //		if( bounds_contact )

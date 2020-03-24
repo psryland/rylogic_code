@@ -467,7 +467,7 @@ namespace pr::common
 		inline bool Collide(Watzit const& lhs, Watzit const& rhs)
 		{
 			float diff[2] = {rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
-			return pr::Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+			return Len(diff[0], diff[1]) < lhs.radius + rhs.radius;
 		}
 	}
 	PRUnitTest(QuadTreeTests)
@@ -513,7 +513,7 @@ namespace pr::common
 		{
 			std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
 			std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
-			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len(qtree.m_size[0], qtree.m_size[1]));
 			Watzit w(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
 			auto n = qtree.Insert(w, w.pos, w.radius);
 
@@ -547,7 +547,7 @@ namespace pr::common
 
 			std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
 			std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
-			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len(qtree.m_size[0], qtree.m_size[1]));
 			Watzit W(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
 			qtree.Traverse(W.pos, W.radius, [&](Watzit& w, void*)
 			{

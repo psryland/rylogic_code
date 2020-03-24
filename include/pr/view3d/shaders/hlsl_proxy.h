@@ -77,12 +77,12 @@ namespace pr
 
 		float2 normalize(float2 const& v)
 		{
-			return Normalise2(static_cast<v2 const&>(v));
+			return Normalise(static_cast<v2 const&>(v));
 		}
 
 		float length(float4 const& v)
 		{
-			return Length4(static_cast<v4 const&>(v));
+			return Length(static_cast<v4 const&>(v));
 		}
 		float4 lerp(float4 const& a, float4 const& b, float t)
 		{
@@ -94,7 +94,7 @@ namespace pr
 		}
 		float4 normalize(float4 const& v)
 		{
-			return Normalise4(static_cast<v4 const&>(v));
+			return Normalise(static_cast<v4 const&>(v));
 		}
 		float dot(float4 const& a, float4 const& b)
 		{

@@ -85,7 +85,7 @@ namespace pr::geometry
 				for (int x = 0; x != cs_count; ++x)
 				{
 					pt = ori * v4(xsection[x], 0, 1.0f);
-					norm = ori * v4(Normalise2(Rotate90CCW(xsection[x+1] - xsection[x-1]), v2Zero), 0, 0);
+					norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x-1]), v2Zero), 0, 0);
 					vout(bb(pt), cc(*col), norm, v2Zero);
 					--vcount;
 				}
@@ -97,13 +97,13 @@ namespace pr::geometry
 					pt = ori * v4(xsection[x], 0, 1.0f);
 					if (x != 0)
 					{
-						norm = ori * v4(Normalise2(Rotate90CCW(xsection[x] - xsection[x-1]), v2Zero), 0, 0);
+						norm = ori * v4(Normalise(Rotate90CCW(xsection[x] - xsection[x-1]), v2Zero), 0, 0);
 						vout(bb(pt), cc(*col), norm, v2Zero);
 						--vcount;
 					}
 					if (x != cs_count)
 					{
-						norm = ori * v4(Normalise2(Rotate90CCW(xsection[x+1] - xsection[x]), v2Zero), 0, 0);
+						norm = ori * v4(Normalise(Rotate90CCW(xsection[x+1] - xsection[x]), v2Zero), 0, 0);
 						vout(bb(pt), cc(*col), norm, v2Zero);
 						--vcount;
 					}

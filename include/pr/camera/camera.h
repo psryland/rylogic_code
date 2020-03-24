@@ -308,9 +308,9 @@ namespace pr
 		// The z component should be the world space distance from the camera
 		void NSSPointToWSRay(v4 const& nss_point, v4& ws_point, v4& ws_direction) const
 		{
-			v4 pt = NSSPointToWSPoint(nss_point);
+			auto pt = NSSPointToWSPoint(nss_point);
 			ws_point = m_c2w.pos;
-			ws_direction = Normalise3(pt - ws_point);
+			ws_direction = Normalise(pt - ws_point);
 		}
 
 		// Get/Set the distances to the near and far clip planes
@@ -430,7 +430,7 @@ namespace pr
 		void Align(v4 const& up)
 		{
 			m_align = up;
-			if (Length3Sq(m_align) > maths::tinyf)
+			if (LengthSq(m_align) > maths::tinyf)
 			{
 				if (Parallel(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
 				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
@@ -441,7 +441,7 @@ namespace pr
 		// Return true if the align axis has been set for the camera
 		bool IsAligned() const
 		{
-			return Length3Sq(m_align) > maths::tinyf;
+			return LengthSq(m_align) > maths::tinyf;
 		}
 
 		// Get/Set orthographic projection mode
@@ -572,7 +572,7 @@ namespace pr
 			{
 				// If in the roll zone. 'm_Rref' is a point in normalised space[-1, +1] x [-1, +1].
 				// So the roll zone is a radial distance from the centre of the screen
-				if (Length2(m_nav.m_Rref) < 0.80f)
+				if (Length(m_nav.m_Rref) < 0.80f)
 					Rotate((point.y - m_nav.m_Rref.y) * float(maths::tau_by_4), (m_nav.m_Rref.x - point.x) * float(maths::tau_by_4), 0.0f, false);
 				else
 					Rotate(0.0f, 0.0f, ATan2(m_nav.m_Rref.y, m_nav.m_Rref.x) - ATan2(point.y, point.x), false);
@@ -605,7 +605,7 @@ namespace pr
 				// mouse point projected onto the focus plane.
 				auto pt  = NSSPointToWSPoint(v4(point, FocusDist(), 0.0f));
 				auto ray_ws = pt - CameraToWorld().pos;
-				ray_cs = Normalise3(WorldToCamera() * ray_ws, -v4ZAxis);
+				ray_cs = Normalise(WorldToCamera() * ray_ws, -v4ZAxis);
 			}
 			ray_cs *= dist;
 
@@ -721,7 +721,7 @@ namespace pr
 			m_c2w.pos = old_focus + m_c2w.z * m_focus_dist;
 
 			// If an align axis is given, align up to it
-			if (Length3Sq(m_align) > maths::tinyf)
+			if (LengthSq(m_align) > maths::tinyf)
 			{
 				auto up = Perpendicular(m_c2w.pos - old_focus, m_align);
 				m_c2w = m4x4::LookAt(m_c2w.pos, old_focus, up);
@@ -791,7 +791,7 @@ namespace pr
 		void LookAt(v4 const& position, v4 const& lookat, v4 const& up, bool commit = true)
 		{
 			m_c2w = m4x4::LookAt(position, lookat, up);
-			m_focus_dist = Clamp(Length3(lookat - position), FocusDistMin(), FocusDistMax());
+			m_focus_dist = Clamp(Length(lookat - position), FocusDistMin(), FocusDistMax());
 
 			// Set the base values
 			if (commit) Commit();
@@ -865,7 +865,7 @@ namespace pr
 			else
 			{
 				// 'size' is the *radius* (i.e. not the full height) of the bounding box projected onto the 'forward' plane.
-				auto size = Sqrt(Clamp(Length3Sq(bbox_radius) - Sqr(sizez), 0.0f, maths::float_max));
+				auto size = Sqrt(Clamp(LengthSq(bbox_radius) - Sqr(sizez), 0.0f, maths::float_max));
 
 				// Choose the focus distance if not given
 				if (focus_dist == 0 || focus_dist < sizez)

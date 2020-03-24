@@ -49,7 +49,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeSphere const& shape, float densi
 // Shift the centre of a sphere
 void pr::ph::ShiftCentre(ShapeSphere&, v4& shift)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, FEql3(shift,pr::v4Zero), ""); shift; // Impossible to shift the centre of an implicit object
+	PR_ASSERT(PR_DBG_PHYSICS, FEql(shift,pr::v4Zero), ""); shift; // Impossible to shift the centre of an implicit object
 }
 
 // Return a support vertex for a sphere
@@ -59,7 +59,7 @@ v4 pr::ph::SupportVertex(ShapeSphere const& shape, v4 const& direction, std::siz
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertSph);
 
 	// We need to quantise the normal otherwise the iterative algorithms perform badly
-	v4 dir = Normalise3(direction);
+	v4 dir = Normalise(direction);
 
 	// Generate an id for the vertex in this direction
 	sup_vert_id =
@@ -73,7 +73,7 @@ v4 pr::ph::SupportVertex(ShapeSphere const& shape, v4 const& direction, std::siz
 // 'shape' and 'point' are in the same space
 void pr::ph::ClosestPoint(ShapeSphere const& shape, v4 const& point, float& distance, v4& closest)
 {
-	distance  = Length3(point);
+	distance  = Length(point);
 	closest   = (shape.m_radius / distance) * point;
 	closest.w = 1.0f;
 	distance -= shape.m_radius;

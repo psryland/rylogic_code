@@ -107,10 +107,10 @@ namespace pr
 			float           Energy() const                          { return PotentialEnergy() + KineticEnergy(); }             // mgh + 0.5mv^2 + 0.5wIw
 			float           PotentialEnergy() const                 { return -Dot3(Gravity(), Position()); }                    // mgh
 			float           KineticEnergy() const                   { return LinearKineticEnergy() + AngularKineticEnergy(); }  // 0.5mv^2 + 0.5wIw
-			float           LinearKineticEnergy() const             { return 0.5f * Mass() * Length3Sq(Velocity()); }           // 0.5mv^2
+			float           LinearKineticEnergy() const             { return 0.5f * Mass() * LengthSq(Velocity()); }           // 0.5mv^2
 			float           AngularKineticEnergy() const            { return 0.5f * Dot3(AngVelocity(), AngMomentum()); }       // 0.5wIw
 			bool            SleepState() const                      { return m_sleeping; }
-			bool            HasMicroVelocity() const                { return m_motion_type == EMotion_Static || (Length3Sq(Momentum()) < m_micro_mom_sq && Length3Sq(AngMomentum()) < m_micro_mom_sq); }
+			bool            HasMicroVelocity() const                { return m_motion_type == EMotion_Static || (LengthSq(Momentum()) < m_micro_mom_sq && LengthSq(AngMomentum()) < m_micro_mom_sq); }
 			void            RestingContacts(v4* contacts, uint& count) const;
 
 			// Write Access Functions ******************************

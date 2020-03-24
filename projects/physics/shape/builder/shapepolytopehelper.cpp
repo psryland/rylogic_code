@@ -55,7 +55,7 @@ void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace co
 		// Calculate the face normal
 		v4 edge0 = verts[f->m_index[1]] - verts[f->m_index[0]];
 		v4 edge1 = verts[f->m_index[2]] - verts[f->m_index[0]];
-		v4 norm  = Normalise3(Cross3(edge0, edge1), v4Zero);
+		v4 norm  = Normalise(Cross3(edge0, edge1), v4Zero);
 
 		// For each vertex in each face, add the other face vertices as neighbours
 		for( std::size_t i = 0, j = 1, k = 2; i != 3; ++i, j=(j+1)%3, k=(k+1)%3 )
@@ -84,7 +84,7 @@ void GenerateArtificialNeighbours(v4 const* verts, std::size_t num_verts, pr::ve
 		// Flip the normal so it points inward
 		nbrhdr.m_normal = -nbrhdr.m_normal;
 		nbrhdr.m_normal.w = 0.0f;
-		nbrhdr.m_normal = Normalise3(nbrhdr.m_normal);
+		nbrhdr.m_normal = Normalise(nbrhdr.m_normal);
 
 		// Find the most extreme vert
 		v4 const* vert = verts;

@@ -879,7 +879,7 @@ namespace pr::script
 					SectionEnd();
 
 					v4 axis = AxisId(axis_id);
-					if (IsZero3(axis))
+					if (axis == v4Zero)
 					{
 						ReportError(script::EResult::UnknownValue, Location(), "axis_id must one of ±1, ±2, ±3");
 						break;
@@ -972,9 +972,9 @@ namespace pr::script
 				}
 				if (kw == Normalise)
 				{
-					p2w.x = Normalise3(p2w.x);
-					p2w.y = Normalise3(p2w.y);
-					p2w.z = Normalise3(p2w.z);
+					p2w.x = pr::Normalise(p2w.x);
+					p2w.y = pr::Normalise(p2w.y);
+					p2w.z = pr::Normalise(p2w.z);
 					continue;
 				}
 				if (kw == Orthonormalise)
@@ -1187,11 +1187,11 @@ namespace pr::script
 			PR_CHECK(farray[2], +2.0f   );
 			PR_CHECK(farray[3], -0.2f   );
 			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector3");
-			PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql4(vec, pr::v4(1.0f, 2.0f, 3.0f,-1.0f)), true);
+			PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql(vec, pr::v4(1.0f, 2.0f, 3.0f,-1.0f)), true);
 			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector4");
-			PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql4(vec, pr::v4(4.0f, 3.0f, 2.0f, 1.0f)), true);
+			PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql(vec, pr::v4(4.0f, 3.0f, 2.0f, 1.0f)), true);
 			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Quaternion");
-			PR_CHECK(reader.Quaternion(q)               ,true); PR_CHECK(pr::FEql4(q, pr::quat(0.0f, -1.0f, -2.0f, -3.0f)), true);
+			PR_CHECK(reader.Quaternion(q)               ,true); PR_CHECK(pr::FEql(q, pr::quat(0.0f, -1.0f, -2.0f, -3.0f)), true);
 			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M3x3");
 			PR_CHECK(reader.Matrix3x3(mat3)             ,true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
 			PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M4x4");

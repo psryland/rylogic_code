@@ -679,7 +679,7 @@ namespace pr
 						auto e0 = v1 - v0;
 						auto e1 = v2 - v1;
 						auto cx = pr::Cross3(e0, e1);
-						pr::v4 norm = Normalise3(cx, pr::v4Zero);
+						pr::v4 norm = Normalise(cx, pr::v4Zero);
 						pr::v4 angles = TriangleAngles(v0, v1, v2);
 
 						// Get the final vertex indices for the face
@@ -706,7 +706,7 @@ namespace pr
 				{
 					auto  p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
 					auto& c = vert.m_col;
-					auto  n = Normalise3(vert.m_norm, v4Zero);
+					auto  n = Normalise(vert.m_norm, v4Zero);
 					auto& t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
 					v_out(p, c, n, t);
 				}

@@ -48,7 +48,7 @@ namespace pr
 		}
 		explicit Mat3x4(Quat<A,B> const& q)
 		{
-			assert("'quat' is a zero quaternion" && !IsZero(q));
+			assert("'quat' is a zero quaternion" && q != QuatZero);
 			auto s = 2.0f / LengthSq(q);
 
 			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
@@ -268,7 +268,7 @@ namespace pr
 		// Create from an axis, angle
 		static Mat3x4 pr_vectorcall Rotation(v4_cref<> axis_norm, v4_cref<> axis_sine_angle, float cos_angle)
 		{
-			assert("'axis_norm' should be normalised" && IsNormal3(axis_norm));
+			assert("'axis_norm' should be normalised" && IsNormal(axis_norm));
 
 			auto m = Mat3x4{};
 			auto trace_vec = axis_norm * (1.0f - cos_angle);
@@ -304,9 +304,9 @@ namespace pr
 		static Mat3x4 pr_vectorcall Rotation(v4_cref<> angular_displacement)
 		{
 			assert("'angular_displacement' should be a scaled direction vector" && angular_displacement.w == 0);
-			auto len = Length3(angular_displacement);
+			auto len = Length(angular_displacement);
 			return len > maths::tinyf
-				? Mat3x4::Rotation(angular_displacement/len, len)
+				? Mat3x4::Rotation(angular_displacement / len, len)
 				: Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
 		}
 
@@ -315,14 +315,14 @@ namespace pr
 		{
 			assert(!FEql(from, v4Zero));
 			assert(!FEql(to  , v4Zero));
-			auto len = Length3(from) * Length3(to);
+			auto len = Length(from) * Length(to);
 
 			auto cos_angle = Dot3(from, to) / len;
 			if (cos_angle >= 1.0f - maths::tinyf) return Mat3x4(v4XAxis, v4YAxis, v4ZAxis);
-			if (cos_angle <= maths::tinyf - 1.0f) return Rotation(Normalise3(Perpendicular(from - to)), maths::tau_by_2f);
+			if (cos_angle <= maths::tinyf - 1.0f) return Rotation(Normalise(Perpendicular(from - to)), maths::tau_by_2f);
 
 			auto axis_size_angle = Cross3(from, to) / len;
-			auto axis_norm = Normalise3(axis_size_angle);
+			auto axis_norm = Normalise(axis_size_angle);
 			return Rotation(axis_norm, axis_size_angle, cos_angle);
 		}
 
@@ -443,9 +443,9 @@ namespace pr
 	template <typename A, typename B> inline bool pr_vectorcall IsOrthonormal(m3_cref<A,B> mat)
 	{
 		return
-			FEql(Length3Sq(mat.x), 1.0f) &&
-			FEql(Length3Sq(mat.y), 1.0f) &&
-			FEql(Length3Sq(mat.z), 1.0f) &&
+			FEql(LengthSq(mat.x), 1.0f) &&
+			FEql(LengthSq(mat.y), 1.0f) &&
+			FEql(LengthSq(mat.z), 1.0f) &&
 			FEql(Abs(Determinant(mat)), 1.0f);
 	}
 
@@ -512,8 +512,8 @@ namespace pr
 	template <typename A, typename B> inline Mat3x4<A,B> pr_vectorcall Orthonorm(m3_cref<A,B> mat)
 	{
 		auto m = mat;
-		m.x = Normalise3(m.x);
-		m.y = Normalise3(Cross3(m.z, m.x));
+		m.x = Normalise(m.x);
+		m.y = Normalise(Cross3(m.z, m.x));
 		m.z = Cross3(m.x, m.y);
 		return m;
 	}
@@ -532,7 +532,7 @@ namespace pr
 			return;
 		}
 		
-		axis = Normalise3(axis);
+		axis = Normalise(axis);
 		if (IsZero3(axis))
 		{
 			axis = v4XAxis;
@@ -737,8 +737,8 @@ namespace pr
 		auto up = Perpendicular(dir, up_);
 
 		Mat3x4<A,B> ori = {};
-		ori.z = Normalise3(Sign(float(axis_id)) * dir);
-		ori.x = Normalise3(Cross3(up, ori.z));
+		ori.z = Normalise(Sign(float(axis_id)) * dir);
+		ori.x = Normalise(Cross3(up, ori.z));
 		ori.y = Cross3(ori.z, ori.x);
 
 		// Permute the column vectors so +Z becomes 'axis'
@@ -753,7 +753,7 @@ namespace pr
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
 	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up)
 	{
-		auto len = Length3(dir);
+		auto len = Length(dir);
 		return len > pr::maths::tinyf ? OriFromDir(dir, axis, up) * Mat3x4<A,B>::Scale(len) : m3x4Zero;
 	}
 	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis)

@@ -329,7 +329,7 @@ namespace pr::rdr
 				PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 				// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
-				auto ledge = Normalise2((tl - bl).xy);
+				auto ledge = Normalise((tl - bl).xy);
 				auto R = m4x4Identity;
 				R.x = v4( ledge.y,  ledge.x, 0, 0);
 				R.y = v4(-ledge.x,  ledge.y, 0, 0);

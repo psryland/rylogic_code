@@ -20,7 +20,7 @@ ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m
 	m_v.x = a;
 	m_v.y = b;
 	m_v.z = c;
-	m_v.w = Normalise3(Cross3(b-a,c-b));
+	m_v.w = Normalise(Cross3(b-a,c-b));
 	CalcBBox(*this, m_base.m_bbox);
 	return *this;
 }
@@ -63,7 +63,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeTriangle const& shape, float den
 {
 	mp.m_centre_of_mass = (shape.m_v.x + shape.m_v.y + shape.m_v.z) / 3.0f;
 	mp.m_centre_of_mass.w = 0.0f;	// 'centre_of_mass' is an offset from the current model origin
-	mp.m_mass = Length3(Cross3(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
+	mp.m_mass = Length(Cross3(shape.m_v.y-shape.m_v.x, shape.m_v.z-shape.m_v.y)) * 0.5f * density;
 	mp.m_os_inertia_tensor = CalcInertiaTensor(shape);
 	return mp;
 }
@@ -72,7 +72,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeTriangle const& shape, float den
 void pr::ph::ShiftCentre(ShapeTriangle& shape, v4& shift)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, shift.w == 0.0f, "");
-	if( FEql3(shift,pr::v4Zero) ) return;
+	if( FEql(shift,pr::v4Zero) ) return;
 	shape.m_v.x -= shift;
 	shape.m_v.y -= shift;
 	shape.m_v.z -= shift;
@@ -91,7 +91,7 @@ v4 pr::ph::SupportVertex(ShapeTriangle const& shape, v4 const& direction, std::s
 	d.y = Dot3(direction, shape.m_v.y);
 	d.z = Dot3(direction, shape.m_v.z);
 	d.w = 0.0f;
-	sup_vert_id = MaxElementIndex3(d);
+	sup_vert_id = MaxElementIndex(d.xyz);
 	return shape.m_v[(int)sup_vert_id];
 }
 
@@ -100,5 +100,5 @@ v4 pr::ph::SupportVertex(ShapeTriangle const& shape, v4 const& direction, std::s
 void pr::ph::ClosestPoint(ShapeTriangle const& shape, v4 const& point, float& distance, v4& closest)
 {
 	closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
-	distance = Length3(point - closest);
+	distance = Length(point - closest);
 }

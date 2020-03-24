@@ -38,7 +38,7 @@ namespace pr
 		// Create a point from 3 points in 3D space
 		inline Plane make(v4 const& a, v4 const& b, v4 const& c)
 		{
-			auto p = Normalise3(Cross3(b-a, c-a));
+			auto p = Normalise(Cross3(b-a, c-a));
 			p.w = -Dot3(a, p);
 			return Plane{p};
 		}
@@ -67,7 +67,7 @@ namespace pr
 				p.z += (i->x - j->x) * (i->y + j->y); // Projection onto XY
 				centre  += *j;
 			}
-			p = Normalise3(p);
+			p = Normalise(p);
 			p.w = Dot4(centre, p) / (end - begin);	// Centre / (end - begin) is the true centre
 			return Plane{p};
 		}
@@ -75,7 +75,7 @@ namespace pr
 		// Normalise (Canonicalise a plane)
 		inline Plane Normalise(Plane const& plane)
 		{
-			return plane / Length3(plane); // This scales the w-component as well
+			return plane / Length(plane.xyz); // This scales the w-component as well
 		}
 
 		// Return the direction vector component of a plane

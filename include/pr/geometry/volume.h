@@ -12,7 +12,7 @@ namespace pr
 	inline float Volume_Triangle(v4 const& a, v4 const& b, v4 const& c)
 	{
 		assert(a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
-		return Length3(Cross3(b-a, c-a)) / 2.0f;
+		return Length(Cross3(b-a, c-a)) / 2.0f;
 	}
 
 	// Return the volume of a tetrahedron

@@ -80,7 +80,7 @@ namespace pr
 				v4 cyl_point = data.m_cyl_pos - (Sign(ratio) * data.m_cyl.m_height) * data.m_cyl_axis;
 				if (1.0f - cos_angle > maths::tinyf)
 				{
-					v4 radius = Normalise3(Cross3(data.m_cyl_axis, Cross3(data.m_cyl_axis, sep_axis)));
+					v4 radius = Normalise(Cross3(data.m_cyl_axis, Cross3(data.m_cyl_axis, sep_axis)));
 					cyl_point += data.m_cyl.m_radius * radius;
 					data.m_penetration = depth;
 					data.m_axis = -sep_axis;
@@ -98,7 +98,7 @@ namespace pr
 					// end of the cylinder and visa versa
 					v4 diff = box_point - cyl_point;
 					diff -= Dot3(diff, data.m_cyl_axis) * data.m_cyl_axis;
-					if (Length3Sq(diff) < Sqr(data.m_cyl.m_radius))
+					if (LengthSq(diff) < Sqr(data.m_cyl.m_radius))
 					{
 						data.m_penetration = depth;
 						data.m_axis = -sep_axis;
@@ -192,9 +192,9 @@ namespace pr
 			bool TestCylWall(Overlap& data, uint i)
 			{
 				v4 sep_axis = Cross3(data.m_a2w[i], data.m_cyl_axis);
-				if (FEql3(sep_axis, pr::v4Zero)) sep_axis = data.m_diff - Dot3(data.m_diff, data.m_cyl_axis) * data.m_cyl_axis;
-				if (FEql3(sep_axis, pr::v4Zero)) return true;
-				sep_axis = Normalise3(sep_axis);
+				if (FEql(sep_axis, v4Zero)) sep_axis = data.m_diff - Dot3(data.m_diff, data.m_cyl_axis) * data.m_cyl_axis;
+				if (FEql(sep_axis, v4Zero)) return true;
+				sep_axis = Normalise(sep_axis);
 
 				uint j = (i+1)%3;
 				uint k = (i+2)%3;
@@ -242,8 +242,8 @@ namespace pr
 				v4 c = c0 + t1 * (c1 - c0);
 				v4 saxis = c - b;
 				if( Dot3(saxis, sep_axis) < 0.0f ) saxis = -saxis;
-				if( FEql3(saxis,pr::v4Zero) ) saxis = sep_axis;
-				sep_axis = Normalise3(saxis);
+				if( FEql(saxis, v4Zero) ) saxis = sep_axis;
+				sep_axis = Normalise(saxis);
 
 				data.m_penetration	= depth;
 				data.m_axis			= -sep_axis;
@@ -292,7 +292,7 @@ namespace pr
 
 				// Find the intercepts on the cylinder rim with the infinite line passing through p0 and p1
 				v4 d = p1 - p0;
-				float d_len_sq = Length3Sq(d);
+				float d_len_sq = LengthSq(d);
 				
 				// If the box edge is parallel to the main axis of the cylinder then this edge
 				// cannot penetrate the rim of the cylinder.
@@ -300,7 +300,7 @@ namespace pr
 					return true;
 
 				v4 nearest = p0 - (Dot3(d, p0 - cyl_point) / d_len_sq) * d;
-				float nearest_dist_sq = Length3Sq(nearest - cyl_point);
+				float nearest_dist_sq = LengthSq(nearest - cyl_point);
 				float radius_sq = Sqr(data.m_cyl.m_radius);
 
 				// If the nearest box edge does not clip the cylinder then this cannot be the separating axis
@@ -319,8 +319,8 @@ namespace pr
 				// Refine the separating axis to the vector that is perpendicular to both the nearest
 				// box edge and the tangent to the cylinder at 'point'
 				sep_axis = Cross3(data.m_a2w[i], Cross3(point - data.m_cyl_pos, cyl_axis));
-				if( FEql3(sep_axis,pr::v4Zero) )	return true;
-				sep_axis = Normalise3(sep_axis);
+				if( FEql(sep_axis,pr::v4Zero) )	return true;
+				sep_axis = Normalise(sep_axis);
 				if( Dot3(sep_axis, data.m_cyl_pos - point) < 0.0f ) sep_axis = -sep_axis; // 'sep_axis' pointing from A to B
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, StartFile("C:/DeleteMe/collision_sepaxis.pr_script"));
 				PR_EXPAND(PR_DBG_BOX_CYL_COLLISION, ldr::LineD("sep_axis", "FFFFFF00", point, sep_axis));

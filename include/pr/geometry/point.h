@@ -117,7 +117,7 @@ namespace pr
 		for (int i = 2; i != count; ++i)
 		{
 			auto norm = Cross3(poly[i-1] - poly[0], poly[i] - poly[0]);
-			if (FEql3(norm, pr::v4Zero)) continue;
+			if (FEql(norm, v4Zero)) continue;
 			return PointWithinConvexPolygon(point, poly, count, norm);
 		}
 		

@@ -108,10 +108,10 @@ namespace pr
 		{
 			auto ans = Mat2x2<A,C>{};
 			auto lhsT = Transpose(lhs);
-			ans.x.x = Dot2(lhsT.x, rhs.x);
-			ans.x.y = Dot2(lhsT.y, rhs.x);
-			ans.y.x = Dot2(lhsT.x, rhs.y);
-			ans.y.y = Dot2(lhsT.y, rhs.y);
+			ans.x.x = Dot(lhsT.x, rhs.x);
+			ans.x.y = Dot(lhsT.y, rhs.x);
+			ans.y.x = Dot(lhsT.x, rhs.y);
+			ans.y.y = Dot(lhsT.y, rhs.y);
 			return ans;
 		}
 		#pragma endregion

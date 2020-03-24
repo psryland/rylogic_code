@@ -187,21 +187,21 @@ namespace pr
 		{
 			auto d = Dot3(from, to);
 			auto axis = Cross3(from, to);
-			auto s = Sqrt(Length3Sq(from) * Length3Sq(to)) + d;
+			auto s = Sqrt(LengthSq(from) * LengthSq(to)) + d;
 			if (FEql(s, 0.0f))
 			{
 				// vectors are 180 degrees apart
 				axis = Perpendicular(to);
 				s = 0.0f;
 			}
-			xyzw = Normalise4(Vec4<void>{axis.x, axis.y, axis.z, s});
+			xyzw = Normalise(Vec4<void>{axis.x, axis.y, axis.z, s});
 		}
 
 		// Get the axis component of the quaternion (normalised)
 		Vec4<void> Axis() const
 		{
 			// The axis is arbitrary for identity rotations
-			return Normalise3(xyzw.w0(), v4ZAxis);
+			return Normalise(xyzw.w0(), v4ZAxis);
 		}
 
 		// Return the angle of rotation about 'Axis()'
@@ -213,7 +213,7 @@ namespace pr
 		// Return the cosine of the angle of rotation about 'Axis()'
 		float CosAngle() const
 		{
-			assert("quaternion isn't normalised" && IsNormal4(*this));
+			assert("quaternion isn't normalised" && IsNormal(*this));
 
 			// Trig:
 			//' cos²(x) = 0.5 * (1 + cos(2x))
@@ -307,17 +307,17 @@ namespace pr
 	// Length squared
 	template <typename A, typename B> inline float pr_vectorcall LengthSq(quat_cref<A,B> q)
 	{
-		return Length4Sq(q.xyzw);
+		return LengthSq(q.xyzw);
 	}
 
 	// Normalise the quaternion 'q'
 	template <typename A, typename B> inline Quat<A,B> pr_vectorcall Normalise(quat_cref<A,B> q)
 	{
-		return Quat<A,B>{Normalise4(q.xyzw)};
+		return Quat<A,B>{Normalise(q.xyzw)};
 	}
 	template <typename A, typename B> inline Quat<A,B> pr_vectorcall Normalise(quat_cref<A,B> q, quat_cref<A,B> def)
 	{
-		return Quat<A,B>{Normalise4(q.xyzw, def.xyzw)};
+		return Quat<A,B>{Normalise(q.xyzw, def.xyzw)};
 	}
 
 	// Return the cosine of *twice* the angle between two quaternions (i.e. the dot product)
@@ -362,7 +362,7 @@ namespace pr
 	// Return the axis and angle from a quaternion
 	template <typename A, typename B> inline void pr_vectorcall AxisAngle(quat_cref<A,B> q, Vec4<void>& axis, float& angle)
 	{
-		assert("quaternion isn't normalised" && IsNormal4(q));
+		assert("quaternion isn't normalised" && IsNormal(q));
 
 		// Trig:
 		//' sin²(x) + cos²(x) == 1
@@ -481,7 +481,7 @@ namespace pr::maths
 
 			auto q0 = quat(p,y,r);
 			quat q1(DirectX::XMQuaternionRotationRollPitchYaw(p,y,r));
-			PR_CHECK(FEql4(q0, q1), true);
+			PR_CHECK(FEql(q0, q1), true);
 			#endif
 		}
 		{ // Create from m3x4
@@ -495,11 +495,11 @@ namespace pr::maths
 				auto v0 = Random3N(rng, 0);
 				auto r0 = mat * v0;
 				auto r1 = Rotate(q, v0);
-				PR_CHECK(FEql4(r0, r1), true);
+				PR_CHECK(FEql(r0, r1), true);
 			}
 		}
 		{ // Average
-			auto ideal_mean = quat(Normalise3(v4(1,1,1,0)), 0.5f);
+			auto ideal_mean = quat(Normalise(v4(1,1,1,0)), 0.5f);
 
 			std::uniform_int_distribution<int> rng_bool(0, 1);
 			std::uniform_real_distribution<float> rng_angle(ideal_mean.Angle() - 0.2f, ideal_mean.Angle() + 0.2f);
@@ -507,7 +507,7 @@ namespace pr::maths
 			Avr<quat, float> avr;
 			for (int i = 0; i != 1000; ++i)
 			{
-				auto axis = Normalise3(ideal_mean.Axis() + Random3(rng, 0.0f, 0.2f, 0.0f));
+				auto axis = Normalise(ideal_mean.Axis() + Random3(rng, 0.0f, 0.2f, 0.0f));
 				auto angle = rng_angle(rng);
 				quat q(axis, angle);
 				avr.Add(rng_bool(rng) ? q : -q);

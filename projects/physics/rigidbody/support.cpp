@@ -90,7 +90,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 	// Get the rigidbody that owns this support
 	Rigidbody& rb = GetRB(*this);
 	PR_ASSERT(PR_DBG_PHYSICS, &rb != &on_obj, "Objects cannot support themselves");
-	PR_ASSERT(PR_DBG_PHYSICS, !FEql3(gravity,pr::v4Zero), "This object has no gravity and therefore can't come to rest");
+	PR_ASSERT(PR_DBG_PHYSICS, !FEql(gravity,pr::v4Zero), "This object has no gravity and therefore can't come to rest");
 	PR_ASSERT(PR_DBG_PHYSICS, rb.HasMicroVelocity() && on_obj.HasMicroVelocity(), "One of these objects has a velocity above the threshold");
 	PR_EXPAND(PR_LDR_SLEEPING, ldr::PhSupport(*this, "sleeping_support");)
 
@@ -100,11 +100,11 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 
 	// Get the point relative to our centre of mass
 	v4 radius = point - rb.Position();
-	v4 radius2d = radius - (Dot3(radius, gravity) / Length3Sq(gravity)) * gravity;
+	v4 radius2d = radius - (Dot3(radius, gravity) / LengthSq(gravity)) * gravity;
 
 	// Reject points that are too close to the centre of mass
-	float thres = 0.05f * Length3Sq(rb.BBoxOS().Radius());
-	if( Length3Sq(radius2d) < thres )
+	float thres = 0.05f * LengthSq(rb.BBoxOS().Radius());
+	if( LengthSq(radius2d) < thres )
 		return;
 
 	// Test if this is a repeat of a support we've already seen
@@ -127,7 +127,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 			break;
 		case 1:
 			{
-				float align = Sqr(Dot3(radius2d, m_leg[0].m_point)) / (Length3Sq(radius2d) * Length3Sq(m_leg[0].m_point));
+				float align = Sqr(Dot3(radius2d, m_leg[0].m_point)) / (LengthSq(radius2d) * LengthSq(m_leg[0].m_point));
 				if( Abs(align) > 0.8f ) break;
 				AddSupport(radius2d, m_leg[1], on_obj);
 				++m_num_supports;

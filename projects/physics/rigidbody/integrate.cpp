@@ -24,7 +24,7 @@ inline float CalcMicroMomentum(v4 const& gravity, float mass, float step_time)
 	// Micro momentum is the momentum after one step under gravity alone
 	// mv = mat = mgt. k*g*t (k=constant, g=gravity, t=time_step)
 	static float multiple_of_accel_under_gravity = 8.0f;
-	return Sqr(multiple_of_accel_under_gravity * step_time * mass) * Length3Sq(gravity);
+	return Sqr(multiple_of_accel_under_gravity * step_time * mass) * LengthSq(gravity);
 }
 
 // Evolve a rigid body forward in time. This applies the accumulated external
@@ -58,7 +58,7 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 	const float Runge2Threshold = 1.8e-1f;
 	const float Runge5Threshold = 2.3e-3f;
 	const float VelCapThreshold = 1.0e-6f;//1.0e-8f;
-	float ang_vel = Length3(rb.AngVelocity());
+	float ang_vel = Length(rb.AngVelocity());
 	for (;;)
 	{
 		// Decide which integrator to use based on the step size and the angular velocity
@@ -87,7 +87,7 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 		{
 			PR_INFO(PR_PH_TEST_ANGULAR, Fmt("Angular velocity capped: %e : %e", h * ang_vel, VelCapThreshold).c_str());
 			rb.m_ang_momentum *= VelCapThreshold / (h * ang_vel);
-			PR_EXPAND(PR_PH_TEST_ANGULAR, ang_vel = Length3(rb.AngVelocity());)
+			PR_EXPAND(PR_PH_TEST_ANGULAR, ang_vel = Length(rb.AngVelocity());)
 		}
 		
 		// Runge 5

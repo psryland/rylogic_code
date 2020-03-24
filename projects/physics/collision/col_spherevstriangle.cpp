@@ -29,7 +29,7 @@ void pr::ph::SphereVsTriangle(Shape const& sphere, m4x4 const& a2w, Shape const&
 	v4 c = triangle_shape.m_v.z; c.w = 1.0f;
 	v4 closest_point = ClosestPoint_PointToTriangle(pos, a, b, c);
 	v4 sep = pos - closest_point;
-	float dist = Length3(sep);
+	float dist = Length(sep);
 	if( dist < sphere_shape.m_radius )
 	{
 		Contact contact;
