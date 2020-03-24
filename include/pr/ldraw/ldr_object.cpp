@@ -724,7 +724,7 @@ namespace pr::ldr
 		for (int i = 1, iend = int(in.size()); i != iend; ++i)
 		{
 			auto d = in[i] - in[i-1];
-			auto len = Length3(d);
+			auto len = Length(d);
 
 			// Emit dashes over the length of the line segment
 			for (;t < len; t += dash.x + dash.y)
@@ -746,7 +746,7 @@ namespace pr::ldr
 		for (int i = 0, iend = int(in.size()); i != iend; i += 2)
 		{
 			auto d  = in[i+1] - in[i];
-			auto len = Length3(d);
+			auto len = Length(d);
 
 			// Emit dashes over the length of the line segment
 			for (auto t = 0.0f; t < len; t += dash.x + dash.y)
@@ -2028,7 +2028,7 @@ namespace pr::ldr
 			// Add the back arrow head geometry (a point)
 			if (m_type & EArrowType::Back)
 			{
-				SetPCN(*v_out++, *v_in, *col, pr::Normalise3(*v_in - *(v_in+1)));
+				SetPCN(*v_out++, *v_in, *col, pr::Normalise(*v_in - *(v_in+1)));
 				*i_out++ = index++;
 			}
 
@@ -2043,7 +2043,7 @@ namespace pr::ldr
 			if (m_type & EArrowType::Fwd)
 			{
 				--v_in;
-				SetPCN(*v_out++, *v_in, c, pr::Normalise3(*v_in - *(v_in-1)));
+				SetPCN(*v_out++, *v_in, c, pr::Normalise(*v_in - *(v_in-1)));
 				*i_out++ = index++;
 			}
 
@@ -2661,7 +2661,7 @@ namespace pr::ldr
 			p.m_reader.Real(w);
 			p.m_reader.Real(h);
 
-			fwd = Normalise3(fwd);
+			fwd = Normalise(fwd);
 			auto up = Perpendicular(fwd);
 			auto left = Cross3(up, fwd);
 			up *= h * 0.5f;
@@ -2846,7 +2846,7 @@ namespace pr::ldr
 		}
 		void CreateModel(LdrObject* obj) override
 		{
-			auto dim = v4(m_width, m_height, pr::Length3(m_pt1 - m_pt0), 0.0f) * 0.5f;
+			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
 			auto b2w = pr::OriFromDir(m_pt1 - m_pt0, 2, m_up, (m_pt1 + m_pt0) * 0.5f);
 			obj->m_model = ModelGenerator<>::Box(p.m_rdr, dim, b2w, Colour32White, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
@@ -4206,7 +4206,7 @@ namespace pr::ldr
 			// Functions can have infinities and divide by zeros. Set the bbox
 			// to match the view volume so that auto-range doesn't zoom out to infinity.
 			model.m_bbox.reset();
-			model.m_bbox = BBoxUnit;//(range.Centre(), v4One);
+			model.m_bbox = BBoxUnit;
 
 			// Update the model by evaluating the equation
 			auto& eq = ob.m_user_data.get<eval::Expression>();
@@ -4235,6 +4235,9 @@ namespace pr::ldr
 					break;
 				}
 			}
+
+			// Update object colour, visibility, etc
+			ApplyObjectState(&ob);
 		}
 		static void LinePlot(Model& model, BSphere_cref range, eval::Expression const& eq, bool init)
 		{
@@ -4301,18 +4304,15 @@ namespace pr::ldr
 			assert(ni <= (int)model.m_irange.size());
 
 			// Evaluate the normal at (x,y)
-			auto norm = [&](double x, double y)
+			auto norm = [&](float x, float y)
 			{
-				auto dx = Abs(0.001 * x);
-				auto dy = Abs(0.001 * y);
-				auto z0 = eq(x - dx, y).db();
-				auto z1 = eq(x + dx, y).db();
-				auto z2 = eq(x, y - dy).db();
-				auto z3 = eq(x, y + dy).db();
+				auto dx = Abs(0.00001f * x);
+				auto dy = Abs(0.00001f * y);
+				auto pt = eq(v4(x - dx, x + dx, x, x), v4(y, y, y - dy, y + dy)).v4();
 				auto n = Cross(
-					v4(static_cast<float>(2*dx), 0, static_cast<float>(z1 - z0), 0),
-					v4(0, static_cast<float>(2*dy), static_cast<float>(z3 - z2), 0));
-				return Normalise3(n, v4Zero);
+					v4(2*dx, 0, pt.y - pt.x, 0),
+					v4(0, 2*dy, pt.w - pt.z, 0));
+				return Normalise(n, v4Zero);
 			};
 
 			MLock mlock(&model, EMap::WriteDiscard);
@@ -4326,7 +4326,7 @@ namespace pr::ldr
 
 					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to be centred around
 					// the focus point, and weighted radially by a cubic.
-					auto len_sq = Length3Sq(pos);
+					auto len_sq = LengthSq(pos);
 					if (len_sq < maths::tinyf)
 					{
 						auto pt = range.Centre();

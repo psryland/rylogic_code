@@ -62,7 +62,7 @@ namespace pr::geometry
 		// Returns the index position of the vertex
 		inline VIndex AddVertex(v4 const& norm, float ang, bool pole, CreateGeosphereData& data)
 		{
-			PR_ASSERT(PR_DBG, IsNormal3(norm), "");
+			PR_ASSERT(PR_DBG, IsNormal(norm), "");
 
 			// Add the vertex
 			GeosphereVert vertex;
@@ -96,7 +96,7 @@ namespace pr::geometry
 			// If no child is found, add one
 			auto& v0 = (*data.m_vcont)[parent0];
 			auto& v1 = (*data.m_vcont)[parent1];
-			auto norm = Normalise3(v0.m_norm + v1.m_norm);
+			auto norm = Normalise(v0.m_norm + v1.m_norm);
 			auto ang = v0.m_pole ? v1.m_ang : v1.m_pole ? v0.m_ang : (v0.m_ang + v1.m_ang) * 0.5f; // Use the average angle unless one of the verts is a pole
 			auto new_vidx = AddVertex(norm, ang, false, data);
 

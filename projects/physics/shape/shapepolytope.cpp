@@ -71,7 +71,7 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 void pr::ph::ShiftCentre(ShapePolytope& shape, v4& shift)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, shift.w == 0.0f, "");
-	if( FEql3(shift,pr::v4Zero) ) return;
+	if( FEql(shift,pr::v4Zero) ) return;
 	for( v4 *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )
 	    *v -= shift;
 	shape.m_base.m_shape_to_model.pos += shift;
@@ -159,7 +159,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 	PR_PROFILE_SCOPE(PR_PROFILE_SUPPORT_VERTS, phSupVertPoly);
 
 	PR_ASSERT(PR_DBG_PHYSICS, hint_vert_id < shape.m_vert_count, "Invalid hint vertex index");
-	PR_ASSERT(PR_DBG_PHYSICS, Length3(direction) > maths::tinyf, "Direction is too short");
+	PR_ASSERT(PR_DBG_PHYSICS, Length(direction) > maths::tinyf, "Direction is too short");
 		PR_EXPAND(PR_PH_DBG_SUPVERT, StartFile("C:/DeleteMe/collision_supverttrace.pr_script");)
 		PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::PhShape("polytope", "8000FF00", shape, m4x4Identity);)
 		PR_EXPAND(PR_PH_DBG_SUPVERT, ldr::Line("sup_direction", "FFFFFF00", v4Origin, direction);)
@@ -252,7 +252,7 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 	v4 const* V1 = &shape.vertex(vert_id0);
 	v4 const* V2 = &shape.vertex(*shape.nbr(vert_id0).begin());	// The first neighbour is always the most distant
 	direction = *V1 - *V2;
-	float span_lenSq = Length3Sq(direction);
+	float span_lenSq = LengthSq(direction);
 	do
 	{
 		hint_vert_id = vert_id0;
@@ -264,7 +264,7 @@ void pr::ph::GetAxis(ShapePolytope const& shape, v4& direction, std::size_t hint
 			v4 const* v1 = &shape.vertex(*n);
 			v4 const* v2 = &shape.vertex(*shape.nbr(*n).begin());
 			v4 span = *v1 - *v2;
-			float lenSq = Length3Sq(span);
+			float lenSq = LengthSq(span);
 			if( (lenSq > span_lenSq + eps) == major )
 			{
 				span_lenSq = lenSq;

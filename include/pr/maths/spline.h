@@ -123,8 +123,8 @@ namespace pr
 	{
 		struct L { static float Len(Spline const& s, float tol)
 		{
-			float poly_length  = Length3(s.y - s.x) + Length3(s.z - s.y) + Length3(s.w - s.z);
-			float chord_length = Length3(s.w - s.x);
+			float poly_length  = Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z);
+			float chord_length = Length(s.w - s.x);
 			if ((poly_length - chord_length) < tol) return (poly_length + chord_length) * 0.5f;
 
 			Spline lhs, rhs;
@@ -173,9 +173,9 @@ namespace pr
 		float t0 = ClosestPoint_PointToSpline(spline, pt, -0.5f, bound01, 5);
 		float t1 = ClosestPoint_PointToSpline(spline, pt,  0.5f, bound01, 5);
 		float t2 = ClosestPoint_PointToSpline(spline, pt,  1.5f, bound01, 5);
-		float d0 = Length3Sq(pt - spline.Position(t0));
-		float d1 = Length3Sq(pt - spline.Position(t1));
-		float d2 = Length3Sq(pt - spline.Position(t2));
+		float d0 = LengthSq(pt - spline.Position(t0));
+		float d1 = LengthSq(pt - spline.Position(t1));
+		float d2 = LengthSq(pt - spline.Position(t2));
 		if (d0 < d1 && d0 < d2) return t0;
 		if (d1 < d0 && d1 < d2) return t1;
 		return t2;
@@ -203,7 +203,7 @@ namespace pr
 					,m_t0(t0)
 					,m_t1(t1)
 					,m_ins(ins)
-					,m_err(Length3(s.y - s.x) + Length3(s.z - s.y) + Length3(s.w - s.z) - Length3(s.w - s.x))
+					,m_err(Length(s.y - s.x) + Length(s.z - s.y) + Length(s.w - s.z) - Length(s.w - s.x))
 				{}
 			};
 

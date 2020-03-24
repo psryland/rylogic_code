@@ -1032,11 +1032,11 @@ namespace pr::ldr
 		auto p = m_attached_ref[0].pos;
 		auto d = m_attached_ref[0][k];
 		auto c2w = camera.CameraToWorld();
-		if (FEql(Length3Sq(d), 0.0f))
+		if (FEql(LengthSq(d), 0.0f))
 		{
 			// If 'd' is zero, try construct it from the other two axes
 			d = Cross3(m_attached_ref[0][(k+1)%3], m_attached_ref[0][(k+2)%3]);
-			if (FEql(Length3Sq(d), 0.0f))
+			if (FEql(LengthSq(d), 0.0f))
 				return; // Still zero... give up
 		}
 
@@ -1070,7 +1070,7 @@ namespace pr::ldr
 
 		// Get the axis of rotation from the gizmo and normalised it
 		auto axis = d;
-		auto axis_lensq = Length3Sq(axis);
+		auto axis_lensq = LengthSq(axis);
 		if (axis_lensq < pr::maths::tinyf) return;
 		axis /= sqrt(axis_lensq);
 
@@ -1078,10 +1078,10 @@ namespace pr::ldr
 		auto p0 = camera.WSPointToNSSPoint(p);
 		auto p1 = camera.WSPointToNSSPoint(p + d);
 		auto s  = Sign(p1.z - p0.z);
-		auto a  = Normalise2(m_ref_pt - p0.xy, v2Zero);
+		auto a  = Normalise(m_ref_pt - p0.xy, v2Zero);
 		auto b  = Rotate90CCW(a);
 		auto c  = nss_point - p0.xy;
-		auto t  = s * ATan2(Dot2(c,b), Dot2(c,a));
+		auto t  = s * ATan2(Dot(c,b), Dot(c,a));
 
 		m_offset = m4x4::Translation(p) * m4x4::Transform(axis, t, v4Origin) * m4x4::Translation((-p).w1()); // World space rotation about 'axis'
 
@@ -1097,11 +1097,11 @@ namespace pr::ldr
 		auto p = m_attached_ref[0].pos;
 		auto d = m_attached_ref[0][k];
 		auto c2w = camera.CameraToWorld();
-		if (FEql(Length3Sq(d), 0.0f))
+		if (FEql(LengthSq(d), 0.0f))
 		{
 			// If 'd' is zero, try construct it from the other two axes
 			d = Cross3(m_attached_ref[0][(k+1)%3], m_attached_ref[0][(k+2)%3]);
-			if (FEql(Length3Sq(d), 0.0f))
+			if (FEql(LengthSq(d), 0.0f))
 				return; // Still zero... give up
 		}
 

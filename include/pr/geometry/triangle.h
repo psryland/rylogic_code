@@ -22,8 +22,8 @@ namespace pr::geometry
 	{
 		v4 ab = b - a;
 		v4 ac = c - a;
-		float abab = Length3Sq(ab);
-		float acac = Length3Sq(ac);
+		float abab = LengthSq(ab);
+		float acac = LengthSq(ac);
 		float abac = Dot3(ab, ac);
 		float e = abab * acac;
 		float d = 2.0f * (e - abac * abac);
@@ -33,7 +33,7 @@ namespace pr::geometry
 		float t = (e - abab * abac) / d;
 
 		centre = a + s * ab + t * ac;
-		return Length3(centre - a);
+		return Length(centre - a);
 	}
 
 	// Returns the angles at each triangle vertex for the triangle v0,v1,v2
@@ -49,9 +49,9 @@ namespace pr::geometry
 		auto a = v2 - v1;
 		auto b = v0 - v2;
 		auto c = v1 - v0;
-		auto asq = Length3Sq(a);
-		auto bsq = Length3Sq(b);
-		auto csq = Length3Sq(c);
+		auto asq = LengthSq(a);
+		auto bsq = LengthSq(b);
+		auto csq = LengthSq(c);
 
 		// Use acos for the two smallest angles and 'A+B+C = pi' for the largest
 		v4 angles;
@@ -91,7 +91,7 @@ namespace pr::geometry
 	{
 		auto area = 0.0f;
 		for (int i = 0; i != count-1; ++i)
-			area += Cross2(poly[i+1], poly[i]);
+			area += Cross(poly[i+1], poly[i]);
 
 		return area / 2.0f;
 	}
@@ -355,7 +355,7 @@ namespace pr::geometry
 		// True if 'b' is a convex vertex (assuming winding order a, b, c is CCW)
 		static bool Convex(v2 a, v2 b, v2 c)
 		{
-			return Cross2(b - a, c - b) <= 0;
+			return Cross(b - a, c - b) <= 0;
 		}
 
 		// True if 'lhs' is less than 'rhs'

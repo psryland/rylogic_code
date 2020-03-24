@@ -15,7 +15,7 @@ namespace pr
 		{
 			// Find the largest component
 			auto abs_norm = Abs(norm);
-			auto i = MaxElementIndex3(abs_norm);
+			auto i = MaxElementIndex(abs_norm.xyz);
 
 			// Save the sign and 'w' component of the dropped component
 			auto s = 0;
@@ -369,7 +369,7 @@ namespace pr
 			int y = (idx % 9) / 3;
 			int z = (idx / 9);
 			return renorm
-				? v4::Normal3(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
+				? v4::Normal(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
 				: v4{x - 1.0f, y - 1.0f, z - 1.0f, 0};
 		}
 	};
@@ -599,10 +599,10 @@ namespace pr::maths
 			for (float y = -1.0f; y <= 1.0f; y += step)
 			for (float x = -1.0f; x <= 1.0f; x += step)
 			{
-				auto in_ = v4::Normal3(x, y, z, 0);
+				auto in_ = v4::Normal(x, y, z, 0);
 				auto enc = Norm64bit::Compress(in_);
 				auto out_ = Norm64bit::Decompress(enc);
-				max_error = std::max(Length3(out_ - in_), max_error);
+				max_error = std::max(Length(out_ - in_), max_error);
 			}
 			PR_CHECK(max_error < 1e-6f, true);
 		}
@@ -613,10 +613,10 @@ namespace pr::maths
 			for (float y = -1.0f; y <= 1.0f; y += step)
 			for (float x = -1.0f; x <= 1.0f; x += step)
 			{
-				auto in_ = v4::Normal3(x, y, z, 0);
+				auto in_ = v4::Normal(x, y, z, 0);
 				auto enc = Norm32bit::Compress(in_);
 				auto out_ = Norm32bit::Decompress(enc);
-				max_error = std::max(Length3(out_ - in_), max_error);
+				max_error = std::max(Length(out_ - in_), max_error);
 				if (max_error > 0.01)
 					max_error = max_error;
 			}
@@ -629,10 +629,10 @@ namespace pr::maths
 			for (float y = -1.0f; y <= 1.0f; y += step)
 			for (float x = -1.0f; x <= 1.0f; x += step)
 			{
-				auto in_ = v4::Normal3(x, y, z, 0);
+				auto in_ = v4::Normal(x, y, z, 0);
 				auto enc = Norm16bit::Compress(in_);
 				auto out_ = Norm16bit::Decompress(enc);
-				max_error = std::max(Length3(out_ - in_), max_error);
+				max_error = std::max(Length(out_ - in_), max_error);
 			}
 			PR_CHECK(max_error < 0.03f, true);
 		}
@@ -643,10 +643,10 @@ namespace pr::maths
 			for (float y = -1.0f; y <= 1.0f; y += step)
 			for (float x = -1.0f; x <= 1.0f; x += step)
 			{
-				v4   in_  = v4::Normal3(x,y,z,0);
+				v4   in_  = v4::Normal(x,y,z,0);
 				auto enc  = Norm5bit::Compress(in_);
 				v4   out_ = Norm5bit::Decompress(enc);
-				max_error = std::max(Length3(out_ - in_), max_error);
+				max_error = std::max(Length(out_ - in_), max_error);
 			}
 			PR_CHECK(max_error < 0.6f, true);
 		}

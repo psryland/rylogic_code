@@ -60,10 +60,10 @@ namespace pr
 			f.m_Tplanes.y = v4(-z, 0.0f, -width * 0.5f, 0.0f); // right
 			f.m_Tplanes.z = v4(0.0f, +z, -height * 0.5f, 0.0f); // bottom
 			f.m_Tplanes.w = v4(0.0f, -z, -height * 0.5f, 0.0f); // top
-			f.m_Tplanes.x = Normalise3(f.m_Tplanes.x);
-			f.m_Tplanes.y = Normalise3(f.m_Tplanes.y);
-			f.m_Tplanes.z = Normalise3(f.m_Tplanes.z);
-			f.m_Tplanes.w = Normalise3(f.m_Tplanes.w);
+			f.m_Tplanes.x = Normalise(f.m_Tplanes.x);
+			f.m_Tplanes.y = Normalise(f.m_Tplanes.y);
+			f.m_Tplanes.z = Normalise(f.m_Tplanes.z);
+			f.m_Tplanes.w = Normalise(f.m_Tplanes.w);
 			f.m_Tplanes = Transpose4x4(f.m_Tplanes);
 			f.zfar(zfar);
 			return f;

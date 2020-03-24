@@ -373,8 +373,15 @@ namespace pr::script
 
 							// Evaluate the expression and push the result as a string onto the stack
 							double result;
-							if (!Evaluate(expr.c_str(), result))
-								throw ScriptException(EResult::ExpressionSyntaxError, loc_beg, "#eval expression cannot be evaluated");
+							try
+							{
+								auto expression = eval::Compile(expr);
+								result = expression().db();
+							}
+							catch (std::exception const& ex)
+							{
+								throw ScriptException(EResult::ExpressionSyntaxError, loc_beg, Fmt("#eval expression cannot be evaluated: %s", ex.what()));
+							}
 
 							// Convert the result to a string
 							expr = (static_cast<long long>(result) == result)
@@ -777,7 +784,6 @@ namespace pr::script
 		bool PPDefined()
 		{
 			auto& src = (Src&)m_stack.back();
-			//auto& emit = src.m_emit;
 			string_t expr, exp;
 
 			// Read the whole line into a string, generating an expression that should evaluate to an integer
@@ -843,7 +849,15 @@ namespace pr::script
 
 			// Evaluate the expression
 			int res;
-			if (!Evaluate(expr, res)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "Failed to evaluate conditional expression");
+			try
+			{
+				auto expression = eval::Compile(expr);
+				res = static_cast<int>(expression().ll());
+			}
+			catch (std::exception const& ex)
+			{
+				throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), Fmt("Failed to evaluate conditional expression: %s", ex.what()));
+			}
 			return res != 0;
 		}
 

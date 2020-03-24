@@ -147,7 +147,7 @@ namespace pr
 						v4 const& v2 = getv(s_cast<VIdx>(face.m_idx[2]));
 
 						max_index = pr::max(max_index, face.m_idx[0], face.m_idx[1], face.m_idx[2]);
-						face.m_norm = Normalise3(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
+						face.m_norm = Normalise(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
 						face.m_angles = TriangleAngles(v0, v1, v2);
 						face.m_grp = ++sg; // each face is in a unique smoothing group to start with
 
@@ -332,7 +332,7 @@ namespace pr
 				vout(
 					s_cast<VIdx>(vert.m_new_idx),
 					s_cast<VIdx>(vert.m_orig_idx),
-					Normalise3(norm, v4Zero));
+					Normalise(norm, v4Zero));
 			}
 
 			// Output the new faces
@@ -375,7 +375,7 @@ namespace pr
 				v4 const& v2 = GetV(i2);
 
 				// Calculate the face normal
-				v4 norm = Normalise3IfNonZero(Cross3(v1 - v0, v2 - v0));
+				v4 norm = Normalise(Cross3(v1 - v0, v2 - v0), v4Zero);
 
 				// Add the normal to each vertex that references the face
 				SetN(i0, GetN(i0) + norm);
@@ -386,7 +386,7 @@ namespace pr
 			// Normalise all of the normals
 			ib = indices;
 			for (std::size_t i = 0; i != num_indices; ++i, ++ib)
-				SetN(*ib, Normalise3IfNonZero(GetN(*ib)));
+				SetN(*ib, Normalise(GetN(*ib), v4Zero));
 		}
 
 		// Generate C++ code declaration from vertex, index, and nugget buffers

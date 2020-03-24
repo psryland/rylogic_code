@@ -77,8 +77,8 @@ void pr::ph::SetMaterialProperties(Contact& contact)
 	if( contact.m_objectA->HasMicroVelocity() &&
 		contact.m_objectB->HasMicroVelocity() )
 	{
-		float momA_sq = contact.m_objectA->Momentum().Length3Sq();
-		float momB_sq = contact.m_objectB->Momentum().Length3Sq();		
+		float momA_sq = contact.m_objectA->Momentum().LengthSq();
+		float momB_sq = contact.m_objectB->Momentum().LengthSq();		
 		float micro_momA_sq = contact.m_objectA->m_micro_mom_sq + maths::tinyf;
 		float micro_momB_sq = contact.m_objectB->m_micro_mom_sq + maths::tinyf;
 		float elasticityA = materialA.m_elasticity * Maximum(0.0f, momA_sq/micro_momA_sq - 0.5f*micro_momA_sq);
@@ -119,7 +119,7 @@ void pr::ph::ImpulseResponse(Contact& contact, v4& ws_impulse)
 	// Clip this impulse to the friction cone
 	float impulse_n = Dot3(contact.m_normal,  ws_impulse);
 	v4 ws_impulse_t	= impulse_n * contact.m_normal - ws_impulse;
-	float impulse_t = ws_impulse_t.Length3();
+	float impulse_t = ws_impulse_t.Length();
 	if( Abs(impulse_t) > Abs(impulse_n * contact.m_static_friction) )
 	{
 		float kappa = contact.m_dynamic_friction * (1.0f + contact.m_elasticity_n) * Dot3(contact.m_normal, Pi) /
@@ -170,18 +170,18 @@ void pr::ph::PushOut(Rigidbody& objA, Rigidbody& objB, Contact& contact)
 
 		//// Decompose the push into a shift of the CoM and a rotation
 		//v4 radius = contact.m_pointA - objA.m_object_to_world.pos;
-		//v4 rot    = Cross3(radius, push)         / radius.Length3Sq();
-		//v4 trans  = Dot3(radius, push) * radius  / radius.Length3Sq();
+		//v4 rot    = Cross3(radius, push)         / radius.LengthSq();
+		//v4 trans  = Dot3(radius, push) * radius  / radius.LengthSq();
 		//objA.m_object_to_world     += CrossProductMatrix3x3(rot) * objA.m_object_to_world.Getm3x4();
 		//objA.m_object_to_world.pos += trans;
-		//if( rot.Length3Sq() > 0.01f ) objA.m_object_to_world.Orthonormalise();
+		//if( rot.LengthSq() > 0.01f ) objA.m_object_to_world.Orthonormalise();
 
 		// Remove energy gained by pushing. E ~= v^2
 		//float nrg_gain = -Dot3(objA.m_gravity, push) * pushout_nrg_scale;
 		//if( nrg_gain > 0.0f )
 		{
 			//v4 vel = objA.Velocity();
-			//float vel_sq = vel.Length3Sq();
+			//float vel_sq = vel.LengthSq();
 			//if( nrg_gain > vel_sq )	objA.SetVelocity(v4Zero);
 			//else					objA.SetVelocity(vel * Sqrt((vel_sq - nrg_gain) / vel_sq));
 		}
@@ -197,18 +197,18 @@ void pr::ph::PushOut(Rigidbody& objA, Rigidbody& objB, Contact& contact)
 
 		//// Decompose the push into a shift of the CoM and a rotation
 		//v4 radius = contact.m_pointB - objB.m_object_to_world.pos;
-		//v4 rot    = Cross3(radius, push)         / radius.Length3Sq();
-		//v4 trans  = Dot3(radius, push) * radius  / radius.Length3Sq();
+		//v4 rot    = Cross3(radius, push)         / radius.LengthSq();
+		//v4 trans  = Dot3(radius, push) * radius  / radius.LengthSq();
 		//objB.m_object_to_world     += CrossProductMatrix3x3(rot) * objB.m_object_to_world.Getm3x4();
 		//objB.m_object_to_world.pos += trans;
-		//if( rot.Length3Sq() > 0.01f ) objB.m_object_to_world.Orthonormalise();
+		//if( rot.LengthSq() > 0.01f ) objB.m_object_to_world.Orthonormalise();
 
 		// Remove energy gained by pushing. E ~= v^2
 		//float nrg_gain = -Dot3(objB.m_gravity, push) * pushout_nrg_scale;
 		//if( nrg_gain > 0.0f )
 		{
 			//v4 vel = objB.Velocity();
-			//float vel_sq = vel.Length3Sq();
+			//float vel_sq = vel.LengthSq();
 			//if( nrg_gain > vel_sq )	objB.SetVelocity(v4Zero);
 			//else					objB.SetVelocity(vel * Sqrt((vel_sq - nrg_gain) / vel_sq));
 		}

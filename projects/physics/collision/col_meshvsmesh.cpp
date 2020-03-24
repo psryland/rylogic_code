@@ -48,11 +48,11 @@ namespace pr
 				for (std::size_t f = 0; f != polyA.m_face_count; ++f)
 				{
 					// ObjA
-					v4 axis = a2w * Normalise3(Cross3(polyA.vertex(polyA.face(f).m_index[1]) - polyA.vertex(polyA.face(f).m_index[0]),
+					v4 axis = a2w * Normalise(Cross3(polyA.vertex(polyA.face(f).m_index[1]) - polyA.vertex(polyA.face(f).m_index[0]),
 						polyA.vertex(polyA.face(f).m_index[2]) - polyA.vertex(polyA.face(f).m_index[0])));
 					v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
 					v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-					v4 r = Normalise3(q - p);
+					v4 r = Normalise(q - p);
 					dp = Dot3(axis, r);
 					if (dp >= 0.0f)
 						return false; // no collision
@@ -61,7 +61,7 @@ namespace pr
 
 					p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
 					q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
-					r = Normalise3(q - p);
+					r = Normalise(q - p);
 					dp = Dot3(-axis, r);
 					if (dp >= 0.0f)
 						return false; // no collision
@@ -74,11 +74,11 @@ namespace pr
 				for (std::size_t f = 0; f != polyB.m_face_count; ++f)
 				{
 					// ObjB
-					v4 axis = b2w * Normalise3(Cross3(polyB.vertex(polyB.face(f).m_index[1]) - polyB.vertex(polyB.face(f).m_index[0]),
+					v4 axis = b2w * Normalise(Cross3(polyB.vertex(polyB.face(f).m_index[1]) - polyB.vertex(polyB.face(f).m_index[0]),
 						polyB.vertex(polyB.face(f).m_index[2]) - polyB.vertex(polyB.face(f).m_index[0])));
 					v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
 					v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-					v4 r = Normalise3(q - p);
+					v4 r = Normalise(q - p);
 					dp = Dot3(axis, r);
 					if (dp >= 0.0f)
 						return false; // no collision
@@ -88,7 +88,7 @@ namespace pr
 					}
 					p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
 					q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
-					r = Normalise3(q - p);
+					r = Normalise(q - p);
 					dp = Dot3(-axis, r);
 					if (dp >= 0.0f)
 						return false; // no collision
@@ -108,12 +108,12 @@ namespace pr
 								v4 edgei = a2w * (polyA.vertex(polyA.face(fi).m_index[(ei + 1) % 3]) - polyA.vertex(polyA.face(fi).m_index[(ei + 0) % 3]));
 								v4 edgej = b2w * (polyB.vertex(polyB.face(fj).m_index[(ej + 1) % 3]) - polyB.vertex(polyB.face(fj).m_index[(ej + 0) % 3]));
 								v4 axis = Cross3(edgei, edgej);
-								if (IsZero3(axis)) continue;
+								if (axis == v4Zero) continue;
 
-								axis = Normalise3(axis);
+								axis = Normalise(axis);
 								v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
 								v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-								v4 r = Normalise3(q - p);
+								v4 r = Normalise(q - p);
 								dp = Dot3(axis, r);
 								if (dp >= 0.0f)
 									return false; // no collision
@@ -125,7 +125,7 @@ namespace pr
 								}
 								p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
 								q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
-								r = Normalise3(q - p);
+								r = Normalise(q - p);
 								dp = Dot3(-axis, r);
 								if (dp >= 0.0f)
 									return false; // no collision
@@ -152,9 +152,9 @@ namespace pr
 					{
 						if (i == j) continue;
 						v4 half_space_normal = Cross3(r[i], r[j]);
-						if (!IsZero3(half_space_normal))
+						if (!FEql(half_space_normal, v4Zero))
 						{
-							half_space_normal = Normalise3(half_space_normal);
+							half_space_normal = Normalise(half_space_normal);
 							bool all_positive = true;
 							for (uint k = 0; k != r_size; ++k)
 							{
@@ -177,7 +177,7 @@ namespace pr
 			bool VerifyHalfSpace(v4 const* r, uint r_size, v4 const& half_space_normal)
 			{
 				r; half_space_normal;
-				PR_ASSERT(PR_DBG_PHYSICS, !FEql3(half_space_normal,pr::v4Zero), "");
+				PR_ASSERT(PR_DBG_PHYSICS, !FEql(half_space_normal,pr::v4Zero), "");
 				for( uint i = 0; i != r_size; ++i )
 				{
 					PR_ASSERT(PR_DBG_PHYSICS, Dot3(half_space_normal, r[i]) > -0.01f, "");
@@ -191,7 +191,7 @@ namespace pr
 			{
 				tri.m_vert[2] = tri.m_vert[1] = tri.m_vert[0] = vert;
 				tri.m_direction = vert.m_direction;
-				tri.m_distance  = Length3(vert.m_r);
+				tri.m_distance  = Length(vert.m_r);
 				PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::phTriangle(tri);)
 			}
 
@@ -201,8 +201,8 @@ namespace pr
 				for( int i = 0; i != 3; ++i )
 				{
 					v4 norm = Cross3(face_norm, tri[(i+1)%3] - tri[i]);
-					if( FEql3(norm,pr::v4Zero) ) continue;
-					norm = Normalise3(norm);
+					if( FEql(norm,pr::v4Zero) ) continue;
+					norm = Normalise(norm);
 					if( Dot3(norm, tri[(i+2)%3] - tri[i]) < 0.0f ) norm = -norm;
 					float d1 = Dot3(norm, s - tri[i]);
 					float d2 = Dot3(norm, e - tri[i]);
@@ -304,7 +304,7 @@ namespace pr
 			// Return true if the last sampled point in 'col' is normal to the surface of the Minkowski difference
 			inline bool PointAndNormalAreAligned(const Couple& col)
 			{
-				return Abs(Length3Sq(col.m_nearest.m_r) - col.m_dist_sq_upper_bound) < PenetrationTolerance * PenetrationTolerance;
+				return Abs(LengthSq(col.m_nearest.m_r) - col.m_dist_sq_upper_bound) < PenetrationTolerance * PenetrationTolerance;
 			}
 
 			// Sets 'vert' to 'nearest' if it represents a tighter bound
@@ -314,14 +314,14 @@ namespace pr
 			{
 				// Use the normal to the surface at 'vert' to bound the nearest distance
 				// Remember the vert that last bounded the distance
-				float dist_sq = Sqr(Dot3(vert.m_direction, vert.m_r)) / Length3Sq(vert.m_direction);
+				float dist_sq = Sqr(Dot3(vert.m_direction, vert.m_r)) / LengthSq(vert.m_direction);
 				if( dist_sq < col.m_dist_sq_upper_bound )
 				{
 					col.m_dist_sq_upper_bound = dist_sq;
 					col.m_nearest = vert;
 						PR_EXPAND(PR_DBG_MESH_COLLISION, StartFile("C:/DeleteMe/collision_upperbound.pr_script");)
 						PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Sphere("Upper_Bound", "80FF0000", v4Origin, Sqrt(col.m_dist_sq_upper_bound));)
-						PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line  ("TargetNorm" , "FFFFFF00", v4Origin, Normalise3(vert.m_direction) * Sqrt(col.m_dist_sq_upper_bound));)
+						PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line  ("TargetNorm" , "FFFFFF00", v4Origin, Normalise(vert.m_direction) * Sqrt(col.m_dist_sq_upper_bound));)
 						PR_EXPAND(PR_DBG_MESH_COLLISION, EndFile();)
 					
 					// If the line from the origin to the vert is aligned with the normal then we've found our result
@@ -401,8 +401,8 @@ namespace pr
 					PR_EXPAND(PR_DBG_MESH_COLLISION, if( loop_count++ > max_loop_count ) max_loop_count = loop_count;)
 					PR_EXPAND(PR_DBG_MESH_COLLISION, ++get_opposing_edge_count;)
 
-					v4 dir = Length3(a.direction() + a.offset()) * refine_normal_direction;
-					col.SupportVertex(Normalise3(dir));
+					v4 dir = Length(a.direction() + a.offset()) * refine_normal_direction;
+					col.SupportVertex(Normalise(dir));
 					b.set(col.m_vertex);
 					if( SetNearestBound(b.vert(), col) ) return true;
 					PR_EXPAND(PR_DBG_MESH_COLLISION, AppendFile("C:/DeleteMe/collision_nearestpoint.pr_script"); ldr::phTrackingVert(b.vert(), "FFFF0000"); EndFile();)
@@ -431,7 +431,7 @@ namespace pr
 					PR_EXPAND(PR_DBG_MESH_COLLISION, if( ++loop_count > max_loop_count ) max_loop_count = loop_count;)
 
 					// Look in the average direction
-					col.SupportVertex(Normalise3(a.direction() + b.direction()));
+					col.SupportVertex(Normalise(a.direction() + b.direction()));
 					test.set(col.m_vertex);
 					if( SetNearestBound(test.vert(), col) ) return true;
 					PR_EXPAND(PR_DBG_MESH_COLLISION, AppendFile("C:/DeleteMe/collision_nearestpoint.pr_script"); ldr::phTrackingVert(test.vert(), "FFFF0000"); EndFile();)
@@ -470,7 +470,7 @@ namespace pr
 				SampleMinkowskiDiff(col);
 				if( PointAndNormalAreAligned(col) )
 				{
-					col.m_nearest.m_direction = Normalise3(col.m_nearest.m_direction);
+					col.m_nearest.m_direction = Normalise(col.m_nearest.m_direction);
 					return CreateTriangleFromVert(triangle, col.m_nearest);
 				}
 				
@@ -480,11 +480,11 @@ namespace pr
 					{&triangle.m_vert[2], 0.0f, v4Zero}};
 
 				// Start with the best estimate from the simplex
-				col.m_nearest.m_direction = Normalise3(col.m_nearest.m_direction);
+				col.m_nearest.m_direction = Normalise(col.m_nearest.m_direction);
 				trk[0].set(col.m_nearest);
 				PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::phTrackingVert(trk, 1);)
 
-				v4 refine_normal_direction = Normalise3(v4Origin - trk[0].offset());
+				v4 refine_normal_direction = Normalise(v4Origin - trk[0].offset());
 				for( int i = 0; i != 3; ++i )
 				{
 					int j = (i + 1) % 3;
@@ -508,8 +508,8 @@ namespace pr
 					// If the origin does not project onto the edge formed between 'i' and 'i+1'
 					// then find a new direction to refine the normal in
 					v4 edge = trk[j].vert().m_r - trk[i].vert().m_r;
-					if( IsZero3(edge) )	{ refine_normal_direction = v4Origin - trk[i].offset(); }
-					else				{ refine_normal_direction = Normalise3(Cross3(trk[i].direction(), edge)); }
+					if(edge== v4Zero)	{ refine_normal_direction = v4Origin - trk[i].offset(); }
+					else				{ refine_normal_direction = Normalise(Cross3(trk[i].direction(), edge)); }
 
 					// Make sure we choose a direction toward the origin
 					float side = Dot3(refine_normal_direction, trk[i].offset());
@@ -563,8 +563,8 @@ namespace pr
 					// Initialise the half space normal once we have two r's
 					// If the product is zero, then any vector perpendicular to 'r[0]' should do
 					half_space_normal = r[0] + r[1];
-					if (FEql3(half_space_normal, pr::v4Zero)) half_space_normal = Perpendicular(r[0]);
-					else                                     half_space_normal = Normalise3(half_space_normal);
+					if (FEql(half_space_normal, pr::v4Zero)) half_space_normal = Perpendicular(r[0]);
+					else                                     half_space_normal = Normalise(half_space_normal);
 					first_new_r = 2;
 
 					PR_ASSERT(PR_DBG_MESH_COLLISION, VerifyHalfSpace(r, 2, half_space_normal), "");
@@ -614,8 +614,8 @@ namespace pr
 					// 'ra' and 'rb' are bounds for the line in the XY place
 					int i = 0;
 					v2 ra = v2Zero, rb = v2Zero;
-					for (; i != first_new_r && FEql2(ra, v2Zero);) { ra = (M * r[i++]).xy; }
-					for (; i != first_new_r && FEql2(rb, v2Zero);) { rb = (M * r[i++]).xy; }
+					for (; i != first_new_r && FEql(ra, v2Zero);) { ra = (M * r[i++]).xy; }
+					for (; i != first_new_r && FEql(rb, v2Zero);) { rb = (M * r[i++]).xy; }
 
 					// We need to ensure 'rb' is on the positive side of 'ra'
 					if (Line::Eqn(ra, rb) < 0.0f)
@@ -627,7 +627,7 @@ namespace pr
 					for (i = 2; i != first_new_r + 1; ++i)
 					{
 						v2 t = (M * r[i]).xy;
-						if (!FEql2(t, v2Zero))
+						if (!FEql(t, v2Zero))
 						{
 							if (Line::Eqn(ra, t) >= 0.0f)
 							{
@@ -657,11 +657,11 @@ namespace pr
 					// that's zero in which case, use the perpendicular to 'rb'. If that's zero
 					// as well then is doesn't matter what we use, might as well be the x axis
 					v2 rn = v2(ra[1], -ra[0]);
-					if (!FEql2(rn, v2Zero)) { rn = Normalise2(rn); }
+					if (!FEql(rn, v2Zero)) { rn = Normalise(rn); }
 					else
 					{
 						rn = v2(-rb[1], rb[0]);
-						if (!FEql2(rn, v2Zero)) { rn = Normalise2(rn); }
+						if (!FEql(rn, v2Zero)) { rn = Normalise(rn); }
 						else { rn = v2XAxis; }
 					}
 					half_space_normal = Transpose(M) * v4(rn, 0.0f, 0.0f);
@@ -694,7 +694,7 @@ namespace pr
 
 					// Find the minimum normal distance from the convex hull of the simplex to the origin
 					v4 nearest_point = col.m_simplex.FindNearestPoint(v4Origin) - v4Origin;
-					float nearest_distanceSq = Length3Sq(nearest_point);
+					float nearest_distanceSq = LengthSq(nearest_point);
 					if( nearest_distanceSq >= last_nearest_distanceSq )
 					{
 						PR_EXPAND(PR_DBG_MESH_COLLISION, DebugOutput(Fmt("GJK: Collision rejected after %d iterations\n", k).c_str());)
@@ -729,7 +729,7 @@ namespace pr
 
 					// If the support vertex 'r' is no more extreme in the direction of the
 					// separating axis than 'nearest_point' then the objects are not in
-					// collision and the distance is nearest_point.Length3()
+					// collision and the distance is nearest_point.Length()
 					float r_dist = Dot3(col.m_separating_axis, col.m_vertex.m_r);
 					float n_dist = Dot3(col.m_separating_axis, nearest_point) + SeparationTolerance;
 					if( r_dist <= n_dist )
@@ -799,7 +799,7 @@ namespace pr
 						PR_EXPAND(PR_DBG_MESH_COLLISION, DebugOutput(Fmt("CW: Collision rejected in %d iterations\n", k).c_str());)
 						return false; // non-collision
 					}
-					float rk_length = Length3(r[k]);
+					float rk_length = Length(r[k]);
 					r[k] /= rk_length;
 					dp   /= rk_length;
 
@@ -914,7 +914,7 @@ bool pr::ph::GetNearestPoints(Shape const& shapeA, m4x4 const& a2w, Shape const&
 	{
 		v4 nearest_point	= col.m_simplex.FindNearestPoint(v4Origin) - v4Origin;
 		Contact contact;
-		contact.m_depth		= -Length3(nearest_point);
+		contact.m_depth		= -Length(nearest_point);
 		contact.m_normal	= nearest_point / contact.m_depth;
 		contact.m_pointA	= col.m_simplex.GetNearestPointOnA() - col.m_a2w.pos;
 		contact.m_pointB	= col.m_simplex.GetNearestPointOnB() - col.m_b2w.pos;

@@ -38,7 +38,7 @@ namespace pr
 			auto v = v2(x, y);
 			auto len = Length2Sq(v);
 			if (len > 0.01f && len <= 1.0f)
-				return Normalise2(v);
+				return Normalise(v);
 		}
 	}
 	// Create a random vector with unit length
@@ -113,7 +113,7 @@ namespace pr
 			auto y = dist(rng);
 			auto z = dist(rng);
 			auto v = v3(x, y, z);
-			auto len = Length3Sq(v);
+			auto len = LengthSq(v);
 			if (len > 0.01f && len <= 1.0f)
 				return v /= Sqrt(len);
 		}
@@ -172,7 +172,7 @@ namespace pr
 			auto z = dist(rng);
 			auto w = dist(rng);
 			auto v = v4(x, y, z, w);
-			auto len = Length4Sq(v);
+			auto len = LengthSq(v);
 			if (len >= 0.01f && len <= 1.0f)
 				return v /= Sqrt(len);
 		}
@@ -310,7 +310,7 @@ namespace pr::maths
 			{
 				auto v = Random4(g_rng(), centre, 10);
 				PR_CHECK(v != prev, true);
-				PR_CHECK(Length4(v - centre) < radius, true);
+				PR_CHECK(Length(v - centre) < radius, true);
 			}
 		}
 	}

@@ -102,12 +102,12 @@ namespace pr
 		//inline void Instance::ApplyWorldCollisionImpulseAt(const v4& force, const v4& where)
 		//{
 		//	float inward_force = Dot3(force, m_force);
-		//	if( inward_force < 0.0f ) { m_force -= (inward_force / force.Length3Sq()) * force; }
+		//	if( inward_force < 0.0f ) { m_force -= (inward_force / force.LengthSq()) * force; }
 		//	m_force += force;
 
 		//	v4 torque = Cross3(where, force);
 		//	float inward_torque = Dot3(torque, m_torque);
-		//	if( inward_torque < 0.0f ) { m_torque -= (inward_torque / torque.Length3Sq()) * torque; }
+		//	if( inward_torque < 0.0f ) { m_torque -= (inward_torque / torque.LengthSq()) * torque; }
 		//	m_torque += torque;
 		//}
 	}

@@ -20,10 +20,10 @@ using namespace pr::ph;
 inline Ray ShiftRay(Ray const& ray)
 {
 	if( ray.m_thickness == 0.0f ) return ray;
-	float direction_len = Length3(ray.m_direction);
+	float direction_len = Length(ray.m_direction);
 	v4 forward			= ray.m_direction / direction_len;
 	v4 sideways			= forward * Dot3(ray.m_point, forward) - ray.m_point; sideways.w = 0.0f;
-	float sideways_len  = Length3(sideways);
+	float sideways_len  = Length(sideways);
 	sideways			/= sideways_len;
 	return Ray(ray.m_point +
 		forward  * pr::Min(direction_len, ray.m_thickness) +
@@ -51,9 +51,9 @@ bool pr::ph::RayCast(Ray const& ray, Shape const& shape, RayCastResult& result)
 bool pr::ph::RayCast(Ray const& ray, ShapeSphere const& shape, RayCastResult& result)
 {
 	// Find the closest point to the line
-	float	direction_lenSq = Length3Sq(ray.m_direction);
+	float	direction_lenSq = LengthSq(ray.m_direction);
 	v4		closest_point	= ray.m_point - ray.m_direction * (Dot3(ray.m_direction, ray.m_point) / direction_lenSq);
-	float	closest_distSq	= Length3Sq(closest_point);
+	float	closest_distSq	= LengthSq(closest_point);
 	float	radius			= shape.m_radius + ray.m_thickness;
 	float	radiusSq		= radius * radius;
 
@@ -278,7 +278,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	PR_EXPAND(PR_PH_DBG_RAY_CAST,	StartFile("C:/Deleteme/raycast_dir.pr_script");EndFile();)
 	PR_EXPAND(PR_PH_DBG_RAY_CAST,	StartFile("C:/Deleteme/raycast_result.pr_script");EndFile();)
 	
-	PR_ASSERT(PR_DBG_PHYSICS, !FEql3(ray.m_direction,pr::v4Zero), "");
+	PR_ASSERT(PR_DBG_PHYSICS, !FEql(ray.m_direction,pr::v4Zero), "");
 
 	Ray ray_ = ShiftRay(ray);
 	v4 lineS = ray_.m_point;
@@ -296,13 +296,13 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	// then the line cannot penetrate the polytope
 	v4 dir = ClosestPoint_PointToInfiniteLine(v4Origin, lineS, lineE, t) - v4Origin;
 	//dir = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
-	if( !FEql3(dir,pr::v4Zero) )
+	if( !FEql(dir,pr::v4Zero) )
 	{
 		start_vert = SupportVertex(shape, dir, id, id);
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/Deleteme/raycast_vert.pr_script");)
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("vert", "FFFFFF00", start_vert, 0.02f);)
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, EndFile();)
-		if( Dot3(start_vert, dir) < Length3Sq(dir) ) return false;
+		if( Dot3(start_vert, dir) < LengthSq(dir) ) return false;
 	}
 	else
 	{
@@ -332,10 +332,10 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 		{
 			dir = smplx.FindNearest(line_s, line_e, back);
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, smplx.Dump("raycast_smplx");)
-			if( FEql3(dir,pr::v4Zero) ) dir = line_s - line_e;
+			if( FEql(dir,pr::v4Zero) ) dir = line_s - line_e;
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/DeleteMe/raycast_nearest.pr_script");)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("Nearest", "FFFF0000", smplx.m_nearest, 0.02f);)
-				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::LineD("Sep_axis", "FFFFFF00", smplx.m_nearest, Normalise3(dir));)
+				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::LineD("Sep_axis", "FFFFFF00", smplx.m_nearest, Normalise(dir));)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, EndFile();)
 		
 			v4 vert = SupportVertex(shape, dir, id, id);
@@ -364,12 +364,12 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 
 		if( side == 0 )
 		{
-			result.m_t0		= Dot3(smplx.m_nearest - lineS, ray.m_direction) / Length3Sq(ray.m_direction);
-			result.m_normal = Normalise3(dir); // Save the front face normal
+			result.m_t0		= Dot3(smplx.m_nearest - lineS, ray.m_direction) / LengthSq(ray.m_direction);
+			result.m_normal = Normalise(dir); // Save the front face normal
 		}
 		else
 		{
-			result.m_t1		= Dot3(smplx.m_nearest - lineS, ray.m_direction) / Length3Sq(ray.m_direction);
+			result.m_t1		= Dot3(smplx.m_nearest - lineS, ray.m_direction) / LengthSq(ray.m_direction);
 		}		
 	}
 
@@ -394,7 +394,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapeTriangle const& shape, RayCastResult& 
 		return false;
 
 	v4 intercept = BaryPoint(shape.m_v.x, shape.m_v.y, shape.m_v.z, bary);
-	float t = Sqrt(Length3Sq(intercept - r.m_point) / Length3Sq(r.m_direction));
+	float t = Sqrt(LengthSq(intercept - r.m_point) / LengthSq(r.m_direction));
 
 	result.m_t0		= t;
 	result.m_t1		= t;
@@ -430,10 +430,10 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 	// Attempt a quick out for the line vs. shape test
 	float t; std::size_t id = 0;
 	v4 nearest = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
-	if( !FEql3(nearest,pr::v4Zero) )
+	if( !FEql(nearest,pr::v4Zero) )
 	{
 		v4 support = SupportVertex(shape, nearest, id, id);
-		if( Dot3(support, nearest) < Length3Sq(nearest) ) return false;
+		if( Dot3(support, nearest) < LengthSq(nearest) ) return false;
 	}
 
 	// Clip the line segment against each face of the polytope

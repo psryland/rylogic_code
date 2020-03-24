@@ -18,10 +18,10 @@ namespace pr
 	{
 		auto da = a1 - a0;
 		auto db = b1 - b0;
-		auto denom = Cross2(da, db);
+		auto denom = Cross(da, db);
 		if (FEql(denom, 0.0f)) return false;
-		auto i = Cross2(a0, a1);
-		auto j = Cross2(b0, b1);
+		auto i = Cross(a0, a1);
+		auto j = Cross(b0, b1);
 		intersect.x = (da.x * j - db.x * i) / denom;
 		intersect.y = (da.y * j - db.y * i) / denom;
 		return true;
@@ -48,15 +48,15 @@ namespace pr
 		auto ab = b0 - a0;
 		auto da = a1 - a0;
 		auto db = b1 - b0;
-		auto denom = Cross2(da, db);
+		auto denom = Cross(da, db);
 		if (!FEql(denom, 0)) // not parallel
 		{
-			ta = Cross2(ab, db) / denom;
-			tb = Cross2(ab, da) / denom;
+			ta = Cross(ab, db) / denom;
+			tb = Cross(ab, da) / denom;
 			return ta >= 0 && ta <= 1 && tb >= 0 && tb <= 1;
 		}
 
-		auto numer = Cross2(ab, da);
+		auto numer = Cross(ab, da);
 		if (!FEql(numer, 0)) // not colinear
 			return false;
 			
@@ -615,7 +615,7 @@ namespace pr::geometry
 			PR_CHECK(r, false);
 		}
 		{ // Intersect_BBoxToPlane
-			auto p = pr::plane::make(v4(0.1f, 0.4f, -0.3f, 1), v4::Normal3(0.3f,-0.4f,0.5f,0));
+			auto p = pr::plane::make(v4(0.1f, 0.4f, -0.3f, 1), v4::Normal(0.3f,-0.4f,0.5f,0));
 			auto b = BBox(v4(0.0f, 0.2f, 0.0f, 1.0f), v4(0.25f, 0.15f, 0.2f, 0));
 			auto r = Intersect_BBoxToPlane(b, p);
 			PR_CHECK(r, true);

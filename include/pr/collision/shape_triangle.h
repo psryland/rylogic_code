@@ -16,7 +16,7 @@ namespace pr::collision
 		ShapeTriangle() = default;
 		ShapeTriangle(v4_cref<> a, v4_cref<> b, v4_cref<> c, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 			:m_base(EShape::Triangle, sizeof(ShapeTriangle), shape_to_model, material_id, flags)
-			,m_v(a, b, c, Normalise3(Cross3(b-a,c-b)))
+			,m_v(a, b, c, Normalise(Cross3(b-a,c-b)))
 		{
 			assert(a.w == 0.0f && b.w == 0.0f && c.w == 0.0f);
 			m_base.m_bbox = CalcBBox(*this);
@@ -54,7 +54,7 @@ namespace pr::collision
 	inline void ShiftCentre(ShapeTriangle& shape, v4& shift)
 	{
 		assert(shift.w == 0.0f);
-		if (FEql3(shift, v4Zero)) return;
+		if (FEql(shift, v4Zero)) return;
 		shape.m_v.x -= shift;
 		shape.m_v.y -= shift;
 		shape.m_v.z -= shift;
@@ -71,7 +71,7 @@ namespace pr::collision
 			Dot3(direction, shape.m_v.z),
 			0};
 
-		sup_vert_id = MaxElementIndex3(d);
+		sup_vert_id = MaxElementIndex(d.xyz);
 		return shape.m_v[(int)sup_vert_id];
 	}
 
@@ -79,6 +79,6 @@ namespace pr::collision
 	inline void ClosestPoint(ShapeTriangle const& shape, v4_cref<> point, float& distance, v4& closest)
 	{
 		closest = ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
-		distance = Length3(point - closest);
+		distance = Length(point - closest);
 	}
 }

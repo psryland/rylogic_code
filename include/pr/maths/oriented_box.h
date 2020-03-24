@@ -57,7 +57,7 @@ namespace pr
 		// Diagonal size of the box
 		float DiametreSq() const
 		{
-			return 4.0f * Length3Sq(m_radius);
+			return 4.0f * LengthSq(m_radius);
 		}
 		float Diametre() const
 		{
@@ -125,7 +125,7 @@ namespace pr
 	// Return the bounding sphere for the box
 	inline BSphere GetBSphere(OBox const& ob)
 	{
-		return BSphere(ob.m_box_to_world.pos, Length3(ob.m_radius));
+		return BSphere(ob.m_box_to_world.pos, Length(ob.m_radius));
 	}
 
 	#pragma endregion

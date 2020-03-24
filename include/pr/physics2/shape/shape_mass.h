@@ -144,7 +144,7 @@ namespace pr::physics
 	{
 		MassProperties mp;
 		mp.m_centre_of_mass  = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z).w0();
-		mp.m_mass            = 0.5f * Length3(Cross3(shape.m_v.y - shape.m_v.x, shape.m_v.z - shape.m_v.y)) * density;
+		mp.m_mass            = 0.5f * Length(Cross3(shape.m_v.y - shape.m_v.x, shape.m_v.z - shape.m_v.y)) * density;
 		mp.m_os_unit_inertia = UnitInertia(shape);
 		return mp;
 	}

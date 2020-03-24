@@ -84,9 +84,9 @@ namespace pr
 		}
 
 		// Construct normalised
-		static Vec3<T> Normal3(float x, float y, float z)
+		static Vec3<T> Normal(float x, float y, float z)
 		{
-			return Normalise3(Vec3<T>(x,y,z));
+			return Normalise(Vec3<T>(x,y,z));
 		}
 
 		#pragma region Operators
@@ -152,25 +152,25 @@ namespace pr
 	#pragma region Functions
 
 	// Dot product: a . b
-	template <typename T> inline float Dot(v3_cref<T> a, v3_cref<T> b)
+	template <typename T> constexpr float Dot(v3_cref<T> a, v3_cref<T> b)
 	{
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 	}
 
 	// Cross product: a x b
-	template <typename T> inline Vec3<T> Cross(v3_cref<T> a, v3_cref<T> b)
+	template <typename T> constexpr Vec3<T> Cross(v3_cref<T> a, v3_cref<T> b)
 	{
 		return Vec3<T>{a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x};
 	}
 
 	// Triple product: a . b x c
-	template <typename T> inline float Triple(v3_cref<T> a, v3_cref<T> b, v3_cref<T> c)
+	template <typename T> constexpr float Triple(v3_cref<T> a, v3_cref<T> b, v3_cref<T> c)
 	{
 		return Dot3(a, Cross3(b, c));
 	}
 
 	// Returns a vector with the values permuted 'n' times. 0=xyz, 1=yzx, 2=zxy, etc
-	template <typename T> inline Vec3<T> Permute(v3_cref<T> v, int n)
+	template <typename T> constexpr Vec3<T> Permute(v3_cref<T> v, int n)
 	{
 		switch (n%3)
 		{
@@ -181,7 +181,7 @@ namespace pr
 	}
 
 	// Returns a 3-bit bitmask of the octant the vector is in. 0=(-x,-y,-z), 1=(+x,-y,-z), 2=(-x,+y,-z), 3=(+x,+y,-z), 4=(-x,-y+z), 5=(+x,-y,+z), 6=(-x,+y,+z), 7=(+x,+y,+z)
-	template <typename T> inline uint Octant(v3_cref<T> v)
+	template <typename T> constexpr uint Octant(v3_cref<T> v)
 	{
 		return (v.x >= 0.0f) | ((v.y >= 0.0f) << 1) | ((v.z >= 0.0f) << 2);
 	}

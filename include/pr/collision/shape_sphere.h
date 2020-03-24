@@ -52,7 +52,7 @@ namespace pr
 		// Shift the centre of a sphere
 		inline void ShiftCentre(ShapeSphere&, v4& shift)
 		{
-			assert("impossible to shift the centre of an implicit object" && FEql3(shift, v4Zero));
+			assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
 			(void)shift; 
 		}
 
@@ -60,7 +60,7 @@ namespace pr
 		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref<> direction, int, int& sup_vert_id)
 		{
 			// We need to quantise the normal otherwise the iterative algorithms perform badly
-			auto dir = Normalise3(direction);
+			auto dir = Normalise(direction);
 
 			// Generate an id for the vertex in this direction
 			sup_vert_id =
@@ -74,7 +74,7 @@ namespace pr
 		// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
 		inline void ClosestPoint(ShapeSphere const& shape, v4_cref<> point, float& distance, v4& closest)
 		{
-			distance  = Length3(point);
+			distance  = Length(point);
 			closest   = ((shape.m_radius / distance) * point).w1();
 			distance -= shape.m_radius;
 		}

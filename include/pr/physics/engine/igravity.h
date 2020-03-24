@@ -55,16 +55,15 @@ namespace pr
 			InverseSqrGravity(v4 const& centre, float strength, float min_dist) : m_centre(centre), m_strength(strength), m_min_dist(min_dist) {}
 			v4 GravityField(v4 const& position) const
 			{
-				v4 diff = m_centre - position;
-				float r = pr::Max(Length3(diff), m_min_dist);
+				auto diff = m_centre - position;
+				auto r = Max(Length(diff), m_min_dist);
 				return diff * (m_strength / (r*r*r)); // first 'r' is to normalise 'diff', then it's r^2
 			}
 			float GravityPotential(v4 const& pos) const
 			{
-				return Length3(GravityField(pos));
+				return Length(GravityField(pos));
 			}
 		};
-		
 	}
 }
 

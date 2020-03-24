@@ -46,7 +46,7 @@ namespace pr::collision
 	// by Invert(shape2world) but not 'shape.m_s2p' or any nested shapes)
 	inline v4 SupportVertex(ShapeSphere const& shape, v4_cref<> direction, EFeature& feature_type)
 	{
-		assert(IsNormal3(direction));
+		assert(IsNormal(direction));
 		feature_type = EFeature::Vert;
 		return shape.m_base.m_s2p.pos + shape.m_radius * direction;
 	}
@@ -69,7 +69,7 @@ namespace pr::collision
 	{
 		v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
 		feature_type = EFeature::Vert;
-		return shape.m_v[MaxElementIndex3(d)];
+		return shape.m_v[MaxElementIndex(d.xyz)];
 	}
 	inline v4 SupportVertex(ShapeLine const& shape, v4_cref<> direction, EFeature& feature_type)
 	{

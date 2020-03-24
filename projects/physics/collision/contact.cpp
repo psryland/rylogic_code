@@ -31,7 +31,7 @@ int contact_dummy;
 //	// Tangent to the collision normal
 //	m_tangent = m_relative_velocity - rel_norm_velocity * m_normal;
 //
-//	float rel_tang_velocity = m_tangent.Length3();
+//	float rel_tang_velocity = m_tangent.Length();
 //	if( !FEql(rel_tang_velocity, 0.0f) )	m_tangent /= rel_tang_velocity;
 //	else									m_tangent .Zero();
 //

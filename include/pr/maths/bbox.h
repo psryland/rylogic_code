@@ -90,7 +90,7 @@ namespace pr
 		// Diagonal size of the bbox
 		float DiametreSq() const
 		{
-			return 4.0f * Length3Sq(m_radius);
+			return 4.0f * LengthSq(m_radius);
 		}
 		float Diametre() const
 		{
@@ -294,7 +294,7 @@ namespace pr
 	// Return a bounding sphere that bounds the bounding box
 	inline BSphere GetBSphere(BBox const& bbox)
 	{
-		return BSphere(bbox.m_centre, Length3(bbox.m_radius));
+		return BSphere(bbox.m_centre, Length(bbox.m_radius));
 	}
 
 	// Encompass 'point' within 'bbox'.

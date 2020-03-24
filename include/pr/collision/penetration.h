@@ -124,7 +124,7 @@ namespace pr::collision
 			// Defer the sqrt by comparing squared depths.
 			// Need to preserve the sign however.
 			auto axis = sep_axis();
-			auto len_sq = Length3Sq(axis);
+			auto len_sq = LengthSq(axis);
 			auto d_sq = SignedSqr(depth) / len_sq;
 			if (d_sq < m_depth_sq)
 			{

@@ -75,7 +75,7 @@ namespace pr::rdr
 				auto v0 = proj * vi;
 				auto v1 = v0.xy / v0.w;
 
-				PR_CHECK(FEql2(v1, vo), true);
+				PR_CHECK(FEql(v1, vo), true);
 			}
 		}
 		{// Orthographic
@@ -112,7 +112,7 @@ namespace pr::rdr
 				auto v0 = proj * vi;
 				auto v1 = v0.xy / v0.w;
 
-				PR_CHECK(FEql2(v1, vo), true);
+				PR_CHECK(FEql(v1, vo), true);
 			}
 		}
 	}

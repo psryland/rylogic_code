@@ -111,7 +111,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
 
 		// Helper function for generating normals
-		auto norm = [](v4_cref<> a, v4_cref<> b, v4_cref<> c) { return Normalise3(Cross3(a - b, c - b), v4Zero); };
+		auto norm = [](v4_cref<> a, v4_cref<> b, v4_cref<> c) { return Normalise(Cross3(a - b, c - b), v4Zero); };
 
 		// Colour iterator wrapper
 		auto col = CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
@@ -180,7 +180,7 @@ namespace pr::geometry
 		auto origin = v4Origin
 			- 0.5f * (1.0f + anchor.x) * quad_w
 			- 0.5f * (1.0f + anchor.y) * quad_h;
-		auto norm = Normalise3(Cross3(quad_w, quad_h));
+		auto norm = Normalise(Cross3(quad_w, quad_h));
 		auto step_x = quad_w / float(divisions.x + 1);
 		auto step_y = quad_h / float(divisions.y + 1);
 
@@ -255,8 +255,8 @@ namespace pr::geometry
 		if (Parallel(up, fwd))
 			up = -pr::v4XAxis;
 
-		auto quad_w = width  * Normalise3(Cross3(up, fwd));
-		auto quad_h = height * Normalise3(Cross3(fwd, quad_w));
+		auto quad_w = width  * Normalise(Cross3(up, fwd));
+		auto quad_h = height * Normalise(Cross3(fwd, quad_w));
 		auto origin = centre - 0.5f * quad_w - 0.5f * quad_h;
 		return Quad(origin, quad_w, quad_h, divisions, colour, t2q, vout, iout);
 	}
@@ -302,7 +302,7 @@ namespace pr::geometry
 		Colour32 c0, c1 = *col++  , c2 = *col++  ;
 
 		// Create the first pair of verts
-		auto bi = Normalise3(Cross3(n1, v2 - v1), Perpendicular(n1));
+		auto bi = Normalise(Cross3(n1, v2 - v1), Perpendicular(n1));
 		vout(bb(v1 + bi*hwidth), cc(c1), n1, t00); iout(index++);
 		vout(bb(v1 - bi*hwidth), cc(c1), n1, t10); iout(index++);
 
@@ -314,9 +314,9 @@ namespace pr::geometry
 
 			auto d0 = v1 - v0;
 			auto d1 = v2 - v1;
-			auto b0 = Normalise3(Cross3(n1, d0), Perpendicular(n1));
-			auto b1 = Normalise3(Cross3(n1, d1), Perpendicular(n1));
-			bi = Normalise3(b0 + b1, bi); // The bisector at v1
+			auto b0 = Normalise(Cross3(n1, d0), Perpendicular(n1));
+			auto b1 = Normalise(Cross3(n1, d1), Perpendicular(n1));
+			bi = Normalise(b0 + b1, bi); // The bisector at v1
 			// Note: bi always points to the left of d0 and d1
 			
 			// Find the distance, t, along d0 to the inside corner vert
@@ -333,8 +333,8 @@ namespace pr::geometry
 			//   X/hwidth = x/y => X = hwidth*w*|d0|/y
 			//   => X/|d0| = hwidth*w/y
 			//   => t = 1 - hwidth*w/y
-			auto d0_sq = Length3Sq(d0);
-			auto d1_sq = Length3Sq(d1);
+			auto d0_sq = LengthSq(d0);
+			auto d1_sq = LengthSq(d1);
 			auto w0 = Abs(Dot3(d0,bi)) / d0_sq;
 			auto w1 = Abs(Dot3(d1,bi)) / d1_sq;
 			auto y = Dot3(b0,bi); // == Dot3(b1,bi);
@@ -371,7 +371,7 @@ namespace pr::geometry
 		}
 
 		// Finish the previous quad
-		bi = Normalise3(Cross3(n2, v2 - v1), Perpendicular(n2));
+		bi = Normalise(Cross3(n2, v2 - v1), Perpendicular(n2));
 		vout(bb(v2 + bi*hwidth), cc(c2), n2, t00); iout(index++);
 		vout(bb(v2 - bi*hwidth), cc(c2), n2, t10); iout(index++);
 

@@ -62,9 +62,9 @@ namespace pr
 		}
 
 		// Construct normalised
-		template <typename = void> static Vec2 Normal2(float x, float y)
+		static Vec2 Normal(float x, float y)
 		{
-			return Normalise2(Vec2(x,y));
+			return Normalise(Vec2(x,y));
 		}
 
 		#pragma region Operators
@@ -108,12 +108,12 @@ namespace pr
 		}
 		friend Vec2<T> operator / (v2_cref<T> lhs, v2_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any2(rhs, IsZero<float>));
+			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec2<T>{lhs.x / rhs.x, lhs.y / rhs.y};
 		}
 		friend Vec2<T> operator % (v2_cref<T> lhs, v2_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any2(rhs, IsZero<float>));
+			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec2<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y)};
 		}
 		#pragma endregion
@@ -130,45 +130,37 @@ namespace pr
 	#pragma region Functions
 	
 	// Dot product: a.b
-	template <typename T> inline float Dot2(v2_cref<T> lhs, v2_cref<T> rhs)
+	template <typename T> constexpr float Dot(v2_cref<T> lhs, v2_cref<T> rhs)
 	{
 		return lhs.x * rhs.x + lhs.y * rhs.y;
 	}
-	template <typename T> inline float Dot(v2_cref<T> lhs, v2_cref<T> rhs)
-	{
-		return Dot2(lhs, rhs);
-	}
 
 	// Cross product: Dot2(Rotate90CW(lhs), rhs)
-	template <typename T> inline float Cross2(v2_cref<T> lhs, v2_cref<T> rhs)
+	template <typename T> constexpr float Cross(v2_cref<T> lhs, v2_cref<T> rhs)
 	{
 		return lhs.y * rhs.x - lhs.x * rhs.y;
 	}
 
 	// Rotate a 2d vector by 90deg (when looking down the Z axis)
-	template <typename T> inline Vec2<T> Rotate90CW(v2_cref<T> v)
+	template <typename T> constexpr Vec2<T> Rotate90CW(v2_cref<T> v)
 	{
 		return Vec2<T>(-v.y, v.x);
 	}
 
 	// Rotate a 2d vector by -90def (when looking down the Z axis)
-	template <typename T> inline Vec2<T> Rotate90CCW(v2_cref<T> v)
+	template <typename T> constexpr Vec2<T> Rotate90CCW(v2_cref<T> v)
 	{
 		return Vec2<T>(v.y, -v.x);
 	}
 
 	// Returns a vector with the 'xy' values permuted 'n' times. '0=xy, 1=yz'
-	template <typename T> inline Vec2<T> Permute2(v2_cref<T> v, int n)
+	template <typename T> constexpr Vec2<T> Permute(v2_cref<T> v, int n)
 	{
-		switch (n%2)
-		{
-		default: return v;
-		case 1:  return Vec2<T>(v.y, v.x);
-		}
+		return (n%2) == 1 ? Vec2<T>(v.y, v.x) : v;
 	}
 
 	// Returns a 2-bit bitmask of the quadrant the vector is in. 0=(-x,-y), 1=(+x,-y), 2=(-x,+y), 3=(+x,+y)
-	template <typename T> inline uint Quadrant(v2_cref<T> v)
+	template <typename T> constexpr uint Quadrant(v2_cref<T> v)
 	{
 		return (v.x >= 0.0f) | ((v.y >= 0.0f) << 1);
 	}
@@ -176,7 +168,7 @@ namespace pr
 	// Divide a circle into N sectors and return an index for the sector that 'vec' is in
 	template <typename T> inline int Sector(v2_cref<T> vec, int sectors)
 	{
-		return int(pr::ATan2Positive(vec.y, vec.x) * sectors / maths::tau);
+		return int(ATan2Positive(vec.y, vec.x) * sectors / maths::tau);
 	}
 
 	#pragma endregion
@@ -207,10 +199,10 @@ namespace pr::maths
 			PR_CHECK(V3.x == 4.0f, true);
 			PR_CHECK(V3.y == 5.0f, true);
 
-			auto V4 = v2::Normal2(3,4);
-			PR_CHECK(FEql2(V4, v2(0.6f,0.8f)), true);
-			PR_CHECK(pr::FEql(V4[0], 0.6f), true);
-			PR_CHECK(pr::FEql(V4[1], 0.8f), true);
+			auto V4 = v2::Normal(3,4);
+			PR_CHECK(FEql(V4, v2(0.6f,0.8f)), true);
+			PR_CHECK(FEql(V4[0], 0.6f), true);
+			PR_CHECK(FEql(V4[1], 0.8f), true);
 		}
 		{// Operators
 			auto V0 = v2(1,2);

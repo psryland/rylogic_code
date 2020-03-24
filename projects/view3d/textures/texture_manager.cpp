@@ -620,7 +620,7 @@ namespace pr::rdr
 					for (int i = 0; i != sz; ++i)
 					{
 						auto c = Colour32White;
-						auto t = Frac(0.0f, Len2(i - radius, j - radius), radius);
+						auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
 						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
 						data[size_t(j*sz + i)] =c;
 					}

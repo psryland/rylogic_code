@@ -32,8 +32,8 @@ namespace pr::rdr
 		default: return false;
 		case ELight::Ambient:     return true;
 		case ELight::Point:       return m_position.w == 1.0f;
-		case ELight::Spot:        return !IsZero3(m_direction);
-		case ELight::Directional: return !IsZero3(m_direction);
+		case ELight::Spot:        return m_direction != v4Zero;
+		case ELight::Directional: return m_direction != v4Zero;
 		}
 	}
 
