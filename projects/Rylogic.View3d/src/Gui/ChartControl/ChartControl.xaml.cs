@@ -693,7 +693,9 @@ namespace Rylogic.Gui.WPF
 				throw new Exception($"View bounding box is invalid: {bbox}");
 
 			// Position the camera to view the bounding box
-			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp, dist: 0f, preserve_aspect: LockAspect, commit: true);
+			var up = Camera.AlignAxis != v4.Zero ? Camera.AlignAxis : Options.ResetUp;
+			var fwd = !Math_.Parallel(Options.ResetForward, up) ? Options.ResetForward : Math_.Perpendicular(up);
+			Camera.ResetView(bbox, fwd, up, dist: 0f, preserve_aspect: LockAspect, commit: true);
 
 			// Set the desired pixel aspect ratio.
 			if (Scene.RenderTarget != null)

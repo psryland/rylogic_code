@@ -4110,12 +4110,13 @@ namespace pr::ldr
 				}
 			case EKeyword::Param:
 				{
-					eval::Arg arg;
+					std::string name;
+					double value;
 					p.m_reader.SectionStart();
-					p.m_reader.String(arg.m_name);
-					p.m_reader.Real(arg.m_value);
+					p.m_reader.String(name);
+					p.m_reader.Real(value);
 					p.m_reader.SectionEnd();
-					m_eq.AddVariable(arg);
+					m_eq.m_args.add(name, value);
 					return true;
 				}
 			case EKeyword::Resolution:
@@ -4159,7 +4160,7 @@ namespace pr::ldr
 			obj->OnAddToScene += UpdateModel;
 
 			// Choose suitable vcount, icount based on the equation dimension and resolution
-			int vcount, icount, dim = m_eq.Dimension();
+			int vcount, icount, dim = m_eq.m_args.dim();
 			switch (dim)
 			{
 			case 1: vcount = icount = m_resolution; break;
@@ -4186,45 +4187,46 @@ namespace pr::ldr
 			// Notes:
 			//  - This code attempts to give the effect of an infinite function or surface by creating graphics
 			//    within the view frustum as the camera moves. It evaluates the equation within a cube centred
-			//    of the focus point.
-			// - no backface culling
-			// - only update the model when the camera moves by ? distance.
-			// - functions can have infinities and divide by zero
-			// - set the bbox to match the view volume so that auto range doesn't zoom out to infinity
+			//    on the focus point.
+			//  - no backface culling
+			//  - only update the model when the camera moves by ? distance.
+			//  - functions can have infinities and divide by zero
+			//  - set the bbox to match the view volume so that auto range doesn't zoom out to infinity
 
 			auto& model = *ob.m_model.get();
 			auto init = model.m_nuggets.empty();
 
 			// Find the range to plot the equation over
 			auto fp = scene.m_view.FocusPoint();
-			auto fd = scene.m_view.FocusDist();
+			auto area = scene.m_view.ViewArea(scene.m_view.FocusDist());
 
 			// Determine the intervals on the world space x,y,z axes that are within the view frustum
-			auto range = BBoxReset;
-			Encompass(range, BSphere(fp, fd));
+			auto range = BSphere(fp, area.x);
 
 			// Functions can have infinities and divide by zeros. Set the bbox
 			// to match the view volume so that auto-range doesn't zoom out to infinity.
 			model.m_bbox.reset();
-			model.m_bbox = range;
+			model.m_bbox = BBoxUnit;//(range.Centre(), v4One);
 
 			// Update the model by evaluating the equation
 			auto& eq = ob.m_user_data.get<eval::Expression>();
-			switch (eq.Dimension())
+			switch (eq.m_args.dim())
 			{
 			case 1: // Line plot
 				{
 					LinePlot(model, range, eq, init);
+					ob.O2W(m4x4::Translation(fp.x, 0, 0));
 					break;
 				}
 			case 2: // Surface plot
 				{
 					SurfacePlot(model, range, eq, init);
+					ob.O2W(m4x4::Translation(fp.x, fp.y, 0));
 					break;
 				}
 			case 3:
 				{
-					// Todo: CloutPlot(model, range, eq, init);
+					// Todo: CloudPlot(model, range, eq, init);
 					break;
 				}
 			default:
@@ -4234,7 +4236,7 @@ namespace pr::ldr
 				}
 			}
 		}
-		static void LinePlot(Model& model, BBox_cref range, eval::Expression const& eq, bool init)
+		static void LinePlot(Model& model, BSphere_cref range, eval::Expression const& eq, bool init)
 		{
 			auto vcount = static_cast<int>(model.m_vrange.size());
 			auto icount = static_cast<int>(model.m_irange.size());
@@ -4247,10 +4249,10 @@ namespace pr::ldr
 				auto vout = vlock.ptr<Vert>();
 				for (int i = 0; i != count; ++i)
 				{
-					auto f = static_cast<float>(UnitCubic((1.0 * i) / count));
-					auto x = Lerp(range.LowerX(), range.UpperX(), f);
+					auto f = static_cast<float>(Cube(Lerp(-1.0f, +1.0f, (1.0f * i) / (count - 1))));
+					auto x = range.Centre().x + f * range.Radius();
 					auto y = static_cast<float>(eq(x).db());
-					SetPC(*vout, v4(x, y, 0,1), Colour32White);
+					SetPC(*vout, v4(f, y, 0, 1), Colour32White);
 					++vout;
 				}
 			}
@@ -4281,7 +4283,7 @@ namespace pr::ldr
 				model.CreateNugget(n);
 			}
 		}
-		static void SurfacePlot(Model& model, BBox_cref range, eval::Expression const& eq, bool init)
+		static void SurfacePlot(Model& model, BSphere_cref range, eval::Expression const& eq, bool init)
 		{
 			// Determine the largest hex patch that can be made with the available model size:
 			//  i.e. solve for the minimum value for 'rings' in:
@@ -4298,18 +4300,48 @@ namespace pr::ldr
 			assert(nv <= (int)model.m_vrange.size());
 			assert(ni <= (int)model.m_irange.size());
 
+			// Evaluate the normal at (x,y)
+			auto norm = [&](double x, double y)
+			{
+				auto dx = Abs(0.001 * x);
+				auto dy = Abs(0.001 * y);
+				auto z0 = eq(x - dx, y).db();
+				auto z1 = eq(x + dx, y).db();
+				auto z2 = eq(x, y - dy).db();
+				auto z3 = eq(x, y + dy).db();
+				auto n = Cross(
+					v4(static_cast<float>(2*dx), 0, static_cast<float>(z1 - z0), 0),
+					v4(0, static_cast<float>(2*dy), static_cast<float>(z3 - z2), 0));
+				return Normalise3(n, v4Zero);
+			};
+
 			MLock mlock(&model, EMap::WriteDiscard);
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			auto iout = mlock.m_ilock.ptr<uint32_t>();
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32 c, v4_cref<> n, v2_cref<> t)
+				[&](v4_cref<> pos, Colour32 c, v4_cref<>, v2_cref<>)
 				{
-					(void)range;
-					// Increase point density around the focus point
-					//auto len = Length3Sq(pos);
-					auto p = pos;//range.Centre() + range.Radius() * Cube(pos.w0());
-					p.z = static_cast<float>(eq(pos.x, pos.y).db());
-					SetPCNT(*vout++, p, c, n, t);
+					// Evaluate the function at points around the focus point, but shift them back
+					// so the focus point is centred around (0,0,0), then set the o2w transform
+
+					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to be centred around
+					// the focus point, and weighted radially by a cubic.
+					auto len_sq = Length3Sq(pos);
+					if (len_sq < maths::tinyf)
+					{
+						auto pt = range.Centre();
+						auto z = static_cast<float>(eq(pt.x, pt.y).db());
+						SetPCNT(*vout++, v4(0, 0, z, 1), c, norm(pt.x, pt.y), v2Zero);
+					}
+					else
+					{
+						// Weight controls the density of points near the focus point
+						constexpr float weight = 0.3f;
+						auto dir = pos.w0() * range.Radius() * Pow(len_sq, weight);
+						auto pt = range.Centre() + dir;
+						auto z = static_cast<float>(eq(pt.x, pt.y).db());
+						SetPCNT(*vout++, v4(dir.x, dir.y, z, 1), c, norm(pt.x, pt.y), v2Zero);
+					}
 				},
 				[&](auto idx)
 				{

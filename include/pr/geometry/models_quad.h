@@ -426,7 +426,7 @@ namespace pr::geometry
 	}
 
 	// Generate a hex patch using triangle strips.
-	// The radius of the patch is 1.0. Callers can then scale/deform as needed.
+	// The radius of the patch is 1.0 with the centre at (0,0,0). Callers can then scale/deform as needed.
 	template <typename VOut, typename IOut>
 	Props HexPatch(int rings, VOut vout, IOut iout)
 	{

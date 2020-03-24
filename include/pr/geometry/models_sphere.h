@@ -21,11 +21,11 @@ namespace pr::geometry
 
 	namespace impl::geosphere
 	{
-		using VIndex = std::size_t;
+		using VIndex = int;
 		struct GeosphereVert
 		{
-			pr::v4 m_vert;
-			pr::v4 m_norm;
+			v4 m_vert;
+			v4 m_norm;
 			float m_ang;
 			bool m_pole;
 		};
@@ -38,12 +38,15 @@ namespace pr::geometry
 			VIndex m_adjacent; // The adjacent vertex (not necessarily at the same recursion level)
 			VIndex m_child;    // The vertex between the associated vertex and 'm_adjacent' in the recursion level below 'm_adjacent'
 			Adjacent() {}
-			Adjacent(VIndex adj, VIndex child) :m_adjacent(adj) ,m_child(child) {}
+			Adjacent(VIndex adj, VIndex child)
+				:m_adjacent(adj)
+				,m_child(child)
+			{}
 		};
-		typedef pr::vector<GeosphereVert, 1024> TVertCont;
-		typedef pr::vector<GeosphereFace, 1024> TFaceCont;
-		typedef pr::vector<Adjacent> TAdjacent;          // A collection of adjacent vertices
-		typedef pr::vector<TAdjacent> TVertexLookupCont; // A map from vertex -> adjacent vertices
+		using TVertCont         = pr::vector<GeosphereVert, 1024>;
+		using TFaceCont         = pr::vector<GeosphereFace, 1024>;
+		using TAdjacent         = pr::vector<Adjacent>;  // A collection of adjacent vertices
+		using TVertexLookupCont = pr::vector<TAdjacent>; // A map from vertex -> adjacent vertices
 
 		// A struct to hold all of the generation data
 		struct CreateGeosphereData
@@ -52,12 +55,12 @@ namespace pr::geometry
 			TVertCont*        m_vcont;
 			TFaceCont*        m_fcont;
 			v4                m_radius;
-			std::size_t       m_divisions;
+			int               m_divisions;
 		};
 
 		// Create a vertex and add it to the vertex container
 		// Returns the index position of the vertex
-		inline std::size_t AddVertex(v4 const& norm, float ang, bool pole, CreateGeosphereData& data)
+		inline VIndex AddVertex(v4 const& norm, float ang, bool pole, CreateGeosphereData& data)
 		{
 			PR_ASSERT(PR_DBG, IsNormal3(norm), "");
 
@@ -71,7 +74,7 @@ namespace pr::geometry
 
 			// Add an entry in the adjacency map
 			data.m_adjacent.push_back(TAdjacent());
-			return data.m_vcont->size() - 1;
+			return s_cast<VIndex>(data.m_vcont->size() - 1);
 		}
 
 		// Get the vertex that has these two vertices as parents
@@ -93,7 +96,7 @@ namespace pr::geometry
 			// If no child is found, add one
 			auto& v0 = (*data.m_vcont)[parent0];
 			auto& v1 = (*data.m_vcont)[parent1];
-			v4 norm = Normalise3(v0.m_norm + v1.m_norm);
+			auto norm = Normalise3(v0.m_norm + v1.m_norm);
 			auto ang = v0.m_pole ? v1.m_ang : v1.m_pole ? v0.m_ang : (v0.m_ang + v1.m_ang) * 0.5f; // Use the average angle unless one of the verts is a pole
 			auto new_vidx = AddVertex(norm, ang, false, data);
 
@@ -106,12 +109,12 @@ namespace pr::geometry
 			return new_vidx;
 		}
 
-			// Recursively add a face
+		// Recursively add a face
 		inline void AddFace(VIndex V00, VIndex V11, VIndex V22, VIndex level, CreateGeosphereData& data)
 		{
-			PR_ASSERT(PR_DBG, V00 < data.m_vcont->size(), "");
-			PR_ASSERT(PR_DBG, V11 < data.m_vcont->size(), "");
-			PR_ASSERT(PR_DBG, V22 < data.m_vcont->size(), "");
+			PR_ASSERT(PR_DBG, V00 < s_cast<VIndex>(data.m_vcont->size()), "");
+			PR_ASSERT(PR_DBG, V11 < s_cast<VIndex>(data.m_vcont->size()), "");
+			PR_ASSERT(PR_DBG, V22 < s_cast<VIndex>(data.m_vcont->size()), "");
 
 			if (level == data.m_divisions)
 			{
@@ -157,7 +160,7 @@ namespace pr::geometry
 			}
 
 			// Add the faces
-			for (std::size_t i = 0, ibase = 0; i != 5; ++i, ibase += 4)
+			for (VIndex i = 0, ibase = 0; i != 5; ++i, ibase += 4)
 			{
 				AddFace(ibase + 0, ibase + 1, ibase + 5, 0, data);
 				AddFace(ibase + 1, ibase + 2, ibase + 5, 0, data);

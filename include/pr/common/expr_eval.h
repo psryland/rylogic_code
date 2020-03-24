@@ -15,8 +15,10 @@
 #include <cassert>
 #include <cerrno>
 #include <charconv>
+#include "pr/common/fmt.h"
 #include "pr/common/hash.h"
 #include "pr/common/algorithm.h"
+#include "pr/container/vector.h"
 #include "pr/str/string_core.h"
 #include "pr/container/span.h"
 #include "pr/container/byte_data.h"
@@ -100,10 +102,7 @@ namespace pr
 			Char const* m_ptr;
 			Char const* m_end;
 
-			char_range()
-				:m_ptr()
-				,m_end()
-			{}
+			char_range() = default;
 			char_range(Char const* ptr, Char const* end)
 				:m_ptr(ptr)
 				,m_end(end)
@@ -156,10 +155,18 @@ namespace pr
 		// Identifier - use narrow strings because they're smaller
 		using Ident = std::string;
 
+		// Identifier hash
+		using IdentHash = pr::hash::HashValue;
+		constexpr IdentHash hashname(std::string_view name)
+		{
+			return hash::HashCT(name.data(), name.data() + name.size());
+		}
+
 		// An integral or floating point value
 		struct Val
 		{
 			enum class EType :uint8_t { Unknown, Intg, Real, };
+			static constexpr bool is_valid(EType ty) { return ty == EType::Intg || ty == EType::Real; }
 
 			// The value
 			union
@@ -170,12 +177,7 @@ namespace pr
 			EType m_ty;
 			uint8_t pad[7];
 
-			Val() noexcept
-				:m_ll()
-				, m_ty(EType::Unknown)
-				, pad()
-			{
-			}
+			Val() = default;
 			Val(long long ll) noexcept
 				:m_ll(ll)
 				, m_ty(EType::Intg)
@@ -256,76 +258,185 @@ namespace pr
 			}
 
 			// Operators
-			friend Val  operator +  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() + rhs.db()) : Val(lhs.ll() + rhs.ll()); }
-			friend Val  operator -  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() - rhs.db()) : Val(lhs.ll() - rhs.ll()); }
-			friend Val  operator *  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() * rhs.db()) : Val(lhs.ll() * rhs.ll()); }
-			friend Val  operator /  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() / rhs.db()) : Val(lhs.ll() / rhs.ll()); }
-			friend bool operator == (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll(); }
-			friend bool operator <  (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() < rhs.db() : lhs.ll() < rhs.ll(); }
-			friend bool operator <= (Val const& lhs, Val const& rhs) { return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll(); }
+			friend Val  operator +  (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() + rhs.db()) : Val(lhs.ll() + rhs.ll());
+			}
+			friend Val  operator -  (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() - rhs.db()) : Val(lhs.ll() - rhs.ll());
+			}
+			friend Val  operator *  (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() * rhs.db()) : Val(lhs.ll() * rhs.ll());
+			}
+			friend Val  operator /  (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? Val(lhs.db() / rhs.db()) : Val(lhs.ll() / rhs.ll());
+			}
+			friend bool operator == (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() == rhs.db() : lhs.ll() == rhs.ll();
+			}
+			friend bool operator <  (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() < rhs.db() : lhs.ll() < rhs.ll();
+			}
+			friend bool operator <= (Val const& lhs, Val const& rhs)
+			{
+				return (lhs.m_ty == EType::Real || rhs.m_ty == EType::Real) ? lhs.db() <= rhs.db() : lhs.ll() <= rhs.ll();
+			}
+		};
+		static_assert(std::is_pod_v<Val>, "Val must be pod for performance");
+
+		// A collection of args with some rules enforced
+		struct ArgSet
+		{
+		private:
+			struct Arg
+			{
+				Val m_value;
+				IdentHash m_hash;
+				bool m_fixed;
+
+				Arg() = default;
+				Arg(IdentHash hash, Val const& val, bool fixed)
+					:m_value(val)
+					,m_hash(hash)
+					,m_fixed(fixed)
+				{}
+			};
+			static_assert(std::is_pod_v<Arg>, "Arg must be pod for performance");
+
+			// The names (and default values) of unique identifiers in the
+			// expression (in order of discovery from left to right).
+			pr::vector<Arg, 4> m_args;
+
+			// Find the argument matching 'hash'
+			Arg const* find(IdentHash hash) const
+			{
+				for (auto& arg : m_args)
+				{
+					if (arg.m_hash != hash) continue;
+					return &arg;
+				}
+				return nullptr;
+			}
+			Arg* find(IdentHash hash)
+			{
+				return const_cast<Arg*>(std::as_const(*this).find(hash));
+			}
+
+		public:
+
+			ArgSet()
+				:m_args()
+			{}
+
+			// The number of arguments in the set
+			std::size_t size() const
+			{
+				return m_args.size();
+			}
+
+			// The number of non-fixed arguments
+			int dim() const
+			{
+				int dim = 0;
+				for (auto& a : m_args)
+					dim += int(a.m_fixed == false);
+
+				return dim;
+			}
+
+			// Add or replace an independent variable
+			void add(std::string_view name)
+			{
+				auto hash = hashname(name);
+				auto arg = find(hash);
+				if (arg == nullptr)
+				{
+					m_args.push_back(Arg(hash, Val{}, false));
+					return;
+				}
+				else
+				{
+					arg->m_value = Val{};
+					arg->m_fixed = false;
+				}
+			}
+
+			// Add or replace a constant
+			void add(std::string_view name, Val const& val)
+			{
+				auto hash = hashname(name);
+				auto arg = find(hash);
+				if (arg == nullptr)
+				{
+					m_args.push_back(Arg(hash, val, true));
+					return;
+				}
+				else
+				{
+					arg->m_value = val;
+					arg->m_fixed = true;
+				}
+			}
+
+			// Get an argument by name
+			Val const& operator()(std::string_view name) const
+			{
+				auto arg = find(hashname(name));
+				return arg ? arg->m_value : throw std::runtime_error(Fmt("Argument %.*s not found", int(name.size()), name.data()));
+			}
+
+			// Get an argument by hash
+			Val const& operator()(IdentHash hash) const
+			{
+				auto arg = find(hash);
+				return arg ? arg->m_value : throw std::runtime_error(Fmt("Argument (hash: %d) not found", hash));
+			}
+
+			// Get an argument by discovery order
+			Val const& operator[](int i) const
+			{
+				return m_args[i].m_value;
+			}
+			Val& operator[](int i)
+			{
+				return m_args[i].m_value;
+			}
 		};
 
-		// A mapping from variable name to value
-		struct Arg
+		// A fixed size stack for expression evaluation
+		template <int S> struct Stack
 		{
-			Ident m_name;
-			Val m_value;
-			bool m_fixed;
+			Val m_buf[S];
+			Val* m_ptr;
 
-			Arg()
-				:m_name()
-				,m_value()
-				,m_fixed()
+			Stack()
+				:m_buf()
+				,m_ptr(&m_buf[0])
 			{}
-			Arg(Arg&& rhs)
-				:m_name(std::move(rhs.m_name))
-				,m_value(std::move(rhs.m_value))
-				,m_fixed(rhs.m_fixed)
-			{}
-			Arg(Arg const& rhs)
-				:m_name(rhs.m_name)
-				,m_value(rhs.m_value)
-				,m_fixed(rhs.m_fixed)
-			{}
-			Arg(std::string_view name)
-				:m_name(Narrow(name))
-				,m_value()
-				,m_fixed(false)
-			{}
-			Arg(std::wstring_view name)
-				:m_name(Narrow(name))
-				,m_value()
-				,m_fixed(false)
-			{}
-			Arg(std::string_view name, Val value)
-				:m_name(Narrow(name))
-				,m_value(value)
-				,m_fixed(true)
-			{}
-			Arg(std::wstring_view name, Val value)
-				:m_name(Narrow(name))
-				,m_value(value)
-				,m_fixed(true)
-			{}
-			Arg& operator = (Arg&& rhs)
+			std::size_t size() const
 			{
-				if (this == &rhs) return *this;
-				std::swap(m_name, rhs.m_name);
-				std::swap(m_value, rhs.m_value);
-				std::swap(m_fixed, rhs.m_fixed);
-				return *this;
+				return m_ptr - &m_buf[0];
 			}
-			Arg& operator = (Arg const& rhs)
+			void push_back(Val val)
 			{
-				if (this == &rhs) return *this;
-				m_name = rhs.m_name;
-				m_value = rhs.m_value;
-				m_fixed = rhs.m_fixed;
-				return *this;
+				assert(Val::is_valid(val.m_ty));
+				if (m_ptr != &m_buf[0] + S) *m_ptr++ = val;
+				else throw std::overflow_error("Insufficient stack space");
 			}
-			bool operator == (std::string_view name) const
+			void pop_back()
 			{
-				return m_name == name;
+				if (m_ptr != &m_buf[0]) --m_ptr;
+				else throw std::out_of_range("Stack is empty");
+			}
+			Val back() const
+			{
+				if (m_ptr != &m_buf[0]) return *(m_ptr - 1);
+				else throw std::out_of_range("Stack is empty");
 			}
 		};
 
@@ -337,27 +448,7 @@ namespace pr
 
 			// The names (and default values) of unique identifiers in the
 			// expression (in order of discovery from left to right).
-			std::vector<Arg> m_args;
-
-			// The number of non-fixed arguments
-			int Dimension() const
-			{
-				int dim = 0;
-				for (auto& a : m_args)
-					dim += int(a.m_fixed == false);
-
-				return dim;
-			}
-
-			// Add or replace an independent variable
-			void AddVariable(Arg const& arg)
-			{
-				auto iter = pr::find_if(m_args, [&](auto& a) { return a.m_name == arg.m_name; });
-				if (iter != std::end(m_args))
-					*iter = arg;
-				else
-					m_args.push_back(arg);
-			}
+			ArgSet m_args;
 
 			// Is callable/valid test
 			explicit operator bool() const
@@ -366,8 +457,11 @@ namespace pr
 			}
 
 			// Evaluate the expression
-			Val operator()(std::initializer_list<Arg> args) const
+			using ArgPair = struct { std::string_view name; Val val; };
+			Val operator()(std::initializer_list<ArgPair> arg_pairs) const
 			{
+				ArgSet args;
+				for (auto& a : arg_pairs) args.add(a.name, a.val);
 				return call(args);
 			}
 			template <typename... A> Val operator()(A... a) const
@@ -385,20 +479,20 @@ namespace pr
 					// Any arguments not given remain as their defaults
 					auto args = m_args;
 					for (int i = 0, iend = static_cast<int>(values.size()); i != iend; ++i)
-						args[i].m_value = values[i];
+						args[i] = values[i];
 
 					return call(args);
 				}
 			}
 
 			// Execute the expression with the given arguments
-			template <typename ArgsCont = std::initializer_list<Arg>, typename = std::enable_if_t<std::is_same_v<ArgsCont::value_type, Arg>>>
-			Val call(ArgsCont const& args = {}) const
+			template <typename Stack = Stack<64>>
+			Val call(ArgSet const& args = {}) const
 			{
 				// Note:
 				//  Parameters are pushed onto the stack in left to right order,
 				//  so when popping them off, the first is the rightmost argument.
-				std::vector<Val> stack;
+				Stack stack;
 				for (size_t i = 0, iend = m_op.size(); i != iend;)
 				{
 					auto tok = m_op.read<ETok>(i);
@@ -410,14 +504,8 @@ namespace pr
 						}
 					case ETok::Identifier:
 						{
-							auto count = m_op.read<uint8_t>(i);
-							auto name = std::string_view(&m_op.at_byte_ofs<char>(i), count);
-							auto iter = pr::find_if(args, [=](auto& a) { return a.m_name == name; });
-							if (iter == std::end(args))
-								throw std::runtime_error(std::string("Missing argument: ").append(name));
-
-							stack.push_back(iter->m_value);
-							i += count * sizeof(char);
+							auto hash = m_op.read<IdentHash>(i);
+							stack.push_back(args(hash));
 							break;
 						}
 					case ETok::Value:
@@ -852,7 +940,7 @@ namespace pr
 				if (stack.size() != 1)
 					throw std::runtime_error("Expression does not evaluate to a single result");
 
-				return stack.front();
+				return stack.back();
 			}
 		};
 
@@ -1786,11 +1874,10 @@ namespace pr
 				case ETok::Identifier:
 					{
 						auto name = Narrow(ident.str_view());
-						auto count = static_cast<uint8_t>(std::min<size_t>(255, name.size()));
+						auto hash = hashname(name);
 						compiled.m_op.append(tok);
-						compiled.m_op.append(count);
-						compiled.m_op.append(name.c_str(), count);
-						compiled.AddVariable(Arg(name));
+						compiled.m_op.append(hash);
+						compiled.m_args.add(name);
 						break;
 					}
 				case ETok::Value:
