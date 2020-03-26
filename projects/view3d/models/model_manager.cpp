@@ -17,8 +17,10 @@ namespace pr::rdr
 		,m_dbg_mem_mdl()
 		,m_dbg_mem_nugget()
 		,m_rdr(rdr)
+		,m_basis()
 		,m_unit_quad()
 		,m_bbox_model()
+		,m_selection_box()
 	{
 		CreateStockModels();
 	}
@@ -118,6 +120,29 @@ namespace pr::rdr
 	// Create stock models
 	void ModelManager::CreateStockModels()
 	{
+		{// Basis/focus point model
+			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays
+			Vert const verts[6] =
+			{
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFFFF0000), v4Zero, v2Zero},
+				{v4( 1.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFFFF0000), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFF00FF00), v4Zero, v2Zero},
+				{v4( 0.0f,  1.0f,  0.0f, 1.0f), Colour32(0xFF00FF00), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  0.0f, 1.0f), Colour32(0xFF0000FF), v4Zero, v2Zero},
+				{v4( 0.0f,  0.0f,  1.0f, 1.0f), Colour32(0xFF0000FF), v4Zero, v2Zero},
+			};
+			uint16_t const idxs[] =
+			{
+				0, 1, 2, 3, 4, 5,
+			};
+			BBox const bbox(v4(0.5f, 0.5f, 0.5f, 1.0f), v4(1,1,1,0));
+
+			MdlSettings s(verts, idxs, bbox, "basis");
+			m_basis = CreateModel(s);
+
+			NuggetProps n(EPrim::LineList, EGeom::Vert|EGeom::Colr);
+			m_basis->CreateNugget(n);
+		}
 		{// Unit quad in Z = 0 plane
 			Vert const verts[4] =
 			{
@@ -163,6 +188,71 @@ namespace pr::rdr
 
 			NuggetProps n(EPrim::LineList, EGeom::Vert|EGeom::Colr);
 			m_bbox_model->CreateNugget(n);
+		}
+		{// Selection box
+			// Create the selection box model
+			constexpr float sz = 1.0f;
+			constexpr float dd = 0.8f;
+			Vert const verts[] =
+			{
+				{v4(-sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(sz, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(dd, -sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(-sz, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, dd, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-dd, sz, -sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, -dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(-sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(sz, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(dd, -sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, -sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+
+				{v4(-sz, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, dd, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-dd, sz, sz, 1.0f), Colour32White, v4Zero, v2Zero},
+				{v4(-sz, sz, dd, 1.0f), Colour32White, v4Zero, v2Zero},
+			};
+			uint16_t const idxs[] =
+			{
+				0,  1,  0,  2,  0,  3,
+				4,  5,  4,  6,  4,  7,
+				8,  9,  8, 10,  8, 11,
+				12, 13, 12, 14, 12, 15,
+				16, 17, 16, 18, 16, 19,
+				20, 21, 20, 22, 20, 23,
+				24, 25, 24, 26, 24, 27,
+				28, 29, 28, 30, 28, 31,
+			};
+			BBox const bbox(v4Origin, v4(1,1,1,0));
+
+			MdlSettings s(verts, idxs, bbox, "selection box");
+			m_selection_box = CreateModel(s);
+
+			NuggetProps n(EPrim::LineList, EGeom::Vert);
+			m_selection_box->CreateNugget(n);
 		}
 	}
 }

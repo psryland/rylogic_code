@@ -86,12 +86,14 @@ namespace pr
 		}
 		friend Vec2<T> operator / (v2_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Vec2<T>{lhs.x / rhs, lhs.y / rhs};
 		}
 		friend Vec2<T> operator % (v2_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Vec2<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs)};
 		}
 		friend Vec2<T> operator + (v2_cref<T> lhs, v2_cref<T> rhs)
@@ -108,24 +110,26 @@ namespace pr
 		}
 		friend Vec2<T> operator / (v2_cref<T> lhs, v2_cref<T> rhs)
 		{
-			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec2<T>{lhs.x / rhs.x, lhs.y / rhs.y};
 		}
 		friend Vec2<T> operator % (v2_cref<T> lhs, v2_cref<T> rhs)
 		{
-			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec2<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y)};
 		}
 		#pragma endregion
+
+		// Define component accessors
+		friend constexpr float x_cp(v2_cref<T> v) { return v.x; }
+		friend constexpr float y_cp(v2_cref<T> v) { return v.y; }
+		friend constexpr float z_cp(v2_cref<T>)   { return 0; }
+		friend constexpr float w_cp(v2_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec2<Vec2<void>>::value, "");
 	static_assert(std::is_pod<Vec2<void>>::value, "Vec2 must be a pod type");
-
-	// Define component accessors
-	template <typename T> inline float x_cp(v2_cref<T> v) { return v.x; }
-	template <typename T> inline float y_cp(v2_cref<T> v) { return v.y; }
-	template <typename T> inline float z_cp(v2_cref<T>)   { return 0; }
-	template <typename T> inline float w_cp(v2_cref<T>)   { return 0; }
 
 	#pragma region Functions
 	

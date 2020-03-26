@@ -116,6 +116,8 @@ namespace pr
 	template <typename T = void> using v3_cref = Vec3<T> const;
 	template <typename T = void> using v4_cref = Vec4<T> const;
 	template <typename T = void> using v8_cref = Vec8<T> const;
+	template <typename T = void> using iv2_cref = IVec2<T> const;
+	template <typename T = void> using iv4_cref = IVec4<T> const;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const;
 	template <typename A = void, typename B = void> using m3_cref = Mat3x4<A, B> const;
 	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A, B> const;
@@ -127,6 +129,8 @@ namespace pr
 	template <typename T = void> using v3_cref = Vec3<T> const&;
 	template <typename T = void> using v4_cref = Vec4<T> const&;
 	template <typename T = void> using v8_cref = Vec8<T> const&;
+	template <typename T = void> using iv2_cref = IVec2<T> const&;
+	template <typename T = void> using iv4_cref = IVec4<T> const&;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const&;
 	template <typename A = void, typename B = void> using m3_cref = Mat3x4<A, B> const&;
 	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A, B> const&;

@@ -80,12 +80,14 @@ namespace pr
 		}
 		friend Mat2x2<A,B> operator / (m2_cref<A,B> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Mat2x2<A,B>{lhs.x / rhs, lhs.y / rhs};
 		}
 		friend Mat2x2<A,B> operator % (m2_cref<A,B> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Mat2x2<A,B>{lhs.x % rhs, lhs.y % rhs};
 		}
 		friend Mat2x2<A,B> operator + (m2_cref<A,B> lhs, m2_cref<A,B> rhs)
@@ -116,6 +118,12 @@ namespace pr
 		}
 		#pragma endregion
 
+		// Define component accessors
+		friend constexpr v2_cref<> x_cp(m2_cref<A,B> v) { return v.x; }
+		friend constexpr v2_cref<> y_cp(m2_cref<A,B> v) { return v.y; }
+		friend constexpr v2_cref<> z_cp(m2_cref<A,B>)   { return v2{}; }
+		friend constexpr v2_cref<> w_cp(m2_cref<A,B>)   { return v2{}; }
+
 		// Create a rotation matrix
 		static Mat2x2<A,B> Rotation(float angle)
 		{
@@ -125,13 +133,7 @@ namespace pr
 		}
 	};
 	static_assert(maths::is_mat2<Mat2x2<void,void>>::value, "");
-	static_assert(std::is_pod<Mat2x2<void,void>>::value, "m2x2 must be a pod type");
-
-	// Define component accessors
-	template <typename A, typename B> inline v2_cref<> x_cp(m2_cref<A,B> v) { return v.x; }
-	template <typename A, typename B> inline v2_cref<> y_cp(m2_cref<A,B> v) { return v.y; }
-	template <typename A, typename B> inline v2_cref<> z_cp(m2_cref<A,B>)   { return v2{}; }
-	template <typename A, typename B> inline v2_cref<> w_cp(m2_cref<A,B>)   { return v2{}; }
+	static_assert(std::is_pod_v<Mat2x2<void,void>>, "m2x2 must be a pod type");
 
 	#pragma region Functions
 	

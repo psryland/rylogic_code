@@ -120,7 +120,8 @@ old:
 		<DisplayString Condition="m_ty == 0">unassigned</DisplayString>
 		<DisplayString Condition="m_ty == 1">{m_ll}</DisplayString>
 		<DisplayString Condition="m_ty == 2">{m_db}</DisplayString>
-		<DisplayString Condition="m_ty == 3">{m_v4}</DisplayString>
+		<DisplayString Condition="m_ty == 3">{m_i4}</DisplayString>
+		<DisplayString Condition="m_ty == 4">{m_v4}</DisplayString>
 		<DisplayString>invalid</DisplayString>
 	</Type>
 

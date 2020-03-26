@@ -55,67 +55,114 @@ namespace pr
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
+
+		#pragma region Operators
+		friend IVec2<T> operator + (iv2_cref<T> vec)
+		{
+			return vec;
+		}
+		friend IVec2<T> operator - (iv2_cref<T> vec)
+		{
+			return IVec2<T>{-vec.x, -vec.y};
+		}
+		friend IVec2<T> operator * (int lhs, iv2_cref<T> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend IVec2<T> operator * (iv2_cref<T> lhs, int rhs)
+		{
+			return IVec2<T>{lhs.x * rhs, lhs.y * rhs};
+		}
+		friend IVec2<T> operator / (iv2_cref<T> lhs, int rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return IVec2<T>{lhs.x / rhs, lhs.y / rhs};
+		}
+		friend IVec2<T> operator % (iv2_cref<T> lhs, int rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return IVec2<T>{lhs.x % rhs, lhs.y % rhs};
+		}
+		friend IVec2<T> operator + (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec2<T>{lhs.x + rhs.x, lhs.y + rhs.y};
+		}
+		friend IVec2<T> operator - (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec2<T>{lhs.x - rhs.x, lhs.y - rhs.y};
+		}
+		friend IVec2<T> operator * (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec2<T>{lhs.x * rhs.x, lhs.y * rhs.y};
+		}
+		friend IVec2<T> operator / (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			return IVec2<T>{lhs.x / rhs.x, lhs.y / rhs.y};
+		}
+		friend IVec2<T> operator % (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			return IVec2<T>{lhs.x % rhs.x, lhs.y % rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator ~  (iv2_cref<T> rhs)
+		{
+			return IVec2<T>{~rhs.x, ~rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator !  (iv2_cref<T> rhs)
+		{
+			return IVec2<T>{!rhs.x, !rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator |  (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec2<T>{lhs.x | rhs.x, lhs.y | rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator &  (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x & rhs.x, lhs.y & rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator ^  (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x ^ rhs.x, lhs.y ^ rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator << (iv2_cref<T> lhs, int rhs)
+		{
+			return IVec4<T>{lhs.x << rhs, lhs.y << rhs};
+		}
+		friend IVec2<T> pr_vectorcall operator << (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x << rhs.x, lhs.y << rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator >> (iv2_cref<T> lhs, int rhs)
+		{
+			return IVec4<T>{lhs.x >> rhs, lhs.y >> rhs};
+		}
+		friend IVec2<T> pr_vectorcall operator >> (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x >> rhs.x, lhs.y >> rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator || (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x || rhs.x, lhs.y || rhs.y};
+		}
+		friend IVec2<T> pr_vectorcall operator && (iv2_cref<T> lhs, iv2_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x && rhs.x, lhs.y && rhs.y};
+		}
+		#pragma endregion
+
+		// Define component accessors for pointer types
+		friend constexpr int x_cp(iv2_cref<T> v) { return v.x; }
+		friend constexpr int y_cp(iv2_cref<T> v) { return v.y; }
+		friend constexpr int z_cp(iv2_cref<T>)   { return 0; }
+		friend constexpr int w_cp(iv2_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec2<IVec2<void>>::value, "");
-	static_assert(std::is_pod<IVec2<void>>::value, "iv2 must be a pod type");
-	template <typename T = void> using iv2_cref = IVec2<T> const&;
-
-	// Define component accessors for pointer types
-	template <typename T> inline int x_cp(iv2_cref<T> v) { return v.x; }
-	template <typename T> inline int y_cp(iv2_cref<T> v) { return v.y; }
-	template <typename T> inline int z_cp(iv2_cref<T>)   { return 0; }
-	template <typename T> inline int w_cp(iv2_cref<T>)   { return 0; }
-
-	#pragma region Operators
-	template <typename T> inline IVec2<T> operator + (iv2_cref<T> vec)
-	{
-		return vec;
-	}
-	template <typename T> inline IVec2<T> operator - (iv2_cref<T> vec)
-	{
-		return IVec2<T>{-vec.x, -vec.y};
-	}
-	template <typename T> inline IVec2<T> operator * (int lhs, iv2_cref<T> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename T> inline IVec2<T> operator * (iv2_cref<T> lhs, int rhs)
-	{
-		return IVec2<T>{lhs.x * rhs, lhs.y * rhs};
-	}
-	template <typename T> inline IVec2<T> operator / (iv2_cref<T> lhs, int rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return IVec2<T>{lhs.x / rhs, lhs.y / rhs};
-	}
-	template <typename T> inline IVec2<T> operator % (iv2_cref<T> lhs, int rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return IVec2<T>{lhs.x % rhs, lhs.y % rhs};
-	}
-	template <typename T> inline IVec2<T> operator + (iv2_cref<T> lhs, iv2_cref<T> rhs)
-	{
-		return IVec2<T>{lhs.x + rhs.x, lhs.y + rhs.y};
-	}
-	template <typename T> inline IVec2<T> operator - (iv2_cref<T> lhs, iv2_cref<T> rhs)
-	{
-		return IVec2<T>{lhs.x - rhs.x, lhs.y - rhs.y};
-	}
-	template <typename T> inline IVec2<T> operator * (iv2_cref<T> lhs, iv2_cref<T> rhs)
-	{
-		return IVec2<T>{lhs.x * rhs.x, lhs.y * rhs.y};
-	}
-	template <typename T> inline IVec2<T> operator / (iv2_cref<T> lhs, iv2_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any2(rhs, IsZero<int>));
-		return IVec2<T>{lhs.x / rhs.x, lhs.y / rhs.y};
-	}
-	template <typename T> inline IVec2<T> operator % (iv2_cref<T> lhs, iv2_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any2(rhs, IsZero<int>));
-		return IVec2<T>{lhs.x % rhs.x, lhs.y % rhs.y};
-	}
-	#pragma endregion
+	static_assert(std::is_pod_v<IVec2<void>>, "iv2 must be a pod type");
 
 	#pragma region Functions
 

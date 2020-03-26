@@ -87,7 +87,8 @@ namespace view3d
 	// An instance type for other models used in LDraw
 	#define PR_RDR_INST(x)\
 		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
-		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
+		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)\
+		x(pr::Colour32      ,m_tint  ,pr::rdr::EInstComp::TintColour32)
 	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
 	#undef PR_RDR_INST
 
@@ -95,7 +96,8 @@ namespace view3d
 	#define PR_RDR_INST(x)\
 		x(pr::m4x4          ,m_c2s   ,pr::rdr::EInstComp::C2STransform)\
 		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
-		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
+		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)\
+		x(pr::Colour32      ,m_tint  ,pr::rdr::EInstComp::TintColour32)
 	PR_RDR_DEFINE_INSTANCE(PointInstance, PR_RDR_INST)
 	#undef PR_RDR_INST
 }

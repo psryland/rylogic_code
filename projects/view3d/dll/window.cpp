@@ -632,7 +632,7 @@ namespace view3d
 		{
 			obj->Apply([&](LdrObject const* c)
 			{
-				if (!AllSet(c->m_flags, ELdrFlags::Selected))
+				if (!AllSet(c->m_flags, ELdrFlags::Selected) || AllSet(c->m_flags, ELdrFlags::SceneBoundsExclude))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -1080,71 +1080,17 @@ namespace view3d
 	// Create stock models such as the focus point, origin, etc
 	void Window::CreateStockModels()
 	{
-		{
-			// Create the focus point/origin models
-			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays
-			static v4 const verts[] =
-			{
-					v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					v4( 1.0f,  0.0f,  0.0f, 1.0f),
-					v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					v4( 0.0f,  1.0f,  0.0f, 1.0f),
-					v4( 0.0f,  0.0f,  0.0f, 1.0f),
-					v4( 0.0f,  0.0f,  1.0f, 1.0f),
-			};
-			static uint16_t const indices[] = { 0, 1, 2, 3, 4, 5 };
-			static NuggetProps const nuggets[] = { NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr) };
-			static Colour32 const focus_cols[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-			static Colour32 const origin_cols[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+		// Create the focus point/origin models
+		m_focus_point.m_model = m_dll->m_rdr.m_mdl_mgr.m_basis;
+		m_focus_point.m_tint = Colour32One;
+		m_focus_point.m_i2w = m4x4Identity;
+		m_origin_point.m_model = m_dll->m_rdr.m_mdl_mgr.m_basis;
+		m_origin_point.m_tint = Colour32Gray;
+		m_origin_point.m_i2w = m4x4Identity;
 
-			{
-				auto cdata = MeshCreationData().verts(verts).indices(indices).nuggets(nuggets).colours(focus_cols);
-				m_focus_point.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-				m_focus_point.m_model->m_name = "focus point";
-				m_focus_point.m_i2w   = m4x4Identity;
-			}
-			{
-				auto cdata = MeshCreationData().verts(verts).indices(indices).nuggets(nuggets).colours(origin_cols);
-				m_origin_point.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-				m_focus_point.m_model->m_name = "origin point";
-				m_origin_point.m_i2w   = m4x4Identity;
-			}
-		}
-		{
-			// Create the selection box model
-			static float const sz = 1.0f;
-			static float const dd = 0.8f;
-			static v4 const verts[] =
-			{
-				v4(-sz, -sz, -sz, 1.0f), v4(-dd, -sz, -sz, 1.0f), v4(-sz, -dd, -sz, 1.0f), v4(-sz, -sz, -dd, 1.0f),
-				v4( sz, -sz, -sz, 1.0f), v4( sz, -dd, -sz, 1.0f), v4( dd, -sz, -sz, 1.0f), v4( sz, -sz, -dd, 1.0f),
-				v4( sz,  sz, -sz, 1.0f), v4( dd,  sz, -sz, 1.0f), v4( sz,  dd, -sz, 1.0f), v4( sz,  sz, -dd, 1.0f),
-				v4(-sz,  sz, -sz, 1.0f), v4(-sz,  dd, -sz, 1.0f), v4(-dd,  sz, -sz, 1.0f), v4(-sz,  sz, -dd, 1.0f),
-				v4(-sz, -sz,  sz, 1.0f), v4(-dd, -sz,  sz, 1.0f), v4(-sz, -dd,  sz, 1.0f), v4(-sz, -sz,  dd, 1.0f),
-				v4( sz, -sz,  sz, 1.0f), v4( sz, -dd,  sz, 1.0f), v4( dd, -sz,  sz, 1.0f), v4( sz, -sz,  dd, 1.0f),
-				v4( sz,  sz,  sz, 1.0f), v4( dd,  sz,  sz, 1.0f), v4( sz,  dd,  sz, 1.0f), v4( sz,  sz,  dd, 1.0f),
-				v4(-sz,  sz,  sz, 1.0f), v4(-sz,  dd,  sz, 1.0f), v4(-dd,  sz,  sz, 1.0f), v4(-sz,  sz,  dd, 1.0f),
-			};
-			static uint16_t const indices[] =
-			{
-				0,  1,  0,  2,  0,  3,
-				4,  5,  4,  6,  4,  7,
-				8,  9,  8, 10,  8, 11,
-				12, 13, 12, 14, 12, 15,
-				16, 17, 16, 18, 16, 19,
-				20, 21, 20, 22, 20, 23,
-				24, 25, 24, 26, 24, 27,
-				28, 29, 28, 30, 28, 31,
-			};
-			static NuggetProps const nuggets[] =
-			{
-				NuggetProps(EPrim::LineList, EGeom::Vert),
-			};
-
-			auto cdata = rdr::MeshCreationData().verts(verts).indices(indices).nuggets(nuggets);
-			m_selection_box.m_model = ModelGenerator<>::Mesh(m_dll->m_rdr, cdata);
-			m_selection_box.m_model->m_name = "selection box";
-			m_selection_box.m_i2w   = m4x4Identity;
-		}
+		// Create the selection box model
+		m_selection_box.m_model = m_dll->m_rdr.m_mdl_mgr.m_selection_box;
+		m_selection_box.m_tint = Colour32White;
+		m_selection_box.m_i2w = m4x4Identity;
 	}
 }
