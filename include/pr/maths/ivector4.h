@@ -101,71 +101,120 @@ namespace pr
 		{
 			return IVec2<T>{arr[i0], arr[i1]};
 		}
+		
+		// Explicit cast to v4
+		explicit operator Vec4<T>() const
+		{
+			return Vec4<T>(x, y, z, w);
+		}
+
+		#pragma region Operators
+		friend IVec4<T> pr_vectorcall operator + (iv4_cref<T> vec)
+		{
+			return vec;
+		}
+		friend IVec4<T> pr_vectorcall operator - (iv4_cref<T> vec)
+		{
+			return IVec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
+		}
+		friend IVec4<T> pr_vectorcall operator * (int lhs, iv4_cref<T> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, int rhs)
+		{
+			return IVec4<T>{lhs.x + rhs, lhs.y + rhs, lhs.z + rhs, lhs.w + rhs};
+		}
+		friend IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, int rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return IVec4<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
+		}
+		friend IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, int rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
+			return IVec4<T>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs};
+		}
+		friend IVec4<T> pr_vectorcall operator + (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator - (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			return IVec4<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			return IVec4<T>{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator ~ (iv4_cref<T> rhs)
+		{
+			return IVec4<T>{~rhs.x, ~rhs.y, ~rhs.z, ~rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator ! (iv4_cref<T> rhs)
+		{
+			return IVec4<T>{!rhs.x, !rhs.y, !rhs.z, !rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator | (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x | rhs.x, lhs.y | rhs.y, lhs.z | rhs.z, lhs.w | rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator & (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x & rhs.x, lhs.y & rhs.y, lhs.z & rhs.z, lhs.w & rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator ^ (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x ^ rhs.x, lhs.y ^ rhs.y, lhs.z ^ rhs.z, lhs.w ^ rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator << (iv4_cref<T> lhs, int rhs)
+		{
+			return IVec4<T>{lhs.x << rhs, lhs.y << rhs, lhs.z << rhs, lhs.w << rhs};
+		}
+		friend IVec4<T> pr_vectorcall operator << (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x << rhs.x, lhs.y << rhs.y, lhs.z << rhs.z, lhs.w << rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator >> (iv4_cref<T> lhs, int rhs)
+		{
+			return IVec4<T>{lhs.x >> rhs, lhs.y >> rhs, lhs.z >> rhs, lhs.w >> rhs};
+		}
+		friend IVec4<T> pr_vectorcall operator >> (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x >> rhs.x, lhs.y >> rhs.y, lhs.z >> rhs.z, lhs.w >> rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator || (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x || rhs.x, lhs.y || rhs.y, lhs.z || rhs.z, lhs.w || rhs.w};
+		}
+		friend IVec4<T> pr_vectorcall operator && (iv4_cref<T> lhs, iv4_cref<T> rhs)
+		{
+			return IVec4<T>{lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z, lhs.w && rhs.w};
+		}
+		#pragma endregion
+
+		// Component accessors
+		friend constexpr int pr_vectorcall x_cp(iv4_cref<T> v) { return v.x; }
+		friend constexpr int pr_vectorcall y_cp(iv4_cref<T> v) { return v.y; }
+		friend constexpr int pr_vectorcall z_cp(iv4_cref<T> v) { return v.z; }
+		friend constexpr int pr_vectorcall w_cp(iv4_cref<T> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<IVec4<void>>::value, "");
-	static_assert(std::is_pod<IVec4<void>>::value, "iv4 must be a pod type");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	template <typename T = void> using iv4_cref = IVec4<T> const;
-	#else
-	template <typename T = void> using iv4_cref = IVec4<T> const&;
-	#endif
-
-	// Define component accessors for pointer types
-	template <typename T> inline int pr_vectorcall x_cp(iv4_cref<T> v) { return v.x; }
-	template <typename T> inline int pr_vectorcall y_cp(iv4_cref<T> v) { return v.y; }
-	template <typename T> inline int pr_vectorcall z_cp(iv4_cref<T> v) { return v.z; }
-	template <typename T> inline int pr_vectorcall w_cp(iv4_cref<T> v) { return v.w; }
-
-	#pragma region Operators
-	template <typename T> inline IVec4<T> pr_vectorcall operator + (iv4_cref<T> vec)
-	{
-		return vec;
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator - (iv4_cref<T> vec)
-	{
-		return IVec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator * (int lhs, iv4_cref<T> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, int rhs)
-	{
-		return IVec4<T>{lhs.x + rhs, lhs.y + rhs, lhs.z + rhs, lhs.w + rhs};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, int rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return IVec4<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, int rhs)
-	{
-		assert("divide by zero" && rhs != 0);
-		return IVec4<T>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator + (iv4_cref<T> lhs, iv4_cref<T> rhs)
-	{
-		return IVec4<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator - (iv4_cref<T> lhs, iv4_cref<T> rhs)
-	{
-		return IVec4<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, iv4_cref<T> rhs)
-	{
-		return IVec4<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, iv4_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any4(rhs, IsZero<int>));
-		return IVec4<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
-	}
-	template <typename T> inline IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, iv4_cref<T> rhs)
-	{
-		assert("divide by zero" && !Any4(rhs, IsZero<int>));
-		return IVec4<T>{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
-	}
-	#pragma endregion
+	static_assert(std::is_pod_v<IVec4<void>>, "iv4 must be a pod type");
 
 	#pragma region Functions
 	

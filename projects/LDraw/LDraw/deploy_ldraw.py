@@ -47,7 +47,6 @@ def Deploy():
 	Tools.Copy(os.path.join(targetdir, "Rylogic.Gui.WPF.dll"),                           os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "Rylogic.View3d.dll"),                            os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "ICSharpCode.AvalonEdit.dll"),                    os.path.join(dstdir, ""))
-	Tools.Copy(os.path.join(targetdir, "Microsoft.Toolkit.Wpf.UI.Controls.WebView.dll"), os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "lib"),                                           os.path.join(dstdir, "lib"))
 
 	# Build the installer

@@ -4091,13 +4091,151 @@ namespace pr::ldr
 	// ELdrObject::Equation
 	template <> struct ObjectCreator<ELdrObject::Equation> :IObjectCreator
 	{
+		struct Extras
+		{
+			using VCPair = struct { float m_value; Colour32 m_colour; };
+			using ColourBands = pr::vector<VCPair>;
+			struct Axis
+			{
+				float m_min;
+				float m_max;
+				ColourBands m_col;
+
+				Axis()
+					:m_min(maths::float_max)
+					,m_max(maths::float_lowest)
+					,m_col()
+				{}
+				bool limited() const
+				{
+					return m_min <= m_max;
+				}
+				float centre() const
+				{
+					return (m_min + m_max) * 0.5f;
+				}
+				float radius() const
+				{
+					return Abs(m_max - m_min) * 0.5f;
+				}
+				VCPair clamp(float value) const
+				{
+					VCPair vc = {value, Colour32White};
+
+					// Clamp the range
+					if (m_min <= m_max)
+					{
+						vc.m_value = Clamp(value, m_min, m_max);
+						if (vc.m_value != value)
+							vc.m_colour.a = 0;
+					}
+
+					// Lerp the colour
+					if (!m_col.empty() && vc.m_value == value)
+					{
+						int i = 0, iend = static_cast<int>(m_col.size());
+						for (; i != iend && vc.m_value >= m_col[i].m_value; ++i) {}
+						if      (i ==    0) vc.m_colour = m_col.front().m_colour;
+						else if (i == iend) vc.m_colour = m_col.back().m_colour;
+						else
+						{
+							auto f = Frac(m_col[i - 1].m_value, vc.m_value, m_col[i].m_value);
+							vc.m_colour = Lerp(m_col[i - 1].m_colour, m_col[i].m_colour, f);
+						}
+					}
+
+					return vc;
+				}
+				static Axis Parse(Reader& reader)
+				{
+					Axis axis;
+					reader.SectionStart();
+					for (; !reader.IsSectionEnd(); )
+					{
+						if (!reader.IsKeyword())
+						{
+							reader.SectionStart();
+							reader.Real(axis.m_min);
+							reader.Real(axis.m_max);
+							reader.SectionEnd();
+						}
+						else
+						{
+							auto kw = reader.NextKeywordH<EKeyword>();
+							switch (kw)
+							{
+							case EKeyword::Range:
+								{
+									reader.SectionStart();
+									reader.Real(axis.m_min);
+									reader.Real(axis.m_max);
+									reader.SectionEnd();
+									break;
+								}
+							case EKeyword::Colours:
+								{
+									reader.SectionStart();
+									for (; !reader.IsSectionEnd(); )
+									{
+										VCPair vcpair;
+										reader.Real(vcpair.m_value);
+										reader.Int(vcpair.m_colour.argb, 16);
+										axis.m_col.push_back(vcpair);
+									}
+									reader.SectionEnd();
+									sort(axis.m_col, [](auto& l, auto& r) { return l.m_value < r.m_value; });
+									break;
+								}
+							}
+						}
+					}
+					reader.SectionEnd();
+					return axis;
+				}
+			};
+
+			std::array<Axis, 3> m_axis;
+			float m_weight;
+			Extras()
+				:m_axis()
+				,m_weight(0.5f)
+			{}
+			bool has_alpha() const
+			{
+				for (auto& axis : m_axis)
+				{
+					for (auto& col : axis.m_col)
+					{
+						if (col.m_colour.a == 0xFF) continue;
+						return true;
+					}
+				}
+				return false;
+			}
+			BBox clamp_range(BBox range) const
+			{
+				for (int i = 0, iend = static_cast<int>(m_axis.size()); i != iend; ++i)
+				{
+					auto& axis = m_axis[i];
+					if (!axis.limited()) continue;
+					range.m_centre[i] = axis.centre();
+					range.m_radius[i] = axis.radius();
+				}
+				return range;
+			}
+		};
+
 		eval::Expression m_eq;
+		eval::ArgSet m_args;
 		int m_resolution;
+		Extras m_extras;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_eq()
-			,m_resolution(1000)
+			,m_args()
+			,m_resolution(10000)
+			,m_extras()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
@@ -4108,6 +4246,12 @@ namespace pr::ldr
 					return
 						IObjectCreator::ParseKeyword(kw);
 				}
+			case EKeyword::Resolution:
+				{
+					p.m_reader.IntS(m_resolution, 10);
+					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
+					return true;
+				}
 			case EKeyword::Param:
 				{
 					std::string name;
@@ -4116,13 +4260,27 @@ namespace pr::ldr
 					p.m_reader.String(name);
 					p.m_reader.Real(value);
 					p.m_reader.SectionEnd();
-					m_eq.m_args.add(name, value);
+					m_args.add(name, value);
 					return true;
 				}
-			case EKeyword::Resolution:
+			case EKeyword::Weight:
 				{
-					p.m_reader.IntS(m_resolution, 10);
-					m_resolution = std::clamp(m_resolution, 8, 0xFFFF);
+					p.m_reader.RealS(m_extras.m_weight);
+					return true;
+				}
+			case EKeyword::XAxis:
+				{
+					m_extras.m_axis[0] = Extras::Axis::Parse(p.m_reader);
+					return true;
+				}
+			case EKeyword::YAxis:
+				{
+					m_extras.m_axis[1] = Extras::Axis::Parse(p.m_reader);
+					return true;
+				}
+			case EKeyword::ZAxis:
+				{
+					m_extras.m_axis[2] = Extras::Axis::Parse(p.m_reader);
 					return true;
 				}
 			}
@@ -4153,14 +4311,18 @@ namespace pr::ldr
 				return;
 			}
 
+			// Apply any constants
+			m_eq.m_args.add(m_args);
+
 			// Store the expression in the object user data
 			obj->m_user_data.get<eval::Expression>() = m_eq;
+			obj->m_user_data.get<Extras>() = m_extras;
 
 			// Update the model before each render so the range depends on the visible area at the focus point
 			obj->OnAddToScene += UpdateModel;
 
 			// Choose suitable vcount, icount based on the equation dimension and resolution
-			int vcount, icount, dim = m_eq.m_args.dim();
+			int vcount, icount, dim = m_eq.m_args.unassigned_count();
 			switch (dim)
 			{
 			case 1: vcount = icount = m_resolution; break;
@@ -4194,14 +4356,17 @@ namespace pr::ldr
 			//  - set the bbox to match the view volume so that auto range doesn't zoom out to infinity
 
 			auto& model = *ob.m_model.get();
+			auto& equation = ob.m_user_data.get<eval::Expression>();
+			auto& extras = ob.m_user_data.get<Extras>();
 			auto init = model.m_nuggets.empty();
 
 			// Find the range to plot the equation over
 			auto fp = scene.m_view.FocusPoint();
 			auto area = scene.m_view.ViewArea(scene.m_view.FocusDist());
 
-			// Determine the intervals on the world space x,y,z axes that are within the view frustum
-			auto range = BSphere(fp, area.x);
+			// Determine the interval to plot within. Default to a sphere around the focus point.
+			auto range = BBox(fp, v4(area.x, area.x, area.x, 0));
+			range = extras.clamp_range(range);
 
 			// Functions can have infinities and divide by zeros. Set the bbox
 			// to match the view volume so that auto-range doesn't zoom out to infinity.
@@ -4209,38 +4374,30 @@ namespace pr::ldr
 			model.m_bbox = BBoxUnit;
 
 			// Update the model by evaluating the equation
-			auto& eq = ob.m_user_data.get<eval::Expression>();
-			switch (eq.m_args.dim())
+			switch (equation.m_args.unassigned_count())
 			{
 			case 1: // Line plot
-				{
-					LinePlot(model, range, eq, init);
-					ob.O2W(m4x4::Translation(fp.x, 0, 0));
-					break;
-				}
+				LinePlot(model, range, equation, extras, init);
+				break;
 			case 2: // Surface plot
-				{
-					SurfacePlot(model, range, eq, init);
-					ob.O2W(m4x4::Translation(fp.x, fp.y, 0));
-					break;
-				}
+				SurfacePlot(model, range, equation, extras, init);
+				break;
 			case 3:
-				{
-					// Todo: CloudPlot(model, range, eq, init);
-					break;
-				}
+				CloudPlot(model, range, equation, extras, init);
+				break;
 			default:
-				{
-					assert(false && "Unsupported equation dimension");
-					break;
-				}
+				assert(false && "Unsupported equation dimension");
+				break;
 			}
 
 			// Update object colour, visibility, etc
 			ApplyObjectState(&ob);
 		}
-		static void LinePlot(Model& model, BSphere_cref range, eval::Expression const& eq, bool init)
+		static void LinePlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
+			// Notes:
+			//  - 'range' is the independent variable range. For line plots, only 'x' is used
+			//  - 'extras.m_axis' contains the bounds on output values and colour gradients.
 			auto vcount = static_cast<int>(model.m_vrange.size());
 			auto icount = static_cast<int>(model.m_irange.size());
 			auto count = std::min(vcount, icount);
@@ -4252,10 +4409,12 @@ namespace pr::ldr
 				auto vout = vlock.ptr<Vert>();
 				for (int i = 0; i != count; ++i)
 				{
-					auto f = static_cast<float>(Cube(Lerp(-1.0f, +1.0f, (1.0f * i) / (count - 1))));
-					auto x = range.Centre().x + f * range.Radius();
-					auto y = static_cast<float>(eq(x).db());
-					SetPC(*vout, v4(f, y, 0, 1), Colour32White);
+					// 'f' is a point in the range [-1.0,+1.0]. Rescale to the range.
+					// 'weight' controls the density of points near the range centre.
+					auto f = Lerp(-1.0f, +1.0f, (1.0f * i) / (count - 1));
+					auto x = range.m_centre.x + f * range.m_radius.x * Pow(Abs(f), extras.m_weight);
+					auto [y,col] = extras.m_axis[1].clamp(static_cast<float>(equation(x).db()));
+					SetPC(*vout, v4(x, y, 0, 1), col);
 					++vout;
 				}
 			}
@@ -4265,10 +4424,10 @@ namespace pr::ldr
 			{
 				Lock ilock;
 				model.MapIndices(ilock, EMap::WriteDiscard);
-				auto iout = ilock.ptr<uint16_t>();
+				auto iout = ilock.ptr<uint32_t>();
 				for (int i = 0; i != count; ++i)
 				{
-					*iout = static_cast<uint16_t>(i);
+					*iout = static_cast<uint32_t>(i);
 					++iout;
 				}
 			}
@@ -4282,12 +4441,17 @@ namespace pr::ldr
 				n.m_geom = EGeom::Vert;
 				n.m_vrange = rdr::Range(0, count);
 				n.m_irange = rdr::Range(0, count);
+				n.m_flags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.DeleteNuggets();
 				model.CreateNugget(n);
 			}
 		}
-		static void SurfacePlot(Model& model, BSphere_cref range, eval::Expression const& eq, bool init)
+		static void SurfacePlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
 		{
+			// Notes:
+			//  - 'range' is the independent variable range. For surface plots, 'x' and 'y' are used.
+			//  - 'extras.m_axis' contains the bounds on output values and colour gradients.
+
 			// Determine the largest hex patch that can be made with the available model size:
 			//  i.e. solve for the minimum value for 'rings' in:
 			//    vcount = ArithmeticSum(0, 6, rings) + 1;
@@ -4306,12 +4470,13 @@ namespace pr::ldr
 			// Evaluate the normal at (x,y)
 			auto norm = [&](float x, float y)
 			{
-				auto dx = Abs(0.00001f * x);
-				auto dy = Abs(0.00001f * y);
-				auto pt = eq(v4(x - dx, x + dx, x, x), v4(y, y, y - dy, y + dy)).v4();
-				auto n = Cross(
-					v4(2*dx, 0, pt.y - pt.x, 0),
-					v4(0, 2*dy, pt.w - pt.z, 0));
+				// Smallest non-zero of (x,y)
+				auto d =
+					(x != 0 && y != 0) ? Min(Abs(x), Abs(y)) * 0.00001f :
+					(x != 0 || y != 0) ? Max(Abs(x), Abs(y)) * 0.00001f :
+					maths::tinyf;
+				auto pt = equation(v4(x - d, x + d, x, x), v4(y, y, y - d, y + d)).v4();
+				auto n = Cross(v4(2*d, 0, pt.y - pt.x, 0), v4(0, 2*d, pt.w - pt.z, 0));
 				return Normalise(n, v4Zero);
 			};
 
@@ -4319,29 +4484,18 @@ namespace pr::ldr
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			auto iout = mlock.m_ilock.ptr<uint32_t>();
 			auto props = geometry::HexPatch(rings,
-				[&](v4_cref<> pos, Colour32 c, v4_cref<>, v2_cref<>)
+				[&](v4_cref<> pos, Colour32, v4_cref<>, v2_cref<>)
 				{
 					// Evaluate the function at points around the focus point, but shift them back
 					// so the focus point is centred around (0,0,0), then set the o2w transform
 
-					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to be centred around
-					// the focus point, and weighted radially by a cubic.
-					auto len_sq = LengthSq(pos);
-					if (len_sq < maths::tinyf)
-					{
-						auto pt = range.Centre();
-						auto z = static_cast<float>(eq(pt.x, pt.y).db());
-						SetPCNT(*vout++, v4(0, 0, z, 1), c, norm(pt.x, pt.y), v2Zero);
-					}
-					else
-					{
-						// Weight controls the density of points near the focus point
-						constexpr float weight = 0.3f;
-						auto dir = pos.w0() * range.Radius() * Pow(len_sq, weight);
-						auto pt = range.Centre() + dir;
-						auto z = static_cast<float>(eq(pt.x, pt.y).db());
-						SetPCNT(*vout++, v4(dir.x, dir.y, z, 1), c, norm(pt.x, pt.y), v2Zero);
-					}
+					// 'pos' is a point in the range [-1.0,+1.0]. Rescale to the range.
+					// 'weight' controls the density of points near the range centre.
+					auto dir = pos.w0();
+					auto len_sq = LengthSq(dir);
+					auto pt = range.Centre() + dir * range.Radius() * Pow(len_sq, extras.m_weight * 0.5f);
+					auto [z,col] = extras.m_axis[2].clamp(static_cast<float>(equation(pt.x, pt.y).db()));
+					SetPCNT(*vout++, v4(pt.x, pt.y, z, 1), col, norm(pt.x, pt.y), v2Zero);
 				},
 				[&](auto idx)
 				{
@@ -4358,8 +4512,14 @@ namespace pr::ldr
 				n.m_geom = props.m_geom;
 				n.m_vrange = rdr::Range(0, vcount);
 				n.m_irange = rdr::Range(0, icount);
+				n.m_flags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.CreateNugget(n);
 			}
+		}
+		static void CloudPlot(Model& model, BBox_cref range, eval::Expression const& equation, Extras const& extras, bool init)
+		{
+			(void)model, range, equation, extras, init;
+			throw std::runtime_error("Plots of 3 independent variables are not supported");
 		}
 	};
 

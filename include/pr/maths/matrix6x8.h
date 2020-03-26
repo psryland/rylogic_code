@@ -82,53 +82,53 @@ namespace pr
 			if (i < 3) { m00[i  ] = rhs.ang; m10[i  ] = rhs.lin; }
 			else       { m01[i-3] = rhs.ang; m11[i-3] = rhs.lin; }
 		}
+	
+		#pragma region Operators
+		friend Mat6x8<A, B> operator + (m6_cref<A,B> m)
+		{
+			return m;
+		}
+		friend Mat6x8<A, B> operator - (m6_cref<A,B> m)
+		{
+			return Mat6x8<A, B>{-m.m00, -m.m01, -m.m10, -m.m11};
+		}
+		friend Mat6x8<A, B> operator + (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
+		{
+			return Mat6x8<A, B>{lhs.m00 + rhs.m00, lhs.m01 + rhs.m01, lhs.m10 + rhs.m10, lhs.m11 + rhs.m11};
+		}
+		friend Mat6x8<A, B> operator - (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
+		{
+			return Mat6x8<A, B>{lhs.m00 - rhs.m00, lhs.m01 - rhs.m01, lhs.m10 - rhs.m10, lhs.m11 - rhs.m11};
+		}
+		friend Mat6x8<A,B> operator * (m6_cref<A,B> lhs, float rhs)
+		{
+			return Mat6x8<A,B>{lhs.m00 * rhs, lhs.m01 * rhs, lhs.m10 * rhs, lhs.m11 * rhs};
+		}
+		friend Mat6x8<A,B> operator * (float lhs, m6_cref<A,B> rhs)
+		{
+			return rhs * lhs;
+		}
+		friend Vec8<B> operator * (m6_cref<A,B> lhs, Vec8<A> const& rhs)
+		{
+			// [m00*a + m01*b] = [m00, m01] [a]
+			// [m10*a + m11*b]   [m10, m11] [b]
+			return Vec8<B>{
+				lhs.m00 * rhs.ang + lhs.m01 * rhs.lin,
+				lhs.m10 * rhs.ang + lhs.m11 * rhs.lin};
+		}
+		template <typename C> friend Mat6x8<A, C> pr_vectorcall operator * (m6_cref<B,C> lhs, m6_cref<A,B> rhs)
+		{
+			// [a00, a01] [b00, b01] = [a00*b00 + a01*b10, a00*b01 + a01*b11]
+			// [a10, a11] [b10, b11]   [a10*b00 + a11*b10, a10*b01 + a11*b11]
+			return Mat6x8<A, C>{
+				lhs.m00*rhs.m00 + lhs.m01*rhs.m10, lhs.m00*rhs.m01 + lhs.m01*rhs.m11,
+				lhs.m10*rhs.m00 + lhs.m11*rhs.m10, lhs.m10*rhs.m01 + lhs.m11*rhs.m11};
+		}
+		#pragma endregion
 	};
 	static_assert(maths::is_vec<Mat6x8<void,void>>::value, "");
-	static_assert(std::is_pod<Mat6x8<void,void>>::value, "m6x8 must be a pod type");
-	static_assert(std::alignment_of<Mat6x8<void, void>>::value == 16, "m6x8 should have 16 byte alignment");
-	
-	#pragma region Operators
-	template <typename A, typename B> inline Mat6x8<A, B> operator + (m6_cref<A,B> m)
-	{
-		return m;
-	}
-	template <typename A, typename B> inline Mat6x8<A, B> operator - (m6_cref<A,B> m)
-	{
-		return Mat6x8<A, B>{-m.m00, -m.m01, -m.m10, -m.m11};
-	}
-	template <typename A, typename B> inline Mat6x8<A, B> operator + (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
-	{
-		return Mat6x8<A, B>{lhs.m00 + rhs.m00, lhs.m01 + rhs.m01, lhs.m10 + rhs.m10, lhs.m11 + rhs.m11};
-	}
-	template <typename A, typename B> inline Mat6x8<A, B> operator - (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
-	{
-		return Mat6x8<A, B>{lhs.m00 - rhs.m00, lhs.m01 - rhs.m01, lhs.m10 - rhs.m10, lhs.m11 - rhs.m11};
-	}
-	template <typename A, typename B> inline Mat6x8<A,B> operator * (m6_cref<A,B> lhs, float rhs)
-	{
-		return Mat6x8<A,B>{lhs.m00 * rhs, lhs.m01 * rhs, lhs.m10 * rhs, lhs.m11 * rhs};
-	}
-	template <typename A, typename B> inline Mat6x8<A,B> operator * (float lhs, m6_cref<A,B> rhs)
-	{
-		return rhs * lhs;
-	}
-	template <typename A, typename B> inline Vec8<B> operator * (m6_cref<A,B> lhs, Vec8<A> const& rhs)
-	{
-		// [m00*a + m01*b] = [m00, m01] [a]
-		// [m10*a + m11*b]   [m10, m11] [b]
-		return Vec8<B>{
-			lhs.m00 * rhs.ang + lhs.m01 * rhs.lin,
-			lhs.m10 * rhs.ang + lhs.m11 * rhs.lin};
-	}
-	template <typename A, typename B, typename C> inline Mat6x8<A, C> pr_vectorcall operator * (m6_cref<B,C> lhs, m6_cref<A,B> rhs)
-	{
-		// [a00, a01] [b00, b01] = [a00*b00 + a01*b10, a00*b01 + a01*b11]
-		// [a10, a11] [b10, b11]   [a10*b00 + a11*b10, a10*b01 + a11*b11]
-		return Mat6x8<A, C>{
-			lhs.m00*rhs.m00 + lhs.m01*rhs.m10, lhs.m00*rhs.m01 + lhs.m01*rhs.m11,
-			lhs.m10*rhs.m00 + lhs.m11*rhs.m10, lhs.m10*rhs.m01 + lhs.m11*rhs.m11};
-	}
-	#pragma endregion
+	static_assert(std::is_pod_v<Mat6x8<void,void>>, "m6x8 must be a pod type");
+	static_assert(std::alignment_of_v<Mat6x8<void, void>> == 16, "m6x8 should have 16 byte alignment");
 
 	#pragma region Functions
 

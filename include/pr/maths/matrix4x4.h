@@ -177,12 +177,14 @@ namespace pr
 		}
 		friend Mat4x4<A,B> pr_vectorcall operator / (m4_cref<A,B> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
 		}
 		friend Mat4x4<A,B> pr_vectorcall operator % (m4_cref<A,B> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
 		}
 		friend Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
@@ -267,6 +269,12 @@ namespace pr
 			#endif
 		}
 		#pragma endregion
+
+		// Define component accessors for pointer types
+		friend constexpr v4_cref<> pr_vectorcall x_cp(m4_cref<A,B> v) { return v.x; }
+		friend constexpr v4_cref<> pr_vectorcall y_cp(m4_cref<A,B> v) { return v.y; }
+		friend constexpr v4_cref<> pr_vectorcall z_cp(m4_cref<A,B> v) { return v.z; }
+		friend constexpr v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
 
 		// Create a translation matrix
 		static Mat4x4 Translation(v4_cref<> xyz)
@@ -418,14 +426,8 @@ namespace pr
 		}
 	};
 	static_assert(maths::is_mat4<Mat4x4<void,void>>::value, "");
-	static_assert(std::is_pod<Mat4x4<void,void>>::value, "Should be a pod type");
-	static_assert(std::alignment_of<Mat4x4<void,void>>::value == 16, "Should be 16 byte aligned");
-
-	// Define component accessors for pointer types
-	template <typename A, typename B> inline v4_cref<> pr_vectorcall x_cp(m4_cref<A,B> v) { return v.x; }
-	template <typename A, typename B> inline v4_cref<> pr_vectorcall y_cp(m4_cref<A,B> v) { return v.y; }
-	template <typename A, typename B> inline v4_cref<> pr_vectorcall z_cp(m4_cref<A,B> v) { return v.z; }
-	template <typename A, typename B> inline v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
+	static_assert(std::is_pod_v<Mat4x4<void,void>>, "Should be a pod type");
+	static_assert(std::alignment_of_v<Mat4x4<void,void>> == 16, "Should be 16 byte aligned");
 
 	#pragma region Functions
 

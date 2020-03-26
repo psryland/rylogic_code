@@ -57,7 +57,9 @@ namespace pr::rdr
 		EventHandler<Model&, EmptyArgs const&, true> ModelDeleted;
 
 		// Stock models
+		ModelPtr m_basis;
 		ModelPtr m_unit_quad;
 		ModelPtr m_bbox_model;
+		ModelPtr m_selection_box;
 	};
 }

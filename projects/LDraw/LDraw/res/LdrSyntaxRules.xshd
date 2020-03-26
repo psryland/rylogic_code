@@ -136,6 +136,7 @@
 			<Word>*Smooth</Word>
 			<Word>*XAxis</Word>
 			<Word>*YAxis</Word>
+			<Word>*ZAxis</Word>
 			<Word>*XColumn</Word>
 			<Word>*Closed</Word>
 			<Word>*Param</Word>

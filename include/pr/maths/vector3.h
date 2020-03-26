@@ -108,12 +108,14 @@ namespace pr
 		}
 		friend Vec3<T> operator / (v3_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Vec3<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs};
 		}
 		friend Vec3<T> operator % (v3_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Vec3<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs)};
 		}
 		friend Vec3<T> operator + (v3_cref<T> lhs, v3_cref<T> rhs)
@@ -130,24 +132,26 @@ namespace pr
 		}
 		friend Vec3<T> operator / (v3_cref<T> lhs, v3_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any3(rhs, IsZero<float>));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && !Any3(rhs, IsZero<float>));
 			return Vec3<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
 		}
 		friend Vec3<T> operator % (v3_cref<T> lhs, v3_cref<T> rhs)
 		{
-			assert("divide by zero" && !Any3(rhs, IsZero<float>));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && !Any3(rhs, IsZero<float>));
 			return Vec3<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z)};
 		}
 		#pragma endregion
+
+		// Component accessors
+		friend constexpr float x_cp(v3_cref<T> v) { return v.x; }
+		friend constexpr float y_cp(v3_cref<T> v) { return v.y; }
+		friend constexpr float z_cp(v3_cref<T> v) { return v.z; }
+		friend constexpr float w_cp(v3_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec3<Vec3<void>>::value, "");
-	static_assert(std::is_pod<Vec3<void>>::value, "v3 must be a pod type");
-
-	// Define component accessors for pointer types
-	template <typename T> inline float x_cp(v3_cref<T> v) { return v.x; }
-	template <typename T> inline float y_cp(v3_cref<T> v) { return v.y; }
-	template <typename T> inline float z_cp(v3_cref<T> v) { return v.z; }
-	template <typename T> inline float w_cp(v3_cref<T>)   { return 0; }
+	static_assert(std::is_pod_v<Vec3<void>>, "v3 must be a pod type");
 
 	#pragma region Functions
 

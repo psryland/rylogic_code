@@ -173,7 +173,8 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			#if PR_MATHS_USE_INTRINSICS
 			return Vec4<T>{_mm_div_ps(lhs.vec, _mm_set_ps1(rhs))};
 			#else
@@ -182,7 +183,8 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, float rhs)
 		{
-			assert("divide by zero" && rhs != 0);
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && rhs != 0);
 			return Vec4<T>{Fmod(lhs.x, rhs), Fmod(lhs.y, rhs), Fmod(lhs.z, rhs), Fmod(lhs.w, rhs)};
 		}
 		friend Vec4<T> pr_vectorcall operator / (float lhs, v4_cref<T> rhs)
@@ -223,7 +225,8 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator / (v4_cref<T> lhs, v4_cref<T> rhs)
 		{
-			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			#if PR_MATHS_USE_INTRINSICS
 			return Vec4<T>{_mm_div_ps(lhs.vec, rhs.vec)};
 			#else
@@ -232,20 +235,21 @@ namespace pr
 		}
 		friend Vec4<T> pr_vectorcall operator % (v4_cref<T> lhs, v4_cref<T> rhs)
 		{
-			assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
+			// Don't check for divide by zero by default. For floats +inf/-inf are valid results
+			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec4<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
 		}
 		#pragma endregion
+
+		// Component accessors
+		friend constexpr float pr_vectorcall x_cp(v4_cref<T> v) { return v.x; }
+		friend constexpr float pr_vectorcall y_cp(v4_cref<T> v) { return v.y; }
+		friend constexpr float pr_vectorcall z_cp(v4_cref<T> v) { return v.z; }
+		friend constexpr float pr_vectorcall w_cp(v4_cref<T> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<Vec4<void>>::value, "");
-	static_assert(std::is_pod<Vec4<void>>::value, "Vec4 must be a pod type");
-	static_assert(std::alignment_of<Vec4<void>>::value == 16, "Vec4 should have 16 byte alignment");
-
-	// Define component accessors
-	template <typename T> inline float pr_vectorcall x_cp(v4_cref<T> v) { return v.x; }
-	template <typename T> inline float pr_vectorcall y_cp(v4_cref<T> v) { return v.y; }
-	template <typename T> inline float pr_vectorcall z_cp(v4_cref<T> v) { return v.z; }
-	template <typename T> inline float pr_vectorcall w_cp(v4_cref<T> v) { return v.w; }
+	static_assert(std::is_pod_v<Vec4<void>>, "Vec4 must be a pod type");
+	static_assert(std::alignment_of_v<Vec4<void>> == 16, "Vec4 should have 16 byte alignment");
 
 	#pragma region Functions
 

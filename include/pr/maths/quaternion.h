@@ -263,16 +263,16 @@ namespace pr
 		}
 
 		#pragma endregion
+
+		// Define component accessors for pointer types
+		friend constexpr float x_cp(quat_cref<A,B> v) { return v.x; }
+		friend constexpr float y_cp(quat_cref<A,B> v) { return v.y; }
+		friend constexpr float z_cp(quat_cref<A,B> v) { return v.z; }
+		friend constexpr float w_cp(quat_cref<A,B> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<Quat<void,void>>::value, "");
-	static_assert(std::is_pod<Quat<void,void>>::value, "Should be a pod type");
-	static_assert(std::alignment_of<Quat<void,void>>::value == 16, "Should have 16 byte alignment");
-
-	// Define component accessors for pointer types
-	template <typename A, typename B> inline float x_cp(quat_cref<A,B> v) { return v.x; }
-	template <typename A, typename B> inline float y_cp(quat_cref<A,B> v) { return v.y; }
-	template <typename A, typename B> inline float z_cp(quat_cref<A,B> v) { return v.z; }
-	template <typename A, typename B> inline float w_cp(quat_cref<A,B> v) { return v.w; }
+	static_assert(std::is_pod_v<Quat<void,void>>, "Should be a pod type");
+	static_assert(std::alignment_of_v<Quat<void,void>> == 16, "Should have 16 byte alignment");
 
 	#pragma region Functions
 
