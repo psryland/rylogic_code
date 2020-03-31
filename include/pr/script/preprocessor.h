@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/script/forward.h"
 #include "pr/script/script_core.h"
 #include "pr/script/fail_policy.h"
@@ -98,6 +96,10 @@ namespace pr::script
 		
 		// Ignore missing includes or embedded code without handlers
 		bool m_ignore_missing;
+
+		#if PR_DBG
+		Buf<16, wchar_t> m_output_history;
+		#endif
 
 	public:
 
@@ -201,6 +203,7 @@ namespace pr::script
 				assert(*src != '\0');
 				auto ch = *src; ++src;
 				src.m_emit -= int(src.m_emit != 0);
+				PR_EXPAND(PR_DBG, m_output_history.shift(ch));
 				return ch;
 			}
 			return '\0';

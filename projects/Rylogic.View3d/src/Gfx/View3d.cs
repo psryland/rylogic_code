@@ -1193,6 +1193,7 @@ $@"//
 //Assembly: System.IO.dll
 //Assembly: System.Linq.dll
 //Assembly: System.Windows.Forms.dll
+//Assembly: System.ValueTuple.dll
 //Assembly: System.Xml.dll
 //Assembly: System.Xml.Linq.dll
 //Assembly: .\Rylogic.Core.dll

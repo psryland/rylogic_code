@@ -30,6 +30,7 @@ namespace pr::ldr
 	{
 		std::string m_str;
 		Str(std::string const& str) :m_str(str) {}
+		Str(std::wstring const& str) :m_str(Narrow(str)) {}
 	};
 	struct Pos
 	{

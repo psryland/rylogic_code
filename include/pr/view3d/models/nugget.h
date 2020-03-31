@@ -134,22 +134,26 @@ namespace pr::rdr
 		template <typename TDrawList>
 		void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id) const
 		{
-			// Ignore if not visible
+			// Ignore if flagged as not visible
+			// If not visible for other reasons, don't render but add child nuggets.
 			if (AllSet(m_flags, ENuggetFlag::Hidden))
 				return;
 
-			// Validate before adding to the draw list
-			assert(m_model_buffer->m_ib.m_format == DXGI_FORMAT_R16_UINT || m_model_buffer->m_ib.m_format == DXGI_FORMAT_R32_UINT);
+			if (Visible())
+			{
+				// Validate before adding to the draw list
+				assert(m_model_buffer->m_ib.m_format == DXGI_FORMAT_R16_UINT || m_model_buffer->m_ib.m_format == DXGI_FORMAT_R32_UINT);
 
-			// Create the sort key for this nugget
-			auto sk = SortKey(id);
-			if (sko) sk = sko->Combine(sk);
+				// Create the sort key for this nugget
+				auto sk = SortKey(id);
+				if (sko) sk = sko->Combine(sk);
 
-			DrawListElement dle;
-			dle.m_instance = &inst;
-			dle.m_nugget = this;
-			dle.m_sort_key = sk;
-			drawlist.push_back(dle);
+				DrawListElement dle;
+				dle.m_instance = &inst;
+				dle.m_nugget = this;
+				dle.m_sort_key = sk;
+				drawlist.push_back(dle);
+			}
 
 			// Recursively add dependent nuggets
 			for (auto& nug : m_nuggets)
@@ -190,5 +194,8 @@ namespace pr::rdr
 		// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
 		// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
 		void Alpha(bool enable);
+
+		// True if this nugget should be rendered
+		bool Visible() const;
 	};
 }

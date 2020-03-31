@@ -14,11 +14,17 @@ namespace view3d
 		using LdrObjectManagerUIPtr = std::unique_ptr<pr::ldr::LdrObjectManagerUI>;
 		using LdrMeasureUIPtr       = std::unique_ptr<pr::ldr::LdrMeasureUI>;
 		using LdrAngleUIPtr         = std::unique_ptr<pr::ldr::LdrAngleUI>;
-		using AnimData              = struct
+		using AnimData              = struct AnimData
 		{
 			std::thread  m_thread;
 			std::atomic_int m_issue;
 			std::atomic<seconds_t> m_clock;
+			
+			AnimData()
+				:m_thread()
+				,m_issue()
+				,m_clock()
+			{}
 		};
 
 		Context*              m_dll;                   // The dll context

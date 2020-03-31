@@ -839,13 +839,13 @@ namespace LDraw.UI
 
 			// Find the smallest indent whitespace
 			int len = int.MaxValue;
-			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			for (var line = beg; line != null && line.Offset <= end.Offset; line = line.NextLine)
 			{
 				var segment = TextUtilities.GetLeadingWhitespace(doc, line);
 				if (segment.Length > len) continue;
 				len = segment.Length;
 			}
-			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			for (var line = beg; line != null && line.Offset <= end.Offset; line = line.NextLine)
 			{
 				var segment = doc.GetText(line.Offset, len);
 				doc.Replace(line.Offset, len, segment + "//");
@@ -859,7 +859,7 @@ namespace LDraw.UI
 			var doc = Editor.Document;
 			var beg = doc.GetLineByOffset(Editor.SelectionStart);
 			var end = doc.GetLineByOffset(Editor.SelectionStart + Editor.SelectionLength);
-			for (var line = beg; line.Offset <= end.Offset; line = line.NextLine)
+			for (var line = beg; line != null && line.Offset <= end.Offset; line = line.NextLine)
 			{
 				var segment = TextUtilities.GetLeadingWhitespace(doc, line);
 				if (line.EndOffset - segment.EndOffset >= 2 && doc.GetText(segment.EndOffset, 2) == "//")

@@ -702,9 +702,6 @@
     <ClInclude Include="..\include\pr\script\script_core.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\buf8.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\fail_policy.h">
       <Filter>pr\script</Filter>
     </ClInclude>
@@ -1034,6 +1031,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\point.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\buf.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

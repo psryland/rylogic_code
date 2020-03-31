@@ -722,14 +722,14 @@ namespace pr
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be chosen.
-	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, int axis, v4_cref<> up, v4_cref<> pos)
+	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up, v4_cref<> pos)
 	{
 		return Mat4x4<A,B>{OriFromDir(dir, axis, up), pos};
 	}
 
 	// Make a scaled object to world transform from a direction vector and position
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, int axis, v4_cref<> up, v4_cref<> pos)
+	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, AxisId axis, v4_cref<> up, v4_cref<> pos)
 	{
 		return Mat4x4<A,B>{ScaledOriFromDir(dir, axis, up), pos};
 	}

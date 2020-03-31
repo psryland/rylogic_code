@@ -69,6 +69,15 @@ namespace pr::rdr
 		return m_model_buffer->mdl_mgr();
 	}
 
+	// True if this nugget should be rendered
+	bool Nugget::Visible() const
+	{
+		if (CullMode() != ECullMode::None && CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))
+			return false;
+
+		return true;
+	}
+
 	// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 	SortKey Nugget::SortKey(ERenderStep rstep) const
 	{
@@ -125,6 +134,10 @@ namespace pr::rdr
 		m_dsb.Clear(EDS::DepthWriteMask);
 		m_rsb.Clear(ERS::CullMode);
 
+		// Restore the fill and cull modes
+		FillMode(FillMode());
+		CullMode(CullMode());
+
 		// Find and delete the dependent alpha nugget
 		DeleteDependent([](auto& nug) { return nug.m_id == AlphaNuggetId; });
 
@@ -141,6 +154,7 @@ namespace pr::rdr
 			m_bsb.Set(EBS::DestBlendAlpha, D3D11_BLEND_DEST_ALPHA, 0);
 			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
 			m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
+			m_cull_mode = ECullMode::Back;
 
 			// Create a dependent nugget to do the back faces
 			if (m_owner != nullptr)
@@ -148,6 +162,7 @@ namespace pr::rdr
 				auto& nug = *mdl_mgr().CreateNugget(*this, m_model_buffer, nullptr);
 				nug.m_sort_key.Group(ESortGroup::AlphaBack);
 				nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
+				nug.m_cull_mode = ECullMode::Front;
 				nug.m_owner = m_owner;
 				nug.m_id = AlphaNuggetId;
 				m_nuggets.push_back(nug);
@@ -173,6 +188,10 @@ namespace pr::rdr
 		case EFillMode::Points:    m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
 		default: throw std::runtime_error(Fmt("Unknown fill mode: %d", fill_mode));
 		}
+
+		// Apply recursively
+		for (auto& nug : m_nuggets)
+			nug.FillMode(fill_mode);
 	}
 
 	// Get/Set the cull mode for this nugget
@@ -184,14 +203,23 @@ namespace pr::rdr
 	{
 		if (m_cull_mode == cull_mode) return;
 		m_cull_mode = cull_mode;
-		switch (m_cull_mode)
+
+		// Alpha rendering nuggets already have the cull mode set.
+		if (!m_alpha_enabled && m_id != AlphaNuggetId)
 		{
-		case ECullMode::Default:
-		case ECullMode::None:  m_rsb.Set(ERS::CullMode, D3D11_CULL_NONE); break;
-		case ECullMode::Back:  m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK); break;
-		case ECullMode::Front: m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT); break;
-		default: throw std::runtime_error(Fmt("Unknown cull mode: %d", cull_mode));
+			switch (m_cull_mode)
+			{
+			case ECullMode::Default:
+			case ECullMode::None:  m_rsb.Set(ERS::CullMode, D3D11_CULL_NONE); break;
+			case ECullMode::Back:  m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK); break;
+			case ECullMode::Front: m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT); break;
+			default: throw std::runtime_error(Fmt("Unknown cull mode: %d", cull_mode));
+			}
 		}
+
+		// Apply recursively
+		for (auto& nug : m_nuggets)
+			nug.CullMode(m_cull_mode);
 	}
 
 	// Delete this nugget, removing it from the owning model

@@ -145,6 +145,17 @@ namespace pr::rdr
 					merge((FieldEnum)field, i, rhs);
 			}
 		}
+
+		// Operators
+		friend bool operator == (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		{
+			// Direct memory compare is way faster than comparing CRCs of the blocks
+			return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+		}
+		friend bool operator != (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		{
+			return !(lhs == rhs);
+		}
 	};
 
 	// Provides a pool of TStateBlock objects
@@ -202,19 +213,6 @@ namespace pr::rdr
 				i->second->Release();
 		}
 	};
-
-	// Operators
-	template <typename TStateDesc, typename TFieldEnum, size_t N>
-	inline bool operator == (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
-	{
-		// Direct memory compare is way faster than comparing CRCs of the blocks
-		return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
-	}
-	template <typename TStateDesc, typename TFieldEnum, size_t N>
-	inline bool operator != (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
-	{
-		return !(lhs == rhs);
-	}
 
 	#pragma endregion
 
@@ -285,8 +283,14 @@ namespace pr::rdr
 
 		// Combine two states into one. 'rhs' has priority over 'this'
 		DSBlock& operator |= (DSBlock const& rhs);
-		bool operator == (DSBlock const& rhs) const { return (base&)*this == (base&)rhs; }
-		bool operator != (DSBlock const& rhs) const { return (base&)*this != (base&)rhs; }
+		friend bool operator == (DSBlock const& lhs, DSBlock const& rhs)
+		{
+			return (base&)lhs == (base&)rhs;
+		}
+		friend bool operator != (DSBlock const& lhs, DSBlock const& rhs)
+		{
+			return (base&)lhs != (base&)rhs;
+		}
 	};
 
 	// Provides a pool of BlendState objects
@@ -328,14 +332,36 @@ namespace pr::rdr
 		// Combine two states into one. 'rhs' has priority over 'this'
 		RSBlock& operator |= (RSBlock const& rhs);
 
-		bool operator == (RSBlock const& rhs) const { return (base&)*this == (base&)rhs; }
-		bool operator != (RSBlock const& rhs) const { return (base&)*this != (base&)rhs; }
+		friend bool operator == (RSBlock const& lhs, RSBlock const& rhs)
+		{
+			return (base&)lhs == (base&)rhs;
+		}
+		friend bool operator != (RSBlock const& lhs, RSBlock const& rhs)
+		{
+			return (base&)lhs != (base&)rhs;
+		}
 
 		// Some common raster states
-		static RSBlock SolidCullNone() { static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_NONE); return s_rs; }
-		static RSBlock SolidCullBack() { static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_BACK); return s_rs; }
-		static RSBlock SolidCullFront() { static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_FRONT); return s_rs; }
-		static RSBlock WireCullNone() { static RSBlock s_rs(D3D11_FILL_WIREFRAME, D3D11_CULL_NONE); return s_rs; }
+		static RSBlock SolidCullNone()
+		{
+			static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_NONE);
+			return s_rs;
+		}
+		static RSBlock SolidCullBack()
+		{
+			static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_BACK);
+			return s_rs;
+		}
+		static RSBlock SolidCullFront()
+		{
+			static RSBlock s_rs(D3D11_FILL_SOLID, D3D11_CULL_FRONT);
+			return s_rs;
+		}
+		static RSBlock WireCullNone()
+		{
+			static RSBlock s_rs(D3D11_FILL_WIREFRAME, D3D11_CULL_NONE);
+			return s_rs;
+		}
 	};
 
 	// Provides a pool of RasterizerState objects

@@ -6,7 +6,7 @@
 #pragma once
 
 #include "pr/script/forward.h"
-#include "pr/script/buf8.h"
+#include "pr/script/buf.h"
 #include "pr/script/fail_policy.h"
 #include "pr/script/script_core.h"
 

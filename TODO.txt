@@ -1,9 +1,14 @@
 Immediate ToDo:
+	- LargeInt unit tests
 	
 LDraw
+	- Alpha rendering draw-list bug
+	- Bug in Spline, missing last vertex
+	- Finish demo scene
 	- Camera type-in
 	- WASD camera controls
-	
+	- Bug with initial camera alignment
+	- Make C# boiler plate configurable
 	
 CoinFlip
 	Candle Charts:
