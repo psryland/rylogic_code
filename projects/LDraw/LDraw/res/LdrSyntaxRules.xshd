@@ -115,7 +115,9 @@
 			<Word>*Padding</Word>
 			<Word>*Period</Word>
 			<Word>*Velocity</Word>
+			<Word>*Accel</Word>
 			<Word>*AngVelocity</Word>
+			<Word>*AngAccel</Word>
 			<Word>*Axis</Word>
 			<Word>*Hidden</Word>
 			<Word>*Wireframe</Word>

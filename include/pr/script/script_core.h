@@ -2,13 +2,11 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
 #include "pr/script/fail_policy.h"
-#include "pr/script/buf8.h"
+#include "pr/script/buf.h"
 #pragma warning(disable:4355) // this used in base member initializer list
 
 namespace pr::script
@@ -53,7 +51,7 @@ namespace pr::script
 		int64_t m_remaining;
 
 		#if PR_DBG
-		BufW8 m_history;
+		Buf<8, wchar_t> m_history;
 		#endif
 
 	protected:

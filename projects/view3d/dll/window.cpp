@@ -217,8 +217,11 @@ namespace view3d
 		// Set the light source
 		m_scene.m_global_light = m_light;
 
-		// Add objects from the window to the scene
+		// Get the animation clock time
 		auto anim_time = (float)m_anim_data.m_clock.load().count();
+		assert(IsFinite(anim_time));
+
+		// Add objects from the window to the scene
 		for (auto& obj : m_objects)
 		{
 			// Apply the fill mode and cull mode to user models
@@ -652,11 +655,12 @@ namespace view3d
 	// Get/Set the value of the animation clock
 	seconds_t Window::AnimTime() const
 	{
-		return m_anim_data.m_clock;
+		return m_anim_data.m_clock.load();
 	}
 	void Window::AnimTime(seconds_t clock)
 	{
-		m_anim_data.m_clock = clock;
+		assert(IsFinite(clock.count()) && clock.count() >= 0);
+		m_anim_data.m_clock.store(clock);
 	}
 
 	// Control animation
@@ -678,7 +682,8 @@ namespace view3d
 		case EView3DAnimCommand::Reset:
 			{
 				AnimControl(EView3DAnimCommand::Stop);
-				m_anim_data.m_clock = time;
+				assert(IsFinite(time.count()));
+				m_anim_data.m_clock.store(time);
 				Invalidate();
 				break;
 			}
@@ -699,7 +704,7 @@ namespace view3d
 						start = system_clock::now();
 
 						// Update the animation clock
-						m_anim_data.m_clock = m_anim_data.m_clock.load() + increment;
+						m_anim_data.m_clock.store(m_anim_data.m_clock.load() + increment);
 					}
 				});
 				m_wnd.m_rdr->AddPollCB({ AnimTick, this });

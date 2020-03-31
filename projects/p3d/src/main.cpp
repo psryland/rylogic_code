@@ -56,9 +56,10 @@ struct Main
 			"        Load a model into memory.\n"
 			"        Supported formats: p3d, 3ds, stl (so far)\n"
 			"\n"
-			"    -fo <filepath> [Compress]\n"
+			"    -fo <filepath> [Compress]|[Code]\n"
 			"        Export a p3d format model file.\n"
 			"        Compress - Optional. Compress vertex and index data\n"
+			"        Code - Optional. Output model as C++ code\n"
 			"\n"
 			"    -RemoveDegenerates [<Tolerance>:<NormalSmoothingAngle>:<ColourDistance>:<UVDistance>]\n"
 			"        Simplify a model by removing degenerate verticies.\n"
@@ -75,9 +76,9 @@ struct Main
 			"        Generate normals from face data within the model.\n"
 			"        SmoothingAngle -  All faces within the smoothing angle of each other are smoothed.\n"
 			"\n"
-			"    -Transform <m4x4>\n"
+			"    -Transform <o2w>\n"
 			"        Apply a transform to the model.\n"
-			"        <m4x4> - A 4x4 matrix given as: 'x.x x.y x.z ... w.z w.w'\n"
+			"        <o2w> - A 4x4 matrix given as pr script. e.g '*euler{20 30 20} *pos{0 1 0}'\n"
 			"\n"
 			// NEW_COMMAND - add a help string
 			"\n"
@@ -85,20 +86,24 @@ struct Main
 	}
 
 	// Convert the command line into a script source
-	std::unique_ptr<script::Src> ParseCommandLine(std::string args)
+	std::unique_ptr<script::Src> ParseCommandLine(int argc, wchar_t* argv[])
 	{
 		using namespace pr::script;
 
+		// No arguments given
+		if (argc <= 1)
+			return nullptr;
+
 		// If the command line is a script filepath, return a file source
-		if (!cmdline::IsOption(args))
+		if (!cmdline::IsOption(argv[1]))
 		{
 			// If the only argument is a filepath, assume a script file
-			auto script_filepath = path(filesys::ResolvePath(args));
+			auto script_filepath = path(filesys::ResolvePath(argv[1]));
 			if (script_filepath.empty())
 				return nullptr;
 
 			if (!exists(script_filepath))
-				throw std::runtime_error("Script '"s + args + "' does not exist");
+				throw std::runtime_error(Fmt("Script '%S' does not exist", argv[1]));
 
 			m_base_dir = script_filepath.parent_path();
 			return std::unique_ptr<FileSrc>(new FileSrc(script_filepath));
@@ -106,7 +111,7 @@ struct Main
 		else
 		{
 			// Otherwise, convert the command line parameters into a script
-			struct Parser :cmdline::IOptionReceiver<>
+			struct Parser :cmdline::IOptionReceiver<wchar_t>
 			{
 				std::string m_str;
 				int m_verbosity;
@@ -118,7 +123,7 @@ struct Main
 				{}
 
 				// Read the option passed to Cex
-				bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
+				bool CmdLineOption(std::wstring const& option, TArgIter& arg, TArgIter arg_end) override
 				{
 					m_ends_with_fileout = false;
 					for (;;)
@@ -142,8 +147,11 @@ struct Main
 						{
 							auto fo = ldr::Section(m_str, "*fo");
 							ldr::Append(m_str, ldr::Str(*arg++));
-							if (arg != arg_end && str::EqualI(*arg, "compress"))
-								ldr::Append(m_str, "*Compress");
+							if (arg != arg_end)
+							{
+								if      (str::EqualI(*arg, "compress")) ldr::Append(m_str, "*Compress");
+								else if (str::EqualI(*arg, "code"    )) ldr::Append(m_str, "*Code");
+							}
 							m_ends_with_fileout = true;
 							break;
 						}
@@ -153,7 +161,7 @@ struct Main
 							if (!IsOption(*arg))
 							{
 								int field = 0;
-								str::Split(*arg++, ":", [&](std::string const& s, auto i, auto j, int)
+								str::Split(*arg++, ":", [&](auto const& s, auto i, auto j, int)
 								{
 									switch (field++)
 									{
@@ -179,12 +187,8 @@ struct Main
 						}
 						if (str::EqualI(option, "-Transform"))
 						{
-							float m[16]; int i;
-							for (i = 0; i != 16 && arg != arg_end && !IsOption(*arg) && str::ExtractRealC(m[i], arg->c_str()); ++i, ++arg) {}
-							if (i != 16) throw std::runtime_error("Transform argument should be followed by 16 values");
-
 							auto sec = ldr::Section(m_str, "*Transform");
-							ldr::Append(m_str, "*m4x4 { ", m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15], "}");
+							ldr::Append(m_str, *arg);
 							break;
 						}
 						if (str::EqualI(option, "--help"))
@@ -208,7 +212,7 @@ struct Main
 			};
 
 			Parser p;
-			EnumCommandLine(args.c_str(), p);
+			EnumCommandLine<wchar_t>(argc, argv, p);
 			if (p.m_str.empty())
 				throw std::runtime_error("Invalid command line");
 
@@ -227,7 +231,7 @@ struct Main
 	}
 
 	// Main program run
-	int Run(std::string args)
+	int Run(int argc, wchar_t* argv[])
 	{
 		//NEW_COMMAND - Test the new command
 		//if (!args.empty()) printf("warning: debugging overriding arguments");
@@ -240,7 +244,7 @@ struct Main
 		try
 		{
 			// Get the script source from the command line
-			auto src = ParseCommandLine(args);
+			auto src = ParseCommandLine(argc, argv);
 			if (src == nullptr)
 			{
 				ShowHelp();
@@ -375,10 +379,11 @@ struct Main
 
 		// Resolve the output file path
 		auto outpath =
-			outfile.empty() ? path(m_infile).replace_extension(extn) :
+			outfile.empty() ? path(m_infile) :
 			path(outfile).is_relative() ? m_base_dir / outfile :
 			path(outfile);
 
+		outpath = outpath.replace_extension(extn);
 		if (m_verbosity >= 1)
 			std::cout << "Writing '" << outpath << "'..." << std::endl;
 
@@ -513,7 +518,5 @@ struct Main
 int __cdecl wmain(int argc, wchar_t* argv[])
 {
 	Main m;
-	std::string args;
-	for (int i = 1; i < argc; ++i) args.append(Narrow(argv[i])).append(" ");
-	return m.Run(args);
+	return m.Run(argc, argv);
 }

@@ -746,7 +746,7 @@ namespace pr
 		// Permute the column vectors so +Z becomes 'axis'
 		return PermuteRotation(ori, abs(axis_id));
 	}
-	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, int axis_id)
+	template <typename A = void, typename B = void> inline Mat3x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, AxisId axis_id)
 	{
 		return OriFromDir(dir, axis_id, Perpendicular(dir));
 	}

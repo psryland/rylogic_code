@@ -10,6 +10,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Rylogic.Extn;
 using Rylogic.Maths;
 
 namespace Rylogic.Gfx
@@ -98,6 +99,18 @@ namespace Rylogic.Gfx
 				(byte)(lhs.G*(1f - t) + rhs.G*t),
 				(byte)(lhs.B*(1f - t) + rhs.B*t));
 		}
+		public static Colour32 Lerp(double t, params (Colour32, double)[] p)
+		{
+			// e.g. Colour32.Lerp(i/9.0, new[] { (Colour32.White, 0.2), (Colour32.Yellow, 0.5), (Colour32.Red, 1.0) });
+			if (p.Length == 0)
+				throw new Exception("Colour32.Lerp requires at least one colour to blend");
+
+			var idx = 0;
+			for (; idx != p.Length && t > p[idx].Item2; ++idx) { }
+			if (idx == 0) return p[0].Item1;
+			if (idx == p.Length) return p[p.Length - 1].Item1;
+			return Lerp(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
+		}
 
 		/// <summary>Linearly interpolate the non-alpha channels of two colours (lhs.A is used)</summary>
 		public Colour32 LerpNoAlpha(Colour32 rhs, double t)
@@ -111,6 +124,18 @@ namespace Rylogic.Gfx
 				(byte)(lhs.R*(1f - t) + rhs.R*t),
 				(byte)(lhs.G*(1f - t) + rhs.G*t),
 				(byte)(lhs.B*(1f - t) + rhs.B*t));
+		}
+		public static Colour32 LerpNoAlpha(double t, params (Colour32, double)[] p)
+		{
+			// e.g. Colour32.Lerp(i/9.0, new[] { (Colour32.White, 0.2), (Colour32.Yellow, 0.5), (Colour32.Red, 1.0) });
+			if (p.Length == 0)
+				throw new Exception("Colour32.Lerp requires at least one colour to blend");
+
+			var idx = 0;
+			for (; idx != p.Length && t > p[idx].Item2; ++idx) { }
+			if (idx == 0) return p[0].Item1;
+			if (idx == p.Length) return p[p.Length - 1].Item1;
+			return LerpNoAlpha(p[idx - 1].Item1, p[idx].Item1, Math_.Frac(p[idx - 1].Item2, t, p[idx].Item2));
 		}
 
 		/// <summary>Lerp this colour toward black by 't'</summary>

@@ -158,7 +158,9 @@ namespace pr::str
 			return std::numeric_limits<int>::max();
 		};
 
+		// FP numbers can be in dec or hex, but not anything else...
 		auto allow_fp = (type & ENumType::FP) == ENumType::FP;
+		allow_fp &= radix == 0 || radix == 10 || radix == 16;
 		auto fp = false;
 
 		// Look for the optional sign character
@@ -173,21 +175,35 @@ namespace pr::str
 			++wsrc;
 		}
 
-		// Look for a radix prefix on the number, this overrides 'radix'.
 		// If the first digit is zero, then the number may have a radix prefix.
-		// '0x' or '0b' must have at least one digit following the prefix
-		// Adding 'o' for octal, in addition to standard C literal syntax
+		// '0x', '0b', or '0o' must have at least one digit following the prefix.
+		// Added 'o' for octal, in addition to standard C literal syntax.
 		if (*wsrc == '0')
 		{
 			++wsrc;
-			auto digit_required = false;
-			if      (*wsrc == 'x' || *wsrc == 'X') { radix = 16; ++wsrc; digit_required = true; }
-			else if (*wsrc == 'o' || *wsrc == 'O') { radix =  8; ++wsrc; digit_required = true; }
-			else if (*wsrc == 'b' || *wsrc == 'B') { radix =  2; ++wsrc; digit_required = true; }
 
-			// Check for the required integer
-			if (digit_required)
+			// True if the radix prefix was consumed
+			auto had_radix_prefix = false;
+
+			// If 'radix' is 10 or 0 then the radix prefix overwrites radix.
+			if (radix == 0 || radix == 10)
 			{
+				if      (*wsrc == 'x' || *wsrc == 'X') { radix = 16; ++wsrc; had_radix_prefix = true; }
+				else if (*wsrc == 'o' || *wsrc == 'O') { radix =  8; ++wsrc; had_radix_prefix = true; allow_fp = false; }
+				else if (*wsrc == 'b' || *wsrc == 'B') { radix =  2; ++wsrc; had_radix_prefix = true; allow_fp = false; }
+			}
+			// If 'radix' is not 10 or 0, then radix is not changed but the optional prefix must still be allowed for.
+			else
+			{
+				if      (radix == 16 && (*wsrc == 'x' || *wsrc == 'X')) { ++wsrc; had_radix_prefix = true; }
+				else if (radix ==  8 && (*wsrc == 'o' || *wsrc == 'O')) { ++wsrc; had_radix_prefix = true; }
+				else if (radix ==  2 && (*wsrc == 'b' || *wsrc == 'B')) { ++wsrc; had_radix_prefix = true; }
+			}
+
+			// If a radix prefix was consumed, add characters to the output str to suit the 'strtol' still functions.
+			if (had_radix_prefix)
+			{
+				// The prefix for hex and octal are needed for odd-ball numbers like '0x1.FEp1'
 				if (digit(*wsrc) >= radix)
 				{
 					len = 0;
@@ -205,66 +221,70 @@ namespace pr::str
 			}
 			else
 			{
-				// If no radix is given, then assume octal (for conformance with C)
-				if (radix == 0) radix = 8;
+				// If no radix is given and cannot be determined from the radix prefix,
+				// then assume octal (for conformance with C).
+				// Note: 09.1 is an invalid octal number but a valid FP number.
+				//       019 is an invalid octal number when FP is not allowed.
+				if (radix == 0)
+					radix = 8;
 
-				// Add '0' to the string because we're not skipping over a prefix.
-				// This is needed to handle the "0" case.
-				if (!append('0')) return;
+				// Add '0' to the string because there was no prefix and we consumed a '0'.
+				if (!append('0'))
+					return;
 			}
 		}
-		else if (radix == 0)
-		{
+
+		// Default radix to decimal
+		if (radix == 0)
 			radix = 10;
-		}
 
 		// Read digits up to a delimiter, decimal point, or digit >= radix.
-		auto assumed_fp_len = 0; // the length of 'str' when we first assumed a FP number.
+		auto intg_len = 0; // the length of 'str' when we first assumed a FP number.
 		for (; *wsrc; ++wsrc)
 		{
-			// If the character is greater than the radix, then assume a FP number.
-			// e.g. 09.1 could be an invalid octal number or a FP number.
-			// 019 is assumed to be FP, 
+			// If 'd' is a valid number, given 'radix', then append it.
 			auto d = digit(*wsrc);
 			if (d < radix)
 			{
 				if (!append(*wsrc)) return;
 				continue;
 			}
-			else if (radix == 8 && allow_fp && d < 10)
+
+			// If the number cannot be floating point, then we've reached the end.
+			if (!allow_fp)
+				break;
+
+			// Decimal point means float
+			if (*wsrc == '.')
 			{
-				if (assumed_fp_len == 0) assumed_fp_len = len;
+				if (!append(*wsrc)) return;
+				intg_len = 0;
+				fp = true;
+				continue;
+			}
+
+			// If 'radix' is 8 and 'allow_fp' is true, then we're assuming octal without a radix prefix.
+			// In this case, the number might be a float (e.g. 09.1), but only if a decimal point is found.
+			if (!fp && radix == 8 && d < 10)
+			{
+				if (intg_len == 0) intg_len = len; // Record the length of the valid integer
 				if (!append(*wsrc)) return;
 				continue;
 			}
+
+			// Delimiter found
 			break;
 		}
 
-		// If we're assuming this is a FP number but no decimal point is found,
-		// then truncate the string at the last valid character given 'radix'.
-		// If a decimal point is found, change the radix to base 10.
-		if (assumed_fp_len != 0)
-		{
-			if (*wsrc == '.') radix = 10;
-			else len = assumed_fp_len;
-		}
+		// If no decimal point is found, then reset the length to the length of the valid integer.
+		// If a decimal point is found, change the radix (if necessary)
+		if (!fp && intg_len != 0)
+			len = intg_len;
+		if (fp && radix == 8)
+			radix = 10;
 
-		// FP numbers can be in dec or hex, but not anything else...
-		allow_fp &= radix == 10 || radix == 16;
-
-		// If floating point is allowed, read a decimal point followed by more digits, and an optional exponent
-		if (allow_fp && *wsrc == '.' && IsDecDigit(*(++wsrc)))
-		{
-			fp = true;
-			if (!append('.')) return;
-
-			// Read decimal digits up to a delimiter, sign, or exponent
-			for (; IsDecDigit(*wsrc); ++wsrc)
-				if (!append(*wsrc)) return;
-		}
-
-		// Read an optional exponent
-		if (allow_fp && (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D' || (*wsrc == 'p' && radix == 16) || (*wsrc == 'P' && radix == 16)))
+		// Read an optional exponent. Note '123e4' will have fp == false because it has no '.'
+		if (allow_fp && (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D' || (radix == 16 && (*wsrc == 'p' || *wsrc == 'P'))))
 		{
 			if (!append(*wsrc)) return;
 			++wsrc;
@@ -277,8 +297,11 @@ namespace pr::str
 			}
 
 			// Read decimal digits up to a delimiter, or suffix
+			// For hex floats, the exponent is still a decimal number.
 			for (; IsDecDigit(*wsrc); ++wsrc)
 				if (!append(*wsrc)) return;
+
+			fp = true;
 		}
 
 		// Read the optional number suffixes
@@ -521,7 +544,7 @@ namespace pr::str
 
 		errno = 0;
 		wchar_t* end;
-		intg = std::is_unsigned<Int>::value
+		intg = std::is_unsigned_v<Int>
 			? static_cast<Int>(::_wcstoui64(str, &end, radix))
 			: static_cast<Int>(::_wcstoi64(str, &end, radix));
 
@@ -827,6 +850,11 @@ namespace pr::str
 				PR_CHECK(ExtractIntC(ll, 16, src), true);
 				PR_CHECK(ll, 0xdeadBeaf);
 			}
+			{
+				char src[] = "0BFF0000";
+				PR_CHECK(ExtractIntC(ll, 16, src), true);
+				PR_CHECK(ll, 0x0BFF0000);
+			}
 		}
 		{// Real
 			using namespace pr::str;
@@ -898,7 +926,7 @@ namespace pr::str
 			PR_CHECK(ExtractNumberC(num, "0923.0"  ), true); PR_CHECK(FEql(num.db(), 0923.0), true);
 			PR_CHECK(ExtractNumberC(num, "0199"    ), true); PR_CHECK(num.ll(), 01); // because it's octal
 			PR_CHECK(ExtractNumberC(num, "0199", 10), true); PR_CHECK(num.ll(), 199);
-			PR_CHECK(ExtractNumberC(num, "0x1.0p1" ), true); PR_CHECK(FEql(num.db(), 0x1.0p1), true);
+			PR_CHECK(ExtractNumberC(num, "0x1.FEp1" ), true); PR_CHECK(FEql(num.db(), 0x1.FEp1), true);
 
 			PR_CHECK(ExtractNumberC(num, "0x.0"), false);
 			PR_CHECK(ExtractNumberC(num, ".x0"), false);

@@ -31,7 +31,11 @@
 namespace pr::cmdline
 {
 	// Helper to test if 'str' is of the form '-xyz'
-	template <typename Char> inline bool IsOption(std::basic_string<Char> const& str)
+	inline bool IsOption(std::string_view str)
+	{
+		return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
+	}
+	inline bool IsOption(std::wstring_view str)
 	{
 		return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
 	}
@@ -100,7 +104,7 @@ namespace pr
 		// consistent. Programs that want the executable name should use:
 		//  char exepath[1024]; GetModuleFileName(0, exepath, sizeof(exepath));
 		typename cmdline::IOptionReceiver<Char>::TArgs args;
-		for (int i = 1; i < argc; ++i) { args.push_back(argv[i]); }
+		for (int i = 1; i < argc; ++i) args.push_back(argv[i]);
 		return argc == 0 || EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 	

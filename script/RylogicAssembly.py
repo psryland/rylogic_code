@@ -68,7 +68,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, framework:str, platform:
 					raise Exception("   **** Unit tests failed ****   ")
 
 	# Copy to lib folder
-	#Tools.Copy(target, os.path.join(UserVars.root, "lib", platform, config, ""))
+	Tools.Copy(target, os.path.join(UserVars.root, "lib", platform, config, ""))
 	return
 
 # Nuget deploy a Rylogic Assembly

@@ -435,11 +435,11 @@ namespace pr::ldr
 				{
 					char style[50];
 					reader.Identifier(style);
-					if      (str::EqualI(style, "NoAnimation"   )) anim.m_style = EAnimStyle::NoAnimation;
-					else if (str::EqualI(style, "PlayOnce"      )) anim.m_style = EAnimStyle::PlayOnce;
-					else if (str::EqualI(style, "PlayReverse"   )) anim.m_style = EAnimStyle::PlayReverse;
-					else if (str::EqualI(style, "PingPong"      )) anim.m_style = EAnimStyle::PingPong;
-					else if (str::EqualI(style, "PlayContinuous")) anim.m_style = EAnimStyle::PlayContinuous;
+					if      (str::EqualI(style, "NoAnimation")) anim.m_style = EAnimStyle::NoAnimation;
+					else if (str::EqualI(style, "Once"       )) anim.m_style = EAnimStyle::Once;
+					else if (str::EqualI(style, "Repeat"     )) anim.m_style = EAnimStyle::Repeat;
+					else if (str::EqualI(style, "Continuous" )) anim.m_style = EAnimStyle::Continuous;
+					else if (str::EqualI(style, "PingPong"   )) anim.m_style = EAnimStyle::PingPong;
 					break;
 				}
 			case EKeyword::Period:
@@ -449,12 +449,22 @@ namespace pr::ldr
 				}
 			case EKeyword::Velocity:
 				{
-					reader.Vector3S(anim.m_velocity, 0.0f);
+					reader.Vector3S(anim.m_vel, 0.0f);
+					break;
+				}
+			case EKeyword::Accel:
+				{
+					reader.Vector3S(anim.m_acc, 0.0f);
 					break;
 				}
 			case EKeyword::AngVelocity:
 				{
-					reader.Vector3S(anim.m_ang_velocity, 0.0f);
+					reader.Vector3S(anim.m_avel, 0.0f);
+					break;
+				}
+			case EKeyword::AngAccel:
+				{
+					reader.Vector3S(anim.m_aacc, 0.0f);
 					break;
 				}
 			}
@@ -1701,11 +1711,13 @@ namespace pr::ldr
 	{
 		v2 m_dashed;
 		float m_line_width;
+		creation::MainAxis m_axis;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_dashed(v2XAxis)
 			,m_line_width()
+			,m_axis()
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
@@ -1714,6 +1726,7 @@ namespace pr::ldr
 			default:
 				{
 					return
+						m_axis.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
 			case EKeyword::Dashed:
@@ -1765,6 +1778,13 @@ namespace pr::ldr
 				VCont verts;
 				std::swap(verts, m_verts);
 				DashLineList(verts, m_verts, m_dashed);
+			}
+
+			// Apply main axis transform
+			if (m_axis.O2WPtr() != nullptr)
+			{
+				for (auto& v : m_verts)
+					v = *m_axis.O2WPtr() * v;
 			}
 
 			// Create the model
@@ -1844,7 +1864,7 @@ namespace pr::ldr
 			// Generate a line strip for all spline segments (separated using strip-cut indices)
 			auto seg = -1;
 			auto thick = m_line_width != 0.0f;
-			pr::vector<pr::v4, 30, true> raster;
+			pr::vector<v4, 30, true> raster;
 			for (auto& spline : m_splines)
 			{
 				++seg;
@@ -1861,7 +1881,7 @@ namespace pr::ldr
 				}
 
 				// Add the line strip to the geometry buffers
-				auto vert = uint16(m_verts.size());
+				auto vert = uint16_t(m_verts.size());
 				m_verts.insert(std::end(m_verts), std::begin(raster), std::end(raster));
 
 				{// Indices
@@ -1869,14 +1889,17 @@ namespace pr::ldr
 					m_indices.reserve(m_indices.size() + raster.size() + (thick ? 2 : 0) + 1);
 
 					// The thick line strip shader uses lineadj which requires an extra first and last vert
-					if (thick) m_indices.push_back_fast(vert);
+					if (thick)
+						m_indices.push_back_fast(vert);
 
 					auto iend = ibeg + raster.size();
 					for (auto i = ibeg; i != iend; ++i)
 						m_indices.push_back_fast(vert++);
 
-					if (thick) m_indices.push_back_fast(vert);
-					m_indices.push_back_fast(uint16(-1)); // strip-cut
+					if (thick)
+						m_indices.push_back_fast(vert);
+
+					m_indices.push_back_fast(uint16_t(-1)); // strip-cut
 				}
 
 				// Colours
@@ -2214,6 +2237,7 @@ namespace pr::ldr
 		}
 		void CreateModel(LdrObject* obj) override
 		{
+			// Scale doesn't use the *o2w scale because that is recursive
 			if (m_scale != 1.0f)
 			{
 				for (auto& pt : m_verts)
@@ -2847,7 +2871,7 @@ namespace pr::ldr
 		void CreateModel(LdrObject* obj) override
 		{
 			auto dim = v4(m_width, m_height, Length(m_pt1 - m_pt0), 0.0f) * 0.5f;
-			auto b2w = pr::OriFromDir(m_pt1 - m_pt0, 2, m_up, (m_pt1 + m_pt0) * 0.5f);
+			auto b2w = OriFromDir(m_pt1 - m_pt0, AxisId::PosZ, m_up, (m_pt1 + m_pt0) * 0.5f);
 			obj->m_model = ModelGenerator<>::Box(p.m_rdr, dim, b2w, Colour32White, m_tex.Material());
 			obj->m_model->m_name = obj->TypeAndName();
 		}
@@ -4154,10 +4178,8 @@ namespace pr::ldr
 					{
 						if (!reader.IsKeyword())
 						{
-							reader.SectionStart();
 							reader.Real(axis.m_min);
 							reader.Real(axis.m_max);
-							reader.SectionEnd();
 						}
 						else
 						{
