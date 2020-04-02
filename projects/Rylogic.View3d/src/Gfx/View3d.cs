@@ -11,6 +11,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
+using Rylogic.Script;
 using Rylogic.Utility;
 using HContext = System.IntPtr;
 using HCubeMap = System.IntPtr;
@@ -1134,6 +1135,7 @@ namespace Rylogic.Gfx
 			m_thread_id = Thread.CurrentThread.ManagedThreadId;
 			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 			m_load_script_handlers = new List<LoadScriptCompleteCB>();
+			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
 
 			try
 			{
@@ -1184,61 +1186,18 @@ namespace Rylogic.Gfx
 					result = null;
 					errors = null;
 
-					var src =
-					#region Embedded C# Source
-$@"//
-//Assembly: netstandard.dll
-//Assembly: System.dll
-//Assembly: System.Drawing.dll
-//Assembly: System.IO.dll
-//Assembly: System.Linq.dll
-//Assembly: System.Windows.Forms.dll
-//Assembly: System.ValueTuple.dll
-//Assembly: System.Xml.dll
-//Assembly: System.Xml.Linq.dll
-//Assembly: .\Rylogic.Core.dll
-//Assembly: .\Rylogic.Core.Windows.dll
-//Assembly: .\Rylogic.View3d.dll
-//--todo Assembly: .\LDraw.exe
-using System;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Xml.Linq;
-using Rylogic.Common;
-using Rylogic.Container;
-using Rylogic.Extn;
-using Rylogic.Gfx;
-using Rylogic.LDraw;
-using Rylogic.Maths;
-using Rylogic.Utility;
+					// Create the source code to build
+					var src = TemplateReplacer.Process(new StringSrc(EmbeddedCSharpBoilerPlate), @"(?<indent>[ \t]*)<<<(?<section>.*?)>>>", (tr,match) =>
+					{
+						var indent = match.Result("${indent}");
+						var section = match.Groups["section"];
+						if (section.Success && section.Value == "support")
+							tr.PushSource(new AddIndents(new StringSrc(support), indent, true));
+						if (section.Success && section.Value == "code")
+							tr.PushSource(new AddIndents(new StringSrc(code), indent, true));
+						return string.Empty;
+					});
 
-namespace ldr
-{{
-	public class Main
-	{{
-		private StringBuilder Out = new StringBuilder();
-		{support}
-		public string Execute()
-		{{
-			{code}
-			return Out.ToString();
-		}}
-	}}
-	internal static class Log
-	{{
-		public static void Info(string text)
-		{{
-			//todo LDraw isn't always available..
-			//LDraw.ExternalLogHelper.AddMessage(text);
-		}}
-	}}
-}}
-";
-					#endregion
 					try
 					{
 						// Create a runtime assembly from the embedded code
@@ -1388,6 +1347,56 @@ namespace ldr
 
 		/// <summary>Template descriptions for auto complete of LDraw script</summary>
 		public static string AutoCompleteTemplates => View3D_AutoCompleteTemplatesBStr();
+
+		/// <summary>Boilerplate C# code used for embedded C#</summary>
+		public string EmbeddedCSharpBoilerPlate { get; set; }
+		public static string EmbeddedCSharpBoilerPlateDefault =>
+			#region Embedded C# Source
+$@"//
+//Assembly: netstandard.dll
+//Assembly: System.dll
+//Assembly: System.Drawing.dll
+//Assembly: System.IO.dll
+//Assembly: System.Linq.dll
+//Assembly: System.Windows.Forms.dll
+//Assembly: System.ValueTuple.dll
+//Assembly: System.Xml.dll
+//Assembly: System.Xml.Linq.dll
+//Assembly: .\Rylogic.Core.dll
+//Assembly: .\Rylogic.Core.Windows.dll
+//Assembly: .\Rylogic.View3d.dll
+using System;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml;
+using System.Xml.Linq;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gfx;
+using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
+
+namespace ldr
+{{
+	public class Main
+	{{
+		private StringBuilder Out = new StringBuilder();
+		<<<support>>>
+
+		public string Execute()
+		{{
+			<<<code>>>
+			return Out.ToString();
+		}}
+	}}
+}}
+";
+			#endregion
 
 		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
 		public static string AddressAt(string ldr_script, long position = -1)

@@ -72,7 +72,12 @@ namespace pr::rdr
 	// True if this nugget should be rendered
 	bool Nugget::Visible() const
 	{
-		if (CullMode() != ECullMode::None && CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))
+		// If the object cull mode does not match the render state cull mode then skip.
+		// This makes back/front face culling work with Alpha nuggets because render state
+		// culling mode has priority over the nugget cull mode.
+		if (CullMode() != ECullMode::None &&
+			CullMode() != ECullMode::Default &&
+			CullMode() != static_cast<ECullMode>(m_rsb.Desc().CullMode))
 			return false;
 
 		return true;
