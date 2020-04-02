@@ -60,6 +60,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		public void Dispose()
 		{
+			// Remove this pane from the previous active pane
+			if (DockContainer.ActiveContentManager.PrevPane == this)
+				DockContainer.ActiveContentManager.PrevPane = null;
+
 			// Note: we don't own any of the content
 			VisibleContent = null;
 			AllContent = null!;
