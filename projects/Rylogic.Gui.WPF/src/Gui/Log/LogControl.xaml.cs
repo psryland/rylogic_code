@@ -290,7 +290,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private void LineWrap_Changed(bool new_value)
 		{
-			CreateColumns();
+			UpdateColumnVisibility();
 		}
 		public static readonly DependencyProperty LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
 
@@ -327,7 +327,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_log_entry_pattern == value) return;
 				m_log_entry_pattern = value;
-				CreateColumns();
+				UpdateColumnVisibility();
 			}
 		}
 		private Regex? m_log_entry_pattern;
@@ -481,56 +481,36 @@ namespace Rylogic.Gui.WPF
 		public IEnumerable<DataGridColumn> Columns => m_view.Columns;
 
 		/// <summary>Use the log entry pattern to create columns</summary>
-		private void CreateColumns()
+		private void UpdateColumnVisibility()
 		{
-			// Element style for the rows of the log grid
-			var element_style = (Style)FindResource("LogEntryStyle");
+			// Preserve column state
+			var column_state = Columns.ToDictionary(x => x.Header, x => new { x.Visibility, x.Width });
 
-			// Set the number of columns based on group names in the pattern.
+			// Hide the columns that don't have group names in the pattern
 			// Group names should match the values in 'ColumnNames' to support non-string values
 			var names = LogEntryPattern?.GetGroupNames().Skip(1).ToArray();
 			if (names != null && names.Length != 0)
 			{
-				// Fill weights per column type
-				var fill_weights = new Dictionary<string, DataGridLength>
-				{
-					{ColumnNames.Tag        , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
-					{ColumnNames.Level      , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
-					{ColumnNames.Timestamp  , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
-					{ColumnNames.Message    , new DataGridLength(3.00, LineWrap ? DataGridLengthUnitType.Star : DataGridLengthUnitType.Auto)},
-					{ColumnNames.File       , new DataGridLength(2.00, LineWrap ? DataGridLengthUnitType.Star : DataGridLengthUnitType.Auto)},
-					{ColumnNames.Line       , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
-					{ColumnNames.Occurrences, new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
-				};
-
-				// Create a column for each capture group in the pattern
-				m_view.Columns.Clear();
+				// Show each column that has a matching capture group in the pattern
 				m_view.HeadersVisibility = DataGridHeadersVisibility.Column;
 				m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-				for (int i = 0; i != names.Length; ++i)
+				foreach (var column in m_view.Columns)
 				{
-					m_view.Columns.Add2(new DataGridTextColumn
-					{
-						Header = names[i],
-						Binding = new Binding(names[i]) { Mode = BindingMode.OneWay },
-						ElementStyle = element_style,
-						Width = fill_weights.TryGetValue(names[i], out var fw) ? fw : new DataGridLength()
-					});
+					var found = names.IndexOf((string)column.Header) != -1;
+					var state = column_state.TryGetValue((string)column.Header, out var s) ? s : null;
+					column.Visibility = found
+						? (state?.Visibility ?? Visibility.Visible)
+						: Visibility.Collapsed;
 				}
 			}
 			else
 			{
-				m_view.Columns.Clear();
+				// Only show the 'Text' column, and hide the column headers
 				m_view.HeadersVisibility = DataGridHeadersVisibility.None;
-				m_view.Columns.Add2(new DataGridTextColumn
+				foreach (var column in m_view.Columns)
 				{
-					Header = ColumnNames.Message,
-					Binding = new Binding(nameof(LogEntry.Text)) { Mode = BindingMode.OneWay },
-					ElementStyle = element_style,
-					Width = LineWrap
-						? new DataGridLength(1.0, DataGridLengthUnitType.Star)
-						: new DataGridLength(1.0, DataGridLengthUnitType.Auto),
-				});
+					column.Visibility = (string)column.Header != ColumnNames.Text ? Visibility.Visible : Visibility.Collapsed;
+				}
 			}
 		}
 
@@ -750,11 +730,23 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Map fields to matches in 'Text'</summary>
 			public string Tag => Read(nameof(Tag), x => x);
+
+			/// <summary></summary>
 			public ELogLevel Level => Read(nameof(Level), x => Enum<ELogLevel>.Parse(x));
+
+			/// <summary></summary>
 			public TimeSpan Timestamp => Read(nameof(Timestamp), x => TimeSpan.Parse(x));
+
+			/// <summary></summary>
 			public string Message => Read(nameof(Message), x => x);
+
+			/// <summary></summary>
 			public string File => Read(nameof(File), x => x);
+
+			/// <summary></summary>
 			public int Line => Read(nameof(Line), x => int.Parse(x));
+
+			/// <summary></summary>
 			public int Occurrences => Read(nameof(Occurrences), x => int.Parse(x));
 
 			/// <summary>Lazy regex pattern match</summary>
@@ -837,13 +829,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Typical column names</summary>
 		public static class ColumnNames
 		{
-			public const string Tag = nameof(Logger.LogEvent.Tag);
-			public const string Level = nameof(Logger.LogEvent.Level);
-			public const string Timestamp = nameof(Logger.LogEvent.Timestamp);
-			public const string Message = nameof(Logger.LogEvent.Message);
-			public const string File = nameof(Logger.LogEvent.File);
-			public const string Line = nameof(Logger.LogEvent.Line);
-			public const string Occurrences = nameof(Logger.LogEvent.Occurrences);
+			public const string Tag         = nameof(LogEntry.Tag);
+			public const string Level       = nameof(LogEntry.Level);
+			public const string Timestamp   = nameof(LogEntry.Timestamp);
+			public const string Message     = nameof(LogEntry.Message);
+			public const string File        = nameof(LogEntry.File);
+			public const string Line        = nameof(LogEntry.Line);
+			public const string Occurrences = nameof(LogEntry.Occurrences);
+			public const string Text        = nameof(LogEntry.Text);
 		}
 	}
 }

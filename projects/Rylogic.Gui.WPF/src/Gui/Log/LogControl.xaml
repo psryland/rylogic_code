@@ -17,11 +17,13 @@
 			<BitmapImage x:Key="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
 			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
 
+			<!-- Default grid cell style -->
 			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
 			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
 			<Style TargetType="{x:Type DataGridCell}">
 				<Setter Property="BorderBrush" Value="{Binding Highlight.BackColour, Converter={conv:ColourToBrush}}"/>
 				<Setter Property="Background" Value="{Binding Highlight.BackColour, Converter={conv:ColourToBrush}}"/>
+				<Setter Property="MaxHeight" Value="200"/>
 				<Style.Triggers>
 					<Trigger Property="IsSelected" Value="True">
 						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
@@ -30,8 +32,17 @@
 				</Style.Triggers>
 			</Style>
 			<Style x:Key="LogEntryStyle" TargetType="{x:Type TextBlock}">
-				<Setter Property="TextWrapping" Value="{Binding LineWrap, Converter={conv:BoolToWrap}, RelativeSource={RelativeSource AncestorType={x:Type local:LogControl}}}"/>
 				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
+			</Style>
+			<Style x:Key="LogEntryTextCellStyle" TargetType="{x:Type TextBox}">
+				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
+				<Setter Property="Background" Value="Transparent"/>
+				<Setter Property="TextWrapping" Value="{Binding Path=DataContext.LineWrap, Converter={conv:BoolToWrap}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
+				<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+				<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+				<Setter Property="BorderBrush" Value="Transparent"/>
+				<Setter Property="BorderThickness" Value="0"/>
+				<Setter Property="IsReadOnly" Value="True"/>
 			</Style>
 		</ResourceDictionary>
 	</UserControl.Resources>
@@ -107,8 +118,11 @@
 			GridLinesVisibility="None"
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
+			local:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
 			SelectionChanged="HandleSelectionChanged"
 			MouseDoubleClick="HandleMouseDoubleClick"
+			CanUserResizeColumns="True"
+			IsReadOnly="True"
 			>
 			<DataGrid.ContextMenu>
 				<ContextMenu>
@@ -116,6 +130,71 @@
 					<MenuItem Header="Copy Messages" Command="{Binding CopySelectedMessagesToClipboard}"/>
 				</ContextMenu>
 			</DataGrid.ContextMenu>
+			<DataGrid.Columns>
+				<DataGridTextColumn
+					Header="Tag"
+					Binding="{Binding Tag}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="1*"
+					/>
+				<DataGridTextColumn
+					Header="Level"
+					Binding="{Binding Level}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="1*"
+					/>
+				<DataGridTextColumn
+					Header="Timestamp"
+					Binding="{Binding Timestamp}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="1*"
+					/>
+				<DataGridTemplateColumn
+					Header="Message"
+					Width="5*"
+					>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox
+								Text="{Binding Message, Mode=OneWay, NotifyOnTargetUpdated=True}"
+								Style="{StaticResource LogEntryTextCellStyle}"
+								/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+				<DataGridTextColumn
+					Header="File"
+					Binding="{Binding File}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="2*"
+					/>
+				<DataGridTextColumn
+					Header="Line"
+					Binding="{Binding Line}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="0.5*"
+					/>
+				<DataGridTextColumn
+					Header="Occurrences"
+					Binding="{Binding Occurrences}"
+					ElementStyle="{StaticResource LogEntryStyle}"
+					Width="0.3*"
+					/>
+				<DataGridTemplateColumn
+					Header="Text"
+					Visibility="Collapsed"
+					Width="1*"
+					>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBox
+								Text="{Binding Text, Mode=OneWay, NotifyOnTargetUpdated=True}"
+								Style="{StaticResource LogEntryTextCellStyle}"
+								/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+			</DataGrid.Columns>
 		</DataGrid>
 	</Grid>
 </UserControl>

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Rylogic.Extn;
 
 namespace Rylogic.Gui.WPF
 {
@@ -52,12 +51,77 @@ namespace Rylogic.Gui.WPF
 				return new DataGridLength(1.0, DataGridLengthUnitType.SizeToCells);
 			if (length.ToLower() == "sizetoheader")
 				return new DataGridLength(1.0, DataGridLengthUnitType.SizeToHeader);
+			if (length.ToLower() == "*")
+				return new DataGridLength(1.0, DataGridLengthUnitType.Star);
 			if (length.EndsWith("*"))
 				return new DataGridLength(double.Parse(length.TrimEnd('*')), DataGridLengthUnitType.Star);
 			if (double.TryParse(length, out var pixels))
 				return new DataGridLength(pixels, DataGridLengthUnitType.Pixel);
 			throw new Exception($"Failed to parse DataGridLength string: {length}");
 		}
+
+		#region Auto Column Size
+
+		// Usage:
+		//   In your xaml set 'DataGrid_.ColumnResizeMode' and 'NotifyOnTargetUpdated=True'
+		//   in the column text binding on all columns that can change.
+		//    e.g.
+		//      <DataGrid
+		//          local:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
+		//          ... />
+		//          <DataGridTextColumn
+		//              Header = "MyColumn"
+		//              Binding="{Binding TextToShow, NotifyOnTargetUpdated=True}"
+		//              />
+
+		/// <summary>Column resizing schemes</summary>
+		public enum EColumnResizeMode
+		{
+			None,
+			FitToDisplayWidth,
+		}
+
+		/// <summary>Foreground Attached property</summary>
+		public const int ColumnResizeMode = 0;
+		public static readonly DependencyProperty ColumnResizeModeProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnResizeMode));
+		public static EColumnResizeMode GetColumnResizeMode(DependencyObject obj) => (EColumnResizeMode)obj.GetValue(ColumnResizeModeProperty);
+		public static void SetColumnResizeMode(DependencyObject obj, EColumnResizeMode value) => obj.SetValue(ColumnResizeModeProperty, value);
+		private static void ColumnResizeMode_Changed(DependencyObject obj)
+		{
+			if (!(obj is DataGrid grid))
+				return;
+
+			grid.SizeChanged -= ResizeColumns;
+			grid.TargetUpdated -= ResizeColumns;
+			if (GetColumnResizeMode(obj) != EColumnResizeMode.None)
+			{
+				grid.SizeChanged += ResizeColumns;
+				grid.TargetUpdated += ResizeColumns;
+			}
+
+			// Handler
+			static void ResizeColumns(object sender, EventArgs e)
+			{
+				var grid = (DataGrid)sender;
+				var widths = grid.Columns.Select(x => x.Width).ToList();
+
+				var total_width = grid.ActualWidth;
+				if (double.IsNaN(total_width))
+					return;
+
+				foreach (var (col, i) in grid.Columns.WithIndex())
+				{
+					if (widths[i].UnitType == DataGridLengthUnitType.Pixel)
+						col.Width = widths[i];
+					else
+						col.Width = new DataGridLength(widths[i].Value, DataGridLengthUnitType.Star);
+				}
+
+				grid.UpdateLayout();
+			}
+		}
+
+		#endregion
 
 		#region Column Visibility
 
@@ -81,6 +145,7 @@ namespace Rylogic.Gui.WPF
 				};
 			}
 			cmenu.PlacementTarget = grid;
+			cmenu.StaysOpen = true;
 			cmenu.IsOpen = true;
 		}
 
