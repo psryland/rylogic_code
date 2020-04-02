@@ -19,6 +19,7 @@ namespace LDraw
 			CheckForChangesPollPeriodS = 1.0;
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
+			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
 			Scene = new ChartControl.OptionsData
 			{
 				BackgroundColour = Colour32.Gray,
@@ -101,6 +102,65 @@ namespace LDraw
 			get => get<string[]>(nameof(IncludePaths));
 			set => set(nameof(IncludePaths), value);
 		}
+
+		/// <summary>Boilerplate code for embedded C# in ldr script files</summary>
+		public string EmbeddedCSharpBoilerPlate
+		{
+			get => get<string>(nameof(EmbeddedCSharpBoilerPlate));
+			set => set(nameof(EmbeddedCSharpBoilerPlate), value);
+		}
+		private static string EmbeddedCSharpBoilerPlateDefault =>
+		#region Embedded C# Source
+$@"//
+//Assembly: netstandard.dll
+//Assembly: System.dll
+//Assembly: System.Drawing.dll
+//Assembly: System.IO.dll
+//Assembly: System.Linq.dll
+//Assembly: System.Windows.Forms.dll
+//Assembly: System.ValueTuple.dll
+//Assembly: System.Xml.dll
+//Assembly: System.Xml.Linq.dll
+//Assembly: .\Rylogic.Core.dll
+//Assembly: .\Rylogic.Core.Windows.dll
+//Assembly: .\Rylogic.View3d.dll
+//Assembly: .\LDraw.exe
+using System;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Xml;
+using System.Xml.Linq;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gfx;
+using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
+
+namespace ldr
+{{
+	public class Main
+	{{
+		private StringBuilder Out = new StringBuilder();
+
+		<<<support>>>
+
+		public string Execute()
+		{{
+			//LDraw.Log.Write(ELogLevel.Info, ""Starting..."");
+
+			<<<code>>>
+
+			return Out.ToString();
+		}}
+	}}
+}}
+";
+		#endregion
 
 		/// <summary>Options for scene behaviour</summary>
 		public ChartControl.OptionsData Scene

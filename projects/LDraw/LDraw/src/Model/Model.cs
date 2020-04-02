@@ -122,6 +122,7 @@ namespace LDraw
 				m_settings = value;
 				if (m_settings != null)
 				{
+					View3d.EmbeddedCSharpBoilerPlate = m_settings.EmbeddedCSharpBoilerPlate;
 					m_settings.SettingChange += HandleSettingChange;
 				}
 
@@ -134,6 +135,11 @@ namespace LDraw
 					case nameof(SettingsData.CheckForChangesPollPeriodS):
 						{
 							FileWatchTimer.Interval = TimeSpan.FromSeconds(Settings.CheckForChangesPollPeriodS);
+							break;
+						}
+					case nameof(SettingsData.EmbeddedCSharpBoilerPlate):
+						{
+							View3d.EmbeddedCSharpBoilerPlate = Settings.EmbeddedCSharpBoilerPlate;
 							break;
 						}
 					}

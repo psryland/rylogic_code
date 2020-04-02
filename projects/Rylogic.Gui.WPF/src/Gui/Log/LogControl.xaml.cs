@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Common;
@@ -40,12 +41,10 @@ namespace Rylogic.Gui.WPF
 		//    - Set the log filepath
 
 		private const int FilePollPeriodMS = 100;
-		private readonly int m_main_thread_id;
 
 		public LogControl()
 		{
 			InitializeComponent();
-			m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 			m_view.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 
 			// Support for dock container controls
@@ -369,7 +368,10 @@ namespace Rylogic.Gui.WPF
 			get => m_log_entries;
 			set
 			{
-				// Allow public set so that the observable collection can be provided externally.
+				// Notes:
+				//  - Allow public set so that the observable collection can be provided externally.
+				//  - Log entry collections can be made threadsafe using: 'BindingOperations.EnableCollectionSynchronization(Entries, new object())';
+
 				if (m_log_entries == value) return;
 				if (m_log_entries != null)
 				{
@@ -383,6 +385,7 @@ namespace Rylogic.Gui.WPF
 					m_log_entries.CollectionChanged += HandleLogEntriesChanged;
 				}
 
+				// Notify properties changed
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntries)));
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntriesView)));
 
@@ -391,6 +394,13 @@ namespace Rylogic.Gui.WPF
 				{
 					if (e.Action != NotifyCollectionChangedAction.Add)
 						return;
+
+					// Handle the entries collection being changed from a different thread
+					if (Thread.CurrentThread.ManagedThreadId != Dispatcher.Thread.ManagedThreadId)
+					{
+						Dispatcher.BeginInvoke(new Action(() => HandleLogEntriesChanged(sender, e)));
+						return;
+					}
 
 					// If a log entry was added, pop-out.
 					if (DockControl?.DockContainer != null)
@@ -540,18 +550,16 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Add text to the log. Can be called from any thread</summary>
 		public void AddMessage(string text)
 		{
-			if (Thread.CurrentThread.ManagedThreadId != m_main_thread_id)
+			if (Thread.CurrentThread.ManagedThreadId != Dispatcher.Thread.ManagedThreadId)
 			{
-				Debug.Assert(Dispatcher.Thread.ManagedThreadId == m_main_thread_id);
 				Dispatcher.BeginInvoke(() => AddMessage(text));
+				return;
 			}
-			else
-			{
-				// Use the FPos value of the last entry so that if 'AddMessage' is mixed with
-				// entries read from a log file, the read position in the log file is preserved.
-				var fpos = !LogEntries.Empty() ? LogEntries.Back().FPos : 0;
-				LogEntries.Add(new LogEntry(this, fpos, text, false));
-			}
+
+			// Use the FPos value of the last entry so that if 'AddMessage' is mixed with
+			// entries read from a log file, the read position in the log file is preserved.
+			var fpos = !LogEntries.Empty() ? LogEntries.Back().FPos : 0;
+			LogEntries.Add(new LogEntry(this, fpos, text, false));
 		}
 
 		/// <summary>Make the last log entry the selected one</summary>

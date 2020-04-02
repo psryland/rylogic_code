@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.IO;
 using System.Text.RegularExpressions;
+using System.Windows.Data;
 using System.Windows.Threading;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -14,15 +14,14 @@ namespace LDraw
 	public class Log
 	{
 		private static long m_index;
-		private static object m_lock;
 		private static Dispatcher m_dispatcher;
 		private static DateTimeOffset m_tzero;
 		static Log()
 		{
-			m_lock = new object();
 			m_dispatcher = Dispatcher.CurrentDispatcher;
 			Entries = new ObservableCollection<LogControl.LogEntry>();
 			Highlighting = new ObservableCollection<LogControl.HLPattern>();
+			BindingOperations.EnableCollectionSynchronization(Entries, new object());
 			m_tzero = DateTimeOffset.Now;
 			m_tzero -= m_tzero.TimeOfDay;
 
@@ -94,12 +93,20 @@ namespace LDraw
 		}
 
 		/// <summary>Add an output message</summary>
+		public static void Write(string message)
+		{
+			Write(ELogLevel.Info, message, string.Empty, 0);
+		}
+		public static void Write(ELogLevel lvl, string message)
+		{
+			Write(lvl, message, string.Empty, 0);
+		}
 		public static void Write(ELogLevel lvl, string message, string filepath, int line)
 		{
 			var msg = $"{lvl}|{filepath}({line})|{Timestamp.ToString("c")}|{message}";
 			var entry = new LogControl.LogEntry(new Provider(), ++m_index, msg, false);
 			System.Diagnostics.Debug.Assert(PatternRegex.IsMatch(entry.Text));
-			lock (m_lock) Entries.Add(entry);
+			Entries.Add(entry);
 		}
 		public static void Write(ELogLevel lvl, Exception ex, string message, string filepath, int line)
 		{

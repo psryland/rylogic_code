@@ -8,6 +8,12 @@ namespace Rylogic.Script
 	/// <summary>A simple template replacer used for text substitutions</summary>
 	public class TemplateReplacer :TextReader
 	{
+		// Notes:
+		//   - For basic use of the template replacer just return the string to substitute
+		//     for each pattern match.
+		//   - For advanced use, you can push a script source onto 'tr' and return 'string.Empty'
+		//     See 'Expand.Markup' as an example
+
 		/// <summary>
 		/// A callback function called whenever a template field match is found.
 		/// Return the string with which to replace 'field' with. If the substitution
