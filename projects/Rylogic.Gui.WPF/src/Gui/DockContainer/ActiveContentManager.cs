@@ -57,12 +57,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					m_active_pane.VisibleContentChanged -= HandleActiveContentChanged;
 					m_active_pane.VisibleContent?.SaveFocus();
 				}
-				m_prev_pane = m_active_pane != null ? new WeakReference<DockPane>(m_active_pane) : null;
+				PrevPane = m_active_pane;
 				m_active_pane = value;
 				if (m_active_pane != null)
 				{
 					// Ensure the containing window is visible
-					if (Window.GetWindow(m_active_pane) is Window wnd)
+					if (PresentationSource.FromVisual(m_active_pane)?.RootVisual is Window wnd)
 						wnd.Visibility = Visibility.Visible;
 
 					m_active_pane.VisibleContent?.RestoreFocus();
@@ -87,13 +87,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 		}
 		private DockPane? m_active_pane;
-		private WeakReference<DockPane>? m_prev_pane;
+		
+		/// <summary>The previously active dock pane</summary>
+		public DockPane? PrevPane
+		{
+			get => m_prev_pane2 != null ? (m_prev_pane2.TryGetTarget(out var p) ? p : null) : null;
+			set => m_prev_pane2 = value != null ? new WeakReference<DockPane>(value) : null;
+		}
+		private WeakReference<DockPane>? m_prev_pane2;
 
 		/// <summary>Make the previously active dock pane the active pane</summary>
 		public void ActivatePrevious()
 		{
 			// If a previous pane is know, try to reactivate it
-			if (m_prev_pane != null && m_prev_pane.TryGetTarget(out var p) && p.DockContainer != null)
+			if (PrevPane is DockPane p && p.DockContainer != null)
 				ActivePane = p;
 			
 			// Otherwise, try to activate the centre pane on the main dock container
