@@ -474,14 +474,52 @@ namespace view3d
 			if (src.m_cam_fields != ECamField::None)
 			{
 				auto& cam = src.m_cam;
-				if (AllSet(src.m_cam_fields, ECamField::C2W     )) m_camera.CameraToWorld(cam.CameraToWorld());
-				if (AllSet(src.m_cam_fields, ECamField::Focus   )) m_camera.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
-				if (AllSet(src.m_cam_fields, ECamField::Align   )) m_camera.Align(cam.m_align);
-				if (AllSet(src.m_cam_fields, ECamField::Aspect  )) m_camera.Aspect(cam.Aspect());
-				if (AllSet(src.m_cam_fields, ECamField::FovY    )) m_camera.FovY(cam.FovY());
-				if (AllSet(src.m_cam_fields, ECamField::Near    )) m_camera.Near(cam.Near(true), true);
-				if (AllSet(src.m_cam_fields, ECamField::Far     )) m_camera.Far(cam.Far(true), true);
-				if (AllSet(src.m_cam_fields, ECamField::Ortho   )) m_camera.Orthographic(cam.Orthographic());
+				auto changed = EView3DSettings::Camera;
+				if (AllSet(src.m_cam_fields, ECamField::C2W))
+				{
+					m_camera.CameraToWorld(cam.CameraToWorld());
+					changed |= EView3DSettings::Camera_Position;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Focus))
+				{
+					m_camera.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
+					changed |= EView3DSettings::Camera_Position;
+					changed |= EView3DSettings::Camera_FocusDist;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Align))
+				{
+					m_camera.Align(cam.m_align);
+					changed |= EView3DSettings::Camera_AlignAxis;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Aspect))
+				{
+					m_camera.Aspect(cam.Aspect());
+					changed |= EView3DSettings::Camera_Aspect;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::FovY))
+				{
+					m_camera.FovY(cam.FovY());
+					changed |= EView3DSettings::Camera_Fov;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Near))
+				{
+					m_camera.Near(cam.Near(true), true);
+					changed |= EView3DSettings::Camera_ClipPlanes;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Far))
+				{
+					m_camera.Far(cam.Far(true), true);
+					changed |= EView3DSettings::Camera_ClipPlanes;
+				}
+				if (AllSet(src.m_cam_fields, ECamField::Ortho))
+				{
+					m_camera.Orthographic(cam.Orthographic());
+					changed |= EView3DSettings::Camera_Orthographic;
+				}
+
+				// Notify if the camera was changed
+				if (changed != EView3DSettings::Camera)
+					NotifySettingsChanged(changed);
 			}
 		}
 		if (m_objects.size() != old_count)

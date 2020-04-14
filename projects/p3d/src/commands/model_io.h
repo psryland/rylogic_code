@@ -20,3 +20,6 @@ void WriteP3d(std::unique_ptr<pr::geometry::p3d::File> const& p3d, std::filesyst
 
 // Write 'p3d' as a cpp source file
 void WriteCpp(std::unique_ptr<pr::geometry::p3d::File> const& p3d, std::filesystem::path const& outfile, std::string indent);
+
+// Write 'p3d' as ldr script
+void WriteLdr(std::unique_ptr<pr::geometry::p3d::File> const& p3d, std::filesystem::path const& outfile, std::string indent);

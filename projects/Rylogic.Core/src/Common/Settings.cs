@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -470,7 +471,30 @@ namespace Rylogic.Common
 
 			// Or if 'nested' is a collection of settings sets
 			if (nested is IEnumerable<ISettingsSet> sets)
+			{
 				sets.ForEach(x => x.Parent = this);
+
+				// If the collection is observable, watch for changes
+				if (nested is INotifyCollectionChanged notif)
+				{
+					notif.CollectionChanged += WeakRef.MakeWeak(HandleSettingCollectionChanged, h => notif.CollectionChanged -= h);
+					void HandleSettingCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+					{
+						if (e.OldItems != null)
+							foreach (var set in e.OldItems.OfType<ISettingsSet>())
+								set.Parent = null;
+						if (e.NewItems != null)
+							foreach (var set in e.NewItems.OfType<ISettingsSet>())
+								set.Parent = this;
+					}
+				}
+			}
+
+			// Or if 'nested' is an associative collection of settings sets
+			if (nested is IDictionary<string, ISettingsSet> map)
+			{
+				map.ForEach(x => x.Value.Parent = this);
+			}
 		}
 
 		/// <summary>Populate these settings from the default instance values</summary>
@@ -1053,15 +1077,17 @@ namespace Rylogic.Common
 	#region Event Args
 	public class SettingChangeEventArgs : EventArgs
 	{
-		private readonly ISettingsSet m_ss;
 		public SettingChangeEventArgs(ISettingsSet ss, string key, object? value, bool before)
 		{
-			m_ss = ss;
+			SettingSet = ss;
 			Key = key;
 			Value = value;
 			Before = before;
 			Cancel = false;
 		}
+
+		/// <summary>The settings set that contains 'key'</summary>
+		public ISettingsSet SettingSet { get; }
 
 		/// <summary>The full address of the key that was changed</summary>
 		public string FullKey
@@ -1069,9 +1095,10 @@ namespace Rylogic.Common
 			get
 			{
 				var full = Key;
-				var ss = m_ss;
+				var ss = SettingSet;
 				for (; ss.Parent != null; ss = ss.Parent)
 				{
+					// Find the key for 'ss' in parent
 					var pkey = ss.Parent.Data.FirstOrDefault(x => Equals(x.Value, ss)).Key;
 					full = $"{pkey}.{full}";
 				}
@@ -1117,11 +1144,97 @@ namespace Rylogic.Common
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using Extn;
+    using System.Collections.ObjectModel;
+    using Extn;
+	using Rylogic.Container;
 
 	[TestFixture]
 	public class TestSettings
 	{
+		private sealed class Settings :SettingsBase<Settings>
+		{
+			public Settings()
+			{
+				Str = "default";
+				Int = 4;
+				DTO = DateTimeOffset.Parse("2013-01-02 12:34:56");
+				Floats = new[] { 1f, 2f, 3f };
+				Things = new object[] { 1, 2.3f, "hello" };
+				Sub = new SubSettings();
+				Sub2 = new XElement("external");
+				Sub3 = new ObservableCollection<SubSettings>();
+			}
+			public Settings(string filepath)
+				:base(filepath)
+			{
+			}
+			public Settings(XElement node)
+				:base(node)
+			{
+			}
+
+			public string Str
+			{
+				get { return get<string>(nameof(Str)); }
+				set { set(nameof(Str), value); }
+			}
+			public int Int
+			{
+				get { return get<int>(nameof(Int)); }
+				set { set(nameof(Int), value); }
+			}
+			public DateTimeOffset DTO
+			{
+				get { return get<DateTimeOffset>(nameof(DTO)); }
+				set { set(nameof(DTO), value); }
+			}
+			public float[] Floats
+			{
+				get { return get<float[]>(nameof(Floats)); }
+				set { set(nameof(Floats), value); }
+			}
+			public object[] Things
+			{
+				get { return get<object[]>(nameof(Things)); }
+				set { set(nameof(Things), value); }
+			}
+			public SubSettings Sub
+			{
+				get { return get<SubSettings>(nameof(Sub)); }
+				set { set(nameof(Sub), value); }
+			}
+			public XElement Sub2
+			{
+				get { return get<XElement>(nameof(Sub2)); }
+				set { set(nameof(Sub2), value); }
+			}
+			public ObservableCollection<SubSettings> Sub3
+			{
+				get => get<ObservableCollection<SubSettings>>(nameof(Sub3));
+				set => set(nameof(Sub3), value);
+			}
+		}
+		private sealed class SubSettings :SettingsSet<SubSettings>
+		{
+			public SubSettings()
+				:this(2, new byte[] { 1, 2, 3 })
+			{}
+			public SubSettings(int field, byte[] buf)
+			{
+				Field = field;
+				Buffer = buf;
+			}
+			public int Field
+			{
+				get => get<int>(nameof(Field));
+				set => set(nameof(Field), value);
+			}
+			public byte[] Buffer
+			{
+				get => get<byte[]>(nameof(Buffer));
+				set => set(nameof(Buffer), value);
+			}
+		}
 		private sealed class SettingsThing
 		{
 			public SettingsThing()
@@ -1144,35 +1257,6 @@ namespace Rylogic.UnitTests
 				return node;
 			}
 			public int x, y, z;
-		}
-		private sealed class SubSettings : SettingsSet<SubSettings>
-		{
-			public SubSettings() { Field = 2; Buffer = new byte[] { 1, 2, 3 }; }
-			public int Field { get { return get<int>(nameof(Field)); } set { set(nameof(Field), value); } }
-			public byte[] Buffer { get { return get<byte[]>(nameof(Buffer)); } set { set(nameof(Buffer), value); } }
-		}
-		private sealed class Settings : SettingsBase<Settings>
-		{
-			public Settings()
-			{
-				Str = "default";
-				Int = 4;
-				DTO = DateTimeOffset.Parse("2013-01-02 12:34:56");
-				Floats = new[] { 1f, 2f, 3f };
-				Sub = new SubSettings();
-				Sub2 = new XElement("external");
-				Things = new object[] { 1, 2.3f, "hello" };
-			}
-			public Settings(string filepath) : base(filepath) { }
-			public Settings(XElement node) : base(node) { }
-
-			public string Str { get { return get<string>(nameof(Str)); } set { set(nameof(Str), value); } }
-			public int Int { get { return get<int>(nameof(Int)); } set { set(nameof(Int), value); } }
-			public DateTimeOffset DTO { get { return get<DateTimeOffset>(nameof(DTO)); } set { set(nameof(DTO), value); } }
-			public float[] Floats { get { return get<float[]>(nameof(Floats)); } set { set(nameof(Floats), value); } }
-			public SubSettings Sub { get { return get<SubSettings>(nameof(Sub)); } set { set(nameof(Sub), value); } }
-			public XElement Sub2 { get { return get<XElement>(nameof(Sub2)); } set { set(nameof(Sub2), value); } }
-			public object[] Things { get { return get<object[]>(nameof(Things)); } set { set(nameof(Things), value); } }
 		}
 
 		[TestFixtureSetUp]
@@ -1207,13 +1291,15 @@ namespace Rylogic.UnitTests
 				Int = 42,
 				DTO = DateTimeOffset.UtcNow,
 				Floats = new[] { 4f, 5f, 6f },
-				Sub = new SubSettings
-				{
-					Field = 12,
-					Buffer = new byte[] { 4, 5, 6 }
-				},
-				Sub2 = st.ToXml(new XElement("external")),
 				Things = new object[] { "Hello", 6.28 },
+				Sub = new SubSettings(12, new byte[]{ 4, 5, 6 }),
+				Sub2 = st.ToXml(new XElement("external")),
+				Sub3 = new ObservableCollection<SubSettings>
+				{
+					new SubSettings(1, new byte[]{ 1, 1, 1 }),
+					new SubSettings(2, new byte[]{ 2, 2, 2 }),
+					new SubSettings(3, new byte[]{ 3, 3, 3 }),
+				},
 			};
 			var xml = s.ToXml();
 
@@ -1223,10 +1309,13 @@ namespace Rylogic.UnitTests
 			Assert.Equal(s.Int, S.Int);
 			Assert.Equal(s.DTO, S.DTO);
 			Assert.True(s.Floats.SequenceEqual(S.Floats));
-			Assert.Equal(s.Sub.Field, S.Sub.Field);
-			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
 			Assert.True((string)s.Things[0] == "Hello");
 			Assert.True((double)s.Things[1] == 6.28);
+			Assert.Equal(s.Sub.Field, S.Sub.Field);
+			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
+			Assert.True(s.Sub3[0].Field == 1);
+			Assert.True(s.Sub3[1].Field == 2);
+			Assert.True(s.Sub3[2].Field == 3);
 
 			var st2 = new SettingsThing(s.Sub2);
 			Assert.Equal(st.x, st2.x);
@@ -1241,9 +1330,13 @@ namespace Rylogic.UnitTests
 
 			var file = Path.GetTempFileName();
 			var settings = new Settings();
-			settings.SettingChange += (s, a) => { if (a.Before) changing = ++i; else changed = ++i; };
 			settings.SettingsSaving += (s, a) => saving = ++i;
 			settings.SettingsLoaded += (s, a) => loading = ++i;
+			settings.SettingChange += (s, a) =>
+			{
+				if (a.Before) changing = ++i;
+				else changed = ++i;
+			};
 
 			settings.Str = "Modified";
 			Assert.Equal(1, changing);
@@ -1257,17 +1350,24 @@ namespace Rylogic.UnitTests
 			Assert.Equal(0, saving);
 			Assert.Equal(0, loading);
 
+			var s0 = settings.Sub3.Add2(new SubSettings());
+			s0.Field = 4;
+			Assert.Equal(5, changing);
+			Assert.Equal(6, changed);
+			Assert.Equal(0, saving);
+			Assert.Equal(0, loading);
+
 			settings.Save(file);
-			Assert.Equal(3, changing);
-			Assert.Equal(4, changed);
-			Assert.Equal(5, saving);
+			Assert.Equal(5, changing);
+			Assert.Equal(6, changed);
+			Assert.Equal(7, saving);
 			Assert.Equal(0, loading);
 
 			settings.Load(file);
-			Assert.Equal(3, changing);
-			Assert.Equal(4, changed);
-			Assert.Equal(5, saving);
-			Assert.Equal(6, loading);
+			Assert.Equal(5, changing);
+			Assert.Equal(6, changed);
+			Assert.Equal(7, saving);
+			Assert.Equal(8, loading);
 		}
 		[Test]
 		public void TestExtensions()

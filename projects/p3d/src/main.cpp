@@ -56,10 +56,11 @@ struct Main
 			"        Load a model into memory.\n"
 			"        Supported formats: p3d, 3ds, stl (so far)\n"
 			"\n"
-			"    -fo <filepath> [Compress]|[Code]\n"
+			"    -fo <filepath> [Compress]|[Code]|[Ldr]\n"
 			"        Export a p3d format model file.\n"
 			"        Compress - Optional. Compress vertex and index data\n"
 			"        Code - Optional. Output model as C++ code\n"
+			"        Ldr - Optional. Output model as Ldr script\n"
 			"\n"
 			"    -RemoveDegenerates [<Tolerance>:<NormalSmoothingAngle>:<ColourDistance>:<UVDistance>]\n"
 			"        Simplify a model by removing degenerate verticies.\n"
@@ -151,6 +152,7 @@ struct Main
 							{
 								if      (str::EqualI(*arg, "compress")) ldr::Append(m_str, "*Compress");
 								else if (str::EqualI(*arg, "code"    )) ldr::Append(m_str, "*Code");
+								else if (str::EqualI(*arg, "ldr"     )) ldr::Append(m_str, "*Ldr");
 							}
 							m_ends_with_fileout = true;
 							break;
@@ -362,6 +364,11 @@ struct Main
 						extn = "cpp";
 						continue;
 					}
+					if (str::EqualI(kw, "Ldr"))
+					{
+						extn = "ldr";
+						continue;
+					}
 					if (str::EqualI(kw, "Compress"))
 					{
 						p3d_flags |= p3d::EFlags::Compress;
@@ -394,6 +401,7 @@ struct Main
 		// Determine the output format from the extn
 		extn = outpath.extension().string();
 		str::EqualI(extn, ".p3d") ? WriteP3d(m_model, outpath, p3d_flags) :
+		str::EqualI(extn, ".ldr") ? WriteLdr(m_model, outpath, "\t") :
 		str::EqualI(extn, ".cpp") ? WriteCpp(m_model, outpath, "\t") :
 		throw std::runtime_error("Unsupported output file format: "s + extn);
 

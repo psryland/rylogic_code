@@ -40,6 +40,10 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 	p3d::File p3d;
 	max_3ds::ReadObjects(src, [&](max_3ds::Object const& o)
 	{
+		// If the object has no verts or faces, then ignore
+		if (o.m_mesh.m_vert.empty() || o.m_mesh.m_face.empty())
+			return false;
+
 		// Add a mesh to the scene
 		p3d.m_scene.m_meshes.emplace_back(o.m_name);
 		auto& mesh = p3d.m_scene.m_meshes.back();
@@ -82,7 +86,9 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 				mesh.m_idx.push_back<uint16_t>(i1);
 				mesh.m_idx.push_back<uint16_t>(i2);
 			});
+
 		mesh.m_bbox = bbox;
+		mesh.m_o2p = o.m_mesh.m_o2p;
 
 		// Add the used materials to the p3d scene
 		for (auto& nug : mesh.m_nugget)
@@ -95,6 +101,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 			p3d.m_scene.m_materials.emplace_back(mat_3ds.m_name, mat_3ds.m_diffuse);
 			auto& mat = p3d.m_scene.m_materials.back();
 
+			// Add the texture filepaths to the material
 			for (auto& tex : mat_3ds.m_textures)
 			{
 				// todo: translate 3ds tiling flags to p3d
@@ -102,6 +109,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 			}
 		}
 
+		// Don't stop, gimme more objects
 		return false;
 	});
 	return std::make_unique<p3d::File>(p3d);
@@ -189,4 +197,11 @@ void WriteCpp(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const
 {
 	std::ofstream ofile(outfile);
 	p3d::WriteAsCode(ofile, *p3d, indent.c_str());
+}
+
+// Write 'p3d' as ldr script
+void WriteLdr(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const& outfile, std::string indent)
+{
+	std::ofstream ofile(outfile);
+	p3d::WriteAsScript(ofile, *p3d, indent.c_str());
 }

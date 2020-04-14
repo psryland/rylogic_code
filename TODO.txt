@@ -4,8 +4,12 @@ LDraw
 	- Bug in Spline, missing last vertex
 	- Camera type-in
 	- WASD camera controls
-	- Bug with initial camera alignment
 	- Equation doesn't renderer until first refresh
+	- *Mesh should silently handle empty objects
+	- Support sub models in object manager
+	
+P3D
+	- file out to ldr script should write normals, colours, and normals
 	
 CoinFlip
 	Candle Charts:

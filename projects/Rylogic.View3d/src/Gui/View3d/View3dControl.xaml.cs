@@ -21,6 +21,8 @@ namespace Rylogic.Gui.WPF
 	{
 		// Notes:
 		//  - This control subclasses 'Image' because the D3DImage is an 'ImageSource'
+		//  - View3dControl does not have a 'Settings' class, state changes are immediate
+		//    and storing the state is left to the caller. (Unlike ChartControl).
 
 		static View3dControl()
 		{
@@ -208,6 +210,11 @@ namespace Rylogic.Gui.WPF
 							if (Bit.AllSet(e.Setting, View3d.ESettings.Diagnostics_FillModePointsSize))
 								cmenu.NotifyPropertyChanged(nameof(IView3dCMenu.FillModePointsSize));
 						}
+					}
+					if (Bit.AllSet(e.Setting, View3d.ESettings.Camera_AlignAxis))
+					{
+						AlignDirection = AlignDirection_.FromAxis(Camera.AlignAxis);
+						NotifyPropertyChanged(nameof(AlignDirection));
 					}
 					if (Bit.AllSet(e.Setting, View3d.ESettings.Scene_BackgroundColour))
 					{
@@ -403,7 +410,11 @@ namespace Rylogic.Gui.WPF
 			{
 				var sz = RenderSize;
 				if (sz.Width != 0 && sz.Height != 0)
-					Camera.Aspect = (float)(value * sz.Width / sz.Height);
+				{
+					var aspect = (float)(value * sz.Width / sz.Height);
+					if (!Math_.FEql(Camera.Aspect, aspect))
+						Camera.Aspect = aspect;
+				}
 			}
 		}
 
@@ -768,18 +779,7 @@ namespace Rylogic.Gui.WPF
 				if (m_view_preset != EViewPreset.Current)
 				{
 					var pos = Camera.FocusPoint;
-					switch (m_view_preset)
-					{
-					default: throw new Exception($"Unknown view pre-set: {m_view_preset}");
-					case EViewPreset.PosX: Camera.ResetView(+v4.XAxis); break;
-					case EViewPreset.NegX: Camera.ResetView(-v4.XAxis); break;
-					case EViewPreset.PosY: Camera.ResetView(+v4.YAxis); break;
-					case EViewPreset.NegY: Camera.ResetView(-v4.YAxis); break;
-					case EViewPreset.PosZ: Camera.ResetView(+v4.ZAxis); break;
-					case EViewPreset.NegZ: Camera.ResetView(-v4.ZAxis); break;
-					case EViewPreset.PosXYZ: Camera.ResetView(+v4.XAxis + v4.YAxis + v4.ZAxis); break;
-					case EViewPreset.NegXYZ: Camera.ResetView(-v4.XAxis - v4.YAxis - v4.ZAxis); break;
-					}
+					Camera.ResetView(ViewPreset_.ToForward(m_view_preset));
 					Camera.FocusPoint = pos;
 					Invalidate();
 				}
@@ -795,18 +795,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_align_direction == value) return;
 				m_align_direction = value;
-
-				switch (m_align_direction)
-				{
-				default: throw new Exception($"Unknown align axis direction: {m_align_direction}");
-				case EAlignDirection.None: Camera.AlignAxis = v4.Zero; break;
-				case EAlignDirection.PosX: Camera.AlignAxis = +v4.XAxis; break;
-				case EAlignDirection.NegX: Camera.AlignAxis = -v4.XAxis; break;
-				case EAlignDirection.PosY: Camera.AlignAxis = +v4.YAxis; break;
-				case EAlignDirection.NegY: Camera.AlignAxis = -v4.YAxis; break;
-				case EAlignDirection.PosZ: Camera.AlignAxis = +v4.ZAxis; break;
-				case EAlignDirection.NegZ: Camera.AlignAxis = -v4.ZAxis; break;
-				}
+				Camera.AlignAxis = AlignDirection_.ToAxis(m_align_direction);
 				Invalidate();
 			}
 		}
@@ -816,6 +805,8 @@ namespace Rylogic.Gui.WPF
 		public event PropertyChangedEventHandler? PropertyChanged;
 		private void NotifyPropertyChanged(string prop_name)
 		{
+			// Note: Notify is called from the SettingsChanged handler, not when the property is changed
+			// because this catches all sources of a property changing, not just when it is explicity set.
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 

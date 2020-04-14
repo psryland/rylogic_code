@@ -111,6 +111,7 @@ namespace Rylogic.Extn
 			{
 				// This is only called if 'name' specifies an assembly
 				var ass = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetName() == name && x.CodeBase == name.CodeBase);
+				if (ass == null) ass = AppDomain.CurrentDomain.Load(name);
 				if (ass == null) throw new TypeLoadException($"No assembly called {name.FullName} is currently loaded");
 				return ass;
 			}

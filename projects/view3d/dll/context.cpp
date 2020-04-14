@@ -84,6 +84,7 @@ namespace view3d
 				}
 			}
 
+			// Notify of updated sources
 			OnSourcesChanged(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
 		};
 		m_sources.OnError += [&](ScriptSources&, ScriptSources::ParseErrorEventArgs const& args)

@@ -42,8 +42,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool OriginPointVisible
 		{
-			get => m_owner.SceneView.Options.OriginPointVisible;
-			set => m_owner.SceneView.Options.OriginPointVisible = value;
+			get => m_owner.SceneState.Chart.OriginPointVisible;
+			set => m_owner.SceneState.Chart.OriginPointVisible = value;
 		}
 		public ICommand ToggleOriginPoint
 		{
@@ -53,8 +53,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool FocusPointVisible
 		{
-			get => m_owner.SceneView.Options.FocusPointVisible;
-			set => m_owner.SceneView.Options.FocusPointVisible = value;
+			get => m_owner.SceneState.Chart.FocusPointVisible;
+			set => m_owner.SceneState.Chart.FocusPointVisible = value;
 		}
 		public ICommand ToggleFocusPoint
 		{
@@ -97,8 +97,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool ShowAxes
 		{
-			get => m_owner.SceneView.Options.ShowAxes;
-			set => m_owner.SceneView.Options.ShowAxes = value;
+			get => m_owner.SceneState.Chart.ShowAxes;
+			set => m_owner.SceneState.Chart.ShowAxes = value;
 		}
 		public ICommand ToggleAxes
 		{
@@ -108,8 +108,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool ShowGridLines
 		{
-			get => m_owner.SceneView.Options.ShowGridLines;
-			set => m_owner.SceneView.Options.ShowGridLines = value;
+			get => m_owner.SceneState.Chart.ShowGridLines;
+			set => m_owner.SceneState.Chart.ShowGridLines = value;
 		}
 		public ICommand ToggleGridLines
 		{
@@ -119,8 +119,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool Orthographic
 		{
-			get => m_owner.SceneView.Options.Orthographic;
-			set => m_owner.SceneView.Options.Orthographic = value;
+			get => m_owner.SceneState.Chart.Orthographic;
+			set => m_owner.SceneState.Chart.Orthographic = value;
 		}
 		public ICommand ToggleOrthographic
 		{
@@ -130,8 +130,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool Antialiasing
 		{
-			get => m_owner.SceneView.Options.Antialiasing;
-			set => m_owner.SceneView.Options.Antialiasing = value;
+			get => m_owner.SceneState.Chart.Antialiasing;
+			set => m_owner.SceneState.Chart.Antialiasing = value;
 		}
 		public ICommand ToggleAntialiasing
 		{
@@ -152,8 +152,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public bool MouseCentredZoom
 		{
-			get => m_owner.SceneView.Options.MouseCentredZoom;
-			set => m_owner.SceneView.Options.MouseCentredZoom = value;
+			get => m_owner.SceneState.Chart.MouseCentredZoom;
+			set => m_owner.SceneState.Chart.MouseCentredZoom = value;
 		}
 		public ICommand ToggleMouseCentredZoom
 		{
@@ -163,8 +163,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public Colour32 BackgroundColour
 		{
-			get => m_owner.SceneView.Options.BackgroundColour;
-			set => m_owner.SceneView.Options.BackgroundColour = value;
+			get => m_owner.SceneState.Chart.BackgroundColour;
+			set => m_owner.SceneState.Chart.BackgroundColour = value;
 		}
 		public ICommand SetBackgroundColour
 		{
@@ -231,29 +231,29 @@ namespace LDraw
 		/// <inheritdoc/>
 		public EAlignDirection AlignDirection
 		{
-			get => m_owner.SceneView.Scene.AlignDirection;
-			set => m_owner.SceneView.Scene.AlignDirection = value;
+			get => m_owner.SceneState.AlignDirection;
+			set => m_owner.SceneState.AlignDirection = value;
 		}
 
 		/// <inheritdoc/>
 		public EViewPreset ViewPreset
 		{
-			get => m_owner.SceneView.Scene.ViewPreset;
-			set => m_owner.SceneView.Scene.ViewPreset = value;
+			get => m_owner.SceneState.ViewPreset;
+			set => m_owner.SceneState.ViewPreset = value;
 		}
 
 		/// <inheritdoc/>
 		public View3d.EFillMode FillMode
 		{
-			get => m_owner.SceneView.Options.FillMode;
-			set => m_owner.SceneView.Options.FillMode = value;
+			get => m_owner.SceneState.Chart.FillMode;
+			set => m_owner.SceneState.Chart.FillMode = value;
 		}
 
 		/// <inheritdoc/>
 		public View3d.ECullMode CullMode
 		{
-			get => m_owner.SceneView.Options.CullMode;
-			set => m_owner.SceneView.Options.CullMode = value;
+			get => m_owner.SceneState.Chart.CullMode;
+			set => m_owner.SceneState.Chart.CullMode = value;
 		}
 
 		/// <summary>Saved views</summary>
@@ -277,8 +277,8 @@ namespace LDraw
 		/// <inheritdoc/>
 		public ChartControl.ENavMode NavigationMode
 		{
-			get => m_owner.SceneView.Options.NavigationMode;
-			set => m_owner.SceneView.Options.NavigationMode = value;
+			get => m_owner.SceneState.Chart.NavigationMode;
+			set => m_owner.SceneState.Chart.NavigationMode = value;
 		}
 
 		/// <inheritdoc/>

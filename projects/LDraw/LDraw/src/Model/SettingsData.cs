@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 
@@ -20,16 +25,7 @@ namespace LDraw
 			RecentFiles = string.Empty;
 			IncludePaths = Array.Empty<string>();
 			EmbeddedCSharpBoilerPlate = EmbeddedCSharpBoilerPlateDefault;
-			Scene = new ChartControl.OptionsData
-			{
-				BackgroundColour = Colour32.Gray,
-				ShowAxes = false,
-				ShowGridLines = false,
-				FocusPointVisible = true,
-				OriginPointVisible = false,
-				NavigationMode = ChartControl.ENavMode.Scene3D,
-				LockAspect = 1.0,
-			};
+			SceneState = new ObservableCollection<SceneStateData>();
 			UILayout = null;
 
 			AutoSaveOnChanges = true;
@@ -162,11 +158,11 @@ namespace ldr
 ";
 		#endregion
 
-		/// <summary>Options for scene behaviour</summary>
-		public ChartControl.OptionsData Scene
+		/// <summary>Per Scene settings</summary>
+		public ObservableCollection<SceneStateData> SceneState
 		{
-			get => get<ChartControl.OptionsData>(nameof(Scene));
-			set => set(nameof(Scene), value);
+			get => get<ObservableCollection<SceneStateData>>(nameof(SceneState));
+			private set => set(nameof(SceneState), value);
 		}
 
 		/// <summary>Layout state of the main UI</summary>
@@ -174,6 +170,64 @@ namespace ldr
 		{
 			get => get<XElement>(nameof(UILayout));
 			set => set(nameof(UILayout), value);
+		}
+	}
+
+	/// <summary>Per Scene settings</summary>
+	public class SceneStateData :SettingsSet<SceneStateData>
+	{
+		public SceneStateData()
+		{
+			ViewPreset = EViewPreset.Current;
+			AlignDirection = EAlignDirection.None;
+			Chart = new ChartControl.OptionsData
+			{
+				BackgroundColour = Colour32.Gray,
+				ShowAxes = false,
+				ShowGridLines = false,
+				FocusPointVisible = true,
+				OriginPointVisible = false,
+				NavigationMode = ChartControl.ENavMode.Scene3D,
+				LockAspect = 1.0,
+			};
+		}
+
+		/// <summary>The name of the scene that this state data belongs to</summary>
+		public string Name
+		{
+			get => get<string>(nameof(Name));
+			set => set(nameof(Name), value);
+		}
+
+		/// <summary>Pre-set view directions</summary>
+		public EViewPreset ViewPreset
+		{
+			get => get<EViewPreset>(nameof(ViewPreset));
+			set => set(nameof(ViewPreset), value);
+		}
+
+		/// <summary>Directions to align the camera up-axis to</summary>
+		public EAlignDirection AlignDirection
+		{
+			get => get<EAlignDirection>(nameof(AlignDirection));
+			set => set(nameof(AlignDirection), value);
+		}
+
+		/// <summary>Options for scene behaviour, common to all scenes</summary>
+		public ChartControl.OptionsData Chart
+		{
+			get => get<ChartControl.OptionsData>(nameof(Chart));
+			set => set(nameof(Chart), value);
+		}
+	}
+	public static class SettingsData_
+	{
+		/// <summary>Access the scene state data for a scene by name</summary>
+		public static SceneStateData get(this ObservableCollection<SceneStateData> container, string name)
+		{
+			var ssd = container.FirstOrDefault(x => x.Name == name);
+			ssd ??= container.Add2(new SceneStateData { Name = name });
+			return ssd;
 		}
 	}
 }

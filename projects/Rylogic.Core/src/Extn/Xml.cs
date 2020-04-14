@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -15,6 +16,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -122,7 +124,23 @@ namespace Rylogic.Extn
 						node.SetValue(string.Empty);
 					return node;
 				};
+				this[typeof(ObservableCollection<>)] = (obj, node) =>
+				{
+					foreach (var x in (IEnumerable)obj)
+						node.Add2("_", x, false);
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+					return node;
+				};
 				this[typeof(Dictionary<,>)] = (obj, node) =>
+				{
+					foreach (var x in (IEnumerable)obj)
+						node.Add2("_", x, false);
+					if (!node.HasElements)
+						node.SetValue(string.Empty);
+					return node;
+				};
+				this[typeof(LazyDictionary<,>)] = (obj, node) =>
 				{
 					foreach (var x in (IEnumerable)obj)
 						node.Add2("_", x, false);
@@ -457,11 +475,39 @@ namespace Rylogic.Extn
 					}
 					return list;
 				};
+				this[typeof(ObservableCollection<>)] = (elem, type, ctor) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var list = type.New();
+					var mi_add = type.GetMethod(nameof(ObservableCollection<int>.Add))!;
+
+					foreach (var li_elem in elem.Elements())
+					{
+						var li = li_elem.As(ty_args[0]);
+						mi_add.Invoke(list, new object?[] { li });
+					}
+					return list;
+				};
 				this[typeof(Dictionary<,>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
 					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
 					var mi_add = type.GetMethod(nameof(Dictionary<int,int>.Add))!;
+
+					var dic = type.New();
+					foreach (var kv_elem in elem.Elements())
+					{
+						var key = kv_elem.Element("k").As(ty_args[0]);
+						var val = kv_elem.Element("v").As(ty_args[1]);
+						mi_add.Invoke(dic, new object?[] { key, val });
+					}
+					return dic;
+				};
+				this[typeof(LazyDictionary<,>)] = (elem, type, ctor) =>
+				{
+					var ty_args = type.GetGenericArguments();
+					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
+					var mi_add = type.GetMethod(nameof(LazyDictionary<int, int>.Add))!;
 
 					var dic = type.New();
 					foreach (var kv_elem in elem.Elements())

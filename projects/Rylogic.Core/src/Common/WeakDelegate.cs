@@ -5,6 +5,7 @@
 // http://diditwith.net/PermaLink,guid,aacdb8ae-7baa-4423-a953-c18c1c7940ab.aspx
 
 using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 namespace Rylogic.Common
@@ -67,6 +68,15 @@ namespace Rylogic.Common
 			var weh_type = typeof(WeakPropChangedHandlerImpl<>).MakeGenericType(method_type);
 			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
 			var weh = (IWeakPropChangedHandler)cons.Invoke(new object[] { handler, unregister });
+			return weh.Handler;
+		}
+		public static NotifyCollectionChangedEventHandler MakeWeak(this NotifyCollectionChangedEventHandler handler, Action<NotifyCollectionChangedEventHandler> unregister)
+		{
+			Validate(handler, unregister);
+			var method_type = handler.Method.DeclaringType ?? throw new Exception($"method handler declaring type is null");
+			var weh_type = typeof(WeakCollectionChangedHandlerImpl<>).MakeGenericType(method_type);
+			var cons = weh_type.GetConstructor(new[] { handler.GetType(), unregister.GetType() }) ?? throw new Exception($"weak event handler constructor not found");
+			var weh = (IWeakCollectionChangedHandler)cons.Invoke(new object[] { handler, unregister });
 			return weh.Handler;
 		}
 
@@ -162,6 +172,10 @@ namespace Rylogic.Common
 	public interface IWeakPropChangedHandler
 	{
 		PropertyChangedEventHandler Handler { get; }
+	}
+	public interface IWeakCollectionChangedHandler
+	{
+		NotifyCollectionChangedEventHandler Handler { get; }
 	}
 
 	#endregion
@@ -283,6 +297,44 @@ namespace Rylogic.Common
 
 		/// <summary></summary>
 		public static implicit operator PropertyChangedEventHandler(WeakPropChangedHandlerImpl<T> weh) { return weh.Handler; }
+	}
+	public class WeakCollectionChangedHandlerImpl<T> :IWeakCollectionChangedHandler
+		where T : class
+	{
+		private delegate void OpenEventHandler(T @this, object? sender, NotifyCollectionChangedEventArgs args);
+
+		private readonly WeakReference m_target_ref;
+		private readonly OpenEventHandler m_open_handler;
+		private Action<NotifyCollectionChangedEventHandler>? m_unregister;
+
+		public WeakCollectionChangedHandlerImpl(NotifyCollectionChangedEventHandler event_handler, Action<NotifyCollectionChangedEventHandler> unregister)
+		{
+			m_target_ref = new WeakReference(event_handler.Target);
+			m_open_handler = (OpenEventHandler)Delegate.CreateDelegate(typeof(OpenEventHandler), null, event_handler.Method);
+			m_unregister = unregister;
+			Handler = Invoke;
+		}
+
+		/// <summary></summary>
+		public NotifyCollectionChangedEventHandler Handler { get; }
+
+		/// <summary></summary>
+		public void Invoke(object? sender, NotifyCollectionChangedEventArgs args)
+		{
+			var target = (T?)m_target_ref.Target;
+			if (target != null)
+			{
+				m_open_handler.Invoke(target, sender, args);
+			}
+			else if (m_unregister != null)
+			{
+				m_unregister(Handler);
+				m_unregister = null;
+			}
+		}
+
+		/// <summary></summary>
+		public static implicit operator NotifyCollectionChangedEventHandler(WeakCollectionChangedHandlerImpl<T> weh) { return weh.Handler; }
 	}
 
 	#endregion
@@ -414,6 +466,7 @@ namespace Rylogic.Common
 namespace Rylogic.UnitTests
 {
 	using System.Collections.Generic;
+	using System.Collections.ObjectModel;
 	using System.Runtime.CompilerServices;
 	using System.Threading;
 	using Common;
@@ -596,6 +649,30 @@ namespace Rylogic.UnitTests
 			gun.Shoot();
 			Assert.True(hit.Count == 0);
 			Assert.True(prop_change.Count == 0);
+		}
+		[Test]
+		public void WeakCollectionChangedEventHandlers()
+		{
+			int count = 0;
+			var list = new List<ObservableCollection<string>>();
+			list.Add(new ObservableCollection<string>());
+			list.Add(new ObservableCollection<string>());
+			list.Add(new ObservableCollection<string>());
+			foreach (var obs in list)
+			{
+				obs.CollectionChanged += WeakRef.MakeWeak(HandleCollectionChanged, h => obs.CollectionChanged -= h);
+				void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) { ++count; }
+			}
+
+			list[0].Add("Zero");
+			list[1].Add("One");
+			list[2].Add("Two");
+			Assert.True(count == 3);
+
+			// Observables collected here
+			list.Clear();
+			GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true);
+			Assert.True(count == 3);
 		}
 	}
 }
