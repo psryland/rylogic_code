@@ -170,7 +170,11 @@ namespace pr::ldr
 		x(Colours              ,= HashI("Colours"             ))\
 		x(TexCoords            ,= HashI("TexCoords"           ))\
 		x(Lines                ,= HashI("Lines"               ))\
+		x(LineList             ,= HashI("LineList"            ))\
+		x(LineStrip            ,= HashI("LineStrip"           ))\
 		x(Faces                ,= HashI("Faces"               ))\
+		x(TriList              ,= HashI("TriList"             ))\
+		x(TriStrip             ,= HashI("TriStrip"            ))\
 		x(Tetra                ,= HashI("Tetra"               ))\
 		x(Part                 ,= HashI("Part"                ))\
 		x(GenerateNormals      ,= HashI("GenerateNormals"     ))\

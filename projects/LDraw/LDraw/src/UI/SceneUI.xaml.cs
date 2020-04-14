@@ -32,9 +32,9 @@ namespace LDraw.UI
 			OtherScenes = new ListCollectionView(new List<SceneWrapper>());
 			Model = model;
 			SceneName = name;
-			SceneView.Options = Settings.Scene;
-			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
+			SceneState = Settings.SceneState.get(name);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
+			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
 			Links = new List<ChartLink>();
 
@@ -81,18 +81,12 @@ namespace LDraw.UI
 				// Handlers
 				void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
 				{
-					//	Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
-					//	Invalidate();
 				}
 				void HandleLoadingLayout(object sender, DockContainerLoadingLayoutEventArgs e)
 				{
-					var camera_xml = e.UserData.Element(nameof(SceneView.Camera));
-					if (camera_xml != null)
-						SceneView.Camera.Load(camera_xml);
 				}
 				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
 				{
-					e.Node.Add2(nameof(SceneView.Camera), SceneView.Camera, false);
 				}
 			}
 		}
@@ -107,7 +101,6 @@ namespace LDraw.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Settings.SettingChange -= HandleSettingChange;
 					m_model.Scenes.CollectionChanged -= HandleScenesCollectionChanged;
 					m_model.Scenes.Remove(this);
 				}
@@ -115,23 +108,10 @@ namespace LDraw.UI
 				if (m_model != null)
 				{
 					// Don't add to m_model.Scenes, that's the caller's choice
-					m_model.Settings.SettingChange += HandleSettingChange;
 					m_model.Scenes.CollectionChanged += HandleScenesCollectionChanged;
 				}
 
 				// Handlers
-				void HandleSettingChange(object sender, SettingChangeEventArgs e)
-				{
-					if (e.Before) return;
-					switch (e.Key)
-					{
-					case nameof(SettingsData.Scene):
-						{
-							SceneView.Options = Settings.Scene;
-							break;
-						}
-					}
-				}
 				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					PopulateOtherScenes();
@@ -143,6 +123,75 @@ namespace LDraw.UI
 
 		/// <summary>Add settings</summary>
 		public SettingsData Settings => Model.Settings;
+		
+		/// <summary>Scene state settings</summary>
+		public SceneStateData SceneState
+		{
+			get => m_scene_state;
+			private set
+			{
+				if (m_scene_state == value) return;
+				if (m_scene_state != null)
+				{
+					SceneView.Scene.Window.OnSettingsChanged -= HandleSceneSettingChanged;
+					m_scene_state.SettingChange -= HandleSettingChange;
+					SceneView.Options = new ChartControl.OptionsData();
+				}
+				m_scene_state = value;
+				if (m_scene_state != null)
+				{
+					SceneView.Options = m_scene_state.Chart;
+					m_scene_state.SettingChange += HandleSettingChange;
+					SceneView.Scene.Window.OnSettingsChanged += HandleSceneSettingChanged;
+				}
+
+				// Handlers
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					// Handle notification that a SceneState value has changed
+					if (e.Before) return;
+					switch (e.Key)
+					{
+					case nameof(SceneStateData.Chart):
+						{
+							SceneView.Options = SceneState.Chart;
+							break;
+						}
+					case nameof(SceneStateData.AlignDirection):
+						{
+							SceneView.Scene.AlignDirection = SceneState.AlignDirection;
+							break;
+						}
+					case nameof(SceneStateData.ViewPreset):
+						{
+							SceneView.Scene.ViewPreset = SceneState.ViewPreset;
+							break;
+						}
+					}
+				}
+				void HandleSceneSettingChanged(object sender, View3d.SettingChangeEventArgs e)
+				{
+					// Handle notification that a View3d.Window property has changed
+					var cmenu = SceneView.Scene.ContextMenu?.DataContext as IView3dCMenu;
+
+					// Persist settings
+					if (Bit.AllSet(e.Setting, View3d.ESettings.Camera))
+					{
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Camera_Orthographic))
+						{
+							SceneState.Chart.Orthographic = SceneView.Camera.Orthographic;
+							cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
+						}
+						if (Bit.AllSet(e.Setting, View3d.ESettings.Camera_AlignAxis))
+						{
+							SceneState.AlignDirection = AlignDirection_.FromAxis(SceneView.Camera.AlignAxis);
+							cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.AlignDirection));
+						}
+					}
+				}
+			}
+		}
+		private SceneStateData m_scene_state = null!;
 
 		/// <summary>The 3d part of the scene (i.e. the chart control)</summary>
 		public ChartControl SceneView => m_scene;
@@ -294,8 +343,7 @@ namespace LDraw.UI
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
-			var cmenu = SceneView.Scene.ContextMenu?.DataContext as IChartCMenu;
-			if (cmenu != null)
+			if (SceneView.Scene.ContextMenu?.DataContext is IChartCMenu cmenu)
 			{
 				switch (prop_name)
 				{

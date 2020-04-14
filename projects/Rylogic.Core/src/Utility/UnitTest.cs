@@ -233,7 +233,7 @@ namespace Rylogic.UnitTests
 		public static void Equal(object? expected, object? result)
 		{
 			if (Equals(expected, result)) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {(expected ?? "null").ToString()}\r\n  result: {(result ?? "null").ToString()}");
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected ?? "null"}\r\n  result: {result ?? "null"}");
 		}
 
 		/// <summary>Tests value equality</summary>

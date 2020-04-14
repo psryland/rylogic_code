@@ -6,9 +6,7 @@
 // Based on 3ds.
 // This model format is designed for load speed
 // Use zip if you want compressed model data.
-
 #pragma once
-
 #include <string>
 #include <vector>
 #include <iostream>
@@ -56,6 +54,7 @@ namespace pr::geometry::p3d
 	x(Mesh                  ,= 0x00003100)/*       └─ Mesh of lines,triangles,tetras                         */\
 	x(MeshName              ,= 0x00003101)/*          ├─ Name (cstr)                                         */\
 	x(MeshBBox              ,= 0x00003102)/*          ├─ Bounding box (BBox)                                 */\
+	x(MeshTransform         ,= 0x00003103)/*          ├─ Mesh to Parent Transform (m4x4)                     */\
 	x(MeshVertices          ,= 0x00003110)/*          ├─ Vertex list (u32 count, count * [Vert])             */\
 	x(MeshVerticesV         ,= 0x00003111)/*          ├─ Vertex list compressed (u32 count, count * [Verts]) */\
 	x(MeshIndices16         ,= 0x00003120)/*          ├─ Index list (u32 count, count * [u16 i]) deprecated  */\
@@ -257,13 +256,13 @@ namespace pr::geometry::p3d
 		{
 			return pr::Range<T>(s_cast<T>(first), s_cast<T>(first + count));
 		}
-		u32 begin() const
+		friend u32 begin(Range r) 
 		{
-			return first;
+			return r.first;
 		}
-		u32 end() const
+		friend u32 end(Range r)
 		{
-			return first + count;
+			return r.first + r.count;
 		}
 		friend bool operator == (Range lhs, Range rhs)
 		{
@@ -379,12 +378,16 @@ namespace pr::geometry::p3d
 		// Mesh bounding box
 		BBox m_bbox;
 
+		// Mesh to scene transform
+		m4x4 m_o2p;
+
 		Mesh(std::string name = std::string())
 			:m_name(name)
 			,m_verts()
 			,m_idx()
 			,m_nugget()
 			,m_bbox()
+			,m_o2p()
 		{}
 	};
 	struct Scene
@@ -938,6 +941,11 @@ namespace pr::geometry::p3d
 					mesh.m_bbox = Read<BBox>(src);
 					break;
 				}
+			case EChunkId::MeshTransform:
+				{
+					mesh.m_o2p = Read<m4x4>(src);
+					break;
+				}
 			case EChunkId::MeshVertices:
 			case EChunkId::MeshVerticesV:
 				{
@@ -1224,6 +1232,18 @@ namespace pr::geometry::p3d
 		return hdr.m_length;
 	}
 
+	// Write a mesh to parent transform to 'out'
+	template <typename TOut> u32 WriteMeshTransform(TOut& out, m4x4 const& o2p)
+	{
+		if (o2p == m4x4Identity)
+			return 0;
+
+		ChunkHeader hdr(EChunkId::MeshTransform, sizeof(m4x4));
+		Write<ChunkHeader>(out, hdr);
+		Write<m4x4>(out, o2p);
+		return hdr.m_length;
+	}
+
 	// Write vertices to 'out'
 	template <typename TOut> u32 WriteVertices(TOut& out, std::span<Vert const> verts, EFlags flags, EGeom geom)
 	{
@@ -1389,6 +1409,9 @@ namespace pr::geometry::p3d
 		// Mesh bounding box
 		hdr.m_length += WriteMeshBBox(out, mesh.m_bbox);
 
+		// Mesh to parent transform
+		hdr.m_length += WriteMeshTransform(out, mesh.m_o2p);
+
 		// Mesh vertex data
 		hdr.m_length += WriteVertices(out, mesh.m_verts, flags, geom);
 
@@ -1482,10 +1505,10 @@ namespace pr::geometry::p3d
 		{
 			switch (mesh.m_idx.m_stride)
 			{
-			default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
 			case 1: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u8>(), mesh.m_verts.begin(), mesh.m_idx.begin<u8>(), out, indent); break;
 			case 2: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u16>(), mesh.m_verts.begin(), mesh.m_idx.begin<u16>(), out, indent); break;
 			case 4: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u32>(), mesh.m_verts.begin(), mesh.m_idx.begin<u32>(), out, indent); break;
+			default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
 			}
 
 			out << indent << "#pragma region BoundingBox\n";
@@ -1496,6 +1519,81 @@ namespace pr::geometry::p3d
 		}
 	}
 
+	// Write the p3d file as ldr script
+	template <typename TOut> void WriteAsScript(TOut& out, File const& file, char const* indent = "")
+	{
+		out << indent << "*Group {\n";
+		for (auto& mesh : file.m_scene.m_meshes)
+		{
+			if (mesh.m_nugget.empty())
+				continue;
+
+			out << indent << "\t*Mesh " << mesh.m_name << " {\n";
+
+			// Verts
+			out << indent << "\t\t*Verts {\n";
+			for (auto& vert : mesh.m_verts)
+				out << indent << "\t\t\t" << vert.pos.x << " " << vert.pos.y << " " << vert.pos.z << "\n";
+			out << indent << "\t\t}\n";
+
+			// Normals
+			out << indent << "\t\t*Normals {\n";
+			for (auto& vert : mesh.m_verts)
+				out << indent << "\t\t\t" << vert.norm.x << " " << vert.norm.y << " " << vert.norm.z << "\n";
+			out << indent << "\t\t}\n";
+
+			// Colours
+			out << indent << "\t\t*Colours {\n";
+			for (auto& vert : mesh.m_verts)
+				out << indent << "\t\t\t" << Fmt("%8.8X", Colour32(vert.col.r, vert.col.g, vert.col.b, vert.col.a).argb) << "\n";
+			out << indent << "\t\t}\n";
+
+			// Faces
+			auto WriteFaces = [&](p3d::Mesh const& mesh, auto* indices)
+			{
+				for (auto& nug : mesh.m_nugget)
+				{
+					switch (nug.m_topo)
+					{
+					case EPrim::LineList:  out << indent << "\t\t*LineList {\n"; break;
+					case EPrim::LineStrip: out << indent << "\t\t*LineStrip {\n"; break;
+					case EPrim::TriList:   out << indent << "\t\t*TriList {\n"; break;
+					case EPrim::TriStrip:  out << indent << "\t\t*TriStrip {\n"; break;
+					default: throw std::runtime_error("Unsupported topology type");
+					}
+
+					int icount = 0;
+					out << indent << "\t\t\t";
+					for (u32 i = begin(nug.m_irange), iend = end(nug.m_irange); i != iend; ++i)
+					{
+						out << indices[i] << " ";
+						if (++icount != 16) continue;
+						out << "\n" << indent << "\t\t\t";
+						icount = 0;
+					}
+					if (icount != 0)
+						out << "\n";
+
+					// End faces
+					out << indent << "\t\t}\n";
+				}
+			};
+			switch (mesh.m_idx.m_stride)
+			{
+			case 1: WriteFaces(mesh, mesh.m_idx.data<u8>()); break;
+			case 2: WriteFaces(mesh, mesh.m_idx.data<u16>()); break;
+			case 4: WriteFaces(mesh, mesh.m_idx.data<u32>()); break;
+			default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
+			}
+
+			// End mesh
+			out << indent << "\t}\n";
+		}
+
+		// End group
+		out << indent << "}\n";
+	}
+	
 	#pragma endregion
 }
 namespace pr::maths

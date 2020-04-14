@@ -649,8 +649,8 @@ namespace pr
 					verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
 
 				// Loop over material groups, each material group is a nugget
-				auto vrange = pr::Range<pr::uint16>::Zero();
-				auto irange = pr::Range<pr::uint32>::Zero();
+				auto vrange = pr::Range<uint16_t>::Zero();
+				auto irange = pr::Range<uint32_t>::Zero();
 				for (auto const& mgrp : obj.m_mesh.m_matgroup)
 				{
 					// Ignore material groups that aren't used in the model
@@ -658,11 +658,11 @@ namespace pr
 						continue;
 
 					// Find the material
-					max_3ds::Material const& mat = mats(mgrp.m_name);
+					auto const& mat = mats(mgrp.m_name);
 
 					// Write out each face that belongs to this group
 					irange.m_beg = irange.m_end;
-					vrange = pr::Range<pr::uint16>::Reset();
+					vrange = pr::Range<uint16_t>::Reset();
 					for (auto const& face_idx : mgrp.m_face)
 					{
 						// Get the face and it's smoothing group
@@ -679,8 +679,8 @@ namespace pr
 						auto e0 = v1 - v0;
 						auto e1 = v2 - v1;
 						auto cx = pr::Cross3(e0, e1);
-						pr::v4 norm = Normalise(cx, pr::v4Zero);
-						pr::v4 angles = TriangleAngles(v0, v1, v2);
+						auto norm = Normalise(cx, v4Zero);
+						auto angles = TriangleAngles(v0, v1, v2);
 
 						// Get the final vertex indices for the face
 						auto i0 = verts.add(face.m_idx[0], angles.x * norm, mat.m_diffuse, sg);
@@ -690,7 +690,7 @@ namespace pr
 						vrange.encompass(i0);
 						vrange.encompass(i1);
 						vrange.encompass(i2);
-						irange.m_end = s_cast<pr::uint32>(irange.m_end + 3);
+						irange.m_end = s_cast<uint32_t>(irange.m_end + 3);
 
 						// Write out face indices
 						i_out(i0, i1, i2);

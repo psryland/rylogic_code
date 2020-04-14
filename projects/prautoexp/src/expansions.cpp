@@ -368,12 +368,12 @@ extern "C"
 	}
 	ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 	{
-		ReentryGuard guard;
-		LargeInt large_int;
-		if (FAILED(pHelper->Read(large_int))) return E_FAIL;
+		//ReentryGuard guard;
+		//LargeInt large_int;
+		//if (FAILED(pHelper->Read(large_int))) return E_FAIL;
 
-		auto str = ToString(large_int);
-		_snprintf(pResult, max, "%s", str.c_str());
+		//auto str = ToString(large_int);
+		//_snprintf(pResult, max, "%s", str.c_str());
 		return S_OK;
 	}
 	ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)

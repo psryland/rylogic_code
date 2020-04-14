@@ -3497,9 +3497,12 @@ namespace pr::ldr
 					return true;
 				}
 			case EKeyword::Lines:
+			case EKeyword::LineList:
+			case EKeyword::LineStrip:
 				{
+					auto is_strip = kw == EKeyword::LineStrip;
 					auto nug = *m_tex.Material();
-					nug.m_topo = EPrim::LineList;
+					nug.m_topo = is_strip ? EPrim::LineStrip : EPrim::LineList;
 					nug.m_geom = EGeom::Vert |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 					nug.m_vrange = pr::rdr::Range::Reset();
@@ -3508,15 +3511,12 @@ namespace pr::ldr
 
 					int r = 1;
 					p.m_reader.SectionStart();
-					for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd(); ++r)
+					for (uint16_t idx; !p.m_reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(idx, 2, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-
-						nug.m_vrange.encompass(idx[0]);
-						nug.m_vrange.encompass(idx[1]);
-						nug.m_irange.m_end += 2;
+						p.m_reader.Int(idx, 10);
+						m_indices.push_back(idx);
+						nug.m_vrange.encompass(idx);
+						++nug.m_irange.m_end;
 
 						if (r % 500 == 0) p.ReportProgress();
 					}
@@ -3526,9 +3526,12 @@ namespace pr::ldr
 					return true;
 				}
 			case EKeyword::Faces:
+			case EKeyword::TriList:
+			case EKeyword::TriStrip:
 				{
+					auto is_strip = kw == EKeyword::TriStrip;
 					auto nug = *m_tex.Material();
-					nug.m_topo = EPrim::TriList;
+					nug.m_topo = is_strip ? EPrim::TriStrip : EPrim::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
@@ -3539,17 +3542,12 @@ namespace pr::ldr
 
 					int r = 1;
 					p.m_reader.SectionStart();
-					for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd(); ++r)
+					for (uint16_t idx; !p.m_reader.IsSectionEnd(); ++r)
 					{
-						p.m_reader.Int(idx, 3, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[2]);
-
-						nug.m_vrange.encompass(idx[0]);
-						nug.m_vrange.encompass(idx[1]);
-						nug.m_vrange.encompass(idx[2]);
-						nug.m_irange.m_end += 3;
+						p.m_reader.Int(idx, 10);
+						m_indices.push_back(idx);
+						nug.m_vrange.encompass(idx);
+						++nug.m_irange.m_end;
 
 						if (r % 500 == 0) p.ReportProgress();
 					}

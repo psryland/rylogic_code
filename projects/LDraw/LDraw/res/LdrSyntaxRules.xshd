@@ -154,7 +154,11 @@
 			<Word>*Colours</Word>
 			<Word>*TexCoords</Word>
 			<Word>*Lines</Word>
+			<Word>*LineList</Word>
+			<Word>*LineStrip</Word>
 			<Word>*Faces</Word>
+			<Word>*TriList</Word>
+			<Word>*TriStrip</Word>
 			<Word>*Tetra</Word>
 			<Word>*Part</Word>
 			<Word>*GenerateNormals</Word>
