@@ -71,8 +71,7 @@
       <Command>py $(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -88,7 +87,7 @@
       <Command>py $(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -104,7 +103,7 @@
       <Command>py $(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -120,7 +119,7 @@
       <Command>py $(ProjectDir)..\projects\gui\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\WTL\v9.0\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Manifest />
     <Manifest />

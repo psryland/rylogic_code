@@ -139,7 +139,7 @@
     <ClInclude Include="..\projects\elements\game_constants.h" />
     <ClInclude Include="..\projects\elements\ship.h" />
     <ClInclude Include="..\projects\elements\stdafx.h" />
-    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
+    <ClInclude Include="..\sdk\sqlite3\include\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\elements\console_ui.cpp" />
@@ -165,7 +165,7 @@
     <ClCompile Include="..\projects\elements\view_lab.cpp" />
     <ClCompile Include="..\projects\elements\view_ship.cpp" />
     <ClCompile Include="..\projects\elements\world_state.cpp" />
-    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c" />
+    <ClCompile Include="..\sdk\sqlite3\src\sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\projects\elements\design.txt" />

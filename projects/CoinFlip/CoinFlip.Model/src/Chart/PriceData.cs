@@ -229,7 +229,7 @@ namespace CoinFlip
 		public string Description => $"{Pair.NameWithExchange}";
 
 		/// <summary>Return the candles over the given index range</summary>
-		public IEnumerable<Candle> ReadCandles(Range index_range)
+		public IEnumerable<Candle> ReadCandles(RangeI index_range)
 		{
 			// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
 			var candles = DB.Query<Candle>(
@@ -449,7 +449,7 @@ namespace CoinFlip
 			}
 
 			// Notify data added/changed
-			OnDataChanged(new DataEventArgs(update_type, this, new Range(Count-1, Count), candle));
+			OnDataChanged(new DataEventArgs(update_type, this, new RangeI(Count-1, Count), candle));
 		}
 
 		/// <summary>Add a batch of candles</summary>
@@ -548,14 +548,14 @@ namespace CoinFlip
 					// Don't change m_total, m_newest, or m_oldest, they are constant during simulations.
 					m_current = null;
 					var count = CountTo(now);
-					OnDataChanged(new DataEventArgs(update_type, this, new Range(count - 1, count), Current));
+					OnDataChanged(new DataEventArgs(update_type, this, new RangeI(count - 1, count), Current));
 					break;
 				}
 			case DataEventArgs.EUpdateType.Current:
 				{
 					// Nothing to invalidate. 'Current' does sub candle interpolation in back-testing mode.
 					var count = CountTo(now);
-					OnDataChanged(new DataEventArgs(update_type, this, new Range(count - 1, count), Current));
+					OnDataChanged(new DataEventArgs(update_type, this, new RangeI(count - 1, count), Current));
 					break;
 				}
 			default:
@@ -576,18 +576,18 @@ namespace CoinFlip
 	/// <summary>Event args for when data is changed</summary>
 	public class DataEventArgs :EventArgs
 	{
-		public DataEventArgs(EUpdateType update_type, PriceData pd, Range index_range, Candle candle)
+		public DataEventArgs(EUpdateType update_type, PriceData pd, RangeI index_range, Candle candle)
 		{
 			UpdateType = update_type;
 			PriceData  = pd;
 			IndexRange = index_range;
 			Candle     = candle;
 		}
-		public DataEventArgs(PriceData pd, Range index_range)
+		public DataEventArgs(PriceData pd, RangeI index_range)
 			:this(EUpdateType.Range, pd, index_range, null)
 		{}
 		public DataEventArgs(PriceData pd)
-			:this(pd, new Range(0, pd.Count))
+			:this(pd, new RangeI(0, pd.Count))
 		{}
 
 		/// <summary>The type of update this event represents.</summary>
@@ -600,7 +600,7 @@ namespace CoinFlip
 		public Candle Candle { get; private set; }
 
 		/// <summary>The index range of candles that have changed</summary>
-		public Range IndexRange { get; private set; }
+		public RangeI IndexRange { get; private set; }
 
 		/// <summary>Update types</summary>
 		public enum EUpdateType

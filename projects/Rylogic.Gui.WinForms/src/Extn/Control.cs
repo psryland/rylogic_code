@@ -12,6 +12,7 @@ using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Rylogic.Attrib;
 using Rylogic.Common;
@@ -20,9 +21,6 @@ using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using ListBox = System.Windows.Forms.ListBox;
-using ToolStripComboBox = System.Windows.Forms.ToolStripComboBox;
-using ToolStripContainer = System.Windows.Forms.ToolStripContainer;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -534,18 +532,18 @@ namespace Rylogic.Gui.WinForms
 	public static class TextBox_
 	{
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
-		public static Scope<Range> SelectionScope(this TextBoxBase edit)
+		public static Scope<RangeI> SelectionScope(this TextBoxBase edit)
 		{
 			return Scope.Create(
-				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
+				() => RangeI.FromStartLength(edit.SelectionStart, edit.SelectionLength),
 				rn => edit.Select(rn.Begi, rn.Sizei));
 		}
 
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
-		public static Scope<Range> SelectionScope(this ComboBox edit)
+		public static Scope<RangeI> SelectionScope(this ComboBox edit)
 		{
 			return Scope.Create(
-				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
+				() => RangeI.FromStartLength(edit.SelectionStart, edit.SelectionLength),
 				pt => edit.Select(pt.Begi, pt.Sizei));
 		}
 
@@ -595,7 +593,7 @@ namespace Rylogic.Gui.WinForms
 			// Need to take a copy of the text, because Remove() will delete the text
 			// if the current text is actually a selected item.
 			var text = cb.Text ?? string.Empty;
-			var selection = new Range(cb.SelectionStart, cb.SelectionStart + cb.SelectionLength);
+			var selection = new RangeI(cb.SelectionStart, cb.SelectionStart + cb.SelectionLength);
 
 			if (text.HasValue() || !only_if_has_value)
 			{
@@ -2107,9 +2105,9 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Return the (inclusive) bounds of the selected rows (or [-1,-1] if no rows are selected). Warning: 'Empty' means only 1 row is selected (unless it's -1). Note: independent of the order of SelectedRows</summary>
-		public static Range SelectedRowIndexRange(this DataGridView grid)
+		public static RangeI SelectedRowIndexRange(this DataGridView grid)
 		{
-			return new Range(grid.FirstSelectedRowIndex(), grid.LastSelectedRowIndex());
+			return new RangeI(grid.FirstSelectedRowIndex(), grid.LastSelectedRowIndex());
 		}
 
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
@@ -2478,11 +2476,11 @@ namespace Rylogic.Gui.WinForms
 				// The grid.MouseDown event calls CellMouseDown (and others) after the drag/drop operation has
 				// finished. A consequence is the cell that the drag started from gets 'clicked' causing the selection
 				// to change back to that cell. BeginInvoke ensures the drag happens after any selection changes.
-				Dispatcher_.BeginInvoke(() =>
+				Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
 				{
 					using (var data = new DragDropData(grid.Rows[hit.RowIndex], grid_pt.X, grid_pt.Y))
 						grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
-				});
+				}));
 			}
 		}
 
@@ -2831,7 +2829,7 @@ namespace Rylogic.Gui.WinForms
 						{
 							// Edit the filter field
 							// BeginInvoke so that Editing starts after the message queue has processed the mouse events
-							Dispatcher_.BeginInvoke(filter_cell.EditFilter);
+							Dispatcher.CurrentDispatcher.BeginInvoke(new Action(filter_cell.EditFilter));
 							m_eat_lbuttonup = true;
 							return true;
 						}
@@ -3087,8 +3085,8 @@ namespace Rylogic.Gui.WinForms
 							var i = Cell.ColumnIndex;
 							var next = i+1 < DGV.ColumnCount ? DGV.Columns[i+1].HeaderCell as FilterHeaderCell : null;
 							var prev = i-1 > -1              ? DGV.Columns[i-1].HeaderCell as FilterHeaderCell : null;
-							if (!args.Shift && next != null) Dispatcher_.BeginInvoke(next.EditFilter);
-							if ( args.Shift && prev != null) Dispatcher_.BeginInvoke(prev.EditFilter);
+							if (!args.Shift && next != null) Dispatcher.CurrentDispatcher.BeginInvoke(new Action(next.EditFilter));
+							if ( args.Shift && prev != null) Dispatcher.CurrentDispatcher.BeginInvoke(new Action(prev.EditFilter));
 						}
 
 						// Close the editing control on these keys

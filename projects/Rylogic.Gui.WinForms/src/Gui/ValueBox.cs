@@ -467,7 +467,7 @@ namespace Rylogic.Gui.WinForms
 			}
 		}
 		private bool m_preserve_selection;
-		private Range m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
+		private RangeI m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
 
 		/// <summary>Preserve the selection in the control</summary>
 		public Scope PreserveTextSelection()
@@ -478,7 +478,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Restore the selection</summary>
-		public void RestoreTextSelection(Range selection)
+		public void RestoreTextSelection(RangeI selection)
 		{
 			//System.Diagnostics.Trace.WriteLine($"Restoring Selection: [{selection.Begi},{ selection.Sizei}]");
 			Select(selection.Begi, selection.Sizei);
@@ -486,9 +486,9 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Save the current selection</summary>
-		public Range SaveTextSelection()
+		public RangeI SaveTextSelection()
 		{
-			var selection = Range.FromStartLength(SelectionStart, SelectionLength);
+			var selection = RangeI.FromStartLength(SelectionStart, SelectionLength);
 			//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}"
 			//	.Fmt(selection.Value.Begi, selection.Value.Sizei,
 			//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));

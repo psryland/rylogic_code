@@ -62,7 +62,7 @@ namespace Rylogic.Gui.WPF.Validators
 				throw new Exception($"Type {obj.GetType().Name} does not have a static dependency property '{nameof(TextBox.TextProperty)}'");
 
 			// Get the binding to the TextProperty
-			var dep = (DependencyProperty)fi.GetValue(null);
+			var dep = (DependencyProperty?)fi.GetValue(null);
 			var binding = BindingOperations.GetBinding(obj, dep);
 			
 			// Add/Replace/Remove the predicate validator

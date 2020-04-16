@@ -33,7 +33,7 @@ namespace RyLogViewer
 		private ToolTip m_tt;
 		#endregion
 
-		public ExportUI(string output_filepath, string row_delim, string col_delim, Range byte_range)
+		public ExportUI(string output_filepath, string row_delim, string col_delim, RangeI byte_range)
 		{
 			InitializeComponent();
 
@@ -120,7 +120,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The maximum range limits</summary>
-		public Range ByteRangeLimits
+		public RangeI ByteRangeLimits
 		{
 			get { return m_range_limit; }
 			private set
@@ -129,21 +129,21 @@ namespace RyLogViewer
 				m_range_limit = value;
 			}
 		}
-		private Range m_range_limit;
+		private RangeI m_range_limit;
 
 		/// <summary>If RangeToExport is byte range, export this range</summary>
-		public Range ByteRange
+		public RangeI ByteRange
 		{
 			get { return m_range; }
 			set
 			{
 				if (m_range == value) return;
-				m_range = new Range(
+				m_range = new RangeI(
 					Math.Max(ByteRangeLimits.Beg, value.Beg),
 					Math.Min(ByteRangeLimits.End, value.End));
 			}
 		}
-		private Range m_range;
+		private RangeI m_range;
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
@@ -224,7 +224,7 @@ namespace RyLogViewer
 			m_tb_range_min.ValueChanged += (s,a) =>
 			{
 				if (m_tb_range_min.Valid)
-					ByteRange = new Range((long)m_tb_range_min.Value, ByteRange.End);
+					ByteRange = new RangeI((long)m_tb_range_min.Value, ByteRange.End);
 				UpdateUI();
 			};
 
@@ -234,7 +234,7 @@ namespace RyLogViewer
 			m_tb_range_max.ValueChanged += (s,a) =>
 			{
 				if (m_tb_range_max.Valid)
-					ByteRange = new Range(ByteRange.Beg, (long)m_tb_range_max.Value);
+					ByteRange = new RangeI(ByteRange.Beg, (long)m_tb_range_max.Value);
 				UpdateUI();
 			};
 

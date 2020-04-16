@@ -143,13 +143,13 @@ namespace Rylogic.Gui.WPF
 				var idx = m_data.BinarySearch(pt => pt.xf.CompareTo(x), find_insert_position: true);
 
 				// Convert 'missing' to an index range within the data
-				var idx_missing = new Range(
+				var idx_missing = new RangeI(
 					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.Beg), find_insert_position: true),
 					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.End), find_insert_position: true));
 
 				// Limit the size of 'idx_missing' to the block size
 				const int PieceBlockSize = 4096;
-				var idx_range = new Range(
+				var idx_range = new RangeI(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
 
@@ -187,7 +187,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Create a point cloud plot</summary>
-		private ChartGfxPiece CreatePointPlot(Range idx_range)
+		private ChartGfxPiece CreatePointPlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -221,7 +221,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Create a line plot</summary>
-		private ChartGfxPiece CreateLinePlot(Range idx_range)
+		private ChartGfxPiece CreateLinePlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 			if (n == 0)
@@ -270,7 +270,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Create a step line plot</summary>
-		private ChartGfxPiece CreateStepLinePlot(Range idx_range)
+		private ChartGfxPiece CreateStepLinePlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -326,7 +326,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Create a bar graph</summary>
-		private ChartGfxPiece CreateBarPlot(Range idx_range)
+		private ChartGfxPiece CreateBarPlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 

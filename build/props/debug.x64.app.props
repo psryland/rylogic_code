@@ -19,7 +19,7 @@
     <ClCompile>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;_WIN32_WINNT=_WIN32_WINNT_WIN10;NOMINMAX;WIN32_LEAN_AND_MEAN;GDIPVER=0x0110</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\sqlite3\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <ProgramDataBaseFileName>$(TargetDir)cl_$(TargetName).pdb</ProgramDataBaseFileName>
       <Optimization>Disabled</Optimization>

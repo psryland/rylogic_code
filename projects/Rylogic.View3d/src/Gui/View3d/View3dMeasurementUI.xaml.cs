@@ -207,7 +207,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handlers
-				void HandleReferenceFrameChanged(object sender, EventArgs e)
+				void HandleReferenceFrameChanged(object? sender, EventArgs e)
 				{
 					Measurement.ReferenceFrame = (Measurement.EReferenceFrame)ReferenceFrames.CurrentItem;
 				}
@@ -219,13 +219,13 @@ namespace Rylogic.Gui.WPF
 		public IBindingList Results => Measurement.Results;
 
 		/// <summary>Display the colour picker</summary>
-		private void HandleEditSpotColour(object sender, RoutedEventArgs e)
+		private void HandleEditSpotColour(object? sender, RoutedEventArgs e)
 		{
 			MessageBox.Show("Not Done Yet");
 		}
 
 		/// <summary>Event handler that updates the bound source when enter is pressed</summary>
-		private void UpdateBindingOnEnterPressed(object sender, KeyEventArgs e)
+		private void UpdateBindingOnEnterPressed(object? sender, KeyEventArgs e)
 		{
 			if (e.Key != Key.Enter || !(sender is TextBox tb))
 				return;

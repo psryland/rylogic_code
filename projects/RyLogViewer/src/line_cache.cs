@@ -34,7 +34,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Access info about a line (cached)</summary>
-		private Line ReadLine(Range rng)
+		private Line ReadLine(RangeI rng)
 		{
 			Debug.Assert(Src != null);
 
@@ -69,7 +69,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Invalidate cache entries for lines within a memory range</summary>
-		private void InvalidateCache(Range rng)
+		private void InvalidateCache(RangeI rng)
 		{
 			foreach (var line in m_line_cache)
 				if (rng.Contains(line.LineStartAddr))

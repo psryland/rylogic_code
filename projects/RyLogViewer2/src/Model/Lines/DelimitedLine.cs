@@ -9,7 +9,7 @@ namespace RyLogViewer
 {
 	public class DelimitedLine : ILine
 	{
-		public Range FileByteRange
+		public RangeI FileByteRange
 		{
 			get
 			{

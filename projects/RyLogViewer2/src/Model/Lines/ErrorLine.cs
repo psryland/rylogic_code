@@ -5,14 +5,14 @@ namespace RyLogViewer
 	public class ErrorLine : ILine
 	{
 		private readonly string m_msg;
-		public ErrorLine(string error_message, Range range)
+		public ErrorLine(string error_message, RangeI range)
 		{
 			FileByteRange = range;
 			m_msg = error_message;
 		}
 
 		/// <summary>The log data byte range</summary>
-		public Range FileByteRange { get; private set; }
+		public RangeI FileByteRange { get; private set; }
 
 		/// <summary>Return the value for the requested column. Return "" for out of range column indices</summary>
 		public string Value(int _)

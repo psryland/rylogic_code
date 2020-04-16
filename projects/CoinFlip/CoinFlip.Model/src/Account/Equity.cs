@@ -88,15 +88,15 @@ namespace CoinFlip
 		private EOrderBy m_order;
 
 		/// <summary>Return the time range (in ticks) spanned by the given index range</summary>
-		public Range TimeRange(RangeF index_range)
+		public RangeI TimeRange(RangeF index_range)
 		{
 			if (Count == 0)
-				return new Range(Misc.CryptoCurrencyEpoch.Ticks, Misc.CryptoCurrencyEpoch.Ticks);
+				return new RangeI(Misc.CryptoCurrencyEpoch.Ticks, Misc.CryptoCurrencyEpoch.Ticks);
 
 			var now = Model.UtcNow.Ticks;
 			var idx0 = Math_.Clamp((int)(index_range.Beg + 0), 0, Count);
 			var idx1 = Math_.Clamp((int)(index_range.End + 1), 0, Count);
-			var range = new Range(
+			var range = new RangeI(
 					idx0 != Count ? BalanceChanges[idx0].Time.Ticks : now,
 					idx1 != Count ? BalanceChanges[idx1].Time.Ticks : now);
 

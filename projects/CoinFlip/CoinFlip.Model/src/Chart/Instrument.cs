@@ -171,7 +171,7 @@ namespace CoinFlip
 				{
 					// Notify when the order book of the latest candle changes
 					if (Count != 0)
-						OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new Range(Count-1, Count), Latest));
+						OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new RangeI(Count-1, Count), Latest));
 				}
 				void HandleMDNeeded(object sender, HandledEventArgs e)
 				{
@@ -282,7 +282,7 @@ namespace CoinFlip
 				return Count-1;
 
 			// If the time stamp is within the cached range, binary search the cache for the index position
-			var time_range = new Range(m_cache.Front().Timestamp, m_cache.Back().Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
+			var time_range = new RangeI(m_cache.Front().Timestamp, m_cache.Back().Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
 			if (time_range.Contains(time_stamp.ExactTicks))
 			{
 				// 'idx' is where 'time_stamp' would be inserted, so the value at m_cache[idx] is >= time_stamp.
@@ -330,21 +330,21 @@ namespace CoinFlip
 		}
 
 		/// <summary>Clamps the given index range to a valid range within the data. [0, Count]</summary>
-		public Range IndexRange(int idx_min, int idx_max)
+		public RangeI IndexRange(int idx_min, int idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
 			var min = Math_.Clamp(idx_min, 0, Count);
 			var max = Math_.Clamp(idx_max, min, Count);
-			return new Range(min, max);
+			return new RangeI(min, max);
 		}
 
 		/// <summary>Convert a time frame time range to an index range. [0, Count]</summary>
-		public Range TimeToIndexRange(TimeFrameTime time_min, TimeFrameTime time_max)
+		public RangeI TimeToIndexRange(TimeFrameTime time_min, TimeFrameTime time_max)
 		{
 			Debug.Assert(time_min <= time_max);
 			var idx_min = IndexAt(time_min);
 			var idx_max = IndexAt(time_max);
-			return new Range(idx_min, idx_max);
+			return new RangeI(idx_min, idx_max);
 		}
 
 		/// <summary>Convert an index range to a time range </summary>
@@ -357,12 +357,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an index range to a time range </summary>
-		public Range FIndexToTimeRange(double idx_min, double idx_max)
+		public RangeI FIndexToTimeRange(double idx_min, double idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
 			var time_min = TimeAtFIndex(idx_min);
 			var time_max = TimeAtFIndex(idx_max);
-			return new Range(time_min, time_max);
+			return new RangeI(time_min, time_max);
 		}
 
 		/// <summary>Return the candle at or immediately before 'time_stamp'</summary>
@@ -396,7 +396,7 @@ namespace CoinFlip
 		private int m_first_cached;
 
 		/// <summary>The candle index range covered by 'm_cache'. Beg = inclusive first cached, End = exclusive last cached</summary>
-		private Range CachedIndexRange => new Range(m_first_cached, m_first_cached + m_cache.Count);
+		private RangeI CachedIndexRange => new RangeI(m_first_cached, m_first_cached + m_cache.Count);
 
 		/// <summary>Invalidate the cached data</summary>
 		public void InvalidateCachedData()
@@ -427,19 +427,19 @@ namespace CoinFlip
 			// ahead because changes the behaviour compared to non-backtesting.
 			if (CachedIndexRange.Empty)
 			{
-				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(Count, idx + CacheChunkSize));
+				var read = new RangeI(Math.Max(0L, idx - CacheChunkSize), Math.Min(Count, idx + CacheChunkSize));
 				InsertCandles(at_end:true, read.Begi, PriceData.ReadCandles(read));
 			}
 			else if (idx >= CachedIndexRange.End)
 			{
 				var chunks = (idx+1 - CachedIndexRange.End + CacheChunkSize - 1) / CacheChunkSize;
-				var read = new Range(CachedIndexRange.End, Math.Min(Count, CachedIndexRange.End + chunks*CacheChunkSize));
+				var read = new RangeI(CachedIndexRange.End, Math.Min(Count, CachedIndexRange.End + chunks*CacheChunkSize));
 				InsertCandles(at_end:true, CachedIndexRange.Begi, PriceData.ReadCandles(read));
 			}
 			else if (idx < CachedIndexRange.Beg)
 			{
 				var chunks = (CachedIndexRange.Beg - idx + CacheChunkSize - 1) / CacheChunkSize;
-				var read = new Range(Math.Max(0L, CachedIndexRange.Beg - chunks*CacheChunkSize), CachedIndexRange.Beg);
+				var read = new RangeI(Math.Max(0L, CachedIndexRange.Beg - chunks*CacheChunkSize), CachedIndexRange.Beg);
 				InsertCandles(at_end: false, read.Begi, PriceData.ReadCandles(read));
 			}
 			else

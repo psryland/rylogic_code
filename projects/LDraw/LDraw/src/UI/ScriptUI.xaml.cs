@@ -127,7 +127,7 @@ namespace LDraw.UI
 				}
 
 				// Handlers
-				void HandleActiveChanged(object sender, ActiveContentChangedEventArgs e)
+				void HandleActiveChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
 					// When activated, restore focus to the editor
 					if (DockControl.IsActiveContent)
@@ -136,7 +136,7 @@ namespace LDraw.UI
 					//	Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
 					//	Invalidate();
 				}
-				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
+				void HandleSavingLayout(object? sender, DockContainerSavingLayoutEventArgs e)
 				{
 					if (!Model.IsTempScriptFilepath(Filepath))
 						e.Node.Add2(nameof(Filepath), Filepath, false);
@@ -166,7 +166,7 @@ namespace LDraw.UI
 				}
 
 				// Handlers
-				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+				void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
 					switch (e.PropertyName)
 					{
@@ -181,7 +181,7 @@ namespace LDraw.UI
 						}
 					}
 				}
-				void HandleLogEntriesChanged(object sender, EventArgs e)
+				void HandleLogEntriesChanged(object? sender, EventArgs e)
 				{
 					RefreshErrorMarkers();
 				}
@@ -303,7 +303,7 @@ namespace LDraw.UI
 					fields.AddRange(search.FindAll(doc, 0, doc.TextLength).Cast<TextSegment>());
 					return fields;
 				}
-				void HandleKeyDown(object sender, KeyEventArgs e)
+				void HandleKeyDown(object? sender, KeyEventArgs e)
 				{
 					switch (e.Key)
 					{
@@ -394,21 +394,21 @@ namespace LDraw.UI
 						}
 					}
 				}
-				void HandleTextChanged(object sender, EventArgs e)
+				void HandleTextChanged(object? sender, EventArgs e)
 				{
 					// Invalidate cached field matches
 					m_fields = null;
 				}
-				void HandleSelectionChanged(object sender, EventArgs e)
+				void HandleSelectionChanged(object? sender, EventArgs e)
 				{
 					NotifyPropertyChanged(nameof(CaretPositionDescription));
 				}
-				void HandleCaretPositionChanged(object sender, EventArgs e)
+				void HandleCaretPositionChanged(object? sender, EventArgs e)
 				{
 					NotifyPropertyChanged(nameof(CaretPositionDescription));
 					NotifyPropertyChanged(nameof(Location));
 				}
-				void HandleMouseHover(object sender, MouseEventArgs e)
+				void HandleMouseHover(object? sender, MouseEventArgs e)
 				{
 					var view = m_text_editor.TextArea.TextView;
 					var pt = e.GetPosition(view);
@@ -435,7 +435,7 @@ namespace LDraw.UI
 						}
 					}
 				}
-				void HandleMouseHoverStopped(object sender, MouseEventArgs e)
+				void HandleMouseHoverStopped(object? sender, MouseEventArgs e)
 				{
 					if (m_tt_errors != null)
 						m_tt_errors.IsOpen = false;
@@ -498,7 +498,7 @@ namespace LDraw.UI
 					var text = View3d.AutoComplete.ExpandTemplate(completion.Template, View3d.AutoComplete.EExpandFlags.Optionals, indent_level, Editor.Options.IndentationString);
 					doc.Replace(completion.StartOffset, end - completion.StartOffset, text);
 				}
-				void UpdateFoldings(object sender, EventArgs e)
+				void UpdateFoldings(object? sender, EventArgs e)
 				{
 					var foldings = new List<NewFolding>();
 					using var reader = Editor.Document.CreateReader();

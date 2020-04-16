@@ -105,7 +105,7 @@ namespace Rylogic.Gui.WPF
 		public override bool CanExecute(object? parameter)
 		{
 			if (m_command == null || m_can_execute == null) return false;
-			return (bool)m_can_execute.Invoke(m_command, new object?[] { parameter });
+			return (bool?)m_can_execute.Invoke(m_command, new object?[] { parameter }) ?? false;
 		}
 		public override void Execute(object? parameter)
 		{

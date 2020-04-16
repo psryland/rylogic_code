@@ -225,7 +225,7 @@ namespace CoinFlip.UI.GfxObjects
 
 			// Create the graphics
 			var gfx = new View3d.Object($"Volume-[{idx0},{idx1})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CtxId);
-			return new VolPiece(new Range(idx0, idx1), gfx);
+			return new VolPiece(new RangeI(idx0, idx1), gfx);
 		}
 
 		/// <summary>Graphics for a piece of the volume indicator</summary>

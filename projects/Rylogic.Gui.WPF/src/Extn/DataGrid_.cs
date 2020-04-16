@@ -100,9 +100,9 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Handler
-			static void ResizeColumns(object sender, EventArgs e)
+			static void ResizeColumns(object? sender, EventArgs? e)
 			{
-				var grid = (DataGrid)sender;
+				if (!(sender is DataGrid grid)) return;
 				var widths = grid.Columns.Select(x => x.Width).ToList();
 
 				var total_width = grid.ActualWidth;

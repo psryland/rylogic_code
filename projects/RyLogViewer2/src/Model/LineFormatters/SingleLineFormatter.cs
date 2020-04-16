@@ -16,7 +16,7 @@ namespace RyLogViewer
 		string ILineFormatter.Name => Name;
 
 		/// <summary>Return a line instance from a buffer of log data</summary>
-		public ILine CreateLine(byte[] line_buf, int start, int count, Range file_byte_range)
+		public ILine CreateLine(byte[] line_buf, int start, int count, RangeI file_byte_range)
 		{
 			// Convert the buffer to text
 			// Note: don't trim 'text', it's the logs fault if it has weird newlines at the end of each row.

@@ -58,7 +58,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			// Handler
-			void HandleElementListChange(object sender, ListChgEventArgs<ChartControl.Element> e)
+			void HandleElementListChange(object? sender, ListChgEventArgs<ChartControl.Element> e)
 			{
 				// Defer the invalidate to the next event since adding elements can happen during BuildScene
 				if (e.After && (e.ChangeType == ListChg.ItemAdded || e.ChangeType == ListChg.ItemRemoved || e.ChangeType == ListChg.Reset))

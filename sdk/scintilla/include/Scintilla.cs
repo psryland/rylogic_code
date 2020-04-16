@@ -1862,7 +1862,7 @@ namespace Rylogic.Scintilla
 
 			public int modificationType;  /* SCN_MODIFIED */
 			public IntPtr text;
-			public string Text => Marshal.PtrToStringAnsi(text);
+			public string Text => Marshal.PtrToStringAnsi(text) ?? string.Empty;
 			/* SCN_MODIFIED, SCN_USERLISTSELECTION, SCN_AUTOCSELECTION, SCN_URIDROPPED */
 
 			public long Length => length.ToInt64();

@@ -65,7 +65,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				/// <summary>Handler for when the active content changes</summary>
-				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+				void HandleActiveContentChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
 					// If the new active content is within this floating window, update the window title
 					if (ActiveContentManager.ActivePane?.RootBranch == Root)
@@ -110,7 +110,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 
 				/// <summary>Handler for when panes are added/removed from the tree</summary>
-				void HandleTreeChanged(object sender, TreeChangedEventArgs args)
+				void HandleTreeChanged(object? sender, TreeChangedEventArgs args)
 				{
 					switch (args.Action)
 					{

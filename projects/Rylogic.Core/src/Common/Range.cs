@@ -24,7 +24,7 @@ namespace Rylogic.Common
 
 	/// <summary>A range over [Begin,End)</summary>
 	[DebuggerDisplay("{Beg} {End} ({Size})")]
-	public struct Range :IEnumerable<long>
+	public struct RangeI :IEnumerable<long>
 	{
 		/// <summary>The value of the first element in the range</summary>
 		public long Beg;
@@ -33,28 +33,28 @@ namespace Rylogic.Common
 		public long End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly Range Zero = new Range{Beg = 0, End = 0};
+		public static readonly RangeI Zero = new RangeI{Beg = 0, End = 0};
 
 		/// <summary>The default full range</summary>
-		public static readonly Range Max = new Range { Beg = long.MinValue, End = long.MaxValue };
+		public static readonly RangeI Max = new RangeI { Beg = long.MinValue, End = long.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly Range Invalid = new Range{Beg = long.MaxValue, End = long.MinValue};
+		public static readonly RangeI Invalid = new RangeI{Beg = long.MaxValue, End = long.MinValue};
 
 		/// <summary>Create a range from a Start and Length</summary>
-		public static Range FromStartLength(long start, long length)
+		public static RangeI FromStartLength(long start, long length)
 		{
-			return new Range(start, start + length);
+			return new RangeI(start, start + length);
 		}
 
 		/// <summary>Create a range from a centre value and + or - a radius</summary>
-		public static Range FromCentreRadius(long centre, long radius)
+		public static RangeI FromCentreRadius(long centre, long radius)
 		{
-			return new Range(centre - radius, centre + radius);
+			return new RangeI(centre - radius, centre + radius);
 		}
 
 		/// <summary>Return the range of values selected by 'selector'</summary>
-		public static Range From<T>(IEnumerable<T> items, Func<T, long> selector)
+		public static RangeI From<T>(IEnumerable<T> items, Func<T, long> selector)
 		{
 			var range = Invalid;
 			foreach (var item in items)
@@ -62,7 +62,7 @@ namespace Rylogic.Common
 
 			return range;
 		}
-		public static Range From(IEnumerable<int> items)
+		public static RangeI From(IEnumerable<int> items)
 		{
 			var range = Invalid;
 			foreach (var item in items)
@@ -70,7 +70,7 @@ namespace Rylogic.Common
 
 			return range;
 		}
-		public static Range From(IEnumerable<long> items)
+		public static RangeI From(IEnumerable<long> items)
 		{
 			var range = Invalid;
 			foreach (var item in items)
@@ -80,7 +80,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Construct from a range</summary>
-		public Range(long beg, long end)
+		public RangeI(long beg, long end)
 		{
 			Beg = beg;
 			End = end;
@@ -160,7 +160,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Returns true if 'rng' is entirely within this range</summary>
-		public bool Contains(Range rng)
+		public bool Contains(RangeI rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
@@ -184,7 +184,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
-		public void Encompass(Range rng)
+		public void Encompass(RangeI rng)
 		{
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
 			Beg = Math.Min(Beg, rng.Beg);
@@ -192,50 +192,50 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
-		public Range Scale(float scale)
+		public RangeI Scale(float scale)
 		{
-			return new Range(Beg, (long)(Beg + Size*scale)){Mid = Mid};
+			return new RangeI(Beg, (long)(Beg + Size*scale)){Mid = Mid};
 		}
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
 		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
-		public Range Union(Range rng)
+		public RangeI Union(RangeI rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			return new Range(Math.Min(Beg, rng.Beg), Math.Max(End, rng.End));
+			return new RangeI(Math.Min(Beg, rng.Beg), Math.Max(End, rng.End));
 		}
 
 		/// <summary>
 		/// Returns the intersection of this range with 'rng'.
 		/// If there is no intersection, returns [b,b) or [e,e) of *this* range.
 		/// Note: this means A.Intersect(B) != B.Intersect(A)</summary>
-		public Range Intersect(Range rng)
+		public RangeI Intersect(RangeI rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			if (rng.End <= Beg) return new Range(Beg, Beg);
-			if (rng.Beg >= End) return new Range(End, End);
-			return new Range(Math.Max(Beg, rng.Beg), Math.Min(End, rng.End));
+			if (rng.End <= Beg) return new RangeI(Beg, Beg);
+			if (rng.Beg >= End) return new RangeI(End, End);
+			return new RangeI(Math.Max(Beg, rng.Beg), Math.Min(End, rng.End));
 		}
 
 		/// <summary>Move the range by an offset</summary>
-		public Range Shift(long ofs)
+		public RangeI Shift(long ofs)
 		{
-			return new Range(Beg + ofs, End + ofs);
+			return new RangeI(Beg + ofs, End + ofs);
 		}
 
 		/// <summary>Returns 'x' clamped by 'range'</summary>
-		public static Range Clamp(Range x, Range range)
+		public static RangeI Clamp(RangeI x, RangeI range)
 		{
-			return new Range(
+			return new RangeI(
 				Math_.Clamp(x.Beg, range.Beg, range.End),
 				Math_.Clamp(x.End, range.Beg, range.End));
 		}
 
 		/// <summary>Returns 'x' constrained by 'range'. i.e 'x' will be fitted within 'range' and only resized if x.Size > range.Size</summary>
-		public static Range Constrain(Range x, Range range)
+		public static RangeI Constrain(RangeI x, RangeI range)
 		{
 			if (x.Beg < range.Beg) x = x.Shift(range.Beg - x.Beg);
 			if (x.End > range.End) x = x.Shift(range.End - x.End);
@@ -250,19 +250,19 @@ namespace Rylogic.Common
 		}
 
 		#region Equals
-		public static bool operator == (Range lhs, Range rhs)
+		public static bool operator == (RangeI lhs, RangeI rhs)
 		{
 			return lhs.Equals(rhs);
 		}
-		public static bool operator != (Range lhs, Range rhs)
+		public static bool operator != (RangeI lhs, RangeI rhs)
 		{
 			return !(lhs == rhs);
 		}
 		public override bool Equals(object? obj)
 		{
-			return obj is Range && Equals((Range)obj);
+			return obj is RangeI && Equals((RangeI)obj);
 		}
-		public bool Equals(Range other)
+		public bool Equals(RangeI other)
 		{
 			return other.Beg == Beg && other.End == End;
 		}
@@ -289,11 +289,11 @@ namespace Rylogic.Common
 		#region Parse
 
 		/// <summary>Convert a string to a range. Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
-		public static Range Parse(string s)
+		public static RangeI Parse(string s)
 		{
 			var v = long_.ParseArray(s, NumberStyles.Integer, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
 			if (v.Length != 2) throw new FormatException("Range.Parse() string argument does not represent a 2 component range");
-			return new Range(v[0], v[1]);
+			return new RangeI(v[0], v[1]);
 		}
 
 		#endregion
@@ -517,15 +517,15 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Allow implicit cast from 'Range'</summary>
-		public static implicit operator RangeF(Range r)
+		public static implicit operator RangeF(RangeI r)
 		{
-			return r != Range.Invalid ? new RangeF(r.Beg, r.End) : RangeF.Invalid;
+			return r != RangeI.Invalid ? new RangeF(r.Beg, r.End) : RangeF.Invalid;
 		}
 
 		/// <summary>Allow explicit cast to 'Range'</summary>
-		public static explicit operator Range(RangeF r)
+		public static explicit operator RangeI(RangeF r)
 		{
-			return r != RangeF.Invalid ? new Range((long)r.Beg, (long)r.End) : Range.Invalid;
+			return r != RangeF.Invalid ? new RangeI((long)r.Beg, (long)r.End) : RangeI.Invalid;
 		}
 
 		#region Equals
@@ -821,8 +821,8 @@ namespace Rylogic.UnitTests
 		public void TestFrom()
 		{
 			{
-				var r = Range.From(new[] { 1, 4, -2, 5, 7, -3 });
-				Assert.Equal(r, new Range(-3, 8));
+				var r = RangeI.From(new[] { 1, 4, -2, 5, 7, -3 });
+				Assert.Equal(r, new RangeI(-3, 8));
 			}
 			{
 				var r = RangeF.From(new[] { 1f, 4f, -2f, 5f, 7f, -3f });
@@ -833,36 +833,36 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void Casting()
 		{
-			Assert.True((RangeF)new Range(10, 20) == new RangeF(10, 20));
-			Assert.True((Range)new RangeF(-10, 20) == new Range(-10, 20));
-			Assert.True((RangeF)Range.Invalid == RangeF.Invalid);
-			Assert.True((Range)RangeF.Invalid == Range.Invalid);
+			Assert.True((RangeF)new RangeI(10, 20) == new RangeF(10, 20));
+			Assert.True((RangeI)new RangeF(-10, 20) == new RangeI(-10, 20));
+			Assert.True((RangeF)RangeI.Invalid == RangeF.Invalid);
+			Assert.True((RangeI)RangeF.Invalid == RangeI.Invalid);
 		}
 
 		[Test]
 		public void Intersect()
 		{
-			var a = new Range(-4, -1);
-			var b = new Range(-1,  3);
-			var c = new Range( 0,  5);
-			var d = new Range( 7, 12);
+			var a = new RangeI(-4, -1);
+			var b = new RangeI(-1,  3);
+			var c = new RangeI( 0,  5);
+			var d = new RangeI( 7, 12);
 
 			// Intersect
 			Assert.Equal(a               , a.Intersect(a));
-			Assert.Equal(new Range(-1,-1), a.Intersect(b));
-			Assert.Equal(new Range(-1,-1), a.Intersect(c));
-			Assert.Equal(new Range(-1,-1), b.Intersect(a));
-			Assert.Equal(new Range( 0, 3), b.Intersect(c));
-			Assert.Equal(new Range( 3, 3), b.Intersect(d));
-			Assert.Equal(new Range( 0, 0), c.Intersect(a));
-			Assert.Equal(new Range( 0, 3), c.Intersect(b));
-			Assert.Equal(new Range( 5, 5), c.Intersect(d));
+			Assert.Equal(new RangeI(-1,-1), a.Intersect(b));
+			Assert.Equal(new RangeI(-1,-1), a.Intersect(c));
+			Assert.Equal(new RangeI(-1,-1), b.Intersect(a));
+			Assert.Equal(new RangeI( 0, 3), b.Intersect(c));
+			Assert.Equal(new RangeI( 3, 3), b.Intersect(d));
+			Assert.Equal(new RangeI( 0, 0), c.Intersect(a));
+			Assert.Equal(new RangeI( 0, 3), c.Intersect(b));
+			Assert.Equal(new RangeI( 5, 5), c.Intersect(d));
 		}
 
 		[Test]
 		public void Encompass()
 		{
-			var r = Range.Invalid;
+			var r = RangeI.Invalid;
 			r.Encompass(4);
 			Assert.Equal(4L, r.Beg);
 			Assert.Equal(5L, r.End);
@@ -874,19 +874,19 @@ namespace Rylogic.UnitTests
 			Assert.True(r.Contains(-2));
 			Assert.True(r.Contains(4));
 
-			r.Encompass(new Range(1,7));
+			r.Encompass(new RangeI(1,7));
 			Assert.Equal(-2L, r.Beg);
 			Assert.Equal( 7L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.False(r.Contains(7));
 
-			var r2 = r.Union(new Range(-3,2));
+			var r2 = r.Union(new RangeI(-3,2));
 			Assert.Equal(-2L, r.Beg);
 			Assert.Equal( 7L, r.End);
 			Assert.Equal(-3L, r2.Beg);
 			Assert.Equal( 7L, r2.End);
 
-			var r3 = r.Intersect(new Range(1,10));
+			var r3 = r.Intersect(new RangeI(1,10));
 			Assert.Equal(-2L, r.Beg);
 			Assert.Equal( 7L, r.End);
 			Assert.Equal( 1L, r3.Beg);

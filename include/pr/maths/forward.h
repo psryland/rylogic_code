@@ -307,6 +307,11 @@ namespace pr
 	template <typename T, typename = maths::enable_if_v3<T>> inline typename maths::is_vec<T>::elem_type z_cp(T const& v) { return v.z; }
 	template <typename T, typename = maths::enable_if_v4<T>> inline typename maths::is_vec<T>::elem_type w_cp(T const& v) { return v.w; }
 
+	// Helper trait for 'underlying_type' that works for non-enums as well
+	template <typename T, bool = std::is_enum_v<T>> struct underlying_type : std::underlying_type<T> {};
+	template <typename T> struct underlying_type<T, false> { using type = T; };
+	template <typename T> using underlying_type_t = typename underlying_type<T>::type;
+
 	// Maths library build options
 	struct MathsBuildOptions
 	{

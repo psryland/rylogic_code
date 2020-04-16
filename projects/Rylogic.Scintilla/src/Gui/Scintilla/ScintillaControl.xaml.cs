@@ -491,8 +491,8 @@ namespace Rylogic.Gui.WPF
 		public long LineCount => Cmd(Sci.SCI_GETLINECOUNT);
 
 		/// <summary>Returns the text in the given range</summary>
-		public string TextRange(long beg, long end) => TextRange(new Range(beg, end));
-		public string TextRange(Range range)
+		public string TextRange(long beg, long end) => TextRange(new RangeI(beg, end));
+		public string TextRange(RangeI range)
 		{
 			if (range.Beg < 0 || range.End > TextLength)
 				throw new Exception($"Invalid text range: [{range.Beg}, {range.End}). Current text length is {TextLength}");
@@ -509,7 +509,7 @@ namespace Rylogic.Gui.WPF
 			Cmd(Sci.SCI_GETTEXTRANGE, 0, buff.Value.Ptr);
 
 			// Return the returned string
-			return Marshal.PtrToStringAnsi(text.Value.Ptr);
+			return Marshal.PtrToStringAnsi(text.Value.Ptr) ?? string.Empty;
 		}
 
 		/// <summary>Return the number of whole characters in the range [beg,end)</summary>
@@ -671,9 +671,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The *unnormalised* range of selected text. Note: *not* [SelectionStart,SelectionEnd)</summary>
-		public Range Selection
+		public RangeI Selection
 		{
-			get => new Range(Anchor, CurrentPos);
+			get => new RangeI(Anchor, CurrentPos);
 			set => SetSel(value.Beg, value.End);
 		}
 
@@ -733,7 +733,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>RAII scope for a selection</summary>
-		public Scope<Range> PreserveSelection()
+		public Scope<RangeI> PreserveSelection()
 		{
 			return Scope.Create(() => Selection, sel => Selection = sel);
 		}
@@ -772,9 +772,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Get the position of the start and end of the selection at the given line with INVALID_POSITION returned if no selection on this line.</summary>
-		public Range GetLineSelectionPosition(long line)
+		public RangeI GetLineSelectionPosition(long line)
 		{
-			return new Range(
+			return new RangeI(
 				Cmd(Sci.SCI_GETLINESELSTARTPOSITION, line),
 				Cmd(Sci.SCI_GETLINESELENDPOSITION, line));
 		}
@@ -830,7 +830,7 @@ namespace Rylogic.Gui.WPF
 			var line_index = LineIndexFromPosition(pos);
 			return GetLine(line_index);
 		}
-		public string LineFromPosition(long pos, out Range range)
+		public string LineFromPosition(long pos, out RangeI range)
 		{
 			var line_index = LineIndexFromPosition(pos);
 			range = LineRange(line_index);
@@ -847,9 +847,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Gets the character range for a line (including new line characters)</summary>
-		public Range LineRange(long line_index)
+		public RangeI LineRange(long line_index)
 		{
-			return new Range(
+			return new RangeI(
 				PositionFromLineIndex(line_index),
 				PositionFromLineIndex(line_index + 1));
 		}
@@ -1155,7 +1155,7 @@ namespace Rylogic.Gui.WPF
 			//  - Users should set 'ReplaceRange', 'Completion', and 'CaretPosition' appropriately.
 			//  - If 'Cancel' is set, no auto completion is done.
 
-			public AutoCompleteSelectionEventArgs(long position, Range replace_range, string completion, Sci.ECompletionMethods method)
+			public AutoCompleteSelectionEventArgs(long position, RangeI replace_range, string completion, Sci.ECompletionMethods method)
 			{
 				Position = position;
 				Method = method;
@@ -1173,7 +1173,7 @@ namespace Rylogic.Gui.WPF
 			public Sci.ECompletionMethods Method { get; }
 
 			/// <summary>The range of text to replace with the completion text. Defaults to the word containing the caret position</summary>
-			public Range ReplaceRange { get; set; }
+			public RangeI ReplaceRange { get; set; }
 
 			/// <summary>The replacement text</summary>
 			public string Completion { get; set; }
@@ -1197,7 +1197,7 @@ namespace Rylogic.Gui.WPF
 			var word_chars = WordChars;
 			long beg = (int)(position - line_start), end = beg;
 			for (; end < line.Length && word_chars.Contains(line[(int)end]); ++end) { }
-			var replace_range = new Range(line_start + beg, line_start + end);
+			var replace_range = new RangeI(line_start + beg, line_start + end);
 
 			// Request the completion text to use. If not handled, fall back to the default handling
 			var args = new AutoCompleteSelectionEventArgs(position, replace_range, completion, method);
@@ -1452,7 +1452,7 @@ namespace Rylogic.Gui.WPF
 		/// members of Sci_TextToFind are filled in with the start and end positions of the found text.
 		/// See also: SCI_SEARCHINTARGET
 		/// Returns an empty range if no match is found</summary>
-		public Range Find(Sci.EFindOption flags, string pattern, Range search_range)
+		public RangeI Find(Sci.EFindOption flags, string pattern, RangeI search_range)
 		{
 			// Create the 'TextToFind' structure
 			using var text = Marshal_.AllocUTF8String(EHeap.HGlobal, pattern);
@@ -1466,10 +1466,10 @@ namespace Rylogic.Gui.WPF
 			// Do the find
 			var pos = Cmd(Sci.SCI_FINDTEXT, (long)flags, buffer.Value.Ptr);
 			if (pos == -1)
-				return new Range();
+				return new RangeI();
 
 			var text_to_find = buffer.Value.As<Sci.TextToFind>();
-			return new Range(text_to_find.chrgText.cpMin, text_to_find.chrgText.cpMax);
+			return new RangeI(text_to_find.chrgText.cpMin, text_to_find.chrgText.cpMax);
 		}
 
 		/// <summary>
@@ -1497,9 +1497,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>
 		/// Get/Set the start and end of the target. When searching you can set start greater than end to find the last matching
 		/// text in the target rather than the first matching text. The target is also set by a successful SCI_SEARCHINTARGET.</summary>
-		public Range Target
+		public RangeI Target
 		{
-			get => new Range(TargetBeg, TargetEnd);
+			get => new RangeI(TargetBeg, TargetEnd);
 			set
 			{
 				TargetBeg = value.Beg;
@@ -1589,13 +1589,13 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Gets the range of visible lines</summary>
-		public Range VisibleLineIndexRange
+		public RangeI VisibleLineIndexRange
 		{
 			get
 			{
 				var s = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
 				var c = Cmd(Sci.SCI_LINESONSCREEN);
-				return new Range(s, s + c);
+				return new RangeI(s, s + c);
 			}
 		}
 

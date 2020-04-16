@@ -159,7 +159,7 @@ namespace pr::str
 		};
 
 		// FP numbers can be in dec or hex, but not anything else...
-		auto allow_fp = (type & ENumType::FP) == ENumType::FP;
+		auto allow_fp = AllSet(type, ENumType::FP);
 		allow_fp &= radix == 0 || radix == 10 || radix == 16;
 		auto fp = false;
 

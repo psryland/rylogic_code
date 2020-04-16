@@ -532,7 +532,7 @@ namespace Rylogic.Gfx
 				public virtual string Description => string.Join(" ", Child.Select(x => x.Description));
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Token tok && 
 						Equals(tok.Child, Child);
@@ -588,7 +588,7 @@ namespace Rylogic.Gfx
 				}
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Template rhs &&
 						rhs.Keyword == Keyword &&
@@ -619,7 +619,7 @@ namespace Rylogic.Gfx
 				public override string Description => Expand ? $"${Keyword}" : $"@{Keyword}";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is TemplateRef rhs &&
 						rhs.Keyword == Keyword &&
@@ -642,7 +642,7 @@ namespace Rylogic.Gfx
 				public override string Description => $"{{{base.Description}}}";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Section rhs &&
 						base.Equals(obj);
@@ -663,7 +663,7 @@ namespace Rylogic.Gfx
 				public override string Description => $"[{base.Description}]";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Optional rhs &&
 						base.Equals(obj);
@@ -684,7 +684,7 @@ namespace Rylogic.Gfx
 				public override string Description => $"({base.Description})";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Repeat rhs &&
 						base.Equals(obj);
@@ -707,7 +707,7 @@ namespace Rylogic.Gfx
 				public override string Description => Child.Count != 0 ? string.Join("|", Child.Select(x => x.Description)) : "|";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Select rhs &&
 						base.Equals(obj);
@@ -732,7 +732,7 @@ namespace Rylogic.Gfx
 				public override string Description => $"<{Name}>";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Field rhs &&
 						rhs.Name == Name &&
@@ -758,7 +758,7 @@ namespace Rylogic.Gfx
 				public override string Description => Text;
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is Literal rhs &&
 						rhs.Text == Text &&
@@ -776,7 +776,7 @@ namespace Rylogic.Gfx
 				public override string Description => ";";
 
 				#region Equals
-				public override bool Equals(object obj)
+				public override bool Equals(object? obj)
 				{
 					return obj is LineBreak rhs &&
 						base.Equals(obj);

@@ -54,7 +54,7 @@ namespace LDraw
 		public static implicit operator SceneUI?(SceneWrapper? x) => x?.SceneUI;
 
 		#region Equals
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is SceneWrapper wrapper && ReferenceEquals(SceneUI, wrapper.SceneUI);
 		}

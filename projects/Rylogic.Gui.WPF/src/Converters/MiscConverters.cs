@@ -75,28 +75,30 @@ namespace Rylogic.Gui.WPF.Converters
 
 			// Get the type of 'value'
 			var ty = value.GetType();
+			if (ty == null)
+				return value.ToString();
 
 			// The parameter is the format string
 			var fmt = (string)parameter;
-			MethodInfo mi;
+			MethodInfo? mi;
 
 			// Specialty types first
 			if (ty.IsGenericType && ty.GetGenericTypeDefinition() == typeof(Unit<>))
 			{
 				// Find the method 'ToString(int sd, bool include_units)'
 				if (fmt.TryConvertTo<int,bool>(out var p0) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int), typeof(bool) })) != null)
-					return (string)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
+					return (string?)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
 
 				// Find the method 'ToString(string fmt, bool include_units)'
 				if (fmt.TryConvertTo<string,bool>(out var p1) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) })) != null)
-					return (string)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
+					return (string?)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
 			}
 
 			// Find the method 'ToString(int sd)'
 			if (int.TryParse(fmt, out var sd))
 			{
 				if ((mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
-					return (string)mi.Invoke(value, new object[] { sd });
+					return (string?)mi.Invoke(value, new object[] { sd });
 				if (value is float f)
 					return float_.ToString(f, sd);
 				if (value is double d)
@@ -107,7 +109,7 @@ namespace Rylogic.Gui.WPF.Converters
 
 			// Find the method 'ToString(string fmt)'
 			if (fmt != null && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(string) })) != null)
-				return (string)mi.Invoke(value, new object[] { fmt });
+				return (string?)mi.Invoke(value, new object[] { fmt });
 
 			return value.ToString();
 		}
@@ -130,10 +132,14 @@ namespace Rylogic.Gui.WPF.Converters
 				return Visibility.Collapsed;
 
 			var ty = value.GetType();
+			if (ty == null)
+				return Visibility.Collapsed;
+
 			if (parameter is string type_name)
 			{
 				// Get the type of 'value'
-				return ty.FullName.EndsWith(type_name) ? Visibility.Visible : Visibility.Collapsed;
+				var full_name = ty.FullName ?? string.Empty;
+				return full_name.EndsWith(type_name) ? Visibility.Visible : Visibility.Collapsed;
 			}
 			if (parameter is Type type)
 			{

@@ -245,7 +245,7 @@ namespace CoinFlip.UI.Indicators
 			public MAPoint this[int i] => m_data[i];
 
 			/// <summary>The candle range spanned by this context</summary>
-			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex + 1) : Range.Invalid;
+			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex + 1) : RangeF.Invalid;
 
 			/// <summary>Returns the nearest index position of 'candle_index' within the data</summary>
 			public int IndexOf(double candle_index) => m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(candle_index), find_insert_position: true);
@@ -281,7 +281,7 @@ namespace CoinFlip.UI.Indicators
 				m_data.Resize(Math.Max(0, m_data.Count - 1));
 
 				// Get the range of new MA data
-				var range = new Range(m_data.Count, Instrument.Count);
+				var range = new RangeI(m_data.Count, Instrument.Count);
 
 				// Append MA data upto, but excluding, the latest candle
 				m_data.AddRange(CalculateMA(m_data.Count, Instrument.Count - 1, m_stat));
@@ -394,7 +394,7 @@ namespace CoinFlip.UI.Indicators
 
 				// Create a piece that spans the index range
 				idx1 = Math.Min(idx1 + 1, Data.Count); // Add 1 to connect to the next piece
-				var data = new Range(idx0, idx1).Select(i => Data[(int)i]);
+				var data = new RangeI(idx0, idx1).Select(i => Data[(int)i]);
 				var piece = new MAPiece(x_range, MA, data);
 				return piece;
 			}
@@ -558,7 +558,7 @@ namespace CoinFlip.UI.Indicators
 
 				// Get the selection distance in chart space, and the index range that needs testing
 				var sel_dist = Chart.ClientToChart(new Size(Chart.Options.MinSelectionDistance, Chart.Options.MinSelectionDistance));
-				var idx_range = new Range(
+				var idx_range = new RangeI(
 					Data.IndexOf(Math.Floor(chart_point.X - sel_dist.Width) + 0),
 					Data.IndexOf(Math.Floor(chart_point.X + sel_dist.Width) + 1));
 
@@ -697,13 +697,13 @@ namespace CoinFlip.UI.Indicators
 		/// <summary>Event args for Context.DataChanged</summary>
 		public class DataChangedEventArgs
 		{
-			public DataChangedEventArgs(Range range)
+			public DataChangedEventArgs(RangeI range)
 			{
 				Range = range;
 			}
 
 			/// <summary>The X Range of the data that has changed</summary>
-			public Range Range { get; }
+			public RangeI Range { get; }
 		}
 
 		/// <summary>Returns a mouse op instance for creating the indicator</summary>

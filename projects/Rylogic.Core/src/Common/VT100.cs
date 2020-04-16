@@ -1250,7 +1250,7 @@ namespace Rylogic.Common
 				if (y >= ymax)
 				{
 					var count = Math.Min(y - Settings.TerminalHeight + 1, LineCount);
-					OnOverflow(new VT100BufferOverflowEventArgs(true, new Range(0, 0 + count)));
+					OnOverflow(new VT100BufferOverflowEventArgs(true, new RangeI(0, 0 + count)));
 
 					// Remove the lines and adjust anything that stores a line number
 					m_lines.RemoveRange(0, count);
@@ -1269,7 +1269,7 @@ namespace Rylogic.Common
 						InvalidRect.X, Math.Max(0, InvalidRect.Y - count),
 						InvalidRect.Width, InvalidRect.Height + Math.Min(0, InvalidRect.Y - count));
 
-					OnOverflow(new VT100BufferOverflowEventArgs(false, new Range(0, 0 + count)));
+					OnOverflow(new VT100BufferOverflowEventArgs(false, new RangeI(0, 0 + count)));
 				}
 
 				if (x >= 0 && x < Settings.TerminalWidth && y >= 0 && y < ymax)
@@ -1436,7 +1436,7 @@ namespace Rylogic.Common
 	#region EventArgs
 	public class VT100BufferOverflowEventArgs : EventArgs
 	{
-		public VT100BufferOverflowEventArgs(bool before, Range dropped)
+		public VT100BufferOverflowEventArgs(bool before, RangeI dropped)
 		{
 			Before = before;
 			Dropped = dropped;
@@ -1446,7 +1446,7 @@ namespace Rylogic.Common
 		public bool Before { get; private set; }
 
 		/// <summary>The index range of lines that are dropped</summary>
-		public Range Dropped { get; private set; }
+		public RangeI Dropped { get; private set; }
 	}
 	public class VT100BufferChangedEventArgs : EventArgs
 	{

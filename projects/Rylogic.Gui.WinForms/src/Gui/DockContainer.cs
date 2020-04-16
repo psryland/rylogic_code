@@ -49,6 +49,7 @@ using System.Linq;
 using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
@@ -421,11 +422,11 @@ namespace Rylogic.Gui.WinForms
 		{
 			if (m_layout_pending || !IsHandleCreated) return;
 			m_layout_pending = true;
-			Dispatcher_.BeginInvoke(() =>
+			Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
 			{
 				m_layout_pending = false;
 				PerformLayout();
-			});
+			}));
 		}
 		private bool m_layout_pending;
 
@@ -1419,11 +1420,11 @@ namespace Rylogic.Gui.WinForms
 			{
 				if (m_layout_pending || !IsHandleCreated) return;
 				m_layout_pending = true;
-				Dispatcher_.BeginInvoke(() =>
+				Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
 				{
 					m_layout_pending = false;
 					PerformLayout();
-				});
+				}));
 			}
 			private bool m_layout_pending;
 
@@ -2022,11 +2023,11 @@ namespace Rylogic.Gui.WinForms
 				if (m_do_layout.Pending || !IsHandleCreated) return;
 				m_do_layout.Signal();
 
-				Dispatcher_.BeginInvoke(() =>
+				Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
 				{
 					m_do_layout.Actioned();
 					PerformLayout();
-				});
+				}));
 			}
 			private Trigger m_do_layout;
 
@@ -2240,7 +2241,9 @@ namespace Rylogic.Gui.WinForms
 				private CaptionButton m_impl_btn_menu;
 
 				/// <summary>Hide the Control's normal context menu</summary>
+				#if NET472
 				private new void ContextMenu() {}
+				#endif
 
 				/// <summary>Measure the height required by this control based on the content in 'DockPane'</summary>
 				public int MeasureHeight()
@@ -2739,6 +2742,11 @@ namespace Rylogic.Gui.WinForms
 				DockAddresses = new Dictionary<Branch, EDockSite[]>();
 			}
 			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool _)
 			{
 				LastInputFocus = null;
 				DockPane = null;
@@ -6239,7 +6247,7 @@ namespace Rylogic.Gui.WinForms
 	}
 
 	/// <summary>Provides the implementation of the docking functionality</summary>
-	public class DockControl :DockContainer.DockControl ,IDisposable
+	public class DockControl :DockContainer.DockControl
 	{
 		/// <summary>Create the docking functionality helper.</summary>
 		/// <param name="owner">The control that docking is being provided for</param>

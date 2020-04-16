@@ -763,14 +763,14 @@ namespace Rylogic.Gui.WinForms
 		private bool m_in_set_position;
 
 		/// <summary>The current track bar range</summary>
-		private Range Range { get; set; }
+		private RangeI Range { get; set; }
 
 		internal void Init(int value, int min, int max, DataGridViewTrackBarCell cell)
 		{
 			// Note, order is important here, because this editor control is shared.
 			// We need to change the cell before setting the new position, or we'll affect the old cell.
 			m_cell = cell;
-			Range = new Range(min, max);
+			Range = new RangeI(min, max);
 			Position = value;
 		}
 		public override bool EditingControlWantsInputKey(Keys key_data, bool wants_input_key)

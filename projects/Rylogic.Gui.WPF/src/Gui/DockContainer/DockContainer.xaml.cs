@@ -350,11 +350,11 @@ namespace Rylogic.Gui.WPF
 		{
 			if (m_layout_changed_notify_pending) return;
 			m_layout_changed_notify_pending = true;
-			Dispatcher.BeginInvoke(() =>
+			Dispatcher.BeginInvoke(new Action(() =>
 			{
 				LayoutChanged?.Invoke(this, EventArgs.Empty);
 				m_layout_changed_notify_pending = false;
-			});
+			}));
 		}
 		private bool m_layout_changed_notify_pending;
 

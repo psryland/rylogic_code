@@ -118,7 +118,7 @@
     <ClInclude Include="..\include\pr\str\tostring.h">
       <Filter>pr\str</Filter>
     </ClInclude>
-    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h">
+    <ClInclude Include="..\sdk\sqlite3\include\sqlite3.h">
       <Filter>sqlite</Filter>
     </ClInclude>
   </ItemGroup>
@@ -177,7 +177,7 @@
     <ClCompile Include="..\projects\elements\world_state.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
+    <ClCompile Include="..\sdk\sqlite3\src\sqlite3.c">
       <Filter>sqlite</Filter>
     </ClCompile>
   </ItemGroup>

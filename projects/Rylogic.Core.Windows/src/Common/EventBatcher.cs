@@ -2,9 +2,6 @@
 // Event Batcher
 //  Copyright (c) Rylogic Ltd 2011
 //***************************************************
-
-#if NET472
-
 using System;
 using System.Threading;
 using System.Windows.Threading;
@@ -35,7 +32,7 @@ namespace Rylogic.Common
 			: this(action, TimeSpan.FromMilliseconds(10))
 		{ }
 		public EventBatcher(EventHandler action, TimeSpan delay)
-			: this(() => action(null, null), delay)
+			: this(() => action(null, EventArgs.Empty), delay)
 		{ }
 		public EventBatcher(Action action)
 			: this(action, TimeSpan.FromMilliseconds(10))
@@ -275,7 +272,5 @@ namespace Rylogic.UnitTests
 		}
 	}
 }
-
-#endif
 
 #endif

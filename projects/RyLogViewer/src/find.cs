@@ -234,7 +234,7 @@ namespace RyLogViewer
 
 		/// <summary>Does the donkey work of searching for a pattern.
 		/// Returns the byte address of the first match.</summary>
-		private static void DoFind(Pattern pat, long start, bool backward, BLIData d, Func<Range, bool> on_found)
+		private static void DoFind(Pattern pat, long start, bool backward, BLIData d, Func<RangeI, bool> on_found)
 		{
 			using (d.file)
 			{
@@ -253,7 +253,7 @@ namespace RyLogViewer
 							return true;
 
 						// Found a match
-						return on_found(new Range(baddr + line_rng.Beg, baddr + line_rng.End));
+						return on_found(new RangeI(baddr + line_rng.Beg, baddr + line_rng.End));
 					};
 
 				// Search for files

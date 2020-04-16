@@ -226,7 +226,7 @@ namespace Rylogic.Gui.WPF
 					c = 0;
 
 					// Add a rectangle to highlight a region of text
-					void DoHighlight(Range r, Brush fill)
+					void DoHighlight(RangeI r, Brush fill)
 					{
 						var l0 = m_tb_testtext.GetLineIndexFromCharacterIndex(r.Begi);
 						var l1 = m_tb_testtext.GetLineIndexFromCharacterIndex(r.Endi);

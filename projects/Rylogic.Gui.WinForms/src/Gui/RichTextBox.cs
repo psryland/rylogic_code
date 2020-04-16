@@ -146,16 +146,16 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Return the character index range for the given line</summary>
-		public Range IndexRangeFromLine(int line, bool include_newline)
+		public RangeI IndexRangeFromLine(int line, bool include_newline)
 		{
 			var line_count = LineCount;
 			var text_count = TextLength;
-			if (line <  0)          return new Range(0,0);
-			if (line >= line_count) return new Range(text_count, text_count);
+			if (line <  0)          return new RangeI(0,0);
+			if (line >= line_count) return new RangeI(text_count, text_count);
 			int idx0 = GetFirstCharIndexFromLine(line);
 			int idx1 = line+1 != line_count ? GetFirstCharIndexFromLine(line+1) : text_count;
 			if (idx1 > idx0 && line+1 < line_count && !include_newline) --idx1; // RTB always uses \n only for line endings, not \r\n
-			return new Range(idx0, idx1);
+			return new RangeI(idx0, idx1);
 		}
 
 		/// <summary>Convert a character index into a character location in (columns,lines)</summary>
@@ -195,16 +195,16 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Convert a client-space area into a virtual line range</summary>
-		public Range ClientAreaToLineRange(Rectangle client_area)
+		public RangeI ClientAreaToLineRange(Rectangle client_area)
 		{
 			var l0 = FirstVisibleLineIndex;
 			var line0 = l0 + client_area.Top / Font.Height;
 			var line1 = l0 + client_area.Bottom / Font.Height + 1;
-			return new Range(line0, line1);
+			return new RangeI(line0, line1);
 		}
 
 		/// <summary>Convert a line range into a client-space area, clipped by ClientRectangle</summary>
-		public Rectangle LineRangeToClientArea(Range line_range)
+		public Rectangle LineRangeToClientArea(RangeI line_range)
 		{
 			var l0 = FirstVisibleLineIndex;
 			var l1 = l0 + VisibleLineCount;
@@ -260,7 +260,7 @@ namespace Rylogic.Gui.WinForms
 			public int CountNoNL { get { return Count - (HasNewLine ? 1 : 0); } }
 
 			/// <summary>Get the character index range for this line</summary>
-			public Range Range { get { return new Range(Beg, End); } }
+			public RangeI Range { get { return new RangeI(Beg, End); } }
 
 			/// <summary>True if this line has a newline character (synonymous with 'is not last line')</summary>
 			public bool HasNewLine { get { return m_line_index+1 < m_rtb.LineCount; } }

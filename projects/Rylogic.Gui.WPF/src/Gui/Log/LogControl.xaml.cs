@@ -148,15 +148,15 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handlers
-				void HandleLoadingLayout(object sender, DockContainerLoadingLayoutEventArgs e)
+				void HandleLoadingLayout(object? sender, DockContainerLoadingLayoutEventArgs e)
 				{
 					LoadSettings(e.UserData);
 				}
-				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
+				void HandleSavingLayout(object? sender, DockContainerSavingLayoutEventArgs e)
 				{
 					SaveSettings(e.Node);
 				}
-				void HandleActiveChanged(object sender, EventArgs e)
+				void HandleActiveChanged(object? sender, EventArgs e)
 				{
 					if (DockControl.IsActiveContent)
 					{
@@ -164,7 +164,7 @@ namespace Rylogic.Gui.WPF
 						//DockControl.InvalidateTab();
 					}
 				}
-				void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs e)
+				void HandleDockContainerChanged(object? sender, DockContainerChangedEventArgs e)
 				{
 					OnDockContainerChanged(e);
 				}
@@ -414,17 +414,17 @@ namespace Rylogic.Gui.WPF
 					// Prevent the LogEntries collection getting too big.
 					// Defer because we can't edit the collection in this handler.
 					if (LogEntries.Count > MaxLines)
-						Dispatcher.BeginInvoke(() =>
+						Dispatcher.BeginInvoke(new Action(() =>
 						{
 							if (LogEntries == null) return;
 							LogEntries.RemoveRange(0, LogEntries.Count - MaxLines);
-						});
+						}));
 
 					// Auto scroll to the last row
 					// Have to do this outside of the event handler or we get an exception
 					// about the "ItemsSource being inconsistent with the ItemsControl"
 					if (TailScroll)
-						Dispatcher.BeginInvoke(ScrollToEnd);
+						Dispatcher.BeginInvoke(new Action(ScrollToEnd));
 				}
 			}
 		}
@@ -448,11 +448,11 @@ namespace Rylogic.Gui.WPF
 		{
 			if (m_log_entry_view_refresh_pending) return;
 			m_log_entry_view_refresh_pending = true;
-			Dispatcher.BeginInvoke(() =>
+			Dispatcher.BeginInvoke(new Action(() =>
 			{
 				LogEntriesView?.Refresh();
 				m_log_entry_view_refresh_pending = false;
-			});
+			}));
 		}
 		private bool m_log_entry_view_refresh_pending;
 
@@ -552,7 +552,7 @@ namespace Rylogic.Gui.WPF
 		{
 			if (Thread.CurrentThread.ManagedThreadId != Dispatcher.Thread.ManagedThreadId)
 			{
-				Dispatcher.BeginInvoke(() => AddMessage(text));
+				Dispatcher.BeginInvoke(new Action(() => AddMessage(text)));
 				return;
 			}
 

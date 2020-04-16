@@ -113,7 +113,7 @@ namespace Rylogic.Gui.WPF
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					m_chart.Dispatcher.BeginInvoke(NotifyMoved);
+					m_chart.Dispatcher.BeginInvoke(new Action(NotifyMoved));
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XZoomed;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YZoomed;
@@ -125,7 +125,7 @@ namespace Rylogic.Gui.WPF
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					m_chart.Dispatcher.BeginInvoke(NotifyMoved);
+					m_chart.Dispatcher.BeginInvoke(new Action(NotifyMoved));
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XScrolled;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YScrolled;

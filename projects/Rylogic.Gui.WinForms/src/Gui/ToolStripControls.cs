@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Extn;
 
@@ -323,14 +324,14 @@ namespace Rylogic.Gui.WinForms
 
 			// There is a retarded bug in .NET where the OnDefaultItemChanged method is called
 			// before the default item is changed, so there's no way to see what the new default item is.
-			Dispatcher_.BeginInvoke(() =>
+			Dispatcher.CurrentDispatcher.BeginInvoke(new Action(() =>
 			{
 				if (DefaultItem != null)
 				{
 					Text  = DefaultItem.Text;
 					Image = DefaultItem.Image;
 				}
-			});
+			}));
 		}
 		protected override void OnDropDownItemClicked(ToolStripItemClickedEventArgs e)
 		{

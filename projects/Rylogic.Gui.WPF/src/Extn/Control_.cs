@@ -82,14 +82,22 @@ namespace Rylogic.Gui.WPF
 				Debug.WriteLine($"No event named '{parts[0]}' found on type {ty.Name}");
 				return; // Silent because of hot editing
 			}
+			if (evt.EventHandlerType == null)
+				return;
 
 			// Attach an event handler.
 			// Get the 'invoke' method on the event handler type to extract the parameter types.
 			// Then, create an instance of the generic helper type so that we can supply an event
 			// handler with the correct signature type.
 			var invoke_mi = evt.EventHandlerType.GetMethod(nameof(EventHandler.Invoke));
+			if (invoke_mi == null)
+				return;
+
 			var parms = invoke_mi.GetParameters().Select(x => x.ParameterType).ToArray();
 			var fwd = Activator.CreateInstance(typeof(EventToCommandData<,>).MakeGenericType(parms), parts[1]);
+			if (fwd == null)
+				return;
+
 			evt.AddEventHandler(obj, Delegate.CreateDelegate(evt.EventHandlerType, fwd, "Handler"));
 		}
 		private class EventToCommandData<TSender, TArgs>

@@ -217,7 +217,7 @@ namespace Rylogic.Extn
 
 				// Handle unknown collections as arrays
 				if (obj is IEnumerable &&
-					type != typeof(Rylogic.Common.Range) &&
+					type != typeof(Rylogic.Common.RangeI) &&
 					type != typeof(Rylogic.Common.RangeF) &&
 					gen_type != typeof(List<>) &&
 					gen_type != typeof(Dictionary<,>) &&
@@ -1856,9 +1856,9 @@ namespace Rylogic.UnitTests
 				Assert.True(v == V);
 			}
 			{
-				var r = new Rylogic.Common.Range(-1, +1);
+				var r = new Rylogic.Common.RangeI(-1, +1);
 				var node = r.ToXml("r", true);
-				var R = node.As<Rylogic.Common.Range>();
+				var R = node.As<Rylogic.Common.RangeI>();
 				Assert.True(r == R);
 			}
 			{

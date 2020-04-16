@@ -11,9 +11,9 @@
 		<OutputType>Library</OutputType>
 		<StartupObject />
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<Version>1.0.1</Version>
-		<FileVersion>1.0.1</FileVersion>
-		<AssemblyVersion>1.0.1</AssemblyVersion>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE;NET471</DefineConstants>

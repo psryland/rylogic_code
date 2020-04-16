@@ -156,7 +156,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			if (m_prune_pending) return;
 			m_prune_pending = true;
-			Dispatcher.BeginInvoke(PruneBranches);
+			Dispatcher.BeginInvoke(new Action(PruneBranches));
 		}
 		private bool m_prune_pending;
 

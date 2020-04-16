@@ -80,7 +80,7 @@ namespace CoinFlip.UI.GfxObjects
 		private IChartGfxPiece CreatePiece(double x_value, RangeF missing)
 		{
 			const int BatchSize = 1024;
-			var db_idx_range = new Range(
+			var db_idx_range = new RangeI(
 				(long)(x_value / BatchSize + 0) * BatchSize,
 				(long)(x_value / BatchSize + 1) * BatchSize);
 
@@ -194,7 +194,7 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			Cache.Invalidate(candle_index);
 		}
-		public void Invalidate(Range candle_index_range)
+		public void Invalidate(RangeI candle_index_range)
 		{
 			Cache.Invalidate(candle_index_range);
 		}
@@ -202,7 +202,7 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>Graphics object for a batch of candles</summary>
 		private class CandleGfx :IChartGfxPiece
 		{
-			public CandleGfx(View3d.Object gfx, Range db_index_range)
+			public CandleGfx(View3d.Object gfx, RangeI db_index_range)
 			{
 				Gfx = gfx;
 				Range = db_index_range;

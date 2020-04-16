@@ -9,7 +9,7 @@ namespace RyLogViewer
 		//  - The Line implementation is responsible for determining the number of columns on the line
 
 		/// <summary>The log data byte range</summary>
-		Range FileByteRange { get; }
+		RangeI FileByteRange { get; }
 
 		/// <summary>Return the value for the requested column. Return "" for out of range column indices</summary>
 		string Value(int column);

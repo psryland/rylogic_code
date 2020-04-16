@@ -80,8 +80,14 @@ namespace Rylogic.Gui.WPF
 				var prop = (PropertyInfo?)null;
 				foreach (var item in view.SourceCollection)
 				{
-					prop = prop != null && ty == item.GetType() ? prop : (ty = item.GetType()).GetProperty(DisplayMemberPath);
-					var text = prop.GetValue(item).ToString();
+					if (item == null) continue;
+					if (prop == null || ty != item.GetType())
+					{
+						ty = item.GetType();
+						prop = ty.GetProperty(DisplayMemberPath);
+					}
+
+					var text = prop?.GetValue(item)?.ToString() ?? string.Empty;
 					if (string.Compare(text, Text, !IsTextSearchCaseSensitive) != 0) continue;
 					view.MoveCurrentTo(item);
 					SelectedItem = item;

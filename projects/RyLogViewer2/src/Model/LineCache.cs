@@ -94,7 +94,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Access info about a line (cached)</summary>
-		private ILine ReadLine(Range rng)
+		private ILine ReadLine(RangeI rng)
 		{
 			// The position in the cache for file range 'rng'
 			var cache_index = rng.Begi % m_cache.Count;
@@ -127,7 +127,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Invalidate cache entries for lines that overlap the given memory range</summary>
-		private void InvalidateCache(Range rng)
+		private void InvalidateCache(RangeI rng)
 		{
 			for (var i = 0; i != m_cache.Count; ++i)
 			{

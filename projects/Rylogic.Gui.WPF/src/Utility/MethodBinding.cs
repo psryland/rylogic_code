@@ -117,10 +117,10 @@ namespace Rylogic.Gui.WPF
 					return;
 				}
 
-				var arguments = new object[_argument_properties.Count - method_args_start];
+				var arguments = new object?[_argument_properties.Count - method_args_start];
 				for (int i = method_args_start; i < _argument_properties.Count; i++)
 				{
-					var arg_value = element.GetValue(_argument_properties[i]);
+					var arg_value = (object?)element.GetValue(_argument_properties[i]);
 					switch (arg_value)
 					{
 					case EventSenderExtension _:

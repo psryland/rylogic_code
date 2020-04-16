@@ -117,11 +117,11 @@ def InputWithTimeout(msg, timeout_s):
 
 # Delete a file or directory tree using the shell
 def ShellDelete(path, wait_time_ms = 100):
+	if not os.path.exists(path): return
+	shutil.rmtree(path, ignore_errors=True)
+	time.sleep(wait_time_ms * 0.001) # Give the OS time to do it
 	if os.path.exists(path):
-		shutil.rmtree(path, ignore_errors=True)
-		time.sleep(wait_time_ms * 0.001) # Give the OS time to do it
-		if os.path.exists(path):
-			raise Exception("Failed to delete '"+path+"'. Check for locked files")
+		raise Exception(f"Failed to delete '{path}'. Check for locked files")
 
 # Change the file extension on 'path'. 'extn' should include the dot
 def ChgExtn(filepath:str, extn:str):
@@ -563,7 +563,7 @@ def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str]
 	configs   = configs if configs else []
 
 	# Build the arguments list
-	args = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
+	args = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/verbosity:minimal", "/nologo"] # "/m", disabled parallel builds because of locked files
 
 	# Set the targets to build
 	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)
@@ -649,41 +649,11 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 
 	return not errors
 
-# Create a Nuget package from the given project file
-# Expects a file called 'package.nuspec' in the same directory as 'proj'
-# The resulting package will be in UserVars.root\lib\packages
-def NugetPackage(proj:str, publish:bool):
-
-	# No nuspec = no publish
-	nuspec = os.path.join(os.path.split(proj)[0], "package.nuspec")
-	if not os.path.exists(nuspec):
-		return
-
-	# Read the version numbers from the spec file and project file
-	vers0 = Extract(nuspec, r"<version>(?P<vers>.*)</version>").group("vers")
-	vers1 = Extract(proj, r"<Version>(?P<vers>.*)</Version>").group("vers")
-	vers2 = Extract(proj, r"<FileVersion>(?P<vers>.*)</FileVersion>").group("vers")
-
-	# Compare it to the versions in the project file
-	if vers0 != vers1 or vers0 != vers2:
-		raise Exception(f"Version number mismatch between project file ({proj}) and nuspec file ({nuspec})")
-
-	# Build the Nuget package directly in the lib\packages folder
-	Exec([UserVars.nuget, "pack", nuspec, "-OutputDirectory", os.path.join(UserVars.root, "lib", "packages")])
-	
-	# Publish the package
-	if publish:
-		package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
-		package_path = os.path.join(UserVars.root, "lib", "packages", f"{package_name}.{vers0}.nupkg")
-
-		# Sign the package
-		if False: # my cert's out of date..
-			cert = os.path.join(UserVars.root, "projects", "Rylogic.pfx")
-			time_server = "http://timestamp.digicert.com"
-			Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", cert, "-Timestamper", time_server])
-		
-		# Push the package to nuget.org
-		Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
+# Sign an assembly
+def SignAssembly(target:str):
+	if not UserVars.rylogic_cert_pfx: return
+	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	Exec([UserVars.signtool, "sign", "/f", UserVars.rylogic_cert_pfx, "/p", UserVars.rylogic_cert_pw, target])
 	return
 
 # Sign a VSIX extension package
@@ -696,6 +666,44 @@ def SignVsix(vsix_filepath:str, algo:str):
 	# If the vsix supports VS versions less than 14.0, you need to use "-fd sha1" or the cert shows up as invalid. If the VSIX only
 	#    supports VS versions >= 14.0, use sha256 instead.
 	Exec(["openvsixsigntool", "sign", "--sha1", "e1053e6fa1aeb7bd4ee453302116a129ca4112f9", "-fd", algo, vsix_filepath])
+	return
+
+# Create a Nuget package from the given project file
+# Expects a file called 'package.nuspec' in the same directory as 'proj'
+# The resulting package will be in UserVars.root\lib\packages
+# The full package path is returned
+def NugetPackage(proj:str):
+
+	# Notes:
+	#  - Assembly signing, packaging, and publishing are all separate steps.
+
+	# No nuspec = no publish
+	nuspec = os.path.join(os.path.split(proj)[0], "package.nuspec")
+	if not os.path.exists(nuspec):
+		raise RuntimeError(f"'nuspec' file missing. Expected '{nuspec}'")
+
+	# Read the version numbers from the spec file and project file
+	vers0 = Extract(nuspec, r"<version>(?P<vers>.*)</version>").group("vers")
+	vers1 = Extract(proj, r"<Version>(?P<vers>.*)</Version>").group("vers")
+	vers2 = Extract(proj, r"<FileVersion>(?P<vers>.*)</FileVersion>").group("vers")
+
+	# Compare it to the versions in the project file
+	if vers0 != vers1 or vers0 != vers2:
+		raise Exception(f"Version number mismatch between project file ({proj}) and nuspec file ({nuspec})")
+
+	# Build the Nuget package directly in the lib\packages folder
+	Exec([UserVars.nuget, "pack", nuspec, "-OutputDirectory", os.path.join(UserVars.root, "lib", "packages")])
+
+	# Sign the package
+	package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
+	package_path = os.path.join(UserVars.root, "lib", "packages", f"{package_name}.{vers0}.nupkg")
+	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", UserVars.rylogic_cert_pfx, "-CertificatePassword", UserVars.rylogic_cert_pw, "-Timestamper", "http://timestamp.digicert.com"])
+	return package_path
+
+# Push a nugget package to 'nuget.org'
+def NugetPublish(package_path:str):
+	Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
 	return
 
 # Create a zip of a directory
