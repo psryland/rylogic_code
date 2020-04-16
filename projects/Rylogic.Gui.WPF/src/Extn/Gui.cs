@@ -42,7 +42,11 @@ namespace Rylogic.Gui.WPF
 
 			// Determine the type of the property
 			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
-			var prop_type = typeof(T).GetProperty(prop_name).PropertyType;
+			var prop_type = typeof(T).GetProperty(prop_name)?.PropertyType;
+			if (prop_type == null)
+				throw new ArgumentNullException($"Property type is unknown");
+
+			// Set the default value
 			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
 
 			// If the type defines a Changed handler, add a callback
@@ -76,7 +80,7 @@ namespace Rylogic.Gui.WPF
 			var validation_handler = typeof(T).GetMethod($"{prop_name}_Validate", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 			if (validation_handler != null)
 			{
-				validate_cb = new ValidateValueCallback((x) => (bool)validation_handler.Invoke(null, new object[] { x }));
+				validate_cb = new ValidateValueCallback((x) => (bool?)validation_handler.Invoke(null, new object[] { x }) ?? false);
 			}
 
 			// Register the property
@@ -106,7 +110,11 @@ namespace Rylogic.Gui.WPF
 			var meta = new FrameworkPropertyMetadata(null, flags);
 
 			// Determine the type of the property
-			var prop_type = class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public).ReturnType;
+			var prop_type = class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public)?.ReturnType;
+			if (prop_type == null)
+				throw new Exception($"Property return type is unknown");
+
+			// Set the default value
 			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
 
 			// If the type defines a Changed handler, add a callback
@@ -492,7 +500,7 @@ namespace Rylogic.Gui.WPF
 		{
 			return (bool)m_fi_showing_as_dialog.GetValue(window)!;
 		}
-		private static readonly FieldInfo m_fi_showing_as_dialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic);
+		private static readonly FieldInfo m_fi_showing_as_dialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("_showingAsDialog field not found");
 
 		/// <summary>Show the folder browser dialog</summary>
 		public static bool ShowDialog(this OpenFolderUI dlg, DependencyObject dep)

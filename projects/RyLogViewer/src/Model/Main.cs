@@ -2332,7 +2332,7 @@ namespace RyLogViewer
 
 				// Selection
 				var sel_range = m_grid.SelectedRowIndexRange();
-				var rg = (r != -1) ? new Range(m_line_index[sel_range.Begi].Beg, m_line_index[sel_range.Endi].End) : SelectedRowByteRange;
+				var rg = (r != -1) ? new RangeI(m_line_index[sel_range.Begi].Beg, m_line_index[sel_range.Endi].End) : SelectedRowByteRange;
 				m_status_selection.Text = $"Selection: [{rg.Beg:N0} - {rg.End:N0}] ({rg.Size} bytes)";
 				m_status_selection.Visible = true;
 
@@ -2366,7 +2366,7 @@ namespace RyLogViewer
 		/// <summary>Update the indicator ranges on the file scroll bar</summary>
 		private void UpdateFileScroll()
 		{
-			Range range = LineIndexRange;
+			RangeI range = LineIndexRange;
 			if (!range.Equals(m_scroll_file.ThumbRange))
 				Log.Info(this, $"File scroll set to [{range.Beg},{range.End}) within file [{FileByteRange.Beg},{FileByteRange.End})");
 

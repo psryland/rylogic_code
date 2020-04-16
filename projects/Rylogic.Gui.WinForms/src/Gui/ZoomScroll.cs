@@ -23,9 +23,9 @@ namespace Rylogic.Gui.WinForms
 		{
 			m_hoverscroll = new HoverScroll();
 			DoubleBuffered = true;
-			TotalRange = new Range(0, 1000);
+			TotalRange = new RangeI(0, 1000);
 			ZoomedRange = TotalRange;
-			VisibleRange = new Range(35, 50);
+			VisibleRange = new RangeI(35, 50);
 			MinimumVisibleRangeSize = 20;
 			VisibleRangeColor = Color.FromArgb(unchecked((int)0x80008000));
 			VisibleRangeBorderColor = Color.FromArgb(unchecked((int)0xFF008000));
@@ -143,7 +143,7 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>The total un-zoomed size of the represented range</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The total un-zoomed size of the represented range")]
-		public Range TotalRange
+		public RangeI TotalRange
 		{
 			get { return m_total_range; }
 			set
@@ -152,43 +152,43 @@ namespace Rylogic.Gui.WinForms
 				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_total_range   = value;
 				m_zoomed_range  = value;
-				m_visible_range = Range.Constrain(m_visible_range, m_total_range);
+				m_visible_range = RangeI.Constrain(m_visible_range, m_total_range);
 				Invalidate();
 			}
 		}
-		private Range m_total_range;
+		private RangeI m_total_range;
 
 		/// <summary>The size of the total range after zooming</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the total range after zooming")]
-		public Range ZoomedRange
+		public RangeI ZoomedRange
 		{
 			get { return m_zoomed_range; }
 			set
 			{
 				if (Equals(m_zoomed_range, value)) return;
 				if (value.Size <= 0) value.End = value.Beg + 1;
-				m_zoomed_range  = Range.Constrain(value, m_total_range);
-				m_visible_range = Range.Constrain(m_visible_range, m_zoomed_range);
+				m_zoomed_range  = RangeI.Constrain(value, m_total_range);
+				m_visible_range = RangeI.Constrain(m_visible_range, m_zoomed_range);
 				Invalidate();
 			}
 		}
-		private Range m_zoomed_range;
+		private RangeI m_zoomed_range;
 
 		/// <summary>The size of the visible region of the represented range</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the visible region of the represented range")]
-		public Range VisibleRange
+		public RangeI VisibleRange
 		{
 			get { return m_visible_range; }
 			set
 			{
 				if (Equals(m_visible_range, value)) return;
 				if (value.Size <= 0) value.End = value.Beg + 1;
-				m_visible_range = Range.Constrain(value, m_zoomed_range);
+				m_visible_range = RangeI.Constrain(value, m_zoomed_range);
 				RaiseScrollEvent();
 				Invalidate();
 			}
 		}
-		private Range m_visible_range;
+		private RangeI m_visible_range;
 
 		/// <summary>Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize")]
@@ -232,7 +232,7 @@ namespace Rylogic.Gui.WinForms
 				if (Math.Abs(value - Zoom) < float.Epsilon) return;
 				value = Math_.Clamp(value, 1.0f, 1000000.0f);
 				var sz = Math.Max((int)(m_total_range.Size / value), MinimumVisibleRangeSize);
-				var r = new Range(0, sz){Mid = ZoomedRange.Mid};
+				var r = new RangeI(0, sz){Mid = ZoomedRange.Mid};
 				if (r.Beg > VisibleRange.Beg) r = r.Shift(VisibleRange.Beg - r.Beg);
 				if (r.End < VisibleRange.End) r = r.Shift(VisibleRange.End - r.End);
 				ZoomedRange = r;

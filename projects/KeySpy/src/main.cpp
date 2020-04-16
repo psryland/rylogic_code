@@ -87,7 +87,7 @@ namespace keyspy
 			}
 
 			// Write 1 bit to record the Alt key state
-			PutBits(AllSet(p.flags, LLKHF_ALTDOWN) ? 1 : 0, 1);
+			PutBits(AllSet(p.flags, DWORD(LLKHF_ALTDOWN)) ? 1 : 0, 1);
 
 			// Write 8 bits for the virtual key code
 			// 'vkCode - 1' = a value on the range [0,253]

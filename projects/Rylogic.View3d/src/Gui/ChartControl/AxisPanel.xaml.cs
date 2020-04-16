@@ -106,11 +106,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			UpdateGraphics();
 
 			// Handlers
-			void HandleMoved(object sender, EventArgs e)
+			void HandleMoved(object? sender, EventArgs e)
 			{
 				Invalidate();
 			}
-			void HandleOptionChanged(object sender, PropertyChangedEventArgs e)
+			void HandleOptionChanged(object? sender, PropertyChangedEventArgs e)
 			{
 				switch (e.PropertyName)
 				{

@@ -4,53 +4,50 @@
 		<TargetFrameworks>net472;netcoreapp3.1</TargetFrameworks>
 		<RootNamespace>Rylogic.Core.Windows</RootNamespace>
 		<OutputType>Library</OutputType>
-		<UseWpf>True</UseWpf>
 		<StartupObject />
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<PublishTrimmed>true</PublishTrimmed>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
+		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 
+	<!-- Assembly Properties -->
 	<PropertyGroup>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.0.2</Version>
-		<FileVersion>1.0.2</FileVersion>
-		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
 	</PropertyGroup>
-	
+
+	<!-- Build Options -->
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE</DefineConstants>
+		<Optimize>true</Optimize>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
+	<!-- Dependencies -->
 	<ItemGroup>
 		<PackageReference Include="System.Drawing.Common" Version="4.7.0" />
 		<PackageReference Include="System.Drawing.Primitives" Version="4.3.0" />
 		<PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-	</ItemGroup>
-	<ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.0' ">
-		<PackageReference Include="System.Reflection.Emit" Version="4.3.0" />
-		<!--
-		<PackageReference Include="Microsoft.Windows.Compatibility" Version="3.0.0" />
-		<PackageReference Include="Microsoft.WindowsDesktop.App" Version="1.0.0" />
-		-->
+		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
-	</ItemGroup>
 	
+	<!-- Post Build -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(TargetFramework) $(PlatformName) $(ConfigurationName)" />
 	</Target>

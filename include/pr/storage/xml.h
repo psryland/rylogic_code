@@ -548,11 +548,11 @@ namespace pr
 			// Set it as the stream source for the writer
 			impl::Check(writer->SetOutput(stream));
 
-			if ((properties & EProperty::Indent) != EProperty::None)
+			if (AllSet(properties, EProperty::Indent))
 				impl::Check(writer->SetProperty(XmlWriterProperty_Indent, TRUE));
-			if ((properties & EProperty::ByteOrderMark) != EProperty::None)
+			if (AllSet(properties, EProperty::ByteOrderMark))
 				impl::Check(writer->SetProperty(XmlWriterProperty_ByteOrderMark, TRUE));
-			if ((properties & EProperty::OmitXmlDeclaration) != EProperty::None)
+			if (AllSet(properties, EProperty::OmitXmlDeclaration))
 				impl::Check(writer->SetProperty(XmlWriterProperty_OmitXmlDeclaration, TRUE));
 
 			// Start the document

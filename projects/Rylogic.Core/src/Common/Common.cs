@@ -7,15 +7,15 @@ namespace Rylogic.Common
 		/// <summary>Add XML serialisation support for graphics types</summary>
 		public static XmlConfig SupportRylogicCommonTypes(this XmlConfig cfg)
 		{
-			Xml_.ToMap[typeof(Range)] = (obj, node) =>
+			Xml_.ToMap[typeof(RangeI)] = (obj, node) =>
 			{
-				var r = (Range)obj;
+				var r = (RangeI)obj;
 				node.SetValue($"{r.Beg} {r.End}");
 				return node;
 			};
-			Xml_.AsMap[typeof(Range)] = (elem, type, instance) =>
+			Xml_.AsMap[typeof(RangeI)] = (elem, type, instance) =>
 			{
-				return Range.Parse(elem.Value);
+				return RangeI.Parse(elem.Value);
 			};
 
 			Xml_.ToMap[typeof(RangeF)] = (obj, node) =>

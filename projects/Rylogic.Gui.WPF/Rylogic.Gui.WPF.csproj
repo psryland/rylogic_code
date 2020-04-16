@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
-		<TargetFrameworks>net472</TargetFrameworks>
+		<TargetFrameworks>net472;netcoreapp3.1</TargetFrameworks>
 		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
 		<OutputType>Library</OutputType>
 		<StartupObject />
-		<UseWpf>true</UseWpf>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<PublishTrimmed>true</PublishTrimmed>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
+		<UseWpf>true</UseWpf>
 	</PropertyGroup>
 
 	<!-- Assembly Properties -->
@@ -17,9 +19,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.0.3</Version>
-		<FileVersion>1.0.3</FileVersion>
-		<AssemblyVersion>1.0.3</AssemblyVersion>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -49,12 +51,9 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Reference Include="Microsoft.CSharp" />
-		<Reference Include="PresentationCore" />
-		<Reference Include="PresentationFramework" />
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-		<PackageReference Include="WindowsBase" Version="4.6.1055" />
 	</ItemGroup>
 
 	<!-- Post Build -->

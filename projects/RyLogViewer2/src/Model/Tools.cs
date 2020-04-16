@@ -13,11 +13,11 @@ namespace RyLogViewer
 	public static class Tools
 	{
 		/// <summary>Return the range that spans 'ranges' (assuming the list is ordered)</summary>
-		public static Range GetRange(IList<Range> ranges)
+		public static RangeI GetRange(IList<RangeI> ranges)
 		{
 			return ranges.Count != 0
-				? new Range(ranges.Front().Beg, ranges.Back().End)
-				: Range.Zero;
+				? new RangeI(ranges.Front().Beg, ranges.Back().End)
+				: RangeI.Zero;
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>

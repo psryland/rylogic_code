@@ -9,7 +9,6 @@ LDraw
 	- Support sub models in object manager
 	
 P3D
-	- file out to ldr script should write normals, colours, and normals
 	
 CoinFlip
 	Candle Charts:

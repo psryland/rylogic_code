@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tradee", "TradeeUI\Tradee.c
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeeService", "TradeeService\TradeeService.csproj", "{454FFEEF-22B5-4115-B000-40C40195D7BF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\..\sdk\sqlite\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\..\sdk\sqlite3\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "..\..\build\renderer11.vcxproj", "{6EC3B435-2551-48FE-84F4-EDED821A48D0}"
 EndProject

@@ -109,7 +109,7 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// Handlers
-					void HandleMoved(object sender, ChartMovedEventArgs e)
+					void HandleMoved(object? sender, ChartMovedEventArgs e)
 					{
 						if (Beg != null && End != null)
 							UpdateGfx();

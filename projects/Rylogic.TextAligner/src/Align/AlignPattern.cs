@@ -85,7 +85,7 @@ namespace Rylogic.TextAligner
 		protected override bool PreserveWhitespace => true;
 
 		/// <summary>Returns the range of characters this pattern should occupy, relative to the aligning column</summary>
-		public Range Position => new Range(Offset, Offset + MinWidth);
+		public RangeI Position => new RangeI(Offset, Offset + MinWidth);
 
 		/// <summary></summary>
 		public override object Clone() => new AlignPattern(this);

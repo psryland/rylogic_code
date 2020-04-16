@@ -63,7 +63,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics2", "physics2.vcxpro
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\sdk\sqlite\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sqlite3", "..\sdk\sqlite3\sqlite.vcxproj", "{F4A1B209-47CA-4F5D-A80E-87004C91D52E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.ExamplePlugin", "..\projects\RyLogViewer\examples\ExamplePlugin\RyLogViewer.ExamplePlugin.csproj", "{C054B079-AC66-4C7E-A201-D57E32FB4F89}"
 EndProject
@@ -122,9 +122,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Scintilla", "..\projects\Rylogic.Scintilla\Rylogic.Scintilla.csproj", "{A96E213D-5566-4248-84E4-803981967B6F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Core.Windows", "..\projects\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj", "{76EF3A15-6E9F-4348-BCC2-E39F14B2A2B4}"
-	ProjectSection(ProjectDependencies) = postProject
-		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Items", "_Items", "{015BC940-4B39-487B-BF98-86206E61794A}"
 	ProjectSection(SolutionItems) = preProject

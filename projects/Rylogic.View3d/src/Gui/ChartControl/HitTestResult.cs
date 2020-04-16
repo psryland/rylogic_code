@@ -69,7 +69,7 @@ namespace Rylogic.Gui.WPF
 				public object Context { get; }
 
 				/// <summary></summary>
-				public override string ToString() => Element.ToString();
+				public override string ToString() => Element.ToString() ?? string.Empty;
 			}
 		}
 	}

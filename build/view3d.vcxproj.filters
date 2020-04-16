@@ -616,7 +616,15 @@
     <CustomBuild Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl" />
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl">
+      <Filter>src\shaders\hlsl\utility</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+      <Filter>src\shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli">
@@ -670,13 +678,5 @@
     <None Include="..\projects\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
-      <Filter>src\shaders\hlsl\screenspace</Filter>
-    </FxCompile>
-    <FxCompile Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
-      <Filter>src\shaders\hlsl\screenspace</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

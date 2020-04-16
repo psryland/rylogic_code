@@ -9,7 +9,6 @@ using System.Runtime.CompilerServices;
 using Rylogic.Common;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Range = Rylogic.Common.Range;
 
 namespace Rylogic.Extn
 {
@@ -377,7 +376,7 @@ namespace Rylogic.Extn
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}
-		public static bool Within(this int x, Range range)
+		public static bool Within(this int x, RangeI range)
 		{
 			return Within(x, range.Begi, range.Endi);
 		}
@@ -389,7 +388,7 @@ namespace Rylogic.Extn
 		{
 			return x.HasValue && x.Value.WithinInclusive(beg,end);
 		}
-		public static bool WithinInclusive(this int x, Range range)
+		public static bool WithinInclusive(this int x, RangeI range)
 		{
 			return x.WithinInclusive(range.Begi, range.Endi);
 		}
@@ -465,7 +464,7 @@ namespace Rylogic.Extn
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}
-		public static bool Within(this long x, Range range)
+		public static bool Within(this long x, RangeI range)
 		{
 			return x.Within(range.Beg, range.End);
 		}
@@ -477,7 +476,7 @@ namespace Rylogic.Extn
 		{
 			return x.HasValue && x.Value.WithinInclusive(beg,end);
 		}
-		public static bool WithinInclusive(this long x, Range range)
+		public static bool WithinInclusive(this long x, RangeI range)
 		{
 			return x.WithinInclusive(range.Beg, range.End);
 		}

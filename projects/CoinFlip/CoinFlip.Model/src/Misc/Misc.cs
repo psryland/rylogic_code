@@ -57,7 +57,7 @@ namespace CoinFlip
 		/// <summary>Execute a delegate on the main thread</summary>
 		public static DispatcherOperation RunOnMainThread(Action action)
 		{
-			return Dispatcher.BeginInvoke(Worker);
+			return Dispatcher.BeginInvoke(new Action(Worker));
 			void Worker()
 			{
 				Debug.Assert(AssertMainThread());

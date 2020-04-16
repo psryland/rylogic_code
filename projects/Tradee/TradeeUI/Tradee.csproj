@@ -211,16 +211,16 @@
     <Content Include="..\..\..\lib\x86\release\view3d.dll">
       <Link>lib\x86\release\view3d.dll</Link>
     </Content>
-    <Content Include="..\..\..\sdk\sqlite\lib\x64\debug\sqlite3.dll">
+    <Content Include="..\..\..\sdk\sqlite3\lib\x64\debug\sqlite3.dll">
       <Link>lib\x64\debug\sqlite3.dll</Link>
     </Content>
-    <Content Include="..\..\..\sdk\sqlite\lib\x64\release\sqlite3.dll">
+    <Content Include="..\..\..\sdk\sqlite3\lib\x64\release\sqlite3.dll">
       <Link>lib\x64\release\sqlite3.dll</Link>
     </Content>
-    <Content Include="..\..\..\sdk\sqlite\lib\x86\debug\sqlite3.dll">
+    <Content Include="..\..\..\sdk\sqlite3\lib\x86\debug\sqlite3.dll">
       <Link>lib\x86\debug\sqlite3.dll</Link>
     </Content>
-    <Content Include="..\..\..\sdk\sqlite\lib\x86\release\sqlite3.dll">
+    <Content Include="..\..\..\sdk\sqlite3\lib\x86\release\sqlite3.dll">
       <Link>lib\x86\release\sqlite3.dll</Link>
     </Content>
     <Content Include="money.ico" />

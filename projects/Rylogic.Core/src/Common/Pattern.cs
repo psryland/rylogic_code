@@ -59,14 +59,14 @@ namespace Rylogic.Common
 		///  if your expression is @"(x)" you get two groups, [0,1] for the whole expression,
 		///  then [0,1] for the sub-expression<para/>
 		/// Note, only the first match is returned, [2,1] is not returned by this method.</summary>
-		IEnumerable<Range> Match(string text, int start = 0, int length = -1);
+		IEnumerable<RangeI> Match(string text, int start = 0, int length = -1);
 
 		/// <summary>
 		/// Returns all occurrences of matches within 'text'.
 		/// i.e.<para/>
 		///   AllMatches(@"(x)", "xoxox") returns [0,1], [2,1], [4,1]<para/>
 		/// Note, this method doesn't return capture groups, only whole expression matches.</summary>
-		IEnumerable<Range> AllMatches(string text);
+		IEnumerable<RangeI> AllMatches(string text);
 
 		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
 		bool IsMatch(string text);
@@ -347,7 +347,7 @@ namespace Rylogic.Common
 		///  if your expression is @"(x)" you get two groups, [0,1] for the whole expression,
 		///  then [0,1] for the sub-expression<para/>
 		/// Note, only the first match is returned, [2,1] is not returned by this method.</summary>
-		public IEnumerable<Range> Match(string text, int start = 0, int length = -1)
+		public IEnumerable<RangeI> Match(string text, int start = 0, int length = -1)
 		{
 			if (!Active || text == null) yield break;
 
@@ -398,7 +398,7 @@ namespace Rylogic.Common
 			for (int i = 0; i != x.Count; i += 2)
 			{
 				Debug.Assert(x[i] <= x[i + 1]);
-				yield return new Range(x[i], x[i + 1]);
+				yield return new RangeI(x[i], x[i + 1]);
 			}
 		}
 
@@ -407,7 +407,7 @@ namespace Rylogic.Common
 		/// i.e.<para/>
 		///   AllMatches(@"(x)", "xoxox") returns [0,1], [2,1], [4,1]<para/>
 		/// Note, this method doesn't return capture groups, only whole expression matches.</summary>
-		public IEnumerable<Range> AllMatches(string text)
+		public IEnumerable<RangeI> AllMatches(string text)
 		{
 			for (var i = 0;;)
 			{
@@ -710,11 +710,11 @@ namespace Rylogic.UnitTests
 
 			// Match returns the whole expr match, then the capture group
 			var r1 = p.Match(s).ToList();
-			Assert.True(r1.SequenceEqual(new[]{ new Range(0,1), new Range(0,1) }));
+			Assert.True(r1.SequenceEqual(new[]{ new RangeI(0,1), new RangeI(0,1) }));
 
 			// AllMatches returns only whole expr matches but all occurrences in the string
 			var r2 = p.AllMatches(s).ToList();
-			Assert.True(r2.SequenceEqual(new[]{ new Range(0,1), new Range(2,3), new Range(4,5) }));
+			Assert.True(r2.SequenceEqual(new[]{ new RangeI(0,1), new RangeI(2,3), new RangeI(4,5) }));
 		}
 		[Test] public void RegexMatches11()
 		{
@@ -723,7 +723,7 @@ namespace Rylogic.UnitTests
 
 			// Match returns the whole expr match, then the capture group
 			var r1 = p.Match(s).ToList();
-			Assert.True(r1.SequenceEqual(new[] { new Range(3, 8), new Range(3, 8) }));
+			Assert.True(r1.SequenceEqual(new[] { new RangeI(3, 8), new RangeI(3, 8) }));
 		}
 	}
 }

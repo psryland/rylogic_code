@@ -487,8 +487,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// The second to last dock site should be a branch or a pane.
 				var branch = TreeHost.Root;
 				var ds = DropAddress.GetEnumerator();
-				for (var more = ds.MoveNext(); more && branch.Descendants[(EDockSite)ds.Current].Item is Branch b; branch = b, more = ds.MoveNext()) { }
-				var target = branch.Descendants[(EDockSite)ds.Current];
+				for (var more = ds.MoveNext(); more; more = ds.MoveNext())
+				{
+					if (!(branch.Descendants[(EDockSite)ds.Current!].Item is Branch b)) break;
+					branch = b;
+				}
+				var target = branch.Descendants[(EDockSite)ds.Current!];
 				if (target.Item is Branch)
 					throw new Exception("The address ends at a branch node, not a pane or null-child");
 

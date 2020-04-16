@@ -620,7 +620,7 @@ namespace CoinFlip.UI
 		private void AutoRangeIfNeeded()
 		{
 			// If the chart X axis range does not overlap the equity data range, auto range.
-			if (Chart.XAxis.Range.Intersect(new Range(0, Equity.Count)).Empty)
+			if (Chart.XAxis.Range.Intersect(new RangeI(0, Equity.Count)).Empty)
 				AutoRange.Execute();
 		}
 

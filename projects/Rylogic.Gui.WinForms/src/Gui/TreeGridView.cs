@@ -1094,9 +1094,9 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>The range of row indices required by this node</summary>
-		public Range RowIndexRange
+		public RangeI RowIndexRange
 		{
-			get { return new Range(RowIndex, NextRowIndex); }
+			get { return new RangeI(RowIndex, NextRowIndex); }
 		}
 
 		/// <summary>Return the tree cell in this row</summary>

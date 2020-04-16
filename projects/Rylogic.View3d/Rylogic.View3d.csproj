@@ -1,12 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
 	<PropertyGroup>
-		<TargetFrameworks>net472</TargetFrameworks>
+		<TargetFrameworks>net472;netcoreapp3.1</TargetFrameworks>
 		<RootNamespace>Rylogic.View3d</RootNamespace>
 		<OutputType>Library</OutputType>
 		<StartupObject />
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<PublishTrimmed>true</PublishTrimmed>
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
 		<LangVersion>latest</LangVersion>
 		<Nullable>Enable</Nullable>
+		<UseWpf>True</UseWpf>
 	</PropertyGroup>
 
 	<!-- Assembly Properties -->
@@ -17,9 +20,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<Version>1.0.2</Version>
-		<FileVersion>1.0.2</FileVersion>
-		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Build Options -->
@@ -31,14 +34,6 @@
 		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
-	
-	<!-- Controls -->
-	<ItemGroup>
-		<Page Include="src\Gui\**\*.xaml">
-			<SubType>Designer</SubType>
-			<Generator>MSBuild:Compile</Generator>
-		</Page>
-	</ItemGroup>
 
 	<!-- Native libraries -->
 	<ItemGroup>
@@ -49,13 +44,9 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-		<Reference Include="PresentationCore" />
-		<Reference Include="PresentationFramework" />
-		<Reference Include="System.Xaml" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
 		<ProjectReference Include="..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
-		<PackageReference Include="WindowsBase" Version="4.6.1055" />
 	</ItemGroup>
 
 	<!-- Post Build -->

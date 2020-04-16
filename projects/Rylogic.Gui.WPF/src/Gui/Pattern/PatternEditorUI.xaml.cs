@@ -32,7 +32,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handle Commit
-				void HandleCommit(object sender, EventArgs e)
+				void HandleCommit(object? sender, EventArgs e)
 				{
 					if (StayOpen) return;
 					Accept.Execute();

@@ -43,7 +43,7 @@ namespace Rylogic.Gui.WPF
 		public virtual ELinkCameras CamLink { get; set; }
 
 		/// <summary>Handle a navigation event from 'Source'</summary>
-		protected virtual void OnSourceNavigation(object sender, View3d.MouseNavigateEventArgs e)
+		protected virtual void OnSourceNavigation(object? sender, View3d.MouseNavigateEventArgs e)
 		{
 			if (!Target.TryGetTarget(out var target))
 				return;

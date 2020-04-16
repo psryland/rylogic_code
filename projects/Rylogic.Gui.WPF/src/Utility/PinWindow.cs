@@ -117,7 +117,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handlers
-				void HandleLoaded(object sender, EventArgs e)
+				void HandleLoaded(object? sender, EventArgs e)
 				{
 					if (double.IsNaN(PinWindow.ActualWidth) || double.IsNaN(PinWindow.ActualHeight))
 						return;
@@ -137,14 +137,14 @@ namespace Rylogic.Gui.WPF
 						_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
 					};
 				}
-				void HandleMoved(object sender, EventArgs e)
+				void HandleMoved(object? sender, EventArgs e)
 				{
 					// When the location of the controlled window changes, record the offset from
 					// the target window, but only if it's not us setting the controlled window's location.
 					if (!UpdatingLocation)
 						PinOffset = MeasureOffset();
 				}
-				void HandleClosed(object sender, EventArgs e)
+				void HandleClosed(object? sender, EventArgs e)
 				{
 					// Dispose when the controlled window closes
 					Dispose();
@@ -175,7 +175,7 @@ namespace Rylogic.Gui.WPF
 				UpdatePinMenuCheckState();
 
 				// Handler
-				void HandleMoved(object sender, EventArgs e)
+				void HandleMoved(object? sender, EventArgs e)
 				{
 					// When the target window moves, update the position of the pinned window.
 					if (Pinned)

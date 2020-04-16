@@ -28,10 +28,10 @@ namespace RyLogViewer
 			public ECase[] Case;
 
 			/// <summary>The start and length of the source characters</summary>
-			public Range Src;
+			public RangeI Src;
 
 			/// <summary>The start and length of where to write the characters</summary>
-			public Range Dst;
+			public RangeI Dst;
 		}
 
 		/// <summary>Construct a mapping from 'src' to 'dst'</summary>
@@ -54,14 +54,14 @@ namespace RyLogViewer
 				map.Char = ch;
 
 				// Read the span of chars from 'dst'
-				map.Dst = new Range(i,i);
+				map.Dst = new RangeI(i,i);
 				for (; i != dst.Length && char.ToLowerInvariant(dst[i]) == ch; ++map.Dst.Size, ++i) {}
 
 				// Find the corresponding span in 'src'
 				int j; for (j = 0; j != src.Length && char.ToLowerInvariant(src[j]) != ch; ++j) {}
 
 				// Read the span of chars from 'src'
-				map.Src = new Range(j,j);
+				map.Src = new RangeI(j,j);
 				for (; j != src.Length && char.ToLowerInvariant(src[j]) == ch; ++map.Src.Size, ++j) {}
 
 				// Check that there are no other 'ch' blocks in 'src'

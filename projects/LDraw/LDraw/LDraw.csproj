@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net472</TargetFramework>
+		<TargetFrameworks>net472</TargetFrameworks>
 		<RootNamespace>LDraw</RootNamespace>
 		<AssemblyName>LDraw</AssemblyName>
 		<LangVersion>latest</LangVersion>
@@ -46,7 +46,6 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
-
 		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
 			<Link>lib\x64\debug\view3d.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

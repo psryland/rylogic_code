@@ -918,12 +918,12 @@ namespace CoinFlip
 				$")");
 
 			// Reset the interval of available history.
-			HistoryInterval = new Range(
+			HistoryInterval = new RangeI(
 				DateTimeOffset_.UnixEpoch.Ticks,
 				DateTimeOffset_.UnixEpoch.Ticks);
 
 			// Reset the interval of available funds transfer history
-			TransfersInterval = new Range(
+			TransfersInterval = new RangeI(
 				DateTimeOffset_.UnixEpoch.Ticks,
 				DateTimeOffset_.UnixEpoch.Ticks);
 
@@ -1020,7 +1020,7 @@ namespace CoinFlip
 			}
 
 			// Update the history range
-			HistoryInterval = new Range(
+			HistoryInterval = new RangeI(
 				Math.Min(HistoryInterval.Beg, order_completed.Created.Ticks),
 				Math.Max(HistoryInterval.End, order_completed.Created.Ticks));
 		}
@@ -1044,7 +1044,7 @@ namespace CoinFlip
 			}
 
 			// Update the history range
-			TransfersInterval = new Range(
+			TransfersInterval = new RangeI(
 				Math.Min(TransfersInterval.Beg, transfer.Created.Ticks),
 				Math.Max(TransfersInterval.End, transfer.Created.Ticks));
 		}
@@ -1246,8 +1246,8 @@ namespace CoinFlip
 
 			History.Clear();
 			Transfers.Clear();
-			HistoryInterval = Range.Invalid;
-			TransfersInterval = Range.Invalid;
+			HistoryInterval = RangeI.Invalid;
+			TransfersInterval = RangeI.Invalid;
 
 			// Populate the collections
 			foreach (var his in history.Values)
@@ -1271,11 +1271,11 @@ namespace CoinFlip
 		private bool m_populate_history_signalled;
 
 		/// <summary>The time range that the completed orders history covers (in ticks)</summary>
-		public Range HistoryInterval { get; protected set; }
+		public RangeI HistoryInterval { get; protected set; }
 		protected DateTimeOffset? m_history_last; // Worker thread context only
 
 		/// <summary>The time range that the transfer history covers (in ticks)</summary>
-		public Range TransfersInterval { get; protected set; }
+		public RangeI TransfersInterval { get; protected set; }
 		protected DateTimeOffset? m_transfers_last; // Worker thread context only
 
 		/// <summary>Property changed notification</summary>

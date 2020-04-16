@@ -347,7 +347,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
 		public event EventHandler<View3dControl.BuildSceneEventArgs>? BuildScene;
-		private void OnBuildScene(object sender, View3dControl.BuildSceneEventArgs e)
+		private void OnBuildScene(object? sender, View3dControl.BuildSceneEventArgs e)
 		{
 			// Notes:
 			//  - 'Elements' manage their graphics directly in the View3d.Window. Those

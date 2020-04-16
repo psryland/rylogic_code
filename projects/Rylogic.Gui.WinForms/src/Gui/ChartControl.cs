@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using System.Xml.Linq;
 using Rylogic.Attrib;
 using Rylogic.Common;
@@ -1927,7 +1928,7 @@ namespace Rylogic.Gui.WinForms
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					Dispatcher_.BeginInvoke(NotifyMoved);
+					Dispatcher.CurrentDispatcher.BeginInvoke(new Action(NotifyMoved));
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XZoomed;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YZoomed;
@@ -1939,7 +1940,7 @@ namespace Rylogic.Gui.WinForms
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					Dispatcher_.BeginInvoke(NotifyMoved);
+					Dispatcher.CurrentDispatcher.BeginInvoke(new Action(NotifyMoved));
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XScrolled;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YScrolled;
@@ -2843,7 +2844,12 @@ namespace Rylogic.Gui.WinForms
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
-			public virtual void Dispose()
+			public void Dispose()
+			{
+				Dispose(true);
+				GC.SuppressFinalize(this);
+			}
+			protected virtual void Dispose(bool disposing)
 			{
 				Disposed?.Invoke(this, EventArgs.Empty);
 				Util.Dispose(ref m_suspend_scope);
@@ -3039,9 +3045,9 @@ namespace Rylogic.Gui.WinForms
 				};
 				m_tape_measure_graphic_added = false;
 			}
-			public override void Dispose()
+			protected override void Dispose(bool disposing)
 			{
-				base.Dispose();
+				base.Dispose(disposing);
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
@@ -4248,7 +4254,7 @@ namespace Rylogic.Gui.WinForms
 		private ChartTools m_tools;
 
 		/// <summary>A collection of graphics used by the chart itself</summary>
-		public class ChartTools :IDisposable
+		public sealed class ChartTools :IDisposable
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
@@ -5093,13 +5099,13 @@ namespace Rylogic.Gui.WinForms
 				var idx = m_data.BinarySearch(pt => pt.xf.CompareTo(x), find_insert_position: true);
 
 				// Convert 'missing' to an index range within the data
-				var idx_missing = new Range(
+				var idx_missing = new RangeI(
 					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.Beg), find_insert_position:true),
 					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.End), find_insert_position:true));
 
 				// Limit the size of 'idx_missing' to the block size
 				const int PieceBlockSize = 4096;
-				var idx_range = new Range(
+				var idx_range = new RangeI(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
 
@@ -5137,7 +5143,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Create a point cloud plot</summary>
-		private GfxPiece CreatePointPlot(Range idx_range)
+		private GfxPiece CreatePointPlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -5171,7 +5177,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Create a line plot</summary>
-		private GfxPiece CreateLinePlot(Range idx_range)
+		private GfxPiece CreateLinePlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 			if (n == 0)
@@ -5220,7 +5226,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Create a step line plot</summary>
-		private GfxPiece CreateStepLinePlot(Range idx_range)
+		private GfxPiece CreateStepLinePlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -5276,7 +5282,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Create a bar graph</summary>
-		private GfxPiece CreateBarPlot(Range idx_range)
+		private GfxPiece CreateBarPlot(RangeI idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -5379,7 +5385,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>A cache of graphics objects that span the X-Axis</summary>
-		public class GfxCache :IDisposable
+		public sealed class GfxCache :IDisposable
 		{
 			// Notes:
 			// - This cache is intended to be used by other ChartDataSeries-like classes.
@@ -5467,7 +5473,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Graphics for a part of the series data</summary>
-		public class GfxPiece :IDisposable
+		public sealed class GfxPiece :IDisposable
 		{
 			public GfxPiece(View3d.Object gfx, RangeF range)
 			{
@@ -5560,7 +5566,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>RAII object for synchronising access to the underlying data</summary>
-		public class LockData : ICollection<Pt>, IDisposable
+		public sealed class LockData : ICollection<Pt>, IDisposable
 		{
 			private RangeF m_changed_data_range;
 			public LockData(ChartDataSeries owner)

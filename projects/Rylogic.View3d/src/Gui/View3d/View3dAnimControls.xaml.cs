@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WPF
 			NotifyPropertyChanged(nameof(ViewWindow));
 
 			// Handlers
-			void HandleAnimationEvent(object sender, View3d.AnimationEventArgs e)
+			void HandleAnimationEvent(object? sender, View3d.AnimationEventArgs e)
 			{
 				Util.BreakIf(!Util.IsMainThread);
 				NotifyPropertyChanged(nameof(Animating));

@@ -131,7 +131,7 @@ namespace RyLogViewer
 		private static IEnumerable<Tag> GetTags(string str)
 		{
 			return Regex.Matches(str, @"\{\w+}").Cast<Match>().Select(
-				m => new Tag(m.Value.TrimStart('{').TrimEnd('}'), new Range(m.Index, m.Index + m.Length)));
+				m => new Tag(m.Value.TrimStart('{').TrimEnd('}'), new RangeI(m.Index, m.Index + m.Length)));
 		}
 
 		/// <summary>Returns true if the match expression is valid</summary>
@@ -175,7 +175,7 @@ namespace RyLogViewer
 			Debug.Assert(ids.Length == grps.Count, "Expected the number of capture ids and number of regex capture groups to be the same");
 			for (var i = 0; i != ids.Length; ++i)
 			{
-				var cap = new Capture(ids[i], grps[i].Value, new Range(grps[i].Index, grps[i].Index + grps[i].Length));
+				var cap = new Capture(ids[i], grps[i].Value, new RangeI(grps[i].Index, grps[i].Index + grps[i].Length));
 				caps.Add(cap.Id, cap);
 				src_caps.Add(cap);
 			}
@@ -194,7 +194,7 @@ namespace RyLogViewer
 				var sub = Subs[t.Id].Result(caps[t.Id].Elem);
 				result = result.Remove(t.Span.Begi + ofs, t.Span.Sizei);
 				result = result.Insert(t.Span.Begi + ofs, sub);
-				dst_caps.Add(new Capture(t.Id, sub, new Range(t.Span.Beg + ofs, t.Span.Beg + ofs + sub.Length)));
+				dst_caps.Add(new Capture(t.Id, sub, new RangeI(t.Span.Beg + ofs, t.Span.Beg + ofs + sub.Length)));
 				ofs += sub.Length - t.Span.Sizei;
 			}
 
@@ -354,14 +354,14 @@ namespace RyLogViewer
 			public readonly string Elem;
 
 			/// <summary>The character range for the capture in the source string</summary>
-			public readonly Range Span;
+			public readonly RangeI Span;
 
 			public Capture(string id, string elem)
 			{
 				Id   = id;
 				Elem = elem;
 			}
-			public Capture(string id, string elem, Range span)
+			public Capture(string id, string elem, RangeI span)
 			{
 				Id   = id;
 				Elem = elem;
@@ -380,9 +380,9 @@ namespace RyLogViewer
 			public readonly string Id;
 
 			/// <summary>The range of characters covered by this tag</summary>
-			public Range Span;
+			public RangeI Span;
 
-			public Tag(string id, Range span)
+			public Tag(string id, RangeI span)
 			{
 				Id = id;
 				Span = span;

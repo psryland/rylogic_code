@@ -368,6 +368,7 @@ extern "C"
 	}
 	ADDIN_API HRESULT WINAPI AddIn_LargeInt(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 	{
+		(void)pHelper, pResult, max;
 		//ReentryGuard guard;
 		//LargeInt large_int;
 		//if (FAILED(pHelper->Read(large_int))) return E_FAIL;

@@ -104,10 +104,10 @@ namespace CoinFlip
 		public event EventHandler HoldsChanged;
 		public void NotifyHoldsChanged()
 		{
-			m_dispatcher.BeginInvoke(() =>
+			m_dispatcher.BeginInvoke(new Action(() =>
 			{
 				HoldsChanged?.Invoke(this, EventArgs.Empty);
-			});
+			}));
 		}
 
 		/// <summary>Enumerable all holds</summary>

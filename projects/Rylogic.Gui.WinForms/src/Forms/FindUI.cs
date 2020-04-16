@@ -130,7 +130,7 @@ namespace Rylogic.Gui.WinForms
 		/// <param name="start">The index of the starting position to begin searching</param>
 		/// <param name="length">The number of characters to search</param>
 		/// <returns>The sub range within 'text' of a matching occurrence</returns>
-		public Range DoFind(string text, int start = 0, int length = -1)
+		public RangeI DoFind(string text, int start = 0, int length = -1)
 		{
 			// Add the search pattern to the history
 			PatternHistory = Utility.Util.AddToHistoryList(PatternHistory, m_pat.Expr, false, 10);
@@ -140,7 +140,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Convenience member for saving the last match location</summary>
-		public Range LastMatch { get; set; }
+		public RangeI LastMatch { get; set; }
 
 		/// <summary>The history of search patterns</summary>
 		public string[] PatternHistory

@@ -63,11 +63,11 @@ namespace LDraw
 				}
 
 				// Handlers
-				void ReportError(object sender, View3d.ErrorEventArgs e)
+				void ReportError(object? sender, View3d.ErrorEventArgs e)
 				{
 					Log.Write(ELogLevel.Error, e.Message, e.Filepath, e.FileLine);
 				}
-				void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
+				void HandleSourcesChanged(object? sender, View3d.SourcesChangedEventArgs e)
 				{
 					// Just prior to reloading sources
 					if (e.Before && Settings.ClearErrorLogOnReload)
@@ -78,12 +78,12 @@ namespace LDraw
 						foreach (var scene in Scenes)
 							scene.SceneView.AutoRange();
 				}
-				void HandleAddFileProgress(object sender, View3d.AddFileProgressEventArgs e) // worker thread context
+				void HandleAddFileProgress(object? sender, View3d.AddFileProgressEventArgs e) // worker thread context
 				{
 					// Marshal to the main thread and update progress
 					Sync.Post(x =>
 					{
-						var args = (View3d.AddFileProgressEventArgs)x;
+						var args = (View3d.AddFileProgressEventArgs)x!;
 						ParsingProgress ??= new ParsingProgressData(args.ContextId);
 
 						// Only update with info from the same file
@@ -127,7 +127,7 @@ namespace LDraw
 				}
 
 				// Handlers
-				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
 					switch (e.Key)
@@ -199,7 +199,7 @@ namespace LDraw
 				}
 
 				// Handlers
-				void HandleCheckForChangedFiles(object sender, EventArgs e)
+				void HandleCheckForChangedFiles(object? sender, EventArgs e)
 				{
 					try
 					{

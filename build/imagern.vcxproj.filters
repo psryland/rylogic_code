@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
+    <ClCompile Include="..\sdk\sqlite3\src\sqlite3.c">
       <Filter>sqlite</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\imagern\main\imager.cpp">
@@ -27,7 +27,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\sdk\sqlite\sqlite3.h">
+    <ClInclude Include="..\sdk\sqlite3\src\sqlite3.h">
       <Filter>sqlite</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\imagern\main\events.h">

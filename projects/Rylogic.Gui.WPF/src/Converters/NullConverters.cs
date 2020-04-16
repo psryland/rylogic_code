@@ -9,7 +9,7 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>If the value is null, return a default instance of 'targetType'</summary>
 	public class NullableToDefault : MarkupExtension, IValueConverter
 	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null) return Activator.CreateInstance(targetType);
 			return value;

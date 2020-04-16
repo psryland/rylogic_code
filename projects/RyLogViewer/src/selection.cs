@@ -87,7 +87,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte offset of the selected row, or 0 if there is no selection</summary>
-		private Range SelectedRowByteRange
+		private RangeI SelectedRowByteRange
 		{
 			get
 			{
@@ -99,13 +99,13 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte range that includes all selected rows (even if there are holes in the selection)</summary>
-		private Range SelectedRowsByteRange
+		private RangeI SelectedRowsByteRange
 		{
 			get
 			{
 				var r = m_grid.SelectedRowIndexRange();
 				if (r.Empty) return SelectedRowByteRange; // 0 or 1 row selected
-				return new Range(
+				return new RangeI(
 					m_line_index[r.Begi].Beg,
 					m_line_index[r.Endi].End + 1);
 			}

@@ -21,22 +21,22 @@ namespace Rylogic.Gui.WinForms
 
 		public interface ISubRange
 		{
-			Range Range { get; }
+			RangeI Range { get; }
 			Color Color { get; }
 		}
 		private class SubRange :ISubRange
 		{
 			public Rectangle m_rect;
 
-			public Range Range { get; set; }
+			public RangeI Range { get; set; }
 			public Color Color { get; set; }
 
-			public SubRange(Range range, Color color) { Range = range; Color = color; }
+			public SubRange(RangeI range, Color color) { Range = range; Color = color; }
 		}
 
 		/// <summary>The total size of the represented range</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The total size of the represented range")]
-		public Range TotalRange
+		public RangeI TotalRange
 		{
 			get { return m_total_range; }
 			set
@@ -44,28 +44,28 @@ namespace Rylogic.Gui.WinForms
 				if (Equals(m_total_range, value)) return;
 				if (value.Size <= 0) value.End = value.Beg + 1;
 				m_total_range = value;
-				m_thumb_range = Range.Constrain(m_thumb_range, m_total_range);
-				foreach (var r in m_indicator_ranges) r.Range = Range.Constrain(r.Range, m_total_range);
+				m_thumb_range = RangeI.Constrain(m_thumb_range, m_total_range);
+				foreach (var r in m_indicator_ranges) r.Range = RangeI.Constrain(r.Range, m_total_range);
 				Invalidate();
 			}
 		}
-		private Range m_total_range;
+		private RangeI m_total_range;
 
 		/// <summary>The range of the thumb relative to TotalRange</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the thumb within TotalRange")]
-		public Range ThumbRange
+		public RangeI ThumbRange
 		{
 			get { return m_thumb_range; }
 			set
 			{
 				if (Equals(m_thumb_range, value)) return;
 				if (value.Size <= 0) value.End = value.Beg + 1;
-				m_thumb_range = Range.Constrain(value, m_total_range);
+				m_thumb_range = RangeI.Constrain(value, m_total_range);
 				RaiseScrollEvent();
 				Invalidate();
 			}
 		}
-		private Range m_thumb_range;
+		private RangeI m_thumb_range;
 
 		/// <summary>The minimum size to let the thumb get</summary>
 		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The minimum size to let the thumb get")]
@@ -133,8 +133,8 @@ namespace Rylogic.Gui.WinForms
 			MinThumbSize = 20;
 			ThumbColor   = Color.FromArgb(unchecked ((int)0xFF008000));
 			TrackColor   = SystemColors.ControlDark;
-			TotalRange   = new Range(0, 100);
-			ThumbRange   = new Range(35, 50);
+			TotalRange   = new RangeI(0, 100);
+			ThumbRange   = new RangeI(35, 50);
 			SetStyle(
 				ControlStyles.OptimizedDoubleBuffer |
 				ControlStyles.AllPaintingInWmPaint|
@@ -150,10 +150,10 @@ namespace Rylogic.Gui.WinForms
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			base.OnKeyDown(e);
-			if (e.KeyCode == Keys.PageUp  )          { Range thm = ThumbRange; thm = thm.Shift(-m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.PageDown)          { Range thm = ThumbRange; thm = thm.Shift(+m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Up   && e.Control) { Range thm = ThumbRange; thm = thm.Shift(-m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
-			if (e.KeyCode == Keys.Down && e.Control) { Range thm = ThumbRange; thm = thm.Shift(+m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageUp  )          { RangeI thm = ThumbRange; thm = thm.Shift(-m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.PageDown)          { RangeI thm = ThumbRange; thm = thm.Shift(+m_large_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Up   && e.Control) { RangeI thm = ThumbRange; thm = thm.Shift(-m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
+			if (e.KeyCode == Keys.Down && e.Control) { RangeI thm = ThumbRange; thm = thm.Shift(+m_small_change); ThumbRange = thm; RaiseScrollEvent(); RaiseScrollEndEvent(); }
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -253,17 +253,17 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Add an indicator range</summary>
-		public void AddIndicatorRange(Range range, Color colour)
+		public void AddIndicatorRange(RangeI range, Color colour)
 		{
 			System.Diagnostics.Debug.Assert(TotalRange.Contains(range), "Indicator range outside total range");
-			range = Range.Constrain(range, TotalRange);
+			range = RangeI.Constrain(range, TotalRange);
 			m_indicator_ranges.Add(new SubRange(range, colour));
 		}
 
 		/// <summary>Set the thumb position given a control space Y value</summary>
 		private void ScrollThumbPos(int y)
 		{
-			Range thm = ThumbRange;
+			RangeI thm = ThumbRange;
 			thm.Mid = TotalRange.Beg + (long)(Math_.Frac(0, y, Height) * TotalRange.Size);
 			ThumbRange = thm;
 		}

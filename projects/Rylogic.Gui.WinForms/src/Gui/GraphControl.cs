@@ -1805,7 +1805,7 @@ namespace Rylogic.Gui.WinForms
 						}
 
 						// Swap the bitmaps on the GUI thread
-						dispatcher.BeginInvoke(() =>
+						dispatcher.BeginInvoke(new Action(() =>
 						{
 							// If the render was cancelled, ignore the result
 							if (rdr_issue != m_rdr_issue)
@@ -1816,7 +1816,7 @@ namespace Rylogic.Gui.WinForms
 
 							// Cause a refresh
 							Refresh();
-						});
+						}));
 					}, m_rdr_issue);
 				}
 

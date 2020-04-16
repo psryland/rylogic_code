@@ -48,7 +48,7 @@ namespace RyLogViewer
 						var d = new BLIData(m, new SingleFile(startup_options.FileToLoad));
 						using (d.file)
 						{
-							var rng = new[] { new Range(0, long.MaxValue) };
+							var rng = new[] { new RangeI(0, long.MaxValue) };
 							var row_delimiter = Misc.Robitise(m.Settings.RowDelimiter);
 							var col_delimiter = Misc.Robitise(m.Settings.ColDelimiter);
 
@@ -116,7 +116,7 @@ namespace RyLogViewer
 				Settings.ExportFilepath = dlg.OutputFilepath;
 
 				// Find the range to export
-				IEnumerable<Range> rng;
+				IEnumerable<RangeI> rng;
 				switch (dlg.RangeToExport)
 				{
 				default: throw new ArgumentOutOfRangeException();
@@ -155,7 +155,7 @@ namespace RyLogViewer
 		/// <param name="row_delimiter">The delimiter that defines rows (robitised)</param>
 		/// <param name="col_delimiter">The delimiter that defines columns (robitised)</param>
 		/// <param name="outp">The stream to write the exported file to</param>
-		private bool DoExportWithProgress(BLIData d, IEnumerable<Range> ranges, string row_delimiter, string col_delimiter, StreamWriter outp)
+		private bool DoExportWithProgress(BLIData d, IEnumerable<RangeI> ranges, string row_delimiter, string col_delimiter, StreamWriter outp)
 		{
 			DialogResult res = DialogResult.Cancel;
 			try
@@ -195,7 +195,7 @@ namespace RyLogViewer
 		/// <param name="row_delimiter">The row delimiter to use in the output file (robitised)</param>
 		/// <param name="col_delimiter">The column delimiter to use in the output file (robitised)</param>
 		/// <param name="outp">The output stream to write the exported result to</param>
-		private static void DoExport(BLIData d, IEnumerable<Range> ranges, string row_delimiter, string col_delimiter, StreamWriter outp)
+		private static void DoExport(BLIData d, IEnumerable<RangeI> ranges, string row_delimiter, string col_delimiter, StreamWriter outp)
 		{
 			var line = new Line();
 
@@ -221,7 +221,7 @@ namespace RyLogViewer
 			foreach (var rng in ranges)
 			{
 				// Find the start of a line (grow the range if necessary)
-				var r = new Range(Math_.Clamp(rng.Beg, 0, d.file.Stream.Length), Math_.Clamp(rng.End, 0, d.file.Stream.Length));
+				var r = new RangeI(Math_.Clamp(rng.Beg, 0, d.file.Stream.Length), Math_.Clamp(rng.End, 0, d.file.Stream.Length));
 				r.Beg = FindLineStart(d.file, r.Beg, r.End, d.row_delim, d.encoding, buf);
 
 				// Read lines and write them to the export file

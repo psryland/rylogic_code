@@ -20,11 +20,11 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
-		public static Scope<Range> SelectionScope(this ComboBox edit)
+		public static Scope<RangeI> SelectionScope(this ComboBox edit)
 		{
 			return edit.IsEditable
 				? edit.EditableTextBox().SelectionScope()
-				: Scope.Create(() => Range.Invalid, null);
+				: Scope.Create(() => RangeI.Invalid, null);
 		}
 	}
 }

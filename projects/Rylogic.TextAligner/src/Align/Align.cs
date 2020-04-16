@@ -44,7 +44,7 @@ namespace Rylogic.TextAligner
 		private AlignPos FindAlignColumn(IEnumerable<Token> toks, int min_column)
 		{
 			var leading_ws = 0;
-			var span = Range.Zero; // include 0 in the range
+			var span = RangeI.Zero; // include 0 in the range
 			var all_line_starts = true;
 			foreach (var tok in toks)
 			{
@@ -169,7 +169,7 @@ namespace Rylogic.TextAligner
 			// It means aligning won't do anything, but I think that's what a user would expect,
 			// consistent with selecting more than 1 line.
 			var line_range = selection.IsSingleLine && !selection.IsWholeLines
-				? new Range(0, m_snapshot.LineCount - 1)
+				? new RangeI(0, m_snapshot.LineCount - 1)
 				: selection.Lines;
 
 			// Get the align boundaries on the current line
@@ -224,7 +224,7 @@ namespace Rylogic.TextAligner
 		/// <summary>
 		/// Searches above (dir == -1) or below (dir == +1) for alignment tokens that occur
 		/// with the same token index as 'align'. Returns all found.</summary>
-		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, Range line_range)
+		private IEnumerable<Token> FindAlignmentEdits(Token align, int token_index, List<AlignGroup> grps, int dir, RangeI line_range)
 		{
 			for (var i = align.LineNumber + dir; line_range.ContainsInclusive(i); i += dir)
 			{
@@ -354,7 +354,7 @@ namespace Rylogic.TextAligner
 		[DebuggerDisplay("{Description,nq}")]
 		private class Token
 		{
-			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, Range span, int tab_size)
+			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, RangeI span, int tab_size)
 			{
 				Grp = grp;
 				GrpIndex = grp_index;
@@ -389,7 +389,7 @@ namespace Rylogic.TextAligner
 			public int LineNumber { get; private set; }
 
 			/// <summary>The character range of the matched pattern on the line</summary>
-			public Range Span { get; private set; }
+			public RangeI Span { get; private set; }
 
 			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
 			public int Distance(int caret_pos)
@@ -433,8 +433,8 @@ namespace Rylogic.TextAligner
 		/// <summary></summary>
 		private struct Selection
 		{
-			public readonly Range Pos;               // The buffer position range of the selected characters [First,Last)
-			public readonly Range Lines;             // The lines contained in the selection [First,Last)
+			public readonly RangeI Pos;               // The buffer position range of the selected characters [First,Last)
+			public readonly RangeI Lines;             // The lines contained in the selection [First,Last)
 			public readonly ITextSnapshotLine SLine; // The line containing the first selected character
 			public readonly ITextSnapshotLine ELine; // The line containing the last selected character
 			public readonly int CaretPos;            // The buffer position of the caret
@@ -446,8 +446,8 @@ namespace Rylogic.TextAligner
 				var selection = view.Selection;
 				var caret = view.Caret;
 
-				Pos = new Range(selection.Start.Position, selection.End.Position);
-				Lines = new Range(
+				Pos = new RangeI(selection.Start.Position, selection.End.Position);
+				Lines = new RangeI(
 					snapshot.GetLineNumberFromPosition(Pos.Begi),
 					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begi : Pos.Endi - 1));
 
@@ -468,7 +468,7 @@ namespace Rylogic.TextAligner
 		/// <summary></summary>
 		private struct AlignPos
 		{
-			public AlignPos(int column, Range span)
+			public AlignPos(int column, RangeI span)
 			{
 				Column = column;
 				Span = span;
@@ -478,7 +478,7 @@ namespace Rylogic.TextAligner
 			public readonly int Column;
 
 			/// <summary>The range of characters around the align column</summary>
-			public readonly Range Span;
+			public readonly RangeI Span;
 
 			/// <summary></summary>
 			public override string ToString() => $"Col {Column} {Span}";

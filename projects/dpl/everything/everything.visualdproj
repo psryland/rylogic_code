@@ -78,7 +78,7 @@
   <objfiles />
   <linkswitches />
   <libfiles>sqlite3.omf.obj ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
-  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite\lib</libpaths>
+  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite3\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
@@ -173,7 +173,7 @@
   <objfiles />
   <linkswitches />
   <libfiles>sqlite3.omf.obj ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
-  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite\lib</libpaths>
+  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite3\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>
@@ -268,7 +268,7 @@
   <objfiles />
   <linkswitches />
   <libfiles>sqlite3.omf.obj ole32.lib kernel32.lib user32.lib comctl32.lib comdlg32.lib</libfiles>
-  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite\lib</libpaths>
+  <libpaths>Q:\sdk\pr\lib;Q:\sdk\sqlite3\lib</libpaths>
   <deffile />
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).exe</exefile>

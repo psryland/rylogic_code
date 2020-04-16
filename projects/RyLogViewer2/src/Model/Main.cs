@@ -104,9 +104,9 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The byte range of the current log data source</summary>
-		public Range FileByteRange
+		public RangeI FileByteRange
 		{
-			get { return Lines?.LineIndex.FileByteRange ?? Range.Zero; }
+			get { return Lines?.LineIndex.FileByteRange ?? RangeI.Zero; }
 		}
 
 		/// <summary>Get/Set the log data to be displayed</summary>
@@ -286,7 +286,7 @@ namespace RyLogViewer
 
 		#region IReadOnlyList<ILine>
 		public int Count => Lines?.Count ?? 0;
-		public ILine this[int index] => Lines?[index] ?? new ErrorLine("Line Index out of range", Range.Zero);
+		public ILine this[int index] => Lines?[index] ?? new ErrorLine("Line Index out of range", RangeI.Zero);
 		#endregion
 		#region IEnumerable<ILine>
 		public IEnumerator<ILine> GetEnumerator()

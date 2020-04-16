@@ -17,7 +17,7 @@ namespace RyLogViewer
 		// Notes:
 		//  - This class is a cache of text line data to byte range within the log.
 
-		private readonly List<Range> m_line_index; // The byte ranges of lines in a file
+		private readonly List<RangeI> m_line_index; // The byte ranges of lines in a file
 		private readonly Dispatcher m_dispatcher;  // Message dispatcher
 		private State m_state;                     // State data for the line index
 		private int m_issue;                       // Issue number for builds
@@ -25,7 +25,7 @@ namespace RyLogViewer
 		public LineIndex(ILogDataSource src, Encoding encoding, byte[] line_end, Settings settings)
 		{
 			Src = src;
-			m_line_index = new List<Range>(settings.LogData.LineCacheCount);
+			m_line_index = new List<RangeI>(settings.LogData.LineCacheCount);
 			m_dispatcher = Dispatcher.CurrentDispatcher;
 
 			m_state = new State
@@ -52,7 +52,7 @@ namespace RyLogViewer
 		public int Count => m_line_index.Count;
 
 		/// <summary>Return the byte range of a line. Negative values mean 'Count - index'</summary>
-		public Range this[int index]
+		public RangeI this[int index]
 		{
 			get
 			{
@@ -62,13 +62,13 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte range of the complete file, last time we checked its length. Begin is always 0</summary>
-		public Range FileByteRange => new Range(0, m_state.m_fileend);
+		public RangeI FileByteRange => new RangeI(0, m_state.m_fileend);
 
 		/// <summary>
 		/// Returns the byte range of the file currently covered by this cache.
 		/// Note: the range is between starts of lines, not the full range. This is 
 		/// the only range we know is complete and doesn't contain partial lines</summary>
-		public Range LineStartRange => m_state.m_line_start_range;
+		public RangeI LineStartRange => m_state.m_line_start_range;
 
 		/// <summary>Notify of a build progress</summary>
 		public event EventHandler<BuildProgressEventArgs> BuildProgress;
@@ -166,7 +166,7 @@ namespace RyLogViewer
 		private bool m_reload_in_progress;
 
 		/// <summary>Called when building the line index completes (success or failure)</summary>
-		private void MergeResults(State d, List<Range> n_line_index, bool reload, ProgressFunc progress)
+		private void MergeResults(State d, List<RangeI> n_line_index, bool reload, ProgressFunc progress)
 		{
 			// This method runs in the main thread, so if the build issue is the same at
 			// the start of this method it can't be changed until after this function returns.
@@ -246,14 +246,14 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Update the line index</summary>
-		private static List<Range> BuildAsync(ref State d, Stream src, bool reload, ProgressFunc progress) // Worker thread context
+		private static List<RangeI> BuildAsync(ref State d, Stream src, bool reload, ProgressFunc progress) // Worker thread context
 		{
 			// This method runs in a background thread
 			// All we're doing here is loading data around 'd.filepos' so that there are an equal number
 			// of lines on either side. This can be optimised however because the existing range of
 			// cached data probably overlaps the range we want loaded.
 			if (!progress(0, d.m_fileend))
-				return new List<Range>();
+				return new List<RangeI>();
 
 			// A temporary buffer for reading sections of the file
 			var buf = new byte[d.m_max_line_length];
@@ -285,15 +285,15 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Scan over the given range for lines</summary>
-		private static List<Range> ScanForLines(Stream src, State d, bool bwd_first, Range scan_range, int bwd_lines, int fwd_lines, byte[] buf, ProgressFunc progress)
+		private static List<RangeI> ScanForLines(Stream src, State d, bool bwd_first, RangeI scan_range, int bwd_lines, int fwd_lines, byte[] buf, ProgressFunc progress)
 		{
-			var line_index = new List<Range>();
+			var line_index = new List<RangeI>();
 			if (bwd_lines == 0 && fwd_lines == 0)
 				return line_index;
 
 			// Line index buffers for collecting the results
-			var fwd_line_buf = new List<Range>(fwd_lines);
-			var bwd_line_buf = new List<Range>(bwd_lines);
+			var fwd_line_buf = new List<RangeI>(fwd_lines);
+			var bwd_line_buf = new List<RangeI>(bwd_lines);
 
 			// Data used in the 'add_line' callback. Updated for forward and backward passes
 			var lbd = new LineBufferData
@@ -303,7 +303,7 @@ namespace RyLogViewer
 			};
 
 			// Callback for adding line byte ranges to a line buffer
-			bool AddLine(Range line, long baddr, long fend, byte[] bf, Encoding enc)
+			bool AddLine(RangeI line, long baddr, long fend, byte[] bf, Encoding enc)
 			{
 				if (line.Empty && d.m_ignore_blanks)
 					return true;
@@ -317,7 +317,7 @@ namespace RyLogViewer
 
 				// Convert the byte range to a file range
 				line = line.Shift(baddr);
-				Debug.Assert(new Range(0, d.m_fileend).Contains(line));
+				Debug.Assert(new RangeI(0, d.m_fileend).Contains(line));
 				lbd.line_buf.Add(line);
 				Debug.Assert(lbd.line_buf.Count <= lbd.line_limit);
 				return (fwd_line_buf.Count + bwd_line_buf.Count) < lbd.line_limit;
@@ -360,14 +360,14 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Adjust the scan parameters when doing an incremental update based on the currently loaded data</summary>
-		private static void AdjustForIncrementalBuild(State d, ref bool scan_backward, ref Range scan_range, ref int bwd_lines, ref int fwd_lines)
+		private static void AdjustForIncrementalBuild(State d, ref bool scan_backward, ref RangeI scan_range, ref int bwd_lines, ref int fwd_lines)
 		{
 			// Determine the direction the cached range is moving based on where 'filepos' is relative
 			// to the current cache centre and which range contains an valid area to be scanned.
 			// With incremental scans we can only update one side of the cache because the returned line index has to
 			// be a contiguous block of lines. This means one of 'bwd_lines' or 'fwd_lines' must be zero.
-			var Lrange = new Range(scan_range.Beg, d.m_line_start_range.Beg);
-			var Rrange = new Range(d.m_line_start_range.End, scan_range.End);
+			var Lrange = new RangeI(scan_range.Beg, d.m_line_start_range.Beg);
+			var Rrange = new RangeI(d.m_line_start_range.End, scan_range.End);
 			var dir =
 				(!Lrange.Empty && !Rrange.Empty) ? Math.Sign(2 * d.m_index_centre - d.m_line_cache_count) :
 				(!Lrange.Empty) ? -1 :
@@ -393,7 +393,7 @@ namespace RyLogViewer
 			{
 				bwd_lines = 0;
 				fwd_lines = 0;
-				scan_range = Range.Zero;
+				scan_range = RangeI.Zero;
 			}
 		}
 
@@ -440,8 +440,8 @@ namespace RyLogViewer
 					// 'lasti' points to the start of the last line we found
 					// Get the range in buf containing the line
 					var line = backward
-						? new Range(i, lasti - line_end.Length)
-						: new Range(lasti, i - line_end.Length);
+						? new RangeI(i, lasti - line_end.Length)
+						: new RangeI(lasti, i - line_end.Length);
 
 					// Pass the detected line to the callback
 					if (!add_line(line, base_addr, fileend, buf, encoding))
@@ -472,8 +472,8 @@ namespace RyLogViewer
 					// 'lasti' points to the start of the last line we found
 					// Get the range in buf containing the line
 					var line = backward
-						? new Range(i + 1, lasti - line_end.Length)
-						: new Range(lasti, i - (IsLineEnd(buf, i - line_end.Length, line_end) ? line_end.Length : 0));
+						? new RangeI(i + 1, lasti - line_end.Length)
+						: new RangeI(lasti, i - (IsLineEnd(buf, i - line_end.Length, line_end) ? line_end.Length : 0));
 
 					// Pass the detected line to the callback
 					if (!add_line(line, base_addr, fileend, buf, encoding))
@@ -506,7 +506,7 @@ namespace RyLogViewer
 		/// Returns the index in 'line_index' for the line that contains 'filepos'.
 		/// Returns '-1' if 'filepos' is before the first range and 'line_index.Count'
 		/// if 'filepos' is after the last range</summary>
-		private static int FindIndex(List<Range> line_index, long filepos)
+		private static int FindIndex(List<RangeI> line_index, long filepos)
 		{
 			// Careful, comparing 'filepos' to line starts, if idx == line_index.Count
 			// it could be in the last line, or after the last line.
@@ -597,9 +597,9 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the byte range that would be buffered given a file position, size, and buffer size</summary>
-		private static Range CalcBufferRange(long filepos, long fileend, long buf_size)
+		private static RangeI CalcBufferRange(long filepos, long fileend, long buf_size)
 		{
-			var rng = new Range();
+			var rng = new RangeI();
 			long ovr, hbuf = buf_size / 2;
 
 			// Start with the range that has 'filepos' in the middle
@@ -616,11 +616,11 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Returns the number of lines that would be each side of the cache centre for 'num_lines'</summary>
-		private static Range CalcLineRange(long num_lines)
+		private static RangeI CalcLineRange(long num_lines)
 		{
 			var bwd_lines = Math.Max(1, num_lines / 2);
 			var fwd_lines = Math.Max(2, num_lines - bwd_lines);
-			return new Range(bwd_lines, fwd_lines);
+			return new RangeI(bwd_lines, fwd_lines);
 		}
 
 		/// <summary>Tests 'text' against each of the filters in 'filters'</summary>
@@ -654,7 +654,7 @@ namespace RyLogViewer
 		/// <param name="buf">Buffer containing the buffered file data</param>
 		/// <param name="encoding">The text encoding used</param>
 		/// <returns>Return true to continue adding lines, false to stop</returns>
-		private delegate bool AddLineFunc(Range rng, long base_addr, long fileend, byte[] buf, Encoding encoding);
+		private delegate bool AddLineFunc(RangeI rng, long base_addr, long fileend, byte[] buf, Encoding encoding);
 
 		/// <summary>Callback function called periodically while finding lines</summary>
 		/// <returns>Return true to continue finding, false to abort</returns>
@@ -663,7 +663,7 @@ namespace RyLogViewer
 		/// <summary>Helper tuple</summary>
 		private struct LineBufferData
 		{
-			public List<Range> line_buf;
+			public List<RangeI> line_buf;
 			public int line_limit;
 		}
 
@@ -678,7 +678,7 @@ namespace RyLogViewer
 			public long m_max_line_length;   // The maximum length of any one line (in bytes)
 			public long m_file_buffer_size;  // The maximum amount of file data to load
 			public bool m_ignore_blanks;     // True to ignore blank lines;
-			public Range m_line_start_range; // The byte range of known complete lines
+			public RangeI m_line_start_range; // The byte range of known complete lines
 			public int m_index_centre;       // The index in the cache (pre-build) of 'm_filepos' 
 			public int m_index_count;        // The number of entries in the line index (pre-build)
 
@@ -703,14 +703,14 @@ namespace RyLogViewer
 	}
 	public class BuildCompleteEventArgs : EventArgs
 	{
-		public BuildCompleteEventArgs(Range new_range, int row_delta)
+		public BuildCompleteEventArgs(RangeI new_range, int row_delta)
 		{
 			NewRange = new_range;
 			RowDelta = row_delta;
 		}
 
 		/// <summary>The range of new data added to the cache.</summary>
-		public Range NewRange { get; private set; }
+		public RangeI NewRange { get; private set; }
 
 		/// <summary>The number of rows that the line index has shifted by</summary>
 		public int RowDelta { get; private set; }

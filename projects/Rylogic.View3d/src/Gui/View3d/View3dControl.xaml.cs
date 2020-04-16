@@ -165,7 +165,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Handlers
-				void HandleSettingsChanged(object sender, View3d.SettingChangeEventArgs e)
+				void HandleSettingsChanged(object? sender, View3d.SettingChangeEventArgs e)
 				{
 					if (ContextMenu?.DataContext is IView3dCMenu cmenu)
 					{
@@ -222,11 +222,11 @@ namespace Rylogic.Gui.WPF
 						NotifyPropertyChanged(nameof(BackgroundColour));
 					}
 				}
-				void HandleInvalidated(object sender, EventArgs e)
+				void HandleInvalidated(object? sender, EventArgs e)
 				{
 					if (m_render_pending) return;
 					m_render_pending = true;
-					Dispatcher.BeginInvoke(Render);
+					Dispatcher.BeginInvoke(new Action(Render));
 				}
 			}
 		}

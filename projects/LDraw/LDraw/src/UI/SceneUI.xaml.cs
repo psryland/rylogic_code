@@ -79,13 +79,13 @@ namespace LDraw.UI
 				}
 
 				// Handlers
-				void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
+				void HandleSceneActive(object? sender, ActiveContentChangedEventArgs args)
 				{
 				}
-				void HandleLoadingLayout(object sender, DockContainerLoadingLayoutEventArgs e)
+				void HandleLoadingLayout(object? sender, DockContainerLoadingLayoutEventArgs e)
 				{
 				}
-				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs e)
+				void HandleSavingLayout(object? sender, DockContainerSavingLayoutEventArgs e)
 				{
 				}
 			}
@@ -146,7 +146,7 @@ namespace LDraw.UI
 				}
 
 				// Handlers
-				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					// Handle notification that a SceneState value has changed
 					if (e.Before) return;
@@ -169,7 +169,7 @@ namespace LDraw.UI
 						}
 					}
 				}
-				void HandleSceneSettingChanged(object sender, View3d.SettingChangeEventArgs e)
+				void HandleSceneSettingChanged(object? sender, View3d.SettingChangeEventArgs e)
 				{
 					// Handle notification that a View3d.Window property has changed
 					var cmenu = SceneView.Scene.ContextMenu?.DataContext as IView3dCMenu;
@@ -332,7 +332,7 @@ namespace LDraw.UI
 		}
 
 		/// <summary>Event from the view3d window during rendering</summary>
-		private void HandleSceneRendering(object sender, EventArgs e)
+		private void HandleSceneRendering(object? sender, EventArgs e)
 		{
 			NotifyPropertyChanged(nameof(FocusPoint));
 		}

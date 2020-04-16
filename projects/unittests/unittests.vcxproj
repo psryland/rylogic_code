@@ -24,7 +24,7 @@
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c" />
     <ClCompile Include="..\include\pr\lua\lua_lib.c" />
-    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
+    <ClCompile Include="..\sdk\sqlite3\src\sqlite3.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
@@ -336,7 +336,7 @@
     <ClInclude Include="..\projects\unittests\src\pp_output.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\projects\unittests\src\unittests.h" />
-    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
+    <ClInclude Include="..\sdk\sqlite3\include\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

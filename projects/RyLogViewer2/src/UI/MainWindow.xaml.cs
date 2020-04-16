@@ -120,9 +120,9 @@ namespace RyLogViewer
 			get
 			{
 				var r = -1; //todo selected row index
-				var sel_range = Range.Zero;// m_grid.SelectedRowIndexRange();
-				var rg = (r == -1) ? Range.Zero//todo SelectedRowByteRange;
-					: new Range(Main[sel_range.Begi].FileByteRange.Beg, Main[sel_range.Endi].FileByteRange.End);
+				var sel_range = RangeI.Zero;// m_grid.SelectedRowIndexRange();
+				var rg = (r == -1) ? RangeI.Zero//todo SelectedRowByteRange;
+					: new RangeI(Main[sel_range.Begi].FileByteRange.Beg, Main[sel_range.Endi].FileByteRange.End);
 				return $"Selection: [{rg.Beg:N0} - {rg.End:N0}] ({rg.Size} bytes)";
 			}
 		}

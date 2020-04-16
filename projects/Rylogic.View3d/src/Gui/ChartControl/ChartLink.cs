@@ -55,9 +55,9 @@ namespace Rylogic.Gui.WPF
 		public virtual ELinkAxes AxisLink { get; set; }
 
 		/// <summary>Handle the axis range of the source chart changing</summary>
-		protected virtual void OnSourceChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
+		protected virtual void OnSourceChartMoved(object? sender, ChartControl.ChartMovedEventArgs e)
 		{
-			var source = (ChartControl)sender;
+			if (!(sender is ChartControl source)) return;
 			if (!Target.TryGetTarget(out var target))
 				return;
 
@@ -80,7 +80,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc />
-		protected override void OnSourceNavigation(object sender, View3d.MouseNavigateEventArgs e)
+		protected override void OnSourceNavigation(object? sender, View3d.MouseNavigateEventArgs e)
 		{
 			base.OnSourceNavigation(sender, e);
 			if (!Target.TryGetTarget(out var target))

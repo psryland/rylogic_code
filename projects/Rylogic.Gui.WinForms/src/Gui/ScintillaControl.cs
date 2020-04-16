@@ -464,7 +464,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary></summary>
-		public Range TextRange
+		public RangeI TextRange
 		{
 			get
 			{
@@ -1150,13 +1150,13 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Gets the range of visible lines</summary>
-		public Range VisibleLineIndexRange
+		public RangeI VisibleLineIndexRange
 		{
 			get
 			{
 				var s = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
 				var c = Cmd(Sci.SCI_LINESONSCREEN);
-				return new Range(s, s + c);
+				return new RangeI(s, s + c);
 			}
 		}
 

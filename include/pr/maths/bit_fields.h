@@ -4,7 +4,6 @@
 //*****************************************************************************
 //http://graphics.stanford.edu/~seander/bithacks.html
 #pragma once
-
 #include "pr/maths/forward.h"
 
 namespace pr
@@ -33,27 +32,34 @@ namespace pr
 	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
 	template <typename T, typename U> constexpr T SetBits(T value, U mask, bool state)
 	{
-		return state ? value | static_cast<T>(mask) : value & ~static_cast<T>(mask);
+		using Int = pr::underlying_type_t<T>;
+		return state
+			? static_cast<T>(static_cast<Int>(value) |  static_cast<Int>(mask))
+			: static_cast<T>(static_cast<Int>(value) & ~static_cast<Int>(mask));
 	}
 
 	// Sets the masked bits of 'value' to the state 'bitfield'
 	template <typename T, typename U> constexpr T SetBits(T value, U mask, U bitfield)
 	{
-		value &= ~mask;            // clear masked bits to zero
-		value |=  mask & bitfield; // set bits from bit field
-		return value;
+		using Int = pr::underlying_type_t<T>;
+		auto result = static_cast<Int>(value);
+		result &= ~static_cast<Int>(mask);            // clear masked bits to zero
+		result |=  static_cast<Int>(mask & bitfield); // set bits from bit field
+		return result;
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
 	template <typename T, typename U> constexpr bool AnySet(T value, U mask)
 	{
-		return (value & T(mask)) != T();
+		using Int = pr::underlying_type_t<T>;
+		return (static_cast<Int>(value) & static_cast<Int>(mask)) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
 	template <typename T, typename U> constexpr bool AllSet(T value, U mask)
 	{
-		return (value & T(mask)) == T(mask);
+		using Int = pr::underlying_type_t<T>;
+		return (static_cast<Int>(value) & static_cast<Int>(mask)) == static_cast<Int>(mask);
 	}
 
 	// Reverse the order of bits in 'v'
