@@ -437,7 +437,7 @@ def Main(args:[str]):
 	platforms = []
 	configs = []
 	clean = False
-	build = True
+	build = False
 	deploy = False
 	publish = False
 
@@ -450,12 +450,22 @@ def Main(args:[str]):
 		elif arg == "-clean":
 			clean = True
 			i = i + 1
+		elif arg == "-build":
+			build = True
+			i = i + 1
 		elif arg == "-deploy":
 			deploy = True
 			i = i + 1
 		elif arg == "-publish":
 			publish = True
 			i = i + 1
+		elif arg == "-cert_pw":
+			i = i + 1
+			if i == len(args) or args[i].startswith('-'):
+				raise RuntimeError("Rylogic code signing certificate password expected")
+			else:
+				UserVars.rylogic_cert_pw = args[i]
+				i = i + 1
 		elif arg == "-workspace":
 			workspace = args[i+1]
 			i = i + 2
@@ -492,6 +502,8 @@ def Main(args:[str]):
 		if configs[i].lower() == "release": configs[i] = "Release"
 		if configs[i].lower() == "debug": configs[i] = "Debug"
 	if not projects: projects = ["All"]
+	if not clean and not build and not deploy and not publish: build = True
+	if publish: deploy = True
 
 	# Build/Clean/Deploy each given project
 	for project in projects:
@@ -501,8 +513,6 @@ def Main(args:[str]):
 		# Clean if '-clean' is used
 		if clean:
 			builder.Clean()
-			print(f"\nClean Complete")
-			return
 
 		# If no project name is given build them all
 		if build:
@@ -526,6 +536,7 @@ if __name__ == "__main__":
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', '-platforms', 'x64', 'x86', '-configs', 'release', 'debug']
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', 'Rylogic.Core.Windows', '-deploy']
 		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
+		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
 		#print(f"Command Line: {str(sys.argv)}")
 		Main(sys.argv)
 

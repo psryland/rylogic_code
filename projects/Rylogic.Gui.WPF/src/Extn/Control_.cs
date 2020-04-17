@@ -140,10 +140,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Find a context menu resource and set it's data context to the given object</summary>
-		public static ContextMenu FindCMenu(this FrameworkElement fe, string resource_key, object? data_context = null)
+		public static ContextMenu? FindCMenu(this FrameworkElement fe, string resource_key, object? data_context = null)
 		{
-			var cmenu = (ContextMenu)fe.FindResource(resource_key);
-			if (data_context != null) cmenu.DataContext = data_context;
+			var cmenu = (ContextMenu?)fe.TryFindResource(resource_key);
+			if (cmenu != null && data_context != null) cmenu.DataContext = data_context;
 			return cmenu;
 		}
 	}
