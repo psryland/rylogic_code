@@ -116,12 +116,14 @@ def InputWithTimeout(msg, timeout_s):
 	return res
 
 # Delete a file or directory tree using the shell
-def ShellDelete(path, wait_time_ms = 100):
+def ShellDelete(path, wait_time_s:float = 0.1, max_wait_time_s:float = 1.0):
 	if not os.path.exists(path): return
-	shutil.rmtree(path, ignore_errors=True)
-	time.sleep(wait_time_ms * 0.001) # Give the OS time to do it
-	if os.path.exists(path):
-		raise Exception(f"Failed to delete '{path}'. Check for locked files")
+	t0 = time.process_time()
+	while time.process_time() - t0 < max_wait_time_s:
+		shutil.rmtree(path, ignore_errors=True)
+		time.sleep(wait_time_s) # Give the OS time to do it
+		if not os.path.exists(path): return
+	raise Exception(f"Failed to delete '{path}'. Check for locked files")
 
 # Change the file extension on 'path'. 'extn' should include the dot
 def ChgExtn(filepath:str, extn:str):
