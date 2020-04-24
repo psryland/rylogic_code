@@ -34,6 +34,7 @@ namespace pr::geometry
 
 		_bitwise_operators_allowed = 0x7FFFFFFF,
 	};
+	static_assert(has_bitops_allowed_v<EGeom>);
 
 	// EPrim
 	enum class EPrim

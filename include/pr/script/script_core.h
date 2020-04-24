@@ -7,7 +7,6 @@
 #include "pr/script/location.h"
 #include "pr/script/fail_policy.h"
 #include "pr/script/buf.h"
-#pragma warning(disable:4355) // this used in base member initializer list
 
 namespace pr::script
 {
@@ -26,6 +25,7 @@ namespace pr::script
 		//  - Src can also wrap another stream, 
 
 		static int const EOS = -1; // end of stream
+		static int64_t const AllData = std::numeric_limits<int64_t>::max();
 
 	protected:
 
@@ -55,15 +55,17 @@ namespace pr::script
 		#endif
 
 	protected:
+		// Warning fix
+		constexpr Src& This() { return *this; }
 
 		// Constructor for character sources
 		Src(EEncoding enc, Loc const& loc = Loc()) noexcept
-			:m_src(*this)
+			:m_src(This())
 			,m_buffer()
 			,m_enc(enc)
 			,m_mb()
 			,m_loc(loc)
-			,m_remaining(std::numeric_limits<int64_t>::max())
+			,m_remaining(AllData)
 			#if PR_DBG
 			,m_history()
 			#endif
@@ -76,7 +78,7 @@ namespace pr::script
 			,m_enc(enc)
 			,m_mb()
 			,m_loc()
-			,m_remaining(std::numeric_limits<int64_t>::max())
+			,m_remaining(AllData)
 			#if PR_DBG
 			,m_history()
 			#endif
@@ -94,15 +96,17 @@ namespace pr::script
 
 		virtual ~Src() {}
 
-		// Move only
+		// Move construct only
 		Src(Src&& rhs) noexcept
-			:m_src(&rhs == &rhs.m_src ? *this : rhs.m_src)
+			:m_src(&rhs == &rhs.m_src ? This() : rhs.m_src)
 			,m_buffer(std::move(rhs.m_buffer))
 			,m_enc(rhs.m_enc)
 			,m_mb(rhs.m_mb)
 			,m_loc(rhs.m_loc)
 		{}
 		Src(Src const& rhs) = delete;
+		Src& operator = (Src&& rhs) = delete;
+		Src& operator = (Src const& rhs) = delete;
 
 		// The current position in the root underlying source
 		virtual Loc Location() const noexcept
@@ -112,7 +116,7 @@ namespace pr::script
 			return s->m_loc;
 		}
 
-		// A local cache of characters read from the source
+		// Access the local cache of characters read from the source
 		string_t const& Buffer() const noexcept
 		{
 			return m_buffer;
@@ -123,14 +127,20 @@ namespace pr::script
 		}
 
 		// Buffer up to (start + count) and return a string view within this range
-		string_view_t Buffer(int start, int count)
+		string_view_t Buffer(int64_t start, int64_t count, bool allow_partial = false)
 		{
 			auto len = ReadAhead(start + count);
-			if (len < start + count)
+
+			// If 'count' bytes are expected, throw if they're not available
+			allow_partial |= count == AllData;
+			if (!allow_partial && len < start + count)
 				throw ScriptException(EResult::UnexpectedEndOfFile, Location(), Fmt("Could not buffer %d characters. End of stream reached", start + count));
 
 			auto str = m_buffer.data();
-			return string_view_t(str + start, count);
+			return
+				len <= start ? string_view_t() :
+				len <= start + count ? string_view_t(str + start, s_cast<size_t>(len - start)) :
+				string_view_t(str + start, s_cast<size_t>(count));
 		}
 
 		// Get/Set the maximum number of characters to emit from this stream (can be less than the underlying source length)
@@ -140,7 +150,7 @@ namespace pr::script
 		}
 		void Limit(int64_t remaining)
 		{
-			m_remaining = remaining >= 0 ? remaining : std::numeric_limits<int64_t>::max();
+			m_remaining = remaining >= 0 ? remaining : AllData;
 		}
 
 		// Peek
@@ -164,14 +174,14 @@ namespace pr::script
 		}
 
 		// Advance by n characters
-		Src& operator += (int n)
+		Src& operator += (int64_t n)
 		{
 			Next(n);
 			return *this;
 		}
 
 		// Increment to the next character
-		void Next(int n = 1)
+		void Next(int64_t n = 1)
 		{
 			if (n < 0)
 				throw std::runtime_error("Cannot seek backwards");
@@ -181,7 +191,7 @@ namespace pr::script
 			for (;;)
 			{
 				// Consume from the buffered characters first
-				auto remove = std::min(n, static_cast<int>(m_buffer.size()));
+				auto remove = s_cast<int>(std::min(n, s_cast<int64_t>(m_buffer.size())));
 				for (int i = 0; i != remove; ++i)
 				{
 					#if PR_DBG
@@ -200,7 +210,7 @@ namespace pr::script
 					break;
 
 				// Buffer and dump, since we need to read whole characters from the underlying source
-				if (ReadAhead(std::min(n, 4096)) == 0)
+				if (ReadAhead(std::min(n, 4096LL)) == 0)
 					break;
 			}
 		}
@@ -208,14 +218,14 @@ namespace pr::script
 		// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF or Limit is hit.
 		// Returns the number of characters available (a value in [0, n])
 		// Do *not* use Buffer.Length as the number available, then can be greater than 'Limit'
-		int ReadAhead(int n)
+		int64_t ReadAhead(int64_t n)
 		{
 			if (n < 0)
 				throw std::runtime_error("Cannot read backwards");
 			if (n > m_remaining)
-				n = static_cast<int>(m_remaining);
+				n = s_cast<int64_t>(m_remaining);
 
-			for (; n > s_cast<int>(m_buffer.size());)
+			for (; n > s_cast<int64_t>(m_buffer.size());)
 			{
 				// Ensure 'Buffer's length grows with each loop
 				auto const count = m_buffer.size();
@@ -230,15 +240,21 @@ namespace pr::script
 					}
 				case EEncoding::already_decoded:
 					{
+						// Already decoded streams should output characters and then 0s.
+						// EOS occurs for invalid character encodings only.
 						ch = Read();
 						if (ch == EOS) throw std::runtime_error("Read() should not return EOS for 'already_decoded' streams.");
 						break;
 					}
 				case EEncoding::ascii:
+				case EEncoding::ascii_extended:
 					{
 						auto const b = Read();
 						if (b == EOS) break;
-						if (b > 127) throw ScriptException(EResult::WrongEncoding, Location(), Fmt(L"Source is not an ASCII character stream. Invalid character with value %d found", b));
+						if (m_enc == EEncoding::ascii && b > 127)
+							throw ScriptException(EResult::WrongEncoding, Location(), Fmt(L"Source is not an ASCII character stream. Invalid character with value %d found", b));
+						else if (b > 255)
+							throw ScriptException(EResult::WrongEncoding, Location(), Fmt(L"Source is not an extended ASCII character stream. Invalid character with value %d found", b));
 						ch = b;
 						break;
 					}
@@ -293,13 +309,35 @@ namespace pr::script
 				if (m_buffer.size() <= count)
 					break;
 			}
-			return std::min(n, s_cast<int>(m_buffer.size()));
+			return std::min(n, s_cast<int64_t>(m_buffer.size()));
 		}
 
 		// String compare. Note: asymmetric, i.e. src="abcd", str="ab", src.Match(str) == true
-		bool Match(string_view_t str) { return Match(str, 0); }
-		bool Match(string_view_t str, int start) { return Match(str, start, int(str.size())); }
+		bool Match(string_view_t str)
+		{
+			return Match(str, 0);
+		}
+		bool Match(string_view_t str, int start)
+		{
+			return Match(str, start, int(str.size()));
+		}
 		bool Match(string_view_t str, int start, int count)
+		{
+			return Match(str, start, count, std::equal_to<wchar_t>{});
+		}
+		bool MatchI(string_view_t str)
+		{
+			return MatchI(str, 0);
+		}
+		bool MatchI(string_view_t str, int start)
+		{
+			return MatchI(str, start, int(str.size()));
+		}
+		bool MatchI(string_view_t str, int start, int count)
+		{
+			return Match(str, start, count, [](wchar_t a, wchar_t b) { return std::tolower(a) == std::tolower(b); });
+		}
+		template <typename Eql> bool Match(string_view_t str, int start, int count, Eql eql)
 		{
 			// 'start' is where to start looking in the buffer
 			// 'count' is the number of characters to compare.
@@ -312,7 +350,7 @@ namespace pr::script
 
 			int i = start;
 			int const iend = start + count;
-			for (; i != iend && str[size_t(i) - start] == m_buffer[i]; ++i) { }
+			for (; i != iend && eql(str[size_t(i) - start], m_buffer[i]); ++i) { }
 			return i == iend;
 		}
 
@@ -320,6 +358,12 @@ namespace pr::script
 		bool Match(string_view_t str, bool consume)
 		{
 			if (!Match(str)) return false;
+			if (consume) Next(int(str.size()));
+			return true;
+		}
+		bool MatchI(string_view_t str, bool consume)
+		{
+			if (!MatchI(str)) return false;
 			if (consume) Next(int(str.size()));
 			return true;
 		}
@@ -423,6 +467,9 @@ namespace pr::script
 		//  - A useful techique is to default construct a StringSrc then push text into its buffer.
 		//    When the buffer is empty, 'Read()' will return EOS. Technically, the same would work
 		//    with 'NullSrc', but that's likely to be confusing.
+		//  - StringSrc has a copy constructor, but it can't have 'start'/'count' parameters because
+		//    UTF string encodings have variable character widths.
+
 		enum class EFlags
 		{
 			None = 0,
@@ -456,20 +503,44 @@ namespace pr::script
 			}
 			else
 			{
+				// Set up the pointers to 'str' then fill the local buffer
 				m_ptr = char_ptr(str.data());
 				m_end = char_ptr(str.data() + str.size());
 				ReadAhead(s_cast<int>(str.size()));
+				m_ptr = nullptr;
+				m_end = nullptr;
 			}
 		}
 
 	public:
 
-		explicit StringSrc(EEncoding enc = EEncoding::utf16_le, Loc const& loc = Loc())
+		StringSrc()
+			:StringSrc(EEncoding::utf16_le)
+		{}
+		explicit StringSrc(EEncoding enc, Loc const& loc = Loc())
 			:Src(enc, loc)
 			,m_ptr(nullptr)
 			,m_end(nullptr)
 		{}
-		explicit StringSrc(std::string_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf8, Loc const& loc = Loc())
+		explicit StringSrc(std::string_view str, Loc const& loc = Loc())
+			:StringSrc(str, EFlags::None, EEncoding::utf8, loc)
+		{}
+		explicit StringSrc(std::wstring_view str, Loc const& loc = Loc())
+			:StringSrc(str, EFlags::None, EEncoding::utf16_le, loc)
+		{}
+		explicit StringSrc(std::string_view str, EEncoding enc, Loc const& loc = Loc())
+			:StringSrc(str, EFlags::None, enc, loc)
+		{}
+		explicit StringSrc(std::wstring_view str, EEncoding enc, Loc const& loc = Loc())
+			:StringSrc(str, EFlags::None, enc, loc)
+		{}
+		explicit StringSrc(std::string_view str, EFlags flags, Loc const& loc = Loc())
+			:StringSrc(str, flags, EEncoding::utf8, loc)
+		{}
+		explicit StringSrc(std::wstring_view str, EFlags flags, Loc const& loc = Loc())
+			:StringSrc(str, flags, EEncoding::utf16_le, loc)
+		{}
+		explicit StringSrc(std::string_view str, EFlags flags, EEncoding enc, Loc const& loc = Loc())
 			:Src(enc, loc)
 			,m_ptr(str.data())
 			,m_end(str.data() + str.size())
@@ -477,7 +548,7 @@ namespace pr::script
 			if (AllSet(flags, EFlags::BufferLocally))
 				BufferLocally(str);
 		}
-		explicit StringSrc(std::wstring_view str, EFlags flags = EFlags::None, EEncoding enc = EEncoding::utf16_le, Loc const& loc = Loc())
+		explicit StringSrc(std::wstring_view str, EFlags flags, EEncoding enc, Loc const& loc = Loc())
 			:Src(enc, loc)
 			,m_ptr(char_ptr(str.data()))
 			,m_end(char_ptr(str.data() + str.size()))
@@ -485,6 +556,45 @@ namespace pr::script
 			// Make a local copy of 'str' in the buffer
 			if (AllSet(flags, EFlags::BufferLocally))
 				BufferLocally(str);
+		}
+		explicit StringSrc(StringSrc const& rhs, Loc const* loc = nullptr)
+			:Src(rhs.m_enc, loc ? *loc : rhs.Location())
+			,m_ptr(rhs.m_ptr)
+			,m_end(rhs.m_end)
+		{}
+
+		// The remaining length in bytes
+		int size_in_bytes() const
+		{
+			return static_cast<int>(m_end - m_ptr);
+		}
+
+		// Return a utf-8 view of the string
+		std::string_view str8() const
+		{
+			return str8(0, size_in_bytes());
+		}
+		std::string_view str8(int start, int count) const
+		{
+			auto size = size_in_bytes();
+			if (start >= size || count < 0 || start + count > size)
+				throw std::runtime_error("Access out-of-bounds");
+
+			return std::string_view(m_ptr + start, count);
+		}
+
+		// Return a utf-16 view of the string
+		std::wstring_view str16() const
+		{
+			return str16(0, s_cast<int>(size_in_bytes() / sizeof(wchar_t)));
+		}
+		std::wstring_view str16(int start, int count) const
+		{
+			auto size = s_cast<int>(size_in_bytes() / sizeof(wchar_t));
+			if (start >= size || count < 0 || start + count > size)
+				throw std::runtime_error("Access out-of-bounds");
+
+			return std::wstring_view(reinterpret_cast<wchar_t const*>(m_ptr) + start, count);
 		}
 	};
 
@@ -505,16 +615,22 @@ namespace pr::script
 
 	public:
 
-		FileSrc(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
+		FileSrc(std::filesystem::path const& filepath, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
+			:FileSrc(filepath, 0, enc, loc)
+		{}
+		FileSrc(std::filesystem::path const& filepath, std::streamsize ofs, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
+			:FileSrc(filepath, ofs, -1, enc, loc)
+		{}
+		FileSrc(std::filesystem::path const& filepath, std::streamsize ofs, int64_t limit, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
 			:Src(enc, Loc())
 			,m_file()
 		{
 			if (!filepath.empty())
-				Open(filepath, ofs, enc, loc);
+				Open(filepath, ofs, limit, enc, loc);
 		}
 
 		// Open a file as a stream source
-		void Open(std::filesystem::path const& filepath, std::streamsize ofs = 0, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
+		void Open(std::filesystem::path const& filepath, std::streamsize ofs = 0, int64_t limit = -1, EEncoding enc = EEncoding::auto_detect, Loc* loc = nullptr)
 		{
 			Close();
 
@@ -522,15 +638,7 @@ namespace pr::script
 			m_enc = enc;
 			auto bom_size = 0;
 			if (m_enc == EEncoding::auto_detect)
-			{
-				std::array<unsigned char, 3> bom;
-				std::ifstream file(filepath, std::ios::binary);
-				auto read = file.good() ? file.read(reinterpret_cast<char*>(bom.data()), bom.size()).gcount() : 0;
-				if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     bom_size = 3; }
-				else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16_le; bom_size = 2; }
-				else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; bom_size = 2; }
-				else                                                                      { m_enc = EEncoding::utf8;     bom_size = 0; } // If no valid bom is found, assume UTF-8
-			}
+				m_enc = pr::filesys::DetectFileEncoding(filepath, bom_size);
 
 			// Open the input file stream
 			m_file.open(filepath, std::ios::binary);
@@ -542,6 +650,10 @@ namespace pr::script
 
 			// Update the location
 			m_loc = loc ? *loc : Loc(filepath, bom_size + ofs, 1, 1, ofs == 0);
+
+			// If a limit is given, apply it
+			if (limit >= 0)
+				Limit(limit);
 		}
 
 		// Close the file stream
@@ -550,6 +662,24 @@ namespace pr::script
 			m_file.close();
 			m_enc = EEncoding::auto_detect;
 			m_loc = Loc();
+		}
+
+		// Get/Set the read position in the file
+		int64_t Position() const
+		{
+			return s_cast<int64_t>(const_cast<std::ifstream&>(m_file).tellg());
+		}
+		int64_t Position(int64_t pos)
+		{
+			m_file.seekg(s_cast<std::streampos>(pos));
+			return Position();
+		}
+
+		// Buffer the file contents and return a string source from the buffer
+		StringSrc ToStringSrc(int64_t start = 0, int64_t count = AllData)
+		{
+			auto range = Buffer(start, count, true);
+			return StringSrc(range, StringSrc::EFlags::BufferLocally, m_enc);
 		}
 	};
 
@@ -573,9 +703,12 @@ namespace pr::script
 	{
 		Eat(src, eat_initial, eat_final, [](TSrc& s) { return str::IsWhiteSpace(*s); });
 	}
-	template <typename TSrc> inline void EatLine(TSrc& src, int eat_initial, int eat_final)
+	template <typename TSrc> inline void EatLine(TSrc& src, int eat_initial, int eat_final, bool eat_newline)
 	{
-		Eat(src, eat_initial, eat_final, [](TSrc& s){ return !(*s == '\n') && !(s[0] == '\r' && s[1] == '\n'); });
+		src += eat_initial;
+		Eat(src, 0, 0, [](TSrc& s){ return !(s[0] == '\n') && !(s[0] == '\r' && s[1] == '\n'); });
+		if (eat_newline) src += (src[0] == '\r' && src[1] == '\n') ? 2 : (src[0] == '\n') ? 1 : 0;
+		src += eat_final;
 	}
 	template <typename TSrc> inline void EatBlock(TSrc& src, string_view_t block_beg, string_view_t block_end)
 	{
@@ -598,12 +731,12 @@ namespace pr::script
 		for (bool esc = true; *src != '\0' && (esc || *src != quote); esc = !esc && *src == '\\', ++src) {}
 		if (*src == quote) ++src; else throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
 	}
-	template <typename TSrc> inline void EatLineComment(TSrc& src, string_view_t line_comment = "//")
+	template <typename TSrc> inline void EatLineComment(TSrc& src, string_view_t line_comment = L"//")
 	{
 		assert(*src == line_comment[0]); // don't call this unless 'src' is pointing at a line comment
-		EatLine(src, static_cast<int>(line_comment.size()), 0);
+		EatLine(src, static_cast<int>(line_comment.size()), 0, false);
 	}
-	template <typename TSrc> inline void EatBlockComment(TSrc& src, string_view_t block_beg = "/*", string_view_t block_end = "*/")
+	template <typename TSrc> inline void EatBlockComment(TSrc& src, string_view_t block_beg = L"/*", string_view_t block_end = L"*/")
 	{
 		assert(*src == block_beg[0]); // don't call this unless 'src' is pointing at a block comment
 		EatBlock(src, block_beg, block_end);
@@ -920,6 +1053,13 @@ namespace pr::script
 			FileSrc file(script_utf);
 			PR_CHECK(*file, str[0]); ++file;
 			PR_CHECK(*file, str[1]); ++file;
+
+			// Buffering a file in a string
+			FileSrc file2(script_utf);
+			StringSrc str2 = file2.ToStringSrc();
+			PR_CHECK(*file2, *str2); ++file2; ++str2;
+			PR_CHECK(*file2, *str2); ++file2; ++str2;
+			PR_CHECK(*file2, *str2); ++file2; ++str2;
 		}
 		{// UTF 16 little endian File source
 
@@ -978,11 +1118,11 @@ namespace pr::script
 			}
 			{
 				StringSrc src0("0123456\r\nABC");
-				EatLine(src0, 0, 2);
+				EatLine(src0, 0, 2, false);
 				PR_CHECK(*src0, 'A');
 
 				StringSrc src1("0123456");
-				EatLine(src1, 0, 0);
+				EatLine(src1, 0, 0, true);
 				PR_CHECK(*src1, '\0');
 			}
 			{

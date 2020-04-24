@@ -102,6 +102,7 @@
     <ClInclude Include="..\include\pr\geometry\models_point.h" />
     <ClInclude Include="..\include\pr\geometry\models_quad.h" />
     <ClInclude Include="..\include\pr\geometry\models_shape2d.h" />
+    <ClInclude Include="..\include\pr\geometry\models_skybox.h" />
     <ClInclude Include="..\include\pr\geometry\models_sphere.h" />
     <ClInclude Include="..\include\pr\geometry\model_file.h" />
     <ClInclude Include="..\include\pr\geometry\p3d.h" />

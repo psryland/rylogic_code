@@ -3,9 +3,12 @@
   <!-- Globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{363D015B-B545-4623-A5CE-61245C9BF1F8}</ProjectGuid>
+    <ProjectName>view3d.dll</ProjectName>
+    <TargetName>view3d</TargetName>
     <RootNamespace>View3D</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>view3d.dll</ProjectName>
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Label="UserMacros" />
   <!-- Configurations -->
@@ -79,8 +82,8 @@
   <!-- Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -89,8 +92,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -99,8 +102,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -109,8 +112,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>VIEW3D_EXPORTS;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>view3d/dll/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>

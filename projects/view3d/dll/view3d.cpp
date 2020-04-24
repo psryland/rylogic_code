@@ -9,6 +9,7 @@
 #include "pr/view3d/dll/view3d.h"
 #include "pr/view3d/dll/pr_conv.h"
 
+using namespace pr;
 using namespace pr::rdr;
 using namespace pr::log;
 using namespace view3d;

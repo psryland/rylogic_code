@@ -154,6 +154,8 @@
     <ClInclude Include="..\include\pr\crypt\sha512.h" />
     <ClInclude Include="..\include\pr\filesys\filesys.h" />
     <ClInclude Include="..\include\pr\filesys\filewatch.h" />
+    <ClInclude Include="..\include\pr\filesys\file_time.h" />
+    <ClInclude Include="..\include\pr\filesys\lock_file.h" />
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\models_box.h" />
     <ClInclude Include="..\include\pr\geometry\closest_point.h" />
@@ -296,6 +298,7 @@
     <ClInclude Include="..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\include\pr\view3d\renderer.h" />
     <ClInclude Include="..\include\pr\view3d\textures\projected_texture.h" />
     <ClInclude Include="..\include\pr\script\buf.h" />
     <ClInclude Include="..\include\pr\script\embedded.h" />

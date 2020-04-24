@@ -23,6 +23,9 @@ namespace Rylogic.Extn
 		/// <summary>Call the constructor of this type to create a new instance. Use Util'T.New if the type is known at compile time</summary>
 		public static object New(this Type ty)
 		{
+			if (!ty.IsClass)
+				return Activator.CreateInstance(ty);
+
 			var cons = ty.GetConstructor(Array.Empty<Type>()) ?? throw new Exception($"Default constructor for {ty.Name} not found");
 			return cons.Invoke(null);
 		}
@@ -45,6 +48,12 @@ namespace Rylogic.Extn
 		{
 			var cons = ty.GetConstructor(new Type[] { a0.Ty(), a1.Ty(), a2.Ty(), a3.Ty() }) ?? throw new Exception($"Arity 3 constructor for {ty.Name} not found");
 			return cons.Invoke(new object?[] { a0, a1, a2, a3 });
+		}
+		public static object New(this Type ty, object?[]? arg_list)
+		{
+			var arg_types = arg_list?.Select(x => x.Ty()).ToArray() ?? Array.Empty<Type>();
+			var cons = ty.GetConstructor(arg_types) ?? throw new Exception($"Arity {arg_types.Length} constructor for {ty.Name} not found");
+			return cons.Invoke(arg_list);
 		}
 
 		/// <summary>Return a default instance of this type</summary>

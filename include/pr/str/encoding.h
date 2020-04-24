@@ -24,6 +24,9 @@ namespace pr
 		// Values in the range [0, 128)
 		ascii,
 
+		// Values in the range [0,256)
+		ascii_extended,
+
 		// 0b0xxxxxxx (1-byte sequence)
 		// 0b110xxxxx, 0b10xxxxxx (2-byte sequence)
 		// 0b1110xxxx, 0b10xxxxxx, 0b10xxxxxx (3-byte sequence)

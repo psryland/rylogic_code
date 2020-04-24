@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Rylogic.Extn;
@@ -190,12 +191,77 @@ namespace Rylogic.Common
 			return Canonicalise(path);
 		}
 
+		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
+		public static string RelativePath(string rel_path, string full_file_path)
+		{
+			#if NETSTANDARD2_0 || true
+
+			// Inspired by https://source.dot.net/ System.IO.GetRelativePath
+			rel_path       = Canonicalise(rel_path, Case.Unchanged);
+			full_file_path = Canonicalise(full_file_path, Case.Unchanged);
+
+			// Normalise the paths - this ensures neither is effectively an empty path
+			var rel = Canonicalise(rel_path, Case.Lower).TrimEnd(Path.DirectorySeparatorChar);
+			var ful = Canonicalise(full_file_path, Case.Lower).TrimEnd(Path.DirectorySeparatorChar);
+
+			// Don't have a common root?
+			if (Path.GetPathRoot(ful) != Path.GetPathRoot(rel))
+				return full_file_path;
+
+			// Same paths, return '.'
+			if (rel == ful)
+				return ".";
+
+			// Find the length of the common directory segments
+			var len = 0;
+			for (int i = 0, iend = Math.Min(rel.Length, ful.Length); i != iend && rel[i] == ful[i]; ++i)
+				++len;
+
+			// Remove partial directory matches. Both should match up to a separator.
+			// 'len' will be the matching length excluding any last separator.
+			if (len == 0) { }
+			else if (len == rel.Length && (len == ful.Length || ful[len] == Path.DirectorySeparatorChar)) { }
+			else if (len == ful.Length && (len == rel.Length || rel[len] == Path.DirectorySeparatorChar)) { }
+			else for (; --len != 0 && rel[len] != Path.DirectorySeparatorChar;) { }
+
+			var sb = new StringBuilder();
+
+			// Add parent segments for segments past the common on the "from" path
+			if (len < rel.Length)
+			{
+				sb.Append("..");
+				for (int i = len + 1; i != rel.Length; ++i)
+				{
+					if (rel[i] != Path.DirectorySeparatorChar) continue;
+					sb.Append(Path.DirectorySeparatorChar);
+					sb.Append("..");
+				}
+			}
+			else if (ful[len] == Path.DirectorySeparatorChar)
+			{
+				// No parent segments and we need to eat the initial separator
+				//  (C:\Foo C:\Foo\Bar case)
+				len++;
+			}
+
+			// Now add the rest of the "to" path, adding back the trailing separator
+			if (len != ful.Length)
+				sb.Append(full_file_path.Substring(len));
+
+			return sb.ToString();
+
+			#else
+			return Path.GetRelativePath(rel_path, full_file_path);
+			#endif
+		}
+
 		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'. Returns a full filepath</summary>
 		public static string Canonicalise(string path, Case change_case = Case.Unchanged)
 		{
 			if (change_case == Case.Lower) path = path.ToLowerInvariant();
 			if (change_case == Case.Upper) path = path.ToUpperInvariant();
-			path = path.Replace('/', '\\');
+			path = path.Replace('/', Path.DirectorySeparatorChar);
+			path = path.Replace('\\', Path.DirectorySeparatorChar);
 			return Path.GetFullPath(path);
 		}
 		public enum Case { Unchanged, Lower, Upper };
@@ -548,6 +614,34 @@ namespace Rylogic.UnitTests
 			Assert.Equal(withquotes ,Path_.Quote(withquotes, true));
 			Assert.Equal(noquotes   ,Path_.Quote(noquotes, false));
 			Assert.Equal(noquotes   ,Path_.Quote(withquotes, false));
+		}
+		[Test]
+		public void RelativePaths()
+		{
+			// Note: since this test runs for netcoreapp3.1 and netstandard2.0 it effectively
+			// ensures consistent behaviour between my implementation and the the .net core one.
+			string rel;
+
+			rel = Path_.RelativePath(@"A:\aaa\eee\fff\", @"A:\aaa\BBB\ccc\ddd");
+			Assert.Equal(rel, @"..\..\BBB\ccc\ddd");
+
+			rel = Path_.RelativePath(@"A:\aaa\eee\fff\", @"A:\aaa\bbb\..\..\ddd");
+			Assert.Equal(rel, @"..\..\..\ddd");
+
+			rel = Path_.RelativePath(@"A:\aaa\eee\fff\", @"B:\AAA\BBB\CCC\DDD");
+			Assert.Equal(rel, @"B:\AAA\BBB\CCC\DDD");
+
+			rel = Path_.RelativePath(@"A:\aaa\eee\fff", @"A:\aaa\");
+			Assert.Equal(rel, @"..\..");
+
+			rel = Path_.RelativePath(@"A:\aAa\eee\fff", @"A:\AaA\BbB\");
+			Assert.Equal(rel, @"..\..\BbB\");
+
+			rel = Path_.RelativePath(@"A:\aAa", @"A:\AaA\BbB\CcC");
+			Assert.Equal(rel, @"BbB\CcC");
+
+			rel = Path_.RelativePath(@"A:\aAa\Part", @"A:\AaA\Partial\CcC");
+			Assert.Equal(rel, @"..\Partial\CcC");
 		}
 	}
 }

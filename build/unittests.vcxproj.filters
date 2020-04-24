@@ -1035,6 +1035,15 @@
     <ClInclude Include="..\include\pr\script\buf.h">
       <Filter>pr\script</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\file_time.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\lock_file.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\renderer.h">
+      <Filter>pr\view3d</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

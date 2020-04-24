@@ -188,9 +188,8 @@ namespace pr::script
 		bool NewLine()
 		{
 			auto& src = m_pp;
-			EatLine(src, 0, 0);
-			if (pr::str::IsNewLine(*src)) ++src; else return false;
-			return true;
+			EatLine(src, 0, 0, true);
+			return *src != 0;
 		}
 
 		// Advance the source to the next '{' within the current scope.

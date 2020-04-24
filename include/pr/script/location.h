@@ -20,6 +20,9 @@ namespace pr::script
 		// The character offset into the stream (0-based)
 		std::streamoff m_pos;
 
+		// The character offset into the stream at the start of the last seen line (0-based)
+		std::streamoff m_line_pos;
+
 		// Line number in the character stream (natural number, i.e. 1-based)
 		int m_line;
 
@@ -43,6 +46,7 @@ namespace pr::script
 		Loc(std::filesystem::path const& filepath, std::streamoff pos = 0, int line = 1, int col = 1, bool lc_valid = true, int tab_size = DefTabSize)
 			:m_filepath(filepath)
 			,m_pos(pos)
+			,m_line_pos(pos)
 			,m_line(std::max(line, 1))
 			,m_col(std::max(col, 1))
 			,m_tab_size(tab_size)
@@ -59,23 +63,21 @@ namespace pr::script
 			if (ch != 0)
 				++m_pos;
 
-			// If the line/column values are valid
-			if (m_lc_valid)
+			if (ch == L'\n')
 			{
-				if (ch == L'\n')
-				{
-					++m_line;
-					m_col = 1;
-				}
-				else if (ch == L'\t')
-				{
-					m_col += m_tab_size;
-				}
-				else if (ch != 0)
-				{
-					++m_col;
-				}
+				m_line_pos = m_pos;
+				++m_line;
+				m_col = 1;
 			}
+			else if (ch == L'\t')
+			{
+				m_col += m_tab_size;
+			}
+			else if (ch != 0)
+			{
+				++m_col;
+			}
+
 			return ch;
 		}
 		char inc(char ch) noexcept
@@ -99,18 +101,11 @@ namespace pr::script
 		{
 			return m_pos;
 		}
-		void Pos(std::streamoff pos, bool lc_valid) noexcept
+
+		// Get the character offset to the start of the line
+		std::streamoff LinePos() const noexcept
 		{
-			Pos(pos, m_line, m_col, lc_valid);
-		}
-		void Pos(std::streamoff pos, int line, int col, bool lc_valid) noexcept
-		{
-			assert("Line index should be natural number, 1-based" && line >= 1);
-			assert("Column index should be natural number, 1-based" && col >= 1);
-			m_pos      = pos;
-			m_line     = line;
-			m_col      = col;
-			m_lc_valid = lc_valid;
+			return m_line_pos;
 		}
 
 		// Get/Set the line number (as a natural number, 1-based)

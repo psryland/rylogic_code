@@ -186,7 +186,7 @@ namespace pr
 				if constexpr (std::is_signed_v<Ty> && sizeof(Ty) > sizeof(long))
 					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoll(ptr, end, radix) & ~Ty()));
 				if constexpr (!std::is_signed_v<Ty> && sizeof(Ty) > sizeof(long))
-					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoull(ptr, end, radix) & ~Ty()));
+					return CheckErrno(static_cast<Ty>(char_traits<Char>::strtoui64(ptr, end, radix) & ~Ty()));
 			}
 		};
 

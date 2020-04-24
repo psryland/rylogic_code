@@ -504,6 +504,8 @@ def Main(args:[str]):
 	if not projects: projects = ["All"]
 	if not clean and not build and not deploy and not publish: build = True
 	if publish: deploy = True
+	if deploy and not UserVars.rylogic_cert_pw:
+		Tools.PromptCertPassword()
 
 	# Build/Clean/Deploy each given project
 	for project in projects:

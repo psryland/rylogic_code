@@ -61,7 +61,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Display a modal message box</summary>
-		public static bool? Show(Window owner, string message, string? title = null, EButtons btns = EButtons.OK, EIcon icon = EIcon.None, EButtons default_button = EButtons.OK)
+		public static bool? Show(Window? owner, string message, string? title = null, EButtons btns = EButtons.OK, EIcon icon = EIcon.None, EButtons default_button = EButtons.OK)
 		{
 			title ??= string.Empty;
 			message ??= string.Empty;

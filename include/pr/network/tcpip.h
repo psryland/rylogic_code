@@ -19,9 +19,6 @@ namespace pr::network
 	{
 		int m_protocol; // TCP or UDP
 
-		TCPServer(TCPServer const&); // no copying
-		TCPServer& operator =(TCPServer const&);
-
 		// Create m_listen_socket to use for listening on
 		virtual void CreateListenSocket() override
 		{
@@ -56,6 +53,9 @@ namespace pr::network
 			:ServerSocket(winsock)
 			,m_protocol(protocol)
 		{}
+
+		TCPServer(TCPServer const&) = delete;
+		TCPServer& operator =(TCPServer const&) = delete;
 	};
 
 	// A network socket with client behaviour
@@ -147,18 +147,24 @@ namespace pr::network
 {
 	PRUnitTest(TcpIpTests)
 	{
+		uint16_t TestPort = 54321;
+		if constexpr (sizeof(void*) == 8)
+			TestPort += 2;
+		if constexpr (PR_DBG)
+			TestPort += 1;
+
 		Winsock wsa;
 		{
 			volatile bool connected = false;
 
 			TCPServer svr(wsa);
-			svr.AllowConnections(54321, [&](SOCKET, sockaddr_in const*)
+			svr.AllowConnections(TestPort, [&](SOCKET, sockaddr_in const*)
 			{
 				connected = true;
 			});
 
 			TCPClient client(wsa);
-			client.Connect("127.0.0.1", 54321);
+			client.Connect("127.0.0.1", TestPort);
 
 			PR_CHECK(svr.WaitForClients(1), true);
 			PR_CHECK(connected, true);
@@ -174,10 +180,10 @@ namespace pr::network
 		}
 		{
 			TCPServer svr(wsa);
-			svr.AllowConnections(54321, 10);
+			svr.AllowConnections(TestPort, 10);
 
 			TCPClient client(wsa);
-			client.Connect("127.0.0.1", 54321);
+			client.Connect("127.0.0.1", TestPort);
 
 			PR_CHECK(svr.WaitForClients(1), true);
 

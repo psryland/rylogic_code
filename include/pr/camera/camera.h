@@ -532,17 +532,17 @@ namespace pr
 		bool MouseControl(v2 const& point, ENavOp nav_op, bool ref_point)
 		{
 			// Navigation operations
-			bool translate = int(nav_op & ENavOp::Translate) != 0;
-			bool rotate    = int(nav_op & ENavOp::Rotate   ) != 0;
-			bool zoom      = int(nav_op & ENavOp::Zoom     ) != 0;
+			bool translate = AllSet(nav_op, ENavOp::Translate);
+			bool rotate    = AllSet(nav_op, ENavOp::Rotate   );
+			bool zoom      = AllSet(nav_op, ENavOp::Zoom     );
 			auto acc_mode  = KeyDown(m_key[ENavKey::Accurate]) + KeyDown(m_key[ENavKey::SuperAccurate]);
 
 			// On mouse down, mouse up, or a change in accuracy mode, record the reference point
 			if (ref_point || acc_mode != m_accuracy_mode)
 			{
-				if (int(nav_op & ENavOp::Translate) != 0) m_nav.m_Tref = point;
-				if (int(nav_op & ENavOp::Rotate) != 0) m_nav.m_Rref = point;
-				if (int(nav_op & ENavOp::Zoom) != 0) m_nav.m_Zref = point;
+				if (AllSet(nav_op, ENavOp::Translate)) m_nav.m_Tref = point;
+				if (AllSet(nav_op, ENavOp::Rotate)) m_nav.m_Rref = point;
+				if (AllSet(nav_op, ENavOp::Zoom)) m_nav.m_Zref = point;
 				m_accuracy_mode = acc_mode;
 				Commit();
 			}

@@ -41,7 +41,7 @@ namespace Rylogic.Gui.WPF.Converters
 		{
 			if (!(values[0] is string full_path)) return null;
 			if (!(values[1] is string base_path)) return null;
-			return Common.Windows.Path_.RelativePath(full_path, base_path);
+			return Path_.RelativePath(base_path, full_path);
 		}
 		public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
 		{

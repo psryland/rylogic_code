@@ -16,45 +16,48 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Description,nq}")]
 	public struct v4
 	{
-		[FieldOffset( 0)] public float x;
-		[FieldOffset( 4)] public float y;
-		[FieldOffset( 8)] public float z;
+		[FieldOffset(0)] public float x;
+		[FieldOffset(4)] public float y;
+		[FieldOffset(8)] public float z;
 		[FieldOffset(12)] public float w;
+		[FieldOffset(0)] public v2 xy;
+		[FieldOffset(4)] public v2 yz;
+		[FieldOffset(8)] public v2 zw;
+		[FieldOffset(0)] public v3 xyz;
 
-		[FieldOffset( 0)] public v2 xy;
-		[FieldOffset( 4)] public v2 yz;
-		[FieldOffset( 8)] public v2 zw;
-
-		[FieldOffset( 0)] public v3 xyz;
-		
 		// Constructors
-		public v4(float x_) :this(x_,x_,x_,x_)
-		{}
-		public v4(float x_, float y_, float z_, float w_) :this()
+		public v4(float x_)
+			: this(x_, x_, x_, x_)
+		{ }
+		public v4(float x_, float y_, float z_, float w_)
+			: this()
 		{
 			x = x_;
 			y = y_;
 			z = z_;
 			w = w_;
 		}
-		public v4(v2 xy_, float z_, float w_) :this()
+		public v4(v2 xy_, float z_, float w_)
+			: this()
 		{
 			xy = xy_;
 			z = z_;
 			w = w_;
 		}
-		public v4(v2 xy_, v2 zw_) :this()
+		public v4(v2 xy_, v2 zw_)
+			: this()
 		{
 			xy = xy_;
 			zw = zw_;
 		}
-		public v4(v3 xyz_, float w_) : this()
+		public v4(v3 xyz_, float w_)
+			: this()
 		{
 			xyz = xyz_;
 			w = w_;
 		}
 		public v4(float[] arr, int start = 0)
-			:this()
+			: this()
 		{
 			x = arr[start + 0];
 			y = arr[start + 1];
@@ -62,7 +65,7 @@ namespace Rylogic.Maths
 			w = arr[start + 3];
 		}
 		public v4(float[] arr, float w_, int start = 0)
-			:this()
+			: this()
 		{
 			x = arr[start + 0];
 			y = arr[start + 1];
@@ -75,7 +78,8 @@ namespace Rylogic.Maths
 		{
 			get
 			{
-				switch (i) {
+				switch (i)
+				{
 				case 0: return x;
 				case 1: return y;
 				case 2: return z;
@@ -85,7 +89,8 @@ namespace Rylogic.Maths
 			}
 			set
 			{
-				switch (i) {
+				switch (i)
+				{
 				case 0: x = value; return;
 				case 1: y = value; return;
 				case 2: z = value; return;
@@ -96,67 +101,28 @@ namespace Rylogic.Maths
 		}
 		public float this[uint i]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get => this[(int)i];
+			set => this[(int)i] = value;
 		}
 
 		/// <summary>Integer cast accessors</summary>
-		public int xi
-		{
-			get { return (int)x; }
-		}
-		public int yi
-		{
-			get { return (int)y; }
-		}
-		public int zi
-		{
-			get { return (int)z; }
-		}
-		public int wi
-		{
-			get { return (int)w; }
-		}
+		public int xi => (int)x;
+		public int yi => (int)y;
+		public int zi => (int)z;
+		public int wi => (int)w;
 
 		/// <summary>Length</summary>
-		public float LengthSq
-		{
-			get { return x * x + y * y + z * z + w * w; }
-		}
-		public float Length
-		{
-			get { return (float)Math.Sqrt(LengthSq); }
-		}
+		public float LengthSq => x * x + y * y + z * z + w * w;
+		public float Length => (float)Math.Sqrt(LengthSq);
 
 		/// <summary>ToString</summary>
-		public string ToString2()
-		{
-			return x + " " + y;
-		}
-		public string ToString3()
-		{
-			return ToString2() + " " + z;
-		}
-		public string ToString4()
-		{
-			return ToString3() + " " + w;
-		}
-		public string ToString2(string format)
-		{
-			return x.ToString(format) + " " + y.ToString(format);
-		}
-		public string ToString3(string format)
-		{
-			return ToString2(format) + " " + z.ToString(format);
-		}
-		public string ToString4(string format)
-		{
-			return ToString3(format) + " " + w.ToString(format);
-		}
-		public override string ToString()
-		{
-			return ToString4();
-		}
+		public string ToString2() => $"{x} {y}";
+		public string ToString3() => $"{x} {y} {z}";
+		public string ToString4() => $"{x} {y} {z} {w}";
+		public string ToString2(string format) => $"{x.ToString(format)} {y.ToString(format)}";
+		public string ToString3(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)}";
+		public string ToString4(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
+		public override string ToString() => ToString4();
 
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v4(float[] a)
@@ -176,61 +142,67 @@ namespace Rylogic.Maths
 			return new double[] { p.x, p.y, p.z, p.w };
 		}
 
-		public v4 w0
-		{
-			get { return new v4(x, y, z, 0); }
-		}
-		public v4 w1
-		{
-			get { return new v4(x, y, z, 1); }
-		}
+		public v4 w0 => new v4(x, y, z, 0);
+		public v4 w1 => new v4(x, y, z, 1);
 
 		// Static v4 types
-		public readonly static v4 Zero     = new v4(0f, 0f, 0f, 0f);
-		public readonly static v4 XAxis    = new v4(1f, 0f, 0f, 0f);
-		public readonly static v4 YAxis    = new v4(0f, 1f, 0f, 0f);
-		public readonly static v4 ZAxis    = new v4(0f, 0f, 1f, 0f);
-		public readonly static v4 WAxis    = new v4(0f, 0f, 0f, 1f);
-		public readonly static v4 Origin   = new v4(0f, 0f, 0f, 1f);
-		public readonly static v4 One      = new v4(1f, 1f, 1f, 1f);
+		public readonly static v4 Zero = new v4(0f, 0f, 0f, 0f);
+		public readonly static v4 XAxis = new v4(1f, 0f, 0f, 0f);
+		public readonly static v4 YAxis = new v4(0f, 1f, 0f, 0f);
+		public readonly static v4 ZAxis = new v4(0f, 0f, 1f, 0f);
+		public readonly static v4 WAxis = new v4(0f, 0f, 0f, 1f);
+		public readonly static v4 Origin = new v4(0f, 0f, 0f, 1f);
+		public readonly static v4 One = new v4(1f, 1f, 1f, 1f);
 		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
 
 		/// <summary>Operators</summary>
-		public static v4 operator + (v4 vec)
+		public static v4 operator +(v4 vec)
 		{
 			return vec;
 		}
-		public static v4 operator - (v4 vec)
+		public static v4 operator -(v4 vec)
 		{
 			return new v4(-vec.x, -vec.y, -vec.z, -vec.w);
 		}
-		public static v4 operator + (v4 lhs, v4 rhs)
+		public static v4 operator +(v4 lhs, v4 rhs)
 		{
 			return new v4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
 		}
-		public static v4 operator - (v4 lhs, v4 rhs)
+		public static v4 operator -(v4 lhs, v4 rhs)
 		{
 			return new v4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
 		}
-		public static v4 operator * (v4 lhs, float rhs)
+		public static v4 operator *(v4 lhs, float rhs)
 		{
 			return new v4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
 		}
-		public static v4 operator * (float lhs, v4 rhs)
+		public static v4 operator *(v4 lhs, double rhs)
+		{
+			return lhs * (float)rhs;
+		}
+		public static v4 operator *(float lhs, v4 rhs)
 		{
 			return new v4(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
 		}
-		public static v4 operator * (v4 lhs, v4 rhs)
+		public static v4 operator *(double lhs, v4 rhs)
+		{
+			return (float)lhs * rhs;
+		}
+		public static v4 operator *(v4 lhs, v4 rhs)
 		{
 			// Not really sound mathematically, but too useful not to have
 			return new v4(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w);
 		}
-		public static v4 operator / (v4 lhs, float rhs)
+		public static v4 operator /(v4 lhs, float rhs)
 		{
 			return new v4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
 		}
-		public static v4 operator / (v4 lhs, v4 rhs)
+		public static v4 operator /(v4 lhs, double rhs)
+		{
+			return lhs / (float)rhs;
+		}
+		public static v4 operator /(v4 lhs, v4 rhs)
 		{
 			return new v4(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);
 		}
@@ -239,14 +211,14 @@ namespace Rylogic.Maths
 		public static v4 Parse3(string s, float w)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v4.Parse3() string argument was null");
-			var values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
 			if (values.Length != 3) throw new FormatException("v4.Parse3() string argument does not represent a 3 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), w);
 		}
 		public static v4 Parse4(string s)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v4.Parse4() string argument was null");
-			var values = s.Split(new char[]{' ',',','\t'},4);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 4);
 			if (values.Length != 4) throw new FormatException("v4.Parse4() string argument does not represent a 4 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
 		}
@@ -254,7 +226,7 @@ namespace Rylogic.Maths
 		{
 			vec = Zero;
 			if (s == null) return false;
-			var values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
 			vec.w = w;
 			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
 		}
@@ -267,8 +239,8 @@ namespace Rylogic.Maths
 		{
 			vec = Zero;
 			if (s == null) return false;
-			var values = s.Split(new char[]{' ',',','\t'},4);
-			return  values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 4);
+			return values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
 		}
 		public static v4? TryParse4(string s)
 		{
@@ -292,7 +264,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector within a 4D sphere of radius 'rad' (Note: *not* on the sphere)</summary>
 		public static v4 Random4(float rad, Random r)
 		{
-			var rad_sq = rad*rad;
+			var rad_sq = rad * rad;
 			v4 v; for (; (v = Random4(-rad, rad, r)).LengthSq > rad_sq;) { }
 			return v;
 		}
@@ -316,7 +288,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector on the unit 4D sphere</summary>
 		public static v4 Random4N(Random r)
 		{
-			v4 v; for (; Math_.FEql(v = Random4(1f, r), Zero); ) { }
+			v4 v; for (; Math_.FEql(v = Random4(1f, r), Zero);) { }
 			return Math_.Normalise(v);
 		}
 
@@ -333,8 +305,8 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
 		public static v4 Random3(float rad, float w, Random r)
 		{
-			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random3(-rad, rad, 0, r)).LengthSq > rad_sq; ){}
+			var rad_sq = rad * rad;
+			v4 v; for (; (v = Random3(-rad, rad, 0, r)).LengthSq > rad_sq;) { }
 			v.w = w;
 			return v;
 		}
@@ -358,7 +330,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector on the unit 3D sphere</summary>
 		public static v4 Random3N(float w, Random r)
 		{
-			v4 v; for (; Math_.FEql(v = Random3(1, 0, r), Zero); ) { }
+			v4 v; for (; Math_.FEql(v = Random3(1, 0, r), Zero);) { }
 			v = Math_.Normalise(v);
 			v.w = w;
 			return v;
@@ -387,7 +359,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v4 Random2(float rad, float z, float w, Random r)
 		{
-			var rad_sq = rad*rad;
+			var rad_sq = rad * rad;
 			v4 v; for (; (v = Random2(-rad, rad, 0, 0, r)).LengthSq > rad_sq;) { }
 			v.z = z;
 			v.w = w;
@@ -407,11 +379,11 @@ namespace Rylogic.Maths
 		#endregion
 
 		#region Equals
-		public static bool operator == (v4 lhs, v4 rhs)
+		public static bool operator ==(v4 lhs, v4 rhs)
 		{
 			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
 		}
-		public static bool operator != (v4 lhs, v4 rhs)
+		public static bool operator !=(v4 lhs, v4 rhs)
 		{
 			return !(lhs == rhs);
 		}

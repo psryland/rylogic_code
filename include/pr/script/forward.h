@@ -34,6 +34,7 @@
 #include "pr/str/string_util.h"
 #include "pr/str/string_filter.h"
 #include "pr/str/extract.h"
+#include "pr/filesys/filesys.h"
 
 namespace pr::script
 {

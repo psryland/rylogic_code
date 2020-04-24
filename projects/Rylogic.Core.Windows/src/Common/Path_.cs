@@ -48,7 +48,7 @@ namespace Rylogic.Common.Windows
 		}
 
 		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
-		public static string RelativePath(string full_file_path, string rel_path)
+		[Obsolete("Use the one in Rylogic.Core but note the parameters are swapped!")] public static string RelativePath(string full_file_path, string rel_path)
 		{
 			const int FILE_ATTRIBUTE_DIRECTORY = 0x10;
 			const int FILE_ATTRIBUTE_NORMAL = 0x80;

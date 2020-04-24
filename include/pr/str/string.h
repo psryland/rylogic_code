@@ -336,6 +336,16 @@ namespace pr
 			assign(right, rofs, count);
 		}
 
+		// construct from string_view
+		explicit string(std::basic_string_view<Type> right, Allocator const& allocator = Allocator())
+			:string(right.data(), right.data() + right.size(), allocator)
+		{}
+
+		// construct from string_view subrange
+		explicit string(std::basic_string_view<Type> right, size_type ofs, size_type count, Allocator const& allocator = Allocator())
+			:string(right.substr(ofs, count), allocator)
+		{}
+
 		// destruct
 		~string()
 		{
