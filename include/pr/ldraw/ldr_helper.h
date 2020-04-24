@@ -14,6 +14,7 @@
 #include "pr/str/string.h"
 #include "pr/str/string_util.h"
 #include "pr/filesys/filesys.h"
+#include "pr/filesys/lock_file.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/conversion.h"
 #include "pr/maths/spline.h"
@@ -137,7 +138,7 @@ namespace pr::ldr
 	}
 	inline TStr& Append(TStr& str, AxisId id)
 	{
-		return AppendSpace(str).append(To<TStr>(int(id)));
+		return Append(str, "*AxisId {",int(id),"} ");
 	}
 	inline TStr& Append(TStr& str, EArrowType ty)
 	{
@@ -285,9 +286,9 @@ namespace pr::ldr
 				,TR.x ,TR.y ,TR.z
 			,"}\n");
 	}
-	inline TStr& Circle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& centre, int axis_id, float radius)
+	inline TStr& Circle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& centre, AxisId axis_id, float radius)
 	{
-		return Append(str,"*Circle",name,colour,"{",axis_id,radius,O2W(centre),"}\n");
+		return Append(str,"*Circle",name,colour,"{",radius,axis_id,O2W(centre),"}\n");
 	}
 	inline TStr& Spline(TStr& str, typename TStr::value_type const* name, Col colour, pr::Spline const& spline)
 	{
@@ -308,9 +309,9 @@ namespace pr::ldr
 	{
 		return Curve(str, name, colour, curve, x0, x1, steps, m4x4Identity);
 	}
-	inline TStr& Ellipse(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& centre, int axis_id, float major, float minor)
+	inline TStr& Ellipse(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& centre, AxisId axis_id, float major, float minor)
 	{
-		return Append(str,"*Ellipse",name,colour,"{",axis_id,major,minor,O2W(centre),"}\n");
+		return Append(str,"*Ellipse",name,colour,"{",major,minor,axis_id,O2W(centre),"}\n");
 	}
 	inline TStr& Sphere(TStr& str, typename TStr::value_type const* name, Col colour, float radius, Pos const& position)
 	{
@@ -357,13 +358,13 @@ namespace pr::ldr
 	{
 		return Frustum(str, name, colour, f, 0.0f, f.zfar(), m4x4Identity);
 	}
-	inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, int axis_id, float height, float radius, O2W const& o2w)
+	inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis_id, float height, float radius, O2W const& o2w)
 	{
-		return Append(str,"*Cylinder",name,colour,"{",axis_id,height,radius,o2w,"}\n");
+		return Append(str,"*Cylinder",name,colour,"{",height,radius,axis_id,o2w,"}\n");
 	}
-	inline TStr& CapsuleHR(TStr& str, typename TStr::value_type const* name, Col colour, int axis_id, float length, float radius, O2W const& o2w)
+	inline TStr& CapsuleHR(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis_id, float length, float radius, O2W const& o2w)
 	{
-		return Append(str,"*CapsuleHR",name,colour,"{",axis_id,length,radius,o2w,"}\n");
+		return Append(str,"*CapsuleHR",name,colour,"{",length,radius,axis_id,o2w,"}\n");
 	}
 	inline TStr& Quad(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& x1, v4 const& x2, v4 const& x3, v4 const& x4)
 	{

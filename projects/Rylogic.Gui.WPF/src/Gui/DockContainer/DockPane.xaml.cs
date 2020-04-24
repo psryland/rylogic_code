@@ -244,6 +244,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// Switch to the new active content
 					if (m_visible_content != null)
 					{
+						// Stop watching property changes
+						m_visible_content.PropertyChanged -= HandleVisibleContentPropertyChanged;
+
 						// Save the control that had input focus at the time this content became inactive
 						m_visible_content.SaveFocus();
 
@@ -271,6 +274,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 						// Restore the input focus for this content
 						m_visible_content.RestoreFocus();
+
+						// Watch for property changes
+						m_visible_content.PropertyChanged += HandleVisibleContentPropertyChanged;
 					}
 
 					// Ensure the tab for the active content is visible
@@ -283,6 +289,49 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// (allowing the globally active content notification to be sent if this is the active pane)
 					var parent_branch = ParentBranch ?? throw new Exception("DockPanes should be children of branches");
 					parent_branch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.ActiveContent, pane: this, dockcontrol: value));
+				}
+
+				// Handlers
+				void HandleVisibleContentPropertyChanged(object? sender, PropertyChangedEventArgs e)
+				{
+					if (!(sender is DockControl dc))
+						return;
+
+					switch (e.PropertyName)
+					{
+					case nameof(DockControl.CaptionText):
+						{
+							NotifyPropertyChanged(nameof(CaptionText));
+							break;
+						}
+					case nameof(DockControl.TabText):
+						{
+							// The caption text defaults to the tab text, so invalidate CaptionText here.
+							NotifyPropertyChanged(nameof(CaptionText));
+							if (TabStrip.Buttons.FirstOrDefault(x => x.DockControl == sender) is var tab_btn)
+							{
+								tab_btn.InvalidateMeasure();
+							}
+							break;
+						}
+					case nameof(DockControl.TabIcon):
+						{
+							if (TabStrip.Buttons.FirstOrDefault(x => x.DockControl == sender) is var tab_btn)
+							{
+								tab_btn.InvalidateMeasure();
+								tab_btn.InvalidateArrange();
+							}
+							break;
+						}
+					case nameof(DockControl.TabState):
+						{
+							if (TabStrip.Buttons.FirstOrDefault(x => x.DockControl == sender) is var tab_btn)
+							{
+								tab_btn.TabState = dc.TabState;
+							}
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -304,7 +353,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Get the text to display in the title bar for this pane</summary>
-		public string CaptionText => VisibleContent?.TabText ?? string.Empty;
+		public string CaptionText => VisibleContent?.CaptionText ?? string.Empty;
 
 		/// <summary>Get/Set the content in the pane floating</summary>
 		public bool IsFloating
@@ -404,7 +453,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal void OnActivatedChanged()
 		{
 			ActivatedChanged?.Invoke(this, EventArgs.Empty);
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Activated)));
+			NotifyPropertyChanged(nameof(Activated));
 		}
 
 		/// <summary>Get/Set this pane as activated. Activation causes the active content in this pane to be activated</summary>
@@ -560,5 +609,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

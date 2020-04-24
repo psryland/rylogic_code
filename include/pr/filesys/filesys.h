@@ -1,127 +1,21 @@
-//**********************************************
+﻿//**********************************************
 // File path/File system operations
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************
-
 #pragma once
-
+#include <cstdint>
 #include <string>
 #include <algorithm>
 #include <type_traits>
 #include <filesystem>
+#include <iterator>
 #include <fstream>
 #include <locale>
 #include <codecvt>
-#include <ctime>
-#include <cstdint>
 #include <cassert>
-#include "pr/str/string_core.h"
-#include "pr/win32/win32.h"
 
 namespace pr::filesys
 {
-	// Notes:
-	//  - Unix Time = seconds since midnight January 1, 1970 UTC
-	//  - FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
-
-	// Convert a UTC Unix time to a local time zone Unix time
-	inline time_t UTCtoLocal(time_t t)
-	{
-		struct tm utc, local;
-		if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert UTC time to local time");
-		return t + (mktime(&local) - mktime(&utc));
-	}
-
-	// Convert local time-zone Unix time to UTC Unix time
-	inline time_t LocaltoUTC(time_t t)
-	{
-		struct tm utc, local;
-		if (gmtime_s(&utc, &t) != 0 || localtime_s(&local, &t) != 0) throw std::exception("failed to convert local time to UTC time");
-		return t - (mktime(&local) - mktime(&utc));
-	}
-
-	// Convert between Unix time and i64. The resulting i64 can then be converted to FILETIME, SYSTEMTIME, etc
-	constexpr int64_t UnixTimetoI64(time_t  t)
-	{
-		return t * 10000000LL + 116444736000000000LL;
-	}
-	constexpr time_t  I64toUnixTime(int64_t t)
-	{
-		return (t - 116444736000000000LL) / 10000000LL;
-	}
-
-	// Conversions between int64_t, FILETIME, and SYSTEMTIME
-	// Requires <windows.h> to be included
-	// Note: the 'int64_t's here are not the same as the timestamps in 'FileTime'
-	// those values are in Unix time. Use 'UnixTimetoI64()'
-	struct FILETIME;
-	struct SYSTEMTIME;
-	template <typename = void> inline int64_t FTtoI64(FILETIME ft)
-	{
-		int64_t  n = int64_t(ft.dwHighDateTime) << 32 | int64_t(ft.dwLowDateTime);
-		return n;
-	}
-	template <typename = void> inline FILETIME I64toFT(int64_t n)
-	{
-		FILETIME ft = { DWORD(n & 0xFFFFFFFFULL), DWORD((n >> 32) & 0xFFFFFFFFULL) };
-		return ft;
-	}
-	template <typename = void> inline SYSTEMTIME FTtoST(FILETIME const& ft)
-	{
-		SYSTEMTIME st = {};
-		if (!::FileTimeToSystemTime(&ft, &st)) throw std::exception("FileTimeToSystemTime failed");
-		return st;
-	}
-	template <typename = void> inline FILETIME STtoFT(SYSTEMTIME const& st)
-	{
-		FILETIME ft = {};
-		if (!::SystemTimeToFileTime(&st, &ft)) throw std::exception("SystemTimeToFileTime failed");
-		return ft;
-	}
-	template <typename = void> inline int64_t STtoI64(SYSTEMTIME const& st)
-	{
-		return FTtoI64(STtoFT(st));
-	}
-	template <typename = void> inline SYSTEMTIME I64toST(int64_t n)
-	{
-		return FTtoST(I64toFT(n));
-	}
-
-	// Scoped object that blocks until it can create a file called 'filepath.locked'.
-	// 'filepath.locked' is deleted as soon as it goes out of scope.
-	// Used as a file system mutex-file
-	// Requires <windows.h> to be included
-	struct LockFile
-	{
-		win32::Handle m_handle;
-		LockFile(std::filesystem::path const& filepath, int max_attempts = 3, int max_block_time_ms = 1000)
-		{
-			// Arithmetic series: Sn = 1+2+3+..+n = n(1 + n)/2. 
-			// For n attempts, the i'th attempt sleep time is: max_block_time_ms * i / Sn
-			// because the sum of sleep times need to add up to max_block_time_ms.
-			//  sleep_time(a) = a * back_off = a * max_block_time_ms / Sn
-			//  back_off = max_block_time_ms / Sn = 2*max_block_time_ms / n(1+n)
-			auto max = static_cast<double>(max_attempts);
-			auto back_off = 2.0 * max_block_time_ms / (max * (1 + max));
-
-			auto fpath = filepath;
-			fpath += L".locked";
-			for (auto a = 0; a != max_attempts; ++a)
-			{
-				m_handle = win32::FileOpen(fpath, GENERIC_READ | GENERIC_WRITE, 0, CREATE_NEW, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_TEMPORARY, FILE_FLAG_DELETE_ON_CLOSE);
-				if (m_handle != INVALID_HANDLE_VALUE)
-					return;
-
-				auto err = GetLastError();
-				if (err == ERROR_SHARING_VIOLATION || err == ERROR_FILE_EXISTS)
-					Sleep(DWORD(a * back_off));
-				else
-					break;
-			}
-			throw std::runtime_error(std::string("Failed to lock file: '").append(filepath.string()).append("'").c_str());
-		}
-	};
-
 	// Compare two, possibly non-existent, paths.
 	inline int Compare(std::filesystem::path const& lhs, std::filesystem::path const& rhs, bool ignore_case)
 	{
@@ -193,26 +87,79 @@ namespace pr::filesys
 		return f0.eof() == f1.eof();
 	}
 
+	// Simple read/write a text file into memory
+	inline std::string ReadAllText(std::filesystem::path const& filepath)
+	{
+		std::ifstream ifile(filepath);
+		return std::string(std::istreambuf_iterator<char>(ifile), {});
+	}
+	inline void WriteAllText(std::string text, std::filesystem::path const& filepath)
+	{
+		std::ofstream ifile(filepath);
+		ifile << text;
+	}
+
 	// Examines 'filepath' to guess at the file data encoding (assumes 'filepath' is a text file)
-	// On return 'bom_length' is the length of the byte order mask.
+	// On return 'bom_size' is the length of the byte order mask.
 	// Returns 'UTF-8' if unknown, since UTF-8 recommends not using BOMs
-	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath, int& bom_length)
+	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath, int& bom_size)
 	{
 		std::ifstream file(filepath, std::ios::binary);
 
 		EEncoding enc;
 		unsigned char bom[3];
 		auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
-		if (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { enc = EEncoding::utf8;     bom_length = 3; }
-		else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF) { enc = EEncoding::utf16_be; bom_length = 2; }
-		else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE) { enc = EEncoding::utf16_le; bom_length = 2; }
-		else { enc = EEncoding::utf8;     bom_length = 0; }
+		if (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
+		{
+			enc = EEncoding::utf8;
+			bom_size = 3;
+		}
+		else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)
+		{
+			enc = EEncoding::utf16_be;
+			bom_size = 2;
+		}
+		else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)
+		{
+			enc = EEncoding::utf16_le;
+			bom_size = 2;
+		}
+		else
+		{
+			// Assume utf-8 unless we find some invalid utf-8 sequences
+			enc = EEncoding::utf8;
+			bom_size = 0;
+
+			// Scan the file (or some of it) to look for invalid utf-8 sequences
+			unsigned char buf[0x10000];
+			constexpr int const max_scan_size = 0x100000 / sizeof(buf);
+			for (int j = 0; file.good(); ++j)
+			{
+				auto iend = file.read(reinterpret_cast<char*>(&buf[0]), sizeof(buf)).gcount();
+				for (std::streamsize i = 0; i != iend; ++i)
+				{
+					if ((buf[i] & 0b10000000) == 0) continue;
+					auto c = 
+						iend - i >= 4 && (buf[i] & 0b11110000) == 0b11110000 ? 3 :
+						iend - i >= 3 && (buf[i] & 0b11100000) == 0b11100000 ? 2 :
+						iend - i >= 2 && (buf[i] & 0b11000000) == 0b11000000 ? 1 : 0;
+
+					// Following bytes should be 0b10xxxxxx for valid utf-8
+					for (++i; c-- != 0 && (buf[i] & 0b11000000) == 0b10000000; ++i) {}
+					if (c == 0) continue;
+
+					// Not valid UTF-8, assume extended ascii
+					enc = EEncoding::ascii_extended;
+					break;
+				}
+			}
+		}
 		return enc;
 	}
 	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath)
 	{
-		int bom_length;
-		return DetectFileEncoding(filepath, bom_length);
+		int bom_size;
+		return DetectFileEncoding(filepath, bom_size);
 	}
 
 	// Read the contents of a file into 'buf'
@@ -246,9 +193,13 @@ namespace pr::filesys
 			switch (file_enc)
 			{
 			case EEncoding::ascii:
+			case EEncoding::ascii_extended:
 			case EEncoding::utf8:
 				{
-					if (buf_enc == EEncoding::ascii || buf_enc == EEncoding::utf8) {}
+					if (buf_enc == EEncoding::ascii ||
+						buf_enc == EEncoding::ascii_extended ||
+						buf_enc == EEncoding::utf8)
+					{}
 					else if (buf_enc == EEncoding::utf16_le)
 					{
 						using cvt_t = std::codecvt_utf8_utf16<wchar_t>;
@@ -270,7 +221,7 @@ namespace pr::filesys
 				{
 					// Imbue the file if the file encoding doesn't match the buffer encoding
 					if (false) {}
-					else if (buf_enc == EEncoding::utf8 || buf_enc == EEncoding::ascii)
+					else if (buf_enc == EEncoding::utf8 || buf_enc == EEncoding::ascii || buf_enc == EEncoding::ascii_extended)
 					{
 						// There doesn't seem to be a codecvt instance that handles utf16 -> utf8
 						// Have to read utf16 into a string then convert it to utf8
@@ -391,7 +342,8 @@ namespace pr::filesys
 			if (add_bom && file_enc != EEncoding::auto_detect)
 			{
 				unsigned char bom[3] = {}; int bom_length = 0;
-				if (file_enc == EEncoding::utf8) { bom[0] = 0xEF; bom[1] = 0xBB; bom[2] = 0xBF; bom_length = 3; }
+				if (false) {}
+				else if (file_enc == EEncoding::utf8)     { bom[0] = 0xEF; bom[1] = 0xBB; bom[2] = 0xBF; bom_length = 3; }
 				else if (file_enc == EEncoding::utf16_le) { bom[0] = 0xFF; bom[1] = 0xFE; bom_length = 2; }
 				else if (file_enc == EEncoding::utf16_be) { bom[0] = 0xFE; bom[1] = 0xFF; bom_length = 2; }
 				else throw std::exception("Cannot write the byte order mask for an unknown text encoding");
@@ -491,7 +443,7 @@ namespace pr::filesys
 			return partial_path;
 		}
 
-		// If 'current_dir' != null
+		// If a current directory is provided
 		if (current_dir != nullptr)
 		{
 			auto path = *current_dir / partial_path;
@@ -516,7 +468,7 @@ namespace pr::filesys
 		// Search the search paths
 		for (auto& dir : search_paths)
 		{
-			auto path = dir / partial_path;
+			auto path = (dir / partial_path).lexically_normal();
 			if (exists(path))
 				return path;
 
@@ -524,7 +476,7 @@ namespace pr::filesys
 			if (!path.is_absolute())
 			{
 				auto paths = search_paths;
-				paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return equivalent(p, dir); }), end(paths));
+				paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return p == dir; }), end(paths));
 				path = ResolvePath(path, paths, current_dir, check_working_dir, searched_paths);
 				if (exists(path))
 					return path;
@@ -611,6 +563,12 @@ namespace pr::filesys
 		}
 		{// Buffer to/from File
 			auto filepath = temp_dir / L"file_test.txt";
+			{// Simple read text file
+				auto text = std::string{u8"你好，This is some test text"};
+				WriteAllText(text, filepath);
+				auto read = ReadAllText(filepath);
+				PR_CHECK(read, text);
+			}
 			{// Write binary - Read binary
 				{// write bytes
 					unsigned char const data[] = { '0', '1', '2', '3', '4', '5' };
@@ -694,7 +652,6 @@ namespace pr::filesys
 			}
 		}
 		{// Enumerate filesystem
-			// Create a folder tree
 			create_directories(temp_dir / L"dir1" / L"dir2");
 			BufferToFile({ 0, 1, 2, 3, 4 }, temp_dir / L"dir1" / L"bytes.bin");
 			BufferToFile("0123456789", temp_dir / L"dir1" / L"digits.txt");

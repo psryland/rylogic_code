@@ -233,7 +233,7 @@ namespace Rylogic.UnitTests
 		public static void Equal(object? expected, object? result)
 		{
 			if (Equals(expected, result)) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected ?? "null"}\r\n  result: {result ?? "null"}");
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected ?? "null"}\r\n    result: {result ?? "null"}");
 		}
 
 		/// <summary>Tests value equality</summary>
@@ -241,19 +241,26 @@ namespace Rylogic.UnitTests
 		{
 			if (ReferenceEquals(expected, result)) return;
 			if (expected.SequenceEqual(result)) return;
-			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  expected: {(expected != null ? string.Join(",", expected) : "null")}\r\n  result: {(result != null ? string.Join(",", result) : "null")}");
+			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  expected: {(expected != null ? string.Join(",", expected) : "null")}\r\n    result: {(result != null ? string.Join(",", result) : "null")}");
+		}
+
+		/// <summary>Tests value equality</summary>
+		public static void Equal(string? expected, string? result)
+		{
+			if (expected == result) return;
+			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  expected: {expected ?? "null"}\r\n    result: {result ?? "null"}");
 		}
 
 		/// <summary>Tests value equality</summary>
 		public static void Equal(double expected, double result, double tol)
 		{
 			if (Math.Abs(result - expected) < tol) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n  result: {result}\r\n  tol: {tol}");
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n    result: {result}\r\n  tol: {tol}");
 		}
 		public static void Equal(decimal expected, decimal result, decimal tol)
 		{
 			if (Math.Abs(result - expected) < tol) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n  result: {result}\r\n  tol: {tol}");
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n    result: {result}\r\n  tol: {tol}");
 		}
 
 		/// <summary>Tests value inequality</summary>

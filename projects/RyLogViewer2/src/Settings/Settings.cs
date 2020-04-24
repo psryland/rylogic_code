@@ -343,7 +343,7 @@ namespace RyLogViewer.Options
 				switch (from_version)
 				{
 				default:
-					base.Upgrade(settings, from_version);
+					base.UpgradeCore(settings, from_version);
 					break;
 				case "vX.X": // example
 					from_version = Upgrade_vXX_to_vYY(settings);

@@ -24,27 +24,31 @@ namespace Rylogic.Maths
 		[FieldOffset(12)] public float w;
 		[FieldOffset( 0)] public v4 xyzw; // (same name as the C++ version)
 
-		public quat(float x) :this()
+		public quat(float x) 
+			:this()
 		{
 			this.x = x;
 			this.y = x;
 			this.z = x;
 			this.w = x;
 		}
-		public quat(float x, float y, float z, float w) :this()
+		public quat(float x, float y, float z, float w)
+			:this()
 		{
 			this.x = x;
 			this.y = y;
 			this.z = z;
 			this.w = w;
 		}
-		public quat(v4 vec) :this()
+		public quat(v4 vec)
+			:this()
 		{
 			this.xyzw = vec;
 		}
 
 		/// <summary>Create a quaternion from an axis and an angle</summary>
-		public quat(v4 axis, float angle) :this()
+		public quat(v4 axis, float angle)
+			:this()
 		{
 			var s = (float)Math.Sin(0.5 * angle);
 			x = s * axis.x;
@@ -54,7 +58,8 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a quaternion from Euler angles. Order is: roll, pitch, yaw (to match DirectX)</summary>
-		public quat(float pitch, float yaw, float roll) :this()
+		public quat(float pitch, float yaw, float roll)
+			:this()
 		{
 			// nicked from 'XMQuaternionRotationRollPitchYaw'
 			float cos_p = (float)Math.Cos(pitch * 0.5), sin_p = (float)Math.Sin(pitch * 0.5);
@@ -67,7 +72,8 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Create a quaternion from a rotation matrix</summary>
-		public quat(m3x4 m) :this()
+		public quat(m3x4 m)
+			:this()
 		{
 			Debug.Assert(Math_.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
 			var trace = m.x.x + m.y.y + m.z.z;
@@ -106,7 +112,8 @@ namespace Rylogic.Maths
 		}
 	
 		/// <summary>Construct a quaternion representing a rotation from 'from' to 'to'</summary>
-		public quat(v4 from, v4 to) :this()
+		public quat(v4 from, v4 to)
+			:this()
 		{
 			var d = Math_.Dot(from.xyz, to.xyz); 
 			var s = (float)Math.Sqrt(from.xyz.LengthSq * to.xyz.LengthSq) + d;
@@ -154,31 +161,19 @@ namespace Rylogic.Maths
 		}
 		public float this[uint i]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get => this[(int)i];
+			set => this[(int)i] = value;
 		}
 
 		/// <summary>Length</summary>
-		public float LengthSq
-		{
-			get { return x * x + y * y + z * z + w * w; }
-		}
-		public float Length
-		{
-			get { return (float)Math.Sqrt(LengthSq); }
-		}
+		public float LengthSq => x * x + y * y + z * z + w * w;
+		public float Length => (float)Math.Sqrt(LengthSq);
 
 		/// <summary>Get the axis component of the quaternion (normalised)</summary>
-		public v4 Axis
-		{
-			get { return Math_.Normalise(xyzw.w0); }
-		}
+		public v4 Axis => Math_.Normalise(xyzw.w0);
 
 		// Return the angle of rotation about 'Axis()'
-		public float Angle
-		{
-			get {  return (float)Math.Acos(CosAngle); }
-		}
+		public float Angle => (float)Math.Acos(CosAngle);
 
 		// Return the cosine of the angle of rotation about 'Axis()'
 		public float CosAngle
@@ -212,14 +207,8 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			return $"{x} {y} {z} {w}";
-		}
-		public string ToString(string format)
-		{
-			return $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
-		}
+		public override string ToString() => $"{x} {y} {z} {w}";
+		public string ToString(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)} {w.ToString(format)}";
 
 		/// <summary>ToArray()</summary>
 		public float[] ToArray()
@@ -227,17 +216,9 @@ namespace Rylogic.Maths
 			return new float[4]{ x, y, z, w };
 		}
 
-		/// <summary>Static quat types</summary>
-		private readonly static quat m_zero = new quat(0,0,0,0);
-		private readonly static quat m_identity = new quat(0,0,0,1);
-		public static quat Zero
-		{
-			get { return m_zero; }
-		}
-		public static quat Identity
-		{
-			get { return m_identity; }
-		}
+		// Static types
+		public static quat Zero { get; } = new quat(0, 0, 0, 0);
+		public static quat Identity { get; } = new quat(0, 0, 0, 1);
 
 		/// <summary>Operators</summary>
 		public static quat operator + (quat q)
@@ -277,6 +258,10 @@ namespace Rylogic.Maths
 		public quat CompMul(quat lhs, float rhs)
 		{
 			return new quat(lhs.xyzw * rhs);
+		}
+		public quat CompMul(quat lhs, double rhs)
+		{
+			return CompMul(lhs, (float)rhs);
 		}
 		public quat CompMul(quat lhs, quat rhs)
 		{

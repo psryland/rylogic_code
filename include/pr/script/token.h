@@ -39,7 +39,7 @@ namespace pr::script
 		explicit Token(EConstant c, double fvalue          ,int64_t ivalue = 0) :m_type(EToken::Constant) ,m_constant(c) ,m_svalue(      ) ,m_ivalue(ivalue) ,m_fvalue(fvalue) {}
 
 		// All tokens except the EndOfStream token return true
-		operator bool() const
+		explicit operator bool() const
 		{
 			return m_type != EToken::EndOfStream;
 		}
@@ -85,8 +85,8 @@ namespace pr::script
 	inline string_t ToStringW(Cont const& tokens)
 	{
 		string_t out;
-		for (for tok : tokens)
-			out.append(ToString<char_t>(tok)).append(L"\n");
+		for (auto tok : tokens)
+			out.append(EToken_::ToStringW(tok)).append(L"\n");
 		return out;
 	}
 }

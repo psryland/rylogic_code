@@ -1,6 +1,7 @@
 Immediate ToDo:
 	
 LDraw
+	- Add a skybox to the demo scene
 	- Bug in Spline, missing last vertex
 	- Camera type-in
 	- WASD camera controls

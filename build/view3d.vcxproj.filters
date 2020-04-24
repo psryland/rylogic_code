@@ -411,6 +411,9 @@
     <ClInclude Include="..\include\pr\container\chain.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_skybox.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">

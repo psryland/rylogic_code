@@ -408,9 +408,12 @@ namespace Rylogic.Script
 		{
 			Eat(src, eat_initial, eat_final, s => Str_.IsWhiteSpace(s));
 		}
-		public static void EatLine(Src src, int eat_initial, int eat_final)
+		public static void EatLine(Src src, int eat_initial, int eat_final, bool eat_newline)
 		{
-			Eat(src, eat_initial, eat_final, s => !(s[0] == '\n') && !(s[0] == '\r' && s[1] == '\n'));
+			src += eat_initial;
+			Eat(src, 0, 0, s => !(s[0] == '\n') && !(s[0] == '\r' && s[1] == '\n'));
+			if (eat_newline) src += (src[0] == '\r' && src[1] == '\n') ? 2 : (src[0] == '\n') ? 1 : 0;
+			src += eat_final;
 		}
 		public static void EatBlock(Src src, string block_beg, string block_end)
 		{
@@ -447,7 +450,7 @@ namespace Rylogic.Script
 			if (!src.Match(line_comment))
 				throw new Exception($"Don't call {nameof(EatLineComment)} unless 'src' is pointing at a line comment");
 
-			EatLine(src, line_comment.Length, 0);
+			EatLine(src, line_comment.Length, 0, false);
 		}
 		public static void EatBlockComment(Src src, string block_beg = "/*", string block_end = "*/")
 		{

@@ -1830,6 +1830,7 @@ namespace pr::eval
 	}
 
 	// Compile an expression
+	// Returns true if a complete expression is consumed from 'expr'. False if the expression is incomplete.
 	template <typename Char> bool Compile(char_range<Char>& expr, Expression& compiled, ETok parent_op, bool l2r = true)
 	{
 		// A flag used to distingush ambiguous operators such as + and -
@@ -2007,7 +2008,8 @@ namespace pr::eval
 					compiled.m_op.append(0);
 
 					// Compile the 'if' body
-					if (!Compile(expr, compiled, ETok::If)) return false;
+					if (!Compile(expr, compiled, ETok::If))
+						return false;
 
 					// Determine the offset to jump over the if body. The jump is from the byte after the jump value.
 					auto jmp = static_cast<int>(compiled.m_op.size() - ofs0 - sizeof(int));
@@ -2026,7 +2028,8 @@ namespace pr::eval
 					compiled.m_op.append(0);
 
 					// Compile the else body
-					if (!Compile(expr, compiled, ETok::Else)) return false;
+					if (!Compile(expr, compiled, ETok::Else))
+						return false;
 
 					// Determine the offset to jump over the else body
 					auto jmp = static_cast<int>(compiled.m_op.size() - ofs0 - sizeof(int));
@@ -2047,8 +2050,9 @@ namespace pr::eval
 	inline Expression Compile(char_range<Char> expr)
 	{
 		Expression compiled;
-		Compile(expr, compiled, ETok::None);
-		return std::move(compiled);
+		return Compile(expr, compiled, ETok::None)
+			? std::move(compiled)
+			: throw std::runtime_error("Expression is incomplete");
 	}
 
 	// Compile an expression. Throws on syntax error

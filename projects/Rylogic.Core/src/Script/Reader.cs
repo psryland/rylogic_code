@@ -122,9 +122,8 @@ namespace Rylogic.Script
 		/// <summary>Move to the start of the next line</summary>
 		public bool NewLine()
 		{
-			Extract.EatLine(Src, 0, 0);
-			if (Str_.IsNewLine(Src)) ++Src; else return false;
-			return true;
+			Extract.EatLine(Src, 0, 0, true);
+			return Src != 0;
 		}
 
 		///<summary>

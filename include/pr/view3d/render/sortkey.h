@@ -46,7 +46,7 @@ namespace pr::rdr
 
 		_arithmetic_operators_allowed,
 	};
-	static_assert(has_arithmetic_operators_allowed<ESortGroup>::value);
+	static_assert(has_arithops_allowed_v<ESortGroup>);
 
 	// The sort key type (wraps a uint32)
 	struct SortKey

@@ -332,7 +332,7 @@ namespace Rylogic.Common
 			//	{
 			//	default:
 			//		{
-			//			base.Upgrade(old_settings, from_version);
+			//			base.UpgradeCore(old_settings, from_version);
 			//			return;
 			//		}
 			//	case "v1.1":

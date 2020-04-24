@@ -21,7 +21,7 @@ namespace pr::script
 		//  - This is a super-set of a C/C++ preprocessor.
 		//  - Line continuations have the highest precedence. They are applied to
 		//    the input stream before considering literals and preprocessor directives.
-		//  - 
+		//  - The MacroDB is replaceable because a macro database that handles scope is used in LETE.
 
 	private:
 
@@ -88,11 +88,9 @@ namespace pr::script
 		EmbeddedCodeFactory m_emb_factory;
 		EmbeddedCodeHandlerCont m_emb_handlers;
 
-		// Preprocessor macro handler
-		MacroDB m_macros;
-
 		// Default handlers
 		Includes m_def_includes;
+		MacroDB m_def_macros;
 		
 		// Ignore missing includes or embedded code without handlers
 		bool m_ignore_missing;
@@ -103,34 +101,35 @@ namespace pr::script
 
 	public:
 
-		Preprocessor(IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
+		Preprocessor(IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr, IMacroHandler* mac = nullptr)
 			:Src(EEncoding::already_decoded, Loc())
 			,m_stack()
 			,m_if_stack()
 			,m_emb_factory(emb)
 			,m_emb_handlers()
-			, m_macros()
 			,m_def_includes()
+			,m_def_macros()
 			,m_ignore_missing()
 			,Includes(inc ? inc : &m_def_includes)
+			,Macros(mac ? mac : &m_def_macros)
 		{}
-		Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, emb)
+		Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr, IMacroHandler* mac = nullptr)
+			:Preprocessor(inc, emb, mac)
 		{
 			Push(src, delete_on_pop, false);
 		}
-		Preprocessor(Src& src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, emb)
+		Preprocessor(Src& src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr, IMacroHandler* mac = nullptr)
+			:Preprocessor(inc, emb, mac)
 		{
 			Push(src);
 		}
-		Preprocessor(std::string_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, emb)
+		Preprocessor(std::string_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr, IMacroHandler* mac = nullptr)
+			:Preprocessor(inc, emb, mac)
 		{
 			Push(src);
 		}
-		Preprocessor(std::wstring_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr)
-			:Preprocessor(inc, emb)
+		Preprocessor(std::wstring_view src, IIncludeHandler* inc = nullptr, EmbeddedCodeFactory emb = nullptr, IMacroHandler* mac = nullptr)
+			:Preprocessor(inc, emb, mac)
 		{
 			Push(src);
 		}
@@ -143,6 +142,9 @@ namespace pr::script
 
 		// Access the include handler
 		IIncludeHandler* const Includes;
+
+		// Access the macro handler;
+		IMacroHandler* const Macros;
 
 		// The current position in the root underlying source
 		Loc Location() const noexcept override
@@ -269,7 +271,7 @@ namespace pr::script
 						if (src.Match(L"define", true))
 						{
 							EatLineSpace(src, 0, 0);
-							m_macros.Add(Macro(src, src.Location()));
+							Macros->Add(Macro(src, src.Location()));
 							is_output = false;
 							break;
 						}
@@ -279,8 +281,8 @@ namespace pr::script
 						{
 							EatLineSpace(src, 0, 0);
 							Macro macro(src, src.Location());
-							if (!m_macros.Find(macro.m_tag))
-								m_macros.Add(macro);
+							if (!Macros->Find(macro.m_tag))
+								Macros->Add(macro);
 
 							is_output = false;
 							break;
@@ -324,7 +326,7 @@ namespace pr::script
 						{
 							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #else");
 							if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
-							else { m_if_stack.top() = true; EatLine(src, 0, 1); }
+							else { m_if_stack.top() = true; EatLine(src, 0, 0, true); }
 							is_output = false;
 							break;
 						}
@@ -335,7 +337,7 @@ namespace pr::script
 							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #elif");
 							if (m_if_stack.top()) { SkipPreprocessorBlock(loc_beg); }
 							else if (!PPDefined()) { SkipPreprocessorBlock(loc_beg); }
-							else { m_if_stack.top() = true; EatLine(src, 0, 1); }
+							else { m_if_stack.top() = true; EatLine(src, 0, 0, true); }
 							is_output = false;
 							break;
 						}
@@ -345,7 +347,7 @@ namespace pr::script
 						{
 							if (m_if_stack.empty()) throw ScriptException(EResult::UnmatchedPreprocessorDirective, loc_beg, "unmatched #endif");
 							m_if_stack.pop();
-							EatLine(src, 0, 1);
+							EatLine(src, 0, 0, true);
 							is_output = false;
 							break;
 						}
@@ -392,7 +394,7 @@ namespace pr::script
 								: FmtS(L"%f", result);
 
 							// Push the 'eval' result onto the input stack
-							auto eval_src = std::make_unique<StringSrc>(expr, StringSrc::EFlags::BufferLocally);
+							auto eval_src = std::unique_ptr<StringSrc>(new StringSrc(expr, StringSrc::EFlags::BufferLocally));
 							Push(eval_src.get(), true, false);
 							eval_src.release();
 							is_output = false;
@@ -473,7 +475,7 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 							
-							if (m_macros.Find(tag))
+							if (Macros->Find(tag))
 							{
 								m_if_stack.push(false);
 								SkipPreprocessorBlock(loc_beg);
@@ -481,7 +483,7 @@ namespace pr::script
 							else
 							{
 								m_if_stack.push(true);
-								EatLine(src, 0, 1);
+								EatLine(src, 0, 0, true);
 							}
 							is_output = false;
 							break;
@@ -495,10 +497,10 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 
-							if (m_macros.Find(tag))
+							if (Macros->Find(tag))
 							{
 								m_if_stack.push(true);
-								EatLine(src, 0, 1);
+								EatLine(src, 0, 0, true);
 							}
 							else
 							{
@@ -516,7 +518,7 @@ namespace pr::script
 							if (PPDefined())
 							{
 								m_if_stack.push(true);
-								EatLine(src, 0, 1);
+								EatLine(src, 0, 0, true);
 							}
 							else
 							{
@@ -629,7 +631,7 @@ namespace pr::script
 						if (src.Match(L"line", true))
 						{
 							// Ignore the #line directive
-							EatLine(src, 0, 1);
+							EatLine(src, 0, 0, true);
 							is_output = false;
 							break;
 						}
@@ -640,7 +642,7 @@ namespace pr::script
 						if (src.Match(L"pragma", true))
 						{
 							// Ignore the #pragma directive
-							EatLine(src, 0, 1);
+							EatLine(src, 0, 0, true);
 							is_output = false;
 							break;
 						}
@@ -657,9 +659,9 @@ namespace pr::script
 							if (!BufferIdentifier(src, 0, &len)) throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "An identifier was expected");
 							auto tag = src.ReadN(len);
 
-							m_macros.Remove(tag);
+							Macros->Remove(tag);
 
-							EatLine(src, 0, 1);
+							EatLine(src, 0, 0, true);
 							is_output = false;
 							break;
 						}
@@ -670,7 +672,7 @@ namespace pr::script
 						if (src.Match(L"warning", true))
 						{
 							// Ignore #warning directives
-							EatLine(src, 0, 1);
+							EatLine(src, 0, 0, true);
 							is_output = false;
 							break;
 						}
@@ -701,7 +703,7 @@ namespace pr::script
 					BufferIdentifier(src, 0, &len);
 
 					// See if the identifier matches any macro definitions
-					auto macro = m_macros.Find(string_t(src.Buffer(0, len)));
+					auto macro = Macros->Find(string_t(src.Buffer(0, len)));
 					if (macro)
 					{
 						// This is a macro, so remove the macro identifier from the buffer
@@ -756,7 +758,7 @@ namespace pr::script
 				str::ExtractIdentifier(tag, ptr);
 
 				// Find the macro?
-				auto macro = m_macros.Find(tag);
+				auto macro = Macros->Find(tag);
 				if (!macro)
 					continue;
 
@@ -819,7 +821,7 @@ namespace pr::script
 					if (wrapped) if (*src == ')') ++src; else throw ScriptException(EResult::InvalidPreprocessorDirective, src.Location(), "unmatched ')'");
 
 					// If the macro is defined, add a 1 to the expression
-					expr.push_back(m_macros.Find(tag) != nullptr ? '1' : '0');
+					expr.push_back(Macros->Find(tag) != nullptr ? '1' : '0');
 				}
 
 				// Otherwise substitute the macro
@@ -831,7 +833,7 @@ namespace pr::script
 					auto len = 0;
 					BufferIdentifier(src, 0, &len);
 					auto tag = src.ReadN(len);
-					auto macro = m_macros.Find(tag);
+					auto macro = Macros->Find(tag);
 					if (macro == nullptr) throw ScriptException(EResult::InvalidPreprocessorDirective, loc, Fmt(L"Identifier '%s' is not defined", tag.c_str()));
 
 					// Read macro parameters if it has them
@@ -895,7 +897,7 @@ namespace pr::script
 				if (*src != '#')
 				{
 					// If it's not a preprocessor directive, consume the line and carry on.
-					EatLine(src, 0, 1);
+					EatLine(src, 0, 0, true);
 					continue;
 				}
 
@@ -913,7 +915,7 @@ namespace pr::script
 				}
 
 				// Consume the rest of the line
-				EatLine(src, 0, 1);
+				EatLine(src, 0, 0, true);
 			}
 			throw ScriptException(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
 		}

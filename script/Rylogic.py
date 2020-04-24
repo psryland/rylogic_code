@@ -651,10 +651,15 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 
 	return not errors
 
+# Prompt for the code signing certificate password
+def PromptCertPassword():
+	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	return
+
 # Sign an assembly
 def SignAssembly(target:str):
 	if not UserVars.rylogic_cert_pfx: return
-	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	PromptCertPassword()
 	Exec([UserVars.signtool, "sign", "/f", UserVars.rylogic_cert_pfx, "/p", UserVars.rylogic_cert_pw, target])
 	return
 
@@ -699,7 +704,7 @@ def NugetPackage(proj:str):
 	# Sign the package
 	package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
 	package_path = os.path.join(UserVars.root, "lib", "packages", f"{package_name}.{vers0}.nupkg")
-	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	PromptCertPassword()
 	Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", UserVars.rylogic_cert_pfx, "-CertificatePassword", UserVars.rylogic_cert_pw, "-Timestamper", "http://timestamp.digicert.com"])
 	return package_path
 

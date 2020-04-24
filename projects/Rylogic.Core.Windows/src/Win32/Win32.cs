@@ -1223,9 +1223,13 @@ namespace Rylogic.Interop.Win32
 			
 			{// Try the working directory
 				var working_dir = Path.GetFullPath(dir);
-				var dll_path = searched.Add2(Path_.CombinePath(working_dir, dllname));
-				if (Path_.FileExists(dll_path))
-					return TryLoad(dll_path);
+				var dll_path = Path_.CombinePath(working_dir, dllname);
+				if (!searched.Contains(dll_path))
+				{
+					searched.Add(dll_path);
+					if (Path_.FileExists(dll_path))
+						return TryLoad(dll_path);
+				}
 			}
 
 			var ass = Assembly.GetEntryAssembly();
@@ -1235,9 +1239,13 @@ namespace Rylogic.Interop.Win32
 			{
 				var exe_path = ass.Location;
 				var exe_dir = Path_.Directory(exe_path);
-				var dll_path = searched.Add2(Path_.CombinePath(exe_dir, dir, dllname));
-				if (Path_.FileExists(dll_path))
-					return TryLoad(dll_path);
+				var dll_path = Path_.CombinePath(exe_dir, dir, dllname);
+				if (!searched.Contains(dll_path))
+				{
+					searched.Add(dll_path);
+					if (Path_.FileExists(dll_path))
+						return TryLoad(dll_path);
+				}
 			}
 
 			// Try the local directory
@@ -1245,16 +1253,19 @@ namespace Rylogic.Interop.Win32
 			{
 				var exe_path = ass.Location;
 				var exe_dir = Path_.Directory(exe_path);
-				var dll_path = searched.Add2(Path_.CombinePath(exe_dir, dllname));
-				if (Path_.FileExists(dll_path))
-					return TryLoad(dll_path);
+				var dll_path = Path_.CombinePath(exe_dir, dllname);
+				if (!searched.Contains(dll_path))
+				{
+					searched.Add(dll_path);
+					if (Path_.FileExists(dll_path))
+						return TryLoad(dll_path);
+				}
 			}
 
 			// Allow LoadDll to be called multiple times if needed
 			return throw_if_missing
 				? throw new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}")
 				: IntPtr.Zero;
-
 		}
 
 		/// <summary>A lazy created HWND for a STATIC window</summary>

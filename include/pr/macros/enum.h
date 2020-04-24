@@ -16,6 +16,7 @@
 
 #include <exception>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <optional>
 #include <iostream>
@@ -43,19 +44,19 @@ namespace pr
 	#define PR_ENUM_TOWSTRING2(id, val)      case E::id: return L#id;
 	#define PR_ENUM_TOWSTRING3(id, str, val) case E::id: return L##str;
 
-	#define PR_ENUM_STRCMP1(id)            if (::strcmp(name, #id) == 0) { e = E::id; return true; }
-	#define PR_ENUM_STRCMP2(id, val)       if (::strcmp(name, #id) == 0) { e = E::id; return true; }
-	#define PR_ENUM_STRCMP3(id, str, val)  if (::strcmp(name, str) == 0) { e = E::id; return true; }
-	#define PR_ENUM_STRCMPI1(id)           if (::_stricmp(name, #id) == 0) { e = E::id; return true; }
-	#define PR_ENUM_STRCMPI2(id, val)      if (::_stricmp(name, #id) == 0) { e = E::id; return true; }
-	#define PR_ENUM_STRCMPI3(id, str, val) if (::_stricmp(name, str) == 0) { e = E::id; return true; }
+	#define PR_ENUM_STRCMP1(id)            if (name == #id)                                    { e = E::id; return true; }
+	#define PR_ENUM_STRCMP2(id, val)       if (name == #id)                                    { e = E::id; return true; }
+	#define PR_ENUM_STRCMP3(id, str, val)  if (name == #id || name == str)                     { e = E::id; return true; }
+	#define PR_ENUM_STRCMPI1(id)           if (ieql<char>(name, #id))                          { e = E::id; return true; }
+	#define PR_ENUM_STRCMPI2(id, val)      if (ieql<char>(name, #id))                          { e = E::id; return true; }
+	#define PR_ENUM_STRCMPI3(id, str, val) if (ieql<char>(name, #id) || ieql<char>(name, str)) { e = E::id; return true; }
 
-	#define PR_ENUM_WSTRCMP1(id)            if (::wcscmp(name, L#id  ) == 0) { e = E::id; return true; }
-	#define PR_ENUM_WSTRCMP2(id, val)       if (::wcscmp(name, L#id  ) == 0) { e = E::id; return true; }
-	#define PR_ENUM_WSTRCMP3(id, str, val)  if (::wcscmp(name, L##str) == 0) { e = E::id; return true; }
-	#define PR_ENUM_WSTRCMPI1(id)           if (::_wcsicmp(name, L#id  ) == 0) { e = E::id; return true; }
-	#define PR_ENUM_WSTRCMPI2(id, val)      if (::_wcsicmp(name, L#id  ) == 0) { e = E::id; return true; }
-	#define PR_ENUM_WSTRCMPI3(id, str, val) if (::_wcsicmp(name, L##str) == 0) { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMP1(id)            if (name == L#id)                                             { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMP2(id, val)       if (name == L#id)                                             { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMP3(id, str, val)  if (name == L#id || name == L##str)                           { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMPI1(id)           if (ieql<wchar_t>(name, L#id))                                { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMPI2(id, val)      if (ieql<wchar_t>(name, L#id))                                { e = E::id; return true; }
+	#define PR_ENUM_WSTRCMPI3(id, str, val) if (ieql<wchar_t>(name, L#id) || ieql<wchar_t>(name, L##str)) { e = E::id; return true; }
 
 	#define PR_ENUM_TOTRUE1(id)           case E::id: return true;
 	#define PR_ENUM_TOTRUE2(id, val)      case E::id: return true;
@@ -123,15 +124,10 @@ namespace pr
 		static constexpr wchar_t const* ToStringW(underlying_type_t e) { return ToString<wchar_t>(static_cast<enum_name>(e)); }\
 \
 		/* Try to convert a string name into it's enum value (inverse of ToString)*/ \
-		template <typename Char> static std::optional<enum_name> TryParse(Char const* name, bool match_case = true)\
-		{\
-			enum_name e;\
-			return TryParse(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
-		}\
-		template <typename Char> static bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
+		template <typename Char> static bool TryParse(enum_name& e, std::basic_string_view<Char> name, bool match_case = true)\
 		{\
 			using E = enum_name;\
-			if (*name == 0) return false;\
+			if (name.empty()) return false;\
 			if constexpr (std::is_same_v<Char,char>)\
 			{\
 				if (match_case)\
@@ -165,13 +161,42 @@ namespace pr
 				return false;\
 			}\
 		}\
+		template <typename Char> static bool TryParse(enum_name& e, std::basic_string<Char> const& name, bool match_case = true)\
+		{\
+			return TryParse(e, std::basic_string_view<Char>(name), match_case);\
+		}\
+		template <typename Char> static bool TryParse(enum_name& e, Char const* name, bool match_case = true)\
+		{\
+			return TryParse(e, std::basic_string_view<Char>(name), match_case);\
+		}\
+		template <typename Char> static std::optional<enum_name> TryParse(std::basic_string_view<Char> name, bool match_case = true)\
+		{\
+			enum_name e;\
+			return TryParse(e, name, match_case) ? std::make_optional(e) : std::nullopt;\
+		}\
+		template <typename Char> static std::optional<enum_name> TryParse(std::basic_string<Char> const& name, bool match_case = true)\
+		{\
+			return TryParse(std::basic_string_view<Char>(name), match_case);\
+		}\
+		template <typename Char> static std::optional<enum_name> TryParse(Char const* name, bool match_case = true)\
+		{\
+			return TryParse(std::basic_string_view<Char>(name), match_case);\
+		}\
 \
-		/* Convert a string name into it's enum value (inverse of ToString)*/ \
-		template <typename Char> static enum_name Parse(Char const* name, bool match_case = true)\
+		/* Convert a string into it's enum value*/ \
+		template <typename Char> static enum_name Parse(std::basic_string_view<Char> name, bool match_case = true)\
 		{\
 			enum_name r;\
 			if (TryParse(r, name, match_case)) return r;\
 			throw std::exception("Parse failed, no matching value in enum "#enum_name);\
+		}\
+		template <typename Char> static enum_name Parse(std::basic_string<Char> const& name, bool match_case = true)\
+		{\
+			return Parse(std::basic_string_view<Char>(name), match_case);\
+		}\
+		template <typename Char> static enum_name Parse(Char const* name, bool match_case = true)\
+		{\
+			return Parse(std::basic_string_view<Char>(name), match_case);\
 		}\
 \
 		/* Returns true if 'val' is convertible to one of the values in this enum */ \
@@ -221,6 +246,19 @@ namespace pr
 		{\
 			auto b = &Member(0);\
 			return std::initializer_list<enum_name>(b, b + NumberOf);\
+		}\
+\
+	private:\
+\
+		/* Case-insensitive compare */\
+		template <typename Char> static bool ieql(std::basic_string_view<Char> lhs, std::basic_string_view<Char> rhs)\
+		{\
+			if constexpr (std::is_same_v<Char, char>)\
+				return lhs.size() == rhs.size() && _strnicmp(lhs.data(), rhs.data(), lhs.size()) == 0;\
+			else if constexpr (std::is_same_v<Char, wchar_t>)\
+				return lhs.size() == rhs.size() && _wcsnicmp(lhs.data(), rhs.data(), lhs.size()) == 0;\
+			else\
+				static_assert(false, "Case insensitive compare not defined for this string type");\
 		}\
 	};\
 \
@@ -322,6 +360,8 @@ namespace pr::common
 	PRUnitTest(Enum2Tests)
 	{
 		using namespace unittests::enum2;
+		using namespace std::literals;
+
 
 		PR_CHECK(Enum<TestEnum1>::NameA(), "TestEnum1");
 		PR_CHECK(Enum<TestEnum2>::NameA(), "TestEnum2");
@@ -346,6 +386,18 @@ namespace pr::common
 		PR_CHECK(Enum<TestEnum3>::Parse("a"), TestEnum3::A);
 		PR_CHECK(Enum<TestEnum4>::Parse("A"), TestEnum4::A);
 		PR_CHECK(Enum<TestEnum5>::Parse("a"), TestEnum5::A);
+
+		PR_CHECK(Enum<TestEnum1>::Parse("A"s), TestEnum1::A);
+		PR_CHECK(Enum<TestEnum2>::Parse("A"s), TestEnum2::A);
+		PR_CHECK(Enum<TestEnum3>::Parse("a"s), TestEnum3::A);
+		PR_CHECK(Enum<TestEnum4>::Parse("A"s), TestEnum4::A);
+		PR_CHECK(Enum<TestEnum5>::Parse("a"s), TestEnum5::A);
+
+		PR_CHECK(Enum<TestEnum1>::Parse("A"sv), TestEnum1::A);
+		PR_CHECK(Enum<TestEnum2>::Parse("A"sv), TestEnum2::A);
+		PR_CHECK(Enum<TestEnum3>::Parse("a"sv), TestEnum3::A);
+		PR_CHECK(Enum<TestEnum4>::Parse("A"sv), TestEnum4::A);
+		PR_CHECK(Enum<TestEnum5>::Parse("a"sv), TestEnum5::A);
 
 		// Initialisation
 		TestEnum1 a1 = TestEnum1::A;

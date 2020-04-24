@@ -79,7 +79,7 @@ namespace pr::rdr
 		// The bit indices in 'm_mask[1..2]' for 'awesome' are not used and should never be set.
 		// This way 'm_mask' indicates which members, including those in arrays, have been changed.
 		using FieldEnum = TFieldEnum;
-		static_assert(has_bitwise_operators_allowed<FieldEnum>::value, "");
+		static_assert(has_bitops_allowed_v<FieldEnum>);
 
 		// A bit field of the members in 'TStateDesc' that have had a value set.
 		FieldEnum m_mask[N];

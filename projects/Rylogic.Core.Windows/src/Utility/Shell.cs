@@ -109,7 +109,7 @@ namespace Rylogic.Utility
 				var dstfile = string.Empty;
 				if (dst_is_dir)
 				{
-					var spath = src_is_dir ? Common.Windows.Path_.RelativePath(srcfile, src) : Path_.FileName(srcfile);
+					var spath = src_is_dir ? Path_.RelativePath(src, srcfile) : Path_.FileName(srcfile);
 					dstfile = Path_.CombinePath(dstdir, spath);
 				}
 				else

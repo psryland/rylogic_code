@@ -307,7 +307,7 @@ namespace pr
 
 		mem_ostream(Container& data)
 			:std::basic_ostream<char_type>(&buf)
-			,buf(nullptr, write, this)
+			,buf(nullptr, write, This())
 			,data(data)
 		{}
 
@@ -319,6 +319,9 @@ namespace pr
 		}
 
 	private:
+
+		// Warning fix
+		constexpr mem_ostream* This() { return this; }
 
 		// Convert from size in bytes to count in 'value_type's
 		constexpr static size_t size_to_count(size_t size_in_bytes)

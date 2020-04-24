@@ -275,7 +275,7 @@ namespace pr::script
 				m_db.erase(i);
 		}
 
-		// Find a macro expansion for a given macro identifier (hashed)
+		// Find a macro expansion for a given macro identifier
 		// Returns nullptr if no macro is found.
 		Macro const* Find(string_t const& tag) const override
 		{

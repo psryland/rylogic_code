@@ -16,27 +16,30 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Description,nq")]
 	public struct v3
 	{
-		[FieldOffset( 0)] public float x;
-		[FieldOffset( 4)] public float y;
-		[FieldOffset( 8)] public float z;
-
-		[FieldOffset( 0)] public v2 xy;
+		[FieldOffset(0)] public float x;
+		[FieldOffset(4)] public float y;
+		[FieldOffset(8)] public float z;
+		[FieldOffset(0)] public v2 xy;
 
 		// Constructors
-		public v3(float x_) :this(x_,x_,x_)
-		{}
-		public v3(float x_, float y_, float z_) :this()
+		public v3(float x_)
+			: this(x_, x_, x_)
+		{ }
+		public v3(float x_, float y_, float z_)
+			: this()
 		{
 			x = x_;
 			y = y_;
 			z = z_;
 		}
-		public v3(v2 xy_, float z_) :this()
+		public v3(v2 xy_, float z_)
+			: this()
 		{
 			xy = xy_;
 			z = z_;
 		}
-		public v3(float[] arr) :this()
+		public v3(float[] arr)
+			: this()
 		{
 			x = arr[0];
 			y = arr[1];
@@ -67,62 +70,32 @@ namespace Rylogic.Maths
 		}
 		public float this[uint i]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get => this[(int)i];
+			set => this[(int)i] = value;
 		}
 
 		/// <summary>Integer cast accessors</summary>
-		public int xi
-		{
-			get { return (int)x; }
-		}
-		public int yi
-		{
-			get { return (int)y; }
-		}
-		public int zi
-		{
-			get { return (int)z; }
-		}
+		public int xi => (int)x;
+		public int yi => (int)y;
+		public int zi => (int)z;
 
 		/// <summary>Length</summary>
-		public float LengthSq
-		{
-			get { return x * x + y * y + z * z; }
-		}
-		public float Length
-		{
-			get { return (float)Math.Sqrt(LengthSq); }
-		}
+		public float LengthSq => x * x + y * y + z * z;
+		public float Length => (float)Math.Sqrt(LengthSq);
 
 		/// <summary>ToString</summary>
-		public string ToString2()
-		{
-			return x + " " + y;
-		}
-		public string ToString3()
-		{
-			return x + " " + y + " " + z;
-		}
-		public string ToString2(string format)
-		{
-			return x.ToString(format) + " " + y.ToString(format);
-		}
-		public string ToString3(string format)
-		{
-			return ToString2(format) + " " + z.ToString(format);
-		}
-		public override string ToString()
-		{
-			return ToString3();
-		}
+		public string ToString2() => $"{x} {y}";
+		public string ToString3() => $"{x} {y} {z}";
+		public string ToString2(string format) => $"{x.ToString(format)} {y.ToString(format)}";
+		public string ToString3(string format) => $"{x.ToString(format)} {y.ToString(format)} {z.ToString(format)}";
+		public override string ToString() => ToString3();
 
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v3 to an object type. e.g. v3? x = v3.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v3(float[] a)
 		{
 			return new v3(a[0], a[1], a[2]);
 		}
-		public static explicit operator float[] (v3 p)
+		public static explicit operator float[](v3 p)
 		{
 			return new float[] { p.x, p.y, p.z };
 		}
@@ -130,54 +103,66 @@ namespace Rylogic.Maths
 		{
 			return new v3((float)a[0], (float)a[1], (float)a[2]);
 		}
-		public static explicit operator double[] (v3 p)
+		public static explicit operator double[](v3 p)
 		{
 			return new double[] { p.x, p.y, p.z };
 		}
 
 		// Static v3 types
-		public readonly static v3 Zero     = new v3(0f, 0f, 0f);
-		public readonly static v3 Xaxis    = new v3(1f, 0f, 0f);
-		public readonly static v3 Yaxis    = new v3(0f, 1f, 0f);
-		public readonly static v3 Zaxis    = new v3(0f, 0f, 1f);
-		public readonly static v3 One      = new v3(1f, 1f, 1f);
+		public readonly static v3 Zero = new v3(0f, 0f, 0f);
+		public readonly static v3 Xaxis = new v3(1f, 0f, 0f);
+		public readonly static v3 Yaxis = new v3(0f, 1f, 0f);
+		public readonly static v3 Zaxis = new v3(0f, 0f, 1f);
+		public readonly static v3 One = new v3(1f, 1f, 1f);
 		public readonly static v3 MinValue = new v3(float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v3 MaxValue = new v3(float.MaxValue, float.MaxValue, float.MaxValue);
 
 		/// <summary>Operators</summary>
-		public static v3 operator + (v3 vec)
+		public static v3 operator +(v3 vec)
 		{
 			return vec;
 		}
-		public static v3 operator - (v3 vec)
+		public static v3 operator -(v3 vec)
 		{
 			return new v3(-vec.x, -vec.y, -vec.z);
 		}
-		public static v3 operator + (v3 lhs, v3 rhs)
+		public static v3 operator +(v3 lhs, v3 rhs)
 		{
 			return new v3(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 		}
-		public static v3 operator - (v3 lhs, v3 rhs)
+		public static v3 operator -(v3 lhs, v3 rhs)
 		{
 			return new v3(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
 		}
-		public static v3 operator * (v3 lhs, float rhs)
+		public static v3 operator *(v3 lhs, float rhs)
 		{
 			return new v3(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
 		}
-		public static v3 operator * (float lhs, v3 rhs)
+		public static v3 operator *(v3 lhs, double rhs)
+		{
+			return lhs * (float)rhs;
+		}
+		public static v3 operator *(float lhs, v3 rhs)
 		{
 			return new v3(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
 		}
-		public static v3 operator * (v3 lhs, v3 rhs)
+		public static v3 operator *(double lhs, v3 rhs)
+		{
+			return (float)lhs * rhs;
+		}
+		public static v3 operator *(v3 lhs, v3 rhs)
 		{
 			return new v3(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
 		}
-		public static v3 operator / (v3 lhs, float rhs)
+		public static v3 operator /(v3 lhs, float rhs)
 		{
 			return new v3(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
 		}
-		public static v3 operator / (v3 lhs, v3 rhs)
+		public static v3 operator /(v3 lhs, double rhs)
+		{
+			return lhs / (float)rhs;
+		}
+		public static v3 operator /(v3 lhs, v3 rhs)
 		{
 			return new v3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 		}
@@ -186,7 +171,7 @@ namespace Rylogic.Maths
 		public static v3 Parse3(string s)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v3.Parse3() string argument was null");
-			var values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
 			if (values.Length != 3) throw new FormatException("v3.Parse3() string argument does not represent a 3 component vector");
 			return new v3(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]));
 		}
@@ -194,7 +179,7 @@ namespace Rylogic.Maths
 		{
 			vec = Zero;
 			if (s == null) return false;
-			var values = s.Split(new char[]{' ',',','\t'},3);
+			var values = s.Split(new char[] { ' ', ',', '\t' }, 3);
 			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
 		}
 		public static v3? TryParse3(string s)
@@ -215,8 +200,8 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
 		public static v3 Random3(float rad, Random r)
 		{
-			var rad_sq = rad*rad;
-			v3 v; for (; (v = Random3(-rad, rad, r)).LengthSq > rad_sq; ){}
+			var rad_sq = rad * rad;
+			v3 v; for (; (v = Random3(-rad, rad, r)).LengthSq > rad_sq;) { }
 			return v;
 		}
 
@@ -229,13 +214,13 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v3 Random3(v3 centre, float radius, Random r)
 		{
-			return  Random3(radius, r) + centre;
+			return Random3(radius, r) + centre;
 		}
 
 		/// <summary>Return a random vector on the unit 3D sphere</summary>
 		public static v3 Random3N(Random r)
 		{
-			v3 v; for (; Math_.FEql(v = Random3(1.0f, r), Zero); ) { }
+			v3 v; for (; Math_.FEql(v = Random3(1.0f, r), Zero);) { }
 			return Math_.Normalise(v);
 		}
 
@@ -254,7 +239,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v3 Random2(float rad, float z, Random r)
 		{
-			var rad_sq = rad*rad;
+			var rad_sq = rad * rad;
 			v3 v; for (; (v = Random2(-rad, rad, 0, r)).LengthSq > rad_sq;) { }
 			v.z = z;
 			return v;
@@ -272,11 +257,11 @@ namespace Rylogic.Maths
 		#endregion
 
 		#region Equals
-		public static bool operator == (v3 lhs, v3 rhs)
+		public static bool operator ==(v3 lhs, v3 rhs)
 		{
 			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 		}
-		public static bool operator != (v3 lhs, v3 rhs)
+		public static bool operator !=(v3 lhs, v3 rhs)
 		{
 			return !(lhs == rhs);
 		}

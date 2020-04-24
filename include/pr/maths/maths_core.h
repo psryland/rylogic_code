@@ -1013,9 +1013,9 @@ namespace pr
 	}
 	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> inline V Dot(T const& a, T const& b)
 	{
-		V r;
+		auto r = V{};
 		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend; ++i) r[i] = Dot(a[i], b[i]);
+		for (; i != iend; ++i) r += Dot(a[i], b[i]);
 		return r;
 	}
 	
@@ -1080,7 +1080,7 @@ namespace pr
 	template <typename T, typename = maths::enable_if_vN<T>> inline float CosAngle(T const& lhs, T const& rhs)
 	{
 		assert("CosAngle undefined for zero vectors" && lhs != T{} && rhs != T{});
-		return Clamp(Dot(lhs,rhs) / Sqrt(LengthSq(lhs)*LengthSq(rhs)), -1.0f, 1.0f);
+		return Clamp(Dot(lhs, rhs) / Sqrt(LengthSq(lhs) * LengthSq(rhs)), -1.0f, 1.0f);
 	}
 
 	// Return the angle (in radians) of the triangle apex opposite 'opp'
@@ -1689,8 +1689,11 @@ namespace pr::maths
 			v3 arr1(2,3,4);
 			iv2 arr2(1,2);
 			iv2 arr3(3,4);
+			quat arr4(4,3,2,1);
+			quat arr5(1,2,3,4);
 			PR_CHECK(FEql(Dot(arr0, arr1), 20), true);
 			PR_CHECK(Dot(arr2, arr3) == 11, true);
+			PR_CHECK(Dot(arr4, arr5) == 20, true);
 		}
 		{// Fraction
 			PR_CHECK(FEql(Frac(-5, 2, 5), 7.0f/10.0f), true);

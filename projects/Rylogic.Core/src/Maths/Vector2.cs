@@ -20,18 +20,23 @@ namespace Rylogic.Maths
 		[FieldOffset(4)] public float y;
 
 		// Constructors
-		public v2(float x_) :this(x_, x_)
+		public v2(float x_)
+			:this(x_, x_)
 		{}
-		public v2(float x_, float y_) :this()
+		public v2(float x_, float y_)
+			:this()
 		{
 			x = x_;
 			y = y_;
 		}
-		public v2(PointF pt) :this(pt.X, pt.Y)
+		public v2(PointF pt)
+			:this(pt.X, pt.Y)
 		{}
-		public v2(SizeF sz) :this(sz.Width, sz.Height)
+		public v2(SizeF sz)
+			:this(sz.Width, sz.Height)
 		{}
-		public v2(float[] arr) :this()
+		public v2(float[] arr)
+			:this()
 		{
 			x = arr[0];
 			y = arr[1];
@@ -59,43 +64,22 @@ namespace Rylogic.Maths
 		}
 		public float this[uint i]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get => this[(int)i];
+			set => this[(int)i] = value;
 		}
 
 		/// <summary>Integer cast accessors</summary>
-		public int xi
-		{
-			get { return (int)x; }
-		}
-		public int yi
-		{
-			get { return (int)y; }
-		}
+		public int xi => (int)x;
+		public int yi => (int)y;
 
 		/// <summary>Length</summary>
-		public float LengthSq
-		{
-			get { return x * x + y * y; }
-		}
-		public float Length
-		{
-			get { return (float)Math.Sqrt(LengthSq); }
-		}
+		public float LengthSq => x * x + y * y;
+		public float Length => (float)Math.Sqrt(LengthSq);
 
 		/// <summary>ToString</summary>
-		public string ToString2()
-		{
-			return x + " " + y;
-		}
-		public string ToString2(string format)
-		{
-			return x.ToString(format) + " " + y.ToString(format);
-		}
-		public override string ToString()
-		{
-			return ToString2();
-		}
+		public string ToString2() => $"{x} {y}";
+		public string ToString2(string format) => $"{x.ToString(format)} {y.ToString(format)}";
+		public override string ToString() => ToString2();
 
 		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v2 to an object type. e.g. v2? x = v2.TryParse4("", out v) ? v : null. </summary>
 		public static explicit operator v2(float[] a)
@@ -144,9 +128,17 @@ namespace Rylogic.Maths
 		{
 			return new v2(lhs.x * rhs, lhs.y * rhs);
 		}
+		public static v2 operator *(v2 lhs, double rhs)
+		{
+			return lhs * (float)rhs;
+		}
 		public static v2 operator * (float lhs, v2 rhs)
 		{
 			return new v2(lhs * rhs.x, lhs * rhs.y);
+		}
+		public static v2 operator *(double lhs, v2 rhs)
+		{
+			return (float)lhs * rhs;
 		}
 		public static v2 operator * (v2 lhs, v2 rhs)
 		{
@@ -155,6 +147,10 @@ namespace Rylogic.Maths
 		public static v2 operator / (v2 lhs, float rhs)
 		{
 			return new v2(lhs.x / rhs, lhs.y / rhs);
+		}
+		public static v2 operator /(v2 lhs, double rhs)
+		{
+			return lhs / (float)rhs;
 		}
 		public static v2 operator / (v2 lhs, v2 rhs)
 		{
