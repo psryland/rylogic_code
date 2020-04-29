@@ -2,17 +2,6 @@
 // Log Helper
 //  Copyright (c) Rylogic Ltd 2011
 //***************************************************
-// Usage:
-//  At the start of your program call:
-//   Log.Register(filepath, reset:false);
-// Throughout call
-//   Log.Info(this, "Message");
-//   etc
-//
-// To output to a file, Register with a valid filename
-// To output to the debug console, Register with the magic string "DebugConsole"
-// To output to nowhere, Register with null or an empty string
-
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -26,6 +15,15 @@ using Rylogic.Extn;
 
 namespace Rylogic.Utility
 {
+	// Notes:
+	//  - There are *two* separate logging strategies in here;
+	//    The 'static Log' class is for basic application logging to console or file.
+	//       - The global methods are thread-safe (as the Log.XXXLogger class use synchronisation)
+	//    The 'Logger' class and 'LogToXXX' classes are a more sophisticated logging system.
+	//       - Allows for logging scopes
+	//       - Log entry time stamps
+	//       - Uses a producer/consumer queue for thread synchronisation
+
 	public enum ELogLevel
 	{
 		NoLevel,
@@ -50,182 +48,9 @@ namespace Rylogic.Utility
 		void Write(string msg);
 	}
 
-	/// <summary>Static log instance for basic diagnostic logging</summary>
-	public static class Log
+	public static class Log_
 	{
-		public const string ToDebugConsole = "DebugConsole";
 		public const char EntryDelimiter = '\u001b';
-
-		static Log()
-		{
-			Writer = new NullLogger();
-			FilterPattern = null;
-			#if DEBUG
-			Level = ELogOutputLevel.Debug;
-			#else
-			Level = ELogOutputLevel.Info;
-			#endif
-		}
-
-		/// <summary>Set the log level. Messages below this level aren't logged</summary>
-		public static ELogOutputLevel Level { get; set; }
-
-		/// <summary>Where log output is sent</summary>
-		public static ILogWriter Writer { get; set; }
-
-		/// <summary>Regex filter pattern</summary>
-		public static string? FilterPattern { get; set; }
-
-		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
-		public static void Register(string filepath, bool reset)
-		{
-			try
-			{
-				if (filepath == ToDebugConsole)
-				{
-					Writer = new DebugConsoleLogger();
-					return;
-				}
-				if (Path_.IsValidFilepath(filepath, false))
-				{
-					Writer = new FileLogger(filepath, reset);
-					return;
-				}
-			}
-			catch {}
-			Writer = new NullLogger();
-			return;
-		}
-
-		/// <summary>Write debug trace statements into the log</summary>
-		public static void Debug(object sender, string str)
-		{
-			Write(ELogOutputLevel.Debug, sender, str);
-		}
-		public static void Debug(object sender, Exception? ex, string str)
-		{
-			Write(ELogOutputLevel.Debug, sender, str, ex);
-		}
-
-		/// <summary>Write info to the current log</summary>
-		public static void Info(object sender, string str)
-		{
-			Write(ELogOutputLevel.Info, sender, str);
-		}
-		public static void Info(object sender, Exception? ex, string str)
-		{
-			Write(ELogOutputLevel.Info, sender, str, ex);
-		}
-
-		/// <summary>Write info to the current log</summary>
-		public static void Warn(object sender, string str)
-		{
-			Write(ELogOutputLevel.Warn, sender, str);
-		}
-		public static void Warn(object sender, Exception? ex, string str)
-		{
-			Write(ELogOutputLevel.Warn, sender, str, ex);
-		}
-
-		/// <summary>Write info to the current log</summary>
-		public static void Error(object sender, string str)
-		{
-			Write(ELogOutputLevel.Error, sender, str);
-		}
-		public static void Error(object sender, Exception? ex, string str)
-		{
-			Write(ELogOutputLevel.Error, sender, str, ex);
-		}
-
-		/// <summary>Write info to the current log</summary>
-		public static void Exception(object sender, Exception? ex, string str)
-		{
-			Write(ELogOutputLevel.Exception, sender, str, ex);
-		}
-
-		/// <summary>Single method for filtering and formatting log messages</summary>
-		private static void Write(ELogOutputLevel level, object sender, string str, Exception? ex = null)
-		{
-			// Below the log level, ignore
-			if (level < Level)
-				return;
-
-			// Convert 'sender' to a tag
-			string tag;
-			if (sender == null)
-			{
-				tag = "";
-			}
-			else if (sender is string)
-			{
-				tag = (string)sender;
-			}
-			else
-			{
-				Type sender_type = sender.GetType();
-				tag = $"{sender_type.Namespace}.{sender_type.Name}";
-			}
-
-			// Filter out messages based on tag
-			if (FilterPattern != null && !Regex.IsMatch(tag, FilterPattern))
-				return;
-
-			// Construct the log message and write it
-			var msg = $"[{level}][{tag}] {str}{(ex != null ? Environment.NewLine + ex.MessageFull() : string.Empty)}"+Environment.NewLine;
-			Writer.Write(msg);
-		}
-
-		#region Logger Implementations
-		public class NullLogger :ILogWriter
-		{
-			public void Write(string msg)
-			{ }
-		}
-		public class DebugConsoleLogger :ILogWriter
-		{
-			private readonly object m_lock;
-			public DebugConsoleLogger()
-			{
-				m_lock = new object();
-			}
-		
-			/// <summary>Add a string to the log</summary>
-			public void Write(string msg)
-			{
-				lock (m_lock)
-					System.Diagnostics.Debug.Write(msg);
-			}
-		}
-		public class FileLogger :ILogWriter
-		{
-			private readonly object m_lock;
-			public FileLogger(string filepath, bool reset)
-			{
-				System.Diagnostics.Debug.Assert(Path_.IsValidFilepath(filepath, false));
-				m_lock = new object();
-
-				// Ensure the directory exists (maybe this should go in an official logs folder?)
-				var dir = Path_.Directory(filepath);
-				if (!Path_.DirExists(dir))
-					Directory.CreateDirectory(dir);
-
-				// Ensure the file exists/is reset
-				Filepath = filepath;
-				using (File.Open(Filepath, reset ? FileMode.Create : FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)) {}
-			}
-
-			/// <summary>The file being written</summary>
-			public string Filepath { get; set; }
-
-			/// <summary>Add a string to the log</summary>
-			public void Write(string str)
-			{
-				lock (m_lock)
-					using (var f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
-						f.Write(str);
-			}
-		}
-		#endregion
 	}
 
 	/// <summary>Asynchronous logging instance</summary>
@@ -264,46 +89,50 @@ namespace Rylogic.Utility
 		/// <summary>The character sequence that separates log entries</summary>
 		public char EntryDelimiter
 		{
-			get { return Context.EntryDelimiter; }
-			set { Context.EntryDelimiter = value; }
+			get => Context.EntryDelimiter;
+			set => Context.EntryDelimiter = value;
 		}
 
 		/// <summary>True if each log entry is time stamped</summary>
 		public bool AddTimestamp
 		{
-			get { return Context.AddTimestamp; }
-			set { Context.AddTimestamp = value; }
+			get => Context.AddTimestamp;
+			set => Context.AddTimestamp = value;
 		}
 
 		/// <summary>Get/Set the zero time for the log</summary>
 		public DateTimeOffset TimeZero
 		{
-			get { return Context.TimeZero; }
-			set { Context.TimeZero = value; }
+			get => Context.TimeZero;
+			set => Context.TimeZero = value;
 		}
 
 		/// <summary>The method that converts a log entry into a string</summary>
 		public Func<LogEvent, string> Serialise
 		{
-			get { return Context.Serialise; }
-			set { Context.Serialise = value; }
+			get => Context.Serialise;
+			set => Context.Serialise = value;
 		}
 		public string DefaultSerialise(LogEvent evt)
 		{
 			return Context.DefaultSerialise(evt);
 		}
 
+		/// <summary>Convenience location for storing a regex pattern corresponding to 'Serialise'</summary>
+		public Regex? LogEntryPattern
+		{
+			get => Context.LogEntryPattern;
+			set => Context.LogEntryPattern = value;
+		}
+
 		/// <summary>Access the shared context</summary>
 		private SharedContext Context
 		{
-			get { return m_ctx; }
+			get => m_ctx;
 			set
 			{
 				if (m_ctx == value) return;
-				if (m_ctx != null)
-				{
-					Util.Dispose(ref m_ref_token);
-				}
+				Util.Dispose(ref m_ref_token);
 				m_ctx = value;
 				if (m_ctx != null)
 				{
@@ -318,17 +147,10 @@ namespace Rylogic.Utility
 		public Logger? ForwardLog { get; set; }
 
 		/// <summary>The object that log data is written to</summary>
-		public ILogWriter LogCB
-		{
-			[DebuggerStepThrough] get { return Context.LogCB; }
-		}
+		public ILogWriter LogCB => Context.LogCB;
 
 		/// <summary>On/Off switch for logging</summary>
-		public bool Enabled
-		{
-			get;
-			set;
-		}
+		public bool Enabled { get; set; }
 
 		/// <summary>
 		/// Enable/Disable immediate mode.
@@ -336,8 +158,8 @@ namespace Rylogic.Utility
 		/// by the background thread. Useful when you want the log to be written in sync with debugging.</summary>
 		public bool ImmediateWrite
 		{
-			get { return Context.ImmediateWrite; }
-			set { Context.ImmediateWrite = value; }
+			get => Context.ImmediateWrite;
+			set => Context.ImmediateWrite = value;
 		}
 
 		/// <summary>Log a message</summary>
@@ -395,7 +217,7 @@ namespace Rylogic.Utility
 			public SharedContext(ILogWriter log_cb, int occurrences_batch_size)
 			{
 				SB = new StringBuilder();
-				EntryDelimiter = Log.EntryDelimiter;
+				EntryDelimiter = Log_.EntryDelimiter;
 				AddTimestamp = true;
 				Serialise = DefaultSerialise;
 
@@ -442,11 +264,11 @@ namespace Rylogic.Utility
 
 			/// <summary>The method that converts a log entry into a string</summary>
 			public Func<LogEvent, string> Serialise { get; set; }
-			public string DefaultSerialise(LogEvent evt)
-			{
-				return Logger.DefaultSerialise(SB, evt, EntryDelimiter, AddTimestamp);
-			}
+			public string DefaultSerialise(LogEvent evt) => Logger.DefaultSerialise(SB, evt, EntryDelimiter, AddTimestamp);
 			public StringBuilder SB;
+
+			/// <summary>Convenience location for storing a regex pattern corresponding to 'Serialise'</summary>
+			public Regex? LogEntryPattern { get; set; }
 
 			/// <summary>
 			/// Enable/Disable immediate mode.
@@ -544,7 +366,7 @@ namespace Rylogic.Utility
 					{
 						// Notes:
 						//  - If you get a block here on shutdown, it's probably because of leaked references to
-						//    the log shared context. Look at 'RefCount' in the debugger. You may turn on 'REfS'
+						//    the log shared context. Look at 'RefCount' in the debugger. You may turn on 'REFS'
 						//    and 'STACKTRACES' in the 'RefCount' class if you want. If each 'm_refs', look at the
 						//    'Tag' name.
 						Idle.Set();
@@ -639,7 +461,7 @@ namespace Rylogic.Utility
 	public class LogToFile :ILogWriter ,IDisposable
 	{
 		private readonly FileStream m_outf;
-		public LogToFile(string filepath, EFlags flags = EFlags.None)
+		public LogToFile(string filepath, EFlags flags)
 		{
 			Filepath = filepath;
 			Flags = flags;
@@ -699,6 +521,23 @@ namespace Rylogic.Utility
 			Str.Append(text);
 		}
 	}
+
+	/// <summary>Log writer that writes to the debug window</summary>
+	public class LogToDebug :ILogWriter
+	{
+		/// <summary>Add a string to the log</summary>
+		public void Write(string msg)
+		{
+			Debug.Write(msg);
+		}
+	}
+
+	/// <summary>Swallow log messages</summary>
+	public class LogToNull: ILogWriter
+	{
+		public void Write(string msg)
+		{ }
+	}
 }
 
 #if PR_UNITTESTS
@@ -730,4 +569,177 @@ namespace Rylogic.UnitTests
 		}
 	}
 }
+#endif
+
+
+
+
+
+
+
+#if false // Remove or rename this... Log is too common a name
+	/// <summary>Static log instance for basic diagnostic logging</summary>
+	public static class Log
+	{
+		// Notes:
+		//   Usage:
+		//    At the start of your program call:
+		//     Log.Register(filepath, reset:false);
+		//   Throughout call
+		//     Log.Info(this, "Message");
+		//     etc
+		//   
+		//   To output to a file, Register with a valid filename
+		//   To output to the debug console, Register with the magic string "DebugConsole"
+		//   To output to nowhere, Register with null or an empty string
+
+		public const string ToDebugConsole = "DebugConsole";
+		public const char EntryDelimiter = '\u001b';
+
+		static Log()
+		{
+			Writer = new NullLogger();
+			FilterPattern = null;
+#if DEBUG
+			Level = ELogOutputLevel.Debug;
+#else
+			Level = ELogOutputLevel.Info;
+#endif
+		}
+
+		/// <summary>Set the log level. Messages below this level aren't logged</summary>
+		public static ELogOutputLevel Level { get; set; }
+
+		/// <summary>Where log output is sent</summary>
+		public static ILogWriter Writer { get; private set; }
+
+		/// <summary>Regex filter pattern</summary>
+		public static string? FilterPattern { get; set; }
+
+		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
+		public static void Register(string filepath, bool reset)
+		{
+			try
+			{
+				if (filepath == ToDebugConsole)
+				{
+					Writer = new DebugConsoleLogger();
+					return;
+				}
+				if (Path_.IsValidFilepath(filepath, false))
+				{
+					Writer = new FileLogger(filepath, reset);
+					return;
+				}
+			}
+			catch {}
+			Writer = new NullLogger();
+			return;
+		}
+
+		/// <summary>Write debug trace statements into the log</summary>
+		public static void Debug(object sender, string str) => Write(ELogOutputLevel.Debug, sender, str);
+		public static void Debug(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Debug, sender, str, ex);
+
+		/// <summary>Write info to the current log</summary>
+		public static void Info(object sender, string str) => Write(ELogOutputLevel.Info, sender, str);
+		public static void Info(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Info, sender, str, ex);
+
+		/// <summary>Write info to the current log</summary>
+		public static void Warn(object sender, string str) => Write(ELogOutputLevel.Warn, sender, str);
+		public static void Warn(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Warn, sender, str, ex);
+
+		/// <summary>Write info to the current log</summary>
+		public static void Error(object sender, string str) => Write(ELogOutputLevel.Error, sender, str);
+		public static void Error(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Error, sender, str, ex);
+
+		/// <summary>Write info to the current log</summary>
+		public static void Exception(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Exception, sender, str, ex);
+
+		/// <summary>Single method for filtering and formatting log messages</summary>
+		public static void Write(ELogOutputLevel level, object sender, string str, Exception? ex = null)
+		{
+			// Below the log level, ignore
+			if (level < Level)
+				return;
+
+			// Convert 'sender' to a tag
+			string tag;
+			if (sender == null)
+			{
+				tag = "";
+			}
+			else if (sender is string)
+			{
+				tag = (string)sender;
+			}
+			else
+			{
+				Type sender_type = sender.GetType();
+				tag = $"{sender_type.Namespace}.{sender_type.Name}";
+			}
+
+			// Filter out messages based on tag
+			if (FilterPattern != null && !Regex.IsMatch(tag, FilterPattern))
+				return;
+
+			// Construct the log message and write it
+			var msg = $"[{level}][{tag}] {str}{(ex != null ? Environment.NewLine + ex.MessageFull() : string.Empty)}"+Environment.NewLine;
+			Writer.Write(msg);
+		}
+
+#region Logger Implementations
+		public class NullLogger :ILogWriter
+		{
+			public void Write(string msg)
+			{ }
+		}
+		public class DebugConsoleLogger :ILogWriter
+		{
+			private readonly object m_lock;
+			public DebugConsoleLogger()
+			{
+				m_lock = new object();
+			}
+		
+			/// <summary>Add a string to the log</summary>
+			public void Write(string msg)
+			{
+				lock (m_lock)
+					System.Diagnostics.Debug.Write(msg);
+			}
+		}
+		public class FileLogger :ILogWriter
+		{
+			private readonly object m_lock;
+			public FileLogger(string filepath, bool reset)
+			{
+				System.Diagnostics.Debug.Assert(Path_.IsValidFilepath(filepath, false));
+				m_lock = new object();
+
+				// Ensure the directory exists (maybe this should go in an official logs folder?)
+				var dir = Path_.Directory(filepath);
+				if (!Path_.DirExists(dir))
+					Directory.CreateDirectory(dir);
+
+				// Ensure the file exists/is reset
+				Filepath = filepath;
+				using (File.Open(Filepath, reset ? FileMode.Create : FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)) {}
+			}
+
+			/// <summary>The file being written</summary>
+			public string Filepath { get; set; }
+
+			/// <summary>Add a string to the log</summary>
+			public void Write(string str)
+			{
+				lock (m_lock)
+				{
+					using var f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite));
+					f.Write(str);
+				}
+			}
+		}
+#endregion
+	}
 #endif

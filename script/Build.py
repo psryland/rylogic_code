@@ -7,6 +7,10 @@
 #  - If you get an error saying 'UserVars not found'. Run py .\script\Setup.py
 #    to generate a suitable UserVars.py file for the current system and working
 #    directory location
+#  - Deploy means copy the Release products to a staging area or location on the
+#    local PC.
+#  - Publish means copy installers/zips/etc to locations for other people to
+#    download and use.
 
 import sys, os, subprocess, datetime, re, shutil
 from importlib import machinery as Import
@@ -58,30 +62,6 @@ def CleanDir(dir:str):
 	os.makedirs(dir)
 	return
 
-# Invoke MSBuild on the given solution or project file
-def MSBuild(name:str, sln:str, projects:[str], platforms:[str], configs:[str], props:str=None):
-	print(f"\nBuilding {name}")
-	Tools.SetupVcEnvironment()
-	if Tools.MSBuild(sln, projects, platforms, configs, props): return
-	raise RuntimeError(f"Building {name} failed")
-
-# Restore nuget packages
-def DotNetRestore(sln_or_proj:str):
-	if sln_or_proj in restored: return
-	Tools.SetupVcEnvironment()
-	print(f"Nuget restore: {sln_or_proj}")
-	Tools.Exec([UserVars.msbuild, sln_or_proj, "/t:restore", "/verbosity:minimal", "/nologo"])
-	#Tools.Exec([UserVars.dotnet, "restore", sln_or_proj, "--verbosity", "quiet"])
-	#Tools.Exec([UserVars.nuget, "restore", sln_or_proj, "-Verbosity", "quiet"])
-	restored.append(sln_or_proj)
-	return
-
-# Sign an assembly
-def SignAssembly(target):
-	if not os.path.exists(target): return
-	Tools.SignAssembly(target)
-	return
-
 # Ensure the directory 'dir' exists and is empty
 def CleanObj(dir:str, platforms:[str]=None, configs:[str]=None):
 	if not platforms and not configs:
@@ -105,6 +85,30 @@ def CleanDotNet(proj_dir:str, platforms:[str], configs:[str]):
 		CleanDir(os.path.join(proj_dir, "obj"))
 		CleanDir(os.path.join(proj_dir, "bin"))
 		#todo
+	return
+
+# Invoke MSBuild on the given solution or project file
+def MSBuild(name:str, sln:str, projects:[str], platforms:[str], configs:[str], props:str=None):
+	print(f"\nBuilding {name}")
+	Tools.SetupVcEnvironment()
+	if Tools.MSBuild(sln, projects, platforms, configs, props): return
+	raise RuntimeError(f"Building {name} failed")
+
+# Restore nuget packages
+def DotNetRestore(sln_or_proj:str):
+	if sln_or_proj in restored: return
+	Tools.SetupVcEnvironment()
+	print(f"Nuget restore: {sln_or_proj}")
+	Tools.Exec([UserVars.msbuild, sln_or_proj, "/t:restore", "/verbosity:minimal", "/nologo"])
+	#Tools.Exec([UserVars.dotnet, "restore", sln_or_proj, "--verbosity", "quiet"])
+	#Tools.Exec([UserVars.nuget, "restore", sln_or_proj, "-Verbosity", "quiet"])
+	restored.append(sln_or_proj)
+	return
+
+# Sign an assembly
+def SignAssembly(target):
+	if not os.path.exists(target): return
+	Tools.SignAssembly(target)
 	return
 
 # Native binary (base)
@@ -448,17 +452,17 @@ def Main(args:[str]):
 		if False:
 			pass
 		elif arg == "-clean":
+			i = i + 1
 			clean = True
-			i = i + 1
 		elif arg == "-build":
+			i = i + 1
 			build = True
-			i = i + 1
 		elif arg == "-deploy":
+			i = i + 1
 			deploy = True
-			i = i + 1
 		elif arg == "-publish":
-			publish = True
 			i = i + 1
+			publish = True
 		elif arg == "-cert_pw":
 			i = i + 1
 			if i == len(args) or args[i].startswith('-'):
@@ -467,8 +471,12 @@ def Main(args:[str]):
 				UserVars.rylogic_cert_pw = args[i]
 				i = i + 1
 		elif arg == "-workspace":
-			workspace = args[i+1]
-			i = i + 2
+			i = i + 1
+			if i == len(args) or args[i].startswith('-'):
+				raise RuntimeError("Workspace argument missing")
+			else:
+				workspace = args[i]
+				i = i + 1
 		elif arg == "-project" or arg == "-projects":
 			i = i + 1
 			if i == len(args) or args[i].startswith('-'):
@@ -498,6 +506,7 @@ def Main(args:[str]):
 	for i in range(0, len(platforms)):
 		if platforms[i].lower() == "x64": platforms[i] = "x64"
 		if platforms[i].lower() == "x86": platforms[i] = "x86"
+		if platforms[i].lower() == "any cpu" or platforms[i].lower() == "anycpu": platforms[i] = "Any CPU"
 	for i in range(0, len(configs)):
 		if configs[i].lower() == "release": configs[i] = "Release"
 		if configs[i].lower() == "debug": configs[i] = "Debug"

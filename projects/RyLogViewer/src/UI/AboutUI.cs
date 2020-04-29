@@ -108,7 +108,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(null, ex, "Could not determine time since installation");
+				Log.Write(ELogLevel.Error, ex, "Could not determine time since installation");
 				return null;
 			}
 		}

@@ -153,7 +153,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, $"Custom data source failed: {src.ShortName} -> {launch.OutputFilepath}");
+				Log.Write(ELogLevel.Error, ex, $"Custom data source failed: {src.ShortName} -> {launch.OutputFilepath}");
 				Misc.ShowMessage(this, $"Failed to launch {src.ShortName}.", "Data Source Failed", MessageBoxIcon.Error, ex);
 			}
 			finally
@@ -177,9 +177,9 @@ namespace RyLogViewer
 			m_src = src;
 			m_buf = new byte[BufBlockSize];
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
-			base.Dispose();
+			base.Dispose(disposing);
 			m_src.Dispose();
 		}
 
@@ -192,7 +192,7 @@ namespace RyLogViewer
 		/// <summary>Start collecting log data asynchronously</summary>
 		public void Start()
 		{
-			Log.Info(this, $"Data Source {m_src.ShortName} started");
+			Log.Write(ELogLevel.Info, $"Data Source {m_src.ShortName} started");
 
 			m_src.Start();
 			m_src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_src, m_buf));

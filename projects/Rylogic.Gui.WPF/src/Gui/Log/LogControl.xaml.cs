@@ -72,10 +72,10 @@ namespace Rylogic.Gui.WPF
 
 			// Define a line in the log
 			LogEntryPattern = null;
-			//new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
-			//	,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
-			//new Regex(@"^\u001b(?<lvl>\d),(?<time>.*?),(?<name>.*?),""(?<msg>.*?)"",""(?<except>.*?)"",(?<count>\d+)\s*\n"
-			//	,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+			// Examples:
+			//   Use the 'ColumnNames' for tags so the columns become visible
+			//   new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\|\n",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+			//   The log entry pattern should not typically contain the line delimiter character
 
 			// Highlighting patterns
 			Highlighting = new ObservableCollection<HLPattern>();
@@ -85,7 +85,7 @@ namespace Rylogic.Gui.WPF
 			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#888"), EPattern.RegularExpression, ".*debug.*") { IgnoreCase = true });
 
 			// The log entry delimiter
-			LineDelimiter = Log.EntryDelimiter;
+			LineDelimiter = Log_.EntryDelimiter;
 
 			// Limit the number of log entries to display
 			MaxLines = 500;
@@ -324,6 +324,12 @@ namespace Rylogic.Gui.WPF
 			get => m_log_entry_pattern;
 			set
 			{
+				// Examples:
+				//   Use the 'ColumnNames' for tags so the columns become visible
+				//   new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\|\n",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+				// Notes:
+				//   - The log entry pattern should not typically contain the line delimiter character
+
 				if (m_log_entry_pattern == value) return;
 				m_log_entry_pattern = value;
 				UpdateColumnVisibility();

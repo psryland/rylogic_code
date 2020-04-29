@@ -8,6 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gui.WinForms;
 using Util = Rylogic.Utility.Util;
 
@@ -30,7 +31,9 @@ namespace RyLogViewer
 				Environment.ExitCode = 0;
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-				Xml_.Config.SupportWinFormsTypes();
+				Xml_.Config
+					.SupportWinFormsTypes()
+					.SupportSystemDrawingPrimitiveTypes();
 
 				// Start the main app
 				Exception err = null;

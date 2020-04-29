@@ -38,7 +38,7 @@ namespace CoinFlip
 
 		static Model()
 		{
-			Log = new Logger("CoinFlip", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt")));
+			Log = new Logger("CoinFlip", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), LogToFile.EFlags.None));
 			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
 			Log.Write(ELogLevel.Debug, "<<< Started >>>");
 

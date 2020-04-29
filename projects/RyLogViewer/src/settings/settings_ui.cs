@@ -912,7 +912,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Resetting settings to defaults");
+				Log.Write(ELogLevel.Error, ex, "Resetting settings to defaults");
 				Misc.ShowMessage(this, "Failed to reset settings to their default values.", "Reset Settings Failed", MessageBoxIcon.Error, ex);
 			}
 		}

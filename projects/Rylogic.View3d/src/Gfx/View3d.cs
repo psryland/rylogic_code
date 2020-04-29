@@ -25,7 +25,7 @@ using HWND = System.IntPtr;
 namespace Rylogic.Gfx
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
-	public sealed partial class View3d : IDisposable
+	public sealed partial class View3d :IDisposable
 	{
 		// Notes:
 		// - Each process should create a single View3d instance that is an isolated context.
@@ -53,18 +53,18 @@ namespace Rylogic.Gfx
 			Norm = 1 << 2,
 			Tex0 = 1 << 3,
 		}
-		public enum EPrim : uint
+		public enum EPrim :uint
 		{
-			Invalid      = 0,  // D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
-			PointList    = 1,  // D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
-			LineList     = 2,  // D3D11_PRIMITIVE_TOPOLOGY_LINELIST
-			LineStrip    = 3,  // D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
-			TriList      = 4,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-			TriStrip     = 5,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
-			LineListAdj  = 10, // D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
+			Invalid = 0,  // D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
+			PointList = 1,  // D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
+			LineList = 2,  // D3D11_PRIMITIVE_TOPOLOGY_LINELIST
+			LineStrip = 3,  // D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP
+			TriList = 4,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+			TriStrip = 5,  // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP
+			LineListAdj = 10, // D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
 			LineStripAdj = 11, // D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
-			TriListAdj   = 12, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
-			TriStripAdj  = 13, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+			TriListAdj = 12, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
+			TriStripAdj = 13, // D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
 		}
 		[Flags] public enum ENuggetFlag :uint
 		{
@@ -107,7 +107,7 @@ namespace Rylogic.Gfx
 		{
 			None = 0,
 		}
-		public enum ERenderStep : int
+		public enum ERenderStep :int
 		{
 			Invalid = 0,
 			ForwardRender,
@@ -117,7 +117,7 @@ namespace Rylogic.Gfx
 			RayCast,
 			_number_of,
 		};
-		public enum EStockTexture : int
+		public enum EStockTexture :int
 		{
 			Invalid = 0,
 			Black,
@@ -129,19 +129,19 @@ namespace Rylogic.Gfx
 			WhiteSpot,
 			WhiteTriangle,
 		}
-		[Flags] public enum ECreateDeviceFlags : uint
+		[Flags] public enum ECreateDeviceFlags :uint
 		{
-			D3D11_CREATE_DEVICE_SINGLETHREADED                                = 0x1,
-			D3D11_CREATE_DEVICE_DEBUG                                         = 0x2,
-			D3D11_CREATE_DEVICE_SWITCH_TO_REF                                 = 0x4,
-			D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS      = 0x8,
-			D3D11_CREATE_DEVICE_BGRA_SUPPORT                                  = 0x20,
-			D3D11_CREATE_DEVICE_DEBUGGABLE                                    = 0x40,
+			D3D11_CREATE_DEVICE_SINGLETHREADED = 0x1,
+			D3D11_CREATE_DEVICE_DEBUG = 0x2,
+			D3D11_CREATE_DEVICE_SWITCH_TO_REF = 0x4,
+			D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS = 0x8,
+			D3D11_CREATE_DEVICE_BGRA_SUPPORT = 0x20,
+			D3D11_CREATE_DEVICE_DEBUGGABLE = 0x40,
 			D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY = 0x80,
-			D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT                           = 0x100,
-			D3D11_CREATE_DEVICE_VIDEO_SUPPORT                                 = 0x800
+			D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT = 0x100,
+			D3D11_CREATE_DEVICE_VIDEO_SUPPORT = 0x800
 		}
-		public enum EFormat : uint
+		public enum EFormat :uint
 		{
 			DXGI_FORMAT_UNKNOWN = 0,
 			DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
@@ -261,7 +261,7 @@ namespace Rylogic.Gfx
 			DXGI_FORMAT_B4G4R4A4_UNORM = 115,
 			DXGI_FORMAT_FORCE_UINT = 0xffffffff
 		}
-		public enum EFilter : uint //D3D11_FILTER
+		public enum EFilter :uint //D3D11_FILTER
 		{
 			D3D11_FILTER_MIN_MAG_MIP_POINT = 0,
 			D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
@@ -300,7 +300,7 @@ namespace Rylogic.Gfx
 			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
 			D3D11_FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
 		}
-		public enum EAddrMode : uint //D3D11_TEXTURE_ADDRESS_MODE
+		public enum EAddrMode :uint //D3D11_TEXTURE_ADDRESS_MODE
 		{
 			D3D11_TEXTURE_ADDRESS_WRAP = 1,
 			D3D11_TEXTURE_ADDRESS_MIRROR = 2,
@@ -308,7 +308,7 @@ namespace Rylogic.Gfx
 			D3D11_TEXTURE_ADDRESS_BORDER = 4,
 			D3D11_TEXTURE_ADDRESS_MIRROR_ONCE = 5,
 		}
-		[Flags] public enum EBindFlags : uint //D3D11_BIND_FLAG
+		[Flags] public enum EBindFlags :uint //D3D11_BIND_FLAG
 		{
 			NONE = 0,
 			D3D11_BIND_VERTEX_BUFFER = 0x1,
@@ -322,7 +322,7 @@ namespace Rylogic.Gfx
 			D3D11_BIND_DECODER = 0x200,
 			D3D11_BIND_VIDEO_ENCODER = 0x400
 		}
-		[Flags] public enum EResMiscFlags : uint//D3D11_RESOURCE_MISC_FLAG
+		[Flags] public enum EResMiscFlags :uint//D3D11_RESOURCE_MISC_FLAG
 		{
 			NONE = 0,
 			D3D11_RESOURCE_MISC_GENERATE_MIPS = 0x1,
@@ -358,18 +358,18 @@ namespace Rylogic.Gfx
 		}
 		public enum EFillMode
 		{
-			Default   = 0,
-			Points    = 1,
+			Default = 0,
+			Points = 1,
 			Wireframe = 2, // D3D11_FILL_WIREFRAME
-			Solid     = 3, // D3D11_FILL_SOLID
+			Solid = 3, // D3D11_FILL_SOLID
 			SolidWire = 4,
 		}
 		public enum ECullMode
 		{
 			Default = 0,
-			None  = 1, // D3D11_CULL_NONE
+			None = 1, // D3D11_CULL_NONE
 			Front = 2, // D3D11_CULL_FRONT
-			Back  = 3, // D3D11_CULL_BACK
+			Back = 3, // D3D11_CULL_BACK
 		}
 		[Flags] public enum ENavOp
 		{
@@ -397,9 +397,11 @@ namespace Rylogic.Gfx
 			RotZ = 1 << 5,
 			Zoom = 1 << 6,
 			CameraRelative = 1 << 7,
+			Translation = TransX | TransY | TransZ,
+			Rotation = RotX | RotY | RotZ,
 			All = (1 << 7) - 1, // Not including camera relative
 		}
-		[Flags] public enum EUpdateObject : uint // Flags for partial update of a model
+		[Flags] public enum EUpdateObject :uint // Flags for partial update of a model
 		{
 			None = 0U,
 			Name = 1 << 0,
@@ -450,7 +452,7 @@ namespace Rylogic.Gfx
 			Default = 64,          // Make opaques the middle group
 			Skybox,                // Sky-box after opaques
 			PostOpaques,           // 
-			PreAlpha = Default+16, // Last group before the alpha groups
+			PreAlpha = Default + 16, // Last group before the alpha groups
 			AlphaBack,             // 
 			AlphaFront,            // 
 			PostAlpha,             // First group after the alpha groups
@@ -489,41 +491,41 @@ namespace Rylogic.Gfx
 			EdgeCentre,
 			FaceCentre,
 		}
-		[Flags] public enum ESettings : int
+		[Flags] public enum ESettings :int
 		{
 			// Upper 2-bytes = category
 			// Lower 2-bytes = specific property that changed.
 			None = 0,
 
-			General                     = 1 << 16,
-			General_FocusPointVisible   = General | 1 << 0,
-			General_OriginPointVisible  = General | 1 << 1,
+			General = 1 << 16,
+			General_FocusPointVisible = General | 1 << 0,
+			General_OriginPointVisible = General | 1 << 1,
 			General_SelectionBoxVisible = General | 1 << 2,
 
-			Scene                  = 1 << 17,
+			Scene = 1 << 17,
 			Scene_BackgroundColour = Scene | 1 << 0,
-			Scene_Multisampling    = Scene | 1 << 1,
-			Scene_FilllMode        = Scene | 1 << 2,
-			Scene_CullMode         = Scene | 1 << 3,
-			Scene_Viewport         = Scene | 1 << 4,
+			Scene_Multisampling = Scene | 1 << 1,
+			Scene_FilllMode = Scene | 1 << 2,
+			Scene_CullMode = Scene | 1 << 3,
+			Scene_Viewport = Scene | 1 << 4,
 
-			Camera              = 1 << 18,
-			Camera_Position     = Camera | 1 << 0,
-			Camera_FocusDist    = Camera | 1 << 1,
+			Camera = 1 << 18,
+			Camera_Position = Camera | 1 << 0,
+			Camera_FocusDist = Camera | 1 << 1,
 			Camera_Orthographic = Camera | 1 << 2,
-			Camera_Aspect       = Camera | 1 << 3,
-			Camera_Fov          = Camera | 1 << 4,
-			Camera_ClipPlanes   = Camera | 1 << 5,
-			Camera_LockMask     = Camera | 1 << 6,
-			Camera_AlignAxis    = Camera | 1 << 7,
+			Camera_Aspect = Camera | 1 << 3,
+			Camera_Fov = Camera | 1 << 4,
+			Camera_ClipPlanes = Camera | 1 << 5,
+			Camera_LockMask = Camera | 1 << 6,
+			Camera_AlignAxis = Camera | 1 << 7,
 
-			Lighting     = 1 << 19,
+			Lighting = 1 << 19,
 			Lighting_All = Lighting | 1 << 0,
 
-			Diagnostics                    = 1 << 20,
-			Diagnostics_BBoxesVisible      = Diagnostics | 1 << 0,
-			Diagnostics_NormalsLength      = Diagnostics | 1 << 1,
-			Diagnostics_NormalsColour      = Diagnostics | 1 << 2,
+			Diagnostics = 1 << 20,
+			Diagnostics_BBoxesVisible = Diagnostics | 1 << 0,
+			Diagnostics_NormalsLength = Diagnostics | 1 << 1,
+			Diagnostics_NormalsColour = Diagnostics | 1 << 2,
 			Diagnostics_FillModePointsSize = Diagnostics | 1 << 3,
 		}
 		#endregion
@@ -542,7 +544,7 @@ namespace Rylogic.Gfx
 			public Vertex(v4 vert) { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col) { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm; m_uv = tex; pad = 0; }
-			
+
 			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
@@ -553,7 +555,7 @@ namespace Rylogic.Gfx
 			public struct ShaderSet
 			{
 				[StructLayout(LayoutKind.Sequential)]
-				public struct ShaderVS { public EShaderVS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				public struct ShaderVS { public EShaderVS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
 				[StructLayout(LayoutKind.Sequential)]
 				public struct ShaderGS { public EShaderGS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
 				[StructLayout(LayoutKind.Sequential)]
@@ -1081,7 +1083,7 @@ namespace Rylogic.Gfx
 
 		#endregion
 
-		public class Exception : System.Exception
+		public class Exception :System.Exception
 		{
 			public EResult m_code = EResult.Success;
 			public Exception() : this(EResult.Success) { }
@@ -1101,9 +1103,9 @@ namespace Rylogic.Gfx
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
-		#if PR_VIEW3D_CREATE_STACKTRACE
+#if PR_VIEW3D_CREATE_STACKTRACE
 		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
-		#endif
+#endif
 
 		/// <summary>Initialise with support for BGRA textures</summary>
 		public static ECreateDeviceFlags CreateDeviceFlags = ECreateDeviceFlags.D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -1111,9 +1113,9 @@ namespace Rylogic.Gfx
 		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
 		public static View3d Create()
 		{
-			#if PR_VIEW3D_CREATE_STACKTRACE
+#if PR_VIEW3D_CREATE_STACKTRACE
 			m_create_stacktraces.Add(new StackTrace(true));
-			#endif
+#endif
 
 			if (m_singleton == null)
 				m_singleton = new View3d();
@@ -1187,7 +1189,7 @@ namespace Rylogic.Gfx
 					errors = null;
 
 					// Create the source code to build
-					var src = TemplateReplacer.Process(new StringSrc(EmbeddedCSharpBoilerPlate), @"(?<indent>[ \t]*)<<<(?<section>.*?)>>>", (tr,match) =>
+					var src = TemplateReplacer.Process(new StringSrc(EmbeddedCSharpBoilerPlate), @"(?<indent>[ \t]*)<<<(?<section>.*?)>>>", (tr, match) =>
 					{
 						var indent = match.Result("${indent}");
 						var section = match.Groups["section"];
@@ -1351,7 +1353,7 @@ namespace Rylogic.Gfx
 		/// <summary>Boilerplate C# code used for embedded C#</summary>
 		public string EmbeddedCSharpBoilerPlate { get; set; }
 		public static string EmbeddedCSharpBoilerPlateDefault =>
-			#region Embedded C# Source
+		#region Embedded C# Source
 $@"//
 //Assembly: netstandard.dll
 //Assembly: System.dll
@@ -1396,7 +1398,7 @@ namespace ldr
 	}}
 }}
 ";
-			#endregion
+		#endregion
 
 		/// <summary>Return the address (form: keyword.keyword...) within a script at 'position'</summary>
 		public static string AddressAt(string ldr_script, long position = -1)
@@ -1415,8 +1417,8 @@ namespace ldr
 		#region DLL extern functions
 
 		/// <summary>True if the view3d dll has been loaded</summary>
-        public static bool ModuleLoaded => m_module != IntPtr.Zero;
-        private static IntPtr m_module = IntPtr.Zero;
+		public static bool ModuleLoaded => m_module != IntPtr.Zero;
+		private static IntPtr m_module = IntPtr.Zero;
 		private const string Dll = "view3d";
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
@@ -1426,252 +1428,473 @@ namespace ldr
 		}
 
 		// Context
-		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB global_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
-		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
-		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
-		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
-		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
-		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     (IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteUnused   (IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)] private static extern void            View3D_CheckForChangedSources();
-		[DllImport(Dll)] private static extern void            View3D_AddFileProgressCBSet  (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_SourcesChangedCBSet   (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_EmbeddedCodeCBSet     ([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern bool            View3D_ContextIdFromFilepath ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
+		[DllImport(Dll)]
+		private static extern HContext View3D_Initialise(ReportErrorCB global_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
+		[DllImport(Dll)]
+		private static extern void View3D_Shutdown(HContext context);
+		[DllImport(Dll)]
+		private static extern void View3D_GlobalErrorCBSet(ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_SourceEnumGuids(EnumGuidsCB enum_guids_cb, IntPtr ctx);
+		[DllImport(Dll)]
+		private static extern Guid View3D_LoadScript([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool is_file, ref Guid context_id, ref View3DIncludes includes, OnAddCB? on_add_complete, IntPtr ctx);
+		[DllImport(Dll)]
+		private static extern void View3D_ReloadScriptSources();
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectsDeleteAll();
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectsDeleteById(IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectsDeleteUnused(IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern void View3D_CheckForChangedSources();
+		[DllImport(Dll)]
+		private static extern void View3D_AddFileProgressCBSet(AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_SourcesChangedCBSet(SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_EmbeddedCodeCBSet([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern bool View3D_ContextIdFromFilepath([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 
 		// Windows
-		[DllImport(Dll)] private static extern HWindow         View3D_WindowCreate              (HWND hwnd, ref WindowOptions opts);
-		[DllImport(Dll)] private static extern void            View3D_WindowDestroy             (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowErrorCBSet          (HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern IntPtr          View3D_WindowSettingsGet         (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowSettingsSet         (HWindow window, string settings);
-		[DllImport(Dll)] private static extern void            View3D_WindowSettingsChangedCB   (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowInvalidatedCB       (HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowRenderingCB         (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3d_WindowSceneChangedCB      (HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddObject           (HWindow window, HObject obj);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObject        (HWindow window, HObject obj);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects    (HWindow window);
-		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject           (HWindow window, HObject obj, bool search_children);
-		[DllImport(Dll)] private static extern int             View3D_WindowObjectCount         (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowEnumGuids           (HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjects         (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjectsById     (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById      (HWindow window, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById   (HWindow window, IntPtr context_ids, int include_count, int exclude_count);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
-		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[]? except);
-		[DllImport(Dll)] private static extern bool            View3D_WindowAnimating           (HWindow window);
-		[DllImport(Dll)] private static extern double          View3D_WindowAnimTimeGet         (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, double time_s);
-		[DllImport(Dll)] private static extern void            View3D_WindowAnimControl         (HWindow window, EAnimCommand command, double time_s);
-		[DllImport(Dll)] private static extern void            View3D_WindowAnimEventCBSet      (HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern HWindow View3D_WindowCreate(HWND hwnd, ref WindowOptions opts);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowDestroy(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowErrorCBSet(HWindow window, ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		[return: MarshalAs(UnmanagedType.LPWStr)]
+		private static extern string View3D_WindowSettingsGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowSettingsSet(HWindow window, [MarshalAs(UnmanagedType.LPWStr)] string settings);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowSettingsChangedCB(HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowInvalidatedCB(HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowRenderingCB(HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3d_WindowSceneChangedCB(HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAddObject(HWindow window, HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowRemoveObject(HWindow window, HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowRemoveAllObjects(HWindow window);
+		[DllImport(Dll)]
+		private static extern bool View3D_WindowHasObject(HWindow window, HObject obj, bool search_children);
+		[DllImport(Dll)]
+		private static extern int View3D_WindowObjectCount(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowEnumGuids(HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowEnumObjects(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowEnumObjectsById(HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAddObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowRemoveObjectsById(HWindow window, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAddGizmo(HWindow window, HGizmo giz);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowRemoveGizmo(HWindow window, HGizmo giz);
+		[DllImport(Dll)]
+		private static extern BBox View3D_WindowSceneBounds(HWindow window, ESceneBounds bounds, int except_count, Guid[]? except);
+		[DllImport(Dll)]
+		private static extern bool View3D_WindowAnimating(HWindow window);
+		[DllImport(Dll)]
+		private static extern double View3D_WindowAnimTimeGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAnimTimeSet(HWindow window, double time_s);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAnimControl(HWindow window, EAnimCommand command, double time_s);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowAnimEventCBSet(HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowHitTest(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
 
 		// Camera
-		[DllImport(Dll)] private static extern void            View3D_CameraToWorldGet       (HWindow window, out m4x4 c2w);
-		[DllImport(Dll)] private static extern void            View3D_CameraToWorldSet       (HWindow window, ref m4x4 c2w);
-		[DllImport(Dll)] private static extern void            View3D_CameraPositionSet      (HWindow window, v4 position, v4 lookat, v4 up);
-		[DllImport(Dll)] private static extern void            View3D_CameraCommit           (HWindow window);
-		[DllImport(Dll)] private static extern bool            View3D_CameraOrthographicGet  (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraOrthographicSet  (HWindow window, bool on);
-		[DllImport(Dll)] private static extern float           View3D_CameraFocusDistanceGet (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraFocusDistanceSet (HWindow window, float dist);
-		[DllImport(Dll)] private static extern void            View3D_CameraFocusPointGet    (HWindow window, out v4 position);
-		[DllImport(Dll)] private static extern void            View3D_CameraFocusPointSet    (HWindow window, v4 position);
-		[DllImport(Dll)] private static extern void            View3D_CameraViewRectSet      (HWindow window, float width, float height, float dist);
-		[DllImport(Dll)] private static extern float           View3D_CameraAspectGet        (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraAspectSet        (HWindow window, float aspect);
-		[DllImport(Dll)] private static extern float           View3D_CameraFovXGet          (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraFovXSet          (HWindow window, float fovX);
-		[DllImport(Dll)] private static extern float           View3D_CameraFovYGet          (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraFovYSet          (HWindow window, float fovY);
-		[DllImport(Dll)] private static extern void            View3D_CameraFovSet           (HWindow window, float fovX, float fovY);
-		[DllImport(Dll)] private static extern void            View3D_CameraBalanceFov       (HWindow window, float fov);
-		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far, bool focus_relative);
-		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern ECameraLockMask View3D_CameraLockMaskGet      (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraLockMaskSet      (HWindow window, ECameraLockMask mask);
-		[DllImport(Dll)] private static extern v4              View3D_CameraAlignAxisGet     (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraAlignAxisSet     (HWindow window, v4 axis);
-		[DllImport(Dll)] private static extern void            View3D_CameraResetZoom        (HWindow window);
-		[DllImport(Dll)] private static extern float           View3D_CameraZoomGet          (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraZoomSet          (HWindow window, float zoom);
-		[DllImport(Dll)] private static extern void            View3D_ResetView              (HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)] private static extern void            View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
-		[DllImport(Dll)] private static extern v2              View3D_ViewArea               (HWindow window, float dist);
-		[DllImport(Dll)] private static extern bool            View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern bool            View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);
-		[DllImport(Dll)] private static extern bool            View3D_Navigate               (HWindow window, float dx, float dy, float dz);
-		[DllImport(Dll)] private static extern v2              View3D_SSPointToNSSPoint      (HWindow window, v2 screen);
-		[DllImport(Dll)] private static extern v4              View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
-		[DllImport(Dll)] private static extern v4              View3D_WSPointToNSSPoint      (HWindow window, v4 world);
-		[DllImport(Dll)] private static extern void            View3D_NSSPointToWSRay        (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
-		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (EMouseBtns mk);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraToWorldGet(HWindow window, out m4x4 c2w);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraToWorldSet(HWindow window, ref m4x4 c2w);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraPositionSet(HWindow window, v4 position, v4 lookat, v4 up);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraCommit(HWindow window);
+		[DllImport(Dll)]
+		private static extern bool View3D_CameraOrthographicGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraOrthographicSet(HWindow window, bool on);
+		[DllImport(Dll)]
+		private static extern float View3D_CameraFocusDistanceGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFocusDistanceSet(HWindow window, float dist);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFocusPointGet(HWindow window, out v4 position);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFocusPointSet(HWindow window, v4 position);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraViewRectSet(HWindow window, float width, float height, float dist);
+		[DllImport(Dll)]
+		private static extern float View3D_CameraAspectGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraAspectSet(HWindow window, float aspect);
+		[DllImport(Dll)]
+		private static extern float View3D_CameraFovXGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFovXSet(HWindow window, float fovX);
+		[DllImport(Dll)]
+		private static extern float View3D_CameraFovYGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFovYSet(HWindow window, float fovY);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraFovSet(HWindow window, float fovX, float fovY);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraBalanceFov(HWindow window, float fov);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraClipPlanesGet(HWindow window, out float near, out float far, bool focus_relative);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraClipPlanesSet(HWindow window, float near, float far, bool focus_relative);
+		[DllImport(Dll)]
+		private static extern ECameraLockMask View3D_CameraLockMaskGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraLockMaskSet(HWindow window, ECameraLockMask mask);
+		[DllImport(Dll)]
+		private static extern v4 View3D_CameraAlignAxisGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraAlignAxisSet(HWindow window, v4 axis);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraResetZoom(HWindow window);
+		[DllImport(Dll)]
+		private static extern float View3D_CameraZoomGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CameraZoomSet(HWindow window, float zoom);
+		[DllImport(Dll)]
+		private static extern void View3D_ResetView(HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+		[DllImport(Dll)]
+		private static extern void View3D_ResetViewBBox(HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
+		[DllImport(Dll)]
+		private static extern v2 View3D_ViewArea(HWindow window, float dist);
+		[DllImport(Dll)]
+		private static extern bool View3D_MouseNavigate(HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
+		[DllImport(Dll)]
+		private static extern bool View3D_MouseNavigateZ(HWindow window, v2 ss_point, float delta, bool along_ray);
+		[DllImport(Dll)]
+		private static extern bool View3D_Navigate(HWindow window, float dx, float dy, float dz);
+		[DllImport(Dll)]
+		private static extern v2 View3D_SSPointToNSSPoint(HWindow window, v2 screen);
+		[DllImport(Dll)]
+		private static extern v4 View3D_NSSPointToWSPoint(HWindow window, v4 screen);
+		[DllImport(Dll)]
+		private static extern v4 View3D_WSPointToNSSPoint(HWindow window, v4 world);
+		[DllImport(Dll)]
+		private static extern void View3D_NSSPointToWSRay(HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)]
+		private static extern ENavOp View3D_MouseBtnToNavOp(EMouseBtns mk);
 
 		// Lights
-		[DllImport(Dll)] private static extern bool              View3D_LightPropertiesGet       (HWindow window, out LightInfo light);
-		[DllImport(Dll)] private static extern void              View3D_LightPropertiesSet       (HWindow window, ref LightInfo light);
-		[DllImport(Dll)] private static extern void              View3D_LightSource              (HWindow window, v4 position, v4 direction, bool camera_relative);
-		[DllImport(Dll)] private static extern void              View3D_LightShowDialog          (HWindow window);
+		[DllImport(Dll)]
+		private static extern bool View3D_LightPropertiesGet(HWindow window, out LightInfo light);
+		[DllImport(Dll)]
+		private static extern void View3D_LightPropertiesSet(HWindow window, ref LightInfo light);
+		[DllImport(Dll)]
+		private static extern void View3D_LightSource(HWindow window, v4 position, v4 direction, bool camera_relative);
+		[DllImport(Dll)]
+		private static extern void View3D_LightShowDialog(HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern Guid              View3D_ObjectContextIdGet       (HObject obj);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateInstance     (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
-		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetRoot            (HObject obj);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChildByName     (HObject obj, string name);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChildByIndex    (HObject obj, int index);
-		[DllImport(Dll)] private static extern int               View3D_ObjectChildCount         (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectEnumChildren       (HObject obj, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[return:MarshalAs(UnmanagedType.BStr)]
-		[DllImport(Dll)] private static extern string            View3D_ObjectNameGetBStr        (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNameSet            (HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
-		[return:MarshalAs(UnmanagedType.BStr)]
-		[DllImport(Dll)] private static extern string            View3D_ObjectTypeGetBStr        (HObject obj);
-		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2WGet             (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectO2WSet             (HObject obj, ref m4x4 o2w, string? name);
-		[DllImport(Dll)] private static extern m4x4              View3D_ObjectO2PGet             (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectO2PSet             (HObject obj, ref m4x4 o2p, string? name);
-		[DllImport(Dll)] private static extern bool              View3D_ObjectVisibilityGet      (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectVisibilitySet      (HObject obj, bool visible, string? name);
-		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string? name);
-		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string? name);
-		[DllImport(Dll)] private static extern ENuggetFlag       View3D_ObjectNuggetFlagsGet     (HObject obj, string? name, int index);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, bool state, string? name, int index);
-		[DllImport(Dll)] private static extern Colour32          View3D_ObjectNuggetTintGet      (HObject obj, string? name, int index);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetTintSet      (HObject obj, Colour32 colour, string? name, int index);
-		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string? name, EColourOp op, float op_value);
-		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectReflectivitySet    (HObject obj, float reflectivity, string? name);
-		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string? name);
-		[DllImport(Dll)] private static extern bool              View3D_ObjectNormalsGet         (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectNormalsSet         (HObject obj, bool show, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string? name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string? name);
-		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj, bool include_children);
+		[DllImport(Dll)]
+		private static extern Guid View3D_ObjectContextIdGet(HObject obj);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreateLdr([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreateEditCB([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreateInstance(HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectUpdate(HObject obj, [MarshalAs(UnmanagedType.LPWStr)] string ldr_script, EUpdateObject flags);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectEdit(HObject obj, EditObjectCB edit_cb, IntPtr ctx);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectDelete(HObject obj);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectGetRoot(HObject obj);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectGetParent(HObject obj);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectGetChildByName(HObject obj, string name);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectGetChildByIndex(HObject obj, int index);
+		[DllImport(Dll)]
+		private static extern int View3D_ObjectChildCount(HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectEnumChildren(HObject obj, EnumObjectsCB enum_objects_cb, IntPtr ctx);
+		[DllImport(Dll)]
+		[return: MarshalAs(UnmanagedType.BStr)]
+		private static extern string View3D_ObjectNameGetBStr(HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectNameSet(HObject obj, [MarshalAs(UnmanagedType.LPStr)] string name);
+		[DllImport(Dll)]
+		[return: MarshalAs(UnmanagedType.BStr)]
+		private static extern string View3D_ObjectTypeGetBStr(HObject obj);
+		[DllImport(Dll)]
+		private static extern m4x4 View3D_ObjectO2WGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectO2WSet(HObject obj, ref m4x4 o2w, string? name);
+		[DllImport(Dll)]
+		private static extern m4x4 View3D_ObjectO2PGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectO2PSet(HObject obj, ref m4x4 o2p, string? name);
+		[DllImport(Dll)]
+		private static extern bool View3D_ObjectVisibilityGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectVisibilitySet(HObject obj, bool visible, string? name);
+		[DllImport(Dll)]
+		private static extern EFlags View3D_ObjectFlagsGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectFlagsSet(HObject obj, EFlags flags, bool state, string? name);
+		[DllImport(Dll)]
+		private static extern ESortGroup View3D_ObjectSortGroupGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectSortGroupSet(HObject obj, ESortGroup group, string? name);
+		[DllImport(Dll)]
+		private static extern ENuggetFlag View3D_ObjectNuggetFlagsGet(HObject obj, string? name, int index);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectNuggetFlagsSet(HObject obj, ENuggetFlag flags, bool state, string? name, int index);
+		[DllImport(Dll)]
+		private static extern Colour32 View3D_ObjectNuggetTintGet(HObject obj, string? name, int index);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectNuggetTintSet(HObject obj, Colour32 colour, string? name, int index);
+		[DllImport(Dll)]
+		private static extern uint View3D_ObjectColourGet(HObject obj, bool base_colour, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectColourSet(HObject obj, uint colour, uint mask, string? name, EColourOp op, float op_value);
+		[DllImport(Dll)]
+		private static extern float View3D_ObjectReflectivityGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectReflectivitySet(HObject obj, float reflectivity, string? name);
+		[DllImport(Dll)]
+		private static extern bool View3D_ObjectWireframeGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectWireframeSet(HObject obj, bool wireframe, string? name);
+		[DllImport(Dll)]
+		private static extern bool View3D_ObjectNormalsGet(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectNormalsSet(HObject obj, bool show, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectResetColour(HObject obj, string? name);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectSetTexture(HObject obj, HTexture tex, string? name);
+		[DllImport(Dll)]
+		private static extern BBox View3D_ObjectBBoxMS(HObject obj, bool include_children);
 
 		// Materials
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromStock            (EStockTexture tex);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions.InteropData options);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
-		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
-		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[]? dst_rect, Rectangle[]? src_rect, EFilter filter, uint colour_key);
-		[DllImport(Dll)] private static extern void              View3D_TextureRelease              (HTexture tex);
-		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
-		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
-		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex, bool discard);
-		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
-		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
-		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataGet       (HTexture tex, Guid guid, ref uint size, IntPtr data);
-		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataSet       (HTexture tex, Guid guid, uint size, IntPtr data);
-		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataIFSet     (HTexture tex, Guid guid, IntPtr pointer);
-		[DllImport(Dll)] private static extern ulong             View3D_TextureRefCount             (HTexture tex);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_TextureResolveAA            (HTexture dst, HTexture src);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions.InteropData options);
-		[DllImport(Dll)] private static extern HTexture          View3D_CreateDx9RenderTarget       (HWND hwnd, uint width, uint height, ref TextureOptions.InteropData options, out IntPtr shared_handle);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_TextureFromStock(EStockTexture tex);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_TextureCreate(uint width, uint height, IntPtr data, uint data_size, ref TextureOptions.InteropData options);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_TextureCreateFromUri([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
+		[DllImport(Dll)]
+		private static extern HCubeMap View3D_CubeMapCreateFromUri([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions.InteropData options);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureLoadSurface(HTexture tex, int level, string tex_filepath, Rectangle[]? dst_rect, Rectangle[]? src_rect, EFilter filter, uint colour_key);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureRelease(HTexture tex);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureGetInfo(HTexture tex, out ImageInfo info);
+		[DllImport(Dll)]
+		private static extern EResult View3D_TextureGetInfoFromFile(string tex_filepath, out ImageInfo info);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureSetFilterAndAddrMode(HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
+		[DllImport(Dll)]
+		private static extern IntPtr View3D_TextureGetDC(HTexture tex, bool discard);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureReleaseDC(HTexture tex);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureResize(HTexture tex, uint width, uint height, bool all_instances, bool preserve);
+		[DllImport(Dll)]
+		private static extern void View3d_TexturePrivateDataGet(HTexture tex, Guid guid, ref uint size, IntPtr data);
+		[DllImport(Dll)]
+		private static extern void View3d_TexturePrivateDataSet(HTexture tex, Guid guid, uint size, IntPtr data);
+		[DllImport(Dll)]
+		private static extern void View3d_TexturePrivateDataIFSet(HTexture tex, Guid guid, IntPtr pointer);
+		[DllImport(Dll)]
+		private static extern ulong View3D_TextureRefCount(HTexture tex);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_TextureRenderTarget(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_TextureResolveAA(HTexture dst, HTexture src);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_TextureFromShared(IntPtr shared_resource, ref TextureOptions.InteropData options);
+		[DllImport(Dll)]
+		private static extern HTexture View3D_CreateDx9RenderTarget(HWND hwnd, uint width, uint height, ref TextureOptions.InteropData options, out IntPtr shared_handle);
 
 		// Rendering
-		[DllImport(Dll)] private static extern void              View3D_Invalidate               (HWindow window, bool erase);
-		[DllImport(Dll)] private static extern void              View3D_InvalidateRect           (HWindow window, ref Win32.RECT rect, bool erase);
-		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_Validate                 (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_RenderTargetRestore      (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_RenderTargetSet          (HWindow window, HTexture render_target, HTexture depth_buffer);
-		[DllImport(Dll)] private static extern void              View3D_RenderTargetSaveAsMain   (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_BackBufferSizeGet        (HWindow window, out int width, out int height);
-		[DllImport(Dll)] private static extern void              View3D_BackBufferSizeSet        (HWindow window, int width, int height);
-		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetViewport              (HWindow window, Viewport vp);
-		[DllImport(Dll)] private static extern EFillMode         View3D_FillModeGet              (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_FillModeSet              (HWindow window, EFillMode mode);
-		[DllImport(Dll)] private static extern ECullMode         View3D_CullModeGet              (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_CullModeSet              (HWindow window, ECullMode mode);
-		[DllImport(Dll)] private static extern uint              View3D_BackgroundColourGet      (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_BackgroundColourSet      (HWindow window, uint aarrggbb);
-		[DllImport(Dll)] private static extern int               View3D_MultiSamplingGet         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_MultiSamplingSet         (HWindow window, int multisampling);
+		[DllImport(Dll)]
+		private static extern void View3D_Invalidate(HWindow window, bool erase);
+		[DllImport(Dll)]
+		private static extern void View3D_InvalidateRect(HWindow window, ref Win32.RECT rect, bool erase);
+		[DllImport(Dll)]
+		private static extern void View3D_Render(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_Present(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_Validate(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_RenderTargetRestore(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_RenderTargetSet(HWindow window, HTexture render_target, HTexture depth_buffer);
+		[DllImport(Dll)]
+		private static extern void View3D_RenderTargetSaveAsMain(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_BackBufferSizeGet(HWindow window, out int width, out int height);
+		[DllImport(Dll)]
+		private static extern void View3D_BackBufferSizeSet(HWindow window, int width, int height);
+		[DllImport(Dll)]
+		private static extern Viewport View3D_Viewport(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_SetViewport(HWindow window, Viewport vp);
+		[DllImport(Dll)]
+		private static extern EFillMode View3D_FillModeGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_FillModeSet(HWindow window, EFillMode mode);
+		[DllImport(Dll)]
+		private static extern ECullMode View3D_CullModeGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_CullModeSet(HWindow window, ECullMode mode);
+		[DllImport(Dll)]
+		private static extern uint View3D_BackgroundColourGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_BackgroundColourSet(HWindow window, uint aarrggbb);
+		[DllImport(Dll)]
+		private static extern int View3D_MultiSamplingGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_MultiSamplingSet(HWindow window, int multisampling);
 
 		// Tools
-		[DllImport(Dll)] private static extern bool              View3D_MeasureToolVisible       (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ShowMeasureTool          (HWindow window, bool show);
-		[DllImport(Dll)] private static extern bool              View3D_AngleToolVisible         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HWindow window, bool show);
+		[DllImport(Dll)]
+		private static extern bool View3D_MeasureToolVisible(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_ShowMeasureTool(HWindow window, bool show);
+		[DllImport(Dll)]
+		private static extern bool View3D_AngleToolVisible(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_ShowAngleTool(HWindow window, bool show);
 
 		// Gizmos
-		[DllImport(Dll)] private static extern HGizmo            View3D_GizmoCreate              (Gizmo.EMode mode, ref m4x4 o2w);
-		[DllImport(Dll)] private static extern void              View3D_GizmoDelete              (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoMovedCBSet          (HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void              View3D_GizmoAttach              (HGizmo gizmo, HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_GizmoDetach              (HGizmo gizmo, HObject obj);
-		[DllImport(Dll)] private static extern float             View3D_GizmoScaleGet            (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoScaleSet            (HGizmo gizmo, float scale);
-		[DllImport(Dll)] private static extern Gizmo.EMode       View3D_GizmoGetMode             (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoSetMode             (HGizmo gizmo, Gizmo.EMode mode);
-		[DllImport(Dll)] private static extern m4x4              View3D_GizmoGetO2W              (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoSetO2W              (HGizmo gizmo, ref m4x4 o2w);
-		[DllImport(Dll)] private static extern m4x4              View3D_GizmoGetOffset           (HGizmo gizmo);
-		[DllImport(Dll)] private static extern bool              View3D_GizmoEnabled             (HGizmo gizmo);
-		[DllImport(Dll)] private static extern void              View3D_GizmoSetEnabled          (HGizmo gizmo, bool enabled);
-		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern HGizmo View3D_GizmoCreate(Gizmo.EMode mode, ref m4x4 o2w);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoDelete(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoMovedCBSet(HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx, bool add);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoAttach(HGizmo gizmo, HObject obj);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoDetach(HGizmo gizmo, HObject obj);
+		[DllImport(Dll)]
+		private static extern float View3D_GizmoScaleGet(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoScaleSet(HGizmo gizmo, float scale);
+		[DllImport(Dll)]
+		private static extern Gizmo.EMode View3D_GizmoGetMode(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoSetMode(HGizmo gizmo, Gizmo.EMode mode);
+		[DllImport(Dll)]
+		private static extern m4x4 View3D_GizmoGetO2W(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoSetO2W(HGizmo gizmo, ref m4x4 o2w);
+		[DllImport(Dll)]
+		private static extern m4x4 View3D_GizmoGetOffset(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern bool View3D_GizmoEnabled(HGizmo gizmo);
+		[DllImport(Dll)]
+		private static extern void View3D_GizmoSetEnabled(HGizmo gizmo, bool enabled);
+		[DllImport(Dll)]
+		private static extern bool View3D_GizmoManipulating(HGizmo gizmo);
 
 		// Diagnostics
-		[DllImport(Dll)] private static extern bool     View3D_DiagBBoxesVisibleGet     (HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagBBoxesVisibleSet     (HWindow window, bool visible);
-		[DllImport(Dll)] private static extern float    View3D_DiagNormalsLengthGet     (HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagNormalsLengthSet     (HWindow window, float length);
-		[DllImport(Dll)] private static extern Colour32 View3D_DiagNormalsColourGet     (HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagNormalsColourSet     (HWindow window, Colour32 colour);
-		[DllImport(Dll)] private static extern v2       View3D_DiagFillModePointsSizeGet(HWindow window);
-		[DllImport(Dll)] private static extern void     View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
+		[DllImport(Dll)]
+		private static extern bool View3D_DiagBBoxesVisibleGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DiagBBoxesVisibleSet(HWindow window, bool visible);
+		[DllImport(Dll)]
+		private static extern float View3D_DiagNormalsLengthGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DiagNormalsLengthSet(HWindow window, float length);
+		[DllImport(Dll)]
+		private static extern Colour32 View3D_DiagNormalsColourGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DiagNormalsColourSet(HWindow window, Colour32 colour);
+		[DllImport(Dll)]
+		private static extern v2 View3D_DiagFillModePointsSizeGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DiagFillModePointsSizeSet(HWindow window, v2 size);
 
 		// Miscellaneous
-		[DllImport(Dll)] private static extern void              View3D_Flush                    ();
-		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, EKeyCodes key_code);
-		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabledGet    (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_DepthBufferEnabledSet    (HWindow window, bool enabled);
-		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisibleGet     (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_FocusPointVisibleSet     (HWindow window, bool show);
-		[DllImport(Dll)] private static extern void              View3D_FocusPointSizeSet        (HWindow window, float size);
-		[DllImport(Dll)] private static extern bool              View3D_OriginVisibleGet         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_OriginVisibleSet         (HWindow window, bool show);
-		[DllImport(Dll)] private static extern void              View3D_OriginSizeSet            (HWindow window, float size);
-		[DllImport(Dll)] private static extern bool              View3D_SelectionBoxVisibleGet   (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SelectionBoxVisibleSet   (HWindow window, bool visible);
-		[DllImport(Dll)] private static extern void              View3D_SelectionBoxPosition     (HWindow window, ref BBox box, ref m4x4 o2w);
-		[DllImport(Dll)] private static extern void              View3D_SelectionBoxFitToSelected(HWindow window);
-		[DllImport(Dll)] private static extern Guid              View3D_DemoSceneCreate          (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_DemoSceneDelete          ();
-		[DllImport(Dll)] private static extern void              View3D_DemoScriptShow           (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_ObjectManagerShow        (HWindow window, bool show);
-		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script);
-		[DllImport(Dll)] private static extern ulong             View3D_RefCount                 (IntPtr pointer);
+		[DllImport(Dll)]
+		private static extern void View3D_Flush();
+		[DllImport(Dll)]
+		private static extern bool View3D_TranslateKey(HWindow window, EKeyCodes key_code);
+		[DllImport(Dll)]
+		private static extern bool View3D_DepthBufferEnabledGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DepthBufferEnabledSet(HWindow window, bool enabled);
+		[DllImport(Dll)]
+		private static extern bool View3D_FocusPointVisibleGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_FocusPointVisibleSet(HWindow window, bool show);
+		[DllImport(Dll)]
+		private static extern void View3D_FocusPointSizeSet(HWindow window, float size);
+		[DllImport(Dll)]
+		private static extern bool View3D_OriginVisibleGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_OriginVisibleSet(HWindow window, bool show);
+		[DllImport(Dll)]
+		private static extern void View3D_OriginSizeSet(HWindow window, float size);
+		[DllImport(Dll)]
+		private static extern bool View3D_SelectionBoxVisibleGet(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_SelectionBoxVisibleSet(HWindow window, bool visible);
+		[DllImport(Dll)]
+		private static extern void View3D_SelectionBoxPosition(HWindow window, ref BBox box, ref m4x4 o2w);
+		[DllImport(Dll)]
+		private static extern void View3D_SelectionBoxFitToSelected(HWindow window);
+		[DllImport(Dll)]
+		private static extern Guid View3D_DemoSceneCreate(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_DemoSceneDelete();
+		[DllImport(Dll)]
+		private static extern void View3D_DemoScriptShow(HWindow window);
+		[DllImport(Dll)]
+		private static extern void View3D_ObjectManagerShow(HWindow window, bool show);
+		[DllImport(Dll)]
+		private static extern m4x4 View3D_ParseLdrTransform([MarshalAs(UnmanagedType.LPWStr)] string ldr_script);
+		[DllImport(Dll)]
+		private static extern ulong View3D_RefCount(IntPtr pointer);
+		[DllImport(Dll)]
 		[return: MarshalAs(UnmanagedType.BStr)]
-		[DllImport(Dll)] private static extern string            View3D_ObjectAddressAt          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, long position);
-		[return:MarshalAs(UnmanagedType.BStr)]
-		[DllImport(Dll)] private static extern string            View3D_ExampleScriptBStr();
+		private static extern string View3D_ObjectAddressAt([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, long position);
 		[return: MarshalAs(UnmanagedType.BStr)]
-		[DllImport(Dll)] private static extern string            View3D_AutoCompleteTemplatesBStr();
-		
-		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
-		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);
-		[DllImport(Dll)] private static extern void              View3D_LdrEditorCtrlInit        (HWND scintilla_control, bool dark);
+		[DllImport(Dll)]
+		private static extern string View3D_ExampleScriptBStr();
+		[DllImport(Dll)]
+		[return: MarshalAs(UnmanagedType.BStr)]
+		private static extern string View3D_AutoCompleteTemplatesBStr();
+
+		[DllImport(Dll)]
+		private static extern HWND View3D_LdrEditorCreate(HWND parent);
+		[DllImport(Dll)]
+		private static extern void View3D_LdrEditorDestroy(HWND hwnd);
+		[DllImport(Dll)]
+		private static extern void View3D_LdrEditorCtrlInit(HWND scintilla_control, bool dark);
 
 		#endregion
 	}

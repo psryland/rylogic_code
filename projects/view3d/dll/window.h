@@ -55,7 +55,7 @@ namespace view3d
 		LdrMeasureUIPtr       m_measure_tool_ui;       // A UI for measuring distances between points within the 3d environment
 		LdrAngleUIPtr         m_angle_tool_ui;         // A UI for measuring angles between points within the 3d environment
 		EditorCont            m_editors;               // User created editors
-		std::string           m_settings;              // Allows a char const* to be returned
+		std::wstring          m_settings;              // Serialised window settings
 		mutable pr::BBox      m_bbox_scene;            // Bounding box for all objects in the scene (Lazy updated)
 		std::thread::id       m_main_thread_id;        // The thread that created this window
 

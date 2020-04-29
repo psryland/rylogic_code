@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 
 namespace pr::rdr
@@ -36,9 +35,10 @@ namespace pr::rdr
 
 		// Get/Set light settings
 		// throws pr::Exception<HRESULT> if the settings are invalid
-		std::string Settings() const;
-		void Settings(char const* settings);
+		std::wstring Settings() const;
+		void Settings(std::wstring_view settings);
 
+		// Operators
 		friend bool operator == (Light const& lhs, Light const& rhs)
 		{
 			return memcmp(&lhs, &rhs, sizeof(Light)) == 0;

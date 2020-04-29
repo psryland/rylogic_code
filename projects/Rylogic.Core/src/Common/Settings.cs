@@ -55,7 +55,7 @@ namespace Rylogic.Common
 		void Save();
 
 		/// <summary>An event raised when a setting is about to change value</summary>
-		event EventHandler<SettingChangeEventArgs> SettingChange;
+		event EventHandler<SettingChangeEventArgs>? SettingChange;
 
 		/// <summary>Called before and after a setting changes</summary>
 		void OnSettingChange(SettingChangeEventArgs args);
@@ -64,7 +64,7 @@ namespace Rylogic.Common
 		/// A callback method called when a settings related event occurs.
 		/// Note: in any tree-like structure of settings there is only one 'SettingsEvent'
 		/// which is the one provided by the top-level settings set.</summary>
-		Action<ESettingsEvent, Exception?, string> SettingsEvent { get; set; }
+		Action<ESettingsEvent, Exception?, string>? SettingsEvent { get; set; }
 	}
 
 	/// <summary>A base class for settings structures</summary>
@@ -96,7 +96,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
+					SettingsEvent?.Invoke(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
 					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
 					ResetToDefaults(); // Fall back to default values
 				}
@@ -403,9 +403,9 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
-		public Action<ESettingsEvent, Exception?, string> SettingsEvent
+		public Action<ESettingsEvent, Exception?, string>? SettingsEvent
 		{
-			get => Parent?.SettingsEvent ?? m_action ?? OnSettingsEvent;
+			get => Parent?.SettingsEvent ?? m_action;
 			set
 			{
 				if (Parent != null)
@@ -415,35 +415,6 @@ namespace Rylogic.Common
 			}
 		}
 		private Action<ESettingsEvent, Exception?, string>? m_action;
-		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
-		{
-			// Default handling of settings errors/warnings
-			switch (err)
-			{
-			default:
-				Debug.Assert(false, "Unknown settings event type");
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.LoadingSettings:
-			case ESettingsEvent.SavingSettings:
-				//Log.Debug(this, msg);
-				break;
-			case ESettingsEvent.NoVersion:
-				Log.Info(this, msg);
-				break;
-			case ESettingsEvent.FileNotFound:
-				Log.Warn(this, msg);
-				break;
-			case ESettingsEvent.LoadFailed:
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.SaveFailed:
-				// By default, show an error message box. User code can prevent this by replacing
-				// the SettingsEvent action, or overriding OnSettingsEvent
-				//MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				break;
-			}
-		}
 
 		/// <summary>Property changing</summary>
 		public event PropertyChangingEventHandler? PropertyChanging;
@@ -534,7 +505,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
+					SettingsEvent?.Invoke(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
 					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
 					ResetToDefaults(); // Fall back to default values
 				}
@@ -552,7 +523,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}");
+					SettingsEvent?.Invoke(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}");
 					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
 					ResetToDefaults(); // Fall back to default values
 				}
@@ -672,13 +643,13 @@ namespace Rylogic.Common
 		{
 			if (!Path_.FileExists(filepath))
 			{
-				SettingsEvent(ESettingsEvent.FileNotFound, null, $"Settings file {filepath} not found, using defaults");
+				SettingsEvent?.Invoke(ESettingsEvent.FileNotFound, null, $"Settings file {filepath} not found, using defaults");
 				Filepath = filepath;
 				Reset();
 				return; // Reset will recursively call Load again
 			}
 
-			SettingsEvent(ESettingsEvent.LoadingSettings, null, $"Loading settings file {filepath}");
+			SettingsEvent?.Invoke(ESettingsEvent.LoadingSettings, null, $"Loading settings file {filepath}");
 
 			var settings = XDocument.Load(filepath).Root;
 			if (settings == null)
@@ -693,7 +664,7 @@ namespace Rylogic.Common
 		}
 		public void Load(Stream stream, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 		{
-			SettingsEvent(ESettingsEvent.LoadingSettings, null, "Loading settings from stream");
+			SettingsEvent?.Invoke(ESettingsEvent.LoadingSettings, null, "Loading settings from stream");
 
 			var settings = XDocument.Load(stream).Root;
 			if (settings == null) throw new Exception("Invalidate settings source");
@@ -723,7 +694,7 @@ namespace Rylogic.Common
 				SettingsSaving?.Invoke(this, args);
 				if (args.Cancel) return;
 
-				SettingsEvent(ESettingsEvent.SavingSettings, null, $"Saving settings to file {filepath}");
+				SettingsEvent?.Invoke(ESettingsEvent.SavingSettings, null, $"Saving settings to file {filepath}");
 
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
@@ -739,7 +710,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.SaveFailed, ex, $"Failed to save settings to file {filepath}");
+					SettingsEvent?.Invoke(ESettingsEvent.SaveFailed, ex, $"Failed to save settings to file {filepath}");
 				}
 			}
 		}
@@ -756,7 +727,7 @@ namespace Rylogic.Common
 				SettingsSaving?.Invoke(this, args);
 				if (args.Cancel) return;
 
-				SettingsEvent(ESettingsEvent.SavingSettings, null, "Saving settings to stream");
+				SettingsEvent?.Invoke(ESettingsEvent.SavingSettings, null, "Saving settings to stream");
 
 				try
 				{
@@ -766,7 +737,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.SaveFailed, ex, "Failed to save settings to the given stream");
+					SettingsEvent?.Invoke(ESettingsEvent.SaveFailed, ex, "Failed to save settings to the given stream");
 				}
 			}
 		}
@@ -926,9 +897,9 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
-		public Action<ESettingsEvent, Exception?, string> SettingsEvent
+		public Action<ESettingsEvent, Exception?, string>? SettingsEvent
 		{
-			get => Parent?.SettingsEvent ?? m_action ?? OnSettingsEvent;
+			get => Parent?.SettingsEvent ?? m_action;
 			set
 			{
 				if (Parent != null)
@@ -938,35 +909,6 @@ namespace Rylogic.Common
 			}
 		}
 		private Action<ESettingsEvent, Exception?, string>? m_action;
-		public virtual void OnSettingsEvent(ESettingsEvent err, Exception? ex, string msg)
-		{
-			// Default handling of settings errors/warnings
-			switch (err)
-			{
-			default:
-				Debug.Assert(false, "Unknown settings event type");
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.LoadingSettings:
-			case ESettingsEvent.SavingSettings:
-				//Log.Debug(this, msg);
-				break;
-			case ESettingsEvent.NoVersion:
-				Log.Info(this, msg);
-				break;
-			case ESettingsEvent.FileNotFound:
-				Log.Warn(this, msg);
-				break;
-			case ESettingsEvent.LoadFailed:
-				Log.Exception(this, ex, msg);
-				break;
-			case ESettingsEvent.SaveFailed:
-				// By default, show an error message box. User code can prevent this by replacing
-				// the SettingsEvent action, or overriding OnSettingsEvent
-				//MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
-				break;
-			}
-		}
 
 		/// <summary>Read a settings value</summary>
 		protected virtual Value get<Value>(string key)

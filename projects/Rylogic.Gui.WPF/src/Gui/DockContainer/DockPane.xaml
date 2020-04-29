@@ -17,6 +17,7 @@
 			<BitmapImage x:Key ="dock_pinned" UriSource="/Rylogic.Gui.WPF;component/res/dock_pinned.png"/>
 			<BitmapImage x:Key ="dock_unpinned" UriSource="/Rylogic.Gui.WPF;component/res/dock_unpinned.png"/>
 			<BitmapImage x:Key ="dock_close" UriSource="/Rylogic.Gui.WPF;component/res/dock_close.png"/>
+			<BitmapImage x:Key ="dock_findpane" UriSource="/Rylogic.Gui.WPF;component/res/dock_menu.png"/>
 
 			<!-- Title background brushes -->
 			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="1,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
@@ -60,17 +61,32 @@
 
 		<!-- Title text -->
 		<TextBlock
-			x:Name="m_title"
 			Grid.Column="0"
 			VerticalAlignment="Center"
 			Margin="3,0,0,0"
-			Text="{Binding CaptionText}"
+			Text="{Binding CaptionText, FallbackValue=''}"
 			/>
 
+		<!-- Find Pane Button -->
+		<Button
+			Grid.Column="1"
+			Visibility="{Binding FindPaneVisible, Converter={conv:BoolToVisible}}"
+			Command="{Binding FindPane}"
+			Background="Transparent"
+			BorderThickness="0"
+			Margin="2"
+			>
+			<Image
+				Source="{StaticResource dock_findpane}"
+				Stretch="None"
+				/>
+		</Button>
+		
 		<!-- Pin Button -->
 		<Button
-			x:Name="m_pin"
 			Grid.Column="1"
+			Visibility="{Binding PinVisible, Converter={conv:BoolToVisible}}"
+			Command="{Binding TogglePin}"
 			Background="Transparent"
 			BorderThickness="0"
 			Margin="2"
@@ -91,10 +107,10 @@
 
 		<!-- Close button -->
 		<Button
-			x:Name="m_close"
 			Grid.Column="2"
 			BorderThickness="0"
 			Content="{StaticResource DockClose}"
+			Command="{Binding ClosePane}"
 			Background="Transparent"
 			Margin="2"
 			/>

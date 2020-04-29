@@ -410,8 +410,8 @@ namespace RyLogViewer
 
 						proc.Close();
 
-						Log.Debug(this, sb_out.ToString());
-						Log.Debug(this, sb_err.ToString());
+						Log.Write(ELogLevel.Debug, sb_out.ToString());
+						Log.Write(ELogLevel.Debug, sb_err.ToString());
 
 						result = sb_out.ToString();
 					}
@@ -470,7 +470,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Error while running adb");
+				Log.Write(ELogLevel.Error, ex, "Error while running adb");
 			}
 		}
 

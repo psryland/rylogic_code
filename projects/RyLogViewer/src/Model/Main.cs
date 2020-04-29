@@ -47,6 +47,7 @@ namespace RyLogViewer
 		private StringFormat m_strfmt;                     // Caches the tab stop sizes for rendering
 		private RecentFiles m_recent_logfiles;             // Recent files
 		private RecentFiles m_recent_pattern_sets;         // Recent pattern sets
+		private Log m_log;
 
 		#region UI Elements
 		private System.Windows.Forms.ToolStrip m_toolstrip;
@@ -180,8 +181,8 @@ namespace RyLogViewer
 
 		public Main(StartupOptions startup_options)
 		{
-			Log.Register(startup_options.LogFilePath, false);
-			Log.Info(this, $"App Startup: {DateTime.Now}");
+			m_log = new Log(startup_options.LogFilePath, LogToFile.EFlags.None);
+			Log.Write(ELogLevel.Info, $"App Startup: {DateTime.Now}");
 			InitializeComponent();
 
 			StartupOptions        = startup_options;
@@ -221,6 +222,7 @@ namespace RyLogViewer
 			BookmarksUI = null;
 			WatchTimer = null;
 			Watch = null;
+			Util.Dispose(ref m_log);
 			Util.Dispose(ref m_batch_set_col_size);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -296,7 +298,7 @@ namespace RyLogViewer
 				void HandleSettingsChange(object sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
-					Log.Info(this, $"Setting {e.Key} changed to {e.Value}");
+					Log.Write(ELogLevel.Info, $"Setting {e.Key} changed to {e.Value}");
 				}
 			}
 		}
@@ -429,7 +431,7 @@ namespace RyLogViewer
 			try { Watch.CheckForChangedFiles(); }
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "CheckForChangedFiles failed");
+				Log.Write(ELogLevel.Error, ex, "CheckForChangedFiles failed");
 			}
 		}
 
@@ -617,7 +619,7 @@ namespace RyLogViewer
 			if (m_in_update_ui != 0) return;
 			using (Scope.Create(() => ++m_in_update_ui, () => --m_in_update_ui))
 			{
-				Log.Info(this, $"UpdateUI. Row delta {row_delta}");
+				Log.Write(ELogLevel.Info, $"UpdateUI. Row delta {row_delta}");
 				using (m_grid.SuspendRedraw(true))
 				{
 					// Configure the grid
@@ -976,7 +978,7 @@ namespace RyLogViewer
 		private void OnFileChanged()
 		{
 			long len = Src.Stream.Length;
-			Log.Info(this, $"File {Src.Name} changed. File length: {len}");
+			Log.Write(ELogLevel.Info, $"File {Src.Name} changed. File length: {len}");
 			long filepos = AutoScrollTail ? Src.Stream.Length : m_filepos;
 			bool reload  = Src.Stream.Length < m_fileend || !Settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
@@ -1391,7 +1393,7 @@ namespace RyLogViewer
 			// Find the new centre position of the thumb
 			var range = m_scroll_file.ThumbRange;
 			long pos = (range.Beg == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
-			Log.Info(this, $"file scroll to {pos}");
+			Log.Write(ELogLevel.Info, $"file scroll to {pos}");
 
 			// Set the new selected row from the mouse up position
 			var pt = m_scroll_file.PointToClient(MousePosition);
@@ -1802,7 +1804,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "First run tutorial failed");
+				Log.Write(ELogLevel.Error, ex, "First run tutorial failed");
 				Misc.ShowMessage(this, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error, ex);
 			}
 		}
@@ -1824,7 +1826,7 @@ namespace RyLogViewer
 				if (Settings.UseWebProxy && !Settings.WebProxyHost.HasValue())
 				{
 					try { proxy =  new WebProxy(Settings.WebProxyHost, Settings.WebProxyPort); }
-					catch (Exception ex) { Log.Exception(this, ex, $"Failed to create web proxy for {Settings.WebProxyHost}:{Settings.WebProxyPort}"); }
+					catch (Exception ex) { Log.Write(ELogLevel.Error, ex, $"Failed to create web proxy for {Settings.WebProxyHost}:{Settings.WebProxyPort}"); }
 				}
 				return proxy;
 			}
@@ -1980,7 +1982,7 @@ namespace RyLogViewer
 		{
 			if (m_grid.RowCount == 0) return;
 			m_grid.FirstDisplayedScrollingRowIndex = 0;
-			Log.Info(this, "Showing first row.");
+			Log.Write(ELogLevel.Info, "Showing first row.");
 		}
 
 		/// <summary>Scroll the grid to make the last row visible</summary>
@@ -1990,7 +1992,7 @@ namespace RyLogViewer
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			int first_row = Math.Max(0, m_grid.RowCount - displayed_rows);
 			m_grid.TryScrollToRowIndex(first_row);
-			Log.Info(this, $"Showing last row. First({first_row}) + Displayed({displayed_rows}) = {first_row + displayed_rows}. RowCount = {m_grid.RowCount}");
+			Log.Write(ELogLevel.Info, $"Showing last row. First({first_row}) + Displayed({displayed_rows}) = {first_row + displayed_rows}. RowCount = {m_grid.RowCount}");
 		}
 
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
@@ -2063,8 +2065,8 @@ namespace RyLogViewer
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count || row_delta != 0)
 			{
-				Log.Info(this, $"RowCount changed {m_grid.RowCount} -> {count}.");
-				Log.Info(this, $"Row delta {row_delta}.");
+				Log.Write(ELogLevel.Info, $"RowCount changed {m_grid.RowCount} -> {count}.");
+				Log.Write(ELogLevel.Info, $"Row delta {row_delta}.");
 
 				// Record data so that we can preserve the selected rows and first visible rows
 				var selected_rows = m_grid.SelectedRowIndices().ToArray();
@@ -2202,7 +2204,7 @@ namespace RyLogViewer
 		/// Note: it doesn't trigger a file reload.</summary>
 		public void ApplySettings()
 		{
-			Log.Info(this, "Applying settings");
+			Log.Write(ELogLevel.Info, "Applying settings");
 
 			// UI options
 			TopMost = Settings.AlwaysOnTop;
@@ -2368,7 +2370,7 @@ namespace RyLogViewer
 		{
 			RangeI range = LineIndexRange;
 			if (!range.Equals(m_scroll_file.ThumbRange))
-				Log.Info(this, $"File scroll set to [{range.Beg},{range.End}) within file [{FileByteRange.Beg},{FileByteRange.End})");
+				Log.Write(ELogLevel.Info, $"File scroll set to [{range.Beg},{range.End}) within file [{FileByteRange.Beg},{FileByteRange.End})");
 
 			m_scroll_file.TotalRange = FileByteRange;
 			m_scroll_file.ThumbRange = range;

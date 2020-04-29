@@ -53,7 +53,7 @@ namespace RyLogViewer
 				}
 				catch (Exception ex)
 				{
-					Log.Warn(this, ex, $"Text transform '{name}' ({guid}) failed to load");
+					Log.Write(ELogLevel.Warn, ex, $"Text transform '{name}' ({guid}) failed to load");
 					Misc.ShowMessage(null, $"Text transform '{name}' ({guid}) failed to load\r\n{ex.Message}",Application.ProductName, MessageBoxIcon.Information);
 					Subs.Add(tag, new SubNoChange());
 				}

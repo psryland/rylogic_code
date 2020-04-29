@@ -95,6 +95,8 @@ namespace pr::camera
 		Zoom           = 1 << 6,
 		All            = (1 << 7) - 1, // Not including camera relative
 		CameraRelative = 1 << 7,
+		Translation    = TransX | TransY | TransZ,
+		Rotation       = RotX | RotY | RotZ,
 		_bitwise_operators_allowed,
 	};
 

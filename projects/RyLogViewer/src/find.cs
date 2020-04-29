@@ -105,7 +105,7 @@ namespace RyLogViewer
 				return;
 
 			var start = from_start ? FileByteRange.Beg : SelectedRowByteRange.End;
-			Log.Info(this, $"FindNext starting from {start}");
+			Log.Write(ELogLevel.Info, $"FindNext starting from {start}");
 
 			if (Find(FindUI.Pattern, start, false, out var found) && found == -1)
 				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
@@ -118,7 +118,7 @@ namespace RyLogViewer
 				return;
 
 			var start = from_end ? FileByteRange.End : SelectedRowByteRange.Beg;
-			Log.Info(this, $"FindPrev starting from {start}");
+			Log.Write(ELogLevel.Info, $"FindPrev starting from {start}");
 
 			long found;
 			if (Find(FindUI.Pattern, start, true, out found) && found == -1)
@@ -191,7 +191,7 @@ namespace RyLogViewer
 
 			try
 			{
-				Log.Info(this, "FindBookmarkAll");
+				Log.Write(ELogLevel.Info, "FindBookmarkAll");
 
 				var pat = FindUI.Pattern;
 				const string body = "Bookmarking all found instances...";

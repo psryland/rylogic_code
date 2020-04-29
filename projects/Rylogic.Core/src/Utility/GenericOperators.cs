@@ -381,24 +381,39 @@ namespace Rylogic.Utility
 		{
 			#region Cast
 			{
-				var paramA = Expression.Parameter(typeof(U), "a");
-				var body = Expression.Convert(paramA, typeof(T));
-				m_cast = Expression.Lambda<Func<U, T>>(body, paramA).Compile();
+				try
+				{
+					var paramA = Expression.Parameter(typeof(U), "a");
+					var body = Expression.Convert(paramA, typeof(T));
+					m_cast = Expression.Lambda<Func<U, T>>(body, paramA).Compile();
+				}
+				catch
+				{
+					m_cast = x => throw new Exception($"No coercion between {typeof(U).Name} and {typeof(T).Name}");
+				}
 			}
 			#endregion
 			#region Multiply
 			{
+				// Can't cast 'b' to 'T' because of 'v4 * double' cases.
+				// 'double' isn't castable to 'v4' but the operator v4 * double is defined.
 				var paramA = Expression.Parameter(typeof(T), "a");
 				var paramB = Expression.Parameter(typeof(U), "b");
-				var body = Expression.Multiply(paramA, Expression.ConvertChecked(paramB, typeof(T)));
+				var body = typeof(T).IsScalar()
+					? Expression.Multiply(paramA, Expression.ConvertChecked(paramB, typeof(T)))
+					: Expression.Multiply(paramA, paramB);
 				m_mul = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
 			}
 			#endregion
 			#region Divide
 			{
+				// Can't cast 'b' to 'T' because of 'v4 / double' cases.
+				// 'double' isn't castable to 'v4' but the operator v4 / double is defined.
 				var paramA = Expression.Parameter(typeof(T), "a");
 				var paramB = Expression.Parameter(typeof(U), "b");
-				var body = Expression.Divide(paramA, Expression.ConvertChecked(paramB, typeof(T)));
+				var body = typeof(T).IsScalar()
+					? Expression.Divide(paramA, Expression.ConvertChecked(paramB, typeof(T)))
+					: Expression.Divide(paramA, paramB);
 				m_div = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
 			}
 			#endregion
