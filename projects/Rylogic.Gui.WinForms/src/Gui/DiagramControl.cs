@@ -2839,8 +2839,10 @@ namespace Rylogic.Gui.WinForms
 				var pts = Points(false);
 
 				// Update the connector line graphics
-				ldr.Append("*Ribbon connector ", col, "{3 ", width);
+				ldr.Append("*Ribbon connector ", col, "{");
 				pts.ForEach(pt => ldr.Append(" ", new v4(pt, 0, 1)));
+				ldr.Append(" *AxisId {3}");
+				ldr.Append(" *Width {",width,"}");
 				if (Style.Smooth) ldr.Append(" *Smooth");
 				ldr.Append("}");
 
@@ -3861,7 +3863,7 @@ namespace Rylogic.Gui.WinForms
 					var min_sep = MinSeparation(vec, body0, body1);
 					var sep = Math.Max(min_sep, vec.Length);
 
-					// Coulomb force F = kQq/r², assume all 'charges' are 1
+					// Coulomb force F = kQq/rï¿½, assume all 'charges' are 1
 					const float charge = 1000f;
 					var coulumb = m_opts.Scatter.CoulombConstant * charge * charge / (sep * sep);
 

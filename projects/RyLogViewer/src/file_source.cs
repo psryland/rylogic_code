@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -87,7 +87,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Warn(this, $"Failed to set log file '{m_filepath}'s length to zero.\nReason: {ex.Message}");
+				Log.Write(ELogLevel.Warn, ex, $"Failed to set log file '{m_filepath}'s length to zero.");
 				err = ex;
 			}
 
@@ -102,7 +102,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Warn(this, $"Failed to replace file {m_filepath} with an empty file.\nReason: {ex.Message}");
+				Log.Write(ELogLevel.Warn, ex, $"Failed to replace file {m_filepath} with an empty file.");
 				err = ex;
 			}
 

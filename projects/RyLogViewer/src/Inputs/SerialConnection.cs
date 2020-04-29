@@ -90,7 +90,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, $"Failed to connect {conn.CommPort}:{conn.BaudRate} -> {conn.OutputFilepath}");
+				Log.Write(ELogLevel.Error, ex, $"Failed to connect {conn.CommPort}:{conn.BaudRate} -> {conn.OutputFilepath}");
 				Misc.ShowMessage(this, $"Failed to connect to {conn.CommPort}:{conn.BaudRate}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
@@ -120,14 +120,14 @@ namespace RyLogViewer
 					RtsEnable = m_conn.RtsEnable
 				};
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
-			base.Dispose();
+			base.Dispose(disposing);
 			if (m_port != null)
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, $"Disposing serial port connection {m_conn.CommPort}");
+					Log.Write(ELogLevel.Info, $"Disposing serial port connection {m_conn.CommPort}");
 					m_port.Dispose();
 					m_port = null;
 				}

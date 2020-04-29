@@ -80,9 +80,9 @@ namespace pr::rdr
 	#undef PR_ENUM
 
 	// Get/Set light settings
-	std::string Light::Settings() const
+	std::wstring Light::Settings() const
 	{
-		std::stringstream out;
+		std::wstringstream out;
 		out << "  *" << ELightKW::Pos  << "{" << m_position.xyz << "}\n"
 			<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz << "}\n"
 			<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
@@ -102,7 +102,7 @@ namespace pr::rdr
 			;
 		return out.str();
 	}
-	void Light::Settings(char const* settings)
+	void Light::Settings(std::wstring_view settings)
 	{
 		using namespace pr::script;
 		try

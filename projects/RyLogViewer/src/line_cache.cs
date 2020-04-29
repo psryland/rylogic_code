@@ -62,7 +62,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to read source data");
+				Log.Write(ELogLevel.Error, ex, "Failed to read source data");
 				line.RowText = "<read failed>";
 				return line;
 			}

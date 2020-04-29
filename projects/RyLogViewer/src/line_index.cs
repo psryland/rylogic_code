@@ -129,7 +129,7 @@ namespace RyLogViewer
 		/// <summary>Cause a currently running BuildLineIndex call to be cancelled</summary>
 		private void CancelBuildLineIndex()
 		{
-			Log.Info(this, $"build (id {m_build_issue}) cancelled");
+			Log.Write(ELogLevel.Info, $"build (id {m_build_issue}) cancelled");
 			Interlocked.Increment(ref m_build_issue);
 			UpdateStatusProgress(1, 1);
 		}
@@ -275,7 +275,7 @@ namespace RyLogViewer
 
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
-				Log.Info(this, $"build start request (id {m_build_issue}, reload: {reload})\n{string.Empty}");//new StackTrace(0,true)));
+				Log.Write(ELogLevel.Info, $"build start request (id {m_build_issue}, reload: {reload})\n{string.Empty}");//new StackTrace(0,true)));
 				ReloadInProgress = reload;
 
 				// Make copies of variables for thread safety
@@ -311,7 +311,7 @@ namespace RyLogViewer
 			// cached data probably overlaps the range we want loaded.
 			try
 			{
-				Log.Info("BLIAsync", $"build started. (id {d.build_issue}, reload {d.reload})");
+				Log.Write(ELogLevel.Info, "BLIAsync", $"build started. (id {d.build_issue}, reload {d.reload})");
 				if (BuildCancelled(d.build_issue)) return;
 				using (d.file)
 				{
@@ -483,7 +483,7 @@ namespace RyLogViewer
 				}
 				else
 				{
-					Log.Exception(this, error, "Exception ended BuildLineIndex() call");
+					Log.Write(ELogLevel.Error, error, "Exception ended BuildLineIndex() call");
 					BuildLineIndexTerminatedWithError(error);
 				}
 			}
@@ -519,7 +519,7 @@ namespace RyLogViewer
 				EnableWatch(false);
 				Misc.ShowHint(m_btn_watch, "File watching disabled due to error.");
 			}
-			Log.Exception(this, err, $"Failed to build index list for {Src.Name}");
+			Log.Write(ELogLevel.Error, err, $"Failed to build index list for {Src.Name}");
 			if (err is NoLinesException)
 			{
 				Misc.ShowMessage(this, err.Message, "Scanning file terminated", MessageBoxIcon.Information);
@@ -766,7 +766,7 @@ namespace RyLogViewer
 					row_delta = intersect.Beg == old_rng.End ? -line_index.Count : line_index.Count;
 				}
 
-				Log.Info(this, $"Replacing results. Results contain {line_index.Count} lines about file position {filepos}/{fileend}");
+				Log.Write(ELogLevel.Info, $"Replacing results. Results contain {line_index.Count} lines about file position {filepos}/{fileend}");
 				m_line_index.Assign(line_index);
 
 				// Invalidate cached lines
@@ -776,7 +776,7 @@ namespace RyLogViewer
 			// The new range is to the left of the old range
 			else if (new_rng.Beg < old_rng.Beg && new_rng.End <= old_rng.End)
 			{
-				Log.Info(this, $"Merging results front. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
+				Log.Write(ELogLevel.Info, $"Merging results front. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
 
 				// Make sure there's no overlap by removing data from 'm_line_index'
 				var trim = 0; for (; trim != m_line_index.Count && m_line_index[trim].Beg < new_rng.End; ++trim) {}
@@ -798,7 +798,7 @@ namespace RyLogViewer
 			// The new range is to the right of the old range
 			else if (new_rng.Beg >= old_rng.Beg && new_rng.End > old_rng.End)
 			{
-				Log.Info(this, $"Merging results back. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
+				Log.Write(ELogLevel.Info, $"Merging results back. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
 
 				// Make sure there's no overlap by removing data from 'm_line_index'
 				var trim = 0; for (; trim != m_line_index.Count && m_line_index.Back(trim).End > new_rng.Beg; ++trim) {}

@@ -38,16 +38,17 @@ namespace RyLogViewer
 			// Open the file that will receive the captured output
 			m_outp = new FileStream(Filepath, mode, FileAccess.Write, FileShare.Read, BufBlockSize, opts);
 		}
-		public virtual void Dispose()
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		protected virtual void Dispose(bool disposing)
 		{
 			if (m_outp != null)
 			{
 				lock (m_lock)
-				{
-					Log.Info(this, "Disposing buffer stream capture file");
-					m_outp.Dispose();
-					m_outp = null;
-				}
+					Util.Dispose(ref m_outp);
 			}
 		}
 
@@ -90,7 +91,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
+					Log.Write(ELogLevel.Error, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
 				}
 				RaiseConnectionDropped();
 			}

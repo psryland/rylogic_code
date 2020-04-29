@@ -324,8 +324,8 @@ namespace Rylogic.Maths
 			++m_count;
 			var diff = Operators<T>.Sub(value, m_mean);
 			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
-			m_mean = Operators<T>.Add(m_mean, Operators<T>.Mul(diff, Operators<T>.Cast(inv_count)));
-			m_var = Operators<T>.Add(m_var, Operators<T>.Mul(Operators<T>.Mul(diff, diff), Operators<T>.Cast((m_count - 1) * inv_count)));
+			m_mean = Operators<T>.Add(m_mean, Operators<T, double>.Mul(diff, inv_count));
+			m_var = Operators<T>.Add(m_var, Operators<T,double>.Mul(Operators<T>.Mul(diff, diff), (m_count - 1) * inv_count));
 		}
 	}
 

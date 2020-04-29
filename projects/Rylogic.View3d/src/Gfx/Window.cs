@@ -221,7 +221,7 @@ namespace Rylogic.Gfx
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
 			{
-				get => Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(Handle)) ?? string.Empty;
+				get => View3D_WindowSettingsGet(Handle) ?? string.Empty;
 				set => View3D_WindowSettingsSet(Handle, value);
 			}
 

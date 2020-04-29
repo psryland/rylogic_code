@@ -140,7 +140,7 @@ namespace RyLogViewer
 					}
 					catch (Exception ex)
 					{
-						Log.Exception(this, ex, "Export failed");
+						Log.Write(ELogLevel.Error, ex, "Export failed");
 						MsgBox.Show(this, string.Format("Export failed.\r\n{0}", ex.Message), Application.ProductName, MessageBoxButtons.OK);
 					}
 				}

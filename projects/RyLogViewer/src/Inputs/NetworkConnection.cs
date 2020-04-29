@@ -93,7 +93,7 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, $"Failed to connect {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
+				Log.Write(ELogLevel.Error, ex, $"Failed to connect {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
 				Misc.ShowMessage(this, $"Failed to connect to {conn.Hostname}:{conn.Port}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
@@ -140,7 +140,7 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, $"Failed to open connection {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
+				Log.Write(ELogLevel.Error, ex, $"Failed to open connection {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
 				Misc.ShowMessage(this, $"Failed to open connected to {conn.Hostname}:{conn.Port}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
@@ -163,14 +163,14 @@ namespace RyLogViewer
 			m_conn  = conn;
 			m_buf   = new byte[BufBlockSize];
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
-			base.Dispose();
+			base.Dispose(disposing);
 			if (m_client != null)
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, $"Disposing TCP client {m_conn.Hostname}");
+					Log.Write(ELogLevel.Info, $"Disposing TCP client {m_conn.Hostname}");
 					m_client.Close();
 					m_client = null;
 				}
@@ -277,14 +277,14 @@ namespace RyLogViewer
 			m_udp = new UdpClient(m_conn.Port);
 			m_specific_host = !string.IsNullOrEmpty(m_conn.Hostname);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
-			base.Dispose();
+			base.Dispose(disposing);
 			if (m_udp != null)
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, $"Disposing UDP client {m_conn.Hostname}");
+					Log.Write(ELogLevel.Info, $"Disposing UDP client {m_conn.Hostname}");
 					m_udp.Close();
 					m_udp = null;
 				}
@@ -341,7 +341,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
+					Log.Write(ELogLevel.Error, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
 				}
 			}
 		}

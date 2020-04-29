@@ -1,5 +1,15 @@
 Immediate ToDo:
 	
+	Retro pi
+	arcade joystick
+	xbox controllers on Pi
+	
+Work
+	- Emit fake data from Sensors
+	- Overlays for sensor errors
+	- Fix ground plane
+	- Fix arrows in MovementEditor diagram
+	
 LDraw
 	- Add a skybox to the demo scene
 	- Bug in Spline, missing last vertex

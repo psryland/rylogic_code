@@ -303,22 +303,21 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(View3DWindow window, View3D_Re
 }
 
 // Generate/Parse a settings string for the view
-VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(View3DWindow window)
+VIEW3D_API wchar_t const* __stdcall View3D_WindowSettingsGet(View3DWindow window)
 {
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
 		
-		std::stringstream out;
-		//out << "*SceneSettings {" << window->m_obj_cont_ui.Settings() << "}\n";
+		std::wstringstream out;
 		out << "*Light {\n" << window->m_light.Settings() << "}\n";
 		
 		window->m_settings = out.str();
 		return window->m_settings.c_str();
 	}
-	CatchAndReport(View3D_WindowSettingsGet, window, "");
+	CatchAndReport(View3D_WindowSettingsGet, window, L"");
 }
-VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char const* settings)
+VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, wchar_t const* settings)
 {
 	try
 	{
@@ -342,9 +341,9 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char con
 			}
 			if (EqualI(kw, "Light"))
 			{
-				pr::string<> desc;
+				std::wstring desc;
 				reader.Section(desc, false);
-				window->m_light.Settings(desc.c_str());
+				window->m_light.Settings(desc);
 				window->NotifySettingsChanged(EView3DSettings::Lighting_All);
 				continue;
 			}

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Xml.Linq;
@@ -38,6 +39,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Create the collection that manages the content within this pane
 			AllContent = new ObservableCollection<DockControl>();
 
+			// Commands
+			FindPane = Command.Create(this, FindPaneInternal);
+			TogglePin = Command.Create(this, TogglePinInternal);
+			ClosePane = Command.Create(this, ClosePaneInternal);
+
 			// Bind to this instance
 			DataContext = this;
 
@@ -47,10 +53,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		protected override void OnVisualParentChanged(DependencyObject oldParent)
 		{
 			base.OnVisualParentChanged(oldParent);
-
-			// Set the visibility of the pin
-			m_pin.Visibility = DockSite != EDockSite.Centre || !(TreeHost is DockContainer)
-				? Visibility.Visible : Visibility.Collapsed;
+			NotifyPropertyChanged(nameof(FindPaneVisible));
+			NotifyPropertyChanged(nameof(PinVisible));
 		}
 		protected override void OnIsKeyboardFocusWithinChanged(DependencyPropertyChangedEventArgs e)
 		{
@@ -253,9 +257,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						// Remove the element
 						// Note: don't dispose the content, we don't own it
 						Centre.Children.Clear();
-
-						// Clear the title bar
-						m_title.Text = string.Empty;
 					}
 
 					// Note: 'm_visible_content' is of type 'DockControl' rather than 'IDockable' because when the DockControl is Disposed
@@ -268,9 +269,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					{
 						// Add the element
 						Centre.Children.Add(m_visible_content.Owner);
-
-						// Set the title bar
-						m_title.Text = CaptionText;
 
 						// Restore the input focus for this content
 						m_visible_content.RestoreFocus();
@@ -354,6 +352,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>Get the text to display in the title bar for this pane</summary>
 		public string CaptionText => VisibleContent?.CaptionText ?? string.Empty;
+
+		/// <summary>True if the find pane button is visible</summary>
+		public bool FindPaneVisible => DockSite == EDockSite.Centre && TreeHost is DockContainer;
+
+		/// <summary>True if the pin button is visible</summary>
+		public bool PinVisible => DockSite != EDockSite.Centre || !(TreeHost is DockContainer);
 
 		/// <summary>Get/Set the content in the pane floating</summary>
 		public bool IsFloating
@@ -446,6 +450,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 
 			VisibleContentChanged?.Invoke(this, args);
+			NotifyPropertyChanged(nameof(CaptionText));
 		}
 
 		/// <summary>Raised when the pane is activated</summary>
@@ -527,20 +532,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					dragging = false;
 				}
 			}
-			{// Set up pin/unpin
-				m_pin.Click += (s, a) =>
-				{
-					IsAutoHide = !IsAutoHide;
-				};
-			}
-			{// Set up close
-				m_close.Click += (s, a) =>
-				{
-					if (VisibleContent == null) return;
-					VisibleContent.Close();
-					RootBranch?.PruneBranches();
-				};
-			}
 		}
 
 		/// <summary>Record the layout of the pane</summary>
@@ -605,6 +596,32 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (TreeHost is FloatingWindow fw)
 				return $"FloatingWindow:{DockAddress.Description()}";
 			return $"MainWindow:{DockAddress.Description()}";
+		}
+
+		/// <summary>Find a pane and open it</summary>
+		public Command FindPane { get; }
+		private void FindPaneInternal()
+		{
+			var cmenu = DockContainer.WindowsCMenu();
+			cmenu.Placement = PlacementMode.MousePoint;
+			cmenu.PlacementTarget = this;
+			cmenu.IsOpen = true;
+		}
+
+		/// <summary>Toggle the pin state of this pane</summary>
+		public Command TogglePin { get; }
+		private void TogglePinInternal()
+		{
+			IsAutoHide = !IsAutoHide;
+		}
+
+		/// <summary></summary>
+		public Command ClosePane { get; }
+		private void ClosePaneInternal()
+		{
+			if (VisibleContent == null) return;
+			VisibleContent.Close();
+			RootBranch?.PruneBranches();
 		}
 
 		/// <summary></summary>

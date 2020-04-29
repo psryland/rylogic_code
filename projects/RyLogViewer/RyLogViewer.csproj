@@ -84,6 +84,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="src\Model\Log.cs" />
     <Compile Include="src\Model\NoLinesException.cs" />
     <Compile Include="src\UI\AboutUI.cs">
       <SubType>Form</SubType>

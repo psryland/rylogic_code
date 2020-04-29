@@ -92,7 +92,7 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, $"Failed to connect {conn.PipeAddr} -> {conn.OutputFilepath}");
+				Log.Write(ELogLevel.Error, ex, $"Failed to connect {conn.PipeAddr} -> {conn.OutputFilepath}");
 				Misc.ShowMessage(this, $"Failed to connect to {conn.PipeAddr}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
@@ -117,14 +117,14 @@ namespace RyLogViewer
 			m_buf = new byte[BufBlockSize];
 			m_pipe = new NamedPipeClientStream(m_conn.ServerName, m_conn.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
 		}
-		public override void Dispose()
+		protected override void Dispose(bool disposing)
 		{
-			base.Dispose();
+			base.Dispose(disposing);
 			if (m_pipe != null)
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, $"Disposing named pipe connection {m_conn.PipeName}");
+					Log.Write(ELogLevel.Info, $"Disposing named pipe connection {m_conn.PipeName}");
 					m_pipe.Dispose();
 					m_pipe = null;
 				}

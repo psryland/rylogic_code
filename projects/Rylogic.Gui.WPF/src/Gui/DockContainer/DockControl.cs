@@ -433,7 +433,6 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				if (m_caption_text == value) return;
-
 				m_caption_text = value;
 				NotifyPropertyChanged(nameof(CaptionText));
 			}

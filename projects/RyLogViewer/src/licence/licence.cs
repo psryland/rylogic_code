@@ -125,8 +125,8 @@ namespace RyLogViewer
 					ActivationCode = root.Element(XmlTag.ActivationCode).As(ActivationCode);
 				}
 			}
-			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
-			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
+			catch (FileNotFoundException) { Log.Write(ELogLevel.Info, "Licence file not found"); }
+			catch (Exception ex) { Log.Write(ELogLevel.Error, ex, "Licence file invalid"); }
 			Changed = false;
 		}
 		public Licence(Licence rhs)

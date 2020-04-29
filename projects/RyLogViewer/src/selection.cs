@@ -63,7 +63,7 @@ namespace RyLogViewer
 			}
 			set
 			{
-				Log.Info(this, $"Row {value} selected");
+				Log.Write(ELogLevel.Info, $"Row {value} selected");
 				using (m_suspend_grid_events.RefToken(this))
 					m_grid.SelectSingleRow(value);
 

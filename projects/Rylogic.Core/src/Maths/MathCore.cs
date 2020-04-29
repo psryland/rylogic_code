@@ -722,6 +722,7 @@ namespace Rylogic.UnitTests
 			Assert.Equal(Math_.Lerp(2 / 3.0, a0), 2.0);
 			Assert.Equal(Math_.Lerp(1 / 6.0, a0), 5.5);
 			Assert.Equal(Math_.Lerp(5 / 6.0, a0), 3.5);
+			Assert.Equal(Math_.Lerp(new v4(0f), new v4(1f), 0.5), new v4(0.5f));
 		}
 		[Test]
 		public void TestExponentiate()

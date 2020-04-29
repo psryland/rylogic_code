@@ -24,7 +24,7 @@ namespace Rylogic.Extn
 		public static object New(this Type ty)
 		{
 			if (!ty.IsClass)
-				return Activator.CreateInstance(ty);
+				return Activator.CreateInstance(ty) ?? throw new Exception($"Default constructor for {ty.Name} not found"); ;
 
 			var cons = ty.GetConstructor(Array.Empty<Type>()) ?? throw new Exception($"Default constructor for {ty.Name} not found");
 			return cons.Invoke(null);
@@ -80,6 +80,24 @@ namespace Rylogic.Extn
 
 			// Fail with exception
 			throw new ArgumentException($"{type.FullName} is not a publicly-visible type, so the default value cannot be retrieved");
+		}
+
+		/// <summary>True if this type is a scalar value</summary>
+		public static bool IsScalar(this Type t)
+		{
+			return
+				t == typeof(byte) ||
+				t == typeof(sbyte) ||
+				t == typeof(char) ||
+				t == typeof(short) ||
+				t == typeof(ushort) ||
+				t == typeof(int) ||
+				t == typeof(uint) ||
+				t == typeof(long) ||
+				t == typeof(ulong) ||
+				t == typeof(float) ||
+				t == typeof(double) ||
+				t == typeof(decimal);
 		}
 
 		/// <summary>Resolve a type name to a type</summary>

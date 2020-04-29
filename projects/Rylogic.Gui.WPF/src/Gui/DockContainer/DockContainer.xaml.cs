@@ -439,56 +439,62 @@ namespace Rylogic.Gui.WPF
 		public MenuItem WindowsMenu(string menu_name = "Windows")
 		{
 			var menu = new MenuItem { Header = menu_name };
-			var sep = menu.Items.Add2(new Separator());
-
-			// Load layout from disk
-			var load = new MenuItem { Header = "Load Layout", Command = CmdLoadLayout };
-
-			// Save the layout to disk
-			var save = new MenuItem { Header = "Save Layout", Command = CmdSaveLayout };
-
-			// Reset to default layout
-			var reset = new MenuItem { Header = "Reset Layout", Command = CmdResetLayout };
-
-			// Repopulate the content items on drop down
 			menu.SubmenuOpened += RepopulateMenu;
-			void RepopulateMenu(object s, EventArgs a)
+			return menu;
+		}
+
+		/// <summary>Creates an instance of a menu with options to select specific content</summary>
+		public ContextMenu WindowsCMenu()
+		{
+			var cmenu = new ContextMenu();
+			cmenu.Opened += RepopulateMenu;
+			return cmenu;
+		}
+
+		/// <summary>Handler for dynamically populating a menu item or context menu with the known panes</summary>
+		private void RepopulateMenu(object? s, EventArgs a)
+		{
+			var items =
+				s is ContextMenu cmenu ? cmenu.Items :
+				s is MenuItem menu ? menu.Items :
+				throw new Exception("Unsupported menu type");
+
+			items.Clear();
+
+			// Add a menu item for each content
+			foreach (var content in AllContentInternal.OrderBy(x => x.TabText))
 			{
-				menu.Items.Clear();
+				var header = new StackPanel { Orientation = Orientation.Horizontal, MaxHeight = 22 };
+				header.Children.Add(new Image { Source = content.TabIcon, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2) });
+				header.Children.Add(new TextBlock { Text = content.TabText, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3,0,0,0) });
 
-				// Add a menu item for each content
-				foreach (var content in AllContentInternal.OrderBy(x => x.TabText))
+				var opt = items.Add2(new MenuItem
 				{
-					var opt = menu.Items.Add2(new MenuItem
-					{
-						Header = content.TabText,
-						Icon = content.TabIcon,
-						IsChecked = content == ActiveContent,
-					});
-					opt.Click += (ss, aa) =>
-					{
-						FindAndShow(content);
-					};
+					Header = header,
+					IsChecked = content == ActiveContent,
+				});
+				opt.Click += (ss, aa) =>
+				{
+					FindAndShow(content);
+				};
 
-					// If the content has a tab context menu, show the context menu on right click on the menu option
-					if (content.TabCMenu != null)
+				// If the content has a tab context menu, show the context menu on right click on the menu option
+				if (content.TabCMenu != null)
+				{
+					opt.MouseDown += HandleMouseDown;
+					void HandleMouseDown(object? ss, MouseButtonEventArgs aa)
 					{
-						opt.MouseDown += (ss, aa) =>
-						{
-							if (aa.RightButton == MouseButtonState.Pressed)
-								content.TabCMenu.IsOpen = true;
-							//Show(opt.PointToScreen(aa.Location));
-						};
+						if (aa.RightButton != MouseButtonState.Pressed) return;
+						content.TabCMenu.IsOpen = true;
 					}
 				}
-
-				// Add a separator, then the layout items
-				menu.Items.Add(sep);
-				menu.Items.Add(load);
-				menu.Items.Add(save);
-				menu.Items.Add(reset);
 			}
-			return menu;
+
+			// Add a separator, then the layout items
+			items.Add(new Separator());
+			items.Add(new MenuItem { Header = "Load Layout", Command = CmdLoadLayout });
+			items.Add(new MenuItem { Header = "Save Layout", Command = CmdSaveLayout });
+			items.Add(new MenuItem { Header = "Reset Layout", Command = CmdResetLayout });
 		}
 
 		/// <summary>Make 'content' visible to the user, by making it's containing window visible, on-screen, popped-out, etc</summary>

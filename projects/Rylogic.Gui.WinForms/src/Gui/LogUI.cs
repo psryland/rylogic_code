@@ -96,7 +96,7 @@ namespace Rylogic.Gui.WinForms
 			};
 
 			// The log entry delimiter
-			LineDelimiter = Log.EntryDelimiter;
+			LineDelimiter = Log_.EntryDelimiter;
 
 			// Limit the number of log entries to display
 			MaxLines = 500;
