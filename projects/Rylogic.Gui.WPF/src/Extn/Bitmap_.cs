@@ -14,20 +14,21 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Convert a bitmap to bitmap source</summary>
-		public static BitmapImage ToBitmapSource(this System.Drawing.Bitmap bitmap)
+		public static BitmapImage ToBitmapSource(this System.Drawing.Bitmap bitmap) => ToBitmapSource(bitmap, System.Drawing.Imaging.ImageFormat.Png);
+		public static BitmapImage ToBitmapSource(this System.Drawing.Bitmap bitmap, System.Drawing.Imaging.ImageFormat fmt)
 		{
-			using (var memory = new MemoryStream())
-			{
-				bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
-				memory.Position = 0;
+			using var memory = new MemoryStream();
+			bitmap.Save(memory, fmt);
+			memory.Position = 0;
 
-				var bm = new BitmapImage();
-				bm.BeginInit();
-				bm.StreamSource = memory;
-				bm.CacheOption = BitmapCacheOption.OnLoad;
-				bm.EndInit();
-				return bm;
-			}
+			var bm = new BitmapImage();
+			bm.BeginInit();
+			bm.StreamSource = memory;
+			bm.CacheOption = BitmapCacheOption.OnLoad;
+			bm.EndInit();
+			bm.Freeze();
+
+			return bm;
 		}
 	}
 }

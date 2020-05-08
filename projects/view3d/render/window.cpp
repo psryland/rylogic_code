@@ -60,7 +60,7 @@ namespace pr::rdr
 		,m_main_srv()
 		,m_main_dsv()
 		,m_d2d_dc()
-		,m_main_tex()
+		,m_main_rt()
 		,m_idle(false)
 		,m_name(settings.m_name)
 		,m_dbg_area()
@@ -136,7 +136,7 @@ namespace pr::rdr
 		m_main_rtv = nullptr;
 		m_main_dsv = nullptr;
 		m_main_srv = nullptr;
-		m_main_tex = nullptr;
+		m_main_rt = nullptr;
 
 		// Destroy the D2D device context
 		if (m_d2d_dc != nullptr)
@@ -217,7 +217,7 @@ namespace pr::rdr
 			Throw(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
 
 		// Get the render target as a texture
-		m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
+		m_main_rt = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
 
 		// Create a texture buffer that we will use as the depth buffer
 		Texture2DDesc desc;
@@ -270,27 +270,41 @@ namespace pr::rdr
 	// Binds the main render target and depth buffer to the OM
 	void Window::RestoreRT()
 	{
-		SetRT(m_main_rtv.get(), m_main_dsv.get());
+		SetRT(m_main_rtv.get(), m_main_dsv.get(), false);
 	}
 
 	// Binds the given render target and depth buffer views to the OM
-	void Window::SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+	void Window::SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv, bool is_new_main_rt)
 	{
 		Renderer::Lock lock(*m_rdr);
+		auto dc = lock.ImmediateDC();
 		ID3D11RenderTargetView* targets[] = { rtv };
-		lock.ImmediateDC()->OMSetRenderTargets(1, targets, dsv);
+		dc->OMSetRenderTargets(1, targets, dsv);
+
+		// Set the current render target as the main render target
+		if (is_new_main_rt)
+		{
+			// Replace the previous RT/DS
+			m_main_rtv = D3DPtr<ID3D11RenderTargetView>(rtv, true);
+			m_main_dsv = D3DPtr<ID3D11DepthStencilView>(dsv, true);
+		}
 	}
 
 	// Render this window into 'render_target'
 	// 'render_target' is the texture that is rendered onto
 	// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
 	// 'depth_buffer' will be created if not provided.
-	void Window::SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer)
+	void Window::SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer, bool is_new_main_rt)
 	{
 		// Allow setting the render target to null
 		if (render_target == nullptr)
 		{
-			SetRT(static_cast<ID3D11RenderTargetView*>(nullptr), static_cast<ID3D11DepthStencilView*>(nullptr));
+			SetRT(static_cast<ID3D11RenderTargetView*>(nullptr), static_cast<ID3D11DepthStencilView*>(nullptr), is_new_main_rt);
+		    if (is_new_main_rt)
+		    {
+			    m_main_rt = nullptr;
+			    m_main_srv = nullptr;
+		    }
 			return;
 		}
 
@@ -300,10 +314,11 @@ namespace pr::rdr
 		PR_ASSERT(PR_DBG_RDR, (tdesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0, "This texture is not a render target");
 
 		Renderer::Lock lock(*m_rdr);
+		auto device = lock.D3DDevice();
 
 		// Get a render target view of the render target texture
 		D3DPtr<ID3D11RenderTargetView> rtv;
-		Throw(lock.D3DDevice()->CreateRenderTargetView(render_target, nullptr, &rtv.m_ptr));
+		Throw(device->CreateRenderTargetView(render_target, nullptr, &rtv.m_ptr));
 
 		// If no depth buffer is given, create a temporary depth buffer
 		D3DPtr<ID3D11Texture2D> tmp_depth_buffer;
@@ -324,25 +339,18 @@ namespace pr::rdr
 
 		// Create a depth stencil view of the depth buffer
 		D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
-		Throw(lock.D3DDevice()->CreateDepthStencilView(depth_buffer, nullptr, &dsv.m_ptr));
+		Throw(device->CreateDepthStencilView(depth_buffer, nullptr, &dsv.m_ptr));
 
 		// Set the render target
-		SetRT(rtv.get(), dsv.get());
-	}
+		SetRT(rtv.get(), dsv.get(), is_new_main_rt);
 
-	// Set the current render target as the main render target
-	// Calling RestoreRT will restore the main render target.
-	void Window::SaveAsMainRT()
-	{
-		Renderer::Lock lock(*m_rdr);
-		auto dc = lock.ImmediateDC();
-
-		// Release the previous RT/DS
-		m_main_rtv = nullptr;
-		m_main_dsv = nullptr;
-
-		// Get the current RT/DS
-		dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+		if (is_new_main_rt)
+		{
+			D3DPtr<ID3D11ShaderResourceView> srv;
+			Throw(device->CreateShaderResourceView(render_target, nullptr, &srv.m_ptr));
+			m_main_rt = tex_mgr().CreateTexture2D(AutoId, render_target, srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
+			m_main_srv = srv;
+		}
 	}
 
 	// Draw text directly to the back buffer
@@ -494,8 +502,12 @@ namespace pr::rdr
 	// Returns the size of the swap chain back buffer
 	iv2 Window::BackBufferSize() const
 	{
-		PR_ASSERT(PR_DBG_RDR, m_swap_chain != nullptr, "The back buffer size is meaningless when there is no swap chain");
-		if (m_swap_chain == nullptr) return iv2{}; // This happens when the WPF designer does something
+		// When used in WPF, the swap chain isn't used. WPF renders to an off-screen dx9 render target.
+		// WPF calls should not land here, they need to be handled by the D3D11Image class.
+		// This should be an assert, but automatic property evaluation in C# causes it to be called.
+		//PR_ASSERT(PR_DBG_RDR, m_swap_chain != nullptr, "The back buffer size is meaningless when there is no swap chain");
+		if (m_swap_chain == nullptr)
+			return iv2{};
 
 		DXGI_SWAP_CHAIN_DESC desc;
 		Throw(m_swap_chain->GetDesc(&desc));
@@ -605,7 +617,7 @@ namespace pr::rdr
 		dc->OMSetRenderTargets(0, nullptr, nullptr);
 		dc->ClearState();
 
-		m_main_tex = nullptr;
+		m_main_rt = nullptr;
 		m_main_rtv = nullptr;
 		m_main_srv = nullptr;
 		m_main_dsv = nullptr;

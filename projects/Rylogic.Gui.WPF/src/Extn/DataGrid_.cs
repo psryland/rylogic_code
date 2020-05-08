@@ -116,8 +116,6 @@ namespace Rylogic.Gui.WPF
 					else
 						col.Width = new DataGridLength(widths[i].Value, DataGridLengthUnitType.Star);
 				}
-
-				grid.UpdateLayout();
 			}
 		}
 

@@ -2190,7 +2190,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow windo
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_wnd.m_main_tex.m_ptr;
+		return window->m_wnd.m_main_rt.get();
 	}
 	CatchAndReport(View3D_TextureResize, window, nullptr);
 }
@@ -2367,7 +2367,7 @@ VIEW3D_API void __stdcall View3D_RenderTargetRestore(View3DWindow window)
 // Render a window into a texture
 // 'render_target' is the texture that is rendered onto
 // 'depth_buffer' is an optional texture that will receive the depth information (can be null)
-VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer)
+VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer, BOOL is_new_main_rt)
 {
 	try
 	{
@@ -2376,23 +2376,10 @@ VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DText
 		DllLockGuard;
 		window->m_wnd.SetRT(
 			render_target != nullptr ? render_target->dx_tex() : nullptr,
-			depth_buffer != nullptr ? depth_buffer->dx_tex() : nullptr);
+			depth_buffer != nullptr ? depth_buffer->dx_tex() : nullptr,
+			is_new_main_rt != 0);
 	}
 	CatchAndReport(View3D_RenderTargetSet, window,);
-}
-
-// Save the current render target as the main render target.
-// Calling RestoreRT will restore this new main render target.
-VIEW3D_API void __stdcall View3D_RenderTargetSaveAsMain(View3DWindow window)
-{
-	try
-	{
-		if (window == nullptr) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->m_wnd.SaveAsMainRT();
-	}
-	CatchAndReport(View3D_RenderTargetSaveAsMain, window,);
 }
 
 // Get/Set the dimensions of the render target

@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -217,6 +218,9 @@ namespace Rylogic.Gfx
 
 			/// <summary>Get the render target texture</summary>
 			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(Handle), owned:false);
+
+			/// <summary>Resize the render target</summary>
+			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
@@ -498,9 +502,16 @@ namespace Rylogic.Gfx
 			[Browsable(false)]
 			public Size BackBufferSize
 			{
-				get { View3D_BackBufferSizeGet(Handle, out var w, out var h); return new Size(w,h); }
+				get
+				{
+					// You might be after RenderTargetSize instead...
+					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
+					View3D_BackBufferSizeGet(Handle, out var w, out var h);
+					return new Size(w, h);
+				}
 				set
 				{
+					Util.BreakIf(Hwnd == IntPtr.Zero, "There is no back buffer when used in window-less mode");
 					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid back buffer size");
 					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid back buffer size");
 					View3D_BackBufferSizeSet(Handle, value.Width, value.Height);
@@ -518,15 +529,9 @@ namespace Rylogic.Gfx
 			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
 			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
 			/// a source and destination texture at the same time</summary>
-			public void SetRT(Texture? render_target, Texture? depth_buffer = null)
+			public void SetRT(Texture? render_target, Texture? depth_buffer, bool is_new_main_rt)
 			{
-				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero);
-			}
-
-			/// <summary>Save the current render target as the main render target (Restored using RestoreRT)</summary>
-			public void SaveAsMainRT()
-			{
-				View3D_RenderTargetSaveAsMain(Handle);
+				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero, is_new_main_rt);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
@@ -557,7 +562,12 @@ namespace Rylogic.Gfx
 			/// <summary>Convert a normalised point into a screen space point</summary>
 			public v2 ScreenSpacePointF(v2 pt)
 			{
-				var da = BackBufferSize;
+				// Notes:
+				//  - What does screen space mean if there is no back buffer?
+				//    For WPF, or other window-less modes of use, there is no back buffer. I'm assuming here that the render target
+				//    is the psuedo-back buffer. In the case were there is a back buffer but a temporary render target is in use, I'm
+				//    using the back buffer still as I'm assuming that is still the screen size.
+				var da = Hwnd != IntPtr.Zero ? BackBufferSize : RenderTargetSize;
 				return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
 			}
 			public Point ScreenSpacePoint(v2 pt)

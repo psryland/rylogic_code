@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -106,10 +107,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (m_dc != null)
 				{
 					ActiveContentManager.ActiveContentChanged -= HandleActiveContentChanged;
+					m_dc.PreviewMouseDown -= HandlePreviewMouseDown;
 				}
 				m_dc = value;
 				if (m_dc != null)
 				{
+					m_dc.PreviewMouseDown += HandlePreviewMouseDown;
 					ActiveContentManager.ActiveContentChanged += HandleActiveContentChanged;
 				}
 
@@ -123,6 +126,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// Show the auto hide panel whenever content that is in our tree becomes active
 					if (e.ContentNew != null && e.ContentNew.DockControl.DockPane?.RootBranch == Root)
 						PoppedOut = true;
+				}
+				void HandlePreviewMouseDown(object sender, MouseButtonEventArgs e)
+				{
+					if (!PoppedOut) return;
+					if (!(e.OriginalSource is DependencyObject dp)) return;
+					PoppedOut = Gui_.FindVisualParent<DependencyObject>(dp, WithinThisAHP, root:m_dc) != null;
+					bool WithinThisAHP(DependencyObject ob) => ob == this || ob == TabStrip;
 				}
 			}
 		}

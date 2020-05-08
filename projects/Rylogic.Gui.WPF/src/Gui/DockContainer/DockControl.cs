@@ -107,7 +107,13 @@ namespace Rylogic.Gui.WPF
 				void HandleActiveContentChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
 					if (e.ContentNew == Owner || e.ContentOld == Owner)
+					{
 						ActiveChanged?.Invoke(this, e);
+
+						// If the tab is flash when we're activated, switch back to active
+						if (IsActiveContent && TabState == ETabState.Flashing)
+							TabState = ETabState.Active;
+					}
 				}
 			}
 		}
@@ -338,10 +344,9 @@ namespace Rylogic.Gui.WPF
 				// Auto hide this dockable
 				if (value)
 				{
-					// If currently docked in the centre, don't allow auto hide
+					// If currently docked in the centre, auto hide to the right
 					var side = DockPane?.AutoHideSide ?? EDockSite.Centre;
-					if (side == EDockSite.Centre)
-						throw new Exception("Cannot auto hide this dockable. It is either not within a pane, or the pane is docked in the centre dock site");
+					if (side == EDockSite.Centre) side = EDockSite.Right;
 
 					// Get the auto-hide panel associated with this dock site
 					var ah = DockContainer.AutoHidePanels[side];

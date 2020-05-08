@@ -183,7 +183,7 @@ namespace pr::rdr
 		}
 
 		// Update the texture and optionally all instances of the same dx texture
-		m_mgr->ReplaceTexture(*this, tex, srv, all_instances);
+		m_mgr->ReplaceTexture(*this, tex.get(), srv.get(), all_instances);
 	}
 
 	// Resize this texture to 'size' optionally applying the resize to all instances of this

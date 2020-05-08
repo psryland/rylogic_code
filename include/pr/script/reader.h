@@ -93,6 +93,12 @@ namespace pr::script
 			return *m_pp.Includes;
 		}
 
+		// Access the macro handler
+		IMacroHandler& Macros() const noexcept
+		{
+			return *m_pp.Macros;
+		}
+
 		// Get/Set delimiter characters
 		wchar_t const* Delimiters() const noexcept
 		{

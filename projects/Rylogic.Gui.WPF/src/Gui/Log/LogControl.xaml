@@ -38,7 +38,7 @@
 				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
 				<Setter Property="Background" Value="Transparent"/>
 				<Setter Property="TextWrapping" Value="{Binding Path=DataContext.LineWrap, Converter={conv:BoolToWrap}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
-				<Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+				<Setter Property="HorizontalScrollBarVisibility" Value="Hidden"/>
 				<Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
 				<Setter Property="BorderBrush" Value="Transparent"/>
 				<Setter Property="BorderThickness" Value="0"/>

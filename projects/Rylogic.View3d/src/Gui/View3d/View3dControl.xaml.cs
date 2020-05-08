@@ -278,8 +278,7 @@ namespace Rylogic.Gui.WPF
 					if (m_d3d_image.RenderTarget != null)
 						OnRenderTargetChanged();
 
-					Window.SetRT(D3DImage.RenderTarget);
-					Window.SaveAsMainRT();
+					Window.SetRT(D3DImage.RenderTarget, null, true);
 				}
 			}
 		}

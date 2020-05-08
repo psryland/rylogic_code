@@ -51,6 +51,7 @@
 
 	<!-- Dependencies -->
 	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.5.0" />
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />

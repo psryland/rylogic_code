@@ -31,6 +31,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\geometry\3ds.h" />
+    <ClInclude Include="..\include\pr\geometry\obj.h" />
+    <ClInclude Include="..\include\pr\geometry\p3d.h" />
+    <ClInclude Include="..\include\pr\geometry\stl.h" />
     <ClInclude Include="..\projects\p3d\src\commands\cross_section.h" />
     <ClInclude Include="..\projects\p3d\src\commands\generate_normals.h" />
     <ClInclude Include="..\projects\p3d\src\commands\model_io.h" />

@@ -352,7 +352,7 @@ namespace EDTradeAdvisor
 						considered.AddRange(system_refs);
 						if (considered.Count > RebuildTreeThreshold)
 						{
-							candidates.RemoveAll(considered);
+							candidates.RemoveSet(considered);
 							KDTree_.Build(candidates, 3);
 							considered.Clear();
 						}

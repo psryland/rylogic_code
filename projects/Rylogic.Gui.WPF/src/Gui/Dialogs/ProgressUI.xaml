@@ -19,32 +19,16 @@
 	MinWidth="280"
 	MinHeight="110"
 	>
-	<DockPanel>
-
-		<!-- Buttons -->
-		<Grid
-			DockPanel.Dock="Bottom"
-			Background="{x:Static SystemColors.ControlBrush}"
-			>
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="Auto"/>
-			</Grid.ColumnDefinitions>
-
-			<Button
-				Grid.Column="1"
-				Content="Cancel"
-				MinWidth="80"
-				MinHeight="22"
-				Margin="0,8,12,8"
-				Command="{Binding SignalCancel}"
-				Visibility="{Binding AllowCancel, Converter={conv:BoolToVisible}}"
-				IsEnabled="{Binding CancelEnabled}"
-				/>
-		</Grid>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="auto"/>
+		</Grid.RowDefinitions>
 
 		<!-- Body -->
 		<Grid
+			Grid.Row="0"
 			Background="{x:Static SystemColors.WindowBrush}"
 			>
 			<Grid.RowDefinitions>
@@ -78,28 +62,55 @@
 				<TextBlock
 					Grid.Column="1"
 					Text="{Binding Description}"
-					Margin="4,4,8,4"
+					TextWrapping="Wrap"
+					Margin="4,8,8,8"
 					/>
 			</Grid>
 
 			<!-- Progress Bar -->
-			<ProgressBar
+			<Grid
 				Grid.Row="1"
-				Name="m_progress"
-				Minimum="0"
-				Maximum="100"
-				Value="{Binding FractionComplete, Converter={conv:ScaleValue}, ConverterParameter=100.0}"
-				IsIndeterminate="{Binding ProgressIsIndeterminate}"
-				VerticalAlignment="Center"
-				Height="20"
-				Margin="8"
-				/>
-			<TextBlock
-				Grid.Row="1"
-				Text="{Binding ProgressBarText}"
-				VerticalAlignment="{Binding VerticalAlignment, ElementName=m_progress}"
-				Margin="{Binding Margin, ElementName=m_progress}"
+				Visibility="{Binding ProgressBarVisible, Converter={conv:BoolToVisible}}"
+				>
+				<ProgressBar
+					Name="m_progress"
+					Minimum="0"
+					Maximum="100"
+					Value="{Binding FractionComplete, Converter={conv:ScaleValue}, ConverterParameter=100.0}"
+					IsIndeterminate="{Binding ProgressIsIndeterminate}"
+					VerticalAlignment="Center"
+					Height="20"
+					Margin="20,8,20,8"
+					/>
+				<TextBlock
+					Text="{Binding ProgressBarText}"
+					VerticalAlignment="{Binding VerticalAlignment, ElementName=m_progress}"
+					Margin="{Binding Margin, ElementName=m_progress}"
+					Padding="2,0,0,0"
+					/>
+			</Grid>
+		</Grid>
+
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="2"
+			Background="{x:Static SystemColors.ControlBrush}"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<Button
+				Grid.Column="1"
+				Content="Cancel"
+				MinWidth="80"
+				MinHeight="22"
+				Margin="0,8,12,8"
+				Command="{Binding SignalCancel}"
+				Visibility="{Binding AllowCancel, Converter={conv:BoolToVisible}}"
+				IsEnabled="{Binding CancelEnabled}"
 				/>
 		</Grid>
-	</DockPanel>
+	</Grid>
 </Window>

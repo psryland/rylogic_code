@@ -28,6 +28,20 @@ namespace Rylogic.Utility
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		/// <summary>Return the result of a function or 'def' if the function throws, swallowing the exception</summary>
+		[DebuggerStepThrough]
+		public static T Try<T>(Func<T> func, T def = default)
+		{
+			try
+			{
+				return func();
+			}
+			catch
+			{
+				return def;
+			}
+		}
+
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
 		[DebuggerStepThrough]
 		public static T? Dispose<T>(ref T? doomed, bool gc_ok = false) where T : class, IDisposable

@@ -40,6 +40,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			AllContent = new ObservableCollection<DockControl>();
 
 			// Commands
+			FocusPane = Command.Create(this, FocusPaneInternal);
 			FindPane = Command.Create(this, FindPaneInternal);
 			TogglePin = Command.Create(this, TogglePinInternal);
 			ClosePane = Command.Create(this, ClosePaneInternal);
@@ -596,6 +597,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (TreeHost is FloatingWindow fw)
 				return $"FloatingWindow:{DockAddress.Description()}";
 			return $"MainWindow:{DockAddress.Description()}";
+		}
+
+		/// <summary>Switch focus to this pane</summary>
+		public Command FocusPane { get; }
+		private void FocusPaneInternal()
+		{
+			ActiveContentManager.ActivePane = this;
 		}
 
 		/// <summary>Find a pane and open it</summary>

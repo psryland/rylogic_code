@@ -779,8 +779,7 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_Present                (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_Validate               (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSaveAsMain (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer, BOOL is_new_main_rt);
 	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet      (View3DWindow window, int& width, int& height);
 	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet      (View3DWindow window, int width, int height);
 	VIEW3D_API View3DViewport  __stdcall View3D_Viewport               (View3DWindow window);

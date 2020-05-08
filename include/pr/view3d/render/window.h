@@ -47,7 +47,7 @@ namespace pr::rdr
 		D3DPtr<ID3D11ShaderResourceView> m_main_srv;         // Shader resource view of the render target
 		D3DPtr<ID3D11DepthStencilView>   m_main_dsv;         // Depth buffer
 		D3DPtr<ID2D1DeviceContext>       m_d2d_dc;           // The device context for D2D
-		Texture2DPtr                     m_main_tex;         // The render target as a texture
+		Texture2DPtr                     m_main_rt;          // The render target as a texture
 		bool                             m_idle;             // True while the window is occluded
 		string32                         m_name;             // A debugging name for the window
 		pr::iv2                          m_dbg_area;         // The size of the render target last set (for debugging only)
@@ -86,16 +86,13 @@ namespace pr::rdr
 		void RestoreRT();
 
 		// Binds the given render target and depth buffer views to the OM
-		void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
+		void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv, bool is_new_main_rt);
 
 		// Render this window into 'render_target;
 		// 'render_target' is the texture that is rendered onto
 		// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
-		void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer);
-
-		// Save the current render target as the main render target.
-		// Calling RestoreRT will restore this new main render target.
-		void SaveAsMainRT();
+		// 'is_new_main_rt' if true, makes the provided targets the main render target (those restored by RestoreRT)
+		void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer, bool is_new_main_rt);
 
 		// Draw text directly to the back buffer
 		void DrawString(wchar_t const* text, float x, float y);

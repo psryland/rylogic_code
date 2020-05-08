@@ -114,6 +114,13 @@ namespace pr::rdr
 			return tex != nullptr ? tex : factory();
 		}
 
+		// Updates the texture and SRV pointers in 'existing' to those provided.
+		// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
+		// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
+		// If 'all_instances' is false, effectively a new entry is added to 'm_lookup_tex'. The RdrId in 'existing' is changed
+		// (as if created with AutoId) and only 'existing' has its dx pointers changed. 'existing' also gets a new sort_id.
+		void ReplaceTexture(Texture2D& existing, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, bool all_instances);
+
 	private:
 		
 		friend struct TextureBase;
@@ -126,12 +133,5 @@ namespace pr::rdr
 
 		// Create the basic textures that exist from startup
 		void CreateStockTextures();
-
-		// Updates the texture and SRV pointers in 'existing' to those provided.
-		// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
-		// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
-		// If 'all_instances' is false, effectively a new entry is added to 'm_lookup_tex'. The RdrId in 'existing' is changed
-		// (as if created with AutoId) and only 'existing' has its dx pointers changed. 'existing' also gets a new sort_id.
-		void ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances);
 	};
 }

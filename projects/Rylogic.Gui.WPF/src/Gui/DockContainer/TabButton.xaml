@@ -56,21 +56,21 @@
 								<BeginStoryboard x:Name="BeginFlashTab">
 									<Storyboard
 										RepeatBehavior="Forever"
-										Duration="0:0:2"
+										Duration="0:0:1"
 										>
 										<ColorAnimation
 											Storyboard.TargetProperty="Background.Color"
 											From="Transparent"
 											To="#fcea6d"
-											Duration="0:0:1"
+											Duration="0:0:0.5"
 											BeginTime="0:0:0"
 											/>
 										<ColorAnimation
 											Storyboard.TargetProperty="Background.Color"
 											From="#fcea6d"
 											To="Transparent"
-											Duration="0:0:1"
-											BeginTime="0:0:1"
+											Duration="0:0:0.5"
+											BeginTime="0:0:0.5"
 											/>
 									</Storyboard>
 								</BeginStoryboard>

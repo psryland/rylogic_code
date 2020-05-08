@@ -194,7 +194,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>True if a valid value is selected</summary>
-		public bool Valid => Value != null;
+		public bool Valid => Value != null || Nullable.GetUnderlyingType(ValueType) != null;
 
 		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
 		public event EventHandler<ValueEventArgs> ValueCommitted;
