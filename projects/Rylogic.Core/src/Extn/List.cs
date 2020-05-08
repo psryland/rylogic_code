@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -207,7 +208,14 @@ namespace Rylogic.Extn
 		public static ICollection<T> Assign<T>(this ICollection<T> list, IEnumerable<T> items)
 		{
 			list.Clear();
-			return list.AddRange(items);
+			list.AddRange(items);
+			return list;
+		}
+		public static ICollection<T> Assign<T>(this ICollection<T> list, T item)
+		{
+			list.Clear();
+			list.Add(item);
+			return list;
 		}
 
 		/// <summary>Swap elements in the list</summary>
@@ -400,11 +408,11 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
-		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set, bool dispose = false)
+		public static void RemoveSet<T>(this IList<T> list, IEnumerable<T> set, bool dispose = false)
 		{
-			list.RemoveAll(set.ToHashSet(), dispose);
+			list.RemoveSet(set.ToHashSet(), dispose);
 		}
-		public static void RemoveAll<T>(this IList<T> list, HashSet<T> set, bool dispose = false)
+		public static void RemoveSet<T>(this IList<T> list, HashSet<T> set, bool dispose = false)
 		{
 			for (int i = list.Count; i-- != 0;)
 			{

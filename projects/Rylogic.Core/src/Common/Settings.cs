@@ -242,7 +242,13 @@ namespace Rylogic.Common
 
 			// Upgrade old settings
 			if (LoadedVersion != Version)
+			{
 				Upgrade(node, LoadedVersion);
+
+				// This is an old version, so optionally ignore types
+				if (flags.HasFlag(ESettingsLoadFlags.IgnoreUnknownTypesInOldVersions))
+					flags |= ESettingsLoadFlags.IgnoreUnknownTypes;
+			}
 
 			// Remove the version number to support old-style settings
 			// where the element name was interpreted as the setting name.
@@ -350,6 +356,13 @@ namespace Rylogic.Common
 			//		}
 			//	}
 			//}
+			//
+			// Notes:
+			//  - Old settings may contain references to types that don't exist in newer applications.
+			//    Typically the Upgrade step would remove these from the XML so that no TypeLoadException's
+			//    occur. A more lazy option is to use the 'ESettingsLoadFlags.IgnoreUnknownTypes' flag, or
+			//    possibly the 'ESettingsLoadFlags.IgnoreUnknownTypesInOldVersions' flag.
+
 			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
 		}
 
@@ -1010,10 +1023,11 @@ namespace Rylogic.Common
 	[Flags]
 	public enum ESettingsLoadFlags
 	{
-		None = 0,
-		ReadOnly = 1 << 0,
-		IgnoreUnknownTypes = 1 << 1,
-		ThrowOnError = 1 << 2,
+		None                            = 0,
+		ReadOnly                        = 1 << 0,
+		ThrowOnError                    = 1 << 1,
+		IgnoreUnknownTypes              = 1 << 2,
+		IgnoreUnknownTypesInOldVersions = 1 << 3,
 	}
 
 	#region Event Args

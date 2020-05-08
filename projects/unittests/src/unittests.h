@@ -147,6 +147,7 @@
 #include "pr\geometry\models_skybox.h"
 #include "pr\geometry\models_sphere.h"
 #include "pr\geometry\model_file.h"
+#include "pr\geometry\obj.h"
 #include "pr\geometry\p3d.h"
 #include "pr\geometry\point.h"
 #include "pr\geometry\stl.h"

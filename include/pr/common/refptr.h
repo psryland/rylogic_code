@@ -195,6 +195,8 @@ namespace pr
 		}
 
 		// std::unique_ptr<> interface
+		// Don't implement 'reset' because it's ambiguous whether to AddRef
+		// the provided pointer. Use a RefPtr constructor then assign.
 		T* get() const
 		{
 			return m_ptr;

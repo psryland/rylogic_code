@@ -98,7 +98,7 @@ namespace TestCS
 			{
 				// Make sure 'm_obj' is not rendered (because it uses the texture we're rendering to)
 				m_view3d.Window.RemoveObject(m_obj2);
-				m_view3d.Window.SetRT(m_tex2);
+				m_view3d.Window.SetRT(m_tex2, null, false);
 				m_view3d.Window.AddObject(m_obj2);
 			};
 			m_obj2.SetTexture(m_tex2);

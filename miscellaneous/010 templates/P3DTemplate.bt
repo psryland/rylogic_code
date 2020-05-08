@@ -65,7 +65,7 @@ struct CStrChunk
 	local int64 fpos = FTell();
 	EChunkId id;
 	u32 length;
-	string str;
+	char str[length - 8];
 	FSeek(fpos + length);
 };
 

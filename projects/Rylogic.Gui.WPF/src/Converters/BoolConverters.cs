@@ -233,21 +233,39 @@ namespace Rylogic.Gui.WPF.Converters
 			if (!(value is bool b)) return null;
 			if (!(parameter is string s)) return null;
 
-			var c = s.Split('|');
-			if (c.Length != 2)
-				throw new Exception($"{nameof(BoolSelect)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
+			try
+			{
+				var c = s.Split('|');
+				if (c.Length != 2)
+					throw new Exception($"{nameof(BoolSelect)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
 
-			var val = b ? c[0] : c[1];
+				var val = b ? c[0] : c[1];
 
-			// Special case conversions not handled by 'ConvertTo'
-			if (targetType == typeof(Colour32))
-				return Colour32.Parse(val);
-			if (targetType == typeof(Color))
-				return Colour32.Parse(val).ToMediaColor();
-			if (targetType == typeof(Brush))
-				return Colour32.Parse(val).ToMediaBrush();
-
-			return Util.ConvertTo(val, targetType);
+				// Special case conversions not handled by 'ConvertTo'
+				if (targetType == typeof(Colour32))
+				{
+					return Colour32.Parse(val);
+				}
+				if (targetType == typeof(Color))
+				{
+					return Colour32.Parse(val).ToMediaColor();
+				}
+				if (targetType == typeof(Brush))
+				{
+					return Colour32.Parse(val).ToMediaBrush();
+				}
+				if (targetType == typeof(Thickness))
+				{
+					var i = (int?)Util.ConvertTo(val, typeof(int)) ?? 0;
+					return new Thickness(i);
+				}
+				return Util.ConvertTo(val, targetType);
+			}
+			catch
+			{
+				// Handle this silently so that runtime editing XML works
+				return null;
+			}
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{

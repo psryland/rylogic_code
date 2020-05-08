@@ -75,14 +75,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 				// Notify that the active pane has changed and therefore the active content too
 				if (old_pane != value)
-					RaiseActivePaneChanged(new ActivePaneChangedEventArgs(old_pane, value));
+					NotifyActivePaneChanged(new ActivePaneChangedEventArgs(old_pane, value));
 				if (old_content?.Dockable != ActiveContent?.Dockable)
-					RaiseActiveContentChanged(new ActiveContentChangedEventArgs(old_content?.Dockable, ActiveContent?.Dockable));
+					NotifyActiveContentChanged(new ActiveContentChangedEventArgs(old_content?.Dockable, ActiveContent?.Dockable));
 
 				/// <summary>Watch for the content in the active pane changing</summary>
 				void HandleActiveContentChanged(object? sender, ActiveContentChangedEventArgs e)
 				{
-					RaiseActiveContentChanged(e);
+					NotifyActiveContentChanged(e);
 				}
 			}
 		}
@@ -110,14 +110,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>Raised whenever the active pane changes in the dock container</summary>
 		public event EventHandler<ActivePaneChangedEventArgs>? ActivePaneChanged;
-		internal void RaiseActivePaneChanged(ActivePaneChangedEventArgs args)
+		internal void NotifyActivePaneChanged(ActivePaneChangedEventArgs args)
 		{
 			ActivePaneChanged?.Invoke(DockContainer, args);
 		}
 
 		/// <summary>Raised whenever the active content for the dock container changes</summary>
 		public event EventHandler<ActiveContentChangedEventArgs>? ActiveContentChanged;
-		internal void RaiseActiveContentChanged(ActiveContentChangedEventArgs args)
+		internal void NotifyActiveContentChanged(ActiveContentChangedEventArgs args)
 		{
 			ActiveContentChanged?.Invoke(DockContainer, args);
 		}

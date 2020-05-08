@@ -671,7 +671,7 @@ namespace Rylogic.Gfx
 			public uint m_mips;
 			public EFormat m_format; //DXGI_FORMAT
 			public uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
-			public float m_aspect { get { return (float)m_width / m_height; } }
+			public float m_aspect => (float)m_width / m_height;
 		}
 
 		public class TextureOptions
@@ -1750,9 +1750,7 @@ namespace ldr
 		[DllImport(Dll)]
 		private static extern void View3D_RenderTargetRestore(HWindow window);
 		[DllImport(Dll)]
-		private static extern void View3D_RenderTargetSet(HWindow window, HTexture render_target, HTexture depth_buffer);
-		[DllImport(Dll)]
-		private static extern void View3D_RenderTargetSaveAsMain(HWindow window);
+		private static extern void View3D_RenderTargetSet(HWindow window, HTexture render_target, HTexture depth_buffer, bool is_new_main_rt);
 		[DllImport(Dll)]
 		private static extern void View3D_BackBufferSizeGet(HWindow window, out int width, out int height);
 		[DllImport(Dll)]

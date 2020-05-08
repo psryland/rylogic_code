@@ -5,8 +5,7 @@ Immediate ToDo:
 	xbox controllers on Pi
 	
 Work
-	- Emit fake data from Sensors
-	- Overlays for sensor errors
+	- Set up Git on the machine that runs plastic...
 	- Fix ground plane
 	- Fix arrows in MovementEditor diagram
 	
@@ -20,6 +19,7 @@ LDraw
 	- Support sub models in object manager
 	
 P3D
+	- Support .obj files
 	
 CoinFlip
 	Candle Charts:

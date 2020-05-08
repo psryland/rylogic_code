@@ -10,7 +10,7 @@ namespace Rylogic.Gui.WPF
 {
 	public sealed partial class ProgressUI : Window, IDisposable, INotifyPropertyChanged
 	{
-		public ProgressUI(Window? owner, string title, string desc, ImageSource image, CancellationToken cancel)
+		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, CancellationToken cancel)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -26,20 +26,27 @@ namespace Rylogic.Gui.WPF
 			SignalCancel = Command.Create(this, () => CancelPending = true);
 			DataContext = this;
 		}
-		public ProgressUI(Window? owner, string title, string desc, ImageSource image, CancellationToken cancel, WorkerFunc worker, object? arg = null, ThreadPriority priority = ThreadPriority.Normal)
+		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, CancellationToken cancel, WorkerFunc worker, object? arg = null, ThreadPriority priority = ThreadPriority.Normal)
 			:this(owner, title, desc, image, cancel)
 		{
 			try
 			{
-				worker ??= new WorkerFunc((ui, a, p) =>
+				worker ??= DefaultWorkerFunc;
+				void DefaultWorkerFunc(ProgressUI ui, object? a, ProgressCB p)
 				{
 					// Default worker function just waits till cancel is signalled
 					for (; !CancelPending; Thread.Sleep(100))
 						p(new UserState { });
-				});
+				}
 
 				// Start the worker task
-				m_thread = new Thread(new ThreadStart(() =>
+				m_thread = new Thread(new ThreadStart(ThreadEntry))
+				{
+					Name = "ProgressUI",
+					Priority = priority,
+					IsBackground = true,
+				};
+				void ThreadEntry()
 				{
 					var progress_cb = new ProgressCB(UpdateProgress);
 					try
@@ -57,12 +64,7 @@ namespace Rylogic.Gui.WPF
 					// Set the event to say "task done"
 					Done.Set();
 					Dispatcher.BeginInvoke(progress_cb, new UserState { CloseDialog = true });
-				}))
-				{
-					Name = "ProgressUI",
-					Priority = priority,
-					IsBackground = true,
-				};
+				}
 				m_thread.Start();
 			}
 			catch
@@ -106,12 +108,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The fraction complete that the task is</summary>
 		public double FractionComplete
 		{
-			get { return m_fraction_complete; }
+			get => m_fraction_complete;
 			set
 			{
 				if (m_fraction_complete == value) return;
 				m_fraction_complete = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FractionComplete)));
+				NotifyPropertyChanged(nameof(FractionComplete));
 			}
 		}
 		private double m_fraction_complete;
@@ -119,12 +121,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if the task can be cancelled</summary>
 		public bool AllowCancel
 		{
-			get { return m_allow_cancel; }
+			get => m_allow_cancel;
 			set
 			{
 				if (m_allow_cancel == value) return;
 				m_allow_cancel = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowCancel)));
+				NotifyPropertyChanged(nameof(AllowCancel));
 			}
 		}
 		private bool m_allow_cancel;
@@ -132,48 +134,48 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The prompt text</summary>
 		public string Description
 		{
-			get { return (string)GetValue(DescriptionProperty); }
-			set { SetValue(DescriptionProperty, value); }
+			get => (string)GetValue(DescriptionProperty);
+			set => SetValue(DescriptionProperty, value);
 		}
 		public static readonly DependencyProperty DescriptionProperty = Gui_.DPRegister<ProgressUI>(nameof(Description));
 
 		/// <summary>Image source for the prompt icon</summary>
-		public ImageSource Image
+		public ImageSource? Image
 		{
-			get { return (ImageSource)GetValue(ImageProperty); }
-			set { SetValue(ImageProperty, value); }
+			get => (ImageSource)GetValue(ImageProperty);
+			set => SetValue(ImageProperty, value);
 		}
 		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<ProgressUI>(nameof(Image));
 
 		/// <summary>Text displayed within the progress bar</summary>
 		public string ProgressBarText
 		{
-			get { return (string)GetValue(ProgressBarTextProperty); }
-			set { SetValue(ProgressBarTextProperty, value); }
+			get => (string)GetValue(ProgressBarTextProperty);
+			set => SetValue(ProgressBarTextProperty, value);
 		}
 		public static readonly DependencyProperty ProgressBarTextProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarText));
 
 		/// <summary>True for tasks of unknown length</summary>
 		public bool ProgressIsIndeterminate
 		{
-			get { return (bool)GetValue(ProgressIsIndeterminateProperty); }
-			set { SetValue(ProgressIsIndeterminateProperty, value); }
+			get => (bool)GetValue(ProgressIsIndeterminateProperty);
+			set => SetValue(ProgressIsIndeterminateProperty, value);
 		}
 		public static readonly DependencyProperty ProgressIsIndeterminateProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressIsIndeterminate));
 
 		/// <summary>True if the progress bar should be shown</summary>
 		public bool ProgressBarVisible
 		{
-			get { return (bool)GetValue(ProgressBarVisibleProperty); }
-			set { SetValue(ProgressBarVisibleProperty, value); }
+			get => (bool)GetValue(ProgressBarVisibleProperty);
+			set => SetValue(ProgressBarVisibleProperty, value);
 		}
 		public static readonly DependencyProperty ProgressBarVisibleProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarVisible));
 
 		/// <summary>True if the cancel button is enabled</summary>
 		public bool CancelEnabled
 		{
-			get { return (bool)GetValue(CancelEnabledProperty); }
-			set { SetValue(CancelEnabledProperty, value); }
+			get => (bool)GetValue(CancelEnabledProperty);
+			set => SetValue(CancelEnabledProperty, value);
 		}
 		public static readonly DependencyProperty CancelEnabledProperty = Gui_.DPRegister<ProgressUI>(nameof(CancelEnabled));
 
@@ -183,7 +185,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The background task should cancel</summary>
 		public bool CancelPending
 		{
-			get { return AllowCancel && m_cancel.IsCancellationRequested; }
+			get => AllowCancel && m_cancel.IsCancellationRequested;
 			private set { if (AllowCancel) m_cancel.Cancel(); }
 		}
 		private readonly CancellationTokenSource m_cancel;
@@ -252,7 +254,7 @@ namespace Rylogic.Gui.WPF
 			if (us.EnableCancel != null)
 				CancelEnabled = us.EnableCancel.Value;
 
-			if (us.CloseDialog)
+			if (us.CloseDialog == true)
 			{
 				Result = CancelPending ? false : true;
 				AllowCancel = true;
@@ -268,6 +270,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>User state used to update the progress dialog</summary>
 		public struct UserState
@@ -284,22 +290,22 @@ namespace Rylogic.Gui.WPF
 			public bool? ProgressIsIndeterminate { get; set; }
 
 			/// <summary>Text to display on the progress bar. Null means don't change</summary>
-			public string ProgressBarText { get; set; }
+			public string? ProgressBarText { get; set; }
 
 			/// <summary>Image next to the description text. Null means don't change</summary>
-			public ImageSource Image { get; set; }
+			public ImageSource? Image { get; set; }
 
 			/// <summary>Dialog title. Null means don't change</summary>
-			public string Title { get; set; }
+			public string? Title { get; set; }
 
 			/// <summary>Description text. Null means don't change</summary>
-			public string Description { get; set; }
+			public string? Description { get; set; }
 
 			/// <summary>Enable/Disable the cancel button. Null means don't change</summary>
 			public bool? EnableCancel { get; set; }
 
 			/// <summary>Set to true to have the dialog close (used by ProgressUI once the task is complete)</summary>
-			public bool CloseDialog { get; set; }
+			public bool? CloseDialog { get; set; }
 		}
 	}
 }

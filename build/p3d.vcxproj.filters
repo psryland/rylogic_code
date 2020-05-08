@@ -33,6 +33,18 @@
     <ClInclude Include="..\projects\p3d\src\commands\cross_section.h">
       <Filter>src\commands</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\stl.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\obj.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\p3d\deploy_p3d.py" />
@@ -44,6 +56,12 @@
     </Filter>
     <Filter Include="src\commands">
       <UniqueIdentifier>{eece3064-d302-4304-854a-ff23d1a37bdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{74d9011f-5155-4919-9429-fffbb8dcb22b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{92a7a757-c87b-441b-bbd3-454a2384b89b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -4,22 +4,27 @@
 //**********************************************
 
 #include "p3d/src/forward.h"
+#include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/stl.h"
+#include "pr/geometry/obj.h"
 
 using namespace pr;
 using namespace pr::script;
 using namespace pr::geometry;
 
+static_assert(std::is_move_constructible_v<p3d::File>);
+
 // Populate the p3d data structures from a p3d file
-std::unique_ptr<p3d::File> CreateFromP3D(std::wstring const& filepath)
+std::unique_ptr<p3d::File> CreateFromP3D(std::filesystem::path const& filepath)
 {
 	std::ifstream src(filepath, std::ifstream::binary);
-	return std::make_unique<p3d::File>(p3d::Read(src));
+	auto p3d = p3d::Read(src);
+	return std::make_unique<p3d::File>(std::move(p3d));
 }
 
 // Populates the p3d data structures from a 3ds file
-std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
+std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 {
 	// Open the 3ds file
 	std::ifstream src(filepath, std::ifstream::binary);
@@ -112,17 +117,16 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 		// Don't stop, gimme more objects
 		return false;
 	});
-	return std::make_unique<p3d::File>(p3d);
+	return std::make_unique<p3d::File>(std::move(p3d));
 }
 
 // Populates the p3d data structures from a stl file
-std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
+std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 {
-	// Open the file
 	std::ifstream src(filepath, std::ifstream::binary);
+	stl::Options opts = {};
 
 	p3d::File p3d;
-	stl::Options opts = {};
 	stl::Read(src, opts, [&](stl::Model const& o)
 	{
 		// Add a mesh to the scene
@@ -182,7 +186,20 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
 		mat.m_diffuse = Colour32White;
 		p3d.m_scene.m_materials.push_back(mat);
 	});
-	return std::make_unique<p3d::File>(p3d);
+	return std::make_unique<p3d::File>(std::move(p3d));
+}
+
+// Popultes the p3d data structures from an obj file
+std::unique_ptr<p3d::File> CreateFromOBJ(std::filesystem::path const& filepath)
+{
+	std::ifstream src(filepath);
+	obj::Options opts = {};
+
+	p3d::File p3d;
+	obj::Read(src, opts, [&](obj::Model const& o)
+		{
+		});
+	return std::make_unique<p3d::File>(std::move(p3d));
 }
 
 // Write 'p3d' as a p3d format file

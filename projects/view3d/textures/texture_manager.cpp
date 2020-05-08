@@ -699,7 +699,7 @@ namespace pr::rdr
 	// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
 	// DX resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
 	// If 'all_instances' is false, only 'existing' has its dx pointers changed.
-	void TextureManager::ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances)
+	void TextureManager::ReplaceTexture(Texture2D& existing, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, bool all_instances)
 	{
 		if (all_instances && existing.m_res != nullptr)
 		{
@@ -708,14 +708,14 @@ namespace pr::rdr
 			{
 				auto& other = *rhs.second;
 				if (other.m_res.m_ptr != existing.m_res.m_ptr) continue;
-				other.m_res = tex;
-				other.m_srv = srv;
+				other.m_res = D3DPtr<ID3D11Texture2D>(tex, true);
+				other.m_srv = D3DPtr<ID3D11ShaderResourceView>(srv, true);
 			}
 		}
 		else
 		{
-			existing.m_res = tex;
-			existing.m_srv = srv;
+			existing.m_res = D3DPtr<ID3D11Texture2D>(tex, true);
+			existing.m_srv = D3DPtr<ID3D11ShaderResourceView>(srv, true);
 		}
 	}
 }
