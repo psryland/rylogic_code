@@ -247,12 +247,34 @@ namespace pr::unittests
 		}
 		return true;
 	}
-	inline bool UTEqual(double lhs, double rhs)                 { return ::abs(rhs - lhs) < DBL_EPSILON; }
-	inline bool UTEqual(float lhs, float rhs)                   { return ::fabs(rhs - lhs) < FLT_EPSILON; }
-	inline bool UTEqual(char const* lhs, char const* rhs)       { return strcmp(lhs, rhs) == 0; }
-	inline bool UTEqual(char* lhs, char* rhs)                   { return strcmp(lhs, rhs) == 0; }
-	inline bool UTEqual(wchar_t const* lhs, wchar_t const* rhs) { return wcscmp(lhs, rhs) == 0; }
-	inline bool UTEqual(wchar_t* lhs, wchar_t* rhs)             { return wcscmp(lhs, rhs) == 0; }
+	inline bool UTEqual(double lhs, double rhs)
+	{
+		if (isnan(lhs) && isnan(rhs)) return true;
+		if (isinf(lhs) && isinf(rhs)) return signbit(lhs) == signbit(rhs);
+		return ::abs(rhs - lhs) < DBL_EPSILON;
+	}
+	inline bool UTEqual(float lhs, float rhs)
+	{
+		if (isnan(lhs) && isnan(rhs)) return true;
+		if (isinf(lhs) && isinf(rhs)) return signbit(lhs) == signbit(rhs);
+		return ::fabs(rhs - lhs) < FLT_EPSILON;
+	}
+	inline bool UTEqual(char const* lhs, char const* rhs)
+	{
+		return strcmp(lhs, rhs) == 0;
+	}
+	inline bool UTEqual(char* lhs, char* rhs)
+	{
+		return strcmp(lhs, rhs) == 0;
+	}
+	inline bool UTEqual(wchar_t const* lhs, wchar_t const* rhs)
+	{
+		return wcscmp(lhs, rhs) == 0;
+	}
+	inline bool UTEqual(wchar_t* lhs, wchar_t* rhs)
+	{
+		return wcscmp(lhs, rhs) == 0;
+	}
 
 	// Unit test check functions
 	inline void Fail(char const* msg, char const* file, int line)

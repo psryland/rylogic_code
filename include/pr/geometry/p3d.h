@@ -1,12 +1,10 @@
 ﻿//********************************
-// PR3d Model file format
+// PR3D Model file format
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 // Binary 3d model format
-// Based on 3ds.
-// This model format is designed for load speed
-// Use zip if you want compressed model data.
 #pragma once
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -16,287 +14,217 @@
 #include "pr/macros/enum.h"
 #include "pr/common/cast.h"
 #include "pr/common/fmt.h"
-#include "pr/common/range.h"
 #include "pr/common/scope.h"
 #include "pr/common/compress.h"
+#include "pr/common/range.h"
 #include "pr/maths/maths.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/utility.h"
-#include "pr/container/span.h"
 #include "pr/container/byte_data.h"
 
 namespace pr::geometry::p3d
 {
-	using u8 = unsigned char;       static_assert(sizeof(u8) == 1, "1byte u8 expected");
-	using u16 = unsigned short;     static_assert(sizeof(u16) == 2, "2byte u16 expected");
-	using u32 = unsigned long;      static_assert(sizeof(u32) == 4, "4byte u32 expected");
-	using u64 = unsigned long long; static_assert(sizeof(u64) == 8, "8byte u64 expected");
+	// Notes:
+	//  - The original design goal for P3D was load speed. Models where stored in a format that could be
+	//    directly memcpy'd into gfx memory. This results in very large p3d files, however, and doesn't give
+	//    much load speed benefit. The idea was that models could be zipped if compression was needed. Data
+	//    aware compression is way better than zip, and unzip is pretty slow so the original idea didn't work
+	//    that well.
+	//  - In this version, the binary format is small on disk, but easily map-able to renderer models. There
+	//    is also options for highly effective data-aware compression.
+	//  - The in-memory version is decompressed but still fairly memory efficient.
+	//  - This means memcpy can't be used to initialise a DX model.
+	//  - To examine a file without fully loading all the data, use a 'p3d::ChunkIndex'.
+	//  - Use order: Vert, Colour, Norm, UV for consistency.
+	//
+	// Format:
+	//  A mesh is separated into vertex data and index data. Each nugget is a collection of faces that use one
+	//  material. Vertex data is stratified into positions, colours, normals, and texture coords. The buffers
+	//  can have any length, but it is assumed indices are shared across all buffers. The C,N,T buffers use mod
+	//  to produce values up to the length of the positions buffer. Typically the lengths of the C,N,T buffers
+	//  will be N, 1, or 0, where 'N' is the length of the vertex position buffer.
+	//    i.e. This means a mesh cannot have some verts with normals and some without. Either all verts have
+	//    normals or none.
+	//  Although there will be some redundancy with vertex position data, it's the only option for fast loading.
+	//
+
 	struct ChunkHeader;
 	struct ChunkIndex;
-	static const u32 Version = 0x00001001;
+	static constexpr uint32_t Version = 0x00010101U;
+	static constexpr uint32_t NoIndex = ~0U;
 	ChunkIndex const& NullChunk();
 
 	#pragma region Chunk Ids
 	#define PR_ENUM(x)\
-	x(Null                  ,= 0x00000000)/* Null chunk                                                      */\
-	x(CStr                  ,= 0x00000001)/* Null terminated ascii string                                    */\
-	x(Main                  ,= 0x44335250)/* PR3D File type indicator                                        */\
-	x(FileVersion           ,= 0x00000100)/* ├─ File Version                                                 */\
-	x(Scene                 ,= 0x00001000)/* └─ Scene                                                        */\
-	x(Materials             ,= 0x00002000)/*    ├─ Materials                                                 */\
-	x(Material              ,= 0x00002100)/*    │  └─ Material                                               */\
-	x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                      */\
-	x(DiffuseTexture        ,= 0x00002120)/*    │     └─ Diffuse texture                                     */\
-	x(TexFilepath           ,= 0x00002121)/*    │        ├─ Texture filepath                                 */\
-	x(TexTiling             ,= 0x00002122)/*    │        └─ Texture tiling                                   */\
-	x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                    */\
-	x(Mesh                  ,= 0x00003100)/*       └─ Mesh of lines,triangles,tetras                         */\
-	x(MeshName              ,= 0x00003101)/*          ├─ Name (cstr)                                         */\
-	x(MeshBBox              ,= 0x00003102)/*          ├─ Bounding box (BBox)                                 */\
-	x(MeshTransform         ,= 0x00003103)/*          ├─ Mesh to Parent Transform (m4x4)                     */\
-	x(MeshVertices          ,= 0x00003110)/*          ├─ Vertex list (u32 count, count * [Vert])             */\
-	x(MeshVerticesV         ,= 0x00003111)/*          ├─ Vertex list compressed (u32 count, count * [Verts]) */\
-	x(MeshIndices16         ,= 0x00003120)/*          ├─ Index list (u32 count, count * [u16 i]) deprecated  */\
-	x(MeshIndices32         ,= 0x00003121)/*          ├─ Index list (u32 count, count * [u32 i]) deprecated  */\
-	x(MeshIndices           ,= 0x00003125)/*          ├─ Index list (u32 count, u32 stride, count * [Idx i]) */\
-	x(MeshIndicesV          ,= 0x00003126)/*          ├─ Index list (u32 count, u32 stride, count * [Idx i]) */\
-	x(MeshNuggets           ,= 0x00003200)/*          └─ Nugget list (u32 count, count * [Nugget]) */
+	x(Null                  ,= 0x00000000)/* Null chunk                                                                                      */\
+	x(CStr                  ,= 0x00000001)/* Null terminated utf-8 string                                                                    */\
+	x(Main                  ,= 0x44335250)/* PR3D File type indicator                                                                        */\
+	x(FileVersion           ,= 0x00000100)/* ├─ File Version                                                                                 */\
+	x(Scene                 ,= 0x00001000)/* └─ Scene                                                                                        */\
+	x(Materials             ,= 0x00002000)/*    ├─ Materials                                                                                 */\
+	x(Material              ,= 0x00002100)/*    │  └─ Material                                                                               */\
+	x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
+	x(DiffuseTexture        ,= 0x00002120)/*    │     └─ Diffuse texture                                                                     */\
+	x(TexFilepath           ,= 0x00002121)/*    │        ├─ Texture filepath                                                                 */\
+	x(TexTiling             ,= 0x00002122)/*    │        └─ Texture tiling                                                                   */\
+	x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
+	x(Mesh                  ,= 0x00003100)/*       └─ Mesh                                                                                   */\
+	x(MeshName              ,= 0x00003101)/*          ├─ Name (cstr)                                                                         */\
+	x(MeshBBox              ,= 0x00003102)/*          ├─ Bounding box (BBox)                                                                 */\
+	x(MeshTransform         ,= 0x00003103)/*          ├─ Mesh to Parent Transform (m4x4)                                                     */\
+	x(MeshVerts             ,= 0x00003300)/*          ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshNorms             ,= 0x00003310)/*          ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshColours           ,= 0x00003320)/*          ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshUVs               ,= 0x00003330)/*          ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
+	x(MeshNugget            ,= 0x00004000)/*          └─ Nugget (topo, geom)                                                                 */\
+	x(MeshMatId             ,= 0x00004001)/*             ├─ Material id (cstr)                                                               */\
+	x(MeshVIdx              ,= 0x00004010)/*             ├─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
+
 	PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
+	static_assert(sizeof(EChunkId) == sizeof(uint32_t), "Chunk Ids must be 4 bytes");
 	#undef PR_ENUM
 	#pragma endregion
-	static_assert(sizeof(EChunkId) == sizeof(u32), "Chunk Ids must be 4 bytes");
 
-	// Flags
+	#pragma region Flags
+	namespace Flags
+	{
+		constexpr int VertsOfs = 0;
+		constexpr int NormsOfs = 4;
+		constexpr int ColoursOfs = 8;
+		constexpr int UVsOfs = 12;
+		constexpr int IndexOfs = 16;
+		constexpr int Mask = 0b1111;
+	}
+	enum class EVertFormat
+	{
+		// Use 32-bit floats for position data (default).
+		// Size/Vert = 12 bytes (float[3])
+		Verts32Bit = 0,
+
+		// Use 16-bit floats for position data.
+		// Size/Vert = 6 bytes (half_t[3])
+		Verts16Bit = 1,
+	};
+	enum class ENormFormat
+	{
+		// Use 32-bit floats for normal data (default)
+		// Size/Norm = 12 bytes (float[3])
+		Norms32Bit = 0,
+
+		// Use 16-bit floats for normal data
+		// Size/Norm = 6 bytes (half[3])
+		Norms16Bit = 1,
+
+		// Pack each normal into 32bits. 
+		// Size/Norm = 4 bytes (uint32_t)
+		NormsPack32 = 2,
+
+	};
+	enum class EColourFormat
+	{
+		// Use 32-bit AARRGGBB colours (default)
+		// Size/Colour = 4 bytes (uint32_t)
+		Colours32Bit = 0,
+	};
+	enum class EUVFormat
+	{
+		// Use 32-bit floats for UV data
+		// Size/UV = 8 bytes (float[2])
+		UVs32Bit = 0,
+
+		// Use 16-bit floats for UV data
+		// Size/UV = 4 bytes (half[2])
+		UVs16Bit = 1,
+	};
+	enum class EIndexFormat
+	{
+		// Don't convert indices, use the input stride
+		IdxSrc = 0,
+
+		// Use 32-bit integers for index data
+		Idx32Bit = 1,
+
+		// Use 16-bit integers for index data
+		Idx16Bit = 2,
+
+		// Use 8-bit integers for index data
+		Idx8Bit = 3,
+
+		// Use variable length integers for index data
+		IdxNBit = 4,
+	};
 	enum class EFlags
 	{
 		None = 0,
-		Compress = 1 << 0,
+
+		// Vertex flags
+		Verts32Bit = s_cast<int>(EVertFormat::Verts32Bit) << Flags::VertsOfs,
+		Verts16Bit = s_cast<int>(EVertFormat::Verts16Bit) << Flags::VertsOfs,
+
+		// Normals flags
+		Norms32Bit = s_cast<int>(ENormFormat::Norms32Bit) << Flags::NormsOfs,
+		Norms16Bit = s_cast<int>(ENormFormat::Norms16Bit) << Flags::NormsOfs,
+		NormsPack32 = s_cast<int>(ENormFormat::NormsPack32) << Flags::NormsOfs,
+
+		// Colours flags
+		Colours32Bit = s_cast<int>(EColourFormat::Colours32Bit) << Flags::ColoursOfs,
+
+		// TexCoord flags
+		UVs32Bit = s_cast<int>(EUVFormat::UVs32Bit) << Flags::UVsOfs,
+		UVs16Bit = s_cast<int>(EUVFormat::UVs16Bit) << Flags::UVsOfs,
+
+		// Index data flags
+		IdxSrc = s_cast<int>(EIndexFormat::IdxSrc) << Flags::IndexOfs,
+		Idx32Bit = s_cast<int>(EIndexFormat::Idx32Bit) << Flags::IndexOfs,
+		Idx16Bit = s_cast<int>(EIndexFormat::Idx16Bit) << Flags::IndexOfs,
+		Idx8Bit = s_cast<int>(EIndexFormat::Idx8Bit) << Flags::IndexOfs,
+		IdxNBit = s_cast<int>(EIndexFormat::IdxNBit) << Flags::IndexOfs,
+
+		// Standard combinations
+		Default = Verts32Bit | Norms32Bit | Colours32Bit | UVs32Bit | IdxSrc,
+		Compressed1 = Verts32Bit | Norms16Bit | Colours32Bit | UVs16Bit | Idx16Bit,
+		CompressedMax = Verts16Bit | NormsPack32 | Colours32Bit | UVs16Bit | IdxNBit,
+
 		_bitwise_operators_allowed,
 	};
+	#pragma endregion
 
-	// Chunk header (8-bytes)
-	struct ChunkHeader
+	#pragma region P3D File
+	struct FatVert
 	{
 		// Notes:
-		//  - 'm_length' includes the size of the ChunkHeader
+		//  - This vertex is intended to be compatible with pr::rdr::Vert.
+		v4     m_vert;
+		Colour m_diff;
+		v4     m_norm;
+		v2     m_tex0;
+		v2     pad;
 
-		EChunkId m_id;
-		u32 m_length;
-
-		ChunkHeader() = default;
-		ChunkHeader(EChunkId id, size_t data_length)
-			:m_id(id)
-			,m_length(s_cast<u32>(sizeof(ChunkHeader) + data_length))
-		{}
-	};
-	static_assert(sizeof(ChunkHeader) == 8, "Incorrect chunk header size");
-
-	// Used to build an index of a p3d file
-	struct ChunkIndex :ChunkHeader
-	{
-		// Notes:
-		//  - data_length in these constructors should *not* include the ChunkHeader size
-		using Cont = std::vector<ChunkIndex>;
-		Cont m_chunks;
-
-		ChunkIndex(EChunkId id, size_t data_length)
-			:ChunkHeader(id, data_length)
-			,m_chunks()
-		{}
-		ChunkIndex(EChunkId id, size_t data_length, std::initializer_list<ChunkIndex> chunks)
-			:ChunkHeader(id, data_length)
-			,m_chunks()
-		{
-			for (auto& c : chunks)
-				add(c);
-		}
-		void add(ChunkIndex const& chunk)
-		{
-			m_chunks.push_back(chunk);
-			m_length += chunk.m_length;
-		}
-		ChunkIndex const& operator[](EChunkId id) const
-		{
-			for (auto& c : m_chunks)
-				if (c.m_id == id)
-					return c;
-
-			std::stringstream ss;
-			ss << "Child chunk " << id << " not a member of chunk " << m_id;
-			throw std::runtime_error(ss.str());
-		}
-		ChunkIndex const& find(std::initializer_list<EChunkId> chunk_id) const
-		{
-			auto* chunks = &m_chunks;
-			auto b = std::begin(chunk_id);
-			auto e = std::end(chunk_id);
-			for (;b != e; ++b)
-			{
-				for (auto& c : *chunks)
-				{
-					if (c.m_id != *b) continue;
-					if ((b + 1) == e) return c;
-					chunks = &c.m_chunks;
-					break;
-				}
-			}
-			return NullChunk();
-		}
-	};
-
-	// Maths library types with no alignment requirements
-	struct Vec2
-	{
-		float x,y;
-		operator v2() const
-		{
-			return v2(x, y);
-		}
-		Vec2& operator = (v2 const& rhs)
-		{
-			x = rhs.x;
-			y = rhs.y;
-			return *this;
-		}
-		friend bool operator == (Vec2 lhs, Vec2 rhs)
-		{
-			return lhs.x == rhs.x && lhs.y == rhs.y;
-		}
-		friend bool operator != (Vec2 lhs, Vec2 rhs)
-		{
-			return !(lhs == rhs);
-		}
-	};
-	struct Vec4
-	{
-		#pragma warning (disable:4201)
-		union {
-		struct { float x,y,z,w; };
-		struct { float r,g,b,a; };
-		};
-		#pragma warning (default:4201)
-		operator v4() const
-		{
-			return v4(x, y, z, w);
-		}
-		operator Colour() const
-		{
-			return Colour(r, g, b, a);
-		}
-		Vec4& operator = (v4 const& rhs)
-		{
-			x = rhs.x;
-			y = rhs.y;
-			z = rhs.z;
-			w = rhs.w;
-			return *this;
-		}
-		Vec4& operator = (Colour const& rhs)
-		{
-			r = rhs.r;
-			g = rhs.g;
-			b = rhs.b;
-			a = rhs.a;
-			return *this;
-		}
-		friend bool operator == (Vec4 lhs, Vec4 rhs)
-		{
-			return
-				lhs.x == rhs.x &&
-				lhs.y == rhs.y &&
-				lhs.z == rhs.z &&
-				lhs.w == rhs.w;
-		}
-		friend bool operator != (Vec4 lhs, Vec4 rhs)
-		{
-			return !(lhs == rhs);
-		}
-	};
-	struct BBox
-	{
-		Vec4 centre;
-		Vec4 radius;
-		BBox()
-		{
-			centre = v4Origin;
-			radius = -v4One.w0();
-		}
-		BBox& operator = (pr::BBox const& rhs)
-		{
-			centre = rhs.m_centre;
-			radius = rhs.m_radius;
-			return *this;
-		}
-		operator pr::BBox() const
-		{
-			return pr::BBox(centre, radius);
-		}
-	};
-	struct Vert
-	{
-		// This type matches 'pr::rdr::Vert' (which has 16-byte alignment). Hence the 'pad' member.
-		Vec4 pos;
-		Vec4 col;
-		Vec4 norm;
-		Vec2 uv;
-		Vec2 pad;
-	};
-	struct Range
-	{
-		u32 first, count;
-
-		template <typename T> Range& operator = (pr::Range<T> rhs)
-		{
-			first = s_cast<u32>(rhs.m_beg);
-			count = s_cast<u32>(rhs.size());
-			return *this;
-		}
-		template <typename T> operator pr::Range<T> () const
-		{
-			return pr::Range<T>(s_cast<T>(first), s_cast<T>(first + count));
-		}
-		friend u32 begin(Range r) 
-		{
-			return r.first;
-		}
-		friend u32 end(Range r)
-		{
-			return r.first + r.count;
-		}
-		friend bool operator == (Range lhs, Range rhs)
-		{
-			return lhs.first == rhs.first && lhs.count == rhs.count;
-		}
-		friend bool operator != (Range lhs, Range rhs)
-		{
-			return !(lhs == rhs);
-		}
+		friend v4     GetP(FatVert const& vert) { return vert.m_vert; }
+		friend Colour GetC(FatVert const& vert) { return vert.m_diff; }
+		friend v4     GetN(FatVert const& vert) { return vert.m_norm; }
+		friend v2     GetT(FatVert const& vert) { return vert.m_tex0; }
 	};
 	struct Str16
 	{
 		using c16 = char[16];
 		c16 str;
 
-		Str16(char const* s = nullptr)
+		Str16(std::string_view s = {})
 			:str()
 		{
 			*this = s;
 		}
-		Str16& operator = (char const* s)
+		Str16& operator = (std::string_view s)
 		{
-			s = s ? s : "";
 			memset(str, 0, sizeof(str));
-			strncat(str, s, sizeof(str) - 1);
+			memcpy(&str[0], s.data(), std::min(s.size(), sizeof(str)));
 			return *this;
 		}
-		Str16& operator = (std::string const& s)
+		operator std::string_view() const
 		{
-			return *this = s.c_str();
-		}
-		operator std::string() const
-		{
-			return str;
+			return std::string_view(&str[0], 16);
 		}
 		operator c16 const& () const
 		{
@@ -311,34 +239,24 @@ namespace pr::geometry::p3d
 			return !(lhs == rhs);
 		}
 	};
-	struct Nugget
-	{
-		EPrim m_topo;
-		EGeom m_geom; 
-		Range m_vrange;
-		Range m_irange;
-		Str16 m_mat;
-	};
 	struct Texture
 	{
-		// Filepath or string identifier for looking up the texture
+		// UTF-8 filepath or string identifier for looking up the texture
 		std::string m_filepath;
 
 		// How the texture is to be mapped
 		// 0 = clamp, 1 = wrap
-		u32 m_tiling;
+		uint32_t m_tiling;
 
-		Texture()
-			:m_filepath()
-			,m_tiling()
-		{}
-		Texture(std::string filepath, u32 tiling)
+		explicit Texture(std::string_view filepath = {}, uint32_t tiling = 0)
 			:m_filepath(filepath)
 			,m_tiling(tiling)
 		{}
 	};
 	struct Material
 	{
+		using TexCont = std::vector<Texture>;
+
 		// A unique name/guid for the material.
 		// The id is always 16 bytes, pad with zeros if you
 		// use a string rather than a guid
@@ -348,32 +266,351 @@ namespace pr::geometry::p3d
 		Colour m_diffuse;
 
 		// Diffuse textures
-		std::vector<Texture> m_tex_diffuse;
+		TexCont m_textures;
 
-		Material(std::string name = std::string(), Colour const& diff_colour = ColourWhite)
-			:m_id(name.c_str())
+		explicit Material(std::string_view name = {}, Colour const& diff_colour = ColourWhite)
+			:m_id(name)
 			,m_diffuse(diff_colour)
-			,m_tex_diffuse()
+			,m_textures()
 		{}
+	};
+	struct IdxBuf: byte_data<4>
+	{
+		// Notes:
+		//  - Converting from a runtime stride to a compile-time type is a PITA. There will always be some indirection.
+		//    Having a conditional before every index access sounds expensive, but the alternative is a function pointer
+		//    which cannot be inlined. The best case is for the caller to switch on 'm_stride' and have separate loops for
+		//    each possible stride size but this is a burden on the caller. I think the next best option is to switch inside
+		//    loops and rely on the optimiser to move the conditional outside the loops in user code.
+
+		union cptr_t
+		{
+			void const* vp;
+			uint64_t const* u64;
+			uint32_t const* u32;
+			uint16_t const* u16;
+			uint8_t  const* u08;
+			cptr_t(void const* ptr) :vp(ptr) {}
+			template <typename TOut> TOut to(int stride) const
+			{
+				// 'Stride' is the size of the underlying elements which are then cast to 'TOut'
+				switch (stride)
+				{
+				case 8: return s_cast<TOut>(*u64);
+				case 4: return s_cast<TOut>(*u32);
+				case 2: return s_cast<TOut>(*u16);
+				case 1: return s_cast<TOut>(*u08);
+				default: throw std::runtime_error("Unsupported underlying data format");
+				}
+			}
+		};
+		template <typename TOut> struct citer_t
+		{
+			using proxy = struct { TOut x; TOut const* operator -> () const { return &x; } };
+
+			cptr_t m_ptr;
+			int m_stride;
+
+			citer_t(void const* p, int stride)
+				:m_ptr(p)
+				,m_stride(stride)
+			{}
+			TOut operator*() const
+			{
+				return m_ptr.to<TOut>(m_stride);
+			}
+			proxy operator->() const
+			{
+				return proxy{**this};
+			}
+			citer_t& operator ++()
+			{
+				m_ptr.u08 += m_stride;
+				return *this;
+			}
+		
+			friend bool operator == (citer_t const& lhs, citer_t const& rhs)
+			{
+				return lhs.m_ptr.vp == rhs.m_ptr.vp;
+			}
+			friend bool operator != (citer_t const& lhs, citer_t const& rhs)
+			{
+				return lhs.m_ptr.vp != rhs.m_ptr.vp;
+			}
+			friend bool operator < (citer_t const& lhs, citer_t const& rhs)
+			{
+				return lhs.m_ptr.vp < rhs.m_ptr.vp;
+			}
+		};
+		template <typename TOut> struct casting_span_t
+		{
+			IdxBuf const* m_buf;
+
+			casting_span_t(IdxBuf const& buf)
+				:m_buf(&buf)
+			{}
+			citer_t<TOut> begin() const
+			{
+				return m_buf->begin<TOut>();
+			}
+			citer_t<TOut> end() const
+			{
+				return m_buf->end<TOut>();
+			}
+		};
+
+		// Index stride. n = bytes per index
+		int m_stride;
+
+		// Constructor
+		explicit IdxBuf(int stride = sizeof(uint32_t))
+			:m_stride(stride)
+		{}
+
+		// The number indices in this buffer
+		size_t count() const
+		{
+			assert(m_stride != 0);
+			return s_cast<size_t>(size() / m_stride);
+		}
+
+		// The width of each vertex in bytes
+		int stride() const
+		{
+			return m_stride;
+		}
+
+		// Access the index buffer by index, regardless of underlying index format
+		uint32_t operator[](int idx) const
+		{
+			// Convert from the underlying type to 'uint32_t'
+			assert(idx >= 0 && idx < count());
+			auto ptr = cptr_t{data() + idx * m_stride};
+			return ptr.to<uint32_t>(m_stride);
+		}
+
+		// Iteration - interpret the index buffer as TOut regardless of the stride of contained data.
+		template <typename TOut = uint32_t> citer_t<TOut> begin() const
+		{
+			return citer_t<TOut> {data(), m_stride};
+		}
+		template <typename TOut = uint32_t> citer_t<TOut> end() const
+		{
+			// The buffer may contain padding...
+			auto size_in_bytes = static_cast<size_t>(count() * m_stride);
+			return citer_t<TOut> {data() + size_in_bytes, m_stride};
+		}
+		template <typename TOut = uint32_t> casting_span_t<TOut> casting_span() const
+		{
+			return casting_span_t<TOut>{*this};
+		}
+	};
+	struct Nugget
+	{
+		// Notes:
+		//  - 'm_mat' is a string id not an index because ids are more reliable if the
+		//     model is modified. Indices need fixing if materials get added/removed.
+		//  - 'm_vidx' is the main face data. The other buffers, that aren't empty,
+		//     are repeated modulo to generate the same number of indices as 'm_vidx'
+		ETopo m_topo;  // Geometry topology
+		EGeom m_geom;  // Geometry valid data
+		Str16 m_mat;   // Material id
+		IdxBuf m_vidx; // Vertex indices for faces/lines/points/tetras/etc
+
+		// Constructor
+		explicit Nugget(ETopo topo = ETopo::TriList, EGeom geom = EGeom::All, std::string_view mat_id = {}, int stride = sizeof(uint32_t))
+			:m_topo(topo)
+			,m_geom(geom)
+			,m_mat(mat_id)
+			,m_vidx(stride)
+		{}
+
+		// The number of indices in the nugget
+		size_t icount() const
+		{
+			return m_vidx.count();
+		}
+
+		// Vertex/Index range
+		Range<int> vrange() const
+		{
+			auto get = [](auto* ptr, int count)
+			{
+				auto r = Range<std::decay_t<decltype(*ptr)>>::Reset();
+				for (; count-- != 0;) r.encompass(*ptr++);
+				return r;
+			};
+			switch (m_vidx.stride())
+			{
+			case 4: return get(m_vidx.data<uint32_t>(), s_cast<int>(m_vidx.count()));
+			case 2: return get(m_vidx.data<uint16_t>(), s_cast<int>(m_vidx.count()));
+			case 1: return get(m_vidx.data<uint8_t >(), s_cast<int>(m_vidx.count()));
+			default: throw std::runtime_error("Unsupported index format");
+			}
+		}
+		Range<int> irange() const
+		{
+			return Range<int>{0, s_cast<int>(m_vidx.count())};
+		}
+
+		// Iteration access to the nugget indices
+		template <typename TOut = uint32_t> IdxBuf::casting_span_t<TOut> indices() const
+		{
+			return m_vidx.casting_span<TOut>();
+		}
+
 	};
 	struct Mesh
 	{
-		// Container types
-		using VCont = std::vector<Vert>;
-		using ICont = struct : ByteData<4> { u32 m_stride; }; // 0 = variable, n = bytes per index
-		using NCont = std::vector<Nugget>;
+		// Notes:
+		//  - A complex model consists of multiple meshes (e.g. a car would have separate meshes
+		//    for the body and the wheels (instances?))
+		//  - A mesh can contain 1 or more nuggets which are divisions based on material (e.g. the
+		//    wheel would have a nugget for the rim, and a nugget for the rubber tyre)
+		//  - Nuggets don't need to all have the same topology.
+		//  - There is only one transform per mesh. Nuggets don't have transforms.
+		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
+		template <typename T> struct Cont
+		{
+			// Simple container with moduluo operator [] accessor
+			inline static T const None = T{};
+
+			std::vector<T> m_cont;
+			Cont()
+				:m_cont()
+			{
+			}
+			size_t count() const
+			{
+				return m_cont.size();
+			}
+			void emplace_back(T&& t)
+			{
+				m_cont.emplace_back(std::forward<T>(t));
+			}
+			void assign(std::initializer_list<T> list)
+			{
+				m_cont.assign(list);
+			}
+			void resize(int count)
+			{
+				m_cont.resize(s_cast<size_t>(count));
+			}
+			T const& operator [] (int i) const
+			{
+				return m_cont[i % count()];
+			}
+			T& operator [] (int i)
+			{
+				return m_cont[i % count()];
+			}
+			T const* begin() const
+			{
+				return m_cont.data();
+			}
+			T* begin()
+			{
+				return m_cont.data();
+			}
+			T const* end() const
+			{
+				return m_cont.data() + m_cont.size();
+			}
+			T* end()
+			{
+				return m_cont.data() + m_cont.size();
+			}
+			T const* data() const
+			{
+				return m_cont.data();
+			}
+			T* data()
+			{
+				return m_cont.data();
+			}
+		};
+		using VCont = Cont<v4>;
+		using CCont = Cont<Colour32>;
+		using NCont = Cont<v4>;
+		using TCont = Cont<v2>;
+		using Nuggets = Cont<Nugget>;
+
+		struct fat_vert_iter_t
+		{
+			using proxy = struct { FatVert x; FatVert const* operator -> () const { return &x; } };
+
+			Mesh const* m_mesh;
+			int m_idx;
+
+			fat_vert_iter_t(Mesh const* mesh, int idx)
+				:m_mesh(mesh)
+				,m_idx(idx)
+			{}
+			FatVert operator *() const
+			{
+				return FatVert
+				{
+					m_mesh->m_vert[m_idx],
+					m_mesh->m_diff[m_idx],
+					m_mesh->m_norm[m_idx],
+					m_mesh->m_tex0[m_idx],
+					{},
+				};
+			}
+			proxy operator ->() const
+			{
+				return proxy{**this};
+			}
+			fat_vert_iter_t& operator ++()
+			{
+				++m_idx;
+				return *this;
+			}
+			friend bool operator == (fat_vert_iter_t const& lhs, fat_vert_iter_t const& rhs)
+			{
+				return lhs.m_mesh == rhs.m_mesh && lhs.m_idx == rhs.m_idx;
+			}
+			friend bool operator != (fat_vert_iter_t const& lhs, fat_vert_iter_t const& rhs)
+			{
+				return !(lhs == rhs);
+			}
+			friend bool operator < (fat_vert_iter_t const& lhs, fat_vert_iter_t const& rhs)
+			{
+				if (lhs.m_mesh != rhs.m_mesh) throw std::runtime_error("Iterators are not from the same mesh");
+				return lhs.m_idx < rhs.m_idx;
+			}
+		};
+		struct fat_vert_span_t
+		{
+			Mesh const* m_mesh;
+			fat_vert_span_t(Mesh const* mesh)
+				:m_mesh(mesh)
+			{}
+
+			// Iterate over vertex indices
+			fat_vert_iter_t begin() const
+			{
+				return fat_vert_iter_t{m_mesh, 0};
+			}
+			fat_vert_iter_t end() const
+			{
+				return fat_vert_iter_t{m_mesh, s_cast<int>(m_mesh->vcount())};
+			}
+		};
 
 		// A name for the model
 		std::string m_name;
 
-		// The basic vertex data for the mesh
-		VCont m_verts;
+		// Vertex data
+		//  - The nuggets contain indices into the 'm_verts' buffer.
+		//  - The same index is also used to access the C,N,T buffers using modulus if needed.
+		VCont m_vert;
+		CCont m_diff;
+		NCont m_norm;
+		TCont m_tex0;
 
-		// Index data for the mesh
-		ICont m_idx;
-
-		// The nuggets to divide the mesh into for each material
-		NCont m_nugget;
+		// Index data
+		Nuggets m_nuggets;
 
 		// Mesh bounding box
 		BBox m_bbox;
@@ -381,20 +618,64 @@ namespace pr::geometry::p3d
 		// Mesh to scene transform
 		m4x4 m_o2p;
 
-		Mesh(std::string name = std::string())
+		explicit Mesh(std::string_view name = {})
 			:m_name(name)
-			,m_verts()
-			,m_idx()
-			,m_nugget()
-			,m_bbox()
-			,m_o2p()
+			,m_vert()
+			,m_diff()
+			,m_norm()
+			,m_tex0()
+			,m_nuggets()
+			,m_bbox(BBoxReset)
+			,m_o2p(m4x4Identity)
 		{}
+
+		// The length of the vertex buffer
+		size_t vcount() const
+		{
+			return m_vert.count();
+		}
+
+		// The sum of indices of all nuggets
+		size_t icount() const
+		{
+			size_t count = 0;
+			for (auto& nug : nuggets()) count += nug.icount();
+			return count;
+		}
+
+		// The number of nuggets in the mesh
+		size_t ncount() const
+		{
+			return m_nuggets.count();
+		}
+
+		// The vertex data geometry type. Nuggets can have geometry types with less bits than this
+		EGeom geom() const
+		{
+			return
+				(m_vert.count() != 0 ? EGeom::Vert : EGeom::None) |
+				(m_diff.count() != 0 ? EGeom::Colr : EGeom::None) |
+				(m_norm.count() != 0 ? EGeom::Norm : EGeom::None) |
+				(m_tex0.count() != 0 ? EGeom::Tex0 : EGeom::None);
+		}
+
+		// Iteration access to the verts as 'fat verts'
+		fat_vert_span_t fat_verts() const
+		{
+			return fat_vert_span_t{this};
+		}
+
+		// Iteration access to the nuggets
+		Nuggets const& nuggets() const
+		{
+			return m_nuggets;
+		}
 	};
 	struct Scene
 	{
-		// Container types
 		using MatCont = std::vector<Material>;
 		using MeshCont = std::vector<Mesh>;
+
 		MatCont m_materials;
 		MeshCont m_meshes;
 
@@ -405,7 +686,7 @@ namespace pr::geometry::p3d
 	};
 	struct File
 	{
-		u32 m_version;
+		uint32_t m_version;
 		Scene m_scene;
 
 		File()
@@ -413,43 +694,37 @@ namespace pr::geometry::p3d
 			,m_scene()
 		{}
 	};
-	inline Vec4 GetP(Vert const& vert) { return vert.pos; }
-	inline Vec4 GetC(Vert const& vert) { return vert.col; }
-	inline Vec4 GetN(Vert const& vert) { return vert.norm; }
-	inline Vec2 GetT(Vert const& vert) { return vert.uv; }
+	#pragma endregion
 
-	// Static null chunk
-	inline ChunkIndex const& NullChunk()
-	{
-		static ChunkIndex nullchunk(EChunkId::Null, 0);
-		return nullchunk;
-	}
-
-	// Helper to return the data size for a chunk
-	inline u32 DataLength(ChunkHeader chunk)
-	{
-		assert(chunk.m_length >= sizeof(ChunkHeader));
-		return chunk.m_length - sizeof(ChunkHeader);
-	}
-
+	#pragma region Stream traits
 	// Traits for a stream-like source
 	template <typename Stream> struct traits
 	{
-		static u64 tellg(Stream& src)
+		// Move the read/write position in the stream
+		static int64_t tellg(Stream& src)
 		{
-			return static_cast<u64>(src.tellg());
+			return static_cast<int64_t>(src.tellg());
 		}
-		static u64 tellp(Stream& src)
+		static int64_t tellp(Stream& src)
 		{
-			return static_cast<u64>(src.tellp());
+			return static_cast<int64_t>(src.tellp());
 		}
-		static bool seekg(Stream& src, u64 pos)
+		static bool seekg(Stream& src, int64_t pos)
 		{
 			return static_cast<bool>(src.seekg(pos));
 		}
-		static bool seekp(Stream& src, u64 pos)
+		static bool seekp(Stream& src, int64_t pos)
 		{
 			return static_cast<bool>(src.seekp(pos));
+		}
+
+		// True if still ok for reading
+		static bool good(Stream& src)
+		{
+			// Check if there is more data available. Eof is not signalled
+			// until and attempt to read past the eof is made.
+			src.peek();
+			return src.good();
 		}
 
 		// Read an array
@@ -465,97 +740,190 @@ namespace pr::geometry::p3d
 			if (dst.write(char_ptr(in), count * sizeof(TIn))) return;
 			throw std::runtime_error("partial write of output stream");
 		}
+
+		// RAII stream position perserver
+		struct SavePos
+		{
+			Stream* m_src;
+			int64_t m_pos;
+
+			~SavePos()
+			{
+				if (m_src == nullptr) return;
+				seekg(*m_src, m_pos);
+			}
+			SavePos()
+				:m_src()
+				,m_pos()
+			{}
+			SavePos(Stream& src)
+				:m_src(&src)
+				,m_pos(tellg(src))
+			{}
+			SavePos(SavePos&& rhs)
+				:SavePos()
+			{
+				std::swap(m_src, rhs.m_src);
+				std::swap(m_pos, rhs.m_pos);
+			}
+			SavePos(SavePos const&) = delete;
+			SavePos& operator =(SavePos&&) = delete;
+			SavePos& operator =(SavePos const&) = delete;
+		};
+
+		// RAII scope for the stream get pointer
+		static SavePos saveg(Stream& src)
+		{
+			return std::move(SavePos(src));
+		}
 	};
-
-	#pragma region Build Chunk Index
-
-	// Notes:
-	//  - The data sizes computed by indexing assume no compression
-
-	// Build a chunk index from parts of a p3d model
-	inline ChunkIndex Index(Texture const& tex)
-	{
-		ChunkIndex index(EChunkId::DiffuseTexture, 0U);
-		index.add(ChunkIndex(EChunkId::TexFilepath, tex.m_filepath.size() + 1));
-		index.add(ChunkIndex(EChunkId::TexTiling, sizeof(u32)));
-		return index;
-	}
-	inline ChunkIndex Index(Material const& mat)
-	{
-		ChunkIndex index(EChunkId::Material, sizeof(Str16));
-		index.add(ChunkIndex(EChunkId::DiffuseColour, sizeof(Vec4)));
-		for (auto& tex : mat.m_tex_diffuse) index.add(Index(tex));
-		return index;
-	}
-	inline ChunkIndex Index(Mesh const& mesh)
-	{
-		ChunkIndex index(EChunkId::Mesh, 0U);
-		index.add(ChunkIndex(EChunkId::MeshName, mesh.m_name.size() + 1));
-		index.add(ChunkIndex(EChunkId::MeshBBox, sizeof(BBox)));
-		if (!mesh.m_verts.empty())
-			index.add(ChunkIndex(EChunkId::MeshVertices, sizeof(u32) + mesh.m_verts.size() * sizeof(Vert))); // count, [verts]
-		if (!mesh.m_idx.empty())
-			index.add(ChunkIndex(EChunkId::MeshIndices, sizeof(u32) + sizeof(u32) + mesh.m_idx.size() * mesh.m_idx.m_stride)); // count, stride, [indices]
-		if (!mesh.m_nugget.empty())
-			index.add(ChunkIndex(EChunkId::MeshNuggets, sizeof(u32) + mesh.m_nugget.size() * sizeof(Nugget))); // count, [nuggets]
-		return index;
-	}
-	inline ChunkIndex Index(Scene const& scene)
-	{
-		ChunkIndex index(EChunkId::Scene, 0U);
-		if (!scene.m_materials.empty())
-		{
-			ChunkIndex mats(EChunkId::Materials, 0U);
-			for (auto& mat : scene.m_materials) mats.add(Index(mat));
-			index.add(mats);
-		}
-		if (!scene.m_meshes.empty())
-		{
-			ChunkIndex meshs(EChunkId::Meshes, 0U);
-			for (auto& mesh : scene.m_meshes) meshs.add(Index(mesh));
-			index.add(meshs);
-		}
-		return index;
-	}
-	inline ChunkIndex Index(File const& file)
-	{
-		ChunkIndex index(EChunkId::Main, 0U);
-		index.add(ChunkIndex(EChunkId::FileVersion, sizeof(Version)));
-		index.add(Index(file.m_scene));
-		return index;
-	}
-
 	#pragma endregion
 
-	// Generic chunk reading function.
-	// 'src' should point to data after the chunk header.
-	// 'len' is the remaining bytes in the parent chunk from 'src' to the end of the parent chunk
-	// 'func' is called back with the chunk header and 'src' positioned at the start of the chunk data
-	// 'func' should return true to stop reading (i.e. chunk found!).
-	template <typename TSrc, typename Func>
-	void ReadChunks(TSrc& src, u32 len, Func func, u32* len_out = nullptr)
+	// Chunk header (8-bytes)
+	struct ChunkHeader
 	{
-		while (len != 0)
+		// Notes:
+		//  - 'm_length' includes the size of the ChunkHeader
+
+		EChunkId m_id;
+		uint32_t m_length;
+
+		ChunkHeader() = default;
+		ChunkHeader(EChunkId id, size_t payload)
+			:m_id(id)
+			, m_length(s_cast<uint32_t>(sizeof(ChunkHeader) + payload))
+		{
+		}
+
+		// True if null equal to the Null chunk
+		explicit operator bool() const
+		{
+			return m_id != EChunkId::Null;
+		}
+
+		// The size (in bytes) of the chunk payload
+		constexpr uint32_t payload() const
+		{
+			assert(m_length >= sizeof(ChunkHeader));
+			return m_length - sizeof(ChunkHeader);
+		}
+	};
+	static_assert(sizeof(ChunkHeader) == 8, "Incorrect chunk header size");
+
+	// Used to build an index of a p3d file without having to load all of the data into memory.
+	struct ChunkIndex :ChunkHeader
+	{
+		// Notes:
+		//  - 'payload' in these constructors should *not* include the ChunkHeader size
+		using Cont = std::vector<ChunkIndex>;
+		Cont m_chunks;
+
+		ChunkIndex(EChunkId id, size_t payload)
+			:ChunkHeader(id, payload)
+			,m_chunks()
+		{}
+		ChunkIndex(EChunkId id, size_t payload, std::initializer_list<ChunkIndex> chunks)
+			:ChunkIndex(id, payload)
+		{
+			for (auto& c : chunks)
+				add(c);
+		}
+		void add(ChunkIndex const& chunk)
+		{
+			m_chunks.push_back(chunk);
+			m_length += chunk.m_length;
+		}
+		ChunkIndex const& operator[](EChunkId id) const
+		{
+			for (auto& c : m_chunks)
+				if (c.m_id == id)
+					return c;
+
+			throw std::runtime_error(Fmt("Child chunk '%8X' not a member of chunk '%8X'", id, m_id));
+		}
+		ChunkIndex const& find(std::initializer_list<EChunkId> chunk_id) const
+		{
+			// Search down the tree for a chunk
+			auto const* b = chunk_id.begin();
+			auto const* e = chunk_id.end();
+
+			auto const* chunks = &m_chunks;
+			for (; b != e; ++b)
+			{
+				for (auto& c : *chunks)
+				{
+					if (c.m_id != *b) continue;
+					if ((b + 1) == e) return c;
+					chunks = &c.m_chunks;
+					break;
+				}
+			}
+			return NullChunk();
+		}
+	};
+
+	// Static null chunk
+	inline ChunkIndex const& NullChunk()
+	{
+		static ChunkIndex nullchunk(EChunkId::Null, 0);
+		return nullchunk;
+	}
+
+	// Preserve the stream get pointer
+	template <typename TSrc> typename traits<TSrc>::SavePos SaveG(TSrc& src)
+	{
+		return std::move(traits<TSrc>::saveg(src));
+	}
+
+	// Chunk reading/searching function.
+	// 'src' should point to data after a chunk header (or the start of a stream).
+	// 'len' is the remaining bytes from 'src' to the end of the parent chunk or stream (can use ~0U to search to the end of the stream).
+	// 'len_out' is an output of the length until the end of the parent chunk on return.
+	// 'func' is called with the found ChunkHeader and with 'src' positioned at the start of the data for the found chunk.
+	// 'func' signature is:   bool Func(ChunkHeader hdr, TSrc& src).
+	// 'func' can be a boolean predicate or a parsing function. Return true to stop searching.
+	template <typename TSrc, typename Func>
+	ChunkHeader Find(TSrc& src, uint32_t len, Func func, uint32_t* len_out = nullptr)
+	{
+		for (; len != 0 && traits<TSrc>::good(src); )
 		{
 			auto start = traits<TSrc>::tellg(src);
 
 			// Read the chunk header
 			auto hdr = Read<ChunkHeader>(src);
-			if (hdr.m_length <= len) len -= hdr.m_length;
-			else throw std::runtime_error(pr::Fmt("invalid chunk found at offset 0x%X", start));
-			u32 data_len = DataLength(hdr);
+			if (hdr.m_length <= len)
+				len -= hdr.m_length;
+			else
+				throw std::runtime_error(Fmt("invalid chunk found at offset 0x%llx", start));
 
-			// Parse the chunk
-			if (func(hdr, src, data_len))
+			try
 			{
-				if (len_out) *len_out = len;
-				return;
+				// Callback with the chunk
+				if (func(hdr, src))
+				{
+					// Update the remaining length
+					if (len_out)
+						*len_out = len;
+
+					return hdr;
+				}
+			}
+			catch (std::exception& ex)
+			{
+				// This is a slicing assignment, but that is actually what we want
+				ex = std::exception(FmtS("%s\n  %s (%d)", ex.what(), EChunkId_::ToStringA(hdr.m_id), hdr.m_id));
+				throw; // Preserves original exception type
 			}
 
 			// Seek to the next chunk
 			traits<TSrc>::seekg(src, start + hdr.m_length);
 		}
-		if (len_out) *len_out = 0;
+
+		// Update the remaining length
+		if (len_out)
+			*len_out = 0;
+
+		return ChunkHeader{};
 	}
 
 	// Search from the current stream position to the next instance of chunk 'id'.
@@ -564,10 +932,11 @@ namespace pr::geometry::p3d
 	// 'len_out' is an output of the length until the end of the parent chunk on return.
 	// If 'next' is true and 'src' currently points to an 'id' chunk, then seeks to the next instance of 'id'
 	// Returns the found chunk header with the current position of 'src' set immediately after it.
-	template <typename TSrc> ChunkHeader Find(EChunkId id, TSrc& src, u32 len, u32* len_out = nullptr, bool next = false)
+	template <typename TSrc>
+	ChunkHeader Find(TSrc& src, uint32_t len, EChunkId id, uint32_t* len_out = nullptr, bool next = false)
 	{
-		ChunkHeader chunk;
-		ReadChunks(src, len, [&](ChunkHeader hdr, TSrc&, u32)
+		auto chunk = ChunkHeader{};
+		Find(src, len, [&](ChunkHeader hdr, TSrc&)
 		{
 			// If this is the chunk we're looking for return false to say "done"
 			if (hdr.m_id == id && !next)
@@ -582,21 +951,23 @@ namespace pr::geometry::p3d
 		return chunk;
 	}
 
-	// Search from the current stream position to the nested chunk described by the list
+	// Search from the current stream position to the nested chunk described by the list.
+	// Finds the first matching chunk Id at each level.
 	// 'src' is assume to be pointed to a chunk header.
-	template <typename TSrc> ChunkHeader Find(TSrc& src, u32 len, std::initializer_list<EChunkId> chunk_id)
+	template <typename TSrc>
+	ChunkHeader Find(TSrc& src, uint32_t len, std::initializer_list<EChunkId> chunk_id)
 	{
-		ChunkHeader hdr = {};
+		auto hdr = ChunkHeader{};
 		for (auto id : chunk_id)
 		{
-			hdr = Find(id, src, len);
+			hdr = Find(src, len, id);
 			if (hdr.m_id != id)
 			{
 				// Special case the Main chunk, if it's missing assume 'src' is not a p3d stream and throw
 				if (id == EChunkId::Main) throw std::runtime_error("Source is not a p3d stream");
-				return ChunkHeader();
+				return ChunkHeader{};
 			}
-			len = DataLength(hdr);
+			len = hdr.payload();
 		}
 		return hdr;
 	}
@@ -606,11 +977,49 @@ namespace pr::geometry::p3d
 	// Notes:
 	//  - All of these Read functions assume 'src' points to the start
 	//    of the chunk data of the corresponding chunk type.
+	//  - Backwards compatibility is only needed in the Read functions.
 
 	// Read an array
 	template <typename TOut, typename TSrc> inline void Read(TSrc& src, TOut* out, size_t count)
 	{
 		traits<TSrc>::read(src, out, count);
+	}
+
+	// Read an array with element transforming.
+	// 'TIn' is the data type of the elements to read.
+	// 'count' is the number of times to call 'out'
+	// 'stride' is the size in bytes consumed with each call to 'out'
+	// 'out' is an output function used to consume the read elements.
+	template <typename TIn, typename TOut, typename TSrc> inline void Read(TSrc& src, size_t count, size_t stride, TOut out)
+	{
+		// Example:
+		//  count = 3, stride = 12 bytes, sizeof(TIn) = 4 bytes
+		//  'element' is the unit consumed by the 'out' callback.
+		//    => element size in units of TIn = stride / sizeof(TIn) = 3 TIn/element
+
+		constexpr int PageSizeBytes = 0x10000;
+
+		if (stride > PageSizeBytes)
+			throw std::runtime_error("Stride value is too large for local page buffer.");
+		if ((stride % sizeof(TIn)) != 0)
+			throw std::runtime_error("Stride value must be a multiple of the size of the input elements");
+
+		// Local buffer
+		TIn page[PageSizeBytes / sizeof(TIn)];
+		auto const page_max = PageSizeBytes / stride; // the number of whole elements that fit in 'page'
+		auto const elem_size = stride / sizeof(TIn);  // the element size in units of 'Tin'
+
+		for (; count != 0; )
+		{
+			// The number of 'TIn's to read
+			auto n = elem_size * std::min(count, page_max);
+			Read(src, &page[0], n);
+
+			auto const* pbeg = &page[0];
+			auto const* pend = &page[0] + n;
+			for (auto p = pbeg; p != pend; p += elem_size, --count)
+				out(p);
+		}
 	}
 
 	// Read a single type
@@ -622,7 +1031,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Read a null terminated string. 'src' is assumed to point to the start of a null terminated string
-	template <typename TSrc, typename TStr = std::string> TStr ReadCStr(TSrc& src, u32 len, u32* len_out = nullptr)
+	template <typename TSrc, typename TStr = std::string> TStr ReadCStr(TSrc& src, uint32_t len, uint32_t* len_out = nullptr)
 	{
 		TStr str;
 		for (char c; len-- != 0 && (c = Read<char>(src)) != 0;)
@@ -633,21 +1042,21 @@ namespace pr::geometry::p3d
 	}
 
 	// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
-	template <typename TSrc> Texture ReadTexture(TSrc& src, u32 len)
+	template <typename TSrc> Texture ReadTexture(TSrc& src, uint32_t len)
 	{
 		Texture tex;
-		ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 		{
 			switch (hdr.m_id)
 			{
 			case EChunkId::TexFilepath:
 				{
-					tex.m_filepath = ReadCStr(src, data_len);
+					tex.m_filepath = ReadCStr(src, hdr.payload());
 					break;
 				}
 			case EChunkId::TexTiling:
 				{
-					tex.m_tiling = Read<u32>(src);
+					tex.m_tiling = Read<uint32_t>(src);
 					break;
 				}
 			}
@@ -657,26 +1066,25 @@ namespace pr::geometry::p3d
 	}
 
 	// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
-	template <typename TSrc> Material ReadMaterial(TSrc& src, u32 len)
+	template <typename TSrc> Material ReadMaterial(TSrc& src, uint32_t len)
 	{
 		Material mat;
 
 		Read(src, mat.m_id.str, sizeof(Str16));
 		len -= sizeof(Str16);
 
-		ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 		{
 			switch (hdr.m_id)
 			{
 			case EChunkId::DiffuseColour:
 				{
-					auto col = Read<Vec4>(src);
-					mat.m_diffuse = pr::Colour(col.r, col.g, col.b, col.a);
+					mat.m_diffuse = Read<Colour>(src);
 					break;
 				}
 			case EChunkId::DiffuseTexture:
 				{
-					mat.m_tex_diffuse.emplace_back(ReadTexture(src, data_len));
+					mat.m_textures.emplace_back(ReadTexture(src, hdr.payload()));
 					break;
 				}
 			}
@@ -685,170 +1093,252 @@ namespace pr::geometry::p3d
 		return std::move(mat);
 	}
 
-	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVertices chunk data
-	template <typename TSrc> Mesh::VCont ReadMeshVertices(TSrc& src, u32 data_len, EChunkId id)
+	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVerts chunk data
+	template <typename TSrc> Mesh::VCont ReadMeshVerts(TSrc& src, uint32_t len)
 	{
 		Mesh::VCont cont;
-		switch (id)
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EVertFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Vertex list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the vertex data into memory. Inflate to v4
+		auto ptr = cont.data();
+		switch (fmt)
 		{
-		case EChunkId::MeshVertices:
+		case EVertFormat::Verts32Bit:
 			{
-				// Read the vertex count
-				auto count = Read<u32>(src);
-				data_len -= sizeof(u32);
-
-				if (count * sizeof(Vert) != data_len)
-					throw std::runtime_error(Fmt("Vertex list count is invalid. Vertex count is %d, data available for %d verts.", count, data_len/sizeof(Vert)));
-
-				// Read the vertex data into memory
-				cont.resize(count);
-				Read(src, cont.data(), count);
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 1.0f}; });
 				break;
 			}
-		case EChunkId::MeshVerticesV:
+		case EVertFormat::Verts16Bit:
 			{
-				// Read the vertex count
-				auto count = Read<u32>(src);
-				data_len -= sizeof(u32);
-
-				// Read the geometry data flags
-				auto geom = static_cast<EGeom>(Read<u32>(src));
-				data_len -= sizeof(u32);
-
-				// Allocate space for 'count' vertices
-				cont.resize(count);
-
-				// Populate the vertex data
-				if (AllSet(geom, EGeom::Vert))
-				{
-					if (count * sizeof(float) * 3 > data_len)
-						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex positions, data available for %d verts.", count, data_len/(3*sizeof(float))));
-
-					for (auto& v : cont)
-					{
-						v.pos.x = Read<float>(src);
-						v.pos.y = Read<float>(src);
-						v.pos.z = Read<float>(src);
-						v.pos.w = 1.0f;
-					}
-					data_len -= count * sizeof(float) * 3;
-				}
-				else
-				{
-					for (auto& v : cont)
-						v.pos = v4Origin;
-				}
-				
-				// Populate the normals
-				if (AllSet(geom, EGeom::Norm))
-				{
-					if (count * sizeof(u32) > data_len)
-						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex normals, data available for %d normals.", count, data_len/sizeof(u32)));
-
-					for (auto& v : cont)
-						v.norm = Norm32bit::Decompress(Read<u32>(src));
-
-					data_len -= count * sizeof(u32);
-				}
-				else
-				{
-					for (auto& v : cont)
-						v.norm = v4Zero;
-				}
-
-				// Populate the vertex colours
-				if (AllSet(geom, EGeom::Colr))
-				{
-					if (count * sizeof(Colour32) > data_len)
-						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex colours, data available for %d colours.", count, data_len/sizeof(Colour32)));
-
-					for (auto& v : cont)
-					{
-						auto col = Read<Colour32>(src);
-						v.col.r = r_cp(col);
-						v.col.g = g_cp(col);
-						v.col.b = b_cp(col);
-						v.col.a = a_cp(col);
-					}
-					data_len -= count * sizeof(Colour32);
-				}
-				else
-				{
-					for (auto& v : cont)
-						v.col = v4One;
-				}
-
-				// Populate the texture coordinates
-				if (AllSet(geom, EGeom::Tex0))
-				{
-					if (count * sizeof(Colour32) > data_len)
-						throw std::runtime_error(Fmt("Mesh vertex data is invalid. Expected %d vertex texture coordinates, data available for %d coords.", count, data_len/(2*sizeof(float))));
-
-					for (auto& v : cont)
-					{
-						v.uv.x = Read<float>(src);
-						v.uv.y = Read<float>(src);
-					}
-					data_len -= count * sizeof(float) * 2;
-				}
-				else
-				{
-					for (auto& v : cont)
-						v.uv = v2Zero;
-				}
-
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 1.0_hf}); });
 				break;
 			}
 		default:
 			{
-				throw std::runtime_error("Unsupported Mesh Vertex format");
+				throw std::runtime_error("Unsupported mesh vertex format");
 			}
 		}
 
 		return std::move(cont);
 	}
 
-	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::MeshIndices8/16/32 chunk data
-	template <typename TSrc> Mesh::ICont ReadMeshIndices(TSrc& src, u32 data_len, EChunkId id)
+	// Fill a container of colours. 'src' is assumed to point to the start of EChunkId::MeshColours chunk data
+	template <typename TSrc> Mesh::CCont ReadMeshColours(TSrc& src, uint32_t len)
 	{
-		Mesh::ICont cont;
-		switch (id)
+		Mesh::CCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EColourFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Colours list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the vertex colour data into memory. Inflate to Colour32
+		auto ptr = cont.data();
+		switch (fmt)
 		{
-		case EChunkId::MeshIndices:
+		case EColourFormat::Colours32Bit:
 			{
-				// Read the index count
-				auto count = Read<u32>(src);
-				data_len -= sizeof(u32);
-
-				// Read the stride
-				auto stride = Read<u32>(src);
-				data_len -= sizeof(u32);
-
-				if (count * stride != data_len)
-					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / stride));
-
-				// Read the index data into memory
-				cont.resize(data_len);
-				cont.m_stride = stride;
-				Read(src, cont.data(), data_len);
+				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Colour32{p[0]}; });
 				break;
 			}
-		case EChunkId::MeshIndicesV:
+		default:
 			{
-				// Read the index count
-				auto count = Read<u32>(src);
-				data_len -= sizeof(u32);
+				throw std::runtime_error("Unsupported mesh vertex colour format");
+			}
+		}
 
-				// Read the stride
-				auto stride = Read<u32>(src);
-				data_len -= sizeof(u32);
+		return std::move(cont);
+	}
 
-				// Create a temporary buffer for holding the compressed indices
-				std::vector<u8> buf(data_len);
+	// Fill a container of normals. 'src' is assumed to point to the start of EChunkId::MeshNorms chunk data
+	template <typename TSrc> Mesh::NCont ReadMeshNorms(TSrc& src, uint32_t len)
+	{
+		Mesh::NCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<ENormFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Normals list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the normals data into memory. Inflate to v4
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case ENormFormat::Norms32Bit:
+			{
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 0.0f}; });
+				break;
+			}
+		case ENormFormat::Norms16Bit:
+			{
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 0.0_hf}); });
+				break;
+			}
+		case ENormFormat::NormsPack32:
+			{
+				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Norm32bit::Decompress(p[0]); });
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh normals format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of UVs. 'src' is assumed to point to the start of EChunkId::MeshUVs chunk data
+	template <typename TSrc> Mesh::TCont ReadMeshUVs(TSrc& src, uint32_t len)
+	{
+		Mesh::TCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EUVFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Texture UVs list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the texture coord data into memory. Inflate to v2
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case EUVFormat::UVs32Bit:
+			{
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v2{p[0], p[1]}; });
+				break;
+			}
+		case EUVFormat::UVs16Bit:
+			{
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], 0.0_hf, 0.0_hf}).xy; });
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh UV format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::Mesh?Idx chunk data
+	template <typename TSrc> IdxBuf ReadIndices(TSrc& src, uint32_t len)
+	{
+		IdxBuf cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EIndexFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check
+		if (count * stride != len && fmt != EIndexFormat::IdxNBit)
+			throw std::runtime_error(Fmt("Indices buffer count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		cont.m_stride = stride;
+
+		// Read the index data into memory
+		switch (fmt)
+		{
+		case EIndexFormat::Idx32Bit:
+			{
+				cont.resize<uint32_t>(count);
+				Read(src, cont.data<uint32_t>(), cont.size<uint32_t>());
+				cont.m_stride = sizeof(uint32_t);
+				break;
+			}
+		case EIndexFormat::Idx16Bit:
+			{
+				cont.resize<uint16_t>(count);
+				Read(src, cont.data<uint16_t>(), cont.size<uint16_t>());
+				cont.m_stride = sizeof(uint16_t);
+				break;
+			}
+		case EIndexFormat::Idx8Bit:
+			{
+				cont.resize<uint8_t>(count);
+				Read(src, cont.data<uint8_t>(), cont.size<uint8_t>());
+				cont.m_stride = sizeof(uint8_t);
+				break;
+			}
+		case EIndexFormat::IdxNBit:
+			{
+				// For IdxNBit, the stride value is the size of the decompressed indices,
+				// *not* the per-element size of the data in 'src' (like it is for other
+				// chunks that have a stride value).
+				cont.reserve(count * stride);
+
+				// Read compressed indices into a local buffer
+				byte_data<> buf(len);
 				Read(src, buf.data(), buf.size());
 
+				// Decompress from 'buf' into 'cont'
 				int64_t prev = 0;
-				for (u8 const* p = buf.data(), *pend = p + buf.size(); p != pend; ++p)
+				auto const* p = buf.data();
+				auto const* pend = p + buf.size();
+				for (; p != pend; ++p)
 				{
 					int s = 0;
 					uint64_t zz = 0;
@@ -862,154 +1352,172 @@ namespace pr::geometry::p3d
 
 					// Get the index value from the delta
 					auto idx = prev + delta;
-					cont.push_back(reinterpret_cast<u8 const*>(&idx), stride);
+					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
 
 					prev += delta;
 				}
 
+				// Integrity check
 				if (cont.size() != count * stride)
-					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, %d indices provided.", count, static_cast<u32>(cont.size() / stride)));
+					throw std::runtime_error(Fmt("Index buffer count is invalid. Count is %d, %d indices provided.", count, static_cast<uint32_t>(cont.size() / stride)));
 
-				cont.m_stride = stride;
-				break;
-			}
-		case EChunkId::MeshIndices16: // deprecated
-			{
-				using Idx = u16;
-				size_t count = Read<u32>(src);
-				data_len -= sizeof(u32);
-				if (count * sizeof(Idx) != data_len)
-					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
-
-				cont.resize<Idx>(count);
-				cont.m_stride = sizeof(Idx);
-				Read(src, cont.data<Idx>(), count);
-				break;
-			}
-		case EChunkId::MeshIndices32: // deprecated
-			{
-				using Idx = u32;
-				size_t count = Read<u32>(src);
-				data_len -= sizeof(u32);
-				if (count * sizeof(Idx) != data_len)
-					throw std::runtime_error(Fmt("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len / sizeof(Idx)));
-
-				cont.resize<Idx>(count);
-				cont.m_stride = sizeof(Idx);
-				Read(src, cont.data<Idx>(), count);
 				break;
 			}
 		default:
 			{
-				throw std::runtime_error("Unsupported Mesh Index format");
+				throw std::runtime_error("Unsupported index buffer format");
 			}
 		}
+
 		return std::move(cont);
 	}
 
-	// Fill a container of nuggets. 'src' is assumed to point to the start of EChunkId::MeshNuggets chunk data
-	template <typename TSrc> Mesh::NCont ReadMeshNuggets(TSrc& src, u32 data_len)
+	// Read a mesh nugget. 'src' is assumed to point to the start of EChunkId::MeshNugget chunk data
+	template <typename TSrc> Nugget ReadMeshNugget(TSrc& src, uint32_t len)
 	{
-		Mesh::NCont cont;
+		Nugget nugget;
 
-		size_t count = Read<u32>(src);
-		data_len -= sizeof(u32);
+		// Read the mesh topology
+		nugget.m_topo = static_cast<ETopo>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
 
-		if (count * sizeof(Nugget) != data_len)
-			throw std::runtime_error(Fmt("Nugget list count is invalid. Nugget count is %d, data available for %d nuggets.", count, data_len/sizeof(Nugget)));
+		// Read the mesh geometry
+		nugget.m_geom = static_cast<EGeom>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
 
-		cont.resize(count);
-		Read(src, cont.data(), count);
-		return std::move(cont);
+		// Read the child chunks
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::MeshMatId:
+					{
+						// Read the material id
+						auto id = ReadCStr(src, hdr.payload());
+						nugget.m_mat = id;
+						break;
+					}
+				case EChunkId::MeshVIdx:
+					{
+						nugget.m_vidx = ReadIndices(src, hdr.payload());
+						break;
+					}
+				}
+				return false;
+			});
+
+		return std::move(nugget);
 	}
 
 	// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
-	template <typename TSrc> Mesh ReadMesh(TSrc& src, u32 len)
+	template <typename TSrc> Mesh ReadMesh(TSrc& src, uint32_t len)
 	{
 		Mesh mesh;
-		ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
-		{
-			switch (hdr.m_id)
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 			{
-			case EChunkId::MeshName:
+				switch (hdr.m_id)
 				{
-					mesh.m_name = ReadCStr(src, data_len);
-					break;
+				case EChunkId::MeshName:
+					{
+						mesh.m_name = ReadCStr(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshBBox:
+					{
+						mesh.m_bbox = Read<BBox>(src);
+						break;
+					}
+				case EChunkId::MeshTransform:
+					{
+						mesh.m_o2p = Read<m4x4>(src);
+						break;
+					}
+				case EChunkId::MeshVerts:
+					{
+						mesh.m_vert = ReadMeshVerts(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshColours:
+					{
+						mesh.m_diff = ReadMeshColours(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshNorms:
+					{
+						mesh.m_norm = ReadMeshNorms(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshUVs:
+					{
+						mesh.m_tex0 = ReadMeshUVs(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshNugget:
+					{
+						mesh.m_nuggets.emplace_back(ReadMeshNugget(src, hdr.payload()));
+						break;
+					}
 				}
-			case EChunkId::MeshBBox:
-				{
-					mesh.m_bbox = Read<BBox>(src);
-					break;
-				}
-			case EChunkId::MeshTransform:
-				{
-					mesh.m_o2p = Read<m4x4>(src);
-					break;
-				}
-			case EChunkId::MeshVertices:
-			case EChunkId::MeshVerticesV:
-				{
-					mesh.m_verts = ReadMeshVertices(src, data_len, hdr.m_id);
-					break;
-				}
-			case EChunkId::MeshIndices:
-			case EChunkId::MeshIndicesV:
-			case EChunkId::MeshIndices16:
-			case EChunkId::MeshIndices32:
-				{
-					mesh.m_idx = ReadMeshIndices(src, data_len, hdr.m_id);
-					break;
-				}
-			case EChunkId::MeshNuggets:
-				{
-					mesh.m_nugget = ReadMeshNuggets(src, data_len);
-					break;
-				}
-			}
-			return false;
-		});
+				return false;
+			});
 		return std::move(mesh);
 	}
 
+	// Fill a container of materials. 'src' is assumed to point to the start of EChunkId::Materials chunk data
+	template <typename TSrc> Scene::MatCont ReadSceneMaterials(TSrc& src, uint32_t len)
+	{
+		Scene::MatCont mats;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::Material:
+					mats.emplace_back(ReadMaterial(src, hdr.payload()));
+					break;
+				}
+				return false;
+			});
+		return std::move(mats);
+	}
+
+	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
+	template <typename TSrc> Scene::MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
+	{
+		Scene::MeshCont meshes;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::Mesh:
+					meshes.emplace_back(ReadMesh(src, hdr.payload()));
+					break;
+				}
+				return false;
+			});
+		return std::move(meshes);
+	}
+
 	// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
-	template <typename TSrc> Scene ReadScene(TSrc& src, u32 len)
+	template <typename TSrc> Scene ReadScene(TSrc& src, uint32_t len)
 	{
 		Scene scene;
-		ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-		{
-			switch (hdr.m_id)
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 			{
-			case EChunkId::Materials:
+				switch (hdr.m_id)
 				{
-					ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+				case EChunkId::Materials:
 					{
-						switch (hdr.m_id)
-						{
-						case EChunkId::Material:
-							scene.m_materials.emplace_back(ReadMaterial(src, data_len));
-							break;
-						}
-						return false;
-					});
-					break;
-				}
-			case EChunkId::Meshes:
-				{
-					ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+						scene.m_materials = ReadSceneMaterials(src, hdr.payload());
+						break;
+					}
+				case EChunkId::Meshes:
 					{
-						switch (hdr.m_id)
-						{
-						case EChunkId::Mesh:
-							scene.m_meshes.emplace_back(ReadMesh(src, data_len));
-							break;
-						}
-						return false;
-					});
-					break;
+						scene.m_meshes = ReadSceneMeshes(src, hdr.payload());
+						break;
+					}
 				}
-			}
-			return false;
-		});
+				return false;
+			});
 		return std::move(scene);
 	}
 
@@ -1024,81 +1532,21 @@ namespace pr::geometry::p3d
 			throw std::runtime_error("Source is not a p3d stream");
 
 		// Read the sub chunks
-		ReadChunks(src, DataLength(main), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-		{
-			switch (hdr.m_id)
+		Find(src, main.payload(), [&](ChunkHeader hdr, TSrc& src)
 			{
-			case EChunkId::FileVersion:
-				file.m_version = Read<u32>(src);
-				break;
-			case EChunkId::Scene:
-				file.m_scene = ReadScene(src, data_len);
-				break;
-			}
-			return false;
-		});
+				switch (hdr.m_id)
+				{
+				case EChunkId::FileVersion:
+					file.m_version = Read<uint32_t>(src);
+					break;
+				case EChunkId::Scene:
+					file.m_scene = ReadScene(src, hdr.payload());
+					break;
+				}
+				return false;
+			});
 
 		return std::move(file);
-	}
-
-	// Extract the materials in the given P3D stream
-	template <typename TSrc, typename TMatObj> void ReadMaterials(TSrc& src, TMatObj mat_out)
-	{
-		// Restore the src position on return
-		auto reset_stream = pr::CreateStateScope(
-			[&]{ return traits<TSrc>::tellg(src); },
-			[&](u64 start){ traits<TSrc>::seekg(src, start); });
-
-		// Check that this is actually a P3D stream
-		auto main = Read<ChunkHeader>(src);
-		if (main.m_id != EChunkId::Main)
-			throw std::runtime_error("Source is not a p3d stream");
-
-		// Find the Materials sub chunk
-		auto mats = Find(src, {EChunkId::Scene, EChunkId::Materials});
-		if (mats.m_id != EChunkId::Materials)
-			return; // Source contains no materials
-
-		// Read the materials
-		ReadChunks(src, DataLength(mats), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-		{
-			switch (hdr.m_id)
-			{
-			case EChunkId::Material:
-				if (mat_out(ReadMaterial(src, data_len)))
-					return true; // Stop reading
-				break;
-			}
-			return false;
-		});
-	}
-
-	// Extract the meshes from a P3D stream
-	template <typename TSrc, typename TMeshOut> void ReadMeshes(TSrc& src, TMeshOut mesh_out)
-	{
-		// Restore the src position on return
-		auto reset_stream = pr::CreateStateScope(
-			[&]{ return traits<TSrc>::tellg(src); },
-			[&](u64 start){ traits<TSrc>::seekg(src, start); }
-		);
-
-		// Find the Meshes sub chunk
-		auto meshes = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Meshes});
-		if (meshes.m_id != EChunkId::Meshes)
-			return; // Source contains no mesh data
-
-		// Read the meshes
-		ReadChunks(src, DataLength(meshes), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-		{
-			switch (hdr.m_id)
-			{
-			case EChunkId::Mesh:
-				if (mesh_out(ReadMesh(src, data_len)))
-					return true; // stop reading
-				break;
-			}
-			return false;
-		});
 	}
 
 	#pragma endregion
@@ -1110,7 +1558,7 @@ namespace pr::geometry::p3d
 	//  - To write out only part of a File, delete the parts in a temporary copy of the file.
 
 	// Write 'hdr' at 'offset', preserving the current output position in 'src'
-	template <typename TOut> void UpdateHeader(TOut& out, u64 offset, ChunkHeader hdr)
+	template <typename TOut> void UpdateHeader(TOut& out, int64_t offset, ChunkHeader hdr)
 	{
 		auto pos = traits<TOut>::tellp(out);
 		traits<TOut>::seekp(out, offset);
@@ -1119,38 +1567,61 @@ namespace pr::geometry::p3d
 	}
 
 	// Write an array
-	template <typename TIn, typename TOut> inline u32 Write(TOut& out, TIn const* in, size_t count)
+	template <typename TIn, typename TOut> inline uint32_t Write(TOut& out, TIn const* in, size_t count)
 	{
 		traits<TOut>::write(out, in, count);
-		return s_cast<u32>(count * sizeof(*in));
+		return s_cast<uint32_t>(count * sizeof(*in));
 	}
 
-	// Write a single type
-	template <typename TIn, typename TOut> inline u32 Write(TOut& out, TIn const& in)
+	// Write an array of type 'TIn' and an array of type 'TAs'
+	template <typename TAs, typename TIn, typename TOut> inline uint32_t WriteCast(TOut& out, TIn const* in, size_t count)
+	{
+		if constexpr (std::is_same_v<TIn, TOut>)
+		{
+			// No type conversion, direct copy
+			return Write(out, in, count);
+		}
+		else
+		{
+			// Convert from 'TIn' to 'TAs'
+			byte_data<> buf(PadTo(count * sizeof(TAs), sizeof(uint32_t)));
+
+			auto pin = in;
+			auto pas = buf.data<TAs>();
+			for (auto n = count; n-- != 0;)
+				*pas++ = s_cast<TAs>(*pin++);
+
+			return Write(out, buf.data<TAs>(), count);
+		}
+	}
+
+	// Write a single POD type
+	template <typename TIn, typename TOut> inline uint32_t Write(TOut& out, TIn const& in)
 	{
 		return Write(out, &in, 1);
 	}
 
-	// Write a null terminated string to 'out'
-	template <typename TOut> u32 WriteCStr(TOut& out, EChunkId chunk_id, std::string const& str)
+	// Write a null terminated string to 'out'.
+	template <typename TOut> uint32_t WriteCStr(TOut& out, EChunkId chunk_id, std::string_view str)
 	{
 		ChunkHeader hdr(chunk_id, str.size() + 1);
 		Write<ChunkHeader>(out, hdr);
-		Write(out, str.c_str(), DataLength(hdr));
+		Write(out, str.data(), str.size());
+		Write<uint8_t>(out, 0);
 		return hdr.m_length;
 	}
 
 	// Write a texture tiling chunk to 'out'
-	template <typename TOut> u32 WriteTexTiling(TOut& out, u32 tiling)
+	template <typename TOut> uint32_t WriteTexTiling(TOut& out, uint32_t tiling)
 	{
-		ChunkHeader hdr(EChunkId::TexTiling, sizeof(u32));
+		ChunkHeader hdr(EChunkId::TexTiling, sizeof(uint32_t));
 		Write<ChunkHeader>(out, hdr);
-		Write<u32>(out, tiling);
+		Write<uint32_t>(out, tiling);
 		return hdr.m_length;
 	}
 
 	// Write a texture to 'out'
-	template <typename TOut> u32 WriteTexture(TOut& out, Texture const& tex)
+	template <typename TOut> uint32_t WriteTexture(TOut& out, Texture const& tex)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
@@ -1170,16 +1641,16 @@ namespace pr::geometry::p3d
 	}
 
 	// Write a diffuse colour chunk to 'out'
-	template <typename TOut> u32 WriteDiffuseColour(TOut& out, pr::Colour const& colour)
+	template <typename TOut> uint32_t WriteColour(TOut& out, EChunkId chunk_id, Colour const& colour)
 	{
-		ChunkHeader hdr(EChunkId::DiffuseColour, sizeof(Vec4));
+		ChunkHeader hdr(chunk_id, sizeof(Colour));
 		Write<ChunkHeader>(out, hdr);
-		Write<Vec4>(out, {colour.r, colour.g, colour.b, colour.a});
+		Write<Colour>(out, colour);
 		return hdr.m_length;
 	}
 
 	// Write a material to 'out'
-	template <typename TOut> u32 WriteMaterial(TOut& out, Material const& mat)
+	template <typename TOut> uint32_t WriteMaterial(TOut& out, Material const& mat)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
@@ -1187,14 +1658,14 @@ namespace pr::geometry::p3d
 		ChunkHeader hdr(EChunkId::Material, 0U);
 		Write<ChunkHeader>(out, hdr);
 
-		// Material name
-		hdr.m_length += Write(out, mat.m_id.str, sizeof(Str16));
+		// Material name (exactly 16 chars, CStr adds a null terminator)
+		hdr.m_length += Write(out, &mat.m_id.str[0], sizeof(mat.m_id.str));
 
 		// Diffuse colour
-		hdr.m_length += WriteDiffuseColour(out, mat.m_diffuse);
+		hdr.m_length += WriteColour(out, EChunkId::DiffuseColour, mat.m_diffuse);
 
 		// Textures
-		for (auto& tex : mat.m_tex_diffuse)
+		for (auto& tex : mat.m_textures)
 			hdr.m_length += WriteTexture(out, tex);
 
 		UpdateHeader(out, offset, hdr);
@@ -1202,8 +1673,11 @@ namespace pr::geometry::p3d
 	}
 
 	// Write a collection of materials to 'out'
-	template <typename TOut> u32 WriteMaterials(TOut& out, std::span<Material const> mats)
+	template <typename TOut> uint32_t WriteMaterials(TOut& out, std::span<Material const> mats)
 	{
+		if (mats.empty())
+			return 0;
+
 		auto offset = traits<TOut>::tellp(out);
 
 		// Materials chunk header
@@ -1219,11 +1693,14 @@ namespace pr::geometry::p3d
 	}
 
 	// Write a bounding box to 'out'
-	template <typename TOut> u32 WriteMeshBBox(TOut& out, BBox const& bbox)
+	template <typename TOut> uint32_t WriteMeshBBox(TOut& out, BBox const& bbox)
 	{
-		if (bbox.radius.x < 0 ||
-			bbox.radius.y < 0 ||
-			bbox.radius.z < 0)
+		if (bbox == BBoxReset)
+			return 0;
+
+		if (bbox.m_radius.x < 0 ||
+			bbox.m_radius.y < 0 ||
+			bbox.m_radius.z < 0)
 			throw std::runtime_error("Writing an invalid bounding box into p3d");
 
 		ChunkHeader hdr(EChunkId::MeshBBox, sizeof(BBox));
@@ -1233,7 +1710,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write a mesh to parent transform to 'out'
-	template <typename TOut> u32 WriteMeshTransform(TOut& out, m4x4 const& o2p)
+	template <typename TOut> uint32_t WriteMeshTransform(TOut& out, m4x4 const& o2p)
 	{
 		if (o2p == m4x4Identity)
 			return 0;
@@ -1245,161 +1722,411 @@ namespace pr::geometry::p3d
 	}
 
 	// Write vertices to 'out'
-	template <typename TOut> u32 WriteVertices(TOut& out, std::span<Vert const> verts, EFlags flags, EGeom geom)
+	template <typename TOut> uint32_t WriteVertices(TOut& out, Mesh::VCont const& verts, EFlags flags)
 	{
+		if (verts.count() == 0)
+			return 0;
+
 		auto offset = traits<TOut>::tellp(out);
 
-		ChunkHeader hdr(EChunkId::MeshVertices, 0U);
+		ChunkHeader hdr(EChunkId::MeshVerts, 0U);
 		Write<ChunkHeader>(out, hdr);
 
-		// Vertex count
-		hdr.m_length += Write<u32>(out, s_cast<u32>(verts.size()));
+		// Count
+		hdr.m_length += Write(out, s_cast<uint32_t>(verts.count()));
+
+		// Format
+		auto fmt = s_cast<EVertFormat>((int(flags) >> Flags::VertsOfs) & Flags::Mask);
+		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
 
 		// Vertex data
-		if (AllSet(flags, EFlags::Compress))
+		switch (fmt)
 		{
-			ByteData<> buf;
-			buf.reserve(verts.size() * sizeof(float) * 3);
-
-			// Record what geometry data is added
-			buf.push_back(static_cast<u32>(geom));
-
-			if (AllSet(geom, EGeom::Vert))
+		case EVertFormat::Verts32Bit:
 			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(float[3]));
+
+				// Use 32bit floats for position data
+				byte_data<> buf(PadTo(verts.count() * sizeof(float[3]), sizeof(uint32_t)));
+				auto ptr = buf.data<float>();
 				for (auto& v : verts)
 				{
-					buf.push_back(v.pos.x);
-					buf.push_back(v.pos.y);
-					buf.push_back(v.pos.z);
+					*ptr++ = v.x;
+					*ptr++ = v.y;
+					*ptr++ = v.z;
 				}
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
 			}
-			if (AllSet(geom, EGeom::Norm))
+		case EVertFormat::Verts16Bit:
 			{
-				for (auto& v : verts)
-					buf.push_back(Norm32bit::Compress(v.norm));
-			}
-			if (AllSet(geom, EGeom::Colr))
-			{
-				for (auto& v : verts)
-					buf.push_back(Colour32(v.col.r, v.col.g, v.col.b, v.col.a));
-			}
-			if (AllSet(geom, EGeom::Tex0))
-			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[3]));
+
+				// Use 16bit floats for position data
+				byte_data<> buf(PadTo(verts.count() * sizeof(half_t[3]), sizeof(uint32_t)));
+				auto ptr = buf.data<uint16_t>();
 				for (auto& v : verts)
 				{
-					buf.push_back(v.uv.x);
-					buf.push_back(v.uv.y);
+					auto h = F32toF16(v);
+					*ptr++ = h.x;
+					*ptr++ = h.y;
+					*ptr++ = h.z;
 				}
-			}
 
-			hdr.m_id = EChunkId::MeshVerticesV;
-			hdr.m_length += Write<u8>(out, buf.data(), buf.size());
-		}
-		else
-		{
-			hdr.m_id = EChunkId::MeshVertices;
-			hdr.m_length += Write<Vert>(out, verts.data(), verts.size());
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unknown vertex storage flags");
+			}
 		}
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
-	// Write indices to 'out'
-	template <typename TOut, typename Idx> u32 WriteIndices(TOut& out, std::span<Idx const> indices, EFlags flags)
+	// Write vertex colours to 'out'
+	template <typename TOut> uint32_t WriteColours(TOut& out, Mesh::CCont const& colours, EFlags flags)
 	{
+		if (colours.count() == 0)
+			return 0;
+
 		auto offset = traits<TOut>::tellp(out);
 
-		// Indices chunk header
-		ChunkHeader hdr(EChunkId::MeshIndices, 0U);
+		ChunkHeader hdr(EChunkId::MeshColours, 0U);
 		Write<ChunkHeader>(out, hdr);
 
-		// Index count
-		hdr.m_length += Write<u32>(out, s_cast<u32>(indices.size()));
+		// Count
+		hdr.m_length += Write(out, s_cast<uint32_t>(colours.count()));
 
-		// Index stride
-		hdr.m_length += Write<u32>(out, s_cast<u32>(sizeof(Idx)));
+		// Format
+		auto fmt = s_cast<EColourFormat>((int(flags) >> Flags::ColoursOfs) & Flags::Mask);
+		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
 
-		// Compress the indices using variable length ints
-		if (AllSet(flags, EFlags::Compress))
+		// Vertex colour data
+		switch (fmt)
 		{
-			constexpr int BitWidth = sizeof(Idx) * 8;
-
-			// Preallocate a buffer to hold the compressed indices
-			std::vector<u8> buf;
-			buf.reserve(indices.size() * 3 / 2);
-
-			// Write the indices as zig-zag encoded variable length ints (like protobuf)
-			int64_t prev = 0;
-			for (auto& idx : indices)
+		case EColourFormat::Colours32Bit:
 			{
-				// Get the delta from the previous index
-				auto delta = idx - prev;
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
 
-				// ZigZag encode to prevent negative 2s compliment numbers using lots of space
-				auto zz = static_cast<uint64_t>((delta << 1) ^ (delta >> (BitWidth - 1)));
+				// Use AARRGGBB 32-bit colour values
+				byte_data<> buf(PadTo(colours.count() * sizeof(Colour32), sizeof(uint32_t)));
+				auto ptr = buf.data<Colour32>();
+				for (auto& c : colours)
+					*ptr++ = c;
 
-				// Variable length int encode
-				for (; zz > 127; zz >>= 7)
-					buf.push_back(s_cast<u8>(0x80 | (zz & 0x7F)));
-				buf.push_back(s_cast<u8>(zz));
-
-				// Update the new previous value
-				prev += delta;
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
 			}
-
-			// Write the header, stride, count, and compressed index data
-			hdr.m_id = EChunkId::MeshIndicesV;
-			hdr.m_length += Write<u8>(out, buf.data(), buf.size());
-		}
-		else
-		{
-			// Write the indices as a contiguous block
-			hdr.m_id = EChunkId::MeshIndices;
-			hdr.m_length += Write<Idx>(out, indices.data(), indices.size());
+		default:
+			{
+				throw std::runtime_error("Unknown vertex colours storage flag");
+			}
 		}
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
-	// Write nuggets to 'out'
-	template <typename TOut> u32 WriteNuggets(TOut& out, std::span<Nugget const> nuggets, EFlags flags)
+	// Write vertex normals to 'out'
+	template <typename TOut> uint32_t WriteNormals(TOut& out, Mesh::NCont const& norms, EFlags flags)
+	{
+		if (norms.count() == 0)
+			return 0;
+
+		auto offset = traits<TOut>::tellp(out);
+
+		ChunkHeader hdr(EChunkId::MeshNorms, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// Count
+		hdr.m_length += Write(out, s_cast<uint32_t>(norms.count()));
+				
+		// Format
+		auto fmt = s_cast<ENormFormat>((int(flags) >> Flags::NormsOfs) & Flags::Mask);
+		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
+
+		// Vertex data
+		switch (fmt)
+		{
+		case ENormFormat::Norms32Bit:
+			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(float[3]));
+
+				// Use 32bit floats for normals
+				byte_data<> buf(PadTo(norms.count() * sizeof(float[3]), sizeof(uint32_t)));
+				auto ptr = buf.data<float>();
+				for (auto& n : norms)
+				{
+					*ptr++ = n.x;
+					*ptr++ = n.y;
+					*ptr++ = n.z;
+				}
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		case ENormFormat::Norms16Bit:
+			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[3]));
+
+				// Use 16bit floats for normals
+				byte_data<> buf(PadTo(norms.count() * sizeof(half_t[3]), sizeof(uint32_t)));
+				auto ptr = buf.data<half_t>();
+				for (auto& n : norms)
+				{
+					auto h = F32toF16(n);
+					*ptr++ = h.x;
+					*ptr++ = h.y;
+					*ptr++ = h.z;
+				}
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		case ENormFormat::NormsPack32:
+			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
+
+				// Pack normals into 32bits
+				byte_data<> buf(PadTo(norms.count() * sizeof(uint32_t), sizeof(uint32_t)));
+				auto ptr = buf.data<uint32_t>();
+				for (auto& n : norms)
+					*ptr++ = Norm32bit::Compress(n);
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unknown normals storage flag");
+			}
+		}
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+
+	// Write texture coordinates to 'out'
+	template <typename TOut> uint32_t WriteTexCoords(TOut& out, Mesh::TCont const& uvs, EFlags flags)
+	{
+		if (uvs.count() == 0)
+			return 0;
+
+		auto offset = traits<TOut>::tellp(out);
+
+		ChunkHeader hdr(EChunkId::MeshUVs, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// Count
+		hdr.m_length += Write(out, s_cast<uint32_t>(uvs.count()));
+
+		// Format
+		auto fmt = s_cast<EUVFormat>((int(flags) >> Flags::UVsOfs) & Flags::Mask);
+		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
+
+		// Texture coords
+		switch (fmt)
+		{
+		case EUVFormat::UVs32Bit:
+			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(float[2]));
+
+				// Use 32-bit float values
+				byte_data<> buf(PadTo(uvs.count() * sizeof(float[2]), sizeof(uint32_t)));
+				auto ptr = buf.data<float>();
+				for (auto& u : uvs)
+				{
+					*ptr++ = u.x;
+					*ptr++ = u.y;
+				}
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		case EUVFormat::UVs16Bit:
+			{
+				// Stride
+				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[2]));
+
+				// Use 16-bit float values
+				byte_data<> buf(PadTo(uvs.count() * sizeof(half_t[2]), sizeof(uint32_t)));
+				auto ptr = buf.data<half_t>();
+				for (auto& u : uvs)
+				{
+					auto h = F32toF16(v4{u, 0, 0});
+					*ptr++ = h.x;
+					*ptr++ = h.y;
+				}
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unknown texture coordinates storage flag");
+			}
+		}
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+
+	// Write index data to 'out'
+	template <typename TOut, typename Idx> uint32_t WriteIndices(TOut& out, EChunkId chunkid, IdxBuf const& idx, EFlags flags)
+	{
+		// Note:
+		//  - 'Idx' is the data type of the values in 'idx'
+		//  - 'flags' controls the type of indices that are written to 'out'.
+		//  - 'chunkid' labels the type of indices being written.
+
+		auto offset = traits<TOut>::tellp(out);
+
+		ChunkHeader hdr(chunkid, 0U);
+		Write<ChunkHeader>(out, hdr);
+
+		// If the format is 'IdxSrc', set 'fmt' to match 'Idx'
+		auto fmt = s_cast<EIndexFormat>((int(flags) >> Flags::IndexOfs) & Flags::Mask);
+		fmt = fmt != EIndexFormat::IdxSrc ? fmt :
+			std::is_same_v<Idx, uint32_t> ? EIndexFormat::Idx32Bit :
+			std::is_same_v<Idx, uint16_t> ? EIndexFormat::Idx16Bit :
+			std::is_same_v<Idx, uint8_t > ? EIndexFormat::Idx8Bit :
+			throw std::runtime_error("Unsupported index stride");
+
+		// Count
+		hdr.m_length += Write(out, s_cast<uint32_t>(idx.size<Idx>()));
+
+		// Format
+		hdr.m_length += Write(out, s_cast<uint16_t>(fmt));
+
+		// Index data
+		switch (fmt)
+		{
+		case EIndexFormat::Idx32Bit:
+			{
+				// Stride (of written indices. Possibly different to idx.m_stride)
+				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
+
+				// Convert from 'Idx' to uint32_t
+				hdr.m_length += WriteCast<uint32_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				break;
+			}
+		case EIndexFormat::Idx16Bit:
+			{
+				// Stride (of written indices. Possibly different to idx.m_stride)
+				hdr.m_length += Write<uint16_t>(out, sizeof(uint16_t));
+
+				// Convert from 'Idx' to uint16_t
+				hdr.m_length += WriteCast<uint16_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				break;
+			}
+		case EIndexFormat::Idx8Bit:
+			{
+				// Stride (of written indices. Possibly different to idx.m_stride)
+				hdr.m_length += Write<uint16_t>(out, sizeof(uint8_t));
+
+				// Convert from 'Idx' to uint8_t
+				hdr.m_length += WriteCast<uint8_t>(out, idx.data<Idx>(), idx.size<Idx>());
+				break;
+			}
+		case EIndexFormat::IdxNBit:
+			{
+				// Stride (of written indices *after decompression* == idx.m_stride)
+				hdr.m_length += Write<uint16_t>(out, sizeof(Idx));
+
+				// Use ZigZag encoded variable length integers (like protobuf)
+				byte_data<> buf;
+				buf.reserve(idx.size<Idx>() * 3 / 2);
+
+				// Fill 'buf' with variable length indices
+				int64_t prev = 0;
+				for (auto i : idx.span<Idx>())
+				{
+					// Get the delta from the previous index
+					auto delta = i - prev;
+
+					// ZigZag encode to prevent negative 2s compliment numbers using lots of space
+					constexpr int BitWidth = sizeof(Idx) * 8;
+					auto zz = static_cast<uint64_t>((delta << 1) ^ (delta >> (BitWidth - 1)));
+
+					// Variable length int encode
+					for (; zz > 127; zz >>= 7)
+						buf.push_back(s_cast<uint8_t>(0x80 | (zz & 0x7F)));
+					buf.push_back(s_cast<uint8_t>(zz));
+
+					// Update the new previous value
+					prev += delta;
+				}
+
+				// Pad to a uint32_t boundary
+				for (auto n = Pad(buf.size(), sizeof(uint32_t)); n-- != 0;)
+					buf.push_back(0);
+
+				hdr.m_length += Write(out, buf.data(), buf.size());
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unknown texture coordinates storage flag");
+			}
+		}
+
+		UpdateHeader(out, offset, hdr);
+		return hdr.m_length;
+	}
+	template <typename TOut> inline uint32_t WriteIndices(TOut& out, EChunkId chunkid, IdxBuf const& idx, EFlags flags)
+	{
+		// Convert from runtime 'stride' to compile time index type
+		switch (idx.m_stride)
+		{
+		case 4: return WriteIndices<TOut, uint32_t>(out, chunkid, idx, flags); break;
+		case 2: return WriteIndices<TOut, uint16_t>(out, chunkid, idx, flags); break;
+		case 1: return WriteIndices<TOut, uint8_t>(out, chunkid, idx, flags); break;
+		default: throw std::runtime_error(FmtS("Unsupported index stride: %d", idx.m_stride));
+		}
+	}
+
+	// Write a mesh nugget to 'out'
+	template <typename TOut> uint32_t WriteNugget(TOut& out, Nugget const& nug, EFlags flags)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
-		ChunkHeader hdr(EChunkId::MeshNuggets, 0U);
+		// Mesh chunk header
+		ChunkHeader hdr(EChunkId::MeshNugget, 0U);
 		Write<ChunkHeader>(out, hdr);
 
-		// Nugget count
-		hdr.m_length += Write<u32>(out, s_cast<u32>(nuggets.size()));
+		// Mesh topology
+		hdr.m_length += Write<uint16_t>(out, s_cast<uint16_t>(nug.m_topo));
 
-		// Nugget data
-		if (int(flags & EFlags::Compress) != 0)
-		{
-			// todo
-			hdr.m_length += Write<Nugget>(out, nuggets.data(), nuggets.size());
-		}
-		else
-		{
-			hdr.m_length += Write<Nugget>(out, nuggets.data(), nuggets.size());
-		}
+		// Mesh geometry
+		hdr.m_length += Write<uint16_t>(out, s_cast<uint16_t>(nug.m_geom));
 
+		// Material id
+		hdr.m_length += WriteCStr(out, EChunkId::MeshMatId, nug.m_mat);
+
+		// Face/Line/Tetra/etc indices
+		hdr.m_length += WriteIndices(out, EChunkId::MeshVIdx, nug.m_vidx, flags);
+		
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
 	// Write a mesh to 'out'
-	template <typename TOut> u32 WriteMesh(TOut& out, Mesh const& mesh, EFlags flags)
+	template <typename TOut> uint32_t WriteMesh(TOut& out, Mesh const& mesh, EFlags flags)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
-		// Determine the union of geometry from the nuggets
-		auto geom = EGeom::Vert;
-		for (auto const& nug : mesh.m_nugget)
-			geom |= nug.m_geom;
-
-		// TriMesh chunk header
+		// Mesh chunk header
 		ChunkHeader hdr(EChunkId::Mesh, 0U);
 		Write<ChunkHeader>(out, hdr);
 
@@ -1412,27 +2139,28 @@ namespace pr::geometry::p3d
 		// Mesh to parent transform
 		hdr.m_length += WriteMeshTransform(out, mesh.m_o2p);
 
-		// Mesh vertex data
-		hdr.m_length += WriteVertices(out, mesh.m_verts, flags, geom);
+		// Vertex data
+		hdr.m_length += WriteVertices(out, mesh.m_vert, flags);
 
-		// Mesh index data
-		switch (mesh.m_idx.m_stride)
-		{
-		default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
-		case 1: hdr.m_length += WriteIndices(out, mesh.m_idx.span<u8>(), flags); break;
-		case 2: hdr.m_length += WriteIndices(out, mesh.m_idx.span<u16>(), flags); break;
-		case 4: hdr.m_length += WriteIndices(out, mesh.m_idx.span<u32>(), flags); break;
-		}
+		// Colour data
+		hdr.m_length += WriteColours(out, mesh.m_diff, flags);
 
-		// Mesh nugget data
-		hdr.m_length += WriteNuggets(out, mesh.m_nugget, flags);
+		// Normals data
+		hdr.m_length += WriteNormals(out, mesh.m_norm, flags);
+
+		// UV data
+		hdr.m_length += WriteTexCoords(out, mesh.m_tex0, flags);
+
+		// Write each nugget
+		for (auto const& nugget : mesh.m_nuggets)
+			hdr.m_length += WriteNugget(out, nugget, flags);
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
 	// Write a collection of meshes to 'out'
-	template <typename TOut> u32 WriteMeshes(TOut& out, std::span<Mesh const> meshs, EFlags flags)
+	template <typename TOut> uint32_t WriteMeshes(TOut& out, std::span<Mesh const> meshs, EFlags flags)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
@@ -1449,7 +2177,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write a scene to 'out'
-	template <typename TOut> u32 WriteScene(TOut& out, Scene const& scene, EFlags flags)
+	template <typename TOut> uint32_t WriteScene(TOut& out, Scene const& scene, EFlags flags)
 	{
 		auto offset = traits<TOut>::tellp(out);
 
@@ -1467,16 +2195,16 @@ namespace pr::geometry::p3d
 	}
 
 	// Write the file version chunk
-	template <typename TOut> u32 WriteVersion(TOut& out, u32 version)
+	template <typename TOut> uint32_t WriteVersion(TOut& out, uint32_t version)
 	{
-		ChunkHeader hdr(EChunkId::FileVersion, sizeof(u32));
+		ChunkHeader hdr(EChunkId::FileVersion, sizeof(uint32_t));
 		Write<ChunkHeader>(out, hdr);
-		Write<u32>(out, version);
+		Write<uint32_t>(out, version);
 		return hdr.m_length;
 	}
 
 	// Write the p3d file to an ostream-like output.
-	template <typename TOut> u32 Write(TOut& out, File const& file, EFlags flags = EFlags::None)
+	template <typename TOut> uint32_t Write(TOut& out, File const& file, EFlags flags = EFlags::Default)
 	{
 		// Notes:
 		//  - Cannot use forward iteration only because some chunk sizes are not known ahead of time.
@@ -1498,118 +2226,274 @@ namespace pr::geometry::p3d
 		return hdr.m_length;
 	}
 
+	#pragma endregion
+
+	#pragma region Utility
+
+	// Extract the materials in the given P3D stream
+	template <typename TSrc, typename TOut> void ExtractMaterials(TSrc& src, TOut out)
+	{
+		// Restore the src position on return
+		auto reset_stream = CreateStateScope(
+			[&] { return traits<TSrc>::tellg(src); },
+			[&](int64_t start) { traits<TSrc>::seekg(src, start); });
+
+		// Check that this is actually a P3D stream
+		auto main = Read<ChunkHeader>(src);
+		if (main.m_id != EChunkId::Main)
+			throw std::runtime_error("Source is not a p3d stream");
+
+		// Find the Materials sub chunk
+		auto mats = Find(src, {EChunkId::Scene, EChunkId::Materials});
+		if (mats.m_id != EChunkId::Materials)
+			return; // Source contains no materials
+
+		// Read the materials
+		Find(src, mats.payload(), [&](ChunkHeader hdr, TSrc& src)
+			{
+				// Returning true stops reading.
+				if (hdr.m_id != EChunkId::Material) return false;
+				return out(ReadMaterial(src, hdr.payload()));
+			});
+	}
+
+	// Extract the meshes from a P3D stream
+	template <typename TSrc, typename TOut> void ExtractMeshes(TSrc& src, TOut out)
+	{
+		// Restore the src position on return
+		auto reset_stream = pr::CreateStateScope(
+			[&] { return traits<TSrc>::tellg(src); },
+			[&](int64_t start) { traits<TSrc>::seekg(src, start); }
+		);
+
+		// Find the Meshes sub chunk
+		auto meshes = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Meshes});
+		if (meshes.m_id != EChunkId::Meshes)
+			return; // Source contains no mesh data
+
+		// Read the meshes
+		Find(src, meshes.payload(), [&](ChunkHeader hdr, TSrc& src)
+			{
+				// Returning true stops reading
+				if (hdr.m_id != EChunkId::Mesh) return false;
+				return out(ReadMesh(src, hdr.payload()));
+			});
+	}
+
 	// Write the p3d file as code
 	template <typename TOut> void WriteAsCode(TOut& out, File const& file, char const* indent = "")
 	{
+		std::string ind = indent;
 		for (auto& mesh : file.m_scene.m_meshes)
 		{
-			switch (mesh.m_idx.m_stride)
-			{
-			case 1: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u8>(), mesh.m_verts.begin(), mesh.m_idx.begin<u8>(), out, indent); break;
-			case 2: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u16>(), mesh.m_verts.begin(), mesh.m_idx.begin<u16>(), out, indent); break;
-			case 4: pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx.size<u32>(), mesh.m_verts.begin(), mesh.m_idx.begin<u32>(), out, indent); break;
-			default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
-			}
+			if (mesh.vcount() == 0)
+				continue;
 
-			out << indent << "#pragma region BoundingBox\n";
-			out << indent << "static pr::BBox const bbox = {";
-			out << pr::Fmt("{%+ff, %+ff, %+ff, 1.0f}, "   , mesh.m_bbox.centre.x, mesh.m_bbox.centre.y, mesh.m_bbox.centre.z);
-			out << pr::Fmt("{%+ff, %+ff, %+ff, 0.0f}};\n" , mesh.m_bbox.radius.x, mesh.m_bbox.radius.y, mesh.m_bbox.radius.z);
-			out << indent << "#pragma endregion\n";
+			// Mesh name
+			out << "// " << mesh.m_name << "\n";
+
+			// Write the model vertices
+			out << ind << "#pragma region Verts\n";
+			out << ind << "static pr::rdr::Vert const verts[] =\n";
+			out << ind << "{\n";
+			ind.push_back('\t');
+			for (auto const& vert : mesh.fat_verts())
+			{
+				auto p = vert.m_vert;
+				auto c = vert.m_diff;
+				auto n = vert.m_norm;
+				auto t = vert.m_tex0;
+				out << ind
+					<< "{"
+					<< Fmt("{%+ff, %+ff, %+ff, 1.0f}, ", p.x, p.y, p.z)
+					<< Fmt("{%+ff, %+ff, %+ff, %+ff}, ", c.r, c.g, c.b, c.a)
+					<< Fmt("{%+ff, %+ff, %+ff, 0.0f}, ", n.x, n.y, n.z)
+					<< Fmt("{%+ff, %+ff}", t.x, t.y)
+					<< "},\n";
+			}
+			ind.pop_back();
+			out << ind << "};\n";
+			out << ind << "#pragma endregion\n";
+
+			// Write the model indices
+			out << ind << "#pragma region Indices\n";
+			out << ind << "static " << (mesh.vcount() < 0x10000 ? "uint16_t" : "uint32_t") << " const idxs[] =\n";
+			out << ind << "{\n";
+			ind.push_back('\t');
+			for (auto& nug : mesh.m_nuggets)
+			{
+				out << ind << "// nugget " << (&nug - mesh.m_nuggets.data()) << "\n";
+
+				auto i = 0;
+				for (auto idx : nug.m_vidx.casting_span())
+				{
+					out << (i == 0 ? ind : "");
+					out << idx << ", ";
+					out << (i == 31 ? "\n" : " ");
+					++i %= 32;
+				}
+				out << (i != 0 ? "\n" : "");
+			}
+			ind.pop_back();
+			out << ind << "};\n";
+			out << ind << "#pragma endregion\n";
+
+			// Write the model nuggets
+			out << ind << "#pragma region Nuggets\n";
+			out << ind << "static pr::rdr::NuggetProps const nuggets[] =\n";
+			out << ind << "{\n";
+			ind.push_back('\t');
+			size_t ibeg = 0;
+			for (auto& nug : mesh.m_nuggets)
+			{
+				auto vrange = nug.vrange();
+				out << ind 
+					<< "pr::rdr::NuggetProps{"
+					<< "pr::rdr::ETopo{" << s_cast<int>(nug.m_topo) << "}, "
+					<< "pr::rdr::EGeom{" << s_cast<int>(nug.m_geom) << "}, "
+					<< "nullptr, "
+					<< "pr::rdr::Range{" << vrange.m_beg << "," << vrange.m_end << "}, "
+					<< "pr::rdr::Range{" << ibeg << "," << ibeg + nug.icount() << "}"
+					<< "},\n";
+
+				ibeg += nug.icount();
+			}
+			ind.pop_back();
+			out << ind << "};\n";
+			out << ind << "#pragma endregion\n";
+
+			// Write the bbox
+			out << ind << "#pragma region BoundingBox\n";
+			out << ind << "static pr::BBox const bbox =\n";
+			out << ind << "{\n";
+			ind.push_back('\t');
+			out << ind << Fmt("{%+ff, %+ff, %+ff, 1.0f},\n", mesh.m_bbox.m_centre.x, mesh.m_bbox.m_centre.y, mesh.m_bbox.m_centre.z);
+			out << ind << Fmt("{%+ff, %+ff, %+ff, 0.0f},\n", mesh.m_bbox.m_radius.x, mesh.m_bbox.m_radius.y, mesh.m_bbox.m_radius.z);
+			ind.pop_back();
+			out << ind << "}\n";
+			out << ind << "#pragma endregion\n";
 		}
 	}
-
+	
 	// Write the p3d file as ldr script
 	template <typename TOut> void WriteAsScript(TOut& out, File const& file, char const* indent = "")
 	{
-		out << indent << "*Group {\n";
+		auto ind = std::string{indent};
+
+		out << ind << "*Group {\n";
+		ind.push_back('\t');
+
+		// Add a *Mesh for each mesh in the scene
 		for (auto& mesh : file.m_scene.m_meshes)
 		{
-			if (mesh.m_nugget.empty())
+			// No geometry in the mesh, skip...
+			if (mesh.m_nuggets.count() == 0)
 				continue;
 
-			out << indent << "\t*Mesh " << mesh.m_name << " {\n";
+			// Mesh
+			out << ind << "*Mesh " << mesh.m_name << " {\n";
+			ind.push_back('\t');
 
 			// Verts
-			out << indent << "\t\t*Verts {\n";
-			for (auto& vert : mesh.m_verts)
-				out << indent << "\t\t\t" << vert.pos.x << " " << vert.pos.y << " " << vert.pos.z << "\n";
-			out << indent << "\t\t}\n";
-
-			// Normals
-			out << indent << "\t\t*Normals {\n";
-			for (auto& vert : mesh.m_verts)
-				out << indent << "\t\t\t" << vert.norm.x << " " << vert.norm.y << " " << vert.norm.z << "\n";
-			out << indent << "\t\t}\n";
-
-			// Colours
-			out << indent << "\t\t*Colours {\n";
-			for (auto& vert : mesh.m_verts)
-				out << indent << "\t\t\t" << Fmt("%8.8X", Colour32(vert.col.r, vert.col.g, vert.col.b, vert.col.a).argb) << "\n";
-			out << indent << "\t\t}\n";
-
-			// Faces
-			auto WriteFaces = [&](p3d::Mesh const& mesh, auto* indices)
+			if (mesh.m_vert.count() != 0)
 			{
-				for (auto& nug : mesh.m_nugget)
+				out << ind << "*Verts {\n";
+				ind.push_back('\t');
+
+				for (int i = 0; i != mesh.vcount(); ++i)
 				{
-					switch (nug.m_topo)
-					{
-					case EPrim::LineList:  out << indent << "\t\t*LineList {\n"; break;
-					case EPrim::LineStrip: out << indent << "\t\t*LineStrip {\n"; break;
-					case EPrim::TriList:   out << indent << "\t\t*TriList {\n"; break;
-					case EPrim::TriStrip:  out << indent << "\t\t*TriStrip {\n"; break;
-					default: throw std::runtime_error("Unsupported topology type");
-					}
-
-					int icount = 0;
-					out << indent << "\t\t\t";
-					for (u32 i = begin(nug.m_irange), iend = end(nug.m_irange); i != iend; ++i)
-					{
-						out << indices[i] << " ";
-						if (++icount != 16) continue;
-						out << "\n" << indent << "\t\t\t";
-						icount = 0;
-					}
-					if (icount != 0)
-						out << "\n";
-
-					// End faces
-					out << indent << "\t\t}\n";
+					auto& vert = mesh.m_vert[i];
+					out << ind << FmtS("%f %f %f\n", vert.x, vert.y, vert.z);
 				}
-			};
-			switch (mesh.m_idx.m_stride)
-			{
-			case 1: WriteFaces(mesh, mesh.m_idx.data<u8>()); break;
-			case 2: WriteFaces(mesh, mesh.m_idx.data<u16>()); break;
-			case 4: WriteFaces(mesh, mesh.m_idx.data<u32>()); break;
-			default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
+
+				ind.pop_back();
+				out << ind << "}\n";
 			}
 
-			// End mesh
-			out << indent << "\t}\n";
+			// Colours
+			if (mesh.m_diff.count() != 0)
+			{
+				out << ind << "*Colours {\n";
+				ind.push_back('\t');
+
+				for (int i = 0; i != mesh.vcount(); ++i)
+				{
+					auto& diff = mesh.m_diff[i];
+					out << ind << FmtS("%8.8X\n", diff.argb);
+				}
+
+				ind.pop_back();
+				out << ind << "}\n";
+			}
+
+			// Normals
+			if (mesh.m_norm.count() != 0)
+			{
+				out << ind << "*Normals {\n";
+				ind.push_back('\t');
+
+				for (int i = 0; i != mesh.vcount(); ++i)
+				{
+					auto& norm = mesh.m_norm[i];
+					out << ind << FmtS("%f %f %f\n", norm.x, norm.y, norm.z);
+				}
+
+				ind.pop_back();
+				out << ind << "}\n";
+			}
+
+			// UVs
+			if (mesh.m_tex0.count() != 0)
+			{
+				out << ind << "*TexCoords {\n";
+				ind.push_back('\t');
+
+				for (int i = 0; i != mesh.vcount(); ++i)
+				{
+					auto& uv = mesh.m_tex0[i];
+					out << ind << FmtS("%f %f\n", uv.x, uv.y);
+				}
+
+				ind.pop_back();
+				out << ind << "}\n";
+			}
+
+			// Nuggets
+			for (auto const& nug : mesh.m_nuggets)
+			{
+				switch (nug.m_topo)
+				{
+				case ETopo::LineList:  out << ind << "*LineList {\n"; break;
+				case ETopo::LineStrip: out << ind << "*LineStrip {\n"; break;
+				case ETopo::TriList:   out << ind << "*TriList {\n"; break;
+				case ETopo::TriStrip:  out << ind << "*TriStrip {\n"; break;
+				default: throw std::runtime_error("Unsupported topology type");
+				}
+				ind.push_back('\t');
+
+				// Indices
+				auto i = 0U;
+				for (auto const& vi : nug.m_vidx.casting_span())
+				{
+					out << (i == 0 ? ind : "");
+					out << vi;
+					out << (i == 15 ? "\n" : " ");
+					++i %= 16;
+				}
+				out << (i != 0 ? "\n" : "");
+				ind.pop_back();
+				out << ind << "}\n";
+			}
+
+			ind.pop_back();
+			out << ind << "}\n";
 		}
 
-		// End group
-		out << indent << "}\n";
+		ind.pop_back();
+		out << ind << "}\n";
 	}
-	
+
 	#pragma endregion
-}
-namespace pr::maths
-{
-//	template <> struct is_vec<pr::geometry::p3d::Vec4> :std::true_type
-//	{
-//		using elem_type = float;
-//		using cp_type = float;
-//		static int const dim = 4;
-//	};
-//	template <> struct is_vec<pr::geometry::p3d::Vec2> :std::true_type
-//	{
-//		using elem_type = float;
-//		using cp_type = float;
-//		static int const dim = 2;
-//	};
 }
 
 #if PR_UNITTESTS
@@ -1620,6 +2504,8 @@ namespace pr::geometry
 {
 	PRUnitTest(P3dTests)
 	{
+		using namespace pr::geometry::p3d;
+
 		//{
 		//	std::ifstream ifile("S:\\software\\PC\\vrex\\res\\lod1\\lh_foot.p3d", std::ios::binary);
 		//	std::ofstream ofile("P:\\dump\\lh_foot.p3d", std::ios::binary);
@@ -1627,119 +2513,181 @@ namespace pr::geometry
 		//	p3d::Write(ofile, m, p3d::EFlags::Compress);
 		//}
 
-		using namespace pr::geometry;
-		p3d::File file;
-		file.m_version = p3d::Version;
-
-		p3d::Texture tex;
-		tex.m_filepath = "filepath";
-		tex.m_tiling = 1;
-
-		p3d::Material mat;
-		mat.m_id = "mat1";
-		mat.m_diffuse = pr::ColourWhite;
-		mat.m_tex_diffuse.push_back(tex);
-
-		file.m_scene.m_materials.push_back(mat);
-
-		p3d::Nugget nug = {};
-		nug.m_topo = EPrim::TriList;
-		nug.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
-		nug.m_vrange.first = 0;
-		nug.m_vrange.count = 4;
-		nug.m_irange.first = 0;
-		nug.m_irange.count = 4;
-		nug.m_mat = "mat1";
-
-		p3d::Vert vert = {};
-		vert.pos = v4(1,2,3,1);
-		vert.norm = v4(0,0,1,0);
-		vert.col = v4(1,1,1,1);
-		vert.uv = v2(1,1);
-
-		p3d::Mesh mesh;
-		mesh.m_name = "mesh";
-		mesh.m_bbox = pr::BBox(v4Origin, v4(1,2,3,0));
-		mesh.m_verts.push_back(vert);
-		mesh.m_verts.push_back(vert);
-		mesh.m_verts.push_back(vert);
-		mesh.m_verts.push_back(vert);
-		mesh.m_idx.m_stride = sizeof(uint16_t);
-		mesh.m_idx.push_back<uint16_t>(0);
-		mesh.m_idx.push_back<uint16_t>(1);
-		mesh.m_idx.push_back<uint16_t>(2);
-		mesh.m_idx.push_back<uint16_t>(0);
-		mesh.m_idx.push_back<uint16_t>(2);
-		mesh.m_idx.push_back<uint16_t>(3);
-		mesh.m_nugget.push_back(nug);
-		file.m_scene.m_meshes.push_back(mesh);
-
-		//std::ofstream buf("\\dump\\test.p3d", std::ofstream:: binary);
-		//p3d::Write(buf, file, p3d::EFlags::Compress);
-
-		//*
-		std::stringstream buf(std::ios_base::in|std::ios_base::out|std::ios_base::binary);
-		auto size = p3d::Write(buf, file, p3d::EFlags::Compress);
-		PR_CHECK(size_t(buf.tellp()), size_t(size));
-
-		p3d::File cmp = p3d::Read(buf);
-
-		PR_CHECK(cmp.m_version                  , file.m_version);
-		PR_CHECK(cmp.m_scene.m_materials.size() , file.m_scene.m_materials.size());
-		PR_CHECK(cmp.m_scene.m_meshes.size()    , file.m_scene.m_meshes.size());
-		for (size_t i = 0; i != file.m_scene.m_materials.size(); ++i)
+		// Create a text p3d file
+		File file;
 		{
-			auto& m0 = cmp.m_scene.m_materials[i];
-			auto& m1 = file.m_scene.m_materials[i];
-			PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
-			PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
-			PR_CHECK(m0.m_tex_diffuse.size() == m1.m_tex_diffuse.size(), true);
-			for (size_t j = 0; j != m1.m_tex_diffuse.size(); ++j)
-			{
-				auto& t0 = m0.m_tex_diffuse[j];
-				auto& t1 = m1.m_tex_diffuse[j];
-				PR_CHECK(t0.m_filepath , t1.m_filepath);
-				PR_CHECK(t0.m_tiling   , t1.m_tiling);
-			}
+			Texture tex;
+			tex.m_filepath = "filepath";
+			tex.m_tiling = 1;
+
+			Material mat{"mat1"};
+			mat.m_diffuse = pr::ColourWhite;
+			mat.m_textures.push_back(tex);
+
+			p3d::Mesh mesh{"mesh"};
+			mesh.m_bbox = BBox{v4Origin, v4{1, 3, 0, 0}};
+			mesh.m_vert.assign({
+				v4{-1, -1, 0, 1},
+				v4{+1, -1, 0, 1},
+				v4{+0, +2, 0, 1},
+				});
+			mesh.m_diff.assign({
+				Colour32Red,
+				Colour32Green,
+				Colour32Blue,
+				});
+			mesh.m_norm.assign({
+				v4{0, 0, 1, 0},
+				});
+			mesh.m_tex0.assign({
+				v2{0.0f, 1.0f},
+				v2{0.5f, 0.0f},
+				v2{1.0f, 1.0f},
+				});
+
+			Nugget nug{EPrim::TriList, EGeom::All, "mat1", sizeof(uint16_t)};
+			nug.m_vidx.append<uint16_t>({0, 1, 2});
+			mesh.m_nuggets.emplace_back(std::move(nug));
+
+			file.m_version = Version;
+			file.m_scene.m_materials.push_back(mat);
+			file.m_scene.m_meshes.push_back(mesh);
 		}
-		for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
+
+		// Write the file to a file stream
 		{
-			auto& m0 = cmp.m_scene.m_meshes[i];
-			auto& m1 = file.m_scene.m_meshes[i];
-			PR_CHECK(m0.m_name          , m1.m_name);
-			PR_CHECK(m0.m_verts.size()  , m1.m_verts.size());
-			PR_CHECK(m0.m_idx.size()    , m1.m_idx.size());
-			PR_CHECK(m0.m_idx.m_stride  , m1.m_idx.m_stride);
-			PR_CHECK(m0.m_idx.m_stride == sizeof(uint16_t), true);
-			PR_CHECK(m0.m_nugget.size() , m1.m_nugget.size());
-			for (size_t j = 0; j != m1.m_verts.size(); ++j)
-			{
-				auto& v0 = m0.m_verts[j];
-				auto& v1 = m1.m_verts[j];
-				PR_CHECK(v0.pos == v1.pos, true);
-				PR_CHECK(v0.norm == v1.norm, true);
-				PR_CHECK(v0.col == v1.col, true);
-				PR_CHECK(v0.uv == v1.uv, true);
-				PR_CHECK(v0.pad == v1.pad, true);
-			}
-			for (size_t j = 0; j != m1.m_idx.size<uint16_t>(); ++j)
-			{
-				auto& i0 = m0.m_idx.at<uint16_t>(j);
-				auto& i1 = m1.m_idx.at<uint16_t>(j);
-				PR_CHECK(i0 == i1, true);
-			}
-			for (size_t j = 0; j != m1.m_nugget.size(); ++j)
-			{
-				auto& n0 = m0.m_nugget[j];
-				auto& n1 = m1.m_nugget[j];
-				PR_CHECK(n0.m_geom == n1.m_geom, true);
-				PR_CHECK(n0.m_topo == n1.m_topo, true);
-				PR_CHECK(n0.m_vrange == n1.m_vrange, true);
-				PR_CHECK(n0.m_irange == n1.m_irange, true);
-				PR_CHECK(n0.m_mat == n1.m_mat, true);
-			}
+			std::ofstream buf("\\dump\\test.p3d", std::ofstream::binary);
+			auto size = Write(buf, file, EFlags::Default);
+			PR_CHECK(size_t(buf.tellp()), size_t(size));
 		}
-		//*/
+
+		// Read the file from a stream and compare contents
+		{
+			// Write the file to a stream
+			std::stringstream buf(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+			{
+				auto size = Write(buf, file, EFlags::Default);
+				PR_CHECK(size_t(buf.tellp()), size_t(size));
+			}
+
+			//*
+			File cmp;
+			try { cmp = std::move(Read(buf)); }
+			catch (std::exception const& ex)
+			{
+				OutputDebugStringA(ex.what());
+			}
+
+			PR_CHECK(cmp.m_version, file.m_version);
+			PR_CHECK(cmp.m_scene.m_materials.size(), file.m_scene.m_materials.size());
+			PR_CHECK(cmp.m_scene.m_meshes.size(), file.m_scene.m_meshes.size());
+			for (size_t i = 0; i != file.m_scene.m_materials.size(); ++i)
+			{
+				auto& m0 = cmp.m_scene.m_materials[i];
+				auto& m1 = file.m_scene.m_materials[i];
+				PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
+				PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
+				PR_CHECK(m0.m_textures.size() == m1.m_textures.size(), true);
+				for (size_t j = 0; j != m1.m_textures.size(); ++j)
+				{
+					auto& t0 = m0.m_textures[j];
+					auto& t1 = m1.m_textures[j];
+					PR_CHECK(t0.m_filepath, t1.m_filepath);
+					PR_CHECK(t0.m_tiling, t1.m_tiling);
+				}
+			}
+			for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
+			{
+				auto& m0 = cmp.m_scene.m_meshes[i];
+				auto& m1 = file.m_scene.m_meshes[i];
+				PR_CHECK(m0.m_name, m1.m_name);
+				PR_CHECK(m0.m_vert.count(), m1.m_vert.count());
+				PR_CHECK(m0.m_diff.count(), m1.m_diff.count());
+				PR_CHECK(m0.m_norm.count(), m1.m_norm.count());
+				PR_CHECK(m0.m_tex0.count(), m1.m_tex0.count());
+				PR_CHECK(m0.m_nuggets.count(), m1.m_nuggets.count());
+				for (int j = 0; j != m1.m_vert.count(); ++j)
+				{
+					auto& v0 = m0.m_vert[j];
+					auto& v1 = m1.m_vert[j];
+					PR_CHECK(v0 == v1, true);
+				}
+				for (int j = 0; j != m1.m_diff.count(); ++j)
+				{
+					auto& c0 = m0.m_diff[j];
+					auto& c1 = m1.m_diff[j];
+					PR_CHECK(c0 == c1, true);
+				}
+				for (int j = 0; j != m1.m_norm.count(); ++j)
+				{
+					auto& n0 = m0.m_norm[j];
+					auto& n1 = m1.m_norm[j];
+					PR_CHECK(n0 == n1, true);
+				}
+				for (int j = 0; j != m1.m_tex0.count(); ++j)
+				{
+					auto& t0 = m0.m_tex0[j];
+					auto& t1 = m1.m_tex0[j];
+					PR_CHECK(t0 == t1, true);
+				}
+				for (int j = 0; j != m1.m_nuggets.count(); ++j)
+				{
+					auto& n0 = m0.m_nuggets[j];
+					auto& n1 = m1.m_nuggets[j];
+					PR_CHECK(n0.m_topo == n1.m_topo, true);
+					PR_CHECK(n0.m_geom == n1.m_geom, true);
+					PR_CHECK(n0.m_mat == n1.m_mat, true);
+					PR_CHECK(n0.m_vidx.count() == n1.m_vidx.count(), true);
+					PR_CHECK(n0.m_vidx.m_stride == n1.m_vidx.m_stride, true);
+					for (int k = 0; k != n1.m_vidx.count(); ++k)
+					{
+						auto i0 = n0.m_vidx[k];
+						auto i1 = n1.m_vidx[k];
+						PR_CHECK(i0 == i1, true);
+					}
+				}
+			}
+			//*/
+		}
+
+		// Write the file as C++ code
+		{
+			std::stringstream script;
+			//std::ofstream script("\\dump\\test.h");
+			WriteAsCode(script, file);
+		}
+
+		// Write the file as a script
+		{
+			std::stringstream script;
+			//std::ofstream script("\\dump\\test.ldr");
+			WriteAsScript(script, file);
+		}
+
+		// IdxBuf iteration test
+		{
+			IdxBuf vidx{sizeof(uint16_t)};
+			vidx.append<uint16_t>({0, 1, 2, 3});
+			
+			int i = 0;
+			for (auto f : vidx.casting_span<float>())
+				PR_CHECK(f, (float)i++);
+		}
+
+		// Fat vertex iteration
+		{
+			auto const& mesh = file.m_scene.m_meshes[0];
+			
+			std::vector<FatVert> fat;
+			for (auto const& v : mesh.fat_verts())
+				fat.push_back(v);
+
+			PR_CHECK(fat[0].m_vert, v4{-1, -1, 0, 1});
+			PR_CHECK(fat[1].m_diff, Colour(Colour32Green));
+			PR_CHECK(fat[2].m_norm, v4{0, 0, 1, 0});
+			PR_CHECK(fat[1].m_tex0, v2{0.5f, 0.0f});
+			PR_CHECK(fat[2].pad, v2{0.0f, 0.0f});
+		}
 		//std::ifstream ifile("\\dump\\test2.3ds", std::ifstream::binary);
 		//Read3DSMaterials(ifile, [](max_3ds::Material&&){});
 		//Read3DSModels(ifile, [](max_3ds::Object&&){});

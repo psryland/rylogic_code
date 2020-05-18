@@ -160,6 +160,18 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty AlwaysProperty = Gui_.DPRegister<MsgBox>(nameof(Always));
 
+		/// <summary>Button text - Allows localisation</summary>
+		public string? OkText { get; set; }        = "OK";
+		public string? CancelText { get; set; }    = "Cancel";
+		public string? OverwriteText { get; set; } = "Overwrite";
+		public string? DiscardText { get; set; }   = "Discard";
+		public string? AbortText { get; set; }     = "Abort";
+		public string? RetryText { get; set; }     = "Retry";
+		public string? IgnoreText { get; set; }    = "Ignore";
+		public string? YesText { get; set; }       = "Yes";
+		public string? NoText { get; set; }        = "No";
+		public string? ReloadText { get; set; }    = "Reload";
+
 		/// <summary>Access to the dialog buttons</summary>
 		public StackPanel ButtonPanel => m_btn_panel;
 

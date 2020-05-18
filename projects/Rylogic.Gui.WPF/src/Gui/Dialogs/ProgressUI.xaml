@@ -62,6 +62,7 @@
 				<TextBlock
 					Grid.Column="1"
 					Text="{Binding Description}"
+					VerticalAlignment="Center"
 					TextWrapping="Wrap"
 					Margin="4,8,8,8"
 					/>

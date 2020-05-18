@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -3021,7 +3021,7 @@ namespace Rylogic.Gui.WinForms
 			public string Make(v2 sz)
 			{
 				var ldr = new LdrBuilder();
-				ldr.Append("*Rect {3 ", sz.x, " ", sz.y, " ", Ldr.Solid(), " ", Ldr.CornerRadius(CornerRadius), "}\n");
+				ldr.Append("*Rect {", sz.x, " ", sz.y, " ", EAxisId.PosZ, " ", Ldr.Solid(), " ", Ldr.CornerRadius(CornerRadius), "}\n");
 				return ldr.ToString();
 			}
 		}
@@ -3037,7 +3037,7 @@ namespace Rylogic.Gui.WinForms
 			public string Make(v2 sz)
 			{
 				var ldr = new LdrBuilder();
-				ldr.Append("*Circle {3 ", sz.x / 2f, " ", sz.y / 2f, " ", Ldr.Solid(), "}\n");
+				ldr.Append("*Circle {", sz.x / 2f, " ", sz.y / 2f, " ", EAxisId.PosZ, " ", Ldr.Solid(), "}\n");
 				return ldr.ToString();
 			}
 		}

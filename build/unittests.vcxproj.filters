@@ -1044,6 +1044,9 @@
     <ClInclude Include="..\include\pr\view3d\renderer.h">
       <Filter>pr\view3d</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\maths\half.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

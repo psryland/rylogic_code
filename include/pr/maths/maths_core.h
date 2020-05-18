@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 

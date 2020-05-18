@@ -23,11 +23,15 @@ namespace pr
 	template <int Alignment = 4> struct byte_data
 	{
 		using value_type = uint8_t;
-
 		union
 		{
 			void* m_ptr;
-			uint8_t* m_u8;
+
+			// Debugging helper pointers
+			uint8_t  (*m_u8)[128];
+			uint16_t (*m_u16)[64];
+			uint32_t (*m_u32)[32];
+			uint64_t (*m_u64)[16];
 		};
 		size_t m_size;
 		size_t m_capacity;
@@ -55,6 +59,11 @@ namespace pr
 			set_capacity(rhs.m_capacity);
 			memcpy(m_ptr, rhs.m_ptr, rhs.m_size);
 			m_size = rhs.m_size;
+		}
+		explicit byte_data(size_t initial_size_in_bytes)
+			:byte_data()
+		{
+			resize(initial_size_in_bytes);
 		}
 		~byte_data()
 		{

@@ -7,41 +7,110 @@ typedef unsigned short u16;
 typedef unsigned long u32;
 typedef unsigned int64 u64;
 
+enum <u32> EChunkId
+{
+	Null           = 0x00000000, // Null chunk
+	CStr           = 0x00000001, // Null terminated utf-8 string
+	Main           = 0x44335250, // PR3D File type indicator
+	FileVersion    = 0x00000100, // ├─ File Version
+	Scene          = 0x00001000, // └─ Scene
+	Materials      = 0x00002000, //    ├─ Materials
+	Material       = 0x00002100, //    │  └─ Material
+	DiffuseColour  = 0x00002110, //    │     ├─ Diffuse Colour
+	DiffuseTexture = 0x00002120, //    │     └─ Diffuse texture
+	TexFilepath    = 0x00002121, //    │        ├─ Texture filepath
+	TexTiling      = 0x00002122, //    │        └─ Texture tiling
+	Meshes         = 0x00003000, //    └─ Meshes
+	Mesh           = 0x00003100, //       └─ Mesh of lines,triangles,tetras
+	MeshName       = 0x00003101, //          ├─ Name (cstr)
+	MeshBBox       = 0x00003102, //          ├─ Bounding box (BBox)
+	MeshTransform  = 0x00003103, //          ├─ Mesh to Parent Transform (m4x4)
+	MeshVerts      = 0x00003300, //          ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])
+	MeshNorms      = 0x00003310, //          ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])
+	MeshColours    = 0x00003320, //          ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])
+	MeshUVs        = 0x00003330, //          ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])
+	MeshNugget     = 0x00004000, //          └─ Nugget (topo)
+	MeshMatId      = 0x00004001, //             ├─ Material id (cstr)
+	MeshVIdx       = 0x00004010, //             ├─ Vert indices   (u32 count, u8 idx_flags, u8 format, u16 stride, count * [stride]
+
+	// Deprecated
+	MeshVertices   = 0x00003110, //          ├─ Vertex list (u32 count, count * [Vert])
+	MeshVerticesV  = 0x00003111, //          ├─ Vertex list (u32 count, count * [Vert])
+	MeshIndices16  = 0x00003120, //          ├─ Index list (u32 count, count * [u16 i])
+	MeshIndices32  = 0x00003121, //          ├─ Index list (u32 count, count * [u32 i])
+	MeshIndices    = 0x00003125, //          +- Index list (u32 count, u32 stride, count * [Idx i])
+	MeshIndicesV   = 0x00003126, //          +- Index list (u32 count, u32 stride, count * [Idx i])
+	MeshNuggets    = 0x00003200, //          └─ Nugget list (u32 count, count * [Nugget])
+};
+
+enum <u16> EVertFormat
+{
+	// Use 32-bit floats for position data (default).
+	// Size/Vert = 12 bytes (float[3])
+	Verts32Bit = 0,
+
+	// Use 16-bit floats for position data.
+	// Size/Vert = 6 bytes (half_t[3])
+	Verts16Bit = 1,
+};
+enum <u16> ENormFormat
+{
+	// Use 32-bit floats for normal data (default)
+	// Size/Norm = 12 bytes (float[3])
+	Norms32Bit = 0,
+
+	// Use 16-bit floats for normal data
+	// Size/Norm = 6 bytes (half[3])
+	Norms16Bit = 1,
+
+	// Pack each normal into 32bits. 
+	// Size/Norm = 4 bytes (uint32_t)
+	NormsPack32 = 2,
+};
+enum <u16> EColourFormat
+{
+	// Use 32-bit AARRGGBB colours (default)
+	// Size/Colour = 4 bytes (uint32_t)
+	Colours32Bit = 0,
+};
+enum <u16> EUVFormat
+{
+	// Use 32-bit floats for UV data
+	// Size/UV = 8 bytes (float[2])
+	UVs32Bit = 0,
+
+	// Use 16-bit floats for UV data
+	// Size/UV = 4 bytes (half[2])
+	UVs16Bit = 1,
+};
+enum <u16> EIndexFormat
+{
+	// Don't convert indices, use the input stride
+	IdxSrc = 0,
+
+	// Use 32-bit integers for index data
+	Idx32Bit = 1,
+
+	// Use 16-bit integers for index data
+	Idx16Bit = 2,
+
+	// Use 8-bit integers for index data
+	Idx8Bit = 3,
+
+	// Use variable length integers for index data
+	IdxNBit = 4,
+};
+
 typedef char Str16[16];
 struct Vec4 { float x,y,z,w; };
-struct Col4 { float r,g,b,a; };
 struct Vec3 { float x,y,z; };
 struct Vec2 { float u,v; };
-struct BBox { Vec4 centre, radius; };
-struct Vert { Vec4 pos; Col4 col; Vec4 norm; Vec2 uv; Vec2 pad; };
-struct Range { u32 first, count; };
-struct Nugget { u32 topo; u32 geom; Range vrange, irange; Str16 mat; };
-
-enum EChunkId
-{
-	Null           = 0x00000000, /* Null chunk                                            */
-	CStr           = 0x00000001, /* Null terminated ascii string                          */
-	Main           = 0x44335250, /* PR3D File type indicator                              */
-	FileVersion    = 0x00000100, /* ├─ File Version                                       */
-	Scene          = 0x00001000, /* └─ Scene                                              */
-	Materials      = 0x00002000, /*    ├─ Materials                                       */
-	Material       = 0x00002100, /*    │  └─ Material                                     */
-	DiffuseColour  = 0x00002110, /*    │     ├─ Diffuse Colour                            */
-	DiffuseTexture = 0x00002120, /*    │     └─ Diffuse texture                           */
-	TexFilepath    = 0x00002121, /*    │        ├─ Texture filepath                       */
-	TexTiling      = 0x00002122, /*    │        └─ Texture tiling                         */
-	Meshes         = 0x00003000, /*    └─ Meshes                                          */
-	Mesh           = 0x00003100, /*       └─ Mesh of lines,triangles,tetras               */
-	MeshName       = 0x00003101, /*          ├─ Name (cstr)                               */
-	MeshBBox       = 0x00003102, /*          ├─ Bounding box (BBox)                       */
-	MeshVertices   = 0x00003110, /*          ├─ Vertex list (u32 count, count * [Vert])   */
-	MeshVerticesV  = 0x00003111, /*          ├─ Vertex list (u32 count, count * [Vert])   */
-	MeshIndices16  = 0x00003120, /*          ├─ Index list (u32 count, count * [u16 i])   */
-	MeshIndices32  = 0x00003121, /*          ├─ Index list (u32 count, count * [u32 i])   */
-	MeshIndices    = 0x00003125, /*          +- Index list (u32 count, u32 stride, count * [Idx i]) */\
-	MeshIndicesV   = 0x00003126, /*          +- Index list (u32 count, u32 stride, count * [Idx i]) */\
-	MeshNuggets    = 0x00003200, /*          └─ Nugget list (u32 count, count * [Nugget]) */
-};
+struct Half4 { u16 x <format=hex>, y <format=hex>, z <format=hex>, w <format=hex>; };
+struct Half3 { u16 x <format=hex>, y <format=hex>, z <format=hex>; };
+struct Half2 { u16 x <format=hex>, y <format=hex>; };
+struct Col4 { float r,g,b,a; };
+struct Col32 { u32 aarrggbb <format=hex>; };
+struct RangeI { u32 first, count; };
 
 struct UnknownChunk
 {
@@ -92,7 +161,17 @@ struct BBoxChunk
 	local int64 fpos = FTell();
 	EChunkId id;
 	u32 length;
-	BBox bbox;
+	Vec4 centre;
+	Vec4 radius;
+	FSeek(fpos + length);
+};
+
+struct M4x4Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	Vec4 x, y, z, w;
 	FSeek(fpos + length);
 };
 
@@ -109,81 +188,192 @@ struct MaterialChunk
 struct VertsChunk
 {
 	local int64 fpos = FTell();
+
 	EChunkId id;
 	u32 length;
 	u32 count;
-	Vert verts[count];
-	FSeek(fpos + length);
-};
-struct VertsVChunk
-{
-    local int64 fpos = FTell();
-    EChunkId id;
-    u32 length;
-    u32 count;
-    u32 geom;
-    if (geom & 1)
-        Vec3 pos[count];
-    if (geom & 2)
-        u32 rgba[count];
-    if (geom & 4)
-        u32 norm[count]; // compressed
-    if (geom & 8)
-        Vec2 uv[count];
+	EVertFormat format;
+	u16 stride;
+
+	if (format == Verts32Bit)
+		Vec3 verts[count];
+	if (format == Verts16Bit)
+		Half3 verts[count];
+
 	FSeek(fpos + length);
 };
 
-struct IdxChunk
+struct ColoursChunk
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
+
 	EChunkId id;
 	u32 length;
 	u32 count;
-	u32 stride;
-	u8 index_data[length - 16];
+	EColourFormat format;
+	u16 stride;
+
+	if (format == Colours32Bit)
+		u32 aarrggbb[count] <format=hex>;
+		//Col32 colours[count];
+
 	FSeek(fpos + length);
 };
 
-struct IdxVChunk
+struct NormsChunk
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
+
 	EChunkId id;
 	u32 length;
 	u32 count;
-	u32 stride;
-	u8 index_data[length - 16];
+	ENormFormat format;
+	u16 stride;
+
+	if (format == Norms32Bit)
+		Vec3 norms[count];
+	if (format == Norms16Bit)
+		Half3 norms[count];
+	if (format == NormsPack32)
+		u32 norms[count] <format=hex>;
+
 	FSeek(fpos + length);
 };
 
-struct Idx16Chunk
+struct UVsChunk
+{
+	local int64 fpos = FTell();
+
+	EChunkId id;
+	u32 length;
+	u32 count;
+	EUVFormat format;
+	u16 stride;
+
+	if (format == UVs32Bit)
+		Vec2 uv[count];
+	if (format == UVs16Bit)
+		Half2 uv[count];
+
+	FSeek(fpos + length);
+};
+
+struct NuggetChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u16 topo;
+	u16 geom;
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
+};
+
+struct IndexChunk
 {
 	local int64 fpos = FTell();
 	EChunkId id;
 	u32 length;
 	u32 count;
-	u16 indices[count];
+	EIndexFormat format;
+	u16 stride;
+
+	if (format == Idx32Bit)
+		u32 idx[count];
+	if (format == Idx16Bit)
+		u16 idx[count];
+	if (format == IdxNBit)
+		u8 idx_compressed[length - 20];
+
 	FSeek(fpos + length);
 };
 
-struct Idx32Chunk
-{
-	local int64 fpos = FTell();
-	EChunkId id;
-	u32 length;
-	u32 count;
-	u32 indices[count];
-	FSeek(fpos + length);
-};
 
-struct NuggetsChunk
+// DEPRECATED *********
 {
-	local int64 fpos = FTell();
-	EChunkId id;
-	u32 length;
-	u32 count;
-	Nugget nuggets[count];
-	FSeek(fpos + length);
-};
+	struct DEPRECATED_Vert { Vec4 pos; Col4 col; Vec4 norm; Vec2 uv; Vec2 pad; };
+	struct DEPRECATED_Nugget { u32 topo; u32 geom; RangeI vrange, irange; Str16 mat; };
+
+	struct DEPRECATED_VertsChunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		DEPRECATED_Vert verts[count];
+		FSeek(fpos + length);
+	};
+	struct DEPRECATED_VertsVChunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		u32 geom;
+		if (geom & 1)
+			Vec3 pos[count];
+		if (geom & 2)
+			u32 rgba[count];
+		if (geom & 4)
+			u32 norm[count]; // compressed
+		if (geom & 8)
+			Vec2 uv[count];
+		FSeek(fpos + length);
+	};
+
+	struct DEPRECATED_IdxChunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		u32 stride;
+		u8 index_data[length - 16];
+		FSeek(fpos + length);
+	};
+
+	struct DEPRECATED_IdxVChunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		u32 stride;
+		u8 index_data[length - 16];
+		FSeek(fpos + length);
+	};
+
+	struct DEPRECATED_Idx16Chunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		u16 indices[count];
+		FSeek(fpos + length);
+	};
+
+	struct DEPRECATED_Idx32Chunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		u32 indices[count];
+		FSeek(fpos + length);
+	};
+
+	struct DEPRECATED_NuggetsChunk
+	{
+		local int64 fpos = FTell();
+		EChunkId id;
+		u32 length;
+		u32 count;
+		DEPRECATED_Nugget nuggets[count];
+		FSeek(fpos + length);
+	};
+}
+// DEPRECATED ********* 
 
 void SubChunks(uint end)
 {
@@ -204,13 +394,25 @@ void SubChunks(uint end)
 		case Mesh           : Chunk mesh; break;
 		case MeshName       : CStrChunk name; break;
 		case MeshBBox       : BBoxChunk bbox; break;
-		case MeshVertices   : VertsChunk verts; break;
-		case MeshVerticesV  : VertsVChunk verts; break;
-		case MeshIndices16  : Idx16Chunk idx16; break;
-		case MeshIndices32  : Idx32Chunk idx32; break;
-		case MeshIndices    : IdxChunk idx; break;
-		case MeshIndicesV   : IdxVChunk idx; break;
-		case MeshNuggets    : NuggetsChunk nuggets; break;
+		case MeshTransform  : M4x4Chunk o2w; break;
+		case MeshVerts      : VertsChunk vert; break;
+		case MeshColours    : ColoursChunk diff; break;
+		case MeshNorms      : NormsChunk norm; break;
+		case MeshUVs        : UVsChunk tex0; break;
+		case MeshNugget     : NuggetChunk nugget; break;
+		case MeshMatId      : CStrChunk material_id; break;
+		case MeshVIdx       : IndexChunk vidx; break;
+
+		// DEPRECATED *********
+		case MeshVertices   : DEPRECATED_VertsChunk verts; break;
+		case MeshVerticesV  : DEPRECATED_VertsVChunk verts; break;
+		case MeshIndices16  : DEPRECATED_Idx16Chunk idx16; break;
+		case MeshIndices32  : DEPRECATED_Idx32Chunk idx32; break;
+		case MeshIndices    : DEPRECATED_IdxChunk idx; break;
+		case MeshIndicesV   : DEPRECATED_IdxVChunk idx; break;
+		case MeshNuggets    : DEPRECATED_NuggetsChunk nuggets; break;
+		// DEPRECATED *********
+
 		default: UnknownChunk chunk; break;
 		}
 	}

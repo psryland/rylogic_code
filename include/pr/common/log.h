@@ -253,6 +253,8 @@ namespace pr
 				}
 			}
 
+			Context& This() { return *this; }
+
 		public:
 
 			template <typename OutputCB>
@@ -262,7 +264,7 @@ namespace pr
 				,m_cv_idle()
 				,m_idle()
 				,m_log_cb()
-				,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
+				,m_thread(LogConsumerThread<OutputCB>, std::ref(This()), log_cb, occurrences_batch_size)
 			{}
 			~Context()
 			{

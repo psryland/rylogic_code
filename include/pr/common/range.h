@@ -1,10 +1,8 @@
-//************************************************************************
+﻿//************************************************************************
 // Range
 //  Copyright (c) Rylogic Ltd 2011
 //************************************************************************
-
 #pragma once
-
 #include <limits>
 #include <cassert>
 
@@ -31,13 +29,13 @@ namespace pr
 		// An invalid range. Used as an initialiser when finding a bounding range
 		static Range Reset()
 		{
-			return Range(std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest());
+			return Range{std::numeric_limits<T>::max(), std::numeric_limits<T>::lowest()};
 		}
 
 		// A range containing the maximum interval
 		static Range Max()
 		{
-			return Range(std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max());
+			return Range{std::numeric_limits<T>::lowest(), std::numeric_limits<T>::max()};
 		}
 
 		// Construct a range
@@ -72,7 +70,7 @@ namespace pr
 		}
 
 		// The number of elements in or length of the range
-		auto size() const -> decltype(T() - T())
+		auto size() const -> decltype(m_end - m_beg)
 		{
 			return m_end - m_beg;
 		}

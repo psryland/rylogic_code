@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // CSV Data
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -221,9 +221,9 @@ namespace Rylogic.Container
 		/// quote characters, commas, or newline characters then the produced CSV will be invalid.</summary>
 		public void Save(string filepath, bool quoted = true)
 		{
-			using (var file = new StreamWriter(filepath))
-				foreach (var row in Rows)
-					row.Save(file, quoted);
+			using var file = new StreamWriter(filepath);
+			foreach (var row in Rows)
+				row.Save(file, quoted);
 		}
 
 		/// <summary>
