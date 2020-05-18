@@ -91,6 +91,7 @@ namespace pr
 	typedef unsigned long     ulong;
 	typedef float            real32;
 	typedef double           real64;
+	using half_t = unsigned short;
 
 	template <typename T> struct Vec2;
 	template <typename T> struct Vec3;
@@ -98,6 +99,7 @@ namespace pr
 	template <typename T> struct Vec8;
 	template <typename T> struct IVec2;
 	template <typename T> struct IVec4;
+	template <typename T> struct Half4;
 	template <typename A, typename B> struct Mat2x2;
 	template <typename A, typename B> struct Mat3x4;
 	template <typename A, typename B> struct Mat4x4;
@@ -118,6 +120,7 @@ namespace pr
 	template <typename T = void> using v8_cref = Vec8<T> const;
 	template <typename T = void> using iv2_cref = IVec2<T> const;
 	template <typename T = void> using iv4_cref = IVec4<T> const;
+	template <typename T = void> using half4_cref = Half4<T> const;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const;
 	template <typename A = void, typename B = void> using m3_cref = Mat3x4<A, B> const;
 	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A, B> const;
@@ -131,6 +134,7 @@ namespace pr
 	template <typename T = void> using v8_cref = Vec8<T> const&;
 	template <typename T = void> using iv2_cref = IVec2<T> const&;
 	template <typename T = void> using iv4_cref = IVec4<T> const&;
+	template <typename T = void> using half4_cref = Half4<T> const&;
 	template <typename A = void, typename B = void> using m2_cref = Mat2x2<A, B> const&;
 	template <typename A = void, typename B = void> using m3_cref = Mat3x4<A, B> const&;
 	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A, B> const&;
@@ -300,6 +304,7 @@ namespace pr
 	using quat = Quat<void,void>;
 	using iv2 = IVec2<void>;
 	using iv4 = IVec4<void>;
+	using half4 = Half4<void>;
 
 	// Default implementations of the component accessors
 	template <typename T, typename = maths::enable_if_v2<T>> inline typename maths::is_vec<T>::elem_type x_cp(T const& v) { return v.x; }

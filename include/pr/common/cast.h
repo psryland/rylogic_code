@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Byte Ptr Cast
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
@@ -41,7 +41,7 @@ namespace pr
 	//  int16_t s = -1302;
 	//  uint8_t b = s_cast<uint8_t>(s); <- gives an assert because -1302 cannot be stored in a uint8_t
 	//  uint8_t b = s_cast<uint8_t,true>(s); <- throws an exception because -1302 cannot be stored in a uint8_t
-	template <typename T, bool RuntimeCheck = false, typename U> inline T s_cast(U x)
+	template <typename T, bool RuntimeCheck = false, typename U> constexpr T s_cast(U x)
 	{
 		if constexpr (RuntimeCheck)
 		{

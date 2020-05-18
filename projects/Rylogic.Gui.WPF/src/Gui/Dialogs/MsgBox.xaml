@@ -14,10 +14,22 @@
 	SizeToContent="WidthAndHeight"
 	ResizeMode="CanResizeWithGrip"
 	ShowInTaskbar="False"
-	MaxWidth="800"	
 	MinWidth="330"
 	MinHeight="100"
 	>
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key ="check_accept" UriSource="/Rylogic.Gui.WPF;component/res/check_accept.png"/>
+			<BitmapImage x:Key ="check_reject" UriSource="/Rylogic.Gui.WPF;component/res/check_reject.png"/>
+			<BitmapImage x:Key ="check_abort" UriSource="/Rylogic.Gui.WPF;component/res/check_reject_gray.png"/>
+			<BitmapImage x:Key ="check_no" UriSource="/Rylogic.Gui.WPF;component/res/check_no.png"/>
+			<BitmapImage x:Key ="rotate" UriSource="/Rylogic.Gui.WPF;component/res/green_rotate.png"/>
+			<BitmapImage x:Key ="green_right" UriSource="/Rylogic.Gui.WPF;component/res/green_right.png"/>
+			<BitmapImage x:Key ="exchange" UriSource="/Rylogic.Gui.WPF;component/res/exchange.png"/>
+			<BitmapImage x:Key ="recycle" UriSource="/Rylogic.Gui.WPF;component/res/recycle bin2 clean.png"/>
+			<BitmapImage x:Key ="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
+		</ResourceDictionary>
+	</Window.Resources>
 	<DockPanel
 		LastChildFill="True"
 		>
@@ -47,118 +59,207 @@
 				Margin="8"
 				x:Name="m_btn_panel"
 				>
+				<StackPanel.Resources>
+					<Style TargetType="Button">
+						<Setter Property="MinWidth" Value="80"/>
+						<Setter Property="MinHeight" Value="22"/>
+						<Setter Property="MaxHeight" Value="30"/>
+						<Setter Property="Margin" Value="4,0,4,0"/>
+					</Style>
+					<Style TargetType="Image">
+						<Setter Property="RenderOptions.BitmapScalingMode" Value="Fant"/>
+						<Setter Property="VerticalAlignment" Value="Center"/>
+						<Setter Property="Margin" Value="2"/>
+					</Style>
+					<Style TargetType="TextBlock">
+						<Setter Property="VerticalAlignment" Value="Center"/>
+						<Setter Property="Margin" Value="4,0,4,0"/>
+					</Style>
+				</StackPanel.Resources>
+				
 				<Button
 					Name="m_btn_ok"
-					Content="_OK"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.OK}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.OK}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.OK}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource check_accept}"
+								/>
+							<TextBlock
+								Text="{Binding OkText, FallbackValue='OK'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_yes"
-					Content="_Yes"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Yes}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Yes}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Yes}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource check_accept}"
+								/>
+							<TextBlock
+								Text="{Binding YesText, FallbackValue='Yes'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_reload"
-					Content="_Reload"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Reload}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Reload}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Reload}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource rotate}"
+								/>
+							<TextBlock
+								Text="{Binding ReloadText, FallbackValue='Reload'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_overwrite"
-					Content="_Overwrite"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Overwrite}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Overwrite}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Overwrite}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource exchange}"
+								/>
+							<TextBlock
+								Text="{Binding OverwriteText, FallbackValue='Overwrite'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_discard"
-					Content="_Discard"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Discard}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Discard}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Discard}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource recycle}"
+								/>
+							<TextBlock
+								Text="{Binding DiscardText, FallbackValue='Discard'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_abort"
-					Content="_Abort"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Abort}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Abort}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Abort}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource check_abort}"
+								/>
+							<TextBlock
+								Text="{Binding AbortText, FallbackValue='Abort'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+
+				</Button>
 				<Button
 					Name="m_btn_retry"
-					Content="_Retry"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Retry}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Retry}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Retry}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource rotate}"
+								/>
+							<TextBlock
+								Text="{Binding RetryText, FallbackValue='Retry'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_ignore"
-					Content="_Ignore"
 					Command="{Binding Accept}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Ignore}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Ignore}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Ignore}}"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource green_right}"
+								/>
+							<TextBlock
+								Text="{Binding IgnoreText, FallbackValue='Ignore'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_no"
-					Content="_No"
 					Command="{Binding Cancel}"
 					CommandParameter="{x:Static local:MsgBox+EResult.No}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.No}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.No}}"
 					IsCancel="True"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource check_no}"
+								/>
+							<TextBlock
+								Text="{Binding NoText, FallbackValue='No'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 				<Button
 					Name="m_btn_cancel"
-					Content="_Cancel"
 					Command="{Binding Cancel}"
 					CommandParameter="{x:Static local:MsgBox+EResult.Cancel}"
 					Visibility="{Binding Buttons, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Cancel}}"
 					IsDefault="{Binding DefaultButton, Converter={conv:HasFlag}, ConverterParameter={x:Static local:MsgBox+EButtons.Cancel}}"
 					IsCancel="True"
-					MinWidth="80"
-					MinHeight="22"
-					Margin="4,0,4,0"
-					/>
+					>
+					<Button.Content>
+						<StackPanel Orientation="Horizontal">
+							<Image
+								Source="{StaticResource check_reject}"
+								/>
+							<TextBlock
+								Text="{Binding CancelText, FallbackValue='Cancel'}"
+								/>
+						</StackPanel>
+					</Button.Content>
+				</Button>
 			</StackPanel>
 		</Grid>
 

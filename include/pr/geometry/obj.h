@@ -112,13 +112,13 @@ namespace pr::geometry::obj
 		// Read a line up to and including the newline character. 'line' should
 		// not include the newline character but it should be read from the stream.
 		// Returns true if 1 or more characters are read, false if not.
-		template <typename TOut> static bool Read(TSrc& src, std::string& line)
+		template <typename TOut> static bool Read(TSrc& src, TOut& line)
 		{
-			return std::getline(src, line);
+			return std::getline(src, line).good();
 		}
 
 		// Write a line
-		template <typename TIn> static void Write(TSrc& dst, std::string const& line)
+		template <typename TIn> static void Write(TSrc& dst, TIn const& line)
 		{
 			if (dst.write(line.c_str(), line.size())) return;
 			throw std::exception("partial write of output stream");
@@ -193,7 +193,7 @@ namespace pr::geometry::obj
 						// Start of a new material definition
 						if (str::Equal(id, "newmtl"))
 						{
-							str::ExtractToken(mat.m_name, ptr, Delim) || throw std::runtime_error("Material name not found"); // Material names can be any characters except spaces
+							if (!str::ExtractToken(mat.m_name, ptr, Delim)) throw std::runtime_error("Material name not found"); // Material names can be any characters except spaces
 							new_mat = true;
 							continue;
 						}
@@ -203,7 +203,7 @@ namespace pr::geometry::obj
 					{
 						if (str::Equal(id, "d"))
 						{
-							str::ExtractReal(mat.m_alpha, ptr, Delim) || throw std::runtime_error("Invalid 'dissolved' definition");
+							if (!str::ExtractReal(mat.m_alpha, ptr, Delim)) throw std::runtime_error("Invalid 'dissolved' definition");
 							continue;
 						}
 						break;
@@ -213,7 +213,7 @@ namespace pr::geometry::obj
 						if (str::Equal(id, "illum"))
 						{
 							int model;
-							str::ExtractInt(model, ptr, Delim) || throw std::runtime_error("Invalid illumination model definition");
+							if (!str::ExtractInt(model, 10, ptr, Delim)) throw std::runtime_error("Invalid illumination model definition");
 							mat.m_illum = static_cast<EIlluminationModel>(model);
 							continue;
 						}
@@ -223,32 +223,32 @@ namespace pr::geometry::obj
 					{
 						if (str::Equal(id, "map_Ka"))
 						{
-							impl::ReadTexture(mat.m_tex_alpha, ptr) || throw std::runtime_error("Invalid ambient texture map definition");
+							if (!impl::ReadTexture(mat.m_tex_alpha, ptr)) throw std::runtime_error("Invalid ambient texture map definition");
 							continue;
 						}
 						if (str::Equal(id, "map_Kd"))
 						{
-							impl::ReadTexture(mat.m_tex_diffuse, ptr) || throw std::runtime_error("Invalid diffuse texture map definition");
+							if (!impl::ReadTexture(mat.m_tex_diffuse, ptr)) throw std::runtime_error("Invalid diffuse texture map definition");
 							continue;
 						}
 						if (str::Equal(id, "map_Ks"))
 						{
-							impl::ReadTexture(mat.m_tex_specular, ptr) || throw std::runtime_error("Invalid specular texture map definition");
+							if (!impl::ReadTexture(mat.m_tex_specular, ptr)) throw std::runtime_error("Invalid specular texture map definition");
 							continue;
 						}
 						if (str::Equal(id, "map_Ns"))
 						{
-							impl::ReadTexture(mat.m_tex_spec_power, ptr) || throw std::runtime_error("Invalid specular power texture map definition");
+							if (!impl::ReadTexture(mat.m_tex_spec_power, ptr)) throw std::runtime_error("Invalid specular power texture map definition");
 							continue;
 						}
 						if (str::Equal(id, "map_d"))
 						{
-							impl::ReadTexture(mat.m_tex_alpha, ptr) || throw std::runtime_error("Invalid alpha map definition");
+							if (!impl::ReadTexture(mat.m_tex_alpha, ptr)) throw std::runtime_error("Invalid alpha map definition");
 							continue;
 						}
 						if (str::Equal(id, "map_bump"))
 						{
-							impl::ReadTexture(mat.m_tex_bump, ptr) || throw std::runtime_error("Invalid bump map definition");
+							if (!impl::ReadTexture(mat.m_tex_bump, ptr)) throw std::runtime_error("Invalid bump map definition");
 							continue;
 						}
 						break;
@@ -257,7 +257,7 @@ namespace pr::geometry::obj
 					{
 						if (str::Equal(id, "sharpness"))
 						{
-							str::ExtractReal(mat.m_sharpness, ptr, Delim) || throw std::runtime_error("Invalid sharpness definition");
+							if (!str::ExtractReal(mat.m_sharpness, ptr, Delim)) throw std::runtime_error("Invalid sharpness definition");
 							continue;
 						}
 						break;
@@ -267,28 +267,28 @@ namespace pr::geometry::obj
 						// Ambient colour
 						if (str::Equal(id, "Ka"))
 						{
-							impl::ReadColour(mat.m_ambient, ptr) || throw std::runtime_error("Invalid ambient colour definition");
+							if (!impl::ReadColour(mat.m_ambient, ptr)) throw std::runtime_error("Invalid ambient colour definition");
 							continue;
 						}
 
 						// Diffuse colour
 						if (str::Equal(id, "Kd"))
 						{
-							impl::ReadColour(mat.m_diffuse, ptr) || throw std::runtime_error("Invalid diffuse colour definition");
+							if (!impl::ReadColour(mat.m_diffuse, ptr)) throw std::runtime_error("Invalid diffuse colour definition");
 							continue;
 						}
 
 						// Specular colour
 						if (str::Equal(id, "Ks"))
 						{
-							impl::ReadColour(mat.m_specular, ptr) || throw std::runtime_error("Invalid specular colour definition");
+							if (!impl::ReadColour(mat.m_specular, ptr)) throw std::runtime_error("Invalid specular colour definition");
 							continue;
 						}
 
 						// Emissive colour
 						if (str::Equal(id, "Ke"))
 						{
-							impl::ReadColour(mat.m_emissive, ptr) || throw std::runtime_error("Invalid emissive colour definition");
+							if (!impl::ReadColour(mat.m_emissive, ptr)) throw std::runtime_error("Invalid emissive colour definition");
 							continue;
 						}
 						break;
@@ -297,12 +297,12 @@ namespace pr::geometry::obj
 					{
 						if (str::Equal(id, "Ns"))
 						{
-							str::ExtractReal(mat.m_spec_power, ptr, Delim) || throw std::runtime_error("Invalid specular power definition");
+							if (!str::ExtractReal(mat.m_spec_power, ptr, Delim)) throw std::runtime_error("Invalid specular power definition");
 							continue;
 						}
 						if (str::Equal(id, "Ni"))
 						{
-							str::ExtractReal(mat.m_refraction, ptr, Delim) || throw std::runtime_error("Invalid optical density definition");
+							if (!str::ExtractReal(mat.m_refraction, ptr, Delim)) throw std::runtime_error("Invalid optical density definition");
 							continue;
 						}
 						break;
@@ -311,13 +311,13 @@ namespace pr::geometry::obj
 					{
 						if (str::Equal(id, "Tf"))
 						{
-							impl::ReadColour(mat.m_transmissive, ptr) || throw std::runtime_error("Invalid transmissive colour definition");
+							if (!impl::ReadColour(mat.m_transmissive, ptr)) throw std::runtime_error("Invalid transmissive colour definition");
 							continue;
 						}
 						if (str::Equal(id, "Tr"))
 						{
-							str::ExtractReal(mat.m_alpha, ptr, Delim) || throw std::runtime_error("Invalid transparency definition");
-							mat.m_alpha = 1.0 - mat.m_alpha;
+							if (!str::ExtractReal(mat.m_alpha, ptr, Delim)) throw std::runtime_error("Invalid transparency definition");
+							mat.m_alpha = 1.0f - mat.m_alpha;
 							continue;
 							
 						}
@@ -337,6 +337,7 @@ namespace pr::geometry::obj
 	template <typename TSrc, typename TModelOut>
 	void Read(TSrc& src, Options opts, TModelOut out)
 	{
+		(void)opts;
 		// OBJ files are a newline delimited list of model data.
 		// Each line has the form: {tag} {data...} where {tag} is:
 		//    v = vertex
@@ -379,7 +380,7 @@ namespace pr::geometry::obj
 								str::AdvanceToNonDelim(ptr, Delim);
 
 								std::ifstream mat(ptr);
-								ReadMaterials(mat, [] {});
+								ReadMaterials(mat, [] (auto const&) {});
 								continue;
 							}
 							catch (std::exception const& ex)

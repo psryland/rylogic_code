@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // LineDrawer helper
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************
@@ -122,6 +122,10 @@ namespace Rylogic.LDraw
 		{
 			return col.ARGB.ToString("X8");
 		}
+		public static string AxisId(AxisId id)
+		{
+			return id.Id != EAxisId.PosZ ? $"*AxisId {{{id}}}" : string.Empty;
+		}
 		public static string Solid(bool solid = true)
 		{
 			return solid ? "*Solid" : string.Empty;
@@ -168,11 +172,11 @@ namespace Rylogic.LDraw
 		}
 		public static string Ellipse(string name, Colour32 colour, AxisId axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
 		{
-			return $"*Ellipse {name} {colour} {{{axis_id} {rx} {ry} {Transform(o2w, pos)}}}\n";
+			return $"*Ellipse {name} {colour} {{{rx} {ry} {AxisId(axis_id)} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Rect(string name, Colour32 colour, AxisId axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
 		{
-			return $"*Rect {name} {colour} {{{axis_id} {w} {h} {Solid(solid)} {Transform(o2w, pos)}}}\n";
+			return $"*Rect {name} {colour} {{{w} {h} {AxisId(axis_id)} {Solid(solid)} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Axis(string name, Colour32 colour, m4x4 basis, float size = 1f)
 		{
@@ -240,14 +244,15 @@ namespace Rylogic.LDraw
 		}
 		public LdrBuilder Append(object part)
 		{
-			if      (part is string     ) m_sb.Append((string)part);
-			else if (part is Color      ) m_sb.Append(Ldr.Colour((Color)part));
-			else if (part is v4         ) m_sb.Append(Ldr.Vec3((v4)part));
-			else if (part is v2         ) m_sb.Append(Ldr.Vec2((v2)part));
-			else if (part is m4x4       ) m_sb.Append(Ldr.Mat4x4((m4x4)part));
-			else if (part is AxisId     ) m_sb.Append(((AxisId)part).Id);
+			if (part is string str) m_sb.Append(str);
+			else if (part is Color col) m_sb.Append(Ldr.Colour(col));
+			else if (part is v4 vec4) m_sb.Append(Ldr.Vec3(vec4));
+			else if (part is v2 vec2) m_sb.Append(Ldr.Vec2(vec2));
+			else if (part is m4x4 o2w) m_sb.Append(Ldr.Mat4x4(o2w));
+			else if (part is AxisId axisid) m_sb.Append(Ldr.AxisId(axisid.Id));
+			else if (part is EAxisId axisid2) m_sb.Append(Ldr.AxisId(axisid2));
 			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(" ").Append(x ?? string.Empty);
-			else if (part != null       ) m_sb.Append(part.ToString());
+			else if (part != null) m_sb.Append(part.ToString());
 			return this;
 		}
 		public LdrBuilder Append(params object[] parts)
@@ -260,7 +265,7 @@ namespace Rylogic.LDraw
 		{
 			var lines = comments.Split('\n');
 			foreach (var line in lines)
-				Append("// ",line,"\n");
+				Append($"// {line}\n");
 		}
 
 		public Scope Group()
@@ -359,7 +364,7 @@ namespace Rylogic.LDraw
 		}
 		public void Grid(string name, Colour32 colour, AxisId axis_id, int width, int height, int wdiv, int hdiv, v4 position)
 		{
-			Append("*Grid ",name," ",colour," {",axis_id," ",width," ",height," ",wdiv," ",hdiv," ",Ldr.Position(position),"}\n");
+			Append("*Grid ", name, " ", colour, " {", width, " ", height, " ", wdiv, " ", hdiv, " ", axis_id, " ", Ldr.Position(position), "}\n");
 		}
 
 		public void Box(m4x4? o2w = null, v4? pos = null)
@@ -414,7 +419,7 @@ namespace Rylogic.LDraw
 		}
 		public void Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*Cylinder ",name," ",colour," {",axis_id," ",height," ",radius," ",Ldr.Transform(o2w,pos),"}\n");
+			Append("*Cylinder ", name, " ", colour, " {", height, " ", radius, " ", axis_id, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
 
 		public void Circle()
@@ -435,7 +440,7 @@ namespace Rylogic.LDraw
 		}
 		public void Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius, v4 position)
 		{
-			Append("*Circle ", name, " ", colour, " {", axis_id, " ", radius, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
+			Append("*Circle ", name, " ", colour, " {", radius, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
 		public void Ellipse()
@@ -448,7 +453,7 @@ namespace Rylogic.LDraw
 		}
 		public void Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy, v4 position)
 		{
-			Append("*Circle ", name, " ", colour, " {", axis_id, " ", radiusx, " ", radiusy, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
+			Append("*Circle ", name, " ", colour, " {", radiusx, " ", radiusy, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
 		public void Pie()
@@ -469,7 +474,7 @@ namespace Rylogic.LDraw
 		}
 		public void Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
 		{
-			Append("*Pie ", name, " ", colour, " {", axis_id, " ", ang0, " ", ang1, " ", rad0, " ", rad1, " ", Ldr.Solid(solid), " ", Ldr.Facets(facets), " *Scale ", sx, " ", sy, " ", Ldr.Position(position), "}\n");
+			Append("*Pie ", name, " ", colour, " {", ang0, " ", ang1, " ", rad0, " ", rad1, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Facets(facets), " *Scale ", sx, " ", sy, " ", Ldr.Position(position), "}\n");
 		}
 
 		public void Rect()
@@ -478,7 +483,7 @@ namespace Rylogic.LDraw
 		}
 		public void Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, v4 position)
 		{
-			Append("*Rect ",name," ",colour," {",axis_id," ",width," ",height," ",solid?"*Solid ":"",Ldr.Position(position),"}\n");
+			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
 		public void Quad()

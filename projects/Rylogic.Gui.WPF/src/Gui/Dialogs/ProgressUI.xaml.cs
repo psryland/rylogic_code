@@ -254,6 +254,9 @@ namespace Rylogic.Gui.WPF
 			if (us.EnableCancel != null)
 				CancelEnabled = us.EnableCancel.Value;
 
+			if (us.EnableAutoResize != null)
+				SizeToContent = us.EnableAutoResize.Value ? SizeToContent.WidthAndHeight : SizeToContent.Manual;
+
 			if (us.CloseDialog == true)
 			{
 				Result = CancelPending ? false : true;
@@ -303,6 +306,9 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Enable/Disable the cancel button. Null means don't change</summary>
 			public bool? EnableCancel { get; set; }
+
+			/// <summary>Enable/Disable the automatic resize of the dialog. Null means don't change</summary>
+			public bool? EnableAutoResize { get; set; }
 
 			/// <summary>Set to true to have the dialog close (used by ProgressUI once the task is complete)</summary>
 			public bool? CloseDialog { get; set; }

@@ -198,6 +198,7 @@ std::unique_ptr<p3d::File> CreateFromOBJ(std::filesystem::path const& filepath)
 	p3d::File p3d;
 	obj::Read(src, opts, [&](obj::Model const& o)
 		{
+			(void)o;
 		});
 	return std::make_unique<p3d::File>(std::move(p3d));
 }

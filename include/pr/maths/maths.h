@@ -35,6 +35,7 @@
 #include "pr/maths/conversion.h"
 #include "pr/maths/spline.h"
 #include "pr/maths/line3.h"
+#include "pr/maths/half.h"
 #include "pr/maths/polynomial.h"
 #include "pr/maths/rand_vector.h"
 #include "pr/maths/constants_vector.h"

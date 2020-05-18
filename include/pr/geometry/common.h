@@ -31,13 +31,14 @@ namespace pr::geometry
 		Colr    = 1 << 1, // Diffuse base colour
 		Norm    = 1 << 2, // Object space 3D normal
 		Tex0    = 1 << 3, // Diffuse texture
+		All     = Vert | Colr | Norm | Tex0,
 
 		_bitwise_operators_allowed = 0x7FFFFFFF,
 	};
 	static_assert(has_bitops_allowed_v<EGeom>);
 
-	// EPrim
-	enum class EPrim
+	// ETopo
+	enum class ETopo
 	{
 		None         = 0,
 		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
@@ -51,15 +52,17 @@ namespace pr::geometry
 		TriListAdj   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
 		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
 	};
+	using EPrim = ETopo; // todo, deprecate 'EPrim'
 
 	// EPrimGroup
-	enum class EPrimGroup
+	enum class ETopoGroup
 	{
 		None,
 		Points,
 		Lines,
 		Triangles,
 	};
+	using EPrimGroup = ETopoGroup;
 
 	// Geometry properties
 	struct Props

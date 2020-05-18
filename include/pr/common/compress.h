@@ -2,7 +2,6 @@
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
-
 #pragma once
 #include "pr/maths/maths.h"
 
@@ -351,10 +350,12 @@ namespace pr
 	};
 
 	// Returns a direction in 5 bits. (Actually a number < 27)
-	// Note: this can be converted into 4 bits if sign information isn't needed
-	// using: if( idx > 13 ) idx = 26 - idx; Doing so, does not effect the DecompressNormal() function
 	struct Norm5bit
 	{
+		// Notes:
+		//  - This can be converted into 4 bits if sign information isn't needed
+		//    using: if (idx > 13) idx = 26 - idx;
+		//    Doing so, does not effect the Decompress() function
 		static uint32_t Compress(v4_cref<> norm)
 		{
 			const float cos_67p5 = 0.382683f;

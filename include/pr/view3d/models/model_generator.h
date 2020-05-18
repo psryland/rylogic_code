@@ -1106,54 +1106,74 @@ namespace pr::rdr
 			Cache cache;
 			std::vector<std::string> mats;
 
-			// Parse the meshes in the stream
-			// Todo, if you're not reading the first mesh in the file, the earlier
-			// meshes all get loaded into memory for no good reason... need a nice
-			// way to seek to the mesh we're after without loading the entire mesh into memory
-			p3d::ReadMeshes(src, [&](p3d::Mesh const& mesh)
-			{
-				// Not the mesh we're looking for?
-				if (mesh_name != nullptr && mesh.m_name != mesh_name)
-					return false;
+			// Find the meshes chunk
+			auto meshes = p3d::Find(src, ~0U, {p3d::EChunkId::Main, p3d::EChunkId::Scene, p3d::EChunkId::Meshes});
+			if (meshes.m_id != p3d::EChunkId::Meshes)
+				return nullptr;
 
-				// Name/Bounding box
-				cache.m_name = mesh.m_name;
-				cache.m_bbox = mesh.m_bbox;
-
-				// Copy the verts
-				cache.m_vcont.resize(mesh.m_verts.size());
-				memcpy(cache.m_vcont.data(), mesh.m_verts.data(), sizeof(p3d::Vert) * mesh.m_verts.size());
-
-				// Copy the indices
-				cache.m_idx_stride = mesh.m_idx.m_stride;
-				cache.m_icont.resize(mesh.m_idx.size());
-				memcpy(cache.m_icont.data(), mesh.m_idx.data(), mesh.m_idx.size());
-
-				// Copy the nuggets
-				cache.m_ncont.reserve(mesh.m_nugget.size());
-				for (auto& nug : mesh.m_nugget)
+			// Find the mesh match 'mesh_name'
+			p3d::Find(src, meshes.payload(), [&](p3d::ChunkHeader hdr, std::istream& src)
 				{
-					cache.m_ncont.emplace_back(
-						static_cast<EPrim>(nug.m_topo),
-						static_cast<EGeom>(nug.m_geom),
-						nullptr,
-						nug.m_vrange,
-						nug.m_irange);
+					// Not a mesh chunk?
+					if (hdr.m_id != p3d::EChunkId::Mesh)
+						return false;
 
-					// Record the material as used
-					insert_unique(mats, nug.m_mat.str);
-				}
+					// Not the mesh we're looking for?
+					if (mesh_name != nullptr)
+					{
+						auto gptr = p3d::SaveG(src);
 
-				// Stop searching
-				return true;
-			});
+						// Find the MeshName chunk
+						uint32_t len = 0;
+						if (!p3d::Find(src, hdr.payload(), p3d::EChunkId::MeshName, &len) || p3d::ReadCStr(src, len) != mesh_name)
+							return false;
+					}
 
-			// Load the used materials into the renderer
-			for (auto& mat : mats)
-			{
-				// todo
-				(void)rdr,mat;
-			}
+					// Found the mesh, extract it into a render model
+					auto mesh = p3d::ReadMesh(src, hdr.payload());
+
+					// Name/Bounding box
+					cache.m_name = mesh.m_name;
+					cache.m_bbox = mesh.m_bbox;
+
+					// Copy the verts
+					cache.m_vcont.resize(mesh.vcount());
+					auto vptr = cache.m_vcont.data();
+					for (auto mvert : mesh.fat_verts())
+					{
+						vptr->m_vert = GetP(mvert);
+						vptr->m_diff = GetC(mvert);
+						vptr->m_norm = GetN(mvert);
+						vptr->m_tex0 = GetT(mvert);
+						++vptr;
+					}
+
+					// Copy nuggets
+					cache.m_idx_stride = sizeof(uint32_t);
+					cache.m_icont.resize<uint32_t>(mesh.icount());
+					cache.m_ncont.reserve(mesh.ncount());
+					auto iptr = cache.m_icont.data<uint32_t>();
+					for (auto& nug : mesh.nuggets())
+					{
+						// Copy the indices
+						for (auto i : nug.indices())
+							*iptr++ = i;
+
+						// Add a nugget
+						cache.m_ncont.emplace_back(
+							static_cast<ETopo>(nug.m_topo),
+							static_cast<EGeom>(nug.m_geom),
+							nullptr,
+							nug.vrange(),
+							nug.irange());
+
+						// Record the material as used
+						insert_unique(mats, nug.m_mat.str);
+					}
+
+					// Stop searching
+					return true;
+				});
 
 			// Create the model
 			return Create(rdr, cache, bake, gen_normals);
