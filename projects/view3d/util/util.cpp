@@ -13,12 +13,12 @@
 namespace pr::rdr
 {
 	// Check enumerations agree with dx11
-	static_assert(int(EPrim::Invalid  ) == int(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    ), "EPrim::Invalid   value out of sync with dx11");
-	static_assert(int(EPrim::PointList) == int(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    ), "EPrim::PointList value out of sync with dx11");
-	static_assert(int(EPrim::LineList ) == int(D3D11_PRIMITIVE_TOPOLOGY_LINELIST     ), "EPrim::LineList  value out of sync with dx11");
-	static_assert(int(EPrim::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "EPrim::LineStrip value out of sync with dx11");
-	static_assert(int(EPrim::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "EPrim::TriList   value out of sync with dx11");
-	static_assert(int(EPrim::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "EPrim::TriStrip  value out of sync with dx11");
+	static_assert(int(ETopo::Invalid  ) == int(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED    ), "ETopo::Invalid   value out of sync with dx11");
+	static_assert(int(ETopo::PointList) == int(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST    ), "ETopo::PointList value out of sync with dx11");
+	static_assert(int(ETopo::LineList ) == int(D3D11_PRIMITIVE_TOPOLOGY_LINELIST     ), "ETopo::LineList  value out of sync with dx11");
+	static_assert(int(ETopo::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "ETopo::LineStrip value out of sync with dx11");
+	static_assert(int(ETopo::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "ETopo::TriList   value out of sync with dx11");
+	static_assert(int(ETopo::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "ETopo::TriStrip  value out of sync with dx11");
 
 	// Helper for getting the ref count of a COM pointer.
 	ULONG RefCount(IUnknown* ptr)
@@ -39,40 +39,40 @@ namespace pr::rdr
 	}
 
 	// Returns the number of primitives implied by an index count and geometry topology
-	size_t PrimCount(size_t icount, EPrim topo)
+	size_t PrimCount(size_t icount, ETopo topo)
 	{
 		// https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-primitive-topologies
 		switch (topo)
 		{
 		default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
-		case EPrim::PointList: return icount;
-		case EPrim::LineList:    PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by i-count"); return icount / 2;
-		case EPrim::LineStrip:   PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by i-count"); return icount - 1;
-		case EPrim::TriList:     PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by i-count"); return icount / 3;
-		case EPrim::TriStrip:    PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return icount - 2;
-		case EPrim::LineListAdj: PR_ASSERT(PR_DBG_RDR, (icount%4) == 0, "Incomplete primitive implied by i-count"); return icount / 4;
-		case EPrim::LineStripAdj:PR_ASSERT(PR_DBG_RDR,  icount    >= 4, "Incomplete primitive implied by i-count"); return (icount - 2) - 1;
-		case EPrim::TriListAdj:  PR_ASSERT(PR_DBG_RDR, (icount%6) == 0, "Incomplete primitive implied by i-count"); return icount / 6;
-		case EPrim::TriStripAdj: PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return (icount - 4) / 2;
+		case ETopo::PointList: return icount;
+		case ETopo::LineList:    PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by i-count"); return icount / 2;
+		case ETopo::LineStrip:   PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by i-count"); return icount - 1;
+		case ETopo::TriList:     PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by i-count"); return icount / 3;
+		case ETopo::TriStrip:    PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return icount - 2;
+		case ETopo::LineListAdj: PR_ASSERT(PR_DBG_RDR, (icount%4) == 0, "Incomplete primitive implied by i-count"); return icount / 4;
+		case ETopo::LineStripAdj:PR_ASSERT(PR_DBG_RDR,  icount    >= 4, "Incomplete primitive implied by i-count"); return (icount - 2) - 1;
+		case ETopo::TriListAdj:  PR_ASSERT(PR_DBG_RDR, (icount%6) == 0, "Incomplete primitive implied by i-count"); return icount / 6;
+		case ETopo::TriStripAdj: PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return (icount - 4) / 2;
 		}
 	}
 
 	// Returns the number of indices implied by a primitive count and geometry topology
-	size_t IndexCount(size_t pcount, EPrim topo)
+	size_t IndexCount(size_t pcount, ETopo topo)
 	{
 		if (pcount == 0) return 0;
 		switch (topo)
 		{
 		default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
-		case EPrim::PointList:   return pcount;
-		case EPrim::LineList:    return pcount * 2;
-		case EPrim::LineStrip:   return pcount + 1;
-		case EPrim::TriList:     return pcount * 3;
-		case EPrim::TriStrip:    return pcount + 2;
-		case EPrim::LineListAdj: return pcount * 4;
-		case EPrim::LineStripAdj:return (pcount + 1) + 2;
-		case EPrim::TriListAdj:  return pcount * 6;
-		case EPrim::TriStripAdj: return (pcount * 2) + 4;
+		case ETopo::PointList:   return pcount;
+		case ETopo::LineList:    return pcount * 2;
+		case ETopo::LineStrip:   return pcount + 1;
+		case ETopo::TriList:     return pcount * 3;
+		case ETopo::TriStrip:    return pcount + 2;
+		case ETopo::LineListAdj: return pcount * 4;
+		case ETopo::LineStripAdj:return (pcount + 1) + 2;
+		case ETopo::TriListAdj:  return pcount * 6;
+		case ETopo::TriStripAdj: return (pcount * 2) + 4;
 		}
 	}
 

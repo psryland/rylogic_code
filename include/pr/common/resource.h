@@ -1,4 +1,4 @@
-//**********************************************************************************
+﻿//**********************************************************************************
 // Resource
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************************************************
@@ -38,8 +38,8 @@ namespace pr
 	{
 		union
 		{
-		Type const* m_data; // Pointer to the resource
-		char const* m_buf;
+			Type const* m_data; // Pointer to the resource
+			char const* m_buf;
 		};
 		size_t m_len;  // The length of the resource in 'Type's
 		

@@ -638,7 +638,7 @@ namespace Rylogic.Gui.WinForms
 				m_dd_list_ctrl = value;
 			}
 		}
-		private DropDownListControl m_dd_list_ctrl;
+		[NonSerialized] private DropDownListControl m_dd_list_ctrl;
 
 		/// <summary>Preserves the selected index in the combo</summary>
 		public Scope PreserveSelectedIndex()
@@ -704,7 +704,7 @@ namespace Rylogic.Gui.WinForms
 			}
 		}
 		private bool m_preserve_selection;
-		private RangeI m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
+		[NonSerialized] private RangeI m_selection; // don't use a Scope for this. We save selection more than restoring it and disposed old scopes will restore the selection.
 
 		/// <summary>Preserve the selection in the combo</summary>
 		public Scope PreserveTextSelection()

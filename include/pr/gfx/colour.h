@@ -211,107 +211,109 @@ namespace pr
 
 		// Construct
 		Colour32() = default;
-		Colour32(uint32_t aarrggbb)
+		constexpr Colour32(uint32_t aarrggbb)
 			:argb(aarrggbb)
 		{}
-		Colour32(int aarrggbb)
+		constexpr Colour32(int aarrggbb)
 			:Colour32(static_cast<uint32_t>(aarrggbb))
 		{}
-		Colour32(EColours col)
+		constexpr Colour32(EColours col)
 			:Colour32(static_cast<uint32_t>(col))
 		{}
-		Colour32(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+		constexpr Colour32(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
 			:Colour32(uint32_t((a_ << 24) | (r_ << 16) | (g_ << 8) | (b_)))
 		{}
-		Colour32(int r_, int g_, int b_, int a_)
+		constexpr Colour32(int r_, int g_, int b_, int a_)
 			:Colour32(
 			uint8_t(Clamp(r_, 0, 255)),
 			uint8_t(Clamp(g_, 0, 255)),
 			uint8_t(Clamp(b_, 0, 255)),
 			uint8_t(Clamp(a_, 0, 255)))
 		{}
-		Colour32(float r_, float g_, float b_, float a_)
+		constexpr Colour32(float r_, float g_, float b_, float a_)
 			:Colour32(
 			uint8_t(Clamp(r_ * 255.0f + 0.5f, 0.0f, 255.0f)),
 			uint8_t(Clamp(g_ * 255.0f + 0.5f, 0.0f, 255.0f)),
 			uint8_t(Clamp(b_ * 255.0f + 0.5f, 0.0f, 255.0f)),
 			uint8_t(Clamp(a_ * 255.0f + 0.5f, 0.0f, 255.0f)))
 		{}
-		template <typename T, typename = enable_if_col<T>> Colour32(T const& c)
+		template <typename T, typename = enable_if_col<T>>
+		constexpr Colour32(T const& c)
 			:Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c))
 		{}
 
 		// Operators
-		Colour32& operator = (int i)
+		constexpr Colour32& operator = (int i)
 		{
 			argb = uint32_t(i);
 			return *this;
 		}
-		Colour32& operator = (uint32_t i)
+		constexpr Colour32& operator = (uint32_t i)
 		{
 			argb = i;
 			return *this;
 		}
-		template <typename T, typename = enable_if_col<T>> Colour32& operator = (T const& c)
+		template <typename T, typename = enable_if_col<T>>
+		constexpr Colour32& operator = (T const& c)
 		{
 			return *this = Colour32(r_cp(c), g_cp(c), b_cp(c), a_cp(c));
 		}
-		Colour32 operator ~() const
+		constexpr Colour32 operator ~() const
 		{
 			return Colour32((argb & 0xFF000000) | (argb ^ 0xFFFFFFFF));
 		}
-		operator uint32_t() const
+		constexpr operator uint32_t() const
 		{
 			return argb;
 		}
 
 		// Component accessors
-		Colour32 rgba() const
+		constexpr Colour32 rgba() const
 		{
 			return Colour32(((argb & 0x00ffffff) << 8) | (argb >> 24));
 		}
 
 		// Set alpha channel
-		Colour32 a0() const
+		constexpr Colour32 a0() const
 		{
 			return Colour32(argb & 0x00FFFFFF);
 		}
-		Colour32 a1() const
+		constexpr Colour32 a1() const
 		{
 			return Colour32(argb | 0xFF000000);
 		}
 
 		// Operators
-		friend bool operator == (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator == (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb == rhs.argb;
 		}
-		friend bool operator != (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator != (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb != rhs.argb;
 		}
-		friend bool operator <  (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator <  (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb < rhs.argb;
 		}
-		friend bool operator >  (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator >  (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb > rhs.argb;
 		}
-		friend bool operator <= (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator <= (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb <= rhs.argb;
 		}
-		friend bool operator >= (Colour32 lhs, Colour32 rhs)
+		friend constexpr bool operator >= (Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.argb >= rhs.argb;
 		}
-		friend bool EqualNoA(Colour32 lhs, Colour32 rhs)
+		friend constexpr bool EqualNoA(Colour32 lhs, Colour32 rhs)
 		{
 			return lhs.a0() == rhs.a0();
 		}
 
-		friend Colour32 operator + (Colour32 lhs, Colour32 rhs)
+		friend constexpr Colour32 operator + (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
 				lhs.r + rhs.r,
@@ -319,7 +321,7 @@ namespace pr
 				lhs.b + rhs.b,
 				lhs.a + rhs.a);
 		}
-		friend Colour32 operator - (Colour32 lhs, Colour32 rhs)
+		friend constexpr Colour32 operator - (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
 				lhs.r - rhs.r,
@@ -327,7 +329,7 @@ namespace pr
 				lhs.b - rhs.b,
 				lhs.a - rhs.a);
 		}
-		friend Colour32 operator * (Colour32 lhs, float s)
+		friend constexpr Colour32 operator * (Colour32 lhs, float s)
 		{
 			return Colour32(
 				lhs.r * s,
@@ -335,11 +337,11 @@ namespace pr
 				lhs.b * s,
 				lhs.a * s);
 		}
-		friend Colour32 operator * (float s, Colour32 rhs)
+		friend constexpr Colour32 operator * (float s, Colour32 rhs)
 		{
 			return rhs * s;
 		}
-		friend Colour32 operator * (Colour32 lhs, Colour32 rhs)
+		friend constexpr Colour32 operator * (Colour32 lhs, Colour32 rhs)
 		{
 			return Colour32(
 				lhs.r * rhs.r / 255,
@@ -347,12 +349,12 @@ namespace pr
 				lhs.b * rhs.b / 255,
 				lhs.a * rhs.a / 255);
 		}
-		friend Colour32 operator / (Colour32 lhs, float s)
+		friend constexpr Colour32 operator / (Colour32 lhs, float s)
 		{
 			assert("divide by zero" && s != 0);
 			return lhs * 1.0f / s;
 		}
-		friend Colour32 operator % (Colour32 lhs, int s)
+		friend constexpr Colour32 operator % (Colour32 lhs, int s)
 		{
 			assert("divide by zero" && s != 0);
 			return Colour32(
@@ -361,27 +363,27 @@ namespace pr
 				lhs.b % s,
 				lhs.a % s);
 		}
-		friend Colour32& operator += (Colour32& lhs, Colour32 rhs)
+		friend constexpr Colour32& operator += (Colour32& lhs, Colour32 rhs)
 		{
 			return lhs = lhs + rhs;
 		}
-		friend Colour32& operator -= (Colour32& lhs, Colour32 rhs)
+		friend constexpr Colour32& operator -= (Colour32& lhs, Colour32 rhs)
 		{
 			return lhs = lhs - rhs;
 		}
-		friend Colour32& operator *= (Colour32& lhs, float s)
+		friend constexpr Colour32& operator *= (Colour32& lhs, float s)
 		{
 			return lhs = lhs * s;
 		}
-		friend Colour32& operator *= (Colour32& lhs, Colour32 rhs)
+		friend constexpr Colour32& operator *= (Colour32& lhs, Colour32 rhs)
 		{
 			return lhs = lhs * rhs;
 		}
-		friend Colour32& operator /= (Colour32& lhs, float s)
+		friend constexpr Colour32& operator /= (Colour32& lhs, float s)
 		{
 			return lhs = lhs / s;
 		}
-		friend Colour32& operator %= (Colour32& lhs, int s)
+		friend constexpr Colour32& operator %= (Colour32& lhs, int s)
 		{
 			return lhs = lhs % s;
 		}
@@ -390,27 +392,26 @@ namespace pr
 	static_assert(is_colour<Colour32>::value, "");
 
 	// Define component accessors
-	inline float r_cp(Colour32 v) { return v.r / 255.0f; }
-	inline float g_cp(Colour32 v) { return v.g / 255.0f; }
-	inline float b_cp(Colour32 v) { return v.b / 255.0f; }
-	inline float a_cp(Colour32 v) { return v.a / 255.0f; }
-
-	inline float x_cp(Colour32 v) { return r_cp(v); }
-	inline float y_cp(Colour32 v) { return g_cp(v); }
-	inline float z_cp(Colour32 v) { return b_cp(v); }
-	inline float w_cp(Colour32 v) { return a_cp(v); }
+	constexpr float r_cp(Colour32 v) { return v.r / 255.0f; }
+	constexpr float g_cp(Colour32 v) { return v.g / 255.0f; }
+	constexpr float b_cp(Colour32 v) { return v.b / 255.0f; }
+	constexpr float a_cp(Colour32 v) { return v.a / 255.0f; }
+	constexpr float x_cp(Colour32 v) { return r_cp(v); }
+	constexpr float y_cp(Colour32 v) { return g_cp(v); }
+	constexpr float z_cp(Colour32 v) { return b_cp(v); }
+	constexpr float w_cp(Colour32 v) { return a_cp(v); }
 
 	#pragma region Constants
-	Colour32 const Colour32Zero   = { 0x00000000 };
-	Colour32 const Colour32One    = { 0xFFFFFFFF };
-	Colour32 const Colour32White  = { 0xFFFFFFFF };
-	Colour32 const Colour32Black  = { 0xFF000000 };
-	Colour32 const Colour32Red    = { 0xFFFF0000 };
-	Colour32 const Colour32Green  = { 0xFF00FF00 };
-	Colour32 const Colour32Blue   = { 0xFF0000FF };
-	Colour32 const Colour32Yellow = { 0xFFFFFF00 };
-	Colour32 const Colour32Purple = { 0xFFFF00FF };
-	Colour32 const Colour32Gray   = { 0xFF808080 };
+	constexpr Colour32 Colour32Zero   = { 0x00000000 };
+	constexpr Colour32 Colour32One    = { 0xFFFFFFFF };
+	constexpr Colour32 Colour32White  = { 0xFFFFFFFF };
+	constexpr Colour32 Colour32Black  = { 0xFF000000 };
+	constexpr Colour32 Colour32Red    = { 0xFFFF0000 };
+	constexpr Colour32 Colour32Green  = { 0xFF00FF00 };
+	constexpr Colour32 Colour32Blue   = { 0xFF0000FF };
+	constexpr Colour32 Colour32Yellow = { 0xFFFFFF00 };
+	constexpr Colour32 Colour32Purple = { 0xFFFF00FF };
+	constexpr Colour32 Colour32Gray   = { 0xFF808080 };
 	#pragma endregion
 
 	#pragma region Functions

@@ -10,7 +10,7 @@ namespace pr::rdr
 {
 	// NuggetData *************************************************
 
-	NuggetData::NuggetData(EPrim topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
+	NuggetData::NuggetData(ETopo topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:m_topo(topo)
 		,m_geom(geom)
 		,m_smap(smap ? *smap : ShaderMap())
@@ -28,7 +28,7 @@ namespace pr::rdr
 
 	// NuggetProps ************************************************
 
-	NuggetProps::NuggetProps(EPrim topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
+	NuggetProps::NuggetProps(ETopo topo, EGeom geom, ShaderMap* smap, Range vrange, Range irange)
 		:NuggetData(topo, geom, smap, vrange, irange)
 		,m_range_overlaps(false)
 	{}

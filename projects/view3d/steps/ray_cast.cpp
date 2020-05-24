@@ -329,23 +329,23 @@ namespace pr::rdr
 	}
 
 	// Update the provided shader set appropriate for this render step
-	void RayCastStep::ConfigShaders(ShaderSet1& ss, EPrim topo) const
+	void RayCastStep::ConfigShaders(ShaderSet1& ss, ETopo topo) const
 	{
 		ss = ShaderSet1{};
 		ss.m_vs = m_vs.get();
 		switch (topo)
 		{
-		case EPrim::PointList:
+		case ETopo::PointList:
 			ss.m_gs = m_gs_vert.get();
 			break;
-		case EPrim::LineList:
-		case EPrim::LineListAdj:
-		case EPrim::LineStrip:
-		case EPrim::LineStripAdj:
+		case ETopo::LineList:
+		case ETopo::LineListAdj:
+		case ETopo::LineStrip:
+		case ETopo::LineStripAdj:
 			ss.m_gs = m_gs_edge.get();
 			break;
-		case EPrim::TriList:
-		case EPrim::TriStrip:
+		case ETopo::TriList:
+		case ETopo::TriStrip:
 			ss.m_gs = m_gs_face.get();
 			break;
 		default:

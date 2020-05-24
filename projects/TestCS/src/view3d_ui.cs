@@ -48,7 +48,7 @@ namespace TestCS
 			m_demo_objs = m_view3d.Window.CreateDemoScene();
 
 			m_view3d.Camera.ResetView();
-			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
+			m_view3d.Camera.Lookat(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 
 			// Simple create object
 			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false, null);
@@ -131,7 +131,7 @@ namespace TestCS
 				};
 				var nuggets = new View3d.Nugget[]
 				{
-					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr)
+					new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr)
 				};
 				m_obj3 = new View3d.Object("Obj3", 0xFFFFFFFF, 3, 3, 1, verts, indcs, nuggets, null);
 				m_view3d.Window.AddObject(m_obj3);
@@ -167,7 +167,7 @@ namespace TestCS
 				indices[new_icount++] = (ushort)(new_vcount - 2);
 				indices[new_icount++] = (ushort)(new_vcount - 1);
 			}
-			nuggets[new_ncount++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert);
+			nuggets[new_ncount++] = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert);
 		}
 
 #region Windows Form Designer generated code

@@ -52,7 +52,6 @@ namespace pr::geometry
 		TriListAdj   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
 		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
 	};
-	using EPrim = ETopo; // todo, deprecate 'EPrim'
 
 	// EPrimGroup
 	enum class ETopoGroup
@@ -62,7 +61,6 @@ namespace pr::geometry
 		Lines,
 		Triangles,
 	};
-	using EPrimGroup = ETopoGroup;
 
 	// Geometry properties
 	struct Props
@@ -90,16 +88,16 @@ namespace pr::geometry
 		{}
 	};
 
-	// Classify primitive types
-	constexpr EPrimGroup PrimGroup(EPrim prim)
+	// Classify topology types
+	constexpr ETopoGroup TopoGroup(ETopo topo)
 	{
 		return
-			prim == EPrim::TriList || prim == EPrim::TriListAdj ? EPrimGroup::Triangles :
-			prim == EPrim::TriStrip || prim == EPrim::TriStripAdj ? EPrimGroup::Triangles :
-			prim == EPrim::LineList || prim == EPrim::LineListAdj ? EPrimGroup::Lines :
-			prim == EPrim::LineStrip || prim == EPrim::LineStripAdj ? EPrimGroup::Lines :
-			prim == EPrim::PointList ? EPrimGroup::Points :
-			EPrimGroup::None;
+			topo == ETopo::TriList || topo == ETopo::TriListAdj ? ETopoGroup::Triangles :
+			topo == ETopo::TriStrip || topo == ETopo::TriStripAdj ? ETopoGroup::Triangles :
+			topo == ETopo::LineList || topo == ETopo::LineListAdj ? ETopoGroup::Lines :
+			topo == ETopo::LineStrip || topo == ETopo::LineStripAdj ? ETopoGroup::Lines :
+			topo == ETopo::PointList ? ETopoGroup::Points :
+			ETopoGroup::None;
 	}
 
 	// An iterator wrapper for applying a transform to 'points'

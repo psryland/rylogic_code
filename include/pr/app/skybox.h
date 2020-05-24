@@ -123,7 +123,7 @@ namespace pr::app
 
 			// Create a model nugget for the sky box
 			NuggetProps ddata;
-			ddata.m_topo = EPrim::TriList;
+			ddata.m_topo = ETopo::TriList;
 			ddata.m_geom = EGeom::Vert|EGeom::Tex0;
 			ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, texpath.c_str(), SamplerDesc::LinearClamp(), false, "skybox");
 			m_inst.m_model->CreateNugget(ddata);
@@ -176,7 +176,7 @@ namespace pr::app
 			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "sky box"));
 
 			// Create the model nuggets for the sky box
-			NuggetProps ddata(EPrim::TriList, EGeom::Vert|EGeom::Tex0);
+			NuggetProps ddata(ETopo::TriList, EGeom::Vert|EGeom::Tex0);
 
 			// One texture per nugget
 			auto tpath = texpath.wstring();

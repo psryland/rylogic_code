@@ -123,7 +123,7 @@
   <!-- Files -->
   <ItemGroup>
     <ClInclude Include="..\include\pr\view3d\dll\view3d.h" />
-    <ClInclude Include="..\include\pr\view3d\dll\pr_conv.h" />
+    <ClInclude Include="..\include\pr\view3d\dll\conversion.h" />
     <ClInclude Include="..\projects\view3d\dll\context.h" />
     <ClInclude Include="..\projects\view3d\dll\forward.h" />
     <ClInclude Include="..\projects\view3d\dll\window.h" />

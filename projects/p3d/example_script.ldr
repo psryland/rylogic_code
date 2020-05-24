@@ -42,9 +42,13 @@
 		// Optional. The file path to write the file to.
 		// If omitted, defaults to the input file, but with the p3d extension.
 		"<filepath_or_directory_of_where_to_write_the_file>"
-	
-		// Optional. Output a p3d file with compressed vertex and index data
-		*Compress
+
+		// Flags that control the compression of the output, given as a colon delimited string
+		// e.g.  "Verts16Bit:NormsPack32:Colours32Bit:IdxNBits"
+		*Flags { "<flags_separated_by_colons>" }
+		
+		// Optional. Output an '*.ldr' file description of the model
+		*Ldr
 		
 		// Optional. Output a '*.cpp' file that statically defines the model
 		*Code

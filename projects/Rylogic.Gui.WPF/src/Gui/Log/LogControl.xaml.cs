@@ -683,13 +683,18 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Switch out of tail scroll mode when a row other than the last is selected</summary>
-		private void HandleSelectionChanged(object sender, SelectionChangedEventArgs e)
+		private void HandleMouseDown(object sender, MouseButtonEventArgs e)
 		{
-			if (TailScroll && LogEntriesView.CurrentPosition != LogEntriesView.Count() - 1)
-				TailScroll = false;
+			Dispatcher.BeginInvoke(new Action(() =>
+			{
+				// Have to dispatcher this because the current position isn't updated until
+				// after the preview mouse down event.
+				if (TailScroll && LogEntriesView.CurrentPosition != LogEntriesView.Count() - 1)
+					TailScroll = false;
+			}));
 		}
 
-		/// <summary></summary>
+		/// <summary>Allow double click on a log entry to do something</summary>
 		private void HandleMouseDoubleClick(object sender, MouseButtonEventArgs e)
 		{
 			if (LogEntriesView.CurrentItem is LogEntry le)

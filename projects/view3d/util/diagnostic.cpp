@@ -58,7 +58,7 @@ namespace pr::rdr
 				// Create a dependent nugget that draws the normals
 				auto& dep = *model->mdl_mgr().CreateNugget(nug, nug.m_model_buffer, nullptr);
 				dep.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
-				dep.m_topo = EPrim::PointList;
+				dep.m_topo = ETopo::PointList;
 				dep.m_geom = EGeom::Vert | EGeom::Colr;
 				dep.m_owner = nug.m_owner;
 				dep.m_irange = RangeZero;

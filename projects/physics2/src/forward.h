@@ -12,7 +12,7 @@
 #include "pr/ldraw/ldr_object.h"
 #include "pr/ldraw/ldr_helper.h"
 #include "pr/view3d/dll/view3d.h"
-#include "pr/view3d/dll/pr_conv.h"
+#include "pr/view3d/dll/conversion.h"
 #include "pr/win32/win32.h"
 #include "pr/win32/windows_com.h"
 

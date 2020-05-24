@@ -20,15 +20,15 @@
 
 namespace pr
 {
-	static v2 const v2Zero    = v2{0.0f, 0.0f};
-	static v2 const v2Half    = v2{0.5f, 0.5f};
-	static v2 const v2One     = v2{1.0f, 1.0f};
-	static v2 const v2Min     = v2{+maths::float_min, +maths::float_min};
-	static v2 const v2Max     = v2{+maths::float_max, +maths::float_max};
-	static v2 const v2Lowest  = v2{-maths::float_max, -maths::float_max};
-	static v2 const v2Epsilon = v2{+maths::float_eps, +maths::float_eps};
-	static v2 const v2XAxis   = v2{1.0f, 0.0f};
-	static v2 const v2YAxis   = v2{0.0f, 1.0f};
+	constexpr v2 v2Zero    = v2{0.0f, 0.0f};
+	constexpr v2 v2Half    = v2{0.5f, 0.5f};
+	constexpr v2 v2One     = v2{1.0f, 1.0f};
+	constexpr v2 v2Min     = v2{+maths::float_min, +maths::float_min};
+	constexpr v2 v2Max     = v2{+maths::float_max, +maths::float_max};
+	constexpr v2 v2Lowest  = v2{-maths::float_max, -maths::float_max};
+	constexpr v2 v2Epsilon = v2{+maths::float_eps, +maths::float_eps};
+	constexpr v2 v2XAxis   = v2{1.0f, 0.0f};
+	constexpr v2 v2YAxis   = v2{0.0f, 1.0f};
 
 	static v3 const v3Zero    = v3{0.0f, 0.0f, 0.0f};
 	static v3 const v3Half    = v3{0.5f, 0.5f, 0.5f};
@@ -41,17 +41,17 @@ namespace pr
 	static v3 const v3YAxis   = v3{0.0f, 1.0f, 0.0f};
 	static v3 const v3ZAxis   = v3{0.0f, 0.0f, 1.0f};
 
-	static v4 const v4Zero    = v4{0.0f, 0.0f, 0.0f, 0.0f};
-	static v4 const v4Half    = v4{0.5f, 0.5f, 0.5f, 0.5f};
-	static v4 const v4One     = v4{1.0f, 1.0f, 1.0f, 1.0f};
-	static v4 const v4Min     = v4{+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
-	static v4 const v4Max     = v4{+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
-	static v4 const v4Lowest  = v4{-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
-	static v4 const v4Epsilon = v4{+maths::float_eps, +maths::float_eps, +maths::float_eps, +maths::float_eps};
-	static v4 const v4XAxis   = v4{1.0f, 0.0f, 0.0f, 0.0f};
-	static v4 const v4YAxis   = v4{0.0f, 1.0f, 0.0f, 0.0f};
-	static v4 const v4ZAxis   = v4{0.0f, 0.0f, 1.0f, 0.0f};
-	static v4 const v4Origin  = v4{0.0f, 0.0f, 0.0f, 1.0f};
+	constexpr v4 v4Zero    = v4{0.0f, 0.0f, 0.0f, 0.0f};
+	constexpr v4 v4Half    = v4{0.5f, 0.5f, 0.5f, 0.5f};
+	constexpr v4 v4One     = v4{1.0f, 1.0f, 1.0f, 1.0f};
+	constexpr v4 v4Min     = v4{+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
+	constexpr v4 v4Max     = v4{+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
+	constexpr v4 v4Lowest  = v4{-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
+	constexpr v4 v4Epsilon = v4{+maths::float_eps, +maths::float_eps, +maths::float_eps, +maths::float_eps};
+	constexpr v4 v4XAxis   = v4{1.0f, 0.0f, 0.0f, 0.0f};
+	constexpr v4 v4YAxis   = v4{0.0f, 1.0f, 0.0f, 0.0f};
+	constexpr v4 v4ZAxis   = v4{0.0f, 0.0f, 1.0f, 0.0f};
+	constexpr v4 v4Origin  = v4{0.0f, 0.0f, 0.0f, 1.0f};
 
 	static v8 const v8Zero = v8{0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f};
 

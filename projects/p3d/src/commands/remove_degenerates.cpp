@@ -9,10 +9,13 @@ using namespace pr;
 using namespace pr::geometry;
 
 // Remove degenerate verts
-void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_angle, float colour_distance, float uv_distance, int verbosity)
+void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_angle, float colour_distance, float uv_distance, int verbosity)
 {
+	// Const mesh reference to ensure const accessors are used unless writing
+	auto const& mesh = mesh_;
+
 	// No mesh, no degenerates
-	if (mesh.m_verts.empty())
+	if (mesh.m_vert.size() == 0)
 		return;
 
 	if (verbosity >= 2)
@@ -25,17 +28,17 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 		std::cout << "    Vert texture coords within " << uv_distance << " are considered degenerate" << std::endl;
 
 	// Quantise the verts.
-	for (auto& vert : mesh.m_verts)
-		vert.pos = pr::Quantise(static_cast<pr::v4>(vert.pos), 1 << quantisation);
+	for (auto& vert : mesh_.m_vert)
+		vert = Quantise(vert, 1 << quantisation);
 
-	// A mapping from original vertex (orig) to kept vertex from all the verts degenerate with 'orig'
-	struct VP { p3d::Vert* orig; p3d::Vert* kept; };
+	// A mapping from original vertex (orig) to the kept vertex from all the vertices degenerate with 'orig'
+	struct VP { v4 const* orig; v4 const* kept; };
 	std::vector<VP> map;
-	map.resize(mesh.m_verts.size());
+	map.resize(mesh.m_vert.size());
 
 	// Initialise the map
-	auto map_ptr = std::begin(map);
-	for (auto& vert : mesh.m_verts)
+	auto map_ptr = map.data();
+	for (auto& vert : mesh.m_vert)
 	{
 		map_ptr->orig = &vert;
 		map_ptr->kept = &vert;
@@ -47,9 +50,9 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 	{
 		auto& v0 = *lhs.orig;
 		auto& v1 = *rhs.orig;
-		if (v0.pos.x != v1.pos.x) return v0.pos.x < v1.pos.x;
-		if (v0.pos.y != v1.pos.y) return v0.pos.y < v1.pos.y;
-		if (v0.pos.z != v1.pos.z) return v0.pos.z < v1.pos.z;
+		if (v0.x != v1.x) return v0.x < v1.x;
+		if (v0.y != v1.y) return v0.y < v1.y;
+		if (v0.z != v1.z) return v0.z < v1.z;
 		return false;
 	});
 
@@ -57,6 +60,11 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 	auto cos_angle_normal_diff = smoothing_angle >= 0 ? Cos(DegreesToRadians(smoothing_angle)) : 0;
 	auto colour_dist_sq = colour_distance >= 0 ? Sqr(colour_distance) : 0;
 	auto uv_dist_sq = uv_distance >= 0 ? Sqr(uv_distance) : 0;
+	auto geom = mesh.geom();
+
+	// The start of the vertex buffer so we can calculate indices from pointers.
+	// And, the buffers of the mesh that contain values
+	auto v0 = mesh.m_vert.data();
 
 	// Set each 'kept' pointer to the first in the set of verts degenerate with 'orig'
 	// Since the verts are only sorted by position, all verts need to be checked back to where the positions changes.
@@ -64,28 +72,43 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 	for (size_t i = 1, iend = map.size(); i != iend; ++i)
 	{
 		// The vert to test for degeneracy
-		auto& vi = *map[i].orig;
+		auto vi = *map[i].orig;
 		for (auto j = i; j-- != 0;)
 		{
 			// A previous vertex that may be degenerate with 'vi' and, if so,
 			// will already have it's 'kept' pointer pointing at the first in the set.
-			auto& vj = *map[j].kept;
+			auto vj = *map[j].kept;
 
 			// If the vertex position is different, move on to the next vert
-			if (vi.pos != vj.pos)
+			if (vi != vj)
 				break;
 
-			// Not a degenerate if the normals don't match, but keep searching
-			if (smoothing_angle >= 0 && Dot((v4)vi.norm, (v4)vj.norm) <= cos_angle_normal_diff)
-				continue;
+			// Not a degenerate if the geometry has normals and they don't match, but keep searching
+			if (AllSet(geom, EGeom::Norm) && smoothing_angle >= 0)
+			{
+				auto ni = mesh.m_norm[s_cast<int>(map[i].orig - v0)];
+				auto nj = mesh.m_norm[s_cast<int>(map[i].kept - v0)];
+				if (Dot(ni, nj) <= cos_angle_normal_diff)
+					continue;
+			}
 
-			// Not a degenerate if the colours don't match, but keep searching
-			if (colour_distance >= 0 && LengthSq((v4)vi.col - (v4)vj.col) >= colour_dist_sq)
-				continue;
+			// Not a degenerate if the geometry has colours and they don't match, but keep searching
+			if (AllSet(geom, EGeom::Colr) && colour_distance >= 0)
+			{
+				auto ci = Colour(mesh.m_diff[s_cast<int>(map[i].orig - v0)]);
+				auto cj = Colour(mesh.m_diff[s_cast<int>(map[j].kept - v0)]);
+				if (LengthSq(ci - cj) >= colour_dist_sq)
+					continue;
+			}
 
-			// Not a degenerate if the UVs don't match, but keep searching
-			if (uv_distance >= 0 && LengthSq((v2)vi.uv - (v2)vj.uv) >= uv_dist_sq)
-				continue;
+			// Not a degenerate if the geometry has UVs and they don't match, but keep searching
+			if (AllSet(geom, EGeom::Tex0) && uv_distance >= 0)
+			{
+				auto ti = mesh.m_tex0[s_cast<int>(map[i].orig - v0)];
+				auto tj = mesh.m_tex0[s_cast<int>(map[i].kept - v0)];
+				if (LengthSq(ti - tj) >= uv_dist_sq)
+					continue;
+			}
 
 			// 'vi' is degenerate with 'vj'.
 			// Set the 'kept' pointer for 'vi' to the same as 'vj' which will
@@ -103,14 +126,19 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 			<< "    " << unique_count << " verts remaining." << std::endl;
 
 	// Returns true if 'ptr' points within 'cont'
-	auto is_within = [](std::vector<p3d::Vert> const& cont, p3d::Vert const* ptr)
+	auto is_within = [](auto const& cont, auto const* ptr)
 	{
 		return ptr >= cont.data() && ptr < cont.data() + cont.size();
 	};
 
+	// Buffers to hold the unique vertices
+	p3d::Mesh::VCont verts(unique_count);
+	p3d::Mesh::CCont diffs;
+	p3d::Mesh::NCont norms;
+	p3d::Mesh::TCont tex0s;
+
 	// Create a collection of verts without degenerates
-	std::vector<p3d::Vert> verts(unique_count);
-	auto vout = std::begin(verts);
+	auto vout = verts.data();
 	for (size_t i = 0, j = 0, iend = map.size(); i != iend; ++i)
 	{
 		// If this vert is already pointing into the new container then it's
@@ -118,33 +146,36 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 		if (is_within(verts, map[i].kept))
 			continue;
 
-		// 'map[i]' should be the first in the next set of degenerate verts.
-		auto norm = static_cast<v4>(map[i].orig->norm);
-		auto col = static_cast<v4>(map[i].orig->col);
-		auto uv = static_cast<v2>(map[i].orig->uv);
+		auto diff = ColourZero;
+		auto norm = v4Zero;
+		auto tex0 = v2Zero;
 
+		// 'map[i]' should be the first in the next set of degenerate verts.
 		// Redirect all pointers up to the next non-degenerate vert to the new container.
-		// Test all verts after 'i' until the positions differ. The preserved fields mean that not all degenerate verts are adjacent in 'map'
+		// Test all verts after 'i' until the positions differ. The preserved
+		// fields mean that not all degenerate verts are contiguous in 'map'.
+		auto degen_count = 1.0f;
 		for (j = i + 1; j != iend; ++j)
 		{
 			// If the next vert has a different position, then we've reached the end of the degenerate verts
-			if (map[j].orig->pos != map[i].orig->pos)
+			if (*map[j].orig != *map[i].orig)
 				break;
 
 			// 'map[i]' is degenerate with 'map[j]' if their 'kept' pointers are the same.
 			if (map[j].kept != map[i].kept)
 				continue;
 
-			// Set 'map[j].kept' to the location in 'verts' that will contain the vertex for this degenerate set (done after this for loop)
+			// Set 'map[j].kept' to the location in 'verts' that will contain the vertex for this degenerate set (done after this loop)
 			map[j].kept = &*vout;
-
+			degen_count += 1.0f;
+	
 			// Perform averaging of the vertex fields that are being merged.
-			if (smoothing_angle >= 0)
-				norm += static_cast<v4>(map[j].orig->norm);
-			if (colour_distance >= 0)
-				col += static_cast<v4>(map[j].orig->col);
-			if (uv_distance >= 0)
-				uv += static_cast<v2>(map[j].orig->uv);
+			if (AllSet(geom, EGeom::Colr))
+				diff += mesh.m_diff[s_cast<int>(map[j].orig - v0)];
+			if (AllSet(geom, EGeom::Norm))
+				norm += mesh.m_norm[s_cast<int>(map[j].orig - v0)];
+			if (AllSet(geom, EGeom::Tex0))
+				tex0 += mesh.m_tex0[s_cast<int>(map[j].orig - v0)];
 		}
 
 		// Assign the kept vertex of the degenerate set into the new container
@@ -152,13 +183,21 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 		*vout++ = *map[i].orig;
 
 		// Perform averaging of the vertex fields that are being merged.
-		auto degen_count = float(j - i);
-		if (smoothing_angle >= 0)
-			map[i].kept->norm = Normalise(norm);
-		if (colour_distance >= 0)
-			map[i].kept->col = col / degen_count;
-		if (uv_distance >= 0)
-			map[i].kept->uv = uv / degen_count;
+		if (AllSet(geom, EGeom::Colr))
+		{
+			diff += mesh.m_diff[s_cast<int>(map[j].orig - v0)];
+			diffs.push_back((diff / degen_count).argb());
+		}
+		if (AllSet(geom, EGeom::Norm))
+		{
+			norm += mesh.m_norm[s_cast<int>(map[i].orig - v0)];
+			norms.push_back(norm / degen_count);
+		}
+		if (AllSet(geom, EGeom::Tex0))
+		{
+			tex0 += mesh.m_tex0[s_cast<int>(map[i].orig - v0)];
+			tex0s.push_back(tex0 / degen_count);
+		}
 	}
 
 	// Re-sort the map back to the original order of mesh.m_vert
@@ -168,31 +207,31 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh, int quantisation, float smoothing_an
 	});
 
 	// Update the mesh indices to use the non-degenerate vert indices
-	auto remap_mesh_indices = [&](size_t count, auto* idx)
+	auto remap_indices = [&](size_t count, auto* idx)
 	{
 		using VIdx = std::decay_t<decltype(*idx)>;
+
 		for (size_t i = 0; i != count; ++i, ++idx)
 			*idx = s_cast<VIdx>(map[*idx].kept - verts.data());
 	};
-	switch (mesh.m_idx.m_stride)
+	for (auto& nug : mesh_.m_nugget)
 	{
-	case sizeof(uint16_t): remap_mesh_indices(mesh.m_idx.size<uint16_t>(), mesh.m_idx.data<uint16_t>()); break;
-	case sizeof(uint32_t): remap_mesh_indices(mesh.m_idx.size<uint32_t>(), mesh.m_idx.data<uint32_t>()); break;
-	default: throw std::runtime_error("Unsupported index format");
+		switch (nug.stride())
+		{
+		case sizeof(uint16_t): remap_indices(nug.m_vidx.size<uint16_t>(), nug.m_vidx.data<uint16_t>()); break;
+		case sizeof(uint32_t): remap_indices(nug.m_vidx.size<uint32_t>(), nug.m_vidx.data<uint32_t>()); break;
+		default: throw std::runtime_error("Unsupported index format");
+		}
 	}
 
-	// Update the vrange for each nugget
-	for (auto& nug : mesh.m_nugget)
-	{
-		auto vrange = pr::Range<p3d::u32>::Reset();
-		for (auto i = nug.m_vrange.first, iend = i + nug.m_vrange.count; i != iend; ++i)
-			Encompass(vrange, static_cast<p3d::u32>(map[i].kept - verts.data()));
-
-		nug.m_vrange = vrange;
-	}
-
-	// Replace the vert container in the mesh
-	mesh.m_verts = std::move(verts);
+	// Replace the vert containers in the mesh
+	mesh_.m_vert = std::move(verts);
+	if (AllSet(geom, EGeom::Colr))
+		mesh_.m_diff = std::move(diffs);
+	if (AllSet(geom, EGeom::Norm))
+		mesh_.m_norm = std::move(norms);
+	if (AllSet(geom, EGeom::Tex0))
+		mesh_.m_tex0 = std::move(tex0s);
 }
 
 // Remove degenerate verts. Use -1.0f to ignore normals, colours, or UVs

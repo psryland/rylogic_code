@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Matrix4x4
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -367,7 +367,7 @@ namespace Rylogic.Maths
 		#endregion
 
 		/// <summary></summary>
-		public string Description => $"{x}  {y}  {z}  {w}";
+		public string Description => $"{x.Description}\n{y.Description}\n{z.Description}\n{w.Description}\n";
 	}
 
 	public static partial class Math_

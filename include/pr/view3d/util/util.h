@@ -243,10 +243,10 @@ namespace pr::rdr
 	UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count);
 
 	// Returns the number of primitives implied by an index count and geometry topology
-	size_t PrimCount(size_t icount, EPrim topo);
+	size_t PrimCount(size_t icount, ETopo topo);
 
 	// Returns the number of indices implied by a primitive count and geometry topology
-	size_t IndexCount(size_t pcount, EPrim topo);
+	size_t IndexCount(size_t pcount, ETopo topo);
 
 	// Returns the expected row and slice pitch for a given image width*height and format
 	iv2 Pitch(iv2 size, DXGI_FORMAT fmt);

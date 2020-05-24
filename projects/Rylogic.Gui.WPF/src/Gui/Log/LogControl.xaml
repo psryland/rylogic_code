@@ -119,7 +119,7 @@
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
 			local:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
-			SelectionChanged="HandleSelectionChanged"
+			PreviewMouseDown="HandleMouseDown"
 			MouseDoubleClick="HandleMouseDoubleClick"
 			CanUserResizeColumns="True"
 			IsReadOnly="True"

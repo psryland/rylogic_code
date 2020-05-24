@@ -30,7 +30,7 @@ namespace pr::rdr
 		ERenderStep GetId() const override { return Id; }
 
 		// Update the provided shader set appropriate for this render step
-		void ConfigShaders(ShaderSet1& ss, EPrim topo) const override;
+		void ConfigShaders(ShaderSet1& ss, ETopo topo) const override;
 
 		// Add model nuggets to the draw list for this render step
 		void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;

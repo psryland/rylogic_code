@@ -1,4 +1,4 @@
-//***************************************************************************************************
+ï»¿//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -35,7 +35,7 @@ namespace pr::ldr
 
 	using VCont = pr::vector<pr::v4>;
 	using NCont = pr::vector<pr::v4>;
-	using ICont = pr::vector<pr::uint16>;
+	using ICont = pr::vector<uint16_t>;
 	using CCont = pr::vector<pr::Colour32>;
 	using TCont = pr::vector<pr::v2>;
 	using GCont = pr::vector<pr::rdr::NuggetProps>;
@@ -1136,7 +1136,7 @@ namespace pr::ldr
 				for (auto& nug : nuggets)
 				{
 					// Not face topology...
-					if (nug.m_topo != EPrim::TriList)
+					if (nug.m_topo != ETopo::TriList)
 						continue;
 
 					// The number of indices in this nugget
@@ -1149,12 +1149,12 @@ namespace pr::ldr
 					}
 
 					// Not sure if this works... needs testing
-					pr::geometry::GenerateNormals(icount, iptr, m_smoothing_angle,
-						[&](pr::uint16 i)
+					pr::geometry::GenerateNormals(icount, iptr, m_smoothing_angle, 0,
+						[&](uint16_t i)
 						{
 							return verts[i];
-						}, 0,
-						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
+						},
+						[&](uint16_t new_idx, uint16_t orig_idx, v4 const& norm)
 						{
 							if (new_idx >= verts.size())
 							{
@@ -1163,7 +1163,7 @@ namespace pr::ldr
 							}
 							normals[new_idx] = norm;
 						},
-						[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
+						[&](uint16_t i0, uint16_t i1, uint16_t i2)
 						{
 							*iptr++ = i0;
 							*iptr++ = i1;
@@ -1610,7 +1610,7 @@ namespace pr::ldr
 
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
-					nug.m_topo = line_strip ? EPrim::LineStripAdj : EPrim::LineList;
+					nug.m_topo = line_strip ? ETopo::LineStripAdj : ETopo::LineList;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
 			}
@@ -1665,7 +1665,7 @@ namespace pr::ldr
 			m_verts.push_back(v4(+dim.x, +dim.y, +dim.z, 1.0f));
 			m_verts.push_back(v4(-dim.x, +dim.y, +dim.z, 1.0f));
 
-			pr::uint16 idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
+			uint16_t idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 			m_indices.insert(m_indices.end(), idx, idx + PR_COUNTOF(idx));
 		}
 		void CreateModel(LdrObject* obj) override
@@ -1691,7 +1691,7 @@ namespace pr::ldr
 				.verts  (m_verts.data(), int(m_verts.size()))
 				.indices(m_indices.data(), int(m_indices.size()))
 				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
+				.nuggets({NuggetProps(ETopo::LineList, EGeom::Vert|EGeom::Colr)});
 			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -1919,7 +1919,7 @@ namespace pr::ldr
 				.verts  (m_verts.data(), int(m_verts.size()))
 				.indices(m_indices.data(), int(m_indices.size()))
 				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetProps(EPrim::LineStrip, EGeom::Vert|EGeom::Colr)});
+				.nuggets({NuggetProps(ETopo::LineStrip, EGeom::Vert|EGeom::Colr)});
 			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -1929,7 +1929,7 @@ namespace pr::ldr
 				auto shdr = ThickLineShaderLS(p.m_rdr, m_line_width);
 				for (auto& nug : obj->m_model->m_nuggets)
 				{
-					nug.m_topo = EPrim::LineStripAdj;
+					nug.m_topo = ETopo::LineStripAdj;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
 			}
@@ -2046,7 +2046,7 @@ namespace pr::ldr
 			auto v_out = cache.m_vcont.data();
 			auto i_out = cache.m_icont.data<uint16_t>();
 			pr::Colour32 c = pr::Colour32White;
-			pr::uint16 index = 0;
+			uint16_t index = 0;
 
 			// Add the back arrow head geometry (a point)
 			if (m_type & EArrowType::Back)
@@ -2088,7 +2088,7 @@ namespace pr::ldr
 			{
 				vrange = pr::rdr::Range(0, 1);
 				irange = pr::rdr::Range(0, 1);
-				nug.m_topo = EPrim::PointList;
+				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 				nug.m_vrange = vrange;
@@ -2099,7 +2099,7 @@ namespace pr::ldr
 			{
 				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + m_verts.size());
 				irange = pr::rdr::Range(irange.m_end, irange.m_end + m_verts.size());
-				nug.m_topo = EPrim::LineStrip;
+				nug.m_topo = ETopo::LineStrip;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
 				nug.m_vrange = vrange;
@@ -2111,7 +2111,7 @@ namespace pr::ldr
 			{
 				vrange = pr::rdr::Range(vrange.m_end, vrange.m_end + 1);
 				irange = pr::rdr::Range(irange.m_end, irange.m_end + 1);
-				nug.m_topo = EPrim::PointList;
+				nug.m_topo = ETopo::PointList;
 				nug.m_geom = EGeom::Vert|EGeom::Colr;
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 				nug.m_vrange = vrange;
@@ -2154,7 +2154,7 @@ namespace pr::ldr
 
 			pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
 			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
+			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
 			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
@@ -2174,7 +2174,7 @@ namespace pr::ldr
 				.verts(m_verts.data(), int(m_verts.size()))
 				.indices(m_indices.data(), int(m_indices.size()))
 				.colours(m_colours.data(), int(m_colours.size()))
-				.nuggets({NuggetProps(EPrim::LineList, EGeom::Vert|EGeom::Colr)});
+				.nuggets({NuggetProps(ETopo::LineList, EGeom::Vert|EGeom::Colr)});
 			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
 
@@ -2204,7 +2204,7 @@ namespace pr::ldr
 		{
 			pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
 			pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
-			pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
+			uint16_t   idx[] = { 0, 1, 2, 3, 4, 5 };
 
 			m_verts.insert(m_verts.end(), pts, pts + PR_COUNTOF(pts));
 			m_colours.insert(m_colours.end(), col, col + PR_COUNTOF(col));
@@ -3502,7 +3502,7 @@ namespace pr::ldr
 				{
 					auto is_strip = kw == EKeyword::LineStrip;
 					auto nug = *m_tex.Material();
-					nug.m_topo = is_strip ? EPrim::LineStrip : EPrim::LineList;
+					nug.m_topo = is_strip ? ETopo::LineStrip : ETopo::LineList;
 					nug.m_geom = EGeom::Vert |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 					nug.m_vrange = pr::rdr::Range::Reset();
@@ -3531,7 +3531,7 @@ namespace pr::ldr
 				{
 					auto is_strip = kw == EKeyword::TriStrip;
 					auto nug = *m_tex.Material();
-					nug.m_topo = is_strip ? EPrim::TriStrip : EPrim::TriList;
+					nug.m_topo = is_strip ? ETopo::TriStrip : ETopo::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
@@ -3559,7 +3559,7 @@ namespace pr::ldr
 			case EKeyword::Tetra:
 				{
 					auto nug = *m_tex.Material();
-					nug.m_topo = EPrim::TriList;
+					nug.m_topo = ETopo::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
@@ -3570,7 +3570,7 @@ namespace pr::ldr
 
 					int r = 1;
 					p.m_reader.SectionStart();
-					for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd(); ++r)
+					for (uint16_t idx[4]; !p.m_reader.IsSectionEnd(); ++r)
 					{
 						p.m_reader.Int(idx, 4, 10);
 						m_indices.push_back(idx[0]);
@@ -3728,7 +3728,7 @@ namespace pr::ldr
 
 			// Create a nugget for the hull
 			auto nug = *m_tex.Material();
-			nug.m_topo = EPrim::TriList;
+			nug.m_topo = ETopo::TriList;
 			nug.m_geom = EGeom::Vert;
 			m_nuggets.push_back(nug);
 
@@ -3972,12 +3972,12 @@ namespace pr::ldr
 
 					v4 vert(x, y, 0.0f, 1.0f);
 					verts.push_back(rot * vert);
-					lines.push_back(static_cast<pr::uint16>(ibase + i));
+					lines.push_back(static_cast<uint16_t>(ibase + i));
 					colrs.push_back(colour);
 				}
 
 				// Create a nugget for the line strip
-				NuggetProps nug(EPrim::LineStrip, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
+				NuggetProps nug(ETopo::LineStrip, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
 				if (m_width != 0.0f)
 				{
 					// Use thick lines
@@ -4004,10 +4004,10 @@ namespace pr::ldr
 				verts.push_back(rot * v4(*m_x0, std::min(*m_y0, yrange.m_beg - 0.05f * yrange.size()), 0.0f, 1.0f));
 				verts.push_back(rot * v4(*m_x0, std::max(*m_y0, yrange.m_end + 0.05f * yrange.size()), 0.0f, 1.0f));
 
-				lines.push_back(static_cast<pr::uint16>(ibase + 0));
-				lines.push_back(static_cast<pr::uint16>(ibase + 1));
-				lines.push_back(static_cast<pr::uint16>(ibase + 2));
-				lines.push_back(static_cast<pr::uint16>(ibase + 3));
+				lines.push_back(static_cast<uint16_t>(ibase + 0));
+				lines.push_back(static_cast<uint16_t>(ibase + 1));
+				lines.push_back(static_cast<uint16_t>(ibase + 2));
+				lines.push_back(static_cast<uint16_t>(ibase + 3));
 
 				// Set a colour for the axes
 				colrs.push_back(0xFF000000);
@@ -4016,7 +4016,7 @@ namespace pr::ldr
 				colrs.push_back(0xFF000000);
 
 				// Create a nugget for the axes
-				NuggetProps nug(EPrim::LineList, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
+				NuggetProps nug(ETopo::LineList, EGeom::Vert|EGeom::Colr, nullptr, vrange, irange);
 				nugts.push_back(nug);
 			}
 
@@ -4457,7 +4457,7 @@ namespace pr::ldr
 			{
 				// Create a nugget
 				NuggetProps n = {};
-				n.m_topo = EPrim::LineStrip;
+				n.m_topo = ETopo::LineStrip;
 				n.m_geom = EGeom::Vert;
 				n.m_vrange = rdr::Range(0, count);
 				n.m_irange = rdr::Range(0, count);
@@ -4477,8 +4477,8 @@ namespace pr::ldr
 			//    vcount = ArithmeticSum(0, 6, rings) + 1;
 			//    icount = ArithmeticSum(0, 12, rings) + 2*rings;
 			// ArithmeticSum := (n + 1) * (a0 + an) / 2, where an = (a0 + n * step)
-			//    3r² + 3r + 1-vcount = 0  =>  r = (-3 ± sqrt(-3 + 12*vcount)) / 6
-			//    6r² + 8r - icount = 0    =>  r = (-8 ± sqrt(64 + 24*icount)) / 12
+			//    3rï¿½ + 3r + 1-vcount = 0  =>  r = (-3 ï¿½ sqrt(-3 + 12*vcount)) / 6
+			//    6rï¿½ + 8r - icount = 0    =>  r = (-8 ï¿½ sqrt(64 + 24*icount)) / 12
 			auto vrings = (-3 + sqrt(-3 + 12 * model.m_vrange.size())) / 6;
 			auto irings = (-8 + sqrt(64 + 24 * model.m_irange.size())) / 12;
 			auto rings = static_cast<int>(std::min(vrings, irings));
@@ -4528,7 +4528,7 @@ namespace pr::ldr
 				auto [vcount, icount] = geometry::HexPatchSize(rings);
 
 				NuggetProps n = {};
-				n.m_topo = EPrim::TriStrip;
+				n.m_topo = ETopo::TriStrip;
 				n.m_geom = props.m_geom;
 				n.m_vrange = rdr::Range(0, vcount);
 				n.m_irange = rdr::Range(0, icount);
@@ -5094,6 +5094,28 @@ namespace pr::ldr
 		return obj;
 	}
 
+	// Create an ldr object from a p3d model.
+	LdrObjectPtr CreateP3D(Renderer& rdr, ObjectAttributes attr, std::filesystem::path const& p3d_filepath, Guid const& context_id)
+	{
+		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+
+		// Create the model
+		std::ifstream src(p3d_filepath, std::ios::binary);
+		obj->m_model = ModelGenerator<>::LoadP3DModel(rdr, src);
+		obj->m_model->m_name = obj->TypeAndName();
+		return obj;
+	}
+	LdrObjectPtr CreateP3D(Renderer& rdr, ObjectAttributes attr, size_t size, void const* p3d_data, Guid const& context_id)
+	{
+		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+
+		// Create the model
+		pr::mem_istream<char> src(p3d_data, size);
+		obj->m_model = ModelGenerator<>::LoadP3DModel(rdr, src);
+		obj->m_model->m_name = obj->TypeAndName();
+		return obj;
+	}
+
 	// Create an instance of an existing ldr object.
 	LdrObjectPtr CreateInstance(LdrObject const* existing)
 	{
@@ -5121,7 +5143,7 @@ namespace pr::ldr
 		obj->m_model->m_name = obj->TypeAndName();
 
 		// Create dummy nuggets
-		rdr::NuggetProps nug(EPrim::PointList, EGeom::Vert);
+		rdr::NuggetProps nug(ETopo::PointList, EGeom::Vert);
 		nug.m_range_overlaps = true;
 		for (int i = ncount; i-- != 0;)
 			obj->m_model->CreateNugget(nug);

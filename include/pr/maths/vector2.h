@@ -23,14 +23,14 @@ namespace pr
 
 		// Construct
 		Vec2() = default;
-		Vec2(float x_, float y_)
+		constexpr Vec2(float x_, float y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit Vec2(float x_)
+		constexpr explicit Vec2(float x_)
 			:Vec2(x_, x_)
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> Vec2(V2 const& v)
+		template <typename V2, typename = maths::enable_if_v2<V2>> constexpr Vec2(V2 const& v)
 			:Vec2(x_as<float>(v), y_as<float>(v))
 		{}
 		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Vec2(CP const* v)

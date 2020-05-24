@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -142,7 +142,7 @@ namespace pr::script
 			,m_strtab()
 			,FileOpened()
 		{}
-		explicit Includes(std::wstring_view const& search_paths, EIncludeTypes types = EIncludeTypes::All)
+		explicit Includes(std::wstring_view search_paths, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			SearchPathList(search_paths);
@@ -152,7 +152,7 @@ namespace pr::script
 		{
 			ResourceModules(modules);
 		}
-		explicit Includes(std::wstring_view const& search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
+		explicit Includes(std::wstring_view search_paths, std::initializer_list<HMODULE> modules, EIncludeTypes types = EIncludeTypes::All)
 			:Includes(types)
 		{
 			SearchPathList(search_paths);
@@ -226,10 +226,12 @@ namespace pr::script
 		// Add a path to the include search paths. Ensures uniqueness of paths
 		void AddSearchPath(std::filesystem::path const& path, size_t index = ~size_t()) override
 		{
+			auto p = path.lexically_normal();
+
 			// Remove 'path' if already in the 'm_paths' collection
-			auto end = std::remove_if(std::begin(m_paths), std::end(m_paths), [=](auto const& s) { return std::filesystem::equivalent(s, path); });
+			auto end = std::remove_if(std::begin(m_paths), std::end(m_paths), [=](auto const& s) { return s == p; });
 			m_paths.erase(end, std::end(m_paths));
-			m_paths.insert(std::begin(m_paths) + std::min(m_paths.size(), index), path);
+			m_paths.insert(std::begin(m_paths) + std::min(m_paths.size(), index), p);
 		}
 
 		// Add a module handle to the modules collection. Ensures uniqueness

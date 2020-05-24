@@ -1,4 +1,4 @@
-//#define PR_VIEW3D_CREATE_STACKTRACE
+﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -53,7 +53,7 @@ namespace Rylogic.Gfx
 			Norm = 1 << 2,
 			Tex0 = 1 << 3,
 		}
-		public enum EPrim :uint
+		public enum ETopo :uint
 		{
 			Invalid = 0,  // D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED
 			PointList = 1,  // D3D11_PRIMITIVE_TOPOLOGY_POINTLIST
@@ -635,7 +635,7 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Nugget
 		{
-			public EPrim m_topo;
+			public ETopo m_topo;
 			public EGeom m_geom;
 			public ECullMode m_cull_mode;
 			public EFillMode m_fill_mode;
@@ -645,7 +645,7 @@ namespace Rylogic.Gfx
 			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 			public Material m_mat;
 
-			public Nugget(EPrim topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, ENuggetFlag flags = ENuggetFlag.None, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
+			public Nugget(ETopo topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, ENuggetFlag flags = ENuggetFlag.None, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
 			{
 				Debug.Assert(mat == null || mat.Value.m_shader_map.m_rstep != null, "Don't use default(Material)");
 				m_topo = topo;
@@ -1611,6 +1611,10 @@ namespace ldr
 		private static extern Guid View3D_ObjectContextIdGet(HObject obj);
 		[DllImport(Dll)]
 		private static extern HObject View3D_ObjectCreateLdr([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreateP3DFile([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, [MarshalAs(UnmanagedType.LPWStr)] string p3d_filepath, ref Guid context_id);
+		[DllImport(Dll)]
+		private static extern HObject View3D_ObjectCreateP3DStream([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int size, IntPtr p3d_data, ref Guid context_id);
 		[DllImport(Dll)]
 		private static extern HObject View3D_ObjectCreate([MarshalAs(UnmanagedType.LPStr)] string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)]

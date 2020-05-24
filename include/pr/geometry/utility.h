@@ -25,9 +25,9 @@ namespace pr::geometry
 	// 'num_indices' is the number of indices available through 'indices'. Multiple of 3 expected.
 	// 'indices' is an iterator to model face data. Expects 3 indices per face.
 	// 'smoothing_angle' is the threshold above which normals are not merged and a new vertex is created (in radians)
-	// 'getv' is an accessor to the vertex for a given face index: v4 const& getv(VIdx idx)
 	// 'new_vidx' is the start index to assign to new vertices. Effectively, it's the size of the container 'getv' is
 	//   pulling from. You can set this to zero in which case one passed the largest vertex index encountered will be used.
+	// 'getv' is an accessor to the vertex for a given face index: v4 const& getv(VIdx idx)
 	// 'vout' outputs the new vertex normals: vout(VIdx new_idx, VIdx orig_idx, v4 normal)
 	// 'iout' outputs the new face indices: iout(VIdx i0, VIdx i1, VIdx i2)
 	// This function will only add verts, not remove any, so 'vout' can overwrite and add to the existing container.
@@ -47,7 +47,7 @@ namespace pr::geometry
 	//         *iptr++ = i2;
 	//      }
 	template <typename TIdxCIter, typename TGetV, typename TVertOut, typename TIdxOut>
-	void GenerateNormals(size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, size_t new_vidx, TVertOut vout, TIdxOut iout)
+	void GenerateNormals(size_t num_indices, TIdxCIter indices, float smoothing_angle, size_t new_vidx, TGetV getv, TVertOut vout, TIdxOut iout)
 	{
 		// Notes:
 		// - Can't weld verts because that would destroy distinct texture
@@ -62,8 +62,8 @@ namespace pr::geometry
 		{
 			struct Face
 			{
-				v4 m_norm;
-				v4 m_angles;
+				v4     m_norm;
+				v4     m_angles;
 				size_t m_idx[3];
 				int    m_grp;
 				v4 normal(size_t idx) const
@@ -84,7 +84,8 @@ namespace pr::geometry
 				Face*  m_rface;     // The face to the right of the edge
 				Edge*  m_next;      // Forms a linked list of edges
 				bool   m_nonplanar; // True if this edge has more than two left or right faces
-				bool   smooth(float cos_angle_threshold) const
+
+				bool smooth(float cos_angle_threshold) const
 				{
 					return
 						m_lface && m_rface && // two faces needed to be smooth
@@ -97,7 +98,7 @@ namespace pr::geometry
 			};
 			struct Vert
 			{
-				v4 m_norm;       // Smoothed vertex normal
+				v4     m_norm;       // Smoothed vertex normal
 				Edge*  m_edges;      // The edges that connect to this vertex
 				Vert*  m_next;       // Other vert the same as this, but in a different smoothing group
 				size_t m_orig_idx;   // Index of the original vertex
@@ -114,7 +115,7 @@ namespace pr::geometry
 			pr::deque<Vert> m_verts;
 			pr::deque<Edge> m_edge_alloc;
 
-			L(size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, size_t new_vidx)
+			L(size_t num_indices, TIdxCIter indices, float smoothing_angle, size_t new_vidx, TGetV getv)
 				:m_faces()
 				,m_verts()
 				,m_edge_alloc()
@@ -144,21 +145,24 @@ namespace pr::geometry
 					v4 const& v1 = getv(s_cast<VIdx>(face.m_idx[1]));
 					v4 const& v2 = getv(s_cast<VIdx>(face.m_idx[2]));
 
+					// Find the largest vertex index
 					max_index = pr::max(max_index, face.m_idx[0], face.m_idx[1], face.m_idx[2]);
+
+					// Get properties of the face (normal, angles, etc)
 					face.m_norm = Normalise(Cross3(v1 - v0, v2 - v1), v4Zero);
 					face.m_angles = TriangleAngles(v0, v1, v2);
 					face.m_grp = ++sg; // each face is in a unique smoothing group to start with
 
-					m_faces.emplace_back(face);
+					m_faces.push_back(face);
 				}
 
 				// Generate a collection of verts
 				for (size_t i = 0; i != max_index+1; ++i)
 				{
-					Vert vert = {};
+					auto vert = Vert{};
 					vert.m_orig_idx = i;
 					vert.m_new_idx = i;
-					m_verts.emplace_back(vert);
+					m_verts.push_back(vert);
 				}
 
 				// Add edges to the corresponding vertices
@@ -221,7 +225,7 @@ namespace pr::geometry
 			//	for (size_t i = 0, iend = m_verts.size(); i != iend; ++i)
 			//	{
 			//		auto& vert = m_verts[i];
-
+			//
 			//		//TODO
 			//		// Build a set of all the norms this vertex could have
 			//		// i.e. one for each face, one for each smooth edge
@@ -237,8 +241,7 @@ namespace pr::geometry
 			void AssignSmoothingGroups(float smoothing_angle)
 			{
 				auto cos_angle_threshold = Cos(smoothing_angle);
-				bool no_changes;
-				do
+				for (bool no_changes = false; !no_changes; )
 				{
 					no_changes = true;
 					for (auto& vert : m_verts)
@@ -255,7 +258,6 @@ namespace pr::geometry
 						}
 					}
 				}
-				while (!no_changes);
 			}
 
 			// Generate the normal for each vertex, adding new vertices for separate smoothing groups
@@ -276,7 +278,7 @@ namespace pr::geometry
 					{
 						vptr->m_norm = face.normal(idx);
 						vptr->m_grp = face.m_grp;
-						return vptr->m_new_idx;// == vptr->m_orig_idx
+						return vptr->m_new_idx;
 					}
 
 					// Find a vertex with a matching smoothing group
@@ -288,15 +290,14 @@ namespace pr::geometry
 					}
 
 					// Add a new copy of this vertex
-					vptr = (m_verts.emplace_back(), &m_verts.back());
-					vptr->m_next = m_verts[idx].m_next;
-					m_verts[idx].m_next = vptr;
-
-					// Initialise the new vertex
+					m_verts.push_back(Vert{});
+					vptr = &m_verts.back();
 					vptr->m_orig_idx = idx;
 					vptr->m_new_idx = new_vidx++;
 					vptr->m_norm = face.normal(idx);
 					vptr->m_grp = face.m_grp;
+					vptr->m_next = m_verts[idx].m_next;
+					m_verts[idx].m_next = vptr;
 					return vptr->m_new_idx;
 				};
 
@@ -311,7 +312,7 @@ namespace pr::geometry
 		};
 			
 		// Generate the normals
-		L gen(num_indices, indices, smoothing_angle, getv, new_vidx);
+		L gen(num_indices, indices, smoothing_angle, new_vidx, getv);
 
 		// Output the new verts
 		for (auto& vert : gen.m_verts)
@@ -327,20 +328,19 @@ namespace pr::geometry
 
 			// Output the original vertex index, and the normal.
 			// Callback function should duplicate the original vertex and set the normal to that provided.
-			vout(
-				s_cast<VIdx>(vert.m_new_idx),
-				s_cast<VIdx>(vert.m_orig_idx),
-				Normalise(norm, v4Zero));
+			auto new_idx = s_cast<VIdx>(vert.m_new_idx);
+			auto org_idx = s_cast<VIdx>(vert.m_orig_idx);
+			vout(new_idx, org_idx, Normalise(norm, v4Zero));
 		}
 
 		// Output the new faces
 		for (auto& face : gen.m_faces)
 		{
 			// Output faces, should be the same number as provided via 'indices'
-			iout(
-				s_cast<VIdx>(face.m_idx[0]),
-				s_cast<VIdx>(face.m_idx[1]),
-				s_cast<VIdx>(face.m_idx[2]));
+			auto i0 = s_cast<VIdx>(face.m_idx[0]);
+			auto i1 = s_cast<VIdx>(face.m_idx[1]);
+			auto i2 = s_cast<VIdx>(face.m_idx[2]);
+			iout(i0, i1, i2);
 		}
 	}
 
@@ -400,15 +400,18 @@ namespace pr::geometry
 			v4 m_pos;
 			v4 m_norm;
 
-			Vert(){}
-			Vert(v4 const& pos, v4 const& norm) :m_pos(pos) ,m_norm(norm) {}
+			Vert() = default;
+			Vert(v4 const& pos, v4 const& norm)
+				:m_pos(pos)
+				,m_norm(norm)
+			{}
 		};
 		Vert verts[] =
 		{
-			Vert(v4(0.0f, 0.0f, 0.0f, 1.0f), v4Zero),
-			Vert(v4(1.0f, 0.0f, 0.0f, 1.0f), v4Zero),
-			Vert(v4(1.0f, 1.0f, 0.0f, 1.0f), v4Zero),
-			Vert(v4(0.0f, 1.0f, 0.0f, 1.0f), v4Zero),
+			Vert(v4{0.0f, 0.0f, 0.0f, 1.0f}, v4Zero),
+			Vert(v4{1.0f, 0.0f, 0.0f, 1.0f}, v4Zero),
+			Vert(v4{1.0f, 1.0f, 0.0f, 1.0f}, v4Zero),
+			Vert(v4{0.0f, 1.0f, 0.0f, 1.0f}, v4Zero),
 		};
 		int faces[] =
 		{
@@ -428,13 +431,12 @@ namespace pr::geometry
 
 			pr::vector<Vert> vout;
 			pr::vector<int> iout;
-			GenerateNormals(PR_COUNTOF(faces), &faces[0], DegreesToRadians(10.0f)
+			GenerateNormals(_countof(faces), &faces[0], DegreesToRadians(10.0f), 0
 				,[&](size_t i)
 				{
 					assert(i < PR_COUNTOF(verts));
 					return verts[i].m_pos;
 				}
-				,0
 				,[&](int, int orig_idx, v4 const& norm)
 				{
 					assert(orig_idx < PR_COUNTOF(verts));

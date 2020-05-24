@@ -18,7 +18,7 @@ export interface IVertex
 export interface INugget
 {
 	/** The geometry topology */
-	topo: Rdr_.EPrim;
+	topo: Rdr_.ETopo;
 
 	/** The shader program to use to render this nugget */
 	shader: IShaderProgram;

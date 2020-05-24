@@ -28,121 +28,120 @@ namespace pr::geometry::max_3ds
 	typedef unsigned long long u64; static_assert(sizeof(u64) == 8, "3DS format specifies long long as 8 bytes");
 
 	#pragma region Chunk Ids
-	#define PR_ENUM(x)                           /*
-		*/x(Null                      ,= 0x0000) /* Null chunk id
-		*/x(ColorF                    ,= 0x0010) /* float red, grn, blu
-		*/x(Color24                   ,= 0x0011) /* char red, grn, blu
-		*/x(LinColor24                ,= 0x0012) /* char red, grn, blu
-		*/x(LinColorF                 ,= 0x0013) /* float red, grn, blu
-		*/x(IntPercentage             ,= 0x0030) /* short percentage
-		*/x(FloatPercentage           ,= 0x0031) /* float percentage
-
-		Basic File Layout:
-		*/x(Main                      ,= 0x4d4d) /* Main Chunk
-		*/x(M3DVersion                ,= 0x0002) /* ├─ M3D Version
-		*/x(MasterScale               ,= 0x0100) /* ├─ Master Scale
-		*/x(M3DEditor                 ,= 0x3D3D) /* ├─ 3D Editor Chunk
-		*/x(MeshVersion               ,= 0x3D3E) /* │  ├─ Mesh Version
-		*/x(ObjectBlock               ,= 0x4000) /* │  ├─ Object Block
-		*/x(TriangularMesh            ,= 0x4100) /* │  │  ├─ Triangular Mesh
-		*/x(VerticesList              ,= 0x4110) /* │  │  │  ├─ Vertices List
-		*/x(FacesDescription          ,= 0x4120) /* │  │  │  ├─ Faces Description
-		*/x(MaterialGroup             ,= 0x4130) /* │  │  │  │  ├─ Faces using Material
-		*/x(SmoothingGroupList        ,= 0x4150) /* │  │  │  │  └─ Smoothing Group List
-		*/x(TexVertList               ,= 0x4140) /* │  │  │  ├─ Mapping Coordinates List
-		*/x(MeshMatrix                ,= 0x4160) /* │  │  │  └─ Local Coordinates System
-		*/x(Light                     ,= 0x4600) /* │  │  ├─ Light
-		*/x(Spotlight                 ,= 0x4610) /* │  │  │  └─ Spotlight
-		*/x(Camera                    ,= 0x4700) /* │  │  └─ Camera
-		*/x(MaterialBlock             ,= 0xAFFF) /* │  └─ Material Block
-		*/x(MaterialName              ,= 0xA000) /* │     ├─ Material Name
-		*/x(MatAmbientColor           ,= 0xA010) /* │     ├─ Ambient Color
-		*/x(MatDiffuseColor           ,= 0xA020) /* │     ├─ Diffuse Color
-		*/x(MatSpecularColor          ,= 0xA030) /* │     ├─ Specular Color
-		*/x(MatShininess              ,= 0xA040) /* │     ├─ Shininess Percentage
-		*/x(MatShininess2             ,= 0xA041) /* │     ├─ Shininess2 Percentage
-		*/x(MatShininess3             ,= 0xA042) /* │     ├─ Shininess3 Percentage
-		*/x(MatTransparency           ,= 0xA050) /* │     ├─ Transparency Percentage
-		*/x(TextureMap1               ,= 0xA200) /* │     ├─ Texture Map 1 (see Map sub chunks)
-		*/x(SpecularMap               ,= 0xA204) /* │     ├─ Specular Map
-		*/x(OpacityMap                ,= 0xA210) /* │     ├─ Opacity Map
-		*/x(ReflectionMap             ,= 0xA220) /* │     ├─ Reflection Map
-		*/x(BumpMap                   ,= 0xA230) /* │     └─ Bump Map
-		*/x(KeyframerChunk            ,= 0xB000) /* └─ Keyframer Chunk
-		*/x(MeshInformationBlock      ,= 0xB002) /*    ├─ Mesh Information Block
-		*/x(SpotLightInformationBlock ,= 0xB007) /*    ├─ Spot Light Information Block
-		*/x(Frames                    ,= 0xB008) /*    └─ Frames (Start and End)
-		*/x(ObjectName                ,= 0xB010) /*       ├─  Object Name
-		*/x(ObjectPivotPoint          ,= 0xB013) /*       ├─  Object Pivot Point
-		*/x(PositionTrack             ,= 0xB020) /*       ├─  Position Track
-		*/x(RotationTrack             ,= 0xB021) /*       ├─  Rotation Track
-		*/x(ScaleTrack                ,= 0xB022) /*       ├─  Scale Track
-		*/x(HierarchyPosition         ,= 0xB030) /*       └─  Hierarchy Position
-
-		Map sub chunks
-		*/x(MapFilename               ,= 0xA300) /* Map Filename
-		*/x(MapTiling                 ,= 0xA351) /* Map Tiling
-
-		Others
-		*/x(MatXPFall                 ,= 0xa052) /*
-		*/x(MatRefBlur                ,= 0xa053) /*
-		*/x(MatSELF_ILLUM             ,= 0xA080) /*
-		*/x(MatTWO_SIDE               ,= 0xA081) /*
-		*/x(MatDECAL                  ,= 0xA082) /*
-		*/x(MatADDITIVE               ,= 0xA083) /*
-		*/x(MatSELF_ILPCT             ,= 0xA084) /*
-		*/x(MatWIRE                   ,= 0xA085) /*
-		*/x(MatSUPERSMP               ,= 0xA086) /*
-		*/x(MatWIRESIZE               ,= 0xA087) /*
-		*/x(MatFACEMAP                ,= 0xA088) /*
-		*/x(MatXPFALLIN               ,= 0xA08a) /*
-		*/x(MatPHONGSOFT              ,= 0xA08c) /*
-		*/x(MatWIREABS                ,= 0xA08e) /*
-		*/x(MatSHADING                ,= 0xA100) /*
-		*/x(MAT_USE_XPFALL            ,= 0xA240) /*
-		*/x(MAT_USE_REFBLUR           ,= 0xA250) /*
-		*/x(MapBumpPercent            ,= 0xA252) /*
-		*/x(MatACUBIC                 ,= 0xA310) /*
-		*/x(MatSXP_TEXT_DATA          ,= 0xA320) /*
-		*/x(MatSXP_TEXT2_DATA         ,= 0xA321) /*
-		*/x(MatSXP_OPAC_DATA          ,= 0xA322) /*
-		*/x(MatSXP_BUMP_DATA          ,= 0xA324) /*
-		*/x(MatSXP_SPEC_DATA          ,= 0xA325) /*
-		*/x(MatSXP_SHIN_DATA          ,= 0xA326) /*
-		*/x(MatSXP_SELFI_DATA         ,= 0xA328) /*
-		*/x(MatSXP_TEXT_MASKDATA      ,= 0xA32a) /*
-		*/x(MatSXP_TEXT2_MASKDATA     ,= 0xA32c) /*
-		*/x(MatSXP_OPAC_MASKDATA      ,= 0xA32e) /*
-		*/x(MatSXP_BUMP_MASKDATA      ,= 0xA330) /*
-		*/x(MatSXP_SPEC_MASKDATA      ,= 0xA332) /*
-		*/x(MatSXP_SHIN_MASKDATA      ,= 0xA334) /*
-		*/x(MatSXP_SELFI_MASKDATA     ,= 0xA336) /*
-		*/x(MatSXP_REFL_MASKDATA      ,= 0xA338) /*
-		*/x(MatTEX2MAP                ,= 0xA33a) /*
-		*/x(MatSHINMAP                ,= 0xA33c) /*
-		*/x(MatSELFIMAP               ,= 0xA33d) /*
-		*/x(MatTEXMASK                ,= 0xA33e) /*
-		*/x(MatTEX2MASK               ,= 0xA340) /*
-		*/x(MatOPACMASK               ,= 0xA342) /*
-		*/x(MatBUMPMASK               ,= 0xA344) /*
-		*/x(MatSHINMASK               ,= 0xA346) /*
-		*/x(MatSPECMASK               ,= 0xA348) /*
-		*/x(MatSELFIMASK              ,= 0xA34a) /*
-		*/x(MatReflMask               ,= 0xA34c) /*
-		*/x(MatMAP_TILINGOLD          ,= 0xA350) /*
-		*/x(MatMapTEXBLUR_OLD         ,= 0xA352) /*
-		*/x(MatMapTEXBLUR             ,= 0xA353) /*
-		*/x(MatMapUSCALE              ,= 0xA354) /*
-		*/x(MatMapVSCALE              ,= 0xA356) /*
-		*/x(MatMapUOFFSET             ,= 0xA358) /*
-		*/x(MatMapVOFFSET             ,= 0xA35a) /*
-		*/x(MatMapANG                 ,= 0xA35c) /*
-		*/x(MatMapCOL1                ,= 0xA360) /*
-		*/x(MatMapCOL2                ,= 0xA362) /*
-		*/x(MatMapRCOL                ,= 0xA364) /*
-		*/x(MatMapGCOL                ,= 0xA366) /*
-		*/x(MatMapBCOL                ,= 0xA368) /*
-		*/
+	#define PR_ENUM(x)\
+		x(Null                      ,= 0x0000) /* Null chunk id */\
+		x(ColorF                    ,= 0x0010) /* float red, grn, blu */\
+		x(Color24                   ,= 0x0011) /* char red, grn, blu */\
+		x(LinColor24                ,= 0x0012) /* char red, grn, blu */\
+		x(LinColorF                 ,= 0x0013) /* float red, grn, blu */\
+		x(IntPercentage             ,= 0x0030) /* short percentage */\
+		x(FloatPercentage           ,= 0x0031) /* float percentage */\
+		\
+		/* Basic File Layout: */\
+		x(Main                      ,= 0x4d4d) /* Main Chunk */\
+		x(M3DVersion                ,= 0x0002) /* ├─ M3D Version */\
+		x(MasterScale               ,= 0x0100) /* ├─ Master Scale */\
+		x(M3DEditor                 ,= 0x3D3D) /* ├─ 3D Editor Chunk */\
+		x(MeshVersion               ,= 0x3D3E) /* │  ├─ Mesh Version */\
+		x(ObjectBlock               ,= 0x4000) /* │  ├─ Object Block */\
+		x(TriangularMesh            ,= 0x4100) /* │  │  ├─ Triangular Mesh */\
+		x(VerticesList              ,= 0x4110) /* │  │  │  ├─ Vertices List */\
+		x(FacesDescription          ,= 0x4120) /* │  │  │  ├─ Faces Description */\
+		x(MaterialGroup             ,= 0x4130) /* │  │  │  │  ├─ Faces using Material */\
+		x(SmoothingGroupList        ,= 0x4150) /* │  │  │  │  └─ Smoothing Group List */\
+		x(TexVertList               ,= 0x4140) /* │  │  │  ├─ Mapping Coordinates List */\
+		x(MeshMatrix                ,= 0x4160) /* │  │  │  └─ Local Coordinates System */\
+		x(Light                     ,= 0x4600) /* │  │  ├─ Light */\
+		x(Spotlight                 ,= 0x4610) /* │  │  │  └─ Spotlight */\
+		x(Camera                    ,= 0x4700) /* │  │  └─ Camera */\
+		x(MaterialBlock             ,= 0xAFFF) /* │  └─ Material Block */\
+		x(MaterialName              ,= 0xA000) /* │     ├─ Material Name */\
+		x(MatAmbientColor           ,= 0xA010) /* │     ├─ Ambient Color */\
+		x(MatDiffuseColor           ,= 0xA020) /* │     ├─ Diffuse Color */\
+		x(MatSpecularColor          ,= 0xA030) /* │     ├─ Specular Color */\
+		x(MatShininess              ,= 0xA040) /* │     ├─ Shininess Percentage */\
+		x(MatShininess2             ,= 0xA041) /* │     ├─ Shininess2 Percentage */\
+		x(MatShininess3             ,= 0xA042) /* │     ├─ Shininess3 Percentage */\
+		x(MatTransparency           ,= 0xA050) /* │     ├─ Transparency Percentage */\
+		x(TextureMap1               ,= 0xA200) /* │     ├─ Texture Map 1 (see Map sub chunks) */\
+		x(SpecularMap               ,= 0xA204) /* │     ├─ Specular Map */\
+		x(OpacityMap                ,= 0xA210) /* │     ├─ Opacity Map */\
+		x(ReflectionMap             ,= 0xA220) /* │     ├─ Reflection Map */\
+		x(BumpMap                   ,= 0xA230) /* │     └─ Bump Map */\
+		x(KeyframerChunk            ,= 0xB000) /* └─ Keyframer Chunk */\
+		x(MeshInformationBlock      ,= 0xB002) /*    ├─ Mesh Information Block */\
+		x(SpotLightInformationBlock ,= 0xB007) /*    ├─ Spot Light Information Block */\
+		x(Frames                    ,= 0xB008) /*    └─ Frames (Start and End) */\
+		x(ObjectName                ,= 0xB010) /*       ├─  Object Name */\
+		x(ObjectPivotPoint          ,= 0xB013) /*       ├─  Object Pivot Point */\
+		x(PositionTrack             ,= 0xB020) /*       ├─  Position Track */\
+		x(RotationTrack             ,= 0xB021) /*       ├─  Rotation Track */\
+		x(ScaleTrack                ,= 0xB022) /*       ├─  Scale Track */\
+		x(HierarchyPosition         ,= 0xB030) /*       └─  Hierarchy Position */\
+		\
+		/* Map sub chunks */\
+		x(MapFilename               ,= 0xA300) /* Map Filename */\
+		x(MapTiling                 ,= 0xA351) /* Map Tiling */\
+		\
+		/* Others */\
+		x(MatXPFall                 ,= 0xa052) /* */\
+		x(MatRefBlur                ,= 0xa053) /* */\
+		x(MatSELF_ILLUM             ,= 0xA080) /* */\
+		x(MatTWO_SIDE               ,= 0xA081) /* */\
+		x(MatDECAL                  ,= 0xA082) /* */\
+		x(MatADDITIVE               ,= 0xA083) /* */\
+		x(MatSELF_ILPCT             ,= 0xA084) /* */\
+		x(MatWIRE                   ,= 0xA085) /* */\
+		x(MatSUPERSMP               ,= 0xA086) /* */\
+		x(MatWIRESIZE               ,= 0xA087) /* */\
+		x(MatFACEMAP                ,= 0xA088) /* */\
+		x(MatXPFALLIN               ,= 0xA08a) /* */\
+		x(MatPHONGSOFT              ,= 0xA08c) /* */\
+		x(MatWIREABS                ,= 0xA08e) /* */\
+		x(MatSHADING                ,= 0xA100) /* */\
+		x(MAT_USE_XPFALL            ,= 0xA240) /* */\
+		x(MAT_USE_REFBLUR           ,= 0xA250) /* */\
+		x(MapBumpPercent            ,= 0xA252) /* */\
+		x(MatACUBIC                 ,= 0xA310) /* */\
+		x(MatSXP_TEXT_DATA          ,= 0xA320) /* */\
+		x(MatSXP_TEXT2_DATA         ,= 0xA321) /* */\
+		x(MatSXP_OPAC_DATA          ,= 0xA322) /* */\
+		x(MatSXP_BUMP_DATA          ,= 0xA324) /* */\
+		x(MatSXP_SPEC_DATA          ,= 0xA325) /* */\
+		x(MatSXP_SHIN_DATA          ,= 0xA326) /* */\
+		x(MatSXP_SELFI_DATA         ,= 0xA328) /* */\
+		x(MatSXP_TEXT_MASKDATA      ,= 0xA32a) /* */\
+		x(MatSXP_TEXT2_MASKDATA     ,= 0xA32c) /* */\
+		x(MatSXP_OPAC_MASKDATA      ,= 0xA32e) /* */\
+		x(MatSXP_BUMP_MASKDATA      ,= 0xA330) /* */\
+		x(MatSXP_SPEC_MASKDATA      ,= 0xA332) /* */\
+		x(MatSXP_SHIN_MASKDATA      ,= 0xA334) /* */\
+		x(MatSXP_SELFI_MASKDATA     ,= 0xA336) /* */\
+		x(MatSXP_REFL_MASKDATA      ,= 0xA338) /* */\
+		x(MatTEX2MAP                ,= 0xA33a) /* */\
+		x(MatSHINMAP                ,= 0xA33c) /* */\
+		x(MatSELFIMAP               ,= 0xA33d) /* */\
+		x(MatTEXMASK                ,= 0xA33e) /* */\
+		x(MatTEX2MASK               ,= 0xA340) /* */\
+		x(MatOPACMASK               ,= 0xA342) /* */\
+		x(MatBUMPMASK               ,= 0xA344) /* */\
+		x(MatSHINMASK               ,= 0xA346) /* */\
+		x(MatSPECMASK               ,= 0xA348) /* */\
+		x(MatSELFIMASK              ,= 0xA34a) /* */\
+		x(MatReflMask               ,= 0xA34c) /* */\
+		x(MatMAP_TILINGOLD          ,= 0xA350) /* */\
+		x(MatMapTEXBLUR_OLD         ,= 0xA352) /* */\
+		x(MatMapTEXBLUR             ,= 0xA353) /* */\
+		x(MatMapUSCALE              ,= 0xA354) /* */\
+		x(MatMapVSCALE              ,= 0xA356) /* */\
+		x(MatMapUOFFSET             ,= 0xA358) /* */\
+		x(MatMapVOFFSET             ,= 0xA35a) /* */\
+		x(MatMapANG                 ,= 0xA35c) /* */\
+		x(MatMapCOL1                ,= 0xA360) /* */\
+		x(MatMapCOL2                ,= 0xA362) /* */\
+		x(MatMapRCOL                ,= 0xA364) /* */\
+		x(MatMapGCOL                ,= 0xA366) /* */\
+		x(MatMapBCOL                ,= 0xA368) /* */\
 
 	PR_DEFINE_ENUM2_BASE(EChunkId, PR_ENUM, u16);
 	#undef PR_ENUM
@@ -162,17 +161,26 @@ namespace pr::geometry::max_3ds
 		std::string m_filepath; // Filepath
 		u16         m_tiling;   // Clamp, Wrap, etc
 
-		Texture() :m_filepath() ,m_tiling() {}
+		Texture()
+			:m_filepath()
+			,m_tiling()
+		{}
 	};
 	struct Material
 	{
 		std::string m_name;              // The name of the material
-		pr::Colour m_ambient;            // Object ambient colour
-		pr::Colour m_diffuse;            // Object diffuse colour
-		pr::Colour m_specular;           // Object specular colour
+		Colour m_ambient;            // Object ambient colour
+		Colour m_diffuse;            // Object diffuse colour
+		Colour m_specular;           // Object specular colour
 		std::vector<Texture> m_textures; // 
 
-		Material() :m_name() ,m_ambient(pr::ColourBlack) ,m_diffuse(pr::ColourWhite) ,m_specular(pr::ColourZero), m_textures() {}
+		Material()
+			:m_name()
+			,m_ambient(ColourBlack)
+			,m_diffuse(ColourWhite)
+			,m_specular(ColourZero)
+			,m_textures()
+		{}
 	};
 	struct Face
 	{
@@ -186,31 +194,46 @@ namespace pr::geometry::max_3ds
 	};
 	struct TriMesh
 	{
-		pr::m4x4 m_o2p;
-		std::vector<pr::v3> m_vert;
-		std::vector<pr::v2> m_uv;
+		m4x4 m_o2p;
+		std::vector<v3> m_vert;
+		std::vector<v2> m_uv;
 		std::vector<Face> m_face;
 		std::vector<MaterialGroup> m_matgroup;
 		std::vector<u32> m_smoothing_groups;
 
-		TriMesh() :m_o2p() ,m_vert() ,m_uv() ,m_face() ,m_matgroup() ,m_smoothing_groups() {}
+		TriMesh()
+			:m_o2p()
+			,m_vert()
+			,m_uv()
+			,m_face()
+			,m_matgroup()
+			,m_smoothing_groups()
+		{}
 	};
 	struct Object
 	{
 		std::string m_name;
 		TriMesh m_mesh;
 
-		Object() :m_name() ,m_mesh() {}
+		Object()
+			:m_name()
+			,m_mesh()
+		{}
 	};
 
 	// Helpers for reading from a stream source
 	// Specialise these for non std::istream's
 	template <typename TSrc> struct Src
 	{
-		static u64  TellPos(TSrc& src)          { return static_cast<u64>(src.tellg()); }
-		static bool SeekAbs(TSrc& src, u64 pos) { return static_cast<bool>(src.seekg(pos)); }
-		//static bool  SeekRel(TSrc& src, int ofs)   { return static_cast<bool>(src.seekg(ofs, src.cur)); }
-
+		static u64  TellPos(TSrc& src)
+		{
+			return static_cast<u64>(src.tellg());
+		}
+		static bool SeekAbs(TSrc& src, u64 pos)
+		{
+			return static_cast<bool>(src.seekg(pos));
+		}
+	
 		// Read an array
 		template <typename TOut> static void Read(TSrc& src, TOut* out, size_t count)
 		{
@@ -250,7 +273,7 @@ namespace pr::geometry::max_3ds
 
 				// Read the chunk header
 				auto hdr = Read<ChunkHeader>(src);
-				if (hdr.length <= len) len -= hdr.length; else throw std::exception(pr::FmtS("invalid chunk found at offset 0x%X", start));
+				if (hdr.length <= len) len -= hdr.length; else throw std::exception(FmtS("invalid chunk found at offset 0x%X", start));
 				u32 data_len = hdr.length - sizeof(ChunkHeader);
 
 				// Parse the chunk
@@ -315,24 +338,24 @@ namespace pr::geometry::max_3ds
 		// Read a colour from 'src'
 		// Assumes 'src' points to a colour chunk header
 		template <typename TSrc>
-		pr::Colour ReadColour(TSrc& src, u32)
+		Colour ReadColour(TSrc& src, u32)
 		{
 			auto hdr = Read<ChunkHeader>(src);
 			switch (hdr.id) {
-			default: throw std::exception(pr::FmtS("Unknown chunk id: %4.4x. Expected a colour chunk", hdr.id));
+			default: throw std::exception(FmtS("Unknown chunk id: %4.4x. Expected a colour chunk", hdr.id));
 			case EChunkId::ColorF: //float red, grn, blu;
 			case EChunkId::LinColorF: //float red, grn, blu;
 				{
 					float rgb[3];
 					Read(src, rgb, 3);
-					return pr::Colour(rgb[0], rgb[1], rgb[2], 1.0f);
+					return Colour(rgb[0], rgb[1], rgb[2], 1.0f);
 				}
 			case EChunkId::Color24: // char red, grn, blu;
 			case EChunkId::LinColor24: // char red, grn, blu;
 				{
 					u8 rgb[3];
 					Read(src, rgb, 3);
-					return pr::Colour(rgb[0], rgb[1], rgb[2], 255);
+					return Colour(rgb[0], rgb[1], rgb[2], 255);
 				}
 			}
 		}
@@ -520,7 +543,7 @@ namespace pr::geometry::max_3ds
 		// Restore the src position on return because typically we read the file in two
 		// passes. It's convenient to allow the caller to use the same source.
 		auto start = Src<TSrc>::TellPos(src);
-		auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+		auto reset_stream = CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
 
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);
@@ -554,7 +577,7 @@ namespace pr::geometry::max_3ds
 
 		// Restore the src position on return
 		auto start = Src<TSrc>::TellPos(src);
-		auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+		auto reset_stream = CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
 
 		// Check that this is actually a 3DS stream
 		auto main = impl::Read<ChunkHeader>(src);
@@ -581,8 +604,9 @@ namespace pr::geometry::max_3ds
 	}
 
 	// Given a 3DS model object, generate verts/indices for a renderer model
-	template <typename TMatLookup, typename TNuggetOut, typename TVertOut, typename TIdxOut>
-	void CreateModel(max_3ds::Object const& obj, TMatLookup mats, TNuggetOut nugget_out, TVertOut v_out, TIdxOut i_out)
+	// 'TOut' is an object with callback methods for received model data.
+	template <typename TMatLookup, typename VOut, typename IOut, typename NOut>
+	void CreateModel(max_3ds::Object const& obj, TMatLookup mats, VOut vout, IOut iout, NOut nout)
 	{
 		// Validate 'obj'
 		if (!obj.m_mesh.m_uv.empty() && obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
@@ -595,13 +619,14 @@ namespace pr::geometry::max_3ds
 		// Create one of these 'Verts' per unique model vert.
 		struct Vert
 		{
-			pr::v4      m_norm;       // The accumulated vertex normal
-			pr::Colour  m_col;        // The material colour for this vert
-			uint        m_smooth;     // The smoothing group bits
-			Vert*       m_next;       // Another copy of this vert with different smoothing group
-			pr::uint16  m_orig_index; // The index into the original obj.m_mesh.m_vert container
-			pr::uint16  m_new_index;  // The index of this vert in the 'verts' container
-			Vert(pr::uint16 orig_index, pr::uint16 new_index, pr::v4 const& norm, pr::Colour const& col, uint sg)
+			v4       m_norm;       // The accumulated vertex normal
+			Colour   m_col;        // The material colour for this vert
+			uint32_t m_smooth;     // The smoothing group bits
+			Vert*    m_next;       // Another copy of this vert with different smoothing group
+			uint16_t m_orig_index; // The index into the original obj.m_mesh.m_vert container
+			uint16_t m_new_index;  // The index of this vert in the 'verts' container
+
+			Vert(uint16_t orig_index, uint16_t new_index, v4 const& norm, Colour const& col, uint32_t sg)
 				:m_norm(norm)
 				,m_col(col)
 				,m_smooth(sg)
@@ -610,12 +635,10 @@ namespace pr::geometry::max_3ds
 				,m_new_index(new_index)
 			{}
 		};
-
-		typedef std::deque<Vert, pr::aligned_alloc<Vert>> VertPool;
-		struct Verts :VertPool
+		struct Verts :std::deque<Vert, pr::aligned_alloc<Vert>>
 		{
 			// Returns the new index for the vert in 'cont'
-			pr::uint16 add(pr::uint16 idx, pr::v4 const& norm, pr::Colour const& col, uint sg)
+			uint16_t add(uint16_t idx, v4 const& norm, Colour const& col, uint32_t sg)
 			{
 				auto& vert = at(idx);
 
@@ -634,20 +657,21 @@ namespace pr::geometry::max_3ds
 					return add(vert.m_next->m_new_index, norm, col, sg);
 
 				// Otherwise, create a new Vert and add it to the linked list
-				auto new_index = s_cast<pr::uint16>(size());
+				auto new_index = s_cast<uint16_t>(size());
 				emplace_back(vert.m_orig_index, new_index, norm, col, sg);
 				vert.m_next = &back();
 				return new_index;
 			}
-		} verts;
-				
-		// Initialise the container 'verts'
-		for (pr::uint16 i = 0, iend = s_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
+		};
+		Verts verts;
+
+		// Initialise 'verts'
+		for (uint16_t i = 0, iend = s_cast<uint16_t>(obj.m_mesh.m_vert.size()); i != iend; ++i)
 			verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
 
 		// Loop over material groups, each material group is a nugget
-		auto vrange = pr::Range<uint16_t>::Zero();
-		auto irange = pr::Range<uint32_t>::Zero();
+		auto vrange = Range<size_t>::Zero();
+		auto irange = Range<size_t>::Zero();
 		for (auto const& mgrp : obj.m_mesh.m_matgroup)
 		{
 			// Ignore material groups that aren't used in the model
@@ -656,10 +680,12 @@ namespace pr::geometry::max_3ds
 
 			// Find the material
 			auto const& mat = mats(mgrp.m_name);
-
+			auto topo = ETopo::TriList;
+			auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : EGeom::None);
+			
 			// Write out each face that belongs to this group
 			irange.m_beg = irange.m_end;
-			vrange = pr::Range<uint16_t>::Reset();
+			vrange = Range<size_t>::Reset();
 			for (auto const& face_idx : mgrp.m_face)
 			{
 				// Get the face and it's smoothing group
@@ -675,7 +701,7 @@ namespace pr::geometry::max_3ds
 				auto v2 = obj.m_mesh.m_vert[face.m_idx[2]].w1();
 				auto e0 = v1 - v0;
 				auto e1 = v2 - v1;
-				auto cx = pr::Cross3(e0, e1);
+				auto cx = Cross3(e0, e1);
 				auto norm = Normalise(cx, v4Zero);
 				auto angles = TriangleAngles(v0, v1, v2);
 
@@ -687,25 +713,24 @@ namespace pr::geometry::max_3ds
 				vrange.encompass(i0);
 				vrange.encompass(i1);
 				vrange.encompass(i2);
-				irange.m_end = s_cast<uint32_t>(irange.m_end + 3);
+				irange.m_end += 3;
 
 				// Write out face indices
-				i_out(i0, i1, i2);
+				iout(i0, i1, i2);
 			}
 
 			// Output a nugget for this material group
-			auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : EGeom::None);
-			nugget_out(mat, geom, vrange, irange);
+			nout(topo, geom, mat, vrange, irange);
 		}
 
 		// Write out the verts including their normals
 		for (auto const& vert : verts)
 		{
-			auto  p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
-			auto& c = vert.m_col;
-			auto  n = Normalise(vert.m_norm, v4Zero);
-			auto& t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
-			v_out(p, c, n, t);
+			auto p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
+			auto c = vert.m_col;
+			auto n = Normalise(vert.m_norm, v4Zero);
+			auto t = !obj.m_mesh.m_uv.empty() ? obj.m_mesh.m_uv[vert.m_orig_index] : v2Zero;
+			vout(p, c, n, t);
 		}
 	}
 }

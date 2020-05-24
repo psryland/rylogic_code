@@ -120,10 +120,11 @@ class Native():
 		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
 		self.platforms = platforms if platforms else ["x64", "x86"]
 		self.configs = configs if configs else ["Release", "Debug"]
+		self.obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
 		return
 
 	def Clean(self):
-		CleanObj(os.path.join(self.proj_dir, "obj", UserVars.platform_toolset), self.platforms, self.configs)
+		CleanObj(self.obj_dir, self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -165,9 +166,8 @@ class Audio(Native):
 		return
 
 	def Clean(self):
-		obj_dir = os.path.join(self.workspace, "obj", UserVars.platform_toolset)
-		CleanObj(os.path.join(obj_dir, "audio"), self.platforms, self.configs)
-		CleanObj(os.path.join(obj_dir, "audio.dll"), self.platforms, self.configs)
+		CleanObj(os.path.join(self.obj_dir, "audio"), self.platforms, self.configs)
+		CleanObj(os.path.join(self.obj_dir, "audio.dll"), self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -182,9 +182,8 @@ class View3d(Native):
 		return
 
 	def Clean(self):
-		obj_dir = os.path.join(self.workspace, "obj", UserVars.platform_toolset)
-		CleanObj(os.path.join(obj_dir, "view3d"), self.platforms, self.configs)
-		CleanObj(os.path.join(obj_dir, "view3d.dll"), self.platforms, self.configs)
+		CleanObj(os.path.join(self.obj_dir, "view3d"), self.platforms, self.configs)
+		CleanObj(os.path.join(self.obj_dir, "view3d.dll"), self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -200,6 +199,14 @@ class P3d(Native):
 
 	def Build(self):
 		MSBuild(self.proj_name, self.rylogic_sln, [f"Tools\\{self.proj_name}"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		if not "Release" in self.configs or not "x64" in self.platforms: return
+		deploy_dir = os.path.join(self.workspace, "bin", "P3d")
+		target = os.path.join(self.obj_dir, self.proj_name, "x64", "Release", "p3d.exe")
+		CleanDir(deploy_dir)
+		Tools.Copy(target, os.path.join(deploy_dir,""))
 		return
 
 # .NET assembly (base)

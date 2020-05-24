@@ -66,6 +66,138 @@ namespace pr
 		{
 			return 2.0f * m_ctr_rad.w;
 		}
+
+		// Encompass 'rhs' in 'lhs' and re-centre the centre point. Returns 'rhs'
+		v4_cref<> pr_vectorcall encompass(v4_cref<> rhs)
+		{
+			if (Radius() < 0.0f)
+			{
+				// Centre on this point, since it's the first
+				m_ctr_rad = v4{rhs.x, rhs.y, rhs.z, 0.0f};
+			}
+			else
+			{
+				// Only grow if outside the current bounds
+				auto len_sq = LengthSq(rhs - Centre());
+				if (len_sq > RadiusSq())
+				{
+					// Move the centre and increase the radius by the minimum
+					// amount to include the existing bsphere and 'rhs'
+					auto separation = Sqrt(len_sq);
+					auto new_radius = (separation + Radius()) * 0.5f;
+					m_ctr_rad += (rhs - Centre()) * ((new_radius - Radius()) / separation);
+					m_ctr_rad.w = new_radius;
+				}
+			}
+			return rhs;
+		}
+		BSphere const& pr_vectorcall encompass(BSphere const& rhs)
+		{
+			if (Radius() < 0.0f)
+			{
+				// If this is the first thing, just adopt 'rhs'
+				m_ctr_rad = rhs.m_ctr_rad;
+			}
+			else
+			{
+				// Only grow if 'rhs' extends beyond the current radius
+				auto separation = Length(rhs.Centre() - Centre());
+				if (separation + rhs.Radius() > Radius())
+				{
+					// Move the centre and increase the radius by the minimum
+					// amount to include the existing bsphere and 'rhs'
+					auto new_radius = (separation + Radius() + rhs.Radius()) * 0.5f;
+					m_ctr_rad += (rhs.Centre() - Centre()) * ((new_radius - Radius()) / separation);
+					m_ctr_rad.w = new_radius;
+				}
+			}
+			return rhs;
+		}
+
+		// Encompass 'rhs' within 'bsphere' without moving the centre point.
+		v4_cref<> pr_vectorcall encompass_loose(v4_cref<> rhs)
+		{
+			if (m_ctr_rad.w < 0.0f)
+			{
+				m_ctr_rad = v4{rhs.x, rhs.y, rhs.z, 0.0f};
+			}
+			else
+			{
+				auto len_sq = LengthSq(rhs - Centre());
+				if (len_sq > RadiusSq())
+					m_ctr_rad.w = Sqrt(len_sq);
+			}
+			return rhs;
+		}
+		BSphere const& pr_vectorcall encompass_loose(BSphere const& rhs)
+		{
+			if (Radius() < 0.0f)
+			{
+				m_ctr_rad = rhs.m_ctr_rad;
+			}
+			else
+			{
+				auto new_radius = Length(rhs.Centre() - Centre()) + rhs.Radius();
+				if (new_radius > Radius())
+					m_ctr_rad.w = new_radius;
+			}
+			return rhs;
+		}
+
+		#pragma region Operators
+		friend bool operator == (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+		friend bool operator != (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+		friend bool operator <  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+		friend bool operator >  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+		friend bool operator <= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+		friend bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+		friend BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref<> offset)
+		{
+			assert(offset.w == 0.0f);
+			lhs.m_ctr_rad += offset;
+			return lhs;
+		}
+		friend BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref<> offset)
+		{
+			assert(offset.w == 0.0f);
+			lhs.m_ctr_rad -= offset;
+			return lhs;
+		}
+		friend BSphere& pr_vectorcall operator *= (BSphere& lhs, float s)
+		{
+			lhs.m_ctr_rad.w *= s;
+			return lhs;
+		}
+		friend BSphere& pr_vectorcall operator /= (BSphere& lhs, float s)
+		{
+			lhs.m_ctr_rad.w /= s;
+			return lhs;
+		}
+		friend BSphere pr_vectorcall operator + (BSphere const& bsph, v4_cref<> offset)
+		{
+			auto bs = bsph;
+			return bs += offset;
+		}
+		friend BSphere pr_vectorcall operator - (BSphere const& bsph, v4_cref<> offset)
+		{
+			auto bs = bsph;
+			return bs -= offset;
+		}
+		friend BSphere pr_vectorcall operator * (BSphere const& bsph, float s)
+		{
+			auto bs = bsph;
+			return bs *= s;
+		}
+		friend BSphere pr_vectorcall operator * (float s, BSphere const& bsph)
+		{
+			auto bs = bsph;
+			return bs *= s;
+		}
+		friend BSphere pr_vectorcall operator * (m4_cref<> m, BSphere const& bsph)
+		{
+			return BSphere(m * bsph.Centre(), bsph.m_ctr_rad.w);
+		}
+		#pragma endregion
 	};
 	static_assert(std::is_pod<BSphere>::value, "Should be a pod type");
 	static_assert(std::alignment_of<BSphere>::value == 16, "Should be 16 byte aligned");
@@ -81,61 +213,6 @@ namespace pr
 	static BSphere const BSphereReset = {v4Origin, -1.0f};
 	#pragma endregion
 
-	#pragma region Operators
-	inline bool operator == (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref<> offset)
-	{
-		assert(offset.w == 0.0f);
-		lhs.m_ctr_rad += offset;
-		return lhs;
-	}
-	inline BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref<> offset)
-	{
-		assert(offset.w == 0.0f);
-		lhs.m_ctr_rad -= offset;
-		return lhs;
-	}
-	inline BSphere& operator *= (BSphere& lhs, float s)
-	{
-		lhs.m_ctr_rad.w *= s;
-		return lhs;
-	}
-	inline BSphere& operator /= (BSphere& lhs, float s)
-	{
-		lhs *= (1.0f / s);
-		return lhs;
-	}
-	inline BSphere pr_vectorcall operator + (BSphere_cref bsph, v4_cref<> offset)
-	{
-		auto bs = bsph;
-		return bs += offset;
-	}
-	inline BSphere pr_vectorcall operator - (BSphere_cref bsph, v4_cref<> offset)
-	{
-		auto bs = bsph;
-		return bs -= offset;
-	}
-	inline BSphere pr_vectorcall operator * (BSphere_cref bsph, float s)
-	{
-		auto bs = bsph;
-		return bs *= s;
-	}
-	inline BSphere pr_vectorcall operator * (float s, BSphere_cref bsph)
-	{
-		auto bs = bsph;
-		return bs *= s;
-	}
-	inline BSphere pr_vectorcall operator * (m4_cref<> m, BSphere_cref bsph)
-	{
-		return BSphere(m * bsph.Centre(), bsph.m_ctr_rad.w);
-	}
-	#pragma endregion
-
 	#pragma region Functions
 
 	// The volume of the bsphere
@@ -144,105 +221,60 @@ namespace pr
 		return 4.188790f * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w; // (2/3)*tau*r^3
 	}
 
-	// Encompass 'point' within 'bsphere' and re-centre the centre point.
-	inline BSphere& pr_vectorcall Encompass(BSphere& bsphere, v4_cref<> point)
+	// Encompass 'point' within 'bsphere' and re-centre the centre point. Returns 'point'
+	inline v4_cref<> pr_vectorcall Encompass(BSphere& bsphere, v4_cref<> point)
 	{
-		if (bsphere.Radius() < 0.0f)
-		{
-			// Centre on this point, since it's the first
-			bsphere.m_ctr_rad = v4(point.x, point.y, point.z, 0.0f);
-		}
-		else
-		{
-			// Only grow if outside the current bounds
-			auto len_sq = LengthSq(point - bsphere.Centre());
-			if (len_sq > bsphere.RadiusSq())
-			{
-				// Move the centre and increase the radius by the minimum
-				// amount to include the existing bsphere and 'point'
-				auto separation = Sqrt(len_sq);
-				auto new_radius = (separation + bsphere.Radius()) * 0.5f;
-				bsphere += (point - bsphere.Centre()) * ((new_radius - bsphere.Radius()) / separation);
-				bsphere.m_ctr_rad.w = new_radius;
-			}
-		}
-		return bsphere;
+		return bsphere.encompass(point);
 	}
+	
+	// Encompass 'point' in 'bsphere'
 	inline BSphere pr_vectorcall Encompass(BSphere const& bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
-		return Encompass(bsph, point);
+		bsph.encompass(point);
+		return bsph;
+	}
+
+	// Encompass 'rhs' in 'lhs'. Returns 'rhs'
+	inline BSphere_cref pr_vectorcall Encompass(BSphere& lhs, BSphere_cref rhs)
+	{
+		return lhs.encompass(rhs);
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BSphere& pr_vectorcall Encompass(BSphere& lhs, BSphere_cref rhs)
-	{
-		if (lhs.Radius() < 0.0f)
-		{
-			// If this is the first thing, just adopt 'rhs'
-			lhs = rhs;
-		}
-		else
-		{
-			// Only grow if 'rhs' extends beyond the current radius
-			auto separation = Length(rhs.Centre() - lhs.Centre());
-			if (separation + rhs.Radius() > lhs.Radius())
-			{
-				// Move the centre and increase the radius by the minimum
-				// amount to include the existing bsphere and 'rhs'
-				auto new_radius = (separation + lhs.Radius() + rhs.Radius()) * 0.5f;
-				lhs += (rhs.Centre() - lhs.Centre()) * ((new_radius - lhs.Radius()) / separation);
-				lhs.m_ctr_rad.w = new_radius;
-			}
-		}
-		return lhs;
-	}
 	inline BSphere pr_vectorcall Encompass(BSphere const& lhs, BSphere_cref rhs)
 	{
 		auto bsph = lhs;
-		return Encompass(bsph, rhs);
+		bsph.encompass(rhs);
+		return bsph;
 	}
 
-	// Encompass 'point' within 'bsphere' without moving the centre point.
-	inline BSphere& pr_vectorcall EncompassLoose(BSphere& bsphere, v4_cref<> point)
+	// Encompass 'point' within 'bsphere' without moving the centre point. Returns 'point'
+	inline v4_cref<> pr_vectorcall EncompassLoose(BSphere& bsphere, v4_cref<> point)
 	{
-		if (bsphere.m_ctr_rad.w < 0.0f)
-		{
-			bsphere.m_ctr_rad = v4(point.x, point.y, point.z, 0.0f);
-		}
-		else
-		{
-			auto len_sq = LengthSq(point - bsphere.Centre());
-			if (len_sq > bsphere.RadiusSq())
-				bsphere.m_ctr_rad.w = Sqrt(len_sq);
-		}
-		return bsphere;
+		return bsphere.encompass_loose(point);
 	}
+	
+	// Encompass 'point' within 'bsphere' without moving the centre point.
 	inline BSphere pr_vectorcall EncompassLoose(BSphere const& bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
-		return EncompassLoose(bsph, point);
+		bsph.encompass_loose(point);
+		return bsph;
 	}
 
-	// Encompass 'rhs' in 'lhs' without moving the centre point
-	inline BSphere& pr_vectorcall EncompassLoose(BSphere& lhs, BSphere_cref rhs)
+	// Encompass 'rhs' in 'lhs' without moving the centre point. Returns 'rhs'
+	inline BSphere_cref pr_vectorcall EncompassLoose(BSphere& lhs, BSphere_cref rhs)
 	{
-		if (lhs.Radius() < 0.0f)
-		{
-			lhs = rhs;
-		}
-		else
-		{
-			auto new_radius = Length(rhs.Centre() - lhs.Centre()) + rhs.Radius();
-			if (new_radius > lhs.Radius())
-				lhs.m_ctr_rad.w = new_radius;
-		}
-		return lhs;
+		return lhs.encompass_loose(rhs);
 	}
+
+	// Encompass 'rhs' in 'lhs' without moving the centre point.
 	inline BSphere pr_vectorcall EncompassLoose(BSphere const& lhs, BSphere_cref rhs)
 	{
 		auto bsph = lhs;
-		return EncompassLoose(bsph, rhs);
+		bsph.encompass_loose(rhs);
+		return bsph;
 	}
 
 	// Return true if 'point' is within the bounding sphere

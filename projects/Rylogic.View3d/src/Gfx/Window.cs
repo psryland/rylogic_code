@@ -1,4 +1,4 @@
-//#define PR_VIEW3D_CREATE_STACKTRACE
+﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -73,7 +73,7 @@ namespace Rylogic.Gfx
 
 				// Position the camera
 				Camera = new Camera(this);
-				Camera.SetPosition(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
+				Camera.Lookat(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
 			}
 			public void Dispose()
 			{

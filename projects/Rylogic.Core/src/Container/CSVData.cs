@@ -47,6 +47,7 @@ namespace Rylogic.Container
 			}
 			public Row Add(params object?[] values)
 			{
+				if (values.Length == 0) Add(string.Empty);
 				foreach (var x in values) Add(x?.ToString());
 				return this;
 			}

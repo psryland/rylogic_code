@@ -369,7 +369,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var eye = new v4(bounds.Centre, m_camera.FocusDist, 1);
 				var tar = new v4(bounds.Centre, 0, 1);
-				m_camera.SetPosition(eye, tar, v4.YAxis);
+				m_camera.Lookat(eye, tar, v4.YAxis);
 			}
 			Invalidate();
 		}

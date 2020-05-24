@@ -69,7 +69,7 @@ namespace pr::rdr
 	// Nugget data. Common base for NuggetProps and Nugget
 	struct NuggetData
 	{
-		EPrim          m_topo;                  // The primitive topology for this nugget
+		ETopo          m_topo;                  // The primitive topology for this nugget
 		EGeom          m_geom;                  // The valid geometry components within this range
 		ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
 		Texture2DPtr   m_tex_diffuse;           // Diffuse texture
@@ -87,7 +87,7 @@ namespace pr::rdr
 		Range m_vrange;
 		Range m_irange;
 
-		NuggetData(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		NuggetData(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
 	};
 
 	// Nugget construction data
@@ -99,7 +99,7 @@ namespace pr::rdr
 		// overlap, but in advanced cases it isn't.
 		bool m_range_overlaps;
 
-		NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		NuggetProps(ETopo topo = ETopo::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
 		explicit NuggetProps(NuggetData const& data);
 	};
 

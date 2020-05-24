@@ -43,8 +43,227 @@ from bpy.types import Operator
 # Mesh data format:
 #  https://docs.blender.org/api/current/bpy.types.Mesh.html
 
+class EVertFormat():
+	# Use 32-bit floats for position data (default).
+	# Size/Vert = 12 bytes (float[3])
+	Verts32Bit = 0
+
+	# Use 16-bit floats for position data.
+	# Size/Vert = 6 bytes (half_t[3])
+	Verts16Bit = 1
+class ENormFormat():
+	# Use 32-bit floats for normal data (default)
+	# Size/Norm = 12 bytes (float[3])
+	Norms32Bit = 0
+
+	# Use 16-bit floats for normal data
+	# Size/Norm = 6 bytes (half[3])
+	Norms16Bit = 1
+
+	# Pack each normal into 32bits. 
+	# Size/Norm = 4 bytes (uint32_t)
+	NormsPack32 = 2
+class EColourFormat():
+	# Use 32-bit AARRGGBB colours (default)
+	# Size/Colour = 4 bytes (uint32_t
+	Colours32Bit = 0
+class EUVFormat():
+	# Use 32-bit floats for UV data
+	# Size/UV = 8 bytes (float[2])
+	UVs32Bit = 0
+
+	# Use 16-bit floats for UV data
+	# Size/UV = 4 bytes (half[2])
+	UVs16Bit = 1
+class EIndexFormat():
+	# Don't convert indices, use the input stride
+	IdxSrc = 0
+
+	# Use 32-bit integers for index data
+	Idx32Bit = 1
+
+	# Use 16-bit integers for index data
+	Idx16Bit = 2
+
+	# Use 8-bit integers for index data
+	Idx8Bit = 3
+
+	# Use variable length integers for index data
+	IdxNBit = 4
+class EFlags():
+	NONE = 0
+
+	_VertsOfs = 0
+	_NormsOfs = 4
+	_ColoursOfs = 8
+	_UVsOfs = 12
+	_IndexOfs = 16
+	_Mask = 0b1111
+
+	# Vertex flags
+	Verts32Bit = EVertFormat.Verts32Bit << _VertsOfs
+	Verts16Bit = EVertFormat.Verts16Bit << _VertsOfs
+
+	# Normals flags
+	Norms32Bit = ENormFormat.Norms32Bit << _NormsOfs
+	Norms16Bit = ENormFormat.Norms16Bit << _NormsOfs
+	NormsPack32 = ENormFormat.NormsPack32 << _NormsOfs
+
+	# Colours flags
+	Colours32Bit = EColourFormat.Colours32Bit << _ColoursOfs
+
+	# TexCoord flags
+	UVs32Bit = EUVFormat.UVs32Bit << _UVsOfs
+	UVs16Bit = EUVFormat.UVs16Bit << _UVsOfs
+
+	# Index data flags
+	IdxSrc = EIndexFormat.IdxSrc << _IndexOfs
+	Idx32Bit = EIndexFormat.Idx32Bit << _IndexOfs
+	Idx16Bit = EIndexFormat.Idx16Bit << _IndexOfs
+	Idx8Bit = EIndexFormat.Idx8Bit << _IndexOfs
+	IdxNBit = EIndexFormat.IdxNBit << _IndexOfs
+
+	# Standard combinations
+	DEFAULT = Verts32Bit | Norms32Bit | Colours32Bit | UVs32Bit | IdxSrc
+	COMPRESSED1 = Verts32Bit | Norms16Bit | Colours32Bit | UVs16Bit | Idx16Bit
+	COMPRESSEDMAX = Verts16Bit | NormsPack32 | Colours32Bit | UVs16Bit | IdxNBit
+
+class ETopo():
+	TriList = 4
+class EGeom():
+	Vert = 1 << 0
+	Colr = 1 << 1
+	Norm = 1 << 2
+	Tex0 = 1 << 3
+	All = Vert | Colr | Norm | Tex0
+class Vec2():
+	def __init__(self, x:float=0, y:float=0):
+		self.x = x
+		self.y = y
+class Vec3():
+	def __init__(self, x:float=0, y:float=0, z:float=0):
+		self.x = x
+		self.y = y
+		self.z = z
+class Mat4():
+	def __init__(self, x:Vec3=Vec3(1,0,0), y:Vec3=Vec3(0,1,0), z:Vec3=Vec3(0,0,1), w:Vec3=Vec3(0,0,0)):
+		self.x = x
+		self.y = y
+		self.z = z
+		self.w = w
+class BBox():
+	def __init__(self):
+		self.centre = [+0,+0,+0,1]
+		self.radius = [-1,-1,-1,0]
+
+	# Grow the bbox to enclose 'pt'. Returns 'pt'
+	def encompass(self, pt:Vec3):
+		for i,x in enumerate([pt.x, pt.y, pt.z]):
+			if self.radius[i] < 0:
+				self.centre[i] = x
+				self.radius[i] = 0
+			else:
+				signed_dist = x - self.centre[i]
+				length      = abs(signed_dist)
+				if length > self.radius[i]:
+					new_radius = (length + self.radius[i]) / 2
+					self.centre[i] += signed_dist * (new_radius - self.radius[i]) / length
+					self.radius[i] = new_radius
+		return pt
+class Nugget():
+	def __init__(self, topo:ETopo=ETopo.TriList, geom:EGeom=EGeom.All, mat:str="", stride:int=2):
+		self.topo = topo
+		self.geom = geom
+		self.mat = mat
+		self.stride = stride
+		self.vidx = []
+		return
+class Mesh():
+	# Meshes (bpy.types.Mesh) contain four main arrays:
+	# 	mesh.vertices (3-vector)
+	# 	mesh.edges (reference to 2 vertices)
+	# 	mesh.loops (reference to 1 vertex and 1 edge)
+	# 	mesh.polygons (reference a contiguous range of loops)
+	# Also:
+	# 	mesh.loops
+	# 	mesh.uv_layers
+	# 	mesh.vertex_colors
+	# are all synchronised, so the same index can be used for the loop (aka vertex), UV, and vert colour.
+	# 
+	# A polygon (bpy.types.MeshPolygon) has:
+	# 	A range [start,count] reference into the mesh.loops array
+	# 	A single material index (value in [0,32768))
+	# 	'loop_indices' can be used to iterate over loops
+	# 
+	# For P3D export, we want to make groups of polygons that all
+	# have the same material as these will be the 'nuggets'.
+	def __init__(self, mesh: bpy.types.Mesh):
+		self.name = mesh.name
+		self.bbox = BBox()
+		self.o2p = Mat4()
+		self.verts = []
+		self.colrs = []
+		self.norms = []
+		self.tex0s = []
+		self.nuggets = []
+
+		# If the mesh has no geometry...
+		if not mesh.polygons:
+			return
+
+		# Ensure the polygons have been triangulated
+		if not mesh.loop_triangles:
+			mesh.calc_loop_triangles()
+
+		# Determine the geometry format
+		geom = EGeom.Vert | EGeom.Norm
+		geom = (geom | EGeom.Colr) if len(mesh.vertex_colors) != 0 else geom
+		geom = (geom | EGeom.Tex0) if mesh.uv_layers.get("UVMap") != None else geom
+
+		# Make a map from material index to a collection of
+		# polygons. Each material index is a separate nugget.
+		polygons_by_material = {i:[] for i in range(len(mesh.materials))}
+		for poly in mesh.polygons:
+			polygons_by_material[poly.material_index].append(poly)
+
+		fat_verts = []
+
+		# Initialise the nuggets list
+		for mat_idx, polys in polygons_by_material.items():
+			vidx = []
+			for poly in polys:
+				for lx in poly.loop_indices:
+					loop = mesh.loops[lx]
+					vidx.append(loop.vertex_index)
+					
+
+
+			mat = mesh.materials[mat_idx]
+			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride)
+			self.nuggets.append(nugget)
+
+
+
+
+
+
+		# Initialise the verts lists
+		self.verts = [Vec3()] * len(mesh.vertices)
+		self.norms = [Vec3()] * len(mesh.vertices)
+		for i,v in enumerate(mesh.vertices):
+			self.verts[i] = self.bbox.encompass(Vec3(v.co.x, v.co.y, v.co.z))
+			self.norms[i] = Vec3(v.normal.x, v.normal.y, v.normal.z)
+
+		# Initialise vertex colours (if present)
+
+
+		# Set the stride based on the number of verts
+		stride = 2 if len(self.verts) < 0x10000 else 4
+
+		return
+
 class P3D():
-	Version = 0x00001001
+	Version = 0x00010101
 
 	class EChunkId():
 		NULL           = 0x00000000 # Null chunk
@@ -63,94 +282,17 @@ class P3D():
 		MESHNAME       = 0x00003101 #          ├─ Name (cstr)
 		MESHBBOX       = 0x00003102 #          ├─ Bounding box (BBox)
 		MESHTRANSFORM  = 0x00003103 #          ├─ Mesh to Parent Transform (m4x4)
-		MESHVERTICES   = 0x00003110 #          ├─ Vertex list (u32 count, count * [Vert])
-		MESHVERTICESV  = 0x00003111 #          ├─ Vertex list compressed (u32 count, count * [Verts])
-		MESHINDICES    = 0x00003125 #          ├─ Index list (u32 count, u32 stride, count * [Idx i])
-		MESHINDICESV   = 0x00003126 #          ├─ Index list (u32 count, u32 stride, count * [Idx i])
-		MESHNUGGETS    = 0x00003200 #          └─ Nugget list (u32 count, count * [Nugget])
-	class EFlags():
-		NONE = 0
-		COMPRESS = 1 << 0
+		MESHVERTS      = 0x00003300 #          ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])
+		MESHNORMS      = 0x00003310 #          ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])
+		MESHCOLOURS    = 0x00003320 #          ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])
+		MESHUVS        = 0x00003330 #          ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])
+		MESHNUGGET     = 0x00004000 #          └─ Nugget list (u32 count, count * [Nugget])
+		MESHMATID      = 0x00004001 #             ├─ Material id (cstr)                                                              
+		MESHVIDX       = 0x00004010 #             ├─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride]
 	class ChunkHeader():
 		def __init__(self, id: int, data_size:int):
 			self.ChunkID = id
 			self.ChunkSize = 8 + data_size
-	class Vert():
-		def __init__(self):
-			self.pos  = [0, 0, 0, 0]
-			self.col  = [0, 0, 0, 0]
-			self.norm = [0, 0, 0, 0]
-			self.uv   = [0, 0]
-	class BBox():
-		def __init__(self):
-			self.c = [+0,+0,+0,1]
-			self.r = [-1,-1,-1,0]
-	class Mesh():
-		# Meshes (bpy.types.Mesh) contain four main arrays:
-		# 	mesh.vertices (3-vector)
-		# 	mesh.edges (reference to 2 vertices)
-		# 	mesh.loops (reference to 1 vertex and 1 edge)
-		# 	mesh.polygons (reference a contiguous range of loops)
-		# Also:
-		# 	mesh.loops
-		# 	mesh.uv_layers
-		# 	mesh.vertex_colors
-		# are all synchronised, so the same index can be used for the loop (aka vertex), UV, and vert colour.
-		# 
-		# A polygon (bpy.types.MeshPolygon) has:
-		# 	A range [start,count] reference into the mesh.loops array
-		# 	A single material index (value in [0,32768))
-		# 	'loop_indices' can be used to iterator over loops
-		# 
-		# For P3D export, we want to make groups of polygons that all have the same material as these
-		# will be the 'nuggets'.
-		def __init__(self, mesh: bpy.types.Mesh):
-			self.name = mesh.name
-			self.bbox = P3D.BBox()
-			self.verts = []
-			self.polygons_by_material = {}
-
-			# If the mesh has no geometry...
-			if not mesh.polygons:
-				return
-
-			# Ensure the polygons have been triangulated
-			if not mesh.loop_triangles:
-				mesh.calc_loop_triangles()
-
-			# Initialise the verts list
-			self.verts = [P3D.Vert()] * len(mesh.vertices)
-			for i,v in enumerate(mesh.vertices):
-				vert = self.verts[i]
-				vert.pos = [v.co.x, v.co.y, v.co.z, 1]
-				vert.col = [1,1,1,1]
-				vert.norm = [v.normal.x, v.normal.y, v.normal.z, 0.0]
-				vert.uv = [0,0]
-
-			# Make a map from material index to a collection of polygons
-			self.polygons_by_material = {i:[] for i in range(len(mesh.materials))}
-			for poly in mesh.polygons:
-				self.polygons_by_material[poly.material_index].append(poly)
-
-			return
-
-		# Calculate the bounding box of a mesh
-		def CalcBBox(self, mesh:bpy.types.Mesh):
-			centre = [+0.0, +0.0, +0.0, 1.0]
-			radius = [-1.0, -1.0, -1.0, 0.0]
-			for vert in mesh.vertices:
-				for i in range(3):
-					if radius[i] < 0:
-						centre[i] = vert.co[i]
-						radius[i] = 0
-					else:
-						signed_dist = vert.co[i] - centre[i]
-						length      = abs(signed_dist)
-						if length > radius[i]:
-							new_radius = (length + radius[i]) / 2
-							centre[i] += signed_dist * (new_radius - radius[i]) / length
-							radius[i] = new_radius
-			return centre, radius
 
 	# P3D Constructor
 	def __init__(self, meshes:[bpy.types.Mesh], flags:int = EFlags.NONE):
@@ -177,9 +319,19 @@ class P3D():
 
 	# Replace the 'hdr' at 'offset' in 'self.data'
 	def UpdateHeader(self, offset:int, hdr:ChunkHeader):
+		if (hdr.ChunkSize & 0b11) != 0: raise RuntimeError("Chunk size is not aligned to 4 bytes")
 		self.data[offset:offset+8] = struct.pack("<II", hdr.ChunkID, hdr.ChunkSize)
 		return
-		
+
+	# Add padding bytes to align 'size' to 4 bytes
+	def PadToU32(self, size:int):
+		count = 0
+		while (size & 0b11) != 0:
+			self.data += struct.pack("B", 0)
+			count += 1
+			size += 1
+		return count
+
 	# Version chunk
 	def WriteVersion(self, version:int):
 		self.data += struct.pack("<III", P3D.EChunkId.FILEVERSION, 12, version)
@@ -214,116 +366,291 @@ class P3D():
 		return hdr.ChunkSize
 
 	# Mesh chunk
-	def WriteMesh(self, mesh:bpy.types.Mesh, flags:int):
+	def WriteMesh(self, mesh:bpy.types.Mesh, flags:EFlags):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESH, 0)
 		self.WriteHeader(hdr)
 
-		if flags & P3D.EFlags.COMPRESS:
+		if flags != EFlags.DEFAULT:
 			print("Vertex compression not supported, falling back to uncompressed")
 
 		# Convert the blender mesh into a form suitable for P3D export
-		m = P3D.Mesh(mesh)
+		m = Mesh(mesh)
 
 		# Mesh name
-		hdr.ChunkSize += self.WriteCStr(P3D.EChunkId.MESHNAME, m.name)
+		hdr.ChunkSize += self.WriteStr(P3D.EChunkId.MESHNAME, m.name)
 
 		# Mesh bounding box
 		hdr.ChunkSize += self.WriteMeshBBox(m.bbox)
 
 		# Mesh to parent transform
-		hdr.ChunkSize += 0 #WriteMeshTransform(out, mesh.m_o2p);
+		hdr.ChunkSize += self.WriteMeshTransform(m.o2p)
 
 		# Mesh vertex data
-		hdr.ChunkSize += self.WriteVertices(m.verts, flags)
-
-		# Mesh index data
-		hdr.ChunkSize += self.WriteIndices(mesh, flags)
+		hdr.ChunkSize += self.WriteVerts(m.verts, flags)
+		hdr.ChunkSize += self.WriteColours(m.colrs, flags)
+		hdr.ChunkSize += self.WriteNorms(m.norms, flags)
+		hdr.ChunkSize += self.WriteUVs(m.tex0s, flags)
 
 		# Mesh nugget data
-		hdr.ChunkSize += 0 #WriteNuggets(out, mesh.m_nugget, flags);
+		for nugget in m.nuggets:
+			hdr.ChunkSize += self.WriteNugget(nugget, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
 	# Mesh Bounding box
-	def WriteMeshBBox(self, bbox:P3D.BBox):
-		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHBBOX, struct.calcsize("ffffffff"))
+	def WriteMeshBBox(self, bbox:BBox):
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHBBOX, struct.calcsize("4f4f"))
 		self.WriteHeader(hdr)
 
-		c,r = bbox.c,bbox.r
-		self.data += struct.pack("ffff", c[0], c[1], c[2], c[3])
-		self.data += struct.pack("ffff", r[0], r[1], r[2], r[3])
+		c, r = bbox.centre, bbox.radius
+		self.data += struct.pack("4f", c[0], c[1], c[2], c[3])
+		self.data += struct.pack("4f", r[0], r[1], r[2], r[3])
+		return hdr.ChunkSize
+
+	# Mesh object to parent transform
+	def WriteMeshTransform(self, o2p:Mat4):
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHTRANSFORM, struct.calcsize("4f4f4f4f"))
+		self.WriteHeader(hdr)
+		self.data += struct.pack("4f", o2p.x.x, o2p.x.y, o2p.x.z, 0)
+		self.data += struct.pack("4f", o2p.y.x, o2p.y.y, o2p.y.z, 0)
+		self.data += struct.pack("4f", o2p.z.x, o2p.z.y, o2p.z.z, 0)
+		self.data += struct.pack("4f", o2p.w.x, o2p.w.y, o2p.w.z, 1)
 		return hdr.ChunkSize
 
 	# Mesh vertices
-	def WriteVertices(self, verts:[P3D.Vert]):
+	def WriteVerts(self, verts:[Vec3], flags:EFlags):
+		if len(verts) == 0:
+			return
+
 		offset = len(self.data)
-		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHVERTICES, 0)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHVERTS, 0)
 		self.WriteHeader(hdr)
 
 		# Vertex count
 		self.data += struct.pack("<I", len(verts))
 		hdr.ChunkSize += struct.calcsize("<I")
 
-		for vert in verts:
-			# Position
-			self.data += struct.pack("ffff", vert.pos[0], vert.pos[1], vert.pos[2], vert.pos[3])
-			hdr.ChunkSize += struct.calcsize("ffff")
+		# Format
+		fmt = (flags >> EFlags._VertsOfs) & EFlags._Mask
+		self.data += struct.pack("<H", fmt)
+		hdr.ChunkSize += struct.calcsize("<H")
 
-			# Colour
-			self.data += struct.pack("ffff", 1.0, 1.0, 1.0, 1.0)
-			hdr.ChunkSize += struct.calcsize("ffff")
+		if fmt == EVertFormat.Verts32Bit:
 
-			# Normal
-			self.data += struct.pack("ffff", vert.normal.x, vert.normal.y, vert.normal.z, 0.0)
-			hdr.ChunkSize += struct.calcsize("ffff")
+			# Stride
+			stride = struct.calcsize("3f")
+			self.data += struct.pack("<H", stride)
+			hdr.ChunkSize += struct.calcsize("<H")
 
-			# UV
-			self.data += struct.pack("ff", 0.0, 0.0)
-			hdr.ChunkSize += struct.calcsize("ff")
+			# Use 32bit floats for position data
+			for v in verts:
+				self.data += struct.pack("3f", v.x, v.y, v.z)
+			hdr.ChunkSize += stride * len(verts)
+		else:
+			raise RuntimeError(f"Unsupported vertex format:{str(fmt)}")
 
-			# pad
-			self.data += struct.pack("ff", 0.0, 0.0)
-			hdr.ChunkSize += struct.calcsize("ff")
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
-	# Mesh
-	def WriteIndices(self, mesh:bpy.types.Mesh, flags:int):
+	# Mesh colours
+	def WriteColours(self, colours:[int], flags:EFlags):
+		if len(colours) == 0:
+			return
+
 		offset = len(self.data)
-		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHINDICES, 0)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHCOLOURS, 0)
 		self.WriteHeader(hdr)
 
-		if flags & P3D.EFlags.COMPRESS:
-			print("Indices compression not supported, falling back to uncompressed")
+		# Vertex count
+		self.data += struct.pack("<I", len(colours))
+		hdr.ChunkSize += struct.calcsize("<I")
 
+		# Format
+		fmt = (flags >> EFlags._ColoursOfs) & EFlags._Mask
+		self.data += struct.pack("<H", fmt)
+		hdr.ChunkSize += struct.calcsize("<H")
 
-		index_count = 0
-		for poly in mesh.polygons:
-			for tri in poly.loop_triangles:
-				pass
+		if fmt == EColourFormat.Colours32Bit:
 
-		# Determine the index stride from the number of verts
-		stride = 2 if len(mesh.vertices) < 0x10000 else 4
+			# Stride
+			stride = struct.calcsize("<I")
+			self.data += struct.pack("<H", stride)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+			# Use AARRGGBB 32-bit colour values
+			for c in colours:
+				self.data += struct.pack("<I", c)
+			hdr.ChunkSize += struct.calcsize("<I") * len(colours)
+		else:
+			raise RuntimeError(f"Unsupported vertex colour format:{str(fmt)}")
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
+
+	# Mesh normals
+	def WriteNorms(self, norms:[Vec3], flags:EFlags):
+		if len(norms) == 0:
+			return
+
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHNORMS, 0)
+		self.WriteHeader(hdr)
+
+		# Vertex count
+		self.data += struct.pack("<I", len(norms))
+		hdr.ChunkSize += struct.calcsize("<I")
+
+		# Format
+		fmt = (flags >> EFlags._NormsOfs) & EFlags._Mask
+		self.data += struct.pack("<H", fmt)
+		hdr.ChunkSize += struct.calcsize("<H")
+
+		if fmt == ENormFormat.Norms32Bit:
+
+			# Stride
+			stride = struct.calcsize("3f")
+			self.data += struct.pack("<H", stride)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+			# Use 32bit floats for normals data
+			for n in norms:
+				self.data += struct.pack("3f", n.x, n.y, n.z)
+			hdr.ChunkSize += stride * len(norms)
+		else:
+			raise RuntimeError(f"Unsupported vertex normals format:{str(fmt)}")
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
+
+	# Mesh UVs
+	def WriteUVs(self, uvs:[Vec2], flags:EFlags):
+		
+		if len(uvs) == 0:
+			return
+
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHUVS, 0)
+		self.WriteHeader(hdr)
+
+		# Vertex count
+		self.data += struct.pack("<I", len(uvs))
+		hdr.ChunkSize += struct.calcsize("<I")
+
+		# Format
+		fmt = (flags >> EFlags._UVsOfs) & EFlags._Mask
+		self.data += struct.pack("<H", fmt)
+		hdr.ChunkSize += struct.calcsize("<H")
+
+		if fmt == EUVFormat.UVs32Bit:
+
+			# Stride
+			stride = struct.calcsize("2f")
+			self.data += struct.pack("<H", stride)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+			# Use 32bit floats for UV data
+			for uv in uvs:
+				self.data += struct.pack("2f", uv.x, uv.y)
+			hdr.ChunkSize += stride * len(uvs)
+		else:
+			raise RuntimeError(f"Unsupported vertex UV format:{str(fmt)}")
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
+
+	# Mesh Nuggets
+	def WriteNugget(self, nugget:Nugget, flags:EFlags):
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHNUGGET, 0)
+		self.WriteHeader(hdr)
+
+		# Mesh topology
+		self.data += struct.pack("<H", nugget.topo)
+		hdr.ChunkSize += struct.calcsize("<H")
+
+		# Mesh geometry
+		self.data += struct.pack("<H", nugget.geom)
+		hdr.ChunkSize += struct.calcsize("<H")
+
+		# Material id
+		hdr.ChunkSize += self.WriteStr(P3D.EChunkId.MESHMATID, nugget.mat)
+
+		# Face/Line/Tetra/etc indices
+		hdr.ChunkSize += self.WriteIndices(nugget.vidx, nugget.stride, flags)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
+
+	# Mesh Indices
+	def WriteIndices(self, vidx:[int], stride_in:int, flags:EFlags):
+		if len(vidx) == 0:
+			return
+
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHVIDX, 0)
+		self.WriteHeader(hdr)
+
+		# If the format is 'IdxSrc', set 'fmt' to match 'Idx'
+		fmt = (flags >> EFlags._IndexOfs) & EFlags._Mask
+		fmt = (fmt if fmt != EIndexFormat.IdxSrc else
+			EIndexFormat.Idx16Bit if stride_in == 2 else
+			EIndexFormat.Idx32Bit)
 
 		# Index count
+		index_count = len(vidx)
 		self.data += struct.pack("<I", index_count)
-		hdr.ChunkSize += index_count
+		hdr.ChunkSize += struct.calcsize("<I")
 
-		# Index stride
-		self.data += struct.pack("<I", stride)
-		hdr.ChunkSize += stride
+		# Format
+		self.data += struct.pack("<H", fmt)
+		hdr.ChunkSize += struct.calcsize("<H")
 
-		#switch (mesh.m_idx.m_stride)
-		#{
-		#default: throw std::runtime_error(Fmt("Index stride value %d is not supported", mesh.m_idx.m_stride));
-		#case 1: hdr.ChunkSize += WriteIndices(out, mesh.m_idx.span<u8>(), flags); break;
-		#case 2: hdr.ChunkSize += WriteIndices(out, mesh.m_idx.span<u16>(), flags); break;
-		#case 4: hdr.ChunkSize += WriteIndices(out, mesh.m_idx.span<u32>(), flags); break;
-		#}
-		return
+		if fmt == EIndexFormat.Idx32Bit:
+
+			# Index stride
+			stride_out = struct.calcsize("<I")
+			self.data += struct.pack("<H", stride_out)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+			# Write indices as 32bit integers
+			for vx in vidx:
+				self.data += struct.pack("<I", vx)
+			hdr.ChunkSize += struct.calcsize("<I")
+
+		elif fmt == EIndexFormat.Idx16Bit:
+
+			# Index stride
+			stride_out = struct.calcsize("<H")
+			self.data += struct.pack("<H", stride_out)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+			# Write indices as 16bit integers
+			for vx in vidx:
+				self.data += struct.pack("<H", vx)
+			hdr.ChunkSize += struct.calcsize("<H")
+
+		else:
+			raise RuntimeError(f"Unsupported index format:{str(fmt)}")
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
 
 	# Materials chunk
 	def WriteMaterials(self, meshes:[bpy.types.Mesh]):
@@ -360,19 +687,34 @@ class P3D():
 
 	# Diffuse colour
 	def WriteDiffuseColour(self, colour:[float]):
-		hdr = P3D.ChunkHeader(P3D.EChunkId.DIFFUSECOLOUR, struct.calcsize("ffff"))
+		hdr = P3D.ChunkHeader(P3D.EChunkId.DIFFUSECOLOUR, struct.calcsize("4f"))
 		self.WriteHeader(hdr)
 
 		# Colours are 'rgba'
-		self.data += struct.pack("ffff", colour[0], colour[1], colour[2], colour[3])
+		self.data += struct.pack("4f", colour[0], colour[1], colour[2], colour[3])
 		return hdr.ChunkSize
 
 	# 16 character string
-	def WriteCStr(self, chunk_id:int, string:str):
-		string_bytes = bytes(string, encoding='utf-8')
-		hdr = P3D.ChunkHeader(chunk_id, len(string_bytes))
+	def WriteStr(self, chunk_id:int, string:str):
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(chunk_id, 0)
 		self.WriteHeader(hdr)
+
+		string_bytes = bytes(string, encoding='utf-8')
+		string_len = len(string_bytes)
+
+		# String length
+		self.data += struct.pack("<I", string_len)
+		hdr.ChunkSize += struct.calcsize("<I")
+
+		# String data
 		self.data += string_bytes
+		hdr.ChunkSize += string_len
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
+
+		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
 

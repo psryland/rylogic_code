@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // LDraw
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
@@ -518,7 +518,7 @@ namespace pr::ldr
 			{
 				// Add the directory of the included file to the paths
 				source.m_includes.AddSearchPath(fp.parent_path());
-				filepaths.push_back(canonical(fp));
+				filepaths.push_back(fp.lexically_normal());
 			};
 			if (source.IsFile())
 			{
@@ -538,7 +538,10 @@ namespace pr::ldr
 					Reader reader(src, false, &source.m_includes, m_emb_factory);
 					Parse(*m_rdr, reader, out, context, StaticCallBack(AddFileProgressCB, this));
 				}
-				else if (str::EqualI(extn.c_str(), ".p3d") || str::EqualI(extn.c_str(), ".stl"))
+				else if (
+					str::EqualI(extn.c_str(), ".p3d") ||
+					str::EqualI(extn.c_str(), ".stl") ||
+					str::EqualI(extn.c_str(), ".3ds"))
 				{
 					// P3D = My custom binary model file format
 					// STL = "Stereolithography" model files (binary and text)
