@@ -58,7 +58,7 @@ namespace pr::geometry::p3d
 	#pragma region Chunk Ids
 	#define PR_ENUM(x)\
 	x(Null                  ,= 0x00000000)/* Null chunk                                                                                      */\
-	x(CStr                  ,= 0x00000001)/* Null terminated utf-8 string                                                                    */\
+	x(Str                   ,= 0x00000001)/* utf-8 string (u32 length, length * [u8])                                                        */\
 	x(Main                  ,= 0x44335250)/* PR3D File type indicator                                                                        */\
 	x(FileVersion           ,= 0x00000100)/* ├─ File Version                                                                                 */\
 	x(Scene                 ,= 0x00001000)/* └─ Scene                                                                                        */\
@@ -94,7 +94,7 @@ namespace pr::geometry::p3d
 		constexpr int ColoursOfs = 8;
 		constexpr int UVsOfs = 12;
 		constexpr int IndexOfs = 16;
-		constexpr int Mask = 0b1111;
+		constexpr uint32_t Mask = 0b1111;
 	}
 	enum class EVertFormat
 	{
@@ -154,7 +154,7 @@ namespace pr::geometry::p3d
 		// Use variable length integers for index data
 		IdxNBit = 4,
 	};
-	enum class EFlags
+	enum class EFlags :uint32_t
 	{
 		None = 0,
 
@@ -201,6 +201,15 @@ namespace pr::geometry::p3d
 		v2     m_tex0;
 		v2     pad;
 
+		FatVert() = default;
+		FatVert(v4_cref<> p, Colour_cref c, v4_cref<> n, v2_cref<> t)
+			:m_vert(p)
+			, m_diff(c)
+			, m_norm(n)
+			, m_tex0(t)
+			, pad()
+		{}
+
 		friend v4     GetP(FatVert const& vert) { return vert.m_vert; }
 		friend Colour GetC(FatVert const& vert) { return vert.m_diff; }
 		friend v4     GetN(FatVert const& vert) { return vert.m_norm; }
@@ -208,8 +217,7 @@ namespace pr::geometry::p3d
 	};
 	struct Str16
 	{
-		using c16 = char[16];
-		c16 str;
+		char str[16];
 
 		Str16(std::string_view s = {})
 			:str()
@@ -224,11 +232,8 @@ namespace pr::geometry::p3d
 		}
 		operator std::string_view() const
 		{
-			return std::string_view(&str[0], 16);
-		}
-		operator c16 const& () const
-		{
-			return str;
+			auto slen = strnlen(&str[0], _countof(str));
+			return std::string_view(&str[0], slen);
 		}
 		friend bool operator == (Str16 const& lhs, Str16 const& rhs)
 		{
@@ -268,7 +273,8 @@ namespace pr::geometry::p3d
 		// Diffuse textures
 		TexCont m_textures;
 
-		explicit Material(std::string_view name = {}, Colour const& diff_colour = ColourWhite)
+		Material() = default;
+		Material(std::string_view name, Colour const& diff_colour)
 			:m_id(name)
 			,m_diffuse(diff_colour)
 			,m_textures()
@@ -384,7 +390,7 @@ namespace pr::geometry::p3d
 		uint32_t operator[](int idx) const
 		{
 			// Convert from the underlying type to 'uint32_t'
-			assert(idx >= 0 && idx < count());
+			assert(idx >= 0 && idx < s_cast<int>(count()));
 			auto ptr = cptr_t{data() + idx * m_stride};
 			return ptr.to<uint32_t>(m_stride);
 		}
@@ -418,7 +424,8 @@ namespace pr::geometry::p3d
 		IdxBuf m_vidx; // Vertex indices for faces/lines/points/tetras/etc
 
 		// Constructor
-		explicit Nugget(ETopo topo = ETopo::TriList, EGeom geom = EGeom::All, std::string_view mat_id = {}, int stride = sizeof(uint32_t))
+		Nugget() = default;
+		Nugget(ETopo topo, EGeom geom, std::string_view mat_id = {}, int stride = sizeof(uint32_t))
 			:m_topo(topo)
 			,m_geom(geom)
 			,m_mat(mat_id)
@@ -431,13 +438,19 @@ namespace pr::geometry::p3d
 			return m_vidx.count();
 		}
 
+		// The stride of the contained indices
+		int stride() const
+		{
+			return m_vidx.stride();
+		}
+
 		// Vertex/Index range
 		Range<int> vrange() const
 		{
 			auto get = [](auto* ptr, int count)
 			{
-				auto r = Range<std::decay_t<decltype(*ptr)>>::Reset();
-				for (; count-- != 0;) r.encompass(*ptr++);
+				auto r = Range<int>::Reset();
+				for (; count-- != 0;) r.encompass(s_cast<int>(*ptr++));
 				return r;
 			};
 			switch (m_vidx.stride())
@@ -458,7 +471,6 @@ namespace pr::geometry::p3d
 		{
 			return m_vidx.casting_span<TOut>();
 		}
-
 	};
 	struct Mesh
 	{
@@ -470,45 +482,61 @@ namespace pr::geometry::p3d
 		//  - Nuggets don't need to all have the same topology.
 		//  - There is only one transform per mesh. Nuggets don't have transforms.
 		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
-		template <typename T> struct Cont
+		
+		// Simple container with moduluo operator [] and a default value when empty.
+		// Saves having to test for count != 0 when accessing contents.
+		template <typename T, typename Base> struct Cont :Base
 		{
-			// Simple container with moduluo operator [] accessor
-			inline static T const None = T{};
-
 			std::vector<T> m_cont;
 			Cont()
 				:m_cont()
-			{
-			}
-			size_t count() const
+			{}
+			explicit Cont(size_t initial_size)
+				:m_cont(initial_size)
+			{}
+			size_t size() const
 			{
 				return m_cont.size();
 			}
-			void emplace_back(T&& t)
+			void reserve(size_t count)
 			{
-				m_cont.emplace_back(std::forward<T>(t));
+				m_cont.reserve(s_cast<size_t>(count));
+			}
+			void resize(size_t count)
+			{
+				resize(count, T{});
+			}
+			void resize(size_t count, T item)
+			{
+				m_cont.resize(count, item);
 			}
 			void assign(std::initializer_list<T> list)
 			{
 				m_cont.assign(list);
 			}
-			void resize(int count)
+			void push_back(T const& t)
 			{
-				m_cont.resize(s_cast<size_t>(count));
+				m_cont.push_back(t);
 			}
-			T const& operator [] (int i) const
+			void emplace_back(T&& t)
 			{
-				return m_cont[i % count()];
+				m_cont.emplace_back(std::forward<T>(t));
 			}
-			T& operator [] (int i)
+			T const& back() const
 			{
-				return m_cont[i % count()];
+				if (size() == 0) return Base::Default;
+				return m_cont.back();
 			}
-			T const* begin() const
+			T const& operator[](int i) const
+			{
+				if (size() == 0) return Base::Default;
+				return m_cont[i % size()];
+			}
+			T const* data() const
 			{
 				return m_cont.data();
 			}
-			T* begin()
+			T const* begin() const
 			{
 				return m_cont.data();
 			}
@@ -516,24 +544,38 @@ namespace pr::geometry::p3d
 			{
 				return m_cont.data() + m_cont.size();
 			}
-			T* end()
+			T& back()
 			{
-				return m_cont.data() + m_cont.size();
+				if (size() == 0) throw std::runtime_error("container is empty");
+				return m_cont.back();
 			}
-			T const* data() const
+			T& operator [] (int i)
 			{
-				return m_cont.data();
+				if (size() == 0) throw std::runtime_error("container is empty"); // you need to use a const& to the container
+				return m_cont[i % size()];
 			}
 			T* data()
 			{
 				return m_cont.data();
 			}
+			T* begin()
+			{
+				return m_cont.data();
+			}
+			T* end()
+			{
+				return m_cont.data() + m_cont.size();
+			}
 		};
-		using VCont = Cont<v4>;
-		using CCont = Cont<Colour32>;
-		using NCont = Cont<v4>;
-		using TCont = Cont<v2>;
-		using Nuggets = Cont<Nugget>;
+		struct VBase { static constexpr v4 Default = v4Origin; };
+		struct CBase { static constexpr Colour32 Default = Colour32White; };
+		struct NBase { static constexpr v4 Default = v4Zero; };
+		struct TBase { static constexpr v2 Default = v2Zero; };
+		using VCont = Cont<v4, VBase>;
+		using CCont = Cont<Colour32, CBase>;
+		using NCont = Cont<v4, NBase>;
+		using TCont = Cont<v2, TBase>;
+		using Nuggets = std::vector<Nugget>;
 
 		struct fat_vert_iter_t
 		{
@@ -553,8 +595,7 @@ namespace pr::geometry::p3d
 					m_mesh->m_vert[m_idx],
 					m_mesh->m_diff[m_idx],
 					m_mesh->m_norm[m_idx],
-					m_mesh->m_tex0[m_idx],
-					{},
+					m_mesh->m_tex0[m_idx]
 				};
 			}
 			proxy operator ->() const
@@ -610,7 +651,7 @@ namespace pr::geometry::p3d
 		TCont m_tex0;
 
 		// Index data
-		Nuggets m_nuggets;
+		Nuggets m_nugget;
 
 		// Mesh bounding box
 		BBox m_bbox;
@@ -618,13 +659,14 @@ namespace pr::geometry::p3d
 		// Mesh to scene transform
 		m4x4 m_o2p;
 
+		// Construct
 		explicit Mesh(std::string_view name = {})
 			:m_name(name)
 			,m_vert()
 			,m_diff()
 			,m_norm()
 			,m_tex0()
-			,m_nuggets()
+			,m_nugget()
 			,m_bbox(BBoxReset)
 			,m_o2p(m4x4Identity)
 		{}
@@ -632,7 +674,7 @@ namespace pr::geometry::p3d
 		// The length of the vertex buffer
 		size_t vcount() const
 		{
-			return m_vert.count();
+			return m_vert.size();
 		}
 
 		// The sum of indices of all nuggets
@@ -646,17 +688,26 @@ namespace pr::geometry::p3d
 		// The number of nuggets in the mesh
 		size_t ncount() const
 		{
-			return m_nuggets.count();
+			return m_nugget.size();
 		}
 
 		// The vertex data geometry type. Nuggets can have geometry types with less bits than this
 		EGeom geom() const
 		{
+			// Even if the diff, norm, and tex0 buffers do not have the same number
+			// of elements as 'm_vert', the accessor uses modulo index which has the
+			// effect of looking like full geometry data.
 			return
-				(m_vert.count() != 0 ? EGeom::Vert : EGeom::None) |
-				(m_diff.count() != 0 ? EGeom::Colr : EGeom::None) |
-				(m_norm.count() != 0 ? EGeom::Norm : EGeom::None) |
-				(m_tex0.count() != 0 ? EGeom::Tex0 : EGeom::None);
+				(m_vert.size() != 0 ? EGeom::Vert : EGeom::None) |
+				(m_diff.size() != 0 ? EGeom::Colr : EGeom::None) |
+				(m_norm.size() != 0 ? EGeom::Norm : EGeom::None) |
+				(m_tex0.size() != 0 ? EGeom::Tex0 : EGeom::None);
+		}
+
+		// Iteration access to the nuggets
+		Nuggets const& nuggets() const
+		{
+			return m_nugget;
 		}
 
 		// Iteration access to the verts as 'fat verts'
@@ -665,10 +716,43 @@ namespace pr::geometry::p3d
 			return fat_vert_span_t{this};
 		}
 
-		// Iteration access to the nuggets
-		Nuggets const& nuggets() const
+		// Add 'fvert' to the vert containers
+		void add_vert(FatVert const& fvert)
 		{
-			return m_nuggets;
+			// Grow a container if not repeatedly adding the same element or the default element
+			auto add_to = [](auto& cont, auto const& elem, size_t vcount)
+			{
+				using ContType = std::decay_t<decltype(cont)>;
+
+				// 2 or more unique elements, assume all are unique
+				if (cont.size() > 1)
+				{
+					cont.push_back(elem);
+					return;
+				}
+
+				// Different to the first element, fill to 'vcount' and add the new element
+				if (cont.size() == 1 && cont[0] != elem)
+				{
+					cont.resize(vcount - 1, cont[0]);
+					cont.push_back(elem);
+					return;
+				}
+				
+				// Not equal to the default elem, fill to 'vcount' and add the new element
+				if (elem != ContType::Default)
+				{
+					cont.resize(vcount - 1, ContType::Default);
+					cont.push_back(elem);
+					return;
+				}
+			};
+
+			// Verts are always unique
+			m_vert.push_back(m_bbox.encompass(fvert.m_vert));
+			add_to(m_diff, fvert.m_diff.argb(), vcount());
+			add_to(m_norm, fvert.m_norm, vcount());
+			add_to(m_tex0, fvert.m_tex0, vcount());
 		}
 	};
 	struct Scene
@@ -1030,14 +1114,16 @@ namespace pr::geometry::p3d
 		return std::move(out);
 	}
 
-	// Read a null terminated string. 'src' is assumed to point to the start of a null terminated string
-	template <typename TSrc, typename TStr = std::string> TStr ReadCStr(TSrc& src, uint32_t len, uint32_t* len_out = nullptr)
+	// Read a string. 'src' is assumed to point to the start of a EChunkId::CStr chunk data
+	template <typename TSrc, typename TStr = std::string> TStr ReadStr(TSrc& src, uint32_t len)
 	{
-		TStr str;
-		for (char c; len-- != 0 && (c = Read<char>(src)) != 0;)
-			str.push_back(c);
+		// Read the string length
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
 
-		if (len_out) *len_out = len;
+		// Read the string data
+		TStr str(count, '\0');
+		Read(src, str.data(), str.size());
 		return std::move(str);
 	}
 
@@ -1051,7 +1137,7 @@ namespace pr::geometry::p3d
 			{
 			case EChunkId::TexFilepath:
 				{
-					tex.m_filepath = ReadCStr(src, hdr.payload());
+					tex.m_filepath = ReadStr(src, hdr.payload());
 					break;
 				}
 			case EChunkId::TexTiling:
@@ -1220,6 +1306,7 @@ namespace pr::geometry::p3d
 		case ENormFormat::NormsPack32:
 			{
 				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Norm32bit::Decompress(p[0]); });
+				break;
 			}
 		default:
 			{
@@ -1294,7 +1381,7 @@ namespace pr::geometry::p3d
 		len -= sizeof(uint16_t);
 
 		// Integrity check
-		if (count * stride != len && fmt != EIndexFormat::IdxNBit)
+		if (count * stride > len && fmt != EIndexFormat::IdxNBit)
 			throw std::runtime_error(Fmt("Indices buffer count is invalid. Count is %d, data available for %d.", count, len / stride));
 
 		cont.m_stride = stride;
@@ -1325,9 +1412,8 @@ namespace pr::geometry::p3d
 			}
 		case EIndexFormat::IdxNBit:
 			{
-				// For IdxNBit, the stride value is the size of the decompressed indices,
-				// *not* the per-element size of the data in 'src' (like it is for other
-				// chunks that have a stride value).
+				// For IdxNBit, the stride value is the size of each decompressed index,
+				// *not* the per-element size of the data in 'src' (like it is for other chunks).
 				cont.reserve(count * stride);
 
 				// Read compressed indices into a local buffer
@@ -1335,10 +1421,11 @@ namespace pr::geometry::p3d
 				Read(src, buf.data(), buf.size());
 
 				// Decompress from 'buf' into 'cont'
+				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
 				int64_t prev = 0;
 				auto const* p = buf.data();
 				auto const* pend = p + buf.size();
-				for (; p != pend; ++p)
+				for (; p != pend && cont.count() != count; ++p)
 				{
 					int s = 0;
 					uint64_t zz = 0;
@@ -1350,7 +1437,7 @@ namespace pr::geometry::p3d
 					// ZigZag decode
 					auto delta = static_cast<int64_t>((zz & 1) ? (zz >> 1) ^ -1 : (zz >> 1));
 
-					// Get the index value from the delta
+					// Get the index value from the delta (only works for little endian!)
 					auto idx = prev + delta;
 					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
 
@@ -1393,7 +1480,7 @@ namespace pr::geometry::p3d
 				case EChunkId::MeshMatId:
 					{
 						// Read the material id
-						auto id = ReadCStr(src, hdr.payload());
+						auto id = ReadStr(src, hdr.payload());
 						nugget.m_mat = id;
 						break;
 					}
@@ -1419,7 +1506,7 @@ namespace pr::geometry::p3d
 				{
 				case EChunkId::MeshName:
 					{
-						mesh.m_name = ReadCStr(src, hdr.payload());
+						mesh.m_name = ReadStr(src, hdr.payload());
 						break;
 					}
 				case EChunkId::MeshBBox:
@@ -1454,7 +1541,7 @@ namespace pr::geometry::p3d
 					}
 				case EChunkId::MeshNugget:
 					{
-						mesh.m_nuggets.emplace_back(ReadMeshNugget(src, hdr.payload()));
+						mesh.m_nugget.emplace_back(ReadMeshNugget(src, hdr.payload()));
 						break;
 					}
 				}
@@ -1560,10 +1647,19 @@ namespace pr::geometry::p3d
 	// Write 'hdr' at 'offset', preserving the current output position in 'src'
 	template <typename TOut> void UpdateHeader(TOut& out, int64_t offset, ChunkHeader hdr)
 	{
+		if ((hdr.m_length & 0b11) != 0)
+			throw std::runtime_error("Chunk size is not aligned to 4 bytes");
+
 		auto pos = traits<TOut>::tellp(out);
 		traits<TOut>::seekp(out, offset);
 		Write<ChunkHeader>(out, hdr);
 		traits<TOut>::seekp(out, pos);
+	}
+
+	// Write bytes to 'out' to pad 'hdr' to a uint32_t boundary
+	template <typename TOut> uint32_t PadToU32(TOut& out, uint32_t chunk_size)
+	{
+		return Write(out, "\0\0\0\0", Pad<uint32_t>(chunk_size, sizeof(uint32_t)));
 	}
 
 	// Write an array
@@ -1584,14 +1680,14 @@ namespace pr::geometry::p3d
 		else
 		{
 			// Convert from 'TIn' to 'TAs'
-			byte_data<> buf(PadTo(count * sizeof(TAs), sizeof(uint32_t)));
+			byte_data<> buf(count * sizeof(TAs));
 
 			auto pin = in;
 			auto pas = buf.data<TAs>();
 			for (auto n = count; n-- != 0;)
 				*pas++ = s_cast<TAs>(*pin++);
 
-			return Write(out, buf.data<TAs>(), count);
+			return Write(out, buf.data<TAs>(), buf.size<TAs>());
 		}
 	}
 
@@ -1601,13 +1697,25 @@ namespace pr::geometry::p3d
 		return Write(out, &in, 1);
 	}
 
-	// Write a null terminated string to 'out'.
-	template <typename TOut> uint32_t WriteCStr(TOut& out, EChunkId chunk_id, std::string_view str)
+	// Write a string to 'out'.
+	template <typename TOut> uint32_t WriteStr(TOut& out, EChunkId chunk_id, std::string_view str)
 	{
-		ChunkHeader hdr(chunk_id, str.size() + 1);
+		auto offset = traits<TOut>::tellp(out);
+
+		// String chunk header
+		ChunkHeader hdr(chunk_id, 0U);
 		Write<ChunkHeader>(out, hdr);
-		Write(out, str.data(), str.size());
-		Write<uint8_t>(out, 0);
+		
+		// String length
+		hdr.m_length += Write(out, s_cast<uint32_t>(str.size()));
+
+		// String data
+		hdr.m_length += Write(out, str.data(), str.size());
+
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
+		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
@@ -1631,7 +1739,7 @@ namespace pr::geometry::p3d
 
 		// Texture filepath
 		if (!tex.m_filepath.empty())
-			hdr.m_length += WriteCStr(out, EChunkId::TexFilepath, tex.m_filepath);
+			hdr.m_length += WriteStr(out, EChunkId::TexFilepath, tex.m_filepath);
 
 		// Texture tiling
 		hdr.m_length += WriteTexTiling(out, tex.m_tiling);
@@ -1724,7 +1832,7 @@ namespace pr::geometry::p3d
 	// Write vertices to 'out'
 	template <typename TOut> uint32_t WriteVertices(TOut& out, Mesh::VCont const& verts, EFlags flags)
 	{
-		if (verts.count() == 0)
+		if (verts.size() == 0)
 			return 0;
 
 		auto offset = traits<TOut>::tellp(out);
@@ -1733,7 +1841,7 @@ namespace pr::geometry::p3d
 		Write<ChunkHeader>(out, hdr);
 
 		// Count
-		hdr.m_length += Write(out, s_cast<uint32_t>(verts.count()));
+		hdr.m_length += Write(out, s_cast<uint32_t>(verts.size()));
 
 		// Format
 		auto fmt = s_cast<EVertFormat>((int(flags) >> Flags::VertsOfs) & Flags::Mask);
@@ -1748,7 +1856,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(float[3]));
 
 				// Use 32bit floats for position data
-				byte_data<> buf(PadTo(verts.count() * sizeof(float[3]), sizeof(uint32_t)));
+				byte_data<> buf(verts.size() * sizeof(float[3]));
 				auto ptr = buf.data<float>();
 				for (auto& v : verts)
 				{
@@ -1766,7 +1874,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[3]));
 
 				// Use 16bit floats for position data
-				byte_data<> buf(PadTo(verts.count() * sizeof(half_t[3]), sizeof(uint32_t)));
+				byte_data<> buf(verts.size() * sizeof(half_t[3]));
 				auto ptr = buf.data<uint16_t>();
 				for (auto& v : verts)
 				{
@@ -1785,6 +1893,9 @@ namespace pr::geometry::p3d
 			}
 		}
 
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
@@ -1792,7 +1903,7 @@ namespace pr::geometry::p3d
 	// Write vertex colours to 'out'
 	template <typename TOut> uint32_t WriteColours(TOut& out, Mesh::CCont const& colours, EFlags flags)
 	{
-		if (colours.count() == 0)
+		if (colours.size() == 0)
 			return 0;
 
 		auto offset = traits<TOut>::tellp(out);
@@ -1801,7 +1912,7 @@ namespace pr::geometry::p3d
 		Write<ChunkHeader>(out, hdr);
 
 		// Count
-		hdr.m_length += Write(out, s_cast<uint32_t>(colours.count()));
+		hdr.m_length += Write(out, s_cast<uint32_t>(colours.size()));
 
 		// Format
 		auto fmt = s_cast<EColourFormat>((int(flags) >> Flags::ColoursOfs) & Flags::Mask);
@@ -1816,7 +1927,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
 
 				// Use AARRGGBB 32-bit colour values
-				byte_data<> buf(PadTo(colours.count() * sizeof(Colour32), sizeof(uint32_t)));
+				byte_data<> buf(colours.size() * sizeof(Colour32));
 				auto ptr = buf.data<Colour32>();
 				for (auto& c : colours)
 					*ptr++ = c;
@@ -1829,6 +1940,9 @@ namespace pr::geometry::p3d
 				throw std::runtime_error("Unknown vertex colours storage flag");
 			}
 		}
+		
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
@@ -1837,7 +1951,7 @@ namespace pr::geometry::p3d
 	// Write vertex normals to 'out'
 	template <typename TOut> uint32_t WriteNormals(TOut& out, Mesh::NCont const& norms, EFlags flags)
 	{
-		if (norms.count() == 0)
+		if (norms.size() == 0)
 			return 0;
 
 		auto offset = traits<TOut>::tellp(out);
@@ -1846,7 +1960,7 @@ namespace pr::geometry::p3d
 		Write<ChunkHeader>(out, hdr);
 
 		// Count
-		hdr.m_length += Write(out, s_cast<uint32_t>(norms.count()));
+		hdr.m_length += Write(out, s_cast<uint32_t>(norms.size()));
 				
 		// Format
 		auto fmt = s_cast<ENormFormat>((int(flags) >> Flags::NormsOfs) & Flags::Mask);
@@ -1861,7 +1975,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(float[3]));
 
 				// Use 32bit floats for normals
-				byte_data<> buf(PadTo(norms.count() * sizeof(float[3]), sizeof(uint32_t)));
+				byte_data<> buf(norms.size() * sizeof(float[3]));
 				auto ptr = buf.data<float>();
 				for (auto& n : norms)
 				{
@@ -1879,7 +1993,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[3]));
 
 				// Use 16bit floats for normals
-				byte_data<> buf(PadTo(norms.count() * sizeof(half_t[3]), sizeof(uint32_t)));
+				byte_data<> buf(norms.size() * sizeof(half_t[3]));
 				auto ptr = buf.data<half_t>();
 				for (auto& n : norms)
 				{
@@ -1898,7 +2012,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(uint32_t));
 
 				// Pack normals into 32bits
-				byte_data<> buf(PadTo(norms.count() * sizeof(uint32_t), sizeof(uint32_t)));
+				byte_data<> buf(norms.size() * sizeof(uint32_t));
 				auto ptr = buf.data<uint32_t>();
 				for (auto& n : norms)
 					*ptr++ = Norm32bit::Compress(n);
@@ -1912,6 +2026,9 @@ namespace pr::geometry::p3d
 			}
 		}
 
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
@@ -1919,7 +2036,7 @@ namespace pr::geometry::p3d
 	// Write texture coordinates to 'out'
 	template <typename TOut> uint32_t WriteTexCoords(TOut& out, Mesh::TCont const& uvs, EFlags flags)
 	{
-		if (uvs.count() == 0)
+		if (uvs.size() == 0)
 			return 0;
 
 		auto offset = traits<TOut>::tellp(out);
@@ -1928,7 +2045,7 @@ namespace pr::geometry::p3d
 		Write<ChunkHeader>(out, hdr);
 
 		// Count
-		hdr.m_length += Write(out, s_cast<uint32_t>(uvs.count()));
+		hdr.m_length += Write(out, s_cast<uint32_t>(uvs.size()));
 
 		// Format
 		auto fmt = s_cast<EUVFormat>((int(flags) >> Flags::UVsOfs) & Flags::Mask);
@@ -1943,7 +2060,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(float[2]));
 
 				// Use 32-bit float values
-				byte_data<> buf(PadTo(uvs.count() * sizeof(float[2]), sizeof(uint32_t)));
+				byte_data<> buf(uvs.size() * sizeof(float[2]));
 				auto ptr = buf.data<float>();
 				for (auto& u : uvs)
 				{
@@ -1960,7 +2077,7 @@ namespace pr::geometry::p3d
 				hdr.m_length += Write<uint16_t>(out, sizeof(half_t[2]));
 
 				// Use 16-bit float values
-				byte_data<> buf(PadTo(uvs.count() * sizeof(half_t[2]), sizeof(uint32_t)));
+				byte_data<> buf(uvs.size() * sizeof(half_t[2]));
 				auto ptr = buf.data<half_t>();
 				for (auto& u : uvs)
 				{
@@ -1978,12 +2095,15 @@ namespace pr::geometry::p3d
 			}
 		}
 
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
 
 	// Write index data to 'out'
-	template <typename TOut, typename Idx> uint32_t WriteIndices(TOut& out, EChunkId chunkid, IdxBuf const& idx, EFlags flags)
+	template <typename TOut, typename Idx> uint32_t WriteIndices(TOut& out, IdxBuf const& idx, EFlags flags)
 	{
 		// Note:
 		//  - 'Idx' is the data type of the values in 'idx'
@@ -1992,7 +2112,7 @@ namespace pr::geometry::p3d
 
 		auto offset = traits<TOut>::tellp(out);
 
-		ChunkHeader hdr(chunkid, 0U);
+		ChunkHeader hdr(EChunkId::MeshVIdx, 0U);
 		Write<ChunkHeader>(out, hdr);
 
 		// If the format is 'IdxSrc', set 'fmt' to match 'Idx'
@@ -2068,10 +2188,6 @@ namespace pr::geometry::p3d
 					prev += delta;
 				}
 
-				// Pad to a uint32_t boundary
-				for (auto n = Pad(buf.size(), sizeof(uint32_t)); n-- != 0;)
-					buf.push_back(0);
-
 				hdr.m_length += Write(out, buf.data(), buf.size());
 				break;
 			}
@@ -2081,17 +2197,20 @@ namespace pr::geometry::p3d
 			}
 		}
 
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
+
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
 	}
-	template <typename TOut> inline uint32_t WriteIndices(TOut& out, EChunkId chunkid, IdxBuf const& idx, EFlags flags)
+	template <typename TOut> inline uint32_t WriteIndices(TOut& out, IdxBuf const& idx, EFlags flags)
 	{
 		// Convert from runtime 'stride' to compile time index type
 		switch (idx.m_stride)
 		{
-		case 4: return WriteIndices<TOut, uint32_t>(out, chunkid, idx, flags); break;
-		case 2: return WriteIndices<TOut, uint16_t>(out, chunkid, idx, flags); break;
-		case 1: return WriteIndices<TOut, uint8_t>(out, chunkid, idx, flags); break;
+		case 4: return WriteIndices<TOut, uint32_t>(out, idx, flags); break;
+		case 2: return WriteIndices<TOut, uint16_t>(out, idx, flags); break;
+		case 1: return WriteIndices<TOut, uint8_t>(out, idx, flags); break;
 		default: throw std::runtime_error(FmtS("Unsupported index stride: %d", idx.m_stride));
 		}
 	}
@@ -2112,10 +2231,10 @@ namespace pr::geometry::p3d
 		hdr.m_length += Write<uint16_t>(out, s_cast<uint16_t>(nug.m_geom));
 
 		// Material id
-		hdr.m_length += WriteCStr(out, EChunkId::MeshMatId, nug.m_mat);
+		hdr.m_length += WriteStr(out, EChunkId::MeshMatId, nug.m_mat);
 
 		// Face/Line/Tetra/etc indices
-		hdr.m_length += WriteIndices(out, EChunkId::MeshVIdx, nug.m_vidx, flags);
+		hdr.m_length += WriteIndices(out, nug.m_vidx, flags);
 		
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
@@ -2131,7 +2250,7 @@ namespace pr::geometry::p3d
 		Write<ChunkHeader>(out, hdr);
 
 		// Mesh name
-		hdr.m_length += WriteCStr(out, EChunkId::MeshName, mesh.m_name);
+		hdr.m_length += WriteStr(out, EChunkId::MeshName, mesh.m_name);
 
 		// Mesh bounding box
 		hdr.m_length += WriteMeshBBox(out, mesh.m_bbox);
@@ -2152,7 +2271,7 @@ namespace pr::geometry::p3d
 		hdr.m_length += WriteTexCoords(out, mesh.m_tex0, flags);
 
 		// Write each nugget
-		for (auto const& nugget : mesh.m_nuggets)
+		for (auto const& nugget : mesh.m_nugget)
 			hdr.m_length += WriteNugget(out, nugget, flags);
 
 		UpdateHeader(out, offset, hdr);
@@ -2320,9 +2439,9 @@ namespace pr::geometry::p3d
 			out << ind << "static " << (mesh.vcount() < 0x10000 ? "uint16_t" : "uint32_t") << " const idxs[] =\n";
 			out << ind << "{\n";
 			ind.push_back('\t');
-			for (auto& nug : mesh.m_nuggets)
+			for (auto& nug : mesh.m_nugget)
 			{
-				out << ind << "// nugget " << (&nug - mesh.m_nuggets.data()) << "\n";
+				out << ind << "// nugget " << (&nug - mesh.m_nugget.data()) << "\n";
 
 				auto i = 0;
 				for (auto idx : nug.m_vidx.casting_span())
@@ -2344,7 +2463,7 @@ namespace pr::geometry::p3d
 			out << ind << "{\n";
 			ind.push_back('\t');
 			size_t ibeg = 0;
-			for (auto& nug : mesh.m_nuggets)
+			for (auto& nug : mesh.m_nugget)
 			{
 				auto vrange = nug.vrange();
 				out << ind 
@@ -2387,7 +2506,7 @@ namespace pr::geometry::p3d
 		for (auto& mesh : file.m_scene.m_meshes)
 		{
 			// No geometry in the mesh, skip...
-			if (mesh.m_nuggets.count() == 0)
+			if (mesh.m_nugget.empty())
 				continue;
 
 			// Mesh
@@ -2395,12 +2514,12 @@ namespace pr::geometry::p3d
 			ind.push_back('\t');
 
 			// Verts
-			if (mesh.m_vert.count() != 0)
+			if (mesh.m_vert.size() != 0)
 			{
 				out << ind << "*Verts {\n";
 				ind.push_back('\t');
 
-				for (int i = 0; i != mesh.vcount(); ++i)
+				for (int i = 0, iend = s_cast<int>(mesh.vcount()); i != iend; ++i)
 				{
 					auto& vert = mesh.m_vert[i];
 					out << ind << FmtS("%f %f %f\n", vert.x, vert.y, vert.z);
@@ -2411,12 +2530,12 @@ namespace pr::geometry::p3d
 			}
 
 			// Colours
-			if (mesh.m_diff.count() != 0)
+			if (mesh.m_diff.size() != 0)
 			{
 				out << ind << "*Colours {\n";
 				ind.push_back('\t');
 
-				for (int i = 0; i != mesh.vcount(); ++i)
+				for (int i = 0, iend = s_cast<int>(mesh.vcount()); i != iend; ++i)
 				{
 					auto& diff = mesh.m_diff[i];
 					out << ind << FmtS("%8.8X\n", diff.argb);
@@ -2427,12 +2546,12 @@ namespace pr::geometry::p3d
 			}
 
 			// Normals
-			if (mesh.m_norm.count() != 0)
+			if (mesh.m_norm.size() != 0)
 			{
 				out << ind << "*Normals {\n";
 				ind.push_back('\t');
 
-				for (int i = 0; i != mesh.vcount(); ++i)
+				for (int i = 0, iend = s_cast<int>(mesh.vcount()); i != iend; ++i)
 				{
 					auto& norm = mesh.m_norm[i];
 					out << ind << FmtS("%f %f %f\n", norm.x, norm.y, norm.z);
@@ -2443,12 +2562,12 @@ namespace pr::geometry::p3d
 			}
 
 			// UVs
-			if (mesh.m_tex0.count() != 0)
+			if (mesh.m_tex0.size() != 0)
 			{
 				out << ind << "*TexCoords {\n";
 				ind.push_back('\t');
 
-				for (int i = 0; i != mesh.vcount(); ++i)
+				for (int i = 0, iend = s_cast<int>(mesh.vcount()); i != iend; ++i)
 				{
 					auto& uv = mesh.m_tex0[i];
 					out << ind << FmtS("%f %f\n", uv.x, uv.y);
@@ -2459,7 +2578,7 @@ namespace pr::geometry::p3d
 			}
 
 			// Nuggets
-			for (auto const& nug : mesh.m_nuggets)
+			for (auto const& nug : mesh.m_nugget)
 			{
 				switch (nug.m_topo)
 				{
@@ -2507,10 +2626,10 @@ namespace pr::geometry
 		using namespace pr::geometry::p3d;
 
 		//{
-		//	std::ifstream ifile("S:\\software\\PC\\vrex\\res\\lod1\\lh_foot.p3d", std::ios::binary);
-		//	std::ofstream ofile("P:\\dump\\lh_foot.p3d", std::ios::binary);
+		//	std::ifstream ifile("S:\\dump\\sketchup exports\\foot.p3d", std::ios::binary);
+		//	std::ofstream ofile("P:\\dump\\foot.p3d", std::ios::binary);
 		//	auto m = p3d::Read(ifile);
-		//	p3d::Write(ofile, m, p3d::EFlags::Compress);
+		//	p3d::Write(ofile, m, p3d::EFlags::Default);
 		//}
 
 		// Create a text p3d file
@@ -2520,11 +2639,10 @@ namespace pr::geometry
 			tex.m_filepath = "filepath";
 			tex.m_tiling = 1;
 
-			Material mat{"mat1"};
-			mat.m_diffuse = pr::ColourWhite;
+			Material mat{"mat01", ColourWhite};
 			mat.m_textures.push_back(tex);
 
-			p3d::Mesh mesh{"mesh"};
+			p3d::Mesh mesh{"tri"};
 			mesh.m_bbox = BBox{v4Origin, v4{1, 3, 0, 0}};
 			mesh.m_vert.assign({
 				v4{-1, -1, 0, 1},
@@ -2545,9 +2663,9 @@ namespace pr::geometry
 				v2{1.0f, 1.0f},
 				});
 
-			Nugget nug{EPrim::TriList, EGeom::All, "mat1", sizeof(uint16_t)};
+			Nugget nug{ETopo::TriList, EGeom::All, "mat01", sizeof(uint16_t)};
 			nug.m_vidx.append<uint16_t>({0, 1, 2});
-			mesh.m_nuggets.emplace_back(std::move(nug));
+			mesh.m_nugget.emplace_back(std::move(nug));
 
 			file.m_version = Version;
 			file.m_scene.m_materials.push_back(mat);
@@ -2601,45 +2719,45 @@ namespace pr::geometry
 				auto& m0 = cmp.m_scene.m_meshes[i];
 				auto& m1 = file.m_scene.m_meshes[i];
 				PR_CHECK(m0.m_name, m1.m_name);
-				PR_CHECK(m0.m_vert.count(), m1.m_vert.count());
-				PR_CHECK(m0.m_diff.count(), m1.m_diff.count());
-				PR_CHECK(m0.m_norm.count(), m1.m_norm.count());
-				PR_CHECK(m0.m_tex0.count(), m1.m_tex0.count());
-				PR_CHECK(m0.m_nuggets.count(), m1.m_nuggets.count());
-				for (int j = 0; j != m1.m_vert.count(); ++j)
+				PR_CHECK(m0.m_vert.size(), m1.m_vert.size());
+				PR_CHECK(m0.m_diff.size(), m1.m_diff.size());
+				PR_CHECK(m0.m_norm.size(), m1.m_norm.size());
+				PR_CHECK(m0.m_tex0.size(), m1.m_tex0.size());
+				PR_CHECK(m0.m_nugget.size(), m1.m_nugget.size());
+				for (int j = 0; j != m1.m_vert.size(); ++j)
 				{
 					auto& v0 = m0.m_vert[j];
 					auto& v1 = m1.m_vert[j];
 					PR_CHECK(v0 == v1, true);
 				}
-				for (int j = 0; j != m1.m_diff.count(); ++j)
+				for (int j = 0; j != m1.m_diff.size(); ++j)
 				{
 					auto& c0 = m0.m_diff[j];
 					auto& c1 = m1.m_diff[j];
 					PR_CHECK(c0 == c1, true);
 				}
-				for (int j = 0; j != m1.m_norm.count(); ++j)
+				for (int j = 0; j != m1.m_norm.size(); ++j)
 				{
 					auto& n0 = m0.m_norm[j];
 					auto& n1 = m1.m_norm[j];
 					PR_CHECK(n0 == n1, true);
 				}
-				for (int j = 0; j != m1.m_tex0.count(); ++j)
+				for (int j = 0; j != m1.m_tex0.size(); ++j)
 				{
 					auto& t0 = m0.m_tex0[j];
 					auto& t1 = m1.m_tex0[j];
 					PR_CHECK(t0 == t1, true);
 				}
-				for (int j = 0; j != m1.m_nuggets.count(); ++j)
+				for (int j = 0; j != m1.m_nugget.size(); ++j)
 				{
-					auto& n0 = m0.m_nuggets[j];
-					auto& n1 = m1.m_nuggets[j];
+					auto& n0 = m0.m_nugget[j];
+					auto& n1 = m1.m_nugget[j];
 					PR_CHECK(n0.m_topo == n1.m_topo, true);
 					PR_CHECK(n0.m_geom == n1.m_geom, true);
 					PR_CHECK(n0.m_mat == n1.m_mat, true);
-					PR_CHECK(n0.m_vidx.count() == n1.m_vidx.count(), true);
+					PR_CHECK(n0.m_vidx.size() == n1.m_vidx.size(), true);
 					PR_CHECK(n0.m_vidx.m_stride == n1.m_vidx.m_stride, true);
-					for (int k = 0; k != n1.m_vidx.count(); ++k)
+					for (int k = 0, kend = s_cast<int>(n1.icount()); k != kend; ++k)
 					{
 						auto i0 = n0.m_vidx[k];
 						auto i1 = n1.m_vidx[k];

@@ -221,7 +221,7 @@ namespace CoinFlip.UI.GfxObjects
 				m_ibuf[indx++] = (ushort)(v + 3);
 			}
 
-			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.GeometryHasAlpha);
+			m_nbuf[0] = new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, flags: View3d.ENuggetFlag.GeometryHasAlpha);
 
 			// Create the graphics
 			var gfx = new View3d.Object($"Volume-[{idx0},{idx1})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CtxId);

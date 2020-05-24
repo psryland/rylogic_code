@@ -313,7 +313,7 @@
 #include "pr\view3d\forward.h"
 #include "pr\view3d\renderer.h"
 #include "pr\view3d\config\config.h"
-#include "pr\view3d\dll\pr_conv.h"
+#include "pr\view3d\dll\conversion.h"
 #include "pr\view3d\dll\view3d.h"
 #include "pr\view3d\instances\instance.h"
 #include "pr\view3d\lights\light.h"

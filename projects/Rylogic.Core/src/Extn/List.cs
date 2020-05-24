@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -104,10 +104,12 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Remove the last item in the list</summary>
-		public static void PopBack<T>(this IList<T> list)
+		public static T PopBack<T>(this IList<T> list)
 		{
-			System.Diagnostics.Debug.Assert(list.Count != 0, "Popback on non-empty container");
+			Debug.Assert(list.Count != 0, "Popback on non-empty container");
+			var elem = list[list.Count - 1];
 			list.RemoveAt(list.Count - 1);
+			return elem;
 		}
 
 		/// <summary>Resize a list default constructing objects to fill</summary>

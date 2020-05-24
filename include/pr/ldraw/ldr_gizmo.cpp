@@ -727,7 +727,7 @@ namespace pr::ldr
 		// need it to draw "through" other objects in the scene.
 		{
 			// On the first pass, draw after all opaques with inverted Z test
-			NuggetProps nugget(pr::rdr::EPrim::TriList, Vert::GeomMask);
+			NuggetProps nugget(pr::rdr::ETopo::TriList, Vert::GeomMask);
 			nugget.m_sort_key.Group(ESortGroup::PostOpaques);
 			nugget.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
 			nugget.m_dsb.Set(EDS::DepthFunc, D3D11_COMPARISON_GREATER);
@@ -736,7 +736,7 @@ namespace pr::ldr
 		}
 		{
 			// On the second pass, draw the gizmo normally
-			NuggetProps nugget(pr::rdr::EPrim::TriList, Vert::GeomMask);
+			NuggetProps nugget(pr::rdr::ETopo::TriList, Vert::GeomMask);
 			nugget.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
 			nugget.m_sort_key.Group(static_cast<ESortGroup>(int(ESortGroup::PostOpaques) + 1));
 			nugget.m_range_overlaps = true;

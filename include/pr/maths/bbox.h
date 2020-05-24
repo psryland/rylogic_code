@@ -159,6 +159,50 @@ namespace pr
 			return 2.0f * m_radius[axis];
 		}
 
+		// Grows the bbox to include 'rhs'
+		// There are two variations of 'Encompass', the version that modifies the
+		// provided instance returns the point encompassed, the version that operates
+		// on a const BBox returns a new BBox that includes 'point'
+		v4_cref<> encompass(v4_cref<> point)
+		{
+			assert("BBox encompass point must have w = 1" && point.w == 1.0f);
+			assert("'point' must be aligned to 16" && maths::is_aligned(&point));
+
+			#if PR_MATHS_USE_INTRINSICS
+			__m128 const zero = _mm_set_ps1(+0.0f);
+			__m128 const half = _mm_set_ps1(+0.5f);
+			auto init = _mm_cmplt_ps(m_radius.vec, zero);                               // init = radius == -1 ? FFFF... : 0000... 
+			auto lwr = _mm_sub_ps(m_centre.vec, m_radius.vec);                          // lwr  = centre - radius
+			auto upr = _mm_add_ps(m_centre.vec, m_radius.vec);                          // upr  = centre + radius
+			auto init_pt = _mm_and_ps(init, point.vec);                                 // init_pt = init & point
+			lwr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_min_ps(lwr, point.vec))); // lwr  = init_pt | (~init & min(lwr, point))
+			upr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_max_ps(upr, point.vec))); // upr  = init_pt | (~init & max(upr, point))
+			m_centre.vec = _mm_mul_ps(_mm_add_ps(upr,lwr), half);                       // center = (upr + lwr) / 2;
+			m_radius.vec = _mm_mul_ps(_mm_sub_ps(upr,lwr), half);                       // radius = (upr - lwr) / 2;
+			#else
+			for (int i = 0; i != 3; ++i)
+			{
+				if (m_radius[i] < 0.0f)
+				{
+					m_centre[i] = point[i];
+					m_radius[i] = 0.0f;
+				}
+				else
+				{
+					float signed_dist = point[i] - m_centre[i];
+					float length      = Abs(signed_dist);
+					if (length > m_radius[i])
+					{
+						float new_radius = (length + m_radius[i]) / 2.0f;
+						m_centre[i] += signed_dist * (new_radius - m_radius[i]) / length;
+						m_radius[i] = new_radius;
+					}
+				}
+			}
+			#endif
+			return point;
+		}
+
 		#pragma region Operators
 		friend bool operator == (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 		friend bool operator != (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
@@ -298,75 +342,59 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bbox'.
-	inline BBox& pr_vectorcall Encompass(BBox& bbox, v4_cref<> point)
+	inline v4_cref<> pr_vectorcall Encompass(BBox& bbox, v4_cref<> point)
 	{
-		assert("BBox encompass point must have w = 1" && point.w == 1.0f);
-		assert("'point' must be aligned to 16" && maths::is_aligned(&point));
-
-		#if PR_MATHS_USE_INTRINSICS
-		__m128 const zero = _mm_set_ps1(+0.0f);
-		__m128 const half = _mm_set_ps1(+0.5f);
-		auto init = _mm_cmplt_ps(bbox.m_radius.vec, zero);                          /// init = radius == -1 ? FFFF... : 0000... 
-		auto lwr = _mm_sub_ps(bbox.m_centre.vec, bbox.m_radius.vec);                /// lwr  = centre - radius
-		auto upr = _mm_add_ps(bbox.m_centre.vec, bbox.m_radius.vec);                /// upr  = centre + radius
-		auto init_pt = _mm_and_ps(init, point.vec);                                 /// init_pt = init & point
-		lwr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_min_ps(lwr, point.vec))); /// lwr  = init_pt | (~init & min(lwr, point))
-		upr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_max_ps(upr, point.vec))); /// upr  = init_pt | (~init & max(upr, point))
-		bbox.m_centre.vec = _mm_mul_ps(_mm_add_ps(upr,lwr), half);                  /// center = (upr + lwr) / 2;
-		bbox.m_radius.vec = _mm_mul_ps(_mm_sub_ps(upr,lwr), half);                  /// radius = (upr - lwr) / 2;
-		#else
-		for (int i = 0; i != 3; ++i)
-		{
-			if (bbox.m_radius[i] < 0.0f)
-			{
-				bbox.m_centre[i] = point[i];
-				bbox.m_radius[i] = 0.0f;
-			}
-			else
-			{
-				float signed_dist = point[i] - bbox.m_centre[i];
-				float length      = Abs(signed_dist);
-				if (length > bbox.m_radius[i])
-				{
-					float new_radius = (length + bbox.m_radius[i]) / 2.0f;
-					bbox.m_centre[i] += signed_dist * (new_radius - bbox.m_radius[i]) / length;
-					bbox.m_radius[i] = new_radius;
-				}
-			}
-		}
-		#endif
-		return bbox;
+		// Const version returns lhs, non-const returns rhs!
+		return bbox.encompass(point);
 	}
 	inline BBox pr_vectorcall Encompass(BBox const& bbox, v4_cref<> point)
 	{
-		auto bb = bbox;
-		return Encompass(bb, point);
+		// Const version returns lhs, non-const returns rhs!
+		BBox bb = bbox;
+		bb.encompass(point);
+		return bb;
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BBox& pr_vectorcall Encompass(BBox& lhs, BBox_cref rhs)
+	inline BBox_cref pr_vectorcall Encompass(BBox& lhs, BBox_cref rhs)
 	{
+		// Const version returns lhs, non-const returns rhs!
 		// Don't treat !rhs.valid() as an error, it's the only way to Encompass a empty bbox
-		if (!rhs.valid()) return lhs;
-		Encompass(lhs, rhs.m_centre + rhs.m_radius);
-		Encompass(lhs, rhs.m_centre - rhs.m_radius);
-		return lhs;
+		if (!rhs.valid()) return rhs;
+		lhs.encompass(rhs.m_centre + rhs.m_radius);
+		lhs.encompass(rhs.m_centre - rhs.m_radius);
+		return rhs;
 	}
 	inline BBox pr_vectorcall Encompass(BBox const& lhs, BBox_cref rhs)
 	{
-		auto bb = lhs;
-		return Encompass(bb, rhs);
+		// Const version returns lhs, non-const returns rhs!
+		// Don't treat !rhs.valid() as an error, it's the only way to Encompass a empty bbox
+		BBox bb = lhs;
+		if (!rhs.valid()) return bb;
+		bb.encompass(rhs.m_centre + rhs.m_radius);
+		bb.encompass(rhs.m_centre - rhs.m_radius);
+		return bb;
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BBox& Encompass(BBox& lhs, BSphere const& rhs)
+	inline BSphere_cref Encompass(BBox& lhs, BSphere_cref rhs)
 	{
 		// Don't treat rhs.empty() as an error, it's the only way to Encompass a empty bsphere
-		if (rhs.empty()) return lhs;
+		if (rhs.empty()) return rhs;
 		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
-		Encompass(lhs, rhs.Centre() + radius);
-		Encompass(lhs, rhs.Centre() - radius);
-		return lhs;
+		lhs.encompass(rhs.Centre() + radius);
+		lhs.encompass(rhs.Centre() - radius);
+		return rhs;
+	}
+	inline BBox Encompass(BBox const& lhs, BSphere_cref rhs)
+	{
+		// Don't treat rhs.empty() as an error, it's the only way to Encompass a empty bsphere
+		BBox bb = lhs;
+		if (rhs.empty()) return bb;
+		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
+		bb.encompass(rhs.Centre() + radius);
+		bb.encompass(rhs.Centre() - radius);
+		return bb;
 	}
 
 	// Returns true if 'point' is within the bounding volume

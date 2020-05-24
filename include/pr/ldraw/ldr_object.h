@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -697,7 +697,20 @@ namespace pr::ldr
 		ObjectAttributes attr,              // Object attributes to use with the created object
 		MeshCreationData const& cdata,      // Model creation data
 		Guid const& context_id = GuidZero); // The context id to assign to the object
-		
+
+	// Create an ldr object from a p3d model.
+	LdrObjectPtr CreateP3D(
+		Renderer& rdr,                             // The reader to create models for
+		ObjectAttributes attr,                     // Object attributes to use with the created object
+		std::filesystem::path const& p3d_filepath, // Model filepath
+		Guid const& context_id = GuidZero);        // The context id to assign to the object
+	LdrObjectPtr CreateP3D(
+		Renderer& rdr,                      // The reader to create models for
+		ObjectAttributes attr,              // Object attributes to use with the created object
+		size_t size,                        // The length of the data pointed to by 'p3d_data'
+		void const* p3d_data,               // The p3d data
+		Guid const& context_id = GuidZero); // The context id to assign to the object
+
 	// Create an instance of an existing ldr object.
 	LdrObjectPtr CreateInstance(
 		LdrObject const* existing);         // The existing object whose model the instance will use.

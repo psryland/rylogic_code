@@ -155,7 +155,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Grid nugget
-				nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr);
+				nuggets[0] = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr);
 				new_vcount = num_lines * 2;
 				new_icount = num_lines * 2;
 				new_ncount = 1;

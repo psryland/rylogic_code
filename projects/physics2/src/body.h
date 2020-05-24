@@ -44,6 +44,6 @@ struct Body :physics::RigidBody
 	void UpdateGfx()
 	{
 		if (m_gfx)
-			View3D_ObjectO2WSet(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
+			View3D_ObjectO2WSet(m_gfx, To<View3DM4x4>(m_o2w), nullptr);
 	}
 };

@@ -135,20 +135,21 @@ namespace pr
 		}
 
 		// Grows the range to include 'rhs'
-		template <typename U> Range<T>& encompass(U rhs)
+		template <typename U> U encompass(U rhs)
 		{
 			if (rhs <  m_beg) { m_beg = static_cast<T>(rhs); }
 			if (rhs >= m_end) { m_end = static_cast<T>(rhs + traits::is_integral); }
-			return *this;
+			return rhs;
 		}
 
 		// Grows the range to include 'rhs'
-		template <typename U> Range<T>& encompass(Range<U> rhs)
+		template <typename U> Range<U> encompass(Range<U> rhs)
 		{
-			assert(rhs.size() >= 0 && "rhs range is invalid");
+			// Don't treat !rhs.valid() as an error, it's the only way to Encompass an empty range
+			if (rhs.size() < 0) return rhs;
 			if (rhs.m_beg <  m_beg) { m_beg = rhs.m_beg; }
 			if (rhs.m_end >= m_end) { m_end = rhs.m_end; }
-			return *this;
+			return rhs;
 		}
 
 		// Implicit conversion to a Range<U> if T is convertible to U
@@ -188,25 +189,27 @@ namespace pr
 	}
 
 	// Expand 'range' if necessary to include 'rhs'
-	template <typename T, typename U> inline Range<T>& Encompass(Range<T>& range, U rhs)
+	template <typename T, typename U> inline U Encompass(Range<T>& range, U rhs)
 	{
 		return range.encompass(rhs);
 	}
-	template <typename T, typename U> inline Range<T>  Encompass(Range<T> const& range, U rhs)
+	template <typename T, typename U> inline Range<T> Encompass(Range<T> const& range, U rhs)
 	{
 		Range<T> r = range;
-		return Encompass(r, rhs);
+		r.encompass(rhs);
+		return r;
 	}
 
 	// Expand 'range' to include 'rhs' if necessary
-	template <typename T, typename U> inline Range<T>& Encompass(Range<T>& range, Range<U> const& rhs)
+	template <typename T, typename U> inline Range<U> const& Encompass(Range<T>& range, Range<U> const& rhs)
 	{
 		return range.encompass(rhs);
 	}
-	template <typename T, typename U> inline Range<T>  Encompass(Range<T> const& range, Range<U> const& rhs)
+	template <typename T, typename U> inline Range<T> Encompass(Range<T> const& range, Range<U> const& rhs)
 	{
 		Range<T> r = range;
-		return Encompass(r, rhs);
+		r.encompass(rhs);
+		return r;
 	}
 
 	// Returns the intersection of 'lhs' with 'rhs'

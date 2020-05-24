@@ -56,11 +56,34 @@ struct Main
 			"        Load a model into memory.\n"
 			"        Supported formats: p3d, 3ds, stl (so far)\n"
 			"\n"
-			"    -fo <filepath> [Compress]|[Code]|[Ldr]\n"
+			"    -fo <filepath> [flags] [Code|Ldr]\n"
 			"        Export a p3d format model file.\n"
-			"        Compress - Optional. Compress vertex and index data\n"
+			"        <flags> is any combination of the following separated by ':' characters:\n"
 			"        Code - Optional. Output model as C++ code\n"
 			"        Ldr - Optional. Output model as Ldr script\n"
+			"\n"
+			"        Vertex Formats:\n"
+			"            Verts32Bit - Use 32-bit floats for position data (default). Size/Vert = 12 bytes (float[3])\n"
+			"            Verts16Bit - Use 16-bit floats for position data. Size/Vert = 6 bytes (half_t[3])\n"
+			"\n"
+			"        Normal Formats:\n"
+			"            Norms32Bit - Use 32-bit floats for normal data (default). Size/Norm = 12 bytes (float[3])\n"
+			"            Norms16Bit - Use 16-bit floats for normal data. Size/Norm = 6 bytes (half[3])\n"
+			"            NormsPack32 - Pack each normal into 32bits.  Size/Norm = 4 bytes (uint32_t)\n"
+			"\n"
+			"        Colour Formats:\n"
+			"            Colours32Bit - Use 32-bit AARRGGBB colours (default).  Size/Colour = 4 bytes (uint32_t)\n"
+			"\n"
+			"        UV Formats:\n"
+			"            UVs32Bit - Use 32-bit floats for UV data. Size/UV = 8 bytes (float[2])\n"
+			"            UVs16Bit - Use 16-bit floats for UV data. Size/UV = 4 bytes (half[2])\n"
+			"\n"
+			"        Index Formats:\n"
+			"            IdxSrc - Don't convert indices, use the input stride (default)\n"
+			"            Idx32Bit - Use 32-bit integers for index data. Size/Index = 4 bytes (uint32_t)\n"
+			"            Idx16Bit - Use 16-bit integers for index data. Size/Index = 2 bytes (uint16_t)\n"
+			"            Idx8Bit - Use 8-bit integers for index data. Size/Index = 1 byte (uint8_t)\n"
+			"            IdxNBit - Use variable length integers for index data.\n"
 			"\n"
 			"    -RemoveDegenerates [<Tolerance>:<NormalSmoothingAngle>:<ColourDistance>:<UVDistance>]\n"
 			"        Simplify a model by removing degenerate verticies.\n"
@@ -150,9 +173,14 @@ struct Main
 							ldr::Append(m_str, ldr::Str(*arg++));
 							if (arg != arg_end)
 							{
-								if      (str::EqualI(*arg, "compress")) ldr::Append(m_str, "*Compress");
-								else if (str::EqualI(*arg, "code"    )) ldr::Append(m_str, "*Code");
-								else if (str::EqualI(*arg, "ldr"     )) ldr::Append(m_str, "*Ldr");
+								if (false) {}
+								else if (str::EqualI(*arg, "code")) ldr::Append(m_str, "*Code");
+								else if (str::EqualI(*arg, "ldr" )) ldr::Append(m_str, "*Ldr");
+								else
+								{
+									auto flags = ldr::Section(m_str, "*Flags");
+									ldr::Append(m_str, ldr::Str(*arg++));
+								}
 							}
 							m_ends_with_fileout = true;
 							break;
@@ -340,7 +368,7 @@ struct Main
 	void ExportFile(script::Reader& reader) const
 	{
 		std::string outfile, extn = "p3d";
-		p3d::EFlags p3d_flags = p3d::EFlags::None;
+		p3d::EFlags p3d_flags = p3d::EFlags::Default;
 
 		// Generate an output filepath based on 'infile'
 		if (reader.IsSectionStart())
@@ -369,9 +397,34 @@ struct Main
 						extn = "ldr";
 						continue;
 					}
-					if (str::EqualI(kw, "Compress"))
+					if (str::EqualI(kw, "Flags"))
 					{
-						p3d_flags |= p3d::EFlags::Compress;
+						using namespace pr::geometry::p3d;
+						std::string flagstr;
+						reader.StringS(flagstr);
+
+						// Parse the flags
+						uint32_t flags = s_cast<uint32_t>(p3d::EFlags::Default);
+						str::Split(flagstr, ":", [&](std::string_view str, int i, int j, int)
+						{
+							auto flag = str.substr(i, j - i);
+							if (false) {}
+							else if (str::EqualI(flag, "Verts32Bit"))   flags = SetBits(flags, Flags::Mask << Flags::VertsOfs  , (uint32_t)EVertFormat  ::Verts32Bit   << Flags::VertsOfs);
+							else if (str::EqualI(flag, "Verts16Bit"))   flags = SetBits(flags, Flags::Mask << Flags::VertsOfs  , (uint32_t)EVertFormat  ::Verts16Bit   << Flags::VertsOfs);
+							else if (str::EqualI(flag, "Norms32Bit"))   flags = SetBits(flags, Flags::Mask << Flags::NormsOfs  , (uint32_t)ENormFormat  ::Norms32Bit   << Flags::NormsOfs);
+							else if (str::EqualI(flag, "Norms16Bit"))   flags = SetBits(flags, Flags::Mask << Flags::NormsOfs  , (uint32_t)ENormFormat  ::Norms16Bit   << Flags::NormsOfs);
+							else if (str::EqualI(flag, "NormsPack32"))  flags = SetBits(flags, Flags::Mask << Flags::NormsOfs  , (uint32_t)ENormFormat  ::NormsPack32  << Flags::NormsOfs);
+							else if (str::EqualI(flag, "Colours32Bit")) flags = SetBits(flags, Flags::Mask << Flags::ColoursOfs, (uint32_t)EColourFormat::Colours32Bit << Flags::ColoursOfs);
+							else if (str::EqualI(flag, "UVs32Bit"))     flags = SetBits(flags, Flags::Mask << Flags::UVsOfs    , (uint32_t)EUVFormat    ::UVs32Bit     << Flags::UVsOfs);
+							else if (str::EqualI(flag, "UVs16Bit"))     flags = SetBits(flags, Flags::Mask << Flags::UVsOfs    , (uint32_t)EUVFormat    ::UVs16Bit     << Flags::UVsOfs);
+							else if (str::EqualI(flag, "IdxSrc"))       flags = SetBits(flags, Flags::Mask << Flags::IndexOfs  , (uint32_t)EIndexFormat ::IdxSrc       << Flags::IndexOfs);
+							else if (str::EqualI(flag, "Idx32Bit"))     flags = SetBits(flags, Flags::Mask << Flags::IndexOfs  , (uint32_t)EIndexFormat ::Idx32Bit     << Flags::IndexOfs);
+							else if (str::EqualI(flag, "Idx16Bit"))     flags = SetBits(flags, Flags::Mask << Flags::IndexOfs  , (uint32_t)EIndexFormat ::Idx16Bit     << Flags::IndexOfs);
+							else if (str::EqualI(flag, "Idx8Bit"))      flags = SetBits(flags, Flags::Mask << Flags::IndexOfs  , (uint32_t)EIndexFormat ::Idx8Bit      << Flags::IndexOfs);
+							else if (str::EqualI(flag, "IdxNBit"))      flags = SetBits(flags, Flags::Mask << Flags::IndexOfs  , (uint32_t)EIndexFormat ::IdxNBit      << Flags::IndexOfs);
+							else std::cout << "Unknown output flag '" << flag << "' ignored" << std::endl;
+						});
+						p3d_flags = s_cast<p3d::EFlags>(flags);
 						continue;
 					}
 				}
@@ -411,9 +464,9 @@ struct Main
 			{
 				std::cout
 					<< "  Mesh: " << mesh.m_name.c_str() << "\n"
-					<< "    V Count: " << mesh.m_verts.size() << "\n"
-					<< "    I Count: " << mesh.m_idx.size() / mesh.m_idx.m_stride << "\n"
-					<< "    N Count: " << mesh.m_nugget.size() << "\n";
+					<< "    V Count: " << mesh.vcount() << "\n"
+					<< "    I Count: " << mesh.icount() << "\n"
+					<< "    N Count: " << mesh.ncount() << "\n";
 			}
 		}
 		if (m_verbosity >= 1)
@@ -512,11 +565,14 @@ struct Main
 		for (auto& mesh : m_model->m_scene.m_meshes)
 		{
 			auto bbox = BBoxReset;
-			for (auto& vert : mesh.m_verts)
+			for (auto& pos : mesh.m_vert)
 			{
-				vert.pos = o2w * static_cast<v4>(vert.pos);
-				vert.norm = n2w * static_cast<v4>(vert.norm);
-				Encompass(bbox, vert.pos);
+				pos = o2w * static_cast<v4>(pos);
+				Encompass(bbox, pos);
+			}
+			for (auto& norm : mesh.m_norm)
+			{
+				norm = n2w * static_cast<v4>(norm);
 			}
 			mesh.m_bbox = bbox;
 		}

@@ -136,18 +136,18 @@ namespace pr::rdr
 	}
 
 	// Update the provided shader set appropriate for this render step
-	void ShadowMap::ConfigShaders(ShaderSet1& ss, EPrim topo) const
+	void ShadowMap::ConfigShaders(ShaderSet1& ss, ETopo topo) const
 	{
 		switch (topo)
 		{
-		case EPrim::PointList:
+		case ETopo::PointList:
 			break; // Ignore point lists.. can a point cast a shadow anyway?
-		case EPrim::LineList:
-		case EPrim::LineStrip:
+		case ETopo::LineList:
+		case ETopo::LineStrip:
 			ss.m_gs = m_gs_line.get();
 			break;
-		case EPrim::TriList:
-		case EPrim::TriStrip:
+		case ETopo::TriList:
+		case ETopo::TriStrip:
 			ss.m_gs = m_gs_face.get();
 			break;
 		default:
@@ -460,7 +460,7 @@ namespace pr
 						MdlSettings s(verts, idxs, bbox, "smap quad");
 						m_model = e.m_scene.m_rdr->m_mdl_mgr.CreateModel(s);
 
-						NuggetProps ddata(EPrim::TriList, EGeom::Vert|EGeom::Tex0);
+						NuggetProps ddata(ETopo::TriList, EGeom::Vert|EGeom::Tex0);
 						ddata.m_tex_diffuse = e.m_scene.m_rdr->m_tex_mgr.CreateTexture2D(AutoId, rstep->m_tex, rstep->m_srv, SamplerDesc::PointClamp(), "smap_tex");
 						m_model->CreateNugget(ddata);
 						m_model->m_name = "smap test";

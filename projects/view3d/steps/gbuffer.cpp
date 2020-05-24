@@ -156,7 +156,7 @@ namespace pr::rdr
 	}
 
 	// Update the provided shader set appropriate for this render step
-	void GBuffer::ConfigShaders(ShaderSet1& ss, EPrim) const
+	void GBuffer::ConfigShaders(ShaderSet1& ss, ETopo) const
 	{
 		assert(ss.m_vs == nullptr);
 		assert(ss.m_ps == nullptr);

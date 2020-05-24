@@ -131,32 +131,32 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The buttons to display on this message box</summary>
 		public EButtons Buttons
 		{
-			get { return (EButtons)GetValue(ButtonsProperty); }
-			set { SetValue(ButtonsProperty, value); }
+			get => (EButtons)GetValue(ButtonsProperty);
+			set => SetValue(ButtonsProperty, value);
 		}
 		public static readonly DependencyProperty ButtonsProperty = Gui_.DPRegister<MsgBox>(nameof(Buttons));
 
 		/// <summary>The image to show to the left of the message</summary>
 		public ImageSource? Image
 		{
-			get { return (ImageSource?)GetValue(ImageProperty); }
-			set { SetValue(ImageProperty, value); }
+			get => (ImageSource?)GetValue(ImageProperty);
+			set => SetValue(ImageProperty, value);
 		}
 		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<MsgBox>(nameof(Image));
 
 		/// <summary>The message to display</summary>
 		public string Message
 		{
-			get { return (string)GetValue(MessageProperty); }
-			set { SetValue(MessageProperty, value); }
+			get => (string)GetValue(MessageProperty);
+			set => SetValue(MessageProperty, value);
 		}
 		public static readonly DependencyProperty MessageProperty = Gui_.DPRegister<MsgBox>(nameof(Message));
 
 		/// <summary>True if the always options is selected</summary>
 		public bool Always
 		{
-			get { return (bool)GetValue(AlwaysProperty); }
-			set { SetValue(AlwaysProperty, value); }
+			get => (bool)GetValue(AlwaysProperty);
+			set => SetValue(AlwaysProperty, value);
 		}
 		public static readonly DependencyProperty AlwaysProperty = Gui_.DPRegister<MsgBox>(nameof(Always));
 

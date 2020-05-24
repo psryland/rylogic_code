@@ -20,7 +20,7 @@ std::unique_ptr<p3d::File> CreateFromP3D(std::filesystem::path const& filepath)
 {
 	std::ifstream src(filepath, std::ifstream::binary);
 	auto p3d = p3d::Read(src);
-	return std::make_unique<p3d::File>(std::move(p3d));
+	return std::unique_ptr<p3d::File>(new p3d::File(std::move(p3d)));
 }
 
 // Populates the p3d data structures from a 3ds file
@@ -31,7 +31,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 
 	// Material lookup
 	std::unordered_map<std::string, max_3ds::Material> mats;
-	auto matlookup = [&](std::string const& name) { return mats.at(name); };
+	auto matlookup = [&](std::string_view name) { return mats.at(std::string(name)); };
 
 	// Read the materials from the 3ds file and add them to a map.
 	// We'll only add the materials that are actually used to the p3d scene.
@@ -54,46 +54,42 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 		auto& mesh = p3d.m_scene.m_meshes.back();
 
 		// Reserve space
-		mesh.m_verts.reserve(o.m_mesh.m_vert.size());
+		mesh.m_vert.reserve(o.m_mesh.m_vert.size());
+		mesh.m_diff.reserve(o.m_mesh.m_vert.size());
+		mesh.m_norm.reserve(o.m_mesh.m_vert.size());
+		mesh.m_tex0.reserve(o.m_mesh.m_vert.size());
 		mesh.m_nugget.reserve(o.m_mesh.m_matgroup.size());
-		mesh.m_idx.reserve<uint16_t>(o.m_mesh.m_face.size() * 3);
-		mesh.m_idx.m_stride = sizeof(uint16_t);
 
-		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a BBox)
-		BBox bbox = BBoxReset;
-		auto bb = [&](v4 const& v) { Encompass(bbox, v); return v; };
+		// Bounding box / transform
+		mesh.m_bbox = BBoxReset;
+		mesh.m_o2p = o.m_mesh.m_o2p;
+		auto bb = [&](v4 const& v) { Encompass(mesh.m_bbox, v); return v; };
+
+		p3d::IdxBuf vidx(sizeof(uint16_t));
+		auto mesh_geom = EGeom::Vert;
 
 		// Get the 3ds code to extract the verts/faces/normals/nuggets
-		// We may regenerate the normals later
 		max_3ds::CreateModel(o, matlookup,
-			[&](max_3ds::Material const& mat, EGeom geom, Range<uint16_t> vrange, Range<uint32_t> irange) // nugget out
-			{
-				p3d::Nugget nug = {};
-				nug.m_topo = EPrim::TriList;
-				nug.m_geom = geom;
-				nug.m_vrange = vrange;
-				nug.m_irange = irange;
-				nug.m_mat = mat.m_name;
-				mesh.m_nugget.push_back(nug);
-			},
 			[&](v4 const& p, Colour const& c, v4 const& n, v2 const& t) // vertex out
 			{
-				p3d::Vert vert = {};
-				vert.pos = bb(p);
-				vert.col = c;
-				vert.norm = n;
-				vert.uv = t;
-				mesh.m_verts.push_back(vert);
+				mesh.add_vert({p, c, n, t});
 			},
 			[&](uint16_t i0, uint16_t i1, uint16_t i2) // index out
 			{
-				mesh.m_idx.push_back<uint16_t>(i0);
-				mesh.m_idx.push_back<uint16_t>(i1);
-				mesh.m_idx.push_back<uint16_t>(i2);
-			});
+				vidx.push_back<uint16_t>(i0);
+				vidx.push_back<uint16_t>(i1);
+				vidx.push_back<uint16_t>(i2);
+			},
+			[&](ETopo topo, EGeom geom, max_3ds::Material const& mat, Range<size_t>, Range<size_t>) // nugget out
+			{
+				mesh_geom |= geom;
+				
+				p3d::Nugget nug(topo, geom, mat.m_name);
+				nug.m_vidx = std::move(vidx);
+				mesh.m_nugget.emplace_back(std::move(nug));
 
-		mesh.m_bbox = bbox;
-		mesh.m_o2p = o.m_mesh.m_o2p;
+				vidx = p3d::IdxBuf{sizeof(uint16_t)};
+			});
 
 		// Add the used materials to the p3d scene
 		for (auto& nug : mesh.m_nugget)
@@ -110,7 +106,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 			for (auto& tex : mat_3ds.m_textures)
 			{
 				// todo: translate 3ds tiling flags to p3d
-				mat.m_tex_diffuse.emplace_back(tex.m_filepath, 0);
+				mat.m_textures.emplace_back(tex.m_filepath, 0);
 			}
 		}
 
@@ -132,58 +128,50 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 		// Add a mesh to the scene
 		p3d.m_scene.m_meshes.emplace_back(o.m_header);
 		auto& mesh = p3d.m_scene.m_meshes.back();
+		auto vcount = int(o.m_verts.size());
 
-		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a BBox)
-		BBox bbox = BBoxReset;
-		auto bb = [&](v4 const& v) { Encompass(bbox, v); return v; };
+		// Bounding box
+		mesh.m_bbox = BBoxReset;
+		auto bb = [&](v4 const& v) { Encompass(mesh.m_bbox, v); return v; };
 
 		// Copy the verts
-		mesh.m_verts.reserve(o.m_verts.size());
-		for (int i = 0, iend = int(o.m_verts.size()); i != iend; ++i)
+		mesh.m_vert.reserve(vcount);
+		mesh.m_norm.reserve(vcount);
+		for (int i = 0; i != vcount; ++i)
 		{
-			p3d::Vert vert = {};
-			vert.pos = bb(o.m_verts[i]);
-			vert.col = Colour32White;
-			vert.norm = o.m_norms[i / 3];
-			vert.uv = v2Zero;
-			mesh.m_verts.push_back(vert);
+			mesh.m_vert.push_back(bb(o.m_verts[i]));
+			mesh.m_norm.push_back(o.m_norms[i / 3]);
 		}
-		mesh.m_bbox = bbox;
+
+		// Generate a single nugget
+		p3d::Nugget nug = {};
+		nug.m_topo = ETopo::TriList;
+		nug.m_geom = EGeom::Vert | EGeom::Norm;
+		nug.m_mat = "default";
 
 		// Generate the indices
-		auto vcount = int(o.m_verts.size());
 		if (vcount < 0x10000)
 		{
 			// Use 16bit indices
-			mesh.m_idx.resize<uint16_t>(vcount);
-			mesh.m_idx.m_stride = sizeof(uint16_t);
-			auto ibuf = mesh.m_idx.data<uint16_t>();
+			nug.m_vidx.resize<uint16_t>(vcount);
+			nug.m_vidx.m_stride = sizeof(uint16_t);
+			auto ibuf = nug.m_vidx.data<uint16_t>();
 			for (uint16_t i = 0; vcount-- != 0;)
 				*ibuf++ = i++;
 		}
 		else
 		{
 			// Use 32bit indices
-			mesh.m_idx.resize<uint32_t>(vcount);
-			mesh.m_idx.m_stride = sizeof(uint32_t);
-			auto ibuf = mesh.m_idx.data<uint32_t>();
+			nug.m_vidx.resize<uint32_t>(vcount);
+			nug.m_vidx.m_stride = sizeof(uint32_t);
+			auto ibuf = nug.m_vidx.data<uint32_t>();
 			for (uint32_t i = 0; vcount-- != 0;)
 				*ibuf++ = i++;
 		}
-
-		// Generate a nugget
-		p3d::Nugget nug = {};
-		nug.m_topo = EPrim::TriList;
-		nug.m_geom = EGeom::Vert | EGeom::Norm;
-		nug.m_vrange = Range<size_t>(0, mesh.m_verts.size());
-		nug.m_irange = Range<size_t>(0, mesh.m_verts.size());
-		nug.m_mat = "default";
-		mesh.m_nugget.push_back(nug);
+		mesh.m_nugget.emplace_back(std::move(nug));
 
 		// Generate a material
-		p3d::Material mat = {};
-		mat.m_id = "default";
-		mat.m_diffuse = Colour32White;
+		p3d::Material mat("default", Colour32White);
 		p3d.m_scene.m_materials.push_back(mat);
 	});
 	return std::make_unique<p3d::File>(std::move(p3d));

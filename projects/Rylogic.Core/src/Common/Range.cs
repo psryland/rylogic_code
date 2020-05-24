@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // Range
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************
@@ -15,12 +15,10 @@ using Rylogic.Utility;
 
 namespace Rylogic.Common
 {
-	// Note about invariants:
-	// It is valid for a range to be inside out (i.e. as the initial state when
-	// finding a bounding range). However some methods assume that this range has
-	// a count >= 0. These functions should contain appropriate asserts.
-
-	// Note, there is no Range<T> because T cannot be constrained to value types with simple maths operators :-/
+	// Notes:
+	//  - It is valid for a range to be inside out (i.e. as the initial state when
+	//    finding a bounding range). However some methods assume that this range has
+	//    a count >= 0. These functions should contain appropriate asserts.
 
 	/// <summary>A range over [Begin,End)</summary>
 	[DebuggerDisplay("{Beg} {End} ({Size})")]
@@ -33,13 +31,13 @@ namespace Rylogic.Common
 		public long End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeI Zero = new RangeI{Beg = 0, End = 0};
+		public static readonly RangeI Zero = new RangeI { Beg = 0, End = 0 };
 
 		/// <summary>The default full range</summary>
 		public static readonly RangeI Max = new RangeI { Beg = long.MinValue, End = long.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeI Invalid = new RangeI{Beg = long.MaxValue, End = long.MinValue};
+		public static readonly RangeI Invalid = new RangeI { Beg = long.MaxValue, End = long.MinValue };
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static RangeI FromStartLength(long start, long length)
@@ -194,7 +192,7 @@ namespace Rylogic.Common
 		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
 		public RangeI Scale(float scale)
 		{
-			return new RangeI(Beg, (long)(Beg + Size*scale)){Mid = Mid};
+			return new RangeI(Beg, (long)(Beg + Size * scale)) { Mid = Mid };
 		}
 
 		/// <summary>
@@ -250,11 +248,11 @@ namespace Rylogic.Common
 		}
 
 		#region Equals
-		public static bool operator == (RangeI lhs, RangeI rhs)
+		public static bool operator ==(RangeI lhs, RangeI rhs)
 		{
 			return lhs.Equals(rhs);
 		}
-		public static bool operator != (RangeI lhs, RangeI rhs)
+		public static bool operator !=(RangeI lhs, RangeI rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -268,7 +266,7 @@ namespace Rylogic.Common
 		}
 		public override int GetHashCode()
 		{
-			unchecked { return (Beg.GetHashCode()*397) ^ End.GetHashCode(); }
+			return new { Beg, End }.GetHashCode();
 		}
 		#endregion
 
@@ -291,7 +289,7 @@ namespace Rylogic.Common
 		/// <summary>Convert a string to a range. Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
 		public static RangeI Parse(string s)
 		{
-			var v = long_.ParseArray(s, NumberStyles.Integer, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+			var v = long_.ParseArray(s, NumberStyles.Integer, new[] { " ", "\t", ",", ";", ":", "[", "]", "(", ")" }, StringSplitOptions.RemoveEmptyEntries);
 			if (v.Length != 2) throw new FormatException("Range.Parse() string argument does not represent a 2 component range");
 			return new RangeI(v[0], v[1]);
 		}
@@ -310,13 +308,13 @@ namespace Rylogic.Common
 		public double End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF Zero = new RangeF{Beg = 0.0, End = 0.0};
+		public static readonly RangeF Zero = new RangeF { Beg = 0.0, End = 0.0 };
 
 		/// <summary>The default full range</summary>
 		public static readonly RangeF Max = new RangeF { Beg = double.MinValue, End = double.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeF Invalid = new RangeF{Beg = double.MaxValue, End = double.MinValue};
+		public static readonly RangeF Invalid = new RangeF { Beg = double.MaxValue, End = double.MinValue };
 
 		/// <summary>Create a range from a Start and Length</summary>
 		public static RangeF FromStartLength(double start, double length)
@@ -364,25 +362,22 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>True if Beg == End</summary>
-		public bool Empty
-		{
-			get { return Equals(Beg,End); }
-		}
+		public bool Empty => Equals(Beg, End);
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public double Size
 		{
-			get { return End - Beg; }
-			set { End = Beg + value; }
+			get => End - Beg;
+			set => End = Beg + value;
 		}
 
 		/// <summary>Get/Set the middle of the range. Setting the middle point does not change 'Size', i.e. 'Begin' and 'End' are both potentially moved</summary>
 		public double Mid
 		{
-			get { return (Beg + End) * 0.5; }
+			get => (Beg + End) * 0.5;
 			set
 			{
-				var hsize = Size*0.5;
+				var hsize = Size * 0.5;
 				Beg = value - hsize;
 				End = value + hsize;
 			}
@@ -395,16 +390,16 @@ namespace Rylogic.Common
 		}
 
 		// Casting helpers
-		public float Begf  { get { return (float)Beg;  } }
-		public float Endf  { get { return (float)End;  } }
-		public float Sizef { get { return (float)Size; } }
-		public float Midf  { get { return (float)Mid;  } }
+		public float Begf => (float)Beg;
+		public float Endf => (float)End;
+		public float Sizef => (float)Size;
+		public float Midf => (float)Mid;
 
 		/// <summary>Enumerator for iterating over the range. 'step' is the step size, 'count' is the number of divisions. Use one or the other, not both. Defaults to step == 1.0</summary>
 		public IEnumerable<double> Enumerate(double? step = null, double? count = null)
 		{
 			var d = 1.0;
-			if (step  != null) d = step.Value;
+			if (step != null) d = step.Value;
 			if (count != null) d = Size / count.Value;
 			for (var i = Beg; i <= End; i += d)
 				yield return i;
@@ -461,7 +456,7 @@ namespace Rylogic.Common
 		/// <summary>Returns a range inflated (i.e. multiplied) by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
 		public RangeF Inflate(double scale)
 		{
-			return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
+			return new RangeF(Beg, Beg + Size * scale) { Mid = Mid };
 		}
 
 		/// <summary>
@@ -505,16 +500,13 @@ namespace Rylogic.Common
 		public static RangeF Constrain(RangeF x, RangeF range)
 		{
 			if (x.Beg < range.Beg) x = x.Shift(range.Beg - x.Beg);
-			if (x.End   > range.End  ) x = x.Shift(range.End - x.End);
+			if (x.End > range.End) x = x.Shift(range.End - x.End);
 			if (x.Beg < range.Beg) x.Beg = range.Beg;
 			return x;
 		}
 
 		/// <summary>String representation of the range</summary>
-		public override string ToString()
-		{
-			return $"[{Beg},{End})";
-		}
+		public override string ToString() => $"[{Beg},{End})";
 
 		/// <summary>Allow implicit cast from 'Range'</summary>
 		public static implicit operator RangeF(RangeI r)
@@ -529,11 +521,11 @@ namespace Rylogic.Common
 		}
 
 		#region Equals
-		public static bool operator == (RangeF lhs, RangeF rhs)
+		public static bool operator ==(RangeF lhs, RangeF rhs)
 		{
 			return lhs.Equals(rhs);
 		}
-		public static bool operator != (RangeF lhs, RangeF rhs)
+		public static bool operator !=(RangeF lhs, RangeF rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -545,7 +537,7 @@ namespace Rylogic.Common
 		}
 		public bool Equals(RangeF other)
 		{
-			return Equals(Beg,other.Beg) && Equals(End,other.End);
+			return Equals(Beg, other.Beg) && Equals(End, other.End);
 		}
 		public override int GetHashCode()
 		{
@@ -560,7 +552,7 @@ namespace Rylogic.Common
 		/// Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
 		public static RangeF Parse(string s)
 		{
-			var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+			var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ", "\t", ",", ";", ":", "[", "]", "(", ")" }, StringSplitOptions.RemoveEmptyEntries);
 			if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
 			return new RangeF(v[0], v[1]);
 		}
@@ -579,13 +571,13 @@ namespace Rylogic.Common
 		public T End;
 
 		/// <summary>The default empty range</summary>
-		public static readonly RangeF<T> Zero = new RangeF<T>{Beg = default, End = default};
+		public static readonly RangeF<T> Zero = new RangeF<T> { Beg = default, End = default };
 
 		/// <summary>The default full range</summary>
 		public static readonly RangeF<T> Max = new RangeF<T> { Beg = Operators<T>.MinValue, End = Operators<T>.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
-		public static readonly RangeF<T> Invalid = new RangeF<T>{Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue};
+		public static readonly RangeF<T> Invalid = new RangeF<T> { Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue };
 		public static RangeF<T> Reset { get { return Invalid; } }
 
 		/// <summary>Create a range from a Start and Length</summary>
@@ -681,7 +673,7 @@ namespace Rylogic.Common
 			// Otherwise 0.
 			return
 				End.CompareTo(value) <= 0 ? -1 :
-				Beg.CompareTo(value) >  0 ? +1 : 0;
+				Beg.CompareTo(value) > 0 ? +1 : 0;
 		}
 
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
@@ -700,10 +692,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Returns a range inflated (i.e. multiplied) by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
-	//	public RangeF<T> Inflate(double scale)
-	//	{
-	//		return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
-	//	}
+		//	public RangeF<T> Inflate(double scale)
+		//	{
+		//		return new RangeF(Beg, Beg + Size*scale){Mid = Mid};
+		//	}
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
@@ -752,29 +744,26 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>String representation of the range</summary>
-		public override string ToString()
-		{
-			return $"[{Beg},{End})";
-		}
+		public override string ToString() => $"[{Beg},{End})";
 
-	//	/// <summary>Allow implicit cast from 'Range'</summary>
-	//	public static implicit operator RangeF<T>(Range<T> r)
-	//	{
-	//		return new RangeF<T>(r.Beg, r.End);
-	//	}
+		//	/// <summary>Allow implicit cast from 'Range'</summary>
+		//	public static implicit operator RangeF<T>(Range<T> r)
+		//	{
+		//		return new RangeF<T>(r.Beg, r.End);
+		//	}
 
-	//	/// <summary>Allow explicit cast to 'Range<U>'</summary>
-	//	public static explicit operator Range<U>(RangeF<T> r)
-	//	{
-	//		return new Range<T>((U)r.Beg, (U)r.End);
-	//	}
+		//	/// <summary>Allow explicit cast to 'Range<U>'</summary>
+		//	public static explicit operator Range<U>(RangeF<T> r)
+		//	{
+		//		return new Range<T>((U)r.Beg, (U)r.End);
+		//	}
 
 		#region Equals
-		public static bool operator == (RangeF<T> lhs, RangeF<T> rhs)
+		public static bool operator ==(RangeF<T> lhs, RangeF<T> rhs)
 		{
 			return lhs.Equals(rhs);
 		}
-		public static bool operator != (RangeF<T> lhs, RangeF<T> rhs)
+		public static bool operator !=(RangeF<T> lhs, RangeF<T> rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -798,12 +787,12 @@ namespace Rylogic.Common
 		/// <summary>
 		/// Convert a string to a range
 		/// Examples: '1 2' '[1:2)' '-1,+1' '[-1,+1]' </summary>
-	//	public static RangeF<T> Parse(string s)
-	//	{
-	//		var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
-	//		if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
-	//		return new RangeF<T>(v[0], v[1]);
-	//	}
+		//	public static RangeF<T> Parse(string s)
+		//	{
+		//		var v = double_.ParseArray(s, NumberStyles.Float, new[] { " ","\t",",",";",":","[","]","(",")" }, StringSplitOptions.RemoveEmptyEntries);
+		//		if (v.Length != 2) throw new FormatException("RangeF.Parse() string argument does not represent a 2 component range");
+		//		return new RangeF<T>(v[0], v[1]);
+		//	}
 
 		#endregion
 	}

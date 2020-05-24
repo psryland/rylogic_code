@@ -292,13 +292,13 @@ namespace CoinFlip.UI.GfxObjects
 			// Nett value outline
 			uint v0 = 0, v1 = (uint)data_count;
 			uint i0 = 0, i1 = (uint)data_count;
-			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, mat: line_material);
+			m_nbuf[0] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, mat: line_material);
 
 			// Nett value filled region
 			v0 = v1; v1 += (uint)data_count * 2;
 			i0 = i1; i1 += (uint)data_count * 2;
 			var has_alpha = SettingsData.Settings.Equity.NettWorthColour.A != 0xFF;
-			m_nbuf[1] = new View3d.Nugget(View3d.EPrim.TriStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: has_alpha, range_overlaps:true);
+			m_nbuf[1] = new View3d.Nugget(View3d.ETopo.TriStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: has_alpha, range_overlaps:true);
 
 			// Per-coin values
 			for (int i = 0; i != num; ++i)
@@ -306,7 +306,7 @@ namespace CoinFlip.UI.GfxObjects
 				// Line strip
 				v0 = v1; v1 += (uint)data_count;
 				i0 = i1; i1 += (uint)data_count;
-				m_nbuf[2 + i] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, mat:line_material);
+				m_nbuf[2 + i] = new View3d.Nugget(View3d.ETopo.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, mat:line_material);
 			}
 
 			// Create the graphics

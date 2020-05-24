@@ -39,21 +39,7 @@ namespace pr::audio
 		DWORD data_chunk_size; // numSamples * numChannels * bitsPerSample/8 (this is the actual data size in bytes)
 		// data follows
 
-		WaveHeader()
-			:file_chunk_id()
-			,file_size()
-			,file_data_format()
-			,fmt_chunk_id()
-			,fmt_chunk_size()
-			,audioFormat()
-			,numChannels()
-			,sampleRate()
-			,byteRate()
-			,blockAlign()
-			,bitsPerSample()
-			,data_chunk_id()
-			,data_chunk_size()
-		{}
+		WaveHeader() = default;
 		WaveHeader(int sample_count, ESampleRate sample_rate, int channels, int bits_per_sample)
 		{
 			// File type chunk

@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -98,7 +98,7 @@ extern "C"
 		Tex0    = 1 << 3, // Diffuse texture
 		_bitwise_operators_allowed,
 	};
-	enum class EView3DPrim :int
+	enum class EView3DTopo :int
 	{
 		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
 		PointList    = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
@@ -433,7 +433,7 @@ extern "C"
 	};
 	struct View3DNugget
 	{
-		EView3DPrim     m_topo;
+		EView3DTopo     m_topo;
 		EView3DGeom     m_geom;
 		EView3DCullMode m_cull_mode;
 		EView3DFillMode m_fill_mode;
@@ -707,6 +707,8 @@ extern "C"
 	// Objects
 	VIEW3D_API GUID              __stdcall View3D_ObjectContextIdGet       (View3DObject object);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateP3DFile      (char const* name, View3DColour colour, wchar_t const* p3d_filepath, GUID const* context_id);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateP3DStream    (char const* name, View3DColour colour, size_t size, void const* p3d_data, GUID const* context_id);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
 	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateInstance     (View3DObject object);
@@ -861,18 +863,6 @@ extern "C"
 #ifdef __cplusplus
 namespace view3d
 {
-	// View3D to custom type conversion.
-	// Specialise this to convert to/from View3D types to a custom type
-	// Include "pr/view3d/pr_conv.h" if using pr types
-	template <typename TTo, typename TFrom> struct Convert
-	{
-		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
-	};
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
-	{
-		return Convert<TTo,TFrom>::To(from);
-	}
-
 	struct Vertex :View3DVertex
 	{
 		void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) noexcept

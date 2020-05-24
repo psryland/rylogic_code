@@ -51,7 +51,7 @@ namespace pr
 			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
 
 			// Update the provided shader set appropriate for this render step
-			void ConfigShaders(ShaderSet1& ss, EPrim topo) const override;
+			void ConfigShaders(ShaderSet1& ss, ETopo topo) const override;
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

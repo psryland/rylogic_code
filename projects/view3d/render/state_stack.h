@@ -17,7 +17,7 @@ namespace pr::rdr
 		ShadowMap const* m_rstep_smap;
 		DrawListElement const* m_dle;
 		ModelBuffer* m_mb;
-		EPrim m_topo;
+		ETopo m_topo;
 		DSBlock m_dsb;
 		RSBlock m_rsb;
 		BSBlock m_bsb;
@@ -30,7 +30,7 @@ namespace pr::rdr
 			,m_rstep_smap()
 			,m_dle()
 			,m_mb()
-			,m_topo(EPrim::PointList)
+			,m_topo(ETopo::PointList)
 			,m_dsb()
 			,m_rsb()
 			,m_bsb()

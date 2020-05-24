@@ -129,12 +129,14 @@ struct Chunk
 	FSeek(fpos + length);
 };
 
-struct CStrChunk
+struct StrChunk
 {
 	local int64 fpos = FTell();
 	EChunkId id;
 	u32 length;
-	char str[length - 8];
+    u32 count;
+	if (count != 0)
+        char str[count];
 	FSeek(fpos + length);
 };
 
@@ -277,14 +279,15 @@ struct IndexChunk
 	u32 count;
 	EIndexFormat format;
 	u16 stride;
-
-	if (format == Idx32Bit)
-		u32 idx[count];
-	if (format == Idx16Bit)
-		u16 idx[count];
-	if (format == IdxNBit)
-		u8 idx_compressed[length - 20];
-
+    if (count != 0)
+	{
+        if (format == Idx32Bit)
+		    u32 idx[count];
+	    if (format == Idx16Bit)
+		    u16 idx[count];
+	    if (format == IdxNBit)
+		    u8 idx_compressed[length - 16];
+    }
 	FSeek(fpos + length);
 };
 
@@ -388,11 +391,11 @@ void SubChunks(uint end)
 		case Material       : MaterialChunk material; break;
 		case DiffuseColour  : Col4Chunk diffuse; break;
 		case DiffuseTexture : Chunk texture; break;
-		case TexFilepath    : CStrChunk filepath; break;
+		case TexFilepath    : StrChunk filepath; break;
 		case TexTiling      : U32Chunk tiling; break;
 		case Meshes         : Chunk meshes; break;
 		case Mesh           : Chunk mesh; break;
-		case MeshName       : CStrChunk name; break;
+		case MeshName       : StrChunk name; break;
 		case MeshBBox       : BBoxChunk bbox; break;
 		case MeshTransform  : M4x4Chunk o2w; break;
 		case MeshVerts      : VertsChunk vert; break;
@@ -400,7 +403,7 @@ void SubChunks(uint end)
 		case MeshNorms      : NormsChunk norm; break;
 		case MeshUVs        : UVsChunk tex0; break;
 		case MeshNugget     : NuggetChunk nugget; break;
-		case MeshMatId      : CStrChunk material_id; break;
+		case MeshMatId      : StrChunk material_id; break;
 		case MeshVIdx       : IndexChunk vidx; break;
 
 		// DEPRECATED *********

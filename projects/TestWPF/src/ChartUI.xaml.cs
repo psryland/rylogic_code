@@ -60,7 +60,7 @@ namespace TestWPF
 				},
 				new View3d.Nugget[]
 				{
-					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr),
+					new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr),
 				},
 				null);
 

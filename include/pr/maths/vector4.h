@@ -34,29 +34,21 @@ namespace pr
 
 		// Construct
 		Vec4() = default;
-		Vec4(float x_, float y_, float z_, float w_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps(w_,z_,y_,x_))
-		#else
+		constexpr Vec4(float x_, float y_, float z_, float w_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 			,w(w_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		explicit Vec4(float x_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps1(x_))
-		#else
+		explicit constexpr Vec4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
 			,w(x_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
 		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Vec4(V4 const& v)
 			:Vec4(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))

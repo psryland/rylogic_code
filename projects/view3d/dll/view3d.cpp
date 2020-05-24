@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -7,7 +7,6 @@
 #include "view3d/dll/context.h"
 #include "view3d/dll/window.h"
 #include "pr/view3d/dll/view3d.h"
-#include "pr/view3d/dll/pr_conv.h"
 
 using namespace pr;
 using namespace pr::rdr;
@@ -566,9 +565,9 @@ VIEW3D_API View3DBBox __stdcall View3D_WindowSceneBounds(View3DWindow window, EV
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
+		return To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
 	}
-	CatchAndReport(View3D_WindowSceneBounds, window, view3d::To<View3DBBox>(pr::BBoxUnit));
+	CatchAndReport(View3D_WindowSceneBounds, window, To<View3DBBox>(BBoxUnit));
 }
 
 // Get/Set the animation time
@@ -683,7 +682,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldGet(View3DWindow window, View3DM4x
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		c2w = view3d::To<View3DM4x4>(window->m_camera.m_c2w);
+		c2w = To<View3DM4x4>(window->m_camera.m_c2w);
 	}
 	CatchAndReport(View3D_CameraToWorldGet, window,);
 }
@@ -696,7 +695,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldSet(View3DWindow window, View3DM4x
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.m_c2w = view3d::To<pr::m4x4>(c2w);
+		window->m_camera.m_c2w = To<m4x4>(c2w);
 	}
 	CatchAndReport(View3D_CameraToWorldSet, window,);
 }
@@ -709,7 +708,7 @@ VIEW3D_API void __stdcall View3D_CameraPositionSet(View3DWindow window, View3DV4
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
+		window->m_camera.LookAt(To<v4>(position), To<v4>(lookat), To<v4>(up), true);
 	}
 	CatchAndReport(View3D_CameraPositionSet, window,);
 }
@@ -785,7 +784,7 @@ VIEW3D_API void __stdcall View3D_CameraFocusPointGet(View3DWindow window, View3D
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		position = view3d::To<View3DV4>(window->m_camera.FocusPoint());
+		position = To<View3DV4>(window->m_camera.FocusPoint());
 	}
 	CatchAndReport(View3D_CameraFocusPointGet, window,);
 }
@@ -796,7 +795,7 @@ VIEW3D_API void __stdcall View3D_CameraFocusPointSet(View3DWindow window, View3D
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
+		window->m_camera.FocusPoint(To<v4>(position));
 		window->NotifySettingsChanged(EView3DSettings::Camera_FocusDist);
 	}
 	CatchAndReport(View3D_CameraFocusPointSet, window,);
@@ -979,9 +978,9 @@ VIEW3D_API View3DV4 __stdcall View3D_CameraAlignAxisGet(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.m_align);
+		return To<View3DV4>(window->m_camera.m_align);
 	}
-	CatchAndReport(View3D_CameraAlignAxisGet, window, view3d::To<View3DV4>(pr::v4Zero));
+	CatchAndReport(View3D_CameraAlignAxisGet, window, To<View3DV4>(v4Zero));
 }
 VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV4 axis)
 {
@@ -990,7 +989,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_camera.Align(view3d::To<pr::v4>(axis));
+		window->m_camera.Align(To<v4>(axis));
 		window->NotifySettingsChanged(EView3DSettings::Camera_AlignAxis);
 	}
 	CatchAndReport(View3D_CameraAlignAxisSet, window,);
@@ -1040,7 +1039,7 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward
 	{
 		if (!window) throw std::runtime_error("window is null");
 		DllLockGuard;
-		window->ResetView(view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
+		window->ResetView(To<v4>(forward), To<v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
 	CatchAndReport(View3D_ResetView, window,);
 }
@@ -1052,7 +1051,7 @@ VIEW3D_API void __stdcall View3D_ResetViewBBox(View3DWindow window, View3DBBox b
 	{
 		if (!window) throw std::runtime_error("window is null");
 		DllLockGuard;
-		window->ResetView(view3d::To<pr::BBox>(bbox), view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
+		window->ResetView(To<BBox>(bbox), To<v4>(forward), To<v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
 	CatchAndReport(View3D_ResetViewBBox, window,);
 }
@@ -1065,9 +1064,9 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV2>(window->m_camera.ViewArea(dist));
+		return To<View3DV2>(window->m_camera.ViewArea(dist));
 	}
-	CatchAndReport(View3D_ViewArea, window, view3d::To<View3DV2>(pr::v2Zero));
+	CatchAndReport(View3D_ViewArea, window, To<View3DV2>(v2Zero));
 }
 
 // General mouse navigation
@@ -1085,7 +1084,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		auto ss_point = view3d::To<pr::v2>(ss_pos);
+		auto ss_point = To<v2>(ss_pos);
 		auto nss_point = window->SSPointToNSSPoint(ss_point);
 		auto op = static_cast<pr::camera::ENavOp>(nav_op);
 
@@ -1124,7 +1123,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		auto ss_point = view3d::To<pr::v2>(ss_pos);
+		auto ss_point = To<v2>(ss_pos);
 		auto nss_point = window->SSPointToNSSPoint(ss_point);
 
 		auto refresh = false;
@@ -1173,7 +1172,7 @@ VIEW3D_API View3DV2 __stdcall View3D_SSPointToNSSPoint(View3DWindow window, View
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV2>(window->SSPointToNSSPoint(view3d::To<pr::v2>(screen)));
+		return To<View3DV2>(window->SSPointToNSSPoint(To<v2>(screen)));
 	}
 	CatchAndReport(View3D_NSSPointToWSPoint, window, View3DV2());
 }
@@ -1188,7 +1187,7 @@ VIEW3D_API View3DV4 __stdcall View3D_NSSPointToWSPoint(View3DWindow window, View
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.NSSPointToWSPoint(view3d::To<pr::v4>(screen)));
+		return To<View3DV4>(window->m_camera.NSSPointToWSPoint(To<v4>(screen)));
 	}
 	CatchAndReport(View3D_NSSPointToWSPoint, window, View3DV4());
 }
@@ -1202,9 +1201,9 @@ VIEW3D_API View3DV4 __stdcall View3D_WSPointToNSSPoint(View3DWindow window, View
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.WSPointToNSSPoint(view3d::To<pr::v4>(world)));
+		return To<View3DV4>(window->m_camera.WSPointToNSSPoint(To<v4>(world)));
 	}
-	CatchAndReport(View3D_WSPointToNSSPoint, window, view3d::To<View3DV4>(pr::v4Zero));
+	CatchAndReport(View3D_WSPointToNSSPoint, window, To<View3DV4>(v4Zero));
 }
 
 // Return a point and direction in world space corresponding to a normalised screen space point.
@@ -1217,10 +1216,10 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 s
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		pr::v4 pt,dir;
-		window->m_camera.NSSPointToWSRay(view3d::To<pr::v4>(screen), pt, dir);
-		ws_point = view3d::To<View3DV4>(pt);
-		ws_direction = view3d::To<View3DV4>(dir);
+		v4 pt,dir;
+		window->m_camera.NSSPointToWSRay(To<v4>(screen), pt, dir);
+		ws_point = To<View3DV4>(pt);
+		ws_direction = To<View3DV4>(dir);
 	}
 	CatchAndReport(View3D_NSSPointToWSRay, window,);
 }
@@ -1241,8 +1240,8 @@ VIEW3D_API BOOL __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DL
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		light.m_position       = view3d::To<View3DV4>(window->m_light.m_position);
-		light.m_direction      = view3d::To<View3DV4>(window->m_light.m_direction);
+		light.m_position       = To<View3DV4>(window->m_light.m_position);
+		light.m_direction      = To<View3DV4>(window->m_light.m_direction);
 		light.m_type           = static_cast<EView3DLight>(window->m_light.m_type);
 		light.m_ambient        = window->m_light.m_ambient;
 		light.m_diffuse        = window->m_light.m_diffuse;
@@ -1268,8 +1267,8 @@ VIEW3D_API void __stdcall View3D_LightPropertiesSet(View3DWindow window, View3DL
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_light.m_position       = view3d::To<pr::v4>(light.m_position);
-		window->m_light.m_direction      = view3d::To<pr::v4>(light.m_direction);
+		window->m_light.m_position       = To<v4>(light.m_position);
+		window->m_light.m_direction      = To<v4>(light.m_direction);
 		window->m_light.m_type           = pr::Enum<pr::rdr::ELight>::From(light.m_type);
 		window->m_light.m_ambient        = light.m_ambient;
 		window->m_light.m_diffuse        = light.m_diffuse;
@@ -1294,8 +1293,8 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_light.m_position = view3d::To<pr::v4>(position);
-		window->m_light.m_direction = view3d::To<pr::v4>(direction);
+		window->m_light.m_position = To<v4>(position);
+		window->m_light.m_direction = To<v4>(direction);
 		window->m_light.m_cam_relative = camera_relative != 0;
 	}
 	CatchAndReport(View3D_LightSource, window,);
@@ -1367,6 +1366,28 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(wchar_t const* ldr_scri
 		return Dll().ObjectCreateLdr(ldr_script, is_file, enc, context_id, GetIncludes(includes));
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
+}
+
+// Load a p3d model file as a view3d object
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateP3DFile(char const* name, View3DColour colour, wchar_t const* p3d_filepath, GUID const* context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreateP3D(name, colour, p3d_filepath, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreateP3D, , nullptr);
+}
+
+// Load a p3d model in memory as a view3d object
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateP3DStream(char const* name, View3DColour colour, size_t size, void const* p3d_data, GUID const* context_id)
+{
+	try
+	{
+		DllLockGuard;
+		return Dll().ObjectCreateP3D(name, colour, size, p3d_data, context_id);
+	}
+	CatchAndReport(View3D_ObjectCreateP3D, , nullptr);
 }
 
 // Create an object from provided buffers
@@ -1595,9 +1616,9 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2WGet(View3DObject object, char co
 		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
-		return view3d::To<View3DM4x4>(object->O2W(name));
+		return To<View3DM4x4>(object->O2W(name));
 	}
-	CatchAndReport(View3D_ObjectGetO2W, , view3d::To<View3DM4x4>(pr::m4x4Identity));
+	CatchAndReport(View3D_ObjectGetO2W, , To<View3DM4x4>(m4x4Identity));
 }
 VIEW3D_API void __stdcall View3D_ObjectO2WSet(View3DObject object, View3DM4x4 const& o2w, char const* name)
 {
@@ -1607,7 +1628,7 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(View3DObject object, View3DM4x4 co
 		if (!pr::FEql(o2w.w.w,1.0f)) throw std::runtime_error("invalid object to world transform");
 
 		DllLockGuard;
-		object->O2W(view3d::To<pr::m4x4>(o2w), name);
+		object->O2W(To<m4x4>(o2w), name);
 	}
 	CatchAndReport(View3D_ObjectSetO2W, ,);
 }
@@ -1622,9 +1643,9 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2PGet(View3DObject object, char co
 		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
-		return view3d::To<View3DM4x4>(object->O2P(name));
+		return To<View3DM4x4>(object->O2P(name));
 	}
-	CatchAndReport(View3D_ObjectGetO2P, , view3d::To<View3DM4x4>(pr::m4x4Identity));
+	CatchAndReport(View3D_ObjectGetO2P, , To<View3DM4x4>(m4x4Identity));
 }
 VIEW3D_API void __stdcall View3D_ObjectO2PSet(View3DObject object, View3DM4x4 const& o2p, char const* name)
 {
@@ -1634,7 +1655,7 @@ VIEW3D_API void __stdcall View3D_ObjectO2PSet(View3DObject object, View3DM4x4 co
 		if (!pr::FEql(o2p.w.w,1.0f)) throw std::runtime_error("invalid object to parent transform");
 
 		DllLockGuard;
-		object->O2P(view3d::To<pr::m4x4>(o2p), name);
+		object->O2P(To<m4x4>(o2p), name);
 	}
 	CatchAndReport(View3D_ObjectSetO2P, ,);
 }
@@ -1893,9 +1914,9 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object, int inc
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		return view3d::To<View3DBBox>(object->BBoxMS(include_children != 0));
+		return To<View3DBBox>(object->BBoxMS(include_children != 0));
 	}
-	CatchAndReport(View3D_ObjectBBoxMS, , view3d::To<View3DBBox>(pr::BBoxUnit));
+	CatchAndReport(View3D_ObjectBBoxMS, , To<View3DBBox>(BBoxUnit));
 }
 
 // Materials ***************************************************************
@@ -1940,10 +1961,10 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 
 		auto name = options.m_dbg_name;
 		auto has_alpha = options.m_has_alpha != 0;
-		auto t2s = view3d::To<pr::m4x4>(options.m_t2s);
+		auto t2s = To<m4x4>(options.m_t2s);
 		t2s =
-			t2s == pr::m4x4Identity ? t2s :
-			t2s == pr::m4x4Zero ? pr::m4x4Identity :
+			t2s == m4x4Identity ? t2s :
+			t2s == m4x4Zero ? m4x4Identity :
 			pr::IsAffine(t2s) ? t2s :
 			throw std::runtime_error("Invalid texture to surface transform");
 
@@ -1974,10 +1995,10 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri(wchar_t const* re
 
 		auto name = options.m_dbg_name;
 		auto has_alpha = options.m_has_alpha != 0;
-		auto t2s = view3d::To<pr::m4x4>(options.m_t2s);
+		auto t2s = To<m4x4>(options.m_t2s);
 		t2s =
-			t2s == pr::m4x4Identity ? t2s :
-			t2s == pr::m4x4Zero ? pr::m4x4Identity :
+			t2s == m4x4Identity ? t2s :
+			t2s == m4x4Zero ? m4x4Identity :
 			pr::IsAffine(t2s) ? t2s :
 			throw std::runtime_error("Invalid texture to surface transform");
 
@@ -2004,10 +2025,10 @@ VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri(wchar_t const* re
 		sdesc.Filter   = options.m_filter;
 
 		auto name = options.m_dbg_name;
-		auto cube2w = view3d::To<pr::m4x4>(options.m_cube2w);
+		auto cube2w = To<m4x4>(options.m_cube2w);
 		cube2w =
-			cube2w == pr::m4x4Identity ? cube2w :
-			cube2w == pr::m4x4Zero ? pr::m4x4Identity :
+			cube2w == m4x4Identity ? cube2w :
+			cube2w == m4x4Zero ? m4x4Identity :
 			pr::IsAffine(cube2w) ? cube2w :
 			throw std::runtime_error("Invalid cube map orientation transform");
 
@@ -2624,7 +2645,7 @@ VIEW3D_API View3DGizmo __stdcall View3D_GizmoCreate(EView3DGizmoMode mode, View3
 	try
 	{
 		DllLockGuard;
-		return Dll().CreateGizmo(static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w));
+		return Dll().CreateGizmo(static_cast<LdrGizmo::EMode>(mode), To<m4x4>(o2w));
 	}
 	CatchAndReport(View3D_GizmoCreate, , nullptr);
 }
@@ -2736,7 +2757,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetO2W(View3DGizmo gizmo)
 	try
 	{
 		if (!gizmo) throw std::runtime_error("Gizmo is null");
-		return view3d::To<View3DM4x4>(gizmo->O2W());
+		return To<View3DM4x4>(gizmo->O2W());
 	}
 	CatchAndReport(View3D_GizmoGetO2W, ,View3DM4x4());
 }
@@ -2745,7 +2766,7 @@ VIEW3D_API void __stdcall View3D_GizmoSetO2W(View3DGizmo gizmo, View3DM4x4 const
 	try
 	{
 		if (!gizmo) throw std::runtime_error("Gizmo is null");
-		gizmo->O2W(view3d::To<pr::m4x4>(o2w));
+		gizmo->O2W(To<m4x4>(o2w));
 	}
 	CatchAndReport(View3D_GizmoSetO2W, ,);
 }
@@ -2756,7 +2777,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetOffset(View3DGizmo gizmo)
 	try
 	{
 		if (!gizmo) throw std::runtime_error("Gizmo is null");
-		return view3d::To<View3DM4x4>(gizmo->Offset());
+		return To<View3DM4x4>(gizmo->Offset());
 	}
 	CatchAndReport(View3D_GizmoGetOffset, ,View3DM4x4());
 }
@@ -2874,7 +2895,7 @@ VIEW3D_API View3DV2 __stdcall View3D_DiagFillModePointsSizeGet(View3DWindow wind
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV2>(window->FillModePointsSize());
+		return To<View3DV2>(window->FillModePointsSize());
 	}
 	CatchAndReport(View3D_DiagFillModePointsSizeGet, window, View3DV2());
 }
@@ -2885,7 +2906,7 @@ VIEW3D_API void __stdcall View3D_DiagFillModePointsSizeSet(View3DWindow window, 
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->FillModePointsSize(view3d::To<pr::v2>(size));
+		window->FillModePointsSize(To<v2>(size));
 	}
 	CatchAndReport(View3D_DiagFillModePointsSizeSet, window, );
 }
@@ -3053,7 +3074,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxPosition(View3DWindow window, View3
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->SetSelectionBox(view3d::To<pr::BBox>(bbox), view3d::To<pr::m4x4>(o2w).rot);
+		window->SetSelectionBox(To<BBox>(bbox), To<m4x4>(o2w).rot);
 	}
 	CatchAndReport(View3D_SelectionBoxPosition, window, );
 }
@@ -3145,11 +3166,11 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(wchar_t const* ldr_scri
 		StringSrc src(ldr_script);
 		Reader reader(src);
 		
-		pr::m4x4 o2w;
+		m4x4 o2w;
 		reader.TransformS(o2w);
-		return view3d::To<View3DM4x4>(o2w);
+		return To<View3DM4x4>(o2w);
 	}
-	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
+	CatchAndReport(View3D_ParseLdrTransform, , To<View3DM4x4>(m4x4Identity));
 }
 
 // Return the hierarchy "address" for a position in an ldr script file.
@@ -3265,12 +3286,12 @@ static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ));
 static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ));
 static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ));
 
-static_assert(int(EView3DPrim::Invalid   ) == int(pr::rdr::EPrim::Invalid   ));
-static_assert(int(EView3DPrim::PointList ) == int(pr::rdr::EPrim::PointList ));
-static_assert(int(EView3DPrim::LineList  ) == int(pr::rdr::EPrim::LineList  ));
-static_assert(int(EView3DPrim::LineStrip ) == int(pr::rdr::EPrim::LineStrip ));
-static_assert(int(EView3DPrim::TriList   ) == int(pr::rdr::EPrim::TriList   ));
-static_assert(int(EView3DPrim::TriStrip  ) == int(pr::rdr::EPrim::TriStrip  ));
+static_assert(int(EView3DTopo::Invalid   ) == int(pr::rdr::ETopo::Invalid   ));
+static_assert(int(EView3DTopo::PointList ) == int(pr::rdr::ETopo::PointList ));
+static_assert(int(EView3DTopo::LineList  ) == int(pr::rdr::ETopo::LineList  ));
+static_assert(int(EView3DTopo::LineStrip ) == int(pr::rdr::ETopo::LineStrip ));
+static_assert(int(EView3DTopo::TriList   ) == int(pr::rdr::ETopo::TriList   ));
+static_assert(int(EView3DTopo::TriStrip  ) == int(pr::rdr::ETopo::TriStrip  ));
 
 static_assert(int(EView3DNuggetFlag::None            ) == int(pr::rdr::ENuggetFlag::None            ));
 static_assert(int(EView3DNuggetFlag::Hidden          ) == int(pr::rdr::ENuggetFlag::Hidden          ));
@@ -3314,12 +3335,12 @@ static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELoc
 static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative));
 static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ));
 
-static_assert(int(EView3DPrim::Invalid  ) == int(pr::rdr::EPrim::Invalid  ));
-static_assert(int(EView3DPrim::PointList) == int(pr::rdr::EPrim::PointList));
-static_assert(int(EView3DPrim::LineList ) == int(pr::rdr::EPrim::LineList ));
-static_assert(int(EView3DPrim::LineStrip) == int(pr::rdr::EPrim::LineStrip));
-static_assert(int(EView3DPrim::TriList  ) == int(pr::rdr::EPrim::TriList  ));
-static_assert(int(EView3DPrim::TriStrip ) == int(pr::rdr::EPrim::TriStrip ));
+static_assert(int(EView3DTopo::Invalid  ) == int(pr::rdr::ETopo::Invalid  ));
+static_assert(int(EView3DTopo::PointList) == int(pr::rdr::ETopo::PointList));
+static_assert(int(EView3DTopo::LineList ) == int(pr::rdr::ETopo::LineList ));
+static_assert(int(EView3DTopo::LineStrip) == int(pr::rdr::ETopo::LineStrip));
+static_assert(int(EView3DTopo::TriList  ) == int(pr::rdr::ETopo::TriList  ));
+static_assert(int(EView3DTopo::TriStrip ) == int(pr::rdr::ETopo::TriStrip ));
 
 static_assert(int(EView3DFillMode::Default  ) == int(pr::rdr::EFillMode::Default  ));
 static_assert(int(EView3DFillMode::SolidWire) == int(pr::rdr::EFillMode::SolidWire));
@@ -3370,10 +3391,10 @@ static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge  
 static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ));
 
 // Specifically used to avoid alignment problems
-static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ));
-static_assert(sizeof(View3DV4    ) == sizeof(pr::v4       ));
-static_assert(sizeof(View3DM4x4  ) == sizeof(pr::m4x4     ));
-static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ));
+static_assert(sizeof(View3DV2  ) == sizeof(v2  ));
+static_assert(sizeof(View3DV4  ) == sizeof(v4  ));
+static_assert(sizeof(View3DM4x4) == sizeof(m4x4));
+static_assert(sizeof(View3DBBox) == sizeof(BBox));
 // View3DVertex - only used in this file
 // View3DImageInfo - only used in this file
 // View3DLight - only used in this file

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -66,7 +66,7 @@ namespace Rylogic.Gui.WPF
 				View3d = View3d.Create();
 				Window = new View3d.Window(View3d, IntPtr.Zero);
 				Window.Error += (s,a) => OnReportError(new ReportErrorEventArgs(a.Message));
-				Camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
+				Camera.Lookat(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
 				Camera.ClipPlanes(0.01f, 1000f, true);
 
 				// Create a D3D11 off-screen render target image source

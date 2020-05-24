@@ -248,7 +248,7 @@ namespace pr::rdr
 			}
 
 			// Add a nugget to 'm_ncont' (helper)
-			void AddNugget(EPrim topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
+			void AddNugget(ETopo topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
 			{
 				// Notes:
 				// - Don't change the 'geom' flags here based on whether the material has a texture
@@ -288,7 +288,7 @@ namespace pr::rdr
 					{
 						switch (nug.m_topo)
 						{
-						case EPrim::TriList:
+						case ETopo::TriList:
 							{
 								switch (cache.m_idx_stride)
 								{
@@ -298,7 +298,7 @@ namespace pr::rdr
 								}
 								break;
 							}
-						case EPrim::TriStrip:
+						case ETopo::TriStrip:
 							{
 								switch (cache.m_idx_stride)
 								{
@@ -344,7 +344,7 @@ namespace pr::rdr
 				{
 					switch (nug.m_topo)
 					{
-					case EPrim::TriList:
+					case ETopo::TriList:
 						{
 							switch (cache.m_idx_stride)
 							{
@@ -354,7 +354,7 @@ namespace pr::rdr
 							}
 							break;
 						}
-					case EPrim::TriStrip:
+					case ETopo::TriStrip:
 						{
 							throw std::exception("Generate normals isn't supported for TriStrip");
 						}
@@ -368,15 +368,16 @@ namespace pr::rdr
 			{
 				auto ibuf = cache.m_icont.data<IType>() + irange.begin();
 				geometry::GenerateNormals(
-					irange.size(), ibuf, gen_normals,
+					irange.size(), ibuf, gen_normals, cache.m_vcont.size(),
 					[&](IType idx)
 					{
 						return GetP(cache.m_vcont[idx]);
 					},
-					cache.m_vcont.size(),
 					[&](IType idx, IType orig, v4 const& norm)
 					{
-						if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
+						assert(idx <= cache.m_vcont.size());
+						if (idx == cache.m_vcont.size()) cache.m_vcont.push_back(cache.m_vcont[orig]);
+						//if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
 						SetN(cache.m_vcont[idx], norm);
 					},
 					[&](IType i0, IType i1, IType i2)
@@ -451,7 +452,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::PointList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::PointList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -479,7 +480,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::LineList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -499,7 +500,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 		
 			// Create a nugget
-			cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::LineList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -519,7 +520,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -546,7 +547,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -566,7 +567,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -586,7 +587,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -606,7 +607,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -626,7 +627,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -648,7 +649,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -668,7 +669,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -688,7 +689,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(solid ? ETopo::TriStrip : ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -708,7 +709,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(solid ? ETopo::TriList : ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -730,7 +731,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -750,7 +751,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -770,7 +771,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -794,7 +795,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -816,7 +817,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -840,7 +841,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -866,7 +867,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -937,7 +938,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -961,7 +962,7 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model
@@ -1013,7 +1014,7 @@ namespace pr::rdr
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
 			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
 			return Create(rdr, cache);
@@ -1039,7 +1040,7 @@ namespace pr::rdr
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
 			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
-			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
 			return Create(rdr, cache);
@@ -1070,7 +1071,7 @@ namespace pr::rdr
 				mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
 				mat.m_vrange = rdr::Range(i * 4, (i + 1) * 4);
 				mat.m_irange = rdr::Range(i * 6, (i + 1) * 6);
-				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, &mat);
+				cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, &mat);
 			}
 
 			// Create the model
@@ -1125,7 +1126,7 @@ namespace pr::rdr
 
 						// Find the MeshName chunk
 						uint32_t len = 0;
-						if (!p3d::Find(src, hdr.payload(), p3d::EChunkId::MeshName, &len) || p3d::ReadCStr(src, len) != mesh_name)
+						if (!p3d::Find(src, hdr.payload(), p3d::EChunkId::MeshName, &len) || p3d::ReadStr(src, len) != mesh_name)
 							return false;
 					}
 
@@ -1153,19 +1154,29 @@ namespace pr::rdr
 					cache.m_icont.resize<uint32_t>(mesh.icount());
 					cache.m_ncont.reserve(mesh.ncount());
 					auto iptr = cache.m_icont.data<uint32_t>();
+					auto vrange = Range::Zero();
+					auto irange = Range::Zero();
 					for (auto& nug : mesh.nuggets())
 					{
 						// Copy the indices
+						vrange = Range::Reset();
 						for (auto i : nug.indices())
+						{
+							vrange.encompass(i);
 							*iptr++ = i;
+						}
+
+						// The index range in the model buffer
+						irange.m_beg = irange.m_end;
+						irange.m_end = irange.m_beg + nug.icount();
 
 						// Add a nugget
 						cache.m_ncont.emplace_back(
 							static_cast<ETopo>(nug.m_topo),
 							static_cast<EGeom>(nug.m_geom),
 							nullptr,
-							nug.vrange(),
-							nug.irange());
+							vrange,
+							irange);
 
 						// Record the material as used
 						insert_unique(mats, nug.m_mat.str);
@@ -1183,6 +1194,7 @@ namespace pr::rdr
 			using namespace geometry;
 
 			Cache cache;
+			cache.m_idx_stride = sizeof(uint16_t);
 
 			// Bounding box
 			cache.m_bbox = BBoxReset;
@@ -1201,9 +1213,9 @@ namespace pr::rdr
 				cache.m_icont.push_back<uint16_t>(i1);
 				cache.m_icont.push_back<uint16_t>(i2);
 			};
-			auto nout = [&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
+			auto nout = [&](ETopo topo, EGeom geom, max_3ds::Material const& mat, Range vrange, Range irange)
 			{
-				NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
+				NuggetProps ddata(topo, geom, nullptr, vrange, irange);
 				ddata.m_flags = SetBits(ddata.m_flags, ENuggetFlag::GeometryHasAlpha, !FEql(mat.m_diffuse.a, 1.0f));
 
 				// Register any materials with the renderer
@@ -1241,7 +1253,7 @@ namespace pr::rdr
 				if (mesh_name != nullptr && obj.m_name != mesh_name)
 					return false;
 
-				max_3ds::CreateModel(obj, matlookup, nout, vout, iout);
+				max_3ds::CreateModel(obj, matlookup, vout, iout, nout);
 				return true; // done, stop searching
 			});
 
@@ -1292,7 +1304,7 @@ namespace pr::rdr
 				}
 
 				// Generate nuggets
-				cache.AddNugget(EPrim::TriList, EGeom::Vert|EGeom::Norm, false, false);
+				cache.AddNugget(ETopo::TriList, EGeom::Vert|EGeom::Norm, false, false);
 			});
 			return Create(rdr, cache, bake, gen_normals);
 		}
@@ -1301,10 +1313,10 @@ namespace pr::rdr
 			using namespace geometry;
 			switch (format)
 			{
-			default: throw std::exception("Unsupported model file format");
 			case EModelFileFormat::P3D:    return LoadP3DModel(rdr, src, mesh_name, bake, gen_normals);
 			case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, mesh_name, bake, gen_normals);
 			case EModelFileFormat::STL:    return LoadSTLModel(rdr, src, bake, gen_normals);
+			default: throw std::exception("Unsupported model file format");
 			}
 		}
 
@@ -1524,9 +1536,9 @@ namespace pr::rdr
 				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
 
 			// Create a nugget
-			NuggetProps mat(EPrim::TriList);
+			NuggetProps mat(ETopo::TriList);
 			mat.m_tex_diffuse = tex;
-			cache.AddNugget(EPrim::TriList, props.m_geom & ~EGeom::Norm, props.m_has_alpha, false, &mat);
+			cache.AddNugget(ETopo::TriList, props.m_geom & ~EGeom::Norm, props.m_has_alpha, false, &mat);
 			cache.m_bbox = props.m_bbox;
 
 			// Create the model

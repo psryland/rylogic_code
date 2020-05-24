@@ -47,7 +47,7 @@ namespace pr::rdr
 			MdlSettings s(verts, idxs, bbox, "unit quad");
 			m_unit_quad.m_model = scene.m_wnd->mdl_mgr().CreateModel(s);
 
-			NuggetProps ddata(EPrim::TriList, EGeom::Vert);
+			NuggetProps ddata(ETopo::TriList, EGeom::Vert);
 			ddata.m_smap[Id].m_vs = m_vs;
 			ddata.m_smap[Id].m_ps = m_ps;
 			m_unit_quad.m_model->CreateNugget(ddata);

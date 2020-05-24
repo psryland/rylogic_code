@@ -35,7 +35,7 @@ export enum EGeom
 }
 
 /** The primitive type of the geometry in a nugget */
-export enum EPrim
+export enum ETopo
 {
 	Invalid = 0,
 	None = 0,

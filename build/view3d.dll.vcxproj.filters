@@ -21,7 +21,7 @@
     <ClInclude Include="..\include\pr\view3d\dll\view3d.h">
       <Filter>src\dll</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\dll\pr_conv.h">
+    <ClInclude Include="..\include\pr\view3d\dll\conversion.h">
       <Filter>src\dll</Filter>
     </ClInclude>
   </ItemGroup>

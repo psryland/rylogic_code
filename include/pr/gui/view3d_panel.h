@@ -110,7 +110,7 @@ namespace pr::gui
 		void OnMouseButton(MouseEventArgs& args) override
 		{
 			auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-			if (View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), args.m_down ? op : EView3DNavOp::None, TRUE))
+			if (View3D_MouseNavigate(m_win, To<View3DV2>(args.m_point), args.m_down ? op : EView3DNavOp::None, TRUE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -119,7 +119,7 @@ namespace pr::gui
 		void OnMouseMove(MouseEventArgs& args) override
 		{
 			auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-			if (View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), op, FALSE))
+			if (View3D_MouseNavigate(m_win, To<View3DV2>(args.m_point), op, FALSE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -127,7 +127,7 @@ namespace pr::gui
 		}
 		void OnMouseWheel(MouseWheelArgs& args) override
 		{
-			if (View3D_MouseNavigateZ(m_win, view3d::To<View3DV2>(args.m_point), args.m_delta, TRUE))
+			if (View3D_MouseNavigateZ(m_win, To<View3DV2>(args.m_point), args.m_delta, TRUE))
 			{
 				Invalidate();
 				UpdateWindow(m_hwnd);
@@ -156,20 +156,20 @@ namespace pr::gui
 		}
 	};
 }
-namespace view3d
+namespace pr
 {
-	template <> struct Convert<View3DV2, pr::gui::Point>
+	template <> struct Convert<View3DV2, gui::Point>
 	{
-		static View3DV2 To(pr::gui::Point const& v)
+		static View3DV2 To(gui::Point const& v)
 		{
 			return View3DV2{float(v.x), float(v.y)};
 		}
 	};
-	template <> struct Convert<pr::gui::Point, View3DV2>
+	template <> struct Convert<gui::Point, View3DV2>
 	{
-		static pr::gui::Point To(View3DV2 const& v)
+		static gui::Point To(View3DV2 const& v)
 		{
-			return pr::gui::Point(long(v.x), long(v.y));
+			return gui::Point(long(v.x), long(v.y));
 		}
 	};
 }

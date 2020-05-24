@@ -43,7 +43,7 @@ namespace pr::rdr
 	}
 
 	// Update the provided shader set appropriate for this render step
-	void ForwardRender::ConfigShaders(ShaderSet1& ss, EPrim) const
+	void ForwardRender::ConfigShaders(ShaderSet1& ss, ETopo) const
 	{
 		if (ss.m_vs == nullptr) ss.m_vs = m_vs.get();
 		if (ss.m_ps == nullptr) ss.m_ps = m_ps.get();
@@ -136,10 +136,10 @@ namespace pr::rdr
 		// Render wire frame over solid for 'SolidWire' mode
 		if (!nugget.m_irange.empty() && 
 			nugget.m_fill_mode == EFillMode::SolidWire && (
-			nugget.m_topo == EPrim::TriList ||
-			nugget.m_topo == EPrim::TriListAdj ||
-			nugget.m_topo == EPrim::TriStrip ||
-			nugget.m_topo == EPrim::TriStripAdj))
+			nugget.m_topo == ETopo::TriList ||
+			nugget.m_topo == ETopo::TriListAdj ||
+			nugget.m_topo == ETopo::TriStrip ||
+			nugget.m_topo == ETopo::TriStripAdj))
 		{
 			m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
 			m_bsb.Set(EBS::BlendEnable, FALSE, 0);
@@ -157,7 +157,7 @@ namespace pr::rdr
 		// Render points for 'Points' mode
 		if (nugget.m_fill_mode == EFillMode::Points)
 		{
-			ss.m_pending.m_topo = EPrim::PointList;
+			ss.m_pending.m_topo = ETopo::PointList;
 			ss.m_pending.m_shdrs.m_gs = m_scene->m_diag.m_gs_fillmode_points.get();
 			ss.Commit();
 			dc->Draw(

@@ -140,7 +140,7 @@ namespace pr::rdr
 			MdlSettings s(verts, idxs, bbox, "basis");
 			m_basis = CreateModel(s);
 
-			NuggetProps n(EPrim::LineList, EGeom::Vert|EGeom::Colr);
+			NuggetProps n(ETopo::LineList, EGeom::Vert|EGeom::Colr);
 			m_basis->CreateNugget(n);
 		}
 		{// Unit quad in Z = 0 plane
@@ -160,7 +160,7 @@ namespace pr::rdr
 			MdlSettings s(verts, idxs, bbox, "unit quad");
 			m_unit_quad = CreateModel(s);
 
-			NuggetProps n(EPrim::TriList, Vert::GeomMask);
+			NuggetProps n(ETopo::TriList, Vert::GeomMask);
 			m_unit_quad->CreateNugget(n);
 		}
 		{// Bounding box cube
@@ -186,7 +186,7 @@ namespace pr::rdr
 			MdlSettings s(verts, idxs, bbox, "bbox cube");
 			m_bbox_model = CreateModel(s);
 
-			NuggetProps n(EPrim::LineList, EGeom::Vert|EGeom::Colr);
+			NuggetProps n(ETopo::LineList, EGeom::Vert|EGeom::Colr);
 			m_bbox_model->CreateNugget(n);
 		}
 		{// Selection box
@@ -251,7 +251,7 @@ namespace pr::rdr
 			MdlSettings s(verts, idxs, bbox, "selection box");
 			m_selection_box = CreateModel(s);
 
-			NuggetProps n(EPrim::LineList, EGeom::Vert);
+			NuggetProps n(ETopo::LineList, EGeom::Vert);
 			m_selection_box->CreateNugget(n);
 		}
 	}

@@ -63,7 +63,7 @@ namespace pr::app
 			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Make(verts), "gimble"));
 
 			NuggetProps mat; // Get a suitable shader
-			mat.m_topo = EPrim::LineList;
+			mat.m_topo = ETopo::LineList;
 			mat.m_geom = EGeom::Vert | EGeom::Colr;
 
 			// Create a render nugget

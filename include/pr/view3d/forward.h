@@ -116,7 +116,7 @@ namespace pr::rdr
 	static RdrId const InvalidId = RdrId();
 
 	using EGeom = pr::geometry::EGeom;
-	using EPrim = pr::geometry::EPrim;
+	using ETopo = pr::geometry::ETopo;
 
 	// Render
 	class Renderer;

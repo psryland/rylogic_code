@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // View3D
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -56,7 +56,7 @@
 #include "pr/win32/key_codes.h"
 
 #include "pr/view3d/dll/view3d.h"
-#include "pr/view3d/dll/pr_conv.h"
+#include "pr/view3d/dll/conversion.h"
 
 namespace view3d
 {

@@ -177,8 +177,8 @@ namespace CoinFlip.UI.GfxObjects
 				}
 			}
 
-			m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)body);
-			m_nbuf[nugt++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
+			m_nbuf[nugt++] = new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)body);
+			m_nbuf[nugt++] = new View3d.Nugget(View3d.ETopo.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, (uint)body, (uint)wick);
 
 			// Create the graphics
 			var gfx = new View3d.Object($"Candles-[{db_idx_range.Begi},{db_idx_range.Endi})", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CtxId);

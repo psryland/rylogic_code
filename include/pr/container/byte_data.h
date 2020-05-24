@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // byte_data
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
@@ -65,6 +65,17 @@ namespace pr
 		{
 			resize(initial_size_in_bytes);
 		}
+		template <typename citer, typename Type = std::iterator_traits<citer>::value_type>
+		byte_data(citer first, citer last)
+			:byte_data()
+		{
+			// Example use:
+			//   std::ifstream infile(filepath, std::ios::binary);
+			//   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
+			static_assert(std::is_pod_v<Type>);
+			for (; first != last; ++first)
+				push_back<Type>(*first);
+		}
 		~byte_data()
 		{
 			set_capacity(0);
@@ -126,10 +137,12 @@ namespace pr
 		// Resize the container to contain 'new_size' multiples of 'Type'
 		template <typename Type> void resize(size_t new_size)
 		{
+			static_assert(std::is_pod_v<Type>);
 			resize(new_size * sizeof(Type));
 		}
 		template <typename Type> void resize(size_t new_size, Type fill)
 		{
+			static_assert(std::is_pod_v<Type>);
 			auto n = std::max<ptrdiff_t>(0, new_size - size<Type>());
 			resize<Type>(new_size);
 			for (auto ptr = end<Type>() - n; ptr != end<Type>(); ++ptr)
@@ -150,6 +163,7 @@ namespace pr
 		// Pre-allocate space
 		template <typename Type> void reserve(size_t new_capacity)
 		{
+			static_assert(std::is_pod_v<Type>);
 			reserve(new_capacity * sizeof(Type));
 		}
 		void reserve(size_t new_capacity)
@@ -166,14 +180,17 @@ namespace pr
 		}
 		template <typename Type> void append(Type const& rhs)
 		{
+			static_assert(std::is_pod_v<Type>);
 			push_back<Type>(rhs);
 		}
 		template <typename Type> void append(Type const* data, size_t count)
 		{
+			static_assert(std::is_pod_v<Type>);
 			push_back(data, count * sizeof(Type));
 		}
 		template <typename Type> void append(std::initializer_list<Type> items)
 		{
+			static_assert(std::is_pod_v<Type>);
 			push_back(items.begin(), items.size() * sizeof(Type));
 		}
 
@@ -215,10 +232,12 @@ namespace pr
 		// Add 'type' to the end of the container
 		template <typename Type> void push_back()
 		{
+			static_assert(std::is_pod_v<Type>);
 			push_back(Type());
 		}
 		template <typename Type> void push_back(Type const& type)
 		{
+			static_assert(std::is_pod_v<Type>);
 			push_back(&type, sizeof(type));
 		}
 		void push_back(void const* data, size_t size)
@@ -333,13 +352,13 @@ namespace pr
 		}
 
 		// Return a reference to 'Type' at a byte offset into the container
-		template <typename Type> Type const& at_byte_ofs(size_t index) const
+		template <typename Type> Type const& at_byte_ofs(size_t byte_ofs) const
 		{
-			return *reinterpret_cast<Type const*>(byte_ptr(m_ptr) + index);
+			return *reinterpret_cast<Type const*>(byte_ptr(m_ptr) + byte_ofs);
 		}
-		template <typename Type> Type& at_byte_ofs(size_t index)
+		template <typename Type> Type& at_byte_ofs(size_t byte_ofs)
 		{
-			return *reinterpret_cast<Type*>(byte_ptr(m_ptr) + index);
+			return *reinterpret_cast<Type*>(byte_ptr(m_ptr) + byte_ofs);
 		}
 
 		// Array access to bytes
@@ -368,6 +387,16 @@ namespace pr
 		value_type* data()
 		{
 			return begin();
+		}
+
+		// A pointer to the data starting at the given byte offset
+		template <typename Type> Type const* data_at(size_t byte_ofs) const
+		{
+			return &at_byte_ofs<Type>(byte_ofs);
+		}
+		template <typename Type> Type* data_at(size_t byte_ofs)
+		{
+			return &at_byte_ofs<Type>(byte_ofs);
 		}
 
 		// Facade access

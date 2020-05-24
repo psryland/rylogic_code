@@ -20,22 +20,24 @@ namespace Rylogic.Maths
 			Centre = centre;
 			Radius = radius;
 		}
+		
+		/// <summary>Reset to the invalid BBox</summary>
 		public void reset()
 		{
 			this = Reset;
 		}
+
+		/// <summary>Reset to a unit cube: C=v4Origin, R=0.5</summary>
 		public void unit()
 		{
 			this = Unit;
 		}
+
+		/// <summary>Assign the bounding box centre and radius</summary>
 		public void set(v4 centre, v4 radius)
 		{
 			Centre = centre;
 			Radius = radius;
-		}
-		public override string ToString()
-		{
-			return $"Centre={Centre.ToString3()} Radius={Radius.ToString3()}";
 		}
 
 		// Construct from
@@ -44,17 +46,9 @@ namespace Rylogic.Maths
 			return new BBox((max + min) * 0.5f, Math_.Abs(max - min) * 0.5f);
 		}
 
-		// Static v4 types
-		private readonly static BBox m_unit = new BBox(v4.Origin, new v4(0.5f, 0.5f, 0.5f, 0));
-		private readonly static BBox m_reset = new BBox(v4.Origin, new v4(-1, -1, -1, 0));
-		public static BBox Unit
-		{
-			get { return m_unit; }
-		}
-		public static BBox Reset
-		{
-			get { return m_reset; }
-		}
+		/// <summary>Constants</summary>
+		public static BBox Unit { get; } = new BBox(v4.Origin, new v4(0.5f, 0.5f, 0.5f, 0));
+		public static BBox Reset { get; } = new BBox(v4.Origin, new v4(-1, -1, -1, 0));
 
 		// Binary operators
 		public static BBox operator +(BBox lhs, v4 offset) { lhs.Centre += offset; return lhs; }
@@ -79,104 +73,53 @@ namespace Rylogic.Maths
 		public static bool operator ==(BBox lhs, BBox rhs) { return lhs.Centre == rhs.Centre; }
 		public static bool operator !=(BBox lhs, BBox rhs) { return !(lhs == rhs); }
 		public override bool Equals(object? o) { return o is BBox box && box == this; }
-		public override int GetHashCode()
-		{
-			return new { Centre, Radius }.GetHashCode();
-		}
+		public override int GetHashCode() => new { Centre, Radius }.GetHashCode();
 
 		/// <summary>Returns true if the bounding box represents a point or volume</summary>
-		public bool IsValid
-		{
-			get
-			{
-				return Radius.x >= 0f && Radius.y >= 0f && Radius.z >= 0f &&
-					Math_.IsFinite(Radius.LengthSq) && Math_.IsFinite(Centre.LengthSq);
-			}
-		}
+		public bool IsValid => Radius.x >= 0f && Radius.y >= 0f && Radius.z >= 0f &&
+			Math_.IsFinite(Radius.LengthSq) && Math_.IsFinite(Centre.LengthSq);
 
 		/// <summary>Returns true if this bbox encompasses a single point</summary>
-		public bool IsPoint
-		{
-			get { return Radius == v4.Zero;  }
-		}
+		public bool IsPoint => Radius == v4.Zero;
 
 		/// <summary>Minimum X bound</summary>
-		public float MinX
-		{
-			get { return Centre.x - Radius.x; }
-		}
+		public float MinX => Centre.x - Radius.x;
 
 		/// <summary>Maximum X bound</summary>
-		public float MaxX
-		{
-			get { return Centre.x + Radius.x; }
-		}
+		public float MaxX => Centre.x + Radius.x;
 
 		/// <summary>Minimum Y bound</summary>
-		public float MinY
-		{
-			get { return Centre.y - Radius.y; }
-		}
+		public float MinY => Centre.y - Radius.y;
 
 		/// <summary>Maximum Y bound</summary>
-		public float MaxY
-		{
-			get { return Centre.y + Radius.y; }
-		}
+		public float MaxY => Centre.y + Radius.y;
 
 		/// <summary>Minimum Z bound</summary>
-		public float MinZ
-		{
-			get { return Centre.z - Radius.z; }
-		}
+		public float MinZ => Centre.z - Radius.z;
 
 		/// <summary>Maximum Z bound</summary>
-		public float MaxZ
-		{
-			get { return Centre.z + Radius.z; }
-		}
+		public float MaxZ => Centre.z + Radius.z;
 
 		/// <summary>Returns the lower corner of the bounding box</summary>
-		public v4 Lower()
-		{
-			return Centre - Radius;
-		}
+		public v4 Lower() => Centre - Radius;
 
 		/// <summary>Returns the upper corner of the bounding box</summary>
-		public v4 Upper()
-		{
-			return Centre + Radius;
-		}
+		public v4 Upper() => Centre + Radius;
 
 		/// <summary>Returns the lower dimension for an axis of the bounding box</summary>
-		public float Lower(int axis)
-		{
-			return Centre[axis] - Radius[axis];
-		}
+		public float Lower(int axis) => Centre[axis] - Radius[axis];
 
 		/// <summary>Returns the upper dimension of an axis of the bounding box</summary>
-		public float Upper(int axis)
-		{
-			return Centre[axis] + Radius[axis];
-		}
+		public float Upper(int axis) => Centre[axis] + Radius[axis];
 
 		/// <summary>Gets the x dimension of the bounding box</summary>
-		public float SizeX
-		{
-			get { return 2.0f * Radius.x; }
-		}
+		public float SizeX => 2.0f * Radius.x;
 
 		/// <summary>Gets the y dimension of the bounding box</summary>
-		public float SizeY
-		{
-			get { return 2.0f * Radius.y; }
-		}
+		public float SizeY => 2.0f * Radius.y;
 
 		/// <summary>Gets the z dimension of the bounding box</summary>
-		public float SizeZ
-		{
-			get { return 2.0f * Radius.z; }
-		}
+		public float SizeZ => 2.0f * Radius.z;
 
 		/// <summary>Get/Sets the centre point of the bounding box</summary>
 		public v4 Centre;
@@ -185,22 +128,13 @@ namespace Rylogic.Maths
 		public v4 Radius;
 
 		/// <summary>Gets the squared length of the diagonal of the bounding box</summary>
-		public float DiametreSq
-		{
-			get { return 4.0f * Radius.LengthSq; }
-		}
+		public float DiametreSq => 4.0f * Radius.LengthSq;
 
 		/// <summary>Gets the length of the diagonal of the bounding box</summary>
-		public float Diametre
-		{
-			get { return Math_.Sqrt(DiametreSq); }
-		}
+		public float Diametre => Math_.Sqrt(DiametreSq);
 
 		/// <summary>Gets the volume of the bounding box</summary>
-		public float Volume
-		{
-			get { return SizeX * SizeY * SizeZ; }
-		}
+		public float Volume => SizeX * SizeY * SizeZ;
 
 		/// <summary>Returns a corner of the bounding box. 'corner'</summary>
 		public v4 GetCorner(uint corner)
@@ -215,26 +149,38 @@ namespace Rylogic.Maths
 		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>
 		public bool IsWithin(v4 point, float tol)
 		{
-			return  Math.Abs(point.x - Centre.x) <= Radius.x + tol &&
-					Math.Abs(point.y - Centre.y) <= Radius.y + tol &&
-					Math.Abs(point.z - Centre.z) <= Radius.z + tol;
+			return
+				Math.Abs(point.x - Centre.x) <= Radius.x + tol &&
+				Math.Abs(point.y - Centre.y) <= Radius.y + tol &&
+				Math.Abs(point.z - Centre.z) <= Radius.z + tol;
 		}
 
 		/// <summary>Returns true if 'bbox' is within this bounding box (within 'tol'erance)</summary>
 		public bool IsWithin(BBox bbox, float tol)
 		{
-			return  Math.Abs(bbox.Centre.x - Centre.x) <= (Radius.x - bbox.Radius.x + tol) &&
-					Math.Abs(bbox.Centre.y - Centre.y) <= (Radius.y - bbox.Radius.y + tol) &&
-					Math.Abs(bbox.Centre.z - Centre.z) <= (Radius.z - bbox.Radius.z + tol);
+			return
+				Math.Abs(bbox.Centre.x - Centre.x) <= (Radius.x - bbox.Radius.x + tol) &&
+				Math.Abs(bbox.Centre.y - Centre.y) <= (Radius.y - bbox.Radius.y + tol) &&
+				Math.Abs(bbox.Centre.z - Centre.z) <= (Radius.z - bbox.Radius.z + tol);
 		}
 
-		/// <summary>Expands the bounding box to include 'point'</summary>
+		/// <summary>Returns true if 'rhs' intersects with this bounding box</summary>
+		public static bool IsIntersection(BBox lhs, BBox rhs)
+		{
+			return
+				Math.Abs(lhs.Centre.x - rhs.Centre.x) <= (lhs.Radius.x + rhs.Radius.x) &&
+				Math.Abs(lhs.Centre.y - rhs.Centre.y) <= (lhs.Radius.y + rhs.Radius.y) &&
+				Math.Abs(lhs.Centre.z - rhs.Centre.z) <= (lhs.Radius.z + rhs.Radius.z);
+		}
+
+		/// <summary>Returns a bbox that encompasses 'lhs' and 'point'</summary>
 		public static BBox Encompass(BBox bbox, v4 point)
 		{
 			// Note:
 			// This is not a member function because it's dangerous.
 			// Calling: 'thing.BBox.Encompass(v4)' does not change 'BBox' because it's a value type
-			// Use: 'thing.BBox = BBox.Encompass(thing.BBox, v4)' instead
+			// Use: 'bb = BBox.Encompass(bb, pt)' or 'pt = BBox.Encompass(ref bbox, pt)' instead
+			// Const version returns lhs, non-const returns rhs!
 
 			var bb = bbox;
 			for (int i = 0; i != 3; ++i)
@@ -246,8 +192,8 @@ namespace Rylogic.Maths
 				}
 				else
 				{
-					float signed_dist = point[i] - bb.Centre[i];
-					float length      = Math.Abs(signed_dist);
+					var signed_dist = point[i] - bb.Centre[i];
+					var length      = Math.Abs(signed_dist);
 					if (length > bb.Radius[i])
 					{
 						float new_radius = (length + bb.Radius[i]) / 2.0f;
@@ -259,29 +205,39 @@ namespace Rylogic.Maths
 			return bb;
 		}
 
-		/// <summary>Expands the bounding box to include 'rhs'</summary>
+		/// <summary>Expands 'lhs' to include 'rhs'. Returns **rhs**</summary>
+		public static v4 Encompass(ref BBox bbox, v4 point)
+		{
+			// Const version returns lhs, non-const returns rhs!
+			bbox = Encompass(bbox, point);
+			return point;
+		}
+
+		/// <summary>Returns a bbox that encompasses 'lhs' and 'rhs'</summary>
 		public static BBox Encompass(BBox lhs, BBox rhs)
 		{
-			Debug.Assert(rhs.IsValid, "Encompassing an invalid bounding box");
+			// Const version returns lhs, non-const returns rhs!
+			// Don't treat !rhs.IsValid as an error, it's the only way to Encompass a empty bbox
 			var bb = lhs;
+			if (!rhs.IsValid) return bb;
 			bb = Encompass(bb, rhs.Centre + rhs.Radius);
 			bb = Encompass(bb, rhs.Centre - rhs.Radius);
 			return bb;
 		}
 
-		/// <summary>Returns true if 'rhs' intersects with this bounding box</summary>
-		public static bool IsIntersection(BBox lhs, BBox rhs)
+		/// <summary>Expands 'lhs' to include 'rhs'. Returns **rhs**</summary>
+		public static BBox Encompass(ref BBox lhs, BBox rhs)
 		{
-			return  Math.Abs(lhs.Centre.x - rhs.Centre.x) <= (lhs.Radius.x + rhs.Radius.x) &&
-					Math.Abs(lhs.Centre.y - rhs.Centre.y) <= (lhs.Radius.y + rhs.Radius.y) &&
-					Math.Abs(lhs.Centre.z - rhs.Centre.z) <= (lhs.Radius.z + rhs.Radius.z);
+			// Const version returns lhs, non-const returns rhs!
+			// Don't treat !rhs.IsValid as an error, it's the only way to Encompass a empty bbox
+			if (!rhs.IsValid) return rhs;
+			lhs = Encompass(lhs, rhs.Centre + rhs.Radius);
+			lhs = Encompass(lhs, rhs.Centre - rhs.Radius);
+			return rhs;
 		}
 
 		/// <summary>Create a RectangleF from the X,Y axes of this bounding box</summary>
-		public RectangleF ToRectXY()
-		{
-			return new RectangleF(MinX, MinY, SizeX, SizeY);
-		}
+		public RectangleF ToRectXY() => new RectangleF(MinX, MinY, SizeX, SizeY);
 
 		/// <summary></summary>
 		public string Description => $"C={Centre} R={Radius}";

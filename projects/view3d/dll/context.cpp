@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -144,6 +144,30 @@ namespace view3d
 		return m_sources.Add(ldr_script, file, enc, ScriptSources::EReason::NewData, context_id, includes, on_add);
 	}
 
+	// Create an LdrObject from the p3d model
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, std::filesystem::path const& p3d_filepath, pr::Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : pr::GenerateGUID();
+
+		// Create an ldr object
+		pr::ldr::ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = pr::ldr::CreateP3D(m_rdr, attr, p3d_filepath, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
+	LdrObject* Context::ObjectCreateP3D(char const* name, Colour32 colour, size_t size, void const* p3d_data, pr::Guid const* context_id)
+	{
+		// Get the context id
+		auto id = context_id ? *context_id : pr::GenerateGUID();
+
+		// Create an ldr object
+		pr::ldr::ObjectAttributes attr(ELdrObject::Model, name, colour);
+		auto obj = pr::ldr::CreateP3D(m_rdr, attr, size, p3d_data, id);
+		m_sources.Add(obj);
+		return obj.get();
+	}
+
 	// Load/Add ldr objects and return the first object from the script
 	LdrObject* Context::ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, pr::script::Includes const& includes)
 	{
@@ -178,7 +202,7 @@ namespace view3d
 		{
 			// Create the renderer nugget
 			NuggetProps nug;
-			nug.m_topo = static_cast<EPrim>(n->m_topo);
+			nug.m_topo = static_cast<ETopo>(n->m_topo);
 			nug.m_geom = static_cast<EGeom>(n->m_geom);
 			if (n->m_cull_mode != EView3DCullMode::Default) nug.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(n->m_cull_mode));
 			if (n->m_fill_mode != EView3DFillMode::Default) nug.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(n->m_fill_mode));
@@ -210,7 +234,7 @@ namespace view3d
 							Reader reader(rstep0.m_ps.params);
 							auto type = reader.Keyword(L"Type").EnumS<pr::rdr::ERadial>();
 							auto radius = reader.Keyword(L"Radius").Vector2S();
-							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : pr::v4Zero;
+							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : v4Zero;
 							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
 							auto id = pr::hash::Hash("RadialFadePS", centre, radius, type, focus_relative);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
@@ -291,11 +315,11 @@ namespace view3d
 		}
 
 		// Vertex buffer
-		pr::vector<pr::v4> pos;
+		pr::vector<v4> pos;
 		{
 			pos.resize(vcount);
 			for (auto i = 0; i != vcount; ++i)
-				pos[i] = view3d::To<pr::v4>(verts[i].pos);
+				pos[i] = To<v4>(verts[i].pos);
 		}
 
 		// Colour buffer
@@ -308,25 +332,25 @@ namespace view3d
 		}
 
 		// Normals
-		pr::vector<pr::v4> nrm;
+		pr::vector<v4> nrm;
 		if (pr::AllSet(geom, EGeom::Norm))
 		{
 			nrm.resize(vcount);
 			for (auto i = 0; i != vcount; ++i)
-				nrm[i] = view3d::To<pr::v4>(verts[i].norm);
+				nrm[i] = To<v4>(verts[i].norm);
 		}
 
 		// Texture coords
-		pr::vector<pr::v2> tex;
+		pr::vector<v2> tex;
 		if (pr::AllSet(geom, EGeom::Tex0))
 		{
 			tex.resize(vcount);
 			for (auto i = 0; i != vcount; ++i)
-				tex[i] = view3d::To<pr::v2>(verts[i].tex);
+				tex[i] = To<v2>(verts[i].tex);
 		}
 
 		// Create the model
-		auto attr  = pr::ldr::ObjectAttributes(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
+		auto attr  = ldr::ObjectAttributes(pr::ldr::ELdrObject::Custom, name, pr::Colour32(colour));
 		auto cdata = pr::ldr::MeshCreationData()
 			.verts  (pos.data(), int(pos.size()))
 			.indices(indices,    icount)
@@ -456,7 +480,7 @@ namespace view3d
 	}
 
 	// Create a gizmo object and add it to the gizmo collection
-	LdrGizmo* Context::CreateGizmo(LdrGizmo::EMode mode, pr::m4x4 const& o2w)
+	LdrGizmo* Context::CreateGizmo(LdrGizmo::EMode mode, m4x4 const& o2w)
 	{
 		return m_sources.CreateGizmo(mode, o2w);
 	}
@@ -505,7 +529,7 @@ namespace view3d
 			for (auto& nug : model->m_nuggets)
 			{
 				View3DNugget n = {};
-				n.m_topo = static_cast<EView3DPrim>(nug.m_topo);
+				n.m_topo = static_cast<EView3DTopo>(nug.m_topo);
 				n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
 				n.m_cull_mode = static_cast<EView3DCullMode>(nug.m_rsb.Desc().CullMode);
 				n.m_fill_mode = static_cast<EView3DFillMode>(nug.m_rsb.Desc().FillMode);
@@ -543,8 +567,8 @@ namespace view3d
 			auto vout = mlock.m_vlock.ptr<Vert>();
 			for (size_t i = 0; i != new_vcount; ++i, ++vin)
 			{
-				SetPCNT(*vout++, view3d::To<v4>(vin->pos), Colour32(vin->col), view3d::To<v4>(vin->norm), view3d::To<v2>(vin->tex));
-				Encompass(model->m_bbox, view3d::To<v4>(vin->pos));
+				SetPCNT(*vout++, To<v4>(vin->pos), Colour32(vin->col), To<v4>(vin->norm), To<v2>(vin->tex));
+				Encompass(model->m_bbox, To<v4>(vin->pos));
 			}
 			auto iout = mlock.m_ilock.ptr<uint16_t>();
 			for (size_t i = 0; i != new_icount; ++i, ++iin)
@@ -558,7 +582,7 @@ namespace view3d
 		for (auto& nug : nbuf)
 		{
 			NuggetProps mat;
-			mat.m_topo = static_cast<EPrim>(nug.m_topo);
+			mat.m_topo = static_cast<ETopo>(nug.m_topo);
 			mat.m_geom = static_cast<EGeom>(nug.m_geom);
 			mat.m_vrange = vrange;
 			mat.m_irange = irange;

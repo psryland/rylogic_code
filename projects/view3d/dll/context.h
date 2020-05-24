@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -53,6 +53,10 @@ namespace view3d
 		// Load/Add ldr objects from a script string or file. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScript(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add);
 		pr::Guid LoadScript(std::string_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes, OnAddCB on_add);
+
+		// Create an LdrObject from the p3d model
+		pr::ldr::LdrObject* ObjectCreateP3D(char const* name, pr::Colour32 colour, std::filesystem::path const& p3d_filepath, pr::Guid const* context_id);
+		pr::ldr::LdrObject* ObjectCreateP3D(char const* name, pr::Colour32 colour, size_t size, void const* p3d_data, pr::Guid const* context_id);
 
 		// Load/Add ldr objects and return the first object from the script
 		pr::ldr::LdrObject* ObjectCreateLdr(std::wstring_view ldr_script, bool file, pr::EEncoding enc, pr::Guid const* context_id, Includes const& includes);

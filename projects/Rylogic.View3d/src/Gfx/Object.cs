@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
@@ -42,6 +43,26 @@ namespace Rylogic.Gfx
 					throw new Exception($"Failed to create object from script\r\n{ldr_script.Summary(100)}");
 			}
 
+			/// <summary>Create an object from a P3D file</summary>
+			public Object(string name, uint colour, string p3d_filepath, Guid? context_id)
+			{
+				Owned = true;
+				var ctx = context_id ?? Guid.NewGuid();
+				Handle = View3D_ObjectCreateP3DFile(name, colour, p3d_filepath, ref ctx);
+				if (Handle == HObject.Zero)
+					throw new Exception($"Failed to create object from p3d model file: '{p3d_filepath}'");
+			}
+			public Object(string name, uint colour, byte[] p3d_data, Guid? context_id)
+			{
+				Owned = true;
+				var ctx = context_id ?? Guid.NewGuid();
+
+				using var pin = Marshal_.Pin(p3d_data);
+				Handle = View3D_ObjectCreateP3DStream(name, colour, p3d_data.Length, pin.Pointer, ref ctx);
+				if (Handle == HObject.Zero)
+					throw new Exception($"Failed to create object from p3d model data stream");
+			}
+
 			/// <summary>Create from buffer</summary>
 			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets, Guid? context_id)
 			{
@@ -71,6 +92,8 @@ namespace Rylogic.Gfx
 				Owned = owned;
 				Handle = handle;
 			}
+
+			/// <summary>Dispose</summary>
 			public void Dispose()
 			{
 				Dispose(true);

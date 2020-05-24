@@ -52,7 +52,7 @@ namespace pr::rdr
 		template <typename RStep, typename = enable_if_render_step<RStep>> RStep        as()       { return *static_cast<RStep*>(this); }
 
 		// Update the provided shader set appropriate for this render step
-		virtual void ConfigShaders(ShaderSet1& ss, EPrim topo) const = 0;
+		virtual void ConfigShaders(ShaderSet1& ss, ETopo topo) const = 0;
 
 		// Reset the drawlist
 		void ClearDrawlist();

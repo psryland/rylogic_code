@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -1048,9 +1048,9 @@ namespace view3d
 
 			// Save the hit
 			auto& result = hits[hit.m_ray_index];
-			result.m_ws_ray_origin     = view3d::To<View3DV4>(hit.m_ws_origin);
-			result.m_ws_ray_direction  = view3d::To<View3DV4>(hit.m_ws_direction);
-			result.m_ws_intercept      = view3d::To<View3DV4>(hit.m_ws_intercept);
+			result.m_ws_ray_origin     = To<View3DV4>(hit.m_ws_origin);
+			result.m_ws_ray_direction  = To<View3DV4>(hit.m_ws_direction);
+			result.m_ws_intercept      = To<View3DV4>(hit.m_ws_intercept);
 			result.m_distance          = hit.m_distance;
 			result.m_obj               = const_cast<View3DObject>(ldr_obj);
 			result.m_snap_type         = static_cast<EView3DSnapType>(hit.m_snap_type);

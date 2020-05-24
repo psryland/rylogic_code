@@ -162,7 +162,7 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Set the camera to world transform and focus distance.</summary>
-			public void SetPosition(v4 position, v4 lookat, v4 up)
+			public void Lookat(v4 position, v4 lookat, v4 up)
 			{
 				View3D_CameraPositionSet(m_window.Handle, position, lookat, up);
 			}
@@ -172,7 +172,7 @@ namespace Rylogic.Gfx
 			{
 				var up = AlignAxis;
 				if (up.LengthSq == 0f) up = v4.YAxis;
-				SetPosition(position, FocusPoint, up);
+				Lookat(position, FocusPoint, up);
 			}
 
 			/// <summary>Set the camera fields of view (H and V) and focus distance such that a rectangle (w/h) exactly fills the view</summary>
