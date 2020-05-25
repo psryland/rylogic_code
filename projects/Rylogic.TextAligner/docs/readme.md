@@ -59,3 +59,24 @@ The _Alignment Characters_ option is used to select between different whitespace
 The top table contains the alignment groups, and the lower table contains the patterns that are all considered equivalent for a given group. In the image above, the group _Comparisons_ consists of the patterns: ```==, !=, <=, >=, >, and <```. Patterns can be simple substrings, wildcard expressions, or regular expressions. To edit a pattern, select the pencil icon to display the pattern editor:
 
 ![pattern_editor.png](pattern_editor.png "Edit a pattern")
+
+### Version 1.09
+
+- An _Unalign_ command has been added that replaces consecutive white-space with a single white-space character within selected text. The command preserves leading (indentation) white-space, and is aware of C-style literal multi-line strings, so long as they are completely enclosed by the selection.
+
+  ```txt
+  You can    now    use  '   Unalign   '
+  to   turn   "  this...
+  ... "   into...		this
+  ```
+
+  ```txt
+  You can now use '   Unalign   '
+  to turn "  this...
+  ... " into... this
+  ```
+
+### Version 1.08
+
+- Added an option to use spaces, tabs, or both for aligning,
+- Replaced the UI components, used in the options dialog, with an implementation based on WPF. This solved a bug related to RichEdit controls and LoadLibrary in the previous version (thanks Quinten!).

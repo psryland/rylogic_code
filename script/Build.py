@@ -111,20 +111,14 @@ def SignAssembly(target):
 	Tools.SignAssembly(target)
 	return
 
-# Native binary (base)
-class Native():
-	def __init__(self, proj_name:str, workspace:str, platforms:[str], configs:[str]):
-		self.proj_name = proj_name
+# Base for all builders
+class Common():
+	def __init__(self, workspace:str):
 		self.workspace = workspace
-		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
-		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
-		self.platforms = platforms if platforms else ["x64", "x86"]
-		self.configs = configs if configs else ["Release", "Debug"]
-		self.obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
+		self.requires_signing = False
 		return
 
 	def Clean(self):
-		CleanObj(self.obj_dir, self.platforms, self.configs)
 		return
 
 	def Build(self):
@@ -134,6 +128,22 @@ class Native():
 		return
 
 	def Publish(self):
+		return
+
+# Native binary (base)
+class Native(Common):
+	def __init__(self, proj_name:str, workspace:str, platforms:[str], configs:[str]):
+		Common.__init__(self, workspace)
+		self.proj_name = proj_name
+		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
+		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+		self.platforms = platforms if platforms else ["x64", "x86"]
+		self.configs = configs if configs else ["Release", "Debug"]
+		self.obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
+		return
+
+	def Clean(self):
+		CleanObj(self.obj_dir, self.platforms, self.configs)
 		return
 
 # Native SDK dll (base)
@@ -210,28 +220,20 @@ class P3d(Native):
 		return
 
 # .NET assembly (base)
-class Managed():
+class Managed(Common):
 	def __init__(self, proj_name:str, frameworks:[str], workspace:str, platforms:[str], configs:[str]):
+		Common.__init__(self, workspace)
 		self.proj_name = proj_name
 		self.frameworks = frameworks
-		self.workspace = workspace
 		self.platforms = platforms if platforms else ["Any CPU"]
 		self.configs = configs if configs else ["Release", "Debug"]
 		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
 		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+		self.requires_signing = True
 		return
 
 	def Clean(self):
 		CleanDotNet(self.proj_dir, self.platforms, self.configs)
-		return
-
-	def Build(self):
-		return
-
-	def Deploy(self):
-		return
-
-	def Publish(self):
 		return
 
 # Rylogic .NET assembly (base)
@@ -298,6 +300,7 @@ class RylogicGuiWPF(RylogicAssembly):
 class Csex(Managed):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
 		Managed.__init__(self, "CSex", ["net472"], workspace, platforms, configs)
+		self.requires_signing = False
 		return
 
 	def Build(self):
@@ -315,7 +318,7 @@ class LDraw(Managed):
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild(self.proj_name, self.rylogic_sln, [f"LDraw\\{self.proj_name}"], self.platforms, self.configs, )
+		MSBuild(self.proj_name, self.rylogic_sln, [f"LDraw\\{self.proj_name}"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):
@@ -355,14 +358,81 @@ class LDraw(Managed):
 		return
 	
 	def Publish(self):
-		if not self.msi or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
+		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing to web site...")
 		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
 		return
 
+# Rylogic.TextAligner
+class RylogicTextAligner(Managed):
+	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+		Managed.__init__(self, "Rylogic.TextAligner", ["net472"], workspace, platforms, configs)
+		self.manifest  = os.path.join(self.proj_dir, "source.extension.vsixmanifest")
+		self.vsix_name = "Rylogic.TextAligner.vsix"
+		return
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"VSExtensions\\{self.proj_name}"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+
+		# Check the manifest version
+		version_regex = r'Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="(?P<version>.*?)"'
+		match_version = Tools.Extract(self.manifest, version_regex)
+		if not match_version: raise RuntimeError("Failed to extract version number from:\r\n " + self.manifest)
+		version = match_version.group("version")
+		print(f"Deploying {self.proj_name} Version: {version}\n")
+
+		# Check version is greater than the last released version (update this after a release)
+		min_released_version = "1.08"
+		if version <= min_released_version:
+			raise RuntimeError("Version number needs bumping")
+
+		# Check the assembly info
+		assinfo = os.path.join(self.proj_dir, "Properties", "AssemblyInfo.cs")
+		ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
+		ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
+		if not ass_version or ass_version.group("vers") != version:
+			raise RuntimeError(f"AssemblyVersion has not been updated to {version}")
+		if not ass_filevers or ass_filevers.group("vers") != version:
+			raise RuntimeError(f"AssemblyFileVersion has not been updated to {version}")
+
+		# Ensure the ouptut directory exists
+		self.bin_dir = os.path.join(UserVars.root, "bin")
+		self.bin_path = Tools.ChgExtn(os.path.join(self.bin_dir, self.vsix_name), f"_v{version}.vsix")
+
+		# Copy build products to the output directory
+		print(f"Copying files to: {self.bin_dir}")
+		target_path = os.path.join(self.proj_dir, "bin", "Release", self.vsix_name)
+		Tools.Copy(target_path, self.bin_path)
+
+		# Sign the vsix
+		Tools.SignVsix(self.bin_path, "sha1")
+		return
+
+	def Publish(self):
+		if not hasattr(self, "bin_path") or not os.path.exists(self.bin_path): raise RuntimeError("Call Deploy before Publish")
+		print("\nPublishing...")
+
+		# Ask to install
+		install = input(f"Install {self.bin_path} (y/n)? ")
+		if install == 'y':
+			try:
+				print("Uninstalling previous versions...")
+				Tools.Exec(["cmd", "/C", os.path.join(UserVars.vs_dir, "Common7", "IDE", "VSIXInstaller.exe"), "/q", "/a", f"/u:{self.vsix_name}"])
+			except: pass
+			print("Installing...")
+			Tools.Exec(["cmd", "/C", self.bin_path])
+
+		# Uploading to marketplace.visualstudio.com should be a manual step... you don't want to bugger it up.
+		return
+
 # Groups of projects
-class Group():
-	def __init__(self):
+class Group(Common):
+	def __init__(self, workspace:str):
+		Common.__init__(self, workspace)
 		self.items = []
 		return
 
@@ -385,7 +455,8 @@ class Group():
 # Rylogic .NET assemblies
 class Rylogic(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Group.__init__(self)
+		Group.__init__(self, workspace)
+		self.requires_signing = True
 		self.items = [
 			RylogicCore       (workspace, platforms, configs),
 			RylogicCoreWindows(workspace, platforms, configs),
@@ -399,7 +470,7 @@ class Rylogic(Group):
 # Build the native projects
 class AllNative(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Group.__init__(self)
+		Group.__init__(self, workspace)
 		self.items = [
 			Sqlite3  (workspace, platforms, configs),
 			Scintilla(workspace, platforms, configs),
@@ -412,7 +483,7 @@ class AllNative(Group):
 # Build the managed projects
 class AllManaged(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Group.__init__(self)
+		Group.__init__(self, workspace)
 		self.items = [
 			Rylogic  (workspace, platforms, configs),
 			Csex     (workspace, platforms, configs),
@@ -423,7 +494,7 @@ class AllManaged(Group):
 # Build all Software projects
 class All(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Group.__init__(self)
+		Group.__init__(self, workspace)
 		self.items = [
 			Sqlite3  (workspace, platforms, configs),
 			Scintilla(workspace, platforms, configs),
@@ -518,13 +589,15 @@ def Main(args:[str]):
 	if not projects: projects = ["All"]
 	if not clean and not build and not deploy and not publish: build = True
 	if publish: deploy = True
-	if deploy and not UserVars.rylogic_cert_pw:
-		Tools.PromptCertPassword()
 
 	# Build/Clean/Deploy each given project
 	for project in projects:
 		name = project.replace('.','')
 		builder = eval(name)(workspace, platforms, configs)
+
+		# Prompt for the cert password if signing is needed
+		if (deploy or publish) and hasattr(builder, "requires_signing") and builder.requires_signing and not UserVars.rylogic_cert_pw:
+			Tools.PromptCertPassword()
 
 		# Clean if '-clean' is used
 		if clean:
@@ -551,6 +624,7 @@ if __name__ == "__main__":
 		# Examples:
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', '-platforms', 'x64', 'x86', '-configs', 'release', 'debug']
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', 'Rylogic.Core.Windows', '-deploy']
+		#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy', '-publish']
 		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
 		#print(f"Command Line: {str(sys.argv)}")
