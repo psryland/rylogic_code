@@ -5,6 +5,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 import Rylogic as Tools
 import UserVars
 
+raise RuntimeError("Deprecated, use build.py")
+
 try:
 	print(
 		"*************************************************************************\n"
