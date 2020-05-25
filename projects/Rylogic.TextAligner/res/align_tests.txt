@@ -56,3 +56,12 @@ a== b
 //		harris
 //  yaris
 // 	  feris
+			
+	Unalign     this    stuff
+	int         words;      
+	char	  something;    //	 else		
+		Preserve	  leading whitespace  
+	But   ignore	"quoted     \"     white space    \"    "    !
+	Including       '  "  single"    \' quotes \' '
+	What about "  multi-   
+	   line strings?  "

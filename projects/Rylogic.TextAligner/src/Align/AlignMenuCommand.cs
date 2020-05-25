@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Rylogic.TextAligner
+﻿namespace Rylogic.TextAligner
 {
 	public sealed class AlignMenuCommand :BaseCommand
 	{
