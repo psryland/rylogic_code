@@ -331,7 +331,6 @@ class LDraw(Managed):
 		print(f"Copying files to {self.bin_dir}...\n")
 		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
 		Tools.Copy(os.path.join(target_dir, "LDraw.exe"                 ), os.path.join(self.bin_dir, ""))
-		#Tools.Copy(os.path.join(target_dir, "LDraw.dll"                 ), os.path.join(self.bin_dir, ""))
 		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), os.path.join(self.bin_dir, ""))
 		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), os.path.join(self.bin_dir, ""))
 		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), os.path.join(self.bin_dir, ""))
@@ -349,7 +348,6 @@ class LDraw(Managed):
 					r"LDraw\..*\.dll",
 					r"Rylogic\..*\.dll",
 					r"ICSharpCode.AvalonEdit.dll",
-					r"Microsoft.Toolkit.Wpf.UI.Controls.WebView.dll",
 				],
 				["lib_files", "lib", "lib", True],
 			])

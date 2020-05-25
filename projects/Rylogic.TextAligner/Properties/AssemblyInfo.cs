@@ -1,7 +1,5 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.Shell;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -20,5 +18,5 @@ using Microsoft.VisualStudio.Shell;
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyVersion("1.08")]
-[assembly: AssemblyFileVersion("1.08")]
+[assembly: AssemblyVersion("1.09")]
+[assembly: AssemblyFileVersion("1.09")]

@@ -4,6 +4,8 @@
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
     <TargetFrameworkProfile />
+	  <Nullable>enable</Nullable>
+	  <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -59,8 +61,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Align\AlignPos.cs" />
+    <Compile Include="src\Align\Selection.cs" />
+    <Compile Include="src\Align\Unalign.cs" />
     <Compile Include="src\Align\Align.cs" />
     <Compile Include="src\Align\AlignGroup.cs" />
+    <Compile Include="src\Align\UnalignMenuCommand.cs" />
     <Compile Include="src\Align\AlignMenuCommand.cs" />
     <Compile Include="src\Align\AlignPattern.cs" />
     <Compile Include="src\Align\EAlignCharacters.cs" />
@@ -124,6 +130,7 @@
     <Resource Include="res\green_up.png" />
     <Resource Include="res\help_blue.png" />
     <Resource Include="res\icon_128x128.png" />
+    <Resource Include="res\left_align.png" />
     <Resource Include="res\paypal_donate_logo.png" />
     <Resource Include="res\pencil.png" />
     <Resource Include="res\red_x.png" />

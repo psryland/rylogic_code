@@ -68,11 +68,21 @@
 					<ButtonText>&amp;Align</ButtonText>
 				</Strings>
 			</Button>
+			<Button guid="guidRylogicTextAlignerCmdSet" id="cmdidUnalign" priority="0x0101" type="Button">
+				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_ADVANCED_CMDS"/>
+				<Icon guid="guidUnalignIcon" id="bmpBtn"/>
+				<Strings>
+					<ToolTipText>Remove repeated consecutive white space in selected text</ToolTipText>
+					<CommandName>Unalign</CommandName>
+					<ButtonText>&amp;Unalign</ButtonText>
+				</Strings>
+			</Button>
 		</Buttons>
 
 		<!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
 		<Bitmaps>
 			<Bitmap guid="guidAlignIcon" href="res\exchange.png"/>
+			<Bitmap guid="guidUnalignIcon" href="res\left_align.png"/>
 		</Bitmaps>
 	</Commands>
 
@@ -84,10 +94,14 @@
 		<GuidSymbol name="guidRylogicTextAlignerCmdSet" value="{E695E21D-48BB-4B3E-B442-DF64253991A5}">
 			<IDSymbol name="RylogicMenuGroup" value="0x1020"/>
 			<IDSymbol name="cmdidAlign" value="0x0100"/>
+			<IDSymbol name="cmdidUnalign" value="0x0101"/>
 		</GuidSymbol>
 
 		<!-- Menu item bitmaps -->
 		<GuidSymbol name="guidAlignIcon" value="{1c4ba5d5-cc4a-4b0f-92a7-d35914c34c13}">
+			<IDSymbol name="bmpBtn" value="1"/>
+		</GuidSymbol>
+		<GuidSymbol name="guidUnalignIcon" value="{d3fbf7c6-efb4-4130-9ede-0ace8f644154}">
 			<IDSymbol name="bmpBtn" value="1"/>
 		</GuidSymbol>
 	</Symbols>

@@ -31,15 +31,13 @@ namespace Rylogic.TextAligner
 	/// </remarks>
 	[Guid(PackageGuidString)]
 	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                 // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.08", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.09", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                  // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                         // This attribute is needed to let the shell know that this package exposes an options page.
 	[ProvideBindingPath]                                                                                      // Include the local directory when resolving dependent assemblies
 	public sealed class RylogicTextAlignerPackage :Package, IOleCommandTarget
 	{
-		/// <summary>
-		/// Rylogic.TextAlignerPackage GUID string.
-		/// </summary>
+		/// <summary>Rylogic.TextAlignerPackage GUID string.</summary>
 		public const string PackageGuidString = "DF402917-6013-40CA-A4C6-E1640DA86B90";
 
 		/// <summary>
@@ -49,7 +47,6 @@ namespace Rylogic.TextAligner
 		/// <param name="cancellationToken">A cancellation token to monitor for initialization cancellation, which can occur when VS is shutting down.</param>
 		/// <param name="progress">A provider for progress updates.</param>
 		/// <returns>A task representing the async work of package initialization, or an already completed task if there is none. Do not return null from this method.</returns>
-		//protected override async Task Initialize(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
 		protected override void Initialize()
 		{
 			var root = Path_.Directory(Assembly.GetExecutingAssembly().Location);
@@ -67,10 +64,11 @@ namespace Rylogic.TextAligner
 			base.Initialize();
 
 			// Add our command handlers for menu
-			//if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService mcs)
-			//	mcs.AddCommand(new AlignMenuCommand(this));
 			if (GetService<IMenuCommandService>() is OleMenuCommandService mcs)
+			{
 				mcs.AddCommand(new AlignMenuCommand(this));
+				mcs.AddCommand(new UnalignMenuCommand(this));
+			}
 		}
 
 		/// <summary>Return the VS service of type 'TService'</summary>
@@ -91,6 +89,7 @@ namespace Rylogic.TextAligner
 	static class PkgCmdIDList
 	{
 		public const int cmdidAlign = 0x100;
+		public const int cmdidUnalign = 0x101;
 	}
 
 	static class GuidList
