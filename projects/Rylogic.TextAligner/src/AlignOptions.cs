@@ -80,7 +80,7 @@ namespace Rylogic.TextAligner
 				new AlignPattern(EPattern.RegularExpression, @"(?<!\+)\+(?!\+)", 0, 1, "Matches '+' but not '++'"),
 				new AlignPattern(EPattern.RegularExpression, @"(?<!\-)\-(?!\-)", 0, 1, "Matches '-' but not '--'")));
 
-			Groups.Add(new AlignGroup("Comma delimiter", 1,
+			Groups.Add(new AlignGroup("Comma delimiter", 0,
 				new AlignPattern(EPattern.Substring, @",")));
 
 			Groups.Add(new AlignGroup("Members", 1,

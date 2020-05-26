@@ -379,29 +379,30 @@ class RylogicTextAligner(Managed):
 	def Deploy(self):
 
 		# Check the manifest version
-		version_regex = r'Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="(?P<version>.*?)"'
+		self.vsix_id = "DF402917-6013-40CA-A4C6-E1640DA86B90"
+		version_regex = f'Id="{self.vsix_id}" Version="(?P<version>.*?)"'
 		match_version = Tools.Extract(self.manifest, version_regex)
 		if not match_version: raise RuntimeError("Failed to extract version number from:\r\n " + self.manifest)
-		version = match_version.group("version")
-		print(f"Deploying {self.proj_name} Version: {version}\n")
+		self.version = match_version.group("version")
+		print(f"Deploying {self.proj_name} Version: {self.version}\n")
 
 		# Check version is greater than the last released version (update this after a release)
-		min_released_version = "1.08"
-		if version <= min_released_version:
+		min_released_version = "1.8"
+		if self.version <= min_released_version:
 			raise RuntimeError("Version number needs bumping")
 
 		# Check the assembly info
 		assinfo = os.path.join(self.proj_dir, "Properties", "AssemblyInfo.cs")
 		ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
 		ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
-		if not ass_version or ass_version.group("vers") != version:
+		if not ass_version or ass_version.group("vers") != self.version:
 			raise RuntimeError(f"AssemblyVersion has not been updated to {version}")
-		if not ass_filevers or ass_filevers.group("vers") != version:
+		if not ass_filevers or ass_filevers.group("vers") != self.version:
 			raise RuntimeError(f"AssemblyFileVersion has not been updated to {version}")
 
 		# Ensure the ouptut directory exists
 		self.bin_dir = os.path.join(UserVars.root, "bin")
-		self.bin_path = Tools.ChgExtn(os.path.join(self.bin_dir, self.vsix_name), f"_v{version}.vsix")
+		self.bin_path = Tools.ChgExtn(os.path.join(self.bin_dir, self.vsix_name), f".v{self.version}.vsix")
 
 		# Copy build products to the output directory
 		print(f"Copying files to: {self.bin_dir}")
@@ -416,17 +417,30 @@ class RylogicTextAligner(Managed):
 		if not hasattr(self, "bin_path") or not os.path.exists(self.bin_path): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing...")
 
+		# Copy to www
+		# Can't download vsix file, so zip first
+		zip_path = Tools.ZipFile(self.bin_path)
+		print("\nPublishing to web site...")
+		Tools.Copy(zip_path, os.path.join(UserVars.wwwroot, "files", "rylogic", ""))
+
 		# Ask to install
+		print("\nInstall locally...")
 		install = input(f"Install {self.bin_path} (y/n)? ")
 		if install == 'y':
 			try:
 				print("Uninstalling previous versions...")
-				Tools.Exec(["cmd", "/C", os.path.join(UserVars.vs_dir, "Common7", "IDE", "VSIXInstaller.exe"), "/q", "/a", f"/u:{self.vsix_name}"])
-			except: pass
-			print("Installing...")
-			Tools.Exec(["cmd", "/C", self.bin_path])
+				vsix_installer = CheckPath(os.path.join(UserVars.vs_dir, "Common7", "IDE", "VSIXInstaller.exe"))
+				Tools.Exec(["cmd", "/C", vsix_installer, "/a", f"/u:{self.vsix_id}"])
+			except Exception as ex:
+				print(f"Uninstall failed: {str(ex)}")
+			try:
+				print("Installing latest version...")
+				Tools.Exec(["cmd", "/C", self.bin_path])
+			except Exception as ex:
+				print(f"Install failed: {str(ex)}")
 
-		# Uploading to marketplace.visualstudio.com should be a manual step... you don't want to bugger it up.
+		# Uploading to marketplace.visualstudio.com is a manual
+		# step... you don't want to bugger it up.
 		return
 
 # Groups of projects

@@ -1,5 +1,11 @@
 Immediate ToDo:
 	
+	Get p3d support working with new format
+	Finish exporter for Blender
+	Export REX models in new format
+	Export Plane model
+	
+	
 	Retro pi
 	arcade joystick
 	xbox controllers on Pi
@@ -17,6 +23,9 @@ LDraw
 	- Equation doesn't renderer until first refresh
 	- *Mesh should silently handle empty objects
 	- Support sub models in object manager
+
+TextAligner
+	- implement VSCode version
 	
 P3D
 	- Support .obj files

@@ -713,8 +713,18 @@ def NugetPublish(package_path:str):
 	Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
 	return
 
+# Create a zip of a single file
+def ZipFile(file_path:str, zip_path:str=None):
+	zip_path = zip_path if zip_path else ChgExtn(file_path, ".zip")
+	arc_path = os.path.split(file_path)[1]
+	zipf = zipfile.ZipFile(zip_path, 'w')
+	zipf.write(file_path, arc_path)
+	zipf.close()
+	return zip_path
+
 # Create a zip of a directory
-def ZipDirectory(zip_path, root_dir):
+def ZipDirectory2(root_dir:str, zip_path:str=None):
+	zip_path = zip_path if zip_path else f"{root_dir}.zip"
 	zipf = zipfile.ZipFile(zip_path, 'w')
 	for root,_,files in os.walk(root_dir):
 		for file in files:
@@ -722,6 +732,7 @@ def ZipDirectory(zip_path, root_dir):
 			arcpath  = os.path.relpath(filepath, root_dir)
 			zipf.write(filepath, arcpath)
 	zipf.close()
+	return zip_path
 
 # Extract a zip file with progress feedback
 def ExtractZip(filepath:str, destination:str, show_progress:bool):

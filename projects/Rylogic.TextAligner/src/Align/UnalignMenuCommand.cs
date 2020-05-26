@@ -17,7 +17,8 @@ namespace Rylogic.TextAligner
 		{
 			var view_host = CurrentViewHost;
 			if (view_host == null) return;
-			new Unalign(view_host.TextView);
+			var options = Package.GetDialogPage<AlignOptions>();
+			new Aligner(options.Groups, options.AlignStyle, view_host.TextView, EAction.Unalign);
 		}
 	}
 }

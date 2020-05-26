@@ -14,10 +14,8 @@
 		{
 			var view_host = CurrentViewHost;
 			if (view_host == null) return;
-
-			// Get the align patterns
 			var options = Package.GetDialogPage<AlignOptions>();
-			new Align(options.Groups, options.AlignStyle, view_host.TextView);
+			new Aligner(options.Groups, options.AlignStyle, view_host.TextView, EAction.Align);
 		}
 	}
 }
