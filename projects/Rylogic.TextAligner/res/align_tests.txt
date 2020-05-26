@@ -5,10 +5,10 @@
 enum Values
 {
 	One = 0x0001,
-	Two = 0x0002,
-	Three = 0x004,
-	Four = 0x0008,
-	Five = 0x0010,
+	Two = 0x0002,  
+	Three = 0x004,  
+	Four = 0x0008,			
+	Five = 0x0010,    
 	Six = 0x0200,
 	Seven = 0x0400,
 }
@@ -65,3 +65,7 @@ a== b
 	Including       '  "  single"    \' quotes \' '
 	What about "  multi-   
 	   line strings?  "
+
+	     You can    now    use  '   Unalign   '
+  to   turn   "  this...
+  ... "   into...		this

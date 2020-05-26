@@ -4,8 +4,8 @@
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
     <TargetFrameworkProfile />
-	  <Nullable>enable</Nullable>
-	  <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -62,9 +62,10 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="src\Align\AlignPos.cs" />
+    <Compile Include="src\Align\EAction.cs" />
     <Compile Include="src\Align\Selection.cs" />
-    <Compile Include="src\Align\Unalign.cs" />
-    <Compile Include="src\Align\Align.cs" />
+    <Compile Include="src\Align\Token.cs" />
+    <Compile Include="src\Align\Aligner.cs" />
     <Compile Include="src\Align\AlignGroup.cs" />
     <Compile Include="src\Align\UnalignMenuCommand.cs" />
     <Compile Include="src\Align\AlignMenuCommand.cs" />

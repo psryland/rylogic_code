@@ -2,7 +2,7 @@
 
 ## Overview
 
-Rylogic Text Aligner is an extension that adds a command to the edit menu for vertically aligning text. More than simply satisfying the obsessive compulsives out there, vertical text alignment is a powerful productivity aid when used in combination with column selection. Vertically aligned text also leverages your subconscious ability to spot patterns, making pattern-breaking bugs much easier to spot. Notice how much easier it is to spot the bug in the second of the following two code examples:
+Rylogic Text Aligner is an extension that adds a command to the edit menu for vertically aligning text. Vertical text alignment is a powerful productivity aid when used in combination with column selection. Vertically aligned text also leverages your subconscious ability to spot patterns, making pattern-breaking bugs much easier to spot. Notice how much easier it is to spot the bug in the second of the following two code examples:
 
 ![unaligned_bug](unaligned_bug.png "Un-aligned code")
 ![aligned_bug](aligned_bug.png "Un-aligned code")
@@ -41,11 +41,18 @@ You can also tell the extension to align to specific characters by selecting the
 ![usage4](usage4.png "Aligning to a selection example")
 ![usage5](usage5.png "Aligning to a selection example")
 
+Sometimes there is a need to limit the range of lines that aligning is applied to. This can be achieved by selecting multiple lines before hitting align:
+
+![usage6](usage6.png "Limiting to selected lines example")
+![usage7](usage7.png "Limiting to selected lines example")
+
+Notice that whole lines do not need to be selected.
+
 ### Options
 
 The character sequences recognised as 'alignable' are defined in the options. Select _Options_ from the _Tools_ menu, then _Align Options_ under the _Rylogic_ section.
 
-![options__1.png](options__1.png "Alignment options")
+![options.png](options.png "Alignment options")
 
 All options are saved to an XML file in your AppData folder:
 ```%USERPROFILE%\AppData\Roaming\Rylogic\VSExtension\align_patterns.xml```
@@ -60,23 +67,44 @@ The top table contains the alignment groups, and the lower table contains the pa
 
 ![pattern_editor.png](pattern_editor.png "Edit a pattern")
 
-### Version 1.09
+### Unalign
 
-- An _Unalign_ command has been added that replaces consecutive white-space with a single white-space character within selected text. The command preserves leading (indentation) white-space, and is aware of C-style literal multi-line strings, so long as they are completely enclosed by the selection.
+In version 1.9, the _Unalign_ command was added. It uses logic similar to the _Align_ command to select the appropriate alignment group, based on nearby text and the lines above and below the caret position. _Unalign_ removes consecutive whitespace to the left of the matched pattern on each line. For alignment groups with leading space, a single whitespace character is added. Trailing whitespace is also removed for affected lines.
 
-  ```txt
-  You can    now    use  '   Unalign   '
-  to   turn   "  this...
-  ... "   into...		this
-  ```
+Using the text example from above, unaligning should result in the following sequence. Notice that the priority of alignment groups is reversed, compared to _Align_, so that _Unalign_ is almost the inverse operation:
 
-  ```txt
-  You can now use '   Unalign   '
-  to turn "  this...
-  ... " into... this
-  ```
+![unalign_usage1](unalign_usage1.png "Unalignment example")
+![unalign_usage2](unalign_usage2.png "Unalignment example")
+![unalign_usage3](unalign_usage3.png "Unalignment example")
 
-### Version 1.08
+Similarly, selecting text to unalign on is also possible:
 
-- Added an option to use spaces, tabs, or both for aligning,
-- Replaced the UI components, used in the options dialog, with an implementation based on WPF. This solved a bug related to RichEdit controls and LoadLibrary in the previous version (thanks Quinten!).
+![unalign_usage4](unalign_usage4.png "Unalignment example")
+![unalign_usage5](unalign_usage5.png "Unalignment example")
+
+The range that unaligning is applied to can be limited by multi-line selection. As before, whole lines do not need to be selected:
+
+![unalign_usage6](unalign_usage6.png "Limiting unalignment example")
+![unalign_usage7](unalign_usage7.png "Limiting unalignment example")
+
+Unlike _Align_, the _Unalign_ command can also be used with selected text where no alignment patterns match. In this case, the _Unalign_ command replaces any consecutive white-space with single white-space characters. The command preserves leading indentation, and is aware of C-style literal strings, including multi-line strings so long as they are spanned by the selection.
+
+![non_pattern_unalign1](non_pattern_unalign1.png "Non-pattern unalignment example")
+![non_pattern_unalign2](non_pattern_unalign2.png "Non-pattern unalignment example")
+
+Notice that multiple whitespace within the quoted literal string is preserved.
+
+The _Unalign_ command is available under the Edit -> Advanced Menu. Again, for convenience, I recommend creating a keyboard shortcut using the same process as above, except with "Edit.Unalign" in the search text field.
+
+#### Version History
+
+- *v1.9 - 2020-05-27*
+  - Unalign feature added.
+  - Default leading space for 'Commas' group set to 0. Set it back to 1 if you prefer space to the left of your commas.
+
+- *v1.8 - 2020-03-23*
+  - Option to use spaces, tabs, or both for aligning added.
+  - Replaced the UI components, used in the options dialog, with an implementation based on WPF. This solved a bug related to RichEdit controls and LoadLibrary in the previous version (thanks Quinten!).
+  
+- *v1.7 - 2018-07-02*
+  - First public release.
