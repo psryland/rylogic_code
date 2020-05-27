@@ -3,9 +3,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {Aligner} from './align/align';
+import { Aligner } from './align/aligner';
+import { EAction } from './align/eaction';
 
-// this method is called when your extension is activated
+// This method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext)
 {
@@ -13,18 +14,26 @@ export function activate(context: vscode.ExtensionContext)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Rylogic.TextAligner is now active.');
 
-	let aligner = new Aligner();
+	const aligner = new Aligner();
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with 'registerCommand'
 	// The commandId parameter must match the command field in package.json
 	context.subscriptions.push(vscode.commands.registerCommand('extension.Align', () =>
 	{
-		var editor = vscode.window.activeTextEditor;
+		const editor = vscode.window.activeTextEditor;
 		if (!editor)
 			return;
 
-		aligner.DoAlign(editor);
+		aligner.DoAlign(editor, EAction.Align);
+	}));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.Unalign', () =>
+	{
+		const editor = vscode.window.activeTextEditor;
+		if (!editor)
+			return;
+
+		aligner.DoAlign(editor, EAction.Unalign);
 	}));
 }
 

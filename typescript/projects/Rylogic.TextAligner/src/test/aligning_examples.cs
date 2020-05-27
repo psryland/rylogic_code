@@ -12,6 +12,11 @@ ass |= ignment
 assi ||= gnment
 as &&= signment
 
+/* Lambdas */
+(a) => {}
+(a,b,c) => { .. }
+_ => one;
+
 /* Comparisons */
 equ == ality
 inequ!= ality
@@ -27,8 +32,8 @@ lamb => da
 as %= signment
 assignme ^= nt
 equ == ality
-ass-= ignment
-assignm~= ent
+ass -= ignment
+assignm ~= ent
 ass |= ignment
 lamb => da
 inequ!= ality
@@ -86,4 +91,5 @@ int m_int;
 float m_float;
 double _double;
 char _char;
-
+string str_;
+long long_;

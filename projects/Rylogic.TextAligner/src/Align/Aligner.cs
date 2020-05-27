@@ -71,6 +71,7 @@ namespace Rylogic.TextAligner
 			var pattern_selection = !selection.IsEmpty && selection.IsSingleLine && !selection.IsWholeLines;
 			if (pattern_selection)
 			{
+				// Create an alignment group based on the selection
 				var s = selection.Pos.Begi - selection.SLine.Start.Position;
 				var e = selection.Pos.Endi - selection.SLine.Start.Position;
 				var text = selection.SLine.GetText();
@@ -80,41 +81,35 @@ namespace Rylogic.TextAligner
 				return new[]{new AlignGroup("Selection", 0, new AlignPattern(EPattern.Substring, expr, ofs))}.ToList();
 			}
 
-			// Make a copy of the groups
-			var groups = m_groups.ToList();
-
 			// If the cursor is next to an alignment pattern, move that pattern to the front of the priority list.
 			// Only do this when there isn't a multi line selection as the 'near-pattern' behaviour is confusing.
 			if (selection.IsEmpty)
 			{
 				var line = selection.SLine;
 				var line_text = line.GetText();
-				var column = selection.Pos.Begi - line.Start.Position;
-				Debug.Assert(column >= 0 && column <= (line.End.Position - line.Start.Position));
+				var line_char = selection.Pos.Begi - line.Start.Position;
+				Debug.Assert(line_char >= 0 && line_char <= (line.End.Position - line.Start.Position));
 
 				var spanning = (AlignGroup?)null;
 				var rightof = (AlignGroup?)null;
 				var leftof = (AlignGroup?)null;
 
 				// Find matches that span, are immediately to the right, or immediately to the left (priority order)
-				for (var i = 0; i != groups.Count; ++i)
+				foreach (var grp in m_groups)
+				foreach (var pat in grp.Patterns)
+				foreach (var match in pat.AllMatches(line_text))
 				{
-					var grp = groups[i];
-					foreach (var pat in grp.Patterns)
-					foreach (var match in pat.AllMatches(line_text))
-					{
-						// Spanning matches have the highest priority
-						if (match.Beg < column && match.End > column)
-							spanning = grp;
+					// Spanning matches have the highest priority
+					if (match.Beg < line_char && match.End > line_char)
+						spanning = grp;
 
-						// Matches to the right separated only by whitespace are the next highest priority
-						if (match.Beg >= column && string.IsNullOrWhiteSpace(line_text.Substring(column, match.Begi - column)))
-							rightof = grp;
+					// Matches to the right separated only by whitespace are the next highest priority
+					if (match.Beg >= line_char && string.IsNullOrWhiteSpace(line_text.Substring(line_char, match.Begi - line_char)))
+						rightof = grp;
 
-						// Matches to the left separated only by whitespace are next
-						if (match.End <= column && string.IsNullOrWhiteSpace(line_text.Substring(match.Endi, column - match.Endi)))
-							leftof = grp;
-					}
+					// Matches to the left separated only by whitespace are next
+					if (match.End <= line_char && string.IsNullOrWhiteSpace(line_text.Substring(match.Endi, line_char - match.Endi)))
+						leftof = grp;
 				}
 
 				// Move the 'near' patterns to the front of the priority list
@@ -229,9 +224,11 @@ namespace Rylogic.TextAligner
 			if (line_number < 0 || line_number >= m_snapshot.LineCount)
 				return tokens;
 
+			// Read the line from the document
 			var line = m_snapshot.GetLineFromLineNumber(line_number);
 			var line_text = line.GetText();
 
+			// For each alignment group, test for alignment boundaries
 			var grp_index = -1;
 			foreach (var grp in grps)
 			{
@@ -260,8 +257,8 @@ namespace Rylogic.TextAligner
 				var boundaries = FindAlignBoundariesOnLine(i, grps);
 
 				// Look for a token that matches 'align' at 'token_index' position
-				var match = (Token?)null;
 				var idx = -1;
+				var match = (Token?)null;
 				foreach (var b in boundaries)
 				{
 					if (b.GrpIndex != align.GrpIndex) continue;
@@ -310,13 +307,10 @@ namespace Rylogic.TextAligner
 		/// <summary>Performs the aligning using the given edits</summary>
 		private void DoAligning(List<Token> edits)
 		{
-			// The first edit is the line that the aligning is based on, if the token we're aligning
-			// to is the first thing on the line don't align to column zero, leave the leading whitespace as is
+			// 'edits[0]' is the line that the aligning is based on, if the token we're aligning to is the
+			// first thing on the line don't align to column zero, leave the leading whitespace as is.
 			var min_column = edits[0].MinColumnIndex != 0 ? 0 : edits[0].CurrentColumnIndex;
 			var leading_ws = edits[0].Line.GetText().Substring(0, edits[0].CurrentCharIndex);
-
-			// Create an undo scope
-			using var text = m_snapshot.TextBuffer.CreateEdit();
 
 			// Sort in descending line order so that the edits are applied from end to start,
 			// meaning character index positions aren't invalidated as each line is edited.
@@ -326,6 +320,9 @@ namespace Rylogic.TextAligner
 			var pos = FindAlignColumn(edits, min_column);
 			var col = pos.Column - pos.Span.Begi;
 			Debug.Assert(pos.Span.Begi <= 0, "0 should be included in the span");
+
+			// Create an undo scope
+			using var text = m_snapshot.TextBuffer.CreateEdit();
 
 			// Align each line to 'pos'
 			foreach (var edit in edits)
@@ -401,20 +398,15 @@ namespace Rylogic.TextAligner
 			text.Apply();
 		}
 
-		/// <summary>Performs the aligning using the given edits</summary>
+		/// <summary>Performs the unaligning using the given edits</summary>
 		private void DoUnaligning(List<Token> edits)
 		{
-			// The first edit is the line that the aligning is based on, if the token we're aligning
-			// to is the first thing on the line don't align to column zero, leave the leading whitespace as is
-			var min_column = edits[0].MinColumnIndex != 0 ? 0 : edits[0].CurrentColumnIndex;
-			var leading_ws = edits[0].Line.GetText().Substring(0, edits[0].CurrentCharIndex);
-
-			// Create an undo scope
-			using var text = m_snapshot.TextBuffer.CreateEdit();
-
 			// Sort in descending line order so that the edits are applied from end to start,
 			// meaning character index positions aren't invalidated as each line is edited.
 			edits.Sort((l, r) => r.LineNumber.CompareTo(l.LineNumber));
+
+			// Create an undo scope
+			using var text = m_snapshot.TextBuffer.CreateEdit();
 
 			// 'Unalign' each line prior to the alignment group
 			foreach (var edit in edits)
@@ -427,8 +419,9 @@ namespace Rylogic.TextAligner
 					text.Delete(edit.Line.Start.Position + i, str.Length - i);
 
 				// Delete the white space before the alignment pattern.
-				// Insert a single character if the pattern doesn't have leading white space, and isn't the start of a line
 				text.Delete(edit.Line.Start.Position + edit.MinCharIndex, edit.CurrentCharIndex - edit.MinCharIndex);
+
+				// Insert a single character if the pattern doesn't have leading white space, and isn't the start of a line
 				if (edit.Grp.LeadingSpace != 0 && edit.MinCharIndex != 0)
 					text.Insert(edit.Line.Start.Position + edit.MinCharIndex, " ");
 			}
@@ -452,7 +445,7 @@ namespace Rylogic.TextAligner
 				var str = line.GetText();
 
 				// Process text within each line in reverse order
-				int s = line.Length, e = s;
+				int s = str.Length, e = s;
 				for (int i = s; i-- != 0;)
 				{
 					if (quote != null)
@@ -472,12 +465,12 @@ namespace Rylogic.TextAligner
 							// Remove all white space if at the end of a line,
 							// otherwise replace with a single whitespace character
 							text.Delete(line.Start.Position + s, e - s);
-							if (e != line.Length)
+							if (e != str.Length)
 								text.Insert(line.Start.Position + s, " ");
 						}
 
 						// Found the end of a literal string
-						if (quote == null && str[i] == '"' || str[i] == '\'')
+						if (quote == null && (str[i] == '"' || str[i] == '\''))
 							quote = str[i];
 
 						s = e = i;
@@ -490,7 +483,7 @@ namespace Rylogic.TextAligner
 				}
 
 				// If the whole line is white space (and not part of a literal string), delete all of it
-				if (e == line.Length && quote == null)
+				if (e == str.Length && quote == null)
 					text.Delete(line.Start.Position, e - s);
 			}
 

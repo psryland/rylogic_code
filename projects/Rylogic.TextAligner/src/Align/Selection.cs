@@ -9,13 +9,6 @@ namespace Rylogic.TextAligner
 	/// <summary></summary>
 	internal struct Selection
 	{
-		public readonly RangeI Pos;              // The buffer position range of the selected characters [First,Last)
-		public readonly RangeI Lines;            // The lines contained in the selection [First,Last]
-		public readonly ITextSnapshotLine SLine; // The line containing the first selected character
-		public readonly ITextSnapshotLine ELine; // The line containing the last selected character
-		public readonly int CaretPos;            // The buffer position of the caret
-		public readonly int CaretLineNumber;     // The line that the caret is on
-
 		public Selection(IWpfTextView view)
 		{
 			var snapshot = view.TextSnapshot;
@@ -36,8 +29,32 @@ namespace Rylogic.TextAligner
 			Debug.Assert(Pos.Size >= 0);
 			Debug.Assert(Lines.Size >= 0);
 		}
+
+		/// <summary>The buffer position range of the selected characters [First,Last)</summary>
+		public readonly RangeI Pos;
+
+		/// <summary>The lines contained in the selection [First,Last]</summary>
+		public readonly RangeI Lines;
+
+		/// <summary>The line containing the first selected character</summary>
+		public readonly ITextSnapshotLine SLine;
+
+		/// <summary>The line containing the last selected character</summary>
+		public readonly ITextSnapshotLine ELine;
+
+		/// <summary>The buffer position of the caret</summary>
+		public readonly int CaretPos;
+
+		/// <summary>The line that the caret is on</summary>
+		public readonly int CaretLineNumber;
+
+		/// <summary>True if there is no selected text, just a single caret position</summary>
 		public bool IsEmpty => Pos.Empty;
+
+		/// <summary>True if the selection is entirely on a single line</summary>
 		public bool IsSingleLine => Lines.Empty;
+
+		/// <summary>True if the selection spans whole lines</summary>
 		public bool IsWholeLines => Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; // >= because ELine.End.Position doesn't include the newline
 	}
 }
