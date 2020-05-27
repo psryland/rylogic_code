@@ -5,11 +5,15 @@
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"license": "MIT",
-	"main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
-	"icon": "images/icon.png",
-	"engines": {
-		"vscode": "^1.20.0"
+	"main": "./out/extension.js",
+	"icon": "http://www.rylogic.co.nz/files/rylogic/icon.png",
+	"repository": {
+		"url": "https://github.com/psryland/rylogic_code/tree/master/typescript/projects/Rylogic.TextAligner"
 	},
+	"engines": {
+		"vscode": "^1.35.0"
+	},
+	"enableProposedApi": true,
 	"categories": [
 		"Other"
 	],
@@ -21,22 +25,37 @@
 			{
 				"command": "extension.Align",
 				"title": "Align"
+			},
+			{
+				"command": "extension.Unalign",
+				"title": "Unalign"
 			}
 		],
 		"keybindings": [
 			{
 				"command": "extension.Align",
-				"key": "ctrl+shift+]",
+				"key": "Ctrl+Alt+]",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "extension.Unalign",
+				"key": "Ctrl+Alt+[",
 				"when": "editorTextFocus"
 			}
 		],
 		"configuration": {
-			"title": "Alignment Groups",
+			"title": "TextAligner Configuration",
 			"type": "object",
 			"properties": {
+				"textaligner.align_characters": {
+					"type" :"string",
+					"description": "Choose one of Spaces, Tabs, or Mixed for the characters to use for aligning",
+					"enum": [ "Spaces", "Tabs", "Mixed" ],
+					"default": "Spaces"
+				},
 				"textaligner.groups": {
 					"type": "array",
-					"description": "Groups of patterns that are considered equivalent for alignment. Note: javascript's regular expression engine is quite basic (e.g. no look-behind assertions or location information for capture groups). Order patterns within a group from most to least specific. Some of these patterns are not specific enough. Once es2018 RegExp is supported in VSCode they can be updated",
+					"description": "Groups of patterns that are considered equivalent for alignment. Order these from most to least specific.",
 					"items": {
 						"type": "object",
 						"properties": {
@@ -63,12 +82,12 @@
 										},
 										"offset": {
 											"type": "number",
-											"description": "The relative position of matching text relative to the other patterns in the group. Defaults to 0 if omitted.",
+											"description": "The relative position of the matched text to the other patterns in the group once aligned.",
 											"default": 0
 										},
 										"minimum_width": {
 											"type": "number",
-											"description": "Matched text will be padded with whitespace characters up to the minimum width. Defaults to 0 if omitted.",
+											"description": "Matched text will be padded with whitespace characters up to the minimum width.",
 											"default": 0
 										},
 										"comment": {
@@ -87,22 +106,34 @@
 							"leading_space": 1,
 							"patterns": [
 								{
+									"pattern": "(?<![+\\-*/%^~&|!=<>])=(?![=<>])",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"
+								},
+								{
+									"pattern": "(?<![&|])[+\\-*/%^~&|]={1}",
+									"offset": -1,
+									"minimum_width": 2,
+									"comment": "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"
+								},
+								{
 									"pattern": "&&=|\\|\\|=",
 									"offset": -2,
 									"minimum_width": 3,
 									"comment": "Assignments &&= and ||="
-								},
+								}
+							]
+						},
+						{
+							"name": "Lambda",
+							"leading_space": 1,
+							"patterns": [
 								{
-									"pattern": "[+\\-*/%^~&|]=",
-									"offset": -1,
-									"minimum_width": 2,
-									"comment": "Assignment preceded by: +,-,*,/,%,^,~,&,|"
-								},
-								{
-									"pattern": "=(?![=<>])",
+									"pattern": "=>",
 									"offset": 0,
-									"minimum_width": 1,
-									"comment": "Assignment not followed by: =,<,>"
+									"minimum_width": 2,
+									"comment": "Lambda function arrows: () => { ... }"
 								}
 							]
 						},
@@ -117,22 +148,16 @@
 									"comment": "2 character comparisons"
 								},
 								{
-									"pattern": "(?:<|>)(?!=)",
-									"offset": 1,
-									"minimum_width": 1,
-									"comment": "< or > not preceded or followed by ="
-								}
-							]
-						},
-						{
-							"name": "Lambda operators",
-							"leading_space": 1,
-							"patterns": [
-								{
-									"pattern": "=>",
+									"pattern": "(?<!=)>(?!=)",
 									"offset": 0,
-									"minimum_width": 2,
-									"comment": ""
+									"minimum_width": 1,
+									"comment": "> not preceded or followed by ="
+								},
+								{
+									"pattern": "(?<!=)<(?!=)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "< not preceded or followed by ="
 								}
 							]
 						},
@@ -144,7 +169,7 @@
 									"pattern": "(&&|\\|\\|)",
 									"offset": 0,
 									"minimum_width": 2,
-									"comment": ""
+									"comment": "Logical AND and OR operators"
 								}
 							]
 						},
@@ -168,7 +193,7 @@
 									"pattern": "\\(",
 									"offset": 0,
 									"minimum_width": 1,
-									"comment": ""
+									"comment": "Open bracket characters"
 								}
 							]
 						},
@@ -177,7 +202,10 @@
 							"leading_space": 0,
 							"patterns": [
 								{
-									"pattern": "\\)"
+									"pattern": "\\)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Close bracket characters"
 								}
 							]
 						},
@@ -186,7 +214,10 @@
 							"leading_space": 0,
 							"patterns": [
 								{
-									"pattern": "{"
+									"pattern": "{",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Scope start characters"
 								}
 							]
 						},
@@ -195,7 +226,10 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "}"
+									"pattern": "}",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Scope close characters"
 								}
 							]
 						},
@@ -204,7 +238,10 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "(\\+\\+|--)"
+									"pattern": "(\\+\\+|--)",
+									"offset": 0,
+									"minimum_width": 2,
+									"comment": "Increment and decrement operators"
 								}
 							]
 						},
@@ -213,13 +250,13 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "\\+(?!\\+)",
+									"pattern": "(?<!\\+)\\+(?!\\+)",
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Matches '+' but not '++'"
 								},
 								{
-									"pattern": "\\-(?!\\-)",
+									"pattern": "(?<!\\-)\\-(?!\\-)",
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Matches '-' but not '--'"
@@ -228,28 +265,37 @@
 						},
 						{
 							"name": "Comma delimiter",
-							"leading_space": 1,
+							"leading_space": 0,
 							"patterns": [
 								{
-									"pattern": ","
+									"pattern": ",",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Comma characters"
 								}
 							]
 						},
 						{
 							"name": "Members",
-							"leading_space": 0,
+							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "(?:^|\\s)(m_[0-9a-zA-Z_]*)",
+									"pattern": "(?<![~^])(?<=\\s)m_[0-9a-zA-Z_]",
 									"offset": 0,
 									"minimum_width": 1,
-									"comment": "Matches class members that being with 'm_'"
+									"comment": "Matches class members that begin with 'm_' and are not at the start of a line"
 								},
 								{
-									"pattern": "(?:^|\\s)(_[0-9a-zA-Z_]*)",
+									"pattern": "(?<![~^])(?<=\\s)_[0-9a-zA-Z_]*",
 									"offset": 0,
 									"minimum_width": 1,
-									"comment": "Matches class members that being with '_'"
+									"comment": "Matches class members that begin with '_' and are not at the start of a line"
+								},
+								{
+									"pattern": "(?<=\\s)[_a-zA-z][_a-zA-Z0-9]*_",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Matches class members that end with '_'"
 								}
 							]
 						}
@@ -261,19 +307,15 @@
 	"bugs": {
 		"email": "support@rylogic.co.nz"
 	},
-	"devDependencies": {
-		"@types/mocha": "^2.2.42",
-		"@types/node": "^7.10.7",
-		"tslint": "^5.11.0",
-		"typescript": "^3.0.1",
-		"vscode": "^1.1.18"
-	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"postinstall": "node ./node_modules/vscode/bin/install",
-		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+		"watch": "tsc -watch -p ./"
 	},
-	"dependencies": {}
+	"devDependencies": {
+		"@types/node": "^12.12.0",
+		"@types/vscode": "^1.35.0",
+		"tslint": "^5.19.0",
+		"typescript": "^3.8.3"
+	}
 }

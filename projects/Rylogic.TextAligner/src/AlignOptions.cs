@@ -84,8 +84,8 @@ namespace Rylogic.TextAligner
 				new AlignPattern(EPattern.Substring, @",")));
 
 			Groups.Add(new AlignGroup("Members", 1,
-				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z_]*", 0, 1, "Matches class members that being with 'm_'"),
-				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)_[0-9a-zA-Z_]*", 0, 1, "Matches class members that being with '_'"),
+				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)m_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with 'm_'"),
+				new AlignPattern(EPattern.RegularExpression, @"(?<![~^])(?<=\s)_[0-9a-zA-Z_]*", 0, 1, "Matches class members that begin with '_'"),
 				new AlignPattern(EPattern.RegularExpression, @"(?<=\s)[_a-zA-z][_a-zA-Z0-9]*_", 0, 1, "Matches class members that end with '_'")));
 
 			AlignStyle = EAlignCharacters.Spaces;

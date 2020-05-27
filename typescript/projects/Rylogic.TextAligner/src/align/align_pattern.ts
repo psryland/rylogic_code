@@ -1,3 +1,5 @@
+import { Range } from './range';
+
 /** A pattern representing an alignment candidate */
 export class AlignPattern
 {
@@ -29,4 +31,10 @@ export class AlignPattern
 
 	/** A comment to go with the pattern to remember what it is */
 	public readonly comment: string;
+
+	/** Returns the range of characters this pattern should occupy, relative to the aligning column */
+	get position() :Range
+	{
+		return new Range(this.offset, this.offset + this.minimum_width);
+	}
 }

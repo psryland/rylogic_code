@@ -1,5 +1,4 @@
-import * as Math_ from "../../../../rylogic/src/maths/maths";
-import Range = Math_.Range;
+import { Range } from './range';
 
 /** */
 export class AlignPos

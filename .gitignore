@@ -68,3 +68,4 @@ build/*.ldr
 */Rylobot/net/Model/*
 *Sample*
 typescript/**/out/*
+package-lock.json

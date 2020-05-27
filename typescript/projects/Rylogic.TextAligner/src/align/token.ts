@@ -1,20 +1,19 @@
 import * as vscode from "vscode";
-import * as Math_ from "../../../../rylogic/src/maths/maths";
-import * as Range_ from "../../../../rylogic/src/maths/range";
 import { AlignGroup } from './align_group';
 import { AlignPattern } from './align_pattern';
-import Range = Math_.Range;
+import { Range } from './range';
 
 /** */
 export class Token
 {
-	constructor(grp: AlignGroup, grp_index: number, patn_index: number, line: vscode.TextLine, span: Range, tab_size: number)
+	constructor(grp: AlignGroup, grp_index: number, patn_index: number, line: vscode.TextLine, line_number:number, span: Range, tab_size: number)
 	{
 		this.grp = grp;
 		this.grp_index = grp_index;
 		this.pattern = grp.patterns[patn_index];
 		this.span = span;
 		this.line = line;
+		this.line_number = line_number;
 
 		let line_text = line.text;
 		this.MinCharIndex = line_text.substr(0, span.begi).replace(/\s*$/,'').length;
@@ -32,8 +31,11 @@ export class Token
 	/** The pattern that this token matches */
 	public readonly pattern: AlignPattern;
 
-	/// <summary>The line that this token is on</summary>
+	/** The line that this token is on */
 	public readonly line: vscode.TextLine;
+
+	/** The line number that the token is on */
+	public readonly line_number: number;
 
 	/** The character range of the matched pattern on the line */
 	public readonly span: Range;
@@ -53,7 +55,7 @@ export class Token
 	/** The minimum distance of this token from 'caret_pos' */
 	public Distance(caret_pos: number): number
 	{
-		return Range_.Contains(this.span, caret_pos) ? 0 
+		return this.span.contains(caret_pos) ? 0 
 			: Math.min(Math.abs(this.span.begi - caret_pos), Math.abs(this.span.endi - caret_pos));
 	}
 
