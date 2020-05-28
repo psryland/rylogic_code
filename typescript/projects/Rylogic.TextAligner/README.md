@@ -115,6 +115,7 @@ In settings, search for 'TextAligner' and look for 'Groups', then edit the JSON 
 #### Support & Donate
 
 If you like Rylogic Text Aligner and would like to say thanks, a donation would be greatly appreciated.
+
 [![paypal donate](images/paypal_donate_logo.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=accounts%40rylogic.co.nz&lc=NZ&item_name=Donation%20for%20Rylogic.TextAligner&currency_code=NZD&bn=PP%2dDonationsBF)
 
 Bugs should be reported to support@rylogic.co.nz

@@ -1,7 +1,7 @@
 {
 	"name": "rylogic-textaligner-vscode",
 	"displayName": "Rylogic.TextAligner",
-	"version": "1.10.0",
+	"version": "1.10.1",
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"license": "MIT",
@@ -13,7 +13,6 @@
 	"engines": {
 		"vscode": "^1.35.0"
 	},
-	"enableProposedApi": true,
 	"categories": [
 		"Other"
 	],
