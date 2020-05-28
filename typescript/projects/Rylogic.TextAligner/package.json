@@ -47,7 +47,7 @@
 			"title": "TextAligner Configuration",
 			"type": "object",
 			"properties": {
-				"textaligner.align_characters": {
+				"textaligner.alignCharacters": {
 					"type" :"string",
 					"description": "Choose one of Spaces, Tabs, or Mixed for the characters to use for aligning",
 					"enum": [ "Spaces", "Tabs", "Mixed" ],
