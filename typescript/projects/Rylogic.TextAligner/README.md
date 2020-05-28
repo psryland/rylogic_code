@@ -1,5 +1,7 @@
 # Rylogic Text Aligner
 
+_Rylogic Text Aligner is also available for [Visual Studio](https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner)_
+
 ## Overview
 
 Rylogic Text Aligner is an extension that adds two commands to the command palette for vertically aligning text: _Align_ and _Unalign_. Vertical text alignment is a powerful productivity aid when used in combination with column selection. Vertically aligned text also leverages your subconscious ability to spot patterns, making pattern-breaking bugs much easier to spot. Notice how much easier it is to spot the bug in the second of the following two code examples:
@@ -80,7 +82,7 @@ Notice that multiple whitespace within the quoted literal string is preserved.
 
 ## Configuration
 
-***Search for TextAligner in settings***
+***Search for TextAligner in Settings***
 
 #### Tabs vs. Spaces
 
@@ -109,6 +111,13 @@ Each _Alignment Pattern_ has an _Offset_ and a _Minimum Width_. The offset contr
 #### Adding your own Groups and Patterns
 
 In settings, search for 'TextAligner' and look for 'Groups', then edit the JSON data representation of the alignment groups and patterns. It's a good idea to use an online Regex testing tool to design and test your regular expressions (for example: [regexr.com](https://regexr.com/)). Note however that VSCode uses ES2018 regular expressions with support for negative lookbehind and other features, but many online testers do not.
+
+#### Support & Donate
+
+If you like Rylogic Text Aligner and would like to say thanks, a donation would be greatly appreciated.
+[![paypal donate](images/paypal_donate_logo.png)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=accounts%40rylogic.co.nz&lc=NZ&item_name=Donation%20for%20Rylogic.TextAligner&currency_code=NZD&bn=PP%2dDonationsBF)
+
+Bugs should be reported to support@rylogic.co.nz
 
 #### Version History
 
