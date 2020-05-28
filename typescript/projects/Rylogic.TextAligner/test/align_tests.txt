@@ -62,3 +62,9 @@ a== b
 	selected   text  containing  "C-style   mult-
 	line   \"  strings  \"" and    indentation!
 }
+
+which         = means
+assignments  -= will
+all          *= align
+as          &&= follows
+
