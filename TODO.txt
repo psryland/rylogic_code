@@ -25,7 +25,7 @@ LDraw
 	- Support sub models in object manager
 
 TextAligner
-	- Do readme and publish
+	- Add "+NEW+ VS Code version available" include links.
 	- Release v1.10 with minor bug fixes (typos etc)
 	
 P3D

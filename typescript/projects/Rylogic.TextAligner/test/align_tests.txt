@@ -63,8 +63,8 @@ a== b
 	line   \"  strings  \"" and    indentation!
 }
 
-which         = means
-assignments  -= will
-all          *= align
-as          &&= follows
+which = means
+assignments -= will
+all *= align
+as &&= follows
 
