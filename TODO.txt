@@ -25,7 +25,8 @@ LDraw
 	- Support sub models in object manager
 
 TextAligner
-	- implement VSCode version
+	- Do readme and publish
+	- Release v1.10 with minor bug fixes (typos etc)
 	
 P3D
 	- Support .obj files
