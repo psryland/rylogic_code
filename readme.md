@@ -6,7 +6,8 @@ This repository contains the Rylogic Ltd code.
 
 	pr
 	|-- art
-	|   |-- icon        - Art assets
+	|   |-- icons       - Art assets
+	|   |-- pngs        - Art assets
 	|   |-- etc...
 	|
 	|-- build           - Project files and property sheets
@@ -16,12 +17,18 @@ This repository contains the Rylogic Ltd code.
 	|   |-- etc...
 	|
 	|-- include         - Public headers and interfaces. Third party projects should add an include path
-	|   |-- pr            to '/pr/include'. All pr lib code uses includes such as #include "pr/common/..."
+	|   |-- pr            to '/pr/include'. All pr lib code uses includes relative to '/pr/include', e.g. #include "pr/common/..."
 	|       |-- common
 	|       |-- etc...
 	|
-	|-- projects        - Projects that compile to libs, dlls, or exe's.
+	|-- projects        - C/C++/C# Projects
 	|   |-- view3d
+	|   |-- Rylogic.Core
+	|   |-- Rylogic.TextAligner
+	|   |-- etc...
+	|
+	|-- typescript      - Typescript Projects
+	|   |-- Rylogic.TextAligner
 	|   |-- etc...
 	|
 	|-- script          - Python scripts used in the build process. Only the variables in 'UserVars.py'
@@ -45,6 +52,8 @@ Follow these steps to build:
 - Pulling to a clean directory
 - Create a _/pr/script/UserVars.py_ file based on the _UserVars.template.py_ file in the same directory.
 - Use _/pr/script/Build.py_ to build projects from the command line, or, open _/pr/build/rylogic.sln_ in visual studio.
+
+This repo is actively developed, often refactored, and frequently broken. It is public so that the source for my released projects is publicly available.
 
 ## License
 

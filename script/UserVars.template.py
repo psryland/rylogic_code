@@ -105,9 +105,6 @@ nuget_api_key = "<NUGET_API_KEY>"
 protoc = CheckPath(JoinPath(root, "tools", "Grpc", "x64", "protoc.exe"))
 grpc_csharp_plugin = CheckPath(JoinPath(root, "tools", "Grpc", "x64", "grpc_csharp_plugin.exe"))
 
-# Zip
-ziptool = CheckPath(JoinPath(root, "tools", "7za.exe"))
-
 # WIX tools
 wix_candle = CheckPath(JoinPath(root, "tools", "WiX", "candle.exe"))
 wix_light = CheckPath(JoinPath(root, "tools", "WiX", "light.exe"))
@@ -117,7 +114,7 @@ wix_heat = CheckPath(JoinPath(root, "tools", "WiX", "heat.exe"))
 errout = CheckPath(JoinPath(root, "tools", "Errout", "x64", "errout.exe"))
 
 # Rylogic code tools
-cex = CheckPath(JoinPath(root, "tools", "cex", "cex.exe"))
-p3d = CheckPath(JoinPath(root, "tools", "p3d", "p3d.exe"))
-csex = CheckPath(JoinPath(root, "tools", "csex", "csex.exe"))
-elevate = CheckPath(JoinPath(root, "tools", "elevate", "elevate.exe"))
+cex = CheckPath(JoinPath(root, "bin", "Cex", "cex.exe"), True)
+p3d = CheckPath(JoinPath(root, "bin", "P3d", "p3d.exe"), True)
+csex = CheckPath(JoinPath(root, "bin", "Csex", "Csex.exe"), True)
+elevate = CheckPath(JoinPath(root, "bin", "Elevate", "elevate.exe"), True)
