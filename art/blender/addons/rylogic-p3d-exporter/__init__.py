@@ -31,8 +31,8 @@ bl_info = {
 	'category': 'Import-Export',
 }
 
+import os, math, struct
 import bpy
-import struct
 
 # ExportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -136,6 +136,12 @@ class EGeom():
 	Norm = 1 << 2
 	Tex0 = 1 << 3
 	All = Vert | Colr | Norm | Tex0
+class EAddrMode():
+	Wrap       = 1
+	Mirror     = 2
+	Clamp      = 3
+	Border     = 4
+	MirrorOnce = 5
 class Vec2():
 	def __init__(self, x:float=0, y:float=0):
 		self.x = x
@@ -145,6 +151,12 @@ class Vec3():
 		self.x = x
 		self.y = y
 		self.z = z
+class Col4():
+	def __init__(self, r:float=0, g:float=0, b:float=0, a:float=0):
+		self.r = r
+		self.g = g
+		self.b = b
+		self.a = a
 class Mat4():
 	def __init__(self, x:Vec3=Vec3(1,0,0), y:Vec3=Vec3(0,1,0), z:Vec3=Vec3(0,0,1), w:Vec3=Vec3(0,0,0)):
 		self.x = x
@@ -170,13 +182,27 @@ class BBox():
 					self.centre[i] += signed_dist * (new_radius - self.radius[i]) / length
 					self.radius[i] = new_radius
 		return pt
+class FatVert():
+	def __init__(self, v:Vec3=Vec3(), c:Col4=Col4(), n:Vec3=Vec3(), t:Vec2=Vec2()):
+		self.vert = v
+		self.colr = c
+		self.norm = n
+		self.tex0 = t
+	def __eq__(self, rhs):
+		return (
+			hasattr(rhs, 'vert') and self.vert == rhs.vert and
+			hasattr(rhs, 'colr') and self.vert == rhs.colr and
+			hasattr(rhs, 'norm') and self.vert == rhs.norm and
+			hasattr(rhs, 'tex0') and self.vert == rhs.tex0)
+	def __hash__(self):
+		return hash(self.vert, self.colr, self.norm, self.tex0)
 class Nugget():
-	def __init__(self, topo:ETopo=ETopo.TriList, geom:EGeom=EGeom.All, mat:str="", stride:int=2):
+	def __init__(self, topo:ETopo=ETopo.TriList, geom:EGeom=EGeom.All, mat:str="", stride:int=2, vidx:[int]=[]):
 		self.topo = topo
 		self.geom = geom
 		self.mat = mat
 		self.stride = stride
-		self.vidx = []
+		self.vidx = vidx
 		return
 class Mesh():
 	# Meshes (bpy.types.Mesh) contain four main arrays:
@@ -226,7 +252,29 @@ class Mesh():
 		for poly in mesh.polygons:
 			polygons_by_material[poly.material_index].append(poly)
 
-		fat_verts = []
+		# Initialise the verts lists
+		self.verts = [Vec3] * len(mesh.vertices)
+		self.norms = [Vec2] * len(mesh.vertices)
+		for i,v in enumerate(mesh.vertices):
+			self.verts[i] = self.bbox.encompass(Vec3(v.co.x, v.co.y, v.co.z))
+			self.norms[i] = Vec3(v.normal.x, v.normal.y, v.normal.z)
+
+		# Initialise the colours
+		if geom & EGeom.Colr:
+			vertex_colors_layer0 = mesh.vertex_colors[0].data
+			self.colrs = [Col4] * len(vertex_colors_layer0)
+			for i,c in enumerate(vertex_colors_layer0):
+				self.colrs[i] = Col4(c[0], c[1], c[2], c[3])
+
+		# Initialise the UVs
+		if geom & EGeom.Tex0:
+			uvs = mesh.uv_layers.get("UVMap").data
+			self.tex0s = [Vec2] * len(uvs)
+			for i,t in enumerate(uvs):
+				self.tex0s[i] = Vec2(t.uv.x, t.uv.y)
+
+		# Set the stride based on the number of verts
+		stride = 2 if len(self.verts) < 0x10000 else 4
 
 		# Initialise the nuggets list
 		for mat_idx, polys in polygons_by_material.items():
@@ -235,30 +283,10 @@ class Mesh():
 				for lx in poly.loop_indices:
 					loop = mesh.loops[lx]
 					vidx.append(loop.vertex_index)
-					
-
 
 			mat = mesh.materials[mat_idx]
-			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride)
+			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride, vidx=vidx)
 			self.nuggets.append(nugget)
-
-
-
-
-
-
-		# Initialise the verts lists
-		self.verts = [Vec3()] * len(mesh.vertices)
-		self.norms = [Vec3()] * len(mesh.vertices)
-		for i,v in enumerate(mesh.vertices):
-			self.verts[i] = self.bbox.encompass(Vec3(v.co.x, v.co.y, v.co.z))
-			self.norms[i] = Vec3(v.normal.x, v.normal.y, v.normal.z)
-
-		# Initialise vertex colours (if present)
-
-
-		# Set the stride based on the number of verts
-		stride = 2 if len(self.verts) < 0x10000 else 4
 
 		return
 
@@ -295,7 +323,7 @@ class P3D():
 			self.ChunkSize = 8 + data_size
 
 	# P3D Constructor
-	def __init__(self, meshes:[bpy.types.Mesh], flags:int = EFlags.NONE):
+	def __init__(self, data:[bpy.types.BlendData], flags:int = EFlags.NONE):
 		self.data = bytearray()
 
 		# Write the file header
@@ -304,10 +332,10 @@ class P3D():
 		self.WriteHeader(hdr)
 
 		# Write the file version
-		hdr.ChunkSize += self.WriteVersion(P3D.Version)
+		hdr.ChunkSize += self.WriteU32(P3D.EChunkId.FILEVERSION, P3D.Version)
 
 		# Write the scene
-		hdr.ChunkSize += self.WriteScene(meshes, flags)
+		hdr.ChunkSize += self.WriteScene(data, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return
@@ -332,35 +360,31 @@ class P3D():
 			size += 1
 		return count
 
-	# Version chunk
-	def WriteVersion(self, version:int):
-		self.data += struct.pack("<III", P3D.EChunkId.FILEVERSION, 12, version)
-		return struct.calcsize("<III")
-
 	# Scene chuck
-	def WriteScene(self, meshes:[bpy.types.Mesh], flags:int):
+	def WriteScene(self, data:[bpy.types.BlendData], flags:int):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.SCENE, 0)
 		self.WriteHeader(hdr)
 
 		# Write all materials
-		hdr.ChunkSize += self.WriteMaterials(meshes)
+		hdr.ChunkSize += self.WriteMaterials(data.materials)
 
 		# Write all meshes
-		hdr.ChunkSize += self.WriteMeshes(meshes, flags)
+		hdr.ChunkSize += self.WriteMeshes(data.objects, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
 	# Meshes chunk
-	def WriteMeshes(self, meshes:[bpy.types.Mesh], flags:int):
+	def WriteMeshes(self, objects:[bpy.types.Object], flags:int):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHES, 0)
 		self.WriteHeader(hdr)
 
 		# Write each mesh
-		for mesh in meshes:
-			hdr.ChunkSize += self.WriteMesh(mesh, flags)
+		for obj in objects:
+			if obj.type != 'MESH': continue
+			hdr.ChunkSize += self.WriteMesh(obj.data, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -422,7 +446,7 @@ class P3D():
 	# Mesh vertices
 	def WriteVerts(self, verts:[Vec3], flags:EFlags):
 		if len(verts) == 0:
-			return
+			return 0
 
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHVERTS, 0)
@@ -460,7 +484,7 @@ class P3D():
 	# Mesh colours
 	def WriteColours(self, colours:[int], flags:EFlags):
 		if len(colours) == 0:
-			return
+			return 0
 
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHCOLOURS, 0)
@@ -498,7 +522,7 @@ class P3D():
 	# Mesh normals
 	def WriteNorms(self, norms:[Vec3], flags:EFlags):
 		if len(norms) == 0:
-			return
+			return 0
 
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHNORMS, 0)
@@ -537,7 +561,7 @@ class P3D():
 	def WriteUVs(self, uvs:[Vec2], flags:EFlags):
 		
 		if len(uvs) == 0:
-			return
+			return 0
 
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHUVS, 0)
@@ -598,7 +622,7 @@ class P3D():
 	# Mesh Indices
 	def WriteIndices(self, vidx:[int], stride_in:int, flags:EFlags):
 		if len(vidx) == 0:
-			return
+			return 0
 
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHVIDX, 0)
@@ -627,9 +651,8 @@ class P3D():
 			hdr.ChunkSize += struct.calcsize("<H")
 
 			# Write indices as 32bit integers
-			for vx in vidx:
-				self.data += struct.pack("<I", vx)
-			hdr.ChunkSize += struct.calcsize("<I")
+			for vx in vidx: self.data += struct.pack("<I", vx)
+			hdr.ChunkSize += struct.calcsize("<I") * len(vidx)
 
 		elif fmt == EIndexFormat.Idx16Bit:
 
@@ -639,9 +662,8 @@ class P3D():
 			hdr.ChunkSize += struct.calcsize("<H")
 
 			# Write indices as 16bit integers
-			for vx in vidx:
-				self.data += struct.pack("<H", vx)
-			hdr.ChunkSize += struct.calcsize("<H")
+			for vx in vidx: self.data += struct.pack("<H", vx)
+			hdr.ChunkSize += struct.calcsize("<H") * len(vidx)
 
 		else:
 			raise RuntimeError(f"Unsupported index format:{str(fmt)}")
@@ -653,15 +675,17 @@ class P3D():
 		return hdr.ChunkSize
 
 	# Materials chunk
-	def WriteMaterials(self, meshes:[bpy.types.Mesh]):
+	def WriteMaterials(self, materials:[bpy.types.Material]):
+		if len(materials) == 0:
+			return 0
+
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MATERIALS, 0)
 		self.WriteHeader(hdr)
 
-		# Meshes contain materials in blender. Might need to make them unique by prefixing with the mesh name
-		for mesh in meshes:
-			for mat in mesh.materials:
-				hdr.ChunkSize += self.WriteMaterial(mat)
+		# Export each material
+		for mat in materials:
+			hdr.ChunkSize += self.WriteMaterial(mat)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -676,11 +700,56 @@ class P3D():
 		self.data += struct.pack("16s", bytes(material.name[0:16], encoding='utf-8'))
 		hdr.ChunkSize += 16
 
-		# Diffuse colour
-		hdr.ChunkSize += self.WriteDiffuseColour(material.diffuse_color)
+		# Blender materials typically use the node based shader 'Principled BSDF'
+		# Try to get basic material info from the nodes
+		if material.use_nodes:
+			for node in material.node_tree.nodes:
 
-		# Textures
-		# TODO
+				if node.type == 'TEX_IMAGE':
+
+					# Add a texture description
+					hdr.ChunkSize += self.WriteTexture(node.image, node.extension)
+
+				elif node.type == "BSDF_PRINCIPLED":
+
+					# Find the 'Base Color' input
+					base_color_input = next(x for x in node.inputs if x.name == 'Base Color')
+					if base_color_input:
+						hdr.ChunkSize += self.WriteDiffuseColour(base_color_input.default_value)
+
+		# otherwise, they're just flat colours.
+		else:
+			# Diffuse colour
+			hdr.ChunkSize += self.WriteDiffuseColour(material.diffuse_color)
+
+		self.UpdateHeader(offset, hdr)
+		return hdr.ChunkSize
+
+	# Texture chunk
+	def WriteTexture(self, image:bpy.types.Image, tiling:str):
+		offset = len(self.data)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.DIFFUSETEXTURE, 0)
+		self.WriteHeader(hdr)
+
+		# Texture filepath
+		if image.filepath:
+			# The texture file path will be relative to the .blend file.
+			# It's too hard to sensibly maintain the relative paths so instead
+			# require the artist to use unique texture filenames and strip all
+			# path information.
+			filename = os.path.split(image.filepath)[1]
+			hdr.ChunkSize += self.WriteStr(P3D.EChunkId.TEXFILEPATH, filename)
+
+		# Texture tiling
+		if tiling:
+			mode = (
+				EAddrMode.Wrap       if tiling == 'REPEAT' else
+				EAddrMode.Mirror     if tiling == 'MIRROR' else      # not supported in blender
+				EAddrMode.Clamp      if tiling == 'EXTEND' else      # extend the edge of the texture is the same as clamping to [0,1]
+				EAddrMode.Border     if tiling == 'CLIP' else        # in blender the border colour is transparent, in dx it's configurable
+				EAddrMode.MirrorOnce if tiling == 'MIRROR_ONCE' else # not supported in blender
+				EAddrMode.Wrap)
+			hdr.ChunkSize += self.WriteU32(P3D.EChunkId.TEXTILING, mode)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -717,6 +786,13 @@ class P3D():
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
+	# Uint32 value
+	def WriteU32(self, chunk_id:int, value:int):
+		hdr = P3D.ChunkHeader(chunk_id, struct.calcsize("<I"))
+		self.WriteHeader(hdr)
+		self.data += struct.pack("<I", value)
+		return hdr.ChunkSize
+
 
 class ExportP3D(Operator, ExportHelper):
 	"""Export a Rylogic model file"""
@@ -744,14 +820,26 @@ class ExportP3D(Operator, ExportHelper):
 	
 	# Run the export
 	def execute(self, context):
-		print("Write P3D File...")
-		p3d = P3D(bpy.data.meshes)
+		
+		# Switch to object mode to ensure mesh edits are flushed
+		if bpy.context != 'OBJECT':
+			bpy.ops.object.mode_set(mode='OBJECT')
+
+		# Create a P3D instance from the mesh data
+		p3d = P3D(bpy.data)
 
 		# Dump the bytearray to file
+		print("Write P3D File...")
 		with open(self.filepath, 'wb') as f: f.write(p3d.data)
 
 		print("Done")
 		return {'FINISHED'}
+
+	# Display a message
+	def ShowMessageBox(self, message = "", title = "Message Box", icon = 'INFO'):
+		def draw(self, context): self.layout.label(text=message)
+		bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+
 
 # Add a menu item to the File->Export menu
 def menu_func_export(self, context):
