@@ -17,7 +17,7 @@ try:
 	dstdir  = os.path.join(projdir, "..", "CoinFlip.UI", "bin", config, "bots")
 
 	# Ensure directories exist
-	os.makedirs(dstdir, exist_ok=True);
+	os.makedirs(dstdir, exist_ok=True)
 
 	# Copy the bot to 'dstdir'
 	Tools.Copy(target, os.path.join(dstdir, ""), only_if_modified=True)
