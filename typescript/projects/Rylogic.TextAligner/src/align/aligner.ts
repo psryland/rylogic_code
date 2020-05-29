@@ -40,7 +40,7 @@ export class Aligner
 		let sel = new Selection(editor.selection, doc);
 
 		// Prioritise the pattern groups to align on
-		let grps = this.PrioritisePatternGroups(doc, sel);
+		let grps = this.PrioritisePatternGroups(sel);
 
 		// Find the edits to make
 		let [edits, fallback_line_span] = this.FindAlignments(doc, sel, grps, action);
@@ -72,7 +72,7 @@ export class Aligner
 	}
 
 	/** Prioritise the alignment groups */
-	PrioritisePatternGroups(doc: vscode.TextDocument, sel: Selection) :AlignGroup[]
+	PrioritisePatternGroups(sel: Selection) :AlignGroup[]
 	{
 		// If there is a selection, see if we should use the selected text at the align pattern
 		// Only use single line, non-whole-line selections on the same line as the caret
@@ -80,11 +80,13 @@ export class Aligner
 		if (is_pattern_selection)
 		{
 			// Create an alignment group based on the selection
-			let expr = doc.getText(sel.sline.range);
-			let ofs = expr.search(/\S|$/); // Count leading whitespace
-			expr = expr.substring(ofs);    // Strip leading whitespace
-			expr = expr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')// Escape the string
+			let text = sel.sline.text;
+			let expr0 = text.substring(sel.beg.character, Math.min(sel.end.character, text.length));
+			let expr1 = expr0.trimLeft();                               // Strip leading whitespace
+			let ofs = expr0.length - expr1.length;                      // Count leading whitespace
+			let expr = expr1.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); // Escape the string
 
+			// Return the temporary pattern
 			let patn = new RegExp(expr, 'g');
 			let ap = new AlignPattern(patn, {offset: ofs})
 			let ag = new AlignGroup("Selection", 0, ap);

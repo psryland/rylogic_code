@@ -122,6 +122,9 @@ Bugs should be reported to support@rylogic.co.nz
 
 #### Version History
 
-* *v1.10.2 - 2020-05-29*
+* *v1.10.3 - 2020-05-29*
+  * Bug fix for alignment based on selected text
+
+* *v1.10.0 - 2020-05-29*
   * Initial release for VSCode
   * Ported from the Visual Studio extension
