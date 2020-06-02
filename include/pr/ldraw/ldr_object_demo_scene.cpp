@@ -1094,7 +1094,6 @@ namespace pr::ldr
 			"//*Model model_from_file\n"
 			"//{\n"
 			"//	\"filepath\"                   // The file to create the model from\n"
-			"//	*Part { n }                  // For model formats that contain multiple models, allows a specific sub model to be selected\n"
 			"//	*GenerateNormals {30}        // Generate normals for the model (smoothing angle between faces)\n"
 			"//	*BakeTransform {*pos{0 0 0}} // Optional. Bake a transform into the model (independent of *o2w)\n"
 			"//}\n"

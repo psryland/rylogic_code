@@ -4036,14 +4036,14 @@ namespace pr::ldr
 	template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 	{
 		std::filesystem::path m_filepath;
-		m4x4 m_bake;
-		int m_part;
+		ModelGenerator<>::CreateOptions m_opts;
 		creation::GenNorms m_gen_norms;
+		int m_part;
 
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 			,m_filepath()
-			,m_bake(m4x4Identity)
+			,m_opts()
 			,m_gen_norms()
 		{}
 		bool ParseKeyword(EKeyword kw) override
@@ -4056,14 +4056,9 @@ namespace pr::ldr
 						m_gen_norms.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Part:
-				{
-					p.m_reader.IntS(m_part, 10);
-					return true;
-				}
 			case EKeyword::BakeTransform:
 				{
-					p.m_reader.TransformS(m_bake);
+					p.m_reader.TransformS(m_opts.m_bake);
 					return true;
 				}
 			}
@@ -4121,9 +4116,17 @@ namespace pr::ldr
 				args.handled = true;
 			};
 
-			// Create the model
-			obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_norms.m_smoothing_angle);
-			obj->m_model->m_name = obj->TypeAndName();
+			// Create the models
+			ModelGenerator<>::LoadModel(format, p.m_rdr, *src, [&](ModelPtr model, m4x4 const& o2p)
+				{
+					// Create an LdrObject for each mesh in the model
+					ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
+					LdrObjectPtr child(new LdrObject(attr, nullptr, obj->m_context_id), true);
+					child->m_model = model;
+					child->m_o2p = o2p;
+					obj->AddChild(child);
+					return false;
+				}, m_opts);
 		}
 	};
 
@@ -5118,8 +5121,16 @@ namespace pr::ldr
 
 		// Create the model
 		std::ifstream src(p3d_filepath, std::ios::binary);
-		obj->m_model = ModelGenerator<>::LoadP3DModel(rdr, src);
-		obj->m_model->m_name = obj->TypeAndName();
+		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelPtr model, m4x4 const& o2p)
+			{
+				ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
+				LdrObjectPtr child(new LdrObject(attr, nullptr, context_id), true);
+				child->m_model = model;
+				child->m_o2p = o2p;
+				obj->AddChild(child);
+				return false;
+			});
+
 		return obj;
 	}
 	LdrObjectPtr CreateP3D(Renderer& rdr, ObjectAttributes attr, size_t size, void const* p3d_data, Guid const& context_id)
@@ -5128,8 +5139,16 @@ namespace pr::ldr
 
 		// Create the model
 		pr::mem_istream<char> src(p3d_data, size);
-		obj->m_model = ModelGenerator<>::LoadP3DModel(rdr, src);
-		obj->m_model->m_name = obj->TypeAndName();
+		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelPtr model, m4x4 const& o2p)
+			{
+				ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
+				LdrObjectPtr child(new LdrObject(attr, nullptr, context_id), true);
+				child->m_model = model;
+				child->m_o2p = o2p;
+				obj->AddChild(child);
+				return false;
+			});
+
 		return obj;
 	}
 

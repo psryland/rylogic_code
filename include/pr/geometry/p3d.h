@@ -2266,50 +2266,39 @@ namespace pr::geometry::p3d
 	template <typename TSrc, typename TOut> void ExtractMaterials(TSrc& src, TOut out)
 	{
 		// Restore the src position on return
-		auto reset_stream = CreateStateScope(
-			[&] { return traits<TSrc>::tellg(src); },
-			[&](int64_t start) { traits<TSrc>::seekg(src, start); });
+		auto save = SaveG(src);
 
-		// Check that this is actually a P3D stream
-		auto main = Read<ChunkHeader>(src);
-		if (main.m_id != EChunkId::Main)
-			throw std::runtime_error("Source is not a p3d stream");
-
-		// Find the Materials sub chunk
-		auto mats = Find(src, {EChunkId::Scene, EChunkId::Materials});
-		if (mats.m_id != EChunkId::Materials)
-			return; // Source contains no materials
-
-		// Read the materials
-		Find(src, mats.payload(), [&](ChunkHeader hdr, TSrc& src)
-			{
-				// Returning true stops reading.
-				if (hdr.m_id != EChunkId::Material) return false;
-				return out(ReadMaterial(src, hdr.payload()));
-			});
+		// Find the materials chunk
+		auto materials = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Materials});
+		if (materials.m_id == p3d::EChunkId::Materials)
+		{
+			Find(src, materials.payload(), [&](p3d::ChunkHeader hdr, std::istream& src)
+				{
+					// Extract the material. 'out' returns true to stop
+					if (hdr.m_id != EChunkId::Material) return false;
+					return out(ReadMaterial(src, hdr.payload()));
+				});
+		}
 	}
 
 	// Extract the meshes from a P3D stream
 	template <typename TSrc, typename TOut> void ExtractMeshes(TSrc& src, TOut out)
 	{
 		// Restore the src position on return
-		auto reset_stream = pr::CreateStateScope(
-			[&] { return traits<TSrc>::tellg(src); },
-			[&](int64_t start) { traits<TSrc>::seekg(src, start); }
-		);
+		auto save = SaveG(src);
 
-		// Find the Meshes sub chunk
+		// Find the meshes chunk
 		auto meshes = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Meshes});
-		if (meshes.m_id != EChunkId::Meshes)
-			return; // Source contains no mesh data
-
-		// Read the meshes
-		Find(src, meshes.payload(), [&](ChunkHeader hdr, TSrc& src)
-			{
-				// Returning true stops reading
-				if (hdr.m_id != EChunkId::Mesh) return false;
-				return out(ReadMesh(src, hdr.payload()));
-			});
+		if (meshes.m_id == EChunkId::Meshes)
+		{
+			// Read the meshes
+			Find(src, meshes.payload(), [&](ChunkHeader hdr, TSrc& src)
+				{
+					// Extract the mesh. 'out' returns true to stop
+					if (hdr.m_id != EChunkId::Mesh) return false;
+					return out(ReadMesh(src, hdr.payload()));
+				});
+		}
 	}
 
 	// Write the p3d file as code

@@ -2,9 +2,7 @@
 // STL CAD Model file format
 //  Copyright (c) Rylogic Ltd 2018
 //********************************
-
 #pragma once
-
 #include <string>
 #include <vector>
 #include <algorithm>

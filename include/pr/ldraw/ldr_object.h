@@ -425,7 +425,7 @@ namespace pr::ldr
 		// object bounding boxes etc.
 		m4x4         m_o2p;           // Object to parent transform (or object to world if this is a top level object)
 		ELdrObject   m_type;          // Object type
-		LdrObject*   m_parent;        // The parent of this object, 0 for top level instances.
+		LdrObject*   m_parent;        // The parent of this object, nullptr for top level instances.
 		ObjectCont   m_child;         // A container of pointers to child instances
 		string32     m_name;          // A name for the object
 		GUID         m_context_id;    // The id of the context this instance was created in

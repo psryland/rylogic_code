@@ -482,7 +482,6 @@ namespace pr::ldr
 			"*Model [<name>] [<colour>]\n"
 			"{\n"
 			"	<model_filepath>\n"
-			"	[*Part {<submodel_index>}]\n"
 			"	[*GenerateNormals {<smoothing_angle>}]\n"
 			"	[*BakeTransform {$o2w}]\n"
 			"	$ObjectModifiers\n"
