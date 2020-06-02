@@ -31,8 +31,8 @@ bl_info = {
 	'category': 'Import-Export',
 }
 
-import os, math, struct
-import bpy
+import os, math, struct, shutil
+import bpy, mathutils
 
 # ExportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -136,12 +136,24 @@ class EGeom():
 	Norm = 1 << 2
 	Tex0 = 1 << 3
 	All = Vert | Colr | Norm | Tex0
-class EAddrMode():
-	Wrap       = 1
-	Mirror     = 2
-	Clamp      = 3
-	Border     = 4
-	MirrorOnce = 5
+class Texture():
+	class EType():
+		Unknown       = 0
+		Diffuse       = 1 # Diffuse colour per texel
+		AlphaMap      = 2 # Transparency per texel
+		ReflectionMap = 3 # Reflectivity per texel
+		NormalMap     = 4 # Surface normal per texel (tangent space)
+		Bump          = 5 # Scalar displacement per texel
+		Displacement  = 6 # Vec3 displacement per texel
+	class EAddrMode():
+		Wrap       = 1 # D3D11_TEXTURE_ADDRESS_WRAP
+		Mirror     = 2 # D3D11_TEXTURE_ADDRESS_MIRROR
+		Clamp      = 3 # D3D11_TEXTURE_ADDRESS_CLAMP
+		Border     = 4 # D3D11_TEXTURE_ADDRESS_BORDER
+		MirrorOnce = 5 # D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
+	class EFlags():
+		Default = 0
+		Alpha = 1 << 0
 class Vec2():
 	def __init__(self, x:float=0, y:float=0):
 		self.x = x
@@ -223,7 +235,7 @@ class Mesh():
 	# 
 	# For P3D export, we want to make groups of polygons that all
 	# have the same material as these will be the 'nuggets'.
-	def __init__(self, mesh: bpy.types.Mesh):
+	def __init__(self, mesh: bpy.types.Mesh, o2w:mathutils.Matrix):
 		self.name = mesh.name
 		self.bbox = BBox()
 		self.o2p = Mat4()
@@ -233,24 +245,18 @@ class Mesh():
 		self.tex0s = []
 		self.nuggets = []
 
+		# TODO
+		# Handle nested meshes
+		# Handle normal generation
+		
 		# If the mesh has no geometry...
 		if not mesh.polygons:
 			return
-
-		# Ensure the polygons have been triangulated
-		if not mesh.loop_triangles:
-			mesh.calc_loop_triangles()
 
 		# Determine the geometry format
 		geom = EGeom.Vert | EGeom.Norm
 		geom = (geom | EGeom.Colr) if len(mesh.vertex_colors) != 0 else geom
 		geom = (geom | EGeom.Tex0) if mesh.uv_layers.get("UVMap") != None else geom
-
-		# Make a map from material index to a collection of
-		# polygons. Each material index is a separate nugget.
-		polygons_by_material = {i:[] for i in range(len(mesh.materials))}
-		for poly in mesh.polygons:
-			polygons_by_material[poly.material_index].append(poly)
 
 		# Initialise the verts lists
 		self.verts = [Vec3] * len(mesh.vertices)
@@ -276,18 +282,31 @@ class Mesh():
 		# Set the stride based on the number of verts
 		stride = 2 if len(self.verts) < 0x10000 else 4
 
-		# Initialise the nuggets list
-		for mat_idx, polys in polygons_by_material.items():
-			vidx = []
-			for poly in polys:
-				for lx in poly.loop_indices:
-					loop = mesh.loops[lx]
-					vidx.append(loop.vertex_index)
+		# Ensure the polygons have been triangulated
+		if not mesh.loop_triangles:
+			mesh.calc_loop_triangles()
 
-			mat = mesh.materials[mat_idx]
+		# Partition the triangles by material index
+		nuggets = {}
+		for tri in mesh.loop_triangles:
+			if not tri.material_index in nuggets: nuggets[tri.material_index] = []
+			nuggets[tri.material_index].extend(tri.vertices)
+
+		# Create nuggets for each material
+		for mat_idx, vidx in nuggets.items():
+			if len(vidx) == 0: continue
+
+			# Save a nugget for the geometry that uses this material
+			mat = mesh.materials[mat_idx] if len(mesh.materials) != 0 else bpy.data.materials[0]
 			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride, vidx=vidx)
 			self.nuggets.append(nugget)
 
+		# Object transform
+		self.o2p = Mat4(
+			Vec3(o2w[0][0], o2w[0][1], o2w[0][2]),
+			Vec3(o2w[1][0], o2w[1][1], o2w[1][2]),
+			Vec3(o2w[2][0], o2w[2][1], o2w[2][2]),
+			Vec3(o2w.translation[0], o2w.translation[1], o2w.translation[2]))
 		return
 
 class P3D():
@@ -302,9 +321,7 @@ class P3D():
 		MATERIALS      = 0x00002000 #    ├─ Materials
 		MATERIAL       = 0x00002100 #    │  └─ Material
 		DIFFUSECOLOUR  = 0x00002110 #    │   ├─ Diffuse Colour
-		DIFFUSETEXTURE = 0x00002120 #    │   └─ Diffuse texture
-		TEXFILEPATH    = 0x00002121 #    │   ├─ Texture filepath
-		TEXTILING      = 0x00002122 #    │   └─ Texture tiling
+		TEXTURE        = 0x00002120 #    │   └─ Diffuse texture
 		MESHES         = 0x00003000 #    └─ Meshes
 		MESH           = 0x00003100 #       └─ Mesh of lines,triangles,tetras
 		MESHNAME       = 0x00003101 #          ├─ Name (cstr)
@@ -325,6 +342,7 @@ class P3D():
 	# P3D Constructor
 	def __init__(self, data:[bpy.types.BlendData], flags:int = EFlags.NONE):
 		self.data = bytearray()
+		self.textures = []
 
 		# Write the file header
 		offset = len(self.data)
@@ -384,13 +402,14 @@ class P3D():
 		# Write each mesh
 		for obj in objects:
 			if obj.type != 'MESH': continue
-			hdr.ChunkSize += self.WriteMesh(obj.data, flags)
+			if not obj.visible_get(): continue
+			hdr.ChunkSize += self.WriteMesh(obj.data, obj.matrix_world, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
 	# Mesh chunk
-	def WriteMesh(self, mesh:bpy.types.Mesh, flags:EFlags):
+	def WriteMesh(self, mesh:bpy.types.Mesh, o2w:mathutils.Matrix, flags:EFlags):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESH, 0)
 		self.WriteHeader(hdr)
@@ -399,7 +418,7 @@ class P3D():
 			print("Vertex compression not supported, falling back to uncompressed")
 
 		# Convert the blender mesh into a form suitable for P3D export
-		m = Mesh(mesh)
+		m = Mesh(mesh, o2w)
 
 		# Mesh name
 		hdr.ChunkSize += self.WriteStr(P3D.EChunkId.MESHNAME, m.name)
@@ -728,28 +747,43 @@ class P3D():
 	# Texture chunk
 	def WriteTexture(self, image:bpy.types.Image, tiling:str):
 		offset = len(self.data)
-		hdr = P3D.ChunkHeader(P3D.EChunkId.DIFFUSETEXTURE, 0)
+		hdr = P3D.ChunkHeader(P3D.EChunkId.TEXTURE, 0)
 		self.WriteHeader(hdr)
 
-		# Texture filepath
-		if image.filepath:
-			# The texture file path will be relative to the .blend file.
-			# It's too hard to sensibly maintain the relative paths so instead
-			# require the artist to use unique texture filenames and strip all
-			# path information.
-			filename = os.path.split(image.filepath)[1]
-			hdr.ChunkSize += self.WriteStr(P3D.EChunkId.TEXFILEPATH, filename)
+		# Record the textures used in this model.
+		# Image filepaths should be relative to the blend file
+		self.textures.append(image.filepath)
 
-		# Texture tiling
-		if tiling:
-			mode = (
-				EAddrMode.Wrap       if tiling == 'REPEAT' else
-				EAddrMode.Mirror     if tiling == 'MIRROR' else      # not supported in blender
-				EAddrMode.Clamp      if tiling == 'EXTEND' else      # extend the edge of the texture is the same as clamping to [0,1]
-				EAddrMode.Border     if tiling == 'CLIP' else        # in blender the border colour is transparent, in dx it's configurable
-				EAddrMode.MirrorOnce if tiling == 'MIRROR_ONCE' else # not supported in blender
-				EAddrMode.Wrap)
-			hdr.ChunkSize += self.WriteU32(P3D.EChunkId.TEXTILING, mode)
+		# Texture filepath
+		# The texture file path will be relative to the .blend file.
+		# It's too hard to sensibly maintain the relative paths so instead require the
+		# artist to use unique texture filenames and strip all path information.
+		filename = os.path.split(image.filepath)[1]
+		hdr.ChunkSize += self.WriteStrRaw(filename)
+
+		# Texture type
+		tex_type = Texture.EType.Diffuse
+		self.data += struct.pack("b", tex_type)
+		hdr.ChunkSize += struct.calcsize("b")
+
+		# Texture address mode
+		addr_mode = (
+			Texture.EAddrMode.Wrap       if tiling == 'REPEAT' else
+			Texture.EAddrMode.Mirror     if tiling == 'MIRROR' else      # not supported in blender
+			Texture.EAddrMode.Clamp      if tiling == 'EXTEND' else      # extend the edge of the texture is the same as clamping to [0,1]
+			Texture.EAddrMode.Border     if tiling == 'CLIP' else        # in blender the border colour is transparent, in dx it's configurable
+			Texture.EAddrMode.MirrorOnce if tiling == 'MIRROR_ONCE' else # not supported in blender
+			Texture.EAddrMode.Wrap)
+		self.data += struct.pack("b", addr_mode)
+		hdr.ChunkSize += struct.calcsize("b")
+
+		# Texture flags
+		flags = Texture.EFlags.Default
+		self.data += struct.pack("<H", flags)
+		hdr.ChunkSize += struct.calcsize("<H")
+
+		# Chunk padding
+		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -763,28 +797,37 @@ class P3D():
 		self.data += struct.pack("4f", colour[0], colour[1], colour[2], colour[3])
 		return hdr.ChunkSize
 
-	# 16 character string
+	# String within a chunk
 	def WriteStr(self, chunk_id:int, string:str):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(chunk_id, 0)
 		self.WriteHeader(hdr)
 
-		string_bytes = bytes(string, encoding='utf-8')
-		string_len = len(string_bytes)
-
-		# String length
-		self.data += struct.pack("<I", string_len)
-		hdr.ChunkSize += struct.calcsize("<I")
-
-		# String data
-		self.data += string_bytes
-		hdr.ChunkSize += string_len
+		# String
+		hdr.ChunkSize += self.WriteStrRaw(string)
 
 		# Chunk padding
 		hdr.ChunkSize += self.PadToU32(hdr.ChunkSize)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
+
+	# String not within a chunk. Note: not padded
+	def WriteStrRaw(self, string:str):
+
+		length = 0
+		string_bytes = bytes(string, encoding='utf-8')
+		string_len = len(string_bytes)
+
+		# String length
+		self.data += struct.pack("<I", string_len)
+		length += struct.calcsize("<I")
+
+		# String data
+		self.data += string_bytes
+		length += string_len
+
+		return length
 
 	# Uint32 value
 	def WriteU32(self, chunk_id:int, value:int):
@@ -812,6 +855,13 @@ class ExportP3D(Operator, ExportHelper):
 	)
 
 	# Compressed p3d option check box
+	copy_textures: BoolProperty(
+		name="Copy Textures",
+		description="Copy textures to Output",
+		default=True,
+	)
+	
+	# Compressed p3d option check box
 	compress: BoolProperty(
 		name="Compressed",
 		description="Export compressed chunks",
@@ -832,8 +882,31 @@ class ExportP3D(Operator, ExportHelper):
 		print("Write P3D File...")
 		with open(self.filepath, 'wb') as f: f.write(p3d.data)
 
+		# Copy the textures to a folder with the same name as the exported model
+		print("Copying Textures...")
+		if self.copy_textures:
+			self.CopyTextures(p3d.textures)
+
 		print("Done")
 		return {'FINISHED'}
+
+	# Copy exported textures to a folder named to match the exported model
+	def CopyTextures(self, texture_filepaths:[str]):
+
+		# The directory that the blend file is in
+		model_dir = os.path.dirname(bpy.data.filepath)
+
+		# The directory to copy the textures to
+		texture_dir = self.filepath + '.textures'
+		os.makedirs(texture_dir, exist_ok=True)
+
+		# Copy each exported texture
+		for texture_filepath in texture_filepaths:
+			src_path = os.path.abspath(os.path.join(model_dir, texture_filepath.strip('/')))
+			dst_path = os.path.join(texture_dir, os.path.split(texture_filepath)[1])
+			shutil.copy(src_path, dst_path)
+
+		return
 
 	# Display a message
 	def ShowMessageBox(self, message = "", title = "Message Box", icon = 'INFO'):
