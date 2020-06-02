@@ -135,6 +135,7 @@
 #include "pr\geometry\deformablemesh.h"
 #include "pr\geometry\distance.h"
 #include "pr\geometry\geometry.h"
+#include "pr\geometry\index_buffer.h"
 #include "pr\geometry\intersect.h"
 #include "pr\geometry\models_box.h"
 #include "pr\geometry\models_cylinder.h"

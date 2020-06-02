@@ -414,6 +414,9 @@
     <ClInclude Include="..\include\pr\geometry\models_skybox.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\index_buffer.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">

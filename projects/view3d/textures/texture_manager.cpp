@@ -16,20 +16,20 @@ namespace pr::rdr
 {
 	// Parse an embedded resource string of the form:
 	//   "@<hmodule|module_name>:<res_type>:<res_name>"
-	void ParseEmbeddedResourceUri(wchar_t const* resource_uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name)
+	void ParseEmbeddedResourceUri(std::wstring const& uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name)
 	{
-		if (resource_uri == nullptr || resource_uri[0] != '@')
+		if (uri.empty() || uri[0] != '@')
 			throw std::runtime_error("Not an embedded resource URI");
 
 		hmodule = nullptr;
 		res_type.resize(0);
 		res_name.resize(0);
 
-		auto div0 = resource_uri;
+		auto div0 = uri.c_str();
 		auto div1 = *div0 != 0 ? str::FindChar(div0 + 1, ':') : div0;
 		auto div2 = *div1 != 0 ? str::FindChar(div1 + 1, ':') : div1;
 		if (*div2 == 0)
-			throw std::runtime_error(FmtS("Embedded resource URI (%S) invalid. Expected format \"@<hmodule|module_name>:<res_type>:<res_name>\"", resource_uri));
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) invalid. Expected format \"@<hmodule|module_name>:<res_type>:<res_name>\"", uri.c_str()));
 		
 		// Read the HMODULE handle from a string name or 
 		auto HModule = [=](wchar_t const* s, wchar_t const* e)
@@ -46,7 +46,7 @@ namespace pr::rdr
 			if (auto h = reinterpret_cast<HMODULE>((uint8_t*)nullptr + (end == e ? address : 0)); h != nullptr)
 				return h;
 
-			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. HMODULE could not be determined", resource_uri));
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. HMODULE could not be determined", uri.c_str()));
 		};
 
 		res_name.append(div2 + 1);
@@ -55,7 +55,7 @@ namespace pr::rdr
 
 		// Both name and type are required
 		if (res_name.empty() || res_type.empty())
-			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. Resource name and type could not be determined", resource_uri));
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. Resource name and type could not be determined", uri.c_str()));
 	}
 
 	// Constructor
@@ -107,7 +107,7 @@ namespace pr::rdr
 	// '@<module>:<resource_type>:<resource_name>' - '@' indicates embedded resource, <module> and <resource_type> are optional  (e.g. @::tex_resource, @00FE123:jpg:tex_resource)
 	// '<filepath>' - All other strings are interpreted as filepaths.
 	// Throws if creation fails. On success returns a pointer to the created texture.
-	Texture2DPtr TextureManager::CreateTexture2D(RdrId id, wchar_t const* resource_name, SamplerDesc const& sdesc, bool has_alpha, char const* name)
+	Texture2DPtr TextureManager::CreateTexture2D(RdrId id, std::filesystem::path const& resource_path, SamplerDesc const& sdesc, bool has_alpha, char const* name)
 	{
 		Renderer::Lock lock(m_rdr);
 
@@ -116,8 +116,8 @@ namespace pr::rdr
 			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
 
 		// The resource name is required
-		if (resource_name == nullptr || *resource_name == 0)
-			throw std::runtime_error("Filepath must be given");
+		if (resource_path.empty())
+			throw std::runtime_error("Texture resource path must be given");
 
 		TextureDesc tdesc;
 		string32 tex_name;
@@ -128,11 +128,11 @@ namespace pr::rdr
 		// Accept stock texture strings: #black, #white, #checker, etc
 		// This is handy for model files that contain string paths for textures.
 		// The code that loads these models doesn't need to handle strings such as '#white' as a special case
-		if (resource_name[0] == '#')
+		if (*resource_path.c_str() == '#')
 		{
-			auto stock = Enum<EStockTexture>::TryParse(resource_name + 1, false);
+			auto stock = Enum<EStockTexture>::TryParse(resource_path.c_str() + 1, false);
 			if (!stock)
-				throw std::runtime_error(pr::FmtS("Unknown stock texture name: %s", resource_name + 1));
+				throw std::runtime_error(Fmt("Unknown stock texture name: %s", resource_path.string().c_str() + 1));
 
 			// Return a clone of the stock texture
 			auto stock_tex = FindStockTexture(*stock);
@@ -141,10 +141,12 @@ namespace pr::rdr
 		}
 
 		// Create a texture from embedded resource
-		if (resource_name[0] == '@')
+		if (*resource_path.c_str() == '@')
 		{
-			src_id = MakeId(resource_name);
-			tex_name = name ? name : To<string32>(str::FindLastOf(resource_name, L":"));
+			auto uri = resource_path.wstring();
+
+			src_id = MakeId(uri.c_str());
+			tex_name = name ? name : To<string32>(str::FindLastOf(uri.c_str(), L":"));
 
 			// Look for an existing DX texture corresponding to the resource
 			auto iter = m_lookup_dxtex.find(src_id);
@@ -157,7 +159,7 @@ namespace pr::rdr
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
 				HMODULE hmodule; wstring32 res_type, res_name;
-				ParseEmbeddedResourceUri(resource_name, hmodule, res_type, res_name);
+				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
 
 				// Get the embedded resource
 				auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
@@ -173,7 +175,7 @@ namespace pr::rdr
 		else
 		{
 			using namespace std::filesystem;
-			auto filepath = canonical(path(resource_name));
+			auto filepath = resource_path.lexically_normal();
 
 			// Generate an id from the filepath
 			src_id = MakeId(filepath.c_str());
@@ -189,6 +191,18 @@ namespace pr::rdr
 			// Otherwise, if not loaded already, load now
 			else
 			{
+				// If the texture filepath doesn't exist, use the resolve event
+				if (!exists(filepath))
+				{
+					auto args = ResolvePathArgs{filepath, false};
+					ResolveTextureFilepath(*this, args);
+					if (!args.handled || !exists(args.filepath))
+						return nullptr;
+
+					filepath = std::move(args.filepath);
+				}
+
+				// Load the texture from disk
 				CreateTextureFromFile(lock.D3DDevice(), filepath, 0, false, tdesc, res, srv);
 				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}
@@ -323,7 +337,7 @@ namespace pr::rdr
 	}
 
 	// Create a cube map texture instance
-	TextureCubePtr TextureManager::CreateTextureCube(RdrId id, wchar_t const* resource_name, SamplerDesc const& sdesc, char const* name)
+	TextureCubePtr TextureManager::CreateTextureCube(RdrId id, std::filesystem::path const& resource_path, SamplerDesc const& sdesc, char const* name)
 	{
 		// Notes:
 		//  - A cube map is an array of 6 2D textures.
@@ -337,8 +351,8 @@ namespace pr::rdr
 			throw std::runtime_error(pr::FmtS("Texture Id '%d' is already in use", id));
 
 		// The resource name is required
-		if (resource_name == nullptr || *resource_name == 0)
-			throw std::runtime_error("Filepath must be given");
+		if (resource_path.empty())
+			throw std::runtime_error("Resource path must be given");
 
 		TextureDesc tdesc;
 		string32 tex_name;
@@ -347,10 +361,12 @@ namespace pr::rdr
 		D3DPtr<ID3D11ShaderResourceView> srv;
 
 		// Create a texture from embedded resource
-		if (resource_name[0] == '@')
+		if (resource_path.c_str()[0] == '@')
 		{
-			src_id = MakeId(resource_name);
-			tex_name = name ? name : To<string32>(str::FindLastOf(resource_name, L":"));
+			auto uri = resource_path.wstring();
+
+			src_id = MakeId(uri.c_str());
+			tex_name = name ? name : To<string32>(str::FindLastOf(uri.c_str(), L":"));
 
 			// Look for an existing DX texture corresponding to the resource
 			auto iter = m_lookup_dxtex.find(src_id);
@@ -363,7 +379,7 @@ namespace pr::rdr
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
 				HMODULE hmodule; wstring32 res_type, res_name;
-				ParseEmbeddedResourceUri(resource_name, hmodule, res_type, res_name);
+				ParseEmbeddedResourceUri(uri, hmodule, res_type, res_name);
 
 				vector<ImageBytes> images;
 
@@ -390,7 +406,7 @@ namespace pr::rdr
 		else
 		{
 			using namespace std::filesystem;
-			auto filepath = canonical(path(resource_name));
+			auto filepath = resource_path.lexically_normal();
 
 			// Generate an id from the filepath
 			src_id = MakeId(filepath.c_str());
@@ -406,6 +422,18 @@ namespace pr::rdr
 			// Otherwise, if not loaded already, load now
 			else
 			{
+				// If the texture filepath doesn't exist, use the resolve event
+				if (!exists(filepath))
+				{
+					auto args = ResolvePathArgs{filepath, false};
+					ResolveTextureFilepath(*this, args);
+					if (!args.handled || !exists(args.filepath))
+						return nullptr;
+
+					filepath = std::move(args.filepath);
+				}
+
+				// Load the texture from disk
 				CreateTextureFromFile(lock.D3DDevice(), filepath, 1, true, tdesc, res, srv);
 				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}

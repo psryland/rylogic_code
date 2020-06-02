@@ -20,6 +20,7 @@
 #include "pr/maths/maths.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
+#include "pr/geometry/index_buffer.h"
 #include "pr/geometry/utility.h"
 #include "pr/container/byte_data.h"
 
@@ -65,9 +66,7 @@ namespace pr::geometry::p3d
 	x(Materials             ,= 0x00002000)/*    ├─ Materials                                                                                 */\
 	x(Material              ,= 0x00002100)/*    │  └─ Material                                                                               */\
 	x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
-	x(DiffuseTexture        ,= 0x00002120)/*    │     └─ Diffuse texture                                                                     */\
-	x(TexFilepath           ,= 0x00002121)/*    │        ├─ Texture filepath                                                                 */\
-	x(TexTiling             ,= 0x00002122)/*    │        └─ Texture tiling                                                                   */\
+	x(Texture               ,= 0x00002120)/*    │     └─ Texture (Str filepath, u8 type, u8 addr_mode, u16 flags)                            */\
 	x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
 	x(Mesh                  ,= 0x00003100)/*       └─ Mesh                                                                                   */\
 	x(MeshName              ,= 0x00003101)/*          ├─ Name (cstr)                                                                         */\
@@ -191,6 +190,97 @@ namespace pr::geometry::p3d
 	#pragma endregion
 
 	#pragma region P3D File
+	using IdxBuf = pr::geometry::IdxBuf;
+	template <typename T, typename Base> struct Cont :Base
+	{
+		// Notes:
+		//  - Simple container with moduluo operator [] and a default value when empty.
+		//  - Saves having to test for count != 0 when accessing contents.
+
+		std::vector<T> m_cont;
+		Cont()
+			:m_cont()
+		{}
+		explicit Cont(size_t initial_size)
+			:m_cont(initial_size)
+		{}
+		size_t size() const
+		{
+			return m_cont.size();
+		}
+		void reserve(size_t count)
+		{
+			m_cont.reserve(s_cast<size_t>(count));
+		}
+		void resize(size_t count)
+		{
+			resize(count, T{});
+		}
+		void resize(size_t count, T item)
+		{
+			m_cont.resize(count, item);
+		}
+		void assign(std::initializer_list<T> list)
+		{
+			m_cont.assign(list);
+		}
+		void push_back(T const& t)
+		{
+			m_cont.push_back(t);
+		}
+		//void emplace_back(T&& t)
+		//{
+		//	m_cont.emplace_back(std::forward<T>(t));
+		//}
+		template<class... Args> void emplace_back(Args&&... args)
+		{
+			m_cont.emplace_back(std::forward<Args>(args)...);
+		}
+		T const& back() const
+		{
+			if (size() == 0) return Base::Default;
+			return m_cont.back();
+		}
+		T const& operator[](int i) const
+		{
+			if (size() == 0) return Base::Default;
+			return m_cont[i % size()];
+		}
+		T const* data() const
+		{
+			return m_cont.data();
+		}
+		T const* begin() const
+		{
+			return m_cont.data();
+		}
+		T const* end() const
+		{
+			return m_cont.data() + m_cont.size();
+		}
+		T& back()
+		{
+			if (size() == 0) throw std::runtime_error("container is empty");
+			return m_cont.back();
+		}
+		T& operator [] (int i)
+		{
+			if (size() == 0) throw std::runtime_error("container is empty"); // you need to use a const& to the container
+			return m_cont[i % size()];
+		}
+		T* data()
+		{
+			return m_cont.data();
+		}
+		T* begin()
+		{
+			return m_cont.data();
+		}
+		T* end()
+		{
+			return m_cont.data() + m_cont.size();
+		}
+	};
 	struct FatVert
 	{
 		// Notes:
@@ -246,16 +336,48 @@ namespace pr::geometry::p3d
 	};
 	struct Texture
 	{
+		enum class EType
+		{
+			Unknown       = 0,
+			Diffuse       = 1, // Diffuse colour per texel
+			AlphaMap      = 2, // Transparency per texel
+			ReflectionMap = 3, // Reflectivity per texel
+			NormalMap     = 4, // Surface normal per texel (tangent space)
+			Bump          = 5, // Scalar displacement per texel
+			Displacement  = 6, // Vec3 displacement per texel
+		};
+		enum class EAddrMode // D3D11_TEXTURE_ADDRESS_MODE
+		{
+			Wrap       = 1, // D3D11_TEXTURE_ADDRESS_WRAP
+			Mirror     = 2, // D3D11_TEXTURE_ADDRESS_MIRROR
+			Clamp      = 3, // D3D11_TEXTURE_ADDRESS_CLAMP
+			Border     = 4, // D3D11_TEXTURE_ADDRESS_BORDER
+			MirrorOnce = 5, // D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
+		};
+		enum class EFlags
+		{
+			None = 0,
+			Alpha = 1 << 0,
+			_bitwise_operators_allowed,
+		};
+
 		// UTF-8 filepath or string identifier for looking up the texture
 		std::string m_filepath;
 
-		// How the texture is to be mapped
-		// 0 = clamp, 1 = wrap
-		uint32_t m_tiling;
+		// Texture type
+		EType m_type;
 
-		explicit Texture(std::string_view filepath = {}, uint32_t tiling = 0)
+		// How the texture is to be mapped
+		EAddrMode m_addr_mode;
+
+		// Texture boolean properties
+		EFlags m_flags;
+
+		explicit Texture(std::string_view filepath = {}, EType type = EType::Diffuse, EAddrMode addr = EAddrMode::Wrap, EFlags flags = EFlags::None)
 			:m_filepath(filepath)
-			,m_tiling(tiling)
+			,m_type(type)
+			,m_addr_mode(addr)
+			,m_flags(flags)
 		{}
 	};
 	struct Material
@@ -279,137 +401,6 @@ namespace pr::geometry::p3d
 			,m_diffuse(diff_colour)
 			,m_textures()
 		{}
-	};
-	struct IdxBuf: byte_data<4>
-	{
-		// Notes:
-		//  - Converting from a runtime stride to a compile-time type is a PITA. There will always be some indirection.
-		//    Having a conditional before every index access sounds expensive, but the alternative is a function pointer
-		//    which cannot be inlined. The best case is for the caller to switch on 'm_stride' and have separate loops for
-		//    each possible stride size but this is a burden on the caller. I think the next best option is to switch inside
-		//    loops and rely on the optimiser to move the conditional outside the loops in user code.
-
-		union cptr_t
-		{
-			void const* vp;
-			uint64_t const* u64;
-			uint32_t const* u32;
-			uint16_t const* u16;
-			uint8_t  const* u08;
-			cptr_t(void const* ptr) :vp(ptr) {}
-			template <typename TOut> TOut to(int stride) const
-			{
-				// 'Stride' is the size of the underlying elements which are then cast to 'TOut'
-				switch (stride)
-				{
-				case 8: return s_cast<TOut>(*u64);
-				case 4: return s_cast<TOut>(*u32);
-				case 2: return s_cast<TOut>(*u16);
-				case 1: return s_cast<TOut>(*u08);
-				default: throw std::runtime_error("Unsupported underlying data format");
-				}
-			}
-		};
-		template <typename TOut> struct citer_t
-		{
-			using proxy = struct { TOut x; TOut const* operator -> () const { return &x; } };
-
-			cptr_t m_ptr;
-			int m_stride;
-
-			citer_t(void const* p, int stride)
-				:m_ptr(p)
-				,m_stride(stride)
-			{}
-			TOut operator*() const
-			{
-				return m_ptr.to<TOut>(m_stride);
-			}
-			proxy operator->() const
-			{
-				return proxy{**this};
-			}
-			citer_t& operator ++()
-			{
-				m_ptr.u08 += m_stride;
-				return *this;
-			}
-		
-			friend bool operator == (citer_t const& lhs, citer_t const& rhs)
-			{
-				return lhs.m_ptr.vp == rhs.m_ptr.vp;
-			}
-			friend bool operator != (citer_t const& lhs, citer_t const& rhs)
-			{
-				return lhs.m_ptr.vp != rhs.m_ptr.vp;
-			}
-			friend bool operator < (citer_t const& lhs, citer_t const& rhs)
-			{
-				return lhs.m_ptr.vp < rhs.m_ptr.vp;
-			}
-		};
-		template <typename TOut> struct casting_span_t
-		{
-			IdxBuf const* m_buf;
-
-			casting_span_t(IdxBuf const& buf)
-				:m_buf(&buf)
-			{}
-			citer_t<TOut> begin() const
-			{
-				return m_buf->begin<TOut>();
-			}
-			citer_t<TOut> end() const
-			{
-				return m_buf->end<TOut>();
-			}
-		};
-
-		// Index stride. n = bytes per index
-		int m_stride;
-
-		// Constructor
-		explicit IdxBuf(int stride = sizeof(uint32_t))
-			:m_stride(stride)
-		{}
-
-		// The number indices in this buffer
-		size_t count() const
-		{
-			assert(m_stride != 0);
-			return s_cast<size_t>(size() / m_stride);
-		}
-
-		// The width of each vertex in bytes
-		int stride() const
-		{
-			return m_stride;
-		}
-
-		// Access the index buffer by index, regardless of underlying index format
-		uint32_t operator[](int idx) const
-		{
-			// Convert from the underlying type to 'uint32_t'
-			assert(idx >= 0 && idx < s_cast<int>(count()));
-			auto ptr = cptr_t{data() + idx * m_stride};
-			return ptr.to<uint32_t>(m_stride);
-		}
-
-		// Iteration - interpret the index buffer as TOut regardless of the stride of contained data.
-		template <typename TOut = uint32_t> citer_t<TOut> begin() const
-		{
-			return citer_t<TOut> {data(), m_stride};
-		}
-		template <typename TOut = uint32_t> citer_t<TOut> end() const
-		{
-			// The buffer may contain padding...
-			auto size_in_bytes = static_cast<size_t>(count() * m_stride);
-			return citer_t<TOut> {data() + size_in_bytes, m_stride};
-		}
-		template <typename TOut = uint32_t> casting_span_t<TOut> casting_span() const
-		{
-			return casting_span_t<TOut>{*this};
-		}
 	};
 	struct Nugget
 	{
@@ -482,91 +473,7 @@ namespace pr::geometry::p3d
 		//  - Nuggets don't need to all have the same topology.
 		//  - There is only one transform per mesh. Nuggets don't have transforms.
 		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
-		
-		// Simple container with moduluo operator [] and a default value when empty.
-		// Saves having to test for count != 0 when accessing contents.
-		template <typename T, typename Base> struct Cont :Base
-		{
-			std::vector<T> m_cont;
-			Cont()
-				:m_cont()
-			{}
-			explicit Cont(size_t initial_size)
-				:m_cont(initial_size)
-			{}
-			size_t size() const
-			{
-				return m_cont.size();
-			}
-			void reserve(size_t count)
-			{
-				m_cont.reserve(s_cast<size_t>(count));
-			}
-			void resize(size_t count)
-			{
-				resize(count, T{});
-			}
-			void resize(size_t count, T item)
-			{
-				m_cont.resize(count, item);
-			}
-			void assign(std::initializer_list<T> list)
-			{
-				m_cont.assign(list);
-			}
-			void push_back(T const& t)
-			{
-				m_cont.push_back(t);
-			}
-			void emplace_back(T&& t)
-			{
-				m_cont.emplace_back(std::forward<T>(t));
-			}
-			T const& back() const
-			{
-				if (size() == 0) return Base::Default;
-				return m_cont.back();
-			}
-			T const& operator[](int i) const
-			{
-				if (size() == 0) return Base::Default;
-				return m_cont[i % size()];
-			}
-			T const* data() const
-			{
-				return m_cont.data();
-			}
-			T const* begin() const
-			{
-				return m_cont.data();
-			}
-			T const* end() const
-			{
-				return m_cont.data() + m_cont.size();
-			}
-			T& back()
-			{
-				if (size() == 0) throw std::runtime_error("container is empty");
-				return m_cont.back();
-			}
-			T& operator [] (int i)
-			{
-				if (size() == 0) throw std::runtime_error("container is empty"); // you need to use a const& to the container
-				return m_cont[i % size()];
-			}
-			T* data()
-			{
-				return m_cont.data();
-			}
-			T* begin()
-			{
-				return m_cont.data();
-			}
-			T* end()
-			{
-				return m_cont.data() + m_cont.size();
-			}
-		};
+
 		struct VBase { static constexpr v4 Default = v4Origin; };
 		struct CBase { static constexpr Colour32 Default = Colour32White; };
 		struct NBase { static constexpr v4 Default = v4Zero; };
@@ -1056,588 +963,6 @@ namespace pr::geometry::p3d
 		return hdr;
 	}
 
-	#pragma region Read
-
-	// Notes:
-	//  - All of these Read functions assume 'src' points to the start
-	//    of the chunk data of the corresponding chunk type.
-	//  - Backwards compatibility is only needed in the Read functions.
-
-	// Read an array
-	template <typename TOut, typename TSrc> inline void Read(TSrc& src, TOut* out, size_t count)
-	{
-		traits<TSrc>::read(src, out, count);
-	}
-
-	// Read an array with element transforming.
-	// 'TIn' is the data type of the elements to read.
-	// 'count' is the number of times to call 'out'
-	// 'stride' is the size in bytes consumed with each call to 'out'
-	// 'out' is an output function used to consume the read elements.
-	template <typename TIn, typename TOut, typename TSrc> inline void Read(TSrc& src, size_t count, size_t stride, TOut out)
-	{
-		// Example:
-		//  count = 3, stride = 12 bytes, sizeof(TIn) = 4 bytes
-		//  'element' is the unit consumed by the 'out' callback.
-		//    => element size in units of TIn = stride / sizeof(TIn) = 3 TIn/element
-
-		constexpr int PageSizeBytes = 0x10000;
-
-		if (stride > PageSizeBytes)
-			throw std::runtime_error("Stride value is too large for local page buffer.");
-		if ((stride % sizeof(TIn)) != 0)
-			throw std::runtime_error("Stride value must be a multiple of the size of the input elements");
-
-		// Local buffer
-		TIn page[PageSizeBytes / sizeof(TIn)];
-		auto const page_max = PageSizeBytes / stride; // the number of whole elements that fit in 'page'
-		auto const elem_size = stride / sizeof(TIn);  // the element size in units of 'Tin'
-
-		for (; count != 0; )
-		{
-			// The number of 'TIn's to read
-			auto n = elem_size * std::min(count, page_max);
-			Read(src, &page[0], n);
-
-			auto const* pbeg = &page[0];
-			auto const* pend = &page[0] + n;
-			for (auto p = pbeg; p != pend; p += elem_size, --count)
-				out(p);
-		}
-	}
-
-	// Read a single type
-	template <typename TOut, typename TSrc> inline TOut Read(TSrc& src)
-	{
-		TOut out;
-		Read(src, &out, 1);
-		return std::move(out);
-	}
-
-	// Read a string. 'src' is assumed to point to the start of a EChunkId::CStr chunk data
-	template <typename TSrc, typename TStr = std::string> TStr ReadStr(TSrc& src, uint32_t len)
-	{
-		// Read the string length
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the string data
-		TStr str(count, '\0');
-		Read(src, str.data(), str.size());
-		return std::move(str);
-	}
-
-	// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
-	template <typename TSrc> Texture ReadTexture(TSrc& src, uint32_t len)
-	{
-		Texture tex;
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-		{
-			switch (hdr.m_id)
-			{
-			case EChunkId::TexFilepath:
-				{
-					tex.m_filepath = ReadStr(src, hdr.payload());
-					break;
-				}
-			case EChunkId::TexTiling:
-				{
-					tex.m_tiling = Read<uint32_t>(src);
-					break;
-				}
-			}
-			return false;
-		});
-		return std::move(tex);
-	}
-
-	// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
-	template <typename TSrc> Material ReadMaterial(TSrc& src, uint32_t len)
-	{
-		Material mat;
-
-		Read(src, mat.m_id.str, sizeof(Str16));
-		len -= sizeof(Str16);
-
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-		{
-			switch (hdr.m_id)
-			{
-			case EChunkId::DiffuseColour:
-				{
-					mat.m_diffuse = Read<Colour>(src);
-					break;
-				}
-			case EChunkId::DiffuseTexture:
-				{
-					mat.m_textures.emplace_back(ReadTexture(src, hdr.payload()));
-					break;
-				}
-			}
-			return false;
-		});
-		return std::move(mat);
-	}
-
-	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVerts chunk data
-	template <typename TSrc> Mesh::VCont ReadMeshVerts(TSrc& src, uint32_t len)
-	{
-		Mesh::VCont cont;
-
-		// Read the count
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the format
-		auto fmt = s_cast<EVertFormat>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the stride
-		auto stride = Read<uint16_t>(src);
-		len -= sizeof(uint16_t);
-
-		// Integrity check - remember data may be padded
-		if (count * stride <= len)
-			cont.resize(count);
-		else
-			throw std::runtime_error(Fmt("Vertex list count is invalid. Count is %d, data available for %d.", count, len / stride));
-
-		// Read the vertex data into memory. Inflate to v4
-		auto ptr = cont.data();
-		switch (fmt)
-		{
-		case EVertFormat::Verts32Bit:
-			{
-				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 1.0f}; });
-				break;
-			}
-		case EVertFormat::Verts16Bit:
-			{
-				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 1.0_hf}); });
-				break;
-			}
-		default:
-			{
-				throw std::runtime_error("Unsupported mesh vertex format");
-			}
-		}
-
-		return std::move(cont);
-	}
-
-	// Fill a container of colours. 'src' is assumed to point to the start of EChunkId::MeshColours chunk data
-	template <typename TSrc> Mesh::CCont ReadMeshColours(TSrc& src, uint32_t len)
-	{
-		Mesh::CCont cont;
-
-		// Read the count
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the format
-		auto fmt = s_cast<EColourFormat>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the stride
-		auto stride = Read<uint16_t>(src);
-		len -= sizeof(uint16_t);
-
-		// Integrity check - remember data may be padded
-		if (count * stride <= len)
-			cont.resize(count);
-		else
-			throw std::runtime_error(Fmt("Colours list count is invalid. Count is %d, data available for %d.", count, len / stride));
-
-		// Read the vertex colour data into memory. Inflate to Colour32
-		auto ptr = cont.data();
-		switch (fmt)
-		{
-		case EColourFormat::Colours32Bit:
-			{
-				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Colour32{p[0]}; });
-				break;
-			}
-		default:
-			{
-				throw std::runtime_error("Unsupported mesh vertex colour format");
-			}
-		}
-
-		return std::move(cont);
-	}
-
-	// Fill a container of normals. 'src' is assumed to point to the start of EChunkId::MeshNorms chunk data
-	template <typename TSrc> Mesh::NCont ReadMeshNorms(TSrc& src, uint32_t len)
-	{
-		Mesh::NCont cont;
-
-		// Read the count
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the format
-		auto fmt = s_cast<ENormFormat>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the stride
-		auto stride = Read<uint16_t>(src);
-		len -= sizeof(uint16_t);
-
-		// Integrity check - remember data may be padded
-		if (count * stride <= len)
-			cont.resize(count);
-		else
-			throw std::runtime_error(Fmt("Normals list count is invalid. Count is %d, data available for %d.", count, len / stride));
-
-		// Read the normals data into memory. Inflate to v4
-		auto ptr = cont.data();
-		switch (fmt)
-		{
-		case ENormFormat::Norms32Bit:
-			{
-				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 0.0f}; });
-				break;
-			}
-		case ENormFormat::Norms16Bit:
-			{
-				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 0.0_hf}); });
-				break;
-			}
-		case ENormFormat::NormsPack32:
-			{
-				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Norm32bit::Decompress(p[0]); });
-				break;
-			}
-		default:
-			{
-				throw std::runtime_error("Unsupported mesh normals format");
-			}
-		}
-
-		return std::move(cont);
-	}
-
-	// Fill a container of UVs. 'src' is assumed to point to the start of EChunkId::MeshUVs chunk data
-	template <typename TSrc> Mesh::TCont ReadMeshUVs(TSrc& src, uint32_t len)
-	{
-		Mesh::TCont cont;
-
-		// Read the count
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the format
-		auto fmt = s_cast<EUVFormat>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the stride
-		auto stride = Read<uint16_t>(src);
-		len -= sizeof(uint16_t);
-
-		// Integrity check - remember data may be padded
-		if (count * stride <= len)
-			cont.resize(count);
-		else
-			throw std::runtime_error(Fmt("Texture UVs list count is invalid. Count is %d, data available for %d.", count, len / stride));
-
-		// Read the texture coord data into memory. Inflate to v2
-		auto ptr = cont.data();
-		switch (fmt)
-		{
-		case EUVFormat::UVs32Bit:
-			{
-				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v2{p[0], p[1]}; });
-				break;
-			}
-		case EUVFormat::UVs16Bit:
-			{
-				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], 0.0_hf, 0.0_hf}).xy; });
-				break;
-			}
-		default:
-			{
-				throw std::runtime_error("Unsupported mesh UV format");
-			}
-		}
-
-		return std::move(cont);
-	}
-
-	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::Mesh?Idx chunk data
-	template <typename TSrc> IdxBuf ReadIndices(TSrc& src, uint32_t len)
-	{
-		IdxBuf cont;
-
-		// Read the count
-		auto count = Read<uint32_t>(src);
-		len -= sizeof(uint32_t);
-
-		// Read the format
-		auto fmt = s_cast<EIndexFormat>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the stride
-		auto stride = Read<uint16_t>(src);
-		len -= sizeof(uint16_t);
-
-		// Integrity check
-		if (count * stride > len && fmt != EIndexFormat::IdxNBit)
-			throw std::runtime_error(Fmt("Indices buffer count is invalid. Count is %d, data available for %d.", count, len / stride));
-
-		cont.m_stride = stride;
-
-		// Read the index data into memory
-		switch (fmt)
-		{
-		case EIndexFormat::Idx32Bit:
-			{
-				cont.resize<uint32_t>(count);
-				Read(src, cont.data<uint32_t>(), cont.size<uint32_t>());
-				cont.m_stride = sizeof(uint32_t);
-				break;
-			}
-		case EIndexFormat::Idx16Bit:
-			{
-				cont.resize<uint16_t>(count);
-				Read(src, cont.data<uint16_t>(), cont.size<uint16_t>());
-				cont.m_stride = sizeof(uint16_t);
-				break;
-			}
-		case EIndexFormat::Idx8Bit:
-			{
-				cont.resize<uint8_t>(count);
-				Read(src, cont.data<uint8_t>(), cont.size<uint8_t>());
-				cont.m_stride = sizeof(uint8_t);
-				break;
-			}
-		case EIndexFormat::IdxNBit:
-			{
-				// For IdxNBit, the stride value is the size of each decompressed index,
-				// *not* the per-element size of the data in 'src' (like it is for other chunks).
-				cont.reserve(count * stride);
-
-				// Read compressed indices into a local buffer
-				byte_data<> buf(len);
-				Read(src, buf.data(), buf.size());
-
-				// Decompress from 'buf' into 'cont'
-				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
-				int64_t prev = 0;
-				auto const* p = buf.data();
-				auto const* pend = p + buf.size();
-				for (; p != pend && cont.count() != count; ++p)
-				{
-					int s = 0;
-					uint64_t zz = 0;
-					for (; p != pend && (*p & 0x80); ++p, s += 7)
-						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
-					if (p != pend)
-						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
-
-					// ZigZag decode
-					auto delta = static_cast<int64_t>((zz & 1) ? (zz >> 1) ^ -1 : (zz >> 1));
-
-					// Get the index value from the delta (only works for little endian!)
-					auto idx = prev + delta;
-					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
-
-					prev += delta;
-				}
-
-				// Integrity check
-				if (cont.size() != count * stride)
-					throw std::runtime_error(Fmt("Index buffer count is invalid. Count is %d, %d indices provided.", count, static_cast<uint32_t>(cont.size() / stride)));
-
-				break;
-			}
-		default:
-			{
-				throw std::runtime_error("Unsupported index buffer format");
-			}
-		}
-
-		return std::move(cont);
-	}
-
-	// Read a mesh nugget. 'src' is assumed to point to the start of EChunkId::MeshNugget chunk data
-	template <typename TSrc> Nugget ReadMeshNugget(TSrc& src, uint32_t len)
-	{
-		Nugget nugget;
-
-		// Read the mesh topology
-		nugget.m_topo = static_cast<ETopo>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the mesh geometry
-		nugget.m_geom = static_cast<EGeom>(Read<uint16_t>(src));
-		len -= sizeof(uint16_t);
-
-		// Read the child chunks
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::MeshMatId:
-					{
-						// Read the material id
-						auto id = ReadStr(src, hdr.payload());
-						nugget.m_mat = id;
-						break;
-					}
-				case EChunkId::MeshVIdx:
-					{
-						nugget.m_vidx = ReadIndices(src, hdr.payload());
-						break;
-					}
-				}
-				return false;
-			});
-
-		return std::move(nugget);
-	}
-
-	// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
-	template <typename TSrc> Mesh ReadMesh(TSrc& src, uint32_t len)
-	{
-		Mesh mesh;
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::MeshName:
-					{
-						mesh.m_name = ReadStr(src, hdr.payload());
-						break;
-					}
-				case EChunkId::MeshBBox:
-					{
-						mesh.m_bbox = Read<BBox>(src);
-						break;
-					}
-				case EChunkId::MeshTransform:
-					{
-						mesh.m_o2p = Read<m4x4>(src);
-						break;
-					}
-				case EChunkId::MeshVerts:
-					{
-						mesh.m_vert = ReadMeshVerts(src, hdr.payload());
-						break;
-					}
-				case EChunkId::MeshColours:
-					{
-						mesh.m_diff = ReadMeshColours(src, hdr.payload());
-						break;
-					}
-				case EChunkId::MeshNorms:
-					{
-						mesh.m_norm = ReadMeshNorms(src, hdr.payload());
-						break;
-					}
-				case EChunkId::MeshUVs:
-					{
-						mesh.m_tex0 = ReadMeshUVs(src, hdr.payload());
-						break;
-					}
-				case EChunkId::MeshNugget:
-					{
-						mesh.m_nugget.emplace_back(ReadMeshNugget(src, hdr.payload()));
-						break;
-					}
-				}
-				return false;
-			});
-		return std::move(mesh);
-	}
-
-	// Fill a container of materials. 'src' is assumed to point to the start of EChunkId::Materials chunk data
-	template <typename TSrc> Scene::MatCont ReadSceneMaterials(TSrc& src, uint32_t len)
-	{
-		Scene::MatCont mats;
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::Material:
-					mats.emplace_back(ReadMaterial(src, hdr.payload()));
-					break;
-				}
-				return false;
-			});
-		return std::move(mats);
-	}
-
-	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
-	template <typename TSrc> Scene::MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
-	{
-		Scene::MeshCont meshes;
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::Mesh:
-					meshes.emplace_back(ReadMesh(src, hdr.payload()));
-					break;
-				}
-				return false;
-			});
-		return std::move(meshes);
-	}
-
-	// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
-	template <typename TSrc> Scene ReadScene(TSrc& src, uint32_t len)
-	{
-		Scene scene;
-		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::Materials:
-					{
-						scene.m_materials = ReadSceneMaterials(src, hdr.payload());
-						break;
-					}
-				case EChunkId::Meshes:
-					{
-						scene.m_meshes = ReadSceneMeshes(src, hdr.payload());
-						break;
-					}
-				}
-				return false;
-			});
-		return std::move(scene);
-	}
-
-	// Read a p3d::File into memory from an istream-like source. Uses forward iteration only.
-	template <typename TSrc> File Read(TSrc& src)
-	{
-		File file;
-
-		// Check that this is actually a P3D stream
-		auto main = Read<ChunkHeader>(src);
-		if (main.m_id != EChunkId::Main)
-			throw std::runtime_error("Source is not a p3d stream");
-
-		// Read the sub chunks
-		Find(src, main.payload(), [&](ChunkHeader hdr, TSrc& src)
-			{
-				switch (hdr.m_id)
-				{
-				case EChunkId::FileVersion:
-					file.m_version = Read<uint32_t>(src);
-					break;
-				case EChunkId::Scene:
-					file.m_scene = ReadScene(src, hdr.payload());
-					break;
-				}
-				return false;
-			});
-
-		return std::move(file);
-	}
-
-	#pragma endregion
-
 	#pragma region Write
 
 	// Notes:
@@ -1697,6 +1022,14 @@ namespace pr::geometry::p3d
 		return Write(out, &in, 1);
 	}
 
+	// Write a string not within a chunk. Note: not padded
+	template <typename TOut> uint32_t WriteStr(TOut& out, std::string_view str)
+	{
+		return
+			Write(out, s_cast<uint32_t>(str.size())) + // String length;
+			Write(out, str.data(), str.size());        // String data
+	}
+
 	// Write a string to 'out'.
 	template <typename TOut> uint32_t WriteStr(TOut& out, EChunkId chunk_id, std::string_view str)
 	{
@@ -1706,25 +1039,13 @@ namespace pr::geometry::p3d
 		ChunkHeader hdr(chunk_id, 0U);
 		Write<ChunkHeader>(out, hdr);
 		
-		// String length
-		hdr.m_length += Write(out, s_cast<uint32_t>(str.size()));
-
-		// String data
-		hdr.m_length += Write(out, str.data(), str.size());
+		// String
+		hdr.m_length += WriteStr(out, str);
 
 		// Chunk padding
 		hdr.m_length += PadToU32(out, hdr.m_length);
 
 		UpdateHeader(out, offset, hdr);
-		return hdr.m_length;
-	}
-
-	// Write a texture tiling chunk to 'out'
-	template <typename TOut> uint32_t WriteTexTiling(TOut& out, uint32_t tiling)
-	{
-		ChunkHeader hdr(EChunkId::TexTiling, sizeof(uint32_t));
-		Write<ChunkHeader>(out, hdr);
-		Write<uint32_t>(out, tiling);
 		return hdr.m_length;
 	}
 
@@ -1734,15 +1055,23 @@ namespace pr::geometry::p3d
 		auto offset = traits<TOut>::tellp(out);
 
 		// Texture chunk header
-		ChunkHeader hdr(EChunkId::DiffuseTexture, 0U);
+		ChunkHeader hdr(EChunkId::Texture, 0U);
 		Write<ChunkHeader>(out, hdr);
 
 		// Texture filepath
-		if (!tex.m_filepath.empty())
-			hdr.m_length += WriteStr(out, EChunkId::TexFilepath, tex.m_filepath);
+		hdr.m_length += WriteStr(out, tex.m_filepath);
 
-		// Texture tiling
-		hdr.m_length += WriteTexTiling(out, tex.m_tiling);
+		// Texture type
+		hdr.m_length += Write(out, s_cast<uint8_t>(tex.m_type));
+
+		// Texture address mode
+		hdr.m_length += Write(out, s_cast<uint8_t>(tex.m_addr_mode));
+
+		// Texture flags
+		hdr.m_length += Write(out, s_cast<uint16_t>(tex.m_flags));
+
+		// Chunk padding
+		hdr.m_length += PadToU32(out, hdr.m_length);
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
@@ -1766,7 +1095,7 @@ namespace pr::geometry::p3d
 		ChunkHeader hdr(EChunkId::Material, 0U);
 		Write<ChunkHeader>(out, hdr);
 
-		// Material name (exactly 16 chars, CStr adds a null terminator)
+		// Material name (exactly 16 chars, no need for length first)
 		hdr.m_length += Write(out, &mat.m_id.str[0], sizeof(mat.m_id.str));
 
 		// Diffuse colour
@@ -2343,6 +1672,590 @@ namespace pr::geometry::p3d
 
 		UpdateHeader(out, offset, hdr);
 		return hdr.m_length;
+	}
+
+	#pragma endregion
+
+	#pragma region Read
+
+	// Notes:
+	//  - All of these Read functions assume 'src' points to the start
+	//    of the chunk data of the corresponding chunk type.
+	//  - Backwards compatibility is only needed in the Read functions.
+
+	// Read an array
+	template <typename TOut, typename TSrc> inline void Read(TSrc& src, TOut* out, size_t count)
+	{
+		traits<TSrc>::read(src, out, count);
+	}
+
+	// Read an array with element transforming.
+	// 'TIn' is the data type of the elements to read.
+	// 'count' is the number of times to call 'out'
+	// 'stride' is the size in bytes consumed with each call to 'out'
+	// 'out' is an output function used to consume the read elements.
+	template <typename TIn, typename TOut, typename TSrc> inline void Read(TSrc& src, size_t count, size_t stride, TOut out)
+	{
+		// Example:
+		//  count = 3, stride = 12 bytes, sizeof(TIn) = 4 bytes
+		//  'element' is the unit consumed by the 'out' callback.
+		//    => element size in units of TIn = stride / sizeof(TIn) = 3 TIn/element
+
+		constexpr int PageSizeBytes = 0x10000;
+
+		if (stride > PageSizeBytes)
+			throw std::runtime_error("Stride value is too large for local page buffer.");
+		if ((stride % sizeof(TIn)) != 0)
+			throw std::runtime_error("Stride value must be a multiple of the size of the input elements");
+
+		// Local buffer
+		TIn page[PageSizeBytes / sizeof(TIn)];
+		auto const page_max = PageSizeBytes / stride; // the number of whole elements that fit in 'page'
+		auto const elem_size = stride / sizeof(TIn);  // the element size in units of 'Tin'
+
+		for (; count != 0; )
+		{
+			// The number of 'TIn's to read
+			auto n = elem_size * std::min(count, page_max);
+			Read(src, &page[0], n);
+
+			auto const* pbeg = &page[0];
+			auto const* pend = &page[0] + n;
+			for (auto p = pbeg; p != pend; p += elem_size, --count)
+				out(p);
+		}
+	}
+
+	// Read a single type
+	template <typename TOut, typename TSrc> inline TOut Read(TSrc& src)
+	{
+		TOut out;
+		Read(src, &out, 1);
+		return std::move(out);
+	}
+
+	// Read a string. 'src' is assumed to point to the start of a EChunkId::CStr chunk data
+	template <typename TSrc, typename TStr = std::string> TStr ReadStr(TSrc& src, uint32_t len)
+	{
+		// Read the string length
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the string data
+		TStr str(count, '\0');
+		Read(src, str.data(), str.size());
+		return std::move(str);
+	}
+
+	// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
+	template <typename TSrc> Texture ReadTexture(TSrc& src, uint32_t len)
+	{
+		Texture tex;
+	
+		// Texture filepath length
+		auto flen = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Texture filepath
+		tex.m_filepath.resize(flen);
+		Read(src, tex.m_filepath.data(), tex.m_filepath.size());
+		len -= s_cast<uint32_t>(tex.m_filepath.size());
+
+		// Texture type
+		tex.m_type = s_cast<Texture::EType>(Read<uint8_t>(src));
+
+		// Texture address mode
+		tex.m_addr_mode = s_cast<Texture::EAddrMode>(Read<uint8_t>(src));
+
+		// Texture flags
+		tex.m_flags = s_cast<Texture::EFlags>(Read<uint16_t>(src));
+
+		return std::move(tex);
+	}
+
+	// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
+	template <typename TSrc> Material ReadMaterial(TSrc& src, uint32_t len)
+	{
+		Material mat;
+
+		Read(src, mat.m_id.str, sizeof(Str16));
+		len -= sizeof(Str16);
+
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+		{
+			switch (hdr.m_id)
+			{
+			case EChunkId::DiffuseColour:
+				{
+					mat.m_diffuse = Read<Colour>(src);
+					break;
+				}
+			case EChunkId::Texture:
+				{
+					mat.m_textures.emplace_back(ReadTexture(src, hdr.payload()));
+					break;
+				}
+			}
+			return false;
+		});
+		return std::move(mat);
+	}
+
+	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVerts chunk data
+	template <typename TSrc> Mesh::VCont ReadMeshVerts(TSrc& src, uint32_t len)
+	{
+		Mesh::VCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EVertFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Vertex list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the vertex data into memory. Inflate to v4
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case EVertFormat::Verts32Bit:
+			{
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 1.0f}; });
+				break;
+			}
+		case EVertFormat::Verts16Bit:
+			{
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 1.0_hf}); });
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh vertex format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of colours. 'src' is assumed to point to the start of EChunkId::MeshColours chunk data
+	template <typename TSrc> Mesh::CCont ReadMeshColours(TSrc& src, uint32_t len)
+	{
+		Mesh::CCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EColourFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Colours list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the vertex colour data into memory. Inflate to Colour32
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case EColourFormat::Colours32Bit:
+			{
+				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Colour32{p[0]}; });
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh vertex colour format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of normals. 'src' is assumed to point to the start of EChunkId::MeshNorms chunk data
+	template <typename TSrc> Mesh::NCont ReadMeshNorms(TSrc& src, uint32_t len)
+	{
+		Mesh::NCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<ENormFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Normals list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the normals data into memory. Inflate to v4
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case ENormFormat::Norms32Bit:
+			{
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v4{p[0], p[1], p[2], 0.0f}; });
+				break;
+			}
+		case ENormFormat::Norms16Bit:
+			{
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], p[2], 0.0_hf}); });
+				break;
+			}
+		case ENormFormat::NormsPack32:
+			{
+				Read<uint32_t>(src, count, stride, [&](uint32_t const* p) { *ptr++ = Norm32bit::Decompress(p[0]); });
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh normals format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of UVs. 'src' is assumed to point to the start of EChunkId::MeshUVs chunk data
+	template <typename TSrc> Mesh::TCont ReadMeshUVs(TSrc& src, uint32_t len)
+	{
+		Mesh::TCont cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EUVFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check - remember data may be padded
+		if (count * stride <= len)
+			cont.resize(count);
+		else
+			throw std::runtime_error(Fmt("Texture UVs list count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		// Read the texture coord data into memory. Inflate to v2
+		auto ptr = cont.data();
+		switch (fmt)
+		{
+		case EUVFormat::UVs32Bit:
+			{
+				Read<float>(src, count, stride, [&](float const* p) { *ptr++ = v2{p[0], p[1]}; });
+				break;
+			}
+		case EUVFormat::UVs16Bit:
+			{
+				Read<half_t>(src, count, stride, [&](half_t const* p) { *ptr++ = F16toF32(half4{p[0], p[1], 0.0_hf, 0.0_hf}).xy; });
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported mesh UV format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::Mesh?Idx chunk data
+	template <typename TSrc> IdxBuf ReadIndices(TSrc& src, uint32_t len)
+	{
+		IdxBuf cont;
+
+		// Read the count
+		auto count = Read<uint32_t>(src);
+		len -= sizeof(uint32_t);
+
+		// Read the format
+		auto fmt = s_cast<EIndexFormat>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the stride
+		auto stride = Read<uint16_t>(src);
+		len -= sizeof(uint16_t);
+
+		// Integrity check
+		if (count * stride > len && fmt != EIndexFormat::IdxNBit)
+			throw std::runtime_error(Fmt("Indices buffer count is invalid. Count is %d, data available for %d.", count, len / stride));
+
+		cont.m_stride = stride;
+
+		// Read the index data into memory
+		switch (fmt)
+		{
+		case EIndexFormat::Idx32Bit:
+			{
+				cont.resize<uint32_t>(count);
+				Read(src, cont.data<uint32_t>(), cont.size<uint32_t>());
+				cont.m_stride = sizeof(uint32_t);
+				break;
+			}
+		case EIndexFormat::Idx16Bit:
+			{
+				cont.resize<uint16_t>(count);
+				Read(src, cont.data<uint16_t>(), cont.size<uint16_t>());
+				cont.m_stride = sizeof(uint16_t);
+				break;
+			}
+		case EIndexFormat::Idx8Bit:
+			{
+				cont.resize<uint8_t>(count);
+				Read(src, cont.data<uint8_t>(), cont.size<uint8_t>());
+				cont.m_stride = sizeof(uint8_t);
+				break;
+			}
+		case EIndexFormat::IdxNBit:
+			{
+				// For IdxNBit, the stride value is the size of each decompressed index,
+				// *not* the per-element size of the data in 'src' (like it is for other chunks).
+				cont.reserve(count * stride);
+
+				// Read compressed indices into a local buffer
+				byte_data<> buf(len);
+				Read(src, buf.data(), buf.size());
+
+				// Decompress from 'buf' into 'cont'
+				// Note, that 'buf' contains padding, so the loop needs to stop when 'count' indices are read.
+				int64_t prev = 0;
+				auto const* p = buf.data();
+				auto const* pend = p + buf.size();
+				for (; p != pend && cont.count() != count; ++p)
+				{
+					int s = 0;
+					uint64_t zz = 0;
+					for (; p != pend && (*p & 0x80); ++p, s += 7)
+						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
+					if (p != pend)
+						zz |= static_cast<uint64_t>(*p & 0x7F) << s;
+
+					// ZigZag decode
+					auto delta = static_cast<int64_t>((zz & 1) ? (zz >> 1) ^ -1 : (zz >> 1));
+
+					// Get the index value from the delta (only works for little endian!)
+					auto idx = prev + delta;
+					cont.push_back(reinterpret_cast<uint8_t const*>(&idx), stride);
+
+					prev += delta;
+				}
+
+				// Integrity check
+				if (cont.size() != count * stride)
+					throw std::runtime_error(Fmt("Index buffer count is invalid. Count is %d, %d indices provided.", count, static_cast<uint32_t>(cont.size() / stride)));
+
+				break;
+			}
+		default:
+			{
+				throw std::runtime_error("Unsupported index buffer format");
+			}
+		}
+
+		return std::move(cont);
+	}
+
+	// Read a mesh nugget. 'src' is assumed to point to the start of EChunkId::MeshNugget chunk data
+	template <typename TSrc> Nugget ReadMeshNugget(TSrc& src, uint32_t len)
+	{
+		Nugget nugget;
+
+		// Read the mesh topology
+		nugget.m_topo = static_cast<ETopo>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the mesh geometry
+		nugget.m_geom = static_cast<EGeom>(Read<uint16_t>(src));
+		len -= sizeof(uint16_t);
+
+		// Read the child chunks
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::MeshMatId:
+					{
+						// Read the material id
+						auto id = ReadStr(src, hdr.payload());
+						nugget.m_mat = id;
+						break;
+					}
+				case EChunkId::MeshVIdx:
+					{
+						nugget.m_vidx = ReadIndices(src, hdr.payload());
+						break;
+					}
+				}
+				return false;
+			});
+
+		return std::move(nugget);
+	}
+
+	// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
+	template <typename TSrc> Mesh ReadMesh(TSrc& src, uint32_t len)
+	{
+		Mesh mesh;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::MeshName:
+					{
+						mesh.m_name = ReadStr(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshBBox:
+					{
+						mesh.m_bbox = Read<BBox>(src);
+						break;
+					}
+				case EChunkId::MeshTransform:
+					{
+						mesh.m_o2p = Read<m4x4>(src);
+						break;
+					}
+				case EChunkId::MeshVerts:
+					{
+						mesh.m_vert = ReadMeshVerts(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshColours:
+					{
+						mesh.m_diff = ReadMeshColours(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshNorms:
+					{
+						mesh.m_norm = ReadMeshNorms(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshUVs:
+					{
+						mesh.m_tex0 = ReadMeshUVs(src, hdr.payload());
+						break;
+					}
+				case EChunkId::MeshNugget:
+					{
+						mesh.m_nugget.emplace_back(ReadMeshNugget(src, hdr.payload()));
+						break;
+					}
+				}
+				return false;
+			});
+		return std::move(mesh);
+	}
+
+	// Fill a container of materials. 'src' is assumed to point to the start of EChunkId::Materials chunk data
+	template <typename TSrc> Scene::MatCont ReadSceneMaterials(TSrc& src, uint32_t len)
+	{
+		Scene::MatCont mats;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::Material:
+					mats.emplace_back(ReadMaterial(src, hdr.payload()));
+					break;
+				}
+				return false;
+			});
+		return std::move(mats);
+	}
+
+	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
+	template <typename TSrc> Scene::MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
+	{
+		Scene::MeshCont meshes;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::Mesh:
+					meshes.emplace_back(ReadMesh(src, hdr.payload()));
+					break;
+				}
+				return false;
+			});
+		return std::move(meshes);
+	}
+
+	// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
+	template <typename TSrc> Scene ReadScene(TSrc& src, uint32_t len)
+	{
+		Scene scene;
+		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::Materials:
+					{
+						scene.m_materials = ReadSceneMaterials(src, hdr.payload());
+						break;
+					}
+				case EChunkId::Meshes:
+					{
+						scene.m_meshes = ReadSceneMeshes(src, hdr.payload());
+						break;
+					}
+				}
+				return false;
+			});
+		return std::move(scene);
+	}
+
+	// Read a p3d::File into memory from an istream-like source. Uses forward iteration only.
+	template <typename TSrc> File Read(TSrc& src)
+	{
+		File file;
+
+		// Check that this is actually a P3D stream
+		auto main = Read<ChunkHeader>(src);
+		if (main.m_id != EChunkId::Main)
+			throw std::runtime_error("Source is not a p3d stream");
+
+		// Read the sub chunks
+		Find(src, main.payload(), [&](ChunkHeader hdr, TSrc& src)
+			{
+				switch (hdr.m_id)
+				{
+				case EChunkId::FileVersion:
+					file.m_version = Read<uint32_t>(src);
+					break;
+				case EChunkId::Scene:
+					file.m_scene = ReadScene(src, hdr.payload());
+					break;
+				}
+				return false;
+			});
+
+		return std::move(file);
 	}
 
 	#pragma endregion
