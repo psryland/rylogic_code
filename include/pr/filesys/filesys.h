@@ -438,9 +438,10 @@ namespace pr::filesys
 		using namespace std::filesystem;
 
 		// If the partial path is actually a full path
-		if (partial_path.is_absolute() && exists(partial_path))
+		if (partial_path.is_absolute())
 		{
-			return partial_path;
+			// Return an empty string for unresolved
+			return exists(partial_path) ? partial_path : path{};
 		}
 
 		// If a current directory is provided
@@ -457,6 +458,7 @@ namespace pr::filesys
 		// Check the working directory
 		if (check_working_dir)
 		{
+			// Convert to an absolute path using the current working directory
 			auto path = absolute(partial_path);
 			if (exists(path))
 				return path;
@@ -487,7 +489,7 @@ namespace pr::filesys
 		}
 
 		// Return an empty string for unresolved
-		return path();
+		return path{};
 	}
 }
 

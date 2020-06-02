@@ -47,7 +47,13 @@ namespace pr::rdr
 		TextureManager& operator = (TextureManager const&) = delete;
 
 		// Renderer access
-		Renderer& rdr() const { return m_rdr; }
+		Renderer& rdr() const
+		{
+			return m_rdr;
+		}
+
+		// An event that is called when a texture filepath cannot be resolved.
+		EventHandler<TextureManager&, ResolvePathArgs&, true> ResolveTextureFilepath;
 
 		// Create a new texture instance.
 		// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
@@ -62,7 +68,7 @@ namespace pr::rdr
 		// '@<module>:<resource_type>:<resource_name>' - '@' indicates embedded resource, <module> and <resource_type> are optional  (e.g. @::tex_resource, @00FE123:jpg:tex_resource)
 		// '<filepath>' - All other strings are interpreted as filepaths.
 		// Throws if creation fails. On success returns a pointer to the created texture.
-		Texture2DPtr CreateTexture2D(RdrId id, wchar_t const* resource_path, SamplerDesc const& sam_desc, bool has_alpha, char const* name);
+		Texture2DPtr CreateTexture2D(RdrId id, std::filesystem::path const& resource_path, SamplerDesc const& sam_desc, bool has_alpha, char const* name);
 
 		// Create a new texture instance that wraps an existing dx texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
@@ -84,7 +90,7 @@ namespace pr::rdr
 		Texture2DPtr CreateTextureGdi(RdrId id, int w, int h, bool has_alpha, char const* name);
 
 		// Create a cube map texture instance
-		TextureCubePtr CreateTextureCube(RdrId id, wchar_t const* resource_name, SamplerDesc const& sdesc, char const* name);
+		TextureCubePtr CreateTextureCube(RdrId id, std::filesystem::path const& resource_path, SamplerDesc const& sdesc, char const* name);
 
 		// Create a new texture instance that uses the same dx texture as an existing texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

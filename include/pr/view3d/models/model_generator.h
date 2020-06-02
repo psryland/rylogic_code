@@ -147,14 +147,9 @@ namespace pr::rdr
 		template <typename VertexType = Vert>
 		struct Cache
 		{
-			// Notes:
-			//  'ICont' is a buffer of u16's because that is the most common case.
-			//  To use u32's for the index buffer, resize 'm_icont' 2x the number of indices,
-			//  reinterpret_cast and fill the buffer with u32's, and set the 'm_idx32' flag.
-
 			using VType = VertexType;
 			using VCont = vector<VType>;
-			using ICont = ByteData<4>;
+			using ICont = pr::geometry::IdxBuf;
 			using NCont = vector<NuggetProps>;
 
 		private:
@@ -186,16 +181,15 @@ namespace pr::rdr
 
 		public:
 
-			std::string& m_name;  // Model name
-			VCont& m_vcont; // Model verts
-			ICont& m_icont; // Model faces/lines/points/etc
-			NCont& m_ncont; // Model nuggets
-			BBox& m_bbox;  // Model bounding box
-			int m_idx_stride; // 0 = variable, n = bytes per index
+			std::string& m_name; // Model name
+			VCont& m_vcont;      // Model verts
+			ICont& m_icont;      // Model faces/lines/points/etc
+			NCont& m_ncont;      // Model nuggets
+			BBox& m_bbox;        // Model bounding box
 
-			Cache()
-				:Cache(0,0,0,1)
-			{}
+			Cache() = delete;
+			//	:Cache(0,0,0,1)
+			//{}
 			Cache(int vcount, int icount, int ncount, int idx_stride)
 				:m_buffers(this_thread_instance())
 				,m_in_use(this_thread_cache_in_use())
@@ -204,12 +198,12 @@ namespace pr::rdr
 				,m_icont(m_buffers.m_icont)
 				,m_ncont(m_buffers.m_ncont)
 				,m_bbox(m_buffers.m_bbox)
-				,m_idx_stride(idx_stride)
 			{
 				assert(vcount >= 0 && icount >= 0 && ncount >= 0 && idx_stride >= 1);
 				m_vcont.resize(vcount);
 				m_icont.resize(icount * idx_stride);
 				m_ncont.resize(ncount);
+				m_icont.m_stride = idx_stride;
 				m_in_use = true;
 			}
 			~Cache()
@@ -232,18 +226,19 @@ namespace pr::rdr
 
 			// Container item counts
 			size_t VCount() const { return m_vcont.size(); }
-			size_t ICount() const { return m_icont.size() / m_idx_stride; }
+			size_t ICount() const { return m_icont.count(); }
 			size_t NCount() const { return m_ncont.size(); }
 
 			// Return the buffer format associated with the index stride
 			DXGI_FORMAT IdxFormat() const
 			{
-				switch (m_idx_stride)
+				auto stride = m_icont.stride();
+				switch (stride)
 				{
 				case 4: return dx_format_v<uint32_t>;
 				case 2: return dx_format_v<uint16_t>;
 				case 1: return dx_format_v<uint8_t>;
-				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", m_idx_stride));
+				default: throw std::runtime_error(Fmt("Unsupported index stride: %d", stride));
 				}
 			}
 
@@ -254,9 +249,7 @@ namespace pr::rdr
 				// - Don't change the 'geom' flags here based on whether the material has a texture
 				//   or not. The texture may be set in the material after here and before the model
 				//   is rendered.
-				NuggetProps nug = {};
-				if (mat)
-					nug = *mat;
+				auto nug = mat ? *mat : NuggetProps{};
 				nug.m_topo = topo;
 				nug.m_geom = geom;
 				nug.m_flags |= geometry_has_alpha ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
@@ -290,7 +283,7 @@ namespace pr::rdr
 						{
 						case ETopo::TriList:
 							{
-								switch (cache.m_idx_stride)
+								switch (cache.m_icont.stride())
 								{
 								case sizeof(uint32_t): FlipTriListFaces<VType, uint32_t>(cache, nug.m_irange); break;
 								case sizeof(uint16_t): FlipTriListFaces<VType, uint16_t>(cache, nug.m_irange); break;
@@ -300,7 +293,7 @@ namespace pr::rdr
 							}
 						case ETopo::TriStrip:
 							{
-								switch (cache.m_idx_stride)
+								switch (cache.m_icont.stride())
 								{
 								case sizeof(uint32_t): FlipTriStripFaces<VType, uint32_t>(cache, nug.m_irange); break;
 								case sizeof(uint16_t): FlipTriStripFaces<VType, uint16_t>(cache, nug.m_irange); break;
@@ -346,7 +339,7 @@ namespace pr::rdr
 					{
 					case ETopo::TriList:
 						{
-							switch (cache.m_idx_stride)
+							switch (cache.m_icont.stride())
 							{
 							case sizeof(uint32_t): GenerateNormals<VType, uint32_t>(cache, nug.m_irange, gen_normals); break;
 							case sizeof(uint16_t): GenerateNormals<VType, uint16_t>(cache, nug.m_irange, gen_normals); break;
@@ -389,8 +382,7 @@ namespace pr::rdr
 			}
 		};
 
-		// Create a model from 'cont'
-		// 'alpha' if true, the default nugget will have alpha enabled. Ignored if 'cont' contains nuggets
+		// Create a model from 'cache'
 		// 'bake' is a transform to bake into the model
 		// 'gen_normals' generates normals for the model if >= 0f. Value is the threshold for smoothing (in rad)
 		template <typename VType>
@@ -1100,91 +1092,161 @@ namespace pr::rdr
 		{
 			using namespace geometry;
 
+			// Material read from the p3d model. Extended with associated renderer resources
+			struct Mat :p3d::Material
+			{
+				Texture2DPtr m_tex_diffuse;
+				Mat(p3d::Material&& m)
+					:p3d::Material(std::forward<p3d::Material>(m))
+					,m_tex_diffuse()
+				{}
+
+				// The material base colour
+				Colour32 Tint() const
+				{
+					return this->m_diffuse.argb();
+				}
+
+				// The diffuse texture resolved to a renderer texture resource
+				Texture2DPtr TexDiffuse(Renderer& rdr)
+				{
+					if (m_tex_diffuse == nullptr)
+					{
+						for (auto& tex : m_textures)
+						{
+							if (tex.m_type != p3d::Texture::EType::Diffuse) continue;
+							auto sam_desc = SamplerDesc{s_cast<D3D11_TEXTURE_ADDRESS_MODE>(tex.m_addr_mode), D3D11_FILTER_ANISOTROPIC};
+							auto has_alpha = AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha);
+							m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(rdr::AutoId, tex.m_filepath.c_str(), sam_desc, has_alpha, tex.m_filepath.c_str());
+							break;
+						}
+					}
+					return m_tex_diffuse;
+				}
+			};
+
+			// Index the materials in the model
+			std::vector<Mat> mats;
+			{
+				// Preserve the stream position
+				auto save = p3d::SaveG(src);
+
+				// Find the materials chunk
+				// If not found, carry on without materials
+				auto materials = p3d::Find(src, ~0U, {p3d::EChunkId::Main, p3d::EChunkId::Scene, p3d::EChunkId::Materials});
+				if (materials.m_id == p3d::EChunkId::Materials)
+				{
+					p3d::Find(src, materials.payload(), [&](p3d::ChunkHeader hdr, std::istream& src)
+						{
+							// Not a material chunk?
+							if (hdr.m_id != p3d::EChunkId::Material)
+								return false;
+
+							// Extract the material
+							mats.emplace_back(p3d::ReadMaterial(src, hdr.payload()));
+							return false;
+						});
+				}
+			}
+
 			// 'P3D' models can contain more than one mesh. If 'mesh_name' is nullptr, then the
 			// first mesh in the scene is loaded. If not null, then the first mesh that matches
 			// 'mesh_name' is loaded. If 'mesh_name' is non-null and 'src' does not contain a matching
 			// mesh, an exception is thrown.
-			Cache cache;
-			std::vector<std::string> mats;
+			Cache cache{0, 0, 0, sizeof(uint32_t)};
 
-			// Find the meshes chunk
-			auto meshes = p3d::Find(src, ~0U, {p3d::EChunkId::Main, p3d::EChunkId::Scene, p3d::EChunkId::Meshes});
-			if (meshes.m_id != p3d::EChunkId::Meshes)
-				return nullptr;
+			// Load the model data
+			{
+				// Preserve the stream position
+				auto save = p3d::SaveG(src);
 
-			// Find the mesh match 'mesh_name'
-			p3d::Find(src, meshes.payload(), [&](p3d::ChunkHeader hdr, std::istream& src)
-				{
-					// Not a mesh chunk?
-					if (hdr.m_id != p3d::EChunkId::Mesh)
-						return false;
+				// Find the meshes chunk
+				auto meshes = p3d::Find(src, ~0U, {p3d::EChunkId::Main, p3d::EChunkId::Scene, p3d::EChunkId::Meshes});
+				if (meshes.m_id != p3d::EChunkId::Meshes)
+					return nullptr;
 
-					// Not the mesh we're looking for?
-					if (mesh_name != nullptr)
+				// Find the mesh matching 'mesh_name'
+				p3d::Find(src, meshes.payload(), [&](p3d::ChunkHeader hdr, std::istream& src)
 					{
-						auto gptr = p3d::SaveG(src);
-
-						// Find the MeshName chunk
-						uint32_t len = 0;
-						if (!p3d::Find(src, hdr.payload(), p3d::EChunkId::MeshName, &len) || p3d::ReadStr(src, len) != mesh_name)
+						// Not a mesh chunk?
+						if (hdr.m_id != p3d::EChunkId::Mesh)
 							return false;
-					}
 
-					// Found the mesh, extract it into a render model
-					auto mesh = p3d::ReadMesh(src, hdr.payload());
-
-					// Name/Bounding box
-					cache.m_name = mesh.m_name;
-					cache.m_bbox = mesh.m_bbox;
-
-					// Copy the verts
-					cache.m_vcont.resize(mesh.vcount());
-					auto vptr = cache.m_vcont.data();
-					for (auto mvert : mesh.fat_verts())
-					{
-						vptr->m_vert = GetP(mvert);
-						vptr->m_diff = GetC(mvert);
-						vptr->m_norm = GetN(mvert);
-						vptr->m_tex0 = GetT(mvert);
-						++vptr;
-					}
-
-					// Copy nuggets
-					cache.m_idx_stride = sizeof(uint32_t);
-					cache.m_icont.resize<uint32_t>(mesh.icount());
-					cache.m_ncont.reserve(mesh.ncount());
-					auto iptr = cache.m_icont.data<uint32_t>();
-					auto vrange = Range::Zero();
-					auto irange = Range::Zero();
-					for (auto& nug : mesh.nuggets())
-					{
-						// Copy the indices
-						vrange = Range::Reset();
-						for (auto i : nug.indices())
+						// Not the mesh we're looking for?
+						if (mesh_name != nullptr)
 						{
-							vrange.encompass(i);
-							*iptr++ = i;
+							auto gptr = p3d::SaveG(src);
+
+							// Find the MeshName chunk
+							uint32_t len = 0;
+							if (!p3d::Find(src, hdr.payload(), p3d::EChunkId::MeshName, &len) || p3d::ReadStr(src, len) != mesh_name)
+								return false;
 						}
 
-						// The index range in the model buffer
-						irange.m_beg = irange.m_end;
-						irange.m_end = irange.m_beg + nug.icount();
+						// Found the mesh, extract it into a render model
+						auto mesh = p3d::ReadMesh(src, hdr.payload());
 
-						// Add a nugget
-						cache.m_ncont.emplace_back(
-							static_cast<ETopo>(nug.m_topo),
-							static_cast<EGeom>(nug.m_geom),
-							nullptr,
-							vrange,
-							irange);
+						// Name/Bounding box
+						cache.m_name = mesh.m_name;
+						cache.m_bbox = mesh.m_bbox;
 
-						// Record the material as used
-						insert_unique(mats, nug.m_mat.str);
-					}
+						// Copy the verts
+						cache.m_vcont.resize(mesh.vcount());
+						auto vptr = cache.m_vcont.data();
+						for (auto mvert : mesh.fat_verts())
+						{
+							vptr->m_vert = GetP(mvert);
+							vptr->m_diff = GetC(mvert);
+							vptr->m_norm = GetN(mvert);
+							vptr->m_tex0 = GetT(mvert);
+							++vptr;
+						}
 
-					// Stop searching
-					return true;
-				});
+						// Copy nuggets
+						cache.m_icont.resize<uint32_t>(mesh.icount());
+						cache.m_ncont.reserve(mesh.ncount());
+						auto iptr = cache.m_icont.data<uint32_t>();
+						auto vrange = Range::Zero();
+						auto irange = Range::Zero();
+						for (auto& nug : mesh.nuggets())
+						{
+							// Copy the indices
+							vrange = Range::Reset();
+							for (auto i : nug.indices())
+							{
+								vrange.encompass(i);
+								*iptr++ = i;
+							}
+
+							// The index range in the model buffer
+							irange.m_beg = irange.m_end;
+							irange.m_end = irange.m_beg + nug.icount();
+
+							// The basic nugget
+							NuggetProps nugget(
+								static_cast<ETopo>(nug.m_topo),
+								static_cast<EGeom>(nug.m_geom),
+								nullptr,
+								vrange,
+								irange);
+
+							// Resolve the material
+							for (auto& m : mats)
+							{
+								if (nug.m_mat != m.m_id) continue;
+								nugget.m_tint = m.Tint();
+								nugget.m_tex_diffuse = m.TexDiffuse(rdr);
+								break;
+							}
+
+							// Add a nugget
+							cache.m_ncont.emplace_back(nugget);
+						}
+
+						// Stop searching
+						return true;
+					});
+			}
 
 			// Create the model
 			return Create(rdr, cache, bake, gen_normals);
@@ -1193,8 +1255,7 @@ namespace pr::rdr
 		{
 			using namespace geometry;
 
-			Cache cache;
-			cache.m_idx_stride = sizeof(uint16_t);
+			Cache cache{0, 0, 0, sizeof(uint16_t)};
 
 			// Bounding box
 			cache.m_bbox = BBoxReset;
@@ -1264,7 +1325,7 @@ namespace pr::rdr
 		{
 			using namespace geometry;
 
-			Cache cache;
+			Cache cache{0, 0, 0, 1};
 			stl::Options opts = {};
 
 			// Parse the model file in the STL stream
@@ -1287,7 +1348,7 @@ namespace pr::rdr
 				if (vcount < 0x10000)
 				{
 					// Use 16bit indices
-					cache.m_idx_stride = sizeof(uint16_t);
+					cache.m_icont.m_stride = sizeof(uint16_t);
 					cache.m_icont.resize<uint16_t>(vcount);
 					auto ibuf = cache.m_icont.data<uint16_t>();
 					for (uint16_t i = 0; vcount-- != 0;)
@@ -1296,7 +1357,7 @@ namespace pr::rdr
 				else
 				{
 					// Use 32bit indices
-					cache.m_idx_stride = sizeof(uint32_t);
+					cache.m_icont.m_stride = sizeof(uint32_t);
 					cache.m_icont.resize<uint32_t>(vcount);
 					auto ibuf = cache.m_icont.data<uint32_t>();
 					for (uint32_t i = 0; vcount-- != 0;)

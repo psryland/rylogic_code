@@ -17,9 +17,7 @@ enum <u32> EChunkId
 	Materials      = 0x00002000, //    ├─ Materials
 	Material       = 0x00002100, //    │  └─ Material
 	DiffuseColour  = 0x00002110, //    │     ├─ Diffuse Colour
-	DiffuseTexture = 0x00002120, //    │     └─ Diffuse texture
-	TexFilepath    = 0x00002121, //    │        ├─ Texture filepath
-	TexTiling      = 0x00002122, //    │        └─ Texture tiling
+    Texture        = 0x00002120, //    │     └─ Diffuse texture
 	Meshes         = 0x00003000, //    └─ Meshes
 	Mesh           = 0x00003100, //       └─ Mesh of lines,triangles,tetras
 	MeshName       = 0x00003101, //          ├─ Name (cstr)
@@ -99,6 +97,29 @@ enum <u16> EIndexFormat
 
 	// Use variable length integers for index data
 	IdxNBit = 4,
+};
+enum <u8> ETextureType
+{
+	Unknown       = 0,
+	Diffuse       = 1, // Diffuse colour per texel
+	AlphaMap      = 2, // Transparency per texel
+	ReflectionMap = 3, // Reflectivity per texel
+	NormalMap     = 4, // Surface normal per texel (tangent space)
+	Bump          = 5, // Scalar displacement per texel
+	Displacement  = 6, // Vec3 displacement per texel
+};
+enum <u8> ETextureAddrMode // D3D11_TEXTURE_ADDRESS_MODE
+{
+	Wrap       = 1, // D3D11_TEXTURE_ADDRESS_WRAP
+	Mirror     = 2, // D3D11_TEXTURE_ADDRESS_MIRROR
+	Clamp      = 3, // D3D11_TEXTURE_ADDRESS_CLAMP
+	Border     = 4, // D3D11_TEXTURE_ADDRESS_BORDER
+	MirrorOnce = 5, // D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
+};
+enum <u16> ETextureFlags
+{
+	None = 0,
+	Alpha = 1 << 0,
 };
 
 typedef char Str16[16];
@@ -184,6 +205,19 @@ struct MaterialChunk
 	u32 length;
 	Str16 name;
 	SubChunks(fpos + length);
+	FSeek(fpos + length);
+};
+
+struct TextureChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+    u32 filepath_length;
+    char filepath[filepath_length];
+	ETextureType type;
+    ETextureAddrMode addr_mode;
+    ETextureFlags flags;
 	FSeek(fpos + length);
 };
 
@@ -390,9 +424,7 @@ void SubChunks(uint end)
 		case Materials      : Chunk materials; break;
 		case Material       : MaterialChunk material; break;
 		case DiffuseColour  : Col4Chunk diffuse; break;
-		case DiffuseTexture : Chunk texture; break;
-		case TexFilepath    : StrChunk filepath; break;
-		case TexTiling      : U32Chunk tiling; break;
+		case Texture        : TextureChunk texture; break;
 		case Meshes         : Chunk meshes; break;
 		case Mesh           : Chunk mesh; break;
 		case MeshName       : StrChunk name; break;

@@ -18,6 +18,7 @@
 #include "pr/maths/convex_hull.h"
 #include "pr/maths/frustum.h"
 #include "pr/geometry/intersect.h"
+#include "pr/filesys/filesys.h"
 #include "pr/view3d/renderer.h"
 #include "pr/storage/csv.h"
 #include "pr/str/extract.h"
@@ -4077,6 +4078,7 @@ namespace pr::ldr
 		{
 			using namespace pr::rdr;
 			using namespace pr::geometry;
+			using namespace std::filesystem;
 
 			// Validate
 			if (m_filepath.empty())
@@ -4096,13 +4098,28 @@ namespace pr::ldr
 			}
 
 			// Ask the include handler to turn the filepath into a stream.
-			// Load the stream in binary model. The model loading functions can convert binary to text if needed.
+			// Load the stream in binary mode. The model loading functions can convert binary to text if needed.
 			auto src = p.m_reader.Includes().OpenStreamA(m_filepath, EIncludeFlags::Binary);
 			if (!src || !*src)
 			{
 				p.ReportError(EResult::Failed, FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
 				return;
 			}
+
+			// Attach a texture filepath resolver
+			auto search_paths = std::vector<path>
+			{
+				path(m_filepath.string() + ".textures"),
+				m_filepath.parent_path(),
+			};
+			AutoSub sub = p.m_rdr.m_tex_mgr.ResolveTextureFilepath += [&](TextureManager&, ResolvePathArgs& args)
+			{
+				// Look in a folder with the same name as the model
+				auto resolved = pr::filesys::ResolvePath<std::vector<path>>(args.filepath, search_paths, nullptr, false, nullptr);
+				if (!exists(resolved)) return;
+				args.filepath = resolved;
+				args.handled = true;
+			};
 
 			// Create the model
 			obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_norms.m_smoothing_angle);
