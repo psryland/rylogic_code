@@ -32,7 +32,7 @@ bl_info = {
 }
 
 import os, math, struct, shutil
-import bpy, mathutils
+import bpy, bmesh, mathutils
 
 # ExportHelper is a helper class, defines filename and
 # invoke() function which calls the file selector.
@@ -340,7 +340,7 @@ class P3D():
 			self.ChunkSize = 8 + data_size
 
 	# P3D Constructor
-	def __init__(self, data:[bpy.types.BlendData], flags:int = EFlags.NONE):
+	def __init__(self, data:[bpy.types.Depsgraph], flags:int = EFlags.NONE):
 		self.data = bytearray()
 		self.textures = []
 
@@ -379,16 +379,26 @@ class P3D():
 		return count
 
 	# Scene chuck
-	def WriteScene(self, data:[bpy.types.BlendData], flags:int):
+	def WriteScene(self, data:[bpy.types.Depsgraph], flags:int):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.SCENE, 0)
 		self.WriteHeader(hdr)
 
+		# Get the objects. Technically there can be instances and I should be using
+		# 'data.object_instances' but instances don't seem to be that simple in v2.8.
+		# Just require the model to not use instances (for now).
+		objects = [x for x in data.scene_eval.objects if x.type == 'MESH']
+
+		# Get a unique collection of all materials used by the objects in the scene
+		materials = set()
+		for obj in objects: materials.update([m.material for m in obj.material_slots])
+		materials = list(materials)
+
 		# Write all materials
-		hdr.ChunkSize += self.WriteMaterials(data.materials)
+		hdr.ChunkSize += self.WriteMaterials(materials)
 
 		# Write all meshes
-		hdr.ChunkSize += self.WriteMeshes(data.objects, flags)
+		hdr.ChunkSize += self.WriteMeshes(objects, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -399,17 +409,24 @@ class P3D():
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESHES, 0)
 		self.WriteHeader(hdr)
 
-		# Write each mesh
+		# All remainig child objects
+		remaining = {x for x in objects if x.parent != None}
+
+		# Write each object
 		for obj in objects:
-			if obj.type != 'MESH': continue
-			if not obj.visible_get(): continue
-			hdr.ChunkSize += self.WriteMesh(obj.data, obj.matrix_world, flags)
+
+			# If the object is a child of another object, don't export it at the top level
+			if obj.parent != None:
+				continue
+
+			# Write out the mesh object
+			hdr.ChunkSize += self.WriteMesh(obj, remaining, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
 
 	# Mesh chunk
-	def WriteMesh(self, mesh:bpy.types.Mesh, o2w:mathutils.Matrix, flags:EFlags):
+	def WriteMesh(self, obj:bpy.types.Object, remaining:{bpy.types.Object}, flags:EFlags):
 		offset = len(self.data)
 		hdr = P3D.ChunkHeader(P3D.EChunkId.MESH, 0)
 		self.WriteHeader(hdr)
@@ -418,7 +435,9 @@ class P3D():
 			print("Vertex compression not supported, falling back to uncompressed")
 
 		# Convert the blender mesh into a form suitable for P3D export
-		m = Mesh(mesh, o2w)
+		mesh = obj.data
+		o2p = obj.matrix_local
+		m = Mesh(mesh, o2p)
 
 		# Mesh name
 		hdr.ChunkSize += self.WriteStr(P3D.EChunkId.MESHNAME, m.name)
@@ -438,6 +457,13 @@ class P3D():
 		# Mesh nugget data
 		for nugget in m.nuggets:
 			hdr.ChunkSize += self.WriteNugget(nugget, flags)
+
+		children = {x for x in remaining if x.parent == obj}
+		remaining = remaining - children
+
+		# Export child meshes
+		for child in children:
+			hdr.ChunkSize += self.WriteMesh(child, remaining, flags)
 
 		self.UpdateHeader(offset, hdr)
 		return hdr.ChunkSize
@@ -875,8 +901,13 @@ class ExportP3D(Operator, ExportHelper):
 		if bpy.context != 'OBJECT':
 			bpy.ops.object.mode_set(mode='OBJECT')
 
-		# Create a P3D instance from the mesh data
-		p3d = P3D(bpy.data)
+		# Get the evaluated dependency graph. This ensures all modifiers
+		# etc are applied. The mode for the deps graph is 'VIEWPORT', ideally
+		# 'RENDER' would be better, but that isn't implemented yet.
+		deps = bpy.context.evaluated_depsgraph_get()
+		
+		# Create a P3D instance from the scene
+		p3d = P3D(deps)
 
 		# Dump the bytearray to file
 		print("Write P3D File...")
