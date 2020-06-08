@@ -417,6 +417,9 @@
     <ClInclude Include="..\include\pr\geometry\index_buffer.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\models\model_tree.h">
+      <Filter>src\models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">

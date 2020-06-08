@@ -1117,17 +1117,20 @@ namespace pr::rdr
 		// ModelFile **************************************************************************
 
 		// Load a P3D model from a stream, emitting models for each mesh via 'out'.
-		// bool out(ModelPtr model, m4x4 o2w) - return true to stop searching, false to get the next model
+		// bool out(span<ModelTreeNode> tree) - return true to stop loading, false to get the next model
 		template <typename TOut> static void LoadP3DModel(Renderer& rdr, std::istream& src, TOut out, CreateOptions const& opts = CreateOptions{})
 		{
 			using namespace geometry;
 
-			// Material read from the p3d model, extended with associated renderer resources.
+			// Model output helpers
 			struct Mat :p3d::Material
 			{
+				Renderer& m_rdr;
 				mutable Texture2DPtr m_tex_diffuse;
-				Mat(p3d::Material&& m)
+
+				Mat(Renderer& rdr, p3d::Material&& m)
 					:p3d::Material(std::forward<p3d::Material>(m))
+					,m_rdr(rdr)
 					,m_tex_diffuse()
 				{}
 
@@ -1138,42 +1141,80 @@ namespace pr::rdr
 				}
 
 				// The diffuse texture resolved to a renderer texture resource
-				Texture2DPtr TexDiffuse(Renderer& rdr) const
+				Texture2DPtr TexDiffuse() const
 				{
+					// Lazy load the texture
 					if (m_tex_diffuse == nullptr)
 					{
 						for (auto& tex : m_textures)
 						{
 							if (tex.m_type != p3d::Texture::EType::Diffuse) continue;
+							auto tex_id = MakeId(tex.m_filepath.c_str());
 							auto sam_desc = SamplerDesc{s_cast<D3D11_TEXTURE_ADDRESS_MODE>(tex.m_addr_mode), D3D11_FILTER_ANISOTROPIC};
 							auto has_alpha = AllSet(tex.m_flags, p3d::Texture::EFlags::Alpha);
-							m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(rdr::AutoId, tex.m_filepath.c_str(), sam_desc, has_alpha, tex.m_filepath.c_str());
+							m_tex_diffuse = m_rdr.m_tex_mgr.CreateTexture2D(tex_id, tex.m_filepath.c_str(), sam_desc, has_alpha, tex.m_filepath.c_str());
 							break;
 						}
 					}
 					return m_tex_diffuse;
 				}
 			};
-			std::vector<Mat> mats;
-			p3d::ExtractMaterials(src, [&](p3d::Material&& mat)
-				{
-					mats.emplace_back(std::forward<p3d::Material>(mat));
-					return false;
-				});
+			struct ModelOut
+			{
+				// Notes:
+				//  - Each 'mesh' can contain nested child meshes.
+				//    Create models for each and emit the tree structure of models
+				using MatCont = std::vector<Mat>;
 
-			// Load each mesh in the P3D stream and emit it as a model
-			Cache cache{0, 0, 0, sizeof(uint32_t)};
-			p3d::ExtractMeshes(src, [&](p3d::Mesh&& mesh)
+				Renderer& m_rdr;
+				CreateOptions const& m_opts;
+				TOut m_out;
+				Cache<> m_cache;
+				MatCont m_mats;
+
+				explicit ModelOut(Renderer& rdr, CreateOptions const& opts, TOut out)
+					:m_rdr(rdr)
+					,m_opts(opts)
+					,m_out(out)
+					,m_cache(0, 0, 0, sizeof(uint32_t))
+					,m_mats()
+				{}
+
+				// Functor called from 'ExtractMaterials'
+				bool operator ()(p3d::Material&& mat)
 				{
-					cache.Reset();
+					m_mats.push_back(Mat(m_rdr, std::forward<p3d::Material>(mat)));
+					return false;
+				}
+
+				// Functor called from 'ExtractMeshes'
+				bool operator()(p3d::Mesh&& mesh)
+				{
+					ModelTree tree;
+					BuildModelTree(tree, mesh, 0);
+					return m_out(tree);
+				}
+
+				// Recursive function for populating a model tree
+				void BuildModelTree(ModelTree& tree, p3d::Mesh const& mesh, int level)
+				{
+					tree.push_back({MeshToModel(mesh), mesh.m_o2p, level});
+					for (auto& child : mesh.m_children)
+						BuildModelTree(tree, child, level + 1);
+				}
+
+				// Convert a p3d::Mesh into a rdr::Model
+				ModelPtr MeshToModel(p3d::Mesh const& mesh)
+				{
+					m_cache.Reset();
 
 					// Name/Bounding box
-					cache.m_name = mesh.m_name;
-					cache.m_bbox = mesh.m_bbox;
+					m_cache.m_name = mesh.m_name;
+					m_cache.m_bbox = mesh.m_bbox;
 
 					// Copy the verts
-					cache.m_vcont.resize(mesh.vcount());
-					auto vptr = cache.m_vcont.data();
+					m_cache.m_vcont.resize(mesh.vcount());
+					auto vptr = m_cache.m_vcont.data();
 					for (auto mvert : mesh.fat_verts())
 					{
 						SetPCNT(*vptr, GetP(mvert), GetC(mvert), GetN(mvert), GetT(mvert));
@@ -1181,10 +1222,10 @@ namespace pr::rdr
 					}
 
 					// Copy nuggets
-					cache.m_icont.m_stride = sizeof(uint32_t);
-					cache.m_icont.resize(mesh.icount() * cache.m_icont.stride());
-					cache.m_ncont.reserve(mesh.ncount());
-					auto iptr = cache.m_icont.data<uint32_t>();
+					m_cache.m_icont.m_stride = sizeof(uint32_t);
+					m_cache.m_icont.resize(mesh.icount() * m_cache.m_icont.stride());
+					m_cache.m_ncont.reserve(mesh.ncount());
+					auto iptr = m_cache.m_icont.data<uint32_t>();
 					auto vrange = Range::Zero();
 					auto irange = Range::Zero();
 					for (auto& nug : mesh.nuggets())
@@ -1210,23 +1251,30 @@ namespace pr::rdr
 							irange);
 
 						// Resolve the material
-						for (auto& m : mats)
+						for (auto& m : m_mats)
 						{
 							if (nug.m_mat != m.m_id) continue;
-							nugget.m_tex_diffuse = m.TexDiffuse(rdr);
+							nugget.m_tex_diffuse = m.TexDiffuse();
 							nugget.m_tint = m.Tint();
 							nugget.m_flags = SetBits(nugget.m_flags, ENuggetFlag::TintHasAlpha, nugget.m_tint.a != 0xff);
 							break;
 						}
 
 						// Add a nugget
-						cache.m_ncont.emplace_back(std::move(nugget));
+						m_cache.m_ncont.emplace_back(std::move(nugget));
 					}
 
-					// Emit the model. 'out' returns true to stop searching
-					auto model = Create(rdr, cache, opts);
-					return out(model, mesh.m_o2p);
-				});
+					// Return the renderer model
+					return Create(m_rdr, m_cache, m_opts);
+				}
+			};
+			ModelOut model_out(rdr, opts, out);
+
+			// Material read from the p3d model, extended with associated renderer resources.
+			p3d::ExtractMaterials<std::istream, ModelOut&>(src, model_out);
+
+			// Load each mesh in the P3D stream and emit it as a model
+			p3d::ExtractMeshes<std::istream, ModelOut&>(src, model_out);
 		}
 		template <typename TOut> static void Load3DSModel(Renderer& rdr, std::istream& src, TOut out, CreateOptions const& opts = CreateOptions{})
 		{
@@ -1315,8 +1363,10 @@ namespace pr::rdr
 					max_3ds::CreateModel(obj, matlookup, vout, iout, nout);
 
 					// Emit the model. 'out' returns true to stop searching
+					// 3DS models cannot nest, so each 'Model Tree' is one root node only
 					auto model = Create(rdr, cache, opts);
-					return out(model, obj.m_mesh.m_o2p);
+					auto tree = ModelTree{{model, obj.m_mesh.m_o2p, 0}};
+					return out(tree);
 				});
 		}
 		template <typename TOut> static void LoadSTLModel(Renderer& rdr, std::istream& src, TOut out, CreateOptions const& opts = CreateOptions{})
@@ -1365,8 +1415,10 @@ namespace pr::rdr
 					cache.AddNugget(ETopo::TriList, EGeom::Vert|EGeom::Norm, false, false);
 
 					// Emit the model. 'out' returns true to stop searching
+					// 3DS models cannot nest, so each 'Model Tree' is one root node only
 					auto model = Create(rdr, cache, opts);
-					return out(model, m4x4Identity);
+					auto tree = ModelTree{{model, m4x4Identity, 0}};
+					return out(tree);
 				});
 		}
 		template <typename MOut> static void LoadModel(geometry::EModelFileFormat format, Renderer& rdr, std::istream& src, MOut mout, CreateOptions const& opts = CreateOptions{})

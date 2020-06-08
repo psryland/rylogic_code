@@ -4117,16 +4117,39 @@ namespace pr::ldr
 			};
 
 			// Create the models
-			ModelGenerator<>::LoadModel(format, p.m_rdr, *src, [&](ModelPtr model, m4x4 const& o2p)
+			ModelGenerator<>::LoadModel(format, p.m_rdr, *src, [&](rdr::ModelTree const& tree)
 				{
-					// Create an LdrObject for each mesh in the model
-					ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
-					LdrObjectPtr child(new LdrObject(attr, nullptr, obj->m_context_id), true);
-					child->m_model = model;
-					child->m_o2p = o2p;
-					obj->AddChild(child);
+					auto child = ModelTreeToLdr(tree, obj->m_context_id);
+					if (child != nullptr) obj->AddChild(child);
 					return false;
 				}, m_opts);
+		}
+
+		// Convert a model tree into a tree of LdrObjects
+		static LdrObjectPtr ModelTreeToLdr(ModelTree const& tree, Guid const& context_id)
+		{
+			std::vector<LdrObjectPtr> stack;
+			for (auto& node : tree)
+			{
+				// If 'node' is at the same level or above the current leaf,
+				// then all the children for that leaf have been added.
+				for (size_t lvl = s_cast<size_t>(node.m_level + 1); stack.size() > lvl; )
+					stack.pop_back();
+
+				// Create an LdrObject for each model
+				ObjectAttributes attr{ELdrObject::Model, node.m_model->m_name.c_str()};
+				LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+				obj->m_model = node.m_model;
+				obj->m_o2p = node.m_o2p;
+
+				// Add 'obj' as a child of the current leaf node
+				if (!stack.empty())
+					stack.back()->AddChild(obj);
+
+				// Add 'obj' as the current leaf node
+				stack.push_back(obj);
+			}
+			return !stack.empty() ? stack[0] : nullptr;
 		}
 	};
 
@@ -5104,7 +5127,7 @@ namespace pr::ldr
 	}
 
 	// Create an ldr object from creation data.
-	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
+	LdrObjectPtr Create(Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, Guid const& context_id)
 	{
 		LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
@@ -5121,13 +5144,10 @@ namespace pr::ldr
 
 		// Create the model
 		std::ifstream src(p3d_filepath, std::ios::binary);
-		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelPtr model, m4x4 const& o2p)
+		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelTree const& tree)
 			{
-				ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
-				LdrObjectPtr child(new LdrObject(attr, nullptr, context_id), true);
-				child->m_model = model;
-				child->m_o2p = o2p;
-				obj->AddChild(child);
+				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
+				if (child != nullptr) obj->AddChild(child);
 				return false;
 			});
 
@@ -5139,13 +5159,10 @@ namespace pr::ldr
 
 		// Create the model
 		pr::mem_istream<char> src(p3d_data, size);
-		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelPtr model, m4x4 const& o2p)
+		ModelGenerator<>::LoadP3DModel(rdr, src, [&](ModelTree const& tree)
 			{
-				ObjectAttributes attr{ELdrObject::Model, model->m_name.c_str()};
-				LdrObjectPtr child(new LdrObject(attr, nullptr, context_id), true);
-				child->m_model = model;
-				child->m_o2p = o2p;
-				obj->AddChild(child);
+				auto child = ObjectCreator<ELdrObject::Model>::ModelTreeToLdr(tree, obj->m_context_id);
+				if (child != nullptr) obj->AddChild(child);
 				return false;
 			});
 

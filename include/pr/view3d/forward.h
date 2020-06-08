@@ -99,20 +99,20 @@
 
 namespace pr::rdr
 {
-	using byte      = unsigned char;
-	using RdrId     = std::uintptr_t;
+	using byte = unsigned char;
+	using RdrId = std::uintptr_t;
 	using SortKeyId = pr::uint16;
-	using Range     = pr::Range<size_t>;
+	using Range = pr::Range<size_t>;
 	template <typename T> using RefCounted = pr::RefCount<T>;
 	template <typename T> using Allocator = pr::aligned_alloc<T>;
 	template <typename T> using alloc_traits = std::allocator_traits<Allocator<T>>;
 
-	using string32   = pr::string<char, 32>;
-	using string512  = pr::string<char, 512>;
-	using wstring32  = pr::string<wchar_t, 32>;
+	using string32 = pr::string<char, 32>;
+	using string512 = pr::string<char, 512>;
+	using wstring32 = pr::string<wchar_t, 32>;
 	using wstring256 = pr::string<wchar_t, 256>;
 
-	static Range const RangeZero = {0,0};
+	static Range const RangeZero = {0, 0};
 	static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
 	static RdrId const InvalidId = RdrId();
 
@@ -148,6 +148,7 @@ namespace pr::rdr
 	struct NuggetProps;
 	struct Nugget;
 	struct MdlSettings;
+	struct ModelTreeNode;
 	using ModelBufferPtr = pr::RefPtr<ModelBuffer>;
 	using ModelPtr = pr::RefPtr<Model>;
 	using TNuggetChain = pr::chain::head<Nugget, struct ChainGroupNugget>;

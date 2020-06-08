@@ -68,17 +68,18 @@ namespace pr::geometry::p3d
 	x(DiffuseColour         ,= 0x00002110)/*    │     ├─ Diffuse Colour                                                                      */\
 	x(Texture               ,= 0x00002120)/*    │     └─ Texture (Str filepath, u8 type, u8 addr_mode, u16 flags)                            */\
 	x(Meshes                ,= 0x00003000)/*    └─ Meshes                                                                                    */\
-	x(Mesh                  ,= 0x00003100)/*       └─ Mesh                                                                                   */\
-	x(MeshName              ,= 0x00003101)/*          ├─ Name (cstr)                                                                         */\
-	x(MeshBBox              ,= 0x00003102)/*          ├─ Bounding box (BBox)                                                                 */\
-	x(MeshTransform         ,= 0x00003103)/*          ├─ Mesh to Parent Transform (m4x4)                                                     */\
-	x(MeshVerts             ,= 0x00003300)/*          ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshNorms             ,= 0x00003310)/*          ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshColours           ,= 0x00003320)/*          ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
-	x(MeshUVs               ,= 0x00003330)/*          ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
-	x(MeshNugget            ,= 0x00004000)/*          └─ Nugget (topo, geom)                                                                 */\
-	x(MeshMatId             ,= 0x00004001)/*             ├─ Material id (cstr)                                                               */\
-	x(MeshVIdx              ,= 0x00004010)/*             ├─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
+	x(Mesh                  ,= 0x00003100)/*       ├─ Mesh (can be nested)                                                                   */\
+	x(MeshName              ,= 0x00003101)/*       │  ├─ Name (cstr)                                                                         */\
+	x(MeshBBox              ,= 0x00003102)/*       │  ├─ Bounding box (BBox)                                                                 */\
+	x(MeshTransform         ,= 0x00003103)/*       │  ├─ Mesh to Parent Transform (m4x4)                                                     */\
+	x(MeshVerts             ,= 0x00003300)/*       │  ├─ Vertex positions (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshNorms             ,= 0x00003310)/*       │  ├─ Vertex normals   (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshColours           ,= 0x00003320)/*       │  ├─ Vertex colours   (u32 count, u16 format, u16 stride, count * [stride])              */\
+	x(MeshUVs               ,= 0x00003330)/*       │  ├─ Vertex UVs       (u32 count, u16 format, u16 stride, count * [float2])              */\
+	x(MeshNugget            ,= 0x00004000)/*       │  └─ Nugget (topo, geom)                                                                 */\
+	x(MeshMatId             ,= 0x00004001)/*       │     ├─ Material id (cstr)                                                               */\
+	x(MeshVIdx              ,= 0x00004010)/*       │     └─ Vert indices   (u32 count, u8 format, u8 idx_flags, u16 stride, count * [stride] */\
+	x(MeshInstance          ,= 0x00003050)/*       └─ MeshInstance (can be nested), contains mesh name, o2p transform chunk                  */\
 
 	PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
 	static_assert(sizeof(EChunkId) == sizeof(uint32_t), "Chunk Ids must be 4 bytes");
@@ -189,8 +190,7 @@ namespace pr::geometry::p3d
 	};
 	#pragma endregion
 
-	#pragma region P3D File
-	using IdxBuf = pr::geometry::IdxBuf;
+	#pragma region Support
 	template <typename T, typename Base> struct Cont :Base
 	{
 		// Notes:
@@ -281,6 +281,25 @@ namespace pr::geometry::p3d
 			return m_cont.data() + m_cont.size();
 		}
 	};
+	struct VBase { static constexpr v4 Default = v4Origin; };
+	struct CBase { static constexpr Colour32 Default = Colour32White; };
+	struct NBase { static constexpr v4 Default = v4Zero; };
+	struct TBase { static constexpr v2 Default = v2Zero; };
+	using VCont = Cont<v4, VBase>;
+	using CCont = Cont<Colour32, CBase>;
+	using NCont = Cont<v4, NBase>;
+	using TCont = Cont<v2, TBase>;
+	using IdxBuf = pr::geometry::IdxBuf;
+
+	struct Nugget;
+	struct Mesh;
+	struct Material;
+	using Nuggets = std::vector<Nugget>;
+	using MatCont = std::vector<Material>;
+	using MeshCont = std::vector<Mesh>;
+	#pragma endregion
+
+	#pragma region P3D File
 	struct FatVert
 	{
 		// Notes:
@@ -473,17 +492,6 @@ namespace pr::geometry::p3d
 		//  - Nuggets don't need to all have the same topology.
 		//  - There is only one transform per mesh. Nuggets don't have transforms.
 		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
-
-		struct VBase { static constexpr v4 Default = v4Origin; };
-		struct CBase { static constexpr Colour32 Default = Colour32White; };
-		struct NBase { static constexpr v4 Default = v4Zero; };
-		struct TBase { static constexpr v2 Default = v2Zero; };
-		using VCont = Cont<v4, VBase>;
-		using CCont = Cont<Colour32, CBase>;
-		using NCont = Cont<v4, NBase>;
-		using TCont = Cont<v2, TBase>;
-		using Nuggets = std::vector<Nugget>;
-
 		struct fat_vert_iter_t
 		{
 			using proxy = struct { FatVert x; FatVert const* operator -> () const { return &x; } };
@@ -565,6 +573,9 @@ namespace pr::geometry::p3d
 
 		// Mesh to scene transform
 		m4x4 m_o2p;
+
+		// Child meshes
+		MeshCont m_children;
 
 		// Construct
 		explicit Mesh(std::string_view name = {})
@@ -664,9 +675,6 @@ namespace pr::geometry::p3d
 	};
 	struct Scene
 	{
-		using MatCont = std::vector<Material>;
-		using MeshCont = std::vector<Mesh>;
-
 		MatCont m_materials;
 		MeshCont m_meshes;
 
@@ -1159,7 +1167,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write vertices to 'out'
-	template <typename TOut> uint32_t WriteVertices(TOut& out, Mesh::VCont const& verts, EFlags flags)
+	template <typename TOut> uint32_t WriteVertices(TOut& out, VCont const& verts, EFlags flags)
 	{
 		if (verts.size() == 0)
 			return 0;
@@ -1230,7 +1238,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write vertex colours to 'out'
-	template <typename TOut> uint32_t WriteColours(TOut& out, Mesh::CCont const& colours, EFlags flags)
+	template <typename TOut> uint32_t WriteColours(TOut& out, CCont const& colours, EFlags flags)
 	{
 		if (colours.size() == 0)
 			return 0;
@@ -1278,7 +1286,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write vertex normals to 'out'
-	template <typename TOut> uint32_t WriteNormals(TOut& out, Mesh::NCont const& norms, EFlags flags)
+	template <typename TOut> uint32_t WriteNormals(TOut& out, NCont const& norms, EFlags flags)
 	{
 		if (norms.size() == 0)
 			return 0;
@@ -1363,7 +1371,7 @@ namespace pr::geometry::p3d
 	}
 
 	// Write texture coordinates to 'out'
-	template <typename TOut> uint32_t WriteTexCoords(TOut& out, Mesh::TCont const& uvs, EFlags flags)
+	template <typename TOut> uint32_t WriteTexCoords(TOut& out, TCont const& uvs, EFlags flags)
 	{
 		if (uvs.size() == 0)
 			return 0;
@@ -1802,9 +1810,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVerts chunk data
-	template <typename TSrc> Mesh::VCont ReadMeshVerts(TSrc& src, uint32_t len)
+	template <typename TSrc> VCont ReadMeshVerts(TSrc& src, uint32_t len)
 	{
-		Mesh::VCont cont;
+		VCont cont;
 
 		// Read the count
 		auto count = Read<uint32_t>(src);
@@ -1848,9 +1856,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of colours. 'src' is assumed to point to the start of EChunkId::MeshColours chunk data
-	template <typename TSrc> Mesh::CCont ReadMeshColours(TSrc& src, uint32_t len)
+	template <typename TSrc> CCont ReadMeshColours(TSrc& src, uint32_t len)
 	{
-		Mesh::CCont cont;
+		CCont cont;
 
 		// Read the count
 		auto count = Read<uint32_t>(src);
@@ -1889,9 +1897,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of normals. 'src' is assumed to point to the start of EChunkId::MeshNorms chunk data
-	template <typename TSrc> Mesh::NCont ReadMeshNorms(TSrc& src, uint32_t len)
+	template <typename TSrc> NCont ReadMeshNorms(TSrc& src, uint32_t len)
 	{
-		Mesh::NCont cont;
+		NCont cont;
 
 		// Read the count
 		auto count = Read<uint32_t>(src);
@@ -1940,9 +1948,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of UVs. 'src' is assumed to point to the start of EChunkId::MeshUVs chunk data
-	template <typename TSrc> Mesh::TCont ReadMeshUVs(TSrc& src, uint32_t len)
+	template <typename TSrc> TCont ReadMeshUVs(TSrc& src, uint32_t len)
 	{
-		Mesh::TCont cont;
+		TCont cont;
 
 		// Read the count
 		auto count = Read<uint32_t>(src);
@@ -2166,6 +2174,12 @@ namespace pr::geometry::p3d
 						mesh.m_nugget.emplace_back(ReadMeshNugget(src, hdr.payload()));
 						break;
 					}
+				case EChunkId::Mesh:
+					{
+						auto child = ReadMesh(src, hdr.payload());
+						mesh.m_children.emplace_back(std::move(child));
+						break;
+					}
 				}
 				return false;
 			});
@@ -2173,9 +2187,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of materials. 'src' is assumed to point to the start of EChunkId::Materials chunk data
-	template <typename TSrc> Scene::MatCont ReadSceneMaterials(TSrc& src, uint32_t len)
+	template <typename TSrc> MatCont ReadSceneMaterials(TSrc& src, uint32_t len)
 	{
-		Scene::MatCont mats;
+		MatCont mats;
 		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 			{
 				switch (hdr.m_id)
@@ -2190,9 +2204,9 @@ namespace pr::geometry::p3d
 	}
 
 	// Fill a container of meshes. 'src' is assumed to point to the start of EChunkId::Meshes chunk data
-	template <typename TSrc> Scene::MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
+	template <typename TSrc> MeshCont ReadSceneMeshes(TSrc& src, uint32_t len)
 	{
-		Scene::MeshCont meshes;
+		MeshCont meshes;
 		Find(src, len, [&](ChunkHeader hdr, TSrc& src)
 			{
 				switch (hdr.m_id)

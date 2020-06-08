@@ -132,10 +132,10 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 	};
 
 	// Buffers to hold the unique vertices
-	p3d::Mesh::VCont verts(unique_count);
-	p3d::Mesh::CCont diffs;
-	p3d::Mesh::NCont norms;
-	p3d::Mesh::TCont tex0s;
+	p3d::VCont verts(unique_count);
+	p3d::CCont diffs;
+	p3d::NCont norms;
+	p3d::TCont tex0s;
 
 	// Create a collection of verts without degenerates
 	auto vout = verts.data();

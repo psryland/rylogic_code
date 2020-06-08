@@ -66,6 +66,7 @@
 #include "pr/view3d/models/model_buffer.h"
 #include "pr/view3d/models/model.h"
 #include "pr/view3d/models/nugget.h"
+#include "pr/view3d/models/model_tree.h"
 #include "pr/view3d/models/model_generator.h"
 
 // Instances

@@ -324,6 +324,7 @@
 #include "pr\view3d\models\model_generator.h"
 #include "pr\view3d\models\model_manager.h"
 #include "pr\view3d\models\model_settings.h"
+#include "pr\view3d\models\model_tree.h"
 #include "pr\view3d\models\nugget.h"
 #include "pr\view3d\render\drawlist_element.h"
 #include "pr\view3d\render\renderer.h"
