@@ -19,7 +19,7 @@ export function activate(context: vscode.ExtensionContext)
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with 'registerCommand'
 	// The commandId parameter must match the command field in package.json
-	context.subscriptions.push(vscode.commands.registerCommand('extension.Align', () =>
+	context.subscriptions.push(vscode.commands.registerCommand('rylogic-textaligner.Align', () =>
 	{
 		const editor = vscode.window.activeTextEditor;
 		if (!editor)
@@ -27,7 +27,7 @@ export function activate(context: vscode.ExtensionContext)
 
 		aligner.DoAlign(editor, EAction.Align);
 	}));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.Unalign', () =>
+	context.subscriptions.push(vscode.commands.registerCommand('rylogic-textaligner.Unalign', () =>
 	{
 		const editor = vscode.window.activeTextEditor;
 		if (!editor)
