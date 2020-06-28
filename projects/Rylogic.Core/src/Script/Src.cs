@@ -129,7 +129,7 @@ namespace Rylogic.Script
 		/// <summary>
 		/// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF or Limit is hit.
 		/// Returns the number of characters available (a value in [0, n])
-		/// Do *not* use Buffer.Length as the number available, then can be greater than 'Limit'</summary>
+		/// Do *not* use Buffer.Length as the number available, it can be greater than 'Limit'</summary>
 		public int ReadAhead(int n)
 		{
 			if (n < 0)
