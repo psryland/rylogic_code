@@ -186,7 +186,7 @@ namespace pr::script
 			if (n < 0)
 				throw std::runtime_error("Cannot seek backwards");
 			if (n > m_remaining)
-				n = static_cast<int>(m_remaining);
+				n = m_remaining;
 
 			for (;;)
 			{
@@ -217,7 +217,7 @@ namespace pr::script
 
 		// Attempt to buffer 'n' characters locally. Less than 'n' characters can be buffered if EOF or Limit is hit.
 		// Returns the number of characters available (a value in [0, n])
-		// Do *not* use Buffer.Length as the number available, then can be greater than 'Limit'
+		// Do *not* use Buffer.Length as the number available, it can be greater than 'Limit'
 		int64_t ReadAhead(int64_t n)
 		{
 			if (n < 0)

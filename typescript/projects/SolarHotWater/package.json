@@ -1,0 +1,29 @@
+{
+	"name": "solar-hot-water",
+	"author": "Rylogic",
+	"version": "1.0.0",
+	"description": "A thing that turns my hot water cylinder on and off based on solar output",
+	"repository": "https://github.com/psryland/rylogic_code/tree/master/typescript/projects/SolarHotWater",
+	"keywords": [
+		"Solar",
+		"Hot",
+		"Water"
+	],
+	"main": "./out/src/main.js",
+	"license": "MIT",
+	"dependencies": {
+		"ewelink-api": "^3.0.0",
+		"typescript": "^3.9.5"
+	},
+	"devDependencies": {
+		"electron": "^9.0.5",
+		"electron-packager": "^14.2.1",
+		"rxjs": "^5.0.1"
+	},
+	"scripts": {
+		"start": "electron .",
+		"build": "electron-packager . --overwrite --asar=true --prune=true --out ./dist ",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./"
+	}
+}
