@@ -1,0 +1,195 @@
+﻿<Window
+	x:Class="SolarHotWater.UI.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d"
+	Title="Solar Hot Water"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
+	Height="350"
+	Width="400"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<!-- Login -->
+		<Grid
+			Grid.Row="0"
+			Margin="3"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Email -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="0"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Email: "
+					VerticalAlignment="Center"
+					MinWidth="60"
+					/>
+				<TextBox
+					VerticalAlignment="Center"
+					MinWidth="180"
+					Name="m_username"
+					/>
+			</StackPanel>
+			
+			<!-- Password -->
+			<StackPanel
+				Grid.Row="1"
+				Grid.Column="0"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Password: "
+					VerticalAlignment="Center"
+					MinWidth="60"
+					/>
+				<PasswordBox
+					MinWidth="180"
+					Name="m_password"
+					/>
+			</StackPanel>
+
+			<!-- Login button -->
+			<Button
+				Grid.Row="0"
+				Grid.Column="1"
+				Grid.RowSpan="2"
+				Content="Login"
+				Command="{Binding Login}"
+				MinWidth="60"
+				Margin="3"
+				/>
+		</Grid>
+
+		<!-- Selectors -->
+		<GroupBox
+			Grid.Row="1"
+			Header="Control"
+			Margin="3"
+			>
+			<!-- Selectors -->
+			<Grid
+				Grid.Row="1"
+				Margin="3"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				
+				<!-- Switch selector -->
+				<StackPanel
+					Grid.Row="0"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Grid.Row="0"
+						Grid.Column="0"
+						Text="Hot Water Switch:"
+						VerticalAlignment="Center"
+						MinWidth="100"
+						/>
+					<ComboBox
+						Grid.Row="0"
+						Grid.Column="1"
+						ItemsSource="{Binding EweDevices}"
+						DisplayMemberPath="Name"
+						MinWidth="100"
+						Margin="3"
+						VerticalAlignment="Center"
+						/>
+				</StackPanel>
+
+				<!-- Inverter selector -->
+				<StackPanel
+					Grid.Row="1"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Grid.Row="1"
+						Grid.Column="0"
+						Text="Solar Inverter IP:"
+						VerticalAlignment="Center"
+						MinWidth="100"
+						/>
+					<TextBox
+						Grid.Row="1"
+						Grid.Column="1"
+						Text="{Binding InverterIP}"
+						VerticalAlignment="Center"
+						VerticalContentAlignment="Center"
+						MinWidth="100"
+						Height="22"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Enable -->
+				<ToggleButton
+					Grid.Row="0"
+					Grid.Column="1"
+					Grid.RowSpan="2"
+					Content="Enable"
+					IsChecked="{Binding MonitorEnabled}"
+					Command="{Binding ToggleEnable}"
+					MinWidth="80"
+					Margin="3"
+					/>
+			</Grid>
+		</GroupBox>
+
+		<!-- Info -->
+		<GroupBox
+			Grid.Row="2"
+			Header="Status"
+			Margin="3,3,3,16"
+			>
+			<Grid
+				Grid.Row="2"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<!-- Solar Output -->
+				<StackPanel
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Solar Output:"
+						/>
+				</StackPanel>
+				
+				
+			</Grid>
+		</GroupBox>
+	</Grid>
+</Window>
