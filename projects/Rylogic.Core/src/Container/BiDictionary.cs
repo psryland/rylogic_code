@@ -118,11 +118,11 @@ namespace Rylogic.Container
 
 		public bool TryGetValue(T0 key, out T1 value)
 		{
-			return m_forward.TryGetValue(key, out value);
+			return m_forward.TryGetValue(key, out value!);
 		}
 		public bool TryGetValue(T1 key, out T0 value)
 		{
-			return m_reverse.TryGetValue(key, out value);
+			return m_reverse.TryGetValue(key, out value!);
 		}
 
 		public Dictionary<T0,T1>.Enumerator GetEnumerator()

@@ -494,7 +494,7 @@ namespace pr::geometry::p3d
 		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
 		struct fat_vert_iter_t
 		{
-			using proxy = struct { FatVert x; FatVert const* operator -> () const { return &x; } };
+			using proxy = struct proxy_ { FatVert x; FatVert const* operator -> () const { return &x; } };
 
 			Mesh const* m_mesh;
 			int m_idx;
@@ -1033,9 +1033,11 @@ namespace pr::geometry::p3d
 	// Write a string not within a chunk. Note: not padded
 	template <typename TOut> uint32_t WriteStr(TOut& out, std::string_view str)
 	{
-		return
-			Write(out, s_cast<uint32_t>(str.size())) + // String length;
-			Write(out, str.data(), str.size());        // String data
+		// Don't combine these because the order of evaluating 'a' and 'b' in 'a + b' is undefined
+		uint32_t len = 0;
+		len += Write(out, s_cast<uint32_t>(str.size())); // String length;
+		len += Write(out, str.data(), str.size());       // String data
+		return len;
 	}
 
 	// Write a string to 'out'.
@@ -2553,7 +2555,9 @@ namespace pr::geometry
 		{
 			Texture tex;
 			tex.m_filepath = "filepath";
-			tex.m_tiling = 1;
+			tex.m_type = Texture::EType::Diffuse;
+			tex.m_addr_mode = Texture::EAddrMode::Wrap;
+			tex.m_flags = Texture::EFlags::None;
 
 			Material mat{"mat01", ColourWhite};
 			mat.m_textures.push_back(tex);
@@ -2589,11 +2593,11 @@ namespace pr::geometry
 		}
 
 		// Write the file to a file stream
-		{
-			std::ofstream buf("\\dump\\test.p3d", std::ofstream::binary);
-			auto size = Write(buf, file, EFlags::Default);
-			PR_CHECK(size_t(buf.tellp()), size_t(size));
-		}
+		//{
+		//	std::ofstream buf("\\dump\\test.p3d", std::ofstream::binary);
+		//	auto size = Write(buf, file, EFlags::Default);
+		//	PR_CHECK(size_t(buf.tellp()), size_t(size));
+		//}
 
 		// Read the file from a stream and compare contents
 		{
@@ -2627,7 +2631,9 @@ namespace pr::geometry
 					auto& t0 = m0.m_textures[j];
 					auto& t1 = m1.m_textures[j];
 					PR_CHECK(t0.m_filepath, t1.m_filepath);
-					PR_CHECK(t0.m_tiling, t1.m_tiling);
+					PR_CHECK(t0.m_type, t1.m_type);
+					PR_CHECK(t0.m_addr_mode, t1.m_addr_mode);
+					PR_CHECK(t0.m_flags, t1.m_flags);
 				}
 			}
 			for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)

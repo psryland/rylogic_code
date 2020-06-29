@@ -106,7 +106,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 			for (auto& tex : mat_3ds.m_textures)
 			{
 				// todo: translate 3ds tiling flags to p3d
-				mat.m_textures.emplace_back(tex.m_filepath, 0);
+				mat.m_textures.emplace_back(tex.m_filepath);
 			}
 		}
 
