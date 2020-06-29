@@ -582,9 +582,9 @@ namespace Rylogic.Gfx
 				public override string Description => $"*{Keyword} {base.Description}";
 
 				/// <summary>Define ordering for templates</summary>
-				public int CompareTo(Template rhs)
+				public int CompareTo(Template? rhs)
 				{
-					return Keyword.CompareTo(rhs.Keyword);
+					return Keyword.CompareTo(rhs?.Keyword);
 				}
 
 				#region Equals

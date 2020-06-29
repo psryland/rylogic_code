@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
 
+#nullable disable
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -31,19 +33,15 @@ namespace Rylogic.Common
 		// - Careful with LessThan/EqualTo, they're ambiguous. i.e. both are Func<T,T,bool>
 
 		private readonly Func<T,T,int> m_cmp;
-		private Cmp(Func<T, T, int> cmp)
-		{
-			m_cmp = cmp ?? Default.m_cmp;
-		}
-
+		private Cmp(Func<T, T, int> cmp) => m_cmp = cmp ?? Default.m_cmp;
 		public static Cmp<T> Default => new Cmp<T>(Comparer<T>.Default.Compare);
 
 		/// <summary>Compares 'lhs' to 'rhs' returning -1,0,1</summary>
 		public int Compare(T lhs, T rhs) => m_cmp(lhs, rhs);
 		public bool Equals(T lhs, T rhs) => m_cmp(lhs, rhs) == 0;
 		public int GetHashCode(T obj) => obj?.GetHashCode() ?? 0;
-		int IComparer.Compare(object? x, object? y) => Compare((T)x!, (T)y!);
-		bool IEqualityComparer.Equals(object? x, object? y) => Equals((T)x!, (T)y!);
+		int IComparer.Compare(object x, object y) => Compare((T)x, (T)y);
+		bool IEqualityComparer.Equals(object x, object y) => Equals((T)x, (T)y);
 		int IEqualityComparer.GetHashCode(object obj) => GetHashCode((T)obj);
 
 		// Convert To
@@ -72,7 +70,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Compare using a value derived from 'T'</summary>
-		public static Cmp<T> From<U>(Func<T, U> selector, IComparer<U>? cmp = null)
+		public static Cmp<T> From<U>(Func<T, U> selector, IComparer<U> cmp = null)
 		{
 			cmp ??= Cmp<U>.Default;
 			return new Cmp<T>((l, r) =>
@@ -105,7 +103,7 @@ namespace Rylogic.Common
 		{
 			return obj?.GetHashCode() ?? 0;
 		}
-		bool IEqualityComparer.Equals(object? x, object? y)
+		bool IEqualityComparer.Equals(object x, object y)
 		{
 			return Equals((T)x!, (T)y!);
 		}
@@ -130,9 +128,9 @@ namespace Rylogic.UnitTests
 
 	[TestFixture] public class TestComparer
 	{
-		private IEnumerable<T> Func<T>(IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T>? cmp = null) where T : notnull
+		private IEnumerable<T> Func<T>(IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T> cmp = null) where T : notnull
 		{
-			cmp = cmp ?? Cmp<T>.Default;
+			cmp ??= Cmp<T>.Default;
 			var i = lhs.GetIterator();
 			var j = rhs.GetIterator();
 			for (;!i.AtEnd && !j.AtEnd;)

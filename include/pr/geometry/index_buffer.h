@@ -46,7 +46,7 @@ namespace pr::geometry
 		// Const iterator for iterating over the indices
 		template <typename TOut> struct citer_t
 		{
-			using proxy = struct { TOut x; TOut const* operator -> () const { return &x; } };
+			using proxy = struct proxy_ { TOut x; TOut const* operator -> () const { return &x; } };
 
 			cptr_t m_ptr;
 			int m_stride;
