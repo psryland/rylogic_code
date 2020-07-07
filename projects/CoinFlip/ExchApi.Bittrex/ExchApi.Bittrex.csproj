@@ -66,6 +66,10 @@
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\Rylogic.Net\Rylogic.Net.csproj">
+      <Project>{8ac9f403-cb1a-4e1f-bc05-6c3ceaad076b}</Project>
+      <Name>Rylogic.Net</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj">
       <Project>{F99B8698-5A0E-4C57-A536-ABBF4ED7CBB4}</Project>
       <Name>ExchApi.Common</Name>

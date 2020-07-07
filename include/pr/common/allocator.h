@@ -1,4 +1,4 @@
-//***********************************************************************
+﻿//***********************************************************************
 // Default Allocator
 //  Copyright (c) 2007 Paul Ryland
 //***********************************************************************
@@ -140,7 +140,7 @@ namespace pr
 		{
 			Allocation al(ptr);
 			if constexpr (RecordCallStacks)
-				pr::DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
+				pr::DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(pr::FmtS("%S(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
 
 			m_live.insert(al);
 			return true;

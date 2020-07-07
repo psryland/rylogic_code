@@ -459,6 +459,10 @@
       <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
       <Name>Rylogic.Gui.WinForms</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Net\Rylogic.Net.csproj">
+      <Project>{8ac9f403-cb1a-4e1f-bc05-6c3ceaad076b}</Project>
+      <Name>Rylogic.Net</Name>
+    </ProjectReference>
     <ProjectReference Include="RyLogViewer.Extensions.csproj">
       <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
       <Name>RyLogViewer.Extensions</Name>

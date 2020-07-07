@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -90,6 +90,9 @@ namespace view3d
 		// Get/Set the scene viewport
 		View3DViewport Viewport() const;
 		void Viewport(View3DViewport vp);
+
+		// The DPI scaling of the monitor that 'window' is displayed on (relative to 96dpi)
+		pr::v2 DpiScale() const;
 
 		// Render this window into whatever render target is currently set
 		void Render();

@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Binance.API.DomainObjects;
-using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Attrib;
 using Rylogic.Extn;
+using Rylogic.Net;
 using Rylogic.Utility;
 
 namespace Binance.API
 {
-	public class CandleDataCache :IDisposable
+	public sealed class CandleDataCache :IDisposable
 	{
 		// Notes:
 		//  - See TickerDataCache for the simplest example

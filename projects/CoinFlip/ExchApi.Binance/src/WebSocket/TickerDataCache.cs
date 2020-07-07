@@ -8,11 +8,12 @@ using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Extn;
+using Rylogic.Net;
 using Rylogic.Utility;
 
 namespace Binance.API
 {
-	public class TickerDataCache :IDisposable
+	public sealed class TickerDataCache :IDisposable
 	{
 		// Notes:
 		//  - This is the simplest example of a websocket stream. The design is

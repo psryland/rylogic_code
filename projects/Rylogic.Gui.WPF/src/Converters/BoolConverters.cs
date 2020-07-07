@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -258,6 +259,13 @@ namespace Rylogic.Gui.WPF.Converters
 				{
 					var i = (int?)Util.ConvertTo(val, typeof(int)) ?? 0;
 					return new Thickness(i);
+				}
+				if (targetType == typeof(ImageSource))
+				{
+					// Use: ConverterParameter='image_key1|image_key2'
+					// Image keys should be static resource keys.
+					var res = Application.Current.TryFindResource(val);
+					return res;
 				}
 				return Util.ConvertTo(val, targetType);
 			}

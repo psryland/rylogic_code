@@ -577,8 +577,8 @@ namespace pr::ldr
 			BBox bbox = BBoxReset;
 			if (m_model && !AllSet(m_flags,ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 			{
-				auto bb = i2w * m_model->m_bbox;
-				if (bb.valid()) Encompass(bbox, bb);
+				if (m_model->m_bbox.valid())
+					Encompass(bbox, i2w * m_model->m_bbox);
 			}
 			if (include_children) // Add the bounding boxes of the children
 			{

@@ -56,7 +56,7 @@ using System.Text.RegularExpressions;
 
 #nullable disable
 
-namespace Rylogic.INet
+namespace Rylogic.Net
 {
 	public class Markdown
 	{

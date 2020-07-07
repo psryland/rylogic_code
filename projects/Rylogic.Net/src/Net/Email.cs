@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Rylogic.INet
+namespace Rylogic.Net
 {
 }
 

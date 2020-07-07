@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
-namespace Rylogic.INet
+namespace Rylogic.Net
 {
 	public sealed class OAuth2 :IDisposable
 	{
@@ -56,7 +56,7 @@ namespace Rylogic.INet
 		/// <summary></summary>
 		private HttpClient Client
 		{
-			get { return m_client ?? new HttpClient(); }
+			get => m_client ?? new HttpClient();
 			set
 			{
 				if (m_client == value) return;
@@ -121,11 +121,11 @@ namespace Rylogic.INet
 			// Authentication request
 			var parms = new Dictionary<string, object>
 			{
-				{ "client_id", ClientID},
-				{ "client_secret", ClientSecret},
-				{ "redirect_uri", redirectUri},
-				{ "code", code},
-				{ "grant_type", "authorization_code"}
+				{ "client_id", ClientID },
+				{ "client_secret", ClientSecret },
+				{ "redirect_uri", redirectUri },
+				{ "code", code },
+				{ "grant_type", "authorization_code" }
 			};
 			if (Scope.HasValue())
 				parms["scope"] = Scope;

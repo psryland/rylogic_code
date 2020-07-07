@@ -120,6 +120,11 @@ namespace Rylogic.Gfx
 		private int m_pixel_width = 16;
 		private int m_pixel_height = 16;
 
+		/// <summary>The DPI scaling when the RenderTarget was last resized</summary>
+		public Point DpiScale => new Point(m_dpi_scaleX, m_dpi_scaleY);
+		private double m_dpi_scaleX;
+		private double m_dpi_scaleY;
+
 		/// <summary>The Dx9 render target that matches the area on screen</summary>
 		private View3d.Texture? FrontBuffer
 		{
@@ -152,11 +157,13 @@ namespace Rylogic.Gfx
 		public event EventHandler? RenderTargetChanged;
 
 		/// <summary>Set the dimensions of the render target</summary>
-		public void SetRenderTargetSize(int pixel_width, int pixel_height)
+		public void SetRenderTargetSize(int pixel_width, int pixel_height, double dpi_scaleX, double dpi_scaleY)
 		{
 			// Cache these values so that the render target can be created at a later time.
 			m_pixel_width = pixel_width;
 			m_pixel_height = pixel_height;
+			m_dpi_scaleX = dpi_scaleX;
+			m_dpi_scaleY = dpi_scaleY;
 
 			// If the render target size has changed, recreate it
 			if (FrontBuffer == null ||

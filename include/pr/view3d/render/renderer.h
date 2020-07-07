@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -147,7 +147,10 @@ namespace pr::rdr
 		// Return the current desktop DPI
 		v2 Dpi() const
 		{
-			// Don't cache the DPI value
+			// Notes:
+			//  - Window's have their own version of this function which detects the DPI
+			//    of the monitor they're on, and fall's back to the system DPI.
+			//  - Don't cache the DPI value because it can change at any time.
 			#if (WINVER >= 0x0605)
 			auto dpi = (float)GetDpiForSystem();
 			#else

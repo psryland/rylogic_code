@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using Rylogic.Attrib;
 using Rylogic.Common;
+using Rylogic.Extn.Windows;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using HWindow = System.IntPtr;
@@ -219,8 +220,11 @@ namespace Rylogic.Gfx
 			/// <summary>Get the render target texture</summary>
 			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(Handle), owned:false);
 
-			/// <summary>Resize the render target</summary>
+			/// <summary>The size of the render target (in pixels)</summary>
 			public Size RenderTargetSize => RenderTarget?.Info is ImageInfo info ? new Size((int)info.m_width, (int)info.m_height) : Size.Empty;
+
+			/// <summary>The DPI of the monitor this window is on</summary>
+			public PointF DpiScale => View3D_WindowDpiScale(Handle).ToPointF();
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
@@ -498,7 +502,7 @@ namespace Rylogic.Gfx
 				View3D_Present(Handle);
 			}
 
-			/// <summary>Resize the render target</summary>
+			/// <summary>Get/Set the size of the backbuffer (in pixels)</summary>
 			[Browsable(false)]
 			public Size BackBufferSize
 			{
@@ -567,8 +571,12 @@ namespace Rylogic.Gfx
 				//    For WPF, or other window-less modes of use, there is no back buffer. I'm assuming here that the render target
 				//    is the psuedo-back buffer. In the case were there is a back buffer but a temporary render target is in use, I'm
 				//    using the back buffer still as I'm assuming that is still the screen size.
+				//  - The render target dimension is in pixels however, and WPF uses device independent units (i.e. 96dpi).
+				//    So to return points in device-independent screen space, the render target size needs to be adjusted
+				//    by the system dpi.
+				var dpi_scale = DpiScale;
 				var da = Hwnd != IntPtr.Zero ? BackBufferSize : RenderTargetSize;
-				return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
+				return new v2((pt.x + 1f) * da.Width / (2f * dpi_scale.X), (1f - pt.y) * da.Height / (2f * dpi_scale.Y));
 			}
 			public Point ScreenSpacePoint(v2 pt)
 			{

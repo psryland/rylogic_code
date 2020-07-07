@@ -306,6 +306,17 @@ namespace Rylogic.Extn
 			return list.IndexOf(pred, 0, list.Count);
 		}
 
+		/// <summary>Return the index of the occurrence of an element (or -1)</summary>
+		public static int IndexOf<T>(this IReadOnlyList<T> list, T item, int start_index, int count)
+		{
+			int i; for (i = start_index; i != count && !Equals(list[i], item); ++i) { }
+			return i != count ? i : -1;
+		}
+		public static int IndexOf<T>(this IReadOnlyList<T> list, T item)
+		{
+			return list.IndexOf(item, 0, list.Count);
+		}
+
 		/// <summary>Return the index of the last occurrence of 'pred(x) == true' or -1</summary>
 		public static int LastIndexOf<T>(this IList<T> list, Func<T, bool> pred)
 		{
@@ -527,24 +538,6 @@ namespace Rylogic.Extn
 			Sync(list, set.ToHashSet());
 		}
 		public static void Sync(this IList list, IEnumerable set)
-		{
-			Sync(list, set.Cast<object>().ToHashSet());
-		}
-
-		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end. On return, 'set' contains the new items that were added</summary>
-		[Obsolete("Use Sync instead")] public static void Merge<T>(this IList<T> list, HashSet<T> set)
-		{
-			Sync<T>(list, set);
-		}
-		[Obsolete("Use Sync instead")] public static void Merge(this IList list, HashSet<object> set)
-		{
-			Sync(list, set);
-		}
-		[Obsolete("Use Sync instead")] public static void Merge<T>(this IList<T> list, IEnumerable<T> set)
-		{
-			Sync(list, set.ToHashSet());
-		}
-		[Obsolete("Use Sync instead")] public static void Merge(this IList list, IEnumerable set)
 		{
 			Sync(list, set.Cast<object>().ToHashSet());
 		}

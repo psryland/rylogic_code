@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using Binance.API.DomainObjects;
-using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Net;
 using Rylogic.Utility;
 
 namespace Binance.API
 {
-	public class UserDataCache :IDisposable
+	public sealed class UserDataCache :IDisposable
 	{
 		// Notes:
 		//  - See TickerDataCache for the simplest example

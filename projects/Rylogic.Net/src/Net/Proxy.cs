@@ -7,7 +7,7 @@ using System.Text;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Rylogic.INet
+namespace Rylogic.Net
 {
 	// Usage:
 	//  var proxy = Proxy.Create(EType.Http, "localhost", 6588);

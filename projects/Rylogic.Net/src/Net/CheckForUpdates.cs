@@ -5,7 +5,7 @@ using System.Xml.Linq;
 
 namespace Rylogic.INet
 {
-	public static partial class INet
+	public static partial class Net
 	{
 		/// <summary>Begin an asynchronous check for update. Follows the standard Begin/End IAsyncResult pattern</summary>
 		/// <param name="identifier">The identifier for the application whose version is being checked</param>
