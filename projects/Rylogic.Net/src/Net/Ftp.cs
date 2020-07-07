@@ -10,7 +10,7 @@ using Rylogic.Common;
 using Rylogic.Streams;
 using Rylogic.Utility;
 
-namespace Rylogic.INet
+namespace Rylogic.Net
 {
 	/// <summary>
 	/// A class for creating FTP/FTPS connections.
@@ -617,7 +617,7 @@ namespace Rylogic.INet
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using INet;
+	using Net;
 
 	[TestFixture] public class TestFtp
 	{

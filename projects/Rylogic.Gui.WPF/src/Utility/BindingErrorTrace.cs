@@ -12,10 +12,33 @@ namespace Rylogic.Gui.WPF
 	//
 	// Handy Tips:
 	//  - Add a TextBlock like this to see what the binding source is:
-	//        <TextBlock
-	//            Text = "{Binding DataContext, Converter={conv:ToString}}"
-	//            />
-
+	//    <TextBlock
+	//        Text = "{Binding DataContext, Converter={conv:ToString}}"
+	//        />
+	//  - How to Fix:
+	//     "System.Windows.Data Error: 4 : Cannot find source for binding...HorizontalContentAlignment/VerticalContentAlignment"
+	//   Set the HorizontalContentAlignment and VerticalContentAlignment properties in your App.xaml
+	//  e.g.
+	//    // App.xaml
+	//    <Application>
+	//        <Application.Resources>
+	//            <ResourceDictionary>
+	//                <!-- Fix for Library binding bugs -->
+	//                <Style TargetType="ComboBoxItem">
+	//                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+	//                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+	//                </Style>
+	//                <Style TargetType="MenuItem">
+	//                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+	//                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+	//                </Style>
+	//                <Style TargetType="TreeViewItem">
+	//                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+	//                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+	//                </Style>
+	//            </ResourceDictionary>
+	//        </Application.Resources>
+	//    </Application>
 
 	public class BindingErrorTraceListener : DefaultTraceListener
 	{

@@ -4,6 +4,10 @@ using System.Windows.Data;
 
 namespace Rylogic.Gui.WPF
 {
+	// Notes:
+	//  - This doesn't seem to work how I thought it would.
+	//    Use 'DataContextRef' instead.
+#if false
 	public class DataContextSpy : Freezable
 	{
 		// Credit: Josh Smith 2008
@@ -36,7 +40,7 @@ namespace Rylogic.Gui.WPF
 		public DataContextSpy()
 		{
 			// This binding allows the spy to inherit a DataContext.
-			BindingOperations.SetBinding(this, DataContextProperty, new Binding());
+			BindingOperations.SetBinding(this, SpiedCtxProperty, new Binding());
 			IsSynchronizedWithCurrentItem = true;
 		}
 		protected override Freezable CreateInstanceCore()
@@ -51,11 +55,11 @@ namespace Rylogic.Gui.WPF
 		/// collection, this property has no effect. The default value is true.</summary>
 		public bool IsSynchronizedWithCurrentItem { get; set; }
 
-		// Borrow the DataContext dependency property from FrameworkElement.
-		public object DataContext
+		/// <summary>The captured DataContext from </summary>
+		public object SpiedCtx
 		{
-			get { return (object)GetValue(DataContextProperty); }
-			set { SetValue(DataContextProperty, value); }
+			get => GetValue(SpiedCtxProperty);
+			set => SetValue(SpiedCtxProperty, value);
 		}
 		private static object DataContext_Coerce(DependencyObject depObj, object value)
 		{
@@ -71,7 +75,10 @@ namespace Rylogic.Gui.WPF
 
 			return value;
 		}
-		public static readonly DependencyProperty DataContextProperty =
+
+		/// <summary>Borrow the DataContext dependency property from FrameworkElement.</summary>
+		public static readonly DependencyProperty SpiedCtxProperty =
 			FrameworkElement.DataContextProperty.AddOwner(typeof(DataContextSpy), new PropertyMetadata(null, null, DataContext_Coerce));
 	}
+#endif
 }

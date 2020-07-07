@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
 using Rylogic.Gui.WinForms;
-using Rylogic.INet;
+using Rylogic.Net;
 using Rylogic.Utility;
 
 namespace RyLogViewer

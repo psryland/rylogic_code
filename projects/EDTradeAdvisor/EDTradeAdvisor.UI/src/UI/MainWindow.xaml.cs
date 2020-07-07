@@ -82,10 +82,10 @@ namespace EDTradeAdvisor.UI
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
-			OriginStarSystemsShortList = null;
-			DestStarSystemsShortList = null;
-			OriginStations = null;
-			DestStations = null;
+			OriginStarSystemsShortList = null!;
+			DestStarSystemsShortList = null!;
+			OriginStations = null!;
+			DestStations = null!;
 			Advisor.Dispose();
 		}
 
@@ -100,7 +100,7 @@ namespace EDTradeAdvisor.UI
 				{
 					m_advisor.TradeRoutesChanged -= HandleTradeRoutesChanged;
 					m_advisor.RunChanged -= HandleRunChanged;
-					Util.Dispose(ref m_advisor);
+					Util.Dispose(ref m_advisor!);
 				}
 				m_advisor = value;
 				if (m_advisor != null)
@@ -110,17 +110,17 @@ namespace EDTradeAdvisor.UI
 				}
 
 				// Handlers
-				void HandleRunChanged(object sender, EventArgs e)
+				void HandleRunChanged(object? sender, EventArgs e)
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Active)));
 				}
-				void HandleTradeRoutesChanged(object sender, EventArgs e)
+				void HandleTradeRoutesChanged(object? sender, EventArgs e)
 				{
 					TradeRoutes.Refresh();
 				}
 			}
 		}
-		private Advisor m_advisor;
+		private Advisor m_advisor = null!;
 
 		/// <summary>Show the settings dialog</summary>
 		public Command ShowSettings { get; }
@@ -201,7 +201,7 @@ namespace EDTradeAdvisor.UI
 				}
 
 				// Handlers
-				void HandleCurrentSystemChanged(object sender, EventArgs e)
+				void HandleCurrentSystemChanged(object? sender, EventArgs e)
 				{
 					// Save the current origin system id
 					var current = (StarSystem)OriginStarSystemsShortList.CurrentItem;
@@ -209,7 +209,7 @@ namespace EDTradeAdvisor.UI
 				}
 			}
 		}
-		private ICollectionView m_star_systems_origin;
+		private ICollectionView m_star_systems_origin = null!;
 
 		/// <summary>The short-list of star systems selected by the destination location combo box</summary>
 		public ICollectionView DestStarSystemsShortList
@@ -229,7 +229,7 @@ namespace EDTradeAdvisor.UI
 				}
 
 				// Handlers
-				void HandleCurrentSystemChanged(object sender, EventArgs e)
+				void HandleCurrentSystemChanged(object? sender, EventArgs e)
 				{
 					// Save the current destination system id
 					var current = (StarSystem)DestStarSystemsShortList.CurrentItem;
@@ -237,7 +237,7 @@ namespace EDTradeAdvisor.UI
 				}
 			}
 		}
-		private ICollectionView m_star_systems_dest;
+		private ICollectionView m_star_systems_dest = null!;
 
 		/// <summary>The stations associated with the selection origin system</summary>
 		public ICollectionView OriginStations
@@ -257,7 +257,7 @@ namespace EDTradeAdvisor.UI
 				}
 
 				// Handlers
-				void HandleCurrentStationChanged(object sender, EventArgs e)
+				void HandleCurrentStationChanged(object? sender, EventArgs e)
 				{
 					// Save the current origin station id
 					var current = (Station)OriginStations.CurrentItem;
@@ -265,7 +265,7 @@ namespace EDTradeAdvisor.UI
 				}
 			}
 		}
-		private ICollectionView m_stations_origin;
+		private ICollectionView m_stations_origin = null!;
 
 		/// <summary>The stations associated with the selection destination system</summary>
 		public ICollectionView DestStations
@@ -285,7 +285,7 @@ namespace EDTradeAdvisor.UI
 				}
 
 				// Handlers
-				void HandleCurrentStationChanged(object sender, EventArgs e)
+				void HandleCurrentStationChanged(object? sender, EventArgs e)
 				{
 					// Save the current destination station id
 					var current = (Station)DestStations.CurrentItem;
@@ -293,7 +293,7 @@ namespace EDTradeAdvisor.UI
 				}
 			}
 		}
-		private ICollectionView m_stations_dest;
+		private ICollectionView m_stations_dest = null!;
 
 		/// <summary>Read the current location from the journal file</summary>
 		public bool UseCurrentLocation
@@ -437,7 +437,7 @@ namespace EDTradeAdvisor.UI
 		}
 
 		/// <summary>Handle setting changes</summary>
-		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
+		private void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 		{
 			// Notes:
 			//  - Don't change any Settings values in here. That should be in the model
@@ -509,13 +509,13 @@ namespace EDTradeAdvisor.UI
 		}
 
 		/// <summary>Handle status changes</summary>
-		private void HandleStatusMsgChanged(object sender, EventArgs e)
+		private void HandleStatusMsgChanged(object? sender, EventArgs e)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StatusMsg)));
 		}
 
 		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
 		/// <summary>Log line pattern</summary>
 		private static readonly Regex LogEntryPatternRegex = new Regex(

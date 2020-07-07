@@ -266,10 +266,16 @@ class RylogicCore(RylogicAssembly):
 		RylogicAssembly.__init__(self, "Rylogic.Core", ["netstandard2.0", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
-# Rylogic.Core .NET assembly
+# Rylogic.Core.Windows .NET assembly
 class RylogicCoreWindows(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Core.Windows", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		return
+
+# Rylogic.Net .NET assembly
+class RylogicNet(RylogicAssembly):
+	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+		RylogicAssembly.__init__(self, "Rylogic.Net", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Scintilla .NET assembly
@@ -474,6 +480,7 @@ class Rylogic(Group):
 		self.items = [
 			RylogicCore       (workspace, platforms, configs),
 			RylogicCoreWindows(workspace, platforms, configs),
+			RylogicNet        (workspace, platforms, configs),
 			RylogicScintilla  (workspace, platforms, configs),
 			RylogicView3d     (workspace, platforms, configs),
 			RylogicGuiWinForms(workspace, platforms, configs),

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,9 +10,7 @@ using Bittrex.API.DomainObjects;
 using Bittrex.API.Subscriptions;
 using ExchApi.Common;
 using Newtonsoft.Json.Linq;
-using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.INet;
 using Rylogic.Utility;
 
 namespace Bittrex.API

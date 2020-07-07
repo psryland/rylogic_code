@@ -8,12 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.INet;
+using Rylogic.Net;
 using Rylogic.Utility;
 
 namespace EDTradeAdvisor
 {
-	public class Web :IDisposable
+	public sealed class Web :IDisposable
 	{
 		// Notes:
 		//  - This class handles interaction with online sources. It basically

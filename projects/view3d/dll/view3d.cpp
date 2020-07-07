@@ -659,6 +659,19 @@ VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTes
 	CatchAndReport(View3D_WindowMouseTrackGet, window, );
 }
 
+// Return the DPI of the monitor that 'window' is displayed on
+VIEW3D_API View3DV2 __stdcall View3D_WindowDpiScale(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return To<View3DV2>(window->DpiScale());
+	}
+	CatchAndReport(View3d_WindowDPI, window, View3DV2{});
+}
+
 // Set the global environment map for the window
 VIEW3D_API void __stdcall View3D_WindowEnvMapSet(View3DWindow window, View3DCubeMap env_map)
 {

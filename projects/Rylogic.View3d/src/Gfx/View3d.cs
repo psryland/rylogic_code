@@ -1515,6 +1515,8 @@ namespace ldr
 		private static extern void View3D_WindowAnimEventCBSet(HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)]
 		private static extern void View3D_WindowHitTest(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)]
+		private static extern v2 View3D_WindowDpiScale(HWindow window);
 
 		// Camera
 		[DllImport(Dll)]

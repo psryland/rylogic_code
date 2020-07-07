@@ -334,7 +334,7 @@ struct Main
 	{
 		// Read the file name
 		std::string infile;
-		reader.StringS(infile);
+		reader.CStringS(infile);
 
 		// Resolve the file
 		m_infile = path(infile);
@@ -381,7 +381,7 @@ struct Main
 				// If a filepath is given, read it
 				if (!reader.IsKeyword())
 				{
-					reader.String(outfile);
+					reader.CString(outfile);
 					continue;
 				}
 				if (char kw[32]; reader.NextKeywordS(kw))

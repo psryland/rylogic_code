@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
 using Rylogic.Gui.WinForms;
-using Rylogic.INet;
+using Rylogic.Net;
 using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer

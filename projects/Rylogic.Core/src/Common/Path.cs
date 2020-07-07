@@ -184,10 +184,9 @@ namespace Rylogic.Common
 			if (!paths.Any())
 				return string.Empty;
 
-			var path = string.Empty;
-			foreach (var p in paths.Where(x => !string.IsNullOrEmpty(x)).Select(x => x.TrimStart('/', '\\')))
-				path = Path.Combine(path, p);
-			
+			// Path combine now supports arrays...
+			// Don't trim '\\' from the start of paths because this breaks UNC paths
+			var path = Path.Combine(paths.ToArray());
 			return Canonicalise(path);
 		}
 

@@ -2279,9 +2279,9 @@ namespace Rylogic.Db
 				// Tests if a member should be included as a column in the table
 				bool IncludeMember(MemberInfo mi, List<string> marked) =>
 					!mi.GetCustomAttributes(typeof(IgnoreAttribute), false).Any() &&  // doesn't have the ignore attribute and,
-					!ignored.Contains(mi.Name) &&                                     // isn't in the ignore list and,
+					(ignored != null && !ignored.Contains(mi.Name)) &&                // isn't in the ignore list and,
 					(mi.GetCustomAttributes(typeof(ColumnAttribute), false).Any() ||  // has the column attribute or,
-					(attr.AllByDefault && marked.Contains(mi.Name)));                 // all in by default and 'mi' is in the collection of found columns
+					(attr != null && attr.AllByDefault && marked.Contains(mi.Name))); // all in by default and 'mi' is in the collection of found columns
 
 				const BindingFlags binding_flags = BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance;
 				var pflags = attr.PropertyBindingFlags != BindingFlags.Default ? attr.PropertyBindingFlags |BindingFlags.Instance : BindingFlags.Default;

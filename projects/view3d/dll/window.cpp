@@ -135,6 +135,12 @@ namespace view3d
 		NotifySettingsChanged(EView3DSettings::Scene_Viewport);
 	}
 
+	// The DPI scaling of the monitor that 'window' is displayed on (relative to 96dpi)
+	v2 Window::DpiScale() const
+	{
+		return m_wnd.DpiScale();
+	}
+
 	// Render this window into whatever render target is currently set
 	void Window::Render()
 	{

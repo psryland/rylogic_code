@@ -655,6 +655,7 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowAnimControl        (View3DWindow window, EView3DAnimCommand command, double time);
 	VIEW3D_API void           __stdcall View3D_WindowAnimEventCBSet     (View3DWindow window, View3D_AnimationCB anim_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API View3DV2       __stdcall View3D_WindowDpiScale           (View3DWindow window);
 	VIEW3D_API void           __stdcall View3D_WindowEnvMapSet          (View3DWindow window, View3DCubeMap env_map);
 
 	// Camera

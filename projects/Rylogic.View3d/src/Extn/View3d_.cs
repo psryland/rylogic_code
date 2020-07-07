@@ -12,13 +12,14 @@ namespace Rylogic.Extn
 		{
 			// Set the screen render target size, accounting for DPI
 			var win = PresentationSource.FromVisual(element)?.CompositionTarget as HwndTarget;
-			var dpi_scale = win?.TransformToDevice.M11 ?? 1.0;
+			var dpi_scaleX = win?.TransformToDevice.M11 ?? 1.0;
+			var dpi_scaleY = win?.TransformToDevice.M22 ?? 1.0;
 
 			// Determine the texture size
-			var width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi_scale));
-			var height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi_scale));
+			var width = Math.Max(1, (int)Math.Ceiling(element.ActualWidth * dpi_scaleX));
+			var height = Math.Max(1, (int)Math.Ceiling(element.ActualHeight * dpi_scaleY));
 
-			d3d_image.SetRenderTargetSize(width, height);
+			d3d_image.SetRenderTargetSize(width, height, dpi_scaleX, dpi_scaleY);
 		}
 	}
 }

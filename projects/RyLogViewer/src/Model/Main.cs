@@ -1838,8 +1838,8 @@ namespace RyLogViewer
 			// The callback to call when the check for updates results are in
 			Action<IAsyncResult> callback = ar =>
 			{
-				INet.CheckForUpdateResult res = null; Exception err = null;
-				try { res = INet.EndCheckForUpdate(ar); }
+				Net.CheckForUpdateResult res = null; Exception err = null;
+				try { res = Net.EndCheckForUpdate(ar); }
 				catch (OperationCanceledException) {}
 				catch (Exception ex) { err = ex; }
 
@@ -1854,13 +1854,13 @@ namespace RyLogViewer
 				var dlg = new ProgressForm("Checking for Updates", "Querying the server for latest version information...", null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
 					cb(new ProgressForm.UserState{ProgressBarStyle = ProgressBarStyle.Marquee, Icon = Icon});
-					var async = INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
+					var async = Net.BeginCheckForUpdate(Constants.AppIdentifier, update_url, null, Proxy);
 
 					// Wait till the operation completes, or until cancel is signalled
 					for (;!s.CancelPending && !async.AsyncWaitHandle.WaitOne(500);) {}
 
 					if (!s.CancelPending) callback(async);
-					else INet.CancelCheckForUpdate(async);
+					else Net.CancelCheckForUpdate(async);
 				});
 				using (dlg)
 					dlg.ShowDialog(this);
@@ -1868,12 +1868,12 @@ namespace RyLogViewer
 			else
 			{
 				// Start the asynchronous check for updates
-				INet.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, Proxy);
+				Net.BeginCheckForUpdate(Constants.AppIdentifier, update_url, callback, Proxy);
 			}
 		}
 
 		/// <summary>Handle the results of a check for updates</summary>
-		private void HandleCheckForUpdateResult(INet.CheckForUpdateResult res, Exception error, bool show_dialog)
+		private void HandleCheckForUpdateResult(Net.CheckForUpdateResult res, Exception error, bool show_dialog)
 		{
 			if (error != null)
 			{

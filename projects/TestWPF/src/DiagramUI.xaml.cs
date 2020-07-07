@@ -13,7 +13,7 @@ using Util = Rylogic.Utility.Util;
 namespace TestWPF
 {
 	/// <summary>Interaction logic for diagram_ui.xaml</summary>
-	public partial class DiagramUI :Window ,IDisposable
+	public sealed partial class DiagramUI :Window ,IDisposable
 	{
 		private string m_diag_xml;
 
@@ -95,6 +95,7 @@ namespace TestWPF
 		}
 		public void Dispose()
 		{
+			Util.DisposeRange(m_diag.Elements);
 			Util.Dispose(ref m_diag);
 		}
 
@@ -107,6 +108,7 @@ namespace TestWPF
 		{
 			base.OnClosed(e);
 			ComponentDispatcher.ThreadFilterMessage -= HandleThreadMessage;
+			Dispose();
 		}
 
 		private void HandleThreadMessage(ref MSG msg, ref bool handled)
