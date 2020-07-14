@@ -337,6 +337,11 @@ namespace Rylogic.Gui.WPF
 		}
 		private Regex? m_log_entry_pattern;
 
+		// Notes:
+		//  - The LineDelimiter must be a single byte UTF8 character because the log control
+		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
+		//    blocks (for performance).
+
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
 		public char LineDelimiter { get; set; }
 

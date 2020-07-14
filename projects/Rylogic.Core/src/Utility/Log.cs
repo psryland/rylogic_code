@@ -50,6 +50,10 @@ namespace Rylogic.Utility
 
 	public static class Log_
 	{
+		// Notes:
+		//  - The EntryDelimiter must be a single byte UTF8 character because the log control
+		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
+		//    blocks (for performance).
 		public const char EntryDelimiter = '\u001b';
 	}
 
@@ -198,7 +202,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Convert a log entry to a string</summary>
-		public static string DefaultSerialise(StringBuilder sb, LogEvent evt, char entry_delimiter, bool timestamp)
+		public static string DefaultSerialise(StringBuilder sb, LogEvent evt, char entry_delimiter, bool timestamp, bool newlines)
 		{
 			var pre = string.Empty;
 			if (entry_delimiter != '\0')        { sb.Clear(); sb.Append(entry_delimiter); }
@@ -208,6 +212,7 @@ namespace Rylogic.Utility
 			if (evt.Level != ELogLevel.NoLevel) { sb.Append($"{pre}{evt.Level}"); pre = "|"; }
 			if (timestamp)                      { sb.Append($"{pre}{evt.Timestamp.ToString("c")}"); pre = "|"; }
 			sb.Append(pre).Append(evt.Message);
+			if (newlines && sb.Length != 0 && sb[sb.Length-1] != '\n') sb.Append('\n');
 			return sb.ToString();
 		}
 
@@ -219,6 +224,7 @@ namespace Rylogic.Utility
 				SB = new StringBuilder();
 				EntryDelimiter = Log_.EntryDelimiter;
 				AddTimestamp = true;
+				AddNewLines = true;
 				Serialise = DefaultSerialise;
 
 				// Clean up when there are no more loggers referencing this context
@@ -244,6 +250,9 @@ namespace Rylogic.Utility
 			/// <summary>True if each log entry is time stamped</summary>
 			public bool AddTimestamp { get; set; }
 
+			/// <summary>True if each log entry has a newline at the end</summary>
+			public bool AddNewLines { get; set; }
+
 			/// <summary>References to this shared context</summary>
 			public RefCount RefCount { get; }
 
@@ -264,7 +273,7 @@ namespace Rylogic.Utility
 
 			/// <summary>The method that converts a log entry into a string</summary>
 			public Func<LogEvent, string> Serialise { get; set; }
-			public string DefaultSerialise(LogEvent evt) => Logger.DefaultSerialise(SB, evt, EntryDelimiter, AddTimestamp);
+			public string DefaultSerialise(LogEvent evt) => Logger.DefaultSerialise(SB, evt, EntryDelimiter, AddTimestamp, AddNewLines);
 			public StringBuilder SB;
 
 			/// <summary>Convenience location for storing a regex pattern corresponding to 'Serialise'</summary>
@@ -441,17 +450,17 @@ namespace Rylogic.Utility
 			/// <summary>Convert the log event to a string</summary>
 			public override string ToString()
 			{
-				return DefaultSerialise(new StringBuilder(), this, '\0', true);
+				return DefaultSerialise(new StringBuilder(), this, '\0', true, true);
 			}
 
 			/// <summary>Compare log events for equality</summary>
 			public static bool Same(LogEvent lhs, LogEvent rhs)
 			{
 				return
-					lhs.Level   == rhs.Level   &&
+					lhs.Level == rhs.Level &&
 					lhs.Tag == rhs.Tag &&
-					lhs.File    == rhs.File    &&
-					lhs.Line    == rhs.Line    &&
+					lhs.File == rhs.File &&
+					lhs.Line == rhs.Line &&
 					lhs.Message == rhs.Message;
 			}
 		}
@@ -563,9 +572,9 @@ namespace Rylogic.UnitTests
 			// Overwrite the timestamp so its the same for all unit tests
 			var lines = l2s.Str.ToString().Split(new[] { "\u001b" }, StringSplitOptions.RemoveEmptyEntries);
 			Assert.Equal(3, lines.Length);
-			Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message");
-			Assert.True(lines[1] == "Thing2|Info|Info message");
-			Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception");
+			Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message\n");
+			Assert.True(lines[1] == "Thing2|Info|Info message\n");
+			Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception\n");
 		}
 	}
 }
