@@ -1,4 +1,4 @@
-//***************************************************
+ï»¿//***************************************************
 // Matrix4x4
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -257,7 +257,7 @@ namespace Rylogic.Maths
 			m3x4 o2f, o2t;
 			switch (from)
 			{
-			default: throw new Exception("axis_id must one of ±1, ±2, ±3");
+			default: throw new Exception("axis_id must one of ï¿½1, ï¿½2, ï¿½3");
 			case -1: o2f = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
 			case +1: o2f = Rotation(0f, (float)-Math_.TauBy4, 0f); break;
 			case -2: o2f = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
@@ -267,7 +267,7 @@ namespace Rylogic.Maths
 			}
 			switch (to)
 			{
-			default: throw new Exception("axis_id must one of ±1, ±2, ±3");
+			default: throw new Exception("axis_id must one of ï¿½1, ï¿½2, ï¿½3");
 			case -1: o2t = Rotation(0f, (float)-Math_.TauBy4, 0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
 			case +1: o2t = Rotation(0f, (float)+Math_.TauBy4, 0f); break;
 			case -2: o2t = Rotation((float)+Math_.TauBy4, 0f, 0f); break;
@@ -329,7 +329,7 @@ namespace Rylogic.Maths
 		#endregion
 
 		/// <summary></summary>
-		public string Description => $"{x}  {y}  {z}";
+		public string Description => $"{x.Description}  \n{y.Description}  \n{z.Description}  \n";
 	}
 
 	public static partial class Math_

@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Matrix
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -175,7 +175,7 @@ namespace Rylogic.Maths
 
 		#endregion
 
-		public string Description => $"{x}  {y}";
+		public string Description => $"{x.Description}  \n{y.Description}  \n";
 	}
 
 	public static partial class Math_

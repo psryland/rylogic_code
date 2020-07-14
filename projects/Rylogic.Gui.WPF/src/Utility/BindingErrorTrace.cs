@@ -36,6 +36,10 @@ namespace Rylogic.Gui.WPF
 	//                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
 	//                    <Setter Property="VerticalContentAlignment" Value="Center"/>
 	//                </Style>
+	//                <Style TargetType = "ListViewItem">
+	//                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+	//                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+	//                </Style>
 	//            </ResourceDictionary>
 	//        </Application.Resources>
 	//    </Application>

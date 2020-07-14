@@ -240,12 +240,15 @@ namespace Rylogic.Gui.WinForms
 					")");
 
 				// Populate from the base table using the filters
+				var join = Join ?? string.Empty;
+				var filter = Filter ?? string.Empty;
+				var orderby = OrderBy ?? string.Empty;
 				DB.Execute(
 					$"insert into {tmp_table} ([Key])\n"+
 					$"select {Pk} from {BaseTableName}\n"+
-					(Join   .HasValue() ? $" join {Join}" : "") +
-					(Filter .HasValue() ? $"{(Join.Contains(" where ") ? " and " : " where ")} {Filter}" : "") +
-					(OrderBy.HasValue() ? $" order by {OrderBy}" : ""));
+					(join   .Length != 0 ? $" join {join}" : "") +
+					(filter .Length != 0 ? $"{(join.Contains(" where ") ? " and " : " where ")} {filter}" : "") +
+					(orderby.Length != 0 ? $" order by {orderby}" : ""));
 
 				t.Commit();
 			}

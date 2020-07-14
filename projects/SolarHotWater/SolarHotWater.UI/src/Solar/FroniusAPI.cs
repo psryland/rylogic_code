@@ -52,7 +52,7 @@ namespace SolarHotWater
 		public async Task<SolarData> RealTimeData(CancellationToken? cancel = null)
 		{
 			var url = $"{Url}solar_api/v1/GetInverterRealtimeData.cgi?Scope=System";
-			var req = new HttpRequestMessage(HttpMethod.Get, Url);
+			var req = new HttpRequestMessage(HttpMethod.Get, url);
 
 			// Submit the request
 			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;

@@ -4,7 +4,7 @@
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
 		<RootNamespace>SolarHotWater</RootNamespace>
-		<AssemblyName>SolarHotWater</AssemblyName>
+		<AssemblyName>SolarHotWater.UI</AssemblyName>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<UseWPF>true</UseWPF>
@@ -27,13 +27,36 @@
 	<ItemGroup>
 		<ApplicationDefinition Include="src\App.xaml" />
 	</ItemGroup>
-	
-	<!-- Dependencies -->
+
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Resource>
+	</ItemGroup>
+
+	<!-- References -->
 	<ItemGroup>
 		<ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\..\Rylogic.Net\Rylogic.Net.csproj" />
 		<ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj" />
 		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.1" />
 		<PackageReference Include="System.Net.Http" Version="4.3.4" />
+		<PackageReference Include="System.Net.WebSockets.Client" Version="4.3.2" />
+	</ItemGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\view3d.dll">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
 </Project>

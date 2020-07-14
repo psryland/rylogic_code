@@ -19,7 +19,7 @@ using Rylogic.Utility;
 
 namespace EDTradeAdvisor.DataProviders
 {
-	public class EliteDataProvider : IEliteDataProvider
+	public sealed class EliteDataProvider : IEliteDataProvider
 	{
 		// Notes:
 		//  - A data provider based on the useful bits of EDDB and EDSM
