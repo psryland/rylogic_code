@@ -203,8 +203,49 @@ namespace Rylogic.Extn
 
 			return task.IsCompleted;
 		}
+		public static bool Equal(ReadOnlySpan<byte> lhs, ReadOnlySpan<byte> rhs)
+		{
+			// 'byte[]' is implicitly convertable to ReadOnlySpan<byte>
+			// This is comparible to memcmp in speed
+			return lhs.SequenceEqual(lhs);
+		}
+		public static bool Equal(this byte[] arr, byte[] rhs, int start, int length)
+		{
+			return Equal(arr, new Span<byte>(rhs, start, length));
+		}
 
-		// BitConverter byte[] to type conversion
+		/// <summary>BitConverter byte[] to type conversion</summary>
+		public static T As<T>(this byte[] arr) where T : struct => As<T>(arr, 0);
+		public static T As<T>(this byte[] arr, int start) where T : struct => As<T>(arr, start, arr.Length - start);
+		public static T As<T>(this byte[] arr, int start, int len) where T : struct
+		{
+			switch (Type.GetTypeCode(typeof(T)))
+			{
+				case TypeCode.Byte:    return (T)(object)(byte)arr[start];
+				case TypeCode.SByte:   return (T)(object)(sbyte)arr[start];
+				case TypeCode.UInt16:  return (T)(object)BitConverter.ToUInt16(arr, start);
+				case TypeCode.UInt32:  return (T)(object)BitConverter.ToUInt32(arr, start);
+				case TypeCode.UInt64:  return (T)(object)BitConverter.ToUInt64(arr, start);
+				case TypeCode.Int16:   return (T)(object)BitConverter.ToInt16(arr, start);
+				case TypeCode.Int32:   return (T)(object)BitConverter.ToInt32(arr, start);
+				case TypeCode.Int64:   return (T)(object)BitConverter.ToInt64(arr, start);
+				case TypeCode.Single:  return (T)(object)BitConverter.ToSingle(arr, start);
+				case TypeCode.Double:  return (T)(object)BitConverter.ToDouble(arr, start);
+				case TypeCode.Boolean: return (T)(object)BitConverter.ToBoolean(arr, start);
+				case TypeCode.Char:    return (T)(object)BitConverter.ToChar(arr, start);
+				case TypeCode.String:  return (T)(object)Encoding.UTF8.GetString(arr, start, len);
+				default:
+				{
+					if (start + len < Marshal.SizeOf(typeof(T)))
+						throw new Exception($"As<T>: Insufficient data. {Marshal.SizeOf(typeof(T))} bytes required, {len - start} available");
+
+					using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
+					return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject() + start);
+				}
+			}
+		}
+#if false
+
 		public static sbyte  AsInt8         (this byte[] arr, int start_index = 0) { return (sbyte)arr[start_index]; }
 		public static byte   AsUInt8        (this byte[] arr, int start_index = 0) { return arr[start_index]; }
 		public static ushort AsUInt16       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt16     (arr, start_index); }
@@ -239,6 +280,7 @@ namespace Rylogic.Extn
 			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
 			return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
 		}
+#endif
 
 		/// <summary>Return the checksum of this array of bytes</summary>
 		public static int Crc32(this byte[] arr, uint initial_value = 0xFFFFFFFF)
@@ -459,6 +501,20 @@ namespace Rylogic.UnitTests
 			var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 			var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
 			var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
+			Assert.Equal((byte)0x01, b0.As<byte>());
+			Assert.Equal((ushort)0x0201, b0.As<ushort>());
+			Assert.Equal((uint)0x04030201U, b0.As<uint>());
+			Assert.Equal(0x0807060504030201UL, b0.As<ulong>());
+			Assert.Equal((sbyte)0x01, b0.As<sbyte>());
+			Assert.Equal((short)0x0201, b0.As<short>());
+			Assert.Equal(0x04030201, b0.As<int>());
+			Assert.Equal(0x0807060504030201L, b0.As<long>());
+			Assert.Equal(1f, b1.As<float>());
+			Assert.Equal(1.0, b2.As<double>());
+			Assert.Equal(true, b0.As<bool>());
+			Assert.Equal((char)0x0201, b0.As<char>());
+
+#if false
 			Assert.Equal((byte)0x01            ,b0.AsUInt8 ());
 			Assert.Equal((ushort)0x0201        ,b0.AsUInt16());
 			Assert.Equal((uint)0x04030201U     ,b0.AsUInt32());
@@ -471,6 +527,7 @@ namespace Rylogic.UnitTests
 			Assert.Equal(1.0                   ,b2.AsDouble());
 			Assert.Equal(true                  ,b0.AsBool  ());
 			Assert.Equal((char)0x0201          ,b0.AsChar  ());
+#endif
 		}
 		[Test] public void ByteArrayAsStruct()
 		{

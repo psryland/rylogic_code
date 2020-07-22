@@ -171,25 +171,26 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Returns a value containing the reverse of the bits in 'value'</summary>
-		public static uint ReverseBits(uint value)
+		public static ulong ReverseBits(ulong value)
 		{
-			value = ((value >> 1) & 0x55555555) | ((value & 0x55555555) << 1);	// swap odd and even bits
-			value = ((value >> 2) & 0x33333333) | ((value & 0x33333333) << 2);	// swap consecutive pairs
-			value = ((value >> 4) & 0x0F0F0F0F) | ((value & 0x0F0F0F0F) << 4);	// swap nibbles ...
-			value = ((value >> 8) & 0x00FF00FF) | ((value & 0x00FF00FF) << 8);	// swap bytes
-			value = ( value >> 16             ) | ( value               << 16);	// swap 2-byte long pairs
+			value = ((value >>  1) & 0x5555555555555555UL) | ((value & 0x5555555555555555UL) <<  1); // swap odd and even bits
+			value = ((value >>  2) & 0x3333333333333333UL) | ((value & 0x3333333333333333UL) <<  2); // swap consecutive pairs
+			value = ((value >>  4) & 0x0F0F0F0F0F0F0F0FUL) | ((value & 0x0F0F0F0F0F0F0F0FUL) <<  4); // swap nibbles ...
+			value = ((value >>  8) & 0x00FF00FF00FF00FFUL) | ((value & 0x00FF00FF00FF00FFUL) <<  8); // swap bytes
+			value = ((value >> 16) & 0x0000FFFF0000FFFFUL) | ((value & 0x0000FFFF0000FFFFUL) << 16); // swap 2-byte words
+			value = ((value >> 32) & 0x00000000FFFFFFFFUL) | ((value & 0x00000000FFFFFFFFUL) << 32); // swap 4-byte words
 			return value;
 		}
 
 		/// <summary>Return the index of the single bit set in 'n'</summary>
-		public static int Index(uint n)
+		public static int Index(ulong n)
 		{
 			if (!IsPowerOfTwo(n)) throw new ArgumentException("BitIndex only works for powers of two");
 			return HighBitIndex(n);
 		}
 
 		/// <summary>Returns a bit mask containing only the lowest bit of 'n'</summary>
-		public static uint LowBit(uint n)
+		public static ulong LowBit(ulong n)
 		{
 			return unchecked(n - ((n - 1) & n));
 		}
@@ -197,38 +198,39 @@ namespace Rylogic.Maths
 		/// <summary>
 		/// Returns the bit position of the highest bit
 		/// Also, is the floor of the log base 2 for a 32 bit integer</summary>
-		public static int HighBitIndex(uint value)
+		public static int HighBitIndex(ulong value)
 		{
 			var pos = 0;
 			var
-			shift = ((value & 0xFFFF0000) != 0 ? 1 << 4 : 0); value >>= shift; pos |= shift;
-			shift = ((value &     0xFF00) != 0 ? 1 << 3 : 0); value >>= shift; pos |= shift;
-			shift = ((value &       0xF0) != 0 ? 1 << 2 : 0); value >>= shift; pos |= shift;
-			shift = ((value &        0xC) != 0 ? 1 << 1 : 0); value >>= shift; pos |= shift;
-			shift = ((value &        0x2) != 0 ? 1 << 0 : 0);                  pos |= shift;
+			shift = (value & 0xFFFFFFFF00000000UL) != 0 ? 1 << 5 : 0; value >>= shift; pos |= shift;
+			shift = (value &         0xFFFF0000UL) != 0 ? 1 << 4 : 0; value >>= shift; pos |= shift;
+			shift = (value &             0xFF00UL) != 0 ? 1 << 3 : 0; value >>= shift; pos |= shift;
+			shift = (value &               0xF0UL) != 0 ? 1 << 2 : 0; value >>= shift; pos |= shift;
+			shift = (value &                0xCUL) != 0 ? 1 << 1 : 0; value >>= shift; pos |= shift;
+			shift = (value &                0x2UL) != 0 ? 1 << 0 : 0;                  pos |= shift;
 			return pos;
 		}
 
 		/// <summary>Returns the bit position of the lowest bit</summary>
-		public static int LowBitIndex(uint n)
+		public static int LowBitIndex(ulong n)
 		{
 			return HighBitIndex(LowBit(n));
 		}
 
 		/// <summary>Return a bit mask contain only the highest bit of 'n'</summary> Must be a faster way?
-		public static uint HighBit(uint n)
+		public static ulong HighBit(ulong n)
 		{
-			return (uint)(1 << HighBitIndex(n));
+			return 1UL << HighBitIndex(n);
 		}
 
 		/// <summary>Returns true if 'n' is a exact power of two</summary>
-		public static bool IsPowerOfTwo(uint n)
+		public static bool IsPowerOfTwo(ulong n)
 		{
 			return ((n - 1) & n) == 0;
 		}
 
 		/// <summary>Count the bits set in 'value'</summary>
-		public static int CountBits(uint value)
+		public static int CountBits(ulong value)
 		{
 			int count = 0;
 			while (value != 0)
@@ -238,9 +240,9 @@ namespace Rylogic.Maths
 			}
 			return count;
 		}
-		public static int CountBits(int value)
+		public static int CountBits(long value)
 		{
-			return CountBits(unchecked((uint)value));
+			return CountBits(unchecked((ulong)value));
 		}
 
 		/// <summary>Return the bit position of the 'n'th set bit, starting from the LSB.

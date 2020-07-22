@@ -1,5 +1,5 @@
 Immediate ToDo:
-	
+	Sort of pdb's for native libraries
 	Get p3d support working with new format
 	Finish exporter for Blender
 	Export REX models in new format

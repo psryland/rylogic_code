@@ -1,0 +1,24 @@
+﻿<Image
+	x:Class="Rylogic.Gui.WPF.JoystickControl"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	mc:Ignorable="d" 
+	d:DesignHeight="256"
+	d:DesignWidth="256"
+	Source="{Binding JoystickImage}"
+	RenderOptions.BitmapScalingMode="Fant"
+	PreviewMouseDown="HandleMouseDown"
+	UseLayoutRounding="True"
+	IsHitTestVisible="True"
+	StretchDirection="Both"
+	Stretch="Fill"
+	Focusable="True"
+	>
+	<Image.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="thumb" UriSource="/Rylogic.Gui.WPF;component/res/thumb_stick.png" />
+		</ResourceDictionary>
+	</Image.Resources>
+</Image>

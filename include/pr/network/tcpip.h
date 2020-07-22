@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <sstream>
@@ -14,67 +14,113 @@
 
 namespace pr::network
 {
-	// A network socket with server behaviour
-	class TCPServer :public ServerSocket
+	// A TCP socket with server behaviour
+	class TcpServer :private ServerSocket
 	{
-		int m_protocol; // TCP or UDP
-
 		// Create m_listen_socket to use for listening on
-		virtual void CreateListenSocket() override
+		virtual SOCKET CreateListenSocket(int port) override
 		{
 			// Create the listen socket
-			switch (m_protocol)
-			{
-			default: throw exception("Unknown protocol");
-			case IPPROTO_TCP: m_listen_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); break;
-			case IPPROTO_UDP: m_listen_socket = ::socket(AF_INET, SOCK_DGRAM,  IPPROTO_UDP); break;
-			}
-			if (m_listen_socket == INVALID_SOCKET)
+			auto socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			if (socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 
 			// Bind the local address to the socket
-			sockaddr_in my_address          = {};
-			my_address.sin_family           = AF_INET;
-			my_address.sin_port             = htons(m_listen_port);
+			sockaddr_in my_address = {};
+			my_address.sin_family = AF_INET;
 			my_address.sin_addr.S_un.S_addr = INADDR_ANY;
-			int result = ::bind(m_listen_socket, (sockaddr const*)&my_address, sizeof(my_address));
+			my_address.sin_port = htons(static_cast<u_short>(port));
+			auto result = ::bind(socket, (sockaddr const*)&my_address, sizeof(my_address));
 			if (result == SOCKET_ERROR)
 				Throw(WSAGetLastError());
 
-			// For message-oriented sockets (i.e UDP) we must not exceed the max packet size of
-			// the underlying provider. Assume all clients use the same provider as m_socket
-			if (m_protocol == IPPROTO_UDP)
-				m_max_packet_size = GetMaxPacketSize(m_listen_socket);
+			return socket;
 		}
 
 	public:
 
-		explicit TCPServer(Winsock const& winsock, int protocol = IPPROTO_TCP)
+		explicit TcpServer(Winsock const& winsock)
 			:ServerSocket(winsock)
-			,m_protocol(protocol)
 		{}
+		TcpServer(TcpServer const&) = delete;
+		TcpServer& operator =(TcpServer const&) = delete;
 
-		TCPServer(TCPServer const&) = delete;
-		TCPServer& operator =(TCPServer const&) = delete;
+		// True if the server is listening for connections
+		bool Listening() const
+		{
+			return ServerSocket::Listening();
+		}
+
+		// The port we're listening on
+		uint16_t ListenPort() const
+		{
+			return ServerSocket::ListenPort();
+		}
+
+		// Turn on/off the server
+		// 'listen_port' is a port number of your choosing
+		// 'connect_cb' should have the signature: void ConnectionCB(void* ctx, SOCKET socket, sockaddr_in const* client_addr);
+		// 'client_addr' will be non-null for connections, null for disconnections
+		void AllowConnections(uint16_t listen_port, ConnectionCB connect_cb, int max_connections = SOMAXCONN)
+		{
+			ServerSocket::AllowConnections(listen_port, connect_cb, max_connections);
+		}
+		void AllowConnections(uint16_t listen_port, int max_connections = SOMAXCONN)
+		{
+			AllowConnections(listen_port, [](SOCKET, sockaddr_in const*){}, max_connections);
+		}
+
+		// Block until 'client_count' connections have been made
+		bool WaitForClients(size_t client_count, int timeout_ms = ~0)
+		{
+			return ServerSocket::WaitForClients(client_count, timeout_ms);
+		}
+
+		// Stop accepting incoming connections
+		void StopConnections()
+		{
+			ServerSocket::StopConnections();
+		}
+
+		// Return the number of connected clients
+		size_t ClientCount() const
+		{
+			return ServerSocket::ClientCount();
+		}
+
+		// Send data to all clients
+		bool Send(void const* data, size_t size, int timeout_ms = ~0)
+		{
+			return ServerSocket::Send(data, size, timeout_ms);
+		}
+
+		// Receive data from any client
+		// Returns true when data is read from a client, 'out_client' is the client that was read from
+		// Returns false if no data was read from any client.
+		// Throws if a connection was aborted, or had a problem
+		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = 0, int flags = 0, SOCKET* out_client = nullptr)
+		{
+			return ServerSocket::Recv(data, size, bytes_read, timeout_ms, flags, out_client);
+		}
+		bool Recv(void* data, size_t size, int timeout_ms = ~0, int flags = 0, SOCKET* out_client = nullptr)
+		{
+			size_t bytes_read;
+			return Recv(data, size, bytes_read, timeout_ms, flags, out_client);
+		}
 	};
 
-	// A network socket with client behaviour
-	class TCPClient :public ClientSocket
+	// A TCP socket with client behaviour
+	class TcpClient :private ClientSocket
 	{
-		IPPROTO m_protocol;  // TCP or UDP
-		int     m_sock_type; // Socket type
-
 	public:
 
-		explicit TCPClient(Winsock const& winsock, IPPROTO protocol = IPPROTO::IPPROTO_TCP, int sock_type = SOCK_STREAM)
+		explicit TcpClient(Winsock const& winsock)
 			:ClientSocket(winsock)
-			,m_protocol(protocol)
-			,m_sock_type(sock_type)
 		{}
-		TCPClient(TCPClient&&) = default;
-		TCPClient(TCPClient const&) = delete;
-		TCPClient& operator =(TCPClient&&) = default;
-		TCPClient& operator =(TCPClient const&) = delete;
+		TcpClient(TcpClient&&) = default;
+		TcpClient(TcpClient const&) = delete;
+		TcpClient& operator =(TcpClient&&) = default;
+		TcpClient& operator =(TcpClient const&) = delete;
 
 		// (Re)create 'm_socket'
 		// Typically applications can just call 'Connect', however some socket options
@@ -82,10 +128,10 @@ namespace pr::network
 		// applications can call 'CreateSocket' first, then connect.
 		void CreateSocket()
 		{
-			Disconnect();
+			Close();
 
 			// Create the socket
-			m_socket = ::socket(AF_INET, m_sock_type, m_protocol);
+			m_socket = ::socket(AF_INET, IPPROTO_TCP, SOCK_STREAM);
 			if (m_socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 		}
@@ -101,20 +147,6 @@ namespace pr::network
 		{
 			if (m_socket == INVALID_SOCKET)
 				CreateSocket();
-
-			// Explicit binding is "not encouraged" for client connections
-			//// Bind the socket to our local address
-			//sockaddr_in my_address     = {0};
-			//my_address.sin_family      = AF_INET;
-			//my_address.sin_port        = htons(listen_port);
-			//my_address.sin_addr.s_addr = INADDR_ANY;
-			//if (bind(m_host, (PSOCKADDR)&my_address, sizeof(my_address)) == SOCKET_ERROR)
-				//throw exception("Bind socket failed");
-
-			// For message-oriented sockets (e.g UDP) we must not exceed
-			// the max packet size of the underlying provider.
-			if (m_sock_type == SOCK_DGRAM)
-				m_max_packet_size = GetMaxPacketSize(m_socket);
 
 			// If an ip address is given, attempt to connect to it
 			// It won't be given for UDP connections
@@ -137,6 +169,138 @@ namespace pr::network
 			}
 			return true;
 		}
+
+		// Close the socket
+		void Close()
+		{
+			ClientSocket::Close();
+		}
+
+		// True if a the socket is connected to a host
+		bool IsConnected() const
+		{
+			return ClientSocket::IsConnected();
+		}
+
+		// Send/Recv data to/from the host
+		// Returns true if all data was sent/received
+		// Returns false if the connection to the client was closed gracefully
+		// Throws if the connection was aborted, or had a problem
+		bool Send(void const* data, size_t size, int timeout_ms = ~0)
+		{
+			return ClientSocket::Send(data, size, timeout_ms);
+		}
+		bool Recv(void* data, size_t size, size_t& bytes_read, int timeout_ms = ~0, int flags = 0)
+		{
+			return ClientSocket::Recv(data, size, bytes_read, timeout_ms, flags);
+		}
+
+		// Get/Set a socket option
+		// 'level' - The level at which the option is defined. Example: SOL_SOCKET.
+		// 'optname' - The socket option for which the value is to be retrieved. Example: SO_ACCEPTCONN.
+		//  The 'optname' value must be a socket option defined within the specified level, or behaviour is undefined.
+		// 'optval' [out] - A pointer to the buffer in which the value for the requested option is to be returned.
+		// 'optlen' [in, out] - The size, in bytes, of the 'optval' buffer.
+		template <typename OptType>
+		OptType SocketOption(int level, int optname) const
+		{
+			OptType opt; int len = sizeof(opt);
+			ClientSocket::GetSocketOption(level, optname, (char*)&opt, len);
+			return opt;
+		}
+		template <typename OptType>
+		void SocketOption(int level, int optname, OptType opt)
+		{
+			ClientSocket::SetSocketOption(level, optname, (char const*)&opt, sizeof(opt));
+		}
+	};
+
+	// A UDP socket (client or server)
+	class UdpClient
+	{
+		// Notes:
+		//  - Modeled on the C# UdpClient class
+		//  - UDP is connectionless so does not need to be based on ServerSocket.
+		//  - UDP is intended to work like this:
+		//      Server listens on the listen port for a message.
+		//      The received message contains the end-point of the sender.
+		//      Server replies with a message using the end-point from the received message
+
+		Winsock const& m_winsock;         // The winsock instance we're bound to
+		SOCKET m_socket;
+		int m_listen_port;
+
+	public:
+
+		explicit UdpClient(Winsock const& winsock)
+			:m_winsock(winsock)
+			,m_socket(INVALID_SOCKET)
+			,m_listen_port()
+		{
+		}
+		UdpClient(Winsock const& winsock, int listen_port)
+			:UdpClient(winsock)
+		{
+			Connect(listen_port);
+		}
+		UdpClient(UdpClient const&) = delete;
+		UdpClient& operator =(UdpClient const&) = delete;
+		~UdpClient()
+		{
+			Close();
+		}
+
+		// Create the socket, and bind it to a port
+		void Connect(int listen_port)
+		{
+			Close();
+
+			// Create the listen socket
+			auto socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+			if (socket == INVALID_SOCKET)
+				Throw(WSAGetLastError());
+
+			// Bind the socket to an end-point
+			SOCKADDR_IN ep = {};
+			ep.sin_family = AF_INET;
+			ep.sin_addr.S_un.S_addr = INADDR_ANY;
+			ep.sin_port = htons(static_cast<u_short>(listen_port));
+			int result = ::bind(socket, (sockaddr const*)&ep, sizeof(ep));
+			if (result == SOCKET_ERROR)
+				Throw(WSAGetLastError());
+
+			m_socket = socket;
+			m_listen_port = listen_port;
+		}
+
+		// Close the socket
+		void Close()
+		{
+			if (m_socket == INVALID_SOCKET)
+				return;
+			
+			::shutdown(m_socket, SD_BOTH);
+			::closesocket(m_socket);
+			m_socket = INVALID_SOCKET;
+		}
+
+		// Send data.
+		// Returns true if all data was sent
+		bool Send(void const* data, size_t size, SOCKADDR_IN ep, int timeout_ms = ~0)
+		{
+			return network::SendTo(m_socket, ep, data, size, timeout_ms);
+		}
+
+		// Receive data from any client
+		// Returns true when data is read from a client
+		// Returns false if no data was read from any client.
+		// Throws if a connection was aborted, or had a problem
+		bool Recv(void* data, size_t size, size_t& bytes_read, SOCKADDR_IN* ep = nullptr, int timeout_ms = 0, int flags = 0)
+		{
+			SOCKADDR_IN sender;
+			ep = ep ? ep : &sender;
+			return network::RecvFrom(m_socket, *ep, data, size, bytes_read, timeout_ms, flags);
+		}
 	};
 }
 
@@ -157,13 +321,13 @@ namespace pr::network
 		{
 			volatile bool connected = false;
 
-			TCPServer svr(wsa);
+			TcpServer svr(wsa);
 			svr.AllowConnections(TestPort, [&](SOCKET, sockaddr_in const*)
 			{
 				connected = true;
 			});
 
-			TCPClient client(wsa);
+			TcpClient client(wsa);
 			client.Connect("127.0.0.1", TestPort);
 
 			PR_CHECK(svr.WaitForClients(1), true);
@@ -179,10 +343,10 @@ namespace pr::network
 			svr.StopConnections();
 		}
 		{
-			TCPServer svr(wsa);
+			TcpServer svr(wsa);
 			svr.AllowConnections(TestPort, 10);
 
-			TCPClient client(wsa);
+			TcpClient client(wsa);
 			client.Connect("127.0.0.1", TestPort);
 
 			PR_CHECK(svr.WaitForClients(1), true);

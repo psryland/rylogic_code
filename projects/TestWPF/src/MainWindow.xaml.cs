@@ -63,6 +63,10 @@ namespace TestWPF
 			{
 				new DockContainerUI().Show();
 			});
+			ShowJoystick = Command.Create(this, () =>
+			{
+				new JoystickUI().Show();
+			});
 			ShowMsgBox = Command.Create(this, () =>
 			{
 				var dlg = new MsgBox(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation) { ShowAlwaysCheckbox = true };
@@ -155,6 +159,7 @@ namespace TestWPF
 		public Command ShowDiagram { get; }
 		public Command ShowDirectionPicker { get; }
 		public Command ShowDockContainer { get; }
+		public Command ShowJoystick { get; }
 		public Command ShowMsgBox { get; }
 		public Command ShowListUI { get; }
 		public Command ShowLogUI { get; }

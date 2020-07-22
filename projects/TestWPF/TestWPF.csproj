@@ -62,6 +62,9 @@
     <Compile Include="src\DiagramUI.xaml.cs">
       <DependentUpon>DiagramUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\JoystickUI.xaml.cs">
+      <DependentUpon>JoystickUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\PatternEditorUI.xaml.cs">
       <DependentUpon>PatternEditorUI.xaml</DependentUpon>
     </Compile>
@@ -87,6 +90,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\ImageButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\JoystickUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,4 +1,4 @@
-//*********************************************************************
+ï»¿//*********************************************************************
 // Stat
 //  Copyright (c) Rylogic Ltd 2008
 //*********************************************************************
@@ -200,32 +200,32 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class AverageVariance : Average, IStatMeanAndVarianceSingleVariable<double>
 	{
-		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
-		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
-		//'  avr(k)   = (SUM{X(k-1)} + X(k)) / k
-		//'           = ((k-1)*avr(k-1) + D(k) + avr(k-1)) / k
-		//'           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
-		//'           = (k*avr(k-1) + D(k)) / k
-		//'           = avr(k-1) + D(k) / k
-		//' Running standard variance:
-		//'  var(k)   = (1/(k-1)) * SUM{(X(k) - avr(k))²}
-		//' (k-1)*var(k) = SUM{(X(k) - avr(k))²}
-		//'              = SUM{(X(k)² - 2*avr(k)*X(k) + avr(k)²}
-		//'              = SUM{X(k)²} - 2*avr(k)*SUM{X(k)} + k*avr(k)²
-		//'              = SUM{X(k)²} - 2*avr(k)*k*avr(k) + k*avr(k)²
-		//'              = SUM{X(k)²} - 2*k*avr(k)² + k*avr(k)²
-		//'              = SUM{X(k)²} - k*avr(k)²
-		//' so:
-		//'  (k-2)*var(k-1) = SUM{X(k-1)²} - (k-1)*avr(k-1)²
-		//' taking:
-		//'  (k-1)*var(k) - (k-2)*var(k-1) = SUM{X(k)²} - k*avr(k)² - SUM{X(k-1)²} + (k-1)*avr(k-1)²
-		//'                                = X(k)² - k*avr(k)² + (k-1)*avr(k-1)²
-		//'                                = X(k)²                               - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
-		//'                                = (D(k) + avr(k-1))²                  - k*(avr(k-1) + D(k)/k)²                       + k*avr(k-1)² - avr(k-1)²
-		//'                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*(avr(k-1)² + 2*D(k)*avr(k-1)/k + D(k)²/k²) + k*avr(k-1)² - avr(k-1)²
-		//'                                = D(k)² + 2*D(k)*avr(k-1) + avr(k-1)² - k*avr(k-1)² - 2*D(k)*avr(k-1) - D(k)²/k      + k*avr(k-1)² - avr(k-1)²
-		//'                                = D(k)² - D(k)²/k
-		//'                                = ((k-1)/k) * D(k)²
+		// let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
+		//  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
+		//  avr(k)   = (SUM{X(k-1)} + X(k)) / k
+		//           = ((k-1)*avr(k-1) + D(k) + avr(k-1)) / k
+		//           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
+		//           = (k*avr(k-1) + D(k)) / k
+		//           = avr(k-1) + D(k) / k
+		// Running variance:
+		//  var(k)   = (1/(k-1)) * SUM{(X(k) - avr(k))Â²}
+		// (k-1)*var(k) = SUM{(X(k) - avr(k))Â²}
+		//              = SUM{(X(k)Â² - 2*avr(k)*X(k) + avr(k)Â²}
+		//              = SUM{X(k)Â²} - 2*avr(k)*SUM{X(k)} + k*avr(k)Â²
+		//              = SUM{X(k)Â²} - 2*avr(k)*k*avr(k) + k*avr(k)Â²
+		//              = SUM{X(k)Â²} - 2*k*avr(k)Â² + k*avr(k)Â²
+		//              = SUM{X(k)Â²} - k*avr(k)Â²
+		// so:
+		//  (k-2)*var(k-1) = SUM{X(k-1)Â²} - (k-1)*avr(k-1)Â²
+		// taking:
+		//  (k-1)*var(k) - (k-2)*var(k-1) = SUM{X(k)Â²} - k*avr(k)Â² - SUM{X(k-1)Â²} + (k-1)*avr(k-1)Â²
+		//                                = X(k)Â² - k*avr(k)Â² + (k-1)*avr(k-1)Â²
+		//                                = X(k)Â²                               - k*(avr(k-1) + D(k)/k)Â²                       + k*avr(k-1)Â² - avr(k-1)Â²
+		//                                = (D(k) + avr(k-1))Â²                  - k*(avr(k-1) + D(k)/k)Â²                       + k*avr(k-1)Â² - avr(k-1)Â²
+		//                                = D(k)Â² + 2*D(k)*avr(k-1) + avr(k-1)Â² - k*(avr(k-1)Â² + 2*D(k)*avr(k-1)/k + D(k)Â²/kÂ²) + k*avr(k-1)Â² - avr(k-1)Â²
+		//                                = D(k)Â² + 2*D(k)*avr(k-1) + avr(k-1)Â² - k*avr(k-1)Â² - 2*D(k)*avr(k-1) - D(k)Â²/k      + k*avr(k-1)Â² - avr(k-1)Â²
+		//                                = D(k)Â² - D(k)Â²/k
+		//                                = ((k-1)/k) * D(k)Â²
 
 		protected double m_var;
 
@@ -516,7 +516,7 @@ namespace Rylogic.Maths
 		}
 
 		// NOTE: no recursive variance because we would need to buffer the averages as well
-		// so that we could remove (X(k-N) - avr(k-N))² at each iteration
+		// so that we could remove (X(k-N) - avr(k-N))ï¿½ at each iteration
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		public double PopStdDev => Math.Sqrt(PopStdVar);
@@ -564,42 +564,44 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
 	public class ExponentialMovingAverage : IStatMeanAndVarianceSingleVariable<double>
 	{
-		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
-		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
-		//'         = avr(k-1) + a * X(k) - a * avr(k-1)
-		//'         = avr(k-1) + a * (X(k) - avr(k-1))
-		//'    'a' is the exponential smoothing factor between (0,1)
-		//'    define: a = 2 / (N + 1), where 'N' is roughly the window size of an equivalent moving window average
-		//'    The interval over which the weights decrease by a factor of two (half-life) is approximately N/2.8854
-		//' Exponential moving variance:
-		//' (k-1)var(k) = SUM{w(k) * U(k)²}, where: U(k) = X(k) - avr(k)
-		//'             = w(1)*U(1)² + w(2)*U(2)² + ... + w(k)*U(k)², where: w(1)+w(2)+...+w(k) = k
-		//' If we say:  w(k) = k * a, ('a' between (0,1) as above) then SUM{w(k-1)} = k * (1-a)
-		//' so consider var(k-1):
-		//'  (k-2)var(k-1) = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)², where: w(1)+w(2)+...+w(k-1) = k - 1
-		//' when we add the next term:
-		//'  (k-1)var(k)   = w(1)*U(1)² + w(2)*U(2)² + ... + w(k-1)*U(k-1)² + w(k)*U(k)² (note w(1)..w(k-1) will be different values to above)
-		//' we need:
-		//'   k = k*a + k*(1-a) = w(k) + b*SUM{w(k-1)}
-		//' => k*(1-a) = b*SUM{w(k-1)}
-		//'          b = (1-a)*k/SUM{w(k-1)}
-		//'            = (1-a)*k/(k-1)
-		//' so:
-		//' (k-1)var(k) = a*k*U(k)² + b*(k-2)var(k-1)
-		//'             = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//'  let: D(k) = X(k) - avr(k-1)
-		//'       U(k) = X(k) - avr(k-1) + avr(k-1) - avr(k)
-		//'            = D(k) + avr(k-1) - avr(k)
-		//'            = D(k) - (avr(k) - avr(k-1))
-		//'            = D(k) - a * (X(k) - avr(k-1))
-		//'            = D(k) - a * D(k)
-		//'            = (1-a)*D(k)
-		//' then:
-		//' (k-1)var(k) = a*k*U(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//'             = a*k*(1-a)²*D(k)² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
-		//'             = a*k*b²*D(k)² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
-		//'             = (b*k/(k-1))*((a*b*(k-1)*D(k)² + (k-2)var(k-1))
-	
+		//  avr(k) = a * X(k) + (1 - a) * avr(k-1)
+		//         = a * X(k) + avr(k-1) - a * avr(k-1)
+		//         = avr(k-1) + a * X(k) - a * avr(k-1)
+		//         = avr(k-1) + a * (X(k) - avr(k-1))
+		//    'a' is the exponential smoothing factor between (0,1)
+		//    define: a = 2 / (N + 1), where 'N' is roughly the window size of an equivalent moving window average
+		//    The interval over which the weights decrease by a factor of two (half-life) is approximately N/2.8854
+		// Exponential moving variance:
+		// (k-1)var(k) = SUM{w(k) * U(k)Â²}, where: U(k) = X(k) - avr(k)
+		//             = w(1)*U(1)Â² + w(2)*U(2)Â² + ... + w(k)*U(k)Â², where: w(1)+w(2)+...+w(k) = k
+		// If we say:  w(k) = k * a, ('a' between (0,1) as above) then SUM{w(k-1)} = k * (1-a)
+		// so consider var(k-1):
+		//  (k-2)var(k-1) = w(1)*U(1)Â² + w(2)*U(2)Â² + ... + w(k-1)*U(k-1)Â², where: w(1)+w(2)+...+w(k-1) = k - 1
+		// when we add the next term:
+		//  (k-1)var(k)   = w(1)*U(1)Â² + w(2)*U(2)Â² + ... + w(k-1)*U(k-1)Â² + w(k)*U(k)Â² (note w(1)..w(k-1) will be different values to above)
+		// we need:
+		//   k = k*a + k*(1-a) = w(k) + b*SUM{w(k-1)}
+		// => k*(1-a) = b*SUM{w(k-1)}
+		//          b = (1-a)*k/SUM{w(k-1)}
+		//            = (1-a)*k/(k-1)
+		// so:
+		// (k-1)var(k) = a*k*U(k)Â² + b*(k-2)var(k-1)
+		//             = a*k*U(k)Â² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//  let: D(k) = X(k) - avr(k-1)
+		//       U(k) = X(k) - avr(k-1) + avr(k-1) - avr(k)
+		//            = D(k) + avr(k-1) - avr(k)
+		//            = D(k) - (avr(k) - avr(k-1))
+		//            = D(k) - a * (X(k) - avr(k-1))
+		//            = D(k) - a * D(k)
+		//            = (1-a)*D(k)
+		// then:
+		// (k-1)var(k) = a*k*U(k)Â² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//             = a*k*(1-a)Â²*D(k)Â² + (1-a)*(k/(k-1)) * (k-2)var(k-1)
+		//             = a*k*bÂ²*D(k)Â² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
+		//             = (b*k/(k-1))*((a*b*(k-1)*D(k)Â² + (k-2)var(k-1))
+		// 'Type' is typically a floating point type, although this does
+		// work for any type that defines the necessary operators.
+
 		public ExponentialMovingAverage()
 			:this(int.MaxValue)
 		{}
@@ -831,7 +833,7 @@ namespace Rylogic.Maths
 		/// <summary>The correlation coefficient between 'x' and 'y' (A value between [-1,+1])</summary>
 		public double CorrCoeff => m_count > 0 && !Math_.FEql(m_var_xy, 0) ? m_var_xy / Math_.Sqrt(m_var_x * m_var_y) : 0.0;
 
-		/// <summary>This is 'r²', i.e. a measure of how well the data fit the Linear Regression line</summary>
+		/// <summary>This is 'rï¿½', i.e. a measure of how well the data fit the Linear Regression line</summary>
 		public double CoeffOfDetermination => Math_.Sqr(CorrCoeff);
 
 		/// <summary>Returns a "best-fit" linear polynomial for the data added</summary>

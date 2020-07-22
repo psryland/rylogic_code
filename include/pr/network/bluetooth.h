@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <sstream>
@@ -202,24 +202,23 @@ namespace pr::network
 		typedef std::vector<GUID> TServices;
 		TServices m_services;
 
-		BTServer(BTServer const&) = delete; // no copying
-		BTServer& operator =(BTServer const&) = delete;
-
 		// Create m_listen_socket to use for listening on
-		virtual void CreateListenSocket() override
+		virtual SOCKET CreateListenSocket(int) override
 		{
 			// Create the listen socket using the RFCOMM protocol
-			m_listen_socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
-			if (m_listen_socket == INVALID_SOCKET)
+			auto socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
+			if (socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 
 			// Bind the local address to the socket
 			SOCKADDR_BTH my_address = {};
 			my_address.addressFamily = AF_BTH;
 			my_address.port = BT_PORT_ANY;
-			auto r = ::bind(m_listen_socket, (sockaddr const*)&my_address, sizeof(my_address));
+			auto r = ::bind(socket, (sockaddr const*)&my_address, sizeof(my_address));
 			if (r == SOCKET_ERROR)
 				Throw(WSAGetLastError());
+			
+			return socket;
 		}
 
 	public:
@@ -228,6 +227,8 @@ namespace pr::network
 			:ServerSocket(winsock)
 			,m_services()
 		{}
+		BTServer(BTServer const&) = delete;
+		BTServer& operator =(BTServer const&) = delete;
 		~BTServer()
 		{
 			for (;!m_services.empty();)
@@ -329,7 +330,7 @@ namespace pr::network
 		// applications can call 'CreateSocket' first, then connect.
 		void CreateSocket()
 		{
-			Disconnect();
+			Close();
 
 			// Create a bluetooth socket using the RFCOMM protocol
 			m_socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
