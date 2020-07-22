@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Multicast Event
 //  Copyright (c) Oct 2011 Rylogic Ltd
 //******************************************
@@ -256,10 +256,11 @@ namespace pr
 		Sub operator = (Delegate func)
 		{
 			reset();
-			return *this += func;
+			return func ? *this += func : Sub{};
 		}
 		Sub operator += (Delegate func)
 		{
+			if (!func) throw std::runtime_error("Handle cannot be null");
 			auto sub = Sub::Make(this);
 			{
 				LockGuard lock(m_cs);

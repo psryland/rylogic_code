@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
 import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request

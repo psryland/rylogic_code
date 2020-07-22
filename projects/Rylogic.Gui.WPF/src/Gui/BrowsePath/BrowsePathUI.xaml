@@ -27,24 +27,26 @@
 		</Grid.ColumnDefinitions>
 	
 		<ComboBox
-			x:Name="m_cb_path"
 			Grid.Column="0"
 			MinWidth="100"
 			VerticalContentAlignment="Center"
 			ItemsSource="{Binding HistoryView}"
 			Text="{Binding SelectedPath, UpdateSourceTrigger=LostFocus}"
 			IsEditable="True"
+			x:Name="m_cb_path"
 			/>
 		<Button
 			Grid.Column="1"
 			DockPanel.Dock="Right"
 			Command="{Binding BrowsePath}"
+			BorderThickness="0"
 			Margin="3,0,0,0"
 			>
 			<Image
 				Source="{StaticResource folder}"
-				Stretch="Uniform"
+				RenderOptions.BitmapScalingMode="Fant"
 				StretchDirection="DownOnly"
+				Stretch="Uniform"
 				/>
 		</Button>
 	</Grid>
