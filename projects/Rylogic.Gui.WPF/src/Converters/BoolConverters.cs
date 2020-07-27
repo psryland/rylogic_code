@@ -264,6 +264,7 @@ namespace Rylogic.Gui.WPF.Converters
 				{
 					// Use: ConverterParameter='image_key1|image_key2'
 					// Image keys should be static resource keys.
+					// Only works if the resources are in App.xml.
 					var res = Application.Current.TryFindResource(val);
 					return res;
 				}

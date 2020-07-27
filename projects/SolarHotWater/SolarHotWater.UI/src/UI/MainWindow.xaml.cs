@@ -48,6 +48,7 @@ namespace SolarHotWater.UI
 			Model = null!;
 			//m_chart.Dispose();
 			base.OnClosed(e);
+			Log.Dispose();
 		}
 
 		/// <summary>App model</summary>
@@ -269,8 +270,8 @@ namespace SolarHotWater.UI
 		public Command InspectDevice { get; }
 		private void InspectDeviceInternal()
 		{
-			if (!(SelectedConsumer?.EweDevice is EweDevice device)) return;
-			var dlg = new InspectDeviceUI(this, device);
+			if (!(SelectedConsumer?.EweSwitch is EweDevice device)) return;
+			var dlg = new InspectDeviceUI(this, Model, device);
 			dlg.Show();
 		}
 
