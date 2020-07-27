@@ -1,7 +1,7 @@
 {
 	"name": "rylogic-textaligner-vscode",
 	"displayName": "Rylogic.TextAligner",
-	"version": "1.10.4",
+	"version": "1.10.5",
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"keywords": [
@@ -284,6 +284,18 @@
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Comma characters"
+								}
+							]
+						},
+						{
+							"name": "Colon delimiter",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": ":",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Colon characters"
 								}
 							]
 						},

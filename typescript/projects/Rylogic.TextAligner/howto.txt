@@ -6,8 +6,8 @@ HowTo Debug/Develop:
 
 HowTo Publish:
 	1) Sign into the marketplace then click on your account name in the top right. This takes you to dev.azure.com
-	2) Click on your organisation
-	3) Click on the 'User settings' icon in the top right and select "Personal Access Tokens"
+	2) Click on your organisation. This takes you to 'https://rylogic.visualstudio.com/'
+	3) Click on the 'User settings' icon (left of the account icon) in the top right and select "Personal Access Tokens"
 	4) Make a new token, full access
 	5) Change the 'organisation' option to 'All accessible organisations' - dunno why, but it doesn't work if you don't
 	6) You should now have a token: 52 character base64 string
