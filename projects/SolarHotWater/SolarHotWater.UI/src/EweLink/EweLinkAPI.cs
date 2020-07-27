@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 using WebSocket = Rylogic.Net.WebSocket;
@@ -240,6 +241,7 @@ namespace EweLink
 				var hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(body));
 				var sign = Convert.ToBase64String(hash);
 
+				// Create the request
 				var url = $"{Url}api/user/login";
 				var req = new HttpRequestMessage(HttpMethod.Post, url);
 				req.Headers.Authorization = new AuthenticationHeaderValue("Sign", sign);
@@ -331,6 +333,66 @@ namespace EweLink
 			await WebSocket.Close();
 			DeviceList.Clear();
 			Cred = null;
+		}
+
+		/// <summary>Set the state of a switch</summary>
+		public async Task SwitchState(EweSwitch sw, EweSwitch.ESwitchState state, int channel = 0, CancellationToken? cancel = null)
+		{
+			Cred = Cred ?? throw new Exception("Credentials not available");
+			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+
+			// Convert 'toggle' to on or off based on the current state
+			state =
+				state != EweSwitch.ESwitchState.Toggle ? state :
+				sw.State == EweSwitch.ESwitchState.On ? EweSwitch.ESwitchState.Off :
+				EweSwitch.ESwitchState.On;
+
+			// Simple switches just have a 'switch' field.
+			// Multi-channel switches have a switches array.
+			var sw_parms = new JObject();
+			if (sw.Params["switch"] is JToken)
+			{
+				if (channel != 0)
+					throw new Exception($"Switch does not have multiple channels");
+
+				sw_parms["switch"] = state.ToString().ToLower();
+			}
+			if (sw.Params["switches"] is JArray jarr)
+			{
+				if (channel < 0 || channel >= jarr.Count)
+					throw new Exception($"Channel index '{channel}' is out-of-range. Switch only has {jarr.Count} channels");
+
+				jarr = (JArray)jarr.DeepClone();
+				jarr[channel] = state.ToString().ToLower();
+				sw_parms["switches"] = jarr;
+			}
+
+			// Body data for the request
+			var parms = new Params
+			{
+				{ "appid", APP_ID },
+				{ "deviceid", sw.DeviceID },
+				{ "params", sw_parms },
+				{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "version", 8 },
+				{ "nonce", Nonce },
+			};
+			var body = JObject.FromObject(parms).ToString();
+
+			// Create the request
+			var url = $"{Url}api/user/device/status";
+			var req = new HttpRequestMessage(HttpMethod.Post, url);
+			req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Cred.AccessToken);
+			req.Content = new StringContent(body, Encoding.UTF8, new Mime("application", "json"));
+
+			// Submit the request
+			var response = await Client.SendAsync(req, cancel_token);
+			var reply = await response.Content.ReadAsStringAsync();
+			var jobj = JObject.Parse(reply);
+
+			// Check for an error
+			if (jobj["error"]?.Value<int>() is int error && error != 0)
+				throw new Exception($"eWeLink: Error setting switch state: {error}");
 		}
 
 		/// <summary>Helper for generating a 'nonce'</summary>

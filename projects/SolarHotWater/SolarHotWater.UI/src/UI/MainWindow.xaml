@@ -57,7 +57,7 @@
 					<RowDefinition Height="*"/>
 					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
-
+				
 				<!-- Login -->
 				<GroupBox
 					Grid.Row="0"
@@ -365,7 +365,7 @@
 							<Button
 								Grid.Column="1"
 								Command="{Binding InspectDevice}"
-								IsEnabled="{Binding SelectedConsumer.EweDevice, Converter={conv:NotNull}}"
+								IsEnabled="{Binding SelectedConsumer.EweSwitch, Converter={conv:NotNull}}"
 								Background="Transparent"
 								BorderThickness="0"
 								>
@@ -402,7 +402,7 @@
 								/>
 						</StackPanel>
 
-						<!-- Switch cooldown -->
+						<!-- Cooldown -->
 						<TextBlock
 							Grid.Row="1"
 							Grid.Column="2"
@@ -463,10 +463,19 @@
 							</Button>
 						</StackPanel>
 
+						<!-- Controllable -->
+						<CheckBox
+							Grid.Row="2"
+							Grid.Column="3"
+							Content="Turn on when power is available"
+							IsChecked="{Binding SelectedConsumer.Settings.Controllable}"
+							VerticalAlignment="Center"
+							Margin="3"
+							/>
 					</Grid>
 				</GroupBox>
 
-				<!-- Info -->
+				<!-- Status -->
 				<GroupBox
 					Grid.Row="3"
 					Header="Status"
@@ -576,18 +585,19 @@
 								/>
 						</Grid>
 				
-						<!-- Plot 
+						<!-- Plot -->
 						<Border
 							Grid.Row="2"
 							BorderBrush="Gray"
 							BorderThickness="1"
 							Margin="3"
 							>
+						<!--
 							<view3d:ChartControl
 								Name="m_chart"
 								/>
-						</Border>
 						-->
+						</Border>
 					</Grid>
 				</GroupBox>
 			</Grid>

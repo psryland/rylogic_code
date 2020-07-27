@@ -19,7 +19,7 @@ namespace SolarHotWater
 		}
 		public void Dispose()
 		{
-			EweDevice = null;
+			EweSwitch = null;
 			Settings = null!;
 		}
 
@@ -48,7 +48,7 @@ namespace SolarHotWater
 					{
 						case nameof(SettingsData.Consumer.SwitchName):
 						{
-							NotifyPropertyChanged(nameof(EweDevice));
+							NotifyPropertyChanged(nameof(EweSwitch));
 							break;
 						}
 						default:
@@ -62,30 +62,41 @@ namespace SolarHotWater
 		}
 		private SettingsData.Consumer m_settings = null!;
 
-		/// <summary></summary>
-		public EweSwitch? EweDevice
+		/// <summary>The switch that controls this consumer</summary>
+		public EweSwitch? EweSwitch
 		{
-			get => m_ewe_device;
+			get => m_ewe_switch;
 			set
 			{
-				if (m_ewe_device == value) return;
-				if (m_ewe_device != null)
+				if (m_ewe_switch == value) return;
+				if (m_ewe_switch != null)
 				{
-					m_ewe_device.PropertyChanged -= HandlePropChanged;
+					m_ewe_switch.PropertyChanged -= HandlePropChanged;
 				}
-				m_ewe_device = value;
-				if (m_ewe_device != null)
+				m_ewe_switch = value;
+				if (m_ewe_switch != null)
 				{
-					m_ewe_device.PropertyChanged += HandlePropChanged;
+					m_ewe_switch.PropertyChanged += HandlePropChanged;
 				}
 
+				// Handler
 				void HandlePropChanged(object sender, PropertyChangedEventArgs e)
 				{
+					switch (e.PropertyName)
+					{
+						case "State":
+						{
+							// Record when the switch changes state, so we know whether
+							// it was changed by this app or changed externally.
+							LastStateChange = DateTimeOffset.Now;
+							break;
+						}
+					}
 					NotifyPropertyChanged(string.Empty);
 				}
 			}
 		}
-		private EweSwitch? m_ewe_device;
+		private EweSwitch? m_ewe_switch;
 
 		/// <summary>Consumer name</summary>
 		public string Name
@@ -134,13 +145,19 @@ namespace SolarHotWater
 		}
 
 		/// <summary>The voltage at the switch output</summary>
-		public double? Voltage => EweDevice?.Voltage;
+		public double? Voltage => EweSwitch?.Voltage;
 
 		/// <summary>The current draw of this consumer</summary>
-		public double? Current => EweDevice?.Current;
+		public double? Current => EweSwitch?.Current;
 
 		/// <summary>The power currently being used by this consumer</summary>
-		public double? Power => EweDevice?.Power;
+		public double? Power => EweSwitch?.Power;
+
+		/// <summary>Get/Set whether the consumer is on/off</summary>
+		public bool On => EweSwitch?.State == EweSwitch.ESwitchState.On;
+
+		/// <summary>Time stamp of when the switch was last turned on/off</summary>
+		public DateTimeOffset LastStateChange { get; private set; }
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

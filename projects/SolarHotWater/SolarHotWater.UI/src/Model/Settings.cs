@@ -84,6 +84,7 @@ namespace SolarHotWater
 				SwitchName = string.Empty;
 				RequiredPower = 0;
 				Cooldown = TimeSpan.Zero;
+				Controllable = true;
 			}
 
 			/// <summary>The name of the consumer</summary>
@@ -112,6 +113,13 @@ namespace SolarHotWater
 			{
 				get => get<TimeSpan>(nameof(Cooldown));
 				set => set(nameof(Cooldown), value);
+			}
+
+			/// <summary>True if the app is allowed to control this device</summary>
+			public bool Controllable
+			{
+				get => get<bool>(nameof(Controllable));
+				set => set(nameof(Controllable), value);
 			}
 		}
 	}

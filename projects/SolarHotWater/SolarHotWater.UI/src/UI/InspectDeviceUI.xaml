@@ -4,14 +4,169 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="Inspect Device"
 	Height="450"
 	Width="500"
 	>
-	<Grid>
-		<TextBlock
-			Text="{Binding Body}"
-			/>
+	<Grid
+		Margin="8"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<!-- Device -->
+		<GroupBox
+			Grid.Row="0"
+			Header="Device"
+			>
+			<ScrollViewer
+				MaxHeight="100">
+				<TextBlock
+					Text="{Binding Body}"
+					/>
+			</ScrollViewer>
+		</GroupBox>
+
+		<!-- Switch -->
+		<GroupBox
+			Grid.Row="1"
+			Header="Switch"
+			Visibility="{Binding Switch, Converter={conv:NullToCollapsed}}"
+			>
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Switch  state -->
+				<StackPanel
+					Grid.Row="0"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="State: "
+						VerticalAlignment="Center"
+						/>
+					<Image
+						Source="{Binding Switch.On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
+						RenderOptions.BitmapScalingMode="Fant"
+						MaxHeight="32"
+						/>
+					<Button
+						Content="Toggle State"
+						Command="{Binding ToggleSwitch}"
+						VerticalAlignment="Center"
+						BorderThickness="0"
+						MinWidth="80"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Voltage -->
+				<StackPanel
+					Grid.Row="1"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="Voltage: "
+						/>
+					<TextBox
+						Text="{Binding Switch.Voltage, FallbackValue='unknown', Mode=OneWay}"
+						MinWidth="80"
+						/>
+					<TextBlock
+						Text=" V"
+						/>
+				</StackPanel>
+
+				<!-- Current -->
+				<StackPanel
+					Grid.Row="2"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="Current: "
+						/>
+					<TextBox
+						Text="{Binding Switch.Current, FallbackValue='unknown', Mode=OneWay}"
+						MinWidth="80"
+						/>
+					<TextBlock
+						Text=" A"
+						/>
+				</StackPanel>
+
+				<!-- Power consumption -->
+				<StackPanel
+					Grid.Row="3"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="Power: "
+						/>
+					<TextBox
+						Text="{Binding Switch.Power, FallbackValue='unknown', Mode=OneWay}"
+						MinWidth="80"
+						/>
+					<TextBlock
+						Text=" kWatts"
+						/>
+				</StackPanel>
+
+				<!-- Device ID -->
+				<StackPanel
+					Grid.Row="0"
+					Grid.Column="1"
+					Orientation="Horizontal"
+					VerticalAlignment="Center"
+					>
+					<TextBlock
+						Text="Device ID: "
+						/>
+					<TextBox
+						Text="{Binding Switch.DeviceID}"
+						HorizontalContentAlignment="Center"
+						MinWidth="100"
+						/>
+				</StackPanel>
+
+				<!-- MAC -->
+				<StackPanel
+					Grid.Row="1"
+					Grid.Column="1"
+					Orientation="Horizontal"
+					VerticalAlignment="Center"
+					>
+					<TextBlock
+						Text="MAC Address: "
+						/>
+					<TextBox
+						Text="{Binding Switch.MACAddress, Mode=OneWay}"
+						MinWidth="120"
+						/>
+				</StackPanel>
+			</Grid>
+		</GroupBox>
 	</Grid>
 </Window>
+
