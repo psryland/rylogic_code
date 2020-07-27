@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.10.5] - 2020-07-27
+
+### Changed
+
+- Bug fix. The cache of alignment patterns was not being reset when settings where changed resulting in weird aligning behaviour until VSCode was restarted.
+- Added a pattern to the default settings for aligning to ':' characters
+
 ## [1.10.4] - 2020-06-08
 
 ### Changed

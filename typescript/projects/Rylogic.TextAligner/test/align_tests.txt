@@ -68,3 +68,7 @@ assignments -= will
 all *= align
 as &&= follows
 
+member :One
+one :Member
+Thing :Two
+what :the.dot?

@@ -546,7 +546,10 @@ export class Aligner
 		// Collect all errors into a list
 		let err: string[] = [];
 
-		// Create a temporary array of alignment groups while we validate them
+		// Reset the cached collection of alignment groups
+		this.groups = [];
+		
+		// Get the collection of alignment groups and validate them
 		let groups:any[] = vscode.workspace.getConfiguration('textaligner').get('groups') || [];
 		for (let g of groups)
 		{
