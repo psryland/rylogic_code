@@ -27,7 +27,7 @@ namespace Rylogic.Interop.Win32
 
 		// IFileDialog-Specific interface members
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetFileTypes([In] uint cFileTypes, [In, MarshalAs(UnmanagedType.LPArray)] Win32.COMDLG_FILTERSPEC[] rgFilterSpec);
+		void SetFileTypes([In] uint cFileTypes, [In, MarshalAs(UnmanagedType.LPArray)] Shell32.COMDLG_FILTERSPEC[] rgFilterSpec);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetFileTypeIndex([In] uint iFileType);
@@ -42,10 +42,10 @@ namespace Rylogic.Interop.Win32
 		void Unadvise([In] uint dwCookie);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetOptions([In] Win32.FOS fos);
+		void SetOptions([In] Shell32.FOS fos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetOptions(out Win32.FOS pfos);
+		void GetOptions(out Shell32.FOS pfos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultFolder([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi);
@@ -78,7 +78,7 @@ namespace Rylogic.Interop.Win32
 		void GetResult([MarshalAs(UnmanagedType.Interface)] out IShellItem ppsi);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Win32.FDAP fdap);
+		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Shell32.FDAP fdap);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultExtension([In, MarshalAs(UnmanagedType.LPWStr)] string pszDefaultExtension);
@@ -106,7 +106,7 @@ namespace Rylogic.Interop.Win32
 
 		// Defined on IFileDialog - repeated here due to requirements of COM interop layer
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetFileTypes([In] uint cFileTypes, [In] ref Win32.COMDLG_FILTERSPEC rgFilterSpec);
+		void SetFileTypes([In] uint cFileTypes, [In] ref Shell32.COMDLG_FILTERSPEC rgFilterSpec);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetFileTypeIndex([In] uint iFileType);
@@ -121,10 +121,10 @@ namespace Rylogic.Interop.Win32
 		void Unadvise([In] uint dwCookie);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetOptions([In] Win32.FOS fos);
+		void SetOptions([In] Shell32.FOS fos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetOptions(out Win32.FOS pfos);
+		void GetOptions(out Shell32.FOS pfos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultFolder([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi);
@@ -157,7 +157,7 @@ namespace Rylogic.Interop.Win32
 		void GetResult([MarshalAs(UnmanagedType.Interface)] out IShellItem ppsi);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Win32.FDAP fdap);
+		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Shell32.FDAP fdap);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultExtension([In, MarshalAs(UnmanagedType.LPWStr)] string pszDefaultExtension);
@@ -192,7 +192,7 @@ namespace Rylogic.Interop.Win32
 
 		// Defined on IFileDialog - repeated here due to requirements of COM interop layer
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetFileTypes([In] uint cFileTypes, [In] ref Win32.COMDLG_FILTERSPEC rgFilterSpec);
+		void SetFileTypes([In] uint cFileTypes, [In] ref Shell32.COMDLG_FILTERSPEC rgFilterSpec);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetFileTypeIndex([In] uint iFileType);
@@ -207,10 +207,10 @@ namespace Rylogic.Interop.Win32
 		void Unadvise([In] uint dwCookie);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetOptions([In] Win32.FOS fos);
+		void SetOptions([In] Shell32.FOS fos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetOptions(out Win32.FOS pfos);
+		void GetOptions(out Shell32.FOS pfos);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultFolder([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi);
@@ -243,7 +243,7 @@ namespace Rylogic.Interop.Win32
 		void GetResult([MarshalAs(UnmanagedType.Interface)] out IShellItem ppsi);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Win32.FDAP fdap);
+		void AddPlace([In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, Shell32.FDAP fdap);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetDefaultExtension([In, MarshalAs(UnmanagedType.LPWStr)] string pszDefaultExtension);
@@ -302,13 +302,13 @@ namespace Rylogic.Interop.Win32
 		void OnSelectionChange([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void OnShareViolation([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd, [In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, out Win32.FDE_SHAREVIOLATION_RESPONSE pResponse);
+		void OnShareViolation([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd, [In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, out Shell32.FDE_SHAREVIOLATION_RESPONSE pResponse);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void OnTypeChange([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void OnOverwrite([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd, [In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, out Win32.FDE_OVERWRITE_RESPONSE pResponse);
+		void OnOverwrite([In, MarshalAs(UnmanagedType.Interface)] IFileDialog pfd, [In, MarshalAs(UnmanagedType.Interface)] IShellItem psi, out Shell32.FDE_OVERWRITE_RESPONSE pResponse);
 	}
 
 	[ComImport, Guid(IIDGuid.IShellItem), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -322,7 +322,7 @@ namespace Rylogic.Interop.Win32
 		void GetParent([MarshalAs(UnmanagedType.Interface)] out IShellItem ppsi);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetDisplayName([In] Win32.SIGDN sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
+		void GetDisplayName([In] Shell32.SIGDN sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void GetAttributes([In] uint sfgaoMask, out uint psfgaoAttribs);
@@ -345,7 +345,7 @@ namespace Rylogic.Interop.Win32
 		void GetPropertyDescriptionList([In] ref Win32.PROPERTYKEY keyType, [In] ref Guid riid, out IntPtr ppv);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetAttributes([In] Win32.SIATTRIBFLAGS dwAttribFlags, [In] uint sfgaoMask, out uint psfgaoAttribs);
+		void GetAttributes([In] Shell32.SIATTRIBFLAGS dwAttribFlags, [In] uint sfgaoMask, out uint psfgaoAttribs);
 
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void GetCount(out uint pdwNumItems);
@@ -438,9 +438,9 @@ namespace Rylogic.Interop.Win32
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void SetControlLabel([In] int dwIDCtl, [In, MarshalAs(UnmanagedType.LPWStr)] string pszLabel);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetControlState([In] int dwIDCtl, [Out] out Win32.CDCONTROLSTATE pdwState);
+		void GetControlState([In] int dwIDCtl, [Out] out Shell32.CDCONTROLSTATE pdwState);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetControlState([In] int dwIDCtl, [In] Win32.CDCONTROLSTATE dwState);
+		void SetControlState([In] int dwIDCtl, [In] Shell32.CDCONTROLSTATE dwState);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void GetEditBoxText([In] int dwIDCtl, [Out] IntPtr ppszText);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
@@ -456,9 +456,9 @@ namespace Rylogic.Interop.Win32
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void RemoveAllControlItems([In] int dwIDCtl);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void GetControlItemState([In] int dwIDCtl, [In] int dwIDItem, [Out] out Win32.CDCONTROLSTATE pdwState);
+		void GetControlItemState([In] int dwIDCtl, [In] int dwIDItem, [Out] out Shell32.CDCONTROLSTATE pdwState);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
-		void SetControlItemState([In] int dwIDCtl, [In] int dwIDItem, [In] Win32.CDCONTROLSTATE dwState);
+		void SetControlItemState([In] int dwIDCtl, [In] int dwIDItem, [In] Shell32.CDCONTROLSTATE dwState);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
 		void GetSelectedControlItem([In] int dwIDCtl, [Out] out int pdwIDItem);
 		[MethodImpl(MethodImplOptions.InternalCall, MethodCodeType = MethodCodeType.Runtime)]
@@ -528,31 +528,8 @@ namespace Rylogic.Interop.Win32
 
 	#endregion
 
-	public static partial class Win32
+	public static partial class Shell32
 	{
-		#region Known Folders
-		public enum FFFP_MODE
-		{
-			FFFP_EXACTMATCH,
-			FFFP_NEARESTPARENTMATCH
-		}
-		
-		public enum KF_CATEGORY
-		{
-			KF_CATEGORY_VIRTUAL = 0x00000001,
-			KF_CATEGORY_FIXED   = 0x00000002,
-			KF_CATEGORY_COMMON  = 0x00000003,
-			KF_CATEGORY_PERUSER = 0x00000004
-		}
-
-		[Flags] public enum KF_DEFINITION_FLAGS
-		{
-			KFDF_PERSONALIZE         = 0x00000001,
-			KFDF_LOCAL_REDIRECT_ONLY = 0x00000002,
-			KFDF_ROAMABLE            = 0x00000004,
-		}
-		#endregion
-
 		#region File Operations Definitions
 
 		// Shell File Operations
@@ -582,8 +559,8 @@ namespace Rylogic.Interop.Win32
 
 		public enum FDAP
 		{
-			FDAP_BOTTOM = 0x00000000,
-			FDAP_TOP    = 0x00000001,
+			BOTTOM = 0x00000000,
+			TOP    = 0x00000001,
 		}
 
 		public enum FDE_SHAREVIOLATION_RESPONSE
@@ -602,46 +579,46 @@ namespace Rylogic.Interop.Win32
 
 		public  enum SIATTRIBFLAGS
 		{
-			SIATTRIBFLAGS_AND       = 0x00000001 , // if multiple items and the attirbutes together.
-			SIATTRIBFLAGS_OR        = 0x00000002 , // if multiple items or the attributes together.
-			SIATTRIBFLAGS_APPCOMPAT = 0x00000003 , // Call GetAttributes directly on the ShellFolder for multiple attributes
+			AND       = 0x00000001 , // if multiple items and the attirbutes together.
+			OR        = 0x00000002 , // if multiple items or the attributes together.
+			APPCOMPAT = 0x00000003 , // Call GetAttributes directly on the ShellFolder for multiple attributes
 		}
 
 		public  enum SIGDN :uint
 		{
-			SIGDN_NORMALDISPLAY               = 0x00000000, // SHGDN_NORMAL
-			SIGDN_PARENTRELATIVEPARSING       = 0x80018001, // SHGDN_INFOLDER | SHGDN_FORPARSING
-			SIGDN_DESKTOPABSOLUTEPARSING      = 0x80028000, // SHGDN_FORPARSING
-			SIGDN_PARENTRELATIVEEDITING       = 0x80031001, // SHGDN_INFOLDER | SHGDN_FOREDITING
-			SIGDN_DESKTOPABSOLUTEEDITING      = 0x8004c000, // SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
-			SIGDN_FILESYSPATH                 = 0x80058000, // SHGDN_FORPARSING
-			SIGDN_URL                         = 0x80068000, // SHGDN_FORPARSING
-			SIGDN_PARENTRELATIVEFORADDRESSBAR = 0x8007c001, // SHGDN_INFOLDER | SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
-			SIGDN_PARENTRELATIVE              = 0x80080001  // SHGDN_INFOLDER
+			NORMALDISPLAY               = 0x00000000, // SHGDN_NORMAL
+			PARENTRELATIVEPARSING       = 0x80018001, // SHGDN_INFOLDER | SHGDN_FORPARSING
+			DESKTOPABSOLUTEPARSING      = 0x80028000, // SHGDN_FORPARSING
+			PARENTRELATIVEEDITING       = 0x80031001, // SHGDN_INFOLDER | SHGDN_FOREDITING
+			DESKTOPABSOLUTEEDITING      = 0x8004c000, // SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
+			FILESYSPATH                 = 0x80058000, // SHGDN_FORPARSING
+			URL                         = 0x80068000, // SHGDN_FORPARSING
+			PARENTRELATIVEFORADDRESSBAR = 0x8007c001, // SHGDN_INFOLDER | SHGDN_FORPARSING | SHGDN_FORADDRESSBAR
+			PARENTRELATIVE              = 0x80080001  // SHGDN_INFOLDER
 		}
 
 		[Flags] public enum FOS :uint
 		{
-			FOS_OVERWRITEPROMPT    = 0x00000002,
-			FOS_STRICTFILETYPES    = 0x00000004,
-			FOS_NOCHANGEDIR        = 0x00000008,
-			FOS_PICKFOLDERS        = 0x00000020,
-			FOS_FORCEFILESYSTEM    = 0x00000040, // Ensure that items returned are filesystem items.
-			FOS_ALLNONSTORAGEITEMS = 0x00000080, // Allow choosing items that have no storage.
-			FOS_NOVALIDATE         = 0x00000100,
-			FOS_ALLOWMULTISELECT   = 0x00000200,
-			FOS_PATHMUSTEXIST      = 0x00000800,
-			FOS_FILEMUSTEXIST      = 0x00001000,
-			FOS_CREATEPROMPT       = 0x00002000,
-			FOS_SHAREAWARE         = 0x00004000,
-			FOS_NOREADONLYRETURN   = 0x00008000,
-			FOS_NOTESTFILECREATE   = 0x00010000,
-			FOS_HIDEMRUPLACES      = 0x00020000,
-			FOS_HIDEPINNEDPLACES   = 0x00040000,
-			FOS_NODEREFERENCELINKS = 0x00100000,
-			FOS_DONTADDTORECENT    = 0x02000000,
-			FOS_FORCESHOWHIDDEN    = 0x10000000,
-			FOS_DEFAULTNOMINIMODE  = 0x20000000
+			OVERWRITEPROMPT    = 0x00000002,
+			STRICTFILETYPES    = 0x00000004,
+			NOCHANGEDIR        = 0x00000008,
+			PICKFOLDERS        = 0x00000020,
+			FORCEFILESYSTEM    = 0x00000040, // Ensure that items returned are filesystem items.
+			ALLNONSTORAGEITEMS = 0x00000080, // Allow choosing items that have no storage.
+			NOVALIDATE         = 0x00000100,
+			ALLOWMULTISELECT   = 0x00000200,
+			PATHMUSTEXIST      = 0x00000800,
+			FILEMUSTEXIST      = 0x00001000,
+			CREATEPROMPT       = 0x00002000,
+			SHAREAWARE         = 0x00004000,
+			NOREADONLYRETURN   = 0x00008000,
+			NOTESTFILECREATE   = 0x00010000,
+			HIDEMRUPLACES      = 0x00020000,
+			HIDEPINNEDPLACES   = 0x00040000,
+			NODEREFERENCELINKS = 0x00100000,
+			DONTADDTORECENT    = 0x02000000,
+			FORCESHOWHIDDEN    = 0x10000000,
+			DEFAULTNOMINIMODE  = 0x20000000
 		}
 
 		public enum CDCONTROLSTATE
@@ -651,6 +628,39 @@ namespace Rylogic.Interop.Win32
 			CDCS_VISIBLE  = 0x00000002
 		}
 
+		#endregion
+
+		#region Interop Structures
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 4)]
+		public struct SHFILEOPSTRUCTW32
+		{
+			public IntPtr hwnd;
+			public UInt32 wFunc;
+			public IntPtr pFrom; // Must be a double null terminated string, can't use strings because interop drops the double null
+			public IntPtr pTo;   // Must be a double null terminated string, can't use strings because interop drops the double null
+			public UInt16 fFlags;
+			public Int32 fAnyOperationsAborted;
+			public IntPtr hNameMappings;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszProgressTitle;
+		}
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 8)]
+		public struct SHFILEOPSTRUCTW64
+		{
+			public IntPtr hwnd;
+			public UInt32 wFunc;
+			public IntPtr pFrom; // Must be a double null terminated string, can't use strings because interop drops the double null
+			public IntPtr pTo;   // Must be a double null terminated string, can't use strings because interop drops the double null
+			public UInt16 fFlags;
+			public Int32 fAnyOperationsAborted;
+			public IntPtr hNameMappings;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszProgressTitle;
+		}
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 4)]
+		public struct COMDLG_FILTERSPEC
+		{
+			[MarshalAs(UnmanagedType.LPWStr)] public string pszName;
+			[MarshalAs(UnmanagedType.LPWStr)] public string pszSpec;
+		}
 		#endregion
 
 		/// <summary>Creates and initializes a Shell item object from a parsing name.</summary>

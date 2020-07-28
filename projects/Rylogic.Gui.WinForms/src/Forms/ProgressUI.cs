@@ -91,7 +91,7 @@ namespace Rylogic.Gui.WinForms
 				try
 				{
 					func(this, arg, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
-					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
+					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1.0});
 				}
 				catch (OperationCanceledException)
 				{
@@ -233,7 +233,7 @@ namespace Rylogic.Gui.WinForms
 			var do_layout = us.ForceLayout != null && us.ForceLayout.Value;
 
 			if (us.FractionComplete != null)
-				m_progress.Value = (int)Math_.Lerp(m_progress.Minimum, m_progress.Maximum, Math_.Clamp(us.FractionComplete.Value,0f,1f));
+				m_progress.Value = (int)Math_.Lerp(m_progress.Minimum, m_progress.Maximum, Math_.Clamp(us.FractionComplete.Value,0.0,1.0));
 
 			if (us.Title != null)
 				Text = us.Title;
@@ -328,7 +328,7 @@ namespace Rylogic.Gui.WinForms
 			public static UserState Empty = new UserState();
 
 			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
-			public float? FractionComplete { get; set; }
+			public double? FractionComplete { get; set; }
 
 			/// <summary>Control the visibility of the progress bar. Null means don't change</summary>
 			public bool? ProgressBarVisible { get; set; }

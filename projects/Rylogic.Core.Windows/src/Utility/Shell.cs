@@ -265,26 +265,26 @@ namespace Rylogic.Utility
 			{
 				if (Environment.Is64BitProcess)
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW64();
+					var shf = new Shell32.SHFILEOPSTRUCTW64();
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_COPY;
+					shf.wFunc = Shell32.FO_COPY;
 					shf.pFrom = spin.Pointer;
 					shf.pTo   = dpin.Pointer;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 				else
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW32();
+					var shf = new Shell32.SHFILEOPSTRUCTW32();
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_COPY;
+					shf.wFunc = Shell32.FO_COPY;
 					shf.pFrom = spin.Pointer;
 					shf.pTo   = dpin.Pointer;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 			}
@@ -324,26 +324,26 @@ namespace Rylogic.Utility
 			{
 				if (Environment.Is64BitProcess)
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW64();
+					var shf = new Shell32.SHFILEOPSTRUCTW64();
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_MOVE;
+					shf.wFunc = Shell32.FO_MOVE;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.pFrom = spin.Pointer;
 					shf.pTo   = dpin.Pointer;
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 				else
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW32();
+					var shf = new Shell32.SHFILEOPSTRUCTW32();
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_MOVE;
+					shf.wFunc = Shell32.FO_MOVE;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.pFrom = spin.Pointer;
 					shf.pTo   = dpin.Pointer;
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 			}
@@ -359,24 +359,24 @@ namespace Rylogic.Utility
 			{
 				if (Environment.Is64BitProcess)
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW64(); 
+					var shf = new Shell32.SHFILEOPSTRUCTW64(); 
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_DELETE;
+					shf.wFunc = Shell32.FO_DELETE;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.pFrom = spin.Pointer;
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 				else
 				{
-					var shf = new Win32.SHFILEOPSTRUCTW32();
+					var shf = new Shell32.SHFILEOPSTRUCTW32();
 					shf.hwnd = hwnd;
-					shf.wFunc = Win32.FO_DELETE;
+					shf.wFunc = Shell32.FO_DELETE;
 					shf.fFlags = unchecked((ushort)flags);
 					shf.pFrom = spin.Pointer;
 					shf.lpszProgressTitle = title;
-					Win32.SHFileOperationW(ref shf);
+					Shell32.SHFileOperationW(ref shf);
 					return shf.fAnyOperationsAborted == 0;
 				}
 			}
@@ -489,46 +489,46 @@ namespace Rylogic.Utility
 			None = 0,
 
 			/// <summary>Don't display progress UI (confirm prompts may be displayed still)</summary>
-			Silent = Win32.FOF_SILENT,
+			Silent = Shell32.FOF_SILENT,
 
 			/// <summary>Copy/Move multiple files to multiple locations</summary>
-			MultipleDstFiles = Win32.FOF_MULTIDESTFILES,
+			MultipleDstFiles = Shell32.FOF_MULTIDESTFILES,
 
 			/// <summary>Automatically rename the source files to avoid the collisions</summary>
-			RenameOnCollision = Win32.FOF_RENAMEONCOLLISION,
+			RenameOnCollision = Shell32.FOF_RENAMEONCOLLISION,
 
 			/// <summary>Don't display confirmation UI, assume "yes" for cases that can be bypassed, "no" for those that can not</summary>
-			NoConfirmation = Win32.FOF_NOCONFIRMATION,
+			NoConfirmation = Shell32.FOF_NOCONFIRMATION,
 
 			/// <summary>Enable undo including Recycle behaviour for IFileOperation::Delete()</summary>
-			AllowUndo = Win32.FOF_ALLOWUNDO,
+			AllowUndo = Shell32.FOF_ALLOWUNDO,
 
 			/// <summary>Only operate on the files (non folders), both files and folders are assumed without this</summary>
-			FilesOnly = Win32.FOF_FILESONLY,
+			FilesOnly = Shell32.FOF_FILESONLY,
 
 			/// <summary>Means don't show names of files</summary>
-			SimpleProgress = Win32.FOF_SIMPLEPROGRESS,
+			SimpleProgress = Shell32.FOF_SIMPLEPROGRESS,
 
 			/// <summary>Don't display confirmation UI before making any needed directories, assume "Yes" in these cases</summary>
-			NoConfirmMakeDir = Win32.FOF_NOCONFIRMMKDIR,
+			NoConfirmMakeDir = Shell32.FOF_NOCONFIRMMKDIR,
 
 			/// <summary>Don't put up error UI, other UI may be displayed, progress, confirmations</summary>
-			NoErrorUI = Win32.FOF_NOERRORUI,
+			NoErrorUI = Shell32.FOF_NOERRORUI,
 
 			/// <summary>Don't copy file security attributes (ACLs)</summary>
-			NoCopySecurityAttribs = Win32.FOF_NOCOPYSECURITYATTRIBS,
+			NoCopySecurityAttribs = Shell32.FOF_NOCOPYSECURITYATTRIBS,
 
 			/// <summary>Don't recurse into directories for operations that would recurse</summary>
-			NoRecursion = Win32.FOF_NORECURSION,
+			NoRecursion = Shell32.FOF_NORECURSION,
 
 			/// <summary>Don't operate on connected elements ("xxx_files" folders that go with .htm files)</summary>
-			NoConnectedElements = Win32.FOF_NO_CONNECTED_ELEMENTS,
+			NoConnectedElements = Shell32.FOF_NO_CONNECTED_ELEMENTS,
 
 			/// <summary>During delete operation, warn if object is being permanently destroyed instead of recycling (partially overrides FOF_NOCONFIRMATION)</summary>
-			WantNukeWarning = Win32.FOF_WANTNUKEWARNING,
+			WantNukeWarning = Shell32.FOF_WANTNUKEWARNING,
 
 			/// <summary>Don't display any UI at all</summary>
-			NoUI = Win32.FOF_NO_UI,
+			NoUI = Shell32.FOF_NO_UI,
 		}
 
 		/// <summary>Contains information about a file</summary>

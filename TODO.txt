@@ -14,6 +14,8 @@ Work
 	- Set up Git on the machine that runs plastic...
 	- Fix ground plane
 	- Fix arrows in MovementEditor diagram
+	- Add "user" to VRex
+	- Add Leg Total lengths to VRex
 	
 LDraw
 	- Add a skybox to the demo scene
@@ -25,6 +27,7 @@ LDraw
 	- Support sub models in object manager
 
 TextAligner
+	- Add option to turn on logging of pattern
 	- Add "+NEW+ VS Code version available" include links.
 	- Release v1.10 with minor bug fixes (typos etc)
 	

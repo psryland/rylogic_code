@@ -423,10 +423,10 @@ namespace Rylogic.Audio
 			}
 
 			/// <summary>Pitch bend value normalised to [-1, +1]</summary>
-			public float PitchBendN
+			public double PitchBendN
 			{
-				get { return Math_.Frac((float)PitchBend, -0x2000, 0x1fff) * 2f - 1f; }
-				set { PitchBend = (short)Math_.Lerp(-0x2000, 0x1fff, Math_.Clamp(value * 0.5f + 1f, 0f, 1f)); }
+				get { return Math_.Frac(-0x2000, (double)PitchBend, 0x1fff) * 2.0 - 1.0; }
+				set { PitchBend = (short)Math_.Lerp(-0x2000, 0x1fff, Math_.Clamp(0.5*value + 1.0, 0.0, 1.0)); }
 			}
 
 			/// <summary>True if this is a control mode message</summary>

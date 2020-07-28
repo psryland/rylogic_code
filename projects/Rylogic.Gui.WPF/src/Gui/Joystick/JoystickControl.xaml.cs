@@ -235,7 +235,31 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SelectedSectorBrushProperty = Gui_.DPRegister<JoystickControl>(nameof(SelectedSectorBrush), Brushes.LightSteelBlue);
+		public static readonly DependencyProperty SelectedSectorBrushProperty = Gui_.DPRegister<JoystickControl>(nameof(SelectedSectorBrush), Brushes.DarkGreen);
+
+		/// <summary>The width of the sector outlines</summary>
+		public double StrokeWidth
+		{
+			get => (double)GetValue(StrokeWidthProperty);
+			set => SetValue(StrokeWidthProperty, value);
+		}
+		private void StrokeWidth_Changed()
+		{
+			UpdateGfx();
+		}
+		public static readonly DependencyProperty StrokeWidthProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeWidth), 1.0);
+
+		/// <summary>The colour of the sector outlines</summary>
+		public Brush StrokeColour
+		{
+			get => (Brush)GetValue(StrokeColourProperty);
+			set => SetValue(StrokeColourProperty, value);
+		}
+		private void StrokeColour_Changed()
+		{
+			UpdateGfx();
+		}
+		public static readonly DependencyProperty StrokeColourProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeColour), Brushes.Black);
 
 		/// <summary>The position of the thumb stick (polar coords). Null to hide</summary>
 		public Point? ThumbPos
@@ -327,7 +351,7 @@ namespace Rylogic.Gui.WPF
 			}
 			
 			// Turn the geometry into a drawing
-			var drawing = new GeometryDrawing(SelectedSectorBrush, new Pen(Brushes.Black, 1), path);
+			var drawing = new GeometryDrawing(SelectedSectorBrush, new Pen(StrokeColour, StrokeWidth), path);
 			drawing.Freeze();
 
 			Source = new DrawingImage(drawing);

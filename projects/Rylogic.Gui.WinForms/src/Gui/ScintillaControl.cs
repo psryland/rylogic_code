@@ -1237,7 +1237,7 @@ namespace Rylogic.Gui.WinForms
 		public override bool AllowDrop
 		{
 			get { return (Win32.GetWindowLong(Handle, Win32.GWL_EXSTYLE) & Win32.WS_EX_ACCEPTFILES) != 0; }
-			set { Win32.DragAcceptFiles(Handle, value); }
+			set { Shell32.DragAcceptFiles(Handle, value); }
 		}
 		#endregion
 

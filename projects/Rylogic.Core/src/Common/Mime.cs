@@ -138,7 +138,7 @@ namespace Rylogic.Common
 			public static readonly HashSet<string> Known = new HashSet<string>(Enumerate());
 			private static IEnumerable<string> Enumerate()
 			{
-				foreach (var f in typeof(Types).GetFields().Where(x => x.FieldType == typeof(string)))
+				foreach (var f in typeof(SubTypes).GetFields().Where(x => x.FieldType == typeof(string)))
 					yield return f.GetRawConstantValue()!.ToString()!;
 			}
 		}

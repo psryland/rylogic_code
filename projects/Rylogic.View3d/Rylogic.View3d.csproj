@@ -45,7 +45,6 @@
 	<!-- Dependencies -->
 	<ItemGroup>
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
-		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
 		<ProjectReference Include="..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
 	</ItemGroup>
 
