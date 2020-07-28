@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
+using Rylogic.Interop.Win32;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
@@ -117,6 +118,10 @@ namespace Rylogic.Gui.WPF
 		public static EKeyCodes ToKeyCode(this Key key)
 		{
 			return (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
+		}
+		public static bool TryToChar(this Key key, out char ch)
+		{
+			return Win32.CharFromVKey(ToKeyCode(key), out ch);
 		}
 
 		///// <summary>Returns true if 'point' is more than the drag size from 'ref_point'</summary>

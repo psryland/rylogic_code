@@ -529,7 +529,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Spherically interpolate between two rotations</summary>
-		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
+		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, double frac)
 		{
 			return new m3x4(Slerp(new quat(lhs), new quat(rhs), frac));
 		}

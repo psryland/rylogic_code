@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -94,7 +94,7 @@ namespace Rylogic.Plugin
 		}
 
 		/// <summary>Loads an instance of each type found in 'directory' that is flagged with the plugin attribute and implements 'TInterface'</summary>
-		public Plugins<TInterface> Load(string directory, object[]? args = null, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern, Func<Type, object[]?, TInterface>? factory = null, Func<string, float, bool>? progress = null)
+		public Plugins<TInterface> Load(string directory, object[]? args = null, SearchOption search = SearchOption.TopDirectoryOnly, string regex_filter = DefaultRegexPattern, Func<Type, object[]?, TInterface>? factory = null, Func<string, double, bool>? progress = null)
 		{
 			// Default callbacks
 			progress ??= (s, p) => true;

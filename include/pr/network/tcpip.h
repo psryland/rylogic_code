@@ -131,7 +131,7 @@ namespace pr::network
 			Close();
 
 			// Create the socket
-			m_socket = ::socket(AF_INET, IPPROTO_TCP, SOCK_STREAM);
+			m_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 			if (m_socket == INVALID_SOCKET)
 				Throw(WSAGetLastError());
 		}
@@ -334,10 +334,11 @@ namespace pr::network
 			PR_CHECK(connected, true);
 
 			char const data[] = "Test data";
-			PR_CHECK(svr.Send(data, sizeof(data)), true);
+			PR_CHECK(svr.Send(&data[0], sizeof(data)), true);
 
+			size_t bytes_read;
 			char result[sizeof(data)] = {};
-			PR_CHECK(client.Recv(result, sizeof(result)), true);
+			PR_CHECK(client.Recv(&result[0], sizeof(result), bytes_read), true);
 
 			PR_CHECK(data, result);
 			svr.StopConnections();
@@ -359,7 +360,7 @@ namespace pr::network
 
 			PR_CHECK(data, result);
 
-			client.Disconnect();
+			client.Close();
 			svr.StopConnections();
 		}
 	}

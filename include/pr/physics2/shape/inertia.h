@@ -80,6 +80,25 @@ namespace pr::physics
 		AwayFromCoM, // The base of 'offset' is the CoM
 	};
 
+	#pragma region Forwards
+	struct Inertia;
+	struct InertiaInv;
+	bool FEql(Inertia const& lhs, Inertia const& rhs);
+	bool FEql(InertiaInv const& lhs, InertiaInv const& rhs);
+	Inertia Join(Inertia const& lhs, Inertia const& rhs);
+	Inertia Split(Inertia const& lhs, Inertia const& rhs);
+	InertiaInv Join(InertiaInv const& lhs, InertiaInv const& rhs);
+	InertiaInv Split(InertiaInv const& lhs, InertiaInv const& rhs);
+	InertiaInv Invert(Inertia const& inertia);
+	Inertia Invert(InertiaInv const& inertia¯);
+	Inertia Rotate(Inertia const& inertia, m3_cref<> a2b);
+	InertiaInv Rotate(InertiaInv const& inertia¯, m3_cref<> a2b);
+	Inertia Translate(Inertia const& inertia0, v4_cref<> offset, ETranslateInertia direction);
+	InertiaInv Translate(InertiaInv const& inertia0¯, v4_cref<> offset, ETranslateInertia direction);
+	Inertia Transform(Inertia const& inertia0, m4_cref<> a2b, ETranslateInertia direction);
+	InertiaInv Transform(InertiaInv const& inertia0¯, m4_cref<> a2b, ETranslateInertia direction);
+	#pragma endregion
+
 	struct Inertia
 	{
 		// Notes:
@@ -346,6 +365,56 @@ namespace pr::physics
 			ib = Translate(ib, offset, ETranslateInertia::AwayFromCoM);
 			return ib;
 		}
+
+		#pragma region Operators
+		// Note: there is no operator + because its definition is ambiguous
+		//  Ia + Ib can either mean:
+		//      Ia.To3x3() + Ib.To3x3() or Ia.To6x6() + Ib.To6x6() 
+		//  or weld two rigid bodies together:
+		//      (ma*Ia + mb*Ib)/(mamb) 
+
+		// Equality
+		friend bool operator == (Inertia const& lhs, Inertia const& rhs)
+		{
+			return
+				lhs.m_diagonal == rhs.m_diagonal &&
+				lhs.m_products == rhs.m_products &&
+				lhs.m_com_and_mass == rhs.m_com_and_mass;
+		}
+		friend bool operator != (Inertia const& lhs, Inertia const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+
+		// Multiply a vector by 'inertia'.
+		friend v4 operator * (Inertia const& inertia, v4 const& v)
+		{
+			if (inertia.CoM() == v4{})
+				return inertia.To3x3() * v;
+			else
+				return Translate(inertia, -inertia.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * v;
+		}
+
+		// Multiply a spatial motion vector by 'inertia'.
+		friend v8f operator * (Inertia const& inertia, v8m const& motion)
+		{
+			// Typically 'motion' is a velocity or an acceleration.
+			// e.g.
+			//   I = spatial inertia
+			//   v = spatial velocity
+			//   h = spatial momentum = I * v
+			//   T = kinetic energy = 0.5 * Dot(v, I*v)
+			//
+			//  h = mass * [Ic - cxcx , cx] * [ang]
+			//             [-cx       ,  1]   [lin]
+		
+			// Special case when the inertia is in CoM frame.
+			if (inertia.CoM() == v4{})
+				return v8f{inertia.To3x3() * motion.ang, inertia.Mass() * motion.lin};
+			else
+				return inertia.To6x6() * motion;
+		}
+		#pragma endregion
 	};
 
 	// Inverse Inertia.
@@ -588,87 +657,47 @@ namespace pr::physics
 		{
 			return InertiaInv{v4{1,1,1,0}, v4{0,0,0,0}, 0};
 		}
+
+		#pragma region Operators
+		// Note: there is no operator + because its definition is ambiguous
+		//  Ia + Ib can either mean:
+		//      Ia.To3x3() + Ib.To3x3() or Ia.To6x6() + Ib.To6x6() 
+		//  or weld two rigid bodies together:
+		//      (ma*Ia + mb*Ib)/(mamb) 
+
+		// Equality
+		friend bool operator == (InertiaInv const& lhs, InertiaInv const& rhs)
+		{
+			return
+				lhs.m_diagonal == rhs.m_diagonal &&
+				lhs.m_products == rhs.m_products &&
+				lhs.m_com_and_invmass == rhs.m_com_and_invmass;
+		}
+		friend bool operator != (InertiaInv const& lhs, InertiaInv const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+
+		// Multiply a vector by 'inertia¯'.
+		friend v4 operator * (InertiaInv const& inertia¯, v4 const& h)
+		{
+			if (inertia¯.CoM() == v4{})
+				return inertia¯.To3x3() * h;
+			else
+				return Translate(inertia¯, -inertia¯.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * h;
+		}
+
+		// Multiply a spatial force vector by 'inertia¯'
+		friend v8m operator * (InertiaInv const& inertia¯, v8f const& force)
+		{
+			// Special case when the inertia is in CoM frame.
+			if (inertia¯.CoM() == v4{})
+				return v8m{inertia¯.To3x3() * force.ang, inertia¯.InvMass() * force.lin};
+			else
+				return inertia¯.To6x6() * force;
+		}
+		#pragma endregion
 	};
-
-	#pragma region Inertia Operators
-	inline bool operator == (Inertia const& lhs, Inertia const& rhs)
-	{
-		return
-			lhs.m_diagonal == rhs.m_diagonal &&
-			lhs.m_products == rhs.m_products &&
-			lhs.m_com_and_mass == rhs.m_com_and_mass;
-	}
-	inline bool operator != (Inertia const& lhs, Inertia const& rhs)
-	{
-		return !(lhs == rhs);
-	}
-	inline bool operator == (InertiaInv const& lhs, InertiaInv const& rhs)
-	{
-		return
-			lhs.m_diagonal == rhs.m_diagonal &&
-			lhs.m_products == rhs.m_products &&
-			lhs.m_com_and_invmass == rhs.m_com_and_invmass;
-	}
-	inline bool operator != (InertiaInv const& lhs, InertiaInv const& rhs)
-	{
-		return !(lhs == rhs);
-	}
-
-	// Note: there is no operator + because its definition is ambiguous
-	//  Ia + Ib can either mean:
-	//      Ia.To3x3() + Ib.To3x3() or Ia.To6x6() + Ib.To6x6() 
-	//  or weld two rigid bodies together:
-	//      (ma*Ia + mb*Ib)/(mamb) 
-
-	// Multiply a vector by 'inertia'.
-	template <typename = void> inline v4 operator * (Inertia const& inertia, v4 const& v)
-	{
-		if (inertia.CoM() == v4{})
-			return inertia.To3x3() * v;
-		else
-			return Translate(inertia, -inertia.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * v;
-	}
-
-	// Multiply a vector by 'inertia¯'.
-	template <typename = void> inline v4 operator * (InertiaInv const& inertia¯, v4 const& h)
-	{
-		if (inertia¯.CoM() == v4{})
-			return inertia¯.To3x3() * h;
-		else
-			return Translate(inertia¯, -inertia¯.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * h;
-	}
-
-	// Multiply a spatial motion vector by 'inertia'.
-	inline v8f operator * (Inertia const& inertia, v8m const& motion)
-	{
-		// Typically 'motion' is a velocity or an acceleration.
-		// e.g.
-		//   I = spatial inertia
-		//   v = spatial velocity
-		//   h = spatial momentum = I * v
-		//   T = kinetic energy = 0.5 * Dot(v, I*v)
-		//
-		//  h = mass * [Ic - cxcx , cx] * [ang]
-		//             [-cx       ,  1]   [lin]
-		
-		// Special case when the inertia is in CoM frame.
-		if (inertia.CoM() == v4{})
-			return v8f{inertia.To3x3() * motion.ang, inertia.Mass() * motion.lin};
-		else
-			return inertia.To6x6() * motion;
-	}
-
-	// Multiply a spatial force vector by 'inertia¯'
-	inline v8m operator * (InertiaInv const& inertia¯, v8f const& force)
-	{
-		// Special case when the inertia is in CoM frame.
-		if (inertia¯.CoM() == v4{})
-			return v8m{inertia¯.To3x3() * force.ang, inertia¯.InvMass() * force.lin};
-		else
-			return inertia¯.To6x6() * force;
-	}
-
-	#pragma endregion
 
 	#pragma region Functions
 

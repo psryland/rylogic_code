@@ -367,12 +367,12 @@ namespace Rylogic.Gui.WinForms
 				#region
 				{
 					var drop_info = m.WParam;
-					var count = Win32.DragQueryFile(drop_info, 0xFFFFFFFFU, null, 0);
+					var count = Shell32.DragQueryFile(drop_info, 0xFFFFFFFFU, null, 0);
 					var files = new List<string>();
 					for (int i = 0; i != count; ++i)
 					{
-						var sb = new StringBuilder((int)Win32.DragQueryFile(drop_info, (uint)i, null, 0) + 1);
-						if (Win32.DragQueryFile(drop_info, (uint)i, sb, (uint)sb.Capacity) == 0)
+						var sb = new StringBuilder((int)Shell32.DragQueryFile(drop_info, (uint)i, null, 0) + 1);
+						if (Shell32.DragQueryFile(drop_info, (uint)i, sb, (uint)sb.Capacity) == 0)
 							throw new Exception("Failed to query file name from dropped files");
 						files.Add(sb.ToString());
 						sb.Clear();

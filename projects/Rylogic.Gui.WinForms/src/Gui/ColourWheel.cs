@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -237,10 +237,10 @@ namespace Rylogic.Gui.WinForms
 			if (dim.Empty || dim.VSlider.IsEmpty) return;
 			
 			var v = VerticalLayout
-				? Math_.Clamp(Math_.Frac(dim.VSlider.Left, x, dim.VSlider.Right), 0f, 1f)
-				: Math_.Clamp(Math_.Frac(dim.VSlider.Bottom, y, dim.VSlider.Top), 0f, 1f);
+				? Math_.Clamp(Math_.Frac(dim.VSlider.Left, x, dim.VSlider.Right), 0.0, 1.0)
+				: Math_.Clamp(Math_.Frac(dim.VSlider.Bottom, y, dim.VSlider.Top), 0.0, 1.0);
 
-			HSVColour = HSV.FromAHSV(HSVColour.A, HSVColour.H, HSVColour.S, v);
+			HSVColour = HSV.FromAHSV(HSVColour.A, HSVColour.H, HSVColour.S, (float)v);
 		}
 
 		/// <summary>Set the alpha based on point x,y relative to the VSlider</summary>
@@ -250,10 +250,10 @@ namespace Rylogic.Gui.WinForms
 			if (dim.Empty || dim.ASlider.IsEmpty) return;
 
 			var a = VerticalLayout
-				? Math_.Clamp(Math_.Frac(dim.ASlider.Left, x, dim.ASlider.Right), 0f, 1f)
-				: Math_.Clamp(Math_.Frac(dim.ASlider.Bottom, y, dim.ASlider.Top), 0f, 1f);
+				? Math_.Clamp(Math_.Frac(dim.ASlider.Left, x, dim.ASlider.Right), 0.0, 1.0)
+				: Math_.Clamp(Math_.Frac(dim.ASlider.Bottom, y, dim.ASlider.Top), 0.0, 1.0);
 
-			HSVColour = HSV.FromAHSV(a, HSVColour.H, HSVColour.S, HSVColour.V);
+			HSVColour = HSV.FromAHSV((float)a, HSVColour.H, HSVColour.S, HSVColour.V);
 		}
 
 		/// <summary>Get/Create the bitmap of the colour wheel</summary>
@@ -404,8 +404,8 @@ namespace Rylogic.Gui.WinForms
 				if ((Parts & EParts.VSelection) != 0)
 				{
 					var v = VerticalLayout
-						? Math_.Lerp(dim.VSlider.Left, dim.VSlider.Right, HSVColour.V)
-						: Math_.Lerp(dim.VSlider.Bottom, dim.VSlider.Top, HSVColour.V);
+						? Math_.Lerp(dim.VSlider.Left, dim.VSlider.Right, (double)HSVColour.V)
+						: Math_.Lerp(dim.VSlider.Bottom, dim.VSlider.Top, (double)HSVColour.V);
 					var pts = SliderSelector(v, dim.VSlider, VerticalLayout);
 					gfx.DrawLines(Pens.Black, pts);
 				}
@@ -430,8 +430,8 @@ namespace Rylogic.Gui.WinForms
 				if ((Parts & EParts.ASelection) != 0)
 				{
 					var v = VerticalLayout
-						? Math_.Lerp(dim.ASlider.Left, dim.ASlider.Right, HSVColour.A)
-						: Math_.Lerp(dim.ASlider.Bottom, dim.ASlider.Top, HSVColour.A);
+						? Math_.Lerp(dim.ASlider.Left, dim.ASlider.Right, (double)HSVColour.A)
+						: Math_.Lerp(dim.ASlider.Bottom, dim.ASlider.Top, (double)HSVColour.A);
 					var pts = SliderSelector(v, dim.ASlider, VerticalLayout);
 					gfx.DrawLines(Pens.Black, pts);
 				}

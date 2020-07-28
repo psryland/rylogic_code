@@ -263,17 +263,17 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Linear interpolate</summary>
-		public static int Lerp(int lhs, int rhs, float frac)
+		public static int Lerp(int lhs, int rhs, double frac)
 		{
-			return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0);
+			return (int)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0);
 		}
 		public static long Lerp(long lhs, long rhs, double frac)
 		{
 			return (long)Math.Round(Lerp((double)lhs, (double)rhs, frac), 0);
 		}
-		public static float Lerp(float lhs, float rhs, float frac)
+		public static float Lerp(float lhs, float rhs, double frac)
 		{
-			return (float)Lerp((double)lhs, (double)rhs, (double)frac);
+			return (float)Lerp((double)lhs, (double)rhs, frac);
 		}
 		public static double Lerp(double lhs, double rhs, double frac)
 		{
@@ -303,20 +303,18 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Normalise to x to range [min,max]</summary>
-		public static float Frac(int min, int x, int max)
+		public static double Frac(int min, int x, int max)
 		{
-			Debug.Assert(max != min);
-			return (float)(x - min) / (max - min);
+			return Frac((long)min, (long)x, (long)max);
 		}
 		public static double Frac(long min, long x, long max)
 		{
 			Debug.Assert(max != min);
 			return (double)(x - min) / (max - min);
 		}
-		public static float Frac(float min, float x, float max)
+		public static double Frac(float min, float x, float max)
 		{
-			Debug.Assert(Math.Abs(max - min) > float.Epsilon);
-			return (x - min) / (max - min);
+			return Frac((double)min, (double)x, (double)max);
 		}
 		public static double Frac(double min, double x, double max)
 		{

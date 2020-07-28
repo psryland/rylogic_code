@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WinForms
 				{
 					return (TInterface)dis.Invoke(() => Activator.CreateInstance(ty, args));
 				}
-				bool progress(string file, float frac)
+				bool progress(string file, double frac)
 				{
 					cb(new ProgressForm.UserState { Description = $"{desc}\r\n{file}", FractionComplete = frac });
 					if (s.CancelPending) throw new OperationCanceledException();

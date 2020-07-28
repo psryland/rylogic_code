@@ -39,6 +39,7 @@
 			Grid.Column="1"
 			DockPanel.Dock="Right"
 			Command="{Binding BrowsePath}"
+			Background="Transparent"
 			BorderThickness="0"
 			Margin="3,0,0,0"
 			>

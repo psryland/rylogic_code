@@ -943,7 +943,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Return the value of the track bar as a normalised fraction of the min-max range</summary>
-		public static void ValueFrac(this TrackBar tb, float frac)
+		public static void ValueFrac(this TrackBar tb, double frac)
 		{
 			tb.Value = Math_.Lerp(tb.Minimum, tb.Maximum, frac);
 		}
@@ -1003,11 +1003,11 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Set the value of the progress bar as a normalised fraction of the min-max range</summary>
-		public static void ValueFrac(this ProgressBar pb, float frac)
+		public static void ValueFrac(this ProgressBar pb, double frac)
 		{
 			pb.Value = Math_.Lerp(pb.Minimum, pb.Maximum, frac);
 		}
-		public static void ValueFrac(this ToolStripProgressBar pb, float frac)
+		public static void ValueFrac(this ToolStripProgressBar pb, double frac)
 		{
 			pb.Value = Math_.Lerp(pb.Minimum, pb.Maximum, frac);
 		}

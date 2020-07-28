@@ -815,7 +815,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Return the value at pixel position 'x'</summary>
 		private int ReadValueAt(int x)
 		{
-			var frac = Math_.Clamp(Math_.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0f, 1f);
+			var frac = Math_.Clamp(Math_.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0.0, 1.0);
 			return Math_.Lerp(Range.Begi, Range.Endi, frac);
 		}
 

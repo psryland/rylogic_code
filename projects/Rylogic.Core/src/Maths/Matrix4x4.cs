@@ -631,7 +631,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Spherically interpolate between two affine transforms</summary>
-		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, float frac)
+		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, double frac)
 		{
 			Debug.Assert(IsAffine(lhs));
 			Debug.Assert(IsAffine(rhs));
