@@ -28,11 +28,12 @@
 	
 		<ComboBox
 			Grid.Column="0"
-			MinWidth="100"
-			VerticalContentAlignment="Center"
 			ItemsSource="{Binding HistoryView}"
 			Text="{Binding SelectedPath, UpdateSourceTrigger=LostFocus}"
+			VerticalContentAlignment="Center"
+			VerticalAlignment="Center"
 			IsEditable="True"
+			MinWidth="100"
 			x:Name="m_cb_path"
 			/>
 		<Button

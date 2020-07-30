@@ -3,13 +3,14 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
-	public sealed partial class AxisPanel :Canvas, IDisposable, INotifyPropertyChanged
+	public sealed partial class AxisPanel :Canvas, IDisposable, INotifyPropertyChanged, IChartAxisCMenu
 	{
 		// Notes:
 		//  - Represents the tick marks and tick labels of an axis.
@@ -36,40 +37,40 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		/// <summary>Font for tick marks</summary>
 		public FontFamily FontFamily
 		{
-			get { return (FontFamily)GetValue(FontFamilyProperty); }
-			set { SetValue(FontFamilyProperty, value); }
+			get => (FontFamily)GetValue(FontFamilyProperty);
+			set => SetValue(FontFamilyProperty, value);
 		}
 		public static readonly DependencyProperty FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
 
 		/// <summary>Font style</summary>
 		public FontStyle FontStyle
 		{
-			get { return (FontStyle)GetValue(FontStyleProperty); }
-			set { SetValue(FontStyleProperty, value); }
+			get => (FontStyle)GetValue(FontStyleProperty);
+			set => SetValue(FontStyleProperty, value);
 		}
 		public static readonly DependencyProperty FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
 
 		/// <summary>Font weight</summary>
 		public FontWeight FontWeight
 		{
-			get { return (FontWeight)GetValue(FontWeightProperty); }
-			set { SetValue(FontWeightProperty, value); }
+			get => (FontWeight)GetValue(FontWeightProperty);
+			set => SetValue(FontWeightProperty, value);
 		}
 		public static readonly DependencyProperty FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);
 
 		/// <summary>Font stretch</summary>
 		public FontStretch FontStretch
 		{
-			get { return (FontStretch)GetValue(FontStretchProperty); }
-			set { SetValue(FontStretchProperty, value); }
+			get => (FontStretch)GetValue(FontStretchProperty);
+			set => SetValue(FontStretchProperty, value);
 		}
 		public static readonly DependencyProperty FontStretchProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStretch), def: FontStretches.Normal);
 
 		/// <summary>Font size for tick labels</summary>
 		public double FontSize
 		{
-			get { return (double)GetValue(FontSizeProperty); }
-			set { SetValue(FontSizeProperty, value); }
+			get => (double)GetValue(FontSizeProperty);
+			set => SetValue(FontSizeProperty, value);
 		}
 		public static readonly DependencyProperty FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), def: 10.0);
 
@@ -79,8 +80,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		/// <summary>The axis represented by this visual</summary>
 		public ChartControl.RangeData.Axis? Axis
 		{
-			get { return (ChartControl.RangeData.Axis?)GetValue(AxisProperty); }
-			set { SetValue(AxisProperty, value); }
+			get => (ChartControl.RangeData.Axis?)GetValue(AxisProperty);
+			set => SetValue(AxisProperty, value);
 		}
 		private void Axis_Changed(ChartControl.RangeData.Axis new_value, ChartControl.RangeData.Axis old_value)
 		{
@@ -357,14 +358,14 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		private bool m_update_graphics_pending;
 
 		/// <summary>Toggle the scroll locked state of the axis</summary>
-		public Command ToggleScrollLock { get; }
+		public ICommand ToggleScrollLock { get; }
 		private void ToggleScrollLockInternal()
 		{
 			AllowScroll = !AllowScroll;
 		}
 
 		/// <summary>Toggle the scroll locked state of the axis</summary>
-		public Command ToggleZoomLock { get; }
+		public ICommand ToggleZoomLock { get; }
 		private void ToggleZoomLockInternal()
 		{
 			AllowZoom = !AllowZoom;
@@ -372,7 +373,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
+		public void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 

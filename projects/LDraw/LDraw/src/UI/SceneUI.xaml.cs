@@ -31,6 +31,7 @@ namespace LDraw.UI
 			};
 			OtherScenes = new ListCollectionView(new List<SceneWrapper>());
 			Model = model;
+			SceneView = m_scene;
 			SceneName = name;
 			SceneState = Settings.SceneState.get(name);
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
@@ -39,12 +40,9 @@ namespace LDraw.UI
 			Links = new List<ChartLink>();
 
 			RenameScene = Command.Create(this, RenameSceneInternal);
-			ClearScene = Command.Create(this, ClearSceneInternal);
-			LinkCamera = Command.Create(this, LinkCameraInternal);
-			ToggleAnimationUI = Command.Create(this, ToggleAnimationUIInternal);
-			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
 
+			InitCommands();
 			InitCMenus();
 			PopulateOtherScenes();
 			DataContext = this;
@@ -52,6 +50,7 @@ namespace LDraw.UI
 		public void Dispose()
 		{
 			Model = null!;
+			SceneView = null!;
 			DockControl = null!;
 			m_scene.Dispose();
 		}
@@ -194,7 +193,32 @@ namespace LDraw.UI
 		private SceneStateData m_scene_state = null!;
 
 		/// <summary>The 3d part of the scene (i.e. the chart control)</summary>
-		public ChartControl SceneView => m_scene;
+		public ChartControl SceneView
+		{
+			get => m_scene_view;
+			set
+			{
+				if (m_scene_view == value) return;
+				if (m_scene_view != null)
+				{
+					m_scene_view.PropertyChanged -= HandlePropertyChanged;
+				}
+				m_scene_view = value;
+				if (m_scene_view != null)
+				{
+					m_scene_view.PropertyChanged += HandlePropertyChanged;
+				}
+
+				// Handler
+				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					// Forward property changed from the ChartControl.
+					// Probably should only forward properties of IChartCMenu and IView3dCMenu.
+					NotifyPropertyChanged(e.PropertyName);
+				}
+			}
+		}
+		private ChartControl m_scene_view = null!;
 
 		/// <summary>The camera focus point</summary>
 		public v4 FocusPoint
@@ -223,19 +247,6 @@ namespace LDraw.UI
 		}
 		private string m_scene_name = null!;
 
-		/// <summary>Show/Hide the animation controls</summary>
-		public bool ShowAnimationUI
-		{
-			get => m_show_anim_ui;
-			set
-			{
-				if (ShowAnimationUI == value) return;
-				m_show_anim_ui = value;
-				NotifyPropertyChanged(nameof(ShowAnimationUI));
-			}
-		}
-		private bool m_show_anim_ui;
-
 		/// <summary>Other available scenes</summary>
 		public ICollectionView OtherScenes { get; }
 		private void PopulateOtherScenes()
@@ -257,10 +268,23 @@ namespace LDraw.UI
 		/// <summary>Set up the context menus</summary>
 		private void InitCMenus()
 		{
-			SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", new SceneCMenu(this));
+			SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", this);
 			SceneView.XAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", new SceneAxisCMenu(this, ChartControl.EAxis.XAxis));
 			SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", new SceneAxisCMenu(this, ChartControl.EAxis.YAxis));
 		}
+
+		/// <summary>True if the animation UI is visible</summary>
+		public bool AnimationUI
+		{
+			get => m_show_anim_ui;
+			set
+			{
+				if (m_show_anim_ui == value) return;
+				m_show_anim_ui = value;
+				NotifyPropertyChanged(nameof(AnimationUI));
+			}
+		}
+		private bool m_show_anim_ui;
 
 		/// <summary>Rename the scene tab</summary>
 		public Command RenameScene { get; }
@@ -279,50 +303,6 @@ namespace LDraw.UI
             }
 		}
 
-		/// <summary>Remove all objects from the scene</summary>
-		public Command ClearScene { get; }
-		private void ClearSceneInternal()
-		{
-			SceneView.Scene.RemoveAllObjects();
-			SceneView.Invalidate();
-		}
-
-		/// <summary>Link the camera for this scene to the camera of another scene</summary>
-		public Command LinkCamera { get; }
-		private void LinkCameraInternal()
-		{
-			if (m_link_cameras_ui == null)
-			{
-				m_link_cameras_ui = new LinkCamerasUI(Window.GetWindow(this), Model);
-				m_link_cameras_ui.Closed += delegate { m_link_cameras_ui = null; };
-				m_link_cameras_ui.Show();
-			}
-			m_link_cameras_ui.Source = new SceneWrapper(this);
-			m_link_cameras_ui.Focus();
-		}
-		private static LinkCamerasUI? m_link_cameras_ui;
-
-		/// <summary>Show/Hide the animation UI</summary>
-		public Command ToggleAnimationUI { get; }
-		private void ToggleAnimationUIInternal()
-		{
-			ShowAnimationUI = !ShowAnimationUI;
-		}
-
-		/// <summary>Show the lighting dialog</summary>
-		public Command ShowLightingUI { get; }
-		private void ShowLightingUIInternal()
-		{
-			if (m_lighting_ui == null)
-			{
-				m_lighting_ui = new View3dLightingUI(Window.GetWindow(this), SceneView.Scene.Window);
-				m_lighting_ui.Closed += delegate { m_lighting_ui = null; };
-				m_lighting_ui.Show();
-			}
-			m_lighting_ui.Focus();
-		}
-		private View3dLightingUI? m_lighting_ui;
-
 		/// <summary>Close and remove this scene</summary>
 		public Command CloseScene { get; }
 		private void CloseSceneInternal()
@@ -339,21 +319,9 @@ namespace LDraw.UI
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
+		public void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-
-			if (SceneView.Scene.ContextMenu?.DataContext is IChartCMenu cmenu)
-			{
-				switch (prop_name)
-				{
-				case nameof(OtherScenes):
-					{
-						cmenu.NotifyPropertyChanged(nameof(IChartCMenu.CanLinkCamera));
-						break;
-					}
-				}
-			}
 		}
 	}
 }

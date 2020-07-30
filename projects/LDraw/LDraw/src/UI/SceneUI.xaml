@@ -31,7 +31,7 @@
 					<StaticResource	ResourceKey="View3dMenuItem_MeasureTool"/>
 				</MenuItem>
 				<MenuItem Header="Camera">
-					<StaticResource	ResourceKey="View3dMenuItem_AutoRange"/>
+					<StaticResource	ResourceKey="View3dMenuItem_AutoRangeView"/>
 					<StaticResource	ResourceKey="ChartMenuItem_Aspect11"/>
 					<StaticResource	ResourceKey="ChartMenuItem_LockAspect"/>
 					<StaticResource	ResourceKey="View3dMenuItem_Orthographic"/>
@@ -97,7 +97,7 @@
 		<!-- Tool bars -->
 		<gui:View3dAnimControls
 			Grid.Row="0"
-			Visibility="{Binding ShowAnimationUI, Converter={conv:BoolToVisible}}"
+			Visibility="{Binding AnimationUI, Converter={conv:BoolToVisible}}"
 			ViewWindow = "{Binding SceneView.Scene.Window}"
 			/>
 

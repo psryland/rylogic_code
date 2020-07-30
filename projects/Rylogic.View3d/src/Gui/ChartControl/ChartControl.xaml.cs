@@ -19,7 +19,7 @@ namespace Rylogic.Gui.WPF
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
-	public partial class ChartControl :Grid, IDisposable, INotifyPropertyChanged
+	public partial class ChartControl :Grid, IDisposable, INotifyPropertyChanged, IChartCMenu, IView3dCMenu
 	{
 		// Notes:
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
@@ -75,6 +75,8 @@ namespace Rylogic.Gui.WPF
 			try
 			{
 				View3d = View3d.Create();
+
+				InitCMenus();
 				InitCommands();
 				InitNavigation();
 				DataContext = this;
@@ -137,12 +139,12 @@ namespace Rylogic.Gui.WPF
 					var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
 					switch (e.PropertyName)
 					{
-					case nameof(OptionsData.ShowGridLines):
+						case nameof(OptionsData.ShowGridLines):
 						{
 							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowGridLines));
 							break;
 						}
-					case nameof(OptionsData.ShowAxes):
+						case nameof(OptionsData.ShowAxes):
 						{
 							m_xaxis_panel.Invalidate();
 							m_yaxis_panel.Invalidate();
@@ -151,35 +153,35 @@ namespace Rylogic.Gui.WPF
 							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowAxes));
 							break;
 						}
-					case nameof(OptionsData.Antialiasing):
+						case nameof(OptionsData.Antialiasing):
 						{
 							Scene.Antialiasing = Options.Antialiasing;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.Orthographic):
+						case nameof(OptionsData.Orthographic):
 						{
 							Camera.Orthographic = Options.Orthographic;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.FillMode):
+						case nameof(OptionsData.FillMode):
 						{
 							Window.FillMode = Options.FillMode;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FillMode));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.CullMode):
+						case nameof(OptionsData.CullMode):
 						{
 							Window.CullMode = Options.CullMode;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.CullMode));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.BackgroundColour):
+						case nameof(OptionsData.BackgroundColour):
 						{
 							Window.BackgroundColour = Options.BackgroundColour;
 							NotifyPropertyChanged(nameof(ChartBackground));
@@ -196,31 +198,31 @@ namespace Rylogic.Gui.WPF
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.FocusPointVisible):
+						case nameof(OptionsData.FocusPointVisible):
 						{
 							Window.FocusPointVisible = Options.FocusPointVisible;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.OriginPointVisible):
+						case nameof(OptionsData.OriginPointVisible):
 						{
 							Window.OriginPointVisible = Options.OriginPointVisible;
 							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
 							Invalidate();
 							break;
 						}
-					case nameof(OptionsData.NavigationMode):
+						case nameof(OptionsData.NavigationMode):
 						{
 							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.NavigationMode));
 							break;
 						}
-					case nameof(OptionsData.LockAspect):
+						case nameof(OptionsData.LockAspect):
 						{
 							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.LockAspect));
 							break;
 						}
-					case nameof(OptionsData.MouseCentredZoom):
+						case nameof(OptionsData.MouseCentredZoom):
 						{
 							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.MouseCentredZoom));
 							break;
@@ -231,7 +233,7 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(OptionsData.Axis.Side):
+						case nameof(OptionsData.Axis.Side):
 						{
 							PositionAxisPanels();
 							break;
@@ -372,31 +374,6 @@ namespace Rylogic.Gui.WPF
 		public void Invalidate(object sender, EventArgs args)
 		{
 			Invalidate();
-		}
-
-		/// <summary></summary>
-		public event PropertyChangedEventHandler? PropertyChanged;
-		internal void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-			
-			var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
-			if (chart_cmenu != null)
-			{
-				switch (prop_name)
-				{
-				case nameof(ShowValueAtPointer):
-					{
-						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowValueAtPointer));
-						break;
-					}
-				case nameof(ShowCrossHair):
-					{
-						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowCrossHair));
-						break;
-					}
-				}
-			}
 		}
 
 		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
@@ -713,20 +690,6 @@ namespace Rylogic.Gui.WPF
 			Invalidate();
 		}
 
-		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
-		public bool LockAspect
-		{
-			get { return Options.LockAspect != null; }
-			set
-			{
-				if (LockAspect == value) return;
-				if (value)
-					Options.LockAspect = (XAxis.Span * SceneBounds.Height) / (YAxis.Span * SceneBounds.Width);
-				else
-					Options.LockAspect = null;
-			}
-		}
-
 		/// <summary>Set the axis range based on the position of the camera and the field of view</summary>
 		public void SetRangeFromCamera()
 		{
@@ -948,103 +911,8 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary>A tool tip to display the mouse location value</summary>
-		public bool ShowValueAtPointer
-		{
-			get { return m_show_value_at_pointer; }
-			set
-			{
-				if (m_show_value_at_pointer == value) return;
-				if (m_show_value_at_pointer)
-				{
-					m_chart_panel.MouseMove -= HandleMouseMove;
-					m_popup_show_value.IsOpen = false;
-				}
-				m_show_value_at_pointer = value;
-				if (m_show_value_at_pointer)
-				{
-					m_popup_show_value.IsOpen = true;
-					m_chart_panel.MouseMove += HandleMouseMove;
-				}
-				NotifyPropertyChanged(nameof(ShowValueAtPointer));
-
-				// Handlers
-				void HandleMouseMove(object sender, MouseEventArgs e)
-				{
-					var pos = e.GetPosition(m_chart_panel);
-					m_popup_show_value.HorizontalOffset = pos.X + 10;
-					m_popup_show_value.VerticalOffset = pos.Y + 20;
-				}
-			}
-		}
-		private bool m_show_value_at_pointer;
-
 		/// <summary>The chart coordinates at the current mouse pointer location</summary>
 		public string ValueAtPointer => LocationText(Mouse.GetPosition(this));
-
-		/// <summary>True while the cross hair is visible</summary>
-		public bool ShowCrossHair
-		{
-			get => m_xhair != null;
-			set
-			{
-				if (ShowCrossHair == value) return;
-				if (ShowCrossHair)
-				{
-					MouseMove -= OnMouseMoveCrossHair;
-					MouseWheel -= OnMouseWheelCrossHair;
-					Cursor = Cursors.Arrow;
-					Util.Dispose(ref m_xhair);
-				}
-				m_xhair = value ? new CrossHair(this) : null;
-				if (ShowCrossHair)
-				{
-					Cursor = Cursors.Cross;
-					MouseWheel += OnMouseWheelCrossHair;
-					MouseMove += OnMouseMoveCrossHair;
-				}
-				NotifyPropertyChanged(nameof(ShowCrossHair));
-
-				// Handlers
-				void OnMouseMoveCrossHair(object? sender, MouseEventArgs e)
-				{
-					var location = e.GetPosition(this);
-					if (m_xhair != null && SceneBounds.Contains(location))
-						m_xhair.PositionCrossHair(location);
-				}
-				void OnMouseWheelCrossHair(object? sender, MouseEventArgs e)
-				{
-					var location = e.GetPosition(this);
-					if (m_xhair != null)
-						m_xhair.PositionCrossHair(location);
-				}
-			}
-		}
-		private CrossHair? m_xhair;
-
-		/// <summary>Tape measure tool</summary>
-		public bool ShowTapeMeasure
-		{
-			get => m_tape != null;
-			set
-			{
-				if (ShowTapeMeasure == value) return;
-				if (ShowTapeMeasure)
-				{
-					Cursor = Cursors.Arrow;
-					Util.Dispose(ref m_tape);
-				}
-				m_tape = value ? new TapeMeasure(this) : null;
-				if (ShowTapeMeasure)
-				{
-					Cursor = Cursors.Cross;
-				}
-				NotifyPropertyChanged(nameof(ShowTapeMeasure));
-
-				// Handlers
-			}
-		}
-		private TapeMeasure? m_tape;
 
 		/// <summary>Callback for formatting the text display by the tape measure</summary>
 		public Func<Point, Point, TapeMeasure.LabelText> TapeMeasureStringFormat { get; set; } = DefaultTapeMeasureStringFormat;
@@ -1063,6 +931,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Binding helpers</summary>
 		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 		public Visibility YAxisLabelVisibility => Options.ShowAxes && YAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>Chart control graphics context id</summary>
 		public static readonly Guid CtxId = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");

@@ -113,7 +113,7 @@
 		VerticalAlignment="Center"
 		Placement="Relative"
 		PlacementTarget="{Binding ElementName=m_chart_panel}"
-		MinWidth="80"
+		MinWidth="150"
 		>
 		<Border
 			BorderThickness="1"

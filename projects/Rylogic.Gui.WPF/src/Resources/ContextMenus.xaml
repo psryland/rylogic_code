@@ -39,8 +39,8 @@
 		IsChecked="{Binding SelectionBoxVisible, Mode=OneWay}"
 		Command="{Binding ToggleSelectionBox}"
 		/>
-	<MenuItem x:Key="View3dMenuItem_AutoRange" x:Shared="False"
-		Command="{Binding AutoRange}"
+	<MenuItem x:Key="View3dMenuItem_AutoRangeView" x:Shared="False"
+		Command="{Binding AutoRangeView}"
 		CommandParameter="{Binding AutoRangeBounds}"
 		>
 		<MenuItem.Header>
@@ -359,15 +359,17 @@
 		</MenuItem.Icon>
 	</MenuItem>
 
+	<!-- Default View3d Context Menu -->
 	<ContextMenu x:Key="View3dCMenu">
 		<MenuItem Header="Tools">
 			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
 			<StaticResource ResourceKey="View3dMenuItem_Focus"/>
 			<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
 			<StaticResource	ResourceKey="View3dMenuItem_SelectionBox"/>
+			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 		</MenuItem>
 		<MenuItem Header="Camera">
-			<StaticResource ResourceKey="View3dMenuItem_AutoRange"/>
+			<StaticResource ResourceKey="View3dMenuItem_AutoRangeView"/>
 			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
 			<StaticResource ResourceKey="View3dMenuItem_AlignUp"/>
 			<StaticResource ResourceKey="View3dMenuItem_ViewPresets"/>
@@ -378,11 +380,13 @@
 			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_NormalsLength"/>
+			<StaticResource ResourceKey="View3dMenuItem_NormalsColour"/>
+			<StaticResource ResourceKey="View3dMenuItem_FillModePointsSize"/>
 			<StaticResource ResourceKey="View3dMenuItem_Animation"/>
 			<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
 		</MenuItem>
 		<MenuItem Header="Tools">
-			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 			<StaticResource ResourceKey="View3dMenuItem_ObjectManager"/>
 		</MenuItem>
 	</ContextMenu>
@@ -472,6 +476,7 @@
 		Command="{Binding ToggleZoomLock}"
 		/>
 
+	<!-- Default Chart Context Menu -->
 	<ContextMenu x:Key="ChartCMenu">
 		<MenuItem Header="Tools">
 			<StaticResource ResourceKey="View3dMenuItem_Origin"/>
@@ -484,7 +489,7 @@
 			<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
 		</MenuItem>
 		<MenuItem Header="Camera">
-			<StaticResource ResourceKey="View3dMenuItem_AutoRange"/>
+			<StaticResource ResourceKey="View3dMenuItem_AutoRangeView"/>
 			<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
 			<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
 			<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
