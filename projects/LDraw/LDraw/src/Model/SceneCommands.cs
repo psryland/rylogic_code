@@ -239,6 +239,14 @@ namespace LDraw.UI
 		public ICommand ToggleBBoxesVisible => SceneView.Scene.ToggleBBoxesVisible;
 
 		/// <inheritdoc/>
+		public bool ShowNormals
+		{
+			get => SceneView.Scene.ShowNormals;
+			set => SceneView.Scene.ShowNormals = value;
+		}
+		public ICommand ToggleShowNormals => SceneView.Scene.ToggleShowNormals;
+
+		/// <inheritdoc/>
 		public float NormalsLength
 		{
 			get => SceneView.Scene.Window.Diag.NormalsLength;

@@ -47,9 +47,12 @@ namespace Rylogic.Gui.WPF
 			// Renderering Menu
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
-			SetNormalsColour = Command.Create(this, SetNormalsColourInternal);
 			ShowAnimationUI = Command.Create(this, ShowAnimationUIInternal);
 			ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
+
+			// Diagnostics
+			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
+			SetNormalsColour = Command.Create(this, SetNormalsColourInternal);
 
 			// Objects Menu
 			ShowObjectManagerUI = Command.Create(this, ShowObjectManagerInternal);
@@ -277,6 +280,28 @@ namespace Rylogic.Gui.WPF
 		{
 			get => Window.CullMode;
 			set => Window.CullMode = value;
+		}
+
+		/// <summary>Show/Hide normals for all objects</summary>
+		public bool ShowNormals
+		{
+			get
+			{
+				var normals_visible = false;
+				Window.EnumObjects(obj => normals_visible |= obj.ShowNormals);
+				return normals_visible;
+			}
+			set
+			{
+				Window.EnumObjects(obj => obj.ShowNormals = value);
+				NotifyPropertyChanged(nameof(ShowNormals));
+				Invalidate();
+			}
+		}
+		public ICommand ToggleShowNormals { get; private set; } = null!;
+		private void ToggleShowNormalsInternal()
+		{
+			ShowNormals = !ShowNormals;
 		}
 
 		/// <inheritdoc/>
