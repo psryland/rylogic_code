@@ -52,6 +52,7 @@
 				</MenuItem>
 				<MenuItem Header="Diagnostics">
 					<StaticResource	ResourceKey="View3dMenuItem_BoundingBoxes"/>
+					<StaticResource	ResourceKey="View3dMenuItem_ShowNormals"/>
 					<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
 					<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
 					<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>

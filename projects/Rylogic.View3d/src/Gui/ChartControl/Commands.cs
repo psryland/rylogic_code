@@ -369,6 +369,14 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc/>
+		public bool ShowNormals
+		{
+			get => Scene.ShowNormals;
+			set => Scene.ShowNormals = value;
+		}
+		public ICommand ToggleShowNormals => Scene.ToggleShowNormals;
+
+		/// <inheritdoc/>
 		public float NormalsLength
 		{
 			get => Scene.NormalsLength;

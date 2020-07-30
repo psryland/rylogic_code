@@ -102,6 +102,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Face culling</summary>
 		View3d.ECullMode CullMode { get; set; }
 
+		/// <summary>Show/Hide normals for all objects</summary>
+		bool ShowNormals { get; set; }
+		ICommand ToggleShowNormals { get; }
+
 		/// <summary>The length of displayed vertex normals</summary>
 		float NormalsLength { get; set; }
 
