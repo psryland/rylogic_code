@@ -6,9 +6,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Data;
-using System.Windows.Interop;
 using System.Windows.Markup;
-using System.Windows.Media.Imaging;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Rylogic.Extn;
@@ -95,14 +93,20 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Convert icons to images</summary>
-	public class IconToImageSource : MarkupExtension, IValueConverter
+	/// <summary>Convert bitmaps/icons to image sources</summary>
+	public class ToImageSource : MarkupExtension, IValueConverter
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return value is Icon icon
-				? Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions())
-				: null;
+			if (value is Bitmap bmp)
+			{
+				return bmp.ToBitmapSource();
+			}
+			if (value is Icon icon)
+			{
+				return icon.ToBitmapSource();
+			}
+			return value;
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
