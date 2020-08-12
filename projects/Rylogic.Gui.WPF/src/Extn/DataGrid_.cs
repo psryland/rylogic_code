@@ -81,8 +81,8 @@ namespace Rylogic.Gui.WPF
 			FitToDisplayWidth,
 		}
 
-		/// <summary>Foreground Attached property</summary>
-		public const int ColumnResizeMode = 0;
+		/// <summary>Column resizing attached property</summary>
+		private const int ColumnResizeMode = 0;
 		public static readonly DependencyProperty ColumnResizeModeProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnResizeMode));
 		public static EColumnResizeMode GetColumnResizeMode(DependencyObject obj) => (EColumnResizeMode)obj.GetValue(ColumnResizeModeProperty);
 		public static void SetColumnResizeMode(DependencyObject obj, EColumnResizeMode value) => obj.SetValue(ColumnResizeModeProperty, value);
@@ -122,6 +122,20 @@ namespace Rylogic.Gui.WPF
 		#endregion
 
 		#region Column Visibility
+
+		// Usage:
+		//  Add 'gui:DataGrid_.ColumnVisibiltySupport="True"' to your DataGrid.
+
+		/// <summary>Add column visibility to a DataGrid attached property</summary>
+		private const int ColumnVisibiltySupport = 0;
+		public static readonly DependencyProperty ColumnVisibiltySupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnVisibiltySupport));
+		public static bool GetColumnVisibiltySupport(DependencyObject obj) => (bool)obj.GetValue(ColumnVisibiltySupportProperty);
+		public static void SetColumnVisibiltySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibiltySupportProperty, value);
+		private static void ColumnVisibiltySupport_Changed(DependencyObject obj)
+		{
+			if (!(obj is DataGrid data_grid)) return;
+			data_grid.MouseRightButtonUp += ColumnVisibility;
+		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
 		public static void ColumnVisibilityCMenu(this DataGrid grid, Action<DataGridColumn>? on_vis_changed = null)
@@ -190,8 +204,8 @@ namespace Rylogic.Gui.WPF
 		//  You can then handle reordered with custom code.
 		//  Use the 'RowsReordered' to get notification after a reorder has happened
 
-		/// <summary>Foreground Attached property</summary>
-		public const int ReorderRowsWithDragDrop = 0;
+		/// <summary>Reorder rows with drag/drop attached property</summary>
+		private const int ReorderRowsWithDragDrop = 0;
 		public static readonly DependencyProperty ReorderRowsWithDragDropProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ReorderRowsWithDragDrop));
 		public static bool GetReorderRowsWithDragDrop(DependencyObject obj) => (bool)obj.GetValue(ReorderRowsWithDragDropProperty);
 		public static void SetReorderRowsWithDragDrop(DependencyObject obj, bool value) => obj.SetValue(ReorderRowsWithDragDropProperty, value);
@@ -433,7 +447,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Event for reordering the underlying collection on row drop</summary>
-		public const int ReorderRowDrop = 0;
+		private const int ReorderRowDrop = 0;
 		public delegate void ReorderRowDropEventHandler(object sender, ReorderRowDropEventArgs args);
 		public static readonly RoutedEvent ReorderRowDropEvent = EventManager.RegisterRoutedEvent(nameof(ReorderRowDrop), RoutingStrategy.Bubble, typeof(ReorderRowDropEventHandler), typeof(DataGrid_));
 		public static void AddReorderRowDropHandler(DependencyObject d, ReorderRowDropEventHandler handler)
@@ -448,7 +462,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Event to signal that rows have been reordered</summary>
-		public const int RowsReordered = 0;
+		private const int RowsReordered = 0;
 		public delegate void RowsReorderedEventHandler(object sender, RoutedEventArgs args);
 		public static readonly RoutedEvent RowsReorderedEvent = EventManager.RegisterRoutedEvent(nameof(RowsReordered), RoutingStrategy.Bubble, typeof(RowsReorderedEventHandler), typeof(DataGrid_));
 		public static void AddRowsReorderedHandler(DependencyObject d, RowsReorderedEventHandler handler)

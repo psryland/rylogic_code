@@ -1,10 +1,8 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
-using System.Windows.Data;
+using System.Windows.Controls;
 using System.Windows.Input;
 using Rylogic.Gfx;
-using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -51,6 +49,29 @@ namespace Rylogic.Gui.WPF
 			if (YAxisPanel.ContextMenu != null && YAxisPanel.ContextMenu.DataContext == null)
 				YAxisPanel.ContextMenu.DataContext = YAxisPanel;
 		}
+
+		/// <summary>Accessors for setting the context menus in XAML</summary>
+		public ContextMenu SceneCMenu
+		{
+			get => Scene.ContextMenu;
+			set => Scene.ContextMenu = value;
+		}
+		public ContextMenu XAxisCMenu
+		{
+			get => XAxisPanel.ContextMenu;
+			set => XAxisPanel.ContextMenu = value;
+		}
+		public ContextMenu YAxisCMenu
+		{
+			get => YAxisPanel.ContextMenu;
+			set => YAxisPanel.ContextMenu = value;
+		}
+
+		/// <inheritdoc/>
+		public IView3dCMenu View3dCMenuContext => this;
+
+		/// <inheritdoc/>
+		public IChartCMenu ChartCMenuContext => this;
 
 		/// <inheritdoc/>
 		public bool OriginPointVisible

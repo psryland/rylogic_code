@@ -12,6 +12,25 @@ namespace Rylogic.Gui.WPF
 		//  - This is used to get simple data from the user.
 		//  - Use 'MsgBox' if you just want to display some info.
 
+		/// <summary>Display a model prompt dialog</summary>
+		public static bool? Show(Window? owner, ref string value, string? title = null, string? prompt = null)
+		{
+			title ??= string.Empty;
+			prompt ??= string.Empty;
+			var dlg = new PromptUI(owner)
+			{
+				Title = title,
+				Prompt = prompt,
+				Value = value,
+			};
+			var r = dlg.ShowDialog();
+			if (r == true)
+			{
+				value = dlg.Value;
+			}
+			return r;
+		}
+
 		public PromptUI(Window? owner = null)
 		{
 			InitializeComponent();

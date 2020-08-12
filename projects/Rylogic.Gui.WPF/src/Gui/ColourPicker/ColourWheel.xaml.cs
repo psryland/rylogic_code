@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -79,7 +80,11 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override Size MeasureOverride(Size constraint)
 		{
-			var meas = CalcMeasurements(constraint);
+			var desired = base.MeasureOverride(constraint);
+			if (double.IsInfinity(desired.Width) || double.IsInfinity(desired.Height))
+				desired = new Size(300, 200);
+
+			var meas = CalcMeasurements(desired);
 			return new Size(meas.Width, meas.Height);
 		}
 		protected override void OnRender(DrawingContext gfx)

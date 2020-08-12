@@ -8,7 +8,7 @@ namespace TestWPF
 	{
 		public class ImageButtonRaw : Button
 		{
-			private Image m_image;
+			private Image? m_image;
 			private TextBlock m_text;
 
 			public ImageButtonRaw()
@@ -45,7 +45,7 @@ namespace TestWPF
 			}
 
 			/// <summary>The button image</summary>
-			public ImageSource Source
+			public ImageSource? Source
 			{
 				get { return m_image?.Source; }
 				set { if (m_image != null) m_image.Source = value; }

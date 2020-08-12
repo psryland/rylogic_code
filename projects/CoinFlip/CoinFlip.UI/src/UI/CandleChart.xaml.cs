@@ -1305,20 +1305,16 @@ namespace CoinFlip.UI
 		/// <summary>Replace the chart context menus</summary>
 		private void ModifyContextMenus()
 		{
+			// Todo: CMenus need fixing up
+			// Probably best to make them entirely generated in code, rather than in XAML
+			
+
 			// Modify the main chart area menu
 			{
 				var cmenu = Chart.Scene.ContextMenu;
 
-				// Move the existing chart menu into a sub menu
-				var chart_options_menu = new MenuItem { Header = "Chart Options" };
-				{
-					var items = cmenu.Items.Cast<MenuItem>().ToList();
-					cmenu.Items.Clear();
-					chart_options_menu.Items.AddRange(items);
-				}
-
 				// Drawing tools menu
-				var drawing_menu = cmenu.Items.Add2(new MenuItem { Header = "Drawing" });
+				var drawing_menu = cmenu.FindSubMenu("Drawing") ?? throw new Exception("Drawing sub menu not found");
 				foreach (var drawing in Indicator_.EnumDrawings())
 				{
 					var opt = drawing_menu.Items.Add2(new MenuItem { Header = Indicator_.Name(drawing) });
@@ -1341,7 +1337,7 @@ namespace CoinFlip.UI
 				}
 
 				// Indicators sub menu
-				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
+				var indicators_menu = cmenu.FindSubMenu("Indicators") ?? throw new Exception("Indicators sub menu not found");
 				foreach (var indicator in Indicator_.EnumIndicators())
 				{
 					var opt = indicators_menu.Items.Add2(new MenuItem { Header = Indicator_.Name(indicator) });
@@ -1363,21 +1359,21 @@ namespace CoinFlip.UI
 					};
 				}
 
-				// Candle style menu
-				var candles_menu = cmenu.Items.Add2(new MenuItem { Header = "Candles", DataContext = this });
-				{
-					var cb = candles_menu.Items.Add2(new ComboBox
-					{
-						Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
-						ItemsSource = Enum<ECandleStyle>.Values,
-						SelectedItem = CandleStyle,
-						Background = SystemColors.ControlBrush,
-						BorderThickness = new Thickness(0),
-						Margin = new Thickness(1, 1, 20, 1),
-						MinWidth = 80,
-					});
-					cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(CandleStyle)) { Mode = BindingMode.TwoWay });
-				}
+				//// Candle style menu
+				//var candles_menu = cmenu.FindSubMenu("Candles") ?? throw new Exception("Candles sub menu not found");
+				//{
+				//	var cb = candles_menu.Items.Add2(new ComboBox
+				//	{
+				//		Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
+				//		ItemsSource = Enum<ECandleStyle>.Values,
+				//		SelectedItem = CandleStyle,
+				//		Background = SystemColors.ControlBrush,
+				//		BorderThickness = new Thickness(0),
+				//		Margin = new Thickness(1, 1, 20, 1),
+				//		MinWidth = 80,
+				//	});
+				//	cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(CandleStyle)) { Mode = BindingMode.TwoWay });
+				//}
 
 				cmenu.Items.Add(new Separator());
 
@@ -1429,10 +1425,11 @@ namespace CoinFlip.UI
 				cmenu.Items.Add(new Separator());
 
 				// Add the chart options menu at the end
-				cmenu.Items.Add(chart_options_menu);
+			//	cmenu.Items.Add(chart_options_menu);
 
 				// Add this last so it occurs after the other handlers attached to 'Opened'
 				cmenu.Opened += Gui_.TidySeparators;
+
 			}
 
 			// Modify the XAxis context menu

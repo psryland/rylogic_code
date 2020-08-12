@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using EweLink;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace SolarHotWater
 {
@@ -48,7 +46,6 @@ namespace SolarHotWater
 					{
 						case nameof(SettingsData.Consumer.SwitchName):
 						{
-							NotifyPropertyChanged(nameof(EweSwitch));
 							break;
 						}
 						default:
@@ -78,21 +75,51 @@ namespace SolarHotWater
 				{
 					m_ewe_switch.PropertyChanged += HandlePropChanged;
 				}
+				NotifyPropertyChanged(nameof(EweSwitch));
+				NotifyPropertyChanged(nameof(On));
+				NotifyPropertyChanged(nameof(Voltage));
+				NotifyPropertyChanged(nameof(Current));
+				NotifyPropertyChanged(nameof(Power));
 
 				// Handler
 				void HandlePropChanged(object sender, PropertyChangedEventArgs e)
 				{
 					switch (e.PropertyName)
 					{
-						case "State":
+						case "switch":
 						{
 							// Record when the switch changes state, so we know whether
 							// it was changed by this app or changed externally.
 							LastStateChange = DateTimeOffset.Now;
+							StateChangePending = null;
+							NotifyPropertyChanged(nameof(On));
+							break;
+						}
+						case "voltage":
+						{
+							NotifyPropertyChanged(nameof(Voltage));
+							break;
+						}
+						case "current":
+						{
+							NotifyPropertyChanged(nameof(Current));
+							break;
+						}
+						case "power":
+						{
+							NotifyPropertyChanged(nameof(Power));
+							break;
+						}
+						case "partnerApikey":
+						{
+							break;
+						}
+						default:
+						{
+							Log.Write(ELogLevel.Debug, $"Consumer {Name}: {e.PropertyName} state changed");
 							break;
 						}
 					}
-					NotifyPropertyChanged(string.Empty);
 				}
 			}
 		}
@@ -109,7 +136,11 @@ namespace SolarHotWater
 		public string SwitchName
 		{
 			get => Settings.SwitchName;
-			set => Settings.SwitchName = value;
+			set
+			{
+				if (value == null || value.Length == 0 || SwitchName == value) return;
+				Settings.SwitchName = value;
+			}
 		}
 
 		/// <summary>The power headroom needed for this consumer</summary>
@@ -126,46 +157,44 @@ namespace SolarHotWater
 			set => Settings.Cooldown = TimeSpan_.TryParseExpr(value) is TimeSpan ts ? ts : TimeSpan.Zero;
 		}
 
-		/// <summary>The priority order of this consumer</summary>
-		public int? Priority
-		{
-			get => Settings.Parent is SettingsData settings ? settings.Consumers.IndexOf(Settings) : (int?)null;
-			set
-			{
-				if (value == null) return;
-				if (Settings.Parent is SettingsData settings && settings.Consumers.Length > 1)
-				{
-					var idx = Math.Clamp(value ?? 0, 0, settings.Consumers.Length);
-					var consumers = settings.Consumers.ToList();
-					consumers.Remove(Settings);
-					consumers.Insert(idx, Settings);
-					settings.Consumers = consumers.ToArray();
-				}
-			}
-		}
-
 		/// <summary>The voltage at the switch output</summary>
 		public double? Voltage => EweSwitch?.Voltage;
 
 		/// <summary>The current draw of this consumer</summary>
 		public double? Current => EweSwitch?.Current;
 
-		/// <summary>The power currently being used by this consumer</summary>
-		public double? Power => EweSwitch?.Power;
+		/// <summary>The power currently being used by this consumer (in kWatts)</summary>
+		public double? Power => EweSwitch?.Power * 0.001;
 
 		/// <summary>Get/Set whether the consumer is on/off</summary>
 		public bool On => EweSwitch?.State == EweSwitch.ESwitchState.On;
 
-		/// <summary>Time stamp of when the switch was last turned on/off</summary>
+		/// <summary>Timestamp of when a state change is first pending</summary>
+		public DateTimeOffset? StateChangePending
+		{
+			get => m_state_change_pending;
+			set
+			{
+				if (m_state_change_pending == value) return;
+				m_state_change_pending = value;
+				NotifyPropertyChanged(nameof(StateChangePending));
+				NotifyPropertyChanged(nameof(StateChangeFrac));
+			}
+		}
+		private DateTimeOffset? m_state_change_pending;
+
+		/// <summary>Timestamp of when the switch was last turned on/off</summary>
 		public DateTimeOffset LastStateChange { get; private set; }
+
+		/// <summary>Normalised time until state change</summary>
+		public double StateChangeFrac => StateChangePending is DateTimeOffset t0 && Settings.Cooldown.TotalSeconds > 0
+			? (DateTimeOffset.Now - t0).TotalSeconds / Settings.Cooldown.TotalSeconds :
+			0.0;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
-	
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+
 		/// <summary></summary>
 		public string Description => $"{Name}";
 	}

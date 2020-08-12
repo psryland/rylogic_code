@@ -1,4 +1,4 @@
-//*****************************************************************************
+ï»¿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -182,10 +182,11 @@ namespace pr
 			#endif
 		{}
 
-		// Construct a quaternion from two vectors represent start and end orientations
+		// Construct a quaternion from two vectors representing start and end orientations
 		Quat(v4_cref<> from, v4_cref<> to)
 		{
-			auto d = Dot3(from, to);
+			assert(from.w == 0 && to.w == 0);
+			auto d = Dot(from, to);
 			auto axis = Cross3(from, to);
 			auto s = Sqrt(LengthSq(from) * LengthSq(to)) + d;
 			if (FEql(s, 0.0f))
@@ -216,10 +217,10 @@ namespace pr
 			assert("quaternion isn't normalised" && IsNormal(*this));
 
 			// Trig:
-			//' cos²(x) = 0.5 * (1 + cos(2x))
+			//' cosï¿½(x) = 0.5 * (1 + cos(2x))
 			//' w == cos(x/2)
-			//' w² == cos²(x/2) == 0.5 * (1 + cos(x))
-			//' 2w² - 1 == cos(x)
+			//' wï¿½ == cosï¿½(x/2) == 0.5 * (1 + cos(x))
+			//' 2wï¿½ - 1 == cos(x)
 			return Clamp(2.0f * Sqr(w) - 1.0f, -1.0f, +1.0f);
 		}
 
@@ -227,9 +228,9 @@ namespace pr
 		float SinAngle() const
 		{
 			// Trig:
-			//' sin²(x) + cos²(x) == 1
-			//' sin²(x) == 1 - cos²(x)
-			//' sin(x) == sqrt(1 - cos²(x))
+			//' sinï¿½(x) + cosï¿½(x) == 1
+			//' sinï¿½(x) == 1 - cosï¿½(x)
+			//' sin(x) == sqrt(1 - cosï¿½(x))
 			return Sqrt(1.0f - Sqr(CosAngle()));
 		}
 
@@ -343,9 +344,9 @@ namespace pr
 		assert("quaternion isn't normalised" && IsNormal4(q));
 
 		// Trig:
-		//' sin²(x) + cos²(x) == 1
-		//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
-		//' s² == 1 - cos²(x/2) == sin²(x/2)
+		//' sinï¿½(x) + cosï¿½(x) == 1
+		//' s == sqrt(1 - wï¿½) == sqrt(1 - cosï¿½(x/2))
+		//' sï¿½ == 1 - cosï¿½(x/2) == sinï¿½(x/2)
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, -1.0f, 1.0f); // = cos(x/2)
 		auto s = Sqrt(1.0f - Sqr(w));     // = sin(x/2)
@@ -365,9 +366,9 @@ namespace pr
 		assert("quaternion isn't normalised" && IsNormal(q));
 
 		// Trig:
-		//' sin²(x) + cos²(x) == 1
-		//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
-		//' s² == 1 - cos²(x/2) == sin²(x/2)
+		//' sinï¿½(x) + cosï¿½(x) == 1
+		//' s == sqrt(1 - wï¿½) == sqrt(1 - cosï¿½(x/2))
+		//' sï¿½ == 1 - cosï¿½(x/2) == sinï¿½(x/2)
 		//' s == sin(x/2)
 		auto w = Clamp(q.w, -1.0f, 1.0f);
 		auto s = Sqrt(1.0f - Sqr(w));

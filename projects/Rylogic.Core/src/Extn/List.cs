@@ -6,7 +6,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -540,6 +539,58 @@ namespace Rylogic.Extn
 		public static void Sync(this IList list, IEnumerable set)
 		{
 			Sync(list, set.Cast<object>().ToHashSet());
+		}
+
+		/// <summary>Update this list with elements from 'source' using minimal changes</summary>
+		public static void SyncStable<T,U>(this IList<T> list, IEnumerable<U> source, Func<U,T,bool> eql, Func<U,T> factory)
+		{
+			// This method is mainly useful for observable collections used as
+			// backing stores for enumerated data. It ensures a 1-to-1 mapping between
+			// 'list' and 'source' while minimsing unnecessary adds/removes.
+			var iter = source.GetEnumerator();
+			var next = iter.MoveNext();
+			for (int i = 0; i != list.Count; ++i, next = iter.MoveNext())
+			{
+				// End of 'source'?
+				if (!next)
+				{
+					list.RemoveRange(i, list.Count - i, dispose:false);
+					break;
+				}
+
+				// 'list' still in sync with 'source'
+				if (eql(iter.Current, list[i]))
+				{
+					continue;
+				}
+
+				// The item at 'i' doesn't match 'iter.Current'. 
+				var save = iter.Current; // save the current item
+				next = iter.MoveNext();  // record if the iter was advanced
+
+				// If the one after *does* match, replace the i'th item and carry on.
+				// Otherwise, remove the remaining items from 'list' and then fill from the remainder of the enumerable.
+				if (i + 1 != list.Count && next && Equals(list[i + 1], iter.Current))
+				{
+					// Replace the i'th item with the saved item
+					// list[i+1] already == iter.Current;
+					list[i++] = factory(save);
+					continue;
+				}
+
+				// Remove [i, Count) and add the saved item
+				list.RemoveRange(i, list.Count - i, dispose: false);
+				list.Add(factory(save));
+				break;
+			}
+
+				// Copy any remaining elements to 'list'
+				for (; next; next = iter.MoveNext())
+				list.Add(factory(iter.Current));
+			}
+		public static void SyncStable<T>(this IList<T> list, IEnumerable<T> source)
+		{
+			SyncStable(list, source, (l,r) => Equals(l,r), x => x);
 		}
 
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>

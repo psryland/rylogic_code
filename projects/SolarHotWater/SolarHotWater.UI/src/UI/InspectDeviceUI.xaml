@@ -14,8 +14,8 @@
 		Margin="8"
 		>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
 		<!-- Device -->
@@ -24,7 +24,8 @@
 			Header="Device"
 			>
 			<ScrollViewer
-				MaxHeight="100">
+				VerticalScrollBarVisibility="Auto"
+				>
 				<TextBlock
 					Text="{Binding Body}"
 					/>
@@ -85,9 +86,11 @@
 					>
 					<TextBlock
 						Text="Voltage: "
+						MinWidth="50"
 						/>
 					<TextBox
 						Text="{Binding Switch.Voltage, FallbackValue='unknown', Mode=OneWay}"
+						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>
 					<TextBlock
@@ -104,9 +107,11 @@
 					>
 					<TextBlock
 						Text="Current: "
+						MinWidth="50"
 						/>
 					<TextBox
 						Text="{Binding Switch.Current, FallbackValue='unknown', Mode=OneWay}"
+						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>
 					<TextBlock
@@ -123,9 +128,11 @@
 					>
 					<TextBlock
 						Text="Power: "
+						MinWidth="50"
 						/>
 					<TextBox
-						Text="{Binding Switch.Power, FallbackValue='unknown', Mode=OneWay}"
+						Text="{Binding Switch.Power, StringFormat={}{0:N3}, Converter={conv:ScaleValue}, ConverterParameter=0.001, FallbackValue='unknown', Mode=OneWay}"
+						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>
 					<TextBlock

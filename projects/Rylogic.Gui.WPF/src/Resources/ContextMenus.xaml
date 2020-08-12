@@ -18,30 +18,40 @@
 	<MenuItem x:Key="View3dMenuItem_Origin" x:Shared="False"
 		Header="Origin"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding OriginPointVisible, Mode=OneWay}"
 		Command="{Binding ToggleOriginPoint}"
+		Name="View3dMenuItem_Origin"
 		/>
 	<MenuItem x:Key="View3dMenuItem_Focus" x:Shared="False"
 		Header="Focus"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding FocusPointVisible, Mode=OneWay}"
 		Command="{Binding ToggleFocusPoint}"
+		Name="View3dMenuItem_Focus"
 		/>
 	<MenuItem x:Key="View3dMenuItem_BoundingBoxes" x:Shared="False"
 		Header="Bounding Boxes"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding BBoxesVisible, Mode=OneWay}"
 		Command="{Binding ToggleBBoxesVisible}"
+		Name="View3dMenuItem_BoundingBoxes"
 		/>
 	<MenuItem x:Key="View3dMenuItem_SelectionBox" x:Shared="False"
 		Header="Selection Box"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding SelectionBoxVisible, Mode=OneWay}"
 		Command="{Binding ToggleSelectionBox}"
+		Name="View3dMenuItem_SelectionBox"
 		/>
 	<MenuItem x:Key="View3dMenuItem_AutoRangeView" x:Shared="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Command="{Binding AutoRangeView}"
 		CommandParameter="{Binding AutoRangeBounds}"
+		Name="View3dMenuItem_AutoRangeView"
 		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
@@ -64,10 +74,16 @@
 	<MenuItem x:Key="View3dMenuItem_Orthographic" x:Shared="False"
 		Header="Orthographic"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding Orthographic, Mode=OneWay}"
 		Command="{Binding ToggleOrthographic}"
+		Name="View3dMenuItem_Orthographic"
 		/>
-	<MenuItem x:Key="View3dMenuItem_AlignUp" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_AlignUp" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_AlignUp"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -92,7 +108,11 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="View3dMenuItem_ViewPresets" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_ViewPresets" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_ViewPresets"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -119,6 +139,8 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_SavedViews" x:Shared="False"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_SavedViews"
 		>
 		<MenuItem.Header>
 			<StackPanel
@@ -181,7 +203,11 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="View3dMenuItem_BackgroundColour" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_BackgroundColour" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_BackgroundColour"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -212,10 +238,16 @@
 	<MenuItem x:Key="View3dMenuItem_Antialiasing" x:Shared="False"
 		Header="Antialiasing"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding Antialiasing, Mode=OneWay}"
 		Command="{Binding ToggleAntialiasing}"
+		Name="View3dMenuItem_Antialiasing"
 		/>
-	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_FillMode"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -234,7 +266,11 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="View3dMenuItem_CullMode" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_CullMode" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_CullMode"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -255,7 +291,10 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_Lighting" x:Shared="False"
 		Header="Lighting..."
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Command="{Binding ShowLightingUI}"
+		Name="View3dMenuItem_Lighting"
 		>
 		<MenuItem.Icon>
 			<Image
@@ -266,7 +305,10 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_Animation" x:Shared="False"
 		Header="Animation..."
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Command="{Binding ShowAnimationUI}"
+		Name="View3dMenuItem_Animation"
 		>
 		<MenuItem.Icon>
 			<Image
@@ -278,10 +320,16 @@
 	<MenuItem x:Key="View3dMenuItem_ShowNormals" x:Shared="False"
 		Header="Show Normals"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		IsChecked="{Binding ShowNormals, Mode=OneWay}"
 		Command="{Binding ToggleShowNormals}"
+		Name="View3dMenuItem_ShowNormals"
 		/>
-	<MenuItem x:Key="View3dMenuItem_NormalsLength" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_NormalsLength" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_NormalsLength"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -290,7 +338,7 @@
 					MinWidth="80"
 					/>
 				<gui:SliderFunction
-					Minimum="-2"
+					Minimum="-5"
 					Maximum="5"
 					FunctionExpr="pow(10, x)"
 					InverseExpr="log10(x)"
@@ -301,7 +349,11 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="View3dMenuItem_NormalsColour" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_NormalsColour" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_NormalsColour"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -322,7 +374,11 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
-	<MenuItem x:Key="View3dMenuItem_FillModePointsSize" x:Shared="False">
+	<MenuItem x:Key="View3dMenuItem_FillModePointsSize" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_FillModePointsSize"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -344,7 +400,10 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_MeasureTool" x:Shared="False"
 		Header="Measure Tool..."
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Command="{Binding ShowMeasureToolUI}"
+		Name="View3dMenuItem_MeasureTool"
 		>
 		<MenuItem.Icon>
 			<Image
@@ -355,7 +414,10 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_ObjectManager" x:Shared="False"
 		Header="Object Manager..."
+		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Command="{Binding ShowObjectManagerUI}"
+		Name="View3dMenuItem_ObjectManager"
 		>
 		<MenuItem.Icon>
 			<Image
@@ -404,26 +466,40 @@
 	<MenuItem x:Key="ChartMenuItem_GridLines" x:Shared="False"
 		Header="Grid Lines"
 		StaysOpenOnClick="True"
+		DataContext="{Binding ChartCMenuContext}"
 		IsChecked="{Binding ShowGridLines, Mode=OneWay}"
 		Command="{Binding ToggleGridLines}"
+		Name="ChartMenuItem_GridLines"
 		/>
 	<MenuItem x:Key="ChartMenuItem_Axes" x:Shared="False"
 		Header="Axes"
 		StaysOpenOnClick="True"
+		DataContext="{Binding ChartCMenuContext}"
 		IsChecked="{Binding ShowAxes, Mode=OneWay}"
 		Command="{Binding ToggleAxes}"
+		Name="ChartMenuItem_Axes"
 		/>
 	<MenuItem x:Key="ChartMenuItem_ValueAtPointer" x:Shared="False"
 		Header="Show Value"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		IsChecked="{Binding ShowValueAtPointer, Mode=OneWay}"
 		Command="{Binding ToggleShowValueAtPointer}"
+		Name="ChartMenuItem_ValueAtPointer"
 		/>
 	<MenuItem x:Key="ChartMenuItem_CrossHair" x:Shared="False"
 		Header="Show Cross Hair"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		IsChecked="{Binding ShowCrossHair, Mode=OneWay}"
 		Command="{Binding ToggleShowCrossHair}"
+		Name="ChartMenuItem_CrossHair"
 		/>
-	<MenuItem x:Key="ChartMenuItem_NavMode" x:Shared="False">
+	<MenuItem x:Key="ChartMenuItem_NavMode" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
+		Name="ChartMenuItem_NavMode"
+		>
 		<MenuItem.Header>
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
@@ -450,22 +526,34 @@
 	</MenuItem>
 	<MenuItem x:Key="ChartMenuItem_Aspect11" x:Shared="False"
 		Header="Aspect 1:1"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		Command="{Binding DoAspect11}"
+		Name="ChartMenuItem_Aspect11"
 		/>
 	<MenuItem x:Key="ChartMenuItem_LockAspect" x:Shared="False"
 		Header="Lock Aspect"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		IsChecked="{Binding LockAspect, Mode=OneWay}"
 		Command="{Binding ToggleLockAspect}"
+		Name="ChartMenuItem_LockAspect"
 		/>
 	<MenuItem x:Key="ChartMenuItem_MouseCentredZoom" x:Shared="False"
 		Header="Mouse Centred Zoom"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		IsCheckable="{Binding MouseCentredZoom}"
 		Command="{Binding ToggleMouseCentredZoom}"
+		Name="ChartMenuItem_MouseCentredZoom"
 		/>
 	<MenuItem x:Key="ChartMenuItem_LinkCamera" x:Shared="False"
 		Header="Link Camera..."
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		IsEnabled="{Binding CanLinkCamera}"
 		Command="{Binding LinkCamera}"
+		Name="ChartMenuItem_LinkCamera"
 		>
 		<MenuItem.Icon>
 			<Image
@@ -474,15 +562,23 @@
 				/>
 		</MenuItem.Icon>
 	</MenuItem>
+
+	<!-- Chart Axis CMenu Items -->
 	<MenuItem x:Key="ChartAxisMenuItem_AllowScroll" x:Shared="False"
 		Header="Allow Scroll"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartAxisCMenuContext}"
 		IsChecked="{Binding AllowScroll, Mode=OneWay}"
 		Command="{Binding ToggleScrollLock}"
+		Name="ChartAxisMenuItem_AllowScroll"
 		/>
 	<MenuItem x:Key="ChartAxisMenuItem_AllowZoom" x:Shared="False"
 		Header="Allow Zoom"
+		StaysOpenOnClick="False"
+		DataContext="{Binding ChartAxisCMenuContext}"
 		IsChecked="{Binding AllowZoom, Mode=OneWay}"
 		Command="{Binding ToggleZoomLock}"
+		Name="ChartAxisMenuItem_AllowZoom"
 		/>
 
 	<!-- Default Chart Context Menu -->

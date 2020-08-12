@@ -15,7 +15,7 @@ namespace TestWPF
 	/// <summary>Interaction logic for diagram_ui.xaml</summary>
 	public sealed partial class DiagramUI :Window ,IDisposable
 	{
-		private string m_diag_xml;
+		private string m_diag_xml = string.Empty;
 
 		static DiagramUI()
 		{
@@ -141,7 +141,7 @@ namespace TestWPF
 			//	m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 			//	m_gfx.O2P = Position;
 			//}
-			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
+			public override DiagramControl.HitTestResult.Hit? HitTest(v2 point, View3d.Camera cam)
 			{
 				if ((PositionXY - point).Length > 20)
 					return null;

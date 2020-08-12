@@ -1,0 +1,18 @@
+﻿<Window
+	x:Class="SolarHotWater.UI.LogUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d"
+	ResizeMode="CanResizeWithGrip"
+	Title="Log"
+	Height="500"
+	Width="400"
+	>
+	<gui:LogControl
+		LogFilepath="{Binding Filepath, Mode=OneWay}"
+		LogEntryPattern="{Binding Pattern, Mode=OneWay}"
+		/>
+</Window>

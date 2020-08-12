@@ -495,6 +495,19 @@ namespace Rylogic.Gui.WPF
 		}
 		private ETabState m_tab_state;
 
+		/// <summary>The preferred sizing mode when this content it the visible content within a Pane</summary>
+		public EDockResizeMode ResizeMode
+		{
+			get => m_resize_mode;
+			set
+			{
+				if (m_resize_mode == value) return;
+				m_resize_mode = value;
+				NotifyPropertyChanged(nameof(ResizeMode));
+			}
+		}
+		private EDockResizeMode m_resize_mode;
+
 		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
 		public ContextMenu DefaultTabCMenu()
 		{

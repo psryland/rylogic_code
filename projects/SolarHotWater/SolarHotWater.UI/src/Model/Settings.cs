@@ -13,7 +13,7 @@ namespace SolarHotWater
 			Password = string.Empty;
 			SolarInverterIP = "ShierlawJ.RyLAN";
 			SolarPollPeriod = TimeSpan.FromSeconds(10);
-			MonitorPeriod = TimeSpan.FromSeconds(10);
+			MonitorPeriod = TimeSpan.FromSeconds(1);
 			ReservePower = 0.2;
 			Consumers = Array.Empty<Consumer>();
 
@@ -84,7 +84,7 @@ namespace SolarHotWater
 				SwitchName = string.Empty;
 				RequiredPower = 0;
 				Cooldown = TimeSpan.Zero;
-				Controllable = true;
+				ControlMode = EControlMode.Observed;
 			}
 
 			/// <summary>The name of the consumer</summary>
@@ -115,11 +115,11 @@ namespace SolarHotWater
 				set => set(nameof(Cooldown), value);
 			}
 
-			/// <summary>True if the app is allowed to control this device</summary>
-			public bool Controllable
+			/// <summary>What to do with this consumer</summary>
+			public EControlMode ControlMode
 			{
-				get => get<bool>(nameof(Controllable));
-				set => set(nameof(Controllable), value);
+				get => get<EControlMode>(nameof(ControlMode));
+				set => set(nameof(ControlMode), value);
 			}
 		}
 	}

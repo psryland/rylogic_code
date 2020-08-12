@@ -22,7 +22,7 @@ namespace TestWPF
 		/// <summary>The button image</summary>
 		public ImageSource Source
 		{
-			get { return BtnImage?.Source; }
+			get => BtnImage.Source;
 			set { if (BtnImage != null) BtnImage.Source = value; }
 		}
 

@@ -22,16 +22,24 @@ namespace Rylogic.Gui.WPF
 
 		public JoystickControl()
 		{
+			// Don't set default values for dependency properties because it overrides
+			// the default value passed to 'DPRegister' when used in other controls.
 			InitializeComponent();
-			NorthOffset = 0.0;
-			SingleSelect = false;
-			RingCount = 1;
-			SectorCount = 8;
+			//SizeChanged += (s, a) =>
+			//{
+			//	Width = Height = Math.Min(a.NewSize.Width, a.NewSize.Height);
+			//};
 		}
 		protected override void OnInitialized(EventArgs e)
 		{
 			base.OnInitialized(e);
 			Dispatcher.BeginInvoke(new Action(UpdateGfx));
+		}
+		protected override Size MeasureOverride(Size constraint)
+		{
+			var desired = base.MeasureOverride(constraint);
+			var sz = Math.Min(desired.Width, desired.Height);
+			return sz != double.PositiveInfinity ? new Size(sz, sz) : new Size(256, 256);
 		}
 
 		/// <summary>Occurs when a sector is selected/deselected</summary>
@@ -55,43 +63,6 @@ namespace Rylogic.Gui.WPF
 				Selected ^= SectorToBitmask(value);
 			}
 		}
-
-		/// <summary>Get/Set the currently selected bits</summary>
-		public ulong Selected
-		{
-			get => (ulong)GetValue(SelectedProperty);
-			set => SetValue(SelectedProperty, value);
-		}
-		private ulong Selected_Coerce(ulong new_value)
-		{
-			// In single select mode, clicking the same sector toggles between
-			// that sector and the centre sector. Expected use however is 'Selected ^= 1U << index'
-			// so we need to handle this toggling for this case as well
-			if (SingleSelect)
-			{
-				var old_value = Selected;
-				return (new_value & old_value) != 0 ? Bit.LowBit(new_value ^ old_value) : 1;
-			}
-			else
-			{
-				// Otherwise, just use the bits given
-				return new_value;
-			}
-		}
-		private void Selected_Changed(ulong new_value, ulong old_value)
-		{
-			SectorSelected?.Invoke(this, new SectorsSelectedEventArgs(new_value ^ old_value, new_value, SingleSelect ? (int?)Sector : null));
-			NotifyPropertyChanged(nameof(Selected));
-			if (SingleSelect)
-			{
-				NotifyPropertyChanged(nameof(Angle));
-				NotifyPropertyChanged(nameof(AngleDeg));
-				NotifyPropertyChanged(nameof(Deflection));
-				NotifyPropertyChanged(nameof(DigitalPosition));
-			}
-			UpdateGfx();
-		}
-		public static readonly DependencyProperty SelectedProperty = Gui_.DPRegister<JoystickControl>(nameof(Selected));
 
 		/// <summary>Return the angle (in radians) of the selected sector [0,Tau]</summary>
 		public double Angle
@@ -168,6 +139,39 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
+		/// <summary>Get/Set the currently selected bits</summary>
+		public ulong Selected
+		{
+			get => (ulong)GetValue(SelectedProperty);
+			set
+		{
+				if (Selected == value) return;
+				var new_value = value;
+
+			// In single select mode, clicking the same sector toggles between
+			// that sector and the centre sector. Expected use however is 'Selected ^= 1U << index'
+			// so we need to handle this toggling for this case as well
+			if (SingleSelect)
+					new_value = (value & Selected) != 0 ? Bit.LowBit(value ^ Selected) : 1;
+
+				SetValue(SelectedProperty, new_value);
+			}
+		}
+		private void Selected_Changed(ulong new_value, ulong old_value)
+		{
+			SectorSelected?.Invoke(this, new SectorsSelectedEventArgs(new_value ^ old_value, new_value, SingleSelect ? (int?)Sector : null));
+			NotifyPropertyChanged(nameof(Selected));
+			if (SingleSelect)
+			{
+				NotifyPropertyChanged(nameof(Angle));
+				NotifyPropertyChanged(nameof(AngleDeg));
+				NotifyPropertyChanged(nameof(Deflection));
+				NotifyPropertyChanged(nameof(DigitalPosition));
+			}
+			UpdateGfx();
+		}
+		public static readonly DependencyProperty SelectedProperty = Gui_.DPRegister<JoystickControl>(nameof(Selected), 1UL);
+
 		/// <summary>The offset from 'North' for sector 1 (in degrees)</summary>
 		public double NorthOffset
 		{
@@ -178,7 +182,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty NorthOffsetProperty = Gui_.DPRegister<JoystickControl>(nameof(NorthOffset));
+		public static readonly DependencyProperty NorthOffsetProperty = Gui_.DPRegister<JoystickControl>(nameof(NorthOffset), 0.0);
 
 		/// <summary>One or multiple sectors selected simultaneously</summary>
 		public bool SingleSelect
@@ -191,7 +195,7 @@ namespace Rylogic.Gui.WPF
 			Selected = Bit.LowBit(Selected);
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SingleSelectProperty = Gui_.DPRegister<JoystickControl>(nameof(SingleSelect));
+		public static readonly DependencyProperty SingleSelectProperty = Gui_.DPRegister<JoystickControl>(nameof(SingleSelect), false);
 
 		/// <summary>The number of concentric rings</summary>
 		public int RingCount
@@ -218,12 +222,12 @@ namespace Rylogic.Gui.WPF
 		public static readonly DependencyProperty SectorCountProperty = Gui_.DPRegister<JoystickControl>(nameof(SectorCount), 8);
 
 		/// <summary>True if the selected sectors cannot be changed via the UI</summary>
-		public bool ReadOnly
+		public bool IsReadOnly
 		{
-			get => (bool)GetValue(ReadOnlyProperty);
-			set => SetValue(ReadOnlyProperty, value);
+			get => (bool)GetValue(IsReadOnlyProperty);
+			set => SetValue(IsReadOnlyProperty, value);
 		}
-		public static readonly DependencyProperty ReadOnlyProperty = Gui_.DPRegister<JoystickControl>(nameof(ReadOnly));
+		public static readonly DependencyProperty IsReadOnlyProperty = Gui_.DPRegister<JoystickControl>(nameof(IsReadOnly), false);
 
 		/// <summary>The brush used to fill the selected sectors</summary>
 		public Brush SelectedSectorBrush
@@ -261,6 +265,18 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty StrokeColourProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeColour), Brushes.Black);
 
+		/// <summary>The background colour</summary>
+		public Brush Background
+		{
+			get => (Brush)GetValue(BackgroundProperty);
+			set => SetValue(BackgroundProperty, value);
+		}
+		private void Background_Changed()
+		{
+			UpdateGfx();
+		}
+		public static readonly DependencyProperty BackgroundProperty = Gui_.DPRegister<JoystickControl>(nameof(Background), Brushes.Transparent);
+
 		/// <summary>The position of the thumb stick (polar coords). Null to hide</summary>
 		public Point? ThumbPos
 		{
@@ -289,6 +305,15 @@ namespace Rylogic.Gui.WPF
 			var centre = new Point(0, 0);
 			var dr = Radius / (1 + 2*RingCount);
 			var selected = Selected >> 1;
+
+			var drawing = new DrawingGroup();
+
+			// Fill the background
+			if (Background != Brushes.Transparent)
+			{
+				var bkgd = new GeometryDrawing(Background, new Pen(Brushes.Black, 0.0), new EllipseGeometry(centre, Radius, Radius));
+				drawing.Children.Add(bkgd);
+			}
 
 			// Create the sectors in order from inner to outer
 			var path = new PathGeometry();
@@ -351,8 +376,8 @@ namespace Rylogic.Gui.WPF
 			}
 			
 			// Turn the geometry into a drawing
-			var drawing = new GeometryDrawing(SelectedSectorBrush, new Pen(StrokeColour, StrokeWidth), path);
-			drawing.Freeze();
+			var sector_drawing = new GeometryDrawing(SelectedSectorBrush, new Pen(StrokeColour, StrokeWidth), path).Freeze2();
+			drawing.Children.Add(sector_drawing);
 
 			Source = new DrawingImage(drawing);
 		}
@@ -397,13 +422,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Handle mouse clicks</summary>
 		private void HandleMouseDown(object sender, MouseButtonEventArgs e)
 		{
-			if (ReadOnly)
+			if (IsReadOnly)
 				return;
 
 			// Determine the selected sector from 'pt'
 			var pt = Mouse.GetPosition(this);
 			if (SectorFromClientPoint(pt) is int sector)
+			{
 				Selected ^= SectorToBitmask(sector);
+			}
 
 			UpdateGfx();
 		}
@@ -424,7 +451,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert a joystick selection to a sector index</summary>
 		public static int BitmaskToSector(ulong selected)
 		{
-			if (Bit.CountBits(selected) != 1)
+			if (Bit.CountBits(selected) > 1)
 				throw new Exception("Bitmask must contain 0 or 1 bits only");
 
 			return Bit.LowBitIndex(selected);

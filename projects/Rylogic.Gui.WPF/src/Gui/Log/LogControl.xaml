@@ -4,7 +4,7 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:my="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignWidth="800"
@@ -46,68 +46,111 @@
 			</Style>
 		</ResourceDictionary>
 	</UserControl.Resources>
-
-	<Grid>
+	<Grid
+		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:LogControl}}"
+		d:DataContext="{d:DesignInstance Type=my:LogControl, IsDesignTimeCreatable=True}"
+		>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 		
 		<!-- Log file tool bar -->
-		<DockPanel
+		<Grid
 			Grid.Row="0"
 			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Filter Level -->
 			<ComboBox
-				DockPanel.Dock="Left"
+				Grid.Column="0"
 				ItemsSource="{Binding FilterLevel, Converter={conv:EnumValues}}"
 				SelectedItem="{Binding FilterLevel}"
 				VerticalAlignment="Center"
 				MinWidth="80"
 				Margin="4"
 				/>
+
+			<!-- Browse path button -->
 			<Button
-				DockPanel.Dock="Left"
+				Grid.Column="1"
 				Command="{Binding BrowseForLogFile}"
 				Visibility="{Binding ShowLogFilepath, Converter={conv:BoolToVisible}}"
-				Margin="4"
+				Background="Transparent"
+				BorderThickness="0"
 				Height="24"
+				Margin="4"
 				>
-				<Image Source="{StaticResource folder}" Stretch="Uniform" StretchDirection="DownOnly"/>
+				<Image
+					RenderOptions.BitmapScalingMode="Fant"
+					Source="{StaticResource folder}"
+					/>
 			</Button>
-			<ToggleButton
-				DockPanel.Dock="Right"
-				IsChecked="{Binding LineWrap, Mode=OneWay}"
-				Command="{Binding ToggleLineWrap}"
-				Margin="4"
-				Height="24"
-				>
-				<Image Source="{StaticResource line_wrap}" Stretch="Uniform" StretchDirection="DownOnly"/>
-			</ToggleButton>
-			<ToggleButton
-				DockPanel.Dock="Right"
-				IsChecked="{Binding TailScroll, Mode=OneWay}"
-				Command="{Binding ToggleTailScroll}"
-				Margin="4"
-				Height="24"
-				>
-				<Image Source="{StaticResource bottom}" Stretch="Uniform" StretchDirection="DownOnly"/>
-			</ToggleButton>
-			<Button
-				DockPanel.Dock="Right"
-				Command="{Binding ClearLog}"
-				Margin="4"
-				Height="24"
-				>
-				<Image Source="{StaticResource check_reject}" Stretch="Uniform" StretchDirection="DownOnly"/>
-			</Button>
+
+			<!-- Log filepath -->
 			<TextBox
+				Grid.Column="2"
 				Text="{Binding LogFilepath}"
 				Visibility="{Binding ShowLogFilepath, Converter={conv:BoolToVisible}}"
 				VerticalContentAlignment="Center"
 				IsReadOnly="True"
 				Margin="4"
 				/>
-		</DockPanel>
+
+			<!-- Clear log -->
+			<Button
+				Grid.Column="3"
+				Command="{Binding ClearLog}"
+				Background="Transparent"
+				BorderThickness="0"
+				Height="24"
+				Margin="4"
+				>
+				<Image
+					RenderOptions.BitmapScalingMode="Fant"
+					Source="{StaticResource check_reject}"
+					/>
+			</Button>
+
+			<!-- Tail scroll -->
+			<ToggleButton
+				Grid.Column="4"
+				IsChecked="{Binding TailScroll, Mode=OneWay}"
+				Command="{Binding ToggleTailScroll}"
+				Background="Transparent"
+				BorderThickness="0"
+				Height="24"
+				Margin="4"
+				>
+				<Image
+					RenderOptions.BitmapScalingMode="Fant"
+					Source="{StaticResource bottom}"
+					/>
+			</ToggleButton>
+
+			<!-- Line wrap -->
+			<ToggleButton
+				Grid.Column="5"
+				IsChecked="{Binding LineWrap, Mode=OneWay}"
+				Command="{Binding ToggleLineWrap}"
+				Background="Transparent"
+				BorderThickness="0"
+				Height="24"
+				Margin="4"
+				>
+				<Image
+					RenderOptions.BitmapScalingMode="Fant"
+					Source="{StaticResource line_wrap}"
+					/>
+			</ToggleButton>
+		</Grid>
 		
 		<!-- Log View -->
 		<DataGrid
@@ -118,7 +161,7 @@
 			GridLinesVisibility="None"
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
-			local:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
+			my:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
 			PreviewMouseDown="HandleMouseDown"
 			MouseDoubleClick="HandleMouseDoubleClick"
 			CanUserResizeColumns="True"
@@ -166,6 +209,7 @@
 					Header="File"
 					Binding="{Binding File}"
 					ElementStyle="{StaticResource LogEntryStyle}"
+					ToolTipService.ToolTip="{Binding File}"
 					Width="2*"
 					/>
 				<DataGridTextColumn

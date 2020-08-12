@@ -70,7 +70,7 @@ namespace EweLink
 		/// <summary>The number of channels for the switch</summary>
 		public int ChannelCount => Manufacturer.UIID.ChannelCount();
 
-		/// <summary>Current power draw (if known)</summary>
+		/// <summary>Current power (in W) draw (if known)</summary>
 		public double? Power => Params["power"]?.Value<double>();
 
 		/// <summary>Current voltage (if known)</summary>

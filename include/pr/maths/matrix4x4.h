@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -279,8 +279,9 @@ namespace pr
 		// Create a translation matrix
 		static Mat4x4 Translation(v4_cref<> xyz)
 		{
-			assert("translation should be a position vector" && xyz.w == 1.0f);
-			return Mat4x4(m3x4Identity, xyz);
+			// 'xyz' can be a position or an offset
+			assert("translation should be an affine vector" && (xyz.w == 0.0f || xyz.w == 1.0f));
+			return Mat4x4(m3x4Identity, xyz.w1());
 		}
 		static Mat4x4 Translation(float x, float y, float z)
 		{

@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
@@ -217,13 +217,13 @@ namespace pr
 	// Returns the parametric values of the intersection points.
 	inline bool pr_vectorcall Intersect_LineToSphere(v4_cref<> s, v4_cref<> d, float radius, float& tmin, float& tmax)
 	{
-		auto d_sq = Dot3(d,d);
+		auto d_sq = Dot(d,d);
 		if (d_sq < maths::tinyf)
 			return false; // zero length line
 
 		// Find the closest point to the line
-		auto c = s - d * (Dot3(d,s) / d_sq);
-		auto c_sq = Dot3(c,c);
+		auto c = s - d * (Dot(d,s) / d_sq);
+		auto c_sq = Dot(c.xyz, c.xyz);
 
 		// If the closest point is not within the sphere then there is no intersection
 		auto rad_sq = radius * radius;
@@ -237,8 +237,8 @@ namespace pr
 		auto offset = d * x;
 		auto lstart = c - offset;
 		auto lend   = c + offset;
-		tmin = std::max(tmin, Dot3(d, lstart - s) / d_sq);
-		tmax = std::min(tmax, Dot3(d, lend   - s) / d_sq);
+		tmin = std::max(tmin, Dot(d, lstart - s) / d_sq);
+		tmax = std::min(tmax, Dot(d, lend   - s) / d_sq);
 		return true;
 	}
 

@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
+using System.Windows.Media;
 using Rylogic.Attrib;
+using Rylogic.Gfx;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
 {
@@ -71,6 +75,84 @@ namespace Rylogic.Gui.WPF.Converters
 				dt.VisualTree.SetValue(TextBlock.TextProperty, new Binding(".") { Converter = new EnumToDesc() });
 				return dt;
 			}
+		}
+	}
+
+	/// <summary>Select between options based on an enum. Parameter should be 'case0:value0|case1:value1|case2:value2|...' where 'value' is a string that is convertable to 'targetType'</summary>
+	public class EnumSelect :MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is Enum e))
+				return null;
+			if (!(parameter is string s))
+				return null;
+
+			try
+			{
+				// Look for a matching case
+				foreach (var pair in s.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
+				{
+					// Valid 'case:value' pair?
+					var case_value = pair.Split(':');
+					if (case_value.Length != 2)
+						continue;
+
+					// Case name is not a member of the enum
+					if (!Enum.IsDefined(value.GetType(), case_value[0]))
+						continue;
+
+					// Case matches 'value'
+					var cas = Enum.Parse(value.GetType(), case_value[0]);
+					if (!Equals(cas, value))
+						continue;
+
+					// Interpret the value to the target type
+					var val = case_value[1];
+
+					// Special case conversions not handled by 'ConvertTo'
+					if (targetType == typeof(Colour32))
+					{
+						return Colour32.Parse(val);
+					}
+					if (targetType == typeof(Color))
+					{
+						return Colour32.Parse(val).ToMediaColor();
+					}
+					if (targetType == typeof(Brush))
+					{
+						return Colour32.Parse(val).ToMediaBrush();
+					}
+					if (targetType == typeof(Thickness))
+					{
+						var i = (int?)Util.ConvertTo(val, typeof(int)) ?? 0;
+						return new Thickness(i);
+					}
+					if (targetType == typeof(ImageSource))
+					{
+						// Use: ConverterParameter='image_key1|image_key2'
+						// Image keys should be static resource keys.
+						// Only works if the resources are in App.xml.
+						var res = Application.Current.TryFindResource(val);
+						return res;
+					}
+					return Util.ConvertTo(val, targetType);
+				}
+				return null;
+			}
+			catch
+			{
+				// Handle this silently so that runtime editing XML works
+				return null;
+			}
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
 		}
 	}
 }
