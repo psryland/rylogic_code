@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
 using Rylogic.Attrib;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF.Converters
@@ -87,6 +89,14 @@ namespace Rylogic.Gui.WPF.Converters
 					colour = new Colour32((uint)i32);
 					break;
 				}
+			}
+			if (parameter is string op)
+			{
+				var m = Regex.Match(op, @"lerp:\s*([0-9a-fA-F]{8})\s+(\d\.?\d*)");
+				if (m.Success &&
+					Colour32.TryParse(m.Groups[1].Value) is Colour32 target &&
+					double_.TryParse(m.Groups[2].Value) is double frac)
+					colour = Colour32.Lerp(colour, target, frac);
 			}
 			return new SolidColorBrush(colour.ToMediaColor());
 		}

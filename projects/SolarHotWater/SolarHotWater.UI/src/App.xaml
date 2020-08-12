@@ -8,6 +8,7 @@
 		<ResourceDictionary>
 			<BitmapImage x:Key="add" UriSource="/SolarHotWater.UI;component/res/add.png" />
 			<BitmapImage x:Key="subtract" UriSource="/SolarHotWater.UI;component/res/subtract.png" />
+			<BitmapImage x:Key="log_file" UriSource="/SolarHotWater.UI;component/res/log_file.png" />
 			<BitmapImage x:Key="light_bulb_off" UriSource="/SolarHotWater.UI;component/res/light_bulb_off.png" />
 			<BitmapImage x:Key="light_bulb_on" UriSource="/SolarHotWater.UI;component/res/light_bulb_on.png" />
 			<BitmapImage x:Key="options" UriSource="/SolarHotWater.UI;component/res/options.png" />
@@ -16,6 +17,11 @@
 			<BitmapImage x:Key="up" UriSource="/SolarHotWater.UI;component/res/up.png" />
 			<BitmapImage x:Key="down" UriSource="/SolarHotWater.UI;component/res/down.png" />
 			<BitmapImage x:Key="inspect" UriSource="/SolarHotWater.UI;component/res/inspect.png" />
+			<BitmapImage x:Key="accept" UriSource="/SolarHotWater.UI;component/res/check_accept.png" />
+			<BitmapImage x:Key="reject" UriSource="/SolarHotWater.UI;component/res/check_reject.png" />
+			<BitmapImage x:Key="connected" UriSource="/SolarHotWater.UI;component/res/connected.png" />
+			<BitmapImage x:Key="connect0" UriSource="/SolarHotWater.UI;component/res/connect0.png" />
+			<BitmapImage x:Key="connect1" UriSource="/SolarHotWater.UI;component/res/connect1.png" />
 
 			<!-- Fix for Library binding bugs -->
 			<Style TargetType="ComboBoxItem">

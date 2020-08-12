@@ -371,6 +371,9 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			AllowZoom = !AllowZoom;
 		}
 
+		///<inheritdoc/>
+		public IChartAxisCMenu ChartAxisCMenuContext => this;
+
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		public void NotifyPropertyChanged(string prop_name)

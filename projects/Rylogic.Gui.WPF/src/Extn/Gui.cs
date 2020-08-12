@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -18,7 +19,7 @@ namespace Rylogic.Gui.WPF
 	public static partial class Gui_
 	{
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -38,7 +39,10 @@ namespace Rylogic.Gui.WPF
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
 			// may not be a reference type, and 'null' may not be a valid default value.
-			var meta = new FrameworkPropertyMetadata(null, flags);
+			var meta = new FrameworkPropertyMetadata(null, flags)
+			{
+				DefaultUpdateSourceTrigger = upd
+			};
 
 			// Determine the type of the property
 			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
@@ -148,9 +152,9 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Attached to the Closed event of a window to clean up any child objects that are disposable</summary>
-		public static void DisposeChildren(object sender, EventArgs e)
+		public static void DisposeChildren(object? sender, EventArgs e)
 		{
-			var obj = (DependencyObject)sender;
+			if (!(sender is DependencyObject obj)) return;
 			foreach (var child in obj.AllLogicalChildren().OfType<IDisposable>())
 				child.Dispose();
 		}

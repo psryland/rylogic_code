@@ -9,6 +9,13 @@ namespace Rylogic.Gui.WPF
 {
 	public static class Geometry_
 	{
+		/// <summary>Fluent overload of 'Freeze'</summary>
+		public static T Freeze2<T>(this T freezable) where T : Freezable
+		{
+			freezable.Freeze();
+			return freezable;
+		}
+
 		/// <summary>Create a region from a list of x,y pairs defining line segments</summary>
 		public static Geometry MakePolygon(bool closed, IEnumerable<Point> pts)
 		{

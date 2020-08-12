@@ -5,8 +5,8 @@ namespace Rylogic.Gui.WPF
 {
 	public interface IChartCMenu :INotifyPropertyChanged
 	{
-		/// <summary>Allow property changed to be triggered externally</summary>
-		void NotifyPropertyChanged(string prop_name);
+		/// <summary>The data context for Chart menu items</summary>
+		IChartCMenu ChartCMenuContext { get; }
 
 		/// <summary>Show/hide grid lines</summary>
 		bool ShowGridLines { get; set; }
@@ -41,11 +41,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Link camera to another scene camera</summary>
 		bool CanLinkCamera { get; }
 		ICommand LinkCamera { get; }
+
+		/// <summary>Allow property changed to be triggered externally</summary>
+		void NotifyPropertyChanged(string prop_name);
 	}
 	public interface IChartAxisCMenu :INotifyPropertyChanged
 	{
-		/// <summary>Allow property changed to be triggered externally</summary>
-		void NotifyPropertyChanged(string prop_name);
+		/// <summary>The data context for Chart axis menu items</summary>
+		IChartAxisCMenu ChartAxisCMenuContext { get; }
 
 		/// <summary>Allow scrolling</summary>
 		bool AllowScroll { get; set; }
@@ -54,5 +57,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Allow zooming</summary>
 		bool AllowZoom { get; set; }
 		ICommand ToggleZoomLock { get; }
+
+		/// <summary>Allow property changed to be triggered externally</summary>
+		void NotifyPropertyChanged(string prop_name);
 	}
 }

@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Bit operations
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -196,22 +196,25 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>
-		/// Returns the bit position of the highest bit
+		/// Returns the bit position of the highest bit.
+		/// Note: returns 0 for n==1 and n==0
 		/// Also, is the floor of the log base 2 for a 32 bit integer</summary>
-		public static int HighBitIndex(ulong value)
+		public static int HighBitIndex(ulong n)
 		{
 			var pos = 0;
 			var
-			shift = (value & 0xFFFFFFFF00000000UL) != 0 ? 1 << 5 : 0; value >>= shift; pos |= shift;
-			shift = (value &         0xFFFF0000UL) != 0 ? 1 << 4 : 0; value >>= shift; pos |= shift;
-			shift = (value &             0xFF00UL) != 0 ? 1 << 3 : 0; value >>= shift; pos |= shift;
-			shift = (value &               0xF0UL) != 0 ? 1 << 2 : 0; value >>= shift; pos |= shift;
-			shift = (value &                0xCUL) != 0 ? 1 << 1 : 0; value >>= shift; pos |= shift;
-			shift = (value &                0x2UL) != 0 ? 1 << 0 : 0;                  pos |= shift;
+			shift = (n & 0xFFFFFFFF00000000UL) != 0 ? 1 << 5 : 0; n >>= shift; pos |= shift;
+			shift = (n &         0xFFFF0000UL) != 0 ? 1 << 4 : 0; n >>= shift; pos |= shift;
+			shift = (n &             0xFF00UL) != 0 ? 1 << 3 : 0; n >>= shift; pos |= shift;
+			shift = (n &               0xF0UL) != 0 ? 1 << 2 : 0; n >>= shift; pos |= shift;
+			shift = (n &                0xCUL) != 0 ? 1 << 1 : 0; n >>= shift; pos |= shift;
+			shift = (n &                0x2UL) != 0 ? 1 << 0 : 0;              pos |= shift;
 			return pos;
 		}
 
-		/// <summary>Returns the bit position of the lowest bit</summary>
+		/// <summary>
+		/// Returns the bit position of the lowest bit.
+		/// Note: returns 0 for n==1 and n==0</summary>
 		public static int LowBitIndex(ulong n)
 		{
 			return HighBitIndex(LowBit(n));

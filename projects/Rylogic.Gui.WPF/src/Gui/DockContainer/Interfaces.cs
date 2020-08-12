@@ -75,4 +75,12 @@ namespace Rylogic.Gui.WPF
 		Active,
 		Flashing,
 	}
+
+	/// <summary>Resizing mode for Dockables</summary>
+	public enum EDockResizeMode
+	{
+		DontChange,
+		Proportional,
+		Absolute,
+	}
 }

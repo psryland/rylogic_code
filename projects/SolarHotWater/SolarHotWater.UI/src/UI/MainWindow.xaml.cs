@@ -19,16 +19,16 @@ namespace SolarHotWater.UI
 			Model = new Model();
 			Consumers = CollectionViewSource.GetDefaultView(Model.Consumers);
 			EweDevices = CollectionViewSource.GetDefaultView(Model.EweDevices);
+			Chart = m_history_chart;
 
 			Login = Command.Create(this, LoginInternal, LoginCanExecute);
 			ToggleEnableMonitor = Command.Create(this, ToggleEnableMonitorInternal, ToggleEnableMonitorCanExecute);
 			AddNewConsumer = Command.Create(this, AddNewConsumerInternal);
 			RemoveConsumer = Command.Create(this, RemoveConsumerInternal);
-			MovePriorityUp = Command.Create(this, MovePriorityUpInternal, MovePriorityUpCanExecute);
-			MovePriorityDown = Command.Create(this, MovePriorityDownInternal, MovePriorityDownCanExecute);
 			InspectDevice = Command.Create(this, InspectDeviceInternal);
+			ToggleSwitch = Command.Create(this, ToggleSwitchInternal);
+			ShowLog = Command.Create(this, ShowLogInternal);
 
-			m_username.Text = Settings.Username;
 			m_password.Password = Settings.Password;
 			DataContext = this;
 		}
@@ -45,8 +45,8 @@ namespace SolarHotWater.UI
 		}
 		protected override void OnClosed(EventArgs e)
 		{
+			Chart = null!;
 			Model = null!;
-			//m_chart.Dispose();
 			base.OnClosed(e);
 			Log.Dispose();
 		}
@@ -104,6 +104,17 @@ namespace SolarHotWater.UI
 						case nameof(Model.Solar):
 						{
 							NotifyPropertyChanged(nameof(Solar));
+							NotifyPropertyChanged(nameof(PowerSurplus));
+							break;
+						}
+						case nameof(Model.PowerConsumed):
+						{
+							NotifyPropertyChanged(nameof(PowerConsumed));
+							break;
+						}
+						case nameof(Model.PowerSurplus):
+						{
+							NotifyPropertyChanged(nameof(PowerSurplus));
 							break;
 						}
 						case nameof(Model.EweDevices):
@@ -115,12 +126,12 @@ namespace SolarHotWater.UI
 						case nameof(Model.Consumers):
 						{
 							// Try to preserve the selected consumer
-							if (SelectedConsumer?.Name is string selected)
-								SelectedConsumer = Model.Consumers.FirstOrDefault(x => x.Name == selected);
+							var selected = SelectedConsumer?.Name;
 
 							Consumers.Refresh();
-							MovePriorityUp.NotifyCanExecuteChanged();
-							MovePriorityDown.NotifyCanExecuteChanged();
+
+							if (selected != null)
+								SelectedConsumer = Model.Consumers.FirstOrDefault(x => x.Name == selected);
 							break;
 						}
 					}
@@ -131,6 +142,9 @@ namespace SolarHotWater.UI
 
 		/// <summary></summary>
 		public SettingsData Settings => Model.Settings;
+
+		/// <summary>Ewelink API access</summary>
+		private EweLinkAPI Ewe => Model.Ewe;
 
 		/// <summary>True if currently logged on</summary>
 		public bool IsLoggedOn => Model.IsLoggedOn;
@@ -163,8 +177,6 @@ namespace SolarHotWater.UI
 				if (m_selected_consumer == value) return;
 				m_selected_consumer = value;
 				NotifyPropertyChanged(nameof(SelectedConsumer));
-				MovePriorityUp.NotifyCanExecuteChanged();
-				MovePriorityDown.NotifyCanExecuteChanged();
 			}
 		}
 		private Consumer? m_selected_consumer;
@@ -176,7 +188,10 @@ namespace SolarHotWater.UI
 		public SolarData Solar => Model.Solar;
 
 		/// <summary>The sum of active consumers</summary>
-		public double ConsumedPower => Model.ConsumedPower;
+		public double PowerConsumed => Model.PowerConsumed;
+
+		/// <summary>Total unused solar power (in kWatts)</summary>
+		public double PowerSurplus => Model.PowerSurplus;
 
 		/// <summary>The schedule for when the controller is active</summary>
 		public string Schedule
@@ -199,7 +214,7 @@ namespace SolarHotWater.UI
 		private async void LoginInternal()
 		{
 			if (!Model.IsLoggedOn)
-				await Model.Login(m_username.Text, m_password.Password);
+				await Model.Login(Settings.Username, m_password.Password);
 			else
 				await Model.Logout();
 		}
@@ -238,34 +253,6 @@ namespace SolarHotWater.UI
 			SelectedConsumer = Model.Consumers.FirstOrDefault();
 		}
 
-		/// <summary>Move the priority of the currently selected consumer up</summary>
-		public Command MovePriorityUp { get; }
-		private void MovePriorityUpInternal()
-		{
-			if (SelectedConsumer == null) return;
-			SelectedConsumer.Priority--;
-		}
-		private bool MovePriorityUpCanExecute()
-		{
-			return
-				SelectedConsumer != null &&
-				Model.Consumers.IndexOf(SelectedConsumer) != 0;
-		}
-
-		/// <summary>Move the priority of the currently selected consumer down</summary>
-		public Command MovePriorityDown { get; }
-		private void MovePriorityDownInternal()
-		{
-			if (SelectedConsumer == null) return;
-			SelectedConsumer.Priority++;
-		}
-		private bool MovePriorityDownCanExecute()
-		{
-			return
-				SelectedConsumer != null &&
-				Model.Consumers.IndexOf(SelectedConsumer) != Model.Consumers.Count - 1;
-		}
-
 		/// <summary>Inspect the device of the currently selected consumer</summary>
 		public Command InspectDevice { get; }
 		private void InspectDeviceInternal()
@@ -273,6 +260,43 @@ namespace SolarHotWater.UI
 			if (!(SelectedConsumer?.EweSwitch is EweDevice device)) return;
 			var dlg = new InspectDeviceUI(this, Model, device);
 			dlg.Show();
+		}
+
+		/// <summary>Toggle the switch state</summary>
+		public Command ToggleSwitch { get; }
+		private async void ToggleSwitchInternal()
+		{
+			if (!(SelectedConsumer?.EweSwitch is EweSwitch sw))
+				return;
+
+			try
+			{
+				await Ewe.SwitchState(sw, EweSwitch.ESwitchState.Toggle, 0, Model.Shutdown.Token);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, "Toggle switch state failed");
+			}
+		}
+
+		/// <summary>Show the log window</summary>
+		public Command ShowLog { get; }
+		private void ShowLogInternal()
+		{
+			if (m_log_ui == null)
+			{
+				m_log_ui = new LogUI(this);
+				m_log_ui.Closed += delegate { m_log_ui = null; };
+				m_log_ui.Show();
+			}
+			m_log_ui.Focus();
+		}
+		private LogUI? m_log_ui;
+
+		/// <summary>Reordered notification</summary>
+		private void HandleConsumersReordered(object sender, RoutedEventArgs args)
+		{
+			Settings.Save();
 		}
 
 		/// <summary></summary>

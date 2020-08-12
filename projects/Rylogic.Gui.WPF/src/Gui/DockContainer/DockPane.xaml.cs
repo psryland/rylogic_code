@@ -246,7 +246,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					if (value != null && !ContentView.MoveCurrentTo(value))
 						throw new Exception($"Dockable item '{value.TabText}' has not been added to this pane so can not be made the active content.");
 
-					// Switch to the new active content
+					// Remove old visible content
 					if (m_visible_content != null)
 					{
 						// Stop watching property changes
@@ -266,6 +266,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					var prev = m_visible_content;
 					m_visible_content = value;
 
+					// New visible content
 					if (m_visible_content != null)
 					{
 						// Add the element

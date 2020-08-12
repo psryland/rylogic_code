@@ -165,7 +165,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Get the size for a dock site in pixels, assuming an available area 'rect'</summary>
-		internal void SetSize(EDockSite location, Rect rect, double value)
+		internal void SetSize(EDockSite location, Rect rect, double value, EDockResizeMode resize_mode)
 		{
 			if (rect.Width == 0 || rect.Height == 0)
 				throw new Exception($"Cannot set dock sizes based on zero rectangle");
@@ -175,10 +175,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 			default: throw new Exception($"No size value for dock zone {location}");
 			case EDockSite.Centre: break;
-			case EDockSite.Left: Left = value / (Left >= 1 ? 1.0 : rect.Width); break;
-			case EDockSite.Top: Top = value / (Top >= 1 ? 1.0 : rect.Height); break;
-			case EDockSite.Right: Right = value / (Right >= 1 ? 1.0 : rect.Width); break;
-			case EDockSite.Bottom: Bottom = value / (Bottom >= 1 ? 1.0 : rect.Height); break;
+			case EDockSite.Left: Left = NewSize(value, Left, rect.Width); break;
+			case EDockSite.Top: Top = NewSize(value, Top, rect.Height); break;
+			case EDockSite.Right: Right = NewSize(value, Right, rect.Width); break;
+			case EDockSite.Bottom: Bottom = NewSize(value, Bottom, rect.Height); break;
+			}
+			double NewSize(double value, double old_size, double max)
+			{
+				return resize_mode switch
+				{
+					EDockResizeMode.DontChange   => value / (old_size >= 1 ? 1.0 : max),
+					EDockResizeMode.Proportional => value / max,
+					EDockResizeMode.Absolute     => value,
+					_ => throw new Exception($"Unknown resize mode: {resize_mode}"),
+				};
 			}
 		}
 

@@ -54,7 +54,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 				var item = (FrameworkElement)child;
 				var size = ds.IsVertical() ? item.DesiredSize.Width : item.DesiredSize.Height;
-				ChildSize(ds, size);
+				var resize_mode = c is DockPane dp && dp.VisibleContent != null ? dp.VisibleContent.ResizeMode : EDockResizeMode.DontChange;
+				ChildSize(ds, size, resize_mode);
 			}
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -127,7 +128,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The sizes of the child controls</summary>
-		public DockSizeData DockSizes { get; private set; }
+		public DockSizeData DockSizes { get; }
 
 		/// <summary>Add a dockable instance to this tree at the position described by 'location'.</summary>
 		public DockPane Add(DockControl dc, int index, params EDockSite[] location)
@@ -420,14 +421,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			return DockSizes.GetSize(location, DisplayRectangle, DockedMask);
 		}
-		public void ChildSize(EDockSite location, double value)
+		public void ChildSize(EDockSite location, double value, EDockResizeMode resize_mode)
 		{
 			if (value < 0 || double.IsNaN(value))
 				throw new Exception($"Invalid child size ({value}) for {location}");
 			if (RenderSize.Width == 0 || RenderSize.Height == 0)
 				throw new Exception($"Invalid size for this branch, can't determine dock size for {location}");
 
-			DockSizes.SetSize(location, DisplayRectangle, value);
+			DockSizes.SetSize(location, DisplayRectangle, value, resize_mode);
 		}
 
 		/// <summary>Get the bounds of a dock site in parent (DockContainer or containing Branch) space</summary>

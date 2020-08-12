@@ -2,9 +2,10 @@
 	x:Class="TestWPF.MainWindow"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF" xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	Title="MainWindow" Height="350" Width="525"
 	WindowStartupLocation="Manual"
+	SizeToContent="Height"
 	Left="-800"
 	Top="100"
 	>
@@ -12,6 +13,8 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 	
@@ -42,6 +45,7 @@
 				<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
 				<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
 				<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>
+				<MenuItem Header="_Radial Progress" Command="{Binding ShowRadialProgressUI}"/>
 				<MenuItem Header="_Tool Window" Command="{Binding ShowToolWindow }"/>
 			</MenuItem>
 		</Menu>
@@ -80,6 +84,15 @@
 						</DataTemplate>
 					</ComboBox.ItemTemplate>
 				</ComboBox>
+				<ComboBox
+					ItemsSource="{Binding EnumValue, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding EnumValue}"
+					Margin="3"
+					/>
+				<TextBlock
+					Text="{Binding EnumValue, Converter={conv:EnumSelect}, ConverterParameter='One:111|Two:222|Three:333'}"
+					Margin="5"
+					/>
 				<DataGrid
 					x:Name="m_grid"
 					AutoGenerateColumns="False"
@@ -105,29 +118,15 @@
 							/>
 					</DataGrid.Columns>
 				</DataGrid>
-				<!--
-				<local:ImageButton
-					Text="Hello World?"
-					Source="pack://application:,,,/res/pencil.png"
-					Height="32"
-					Background="{x:Static Brushes.Aqua}"/>
-				<local:ImageButtonRaw
-					Text="Roar!"
-					Source="pack://application:,,,/res/check_accept.png"
-					Height="32"
-					Background="{x:Static Brushes.Beige}"/>
-				<gui2:ColourWheel
-					Margin="3"
-					Orientation="Horizontal"
-					/>
-				-->
-				<Button
-					Content="OK"
-					HorizontalAlignment="Right"
-					MinWidth="80"
-					Margin="8"
-					/>
 			</StackPanel>
 		</ScrollViewer>
+
+		<Button
+			Grid.Row="10"
+			Content="OK"
+			HorizontalAlignment="Right"
+			MinWidth="80"
+			Margin="8"
+			/>
 	</Grid>
 </Window>

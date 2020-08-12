@@ -15,7 +15,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class PriceData :IDisposable
+	public sealed class PriceData :IDisposable
 	{
 		// Notes:
 		// - PriceData represents a single pair and TimeFrame on an exchange.
@@ -248,7 +248,7 @@ namespace CoinFlip
 
 		/// <summary>Raised whenever candles are added/modified</summary>
 		public event EventHandler<DataEventArgs> DataChanged;
-		protected virtual void OnDataChanged(DataEventArgs args)
+		private void OnDataChanged(DataEventArgs args)
 		{
 			DataChanged?.Invoke(this, args);
 		}

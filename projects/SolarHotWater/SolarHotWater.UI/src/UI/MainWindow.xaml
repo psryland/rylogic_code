@@ -4,10 +4,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-	xmlns:view3d="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
-	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF" xmlns:rh="http://schemas.rollinghours.com/wpf"
-	mc:Ignorable="d"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+    xmlns:view3d="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
+    mc:Ignorable="d"
 	Title="Solar Hot Water"
 	ResizeMode="CanResizeWithGrip"
 	MinWidth="380"
@@ -38,154 +38,132 @@
 	</Window.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
 		<!-- Main Body -->
-		<ScrollViewer
-			Grid.Row="1"
-			HorizontalScrollBarVisibility="Auto"
-			VerticalScrollBarVisibility="Auto"
+		<Grid
+			Grid.Row="0"
 			>
-			<Grid>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="*"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
-				
-				<!-- Login -->
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+
+			<!-- Main controls -->
+			<Grid
+				Grid.Row="0"
+				Margin="8,1,8,1"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Consumer list -->
 				<GroupBox
-					Grid.Row="0"
-					Header="eWeLink"
-					Margin="8,1,8,1"
+					Grid.Column="0"
+					Header="Consumers"
 					>
 					<Grid>
 						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-						</Grid.RowDefinitions>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="Auto"/>
-						</Grid.ColumnDefinitions>
-
-						<!-- Email -->
-						<TextBlock
-							Grid.Row="0"
-							Grid.Column="0"
-							Text="Email: "
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<TextBox
-							Grid.Row="0"
-							Grid.Column="1"
-							Name="m_username"
-							Text="{Binding Settings.Username, UpdateSourceTrigger=PropertyChanged}"
-							Style="{StaticResource FieldBoxStyle}"
-							/>
-
-						<!-- Password -->
-						<TextBlock
-							Grid.Row="1"
-							Grid.Column="0"
-							Text="Password: "
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<PasswordBox
-							Grid.Row="1"
-							Grid.Column="1"
-							VerticalAlignment="Center"
-							Name="m_password"
-							Margin="3"
-							/>
-
-						<!-- Login button -->
-						<Button
-							Grid.Row="0"
-							Grid.Column="2"
-							Grid.RowSpan="2"
-							Command="{Binding Login}"
-							IsEnabled="{Binding Login.Available}"
-							Content="{Binding IsLoggedOn, Converter={conv:BoolSelect}, ConverterParameter='Connected|Login'}"
-							Background="{Binding IsLoggedOn, Converter={conv:BoolSelect}, ConverterParameter='LightGreen|#DDD'}"
-							MinWidth="70"
-							Margin="3"
-							/>
-					</Grid>
-				</GroupBox>
-		
-				<!-- Control -->
-				<GroupBox
-					Grid.Row="1"
-					Header="Control"
-					Margin="8,1,8,1"
-					>
-					<!-- Selectors -->
-					<Grid
-						Grid.Row="1"
-						Margin="3"
-						>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
 							<RowDefinition Height="Auto"/>
 						</Grid.RowDefinitions>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="*"/>
-							<ColumnDefinition Width="Auto"/>
-						</Grid.ColumnDefinitions>
 
-						<!-- Solar Inverter IP -->
-						<TextBlock
+						<!-- Consumer list -->
+						<DataGrid
 							Grid.Row="0"
-							Grid.Column="0"
-							Text="Solar Inverter IP:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<TextBox
-							Grid.Row="0"
-							Grid.Column="1"
-							Text="{Binding Settings.SolarInverterIP}"
-							Style="{StaticResource FieldBoxStyle}"
-							Height="22"
-							/>
-
-						<!-- Consumer -->
-						<TextBlock
-							Grid.Row="1"
-							Grid.Column="0"
-							Text="Consumer:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<Grid
-							Grid.Row="1"
-							Grid.Column="1"
+							ItemsSource="{Binding Consumers}"
+							SelectedItem="{Binding SelectedConsumer}"
+							AutoGenerateColumns="False"
+							CanUserAddRows="False"
+							CanUserDeleteRows="False"
+							HeadersVisibility="All"
+							CanUserResizeColumns="True"
+							GridLinesVisibility="None"
+							gui:DataGrid_.ReorderRowsWithDragDrop="True"
+							gui:DataGrid_.RowsReordered="HandleConsumersReordered"
+							HorizontalScrollBarVisibility="Disabled"
+							RowHeaderWidth="12"
+							Background="White"
+							IsReadOnly="True"
 							>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-					
-							<!-- Consumer -->
-							<ComboBox
-								Grid.Column="0"
-								ItemsSource="{Binding Consumers}"
-								SelectedItem="{Binding SelectedConsumer}"
-								DisplayMemberPath="Name"
-								VerticalAlignment="Center"
-								Margin="3"
-								/>
-					
+							<DataGrid.Resources>
+								<Style x:Key="StyleCellBase" TargetType="DataGridCell">
+									<Setter Property="Template">
+										<Setter.Value>
+											<ControlTemplate TargetType="DataGridCell">
+												<Grid Background="{TemplateBinding Background}">
+													<ContentPresenter VerticalAlignment="Center"/>
+												</Grid>
+											</ControlTemplate>
+										</Setter.Value>
+									</Setter>
+									<Style.Triggers>
+										<Trigger Property="IsSelected" Value="True">
+											<Setter Property="Background" Value="#FACE"/>
+											<Setter Property="Foreground" Value="Black"/>
+										</Trigger>
+									</Style.Triggers>
+									</Style>
+									<Style x:Key="StyleCellLeft" TargetType="DataGridCell" BasedOn="{StaticResource StyleCellBase}">
+										<Setter Property="TextBlock.TextAlignment" Value="Left"/>
+									</Style>
+									<Style x:Key="StyleCellCentred" TargetType="DataGridCell" BasedOn="{StaticResource StyleCellBase}">
+										<Setter Property="TextBlock.TextAlignment" Value="Center"/>
+									</Style>
+							</DataGrid.Resources>
+							<DataGrid.Columns>
+								<DataGridTextColumn
+									Header="Consumer"
+									Binding="{Binding Name}"
+									CellStyle="{StaticResource StyleCellLeft}"
+									Width="8*"
+									/>
+								<DataGridTemplateColumn
+									Header=""
+									CellStyle="{StaticResource StyleCellCentred}"
+									Width="1*"
+									>
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Image
+												Source="{Binding On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
+												RenderOptions.BitmapScalingMode="Fant"
+												Height="22"
+												/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+								<DataGridTemplateColumn
+									Header=""
+									CellStyle="{StaticResource StyleCellCentred}"
+									Width="1*"
+									>
+									<DataGridTemplateColumn.CellTemplate>
+										<DataTemplate>
+											<Image
+												Source="{Binding Settings.ControlMode, Converter={conv:EnumSelect}, ConverterParameter='Disabled:reject|Observed:inspect|Controlled:connected'}"
+												RenderOptions.BitmapScalingMode="Fant"
+												Height="22"
+												/>
+										</DataTemplate>
+									</DataGridTemplateColumn.CellTemplate>
+								</DataGridTemplateColumn>
+							</DataGrid.Columns>
+						</DataGrid>
+						
+						<!-- Add/Remove consumer buttons -->
+						<StackPanel
+							Grid.Row="1"
+							Orientation="Horizontal"
+							HorizontalAlignment="Right"
+							>
 							<!-- Add New Consumer -->
 							<Button
 								Grid.Column="1"
@@ -206,6 +184,7 @@
 							<Button
 								Grid.Column="2"
 								Command="{Binding RemoveConsumer}"
+								IsEnabled="{Binding SelectedConsumer, Converter={conv:NotNull}}"
 								Background="Transparent"
 								BorderThickness="0"
 								Margin="3"
@@ -216,282 +195,21 @@
 									Height="20"
 									/>
 							</Button>
-
-							<!-- Consumer options -->
-							<ToggleButton
-								Grid.Column="3"
-								DockPanel.Dock="Right"
-								Background="Transparent"
-								IsChecked="{Binding ShowConsumerDetails}"
-								BorderThickness="0"
-								Margin="3"
-								>
-								<Image
-									Source="{StaticResource options}"
-									RenderOptions.BitmapScalingMode="Fant"
-									Height="20"
-									/>
-							</ToggleButton>
-						</Grid>
-
-						<!-- Reserve Power -->
-						<TextBlock
-							Grid.Row="2"
-							Grid.Column="0"
-							Text="Reserved Power:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<StackPanel
-							Grid.Row="2"
-							Grid.Column="1"
-							Orientation="Horizontal"
-							>
-							<TextBox
-								Text="{Binding Settings.ReservePower}"
-								Style="{StaticResource FieldBoxStyle}"
-								HorizontalContentAlignment="Right"
-								MinWidth="60"
-								/>
-							<TextBlock
-								Text="kWatts"
-								VerticalAlignment="Center"
-								/>
 						</StackPanel>
-
-						<!-- Schedule -->
-						<TextBlock
-							Grid.Row="3"
-							Grid.Column="0"
-							Text="Schedule: "
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<StackPanel
-							Grid.Row="3"
-							Grid.Column="1"
-							>
-							<TextBox
-								Text="{Binding Schedule}"
-								/>
-
-						</StackPanel>
-						
-						<!-- Enable Button -->
-						<ToggleButton
-							Grid.Row="0"
-							Grid.Column="2"
-							Grid.RowSpan="2"
-							IsChecked="{Binding MonitorEnabled, Mode=OneWay}"
-							IsEnabled="{Binding ToggleEnableMonitor.Available}"
-							Command="{Binding ToggleEnableMonitor}"
-							Background="Transparent"
-							BorderThickness="0"
-							Margin="3"
-							>
-							<Image
-								Source="{Binding MonitorEnabled, Converter={conv:BoolSelect}, ConverterParameter='power_blue|power_gray'}"
-								RenderOptions.BitmapScalingMode="Fant"
-								Height="44"
-								/>
-						</ToggleButton>
 					</Grid>
 				</GroupBox>
-
-				<!-- Details -->
-				<GroupBox
-					Grid.Row="2"
-					Grid.ColumnSpan="3"
-					Visibility="{Binding ShowConsumerDetails, Converter={conv:BoolToVisible}}"
-					IsEnabled="{Binding SelectedConsumer, Converter={conv:NullToCollapsed}}"
-					Header="Details"
-					Margin="8,1,8,1"
+				
+				<!-- Login and Settings -->
+				<StackPanel
+					Grid.Column="1"
+					Orientation="Vertical"
 					>
-					<Grid>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="*"/>
-						</Grid.RowDefinitions>
-						<Grid.ColumnDefinitions>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="2*"/>
-							<ColumnDefinition Width="Auto"/>
-							<ColumnDefinition Width="3*"/>
-						</Grid.ColumnDefinitions>
-
-						<!-- Consumer Name -->
-						<TextBlock
-							Grid.Row="0"
-							Grid.Column="0"
-							Style="{StaticResource FieldLabelStyle}"
-							Text="Name: "
-							Margin="3"
-							/>
-						<TextBox
-							Grid.Row="0"
-							Grid.Column="1"
-							Text="{Binding SelectedConsumer.Name, FallbackValue=''}"
-							Style="{StaticResource FieldBoxStyle}"
-							Margin="3"
-							/>
-
-						<!-- EweLink Switch -->
-						<TextBlock
-							Grid.Row="0"
-							Grid.Column="2"
-							Text="Switch: "
-							Style="{StaticResource FieldLabelStyle}"
-							MinWidth="60"
-							/>
-						<Grid
-							Grid.Row="0"
-							Grid.Column="3"
-							>
-							<Grid.ColumnDefinitions>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
-							</Grid.ColumnDefinitions>
-							
-							<ComboBox
-								Grid.Column="0"
-								ItemsSource="{Binding EweDevices}"
-								SelectedValue="{Binding SelectedConsumer.SwitchName, FallbackValue=null}"
-								DisplayMemberPath="Name"
-								SelectedValuePath="Name"
-								VerticalAlignment="Center"
-								Margin="3"
-								ToolTip="The eWeLink Device that controls this consumer"
-								/>
-							<Button
-								Grid.Column="1"
-								Command="{Binding InspectDevice}"
-								IsEnabled="{Binding SelectedConsumer.EweSwitch, Converter={conv:NotNull}}"
-								Background="Transparent"
-								BorderThickness="0"
-								>
-								<Image
-									Source="{StaticResource inspect}"
-									RenderOptions.BitmapScalingMode="Fant"
-									MaxHeight="18"
-									/>
-							</Button>
-								
-						</Grid>
-
-						<!-- Required Power -->
-						<TextBlock
-							Grid.Row="1"
-							Grid.Column="0"
-							Text="Required Power:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<StackPanel
-							Grid.Row="1"
-							Grid.Column="1"
-							Orientation="Horizontal"
-							>
-							<TextBox
-								Text="{Binding SelectedConsumer.RequiredPower, StringFormat={}{0:N3}, FallbackValue=''}"
-								Style="{StaticResource FieldBoxStyle}"
-								ToolTip="The available power (in kW) before enabling this consumer"
-								MinWidth="60"
-								/>
-							<TextBlock
-								Text="kWatts"
-								VerticalAlignment="Center"
-								/>
-						</StackPanel>
-
-						<!-- Cooldown -->
-						<TextBlock
-							Grid.Row="1"
-							Grid.Column="2"
-							Text="Cooldown:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<TextBox
-							Grid.Row="1"
-							Grid.Column="3"
-							Text="{Binding SelectedConsumer.Cooldown, FallbackValue=''}"
-							Style="{StaticResource FieldBoxStyle}"
-							ToolTip="The minimum time between switch state changes"
-							/>
-
-						<!-- Priority -->
-						<TextBlock
-							Grid.Row="2"
-							Grid.Column="0"
-							Text="Priority:"
-							Style="{StaticResource FieldLabelStyle}"
-							/>
-						<StackPanel
-							Grid.Row="2"
-							Grid.Column="1"
-							Orientation="Horizontal"
-							>
-							<TextBox
-								Text="{Binding SelectedConsumer.Priority, Mode=OneWay, FallbackValue=''}"
-								Style="{StaticResource FieldBoxStyle}"
-								IsReadOnly="True"
-								MinWidth="60"
-								/>
-							<Button
-								Command="{Binding MovePriorityUp}"
-								IsEnabled="{Binding MovePriorityUp.Available}"
-								Background="Transparent"
-								BorderThickness="0"
-								Margin="3"
-								>
-								<Image
-									Source="{StaticResource up}"
-									RenderOptions.BitmapScalingMode="Fant"
-									MaxHeight="18"
-									/>
-							</Button>
-							<Button
-								Command="{Binding MovePriorityDown}"
-								IsEnabled="{Binding MovePriorityDown.Available}"
-								Background="Transparent"
-								BorderThickness="0"
-								Margin="3"
-								>
-								<Image
-									Source="{StaticResource down}"
-									RenderOptions.BitmapScalingMode="Fant"
-									MaxHeight="18"
-									/>
-							</Button>
-						</StackPanel>
-
-						<!-- Controllable -->
-						<CheckBox
-							Grid.Row="2"
-							Grid.Column="3"
-							Content="Turn on when power is available"
-							IsChecked="{Binding SelectedConsumer.Settings.Controllable}"
-							VerticalAlignment="Center"
-							Margin="3"
-							/>
-					</Grid>
-				</GroupBox>
-
-				<!-- Status -->
-				<GroupBox
-					Grid.Row="3"
-					Header="Status"
-					Margin="8,1,8,16"
-					>
-					<Grid>
-						<Grid.RowDefinitions>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="Auto"/>
-							<RowDefinition Height="*"/>
-						</Grid.RowDefinitions>
-
-						<!-- Solar Output -->
-						<Grid
-							Grid.Row="0"
-							>
+					<!-- Login -->
+					<GroupBox
+						Grid.Column="1"
+						Header="eWeLink:"
+						>
+						<Grid>
 							<Grid.RowDefinitions>
 								<RowDefinition Height="Auto"/>
 								<RowDefinition Height="Auto"/>
@@ -500,108 +218,582 @@
 								<ColumnDefinition Width="Auto"/>
 								<ColumnDefinition Width="*"/>
 								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="Auto"/>
-								<ColumnDefinition Width="*"/>
-								<ColumnDefinition Width="Auto"/>
 							</Grid.ColumnDefinitions>
 
-							<!-- Current Power -->
+							<!-- Email -->
 							<TextBlock
 								Grid.Row="0"
 								Grid.Column="0"
-								Text="Solar Output:"
-								Style="{StaticResource FieldLabelStyle}"
+								VerticalAlignment="Center"
+								Text="Email: "
 								/>
 							<TextBox
 								Grid.Row="0"
 								Grid.Column="1"
+								Text="{Binding Settings.Username, UpdateSourceTrigger=PropertyChanged}"
+								IsEnabled="{Binding IsLoggedOn, Converter={conv:Not}}"
+								VerticalAlignment="Center"
+								Margin="3"
+								/>
+
+							<!-- Password -->
+							<TextBlock
+								Grid.Row="1"
+								Grid.Column="0"
+								VerticalAlignment="Center"
+								Text="Password: "
+								/>
+							<PasswordBox
+								Grid.Row="1"
+								Grid.Column="1"
+								IsEnabled="{Binding IsLoggedOn, Converter={conv:Not}}"
+								VerticalAlignment="Center"
+								Name="m_password"
+								Margin="3"
+								/>
+
+							<!-- Login button -->
+							<Button
+								Grid.Row="0"
+								Grid.Column="2"
+								Grid.RowSpan="2"
+								Command="{Binding Login}"
+								IsEnabled="{Binding Login.Available}"
+								VerticalAlignment="Center"
+								Background="Transparent"
+								BorderThickness="0"
+								Margin="3"
+								>
+								<Image
+									RenderOptions.BitmapScalingMode="Fant"
+									Source="{Binding IsLoggedOn, Converter={conv:BoolSelect}, ConverterParameter='connect1|connect0'}"
+									MaxWidth="36"
+									/>
+							</Button>
+						</Grid>
+					</GroupBox>
+
+					<!-- Solar Inverter IP -->
+					<GroupBox
+						Header="Solar Inverter IP:"
+						Padding="3"
+						>
+						<TextBox
+							Text="{Binding Settings.SolarInverterIP}"
+							VerticalAlignment="Center"
+							/>
+					</GroupBox>
+
+					<!-- Global Settings -->
+					<GroupBox
+						Header="Reserved Power:"
+						Padding="3"
+						>
+						<StackPanel
+							Orientation="Horizontal"
+							>
+							<!-- Reserve Power -->
+							<StackPanel
+								Orientation="Horizontal"
+								>
+								<TextBox
+									Text="{Binding Settings.ReservePower}"
+									HorizontalContentAlignment="Right"
+									MinWidth="50"
+									/>
+								<TextBlock
+									Text=" kWatts  "
+									VerticalAlignment="Center"
+									/>
+							</StackPanel>
+
+							<!-- Schedule -->
+							<StackPanel
+								Orientation="Vertical"
+								Margin="3,0,3,0"
+								Visibility="Collapsed"
+								>
+								<TextBlock
+									Text="Schedule: "
+									/>
+								<StackPanel
+									Orientation="Horizontal">
+									<TextBox
+										Text="{Binding Schedule}"
+										/>
+								</StackPanel>
+							</StackPanel>
+						</StackPanel>
+					</GroupBox>
+				</StackPanel>
+
+				<!-- Enable Button -->
+				<StackPanel
+					Grid.Column="2"
+					Orientation="Vertical"
+					>
+					<!-- Enable Button -->
+					<Button
+						IsEnabled="{Binding ToggleEnableMonitor.Available}"
+						Command="{Binding ToggleEnableMonitor}"
+						HorizontalAlignment="Center"
+						VerticalAlignment="Top"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{Binding MonitorEnabled, Converter={conv:BoolSelect}, ConverterParameter='power_blue|power_gray'}"
+							RenderOptions.BitmapScalingMode="Fant"
+							Height="64"
+							/>
+					</Button>
+
+					<!-- Calender -->
+					<GroupBox
+						Header="Calender"
+						Visibility="Collapsed"
+						>
+					</GroupBox>
+
+					<!-- Log -->
+					<Button
+						Command="{Binding ShowLog}"
+						Background="Transparent"
+						BorderThickness="0"
+						>
+						<Image
+							Source="{StaticResource log_file}"
+							RenderOptions.BitmapScalingMode="Fant"
+							MaxHeight="48"
+							/>
+					</Button>
+				</StackPanel>
+			</Grid>
+
+			<!-- Details -->
+			<GroupBox
+				Grid.Row="1"
+				Header="Consumer Details:"
+				IsEnabled="{Binding SelectedConsumer, Converter={conv:NotNull}}"
+				Margin="8,1,8,1"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+
+					<!-- Consumer Name -->
+					<TextBlock
+						Grid.Row="0"
+						Grid.Column="0"
+						Text="Name: "
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="0"
+						Grid.Column="1"
+						Orientation="Horizontal"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.Name, FallbackValue=''}"
+							HorizontalAlignment="Left"
+							MinWidth="100"
+							Margin="3"
+							/>
+						<Button
+							Grid.Column="1"
+							Command="{Binding InspectDevice}"
+							IsEnabled="{Binding SelectedConsumer.EweSwitch, Converter={conv:NotNull}}"
+							Background="Transparent"
+							BorderThickness="0"
+							>
+							<Image
+								Source="{StaticResource inspect}"
+								RenderOptions.BitmapScalingMode="Fant"
+								MaxHeight="18"
+								/>
+						</Button>
+					</StackPanel>
+
+					<!-- EweLink Switch -->
+					<TextBlock
+						Grid.Row="1"
+						Grid.Column="0"
+						Text="Switch: "
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="1"
+						Grid.Column="1"
+						Orientation="Horizontal"
+						>
+						<ComboBox
+							ItemsSource="{Binding EweDevices}"
+							SelectedValue="{Binding SelectedConsumer.SwitchName, FallbackValue=null}"
+							DisplayMemberPath="Name"
+							SelectedValuePath="Name"
+							VerticalAlignment="Center"
+							MinWidth="160"
+							MaxWidth="200"
+							Margin="3,3,6,3"
+							ToolTip="The eWeLink Device that controls this consumer"
+							/>
+					</StackPanel>
+
+					<!-- Control Mode -->
+					<TextBlock
+						Grid.Row="2"
+						Grid.Column="0"
+						Text="Mode: "
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="2"
+						Grid.Column="1"
+						Orientation="Horizontal"
+						>
+						<ComboBox
+							ItemsSource="{Binding SelectedConsumer.Settings.ControlMode, Converter={conv:EnumValues}}"
+							SelectedItem="{Binding SelectedConsumer.Settings.ControlMode}"
+							MinWidth="100"
+							Margin="3"
+							/>
+					</StackPanel>
+
+					<!-- Required Power -->
+					<TextBlock
+						Grid.Row="0"
+						Grid.Column="2"
+						Text="Required Power: "
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="0"
+						Grid.Column="3"
+						Orientation="Horizontal"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.RequiredPower, StringFormat={}{0:N3}, FallbackValue=''}"
+							VerticalAlignment="Center"
+							ToolTip="The available power (in kW) before enabling this consumer"
+							MinWidth="60"
+							Margin="3"
+							/>
+						<TextBlock
+							Text="kWatts  "
+							VerticalAlignment="Center"
+							/>
+					</StackPanel>
+
+					<!-- Cooldown -->
+					<TextBlock
+						Grid.Row="1"
+						Grid.Column="2"
+						Text="Cooldown:"
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="1"
+						Grid.Column="3"
+						Orientation="Horizontal"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.Cooldown, FallbackValue=''}"
+							VerticalAlignment="Center"
+							MinWidth="60"
+							Margin="3"
+							ToolTip="The minimum time between switch state changes"
+							/>
+						<gui:RadialProgressControl
+							Visibility="{Binding SelectedConsumer.StateChangePending, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+							Value="{Binding SelectedConsumer.StateChangeFrac, Mode=OneWay}"
+							Minimum="0.0"
+							Maximum="1.0"
+							ArcWidth="50"
+							MaxHeight="22"
+							/>
+					</StackPanel>
+
+					<!-- Current State -->
+					<TextBlock
+						Grid.Row="2"
+						Grid.Column="2"
+						Text="State: "
+						Visibility="{Binding SelectedConsumer, Converter={conv:NullToCollapsed}}"
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="2"
+						Grid.Column="3"
+						Orientation="Horizontal"
+						>
+						<!-- Toggle switch -->
+						<Button
+							Command="{Binding ToggleSwitch}"
+							Visibility="{Binding SelectedConsumer, Converter={conv:NullToCollapsed}}"
+							VerticalAlignment="Center"
+							HorizontalAlignment="Left"
+							Background="Transparent"
+							BorderThickness="1"
+							BorderBrush="#CCC"
+							MaxHeight="24"
+							Margin="3"
+							>
+							<Image
+								Source="{Binding SelectedConsumer.On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
+								RenderOptions.BitmapScalingMode="Fant"
+								/>
+						</Button>
+					</StackPanel>
+
+					<!-- Power consumption -->
+					<TextBlock
+						Grid.Row="0"
+						Grid.Column="4"
+						Text="Power: "
+						Visibility="{Binding SelectedConsumer.Power, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="0"
+						Grid.Column="5"
+						Orientation="Horizontal"
+						VerticalAlignment="Center"
+						Visibility="{Binding SelectedConsumer.Power, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						Margin="3,1,3,1"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.Power, StringFormat={}{0:N3}, Mode=OneWay}"
+							HorizontalContentAlignment="Right"
+							Background="AliceBlue"
+							BorderThickness="1"
+							IsReadOnly="True"
+							MinWidth="40"
+							/>
+						<TextBlock
+							Text=" kWatts  "
+							/>
+					</StackPanel>
+
+					<!-- Voltage -->
+					<TextBlock
+						Grid.Row="1"
+						Grid.Column="4"
+						Text="Voltage: "
+						Visibility="{Binding SelectedConsumer.Voltage, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="1"
+						Grid.Column="5"
+						Orientation="Horizontal"
+						VerticalAlignment="Center"
+						Visibility="{Binding SelectedConsumer.Voltage, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						Margin="3,1,3,1"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.Voltage, StringFormat={}{0:N1}, Mode=OneWay}"
+							HorizontalContentAlignment="Right"
+							Background="AliceBlue"
+							BorderThickness="1"
+							IsReadOnly="True"
+							MinWidth="40"
+							/>
+						<TextBlock
+							Text=" V  "
+							/>
+					</StackPanel>
+
+					<!-- Current -->
+					<TextBlock
+						Grid.Row="2"
+						Grid.Column="4"
+						Text="Current: "
+						Visibility="{Binding SelectedConsumer.Current, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						VerticalAlignment="Center"
+						/>
+					<StackPanel
+						Grid.Row="2"
+						Grid.Column="5"
+						Orientation="Horizontal"
+						VerticalAlignment="Center"
+						Visibility="{Binding SelectedConsumer.Current, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+						Margin="3,1,3,1"
+						>
+						<TextBox
+							Text="{Binding SelectedConsumer.Current, StringFormat={}{0:N3}, Mode=OneWay}"
+							HorizontalContentAlignment="Right"
+							Background="AliceBlue"
+							BorderThickness="1"
+							IsReadOnly="True"
+							MinWidth="40"
+							/>
+						<TextBlock
+							Text=" A  "
+							/>
+					</StackPanel>
+				</Grid>
+			</GroupBox>
+
+			<!-- Status -->
+			<GroupBox
+				Grid.Row="2"
+				Header="Status"
+				Margin="8,1,8,1"
+				>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+						<RowDefinition Height="Auto"/>
+					</Grid.RowDefinitions>
+
+					<!-- Solar Output -->
+					<Grid
+						Grid.Row="0"
+						>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+
+						<!-- Current Solar Output -->
+						<TextBlock
+							Grid.Row="0"
+							Grid.Column="0"
+							Text="Solar Output: "
+							VerticalAlignment="Center"
+							/>
+						<StackPanel
+							Grid.Row="0"
+							Grid.Column="1"
+							Orientation="Horizontal"
+							>
+							<TextBox
 								Text="{Binding Solar.CurrentPower, StringFormat={}{0:N3}, Mode=OneWay, FallbackValue=0}"
 								Background="AliceBlue"
 								VerticalAlignment="Center"
 								HorizontalContentAlignment="Right"
 								BorderThickness="1"
 								IsReadOnly="True"
+								MinWidth="60"
 								/>
 							<TextBlock
-								Grid.Column="2"
 								Text="kWatts"
 								VerticalAlignment="Center"
 								Margin="3,3,16,3"
 								/>
+						</StackPanel>
 
-							<!-- Power consumed -->
+						<!-- Last update -->
+						<TextBlock
+							Grid.Row="1"
+							Grid.Column="0"
+							Text="Last Update:"
+							Style="{StaticResource FieldLabelStyle}"
+							/>
+						<StackPanel
+							Grid.Row="1"
+							Grid.Column="1"
+							Orientation="Horizontal"
+							>
 							<TextBlock
-								Grid.Row="0"
-								Grid.Column="3"
-								Text="Power Consumed:"
-								Style="{StaticResource FieldLabelStyle}"
+								Text="{Binding Solar.Timestamp, StringFormat={}{0:yyyy-MMM-dd HH:mm:ss}, Mode=OneWay}"
+								VerticalAlignment="Center"
+								Margin="0,0,12,0"
 								/>
+						</StackPanel>
+
+						<!-- Power consumed -->
+						<TextBlock
+							Grid.Row="0"
+							Grid.Column="2"
+							Text="Power Consumed: "
+							VerticalAlignment="Center"
+							/>
+						<StackPanel
+							Grid.Row="0"
+							Grid.Column="3"
+							Orientation="Horizontal"
+							>
 							<TextBox
-								Grid.Row="0"
-								Grid.Column="4"
-								Text="{Binding ConsumedPower, StringFormat={}{0:N3}, Mode=OneWay, FallbackValue=0}"
+								Text="{Binding PowerConsumed, StringFormat={}{0:N3}, Mode=OneWay, FallbackValue=0}"
 								Background="AliceBlue"
 								VerticalAlignment="Center"
 								HorizontalContentAlignment="Right"
 								BorderThickness="1"
 								IsReadOnly="True"
+								MinWidth="60"
 								/>
 							<TextBlock
-								Grid.Row="0"
-								Grid.Column="5"
-								Text="kWatts"
-								VerticalAlignment="Center"
-								Margin="3,3,16,3"
-								/>
-							
-							<!-- Last update -->
-							<TextBlock
-								Grid.Row="1"
-								Grid.Column="0"
-								Text="Last Update:"
-								Style="{StaticResource FieldLabelStyle}"
-								/>
-							<TextBlock
-								Grid.Row="1"
-								Grid.Column="1"
-								Grid.ColumnSpan="2"
-								Text="{Binding Solar.Timestamp, StringFormat={}{0:HH:mm:ss - dd MMM yyyy}, Mode=OneWay}"
+								Text=" kWatts  "
 								VerticalAlignment="Center"
 								/>
+						</StackPanel>
 
-							<!-- Active Consumers -->
-							<TextBlock
-								Grid.Row="1"
-								Grid.Column="3"
-								Text="Active Consumers:"
-								Style="{StaticResource FieldLabelStyle}"
+						<!-- Power surplus -->
+						<TextBlock
+							Grid.Row="1"
+							Grid.Column="2"
+							Text="Power Surplus: "
+							VerticalAlignment="Center"
+							/>
+						<StackPanel
+							Grid.Row="1"
+							Grid.Column="3"
+							Orientation="Horizontal"
+							>
+							<TextBox
+								Text="{Binding PowerSurplus, StringFormat={}{0:N3}, Mode=OneWay, FallbackValue=0}"
+								Background="AliceBlue"
+								VerticalAlignment="Center"
+								HorizontalContentAlignment="Right"
+								BorderThickness="1"
+								IsReadOnly="True"
+								MinWidth="60"
 								/>
 							<TextBlock
-								Grid.Row="1"
-								Grid.Column="4"
-								Grid.ColumnSpan="2"
-								Text="{Binding ActiveConsumers}"
+								Text=" kWatts  "
 								VerticalAlignment="Center"
 								/>
-						</Grid>
-				
-						<!-- Plot -->
-						<Border
-							Grid.Row="2"
-							BorderBrush="Gray"
-							BorderThickness="1"
-							Margin="3"
-							>
-						<!--
-							<view3d:ChartControl
-								Name="m_chart"
-								/>
-						-->
-						</Border>
+						</StackPanel>
 					</Grid>
-				</GroupBox>
-			</Grid>
-		</ScrollViewer>
+
+					<!-- Plot -->
+					<Border
+						Grid.Row="2"
+						BorderBrush="Gray"
+						BorderThickness="0.2"
+						>
+						<view3d:ChartControl
+							Title="History"
+							Background="Transparent"
+							Name="m_history_chart"
+							/>
+					</Border>
+				</Grid>
+			</GroupBox>
+		</Grid>
 
 		<!-- Status Bar -->
 		<StatusBar
@@ -617,5 +809,3 @@
 		</StatusBar>
 	</Grid>
 </Window>
-
-	

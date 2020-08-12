@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
+using SolarHotWater;
 using WebSocket = Rylogic.Net.WebSocket;
 
 namespace EweLink
@@ -114,6 +115,7 @@ namespace EweLink
 				{
 					try
 					{
+						Log.Write(ELogLevel.Debug, e.Text);
 						var jobj = JObject.Parse(e.Text);
 
 						// Look for errors
@@ -144,7 +146,7 @@ namespace EweLink
 						{
 							if (Cred?.User.ApiKey != apikey)
 							{
-								Logout().Start();
+								Logout().Wait();
 								return;
 							}
 						}

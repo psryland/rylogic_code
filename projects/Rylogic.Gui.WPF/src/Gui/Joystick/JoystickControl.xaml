@@ -7,7 +7,6 @@
 	mc:Ignorable="d" 
 	d:DesignHeight="256"
 	d:DesignWidth="256"
-	Source="{Binding JoystickImage}"
 	RenderOptions.BitmapScalingMode="Fant"
 	PreviewMouseDown="HandleMouseDown"
 	UseLayoutRounding="True"

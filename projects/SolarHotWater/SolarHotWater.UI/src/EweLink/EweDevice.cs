@@ -40,23 +40,20 @@ namespace EweLink
 			foreach (var parm in parms)
 			{
 				// If the parameter exists and is changing, notify
-				if (Params.TryGetValue(parm.Key, out var value) && !Equals(value, parm.Value))
-					NotifyPropertyChanged(parm.Key);
+				var notify = Params.TryGetValue(parm.Key, out var value) && !Equals(value, parm.Value);
 
 				// Set the new state of the parameter
 				Params[parm.Key] = parm.Value;
-			}
 
-			// Notify that the update occurred
-			NotifyPropertyChanged(string.Empty);
+				// Notify after changed
+				if (notify)
+					NotifyPropertyChanged(parm.Key);
+			}
 		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 
 

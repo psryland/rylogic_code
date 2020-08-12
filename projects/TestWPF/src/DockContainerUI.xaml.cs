@@ -98,11 +98,11 @@ namespace TestWPF
 			private set
 			{
 				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control);
+				Util.Dispose(ref m_dock_control!);
 				m_dock_control = value;
 			}
 		}
-		private DockControl m_dock_control;
+		private DockControl m_dock_control = null!;
 
 		/// <summary>Human friendly name</summary>
 		public override string ToString()

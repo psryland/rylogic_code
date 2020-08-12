@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using Rylogic.Extn;
 using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF
@@ -57,6 +56,9 @@ namespace Rylogic.Gui.WPF
 			// Objects Menu
 			ShowObjectManagerUI = Command.Create(this, ShowObjectManagerInternal);
 		}
+
+		/// <inheritdoc/>
+		public IView3dCMenu View3dCMenuContext => this;
 
 		/// <inheritdoc/>
 		public bool OriginPointVisible
@@ -288,12 +290,20 @@ namespace Rylogic.Gui.WPF
 			get
 			{
 				var normals_visible = false;
-				Window.EnumObjects(obj => normals_visible |= obj.ShowNormals);
+				Window.EnumObjects(obj =>
+				{
+					normals_visible |= obj.ShowNormals;
+					return true;
+				});
 				return normals_visible;
 			}
 			set
 			{
-				Window.EnumObjects(obj => obj.ShowNormals = value);
+				Window.EnumObjects(obj =>
+				{
+					obj.ShowNormals = value;
+					return true;
+				});
 				NotifyPropertyChanged(nameof(ShowNormals));
 				Invalidate();
 			}

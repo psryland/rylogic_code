@@ -12,29 +12,46 @@ namespace Rylogic.Net
 {
 	public sealed class WebSocket :IDisposable
 	{
-		private readonly ClientWebSocket m_socket;
 		public WebSocket(CancellationToken shutdown)
 		{
 			Shutdown = shutdown;
-
-			m_socket = new ClientWebSocket();
-			m_socket.Options.AddSubProtocol("Tls");
-			m_socket.Options.AddSubProtocol("Tls11");
-			m_socket.Options.AddSubProtocol("Tls12");
-			m_socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+			Socket = new ClientWebSocket();
 		}
 		public void Dispose()
 		{
 			Heartbeat = TimeSpan.Zero;
 			Listening = false;
-			Util.Dispose(m_socket);
+			Socket = null!;
 		}
+
+		/// <summary>The socket</summary>
+		private ClientWebSocket Socket
+		{
+			get => m_socket;
+			set
+			{
+				if (m_socket == value) return;
+				if (m_socket != null)
+				{
+					Util.Dispose(ref m_socket!);
+				}
+				m_socket = value;
+				if (m_socket != null)
+				{
+					m_socket.Options.AddSubProtocol("Tls");
+					m_socket.Options.AddSubProtocol("Tls11");
+					m_socket.Options.AddSubProtocol("Tls12");
+					m_socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(30);
+				}
+			}
+		}
+		private ClientWebSocket m_socket = null!;
 
 		/// <summary>Shutdown signal</summary>
 		private CancellationToken Shutdown { get; }
 
 		/// <summary></summary>
-		public bool Healthy => m_socket.State == WebSocketState.Open || m_socket.State == WebSocketState.Connecting;
+		public bool Healthy => Socket is ClientWebSocket socket && (socket.State == WebSocketState.Open || socket.State == WebSocketState.Connecting);
 
 		/// <summary>Connect the web socket</summary>
 		public async Task Connect(string endpoint)
@@ -42,14 +59,14 @@ namespace Rylogic.Net
 			try
 			{
 				// Connect to 'endpoint'
-				await m_socket.ConnectAsync(new Uri(endpoint), Shutdown);
-				if (m_socket.State == WebSocketState.Open)
+				await Socket.ConnectAsync(new Uri(endpoint), Shutdown);
+				if (Socket.State == WebSocketState.Open)
 				{
 					OnOpen?.Invoke(this, new OpenEventArgs(endpoint));
 				}
 				else
 				{
-					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Unable to connection. State = {m_socket.State}", new Exception("Connection Refused")));
+					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Unable to connection. State = {Socket.State}", new Exception("Connection Refused")));
 				}
 
 				// Start listening for messages
@@ -66,15 +83,21 @@ namespace Rylogic.Net
 		{
 			try
 			{
-				await m_socket.CloseAsync(status, status.ToString(), Shutdown);
-				if (m_socket.State == WebSocketState.Closed)
+				if (Socket.State != WebSocketState.Open)
+					return;
+
+				await Socket.CloseAsync(status, status.ToString(), Shutdown);
+				if (Socket.State == WebSocketState.Closed)
 				{
 					OnClose?.Invoke(this, new CloseEventArgs(status, reason ?? string.Empty));
 				}
 				else
 				{
-					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Graceful close failed. State = {m_socket.State}", new Exception("Graceful close failed")));
+					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Graceful close failed. State = {Socket.State}", new Exception("Graceful close failed")));
 				}
+
+				// Can't recycle sockets
+				Socket = new ClientWebSocket();
 			}
 			catch (Exception ex)
 			{
@@ -137,14 +160,14 @@ namespace Rylogic.Net
 					{
 						var buffer = new byte[1024];
 						var data = new MemoryStream(4096);
-						for (; m_socket.State == WebSocketState.Open && !exit.IsCancellationRequested;)
+						for (; Socket.State == WebSocketState.Open && !exit.IsCancellationRequested;)
 						{
 							// Receive data to build up the complete message
 							var result = new WebSocketReceiveResult(0, WebSocketMessageType.Binary, false);
 							for (; !result.EndOfMessage;)
 							{
 								// Wait for a message from the server
-								result = m_socket.ReceiveAsync(new ArraySegment<byte>(buffer), exit).Result;
+								result = Socket.ReceiveAsync(new ArraySegment<byte>(buffer), exit).Result;
 								if (result.MessageType == WebSocketMessageType.Close)
 								{
 									Close(WebSocketCloseStatus.NormalClosure).Wait();
@@ -178,27 +201,27 @@ namespace Rylogic.Net
 		/// <summary>Receives data on System.Net.WebSockets.ClientWebSocket as an asynchronous operation.</summary>
 		/// <param name="buffer">The buffer to receive the response</param>
 		/// <param name="cancel">Abort token</param>
-		public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancel) => m_socket.ReceiveAsync(buffer, cancel);
+		public Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancel) => Socket.ReceiveAsync(buffer, cancel);
 
 		/// <summary>Sends data on System.Net.WebSockets.ClientWebSocket as an asynchronous operation.</summary>
 		/// <param name="buffer">The buffer containing the message to be sent.</param>
 		/// <param name="message_type">One of the enumeration values that specifies whether the buffer is clear text or in a binary format.</param>
 		/// <param name="end_of_message">true to indicate this is the final asynchronous send; otherwise, false.</param>
 		/// <param name="cancel">A cancellation token used to propagate notification that this operation should be canceled.</param>
-		public Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType message_type, bool end_of_message, CancellationToken cancel) => m_socket.SendAsync(buffer, message_type, end_of_message, cancel);
+		public Task SendAsync(ArraySegment<byte> buffer, WebSocketMessageType message_type, bool end_of_message, CancellationToken cancel) => Socket.SendAsync(buffer, message_type, end_of_message, cancel);
 
 		#if NETCOREAPP3_1
 		/// <summary>Receives data on System.Net.WebSockets.ClientWebSocket to a byte memory range as an asynchronous operation.</summary>
 		/// <param name="buffer"></param>
 		/// <param name="cancel"></param>
-		public ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancel) => m_socket.ReceiveAsync(buffer, cancel);
+		public ValueTask<ValueWebSocketReceiveResult> ReceiveAsync(Memory<byte> buffer, CancellationToken cancel) => Socket.ReceiveAsync(buffer, cancel);
 
 		/// <summary>Sends data on System.Net.WebSockets.ClientWebSocket from a read-only byte memory range as an asynchronous operation.</summary>
 		/// <param name="buffer">The region of memory containing the message to be sent.</param>
 		/// <param name="message_type">One of the enumeration values that specifies whether the buffer is clear text or in a binary format.</param>
 		/// <param name="end_of_message">true to indicate this is the final asynchronous send; otherwise, false.</param>
 		/// <param name="cancel">A cancellation token used to propagate notification that this operation should be canceled.</param>
-		public ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType message_type, bool end_of_message, CancellationToken cancel) => m_socket.SendAsync(buffer, message_type, end_of_message, cancel);
+		public ValueTask SendAsync(ReadOnlyMemory<byte> buffer, WebSocketMessageType message_type, bool end_of_message, CancellationToken cancel) => Socket.SendAsync(buffer, message_type, end_of_message, cancel);
 		#endif
 
 		/// <summary>Receives a string on System.Net.WebSockets.ClientWebSocket as an asynchronous operation.</summary>

@@ -1,0 +1,43 @@
+﻿<Window
+	x:Class="TestWPF.RadialProgressUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF" xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	d:DesignHeight="256"
+	d:DesignWidth="256"
+	Title="RadialProgressUI"
+	ResizeMode="CanResizeWithGrip"
+	WindowStartupLocation="CenterOwner"
+	Width="256"
+	Height="256"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<gui:RadialProgressControl
+			Grid.Row="0"
+			Minimum="{Binding Minimum}"
+			Maximum="{Binding Maximum}"
+			Value="{Binding Value}"
+			ArcWidth="10"
+			ArcColor="#F0AF"
+			TextFormat="Ratio"
+			ContentStringFormat='N1'
+			/>
+
+		<Button
+			Grid.Row="1"
+			Content="{Binding Go, Converter={conv:BoolSelect}, ConverterParameter='Stop!|Go!'}"
+			Command="{Binding ToggleGo}"
+			HorizontalAlignment="Right"
+			MinWidth="80"
+			Margin="12"
+			/>
+	</Grid>
+</Window>

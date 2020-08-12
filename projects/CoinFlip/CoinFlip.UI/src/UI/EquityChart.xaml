@@ -12,7 +12,42 @@
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	>
+	<Grid.Resources>
+		<ResourceDictionary>
+			<ContextMenu x:Key="EquityChartCMenu">
+				<MenuItem Header="Drawing">
 
+				</MenuItem>
+				<MenuItem Header="Chart Options">
+					<MenuItem Header="Tools">
+						<StaticResource ResourceKey="View3dMenuItem_Origin"/>
+						<StaticResource ResourceKey="View3dMenuItem_Focus"/>
+						<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
+						<StaticResource ResourceKey="ChartMenuItem_CrossHair"/>
+						<StaticResource ResourceKey="ChartMenuItem_ValueAtPointer"/>
+						<StaticResource ResourceKey="ChartMenuItem_Axes"/>
+						<StaticResource ResourceKey="ChartMenuItem_GridLines"/>
+						<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
+					</MenuItem>
+					<MenuItem Header="Camera">
+						<StaticResource ResourceKey="View3dMenuItem_AutoRangeView"/>
+						<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
+						<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
+						<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
+						<StaticResource ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+						<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
+					</MenuItem>
+					<MenuItem Header="Rendering">
+						<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
+						<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+						<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
+						<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+					</MenuItem>
+				</MenuItem>
+			</ContextMenu>
+
+		</ResourceDictionary>
+	</Grid.Resources>
 	<Grid.RowDefinitions>
 		<RowDefinition Height="Auto"/>
 		<RowDefinition Height="*"/>
@@ -225,6 +260,8 @@
 		Grid.Row="1"
 		x:Name="m_chart_equity"
 		ChartBackground="White"
+		SceneCMenu="{StaticResource EquityChartCMenu}"
+		XAxisCMenu="{StaticResource ChartAxisCMenu}"
 		Margin="4,0,4,4"
 		/>
 </Grid>

@@ -23,7 +23,7 @@ using Rylogic.Gui.WPF;
 namespace TestWPF
 {
 	/// <summary>Interaction logic for MainWindow.xaml</summary>
-	public partial class MainWindow : Window
+	public partial class MainWindow : Window, INotifyPropertyChanged
 	{
 		public MainWindow()
 		{
@@ -132,11 +132,15 @@ namespace TestWPF
 					Value = "Really long value as well, that hopefully wraps around",
 					Units = "kgs",
 					Validate = x => double.TryParse(x, out var v) && v >= 0 ? ValidationResult.ValidResult : new ValidationResult(false, "Enter a positive number"),
-					Image = FindResource("pencil") as BitmapImage,
+					Image = (BitmapImage)FindResource("pencil"),
 					MultiLine = true,
 				};
 				if (dlg.ShowDialog() == true)
 					double.Parse(dlg.Value);
+			});
+			ShowRadialProgressUI = Command.Create(this, () =>
+			{
+				new RadialProgressUI { Owner = this }.Show();
 			});
 			ShowToolWindow = Command.Create(this, () =>
 			{
@@ -166,6 +170,7 @@ namespace TestWPF
 		public Command ShowPatternEditor { get; }
 		public Command ShowProgressUI { get; }
 		public Command ShowPromptUI { get; }
+		public Command ShowRadialProgressUI { get; }
 		public Command ShowToolWindow { get; }
 		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }
@@ -173,6 +178,19 @@ namespace TestWPF
 
 		/// <summary>Some strings</summary>
 		public ICollectionView Things { get; }
+		
+		/// <summary>Some enum value</summary>
+		public EEnum EnumValue
+		{
+			get => m_enum_value;
+			set
+			{
+				if (m_enum_value == value) return;
+				m_enum_value = value;
+				NotifyPropertyChanged(nameof(EnumValue));
+			}
+		}
+		private EEnum m_enum_value;
 
 		/// <summary>Comma separated list of selected things</summary>
 		public string SelectedDescription => string.Join(",", m_things.Where(x => x.IsChecked).Select(x => x.Name));
@@ -191,6 +209,10 @@ namespace TestWPF
 		private List<Thing> m_things = new List<Thing> { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" };
 
 		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+
+		/// <summary></summary>
 		[DebuggerDisplay("{Name,nq}")]
 		private class Thing
 		{
@@ -207,5 +229,12 @@ namespace TestWPF
 		{
 
 		}
+	}
+	public enum EEnum
+	{
+		Zero,
+		One,
+		Two,
+		Three,
 	}
 }

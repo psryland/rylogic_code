@@ -128,6 +128,10 @@ namespace Rylogic.Utility
 			get => Context.LogEntryPattern;
 			set => Context.LogEntryPattern = value;
 		}
+		public Regex? DefaultPattern
+		{
+			get => Context.DefaultLogEntryPattern;
+		}
 
 		/// <summary>Access the shared context</summary>
 		private SharedContext Context
@@ -206,14 +210,24 @@ namespace Rylogic.Utility
 		{
 			var pre = string.Empty;
 			if (entry_delimiter != '\0')        { sb.Clear(); sb.Append(entry_delimiter); }
-			if (evt.File.HasValue())            { sb.Append(evt.File); pre = " "; }
-			if (evt.Line != null)               { sb.Append($"({evt.Line.Value}):"); pre = " "; }
+			if (evt.File.HasValue())            { sb.Append(evt.File); pre = "|"; }
+			if (evt.Line != null)               { sb.Append($"({evt.Line.Value})"); pre = "|"; }
 			if (evt.Tag.HasValue())             { sb.Append($"{pre}{evt.Tag:8}"); pre = "|"; }
 			if (evt.Level != ELogLevel.NoLevel) { sb.Append($"{pre}{evt.Level}"); pre = "|"; }
-			if (timestamp)                      { sb.Append($"{pre}{evt.Timestamp.ToString("c")}"); pre = "|"; }
+			if (timestamp)                      { sb.Append($"{pre}{evt.Timestamp:c}"); pre = "|"; }
 			sb.Append(pre).Append(evt.Message);
 			if (newlines && sb.Length != 0 && sb[sb.Length-1] != '\n') sb.Append('\n');
 			return sb.ToString();
+		}
+		public static Regex DefaultLogEntryPattern()
+		{
+			// Notes:
+			//  - This is just a simple pattern to make any log readable.
+			//    You will probably not want to use this pattern.
+			//  - The pattern doesn't need to include the entry delimiter.
+			//    The pattern is only applied to each row read from the log file.
+			//    The entry delimiter is used to determine a "row" and is therefore not part of each row.
+			return new Regex($"^(?<Message>.*)\n", RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
 		}
 
 		/// <summary>Logger context. A single Context is shared by many instances of a Logger</summary>
@@ -226,6 +240,7 @@ namespace Rylogic.Utility
 				AddTimestamp = true;
 				AddNewLines = true;
 				Serialise = DefaultSerialise;
+				LogEntryPattern = DefaultLogEntryPattern;
 
 				// Clean up when there are no more loggers referencing this context
 				RefCount = new RefCount(0);
@@ -278,6 +293,7 @@ namespace Rylogic.Utility
 
 			/// <summary>Convenience location for storing a regex pattern corresponding to 'Serialise'</summary>
 			public Regex? LogEntryPattern { get; set; }
+			public Regex? DefaultLogEntryPattern => Logger.DefaultLogEntryPattern();
 
 			/// <summary>
 			/// Enable/Disable immediate mode.
@@ -572,7 +588,7 @@ namespace Rylogic.UnitTests
 			// Overwrite the timestamp so its the same for all unit tests
 			var lines = l2s.Str.ToString().Split(new[] { "\u001b" }, StringSplitOptions.RemoveEmptyEntries);
 			Assert.Equal(3, lines.Length);
-			Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message\n");
+			Assert.True(lines[0] == "A:\\file.txt(32)|Thing1|Error|Error message\n");
 			Assert.True(lines[1] == "Thing2|Info|Info message\n");
 			Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception\n");
 		}

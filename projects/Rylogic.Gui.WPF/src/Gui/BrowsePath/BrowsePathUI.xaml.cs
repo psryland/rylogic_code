@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using Microsoft.Win32;
 using Rylogic.Core.Windows;
 using Rylogic.Gui.WPF.Validators;
@@ -24,9 +25,13 @@ namespace Rylogic.Gui.WPF
 
 			// Commands
 			BrowsePath = Command.Create(this, BrowsePathInternal);
+			Commit = Command.Create(this, CommitInternal);
 
 			// Don't set DataContext, we need to inherit the parent's context
 		}
+
+		/// <summary>Raised when a path is selected (through focus lost, or enter key)</summary>
+		public event EventHandler? SelectedPathChanged;
 
 		/// <summary>The type of path to browse for</summary>
 		public EType PathType
@@ -49,7 +54,6 @@ namespace Rylogic.Gui.WPF
 			SelectedPathChanged?.Invoke(this, EventArgs.Empty);
 		}
 		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath));
-		public event EventHandler? SelectedPathChanged;
 
 		/// <summary>Callback function for validating a selected path</summary>
 		public Func<string, ValidationResult> PathValidation
@@ -126,6 +130,25 @@ namespace Rylogic.Gui.WPF
 					break;
 				}
 			}
+		}
+
+		/// <summary>Trigger the SelectedPathChanged event</summary>
+		public Command Commit { get; }
+		private void CommitInternal()
+		{
+			// Trigger an update of the 'SelectedPath' bindings
+			var binding = GetBindingExpression(SelectedPathProperty);
+			binding.UpdateSource();
+		}
+
+		/// <summary>Watch for enter key presses</summary>
+		private void HandlePreviewKeyUp(object sender, KeyEventArgs e)
+		{
+			if (e.Key != Key.Enter)
+				return;
+
+			Commit.Execute();
+			e.Handled = true;
 		}
 
 		/// <summary>The type of path to browse for</summary>

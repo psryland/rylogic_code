@@ -8,6 +8,10 @@
 	>
 	<Application.Resources>
 		<ResourceDictionary>
+			<BitmapImage x:Key="one" UriSource="/TestWPF;component/res/check_accept.png" />
+			<BitmapImage x:Key="two" UriSource="/TestWPF;component/res/check_reject.png" />
+			<BitmapImage x:Key="three" UriSource="/TestWPF;component/res/pencil.png" />
+
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="Res.xaml"/>
 				<x:Static Member="gui:ContextMenus.Instance"/>

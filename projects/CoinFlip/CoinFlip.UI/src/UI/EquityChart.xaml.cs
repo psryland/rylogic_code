@@ -668,18 +668,18 @@ namespace CoinFlip.UI
 			{
 				var cmenu = Chart.Scene.ContextMenu;
 
-				// Move the existing chart menu into a sub menu
-				var chart_options_menu = new MenuItem { Header = "Chart Options" };
-				{
-					var items = cmenu.Items.Cast<object>().ToList();
-					cmenu.Items.Clear();
-					chart_options_menu.Items.AddRange(items);
-				}
+				// // Move the existing chart menu into a sub menu
+				// var chart_options_menu = new MenuItem { Header = "Chart Options" };
+				// {
+				// 	var items = cmenu.Items.Cast<object>().ToList();
+				// 	cmenu.Items.Clear();
+				// 	chart_options_menu.Items.AddRange(items);
+				// }
 
 				cmenu.Items.Add(new Separator());
 
 				// Add the chart options menu at the end
-				cmenu.Items.Add(chart_options_menu);
+			//	cmenu.Items.Add(chart_options_menu);
 
 				// Add this last so it occurs after the other handlers attached to 'Opened'
 				cmenu.Opened += Gui_.TidySeparators;
@@ -707,6 +707,23 @@ namespace CoinFlip.UI
 					}
 				}
 			}
+		}
+
+		/// <summary>Accessors for setting the context menus in XAML</summary>
+		public ContextMenu SceneCMenu
+		{
+			get => Chart.Scene.ContextMenu;
+			set => Chart.Scene.ContextMenu = value;
+		}
+		public ContextMenu XAxisCMenu
+		{
+			get => Chart.XAxisPanel.ContextMenu;
+			set => Chart.XAxisPanel.ContextMenu = value;
+		}
+		public ContextMenu YAxisCMenu
+		{
+			get => Chart.YAxisPanel.ContextMenu;
+			set => Chart.YAxisPanel.ContextMenu = value;
 		}
 
 		/// <summary></summary>

@@ -21,7 +21,7 @@ namespace TestWPF
 
 			// Note! Running this in the debugger causes this to be run as a 32bit
 			// process regardless of the selected solution platform
-			Debug.WriteLine($"\n    {Assembly.GetEntryAssembly().Location} is a {(Environment.Is64BitProcess?"64":"32")}bit process\n");
+			Debug.WriteLine($"\n    {Assembly.GetEntryAssembly()!.Location} is a {(Environment.Is64BitProcess?"64":"32")}bit process\n");
 
 			//// Copy the dlls to the current directory if not currently there
 			//Util.LibCopy(@"{platform}\{config}\view3d.dll", "view3d.dll", true);

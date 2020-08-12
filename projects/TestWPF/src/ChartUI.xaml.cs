@@ -87,9 +87,9 @@ namespace TestWPF
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			Util.Dispose(ref m_legend);
-			Util.Dispose(ref m_series);
-			Util.Dispose(ref m_obj0);
+			Util.Dispose(ref m_legend!);
+			Util.Dispose(ref m_series!);
+			Util.Dispose(ref m_obj0!);
 			Gui_.DisposeChildren(this, EventArgs.Empty);
 			base.OnClosed(e);
 		}

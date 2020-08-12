@@ -27,6 +27,16 @@ namespace Rylogic.Gui.WPF
 		//   View3dControl and ChartControl do not set a context menu by default. To add the default one
 		//      use the 'View3dCMenu' or 'ChartCMenu' static resources. Or, create your own context menu.
 		//
+		// Binding:
+		//   Whatever the context menu is bound to must provide these properties so that the menu items
+		//   operate on the correct objects:
+		//      IView3dCMenu View3dCMenuContext { get; }
+		//      IChartCMenu ChartCMenuContext { get; }
+		//      IChartAxisCMenu ChartAxisCMenuContext { get; }
+		//   Making a menu that incorporates some view3d menu items with other things is them possible
+		//   because the custom context menu can bind to your custom window or control, which provides
+		//   these properties for the view3d menu items.
+		//
 		// Usage:
 		//   - Import the resource dictionary in App.xaml for 'gui:ContextMenus.Instance' using:
 		//        <ResourceDictionary.MergedDictionaries>
@@ -45,6 +55,10 @@ namespace Rylogic.Gui.WPF
 		//  - This is mainly just to ensure the required binding functions exist. DataTemplate cannot
 		//    bind to interfaces so you have to implement this interface with implicit implementations,
 		//    not explicit (e.g. bool IView3dCMenu.OriginPointVisible => ... won't work ).
+		//
+
+		/// <summary>The data context for view3d menu items</summary>
+		IView3dCMenu View3dCMenuContext { get; }
 
 		/// <summary>Origin</summary>
 		bool OriginPointVisible { get; set; }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Rylogic.Utility;
 
 namespace SolarHotWater
@@ -12,7 +13,7 @@ namespace SolarHotWater
 		{
 			m_log = new Logger("Solar", new LogToFile(Filepath, LogToFile.EFlags.None));
 			m_log.TimeZero -= m_log.TimeZero.TimeOfDay;
-			m_log.Write(ELogLevel.Info, "<<< Started >>>");
+			m_log.Write(ELogLevel.Info, "<<< Started >>>", Util.__FILE__(), Util.__LINE__());
 		}
 		public static void Dispose()
 		{
@@ -21,6 +22,10 @@ namespace SolarHotWater
 
 		/// <summary>Log filepath</summary>
 		public static string Filepath => Util.ResolveUserDocumentsPath("Rylogic", "SolarHotWater", "Logs", "log.txt");
+
+		/// <summary>How to interpret each log entry</summary>
+		public static Regex? LogEntryPattern => new Regex(@"^(?<File>.*?)\|(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
+			,RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
 		/// <summary>Log a message</summary>
 		public static void Write(ELogLevel level, string msg, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0) => m_log.Write(level, msg, file, line);

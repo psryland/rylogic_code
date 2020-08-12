@@ -29,7 +29,7 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class LogControl : UserControl, IDockable, IDisposable, INotifyPropertyChanged, LogControl.ILogEntryPatternProvider
 	{
-		// Notes:
+		// Usage:
 		//   This component can be used in two ways, one is as a simple text
 		//   panel for displaying log messages, the second is as a view of a
 		//   log file.
@@ -39,6 +39,11 @@ namespace Rylogic.Gui.WPF
 		//   2)
 		//    - Add an instance of the control
 		//    - Set the log filepath
+		// Notes:
+		//  - The EntryDelimiter must be a single byte UTF8 character because the log control
+		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
+		//    blocks (for performance).
+		//  - The EntryDelimiter is *NOT* needed in the LogEntryPattern.
 
 		private const int FilePollPeriodMS = 100;
 
@@ -79,13 +84,14 @@ namespace Rylogic.Gui.WPF
 
 			// Highlighting patterns
 			Highlighting = new ObservableCollection<HLPattern>();
-			Highlighting.Add(new HLPattern(Color_.From("#FCF"), Color_.From("#C0C"), EPattern.RegularExpression, ".*fatal.*") { IgnoreCase = true });
-			Highlighting.Add(new HLPattern(Color_.From("#FDD"), Color_.From("#F00"), EPattern.RegularExpression, ".*error.*") { IgnoreCase = true });
-			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#E70"), EPattern.RegularExpression, ".*warn.*") { IgnoreCase = true });
-			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#888"), EPattern.RegularExpression, ".*debug.*") { IgnoreCase = true });
+			// Examples:
+			//   Highlighting.Add(new HLPattern(Color_.From("#FCF"), Color_.From("#C0C"), EPattern.RegularExpression, ".*fatal.*") { IgnoreCase = true });
+			//   Highlighting.Add(new HLPattern(Color_.From("#FDD"), Color_.From("#F00"), EPattern.RegularExpression, ".*error.*") { IgnoreCase = true });
+			//   Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#E70"), EPattern.RegularExpression, ".*warn.*") { IgnoreCase = true });
+			//   Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#888"), EPattern.RegularExpression, ".*debug.*") { IgnoreCase = true });
 
 			// The log entry delimiter
-			LineDelimiter = Log_.EntryDelimiter;
+			EntryDelimiter = Log_.EntryDelimiter;
 
 			// Limit the number of log entries to display
 			MaxLines = 500;
@@ -99,7 +105,7 @@ namespace Rylogic.Gui.WPF
 			CopySelectedRowsToClipboard = Command.Create(this, CopySelectedRowsToClipboardInternal);
 			CopySelectedMessagesToClipboard = Command.Create(this, CopySelectedMessagesToClipboardInternal);
 
-			DataContext = this;
+			// Don't set DataContext, it must be inherited
 		}
 		public void Dispose()
 		{
@@ -177,115 +183,137 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Get/Set the log file to display. Setting a filepath sets the control to the 'file tail' mode</summary>
 		public string? LogFilepath
 		{
-			get => m_log_filepath;
-			set
+			get => (string?)GetValue(LogFilepathProperty);
+			set => SetValue(LogFilepathProperty, value);
+		}
+		private void LogFilepath_Changed(string? new_value, string? old_value)
+		{
+			// Allow setting to the same value
+			if (old_value != null)
 			{
-				// Allow setting to the same value
-				if (m_log_filepath != null)
-				{
-					m_watch!.Remove(m_log_filepath);
-					Util.Dispose(ref m_watch);
-				}
-				m_log_filepath = value;
-				if (m_log_filepath != null)
-				{
-					m_watch = new FileWatch { PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS) };
-					m_watch.Add(m_log_filepath, HandleFileChanged);
-					HandleFileChanged(m_log_filepath, null);
-				}
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogFilepath)));
+				m_watch!.Remove(old_value);
+				Util.Dispose(ref m_watch);
+			}
+			if (new_value != null)
+			{
+				m_watch = new FileWatch { PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS) };
+				m_watch.Add(new_value, HandleFileChanged);
+				HandleFileChanged(new_value, null);
+			}
+			NotifyPropertyChanged(nameof(LogFilepath));
 
-				// Handlers
-				bool HandleFileChanged(string filepath, object? ctx)
+			// Handlers
+			bool HandleFileChanged(string filepath, object? ctx)
+			{
+				try
 				{
-					try
+					// Open the file
+					using var file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
+					// Get the file length (remember this is potentially changing all the time)
+					var fend = file.Seek(0, SeekOrigin.End);
+
+					// Determine the file offset to start reading from
+					var fpos = Math.Max(0, fend - MaxFileBytes);
+					var le = LogEntries.LastOrDefault(x => x.FromFile);
+					if (le != null) fpos = Math.Min(le.FPos, fend);
+
+					// Read forwards from 'pos' to the end of the file
+					for (; fpos != fend;)
 					{
-						// Open the file
-						using var file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+						// Read a chunk from the file
+						var len = (int)Math.Min(fend - fpos, m_buf.Length);
+						file.Seek(fpos, SeekOrigin.Begin);
+						if (file.Read(m_buf, 0, len) != len)
+							throw new Exception("Failed to read file");
 
-						// Get the file length (remember this is potentially changing all the time)
-						var fend = file.Seek(0, SeekOrigin.End);
-
-						// Determine the file offset to start reading from
-						var fpos = Math.Max(0, fend - MaxFileBytes);
-						var le = LogEntries.LastOrDefault(x => x.FromFile);
-						if (le != null) fpos = Math.Min(le.FPos, fend);
-
-						// Read forwards from 'pos' to the end of the file
-						for (; fpos != fend;)
+						// Extract log entries from the file data
+						var fstart = fpos;
+						for (int s = 0, e = 0; fpos != fend; s = e)
 						{
-							// Read a chunk from the file
-							var len = (int)Math.Min(fend - fpos, m_buf.Length);
-							file.Seek(fpos, SeekOrigin.Begin);
-							if (file.Read(m_buf, 0, len) != len)
-								throw new Exception("Failed to read file");
+							// Log lines start with the ESC character '\u001b'
+							for (; s != len && m_buf[s] != EntryDelimiter; ++s) { }
+							fpos = fstart + s;
 
-							// Extract log entries from the file data
-							var fstart = fpos;
-							for (int s = 0, e = 0; fpos != fend; s = e)
-							{
-								// Log lines start with the ESC character '\u001b'
-								for (; s != len && m_buf[s] != LineDelimiter; ++s) { }
-								fpos = fstart + s;
+							// No log lines found
+							if (s == len)
+								break;
 
-								// No log lines found
-								if (s == len)
-									break;
+							// Find the start of the next log entry
+							for (e = s + 1; e != len && m_buf[e] != EntryDelimiter; ++e) { }
 
-								// Find the start of the next log entry
-								for (e = s + 1; e != len && m_buf[e] != LineDelimiter; ++e) { }
+							// [s,e) is a log entry. If 'm_buf[e]' is not the delimiter then it may be a partial entry
+							var entry = new LogEntry(this, fstart + s, Encoding.UTF8.GetString(m_buf, s + 1, e - s - 1), true);
 
-								// [s,e) is a log entry. If 'm_buf[e]' is not the delimiter then it may be a partial entry
-								var entry = new LogEntry(this, fstart + s, Encoding.UTF8.GetString(m_buf, s + 1, e - s - 1), true);
+							// Add to the log entries collection. Replace any partial log entry
+							int i = LogEntries.Count;
+							for (; i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) { }
+							if (i >= 0 && LogEntries[i].FPos == entry.FPos)
+								LogEntries[i] = entry;
+							else
+								LogEntries.Add(entry);
 
-								// Add to the log entries collection. Replace any partial log entry
-								int i = LogEntries.Count;
-								for (; i-- != 0 && (!LogEntries[i].FromFile || LogEntries[i].FPos > fpos);) { }
-								if (i >= 0 && LogEntries[i].FPos == entry.FPos)
-									LogEntries[i] = entry;
-								else
-									LogEntries.Add(entry);
-
-								// If we haven't read to the end of the file, re-read from 's'.
-								// If we have read to the end of the file, exit the loop.
-								if (e == len && len != m_buf.Length)
-									fpos = fend;
-							}
+							// If we haven't read to the end of the file, re-read from 's'.
+							// If we have read to the end of the file, exit the loop.
+							if (e == len && len != m_buf.Length)
+								fpos = fend;
 						}
 					}
-					catch (Exception ex)
-					{
-						AddMessage($"Log Error: {ex.Message}");
-					}
-					return true;
 				}
+				catch (Exception ex)
+				{
+					AddMessage($"Log Error: {ex.Message}");
+				}
+				return true;
 			}
 		}
-		private string? m_log_filepath;
+		public static readonly DependencyProperty LogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(LogFilepath));
 		private byte[] m_buf = new byte[8192];
 		private FileWatch? m_watch;
+
+		/// <summary>A regex expression for extracting lines from the log file</summary>
+		public Regex? LogEntryPattern
+		{
+			get => (Regex?)GetValue(LogEntryPatternProperty);
+			set => SetValue(LogEntryPatternProperty, value);
+		}
+		private void LogEntryPattern_Changed()
+		{
+			// Examples:
+			//   Use the 'ColumnNames' for tags so the columns become visible
+			//   new Regex(@"^(?<File>.*?)\|(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\n"
+			//       ,RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+			// Notes:
+			//   - The pattern doesn't need to include the entry delimiter.
+			//     The pattern is only applied to each row read from the log file.
+			//     The entry delimiter is used to determine a "row" and is therefore not part of each row.
+			UpdateColumnVisibility();
+			SignalRefresh();
+			NotifyPropertyChanged(nameof(LogEntryPattern));
+		}
+		public static readonly DependencyProperty LogEntryPatternProperty = Gui_.DPRegister<LogControl>(nameof(LogEntryPattern));
 
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages
 		{
-			get { return (bool)GetValue(PopOutOnNewMessagesProperty); }
-			set { SetValue(PopOutOnNewMessagesProperty, value); }
+			get => (bool)GetValue(PopOutOnNewMessagesProperty);
+			set => SetValue(PopOutOnNewMessagesProperty, value);
 		}
 		public static readonly DependencyProperty PopOutOnNewMessagesProperty = Gui_.DPRegister<LogControl>(nameof(PopOutOnNewMessages));
 
 		/// <summary>Show UI parts related to log files</summary>
 		public bool ShowLogFilepath
 		{
-			get { return (bool)GetValue(ShowLogFilepathProperty); }
-			set { SetValue(ShowLogFilepathProperty, value); }
+			get => (bool)GetValue(ShowLogFilepathProperty);
+			set => SetValue(ShowLogFilepathProperty, value);
 		}
 		public static readonly DependencyProperty ShowLogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(ShowLogFilepath));
 
 		/// <summary>Line wrap mode</summary>
 		public bool LineWrap
 		{
-			get { return (bool)GetValue(LineWrapProperty); }
-			set { SetValue(LineWrapProperty, value); }
+			get => (bool)GetValue(LineWrapProperty);
+			set => SetValue(LineWrapProperty, value);
 		}
 		private void LineWrap_Changed(bool new_value)
 		{
@@ -296,8 +324,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Scroll the view to the last entry</summary>
 		public bool TailScroll
 		{
-			get { return (bool)GetValue(TailScrollProperty); }
-			set { SetValue(TailScrollProperty, value); }
+			get => (bool)GetValue(TailScrollProperty);
+			set => SetValue(TailScrollProperty, value);
 		}
 		private void TailScroll_Changed(bool new_value)
 		{
@@ -308,42 +336,18 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The minimum log level to display</summary>
 		public ELogLevel FilterLevel
-			{
-				get { return (ELogLevel)GetValue(FilterLevelProperty); }
-				set { SetValue(FilterLevelProperty, value); }
-			}
+		{
+			get => (ELogLevel)GetValue(FilterLevelProperty);
+			set => SetValue(FilterLevelProperty, value);
+		}
 		private void FilterLevel_Changed()
 		{
 			LogEntriesView?.Refresh();
 		}
 		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
 
-		/// <summary>A regex expression for extracting lines from the log file</summary>
-		public Regex? LogEntryPattern
-		{
-			get => m_log_entry_pattern;
-			set
-			{
-				// Examples:
-				//   Use the 'ColumnNames' for tags so the columns become visible
-				//   new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\|\n",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
-				// Notes:
-				//   - The log entry pattern should not typically contain the line delimiter character
-
-				if (m_log_entry_pattern == value) return;
-				m_log_entry_pattern = value;
-				UpdateColumnVisibility();
-			}
-		}
-		private Regex? m_log_entry_pattern;
-
-		// Notes:
-		//  - The LineDelimiter must be a single byte UTF8 character because the log control
-		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
-		//    blocks (for performance).
-
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
-		public char LineDelimiter { get; set; }
+		public char EntryDelimiter { get; set; }
 
 		/// <summary>The maximum number of lines to show in the log</summary>
 		public int MaxLines { get; set; }
@@ -369,6 +373,7 @@ namespace Rylogic.Gui.WPF
 					if (m_watch != null)
 						m_watch.PollPeriod = TimeSpan.Zero;
 				}
+				NotifyPropertyChanged(nameof(Freeze));
 			}
 		}
 		private bool m_freeze;
@@ -397,8 +402,8 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Notify properties changed
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntries)));
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LogEntriesView)));
+				NotifyPropertyChanged(nameof(LogEntries));
+				NotifyPropertyChanged(nameof(LogEntriesView));
 
 				// Handlers
 				void HandleLogEntriesChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -454,7 +459,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private ICollectionView m_log_entries_view = null!;
 
-		// Trigger a refresh
+		/// <summary>Trigger a refresh</summary>
 		private void SignalRefresh()
 		{
 			if (m_log_entry_view_refresh_pending) return;
@@ -719,6 +724,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>Provides a regex that describes the format of the log entry</summary>
 		public interface ILogEntryPatternProvider
@@ -796,7 +802,16 @@ namespace Rylogic.Gui.WPF
 				get
 				{
 					m_highlight ??= m_provider.Highlighting.FirstOrDefault(x => x.IsMatch(Text));
-					m_highlight ??= new HLPattern(Colors.Transparent, Colors.Black);
+					m_highlight ??= Level switch
+					{
+						ELogLevel.Fatal => new HLPattern(Color_.From("#FCF"), Color_.From("#C0C")),
+						ELogLevel.Error => new HLPattern(Color_.From("#FDD"), Color_.From("#F00")),
+						ELogLevel.Warn => new HLPattern(Colors.Transparent, Color_.From("#E70")),
+						ELogLevel.Info => new HLPattern(Colors.Transparent, Colors.Black),
+						ELogLevel.Debug => new HLPattern(Colors.Transparent, Color_.From("#888")),
+						ELogLevel.NoLevel => new HLPattern(Colors.Transparent, Colors.Black),
+						_ => throw new Exception($"Unknown log level for highlighting"),
+					};
 					return m_highlight;
 				}
 				set
