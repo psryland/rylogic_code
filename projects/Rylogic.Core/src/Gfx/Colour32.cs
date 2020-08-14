@@ -48,16 +48,16 @@ namespace Rylogic.Gfx
 		public bool HasAlpha => (m_argb & 0xFF000000) != 0xFF000000;
 
 		// Byte components
-		public byte A { get { return (byte)((m_argb >> 24) & 0xFF); } set { m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); } }
-		public byte R { get { return (byte)((m_argb >> 16) & 0xFF); } set { m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); } }
-		public byte G { get { return (byte)((m_argb >>  8) & 0xFF); } set { m_argb = ((uint)value <<  8) | (m_argb & 0xFFFF00FF); } }
-		public byte B { get { return (byte)((m_argb >>  0) & 0xFF); } set { m_argb = ((uint)value <<  0) | (m_argb & 0xFFFFFF00); } }
+		public byte A { get => (byte)((m_argb >> 24) & 0xFF); set => m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); }
+		public byte R { get => (byte)((m_argb >> 16) & 0xFF); set => m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); }
+		public byte G { get => (byte)((m_argb >>  8) & 0xFF); set => m_argb = ((uint)value <<  8) | (m_argb & 0xFFFF00FF); }
+		public byte B { get => (byte)((m_argb >>  0) & 0xFF); set => m_argb = ((uint)value <<  0) | (m_argb & 0xFFFFFF00); }
 
 		// Normalised float components
-		public float Af { get { return A / 255f; } set { A = (byte)((int)(value * 255) & 0xFF); } }
-		public float Rf { get { return R / 255f; } set { R = (byte)((int)(value * 255) & 0xFF); } }
-		public float Gf { get { return G / 255f; } set { G = (byte)((int)(value * 255) & 0xFF); } }
-		public float Bf { get { return B / 255f; } set { B = (byte)((int)(value * 255) & 0xFF); } }
+		public float Af { get => A / 255f; set => A = (byte)((int)(value * 255) & 0xFF); }
+		public float Rf { get => R / 255f; set => R = (byte)((int)(value * 255) & 0xFF); }
+		public float Gf { get => G / 255f; set => G = (byte)((int)(value * 255) & 0xFF); }
+		public float Bf { get => B / 255f; set => B = (byte)((int)(value * 255) & 0xFF); }
 
 		// Conversion
 		public Color ToColor() => Color.FromArgb(A, R, G, B);
@@ -409,6 +409,12 @@ namespace Rylogic.Gfx
 		public static Colour32 DeepPink => Color.DeepPink;
 		public static Colour32 DodgerBlue => Color.DodgerBlue;
 		public static Colour32 Firebrick => Color.Firebrick;
+
+		/// <summary>Colour sequence for issuing changing colours to things</summary>
+		public static Colour32 NextColour() => m_next_colour[m_next_colour_index++ % m_next_colour.Length];
+		private static uint[] m_next_colour = new[] { 0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF, 0xFF00FFFF, 0xFF8080FF, 0xFF80FF80, 0xFFFF8080 };
+		private static int m_next_colour_index;
+
 		#endregion
 	}
 }

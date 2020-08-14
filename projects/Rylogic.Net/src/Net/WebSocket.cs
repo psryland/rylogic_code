@@ -15,6 +15,7 @@ namespace Rylogic.Net
 		public WebSocket(CancellationToken shutdown)
 		{
 			Shutdown = shutdown;
+			Sync = SynchronizationContext.Current ?? throw new Exception("There is no synchronisation context for this thread");
 			Socket = new ClientWebSocket();
 		}
 		public void Dispose()
@@ -23,6 +24,9 @@ namespace Rylogic.Net
 			Listening = false;
 			Socket = null!;
 		}
+
+		/// <summary>Synchronisation context for marshalling events to the main thread</summary>
+		private SynchronizationContext Sync { get; }
 
 		/// <summary>The socket</summary>
 		private ClientWebSocket Socket
@@ -62,11 +66,13 @@ namespace Rylogic.Net
 				await Socket.ConnectAsync(new Uri(endpoint), Shutdown);
 				if (Socket.State == WebSocketState.Open)
 				{
-					OnOpen?.Invoke(this, new OpenEventArgs(endpoint));
+					var a = new OpenEventArgs(endpoint);
+					OnOpen?.Invoke(this, a);
 				}
 				else
 				{
-					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Unable to connection. State = {Socket.State}", new Exception("Connection Refused")));
+					var a = new ErrorEventArgs($"WebSocket: Unable to connection. State = {Socket.State}", new Exception("Connection Refused"));
+					OnError?.Invoke(this, a);
 				}
 
 				// Start listening for messages
@@ -74,7 +80,8 @@ namespace Rylogic.Net
 			}
 			catch (Exception ex)
 			{
-				OnError?.Invoke(this, new ErrorEventArgs("WebSocket: Connect failed", ex));
+				var a = new ErrorEventArgs("WebSocket: Connect failed", ex);
+				OnError?.Invoke(this, a);
 			}
 		}
 
@@ -89,11 +96,13 @@ namespace Rylogic.Net
 				await Socket.CloseAsync(status, status.ToString(), Shutdown);
 				if (Socket.State == WebSocketState.Closed)
 				{
-					OnClose?.Invoke(this, new CloseEventArgs(status, reason ?? string.Empty));
+					var a = new CloseEventArgs(status, reason ?? string.Empty);
+					OnClose?.Invoke(this, a);
 				}
 				else
 				{
-					OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Graceful close failed. State = {Socket.State}", new Exception("Graceful close failed")));
+					var a = new ErrorEventArgs($"WebSocket: Graceful close failed. State = {Socket.State}", new Exception("Graceful close failed"));
+					OnError?.Invoke(this, a);
 				}
 
 				// Can't recycle sockets
@@ -101,7 +110,8 @@ namespace Rylogic.Net
 			}
 			catch (Exception ex)
 			{
-				OnError?.Invoke(this, new ErrorEventArgs("WebSocket: Close connection failed", ex));
+				var a = new ErrorEventArgs("WebSocket: Close connection failed", ex);
+				OnError?.Invoke(this, a);
 			}
 		}
 
@@ -182,7 +192,7 @@ namespace Rylogic.Net
 							if (data.Length != 0)
 							{
 								var msg = new MessageEventArgs(result.MessageType, data.ToArray());
-								OnMessage?.Invoke(this, msg);
+								Sync.Post(_ => OnMessage?.Invoke(this, msg), null);
 								data.SetLength(0);
 							}
 						}
@@ -190,7 +200,8 @@ namespace Rylogic.Net
 					catch (Exception ex)
 					{
 						if (ex.InnerException is OperationCanceledException) return;
-						OnError?.Invoke(this, new ErrorEventArgs($"WebSocket: Error receiving data", ex));
+						var a = new ErrorEventArgs($"WebSocket: Error receiving data", ex);
+						Sync.Post(_ => OnError?.Invoke(this, a), null);
 					}
 				}
 			}
@@ -252,16 +263,16 @@ namespace Rylogic.Net
 			return SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancel);
 		}
 
-		/// <summary>Raised when the web socket connection is closed</summary>
+		/// <summary>Raised when the web socket connection is opened</summary>
 		public event EventHandler<OpenEventArgs>? OnOpen;
 
 		/// <summary>Raised when the web socket connection is closed</summary>
 		public event EventHandler<CloseEventArgs>? OnClose;
 
-		/// <summary>Raised when the web socket connection is closed</summary>
+		/// <summary>Raised when the web socket connection encounters an error</summary>
 		public event EventHandler<ErrorEventArgs>? OnError;
 
-		/// <summary>Raised when the web socket connection is closed</summary>
+		/// <summary>Raised when a message is received</summary>
 		public event EventHandler<MessageEventArgs>? OnMessage;
 
 		/// <summary>Raised when the heartbeat timer ticks</summary>

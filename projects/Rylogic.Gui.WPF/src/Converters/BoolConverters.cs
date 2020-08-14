@@ -266,6 +266,8 @@ namespace Rylogic.Gui.WPF.Converters
 					// Image keys should be static resource keys.
 					// Only works if the resources are in App.xml.
 					var res = Application.Current.TryFindResource(val);
+					res ??= Application.Current.MainWindow.TryFindResource(val);
+					res ??= Application.Current.Windows.Cast<Window>().Select(x => x.TryFindResource(val)).FirstOrDefault(x => x != null);
 					return res;
 				}
 				return Util.ConvertTo(val, targetType);

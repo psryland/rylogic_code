@@ -68,12 +68,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc/>
-		public IView3dCMenu View3dCMenuContext => this;
-
-		/// <inheritdoc/>
-		public IChartCMenu ChartCMenuContext => this;
-
-		/// <inheritdoc/>
 		public bool OriginPointVisible
 		{
 			get => Options.OriginPointVisible;
@@ -210,7 +204,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc/>
-		public new bool ShowGridLines
+		public bool ShowGridLines
 		{
 			get => Options.ShowGridLines;
 			set => Options.ShowGridLines = value;

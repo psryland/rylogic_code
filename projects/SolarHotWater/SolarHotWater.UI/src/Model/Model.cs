@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -17,9 +16,13 @@ namespace SolarHotWater
 {
 	public sealed class Model :IDisposable, INotifyPropertyChanged
 	{
+		// Notes:
+		//  - Device updates come from within the EweLinkAPI. The websocket receives a message
+		//    for a device. It then calls 'Update' on the device, which the Consumer observes.
+
 		public Model()
 		{
-			ConsumersList = new ObservableCollection<Consumer>();
+			ConsumersList = new ConsumerList();
 			Settings = new SettingsData(SettingsData.Filepath);
 			Shutdown = new CancellationTokenSource();
 			History = new History();
@@ -39,7 +42,7 @@ namespace SolarHotWater
 		{
 			EnableMonitor = false;
 			PollSolarData = false;
-			Util.DisposeRange(ConsumersList);
+			Util.DisposeRange(Consumers);
 			Fronius = null!;
 			Ewe = null!;
 			History = null!;
@@ -50,7 +53,7 @@ namespace SolarHotWater
 		public SettingsData Settings
 		{
 			get => m_settings;
-			set
+			private set
 			{
 				if (m_settings == value) return;
 				if (m_settings != null)
@@ -91,19 +94,21 @@ namespace SolarHotWater
 						case nameof(SettingsData.Consumers):
 						{
 							// Synchronise the consumer list with the settings
-							ConsumersList.SyncStable(Settings.Consumers, (l,r) => Equals(l, r.Settings), x =>
+							ConsumersList.SyncStable(Settings.Consumers, (l,r) => Equals(l, r.Settings), settings =>
 							{
-								var consumer = new Consumer(x);
+								var consumer = new Consumer(settings);
 								consumer.PropertyChanged += WeakRef.MakeWeak(HandleConsumerPropertyChanged, h => consumer.PropertyChanged -= h);
+								consumer.Updated += WeakRef.MakeWeak(HandleConsumerUpdated, h => consumer.Updated -= h);
+								consumer.EweSwitch = EweDevices.OfType<EweSwitch>().FirstOrDefault(x => x.DeviceID == settings.DeviceID);
 								return consumer;
 							});
-							PopulateConsumerDevices(ConsumersList);
 							break;
 						}
 					}
 				}
-				void HandleConsumerPropertyChanged(object sender, PropertyChangedEventArgs e)
+				void HandleConsumerPropertyChanged(object? sender, PropertyChangedEventArgs e)
 				{
+					var consumer = (Consumer?)sender ?? throw new Exception("Consumer as sender expected");
 					switch (e.PropertyName)
 					{
 						case nameof(Consumer.On):
@@ -118,6 +123,13 @@ namespace SolarHotWater
 							NotifyPropertyChanged(nameof(PowerSurplus));
 							break;
 						}
+						case nameof(Consumer.EweSwitch):
+						{
+							// Record the state of each switch assigned to a consumer
+							if (consumer.EweSwitch is EweSwitch sw)
+								History.Add(sw);
+							break;
+						}
 						default:
 						{
 							//var consumer = (Consumer)sender;
@@ -125,6 +137,15 @@ namespace SolarHotWater
 							break;
 						}
 					}
+				}
+				void HandleConsumerUpdated(object? sender, EventArgs e)
+				{
+					// Record history after each update of the consumer's switch
+					if (sender is Consumer consumer && consumer.EweSwitch is EweSwitch sw)
+						History.Add(sw);
+
+					// Record history of the combined consumption
+					History.Add(Consumers);
 				}
 			}
 		}
@@ -137,7 +158,7 @@ namespace SolarHotWater
 		public History History
 		{
 			get => m_history;
-			set
+			private set
 			{
 				if (m_history == value) return;
 				Util.Dispose(ref m_history!);
@@ -167,8 +188,12 @@ namespace SolarHotWater
 				// Handler
 				void HandleDeviceListChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					PopulateConsumerDevices(ConsumersList);
-					NotifyPropertyChanged(nameof(EweDevices));
+					// Map from device ID to device
+					var devices = EweDevices.OfType<EweSwitch>().ToDictionary(x => x.DeviceID, x => x);
+
+					// Link consumers to their controlling switch
+					foreach (var consumer in Consumers)
+						consumer.EweSwitch = devices.TryGetValue(consumer.DeviceID, out var sw) ? sw : null;
 				}
 			}
 		}
@@ -190,9 +215,9 @@ namespace SolarHotWater
 		/// <summary>EweDevices</summary>
 		public EweLinkAPI.IEweDeviceList EweDevices => Ewe.Devices;
 
-		/// <summary>The consumers</summary>
-		public IReadOnlyList<Consumer> Consumers => ConsumersList;
-		private ObservableCollection<Consumer> ConsumersList { get; }
+		/// <summary>The consumers. Do not modify this collection, treat it as readonly</summary>
+		public IConsumerList Consumers => ConsumersList;
+		private ConsumerList ConsumersList { get; }
 
 		/// <summary>The schedule for when the app is active</summary>
 		public Schedule Sched { get; }
@@ -252,61 +277,33 @@ namespace SolarHotWater
 				{
 					// Perform a check of the solar output to see whether consumers should be enabled.
 
-					// If not within the scheduled active time, do nothing
-					//hack if (!Sched.ActiveRanges().Any())
-					//hack	return;
-
 					// The current solar output
 					var available_power = Solar.CurrentPower;
 
 					// The required power accumulator
 					var required_power = Settings.ReservePower;
 
+					// Does the schedule say we're allowed to control things now?
+					var sched_active = Sched.ActiveRanges().Any();
+
 					// Make a list of the consumers that can be controlled.
-					// Accumulate the required power of those that are on but are not controllable
 					var consumers = Consumers.Where(c =>
 					{
-						// No switch? can't turn it off or on
-						if (c.EweSwitch == null)
-						{
-							if (c.On) required_power += c.Power ?? 0.0;
-							return false;
-						}
+						// Can control this consumer?
+						if (c.EweSwitch != null && c.Settings.ControlMode == EControlMode.Controlled && sched_active)
+							return true;
 
-						// Not a controllable device...
-						switch (c.Settings.ControlMode)
-						{
-							case EControlMode.Disabled:
-							{
-								return false;
-							}
-							case EControlMode.Observed:
-							{
-								if (c.On) required_power += c.Power ?? 0.0;
-								return false;
-							}
-							case EControlMode.Controlled:
-							{
-								// Todo: for now, ignore external control.
-								//// Consumer is currently on, and wasn't turned on by us
-								//return
-								//	c.EweSwitch.State == EweSwitch.ESwitchState.On &&
-								//	c.LastAppStateChange
-								return true;
-							}
-							default:
-							{
-								throw new Exception($"Unknown control mode: {c.Settings.ControlMode}");
-							}
-						}
+						// Accumulate the required power of those that are on but are not controllable.
+						if (c.On) required_power += c.Power ?? 0.0;
+						return false;
 					}).ToList();
 
 					// Enable/Disable each consumer based on available power
 					foreach (var consumer in consumers)
 					{
-						// If the consumer knows its power consumption, use that value.
-						// otherwise fall-back to the required power.
-						var req_pwr = consumer.Power ?? consumer.RequiredPower;
+						// If the consumer is on, use the actual power consumption.
+						// If off, use the required power. The switch seems to buffer the last used power when switched off.
+						var req_pwr = consumer.On ? (consumer.Power ?? consumer.RequiredPower) : consumer.RequiredPower;
 						var turn_on = required_power + req_pwr < available_power;
 						var state = turn_on ? EweSwitch.ESwitchState.On : EweSwitch.ESwitchState.Off;
 
@@ -350,7 +347,6 @@ namespace SolarHotWater
 				}
 			}
 		}
-		public bool EnableMonitorAvailable => PollSolarData || EnableMonitor; // Available if receiving solar data or currently on
 		private DispatcherTimer? m_timer_enable_control;
 
 		/// <summary>Enable/Disable polling the solar output data</summary>
@@ -390,6 +386,9 @@ namespace SolarHotWater
 			}
 		}
 		private DispatcherTimer? m_timer_poll_solar;
+
+		/// <summary>True if the monitor can be enabled. Available if receiving solar data or currently on.</summary>
+		public bool EnableMonitorAvailable => PollSolarData || EnableMonitor;
 
 		/// <summary>The total power used by active consumers (in kWatts)</summary>
 		public double PowerConsumed => ActiveConsumers.Sum(x => x.Power ?? x.RequiredPower);
@@ -477,16 +476,12 @@ namespace SolarHotWater
 			Settings.Consumers = Settings.Consumers.Except(consumer.Settings).ToArray();
 		}
 
-		/// <summary>Assign the Device in each Consumer (if found)</summary>
-		private void PopulateConsumerDevices(IList<Consumer> consumers)
-		{
-			var devices = EweDevices.OfType<EweSwitch>().ToDictionary(x => x.Name, x => x);
-			foreach (var consumer in consumers)
-				consumer.EweSwitch = devices.TryGetValue(consumer.SwitchName, out var sw) ? sw : null;
-		}
-
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+
+		/// <summary>Public interface for the consumer list</summary>
+		public interface IConsumerList :IReadOnlyList<Consumer>, INotifyCollectionChanged, INotifyPropertyChanged { }
+		private class ConsumerList :ObservableCollection<Consumer>, IConsumerList { }
 	}
 }

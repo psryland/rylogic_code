@@ -20,6 +20,8 @@ namespace Rylogic.Gui.WPF
 				LockAspect = null;
 				BackgroundColour = Colour32.White;
 				SelectionColour = 0x8060A0E0;
+				SceneBorderColour = Colour32.Transparent;
+				SceneBorderThickness = 0.0;
 				GridZOffset = 0.001;
 				CrossHairZOffset = 0.005;
 				FocusPointVisible = false;
@@ -72,6 +74,20 @@ namespace Rylogic.Gui.WPF
 			{
 				get => get<Colour32>(nameof(SelectionColour));
 				set => set(nameof(SelectionColour), value);
+			}
+
+			/// <summary>Chart area border colour</summary>
+			public Colour32 SceneBorderColour
+			{
+				get => get<Colour32>(nameof(SceneBorderColour));
+				set => set(nameof(SceneBorderColour), value);
+			}
+
+			/// <summary>Chart area border thickness</summary>
+			public double SceneBorderThickness
+			{
+				get => get<double>(nameof(SceneBorderThickness));
+				set => set(nameof(SceneBorderThickness), value);
 			}
 
 			/// <summary>The offset from the origin for the grid, in the forward direction of the camera (focus distance relative)</summary>

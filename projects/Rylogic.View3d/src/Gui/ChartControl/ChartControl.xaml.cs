@@ -16,10 +16,11 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
+	using System.Collections;
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
-	public partial class ChartControl :Grid, IDisposable, INotifyPropertyChanged, IChartCMenu, IView3dCMenu
+	public partial class ChartControl :UserControl, IDisposable, INotifyPropertyChanged, IChartCMenu, IView3dCMenu
 	{
 		// Notes:
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
@@ -35,7 +36,6 @@ namespace Rylogic.Gui.WPF
 		//   offset from the control origin. e.g. SceneBounds = [30,10,100,100] say.
 		//   Note: the overlay has a transform applied to it so that points in client space are
 		//   correctly positioned.
-
 		static ChartControl()
 		{
 			View3d.LoadDll(throw_if_missing: false);
@@ -104,145 +104,150 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Rendering options for the chart</summary>
 		public OptionsData Options
 		{
-			[DebuggerStepThrough]
-			get => m_options ?? new OptionsData();
-			set
+			get => (OptionsData)GetValue(OptionsProperty);
+			set => SetValue(OptionsProperty, value);
+		}
+		private void Options_Changed(OptionsData new_value, OptionsData old_value)
+		{
+			if (old_value != null)
 			{
-				if (m_options == value) return;
-				if (m_options != null)
-				{
-					m_options.XAxis.PropertyChanged -= HandleAxisOptionsChanged;
-					m_options.YAxis.PropertyChanged -= HandleAxisOptionsChanged;
-					m_options.PropertyChanged -= HandleOptionsChanged;
-				}
-				m_options = value;
-				if (m_options != null)
-				{
-					// Apply the options to the scene
-					Camera.Orthographic = Options.Orthographic;
-					Window.FillMode = Options.FillMode;
-					Window.CullMode = Options.CullMode;
-					Window.BackgroundColour = Options.BackgroundColour;
-					Window.FocusPointVisible = Options.FocusPointVisible;
-					Window.OriginPointVisible = Options.OriginPointVisible;
-					Scene.MultiSampling = Options.Antialiasing ? 4 : 1;
-					PositionAxisPanels();
+				old_value.XAxis.PropertyChanged -= HandleAxisOptionsChanged;
+				old_value.YAxis.PropertyChanged -= HandleAxisOptionsChanged;
+				old_value.PropertyChanged -= HandleOptionsChanged;
+			}
+			if (new_value != null)
+			{
+				// Apply the options to the scene
+				Camera.Orthographic = Options.Orthographic;
+				Window.FillMode = Options.FillMode;
+				Window.CullMode = Options.CullMode;
+				Window.BackgroundColour = Options.BackgroundColour;
+				Window.FocusPointVisible = Options.FocusPointVisible;
+				Window.OriginPointVisible = Options.OriginPointVisible;
+				Scene.MultiSampling = Options.Antialiasing ? 4 : 1;
+				PositionAxisPanels();
 
-					m_options.PropertyChanged += HandleOptionsChanged;
-					m_options.XAxis.PropertyChanged += HandleAxisOptionsChanged;
-					m_options.YAxis.PropertyChanged += HandleAxisOptionsChanged;
-				}
+				new_value.PropertyChanged += HandleOptionsChanged;
+				new_value.XAxis.PropertyChanged += HandleAxisOptionsChanged;
+				new_value.YAxis.PropertyChanged += HandleAxisOptionsChanged;
+			}
 
-				void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
+			void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
+			{
+				var view3d_cmenu = Scene.ContextMenu?.DataContext as IView3dCMenu;
+				var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
+				switch (e.PropertyName)
 				{
-					var view3d_cmenu = Scene.ContextMenu?.DataContext as IView3dCMenu;
-					var chart_cmenu = Scene.ContextMenu?.DataContext as IChartCMenu;
-					switch (e.PropertyName)
+					case nameof(OptionsData.ShowGridLines):
 					{
-						case nameof(OptionsData.ShowGridLines):
-						{
-							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowGridLines));
-							break;
-						}
-						case nameof(OptionsData.ShowAxes):
-						{
-							m_xaxis_panel.Invalidate();
-							m_yaxis_panel.Invalidate();
-							NotifyPropertyChanged(nameof(XAxisLabelVisibility));
-							NotifyPropertyChanged(nameof(YAxisLabelVisibility));
-							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowAxes));
-							break;
-						}
-						case nameof(OptionsData.Antialiasing):
-						{
-							Scene.Antialiasing = Options.Antialiasing;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.Orthographic):
-						{
-							Camera.Orthographic = Options.Orthographic;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.FillMode):
-						{
-							Window.FillMode = Options.FillMode;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FillMode));
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.CullMode):
-						{
-							Window.CullMode = Options.CullMode;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.CullMode));
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.BackgroundColour):
-						{
-							Window.BackgroundColour = Options.BackgroundColour;
-							NotifyPropertyChanged(nameof(ChartBackground));
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowGridLines));
+						break;
+					}
+					case nameof(OptionsData.ShowAxes):
+					{
+						m_xaxis_panel.Invalidate();
+						m_yaxis_panel.Invalidate();
+						NotifyPropertyChanged(nameof(XAxisLabelVisibility));
+						NotifyPropertyChanged(nameof(YAxisLabelVisibility));
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.ShowAxes));
+						break;
+					}
+					case nameof(OptionsData.Antialiasing):
+					{
+						Scene.Antialiasing = Options.Antialiasing;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Antialiasing));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.Orthographic):
+					{
+						Camera.Orthographic = Options.Orthographic;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.Orthographic));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.FillMode):
+					{
+						Window.FillMode = Options.FillMode;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FillMode));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.CullMode):
+					{
+						Window.CullMode = Options.CullMode;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.CullMode));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.BackgroundColour):
+					{
+						Window.BackgroundColour = Options.BackgroundColour;
+						//NotifyPropertyChanged(nameof(ChartBackground));
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.BackgroundColour));
 
-							// Invalidate grid lines and crosshair because their colour depends on the background colour
-							XAxis.Gfx.Invalidate();
-							YAxis.Gfx.Invalidate();
-							if (ShowCrossHair)
-							{
-								ShowCrossHair = false;
-								ShowCrossHair = true;
-							}
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.FocusPointVisible):
+						// Invalidate grid lines and crosshair because their colour depends on the background colour
+						XAxis.Gfx.Invalidate();
+						YAxis.Gfx.Invalidate();
+						if (ShowCrossHair)
 						{
-							Window.FocusPointVisible = Options.FocusPointVisible;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
-							Invalidate();
-							break;
+							ShowCrossHair = false;
+							ShowCrossHair = true;
 						}
-						case nameof(OptionsData.OriginPointVisible):
-						{
-							Window.OriginPointVisible = Options.OriginPointVisible;
-							view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
-							Invalidate();
-							break;
-						}
-						case nameof(OptionsData.NavigationMode):
-						{
-							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.NavigationMode));
-							break;
-						}
-						case nameof(OptionsData.LockAspect):
-						{
-							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.LockAspect));
-							break;
-						}
-						case nameof(OptionsData.MouseCentredZoom):
-						{
-							chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.MouseCentredZoom));
-							break;
-						}
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.FocusPointVisible):
+					{
+						Window.FocusPointVisible = Options.FocusPointVisible;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.FocusPointVisible));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.OriginPointVisible):
+					{
+						Window.OriginPointVisible = Options.OriginPointVisible;
+						view3d_cmenu?.NotifyPropertyChanged(nameof(IView3dCMenu.OriginPointVisible));
+						Invalidate();
+						break;
+					}
+					case nameof(OptionsData.NavigationMode):
+					{
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.NavigationMode));
+						break;
+					}
+					case nameof(OptionsData.LockAspect):
+					{
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.LockAspect));
+						break;
+					}
+					case nameof(OptionsData.MouseCentredZoom):
+					{
+						chart_cmenu?.NotifyPropertyChanged(nameof(IChartCMenu.MouseCentredZoom));
+						break;
 					}
 				}
-				void HandleAxisOptionsChanged(object sender, PropertyChangedEventArgs e)
+			}
+			void HandleAxisOptionsChanged(object sender, PropertyChangedEventArgs e)
+			{
+				switch (e.PropertyName)
 				{
-					switch (e.PropertyName)
+					case nameof(OptionsData.Axis.Side):
 					{
-						case nameof(OptionsData.Axis.Side):
-						{
-							PositionAxisPanels();
-							break;
-						}
+						PositionAxisPanels();
+						break;
 					}
 				}
 			}
 		}
-		private OptionsData? m_options;
+		public static readonly DependencyProperty OptionsProperty = Gui_.DPRegister<ChartControl>(nameof(Options), new OptionsData());
+
+		/// <summary>Scene background colour</summary>
+		public SolidColorBrush SceneBackground
+		{
+			get => Options.BackgroundColour.ToMediaBrush();
+			set => Options.BackgroundColour = value.Color.ToColour32();
+		}
 
 		/// <summary>The title of the chart</summary>
 		public string Title
@@ -256,13 +261,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private string? m_title;
-
-		/// <summary>The chart background colour</summary>
-		public Color ChartBackground
-		{
-			get => Options.BackgroundColour.ToMediaColor();
-			set => Options.BackgroundColour = value.ToColour32();
-		}
 
 		/// <summary>All chart objects</summary>
 		public ElementCollection Elements { get; }
@@ -333,6 +331,29 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The view3d window associated with 'Scene'</summary>
 		private View3d.Window Window => Scene.Window; // Keep private, clients should be using 'Scene'
+
+		/// <summary>A control to use as the legend.</summary>
+		public FrameworkElement? Legend
+		{
+			get => m_legend;
+			set
+			{
+				if (m_legend == value) return;
+				if (m_legend != null)
+				{
+					Overlay.Children.Remove(m_legend);
+				}
+				m_legend = value;
+				if (m_legend != null)
+				{
+					// If the legend is 'ChartLegend' (i.e. not some custom thing),
+					// then default the ItemsSource to the chart elements.
+					if (m_legend is ChartLegend legend) legend.ItemsSource ??= Elements;
+					Overlay.Children.Add(m_legend);
+				}
+			}
+		}
+		private FrameworkElement? m_legend = null;
 
 		/// <summary>View3d context reference</summary>
 		private View3d View3d
@@ -902,12 +923,12 @@ namespace Rylogic.Gui.WPF
 		private void PositionAxisPanels()
 		{
 			{// XAxis
-				SetRow(m_xaxis_label, Options.XAxis.Side == Dock.Top ? 1 : 5);
-				SetRow(m_xaxis_panel, Options.XAxis.Side == Dock.Top ? 2 : 4);
+				Grid.SetRow(m_xaxis_label, Options.XAxis.Side == Dock.Top ? 1 : 5);
+				Grid.SetRow(m_xaxis_panel, Options.XAxis.Side == Dock.Top ? 2 : 4);
 			}
 			{// YAxis
-				SetColumn(m_yaxis_label, Options.YAxis.Side == Dock.Left ? 0 : 4);
-				SetColumn(m_yaxis_panel, Options.YAxis.Side == Dock.Left ? 1 : 3);
+				Grid.SetColumn(m_yaxis_label, Options.YAxis.Side == Dock.Left ? 0 : 4);
+				Grid.SetColumn(m_yaxis_panel, Options.YAxis.Side == Dock.Left ? 1 : 3);
 			}
 		}
 

@@ -5,9 +5,6 @@ namespace Rylogic.Gui.WPF
 {
 	public interface IChartCMenu :INotifyPropertyChanged
 	{
-		/// <summary>The data context for Chart menu items</summary>
-		IChartCMenu ChartCMenuContext { get; }
-
 		/// <summary>Show/hide grid lines</summary>
 		bool ShowGridLines { get; set; }
 		ICommand ToggleGridLines { get; }
@@ -45,11 +42,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Allow property changed to be triggered externally</summary>
 		void NotifyPropertyChanged(string prop_name);
 	}
+	public interface IChartCMenuContext
+	{
+		/// <summary>The data context for Chart menu items</summary>
+		IChartCMenu ChartCMenuContext { get; }
+	}
 	public interface IChartAxisCMenu :INotifyPropertyChanged
 	{
-		/// <summary>The data context for Chart axis menu items</summary>
-		IChartAxisCMenu ChartAxisCMenuContext { get; }
-
 		/// <summary>Allow scrolling</summary>
 		bool AllowScroll { get; set; }
 		ICommand ToggleScrollLock { get; }
@@ -60,5 +59,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Allow property changed to be triggered externally</summary>
 		void NotifyPropertyChanged(string prop_name);
+	}
+	public interface IChartAxisCMenuContext
+	{
+		/// <summary>The data context for Chart axis menu items</summary>
+		IChartAxisCMenu ChartAxisCMenuContext { get; }
 	}
 }

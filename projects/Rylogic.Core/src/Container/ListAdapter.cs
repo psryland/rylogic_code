@@ -7,18 +7,19 @@ using Rylogic.Common;
 
 namespace Rylogic.Container
 {
-	public class ListAdapter<In, Out> :IList<Out>, IList, INotifyCollectionChanged, IDisposable
+	public class ListAdapter<In, Out> :IList<Out>, IList, IDisposable, INotifyCollectionChanged
 		where In : notnull
 		where Out : notnull
 	{
 		// Notes:
+		//  - 'In' list can be modified if it is dynamic castable to IList<In> and 'update' is provided.
 		//  - Used to make a list of type 'In' appear like a list of 'Out'
 		//  - Intended for Binding where 'Out' is a wrapper of 'In'
 		//  - Only need to call Dispose if 'Out' is disposable
 		//  - ObservableCollection can cause problems because it notifies during 'Refresh'
 		//    This is why I'm using List and implementing INotifyCollectionChanged manually.
 
-		public ListAdapter(IList<In> list, Func<In, Out> factory, Func<Out, In>? update = null)
+		public ListAdapter(IReadOnlyList<In> list, Func<In, Out> factory, Func<Out, In>? update = null)
 		{
 			List = new List<Pair>();
 			Factory = factory;
@@ -54,7 +55,7 @@ namespace Rylogic.Container
 		public event NotifyCollectionChangedEventHandler? CollectionChanged;
 
 		/// <summary>The source list</summary>
-		public IList<In> Source
+		public IReadOnlyList<In> Source
 		{
 			get => m_source;
 			private set
@@ -69,7 +70,10 @@ namespace Rylogic.Container
 				}
 			}
 		}
-		private IList<In> m_source = null!;
+		private IReadOnlyList<In> m_source = null!;
+
+		/// <summary>The source collection as an IList (if possible)</summary>
+		public IList<In>? EditableSource => Source as IList<In>;
 
 		/// <summary>The collection that holds the 'Out' instances</summary>
 		private List<Pair> List { get; }
@@ -114,10 +118,18 @@ namespace Rylogic.Container
 			}
 
 			// Notify Collection changed (now that List and Source are in sync)
-			if (m_recycler.Count != 0)
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, m_recycler.Values.ToList()));
-			if (new_items.Count != 0)
-				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, new_items));
+			// ICollectionView doesn't support range actions, so need to notify once for each item
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			//if (m_recycler.Count != 0)
+			//{
+			//	foreach (var item in m_recycler.Values)
+			//		CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
+			//}
+			//if (new_items.Count != 0)
+			//{
+			//	foreach (var item in new_items)
+			//		CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
+			//}
 
 			// Call dispose on left over 'Out's (if disposable)
 			if (typeof(IDisposable).IsAssignableFrom(typeof(Out)))
@@ -141,8 +153,8 @@ namespace Rylogic.Container
 		public int Count => List.Count;
 
 		/// <inheritdoc/>
-		public bool IsReadOnly => Source.IsReadOnly || Update == null;
-		bool IList.IsFixedSize => ((IList)Source).IsFixedSize;
+		public bool IsReadOnly => Update == null || !(EditableSource is IList<In> src) || src.IsReadOnly;
+		bool IList.IsFixedSize => !(Source is IList src) || src.IsFixedSize;
 
 		/// <inheritdoc/>
 		public Out this[int index]
@@ -150,14 +162,14 @@ namespace Rylogic.Container
 			get => List[index].Dst;
 			set
 			{
-				if (Update == null)
+				if (Update == null || !(EditableSource is IList<In> source))
 					throw new NotSupportedException($"No update method has been provided for creating new source instances");
 
 				// Add to 'List' first in case 'Source' is observable.
 				// This means 'List' should already be synchronised when 'Source' is changed;
 				var src = Update(value);
 				List[index] = new Pair { Src = src, Dst = Factory(src) };
-				Source[index] = src;
+				source[index] = src;
 			}
 		}
 		object? IList.this[int index]
@@ -181,14 +193,14 @@ namespace Rylogic.Container
 		/// <inheritdoc/>
 		public void Add(Out item)
 		{
-			if (Update == null)
+			if (Update == null || !(EditableSource is IList<In> source))
 				throw new NotSupportedException($"No update method has been provided for creating new source instances");
 
 			// Add to 'List' first in case 'Source' is observable.
 			// This means 'List' should already be synchronised when 'Source' is changed;
 			var src = Update(item);
 			List.Add(new Pair { Src = src, Dst = Factory(src) });
-			Source.Add(src);
+			source.Add(src);
 		}
 		int IList.Add(object? value)
 		{
@@ -199,7 +211,7 @@ namespace Rylogic.Container
 		/// <inheritdoc/>
 		public void Insert(int index, Out item)
 		{
-			if (Update == null)
+			if (Update == null || !(EditableSource is IList<In> source))
 				throw new NotSupportedException($"No update method has been provided for creating new source instances");
 
 
@@ -207,7 +219,7 @@ namespace Rylogic.Container
 			// This means 'List' should already be synchronised when 'Source' is changed;
 			var src = Update(item);
 			List.Insert(index, new Pair { Src = src, Dst = Factory(src) });
-			Source.Insert(index, src);
+			source.Insert(index, src);
 		}
 		void IList.Insert(int index, object? value)
 		{
@@ -238,10 +250,10 @@ namespace Rylogic.Container
 		{
 			// Even though 'Update' is not needed here, its absence
 			// implies we shouldn't be modifying the source collection.
-			if (Update == null)
+			if (Update == null || !(EditableSource is IList<In> source))
 				throw new NotSupportedException($"No update method has been provided for modifying the source collection");
 
-			Source.Clear();
+			source.Clear();
 			List.Clear();
 		}
 
@@ -293,7 +305,7 @@ namespace Rylogic.Container
 	public static class ListAdapter
 	{
 		/// <summary>Helper for inferring type parameters</summary>
-		public static ListAdapter<In, Out> Create<In, Out>(IList<In> list, Func<In, Out> factory, Func<Out, In>? update = null)
+		public static ListAdapter<In, Out> Create<In, Out>(IReadOnlyList<In> list, Func<In, Out> factory, Func<Out, In>? update = null)
 			where In : notnull
 			where Out : notnull
 		{

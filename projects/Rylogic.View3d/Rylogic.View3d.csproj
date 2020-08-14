@@ -35,6 +35,11 @@
 		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png" />
+	</ItemGroup>
+
 	<!-- Native libraries -->
 	<ItemGroup>
 		<Content Include="Rylogic.View3d.targets">

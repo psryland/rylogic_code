@@ -375,7 +375,7 @@
 	<gfx:ChartControl
 		Grid.Row="1"
 		x:Name="m_chart_candles"
-		ChartBackground="White"
+		SceneBackground="White"
 		SceneCMenu="{StaticResource CandleChartCMenu}"
 		XAxisCMenu="{StaticResource ChartAxisCMenu}"
 		YAxisCMenu="{StaticResource ChartAxisCMenu}"
