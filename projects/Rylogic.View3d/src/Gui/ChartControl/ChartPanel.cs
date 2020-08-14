@@ -7,7 +7,7 @@ using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
-	public class ChartPanel : View3dControl
+	public class ChartPanel : View3dControl, IChartCMenuContext
 	{
 		public ChartPanel()
 		{
@@ -38,6 +38,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				Invalidate();
 			}
 		}
+
+		/// <inheritdoc/>
+		public new IView3dCMenu View3dCMenuContext => Chart;
+
+		/// <inheritdoc/>
+		public IChartCMenu ChartCMenuContext => Chart;
 
 		/// <summary>The containing chart control</summary>
 		internal ChartControl Chart
@@ -97,12 +103,14 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			// Update axis graphics
 			Chart.Range.UpdateScene(Window);
 
+			// Raise the BuildScene event
+			// Do this before calling UpdateScene on each element so that last minute
+			// changes to the elements can be made. E.g. setting visibility, invalidating gfx, etc
+			base.OnBuildScene();
+
 			// Add/Remove all chart elements
 			foreach (var elem in Chart.Elements)
 				elem.UpdateScene();
-
-			// Raise the BuildScene event
-			base.OnBuildScene();
 		}
 
 		/// <summary>Returns a point in chart space from a point in ChartPanel-client space.</summary>

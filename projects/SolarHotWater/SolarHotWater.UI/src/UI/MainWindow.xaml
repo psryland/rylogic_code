@@ -21,19 +21,6 @@
 			<!-- Window Context -->
 			<gui:DataContextRef x:Key="WindowCtx" Ctx="{Binding .}"/>
 
-			<!-- Style for text labels -->
-			<Style x:Key="FieldLabelStyle" TargetType="TextBlock">
-				<Setter Property="VerticalAlignment" Value="Center"/>
-				<Setter Property="MinWidth" Value="60"/>
-				<Setter Property="Margin" Value="3"/>
-			</Style>
-			
-			<!-- Style for text fields -->
-			<Style x:Key="FieldBoxStyle" TargetType="TextBox">
-				<Setter Property="VerticalAlignment" Value="Center"/>
-				<Setter Property="Margin" Value="3"/>
-			</Style>
-			
 		</ResourceDictionary>
 	</Window.Resources>
 	<Grid>
@@ -59,8 +46,8 @@
 				Margin="8,1,8,1"
 				>
 				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="4*"/>
+					<ColumnDefinition Width="3*"/>
 					<ColumnDefinition Width="Auto"/>
 				</Grid.ColumnDefinitions>
 
@@ -83,6 +70,7 @@
 							AutoGenerateColumns="False"
 							CanUserAddRows="False"
 							CanUserDeleteRows="False"
+							CanUserSortColumns="False"
 							HeadersVisibility="All"
 							CanUserResizeColumns="True"
 							GridLinesVisibility="None"
@@ -95,6 +83,8 @@
 							>
 							<DataGrid.Resources>
 								<Style x:Key="StyleCellBase" TargetType="DataGridCell">
+									<Setter Property="Foreground" Value="Black"/>
+									<Setter Property="Background" Value="{Binding Colour, Converter={conv:ColourToBrush}, ConverterParameter='lerp: FFFFFFFF 0.7'}"/>
 									<Setter Property="Template">
 										<Setter.Value>
 											<ControlTemplate TargetType="DataGridCell">
@@ -106,7 +96,7 @@
 									</Setter>
 									<Style.Triggers>
 										<Trigger Property="IsSelected" Value="True">
-											<Setter Property="Background" Value="#FACE"/>
+											<Setter Property="Background" Value="{Binding Colour, Converter={conv:ColourToBrush}, ConverterParameter='lerp: FF000000 0.1'}"/>
 											<Setter Property="Foreground" Value="Black"/>
 										</Trigger>
 									</Style.Triggers>
@@ -125,8 +115,14 @@
 									CellStyle="{StaticResource StyleCellLeft}"
 									Width="8*"
 									/>
+								<DataGridTextColumn
+									Header="Power"
+									Binding="{Binding Power, StringFormat={}{0:N3}}"
+									CellStyle="{StaticResource StyleCellCentred}"
+									Width="1*"
+									/>
 								<DataGridTemplateColumn
-									Header=""
+									Header="On"
 									CellStyle="{StaticResource StyleCellCentred}"
 									Width="1*"
 									>
@@ -141,14 +137,14 @@
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
 								<DataGridTemplateColumn
-									Header=""
+									Header="Mode"
 									CellStyle="{StaticResource StyleCellCentred}"
 									Width="1*"
 									>
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
 											<Image
-												Source="{Binding Settings.ControlMode, Converter={conv:EnumSelect}, ConverterParameter='Disabled:reject|Observed:inspect|Controlled:connected'}"
+												Source="{Binding Settings.ControlMode, Converter={conv:EnumSelect}, ConverterParameter='Disabled:reject|Observed:inspect|Controlled:accept'}"
 												RenderOptions.BitmapScalingMode="Fant"
 												Height="22"
 												/>
@@ -412,7 +408,6 @@
 							Margin="3"
 							/>
 						<Button
-							Grid.Column="1"
 							Command="{Binding InspectDevice}"
 							IsEnabled="{Binding SelectedConsumer.EweSwitch, Converter={conv:NotNull}}"
 							Background="Transparent"
@@ -420,6 +415,19 @@
 							>
 							<Image
 								Source="{StaticResource inspect}"
+								RenderOptions.BitmapScalingMode="Fant"
+								MaxHeight="18"
+								/>
+						</Button>
+						<Button
+							Command="{Binding ChangeColour}"
+							Background="Transparent"
+							BorderThickness="0"
+							MinWidth="20"
+							Margin="3"
+							>
+							<Image
+								Source="{StaticResource colour_wheel}"
 								RenderOptions.BitmapScalingMode="Fant"
 								MaxHeight="18"
 								/>
@@ -440,7 +448,7 @@
 						>
 						<ComboBox
 							ItemsSource="{Binding EweDevices}"
-							SelectedValue="{Binding SelectedConsumer.SwitchName, FallbackValue=null}"
+							SelectedItem="{Binding SelectedConsumer.EweSwitch, FallbackValue=null}"
 							DisplayMemberPath="Name"
 							SelectedValuePath="Name"
 							VerticalAlignment="Center"
@@ -466,9 +474,27 @@
 						<ComboBox
 							ItemsSource="{Binding SelectedConsumer.Settings.ControlMode, Converter={conv:EnumValues}}"
 							SelectedItem="{Binding SelectedConsumer.Settings.ControlMode}"
+							VerticalAlignment="Center"
 							MinWidth="100"
 							Margin="3"
-							/>
+							>
+							<ComboBox.ItemTemplate>
+								<DataTemplate>
+									<StackPanel Orientation="Horizontal">
+										<TextBlock
+											Text="{Binding .}"
+											VerticalAlignment="Center"
+											MinWidth="60"
+											/>
+										<Image
+											RenderOptions.BitmapScalingMode="Fant"
+											Source="{Binding ., Converter={conv:EnumSelect}, ConverterParameter='Disabled:reject|Observed:inspect|Controlled:accept'}"
+											MaxHeight="18"
+											/>
+									</StackPanel>
+								</DataTemplate>
+							</ComboBox.ItemTemplate>
+						</ComboBox>
 					</StackPanel>
 
 					<!-- Required Power -->
@@ -584,6 +610,11 @@
 						<TextBlock
 							Text=" kWatts  "
 							/>
+						<Button
+							Command="{Binding RefreshDeviceInfo}"
+							Content="Refresh Device Info"
+							Visibility="Collapsed"
+							/>
 					</StackPanel>
 
 					<!-- Voltage -->
@@ -646,7 +677,7 @@
 				</Grid>
 			</GroupBox>
 
-			<!-- Status -->
+			<!-- Realtime Data -->
 			<GroupBox
 				Grid.Row="2"
 				Header="Status"
@@ -655,9 +686,7 @@
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
 						<RowDefinition Height="*"/>
-						<RowDefinition Height="Auto"/>
 					</Grid.RowDefinitions>
 
 					<!-- Solar Output -->
@@ -710,7 +739,7 @@
 							Grid.Row="1"
 							Grid.Column="0"
 							Text="Last Update:"
-							Style="{StaticResource FieldLabelStyle}"
+							VerticalAlignment="Center"
 							/>
 						<StackPanel
 							Grid.Row="1"
@@ -781,7 +810,7 @@
 
 					<!-- Plot -->
 					<Border
-						Grid.Row="2"
+						Grid.Row="1"
 						BorderBrush="Gray"
 						BorderThickness="0.2"
 						>
@@ -789,7 +818,11 @@
 							Title="History"
 							Background="Transparent"
 							Name="m_history_chart"
-							/>
+							>
+							<view3d:ChartControl.Legend>
+								<view3d:ChartLegend/>
+							</view3d:ChartControl.Legend>
+						</view3d:ChartControl>
 					</Border>
 				</Grid>
 			</GroupBox>

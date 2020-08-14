@@ -116,6 +116,12 @@ namespace EweLink
 					try
 					{
 						Log.Write(ELogLevel.Debug, e.Text);
+						
+						// Heartbeat response
+						if (e.Text == "pong")
+							return; 
+
+						// Otherwise expect a JSON response
 						var jobj = JObject.Parse(e.Text);
 
 						// Look for errors
@@ -337,17 +343,45 @@ namespace EweLink
 			Cred = null;
 		}
 
+		/// <summary>Get info about a specific device</summary>
+		public async Task<JObject> GetDeviceInfo(string device_id, CancellationToken? cancel = null)
+		{
+			Cred = Cred ?? throw new Exception("Credentials not available");
+			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+
+			// Body data for the request
+			var parms = new Params
+			{
+				{ "appid", APP_ID },
+				{ "deviceid", device_id },
+				{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "version", 8 },
+				{ "nonce", Nonce },
+			};
+
+			// Create the request
+			var url = $"{Url}api/user/device/{device_id}{Http_.UrlEncode(parms)}";
+			var req = new HttpRequestMessage(HttpMethod.Get, url);
+			req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Cred.AccessToken);
+
+			// Submit the request
+			var response = await Client.SendAsync(req, cancel_token);
+			var reply = await response.Content.ReadAsStringAsync();
+			var jobj = JObject.Parse(reply);
+
+			// Check for an error
+			if (jobj["error"]?.Value<int>() is int error && error != 0)
+				throw new Exception($"eWeLink: Error getting device info: {error}");
+		
+			// Return the device info
+			return jobj;
+		}
+
 		/// <summary>Set the state of a switch</summary>
 		public async Task SwitchState(EweSwitch sw, EweSwitch.ESwitchState state, int channel = 0, CancellationToken? cancel = null)
 		{
 			Cred = Cred ?? throw new Exception("Credentials not available");
 			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
-
-			// Convert 'toggle' to on or off based on the current state
-			state =
-				state != EweSwitch.ESwitchState.Toggle ? state :
-				sw.State == EweSwitch.ESwitchState.On ? EweSwitch.ESwitchState.Off :
-				EweSwitch.ESwitchState.On;
 
 			// Simple switches just have a 'switch' field.
 			// Multi-channel switches have a switches array.

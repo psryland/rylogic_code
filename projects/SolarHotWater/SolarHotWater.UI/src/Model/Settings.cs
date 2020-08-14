@@ -1,6 +1,7 @@
 ﻿using System;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace SolarHotWater
@@ -81,6 +82,8 @@ namespace SolarHotWater
 			public Consumer()
 			{
 				Name = "New Consumer";
+				Colour = NextColour();
+				DeviceID = string.Empty;
 				SwitchName = string.Empty;
 				RequiredPower = 0;
 				Cooldown = TimeSpan.Zero;
@@ -92,6 +95,20 @@ namespace SolarHotWater
 			{
 				get => get<string>(nameof(Name));
 				set => set(nameof(Name), value);
+			}
+
+			/// <summary>Identifying colour</summary>
+			public Colour32 Colour
+			{
+				get => get<Colour32>(nameof(Colour));
+				set => set(nameof(Colour), value);
+			}
+
+			/// <summary>The Unique ID of the EweLink switch that controls this consumer</summary>
+			public string DeviceID
+			{
+				get => get<string>(nameof(DeviceID));
+				set => set(nameof(DeviceID), value);
 			}
 
 			/// <summary>The name of the eWeLink switch that controls the consumer</summary>
@@ -121,6 +138,11 @@ namespace SolarHotWater
 				get => get<EControlMode>(nameof(ControlMode));
 				set => set(nameof(ControlMode), value);
 			}
+
+			/// <summary>Colour sequence for issuing changing colours to things</summary>
+			private static Colour32 NextColour() => m_next_colour[m_next_colour_index++ % m_next_colour.Length];
+			private static uint[] m_next_colour = new[] { 0xFF0000FF, 0xFF00FF00, 0xFFFF0000, 0xFFFFFF00, 0xFFFF00FF, 0xFF00FFFF, 0xFF80FF80, 0xFFFF8080, 0xFF8080FF };
+			private static int m_next_colour_index;
 		}
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,9 +19,6 @@ using Rylogic.Utility;
 
 namespace TestWPF
 {
-	/// <summary>
-	/// Interaction logic for ChartUI.xaml
-	/// </summary>
 	public partial class ChartUI : Window
 	{
 		private ChartDataSeries m_series;
@@ -36,8 +34,9 @@ namespace TestWPF
 			m_chart.YAxis.Label = "My Y Axis";
 			//m_chart.XAxis.Options.Side = Dock.Top;
 			//m_chart.YAxis.Options.Side = Dock.Right;
-
 			m_chart.Options.Orthographic = true;
+			m_chart.Options.SceneBorderThickness = 1;
+			m_chart.Options.SceneBorderColour = Colour32.Black;
 
 			m_obj0 = new View3d.Object(
 				"test_object", 0xFFFFFFFF, 5, 18, 1,
@@ -63,27 +62,29 @@ namespace TestWPF
 					new View3d.Nugget(View3d.ETopo.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr),
 				},
 				null);
-
 			m_chart.BuildScene += (s, a) =>
 			{
 				m_chart.Scene.Window.AddObject(m_obj0);
 			};
 
 			m_series = new ChartDataSeries("waves", ChartDataSeries.EFormat.XRealYReal);
-			using (var lk = m_series.Lock())
-			{
-				for (int i = 0; i != 100000; ++i)
-					lk.Add(new ChartDataSeries.Pt(0.01 * i, Math.Sin(0.01 * i * Math_.Tau)));
-			}
 			m_series.Options.Colour = Colour32.Blue;
 			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
 			m_series.Options.PointStyle = EPointStyle.Triangle;
 			m_series.Options.PointSize = 50f;
 			m_series.Options.LineWidth = 3f;
 			m_series.Chart = m_chart;
+			{
+				using var lk = m_series.Lock();
+				for (int i = 0; i != 100000; ++i)
+					lk.Add(new ChartDataSeries.Pt(0.01 * i, Math.Sin(0.01 * i * Math_.Tau)));
+			}
 
 			m_legend = new ChartDataLegend();
 			m_chart.Elements.Add(m_legend);
+
+			MyLegendItems = new ListCollectionView(new[] { m_series });
+			DataContext = this;
 		}
 		protected override void OnClosed(EventArgs e)
 		{
@@ -93,5 +94,10 @@ namespace TestWPF
 			Gui_.DisposeChildren(this, EventArgs.Empty);
 			base.OnClosed(e);
 		}
+
+		public int Number => 4;
+
+		/// <summary></summary>
+		public ICollectionView MyLegendItems { get; }
 	}
 }

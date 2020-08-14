@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SolarHotWater.UI": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

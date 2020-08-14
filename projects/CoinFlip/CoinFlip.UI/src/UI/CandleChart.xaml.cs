@@ -289,8 +289,8 @@ namespace CoinFlip.UI
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
 					m_chart.XAxis.TickText = HandleChartXAxisTickText;
 					m_chart.YAxis.TickText = HandleChartYAxisTickText;
-					m_chart.TapeMeasureStringFormat = HandleTapeMeasureStringFormat;
 					m_chart.YAxis.Options.Side = Dock.Right;
+					m_chart.TapeMeasureStringFormat = HandleTapeMeasureStringFormat;
 					m_chart.AutoRanging += HandleAutoRanging;
 					m_chart.MouseDown += HandleMouseDown;
 					m_chart.BuildScene += HandleBuildScene;

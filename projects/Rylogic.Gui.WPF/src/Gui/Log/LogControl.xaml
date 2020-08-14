@@ -209,7 +209,6 @@
 					Header="File"
 					Binding="{Binding File}"
 					ElementStyle="{StaticResource LogEntryStyle}"
-					ToolTipService.ToolTip="{Binding File}"
 					Width="2*"
 					/>
 				<DataGridTextColumn

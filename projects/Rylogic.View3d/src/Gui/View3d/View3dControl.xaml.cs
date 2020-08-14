@@ -17,7 +17,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class View3dControl :Image, IDisposable, INotifyPropertyChanged, IView3dCMenu
+	public partial class View3dControl :Image, IDisposable, INotifyPropertyChanged, IView3dCMenu, IView3dCMenuContext
 	{
 		// Notes:
 		//  - This control subclasses 'Image' because the D3DImage is an 'ImageSource'

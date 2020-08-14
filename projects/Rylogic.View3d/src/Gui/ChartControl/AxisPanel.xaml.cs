@@ -10,7 +10,7 @@ using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
-	public sealed partial class AxisPanel :Canvas, IDisposable, INotifyPropertyChanged, IChartAxisCMenu
+	public sealed partial class AxisPanel :Canvas, IDisposable, INotifyPropertyChanged, IChartAxisCMenu, IChartAxisCMenuContext
 	{
 		// Notes:
 		//  - Represents the tick marks and tick labels of an axis.
@@ -379,21 +379,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-
-			var axis_cmenu = ContextMenu.DataContext as IChartAxisCMenu;
-			switch (prop_name)
-			{
-			case nameof(AllowScroll):
-				{
-					axis_cmenu?.NotifyPropertyChanged(nameof(IChartAxisCMenu.AllowScroll));
-					break;
-				}
-			case nameof(AllowZoom):
-				{
-					axis_cmenu?.NotifyPropertyChanged(nameof(IChartAxisCMenu.AllowZoom));
-					break;
-				}
-			}
 		}
 	}
 }

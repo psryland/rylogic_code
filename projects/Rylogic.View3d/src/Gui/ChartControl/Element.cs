@@ -17,7 +17,7 @@ namespace Rylogic.Gui.WPF
 	{
 		/// <summary>Base class for anything on a chart</summary>
 		[DebuggerDisplay("{Name} {Id} {GetType().Name}")]
-		public abstract class Element : IDisposable, INotifyPropertyChanged
+		public abstract class Element : IDisposable, IChartLegendItem, INotifyPropertyChanged
 		{
 			/// <summary>Buffers for creating the chart graphics</summary>
 			protected List<View3d.Vertex> m_vbuf;
@@ -144,6 +144,9 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Debugging name for the element</summary>
 			public string Name { get; set; }
+
+			/// <summary>Default identity colour</summary>
+			public virtual Colour32 Colour => Colour32.Black;
 
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)

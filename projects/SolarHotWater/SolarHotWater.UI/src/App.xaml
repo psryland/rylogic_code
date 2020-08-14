@@ -22,6 +22,7 @@
 			<BitmapImage x:Key="connected" UriSource="/SolarHotWater.UI;component/res/connected.png" />
 			<BitmapImage x:Key="connect0" UriSource="/SolarHotWater.UI;component/res/connect0.png" />
 			<BitmapImage x:Key="connect1" UriSource="/SolarHotWater.UI;component/res/connect1.png" />
+			<BitmapImage x:Key="colour_wheel" UriSource="/SolarHotWater.UI;component/res/colour_wheel.png" />
 
 			<!-- Fix for Library binding bugs -->
 			<Style TargetType="ComboBoxItem">

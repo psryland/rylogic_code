@@ -259,7 +259,7 @@
 	<gfx:ChartControl
 		Grid.Row="1"
 		x:Name="m_chart_equity"
-		ChartBackground="White"
+		SceneBackground="White"
 		SceneCMenu="{StaticResource EquityChartCMenu}"
 		XAxisCMenu="{StaticResource ChartAxisCMenu}"
 		Margin="4,0,4,4"

@@ -14,10 +14,21 @@ create table if not exists [SolarOutput] (
 	[Timestamp] integer not null
 );
 
+-- Combined consumption table
+create table if not exists [Consumption] (
+	[ID] integer unique primary key,
+	[Power] real not null,
+	[Timestamp] integer not null
+);
+
 -- Consumer table
 create table if not exists [Consumer] (
 	[ID] integer unique primary key,
-	[DeviceID] integer not null,
-	[Timestamp] integer not null
-)
+	[DeviceID] text not null,
+	[Timestamp] integer not null,
+	[On] integer not null,
+	[Power] real null,
+	[Voltage] real null,
+	[Current] real null
+);
 

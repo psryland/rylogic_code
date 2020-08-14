@@ -317,7 +317,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private void LineWrap_Changed(bool new_value)
 		{
-			UpdateColumnVisibility();
+			m_view.HorizontalScrollBarVisibility = new_value ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 		}
 		public static readonly DependencyProperty LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
 
@@ -345,6 +345,18 @@ namespace Rylogic.Gui.WPF
 			LogEntriesView?.Refresh();
 		}
 		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
+
+		/// <summary>The column names that are hidden by default</summary>
+		public string HiddenColumns
+		{
+			get => (string)GetValue(HiddenColumnsProperty);
+			set => SetValue(HiddenColumnsProperty, value);
+		}
+		private void HiddenColumns_Changed()
+		{
+			UpdateColumnVisibility();
+		}
+		public static readonly DependencyProperty HiddenColumnsProperty = Gui_.DPRegister<LogControl>(nameof(HiddenColumns), string.Empty);
 
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
 		public char EntryDelimiter { get; set; }
@@ -509,34 +521,32 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Use the log entry pattern to create columns</summary>
 		private void UpdateColumnVisibility()
 		{
-			// Preserve column state
-			var column_state = Columns.ToDictionary(x => x.Header, x => new { x.Visibility, x.Width });
-
-			// Hide the columns that don't have group names in the pattern
+			// The visible column names, taken from the pattern.
 			// Group names should match the values in 'ColumnNames' to support non-string values
-			var names = LogEntryPattern?.GetGroupNames().Skip(1).ToArray();
-			if (names != null && names.Length != 0)
-			{
-				// Show each column that has a matching capture group in the pattern
-				m_view.HeadersVisibility = DataGridHeadersVisibility.Column;
-				m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-				foreach (var column in m_view.Columns)
-				{
-					var found = names.IndexOf((string)column.Header) != -1;
-					var state = column_state.TryGetValue((string)column.Header, out var s) ? s : null;
-					column.Visibility = found
-						? (state?.Visibility ?? Visibility.Visible)
-						: Visibility.Collapsed;
-				}
-			}
-			else
+			var shown = LogEntryPattern?.GetGroupNames().Skip(1).ToHashSet(x => x) ?? new HashSet<string>();
+			if (shown.Count == 0)
 			{
 				// Only show the 'Text' column, and hide the column headers
 				m_view.HeadersVisibility = DataGridHeadersVisibility.None;
+				m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 				foreach (var column in m_view.Columns)
-				{
 					column.Visibility = (string)column.Header != ColumnNames.Text ? Visibility.Visible : Visibility.Collapsed;
-				}
+				
+				return;
+			}
+
+			// The column names that are hidden by default
+			var hidden = HiddenColumns.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries).ToHashSet(x => x);
+		
+			// Show each column that has a matching capture group in the pattern
+			m_view.HeadersVisibility = DataGridHeadersVisibility.Column;
+			m_view.HorizontalScrollBarVisibility = LineWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+			foreach (var column in m_view.Columns)
+			{
+				Visibility state;
+				state = shown.Contains((string)column.Header) ? Visibility.Visible : Visibility.Collapsed;
+				state = !hidden.Contains((string)column.Header) ? state : Visibility.Collapsed;
+				column.Visibility = state;
 			}
 		}
 

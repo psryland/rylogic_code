@@ -14,5 +14,6 @@
 	<gui:LogControl
 		LogFilepath="{Binding Filepath, Mode=OneWay}"
 		LogEntryPattern="{Binding Pattern, Mode=OneWay}"
+		HiddenColumns="Tag,Level,File,Line"
 		/>
 </Window>

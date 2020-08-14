@@ -57,9 +57,6 @@ namespace Rylogic.Gui.WPF
 		//    not explicit (e.g. bool IView3dCMenu.OriginPointVisible => ... won't work ).
 		//
 
-		/// <summary>The data context for view3d menu items</summary>
-		IView3dCMenu View3dCMenuContext { get; }
-
 		/// <summary>Origin</summary>
 		bool OriginPointVisible { get; set; }
 		ICommand ToggleOriginPoint { get; }
@@ -144,5 +141,10 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Allow property changed to be triggered externally</summary>
 		void NotifyPropertyChanged(string prop_name);
+	}
+	public interface IView3dCMenuContext
+	{
+		/// <summary>The data context for view3d menu items</summary>
+		IView3dCMenu View3dCMenuContext { get; }
 	}
 }

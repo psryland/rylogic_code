@@ -27,11 +27,12 @@
 
 		<!-- Colour Wheel -->
 		<gui:ColourWheel
-			x:Name="m_colour_wheel"
+			Grid.Row="0"
 			Orientation="Horizontal"
 			HorizontalAlignment="Center"
 			Colour="{Binding Colour}"
 			Margin="8"
+			x:Name="m_colour_wheel"
 			/>
 
 		<!-- Type In -->

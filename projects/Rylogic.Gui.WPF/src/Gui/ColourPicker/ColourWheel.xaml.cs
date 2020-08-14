@@ -80,11 +80,10 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override Size MeasureOverride(Size constraint)
 		{
-			var desired = base.MeasureOverride(constraint);
-			if (double.IsInfinity(desired.Width) || double.IsInfinity(desired.Height))
-				desired = new Size(300, 200);
+			if (double.IsInfinity(constraint.Width) || double.IsInfinity(constraint.Height))
+				constraint = new Size(300, 200);
 
-			var meas = CalcMeasurements(desired);
+			var meas = CalcMeasurements(constraint);
 			return new Size(meas.Width, meas.Height);
 		}
 		protected override void OnRender(DrawingContext gfx)
@@ -242,7 +241,7 @@ namespace Rylogic.Gui.WPF
 		private void SelectHueAndSaturation(Point pt)
 		{
 			var dim = LayoutDimensions;
-			if (dim.Empty)
+			if (dim.Empty || dim.Radius == 0)
 				return;
 
 			HSVColour = HSV.FromRadial(

@@ -8,7 +8,7 @@ using Rylogic.Extn;
 
 namespace CoinFlip
 {
-	public class CoinDataList :IList<CoinData>, IList, INotifyCollectionChanged
+	public class CoinDataList :IReadOnlyList<CoinData>, IList<CoinData>, IList, INotifyCollectionChanged
 	{
 		// Notes:
 		//  - This is a wrapper around the 'Settings.Coins' array.

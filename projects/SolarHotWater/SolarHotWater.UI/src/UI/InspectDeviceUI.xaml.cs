@@ -98,7 +98,8 @@ namespace SolarHotWater.UI
 			if (!(Switch is EweSwitch sw)) return;
 			try
 			{
-				await Ewe.SwitchState(sw, EweSwitch.ESwitchState.Toggle, 0, Model.Shutdown.Token);
+				var state = sw.On ? EweSwitch.ESwitchState.Off : EweSwitch.ESwitchState.On;
+				await Ewe.SwitchState(sw, state, 0, Model.Shutdown.Token);
 			}
 			catch (Exception ex)
 			{

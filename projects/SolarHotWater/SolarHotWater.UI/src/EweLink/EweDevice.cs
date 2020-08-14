@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using Newtonsoft.Json.Linq;
 
 namespace EweLink
@@ -9,7 +10,7 @@ namespace EweLink
 		protected EweDevice(JObject jdevice)
 		{
 			m_jdevice = jdevice;
-			Params = m_jdevice["params"] as JObject ?? new JObject();
+			Params = jdevice["params"] as JObject ?? new JObject();
 			Manufacturer = new ManufacturerData(m_jdevice["extra"]?["extra"] as JObject);
 		}
 
@@ -49,7 +50,11 @@ namespace EweLink
 				if (notify)
 					NotifyPropertyChanged(parm.Key);
 			}
+			Updated?.Invoke(this, EventArgs.Empty);
 		}
+
+		/// <summary>Signals an update message was received</summary>
+		public event EventHandler? Updated;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;

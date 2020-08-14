@@ -1,0 +1,148 @@
+﻿<UserControl
+	x:Class="Rylogic.Gui.WPF.ChartLegend"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	HorizontalAlignment="Left"
+	VerticalAlignment="Top"
+	d:DesignHeight="200"
+	d:DesignWidth="200"
+	>
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="plus" UriSource="/Rylogic.View3d;component/res/plus.png" />
+			<BitmapImage x:Key="plus_gray" UriSource="/Rylogic.View3d;component/res/plus_gray.png" />
+			<BitmapImage x:Key="power_blue" UriSource="/Rylogic.View3d;component/res/power_blue.png" />
+			<BitmapImage x:Key="power_gray" UriSource="/Rylogic.View3d;component/res/power_gray.png" />
+		</ResourceDictionary>
+	</UserControl.Resources>
+	<StackPanel
+		Orientation="Vertical"
+		d:DataContext="{d:DesignInstance Type=UserControl, IsDesignTimeCreatable=True}"
+		DataContext="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
+		Background="{Binding Expanded, Converter={conv:BoolSelect}, ConverterParameter='#CEEE|Transparent'}"
+		HorizontalAlignment="Left"
+		>
+		<!--
+		{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}
+		-->
+		<!-- Expand button -->
+		<ToggleButton
+			IsChecked="{Binding Expanded}"
+			HorizontalAlignment="{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
+			Background="Transparent"
+			VerticalAlignment="Top"
+			IsThreeState="False"
+			BorderThickness="0"
+			MaxWidth="12"
+			x:Name="m_btn"
+			>
+			<Image
+				Source="{StaticResource plus_gray}"
+				RenderOptions.BitmapScalingMode="Fant"
+				/>
+		</ToggleButton>
+
+		<!-- Items -->
+		<DataGrid
+			ItemsSource="{Binding ItemsSource}"
+			SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+			Visibility="{Binding Expanded, Converter={conv:BoolToVisible}}"
+			HeadersVisibility="{Binding CanUsersReorderItems, Converter={conv:BoolSelect}, ConverterParameter='Row|None'}"
+			gui:DataGrid_.ReorderRowsWithDragDrop="True"
+			gui:DataGrid_.RowsReordered="HandleReordered"
+			AutoGenerateColumns="False"
+			GridLinesVisibility="None"
+			HorizontalAlignment="Left"
+			VerticalAlignment="Top"
+			Background="Transparent"
+			BorderThickness="0"
+			>
+			<DataGrid.RowStyle>
+				<Style TargetType="DataGridRow">
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="BorderThickness" Value="0"/>
+				</Style>
+			</DataGrid.RowStyle>
+			<DataGrid.CellStyle>
+				<Style TargetType="DataGridCell">
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="BorderThickness" Value="0"/>
+					<Style.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="{Binding Colour, Converter={conv:ColourToBrush}}"/>
+						</Trigger>
+						<Trigger Property="IsSelected" Value="True">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="{Binding Colour, Converter={conv:ColourToBrush}}"/>
+							<Setter Property="BorderThickness" Value="0"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+			</DataGrid.CellStyle>
+			<DataGrid.Columns>
+
+				<!-- Visibility -->
+				<DataGridTemplateColumn
+					Header="Visible"
+					Width="22"
+					>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<Button
+								Command="{Binding DataContext.ToggleVisibility, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}}"
+								>
+								<Button.Style>
+									<Style TargetType="Button">
+										<Setter Property="Background" Value="Transparent"/>
+										<Setter Property="BorderThickness" Value="0"/>
+										<Style.Triggers>
+											<Trigger Property="IsMouseOver" Value="True">
+												<Setter Property="Background" Value="Transparent"/>
+											</Trigger>
+										</Style.Triggers>
+									</Style>
+								</Button.Style>
+								<StackPanel>
+									<Image
+										RenderOptions.BitmapScalingMode="Fant"
+										Source="{StaticResource power_blue}"
+										Visibility="{Binding Visible, Converter={conv:BoolToVisible}}"
+										/>
+									<Image
+										RenderOptions.BitmapScalingMode="Fant"
+										Source="{StaticResource power_gray}"
+										Visibility="{Binding Visible, Converter={conv:BoolToCollapsed}}"
+										/>
+								</StackPanel>
+							</Button>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+
+				<!-- Item Label -->
+				<DataGridTemplateColumn
+					Header="Name"
+					Width="Auto"
+					>
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate>
+							<TextBlock
+								Text="{Binding Name}"
+								Foreground="{Binding Colour.RGB, Converter={conv:ColourToBrush}}"
+								Background="Transparent"
+								Margin="3"
+								/>
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
+			</DataGrid.Columns>
+		</DataGrid>
+	</StackPanel>
+</UserControl>
+	

@@ -4,7 +4,9 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
+	xmlns:view3d="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:TestWPF"
 	mc:Ignorable="d"
 	WindowStartupLocation="Manual"
@@ -16,8 +18,27 @@
 	Left="-1050"
 	Top="500"
 	-->
-	<gui:ChartControl
-		x:Name="m_chart"
-		Title="My Chart"
-		/>
+	<Window.Resources>
+		<ResourceDictionary>
+			<ContextMenu x:Key="MyChartCMenu">
+				<MenuItem
+					Header="Boobs"
+					/>
+			</ContextMenu>
+		</ResourceDictionary>
+	</Window.Resources>
+	<Grid>
+		<view3d:ChartControl
+			Title="My Chart"
+			SceneCMenu="{StaticResource ChartCMenu}"
+			XAxisCMenu="{StaticResource ChartAxisCMenu}"
+			YAxisCMenu="{StaticResource ChartAxisCMenu}"
+			x:Name="m_chart"
+			>
+			<view3d:ChartControl.Legend>
+				<view3d:ChartLegend/>
+			</view3d:ChartControl.Legend>
+		</view3d:ChartControl>
+	</Grid>
 </Window>
+

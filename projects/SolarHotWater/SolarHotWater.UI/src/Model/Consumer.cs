@@ -4,6 +4,7 @@ using System.Diagnostics;
 using EweLink;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace SolarHotWater
@@ -11,13 +12,17 @@ namespace SolarHotWater
 	[DebuggerDisplay("{Description,nq}")]
 	public sealed class Consumer :IDisposable, INotifyPropertyChanged
 	{
+		public static event Action<Consumer, bool>? Genesis;
+
 		public Consumer(SettingsData.Consumer settings)
 		{
 			Settings = settings;
+			Genesis?.Invoke(this, true);
 		}
 		public void Dispose()
 		{
-			EweSwitch = null;
+			Genesis?.Invoke(this, false);
+			EweSwitch = null!;
 			Settings = null!;
 		}
 
@@ -44,8 +49,11 @@ namespace SolarHotWater
 					if (e.Before) return;
 					switch (e.Key)
 					{
-						case nameof(SettingsData.Consumer.SwitchName):
+						case nameof(SettingsData.Consumer.ControlMode):
 						{
+							// Switching out of controlled mode cancels any pending state changes
+							if (Settings.ControlMode != EControlMode.Controlled)
+								StateChangePending = null;
 							break;
 						}
 						default:
@@ -69,10 +77,14 @@ namespace SolarHotWater
 				if (m_ewe_switch != null)
 				{
 					m_ewe_switch.PropertyChanged -= HandlePropChanged;
+					m_ewe_switch.Updated -= HandleSwitchUpdated;
 				}
 				m_ewe_switch = value;
 				if (m_ewe_switch != null)
 				{
+					DeviceID = m_ewe_switch.DeviceID;
+					SwitchName = m_ewe_switch.Name;
+					m_ewe_switch.Updated += HandleSwitchUpdated;
 					m_ewe_switch.PropertyChanged += HandlePropChanged;
 				}
 				NotifyPropertyChanged(nameof(EweSwitch));
@@ -121,6 +133,10 @@ namespace SolarHotWater
 						}
 					}
 				}
+				void HandleSwitchUpdated(object? sender, EventArgs e)
+				{
+					Updated?.Invoke(this, EventArgs.Empty);
+				}
 			}
 		}
 		private EweSwitch? m_ewe_switch;
@@ -130,6 +146,24 @@ namespace SolarHotWater
 		{
 			get => Settings.Name;
 			set => Settings.Name = value;
+		}
+
+		/// <summary>Identifying colour for this consumer</summary>
+		public Colour32 Colour
+		{
+			get => Settings.Colour;
+			set => Settings.Colour = value;
+		}
+
+		/// <summary>The device ID of the controlling switch</summary>
+		public string DeviceID
+		{
+			get => Settings.DeviceID;
+			set
+			{
+				if (value == null || value.Length == 0 || DeviceID == value) return;
+				Settings.DeviceID = value;
+			}
 		}
 
 		/// <summary>The name of the switch that controls this consumer</summary>
@@ -164,10 +198,13 @@ namespace SolarHotWater
 		public double? Current => EweSwitch?.Current;
 
 		/// <summary>The power currently being used by this consumer (in kWatts)</summary>
-		public double? Power => EweSwitch?.Power * 0.001;
+		public double? Power => EweSwitch?.Power;
 
 		/// <summary>Get/Set whether the consumer is on/off</summary>
 		public bool On => EweSwitch?.State == EweSwitch.ESwitchState.On;
+
+		/// <summary>An update for the switch state has been received</summary>
+		public event EventHandler? Updated;
 
 		/// <summary>Timestamp of when a state change is first pending</summary>
 		public DateTimeOffset? StateChangePending

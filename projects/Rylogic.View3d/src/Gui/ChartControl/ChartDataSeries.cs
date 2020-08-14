@@ -58,6 +58,9 @@ namespace Rylogic.Gui.WPF
 		public LockData Lock() => new LockData(this);
 		private readonly List<Pt> m_data;
 
+		/// <summary>Default identity colour</summary>
+		public override Colour32 Colour => Options.Colour;
+
 		/// <summary>Read the number of data points in the series. (Not synchronised by 'Lock()')</summary>
 		public int SampleCount => m_data.Count;
 
@@ -102,7 +105,7 @@ namespace Rylogic.Gui.WPF
 				m_range_x.Encompass(x_range);
 		}
 
-		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
+		/// <summary>Update the graphics for this series and add it to the scene</summary>
 		protected override void UpdateSceneCore()
 		{
 			if (Chart == null)
@@ -445,6 +448,8 @@ namespace Rylogic.Gui.WPF
 			YReal = 1 << 3,
 
 			XIntgYIntg = XIntg | YIntg,
+			XIntgYReal = XIntg | YReal,
+			XRealYIntg = XReal | YIntg,
 			XRealYReal = XReal | YReal,
 		}
 
@@ -739,16 +744,16 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The size of point data graphics</summary>
-			public float PointSize
+			public double PointSize
 			{
-				get => get<float>(nameof(PointSize));
+				get => get<double>(nameof(PointSize));
 				set => set(nameof(PointSize), value);
 			}
 
 			/// <summary>The width of the line in line plots</summary>
-			public float LineWidth
+			public double LineWidth
 			{
-				get => get<float>(nameof(LineWidth));
+				get => get<double>(nameof(LineWidth));
 				set => set(nameof(LineWidth), value);
 			}
 
