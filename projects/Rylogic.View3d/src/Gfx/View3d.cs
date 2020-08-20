@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Windows.Threading;
 using Rylogic.Common;
@@ -1083,6 +1084,7 @@ namespace Rylogic.Gfx
 
 		#endregion
 
+		[Serializable]
 		public class Exception :System.Exception
 		{
 			public EResult m_code = EResult.Success;
@@ -1090,6 +1092,8 @@ namespace Rylogic.Gfx
 			public Exception(EResult code) : this("", code) { }
 			public Exception(string message) : this(message, EResult.Success) { }
 			public Exception(string message, EResult code) : base(message) { m_code = code; }
+			public Exception(string message, System.Exception innerException) : base(message, innerException) {}
+			protected Exception(SerializationInfo serializationInfo, StreamingContext streamingContext) {throw new NotImplementedException();}
 		}
 
 		private readonly List<Window> m_windows;          // Groups of objects to render
@@ -1103,9 +1107,9 @@ namespace Rylogic.Gfx
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 		private List<LoadScriptCompleteCB> m_load_script_handlers;
 
-#if PR_VIEW3D_CREATE_STACKTRACE
+		#if PR_VIEW3D_CREATE_STACKTRACE
 		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
-#endif
+		#endif
 
 		/// <summary>Initialise with support for BGRA textures</summary>
 		public static ECreateDeviceFlags CreateDeviceFlags = ECreateDeviceFlags.D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -1113,15 +1117,11 @@ namespace Rylogic.Gfx
 		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
 		public static View3d Create()
 		{
-#if PR_VIEW3D_CREATE_STACKTRACE
+			#if PR_VIEW3D_CREATE_STACKTRACE
 			m_create_stacktraces.Add(new StackTrace(true));
-#endif
-
-			if (m_singleton == null)
-				m_singleton = new View3d();
-
+			#endif
 			++m_ref_count;
-			return m_singleton;
+			return m_singleton ??= new View3d();
 		}
 		private static View3d? m_singleton;
 		private static int m_ref_count;
@@ -1143,13 +1143,17 @@ namespace Rylogic.Gfx
 			{
 				// Initialise view3d
 				m_context = View3D_Initialise(m_error_cb = HandleError, IntPtr.Zero, CreateDeviceFlags);
-				if (m_context == HContext.Zero) throw new Exception("Failed to initialised View3d");
+				if (m_context == HContext.Zero) throw LastError ?? new Exception("Failed to initialised View3d");
 				void HandleError(IntPtr ctx, string msg, string filepath, int line, long pos)
 				{
 					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-						m_dispatcher.BeginInvoke(m_error_cb, ctx, msg, filepath, line, pos);
-					else
-						Error?.Invoke(this, new ErrorEventArgs(msg, filepath, line, pos));
+					{
+						m_dispatcher.Invoke(m_error_cb, ctx, msg, filepath, line, pos);
+						return;
+					}
+
+					LastError = new Exception(msg);
+					Error?.Invoke(this, new ErrorEventArgs(msg, filepath, line, pos));
 				}
 
 				// Sign up for progress reports
@@ -1234,23 +1238,27 @@ namespace Rylogic.Gfx
 				Util.BreakIf(m_ref_count < 0);
 				return;
 			}
+			if (m_singleton != null)
+			{
+				// Unsubscribe
+				foreach (var emb in m_embedded_code_handlers)
+					View3D_EmbeddedCodeCBSet(emb.Key, emb.Value, IntPtr.Zero, false);
 
-			// Unsubscribe
-			foreach (var emb in m_embedded_code_handlers)
-				View3D_EmbeddedCodeCBSet(emb.Key, emb.Value, IntPtr.Zero, false);
+				View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
+				View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
+				View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
 
-			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
-			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
-			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
+				while (m_windows.Count != 0)
+					m_windows[0].Dispose();
 
-			while (m_windows.Count != 0)
-				m_windows[0].Dispose();
-
-			View3D_Shutdown(m_context);
-			m_singleton = null;
-
+				View3D_Shutdown(m_context);
+				m_singleton = null;
+			}
 			GC.SuppressFinalize(this);
 		}
+
+		/// <summary>The last error reported from View3d</summary>
+		public Exception? LastError { get; private set; }
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
 		public event EventHandler<ErrorEventArgs>? Error;

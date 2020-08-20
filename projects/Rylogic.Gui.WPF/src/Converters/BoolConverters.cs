@@ -231,7 +231,8 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is bool b)) return null;
+			// Allow 'value' to be non-boolean, where not-null == true
+			if (!(value is bool b)) b = value != null;
 			if (!(parameter is string s)) return null;
 
 			try

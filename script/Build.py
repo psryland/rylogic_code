@@ -324,7 +324,7 @@ class LDraw(Managed):
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild(self.proj_name, self.rylogic_sln, [f"LDraw\\{self.proj_name}"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\LDraw\\{self.proj_name}"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):
@@ -367,6 +367,72 @@ class LDraw(Managed):
 		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 		print("\nPublishing to web site...")
 		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
+		return
+
+# Solar Hot Water
+class SolarHotWater(Managed):
+	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+		Managed.__init__(self, "SolarHotWater.UI", ["netcoreapp3.1"], workspace, platforms, configs)
+		self.platforms = ["x64"]
+		self.proj_dir = os.path.join(workspace, "projects", "SolarHotWater", self.proj_name)
+		return
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\SolarHotWater\\{self.proj_name}"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		# Check versions
+		version = Tools.Extract(os.path.join(self.proj_dir, "SolarHotWater.UI.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying SolarHotWater.UI Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater")
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.exe"                       ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.dll"                       ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"                           ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"                   ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"                        ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Net.dll"                            ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.View3d.dll"                         ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "System.Data.SQLite.dll"                     ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.dll"                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.CSharp.dll"          ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.CSharp.Scripting.dll"), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Microsoft.CodeAnalysis.Scripting.dll"       ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.deps.json"                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.runtimeconfig.json"        ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Dapper.dll"                                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Newtonsoft.Json.dll"                        ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "runtimes"                                   ), os.path.join(self.bin_dir, "runtimes"))
+		Tools.Copy(os.path.join(target_dir, "lib"                                        ), os.path.join(self.bin_dir, "lib"))
+
+		# Build the installer
+		#print("Building installer...\n")
+		#self.installer_wxs = os.path.join(self.proj_dir, "installer", "installer.wxs")
+		#self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
+		#	os.path.join(self.bin_dir, ".."),
+		#	[
+		#		["binaries", "INSTALLFOLDER", ".", False,
+		#			r"LDraw\..*\.dll",
+		#			r"Rylogic\..*\.dll",
+		#			r"ICSharpCode.AvalonEdit.dll",
+		#		],
+		#		["lib_files", "lib", "lib", True],
+		#	])
+		#print(f"{self.msi} created.\n")
+		return
+	
+	def Publish(self):
+	#	if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
+	#	print("\nPublishing to web site...")
+	#	Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
 		return
 
 # Rylogic.TextAligner
@@ -506,9 +572,10 @@ class AllManaged(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
 		Group.__init__(self, workspace)
 		self.items = [
-			Rylogic  (workspace, platforms, configs),
-			Csex     (workspace, platforms, configs),
-			LDraw    (workspace, platforms, configs),
+			Rylogic      (workspace, platforms, configs),
+			Csex         (workspace, platforms, configs),
+			LDraw        (workspace, platforms, configs),
+			SolarHotWater(workspace, platforms, configs),
 		]
 		return
 
@@ -517,14 +584,15 @@ class All(Group):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
 		Group.__init__(self, workspace)
 		self.items = [
-			Sqlite3  (workspace, platforms, configs),
-			Scintilla(workspace, platforms, configs),
-			Audio    (workspace, platforms, configs),
-			View3d   (workspace, platforms, configs),
-			P3d      (workspace, platforms, configs),
-			Rylogic  (workspace, platforms, configs),
-			Csex     (workspace, platforms, configs),
-			LDraw    (workspace, platforms, configs),
+			Sqlite3      (workspace, platforms, configs),
+			Scintilla    (workspace, platforms, configs),
+			Audio        (workspace, platforms, configs),
+			View3d       (workspace, platforms, configs),
+			P3d          (workspace, platforms, configs),
+			Rylogic      (workspace, platforms, configs),
+			Csex         (workspace, platforms, configs),
+			LDraw        (workspace, platforms, configs),
+			SolarHotWater(workspace, platforms, configs),
 		]
 		return
 

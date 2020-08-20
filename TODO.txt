@@ -1,5 +1,5 @@
 Immediate ToDo:
-	Sort of pdb's for native libraries
+	Sort out pdb's for native libraries
 	Get p3d support working with new format
 	Finish exporter for Blender
 	Export REX models in new format
@@ -16,7 +16,11 @@ Work
 	- Fix arrows in MovementEditor diagram
 	- Add "user" to VRex
 	- Add Leg Total lengths to VRex
+	- Update build scripts for new projects
 	
+SolarHotWater
+	- Auto scroll graph
+	- Schedule control
 LDraw
 	- Add a skybox to the demo scene
 	- Bug in Spline, missing last vertex
@@ -122,3 +126,6 @@ YouTube speed:
    vid = document.getElementsByClassName("video-stream html5-main-video")[0];
    vid.playbackRate=3.0;
    
+   
+   
+   e6t5wckci3piacc5cggr7f5qx2nvwuypz5jrdi4lahol5slcwwrq

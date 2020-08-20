@@ -69,7 +69,12 @@ namespace TestWPF
 			});
 			ShowMsgBox = Command.Create(this, () =>
 			{
-				var dlg = new MsgBox(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation) { ShowAlwaysCheckbox = true };
+				var msg =
+				"Informative isn't it\nThis is a really really really long message to test the automatic resizing of the dialog window to a desirable aspect ratio. " +
+				"It's intended to be used for displaying error messages that can sometimes be really long. Once I had a message that was so long, it made the message " +
+				"box extend off the screen and you couldn't click the OK button. That was a real pain so that's why I've added this auto aspect ratio fixing thing. " +
+				"Hopefully it'll do the job in all cases and I'll never have to worry about it again...\n Hopefully...";
+				var dlg = new MsgBox(this, msg, "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation) { ShowAlwaysCheckbox = true };
 				dlg.ShowDialog();
 			});
 			ShowListUI = Command.Create(this, () =>

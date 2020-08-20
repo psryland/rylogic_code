@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading;
@@ -6,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Interop.Win32;
+using Rylogic.Utility;
 using Point = System.Windows.Point;
 using Size = System.Windows.Size;
 
@@ -13,6 +15,9 @@ namespace Rylogic.Gui.WPF
 {
 	public static class WPFUtil
 	{
+		/// <summary>Checks whether the application is currently in design mode.</summary>
+		public static bool IsDesignMode { get; } = (bool)DependencyPropertyDescriptor.FromProperty(DesignerProperties.IsInDesignModeProperty, typeof(FrameworkElement)).Metadata.DefaultValue;
+
 		/// <summary>Ensure Dispose is called during Application.Current.Exit</summary>
 		public static void DisposeAtExit(this IDisposable dis)
 		{
@@ -25,24 +30,31 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Blocks until the debugger is attached</summary>
-		public static void WaitForDebugger()
+		public static void WaitForDebugger(bool in_debug_only = true)
 		{
-			if (Debugger.IsAttached) return;
-			var dlg = new ProgressUI(null,
+			if (in_debug_only && !Util.IsDebug)
+				return;
+
+			if (DebuggerAttached())
+				return;
+
+			using var dlg = new ProgressUI(null,
 				"Application Paused",
 				"Waiting for the debugger to attach.\n\nClick 'Cancel' to skip",
 				SystemIcons.Information.ToBitmapSource(),
 				CancellationToken.None,
 				(u, o, p) =>
 				{
-					for (; !Debugger.IsAttached && !u.CancelPending; Thread.Sleep(100))
+					for (; !DebuggerAttached() && !u.CancelPending; Thread.Sleep(100))
 						p(new ProgressUI.UserState { });
 				})
 			{
 				ProgressIsIndeterminate = true,
 			};
-			using (dlg)
-				dlg.ShowDialog();
+			dlg.ShowDialog();
+
+			// Helper method for debugging (return false)
+			bool DebuggerAttached() => Debugger.IsAttached;
 		}
 
 		///// <summary>Helper to ignore the requirement for matched called to Cursor.Show()/Hide()</summary>

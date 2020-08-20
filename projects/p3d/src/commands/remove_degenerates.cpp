@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // P3D Graphics Tool
 //  Copyright (c) Rylogic Ltd 2019
 //**********************************************
@@ -168,7 +168,7 @@ void RemoveDegenerateVerts(p3d::Mesh& mesh_, int quantisation, float smoothing_a
 			// Set 'map[j].kept' to the location in 'verts' that will contain the vertex for this degenerate set (done after this loop)
 			map[j].kept = &*vout;
 			degen_count += 1.0f;
-	
+
 			// Perform averaging of the vertex fields that are being merged.
 			if (AllSet(geom, EGeom::Colr))
 				diff += mesh.m_diff[s_cast<int>(map[j].orig - v0)];

@@ -43,5 +43,11 @@ namespace Rylogic.Gui.WPF
 			return wnd;
 		}
 
+		/// <summary>Fluent show method</summary>
+		public static TWindow Show2<TWindow>(this TWindow wnd) where TWindow : Window
+		{
+			wnd.Show();
+			return wnd;
+		}
 	}
 }

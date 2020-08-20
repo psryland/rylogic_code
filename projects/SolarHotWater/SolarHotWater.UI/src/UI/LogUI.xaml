@@ -15,5 +15,6 @@
 		LogFilepath="{Binding Filepath, Mode=OneWay}"
 		LogEntryPattern="{Binding Pattern, Mode=OneWay}"
 		HiddenColumns="Tag,Level,File,Line"
+		TimestampFormat="yyyy-MM-dd HH:mm:ss"
 		/>
 </Window>

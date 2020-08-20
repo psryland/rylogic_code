@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // P3D Graphics Tool
 //  Copyright (c) Rylogic Ltd 2019
 //**********************************************
@@ -83,7 +83,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 			[&](ETopo topo, EGeom geom, max_3ds::Material const& mat, Range<size_t>, Range<size_t>) // nugget out
 			{
 				mesh_geom |= geom;
-				
+
 				p3d::Nugget nug(topo, geom, mat.m_name);
 				nug.m_vidx = std::move(vidx);
 				mesh.m_nugget.emplace_back(std::move(nug));

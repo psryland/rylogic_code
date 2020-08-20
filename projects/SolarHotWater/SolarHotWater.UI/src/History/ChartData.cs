@@ -145,6 +145,8 @@ namespace SolarHotWater
 						lk.Add(new ChartDataSeries.Pt(x, y));
 						AddNowPoint(lk);
 					}
+
+					Chart.Invalidate();
 				}
 			}
 		}

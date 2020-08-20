@@ -123,12 +123,17 @@ namespace SolarHotWater
 							break;
 						}
 						case "partnerApikey":
+						case "alarmVValue":
+						case "alarmCValue":
+						case "alarmPValue":
+						case "timers":
+						case "only_device":
 						{
 							break;
 						}
 						default:
 						{
-							Log.Write(ELogLevel.Debug, $"Consumer {Name}: {e.PropertyName} state changed");
+							Log.Write(ELogLevel.Debug, $"Consumer '{Name}': {e.PropertyName} state changed");
 							break;
 						}
 					}

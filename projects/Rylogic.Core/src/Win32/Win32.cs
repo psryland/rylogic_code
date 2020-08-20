@@ -654,6 +654,20 @@ namespace Rylogic.Interop.Win32
 		public const int GWLP_ID         = -12;
 		#endregion
 
+		#region Get Class Long Pointer GCLP_, GCL_
+		public const int GCW_ATOM           = -32; // Retrieves an ATOM value that uniquely identifies the window class. This is the same atom that the RegisterClassEx function returns.
+		public const int GCL_CBCLSEXTRA     = -20; // Retrieves the size, in bytes, of the extra memory associated with the class.
+		public const int GCL_CBWNDEXTRA     = -18; // Retrieves the size, in bytes, of the extra window memory associated with each window in the class. For information on how to access this memory, see GetWindowLongPtr.
+		public const int GCLP_HBRBACKGROUND = -10; // Retrieves a handle to the background brush associated with the class.
+		public const int GCLP_HCURSOR       = -12; // Retrieves a handle to the cursor associated with the class.
+		public const int GCLP_HICON         = -14; // Retrieves a handle to the icon associated with the class.
+		public const int GCLP_HICONSM       = -34; // Retrieves a handle to the small icon associated with the class.
+		public const int GCLP_HMODULE       = -16; // Retrieves a handle to the module that registered the class.
+		public const int GCLP_MENUNAME      =  -8; // Retrieves the pointer to the menu name string. The string identifies the menu resource associated with the class.
+		public const int GCL_STYLE          = -26; // Retrieves the window-class style bits.
+		public const int GCLP_WNDPROC       = -24; // Retrieves the address of the window procedure, or a handle representing the address of the window procedure. You must use the CallWindowProc function to call the window procedure.
+		#endregion
+
 		#region TM_
 		public const int TM_PLAINTEXT       = 1;
 		public const int TM_RICHTEXT        = 2; // default behaviour
@@ -1104,6 +1118,41 @@ namespace Rylogic.Interop.Win32
 		public const int MFS_DEFAULT         = MF_DEFAULT;
 		#endregion
 
+		#region NIN Notification Icon
+		/// <summary>
+		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
+		/// Send when a notify icon is activated with mouse or ENTER key. Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
+		public const int NIN_SELECT = WM_USER;
+
+		/// <summary>
+		/// This message is only send when using NOTIFYICON_VERSION_4, the Shell now sends the associated application an NIN_SELECT notification.
+		/// Send when a notify icon is activated with SPACEBAR or ENTER key.
+		/// Earlier versions send WM_RBUTTONDOWN and WM_RBUTTONUP messages.</summary>
+		public const int NIN_KEYSELECT = WM_USER + 1;
+
+		/// <summary>Sent when the balloon is shown (balloons are queued).</summary>
+		public const int NIN_BALLOONSHOW = WM_USER + 2;
+
+		/// <summary>
+		/// Sent when the balloon disappears. For example, when the icon is deleted.
+		/// This message is not sent if the balloon is dismissed because of a timeout or if the user clicks the mouse.
+		/// As of Windows 7, NIN_BALLOONHIDE is also sent when a notification with the NIIF_RESPECT_QUIET_TIME flag set attempts
+		/// to display during quiet time (a user's first hour on a new computer).In that case, the balloon is never displayed at all.</summary>
+		public const int NIN_BALLOONHIDE = WM_USER + 3;
+
+		/// <summary>Sent when the balloon is dismissed because of a timeout.</summary>
+		public const int NIN_BALLOONTIMEOUT = WM_USER + 4;
+
+		/// <summary>Sent when the balloon is dismissed because the user clicked the mouse.</summary>
+		public const int NIN_BALLOONUSERCLICK = WM_USER + 5;
+
+		/// <summary>Sent when the user hovers the cursor over an icon to indicate that the richer pop-up UI should be used in place of a standard textual tooltip.</summary>
+		public const int NIN_POPUPOPEN = WM_USER + 6;
+
+		/// <summary>Sent when a cursor no longer hovers over an icon to indicate that the rich pop-up UI should be closed.</summary>
+		public const int NIN_POPUPCLOSE = WM_USER + 7;
+		#endregion
+
 		#region Scroll Bar SB_
 		public enum ScrollBarDirection
 		{
@@ -1219,7 +1268,18 @@ namespace Rylogic.Interop.Win32
 			KFDF_ROAMABLE = 0x00000004,
 		}
 		#endregion
-		
+
+		#region Execution State
+		[Flags]
+		public enum ExecutionState :uint
+		{
+			EsAwaymodeRequired = 0x00000040,
+			EsContinuous = 0x80000000,
+			EsDisplayRequired = 0x00000002,
+			EsSystemRequired = 0x00000001
+		}
+		#endregion
+
 		#endregion
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
@@ -1429,13 +1489,31 @@ namespace Rylogic.Interop.Win32
 			{}
 		}
 
-		/// <summary>Pack a Point into an LPARAM</summary>
+		/// <summary>Convert the WParam from WM_MOUSEWHEEL to usable data</summary>
+		public struct WheelState
+		{
+			public short Delta;
+			public int MouseKey; // An MK_ value
+
+			/// <summary>Read the mouse wheel delta from a WParam</summary>
+			public WheelState(uint wparam)
+			{
+				Delta = (short)HiWord(wparam);
+				MouseKey = LoWord(wparam);
+			}
+			public WheelState(int wparam)
+				: this((uint)wparam)
+			{ }
+			public WheelState(IntPtr wparam)
+				: this((uint)wparam)
+			{}
+		}
+
+		/// <summary>Pack/Unpack a Point from an LPARAM</summary>
 		public static IntPtr PointToLParam(Point pt)
 		{
 			return new IntPtr((((pt.Y & 0xffff) << 16) | (pt.X & 0xffff)));
 		}
-
-		/// <summary>Unpack a Point from an LPARAM</summary>
 		public static Point LParamToPoint(IntPtr lparam)
 		{
 			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);
@@ -1444,7 +1522,7 @@ namespace Rylogic.Interop.Win32
 		{
 			return LParamToPoint((IntPtr)lparam);
 		}
-		
+
 		/// <summary>Return the window under a screen space point</summary>
 		public static HWND WindowFromPoint(Point pt)
 		{

@@ -554,7 +554,7 @@ namespace Rylogic.Extn
 				// End of 'source'?
 				if (!next)
 				{
-					list.RemoveRange(i, list.Count - i, dispose:false);
+					list.RemoveRange(i, list.Count - i, dispose: false);
 					break;
 				}
 
@@ -584,10 +584,10 @@ namespace Rylogic.Extn
 				break;
 			}
 
-				// Copy any remaining elements to 'list'
-				for (; next; next = iter.MoveNext())
+			// Copy any remaining elements to 'list'
+			for (; next; next = iter.MoveNext())
 				list.Add(factory(iter.Current));
-			}
+		}
 		public static void SyncStable<T>(this IList<T> list, IEnumerable<T> source)
 		{
 			SyncStable(list, source, (l,r) => Equals(l,r), x => x);

@@ -107,15 +107,27 @@ namespace EweLink
 				void HandleError(object? sender, WebSocket.ErrorEventArgs e)
 				{
 				}
-				void HandleHeartbeat(object? sender, EventArgs e)
-				{
-					WebSocket?.SendAsync("ping", Shutdown);
-				}
-				void HandleMessage(object? sender, WebSocket.MessageEventArgs e)
+				async void HandleHeartbeat(object? sender, EventArgs e)
 				{
 					try
 					{
-						Log.Write(ELogLevel.Debug, e.Text);
+						if (!(WebSocket is WebSocket ws)) return;
+						if (!ws.Healthy || !ws.Listening || Cred == null)
+							throw new Exception("eWeLink WebSocket connection lost");
+
+						await ws.SendAsync("ping", Shutdown);
+					}
+					catch (Exception ex)
+					{
+						Log.Write(ELogLevel.Error, ex, $"Error during eWeLink HandleHeartbeat");
+						await Logout();
+					}
+				}
+				async void HandleMessage(object? sender, WebSocket.MessageEventArgs e)
+				{
+					try
+					{
+						Log.Write(ELogLevel.Debug, e.Text != "pong" ? e.Text : "heartbeat");
 						
 						// Heartbeat response
 						if (e.Text == "pong")
@@ -127,8 +139,9 @@ namespace EweLink
 						// Look for errors
 						if (jobj["error"]?.Value<int>() is int err && err != 0)
 						{
-							Debug.WriteLine($"EweLink Error Received: {err}");
-							var _ = Logout();
+							var msg = jobj["msg"]?.Value<string>() ?? string.Empty;
+							Log.Write(ELogLevel.Error, $"EweLink Error Received: {err} {msg}");
+							await Logout();
 							return;
 						}
 
@@ -152,7 +165,8 @@ namespace EweLink
 						{
 							if (Cred?.User.ApiKey != apikey)
 							{
-								Logout().Wait();
+								Log.Write(ELogLevel.Warn, $"eWeLink API key changed");
+								await Logout();
 								return;
 							}
 						}
@@ -205,9 +219,9 @@ namespace EweLink
 					catch (OperationCanceledException) {}
 					catch (Exception ex)
 					{
-						Debug.WriteLine(ex.Message);
 						Debugger.Break();
-						var _ = Logout();
+						Log.Write(ELogLevel.Error, ex, $"Unknown error during eWeLink HandleMessage");
+						await Logout();
 					}
 				}
 			}
@@ -231,6 +245,7 @@ namespace EweLink
 			if (Cred != null)
 				return;
 
+			Log.Write(ELogLevel.Info, $"EweLinkAPI: Logging In as {username}"); 
 			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
 
 			// REST request for the credentials
@@ -260,8 +275,19 @@ namespace EweLink
 				var reply = await response.Content.ReadAsStringAsync();
 				var jtok = JToken.Parse(reply);
 
+				// Check for an error
+				if (jtok["error"]?.Value<int>() is int error && error != 0)
+				{
+					var msg = jtok["msg"]?.Value<string>() ?? string.Empty;
+					throw new Exception($"eWeLink: Error requested credentials: {error} {msg}");
+				}
+
 				// Save the credentials
-				Cred = jtok.ToObject<EweCred>() ?? throw new Exception("Credentials not available");
+				var cred = jtok.ToObject<EweCred>() ?? throw new Exception("Credentials not available");
+				if (cred.AccessToken.Length == 0)
+					throw new Exception("Credentials did not contain an access token");
+
+				Cred = cred;
 			}
 
 			// Populate the devices collection
@@ -326,6 +352,7 @@ namespace EweLink
 				};
 
 				// Open the websocket connection
+				Log.Write(ELogLevel.Info, $"Opening WebSocket connection to {EndPoint}");
 				await WebSocket.Connect(EndPoint);
 
 				// Start listening
@@ -338,6 +365,7 @@ namespace EweLink
 		}
 		public async Task Logout()
 		{
+			Log.Write(ELogLevel.Info, $"EweLinkAPI: Logging out");
 			await WebSocket.Close();
 			DeviceList.Clear();
 			Cred = null;
@@ -429,6 +457,9 @@ namespace EweLink
 			// Check for an error
 			if (jobj["error"]?.Value<int>() is int error && error != 0)
 				throw new Exception($"eWeLink: Error setting switch state: {error}");
+
+			// Assume success
+			sw.State = state;
 		}
 
 		/// <summary>Helper for generating a 'nonce'</summary>

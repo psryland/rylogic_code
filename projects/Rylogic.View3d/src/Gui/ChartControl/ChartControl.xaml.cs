@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -16,7 +17,6 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	using System.Collections;
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>

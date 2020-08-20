@@ -2381,7 +2381,7 @@ namespace Rylogic.Gui.WinForms
 				}
 				protected override void OnMouseMove(MouseEventArgs e)
 				{
-					if (e.Button == MouseButtons.Left && Utility.Util.Distance(e.Location, m_mouse_down_at) > 5)
+					if (e.Button == MouseButtons.Left && Point_.Distance(e.Location, m_mouse_down_at) > 5)
 					{
 						Capture = false;
 
@@ -4361,7 +4361,7 @@ namespace Rylogic.Gui.WinForms
 			}
 			protected override void OnMouseMove(MouseEventArgs e)
 			{
-				if (m_mouse_down_at != null && Utility.Util.Distance(e.Location, m_mouse_down_at.Value) > 5)
+				if (m_mouse_down_at != null && Point_.Distance(e.Location, m_mouse_down_at.Value) > 5)
 				{
 					// Begin dragging the content associated with the tab
 					var content = HitTestContent(m_mouse_down_at.Value);

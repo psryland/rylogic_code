@@ -326,9 +326,9 @@ namespace pr
 					// Draw the separator line
 					gdi::Pen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
 					gdi::Pen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
-					auto x0 = rect.left + style.m_margin_left + 1;
-					auto x1 = rect.right - MenuMargin;
-					auto y  = rect.top + 2;
+					auto x0 = static_cast<INT>(rect.left + style.m_margin_left + 1);
+					auto x1 = static_cast<INT>(rect.right - MenuMargin);
+					auto y  = static_cast<INT>(rect.top + 2);
 					if (x0 < x1)
 					{
 						gfx.DrawLine(&pen_3dlo, x0, y+0, x1, y+0);

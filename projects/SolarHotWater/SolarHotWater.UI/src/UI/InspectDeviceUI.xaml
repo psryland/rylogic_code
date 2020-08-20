@@ -26,8 +26,10 @@
 			<ScrollViewer
 				VerticalScrollBarVisibility="Auto"
 				>
-				<TextBlock
-					Text="{Binding Body}"
+				<TextBox
+					Text="{Binding Body, Mode=OneWay}"
+					BorderThickness="0"
+					IsReadOnly="True"
 					/>
 			</ScrollViewer>
 		</GroupBox>
@@ -89,7 +91,7 @@
 						MinWidth="50"
 						/>
 					<TextBox
-						Text="{Binding Switch.Voltage, FallbackValue='unknown', Mode=OneWay}"
+						Text="{Binding Switch.Voltage, StringFormat={}{0:N1}, Mode=OneWay}"
 						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>
@@ -110,7 +112,7 @@
 						MinWidth="50"
 						/>
 					<TextBox
-						Text="{Binding Switch.Current, FallbackValue='unknown', Mode=OneWay}"
+						Text="{Binding Switch.Current, StringFormat={}{0:N3}, Mode=OneWay}"
 						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>
@@ -131,7 +133,7 @@
 						MinWidth="50"
 						/>
 					<TextBox
-						Text="{Binding Switch.Power, StringFormat={}{0:N3}, Converter={conv:ScaleValue}, ConverterParameter=0.001, FallbackValue='unknown', Mode=OneWay}"
+						Text="{Binding Switch.Power, StringFormat={}{0:N3}, Mode=OneWay}"
 						HorizontalContentAlignment="Right"
 						MinWidth="80"
 						/>

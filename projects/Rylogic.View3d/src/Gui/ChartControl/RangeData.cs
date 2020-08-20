@@ -299,20 +299,19 @@ namespace Rylogic.Gui.WPF
 				public void Set(double min, double max)
 				{
 					if (m_in_set != 0) return;
-					using (Scope.Create(() => ++m_in_set, () => --m_in_set))
-					{
-						Debug.Assert(min < max, "Range must be positive and non-zero");
-						var zoomed = !Math_.FEql(max - min, m_max - m_min);
-						var scroll = !Math_.FEql((max + min) * 0.5, (m_max + m_min) * 0.5);
+					using var is_set = Scope.Create(() => ++m_in_set, () => --m_in_set);
 
-						m_min = Math_.Clamp(min, RangeLimits.Beg, RangeLimits.End);
-						m_max = Math_.Clamp(max, RangeLimits.Beg, RangeLimits.End);
-						if (m_max - m_min < Math_.TinyD) m_max = m_min + Math_.TinyD;
+					Debug.Assert(min < max, "Range must be positive and non-zero");
+					var zoomed = !Math_.FEql(max - min, m_max - m_min);
+					var scroll = !Math_.FEql((max + min) * 0.5, (m_max + m_min) * 0.5);
 
-						if (zoomed || scroll) OnMoved();
-						if (zoomed) OnZoomed();
-						if (scroll) OnScroll();
-					}
+					m_min = Math_.Clamp(min, RangeLimits.Beg, RangeLimits.End);
+					m_max = Math_.Clamp(max, RangeLimits.Beg, RangeLimits.End);
+					if (m_max - m_min < Math_.TinyD) m_max = m_min + Math_.TinyD;
+
+					if (zoomed || scroll) OnMoved();
+					if (zoomed) OnZoomed();
+					if (scroll) OnScroll();
 				}
 				public void Set(RangeF range)
 				{

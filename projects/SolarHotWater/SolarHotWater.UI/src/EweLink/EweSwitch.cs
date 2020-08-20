@@ -32,12 +32,17 @@ namespace EweLink
 				"on" => ESwitchState.On,
 				_ => throw new Exception($"Unknown switch state: {Params["switch"]?.Value<string>()}"),
 			};
-			set => Params["switch"] = value switch
+			set
 			{
-				ESwitchState.Off => "off",
-				ESwitchState.On => "on",
-				_ => null
-			};
+				var p = new JObject();
+				p["switch"] = value switch
+				{
+					ESwitchState.Off => "off",
+					ESwitchState.On => "on",
+					_ => null
+				};
+				Update(p);
+			}
 		}
 		public enum ESwitchState
 		{

@@ -9,11 +9,14 @@ namespace Rylogic.Interop.Win32
 	{
 		public const int ATTACH_PARENT_PROCESS = -1;
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+		public static extern ExecutionState SetThreadExecutionState(ExecutionState esFlags);
 
-        [DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern SafeFileHandle CreateFile(string lpFileName, int dwDesiredAccess, int dwShareMode, IntPtr SecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, IntPtr hTemplateFile);
+		[DllImport("kernel32.dll", SetLastError = true)]
+		public static extern bool GetFileInformationByHandle(IntPtr hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+
+		[DllImport("kernel32.dll", EntryPoint = "CreateFileW", CharSet = CharSet.Unicode, SetLastError = true)]
+		public static extern SafeFileHandle CreateFile(string lpFileName, int dwDesiredAccess, int dwShareMode, IntPtr SecurityAttributes, int dwCreationDisposition, int dwFlagsAndAttributes, IntPtr hTemplateFile);
 
 		[DllImport("Kernel32.dll", SetLastError = true, EntryPoint = "LoadLibraryW")] public static extern IntPtr LoadLibrary([MarshalAs(UnmanagedType.LPWStr)]string path);
 		[DllImport("Kernel32.dll", SetLastError = true)] public static extern bool   FreeLibrary(IntPtr module);

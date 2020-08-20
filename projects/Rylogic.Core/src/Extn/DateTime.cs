@@ -144,6 +144,16 @@ namespace Rylogic.Extn
 			return time;
 		}
 
+		/// <summary>Parse a timespan from a string</summary>
+		public static DateTimeOffset? TryParse(string s)
+		{
+			return DateTimeOffset.TryParse(s, out var ts) ? (DateTimeOffset?)ts : null;
+		}
+		public static DateTimeOffset? TryParseExact(string s, string fmt, DateTimeStyles styles = DateTimeStyles.None)
+		{
+			return DateTimeOffset.TryParseExact(s, fmt, null, styles, out var ts) ? (DateTimeOffset?)ts : null;
+		}
+
 		/// <summary>True if this time is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
 		public static bool Within(this DateTimeOffset time, DateTimeOffset beg, DateTimeOffset end)
 		{
@@ -364,6 +374,45 @@ namespace Rylogic.Extn
 			if (ts.TotalMinutes > 1) return $"{(int)ts.TotalMinutes}m";
 			if (ts.TotalSeconds > 1) return $"{(int)ts.TotalSeconds}s";
 			return $"{(int)ts.TotalMilliseconds}ms";
+		}
+
+		/// <summary>An extension of the usual string formatting for Timespan that allows for optional parts in the format string. E.g "[d\\.][hh\\:][mm\\:]ss\\.fff"</summary>
+		public static string ToStringOptional(this TimeSpan ts, string format_string = @"[d\.\ ][hh\:][mm\:]ss\.fff")
+		{
+			var fmt = new StringBuilder(format_string);
+
+			// Find the first optional part of the format string with a non zero value
+			for (; ; )
+			{
+				var m = Regex.Match(fmt.ToString(), @"\[(.*?)\]");
+				if (!m.Success) break;
+
+				// If the option format results in any digits other than zero assume it is required
+				var required = ts.ToString(m.Groups[1].Value).Any(x => x >= '1' && x <= '9');
+
+				// Remove the optional part of the format string
+				fmt.Remove(m.Index, m.Length);
+				if (required)
+				{
+					// Insert the optional part of the format string because it was required.
+					fmt.Insert(m.Index, m.Groups[1].Value);
+
+					// Stop searching, assume all following optional parts are required
+					break;
+				}
+			}
+
+			// Replace any remaining optional parts as not optional
+			for (; ; )
+			{
+				var m = Regex.Match(fmt.ToString(), @"\[(.*?)\]");
+				if (!m.Success) break;
+				fmt.Remove(m.Index, m.Length);
+				fmt.Insert(m.Index, m.Groups[1].Value);
+			}
+
+			// Format the string
+			return ts.ToString(fmt.ToString());
 		}
 	}
 }

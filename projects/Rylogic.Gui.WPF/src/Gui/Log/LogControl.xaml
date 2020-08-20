@@ -17,6 +17,62 @@
 			<BitmapImage x:Key="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
 			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
 
+			<!-- Default context menu -->
+			<MenuItem
+				x:Key="LogControlCMenu_CopyLogEntries"
+				Header="Copy Log Entries"
+				Command="{Binding CopySelectedRowsToClipboard}"
+				/>
+			<MenuItem
+				x:Key="LogControlCMenu_CopyMessages"
+				Header="Copy Messages"
+				Command="{Binding CopySelectedMessagesToClipboard}"
+				/>
+			<MenuItem
+				x:Key="LogControlCMenu_ElapsedFormat"
+				Visibility="{Binding VisibleColumnNames, Converter={conv:VisibleIfContains}, ConverterParameter='Elapsed'}"
+				>
+				<MenuItem.Header>
+					<StackPanel Orientation="Horizontal">
+						<TextBlock
+							Text="Elapsed Format: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding TimestampFormat}"
+							VerticalAlignment="Center"
+							MinWidth="80"
+							Margin="1"
+							/>
+					</StackPanel>
+				</MenuItem.Header>
+			</MenuItem>
+			<MenuItem
+				x:Key="LogControlCMenu_TimestampFormat"
+				Visibility="{Binding VisibleColumnNames, Converter={conv:VisibleIfContains}, ConverterParameter='Timestamp'}"
+				>
+				<MenuItem.Header>
+					<StackPanel Orientation="Horizontal">
+						<TextBlock
+							Text="Timestamp Format: "
+							VerticalAlignment="Center"
+							/>
+						<TextBox
+							Text="{Binding TimestampFormat}"
+							VerticalAlignment="Center"
+							MinWidth="80"
+							Margin="1"
+							/>
+					</StackPanel>
+				</MenuItem.Header>
+			</MenuItem>
+			<ContextMenu x:Key="LogControlCMenu">
+				<StaticResource ResourceKey="LogControlCMenu_CopyLogEntries"/>
+				<StaticResource ResourceKey="LogControlCMenu_CopyMessages"/>
+				<StaticResource ResourceKey="LogControlCMenu_ElapsedFormat"/>
+				<StaticResource ResourceKey="LogControlCMenu_TimestampFormat"/>
+			</ContextMenu>
+			
 			<!-- Default grid cell style -->
 			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
 			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
@@ -33,6 +89,11 @@
 			</Style>
 			<Style x:Key="LogEntryStyle" TargetType="{x:Type TextBlock}">
 				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
+				<Setter Property="HorizontalAlignment" Value="Left"/>
+			</Style>
+			<Style x:Key="LogEntryStyleRight" TargetType="{x:Type TextBlock}">
+				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
+				<Setter Property="HorizontalAlignment" Value="Right"/>
 			</Style>
 			<Style x:Key="LogEntryTextCellStyle" TargetType="{x:Type TextBox}">
 				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
@@ -161,18 +222,13 @@
 			GridLinesVisibility="None"
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
+			ContextMenu="{StaticResource LogControlCMenu}"
 			my:DataGrid_.ColumnResizeMode="FitToDisplayWidth"
 			PreviewMouseDown="HandleMouseDown"
 			MouseDoubleClick="HandleMouseDoubleClick"
 			CanUserResizeColumns="True"
 			IsReadOnly="True"
 			>
-			<DataGrid.ContextMenu>
-				<ContextMenu>
-					<MenuItem Header="Copy Log Entries" Command="{Binding CopySelectedRowsToClipboard}"/>
-					<MenuItem Header="Copy Messages" Command="{Binding CopySelectedMessagesToClipboard}"/>
-				</ContextMenu>
-			</DataGrid.ContextMenu>
 			<DataGrid.Columns>
 				<DataGridTextColumn
 					Header="Tag"
@@ -188,8 +244,14 @@
 					/>
 				<DataGridTextColumn
 					Header="Timestamp"
-					Binding="{Binding Timestamp}"
-					ElementStyle="{StaticResource LogEntryStyle}"
+					Binding="{Binding TimestampFormatted}"
+					ElementStyle="{StaticResource LogEntryStyleRight}"
+					Width="1*"
+					/>
+				<DataGridTextColumn
+					Header="Elapsed"
+					Binding="{Binding ElapsedFormatted}"
+					ElementStyle="{StaticResource LogEntryStyleRight}"
 					Width="1*"
 					/>
 				<DataGridTemplateColumn

@@ -223,7 +223,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Convert this bitmap to a cursor with hotspot at 'hot_spot'</summary>
 		public static Cursor ToCursor(this Bitmap bm, Point hot_spot)
 		{
-			var tmp = new Win32.IconInfo();
+			var tmp = new Win32.ICONINFO();
 			Win32.GetIconInfo(bm.GetHicon(), ref tmp);
 			tmp.xHotspot = hot_spot.X;
 			tmp.yHotspot = hot_spot.Y;

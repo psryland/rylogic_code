@@ -299,12 +299,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 					switch (e.PropertyName)
 					{
-					case nameof(DockControl.CaptionText):
+						case nameof(DockControl.CaptionText):
 						{
 							NotifyPropertyChanged(nameof(CaptionText));
 							break;
 						}
-					case nameof(DockControl.TabText):
+						case nameof(DockControl.TabText):
 						{
 							// The caption text defaults to the tab text, so invalidate CaptionText here.
 							NotifyPropertyChanged(nameof(CaptionText));
@@ -314,7 +314,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							}
 							break;
 						}
-					case nameof(DockControl.TabIcon):
+						case nameof(DockControl.TabIcon):
 						{
 							if (TabStrip.Buttons.FirstOrDefault(x => x.DockControl == sender) is var tab_btn)
 							{
@@ -323,7 +323,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							}
 							break;
 						}
-					case nameof(DockControl.TabState):
+						case nameof(DockControl.TabState):
 						{
 							if (TabStrip.Buttons.FirstOrDefault(x => x.DockControl == sender) is var tab_btn)
 							{

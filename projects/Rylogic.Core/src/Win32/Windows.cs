@@ -2,13 +2,11 @@
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
-
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
-using System.Collections;
-using System.Runtime.InteropServices;
 using HWND = System.IntPtr;
 
 namespace Rylogic.Interop.Win32
@@ -16,14 +14,6 @@ namespace Rylogic.Interop.Win32
 	// Collection used to enumerate Window Objects
 	public class Windows :IEnumerable, IEnumerator
 	{
-		[DllImport("user32.dll")] public static extern int GetWindowText(HWND hwnd, StringBuilder title, int size);
-		[DllImport("user32.dll")] public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
-		[DllImport("user32.dll")] public static extern int EnumWindows(EnumWindowsProc ewp, int lParam);
-		[DllImport("user32.dll")] public static extern bool IsWindowVisible(HWND hwnd);
-
-		// Delegate used for EnumWindows() callback function
-		public delegate bool EnumWindowsProc(HWND hwnd, int lParam);
-
 		private readonly ArrayList m_wnds = new ArrayList(); //array of windows
 		private readonly bool m_invisible = false;  // filter out invisible windows
 		private readonly bool m_no_title = false; // filter out windows with no title
@@ -36,36 +26,37 @@ namespace Rylogic.Interop.Win32
 			m_no_title = untitled;
 
 			// EnumWindows callback function
-			EnumWindowsProc ewp = delegate (HWND hwnd, int lParam)
+			Win32.EnumWindows(ewp, 0);
+			bool ewp(HWND hwnd, int lParam)
 			{
-				if (m_invisible == false && !IsWindowVisible(hwnd))
+				if (m_invisible == false && !Win32.IsWindowVisible(hwnd))
 					return true;
 
 				var title = new StringBuilder(256);
 				var module = new StringBuilder(256);
-				GetWindowModuleFileName(hwnd, module, 256);
-				GetWindowText(hwnd, title, 256);
+				Win32.GetWindowModuleFileName(hwnd, module, 256);
+				Win32.GetWindowText(hwnd, title, 256);
 
 				if (m_no_title == false && title.Length == 0)
 					return true;
 
 				m_wnds.Add(new CWindow(title.ToString(), hwnd, module.ToString()));
 				return true;
-			};
-			EnumWindows(ewp, 0);
+			}
 		}
 
 		// Find all windows with a given name (or partial name)
-		public static List<CWindow> GetWindowsByName(string name) { return GetWindowsByName(name, false); }
+		public static List<CWindow> GetWindowsByName(string name) => GetWindowsByName(name, false);
 		public static List<CWindow> GetWindowsByName(string name, bool partial)
 		{
 			List<CWindow> wnd = new List<CWindow>();
-			EnumWindowsProc ewp = delegate (HWND hwnd, int lParam)
+			Win32.EnumWindows(ewp, 0);
+			bool ewp(HWND hwnd, int lParam)
 			{
-				StringBuilder title = new StringBuilder(256);
-				StringBuilder module = new StringBuilder(256);
-				GetWindowModuleFileName(hwnd, module, 256);
-				GetWindowText(hwnd, title, 256);
+				var title = new StringBuilder(256);
+				var module = new StringBuilder(256);
+				Win32.GetWindowModuleFileName(hwnd, module, 256);
+				Win32.GetWindowText(hwnd, title, 256);
 
 				string wnd_title = title.ToString();
 				bool match = (!partial && wnd_title == name) || (partial && wnd_title.Contains(name));
@@ -74,8 +65,7 @@ namespace Rylogic.Interop.Win32
 
 				wnd.Add(new CWindow(wnd_title, hwnd, module.ToString()));
 				return true;
-			};
-			EnumWindows(ewp, 0);
+			}
 			return wnd;
 		}
 
@@ -108,8 +98,8 @@ namespace Rylogic.Interop.Win32
 		{
 			StringBuilder title = new StringBuilder(256);
 			StringBuilder module = new StringBuilder(256);
-			Windows.GetWindowModuleFileName(hwnd, module, 256);
-			Windows.GetWindowText(hwnd, title, 256);
+			Win32.GetWindowModuleFileName(hwnd, module, 256);
+			Win32.GetWindowText(hwnd, title, 256);
 			m_title = title.ToString();
 			m_process = module.ToString();
 		}

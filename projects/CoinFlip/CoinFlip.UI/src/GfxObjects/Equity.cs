@@ -135,7 +135,7 @@ namespace CoinFlip.UI.GfxObjects
 			public CoinFlip.Equity.CoinBalanceInfo CoinInfo { get; }
 
 			/// <summary>Plot colour</summary>
-			public Colour32 Colour
+			public override Colour32 Colour
 			{
 				get => m_colour;
 				set

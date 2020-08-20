@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -75,11 +76,14 @@ namespace Rylogic.Gui.WPF
 			// This is populated by calls to AddMessage or from the log file.
 			LogEntries = new ObservableCollection<LogEntry>();
 
+			// Guess the log starts now
+			Epoch = DateTimeOffset.Now;
+
 			// Define a line in the log
 			LogEntryPattern = null;
 			// Examples:
 			//   Use the 'ColumnNames' for tags so the columns become visible
-			//   new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)\|\n",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
+			//   new Regex(@"^(?<File>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Elapsed>.*?)\|(?<Message>.*)\|\n",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
 			//   The log entry pattern should not typically contain the line delimiter character
 
 			// Highlighting patterns
@@ -293,6 +297,15 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty LogEntryPatternProperty = Gui_.DPRegister<LogControl>(nameof(LogEntryPattern));
 
+		/// <summary>The time of the first log entry</summary>
+		public DateTimeOffset Epoch
+		{
+			get => (DateTimeOffset)GetValue(EpochProperty);
+			set => SetValue(EpochProperty, value);
+		}
+		private void Epoch_Changed() => SignalRefresh();
+		public static readonly DependencyProperty EpochProperty = Gui_.DPRegister<LogControl>(nameof(Epoch));
+
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages
 		{
@@ -340,10 +353,7 @@ namespace Rylogic.Gui.WPF
 			get => (ELogLevel)GetValue(FilterLevelProperty);
 			set => SetValue(FilterLevelProperty, value);
 		}
-		private void FilterLevel_Changed()
-		{
-			LogEntriesView?.Refresh();
-		}
+		private void FilterLevel_Changed() => LogEntriesView?.Refresh();
 		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
 
 		/// <summary>The column names that are hidden by default</summary>
@@ -352,11 +362,26 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(HiddenColumnsProperty);
 			set => SetValue(HiddenColumnsProperty, value);
 		}
-		private void HiddenColumns_Changed()
-		{
-			UpdateColumnVisibility();
-		}
+		private void HiddenColumns_Changed() => UpdateColumnVisibility();
 		public static readonly DependencyProperty HiddenColumnsProperty = Gui_.DPRegister<LogControl>(nameof(HiddenColumns), string.Empty);
+
+		/// <summary>String format for the timestamp</summary>
+		public string TimestampFormat
+		{
+			get => (string)GetValue(TimestampFormatProperty);
+			set => SetValue(TimestampFormatProperty, value);
+		}
+		private void TimestampFormat_Changed() => SignalRefresh();
+		public static readonly DependencyProperty TimestampFormatProperty = Gui_.DPRegister<LogControl>(nameof(TimestampFormat), "yyyy-MM-dd HH:mm:ss.fff");
+
+		/// <summary>String format for the elapsed time. Optional parts allowed, E.g. "[d\\.][hh\\:][mm\\:]ss\\.fff"</summary>
+		public string ElapsedFormat
+		{
+			get => (string)GetValue(ElapsedFormatProperty);
+			set => SetValue(ElapsedFormatProperty, value);
+		}
+		private void ElapsedFormat_Changed() => SignalRefresh();
+		public static readonly DependencyProperty ElapsedFormatProperty = Gui_.DPRegister<LogControl>(nameof(ElapsedFormat), "c");
 
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
 		public char EntryDelimiter { get; set; }
@@ -518,6 +543,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Access to the columns of the log grid</summary>
 		public IEnumerable<DataGridColumn> Columns => m_view.Columns;
 
+		/// <summary>The currently visible columns of the log grid</summary>
+		public IEnumerable<DataGridColumn> VisibleColumns => m_view.Columns.Where(x => x.Visibility == Visibility.Visible);
+		public IEnumerable<string> VisibleColumnNames => VisibleColumns.Select(x => x.Header as string).NotNull();
+
 		/// <summary>Use the log entry pattern to create columns</summary>
 		private void UpdateColumnVisibility()
 		{
@@ -548,6 +577,9 @@ namespace Rylogic.Gui.WPF
 				state = !hidden.Contains((string)column.Header) ? state : Visibility.Collapsed;
 				column.Visibility = state;
 			}
+
+			NotifyPropertyChanged(nameof(VisibleColumns));
+			NotifyPropertyChanged(nameof(VisibleColumnNames));
 		}
 
 		/// <summary>Update the log file to display</summary>
@@ -744,6 +776,15 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>The highlighting patterns</summary>
 			IEnumerable<HLPattern> Highlighting { get; }
+
+			/// <summary>The time point of when the log started</summary>
+			DateTimeOffset Epoch { get; }
+
+			/// <summary>Format string for timestamps</summary>
+			string TimestampFormat { get; }
+
+			/// <summary>Format string for elapsed time</summary>
+			string ElapsedFormat { get; }
 		}
 
 		/// <summary>A single log entry</summary>
@@ -769,24 +810,29 @@ namespace Rylogic.Gui.WPF
 			public bool FromFile { get; }
 
 			/// <summary>Map fields to matches in 'Text'</summary>
-			public string Tag => Read(nameof(Tag), x => x);
+			public string Tag => Read<string?>(nameof(Tag), x => x) ?? string.Empty;
 
-			/// <summary></summary>
+			/// <summary>The log entry importance level</summary>
 			public ELogLevel Level => Read(nameof(Level), x => Enum<ELogLevel>.Parse(x));
 
-			/// <summary></summary>
-			public TimeSpan Timestamp => Read(nameof(Timestamp), x => TimeSpan.Parse(x));
+			/// <summary>The time since the log was started</summary>
+			public TimeSpan Elapsed => Read(nameof(Elapsed), x => TimeSpan_.TryParse(x)) ?? TimeSpan.Zero;
+			public string ElapsedFormatted => Elapsed.ToStringOptional(m_provider.ElapsedFormat);
 
-			/// <summary></summary>
-			public string Message => Read(nameof(Message), x => x);
+			/// <summary>The time point of the log entry</summary>
+			public DateTimeOffset Timestamp => Read(nameof(Timestamp), x => DateTimeOffset_.TryParse(x)) ?? m_provider.Epoch + Elapsed;
+			public string TimestampFormatted => Timestamp.ToString(m_provider.TimestampFormat);
 
-			/// <summary></summary>
-			public string File => Read(nameof(File), x => x);
+			/// <summary>The log entry message</summary>
+			public string Message => Read(nameof(Message), x => x) ?? string.Empty;
 
-			/// <summary></summary>
+			/// <summary>The file that was the source of the log entry</summary>
+			public string File => Read(nameof(File), x => x) ?? string.Empty;
+
+			/// <summary>The line in the file that was the source of the log entry</summary>
 			public int Line => Read(nameof(Line), x => int.Parse(x));
 
-			/// <summary></summary>
+			/// <summary>The number of repeat log entries of the same type</summary>
 			public int Occurrences => Read(nameof(Occurrences), x => int.Parse(x));
 
 			/// <summary>Lazy regex pattern match</summary>
@@ -798,7 +844,7 @@ namespace Rylogic.Gui.WPF
 					try
 					{
 						var value = m_match.Groups[grp]?.Value ?? string.Empty;
-						return parse(value);
+						return value.Length != 0 ? parse(value) : default!;
 					}
 					catch { }
 				}
@@ -881,6 +927,7 @@ namespace Rylogic.Gui.WPF
 			public const string Tag         = nameof(LogEntry.Tag);
 			public const string Level       = nameof(LogEntry.Level);
 			public const string Timestamp   = nameof(LogEntry.Timestamp);
+			public const string Elapsed     = nameof(LogEntry.Elapsed);
 			public const string Message     = nameof(LogEntry.Message);
 			public const string File        = nameof(LogEntry.File);
 			public const string Line        = nameof(LogEntry.Line);

@@ -1,0 +1,110 @@
+﻿<Window
+	x:Class="SolarHotWater.UI.OptionsUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	WindowStartupLocation="CenterOwner"
+	ResizeMode="CanResizeWithGrip"
+	SizeToContent="Height"
+	ShowInTaskbar="False"
+	Title="Options"
+	Height="150"
+	Width="240"
+	>
+	<Grid
+		Margin="8">
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+		</Grid.ColumnDefinitions>
+		
+		<!-- Column 0 -->
+		<Grid
+			Grid.Column="0"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+		
+			<!-- Start with windows -->
+			<StackPanel
+				Grid.Row="0"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Start with Windows: "
+					VerticalAlignment="Center"
+					/>
+				<CheckBox
+					IsChecked="{Binding StartWithWindows}"
+					ToolTip="Start this application when windows starts"
+					VerticalAlignment="Center"
+					/>
+			</StackPanel>
+
+			<!-- Enable on start up-->
+			<StackPanel
+				Grid.Row="1"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Enable on Startup: "
+					VerticalAlignment="Center"
+					/>
+				<CheckBox
+					IsChecked="{Binding EnableOnStartup}"
+					ToolTip="Automatic start the monitor running when the application starts"
+					VerticalAlignment="Center"
+					/>
+			</StackPanel>
+
+			<!-- Monitor Poll Period -->
+			<StackPanel
+				Grid.Row="2"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Monitor Poll Period (s): "
+					VerticalAlignment="Center"
+					/>
+				<TextBox
+					Text="{Binding MonitorPeriod, Converter={conv:TimeSpanToDouble}, StringFormat={}{0:N3}}"
+					ToolTip="How frequently the monitor makes updates to the state of the consumers"
+					HorizontalContentAlignment="Center"
+					VerticalAlignment="Center"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		
+			<!-- Solar Poll Period -->
+			<StackPanel
+				Grid.Row="3"
+				Orientation="Horizontal"
+				Margin="3"
+				>
+				<TextBlock
+					Text="Solar Poll Period (s): "
+					VerticalAlignment="Center"
+					/>
+				<TextBox
+					Text="{Binding SolarPollPeriod, Converter={conv:TimeSpanToDouble}, StringFormat={}{0:N3}}"
+					ToolTip="How frequently the solar inverter is queried for current power"
+					HorizontalContentAlignment="Center"
+					VerticalAlignment="Center"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</Grid>
+	</Grid>
+</Window>

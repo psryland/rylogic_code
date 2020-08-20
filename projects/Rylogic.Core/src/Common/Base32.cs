@@ -205,6 +205,7 @@ namespace Rylogic.Common
 namespace Rylogic.UnitTests
 {
 	using Common;
+	using Extn;
 	using Utility;
 
 	[TestFixture] public class TestBase32
@@ -217,7 +218,7 @@ namespace Rylogic.UnitTests
 				var dec = Base32Encoding.ToBytes(enc);
 				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
 				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(0, Array_.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 			{
 				var data = new byte[256];
@@ -226,7 +227,7 @@ namespace Rylogic.UnitTests
 				var dec = Base32Encoding.ToBytes(enc);
 				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
 				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(0, Array_.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 			var rand = new Random(42);
 			for (int i = 0; i != 100; ++i)
@@ -237,7 +238,7 @@ namespace Rylogic.UnitTests
 				var dec = Base32Encoding.ToBytes(enc);
 				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
 				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(0, Array_.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 		}
 	}

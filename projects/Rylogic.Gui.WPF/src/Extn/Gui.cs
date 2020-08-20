@@ -152,9 +152,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Attached to the Closed event of a window to clean up any child objects that are disposable</summary>
-		public static void DisposeChildren(object? sender, EventArgs e)
+		public static void DisposeChildren(object? sender, EventArgs e) => DisposeChildren(sender as DependencyObject);
+		public static void DisposeChildren(DependencyObject? obj)
 		{
-			if (!(sender is DependencyObject obj)) return;
+			if (obj == null) return;
 			foreach (var child in obj.AllLogicalChildren().OfType<IDisposable>())
 				child.Dispose();
 		}
