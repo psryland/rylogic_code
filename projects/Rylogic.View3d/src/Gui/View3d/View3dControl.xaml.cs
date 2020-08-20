@@ -464,40 +464,39 @@ namespace Rylogic.Gui.WPF
 		{
 			// Don't make this public, use 'Invalidate'
 			if (!m_render_pending) return;
-			using (Scope.Create(null, () => m_render_pending = false))
+			using var render_pending = Scope.Create(null, () => m_render_pending = false);
+		
+			// Ignore renders until we have a non-zero size, and the D3DImage has a render target
+			if (ActualWidth == 0 || ActualHeight == 0 ||
+				D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 			{
-				// Ignore renders until we have a non-zero size, and the D3DImage has a render target
-				if (ActualWidth == 0 || ActualHeight == 0 ||
-					D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
-				{
-					// 'Validate' the window so that future Invalidate() calls to trigger the call back.
-					Window?.Validate();
-					return;
-				}
-
-				// If the size has changed, update the back buffer
-				if (m_resized)
-				{
-					D3DImage.SetRenderTargetSize(this);
-					m_resized = false;
-				}
-
-				// Set the camera aspect to achieve the desired pixel aspect
-				ActualPixelAspect = DesiredPixelAspect;
-
-				// Allow objects to be added/removed from the scene
-				try { OnBuildScene(); }
-				catch (OperationCanceledException) { }
-				catch (Exception ex) { OnReportError(new ReportErrorEventArgs($"Error during build scene: {ex.Message}")); }
-
-				// Render the scene
-				Window.RestoreRT();
-				Window.Render();
-				Window.Present();
-
-				// Notify that the D3DImage has changed
-				D3DImage.Invalidate();
+				// 'Validate' the window so that future Invalidate() calls to trigger the call back.
+				Window?.Validate();
+				return;
 			}
+
+			// If the size has changed, update the back buffer
+			if (m_resized)
+			{
+				D3DImage.SetRenderTargetSize(this);
+				m_resized = false;
+			}
+
+			// Set the camera aspect to achieve the desired pixel aspect
+			ActualPixelAspect = DesiredPixelAspect;
+
+			// Allow objects to be added/removed from the scene
+			try { OnBuildScene(); }
+			catch (OperationCanceledException) { }
+			catch (Exception ex) { OnReportError(new ReportErrorEventArgs($"Error during build scene: {ex.Message}")); }
+
+			// Render the scene
+			Window.RestoreRT();
+			Window.Render();
+			Window.Present();
+
+			// Notify that the D3DImage has changed
+			D3DImage.Invalidate();
 		}
 		private bool m_render_pending;
 

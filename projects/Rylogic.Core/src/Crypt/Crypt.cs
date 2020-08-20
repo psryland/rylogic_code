@@ -57,7 +57,7 @@ namespace Rylogic.Crypt
 			
 			// Check whether the file has an existing signature
 			// If so, shorten the length of file buf that's signed
-			if (length >= sig_length && Util.Compare(
+			if (length >= sig_length && Array_.Compare(
 				filebuf, length - sig_length, SignatureId.Length,
 				SignatureId, 0, SignatureId.Length) == 0)
 				length -= sig_length;
@@ -91,7 +91,7 @@ namespace Rylogic.Crypt
 			var sig_length = key_size_bytes + SignatureId.Length;
 			
 			// Check whether the file has a signature
-			if (length >= sig_length && Util.Compare(
+			if (length >= sig_length && Array_.Compare(
 				filebuf, length - sig_length, SignatureId.Length,
 				SignatureId, 0, SignatureId.Length) == 0)
 				length -= sig_length;
@@ -159,7 +159,7 @@ namespace Rylogic.UnitTests
 
 				// Check that the start of the file is the same
 				var buf1 = File.ReadAllBytes(filepath);
-				Assert.True(Util.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
+				Assert.True(Array_.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
 
 				// Verify the signed file using the public key
 				Assert.True(Crypt.Validate(filepath, pub));
@@ -169,7 +169,7 @@ namespace Rylogic.UnitTests
 
 				// Check that the whole file is the same
 				var buf2 = File.ReadAllBytes(filepath);
-				Assert.True(Util.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
+				Assert.True(Array_.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
 
 				// Verify the signed file using the public key
 				Assert.True(Crypt.Validate(filepath, pub));

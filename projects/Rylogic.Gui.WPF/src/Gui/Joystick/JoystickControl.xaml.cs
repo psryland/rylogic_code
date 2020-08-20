@@ -144,14 +144,14 @@ namespace Rylogic.Gui.WPF
 		{
 			get => (ulong)GetValue(SelectedProperty);
 			set
-		{
+			{
 				if (Selected == value) return;
 				var new_value = value;
 
-			// In single select mode, clicking the same sector toggles between
-			// that sector and the centre sector. Expected use however is 'Selected ^= 1U << index'
-			// so we need to handle this toggling for this case as well
-			if (SingleSelect)
+				// In single select mode, clicking the same sector toggles between
+				// that sector and the centre sector. Expected use however is 'Selected ^= 1U << index'
+				// so we need to handle this toggling for this case as well
+				if (SingleSelect)
 					new_value = (value & Selected) != 0 ? Bit.LowBit(value ^ Selected) : 1;
 
 				SetValue(SelectedProperty, new_value);

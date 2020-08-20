@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -194,6 +194,7 @@ namespace Rylogic.Utility
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger(Func<string, bool>? wait_cb = null)
 		{
+			// Note: Use WPFUtil.WaitForDebugger() for WPF apps
 			if (DebuggerAttached()) return;
 			var t = new Thread(new ThreadStart(() =>
 			{
@@ -262,23 +263,6 @@ namespace Rylogic.Utility
 			T tmp = lhs;
 			lhs = rhs;
 			rhs = tmp;
-		}
-
-		/// <summary>Compare two ranges within a byte array</summary>
-		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
-		{
-			for (;llength != 0 && rlength != 0; ++lstart, ++rstart, --llength, --rlength)
-			{
-				if (lhs[lstart] == rhs[rstart]) continue;
-				return
-					lhs[lstart] < rhs[rstart] ? -1 :
-					lhs[lstart] > rhs[rstart] ? +1 :
-					0;
-			}
-			return
-				llength < rlength ? -1 :
-				llength > rlength ? +1 :
-				0;
 		}
 
 		/// <summary>Convert a collection of 'U' into a collection of 'T' using 'conv' to do the conversion</summary>
@@ -578,22 +562,6 @@ namespace Rylogic.Utility
 			return AddToHistoryList(history, item, max_history_length, index, Cmp);
 		}
 
-		/// <summary>Return the distance between to points</summary>
-		public static double Distance(Point lhs, Point rhs)
-		{
-			int dx = lhs.X - rhs.X;
-			int dy = lhs.Y - rhs.Y;
-			return Math.Sqrt(dx*dx + dy*dy);
-		}
-
-		/// <summary>Set 'existing' to 'value' if not already Equal. Raises 'raise' if not equal</summary>
-		public static void SetAndRaise<T>(object this_, ref T existing, T value, EventHandler raise, EventArgs? args = null)
-		{
-			if (Equals(existing, value)) return;
-			existing = value;
-			raise?.Invoke(this_, args ?? EventArgs.Empty);
-		}
-
 		/// <summary>Return an assembly attribute</summary>
 		public static T GetAssemblyAttribute<T>(Assembly? ass = null)
 		{
@@ -826,7 +794,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Convert a Unix time (i.e. seconds past 1/1/1970) to a date time</summary>
-		public static DateTime UnixTimeToDateTime(long milliseconds)
+		[Obsolete] public static DateTime UnixTimeToDateTime(long milliseconds)
 		{
 			const long ticks_per_ms = 10000;
 			var time = DateTime_.UnixEpoch;
@@ -1120,14 +1088,6 @@ namespace Rylogic.Utility
 			return sb.ToString();
 		}
 
-		/// <summary>Return a sub range of an array of T</summary>
-		[Obsolete("Use Array_.Dup()")] public static T[] SubRange<T>(T[] arr, int start, int length)
-		{
-			var sub = new T[length];
-			Array.Copy(arr, start, sub, 0, length);
-			return sub;
-		}
-
 		/// <summary>Convert a size in bytes to a 'pretty' size in KB,MB,GB,etc</summary>
 		/// <param name="bytes">The input data size</param>
 		/// <param name="si">True to use 1000bytes = 1kb, false for 1024bytes = 1kb</param>
@@ -1403,17 +1363,6 @@ namespace Rylogic.UnitTests
 			[DataMember] public int[]?   Data   { get; set; }
 		}
 
-		[Test] public void ByteArrayCompare()
-	    {
-		    byte[] lhs = new byte[]{1,2,3,4,5};
-		    byte[] rhs = new byte[]{3,4,5,6,7};
-    
-		    Assert.Equal(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
-		    Assert.Equal( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
-		    Assert.Equal( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
-		    Assert.Equal(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
-		    Assert.Equal( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
-	    }
 		[Test] public void Convert()
 		{
 			var src = new[] {1,2,3,4};

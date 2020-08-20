@@ -54,10 +54,10 @@ namespace Rylogic.Interop.Win32
 			public static implicit operator Point(POINT pt) { return pt.ToPoint(); }
 		}
 
-		/// <summary>Notification message (WM_NOTIFY) header</summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct NMHDR
 		{
+			// Notification message (WM_NOTIFY) header
 			public HWND hwndFrom;
 			public UINT idFrom;
 			public UINT code; // NM_code
@@ -80,10 +80,10 @@ namespace Rylogic.Interop.Win32
 			}
 		}
 
-		// Structure pointed to by WM_GETMINMAXINFO lParam
 		[StructLayout(LayoutKind.Sequential)]
 		public struct MINMAXINFO
 		{
+			// Structure pointed to by WM_GETMINMAXINFO lParam
 			public POINT ptReserved;
 			public POINT ptMaxSize;
 			public POINT ptMaxPosition;
@@ -135,10 +135,10 @@ namespace Rylogic.Interop.Win32
 			public float eDy;
 		}
 
-		// Used by the FindFirstFile or FindNextFile functions.
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto), BestFitMapping(false)]
 		public struct WIN32_FIND_DATA
 		{
+			// Used by the FindFirstFile or FindNextFile functions.
 			public FileAttributes dwFileAttributes;
 			public uint ftCreationTime_dwLowDateTime;
 			public uint ftCreationTime_dwHighDateTime;
@@ -184,7 +184,6 @@ namespace Rylogic.Interop.Win32
 			private static DateTime ToDateTime(uint high, uint low) { return DateTime.FromFileTimeUtc(ToLong(high,low)); }
 			private static long ToLong(uint high, uint low)         { return ((long)high << 0x20) | low; }
 		}
-
 
 		[StructLayout(LayoutKind.Sequential, Pack = 4)]
 		public struct PROPERTYKEY
@@ -276,7 +275,7 @@ namespace Rylogic.Interop.Win32
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 4)]
-		public struct IconInfo
+		public struct ICONINFO
 		{
 			public bool fIcon;
 			public int xHotspot;
@@ -311,5 +310,20 @@ namespace Rylogic.Interop.Win32
 			public uint FileIndexHigh;
 			public uint FileIndexLow;
 		};
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WNDCLASS
+		{
+			public uint style;
+			public WNDPROC lpfnWndProc;
+			public int cbClsExtra;
+			public int cbWndExtra;
+			public IntPtr hInstance;
+			public IntPtr hIcon;
+			public IntPtr hCursor;
+			public IntPtr hbrBackground;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszMenuName;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClassName;
+		}
 	}
 }

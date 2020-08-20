@@ -4,7 +4,12 @@ Run 'Remote Debugger' (by searching from the start menu)
 Click 'Configure remote debugging'
 Run 'ipconfig' on the remote machine to get the IP address
 
-In VS on the dev machine, open 'Attach to Process'
-Connect to '<ip address>:4020'
+In VS on the dev machine,
+Get the debug build output on the remote machine somehow (copy, or set the output path in the VS project)
+Launch the exe on the remote machine (You might need 'WaitForDebugger' in the app)
+Open 'Attach to Process'
+Connect to '<ip address>:4020' (Check the port number in the Remote Debugger window on the remote machine)
+Login using windows authentication (i.e. user=psryland@yahoo.co.nz)
+Find the process on the remote machine
 
 

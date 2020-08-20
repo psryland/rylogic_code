@@ -8,8 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using EweLink;
+using Newtonsoft.Json.Linq;
 using Rylogic.Common;
+using Rylogic.Core.Windows;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 
 namespace SolarHotWater
@@ -37,6 +40,9 @@ namespace SolarHotWater
 
 			Log.Write(ELogLevel.Info, "Model initialised");
 			m_settings.NotifyAllSettingsChanged();
+		
+			// Prevent system sleep
+			WinOS.SystemSleep(keep_awake: true);
 		}
 		public void Dispose()
 		{
@@ -74,7 +80,7 @@ namespace SolarHotWater
 					// Save the new order of consumers to the settings
 					Settings.Consumers = Consumers.Select(x => x.Settings).ToArray();
 				}
-				void HandleSettingChange(object? sender, SettingChangeEventArgs e)
+				async void HandleSettingChange(object? sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
 					switch (e.Key)
@@ -89,6 +95,22 @@ namespace SolarHotWater
 						{
 							// If the solar inverter IP has a value, start polling for data
 							PollSolarData = Settings.SolarInverterIP.HasValue();
+							break;
+						}
+						case nameof(SettingsData.StartWithWindows):
+						{
+							WinOS.StartWithWindows(Settings.StartWithWindows, Util.AppProductName, Util.ExecutablePath);
+							break;
+						}
+						case nameof(SettingsData.EnableOnStartup):
+						{
+							if (Settings.EnableOnStartup)
+							{
+								if (!IsLoggedOn && CanLogin)
+									await Login(Settings.Username, Settings.Password);
+
+								EnableMonitor = true;
+							}
 							break;
 						}
 						case nameof(SettingsData.Consumers):
@@ -264,18 +286,30 @@ namespace SolarHotWater
 					{
 						m_timer_enable_control?.Stop();
 						await RunMonitor();
-						m_timer_enable_control?.Start();
 					}
-					catch (OperationCanceledException) {}
+					catch (OperationCanceledException) { }
 					catch (Exception ex)
 					{
 						Log.Write(ELogLevel.Error, ex, "Error during RunMonitor");
 						LastError = ex;
 					}
+					finally
+					{
+						m_timer_enable_control?.Start();
+						NotifyPropertyChanged(nameof(EnableMonitor));
+					}
 				}
 				async Task RunMonitor()
 				{
 					// Perform a check of the solar output to see whether consumers should be enabled.
+					if (StayLoggedIn && !IsLoggedOn)
+					{
+						// Try to reconnect if the connection has dropped
+						Log.Write(ELogLevel.Info, "RunMonitor: Attempting to reconnect");
+						await Login(Settings.Username, Settings.Password);
+						if (!IsLoggedOn)
+							return;
+					}
 
 					// The current solar output
 					var available_power = Solar.CurrentPower;
@@ -299,6 +333,7 @@ namespace SolarHotWater
 					}).ToList();
 
 					// Enable/Disable each consumer based on available power
+					var state_changed = false;
 					foreach (var consumer in consumers)
 					{
 						// If the consumer is on, use the actual power consumption.
@@ -326,8 +361,14 @@ namespace SolarHotWater
 						// If the state change has been pending for more than the cooldown period, change state
 						else if (DateTimeOffset.Now - consumer.StateChangePending > consumer.Settings.Cooldown)
 						{
-							Log.Write(ELogLevel.Info, $"{consumer.Name}: State changed to {state}");
-							await Ewe.SwitchState(consumer.EweSwitch!, state, 0, Shutdown.Token);
+							Log.Write(ELogLevel.Info, $"{consumer.Name}: State changing to {state}");
+							var sw = consumer.EweSwitch ?? throw new Exception($"Switch instance missing for {consumer.Name}");
+							await Ewe.SwitchState(sw, state, 0, Shutdown.Token);
+
+							// Don't clear 'StateChangePending' here, because if the
+							// state switch fails we want to automatically retry.
+							state_changed |= true;
+							History.Add(sw);
 						}
 
 						// Trigger a refresh of the state change fraction
@@ -340,6 +381,10 @@ namespace SolarHotWater
 						if (turn_on)
 							required_power += req_pwr;
 					}
+
+					// Record history of the combined consumption
+					if (state_changed)
+						History.Add(Consumers);
 
 					// todo: shouldn't be here...
 					NotifyPropertyChanged(nameof(PowerConsumed));
@@ -433,6 +478,7 @@ namespace SolarHotWater
 		{
 			Settings.Username = username;
 			Settings.Password = password;
+			StayLoggedIn = true;
 
 			if (CanLogin)
 			{
@@ -456,12 +502,16 @@ namespace SolarHotWater
 		}
 		public async Task Logout()
 		{
+			StayLoggedIn = false;
 			await Ewe.Logout();
 			NotifyPropertyChanged(nameof(IsLoggedOn));
 		}
 
 		/// <summary>Try if login is possible</summary>
 		public bool CanLogin => Settings.Username.HasValue() && !LoginInProgress; // note: password not required for a login attempt
+
+		/// <summary>True if the user wants to be logged in (i.e. reconnect if the connection drops)</summary>
+		public bool StayLoggedIn { get; set; }
 
 		/// <summary>Create a new Consumer instance</summary>
 		public Consumer AddNewConsumer()
@@ -474,6 +524,18 @@ namespace SolarHotWater
 		public void RemoveConsumer(Consumer consumer)
 		{
 			Settings.Consumers = Settings.Consumers.Except(consumer.Settings).ToArray();
+		}
+
+		/// <summary>Manually poll the device state of a consumer's switch</summary>
+		public async Task RefreshDeviceInfo(Consumer consumer)
+		{
+			if (!(consumer?.EweSwitch is EweSwitch sw))
+				return;
+
+			Log.Write(ELogLevel.Info, "Manual device state refresh");
+			var info = await Ewe.GetDeviceInfo(sw.DeviceID, Shutdown.Token);
+			if (info["params"] is JObject parms)
+				sw.Update(parms);
 		}
 
 		/// <summary></summary>

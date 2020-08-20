@@ -56,9 +56,11 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 
+	# Careful with shader versions, if you bump up from 4_0 you'll need to change the
+	# minimum feature level in view3d.
 	keys = [
 		["vs", "/Tvs_4_0", r"^#ifdef PR_RDR_VSHADER_(?P<name>.*)$"],
-		["ps", "/Tps_5_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
+		["ps", "/Tps_4_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
 		["gs", "/Tgs_4_0", r"^#ifdef PR_RDR_GSHADER_(?P<name>.*)$"],
 		["cs", "/Tcs_5_0", r"^#ifdef PR_RDR_CSHADER_(?P<name>.*)$"],
 		]

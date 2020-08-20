@@ -214,6 +214,23 @@ namespace Rylogic.Extn
 			return Equal(arr, new Span<byte>(rhs, start, length));
 		}
 
+		/// <summary>Compare two ranges within a byte array</summary>
+		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
+		{
+			for (; llength != 0 && rlength != 0; ++lstart, ++rstart, --llength, --rlength)
+			{
+				if (lhs[lstart] == rhs[rstart]) continue;
+				return
+					lhs[lstart] < rhs[rstart] ? -1 :
+					lhs[lstart] > rhs[rstart] ? +1 :
+					0;
+			}
+			return
+				llength < rlength ? -1 :
+				llength > rlength ? +1 :
+				0;
+		}
+
 		/// <summary>BitConverter byte[] to type conversion</summary>
 		public static T As<T>(this byte[] arr) where T : struct => As<T>(arr, 0);
 		public static T As<T>(this byte[] arr, int start) where T : struct => As<T>(arr, start, arr.Length - start);
@@ -244,43 +261,6 @@ namespace Rylogic.Extn
 				}
 			}
 		}
-#if false
-
-		public static sbyte  AsInt8         (this byte[] arr, int start_index = 0) { return (sbyte)arr[start_index]; }
-		public static byte   AsUInt8        (this byte[] arr, int start_index = 0) { return arr[start_index]; }
-		public static ushort AsUInt16       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt16     (arr, start_index); }
-		public static uint   AsUInt32       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt32     (arr, start_index); }
-		public static ulong  AsUInt64       (this byte[] arr, int start_index = 0) { return BitConverter.ToUInt64     (arr, start_index); }
-		public static short  AsInt16        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt16      (arr, start_index); }
-		public static int    AsInt32        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt32      (arr, start_index); }
-		public static long   AsInt64        (this byte[] arr, int start_index = 0) { return BitConverter.ToInt64      (arr, start_index); }
-		public static float  AsFloat        (this byte[] arr, int start_index = 0) { return BitConverter.ToSingle     (arr, start_index); }
-		public static double AsDouble       (this byte[] arr, int start_index = 0) { return BitConverter.ToDouble     (arr, start_index); }
-		public static bool   AsBool         (this byte[] arr, int start_index = 0) { return BitConverter.ToBoolean    (arr, start_index); }
-		public static char   AsChar         (this byte[] arr, int start_index = 0) { return BitConverter.ToChar       (arr, start_index); }
-		public static string AsUTF8String   (this byte[] arr, int start_index = 0) { return Encoding.UTF8.GetString   (arr, start_index, arr.Length - start_index); }
-		public static string AsUnicodeString(this byte[] arr, int start_index = 0) { return Encoding.Unicode.GetString(arr, start_index, arr.Length - start_index); }
-
-		public static T As<T>(this byte[] arr) where T:struct
-		{
-			if (typeof(T) == typeof(byte  )) return (T)(object)AsUInt8 (arr);
-			if (typeof(T) == typeof(ushort)) return (T)(object)AsUInt16(arr);
-			if (typeof(T) == typeof(uint  )) return (T)(object)AsUInt32(arr);
-			if (typeof(T) == typeof(ulong )) return (T)(object)AsUInt64(arr);
-			if (typeof(T) == typeof(sbyte )) return (T)(object)AsInt8  (arr);
-			if (typeof(T) == typeof(short )) return (T)(object)AsInt16 (arr);
-			if (typeof(T) == typeof(int   )) return (T)(object)AsInt32 (arr);
-			if (typeof(T) == typeof(long  )) return (T)(object)AsInt64 (arr);
-			if (typeof(T) == typeof(float )) return (T)(object)AsFloat (arr);
-			if (typeof(T) == typeof(double)) return (T)(object)AsDouble(arr);
-			if (typeof(T) == typeof(bool  )) return (T)(object)AsBool  (arr);
-			if (typeof(T) == typeof(char  )) return (T)(object)AsChar  (arr);
-
-			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), $"As<T>: Insufficient data. Expected {Marshal.SizeOf(typeof(T))}, got {arr.Length}");
-			using var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned);
-			return Marshal.PtrToStructure<T>(handle.Handle.AddrOfPinnedObject());
-		}
-#endif
 
 		/// <summary>Return the checksum of this array of bytes</summary>
 		public static int Crc32(this byte[] arr, uint initial_value = 0xFFFFFFFF)
@@ -440,9 +420,10 @@ namespace Rylogic.UnitTests
 	using System.Runtime.InteropServices;
 	using Extn;
 
-	[TestFixture] public class TestArrayExtns
+	[TestFixture]
+	public class TestArrayExtns
 	{
-		[StructLayout(LayoutKind.Sequential,Pack = 1,CharSet = CharSet.Ansi)]
+		[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 		internal struct Thing
 		{
 			public int m_int;
@@ -450,9 +431,10 @@ namespace Rylogic.UnitTests
 			public byte m_byte;
 		}
 
-		[Test] public void ArrayExtns()
+		[Test]
+		public void ArrayExtns()
 		{
-			var a0 = new[]{1,2,3,4};
+			var a0 = new[] { 1, 2, 3, 4 };
 			var A0 = a0.Dup();
 
 			Assert.Equal(typeof(int[]), A0.GetType());
@@ -464,43 +446,44 @@ namespace Rylogic.UnitTests
 			for (var err = 0; err != 2; ++err)
 			{
 				// 1-Dimensional array value equality
-				var a1 = new [] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
-				var A1 = new [] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 + err };
+				var a1 = new[] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
+				var A1 = new[] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 + err };
 				Assert.Equal(Array_.Equal(a1, A1), err == 0);
 
 				// 2-Dimensional array value equality
 				var v2 = 0.0;
-				var a2 = new double[3,4];
-				var A2 = new double[3,4];
+				var a2 = new double[3, 4];
+				var A2 = new double[3, 4];
 				for (int i = 0; i != a2.GetLength(0); ++i)
 					for (int j = 0; j != a2.GetLength(1); ++j)
 					{
-						a2[i,j] = v2;
-						A2[i,j] = v2 + err;
+						a2[i, j] = v2;
+						A2[i, j] = v2 + err;
 						v2 += 1.0;
 					}
 				Assert.Equal(Array_.Equal(a2, A2), err == 0);
 
 				// N-Dimensional array value equality
 				var v3 = 0.0;
-				var a3 = new double[2,3,4];
-				var A3 = new double[2,3,4];
+				var a3 = new double[2, 3, 4];
+				var A3 = new double[2, 3, 4];
 				for (int i = 0; i != a3.GetLength(0); ++i)
 					for (int j = 0; j != a3.GetLength(1); ++j)
 						for (int k = 0; k != a3.GetLength(2); ++k)
 						{
-							a3[i,j,k] = v3;
-							A3[i,j,k] = v3 + err;
+							a3[i, j, k] = v3;
+							A3[i, j, k] = v3 + err;
 							v3 += 1.0;
 						}
 				Assert.Equal(Array_.Equal(a3, A3), err == 0);
 			}
 		}
-		[Test] public void ByteArrayAs()
+		[Test]
+		public void ByteArrayAs()
 		{
-			var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-			var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
-			var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
+			var b0 = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 };
+			var b1 = new byte[] { 0x00, 0x00, 0x80, 0x3f };
+			var b2 = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F };
 			Assert.Equal((byte)0x01, b0.As<byte>());
 			Assert.Equal((ushort)0x0201, b0.As<ushort>());
 			Assert.Equal((uint)0x04030201U, b0.As<uint>());
@@ -529,14 +512,27 @@ namespace Rylogic.UnitTests
 			Assert.Equal((char)0x0201          ,b0.AsChar  ());
 #endif
 		}
-		[Test] public void ByteArrayAsStruct()
+		[Test]
+		public void ByteArrayAsStruct()
 		{
-			var b0 = new byte[]{0x01,0x02,0x03,0x04,0x41,0xAB};
+			var b0 = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x41, 0xAB };
 			var thing = b0.As<Thing>();
 
-			Assert.Equal(0x04030201 , thing.m_int );
-			Assert.Equal('A'        , thing.m_char);
-			Assert.Equal((byte)0xab , thing.m_byte);
+			Assert.Equal(0x04030201, thing.m_int);
+			Assert.Equal('A', thing.m_char);
+			Assert.Equal((byte)0xab, thing.m_byte);
+		}
+		[Test]
+		public void ByteArrayCompare()
+		{
+			byte[] lhs = new byte[] { 1, 2, 3, 4, 5 };
+			byte[] rhs = new byte[] { 3, 4, 5, 6, 7 };
+
+			Assert.Equal(-1, Array_.Compare(lhs, 0, 5, rhs, 0, 5));
+			Assert.Equal(0, Array_.Compare(lhs, 2, 3, rhs, 0, 3));
+			Assert.Equal(1, Array_.Compare(lhs, 3, 2, rhs, 0, 2));
+			Assert.Equal(-1, Array_.Compare(lhs, 2, 3, rhs, 0, 4));
+			Assert.Equal(1, Array_.Compare(lhs, 2, 3, rhs, 0, 2));
 		}
 	}
 }

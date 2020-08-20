@@ -176,7 +176,7 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
+	/// <summary>Returns visible if 'value' is a given type</summary>
 	public class VisibleIfType :MarkupExtension, IValueConverter
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -237,71 +237,49 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	///// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
-	//public class WithUnits : MarkupExtension, IValueConverter
-	//{
-	//	public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-	//	{
-	//		if (value == null)
-	//			return null;
+	/// <summary>Returns 'Visible' if an element in the collection matches a predicate</summary>
+	public class VisibleIfMatch :MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			// The binding should be an enumerable
+			if (!(value is IEnumerable collection))
+				return Visibility.Collapsed;
 
-	//		// The parameter is the format string
-	//		var fmt = (string)parameter ?? string.Empty;
+			if (!(parameter is string filter))
+				return Visibility.Collapsed;
 
-	//		// If 'value' is not an instance of 'Unit<>' just convert to string
-	//		var ty = value.GetType();
-	//		if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
-	//			return value.ToString();
+			try
+			{
+				var options = ScriptOptions.Default.AddReferences(
+					Assembly.GetEntryAssembly(),
+					Assembly.GetCallingAssembly(),
+					Assembly.GetExecutingAssembly(),
+					Assembly.GetAssembly(collection.GetType()));
 
-	//		// Find the method 'ToString(string fmt, bool include_units)'
-	//		var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
-	//		if (to_string == null)
-	//			return value.ToString();
+				// Compile the filter string into a lambda
+				var filter_func = CSharpScript.EvaluateAsync<Func<object?, bool>>(filter, options).Result;
+				foreach (var item in collection)
+				{
+					if (!filter_func(item)) continue;
+					return Visibility.Visible;
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Converter '{nameof(VisibleIfMatch)}' threw an error: {ex.Message}");
+			}
 
-	//		// Convert to string with units
-	//		return (string)to_string.Invoke(value, new object[] { fmt, true });
-	//	}
-	//	public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-	//	{
-	//		throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
-	//	}
-	//	public override object ProvideValue(IServiceProvider serviceProvider)
-	//	{
-	//		return this;
-	//	}
-	//}
-
-	///// <summary>Display a Unit'T value as a string without units. 'parameter' is the format string</summary>
-	//public class WithoutUnits :MarkupExtension, IValueConverter
-	//{
-	//	public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-	//	{
-	//		if (value == null)
-	//			return null;
-
-	//		// The parameter is the format string
-	//		var fmt = (string)parameter ?? string.Empty;
-
-	//		// If 'value' is not an instance of 'Unit<>' just convert to string
-	//		var ty = value.GetType();
-	//		if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
-	//			return value.ToString();
-
-	//		// Find the method 'ToString(string fmt, bool include_units)'
-	//		var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
-	//		if (to_string == null)
-	//			return value.ToString();
-
-	//		// Convert to string with units
-	//		return (string)to_string.Invoke(value, new object[] { fmt, false });
-	//	}
-	//	public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-	//	{
-	//		throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
-	//	}
-	//	public override object ProvideValue(IServiceProvider serviceProvider)
-	//	{
-	//		return this;
-	//	}
-	//}
+			// Not found
+			return Visibility.Collapsed;
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException($"MarkupExtension '{nameof(VisibleIfMatch)}' cannot convert visibility back to '{targetType.Name}'");
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
 }

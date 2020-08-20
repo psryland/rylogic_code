@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Extn;
 
@@ -123,6 +124,26 @@ namespace Rylogic.Gui.WPF
 				Result = DialogResult == true ? EResult.OK : EResult.Cancel;
 
 			base.OnClosed(e);
+		}
+		protected override Size MeasureOverride(Size availableSize)
+		{
+			const double MinAspect = 0.5;
+			const double MaxAspect = 5.0;
+			const double TargetAspect = (MinAspect + MaxAspect) * 0.5;
+
+			var sz = base.MeasureOverride(availableSize);
+			for (int attempts = 3; attempts-- != 0; )
+			{
+				var aspect = sz.Width / sz.Height;
+				if (aspect >= MinAspect && aspect < MaxAspect)
+					break;
+
+				// Change the size to a more desirable aspect ratio
+				var scale = aspect / TargetAspect;
+				if (scale > 1.0) sz = base.MeasureOverride(new Size(sz.Width / scale, double.PositiveInfinity));
+				if (scale < 1.0) sz = base.MeasureOverride(new Size(double.PositiveInfinity, sz.Height * scale));
+			}
+			return sz;
 		}
 
 		/// <summary>The result set by the selected button</summary>

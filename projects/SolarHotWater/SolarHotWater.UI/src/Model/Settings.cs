@@ -16,6 +16,8 @@ namespace SolarHotWater
 			SolarPollPeriod = TimeSpan.FromSeconds(10);
 			MonitorPeriod = TimeSpan.FromSeconds(1);
 			ReservePower = 0.2;
+			StartWithWindows = false;
+			EnableOnStartup = false;
 			Consumers = Array.Empty<Consumer>();
 
 			AutoSaveOnChanges = true;
@@ -69,6 +71,20 @@ namespace SolarHotWater
 		{
 			get => get<double>(nameof(ReservePower));
 			set => set(nameof(ReservePower), value);
+		}
+
+		/// <summary>Start the app with windows</summary>
+		public bool StartWithWindows
+		{
+			get => get<bool>(nameof(StartWithWindows));
+			set => set(nameof(StartWithWindows), value);
+		}
+
+		/// <summary>Log in to EweLink and start the monitor on app start</summary>
+		public bool EnableOnStartup
+		{
+			get => get<bool>(nameof(EnableOnStartup));
+			set => set(nameof(EnableOnStartup), value);
 		}
 
 		/// <summary>Consumer instances</summary>

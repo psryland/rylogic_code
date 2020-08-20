@@ -353,7 +353,9 @@ namespace pr
 		}
 		void Aspect(float aspect_w_by_h)
 		{
-			PR_ASSERT(PR_DBG, aspect_w_by_h > 0.0f && IsFinite(aspect_w_by_h), "");
+			if (aspect_w_by_h <= 0 || !IsFinite(aspect_w_by_h))
+				throw std::runtime_error("Aspect ratio value is invalid");
+
 			m_moved |= aspect_w_by_h != m_aspect;
 			m_aspect = aspect_w_by_h;
 		}
@@ -375,7 +377,8 @@ namespace pr
 		}
 		void FovY(float fovY)
 		{
-			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && IsFinite(fovY), "");
+			if (fovY <= 0.0f || fovY >= maths::tau_by_2 || !IsFinite(fovY))
+				throw std::runtime_error("FovY value is invalid");
 			
 			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
 			m_moved |= fovY != m_fovY;
@@ -385,8 +388,11 @@ namespace pr
 		// Set both X and Y axis field of view. Implies aspect ratio
 		void Fov(float fovX, float fovY)
 		{
-			PR_ASSERT(PR_DBG, IsFinite(fovX) && IsFinite(fovY), "");
-			PR_ASSERT(PR_DBG, fovX < maths::tau_by_2f && fovY < maths::tau_by_2f, "");
+			if (fovX <= 0.0f || fovX >= maths::tau_by_2 || !IsFinite(fovX))
+				throw std::runtime_error("FovX value is invalid");
+			if (fovY <= 0.0f || fovY >= maths::tau_by_2 || !IsFinite(fovY))
+				throw std::runtime_error("FovY value is invalid");
+
 			fovX = Clamp(fovX, maths::tinyf, maths::tau_by_2f);
 			fovY = Clamp(fovY, maths::tinyf, maths::tau_by_2f);
 			auto aspect = Tan(fovX/2) / Tan(fovY/2);
@@ -837,9 +843,10 @@ namespace pr
 				auto height = bbox_cs.SizeY();
 				auto aspect = width / height;
 
-				// Handle degeneracy
+				// Set the aspect ratio
 				if (aspect < maths::float_eps || !IsFinite(aspect))
 				{
+					// Handle degeneracy
 					const float min_aspect = maths::tinyf;
 					const float max_aspect = 1 / maths::tinyf;
 					if      (width  > maths::float_eps) height = width / max_aspect;
@@ -847,22 +854,27 @@ namespace pr
 					else { width = 1; height = 1; }
 					aspect = width / height;
 				}
+				Aspect(aspect);
 
-				// Choose the fields of view. If 'focus_dist' is given, then that determines
+				// Choose the field of view. If 'focus_dist' is given, then that determines
 				// the X,Y field of view. If not, choose a focus distance based on a view size
 				// equal to the average of 'width' and 'height' using the default FOV.
-				if (focus_dist == 0)
+				if (focus_dist != 0)
+				{
+					FovY(2.0f * ATan(0.5f * height / focus_dist));
+				}
+				else
 				{
 					auto size = (width + height) / 2.0f;
 					focus_dist = (0.5f * size) / Tan(0.5f * m_default_fovY);
+
+					// Allow for the depth of the bbox. Assume the W/H of the bbox are at the nearest
+					// face of the bbox to the camera. Unless, the bbox.radius.z is greater than the 
+					// default focus distance. In that case, just use the bbox.radius.z. The FoV will
+					// cover the centre of the bbox
+					auto d = 1.1f * sizez > focus_dist ? focus_dist : focus_dist - sizez;
+					FovY(2.0f * ATan(0.5f * height / d));
 				}
-
-				// Set the aspect ratio
-				auto d = focus_dist - sizez;
-
-				// Set the aspect and FOV based on the view of the bbox
-				Aspect(aspect);
-				FovY(2.0f * ATan(0.5f * height / d));
 			}
 			else
 			{

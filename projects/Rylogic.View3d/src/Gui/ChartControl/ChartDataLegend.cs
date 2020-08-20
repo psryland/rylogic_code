@@ -15,9 +15,10 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>A Legend element for a collection of ChartDataSeries</summary>
-	[Obsolete("Use ChartLegend instead")] public class ChartDataLegend : ChartControl.Element
+	public class ChartDataLegend : ChartControl.Element
 	{
 		// Notes:
+		//  - This is deprecated, prefer 'ChartLegend'.
 		//  - This legend automatically files chart elements of type ChartDataSeries
 		//    and adds them to the length, callers shouldn't have to do anything.
 

@@ -187,6 +187,14 @@ namespace Rylogic.Extn
 			if (Math.Abs(len - 0.0) < double.Epsilon) throw new DivideByZeroException("Cannot normalise a zero vector");
 			return new PointF((float)(pt.X / len), (float)(pt.Y / len));
 		}
+
+		/// <summary>Return the distance between to points</summary>
+		public static double Distance(Point lhs, Point rhs)
+		{
+			int dx = lhs.X - rhs.X;
+			int dy = lhs.Y - rhs.Y;
+			return Math.Sqrt(dx * dx + dy * dy);
+		}
 	}
 
 	public static class Size_

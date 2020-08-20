@@ -35,13 +35,22 @@ namespace SolarHotWater.UI
 			InspectDevice = Command.Create(this, InspectDeviceInternal);
 			ChangeColour = Command.Create(this, ChangeColourInternal);
 			ToggleSwitch = Command.Create(this, ToggleSwitchInternal);
+			ShowSchedule = Command.Create(this, ShowScheduleInternal);
+			ShowOptions = Command.Create(this, ShowOptionsInternal);
 			ShowLog = Command.Create(this, ShowLogInternal);
+			CloseApp = Command.Create(this, CloseAppInternal);
 
 			m_password.Password = Settings.Password;
 			DataContext = this;
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
+			if (!m_allow_shutdown)
+			{
+				e.Cancel = true;
+				Hide();
+				return;
+			}
 			if (!Model.Shutdown.IsCancellationRequested)
 			{
 				e.Cancel = true;
@@ -55,9 +64,11 @@ namespace SolarHotWater.UI
 		{
 			Chart = null!;
 			Model = null!;
+			Gui_.DisposeChildren(this);
 			base.OnClosed(e);
 			Log.Dispose();
 		}
+		private bool m_allow_shutdown;
 
 		/// <summary>App model</summary>
 		private Model Model
@@ -84,8 +95,7 @@ namespace SolarHotWater.UI
 					{
 						case nameof(Model.LastError):
 						{
-							NotifyPropertyChanged(nameof(StatusMessage));
-							NotifyPropertyChanged(nameof(StatusColour));
+							NotifyPropertyChanged(nameof(LastError));
 							break;
 						}
 						case nameof(Model.CanLogin):
@@ -201,20 +211,26 @@ namespace SolarHotWater.UI
 			set { }// Model.Sched (value);
 		}
 
-		/// <summary></summary>
-		public string StatusMessage => Model.LastError?.Message ?? "Idle";
+		/// <summary>The last reported error</summary>
+		public Exception? LastError => Model.LastError;
 
 		/// <summary></summary>
-		public Brush StatusColour => Model.LastError != null ? Brushes.Red : Brushes.Black;
+		public string VersionString => Util.AppVersion;
 
 		/// <summary>Log</summary>
 		public Command Login { get; }
 		private async void LoginInternal()
 		{
 			if (!Model.IsLoggedOn)
+			{
+				Log.Write(ELogLevel.Info, $"User initiated log in: {Settings.Username}");
 				await Model.Login(Settings.Username, m_password.Password);
+			}
 			else
+			{
+				Log.Write(ELogLevel.Info, "User initiated log out");
 				await Model.Logout();
+			}
 		}
 		private bool LoginCanExecute()
 		{
@@ -236,13 +252,12 @@ namespace SolarHotWater.UI
 		public Command RefreshDeviceInfo { get; }
 		private async void RefreshDeviceInfoInternal()
 		{
-			if (!(SelectedConsumer?.EweSwitch is EweSwitch sw))
+			if (SelectedConsumer == null)
 				return;
+
 			try
 			{
-				var info = await Ewe.GetDeviceInfo(sw.DeviceID, Model.Shutdown.Token);
-				if (info["params"] is JObject parms)
-					sw.Update(parms);
+				await Model.RefreshDeviceInfo(SelectedConsumer);
 			}
 			catch (Exception ex)
 			{
@@ -311,6 +326,34 @@ namespace SolarHotWater.UI
 			}
 		}
 
+		/// <summary>Show the Schedule UI</summary>
+		public Command ShowSchedule { get; }
+		private void ShowScheduleInternal()
+		{
+			if (m_sched_ui == null)
+			{
+				m_sched_ui = new Window();
+				m_sched_ui.Closed += delegate { m_sched_ui = null; };
+				m_sched_ui.Show();
+			}
+			m_sched_ui.Focus();
+		}
+		private Window? m_sched_ui;
+
+		/// <summary>Show the options UI</summary>
+		public Command ShowOptions { get; }
+		private void ShowOptionsInternal()
+		{
+			if (m_options_ui == null)
+			{
+				m_options_ui = new OptionsUI(this, Settings);
+				m_options_ui.Closed += delegate { m_options_ui = null; };
+				m_options_ui.Show();
+			}
+			m_options_ui.Focus();
+		}
+		private OptionsUI? m_options_ui;
+
 		/// <summary>Show the log window</summary>
 		public Command ShowLog { get; }
 		private void ShowLogInternal()
@@ -324,6 +367,14 @@ namespace SolarHotWater.UI
 			m_log_ui.Focus();
 		}
 		private LogUI? m_log_ui;
+
+		/// <summary>Shutdown the app</summary>
+		public Command CloseApp { get; }
+		private void CloseAppInternal()
+		{
+			m_allow_shutdown = true;
+			Close();
+		}
 
 		/// <summary>Reordered notification</summary>
 		private void HandleConsumersReordered(object sender, RoutedEventArgs args)
@@ -448,11 +499,15 @@ namespace SolarHotWater.UI
 						xrange = m_chart.XAxis.Range;
 					if (!e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 						yrange = m_chart.YAxis.Range;
-					else
+					else if (yrange != RangeF.Invalid)
 						yrange.Inflate(1.2);
 
-					e.ViewBBox = new BBox(new v4(xrange.Midf, yrange.Midf, 0f, 1f), new v4(xrange.Sizef / 2, yrange.Sizef / 2, 1f / 2, 0f));
-					e.Handled = true;
+					// If a valid range is found, return it
+					if (xrange != RangeF.Invalid && yrange != RangeF.Invalid)
+					{
+						e.ViewBBox = new BBox(new v4(xrange.Midf, yrange.Midf, 0f, 1f), new v4(xrange.Sizef / 2, yrange.Sizef / 2, 1f / 2, 0f));
+						e.Handled = true;
+					}
 				}
 			}
 		}

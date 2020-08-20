@@ -146,7 +146,7 @@ namespace Rylogic.Gui.WPF
 			public string Name { get; set; }
 
 			/// <summary>Default identity colour</summary>
-			public virtual Colour32 Colour => Colour32.Black;
+			public virtual Colour32 Colour { get; set; } = Colour32.Black;
 
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)

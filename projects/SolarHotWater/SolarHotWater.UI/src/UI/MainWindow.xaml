@@ -1,14 +1,16 @@
 ﻿<Window
 	x:Class="SolarHotWater.UI.MainWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
-    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-    xmlns:view3d="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
-    mc:Ignorable="d"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:view3d="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.View3d"
+	xmlns:tb="http://www.hardcodet.net/taskbar"
+	mc:Ignorable="d"
 	Title="Solar Hot Water"
+	Icon="{StaticResource coffee}"
 	ResizeMode="CanResizeWithGrip"
 	MinWidth="380"
 	MinHeight="300"
@@ -21,6 +23,21 @@
 			<!-- Window Context -->
 			<gui:DataContextRef x:Key="WindowCtx" Ctx="{Binding .}"/>
 
+			<!-- Notification Icon Menu -->
+			<ContextMenu
+				x:Key="NotificationCMenu"
+				>
+				<MenuItem
+					Header="Show Monitor"
+					FontWeight="Bold"
+					Command="{Binding ShowOwner}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Exit"
+					Command="{Binding Owner.CloseApp}"
+					/>
+			</ContextMenu>
 		</ResourceDictionary>
 	</Window.Resources>
 	<Grid>
@@ -113,7 +130,7 @@
 									Header="Consumer"
 									Binding="{Binding Name}"
 									CellStyle="{StaticResource StyleCellLeft}"
-									Width="8*"
+									Width="3*"
 									/>
 								<DataGridTextColumn
 									Header="Power"
@@ -128,11 +145,23 @@
 									>
 									<DataGridTemplateColumn.CellTemplate>
 										<DataTemplate>
-											<Image
-												Source="{Binding On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
-												RenderOptions.BitmapScalingMode="Fant"
-												Height="22"
-												/>
+											<StackPanel
+												Orientation="Horizontal"
+												>
+												<Image
+													Source="{Binding On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
+													RenderOptions.BitmapScalingMode="Fant"
+													Height="22"
+													/>
+												<gui:RadialProgressControl
+													Visibility="{Binding StateChangePending, Converter={conv:NullToCollapsed}, FallbackValue=Collapsed}"
+													Value="{Binding StateChangeFrac, Mode=OneWay}"
+													Minimum="0.0"
+													Maximum="1.0"
+													ArcWidth="50"
+													MaxHeight="22"
+													/>
+											</StackPanel>
 										</DataTemplate>
 									</DataGridTemplateColumn.CellTemplate>
 								</DataGridTemplateColumn>
@@ -195,7 +224,7 @@
 					</Grid>
 				</GroupBox>
 				
-				<!-- Login and Settings -->
+				<!-- Login, Solar, and Reserved -->
 				<StackPanel
 					Grid.Column="1"
 					Orientation="Vertical"
@@ -255,6 +284,7 @@
 								Grid.RowSpan="2"
 								Command="{Binding Login}"
 								IsEnabled="{Binding Login.Available}"
+								ToolTip="Connect to the eWeLink Cloud Service to receive switch state updates"
 								VerticalAlignment="Center"
 								Background="Transparent"
 								BorderThickness="0"
@@ -277,48 +307,28 @@
 						<TextBox
 							Text="{Binding Settings.SolarInverterIP}"
 							VerticalAlignment="Center"
+							ToolTip="The IP address of the Fronius Solar Inverter"
 							/>
 					</GroupBox>
 
-					<!-- Global Settings -->
+					<!-- Reserved Power -->
 					<GroupBox
 						Header="Reserved Power:"
 						Padding="3"
 						>
+						<!-- Reserve Power -->
 						<StackPanel
 							Orientation="Horizontal"
 							>
-							<!-- Reserve Power -->
-							<StackPanel
-								Orientation="Horizontal"
-								>
-								<TextBox
-									Text="{Binding Settings.ReservePower}"
-									HorizontalContentAlignment="Right"
-									MinWidth="50"
-									/>
-								<TextBlock
-									Text=" kWatts  "
-									VerticalAlignment="Center"
-									/>
-							</StackPanel>
-
-							<!-- Schedule -->
-							<StackPanel
-								Orientation="Vertical"
-								Margin="3,0,3,0"
-								Visibility="Collapsed"
-								>
-								<TextBlock
-									Text="Schedule: "
-									/>
-								<StackPanel
-									Orientation="Horizontal">
-									<TextBox
-										Text="{Binding Schedule}"
-										/>
-								</StackPanel>
-							</StackPanel>
+							<TextBox
+								Text="{Binding Settings.ReservePower}"
+								HorizontalContentAlignment="Right"
+								MinWidth="40"
+								/>
+							<TextBlock
+								Text=" kWatts"
+								VerticalAlignment="Center"
+								/>
 						</StackPanel>
 					</GroupBox>
 				</StackPanel>
@@ -332,6 +342,7 @@
 					<Button
 						IsEnabled="{Binding ToggleEnableMonitor.Available}"
 						Command="{Binding ToggleEnableMonitor}"
+						ToolTip="Enable/Disable the monitor to turn consumers on/off based on available solar power"
 						HorizontalAlignment="Center"
 						VerticalAlignment="Top"
 						Background="Transparent"
@@ -344,25 +355,58 @@
 							/>
 					</Button>
 
-					<!-- Calender -->
-					<GroupBox
-						Header="Calender"
-						Visibility="Collapsed"
+					<!-- Tool Buttons -->
+					<WrapPanel
+						Orientation="Horizontal"
 						>
-					</GroupBox>
+						<!-- Calender -->
+						<Button
+							Command="{Binding ShowSchedule}"
+							ToolTip="Monitor active schedule"
+							Background="Transparent"
+							BorderThickness="0"
+							>
+							<Image
+								Source="{StaticResource clock}"
+								RenderOptions.BitmapScalingMode="Fant"
+								MaxHeight="28"
+								/>
+						</Button>
 
-					<!-- Log -->
-					<Button
-						Command="{Binding ShowLog}"
-						Background="Transparent"
-						BorderThickness="0"
-						>
-						<Image
-							Source="{StaticResource log_file}"
-							RenderOptions.BitmapScalingMode="Fant"
-							MaxHeight="48"
-							/>
-					</Button>
+						<!-- Options -->
+						<Button
+							Command="{Binding ShowOptions}"
+							ToolTip="Application settings"
+							Background="Transparent"
+							BorderThickness="0"
+							>
+							<Image
+								Source="{StaticResource options}"
+								RenderOptions.BitmapScalingMode="Fant"
+								MaxHeight="28"
+								/>
+						</Button>
+
+						<!-- Log -->
+						<Button
+							Command="{Binding ShowLog}"
+							ToolTip="Application log"
+							Background="Transparent"
+							BorderThickness="0"
+							>
+							<Image
+								Source="{StaticResource log_file}"
+								RenderOptions.BitmapScalingMode="Fant"
+								MaxHeight="28"
+								/>
+						</Button>
+					</WrapPanel>
+
+					<!-- Version -->
+					<TextBlock
+						Text="{Binding VersionString, StringFormat=v{0}}"
+						HorizontalAlignment="Center"
+						/>
 				</StackPanel>
 			</Grid>
 
@@ -578,6 +622,24 @@
 							>
 							<Image
 								Source="{Binding SelectedConsumer.On, Converter={conv:BoolSelect}, ConverterParameter='light_bulb_on|light_bulb_off'}"
+								RenderOptions.BitmapScalingMode="Fant"
+								/>
+						</Button>
+						
+						<!-- Refresh State button -->
+						<Button
+							Command="{Binding RefreshDeviceInfo}"
+							Visibility="{Binding SelectedConsumer, Converter={conv:NullToCollapsed}}"
+							VerticalAlignment="Center"
+							HorizontalAlignment="Left"
+							Background="Transparent"
+							BorderThickness="1"
+							BorderBrush="#CCC"
+							MaxHeight="24"
+							Margin="3"
+							>
+							<Image
+								Source="{StaticResource refresh}"
 								RenderOptions.BitmapScalingMode="Fant"
 								/>
 						</Button>
@@ -836,9 +898,16 @@
 			BorderBrush="{x:Static SystemColors.ControlLightBrush}"
 			>
 			<StatusBarItem
-				Content="{Binding StatusMessage, FallbackValue='Idle'}"
-				Foreground="{Binding StatusColour, FallbackValue='Green'}"
+				Content="{Binding LastError.Message, FallbackValue='Idle'}"
+				Foreground="{Binding LastError, Converter={conv:BoolSelect}, ConverterParameter='Red|Black'}"
 				/>
 		</StatusBar>
+
+		<!-- Notification Tray -->
+		<gui:NotificationIcon
+			ContextMenu="{StaticResource NotificationCMenu}"
+			ToolTipText="Solar Hot Water "
+			/>
+
 	</Grid>
 </Window>

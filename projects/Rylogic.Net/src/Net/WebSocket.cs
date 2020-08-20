@@ -55,7 +55,9 @@ namespace Rylogic.Net
 		private CancellationToken Shutdown { get; }
 
 		/// <summary></summary>
-		public bool Healthy => Socket is ClientWebSocket socket && (socket.State == WebSocketState.Open || socket.State == WebSocketState.Connecting);
+		public bool Healthy =>
+			Socket is ClientWebSocket ws &&
+			(ws.State == WebSocketState.Open || ws.State == WebSocketState.Connecting);
 
 		/// <summary>Connect the web socket</summary>
 		public async Task Connect(string endpoint)
@@ -90,29 +92,34 @@ namespace Rylogic.Net
 		{
 			try
 			{
-				if (Socket.State != WebSocketState.Open)
-					return;
+				// Stop the heartbeat timer
+				Heartbeat = TimeSpan.Zero;
 
-				await Socket.CloseAsync(status, status.ToString(), Shutdown);
-				if (Socket.State == WebSocketState.Closed)
+				// Close the socket if open
+				if (Socket.State == WebSocketState.Open ||
+					Socket.State == WebSocketState.CloseReceived)
 				{
-					var a = new CloseEventArgs(status, reason ?? string.Empty);
-					OnClose?.Invoke(this, a);
+					await Socket.CloseAsync(status, status.ToString(), Shutdown);
+					if (Socket.State == WebSocketState.Closed)
+					{
+						var a = new CloseEventArgs(status, reason ?? string.Empty);
+						OnClose?.Invoke(this, a);
+					}
+					else
+					{
+						var a = new ErrorEventArgs($"WebSocket: Graceful close failed. State = {Socket.State}", new Exception("Graceful close failed"));
+						OnError?.Invoke(this, a);
+					}
 				}
-				else
-				{
-					var a = new ErrorEventArgs($"WebSocket: Graceful close failed. State = {Socket.State}", new Exception("Graceful close failed"));
-					OnError?.Invoke(this, a);
-				}
-
-				// Can't recycle sockets
-				Socket = new ClientWebSocket();
 			}
 			catch (Exception ex)
 			{
 				var a = new ErrorEventArgs("WebSocket: Close connection failed", ex);
 				OnError?.Invoke(this, a);
 			}
+
+			// Can't recycle sockets
+			Socket = new ClientWebSocket();
 		}
 
 		/// <summary>Heartbeat timer. Set to zero to disable. If enabled, calls 'OnHeartbeat' periodically</summary>
@@ -163,7 +170,7 @@ namespace Rylogic.Net
 				}
 
 				// Thread entry point
-				void ListenEntryPoint(object? args)
+				async void ListenEntryPoint(object? args)
 				{
 					var exit = (CancellationToken)args!;
 					try
@@ -177,7 +184,7 @@ namespace Rylogic.Net
 							for (; !result.EndOfMessage;)
 							{
 								// Wait for a message from the server
-								result = Socket.ReceiveAsync(new ArraySegment<byte>(buffer), exit).Result;
+								result = await Socket.ReceiveAsync(new ArraySegment<byte>(buffer), exit);
 								if (result.MessageType == WebSocketMessageType.Close)
 								{
 									Close(WebSocketCloseStatus.NormalClosure).Wait();
@@ -197,11 +204,15 @@ namespace Rylogic.Net
 							}
 						}
 					}
+					catch (OperationCanceledException) { }
 					catch (Exception ex)
 					{
-						if (ex.InnerException is OperationCanceledException) return;
 						var a = new ErrorEventArgs($"WebSocket: Error receiving data", ex);
 						Sync.Post(_ => OnError?.Invoke(this, a), null);
+					}
+					finally
+					{
+						Sync.Post(_ => Listening = false, null);
 					}
 				}
 			}

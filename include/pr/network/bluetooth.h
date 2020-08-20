@@ -234,7 +234,7 @@ namespace pr::network
 			for (;!m_services.empty();)
 				WithdrawService(m_services.back());
 		}
-			
+
 		// Bluetooth servers register services with the OS which clients query in order
 		// to establish the port to connect to (since only ports 1-31 are valid in RFCOMM).
 		// Services are typically registered just before the server 'accepts' incoming connections

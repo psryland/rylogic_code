@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows;
+using Rylogic.Extn;
 using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
 [assembly: ThemeInfo(
@@ -13,6 +15,10 @@ namespace SolarHotWater.UI
 {
 	public partial class App :Application
 	{
+		static App()
+		{
+			WPFUtil.WaitForDebugger();
+		}
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			base.OnStartup(e);
@@ -24,10 +30,10 @@ namespace SolarHotWater.UI
 			}
 			catch (Exception ex)
 			{
+				if (Debugger.IsAttached) throw;
 				Log.Write(ELogLevel.Fatal, ex, "Application startup failure");
-				#if DEBUG
-				throw;
-				#endif
+				MsgBox.Show(null, $"Application startup failure: {ex.MessageFull()}", Util.AppProductName, MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+				Shutdown();
 			}
 		}
 	}

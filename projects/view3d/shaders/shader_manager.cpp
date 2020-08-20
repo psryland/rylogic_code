@@ -88,12 +88,21 @@ namespace pr::rdr
 		}
 
 		// Doesn't already exist, or the caller wants a new instance
-		auto res = create();
+		try
+		{
+			auto res = create();
 
-		// Add it to the lookup
-		id = id == AutoId ? MakeId(res.m_ptr) : id;
-		AddLookup(lookup, id, res);
-		return std::move(res);
+			// Add it to the lookup
+			id = id == AutoId ? MakeId(res.m_ptr) : id;
+			AddLookup(lookup, id, res);
+			return std::move(res);
+		}
+		catch (std::exception& ex)
+		{
+			// This is a slicing assignment, but that is actually what we want
+			ex = std::exception(FmtS("%s\n Shader Id: %d (%s)", ex.what(), id, EStockShader_::ToStringA(id)));
+			throw; // Preserves original exception type
+		}
 	}
 
 	// Get (or create) an input layout
@@ -131,7 +140,7 @@ namespace pr::rdr
 			// Attach the input layout as private data to the vertex shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11VertexShader> vs;
-			pr::Throw(lock1.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
+			pr::Throw(lock1.D3DDevice()->CreateVertexShader(desc->m_data, desc->m_size, nullptr, &vs.m_ptr));
 			return std::move(vs);
 		});
 	}
@@ -149,7 +158,7 @@ namespace pr::rdr
 			// Create the pixel shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11PixelShader> ps;
-			pr::Throw(lock1.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, 0, &ps.m_ptr));
+			Throw(lock1.D3DDevice()->CreatePixelShader(desc->m_data, desc->m_size, nullptr, &ps.m_ptr), "Failed to create pixel shader.");
 			return std::move(ps);
 		});
 	}
@@ -167,7 +176,7 @@ namespace pr::rdr
 			// Create the geometry shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11GeometryShader> gs;
-			pr::Throw(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
+			pr::Throw(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, nullptr, &gs.m_ptr));
 			return std::move(gs);
 		});
 	}
@@ -201,7 +210,7 @@ namespace pr::rdr
 			// Create the pixel shader
 			Renderer::Lock lock1(m_rdr);
 			D3DPtr<ID3D11ComputeShader> cs;
-			pr::Throw(lock1.D3DDevice()->CreateComputeShader(desc->m_data, desc->m_size, 0, &cs.m_ptr));
+			pr::Throw(lock1.D3DDevice()->CreateComputeShader(desc->m_data, desc->m_size, nullptr, &cs.m_ptr));
 			return std::move(cs);
 		});
 	}

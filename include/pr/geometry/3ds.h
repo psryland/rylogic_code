@@ -682,7 +682,7 @@ namespace pr::geometry::max_3ds
 			auto const& mat = mats(mgrp.m_name);
 			auto topo = ETopo::TriList;
 			auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : EGeom::None);
-			
+
 			// Write out each face that belongs to this group
 			irange.m_beg = irange.m_end;
 			vrange = Range<size_t>::Reset();
