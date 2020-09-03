@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Markup;
+using Rylogic.Extn;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -13,11 +14,45 @@ namespace Rylogic.Gui.WPF.Converters
 		//  - Scale a value by the given parameter
 		public object? Convert(object value, Type target_type, object parameter, CultureInfo culture)
 		{
-			return System.Convert.ToDouble(value) * System.Convert.ToDouble(parameter);
+			try
+			{
+				var scale =
+					parameter is double d ? d :
+					System.Convert.ToDouble(parameter);
+
+				// Trim anything that isn't a digit, minus sign, or decimal point
+				var num =
+					value is double vd ? vd :
+					value is string vs ? System.Convert.ToDouble(vs.Strip(x => !char.IsDigit(x) && x != '.' && x != '-')) :
+					System.Convert.ToDouble(value);
+
+				return System.Convert.ChangeType(num * scale, target_type);
+			}
+			catch
+			{
+				return null;
+			}
 		}
 		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
-			return System.Convert.ToDouble(value) / System.Convert.ToDouble(parameter);
+			try
+			{
+				var scale =
+					parameter is double sd ? sd :
+					System.Convert.ToDouble(parameter);
+
+				// Trim anything that isn't a digit, minus sign, or decimal point
+				var num =
+					value is double vd ? vd :
+					value is string vs ? System.Convert.ToDouble(vs.Strip(x => !char.IsDigit(x) && x != '.' && x != '-')) :
+					System.Convert.ToDouble(value);
+
+				return System.Convert.ChangeType(num / scale, target_type);
+			}
+			catch
+			{
+				return null;
+			}
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{

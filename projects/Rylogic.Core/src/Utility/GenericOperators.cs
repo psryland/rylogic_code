@@ -10,8 +10,11 @@ namespace Rylogic.Utility
 	public static class Operators<T>
 	{
 		// Notes:
-		//  This class does not support integer types smaller than 'int' because the function
-		//  signatures for 'Plus', 'Neg' are not the same as for types >= 'int' (i.e. +(byte)1 returns an int)
+		//  - This class does not support integer types smaller than 'int' because the function
+		//    signatures for 'Plus', 'Neg' are not the same as for types >= 'int' (i.e. +(byte)1 returns an int)
+		//  - If you get 'InvalidOperationException's in here, it's because instantiating 'Operators<YourType>' is
+		//    not possible for one or more of the operators. You'll need to specialise to handle the type.
+		//  - Try to write these as: if (positive_logic) {} else if (positive_logic) {} else { failure function }
 		static Operators()
 		{
 			#region MaxValue
@@ -19,11 +22,17 @@ namespace Rylogic.Utility
 				var mi = typeof(T).GetProperty("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
 				var fi = typeof(T).GetField("MaxValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
 				if (mi != null)
+				{
 					m_max_value = () => (T)mi.Invoke(null, null)!;
+				}
 				else if (fi != null)
+				{
 					m_max_value = () => (T)fi.GetValue(null)!;
+				}
 				else
+				{
 					m_max_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MaxValue'"); };
+				}
 			}
 			#endregion
 			#region MinValue
@@ -31,24 +40,30 @@ namespace Rylogic.Utility
 				var mi = typeof(T).GetProperty("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy)?.GetGetMethod();
 				var fi = typeof(T).GetField("MinValue", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy);
 				if (mi != null)
+				{
 					m_min_value = () => (T)mi.Invoke(null, null)!;
+				}
 				else if (fi != null)
+				{
 					m_min_value = () => (T)fi.GetValue(null)!;
+				}
 				else
+				{
 					m_min_value = () => { throw new Exception($"Type {typeof(T).Name} has no static property or field named 'MinValue'"); };
+				}
 			}
 			#endregion
 			#region Plus
 			{
-				if (typeof(T).IsEnum)
-				{
-					m_plus = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Plus operator"); };
-				}
-				else
+				if (!typeof(T).IsEnum)
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var body = Expression.UnaryPlus(paramA);
 					m_plus = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
+				else
+				{
+					m_plus = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Plus operator"); };
 				}
 			}
 			#endregion
@@ -67,15 +82,15 @@ namespace Rylogic.Utility
 					var body = Expression.Subtract(Expression.Constant(0UL), paramA);
 					m_neg = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
 				}
-				else if (typeof(T).IsEnum)
-				{
-					m_neg = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Minus operator"); };
-				}
-				else
+				else if (!typeof(T).IsEnum)
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var body = Expression.Negate(paramA);
 					m_neg = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
+				else
+				{
+					m_neg = x => { throw new Exception($"Type {typeof(T).Name} does not define the Unary Minus operator"); };
 				}
 			}
 			#endregion
@@ -110,62 +125,64 @@ namespace Rylogic.Utility
 			#endregion
 			#region Add
 			{
-				if (typeof(T).IsEnum)
-				{
-					m_add = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Add operator"); };
-				}
-				else
+				if (!typeof(T).IsEnum)
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var body = Expression.Add(paramA, paramB);
 					m_add = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
 				}
+				else
+				{
+					m_add = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the Add operator"); };
+				}
 			}
 			#endregion
 			#region Sub
 			{
-				if (typeof(T).IsEnum)
-				{
-					m_sub = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Subtraction operator"); };
-				}
-				else
+				if (!typeof(T).IsEnum)
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var body = Expression.Subtract(paramA, paramB);
 					m_sub = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
 				}
+				else
+				{
+					m_sub = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the Subtraction operator"); };
+				}
 			}
 			#endregion
 			#region Multiply
 			{
-				if (typeof(T).IsEnum)
-				{
-					m_mul = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Multiplication operator"); };
-				}
-				else
+				if (!typeof(T).IsEnum &&
+					typeof(T) != typeof(TimeSpan))
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var body = Expression.Multiply(paramA, paramB);
 					m_mul = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
 				}
+				else
+				{
+					m_mul = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the Multiplication operator"); };
+				}
 			}
 			#endregion
 			#region Divide
 			{
-				if (typeof(T).IsEnum ||
-					Math_.IsVecMatType(typeof(T)))
-				{
-					m_div = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Division operator"); };
-				}
-				else
+				if (!typeof(T).IsEnum &&
+					typeof(T) != typeof(TimeSpan) &&
+					!Math_.IsVecMatType(typeof(T)))
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var body = Expression.Divide(paramA, paramB);
 					m_div = Expression.Lambda<Func<T, T, T>>(body, paramA, paramB).Compile();
+				}
+				else
+				{
+					m_div = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the Division operator"); };
 				}
 			}
 			#endregion
@@ -253,16 +270,16 @@ namespace Rylogic.Utility
 					m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
 
 				}
-				else if (Math_.IsVecMatType(typeof(T)))
-				{
-					m_less = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the LessThan operator"); };
-				}
-				else
+				else if (!Math_.IsVecMatType(typeof(T)))
 				{
 					var paramA = Expression.Parameter(typeof(T), "a");
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var body = Expression.LessThan(paramA, paramB);
 					m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
+				}
+				else
+				{
+					m_less = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the LessThan operator"); };
 				}
 			}
 			#endregion
@@ -283,9 +300,13 @@ namespace Rylogic.Utility
 			{
 				var mi = typeof(T).GetMethod("Parse", BindingFlags.Public|BindingFlags.Static|BindingFlags.FlattenHierarchy, null, new Type[]{ typeof(string) }, null);
 				if (mi != null)
-					m_parse = s => (T)mi.Invoke(null, new object[]{ s })!;
+				{
+					m_parse = s => (T)mi.Invoke(null, new object[] { s })!;
+				}
 				else
+				{
 					m_parse = s => { throw new Exception($"Type {typeof(T).Name} has no static method named 'Parse'"); };
+				}
 			}
 			#endregion
 		}

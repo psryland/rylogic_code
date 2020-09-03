@@ -147,6 +147,10 @@ namespace TestWPF
 			{
 				new RadialProgressUI { Owner = this }.Show();
 			});
+			ShowTextEditorUI = Command.Create(this, () =>
+			{
+				new TextEditorUI { Owner = this }.Show();
+			});
 			ShowToolWindow = Command.Create(this, () =>
 			{
 				new ToolUI { Owner = this }.Show();
@@ -176,6 +180,7 @@ namespace TestWPF
 		public Command ShowProgressUI { get; }
 		public Command ShowPromptUI { get; }
 		public Command ShowRadialProgressUI { get; }
+		public Command ShowTextEditorUI { get; }
 		public Command ShowToolWindow { get; }
 		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }

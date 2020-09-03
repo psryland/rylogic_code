@@ -777,14 +777,11 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The highlighting patterns</summary>
 			IEnumerable<HLPattern> Highlighting { get; }
 
-			/// <summary>The time point of when the log started</summary>
-			DateTimeOffset Epoch { get; }
-
 			/// <summary>Format string for timestamps</summary>
-			string TimestampFormat { get; }
+			string? TimestampFormat { get; }
 
 			/// <summary>Format string for elapsed time</summary>
-			string ElapsedFormat { get; }
+			string? ElapsedFormat { get; }
 		}
 
 		/// <summary>A single log entry</summary>
@@ -817,11 +814,11 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>The time since the log was started</summary>
 			public TimeSpan Elapsed => Read(nameof(Elapsed), x => TimeSpan_.TryParse(x)) ?? TimeSpan.Zero;
-			public string ElapsedFormatted => Elapsed.ToStringOptional(m_provider.ElapsedFormat);
+			public string ElapsedFormatted => Elapsed.ToStringOptional(m_provider.ElapsedFormat ?? @"[d\.\ ][hh\:][mm\:]ss\.fff");
 
 			/// <summary>The time point of the log entry</summary>
-			public DateTimeOffset Timestamp => Read(nameof(Timestamp), x => DateTimeOffset_.TryParse(x)) ?? m_provider.Epoch + Elapsed;
-			public string TimestampFormatted => Timestamp.ToString(m_provider.TimestampFormat);
+			public DateTimeOffset Timestamp => Read(nameof(Timestamp), x => DateTimeOffset_.TryParse(x)) ?? DateTimeOffset.MinValue;
+			public string TimestampFormatted => Timestamp.ToString(m_provider.TimestampFormat ?? "yyyy-MM-dd HH:mm:ss.fff");
 
 			/// <summary>The log entry message</summary>
 			public string Message => Read(nameof(Message), x => x) ?? string.Empty;

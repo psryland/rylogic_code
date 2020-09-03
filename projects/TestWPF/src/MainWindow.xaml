@@ -35,6 +35,7 @@
 				<MenuItem Header="_Joystick" Command="{Binding ShowJoystick}"/>
 				<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
 				<MenuItem Header="_Scintilla" Command="{Binding ScintillaUI}"/>
+				<MenuItem Header="_TextEditor" Command="{Binding ShowTextEditorUI}"/>
 				<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 			</MenuItem>
 			<MenuItem Header="_Dialogs">

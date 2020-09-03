@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -12,12 +12,14 @@ namespace Rylogic.Container
 		where Out : notnull
 	{
 		// Notes:
-		//  - 'In' list can be modified if it is dynamic castable to IList<In> and 'update' is provided.
 		//  - Used to make a list of type 'In' appear like a list of 'Out'
 		//  - Intended for Binding where 'Out' is a wrapper of 'In'
+		//  - 'In' list can be modified if it is dynamically castable to IList<In>
+		//  - 'Update' is required to add/insert items into the list.
 		//  - Only need to call Dispose if 'Out' is disposable
 		//  - ObservableCollection can cause problems because it notifies during 'Refresh'
-		//    This is why I'm using List and implementing INotifyCollectionChanged manually.
+		//    This is why I'm using List<Pair> for the Out instances and implementing INotifyCollectionChanged manually.
+		//  - Ownership of 'Out' instances is handled by this class. If 'Out' is disposable it will be automatically called.
 
 		public ListAdapter(IReadOnlyList<In> list, Func<In, Out> factory, Func<Out, In>? update = null)
 		{
@@ -120,23 +122,11 @@ namespace Rylogic.Container
 			// Notify Collection changed (now that List and Source are in sync)
 			// ICollectionView doesn't support range actions, so need to notify once for each item
 			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-			//if (m_recycler.Count != 0)
-			//{
-			//	foreach (var item in m_recycler.Values)
-			//		CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
-			//}
-			//if (new_items.Count != 0)
-			//{
-			//	foreach (var item in new_items)
-			//		CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
-			//}
 
-			// Call dispose on left over 'Out's (if disposable)
-			if (typeof(IDisposable).IsAssignableFrom(typeof(Out)))
-			{
-				foreach (var x in m_recycler.Values.Cast<IDisposable>())
-					x.Dispose();
-			}
+			// Call dispose on left-over 'Out's (if disposable)
+			// Remember 'Out' could be object, so only some of the items might be disposable.
+			foreach (var x in m_recycler.Values.OfType<IDisposable>())
+				x.Dispose();
 
 			// Drop any unused items
 			m_recycler.Clear();
@@ -153,7 +143,7 @@ namespace Rylogic.Container
 		public int Count => List.Count;
 
 		/// <inheritdoc/>
-		public bool IsReadOnly => Update == null || !(EditableSource is IList<In> src) || src.IsReadOnly;
+		public bool IsReadOnly => !(EditableSource is IList<In> src) || src.IsReadOnly;
 		bool IList.IsFixedSize => !(Source is IList src) || src.IsFixedSize;
 
 		/// <inheritdoc/>
@@ -193,14 +183,16 @@ namespace Rylogic.Container
 		/// <inheritdoc/>
 		public void Add(Out item)
 		{
-			if (Update == null || !(EditableSource is IList<In> source))
+			if (!(EditableSource is IList<In> source) || Update == null)
 				throw new NotSupportedException($"No update method has been provided for creating new source instances");
 
 			// Add to 'List' first in case 'Source' is observable.
 			// This means 'List' should already be synchronised when 'Source' is changed;
 			var src = Update(item);
-			List.Add(new Pair { Src = src, Dst = Factory(src) });
+			var pair = new Pair { Src = src, Dst = Factory(src) };
+			List.Add(pair);
 			source.Add(src);
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, pair.Dst));
 		}
 		int IList.Add(object? value)
 		{
@@ -211,15 +203,17 @@ namespace Rylogic.Container
 		/// <inheritdoc/>
 		public void Insert(int index, Out item)
 		{
-			if (Update == null || !(EditableSource is IList<In> source))
+			if (!(EditableSource is IList<In> source) || Update == null)
 				throw new NotSupportedException($"No update method has been provided for creating new source instances");
 
 
 			// Add to 'List' first in case 'Source' is observable.
 			// This means 'List' should already be synchronised when 'Source' is changed;
 			var src = Update(item);
-			List.Insert(index, new Pair { Src = src, Dst = Factory(src) });
+			var pair = new Pair { Src = src, Dst = Factory(src) };
+			List.Insert(index, pair);
 			source.Insert(index, src);
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, pair.Dst, index));
 		}
 		void IList.Insert(int index, object? value)
 		{
@@ -229,7 +223,15 @@ namespace Rylogic.Container
 		/// <inheritdoc/>
 		public void RemoveAt(int index)
 		{
+			if (!(EditableSource is IList<In> source))
+				throw new NotSupportedException($"Underlying list is not editable");
+
+			var item = List[index];
+			source.RemoveAt(index);
 			List.RemoveAt(index);
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item.Dst, index));
+			if (item.Dst is IDisposable disposable)
+				disposable.Dispose();
 		}
 
 		/// <inheritdoc/>
@@ -255,6 +257,7 @@ namespace Rylogic.Container
 
 			source.Clear();
 			List.Clear();
+			CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 		}
 
 		/// <inheritdoc/>

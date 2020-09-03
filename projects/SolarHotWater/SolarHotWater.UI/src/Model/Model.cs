@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -116,7 +116,7 @@ namespace SolarHotWater
 						case nameof(SettingsData.Consumers):
 						{
 							// Synchronise the consumer list with the settings
-							ConsumersList.SyncStable(Settings.Consumers, (l,r) => Equals(l, r.Settings), settings =>
+							ConsumersList.SyncStable(Settings.Consumers, (l,r) => Equals(l, r.Settings), (settings,_) =>
 							{
 								var consumer = new Consumer(settings);
 								consumer.PropertyChanged += WeakRef.MakeWeak(HandleConsumerPropertyChanged, h => consumer.PropertyChanged -= h);

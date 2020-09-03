@@ -1,4 +1,4 @@
-﻿//***************************************************
+//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -118,8 +118,17 @@ namespace Rylogic.Extn
 		}
 		public static void Resize<T>(this List<T> list, int newsize, Func<T> factory)
 		{
-			if      (list.Count > newsize) list.RemoveRange(newsize, list.Count - newsize);
-			else if (list.Count < newsize) for (int i = list.Count; i != newsize; ++i) list.Add(factory());
+			if (list.Count > newsize)
+			{
+				list.RemoveRange(newsize, list.Count - newsize);
+			}
+			else if (list.Count < newsize)
+			{
+				if (list.Capacity < newsize)
+					list.Capacity = newsize;
+				for (int i = list.Count; i != newsize; ++i)
+					list.Add(factory());
+			}
 		}
 
 		/// <summary>True if 'index' >= 0 && 'index' < list.Count</summary>
@@ -541,8 +550,10 @@ namespace Rylogic.Extn
 			Sync(list, set.Cast<object>().ToHashSet());
 		}
 
-		/// <summary>Update this list with elements from 'source' using minimal changes</summary>
-		public static void SyncStable<T,U>(this IList<T> list, IEnumerable<U> source, Func<U,T,bool> eql, Func<U,T> factory)
+		/// <summary>
+		/// Update this list with elements from 'source' using minimal changes.
+		/// Factory signature: 'T factory(U source_item, int index)'</summary>
+		public static void SyncStable<T,U>(this IList<T> list, IEnumerable<U> source, Func<U,T,bool> eql, Func<U, int, T> factory)
 		{
 			// This method is mainly useful for observable collections used as
 			// backing stores for enumerated data. It ensures a 1-to-1 mapping between
@@ -574,23 +585,24 @@ namespace Rylogic.Extn
 				{
 					// Replace the i'th item with the saved item
 					// list[i+1] already == iter.Current;
-					list[i++] = factory(save);
+					list[i] = factory(save, i);
+					++i;
 					continue;
 				}
 
 				// Remove [i, Count) and add the saved item
 				list.RemoveRange(i, list.Count - i, dispose: false);
-				list.Add(factory(save));
+				list.Add(factory(save, list.Count));
 				break;
 			}
 
 			// Copy any remaining elements to 'list'
 			for (; next; next = iter.MoveNext())
-				list.Add(factory(iter.Current));
+				list.Add(factory(iter.Current, list.Count));
 		}
 		public static void SyncStable<T>(this IList<T> list, IEnumerable<T> source)
 		{
-			SyncStable(list, source, (l,r) => Equals(l,r), x => x);
+			SyncStable(list, source, (l,r) => Equals(l,r), (x,i) => x);
 		}
 
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>
