@@ -188,7 +188,7 @@ class Audio(Native):
 # View3d native dll
 class View3d(Native):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Native.__init__(self, "audio", workspace, platforms, configs)
+		Native.__init__(self, "view3d", workspace, platforms, configs)
 		return
 
 	def Clean(self):

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
@@ -529,7 +529,7 @@ namespace Rylogic.Maths
 						var args = new Expression[2];
 						if (!Eval(expr, ref i, vars, args, 0, ETok.None)) return false;
 						if (args[0] == null || args[1] == null) throw new Exception("incomplete if-else");
-						result[ridx] = Expression.IfThenElse(result[ridx], args[0], args[1]);
+						result[ridx] = Expression.Condition(result[ridx], args[0], args[1]);
 						break;
 					}
 				case ETok.Else:

@@ -20,6 +20,7 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding OriginPointVisible, Mode=OneWay}"
 		Command="{Binding ToggleOriginPoint}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Origin"
 		/>
 	<MenuItem x:Key="View3dMenuItem_Focus" x:Shared="False"
@@ -27,6 +28,7 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding FocusPointVisible, Mode=OneWay}"
 		Command="{Binding ToggleFocusPoint}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Focus"
 		/>
 	<MenuItem x:Key="View3dMenuItem_BoundingBoxes" x:Shared="False"
@@ -34,6 +36,7 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding BBoxesVisible, Mode=OneWay}"
 		Command="{Binding ToggleBBoxesVisible}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_BoundingBoxes"
 		/>
 	<MenuItem x:Key="View3dMenuItem_SelectionBox" x:Shared="False"
@@ -41,11 +44,13 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding SelectionBoxVisible, Mode=OneWay}"
 		Command="{Binding ToggleSelectionBox}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_SelectionBox"
 		/>
 	<MenuItem x:Key="View3dMenuItem_AutoRangeView" x:Shared="False"
 		Command="{Binding AutoRangeView}"
 		CommandParameter="{Binding AutoRangeBounds}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_AutoRangeView"
 		>
 		<MenuItem.Header>
@@ -71,10 +76,12 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding Orthographic, Mode=OneWay}"
 		Command="{Binding ToggleOrthographic}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Orthographic"
 		/>
 	<MenuItem x:Key="View3dMenuItem_AlignUp" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_AlignUp"
 		>
 		<MenuItem.Header>
@@ -103,6 +110,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_ViewPresets" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_ViewPresets"
 		>
 		<MenuItem.Header>
@@ -131,6 +139,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_SavedViews" x:Shared="False"
 		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_SavedViews"
 		>
 		<MenuItem.Header>
@@ -196,6 +205,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_BackgroundColour" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_BackgroundColour"
 		>
 		<MenuItem.Header>
@@ -230,10 +240,12 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding Antialiasing, Mode=OneWay}"
 		Command="{Binding ToggleAntialiasing}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Antialiasing"
 		/>
 	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_FillMode"
 		>
 		<MenuItem.Header>
@@ -256,6 +268,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_CullMode" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_CullMode"
 		>
 		<MenuItem.Header>
@@ -280,6 +293,7 @@
 		Header="Lighting..."
 		StaysOpenOnClick="False"
 		Command="{Binding ShowLightingUI}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Lighting"
 		>
 		<MenuItem.Icon>
@@ -293,6 +307,7 @@
 		Header="Animation..."
 		StaysOpenOnClick="False"
 		Command="{Binding ShowAnimationUI}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Animation"
 		>
 		<MenuItem.Icon>
@@ -307,10 +322,12 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding ShowNormals, Mode=OneWay}"
 		Command="{Binding ToggleShowNormals}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_ShowNormals"
 		/>
 	<MenuItem x:Key="View3dMenuItem_NormalsLength" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_NormalsLength"
 		>
 		<MenuItem.Header>
@@ -324,7 +341,7 @@
 					Minimum="-5"
 					Maximum="5"
 					FunctionExpr="pow(10, x)"
-					InverseExpr="log10(x)"
+					InverseExpr="x > 0 ? log10(x) : 1"
 					ValueFn="{Binding NormalsLength}"
 					Margin="1,1,20,1"
 					MinWidth="100"
@@ -334,6 +351,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_NormalsColour" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_NormalsColour"
 		>
 		<MenuItem.Header>
@@ -358,6 +376,7 @@
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_FillModePointsSize" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_FillModePointsSize"
 		>
 		<MenuItem.Header>
@@ -371,7 +390,7 @@
 					Minimum="-1"
 					Maximum="2"
 					FunctionExpr="pow(10, x)"
-					InverseExpr="log10(x)"
+					InverseExpr="x > 0 ? log10(x) : 1"
 					ValueFn="{Binding FillModePointsSize}"
 					Margin="1,1,20,1"
 					MinWidth="100"
@@ -383,6 +402,7 @@
 		Header="Measure Tool..."
 		StaysOpenOnClick="False"
 		Command="{Binding ShowMeasureToolUI}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_MeasureTool"
 		>
 		<MenuItem.Icon>
@@ -396,6 +416,7 @@
 		Header="Object Manager..."
 		StaysOpenOnClick="False"
 		Command="{Binding ShowObjectManagerUI}"
+		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_ObjectManager"
 		>
 		<MenuItem.Icon>
@@ -407,10 +428,15 @@
 	</MenuItem>
 
 	<!-- Default View3d Context Menu -->
-	<ContextMenu x:Key="View3dCMenu"
-		DataContext="{Binding PlacementTarget.View3dCMenuContext, RelativeSource={RelativeSource Self}}"
-		>
-		<!-- Use this to show what this menu is currently bound to
+	<ContextMenu x:Key="View3dCMenu">
+		<!--
+		DataContext is expected to be set to an object with the properties:
+		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
+		PlacementTarget isn't used because there is no control over what that object is
+		-->
+
+		<!--
+		Use this to show what this menu is currently bound to
 		<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 		-->
 		<MenuItem Header="Tools">
@@ -452,6 +478,7 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding ShowGridLines, Mode=OneWay}"
 		Command="{Binding ToggleGridLines}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_GridLines"
 		/>
 	<MenuItem x:Key="ChartMenuItem_Axes" x:Shared="False"
@@ -459,6 +486,7 @@
 		StaysOpenOnClick="True"
 		IsChecked="{Binding ShowAxes, Mode=OneWay}"
 		Command="{Binding ToggleAxes}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_Axes"
 		/>
 	<MenuItem x:Key="ChartMenuItem_ValueAtPointer" x:Shared="False"
@@ -466,6 +494,7 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding ShowValueAtPointer, Mode=OneWay}"
 		Command="{Binding ToggleShowValueAtPointer}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_ValueAtPointer"
 		/>
 	<MenuItem x:Key="ChartMenuItem_CrossHair" x:Shared="False"
@@ -473,10 +502,12 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding ShowCrossHair, Mode=OneWay}"
 		Command="{Binding ToggleShowCrossHair}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_CrossHair"
 		/>
 	<MenuItem x:Key="ChartMenuItem_NavMode" x:Shared="False"
 		StaysOpenOnClick="False"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_NavMode"
 		>
 		<MenuItem.Header>
@@ -507,6 +538,7 @@
 		Header="Aspect 1:1"
 		StaysOpenOnClick="False"
 		Command="{Binding DoAspect11}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_Aspect11"
 		/>
 	<MenuItem x:Key="ChartMenuItem_LockAspect" x:Shared="False"
@@ -514,6 +546,7 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding LockAspect, Mode=OneWay}"
 		Command="{Binding ToggleLockAspect}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_LockAspect"
 		/>
 	<MenuItem x:Key="ChartMenuItem_MouseCentredZoom" x:Shared="False"
@@ -521,6 +554,7 @@
 		StaysOpenOnClick="False"
 		IsCheckable="{Binding MouseCentredZoom}"
 		Command="{Binding ToggleMouseCentredZoom}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_MouseCentredZoom"
 		/>
 	<MenuItem x:Key="ChartMenuItem_LinkCamera" x:Shared="False"
@@ -528,6 +562,7 @@
 		StaysOpenOnClick="False"
 		IsEnabled="{Binding CanLinkCamera}"
 		Command="{Binding LinkCamera}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartMenuItem_LinkCamera"
 		>
 		<MenuItem.Icon>
@@ -544,6 +579,7 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding AllowScroll, Mode=OneWay}"
 		Command="{Binding ToggleScrollLock}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartAxisMenuItem_AllowScroll"
 		/>
 	<MenuItem x:Key="ChartAxisMenuItem_AllowZoom" x:Shared="False"
@@ -551,14 +587,19 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding AllowZoom, Mode=OneWay}"
 		Command="{Binding ToggleZoomLock}"
+		DataContext="{Binding ChartCMenuContext}"
 		Name="ChartAxisMenuItem_AllowZoom"
 		/>
 
 	<!-- Default Chart Context Menu -->
-	<ContextMenu x:Key="ChartCMenu"
-		DataContext="{Binding PlacementTarget.ChartCMenuContext, RelativeSource={RelativeSource Self}}"
-		>
-		<!-- Use this to show what this menu is currently bound to
+	<ContextMenu x:Key="ChartCMenu">
+		<!--
+		DataContext is expected to be set to an object with the properties:
+		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
+		PlacementTarget isn't used because there is no control over what that object is
+		-->
+		<!--
+		Use this to show what this menu is currently bound to
 		<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 		-->
 		<MenuItem Header="Tools">
@@ -586,10 +627,14 @@
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
 		</MenuItem>
 	</ContextMenu>
-	<ContextMenu x:Key="ChartAxisCMenu"
-		DataContext="{Binding PlacementTarget.ChartAxisCMenuContext, RelativeSource={RelativeSource Self}}"
-		>
-		<!-- Use this to show what this menu is currently bound to
+	<ContextMenu x:Key="ChartAxisCMenu">
+		<!--
+		DataContext is expected to be set to an object with the properties:
+		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
+		PlacementTarget isn't used because there is no control over what that object is
+		-->
+		<!--
+		Use this to show what this menu is currently bound to
 		<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 		-->
 		<StaticResource ResourceKey="ChartAxisMenuItem_AllowScroll"/>

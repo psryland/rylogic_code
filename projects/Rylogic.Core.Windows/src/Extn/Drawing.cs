@@ -1,9 +1,79 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn.Windows
 {
+	public static class Drawing_
+	{
+		// Notes:
+		//  - System.Drawing is available in .NET core, System.Windows is not.
+		//    So use System.Drawing primitive types for shared code. System.Windows
+		//    primitive types are used by WPF however.
+
+		// Points
+
+		public static System.Drawing.PointF ToPointF(this Point pt)
+		{
+			return new System.Drawing.PointF((float)pt.X, (float)pt.Y);
+		}
+		public static Point ToPointD(this System.Drawing.PointF pt)
+		{
+			return new Point(pt.X, pt.Y);
+		}
+		public static Point ToPointD(this v2 pt)
+		{
+			return new Point(pt.x, pt.y);
+		}
+		public static Vector ToVectorD(this v2 pt)
+		{
+			return new Vector(pt.x, pt.y);
+		}
+		public static Point ToNormalisedScreenSpace(Point pt, double screen_width, double screen_height)
+		{
+			return new Point(pt.X / screen_width - 0.5, 0.5 - pt.Y / screen_height);
+		}
+
+		// Sizes
+
+		// Rectangles
+
+		public static System.Drawing.RectangleF ToRectF(this Rect rect)
+		{
+			return new System.Drawing.RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height);
+		}
+		public static Rect ToRectD(this System.Drawing.RectangleF rect)
+		{
+			return new Rect(rect.X, rect.Y, rect.Width, rect.Height);
+		}
+
+		/// <summary>Add XML serialisation support for graphics types</summary>
+		public static XmlConfig SupportSystemDrawingCommonTypes(this XmlConfig cfg)
+		{
+			Xml_.ToMap[typeof(System.Drawing.Drawing2D.Matrix)] = (obj, node) =>
+			{
+				var mat = (System.Drawing.Drawing2D.Matrix)obj;
+				node.Add(string.Join(" ", mat.Elements));
+				return node;
+			};
+			Xml_.AsMap[typeof(System.Drawing.Drawing2D.Matrix)] = (elem, type, instance) =>
+			{
+				var v = float_.ParseArray(elem.Value);
+				return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
+			};
+			return cfg;
+		}
+
+		/// <summary>Debugging check that an object is frozen</summary>
+		[Conditional("DEBUG")]
+		public static void CheckIsFrozen(Freezable f)
+		{
+			if (f == null || f.IsFrozen) return;
+			Debug.WriteLine($"Performance warning: Not frozen: {f}");
+		}
+	}
+
 	public static class Size_
 	{
 		/// <summary>Zero size</summary>
@@ -11,6 +81,20 @@ namespace Rylogic.Extn.Windows
 
 		/// <summary>Infinite size</summary>
 		public static Size Infinity => new Size(double.PositiveInfinity, double.PositiveInfinity);
+
+		/// <summary>Compare sizes for approximate equality</summary>
+		public static bool FEql(Size lhs, Size rhs)
+		{
+			return 
+				Math_.FEql(lhs.Width, rhs.Width) &&
+				Math_.FEql(lhs.Height, rhs.Height);
+		}
+		public static bool FEqlRelative(Size lhs, Size rhs, double tol)
+		{
+			return
+				Math_.FEqlRelative(lhs.Width, rhs.Width, tol) &&
+				Math_.FEqlRelative(lhs.Height, rhs.Height, tol);
+		}
 	}
 
 	public static class Rect_
@@ -89,66 +173,23 @@ namespace Rylogic.Extn.Windows
 
 			throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
 		}
-	}
 
-	public static class Drawing_
-	{
-		// Notes:
-		//  - System.Drawing is available in .NET core, System.Windows is not.
-		//    So use System.Drawing primitive types for shared code. System.Windows
-		//    primitive types are used by WPF however.
-
-		// Points
-
-		public static System.Drawing.PointF ToPointF(this Point pt)
+		/// <summary>Compare sizes for approximate equality</summary>
+		public static bool FEql(Rect lhs, Rect rhs)
 		{
-			return new System.Drawing.PointF((float)pt.X, (float)pt.Y);
+			return
+				Math_.FEql(lhs.X, rhs.X) &&
+				Math_.FEql(lhs.Y, rhs.Y) &&
+				Math_.FEql(lhs.Width, rhs.Width) &&
+				Math_.FEql(lhs.Height, rhs.Height);
 		}
-		public static Point ToPointD(this System.Drawing.PointF pt)
+		public static bool FEqlRelative(Rect lhs, Rect rhs, double tol)
 		{
-			return new Point(pt.X, pt.Y);
-		}
-		public static Point ToPointD(this v2 pt)
-		{
-			return new Point(pt.x, pt.y);
-		}
-		public static Vector ToVectorD(this v2 pt)
-		{
-			return new Vector(pt.x, pt.y);
-		}
-		public static Point ToNormalisedScreenSpace(Point pt, double screen_width, double screen_height)
-		{
-			return new Point(pt.X / screen_width - 0.5, 0.5 - pt.Y / screen_height);
-		}
-
-		// Sizes
-
-		// Rectangles
-
-		public static System.Drawing.RectangleF ToRectF(this Rect rect)
-		{
-			return new System.Drawing.RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height);
-		}
-		public static Rect ToRectD(this System.Drawing.RectangleF rect)
-		{
-			return new Rect(rect.X, rect.Y, rect.Width, rect.Height);
-		}
-
-		/// <summary>Add XML serialisation support for graphics types</summary>
-		public static XmlConfig SupportSystemDrawingCommonTypes(this XmlConfig cfg)
-		{
-			Xml_.ToMap[typeof(System.Drawing.Drawing2D.Matrix)] = (obj, node) =>
-			{
-				var mat = (System.Drawing.Drawing2D.Matrix)obj;
-				node.Add(string.Join(" ", mat.Elements));
-				return node;
-			};
-			Xml_.AsMap[typeof(System.Drawing.Drawing2D.Matrix)] = (elem, type, instance) =>
-			{
-				var v = float_.ParseArray(elem.Value);
-				return new System.Drawing.Drawing2D.Matrix(v[0], v[1], v[2], v[3], v[4], v[5]);
-			};
-			return cfg;
+			return
+				Math_.FEqlRelative(lhs.X, rhs.X, tol) &&
+				Math_.FEqlRelative(lhs.Y, rhs.Y, tol) &&
+				Math_.FEqlRelative(lhs.Width, rhs.Width, tol) &&
+				Math_.FEqlRelative(lhs.Height, rhs.Height, tol);
 		}
 	}
 
@@ -171,6 +212,20 @@ namespace Rylogic.Extn.Windows
 		{
 			return double.IsNaN(v.X) || double.IsNaN(v.Y);
 		}
+
+		/// <summary>Compare sizes for approximate equality</summary>
+		public static bool FEql(Point lhs, Point rhs)
+		{
+			return
+				Math_.FEql(lhs.X, rhs.X) &&
+				Math_.FEql(lhs.Y, rhs.Y);
+		}
+		public static bool FEqlRelative(Point lhs, Point rhs, double tol)
+		{
+			return
+				Math_.FEqlRelative(lhs.X, rhs.X, tol) &&
+				Math_.FEqlRelative(lhs.Y, rhs.Y, tol);
+		}
 	}
 
 	public static class Vector_
@@ -188,6 +243,20 @@ namespace Rylogic.Extn.Windows
 		public static bool IsNaN(Vector v)
 		{
 			return double.IsNaN(v.X) || double.IsNaN(v.Y);
+		}
+
+		/// <summary>Compare sizes for approximate equality</summary>
+		public static bool FEql(Vector lhs, Vector rhs)
+		{
+			return
+				Math_.FEql(lhs.X, rhs.X) &&
+				Math_.FEql(lhs.Y, rhs.Y);
+		}
+		public static bool FEqlRelative(Vector lhs, Vector rhs, double tol)
+		{
+			return
+				Math_.FEqlRelative(lhs.X, rhs.X, tol) &&
+				Math_.FEqlRelative(lhs.Y, rhs.Y, tol);
 		}
 	}
 }

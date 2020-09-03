@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -579,7 +579,7 @@ namespace LDraw.UI
 		/// <summary>Update the objects associated with 'ContextId' within View3D's object store</summary>
 		private void UpdateObjects()
 		{
-			LastUpdateTime = Log.Timestamp;
+			LastUpdateTime = Log.Elapsed;
 			Log.Clear(x => Path_.Compare(x.File, Filepath) == 0);
 
 			var scenes = Context.SelectedScenes.ToArray();
@@ -757,7 +757,7 @@ namespace LDraw.UI
 			foreach (var le in Log.Entries)
 			{
 				if (Path_.Compare(le.File, Filepath) != 0) continue;
-				if (le.Timestamp < LastUpdateTime) continue;
+				if (le.Elapsed < LastUpdateTime) continue;
 
 				var line = Editor.Document.GetLineByNumber(le.Line);
 				var marker = m_text_marker_service.Create(line.Offset, line.Length);

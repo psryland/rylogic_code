@@ -80,8 +80,8 @@ namespace LDraw
 		/// <summary>Highlighting patterns (in priority order)</summary>
 		public static ObservableCollection<LogControl.HLPattern> Highlighting { get; }
 
-		/// <summary>Return a timestamp for 'now'</summary>
-		public static TimeSpan Timestamp => DateTimeOffset.Now - m_tzero;
+		/// <summary>Return the elapsed time for 'now'</summary>
+		public static TimeSpan Elapsed => DateTimeOffset.Now - m_tzero;
 
 		/// <summary>Reset the log messages</summary>
 		public static void Clear(Func<LogControl.LogEntry, bool>? pred = null)
@@ -103,7 +103,7 @@ namespace LDraw
 		}
 		public static void Write(ELogLevel lvl, string message, string filepath, int line)
 		{
-			var msg = $"{lvl}|{filepath}({line})|{Timestamp.ToString("c")}|{message}";
+			var msg = $"{lvl}|{filepath}({line})|{Elapsed:c}|{message}";
 			var entry = new LogControl.LogEntry(new Provider(), ++m_index, msg, false);
 			System.Diagnostics.Debug.Assert(PatternRegex.IsMatch(entry.Text));
 			Entries.Add(entry);
@@ -115,8 +115,8 @@ namespace LDraw
 
 		/// <summary>Output text pattern</summary>
 		public static readonly Regex PatternRegex = new Regex(
-			@"^(?<Level>.*?)\|(?<File>.*?)\((?<Line>.*)\)\|(?<Timestamp>.*?)\|(?<Message>.*)",
-			//@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",
+			@"^(?<Level>.*?)\|(?<File>.*?)\((?<Line>.*)\)\|(?<Elapsed>.*?)\|(?<Message>.*)",
+			//@"^(?<File>.*?)\((?<Line>.*)\):\s*(?<Tag>.*?)\|(?<Level>.*?)\|(?<Elapsed>.*?)\|(?<Message>.*)",
 			RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
 		/// <summary></summary>
@@ -124,6 +124,8 @@ namespace LDraw
 		{
 			public Regex? LogEntryPattern => Log.PatternRegex;
 			public IEnumerable<LogControl.HLPattern> Highlighting => Log.Highlighting;
+			public string? TimestampFormat => null;
+			public string? ElapsedFormat => null;
 		}
 	}
 }

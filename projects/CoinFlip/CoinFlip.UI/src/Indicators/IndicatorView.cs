@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -58,7 +58,7 @@ namespace CoinFlip.UI.Indicators
 		public string Label => Indicator.Label;
 
 		/// <summary>Indicator colour</summary>
-		public Colour32 Colour => Indicator.Colour;
+		public override Colour32 Colour => Indicator.Colour;
 
 		/// <summary>The instrument that this indicator is associated with</summary>
 		public Instrument Instrument

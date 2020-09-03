@@ -81,7 +81,24 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return value?.ToString() ?? "null";
+			if (value == null)
+				return "null";
+
+			var ty = value.GetType();
+
+			// Try for a description property
+			if (ty.GetProperty("Description") is PropertyInfo pi)
+			{
+				if (pi.GetValue(value) is string desc && desc.Length != 0)
+					return desc;
+			}
+
+			// If the type converts to a string
+			if (value.ToString() is string str && str.Length != 0)
+				return str;
+
+			// Fall back to the type name
+			return ty.Name;
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{

@@ -25,6 +25,7 @@ namespace Rylogic.Gui.WPF
 			// Don't set default values for dependency properties because it overrides
 			// the default value passed to 'DPRegister' when used in other controls.
 			InitializeComponent();
+			Stretch = Stretch.Uniform;
 			//SizeChanged += (s, a) =>
 			//{
 			//	Width = Height = Math.Min(a.NewSize.Width, a.NewSize.Height);
