@@ -14,6 +14,7 @@ using Rylogic.Core.Windows;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 using Rylogic.Utility;
+using SolarHotWater.Common;
 
 namespace SolarHotWater
 {

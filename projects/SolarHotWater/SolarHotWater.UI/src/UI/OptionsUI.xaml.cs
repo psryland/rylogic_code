@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using SolarHotWater.Common;
 
 namespace SolarHotWater.UI
 {

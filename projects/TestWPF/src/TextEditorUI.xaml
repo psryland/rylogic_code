@@ -5,12 +5,20 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:edit="clr-namespace:Rylogic.Gui.WPF.TextEditor;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
     Title="TextEditorUI"
 	Height="450"
 	Width="800"
 	>
-	<gui:TextEditorControl
-		x:Name="m_editor"
-		/>
+	<Grid
+		Background="Gray"
+		>
+		<gui:TextEditorControl
+			x:Name="m_editor"
+			Background="LightBlue"
+			FontFamily="Consolas"
+			Padding="100"
+			/>
+	</Grid>
 </Window>

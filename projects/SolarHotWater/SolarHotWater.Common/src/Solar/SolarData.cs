@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Navigation;
 using Newtonsoft.Json;
 
-namespace SolarHotWater
+namespace SolarHotWater.Common
 {
 	public class SolarData
 	{

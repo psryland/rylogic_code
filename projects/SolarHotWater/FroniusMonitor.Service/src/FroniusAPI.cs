@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Utility;
 using SolarHotWater.Common;
 
-namespace SolarHotWater
+namespace FroniusMonitor.Service
 {
 	public sealed class FroniusAPI :IDisposable
 	{

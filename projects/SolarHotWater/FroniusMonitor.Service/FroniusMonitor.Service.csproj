@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+	<PropertyGroup>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<UserSecretsId>dotnet-FroniusMonitor.Service-9D070EDA-30AF-460F-887D-946E49E0DD18</UserSecretsId>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A windows service for logging solar output</Description>
+		<Copyright>Copyright (c) Rylogic 2020</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="res\Setup.sql" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.0.35" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.7" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="3.1.7" />
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\SolarHotWater.Common\SolarHotWater.Common.csproj" />
+	</ItemGroup>
+</Project>

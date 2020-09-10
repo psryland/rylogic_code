@@ -9,6 +9,7 @@ using EweLink;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
+using SolarHotWater.Common;
 
 namespace SolarHotWater
 {

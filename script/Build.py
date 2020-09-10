@@ -372,28 +372,71 @@ class LDraw(Managed):
 # Solar Hot Water
 class SolarHotWater(Managed):
 	def __init__(self, workspace:str, platforms:[str], configs:[str]):
-		Managed.__init__(self, "SolarHotWater.UI", ["netcoreapp3.1"], workspace, platforms, configs)
+		Managed.__init__(self, "SolarHotWater", ["netcoreapp3.1"], workspace, platforms, configs)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects", "SolarHotWater", self.proj_name)
+		self.proj_dir = os.path.join(workspace, "projects", "SolarHotWater")
 		return
+
+	def Clean(self):
+		CleanDotNet(os.path.join(self.proj_dir, "SolarHotWater.Common"), self.platforms, self.configs)
+		CleanDotNet(os.path.join(self.proj_dir, "FroniusMonitor.Service"), self.platforms, self.configs)
+		CleanDotNet(os.path.join(self.proj_dir, "SolarHotWater.UI"), self.platforms, self.configs)
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\SolarHotWater\\{self.proj_name}"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\SolarHotWater\\SolarHotWater.Common"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\SolarHotWater\\FroniusMonitor.Service"], self.platforms, self.configs)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\SolarHotWater\\SolarHotWater.UI"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):
+		self.DeployService()
+		self.DeployUI()
+		return
+
+	def DeployService(self):
+		proj_dir = os.path.join(self.proj_dir, "FroniusMonitor.Service")
+
 		# Check versions
-		version = Tools.Extract(os.path.join(self.proj_dir, "SolarHotWater.UI.csproj"), r"<Version>(.*)</Version>").group(1)
-		print(f"Deploying SolarHotWater.UI Version: {version}\n")
+		version = Tools.Extract(os.path.join(proj_dir, "FroniusMonitor.Service.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying FroniusMonitor.Service Version: {version}\n")
 
 		# Ensure output directories exist and are empty
-		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater")
+		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater", "Fronius")
 		CleanDir(self.bin_dir)
 
 		# Copy build products to the output directory
 		print(f"Copying files to {self.bin_dir}...\n")
-		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
+		target_dir = os.path.join(proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.exe"                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.dll"                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "SolarHotWater.Common.dll"                   ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"                           ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"                   ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "System.Data.SQLite.dll"                     ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "System.ServiceProcess.ServiceController.dll"), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Newtonsoft.Json.dll"                        ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Dapper.dll"                                 ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Microsoft.*.dll"                            ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.deps.json"           ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "FroniusMonitor.Service.runtimeconfig.json"  ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "appsettings.json"                           ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "runtimes"                                   ), os.path.join(self.bin_dir, "runtimes"))
+
+	def DeployUI(self):
+		proj_dir = os.path.join(self.proj_dir, "SolarHotWater.UI")
+
+		# Check versions
+		version = Tools.Extract(os.path.join(proj_dir, "SolarHotWater.UI.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying SolarHotWater.UI Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = os.path.join(UserVars.root, "bin", "SolarHotWater", "UI")
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = os.path.join(proj_dir, "bin", "Release", self.frameworks[0])
 		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.exe"                       ), os.path.join(self.bin_dir, ""))
 		Tools.Copy(os.path.join(target_dir, "SolarHotWater.UI.dll"                       ), os.path.join(self.bin_dir, ""))
 		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"                           ), os.path.join(self.bin_dir, ""))

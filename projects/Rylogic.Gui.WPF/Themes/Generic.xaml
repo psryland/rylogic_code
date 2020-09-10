@@ -1,7 +1,16 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:system="clr-namespace:System;assembly=mscorlib">
+	>
+	<!--
+	Notes:
+	  - This Wasn't working until I removed the <Resource Include='Themes\Generic.xaml'/> line from the project file
+	  - You also need the '[assembly: ThemeInfo()]' attribute somewhere in the assembly
+	
+	-->
+
+	<ResourceDictionary.MergedDictionaries>
+		<ResourceDictionary Source="/Rylogic.Gui.WPF;component/src/Gui/TextEditor/TextEditorControl.xaml" />
+	</ResourceDictionary.MergedDictionaries>
 
 	<!-- New Line:
 	<system:String x:Key="NewLine">&#x0a;</system:String>

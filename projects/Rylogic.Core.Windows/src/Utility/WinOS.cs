@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Principal;
 using Microsoft.Win32;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
@@ -33,6 +34,39 @@ namespace Rylogic.Core.Windows
 				using var key = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
 				key.DeleteValue(app_name, false);
 			}
+		}
+
+		/// <summary>Return the windows account SID for a given user name (or null if it doesn't exist)</summary>
+		public static string? UserSID(string user_name)
+		{
+			try
+			{
+				var account = new NTAccount(user_name);
+				var s = (SecurityIdentifier)account.Translate(typeof(SecurityIdentifier));
+				return s.ToString();
+			}
+			catch (IdentityNotMappedException)
+			{
+				return null;
+			}
+		}
+
+		/// <summary>Return the User Profile directory of a given user (or null if it doesn't exist)</summary>
+		public static string? UserProfilePath(string? user_name = null, string? user_sid = null)
+		{
+			if (user_sid == null)
+			{
+				user_name = user_name ?? throw new Exception("Either user_sid or user_name must be given");
+				user_sid = UserSID(user_name);
+			}
+			if (user_sid == null)
+			{
+				return null;
+			}
+
+			// Return the profile path from the registry
+			using var key = Registry.LocalMachine.OpenSubKey($@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\{user_sid}");
+			return key.GetValue("ProfileImagePath") is string profile_path ? profile_path : null;
 		}
 	}
 }

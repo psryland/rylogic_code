@@ -1,4 +1,4 @@
-﻿namespace SolarHotWater
+﻿namespace SolarHotWater.Common
 {
 	public enum EControlMode
 	{
