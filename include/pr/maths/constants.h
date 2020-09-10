@@ -19,6 +19,10 @@ namespace pr::maths
 	constexpr float const tiny_sqf = float(1.00000015e-10);
 	constexpr float const tiny_sqrtf = float(3.16227786e-03);
 
+	template <typename T> constexpr T tiny;
+	template <> constexpr double tiny<double> = tinyd;
+	template <> constexpr float tiny<float> = tinyf;
+
 	constexpr double const phi = double(1.618033988749894848204586834);    // "Golden Ratio"
 	constexpr double const tau = double(6.283185307179586476925286766559);    // circle constant
 	constexpr double const inv_tau = 1.0 / tau;

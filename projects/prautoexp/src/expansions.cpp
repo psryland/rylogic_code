@@ -317,11 +317,11 @@ extern "C"
 		{
 			using Matrix<float>::m_buf;
 			using Matrix<float>::m_data;
-			using Matrix<float>::m_cols;
-			using Matrix<float>::m_rows;
+			using Matrix<float>::m_vecs;
+			using Matrix<float>::m_cmps;
 		} mat;
 		if (FAILED(pHelper->Read(mat))) return E_FAIL;
-		std::vector<float> data(mat.m_cols * mat.m_rows);
+		std::vector<float> data(mat.m_vecs * mat.m_cmps);
 		(void)pResult,max;
 		return S_OK;
 	}

@@ -20,102 +20,116 @@ namespace pr
 
 	protected:
 
-		// Store data as contiguous column vectors (like m4x4 does)
-		// e.g.
-		//  [{x}  {y}  {z}]
-		// is:                memory order:
-		//  [x.x  y.x  z.x]    [0  4   8]
-		//  [x.y  y.y  z.y]    [1  5   9]
-		//  [x.z  y.z  z.z]    [2  6  10]
-		//  [x.w  y.w  z.w]    [3  7  11]
+		// Notes:
+		//  - Matrix has reference semantics because it is potentially a large object.
+		//  - Data is stored as contiguous vectors (like m4x4 does, i.e. row major)
+		//    Visually, the matrix is displayed with the vectors as columns.
+		//    e.g.
+		//     [{x}  {y}  {z}]
+		//    is:                memory order:
+		//     [x.x  y.x  z.x]    [0  4   8]
+		//     [x.y  y.y  z.y]    [1  5   9]
+		//     [x.z  y.z  z.z]    [2  6  10]
+		//     [x.w  y.w  z.w]    [3  7  11]
+		//  - 'vec_count' is the number of vectors in the matrix
+		//  - 'cmp_count' is the number of components in each vector
+		//  - The Row/Column description is confusing as hell because the matrix is displayed
+		//    with the vectors as columns, even though the data are stored in rows. So I'm not
+		//    using Row/Column notation. 'Vector/Component' notation is less ambiguous.
+		//  - Accessors use 'vec' first then 'cmp' so that from left-to-right you select
+		//    the vector first then the component.
+		//  - The 'transposed' state should not be visible outside of the matrix. The matrix
+		//    should look like any other matrix from an interface point-of-view.
+		//  - 'transposed' is not a constructor parameter because almost anything is convertible
+		//    to bool which causes the wrong constructor to be called. To create a matrix initialised
+		//    with transposed data, use the constructor with all parameters
+
 		Real  m_buf[LocalBufCount]; // Local buffer for small matrices
 		Real* m_data;               // linear buffer of matrix elements
-		int   m_cols;               // number of columns (X dimension)
-		int   m_rows;               // number of rows (Y dimension)
-		bool  m_transposed;         // interpret the matrix as transposed
+		int   m_vecs;               // number of vectors (Y dimension, aka rows in row major matrix)
+		int   m_cmps;               // number of components per vector (X dimension, aka columns)
+		bool  m_transposed;         // interpret the matrix as transposed (don't make this public, callers shouldn't know a matrix is transposed)
 
 	public:
 
 		Matrix()
 			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
+			,m_vecs(0)
+			,m_cmps(0)
 			,m_transposed(false)
 		{
 			resize(0,0);
 		}
-		Matrix(int cols, int rows, bool transposed = false)
-			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
-			,m_transposed(false)
+		Matrix(int vecs, int cmps)
+			:Matrix()
 		{
-			resize(cols, rows);
+			resize(vecs, cmps, false);
+		}
+		Matrix(int vecs, int cmps, Real const* data)
+			:Matrix(vecs, cmps, std::initializer_list<Real>(data, data + vecs * cmps))
+		{
+		}
+		Matrix(int vecs, int cmps, std::initializer_list<Real> data)
+			:Matrix(vecs, cmps, data, false)
+		{
+		}
+		Matrix(int vecs, int cmps, std::initializer_list<Real> data, bool transposed)
+			:Matrix(!transposed ? vecs : cmps, !transposed ? cmps : vecs)
+		{
+			assert("Data length mismatch" && int(data.size()) == vecs*cmps);
+			memcpy(m_data, data.begin(), sizeof(Real) * size_t(vecs * cmps));
 			m_transposed = transposed;
 		}
-		Matrix(int cols, int rows, std::initializer_list<Real> data, bool transposed = false)
-			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
-			,m_transposed(false)
+		Matrix(Matrix&& rhs)
+			:Matrix()
 		{
-			assert("Data length mismatch" && int(data.size()) == cols * rows);
-			resize(cols, rows);
-			memcpy(m_data, data.begin(), size_t(cols) * size_t(rows) * sizeof(Real));
-			m_transposed = transposed;
-		}
-		Matrix(m4_cref<> m)
-			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
-			,m_transposed(false)
-		{
-			resize(4, 4);
+			if (rhs.local())
+			{
+				resize(rhs.m_vecs, rhs.m_cmps);
+				memcpy(m_data, rhs.m_data, sizeof(Real) * size());
+				m_transposed = rhs.m_transposed;
+			}
+			else
+			{
+				m_vecs = rhs.m_vecs;
+				m_cmps = rhs.m_cmps;
+				m_data = rhs.m_data;
+				m_transposed = rhs.m_transposed;
 
+				rhs.m_data = &rhs.m_buf[0];
+				rhs.m_vecs = 0;
+				rhs.m_cmps = 0;
+				rhs.m_transposed = false;
+			}
+		}
+		Matrix(Matrix const& rhs)
+			:Matrix()
+		{
+			resize(rhs.m_vecs, rhs.m_cmps);
+			memcpy(m_data, rhs.m_data, sizeof(Real) * size());
+			m_transposed = rhs.m_transposed;
+		}
+		explicit Matrix(v4_cref<> v)
+			:Matrix(1, 4)
+		{
+			auto data = m_data;
+			*data++ = Real(v.x);
+			*data++ = Real(v.y);
+			*data++ = Real(v.z);
+			*data++ = Real(v.w);
+		}
+		explicit Matrix(m4_cref<> m)
+			:Matrix(4, 4)
+		{
 			auto data = m_data;
 			*data++ = Real(m.x.x); *data++ = Real(m.x.y); *data++ = Real(m.x.z); *data++ = Real(m.x.w);
 			*data++ = Real(m.y.x); *data++ = Real(m.y.y); *data++ = Real(m.y.z); *data++ = Real(m.y.w);
 			*data++ = Real(m.z.x); *data++ = Real(m.z.y); *data++ = Real(m.z.z); *data++ = Real(m.z.w);
 			*data++ = Real(m.w.x); *data++ = Real(m.w.y); *data++ = Real(m.w.z); *data++ = Real(m.w.w);
 		}
-		Matrix(Matrix&& rhs)
-			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
-			,m_transposed(false)
-		{
-			if (rhs.local())
-			{
-				resize(rhs.m_cols, rhs.m_rows);
-				memcpy(m_data, rhs.m_data, size() * sizeof(Real));
-				m_transposed = rhs.m_transposed;
-			}
-			else
-			{
-				m_cols = rhs.m_cols;
-				m_rows = rhs.m_rows;
-				m_data = rhs.m_data;
-				m_transposed = rhs.m_transposed;
-
-				rhs.m_data = &rhs.m_buf[0];
-				rhs.m_cols = 0;
-				rhs.m_rows = 0;
-				rhs.m_transposed = false;
-			}
-		}
-		Matrix(Matrix const& rhs)
-			:m_data(&m_buf[0])
-			,m_cols(0)
-			,m_rows(0)
-			,m_transposed(false)
-		{
-			resize(rhs.m_cols, rhs.m_rows);
-			memcpy(m_data, rhs.m_data, size() * sizeof(Real));
-			m_transposed = rhs.m_transposed;
-		}
 		~Matrix()
 		{
-			resize(0,0);
+			resize(0, 0);
 		}
 
 		// Assignment
@@ -124,14 +138,14 @@ namespace pr
 			if (this == &rhs) return *this;
 			if (rhs.local())
 			{
-				resize(rhs.m_cols, rhs.m_rows);
-				memcpy(m_data, rhs.m_data, size() * sizeof(Real));
+				resize(rhs.m_vecs, rhs.m_cmps);
+				memcpy(m_data, rhs.m_data, sizeof(Real) * size());
 				m_transposed = rhs.m_transposed;
 			}
 			else
 			{
-				std::swap(m_cols, rhs.m_cols);
-				std::swap(m_rows, rhs.m_rows);
+				std::swap(m_vecs, rhs.m_vecs);
+				std::swap(m_cmps, rhs.m_cmps);
 				std::swap(m_data, rhs.m_data);
 				std::swap(m_transposed, rhs.m_transposed);
 			}
@@ -140,55 +154,43 @@ namespace pr
 		Matrix& operator = (Matrix const& rhs)
 		{
 			if (this == &rhs) return *this;
-			resize(rhs.m_cols, rhs.m_rows);
-			memcpy(m_data, rhs.m_data, size() * sizeof(Real));
+			resize(rhs.m_vecs, rhs.m_cmps);
+			memcpy(m_data, rhs.m_data, sizeof(Real) * size());
 			return *this;
 		}
 
 		// Access this matrix as a 2D array
-		Real operator()(int col, int row) const
+		Real operator()(int vec, int cmp) const
 		{
-			if (m_transposed) std::swap(col, row);
-			assert(col >= 0 && col < m_cols);
-			assert(row >= 0 && row < m_rows);
-			return m_data[col * m_rows + row];
+			if (m_transposed) std::swap(vec, cmp);
+			assert(vec >= 0 && vec < m_vecs);
+			assert(cmp >= 0 && cmp < m_cmps);
+			return m_data[vec * m_cmps + cmp];
 		}
-		Real& operator()(int col, int row)
+		Real& operator()(int vec, int cmp)
 		{
-			if (m_transposed) std::swap(col, row);
-			assert(col >= 0 && col < m_cols);
-			assert(row >= 0 && row < m_rows);
-			return m_data[col * m_rows + row];
-		}
-
-		// The number of columns in the matrix (i.e. X dimension)
-		int cols() const
-		{
-			return !m_transposed ? m_cols : m_rows;
+			if (m_transposed) std::swap(vec, cmp);
+			assert(vec >= 0 && vec < m_vecs);
+			assert(cmp >= 0 && cmp < m_cmps);
+			return m_data[vec * m_cmps + cmp];
 		}
 
-		// The number of rows in the matrix (i.e. Y dimension)
-		int rows() const
+		// The number of vectors in the matrix (i.e. Y dimension, aka row count in row-major matrix)
+		int vecs() const
 		{
-			return !m_transposed ? m_rows : m_cols;
+			return !m_transposed ? m_vecs : m_cmps;
 		}
 
-		// Get/Set whether this matrix is transposed (i.e. switch between column/row major)
-		// Doesn't move memory, just changes the interpretation of row/col.
-		bool transposed() const
+		// The number of components per vector in the matrix (i.e. X dimension, aka column count in row-major matrix)
+		int cmps() const
 		{
-			return m_transposed;
-		}
-		Matrix& transposed(bool transpose)
-		{
-			m_transposed = transpose;
-			return *this;
+			return !m_transposed ? m_cmps : m_vecs;
 		}
 
 		// The total number of elements in the matrix
 		int size() const
 		{
-			return m_cols * m_rows;
+			return m_vecs * m_cmps;
 		}
 
 		// Access to the linear underlying matrix data
@@ -201,96 +203,118 @@ namespace pr
 			return m_data;
 		}
 
-		// Access this matrix by row
-		struct RowProxy
+		// Access this matrix by vector
+		struct VecProxy
 		{
 			Matrix* m_mat;
-			int     m_row;
+			int     m_idx;
 
-			RowProxy(Matrix& m, int row)
+			VecProxy(Matrix& m, int idx)
 				:m_mat(&m)
-				,m_row(row)
+				,m_idx(idx)
 			{
-				assert(row >= 0 && row < m_mat->rows());
+				assert(idx >= 0 && idx < m_mat->vecs());
 			}
 			operator Matrix() const
 			{
-				Matrix v(m_mat->cols(), 1);
-				for (int i = 0, iend = m_mat->cols(); i != iend; ++i)
-					v(i,0) = (*m_mat)(i, m_row);
+				Matrix v(1, m_mat->cmps());
+				for (int i = 0, iend = m_mat->cmps(); i != iend; ++i)
+					v(0, i) = (*m_mat)(m_idx, i);
 
 				return v;
 			}
-			RowProxy& operator = (Matrix const& rhs)
+			VecProxy& operator = (Matrix const& rhs)
 			{
-				assert("'rhs' must be a row vector" && rhs.rows() == 1 && rhs.cols() == m_mat->cols());
+				assert("'rhs' must be a vector" && rhs.vecs() == 1 && rhs.cmps() == m_mat->cmps());
 
-				for (int i = 0, iend = m_mat->cols(); i != iend; ++i)
-					(*m_mat)(i,m_row) = rhs(i,0);
+				for (int i = 0, iend = m_mat->cmps(); i != iend; ++i)
+					(*m_mat)(m_idx, i) = rhs(0, i);
 
 				return *this;
 			}
 			Real operator[](int i) const
 			{
-				return (*m_mat)(i,m_row);
+				return (*m_mat)(m_idx, i);
 			}
 			Real& operator[](int i)
 			{
-				return (*m_mat)(i,m_row);
+				return (*m_mat)(m_idx, i);
 			}
 		};
-		RowProxy row(int i) const
+		VecProxy vec(int i) const
 		{
-			return RowProxy(const_cast<Matrix&>(*this), i);
+			return VecProxy(const_cast<Matrix&>(*this), i);
 		}
 
-		// Access this matrix by column
-		struct ColProxy
+		// Access this matrix by components (transposed vector)
+		struct CmpProxy
 		{
 			Matrix* m_mat;
-			int     m_col;
+			int     m_idx;
 
-			ColProxy(Matrix& m, int col)
+			CmpProxy(Matrix& m, int idx)
 				:m_mat(&m)
-				,m_col(col)
+				,m_idx(idx)
 			{
-				assert(col >= 0 && col < m_mat->cols());
+				assert(idx >= 0 && idx < m_mat->cmps());
 			}
 			operator Matrix() const
 			{
-				Matrix v(1, m_mat->rows());
-				for (int i = 0, iend = m_mat->rows(); i != iend; ++i)
-					v(0,i) = (*m_mat)(m_col,i);
+				Matrix v(m_mat->vecs(), 1);
+				for (int i = 0, iend = m_mat->vecs(); i != iend; ++i)
+					v(i, 0) = (*m_mat)(i, m_idx);
 
 				return v;
 			}
-			ColProxy& operator = (Matrix const& rhs)
+			CmpProxy& operator = (Matrix const& rhs)
 			{
-				assert("'rhs' must be a column vector" && rhs.cols() == 1 && rhs.rows() == m_mat->rows());
+				assert("'rhs' must be a transposed vector" && rhs.cmps() == 1 && rhs.vecs() == m_mat->vecs());
 
-				for (int i = 0, iend = m_mat->rows(); i != iend; ++i)
-					(*m_mat)(m_col,i) = rhs(0,i);
+				for (int i = 0, iend = m_mat->vecs(); i != iend; ++i)
+					(*m_mat)(i, m_idx) = rhs(i, 0);
 
 				return *this;
 			}
 			Real operator [](int i) const
 			{
-				return (*m_mat)(m_col,i);
+				return (*m_mat)(i, m_idx);
 			}
 			Real& operator [](int i)
 			{
-				return (*m_mat)(m_col,i);
+				return (*m_mat)(i, m_idx);
 			}
 		};
-		ColProxy col(int i) const
+		CmpProxy cmp(int i) const
 		{
-			return ColProxy(const_cast<Matrix&>(*this), i);
+			return CmpProxy(const_cast<Matrix&>(*this), i);
 		}
 
 		// True if the matrix is square
 		bool IsSquare() const
 		{
-			return m_cols == m_rows;
+			return m_vecs == m_cmps;
+		}
+
+		// Set this matrix to all zeros
+		Matrix& zero()
+		{
+			memset(m_data, 0, sizeof(Real) * size());
+			return *this;
+		}
+
+		// Set this matrix to an identity matrix
+		Matrix& identity()
+		{
+			zero();
+			for (int i = 0, istep = cmps() + 1, iend = size(); i < iend; i += istep) m_data[i] = Real(1);
+			return *this;
+		}
+
+		// Transpose this matrix
+		Matrix& transpose()
+		{
+			m_transposed = !m_transposed;
+			return *this;
 		}
 
 		// True if the data of this matrix is locally buffered
@@ -300,18 +324,16 @@ namespace pr
 		}
 
 		// Change the dimensions of the matrix.
-		// Note: data is only preserved if 'rows' == 'rows()'.
-		// If you want to add rows to a matrix while preserving data, use a 'transposed()' matrix.
-		void resize(int cols, int rows)
+		void resize(int vecs, int cmps, bool preserve_data = true)
 		{
-			// Matrix elements are stored as contiguous column vectors
-			// so adding/removing columns does not invalidate existing data.
-			if (m_transposed) std::swap(cols, rows);
+			if (m_transposed) std::swap(vecs, cmps);
 
 			// Check if a resize is needed
-			auto new_count = cols * rows;
-			auto old_count = m_cols * m_rows;
+			auto new_count = size_t(vecs * cmps);
+			auto old_count = size_t(m_vecs * m_cmps);
 			auto min_count = std::min(new_count, old_count);
+			auto min_vecs = std::min(vecs, m_vecs);
+			auto min_cmps = std::min(cmps, m_cmps);
 			
 			// Reallocate buffer if necessary.
 			auto data =
@@ -320,272 +342,177 @@ namespace pr
 				&m_buf[0];
 
 			// Copy/Initialise data
-			if (rows == m_rows)
+			if (!preserve_data)
 			{
-				if (data != m_data) memcpy(data, m_data, min_count * sizeof(Real));
-				memset(data + min_count, 0, (size_t(new_count) - size_t(min_count)) * sizeof(Real));
+				// Initialise to zeros
+				memset(data, 0, sizeof(Real) * new_count);
+			}
+			else if (cmps == m_cmps)
+			{
+				// Matrix elements are stored as contiguous vectors so adding/removing vectors does not invalidate existing data.
+				if (data != m_data) memcpy(data, m_data, sizeof(Real) * min_count);
+				memset(data + min_count, 0, sizeof(Real) * (new_count - min_count));
 			}
 			else
 			{
-				memset(data, 0, new_count * sizeof(Real));
+				// Adding components requires copying per vector.
+				memset(data, 0, sizeof(Real) * new_count);
+				for (int i = 0; i != min_vecs; ++i)
+					memcpy(data + i*cmps, m_data + i*m_cmps, sizeof(Real) * min_cmps);
 			}
 
 			// Update the members
-			m_cols = cols;
-			m_rows = rows;
+			m_vecs = vecs;
+			m_cmps = cmps;
 			std::swap(m_data, data);
 
-			// Deallocate old buffer
+			// Deallocate the old buffer
 			if (data != m_data && data != &m_buf[0])
 				delete[] data;
 		}
 
-		// Change the number of column or row vectors in the matrix, preserving data.
-		// If the matrix is 'transposed()' the number of rows is changed, otherwise columns.
-		void resize(int vecs)
+		// Change the number of vectors in the matrix.
+		void resize(int size, bool preserve_data = true)
 		{
-			if (!m_transposed)
-				resize(vecs, rows());
-			else
-				resize(cols(), vecs);
+			resize(size, cmps(), preserve_data);
 		}
 
 		// Return an identity matrix of the given dimensions
-		static Matrix Identity(int cols, int rows)
+		static Matrix Identity(int vecs, int cmps)
 		{
-			Matrix m(cols, rows);
-			for (int i = 0, iend = std::min(cols,rows); i != iend; ++i)
-				m(i,i) = 1;
+			Matrix m(vecs, cmps);
+			for (int i = 0, iend = std::min(vecs, cmps); i != iend; ++i)
+				m(i, i) = 1;
 
 			return m;
 		}
 
 		// Generates the random matrix
-		template <typename Rng = std::default_random_engine> static Matrix Random(Rng& rng, int cols, int rows, Real min_value, Real max_value)
+		template <typename Rng = std::default_random_engine> static Matrix Random(Rng& rng, int vecs, int cmps, Real min_value, Real max_value)
 		{
 			std::uniform_real_distribution<Real> dist(min_value, max_value);
 
-			Matrix<Real> m(cols, rows);
+			Matrix<Real> m(vecs, cmps);
 			for (int i = 0, iend = m.size(); i != iend; ++i)
 				m.data()[i] = dist(rng);
 
 			return m;
 		}
-	};
 
-	// The LU decomposition of a square matrix
-	template <typename Real>
-	struct MatrixLU :private Matrix<Real>
-	{
-		// The L and U matrices are stored in one matrix.
-		// Note: the base matrix is *not* LU and *not* the original matrix.
-		// It's just a compressed way of storing both L and U.
+		#pragma region Operators
 
-		struct LProxy
+		// Unary operators
+		friend Matrix<Real> operator + (Matrix<Real> const& m)
 		{
-			Matrix<Real> const* m_mat;
-			LProxy(Matrix<Real> const& m)
-				:m_mat(&m)
-			{}
-			Real operator ()(int col, int row) const
-			{
-				assert(col >= 0 && col < m_mat->cols());
-				assert(row >= 0 && row < m_mat->rows());
-				return col < row ? (*m_mat)(col,row) : col == row ? 1 : 0;
-			}
-		};
-		struct UProxy
-		{
-			Matrix<Real> const* m_mat;
-			UProxy(Matrix<Real> const& m)
-				:m_mat(&m)
-			{}
-			Real operator ()(int col, int row) const
-			{
-				assert(col >= 0 && col < m_mat->cols());
-				assert(row >= 0 && row < m_mat->rows());
-				return col >= row ? (*m_mat)(col,row) : 0;
-			}
-		};
-
-		// The dimensions of the decomposed matrix
-		using Matrix<Real>::cols;
-		using Matrix<Real>::rows;
-
-		// The determinant of the permutation matrix
-		Real DetOfP;
-
-		// The permutation row indices (length == rows())
-		std::unique_ptr<int[]> pi;
-
-		// Access to the lower diagonal matrix
-		LProxy L;
-
-		// Access to the upper diagonal matrix
-		UProxy U;
-
-		MatrixLU(Matrix<Real> const& m)
-			:Matrix<Real>(m) // Note: after construction base != m
-			,DetOfP(1.0f)
-			,pi(std::make_unique<int[]>(m.rows()))
-			,L(This())
-			,U(This())
-		{
-			if (!m.IsSquare())
-				throw std::exception("LU decomposition is only possible on square matrices");
-
-			// We will store both the L and U matrices in 'base' since we know
-			// L has the form: [1 0] and U has the form: [U U]
-			//                 [L 1]                     [0 U]
-			auto  LL = Matrix<Real>::Identity(m.cols(), m.rows());
-			auto& UU = static_cast<Matrix<Real>&>(*this);
-
-			// Initialise the permutation vector
-			for (int i = 0; i != m.rows(); ++i)
-				pi[i] = i;
-
-			// Decompose 'm' into 'LL' and 'UU'
-			for (int k = 0, k0 = 0, kend = m.cols() - 1; k != kend; ++k)
-			{
-				// Find the row with the biggest pivot
-				Real p = 0;
-				for (int r = k; r != m.rows(); ++r)
-				{
-					if (abs(UU(k,r)) <= p) continue;
-					p = abs(UU(k,r));
-					k0 = r;
-				}
-				if (p == 0)
-					throw std::exception("The matrix is singular");
-
-				// Switch two rows in permutation matrix
-				std::swap(pi[k], pi[k0]);
-				for (int i = 0; i != k; ++i) std::swap(LL(i,k), LL(i,k0));
-				if (k != k0) DetOfP *= -1;
-
-				// Switch rows in 'UU'
-				for (int c = 0; c != m.cols(); ++c)
-					std::swap(UU(c,k), UU(c,k0));
-
-				// Gaussian eliminate the remaining rows
-				for (int r = k + 1; r < m.rows(); ++r)
-				{
-					LL(k,r) = UU(k,r) / UU(k,k);
-					for (int c = k; c < m.cols(); ++c)
-						UU(c,r) = UU(c,r) - LL(k,r) * UU(c,k);
-				}
-			}
-
-			// Store 'LL' in the zero part of 'UU' (i.e. *this)
-			for (int r = 1; r < m.rows(); ++r)
-				for (int c = 0; c != r; ++c)
-					UU(c,r) = LL(c,r);
+			return m;
 		}
-
-	private:
-
-		// Work around to prevent warning
-		Matrix<Real> const& This() const
+		friend Matrix<Real> operator - (Matrix<Real> const& m)
 		{
-			return *this;
-		}
-
-		// Protect the array access operator, since it doesn't make
-		// sense for callers to write to the matrix elements
-		using Matrix<Real>::operator();
-	};
-
-	#pragma region Operators
-
-	// Unary operators
-	template <typename Real> inline Matrix<Real> operator + (Matrix<Real> const& m)
-	{
-		return m;
-	}
-	template <typename Real> inline Matrix<Real> operator - (Matrix<Real> const& m)
-	{
-		Matrix<Real> res(m.cols(), m.rows(), m.transposed());
-		for (int i = 0, iend = res.size(); i != iend; ++i)
-			res.data()[i] = -m.data()[i];
+			// If 'm' is transposed, return a transposed matrix for consistency
+			Matrix<Real> res(m.m_vecs, m.m_cmps);
+			res.m_transposed = m.m_transposed;
+			for (int i = 0, iend = res.size(); i != iend; ++i)
+				res.m_data[i] = -m.m_data[i];
 		
-		return res;
-	}
-
-	// Addition/Subtraction
-	template <typename Real> inline Matrix<Real> operator + (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
-	{
-		assert(lhs.cols() == rhs.cols());
-		assert(lhs.rows() == rhs.rows());
-
-		Matrix<Real> res(lhs.cols(), lhs.rows());
-		if (lhs.transposed() != rhs.transposed())
-		{
-			// If one of the matrices is transposed, we need to add element-by-element
-			for (int r = 0; r != res.rows(); ++r)
-				for (int c = 0; c != res.cols(); ++c)
-					res(c,r) = lhs(c,r) + rhs(c,r);
-		}
-		else
-		{
-			// If both are not transposed, we can vectorise element adding
-			for (int i = 0, iend = res.size(); i != iend; ++i)
-				res.data()[i] = lhs.data()[i] + rhs.data()[i];
-		}
-		return res;
-	}
-	template <typename Real> inline Matrix<Real> operator - (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
-	{
-		assert(lhs.cols() == rhs.cols());
-		assert(lhs.rows() == rhs.rows());
-
-		Matrix<Real> res(lhs.cols(), lhs.rows());
-		if (lhs.transposed() != rhs.transposed())
-		{
-			// If one of the matrices is transposed, we need to add element-by-element
-			for (int r = 0; r != res.rows(); ++r)
-				for (int c = 0; c != res.cols(); ++c)
-					res(c,r) = lhs(c,r) - rhs(c,r);
-		}
-		else
-		{
-			// If both are not transposed, we can vectorise element subtracting
-			for (int i = 0, iend = res.size(); i != iend; ++i)
-				res.data()[i] = lhs.data()[i] - rhs.data()[i];
-		}
-		return res;
-	}
-
-	// Multiplication
-	template <typename Real> inline Matrix<Real> operator * (Real s, Matrix<Real> const& mat)
-	{
-		Matrix<Real> res(mat.cols(), mat.rows());
-		for (int i = 0, iend = res.size(); i != iend; ++i)
-			res.data()[i] = mat.data()[i] * s;
-
-		return res;
-	}
-	template <typename Real> Matrix<Real> operator * (Matrix<Real> const& mat, Real s)
-	{
-		return s * mat;
-	}
-	template <typename Real> Matrix<Real> operator * (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
-	{
-		assert("Wrong matrix dimensions" && lhs.cols() == rhs.rows());
-		using Matrix = Matrix<Real>;
-
-		auto msize = std::max(std::max(lhs.rows(), lhs.cols()), std::max(rhs.rows(), rhs.cols()));
-		if (msize < 32)
-		{
-			// Small matrix multiply
-			Matrix res(rhs.cols(), lhs.rows());
-			for (int r = 0; r != res.rows(); ++r)
-				for (int c = 0; c != res.cols(); ++c)
-					for (int k = 0; k != lhs.cols(); ++k)
-						res(c,r) += lhs(k,r) * rhs(c,k);
 			return res;
 		}
-		else
+
+		// Addition/Subtraction
+		friend Matrix<Real> operator + (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 		{
+			assert(lhs.vecs() == rhs.vecs());
+			assert(lhs.cmps() == rhs.cmps());
+
+			// If one of the matrices is transposed, we need to add element-by-element
+			// If both are transposed (or not), we can vectorise element adding
+			// Return a matrix consist with the common transposed state
+			if (lhs.m_transposed == rhs.m_transposed)
+			{
+				// If both are not transposed, we can vectorise element adding
+				Matrix<Real> res(lhs.m_vecs, lhs.m_cmps);
+				res.m_transposed = lhs.m_transposed;
+				for (int i = 0, iend = res.size(); i != iend; ++i)
+					res.m_data[i] = lhs.m_data[i] + rhs.m_data[i];
+				return res;
+			}
+			else
+			{
+				// If one of the matrices is transposed, we need to add element-by-element
+				Matrix<Real> res(lhs.vecs(), lhs.cmps());
+				for (int r = 0; r != res.vecs(); ++r)
+					for (int c = 0; c != res.cmps(); ++c)
+						res(r, c) = lhs(r, c) + rhs(r, c);
+				return res;
+			}
+		}
+		friend Matrix<Real> operator - (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+		{
+			assert(lhs.vecs() == rhs.vecs());
+			assert(lhs.cmps() == rhs.cmps());
+
+			// If one of the matrices is transposed, we need to subtract element-by-element
+			// If both are transposed (or not), we can vectorise element substracting
+			// Return a matrix consist with the common transposed state
+			if (lhs.m_transposed != rhs.m_transposed)
+			{
+				// If both are not transposed, we can vectorise element subtracting
+				Matrix<Real> res(lhs.m_vecs, lhs.m_cmps);
+				res.m_transposed = lhs.m_transposed;
+				for (int i = 0, iend = res.size(); i != iend; ++i)
+					res.m_data[i] = lhs.m_data[i] - rhs.m_data[i];
+				return res;
+			}
+			else
+			{
+				// If one of the matrices is transposed, we need to subtract element-by-element
+				Matrix<Real> res(lhs.vecs(), lhs.cmps());
+				for (int r = 0; r != res.vecs(); ++r)
+					for (int c = 0; c != res.cmps(); ++c)
+						res(r, c) = lhs(r, c) - rhs(r, c);
+				return res;
+			}
+		}
+
+		// Multiplication
+		friend Matrix<Real> operator * (Real s, Matrix<Real> const& mat)
+		{
+			// Preserve the transposed state in the returned matrix
+			Matrix<Real> res(mat.m_vecs, mat.m_cmps);
+			res.m_transposed = mat.m_transposed;
+			for (int i = 0, iend = res.size(); i != iend; ++i)
+				res.m_data[i] = mat.m_data[i] * s;
+
+			return res;
+		}
+		friend Matrix<Real> operator * (Matrix<Real> const& mat, Real s)
+		{
+			return s * mat;
+		}
+		friend Matrix<Real> operator * (Matrix<Real> const& b2c, Matrix<Real> const& a2b)
+		{
+			// Note:
+			//  - The multplication order is the same as for m4x4.
+			//  - The shape of the result is:
+			//        [  b2c  ]       [a2b]       [a2c]
+			//        [  2x3  ]   *   [1x2]   =   [1x3]
+			//        [       ]       [   ]       [   ]
+			assert("Wrong matrix dimensions" && a2b.cmps() == b2c.vecs());
+
+			// Result
+			Matrix res(a2b.vecs(), b2c.cmps());
+
+			auto msize = std::max(std::max(a2b.vecs(), a2b.cmps()), std::max(b2c.vecs(), b2c.cmps()));
+			if (msize < 32)
+			{
+				// Small matrix multiply
+				for (int r = 0; r != res.vecs(); ++r)
+					for (int c = 0; c != res.cmps(); ++c)
+						for (int k = 0; k != a2b.cmps(); ++k)
+							res(r, c) += a2b(r, k) * b2c(k, c);
+				
+				return res;
+			}
+
 			// 'Strassen Multiply'
 			int n = 0;
 			int size = 1;
@@ -605,7 +532,7 @@ namespace pr
 			{
 				auto z = (int)pow(2, n - i - 1);
 				for (int j = 0; j < M; j++)
-					field[i*M+j] = Matrix(z,z);
+					field[i*M+j] = Matrix(z, z);
 			}
 
 			#pragma region Sub Functions
@@ -617,9 +544,9 @@ namespace pr
 					{
 						for (int c = 0; c < sz; ++c) // cols
 						{
-							C(c,r) = 0;
-							if (xa + c < A.cols() && ya + r < A.rows()) C(c,r) += A(xa + c, ya + r);
-							if (xb + c < B.cols() && yb + r < B.rows()) C(c,r) += B(xb + c, yb + r);
+							C(r, c) = 0;
+							if (xa + c < A.cmps() && ya + r < A.vecs()) C(r, c) += A(ya + r, xa + c);
+							if (xb + c < B.cmps() && yb + r < B.vecs()) C(r, c) += B(yb + r, xb + c);
 						}
 					}
 				}
@@ -629,9 +556,9 @@ namespace pr
 					{
 						for (int c = 0; c < sz; ++c) // cols
 						{
-							C(c,r) = 0;
-							if (xa + c < A.cols() && ya + r < A.rows()) C(c,r) += A(xa + c, ya + r);
-							if (xb + c < B.cols() && yb + r < B.rows()) C(c,r) -= B(xb + c, yb + r);
+							C(r, c) = 0;
+							if (xa + c < A.cmps() && ya + r < A.vecs()) C(r, c) += A(ya + r, xa + c);
+							if (xb + c < B.cmps() && yb + r < B.vecs()) C(r, c) -= B(yb + r, xb + c);
 						}
 					}
 				}
@@ -641,8 +568,8 @@ namespace pr
 					{
 						for (int c = 0; c < sz; ++c) // cols
 						{
-							C(c,r) = 0;
-							if (xa + c < A.cols() && ya + r < A.rows()) C(c,r) += A(xa + c, ya + r);
+							C(r, c) = 0;
+							if (xa + c < A.cmps() && ya + r < A.vecs()) C(r, c) += A(ya + r, xa + c);
 						}
 					}
 				}
@@ -650,34 +577,34 @@ namespace pr
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
-							C(c,r) = A(xa + c, ya + r) + B(xb + c, yb + r);
+							C(r, c) = A(ya + r, xa + c) + B(yb + r, xb + c);
 				}
 				static void AminusBintoC(Matrix const& A, int xa, int ya, Matrix const& B, int xb, int yb, Matrix& C, int sz)
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
-							C(c,r) = A(xa + c, ya + r) - B(xb + c, yb + r);
+							C(r, c) = A(ya + r, xa + c) - B(yb + r, xb + c);
 				}
 				static void ACopytoC(Matrix const& A, int xa, int ya, Matrix& C, int sz)
 				{
 					for (int r = 0; r < sz; ++r) // rows
 						for (int c = 0; c < sz; ++c)
-							C(c,r) = A(xa + c, ya + r);
+							C(r, c) = A(ya + r, xa + c);
 				}
 				static void StrassenMultiplyRun(Matrix const& A, Matrix const& B, Matrix& C, int l, Matrix* f)
 				{
 					// A * B into C, level of recursion, matrix field
 					// function for square matrix 2^N x 2^N
-					auto sz = A.rows();
+					auto sz = A.vecs();
 					if (sz < 32)
 					{
-						for (int r = 0; r < C.rows(); ++r)
+						for (int r = 0; r < C.vecs(); ++r)
 						{
-							for (int c = 0; c < C.cols(); ++c)
+							for (int c = 0; c < C.cmps(); ++c)
 							{
-								C(c,r) = 0;
-								for (int k = 0; k < A.cols(); ++k)
-									C(c,r) += A(k,r) * B(c,k);
+								C(r, c) = 0;
+								for (int k = 0; k < A.cmps(); ++k)
+									C(r, c) += A(r, k) * B(k, c);
 							}
 						}
 					}
@@ -715,163 +642,307 @@ namespace pr
 						// C11
 						for (int r = 0; r < hh; r++) // rows
 							for (int c = 0; c < hh; c++) // cols
-								C(c,r) = f[l*M + 1 + 1](c,r) + f[l*M + 1 + 4](c,r) - f[l*M + 1 + 5](c,r) + f[l*M + 1 + 7](c,r);
+								C(r, c) = f[l*M + 1 + 1](r, c) + f[l*M + 1 + 4](r, c) - f[l*M + 1 + 5](r, c) + f[l*M + 1 + 7](r, c);
 
 						// C12
 						for (int r = 0; r < hh; r++) // rows
 							for (int c = hh; c < sz; c++) // cols
-								C(c,r) = f[l*M + 1 + 3](c - hh,r) + f[l*M + 1 + 5](c - hh,r);
+								C(r, c) = f[l*M + 1 + 3](r, c - hh) + f[l*M + 1 + 5](r, c - hh);
 
 						// C21
 						for (int r = hh; r < sz; r++) // rows
 							for (int c = 0; c < hh; c++) // cols
-								C(c,r) = f[l*M + 1 + 2](c,r - hh) + f[l*M + 1 + 4](c,r - hh);
+								C(r, c) = f[l*M + 1 + 2](r - hh, c) + f[l*M + 1 + 4](r - hh, c);
 
 						// C22
 						for (int r = hh; r < sz; r++) // rows
 							for (int c = hh; c < sz; c++) // cols
-								C(c,r) = f[l*M + 1 + 1](c - hh,r - hh) - f[l*M + 1 + 2](c - hh,r - hh) + f[l*M + 1 + 3](c - hh,r - hh) + f[l*M + 1 + 6](c - hh,r - hh);
+								C(r, c) = f[l*M + 1 + 1](r - hh, c - hh) - f[l*M + 1 + 2](r - hh, c - hh) + f[l*M + 1 + 3](r - hh, c - hh) + f[l*M + 1 + 6](r - hh, c - hh);
 					}
 				}
 			};
 			#pragma endregion
 
-			L::SafeAplusBintoC(lhs, 0, 0, lhs, h, h, field[0*M + 0], h);
-			L::SafeAplusBintoC(rhs, 0, 0, rhs, h, h, field[0*M + 1], h);
+			#pragma region Strassen Multiply
+
+			L::SafeAplusBintoC(a2b, 0, 0, a2b, h, h, field[0*M + 0], h);
+			L::SafeAplusBintoC(b2c, 0, 0, b2c, h, h, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 1], 1, field); // (A11 + A22) * (B11 + B22);
 
-			L::SafeAplusBintoC(lhs, 0, h, lhs, h, h, field[0*M + 0], h);
-			L::SafeACopytoC(rhs, 0, 0, field[0*M + 1], h);
+			L::SafeAplusBintoC(a2b, 0, h, a2b, h, h, field[0*M + 0], h);
+			L::SafeACopytoC(b2c, 0, 0, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 2], 1, field); // (A21 + A22) * B11;
 
-			L::SafeACopytoC(lhs, 0, 0, field[0*M + 0], h);
-			L::SafeAminusBintoC(rhs, h, 0, rhs, h, h, field[0*M + 1], h);
+			L::SafeACopytoC(a2b, 0, 0, field[0*M + 0], h);
+			L::SafeAminusBintoC(b2c, h, 0, b2c, h, h, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 3], 1, field); //A11 * (B12 - B22);
 
-			L::SafeACopytoC(lhs, h, h, field[0*M + 0], h);
-			L::SafeAminusBintoC(rhs, 0, h, rhs, 0, 0, field[0*M + 1], h);
+			L::SafeACopytoC(a2b, h, h, field[0*M + 0], h);
+			L::SafeAminusBintoC(b2c, 0, h, b2c, 0, 0, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 4], 1, field); //A22 * (B21 - B11);
 
-			L::SafeAplusBintoC(lhs, 0, 0, lhs, h, 0, field[0*M + 0], h);
-			L::SafeACopytoC(rhs, h, h, field[0*M + 1], h);
+			L::SafeAplusBintoC(a2b, 0, 0, a2b, h, 0, field[0*M + 0], h);
+			L::SafeACopytoC(b2c, h, h, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 5], 1, field); //(A11 + A12) * B22;
 
-			L::SafeAminusBintoC(lhs, 0, h, lhs, 0, 0, field[0*M + 0], h);
-			L::SafeAplusBintoC(rhs, 0, 0, rhs, h, 0, field[0*M + 1], h);
+			L::SafeAminusBintoC(a2b, 0, h, a2b, 0, 0, field[0*M + 0], h);
+			L::SafeAplusBintoC(b2c, 0, 0, b2c, h, 0, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 6], 1, field); //(A21 - A11) * (B11 + B12);
 
-			L::SafeAminusBintoC(lhs, h, 0, lhs, h, h, field[0*M + 0], h);
-			L::SafeAplusBintoC(rhs, 0, h, rhs, h, h, field[0*M + 1], h);
+			L::SafeAminusBintoC(a2b, h, 0, a2b, h, h, field[0*M + 0], h);
+			L::SafeAplusBintoC(b2c, 0, h, b2c, h, h, field[0*M + 1], h);
 			L::StrassenMultiplyRun(field[0*M + 0], field[0*M + 1], field[0*M + 1 + 7], 1, field); // (A12 - A22) * (B21 + B22);
 
-			// Result
-			Matrix res(rhs.cols(), lhs.rows());
-
 			// C11
-			for (int r = 0; r < std::min(h, res.rows()); r++) // rows
-				for (int c = 0; c < std::min(h, res.cols()); c++) // cols
-					res(c,r) = field[0*M + 1 + 1](c,r) + field[0*M + 1 + 4](c,r) - field[0*M + 1 + 5](c,r) + field[0*M + 1 + 7](c,r);
+			for (int r = 0; r < std::min(h, res.vecs()); r++) // rows
+				for (int c = 0; c < std::min(h, res.cmps()); c++) // cols
+					res(r, c) = field[0*M + 1 + 1](r, c) + field[0*M + 1 + 4](r, c) - field[0*M + 1 + 5](r, c) + field[0*M + 1 + 7](r, c);
 
 			// C12
-			for (int r = 0; r < std::min(h, res.rows()); r++) // rows
-				for (int c = h; c < std::min(2 * h, res.cols()); c++) // cols
-					res(c,r) = field[0*M + 1 + 3](c - h,r) + field[0*M + 1 + 5](c - h,r);
+			for (int r = 0; r < std::min(h, res.vecs()); r++) // rows
+				for (int c = h; c < std::min(2 * h, res.cmps()); c++) // cols
+					res(r, c) = field[0*M + 1 + 3](r, c - h) + field[0*M + 1 + 5](r, c - h);
 
 			// C21
-			for (int r = h; r < std::min(2 * h, res.rows()); r++) // rows
-				for (int c = 0; c < std::min(h, res.cols()); c++) // cols
-					res(c,r) = field[0*M + 1 + 2](c,r - h) + field[0*M + 1 + 4](c,r - h);
+			for (int r = h; r < std::min(2 * h, res.vecs()); r++) // rows
+				for (int c = 0; c < std::min(h, res.cmps()); c++) // cols
+					res(r, c) = field[0*M + 1 + 2](r - h, c) + field[0*M + 1 + 4](r - h, c);
 
 			// C22
-			for (int r = h; r < std::min(2 * h, res.rows()); r++) // rows
-				for (int c = h; c < std::min(2 * h, res.cols()); c++) // cols
-					res(c,r) = field[0*M + 1 + 1](c - h,r - h) - field[0*M + 1 + 2](c - h,r - h) + field[0*M + 1 + 3](c - h,r - h) + field[0*M + 1 + 6](c - h,r - h);
-			
+			for (int r = h; r < std::min(2 * h, res.vecs()); r++) // rows
+				for (int c = h; c < std::min(2 * h, res.cmps()); c++) // cols
+					res(r, c) = field[0*M + 1 + 1](r - h, c - h) - field[0*M + 1 + 2](r - h, c - h) + field[0*M + 1 + 3](r - h, c - h) + field[0*M + 1 + 6](r - h, c - h);
+
+			#pragma endregion 
+
 			return res;
 		}
-	}
+		
+		// Equals
+		friend bool operator == (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+		{
+			if (lhs.vecs() != rhs.vecs()) return false;
+			if (lhs.cmps() != rhs.cmps()) return false;
+			if (lhs.m_transposed == rhs.m_transposed)
+				return memcmp(lhs.data(), rhs.data(), sizeof(Real) * lhs.size()) == 0;
 
-	// Equals
-	template <typename Real> inline bool operator == (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+			// Fall back to element-by-element comparisons
+			for (int r = 0, rend = lhs.vecs(); r != rend; ++r)
+				for (int c = 0, cend = lhs.cmps(); c != cend; ++c)
+					if (lhs(r, c) != rhs(r, c))
+						return false;
+
+			return true;
+		}
+		friend bool operator != (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+		{
+			return !(lhs == rhs);
+		}
+
+		// Value equality
+		friend bool FEqlRelative(Matrix<Real> const& lhs, Matrix<Real> const& rhs, Real tol)
+		{
+			if (lhs.vecs() != rhs.vecs()) return false;
+			if (lhs.cmps() != rhs.cmps()) return false;
+			if (lhs.m_transposed == rhs.m_transposed)
+			{
+				// Vectorise compares
+				for (int i = 0, iend = lhs.size(); i != iend; ++i)
+					if (!FEqlRelative(lhs.m_data[i], rhs.m_data[i], tol))
+						return false;
+			}
+			else
+			{
+				// Element-by-element compares
+				for (int r = 0, rend = lhs.vecs(); r != rend; ++r)
+					for (int c = 0, cend = lhs.cmps(); c != cend; ++c)
+						if (!FEqlRelative(lhs(r, c), rhs(r, c), tol))
+							return false;
+			}
+
+			return true;
+		}
+		friend bool FEql(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+		{
+			return FEqlRelative(lhs, rhs, maths::tiny<Real>);
+		}
+		friend bool FEqlRelative(Matrix<Real> const& lhs, m4_cref<> rhs, float tol)
+		{
+			if (lhs.vecs() != 4) return false;
+			if (lhs.cmps() != 4) return false;
+			return
+				FEqlRelative(float(lhs(0, 0)), rhs.x.x, tol) && FEqlRelative(float(lhs(0, 1)), rhs.x.y, tol) && FEqlRelative(float(lhs(0, 2)), rhs.x.z, tol) && FEqlRelative(float(lhs(0, 3)), rhs.x.w, tol) &&
+				FEqlRelative(float(lhs(1, 0)), rhs.y.x, tol) && FEqlRelative(float(lhs(1, 1)), rhs.y.y, tol) && FEqlRelative(float(lhs(1, 2)), rhs.y.z, tol) && FEqlRelative(float(lhs(1, 3)), rhs.y.w, tol) &&
+				FEqlRelative(float(lhs(2, 0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2, 1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2, 2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2, 3)), rhs.z.w, tol) &&
+				FEqlRelative(float(lhs(3, 0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3, 1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3, 2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3, 3)), rhs.w.w, tol);
+		}
+		friend bool FEql(Matrix<Real> const& lhs, m4_cref<> rhs)
+		{
+			return FEqlRelative(lhs, rhs, maths::tinyf);
+		}
+		friend bool FEqlRelative(Matrix<Real> const& lhs, v4_cref<> rhs, float tol)
+		{
+			if (lhs.vecs() != 1 && lhs.cmps() != 1) return false;
+			if (lhs.size() != 4) return false;
+			return
+				FEqlRelative(float(lhs.m_data[0]), rhs.x, tol) &&
+				FEqlRelative(float(lhs.m_data[1]), rhs.y, tol) &&
+				FEqlRelative(float(lhs.m_data[2]), rhs.z, tol) &&
+				FEqlRelative(float(lhs.m_data[3]), rhs.w, tol);
+		}
+		friend bool FEql(Matrix<Real> const& lhs, v4_cref<> rhs)
+		{
+			return FEqlRelative(lhs, rhs, maths::tinyf);
+		}
+
+		#pragma endregion
+	};
+
+	// The LU decomposition of a square matrix
+	template <typename Real>
+	struct MatrixLU
 	{
-		if (lhs.cols() != rhs.cols()) return false;
-		if (lhs.rows() != rhs.rows()) return false;
-		if (lhs.transposed() == rhs.transposed())
-			return memcmp(lhs.data(), rhs.data(), lhs.size() * sizeof(Real)) == 0;
+		struct LProxy
+		{
+			Matrix<Real> const* m_mat;
+			LProxy(Matrix<Real> const& m)
+				:m_mat(&m)
+			{}
+			Real operator ()(int vec, int cmp) const
+			{
+				assert(vec >= 0 && vec < m_mat->vecs());
+				assert(cmp >= 0 && cmp < m_mat->cmps());
+				return cmp > vec ? (*m_mat)(vec, cmp) : cmp == vec ? 1 : 0;
+			}
+		};
+		struct UProxy
+		{
+			Matrix<Real> const* m_mat;
+			UProxy(Matrix<Real> const& m)
+				:m_mat(&m)
+			{}
+			Real operator ()(int vec, int cmp) const
+			{
+				assert(vec >= 0 && vec < m_mat->vecs());
+				assert(cmp >= 0 && cmp < m_mat->cmps());
+				return cmp <= vec ? (*m_mat)(vec, cmp) : 0;
+			}
+		};
+	
+		// The L and U matrices are stored in one matrix.
+		Matrix<Real> lu;
 
-		// Fall back to element-by-element comparisons
-		for (int r = 0, rend = lhs.rows(); r != rend; ++r)
-			for (int c = 0, cend = lhs.cols(); c != cend; ++c)
-				if (lhs(c,r) != rhs(c,r))
-					return false;
+		// Access to the lower diagonal matrix
+		LProxy L;
 
-		return true;
-	}
-	template <typename Real> inline bool operator != (Matrix<Real> const& lhs, Matrix<Real> const& rhs)
-	{
-		return !(lhs == rhs);
-	}
+		// Access to the upper diagonal matrix
+		UProxy U;
 
-	#pragma endregion
+		// The permutation row indices (length == rows())
+		std::unique_ptr<int[]> pi;
+
+		// The determinant of the permutation matrix
+		Real DetOfP;
+
+		MatrixLU(int vecs, int cmps, std::initializer_list<Real> data, bool transposed = false)
+			:MatrixLU(Matrix<Real>(vecs, cmps, data, transposed))
+		{}
+		MatrixLU(Matrix<Real> const& m)
+			:lu(m)
+			,L(lu)
+			,U(lu)
+			,pi(new int[m.vecs()])
+			,DetOfP(1.0f)
+		{
+			auto const N = m.IsSquare() ? m.vecs() : throw std::exception("LU decomposition is only possible on square matrices");
+
+			// We will store both the L and U matrices in 'base' since we know
+			// L has the form: [1 0] and U has the form: [U U]
+			//                 [L 1]                     [0 U]
+			auto  LL = Matrix<Real>::Identity(m.vecs(), m.cmps());
+			auto& UU = lu;
+
+			// Initialise the permutation vector
+			for (int i = 0; i != m.vecs(); ++i)
+				pi[i] = i;
+
+			// Decompose 'm' into 'LL' and 'UU'
+			for (int v = 0; v != N; ++v)
+			{
+				// Find the largest component in the vector 'v' to use as the pivot
+				auto p = 0;
+				Real max = 0;
+				for (int i = v; i != N; ++i)
+				{
+					auto val = abs(UU(v, i));
+					if (val <= max) continue;
+					max = val;
+					p = i;
+				}
+				if (max == 0)
+					throw std::runtime_error("The matrix is singular");
+
+				// Switch the components of all vectors
+				if (p != v)
+				{
+					std::swap(pi[v], pi[p]);
+					DetOfP *= -1;
+				
+					// Switch the components in LL and UU
+					for (int i = 0; i != v; ++i)
+						std::swap(LL(i, v), LL(i, p));
+					for (int i = 0; i != N; ++i)
+						std::swap(UU(i, v), UU(i, p));
+				}
+
+				// Gaussian eliminate the remaining vectors
+				for (int w = v + 1; w != N; ++w)
+				{
+					LL(v, w) = UU(v, w) / UU(v, v);
+					for (int i = v; i != N; ++i)
+						UU(i, w) = UU(i, w) - LL(v, w) * UU(i, v);
+				}
+			}
+
+			// Combine 'LL' and 'UU' into 'LU' (note UU *is* lu)
+			for (int r = 0; r != N; ++r)
+				for (int c = r+1; c != N; ++c)
+					lu(r, c) = LL(r, c);
+		}
+
+		// The matrix dimension (square)
+		int dim() const
+		{
+			return lu.vecs();
+		}
+
+		// Access to the linear underlying matrix data
+		Real const* data() const
+		{
+			return lu.data();
+		}
+		
+		// Access this matrix as a 2D array
+		Real operator()(bool change, int vec, int cmp) const
+		{
+			return lu(vec, cmp);
+		}
+	};
 
 	#pragma region Functions
-
-	// Value equality
-	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, Matrix<Real> const& rhs, Real tol)
-	{
-		if (lhs.cols() != rhs.cols()) return false;
-		if (lhs.rows() != rhs.rows()) return false;
-		if (lhs.transposed() == rhs.transposed())
-		{
-			// Vectorise compares
-			for (int i = 0, iend = lhs.size(); i != iend; ++i)
-				if (!FEqlRelative(lhs.data()[i], rhs.data()[i], tol))
-					return false;
-		}
-		else
-		{
-			// Element-by-element compares
-			for (int r = 0, rend = lhs.rows(); r != rend; ++r)
-				for (int c = 0, cend = lhs.cols(); c != cend; ++c)
-					if (!FEqlRelative(lhs(c,r), rhs(c,r), tol))
-						return false;
-		}
-
-		return true;
-	}
-	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
-	{
-		return FEqlRelative(lhs, rhs, maths::tinyf);
-	}
-	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, m4_cref<> rhs, Real tol)
-	{
-		if (lhs.cols() != 4) return false;
-		if (lhs.rows() != 4) return false;
-		return
-			FEqlRelative(float(lhs(0,0)), rhs.x.x, tol) && FEqlRelative(float(lhs(0,1)), rhs.x.y, tol) && FEqlRelative(float(lhs(0,2)), rhs.x.z, tol) && FEqlRelative(float(lhs(0,3)), rhs.x.w, tol) &&
-			FEqlRelative(float(lhs(1,0)), rhs.y.x, tol) && FEqlRelative(float(lhs(1,1)), rhs.y.y, tol) && FEqlRelative(float(lhs(1,2)), rhs.y.z, tol) && FEqlRelative(float(lhs(1,3)), rhs.y.w, tol) &&
-			FEqlRelative(float(lhs(2,0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2,1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2,2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2,3)), rhs.z.w, tol) &&
-			FEqlRelative(float(lhs(3,0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3,1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3,2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3,3)), rhs.w.w, tol);
-	}
-	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4_cref<> rhs)
-	{
-		return FEqlRelative(lhs, rhs, maths::tinyf);
-	}
 
 	// Return the transpose of matrix 'm'
 	template <typename Real> inline Matrix<Real> Transpose(Matrix<Real> const& m)
 	{
-		Matrix<Real> t(m);
-		t.transposed(!m.transposed());
-		return t;
+		return Matrix<Real>(m).transpose();
 	}
 
 	// Return the determinant of a matrix
 	template <typename Real> inline Real Determinant(MatrixLU<Real> const& m)
 	{
 		auto det = m.DetOfP;
-		for (int i = 0; i != m.rows(); ++i)
-			det *= m.U(i,i);
+		for (int i = 0; i != m.dim(); ++i)
+			det *= m.U(i, i);
 
 		return det;
 	}
@@ -883,12 +954,12 @@ namespace pr
 	// Return the dot product of two vectors
 	template <typename Real> inline Real Dot(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 	{
-		assert("Dot product is between column vectors" && lhs.cols() == 1 && rhs.cols() == 1);
-		assert("Dot product must be between vectors of the same length" && lhs.rows() == rhs.rows());
+		assert("Dot product is between column vectors" && lhs.vecs() == 1 && rhs.vecs() == 1);
+		assert("Dot product must be between vectors of the same length" && lhs.cmps() == rhs.cmps());
 
 		Real dp = 0;
-		for (int i = 0, iend = lhs.rows(); i != iend; ++i)
-			dp += lhs(0,i) * rhs(0,i);
+		for (int i = 0, iend = lhs.cmps(); i != iend; ++i)
+			dp += lhs(0, i) * rhs(0, i);
 		return dp;
 	}
 
@@ -906,33 +977,31 @@ namespace pr
 	template <typename Real> inline Matrix<Real> Solve(MatrixLU<Real> const& A, Matrix<Real> const& v)
 	{
 		// e.g. [4x4][4x1] = [4x1]
-		assert("Solution vector has the wrong dimensions" && A.rows() == v.rows());
-
-		Matrix<Real> a(1, A.rows());
-		Matrix<Real> b(1, A.rows());
+		assert("Solution vector has the wrong dimensions" && A.dim() == v.cmps());
 
 		// Switch items in "v" due to permutation matrix
-		for (int r = 0; r != A.rows(); ++r)
-			a(0,r) = v(0,A.pi[r]);
+		Matrix<Real> a(1, A.dim());
+		for (int i = 0; i != A.dim(); ++i)
+			a(0, i) = v(0, A.pi[i]);
 
-		// Solve for x in 'Lx = b' assuming 'L' is a lower triangular matrix
-		for (int r = 0; r != A.rows(); ++r)
+		// Solve for x in 'L.x = b' assuming 'L' is a lower triangular matrix
+		Matrix<Real> b(1, A.dim());
+		for (int i = 0; i != A.dim(); ++i)
 		{
-			b(0,r) = a(0,r);
-			for (int k = 0; k != r; ++k)
-				b(0,r) -= A.L(k,r) * b(0,k);
-			b(0,r) = b(0,r) / A.L(r,r);
+			b(0, i) = a(0, i);
+			for (int j = 0; j != i; ++j)
+				b(0, i) -= A.L(j, i) * b(0, j);
 		}
 
-		a = b;
-
 		// Solve for x in 'Ux = b' assuming 'U' is an upper triangular matrix
-		for (int r = A.rows(); r-- != 0;)
+		Matrix<Real> c(b);
+		for (int i = A.dim(); i-- != 0;)
 		{
-			b(0,r) = a(0,r);
-			for (int k = A.rows() - 1; k > r; k--)
-				b(0,r) -= A.U(k,r) * b(0,k);
-			b(0,r) = b(0,r) / A.U(r,r);
+			b(0, i) = c(0, i);
+			for (int j = A.dim() - 1; j > i; --j)
+				b(0, i) -= A.U(j, i) * b(0, j);
+
+			b(0, i) = b(0, i) / A.U(i, i);
 		}
 
 		return b;
@@ -951,13 +1020,13 @@ namespace pr
 		assert("Matrix has no inverse" && IsInvertible(lu));
 
 		// Inverse of an NxM matrix is a MxN matrix (even though this only works for square matrices)
-		Matrix<Real> inv(lu.rows(), lu.cols());
-		Matrix<Real> elem(1, lu.rows());
-		for (int i = 0; i != elem.size(); ++i)
+		Matrix<Real> inv(lu.dim(), lu.dim());
+		Matrix<Real> elem(1, lu.dim());
+		for (int i = 0; i != lu.dim(); ++i)
 		{
-			elem(0,i) = 1;
-			inv.col(i) = Solve(lu, elem);
-			elem(0,i) = 0;
+			elem(0, i) = 1;
+			inv.vec(i) = Solve(lu, elem);
+			elem(0, i) = 0;
 		}
 		return inv;
 	}
@@ -970,13 +1039,13 @@ namespace pr
 	template <typename Real> inline Matrix<Real> Power(Matrix<Real> const& m, int pow)
 	{
 		if (pow == +1) return m;
-		if (pow ==  0) return Matrix<Real>::Identity(m.cols(),m.rows());
+		if (pow ==  0) return Matrix<Real>::Identity(m.vecs(), m.cmps());
 		if (pow == -1) return Invert(m);
 
 		auto x = pow < 0 ? Invert(m) : m;
-		if (pow < 0) pow *= -1;
+		pow = pow < 0 ? -pow : pow;
 
-		auto ret = Matrix<Real>::Identity(m.cols(), m.rows());
+		auto ret = Matrix<Real>::Identity(m.vecs(), m.cmps());
 		while (pow != 0)
 		{
 			if ((pow & 1) == 1) ret *= x;
@@ -1051,6 +1120,8 @@ namespace pr
 		}
 	}
 	#endif
+
+	#pragma endregion
 }
 
 #if PR_UNITTESTS
@@ -1063,14 +1134,71 @@ namespace pr::maths
 		using namespace pr;
 		std::default_random_engine rng(1);
 
+		{// LU decomposition
+			auto m = MatrixLU<double>(4, 4, 
+			{
+				  1.0, +2.0,  3.0, +1.0,
+				  4.0, -5.0,  6.0, +5.0,
+				  7.0, +8.0,  9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			});
+			auto res = Matrix<double>(4, 4,
+			{
+				3.0, 0.66666666666667, 0.33333333333333, 0.33333333333333,
+				6.0, -9.0, -0.33333333333333, -0.22222222222222,
+				9.0, 2.0, -11.333333333333, -0.3921568627451,
+				12.0, 3.0, -3.0, -14.509803921569,
+			});
+			PR_CHECK(FEql(m.lu, res), true);
+		}
+		{// Invert
+			auto M = m4x4(
+				v4(1.0f, +2.0f, 3.0f, +1.0f),
+				v4(4.0f, -5.0f, 6.0f, +5.0f),
+				v4(7.0f, +8.0f, 9.0f, -9.0f),
+				v4(-10.0f, 11.0f, 12.0f, +0.0f)
+			);
+			auto INV = Invert(M);
+			auto m = Matrix<double>(4, 4,
+			{
+				1.0, +2.0, 3.0, +1.0,
+				4.0, -5.0, 6.0, +5.0,
+				7.0, +8.0, 9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			});
+			auto inv = Invert(m);
+
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(inv, INV), true);
+		}
+		{// Invert transposed
+			auto M = Transpose4x4(m4x4(
+				v4(1.0f, +2.0f, 3.0f, +1.0f),
+				v4(4.0f, -5.0f, 6.0f, +5.0f),
+				v4(7.0f, +8.0f, 9.0f, -9.0f),
+				v4(-10.0f, 11.0f, 12.0f, +0.0f)
+			));
+			auto INV = Invert(M);
+			auto m = Matrix<double>(4, 4,
+			{
+				1.0, +2.0, 3.0, +1.0,
+				4.0, -5.0, 6.0, +5.0,
+				7.0, +8.0, 9.0, -9.0,
+				-10.0, 11.0, 12.0, +0.0,
+			}, true);
+			auto inv = Invert(m);
+
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(inv, INV), true);
+		}
 		{// Compare with m4x4
 			auto M = Random4x4(rng, -5.0f, +5.0f, v4Origin);
 			Matrix<float> m(M);
 
 			PR_CHECK(FEql(m, M), true);
-			PR_CHECK(FEql(m(0,3), M.x.w), true);
-			PR_CHECK(FEql(m(3,0), M.w.x), true);
-			PR_CHECK(FEql(m(2,2), M.z.z), true);
+			PR_CHECK(FEql(m(0, 3), M.x.w), true);
+			PR_CHECK(FEql(m(3, 0), M.w.x), true);
+			PR_CHECK(FEql(m(2, 2), M.z.z), true);
 
 			PR_CHECK(IsInvertible(m) == IsInvertible(M), true);
 
@@ -1082,21 +1210,44 @@ namespace pr::maths
 			auto M2 = Transpose4x4(M);
 			PR_CHECK(FEql(m2, M2), true);
 		}
+		{// Multipy
+			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
+			
+			auto V0 = Random4(rng, -5, +5);
+			auto M0 = Random4x4(rng, -5, +5);
+			auto M1 = Random4x4(rng, -5, +5);
+
+			auto v0 = Matrix<float>(V0);
+			auto m0 = Matrix<float>(M0);
+			auto m1 = Matrix<float>(M1);
+
+			PR_CHECK(FEql(v0, V0), true);
+			PR_CHECK(FEql(m0, M0), true);
+			PR_CHECK(FEql(m1, M1), true);
+
+			auto V2 = M0 * V0;
+			auto v2 = m0 * v0;
+			PR_CHECK(FEql(v2, V2), true);
+
+			auto M2 = M0 * M1;
+			auto m2 = m0 * m1;
+			PR_CHECK(FEql(m2, M2), true);
+		}
 		{// Multiply round trip
 			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
 			const int SZ = 100;
-			Matrix<float> m(SZ,SZ);
+			Matrix<float> m(SZ, SZ);
 			for (int k = 0; k != 10; ++k)
 			{
-				for (int r = 0; r != m.rows(); ++r)
-					for (int c = 0; c != m.cols(); ++c)
-						m(c,r) = dist(rng);
+				for (int r = 0; r != m.vecs(); ++r)
+					for (int c = 0; c != m.cmps(); ++c)
+						m(r, c) = dist(rng);
 
 				if (IsInvertible(m))
 				{
 					auto m_inv = Invert(m);
 
-					auto i0 = Matrix<float>::Identity(SZ,SZ);
+					auto i0 = Matrix<float>::Identity(SZ, SZ);
 					auto i1 = m * m_inv;
 					auto i2 = m_inv * m;
 
@@ -1108,51 +1259,62 @@ namespace pr::maths
 			}
 		}
 		{// Transpose
-			const int cols = 3, rows = 4;
-			auto m = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
+			const int vecs = 4, cmps = 3;
+			auto m = Matrix<double>::Random(rng, vecs, cmps, -5.0, 5.0);
 			auto t = Transpose(m);
 
-			PR_CHECK(m.cols(), cols);
-			PR_CHECK(m.rows(), rows);
-			PR_CHECK(t.cols(), rows);
-			PR_CHECK(t.rows(), cols);
+			PR_CHECK(m.vecs(), vecs);
+			PR_CHECK(m.cmps(), cmps);
+			PR_CHECK(t.vecs(), cmps);
+			PR_CHECK(t.cmps(), vecs);
 
-			for (int r = 0; r != rows; ++r)
-				for (int c = 0; c != cols; ++c)
-					PR_CHECK(m(c,r) == t(r,c), true);
+			for (int r = 0; r != vecs; ++r)
+				for (int c = 0; c != cmps; ++c)
+					PR_CHECK(m(r, c) == t(c, r), true);
 		}
 		{// Resizing
-			const int cols = 3, rows = 4, sz = 5;
-			auto M = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
+			auto M = Matrix<double>::Random(rng, 4, 3, -5.0, 5.0);
 			auto m = M;
 			auto t = Transpose(M);
 
-			// Resizing a normal matrix adds more columns, and preserves data
-			m.resize(sz);
-			PR_CHECK(m.cols(), sz);
-			PR_CHECK(m.rows(), rows);
-			for (int r = 0; r != m.rows(); ++r)
-				for (int c = 0; c != m.cols(); ++c)
-					if (c < cols)
-						PR_CHECK(m(c,r) == M(c,r), true);
+			// Resizing a normal matrix adds more vectors, and preserves data
+			PR_CHECK(m.vecs(), 4);
+			PR_CHECK(m.cmps(), 3);
+			m.resize(5);
+			PR_CHECK(m.vecs(), 5);
+			PR_CHECK(m.cmps(), 3);
+			for (int r = 0; r != m.vecs(); ++r)
+			{
+				for (int c = 0; c != m.cmps(); ++c)
+				{
+					if (r < 4 && c < 3)
+						PR_CHECK(m(r, c) == M(r, c), true);
 					else
-						PR_CHECK(m(c,r) == 0, true);
+						PR_CHECK(m(r, c) == 0, true);
+				}
+			}
 
-			// Resizing a transposed matrix adds more rows, and preserves data 
-			t.resize(sz);
-			PR_CHECK(t.cols(), rows);
-			PR_CHECK(t.rows(), sz);
-			for (int r = 0; r != t.rows(); ++r)
-				for (int c = 0; c != t.cols(); ++c)
-					if (r < cols)
-						PR_CHECK(t(c,r) == M(r,c), true);
+			// Resizing a transposed matrix adds more transposed vectors, and preserves data 
+			PR_CHECK(t.vecs(), 3);
+			PR_CHECK(t.cmps(), 4);
+			t.resize(5);
+			PR_CHECK(t.vecs(), 5);
+			PR_CHECK(t.cmps(), 4);
+			for (int r = 0; r != t.vecs(); ++r)
+			{
+				for (int c = 0; c != t.cmps(); ++c)
+				{
+					if (r < 3 && c < 4)
+						PR_CHECK(t(r, c) == M(c, r), true);
 					else
-						PR_CHECK(t(c,r) == 0, true);
+						PR_CHECK(t(r, c) == 0, true);
+				}
+			}
 		}
 		{// Dot Product
-			auto a = Matrix<float>(1,3,{1.0, 2.0, 3.0});
-			auto b = Matrix<float>(1,3,{3.0, 2.0, 1.0});
-			auto r = Dot(a,b);
+			auto a = Matrix<float>(1, 3, {1.0, 2.0, 3.0});
+			auto b = Matrix<float>(1, 3, {3.0, 2.0, 1.0});
+			auto r = Dot(a, b);
 			PR_CHECK(FEql(r, 10.0f), true);
 		}
 	}
