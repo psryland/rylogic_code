@@ -189,17 +189,17 @@ namespace pr::maths
 		}
 		static Quadratic FromPoints(double x0, double y0, double x1, double y1, double x2, double y2)
 		{
-			auto M = Matrix<double>(3,3,
+			auto M = Matrix<double>(3, 3,
 			{
-				x0*x0, x0, 1,
-				x1*x1, x1, 1,
-				x2*x2, x2, 1,
-			}, true);
-				
-			auto y = Matrix<double>(1,3,{y0, y1, y2},false);
+				x0*x0, x0, 1.0,
+				x1*x1, x1, 1.0,
+				x2*x2, x2, 1.0,
+			}).transpose();
+
+			auto y = Matrix<double>(1, 3, {y0, y1, y2});
 			auto x = Invert(M) * y;
 
-			return Quadratic(x(0,0), x(0,1), x(0,2));
+			return Quadratic(x(0, 0), x(0, 1), x(0, 2));
 		}
 		static Quadratic FromPoints(double const* pts)
 		{

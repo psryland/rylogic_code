@@ -235,11 +235,11 @@ namespace pr::maths
 				m3x4{2}, m3x4{4}  //   [[2] [4]]
 			};
 
-			for (int c = 0; c != 6; ++c)
-			for (int r = 0; r != 8; ++r)
+			for (int r = 0; r != 6; ++r)
+			for (int c = 0; c != 8; ++c)
 			{
-				PR_CHECK(FEql(m1(c,r), M1[c][r]), true);
-				PR_CHECK(FEql(m2(c,r), M2[c][r]), true);
+				PR_CHECK(FEql(m1(r, c), M1[r][c]), true);
+				PR_CHECK(FEql(m2(r, c), M2[r][c]), true);
 			}
 
 			auto M3 = m6x8 // = [{1} {2} {3} {4} {5} {6}]
@@ -378,16 +378,16 @@ namespace pr::maths
 			auto m2 = Transpose(m1);
 			auto M2 = Transpose(M1);
 
-			for (int c = 0; c != 6; ++c)
+			for (int i = 0; i != 6; ++i)
 			{
-				PR_CHECK(FEql(M2[c], v8{v3{1,2,3},v3{4,5,6}}), true);
+				PR_CHECK(FEql(M2[i], v8{v3{1, 2, 3}, v3{4, 5, 6}}), true);
 
-				PR_CHECK(FEql(m2(c,0), M2[c].ang.x), true);
-				PR_CHECK(FEql(m2(c,1), M2[c].ang.y), true);
-				PR_CHECK(FEql(m2(c,2), M2[c].ang.z), true);
-				PR_CHECK(FEql(m2(c,3), M2[c].lin.x), true);
-				PR_CHECK(FEql(m2(c,4), M2[c].lin.y), true);
-				PR_CHECK(FEql(m2(c,5), M2[c].lin.z), true);
+				PR_CHECK(FEql(m2(i, 0), M2[i].ang.x), true);
+				PR_CHECK(FEql(m2(i, 1), M2[i].ang.y), true);
+				PR_CHECK(FEql(m2(i, 2), M2[i].ang.z), true);
+				PR_CHECK(FEql(m2(i, 3), M2[i].lin.x), true);
+				PR_CHECK(FEql(m2(i, 4), M2[i].lin.y), true);
+				PR_CHECK(FEql(m2(i, 5), M2[i].lin.z), true);
 			}
 		}
 		{// Inverse

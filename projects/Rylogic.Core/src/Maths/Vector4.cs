@@ -105,6 +105,12 @@ namespace Rylogic.Maths
 			set => this[(int)i] = value;
 		}
 
+		/// <summary>To flat array</summary>
+		public float[] ToArray()
+		{
+			return new[] { x, y, z, w };
+		}
+
 		/// <summary>Integer cast accessors</summary>
 		public int xi => (int)x;
 		public int yi => (int)y;
