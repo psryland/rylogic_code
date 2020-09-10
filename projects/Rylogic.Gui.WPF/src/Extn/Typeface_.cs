@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Rylogic.Gui.WPF
 {
@@ -62,6 +64,22 @@ namespace Rylogic.Gui.WPF
 			case nameof(FontStretches.ExtraExpanded): return FontStretches.ExtraExpanded;
 			case nameof(FontStretches.UltraExpanded): return FontStretches.UltraExpanded;
 			}
+		}
+
+		/// <summary>Creates typeface from the framework element.</summary>
+		public static Typeface CreateTypeface(this FrameworkElement fe)
+		{
+			return new Typeface(
+				(FontFamily)fe.GetValue(TextBlock.FontFamilyProperty),
+				(FontStyle)fe.GetValue(TextBlock.FontStyleProperty),
+				(FontWeight)fe.GetValue(TextBlock.FontWeightProperty),
+				(FontStretch)fe.GetValue(TextBlock.FontStretchProperty));
+		}
+
+		/// <summary>Return the font size associated with this framework element</summary>
+		public static double FontSize(this FrameworkElement fe)
+		{
+			return (double)fe.GetValue(TextBlock.FontSizeProperty);
 		}
 	}
 }

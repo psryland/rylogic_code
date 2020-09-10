@@ -6,6 +6,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Utility;
+using SolarHotWater.Common;
 
 namespace SolarHotWater
 {

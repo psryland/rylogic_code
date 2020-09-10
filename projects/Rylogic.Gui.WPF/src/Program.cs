@@ -1,7 +1,17 @@
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Windows;
+using System.Windows.Markup;
 using Rylogic.UnitTests;
+
+[assembly: ThemeInfo(
+	//where theme specific resource dictionaries are located used if a resource is not found in the page, or application resource dictionaries)
+	ResourceDictionaryLocation.None, 
+	//where the generic resource dictionary is located (used if a resource is not found in the page, app, or any theme specific resource dictionaries)
+	ResourceDictionaryLocation.SourceAssembly
+)]
+[assembly: XmlnsDefinition("http://rylogic.co.nz/guiwpf", "Rylogic.Gui.WPF")]
 
 namespace Rylogic.Gui.WPF
 {

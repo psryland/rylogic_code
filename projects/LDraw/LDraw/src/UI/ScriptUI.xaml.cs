@@ -261,6 +261,9 @@ namespace LDraw.UI
 				m_text_editor = value;
 				if (m_text_editor != null)
 				{
+					// Set general properties
+					m_text_editor.TextArea.SelectionCornerRadius = 1.0;
+
 					// Add support for searching
 					m_search_ui = SearchPanel.Install(m_text_editor);
 

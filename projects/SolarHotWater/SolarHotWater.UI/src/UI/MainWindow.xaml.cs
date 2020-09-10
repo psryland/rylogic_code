@@ -14,6 +14,7 @@ using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using SolarHotWater.Common;
 
 namespace SolarHotWater.UI
 {

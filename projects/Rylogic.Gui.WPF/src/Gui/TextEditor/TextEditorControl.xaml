@@ -1,10 +1,56 @@
-﻿<Control
-	x:Class="Rylogic.Gui.WPF.TextEditorControl"
+﻿<ResourceDictionary
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	mc:Ignorable="d" 
-	d:DesignHeight="450"
-	d:DesignWidth="800"
-	/>
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:edit="clr-namespace:Rylogic.Gui.WPF.TextEditor"
+	>
+	<Pen x:Key="TextEditor_SelectionBorder" Brush="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" Thickness="1"/>
+	<SolidColorBrush x:Key="TextEditor_SelectionBrush" Color="{DynamicResource {x:Static SystemColors.HighlightColorKey}}" Opacity="0.7"/>
+
+	<!-- TextEditor Control -->
+	<ControlTemplate x:Key="TextEditor_ControlTemplate" TargetType="{x:Type gui:TextEditorControl}">
+		<ScrollViewer
+			Focusable="False"
+			Name="PART_ScrollViewer"
+			CanContentScroll="True"
+			Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextArea}"
+			VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
+			HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+			VerticalContentAlignment="Top"
+			HorizontalContentAlignment="Left"
+			BorderThickness="{TemplateBinding BorderThickness}"
+			BorderBrush="{TemplateBinding BorderBrush}"
+			Background="{TemplateBinding Background}"
+			Padding="{TemplateBinding Padding}"
+			/>
+		<ControlTemplate.Triggers>
+			<Trigger Property="WordWrap" Value="True">
+				<Setter TargetName="PART_ScrollViewer" Property="HorizontalScrollBarVisibility" Value="Disabled" />
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+	<Style TargetType="{x:Type gui:TextEditorControl}">
+		<Setter Property="FlowDirection" Value="LeftToRight"/>
+		<Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" />
+		<Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+		<Setter Property="Template" Value="{StaticResource TextEditor_ControlTemplate}" />
+	</Style>
+
+	<!-- Text Area -->
+	<ControlTemplate x:Key="TextEditor_TextAreaControlTemplate" TargetType="{x:Type edit:TextArea}">
+		<DockPanel Focusable="False">
+			<ContentPresenter
+				Panel.ZIndex="-1"
+				Focusable="False"
+				Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextView}"/>
+		</DockPanel>
+	</ControlTemplate>
+	<Style TargetType="{x:Type edit:TextArea}">
+		<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+		<Setter Property="SelectionBrush" Value="{StaticResource TextEditor_SelectionBrush}"/>
+		<Setter Property="SelectionBorder" Value="{StaticResource TextEditor_SelectionBorder}"/>
+		<Setter Property="SelectionForeground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+		<Setter Property="Template" Value="{StaticResource TextEditor_TextAreaControlTemplate}"/>
+	</Style>
+
+</ResourceDictionary>

@@ -1,10 +1,9 @@
 ﻿using System;
 using Rylogic.Common;
-using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 
-namespace SolarHotWater
+namespace SolarHotWater.Common
 {
 	public class SettingsData :SettingsBase<SettingsData>
 	{

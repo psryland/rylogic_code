@@ -18,8 +18,96 @@ namespace Rylogic.Gui.WPF
 {
 	public static partial class Gui_
 	{
+		/// <summary>Framework property meta data</summary>
+		private class DPMeta :FrameworkPropertyMetadata
+		{
+			public DPMeta(Type prop_type, object? def, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
+				:base(def, flags)
+			{
+				PropType = prop_type;
+				DefaultUpdateSourceTrigger = upd;
+			}
+
+			/// <summary>The type of the dependency property</summary>
+			public Type PropType { get; }
+
+			/// <summary>Property value validation handler</summary>
+			public ValidateValueCallback? Validate { get; set; }
+		}
+
+		/// <summary>Create framework property metadata for the given property name</summary>
+		private static DPMeta DPMetaData(bool is_prop, Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
+		{
+			// Determine the type of the property
+			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
+			var prop_type = is_prop
+				? (class_type.GetProperty(prop_name)?.PropertyType                                                ?? throw new ArgumentNullException($"Property type is unknown"))
+				: (class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public)?.ReturnType ?? throw new ArgumentNullException($"Property return type is unknown"));
+
+			// Set the default value
+			def ??= (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
+
+			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
+			// may not be a reference type, and 'null' may not be a valid default value.
+			var meta = new DPMeta(prop_type, def, flags, upd);
+
+			// If the type defines a Changed handler, add a callback
+			if (class_type.GetMethod($"{prop_name}_Changed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is MethodInfo changed_handler)
+			{
+				var param_count = changed_handler.GetParameters().Length;
+				meta.PropertyChangedCallback = param_count switch
+				{
+					2 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue, e.OldValue }),
+					1 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }),
+					0 => (d, e) => changed_handler.Invoke(d, null),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
+				};
+			}
+			if (class_type.GetMethod($"{prop_name}_Changed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is MethodInfo changed_handler_s)
+			{
+				var param_count = changed_handler_s.GetParameters().Length;
+				meta.PropertyChangedCallback = param_count switch
+				{
+					3 => (d, e) => changed_handler_s.Invoke(null, new object[] { d, e.NewValue, e.OldValue }),
+					2 => (d, e) => changed_handler_s.Invoke(null, new object[] { d, e.NewValue }),
+					1 => (d, e) => changed_handler_s.Invoke(null, new object[] { d }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
+				};
+			}
+
+			// If the type defines a Coerce handler, add a callback
+			if (class_type.GetMethod($"{prop_name}_Coerce", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is MethodInfo coerce_handler)
+			{
+				var param_count = coerce_handler.GetParameters().Length;
+				meta.CoerceValueCallback = param_count switch
+				{
+					1 => (d, v) => coerce_handler.Invoke(d, new object[] { v }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
+				};
+			}
+			if (class_type.GetMethod($"{prop_name}_Coerce", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is MethodInfo coerce_handler_s)
+			{
+				var param_count = coerce_handler_s.GetParameters().Length;
+				meta.CoerceValueCallback = param_count switch
+				{
+					2 => (d, v) => coerce_handler_s.Invoke(null, new object[] { d, v }),
+					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
+				};
+			}
+
+			// IF the type defines a Validation handler
+			if (class_type.GetMethod($"{prop_name}_Validate", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is MethodInfo validation_handler)
+			{
+				meta.Validate = new ValidateValueCallback((x) => (bool?)validation_handler.Invoke(null, new object[] { x }) ?? false);
+			}
+
+			// Return the meta data
+			return meta;
+		}
+
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
+		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegister(typeof(T), prop_name, def, flags, upd);
+		public static DependencyProperty DPRegister(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -37,66 +125,16 @@ namespace Rylogic.Gui.WPF
 			//    var binding = BindingOperations.GetBinding(<control>, ComboBox.DepProperty);
 			//    binding.ValidationRules.Clear(); etc).
 
-			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
-			// may not be a reference type, and 'null' may not be a valid default value.
-			var meta = new FrameworkPropertyMetadata(null, flags)
-			{
-				DefaultUpdateSourceTrigger = upd
-			};
-
-			// Determine the type of the property
-			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
-			var prop_type = typeof(T).GetProperty(prop_name)?.PropertyType;
-			if (prop_type == null)
-				throw new ArgumentNullException($"Property type is unknown");
-
-			// Set the default value
-			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
-
-			// If the type defines a Changed handler, add a callback
-			var changed_handler = typeof(T).GetMethod($"{prop_name}_Changed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-			if (changed_handler != null)
-			{
-				var param_count = changed_handler.GetParameters().Length;
-				meta.PropertyChangedCallback = param_count switch
-				{
-					2 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue, e.OldValue }),
-					1 => (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }),
-					0 => (d, e) => changed_handler.Invoke(d, null),
-					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
-				};
-			}
-
-			// If the type defines a Coerce handler, add a callback
-			var coerce_handler = typeof(T).GetMethod($"{prop_name}_Coerce", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-			if (coerce_handler != null)
-			{
-				var param_count = coerce_handler.GetParameters().Length;
-				meta.CoerceValueCallback = param_count switch
-				{
-					1 => (d, v) => coerce_handler.Invoke(d, new object[] { v }),
-					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
-				};
-			}
-
-			// IF the type defines a Validation handler
-			var validate_cb = (ValidateValueCallback?)null;
-			var validation_handler = typeof(T).GetMethod($"{prop_name}_Validate", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-			if (validation_handler != null)
-			{
-				validate_cb = new ValidateValueCallback((x) => (bool?)validation_handler.Invoke(null, new object[] { x }) ?? false);
-			}
+			// Get the meta data
+			var meta = DPMetaData(true, class_type, prop_name, def, flags, upd);
 
 			// Register the property
-			return DependencyProperty.Register(prop_name, prop_type, typeof(T), meta, validate_cb);
+			return DependencyProperty.Register(prop_name, meta.PropType, class_type, meta, meta.Validate);
 		}
 
 		/// <summary>Wrapper for DependencyProperty.RegisterAttached that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
-		{
-			return DPRegisterAttached(typeof(T), prop_name, def, flags);
-		}
-		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegisterAttached(typeof(T), prop_name, def, flags, upd);
+		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -111,44 +149,18 @@ namespace Rylogic.Gui.WPF
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
 			// may not be a reference type, and 'null' may not be a valid default value.
-			var meta = new FrameworkPropertyMetadata(null, flags);
+			var meta = DPMetaData(false, class_type, prop_name, def, flags, upd);
 
-			// Determine the type of the property
-			var prop_type = class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public)?.ReturnType;
-			if (prop_type == null)
-				throw new Exception($"Property return type is unknown");
-
-			// Set the default value
-			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
-
-			// If the type defines a Changed handler, add a callback
-			var changed_handler = class_type.GetMethod($"{prop_name}_Changed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-			if (changed_handler != null)
-			{
-				var param_count = changed_handler.GetParameters().Length;
-				meta.PropertyChangedCallback = param_count switch
-				{
-					3 => (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue, e.OldValue }),
-					2 => (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue }),
-					1 => (d, e) => changed_handler.Invoke(null, new object[] { d }),
-					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Changed"),
-				};
-			}
-
-			// If the type defines a Validate handle, add a callback
-			var coerce_handler = class_type.GetMethod($"{prop_name}_Coerce", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-			if (coerce_handler != null)
-			{
-				var param_count = coerce_handler.GetParameters().Length;
-				meta.CoerceValueCallback = param_count switch
-				{
-					2 => (d, v) => coerce_handler.Invoke(null, new object[] { d, v }),
-					_ => throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce"),
-				};
-			}
-			
 			// Register the attached property using the return type of 'Get<prop_name>'
-			return DependencyProperty.RegisterAttached(prop_name, prop_type, class_type, meta);
+			return DependencyProperty.RegisterAttached(prop_name, meta.PropType, class_type, meta);
+		}
+
+		/// <summary>Wrapper for 'DependencyProperty.AddOwner' that uses reflection to look for changed or coerce handlers</summary>
+		public static DependencyProperty AddOwner<T>(this DependencyProperty dp, string prop_name, object? def = null) => AddOwner(dp, typeof(T), prop_name, def);
+		public static DependencyProperty AddOwner(this DependencyProperty dp, Type class_type, string prop_name, object? def = null)
+		{
+			var meta = DPMetaData(true, class_type, prop_name, def);
+			return dp.AddOwner(class_type, meta);
 		}
 
 		/// <summary>Attached to the Closed event of a window to clean up any child objects that are disposable</summary>

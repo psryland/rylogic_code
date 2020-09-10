@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Windows.Media;
+using Rylogic.Extn;
 
 namespace Rylogic.Gui.WPF.TextEditor
 {
@@ -17,6 +18,12 @@ namespace Rylogic.Gui.WPF.TextEditor
 		//  - 'pixels_per_dip' is DIP/96.0, i.e. 1.0 if DPI is 96.0, 1.25 if DIP is 120.0, etc
 
 		private List<Cell> m_cells = new List<Cell>();
+		public Line()
+		{}
+		public Line(string text, ushort style = 0)
+		{
+			SetText(text, style);
+		}
 
 		/// <summary>Get the text of this line</summary>
 		public virtual string Text
@@ -32,7 +39,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <summary>Set the line to the given text and style</summary>
 		public void SetText(string text, ushort style)
 		{
-			m_cells.Clear();
+			m_cells.Resize(text.Length);
 			for (int i = 0; i != text.Length; ++i)
 				this[i] = new Cell(text[i], style);
 		}
@@ -46,8 +53,8 @@ namespace Rylogic.Gui.WPF.TextEditor
 				throw new ArgumentException(nameof(start), "Length is out of range");
 
 			// Grow the line if necessary
-			for (; start + length < Count;)
-				m_cells.Add(new Cell());
+			if (start + length > Count)
+				m_cells.Resize(start + length);
 
 			// Set the text and style
 			for (int i = 0, j = start; i != length; ++i, ++j)
@@ -147,7 +154,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 				Height = 0.0;
 
 				var sb = new StringBuilder(256);
-				for (int s = 0, e = 0; s != Count;)
+				for (int s = 0, e = 0; s != Count; s = e)
 				{
 					sb.Length = 0;
 
@@ -181,6 +188,6 @@ namespace Rylogic.Gui.WPF.TextEditor
 		}
 
 		/// <summary>Line height is only know after formatting</summary>
-		public double Height { get; private set; } = double.NaN;
+		public double Height { get; private set; } = 0.0;
 	}
 }
