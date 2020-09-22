@@ -364,6 +364,7 @@
 #include "pr\view3d\util\stock_resources.h"
 #include "pr\view3d\util\util.h"
 #include "pr\view3d\util\wrappers.h"
+#include "pr\win32\dummy_window.h"
 #include "pr\win32\key_codes.h"
 #include "pr\win32\stackdump.h"
 #include "pr\win32\win32.h"

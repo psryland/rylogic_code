@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -72,7 +72,9 @@ namespace pr::rdr
 
 			{ GUID_WICPixelFormat8bppAlpha, DXGI_FORMAT_A8_UNORM },
 
+			#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 			{ GUID_WICPixelFormat96bppRGBFloat, DXGI_FORMAT_R32G32B32_FLOAT },
+			#endif
 		};
 
 		// WIC Pixel Format nearest conversion table
@@ -131,10 +133,11 @@ namespace pr::rdr
 			{ GUID_WICPixelFormat40bppCMYKAlpha, GUID_WICPixelFormat64bppRGBA }, // DXGI_FORMAT_R16G16B16A16_UNORM
 			{ GUID_WICPixelFormat80bppCMYKAlpha, GUID_WICPixelFormat64bppRGBA }, // DXGI_FORMAT_R16G16B16A16_UNORM
 
+			#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 			{ GUID_WICPixelFormat32bppRGB, GUID_WICPixelFormat32bppRGBA }, // DXGI_FORMAT_R8G8B8A8_UNORM
 			{ GUID_WICPixelFormat64bppRGB, GUID_WICPixelFormat64bppRGBA }, // DXGI_FORMAT_R16G16B16A16_UNORM
 			{ GUID_WICPixelFormat64bppPRGBAHalf, GUID_WICPixelFormat64bppRGBAHalf }, // DXGI_FORMAT_R16G16B16A16_FLOAT 
-
+			#endif
 			// We don't support n-channel formats
 		};
 	}

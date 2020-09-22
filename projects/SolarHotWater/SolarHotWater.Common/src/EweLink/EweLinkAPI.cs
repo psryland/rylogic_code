@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
-using SolarHotWater;
+using SolarHotWater.Common;
 using WebSocket = Rylogic.Net.WebSocket;
 
 namespace EweLink
@@ -82,7 +82,7 @@ namespace EweLink
 				{
 					m_socket.OnClose -= HandleClosed;
 					m_socket.OnError -= HandleError;
-					m_socket.OnHeartbeat-= HandleHeartbeat;
+					m_socket.OnHeartbeat -= HandleHeartbeat;
 					m_socket.OnMessage -= HandleMessage;
 					m_socket.OnOpen -= HandleOpened;
 					Util.Dispose(ref m_socket!);
@@ -128,10 +128,10 @@ namespace EweLink
 					try
 					{
 						Log.Write(ELogLevel.Debug, e.Text != "pong" ? e.Text : "heartbeat");
-						
+
 						// Heartbeat response
 						if (e.Text == "pong")
-							return; 
+							return;
 
 						// Otherwise expect a JSON response
 						var jobj = JObject.Parse(e.Text);
@@ -216,7 +216,7 @@ namespace EweLink
 							}
 						}
 					}
-					catch (OperationCanceledException) {}
+					catch (OperationCanceledException) { }
 					catch (Exception ex)
 					{
 						Debugger.Break();
@@ -245,7 +245,7 @@ namespace EweLink
 			if (Cred != null)
 				return;
 
-			Log.Write(ELogLevel.Info, $"EweLinkAPI: Logging In as {username}"); 
+			Log.Write(ELogLevel.Info, $"EweLinkAPI: Logging In as {username}");
 			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
 
 			// REST request for the credentials
@@ -335,33 +335,6 @@ namespace EweLink
 					}
 				}
 			}
-
-			// Open the web socket
-			{
-				var parms = new Params
-				{
-					{ "action",  "userOnline" },
-					{ "at", Cred.AccessToken },
-					{ "apikey", Cred.User.ApiKey },
-					{ "appid", APP_ID },
-					{ "nonce", Nonce },
-					{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
-					{ "userAgent", "ewelink-api" },
-					{ "sequence", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
-					{ "version", 8 },
-				};
-
-				// Open the websocket connection
-				Log.Write(ELogLevel.Info, $"Opening WebSocket connection to {EndPoint}");
-				await WebSocket.Connect(EndPoint);
-
-				// Start listening
-				WebSocket.Listening = true;
-
-				// Send the login message
-				var msg = JObject.FromObject(parms).ToString();
-				await WebSocket.SendAsync(msg, cancel_token);
-			}
 		}
 		public async Task Logout()
 		{
@@ -369,6 +342,38 @@ namespace EweLink
 			await WebSocket.Close();
 			DeviceList.Clear();
 			Cred = null;
+		}
+
+		/// <summary>Create a web socket connection to the EweLink cloud server</summary>
+		public async Task OpenWebSocket(CancellationToken? cancel = null)
+		{
+			Cred = Cred ?? throw new Exception("Credentials not available");
+			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+
+			// Open the web socket
+			var parms = new Params
+			{
+				{ "action",  "userOnline" },
+				{ "at", Cred.AccessToken },
+				{ "apikey", Cred.User.ApiKey },
+				{ "appid", APP_ID },
+				{ "nonce", Nonce },
+				{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "userAgent", "ewelink-api" },
+				{ "sequence", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "version", 8 },
+			};
+
+			// Open the websocket connection
+			Log.Write(ELogLevel.Info, $"Opening WebSocket connection to {EndPoint}");
+			await WebSocket.Connect(EndPoint);
+
+			// Start listening
+			WebSocket.Listening = true;
+
+			// Send the login message
+			var msg = JObject.FromObject(parms).ToString();
+			await WebSocket.SendAsync(msg, cancel_token);
 		}
 
 		/// <summary>Get info about a specific device</summary>
@@ -461,6 +466,99 @@ namespace EweLink
 			// Assume success
 			sw.State = state;
 		}
+
+
+#if false
+		/// <summary>Get the device info directly over the LAN, rather than via the EweLink server</summary>
+		public async Task<JObject> GetDeviceInfoLocal(string ip, string device_id, CancellationToken? cancel = null)
+		{
+			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+
+			// Body data for the request
+			var parms = new Params
+			{
+				{ "apikey", "a7774931-aa61-4506-96ac-a8a0f01c4ae8" },
+				{ "deviceid", device_id },
+				{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "version", 8 },
+				{ "nonce", Nonce },
+			};
+
+			// Create the request
+			var url = $"http://{ip}:8081/zeroconf/info";
+			var req = new HttpRequestMessage(HttpMethod.Post, url);
+			//req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Cred.AccessToken);
+
+			// Submit the request
+			var response = await Client.SendAsync(req, cancel_token);
+			var reply = await response.Content.ReadAsStringAsync();
+			var jobj = JObject.Parse(reply);
+
+			// Check for an error
+			if (jobj["error"]?.Value<int>() is int error && error != 0)
+				throw new Exception($"eWeLink: Error getting device info: {error}");
+
+			// Return the device info
+			return jobj;
+		}
+
+		/// <summary>Set the state of a switch</summary>
+		public async Task SwitchState(string ip, EweSwitch sw, EweSwitch.ESwitchState state, int channel = 0, CancellationToken? cancel = null)
+		{
+			var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+
+			// Simple switches just have a 'switch' field.
+			// Multi-channel switches have a switches array.
+			var sw_parms = new JObject();
+			if (sw.Params["switch"] is JToken)
+			{
+				if (channel != 0)
+					throw new Exception($"Switch does not have multiple channels");
+
+				sw_parms["switch"] = state.ToString().ToLower();
+			}
+			if (sw.Params["switches"] is JArray jarr)
+			{
+				if (channel < 0 || channel >= jarr.Count)
+					throw new Exception($"Channel index '{channel}' is out-of-range. Switch only has {jarr.Count} channels");
+
+				jarr = (JArray)jarr.DeepClone();
+				jarr[channel] = state.ToString().ToLower();
+				sw_parms["switches"] = jarr;
+			}
+
+			// Body data for the request
+			var parms = new Params
+			{
+				{ "appid", APP_ID },
+				{ "deviceid", sw.DeviceID },
+				{ "params", sw_parms },
+				{ "ts", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
+				{ "version", 8 },
+				{ "nonce", Nonce },
+			};
+			var body = JObject.FromObject(parms).ToString();
+
+			// Create the request
+			var url = $"http://{ip}:8081/zeroconf/api/user/device/status";
+			var req = new HttpRequestMessage(HttpMethod.Post, url);
+			req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Cred.AccessToken);
+			req.Content = new StringContent(body, Encoding.UTF8, new Mime("application", "json"));
+
+			// Submit the request
+			var response = await Client.SendAsync(req, cancel_token);
+			var reply = await response.Content.ReadAsStringAsync();
+			var jobj = JObject.Parse(reply);
+
+			// Check for an error
+			if (jobj["error"]?.Value<int>() is int error && error != 0)
+				throw new Exception($"eWeLink: Error setting switch state: {error}");
+
+			// Assume success
+			sw.State = state;
+		}
+#endif
+
 
 		/// <summary>Helper for generating a 'nonce'</summary>
 		private static string Nonce

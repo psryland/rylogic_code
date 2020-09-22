@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 using Rylogic.Utility;
 
 namespace Rylogic.Net
@@ -129,25 +127,20 @@ namespace Rylogic.Net
 			set
 			{
 				if (m_heartbeat == value) return;
-				if (m_heartbeat_timer != null)
-				{
-					m_heartbeat_timer.Stop();
-				}
 				m_heartbeat = value;
-				m_heartbeat_timer = m_heartbeat != TimeSpan.Zero ? new DispatcherTimer(m_heartbeat, DispatcherPriority.Background, HandleTimer, Dispatcher.CurrentDispatcher) : null;
-				if (m_heartbeat_timer != null)
-				{
-					m_heartbeat_timer.Start();
-				}
+				HeartbeatTimer();
 
 				// Handler
-				void HandleTimer(object? sender, EventArgs e)
+				async void HeartbeatTimer()
 				{
-					OnHeartbeat?.Invoke(this, EventArgs.Empty);
+					for (;m_heartbeat != TimeSpan.Zero && !Shutdown.IsCancellationRequested;)
+					{
+						OnHeartbeat?.Invoke(this, EventArgs.Empty);
+						await Task.Delay(m_heartbeat, Shutdown);
+					}
 				}
 			}
 		}
-		private DispatcherTimer? m_heartbeat_timer;
 		private TimeSpan m_heartbeat;
 
 		/// <summary>Start/Stop listening for data</summary>

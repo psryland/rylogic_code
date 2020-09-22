@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Utility;
@@ -25,6 +26,35 @@ namespace SolarHotWater.Common
 			: base(filepath, ESettingsLoadFlags.None)
 		{
 			AutoSaveOnChanges = true;
+		}
+
+		/// <inheritdoc/>
+		public override string Version => "v1.01";
+		protected override void UpgradeCore(XElement old_settings, string from_version)
+		{
+			for (; from_version != Version; )
+			{
+				switch (from_version)
+				{
+					case "v1.0":
+					{
+						#region SettingsData type moved
+						{
+							Settings_.Child(old_settings, "Consumers")?.SetAttributeValue("ty", "SolarHotWater.Common.SettingsData+Consumer[]");
+							foreach (var elem in Settings_.Children(old_settings, "Consumers", "ControlMode"))
+								elem.SetAttributeValue("ty", "SolarHotWater.Common.EControlMode");
+						}
+						#endregion
+						from_version = "v1.01";
+						break;
+					}
+					default:
+					{
+						base.UpgradeCore(old_settings, from_version);
+						return;
+					}
+				}
+			}
 		}
 
 		/// <summary></summary>

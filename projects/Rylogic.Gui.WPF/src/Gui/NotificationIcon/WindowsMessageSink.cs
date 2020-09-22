@@ -49,10 +49,10 @@ namespace Rylogic.Gui.WPF.NotifyIcon
 				ProcessWindowMessage(message_id, wParam, lParam);
 				return Win32.DefWindowProc(hWnd, message_id, wParam, lParam);
 			}
-			Win32.RegisterClass(ref wc);
+			Win32.RegisterClass(wc);
 
 			// Create the message window
-			HWnd = Win32.CreateWindowEx(0, WindowId, "", 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+			HWnd = Win32.CreateWindow(0, WindowId, "", 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 			if (HWnd == IntPtr.Zero)
 				throw new Win32Exception("Failed to create window for notification icon");
 		}

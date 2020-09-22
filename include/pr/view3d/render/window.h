@@ -1,9 +1,8 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 #include "pr/view3d/config/config.h"
 
@@ -68,12 +67,40 @@ namespace pr::rdr
 		v2 Dpi() const
 		{
 			// Don't cache the DPI value. It can change at any point.
-			#if (WINVER >= 0x0605)
-			auto dpi = m_hwnd != nullptr ? (float)GetDpiForWindow(m_hwnd) : (float)GetDpiForSystem();
-			#else
-			auto dpi = (float)96.0f;
-			#endif
+			#if WINVER >= 0x0605
+			auto dpi = m_hwnd != nullptr ? (float)::GetDpiForWindow(m_hwnd) : (float)::GetDpiForSystem();
 			return v2(dpi, dpi);
+			#else
+			// Support old windows by dynamically looking for the new DPI functions
+			// and falling back to the GDI functions if not available.
+			auto user32 = CreateStateScope(
+				[=] { return ::LoadLibraryW(L"user32.dll"); }, 
+				[=](HMODULE m) {::FreeLibrary(m); });
+
+			// Look for the new windows functions for DPI
+			auto GetDpiForWindowFunc = reinterpret_cast<UINT(far __stdcall*)(HWND)>(GetProcAddress(user32.m_state, "GetDpiForWindow"));
+			auto GetDpiForSystemFunc = reinterpret_cast<UINT(far __stdcall*)()>(GetProcAddress(user32.m_state, "GetDpiForSystem"));
+
+			auto dpi = 96.0f;
+			if (m_hwnd != nullptr && GetDpiForWindowFunc != nullptr)
+			{
+				dpi = (float)GetDpiForWindowFunc(m_hwnd);
+			}
+			else if (GetDpiForSystemFunc != nullptr)
+			{
+				dpi = (float)GetDpiForSystemFunc();
+			}
+			else
+			{
+				gdi::Graphics g(m_hwnd);
+				//auto dpi_ = v2(g.GetDpiX(), g.GetDpiY());
+				auto desktop_dc = g.GetHDC();
+				auto logical_screen_height  = GetDeviceCaps(desktop_dc, VERTRES);
+				auto physical_screen_height = GetDeviceCaps(desktop_dc, DESKTOPVERTRES); 
+				dpi = physical_screen_height * 96.0f / logical_screen_height;
+			}
+			return v2(dpi, dpi);
+			#endif
 		}
 
 		// Return the scaling factors to convert DIP to physical pixels

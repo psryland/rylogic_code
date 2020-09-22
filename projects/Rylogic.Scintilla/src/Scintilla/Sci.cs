@@ -236,15 +236,19 @@ namespace Rylogic.Scintilla
 		}
 		private static Dictionary<int, string> m_sci_name = new Dictionary<int,string>();
 
+		public const string Dll = "scintilla";
+
 		/// <summary>True if the scintilla dll has been loaded</summary>
 		public static bool ModuleLoaded => m_module != IntPtr.Zero;
 		private static IntPtr m_module = IntPtr.Zero;
-		public const string Dll = "scintilla";
+
+		/// <summary>The error created if loading the dll fails</summary>
+		public static Exception? LoadError;
 
 		/// <summary>Load the scintilla dll</summary>
 		public static bool LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
-			return ModuleLoaded || (m_module = Win32.LoadDll(Dll + ".dll", dir, throw_if_missing)) != IntPtr.Zero;
+			return ModuleLoaded || (m_module = Win32.LoadDll(Dll + ".dll", out LoadError, dir, throw_if_missing)) != IntPtr.Zero;
 		}
 	}
 }

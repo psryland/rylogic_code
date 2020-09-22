@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Windows;
 using Rylogic.Gui.WPF;
+using SolarHotWater.Common;
 
 namespace SolarHotWater.UI
 {

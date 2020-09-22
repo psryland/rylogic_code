@@ -203,20 +203,20 @@ namespace pr
 		{
 			return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
 		}
-		friend Vec4<B> pr_vectorcall operator * (m4_cref<A,B> lhs, v4_cref<A> rhs)
+		friend Vec4<B> pr_vectorcall operator * (m4_cref<A,B> a2b, v4_cref<A> v)
 		{
 			#if PR_MATHS_USE_DIRECTMATH
-			return Vec4<B>{DirectX::XMVector4Transform(rhs.vec, lhs)};
+			return Vec4<B>{DirectX::XMVector4Transform(v.vec, a2b)};
 			#elif PR_MATHS_USE_INTRINSICS
-			auto x = _mm_load_ps(lhs.x.arr);
-			auto y = _mm_load_ps(lhs.y.arr);
-			auto z = _mm_load_ps(lhs.z.arr);
-			auto w = _mm_load_ps(lhs.w.arr);
+			auto x = _mm_load_ps(a2b.x.arr);
+			auto y = _mm_load_ps(a2b.y.arr);
+			auto z = _mm_load_ps(a2b.z.arr);
+			auto w = _mm_load_ps(a2b.w.arr);
 
-			auto brod1 = _mm_set_ps1(rhs.x);
-			auto brod2 = _mm_set_ps1(rhs.y);
-			auto brod3 = _mm_set_ps1(rhs.z);
-			auto brod4 = _mm_set_ps1(rhs.w);
+			auto brod1 = _mm_set_ps1(v.x);
+			auto brod2 = _mm_set_ps1(v.y);
+			auto brod3 = _mm_set_ps1(v.z);
+			auto brod4 = _mm_set_ps1(v.w);
 
 			auto ans = _mm_add_ps(
 				_mm_add_ps(
@@ -228,26 +228,37 @@ namespace pr
 		
 			return Vec4<B>{ans};
 			#else
-			auto lhsT = Transpose4x4(lhs);
-			return Vec4<B>{Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs)};
+			auto a2bT = Transpose4x4(a2b);
+			return Vec4<B>{Dot4(a2bT.x, v), Dot4(a2bT.y, v), Dot4(a2bT.z, v), Dot4(a2bT.w, v)};
 			#endif
 		}
-		template <typename C> friend Mat4x4<A,C> pr_vectorcall operator * (m4_cref<B,C> lhs, m4_cref<A,B> rhs)
+		template <typename C> friend Mat4x4<A,C> pr_vectorcall operator * (m4_cref<B,C> b2c, m4_cref<A,B> a2b)
 		{
+			// Note:
+			//  - The reason for this order is because matrices are applied from right to left
+			//    e.g.
+			//       auto Va =             V = vector in space 'a'
+			//       auto Vb =       a2b * V = vector in space 'b'
+			//       auto Vc = b2c * a2b * V = vector in space 'c'
+			//  - The shape of the result is:
+			//       [   ]       [       ]       [   ]
+			//       [a2c]       [  b2c  ]       [a2b]
+			//       [1x3]   =   [  2x3  ]   *   [1x2]
+			//       [   ]       [       ]       [   ]
 			#if PR_MATHS_USE_DIRECTMATH
-			return Mat4x4<A,C>{DirectX::XMMatrixMultiply(rhs, lhs)};
+			return Mat4x4<A,C>{DirectX::XMMatrixMultiply(a2b, b2c)};
 			#elif PR_MATHS_USE_INTRINSICS
 			auto ans = Mat4x4<A,C>{};
-			auto x = _mm_load_ps(lhs.x.arr);
-			auto y = _mm_load_ps(lhs.y.arr);
-			auto z = _mm_load_ps(lhs.z.arr);
-			auto w = _mm_load_ps(lhs.w.arr);
+			auto x = _mm_load_ps(b2c.x.arr);
+			auto y = _mm_load_ps(b2c.y.arr);
+			auto z = _mm_load_ps(b2c.z.arr);
+			auto w = _mm_load_ps(b2c.w.arr);
 			for (int i = 0; i != 4; ++i)
 			{
-				auto brod1 = _mm_set_ps1(rhs.arr[i].x);
-				auto brod2 = _mm_set_ps1(rhs.arr[i].y);
-				auto brod3 = _mm_set_ps1(rhs.arr[i].z);
-				auto brod4 = _mm_set_ps1(rhs.arr[i].w);
+				auto brod1 = _mm_set_ps1(a2b.arr[i].x);
+				auto brod2 = _mm_set_ps1(a2b.arr[i].y);
+				auto brod3 = _mm_set_ps1(a2b.arr[i].z);
+				auto brod4 = _mm_set_ps1(a2b.arr[i].w);
 				auto row = _mm_add_ps(
 					_mm_add_ps(
 						_mm_mul_ps(brod1, x),
@@ -260,11 +271,11 @@ namespace pr
 			return ans;
 			#else
 			auto ans = Mat4x4<A,C>{};
-			auto lhsT = Transpose4x4(lhs);
-			ans.x = Vec4<void>(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
-			ans.y = Vec4<void>(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
-			ans.z = Vec4<void>(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
-			ans.w = Vec4<void>(Dot4(lhsT.x, rhs.w), Dot4(lhsT.y, rhs.w), Dot4(lhsT.z, rhs.w), Dot4(lhsT.w, rhs.w));
+			auto b2cT = Transpose4x4(b2c);
+			ans.x = Vec4<void>(Dot4(b2cT.x, a2b.x), Dot4(b2cT.y, a2b.x), Dot4(b2cT.z, a2b.x), Dot4(b2cT.w, a2b.x));
+			ans.y = Vec4<void>(Dot4(b2cT.x, a2b.y), Dot4(b2cT.y, a2b.y), Dot4(b2cT.z, a2b.y), Dot4(b2cT.w, a2b.y));
+			ans.z = Vec4<void>(Dot4(b2cT.x, a2b.z), Dot4(b2cT.y, a2b.z), Dot4(b2cT.z, a2b.z), Dot4(b2cT.w, a2b.z));
+			ans.w = Vec4<void>(Dot4(b2cT.x, a2b.w), Dot4(b2cT.y, a2b.w), Dot4(b2cT.z, a2b.w), Dot4(b2cT.w, a2b.w));
 			return ans;
 			#endif
 		}

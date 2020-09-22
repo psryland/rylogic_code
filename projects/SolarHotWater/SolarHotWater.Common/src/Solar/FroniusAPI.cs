@@ -4,9 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Rylogic.Utility;
-using SolarHotWater.Common;
 
-namespace SolarHotWater
+namespace SolarHotWater.Common
 {
 	public sealed class FroniusAPI :IDisposable
 	{

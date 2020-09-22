@@ -68,7 +68,7 @@ namespace Rylogic.Gui.WPF
 
 			// Create the native scintilla window to fit within 'hwnd_parent'
 			var rect = Win32.RECT.FromLTRB(0, 0, 1, 1);
-			Hwnd = Win32.CreateWindowEx(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, rect.width, rect.height, Win32.ProxyParentHwnd, CtrlId, IntPtr.Zero, IntPtr.Zero);
+			Hwnd = Win32.CreateWindow(0, "Scintilla", string.Empty, Win32.WS_CHILD | Win32.WS_VISIBLE, 0, 0, rect.width, rect.height, Win32.ProxyParentHwnd, CtrlId, IntPtr.Zero, IntPtr.Zero);
 			if (Hwnd == IntPtr.Zero)
 				throw new Win32Exception(Win32.GetLastError(), $"Failed to create the scintilla native control. {Win32.GetLastErrorString()}");
 

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Media.Media3D;
 using EweLink;
 using Newtonsoft.Json.Linq;
 using Rylogic.Gui.WPF;
+using SolarHotWater.Common;
 
 namespace SolarHotWater.UI
 {

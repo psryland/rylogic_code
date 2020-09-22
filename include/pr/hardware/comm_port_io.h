@@ -282,9 +282,9 @@ namespace pr
 				case WAIT_ABANDONED:
 					return false;
 				case WAIT_FAILED:
-					throw std::exception(FmtS("Serial port Write command failed with error code %X", LastError()));
+					throw std::runtime_error(FmtS("Serial port Write command failed with error code %X", LastError()));
 				default:
-					throw std::exception(FmtS("Unknown return code (%d) during Serial port Write command", r));
+					throw std::runtime_error(FmtS("Unknown return code (%d) during Serial port Write command", r));
 				}
 			}
 

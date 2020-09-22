@@ -705,7 +705,7 @@ namespace Rylogic.Maths
 				if (p != v)
 				{
 					Math_.Swap(ref pi[v], ref pi[p]);
-					DetOfP *= -1;
+					DetOfP = -DetOfP;
 
 					// Swap the components in LL and UU
 					for (int i = 0, i0 = v, i1 = p; i != v; ++i, i0 += N, i1 += N)
@@ -714,20 +714,20 @@ namespace Rylogic.Maths
 						Math_.Swap(ref UU.Data[i0], ref UU.Data[i1]);
 				}
 
-				// Gaussian eliminate the remaining vectors
-				for (int w = v + 1; w != N; ++w)
+				// Gaussian eliminate the remaining components of vector 'v'
+				for (int c = v + 1; c != N; ++c)
 				{
-					LL[v,w] = UU[v,w] / UU[v,v];
+					LL[v,c] = UU[v,c] / UU[v,v];
 					for (int i = v; i != N; ++i)
-						UU[i,w] -= LL[v,w] * UU[i,v];
+						UU[i,c] -= LL[v,c] * UU[i,v];
 				}
 			}
 
 			// Combine 'LL' and 'UU' into 'LU'
 			LU = UU;
-			for (int r = 0; r != N; ++r)
-				for (int c = r+1; c != N; ++c)
-					LU[r,c] = LL[r,c];
+			for (int v = 0; v != N; ++v)
+				for (int c = v+1; c != N; ++c)
+					LU[v,c] = LL[v,c];
 
 			L = new LProxy(LU);
 			U = new UProxy(LU);
@@ -950,7 +950,20 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void Multiply()
+		public void Multiply0()
+		{
+			var data0 = new double[]{ 1, 2, 3, 4, 0.1, 0.2, 0.3, 0.4, -4, -3, -2, -1 };
+			var data1 = new double[]{ 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4 };
+			var rdata = new double[]{ 30, 30, 30, 30, 30, 3, 3, 3, 3, 3, -20, -20, -20, -20, -20 };
+			var a2b = new Matrix(3, 4, data0);
+			var b2c = new Matrix(4, 5, data1);
+			var A2C = new Matrix(3, 5, rdata);
+			var a2c = b2c * a2b;
+			Assert.True(Matrix.FEql(a2c, A2C));
+		}
+
+		[Test]
+		public void Multiply1()
 		{
 			var rng = new Random(1);
 

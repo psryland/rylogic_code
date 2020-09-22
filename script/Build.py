@@ -130,6 +130,29 @@ class Common():
 	def Publish(self):
 		return
 
+# Groups of projects
+class Group(Common):
+	def __init__(self, workspace:str):
+		Common.__init__(self, workspace)
+		self.items = []
+		return
+
+	def Clean(self):
+		for item in self.items: item.Clean()
+		return
+
+	def Build(self):
+		for item in self.items: item.Build()
+		return
+
+	def Deploy(self):
+		for item in self.items: item.Deploy()
+		return
+
+	def Publish(self):
+		for item in self.items: item.Publish()
+		return
+
 # Native binary (base)
 class Native(Common):
 	def __init__(self, proj_name:str, workspace:str, platforms:[str], configs:[str]):
@@ -556,29 +579,6 @@ class RylogicTextAligner(Managed):
 
 		# Uploading to marketplace.visualstudio.com is a manual
 		# step... you don't want to bugger it up.
-		return
-
-# Groups of projects
-class Group(Common):
-	def __init__(self, workspace:str):
-		Common.__init__(self, workspace)
-		self.items = []
-		return
-
-	def Clean(self):
-		for item in self.items: item.Clean()
-		return
-
-	def Build(self):
-		for item in self.items: item.Build()
-		return
-
-	def Deploy(self):
-		for item in self.items: item.Deploy()
-		return
-
-	def Publish(self):
-		for item in self.items: item.Publish()
 		return
 
 # Rylogic .NET assemblies
