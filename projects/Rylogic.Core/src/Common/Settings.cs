@@ -332,30 +332,39 @@ namespace Rylogic.Common
 		protected virtual void UpgradeCore(XElement old_settings, string from_version)
 		{
 			// Boiler-plate:
-			//for (; from_version != Version; )
-			//{
-			//	switch (from_version)
-			//	{
-			//	default:
-			//		{
-			//			base.UpgradeCore(old_settings, from_version);
-			//			return;
-			//		}
-			//	case "v1.1":
-			//		{
-			//			#region Change description
-			//			{
-			//				// Modify the XML document using hard-coded element names.
-			//				// Note: don't use constants for the element names because they
-			//				// may get changed in the future. This is one case where magic
-			//				// strings is actually the correct thing to do!
-			//			}
-			//			#endregion
-			//			from_version = "v1.2";
-			//			break;
-			//		}
-			//	}
-			//}
+			// for (; from_version != Version;)
+			// {
+			// 	switch (from_version)
+			// 	{
+			// 		case "v1.1":
+			// 		{
+			// 			#region Change description
+			// 			{
+			// 				// Modify the XML document using hard-coded element names.
+			// 				// Note: don't use constants for the element names because they
+			// 				// may get changed in the future. This is one case where magic
+			// 				// strings is actually the correct thing to do!
+			//
+			//				// Use the child helper:
+			//				Settings_.Child(old_settings, "thing")?.SetAttributeValue("ty", "NewType");
+			//				Settings_.Child(old_settings, "redundant")?.Remove();
+			//				foreach (var elem in Settings_.Children(old_settings, "MyList", "ListItemField"))
+			//					elem.Value = "42";
+			//
+			//				// Or the Xml Extensions:
+			//				var thing = old_settings.Elements("setting","key").Where(x => x.Value == "Thing").First();
+			// 			}
+			// 			#endregion
+			// 			from_version = "v1.2";
+			// 			break;
+			// 		}
+			// 		default:
+			// 		{
+			// 			base.UpgradeCore(old_settings, from_version);
+			// 			return;
+			// 		}
+			// 	}
+			// }
 			//
 			// Notes:
 			//  - Old settings may contain references to types that don't exist in newer applications.
@@ -994,12 +1003,20 @@ namespace Rylogic.Common
 		/// <summary>Return all child settings based on the given key names</summary>
 		public static IEnumerable<XElement> Children(XElement element, params string[] key_names)
 		{
+			// Note:
+			//  - List elements are handled automatically, calling 'Children(e, "list", "child_property")' will
+			//    return the 'child_property' of each element in 'list'
 			IEnumerable<XElement> ChildrenInternal(XElement e, int i)
 			{
 				if (i == key_names.Length)
 					return Enumerable.Empty<XElement>();
 
-				var children = e.Elements("setting").Where(x => x.Attribute("key").Value == key_names[i]);
+				// If the children of 'e' have the special name '_' then 'e' is a list.
+				// Search the children of each list element.
+				var children = e.Elements("_").Any()
+					? e.Elements("_", "setting").Where(x => x.Attribute("key").Value == key_names[i])
+					: e.Elements("setting").Where(x => x.Attribute("key").Value == key_names[i]);
+
 				return i + 1 != key_names.Length
 					? children.SelectMany(x => ChildrenInternal(x, i + 1))
 					: children;

@@ -1266,6 +1266,33 @@ namespace pr
 		return (a*b) / GreatestCommonFactor(a,b);
 	}
 
+	// Convert a decimal back to a rational
+	inline void DecimalToRational(double num, int& numer, int& denom)
+	{
+		(void)num,numer,denom;
+		// Algorithm:
+		//  c = the number of digits that form the repeating part of 'num'
+		//  l = the offset from the decimal point to the start of the repeating part of 'num'
+		//  let d = 9[c times]0[l times]
+		//     e.g. 0.1435282828... has c = 2 (28), and l = 4 (0.1435), so d = 990000
+		//          0.125           has c = 0, and l = 3, so d = 1000
+		//  let n = the digits right of the decimal point with the repeating part removed
+		//     e.g. 0.1435282828... so n = 1435
+		//          0.125           so n = 125
+		//  Find the GCF between n and d to get the rational: n/d
+		//
+		// Explanation:
+		//   0.123(45)... (45 repeating) equals 0.123 + (45/10000 + 45/1000000 + 45/100000000 + ...)
+		//   which is 123/1000 + the sum of the geometric series with ratio = 1/100
+		//     = 123/1000 + (45/10000).(1/(1-(1/100)))
+		//     = 123/1000 + (45/10000).(1/99)
+		//     = 123/1000 + (45/990000)
+		//     = (99*123 + 45)/990000
+		//     = 12222/990000
+
+		// todo: implement this
+	}
+
 	// Returns the number to add to pad 'size' up to 'alignment'
 	template <typename T, typename = maths::enable_if_intg<T>> constexpr T Pad(T size, T alignment)
 	{

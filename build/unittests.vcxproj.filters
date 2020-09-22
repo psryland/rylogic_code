@@ -234,9 +234,6 @@
     <ClInclude Include="..\include\pr\common\enumerable.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\event.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\filesys\filesys.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
@@ -244,9 +241,6 @@
       <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\expr_eval.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\events.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\exception.h">
@@ -1046,6 +1040,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\half.h">
       <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\win32\dummy_window.h">
+      <Filter>pr\win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

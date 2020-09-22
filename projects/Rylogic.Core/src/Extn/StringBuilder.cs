@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -49,6 +49,13 @@ namespace Rylogic.Extn
 		{
 			foreach (var p in parts) sb.Append(p.ToString());
 			return sb;
+		}
+
+		/// <summary>Append a bunch of stuff</summary>
+		public static StringBuilder AppendLine(this StringBuilder sb, params object[] parts)
+		{
+			foreach (var p in parts) sb.Append(p.ToString());
+			return sb.AppendLine();
 		}
 
 		/// <summary>Append 'sep' if the current string is not empty</summary>

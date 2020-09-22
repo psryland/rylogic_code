@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Rylogic.Utility;
 
-namespace SolarHotWater
+namespace SolarHotWater.Common
 {
 	/// <summary>Logging</summary>
 	public static class Log

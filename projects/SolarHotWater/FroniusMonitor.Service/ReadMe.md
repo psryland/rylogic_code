@@ -23,3 +23,5 @@ In an admin powershell console:
  - Remove the service
     ```Remove-Service -Name "FroniusMonitor"
 
+Check the service actually starts. Start-Service doesn't report an error if the service stops again (due to a crash etc).
+If the service fails to start, run the 'FroniusMonitor.Service.exe' manually at the command line.

@@ -13,6 +13,7 @@
 #include <locale>
 #include <codecvt>
 #include <cassert>
+#include "pr/str/string_core.h"
 
 namespace pr::filesys
 {

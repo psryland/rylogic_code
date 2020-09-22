@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Win32.SafeHandles;
 using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -316,7 +317,7 @@ namespace Rylogic.Gui.WinForms
 			// Get the available radios
 			var radios = Bluetooth.Radios().ToList();
 			if (radios.Count != 0)
-				radios.Insert(0, new Bluetooth.Radio());
+				radios.Insert(0, new Bluetooth.Radio(new SafeFileHandle(IntPtr.Zero, false)));
 
 			// Update the combo of radios
 			if (radios.Count == 0)

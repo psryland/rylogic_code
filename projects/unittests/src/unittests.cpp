@@ -41,6 +41,7 @@ namespace pr::unittests::your::namespace
 //#include "pr/geometry/intersect.h"
 //#include "pr/geometry/point.h"
 //#include "pr/geometry/p3d.h"
+//#include "pr/hardware/find_bt_device.h"
 //#include "pr/filesys/filesys.h"
 //#include "pr/str/string_core.h"
 //#include "pr/str/string_util.h"

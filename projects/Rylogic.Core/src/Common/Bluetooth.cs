@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Win32.SafeHandles;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -175,10 +177,10 @@ namespace Rylogic.Common
 		/// <summary>Enable incoming connections on all BT radios. Returns true if any radio changes state</summary>
 		public static bool Connectable
 		{
-			get => BluetoothIsConnectable(IntPtr.Zero);
+			get => BluetoothIsConnectable(null);
 			set
 			{
-				var r = BluetoothEnableIncomingConnections(IntPtr.Zero, value);
+				var r = BluetoothEnableIncomingConnections(null, value);
 				if (r) Debug.WriteLine($"Bluetooth radios {(value ? "listening for" : "ignoring")} incoming connections");
 				else Debug.WriteLine("Bluetooth connectivity unchanged");
 			}
@@ -187,25 +189,27 @@ namespace Rylogic.Common
 		/// <summary>True if this PC is discoverable</summary>
 		public static bool Discoverable
 		{
-			get => BluetoothIsDiscoverable(IntPtr.Zero);
+			get => BluetoothIsDiscoverable(null);
 			set
 			{
-				var r = BluetoothEnableDiscovery(IntPtr.Zero, value);
+				var r = BluetoothEnableDiscovery(null, value);
 				if (r) Debug.WriteLine($"Bluetooth discovery {(value ? "enabled" : "disabled")}");
 				else Debug.WriteLine("Bluetooth discovery unchanged");
 			}
 		}
 
+		/// <summary>Return the primary BT radio on the system</summary>
+		public static Radio? PrimaryRadio => Radios().FirstOrDefault();
+
 		/// <summary>Enumerable bluetooth radios on the system</summary>
 		public static IEnumerable<Radio> Radios()
 		{
-			var parms = BLUETOOTH_FIND_RADIO_PARAMS.New();
-			var radio = IntPtr.Zero;
 			var find = IntPtr.Zero;
 			using (Scope.Create(null, () => BluetoothFindRadioClose(find)))
 			{
 				// Find the first radio
-				find = BluetoothFindFirstRadio(ref parms, out radio);
+				var parms = BLUETOOTH_FIND_RADIO_PARAMS.New();
+				find = BluetoothFindFirstRadio(ref parms, out var radio);
 				if (find != IntPtr.Zero)
 				{
 					yield return new Radio(radio);
@@ -295,10 +299,10 @@ namespace Rylogic.Common
 		public class Radio
 		{
 			private BLUETOOTH_RADIO_INFO m_info;
-			public Radio(IntPtr handle = default)
+			public Radio(SafeFileHandle handle)
 			{
 				Handle = handle;
-				if (handle != IntPtr.Zero)
+				if (!Handle.IsInvalid)
 				{
 					m_info = BLUETOOTH_RADIO_INFO.New();
 					BluetoothGetRadioInfo(handle, ref m_info);
@@ -306,10 +310,10 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>System handle</summary>
-			public IntPtr Handle { get; }
+			public SafeFileHandle Handle { get; }
 
 			/// <summary>The name of the bluetooth radio</summary>
-			public string Name => Handle != IntPtr.Zero ? m_info.szName : "All Radios";
+			public string Name => !Handle.IsInvalid ? m_info.szName : "All Radios";
 
 			/// <summary>Enable/Disable connect-ability for this radio</summary>
 			public bool Connectable
@@ -499,11 +503,10 @@ namespace Rylogic.Common
 		private struct BLUETOOTH_FIND_RADIO_PARAMS
 		{
 			public int dwSize; // IN  sizeof this structure
-
-			public static BLUETOOTH_FIND_RADIO_PARAMS New()
+			public static BLUETOOTH_FIND_RADIO_PARAMS New() => new BLUETOOTH_FIND_RADIO_PARAMS
 			{
-				return new BLUETOOTH_FIND_RADIO_PARAMS { dwSize = Marshal.SizeOf(typeof(BLUETOOTH_FIND_RADIO_PARAMS)) };
-			}
+				dwSize = Marshal.SizeOf(typeof(BLUETOOTH_FIND_RADIO_PARAMS))
+			};
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -518,10 +521,10 @@ namespace Rylogic.Common
 			public byte cTimeoutMultiplier;  //  IN  timeout for the inquiry
 			public IntPtr hRadio;               //  IN  handle to radio to enumerate - NULL == all radios will be searched
 
-			public static BLUETOOTH_DEVICE_SEARCH_PARAMS New()
+			public static BLUETOOTH_DEVICE_SEARCH_PARAMS New() => new BLUETOOTH_DEVICE_SEARCH_PARAMS
 			{
-				return new BLUETOOTH_DEVICE_SEARCH_PARAMS { dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_SEARCH_PARAMS)) };
-			}
+				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_SEARCH_PARAMS))
+			};
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -536,13 +539,10 @@ namespace Rylogic.Common
 			public ushort lmpSubversion; // lmpSubversion, manufacturer specifc.
 			public ushort manufacturer;  // Manufacturer of the radio, BTH_MFG_Xxx value.  For the most up to date list, goto the Bluetooth specification website and get the Bluetooth assigned numbers document.
 
-			public static BLUETOOTH_RADIO_INFO New()
+			public static BLUETOOTH_RADIO_INFO New() => new BLUETOOTH_RADIO_INFO
 			{
-				return new BLUETOOTH_RADIO_INFO
-				{
-					dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_RADIO_INFO)),
-				};
-			}
+				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_RADIO_INFO)),
+			};
 		}
 
 		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
@@ -560,13 +560,10 @@ namespace Rylogic.Common
 			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = BLUETOOTH_MAX_NAME_SIZE)]
 			public string szName; //  Name of the device
 
-			public static BLUETOOTH_DEVICE_INFO New()
+			public static BLUETOOTH_DEVICE_INFO New() => new BLUETOOTH_DEVICE_INFO
 			{
-				return new BLUETOOTH_DEVICE_INFO
-				{
-					dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_INFO)),
-				};
-			}
+				dwSize = (uint)Marshal.SizeOf(typeof(BLUETOOTH_DEVICE_INFO)),
+			};
 		}
 
 		[StructLayout(LayoutKind.Sequential, Size = 8)]
@@ -575,10 +572,10 @@ namespace Rylogic.Common
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
 			public byte[] rgBytes; //  easier to format when broken out
 
-			public static BLUETOOTH_ADDRESS New()
+			public static BLUETOOTH_ADDRESS New() => new BLUETOOTH_ADDRESS
 			{
-				return new BLUETOOTH_ADDRESS { rgBytes = new byte[6] };
-			}
+				rgBytes = new byte[6] 
+			};
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -641,28 +638,28 @@ namespace Rylogic.Common
 		private static extern int IsBluetoothRadioEnabled(ref int enabled);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool BluetoothIsConnectable(IntPtr hRadio);
+		private static extern bool BluetoothIsConnectable(SafeFileHandle? hRadio);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool BluetoothIsDiscoverable(IntPtr hRadio);
+		private static extern bool BluetoothIsDiscoverable(SafeFileHandle? hRadio);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
 		private static extern int BluetoothEnableRadio(bool fEnable);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool BluetoothEnableIncomingConnections(IntPtr hRadio, bool fEnable);
+		private static extern bool BluetoothEnableIncomingConnections(SafeFileHandle? hRadio, bool fEnable);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool BluetoothEnableDiscovery(IntPtr hRadio, bool fEnable);
+		private static extern bool BluetoothEnableDiscovery(SafeFileHandle? hRadio, bool fEnable);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern uint BluetoothGetRadioInfo(IntPtr hRadio, ref BLUETOOTH_RADIO_INFO pRadioInfo);
+		private static extern uint BluetoothGetRadioInfo(SafeFileHandle hRadio, ref BLUETOOTH_RADIO_INFO pRadioInfo);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern IntPtr BluetoothFindFirstRadio(ref BLUETOOTH_FIND_RADIO_PARAMS pbtfrp, out IntPtr phRadio);
+		private static extern IntPtr BluetoothFindFirstRadio(ref BLUETOOTH_FIND_RADIO_PARAMS pbtfrp, out SafeFileHandle phRadio);
 
 		[DllImport(Dll, SetLastError = true, CharSet = CharSet.Auto)]
-		private static extern bool BluetoothFindNextRadio(IntPtr hFind, out IntPtr phRadio);
+		private static extern bool BluetoothFindNextRadio(IntPtr hFind, out SafeFileHandle phRadio);
 
 		[DllImport(Dll, SetLastError = true)]
 		private static extern bool BluetoothFindRadioClose(IntPtr hFind);
@@ -683,7 +680,7 @@ namespace Rylogic.Common
 		private static extern bool BluetoothUnregisterAuthentication(IntPtr hRegHandle);
 
 		[DllImport(Dll, SetLastError = true)]
-		private static extern int BluetoothAuthenticateDeviceEx(IntPtr hwndParentIn, IntPtr hRadioIn, [In][Out] ref BLUETOOTH_DEVICE_INFO pbtdiInout, [In][Out] IntPtr pbtOobData, [In] EAuthenticationRequirements authenticationRequirement);
+		private static extern int BluetoothAuthenticateDeviceEx(IntPtr hwndParentIn, SafeFileHandle hRadioIn, [In][Out] ref BLUETOOTH_DEVICE_INFO pbtdiInout, [In][Out] IntPtr pbtOobData, [In] EAuthenticationRequirements authenticationRequirement);
 
 		[DllImport(Dll, SetLastError = true)]
 		private static extern int BluetoothSendAuthenticationResponseEx([In] IntPtr hRadioIn, [In] ref BLUETOOTH_AUTHENTICATE_RESPONSE pauthResponse);

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Rylogic.Utility;
 
 namespace Rylogic.Extn
@@ -22,11 +23,34 @@ namespace Rylogic.Extn
 		{
 			if (obj == null) return "null";
 			var type = obj.GetType();
-			return
-				$"{type.Name}:\n" +
-				string.Join("\n", type.GetProperties().Select(p => p.Name + ":  " + p.GetValue(obj, null)))+
-				"\n";
+
+			m_dump ??= new StringBuilder();
+			try
+			{
+				m_dump.Append(type.Name).AppendLine(":");
+				foreach (var pi in type.GetProperties())
+				{
+					// Does the property take parameters? (If so, it's probably an indexer)
+					if (pi.GetIndexParameters() is ParameterInfo[] parms && parms.Length != 0)
+					{
+						m_dump.Append(pi.Name).Append(": {collection}");
+					}
+					else
+					{
+						var val = pi.GetValue(obj, null);
+						m_dump.Append(pi.Name).Append(": ").AppendLine(val ?? string.Empty);
+					}
+				}
+				foreach (var fi in type.GetFields())
+				{
+					var val = fi.GetValue(obj);
+					m_dump.Append(fi.Name).Append(": ").AppendLine(val ?? string.Empty);
+				}
+				return m_dump.ToString();
+			}
+			finally { m_dump.Length = 0; }
 		}
+		[ThreadStatic] private static StringBuilder? m_dump;
 
 		/// <summary>Copies all of the fields of this object into 'to'. Returns 'to' for method chaining</summary>
 		[Obsolete]

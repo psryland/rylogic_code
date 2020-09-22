@@ -1,4 +1,4 @@
-//*****************************************************************************
+ï»¿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -492,10 +492,16 @@ namespace pr
 		{
 			// Note:
 			//  - The multplication order is the same as for m4x4.
+			//    The reason for this order is because matrices are applied from right to left
+			//    e.g.
+			//       auto Va =             V = vector in space 'a'
+			//       auto Vb =       a2b * V = vector in space 'b'
+			//       auto Vc = b2c * a2b * V = vector in space 'c'
 			//  - The shape of the result is:
-			//        [  b2c  ]       [a2b]       [a2c]
-			//        [  2x3  ]   *   [1x2]   =   [1x3]
-			//        [       ]       [   ]       [   ]
+			//       [   ]       [       ]       [   ]
+			//       [a2c]       [  b2c  ]       [a2b]
+			//       [1x3]   =   [  2x3  ]   *   [1x2]
+			//       [   ]       [       ]       [   ]
 			assert("Wrong matrix dimensions" && a2b.cmps() == b2c.vecs());
 
 			// Result
@@ -863,51 +869,57 @@ namespace pr
 			auto& UU = lu;
 
 			// Initialise the permutation vector
-			for (int i = 0; i != m.vecs(); ++i)
+			for (int i = 0; i != N; ++i)
 				pi[i] = i;
 
 			// Decompose 'm' into 'LL' and 'UU'
 			for (int v = 0; v != N; ++v)
 			{
-				// Find the largest component in the vector 'v' to use as the pivot
-				auto p = 0;
-				Real max = 0;
-				for (int i = v; i != N; ++i)
+				// Pivoting is used to avoid instability when the pivot is ~0
+				// It will probably always be enabled, but this documents it.
+				const bool UsePivot = true;
+				if constexpr (UsePivot)
 				{
-					auto val = abs(UU(v, i));
-					if (val <= max) continue;
-					max = val;
-					p = i;
-				}
-				if (max == 0)
-					throw std::runtime_error("The matrix is singular");
-
-				// Switch the components of all vectors
-				if (p != v)
-				{
-					std::swap(pi[v], pi[p]);
-					DetOfP *= -1;
-				
-					// Switch the components in LL and UU
-					for (int i = 0; i != v; ++i)
-						std::swap(LL(i, v), LL(i, p));
-					for (int i = 0; i != N; ++i)
-						std::swap(UU(i, v), UU(i, p));
-				}
-
-				// Gaussian eliminate the remaining vectors
-				for (int w = v + 1; w != N; ++w)
-				{
-					LL(v, w) = UU(v, w) / UU(v, v);
+					// Find the largest component in the vector 'v' to use as the pivot
+					auto p = 0;
+					Real max = 0;
 					for (int i = v; i != N; ++i)
-						UU(i, w) = UU(i, w) - LL(v, w) * UU(i, v);
+					{
+						auto val = abs(UU(v, i));
+						if (val <= max) continue;
+						max = val;
+						p = i;
+					}
+					if (max == 0)
+						throw std::runtime_error("The matrix is singular");
+
+					// Switch the components of all vectors
+					if (p != v)
+					{
+						std::swap(pi[v], pi[p]);
+						DetOfP = -DetOfP;
+				
+						// Switch the components in LL and UU
+						for (int i = 0; i != v; ++i)
+							std::swap(LL(i, v), LL(i, p));
+						for (int i = 0; i != N; ++i)
+							std::swap(UU(i, v), UU(i, p));
+					}
+				}
+
+				// Gaussian eliminate the remaining components of vector 'v'
+				for (int c = v + 1; c != N; ++c)
+				{
+					LL(v, c) = UU(v, c) / UU(v, v);
+					for (int i = v; i != N; ++i)
+						UU(i, c) -= LL(v, c) * UU(i, v);
 				}
 			}
 
 			// Combine 'LL' and 'UU' into 'LU' (note UU *is* lu)
-			for (int r = 0; r != N; ++r)
-				for (int c = r+1; c != N; ++c)
-					lu(r, c) = LL(r, c);
+			for (int v = 0; v != N; ++v)
+				for (int c = v+1; c != N; ++c)
+					lu(v, c) = LL(v, c);
 		}
 
 		// The matrix dimension (square)
@@ -976,10 +988,10 @@ namespace pr
 	// Solves for 'x' in 'Ax = v'
 	template <typename Real> inline Matrix<Real> Solve(MatrixLU<Real> const& A, Matrix<Real> const& v)
 	{
-		// e.g. [4x4][4x1] = [4x1]
-		assert("Solution vector has the wrong dimensions" && A.dim() == v.cmps());
+		// e.g. [4x4][1x4] = [1x4]
+		assert("Solution vector 'v' has the wrong dimensions" && A.dim() == v.cmps() && v.vecs() == 1);
 
-		// Switch items in "v" due to permutation matrix
+		// Switch items in 'v' due to permutation matrix
 		Matrix<Real> a(1, A.dim());
 		for (int i = 0; i != A.dim(); ++i)
 			a(0, i) = v(0, A.pi[i]);
@@ -1070,8 +1082,8 @@ namespace pr
 			s = s.Replace("\r\n ", "\r\n");
 
 			// If the data ends in a newline, remove the trailing newline.
-			// Make it easier by first replacing \r\n’s with |’s then
-			// restore the |’s with \r\n’s
+			// Make it easier by first replacing \r\nï¿½s with |ï¿½s then
+			// restore the |ï¿½s with \r\nï¿½s
 			s = s.Replace("\r\n", "|");
 			while (s.LastIndexOf("|") == (s.Length - 1))
 				s = s.Substring(0, s.Length - 1);
@@ -1082,7 +1094,7 @@ namespace pr
 
 		var rows = Regex.Split(s, "\r\n");
 		var nums = rows[0].Split(' ');
-		var m = new Matrix(rows.Length, nums.Length);
+		var m = Matrix<double>(rows.Length, nums.Length);
 		for (int i = 0; i < rows.Length; i++)
 		{
 			nums = rows[i].Split(' ');
@@ -1152,6 +1164,18 @@ namespace pr::maths
 			PR_CHECK(FEql(m.lu, res), true);
 		}
 		{// Invert
+			auto m = Matrix<double>(4, 4, { 1, 2, 3, 1, 4, -5, 6, 5, 7, 8, 9, -9, -10, 11, 12, 0 });
+			auto inv = Invert(m);
+			auto INV = Matrix<double>(4, 4,
+			{
+				+0.258783783783783810, -0.018918918918918920, +0.018243243243243241, -0.068918918918918923,
+				+0.414864864864864790, -0.124324324324324320, -0.022972972972972971, -0.024324324324324322,
+				-0.164639639639639650, +0.098198198198198194, +0.036261261261261266, +0.048198198198198199,
+				+0.405405405405405430, -0.027027027027027029, -0.081081081081081086, -0.027027027027027025,
+			});
+			PR_CHECK(FEql(inv, INV), true);
+		}
+		{// Invert
 			auto M = m4x4(
 				v4(1.0f, +2.0f, 3.0f, +1.0f),
 				v4(4.0f, -5.0f, 6.0f, +5.0f),
@@ -1209,6 +1233,16 @@ namespace pr::maths
 			auto m2 = Transpose(m);
 			auto M2 = Transpose4x4(M);
 			PR_CHECK(FEql(m2, M2), true);
+		}
+		{// Multiply
+			double data0[] = {1, 2, 3, 4, 0.1, 0.2, 0.3, 0.4, -4, -3, -2, -1};
+			double data1[] = {1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4};
+			double rdata[] = {30, 30, 30, 30, 30, 3, 3, 3, 3, 3, -20, -20, -20, -20, -20};
+			auto a2b = Matrix<double>(3, 4, data0);
+			auto b2c = Matrix<double>(4, 5, data1);
+			auto A2C = Matrix<double>(3, 5, rdata);
+			auto a2c = b2c * a2b;
+			PR_CHECK(FEql(a2c, A2C), true);
 		}
 		{// Multipy
 			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);

@@ -3220,16 +3220,13 @@ namespace Rylogic.Db
 		#region DLL Functions
 
 		/// <summary>Helper method for loading the dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
-		{
-			NativeDll.LoadDll(dir);
-		}
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)") => NativeDll.LoadDll(dir);
 
 		/// <summary>True if the sqlite dll has been loaded</summary>
-		public static bool ModuleLoaded
-		{
-			get { return NativeDll.ModuleLoaded; }
-		}
+		public static bool ModuleLoaded => NativeDll.ModuleLoaded;
+
+		/// <summary>The exception created if the module fails to load</summary>
+		public static Exception? LoadError => NativeDll.LoadError;
 
 		/// <summary>Interop functions</summary>
 		private static class NativeDll
@@ -3237,17 +3234,17 @@ namespace Rylogic.Db
 			private const string Dll = "sqlite3";
 
 			/// <summary>True if the sqlite3.dll has been loaded into memory</summary>
-			public static bool ModuleLoaded
-			{
-				get { return m_module != IntPtr.Zero; }
-			}
+			public static bool ModuleLoaded => m_module != IntPtr.Zero;
 			private static IntPtr m_module;
+
+			/// <summary>The exception created if the module fails to load</summary>
+			public static Exception? LoadError;
 
 			/// <summary>Helper method for loading the dll from a platform specific path</summary>
 			public static void LoadDll(string dir)
 			{
 				if (ModuleLoaded) return;
-				m_module = Win32.LoadDll(Dll+".dll", dir);
+				m_module = Win32.LoadDll(Dll+".dll", out LoadError, dir);
 			}
 
 			/// <summary>Base class for wrappers of native sqlite handles</summary>

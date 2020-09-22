@@ -573,7 +573,7 @@ namespace Rylogic.Gfx
 				//    using the back buffer still as I'm assuming that is still the screen size.
 				//  - The render target dimension is in pixels however, and WPF uses device independent units (i.e. 96dpi).
 				//    So to return points in device-independent screen space, the render target size needs to be adjusted
-				//    by the system dpi.
+				//    by the DPI.
 				var dpi_scale = DpiScale;
 				var da = Hwnd != IntPtr.Zero ? BackBufferSize : RenderTargetSize;
 				return new v2((pt.x + 1f) * da.Width / (2f * dpi_scale.X), (1f - pt.y) * da.Height / (2f * dpi_scale.Y));

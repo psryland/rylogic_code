@@ -544,6 +544,16 @@ namespace pr
 		bool before() const { return m_before; }
 		bool after() const { return !m_before; }
 	};
+
+	// Event for WndProc handlers translated to events
+	struct WindowEventArgs
+	{
+		void* hwnd;
+		uint32_t msg;
+		uint64_t wparam;
+		int64_t lparam;
+		bool handled;
+	};
 }
 
 #if PR_UNITTESTS

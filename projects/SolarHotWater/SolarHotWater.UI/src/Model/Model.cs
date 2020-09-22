@@ -492,6 +492,7 @@ namespace SolarHotWater
 				{
 					// Log in to EweLink
 					await Ewe.Login(username, password);
+					await Ewe.OpenWebSocket();
 					NotifyPropertyChanged(nameof(IsLoggedOn));
 					NotifyPropertyChanged(nameof(EweDevices));
 				}

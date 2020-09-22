@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Win32 wrapper
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -13,7 +13,6 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
@@ -1280,44 +1279,76 @@ namespace Rylogic.Interop.Win32
 		}
 		#endregion
 
+		#region Device Changed event types DBT_
+		public enum EDeviceChangedEventType
+		{
+			/// <summary>DBT_DEVNODES_CHANGED - A device has been added to or removed from the system.</summary>
+			DevNodesChanged = 0x0007,
+
+			/// <summary>DBT_QUERYCHANGECONFIG - Permission is requested to change the current configuration(dock or undock).</summary>
+			QueryChangeConfig = 0x0017,
+
+			/// <summary>DBT_CONFIGCHANGED - The current configuration has changed, due to a dock or undock.</summary>
+			ConfigChanged = 0x0018,
+
+			/// <summary>DBT_CONFIGCHANGECANCELED - A request to change the current configuration(dock or undock) has been canceled.</summary>
+			ConfigChangeCanceled = 0x0019,
+
+			/// <summary>DBT_DEVICEARRIVAL - A device or piece of media has been inserted and is now available.</summary>
+			DeviceArrival = 0x8000,
+
+			/// <summary>DBT_DEVICEQUERYREMOVE - Permission is requested to remove a device or piece of media.Any application can deny this request and cancel the removal.</summary>
+			DeviceQueryRemove = 0x8001,
+
+			/// <summary>DBT_DEVICEQUERYREMOVEFAILED - A request to remove a device or piece of media has been canceled.</summary>
+			DeviceQueryRemoveFailed = 0x8002,
+
+			/// <summary>DBT_DEVICEREMOVEPENDING - A device or piece of media is about to be removed. Cannot be denied.</summary>
+			DeviceRemovePending = 0x8003,
+
+			/// <summary>DBT_DEVICEREMOVECOMPLETE - A device or piece of media has been removed.</summary>
+			DeviceRemoveComplete = 0x8004,
+
+			/// <summary>DBT_DEVICETYPESPECIFIC - A device-specific event has occurred.</summary>
+			DeviceTypeSpecific = 0x8005,
+
+			/// <summary>DBT_CUSTOMEVENT - A custom event has occurred.</summary>
+			CustomEvent = 0x8006,
+
+			/// <summary>DBT_USERDEFINED - The meaning of this message is user-defined.</summary>
+			UserDefined = 0xFFFF,
+		}
 		#endregion
 
+		#endregion
+
+		/// <summary>Magic value used for message queue only windows</summary>
+		public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
+
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
+		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
-			HWND TryLoad(string path)
-			{
-				Debug.WriteLine($"Loading native dll '{path}'...");
-				var module = LoadLibrary(path);
-				if (module != IntPtr.Zero)
-					return module;
-
-				var msg = GetLastErrorString();
-				throw new Exception(
-					$"Found dependent library '{path}' but it failed to load.\r\n" +
-					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n" +
-					$"Last Error: {msg}");
-			}
-
 			var searched = new List<string>();
+			var ass = Assembly.GetEntryAssembly();
 
 			// Substitute the platform and config
 			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
 			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
 			
-			{// Try the working directory
+			// Try the working directory
+			if (dir.Length != 0)
+			{
+				// 'dir' should be '.' to get the current working directory
 				var working_dir = Path.GetFullPath(dir);
 				var dll_path = Path_.CombinePath(working_dir, dllname);
 				if (!searched.Contains(dll_path))
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path);
+						return TryLoad(dll_path, out load_error);
 				}
 			}
 
-			var ass = Assembly.GetEntryAssembly();
-			
 			// Try the EXE directory
 			if (ass != null)
 			{
@@ -1328,7 +1359,7 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path);
+						return TryLoad(dll_path, out load_error);
 				}
 			}
 
@@ -1342,14 +1373,31 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path);
+						return TryLoad(dll_path, out load_error);
 				}
 			}
 
 			// Allow LoadDll to be called multiple times if needed
-			return throw_if_missing
-				? throw new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}")
-				: IntPtr.Zero;
+			load_error = new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}");
+			return !throw_if_missing ? IntPtr.Zero : throw load_error;
+
+			// The path is found, attempt to load the dll
+			static HWND TryLoad(string path, out Exception? load_error)
+			{
+				load_error = null;
+
+				Debug.WriteLine($"Loading native dll '{path}'...");
+				var module = LoadLibrary(path);
+				if (module != IntPtr.Zero)
+					return module;
+
+				var msg = GetLastErrorString();
+				load_error = new Exception(
+					$"Found dependent library '{path}' but it failed to load.\r\n" +
+					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n" +
+					$"Last Error: {msg}");
+				throw load_error;
+			}
 		}
 
 		/// <summary>A lazy created HWND for a STATIC window</summary>
@@ -1360,7 +1408,7 @@ namespace Rylogic.Interop.Win32
 				// This window is used to allow child windows to be created before the actual parent HWND is available.
 				// See ScintillaControl as an example.
 				if (m_proxy_parent_hwnd == IntPtr.Zero)
-					m_proxy_parent_hwnd = CreateWindowEx(0, "STATIC", string.Empty, 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+					m_proxy_parent_hwnd = CreateWindow(0, "STATIC", string.Empty, 0, 0, 0, 1, 1, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 				return m_proxy_parent_hwnd;
 			}
 		}

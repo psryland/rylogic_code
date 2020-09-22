@@ -1566,9 +1566,13 @@ namespace pr
 			// Register the this window class
 			WndClassEx& Register()
 			{
-				m_atom = ATOM(::RegisterClassExW(this));
-				Throw(m_atom != 0, "RegisterClassEx failed");
-				m_unreg = true;
+				m_atom = ATOM(::GetClassInfoExW(m_hinst, lpszClassName, this));
+				if (m_atom == 0)
+				{
+					m_atom = ATOM(::RegisterClassExW(this));
+					Throw(m_atom != 0, "RegisterClassEx failed");
+					m_unreg = true;
+				}
 				return *this;
 			}
 

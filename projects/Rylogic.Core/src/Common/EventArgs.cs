@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Dynamic;
+using System.Text;
 
 namespace Rylogic.Common
 {
@@ -66,5 +68,33 @@ namespace Rylogic.Common
 
 		public T New { get; }
 		public T Old { get; }
+	}
+
+	/// <summary>Event args for message handlers</summary>
+	public class WndProcEventArgs :EventArgs
+	{
+		public WndProcEventArgs(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
+		{
+			Hwnd = hwnd;
+			Message = message;
+			WParam = wparam;
+			LParam = lparam;
+			Handled = false;
+		}
+
+		/// <summary>Window handle</summary>
+		public IntPtr Hwnd { get; }
+
+		/// <summary>Window message</summary>
+		public int Message { get; }
+
+		/// <summary>WParam</summary>
+		public IntPtr WParam { get; }
+
+		/// <summary>LParam</summary>
+		public IntPtr LParam { get; }
+
+		/// <summary>Message handled (prevents passing to DefWindowProc)</summary>
+		public bool Handled { get; set; }
 	}
 }

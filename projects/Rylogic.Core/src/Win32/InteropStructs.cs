@@ -312,6 +312,23 @@ namespace Rylogic.Interop.Win32
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct CREATESTRUCT
+		{
+			public IntPtr lpCreateParams;
+			public IntPtr hInstance;
+			public IntPtr hMenu;
+			public HWND hwndParent;
+			public int cy;
+			public int cx;
+			public int y;
+			public int x;
+			public int style;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszName;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClass;
+			public uint dwExStyle;
+		}
+		
+		[StructLayout(LayoutKind.Sequential)]
 		public struct WNDCLASS
 		{
 			public uint style;
@@ -324,6 +341,23 @@ namespace Rylogic.Interop.Win32
 			public IntPtr hbrBackground;
 			[MarshalAs(UnmanagedType.LPWStr)] public string lpszMenuName;
 			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClassName;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WNDCLASSEX
+		{
+			public int cbSize; // = sizeof(WNDCLASSEX)
+			public uint style;
+			public WNDPROC lpfnWndProc;
+			public int cbClsExtra;
+			public int cbWndExtra;
+			public IntPtr hInstance;
+			public IntPtr hIcon;
+			public IntPtr hCursor;
+			public IntPtr hbrBackground;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszMenuName;
+			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClassName;
+			public IntPtr hIconSm;
 		}
 	}
 }

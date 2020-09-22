@@ -1,4 +1,4 @@
-#if NET472
+﻿#if NET472
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -71,14 +71,17 @@ namespace Rylogic.Audio
 
 		/// <summary>True if the view3d dll has been loaded</summary>
 		private const string Dll = "audio";
-		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
+		public static bool ModuleLoaded => m_module != IntPtr.Zero;
 		private static IntPtr m_module = IntPtr.Zero;
+
+		/// <summary>The exception created if the module fails to load</summary>
+		public static System.Exception? LoadError;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
 		{
 			if (ModuleLoaded) return;
-			m_module = Win32.LoadDll(Dll+".dll", dir);
+			m_module = Win32.LoadDll(Dll+".dll", out LoadError, dir);
 		}
 
 		/// <summary>Report errors callback</summary>

@@ -338,9 +338,10 @@
 					Grid.Column="2"
 					Orientation="Vertical"
 					>
-					<!-- Enable Button -->
-					<Button
+					<!-- Enable Button 
 						IsEnabled="{Binding ToggleEnableMonitor.Available}"
+					-->
+					<Button
 						Command="{Binding ToggleEnableMonitor}"
 						ToolTip="Enable/Disable the monitor to turn consumers on/off based on available solar power"
 						HorizontalAlignment="Center"

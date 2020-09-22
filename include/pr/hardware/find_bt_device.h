@@ -1,4 +1,4 @@
-//**************************************************************
+﻿//**************************************************************
 // FindBTDevices
 //  Copyright (c) Rylogic 2015
 //**************************************************************
@@ -17,55 +17,54 @@
 #include <ws2bth.h>
 #include <bthsdpdef.h>
 #include <bluetoothapis.h>
+#pragma comment(lib, "bthprops.lib")
 
 namespace pr
 {
-	namespace impl
+	namespace impl::bth
 	{
-		namespace bth
+		// Throw an exception for a win32 error
+		inline void ThrowWin32Exception(char const* msg, int err)
 		{
-			// Throw an exception for a win32 error
-			inline void ThrowWin32Exception(char const* msg, int err)
-			{
-				char desc[4096], err_msg[4096];
-				auto result = HRESULT_FROM_WIN32(err);
-				if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err_msg, DWORD(sizeof(err_msg)), NULL))
-					sprintf_s(desc, "%s: %s", msg, err_msg);
-				else
-					sprintf_s(desc, "%s: 0x%80X", msg, result);
+			char desc[4096], err_msg[4096];
+			auto result = HRESULT_FROM_WIN32(err);
+			if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err_msg, DWORD(sizeof(err_msg)), NULL))
+				sprintf_s(desc, "%s: %s", msg, err_msg);
+			else
+				sprintf_s(desc, "%s: 0x%80X", msg, result);
 
-				throw std::exception(desc);
-			}
+			throw std::exception(desc);
 		}
 	}
 
 	// Helper for enumerating BT radios
-	struct FindBTRadios
+	struct FindBTRadios :BLUETOOTH_FIND_RADIO_PARAMS
 	{
 	private:
-		HANDLE m_radio;
 		HBLUETOOTH_RADIO_FIND m_find;
+		HANDLE m_radio;
 		bool m_more;
 	
 	public:
 		FindBTRadios()
-			:m_radio()
+			:BLUETOOTH_FIND_RADIO_PARAMS({ sizeof(BLUETOOTH_FIND_RADIO_PARAMS) })
 			,m_find()
+			,m_radio()
 			,m_more(true)
 		{
 			// Find the first radio
-			auto parms = BLUETOOTH_FIND_RADIO_PARAMS{ sizeof(BLUETOOTH_FIND_RADIO_PARAMS) };
-			m_find = ::BluetoothFindFirstRadio(&parms, &m_radio);
+			m_find = ::BluetoothFindFirstRadio(this, &m_radio);
 			if (m_find == nullptr)
 			{
 				auto err = ::GetLastError();
-				switch (err) {
-				default:
-					impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
-					break;
-				case ERROR_NO_MORE_ITEMS:
-					m_more = false;
-					break;
+				switch (err)
+				{
+					case ERROR_NO_MORE_ITEMS:
+						m_more = false;
+						break;
+					default:
+						impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
+						break;
 				}
 			}
 		}
@@ -82,7 +81,7 @@ namespace pr
 		}
 
 		// The handle of the current radio device being enumerated
-		HANDLE radio() const
+		HANDLE handle() const
 		{
 			return m_radio;
 		}
@@ -90,22 +89,28 @@ namespace pr
 		// Move to the next device
 		void next()
 		{
-			for (;!done();)
+			if (::BluetoothFindNextRadio(m_find, &m_radio))
+				return;
+
+			auto err = ::GetLastError();
+			switch (err)
 			{
-				if (!::BluetoothFindNextRadio(m_find, &m_radio))
-				{
-					auto err = ::GetLastError();
-					switch (err) {
-					default:
-						impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
-						break;
-					case ERROR_NO_MORE_ITEMS:
-					case RPC_S_SERVER_UNAVAILABLE:
-						m_more = false;
-						break;
-					}
-				}
+				case ERROR_NO_MORE_ITEMS:
+				case RPC_S_SERVER_UNAVAILABLE:
+					m_more = false;
+					break;
+				default:
+					impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
+					break;
 			}
+		}
+	
+		// Return information about the current radio
+		BLUETOOTH_RADIO_INFO info() const
+		{
+			BLUETOOTH_RADIO_INFO info = {sizeof(BLUETOOTH_RADIO_INFO)};
+			BluetoothGetRadioInfo(handle(), &info);
+			return info;
 		}
 	};
 
@@ -150,15 +155,16 @@ namespace pr
 			if (m_find == nullptr)
 			{
 				auto err = ::GetLastError();
-				switch (err) {
-				default:
-					impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
-					break;
-				case ERROR_INVALID_HANDLE:
-				case ERROR_NO_MORE_ITEMS:
-				case RPC_S_SERVER_UNAVAILABLE:
-					m_more = false;
-					break;
+				switch (err)
+				{
+					case ERROR_INVALID_HANDLE:
+					case ERROR_NO_MORE_ITEMS:
+					case RPC_S_SERVER_UNAVAILABLE:
+						m_more = false;
+						break;
+					default:
+						impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
+						break;
 				}
 			}
 		}
@@ -177,35 +183,51 @@ namespace pr
 		// Move to the next device
 		void next()
 		{
-			for (;!done();)
+			if (::BluetoothFindNextDevice(m_find, this))
+				return;
+
+			auto err = ::GetLastError();
+			switch (err)
 			{
-				if (!::BluetoothFindNextDevice(m_find, this))
-				{
-					auto err = ::GetLastError();
-					switch (err) {
-					default:
-						impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
-						break;
-					case ERROR_NO_MORE_ITEMS:
-						m_more = false;
-						break;
-					}
-				}
+				case ERROR_NO_MORE_ITEMS:
+					m_more = false;
+					break;
+				default:
+					impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
+					break;
 			}
+		}
+			
+		// Return information about the current radio
+		BLUETOOTH_DEVICE_INFO_STRUCT info() const
+		{
+			BLUETOOTH_DEVICE_INFO_STRUCT info = {sizeof(BLUETOOTH_DEVICE_INFO_STRUCT)};
+			BluetoothGetDeviceInfo(m_search_params.hRadio, &info);
+			return info;
 		}
 	};
 }
 
 #if PR_UNITTESTS
+#include <dbt.h>
+#include <bthdef.h>
 #include "pr/common/unittests.h"
 #include "pr/filesys/filesys.h"
 namespace pr::hardware
 {
+	PRUnitTest(FindBTRadiosTests)
+	{
+		for (FindBTRadios r; !r.done(); r.next())
+		{
+			OutputDebugStringW(L"Found BT Radio\n");
+		}
+	}
 	PRUnitTest(FindBTDevicesTests)
 	{
-		for (pr::FindBTDevices f; !f.done(); f.next())
+		for (FindBTDevices f; !f.done(); f.next())
 		{
 			OutputDebugStringW(f.szName);
+			OutputDebugStringW(L"\n");
 		}
 	}
 }

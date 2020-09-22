@@ -2,7 +2,6 @@
 // Application Framework
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
-
 #include "pr/app/main.h"
 #include "pr/app/main_ui.h"
 #ifdef PR_APP_MAIN_INCLUDE

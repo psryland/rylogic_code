@@ -32,12 +32,7 @@ namespace Rylogic.Common.Windows
 
 			static SafeFileHandle GetFileHandle(string path)
 			{
-				const int FILE_ACCESS_NEITHER = 0;
-				const int FILE_SHARE_READ = 1;
-				const int FILE_SHARE_WRITE = 2;
-				const int CREATION_DISPOSITION_OPEN_EXISTING = 3;
-				const int FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
-				return Win32.CreateFile(path, FILE_ACCESS_NEITHER, FILE_SHARE_READ | FILE_SHARE_WRITE, IntPtr.Zero, CREATION_DISPOSITION_OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+				return Win32.CreateFile(path, Win32.EFileAccess.NEITHER, Win32.EFileShare.READ | Win32.EFileShare.WRITE, IntPtr.Zero, Win32.EFileCreation.OPEN_EXISTING, Win32.EFileFlag.BACKUP_SEMANTICS, IntPtr.Zero);
 			}
 			static Win32.BY_HANDLE_FILE_INFORMATION? GetFileInfo(SafeFileHandle handle)
 			{

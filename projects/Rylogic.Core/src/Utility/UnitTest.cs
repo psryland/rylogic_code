@@ -44,33 +44,33 @@ namespace Rylogic.UnitTests
 
 				int passed = 0;
 				int failed = 0;
-				using (var outp = new StreamWriter(outstream, Encoding.ASCII, 4096, true))
+				const string file_pattern = @" in " + Regex_.FullPathPattern + @":line\s(?<line>\d+)";
+
+				using var outp = new StreamWriter(outstream, Encoding.ASCII, 4096, true);
+				outp.WriteLine($"Unit Testing:  {ass.GetName().Name}.dll  Framework={ass.FindAttribute<TargetFrameworkAttribute>()?.FrameworkName ?? ass.ImageRuntimeVersion}  Platform={(Environment.Is64BitProcess ? "x64" : "x86")}  Config={(Util.IsDebug ? "Debug" : "Release")}  Version={ass.GetName().Version}");
+
+				// Look for test fixtures
+				var test_fixtures = FindTestFixtures(ass).ToList();
+				foreach (var fixture in test_fixtures)
 				{
-					outp.WriteLine($"Unit Testing:  {ass.GetName().Name}.dll  Framework={ass.FindAttribute<TargetFrameworkAttribute>()?.FrameworkName ?? ass.ImageRuntimeVersion}  Platform={(Environment.Is64BitProcess ? "x64" : "x86")}  Config={(Util.IsDebug ? "Debug" : "Release")}  Version={ass.GetName().Version}");
-					const string file_pattern = @" in " + Regex_.FullPathPattern + @":line\s(?<line>\d+)";
-
-					// Look for test fixtures
-					var test_fixtures = FindTestFixtures(ass).ToList();
-					foreach (var fixture in test_fixtures)
+					// Create an instance of the unit test
+					object inst;
+					try { inst = Activator.CreateInstance(fixture) ?? throw new Exception($"Failed to create unit test {fixture.Name}"); }
+					catch (Exception ex)
 					{
-						// Create an instance of the unit test
-						object inst;
-						try { inst = Activator.CreateInstance(fixture) ?? throw new Exception($"Failed to create unit test {fixture.Name}"); }
-						catch (Exception ex)
-						{
-							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
-							outp.WriteLine(
-								$"Unit Testing:  {fixture.Name} - Failed to create an instance of test fixture\n" +
-								$"{ex.MessageFull()}\n" +
-								$"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
-							outp.Flush();
-							++failed;
-							continue;
-						}
+						while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+						outp.WriteLine(
+							$"Unit Testing:  {fixture.Name} - Failed to create an instance of test fixture\n" +
+							$"{ex.MessageFull()}\n" +
+							$"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
+						outp.Flush();
+						++failed;
+						continue;
+					}
 
-						// Call the fixture set up method
-						var setup = fixture.FindMethodsWithAttribute<TestFixtureSetUpAttribute>().FirstOrDefault();
-						if (setup != null) try
+					// Call the fixture set up method
+					var setup = fixture.FindMethodsWithAttribute<TestFixtureSetUpAttribute>().FirstOrDefault();
+					if (setup != null) try
 						{
 							setup.Invoke(inst, null);
 						}
@@ -86,75 +86,74 @@ namespace Rylogic.UnitTests
 							continue;
 						}
 
-						// Find the set up/clean up method to call before each unit test
-						var test_setup = fixture.FindMethodsWithAttribute<SetUpAttribute>().FirstOrDefault();
-						var test_clean = fixture.FindMethodsWithAttribute<TearDownAttribute>().FirstOrDefault();
+					// Find the set up/clean up method to call before each unit test
+					var test_setup = fixture.FindMethodsWithAttribute<SetUpAttribute>().FirstOrDefault();
+					var test_clean = fixture.FindMethodsWithAttribute<TearDownAttribute>().FirstOrDefault();
 
-						// Find the unit tests
-						int pass_count = 0;
-						foreach (var test in fixture.FindMethodsWithAttribute<TestAttribute>())
-						{
-							try
-							{
-								// Call set up for the test
-								if (test_setup != null)
-									test_setup.Invoke(inst, null);
-
-								// Run the test
-								test.Invoke(inst, null);
-
-								// Call clean up for the test
-								if (test_clean != null)
-									test_clean.Invoke(inst, null);
-
-								++pass_count;
-							}
-							catch (Exception ex)
-							{
-								while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
-								outp.WriteLine();
-								outp.WriteLine($"Unit Testing:  Test {test.Name} Failed");
-								outp.WriteLine($"{ex.MessageFull()}");
-								outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
-								outp.Flush();
-								++failed;
-							}
-						}
-
-						// Call the fixture clean up method
-						var cleanup = fixture.FindMethodsWithAttribute<TestFixtureTearDownAttribute>().FirstOrDefault();
-						if (cleanup != null)
-						{
-							try
-							{
-								cleanup.Invoke(inst, null);
-							}
-							catch (Exception ex)
-							{
-								while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
-								outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
-								outp.WriteLine($"{ex.MessageFull()}");
-								outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
-								outp.Flush();
-								++failed;
-								continue;
-							}
-						}
-						passed += pass_count;
-					}
-
-					if (test_fixtures.Count == 0)
+					// Find the unit tests
+					int pass_count = 0;
+					foreach (var test in fixture.FindMethodsWithAttribute<TestAttribute>())
 					{
-						outp.WriteLine($"Unit Testing:  No unit tests found in assembly {ass.FullName}");
-						outp.Flush();
+						try
+						{
+							// Call set up for the test
+							if (test_setup != null)
+								test_setup.Invoke(inst, null);
+
+							// Run the test
+							test.Invoke(inst, null);
+
+							// Call clean up for the test
+							if (test_clean != null)
+								test_clean.Invoke(inst, null);
+
+							++pass_count;
+						}
+						catch (Exception ex)
+						{
+							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+							outp.WriteLine();
+							outp.WriteLine($"Unit Testing:  Test {test.Name} Failed");
+							outp.WriteLine($"{ex.MessageFull()}");
+							outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
+							outp.Flush();
+							++failed;
+						}
 					}
-					else if (failed == 0 && passed > 0)
+
+					// Call the fixture clean up method
+					var cleanup = fixture.FindMethodsWithAttribute<TestFixtureTearDownAttribute>().FirstOrDefault();
+					if (cleanup != null)
 					{
-						outp.WriteLine($"Unit Testing:  *** All {passed} unit tests passed ***");
-						outp.Flush();
+						try
+						{
+							cleanup.Invoke(inst, null);
+						}
+						catch (Exception ex)
+						{
+							while (ex is TargetInvocationException && ex.InnerException != null) ex = ex.InnerException;
+							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
+							outp.WriteLine($"{ex.MessageFull()}");
+							outp.WriteLine($"{(ex.StackTrace is string st ? Util.FormatForOutputWindow(st, file_pattern) : string.Empty)}");
+							outp.Flush();
+							++failed;
+							continue;
+						}
 					}
-					return failed == 0;
+					passed += pass_count;
 				}
+
+				if (test_fixtures.Count == 0)
+				{
+					outp.WriteLine($"Unit Testing:  No unit tests found in assembly {ass.FullName}");
+					outp.Flush();
+				}
+				else if (failed == 0 && passed > 0)
+				{
+					outp.WriteLine($"Unit Testing:  *** All {passed} unit tests passed ***");
+					outp.Flush();
+				}
+				return failed == 0;
 			}
 			catch (Exception ex)
 			{

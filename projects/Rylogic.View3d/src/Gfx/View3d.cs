@@ -1424,15 +1424,21 @@ namespace ldr
 
 		#region DLL extern functions
 
+		private const string Dll = "view3d";
+
 		/// <summary>True if the view3d dll has been loaded</summary>
 		public static bool ModuleLoaded => m_module != IntPtr.Zero;
 		private static IntPtr m_module = IntPtr.Zero;
-		private const string Dll = "view3d";
+
+		/// <summary>The exception created if the module fails to load</summary>
+		public static System.Exception? LoadError;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static bool LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
-			return ModuleLoaded || (m_module = Win32.LoadDll(Dll + ".dll", dir, throw_if_missing)) != IntPtr.Zero;
+			if (ModuleLoaded) return true;
+			m_module = Win32.LoadDll(Dll + ".dll", out LoadError, dir, throw_if_missing);
+			return m_module != IntPtr.Zero;
 		}
 
 		// Context
