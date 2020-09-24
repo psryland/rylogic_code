@@ -9,6 +9,7 @@ using HWND = System.IntPtr;
 using LPARAM = System.IntPtr;
 using WPARAM = System.IntPtr;
 using Rylogic.Extn;
+using System.ComponentModel;
 
 namespace Rylogic.Interop.Win32
 {
@@ -147,8 +148,14 @@ namespace Rylogic.Interop.Win32
 		{
 			return CreateWindow_(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 		}
-		[DllImport("user32.dll", EntryPoint = "CreateWindowEx", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern HWND CreateWindow_(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
+		public static HWND CreateWindow(int dwExStyle, int lpClassAtom, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam)
+		{
+			return CreateWindow_(dwExStyle, (IntPtr)lpClassAtom, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+		}
+		[DllImport("user32.dll", EntryPoint = "CreateWindowExW", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern HWND CreateWindow_(int dwExStyle, [MarshalAs(UnmanagedType.LPWStr)] string lpClassName, [MarshalAs(UnmanagedType.LPWStr)] string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
+		[DllImport("user32.dll", EntryPoint = "CreateWindowExW", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern HWND CreateWindow_(int dwExStyle, IntPtr lpClassAtom, [MarshalAs(UnmanagedType.LPWStr)] string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 
 		[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
 		public static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
@@ -184,10 +191,10 @@ namespace Rylogic.Interop.Win32
 		/// defined by the system (such as buttons or list boxes),set this parameter to NULL.</param>
 		/// <param name="class_name">The name of the window class to look up</param>
 		/// <returns>Returns the window class data if the window class is registered</returns>
-		public static WNDCLASSEX? GetClassInfo(IntPtr hinstance, string class_name)
+		public static WNDCLASSEX? GetClassInfo(IntPtr hinstance, string class_name, out int atom)
 		{
 			var wc = new WNDCLASSEX { cbSize = Marshal.SizeOf<WNDCLASSEX>() };
-			var atom = GetClassInfoEx_(hinstance, class_name, ref wc);
+			atom = GetClassInfoEx_(hinstance, class_name, ref wc);
 			return atom != 0 ? wc : (WNDCLASSEX?)null;
 		}
 		[DllImport("user32.dll", EntryPoint = "GetClassInfoExW", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -335,12 +342,28 @@ namespace Rylogic.Interop.Win32
 		public static extern bool RedrawWindow(HWND hWnd, IntPtr lprcUpdate, HRGN hrgnUpdate, uint flags);
 
 		/// <summary>Register a window class</summary>
-		public static short RegisterClass(WNDCLASS wnd_class) => RegisterClass_(ref wnd_class);
-		public static short RegisterClass(WNDCLASSEX wnd_class) => RegisterClassEx_(ref wnd_class);
-		[DllImport("user32.dll", EntryPoint = "RegisterClassW", SetLastError = true)]
-		private static extern short RegisterClass_(ref WNDCLASS lpWndClass);
-		[DllImport("user32.dll", EntryPoint = "RegisterClassExW", SetLastError = true)]
-		private static extern short RegisterClassEx_(ref WNDCLASSEX lpWndClass);
+		public static ushort RegisterClass(WNDCLASS wnd_class)
+		{
+			// RegisterClass only sets last error if there is an error
+			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			var atom = RegisterClass_(ref wnd_class);
+			var err = Marshal.GetLastWin32Error();
+			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception();
+			return atom;
+		}
+		public static ushort RegisterClass(WNDCLASSEX wnd_class)
+		{
+			// RegisterClass only sets last error if there is an error
+			Win32.SetLastError(Win32.ERROR_SUCCESS);
+			var atom = RegisterClassEx_(ref wnd_class);
+			var err = Marshal.GetLastWin32Error();
+			if (err != Win32.ERROR_SUCCESS) throw new Win32Exception(); 
+			return atom;
+		}
+		[DllImport("user32.dll", EntryPoint = "RegisterClassW", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern ushort RegisterClass_(ref WNDCLASS lpWndClass);
+		[DllImport("user32.dll", EntryPoint = "RegisterClassExW", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern ushort RegisterClassEx_(ref WNDCLASSEX lpWndClass);
 
 		/// <summary>Registry for notifications about devices being adding/removed</summary>
 		public static SafeDevNotifyHandle RegisterDeviceNotification(IntPtr recipient, DEV_BROADCAST_HDR notificationFilter, EDeviceNotifyFlags flags)

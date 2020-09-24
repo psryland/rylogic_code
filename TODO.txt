@@ -5,18 +5,19 @@ Immediate ToDo:
 	Export REX models in new format
 	Export Plane model
 	
-	
-	Retro pi
-	arcade joystick
-	xbox controllers on Pi
-	
 Work
-	- Set up Git on the machine that runs plastic...
+  RexNode Sensor
+	- DPI issue for ZRT
+	- Battery monitoring - low power warning..
+	- MuRata to sleep between samples
+	- installer for ZRT
+
+  VRex
 	- Fix ground plane
-	- Fix arrows in MovementEditor diagram
-	- Add "user" to VRex
 	- Add Leg Total lengths to VRex
 	- Update build scripts for new projects
+  Misc
+	- Set up Git on the machine that runs plastic...
 	
 SolarHotWater
 	- Auto scroll graph

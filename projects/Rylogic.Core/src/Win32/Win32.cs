@@ -1325,6 +1325,9 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Magic value used for message queue only windows</summary>
 		public static readonly IntPtr HWND_MESSAGE = new IntPtr(-3);
 
+		/// <summary>INVALID_HANDLE_VALUE constant</summary>
+		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
 		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{

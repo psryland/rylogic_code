@@ -8,7 +8,7 @@ using System.Reflection;
 namespace Rylogic.Interop.Win32
 {
 	/// <summary>Device manager device classes</summary>
-	[DebuggerDisplay("{Name,nq}")]
+	[DebuggerDisplay("{Name,nq} - {Id,nq}")]
 	public class DevClass
 	{
 		// Notes:
@@ -31,7 +31,7 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Device description</summary>
 		public string Desc { get; }
 
-		/// <summary>Enumerable all dev class types</summary>
+		/// <summary>Enumerable all dev classes</summary>
 		public static IEnumerable<DevClass> All
 		{
 			get
@@ -46,14 +46,13 @@ namespace Rylogic.Interop.Win32
 			}
 		}
 
-		/// <summary>Return the DevClass type associated with the given Guid</summary>
-		public static DevClass From(Guid class_guid)
+		/// <summary>Return the DevClass associated with the given Guid</summary>
+		public static DevClass From(Guid device_class_guid)
 		{
-			return All.FirstOrDefault(x => x.Id == class_guid) ?? new DevClass("Unknown", class_guid, "Unknown hardware device class");
+			return All.FirstOrDefault(x => x.Id == device_class_guid) ?? new DevClass("Unknown", device_class_guid, "Unknown hardware device class");
 		}
 
 		#region Device class GUIDs
-		// I think some of these are categories and others are device classes... sort out as needed
 		public static readonly DevClass ApplicationLaunchButton     = new DevClass(""                                                            , new Guid("629758ee-986e-4d9e-8e47-de27f8ab054d"), "");
 		public static readonly DevClass AVC                         = new DevClass(""                                                            , new Guid("095780c3-48a1-4570-bd95-46707f78c2dc"), "");
 		public static readonly DevClass Battery                     = new DevClass("Battery Devices"                                             , new Guid("72631e54-78a4-11d0-bcf7-00aa00b7b32a"), "This class includes battery devices and UPS devices.");
@@ -117,8 +116,8 @@ namespace Rylogic.Interop.Win32
 		public static readonly DevClass PCI_SLL_Accelerator         = new DevClass("PCI SSL Accelerator"                                         , new Guid("268c95a1-edfe-11d3-95c3-0010dc4050a5"), "This class includes devices that accelerate secure socket layer (SSL) cryptographic processing.");
 		public static readonly DevClass PCMCIAAdapter               = new DevClass("PCMCIA Adapter"                                              , new Guid("4d36e977-e325-11ce-bfc1-08002be10318"), "This class includes PCMCIA and CardBus host controllers, but not PCMCIA or CardBus peripherals. Drivers for this class are system-supplied.");
 		public static readonly DevClass PNPPrinters                 = new DevClass("Printers (Bus-specific class drivers)"                       , new Guid("4658ee7e-f050-11d1-b6bd-00c04fa372a7"), "This class includes SCSI/1394-enumerated printers. Drivers for this class provide printer communication for a specific bus.");
-		public static readonly DevClass Ports                       = new DevClass("Ports (COM & LPT)"                                           , new Guid("86e0d1e0-8089-11d0-9ce4-08003e301f73"), "This class includes serial and parallel port devices. See also the MultiportSerial class.");
-		public static readonly DevClass PortsSerEnumBusEmulator     = new DevClass("Ports (COM & LPT) (Legacy 16550 UART)."                      , new Guid("4d36e978-e325-11ce-bfc1-08002be10318"), "This class includes serial and parallel port devices. See also the MultiportSerial class.");
+		public static readonly DevClass Ports                       = new DevClass("Ports (COM & LPT)"                                           , new Guid("4d36e978-e325-11ce-bfc1-08002be10318"), "This class includes serial and parallel port devices. See also the MultiportSerial class.");
+		public static readonly DevClass PortsSerEnum                = new DevClass("Ports (COM & LPT)"                                           , new Guid("86e0d1e0-8089-11d0-9ce4-08003e301f73"), "This class includes serial and parallel port devices that support plug and play.");
 		public static readonly DevClass Printer                     = new DevClass("Printers"                                                    , new Guid("4d36e979-e325-11ce-bfc1-08002be10318"), "This class includes printers.");
 		public static readonly DevClass Processor                   = new DevClass(""                                                            , new Guid("97fadb10-4e33-40ae-359c-8bef029dbdd0"), "");
 		public static readonly DevClass Processors                  = new DevClass("Processors"                                                  , new Guid("50127dc3-0f36-415e-a6cc-4cb3be910b65"), "This class includes processor types.");

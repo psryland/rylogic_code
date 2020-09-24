@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using Rylogic.Common;
 using Rylogic.Utility;
 using HTexture = System.IntPtr;
@@ -236,13 +237,13 @@ namespace Rylogic.Gfx
 
 						// Create a buffer and read the private data
 						var buffer = new byte[size];
-						using var buf = Marshal_.Pin(buffer);
+						using var buf = Marshal_.Pin(buffer, GCHandleType.Pinned);
 						View3d_TexturePrivateDataGet(m_handle, id, ref size, buf.Pointer);
 						return buffer;
 					}
 					set
 					{
-						using var buf = Marshal_.Pin(value);
+						using var buf = Marshal_.Pin(value, GCHandleType.Pinned);
 						View3d_TexturePrivateDataSet(m_handle, id, (uint)(value?.Length ?? 0), buf.Pointer);
 					}
 				}
@@ -267,8 +268,8 @@ namespace Rylogic.Gfx
 
 						// Create a buffer and read the private data
 						var buffer = new byte[size];
-						using (var buf = Marshal_.Pin(buffer))
-							View3d_TexturePrivateDataGet(m_handle, id, ref size, buf.Pointer);
+						using var buf = Marshal_.Pin(buffer, GCHandleType.Pinned);
+						View3d_TexturePrivateDataGet(m_handle, id, ref size, buf.Pointer);
 
 						if (size == 8)
 							return new IntPtr(BitConverter.ToInt64(buffer, 0));

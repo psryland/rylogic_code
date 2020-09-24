@@ -148,106 +148,12 @@ namespace Rylogic.Common
 			return func;
 		}
 
-		/// <summary>Pin an object. No copy made</summary>
-		public static PinnedObject<T> Pin<T>(T obj)
+		/// <summary>Pin an object. No copy made. 'type' Pinned only works if 'obj' contains primitive/blittable data</summary>
+		public static PinnedObject<T> Pin<T>(T obj, GCHandleType type)
 			where T : class
 		{
-			return new PinnedObject<T>(obj);
+			return new PinnedObject<T>(obj, type);
 		}
-
-		/// <summary>Unmanaged memory buffer</summary>
-		public sealed class UnmanagedBuffer :IDisposable
-		{
-			public UnmanagedBuffer(EHeap mem, Type ty, int count)
-			{
-				Type = mem;
-				Length = Marshal.SizeOf(ty) * count;
-				Ptr = Type switch
-				{
-					EHeap.CoTaskMem => Marshal.AllocCoTaskMem(Length),
-					EHeap.HGlobal => Marshal.AllocHGlobal(Length),
-					_ => throw new Exception($"Unknown global memory type: {Type}"),
-				};
-			}
-			public void Dispose()
-			{
-				if (Ptr == IntPtr.Zero) return;
-				switch (Type)
-				{
-				case EHeap.HGlobal: Marshal.FreeHGlobal(Ptr); break;
-				case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(Ptr); break;
-				default: throw new Exception($"Unknown global memory type: {Type}");
-				}
-				Ptr = IntPtr.Zero;
-				Length = 0;
-				GC.SuppressFinalize(this);
-			}
-
-			public EHeap Type;
-			public IntPtr Ptr;
-			public int Length;
-
-			/// <summary>Init the buffer from a structure</summary>
-			public void Init<TStruct>(TStruct init, bool replacing_valid_data = false)
-				where TStruct : struct
-			{
-				if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
-				if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
-				Marshal.StructureToPtr(init, Ptr, replacing_valid_data);
-			}
-
-			/// <summary>Interpret the buffer as a structure type</summary>
-			public TStruct As<TStruct>()
-				where TStruct : struct
-			{
-				if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
-				if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
-				return Marshal.PtrToStructure<TStruct>(Ptr);
-			}
-		}
-	}
-
-	/// <summary>A helper class for pinning a managed structure so that it is suitable for unmanaged calls.</summary>
-	public sealed class PinnedObject<T> :IDisposable
-		where T : class
-	{
-		// Notes:
-		// A pinned object will not be collected and will not be moved by the GC until explicitly freed.
-
-		private readonly T m_managed_object;
-		private GCHandle m_handle;
-		private bool     m_disposed;
-
-		public PinnedObject(T obj)
-			:this(obj, GCHandleType.Pinned)
-		{}
-		public PinnedObject(T obj, GCHandleType type)
-		{
-			m_managed_object = obj;
-			m_handle = GCHandle.Alloc(obj, type);
-			Pointer = m_handle.AddrOfPinnedObject();
-		}
-		public void Dispose()
-		{
-			if (m_disposed) return;
-			m_handle.Free();
-			m_disposed = true;
-			GC.SuppressFinalize(this);
-		}
-		~PinnedObject()
-		{
-			Dispose();
-		}
-
-		/// <summary>The managed object being pinned</summary>
-		public T ManangedObject
-		{
-			get => (T?)m_handle.Target ?? throw new Exception("Pinned object is null");
-			set => Marshal.StructureToPtr(value, Pointer, false);
-		}
-
-		/// <summary>Pointer to the pinned object</summary>
-		public IntPtr Pointer { get; }
 	}
 
 	/// <summary>Extra methods for GCHandle</summary>
@@ -274,6 +180,134 @@ namespace Rylogic.Common
 				Init(
 					() => Handle = GCHandle.Alloc(obj, type),
 					() => { if (Handle.IsAllocated) Handle.Free(); });
+			}
+		}
+	}
+
+	/// <summary>Unmanaged memory buffer</summary>
+	public sealed class UnmanagedBuffer :IDisposable
+	{
+		public UnmanagedBuffer(EHeap mem, Type ty, int count)
+		{
+			Type = mem;
+			Length = Marshal.SizeOf(ty) * count;
+			Ptr = Type switch
+			{
+				EHeap.CoTaskMem => Marshal.AllocCoTaskMem(Length),
+				EHeap.HGlobal => Marshal.AllocHGlobal(Length),
+				_ => throw new Exception($"Unknown global memory type: {Type}"),
+			};
+		}
+		public void Dispose()
+		{
+			if (Ptr == IntPtr.Zero) return;
+			switch (Type)
+			{
+			case EHeap.HGlobal: Marshal.FreeHGlobal(Ptr); break;
+			case EHeap.CoTaskMem: Marshal.FreeCoTaskMem(Ptr); break;
+			default: throw new Exception($"Unknown global memory type: {Type}");
+			}
+			Ptr = IntPtr.Zero;
+			Length = 0;
+			GC.SuppressFinalize(this);
+		}
+
+		public EHeap Type;
+		public IntPtr Ptr;
+		public int Length;
+
+		/// <summary>Init the buffer from a structure</summary>
+		public void Init<TStruct>(TStruct init, bool replacing_valid_data = false)
+			where TStruct : struct
+		{
+			if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
+			if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
+			Marshal.StructureToPtr(init, Ptr, replacing_valid_data);
+		}
+
+		/// <summary>Interpret the buffer as a structure type</summary>
+		public TStruct As<TStruct>()
+			where TStruct : struct
+		{
+			if (Ptr == IntPtr.Zero) throw new Exception($"Unmanaged buffer pointer is null");
+			if (Length < Marshal.SizeOf<TStruct>()) throw new Exception($"Unmanaged buffer is too small to be this structure type");
+			return Marshal.PtrToStructure<TStruct>(Ptr);
+		}
+	}
+
+	/// <summary>A helper class for pinning a managed structure so that it is suitable for unmanaged calls.</summary>
+	public sealed class PinnedObject<T> :IDisposable
+		where T : class
+	{
+		// Notes:
+		//  - A pinned object will not be collected and will not be moved by the GC until explicitly freed.
+		//  - GCHandleType.Normal is used to pass a managed object through native callbacks to be accessed later in managed code.
+		//  - GCHandleType.Pinned is used to pass a pointer to a managed buffer into unmanaged code.
+		// Examples:
+		//   GCHandleType.Pinned:
+		//      Passing a vertex buffer to view3d:
+		//      var verts = new Vertex[1000];
+		//      using var vbuf = Marshal_.Pin(verts, GCHandle.Pinned);
+		//      View3D_ObjectCreate(..., verts.Length, ..., vbuf.Pointer, ...);
+		//
+		//   GCHandleType.Normal:
+		//      Passing 'this' to WM_CREATE through CreateWindowEx:
+		//      using var pin = Marshal_.Pin(this, GCHandleType.Normal);
+		//      Win32.CreateWindow(0, atom, title, 0, 0, 0, 1, 1, Win32.HWND_MESSAGE, IntPtr.Zero, HInstance, pin.Pointer);
+		//      ...
+		//      if (message == Win32.WM_CREATE) // in WndProc
+		//      {
+		//          var cp = Marshal.PtrToStructure<Win32.CREATESTRUCT>(lparam);
+		//          var gc = GCHandle.FromIntPtr(cp.lpCreateParams);
+		//          var wnd = (Thing?)gc.Target ?? throw new Exception("'this' pointer must be provided in CreateWindowEx"));
+		//      }
+
+		//private readonly T m_managed_object;
+		private readonly GCHandleType m_type;
+		private readonly GCHandle m_handle;
+		private bool m_disposed;
+
+		public PinnedObject(T obj, GCHandleType type)
+		{
+			m_type = type;
+			//m_managed_object = obj;
+			m_handle = GCHandle.Alloc(obj, type);
+			Pointer = type switch
+			{
+				GCHandleType.Weak => (IntPtr)m_handle,
+				GCHandleType.Normal => (IntPtr)m_handle,
+				GCHandleType.Pinned => m_handle.AddrOfPinnedObject(),
+				_ => throw new Exception($"Don't know how to get the pointer for pin type {type}"),
+			};
+		}
+		public void Dispose()
+		{
+			if (m_disposed) return;
+			m_handle.Free();
+			m_disposed = true;
+			GC.SuppressFinalize(this);
+		}
+		~PinnedObject()
+		{
+			Dispose();
+		}
+
+		/// <summary>
+		/// Pointer to the pinned object (if GCHandleType is pinned),
+		/// or an pointer to the GCHandle itself (if GCHandleType is normal).</summary>
+		public IntPtr Pointer { get; }
+
+		/// <summary>The managed object being pinned</summary>
+		public T ManangedObject
+		{
+			get => (T?)m_handle.Target ?? throw new Exception("Pinned object is null");
+			set
+			{
+				switch (m_type)
+				{
+					case GCHandleType.Pinned: Marshal.StructureToPtr(value, Pointer, false); break;
+					default: throw new Exception("Only 'GCHandle.Pinned' objects can be replaced");
+				}
 			}
 		}
 	}

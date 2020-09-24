@@ -758,10 +758,10 @@ extern "C"
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options);
-	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
+	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
 	VIEW3D_API void          __stdcall View3D_TextureRelease              (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
-	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (char const* tex_filepath, View3DImageInfo& info);
+	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (wchar_t const* tex_filepath, View3DImageInfo& info);
 	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
 	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (View3DTexture tex, BOOL discard);
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (View3DTexture tex);

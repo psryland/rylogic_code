@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,19 +11,18 @@ namespace Rylogic.Interop.Win32
 	/// <summary>An invisible window used for receiving notification messages</summary>
 	public sealed class DummyWindow :IDisposable
 	{
-		public const string ClassName = "Rylogic.DummyWindow";
-		public static readonly IntPtr HInstance = Marshal.GetHINSTANCE(typeof(DummyWindow).Module);
-		private delegate void ThunkFunc(IntPtr hwnd);
+		public const string ClassName = "Rylogic-DummyWindow";
+		public static readonly IntPtr HInstance = IntPtr.Zero;// Marshal.GetHINSTANCE(typeof(DummyWindow).Module);
 
 		/// <summary>Mapping from HWND to DummyWindow instance</summary>
-		private static Dictionary<IntPtr, DummyWindow> m_thunk = new Dictionary<IntPtr, DummyWindow>();
+		private static Dictionary<IntPtr, DummyWindow> m_wnd = new Dictionary<IntPtr, DummyWindow>();
 
-		public DummyWindow()
+		public DummyWindow(string? diag_name = null)
 		{
-			EnsureWndClassRegistered();
+			var atom = EnsureWndClassRegistered(HInstance);
 
-			var thunk = Marshal.GetFunctionPointerForDelegate(new ThunkFunc((hwnd) => m_thunk[hwnd] = this));
-			Handle = Win32.CreateWindow(0, ClassName, string.Empty, 0, 0, 0, 1, 1, Win32.HWND_MESSAGE, IntPtr.Zero, HInstance, thunk);
+			using var pin = Marshal_.Pin(this, GCHandleType.Normal);
+			Handle = Win32.CreateWindow(0, atom, diag_name ?? string.Empty, 0, 0, 0, 1, 1, Win32.HWND_MESSAGE, IntPtr.Zero, HInstance, pin.Pointer);
 			if (Handle == IntPtr.Zero)
 				throw new Win32Exception();
 		}
@@ -43,12 +41,12 @@ namespace Rylogic.Interop.Win32
 				if (m_hwnd != IntPtr.Zero)
 				{
 					Win32.DestroyWindow(m_hwnd);
-					m_thunk.Remove(m_hwnd);
+					m_wnd.Remove(m_hwnd);
 				}
 				m_hwnd = value;
 				if (m_hwnd != IntPtr.Zero)
 				{
-					m_thunk[m_hwnd] = this;
+					m_wnd[m_hwnd] = this;
 				}
 			}
 		}
@@ -93,41 +91,50 @@ namespace Rylogic.Interop.Win32
 				? Win32.DefWindowProc(hwnd, message, wparam, lparam)
 				: IntPtr.Zero; // S_OK
 		}
-		private static void EnsureWndClassRegistered()
+		private static IntPtr StaticWndProc(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
+		{
+			if (message == Win32.WM_NCCREATE)
+			{
+				// Managed issue with this... couldn't figure it out...
+				// It's exactly the same as the MessageWindow implementation from the .net reference source
+				// but it still didn't work... Only needed if the 'Handle' value is needed during WM_CREATE
+
+				//var gc = GCHandle.FromIntPtr(lparam);
+				//var cp = Marshal.PtrToStructure<Win32.CREATESTRUCT>(lparam);
+				//var gc = GCHandle.FromIntPtr(cp.lpCreateParams);
+				//m_wnd.Add(hwnd, (DummyWindow?)gc.Target ?? throw new Exception("'this' pointer must be provided in CreateWindowEx"));
+			}
+			return m_wnd.TryGetValue(hwnd, out var wnd)
+				? wnd.WndProc(hwnd, message, wparam, lparam)
+				: Win32.DefWindowProc(hwnd, message, wparam, lparam);
+		}
+		private static readonly Win32.WNDPROC m_static_wndproc = new Win32.WNDPROC(StaticWndProc);
+
+		/// <summary></summary>
+		private static int EnsureWndClassRegistered(IntPtr hinstance)
 		{
 			// Window class is already registered?
-			if (Win32.GetClassInfo(HInstance, ClassName) != null)
-				return;
+			if (Win32.GetClassInfo(HInstance, ClassName, out var atom) != null)
+				return atom;
 
 			// Register the window class
 			var wc = new Win32.WNDCLASSEX
 			{
 				cbSize = Marshal.SizeOf<Win32.WNDCLASSEX>(),
 				style = 0,
-				lpfnWndProc = m_static_wndproc = WndProc,
+				lpfnWndProc = m_static_wndproc,
 				cbClsExtra = 0,
 				cbWndExtra = 0,
-				hInstance = IntPtr.Zero,
+				hInstance = hinstance,
 				hIcon = IntPtr.Zero,
 				hCursor = IntPtr.Zero,
 				hbrBackground = IntPtr.Zero,
 				lpszMenuName = string.Empty,
 				lpszClassName = ClassName,
 			};
-			static IntPtr WndProc(IntPtr hwnd, int message, IntPtr wparam, IntPtr lparam)
-			{
-				if (message == Win32.WM_NCCREATE)
-				{
-					var cp = Marshal.PtrToStructure<Win32.CREATESTRUCT>(lparam);
-					var thunk = Marshal.GetDelegateForFunctionPointer<ThunkFunc>(cp.lpCreateParams);
-					thunk(hwnd);
-				}
-				return m_thunk.TryGetValue(hwnd, out var wnd)
-					? wnd.WndProc(hwnd, message, wparam, lparam)
-					: Win32.DefWindowProc(hwnd, message, wparam, lparam);
-			}
-			Win32.RegisterClass(wc);
+
+			atom = Win32.RegisterClass(wc);
+			return atom;
 		}
-		private static Win32.WNDPROC? m_static_wndproc;
 	}
 }
