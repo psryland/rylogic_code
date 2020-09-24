@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Log Helper
 //  Copyright (c) Rylogic Ltd 2011
 //***************************************************
@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -174,7 +175,7 @@ namespace Rylogic.Utility
 		public void Write(ELogLevel level, string msg, string? file = null, int? line = null)
 		{
 			if (!Enabled) return;
-			var evt = new LogEvent(level, Context.TimeZero, Tag, msg, file, line);
+			var evt = new LogEvent(level, Context.TimeZero, Tag, msg.TrimEnd('\n', '\r'), file, line);
 			Write(evt);
 			ForwardLog?.Write(evt);
 		}
@@ -183,11 +184,22 @@ namespace Rylogic.Utility
 		public void Write(ELogLevel level, Exception ex, string msg, string? file = null, int? line = null)
 		{
 			if (!Enabled) return;
-			var message =
-				ex is AggregateException ae ? string.Concat(msg, " - Exception: ", ae.MessageFull()) :
-				ex is TargetInvocationException ie && ie.InnerException != null ? string.Concat(msg, " - Exception: ", ie.InnerException.Message) :
-				string.Concat(msg, " - Exception: ", ex.MessageFull());
-			var evt = new LogEvent(level, Context.TimeZero, Tag, message, file, line);
+			var message = new StringBuilder(msg);
+			if (ex is AggregateException ae)
+			{
+				message.Append(" - Exception: ").Append(ae.MessageFull());
+			}
+			else if (ex is TargetInvocationException ie && ie.InnerException != null)
+			{
+				message.Append(" - Exception: ").Append(ie.InnerException.Message);
+			}
+			else
+			{
+				message.Append(" - Exception: ").Append(ex.MessageFull());
+			}
+			message.TrimEnd('\n','\r');
+
+			var evt = new LogEvent(level, Context.TimeZero, Tag, message.ToString(), file, line);
 			Write(evt);
 			ForwardLog?.Write(evt);
 		}

@@ -57,7 +57,7 @@ namespace Rylogic.Gfx
 				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
 
-				using var pin = Marshal_.Pin(p3d_data);
+				using var pin = Marshal_.Pin(p3d_data, GCHandleType.Pinned);
 				Handle = View3D_ObjectCreateP3DStream(name, colour, p3d_data.Length, pin.Pointer, ref ctx);
 				if (Handle == HObject.Zero)
 					throw new Exception($"Failed to create object from p3d model data stream");
@@ -70,8 +70,8 @@ namespace Rylogic.Gfx
 				var ctx = context_id ?? Guid.NewGuid();
 
 				// Serialise the verts/indices to a memory buffer
-				using var vbuf = Marshal_.Pin(verts);
-				using var ibuf = Marshal_.Pin(indices);
+				using var vbuf = Marshal_.Pin(verts, GCHandleType.Pinned);
+				using var ibuf = Marshal_.Pin(indices, GCHandleType.Pinned);
 				using var nbuf = Marshal_.ArrayToPtr(EHeap.HGlobal, nuggets);
 				Handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
 				if (Handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");

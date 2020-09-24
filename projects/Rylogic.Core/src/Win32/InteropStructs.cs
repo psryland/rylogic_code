@@ -311,7 +311,7 @@ namespace Rylogic.Interop.Win32
 			public uint FileIndexLow;
 		};
 
-		[StructLayout(LayoutKind.Sequential)]
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct CREATESTRUCT
 		{
 			public IntPtr lpCreateParams;
@@ -328,7 +328,7 @@ namespace Rylogic.Interop.Win32
 			public uint dwExStyle;
 		}
 		
-		[StructLayout(LayoutKind.Sequential)]
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct WNDCLASS
 		{
 			public uint style;
@@ -343,7 +343,7 @@ namespace Rylogic.Interop.Win32
 			[MarshalAs(UnmanagedType.LPWStr)] public string lpszClassName;
 		}
 
-		[StructLayout(LayoutKind.Sequential)]
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct WNDCLASSEX
 		{
 			public int cbSize; // = sizeof(WNDCLASSEX)

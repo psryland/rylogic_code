@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -21,7 +22,7 @@ namespace Rylogic.Interop.Win32
 		static DeviceManager()
 		{
 			// Create a dummy window to receive the device notification messages
-			NotifyWnd = new DummyWindow();
+			NotifyWnd = new DummyWindow("Rylogic.DeviceManager.NotifyWnd");
 			NotifyWnd.Message += HandleMessage;
 			NotifyWnd.Run(CancellationToken.None);
 			static void HandleMessage(object? sender, WndProcEventArgs args)
@@ -92,6 +93,31 @@ namespace Rylogic.Interop.Win32
 				Arrived = arrived;
 			}
 
+			/// <summary>Lazy loaded device info for the changed device (arrived only)</summary>
+			public Device? Device
+			{
+				get
+				{
+					if (Removed)
+						return null;
+
+					// Lazy create the 'Device'
+					if (m_device == null)
+					{
+						// Find the device info
+						var dev_class_handle = GetClassDevs(DevClass.Id, null, IntPtr.Zero, ESetupDiGetClassDevsFlags.Present);
+						foreach (var device in EnumDeviceInfo(dev_class_handle).Select(x => new Device(dev_class_handle, x)))
+						{
+							if (!device.HardwareIds.Contains(DevicePath)) continue;
+							m_device = device;
+							break;
+						}
+					}
+					return m_device;
+				}
+			}
+			private Device? m_device;
+
 			/// <summary>The type of device that was changed</summary>
 			public DevClass DevClass { get; }
 
@@ -109,51 +135,71 @@ namespace Rylogic.Interop.Win32
 		[DebuggerDisplay("{DeviceDescription,nq}")]
 		public class Device
 		{
-			private readonly SafeHandle m_handle;
+			private readonly DevClassSafeHandle m_handle;
 			private readonly DeviceInfoData m_did;
-			internal Device(SafeHandle handle, DeviceInfoData did)
+			internal Device(DevClassSafeHandle handle, DeviceInfoData did)
 			{
 				m_handle = handle;
 				m_did = did;
 			}
 
 			/// <summary>Device description</summary>
-			public string DeviceDescription => StringRegProp(EDeviceRegistryProperty.DEVICEDESC);
+			public string DeviceDescription => (string?)RegProp(EDeviceRegistryProperty.DEVICEDESC) ?? string.Empty;
 
-			/// <summary>Return a registry property as a string</summary>
-			public string StringRegProp(EDeviceRegistryProperty prop)
+			/// <summary>Device hardware ID</summary>
+			public string[] HardwareIds => (string[]?)RegProp(EDeviceRegistryProperty.HARDWAREID) ?? Array.Empty<string>();
+
+			/// <summary>Return a registry property</summary>
+			public object? RegProp(EDeviceRegistryProperty prop)
 			{
 				var (ty, data) = GetDeviceRegistryProperty(m_handle, m_did, prop);
-				return (RegistryValueKind)ty == RegistryValueKind.String
-					? Encoding.Unicode.GetString(data, 0, data.Length).TrimEnd('\0')
-					: throw new Exception($"Registry property {prop} is not a string property");
+				return Core.Windows.Extn.RegistryKey_.Decode(ty, data);
 			}
-			public string StringRegProp(string key_name)
+			public object? RegProp(string key_name)
 			{
 				using var key = OpenDevRegKey(m_handle, m_did, EScope.Global, 0, EDevKeyKind.Device, RegistryRights.QueryValues);
-				var value = key.GetValue(key_name);
-				return value is string s ? s : throw new Exception($"Registry property {key_name} is not a string property");
-			}
-
-			/// <summary>Return a registry property as a binary blob</summary>
-			public byte[] BinaryRegProp(EDeviceRegistryProperty prop)
-			{
-				var (_, data) = GetDeviceRegistryProperty(m_handle, m_did, prop);
-				return data;
-			}
-
-			/// <summary>Return a device property as a string</summary>
-			public string StringDevProp(DEVPROPKEY prop)
-			{
-				var (_, data) = GetDeviceProperty(m_handle, m_did, prop);
-				return Encoding.Unicode.GetString(data, 0, data.Length).TrimEnd('\0');
+				return key.GetValue(key_name);
 			}
 
 			/// <summary>Return a device property as a binary blob</summary>
-			public byte[] BinaryDevProp(DEVPROPKEY prop)
+			public object? DevProp(DEVPROPKEY prop)
 			{
-				var (_, data) = GetDeviceProperty(m_handle, m_did, prop);
-				return data;
+				var (ty, data) = GetDeviceProperty(m_handle, m_did, prop);
+				switch (ty)
+				{
+					case EDevPropType.EMPTY: return null;
+					case EDevPropType.NULL: return null;
+					case EDevPropType.SBYTE: return (sbyte)data[0];
+					case EDevPropType.BYTE: return data[0];
+					case EDevPropType.INT16: return BitConverter.ToInt16(data, 0);
+					case EDevPropType.UINT16: return BitConverter.ToUInt16(data, 0);
+					case EDevPropType.INT32: return BitConverter.ToInt32(data, 0);
+					case EDevPropType.UINT32: return BitConverter.ToUInt32(data, 0);
+					case EDevPropType.INT64: return BitConverter.ToInt64(data, 0);
+					case EDevPropType.UINT64: return BitConverter.ToUInt64(data, 0);
+					case EDevPropType.FLOAT: return BitConverter.ToSingle(data, 0);
+					case EDevPropType.DOUBLE: return BitConverter.ToDouble(data, 0);
+					//case EDevPropType.DECIMAL:
+					case EDevPropType.GUID: return new Guid(data);
+					case EDevPropType.CURRENCY: return BitConverter.ToInt64(data, 0);
+					//case EDevPropType.DATE:
+					//case EDevPropType.FILETIME:
+					case EDevPropType.BOOLEAN: return BitConverter.ToBoolean(data, 0);
+					case EDevPropType.STRING: return Encoding.Unicode.GetString(data, 0, data.Length).TrimEnd('\0');
+					case EDevPropType.STRING_LIST: return Str_.DecodeStringArray(Encoding.Unicode.GetString(data, 0, data.Length));
+					//case EDevPropType.SECURITY_DESCRIPTOR:
+					//case EDevPropType.SECURITY_DESCRIPTOR_STRING:
+					//case EDevPropType.DEVPROPKEY:
+					//case EDevPropType.DEVPROPTYPE:
+					case EDevPropType.BINARY: return data;
+					case EDevPropType.ERROR: return BitConverter.ToUInt32(data, 0); // HRESULT
+					case EDevPropType.NTSTATUS: return BitConverter.ToUInt32(data, 0); // NTSTATUS
+					//case EDevPropType.STRING_INDIRECT:
+					default:
+					{
+						throw new NotImplementedException($"Device property type {ty} has not been implemented");
+					}
+				}
 			}
 
 			/// <summary>Enable/Disable the device. Will throw an exception if the device is not Disable-able.</summary>
@@ -175,7 +221,7 @@ namespace Rylogic.Interop.Win32
 					};
 
 					if (!SetClassInstallParams(m_handle, m_did, parms))
-						throw new Win32Exception(Marshal.GetLastWin32Error());
+						throw new Win32Exception();
 
 					if (!CallClassInstaller(EDiFunction.PropertyChange, m_handle, m_did))
 					{
@@ -472,6 +518,45 @@ namespace Rylogic.Interop.Win32
 			SignatureOSAttributeMismatch    = unchecked((int)0xe0000244),
 			OnlyValidateViaAuthenticode     = unchecked((int)0xe0000245)
 		}
+
+		/// <summary>Device property data types</summary>
+		public enum EDevPropType
+		{
+			// Property data types.
+			EMPTY                      = 0x00000000,          // nothing, no property data
+			NULL                       = 0x00000001,          // null property data
+			SBYTE                      = 0x00000002,          // 8-bit signed int (SBYTE)
+			BYTE                       = 0x00000003,          // 8-bit unsigned int (BYTE)
+			INT16                      = 0x00000004,          // 16-bit signed int (SHORT)
+			UINT16                     = 0x00000005,          // 16-bit unsigned int (USHORT)
+			INT32                      = 0x00000006,          // 32-bit signed int (LONG)
+			UINT32                     = 0x00000007,          // 32-bit unsigned int (ULONG)
+			INT64                      = 0x00000008,          // 64-bit signed int (LONG64)
+			UINT64                     = 0x00000009,          // 64-bit unsigned int (ULONG64)
+			FLOAT                      = 0x0000000A,          // 32-bit floating-point (FLOAT)
+			DOUBLE                     = 0x0000000B,          // 64-bit floating-point (DOUBLE)
+			DECIMAL                    = 0x0000000C,          // 128-bit data (DECIMAL)
+			GUID                       = 0x0000000D,          // 128-bit unique identifier (GUID)
+			CURRENCY                   = 0x0000000E,          // 64 bit signed int currency value (CURRENCY)
+			DATE                       = 0x0000000F,          // date (DATE)
+			FILETIME                   = 0x00000010,          // file time (FILETIME)
+			BOOLEAN                    = 0x00000011,          // 8-bit boolean (DEVPROP_BOOLEAN)
+			STRING                     = 0x00000012,          // null-terminated string
+			STRING_LIST                = STRING|TYPEMOD_LIST, // multi-sz string list
+			SECURITY_DESCRIPTOR        = 0x00000013,          // self-relative binary SECURITY_DESCRIPTOR
+			SECURITY_DESCRIPTOR_STRING = 0x00000014,          // security descriptor string (SDDL format)
+			DEVPROPKEY                 = 0x00000015,          // device property key (DEVPROPKEY)
+			DEVPROPTYPE                = 0x00000016,          // device property type (DEVPROPTYPE)
+			BINARY                     = BYTE|TYPEMOD_ARRAY,  // custom binary data
+			ERROR                      = 0x00000017,          // 32-bit Win32 system error code
+			NTSTATUS                   = 0x00000018,          // 32-bit NTSTATUS code
+			STRING_INDIRECT            = 0x00000019,          // string resource (@[path\]<dllname>,-<strId>)
+
+			// Property type modifiers.  Used to modify base DEVPROP_TYPE_ values, as
+			// appropriate.  Not valid as standalone DEVPROPTYPE values.
+			TYPEMOD_ARRAY = 0x00001000, // array of fixed-sized data elements
+			TYPEMOD_LIST  = 0x00002000, // list of variable-sized data elements
+		}
 		#endregion
 
 		#region Interop
@@ -759,24 +844,24 @@ namespace Rylogic.Interop.Win32
 		}
 
 		/// <summary></summary>
-		public static bool CallClassInstaller(EDiFunction install_function, SafeHandle handle, DeviceInfoData did)
+		public static bool CallClassInstaller(EDiFunction install_function, DevClassSafeHandle handle, DeviceInfoData did)
 		{
 			return SetupDiCallClassInstaller_(install_function, handle, ref did);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiCallClassInstaller", SetLastError = true)]
-		private static extern bool SetupDiCallClassInstaller_(EDiFunction installFunction, SafeHandle deviceInfoSet, [In] ref DeviceInfoData deviceInfoData);
+		private static extern bool SetupDiCallClassInstaller_(EDiFunction installFunction, DevClassSafeHandle deviceInfoSet, [In] ref DeviceInfoData deviceInfoData);
 
 		/// <summary></summary>
-		public static bool SetClassInstallParams(SafeHandle handle, DeviceInfoData did, PropertyChangeParameters parms)
+		public static bool SetClassInstallParams(DevClassSafeHandle handle, DeviceInfoData did, PropertyChangeParameters parms)
 		{
 			return SetupDiSetClassInstallParams_(handle, ref did, ref parms, Marshal.SizeOf(parms));
 
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiSetClassInstallParamsW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool SetupDiSetClassInstallParams_(SafeHandle deviceInfoSet, [In] ref DeviceInfoData deviceInfoData, [In] ref PropertyChangeParameters classInstallParams, int classInstallParamsSize);
+		private static extern bool SetupDiSetClassInstallParams_(DevClassSafeHandle deviceInfoSet, [In] ref DeviceInfoData deviceInfoData, [In] ref PropertyChangeParameters classInstallParams, int classInstallParamsSize);
 
 		/// <summary>Returns info for each device in a device information set.</summary>
-		public static IEnumerable<DeviceInfoData> EnumDeviceInfo(SafeHandle handle)
+		public static IEnumerable<DeviceInfoData> EnumDeviceInfo(DevClassSafeHandle handle)
 		{
 			var did = new DeviceInfoData { Size = Marshal.SizeOf<DeviceInfoData>() };
 			for (int i = 0; SetupDiEnumDeviceInfo_(handle, i, ref did); ++i)
@@ -786,21 +871,19 @@ namespace Rylogic.Interop.Win32
 				throw new Win32Exception(err);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiEnumDeviceInfo", SetLastError = true)]
-		private static extern bool SetupDiEnumDeviceInfo_(SafeHandle deviceInfoSet, int memberIndex, ref DeviceInfoData did);
+		private static extern bool SetupDiEnumDeviceInfo_(DevClassSafeHandle deviceInfoSet, int memberIndex, ref DeviceInfoData did);
 
 		/// <summary>Opens a handle to a device information set that contains requested device information elements for a local computer.</summary>
-		public static SafeHandle GetClassDevs(Guid class_dev, string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags)
+		public static DevClassSafeHandle GetClassDevs(Guid class_dev, string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags)
 		{
 			var handle = SetupDiGetClassDevs_(ref class_dev, enumerator, hwndParent, flags);
-			if (handle.IsInvalid)
-				throw new Win32Exception(Marshal.GetLastWin32Error());
-
-			return handle;
+			if (handle == Win32.INVALID_HANDLE_VALUE) throw new Win32Exception();
+			return new DevClassSafeHandle(handle, true);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetClassDevsW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern SafeHandle SetupDiGetClassDevs_(ref Guid classGuid, [MarshalAs(UnmanagedType.LPWStr)] string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags);
+		private static extern IntPtr SetupDiGetClassDevs_(ref Guid classGuid, [MarshalAs(UnmanagedType.LPWStr)] string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags);
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetClassDevsW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern SafeHandle SetupDiGetClassDevs_(IntPtr classGuid, [MarshalAs(UnmanagedType.LPWStr)] string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags);
+		private static extern IntPtr SetupDiGetClassDevs_(IntPtr classGuid, [MarshalAs(UnmanagedType.LPWStr)] string? enumerator, IntPtr hwndParent, ESetupDiGetClassDevsFlags flags);
 
 		/// <summary>Get the class name from a dev class guid</summary>
 		public static string ClassNameFromGuid(Guid dev_class_guid)
@@ -843,7 +926,7 @@ namespace Rylogic.Interop.Win32
 		private static extern bool SetupDiClassGuidsFromName_([MarshalAs(UnmanagedType.LPWStr)] string ClassName, IntPtr ClassGuidArray1stItem, int ClassGuidArraySize, out int RequiredSize);
 
 		/// <summary></summary>
-		public static string GetDeviceInstanceId(SafeHandle handle, DeviceInfoData did)
+		public static string GetDeviceInstanceId(DevClassSafeHandle handle, DeviceInfoData did)
 		{
 			var result = SetupDiGetDeviceInstanceId_(handle, ref did, IntPtr.Zero, 0, out var required_size);
 			var err = Marshal.GetLastWin32Error();
@@ -859,30 +942,30 @@ namespace Rylogic.Interop.Win32
 			return sb.TrimEnd('\0').ToString();
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDeviceInstanceIdW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool SetupDiGetDeviceInstanceId_(SafeHandle deviceInfoSet, ref DeviceInfoData did, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
+		private static extern bool SetupDiGetDeviceInstanceId_(DevClassSafeHandle deviceInfoSet, ref DeviceInfoData did, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDeviceInstanceIdW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool SetupDiGetDeviceInstanceId_(SafeHandle deviceInfoSet, ref DeviceInfoData did, IntPtr DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
+		private static extern bool SetupDiGetDeviceInstanceId_(DevClassSafeHandle deviceInfoSet, ref DeviceInfoData did, IntPtr DeviceInstanceId, int DeviceInstanceIdSize, out int RequiredSize);
 
 		/// <summary></summary>
-		private static (uint type, byte[] prop) GetDeviceProperty(SafeHandle deviceInfoSet, DeviceInfoData did, DEVPROPKEY propertyKey)
+		private static (EDevPropType type, byte[] prop) GetDeviceProperty(DevClassSafeHandle deviceInfoSet, DeviceInfoData did, DEVPROPKEY propertyKey)
 		{
 			var result = SetupDiGetDeviceProperty_(deviceInfoSet, ref did, ref propertyKey, out var type, IntPtr.Zero, 0, out var required_size, 0);
 			var err = Marshal.GetLastWin32Error();
 			if (result || err == Win32.ERROR_NOT_FOUND)
-				return (type, Array.Empty<byte>());
+				return ((EDevPropType)type, Array.Empty<byte>());
 			if (err != Win32.ERROR_INSUFFICIENT_BUFFER)
 				throw new Win32Exception(err);
 
 			var buf = new byte[required_size];
 			if (!SetupDiGetDeviceProperty_(deviceInfoSet, ref did, ref propertyKey, out type, buf, buf.Length, out _, 0))
-				throw new Win32Exception(Marshal.GetLastWin32Error());
+				throw new Win32Exception();
 
-			return (type, buf);
+			return ((EDevPropType)type, buf);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDevicePropertyW", SetLastError = true)]
-		private static extern bool SetupDiGetDeviceProperty_(SafeHandle deviceInfoSet, [In] ref DeviceInfoData did, [In] ref DEVPROPKEY propertyKey, [Out] out uint propertyType, byte[] propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
+		private static extern bool SetupDiGetDeviceProperty_(DevClassSafeHandle deviceInfoSet, [In] ref DeviceInfoData did, [In] ref DEVPROPKEY propertyKey, [Out] out uint propertyType, byte[] propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDevicePropertyW", SetLastError = true)]
-		private static extern bool SetupDiGetDeviceProperty_(SafeHandle deviceInfoSet, [In] ref DeviceInfoData did, [In] ref DEVPROPKEY propertyKey, [Out] out uint propertyType, IntPtr propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
+		private static extern bool SetupDiGetDeviceProperty_(DevClassSafeHandle deviceInfoSet, [In] ref DeviceInfoData did, [In] ref DEVPROPKEY propertyKey, [Out] out uint propertyType, IntPtr propertyBuffer, int propertyBufferSize, out int requiredSize, uint flags);
 
 		/// <summary>
 		/// The SetupDiGetDeviceRegistryProperty function retrieves the specified device property.
@@ -895,34 +978,34 @@ namespace Rylogic.Interop.Win32
 		/// <param Name="PropertyBufferSize">Size of the buffer, in bytes.</param>
 		/// <param Name="RequiredSize">Pointer to a variable that receives the required buffer size, in bytes. This parameter can be NULL.</param>
 		/// <returns>If the function succeeds, the return value is nonzero.</returns>
-		public static (uint type, byte[] prop) GetDeviceRegistryProperty(SafeHandle handle, DeviceInfoData did, EDeviceRegistryProperty property)
+		public static (RegistryValueKind type, byte[] prop) GetDeviceRegistryProperty(DevClassSafeHandle handle, DeviceInfoData did, EDeviceRegistryProperty property)
 		{
 			var result = SetupDiGetDeviceRegistryProperty_(handle, ref did, property, out var type, IntPtr.Zero, 0, out var required_size);
 			var err = Marshal.GetLastWin32Error();
 			if (result || err == Win32.ERROR_NOT_FOUND)
-				return (type, Array.Empty<byte>());
+				return ((RegistryValueKind)type, Array.Empty<byte>());
 			if (err != Win32.ERROR_INSUFFICIENT_BUFFER)
 				throw new Win32Exception(err);
 
 			var buf = new byte[required_size];
 			if (!SetupDiGetDeviceRegistryProperty_(handle, ref did, property, out type, buf, buf.Length, out _))
-				throw new Win32Exception(Marshal.GetLastWin32Error());
+				throw new Win32Exception();
 
-			return (type, buf);
+			return ((RegistryValueKind)type, buf);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDeviceRegistryPropertyW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool SetupDiGetDeviceRegistryProperty_(SafeHandle hDeviceInfoSet, ref DeviceInfoData DeviceInfoData, EDeviceRegistryProperty Property, out uint PropertyRegDataType, byte[] PropertyBuffer, int PropertyBufferSize, out int RequiredSize);
+		private static extern bool SetupDiGetDeviceRegistryProperty_(DevClassSafeHandle hDeviceInfoSet, ref DeviceInfoData DeviceInfoData, EDeviceRegistryProperty Property, out uint PropertyRegDataType, byte[] PropertyBuffer, int PropertyBufferSize, out int RequiredSize);
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiGetDeviceRegistryPropertyW", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern bool SetupDiGetDeviceRegistryProperty_(SafeHandle hDeviceInfoSet, ref DeviceInfoData DeviceInfoData, EDeviceRegistryProperty Property, out uint PropertyRegDataType, IntPtr PropertyBuffer, int PropertyBufferSize, out int RequiredSize);
+		private static extern bool SetupDiGetDeviceRegistryProperty_(DevClassSafeHandle hDeviceInfoSet, ref DeviceInfoData DeviceInfoData, EDeviceRegistryProperty Property, out uint PropertyRegDataType, IntPtr PropertyBuffer, int PropertyBufferSize, out int RequiredSize);
 
 		/// <summary></summary>
-		public static RegistryKey OpenDevRegKey(SafeHandle handle, DeviceInfoData did, EScope scope, uint hwProfile, EDevKeyKind kind, RegistryRights access)
+		public static RegistryKey OpenDevRegKey(DevClassSafeHandle handle, DeviceInfoData did, EScope scope, uint hwProfile, EDevKeyKind kind, RegistryRights access)
 		{
 			var key = SetupDiOpenDevRegKey_(handle, ref did, scope, hwProfile, kind, access);
 			return RegistryKey.FromHandle(key);
 		}
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiOpenDevRegKey", CharSet = CharSet.Unicode, SetLastError = true)]
-		private static extern SafeRegistryHandle SetupDiOpenDevRegKey_(SafeHandle hDeviceInfoSet, ref DeviceInfoData did, EScope scope, uint hwProfile, EDevKeyKind kind, RegistryRights access);
+		private static extern SafeRegistryHandle SetupDiOpenDevRegKey_(DevClassSafeHandle hDeviceInfoSet, ref DeviceInfoData did, EScope scope, uint hwProfile, EDevKeyKind kind, RegistryRights access);
 
 		/// <summary></summary>
 		[SuppressUnmanagedCodeSecurity()]
@@ -930,6 +1013,12 @@ namespace Rylogic.Interop.Win32
 		[DllImport("setupapi.dll", EntryPoint = "SetupDiDestroyDeviceInfoList", SetLastError = true)]
 		private static extern bool SetupDiDestroyDeviceInfoList(IntPtr deviceInfoSet);
 		#endregion
+
+		public class DevClassSafeHandle :SafeHandleZeroOrMinusOneIsInvalid
+		{
+			public DevClassSafeHandle(IntPtr handle, bool owns_handle) : base(owns_handle) => SetHandle(handle);
+			protected override bool ReleaseHandle() => SetupDiDestroyDeviceInfoList(DangerousGetHandle());
+		}
 	}
 }
 

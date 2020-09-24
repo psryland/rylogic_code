@@ -20,7 +20,7 @@ namespace pr
 
 	private:
 
-		static inline wchar_t const* DummyWndClassName = L"Rylogic.DummyWindow";
+		static inline wchar_t const* DummyWndClassName = L"Rylogic-DummyWindow";
 		static UINT const WM_BeginInvoke = WM_USER + 0x1976;
 
 		using TaskQueue = std::vector<std::future<void>>;
@@ -47,6 +47,9 @@ namespace pr
 				auto atom = ATOM(::GetClassInfoExW(m_hinstance, DummyWndClassName, &wc));
 				if (atom == 0)
 				{
+					// RegisterClass only sets last error if there is actually an error
+					SetLastError(S_OK);
+
 					wc.style         = 0;
 					wc.cbClsExtra    = 0;
 					wc.cbWndExtra    = 0;
@@ -56,7 +59,7 @@ namespace pr
 					wc.hCursor       = nullptr;
 					wc.hbrBackground = nullptr;
 					wc.lpszMenuName  = nullptr;
-					wc.lpfnWndProc   = &DummyWndProc;
+					wc.lpfnWndProc   = &StaticWndProc;
 					wc.lpszClassName = DummyWndClassName;
 					atom = ATOM(::RegisterClassExW(&wc));
 					if (atom == 0)
@@ -201,12 +204,13 @@ namespace pr
 			}
 			return DefWindowProcW(hwnd, message, wparam, lparam);
 		}
-		static LRESULT __stdcall DummyWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+		static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 		{
 			DummyWindow* self;
 			if (message == WM_NCCREATE) 
 			{
-				self = reinterpret_cast<DummyWindow*>(reinterpret_cast<LPCREATESTRUCT>(lparam)->lpCreateParams);
+				auto cp = reinterpret_cast<LPCREATESTRUCT>(lparam);
+				self = reinterpret_cast<DummyWindow*>(cp->lpCreateParams);
 				SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LPARAM>(self));
 				self->m_hwnd = hwnd;
 			} 

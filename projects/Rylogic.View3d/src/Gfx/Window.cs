@@ -209,10 +209,10 @@ namespace Rylogic.Gfx
 				var rays = new HitTestRay[1] { ray };
 				var hits = new HitTestResult[1];
 
-				using (var rays_buf = Marshal_.Pin(rays))
-				using (var hits_buf = Marshal_.Pin(hits))
-				using (var guids_buf = Marshal_.Pin(guids))
-					View3D_WindowHitTest(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
+				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
+				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
+				using var guids_buf = Marshal_.Pin(guids, GCHandleType.Pinned);
+				View3D_WindowHitTest(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
 
 				return hits[0];
 			}
@@ -267,11 +267,9 @@ namespace Rylogic.Gfx
 			public void EnumObjects(Func<Object, bool> cb, Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using (var ids = Marshal_.Pin(context_ids))
-				{
-					EnumObjectsCB enum_cb = (c,obj) => cb(new Object(obj));
-					View3D_WindowEnumObjectsById(Handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
-				}
+				EnumObjectsCB enum_cb = (c,obj) => cb(new Object(obj));
+				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
+				View3D_WindowEnumObjectsById(Handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Return the objects associated with this window</summary>
@@ -309,7 +307,7 @@ namespace Rylogic.Gfx
 			public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using var ids = Marshal_.Pin(context_ids);
+				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
 				View3D_WindowAddObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 
@@ -343,7 +341,7 @@ namespace Rylogic.Gfx
 			public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
-				using var ids = Marshal_.Pin(context_ids);
+				using var ids = Marshal_.Pin(context_ids, GCHandleType.Pinned);
 				View3D_WindowRemoveObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 

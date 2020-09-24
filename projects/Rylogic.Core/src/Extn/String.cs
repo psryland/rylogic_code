@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -440,6 +440,32 @@ namespace Rylogic.Extn
 			return Regex.Replace(str, @"[\s\t]*\n[\t]*", "\n");
 		}
 
+		/// <summary>Convert an array of strings into the form: "The\0string\0array\0\0"</summary>
+		public static string EncodeStringArray(string[] strings)
+		{
+			var string_array = new StringBuilder();
+			foreach (var str in strings)
+			{
+				if (string_array.Length != 0) string_array.Append('\0');
+				string_array.Append(str);
+			}
+			string_array.Append("\0\0"); // Double null to terminate
+			return string_array.ToString();
+		}
+
+		/// <summary>Convert a string of the form: "The\0string\0array\0\0-possible junk data-" into an array of strings</summary>
+		public static IList<string> DecodeStringArray(string string_array)
+		{
+			var strings = new List<string>();
+			for (int i = 0, j = 0; i != string_array.Length; i = j + 1)
+			{
+				if (i != 0 && string_array[i] == 0 && string_array[i - 1] == 0) break;
+				for (j = i; j != string_array.Length && string_array[j] != 0; ++j) { }
+				strings.Add(string_array.Substring(i, j - i));
+			}
+			return strings;
+		}
+
 		/// <summary>
 		/// Look for 'identifier' within the range [start, start+count) ensuring it is not a substring of a larger identifier.
 		/// Returns the index of it's position or -1 if not found.</summary>
@@ -875,6 +901,20 @@ namespace Rylogic.UnitTests
 				Assert.Equal(m.Groups["dir"].Value, test.Dir);
 				Assert.Equal(m.Groups["file"].Value, test.File);
 				Assert.Equal(m.Groups["q"].Value, test.Quote);
+			}
+		}
+		[Test]
+		public void StringArrays()
+		{
+			{// Encode
+				var strings = new string[] { "The", "string", "array" };
+				var result = Str_.EncodeStringArray(strings);
+				Assert.Equal("The\0string\0array\0\0", result);
+			}
+			{// Decode
+				var string_array = "The\0string\0array\0\0-possible junk data-";
+				var result = Str_.DecodeStringArray(string_array);
+				Assert.Equal(new[] { "The", "string", "array" }, result);
 			}
 		}
 	}

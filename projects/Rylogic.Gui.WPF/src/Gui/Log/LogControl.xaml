@@ -227,6 +227,7 @@
 			PreviewMouseDown="HandleMouseDown"
 			MouseDoubleClick="HandleMouseDoubleClick"
 			CanUserResizeColumns="True"
+			CanUserSortColumns="False"
 			IsReadOnly="True"
 			>
 			<DataGrid.Columns>

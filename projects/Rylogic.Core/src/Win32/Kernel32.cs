@@ -372,12 +372,17 @@ namespace Rylogic.Interop.Win32
 		{
 			return ReOpenFile_(hOriginalFile, (uint)dwDesiredAccess, (uint)dwShareMode, (uint)dwFlagsAndAttributes);
 		}
-		[DllImport("kernel32.dll", EntryPoint = "ReOpenFile", SetLastError = true, CharSet = CharSet.Auto)]
+		[DllImport("kernel32.dll", EntryPoint = "ReOpenFile", SetLastError = true)]
 		private static extern SafeFileHandle ReOpenFile_(SafeFileHandle hOriginalFile, uint dwDesiredAccess, uint dwShareMode, uint dwFlagsAndAttributes);
 
 		/// <summary></summary>
+		public static void SetLastError(int err) => SetLastError_(err);
+		[DllImport("kernel32.dll", EntryPoint = "SetLastError", SetLastError = true)]
+		private static extern void SetLastError_(int err);
+
+		/// <summary></summary>
 		public static ExecutionState SetThreadExecutionState(ExecutionState esFlags) => SetThreadExecutionState_(esFlags);
-		[DllImport("kernel32.dll", EntryPoint = "SetThreadExecutionState", SetLastError = true, CharSet = CharSet.Auto)]
+		[DllImport("kernel32.dll", EntryPoint = "SetThreadExecutionState", SetLastError = true)]
 		private static extern ExecutionState SetThreadExecutionState_(ExecutionState esFlags);
 
 		/// <summary></summary>

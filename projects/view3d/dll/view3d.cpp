@@ -2076,7 +2076,7 @@ VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 }
 
 // Load a texture surface from file
-VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
+VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
 {
 	try
 	{
@@ -2128,7 +2128,7 @@ VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageIn
 }
 
 // Read the properties of an image file
-VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, View3DImageInfo& info)
+VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(wchar_t const* tex_filepath, View3DImageInfo& info)
 {
 	try
 	{
