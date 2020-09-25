@@ -81,25 +81,30 @@ namespace pr::rdr
 			auto GetDpiForWindowFunc = reinterpret_cast<UINT(far __stdcall*)(HWND)>(GetProcAddress(user32.m_state, "GetDpiForWindow"));
 			auto GetDpiForSystemFunc = reinterpret_cast<UINT(far __stdcall*)()>(GetProcAddress(user32.m_state, "GetDpiForSystem"));
 
-			auto dpi = 96.0f;
 			if (m_hwnd != nullptr && GetDpiForWindowFunc != nullptr)
 			{
-				dpi = (float)GetDpiForWindowFunc(m_hwnd);
+				auto dpi = (float)GetDpiForWindowFunc(m_hwnd);
+				return v2(dpi, dpi);
 			}
-			else if (GetDpiForSystemFunc != nullptr)
+			if (GetDpiForSystemFunc != nullptr)
 			{
-				dpi = (float)GetDpiForSystemFunc();
+				auto dpi = (float)GetDpiForSystemFunc();
+				return v2(dpi, dpi);
 			}
-			else
-			{
-				gdi::Graphics g(m_hwnd);
-				//auto dpi_ = v2(g.GetDpiX(), g.GetDpiY());
-				auto desktop_dc = g.GetHDC();
-				auto logical_screen_height  = GetDeviceCaps(desktop_dc, VERTRES);
-				auto physical_screen_height = GetDeviceCaps(desktop_dc, DESKTOPVERTRES); 
-				dpi = physical_screen_height * 96.0f / logical_screen_height;
-			}
-			return v2(dpi, dpi);
+
+			gdi::Graphics g(m_hwnd);
+			auto dpi = v2(g.GetDpiX(), g.GetDpiY());
+			return dpi;
+			//auto desktop_dc = CreateStateScope(
+			//	[&] { return g.GetHDC(); },
+			//	[&](HDC dc) { g.ReleaseHDC(dc); });
+			//
+			//auto logical_screen_height  = GetDeviceCaps(desktop_dc.m_state, VERTRES);
+			//auto physical_screen_height = GetDeviceCaps(desktop_dc.m_state, DESKTOPVERTRES); 
+			//if (logical_screen_height  != 0 && physical_screen_height != 0)
+			//	dpi = physical_screen_height * 96.0f / logical_screen_height;
+			//else
+			//	dpi = 96.0f;
 			#endif
 		}
 

@@ -7,11 +7,14 @@ Immediate ToDo:
 	
 Work
   RexNode Sensor
-	- DPI issue for ZRT
 	- Battery monitoring - low power warning..
 	- MuRata to sleep between samples
-	- installer for ZRT
-
+  RexNode Dongle
+	- update .inf driver file (date)
+    - Look at adding a second virtual comm port for the CLI
+  ZRT
+	- Make the 'bubbles' not always go to the far edge of the window
+	
   VRex
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
