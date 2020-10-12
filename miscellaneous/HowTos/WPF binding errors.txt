@@ -21,6 +21,10 @@ System.Windows.Data Error: 4 : Cannot find source for binding ... HorizontalCont
 					<Setter Property="HorizontalContentAlignment" Value="Left" />
 					<Setter Property="VerticalContentAlignment" Value="Center" />
 				</Style>
+				<Style TargetType="ListViewItem">
+					<Setter Property="HorizontalContentAlignment" Value="Left" />
+					<Setter Property="VerticalContentAlignment" Value="Center" />
+				</Style>				
 			</ResourceDictionary>
 		</Application.Resources>
 	</Application>

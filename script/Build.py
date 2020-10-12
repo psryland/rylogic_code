@@ -644,7 +644,7 @@ def Main(args:[str]):
 
 	# Set defaults for command line options
 	# Get the current workspace directory from the path of this file
-	workspace = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+	workspace = Tools.Path(os.path.dirname(__file__), "..")
 	projects = []
 	platforms = []
 	configs = []
@@ -676,7 +676,7 @@ def Main(args:[str]):
 			if i == len(args) or args[i].startswith('-'):
 				raise RuntimeError("Rylogic code signing certificate password expected")
 			else:
-				UserVars.rylogic_cert_pw = args[i]
+				UserVars.code_sign_cert_pw = args[i]
 				i = i + 1
 		elif arg == "-workspace":
 			i = i + 1
@@ -728,7 +728,7 @@ def Main(args:[str]):
 		builder = eval(name)(workspace, platforms, configs)
 
 		# Prompt for the cert password if signing is needed
-		if (deploy or publish) and hasattr(builder, "requires_signing") and builder.requires_signing and not UserVars.rylogic_cert_pw:
+		if (deploy or publish) and hasattr(builder, "requires_signing") and builder.requires_signing and not UserVars.code_sign_cert_pw:
 			Tools.PromptCertPassword()
 
 		# Clean if '-clean' is used

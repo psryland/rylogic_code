@@ -10,11 +10,19 @@
 
 static const float TINY = 0.0001f;
 
+// Model flags
+static const int ModelFlags_HasNormals           = (1 << 0);
+static const int TextureFlags_HasDiffuse         = (1 << 0);
+static const int TextureFlags_IsReflective       = (1 << 1);
+static const int TextureFlags_ProjectFromEnvMap  = (1 << 2);
+static const int AlphaFlags_HasAlpha             = (1 << 0);
+
 // Models
-#define HasNormals ((m_flags.x >> 0) & 1)
-#define HasTex0    ((m_flags.y >> 0) & 1)
-#define HasEnvMap  ((m_flags.y >> 1) & 1)
-#define HasAlpha   ((m_flags.z >> 0) & 1)
+#define HasNormals (m_flags.x & ModelFlags_HasNormals)
+#define HasTex0    (m_flags.y & TextureFlags_HasDiffuse)
+#define HasEnvMap  (m_flags.y & TextureFlags_IsReflective)
+#define EnvMapProj (m_flags.y & TextureFlags_ProjectFromEnvMap)
+#define HasAlpha   (m_flags.z & AlphaFlags_HasAlpha)
 
 // Light types
 #define AmbientLight(light)     (light.m_info.x == 0)

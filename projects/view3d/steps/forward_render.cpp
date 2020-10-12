@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -91,6 +91,12 @@ namespace pr::rdr
 		Lock lock(*this);
 		for (auto& dle : lock.drawlist())
 		{
+			// Something no rendering?
+			//  - Check the tint for the nugget isn't 0x00000000.
+			// Tips:
+			//  - To uniquely identify an instance in a shader for debugging, set the Instance Id (cb1.m_flags.w)
+			//    Then in the shader, use: if (m_flags.w == 1234) ...
+
 			StateStack::DleFrame frame(ss, dle);
 			auto const& nugget = *dle.m_nugget;
 

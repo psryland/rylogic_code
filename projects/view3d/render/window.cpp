@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -121,6 +121,23 @@ namespace pr::rdr
 				Throw(lock.D2DDevice()->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS, &m_d2d_dc.m_ptr));
 			}
 
+			// In device debug mode, create a dummy swap chain so that the graphics debugging
+			// sees 'Present' calls allowing it to capture frames.
+			if (AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG))
+			{
+				DXGI_SWAP_CHAIN_DESC sd = {};
+				sd.BufferCount  = 1;
+				sd.BufferDesc   = settings.m_mode;
+				sd.SampleDesc   = MultiSamp();
+				sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+				sd.OutputWindow = rdr.DummyHwnd();
+				sd.Windowed     = TRUE;
+				sd.SwapEffect   = DXGI_SWAP_EFFECT_DISCARD;
+				sd.Flags        = DXGI_SWAP_CHAIN_FLAG(0);
+				Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain_dbg.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain_dbg.get(), FmtS("swap chain dbg")));
+			}
+
 			InitRT();
 		}
 		catch (...)
@@ -155,6 +172,14 @@ namespace pr::rdr
 			PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
 			m_swap_chain->SetFullscreenState(FALSE, nullptr);
 			m_swap_chain = nullptr;
+		}
+
+		// Release the debug swap chain
+		if (m_swap_chain_dbg != nullptr)
+		{
+			PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain_dbg.RefCount()) == 1, "Outstanding references to the dbg swap chain");
+			m_swap_chain_dbg->SetFullscreenState(FALSE, nullptr);
+			m_swap_chain_dbg = nullptr;
 		}
 	}
 
@@ -654,6 +679,10 @@ namespace pr::rdr
 		// the swap chain unable to relinquish full-screen mode.
 		// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
 		// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
+
+		// Present with the debug swap chain so that graphics debugging detects a frame
+		if (m_swap_chain_dbg != nullptr)
+			m_swap_chain_dbg->Present(m_vsync, 0);
 
 		// If there is no swap chain, then we must be rendering to an off-screen texture.
 		// In that case, flush to the graphics card

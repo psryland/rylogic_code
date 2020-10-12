@@ -6,13 +6,14 @@ Immediate ToDo:
 	Export Plane model
 	
 Work
+  \\10.0.10.85\Users\etienne.kilian\Desktop\ZRTDebug
   RexNode Sensor
-	- Battery monitoring - low power warning..
+	- Battery monitoring - low power warning.. show in console
 	- MuRata to sleep between samples
   RexNode Dongle
-	- update .inf driver file (date)
-    - Look at adding a second virtual comm port for the CLI
+    - Make the dongle code work with a boot loader
   ZRT
+    - Make lines from bubbles go green as well
 	- Make the 'bubbles' not always go to the far edge of the window
 	
   VRex
@@ -35,9 +36,6 @@ LDraw
 	- Support sub models in object manager
 
 TextAligner
-	- Add option to turn on logging of pattern
-	- Add "+NEW+ VS Code version available" include links.
-	- Release v1.10 with minor bug fixes (typos etc)
 	
 P3D
 	- Support .obj files
@@ -131,5 +129,5 @@ YouTube speed:
    vid.playbackRate=3.0;
    
    
-   
+   L3tMe1n!
    e6t5wckci3piacc5cggr7f5qx2nvwuypz5jrdi4lahol5slcwwrq

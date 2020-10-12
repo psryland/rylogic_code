@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -86,30 +86,35 @@ namespace pr::rdr
 		{
 			// Has normals
 			if (pr::AllSet(nug.m_geom, EGeom::Norm))
-				model_flags |= 1 << 0;
+				model_flags |= hlsl::ModelFlags_HasNormals;
 		}
 
 		auto texture_flags = 0;
 		{
 			// Has diffuse texture
 			if (pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr)
-				texture_flags |= 1 << 0;
+			{
+				texture_flags |= hlsl::TextureFlags_HasDiffuse;
+
+				// Texture by projection from the environment map
+				if (nug.m_tex_diffuse->m_src_id == RdrId(EStockTexture::EnvMapProjection))
+					texture_flags |= hlsl::TextureFlags_ProjectFromEnvMap;
+			}
 
 			// Is reflective
-			if (float const* reflec;
-				scene.m_global_envmap != nullptr &&                                              // There is an env map
-				pr::AllSet(nug.m_geom, EGeom::Norm) &&                                           // The model contains normals
-				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity), reflec != nullptr) && // The instance has a reflectivity value
-				*reflec * nug.m_relative_reflectivity != 0                                       // and the reflectivity isn't zero
-				)
-				texture_flags |= 1 << 1;
+			auto reflec = inst.find<float>(EInstComp::EnvMapReflectivity);
+			if (reflec != nullptr &&                       // The instance has a reflectivity value
+				scene.m_global_envmap != nullptr &&        // There is an env map
+				pr::AllSet(nug.m_geom, EGeom::Norm) &&     // The model contains normals
+				*reflec * nug.m_relative_reflectivity != 0)// and the reflectivity isn't zero
+				texture_flags |= hlsl::TextureFlags_IsReflective;
 		}
 
 		auto alpha_flags = 0;
 		{
 			// Has alpha pixels
 			if (nug.m_sort_key.Group() > ESortGroup::PreAlpha)
-				alpha_flags |= 1 << 0;
+				alpha_flags |= hlsl::AlphaFlags_HasAlpha;
 		}
 
 		auto inst_id = 0;

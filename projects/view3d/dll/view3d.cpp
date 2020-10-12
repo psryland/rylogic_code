@@ -1939,9 +1939,9 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock(EView3DStockTexture t
 {
 	try
 	{
-		DllLockGuard;
+		// Since it's stock, the renderer has a reference.
 		// Drop the reference so that callers don't need to release the texture.
-		// Since it's stock, the renderer has a reference
+		DllLockGuard;
 		auto texture = Dll().m_rdr.m_tex_mgr.FindStockTexture(static_cast<EStockTexture>(tex));
 		return texture.get();
 	}
@@ -1992,6 +1992,36 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 		return t.release();
 	}
 	CatchAndReport(View3D_TextureCreate, , nullptr);
+}
+
+// Clone one of the stock textures
+VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromStock(EView3DStockTexture tex, View3DTextureOptions const& options)
+{
+	try
+	{
+		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter = options.m_filter;
+
+		auto name = options.m_dbg_name;
+		auto t2s = To<m4x4>(options.m_t2s);
+		t2s =
+			t2s == m4x4Identity ? t2s :
+			t2s == m4x4Zero ? m4x4Identity :
+			pr::IsAffine(t2s) ? t2s :
+			throw std::runtime_error("Invalid texture to surface transform");
+
+		// Clone a stock texture (allowing the t2s to be changed)
+		DllLockGuard;
+		auto t = Dll().m_rdr.m_tex_mgr.FindStockTexture(static_cast<EStockTexture>(tex));
+		t = Dll().m_rdr.m_tex_mgr.CloneTexture2D(AutoId, t.get(), &sdesc, name);
+
+		t->m_t2s = t2s;
+
+		return t.release();
+	}
+	CatchAndReport(View3D_TextureCreateFromStock, , nullptr);
 }
 
 // Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file

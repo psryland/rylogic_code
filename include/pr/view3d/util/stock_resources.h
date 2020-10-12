@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -26,7 +26,8 @@ namespace pr::rdr
 		x(Checker2     ,)\
 		x(Checker3     ,)\
 		x(WhiteSpot    ,)\
-		x(WhiteTriangle,)
+		x(WhiteTriangle,)\
+		x(EnvMapProjection,)
 	PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
 	#undef PR_ENUM
 

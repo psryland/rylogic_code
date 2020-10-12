@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -537,11 +537,7 @@ namespace pr::rdr
 		Texture2DPtr tex;
 		switch (stock)
 		{
-		default:
-			{
-				throw std::runtime_error(pr::FmtS("Unknown stock texture: %s", Enum<EStockTexture>::ToStringA(stock)));
-			}
-		case EStockTexture::Black:
+			case EStockTexture::Black:
 			{
 				uint32_t const data[] = {0};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -549,7 +545,7 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::Black), src, tdesc, SamplerDesc::LinearClamp(), false, "#black");
 				break;
 			}
-		case EStockTexture::White:
+			case EStockTexture::White:
 			{
 				uint32_t const data[] = {0xFFFFFFFF};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -557,7 +553,7 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::White), src, tdesc, SamplerDesc::LinearClamp(), false, "#white");
 				break;
 			}
-		case EStockTexture::Gray:
+			case EStockTexture::Gray:
 			{
 				uint32_t const data[] = {0xFF808080};
 				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -565,20 +561,20 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::Gray), src, tdesc, SamplerDesc::LinearClamp(), false, "#gray");
 				break;
 			}
-		case EStockTexture::Checker:
+			case EStockTexture::Checker:
 			{
 				uint32_t const data[] =
 				{
 					#define X 0xFFFFFFFF
 					#define O 0x00000000
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
 					#undef X
 					#undef O
 				};
@@ -589,20 +585,20 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::Checker), src, tdesc, sam, false, "#checker");
 				break;
 			}
-		case EStockTexture::Checker2:
+			case EStockTexture::Checker2:
 			{
 				uint32_t const data[] =
 				{
 					#define X 0xFFFFFFFF
 					#define O 0xFFAAAAAA
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
 					#undef X
 					#undef O
 				};
@@ -613,20 +609,20 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::Checker2), src, tdesc, sam, false, "#checker2");
 				break;
 			}
-		case EStockTexture::Checker3:
+			case EStockTexture::Checker3:
 			{
 				uint32_t const data[] =
 				{
 					#define O 0xFFFFFFFF
 					#define X 0xFFEEEEEE
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
-					X,X,O,O,X,X,O,O,
-					X,X,O,O,X,X,O,O,
-					O,O,X,X,O,O,X,X,
-					O,O,X,X,O,O,X,X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
+					X, X, O, O, X, X, O, O,
+					X, X, O, O, X, X, O, O,
+					O, O, X, X, O, O, X, X,
+					O, O, X, X, O, O, X, X,
 					#undef X
 					#undef O
 				};
@@ -637,11 +633,11 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::Checker3), src, tdesc, sam, false, "#checker3");
 				break;
 			}
-		case EStockTexture::WhiteSpot:
+			case EStockTexture::WhiteSpot:
 			{
 				const int sz = 256;
 				std::vector<uint> data;
-				data.resize(sz*sz);
+				data.resize(sz * sz);
 				auto radius = sz / 2.0f;
 				for (int j = 0; j != sz; ++j)
 				{
@@ -650,7 +646,7 @@ namespace pr::rdr
 						auto c = Colour32White;
 						auto t = Frac(0.0f, Len(i - radius, j - radius), radius);
 						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-						data[size_t(j*sz + i)] =c;
+						data[size_t(j * sz + i)] = c;
 					}
 				}
 
@@ -660,11 +656,11 @@ namespace pr::rdr
 				tex = CreateTexture2D(RdrId(EStockTexture::WhiteSpot), src, tdesc, sam, true, "#whitespot");
 				break;
 			}
-		case EStockTexture::WhiteTriangle:
+			case EStockTexture::WhiteTriangle:
 			{
 				const int sz = 64, hsz = sz / 2;
 				std::vector<uint> data;
-				data.resize(sz*sz);
+				data.resize(sz * sz);
 
 				// Equilateral triangle, 'pointing' up.
 				// (-sqrt(3)/2,0.75)------(sqrt(3)/2,0.75)
@@ -677,27 +673,27 @@ namespace pr::rdr
 				const float dy = 0.75f;
 				const float s = 1.0f / sz;
 
-				for (int j = 0; j*4 <= sz*3; ++j)
+				for (int j = 0; j * 4 <= sz * 3; ++j)
 				{
 					auto y = j * s; // [0, 0.75]
 
 					// Do the positive half x range and mirror to -x
 					for (int i = 0; i != hsz; ++i)
 					{
-						auto x0 = s * (i+0);
-						auto x1 = s * (i+1);
+						auto x0 = s * (i + 0);
+						auto x1 = s * (i + 1);
 
 						// x*dy == y*dx on the edge
 						auto t =
-							(x1 * dy < y * dx) ? 0.0f :  // inside the triangle
+							(x1 * dy < y* dx) ? 0.0f :  // inside the triangle
 							(x0 * dy > y * dx) ? 1.0f :  // outside the triangle
 							(Frac(x0 * dy, y * dx, x1 * 0.75f)); // Spanning the edge
-						
+
 						auto c = Colour32White;
 						c.a = uint8_t(Lerp(0xFF, 0x00, SmoothStep(0.0f, 1.0f, t)));
-						
-						data[size_t(j*sz + hsz-i)] = c;
-						data[size_t(j*sz + hsz+i)] = c;
+
+						data[size_t(j * sz + hsz - i)] = c;
+						data[size_t(j * sz + hsz + i)] = c;
 					}
 				}
 
@@ -706,6 +702,18 @@ namespace pr::rdr
 				auto sam = SamplerDesc::LinearClamp();
 				tex = CreateTexture2D(RdrId(EStockTexture::WhiteTriangle), src, tdesc, sam, true, "#whitetriangle");
 				break;
+			}
+			case EStockTexture::EnvMapProjection:
+			{
+				uint32_t const data[] = {0};
+				Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Texture2DDesc tdesc(src, 1, EUsage::Immutable);
+				tex = CreateTexture2D(RdrId(EStockTexture::EnvMapProjection), src, tdesc, SamplerDesc::LinearClamp(), false, "#envmapproj");
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error(pr::FmtS("Unknown stock texture: %s", Enum<EStockTexture>::ToStringA(stock)));
 			}
 		}
 
@@ -721,6 +729,7 @@ namespace pr::rdr
 		FindStockTexture(EStockTexture::Black);
 		FindStockTexture(EStockTexture::White);
 		FindStockTexture(EStockTexture::Checker);
+		FindStockTexture(EStockTexture::EnvMapProjection);
 	}
 
 	// Updates the texture and 'srv' pointers in 'existing' to those provided.

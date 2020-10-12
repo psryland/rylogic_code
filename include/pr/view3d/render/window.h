@@ -41,6 +41,7 @@ namespace pr::rdr
 		MultiSamp                        m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
 		UINT                             m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 		UINT                             m_vsync;            // Present SyncInterval value
+		D3DPtr<IDXGISwapChain>           m_swap_chain_dbg;   // A swap chain bound to the dummy window handle for debugging
 		D3DPtr<IDXGISwapChain>           m_swap_chain;       // The swap chain bound to the window handle
 		D3DPtr<ID3D11RenderTargetView>   m_main_rtv;         // Render target view of the render target
 		D3DPtr<ID3D11ShaderResourceView> m_main_srv;         // Shader resource view of the render target

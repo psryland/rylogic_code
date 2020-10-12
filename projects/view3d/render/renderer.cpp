@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -64,7 +64,6 @@ namespace pr::rdr
 		// Note: this automatically disables multi-sampling as well
 		//PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
 		//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
-
 		PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG       ), "D3D11_CREATE_DEVICE_DEBUG is enabled");
 		PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT), "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 

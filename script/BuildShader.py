@@ -36,7 +36,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	Tools.AssertPath(UserVars.winsdk, "UserVars.winsdk")
 	
 	# Get the full path to fxc.exe
-	fxc = os.path.join(UserVars.winsdk_bin, "x64", "fxc.exe")
+	fxc = Tools.Path(UserVars.winsdk, "bin", UserVars.winsdkvers, "x64", "fxc.exe")
 	Tools.AssertPath(fxc)
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders

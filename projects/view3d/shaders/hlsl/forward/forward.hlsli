@@ -74,7 +74,17 @@ PSOut PSDefault(PSIn In)
 
 	// Texture2D (with transform)
 	if (HasTex0)
-		Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
+	{
+		if (EnvMapProj)
+		{
+			float3 dir = mul(In.ws_vert, m_tex2surf0).xyz;
+			Out.diff = m_envmap_texture.Sample(m_envmap_sampler, dir);
+		}
+		else
+		{
+			Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
+		}
+	}
 
 	// Env Map
 	if (HasEnvMap)
@@ -95,5 +105,4 @@ PSOut PSDefault(PSIn In)
 
 	return Out;
 }
-
 #endif
