@@ -186,6 +186,28 @@ namespace Rylogic.Utility
 				}
 			}
 			#endregion
+			#region Sqrt
+			{
+				if (typeof(T).IsPrimitive || typeof(T) == typeof(decimal))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var sqrt = typeof(Math).GetMethod(nameof(Math.Sqrt), new[] { typeof(double) });
+					var body = Expression.ConvertChecked(Expression.Call(sqrt, Expression.ConvertChecked(paramA, typeof(double))), typeof(T));
+					m_sqrt = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
+				else if (typeof(T) == typeof(v4))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var sqrt = typeof(Math_).GetMethod(nameof(Math_.Sqrt), new[] { typeof(T) });
+					var body = Expression.ConvertChecked(Expression.Call(sqrt, paramA), typeof(T));
+					m_sqrt = Expression.Lambda<Func<T, T>>(body, paramA).Compile();
+				}
+				else
+				{
+					m_sqrt = (a) => { throw new Exception($"Type {typeof(T).Name} does not define the Sqrt operator"); };
+				}
+			}
+			#endregion
 			#region Bitwise OR
 			{
 				if (typeof(T).IsEnum)
@@ -312,77 +334,84 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Return the maximum value</summary>
-		public static T MaxValue { get { return m_max_value(); } }
+		public static T MaxValue => m_max_value();
 		private static Func<T> m_max_value;
 
 		/// <summary>Return the maximum value</summary>
-		public static T MinValue { get { return m_min_value(); } }
+		public static T MinValue => m_min_value();
 		private static Func<T> m_min_value;
 
 		/// <summary>Cast from type U to type T</summary>
-		public static T Cast<U>(U a) { return Operators<T, U>.Cast(a); }
+		public static T Cast<U>(U a) => Operators<T, U>.Cast(a);
 
 		/// <summary>+a</summary>
-		public static T Plus(T a) { return m_plus(a); }
+		public static T Plus(T a) => m_plus(a);
 		private static Func<T,T> m_plus;
 
 		/// <summary>-a</summary>
-		public static T Neg(T a) { return m_neg(a); }
+		public static T Neg(T a) => m_neg(a);
 		private static Func<T,T> m_neg;
 
 		/// <summary>~a</summary>
-		public static T OnesComp(T a) { return m_ones_comp(a); }
+		public static T OnesComp(T a) => m_ones_comp(a);
 		private static Func<T,T> m_ones_comp;
 
 		/// <summary>a + b</summary>
-		public static T Add(T a, T b) { return m_add(a,b); }
+		public static T Add(T a, T b) => m_add(a, b);
 		private static Func<T,T,T> m_add;
 
 		/// <summary>a - b</summary>
-		public static T Sub(T a, T b) { return m_sub(a,b); }
+		public static T Sub(T a, T b) => m_sub(a, b);
 		private static Func<T,T,T> m_sub;
 
 		/// <summary>a * b</summary>
-		public static T Mul(T a, T b) { return m_mul(a,b); }
+		public static T Mul(T a, T b) => m_mul(a, b);
 		private static Func<T,T,T> m_mul;
 
 		/// <summary>a / b</summary>
-		public static T Div(T a, T b) { return m_div(a,b); }
+		public static T Div(T a, T b) => m_div(a, b);
 		private static Func<T,T,T> m_div;
 
+		/// <summary>pow(a, b)</summary>
+		public static T Pow(T a, T b) => Operators<T,T>.Pow(a, b);
+
+		/// <summary>sqrt(a)</summary>
+		public static T Sqrt(T a) => m_sqrt(a);
+		private static Func<T, T> m_sqrt;
+
 		/// <summary>a | b</summary>
-		public static T BitwiseOR(T a, T b) { return m_bitwise_or(a,b); }
+		public static T BitwiseOR(T a, T b) => m_bitwise_or(a, b);
 		private static Func<T,T,T> m_bitwise_or;
 
 		/// <summary>a & b</summary>
-		public static T BitwiseAND(T a, T b) { return m_bitwise_and(a,b); }
+		public static T BitwiseAND(T a, T b) => m_bitwise_and(a, b);
 		private static Func<T,T,T> m_bitwise_and;
 
 		/// <summary>a == b</summary>
-		public static bool Eql(T a, T b) { return m_eql(a,b); }
+		public static bool Eql(T a, T b) => m_eql(a, b);
 		private static Func<T,T,bool> m_eql;
 
 		/// <summary>a != b</summary>
-		public static bool NEql(T a, T b) { return !Eql(a,b); }
+		public static bool NEql(T a, T b) => !Eql(a, b);
 
 		/// <summary>a < b</summary>
-		public static bool Less(T a, T b) { return m_less(a,b); }
+		public static bool Less(T a, T b) => m_less(a, b);
 		private static Func<T,T,bool> m_less;
 
 		/// <summary>a &lt;= b</summary>
-		public static bool LessEql(T a, T b) { return !Less(b,a); }
+		public static bool LessEql(T a, T b) => !Less(b, a);
 
 		/// <summary>a > b</summary>
-		public static bool Greater(T a, T b) { return Less(b,a); }
+		public static bool Greater(T a, T b) => Less(b, a);
 
 		/// <summary>a >= b</summary>
-		public static bool GreaterEql(T a, T b) { return !Less(a,b); }
+		public static bool GreaterEql(T a, T b) => !Less(a, b);
 
 		/// <summary>ToString with formatting</summary>
-		public static string ToString(T a)                                 { return a?.ToString() ?? string.Empty; }
-		public static string ToString(T a, IFormatProvider fp)             { return m_tostring1(a, fp) ?? string.Empty; }
-		public static string ToString(T a, string fmt)                     { return m_tostring2(a, fmt) ?? string.Empty; }
-		public static string ToString(T a, string fmt, IFormatProvider fp) { return m_tostring3(a, fmt, fp) ?? string.Empty; }
+		public static string ToString(T a)                                 => a?.ToString() ?? string.Empty;
+		public static string ToString(T a, IFormatProvider fp)             => m_tostring1(a, fp) ?? string.Empty;
+		public static string ToString(T a, string fmt)                     => m_tostring2(a, fmt) ?? string.Empty;
+		public static string ToString(T a, string fmt, IFormatProvider fp) => m_tostring3(a, fmt, fp) ?? string.Empty;
 		private static Func<T,IFormatProvider,string?>        m_tostring1;
 		private static Func<T,string,string?>                 m_tostring2;
 		private static Func<T,string,IFormatProvider,string?> m_tostring3;
@@ -393,7 +422,7 @@ namespace Rylogic.Utility
 			try   { val = Parse(str); return true; }
 			catch { val = default!; return false; }
 		}
-		public static T Parse(string str) { return m_parse(str); }
+		public static T Parse(string str) => m_parse(str);
 		private static Func<string, T> m_parse;
 	}
 	public static class Operators<T,U>
@@ -464,19 +493,19 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Cast a value to type 'T'</summary>
-		public static T Cast(U a) { return m_cast(a); }
+		public static T Cast(U a) => m_cast(a);
 		private static Func<U, T> m_cast;
 
 		/// <summary>a * b</summary>
-		public static T Mul(T a, U b) { return m_mul(a,b); }
+		public static T Mul(T a, U b) => m_mul(a, b);
 		private static Func<T,U,T> m_mul;
 
 		/// <summary>a / b</summary>
-		public static T Div(T a, U b) { return m_div(a,b); }
+		public static T Div(T a, U b) => m_div(a, b);
 		private static Func<T,U,T> m_div;
 
 		/// <summary>a ^ b</summary>
-		public static T Pow(T a, U b) { return m_pow(a, b); }
+		public static T Pow(T a, U b) => m_pow(a, b);
 		private static Func<T, U, T> m_pow;
 	}
 }
@@ -512,6 +541,7 @@ namespace Rylogic.UnitTests
 			Operators<float  >.Eql(123, 124);
 			Operators<double >.Eql(123, 124);
 			Operators<decimal>.Eql(123, 124);
+			Operators<v4>.Eql(v4.Zero, v4.Zero);
 
 			Assert.Equal(Operators<decimal>.MaxValue, decimal.MaxValue);
 			Assert.Equal(Operators<decimal>.MinValue, decimal.MinValue);
@@ -523,6 +553,7 @@ namespace Rylogic.UnitTests
 			Assert.Equal(Operators<decimal>.Sub(0.5m, 0.8m) , 0.5m - 0.8m );
 			Assert.Equal(Operators<int    >.Mul(3, 7)       , 3 * 7       );
 			Assert.Equal(Operators<float  >.Div(1.2f, 3.4f) , 1.2f / 3.4f );
+			Assert.Equal(Operators<decimal>.Sqrt(1.5625m)   , 1.25m       );
 
 			Assert.Equal(Operators<float  >.Eql(1.23f, 1.24f)        , 1.23f == 1.24f );
 			Assert.Equal(Operators<float  >.Eql(1.23f, 1.23f)        , 1.23f == 1.23f );
