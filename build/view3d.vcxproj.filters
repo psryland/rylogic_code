@@ -159,9 +159,6 @@
     <ClInclude Include="..\include\pr\ldraw\ldr_tools.h">
       <Filter>pr\ldraw</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\buf8.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\embedded.h">
       <Filter>pr\script</Filter>
     </ClInclude>
@@ -185,9 +182,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\3ds.h">
       <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\util\allocator.h">
-      <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\view3d\directxtex\BC.h">
       <Filter>src\directxtex</Filter>
@@ -305,9 +299,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\p3d.h">
       <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\view3d\dll\pr_conv.h">
-      <Filter>src\dll</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\textures\projected_texture.h">
       <Filter>src\textures</Filter>
