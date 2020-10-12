@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -39,7 +39,7 @@ namespace pr::rdr
 		:Texture2D(mgr, id, tex, nullptr, sdesc, sort_id, has_alpha, name)
 	{}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, tex, srv, nullptr, 0, name)
+		:TextureBase(mgr, id, tex, srv, nullptr, id, name)
 		,m_t2s(pr::m4x4Identity)
 		,m_sort_id(sort_id)
 		,m_has_alpha(has_alpha)
@@ -48,7 +48,7 @@ namespace pr::rdr
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, shared_resource, 0, name)
+		:TextureBase(mgr, id, shared_resource, id, name)
 		,m_t2s(pr::m4x4Identity)
 		,m_sort_id(sort_id)
 		,m_has_alpha(has_alpha)
@@ -57,7 +57,7 @@ namespace pr::rdr
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, shared_handle, 0, name)
+		:TextureBase(mgr, id, shared_handle, id, name)
 		,m_t2s(pr::m4x4Identity)
 		,m_sort_id(sort_id)
 		,m_has_alpha(has_alpha)
@@ -66,7 +66,7 @@ namespace pr::rdr
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
-		:TextureBase(mgr, id, nullptr, nullptr, nullptr, 0, name)
+		:TextureBase(mgr, id, nullptr, nullptr, nullptr, id, name)
 		,m_t2s(pr::m4x4Identity)
 		,m_sort_id(sort_id)
 		,m_has_alpha(has_alpha)

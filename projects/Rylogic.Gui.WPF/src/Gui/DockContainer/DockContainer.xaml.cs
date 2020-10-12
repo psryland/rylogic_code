@@ -25,7 +25,7 @@ namespace Rylogic.Gui.WPF
 	{
 		// Notes:
 		//  - The dock container does not own the content. To clean up disposable content
-		//    use 'Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>().ToList());'
+		//    use 'Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>());'
 		//  - Don't be tempted to add a 'DisposeContent' flag because it's ambiguous when
 		//    dispose should be called on the content. 
 

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
@@ -14,6 +14,8 @@
 #include "pr/view3d/steps/render_step.h"
 #include "view3d/render/state_stack.h"
 
+using namespace std::filesystem;
+
 namespace pr::rdr
 {
 	// Look for a compiled shader object file by the name 'compiled_shader_filename'
@@ -21,16 +23,16 @@ namespace pr::rdr
 	#if PR_RDR_RUNTIME_SHADERS
 	#pragma message(PR_LINK "WARNING: ************************************************** PR_RDR_RUNTIME_SHADERS enabled")
 
-	std::unordered_map<RdrId, wstring256> shader_cso;
+	std::unordered_map<RdrId, path> g_shader_cso;
 	void RegisterRuntimeShader(RdrId id, char const* cso_filepath)
 	{
 		#ifdef NDEBUG
-		char const* compile_shader_dir = R"(P:\pr\projects\renderer11\shaders\hlsl\compiled\release)";
+		char const* compile_shader_dir = R"(P:\pr\projects\view3d\shaders\hlsl\compiled\release)";
 		#else
-		char const* compile_shader_dir = R"(P:\pr\projects\renderer11\shaders\hlsl\compiled\debug)";
+		char const* compile_shader_dir = R"(P:\pr\projects\view3d\shaders\hlsl\compiled\debug)";
 		#endif
 
-		shader_cso[id] = pr::To<wstring256>(pr::FmtS("%s\\%s",compile_shader_dir,cso_filepath));
+		g_shader_cso[id] = pr::FmtS("%s\\%s", compile_shader_dir, cso_filepath);
 	}
 	#endif
 	
@@ -39,8 +41,8 @@ namespace pr::rdr
 		#if PR_RDR_RUNTIME_SHADERS
 		struct ModCheck
 		{
-			DWORD  m_last_check;    // Tick value when the last check for a changed shader was made
-			time_t m_last_modified; // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
+			DWORD m_last_check;             // Tick value when the last check for a changed shader was made
+			file_time_type m_last_modified; // Support for dynamically loading shaders at runtime
 		};
 		static std::unordered_map<RdrId, ModCheck> s_check;
 		auto& check = s_check[m_orig_id];
@@ -52,17 +54,17 @@ namespace pr::rdr
 
 		Renderer::Lock lock(m_mgr->m_rdr);
 		auto device = lock.D3DDevice();
-		auto iter = shader_cso.find(m_orig_id);
-		if (iter == std::end(shader_cso))
+		auto iter = g_shader_cso.find(m_orig_id);
+		if (iter == std::end(g_shader_cso))
 			return;
 			
 		// Check for a new shader
-		wstring256 cso_filepath = iter->second;
-		time_t last_mod, newest = check.m_last_modified;
-		if (pr::filesys::FileExists(cso_filepath) && (last_mod = pr::filesys::FileTimeStats(cso_filepath).m_last_modified) > check.m_last_modified)
+		path cso_filepath = iter->second;
+		file_time_type last_mod, newest = check.m_last_modified;
+		if (exists(cso_filepath) && (last_mod = last_write_time(cso_filepath)) > check.m_last_modified)
 		{
 			std::vector<pr::uint8> buf;
-			if (pr::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())
+			if (pr::filesys::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())
 			{
 				D3DPtr<ID3D11DeviceChild> dxshdr;
 				switch (m_shdr_type) {
@@ -76,7 +78,7 @@ namespace pr::rdr
 				}
 				m_dx_shdr = dxshdr;
 				if (last_mod > newest) newest = last_mod;
-				PR_INFO(1, pr::FmtS("Shader %s replaced", pr::To<std::string>(cso_filepath).c_str()));
+				PR_INFO(1, pr::FmtS("Shader %S replaced", cso_filepath.c_str()));
 			}
 		}
 

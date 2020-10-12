@@ -182,6 +182,7 @@ extern "C"
 		Checker3,
 		WhiteSpot,
 		WhiteTriangle,
+		EnvMapProjection,
 	};
 	enum class EView3DLight :int
 	{
@@ -756,6 +757,7 @@ extern "C"
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureFromStock            (EView3DStockTexture tex);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
+	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromStock      (EView3DStockTexture tex, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, wchar_t const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);

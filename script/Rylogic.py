@@ -62,6 +62,10 @@ def OnException(ex,enter_to_close=True, pause_time_seconds=0):
 	OnError("ERROR: " + str(ex), enter_to_close=enter_to_close, pause_time_seconds=pause_time_seconds)
 	return
 
+# Path join/check
+def Path(*args, check_exists:bool = True, normalise:bool = True):
+	return UserVars.Path(*args, check_exists=check_exists, normalise=normalise)
+
 # Check that the UserVars file is the correct version
 def AssertVersion(version):
 	if version > UserVars.version:
@@ -653,14 +657,14 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 
 # Prompt for the code signing certificate password
 def PromptCertPassword():
-	UserVars.rylogic_cert_pw = UserVars.rylogic_cert_pw if UserVars.rylogic_cert_pw else input(f"Rylogic Cert Password: ")
+	UserVars.code_sign_cert_pw = UserVars.code_sign_cert_pw if UserVars.code_sign_cert_pw else input(f"Code Signing Cert Password: ")
 	return
 
 # Sign an assembly
 def SignAssembly(target:str):
-	if not UserVars.rylogic_cert_pfx: return
+	if not UserVars.code_sign_cert_pfx: return
 	PromptCertPassword()
-	Exec([UserVars.signtool, "sign", "/f", UserVars.rylogic_cert_pfx, "/p", UserVars.rylogic_cert_pw, target])
+	Exec([UserVars.signtool, "sign", "/f", UserVars.code_sign_cert_pfx, "/p", UserVars.code_sign_cert_pw, target])
 	return
 
 # Sign a VSIX extension package
@@ -705,7 +709,7 @@ def NugetPackage(proj:str):
 	package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
 	package_path = os.path.join(UserVars.root, "lib", "packages", f"{package_name}.{vers0}.nupkg")
 	PromptCertPassword()
-	Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", UserVars.rylogic_cert_pfx, "-CertificatePassword", UserVars.rylogic_cert_pw, "-Timestamper", "http://timestamp.digicert.com"])
+	Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", UserVars.code_sign_cert_pfx, "-CertificatePassword", UserVars.code_sign_cert_pw, "-Timestamper", "http://timestamp.digicert.com"])
 	return package_path
 
 # Push a nugget package to 'nuget.org'
