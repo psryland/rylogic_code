@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Vector4
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -526,6 +526,16 @@ namespace Rylogic.Maths
 		public static v4 Div(v4 a, v4 b, v4 def)
 		{
 			return b != v4.Zero ? a / b : def;
+		}
+
+		/// <summary>Return the component-wise square root of a vector</summary>
+		public static v4 Sqrt(v4 a)
+		{
+			return new v4(
+				(float)Math.Sqrt(a.x),
+				(float)Math.Sqrt(a.y),
+				(float)Math.Sqrt(a.z),
+				(float)Math.Sqrt(a.w));
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XYZW components</summary>
