@@ -94,17 +94,17 @@ namespace Rylogic.Gui.WPF
 			public void PositionCrossHair(Point client_pt)
 			{
 				var chart_pt = Chart.ClientToChart(client_pt);
-				var scene_bounds = Chart.SceneBounds;
+				var bounds = Chart.SceneBounds;
 
-				LineV.X1 = client_pt.X;
-				LineV.X2 = client_pt.X;
-				LineV.Y1 = scene_bounds.Top;
-				LineV.Y2 = scene_bounds.Bottom;
+				LineV.X1 = client_pt.X - bounds.Left;
+				LineV.X2 = client_pt.X - bounds.Left;
+				LineV.Y1 = 0;
+				LineV.Y2 = bounds.Height;
 
-				LineH.X1 = scene_bounds.Left;
-				LineH.X2 = scene_bounds.Right;
-				LineH.Y1 = client_pt.Y;
-				LineH.Y2 = client_pt.Y;
+				LineH.X1 = 0;
+				LineH.X2 = bounds.Width;
+				LineH.Y1 = client_pt.Y - bounds.Top;
+				LineH.Y2 = client_pt.Y - bounds.Top;
 
 				LabelX.Text = Chart.XAxis.TickText(chart_pt.X);
 				switch (Chart.XAxis.Options.Side)

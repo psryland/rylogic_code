@@ -383,6 +383,7 @@
 			<StackPanel Orientation="Horizontal">
 				<TextBlock
 					Text="Fill Mode Points Size: "
+					ToolTip="The size of points used when the Rendering Fill Mode is set to 'Points'"
 					VerticalAlignment="Center"
 					MinWidth="80"
 					/>
@@ -579,7 +580,7 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding AllowScroll, Mode=OneWay}"
 		Command="{Binding ToggleScrollLock}"
-		DataContext="{Binding ChartCMenuContext}"
+		DataContext="{Binding ChartAxisCMenuContext}"
 		Name="ChartAxisMenuItem_AllowScroll"
 		/>
 	<MenuItem x:Key="ChartAxisMenuItem_AllowZoom" x:Shared="False"
@@ -587,7 +588,7 @@
 		StaysOpenOnClick="False"
 		IsChecked="{Binding AllowZoom, Mode=OneWay}"
 		Command="{Binding ToggleZoomLock}"
-		DataContext="{Binding ChartCMenuContext}"
+		DataContext="{Binding ChartAxisCMenuContext}"
 		Name="ChartAxisMenuItem_AllowZoom"
 		/>
 

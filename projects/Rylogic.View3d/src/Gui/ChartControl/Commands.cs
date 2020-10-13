@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -7,13 +8,14 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ChartControl
+	public partial class ChartControl :IChartCMenu, IView3dCMenu
 	{
 		// Notes:
-		//  - Many commands are available on View3dControl but I want to make
-		//    the Options the source of truth for the scene settings, so the
-		//    scene commands are implemented again here, usually setting the
-		//    Options value first then forwarding to the View3dControl command.
+		//  - Many commands are available on View3dControl but I want to make the Options the source
+		//    of truth for the scene settings, so the scene commands are implemented again here, usually
+		//    setting the Options value first then forwarding to the View3dControl command.
+		//  - Boolean properties can't forward the ICommand to View3d because the property changed
+		//    notification occurs on the wrong object.
 
 		/// <summary>Initialise the commands</summary>
 		private void InitCommands()
@@ -21,6 +23,8 @@ namespace Rylogic.Gui.WPF
 			// Tools Menu
 			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
 			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
+			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
 			ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
 			ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
 			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
@@ -37,6 +41,7 @@ namespace Rylogic.Gui.WPF
 			// Rendering
 			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
 			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
+			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
 		}
 
 		/// <summary>Set default cmenu data contexts</summary>
@@ -71,7 +76,12 @@ namespace Rylogic.Gui.WPF
 		public bool OriginPointVisible
 		{
 			get => Options.OriginPointVisible;
-			set => Options.OriginPointVisible = value;
+			set
+			{
+				if (OriginPointVisible == value) return;
+				Options.OriginPointVisible = value;
+				NotifyPropertyChanged(nameof(OriginPointVisible));
+			}
 		}
 		public ICommand ToggleOriginPoint { get; private set; } = null!;
 		private void ToggleOriginPointInternal()
@@ -84,7 +94,12 @@ namespace Rylogic.Gui.WPF
 		public bool FocusPointVisible
 		{
 			get => Options.FocusPointVisible;
-			set => Options.FocusPointVisible = value;
+			set
+			{
+				if (FocusPointVisible == value) return;
+				Options.FocusPointVisible = value;
+				NotifyPropertyChanged(nameof(FocusPointVisible));
+			}
 		}
 		public ICommand ToggleFocusPoint { get; private set; } = null!;
 		private void ToggleFocusPointInternal()
@@ -97,17 +112,37 @@ namespace Rylogic.Gui.WPF
 		public bool BBoxesVisible
 		{
 			get => Scene.BBoxesVisible;
-			set => Scene.BBoxesVisible = value;
+			set
+			{
+				if (BBoxesVisible == value) return;
+				Scene.BBoxesVisible = value;
+				NotifyPropertyChanged(nameof(BBoxesVisible));
+			}
 		}
-		public ICommand ToggleBBoxesVisible => Scene.ToggleBBoxesVisible;
+		public ICommand ToggleBBoxesVisible { get; private set; } = null!;
+		private void ToggleBBoxesVisibleInternal()
+		{
+			BBoxesVisible = !BBoxesVisible;
+			Invalidate();
+		}
 
 		/// <summary>Toggle visibility of the focus point</summary>
 		public bool SelectionBoxVisible
 		{
 			get => Window.SelectionBoxVisible;
-			set => Window.SelectionBoxVisible = value;
+			set
+			{
+				if (SelectionBoxVisible == value) return;
+				Window.SelectionBoxVisible = value;
+				NotifyPropertyChanged(nameof(SelectionBoxVisible));
+			}
 		}
-		public ICommand ToggleSelectionBox => Scene.ToggleSelectionBox;
+		public ICommand ToggleSelectionBox { get; private set; } = null!;
+		private void ToggleSelectionBoxInternal()
+		{
+			SelectionBoxVisible = !SelectionBoxVisible;
+			Invalidate();
+		}
 
 		/// <inheritdoc/>
 		public bool ShowCrossHair
@@ -194,7 +229,12 @@ namespace Rylogic.Gui.WPF
 		public bool ShowAxes
 		{
 			get => Options.ShowAxes;
-			set => Options.ShowAxes = value;
+			set
+			{
+				if (ShowAxes == value) return;
+				Options.ShowAxes = value;
+				NotifyPropertyChanged(nameof(ShowAxes));
+			}
 		}
 		public ICommand ToggleAxes { get; private set; } = null!;
 		private void ToggleAxesInternal()
@@ -207,7 +247,12 @@ namespace Rylogic.Gui.WPF
 		public bool ShowGridLines
 		{
 			get => Options.ShowGridLines;
-			set => Options.ShowGridLines = value;
+			set
+			{
+				if (ShowGridLines == value) return;
+				Options.ShowGridLines = value;
+				NotifyPropertyChanged(nameof(ShowGridLines));
+			}
 		}
 		public ICommand ToggleGridLines { get; private set; } = null!;
 		private void ToggleGridLinesInternal()
@@ -261,7 +306,7 @@ namespace Rylogic.Gui.WPF
 		private void AutoRangeViewInternal(object? parameter)
 		{
 			var bounds = parameter is View3d.ESceneBounds b ? b : View3d.ESceneBounds.All;
-			AutoRange(who:bounds);
+			AutoRange(who: bounds);
 		}
 		private View3d.ESceneBounds m_AutoRangeBounds;
 
@@ -281,10 +326,8 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				if (LockAspect == value) return;
-				if (value)
-					Options.LockAspect = (XAxis.Span * SceneBounds.Height) / (YAxis.Span * SceneBounds.Width);
-				else
-					Options.LockAspect = null;
+				Options.LockAspect = value ? (XAxis.Span * SceneBounds.Height) / (YAxis.Span * SceneBounds.Width) : (double?)null;
+				NotifyPropertyChanged(nameof(LockAspect));
 			}
 		}
 		public ICommand ToggleLockAspect { get; private set; } = null!;
@@ -297,7 +340,12 @@ namespace Rylogic.Gui.WPF
 		public bool Orthographic
 		{
 			get => Options.Orthographic;
-			set => Options.Orthographic = value;
+			set
+			{
+				if (Orthographic == value) return;
+				Options.Orthographic = value;
+				NotifyPropertyChanged(nameof(Orthographic));
+			}
 		}
 		public ICommand ToggleOrthographic { get; private set; } = null!;
 		private void ToggleOrthographicInternal()
@@ -309,7 +357,12 @@ namespace Rylogic.Gui.WPF
 		public bool MouseCentredZoom
 		{
 			get => Options.MouseCentredZoom;
-			set => Options.MouseCentredZoom = value;
+			set
+			{
+				if (MouseCentredZoom == value) return;
+				Options.MouseCentredZoom = value;
+				NotifyPropertyChanged(nameof(MouseCentredZoom));
+			}
 		}
 		public ICommand ToggleMouseCentredZoom { get; private set; } = null!;
 		private void ToggleMouseCentredZoomInternal()
@@ -321,14 +374,24 @@ namespace Rylogic.Gui.WPF
 		public ENavMode NavigationMode
 		{
 			get => Options.NavigationMode;
-			set => Options.NavigationMode = value;
+			set
+			{
+				if (NavigationMode == value) return;
+				Options.NavigationMode = value;
+				NotifyPropertyChanged(nameof(NavigationMode));
+			}
 		}
 
 		/// <inheritdoc/>
 		public Colour32 BackgroundColour
 		{
 			get => Options.BackgroundColour;
-			set => Options.BackgroundColour = value;
+			set
+			{
+				if (BackgroundColour == value) return;
+				Options.BackgroundColour = value;
+				NotifyPropertyChanged(nameof(BackgroundColour));
+			}
 		}
 		public ICommand SetBackgroundColour { get; private set; } = null!;
 		private void SetBackgroundColourInternal()
@@ -341,7 +404,12 @@ namespace Rylogic.Gui.WPF
 		public bool Antialiasing
 		{
 			get => Options.Antialiasing;
-			set => Options.Antialiasing = value;
+			set
+			{
+				if (Antialiasing == value) return;
+				Options.Antialiasing = value;
+				NotifyPropertyChanged(nameof(Antialiasing));
+			}
 		}
 		public ICommand ToggleAntialiasing { get; private set; } = null!;
 		private void ToggleAntiAliasingInternal()
@@ -353,14 +421,24 @@ namespace Rylogic.Gui.WPF
 		public EAlignDirection AlignDirection
 		{
 			get => Scene.AlignDirection;
-			set => Scene.AlignDirection = value;
+			set
+			{
+				if (AlignDirection == value) return;
+				Scene.AlignDirection = value;
+				NotifyPropertyChanged(nameof(AlignDirection));
+			}
 		}
 
 		/// <inheritdoc/>
 		public EViewPreset ViewPreset
 		{
 			get => Scene.ViewPreset;
-			set => Scene.ViewPreset = value;
+			set
+			{
+				if (ViewPreset == value) return;
+				Scene.ViewPreset = value;
+				NotifyPropertyChanged(nameof(ViewPreset));
+			}
 		}
 
 		/// <summary>Saved views</summary>
@@ -373,36 +451,66 @@ namespace Rylogic.Gui.WPF
 		public View3d.EFillMode FillMode
 		{
 			get => Options.FillMode;
-			set => Options.FillMode = value;
+			set
+			{
+				if (FillMode == value) return;
+				Options.FillMode = value;
+				NotifyPropertyChanged(nameof(FillMode));
+			}
 		}
 
 		/// <inheritdoc/>
 		public View3d.ECullMode CullMode
 		{
 			get => Options.CullMode;
-			set => Options.CullMode = value;
+			set
+			{
+				if (CullMode == value) return;
+				Options.CullMode = value;
+				NotifyPropertyChanged(nameof(CullMode));
+			}
 		}
 
 		/// <inheritdoc/>
 		public bool ShowNormals
 		{
 			get => Scene.ShowNormals;
-			set => Scene.ShowNormals = value;
+			set
+			{
+				if (ShowNormals == value) return;
+				Scene.ShowNormals = value;
+				NotifyPropertyChanged(nameof(ShowNormals));
+			}
 		}
-		public ICommand ToggleShowNormals => Scene.ToggleShowNormals;
+		public ICommand ToggleShowNormals { get; private set; } = null!;
+		private void ToggleShowNormalsInternal()
+		{
+			ShowNormals = !ShowNormals;
+			Invalidate();
+		}
 
 		/// <inheritdoc/>
 		public float NormalsLength
 		{
 			get => Scene.NormalsLength;
-			set => Scene.NormalsLength = value;
+			set
+			{
+				if (NormalsLength == value) return;
+				Scene.NormalsLength = value;
+				NotifyPropertyChanged(nameof(NormalsLength));
+			}
 		}
 
 		/// <inheritdoc/>
 		public Colour32 NormalsColour
 		{
 			get => Scene.NormalsColour;
-			set => Scene.NormalsColour = value;
+			set
+			{
+				if (NormalsColour == value) return;
+				Scene.NormalsColour = value;
+				NotifyPropertyChanged(nameof(NormalsColour));
+			}
 		}
 		public ICommand SetNormalsColour => Scene.SetNormalsColour;
 
@@ -410,7 +518,12 @@ namespace Rylogic.Gui.WPF
 		public float FillModePointsSize
 		{
 			get => Scene.FillModePointsSize;
-			set => Scene.FillModePointsSize = value;
+			set
+			{
+				if (FillModePointsSize == value) return;
+				Scene.FillModePointsSize = value;
+				NotifyPropertyChanged(nameof(FillModePointsSize));
+			}
 		}
 
 		/// <inheritdoc/>

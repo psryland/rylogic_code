@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
-	public partial class ChartControl :UserControl, IDisposable, INotifyPropertyChanged, IChartCMenu, IView3dCMenu
+	public partial class ChartControl :UserControl, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
@@ -436,30 +436,33 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
 		public Point ClientToChart(Point client_point)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
 
 			return new Point(
-				(XAxis.Min + (client_point.X - SceneBounds.Left) * XAxis.Span / SceneBounds.Width),
-				(YAxis.Min - (client_point.Y - SceneBounds.Bottom) * YAxis.Span / SceneBounds.Height));
+				(XAxis.Min + (client_point.X - bounds.Left) * XAxis.Span / bounds.Width),
+				(YAxis.Min - (client_point.Y - bounds.Bottom) * YAxis.Span / bounds.Height));
 		}
 		public Size ClientToChart(Size client_size)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
 
 			return new Size(
-				(client_size.Width * XAxis.Span / SceneBounds.Width),
-				(client_size.Height * YAxis.Span / SceneBounds.Height));
+				(client_size.Width * XAxis.Span / bounds.Width),
+				(client_size.Height * YAxis.Span / bounds.Height));
 		}
 		public Vector ClientToChart(Vector client_vec)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
 
 			return new Vector(
-				(+client_vec.X * XAxis.Span / SceneBounds.Width),
-				(-client_vec.Y * YAxis.Span / SceneBounds.Height));
+				(+client_vec.X * XAxis.Span / bounds.Width),
+				(-client_vec.Y * YAxis.Span / bounds.Height));
 		}
 		public Rect ClientToChart(Rect client_rect)
 		{
@@ -471,30 +474,33 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
 		public Point ChartToClient(Point chart_point)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
 
 			return new Point(
-				(SceneBounds.Left + (chart_point.X - XAxis.Min) * SceneBounds.Width / XAxis.Span),
-				(SceneBounds.Bottom - (chart_point.Y - YAxis.Min) * SceneBounds.Height / YAxis.Span));
+				(bounds.Left + (chart_point.X - XAxis.Min) * bounds.Width / XAxis.Span),
+				(bounds.Bottom - (chart_point.Y - YAxis.Min) * bounds.Height / YAxis.Span));
 		}
 		public Size ChartToClient(Size chart_size)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
 
 			return new Size(
-				(chart_size.Width * SceneBounds.Width / XAxis.Span),
-				(chart_size.Height * SceneBounds.Height / YAxis.Span));
+				(chart_size.Width * bounds.Width / XAxis.Span),
+				(chart_size.Height * bounds.Height / YAxis.Span));
 		}
 		public Vector ChartToClient(Vector chart_vec)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
 
 			return new Vector(
-				(+chart_vec.X * SceneBounds.Width / XAxis.Span),
-				(-chart_vec.Y * SceneBounds.Height / YAxis.Span));
+				(+chart_vec.X * bounds.Width / XAxis.Span),
+				(-chart_vec.Y * bounds.Height / YAxis.Span));
 		}
 		public Rect ChartToClient(Rect chart_rect)
 		{
@@ -602,15 +608,17 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert between client space and normalised screen space</summary>
 		public Point ClientToNSS(Point client_point)
 		{
+			var bounds = SceneBounds;
 			return new Point(
-				((client_point.X - SceneBounds.Left) / SceneBounds.Width) * 2 - 1,
-				((SceneBounds.Bottom - client_point.Y) / SceneBounds.Height) * 2 - 1);
+				((client_point.X - bounds.Left) / bounds.Width) * 2 - 1,
+				((bounds.Bottom - client_point.Y) / bounds.Height) * 2 - 1);
 		}
 		public Size ClientToNSS(Size client_size)
 		{
+			var bounds = SceneBounds;
 			return new Size(
-				(client_size.Width / SceneBounds.Width) * 2,
-				(client_size.Height / SceneBounds.Height) * 2);
+				(client_size.Width / bounds.Width) * 2,
+				(client_size.Height / bounds.Height) * 2);
 		}
 		public Rect ClientToNSS(Rect client_rect)
 		{
@@ -620,15 +628,17 @@ namespace Rylogic.Gui.WPF
 		}
 		public Point NSSToClient(Point nss_point)
 		{
+			var bounds = SceneBounds;
 			return new Point(
-				SceneBounds.Left + 0.5 * (nss_point.X + 1) * SceneBounds.Width,
-				SceneBounds.Bottom - 0.5 * (nss_point.Y + 1) * SceneBounds.Height);
+				bounds.Left + 0.5 * (nss_point.X + 1) * bounds.Width,
+				bounds.Bottom - 0.5 * (nss_point.Y + 1) * bounds.Height);
 		}
 		public Size NSSToClient(Size nss_size)
 		{
+			var bounds = SceneBounds;
 			return new Size(
-				0.5 * nss_size.Width * SceneBounds.Width,
-				0.5 * nss_size.Height * SceneBounds.Height);
+				0.5 * nss_size.Width * bounds.Width,
+				0.5 * nss_size.Height * bounds.Height);
 		}
 		public Rect NSSToClient(Rect nss_rect)
 		{
@@ -795,7 +805,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return a string representation of a location on the chart. 'location' is in ChartControl client space</summary>
 		public string LocationText(Point location)
 		{
-			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+			var bounds = SceneBounds;
+			if (bounds.Width == 0 || bounds.Height == 0)
 				return string.Empty;
 
 			var pt = ClientToChart(location);

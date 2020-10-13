@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -9,7 +10,7 @@ using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class View3dControl
+	public partial class View3dControl: IView3dCMenu
 	{
 		// Notes:
 		//  - CMenu howto? Look in IView3dCMenu.cs
@@ -64,7 +65,12 @@ namespace Rylogic.Gui.WPF
 		public bool OriginPointVisible
 		{
 			get => Window.OriginPointVisible;
-			set => Window.OriginPointVisible = value;
+			set
+			{
+				if (OriginPointVisible == value) return;
+				Window.OriginPointVisible = value;
+				NotifyPropertyChanged(nameof(OriginPointVisible));
+			}
 		}
 		public ICommand ToggleOriginPoint { get; private set; } = null!;
 		private void ToggleOriginPointInternal()
@@ -77,7 +83,12 @@ namespace Rylogic.Gui.WPF
 		public bool FocusPointVisible
 		{
 			get => Window.FocusPointVisible;
-			set => Window.FocusPointVisible = value;
+			set
+			{
+				if (FocusPointVisible == value) return;
+				Window.FocusPointVisible = value;
+				NotifyPropertyChanged(nameof(FocusPointVisible));
+			}
 		}
 		public ICommand ToggleFocusPoint { get; private set; } = null!;
 		private void ToggleFocusPointInternal()
@@ -90,7 +101,12 @@ namespace Rylogic.Gui.WPF
 		public bool BBoxesVisible
 		{
 			get => Window.Diag.BBoxesVisible;
-			set => Window.Diag.BBoxesVisible = value;
+			set
+			{
+				if (BBoxesVisible == value) return;
+				Window.Diag.BBoxesVisible = value;
+				NotifyPropertyChanged(nameof(BBoxesVisible));
+			}
 		}
 		public ICommand ToggleBBoxesVisible { get; private set; } = null!;
 		private void ToggleBBoxesVisibleInternal()
@@ -103,7 +119,12 @@ namespace Rylogic.Gui.WPF
 		public bool SelectionBoxVisible
 		{
 			get => Window.SelectionBoxVisible;
-			set => Window.SelectionBoxVisible = value;
+			set
+			{
+				if (SelectionBoxVisible == value) return;
+				Window.SelectionBoxVisible = value;
+				NotifyPropertyChanged(nameof(SelectionBoxVisible));
+			}
 		}
 		public ICommand ToggleSelectionBox { get; private set; } = null!;
 		private void ToggleSelectionBoxInternal()
@@ -123,7 +144,6 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(AutoRangeBounds));
 			}
 		}
-		private View3d.ESceneBounds m_AutoRangeBounds;
 		public ICommand AutoRangeView { get; private set; } = null!;
 		private void AutoRangeViewInternal(object? parameter)
 		{
@@ -131,12 +151,18 @@ namespace Rylogic.Gui.WPF
 			Camera.ResetView(Window.SceneBounds(bounds));
 			Invalidate();
 		}
+		private View3d.ESceneBounds m_AutoRangeBounds;
 
 		/// <inheritdoc/>
 		public bool Orthographic
 		{
 			get => Camera.Orthographic;
-			set => Camera.Orthographic = value;
+			set
+			{
+				if (Orthographic == value) return;
+				Camera.Orthographic = value;
+				NotifyPropertyChanged(nameof(Orthographic));
+			}
 		}
 		public ICommand ToggleOrthographic { get; private set; } = null!;
 		private void ToggleOrthographicInternal()
@@ -151,9 +177,10 @@ namespace Rylogic.Gui.WPF
 			get => m_align_direction;
 			set
 			{
-				if (m_align_direction == value) return;
+				if (AlignDirection == value) return;
 				m_align_direction = value;
 				Camera.AlignAxis = AlignDirection_.ToAxis(m_align_direction);
+				NotifyPropertyChanged(nameof(AlignDirection));
 				Invalidate();
 			}
 		}
@@ -165,7 +192,7 @@ namespace Rylogic.Gui.WPF
 			get => m_view_preset;
 			set
 			{
-				if (m_view_preset == value) return;
+				if (ViewPreset == value) return;
 				m_view_preset = value;
 				if (m_view_preset != EViewPreset.Current)
 				{
@@ -174,6 +201,7 @@ namespace Rylogic.Gui.WPF
 					Camera.FocusPoint = pos;
 					Invalidate();
 				}
+				NotifyPropertyChanged(nameof(ViewPreset));
 			}
 		}
 		private EViewPreset m_view_preset;
@@ -230,6 +258,7 @@ namespace Rylogic.Gui.WPF
 			get => (Colour32)GetValue(BackgroundColourProperty);
 			set => SetValue(BackgroundColourProperty, value);
 		}
+		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();
 		private void BackgroundColour_Changed(Colour32 new_value)
 		{
 			Window.BackgroundColour = new_value;
@@ -255,13 +284,17 @@ namespace Rylogic.Gui.WPF
 			else
 				BackgroundColour = bg;
 		}
-		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();
 
 		/// <inheritdoc/>
 		public bool Antialiasing
 		{
 			get => MultiSampling != 1;
-			set => MultiSampling = value ? 4 : 1;
+			set
+			{
+				if (Antialiasing == value) return;
+				MultiSampling = value ? 4 : 1;
+				NotifyPropertyChanged(nameof(Antialiasing));
+			}
 		}
 		public ICommand ToggleAntialiasing { get; private set; } = null!;
 		private void ToggleAntialiasingInternal()
@@ -274,14 +307,24 @@ namespace Rylogic.Gui.WPF
 		public View3d.EFillMode FillMode
 		{
 			get => Window.FillMode;
-			set => Window.FillMode = value;
+			set
+			{
+				if (FillMode == value) return;
+				Window.FillMode = value;
+				NotifyPropertyChanged(nameof(FillMode));
+			}
 		}
 
 		/// <inheritdoc/>
 		public View3d.ECullMode CullMode
 		{
 			get => Window.CullMode;
-			set => Window.CullMode = value;
+			set
+			{
+				if (CullMode == value) return;
+				Window.CullMode = value;
+				NotifyPropertyChanged(nameof(CullMode));
+			}
 		}
 
 		/// <summary>Show/Hide normals for all objects</summary>
@@ -318,14 +361,24 @@ namespace Rylogic.Gui.WPF
 		public float NormalsLength
 		{
 			get => Window.Diag.NormalsLength;
-			set => Window.Diag.NormalsLength = value;
+			set
+			{
+				if (NormalsLength == value) return;
+				Window.Diag.NormalsLength = value;
+				NotifyPropertyChanged(nameof(NormalsLength));
+			}
 		}
 
 		/// <inheritdoc/>
 		public Colour32 NormalsColour
 		{
 			get => Window.Diag.NormalsColour;
-			set => Window.Diag.NormalsColour = value;
+			set
+			{
+				if (NormalsColour == value) return;
+				Window.Diag.NormalsColour = value;
+				NotifyPropertyChanged(nameof(NormalsColour));
+			}
 		}
 		public ICommand SetNormalsColour { get; private set; } = null!;
 		private void SetNormalsColourInternal()
@@ -351,7 +404,12 @@ namespace Rylogic.Gui.WPF
 		public float FillModePointsSize
 		{
 			get => Window.Diag.FillModePointsSize.x;
-			set => Window.Diag.FillModePointsSize = new Maths.v2(value, value);
+			set
+			{
+				if (FillModePointsSize == value) return;
+				Window.Diag.FillModePointsSize = new Maths.v2(value, value);
+				NotifyPropertyChanged(nameof(FillModePointsSize));
+			}
 		}
 
 		/// <inheritdoc/>
