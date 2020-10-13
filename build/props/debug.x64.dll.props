@@ -9,7 +9,7 @@
   <PropertyGroup>
     <IntDir>$(OutDir)</IntDir>
     <TargetExt>.dll</TargetExt>
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">

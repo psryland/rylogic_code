@@ -102,7 +102,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			AxisSize = 0;
 
 			// Notify properties changed
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Options)));
+			NotifyPropertyChanged(nameof(Options));
 			UpdateGraphics();
 
 			// Handlers
@@ -125,12 +125,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
 				case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
 					AxisSize = 0;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
+					NotifyPropertyChanged(nameof(AxisSize));
 					UpdateGraphics();
 					break;
 				case nameof(ChartControl.OptionsData.Axis.TickTextTemplate):
 					AxisSize = 0;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
+					NotifyPropertyChanged(nameof(AxisSize));
 					UpdateGraphics();
 					break;
 				}
@@ -172,7 +172,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			private set
 			{
 				m_axis_size = null;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
+				NotifyPropertyChanged(nameof(AxisSize));
 			}
 		}
 		private double? m_axis_size;
@@ -376,9 +376,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }
