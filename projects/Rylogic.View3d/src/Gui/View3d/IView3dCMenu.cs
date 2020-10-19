@@ -6,6 +6,12 @@ namespace Rylogic.Gui.WPF
 {
 	public interface IView3dCMenu :INotifyPropertyChanged
 	{
+		// TLDR:
+		//   - Make are CMenu from static resources
+		//   - Set it's data context to 'this'
+		//   - Add the View3dCMenuContext, etc properties to 'this' and return the object that implements
+		//     the functionality of the menu items.
+		//
 		// Architecture:
 		//   Rylogic.Gui.WPF.Resources.ContextMenus - (Rylogic.Gui.WPF\src\Resources\ContextMenus.xaml)
 		//     contains the XAML for View3d and Chart menu items. These menu items are used in the context
@@ -106,6 +112,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable antialiasing</summary>
 		bool Antialiasing { get; set; }
 		ICommand ToggleAntialiasing { get; }
+
+		/// <summary>Shadows cast range. 0 = off</summary>
+		double ShadowCastRange { get; set; }
 
 		/// <summary>Fill mode</summary>
 		View3d.EFillMode FillMode { get; set; }

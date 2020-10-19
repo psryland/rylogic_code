@@ -25,7 +25,7 @@
 						Offset="0"
 						/>
 					<GradientStop
-						Color="{Binding PerimeterColour, FallbackValue='#444'}"
+						Color="{Binding PerimeterColour, FallbackValue='#444', Converter={conv:ToMediaColor}}"
 						Offset="1"
 						/>
 				</RadialGradientBrush.GradientStops>

@@ -25,12 +25,7 @@ namespace Rylogic.Gui.WPF
 			PinState = new PinData(this, EPin.TopRight);
 
 			// Set up commands
-			ChangeSpotColour = Command.Create(this, () =>
-			{
-				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.SpotColour };
-				if (dlg.ShowDialog() == true)
-					Measurement.SpotColour = dlg.Colour;
-			});
+			SetSpotColour = Command.Create(this, SetSpotColourInternal);
 			ReferenceFrames = new ListCollectionView(Enum<Measurement.EReferenceFrame>.ValuesArray);
 
 			DataContext = this;
@@ -104,25 +99,42 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(Measurement.Flags):
+						case nameof(Measurement.Flags):
 						{
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapToVerts)));
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapToEdges)));
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapToFaces)));
 							break;
 						}
-					case nameof(Measurement.ActiveHit):
+						case nameof(Measurement.Hit0):
+						{
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BegPoint)));
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BegPointDetails)));
+							break;
+						}
+						case nameof(Measurement.Hit1):
+						{
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EndPoint)));
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EndPointDetails)));
+							break;
+						}
+						case nameof(Measurement.ActiveHit):
 						{
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StartActive)));
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EndActive)));
 							break;
 						}
-					case nameof(Measurement.SpotColour):
+						case nameof(Measurement.BegSpotColour):
 						{
-							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SpotColourBrush)));
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BegSpotColourBrush)));
 							break;
 						}
-					case nameof(Measurement.SnapDistance):
+						case nameof(Measurement.EndSpotColour):
+						{
+							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EndSpotColourBrush)));
+							break;
+						}
+						case nameof(Measurement.SnapDistance):
 						{
 							PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SnapDistance)));
 							break;
@@ -182,11 +194,50 @@ namespace Rylogic.Gui.WPF
 			set { Measurement.ActiveHit = value ? Measurement.Hit1 : null; }
 		}
 
-		/// <summary>Binding for the spot colour</summary>
-		public Brush SpotColourBrush => new SolidColorBrush(Measurement.SpotColour.ToMediaColor());
+		/// <summary>The start and end points</summary>
+		public v3 BegPoint
+		{
+			get => Measurement.BegPoint.xyz;
+			set => Measurement.BegPoint = new v4(value, 1);
+		}
+		public v3 EndPoint
+		{
+			get => Measurement.EndPoint.xyz;
+			set => Measurement.EndPoint = new v4(value, 1);
+		}
 
-		/// <summary>Change the measurement spot colour</summary>
-		public ICommand ChangeSpotColour { get; }
+		/// <summary>Binding for the spot colour</summary>
+		public Brush BegSpotColourBrush => new SolidColorBrush(Measurement.BegSpotColour.ToMediaColor());
+		public Brush EndSpotColourBrush => new SolidColorBrush(Measurement.EndSpotColour.ToMediaColor());
+
+		/// <summary>Information about the start/end points</summary>
+		public string BegPointDetails =>
+			$"Object: {Measurement.Hit0.Obj?.Name ?? "---"}\n" +
+			$"Snap: {Measurement.Hit0.SnapType}";
+		public string EndPointDetails =>
+			$"Object: {Measurement.Hit1.Obj?.Name ?? "---"}\n" +
+			$"Snap: {Measurement.Hit1.SnapType}";
+
+		/// <summary>Change the spot colour for the start or end point</summary>
+		public ICommand SetSpotColour { get; } = null!;
+		private void SetSpotColourInternal(object? x)
+		{
+			if (!(x is string spot))
+				return;
+
+			if (spot == "beg")
+			{
+				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.BegSpotColour };
+				if (dlg.ShowDialog() == true)
+					Measurement.BegSpotColour = dlg.Colour;
+			}
+			if (spot == "end")
+			{
+				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.EndSpotColour };
+				if (dlg.ShowDialog() == true)
+					Measurement.EndSpotColour = dlg.Colour;
+			}
+		}
 
 		/// <summary>The available measurement reference frames</summary>
 		public ICollectionView ReferenceFrames
@@ -237,11 +288,5 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-
-		/// <summary>Change the spot colour</summary>
-		private void HandleEditSpotColour(object sender, MouseButtonEventArgs e)
-		{
-			ChangeSpotColour.Execute(null);
-		}
 	}
 }

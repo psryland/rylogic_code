@@ -23,8 +23,7 @@ namespace pr::maths
 	template <> constexpr double tiny<double> = tinyd;
 	template <> constexpr float tiny<float> = tinyf;
 
-	constexpr double const phi = double(1.618033988749894848204586834);    // "Golden Ratio"
-	constexpr double const tau = double(6.283185307179586476925286766559);    // circle constant
+	constexpr double const tau = double(6.283185307179586476925286766559); // circle constant
 	constexpr double const inv_tau = 1.0 / tau;
 	constexpr double const tau_by_2 = tau / 2.0;
 	constexpr double const tau_by_4 = tau / 4.0;
@@ -34,11 +33,13 @@ namespace pr::maths
 	constexpr double const E60_by_tau = 360.0 / tau;
 	constexpr double const root2 = double(1.4142135623730950488);
 	constexpr double const root3 = double(1.7320508075688772935274463415059);
+	constexpr double const root5 = double(2.23606797749978969641);
 	constexpr double const root3_by_2 = root3 / 2.0; // 0.86602540378443864676
 	constexpr double const inv_root2 = 1.0 / root2;
 	constexpr double const inv_root3 = 1.0 / root3;
+	constexpr double const golden_ratio = double(1.618033988749894848204586834);    // "Golden Ratio" = (1 + root5) / 2
+	constexpr double const golden_angle = double(2.39996322972865332223);  // (rad) "Golden Angle" = pi*(3-root(5)) = the angle the divides the circumference of a circle with ratio equal to the golden ratio
 
-	constexpr float const phif = float(1.618033988749894848204586834);    // "Golden Ratio"
 	constexpr float const tauf = float(6.283185307179586476925286766559);    // circle constant
 	constexpr float const inv_tauf = 1.0f / tauf;
 	constexpr float const tau_by_2f = tauf / 2.0f;
@@ -49,9 +50,12 @@ namespace pr::maths
 	constexpr float const E60_by_tauf = 360.0f / tauf;
 	constexpr float const root2f = float(1.4142135623730950488);
 	constexpr float const root3f = float(1.7320508075688772935274463415059);
+	constexpr float const root5f = float(2.23606797749978969641);
 	constexpr float const root3_by_2f = root3f / 2.0f;
 	constexpr float const inv_root2f = 1.0f / root2f;
 	constexpr float const inv_root3f = 1.0f / root3f;
+	constexpr float const golden_ratiof = float(1.618033988749894848204586834);  // "Golden Ratio"
+	constexpr float const golden_anglef = float(2.39996322972865332223); //(rad) "Golden Angle" = pi*(3-root(5)) = the angle the divides the circumference of a circle with ratio equal to the golden ratio
 
 	constexpr double const cos_30 = root3_by_2;
 	constexpr double const cos_45 = inv_root2;

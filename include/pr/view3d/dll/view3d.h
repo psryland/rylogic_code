@@ -124,6 +124,9 @@ extern "C"
 		// Set if the tint colour contains alpha
 		TintHasAlpha = 1 << 2,
 
+		// Excluded from shadow map render steps
+		ShadowCastExclude = 1 << 3,
+
 		_bitwise_operators_allowed,
 	};
 	enum class EView3DShaderVS :int
@@ -293,6 +296,9 @@ extern "C"
 		// Ignored for hit test ray casts
 		HitTestExclude = 1 << 11,
 
+		// Doesn't cast a shadow
+		ShadowCastExclude = 1 << 12,
+
 		// Bitwise operators supported
 		_bitwise_operators_allowed,
 	};
@@ -455,20 +461,20 @@ extern "C"
 	};
 	struct View3DLight
 	{
-		EView3DLight m_type;
 		View3DV4     m_position;
 		View3DV4     m_direction;
+		EView3DLight m_type;
 		View3DColour m_ambient;
 		View3DColour m_diffuse;
 		View3DColour m_specular;
 		float        m_specular_power;
-		float        m_inner_angle;
-		float        m_outer_angle;
 		float        m_range;
 		float        m_falloff;
+		float        m_inner_angle;
+		float        m_outer_angle;
 		float        m_cast_shadow;
-		BOOL         m_on;
 		BOOL         m_cam_relative;
+		BOOL         m_on;
 	};
 	struct View3DTextureOptions
 	{

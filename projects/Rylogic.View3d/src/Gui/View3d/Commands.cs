@@ -252,13 +252,15 @@ namespace Rylogic.Gui.WPF
 				SavedViewsList.Remove(view);
 		}
 
+		/// <summary>Background colour (as a media brush)</summary>
+		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();
+
 		/// <inheritdoc/>
 		public Colour32 BackgroundColour
 		{
 			get => (Colour32)GetValue(BackgroundColourProperty);
 			set => SetValue(BackgroundColourProperty, value);
 		}
-		public Brush BackgroundColourBrush => BackgroundColour.ToMediaBrush();
 		private void BackgroundColour_Changed(Colour32 new_value)
 		{
 			Window.BackgroundColour = new_value;
@@ -301,6 +303,21 @@ namespace Rylogic.Gui.WPF
 		{
 			Antialiasing = !Antialiasing;
 			Invalidate();
+		}
+
+		/// <inheritdoc/>
+		public double ShadowCastRange
+		{
+			get => Window.LightProperties.CastShadow;
+			set
+			{
+				if (ShadowCastRange == value) return;
+				var light_props = Window.LightProperties;
+				light_props.CastShadow = (float)value;
+				Window.LightProperties = light_props;
+				NotifyPropertyChanged(nameof(ShadowCastRange));
+				Invalidate();
+			}
 		}
 
 		/// <inheritdoc/>

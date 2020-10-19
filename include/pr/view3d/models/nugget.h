@@ -63,6 +63,9 @@ namespace pr::rdr
 		// Set if the tint colour contains alpha
 		TintHasAlpha = 1 << 2,
 
+		// Excluded from shadow map render steps
+		ShadowCastExclude = 1 << 3,
+
 		_bitwise_operators_allowed,
 	};
 

@@ -130,7 +130,10 @@ namespace pr::rdr
 		// Add a drawlist element for each nugget in the instance's model
 		drawlist.reserve(drawlist.size() + nuggets.size());
 		for (auto& nug : nuggets)
+		{
+			if (AllSet(nug.m_flags, ENuggetFlag::ShadowCastExclude)) continue;
 			nug.AddToDrawlist(drawlist, inst, nullptr, Id);
+		}
 
 		m_sort_needed = true;
 	}
@@ -138,6 +141,8 @@ namespace pr::rdr
 	// Update the provided shader set appropriate for this render step
 	void ShadowMap::ConfigShaders(ShaderSet1& ss, ETopo topo) const
 	{
+		ss.m_vs = m_vs.get();
+		ss.m_ps = m_ps.get();
 		switch (topo)
 		{
 		case ETopo::PointList:
@@ -150,8 +155,13 @@ namespace pr::rdr
 		case ETopo::TriStrip:
 			ss.m_gs = m_gs_face.get();
 			break;
+		case ETopo::LineListAdj:
+		case ETopo::LineStripAdj:
+		case ETopo::TriListAdj:
+			//todo
+			break;
 		default:
-			throw std::exception("Unsupported primitive type");
+			throw std::runtime_error("Unsupported primitive type");
 		}
 	}
 

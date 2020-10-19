@@ -24,7 +24,6 @@ namespace Rylogic.Maths
 		public const double TinySqD = 1.0000000000000003e-24;
 		public const double TinySqrtD = 1.0000000000000002e-06;
 
-		public const double Phi = 1.618033988749894848204586834; // "Golden Ratio"
 		public const double Tau = 6.283185307179586476925286766559; // circle constant
 		public const double InvTau = 1.0 / Tau;
 		public const double TauBy2 = Tau / 2.0;
@@ -41,10 +40,13 @@ namespace Rylogic.Maths
 		public const double _360ByTau = 360.0 / Tau;
 		public const double Root2 = 1.4142135623730950488016887242097;
 		public const double Root3 = 1.7320508075688772935274463415059;
+		public const double Root5 = 2.236067977499789696409173668731276;
 		public const double InvRoot2 = 1.0 / 1.4142135623730950488016887242097;
 		public const double InvRoot3 = 1.0 / 1.7320508075688772935274463415059;
+		public const double GoldenRatio = 1.618033988749894848204586834; // "Golden Ratio" = (1 + sqrt(5))/2
+		public const double GoldenAngle = 2.39996322972865332223; // (rad) "Golden Angle" = pi*(3-root(5)) = the angle the divides the circumference of a circle with ratio equal to the golden ratio
+		public const double Phi = GoldenRatio;
 
-		public const float PhiF = (float)Phi;
 		public const float TauF = (float)Tau;
 		public const float InvTauF = (float)InvTau;
 		public const float TauBy2F = (float)TauBy2;
@@ -61,8 +63,12 @@ namespace Rylogic.Maths
 		public const float _360ByTauF = (float)_360ByTau;
 		public const float Root2F = (float)Root2;
 		public const float Root3F = (float)Root3;
+		public const float Root5F = (float)Root5;
 		public const float InvRoot2F = (float)InvRoot2;
 		public const float InvRoot3F = (float)InvRoot3;
+		public const float GoldenRatioF = (float)GoldenRatio;
+		public const float GoldenAngleF = (float)GoldenAngle;
+		public const float PhiF = GoldenRatioF;
 
 		public static bool IsFinite(float x) { return !float.IsInfinity(x) && !float.IsNaN(x); }
 		public static bool IsFinite(double x) { return !double.IsInfinity(x) && !double.IsNaN(x); }

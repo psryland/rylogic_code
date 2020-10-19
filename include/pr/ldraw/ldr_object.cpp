@@ -1509,11 +1509,11 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Param:
+				case EKeyword::Param:
 				{
 					float t[2];
 					p.m_reader.RealS(t, 2);
@@ -1529,17 +1529,17 @@ namespace pr::ldr
 					p1 = pt + t[1] * dir;
 					return true;
 				}
-			case EKeyword::Smooth:
+				case EKeyword::Smooth:
 				{
 					m_smooth = true;
 					return true;
 				}
-			case EKeyword::Dashed:
+				case EKeyword::Dashed:
 				{
 					p.m_reader.Vector2S(m_dashed);
 					return true;
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
@@ -1556,7 +1556,7 @@ namespace pr::ldr
 			if (!m_per_vert_colour)
 				m_per_vert_colour = p.m_reader.IsMatch(8, std::wregex(L"[0-9a-fA-F]{8}"));
 
-			if (m_per_vert_colour)
+			if (*m_per_vert_colour)
 			{
 				pr::Colour32 col;
 				p.m_reader.Int(col.argb, 16);
@@ -4892,7 +4892,11 @@ namespace pr::ldr
 
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::SceneBoundsExclude, true);
+					obj->m_flags = SetBits(obj->m_flags,
+						ELdrFlags::BBoxExclude |
+						ELdrFlags::SceneBoundsExclude |
+						ELdrFlags::HitTestExclude |
+						ELdrFlags::ShadowCastExclude, true);
 
 					// Screen space uses a standard normalised orthographic projection
 					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -5643,6 +5647,14 @@ namespace pr::ldr
 			if (o->m_model != nullptr)
 			{
 				ShowNormals(o->m_model.get(), AllSet(o->m_flags, ELdrFlags::Normals));
+			}
+
+			// Shadow cast
+			if (o->m_model != nullptr)
+			{
+				auto vampire = AllSet(o->m_flags, ELdrFlags::ShadowCastExclude);
+				for (auto& nug : o->m_model->m_nuggets)
+					SetBits(nug.m_flags, ENuggetFlag::ShadowCastExclude, vampire);
 			}
 
 			return true;

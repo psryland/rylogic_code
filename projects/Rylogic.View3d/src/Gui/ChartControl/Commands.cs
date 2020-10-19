@@ -418,6 +418,18 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc/>
+		public double ShadowCastRange
+		{
+			get => Options.ShadowCastRange;
+			set
+			{
+				if (ShadowCastRange == value) return;
+				Options.ShadowCastRange = value;
+				NotifyPropertyChanged(nameof(ShadowCastRange));
+			}
+		}
+
+		/// <inheritdoc/>
 		public EAlignDirection AlignDirection
 		{
 			get => Scene.AlignDirection;

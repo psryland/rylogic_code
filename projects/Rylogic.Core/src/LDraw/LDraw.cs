@@ -486,6 +486,19 @@ namespace Rylogic.LDraw
 			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
+		public void Triangle()
+		{
+			Triangle(string.Empty, Colour32.White, v4.Origin, v4.XAxis.w1, v4.YAxis.w1);
+		}
+		public void Triangle(string name, Colour32 colour, v4 a, v4 b, v4 c, m4x4? o2w = null)
+		{
+			Append("*Triangle ", name, " ", colour, " {", a, " ", b, " ", c, " ", Ldr.Transform(o2w), "}");
+		}
+		public void Triangle(string name, Colour32 colour, IEnumerable<v4> pts, m4x4? o2w = null)
+		{
+			Append("*Triangle ", name, " ", colour, " {", pts, Ldr.Transform(o2w), "}");
+		}
+
 		public void Quad()
 		{
 			Quad(string.Empty, Color.White);

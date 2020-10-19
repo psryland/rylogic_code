@@ -87,6 +87,9 @@ namespace pr::rdr
 			throw std::runtime_error(Fmt("RenderStep %s is not part of this scene", Enum<ERenderStep>::ToStringA(TRStep::Id)));
 		}
 
+		// Enable/Disable shadow casting
+		void ShadowCasting(bool enable, iv2 shadow_map_size);
+
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame
 		// and rebuild them from scratch (useful for scenes that change frequently).

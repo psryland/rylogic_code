@@ -71,14 +71,17 @@ namespace Rylogic.Gfx
 		{
 			None = 0,
 
-			// Exclude this nugget when rendering a model
+			/// <summary>Exclude this nugget when rendering a model</summary>
 			Hidden = 1 << 0,
 
-			// Set if the geometry data for the nugget contains alpha colours
+			/// <summary>Set if the geometry data for the nugget contains alpha colours</summary>
 			GeometryHasAlpha = 1 << 1,
 
-			// Set if the tint colour contains alpha
+			/// <summary>Set if the tint colour contains alpha</summary>
 			TintHasAlpha = 1 << 2,
+
+			/// <summary>Excluded from shadow map render steps</summary>
+			ShadowCastExclude = 1 << 3,
 		}
 		public enum EShaderVS
 		{
@@ -419,32 +422,35 @@ namespace Rylogic.Gfx
 		{
 			None = 0,
 
-			// The object is hidden
+			/// <summary>The object is hidden</summary>
 			Hidden = 1 << 0,
 
-			// The object is filled in wireframe mode
+			/// <summary>The object is filled in wireframe mode</summary>
 			Wireframe = 1 << 1,
 
-			// Render the object without testing against the depth buffer
+			/// <summary>Render the object without testing against the depth buffer</summary>
 			NoZTest = 1 << 2,
 
-			// Render the object without effecting the depth buffer
+			/// <summary>Render the object without effecting the depth buffer</summary>
 			NoZWrite = 1 << 3,
 
-			// The object has normals shown
+			/// <summary>The object has normals shown</summary>
 			Normals = 1 << 4,
 
-			// Set when an object is selected. The meaning of 'selected' is up to the application
+			/// <summary>Set when an object is selected. The meaning of 'selected' is up to the application</summary>
 			Selected = 1 << 8,
 
-			// Doesn't contribute to the bounding box on an object.
+			/// <summary>Doesn't contribute to the bounding box on an object.</summary>
 			BBoxExclude = 1 << 9,
 
-			// Should not be included when determining the bounds of a scene.
+			/// <summary>Should not be included when determining the bounds of a scene.</summary>
 			SceneBoundsExclude = 1 << 10,
 
-			// Ignored for hit test ray casts
+			/// <summary>Ignored for hit test ray casts</summary>
 			HitTestExclude = 1 << 11,
+
+			/// <summary>Doesn't cast a shadow</summary>
+			ShadowCastExclude = 1 << 12,
 		}
 		public enum ESortGroup :int
 		{
@@ -832,40 +838,67 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct LightInfo
 		{
-			public ELight m_type;
-			public v4 m_position;
-			public v4 m_direction;
-			public Colour32 m_ambient;
-			public Colour32 m_diffuse;
-			public Colour32 m_specular;
-			public float m_specular_power;
-			public float m_inner_angle;
-			public float m_outer_angle;
-			public float m_range;
-			public float m_falloff;
-			public float m_cast_shadow;
-			public bool m_on;
-			public bool m_cam_relative;
+			/// <summary>Position, only valid for point and spot lights</summary>
+			public v4 Position;
+
+			/// <summary>Direction, only valid for directional and spot lights</summary>
+			public v4 Direction;
+
+			/// <summary>Tbe light source type. One of ambient, directional, point, spot</summary>
+			public ELight Type;
+
+			/// <summary>Ambient light colour</summary>
+			public Colour32 AmbientColour;
+
+			/// <summary>Main light colour</summary>
+			public Colour32 DiffuseColour;
+
+			/// <summary>Specular light colour</summary>
+			public Colour32 SpecularColour;
+
+			/// <summary>Specular power (controls specular spot size)</summary>
+			public float SpecularPower;
+
+			/// <summary>Light range</summary>
+			public float Range;
+
+			/// <summary>Intensity falloff per unit distance</summary>
+			public float Falloff;
+
+			/// <summary>Spot light inner angle 100% light (in radians)</summary>
+			public float InnerAngle;
+
+			/// <summary>Spot light outer angle 0% light (in radians)</summary>
+			public float OuterAngle;
+
+			/// <summary>Shadow cast range, 0 for off</summary>
+			public float CastShadow;
+
+			/// <summary>True if the light should move with the camera</summary>
+			public bool CameraRelative;
+
+			/// <summary>True if this light is on</summary>
+			public bool On;
 
 			/// <summary>Default light info</summary>
 			public static LightInfo Default()
 			{
 				return new LightInfo
 				{
-					m_on = true,
-					m_type = ELight.Ambient,
-					m_position = v4.Origin,
-					m_direction = -v4.ZAxis,
-					m_ambient = 0xFF101010,
-					m_diffuse = 0xFF808080,
-					m_specular = 0xFF808080,
-					m_specular_power = 1000f,
-					m_inner_angle = Math_.TauBy4F,
-					m_outer_angle = Math_.TauBy4F,
-					m_range = 1000f,
-					m_falloff = 0f,
-					m_cast_shadow = 0f,
-					m_cam_relative = false,
+					On = true,
+					Type = ELight.Ambient,
+					Position = v4.Origin,
+					Direction = -v4.ZAxis,
+					AmbientColour = 0xFF101010,
+					DiffuseColour = 0xFF808080,
+					SpecularColour = 0xFF808080,
+					SpecularPower = 1000f,
+					InnerAngle = Math_.TauBy4F,
+					OuterAngle = Math_.TauBy4F,
+					Range = 1000f,
+					Falloff = 0f,
+					CastShadow = 0f,
+					CameraRelative = false,
 				};
 			}
 
@@ -873,8 +906,8 @@ namespace Rylogic.Gfx
 			public static LightInfo Ambient(Colour32? ambient = null)
 			{
 				var light = Default();
-				light.m_type = ELight.Ambient;
-				light.m_ambient = ambient ?? light.m_ambient;
+				light.Type = ELight.Ambient;
+				light.AmbientColour = ambient ?? light.AmbientColour;
 				return light;
 			}
 
@@ -882,14 +915,14 @@ namespace Rylogic.Gfx
 			public static LightInfo Directional(v4 direction, Colour32? ambient = null, Colour32? diffuse = null, Colour32? specular = null, float? spec_power = null, float? cast_shadow = null, bool camera_relative = false)
 			{
 				var light = Default();
-				light.m_type = ELight.Directional;
-				light.m_direction = Math_.Normalise(direction);
-				light.m_ambient = ambient ?? light.m_ambient;
-				light.m_diffuse = diffuse ?? light.m_diffuse;
-				light.m_specular = specular ?? light.m_specular;
-				light.m_specular_power = spec_power ?? light.m_specular_power;
-				light.m_cast_shadow = cast_shadow ?? light.m_cast_shadow;
-				light.m_cam_relative = camera_relative;
+				light.Type = ELight.Directional;
+				light.Direction = Math_.Normalise(direction);
+				light.AmbientColour = ambient ?? light.AmbientColour;
+				light.DiffuseColour = diffuse ?? light.DiffuseColour;
+				light.SpecularColour = specular ?? light.SpecularColour;
+				light.SpecularPower = spec_power ?? light.SpecularPower;
+				light.CastShadow = cast_shadow ?? light.CastShadow;
+				light.CameraRelative = camera_relative;
 				return light;
 			}
 
@@ -897,14 +930,14 @@ namespace Rylogic.Gfx
 			public static LightInfo Point(v4 position, Colour32? ambient = null, Colour32? diffuse = null, Colour32? specular = null, float? spec_power = null, float? cast_shadow = null, bool camera_relative = false)
 			{
 				var light = Default();
-				light.m_type = ELight.Point;
-				light.m_position = position;
-				light.m_ambient = ambient ?? light.m_ambient;
-				light.m_diffuse = diffuse ?? light.m_diffuse;
-				light.m_specular = specular ?? light.m_specular;
-				light.m_specular_power = spec_power ?? light.m_specular_power;
-				light.m_cast_shadow = cast_shadow ?? light.m_cast_shadow;
-				light.m_cam_relative = camera_relative;
+				light.Type = ELight.Point;
+				light.Position = position;
+				light.AmbientColour = ambient ?? light.AmbientColour;
+				light.DiffuseColour = diffuse ?? light.DiffuseColour;
+				light.SpecularColour = specular ?? light.SpecularColour;
+				light.SpecularPower = spec_power ?? light.SpecularPower;
+				light.CastShadow = cast_shadow ?? light.CastShadow;
+				light.CameraRelative = camera_relative;
 				return light;
 			}
 		}

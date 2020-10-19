@@ -349,7 +349,7 @@ namespace pr::rdr
 			ss.m_gs = m_gs_face.get();
 			break;
 		default:
-			throw std::exception("Unsupported primitive type");
+			throw std::runtime_error("Unsupported primitive type");
 		}
 	}
 

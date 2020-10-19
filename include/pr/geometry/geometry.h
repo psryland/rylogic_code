@@ -11,6 +11,14 @@
 #include "pr/geometry/closest_point.h"
 #include "pr/geometry/intersect.h"
 
+// There is no equation for the circumference of an ellipse.
+// The best approximation is: (Ramanujan)
+//  pi*(a+b)*(1 + 3h/(10 + sqrt(4-3h)))
+//    where h = (a-b)^2 / (a+b)^2
+// Exact solution is a series:
+//   Cirumference = pi * (a + b) * (1 + h/4 + h^2/64 + h^3/256 + 25*h^4/16384 + ....)
+
+
 //=== Section 5.1.4: =============================================================
 //
 //// Given point p, return point q on (or in) OBB b, closest to p
