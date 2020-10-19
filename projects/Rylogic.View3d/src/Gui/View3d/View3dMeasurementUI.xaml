@@ -4,12 +4,13 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
     xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
     mc:Ignorable="d" 
 	d:DesignHeight="450" d:DesignWidth="258"
-	Width="258"
+	Width="300"
 	Height="400"
-	MinWidth="268"
+	MinWidth="300"
 	MinHeight="200"
 	Title="Measure"
 	WindowStyle="ToolWindow"
@@ -27,60 +28,22 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 
-		<ToggleButton
+		<!-- Measurement frame -->
+		<StackPanel
 			Grid.Row="0"
-			Grid.Column="0"
-			Content="Start Point"
-			Height="40"
-			Margin="8"
-			IsChecked="{Binding StartActive, Mode=TwoWay}"
-			/>
-		<ToggleButton
-			Grid.Row="0"
-			Grid.Column="1"
-			Content="End Point"
-			Height="40"
-			Margin="8"
-			IsChecked="{Binding EndActive, Mode=TwoWay}"
-			/>
-		<StackPanel
-			Grid.Row="1"
-			Grid.Column="0"
-			Orientation="Vertical"
-			Margin="2"
-			>
-			<StackPanel Orientation="Vertical" Margin="2">
-				<TextBlock Text="Snap Distance:"/>
-				<TextBox Text="{Binding SnapDistance, Mode=TwoWay}" Margin="10,0,5,0" KeyUp="UpdateBindingOnEnterPressed"/>
-			</StackPanel>
-			<StackPanel Orientation="Horizontal" Margin="2">
-				<TextBlock Text="Spot Colour:" Margin="0,0,8,0" VerticalAlignment="Top"/>
-				<Rectangle Fill="{Binding SpotColourBrush}" Width="50" Height="18" VerticalAlignment="Top" MouseLeftButtonUp="HandleEditSpotColour"/>
-			</StackPanel>
-		</StackPanel>
-		<StackPanel
-			Grid.Row="1"
-			Grid.Column="1"
-			Orientation="Vertical"
-			Margin="2"
-			>
-			<TextBlock Text="Snap To:"/>
-			<CheckBox Content="Vertices" IsChecked="{Binding SnapToVerts}" Margin="10,0,0,0"/>
-			<CheckBox Content="Edges" IsChecked="{Binding SnapToEdges}" Margin="10,0,0,0"/>
-			<CheckBox Content="Faces" IsChecked="{Binding SnapToFaces}" Margin="10,0,0,0"/>
-		</StackPanel>
-		<StackPanel
-			Grid.Row="2"
 			Grid.Column="0"
 			Grid.ColumnSpan="2"
 			Orientation="Horizontal"
-			HorizontalAlignment="Left"
-			Margin="2"
+			HorizontalAlignment="Center"
+			Margin="3"
 			>
-			<TextBlock Text="Measurement Frame:" VerticalAlignment="Center"/>
+			<TextBlock
+				Text="Measurement Frame:"
+				VerticalAlignment="Center"
+				/>
 			<ComboBox
 				ItemsSource="{Binding ReferenceFrames}"
-				Margin="10,2,20,2"
+				Margin="10,2,10,2"
 				>
 				<ComboBox.ItemTemplate>
 					<DataTemplate>
@@ -89,6 +52,121 @@
 				</ComboBox.ItemTemplate>
 			</ComboBox>
 		</StackPanel>
+		
+		<!-- Start Point -->
+		<StackPanel
+			Grid.Row="1"
+			Grid.Column="0"
+			Orientation="Vertical"
+			Margin="12,0,3,0"
+			>
+			<ToggleButton
+				Content="Start Point"
+				IsChecked="{Binding StartActive, Mode=TwoWay}"
+				Height="40"
+				/>
+			<DockPanel
+				Margin="0,3,0,3"
+				>
+				<Button
+					DockPanel.Dock="Right"
+					Background="{Binding BegSpotColourBrush}"
+					Command="{Binding SetSpotColour}"
+					CommandParameter="beg"
+					BorderThickness="0"
+					MinWidth="18"
+					Margin="1,0,0,0"
+					/>
+				<TextBox
+					Text="{Binding BegPoint, Converter={conv:VecToString}}"
+					Margin="0,0,1,0"
+					/>
+			</DockPanel>
+			<TextBlock
+				Text="{Binding BegPointDetails}"
+				/>
+		</StackPanel>
+
+		<!-- End Point -->
+		<StackPanel
+			Grid.Row="1"
+			Grid.Column="1"
+			Orientation="Vertical"
+			Margin="3,0,12,0"
+			>
+			<ToggleButton
+				Content="End Point"
+				IsChecked="{Binding EndActive, Mode=TwoWay}"
+				Height="40"
+				/>
+			<DockPanel
+				Margin="0,3,0,3"
+				>
+				<Button
+					DockPanel.Dock="Right"
+					Background="{Binding EndSpotColourBrush}"
+					Command="{Binding SetSpotColour}"
+					CommandParameter="end"
+					BorderThickness="0"
+					MinWidth="18"
+					Margin="1,0,0,0"
+					/>
+				<TextBox
+					Text="{Binding EndPoint, Converter={conv:VecToString}}"
+					Margin="0,0,1,0"
+					/>
+			</DockPanel>
+			<TextBlock
+				Text="{Binding EndPointDetails}"
+				/>
+		</StackPanel>
+
+		<!-- Options -->
+		<StackPanel
+			Grid.Row="2"
+			Grid.Column="0"
+			Grid.ColumnSpan="2"
+			Orientation="Vertical"
+			Margin="2"
+			>
+			<!-- Snap Distance -->
+			<StackPanel
+				Orientation="Horizontal"
+				Margin="8"
+				>
+				<TextBlock
+					Text="Snap Distance: "
+					/>
+				<TextBox
+					Text="{Binding SnapDistance, Mode=TwoWay}"
+					KeyUp="UpdateBindingOnEnterPressed"
+					MinWidth="50"
+					/>
+				<gui:SliderFunction
+					Minimum="-5"
+					Maximum="5"
+					FunctionExpr="pow(10, x)"
+					InverseExpr="x > 0 ? log10(x) : 1"
+					ValueFn="{Binding SnapDistance}"
+					MinWidth="100"
+					/>
+			</StackPanel>
+			
+			<!-- SnapTo -->
+			<StackPanel
+				Grid.Row="1"
+				Grid.Column="1"
+				Orientation="Horizontal"
+				Margin="2"
+				>
+				<TextBlock Text="Snap To:"/>
+				<CheckBox Content="Vertices" IsChecked="{Binding SnapToVerts}" Margin="10,0,0,0"/>
+				<CheckBox Content="Edges" IsChecked="{Binding SnapToEdges}" Margin="10,0,0,0"/>
+				<CheckBox Content="Faces" IsChecked="{Binding SnapToFaces}" Margin="10,0,0,0"/>
+			</StackPanel>
+		</StackPanel>
+
+		<!-- Measurement Data -->
 		<DataGrid
 			Grid.Row="3"
 			Grid.Column="0"

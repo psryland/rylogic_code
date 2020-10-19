@@ -192,6 +192,7 @@
 #include "pr\maths\conversion.h"
 #include "pr\maths\convex_hull.h"
 #include "pr\maths\fft.h"
+#include "pr\maths\fibonacci_sphere.h"
 #include "pr\maths\float_compare.h"
 #include "pr\maths\forward.h"
 #include "pr\maths\frustum.h"

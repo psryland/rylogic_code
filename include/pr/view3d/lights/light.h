@@ -20,9 +20,9 @@ namespace pr::rdr
 		float    m_falloff;        // Intensity falloff per unit distance
 		float    m_inner_angle;    // Spot light inner angle 100% light (in radians)
 		float    m_outer_angle;    // Spot light outer angle 0% light (in radians)
-		float    m_cast_shadow;    // Shadow cast range, 0 for off
-		bool     m_on;             // True if this light is on
+		float    m_cast_shadow;    // Shadow cast range as a fraction of the viewport depth, 0 for off
 		bool     m_cam_relative;   // True if the light should move with the camera
+		bool     m_on;             // True if this light is on
 
 		Light();
 		bool IsValid() const;

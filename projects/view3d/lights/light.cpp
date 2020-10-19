@@ -20,8 +20,8 @@ namespace pr::rdr
 		,m_inner_angle(maths::tau_by_4f)
 		,m_outer_angle(maths::tau_by_4f)
 		,m_cast_shadow(0.0f)
-		,m_on(true)
 		,m_cam_relative(false)
+		,m_on(true)
 	{}
 
 	// Return true if this light is in a valid state

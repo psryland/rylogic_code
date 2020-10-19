@@ -1019,6 +1019,16 @@ namespace pr
 	}
 	
 	// Return the normalised fraction that 'x' is in the range ['min', 'max']
+	inline float Frac(float min, float x, float max)
+	{
+		assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
+		return (x - min) / (max - min);
+	}
+	inline double Frac(double min, double x, double max)
+	{
+		assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);
+		return (x - min) / (max - min);
+	}
 	template <typename T, typename = maths::enable_if_vec_cp<T>> inline float Frac(T min, T x, T max)
 	{
 		assert("Positive definite interval required for 'Frac'" && Abs(max - min) > 0);

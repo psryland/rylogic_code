@@ -243,6 +243,30 @@
 		DataContext="{Binding View3dCMenuContext}"
 		Name="View3dMenuItem_Antialiasing"
 		/>
+	<MenuItem x:Key="View3dMenuItem_ShadowCastRange" x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding View3dCMenuContext}"
+		Name="View3dMenuItem_ShadowCastRange"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Shadow Range: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<gui:SliderFunction
+					Minimum="0"
+					Maximum="1"
+					FunctionExpr="x"
+					InverseExpr="x > 0 ? x : 0"
+					ValueFn="{Binding ShadowCastRange}"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_FillMode" x:Shared="False"
 		StaysOpenOnClick="False"
 		DataContext="{Binding View3dCMenuContext}"
@@ -457,6 +481,7 @@
 		<MenuItem Header="Rendering">
 			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
 			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+			<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_Animation"/>
@@ -624,6 +649,7 @@
 		<MenuItem Header="Rendering">
 			<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
 			<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+			<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
 		</MenuItem>

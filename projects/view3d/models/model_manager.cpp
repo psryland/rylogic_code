@@ -141,6 +141,7 @@ namespace pr::rdr
 			m_basis = CreateModel(s);
 
 			NuggetProps n(ETopo::LineList, EGeom::Vert|EGeom::Colr);
+			n.m_flags |= ENuggetFlag::ShadowCastExclude;
 			m_basis->CreateNugget(n);
 		}
 		{// Unit quad in Z = 0 plane
@@ -187,6 +188,7 @@ namespace pr::rdr
 			m_bbox_model = CreateModel(s);
 
 			NuggetProps n(ETopo::LineList, EGeom::Vert|EGeom::Colr);
+			n.m_flags |= ENuggetFlag::ShadowCastExclude;
 			m_bbox_model->CreateNugget(n);
 		}
 		{// Selection box
@@ -252,6 +254,7 @@ namespace pr::rdr
 			m_selection_box = CreateModel(s);
 
 			NuggetProps n(ETopo::LineList, EGeom::Vert);
+			n.m_flags |= ENuggetFlag::ShadowCastExclude;
 			m_selection_box->CreateNugget(n);
 		}
 	}

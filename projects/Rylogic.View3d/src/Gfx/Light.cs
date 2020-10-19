@@ -74,107 +74,107 @@ namespace Rylogic.Gfx
 			/// <summary>Whether the light is active or not</summary>
 			public bool On
 			{
-				get => m_info.m_on;
-				set => SetProp(ref m_info.m_on, value, nameof(On));
+				get => m_info.On;
+				set => SetProp(ref m_info.On, value, nameof(On));
 			}
 
 			/// <summary>The type of light source</summary>
 			public ELight Type
 			{
-				get => m_info.m_type;
-				set => SetProp(ref m_info.m_type, value, nameof(Type));
+				get => m_info.Type;
+				set => SetProp(ref m_info.Type, value, nameof(Type));
 			}
 
 			/// <summary>The position of the light source</summary>
 			public v4 Position
 			{
-				get => m_info.m_position;
-				set => SetProp(ref m_info.m_position, value, nameof(Position));
+				get => m_info.Position;
+				set => SetProp(ref m_info.Position, value, nameof(Position));
 			}
 
 			/// <summary>The direction of the light source</summary>
 			public v4 Direction
 			{
-				get => m_info.m_direction;
-				set => SetProp(ref m_info.m_direction, Math_.Normalise(value, -v4.ZAxis), nameof(Direction));
+				get => m_info.Direction;
+				set => SetProp(ref m_info.Direction, Math_.Normalise(value, -v4.ZAxis), nameof(Direction));
 			}
 
 			/// <summary>The colour of the ambient component of the light</summary>
 			public Colour32 Ambient
 			{
-				get => m_info.m_ambient;
-				set => SetProp(ref m_info.m_ambient, value, nameof(Ambient));
+				get => m_info.AmbientColour;
+				set => SetProp(ref m_info.AmbientColour, value, nameof(Ambient));
 			}
 
 			/// <summary>The colour of the diffuse component of the light</summary>
 			public Colour32 Diffuse
 			{
-				get => m_info.m_diffuse;
-				set => SetProp(ref m_info.m_diffuse, value, nameof(Diffuse));
+				get => m_info.DiffuseColour;
+				set => SetProp(ref m_info.DiffuseColour, value, nameof(Diffuse));
 			}
 
 			/// <summary>The colour of the specular component of the light</summary>
 			public Colour32 Specular
 			{
-				get => m_info.m_specular;
-				set => SetProp(ref m_info.m_specular, value, nameof(Specular));
+				get => m_info.SpecularColour;
+				set => SetProp(ref m_info.SpecularColour, value, nameof(Specular));
 			}
 
 			/// <summary>The specular power</summary>
 			public double SpecularPower
 			{
-				get => m_info.m_specular_power;
-				set => SetProp(ref m_info.m_specular_power, (float)value, nameof(SpecularPower));
+				get => m_info.SpecularPower;
+				set => SetProp(ref m_info.SpecularPower, (float)value, nameof(SpecularPower));
 			}
 
 			/// <summary>The inner spot light cone angle (in degrees)</summary>
 			public double InnerAngle
 			{
-				get => Math_.RadiansToDegrees(m_info.m_inner_angle);
+				get => Math_.RadiansToDegrees(m_info.InnerAngle);
 				set
 				{
 					var angle = Math_.DegreesToRadians(Math_.Clamp(value, 0, 180));
-					SetProp(ref m_info.m_inner_angle, (float)angle, nameof(InnerAngle));
+					SetProp(ref m_info.InnerAngle, (float)angle, nameof(InnerAngle));
 				}
 			}
 
 			/// <summary>The outer spot light cone angle (in degrees)</summary>
 			public double OuterAngle
 			{
-				get => Math_.RadiansToDegrees(m_info.m_outer_angle);
+				get => Math_.RadiansToDegrees(m_info.OuterAngle);
 				set
 				{
 					var angle = Math_.DegreesToRadians(Math_.Clamp(value, 0, 180));
-					SetProp(ref m_info.m_outer_angle, (float)angle, nameof(OuterAngle));
+					SetProp(ref m_info.OuterAngle, (float)angle, nameof(OuterAngle));
 				}
 			}
 
 			/// <summary>The range of the light</summary>
 			public double Range
 			{
-				get => m_info.m_range;
-				set => SetProp(ref m_info.m_range, (float)value, nameof(Range));
+				get => m_info.Range;
+				set => SetProp(ref m_info.Range, (float)value, nameof(Range));
 			}
 
 			/// <summary>The attenuation of the light with distance</summary>
 			public double Falloff
 			{
-				get => m_info.m_falloff;
-				set => SetProp(ref m_info.m_falloff, (float)value, nameof(Falloff));
+				get => m_info.Falloff;
+				set => SetProp(ref m_info.Falloff, (float)value, nameof(Falloff));
 			}
 
 			/// <summary>The maximum distance from the light source in which objects cast shadows</summary>
 			public double CastShadow
 			{
-				get => m_info.m_cast_shadow;
-				set => SetProp(ref m_info.m_cast_shadow, (float)value, nameof(CastShadow));
+				get => m_info.CastShadow;
+				set => SetProp(ref m_info.CastShadow, (float)value, nameof(CastShadow));
 			}
 
 			/// <summary>Whether the light moves with the camera or not</summary>
 			public bool CameraRelative
 			{
-				get => m_info.m_cam_relative;
-				set => SetProp(ref m_info.m_cam_relative, value, nameof(CameraRelative));
+				get => m_info.CameraRelative;
+				set => SetProp(ref m_info.CameraRelative, value, nameof(CameraRelative));
 			}
 
 			/// <summary>Notify property value changed</summary>

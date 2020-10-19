@@ -30,7 +30,8 @@ namespace Rylogic.Gfx
 			ReferenceFrame = EReferenceFrame.WorldSpace;
 			Flags = View3d.EHitTestFlags.Verts | View3d.EHitTestFlags.Edges | View3d.EHitTestFlags.Faces;
 			SnapDistance = 0.1;
-			SpotColour = Colour32.Aqua;
+			BegSpotColour = Colour32.Aqua;
+			EndSpotColour = Colour32.Salmon;
 			ContextIds = new Guid[1] { Guid.NewGuid() };
 			IncludeCount = 0;
 			ExcludeCount = 1;
@@ -94,7 +95,7 @@ namespace Rylogic.Gfx
 					{
 						if (Hit0.IsValid)
 						{
-							GfxHotSpot0.Colour = SpotColour;
+							GfxHotSpot0.Colour = BegSpotColour;
 							GfxHotSpot0.O2P = m4x4.Translation(Hit0.PointWS);
 							Window.AddObject(GfxHotSpot0);
 						}
@@ -107,7 +108,7 @@ namespace Rylogic.Gfx
 					{
 						if (Hit1.IsValid)
 						{
-							GfxHotSpot1.Colour = SpotColour;
+							GfxHotSpot1.Colour = EndSpotColour;
 							GfxHotSpot1.O2P = m4x4.Translation(Hit1.PointWS);
 							Window.AddObject(GfxHotSpot1);
 						}
@@ -146,19 +147,33 @@ namespace Rylogic.Gfx
 			}
 		}
 
-		/// <summary>The colour of the hot spots</summary>
-		public Colour32 SpotColour
+		/// <summary>The colour of the starting hot spot</summary>
+		public Colour32 BegSpotColour
 		{
-			get => m_spot_colour;
+			get => m_beg_spot_colour;
 			set
 			{
-				if (m_spot_colour == value) return;
-				m_spot_colour = value;
+				if (BegSpotColour == value) return;
+				m_beg_spot_colour = value;
 				Window?.Invalidate();
-				NotifyPropertyChanged(nameof(SpotColour));
+				NotifyPropertyChanged(nameof(BegSpotColour));
 			}
 		}
-		private Colour32 m_spot_colour;
+		private Colour32 m_beg_spot_colour;
+
+		/// <summary>The colour of the ending hot spot</summary>
+		public Colour32 EndSpotColour
+		{
+			get => m_end_spot_colour;
+			set
+			{
+				if (EndSpotColour == value) return;
+				m_end_spot_colour = value;
+				Window?.Invalidate();
+				NotifyPropertyChanged(nameof(EndSpotColour));
+			}
+		}
+		private Colour32 m_end_spot_colour;
 		
 		/// <summary>The snap distance</summary>
 		public double SnapDistance
@@ -203,6 +218,30 @@ namespace Rylogic.Gfx
 			}
 		}
 		private EReferenceFrame m_reference_frame;
+
+		/// <summary>The starting point in reference space</summary>
+		public v4 BegPoint
+		{
+			get => Math_.InvertFast(RefSpaceToWorld) * Hit0.PointWS;
+			set
+			{
+				Hit0.PointWS = RefSpaceToWorld * value;
+				Hit0.SnapType = View3d.ESnapType.NoSnap;
+				Hit0.Obj = null;
+				NotifyPropertyChanged(nameof(Hit0));
+			}
+		}
+		public v4 EndPoint
+		{
+			get => Math_.InvertFast(RefSpaceToWorld) * Hit1.PointWS;
+			set
+			{
+				Hit1.PointWS = RefSpaceToWorld * value;
+				Hit1.SnapType = View3d.ESnapType.NoSnap;
+				Hit1.Obj = null;
+				NotifyPropertyChanged(nameof(Hit1));
+			}
+		}
 
 		/// <summary>The start point to measure from</summary>
 		public Hit Hit0
@@ -291,6 +330,11 @@ namespace Rylogic.Gfx
 			ActiveHit.PointWS = result.m_ws_intercept;
 			ActiveHit.SnapType = result.m_snap_type;
 			ActiveHit.Obj = result.HitObject;
+
+			if (ActiveHit == Hit0)
+				NotifyPropertyChanged(nameof(Hit0));
+			if (ActiveHit == Hit1)
+				NotifyPropertyChanged(nameof(Hit1));
 
 			// Invalidate
 			UpdateResults();
@@ -439,10 +483,7 @@ namespace Rylogic.Gfx
 
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>The measurement results</summary>
 		public BindingDict<EQuantity, Result> Results { get; }
@@ -470,10 +511,6 @@ namespace Rylogic.Gfx
 				foreach (var q in Enum<EQuantity>.Values)
 					Results[q] = new Result(q, "---");
 			}
-
-			// Update the hit object if known
-			Results[EQuantity.Instance0] = new Result(EQuantity.Instance0, Hit0.IsValid ? Hit0.Obj!.Name : "---");
-			Results[EQuantity.Instance1] = new Result(EQuantity.Instance1, Hit1.IsValid ? Hit1.Obj!.Name : "---");
 		}
 
 		/// <summary>The end point of a measurement</summary>
@@ -528,8 +565,6 @@ namespace Rylogic.Gfx
 			[Desc("ATan(Y/X)")] AngleXY,
 			[Desc("ATan(Z/X)")] AngleXZ,
 			[Desc("ATan(Z/Y)")] AngleYZ,
-			[Desc("Object 1")] Instance0,
-			[Desc("Object 2")] Instance1,
 		}
 
 		/// <summary>Spaces that measurements can be made in</summary>

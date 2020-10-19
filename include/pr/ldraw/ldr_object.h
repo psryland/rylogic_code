@@ -271,6 +271,9 @@ namespace pr::ldr
 		// Ignored for hit test ray casts
 		HitTestExclude = 1 << 11,
 
+		// Doesn't cast a shadow
+		ShadowCastExclude = 1 << 12,
+
 		// Bitwise operators
 		_bitwise_operators_allowed,
 	};

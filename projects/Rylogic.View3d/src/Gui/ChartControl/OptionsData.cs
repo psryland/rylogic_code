@@ -28,6 +28,7 @@ namespace Rylogic.Gui.WPF
 				OriginPointVisible = false;
 				ShowAxes = true;
 				Antialiasing = true;
+				ShadowCastRange = 0.0;
 				FillMode = View3d.EFillMode.Solid;
 				CullMode = View3d.ECullMode.Back;
 				Orthographic = false;
@@ -143,6 +144,13 @@ namespace Rylogic.Gui.WPF
 			{
 				get => get<bool>(nameof(Antialiasing));
 				set => set(nameof(Antialiasing), value);
+			}
+
+			/// <summary>How far to cast shadows. 0 = off</summary>
+			public double ShadowCastRange
+			{
+				get => get<double>(nameof(ShadowCastRange));
+				set => set(nameof(ShadowCastRange), value);
 			}
 
 			/// <summary>Fill mode, solid, wire, or both</summary>

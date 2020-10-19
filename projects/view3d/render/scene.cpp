@@ -121,8 +121,8 @@ namespace pr::rdr
 			if (rs == nullptr)
 			{
 				// Add the ray cast step first so that 'CopyResource' can happen while we render the rest of the scene
-				std::unique_ptr<RayCastStep> step(new RayCastStep(*this, true));
-				auto iter = m_render_steps.insert(std::begin(m_render_steps), std::move(step));
+				RenderStepPtr step(new RayCastStep(*this, true));
+				auto iter = m_render_steps.insert(begin(m_render_steps), std::move(step));
 				rs = static_cast<RayCastStep*>(iter->get());
 			}
 
@@ -164,6 +164,30 @@ namespace pr::rdr
 		auto rs = FindRStep(id);
 		if (rs) return *rs;
 		throw std::runtime_error(Fmt("RenderStep %s is not part of this scene", Enum<ERenderStep>::ToStringA(id)));
+	}
+
+	// Enable/Disable shadow casting
+	void Scene::ShadowCasting(bool enable, iv2 shadow_map_size)
+	{
+		if (enable)
+		{
+			// Ensure there is a shadow map render step
+			auto shadow_map_step = FindRStep(ERenderStep::ShadowMap);
+			if (shadow_map_step == nullptr)
+			{
+				RenderStepPtr step(new ShadowMap(*this, m_global_light, shadow_map_size));
+
+				// Insert the shadow map step before the main render step
+				auto iter = begin(m_render_steps);
+				for (; iter != end(m_render_steps) && (**iter).GetId() != ERenderStep::ForwardRender && (**iter).GetId() != ERenderStep::DSLighting; ++iter) {}
+				m_render_steps.insert(iter, std::move(step));
+			}
+		}
+		else
+		{
+			// Remove the shadow map render step
+			pr::erase_if(m_render_steps, [](auto& rs) { return rs->GetId() == ERenderStep::ShadowMap; });
+		}
 	}
 
 	// Reset the drawlist for each render step

@@ -82,13 +82,21 @@ namespace Rylogic.Gui.WPF
 			get => (Colour32)GetValue(MyPropertyProperty);
 			set => SetValue(MyPropertyProperty, value);
 		}
+		private void PerimeterColour_Changed()
+		{
+			NotifyPropertyChanged(nameof(PerimeterColour));
+		}
 		public static readonly DependencyProperty MyPropertyProperty = Gui_.DPRegister<DirectionPicker>(nameof(PerimeterColour), def:new Colour32(0xFF404040));
 
 		/// <summary>True to display the direction vector in a Textbox below the 'dome'</summary>
 		public bool ShowTextValue
 		{
-			get { return (bool)GetValue(ShowTextValueProperty); }
-			set { SetValue(ShowTextValueProperty, value); }
+			get => (bool)GetValue(ShowTextValueProperty);
+			set => SetValue(ShowTextValueProperty, value);
+		}
+		private void ShowTextValue_Changed()
+		{
+			NotifyPropertyChanged(nameof(ShowTextValue));
 		}
 		public static readonly DependencyProperty ShowTextValueProperty = Gui_.DPRegister<DirectionPicker>(nameof(ShowTextValue));
 

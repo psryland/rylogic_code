@@ -235,6 +235,7 @@
     <ClInclude Include="..\include\pr\maths\conversion.h" />
     <ClInclude Include="..\include\pr\maths\convex_hull.h" />
     <ClInclude Include="..\include\pr\maths\fft.h" />
+    <ClInclude Include="..\include\pr\maths\fibonacci_sphere.h" />
     <ClInclude Include="..\include\pr\maths\forward.h" />
     <ClInclude Include="..\include\pr\maths\half.h" />
     <ClInclude Include="..\include\pr\maths\limits.h" />

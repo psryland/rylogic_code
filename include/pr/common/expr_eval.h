@@ -1790,7 +1790,7 @@ namespace pr::eval
 		case 'p':
 			{
 				if (cmp(expr, "pow")) { expr += 3; return ETok::Pow; }
-				if (cmp(expr, "phi")) { expr += 3; val = maths::phi; return ETok::Value; }
+				if (cmp(expr, "phi")) { expr += 3; val = maths::golden_ratio; return ETok::Value; }
 				if (cmp(expr, "pi")) { expr += 2; val = maths::tau_by_2; return ETok::Value; }
 				break;
 			}
