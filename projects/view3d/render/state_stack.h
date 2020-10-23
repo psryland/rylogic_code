@@ -3,11 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 #include "pr/view3d/render/state_block.h"
 #include "pr/view3d/shaders/shader_set.h"
-#include <d3d11_1.h>
 
 namespace pr::rdr
 {

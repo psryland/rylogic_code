@@ -141,30 +141,29 @@ namespace Rylogic.Gui.WPF
 		public Command SetVisible { get; }
 		private void SetVisibleInternal(object? parameter)
 		{
-			if (parameter is ESetVisibleCmd vis)
+			if (!(parameter is ESetVisibleCmd vis))
+				throw new Exception($"SetVisible parameter '{parameter}' is invalid");
+
+			foreach (var x in Objects)
 			{
-				foreach (var x in Objects)
+				var selected = x.Flags.HasFlag(View3d.EFlags.Selected);
+				var visible = x.Flags.HasFlag(View3d.EFlags.Hidden) == false;
+				var show = vis switch
 				{
-					var selected = x.Flags.HasFlag(View3d.EFlags.Selected);
-					var visible = x.Flags.HasFlag(View3d.EFlags.Hidden) == false;
-					var show = vis switch
-					{
-						ESetVisibleCmd.ShowAll => true,
-						ESetVisibleCmd.HideAll => false,
-						ESetVisibleCmd.ShowSelected => selected ? true : visible,
-						ESetVisibleCmd.HideSelected => selected ? false : visible,
-						ESetVisibleCmd.ToggleSelected => selected ? !visible : visible,
-						ESetVisibleCmd.ShowOthers => selected ? visible : true,
-						ESetVisibleCmd.HideOthers => selected ? visible : false,
-						ESetVisibleCmd.ToggleOthers => selected ? visible : !visible,
-						_ => throw new Exception($"Unknown visibility command {vis}"),
-					};
-					x.FlagsSet(View3d.EFlags.Hidden, !show, string.Empty);
-				}
-				Invalidate();
-				return;
+					ESetVisibleCmd.ShowAll => true,
+					ESetVisibleCmd.HideAll => false,
+					ESetVisibleCmd.ShowSelected => selected ? true : visible,
+					ESetVisibleCmd.HideSelected => selected ? false : visible,
+					ESetVisibleCmd.ToggleSelected => selected ? !visible : visible,
+					ESetVisibleCmd.ShowOthers => selected ? visible : true,
+					ESetVisibleCmd.HideOthers => selected ? visible : false,
+					ESetVisibleCmd.ToggleOthers => selected ? visible : !visible,
+					_ => throw new Exception($"Unknown visibility command {vis}"),
+				};
+				x.FlagsSet(View3d.EFlags.Hidden, !show, string.Empty);
 			}
-			throw new Exception($"SetVisible parameter '{parameter}' is invalid. Expected +1, 0, or -1");
+
+			Invalidate();
 		}
 
 		/// <summary>Switch between wireframe and solid</summary>

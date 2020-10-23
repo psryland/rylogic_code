@@ -194,9 +194,9 @@
 				IsReadOnly="True"
 				>
 				<DataGrid.InputBindings>
-					<KeyBinding Key="Space" Command="{Binding SetVisible}" CommandParameter="0"/>
-					<KeyBinding Key="Space" Modifiers="Ctrl" Command="{Binding SetVisible}" CommandParameter="+1"/>
-					<KeyBinding Key="Space" Modifiers="Ctrl+Shift" Command="{Binding SetVisible}" CommandParameter="-1"/>
+					<KeyBinding Key="Space" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"/>
+					<KeyBinding Key="Space" Modifiers="Ctrl" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"/>
+					<KeyBinding Key="Space" Modifiers="Ctrl+Shift" Command="{Binding SetVisible}" CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"/>
 					<KeyBinding Key="W" Command="{Binding SetWireframe}" CommandParameter="0"/>
 					<KeyBinding Key="W" Modifiers="Ctrl" Command="{Binding SetWireframe}" CommandParameter="+1"/>
 					<KeyBinding Key="W" Modifiers="Ctrl+Shift" Command="{Binding SetWireframe}" CommandParameter="-1"/>

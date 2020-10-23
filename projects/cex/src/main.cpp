@@ -19,7 +19,7 @@ namespace cex
 {
 	struct Main :cex::ICex
 	{
-		pr::InitComEx m_com;
+		pr::InitCom m_com;
 		std::unique_ptr<cex::ICex> m_command;
 
 		Main()

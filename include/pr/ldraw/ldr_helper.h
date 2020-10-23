@@ -42,6 +42,7 @@ namespace pr::ldr
 	struct O2W
 	{
 		m4x4 m_mat;
+		O2W() :m_mat(m4x4Identity) {}
 		O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
 		O2W(m4x4 const& mat) :m_mat(mat) {}
 	};
@@ -51,14 +52,22 @@ namespace pr::ldr
 		Colour32 m_col;
 		unsigned int m_ui;
 		};
+		Col() :Col(0xFFFFFFFF) {}
 		Col(Colour32 c) :m_col(c) {}
 		Col(unsigned int ui) :m_ui(ui) {}
 	};
 	struct Width
 	{
 		float m_width;
+		Width() :m_width(0) {}
 		Width(float w) :m_width(w) {}
 		Width(int w) :m_width(float(w)) {}
+	};
+	struct Wireframe
+	{
+		bool m_wire;
+		Wireframe() :m_wire(false) {}
+		Wireframe(bool w) :m_wire(w) {}
 	};
 	enum class EArrowType
 	{
@@ -94,8 +103,9 @@ namespace pr::ldr
 	}
 	inline TStr& Append(TStr& str, typename TStr::value_type const* s)
 	{
+		if (s == nullptr || *s == '\0') return str;
 		if (*s != '}' && *s != ')') AppendSpace(str);
-		if (s != nullptr) str.append(s);
+		str.append(s);
 		return str;
 	}
 	inline TStr& Append(TStr& str, std::string const& s)
@@ -133,12 +143,17 @@ namespace pr::ldr
 	}
 	inline TStr& Append(TStr& str, Width w)
 	{
-		if (w.m_width != 0) Append(str, "*Width {",w.m_width,"} ");
-		return str;
+		if (w.m_width == 0) return str;
+		return Append(str, "*Width {", w.m_width, "} ");
+	}
+	inline TStr& Append(TStr& str, Wireframe w)
+	{
+		if (!w.m_wire) return str;
+		return Append(str, "*Wireframe");
 	}
 	inline TStr& Append(TStr& str, AxisId id)
 	{
-		return Append(str, "*AxisId {",int(id),"} ");
+		return Append(str, "*AxisId {", int(id), "} ");
 	}
 	inline TStr& Append(TStr& str, EArrowType ty)
 	{
@@ -354,9 +369,13 @@ namespace pr::ldr
 	{
 		return Frustum(str, name, colour, f, nplane, fplane, m4x4Identity);
 	}
+	inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, O2W const& o2w)
+	{
+		return Frustum(str, name, colour, f, 0.0f, f.zfar(), o2w);
+	}
 	inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f)
 	{
-		return Frustum(str, name, colour, f, 0.0f, f.zfar(), m4x4Identity);
+		return Frustum(str, name, colour, f, m4x4Identity);
 	}
 	inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis_id, float height, float radius, O2W const& o2w)
 	{
@@ -502,38 +521,428 @@ namespace pr::ldr
 		return Append(str, "}\n");
 	}
 
-	struct LdrBuilder
+	// Ldr object fluent helper
+	namespace fluent
 	{
-		TStr m_sb;
+		struct LdrLine;
+		struct LdrTriangle;
+		struct LdrSphere;
+		struct LdrBox;
+		struct LdrCylinder;
+		struct LdrFrustum;
+		struct LdrGroup;
+		struct Root
+		{
+			virtual ~Root() {}
+			virtual void ToString(std::string& str) const = 0;
+		};
+		using ObjPtr = std::unique_ptr<Root>;
+		using ObjCont = std::vector<ObjPtr>;
 
-		LdrBuilder()
-			:m_sb()
-		{}
+		template <typename Derived> struct LdrObj :Root
+		{
+			ObjCont m_objects;
 
-		template <typename EnumPts> void Line(std::string name, Col colour, int width, EnumPts points)
+			LdrObj()
+				:m_objects()
+				, m_name()
+				, m_colour()
+				, m_o2w(m4x4Identity)
+				, m_wire()
+				, m_axis_id(AxisId::PosZ)
+			{}
+
+			LdrGroup& Group(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrGroup;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrLine& Line(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrLine;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrTriangle;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrSphere& Sphere(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrSphere;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrBox& Box(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrBox;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrCylinder& Cylinder(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrCylinder;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+			LdrFrustum& Frustum(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrFrustum;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+
+			// Object name
+			Derived& name(std::string_view name)
+			{
+				m_name = name;
+				return static_cast<Derived&>(*this);
+			}
+			std::string m_name;
+
+			// Object colour
+			Derived& col(Col colour)
+			{
+				m_colour = colour;
+				return static_cast<Derived&>(*this);
+			}
+			Col m_colour;
+
+			// Object to world transform
+			Derived& pos(v4_cref<> pos)
+			{
+				return o2w(m4x4::Translation(pos));
+			}
+			Derived& ori(v4 const& dir, AxisId axis = AxisId::PosZ)
+			{
+				return ori(m3x4::Rotation(axis.vec(), dir));
+			}
+			Derived& ori(m3x4 const& rot)
+			{
+				return o2w(rot.m4x4());
+			}
+			Derived& scale(float s)
+			{
+				return scale(s, s, s);
+			}
+			Derived& scale(float sx, float sy, float sz)
+			{
+				return o2w(m3x4::Scale(sx, sy, sz));
+			}
+			Derived& o2w(m4x4 const& o2w)
+			{
+				m_o2w = o2w * m_o2w;
+				return static_cast<Derived&>(*this);
+			}
+			m4x4 m_o2w;
+
+			// Wireframe
+			Derived& wireframe(bool w = true)
+			{
+				m_wire = w;
+				return static_cast<Derived&>(*this);
+			}
+			bool m_wire;
+
+			// Axis id
+			Derived& axis(AxisId axis_id)
+			{
+				m_axis_id = axis_id;
+				return static_cast<Derived&>(*this);
+			}
+			AxisId m_axis_id;
+
+			// Add object modifiers
+			void Modifiers(std::string& str) const
+			{
+				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
+			}
+
+			// Serialise the ldr script to a string
+			virtual void ToString(std::string& str) const
+			{
+				for (auto& s : m_objects) s->ToString(str);
+				Modifiers(str);
+			}
+
+			// Write the script to a file
+			void Write(std::filesystem::path const& filepath, bool append = false)
+			{
+				std::string str;
+				ToString(str);
+				ldr::Write(str, filepath, append);
+			}
+		};
+		struct LdrLine :LdrObj<LdrLine>
 		{
-			auto w = width != 0 ? FmtS("*Width {%d}", width) : "";
-			Append(m_sb, "*LineStrip ", name, " ", colour, " {", w);
-			int i = 0; v4 x; for (; points(i++, x);) Append(m_sb, x.xyz);
-			Append(m_sb, "}\n");
-		}
-		void Triangle(std::string name, Col colour, v4 const& a, v4 const& b, v4 const& c)
+			LdrLine()
+				:m_strip()
+				,m_width()
+				,m_points()
+			{}
+
+			// Line strip
+			LdrLine& strip()
+			{
+				m_strip = true;
+				return *this;
+			}
+			bool m_strip;
+
+			// Line width
+			LdrLine& width(Width w)
+			{
+				m_width = w;
+				return *this;
+			}
+			Width m_width;
+
+			// Line points
+			LdrLine& pt(v4_cref<> a, v4_cref<> b)
+			{
+				m_points.push_back(a);
+				m_points.push_back(b);
+				return *this;
+			}
+			LdrLine& pt(v4 const* verts, int const* lines, int num_lines)
+			{
+				for (int const* i = lines, *i_end = i + 2*num_lines; i < i_end;)
+				{
+					m_points.push_back(verts[*i++]);
+					m_points.push_back(verts[*i++]);
+				}
+				return *this;
+			}
+			template <typename EnumPts> LdrLine& pt(EnumPts points)
+			{
+				v4 x;
+				for (int i = 0; points(i++, x);) m_points.push_back(x);
+				return *this;
+			}
+			std::vector<v4> m_points;
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				auto ty = m_strip ? "*Line" : "*LineStrip";
+				auto delim = m_points.size() > 1 ? "\n" : "";
+				ldr::Append(str, ty, m_name, m_colour, "{", delim, m_width, delim);
+				for (int i = 0, iend = (int)m_points.size(); i != iend; ++i)
+				{
+					ldr::Append(str, m_points[i].xyz);
+					if ((i & 1) == 1) ldr::Append(str, delim);
+				}
+				LdrObj<LdrLine>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrTriangle :LdrObj<LdrTriangle>
 		{
-			ldr::Triangle(m_sb, name.c_str(), colour, a, b, c);
-		}
-		void Triangle(std::string name, Col colour, v4 const& a, v4 const& b, v4 const& c, m4x4 const& o2w)
+			LdrTriangle()
+				:m_points()
+			{}
+
+			LdrTriangle& pt(v4_cref<> a, v4_cref<> b, v4_cref<> c)
+			{
+				m_points.push_back(a);
+				m_points.push_back(b);
+				m_points.push_back(c);
+				return *this;
+			}
+			LdrTriangle& pt(v4 const* verts, int const* faces, int num_faces)
+			{
+				for (int const* i = faces, *i_end = i + 3*num_faces; i < i_end;)
+				{
+					m_points.push_back(verts[*i++]);
+					m_points.push_back(verts[*i++]);
+					m_points.push_back(verts[*i++]);
+				}
+				return *this;
+			}
+			std::vector<v4> m_points;
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				auto delim = m_points.size() > 3 ? "\n" : "";
+				ldr::Append(str, "*Triangle", m_name, m_colour, "{", delim);
+				for (int i = 0, iend = (int)m_points.size(); i != iend; ++i)
+				{
+					ldr::Append(str, m_points[i].xyz);
+					if ((i & 3) == 3) ldr::Append(str, delim);
+				}
+				LdrObj<LdrTriangle>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrSphere :LdrObj<LdrSphere>
 		{
-			ldr::Triangle(m_sb, name.c_str(), colour, a, b, c, o2w);
-		}
-		void Box(std::string name, Col colour, float dim, v4 const& position)
+			LdrSphere()
+				:m_radius()
+			{}
+
+			// Radius
+			LdrSphere& r(float radius)
+			{
+				return r(radius, radius, radius);
+			}
+			LdrSphere& r(float radius_x, float radius_y, float radius_z)
+			{
+				m_radius = v4{radius_x, radius_y, radius_z, 0};
+				return *this;
+			}
+			v4 m_radius;
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				if (m_radius.x == m_radius.y && m_radius.x == m_radius.z)
+					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x);
+				else
+					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x, m_radius.y, m_radius.z);
+				LdrObj<LdrSphere>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrBox :LdrObj<LdrBox>
 		{
-			ldr::Box(m_sb, name.c_str(), colour, dim, position);
-		}
-		
-		void ToFile(wchar_t const* filepath, bool append = false)
+			LdrBox()
+				:m_dim()
+			{}
+
+			// Box dimensions
+			LdrBox& dim(float dim)
+			{
+				m_dim = v4{dim, dim, dim, 0};
+				return *this;
+			}
+			LdrBox& dim(v4_cref<> dim)
+			{
+				m_dim = dim;
+				return *this;
+			}
+			v4 m_dim;
+
+			// Create from bounding box
+			LdrBox& bbox(BBox_cref bbox)
+			{
+				if (bbox == BBoxReset) return *this;
+				return dim(2 * bbox.Radius()).pos(bbox.Centre());
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				ldr::Append(str, "*Box", m_name, m_colour, "{", m_dim.xyz);
+				LdrObj<LdrBox>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrCylinder :LdrObj<LdrCylinder>
 		{
-			Write(m_sb, filepath, append);
-		}
+			LdrCylinder()
+				:m_height()
+				,m_radius()
+			{}
+
+			// Height/Radius
+			LdrCylinder& hr(float height, float radius)
+			{
+				return hr(height, radius, radius);
+			}
+			LdrCylinder& hr(float height, float radius_x, float radius_y)
+			{
+				m_height = height;
+				m_radius = v2(radius_x, radius_y);
+				return *this;
+			}
+			float m_height;
+			v2 m_radius;
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				ldr::Append(str, "*Cylinder", m_name, m_colour, "{", m_height, m_radius.x, m_radius.y, m_axis_id);
+				LdrObj<LdrCylinder>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrFrustum :LdrObj<LdrFrustum>
+		{
+			LdrFrustum()
+				: m_nf()
+				, m_wh()
+				, m_fovY()
+				, m_aspect()
+			{}
+
+			// Near/Far
+			LdrFrustum& nf(float n, float f)
+			{
+				m_nf = v2(n, f);
+				return *this;
+			}
+			v2 m_nf;
+
+			// Frustum dimensions
+			LdrFrustum& wh(float w, float h)
+			{
+				return wh(v2(w, h));
+			}
+			LdrFrustum& wh(v2_cref<> wh)
+			{
+				m_fovY = 0;
+				m_aspect = 0;
+				m_wh = wh;
+				return *this;
+			}
+			v2 m_wh;
+
+			// Frustum angles
+			LdrFrustum& fov(float fovY, float aspect)
+			{
+				m_wh = v2Zero;
+				m_fovY = fovY;
+				m_aspect = aspect;
+				return *this;
+			}
+			float m_fovY;
+			float m_aspect;
+
+			// From maths frustum
+			LdrFrustum& frustum(pr::Frustum const& f)
+			{
+				return nf(0, f.zfar()).fov(f.fovY(), f.aspect());
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				if (m_wh != v2Zero)
+					ldr::Append(str, "*FrustumWH", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.x, m_nf.y);
+				else
+					ldr::Append(str, "*FrustumFA", m_name, m_colour, "{", RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
+				
+				LdrObj<LdrFrustum>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+		struct LdrGroup :LdrObj<LdrGroup>
+		{
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				ldr::Append(str, "*Group", m_name, m_colour, "{\n");
+				LdrObj<LdrGroup>::ToString(str);
+				ldr::Append(str, "}\n");
+			}
+		};
+	}
+	struct Builder : fluent::LdrObj<Builder>
+	{
 	};
 }
 
@@ -544,12 +953,21 @@ namespace pr::ldr
 	PRUnitTest(LdrHelperTests)
 	{
 		std::string str;
+
 		Append(str,"*Box b",Colour32Green,"{",v3(1.0f,2.0f,3.0f),O2W(m4x4Identity),"}");
 		PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
-
 		str.resize(0);
+
 		Append(str,"*Box b",Colour32Red,"{",1.5f,O2W(v4ZAxis.w1()),"}");
 		PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
+		str.resize(0);
+
+		Builder L;
+		L.Box("b", 0xFF00FF00).dim(1).o2w(m4x4Identity);
+		L.Triangle().name("tri").col(0xFFFF0000).pt(v4(0,0,0,1), v4(1,0,0,1), v4(0,1,0,1));
+		L.ToString(str);
+		PR_CHECK(str, "*Box b ff00ff00 {1 1 1}\n*Triangle tri ffff0000 {0 0 0 1 0 0 0 1 0}\n");
+		str.resize(0);
 	}
 }
 #endif
