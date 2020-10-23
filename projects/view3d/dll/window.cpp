@@ -1,4 +1,4 @@
-﻿//***************************************************************************************************
+//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -619,7 +619,7 @@ namespace view3d
 					{
 						if (!pred(*obj)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
-						Encompass(bbox, obj->BBoxWS(true, pred));
+						Grow(bbox, obj->BBoxWS(true, pred));
 					}
 					m_bbox_scene = bbox;
 				}
@@ -634,7 +634,7 @@ namespace view3d
 					if (!pred(*obj)) continue;
 					if (!AllSet(obj->m_flags, ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					Encompass(bbox, obj->BBoxWS(true, pred));
+					Grow(bbox, obj->BBoxWS(true, pred));
 				}
 				break;
 			}
@@ -646,7 +646,7 @@ namespace view3d
 					if (!pred(*obj)) continue;
 					if (AllSet(obj->m_flags, ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					Encompass(bbox, obj->BBoxWS(true, pred));
+					Grow(bbox, obj->BBoxWS(true, pred));
 				}
 				break;
 			}
@@ -683,7 +683,7 @@ namespace view3d
 					return true;
 
 				auto bb = c->BBoxWS(true);
-				Encompass(bbox, bb);
+				Grow(bbox, bb);
 				return false;
 			}, "");
 		}

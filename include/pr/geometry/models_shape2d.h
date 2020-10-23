@@ -95,7 +95,7 @@ namespace pr::geometry
 		props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None) | (solid ? EGeom::Tex0 : EGeom::None);
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Tex coords
 		auto tr0 = FEql(radius1,0) ? 0.0f : radius0 / radius1;
@@ -257,7 +257,7 @@ namespace pr::geometry
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Verts
 		for (int i = 0; i != num_points; ++i)

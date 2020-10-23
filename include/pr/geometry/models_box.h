@@ -79,7 +79,7 @@ namespace pr::geometry
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		auto v_in = points;
 		for (int i = 0; i != num_boxes; ++i)

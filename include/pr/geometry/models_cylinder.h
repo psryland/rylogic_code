@@ -42,8 +42,8 @@ namespace pr::geometry
 
 		// Bounding box
 		float max_radius = std::max(radius0, radius1);
-		Encompass(props.m_bbox, v4(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
-		Encompass(props.m_bbox, v4(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
+		Grow(props.m_bbox, v4(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
+		Grow(props.m_bbox, v4(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 		// Colour iterator wrapper
 		auto col = CreateRepeater(colours, num_colours, vcount, Colour32White);

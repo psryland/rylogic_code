@@ -334,7 +334,7 @@ namespace pr
 			return Rotation(axis_norm, axis_size_angle, cos_angle);
 		}
 
-		// Create a transform from one basis axis to another
+		// Create a transform from one basis axis to another. Remember AxisId can be cast to v4
 		static Mat3x4 Rotation(AxisId from_axis, AxisId to_axis)
 		{
 			// 'o2f' = the rotation from Z to 'from_axis'
@@ -343,7 +343,7 @@ namespace pr
 			Mat3x4 o2f, o2t;
 			switch (from_axis)
 			{
-			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2f = m3x4Identity; break;
+			default: assert(false && "axis_id must one of +/-1, +/-2, +/-3"); o2f = m3x4Identity; break;
 			case -1: o2f = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
 			case +1: o2f = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break;
 			case -2: o2f = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;
@@ -353,7 +353,7 @@ namespace pr
 			}
 			switch (to_axis)
 			{
-			default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2t = m3x4Identity; break;
+			default: assert(false && "axis_id must one of +/-1, +/-2, +/-3"); o2t = m3x4Identity; break;
 			case -1: o2t = Mat3x4::Rotation(0.0f, -float(maths::tau_by_4), 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
 			case +1: o2t = Mat3x4::Rotation(0.0f, +float(maths::tau_by_4), 0.0f); break;
 			case -2: o2t = Mat3x4::Rotation(+float(maths::tau_by_4), 0.0f, 0.0f); break;

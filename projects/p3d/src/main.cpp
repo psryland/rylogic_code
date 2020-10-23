@@ -568,7 +568,7 @@ struct Main
 			for (auto& pos : mesh.m_vert)
 			{
 				pos = o2w * static_cast<v4>(pos);
-				Encompass(bbox, pos);
+				Grow(bbox, pos);
 			}
 			for (auto& norm : mesh.m_norm)
 			{

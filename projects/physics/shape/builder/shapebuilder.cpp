@@ -107,7 +107,7 @@ void ShapeBuilder::CalculateBoundingBox()
 	for( TPrimList::const_iterator p = m_model.m_prim_list.begin(), p_end = m_model.m_prim_list.end(); p != p_end; ++p )
 	{
 		Prim const& prim = *(*p).m_ptr;
-		Encompass(m_model.m_bbox, prim.GetShape().m_shape_to_model * prim.m_bbox);
+		Grow(m_model.m_bbox, prim.GetShape().m_shape_to_model * prim.m_bbox);
 	}
 }
 

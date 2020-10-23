@@ -2037,7 +2037,7 @@ namespace pr::ldr
 			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Model bounding box
-			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+			auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 			// Generate the model
 			// 'm_verts' should contain line strip data
@@ -3516,7 +3516,7 @@ namespace pr::ldr
 					{
 						p.m_reader.Int(idx, 10);
 						m_indices.push_back(idx);
-						nug.m_vrange.encompass(idx);
+						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
 
 						if (r % 500 == 0) p.ReportProgress();
@@ -3547,7 +3547,7 @@ namespace pr::ldr
 					{
 						p.m_reader.Int(idx, 10);
 						m_indices.push_back(idx);
-						nug.m_vrange.encompass(idx);
+						nug.m_vrange.grow(idx);
 						++nug.m_irange.m_end;
 
 						if (r % 500 == 0) p.ReportProgress();
@@ -3587,10 +3587,10 @@ namespace pr::ldr
 						m_indices.push_back(idx[2]);
 						m_indices.push_back(idx[1]);
 
-						nug.m_vrange.encompass(idx[0]);
-						nug.m_vrange.encompass(idx[1]);
-						nug.m_vrange.encompass(idx[2]);
-						nug.m_vrange.encompass(idx[3]);
+						nug.m_vrange.grow(idx[0]);
+						nug.m_vrange.grow(idx[1]);
+						nug.m_vrange.grow(idx[2]);
+						nug.m_vrange.grow(idx[3]);
 						nug.m_irange.m_end += 12;
 
 						if (r % 500 == 0) p.ReportProgress();
@@ -3968,8 +3968,8 @@ namespace pr::ldr
 					auto x = m_xcolumn == -1 ? i : m_table[m_xcolumn][i];
 					auto y = col[i];
 
-					Encompass(xrange, x);
-					Encompass(yrange, y);
+					Grow(xrange, x);
+					Grow(yrange, y);
 
 					v4 vert(x, y, 0.0f, 1.0f);
 					verts.push_back(rot * vert);
@@ -4836,21 +4836,17 @@ namespace pr::ldr
 			// Create the model
 			switch (m_type)
 			{
-			default:
-				{
-					throw std::exception(FmtS("Unknown Text mode: %d", m_type));
-				}
-			// Text is a normal 3D object
-			case EType::Full3D:
+				// Text is a normal 3D object
+				case EType::Full3D:
 				{
 					break;
 				}
-			// Position the text quad so that it always faces the camera and has the same size
-			case EType::Billboard:
+				// Position the text quad so that it always faces the camera and has the same size
+				case EType::Billboard:
 				{
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::SceneBoundsExclude, true);
+					obj->Flags(ELdrFlags::SceneBoundsExclude, true, "");
 
 					// Update the rendering 'i2w' transform on add-to-scene
 					obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
@@ -4884,19 +4880,20 @@ namespace pr::ldr
 					};
 					break;
 				}
-			// Position the text quad in screen space.
-			case EType::ScreenSpace:
+				// Position the text quad in screen space.
+				case EType::ScreenSpace:
 				{
 					// Scale up the view port to reduce floating point precision noise.
 					enum { ViewPortSize = 1024 };
 
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
-					obj->m_flags = SetBits(obj->m_flags,
+					obj->Flags(
 						ELdrFlags::BBoxExclude |
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
-						ELdrFlags::ShadowCastExclude, true);
+						ELdrFlags::ShadowCastExclude, true, "");
+					
 
 					// Screen space uses a standard normalised orthographic projection
 					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -4912,16 +4909,20 @@ namespace pr::ldr
 						auto c2w = scene.m_view.CameraToWorld();
 
 						// Scale the object from physical pixels to normalised screen space
-						auto scale = m4x4::Scale(ViewPortSize/w, ViewPortSize/h, 1, v4Origin);
+						auto scale = m4x4::Scale(ViewPortSize / w, ViewPortSize / h, 1, v4Origin);
 
 						// Reverse 'pos.z' so positive values can be used
-						ob.m_i2w.pos.x *= 0.5f*ViewPortSize;
-						ob.m_i2w.pos.y *= 0.5f*ViewPortSize;
+						ob.m_i2w.pos.x *= 0.5f * ViewPortSize;
+						ob.m_i2w.pos.y *= 0.5f * ViewPortSize;
 
 						// Convert 'i2w', which is being interpreted as 'i2c', into an actual 'i2w'
 						ob.m_i2w = c2w * ob.m_i2w * scale;
 					};
 					break;
+				}
+				default:
+				{
+					throw std::exception(FmtS("Unknown Text mode: %d", m_type));
 				}
 			}
 		}
@@ -5604,7 +5605,7 @@ namespace pr::ldr
 				// set the visibility flags on the nuggets for consistency.
 				auto hidden = AllSet(o->m_flags, ELdrFlags::Hidden);
 				for (auto& nug : o->m_model->m_nuggets)
-					SetBits(nug.m_flags, ENuggetFlag::Hidden, hidden);
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::Hidden, hidden);
 			}
 
 			// Wireframe
@@ -5654,7 +5655,7 @@ namespace pr::ldr
 			{
 				auto vampire = AllSet(o->m_flags, ELdrFlags::ShadowCastExclude);
 				for (auto& nug : o->m_model->m_nuggets)
-					SetBits(nug.m_flags, ENuggetFlag::ShadowCastExclude, vampire);
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::ShadowCastExclude, vampire);
 			}
 
 			return true;

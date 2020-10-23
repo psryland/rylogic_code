@@ -83,7 +83,7 @@ BBox& pr::ph::CalcBBox(ShapePolytope const& shape, BBox& bbox)
 {
 	bbox.reset();
 	for( v4 const *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )
-	    Encompass(bbox, *v);
+	    Grow(bbox, *v);
 	return bbox;
 }
 

@@ -35,7 +35,7 @@ namespace pr::geometry
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		v4 const* v_in = points; int index = 0;
 		for (int i = 0; i != num_points; ++i)

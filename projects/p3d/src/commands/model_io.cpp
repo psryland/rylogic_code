@@ -63,7 +63,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 		// Bounding box / transform
 		mesh.m_bbox = BBoxReset;
 		mesh.m_o2p = o.m_mesh.m_o2p;
-		auto bb = [&](v4 const& v) { Encompass(mesh.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(mesh.m_bbox, v); return v; };
 
 		p3d::IdxBuf vidx(sizeof(uint16_t));
 		auto mesh_geom = EGeom::Vert;
@@ -132,7 +132,7 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 
 		// Bounding box
 		mesh.m_bbox = BBoxReset;
-		auto bb = [&](v4 const& v) { Encompass(mesh.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(mesh.m_bbox, v); return v; };
 
 		// Copy the verts
 		mesh.m_vert.reserve(vcount);

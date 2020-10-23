@@ -30,7 +30,8 @@ namespace pr
 	}
 
 	// If 'state' is true, returns 'value | mask'. If false, returns 'value &~ mask'
-	template <typename T, typename U> constexpr T SetBits(T value, U mask, bool state)
+	template <typename T, typename U> 
+	[[nodiscard]] constexpr T SetBits(T value, U mask, bool state)
 	{
 		using Int = pr::underlying_type_t<T>;
 		return state
@@ -39,7 +40,8 @@ namespace pr
 	}
 
 	// Sets the masked bits of 'value' to the state 'bitfield'
-	template <typename T, typename U> constexpr T SetBits(T value, U mask, U bitfield)
+	template <typename T, typename U>
+	[[nodiscard]] constexpr T SetBits(T value, U mask, U bitfield)
 	{
 		using Int = pr::underlying_type_t<T>;
 		auto result = static_cast<Int>(value);
@@ -49,14 +51,16 @@ namespace pr
 	}
 
 	// Returns true if any bits in 'value & mask != 0'
-	template <typename T, typename U> constexpr bool AnySet(T value, U mask)
+	template <typename T, typename U>
+	[[nodiscard]] constexpr bool AnySet(T value, U mask)
 	{
 		using Int = pr::underlying_type_t<T>;
 		return (static_cast<Int>(value) & static_cast<Int>(mask)) != 0;
 	}
 
 	// Return true if all bits in 'value & mask == mask'
-	template <typename T, typename U> constexpr bool AllSet(T value, U mask)
+	template <typename T, typename U>
+	[[nodiscard]] constexpr bool AllSet(T value, U mask)
 	{
 		using Int = pr::underlying_type_t<T>;
 		return (static_cast<Int>(value) & static_cast<Int>(mask)) == static_cast<Int>(mask);

@@ -17,7 +17,7 @@ namespace pr::geometry
 	{
 		auto bbox = BBoxReset;
 		for (; num_verts-- != 0; ++verts)
-			Encompass(bbox, GetP(*vert));
+			Grow(bbox, GetP(*vert));
 		return bbox;
 	}
 

@@ -61,7 +61,7 @@ namespace pr::rdr
 	// Set the position of the four corners of the view frustum in camera space
 	void SetFrustumCorners(SceneView const& view, hlsl::ds::CBufCamera& cb)
 	{
-		auto corner = GetCorners(view.ViewFrustum(), 1.0f);
+		auto corner = Corners(view.ViewFrustum(), 1.0f);
 		cb.m_frustum[0] = corner.x;
 		cb.m_frustum[1] = corner.y;
 		cb.m_frustum[2] = corner.z;

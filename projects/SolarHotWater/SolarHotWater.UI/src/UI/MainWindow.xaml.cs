@@ -480,8 +480,8 @@ namespace SolarHotWater.UI
 						lk.IndexRange(t0, t1, out var i0, out var i1);
 						foreach (var pt in lk.Values(i0, i1))
 						{
-							xrange.Encompass(pt.xf);
-							yrange.Encompass(pt.yf);
+							xrange.Grow(pt.xf);
+							yrange.Grow(pt.yf);
 						}
 					}
 

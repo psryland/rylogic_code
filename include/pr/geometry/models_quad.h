@@ -118,7 +118,7 @@ namespace pr::geometry
 		auto cc = [&](Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 		// Bounding box
-		auto bb = [&](v4_cref<> v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4_cref<> v) { Grow(props.m_bbox, v); return v; };
 
 		// Texture coords
 		auto t00 = (t2q * v4(0.0f, 0.0f, 0.0f, 1.0f)).xy;

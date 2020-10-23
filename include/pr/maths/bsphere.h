@@ -67,8 +67,8 @@ namespace pr
 			return 2.0f * m_ctr_rad.w;
 		}
 
-		// Encompass 'rhs' in 'lhs' and re-centre the centre point. Returns 'rhs'
-		v4_cref<> pr_vectorcall encompass(v4_cref<> rhs)
+		// Include 'rhs' in 'lhs' and re-centre the centre point. Returns 'rhs'
+		v4_cref<> pr_vectorcall Grow(v4_cref<> rhs)
 		{
 			if (Radius() < 0.0f)
 			{
@@ -91,7 +91,7 @@ namespace pr
 			}
 			return rhs;
 		}
-		BSphere const& pr_vectorcall encompass(BSphere const& rhs)
+		BSphere_cref pr_vectorcall Grow(BSphere_cref rhs)
 		{
 			if (Radius() < 0.0f)
 			{
@@ -114,8 +114,8 @@ namespace pr
 			return rhs;
 		}
 
-		// Encompass 'rhs' within 'bsphere' without moving the centre point.
-		v4_cref<> pr_vectorcall encompass_loose(v4_cref<> rhs)
+		// Include 'rhs' within 'bsphere' without moving the centre point.
+		v4_cref<> pr_vectorcall GrowLoose(v4_cref<> rhs)
 		{
 			if (m_ctr_rad.w < 0.0f)
 			{
@@ -129,7 +129,7 @@ namespace pr
 			}
 			return rhs;
 		}
-		BSphere const& pr_vectorcall encompass_loose(BSphere const& rhs)
+		BSphere_cref pr_vectorcall GrowLoose(BSphere_cref rhs)
 		{
 			if (Radius() < 0.0f)
 			{
@@ -201,11 +201,6 @@ namespace pr
 	};
 	static_assert(std::is_pod<BSphere>::value, "Should be a pod type");
 	static_assert(std::alignment_of<BSphere>::value == 16, "Should be 16 byte aligned");
-	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	using BSphere_cref = BSphere const;
-	#else
-	using BSphere_cref = BSphere const&;
-	#endif
 
 	#pragma region Constants
 	static BSphere const BSphereZero  = {v4Zero, 0.0f};
@@ -221,60 +216,56 @@ namespace pr
 		return 4.188790f * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w; // (2/3)*tau*r^3
 	}
 
-	// Encompass 'point' within 'bsphere' and re-centre the centre point. Returns 'point'
-	inline v4_cref<> pr_vectorcall Encompass(BSphere& bsphere, v4_cref<> point)
-	{
-		return bsphere.encompass(point);
-	}
-	
-	// Encompass 'point' in 'bsphere'
-	inline BSphere pr_vectorcall Encompass(BSphere const& bsphere, v4_cref<> point)
+	// Include 'point' within 'bsphere' and re-centre the centre point.
+	[[nodiscard]]
+	inline BSphere pr_vectorcall Union(BSphere_cref bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
-		bsph.encompass(point);
+		bsph.Grow(point);
 		return bsph;
 	}
-
-	// Encompass 'rhs' in 'lhs'. Returns 'rhs'
-	inline BSphere_cref pr_vectorcall Encompass(BSphere& lhs, BSphere_cref rhs)
+	inline v4_cref<> pr_vectorcall Grow(BSphere& bsphere, v4_cref<> point)
 	{
-		return lhs.encompass(rhs);
+		return bsphere.Grow(point);
 	}
 
-	// Encompass 'rhs' in 'lhs'
-	inline BSphere pr_vectorcall Encompass(BSphere const& lhs, BSphere_cref rhs)
+	// Include 'rhs' in 'lhs' 
+	[[nodiscard]]
+	inline BSphere pr_vectorcall Union(BSphere_cref lhs, BSphere_cref rhs)
 	{
 		auto bsph = lhs;
-		bsph.encompass(rhs);
+		bsph.Grow(rhs);
 		return bsph;
 	}
-
-	// Encompass 'point' within 'bsphere' without moving the centre point. Returns 'point'
-	inline v4_cref<> pr_vectorcall EncompassLoose(BSphere& bsphere, v4_cref<> point)
+	inline BSphere_cref pr_vectorcall Grow(BSphere& lhs, BSphere_cref rhs)
 	{
-		return bsphere.encompass_loose(point);
+		return lhs.Grow(rhs);
 	}
-	
-	// Encompass 'point' within 'bsphere' without moving the centre point.
-	inline BSphere pr_vectorcall EncompassLoose(BSphere const& bsphere, v4_cref<> point)
+
+	// Include 'point' within 'bsphere' without moving the centre point
+	[[nodiscard]] 
+	inline BSphere pr_vectorcall UnionLoose(BSphere_cref bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
-		bsph.encompass_loose(point);
+		bsph.GrowLoose(point);
 		return bsph;
 	}
-
-	// Encompass 'rhs' in 'lhs' without moving the centre point. Returns 'rhs'
-	inline BSphere_cref pr_vectorcall EncompassLoose(BSphere& lhs, BSphere_cref rhs)
+	inline v4_cref<> pr_vectorcall GrowLoose(BSphere& bsphere, v4_cref<> point)
 	{
-		return lhs.encompass_loose(rhs);
+		return bsphere.GrowLoose(point);
 	}
 
-	// Encompass 'rhs' in 'lhs' without moving the centre point.
-	inline BSphere pr_vectorcall EncompassLoose(BSphere const& lhs, BSphere_cref rhs)
+	// Include 'rhs' in 'lhs' without moving the centre point
+	[[nodiscard]] 
+	inline BSphere pr_vectorcall UnionLoose(BSphere_cref lhs, BSphere_cref rhs)
 	{
 		auto bsph = lhs;
-		bsph.encompass_loose(rhs);
+		bsph.GrowLoose(rhs);
 		return bsph;
+	}
+	inline BSphere_cref pr_vectorcall GrowLoose(BSphere& lhs, BSphere_cref rhs)
+	{
+		return lhs.GrowLoose(rhs);
 	}
 
 	// Return true if 'point' is within the bounding sphere
@@ -315,7 +306,7 @@ namespace pr::maths
 		};
 		auto bsph = BSphereReset;
 		for (auto& p : pt)
-			pr::Encompass(bsph, p);
+			Grow(bsph, p);
 
 		PR_CHECK(FEql(bsph.Centre(), v4(0.5f, 0.5f, 0.5f, 1)), true);
 		PR_CHECK(FEql(bsph.Radius(), 0.8660254f), true);

@@ -154,14 +154,14 @@ namespace view3d
 				for (auto obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					pr::Encompass(bbox, obj->BBoxWS(true));
+					Grow(bbox, obj->BBoxWS(true));
 				}
 			}
 			if (gizmos)
 			{
 				throw std::exception("not implemented");
 				//for (auto giz : m_gizmos)
-				//	pr::Encompass(bbox, giz->BBoxWS(true));
+				//	Grow(bbox, giz->BBoxWS(true));
 			}
 			if (bbox == pr::BBoxReset)
 			{

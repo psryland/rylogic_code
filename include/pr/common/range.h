@@ -135,7 +135,7 @@ namespace pr
 		}
 
 		// Grows the range to include 'rhs'
-		template <typename U> U encompass(U rhs)
+		template <typename U> U grow(U rhs)
 		{
 			if (rhs <  m_beg) { m_beg = static_cast<T>(rhs); }
 			if (rhs >= m_end) { m_end = static_cast<T>(rhs + traits::is_integral); }
@@ -143,9 +143,9 @@ namespace pr
 		}
 
 		// Grows the range to include 'rhs'
-		template <typename U> Range<U> encompass(Range<U> rhs)
+		template <typename U> Range<U> grow(Range<U> rhs)
 		{
-			// Don't treat !rhs.valid() as an error, it's the only way to Encompass an empty range
+			// Don't treat !rhs.valid() as an error, it's the only way to grow an empty range
 			if (rhs.size() < 0) return rhs;
 			if (rhs.m_beg <  m_beg) { m_beg = rhs.m_beg; }
 			if (rhs.m_end >= m_end) { m_end = rhs.m_end; }
@@ -189,47 +189,39 @@ namespace pr
 	}
 
 	// Expand 'range' if necessary to include 'rhs'
-	template <typename T, typename U> inline U Encompass(Range<T>& range, U rhs)
+	template <typename T, typename U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, U rhs)
 	{
-		return range.encompass(rhs);
-	}
-	template <typename T, typename U> inline Range<T> Encompass(Range<T> const& range, U rhs)
-	{
-		Range<T> r = range;
-		r.encompass(rhs);
+		auto r = range;
+		r.grow(rhs);
 		return r;
+	}
+	template <typename T, typename U> inline U Grow(Range<T>& range, U rhs)
+	{
+		return range.grow(rhs);
 	}
 
 	// Expand 'range' to include 'rhs' if necessary
-	template <typename T, typename U> inline Range<U> const& Encompass(Range<T>& range, Range<U> const& rhs)
+	template <typename T, typename U> [[nodiscard]] inline Range<T> Union(Range<T> const& range, Range<U> const& rhs)
 	{
-		return range.encompass(rhs);
-	}
-	template <typename T, typename U> inline Range<T> Encompass(Range<T> const& range, Range<U> const& rhs)
-	{
-		Range<T> r = range;
-		r.encompass(rhs);
+		auto r = range;
+		r.grow(rhs);
 		return r;
+	}
+	template <typename T, typename U> inline Range<U> const& Grow(Range<T>& range, Range<U> const& rhs)
+	{
+		return range.grow(rhs);
 	}
 
 	// Returns the intersection of 'lhs' with 'rhs'
 	// If there is no intersection, returns [b,b) or [e,e) (from the lhs range).
 	// Note: this means Intersect(a,b) != Intersect(b,a)
-	template <typename T, typename U> Range<T> Intersect(Range<T> const& lhs, Range<U> const& rhs)
+	template <typename T, typename U> [[nodiscard]] Range<T> Intersect(Range<T> const& lhs, Range<U> const& rhs)
 	{
 		assert(lhs.size() >= 0 && "lhs range is invalid");
 		assert(rhs.size() >= 0 && "rhs range is invalid");
 		if (rhs.m_end <= lhs.m_beg) return Range<T>::make(lhs.m_beg, lhs.m_beg);
 		if (rhs.m_beg >= lhs.m_end) return Range<T>::make(lhs.m_end, lhs.m_end);
 		return Range<T>::make(std::max(lhs.m_beg, rhs.m_beg), std::min(lhs.m_end, rhs.m_end));
-	}
-
-	// Returns a range that is the union of this range with 'rhs'
-	template <typename T, typename U> Range<T> Union(Range<T> const& lhs, Range<U> const& rhs)
-	{
-		assert(lhs.size() >= 0 && "lhs range is invalid");
-		assert(rhs.size() >= 0 && "rhs range is invalid");
-		return Range<T>::make(std::min(lhs.m_beg, rhs.m_beg), std::max(lhs.m_end, rhs.m_end));
 	}
 
 	// Clamp 'value' to within 'range'
@@ -290,7 +282,7 @@ namespace pr::common
 			PR_CHECK(r0.size(), 3);
 
 			IRange r4 = IRange::Reset();
-			Encompass(r4, 4);
+			Grow(r4, 4);
 			PR_CHECK(4, r4.m_beg);
 			PR_CHECK(5, r4.m_end);
 			PR_CHECK(1, r4.size());
@@ -343,7 +335,7 @@ namespace pr::common
 			PR_CHECK(r0.size(), 3);
 
 			IRange r4(vec.end(),vec.begin());
-			Encompass(r4, vec.begin() + 4);
+			Grow(r4, vec.begin() + 4);
 			PR_CHECK(vec.begin() + 4 == r4.m_beg, true);
 			PR_CHECK(vec.begin() + 5 == r4.m_end, true);
 			PR_CHECK(1, r4.size());
@@ -394,7 +386,7 @@ namespace pr::common
 			PR_CHECK(r0.size(), 3.0f);
 
 			FRange r4 = FRange::Reset();
-			Encompass(r4, 4.0f);
+			Grow(r4, 4.0f);
 			PR_CHECK(4.0f, r4.m_beg);
 			PR_CHECK(4.0f, r4.m_end);
 			PR_CHECK(0.0f, r4.size());

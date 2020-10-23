@@ -79,7 +79,7 @@ namespace Rylogic.Maths
 		public bool IsValid => Radius.x >= 0f && Radius.y >= 0f && Radius.z >= 0f &&
 			Math_.IsFinite(Radius.LengthSq) && Math_.IsFinite(Centre.LengthSq);
 
-		/// <summary>Returns true if this bbox encompasses a single point</summary>
+		/// <summary>Returns true if this bbox encloses a single point</summary>
 		public bool IsPoint => Radius == v4.Zero;
 
 		/// <summary>Minimum X bound</summary>
@@ -173,15 +173,9 @@ namespace Rylogic.Maths
 				Math.Abs(lhs.Centre.z - rhs.Centre.z) <= (lhs.Radius.z + rhs.Radius.z);
 		}
 
-		/// <summary>Returns a bbox that encompasses 'lhs' and 'point'</summary>
-		public static BBox Encompass(BBox bbox, v4 point)
+		/// <summary>Returns a bbox that encloses 'lhs' and 'point'</summary>
+		public static BBox Union(BBox bbox, v4 point)
 		{
-			// Note:
-			// This is not a member function because it's dangerous.
-			// Calling: 'thing.BBox.Encompass(v4)' does not change 'BBox' because it's a value type
-			// Use: 'bb = BBox.Encompass(bb, pt)' or 'pt = BBox.Encompass(ref bbox, pt)' instead
-			// Const version returns lhs, non-const returns rhs!
-
 			var bb = bbox;
 			for (int i = 0; i != 3; ++i)
 			{
@@ -206,33 +200,33 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Expands 'lhs' to include 'rhs'. Returns **rhs**</summary>
-		public static v4 Encompass(ref BBox bbox, v4 point)
+		public static v4 Grow(ref BBox bbox, v4 point)
 		{
 			// Const version returns lhs, non-const returns rhs!
-			bbox = Encompass(bbox, point);
+			bbox = Union(bbox, point);
 			return point;
 		}
 
-		/// <summary>Returns a bbox that encompasses 'lhs' and 'rhs'</summary>
-		public static BBox Encompass(BBox lhs, BBox rhs)
+		/// <summary>Returns a bbox that encloses 'lhs' and 'rhs'</summary>
+		public static BBox Union(BBox lhs, BBox rhs)
 		{
 			// Const version returns lhs, non-const returns rhs!
-			// Don't treat !rhs.IsValid as an error, it's the only way to Encompass a empty bbox
+			// Don't treat !rhs.IsValid as an error, it's the only way to grow an empty bbox
 			var bb = lhs;
 			if (!rhs.IsValid) return bb;
-			bb = Encompass(bb, rhs.Centre + rhs.Radius);
-			bb = Encompass(bb, rhs.Centre - rhs.Radius);
+			bb = Union(bb, rhs.Centre + rhs.Radius);
+			bb = Union(bb, rhs.Centre - rhs.Radius);
 			return bb;
 		}
 
 		/// <summary>Expands 'lhs' to include 'rhs'. Returns **rhs**</summary>
-		public static BBox Encompass(ref BBox lhs, BBox rhs)
+		public static BBox Grow(ref BBox lhs, BBox rhs)
 		{
 			// Const version returns lhs, non-const returns rhs!
-			// Don't treat !rhs.IsValid as an error, it's the only way to Encompass a empty bbox
+			// Don't treat !rhs.IsValid as an error, it's the only way to grow an empty bbox
 			if (!rhs.IsValid) return rhs;
-			lhs = Encompass(lhs, rhs.Centre + rhs.Radius);
-			lhs = Encompass(lhs, rhs.Centre - rhs.Radius);
+			lhs = Union(lhs, rhs.Centre + rhs.Radius);
+			lhs = Union(lhs, rhs.Centre - rhs.Radius);
 			return rhs;
 		}
 

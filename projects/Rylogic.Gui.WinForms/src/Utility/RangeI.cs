@@ -50,7 +50,7 @@ namespace Rylogic.Gui.WinForms.Workaround
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(selector(item));
+				range.Grow(selector(item));
 
 			return range;
 		}
@@ -58,7 +58,7 @@ namespace Rylogic.Gui.WinForms.Workaround
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -66,7 +66,7 @@ namespace Rylogic.Gui.WinForms.Workaround
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -169,14 +169,14 @@ namespace Rylogic.Gui.WinForms.Workaround
 		}
 
 		/// <summary>Grow the bounds of this range to include 'x'</summary>
-		public void Encompass(long value)
+		public void Grow(long value)
 		{
 			Beg = Math.Min(Beg, value);
 			End = Math.Max(End, value + 1);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
-		public void Encompass(RangeI rng)
+		public void Grow(RangeI rng)
 		{
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
 			Beg = Math.Min(Beg, rng.Beg);
@@ -191,7 +191,7 @@ namespace Rylogic.Gui.WinForms.Workaround
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
-		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
+		/// (basically the same as 'Grow' except this range isn't modified.</summary>
 		public RangeI Union(RangeI rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");

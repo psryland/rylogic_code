@@ -59,7 +59,7 @@ namespace pr
 		{
 			auto bb = BBoxReset;
 			for (Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = next(i))
-				Encompass(bb, CalcBBox(*i));
+				Grow(bb, CalcBBox(*i));
 			return shape.m_base.m_s2p * bb;
 		}
 	}

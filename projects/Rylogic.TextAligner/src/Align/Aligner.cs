@@ -285,7 +285,7 @@ namespace Rylogic.TextAligner
 			var all_line_starts = true;
 			foreach (var tok in toks)
 			{
-				span.Encompass(tok.Patn.Position);
+				span.Grow(tok.Patn.Position);
 				all_line_starts &= tok.MinColumnIndex == 0;
 				min_column = Math.Max(min_column, tok.MinColumnIndex);
 				leading_ws = Math.Max(leading_ws, tok.Grp.LeadingSpace);

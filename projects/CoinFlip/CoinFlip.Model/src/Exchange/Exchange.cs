@@ -1254,12 +1254,12 @@ namespace CoinFlip
 			{
 				History.Add(his);
 				foreach (var trade in his.Trades)
-					HistoryInterval.Encompass(trade.Updated.Ticks);
+					HistoryInterval.Grow(trade.Updated.Ticks);
 			}
 			foreach (var xfer in transfers)
 			{
 				Transfers.AddOrUpdate(xfer);
-				TransfersInterval.Encompass(xfer.Created.Ticks);
+				TransfersInterval.Grow(xfer.Created.Ticks);
 			}
 		}
 		private void SignalPopulateTradeHistory()
