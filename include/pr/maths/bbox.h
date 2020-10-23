@@ -56,7 +56,7 @@ namespace pr
 				IsFinite(LengthSq(m_radius)) && IsFinite(LengthSq(m_centre));
 		}
 
-		// Returns true if this bbox encompasses a single point
+		// Returns true if this bbox encloses a single point
 		bool is_point() const
 		{
 			return m_radius == v4Zero;
@@ -159,13 +159,13 @@ namespace pr
 			return 2.0f * m_radius[axis];
 		}
 
-		// Grows the bbox to include 'rhs'
-		// There are two variations of 'Encompass', the version that modifies the
-		// provided instance returns the point encompassed, the version that operates
-		// on a const BBox returns a new BBox that includes 'point'
-		v4_cref<> encompass(v4_cref<> point)
+		// Grows the bbox to include 'rhs'. Note: prefer the free function versions.
+		// There are two variations of 'Encompass':
+		//   1) Grow = modifies the provided instance returning the point enclosed,
+		//   2) Union = operates on a const BBox returning a new BBox that includes 'point'
+		v4_cref<> Grow(v4_cref<> point)
 		{
-			assert("BBox encompass point must have w = 1" && point.w == 1.0f);
+			assert("BBox Grow. Point must have w = 1" && point.w == 1.0f);
 			assert("'point' must be aligned to 16" && maths::is_aligned(&point));
 
 			#if PR_MATHS_USE_INTRINSICS
@@ -204,12 +204,12 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend bool operator == (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-		friend bool operator != (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-		friend bool operator <  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-		friend bool operator >  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-		friend bool operator <= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-		friend bool operator >= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+		friend bool pr_vectorcall operator == (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+		friend bool pr_vectorcall operator != (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+		friend bool pr_vectorcall operator <  (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+		friend bool pr_vectorcall operator >  (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+		friend bool pr_vectorcall operator <= (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+		friend bool pr_vectorcall operator >= (BBox_cref lhs, BBox_cref rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 		friend BBox& pr_vectorcall operator += (BBox& lhs, v4_cref<> offset)
 		{
 			lhs.m_centre += offset;
@@ -278,7 +278,7 @@ namespace pr
 		template <typename VertCont> static BBox Make(VertCont const& verts)
 		{
 			auto bbox = BBoxReset;
-			for (auto& vert : verts) Encompass(bbox, vert);
+			for (auto& vert : verts) pr::Grow(bbox, vert);
 			return bbox;
 		}
 
@@ -286,7 +286,7 @@ namespace pr
 		template <typename Vert> static BBox Make(std::initializer_list<Vert> verts)
 		{
 			auto bbox = BBoxReset;
-			for (auto& vert : verts) Encompass(bbox, vert);
+			for (auto& vert : verts) pr::Grow(bbox, vert);
 			return bbox;
 		}
 	};
@@ -300,14 +300,43 @@ namespace pr
 
 	#pragma region Functions
 
+	// Return a corner of the bounding box
+	inline v4 pr_vectorcall Corner(BBox_cref bbox, int corner)
+	{
+		assert("Invalid corner index" && corner >= 0 && corner < 8);
+		auto x = ((corner >> 0) & 0x1) * 2 - 1;
+		auto y = ((corner >> 1) & 0x1) * 2 - 1;
+		auto z = ((corner >> 2) & 0x1) * 2 - 1;
+		return v4(
+			bbox.m_centre.x + x * bbox.m_radius.x,
+			bbox.m_centre.y + y * bbox.m_radius.y,
+			bbox.m_centre.z + z * bbox.m_radius.z,
+			1.0f);
+	}
+
+	// Return the corners of the bounding box
+	inline void pr_vectorcall Corners(BBox_cref bbox, v4 (&corners)[8])
+	{
+		auto& c = bbox.m_centre;
+		auto& r = bbox.m_radius;
+		corners[0] = v4{c.x - r.x, c.y - r.y, c.z - r.z, 1};
+		corners[1] = v4{c.x + r.x, c.y - r.y, c.z - r.z, 1};
+		corners[2] = v4{c.x - r.x, c.y + r.y, c.z - r.z, 1};
+		corners[3] = v4{c.x + r.x, c.y + r.y, c.z - r.z, 1};
+		corners[4] = v4{c.x - r.x, c.y - r.y, c.z + r.z, 1};
+		corners[5] = v4{c.x + r.x, c.y - r.y, c.z + r.z, 1};
+		corners[6] = v4{c.x - r.x, c.y + r.y, c.z + r.z, 1};
+		corners[7] = v4{c.x + r.x, c.y + r.y, c.z + r.z, 1};
+	}
+
 	// Return the volume of a bounding box
-	inline float Volume(BBox const& bbox)
+	inline float pr_vectorcall Volume(BBox_cref bbox)
 	{
 		return bbox.SizeX() * bbox.SizeY() * bbox.SizeZ();
 	}
 
 	// Return a plane corresponding to a side of the bounding box. Returns inward facing planes
-	inline Plane GetPlane(BBox const& bbox, BBox::EPlane side)
+	inline Plane pr_vectorcall GetPlane(BBox_cref bbox, BBox::EPlane side)
 	{
 		switch (side)
 		{
@@ -321,80 +350,69 @@ namespace pr
 		}
 	}
 
-	// Return a corner of the bounding box
-	inline v4 GetCorner(BBox const& bbox, int corner)
-	{
-		assert("Invalid corner index" && corner >= 0 && corner < 8);
-		auto x = ((corner >> 0) & 0x1) * 2 - 1;
-		auto y = ((corner >> 1) & 0x1) * 2 - 1;
-		auto z = ((corner >> 2) & 0x1) * 2 - 1;
-		return v4(
-			bbox.m_centre.x + x * bbox.m_radius.x,
-			bbox.m_centre.y + y * bbox.m_radius.y,
-			bbox.m_centre.z + z * bbox.m_radius.z,
-			1.0f);
-	}
-
 	// Return a bounding sphere that bounds the bounding box
-	inline BSphere GetBSphere(BBox const& bbox)
+	inline BSphere pr_vectorcall GetBSphere(BBox_cref bbox)
 	{
 		return BSphere(bbox.m_centre, Length(bbox.m_radius));
 	}
 
-	// Encompass 'point' within 'bbox'.
-	inline v4_cref<> pr_vectorcall Encompass(BBox& bbox, v4_cref<> point)
-	{
-		// Const version returns lhs, non-const returns rhs!
-		return bbox.encompass(point);
-	}
-	inline BBox pr_vectorcall Encompass(BBox const& bbox, v4_cref<> point)
+	// Include 'point' within 'bbox'.
+	[[nodiscard]]
+	inline BBox pr_vectorcall Union(BBox_cref bbox, v4_cref<> point)
 	{
 		// Const version returns lhs, non-const returns rhs!
 		BBox bb = bbox;
-		bb.encompass(point);
+		bb.Grow(point);
 		return bb;
 	}
-
-	// Encompass 'rhs' in 'lhs'
-	inline BBox_cref pr_vectorcall Encompass(BBox& lhs, BBox_cref rhs)
+	inline v4_cref<> pr_vectorcall Grow(BBox& bbox, v4_cref<> point)
 	{
 		// Const version returns lhs, non-const returns rhs!
-		// Don't treat !rhs.valid() as an error, it's the only way to Encompass a empty bbox
-		if (!rhs.valid()) return rhs;
-		lhs.encompass(rhs.m_centre + rhs.m_radius);
-		lhs.encompass(rhs.m_centre - rhs.m_radius);
-		return rhs;
+		return bbox.Grow(point);
 	}
-	inline BBox pr_vectorcall Encompass(BBox const& lhs, BBox_cref rhs)
+
+	// Include 'rhs' in 'lhs'
+	[[nodiscard]]
+	inline BBox pr_vectorcall Union(BBox_cref lhs, BBox_cref rhs)
 	{
 		// Const version returns lhs, non-const returns rhs!
-		// Don't treat !rhs.valid() as an error, it's the only way to Encompass a empty bbox
+		// Don't treat !rhs.valid() as an error, it's the only way to grow an empty bbox
 		BBox bb = lhs;
 		if (!rhs.valid()) return bb;
-		bb.encompass(rhs.m_centre + rhs.m_radius);
-		bb.encompass(rhs.m_centre - rhs.m_radius);
+		bb.Grow(rhs.m_centre + rhs.m_radius);
+		bb.Grow(rhs.m_centre - rhs.m_radius);
 		return bb;
 	}
-
-	// Encompass 'rhs' in 'lhs'
-	inline BSphere_cref Encompass(BBox& lhs, BSphere_cref rhs)
+	inline BBox_cref pr_vectorcall Grow(BBox& lhs, BBox_cref rhs)
 	{
-		// Don't treat rhs.empty() as an error, it's the only way to Encompass a empty bsphere
-		if (rhs.empty()) return rhs;
-		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
-		lhs.encompass(rhs.Centre() + radius);
-		lhs.encompass(rhs.Centre() - radius);
+		// Const version returns lhs, non-const returns rhs!
+		// Don't treat !rhs.valid() as an error, it's the only way to grow an empty bbox
+		if (!rhs.valid()) return rhs;
+		lhs.Grow(rhs.m_centre + rhs.m_radius);
+		lhs.Grow(rhs.m_centre - rhs.m_radius);
 		return rhs;
 	}
-	inline BBox Encompass(BBox const& lhs, BSphere_cref rhs)
+
+	// Include 'rhs' in 'lhs'
+	[[nodiscard]]
+	inline BBox Union(BBox_cref lhs, BSphere_cref rhs)
 	{
-		// Don't treat rhs.empty() as an error, it's the only way to Encompass a empty bsphere
+		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
 		BBox bb = lhs;
 		if (rhs.empty()) return bb;
 		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
-		bb.encompass(rhs.Centre() + radius);
-		bb.encompass(rhs.Centre() - radius);
+		bb.Grow(rhs.Centre() + radius);
+		bb.Grow(rhs.Centre() - radius);
 		return bb;
+	}
+	inline BSphere_cref Grow(BBox& lhs, BSphere_cref rhs)
+	{
+		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
+		if (rhs.empty()) return rhs;
+		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
+		lhs.Grow(rhs.Centre() + radius);
+		lhs.Grow(rhs.Centre() - radius);
+		return rhs;
 	}
 
 	// Returns true if 'point' is within the bounding volume
@@ -432,7 +450,7 @@ namespace pr::maths
 			{+0,-2,-1,1},
 		};
 		auto bbox = BBoxReset;
-		for (auto& p : pt) pr::Encompass(bbox, p);
+		for (auto& p : pt) Grow(bbox, p);
 		PR_CHECK(bbox.Lower().x, -1.0f);
 		PR_CHECK(bbox.Lower().y, -2.0f);
 		PR_CHECK(bbox.Lower().z, -1.0f);

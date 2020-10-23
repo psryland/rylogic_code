@@ -253,10 +253,10 @@ namespace CoinFlip.UI
 						var xrange = new RangeF(0, Equity.BalanceChanges.Count);
 						var yrange = RangeF.Invalid;
 						foreach (var chg in Equity.NettWorthHistory())
-							yrange.Encompass(chg.Worth.ToDouble());
+							yrange.Grow(chg.Worth.ToDouble());
 
-						bb = BBox.Encompass(bb, new v4((float)xrange.Beg, (float)yrange.Beg, -ZOrder.Max, 1f));
-						bb = BBox.Encompass(bb, new v4((float)xrange.End, (float)yrange.End, +ZOrder.Max, 1f));
+						bb = BBox.Union(bb, new v4((float)xrange.Beg, (float)yrange.Beg, -ZOrder.Max, 1f));
+						bb = BBox.Union(bb, new v4((float)xrange.End, (float)yrange.End, +ZOrder.Max, 1f));
 					}
 					else if (e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
@@ -265,8 +265,8 @@ namespace CoinFlip.UI
 						//var idx_max = (int)Chart.XAxis.Max;
 						//foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
 						//{
-						//	bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low, -ZOrder.Max, 1f));
-						//	bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
+						//	bb = BBox.Union(bb, new v4(idx_min, (float)candle.Low, -ZOrder.Max, 1f));
+						//	bb = BBox.Union(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
 						//}
 					}
 					else if (e.Axes.HasFlag(ChartControl.EAxis.XAxis))
@@ -276,13 +276,13 @@ namespace CoinFlip.UI
 						//var width = (int)(Chart.Scene.ActualWidth / 6); // in candles
 						//var idx_min = Instrument.Count - width * 4 / 5;
 						//var idx_max = Instrument.Count + width * 1 / 5;
-						//bb = BBox.Encompass(bb, new v4(idx_min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
-						//bb = BBox.Encompass(bb, new v4(idx_max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
+						//bb = BBox.Union(bb, new v4(idx_min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
+						//bb = BBox.Union(bb, new v4(idx_max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
 					}
 					else
 					{
-						bb = BBox.Encompass(bb, new v4((float)Chart.XAxis.Min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
-						bb = BBox.Encompass(bb, new v4((float)Chart.XAxis.Max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
+						bb = BBox.Union(bb, new v4((float)Chart.XAxis.Min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
+						bb = BBox.Union(bb, new v4((float)Chart.XAxis.Max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
 					}
 
 					// Swell the box a little for margins

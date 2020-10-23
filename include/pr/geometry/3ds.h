@@ -710,9 +710,9 @@ namespace pr::geometry::max_3ds
 				auto i1 = verts.add(face.m_idx[1], angles.y * norm, mat.m_diffuse, sg);
 				auto i2 = verts.add(face.m_idx[2], angles.z * norm, mat.m_diffuse, sg);
 
-				vrange.encompass(i0);
-				vrange.encompass(i1);
-				vrange.encompass(i2);
+				vrange.grow(i0);
+				vrange.grow(i1);
+				vrange.grow(i2);
 				irange.m_end += 3;
 
 				// Write out face indices

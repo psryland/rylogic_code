@@ -3,12 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 
 namespace pr
 {
-	// An integer that represents one of the basis axis: ±X, ±Y, ±Z
+	// An integer that represents one of the basis axis: +/-X, +/-Y, +/-Z
 	struct AxisId
 	{
 		static int const None = 0;
@@ -34,15 +33,19 @@ namespace pr
 		}
 		operator v4() const // Convert an axis id to an axis
 		{
-			//assert(IsValid(*this) && "axis_id must one of +/-1, +/-2, +/-3");
-			switch (value) {
-			default: return v4{};
-			case +1: return v4{+1,0,0,0};
-			case -1: return v4{-1,0,0,0};
-			case +2: return v4{0,+1,0,0};
-			case -2: return v4{0,-1,0,0};
-			case +3: return v4{0,0,+1,0};
-			case -3: return v4{0,0,-1,0};
+			return vec();
+		}
+		v4 vec() const
+		{
+			switch (value)
+			{
+				default: return v4{};
+				case +1: return v4{+1, 0, 0, 0};
+				case -1: return v4{-1, 0, 0, 0};
+				case +2: return v4{0, +1, 0, 0};
+				case -2: return v4{0, -1, 0, 0};
+				case +3: return v4{0, 0, +1, 0};
+				case -3: return v4{0, 0, -1, 0};
 			}
 		}
 		static bool IsValid(AxisId axis_id)

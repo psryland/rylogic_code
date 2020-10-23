@@ -24,9 +24,9 @@ ShapeArray& ShapeArray::set(std::size_t num_shapes, std::size_t size_in_bytes, c
 BBox& pr::ph::CalcBBox(ShapeArray const& shape, BBox& bbox)
 {
 	bbox.reset();
-	for( Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = pr::ph::Inc(i) )
+	for (Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = pr::ph::Inc(i))
 	{
-		Encompass(bbox, i->m_shape_to_model * i->m_bbox);
+		Grow(bbox, i->m_shape_to_model * i->m_bbox);
 	}
 	return bbox;
 }

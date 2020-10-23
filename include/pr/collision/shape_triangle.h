@@ -44,9 +44,9 @@ namespace pr::collision
 	inline BBox CalcBBox(ShapeTriangle const& shape)
 	{
 		auto bbox = BBoxReset;
-		Encompass(bbox, shape.m_v.x);
-		Encompass(bbox, shape.m_v.y);
-		Encompass(bbox, shape.m_v.z);
+		Grow(bbox, shape.m_v.x);
+		Grow(bbox, shape.m_v.y);
+		Grow(bbox, shape.m_v.z);
 		return shape.m_base.m_s2p * bbox;
 	}
 

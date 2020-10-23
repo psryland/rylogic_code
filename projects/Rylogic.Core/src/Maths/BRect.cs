@@ -93,7 +93,7 @@ namespace Rylogic.Maths
 		{
 			var br = BRect.Reset;
 			foreach (var pt in points)
-				br.Encompass(pt);
+				br.Grow(pt);
 			return br;
 		}
 
@@ -208,7 +208,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Expands the bounding rectangle to include 'point'</summary>
-		public void Encompass(params v2[] points)
+		public void Grow(params v2[] points)
 		{
 			foreach (var point in points)
 			{
@@ -235,13 +235,13 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Expands the bounding rectangle to include 'rhs'</summary>
-		public void Encompass(params BRect[] areas)
+		public void Grow(params BRect[] areas)
 		{
 			foreach (var area in areas)
 			{
 				Debug.Assert(area.IsValid, "Encompasing an invalid bounding rectangle");
-				Encompass(area.m_centre + area.m_radius);
-				Encompass(area.m_centre - area.m_radius);
+				Grow(area.m_centre + area.m_radius);
+				Grow(area.m_centre - area.m_radius);
 			}
 		}
 

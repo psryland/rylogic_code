@@ -207,7 +207,7 @@ namespace CoinFlip.UI.GfxObjects
 			foreach (var order in b2q)
 			{
 				var price_q2b = (double)order.PriceQ2B.ToDouble();
-				price_range.Encompass(price_q2b);
+				price_range.Grow(price_q2b);
 				b2q_volume += order.AmountBase.ToDouble();
 				if (price_q2b.Within(chart_yrange))
 					visible_volume = Math.Max(visible_volume, b2q_volume);
@@ -215,7 +215,7 @@ namespace CoinFlip.UI.GfxObjects
 			foreach (var order in q2b)
 			{
 				var price_q2b = (double)order.PriceQ2B.ToDouble();
-				price_range.Encompass(price_q2b);
+				price_range.Grow(price_q2b);
 				q2b_volume += order.AmountBase.ToDouble();
 				if (price_q2b.Within(chart_yrange))
 					visible_volume = Math.Max(visible_volume, q2b_volume);

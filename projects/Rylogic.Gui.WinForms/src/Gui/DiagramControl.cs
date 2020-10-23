@@ -277,7 +277,7 @@ namespace Rylogic.Gui.WinForms
 				foreach (var elem in Selected.OfType<ResizeableElement>().Where(x => x.Resizeable))
 				{
 					var b = elem.Bounds;
-					if (b.IsValid) bounds.Encompass(b);
+					if (b.IsValid) bounds.Grow(b);
 				}
 				m_tools.Resizer.ForEach(x => x.Update(bounds, z));
 
@@ -855,13 +855,13 @@ namespace Rylogic.Gui.WinForms
 				foreach (var elem in Elements)
 				{
 					var b = elem.Bounds;
-					if (b.IsValid) bounds.Encompass(b);
+					if (b.IsValid) bounds.Grow(b);
 				}
 				return bounds;
 			}
 		}
 
-		/// <summary>Get the area encompassing the selected elements</summary>
+		/// <summary>Get the area enclosing the selected elements</summary>
 		public BRect SelectionBounds
 		{
 			get
@@ -870,7 +870,7 @@ namespace Rylogic.Gui.WinForms
 				foreach (var elem in Selected)
 				{
 					var b = elem.Bounds;
-					if (b.IsValid) bounds.Encompass(b);
+					if (b.IsValid) bounds.Grow(b);
 				}
 				return bounds;
 			}
@@ -2733,7 +2733,7 @@ namespace Rylogic.Gui.WinForms
 				get
 				{
 					var bounds = BRect.Reset;
-					bounds.Encompass(Points(true));
+					bounds.Grow(Points(true));
 					return bounds;
 				}
 			}
@@ -3634,7 +3634,7 @@ namespace Rylogic.Gui.WinForms
 			foreach (var node in nodes)
 			{
 				node.PositionXY = r != 0 ? (r + 0.5f * node.Size.Length) * new v2((float)Math.Cos(a), (float)Math.Sin(a)) : v2.Zero;
-				bounds.Encompass(new BRect(node.PositionXY, node.Size * 0.5f));
+				bounds.Grow(new BRect(node.PositionXY, node.Size * 0.5f));
 
 				a += astep;
 				if (a >= Math_.TauF)

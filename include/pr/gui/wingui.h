@@ -762,7 +762,7 @@ namespace pr
 			bool operator != (Rect const& rhs) const { return !(*this == rhs); }
 
 			static Rect invalid() { return Rect(INT_MAX, INT_MAX, -INT_MAX, -INT_MAX); }
-			static void Encompass(Rect& lhs, Rect const& rhs)
+			static void Grow(Rect& lhs, Rect const& rhs)
 			{
 				if (lhs.left   > rhs.left  ) lhs.left   = rhs.left  ;
 				if (lhs.top    > rhs.top   ) lhs.top    = rhs.top   ;
@@ -4120,7 +4120,7 @@ namespace pr
 						AutoSizePosition(x, y, w, h, this);
 						rc = Rect(x,y,x+w,y+h);
 					}
-					Rect::Encompass(bbox, rc);
+					Rect::Grow(bbox, rc);
 				}
 				return bbox;
 			}

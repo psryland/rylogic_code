@@ -460,7 +460,7 @@ namespace pr::geometry::p3d
 			auto get = [](auto* ptr, int count)
 			{
 				auto r = Range<int>::Reset();
-				for (; count-- != 0;) r.encompass(s_cast<int>(*ptr++));
+				for (; count-- != 0;) r.grow(s_cast<int>(*ptr++));
 				return r;
 			};
 			switch (m_vidx.stride())
@@ -491,7 +491,7 @@ namespace pr::geometry::p3d
 		//    wheel would have a nugget for the rim, and a nugget for the rubber tyre)
 		//  - Nuggets don't need to all have the same topology.
 		//  - There is only one transform per mesh. Nuggets don't have transforms.
-		//  - The bounding box encompasses the mesh. Nuggets don't have bounding boxes.
+		//  - The bounding box encloses the mesh. Nuggets don't have bounding boxes.
 		struct fat_vert_iter_t
 		{
 			using proxy = struct proxy_ { FatVert x; FatVert const* operator -> () const { return &x; } };
@@ -667,7 +667,7 @@ namespace pr::geometry::p3d
 			};
 
 			// Verts are always unique
-			m_vert.push_back(m_bbox.encompass(fvert.m_vert));
+			m_vert.push_back(m_bbox.Grow(fvert.m_vert));
 			add_to(m_diff, fvert.m_diff.argb(), vcount());
 			add_to(m_norm, fvert.m_norm, vcount());
 			add_to(m_tex0, fvert.m_tex0, vcount());

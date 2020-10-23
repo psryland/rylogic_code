@@ -5058,7 +5058,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			Cache.Invalidate(x_range);
 			if (m_range_x != RangeF.Invalid)
-				m_range_x.Encompass(x_range);
+				m_range_x.Grow(x_range);
 		}
 		
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
@@ -5160,7 +5160,7 @@ namespace Rylogic.Gui.WinForms
 				var pt = m_data[i + idx_range.Begi];
 				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
 				m_ibuf[i] = (ushort)i;
-				x_range.Encompass(pt.xf);
+				x_range.Grow(pt.xf);
 			}
 
 			// Create a nugget for the points using the sprite shader
@@ -5201,7 +5201,7 @@ namespace Rylogic.Gui.WinForms
 				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
 				m_ibuf[indx++] = (ushort)(v);
 
-				x_range.Encompass(pt.xf);
+				x_range.Grow(pt.xf);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
@@ -5252,7 +5252,7 @@ namespace Rylogic.Gui.WinForms
 				m_ibuf[indx++] = (ushort)(v + 0);
 				m_ibuf[indx++] = (ushort)(v + 1);
 
-				x_range.Encompass(pt.xf);
+				x_range.Grow(pt.xf);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
@@ -5323,7 +5323,7 @@ namespace Rylogic.Gui.WinForms
 				m_ibuf[indx++] = (ushort)(v + 3);
 				m_ibuf[indx++] = (ushort)(v + 0);
 
-				x_range.Encompass(pt.xf);
+				x_range.Grow(pt.xf);
 			}
 
 			// Create a nugget for the tri list
@@ -5604,7 +5604,7 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Add a datum point</summary>
 			public Pt Add(Pt point)
 			{
-				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_range.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Add(point);
 				return point;
 			}
@@ -5619,7 +5619,7 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Insert a datum point</summary>
 			public Pt Insert(int index, Pt point)
 			{
-				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_range.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Insert(index, point);
 				return point;
 			}
@@ -5630,7 +5630,7 @@ namespace Rylogic.Gui.WinForms
 				get { return Data[idx]; }
 				set
 				{
-					m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
+					m_changed_data_range.Grow(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
 					Data[idx] = value;
 				}
 			}

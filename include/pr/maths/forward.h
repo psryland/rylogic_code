@@ -127,6 +127,7 @@ namespace pr
 	template <typename A = void, typename B = void> using m6_cref = Mat6x8<A, B> const&;
 	template <typename A = void, typename B = void> using quat_cref = Quat<A,B> const;
 	using BBox_cref = BBox const;
+	using BSphere_cref = BSphere const;
 	#else
 	template <typename T = void> using v2_cref = Vec2<T> const&;
 	template <typename T = void> using v3_cref = Vec3<T> const&;
@@ -141,6 +142,7 @@ namespace pr
 	template <typename A = void, typename B = void> using m6_cref = Mat6x8<A, B> const&;
 	template <typename A = void, typename B = void> using quat_cref = Quat<A,B> const&;
 	using BBox_cref = BBox const&;
+	using BSphere_cref = BSphere const&;
 	#endif
 
 	namespace maths

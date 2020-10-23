@@ -56,7 +56,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(selector(item));
+				range.Grow(selector(item));
 
 			return range;
 		}
@@ -64,7 +64,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -72,7 +72,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -175,14 +175,14 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Grow the bounds of this range to include 'x'</summary>
-		public void Encompass(long value)
+		public void Grow(long value)
 		{
 			Beg = Math.Min(Beg, value);
 			End = Math.Max(End, value + 1);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
-		public void Encompass(RangeI rng)
+		public void Grow(RangeI rng)
 		{
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
 			Beg = Math.Min(Beg, rng.Beg);
@@ -197,7 +197,7 @@ namespace Rylogic.Common
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
-		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
+		/// (basically the same as 'Grow' except this range isn't modified.</summary>
 		public RangeI Union(RangeI rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
@@ -333,7 +333,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(selector(item));
+				range.Grow(selector(item));
 
 			return range;
 		}
@@ -341,7 +341,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -349,7 +349,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -439,14 +439,14 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
-		public void Encompass(double value)
+		public void Grow(double value)
 		{
 			Beg = Math.Min(Beg, value);
 			End = Math.Max(End, value);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
-		public void Encompass(RangeF rng)
+		public void Grow(RangeF rng)
 		{
 			Debug.Assert(rng.Size >= 0.0, "'rng' is inside out");
 			Beg = Math.Min(Beg, rng.Beg);
@@ -461,7 +461,7 @@ namespace Rylogic.Common
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
-		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
+		/// (basically the same as 'Grow' except this range isn't modified.</summary>
 		public RangeF Union(RangeF rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
@@ -597,7 +597,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(selector(item));
+				range.Grow(selector(item));
 
 			return range;
 		}
@@ -605,7 +605,7 @@ namespace Rylogic.Common
 		{
 			var range = Invalid;
 			foreach (var item in items)
-				range.Encompass(item);
+				range.Grow(item);
 
 			return range;
 		}
@@ -677,14 +677,14 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
-		public void Encompass(T value)
+		public void Grow(T value)
 		{
 			Beg = Math_.Min(Beg, value);
 			End = Math_.Max(End, value);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
-		public void Encompass(RangeF<T> rng)
+		public void Grow(RangeF<T> rng)
 		{
 			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
 			Beg = Math_.Min(Beg, rng.Beg);
@@ -699,7 +699,7 @@ namespace Rylogic.Common
 
 		/// <summary>
 		/// Returns a range that is the union of this range with 'rng'
-		/// (basically the same as 'Encompass' except this range isn't modified.</summary>
+		/// (basically the same as 'Grow' except this range isn't modified.</summary>
 		public RangeF<T> Union(RangeF<T> rng)
 		{
 			Debug.Assert(Size.CompareTo(default(T)) >= 0, "this range is inside out");
@@ -849,21 +849,21 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void Encompass()
+		public void Bounds()
 		{
 			var r = RangeI.Invalid;
-			r.Encompass(4);
+			r.Grow(4);
 			Assert.Equal(4L, r.Beg);
 			Assert.Equal(5L, r.End);
 			Assert.True(r.Contains(4));
 
-			r.Encompass(-2);
+			r.Grow(-2);
 			Assert.Equal(-2L, r.Beg);
 			Assert.Equal( 5L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.True(r.Contains(4));
 
-			r.Encompass(new RangeI(1,7));
+			r.Grow(new RangeI(1,7));
 			Assert.Equal(-2L, r.Beg);
 			Assert.Equal( 7L, r.End);
 			Assert.True(r.Contains(-2));
@@ -903,18 +903,18 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void EncompassF()
+		public void BoundsF()
 		{
 			var r = RangeF.Invalid;
-			r.Encompass(4);
+			r.Grow(4);
 			Assert.Equal(4.0, r.Beg);
 			Assert.Equal(4.0, r.End);
 
-			r.Encompass(-2);
+			r.Grow(-2);
 			Assert.Equal(-2.0, r.Beg);
 			Assert.Equal( 4.0, r.End);
 
-			r.Encompass(new RangeF(1,7));
+			r.Grow(new RangeF(1,7));
 			Assert.Equal(-2.0, r.Beg);
 			Assert.Equal( 7.0, r.End);
 
@@ -952,18 +952,18 @@ namespace Rylogic.UnitTests
 		}
 
 		[Test]
-		public void EncompassFGen()
+		public void BoundsFGen()
 		{
 			var r = RangeF<decimal>.Invalid;
-			r.Encompass(4);
+			r.Grow(4);
 			Assert.Equal(4.0m, r.Beg);
 			Assert.Equal(4.0m, r.End);
 
-			r.Encompass(-2);
+			r.Grow(-2);
 			Assert.Equal(-2.0m, r.Beg);
 			Assert.Equal( 4.0m, r.End);
 
-			r.Encompass(new RangeF<decimal>(1m,7m));
+			r.Grow(new RangeF<decimal>(1m,7m));
 			Assert.Equal(-2.0m, r.Beg);
 			Assert.Equal( 7.0m, r.End);
 

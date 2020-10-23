@@ -278,30 +278,30 @@ namespace pr
 		return Scale(rect, by, by);
 	}
 
-	// Encompass 'point' in 'frect'
-	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V>& Encompass(Rectangle<V>& rect, V const& point)
+	// Include 'point' in 'frect'
+	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V>& Grow(Rectangle<V>& rect, V const& point)
 	{
 		rect.m_min = Min(point, rect.m_min);
 		rect.m_max = Max(point, rect.m_max);
 		return rect;
 	}
-	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V> Encompass(Rectangle<V> const& rect, V const& point)
+	template <typename V, typename E = Rectangle<V>::elem_type> [[nodiscard]] inline Rectangle<V> Union(Rectangle<V> const& rect, V const& point)
 	{
 		auto r = rect;
-		return Encompass(r, point);
+		return Grow(r, point);
 	}
 
-	// Encompass 'rhs' in 'lhs'
-	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V>& Encompass(Rectangle<V>& lhs, Rectangle<V> const& rhs)
+	// Include 'rhs' in 'lhs'
+	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V>& Grow(Rectangle<V>& lhs, Rectangle<V> const& rhs)
 	{
 		lhs.m_min = Min(lhs.m_min, rhs.m_min);
 		lhs.m_max = Max(lhs.m_max, rhs.m_max);
 		return lhs;
 	}
-	template <typename V, typename E = Rectangle<V>::elem_type> inline Rectangle<V> Encompass(Rectangle<V> const& lhs, Rectangle<V> const& rhs)
+	template <typename V, typename E = Rectangle<V>::elem_type> [[nodiscard]] inline Rectangle<V> Union(Rectangle<V> const& lhs, Rectangle<V> const& rhs)
 	{
 		auto r = lhs;
-		return Encompass(r, rhs);
+		return Grow(r, rhs);
 	}
 
 	// Returns true if 'point' is within the bounding volume

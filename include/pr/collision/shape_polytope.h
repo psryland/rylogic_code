@@ -113,7 +113,7 @@ namespace pr
 		{
 			auto bbox = BBoxReset;
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v)
-				Encompass(bbox, *v);
+				Grow(bbox, *v);
 			return shape.m_base.m_s2p * bbox;
 		}
 

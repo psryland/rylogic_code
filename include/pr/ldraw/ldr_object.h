@@ -581,7 +581,7 @@ namespace pr::ldr
 			if (m_model && !AllSet(m_flags,ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 			{
 				if (m_model->m_bbox.valid())
-					Encompass(bbox, i2w * m_model->m_bbox);
+					Grow(bbox, i2w * m_model->m_bbox);
 			}
 			if (include_children) // Add the bounding boxes of the children
 			{
@@ -589,7 +589,7 @@ namespace pr::ldr
 				{
 					auto c2w = i2w * child->m_o2p;
 					auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w);
-					if (cbbox.valid()) Encompass(bbox, cbbox);
+					if (cbbox.valid()) Grow(bbox, cbbox);
 				}
 			}
 			return bbox;

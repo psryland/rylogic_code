@@ -213,7 +213,7 @@ namespace pr::physics
 
 			model.m_bbox = BBoxReset;
 			for (auto& prim : model.m_prim_list)
-				Encompass(model.m_bbox, prim->shape().m_s2p * prim->m_bbox);
+				Grow(model.m_bbox, prim->shape().m_s2p * prim->m_bbox);
 		}
 
 		// Calculates the inertia for 'm_model'

@@ -576,7 +576,7 @@ namespace Rylogic.LDraw
 		{
 			var bbox = BBox.Reset;
 			foreach (var d in data)
-				bbox = BBox.Encompass(bbox, d);
+				BBox.Grow(ref bbox, d);
 
 			using (Group(name))
 			{

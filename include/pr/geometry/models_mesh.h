@@ -54,7 +54,7 @@ namespace pr::geometry
 		auto uv = CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, v2Zero);
 
 		// Bounding box
-		auto bb = [&](v4 const& v) { Encompass(props.m_bbox, v); return v; };
+		auto bb = [&](v4 const& v) { Grow(props.m_bbox, v); return v; };
 
 		// Verts
 		for (auto v = 0; v != num_verts; ++v)

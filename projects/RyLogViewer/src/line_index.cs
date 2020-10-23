@@ -95,7 +95,7 @@ namespace RyLogViewer
 						if (row_index != -1) yield return rng;
 						rng = RangeI.Invalid;
 					}
-					rng.Encompass(m_line_index[r.Index]);
+					rng.Grow(m_line_index[r.Index]);
 					row_index = r.Index;
 				}
 				if (!rng.Equals(RangeI.Invalid)) yield return rng;

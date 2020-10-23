@@ -319,6 +319,37 @@ namespace pr
 
 	#pragma region Functions
 
+	// Returns the corners of the frustum (in frustum space) at a given 'z' distance (i.e. apex at (0,0,0). Far plane at (0,0,-zfar)). Return order: x=lb, y=lt, z=rt, w=rb
+	inline m4x4 Corners(Frustum const& frustum, float z)
+	{
+		assert(z >= 0 && "'z' should be a positive distance from the apex");
+		auto edges = frustum.edges();
+		
+		if (frustum.orthographic())
+		{
+			return m4x4(
+				v4(-frustum.m_Tplanes.w.x, -frustum.m_Tplanes.w.z, -z, 1),
+				v4(-frustum.m_Tplanes.w.x, +frustum.m_Tplanes.w.w, -z, 1),
+				v4(+frustum.m_Tplanes.w.y, +frustum.m_Tplanes.w.w, -z, 1),
+				v4(+frustum.m_Tplanes.w.y, -frustum.m_Tplanes.w.z, -z, 1));
+		}
+		else
+		{
+			// Each edge vector has length == 1. Find the length of each edge
+			// when projected onto the Z axis then scale by z.
+			auto lengths = Transpose4x4(edges) * v4(0, 0, -1, 0);
+			auto corners = CompMul(edges, z / lengths) + m4x4(v4Origin, v4Origin, v4Origin, v4Origin);
+			return corners;
+		}
+	}
+
+	// Returns the corners of the frustum at the zfar plane.
+	inline m4x4 Corners(Frustum const& frustum)
+	{
+		// Warning: calling this on orthographic frusta is probably a bug.. unless Z isn't used.
+		return Corners(frustum, frustum.zfar());
+	}
+
 	// Return true if any part of a sphere around 'point' is within 'frustum'
 	inline bool IsWithin(Frustum const& frustum, v4 const& point, float radius, bool include_zfar)
 	{
@@ -360,7 +391,7 @@ namespace pr
 	// Return true if any part of 'bbox' is within 'frustum'
 	inline bool IsWithin(Frustum const& frustum, BBox const& bbox, bool include_zfar)
 	{
-		// Shift 'bbox' to that zfar is at (0,0,0)
+		// Shift 'bbox' so that zfar is at (0,0,0)
 		auto bb = bbox;
 		bb.m_centre.z += frustum.zfar();
 
@@ -373,47 +404,15 @@ namespace pr
 		return IsWithin(frustum, GetBSphere(bbox), include_zfar);
 	}
 
-	// Returns the corners of the frustum (in frustum space) at a given 'z' distance (i.e. apex at (0,0,0). Far plane at (0,0,-zfar)).
-	// Return order: x=lb, y=lt, z=rt, w=rb
-	inline m4x4 GetCorners(Frustum const& frustum, float z)
+	// Include 'f2w * frustum' in 'bbox'
+	inline BBox& pr_vectorcall Grow(BBox& bbox, Frustum const& frustum, m4x4 const& f2w = m4x4Identity)
 	{
-		assert(z >= 0 && "'z' should be a positive distance from the apex");
-		auto edges = frustum.edges();
-		
-		if (frustum.orthographic())
-		{
-			return m4x4(
-				v4(-frustum.m_Tplanes.w.x, -frustum.m_Tplanes.w.z, -z, 1),
-				v4(-frustum.m_Tplanes.w.x, +frustum.m_Tplanes.w.w, -z, 1),
-				v4(+frustum.m_Tplanes.w.y, +frustum.m_Tplanes.w.w, -z, 1),
-				v4(+frustum.m_Tplanes.w.y, -frustum.m_Tplanes.w.z, -z, 1));
-		}
-		else
-		{
-			// Each edge vector has length == 1. Find the length of each edge
-			// when projected onto the Z axis then scale by z.
-			auto lengths = Transpose4x4(edges) * v4(0, 0, -1, 0);
-			auto corners = CompMul(edges, z / lengths) + m4x4(v4Origin, v4Origin, v4Origin, v4Origin);
-			return corners;
-		}
-	}
-
-	// Returns the corners of the frustum at the zfar plane.
-	inline m4x4 GetCorners(Frustum const& frustum)
-	{
-		// Warning: calling this on orthographic frusta is probably a bug.. unless Z isn't used.
-		return GetCorners(frustum, frustum.zfar());
-	}
-
-	// Encompass 'f2w * frustum' in 'bbox'
-	inline BBox& pr_vectorcall Encompass(BBox& bbox, Frustum const& frustum, m4x4 const& f2w = m4x4Identity)
-	{
-		auto corner = GetCorners(frustum);
-		Encompass(bbox, f2w.pos);
-		Encompass(bbox, f2w * corner.x);
-		Encompass(bbox, f2w * corner.y);
-		Encompass(bbox, f2w * corner.z);
-		Encompass(bbox, f2w * corner.w);
+		auto corner = Corners(frustum);
+		Grow(bbox, f2w.pos);
+		Grow(bbox, f2w * corner.x);
+		Grow(bbox, f2w * corner.y);
+		Grow(bbox, f2w * corner.z);
+		Grow(bbox, f2w * corner.w);
 		return bbox;
 	}
 
@@ -467,7 +466,7 @@ namespace pr::maths
 			PR_CHECK(IsWithin(f, v4(+0.6f, -0.4f, -0.8f, 1), 0.06f, true), false);
 
 			// GetCorners
-			auto corners = GetCorners(f, 1.0f);
+			auto corners = Corners(f, 1.0f);
 			PR_CHECK(FEql(corners.x, v4(-0.724874f, -0.414214f, -1.0f, 1)), true);
 			PR_CHECK(FEql(corners.y, v4(-0.724874f, +0.414214f, -1.0f, 1)), true);
 			PR_CHECK(FEql(corners.z, v4(+0.724874f, +0.414214f, -1.0f, 1)), true);
@@ -511,7 +510,7 @@ namespace pr::maths
 			PR_CHECK(IsWithin(f, v4(+0.8f, -0.5f, -0.7f, 1), 0.20f, true), true); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
 			
 			// GetCorners
-			auto corners = GetCorners(f, 2.0f);
+			auto corners = Corners(f, 2.0f);
 			PR_CHECK(FEql(corners.x, v4(-1.6f, -0.9f, -2.0f, 1)), true);
 			PR_CHECK(FEql(corners.y, v4(-1.6f, +0.9f, -2.0f, 1)), true);
 			PR_CHECK(FEql(corners.z, v4(+1.6f, +0.9f, -2.0f, 1)), true);
@@ -553,7 +552,7 @@ namespace pr::maths
 			PR_CHECK(IsWithin(f, v4(+0.3f, -0.5f, -0.8f, 1), 0.04f, true), false);
 
 			// GetCorners
-			auto corners = GetCorners(f, 2.0f);
+			auto corners = Corners(f, 2.0f);
 			PR_CHECK(FEql(corners.x, v4(-0.8f, -0.45f, -2.0f, 1)), true);
 			PR_CHECK(FEql(corners.y, v4(-0.8f, +0.45f, -2.0f, 1)), true);
 			PR_CHECK(FEql(corners.z, v4(+0.8f, +0.45f, -2.0f, 1)), true);
