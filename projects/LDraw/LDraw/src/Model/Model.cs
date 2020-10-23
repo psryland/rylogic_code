@@ -302,6 +302,7 @@ namespace LDraw
 		}
 
 		/// <summary>Clear instances from one or more scenes</summary>
+		public void Clear(SceneUI scene) => Clear(new[] { scene });
 		public void Clear(SceneUI scene, Guid context_id) => Clear(new[] { scene }, new[] { context_id }, 1, 0);
 		public void Clear(IEnumerable<SceneUI> scenes, Guid context_id) => Clear(scenes, new[] { context_id }, 1, 0);
 		public void Clear(IEnumerable<SceneUI> scenes, Guid[] context_ids, int include_count, int exclude_count)

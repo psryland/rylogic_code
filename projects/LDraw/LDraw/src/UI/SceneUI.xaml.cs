@@ -39,6 +39,7 @@ namespace LDraw.UI
 			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
 			Links = new List<ChartLink>();
 
+			ClearScene = Command.Create(this, ClearSceneInternal);
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
 
@@ -290,6 +291,13 @@ namespace LDraw.UI
 			}
 		}
 		private bool m_show_anim_ui;
+
+		/// <summary>Remove all objects from the scene</summary>
+		public Command ClearScene { get; }
+		private void ClearSceneInternal()
+		{
+			Model.Clear(this);
+		}
 
 		/// <summary>Rename the scene tab</summary>
 		public Command RenameScene { get; }

@@ -6,15 +6,10 @@ Immediate ToDo:
 	Export Plane model
 	
 Work
-  \\10.0.10.85\Users\etienne.kilian\Desktop\ZRTDebug
   RexNode Sensor
-	- Battery monitoring - low power warning.. show in console
 	- MuRata to sleep between samples
   RexNode Dongle
-    - Make the dongle code work with a boot loader
   ZRT
-    - Make lines from bubbles go green as well
-	- Make the 'bubbles' not always go to the far edge of the window
 	
   VRex
 	- Fix ground plane
@@ -26,6 +21,7 @@ Work
 SolarHotWater
 	- Auto scroll graph
 	- Schedule control
+	
 LDraw
 	- Drag and drop on Scene should not open the file, DnD on Script should. Handle large ldr files.
 	- Add a skybox to the demo scene
@@ -35,6 +31,7 @@ LDraw
 	- Equation doesn't renderer until first refresh
 	- *Mesh should silently handle empty objects
 	- Support sub models in object manager
+	- Rendering bug in demo scene (looks like a depth state is not being set each frame. Ribbon rendering through rabbit, but not after toggling visibility. Rabbit is occluding other alphas)
 
 TextAligner
 	
@@ -131,4 +128,3 @@ YouTube speed:
    
    
    L3tMe1n!
-   e6t5wckci3piacc5cggr7f5qx2nvwuypz5jrdi4lahol5slcwwrq
