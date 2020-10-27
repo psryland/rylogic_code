@@ -41,8 +41,6 @@ namespace pr::rdr
 		x(DSLightingVS    ,)\
 		x(DSLightingPS    ,)\
 		x(ShadowMapVS     ,)\
-		x(ShadowMapFaceGS ,)\
-		x(ShadowMapLineGS ,)\
 		x(ShadowMapPS     ,)\
 		x(PointSpritesGS  ,)\
 		x(ThickLineListGS ,)\

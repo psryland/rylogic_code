@@ -1,4 +1,4 @@
-//***************************************************************************************************
+﻿//***************************************************************************************************
 // View 3D
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -163,6 +163,10 @@ namespace view3d
 		m_scene.SetView(cam);
 		cam.m_moved = false;
 
+		// Set the light source
+		m_scene.m_global_light = m_light;
+		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, {1024,1024});
+
 		// Position and scale the focus point and origin point
 		if (m_focus_point_visible || m_origin_point_visible)
 		{
@@ -219,9 +223,6 @@ namespace view3d
 			if (m_selection_box.m_i2w.pos.w != 0)
 				m_scene.AddInstance(m_selection_box);
 		}
-
-		// Set the light source
-		m_scene.m_global_light = m_light;
 
 		// Get the animation clock time
 		auto anim_time = (float)m_anim_data.m_clock.load().count();

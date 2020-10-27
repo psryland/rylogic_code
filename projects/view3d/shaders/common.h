@@ -6,6 +6,7 @@
 
 #include "pr/view3d/forward.h"
 #include "pr/view3d/render/scene_view.h"
+#include "pr/view3d/steps/shadow_map.h"
 #include "pr/view3d/lights/light.h"
 #include "pr/view3d/instances/instance.h"
 #include "pr/view3d/util/util.h"
@@ -193,24 +194,28 @@ namespace pr::rdr
 		cb.m_spot         = v4(light.m_inner_angle, light.m_outer_angle, light.m_range, light.m_falloff);
 	}
 
+	// Set the shadow map constants
+	inline void SetShadowMapConstants(ShadowMap const* smap_step, hlsl::Shadow& cb)
+	{
+		// Ignore if there is no shadow map step
+		if (smap_step == nullptr) return;
+
+		// Add the shadow maps to the shader params
+		for (auto& caster : smap_step->m_caster)
+		{
+			int i = cb.m_info.x++;
+			if (i == hlsl::MaxShadowMaps) break;
+			cb.m_w2l[i] = caster.m_params.m_w2l;
+			cb.m_l2s[i] = caster.m_params.m_l2s;
+			cb.m_zclip[i] = v4(caster.m_params.m_zn, caster.m_params.m_zf, 0, 0);
+		}
+	}
+
 	// Set the env-map to world orientation
 	inline void SetEnvMapConstants(TextureCube* env_map, hlsl::EnvMap& cb)
 	{
 		if (env_map == nullptr) return;
 		cb.m_w2env = InvertFast(env_map->m_cube2w);
-	}
-
-	// Set the shadow map constants
-	inline void SetShadowMapConstants(SceneView const& view, int smap_count, hlsl::Shadow& cb)
-	{
-		auto shadow_frustum = view.ShadowFrustum();
-		auto zfar = shadow_frustum.zfar();
-		auto wh = shadow_frustum.area(zfar);
-		auto max_range = view.m_shadow_max_caster_dist;
-
-		cb.m_info        = iv4(smap_count, 0, 0, 0);
-		cb.m_frust_dim   = v4(0.5f * wh.x, 0.5f * wh.y, zfar, max_range);
-		cb.m_frust       = shadow_frustum.m_Tplanes;
 	}
 
 	// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders

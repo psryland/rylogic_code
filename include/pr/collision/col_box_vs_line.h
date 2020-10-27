@@ -96,7 +96,7 @@ namespace pr::collision
 		auto sep_axis = p.SeparatingAxis();
 		auto p0 = Dot3(sep_axis, l2w * lhs.m_s2p.pos);
 		auto p1 = Dot3(sep_axis, r2w * rhs.m_s2p.pos);
-		auto sign = SignF(p0 < p1);
+		auto sign = Bool2SignF(p0 < p1);
 
 		contact.m_depth = p.Depth();
 		contact.m_axis  = sign * sep_axis;

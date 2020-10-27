@@ -424,7 +424,6 @@ namespace pr::rdr
 	}
 
 	// Create a DX texture from one or more image files
-	// 
 	void CreateWICTextureFromFiles(ID3D11Device* d3d_device, vector<std::filesystem::path> const& filepaths, int mips, bool is_cube_map, TextureDesc& tdesc, D3DPtr<ID3D11Resource>& res, D3DPtr<ID3D11ShaderResourceView>& srv, size_t max_dimension)
 	{
 		if (!d3d_device)

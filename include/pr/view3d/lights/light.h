@@ -28,13 +28,14 @@ namespace pr::rdr
 		bool IsValid() const;
 
 		// Returns a light to world transform appropriate for this light type and facing 'centre'
-		pr::m4x4 LightToWorld(pr::v4 const& centre, float centre_dist) const;
+		m4x4 LightToWorld(v4 const& centre, float centre_dist, m4x4 const& c2w = m4x4Identity) const;
 
 		// Returns a projection transform appropriate for this light type
-		pr::m4x4 Projection(float centre_dist) const;
+		m4x4 Projection(float zn, float zf, float w, float h, float focus_dist) const;
+		m4x4 ProjectionFOV(float zn, float zf, float aspect, float fovY, float focus_dist) const;
 
 		// Get/Set light settings
-		// throws pr::Exception<HRESULT> if the settings are invalid
+		// throws Exception<HRESULT> if the settings are invalid
 		std::wstring Settings() const;
 		void Settings(std::wstring_view settings);
 

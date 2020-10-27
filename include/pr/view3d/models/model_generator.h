@@ -1234,7 +1234,7 @@ namespace pr::rdr
 						vrange = Range::Reset();
 						for (auto i : nug.indices())
 						{
-							vrange.encompass(i);
+							vrange.grow(i);
 							*iptr++ = i;
 						}
 
@@ -1334,7 +1334,7 @@ namespace pr::rdr
 					auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
 					{
 						Vert vert;
-						SetPCNT(vert, cache.m_bbox.encompass(p), c, n, t);
+						SetPCNT(vert, cache.m_bbox.Grow(p), c, n, t);
 						cache.m_vcont.push_back(vert);
 					};
 					auto iout = [&](uint16_t i0, uint16_t i1, uint16_t i2)
@@ -1388,7 +1388,7 @@ namespace pr::rdr
 					auto vptr = cache.m_vcont.data();
 					for (int i = 0, iend = int(mesh.m_verts.size()); i != iend; ++i)
 					{
-						SetPCNT(*vptr, cache.m_bbox.encompass(mesh.m_verts[i]), Colour32White, mesh.m_norms[i/3], v2Zero);
+						SetPCNT(*vptr, cache.m_bbox.Grow(mesh.m_verts[i]), Colour32White, mesh.m_norms[i/3], v2Zero);
 						++vptr;
 					}
 

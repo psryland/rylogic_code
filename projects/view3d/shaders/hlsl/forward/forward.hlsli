@@ -7,24 +7,24 @@
 #ifndef PR_RDR_SHADER_FORWARD_HLSLI
 #define PR_RDR_SHADER_FORWARD_HLSLI
 
-#include "forward_cbuf.hlsli"
 #include "../types.hlsli"
+#include "forward_cbuf.hlsli"
 
 // Texture2D /w sampler
-Texture2D<float4> m_texture0 :register(t0);
-SamplerState      m_sampler0 :register(s0);
+Texture2D<float4> m_texture0; //:register(t0);
+SamplerState      m_sampler0; //:register(s0);
 
 // Environment map
-TextureCube<float4> m_envmap_texture :register(t1);
-SamplerState        m_envmap_sampler :register(s1);
+TextureCube<float4> m_envmap_texture; //:register(t1);
+SamplerState        m_envmap_sampler; //:register(s1);
 
 // Shadow map
-Texture2D<float2> m_smap_texture[1] :register(t2);
-SamplerState      m_smap_sampler[1] :register(s2);
+Texture2D<float2> m_smap_texture[MaxShadowMaps]; //:register(t2);
+SamplerState      m_smap_sampler; //:register(s2);
 
 // Projected textures
-Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES] :register(t3);
-SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES] :register(s3);
+Texture2D<float4> m_proj_texture[MaxProjectedTextures]; //:register(t3);
+SamplerState      m_proj_sampler[MaxProjectedTextures]; //:register(s3);
 
 #include "../lighting/phong_lighting.hlsli"
 #include "../shadow/shadow_cast.hlsli"
@@ -92,8 +92,8 @@ PSOut PSDefault(PSIn In)
 
 	// Shadows
 	float light_visible = 1.0f;
-	if (ShadowMapCount(m_shadow) == 1)
-		light_visible = LightVisibility(m_shadow, 0, m_global_light, m_cam.m_w2c, In.ws_vert);
+	if (ShadowMapCount(m_shadow) != 0)
+		light_visible = LightVisibility(m_shadow, In.ws_vert);
 
 	// Lighting
 	if (HasNormals)

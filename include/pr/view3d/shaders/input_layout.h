@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 
 namespace pr::rdr
@@ -102,10 +101,12 @@ namespace pr::rdr
 		vert.m_norm = norm;
 		vert.m_tex0 = uv;
 	}
-
-	inline void Encompass(BBox& bbox, Vert const& vert)
+}
+namespace pr
+{
+	inline rdr::Vert const& Grow(BBox& bbox, rdr::Vert const& vert)
 	{
-		Encompass(bbox, vert.m_vert);
+		Grow(bbox, vert.m_vert);
+		return vert;
 	}
-
 }

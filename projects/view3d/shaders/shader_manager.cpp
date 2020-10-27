@@ -60,8 +60,6 @@ namespace pr::rdr
 
 		// Shadow map shaders
 		CreateShader<ShadowMapVS>();
-		CreateShader<ShadowMapFaceGS>();
-		CreateShader<ShadowMapLineGS>();
 		CreateShader<ShadowMapPS>();
 
 		// Other shaders

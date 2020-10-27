@@ -9,6 +9,8 @@
 #include "cbuf.hlsli"
 
 static const float TINY = 0.0001f;
+static const int MaxShadowMaps = 1;
+static const int MaxProjectedTextures = 1;
 
 // Model flags
 static const int ModelFlags_HasNormals           = (1 << 0);
@@ -64,9 +66,17 @@ struct EnvMap
 // Shadows
 struct Shadow
 {
-	int4 m_info;                // x = count of smaps
-	float4 m_frust_dim;         // x = width at far plane, y = height at far plane, z = distance to far plane, w = smap max range (for normalising distances)
-	row_major float4x4 m_frust; // Inward pointing frustum plane normals, transposed.
+	int4 m_info;  // x = count of smaps
+	row_major float4x4 m_w2l[MaxShadowMaps]; // World space to light space
+	row_major float4x4 m_l2s[MaxShadowMaps]; // Light space to shadow map space
+	float4             m_zclip[MaxShadowMaps]; // x = near, y = far, z = pad0, w = pad1
+};
+
+// Projected textures
+struct ProjTexture
+{
+	int4 m_info;  // x = count of projected textures
+	row_major float4x4 m_w2t[MaxProjectedTextures]; // World to texture space projection transform
 };
 
 #ifdef SHADER_BUILD

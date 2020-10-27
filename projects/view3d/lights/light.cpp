@@ -38,26 +38,41 @@ namespace pr::rdr
 	}
 
 	// Returns a light to world transform appropriate for this light type and facing 'centre'
-	m4x4 Light::LightToWorld(v4 const& centre, float centre_dist) const
+	m4x4 Light::LightToWorld(v4 const& centre, float centre_dist, m4x4 const& c2w) const
 	{
+		auto pos = m_cam_relative ? c2w * m_position : m_position;
+		auto dir = m_cam_relative ? c2w * m_direction : m_direction;
+		auto preferred_up = m_cam_relative ? c2w.y : v4YAxis;
 		switch (m_type)
 		{
-		default:                  return m4x4Identity;
-		case ELight::Directional: return m4x4::LookAt(centre - centre_dist*m_direction, centre, Perpendicular(m_direction));
-		case ELight::Point:       return m4x4::LookAt(m_position, centre, Perpendicular(centre - m_position));
-		case ELight::Spot:        return m4x4::LookAt(m_position, centre, Perpendicular(centre - m_position));
+			case ELight::Directional: return m4x4::LookAt(centre - centre_dist * dir, centre, Perpendicular(dir, preferred_up));
+			case ELight::Point:       return m4x4::LookAt(pos, centre, Perpendicular(centre - pos, preferred_up));
+			case ELight::Spot:        return m4x4::LookAt(pos, centre, Perpendicular(centre - pos, preferred_up));
+			default:                  return m4x4Identity;
 		}
 	}
 
 	// Returns a projection transform appropriate for this light type
-	m4x4 Light::Projection(float centre_dist) const
+	m4x4 Light::Projection(float zn, float zf, float w, float h, float focus_dist) const
 	{
+		auto s = zn / focus_dist;
 		switch (m_type)
 		{
-		default:                  return m4x4Identity;
-		case ELight::Directional: return m4x4::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-		case ELight::Point:       return m4x4::ProjectionPerspectiveFOV(float(maths::tau_by_8), 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-		case ELight::Spot:        return m4x4::ProjectionPerspectiveFOV(float(maths::tau_by_8), 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Directional: return m4x4::ProjectionOrthographic(w, h, zn, zf, true);
+			case ELight::Point:       return m4x4::ProjectionPerspective(w * s, h * s, zn, zf, true);
+			case ELight::Spot:        return m4x4::ProjectionPerspective(w * s, h * s, zn, zf, true);
+			default:                  return m4x4Identity;
+		}
+	}
+	m4x4 Light::ProjectionFOV(float zn, float zf, float aspect, float fovY, float focus_dist) const
+	{
+		auto height = 2.0f * focus_dist * tan(fovY * 0.5f);
+		switch (m_type)
+		{
+			case ELight::Directional: return m4x4::ProjectionOrthographic(height * aspect, height, zn, zf, true);
+			case ELight::Point:       return m4x4::ProjectionPerspectiveFOV(fovY, aspect, zn, zf, true);
+			case ELight::Spot:        return m4x4::ProjectionPerspectiveFOV(fovY, aspect, zn, zf, true);
+			default:                  return m4x4Identity;
 		}
 	}
 
