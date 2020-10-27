@@ -16,7 +16,6 @@ cbuffer CBufFrame :reg(b0)
 	// support multiple shadow maps.
 	row_major float4x4 m_w2l; // World space to light space
 	row_major float4x4 m_l2s; // Light space to screen space
-	float m_zn, m_zf, pad0, pad1; // x = near, y = far
 };
 
 // Per nugget constants

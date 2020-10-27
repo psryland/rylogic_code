@@ -207,7 +207,6 @@ namespace pr::rdr
 			if (i == hlsl::MaxShadowMaps) break;
 			cb.m_w2l[i] = caster.m_params.m_w2l;
 			cb.m_l2s[i] = caster.m_params.m_l2s;
-			cb.m_zclip[i] = v4(caster.m_params.m_zn, caster.m_params.m_zf, 0, 0);
 		}
 	}
 

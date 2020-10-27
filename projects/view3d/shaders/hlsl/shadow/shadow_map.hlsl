@@ -24,9 +24,11 @@ PSIn_ShadowMap main(VSIn In)
 	float4 ws_vert = mul(In.vert, m_o2w);
 	float4 ls_vert = mul(ws_vert, m_w2l);
 
+	float2 nf = ClipPlanes(m_l2s);
+
 	// Transform. Set ws_vert.w to normalised distance from light
 	Out.ws_vert = ws_vert;
-	Out.ws_vert.w = Frac(m_zf, -ls_vert.z, m_zn);
+	Out.ws_vert.w = Frac(nf.y, -ls_vert.z, nf.x);
 	Out.ss_vert = mul(ls_vert, m_l2s);
 	return Out;
 }

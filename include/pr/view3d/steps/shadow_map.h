@@ -49,8 +49,6 @@ namespace pr::rdr
 			m4x4  m_w2l;
 			m4x4  m_l2s;
 			BBox  m_bounds;
-			float m_zn;
-			float m_zf;
 		};
 		struct ShadowCaster
 		{

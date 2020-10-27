@@ -69,7 +69,6 @@ struct Shadow
 	int4 m_info;  // x = count of smaps
 	row_major float4x4 m_w2l[MaxShadowMaps]; // World space to light space
 	row_major float4x4 m_l2s[MaxShadowMaps]; // Light space to shadow map space
-	float4             m_zclip[MaxShadowMaps]; // x = near, y = far, z = pad0, w = pad1
 };
 
 // Projected textures

@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
 #include "vector.hlsli"
@@ -87,4 +87,35 @@ float4 Intersect_RayVsTriangle(float4 pt, float4 dir, float4 a, float4 b, float4
 	float sum = SumComponents(bary);
 	sum = (abs(sum) > 0.0001) ? (1 / sum) : 0;
 	return bary * sum;
+}
+
+// Returns the parametric value 't' of the intersection between the line
+// passing through 's' and 'e' with 'frust'.
+// Assumes 's' is within the frustum to start with.
+float Intersect_RayVsFrustum(float4x4 frust, float4 s, float4 e)
+{
+	const float4 T = 1e10f;
+	
+	// Find the distance from each frustum face for 's' and 'e'
+	float4 d0 = mul(s, frust);
+	float4 d1 = mul(e, frust);
+
+	// Clip the edge 's-e' to each of the frustum sides (Actually, find the parametric
+	// value of the intercept)(min(T,..) protects against divide by zero)
+	float4 t0 = step(d1,d0)   * min(T, -d0/(d1 - d0));        // Clip to the frustum sides
+	float  t1 = step(e.z,s.z) * min(T.x, -s.z / (e.z - s.z)); // Clip to the far plane
+
+	// Set all components that are <= 0.0 to BIG
+	t0 += step(t0, float4(0,0,0,0)) * T;
+	t1 += step(t1, 0.0f) * T.x;
+
+	// Find the smallest positive parametric value
+	// => the closest intercept with a frustum plane
+	float t = T.x;
+	t = min(t, t0.x);
+	t = min(t, t0.y);
+	t = min(t, t0.z);
+	t = min(t, t0.w);
+	t = min(t, t1);
+	return t;
 }
