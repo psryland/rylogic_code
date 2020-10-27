@@ -137,8 +137,6 @@ namespace pr::rdr
 		m_params.m_bounds = ls_bounds;
 		m_params.m_w2l = InvertFast(l2w);
 		m_params.m_l2s = l2s;
-		m_params.m_zn = zn;
-		m_params.m_zf = zf;
 	}
 
 	// **************************
@@ -290,8 +288,6 @@ namespace pr::rdr
 				hlsl::smap::CBufFrame cb = {};
 				cb.m_w2l = caster.m_params.m_w2l;
 				cb.m_l2s = caster.m_params.m_l2s;
-				cb.m_zn = caster.m_params.m_zn;
-				cb.m_zf = caster.m_params.m_zf;
 				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS | EShaderType::PS);
 			}
 

@@ -16,10 +16,13 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 	float visibility = 1.0f;
 	for (int i = 0; i != ShadowMapCount(shadow); ++i)
 	{
+		float2 nf = ClipPlanes(shadow.m_l2s[i]);
+
 		// Get the distance from the light, normalised within the projection volume
 		float4 ls_pos = mul(ws_pos, shadow.m_w2l[i]);
-		float z = Frac(shadow.m_zclip[i].y, -ls_pos.z, shadow.m_zclip[i].x);
-		
+		float z = Frac(nf.y, -ls_pos.z, nf.x);
+
+		// Get the distance to the light from the shadow map
 		float4 ss_pos = mul(ls_pos, shadow.m_l2s[i]);
 		float2 uv = 0.5*float2(1.0 + ss_pos.x, 1.0 - ss_pos.y);
 		float2 depth = m_smap_texture[i].Sample(m_smap_sampler, uv);
