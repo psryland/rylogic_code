@@ -524,33 +524,22 @@ namespace pr::ldr
 	// Ldr object fluent helper
 	namespace fluent
 	{
+		template <typename> struct LdrObj_;
+		struct LdrGroup;
 		struct LdrLine;
 		struct LdrTriangle;
 		struct LdrSphere;
 		struct LdrBox;
 		struct LdrCylinder;
 		struct LdrFrustum;
-		struct LdrGroup;
-		struct Root
-		{
-			virtual ~Root() {}
-			virtual void ToString(std::string& str) const = 0;
-		};
-		using ObjPtr = std::unique_ptr<Root>;
+		using LdrObj = LdrObj_<void>;
+		using ObjPtr = std::unique_ptr<LdrObj>;
 		using ObjCont = std::vector<ObjPtr>;
 
-		template <typename Derived> struct LdrObj :Root
+		template <typename> struct LdrObj_
 		{
 			ObjCont m_objects;
-
-			LdrObj()
-				:m_objects()
-				, m_name()
-				, m_colour()
-				, m_o2w(m4x4Identity)
-				, m_wire()
-				, m_axis_id(AxisId::PosZ)
-			{}
+			virtual ~LdrObj_() {}
 
 			LdrGroup& Group(std::string_view name = "", Col colour = Col())
 			{
@@ -595,6 +584,30 @@ namespace pr::ldr
 				return (*ptr).name(name).col(colour);
 			}
 
+			// Serialise the ldr script to a string
+			virtual void ToString(std::string& str) const
+			{
+				for (auto& s : m_objects) s->ToString(str);
+			}
+
+			// Write the script to a file
+			void Write(std::filesystem::path const& filepath, bool append = false)
+			{
+				std::string str;
+				ToString(str);
+				ldr::Write(str, filepath, append);
+			}
+		};
+		template <typename Derived> struct LdrBase :LdrObj
+		{
+			LdrBase()
+				: m_name()
+				, m_colour()
+				, m_o2w(m4x4Identity)
+				, m_wire()
+				, m_axis_id(AxisId::PosZ)
+			{}
+
 			// Object name
 			Derived& name(std::string_view name)
 			{
@@ -612,6 +625,10 @@ namespace pr::ldr
 			Col m_colour;
 
 			// Object to world transform
+			Derived& pos(float x, float y, float z)
+			{
+				return o2w(m4x4::Translation(x, y, z));
+			}
 			Derived& pos(v4_cref<> pos)
 			{
 				return o2w(m4x4::Translation(pos));
@@ -630,7 +647,7 @@ namespace pr::ldr
 			}
 			Derived& scale(float sx, float sy, float sz)
 			{
-				return o2w(m3x4::Scale(sx, sy, sz));
+				return ori(m3x4::Scale(sx, sy, sz));
 			}
 			Derived& o2w(m4x4 const& o2w)
 			{
@@ -661,22 +678,14 @@ namespace pr::ldr
 				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
 			}
 
-			// Serialise the ldr script to a string
+			/// <inheritdoc/>
 			virtual void ToString(std::string& str) const
 			{
-				for (auto& s : m_objects) s->ToString(str);
+				LdrObj::ToString(str);
 				Modifiers(str);
 			}
-
-			// Write the script to a file
-			void Write(std::filesystem::path const& filepath, bool append = false)
-			{
-				std::string str;
-				ToString(str);
-				ldr::Write(str, filepath, append);
-			}
 		};
-		struct LdrLine :LdrObj<LdrLine>
+		struct LdrLine :LdrBase<LdrLine>
 		{
 			LdrLine()
 				:m_strip()
@@ -735,11 +744,11 @@ namespace pr::ldr
 					ldr::Append(str, m_points[i].xyz);
 					if ((i & 1) == 1) ldr::Append(str, delim);
 				}
-				LdrObj<LdrLine>::ToString(str);
+				LdrBase<LdrLine>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrTriangle :LdrObj<LdrTriangle>
+		struct LdrTriangle :LdrBase<LdrTriangle>
 		{
 			LdrTriangle()
 				:m_points()
@@ -774,11 +783,11 @@ namespace pr::ldr
 					ldr::Append(str, m_points[i].xyz);
 					if ((i & 3) == 3) ldr::Append(str, delim);
 				}
-				LdrObj<LdrTriangle>::ToString(str);
+				LdrBase<LdrTriangle>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrSphere :LdrObj<LdrSphere>
+		struct LdrSphere :LdrBase<LdrSphere>
 		{
 			LdrSphere()
 				:m_radius()
@@ -803,11 +812,11 @@ namespace pr::ldr
 					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x);
 				else
 					ldr::Append(str, "*Sphere", m_name, m_colour, "{", m_radius.x, m_radius.y, m_radius.z);
-				LdrObj<LdrSphere>::ToString(str);
+				LdrBase<LdrSphere>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrBox :LdrObj<LdrBox>
+		struct LdrBox :LdrBase<LdrBox>
 		{
 			LdrBox()
 				:m_dim()
@@ -837,11 +846,11 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Box", m_name, m_colour, "{", m_dim.xyz);
-				LdrObj<LdrBox>::ToString(str);
+				LdrBase<LdrBox>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrCylinder :LdrObj<LdrCylinder>
+		struct LdrCylinder :LdrBase<LdrCylinder>
 		{
 			LdrCylinder()
 				:m_height()
@@ -866,18 +875,27 @@ namespace pr::ldr
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Cylinder", m_name, m_colour, "{", m_height, m_radius.x, m_radius.y, m_axis_id);
-				LdrObj<LdrCylinder>::ToString(str);
+				LdrBase<LdrCylinder>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrFrustum :LdrObj<LdrFrustum>
+		struct LdrFrustum :LdrBase<LdrFrustum>
 		{
 			LdrFrustum()
-				: m_nf()
+				: m_ortho()
+				, m_nf()
 				, m_wh()
 				, m_fovY()
 				, m_aspect()
 			{}
+
+			// Orthographic
+			LdrFrustum& ortho(bool ortho = true)
+			{
+				m_ortho = ortho;
+				return *this;
+			}
+			bool m_ortho;
 
 			// Near/Far
 			LdrFrustum& nf(float n, float f)
@@ -904,6 +922,7 @@ namespace pr::ldr
 			// Frustum angles
 			LdrFrustum& fov(float fovY, float aspect)
 			{
+				m_ortho = false;
 				m_wh = v2Zero;
 				m_fovY = fovY;
 				m_aspect = aspect;
@@ -918,30 +937,55 @@ namespace pr::ldr
 				return nf(0, f.zfar()).fov(f.fovY(), f.aspect());
 			}
 
+			// From projection matrix
+			LdrFrustum& proj(m4x4 const& c2s)
+			{
+				if (c2s.w.w == 1) // If orthographic
+				{
+					auto rh = -Sign(c2s.z.z);
+					auto zn = c2s.w.z / c2s.z.z;
+					auto zf = zn * (c2s.w.z - rh) / c2s.w.z;
+					auto w = 2.0f / c2s.x.x;
+					auto h = 2.0f / c2s.y.y;
+					return ortho(true).nf(zn, zf).wh(w,h);
+				}
+				else // Otherwise perspective
+				{
+					auto rh = -Sign(c2s.z.w);
+					auto zn = rh * c2s.w.z / c2s.z.z;
+					auto zf = zn * c2s.z.z / (rh + c2s.z.z);
+					auto w = 2.0f * zn / c2s.x.x;
+					auto h = 2.0f * zn / c2s.y.y;
+					return ortho(false).nf(zn, zf).wh(w, h);
+				}
+			}
+
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
-				if (m_wh != v2Zero)
+				if (m_ortho)
+					ldr::Append(str, "*Box", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.y - m_nf.x, O2W(v4{0, 0, -0.5f * (m_nf.x + m_nf.y), 1}));
+				else if (m_wh != v2Zero)
 					ldr::Append(str, "*FrustumWH", m_name, m_colour, "{", m_wh.x, m_wh.y, m_nf.x, m_nf.y);
 				else
 					ldr::Append(str, "*FrustumFA", m_name, m_colour, "{", RadiansToDegrees(m_fovY), m_aspect, m_nf.x, m_nf.y);
-				
-				LdrObj<LdrFrustum>::ToString(str);
+
+				LdrBase<LdrFrustum>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
-		struct LdrGroup :LdrObj<LdrGroup>
+		struct LdrGroup :LdrBase<LdrGroup>
 		{
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
 				ldr::Append(str, "*Group", m_name, m_colour, "{\n");
-				LdrObj<LdrGroup>::ToString(str);
+				LdrBase<LdrGroup>::ToString(str);
 				ldr::Append(str, "}\n");
 			}
 		};
 	}
-	struct Builder : fluent::LdrObj<Builder>
+	struct Builder : fluent::LdrObj
 	{
 	};
 }

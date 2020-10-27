@@ -451,15 +451,11 @@ namespace pr
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
-	constexpr int Sign(bool positive)
+	constexpr int Bool2SignI(bool positive)
 	{
 		return positive ? +1 : -1;
 	}
-	constexpr int SignI(bool positive)
-	{
-		return positive ? +1 : -1;
-	}
-	constexpr float SignF(bool positive)
+	constexpr float Bool2SignF(bool positive)
 	{
 		return positive ? +1.0f : -1.0f;
 	}

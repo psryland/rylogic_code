@@ -242,7 +242,7 @@ namespace pr
 		// Return a projection transform
 		m4x4 CameraToScreen(float near_clip, float far_clip, float aspect, float fovY, float focus_dist) const
 		{
-			float height = 2.0f * focus_dist * tan(fovY * 0.5f);
+			auto height = 2.0f * focus_dist * tan(fovY * 0.5f);
 			return m_orthographic
 				? m4x4::ProjectionOrthographic(height*aspect, height, near_clip, far_clip, true)
 				: m4x4::ProjectionPerspectiveFOV(fovY, aspect, near_clip, far_clip, true);

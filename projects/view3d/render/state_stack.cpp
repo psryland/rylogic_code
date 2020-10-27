@@ -224,18 +224,23 @@ namespace pr::rdr
 		// Set shadow map texture
 		if (current.m_rstep_smap != pending.m_rstep_smap || force)
 		{
-			ID3D11ShaderResourceView* srv[1]  = {nullptr};
+			ID3D11ShaderResourceView* srv[hlsl::MaxShadowMaps]  = {nullptr};
 			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
-				
+
+			int i = 0;
 			if (pending.m_rstep_smap != nullptr)
 			{
-				srv[0] = pending.m_rstep_smap->m_srv.get();
+				for (auto& caster : pending.m_rstep_smap->m_caster)
+				{
+					srv[i] = caster.m_srv.get();
+					if (++i == hlsl::MaxShadowMaps) break;
+				}
 				samp[0] = pending.m_rstep_smap->m_samp.get();
 			}
 
 			//todo, shadow map texture hard-coded to slot 2 here
-			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t2), 1, srv);
-			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s2), 1, samp);
+			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t2), i, &srv[0]);
+			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s2), 1, &samp[0]);
 		}
 	}
 

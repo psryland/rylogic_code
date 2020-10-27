@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
-import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request
+import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 from typing import Callable
@@ -47,7 +47,7 @@ def OnSuccess(msg = "\nSuccess\n", enter_to_close=False, pause_time_seconds=5, s
 		sys.exit(0)
 
 # Terminate the script indicating an error
-def OnError(msg = "\nFailed\n", enter_to_close=True, pause_time_seconds=0, sys_exit=False):
+def OnError(msg = "\nFailed\n", enter_to_close=False, pause_time_seconds=0, sys_exit=False):
 	print(msg)
 	try:
 		if enter_to_close: input("Press enter to close")
@@ -58,7 +58,7 @@ def OnError(msg = "\nFailed\n", enter_to_close=True, pause_time_seconds=0, sys_e
 		sys.exit(-1)
 
 # Terminate on exception
-def OnException(ex,enter_to_close=True, pause_time_seconds=0):
+def OnException(ex,enter_to_close=False, pause_time_seconds=0):
 	OnError("ERROR: " + str(ex), enter_to_close=enter_to_close, pause_time_seconds=pause_time_seconds)
 	return
 
@@ -657,7 +657,8 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 
 # Prompt for the code signing certificate password
 def PromptCertPassword():
-	UserVars.code_sign_cert_pw = UserVars.code_sign_cert_pw if UserVars.code_sign_cert_pw else input(f"Code Signing Cert Password: ")
+	if UserVars.code_sign_cert_pw: return
+	UserVars.code_sign_cert_pw = getpass.getpass(prompt="Code Signing Cert Password: ")
 	return
 
 # Sign an assembly

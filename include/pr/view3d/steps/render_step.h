@@ -55,7 +55,7 @@ namespace pr::rdr
 		virtual void ConfigShaders(ShaderSet1& ss, ETopo topo) const = 0;
 
 		// Reset the drawlist
-		void ClearDrawlist();
+		virtual void ClearDrawlist();
 
 		// Sort the drawlist based on sort key
 		void Sort();

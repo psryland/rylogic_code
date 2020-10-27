@@ -6,10 +6,7 @@
 // This file is included from C++ source as well
 #ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
 #define PR_RDR_SHADER_FORWARD_CBUF_HLSL
-
 #include "../types.hlsli"
-
-#define PR_RDR_MAX_PROJECTED_TEXTURES 1
 
 // 'CBufFrame' is a cbuffer managed by a scene.
 // It contains values constant for the whole frame.
@@ -29,8 +26,7 @@ cbuffer CBufFrame :reg(b0)
 	Shadow m_shadow;
 
 	// Projected textures
-	float4 m_proj_tex_count;
-	row_major float4x4 m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES];
+	ProjTexture m_proj_tex;
 };
 
 // Constants per render nugget.

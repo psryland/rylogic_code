@@ -6,14 +6,17 @@
 // This file is included from C++ source as well
 #ifndef PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
 #define PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
-
 #include "../types.hlsli"
 
 // Camera to world transform and view frustum
 cbuffer CBufFrame :reg(b0)
 {
-	row_major float4x4 m_proj[5];  // The five projection transforms onto the frustum faces
-	float4 m_frust_dim;            // The dimensions of the shadow frustum
+	// Not using 'Shadow' from types because the shadow map generation
+	// shaders operate on one shadow map at a time. The main render can
+	// support multiple shadow maps.
+	row_major float4x4 m_w2l; // World space to light space
+	row_major float4x4 m_l2s; // Light space to screen space
+	float m_zn, m_zf, pad0, pad1; // x = near, y = far
 };
 
 // Per nugget constants

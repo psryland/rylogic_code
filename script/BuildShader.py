@@ -177,4 +177,4 @@ if __name__ == "__main__":
 		BuildShader(fullpath, platform, config, pp=pp, obj=obj, trace=trace, dbg=dbg)
 
 	except Exception as ex:
-		Tools.OnException(ex)
+		Tools.OnException(ex, enter_to_close=False)

@@ -24,7 +24,7 @@ namespace pr::rdr
 		Range             m_vrange;       // The first and number of vertices for this model within 'm_model_buffer'
 		Range             m_irange;       // The first and number of indices for this model within 'm_model_buffer'
 		TNuggetChain      m_nuggets;      // The nuggets for this model
-		pr::BBox          m_bbox;         // A bounding box for the model. Set by the client
+		BBox              m_bbox;         // A bounding box for the model. Set by the client
 		string32          m_name;         // A human readable name for the model
 		mutable EDbgFlags m_dbg_flags;    // Flags used by PR_DBG_RDR to output info once only
 
@@ -58,6 +58,6 @@ namespace pr::rdr
 		Range IRange() const { return m_irange; }
 
 		// Ref-counting clean up function
-		static void RefCountZero(pr::RefCount<Model>* doomed);
+		static void RefCountZero(RefCount<Model>* doomed);
 	};
 }

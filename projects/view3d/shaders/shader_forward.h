@@ -19,8 +19,6 @@ namespace pr::rdr
 
 	// Shadow mapping
 	struct ShadowMapVS;
-	struct ShadowMapFaceGS;
-	struct ShadowMapLineGS;
 	struct ShadowMapPS;
 
 	// Screen space shaders

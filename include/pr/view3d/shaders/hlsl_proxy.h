@@ -29,7 +29,6 @@ namespace pr
 		struct SamplerState
 		{
 		};
-
 		template <typename Format> struct Texture2D
 		{
 			pr::rdr::Image m_img;
@@ -46,7 +45,6 @@ namespace pr
 				return px[v * m_img.m_pitch.x + u];
 			}
 		};
-
 		template <typename T> struct TriangleStream
 		{
 			virtual void Append(T const&) {}
@@ -74,12 +72,10 @@ namespace pr
 		{
 			return Clamp(x,0.0f,1.0f);
 		}
-
 		float2 normalize(float2 const& v)
 		{
 			return Normalise(static_cast<v2 const&>(v));
 		}
-
 		float length(float4 const& v)
 		{
 			return Length(static_cast<v4 const&>(v));

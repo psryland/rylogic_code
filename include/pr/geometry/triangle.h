@@ -195,7 +195,7 @@ namespace pr::geometry
 				if (ty == EType::Split || ty == EType::Merge)
 				{
 					// Find the vertex to create a degenerate to. The nearest above or below, depending on type.
-					auto helper = FindHelper(i, SignI(ty == EType::Merge));
+					auto helper = FindHelper(i, Bool2SignI(ty == EType::Merge));
 					mt.push_back(i);
 					mt.push_back(helper);
 					mt.push_back(helper);
@@ -235,7 +235,7 @@ namespace pr::geometry
 					// If the inner values are less than the outer values, then this marks the end
 					// of a "backward" monotone polygon (i.e. the previous occurrence of monotone[i]
 					// before i marks the start of the monotone polygon).
-					auto fwd = SignI(monotone[i] > monotone[i-dir]);
+					auto fwd = Bool2SignI(monotone[i] > monotone[i-dir]);
 					auto chg = FindMonotonePolygons(mt, i + (fwd == dir ? dir : 0), fwd);
 
 					// 'monotone' is invalidated when indices are removed, so recreate it.
