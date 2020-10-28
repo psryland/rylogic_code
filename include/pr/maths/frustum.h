@@ -53,7 +53,7 @@ namespace pr
 		static Frustum MakeWH(float width, float height, float z, float zfar)
 		{
 			assert(z > 0 && "The focus plane should be a positive distance from the apex");
-			assert(zfar > 0 && "The far plane should be a positive distance from the apex");
+			assert(zfar >= 0 && "The far plane should be a positive distance from the apex");
 
 			Frustum f;
 			f.m_Tplanes.x = v4(+z, 0.0f, -width * 0.5f, 0.0f); // left
@@ -102,6 +102,28 @@ namespace pr
 		static Frustum MakeOrtho(v2 area)
 		{
 			return MakeOrtho(area.x, area.y);
+		}
+
+		// Create from a projection matrix
+		static Frustum MakeFromProjection(m4x4 const& c2s)
+		{
+			Frustum f;
+			if (c2s.w.w == 1) // If orthographic
+			{
+				auto w = 2.0f / c2s.x.x;
+				auto h = 2.0f / c2s.y.y;
+				f = MakeOrtho(w, h);
+			}
+			else // Otherwise perspective
+			{
+				auto rh = -Sign(c2s.z.w);
+				auto zn = rh * c2s.w.z / c2s.z.z;
+				auto zf = zn * c2s.z.z / (rh + c2s.z.z);
+				auto w = 2.0f * zn / c2s.x.x;
+				auto h = 2.0f * zn / c2s.y.y;
+				f = MakeWH(w, h, zn, zf);
+			}
+			return f;
 		}
 
 		// True if this is an orthographic frustum
@@ -177,21 +199,25 @@ namespace pr
 			else
 			{
 				auto z0 = zfar();
-				return v2(w * z / z0, h * z / z0);
+				return z0 != 0 ? v2(w * z / z0, h * z / z0) : v2Zero;
 			}
 		}
 
-		// Return a plane of the frustum
+		// Return the planes of the frustum
+		m4x4 planes() const
+		{
+			return Transpose4x4(m_Tplanes);
+		}
 		Plane plane(EPlane plane_index) const
 		{
 			switch (plane_index)
 			{
-			case EPlane::XPos: return pr::Plane(m_Tplanes.x.x, m_Tplanes.y.x, m_Tplanes.z.x, m_Tplanes.w.x);
-			case EPlane::XNeg: return pr::Plane(m_Tplanes.x.y, m_Tplanes.y.y, m_Tplanes.z.y, m_Tplanes.w.y);
-			case EPlane::YPos: return pr::Plane(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, m_Tplanes.w.z);
-			case EPlane::YNeg: return pr::Plane(m_Tplanes.x.w, m_Tplanes.y.w, m_Tplanes.z.w, m_Tplanes.w.w);
-			case EPlane::ZFar: return pr::Plane{0, 0, 1, 0};
-			default: throw std::runtime_error("Invalid plane index");
+				case EPlane::XPos: return Plane(m_Tplanes.x.x, m_Tplanes.y.x, m_Tplanes.z.x, m_Tplanes.w.x);
+				case EPlane::XNeg: return Plane(m_Tplanes.x.y, m_Tplanes.y.y, m_Tplanes.z.y, m_Tplanes.w.y);
+				case EPlane::YPos: return Plane(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, m_Tplanes.w.z);
+				case EPlane::YNeg: return Plane(m_Tplanes.x.w, m_Tplanes.y.w, m_Tplanes.z.w, m_Tplanes.w.w);
+				case EPlane::ZFar: return Plane{0, 0, 1, 0};
+				default: throw std::runtime_error("Invalid plane index");
 			}
 		}
 
@@ -313,7 +339,7 @@ namespace pr
 			// Returns the signed distance of 'rhs' from each face of the frustum
 			return lhs.m_Tplanes * rhs;
 		}
-		//friend Frustum operator * (m4x4 const& m, Frustum const& rhs) // Do not implement this. Frustums cannot be rotated or moved.
+		// Do not implement Frustum = m4x4 * Frustum. Frustums cannot be rotated or moved.
 		#pragma endregion
 	};
 
@@ -350,58 +376,219 @@ namespace pr
 		return Corners(frustum, frustum.zfar());
 	}
 
-	// Return true if any part of a sphere around 'point' is within 'frustum'
-	inline bool IsWithin(Frustum const& frustum, v4 const& point, float radius, bool include_zfar)
+	// Return true if any part of a point, box, or sphere is within 'frustum'.
+	// Use 'zf == 0' to use the frustum's far plane, or 'zf == -1' to ignore the far plane.
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, v4_cref<> point, float radius, v2 nf = v2Zero)
 	{
 		auto pt = point;
-		
+		auto frustum_apex = 0.0f;
+		auto znear = 0.0f, zfar = 0.0f;
+
 		// Orthographic frusta don't have a zfar distance
 		if (!frustum.orthographic())
 		{
-			// Shift the point so that zfar is at (0,0,0)
-			pt.z += frustum.zfar();
+			// Remember zn and zf are "the distance to", not "the z coordinate of"
+			frustum_apex = frustum.zfar();
 
-			// Test against the far plane
-			if (include_zfar && pt.z + radius < 0)
-				return false;
+			// Shift 'pt' so that the frustum apex is at (0,0,frustum_apex)
+			pt.z += frustum_apex;
+
+			// Get the z coordinate of the clip planes
+			znear = frustum_apex - nf.x;
+			zfar = nf.y > 0 ? frustum_apex - nf.y : nf.y == 0 ? 0.0f : -maths::float_inf;
 		}
+		// Orthographic frusta have their "apex" at (0,0,0)
 		else
 		{
-			// Orthographic frusta start at (0,0,0)
-			if (pt.z - radius > 0)
-				return false;
+			// Get the z coordinate of the clip planes
+			znear = -nf.x;
+			zfar = nf.y > 0 ? -nf.y : -maths::float_inf;
 		}
+
+		// Test against the near plane
+		if (pt.z - radius > znear)
+			return false;
+
+		// Test against the far plane (only if given)
+		if (pt.z + radius < zfar)
+			return false;
 
 		// Dot product of 'point' with each plane gives the signed distance to each plane.
 		// Increase each distance by 'radius'. This is not strictly correct because we're
-		// effectively expanding the frustum by 'radius' not the sphere. It doesn't work
-		// near edges.
+		// effectively expanding the frustum by 'radius' not the sphere. It doesn't work near edges.
 		auto dots = frustum.m_Tplanes * pt + v4(radius);
 
 		// If all dot products are >= 0 then some part of the sphere is within the frustum
 		return dots == Abs(dots); 
 	}
-
-	// Return true if any part of 'bsphere' is within 'frustum'
-	inline bool IsWithin(Frustum const& frustum, BSphere const& sphere, bool include_zfar)
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BSphere_cref bsphere, v2 nf = v2Zero)
 	{
-		return IsWithin(frustum, sphere.Centre(), sphere.Radius(), include_zfar);
+		assert(bsphere.valid() && "Invalid bsphere used in 'IsWithin' test against frustum");
+		return IsWithin(frustum, bsphere.Centre(), bsphere.Radius(), nf);
 	}
-
-	// Return true if any part of 'bbox' is within 'frustum'
-	inline bool IsWithin(Frustum const& frustum, BBox const& bbox, bool include_zfar)
+	inline bool pr_vectorcall IsWithin(Frustum const& frustum, BBox_cref bbox, v2 nf = v2Zero)
 	{
-		// Shift 'bbox' so that zfar is at (0,0,0)
-		auto bb = bbox;
-		bb.m_centre.z += frustum.zfar();
+		assert(bbox.valid() && "Invalid bbox used in 'IsWithin' test against frustum");
 
-		// Test against the far plane
-		if (include_zfar && bb.m_centre.z + Abs(bb.m_radius.z) < 0)
+		auto bb = bbox;
+		auto frustum_apex = 0.0f;
+		auto znear = 0.0f, zfar = 0.0f;
+
+		// Orthographic frusta don't have a zfar distance
+		if (!frustum.orthographic())
+		{
+			// Remember zn and zf are "the distance to", not "the z coordinate of"
+			frustum_apex = frustum.zfar();
+
+			// Shift 'bbox' so that the frustum apex is at (0,0,frustum_apex)
+			bb.m_centre.z += frustum_apex;
+
+			// Get the z coordinate of the clip planes
+			znear = frustum_apex - nf.x;
+			zfar = nf.y > 0 ? frustum_apex - nf.y : nf.y == 0 ? 0.0f : -maths::float_inf;
+		}
+		// Orthographic frusta have their "apex" at (0,0,0)
+		else
+		{
+			// Get the z coordinate of the clip planes
+			znear = -nf.x;
+			zfar = nf.y > 0 ? -nf.y : -maths::float_inf;
+		}
+
+		// Test against the near plane
+		if (bb.LowerZ() > znear)
 			return false;
 
-		// todo: Test for intersection of 'bb' with the four planes of the frustum
-		// for now:
-		return IsWithin(frustum, GetBSphere(bbox), include_zfar);
+		// Test against the far plane (only if given)
+		if (bb.UpperZ() < zfar)
+			return false;
+
+		// The bbox and frustum are both axis aligned, so the test is basically a 2D quad intersection test.
+		// Only need to test the cross section of the bbox and the frustum at the minimum z value.
+		auto z = Clamp(bb.LowerZ(), zfar, znear);
+		auto wh = 0.5f * frustum.area(frustum_apex - z);
+
+		// This assumes the frustum is symmetric....
+		return
+			bb.LowerX() >= -wh.x && bb.UpperX() <= +wh.x &&
+			bb.LowerY() >= -wh.y && bb.UpperY() <= +wh.y;
+	}
+
+	// Grow a frustum (i.e. move it along +f2w.Z growing zfar while preserving fov/aspect) so that 'ws_pt','ws_bbox', or 'ws_sphere' are within the frustum.
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v2& nf, v4_cref<> ws_pt, float radius)
+	{
+		// By similar triangles:
+		//   zfar1 / zfar0 = (n.w + Dot(n,pt)) / n.w
+		// where:
+		//   zfar0 = the current zfar distance
+		//   zfar1 = the new zfar distance needed to enclose 'pt'
+		//   n.w   = is a frustum plane distance from the origin
+		//   n     = is a frustum plane 4-vector
+		// However, zfar0 can be 0.0.
+		// So instead, make a copy of 'frustum' and set zfar0 to 1.0.
+		// Calculate the zfar1 value for all planes and choose the maximum.
+		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+
+		// The caller assumes (0,0,0) is the apex and the far plane is (0,0,-zfar).
+		// Transform 'ws_pt' to frustum space, then offset to be relative to (0,0,zfar)
+		auto frustum_zfar = frustum.zfar();
+		auto pt = InvertFast(f2w) * ws_pt;
+		pt.z += frustum_zfar;
+		
+		// If 'pt' is beyond the far plane, extend the far plane
+		if (pt.z - radius < 0)
+		{
+			frustum_zfar -= pt.z - radius;
+			pt.z = radius;
+		}
+
+		// Take a copy of 'frustum' and set its zfar to 1.0 (i.e. zfar0 == 1)
+		auto tnorms = frustum.m_Tplanes;
+		tnorms.w = -tnorms.z;
+
+		// Get the signed distance to all frustum planes
+		auto planes = Transpose4x4(tnorms);
+		auto dst = v4{
+			Dot(planes.x, pt - radius * planes.x.w0()),
+			Dot(planes.y, pt - radius * planes.y.w0()),
+			Dot(planes.z, pt - radius * planes.z.w0()),
+			Dot(planes.w, pt - radius * planes.w.w0()),
+		};
+
+		// Get the new zfar distance according to each plane
+		auto zfar4 = (tnorms.w - dst) / tnorms.w;
+		auto zfar = MaxElement(zfar4);
+		auto dzfar = Max(0.0f, zfar - frustum_zfar);
+		frustum_zfar += dzfar;
+		frustum.zfar(frustum_zfar);
+
+		// Update the f2w transform and clip planes
+		f2w.pos += dzfar * f2w.z;
+		nf.x = Min(nf.x + dzfar, frustum_zfar - (pt.z + radius));
+		nf.y = Max(nf.y + dzfar, frustum_zfar - (pt.z - radius));
+	}
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v2& nf, BSphere_cref ws_bsphere)
+	{
+		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+		return Grow(frustum, f2w, nf, ws_bsphere.Centre(), ws_bsphere.Radius());
+	}
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v2& nf, BBox_cref ws_bbox)
+	{
+		assert(!frustum.orthographic() && "No amount of shifting along z can change what is within an orthographic frustum");
+
+		// The caller assumes (0,0,0) is the apex and the far plane is (0,0,-zfar).
+		// Transform 'ws_bbox' to frustum space, then offset to be relative to (0,0,zfar)
+		auto frustum_zfar = frustum.zfar();
+		auto bbox = InvertFast(f2w) * ws_bbox;
+		bbox.m_centre.z += frustum_zfar;
+		
+		// If 'pt' is beyond the far plane, extend the far plane
+		auto pt = SupportPoint(bbox, -v4ZAxis);
+		if (pt.z < 0)
+		{
+			frustum_zfar -= pt.z;
+			bbox.m_centre.z = bbox.m_radius.z;
+		}
+
+		// Take a copy of 'frustum' and set its zfar to 1.0 (i.e. zfar0 == 1)
+		auto tnorms = frustum.m_Tplanes;
+		tnorms.w = -tnorms.z;
+
+		// Get the signed distance to all frustum planes
+		auto planes = Transpose4x4(tnorms);
+		auto dst = v4{
+			Dot(planes.x, SupportPoint(bbox, -planes.x.w0())),
+			Dot(planes.y, SupportPoint(bbox, -planes.y.w0())),
+			Dot(planes.z, SupportPoint(bbox, -planes.z.w0())),
+			Dot(planes.w, SupportPoint(bbox, -planes.w.w0())),
+		};
+
+		// Get the new zfar distance according to each plane
+		auto zfar4 = (tnorms.w - dst) / tnorms.w;
+		auto zfar = MaxElement(zfar4);
+		auto dzfar = Max(0.0f, zfar - frustum_zfar);
+		frustum_zfar += dzfar;
+		frustum.zfar(frustum_zfar);
+
+		// Update the f2w transform
+		f2w.pos += dzfar * f2w.z;
+		nf.x = Min(nf.x + dzfar, frustum_zfar - bbox.UpperZ());
+		nf.y = Max(nf.y + dzfar, frustum_zfar - bbox.LowerZ());
+	}
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, v4_cref<> ws_pt, float radius)
+	{
+		auto nf = v2Zero;
+		Grow(frustum, f2w, nf, ws_pt, radius);
+	}
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, BSphere_cref ws_bsphere)
+	{
+		auto nf = v2Zero;
+		Grow(frustum, f2w, nf, ws_bsphere);
+	}
+	inline void pr_vectorcall Grow(Frustum& frustum, m4x4& f2w, BBox_cref ws_bbox)
+	{
+		auto nf = v2Zero;
+		Grow(frustum, f2w, nf, ws_bbox);
 	}
 
 	// Include 'f2w * frustum' in 'bbox'
@@ -425,6 +612,27 @@ namespace pr::maths
 {
 	PRUnitTest(FrustumTests)
 	{
+		std::default_random_engine rng(5);
+		auto DumpFrustum = [](Frustum const& f, m4x4 const& f2w)
+		{
+			(void)f;
+			ldr::Builder b;
+			b.Frustum("f", 0xFF00FF00).frustum(f).o2w(f2w);
+			b.Write("P:\\dump\\frustum.ldr");
+			//auto c = GetCorners(f);
+			//
+			//std::string s;
+			//ldr::Triangle(s, "left", 0xFFFFFFFF, v4Origin, c.x, c.y);
+			//ldr::Triangle(s, "top", 0xFFFFFFFF, v4Origin, c.y, c.z);
+			//ldr::Triangle(s, "right", 0xFFFFFFFF, v4Origin, c.z, c.w);
+			//ldr::Triangle(s, "bottom", 0xFFFFFFFF, v4Origin, c.w, c.x);
+			//ldr::Plane(s, "left", 0xFFFFFFFF, f.plane(Frustum::EPlane::XPos), v4Origin, zfar);
+			//ldr::Plane(s, "right", 0xFFFFFFFF, f.plane(Frustum::EPlane::XNeg), v4Origin, zfar);
+			//ldr::Plane(s, "bottom", 0xFFFFFFFF, f.plane(Frustum::EPlane::YPos), v4Origin, zfar);
+			//ldr::Plane(s, "top", 0xFFFFFFFF, f.plane(Frustum::EPlane::YNeg), v4Origin, zfar);
+			//ldr::Write(s, "P:\\dump\\frustum.ldr");
+		};
+
 		{ // FA Frustum
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
 			
@@ -450,20 +658,20 @@ namespace pr::maths
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4(0, 0, -1.0f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(0, 0, +0.1f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
 
 			// zfar test
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, true), false);
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, false), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
 
 			// Random points
-			PR_CHECK(IsWithin(f, v4(+0.4f, -0.2f, -0.8f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(-0.3f, +0.4f, -0.8f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{+0.4f, -0.2f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{-0.3f, +0.4f, -0.8f, 1}, 0.0f), false);
 
 			// Radius test
-			PR_CHECK(IsWithin(f, v4(+0.6f, -0.4f, -0.8f, 1), 0.07f, true), true);
-			PR_CHECK(IsWithin(f, v4(+0.6f, -0.4f, -0.8f, 1), 0.06f, true), false);
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.07f), true);
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.4f, -0.8f, 1}, 0.06f), false);
 
 			// GetCorners
 			auto corners = Corners(f, 1.0f);
@@ -494,20 +702,20 @@ namespace pr::maths
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4(0, 0, -1.0f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(0, 0, +0.1f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
 			
 			// zfar test
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, true), false);
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, false), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
 			
 			// Random points
-			PR_CHECK(IsWithin(f, v4(+0.6f, -0.2f, -0.8f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(+0.8f, -0.5f, -0.7f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{+0.6f, -0.2f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.0f), false);
 			
 			// Radius test
-			PR_CHECK(IsWithin(f, v4(+0.8f, -0.5f, -0.7f, 1), 0.23f, true), true);
-			PR_CHECK(IsWithin(f, v4(+0.8f, -0.5f, -0.7f, 1), 0.20f, true), true); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.23f), true);
+			PR_CHECK(IsWithin(f, v4{+0.8f, -0.5f, -0.7f, 1}, 0.20f), true); // This should be false but isn't because 'radius' actually expands the frustum not the sphere.
 			
 			// GetCorners
 			auto corners = Corners(f, 2.0f);
@@ -536,20 +744,20 @@ namespace pr::maths
 
 			// IsWithin
 			// In front/behind test
-			PR_CHECK(IsWithin(f, v4(0, 0, -1.0f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(0, 0, +0.1f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{0, 0, -1.0f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, +0.1f, 1}, 0.0f), false);
 			
 			// zfar test
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(0, 0, -2.1f, 1), 0.0f, false), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{0, 0, -2.1f, 1}, 0.0f, {0, -1}), true);
 			
 			// Random points
-			PR_CHECK(IsWithin(f, v4(+0.3f, -0.44f, -0.8f, 1), 0.0f, true), true);
-			PR_CHECK(IsWithin(f, v4(+0.3f, -0.46f, -0.8f, 1), 0.0f, true), false);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.44f, -0.8f, 1}, 0.0f), true);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.46f, -0.8f, 1}, 0.0f), false);
 			
 			// Radius test
-			PR_CHECK(IsWithin(f, v4(+0.3f, -0.5f, -0.8f, 1), 0.06f, true), true);
-			PR_CHECK(IsWithin(f, v4(+0.3f, -0.5f, -0.8f, 1), 0.04f, true), false);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.06f), true);
+			PR_CHECK(IsWithin(f, v4{+0.3f, -0.5f, -0.8f, 1}, 0.04f), false);
 
 			// GetCorners
 			auto corners = Corners(f, 2.0f);
@@ -558,26 +766,94 @@ namespace pr::maths
 			PR_CHECK(FEql(corners.z, v4(+0.8f, +0.45f, -2.0f, 1)), true);
 			PR_CHECK(FEql(corners.w, v4(+0.8f, -0.45f, -2.0f, 1)), true);
 		}
-		{
-			auto DumpFrustum = [](Frustum const& f)
-			{
-				(void)f;
-				//auto c = GetCorners(f);
-				//
-				//std::string s;
-				//ldr::Triangle(s, "left", 0xFFFFFFFF, v4Origin, c.x, c.y);
-				//ldr::Triangle(s, "top", 0xFFFFFFFF, v4Origin, c.y, c.z);
-				//ldr::Triangle(s, "right", 0xFFFFFFFF, v4Origin, c.z, c.w);
-				//ldr::Triangle(s, "bottom", 0xFFFFFFFF, v4Origin, c.w, c.x);
-				//ldr::Plane(s, "left", 0xFFFFFFFF, f.plane(Frustum::EPlane::XPos), v4Origin, zfar);
-				//ldr::Plane(s, "right", 0xFFFFFFFF, f.plane(Frustum::EPlane::XNeg), v4Origin, zfar);
-				//ldr::Plane(s, "bottom", 0xFFFFFFFF, f.plane(Frustum::EPlane::YPos), v4Origin, zfar);
-				//ldr::Plane(s, "top", 0xFFFFFFFF, f.plane(Frustum::EPlane::YNeg), v4Origin, zfar);
-				//ldr::Write(s, "P:\\dump\\frustum.ldr");
-			};
+		{// Grow with points
+			std::vector<v4> pts;
+			for (int i = 0; i != 50; ++i)
+				pts.push_back(Random3(rng, 0.0f, 2.0f, 1.0f));
 
-			//auto f0 = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
-			//DumpFrustum(f0);
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+
+			for (auto& pt : pts)
+			{
+				Grow(f, f2w, nf, pt, 0.0f);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& pt : pts)
+			//		b.Sphere("s", 0xFFFF0000).r(0.05).pos(pt);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& pt : pts)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * pt, 0.001f, nf);
+				PR_CHECK(within, true);
+			}
+		}
+		{// Grow with bboxes
+			std::vector<BBox> bboxes;
+			for (int i = 0; i != 50; ++i)
+			{
+				BBox bb(
+					Random3(g_rng(), i * 0.05f, i * 0.1f, 1.0f),
+					Abs(Random3(rng, 0.3f, 0.5f, 0.0f)));
+				bboxes.push_back(bb);
+			}
+
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+			for (auto& bb : bboxes)
+			{
+				Grow(f, f2w, nf, bb);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& bb : bboxes)
+			//		b.Box("s", 0xFFFF0000).bbox(bb);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& bb : bboxes)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * bb, nf);
+				PR_CHECK(within, true);
+			}
+		}
+		{// Grow with spheres
+			std::vector<BSphere> spheres;
+			for (int i = 0; i != 50; ++i)
+			{
+				BSphere bs(
+					Random3(g_rng(), i * 0.05f, i * 0.2f, 1.0f),
+					Random1(rng, 0.3f, 0.5f));
+				spheres.push_back(bs);
+			}
+
+			auto nf = v2Zero;
+			auto f2w = m4x4Identity;
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.0f, 0.0f);
+			PR_CHECK(f.zfar() == 0.0f, true);
+			for (auto& bs : spheres)
+			{
+				Grow(f, f2w, nf, bs);
+			}
+			//{
+			//	ldr::Builder b;
+			//	b.Frustum("f", 0x8000FF00).frustum(f).nf(nf).o2w(f2w);
+			//	for (auto& bs : spheres)
+			//		b.Sphere("s", 0xFFFF0000).bsphere(bs);
+			//	b.Write("P:\\dump\\frustum.ldr");
+			//}
+			for (auto& bs : spheres)
+			{
+				auto within = IsWithin(f, InvertFast(f2w) * bs, nf);
+				PR_CHECK(within, true);
+			}
 		}
 	}
 }

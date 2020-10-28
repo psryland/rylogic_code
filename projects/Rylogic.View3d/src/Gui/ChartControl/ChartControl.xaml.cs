@@ -705,8 +705,10 @@ namespace Rylogic.Gui.WPF
 			var bbox = args.Handled ? args.ViewBBox : Window.SceneBounds(who);
 
 			// Check it's valid
-			if (!bbox.IsValid || bbox.Radius == v4.Zero)
+			if (!bbox.IsValid)
 				throw new Exception($"View bounding box is invalid: {bbox}");
+			if (bbox.Radius == v4.Zero)
+				bbox.Radius = 0.5f * v4.One;
 
 			// Position the camera to view the bounding box
 			var up = Camera.AlignAxis != v4.Zero ? Camera.AlignAxis : Options.ResetUp;

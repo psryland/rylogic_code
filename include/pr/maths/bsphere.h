@@ -28,10 +28,16 @@ namespace pr
 			return *this;
 		}
 
-		// Returns true if this bsphere does not bound anything
-		bool empty() const
+		// True if the bsphere is valid
+		bool valid() const
 		{
-			return m_ctr_rad.w < 0;
+			return m_ctr_rad.w >= 0 && IsFinite(m_ctr_rad.w);
+		}
+
+		// Returns true if this bsphere does not bound anything
+		bool is_point() const
+		{
+			return m_ctr_rad.w == 0;
 		}
 
 		// Set this bsphere to a unit sphere centred on the origin
@@ -214,6 +220,12 @@ namespace pr
 	inline float Volume(BSphere const& bsph)
 	{
 		return 4.188790f * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w; // (2/3)*tau*r^3
+	}
+
+	// Returns the most extreme point in the direction of 'separating_axis'
+	inline v4 pr_vectorcall SupportPoint(BSphere_cref bsphere, v4_cref<> separating_axis)
+	{
+		return bsphere.m_ctr_rad.w1() + bsphere.m_ctr_rad.w * separating_axis;
 	}
 
 	// Include 'point' within 'bsphere' and re-centre the centre point.

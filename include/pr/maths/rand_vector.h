@@ -27,6 +27,18 @@ namespace pr
 		return s_rng;
 	}
 
+	// Create a random vector with components on interval ['vmin', 'vmax']
+	template <typename Rng = std::default_random_engine> inline float Random1(Rng& rng, float vmin, float vmax)
+	{
+		std::uniform_real_distribution<float> dist(vmin, vmax);
+		return dist(rng);
+	}
+	// Create a random vector centred on 'centre' with radius 'radius'
+	template <typename Rng = std::default_random_engine> inline float Random1C(Rng& rng, float centre, float radius)
+	{
+		return Random1(rng, centre - radius, centre + radius);
+	}
+
 	// Create a random vector with unit length
 	template <typename Rng = std::default_random_engine> inline v2 Random2N(Rng& rng)
 	{

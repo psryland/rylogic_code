@@ -488,6 +488,13 @@ namespace pr
 		#endif
 	}
 
+	// Returns the most extreme point in the direction of 'separating_axis'
+	template <typename T> inline Vec4<T> pr_vectorcall SupportPoint(v4_cref<T> pt, v4_cref<> separating_axis)
+	{
+		// This overload allows other generic functions to work
+		(void)separating_axis;
+		return pt;
+	}
 	#pragma endregion
 }
 

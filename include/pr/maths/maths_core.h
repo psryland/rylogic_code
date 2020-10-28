@@ -470,7 +470,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Sign(T const& v, bool zero_is_positive = true)
 	{
-		return CompOp(v, [=](auto x) { return Sign(v[i], zero_is_positive); });
+		return CompOp(v, [=](auto x) { return Sign(x, zero_is_positive); });
 	}
 
 	// Divide 'a' by 'b' if 'b' is not equal to zero, otherwise return 'def'
