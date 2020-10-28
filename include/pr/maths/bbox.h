@@ -335,6 +335,12 @@ namespace pr
 		return bbox.SizeX() * bbox.SizeY() * bbox.SizeZ();
 	}
 
+	// Returns the most extreme point in the direction of 'separating_axis'
+	inline v4 pr_vectorcall SupportPoint(BBox_cref bbox, v4_cref<> separating_axis)
+	{
+		return bbox.m_centre + Sign(separating_axis, false) * bbox.m_radius;
+	}
+
 	// Return a plane corresponding to a side of the bounding box. Returns inward facing planes
 	inline Plane pr_vectorcall GetPlane(BBox_cref bbox, BBox::EPlane side)
 	{
@@ -399,7 +405,7 @@ namespace pr
 	{
 		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
 		BBox bb = lhs;
-		if (rhs.empty()) return bb;
+		if (!rhs.valid()) return bb;
 		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
 		bb.Grow(rhs.Centre() + radius);
 		bb.Grow(rhs.Centre() - radius);
@@ -408,7 +414,7 @@ namespace pr
 	inline BSphere_cref Grow(BBox& lhs, BSphere_cref rhs)
 	{
 		// Don't treat rhs.empty() as an error, it's the only way to grow an empty bsphere
-		if (rhs.empty()) return rhs;
+		if (!rhs.valid()) return rhs;
 		auto radius = v4(rhs.Radius(), rhs.Radius(), rhs.Radius(), 0);
 		lhs.Grow(rhs.Centre() + radius);
 		lhs.Grow(rhs.Centre() - radius);

@@ -590,12 +590,25 @@ namespace pr::ldr
 				for (auto& s : m_objects) s->ToString(str);
 			}
 
+			// Reset the builder
+			LdrObj_& Clear(int count = -1)
+			{
+				auto size = static_cast<int>(m_objects.size());
+				if (count >= 0 && count < size)
+					m_objects.resize(size - count);
+				else
+					m_objects.clear();
+
+				return *this;
+			}
+
 			// Write the script to a file
-			void Write(std::filesystem::path const& filepath, bool append = false)
+			LdrObj_& Write(std::filesystem::path const& filepath, bool append = false)
 			{
 				std::string str;
 				ToString(str);
 				ldr::Write(str, filepath, append);
+				return *this;
 			}
 		};
 		template <typename Derived> struct LdrBase :LdrObj
@@ -805,6 +818,13 @@ namespace pr::ldr
 			}
 			v4 m_radius;
 
+			// Create from bounding sphere
+			LdrSphere& bsphere(BSphere_cref bsphere)
+			{
+				if (bsphere == BSphereReset) return *this;
+				return r(bsphere.Radius()).pos(bsphere.Centre());
+			}
+
 			/// <inheritdoc/>
 			void ToString(std::string& str) const override
 			{
@@ -902,6 +922,10 @@ namespace pr::ldr
 			{
 				m_nf = v2(n, f);
 				return *this;
+			}
+			LdrFrustum& nf(v2_cref<> nf_)
+			{
+				return nf(nf_.x, nf_.y);
 			}
 			v2 m_nf;
 
