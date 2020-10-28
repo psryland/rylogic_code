@@ -17,6 +17,7 @@ namespace pr::rdr
 			None                  = 0,
 			WarnedNoRenderNuggets = 1 << 0,
 			NormalsVisible        = 1 << 1,
+			NonAffine             = 1 << 2,
 			_bitwise_operators_allowed,
 		};
 

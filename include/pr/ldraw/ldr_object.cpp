@@ -587,6 +587,7 @@ namespace pr::ldr
 		case EKeyword::Txfm:
 			{
 				reader.TransformS(obj->m_o2p);
+				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
 				return true;
 			}
 		case EKeyword::Colour:
@@ -681,6 +682,13 @@ namespace pr::ldr
 			// Don't write to Z and draw behind all objects
 			obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
 			obj->m_sko.Group(rdr::ESortGroup::PreOpaques);
+		}
+
+		// If NonAffine
+		if (AllSet(obj->m_flags, ELdrFlags::NonAffine))
+		{
+			if (obj->m_model != nullptr)
+				obj->m_model->m_dbg_flags = SetBits(obj->m_model->m_dbg_flags, Model::EDbgFlags::NonAffine, true);
 		}
 
 		// If flagged as screen space rendering mode
@@ -2947,23 +2955,23 @@ namespace pr::ldr
 			,m_height(1.0f)
 			,m_near(0.0f)
 			,m_far(1.0f)
-			,m_view_plane(1.0f)
+			,m_view_plane(0.0f)
 		{}
 		bool ParseKeyword(EKeyword kw) override
 		{
 			switch (kw)
 			{
-			default:
+				case EKeyword::ViewPlaneZ:
+				{
+					p.m_reader.RealS(m_view_plane);
+					return true;
+				}
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
-				}
-			case EKeyword::ViewPlaneZ:
-				{
-					p.m_reader.RealS(m_view_plane);
-					return true;
 				}
 			}
 		}
@@ -2978,9 +2986,11 @@ namespace pr::ldr
 		{
 			// Construct pointing down -z, then rotate the points based on axis id.
 			// Do this because frustums are commonly used for camera views and cameras point down -z.
-			float w = m_width  * 0.5f / m_view_plane;
-			float h = m_height * 0.5f / m_view_plane;
+			// If the near plane is given, but no view plane, assume the near plane is the view plane.
 			float n = m_near, f = m_far;
+			auto vp = m_view_plane != 0 ? m_view_plane : m_near != 0 ? m_near : 1.0f;
+			auto w = 0.5f * m_width  / vp;
+			auto h = 0.5f * m_height / vp;
 
 			m_pt[0] = v4(-f*w, -f*h, -f, 1.0f);
 			m_pt[1] = v4(+f*w, -f*h, -f, 1.0f);
@@ -5058,7 +5068,31 @@ namespace pr::ldr
 			auto kw = (EKeyword)p.m_keyword;
 			switch (kw)
 			{
-			default:
+				case EKeyword::Camera:
+				{
+					// Camera position description
+					ParseCamera(p, p.m_result);
+					break;
+				}
+				case EKeyword::Wireframe:
+				{
+					p.m_result.m_wireframe = true;
+					break;
+				}
+				case EKeyword::Font:
+				{
+					ParseFont(p, p.m_font.back());
+					break;
+				}
+				case EKeyword::Lock:
+				{
+					break;
+				}
+				case EKeyword::Delimiters:
+				{
+					break;
+				}
+				default:
 				{
 					// Save the current number of objects
 					auto object_count = int(p.m_objects.size());
@@ -5073,30 +5107,6 @@ namespace pr::ldr
 
 					// Call the callback with the freshly minted object.
 					add_cb(object_count);
-					break;
-				}
-			case EKeyword::Camera:
-				{
-					// Camera position description
-					ParseCamera(p, p.m_result);
-					break;
-				}
-			case EKeyword::Wireframe:
-				{
-					p.m_result.m_wireframe = true;
-					break;
-				}
-			case EKeyword::Font:
-				{
-					ParseFont(p, p.m_font.back());
-					break;
-				}
-			case EKeyword::Lock:
-				{
-					break;
-				}
-			case EKeyword::Delimiters:
-				{
 					break;
 				}
 			}
@@ -5402,7 +5412,7 @@ namespace pr::ldr
 		// We want parenting to be unaffected by the event handlers.
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 		m_i2w = i2w;
-		PR_ASSERT(PR_DBG, FEql(m_i2w.w.w, 1.0f), "Invalid instance transform");
+		PR_ASSERT(PR_DBG, AllSet(m_flags, ELdrFlags::NonAffine) || FEql(m_i2w.w.w, 1.0f), "Invalid instance transform");
 
 		// Allow the object to change it's transform just before rendering
 		OnAddToScene(*this, scene);

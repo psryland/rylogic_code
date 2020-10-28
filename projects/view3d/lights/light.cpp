@@ -43,6 +43,7 @@ namespace pr::rdr
 		auto pos = m_cam_relative ? c2w * m_position : m_position;
 		auto dir = m_cam_relative ? c2w * m_direction : m_direction;
 		auto preferred_up = m_cam_relative ? c2w.y : v4YAxis;
+		centre_dist = centre_dist != 0 ? centre_dist : 1.0f;
 		switch (m_type)
 		{
 			case ELight::Directional: return m4x4::LookAt(centre - centre_dist * dir, centre, Perpendicular(dir, preferred_up));

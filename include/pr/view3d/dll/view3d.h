@@ -284,6 +284,9 @@ extern "C"
 		// The object has normals shown
 		Normals = 1 << 4,
 
+		// The object to world transform is not an affine transform
+		NonAffine = 1 << 5,
+
 		// Set when an object is selected. The meaning of 'selected' is up to the application
 		Selected = 1 << 8,
 
