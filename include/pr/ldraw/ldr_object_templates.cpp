@@ -96,6 +96,7 @@ namespace pr::ldr
 			"	[*Orthonormalise]\n"
 			"	[*Transpose]\n"
 			"	[*Inverse]\n"
+			"	[*NonAffine]\n"
 			"}\n"
 			"**Font\n"
 			"{\n"

@@ -259,6 +259,9 @@ namespace pr::ldr
 		// The object has normals shown
 		Normals = 1 << 4,
 
+		// The object to world transform is not an affine transform
+		NonAffine = 1 << 5,
+
 		// Set when an object is selected. The meaning of 'selected' is up to the application
 		Selected = 1 << 8,
 
@@ -578,7 +581,7 @@ namespace pr::ldr
 
 			// Start with the bbox for this object
 			BBox bbox = BBoxReset;
-			if (m_model && !AllSet(m_flags,ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
+			if (m_model != nullptr && !AnySet(m_flags, ELdrFlags::BBoxExclude|ELdrFlags::NonAffine) && pred(*this)) // Get the bbox from the graphics model
 			{
 				if (m_model->m_bbox.valid())
 					Grow(bbox, i2w * m_model->m_bbox);

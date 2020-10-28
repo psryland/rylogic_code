@@ -437,6 +437,9 @@ namespace Rylogic.Gfx
 			/// <summary>The object has normals shown</summary>
 			Normals = 1 << 4,
 
+			/// <summary>The object to world transform is not an affine transform</summary>
+			NonAffine = 1 << 5,
+
 			/// <summary>Set when an object is selected. The meaning of 'selected' is up to the application</summary>
 			Selected = 1 << 8,
 

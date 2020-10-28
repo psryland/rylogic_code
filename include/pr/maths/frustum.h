@@ -77,7 +77,7 @@ namespace pr
 		static Frustum MakeFA(float fovY, float aspect, float zfar)
 		{
 			auto h = 2.0f * tan(0.5f * fovY);
-			return MakeWH(aspect*h, h, 1.0f, zfar);
+			return MakeWH(aspect * h, h, 1.0f, zfar);
 		}
 
 		// Create a frustum from horizontal and vertical fields of view
@@ -126,6 +126,19 @@ namespace pr
 			return f;
 		}
 
+		// Return the projection matrix for this Frustum
+		m4x4 projection(float zn, float zf) const
+		{
+			auto wh = area(zn);
+			return orthographic()
+				? m4x4::ProjectionOrthographic(wh.x, wh.y, zn, zf, true)
+				: m4x4::ProjectionPerspective(wh.x, wh.y, zn, zf, true);
+		}
+		m4x4 projection(v2 nf) const
+		{
+			return projection(nf.x, nf.y);
+		}
+
 		// True if this is an orthographic frustum
 		bool orthographic() const
 		{
@@ -154,7 +167,7 @@ namespace pr
 			// The FovX is the angle between the left/right plane normals: Cos(ang) = dot(l,r)
 			auto l = v4(m_Tplanes.x.x, m_Tplanes.y.x, m_Tplanes.z.x, 0);
 			auto r = v4(m_Tplanes.x.y, m_Tplanes.y.y, m_Tplanes.z.y, 0);
-			auto fov = ACos(Clamp(Dot(l,-r), -1.0f, 1.0f));
+			auto fov = ACos(Clamp(Dot(l, -r), -1.0f, 1.0f));
 			return fov;
 		}
 
@@ -164,7 +177,7 @@ namespace pr
 			// The FovY is the angle between the bottom/top plane normals: Cos(ang) = dot(b,t)
 			auto b = v4(m_Tplanes.x.z, m_Tplanes.y.z, m_Tplanes.z.z, 0);
 			auto t = v4(m_Tplanes.x.w, m_Tplanes.y.w, m_Tplanes.z.w, 0);
-			auto fov = ACos(Clamp(Dot(b,-t), -1.0f, 1.0f));
+			auto fov = ACos(Clamp(Dot(b, -t), -1.0f, 1.0f));
 			return fov;
 		}
 
@@ -286,13 +299,13 @@ namespace pr
 			// Get the dot products of a section of the line agains the frustum planes
 			auto d0 = (*this) * a;
 			auto d1 = (*this) * b;
-			auto interval  = d1 - d0;
+			auto interval = d1 - d0;
 
 			// Reduce the parametric interval
 			for (int i = 0; i != 4; ++i)
 			{
 				// If the line is not parallel to the far plane
-				if (!FEql(interval[i], 0)) 
+				if (!FEql(interval[i], 0))
 				{
 					if (d1[i] > d0[i]) t0 = Max(t0, -d0[i] / interval[i]);
 					else               t1 = Min(t1, -d0[i] / interval[i]);
@@ -344,6 +357,25 @@ namespace pr
 	};
 
 	#pragma region Functions
+
+	// Floating point comparisons. *WARNING* 'tol' is an absolute tolerance. Returns true if a is in the range (b-tol,b+tol)
+	constexpr bool FEqlAbsolute(Frustum const& a, Frustum const& b, float tol)
+	{
+		return FEqlAbsolute<>(a.m_Tplanes, b.m_Tplanes, tol);
+	}
+
+	// *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
+	constexpr bool FEqlRelative(Frustum const& a, Frustum const& b, float tol)
+	{
+		return FEqlRelative<>(a.m_Tplanes, b.m_Tplanes, tol);
+	}
+
+	// FEqlRelative using 'tinyf'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
+	constexpr bool FEql(Frustum const& a, Frustum const& b)
+	{
+		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
+		return FEql<>(a.m_Tplanes, b.m_Tplanes);
+	}
 
 	// Returns the corners of the frustum (in frustum space) at a given 'z' distance (i.e. apex at (0,0,0). Far plane at (0,0,-zfar)). Return order: x=lb, y=lt, z=rt, w=rb
 	inline m4x4 Corners(Frustum const& frustum, float z)
@@ -633,6 +665,15 @@ namespace pr::maths
 			//ldr::Write(s, "P:\\dump\\frustum.ldr");
 		};
 
+		{// Projection round trip
+			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
+			auto p = f.projection(2.0f, 10.0f);
+			auto F = Frustum::MakeFromProjection(p);
+			auto P = F.projection(2.0f, 10.0f);
+
+			PR_CHECK(FEql(F, f), true);
+			PR_CHECK(FEql(P, p), true);
+		}
 		{ // FA Frustum
 			auto f = Frustum::MakeFA(maths::tau_by_8f, 1.75f, 10.0f);
 			

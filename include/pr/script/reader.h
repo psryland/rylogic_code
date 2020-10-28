@@ -827,8 +827,10 @@ namespace pr::script
 		{
 			assert(IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it pre-multiplies the transform with the one read from the script");
 			auto p2w = m4x4Identity;
-
+			auto affine = IsAffine(o2w);
+			
 			// Tranform keywords
+			const int NonAffine      = HashKeyword(L"NonAffine"     );
 			const int M4x4           = HashKeyword(L"M4x4"          );
 			const int M3x3           = HashKeyword(L"M3x3"          );
 			const int Pos            = HashKeyword(L"Pos"           );
@@ -848,13 +850,18 @@ namespace pr::script
 			// Parse the transform
 			for (int kw; NextKeywordH(kw);)
 			{
+				if (kw == NonAffine)
+				{
+					affine = false;
+					continue;
+				}
 				if (kw == M4x4)
 				{
 					auto m = m4x4Identity;
 					Matrix4x4S(m);
-					if (m.w.w != 1)
+					if (affine && m.w.w != 1)
 					{
-						ReportError(script::EResult::UnknownValue, Location(), "M4x4 must be an affine transform with: w.w == 1");
+						ReportError(script::EResult::UnknownValue, Location(), "Specify 'NonAffine' if M4x4 is intentionally non-affine.");
 						break;
 					}
 					p2w = m * p2w;

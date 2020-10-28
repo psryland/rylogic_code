@@ -58,17 +58,21 @@ namespace pr::rdr
 
 		// Get the nuggets for this render step
 		auto& nuggets = model->m_nuggets;
+
+		// Debug checks
 		#if PR_DBG_RDR
 		if (nuggets.empty() && !AllSet(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets))
 		{
 			PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
 			model->m_dbg_flags = SetBits(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets, true);
 		}
-		#endif
 
 		// Check the instance transform is valid
-		PR_ASSERT(PR_DBG_RDR, FEql(GetO2W(inst).w.w, 1.0f), "Invalid instance transform");
-		PR_ASSERT(PR_DBG_RDR, IsFinite(GetO2W(inst)), "Invalid instance transform");
+		auto& o2w = GetO2W(inst);
+		PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
+		if (!AllSet(model->m_dbg_flags, Model::EDbgFlags::NonAffine))
+			PR_ASSERT(PR_DBG_RDR, FEql(o2w.w.w, 1.0f), "Invalid instance transform");
+		#endif
 
 		// Add to the derived objects drawlist
 		AddNuggets(inst, nuggets);
