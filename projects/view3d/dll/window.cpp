@@ -82,9 +82,9 @@ namespace view3d
 
 			// The light for the scene
 			m_light.m_type           = rdr::ELight::Directional;
-			m_light.m_ambient        = Colour32(0x00101010U);
-			m_light.m_diffuse        = Colour32(0xFF808080U);
-			m_light.m_specular       = Colour32(0x00404040U);
+			m_light.m_ambient        = Colour32(0xFF404040U);
+			m_light.m_diffuse        = Colour32(0xFF404040U);
+			m_light.m_specular       = Colour32(0xFF808080U);
 			m_light.m_specular_power = 1000.0f;
 			m_light.m_direction      = -v4ZAxis;
 			m_light.m_on             = true;
@@ -165,7 +165,7 @@ namespace view3d
 
 		// Set the light source
 		m_scene.m_global_light = m_light;
-		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, {1024,1024});
+		m_scene.ShadowCasting(m_scene.m_global_light.m_cast_shadow != 0, 1024);
 
 		// Position and scale the focus point and origin point
 		if (m_focus_point_visible || m_origin_point_visible)

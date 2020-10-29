@@ -61,18 +61,30 @@ namespace pr::rdr
 	// Constructor
 	TextureManager::TextureManager(Renderer& rdr)
 		:m_mem_tracker()
-		,m_rdr(rdr)
-		,m_lookup_tex()
-		,m_lookup_dxtex()
-		,m_stock_textures()
-		,m_gdiplus()
-		,m_eh_resize()
-		,m_gdi_dc_ref_count()
+		, m_rdr(rdr)
+		, m_lookup_tex()
+		, m_lookup_dxtex()
+		, m_stock_textures()
+		, m_gdiplus()
+		, m_eh_resize()
+		, m_gdi_dc_ref_count()
+		, m_def_sampler()
+		, m_def_sampler_comp()
 	{
-		m_eh_resize = m_rdr.BackBufferSizeChanged += [this](Window&,BackBufferSizeChangedEventArgs const&)
+		m_eh_resize = m_rdr.BackBufferSizeChanged += [this](Window&, BackBufferSizeChangedEventArgs const&)
 		{
 			assert("Outstanding DC references during resize" && m_gdi_dc_ref_count == 0);
 		};
+
+		// Create default samplers to use in shaders that expect a
+		// sampler but the model has no texture/sampler bound.
+		{
+			Renderer::Lock lock(rdr);
+			auto sdesc = SamplerDesc::LinearClamp();
+			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler.m_ptr));
+			sdesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_def_sampler_comp.m_ptr));
+		}
 
 		// Create the basic textures that exist from startup
 		CreateStockTextures();

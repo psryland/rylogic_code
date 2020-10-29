@@ -22,8 +22,8 @@ cbuffer CBufLighting :reg(b1)
 	Light m_light;
 };
 
-// Per-model constants
-cbuffer CBufModel :reg(b2)
+// Per-nugget constants
+cbuffer CBufNugget :reg(b2)
 {
 	// Note: A duplicate of this struct is in 'forward_cbuf.hlsli'
 

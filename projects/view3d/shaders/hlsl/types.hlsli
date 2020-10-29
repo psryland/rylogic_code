@@ -66,7 +66,7 @@ struct EnvMap
 // Shadows
 struct Shadow
 {
-	int4 m_info;  // x = count of smaps
+	int4 m_info;  // x = count of smaps, y = smap size
 	row_major float4x4 m_w2l[MaxShadowMaps]; // World space to light space
 	row_major float4x4 m_l2s[MaxShadowMaps]; // Light space to shadow map space
 };

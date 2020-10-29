@@ -30,7 +30,7 @@ cbuffer CBufFrame :reg(b0)
 };
 
 // Constants per render nugget.
-cbuffer CBufModel :reg(b1)
+cbuffer CBufNugget :reg(b1)
 {
 	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
 
@@ -40,7 +40,7 @@ cbuffer CBufModel :reg(b1)
 	//   1 << 0 = has diffuse texture
 	//   1 << 1 = use env map
 	// z = Alpha flags:
-	//   1 < 0 = has alpha
+	//   1 << 0 = has alpha
 	// w = Instance Id
 	int4 m_flags;
 

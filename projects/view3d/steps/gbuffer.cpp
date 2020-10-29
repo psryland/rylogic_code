@@ -25,7 +25,7 @@ namespace pr::rdr
 		,m_main_rtv()
 		,m_main_dsv()
 		,m_cbuf_camera(m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera>("ds::CBufCamera"))
-		,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufModel >("ds::CBufModel"))
+		,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufNugget>("ds::CBufNugget"))
 		,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferVS)))
 		,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferPS)))
 	{
@@ -202,7 +202,7 @@ namespace pr::rdr
 			auto const& nugget = *dle.m_nugget;
 
 			// Set the per-nugget constants
-			hlsl::ds::CBufModel cb1 = {};
+			hlsl::ds::CBufNugget cb1 = {};
 			SetModelFlags(*dle.m_instance, *dle.m_nugget, *m_scene, cb1);
 			SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 			SetTint(*dle.m_instance, nugget, cb1);

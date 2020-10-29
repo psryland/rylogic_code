@@ -22,7 +22,9 @@ namespace pr::rdr
 		,m_init_state()
 		,m_pending()
 		,m_current()
-		,m_tex_default(scene.m_wnd->tex_mgr().FindTexture<Texture2D>(RdrId(EStockTexture::White)))
+		,m_def_texture0(scene.rdr().m_tex_mgr.FindTexture<Texture2D>(RdrId(EStockTexture::White)))
+		,m_def_sampler(scene.rdr().m_tex_mgr.m_def_sampler)
+		,m_def_sampler_comp(scene.rdr().m_tex_mgr.m_def_sampler_comp)
 		,m_dbg()
 	{
 		// Create the debugging interface
@@ -185,8 +187,8 @@ namespace pr::rdr
 		// Bind the diffuse texture
 		if (current.m_tex_diffuse != pending.m_tex_diffuse || force)
 		{
-			ID3D11ShaderResourceView* srv[1]  = {m_tex_default->m_srv.get()};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
+			ID3D11ShaderResourceView* srv[1]  = {m_def_texture0->m_srv.get()};
+			ID3D11SamplerState*       samp[1] = {m_def_texture0->m_samp.get()};
 
 			if (pending.m_tex_diffuse != nullptr)
 			{
@@ -203,7 +205,7 @@ namespace pr::rdr
 		if (current.m_tex_envmap != pending.m_tex_envmap || force)
 		{
 			ID3D11ShaderResourceView* srv[1]  = {nullptr};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
+			ID3D11SamplerState*       samp[1] = {m_def_sampler.get()};
 
 			if (pending.m_tex_envmap != nullptr)
 			{
@@ -224,12 +226,12 @@ namespace pr::rdr
 		// Set shadow map texture
 		if (current.m_rstep_smap != pending.m_rstep_smap || force)
 		{
-			ID3D11ShaderResourceView* srv[hlsl::MaxShadowMaps]  = {nullptr};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
+			ID3D11ShaderResourceView* srv[hlsl::MaxShadowMaps]  = {};
+			ID3D11SamplerState*       samp[1] = {m_def_sampler_comp.get()};
 
-			int i = 0;
 			if (pending.m_rstep_smap != nullptr)
 			{
+				int i = 0;
 				for (auto& caster : pending.m_rstep_smap->m_caster)
 				{
 					srv[i] = caster.m_srv.get();
@@ -239,7 +241,7 @@ namespace pr::rdr
 			}
 
 			//todo, shadow map texture hard-coded to slot 2 here
-			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t2), i, &srv[0]);
+			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t2), hlsl::MaxShadowMaps, &srv[0]);
 			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s2), 1, &samp[0]);
 		}
 	}

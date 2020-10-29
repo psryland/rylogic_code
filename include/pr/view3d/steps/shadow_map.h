@@ -31,14 +31,15 @@ namespace pr::rdr
 		//    - During the main render, apply the perspective to the light lookup ray before sampling the smap.
 		//
 		// Notes:
-		//  - The shadow map step handles generation of all shadow maps for all lights in the scene.
-		//    It renders a shadow map for each shadow caster as a separate pass.
 		//  - This is an implementation of light space perspective shadow mapping (LiSPSM).
+		//    (see Light Space Perspective Shadow Maps by Michael Wimmer, Daniel Scherzer and Werner Purgathofer)
 		//    The main idea of perspective shadow mapping is to apply a perspective transformation
 		//    to the scene before rendering it into the shadow map. In the original PSM algorithm
 		//    the perspective transform was the same as the view projection, but that does weird
 		//    things to the light direction. In LiSPSM, the projection is perpendicular to the light
 		//    direction instead, with Zn and Zf clamped to the view frustum Zn,Zf.
+		//  - The shadow map step handles generation of all shadow maps for all lights in the scene.
+		//    It renders a shadow map for each shadow caster as a separate pass.
 		//  - The smap face must be perpendicular to the light direction otherwise the smap texels
 		//    are not isotropic and the shadow will be blocky in some places.
 		//  - The shadow map is not a depth buffer. It's a colour buffer with depth encoded into it.
@@ -46,9 +47,14 @@ namespace pr::rdr
 		static ERenderStep const Id = ERenderStep::ShadowMap;
 		struct ProjectionParams
 		{
-			m4x4  m_w2l;
-			m4x4  m_l2s;
-			BBox  m_bounds;
+			m4x4 m_l2w;  // The position of the light in world space
+			m4x4 m_w2ls; // The transform from world space to (perspective skewed) light space
+			m4x4 m_ls2s; // The projection from light space to the shadow map
+
+			m4x4 m_lsp;   // The light space perspective projection
+			m4x4 m_w2lsp; // The position of the LSP frustum
+
+			BBox m_bounds;
 		};
 		struct ShadowCaster
 		{
@@ -58,7 +64,7 @@ namespace pr::rdr
 			D3DPtr<ID3D11RenderTargetView>   m_rtv;         // RT view of the shadow map texture for creating the shadow map
 			D3DPtr<ID3D11ShaderResourceView> m_srv;         // Shader view for using the shadow map in other shaders
 
-			ShadowCaster(ID3D11Device* device, Light const& light, iv2 size, DXGI_FORMAT format);
+			ShadowCaster(ID3D11Device* device, Light const& light, int size, DXGI_FORMAT format);
 			void UpdateParams(Scene const& scene, BBox_cref ws_bounds);
 		};
 		using Casters = std::vector<ShadowCaster>;
@@ -70,12 +76,12 @@ namespace pr::rdr
 		D3DPtr<ID3D11Buffer>           m_cbuf_frame;  // Per-frame constant buffer
 		D3DPtr<ID3D11Buffer>           m_cbuf_nugget; // Per-nugget constant buffer
 		DXGI_FORMAT                    m_smap_format; // The texture format of the smap textures
-		iv2                            m_smap_size;   // Dimensions of the 'smap' textures
+		int                            m_smap_size;   // Dimensions of the (square) 'smap' textures
 		BBox                           m_bbox_scene;  // The scene bounds of shadow casters
 		ShaderPtr                      m_vs;
 		ShaderPtr                      m_ps;
 
-		ShadowMap(Scene& scene, Light const& light, iv2 size = {1024,1024}, DXGI_FORMAT format = DXGI_FORMAT_R32G32_FLOAT);
+		ShadowMap(Scene& scene, Light const& light, int size = 1024, DXGI_FORMAT format = DXGI_FORMAT_R32_FLOAT);
 		ShadowMap(ShadowMap const&) = delete;
 		ShadowMap& operator = (ShadowMap const&) = delete;
 

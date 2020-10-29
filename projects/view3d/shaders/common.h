@@ -52,15 +52,15 @@ namespace pr::rdr
 		{
 			#include "view3d/shaders/hlsl/forward/forward_cbuf.hlsli"
 			static_assert((sizeof(CBufFrame) % 16) == 0);
-			static_assert((sizeof(CBufModel) % 16) == 0);
+			static_assert((sizeof(CBufNugget) % 16) == 0);
 			static_assert((sizeof(CBufFade) % 16) == 0);
 		}
 		namespace ds
 		{
 			#include "view3d/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
-			static_assert((sizeof(CBufCamera  ) % 16) == 0);
+			static_assert((sizeof(CBufCamera) % 16) == 0);
 			static_assert((sizeof(CBufLighting) % 16) == 0);
-			static_assert((sizeof(CBufModel   ) % 16) == 0);
+			static_assert((sizeof(CBufNugget) % 16) == 0);
 		}
 		namespace ss
 		{
@@ -201,12 +201,15 @@ namespace pr::rdr
 		if (smap_step == nullptr) return;
 
 		// Add the shadow maps to the shader params
+		int i = 0;
 		for (auto& caster : smap_step->m_caster)
 		{
-			int i = cb.m_info.x++;
 			if (i == hlsl::MaxShadowMaps) break;
-			cb.m_w2l[i] = caster.m_params.m_w2l;
-			cb.m_l2s[i] = caster.m_params.m_l2s;
+			cb.m_info.x = i + 1;
+			cb.m_info.y = smap_step->m_smap_size;
+			cb.m_w2l[i] = caster.m_params.m_w2ls;
+			cb.m_l2s[i] = caster.m_params.m_ls2s;
+			++i;
 		}
 	}
 

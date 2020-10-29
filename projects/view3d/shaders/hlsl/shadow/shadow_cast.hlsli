@@ -22,15 +22,28 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 		float4 ls_pos = mul(ws_pos, shadow.m_w2l[i]);
 		float z = Frac(nf.y, -ls_pos.z, nf.x);
 
-		// Get the distance to the light from the shadow map
+		// Get the distance from the light, from the shadow map
 		float4 ss_pos = mul(ls_pos, shadow.m_l2s[i]);
 		float2 uv = 0.5*float2(1.0 + ss_pos.x, 1.0 - ss_pos.y);
-		float2 depth = m_smap_texture[i].Sample(m_smap_sampler, uv);
+
+		const float Eps = TINY * 40;
+		const int2 Ofs[9] =
+		{
+			{-1,-1}, {+0,-1}, {+1,-1},
+			{-1,+0}, {+0,+0}, {+1,+0},
+			{-1,+1}, {+0,+1}, {+1,+1},
+		};
+
+		float lit = 0.0;
+		[unroll] for (int s = 0; s != 9; ++s)
+		{
+			lit += m_smap_texture[i].SampleCmpLevelZero(m_smap_sampler, uv, z + Eps, Ofs[s]);
+		}
+		lit /= 9.0;
 
 		// 1.0 = near plane, 0.0 = far plane, so the
 		// largest value is closest to the light source
-		const float Eps = TINY * 10;
-		visibility = smoothstep(depth.x-Eps, depth.x, z);
+		visibility = lit;
 	}
 	return visibility;
 }

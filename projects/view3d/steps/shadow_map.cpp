@@ -13,7 +13,7 @@
 #include "view3d/render/state_stack.h"
 #include "view3d/shaders/common.h"
 
-#define PR_DBG_SMAP 0 //PR_DBG
+#define PR_DBG_SMAP PR_DBG
 #if PR_DBG_SMAP
 #pragma message(PR_LINK "WARNING: ************************************************** Shadow Map debugging enabled")
 #include "pr/ldraw/ldr_helper.h"
@@ -79,7 +79,7 @@ namespace pr::rdr
 
 namespace pr::rdr
 {
-	ShadowMap::ShadowCaster::ShadowCaster(ID3D11Device* device, Light const& light, iv2 size, DXGI_FORMAT format)
+	ShadowMap::ShadowCaster::ShadowCaster(ID3D11Device* device, Light const& light, int size, DXGI_FORMAT format)
 		: m_params()
 		, m_light(&light)
 		, m_tex()
@@ -93,8 +93,8 @@ namespace pr::rdr
 
 		// Create the smap texture
 		Texture2DDesc tdesc;
-		tdesc.Width = size.x;
-		tdesc.Height = size.y;
+		tdesc.Width = size;
+		tdesc.Height = size;
 		tdesc.Format = format;
 		tdesc.MipLevels = 1;
 		tdesc.ArraySize = 1;
@@ -121,27 +121,87 @@ namespace pr::rdr
 	{
 		auto& c2w = scene.m_view.m_c2w;
 		auto l2w = m_light->LightToWorld(ws_bounds.Centre(), 0.5f * ws_bounds.Diametre(), c2w);
+		m_params.m_l2w = l2w;
 
-		// Get the scene bounds in light space
-		auto ls_bounds = InvertFast(l2w) * ws_bounds;
+		constexpr int UseLiSPSM = 0;
+		if constexpr (UseLiSPSM)
+		{
+			// Create a light space perspective (LSP) transform that skews the scene to give detail
+			// near the camera. The projection must be perpendicular to the light direction and the
+			// camera must be in front of the LSP near plane.
+	
+			// Camera near/far plane distances
+			auto cam_zn = scene.m_view.Near(false);
+			auto cam_zf = scene.m_view.Far(false);
+			auto lsp_zn = cam_zn + sqrt(cam_zn * cam_zf);
 
-		// Inflate the bounds slightly so that the edge of the smap is avoided
-		ls_bounds.m_radius *= 1.01f;
+			// Create a lsp to world transform. This is the space that the projection is in.
+			// The projection clip planes are parallel to the light direction.
+			auto lsp_z = Perpendicular(l2w.z, -c2w.z);
+			auto lsp2w = m4x4::Transform(-v4ZAxis, lsp_z, v4Origin);
 
-		// Create a projection that encloses the scene bounds. This is basically "c2s"
-		auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
-		auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
-		auto l2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
+			// Get the scene bounds plus the camera near clip in lsp space.
+			// 'lsp_bounds' is the volume that we want to perspective skew.
+			auto w2lsp = InvertFast(lsp2w);
+			auto lsp_bounds = w2lsp * ws_bounds;
+			Grow(lsp_bounds, w2lsp * (c2w.pos - cam_zn * c2w.z));
 
-		// Save the projection values for later render steps
-		m_params.m_bounds = ls_bounds;
-		m_params.m_w2l = InvertFast(l2w);
-		m_params.m_l2s = l2s;
+			// Create a frustum (i.e. projection) that wraps the lsp scene bounds.
+			// The amount of perspective warp is controlled by offseting both zn and zf by a fixed amount.
+			// When the light is at 90 deg to the camera, the optimal zn value is apparently:
+			//     cam_zn + sqrt(cam_zn * cam_zf)
+			auto dz = lsp_bounds.UpperZ() - lsp_bounds.LowerZ();
+			auto sz = Max(lsp_bounds.SizeX(), lsp_bounds.SizeY());
+			auto lsp = m4x4::ProjectionPerspective(sz, sz, lsp_zn, lsp_zn + dz, true);
+			m_params.m_lsp = lsp;
+
+			// Transform from world space to lsp space
+			w2lsp.pos = v4Origin - lsp_bounds.Centre().w0() - v4{0, 0, lsp_zn + 0.5f * dz, 0};
+			m_params.m_w2lsp = w2lsp;
+
+			// World to perspective skewed light space
+			auto w2ls = m_params.m_lsp * m_params.m_w2lsp;
+			m_params.m_w2ls = w2ls;
+
+			// Transform the scene bounds to light space. Since 'w2lsp' isn't an affine transform
+			// the normal m4x4 * bbox doesn't work. Have to transform points
+			auto ls_bounds = BBoxReset;
+			for (auto& c : Corners(ws_bounds))
+			{
+				auto ls_cnr = m_params.m_w2ls * c;
+				Grow(ls_bounds, ls_cnr / ls_cnr.w);
+			}
+			m_params.m_bounds = ls_bounds;
+
+			// Create a projection that maps ls_bounds onto the shadow map
+			auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
+			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
+			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
+			m_params.m_ls2s = ls2s;
+		}
+		else
+		{
+			// World to light space
+			auto w2ls = InvertFast(l2w);
+			m_params.m_w2ls = w2ls;
+
+			// Get the scene bounds in light space
+			// Inflate the bounds slightly so that the edge of the smap is avoided
+			auto ls_bounds = w2ls * ws_bounds;
+			ls_bounds.m_radius *= 1.01f;
+			m_params.m_bounds = ls_bounds;
+
+			// Create a projection that encloses the scene bounds. This is basically "c2s"
+			auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
+			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
+			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
+			m_params.m_ls2s = ls2s;
+		}
 	}
 
 	// **************************
 
-	ShadowMap::ShadowMap(Scene& scene, Light const& light, iv2 size, DXGI_FORMAT format)
+	ShadowMap::ShadowMap(Scene& scene, Light const& light, int size, DXGI_FORMAT format)
 		: RenderStep(scene)
 		, m_caster()
 		, m_samp()
@@ -166,6 +226,11 @@ namespace pr::rdr
 		{
 			Renderer::Lock lock(m_scene->rdr());
 			auto sdesc = SamplerDesc::LinearClamp();
+			sdesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+			sdesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+			sdesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+			sdesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+			sdesc.ComparisonFunc = D3D11_COMPARISON_GREATER;
 			Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_samp.m_ptr));
 		}
 
@@ -233,18 +298,21 @@ namespace pr::rdr
 		Model const* model = nullptr;
 		for (auto& nug : nuggets)
 		{
-			if (AllSet(nug.m_flags, ENuggetFlag::ShadowCastExclude)) continue;
+			if (AnySet(nug.m_flags, ENuggetFlag::ShadowCastExclude)) continue;
 			nug.AddToDrawlist(drawlist, inst, nullptr, Id);
 			model = nug.m_owner;
 		}
 
 		// Grow the scene bounds if nuggets were added
-		if (model != nullptr && model->m_bbox != BBoxReset)
+		if (model != nullptr && model->m_bbox.valid())
 		{
 			auto i2w = GetO2W(inst);
-			auto bbox = i2w * model->m_bbox;
-			assert(bbox.valid() && "Model bounding box is invalid");
-			Grow(m_bbox_scene, bbox);
+			if (IsAffine(i2w)) // Ignore instances with non-affine transforms
+			{
+				auto bbox = i2w * model->m_bbox;
+				assert(bbox.valid() && "Model bounding box is invalid");
+				Grow(m_bbox_scene, bbox);
+			}
 		}
 
 		m_sort_needed = true;
@@ -258,7 +326,7 @@ namespace pr::rdr
 		// Determine the bounds for the shadow map.
 		// Trim away objects that cannot cast shadows into the view frustum. (todo)
 		// Nothing to render if there are no objects
-		if (!m_bbox_scene.valid())
+		if (!m_bbox_scene.valid() || m_bbox_scene.is_point())
 			return;
 
 		// Sort the draw list if needed
@@ -277,17 +345,17 @@ namespace pr::rdr
 			dc->ClearRenderTargetView(caster.m_rtv.m_ptr, reset);
 
 			// Viewport = the whole smap
-			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
+			Viewport vp(s_cast<UINT>(m_smap_size), s_cast<UINT>(m_smap_size));
 			dc->RSSetViewports(1, &vp);
 
 			// Set the frame constants
 			caster.UpdateParams(*m_scene, m_bbox_scene);
 
-			// Set up the smap shader
+			// Set up the smap shader frame constants
 			{
 				hlsl::smap::CBufFrame cb = {};
-				cb.m_w2l = caster.m_params.m_w2l;
-				cb.m_l2s = caster.m_params.m_l2s;
+				cb.m_w2l = caster.m_params.m_w2ls;
+				cb.m_l2s = caster.m_params.m_ls2s;
 				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS | EShaderType::PS);
 			}
 
@@ -297,14 +365,17 @@ namespace pr::rdr
 				auto& c2w = m_scene->m_view.m_c2w;
 				auto cam_zn = m_scene->m_view.Near(false);
 				auto cam_zf = m_scene->m_view.FocusDist() * 2;
-				auto l2w = InvertFast(caster.m_params.m_w2l);
 				auto bounds = caster.m_params.m_bounds;
-				auto& l2s = caster.m_params.m_l2s;
+				auto& l2w = caster.m_params.m_l2w;
+				auto& l2s = caster.m_params.m_ls2s;
+				auto& lsp = caster.m_params.m_lsp;
+				auto& w2lsp = caster.m_params.m_w2lsp;
 				auto s = cam_zf * 0.05f; // scale the light gfx based on frustum size
 
 				ldr::Builder b;
 				b.Box("scene_bounds", 0xFF0000FF).bbox(m_bbox_scene).wireframe();
 				b.Frustum("camera_view", 0xFF00FFFF).nf(cam_zn, cam_zf).fov(m_scene->m_view.FovY(), m_scene->m_view.Aspect()).o2w(c2w).wireframe().axis(AxisId::NegZ);
+				if (lsp != m4x4Zero) b.Frustum("lsp", 0xFF00FF00).proj(lsp).o2w(InvertFast(w2lsp)).wireframe();
 				auto& blight =
 					(caster.m_light->m_type == ELight::Directional) ? b.Cylinder("light", 0xFFFFFF00).hr(s*1.6f, s*0.4f, s*0.1f).o2w(l2w) :
 					(caster.m_light->m_type == ELight::Spot       ) ? b.Cylinder("light", 0xFFFFFF00).hr(s*1.6f, s*0.4f, s*0.1f).o2w(l2w) :
@@ -325,8 +396,11 @@ namespace pr::rdr
 
 				// Set the per-nugget constants
 				hlsl::smap::CBufNugget cb = {};
+				SetModelFlags(*dle.m_instance, nugget, *m_scene, cb);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
-				WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS);
+				SetTint(*dle.m_instance, nugget, cb);
+				SetTexDiffuse(nugget, cb);
+				WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS|EShaderType::PS);
 
 				// Draw the nugget
 				DrawNugget(dc, nugget, ss);

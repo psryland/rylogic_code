@@ -21,10 +21,26 @@ cbuffer CBufFrame :reg(b0)
 // Per nugget constants
 cbuffer CBufNugget :reg(b1)
 {
+	// x = Model flags:
+	//   1 << 0 = has normals
+	// y = Texture flags:
+	//   1 << 0 = has diffuse texture
+	//   1 << 1 = use env map
+	// z = Alpha flags:
+	//   1 << 0 = has alpha
+	// w = Instance Id
+	int4 m_flags;
+
 	// Object transform
 	row_major float4x4 m_o2s; // object to screen
 	row_major float4x4 m_o2w; // object to world
 	row_major float4x4 m_n2w; // normal to world
+
+	// Texture2D
+	row_major float4x4 m_tex2surf0; // texture to surface transform
+
+	// Tinting
+	float4 m_tint; // object tint colour
 };
 #endif
 

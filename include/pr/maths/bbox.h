@@ -315,8 +315,9 @@ namespace pr
 	}
 
 	// Return the corners of the bounding box
-	inline void pr_vectorcall Corners(BBox_cref bbox, v4 (&corners)[8])
+	inline std::array<v4,8> pr_vectorcall Corners(BBox_cref bbox)
 	{
+		std::array<v4, 8> corners;
 		auto& c = bbox.m_centre;
 		auto& r = bbox.m_radius;
 		corners[0] = v4{c.x - r.x, c.y - r.y, c.z - r.z, 1};
@@ -327,6 +328,7 @@ namespace pr
 		corners[5] = v4{c.x + r.x, c.y - r.y, c.z + r.z, 1};
 		corners[6] = v4{c.x - r.x, c.y + r.y, c.z + r.z, 1};
 		corners[7] = v4{c.x + r.x, c.y + r.y, c.z + r.z, 1};
+		return corners;
 	}
 
 	// Return the volume of a bounding box
