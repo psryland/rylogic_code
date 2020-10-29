@@ -20,7 +20,7 @@ SamplerState        m_envmap_sampler; //:register(s1);
 
 // Shadow map
 Texture2D<float2> m_smap_texture[MaxShadowMaps]; //:register(t2);
-SamplerState      m_smap_sampler; //:register(s2);
+SamplerComparisonState m_smap_sampler; //:register(s2);
 
 // Projected textures
 Texture2D<float4> m_proj_texture[MaxProjectedTextures]; //:register(t3);

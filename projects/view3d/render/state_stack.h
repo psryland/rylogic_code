@@ -103,7 +103,9 @@ namespace pr::rdr
 		DeviceState          m_init_state;
 		DeviceState          m_pending;
 		DeviceState          m_current;
-		Texture2DPtr         m_tex_default;  // A default texture to use in shaders that expect a texture/sampler but have no texture/sampler bound
+		Texture2DPtr         m_def_texture0;
+		D3DPtr<ID3D11SamplerState> m_def_sampler;
+		D3DPtr<ID3D11SamplerState> m_def_sampler_comp;
 		D3DPtr<ID3DUserDefinedAnnotation> m_dbg; // nullptr unless PR_DBG_RDR is 1
 
 		StateStack(ID3D11DeviceContext1* dc, Scene& scene);

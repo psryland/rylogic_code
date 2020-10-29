@@ -23,15 +23,16 @@ SolarHotWater
 	- Schedule control
 	
 LDraw
+	- Camera type-in
 	- Drag and drop on Scene should not open the file, DnD on Script should. Handle large ldr files.
 	- Add a skybox to the demo scene
 	- Bug in Spline, missing last vertex
-	- Camera type-in
 	- WASD camera controls
 	- Equation doesn't renderer until first refresh
 	- *Mesh should silently handle empty objects
 	- Support sub models in object manager
 	- Rendering bug in demo scene (looks like a depth state is not being set each frame. Ribbon rendering through rabbit, but not after toggling visibility. Rabbit is occluding other alphas)
+	- Allow #include of temporary scripts
 
 TextAligner
 	

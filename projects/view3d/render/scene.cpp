@@ -67,7 +67,7 @@ namespace pr::rdr
 				case ERenderStep::ForwardRender: m_render_steps.emplace_back(new ForwardRender(*this)); break;
 				case ERenderStep::GBuffer:       m_render_steps.emplace_back(new GBuffer(*this)); break;
 				case ERenderStep::DSLighting:    m_render_steps.emplace_back(new DSLighting(*this)); break;
-				case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new ShadowMap(*this, m_global_light, iv2(4096, 4096))); break;
+				case ERenderStep::ShadowMap:     m_render_steps.emplace_back(new ShadowMap(*this, m_global_light)); break;
 				case ERenderStep::RayCast:       m_render_steps.emplace_back(new RayCastStep(*this, true)); break;
 				default: throw std::exception("Unknown render step");
 			}
@@ -167,7 +167,7 @@ namespace pr::rdr
 	}
 
 	// Enable/Disable shadow casting
-	void Scene::ShadowCasting(bool enable, iv2 shadow_map_size)
+	void Scene::ShadowCasting(bool enable, int shadow_map_size)
 	{
 		if (enable)
 		{

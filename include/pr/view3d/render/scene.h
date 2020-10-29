@@ -88,7 +88,7 @@ namespace pr::rdr
 		}
 
 		// Enable/Disable shadow casting
-		void ShadowCasting(bool enable, iv2 shadow_map_size);
+		void ShadowCasting(bool enable, int shadow_map_size);
 
 		// Clear/Populate the drawlists for each render step.
 		// Drawlists can be used in two ways, one is to clear the draw sets with each frame

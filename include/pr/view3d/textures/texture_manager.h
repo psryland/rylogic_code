@@ -127,6 +127,10 @@ namespace pr::rdr
 		// (as if created with AutoId) and only 'existing' has its dx pointers changed. 'existing' also gets a new sort_id.
 		void ReplaceTexture(Texture2D& existing, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, bool all_instances);
 
+		// Default sampler state instances
+		D3DPtr<ID3D11SamplerState> m_def_sampler;
+		D3DPtr<ID3D11SamplerState> m_def_sampler_comp;
+
 	private:
 		
 		friend struct TextureBase;

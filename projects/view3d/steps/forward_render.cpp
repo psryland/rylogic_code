@@ -19,7 +19,7 @@ namespace pr::rdr
 	ForwardRender::ForwardRender(Scene& scene, bool clear_bb)
 		:RenderStep(scene)
 		,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::fwd::CBufFrame>("Fwd::CBufFrame"))
-		,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::fwd::CBufModel>("Fwd::CBufModel"))
+		,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::fwd::CBufNugget>("Fwd::CBufNugget"))
 		,m_clear_bb(clear_bb)
 		,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderVS)))
 		,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderPS)))
@@ -101,7 +101,7 @@ namespace pr::rdr
 			auto const& nugget = *dle.m_nugget;
 
 			// Set the per-nugget constants
-			hlsl::fwd::CBufModel cb1 = {};
+			hlsl::fwd::CBufNugget cb1 = {};
 			SetModelFlags(*dle.m_instance, nugget, *m_scene, cb1);
 			SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 			SetTint(*dle.m_instance, nugget, cb1);
