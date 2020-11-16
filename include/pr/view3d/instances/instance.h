@@ -69,6 +69,15 @@ namespace pr::rdr
 		}
 	}
 
+	// Instance flags
+	enum class EInstFlags :uint32_t
+	{
+		None = 0,
+
+		// The object to world transform is not an affine transform
+		NonAffine = 1 << 5,
+	};
+
 	// The header for an instance. All instances must start with one of these
 	struct BaseInstance
 	{

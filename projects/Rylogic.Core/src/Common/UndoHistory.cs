@@ -9,6 +9,8 @@ namespace Rylogic.Common
 	{
 		// Notes:
 		//  - Creates an undo history of 'TRecord' entries
+		//  - This does not record deltas of state, but snapshots of current state
+		//  - See UndoStack if you want a state-delta type implementation
 
 		public UndoHistory()
 		{

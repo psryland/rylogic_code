@@ -107,10 +107,10 @@ namespace pr::rdr
 		// in the scene, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 		// This method will add the instance to all render steps for which the model has appropriate nuggets.
 		// Instances can be added to render steps directly if finer control is needed
-		void AddInstance(BaseInstance const& inst);
-		template <typename Inst> void AddInstance(Inst const& inst)
+		void AddInstance(BaseInstance const& inst, EInstFlags flags = EInstFlags::None);
+		template <typename Inst> void AddInstance(Inst const& inst, EInstFlags flags = EInstFlags::None)
 		{
-			AddInstance(inst.m_base);
+			AddInstance(inst.m_base, flags);
 		}
 
 		// Remove an instance from the drawlist

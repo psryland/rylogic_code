@@ -172,7 +172,7 @@ namespace Rylogic.Container
 			//  root = RedBlack_.Delete(root, ...) will be common. The return type needs to match
 			// the type of 'root'.
 			if (Equals(root, default))
-				return root;
+				return root!;
 
 			// Find the node to delete
 			stack.Push(root);
@@ -443,7 +443,7 @@ namespace Rylogic.Container
 			}
 		}
 
-		/// <summary>Depth first traversal of the tree (order is ascending = +1 or descending = -1)</summary>
+		/// <summary>Breadth first traversal of the tree (order is ascending = +1 or descending = -1)</summary>
 		public static IEnumerable<T> EnumerateBF<T>([DisallowNull] T root, int order) where T : IAccessors<T> => EnumerateBF(root, order, root);
 		public static IEnumerable<T> EnumerateBF<T>([DisallowNull] T root, int order, IAccessors<T> ops) where T : notnull
 		{

@@ -38,7 +38,7 @@ namespace Rylogic.Utility
 			}
 			catch
 			{
-				return def;
+				return def!;
 			}
 		}
 

@@ -89,6 +89,7 @@ struct Main :Form
 			.xy(2000,100).wh(800,600)
 			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
 			.main_wnd(true)
+			.dbl_buffer(true)
 			.wndclass(RegisterWndClass<Main>()))
 		,m_lbl         (Label::Params<>() .name("m_lbl")         .parent(this_).text(L"hello world")       .xy(10,10)                          .wh(Auto,Auto))
 		,m_btn_progress(Button::Params<>().name("m_btn_progress").parent(this_).text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   )

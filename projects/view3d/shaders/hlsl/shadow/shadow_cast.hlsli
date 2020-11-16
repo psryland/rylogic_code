@@ -21,6 +21,7 @@ float LightVisibility(uniform Shadow shadow, float4 ws_pos)
 		// Get the distance from the light, normalised within the projection volume
 		float4 ls_pos = mul(ws_pos, shadow.m_w2l[i]);
 		float z = Frac(nf.y, -ls_pos.z, nf.x);
+		z = saturate(z);
 
 		// Get the distance from the light, from the shadow map
 		float4 ss_pos = mul(ls_pos, shadow.m_l2s[i]);

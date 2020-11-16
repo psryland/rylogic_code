@@ -51,9 +51,6 @@ namespace pr::rdr
 			m4x4 m_w2ls; // The transform from world space to (perspective skewed) light space
 			m4x4 m_ls2s; // The projection from light space to the shadow map
 
-			m4x4 m_lsp;   // The light space perspective projection
-			m4x4 m_w2lsp; // The position of the LSP frustum
-
 			BBox m_bounds;
 		};
 		struct ShadowCaster

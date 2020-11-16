@@ -41,7 +41,7 @@ namespace Rylogic.Str
 		/// Split the string into substrings at places where 'pred' returns >= 0.
 		/// int Pred(IString s, int idx) - "returns the length of the separater that starts at 's[idx]'".
 		/// So < 0 means not a separater</summary>
-		public IEnumerable<IString> Split(Func<IString, int,int> pred)
+		public IEnumerable<IString> Split(Func<IString, int, int> pred)
 		{
 			if (Length == 0) yield break;
 			for (int s = 0, e, end = Length;;)

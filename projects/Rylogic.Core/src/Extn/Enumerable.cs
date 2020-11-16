@@ -16,6 +16,12 @@ namespace Rylogic.Extn
 	/// <summary>Extensions for IEnumerable</summary>
 	public static class Enumerable_
 	{
+		/// <summary>Create an IEnumerable from a single value</summary>
+		public static IEnumerable<T> Sequence<T>(T value)
+		{
+			yield return value;
+		}
+
 		/// <summary>Enumerate instances of a given type</summary>
 		public static IEnumerable OfType(this IEnumerable source, Type ty)
 		{

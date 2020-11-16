@@ -195,7 +195,7 @@ namespace Rylogic.Maths
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
 		public static T Div<T>(T a, T b, T def = default)
 		{
-			return !Equals(b, default) ? Operators<T>.Div(a, b) : def;
+			return !Equals(b, default) ? Operators<T>.Div(a, b) : def!;
 		}
 
 		/// <summary>Minimum value</summary>
@@ -230,10 +230,10 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'x' is within the interval '[min-tol,max+tol]'</summary>
-		public static bool Within<T>(T min, T x, T max, T tol = default(T)) where T : IComparable<T>
+		public static bool Within<T>(T min, T x, T max, T tol = default) where T : IComparable<T>
 		{
-			min = Operators<T>.Sub(min, tol);
-			max = Operators<T>.Add(max, tol);
+			min = Operators<T>.Sub(min, tol!);
+			max = Operators<T>.Add(max, tol!);
 			return x.CompareTo(min) >= 0 && x.CompareTo(max) <= 0;
 		}
 

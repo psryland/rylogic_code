@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/view3d/forward.h"
+#include "pr/view3d/instances/instance.h"
 #include "pr/view3d/render/state_block.h"
 #include "pr/view3d/render/drawlist_element.h"
 #include "pr/view3d/util/stock_resources.h"
@@ -63,10 +64,10 @@ namespace pr::rdr
 
 		// Add an instance. The instance,model,and nuggets must be resident for the entire time
 		// that it is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-		void AddInstance(BaseInstance const& inst);
-		template <typename Inst> void AddInstance(Inst const& inst)
+		void AddInstance(BaseInstance const& inst, EInstFlags flags = EInstFlags::None);
+		template <typename Inst> void AddInstance(Inst const& inst, EInstFlags flags = EInstFlags::None)
 		{
-			AddInstance(inst.m_base);
+			AddInstance(inst.m_base, flags);
 		}
 
 		// Remove an instance from the scene

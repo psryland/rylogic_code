@@ -54,7 +54,7 @@ namespace pr::gui
 					if (AllSet(rhs.m_mask, EMask::Title)) m_title = rhs.m_title;
 					if (AllSet(rhs.m_mask, EMask::Desc )) m_desc  = rhs.m_desc;
 					if (AllSet(rhs.m_mask, EMask::PC   )) m_pc    = rhs.m_pc;
-					m_mask |= rhs.m_mask;
+					m_mask = m_mask | rhs.m_mask;
 				}
 				return *this;
 			}
@@ -122,8 +122,6 @@ namespace pr::gui
 			,m_cv()
 			,m_worker()
 		{
-			CreateHandle();
-
 			m_dialog_result = EDialogResult::Ok;
 			m_btn.Click += [&](Button&,EmptyArgs const&)
 			{
@@ -150,6 +148,8 @@ namespace pr::gui
 		template <typename Func, typename... Args>
 		void Show(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
 		{
+			CreateHandle();
+
 			Text(title);
 			m_lbl_desc.Text(desc);
 			StartWorker(title, desc, std::forward<Func>(func), std::forward<Args>(args)...);

@@ -50,8 +50,6 @@
 #include <gdiplus.h>
 #pragma warning(pop)
 
-#include "pr/common/flags_enum.h"
-
 #define PR_WNDPROCDEBUG 0
 #if PR_WNDPROCDEBUG
 #include "pr/gui/messagemap_dbg.h"
@@ -61,18 +59,11 @@
 #pragma comment(lib, "uxtheme.lib")
 #pragma comment(lib, "gdiplus.lib")
 
-// C++11's thread_local
-#if _MSC_VER < 1900
-#  ifndef thread_local
-#    define thread_local __declspec(thread)
-#    define thread_local_defined
-#  endif
-#endif
-
 // Disable warnings
 #pragma warning(push)
 #pragma warning(disable: 4351) // C4351: new behaviour: elements of array will be default initialized
 
+// Implementation
 namespace pr
 {
 	// Import the 'Gdiplus' namespace into 'pr::gdi'
@@ -415,6 +406,23 @@ namespace pr
 			return buf;
 		}
 
+		// Enum class operator | and &
+		template <typename U> static std::true_type  has_bitops_allowed(decltype(U::_bitwise_operators_allowed)*);
+		template <typename>   static std::false_type has_bitops_allowed(...);
+		template <typename T> constexpr bool has_bitops_allowed_v = decltype(has_bitops_allowed<T>(nullptr))::value;
+		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator ~ (T rhs)
+		{
+			return static_cast<T>(~static_cast<std::underlying_type_t<T>>(rhs));
+		}
+		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator | (T lhs, T rhs)
+		{
+			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) | static_cast<std::underlying_type_t<T>>(rhs));
+		}
+		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator & (T lhs, T rhs)
+		{
+			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs));
+		}
+		
 		// Convert an error code into an error message
 		inline std::string ErrorMessage(HRESULT result)
 		{
@@ -3453,8 +3461,10 @@ namespace pr
 				return m_cp->as<TParams>();
 			}
 
-			// Create this control. If the control has a parent, then creation starts with the 
-			// top level parent and cascades down through all child controls.
+			// Create this control and any child controls that have not yet been created.
+			// If the control has a parent, then creation starts with the top level parent
+			// and cascades down through all child controls. This method is idempotent, you
+			// can call it multiple times as more child controls get added.
 			Control& CreateHandle()
 			{
 				if (m_hwnd == nullptr)
@@ -4546,46 +4556,62 @@ namespace pr
 				//WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("CtrlWPMsg: %s",cp().m_name));
 				switch (message)
 				{
-				case WM_GETCTRLPTR:
+					case WM_GETCTRLPTR:
 					{
 						return LRESULT(this);
 					}
-				case WM_CREATE:
+					case WM_CREATE:
 					{
 						OnCreate(*rcast<CreateStruct const*>(lparam));
+						if (cp().m_dbl_buffer) EnsureDoubleBuffer();
 						if (wparam) return S_OK; // 'wparam != 0' indicates 'WM_CREATE' is being called manually so don't pass to DefWndProc
 						break;
 					}
-				case WM_DESTROY:
+					case WM_DESTROY:
 					{
 						OnDestroy();
 						Detach();
 						break;
 					}
-				case WM_ACTIVATE:
+					case WM_ACTIVATE:
 					{
 						UpdateWindow(*this);
 						break;
 					}
-				case WM_ERASEBKGND:
-					{
-						// Always prevent erase background. It results in flickering.
-						return S_FALSE;
-					}
-				case WM_PAINT:
+					case WM_ERASEBKGND:
 					{
 						// Notes:
-						//  Only create a pr::gui::PaintStruct if you intend to do all the painting yourself,
-						//  otherwise DefWndProc will do it (i.e. most controls are drawn by DefWndProc).
-						//  The update rect in the paint args is the area needing painting.
-						//  Typical behaviour is to create a PaintStruct, however you can not do this and
-						//  use this sequence instead:
-						//    ::GetUpdateRect(*this, &r, FALSE); <- (TRUE sends the WM_ERASEBKGND if needed)
-						//    Draw(); <- do your drawing
-						//    Validate(&r); <- tell windows the update rect has been updated,
-						//  Non-client window parts are drawn in DefWndProc
-						// The WS_BORDER style decreases the client rectangle by 1 on all sides.
-						// The Border is part of the non-client area of the control.
+						//  - WM_ERASEBKGND means clear the client area background. When we're double
+						//    buffering, we need to fill with the background colour.
+						//  - WM_ERASEBKGND occurs before WM_PAINT, so 
+
+						//// If double buffering, do all drawing in a memory DC
+						//if (cp().m_dbl_buffer)
+						//{
+						//	EnsureDoubleBuffer();
+						//
+						//	ClientDC dc(m_hwnd);
+						//	auto client_rect = ClientRect(false);
+						//	MemDC mem(dc, client_rect, m_dbl_buffer);
+						//}
+
+						// Prevent erase background. It results in flickering.
+						return S_FALSE;
+					}
+					case WM_PAINT:
+					{
+						// Notes:
+						//  - Only create a pr::gui::PaintStruct if you intend to do all the painting yourself,
+						//    otherwise DefWndProc will do it (i.e. most controls are drawn by DefWndProc).
+						//  - The update rect in the paint args is the area needing painting.
+						//  - Typical behaviour is to create a PaintStruct, however you can choose to not do
+						//    this and use this sequence instead:
+						//      ::GetUpdateRect(*this, &r, FALSE); <- (TRUE sends the WM_ERASEBKGND if needed)
+						//      Draw(); <- do your drawing
+						//      Validate(&r); <- tell windows the update rect has been updated,
+						//  - Non-client window parts are drawn in DefWndProc
+						//  - The WS_BORDER style decreases the client rectangle by 1 on all sides.
+						//  - The Border is part of the non-client area of the control.
 
 						// Create arguments for the paint event
 						auto back_brush = m_brush_back != nullptr ? m_brush_back : Brush(m_wci.hbrBackground);
@@ -4594,24 +4620,17 @@ namespace pr
 						// If double buffering, do all drawing in a memory DC
 						if (cp().m_dbl_buffer)
 						{
-							ClientDC dc(m_hwnd);
-							auto client_rect = ClientRect();
-							
-							// Ensure the double buffer is the correct size
-							auto bm = Image::Info(m_dbl_buffer);
-							if (bm.bmWidth != client_rect.width() || bm.bmHeight != client_rect.height())
-							{
-								if (m_dbl_buffer) ::DeleteObject(m_dbl_buffer);
-								m_dbl_buffer = ::CreateCompatibleBitmap(dc, client_rect.width(), client_rect.height());
-							}
+							EnsureDoubleBuffer();
 
-							// Create a memory DC the same size as then client area using the double buffer bitmap
+							// Create a memory DC the same size as the client area using the double buffer bitmap
+							ClientDC dc(m_hwnd);
+							auto client_rect = ClientRect(false);
 							MemDC mem(dc, client_rect, m_dbl_buffer);
-							
+
 							// Replace the DC in 'args' (and make sure it doesn't get released)
 							assert(args.m_dc.m_owned == false);
 							args.m_dc.m_hdc = mem.m_hdc;
-							args.m_hwnd = nullptr;
+							//args.m_hwnd = nullptr; //why null?
 
 							// Allow sub-classes to handle painting
 							OnPaint(args);
@@ -4625,7 +4644,7 @@ namespace pr
 
 							// Render the window into the memory DC
 							if (AllSet(args.m_parts, PaintEventArgs::EParts::Foreground))
-								DefWndProc(WM_PRINTCLIENT, (WPARAM)mem.m_hdc, LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
+								DefWndProc(WM_PRINTCLIENT, (WPARAM)mem.m_hdc, LPARAM(PRF_CHECKVISIBLE | PRF_NONCLIENT | PRF_CLIENT));
 
 							// Copy to the screen buffer
 							Throw(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
@@ -4655,8 +4674,8 @@ namespace pr
 						}
 						break;
 					}
-				case WM_WINDOWPOSCHANGING:
-				case WM_WINDOWPOSCHANGED:
+					case WM_WINDOWPOSCHANGING:
+					case WM_WINDOWPOSCHANGED:
 					{
 						// WM_WINDOWPOSCHANGING/ED is sent to a form/control when it is resized using SetWindowPos (or similar).
 						// It is not recursive, i.e. if a window is resized, then only that window receives the WM_WINDOWPOSCHANGED
@@ -4685,6 +4704,7 @@ namespace pr
 						//   are only sent if WM_WINDOWPOSCHANGED is handled by DefWndProc.
 						// - Don't resize child controls during 'WM_WINDOWPOSCHANGING' because the 'm_pos_offset'
 						//   gets recorded relative to the old client area.
+
 						auto& wp = *rcast<WindowPos*>(lparam);
 						auto before = message == WM_WINDOWPOSCHANGING;
 						if (before)
@@ -4695,8 +4715,8 @@ namespace pr
 						else
 						{
 							auto is_resize = !AllSet(wp.flags, int(EWindowPos::NoSize));
-							auto is_move   = !AllSet(wp.flags, int(EWindowPos::NoMove));
-							auto redraw    = !AllSet(wp.flags, int(EWindowPos::NoRedraw));
+							auto is_move = !AllSet(wp.flags, int(EWindowPos::NoMove));
+							auto redraw = !AllSet(wp.flags, int(EWindowPos::NoRedraw));
 
 							// Record the new position/size in the parameters
 							if (is_move)
@@ -4730,6 +4750,10 @@ namespace pr
 								}
 							}
 
+							// If we're double buffering, resize the backbuffer
+							if (is_resize && cp().m_dbl_buffer)
+								EnsureDoubleBuffer();
+
 							// Notify of position changed
 							OnWindowPosChange(WindowPosEventArgs(wp, before));
 
@@ -4745,18 +4769,18 @@ namespace pr
 						}
 						break;
 					}
-				case WM_GETMINMAXINFO:
+					case WM_GETMINMAXINFO:
 					{
 						auto& a = *reinterpret_cast<MinMaxInfo*>(lparam);
 						auto& b = cp().m_min_max_info;
-						if ((b.m_mask & MinMaxInfo::EMask::MaxSize     ) != 0) a.ptMaxSize      = b.ptMaxSize     ; else b.ptMaxSize      = a.ptMaxSize     ;
-						if ((b.m_mask & MinMaxInfo::EMask::MaxPosition ) != 0) a.ptMaxPosition  = b.ptMaxPosition ; else b.ptMaxPosition  = a.ptMaxPosition ;
+						if ((b.m_mask & MinMaxInfo::EMask::MaxSize) != 0) a.ptMaxSize = b.ptMaxSize; else b.ptMaxSize = a.ptMaxSize;
+						if ((b.m_mask & MinMaxInfo::EMask::MaxPosition) != 0) a.ptMaxPosition = b.ptMaxPosition; else b.ptMaxPosition = a.ptMaxPosition;
 						if ((b.m_mask & MinMaxInfo::EMask::MinTrackSize) != 0) a.ptMinTrackSize = b.ptMinTrackSize; else b.ptMinTrackSize = a.ptMinTrackSize;
 						if ((b.m_mask & MinMaxInfo::EMask::MaxTrackSize) != 0) a.ptMaxTrackSize = b.ptMaxTrackSize; else b.ptMaxTrackSize = a.ptMaxTrackSize;
 						break;
 					}
-				case WM_KEYDOWN:
-				case WM_KEYUP:
+					case WM_KEYDOWN:
+					case WM_KEYUP:
 					{
 						// Key down/up is sent to the window that has keyboard focus. Typically this is a text
 						// box, etc. However, if the window has focus but no controls with keyboard focus, the
@@ -4782,7 +4806,7 @@ namespace pr
 
 						break;
 					}
-				case WM_COMMAND:
+					case WM_COMMAND:
 					{
 						// WM_COMMAND, when sent from a button, is sent to the parent control/window.
 						// Typically this would be a Form but it can be any container control such as Panel,GroupBox.
@@ -4793,14 +4817,14 @@ namespace pr
 
 						break;
 					}
-				case WM_LBUTTONDOWN:
-				case WM_RBUTTONDOWN:
-				case WM_MBUTTONDOWN:
-				case WM_XBUTTONDOWN:
-				case WM_LBUTTONUP:
-				case WM_RBUTTONUP:
-				case WM_MBUTTONUP:
-				case WM_XBUTTONUP:
+					case WM_LBUTTONDOWN:
+					case WM_RBUTTONDOWN:
+					case WM_MBUTTONDOWN:
+					case WM_XBUTTONDOWN:
+					case WM_LBUTTONUP:
+					case WM_RBUTTONUP:
+					case WM_MBUTTONUP:
+					case WM_XBUTTONUP:
 					{
 						Point pt(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
@@ -4818,7 +4842,7 @@ namespace pr
 
 						// Event order is: down, click, up
 						MouseEventArgs args(btn, down, pt, keystate);
-						if ( down) OnMouseButton(args);
+						if (down) OnMouseButton(args);
 						DetectSingleClicks(args);
 						if (!down) OnMouseButton(args);
 						if (args.m_handled)
@@ -4826,11 +4850,11 @@ namespace pr
 
 						break;
 					}
-				case WM_MOUSEWHEEL:
+					case WM_MOUSEWHEEL:
 					{
 						auto pt = PointToClient(Point(lparam));
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						MouseWheelArgs args(delta, pt, keystate);
 						OnMouseWheel(args);
 						if (args.m_handled)
@@ -4838,10 +4862,10 @@ namespace pr
 
 						break;
 					}
-				case WM_MOUSEMOVE:
+					case WM_MOUSEMOVE:
 					{
 						auto pt = Point(lparam);
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						MouseEventArgs args(keystate, false, pt, keystate);
 						OnMouseMove(args);
 						if (args.m_handled)
@@ -4849,7 +4873,7 @@ namespace pr
 
 						break;
 					}
-				case WM_MOUSEACTIVATE:
+					case WM_MOUSEACTIVATE:
 					{
 						if (cp().m_selectable)
 						{
@@ -4858,7 +4882,7 @@ namespace pr
 						}
 						break;
 					}
-				case WM_DROPFILES:
+					case WM_DROPFILES:
 					{
 						// Remember to call 'AllowDrop()' on this control
 
@@ -4908,7 +4932,7 @@ namespace pr
 				//WndProcDebug(toplevel_hwnd, message, wparam, lparam, FmtS("CtrlMsg: %s", m_name.c_str()));
 				switch (message)
 				{
-				case WM_INITDIALOG:
+					case WM_INITDIALOG:
 					{
 						// When the parent dialog is initialising (i.e. it's received this WM_INITDIALOG message and
 						// forwarded it on to this child control), make sure the WndProc is set.
@@ -4932,7 +4956,7 @@ namespace pr
 						}
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
-				case WM_DESTROY:
+					case WM_DESTROY:
 					{
 						// Notify children of the WM_DESTROY before destroying this window so that destruction
 						// occurs from leaves to root of the control tree
@@ -4946,27 +4970,27 @@ namespace pr
 						// Allow WM_DESTROY to be passed to the parent window's WndProc
 						return false;
 					}
-				case WM_WINDOWPOSCHANGED:
+					case WM_WINDOWPOSCHANGED:
 					{
 						// See the notes in Control::WndProc for this message
 						return false;
 					}
-				case WM_TIMER:
+					case WM_TIMER:
 					{
 						// Timer event, forwarded to all child controls
 						auto event_id = UINT_PTR(wparam);
 						OnTimer(TimerEventArgs(event_id));
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, AllChildren);
 					}
-				case WM_CTLCOLORSTATIC:
-				case WM_CTLCOLORBTN:
-				case WM_CTLCOLOREDIT:
-				case WM_CTLCOLORLISTBOX:
-				case WM_CTLCOLORSCROLLBAR:
+					case WM_CTLCOLORSTATIC:
+					case WM_CTLCOLORBTN:
+					case WM_CTLCOLOREDIT:
+					case WM_CTLCOLORLISTBOX:
+					case WM_CTLCOLORSCROLLBAR:
 					{
 						// WM_CTLCOLORDLG is sent to the dialog itself, all other WM_CTLCOLOR messages
 						// are sent to the parent window of the control that they refer to. 
-						
+
 						// This is a request to set the foreground and background colour in the DC for the specified label control.
 						if (HWND(lparam) == m_hwnd)
 						{
@@ -4995,7 +5019,7 @@ namespace pr
 						// Not for this control, forward to children
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
 					}
-				case WM_MOUSEWHEEL:
+					case WM_MOUSEWHEEL:
 					{
 						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse
 						// button/move messages which are sent to the control with focus.
@@ -5006,7 +5030,7 @@ namespace pr
 
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = PointToClient(Point(lparam));
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						MouseWheelArgs args(delta, pt, keystate);
 						OnMouseWheel(args);
 						if (args.m_handled)
@@ -5015,8 +5039,8 @@ namespace pr
 						// Pass to WndProc, I don't think it does anything, but doesn't hurt either
 						return false;
 					}
-				case WM_KEYDOWN:
-				case WM_KEYUP:
+					case WM_KEYDOWN:
+					case WM_KEYUP:
 					{
 						// Don't forward key events to child controls. (see the notes in WndProc)
 						// Key events are sent directly to the window with keyboard focus. This may
@@ -5024,7 +5048,7 @@ namespace pr
 						// receives the events can choose to forward it to child controls
 						return false;
 					}
-				default:
+					default:
 					{
 						// By default, forward the parent window message to the child controls only
 						return ForwardToChildren(toplevel_hwnd, message, wparam, lparam, result, IsChild);
@@ -5491,7 +5515,7 @@ namespace pr
 					for (auto& d : m_down_at)
 					{
 						if (now - d.second > click_thres) continue;
-						args.m_button |= d.first;
+						args.m_button = args.m_button|d.first;
 					}
 
 					// Handle the click
@@ -5500,6 +5524,32 @@ namespace pr
 
 				// Reset the 'down-at' time
 				down_at = args.m_down ? now : 0;
+			}
+
+			// Create or resize the double buffer
+			void EnsureDoubleBuffer()
+			{
+				if (!cp().m_dbl_buffer)
+				{
+					if (m_dbl_buffer) ::DeleteObject(m_dbl_buffer);
+					m_dbl_buffer = nullptr;
+				}
+				else
+				{
+					// Ensure the double buffer is the correct size
+					auto client = ClientRect(false);
+					auto bm = Image::Info(m_dbl_buffer);
+					if (bm.bmWidth != client.width() || bm.bmHeight != client.height())
+					{
+						ClientDC dc(m_hwnd);
+						if (m_dbl_buffer) ::DeleteObject(m_dbl_buffer);
+						m_dbl_buffer = ::CreateCompatibleBitmap(dc, client.width(), client.height());
+
+						// Invalidate the whole window if we've just created the
+						// double buffer as the whole surface will need painting.
+						Invalidate(false, &client, true);
+					}
+				}
 			}
 		};
 		#pragma endregion
@@ -5872,12 +5922,12 @@ namespace pr
 				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("FormMsg: %s", cp().m_name));
 				switch (message)
 				{
-				case WM_CREATE:
+					case WM_CREATE:
 					{
 						// Pass WM_CREATE to WndProc
 						return false;
 					}
-				case WM_INITDIALOG:
+					case WM_INITDIALOG:
 					{
 						// Get the dialog window class information
 						m_wci = WndClassEx(hwnd);
@@ -5902,9 +5952,9 @@ namespace pr
 						// Return false so that WM_INITDIALOG is passed to the WndProc
 						return false;
 					}
-				case WM_CLOSE:
+					case WM_CLOSE:
 					{
-						// If this form is running modally, disable the parent
+						// If this form is running modally, reenable the parent
 						auto parent = ::GetParent(m_hwnd);
 						if (m_modal && parent != nullptr)
 							::EnableWindow(parent, true);
@@ -5915,14 +5965,14 @@ namespace pr
 							Visible(false);
 							return true;
 						}
-						
+
 						// Let the DefWndProc call DestroyWindow in response to the WM_CLOSE
 						// All forms are created using CreateWindow or CreateDialog, so in all
 						// cases we use 'DestroyWindow'.
 						// Don't null m_hwnd here, that happens in WM_DESTROY
 						return false;
 					}
-				case WM_DESTROY:
+					case WM_DESTROY:
 					{
 						// Let children know the parent is destroying
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result, AllChildren))
@@ -5940,19 +5990,19 @@ namespace pr
 						// while unhook the thunk and null the 'm_hwnd'
 						return false;
 					}
-				case WM_CTLCOLORDLG:
+					case WM_CTLCOLORDLG:
 					{
 						// Our background brush is only valid if we have valid wndclass info
 						// otherwise, let the default handle it.
 						result = LRESULT(m_wci.hbrBackground);
 						return m_wci.m_atom != 0;
 					}
-				case WM_COMMAND:
+					case WM_COMMAND:
 					{
 						auto ctrl_hwnd = HWND(lparam); // Only valid if sent from a control (i.e. not sent from a menu or accelerator)
 						if (ctrl_hwnd == nullptr)
 						{
-							auto id  = UINT(LoWord(wparam)); // The menu_item id or accelerator id
+							auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
 							auto src = UINT(HiWord(wparam)); // 0 = menu, 1 = accelerator, 2 = control-defined notification code
 							return HandleMenu(id, src, ctrl_hwnd);
 						}
@@ -5960,7 +6010,7 @@ namespace pr
 						// Otherwise fall through to the control's WndProc
 						return false;
 					}
-				case WM_SYSCOMMAND:
+					case WM_SYSCOMMAND:
 					{
 						auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
 						if (id == IDC_PINWINDOW_OPT)
@@ -5975,7 +6025,7 @@ namespace pr
 						// Pass the WM_SYSCOMMAND to the WndProc
 						return false;
 					}
-				case WM_WINDOWPOSCHANGED:
+					case WM_WINDOWPOSCHANGED:
 					{
 						auto& wp = *rcast<WindowPos*>(lparam);
 
@@ -5998,24 +6048,24 @@ namespace pr
 						// Let the WM_WINDOWPOSCHANGED message fall through to be handled by Control::WndProc
 						return false;
 					}
-				case WM_DROPFILES:
-				case WM_NOTIFY:
-				case WM_MOUSEWHEEL:
-				case WM_SETFOCUS:
-				case WM_KILLFOCUS:
-				case WM_TIMER:
-				case WM_ENTERSIZEMOVE:
-				case WM_EXITSIZEMOVE:
-				case WM_CTLCOLORSTATIC:
-				case WM_CTLCOLORBTN:
-				case WM_CTLCOLOREDIT:
-				case WM_CTLCOLORLISTBOX:
-				case WM_CTLCOLORSCROLLBAR:
+					case WM_DROPFILES:
+					case WM_NOTIFY:
+					case WM_MOUSEWHEEL:
+					case WM_SETFOCUS:
+					case WM_KILLFOCUS:
+					case WM_TIMER:
+					case WM_ENTERSIZEMOVE:
+					case WM_EXITSIZEMOVE:
+					case WM_CTLCOLORSTATIC:
+					case WM_CTLCOLORBTN:
+					case WM_CTLCOLOREDIT:
+					case WM_CTLCOLORLISTBOX:
+					case WM_CTLCOLORSCROLLBAR:
 					{
 						// Form messages that get here will be forwarded to child controls as well
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
-				default:
+					default:
 					{
 						// By default, Form messages aren't forwarded to child controls.
 						// Returning false will cause this message to get passed to the
@@ -8901,8 +8951,10 @@ namespace pr
 	}
 }
 
+// Restore warnings
 #pragma warning(pop)
 
+// Tell the linker to include common controls
 #if defined _M_IX86
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #elif defined _M_IA64
@@ -8911,9 +8963,4 @@ namespace pr
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #else
 #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#endif
-
-#ifdef thread_local_defined
-#undef thread_local_defined
-#undef thread_local
 #endif

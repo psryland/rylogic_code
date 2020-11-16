@@ -63,6 +63,8 @@ PSOut PSDefault(PSIn In)
 {
 	// Notes:
 	//  - 'ss_vert:SV_Position' in the pixel shader already has x,y,z divided by w (w unchanged)
+	//  - Models without normals can still use 'HasNormals' as true. For this case, and normal to
+	//    the light source is used.
 
 	PSOut Out;
 
@@ -70,7 +72,16 @@ PSOut PSDefault(PSIn In)
 	Out.diff = In.diff;
 
 	// Transform
-	In.ws_norm = normalize(In.ws_norm);
+	if (HasNormals)
+	{
+		// If the normal is (0,0,0), use a vector to the light source
+		In.ws_norm =
+			dot(In.ws_norm, In.ws_norm) != 0 ? normalize(In.ws_norm) :
+			DirectionalLight(m_global_light) ? -m_global_light.m_ws_direction :
+			PointLight(m_global_light)       ? normalize(m_global_light.m_ws_position - In.ws_vert) :
+			SpotLight(m_global_light)        ? normalize(m_global_light.m_ws_position - In.ws_vert) :
+			float4(0,0,0,0);
+	}
 
 	// Texture2D (with transform)
 	if (HasTex0)
@@ -87,7 +98,7 @@ PSOut PSDefault(PSIn In)
 	}
 
 	// Env Map
-	if (HasEnvMap)
+	if (HasEnvMap && HasNormals)
 		Out.diff = EnvironmentMap(m_env_map, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], Out.diff);
 
 	// Shadows
