@@ -50,7 +50,7 @@ namespace pr::rdr
 
 	// Add an instance. The instance, model, and nuggets must be resident for the entire time
 	// that the instance is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-	void RenderStep::AddInstance(BaseInstance const& inst)
+	void RenderStep::AddInstance(BaseInstance const& inst, EInstFlags flags)
 	{
 		// Get the model associated with the instance
 		ModelPtr const& model = GetModel(inst);
@@ -70,8 +70,7 @@ namespace pr::rdr
 		// Check the instance transform is valid
 		auto& o2w = GetO2W(inst);
 		PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
-		if (!AllSet(model->m_dbg_flags, Model::EDbgFlags::NonAffine))
-			PR_ASSERT(PR_DBG_RDR, FEql(o2w.w.w, 1.0f), "Invalid instance transform");
+		PR_ASSERT(PR_DBG_RDR, AllSet(flags, EInstFlags::NonAffine) || IsAffine(o2w), "Invalid instance transform");
 		#endif
 
 		// Add to the derived objects drawlist

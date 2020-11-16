@@ -176,6 +176,7 @@
 			<Word>*Depth</Word>
 			<Word>*LeftHanded</Word>
 			<Word>*CastShadow</Word>
+			<Word>*NonAffine</Word>
 			<!-- ##AUTO-GENERATED## EKeyword End -->
 		</Keywords>
 

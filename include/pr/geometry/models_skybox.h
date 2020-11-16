@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Geometry
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
@@ -121,27 +121,22 @@ namespace pr::geometry
 		vout(v4{+s, -s, +s, 1}, colour, v4Zero, v2{0, 1}); //  1
 		vout(v4{+s, -s, -s, 1}, colour, v4Zero, v2{1, 1}); //  2
 		vout(v4{+s, +s, -s, 1}, colour, v4Zero, v2{1, 0}); //  3
-
 		vout(v4{-s, +s, -s, 1}, colour, v4Zero, v2{0, 0}); //  4 // -X
 		vout(v4{-s, -s, -s, 1}, colour, v4Zero, v2{0, 1}); //  5
 		vout(v4{-s, -s, +s, 1}, colour, v4Zero, v2{1, 1}); //  6
 		vout(v4{-s, +s, +s, 1}, colour, v4Zero, v2{1, 0}); //  7
-
 		vout(v4{-s, +s, -s, 1}, colour, v4Zero, v2{0, 0}); //  8 // +Y
 		vout(v4{-s, +s, +s, 1}, colour, v4Zero, v2{0, 1}); //  9
 		vout(v4{+s, +s, +s, 1}, colour, v4Zero, v2{1, 1}); // 10
 		vout(v4{+s, +s, -s, 1}, colour, v4Zero, v2{1, 0}); // 11
-
 		vout(v4{-s, -s, +s, 1}, colour, v4Zero, v2{0, 0}); // 12 // -Y
 		vout(v4{-s, -s, -s, 1}, colour, v4Zero, v2{0, 1}); // 13
 		vout(v4{+s, -s, -s, 1}, colour, v4Zero, v2{1, 1}); // 14
 		vout(v4{+s, -s, +s, 1}, colour, v4Zero, v2{1, 0}); // 15
-
 		vout(v4{-s, +s, +s, 1}, colour, v4Zero, v2{0, 0}); // 16 // +Z
 		vout(v4{-s, -s, +s, 1}, colour, v4Zero, v2{0, 1}); // 17
 		vout(v4{+s, -s, +s, 1}, colour, v4Zero, v2{1, 1}); // 18
 		vout(v4{+s, +s, +s, 1}, colour, v4Zero, v2{1, 0}); // 19
-
 		vout(v4{+s, +s, -s, 1}, colour, v4Zero, v2{0, 0}); // 20 // -Z
 		vout(v4{+s, -s, -s, 1}, colour, v4Zero, v2{0, 1}); // 21
 		vout(v4{-s, -s, -s, 1}, colour, v4Zero, v2{1, 1}); // 22

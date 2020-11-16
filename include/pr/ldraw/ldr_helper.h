@@ -27,6 +27,7 @@ namespace pr::ldr
 	using TStr = std::string;
 	using Scope = pr::Scope<std::function<void()>,std::function<void()>>;
 
+	#pragma region Append
 	struct Str
 	{
 		std::string m_str;
@@ -76,17 +77,9 @@ namespace pr::ldr
 		FwdBack,
 	};
 
-	#pragma region Append
 	// See unit tests for example.
 	// This only works when the overloads of Append have only two parameters.
 	// For complex types, either create a struct like O2W above, or a different named function
-	inline TStr& AppendSpace(TStr& str)
-	{
-		TStr::value_type ch;
-		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
-		str.append(" ");
-		return str;
-	}
 	template <typename Type> inline TStr& Append(TStr& str, Type)
 	{
 		// Note: if you hit this error, it's probably because Append(str, ???) is being
@@ -100,6 +93,13 @@ namespace pr::ldr
 	{
 		Append(str, arg0);
 		return Append(str, std::forward<Args>(args)...);
+	}
+	inline TStr& AppendSpace(TStr& str)
+	{
+		TStr::value_type ch;
+		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
+		str.append(" ");
+		return str;
 	}
 	inline TStr& Append(TStr& str, typename TStr::value_type const* s)
 	{
@@ -191,10 +191,11 @@ namespace pr::ldr
 	{
 		if (o2w.m_mat == m4x4Identity)
 			return str;
-		if (o2w.m_mat.rot == m3x4Identity)
+		if (o2w.m_mat.rot == m3x4Identity && o2w.m_mat.pos.w == 1)
 			return Append(AppendSpace(str), "*o2w{*pos{", o2w.m_mat.pos.xyz, "}}");
-		else
-			return Append(AppendSpace(str), "*o2w{*m4x4{", o2w.m_mat, "}}");
+
+		auto affine = !IsAffine(o2w.m_mat) ? "*NonAffine": "";
+		return Append(AppendSpace(str), "*o2w{", affine, "*m4x4{", o2w.m_mat, "}}");
 	}
 	#pragma endregion
 
@@ -521,10 +522,42 @@ namespace pr::ldr
 		return Append(str, "}\n");
 	}
 
+	// Pretty format Ldraw script
+	template <typename TStr>
+	TStr FormatScript(TStr const& str)
+	{
+		TStr out;
+		out.reserve(str.size());
+
+		int indent = 0;
+		for (auto c : str)
+		{
+			if (c == '{')
+			{
+				++indent;
+				out.push_back(c);
+				out.append(1,'\n').append(indent, '\t');
+			}
+			else if (c == '}')
+			{
+				--indent;
+				out.append(1,'\n').append(indent, '\t');
+				out.push_back(c);
+			}
+			else
+			{
+				out.push_back(c);
+			}
+		}
+		return std::move(out);
+	};
+	#pragma endregion
+
 	// Ldr object fluent helper
 	namespace fluent
 	{
 		template <typename> struct LdrObj_;
+		struct LdrRawString;
 		struct LdrGroup;
 		struct LdrLine;
 		struct LdrTriangle;
@@ -541,6 +574,13 @@ namespace pr::ldr
 			ObjCont m_objects;
 			virtual ~LdrObj_() {}
 
+			template <typename Arg0, typename... Args>
+			LdrObj_& Append(Arg0 const& arg0, Args&&... args)
+			{
+				auto ptr = new LdrRawString(arg0, std::forward<Args>(args)...);
+				m_objects.emplace_back(ptr);
+				return *this;
+			}
 			LdrGroup& Group(std::string_view name = "", Col colour = Col())
 			{
 				auto ptr = new LdrGroup;
@@ -584,10 +624,20 @@ namespace pr::ldr
 				return (*ptr).name(name).col(colour);
 			}
 
+			// Extension objects
+			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj_, LdrCustom>>>
+			LdrCustom& Add(std::string_view name = "", Col colour = Col())
+			{
+				auto ptr = new LdrCustom;
+				m_objects.emplace_back(ptr);
+				return (*ptr).name(name).col(colour);
+			}
+
 			// Serialise the ldr script to a string
 			virtual void ToString(std::string& str) const
 			{
-				for (auto& s : m_objects) s->ToString(str);
+				for (auto& s : m_objects)
+					s->ToString(str);
 			}
 
 			// Reset the builder
@@ -603,12 +653,33 @@ namespace pr::ldr
 			}
 
 			// Write the script to a file
-			LdrObj_& Write(std::filesystem::path const& filepath, bool append = false)
+			LdrObj_& Write(std::filesystem::path const& filepath)
+			{
+				return Write(filepath, false, false);
+			}
+			LdrObj_& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
 				std::string str;
 				ToString(str);
+				if (pretty) str = FormatScript(str);
 				ldr::Write(str, filepath, append);
 				return *this;
+			}
+		};
+		struct LdrRawString :LdrObj
+		{
+			std::string m_str;
+			template <typename Arg0, typename... Args> 
+			LdrRawString(Arg0 const& arg0, Args&&... args)
+				:m_str()
+			{
+				ldr::Append(m_str, arg0, std::forward<Args>(args)...);
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				str.append(m_str);
 			}
 		};
 		template <typename Derived> struct LdrBase :LdrObj
@@ -685,17 +756,22 @@ namespace pr::ldr
 			}
 			AxisId m_axis_id;
 
-			// Add object modifiers
-			void Modifiers(std::string& str) const
+			// Copy all modifiers from another object
+			template <typename D> Derived& modifiers(LdrBase<D> const& rhs)
 			{
-				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
+				m_name = rhs.m_name;
+				m_colour = rhs.m_colour;
+				m_o2w = rhs.m_o2w;
+				m_wire = rhs.m_wire;
+				m_axis_id = rhs.m_axis_id;
+				return static_cast<Derived&>(*this);
 			}
 
 			/// <inheritdoc/>
 			virtual void ToString(std::string& str) const
 			{
 				LdrObj::ToString(str);
-				Modifiers(str);
+				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
 			}
 		};
 		struct LdrLine :LdrBase<LdrLine>
@@ -967,8 +1043,8 @@ namespace pr::ldr
 				if (c2s.w.w == 1) // If orthographic
 				{
 					auto rh = -Sign(c2s.z.z);
-					auto zn = c2s.w.z / c2s.z.z;
-					auto zf = zn * (c2s.w.z - rh) / c2s.w.z;
+					auto zn = Div(c2s.w.z, c2s.z.z, 0.0f);
+					auto zf = Div(zn * (c2s.w.z - rh), c2s.w.z, 1.0f);
 					auto w = 2.0f / c2s.x.x;
 					auto h = 2.0f / c2s.y.y;
 					return ortho(true).nf(zn, zf).wh(w,h);
@@ -977,7 +1053,7 @@ namespace pr::ldr
 				{
 					auto rh = -Sign(c2s.z.w);
 					auto zn = rh * c2s.w.z / c2s.z.z;
-					auto zf = zn * c2s.z.z / (rh + c2s.z.z);
+					auto zf = Div(zn * c2s.z.z, (rh + c2s.z.z), zn * 1000.0f);
 					auto w = 2.0f * zn / c2s.x.x;
 					auto h = 2.0f * zn / c2s.y.y;
 					return ortho(false).nf(zn, zf).wh(w, h);
@@ -1005,10 +1081,12 @@ namespace pr::ldr
 			{
 				ldr::Append(str, "*Group", m_name, m_colour, "{\n");
 				LdrBase<LdrGroup>::ToString(str);
-				ldr::Append(str, "}\n");
+				for (;!str.empty() && str.back() == '\n';) str.pop_back();
+				ldr::Append(str, "\n}\n");
 			}
 		};
 	}
+
 	struct Builder : fluent::LdrObj
 	{
 	};

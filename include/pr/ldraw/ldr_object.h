@@ -1,4 +1,4 @@
-﻿//***************************************************************************************************
+//***************************************************************************************************
 // Ldr Object
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
@@ -191,7 +191,8 @@ namespace pr::ldr
 		x(Billboard            ,= HashI("Billboard"           ))\
 		x(Depth                ,= HashI("Depth"               ))\
 		x(LeftHanded           ,= HashI("LeftHanded"          ))\
-		x(CastShadow           ,= HashI("CastShadow"          ))
+		x(CastShadow           ,= HashI("CastShadow"          ))\
+		x(NonAffine            ,= HashI("NonAffine"           ))
 	PR_DEFINE_ENUM2(EKeyword, PR_ENUM_LDRKEYWORDS);
 	#pragma endregion
 
@@ -262,10 +263,10 @@ namespace pr::ldr
 		// The object to world transform is not an affine transform
 		NonAffine = 1 << 5,
 
-		// Set when an object is selected. The meaning of 'selected' is up to the application
+		// Set when an instance is "selected". The meaning of 'selected' is up to the application
 		Selected = 1 << 8,
 
-		// Doesn't contribute to the bounding box on an object.
+		// Doesn't contribute to the bounding box
 		BBoxExclude = 1 << 9,
 
 		// Should not be included when determining the bounds of a scene.
@@ -454,11 +455,11 @@ namespace pr::ldr
 		EventHandler<LdrObject&, rdr::Scene const&, true> OnAddToScene;
 
 		// Recursively add this object and its children to a scene
-		void AddToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
+		void AddToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None);
 
 		// Recursively add the bounding box instance for this object using 'bbox_model'
 		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity);
+		void AddBBoxToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None);
 
 		// Notes:
 		//  - Methods with a 'name' parameter apply an operation on this object
@@ -575,23 +576,31 @@ namespace pr::ldr
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
 		// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-		template <typename Pred> BBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity) const
+		template <typename Pred> BBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None) const
 		{
 			auto i2w = *p2w * m_anim.Step(time_s);
 
+			// Combine recursive flags
+			auto flags = m_flags | (pflags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
+
 			// Start with the bbox for this object
 			BBox bbox = BBoxReset;
-			if (m_model != nullptr && !AnySet(m_flags, ELdrFlags::BBoxExclude|ELdrFlags::NonAffine) && pred(*this)) // Get the bbox from the graphics model
+			if (m_model != nullptr && !AnySet(flags, ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 			{
 				if (m_model->m_bbox.valid())
-					Grow(bbox, i2w * m_model->m_bbox);
+				{
+					if (IsAffine(i2w))
+						Grow(bbox, i2w * m_model->m_bbox);
+					else
+						Grow(bbox, MulNonAffine(i2w, m_model->m_bbox));
+				}
 			}
 			if (include_children) // Add the bounding boxes of the children
 			{
 				for (auto& child : m_child)
 				{
 					auto c2w = i2w * child->m_o2p;
-					auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w);
+					auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w, flags);
 					if (cbbox.valid()) Grow(bbox, cbbox);
 				}
 			}

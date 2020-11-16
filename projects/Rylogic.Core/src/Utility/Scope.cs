@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Rylogic.Utility
@@ -19,7 +20,9 @@ namespace Rylogic.Utility
 		}
 		protected virtual void Dispose(bool _)
 		{
-			OnExit?.Invoke();
+			// Ensure OnExit is called only once
+			var action = Interlocked.Exchange(ref OnExit, null);
+			action?.Invoke();
 		}
 
 		/// <summary>Clean up delegate</summary>

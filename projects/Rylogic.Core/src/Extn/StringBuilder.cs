@@ -36,6 +36,15 @@ namespace Rylogic.Extn
 				f.Write(sb.ToString());
 		}
 
+		/// <summary>Copy the internal string to a char array</summary>
+		public static char[] ToCharArray(this StringBuilder sb)
+		{
+			// This is faster than: sb.ToString().ToCharArray(); which does two allocations
+			var arr = new char[sb.Length];
+			sb.CopyTo(0, arr, 0, arr.Length);
+			return arr;
+		}
+
 		/// <summary>Replace the string builder contents with 'value'</summary>
 		public static StringBuilder Assign<T>(this StringBuilder sb, T value)
 		{

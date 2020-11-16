@@ -242,6 +242,7 @@ namespace pr
 		}
 		friend BBox pr_vectorcall operator * (m4_cref<> m, BBox_cref rhs)
 		{
+			assert("m4x4 * BBox: Transform is not affine" && IsAffine(m));
 			assert("Transforming an invalid bounding box" && rhs.valid());
 
 			BBox bb(m.pos, v4Zero);
@@ -362,6 +363,20 @@ namespace pr
 	inline BSphere pr_vectorcall GetBSphere(BBox_cref bbox)
 	{
 		return BSphere(bbox.m_centre, Length(bbox.m_radius));
+	}
+
+	// Multiply the bounding box by a non-affine transform
+	inline BBox pr_vectorcall MulNonAffine(m4_cref<> m, BBox_cref rhs)
+	{
+		assert("Transforming an invalid bounding box" && rhs.valid());
+
+		auto bb = BBoxReset;
+		for (auto& c : Corners(rhs))
+		{
+			auto cnr = m * c;
+			bb.Grow(cnr / cnr.w);
+		}
+		return bb;
 	}
 
 	// Include 'point' within 'bbox'.

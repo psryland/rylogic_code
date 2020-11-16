@@ -10,10 +10,11 @@
 #include "pr/view3d/steps/shadow_map.h"
 #include "pr/view3d/lights/light.h"
 #include "pr/view3d/util/stock_resources.h"
+#include "pr/view3d/util/diagnostic.h"
 #include "view3d/render/state_stack.h"
 #include "view3d/shaders/common.h"
 
-#define PR_DBG_SMAP PR_DBG
+#define PR_DBG_SMAP 0 //PR_DBG
 #if PR_DBG_SMAP
 #pragma message(PR_LINK "WARNING: ************************************************** Shadow Map debugging enabled")
 #include "pr/ldraw/ldr_helper.h"
@@ -129,55 +130,97 @@ namespace pr::rdr
 			// Create a light space perspective (LSP) transform that skews the scene to give detail
 			// near the camera. The projection must be perpendicular to the light direction and the
 			// camera must be in front of the LSP near plane.
-	
-			// Camera near/far plane distances
+
+			// Camera near/far plane distances, and LiSPSM "warp" factor lsp_zn
 			auto cam_zn = scene.m_view.Near(false);
 			auto cam_zf = scene.m_view.Far(false);
 			auto lsp_zn = cam_zn + sqrt(cam_zn * cam_zf);
 
-			// Create a lsp to world transform. This is the space that the projection is in.
-			// The projection clip planes are parallel to the light direction.
+			// Grow the bounds to include the camera near plane
+			auto ws_bounds_cam = ws_bounds;
+			Grow(ws_bounds_cam, c2w.pos - cam_zn * c2w.z);
+
+			// Create a LSP to world transform. This is the space that the skew projection is in.
+			// The projection clip planes are parallel to the light direction. The origin of LSP
+			// space is 'lsp_zn * lsp_z' from the nearest point of 'ws_bounds_cam'
 			auto lsp_z = Perpendicular(l2w.z, -c2w.z);
-			auto lsp2w = m4x4::Transform(-v4ZAxis, lsp_z, v4Origin);
-
-			// Get the scene bounds plus the camera near clip in lsp space.
-			// 'lsp_bounds' is the volume that we want to perspective skew.
+			auto lsp_rot = m3x4::Rotation(-v4ZAxis, lsp_z);
+			auto lsp_dz = Dot(Abs(lsp_z), ws_bounds_cam.Radius());
+			auto lsp_origin = ws_bounds_cam.Centre() - lsp_z * (lsp_zn + lsp_dz);
+			auto lsp2w = m4x4{lsp_rot, lsp_origin};
 			auto w2lsp = InvertFast(lsp2w);
-			auto lsp_bounds = w2lsp * ws_bounds;
-			Grow(lsp_bounds, w2lsp * (c2w.pos - cam_zn * c2w.z));
 
-			// Create a frustum (i.e. projection) that wraps the lsp scene bounds.
+			// Get the scene+camera bounds in LSP space.
+			auto lsp_bounds_cam = w2lsp * ws_bounds_cam;
+
+			// Create a frustum (i.e. projection) that maps the lsp scene bounds to the unit cube.
 			// The amount of perspective warp is controlled by offseting both zn and zf by a fixed amount.
-			// When the light is at 90 deg to the camera, the optimal zn value is apparently:
-			//     cam_zn + sqrt(cam_zn * cam_zf)
-			auto dz = lsp_bounds.UpperZ() - lsp_bounds.LowerZ();
-			auto sz = Max(lsp_bounds.SizeX(), lsp_bounds.SizeY());
-			auto lsp = m4x4::ProjectionPerspective(sz, sz, lsp_zn, lsp_zn + dz, true);
-			m_params.m_lsp = lsp;
+			// When the light is at 90 deg to the camera, the optimal zn value is: cam_zn + sqrt(cam_zn * cam_zf)
+			auto sz = Max(lsp_bounds_cam.SizeX(), lsp_bounds_cam.SizeY());
+			auto lsp = m4x4::ProjectionPerspective(sz, sz, lsp_zn, lsp_zn + 2.0f*lsp_dz, true);
 
-			// Transform from world space to lsp space
-			w2lsp.pos = v4Origin - lsp_bounds.Centre().w0() - v4{0, 0, lsp_zn + 0.5f * dz, 0};
-			m_params.m_w2lsp = w2lsp;
+			// Rotate, scale, and shift the unit cube so that it is viewed from the light.
+			auto ls_bounds = MulNonAffine(lsp, lsp_bounds_cam);
+			{
+				ldr::Builder B;
+				auto& g = B.Group("ls");
+				for (auto& p : Corners(lsp_bounds_cam))
+				{
+					auto v = lsp * p;
+					//v = lsp * v;
+					v /= v.w;
+					g.Sphere("p", 0xFFFFFFFF).r(0.05f).pos(v);
+				}
+				B.Write("P:\\dump\\smap_lispsm.ldr");
+			}
 
-			// World to perspective skewed light space
-			auto w2ls = m_params.m_lsp * m_params.m_w2lsp;
+
+			// Because the light direction is perpendicular to the lsp clip planes, the transform
+			// from lsp space to light space is just a 90deg rotation, scale, and offset of the unit cube.
+			static float Z = 1.0f;
+			static AxisId From = AxisId::PosY;
+			static AxisId To = AxisId::PosZ;
+			static float SX = 1.0f;
+			static float SY = 1.0f;
+			static float SZ = 1.0f;
+			auto lsp2ls = m4x4::Transform(From, To, v4{0, 0, Z, 1}) * m4x4::Scale(SX, SY, SZ, v4Origin);
+
+			// World to perspective skewed light space to light space
+			auto w2ls = lsp2ls * lsp * w2lsp;
 			m_params.m_w2ls = w2ls;
 
-			// Transform the scene bounds to light space. Since 'w2lsp' isn't an affine transform
-			// the normal m4x4 * bbox doesn't work. Have to transform points
-			auto ls_bounds = BBoxReset;
-			for (auto& c : Corners(ws_bounds))
-			{
-				auto ls_cnr = m_params.m_w2ls * c;
-				Grow(ls_bounds, ls_cnr / ls_cnr.w);
-			}
-			m_params.m_bounds = ls_bounds;
-
-			// Create a projection that maps ls_bounds onto the shadow map
-			auto zn = -ls_bounds.Centre().z - ls_bounds.Radius().z;
-			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
-			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
+			// Create a projection that maps the lsp unit cube onto the shadow map
+			static float W = 1.0f;
+			static float H = 1.0f;
+			auto ls2s = m4x4::ProjectionOrthographic(W, H, -5.0f, 5.0f, true);
 			m_params.m_ls2s = ls2s;
+
+			#if PR_DBG_SMAP
+			{
+				ldr::Builder b;
+				b.Box("scene_bounds", 0xFF0000FF).bbox(ws_bounds_cam).wireframe();
+				b.Frustum("camera_view", 0xFF00FFFF).nf(scene.m_view.Near(false), scene.m_view.FocusDist() * 2).fov(scene.m_view.FovY(), scene.m_view.Aspect()).o2w(c2w).wireframe().axis(AxisId::NegZ);
+				b.Frustum("lsp", 0x4000FF00).proj(lsp).o2w(InvertFast(w2lsp));
+				auto& blight = b.Add<LdrLight>("light", 0xFFFFFF00).light(*m_light).scale(scene.m_view.FocusDist() * 0.05f).o2w(l2w);
+		//		blight.Box("light_bounds", 0xFFFFFF00).bbox(m_params.m_bounds).wireframe();
+		//		blight.Frustum("light_proj", 0xFFFF00FF).proj(ls2s).wireframe().o2w(l2w);
+				b.Write("P:\\dump\\smap_view.ldr");
+			}
+			#endif
+			
+			//{
+			//	ldr::Builder B;
+			//	auto& g = B.Group("ls");
+			//	for (auto& p : Corners(ws_bounds_cam))
+			//	{
+			//		auto v = w2lsp * p;
+			//		v = lsp * v;
+			//		v /= v.w;
+			//		g.Sphere("p", 0xFFFFFFFF).r(0.05f).pos(v);
+			//	}
+			//	B.Write("P:\\dump\\smap_lispsm.ldr");
+			//}
+
 		}
 		else
 		{
@@ -196,6 +239,19 @@ namespace pr::rdr
 			auto zf = -ls_bounds.Centre().z + ls_bounds.Radius().z;
 			auto ls2s = m_light->Projection(zn, zf, ls_bounds.SizeX(), ls_bounds.SizeY(), Length(ls_bounds.Centre() - l2w.pos));
 			m_params.m_ls2s = ls2s;
+
+			// Output the camera, light position, scene bounds, and smap projection.
+			#if PR_DBG_SMAP
+			{
+				ldr::Builder b;
+				b.Box("scene_bounds", 0xFF0000FF).bbox(ws_bounds).wireframe();
+				b.Frustum("camera_view", 0xFF00FFFF).nf(scene.m_view.Near(false), scene.m_view.FocusDist() * 2).fov(scene.m_view.FovY(), scene.m_view.Aspect()).o2w(c2w).wireframe().axis(AxisId::NegZ);
+				auto& blight = b.Add<LdrLight>("light", 0xFFFFFF00).light(*m_light).scale(scene.m_view.FocusDist() * 0.05f).o2w(l2w);
+				blight.Box("light_bounds", 0xFFFFFF00).bbox(m_params.m_bounds).wireframe();
+				blight.Frustum("light_proj", 0xFFFF00FF).proj(ls2s).wireframe();
+				b.Write("P:\\dump\\smap_view.ldr");
+			}
+			#endif
 		}
 	}
 
@@ -358,34 +414,6 @@ namespace pr::rdr
 				cb.m_l2s = caster.m_params.m_ls2s;
 				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS | EShaderType::PS);
 			}
-
-			// Output the camera, light position, scene bounds, and smap projection.
-			#if PR_DBG_SMAP
-			{
-				auto& c2w = m_scene->m_view.m_c2w;
-				auto cam_zn = m_scene->m_view.Near(false);
-				auto cam_zf = m_scene->m_view.FocusDist() * 2;
-				auto bounds = caster.m_params.m_bounds;
-				auto& l2w = caster.m_params.m_l2w;
-				auto& l2s = caster.m_params.m_ls2s;
-				auto& lsp = caster.m_params.m_lsp;
-				auto& w2lsp = caster.m_params.m_w2lsp;
-				auto s = cam_zf * 0.05f; // scale the light gfx based on frustum size
-
-				ldr::Builder b;
-				b.Box("scene_bounds", 0xFF0000FF).bbox(m_bbox_scene).wireframe();
-				b.Frustum("camera_view", 0xFF00FFFF).nf(cam_zn, cam_zf).fov(m_scene->m_view.FovY(), m_scene->m_view.Aspect()).o2w(c2w).wireframe().axis(AxisId::NegZ);
-				if (lsp != m4x4Zero) b.Frustum("lsp", 0xFF00FF00).proj(lsp).o2w(InvertFast(w2lsp)).wireframe();
-				auto& blight =
-					(caster.m_light->m_type == ELight::Directional) ? b.Cylinder("light", 0xFFFFFF00).hr(s*1.6f, s*0.4f, s*0.1f).o2w(l2w) :
-					(caster.m_light->m_type == ELight::Spot       ) ? b.Cylinder("light", 0xFFFFFF00).hr(s*1.6f, s*0.4f, s*0.1f).o2w(l2w) :
-					(caster.m_light->m_type == ELight::Point      ) ? (ldr::fluent::LdrObj&)b.Sphere("light", 0xFFFFFF00).r(s*0.3f).o2w(l2w) :
-					throw std::runtime_error("Unsupported light type");
-				blight.Box("light_bounds", 0xFFFFFF00).bbox(bounds).wireframe();
-				blight.Frustum("light_proj", 0xFFFF00FF).proj(l2s).wireframe();
-				b.Write("P:\\dump\\smap_view.ldr");
-			}
-			#endif
 
 			// Draw each element in the draw list
 			Lock lock(*this);

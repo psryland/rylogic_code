@@ -46,9 +46,11 @@ float LightSpecular(in uniform float4 ws_light_direction, in uniform float specu
 // Return the colour due to lighting. Returns unlit_diff if ws_norm is zero
 float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 ws_cam, float light_visible, float4 unlit_diff)
 {
-	// Lighting should not change the alpha value. If the thing was semi transparent coming in, casting
-	// light on it shouldn't change it.
-	float  has_norm      = dot(ws_norm,ws_norm); // 1 for normals, 0 for not
+	// Notes:
+	//  - Lighting should not change the alpha value.
+	//    If the thing was semi transparent coming in, casting light on it shouldn't change it.
+
+	float  has_norm      = dot(ws_norm, ws_norm); // 1 for normals, 0 for not
 	float4 ws_toeye_norm = normalize(ws_cam - ws_pos);
 	float4 ws_light_dir  = DirectionalLight(light) ? light.m_ws_direction : normalize(ws_pos - light.m_ws_position);
 

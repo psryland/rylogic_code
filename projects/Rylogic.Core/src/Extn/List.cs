@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Rylogic.Common;
+using Rylogic.Container;
 
 namespace Rylogic.Extn
 {
@@ -85,7 +86,15 @@ namespace Rylogic.Extn
 			return list[list.Count - index - 1];
 		}
 
-		/// <summary>Enumerate a sub-range of the list. (Note: Skip/Take are *NOT* optimised for lists)</summary>
+		/// <summary>Enumerate a sub-range of the list. (Note: Skip/Take are *NOT* optimised for lists). The 'pad' version allows enumerating beyond the list</summary>
+		public static IEnumerable<TSource> EnumRange<TSource>(this IList<TSource> list, int start, int count, TSource pad)
+		{
+			int i = 0, count0 = Math.Min(count, Math.Max(0, list.Count - start));
+			for (; i != count0; ++i)
+				yield return list[start  + i];
+			for (; i != count; ++i)
+				yield return pad;
+		}
 		public static IEnumerable<TSource> EnumRange<TSource>(this IList<TSource> list, int start, int count)
 		{
 			for (int i = start; count-- != 0; ++i)
@@ -115,6 +124,10 @@ namespace Rylogic.Extn
 		public static void Resize<T>(this List<T> list, int newsize)
 		{
 			list.Resize(newsize, () => default!);
+		}
+		public static void Resize<T>(this List<T> list, int newsize, T value)
+		{
+			list.Resize(newsize, () => value);
 		}
 		public static void Resize<T>(this List<T> list, int newsize, Func<T> factory)
 		{
@@ -331,6 +344,32 @@ namespace Rylogic.Extn
 			int idx;
 			for (idx = list.Count; idx-- != 0 && !pred(list[idx]);) { }
 			return idx;
+		}
+
+		/// <summary>Split a list into sub ranges at places where 'pred' returns >= 0.</summary>
+		public static IEnumerable<ListSpan<ListT, T>> Split<ListT, T>(this ListT list, Func<ListT, int, int> pred)
+			where ListT : IList<T>
+		{
+			// Notes:
+			//   - Pred is used to identify split points, and the length of the delimiters.
+			//     e.g. for a string: "123 234 345", pred would return 1 and index 3, and 7, resulting in the ranges: "123", "234", "345".
+			//   - Signature:  int Pred(IList<T> list, int idx)
+			//     Return the length of the delimiter that starts at 'list[idx]' or -1 if not a delimiter
+
+			if (list.Count == 0)
+				yield break;
+
+			for (int s = 0, e, end = list.Count; ;)
+			{
+				// Find the next delimiter
+				var len = 0;
+				for (e = s; e != end && (len = pred(list, e)) < 0; ++e) { }
+
+				// Return the sub range
+				yield return new ListSpan<ListT, T>(list, s, e - s);
+				if (e == end) break;
+				s = e + len;
+			}
 		}
 
 		/// <summary>

@@ -684,13 +684,6 @@ namespace pr::ldr
 			obj->m_sko.Group(rdr::ESortGroup::PreOpaques);
 		}
 
-		// If NonAffine
-		if (AllSet(obj->m_flags, ELdrFlags::NonAffine))
-		{
-			if (obj->m_model != nullptr)
-				obj->m_model->m_dbg_flags = SetBits(obj->m_model->m_dbg_flags, Model::EDbgFlags::NonAffine, true);
-		}
-
 		// If flagged as screen space rendering mode
 		if (obj->m_screen_space)
 			obj->ScreenSpace(true);
@@ -4697,22 +4690,6 @@ namespace pr::ldr
 		ObjectCreator(ParseParams& p)
 			:IObjectCreator(p)
 		{}
-		void CreateModel(LdrObject* obj) override
-		{
-			// Object modifiers applied to groups are applied recursively to children within the group
-
-			// Apply colour to all children
-			if (obj->m_colour_mask != 0)
-				obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
-
-			// Apply wireframe to all children
-			if (AllSet(obj->m_flags, ELdrFlags::Wireframe))
-				obj->Wireframe(true, "");
-
-			// Apply visibility to all children
-			if (AllSet(obj->m_flags, ELdrFlags::Hidden))
-				obj->Visible(false, "");
-		}
 	};
 
 	// ELdrObject::Text
@@ -5047,6 +5024,7 @@ namespace pr::ldr
 		}
 
 		// Apply properties to each object added
+		// This is done after objects are parsed so that recursive properties can be applied
 		assert("No object added, or objects removed, without Parse error" && p.m_objects.size() > object_count);
 		for (auto i = object_count, iend = p.m_objects.size(); i != iend; ++i)
 			ApplyObjectState(p.m_objects[i].get());
@@ -5318,6 +5296,14 @@ namespace pr::ldr
 		erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
 	}
 
+	// Convert ELdrFlags to EInstFlags
+	rdr::EInstFlags InstFlags(ELdrFlags ldr_flags)
+	{
+		auto flags = rdr::EInstFlags::None;
+		if (AllSet(ldr_flags, ELdrFlags::NonAffine)) flags = SetBits(flags, rdr::EInstFlags::NonAffine, true);
+		return flags;
+	}
+
 	// LdrObject ***********************************
 
 	#pragma region LdrObject
@@ -5405,49 +5391,56 @@ namespace pr::ldr
 	}
 
 	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w)
+	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags pflags)
 	{
 		// Set the instance to world.
 		// Take a copy in case the 'OnAddToScene' event changes it.
 		// We want parenting to be unaffected by the event handlers.
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 		m_i2w = i2w;
-		PR_ASSERT(PR_DBG, AllSet(m_flags, ELdrFlags::NonAffine) || FEql(m_i2w.w.w, 1.0f), "Invalid instance transform");
+
+		// Combine recursive flags
+		auto flags = m_flags | (pflags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Allow the object to change it's transform just before rendering
 		OnAddToScene(*this, scene);
 
 		// Add the instance to the scene drawlist
-		if (m_model && !AllSet(m_flags, ELdrFlags::Hidden))
+		if (m_model && !AllSet(flags, ELdrFlags::Hidden))
 		{
 			// Could add occlusion culling here...
-			scene.AddInstance(*this);
+			scene.AddInstance(*this, InstFlags(flags));
 		}
 
 		// Rinse and repeat for all children
 		for (auto& child : m_child)
-			child->AddToScene(scene, time_s, &i2w);
+			child->AddToScene(scene, time_s, &i2w, flags);
 	}
 
 	// Recursively add this object using 'bbox_model' instead of its
 	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w)
+	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags pflags)
 	{
 		// Set the instance to world for this object
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 
+		// Combine recursive flags
+		auto flags = m_flags | (pflags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
+
 		// Add the bbox instance to the scene drawlist
-		if (m_model && !AnySet(m_flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
+		if (m_model && !AnySet(flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 		{
 			// Find the object to world for the bbox
 			m_bbox_instance.m_model = scene.rdr().m_mdl_mgr.m_bbox_model;
 			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
-			scene.AddInstance(m_bbox_instance);
+			scene.AddInstance(m_bbox_instance, InstFlags(flags));
 		}
 
 		// Rinse and repeat for all children
 		for (auto& child : m_child)
-			child->AddBBoxToScene(scene, time_s, &i2w);
+			child->AddBBoxToScene(scene, time_s, &i2w, flags);
 	}
 
 	// Get the first child object of this object that matches 'name' (see Apply)

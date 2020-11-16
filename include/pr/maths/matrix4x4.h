@@ -393,6 +393,10 @@ namespace pr
 		// Construct a perspective projection matrix. 'w' and 'h' are measured at 'zn'
 		static Mat4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
 		{
+			// Getting your head around perspective transforms:
+			//   p0 = c2s * v4(0,0,-zn,1); p0/p0.w = (0,0,0,1)
+			//   p1 = c2s * v4(0,0,-zf,1); p1/p1.w = (0,0,1,1)
+
 			assert("invalid view rect" && IsFinite(w) && IsFinite(h) && w > 0 && h > 0);
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = Bool2SignF(righthanded);
