@@ -5,20 +5,40 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-	xmlns:edit="clr-namespace:Rylogic.Gui.WPF.TextEditor;assembly=Rylogic.Gui.WPF"
+	xmlns:gui_text="clr-namespace:Rylogic.Gui.WPF.TextEditor;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
     Title="TextEditorUI"
 	Height="450"
 	Width="800"
 	>
 	<Grid
-		Background="Gray"
+		Background="#CCC"
 		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		
+		<!-- 
+		-->
 		<gui:TextEditorControl
+			Grid.Row="0"
 			x:Name="m_editor"
+			Document="{Binding Doc, Mode=OneWay}"
 			Background="LightBlue"
 			FontFamily="Consolas"
 			Padding="100"
+			/>
+		<gui_text:TextView
+			Grid.Row="1"
+			x:Name="m_view"
+			Document="{Binding Doc, Mode=OneWay}"
+			/>
+		<gui_text:TextArea
+			Grid.Row="2"
+			x:Name="m_area"
+			Document="{Binding Doc, Mode=OneWay}"
 			/>
 	</Grid>
 </Window>
