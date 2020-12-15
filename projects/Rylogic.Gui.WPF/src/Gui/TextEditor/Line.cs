@@ -1,78 +1,81 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
-using System.Windows.Media;
+using System.Diagnostics;
+using System.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.TextEditor
 {
-	public class Line :IList<Cell>
+	[DebuggerDisplay("{Description,nq}")]
+	public class Line :IList<Cell>, IReadOnlyList<Cell>
 	{
 		// Notes:
-		//  - 'm_cells' should not include new-line characters.
+		//  - An IList<Cell> is basically a StringBuilder
+		//  - 'Text' should not include new-line characters.
 		//    There is an implicit new line at the end of each line.
+		//  - There isn't a reference to 'TextDocument' because Line's
+		//    shouldn't know about Documents, and it's wasteful of memory.
 		//  - The new-line is not included in the returned text because
-		//    that would require a dependency on the 'Document'
-		//  - 'pixels_per_dip' is DIP/96.0, i.e. 1.0 if DPI is 96.0, 1.25 if DIP is 120.0, etc
+		//    that would require a dependency on the 'Document' for 'LineEnd'.
+		//  - A document (and therefore these Lines) can be shared by multiple
+		//    view controls. Don't store WPF visuals in this class.
 
-		private List<Cell> m_cells = new List<Cell>();
-		public Line()
-		{}
-		public Line(string text, ushort style = 0)
+		internal Line()
 		{
-			SetText(text, style);
+			Text = new CellString();
 		}
+		internal Line(CellString text)
+			: this()
+		{
+			SetText(text);
+		}
+		internal Line(CellString text, int start, int length)
+			: this()
+		{
+			SetText(text, start, length);
+		}
+
+		/// <summary>The line index (0-based) of this line in the document</summary>
+		public int LineIndex => TextDocument.IndexByLine(this);
+
+		/// <summary>The beg offset of the line in the document's text.</summary>
+		public int BegOffset => TextDocument.OffsetByLine(this);
+
+		/// <summary>The end offset of the line in the document's text (excludes the newline).</summary>
+		public int EndOffset => BegOffset + Length;
+
+		/// <summary>Line length (excludes the new line)</summary>
+		public int Length => Text.Length;
+
+		/// <summary>Line lenth including the LineEnd delimiter</summary>
+		public int LengthWithLineEnd => SubTreeTextLength - (m_lhs?.SubTreeTextLength ?? 0 + m_rhs?.SubTreeTextLength ?? 0);
 
 		/// <summary>Get the text of this line</summary>
-		public virtual string Text
+		public CellString Text { get; }
+
+		/// <summary>Set the whole line to the given text and style</summary>
+		public void SetText(CellString text) => SetText(text, 0, text.Length);
+		public void SetText(CellString text, int start, int length)
 		{
-			get
-			{
-				var sb = new StringBuilder(Count);
-				foreach (var cell in m_cells) sb.Append(cell.ch);
-				return sb.ToString();
-			}
+			Debug.Assert(Validate(text, start, length));
+
+			Text.Length = 0;
+			Text.Append(text, start, length);
+			Invalidate();
 		}
-
-		/// <summary>Set the line to the given text and style</summary>
-		public void SetText(string text, ushort style)
-		{
-			m_cells.Resize(text.Length);
-			for (int i = 0; i != text.Length; ++i)
-				this[i] = new Cell(text[i], style);
-		}
-
-		/// <summary>Set a range of text on this line with the given style</summary>
-		public void SetText(string text, ushort style, int start, int length)
-		{
-			if (start < 0)
-				throw new ArgumentException(nameof(start), "Start index is out of range");
-			if (length < 0)
-				throw new ArgumentException(nameof(start), "Length is out of range");
-
-			// Grow the line if necessary
-			if (start + length > Count)
-				m_cells.Resize(start + length);
-
-			// Set the text and style
-			for (int i = 0, j = start; i != length; ++i, ++j)
-				this[j] = new Cell(text[i], style);
-		}
-
-		/// <summary>Line length</summary>
-		public int Count => m_cells.Count;
 
 		/// <summary>Access to each cell</summary>
 		public Cell this[int index]
 		{
-			get => m_cells[index];
+			get => Text[index];
 			set
 			{
-				if (m_cells[index] == value) return;
-				if (value.ch == '\n' || value.ch == '\r') throw new Exception("Line text should not include new-line characters");
-				m_cells[index] = value;
+				if (Text[index] == value) return;
+				Validate(value);
+				Text[index] = value;
 				Invalidate();
 			}
 		}
@@ -80,51 +83,82 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <inheritdoc/>
 		public int IndexOf(Cell item)
 		{
-			return m_cells.IndexOf(item);
+			return Text.IndexOf(item);
 		}
 
 		/// <summary>Reset the line to empty</summary>
 		public void Clear()
 		{
-			m_cells.Clear();
+			Text.Length = 0;
 		}
 
 		/// <summary>Append a cell to the line</summary>
 		public void Add(Cell item)
 		{
-			m_cells.Add(new Cell());
-			this[Count - 1] = item;
+			Debug.Assert(Validate(item));
+			Text.Add(item);
+			Invalidate();
 		}
 
 		/// <summary>Insert a cell into the line</summary>
 		public void Insert(int index, Cell item)
 		{
-			m_cells.Insert(index, new Cell());
-			this[index] = item;
+			Debug.Assert(Validate(item));
+			Text.Insert(index, item);
+			Invalidate();
+		}
+
+		/// <summary>Insert a string into the line</summary>
+		public void Insert(int index, CellString str)
+		{
+			Debug.Assert(Validate(str));
+			Text.Insert(index, str);
+			Invalidate();
+		}
+
+		/// <summary>Insert a string into the line</summary>
+		public void Insert(int index, CellString str, int start, int length)
+		{
+			Debug.Assert(Validate(str));
+			Text.Insert(index, str, start, length);
+			Invalidate();
 		}
 
 		/// <summary>Delete a cell from the line</summary>
 		public bool Remove(Cell item)
 		{
-			return m_cells.Remove(item);
+			Invalidate();
+			return Text.Remove(item);
 		}
 
 		/// <summary>Delete a cell at the given index position</summary>
 		public void RemoveAt(int index)
 		{
-			m_cells.RemoveAt(index);
+			Text.RemoveAt(index);
+			Invalidate();
+		}
+
+		/// <summary>Remove a span of cells from the line</summary>
+		public void Remove(int index, int count)
+		{
+			Text.Remove(index, count);
+			Invalidate();
 		}
 
 		/// <inheritdoc/>
 		public bool Contains(Cell item)
 		{
-			return m_cells.Contains(item);
+			return Text.Contains(item);
 		}
+
+		/// <inheritdoc/>
+		int ICollection<Cell>.Count => Length;
+		int IReadOnlyCollection<Cell>.Count => Length;
 
 		/// <inheritdoc/>
 		void ICollection<Cell>.CopyTo(Cell[] array, int arrayIndex)
 		{
-			m_cells.CopyTo(array, arrayIndex);
+			((ICollection<Cell>)Text).CopyTo(array, arrayIndex);
 		}
 
 		/// <summary></summary>
@@ -133,61 +167,165 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <inheritdoc/>
 		public IEnumerator<Cell> GetEnumerator()
 		{
-			return m_cells.GetEnumerator();
+			return Text.GetEnumerator();
 		}
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return GetEnumerator();
 		}
 
-		/// <summary>Text ready to render</summary>
-		public IEnumerable<FormattedText> FormattedText(StyleMap styles)
-		{
-			// No text on this line
-			if (m_cells.Count == 0)
-				yield break;
-
-			// If the formatted text isn't cached, recreate it
-			if (m_formatted.Count == 0)
-			{
-				m_formatted.Clear();
-				Height = 0.0;
-
-				var sb = new StringBuilder(256);
-				for (int s = 0, e = 0; s != Count; s = e)
-				{
-					sb.Length = 0;
-
-					// Find the span of characters with the same style
-					sb.Append(m_cells[s].ch);
-					for (e = s + 1; e != Count && m_cells[e].sty == m_cells[s].sty; ++e)
-						sb.Append(m_cells[e].ch);
-
-					// Get the style for the span
-					var style = styles.TryGetValue(m_cells[s].sty, out var sty) && sty is TextStyle ts ? ts : TextStyle.Default;
-
-					// Create formatted text for the span
-					var formatted = new FormattedText(sb.ToString(), CultureInfo.CurrentCulture, style.Flow, style.Typeface, style.EmSize, style.ForeColor, style.PixelsPerDIP);
-					m_formatted.Add(formatted);
-
-					// Record the line height
-					Height = Math.Max(Height, formatted.Height);
-				}
-			}
-
-			// Return the formatted text
-			foreach (var ft in m_formatted)
-				yield return ft;
-		}
-		private List<FormattedText> m_formatted = new List<FormattedText>();
-
 		/// <summary>Cause the cached formatted text to be recreated</summary>
-		public void Invalidate()
+		public void Invalidate() => ++IssueNumber;
+
+		/// <summary>Invalidation counter</summary>
+		internal int IssueNumber { get; private set; }
+
+		/// <summary>Gets the next line in the document (or null if the last line)</summary>
+		public Line? NextLine
 		{
-			m_formatted.Clear();
+			get
+			{
+				//DebugVerifyAccess();
+				if (m_rhs != null)
+					return m_rhs.LeftMost;
+
+				Line? p = m_parent;
+				for (var c = this; p != null && p.m_rhs == c; c = p, p = p.m_parent) { }
+				return p;
+			}
 		}
 
-		/// <summary>Line height is only know after formatting</summary>
-		public double Height { get; private set; } = 0.0;
+		/// <summary>Gets the previous line in the document (or null if the first line)</summary>
+		public Line? PrevLine
+		{
+			get
+			{
+				//DebugVerifyAccess();
+				if (m_lhs != null)
+					return m_lhs.RightMost;
+
+				Line? p = m_parent;
+				for (var c = this; p != null && p.m_lhs == c; c = p, p = p.m_parent) { }
+				return p;
+			}
+		}
+
+		/// <summary>Meta data attached to each line</summary>
+		internal UserData UserData { get; } = new UserData();
+
+		#region Red/Black Tree
+
+		internal Line? m_parent;
+		internal Line? m_lhs;
+		internal Line? m_rhs;
+		internal bool m_black;
+		
+		/// <summary>The number of nodes in the sub tree that has this line as the root</summary>
+		internal int SubTreeLineCount = 1;
+
+		/// <summary>The total length of text in the sub tree that has this line as the root (includes newlines)</summary>
+		internal int SubTreeTextLength = 0;
+
+		/// <summary>Return the line that is the root of the tree containing this line</summary>
+		internal Line TreeRoot
+		{
+			get
+			{
+				var line = this;
+				for (; line.m_parent != null; line = line.m_parent) { }
+				return line;
+			}
+		}
+
+		/// <summary>The left-most child of the subtree</summary>
+		internal Line LeftMost
+		{
+			get
+			{
+				var line = this;
+				for (; line.m_lhs != null; line = line.m_lhs) { }
+				return line;
+			}
+		}
+
+		/// <summary>The right-most child of the subtree</summary>
+		internal Line RightMost
+		{
+			get
+			{
+				var line = this;
+				for (; line.m_rhs != null; line = line.m_rhs) { }
+				return line;
+			}
+		}
+
+		#endregion
+
+		#region Diagnostics
+
+		/// <summary></summary>
+		private bool Validate(Cell cell)
+		{
+			if (cell != '\n' && cell != '\r') return true;
+			throw new Exception("Line text should not include new-line characters");
+		}
+
+		/// <summary>Check 'cells' is a valid collection of cells to add to the line</summary>
+		private bool Validate(CellString str) => Validate(str, 0, str.Length);
+		private bool Validate(CellString str, int start, int length)
+		{
+			for (; length-- != 0; ++start)
+				Validate(str[start]);
+
+			return true;
+		}
+
+		/// <summary>Debug description</summary>
+		private string Description => $"[DocLine] \"{Text}\"";
+
+		#endregion
+	}
+
+	/// <summary>Line helper extensions</summary>
+	internal static class Line_
+	{
+		/// <summary>True if 'str[idx]' is the location of a new line delimiter</summary>
+		internal static bool IsNewLine(CellString str, int idx, string lineend)
+		{
+			return string.Compare((string)str, idx, lineend, 0, lineend.Length) == 0;
+		}
+
+		/// <summary>Search from 'idx' for the next new line delimiter, returning it's index. Returns 'str.Length' if not found</summary>
+		internal static int FindNewLine(CellString str, int idx, string lineend)
+		{
+			for (; idx != str.Length && !IsNewLine(str, idx, lineend); ++idx) { }
+			return idx;
+		}
+
+	//	/// <summary>Return the span in 'str' containing the first new line after 'offset'</summary>
+	//	internal static SimpleSegment NextNewLine(CellString str, int offset)
+	//	{
+	//		Debug.Assert(offset >= 0 && offset < str.Length);
+	//
+	//		int i = offset;
+	//		for (; i != str.Length && str[i] != '\r' && str[i] != '\n'; ++i) {}
+	//		if (i == str.Length) return new SimpleSegment(i, 0);
+	//		if (i + 1 == str.Length) return new SimpleSegment(i, 1);
+	//		if (str[i] == '\r' && str[i + 1] == '\n') return new SimpleSegment(i, 2);
+	//		return new SimpleSegment(i, 1);
+	//	}
+	//
+	//	/// <summary>Return the span in 'str' containing the first new line after 'offset'</summary>
+	//	internal static SimpleSegment NextNewLine(string str, int offset)
+	//	{
+	//		Debug.Assert(offset >= 0 && offset < str.Length);
+	//
+	//		int i = offset;
+	//		for (; i != str.Length && str[i] != '\r' && str[i] != '\n'; ++i) { }
+	//		if (i == str.Length) return new SimpleSegment(i, 0);
+	//		if (i+1 == str.Length) return new SimpleSegment(i, 1);
+	//		if (str[i] == '\r' && str[i+1] == '\n') return new SimpleSegment(i, 2);
+	//		return new SimpleSegment(i, 1);
+	//	}
 	}
 }

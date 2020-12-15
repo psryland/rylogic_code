@@ -13,15 +13,15 @@
 			Focusable="False"
 			Name="PART_ScrollViewer"
 			CanContentScroll="True"
-			Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextArea}"
 			VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
 			HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+			Content="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=TextArea}"
 			VerticalContentAlignment="Top"
 			HorizontalContentAlignment="Left"
-			BorderThickness="{TemplateBinding BorderThickness}"
-			BorderBrush="{TemplateBinding BorderBrush}"
 			Background="{TemplateBinding Background}"
 			Padding="{TemplateBinding Padding}"
+			BorderBrush="{TemplateBinding BorderBrush}"
+			BorderThickness="{TemplateBinding BorderThickness}"
 			/>
 		<ControlTemplate.Triggers>
 			<Trigger Property="WordWrap" Value="True">

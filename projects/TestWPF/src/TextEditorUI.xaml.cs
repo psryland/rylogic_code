@@ -10,33 +10,21 @@ namespace TestWPF
 		public TextEditorUI()
 		{
 			InitializeComponent();
+
+			Doc = new TextDocument();
+			Doc.TextStyles[1] = new TextStyle(fore: Colour32.DarkRed.ToMediaBrush());
+			Doc.TextStyles[2] = new TextStyle(fore: Colour32.DarkGreen.ToMediaBrush());
+
+			Doc.Text = new CellString()
+				.Append("Line0: This is a long test string\n")
+				.Append("Line1: that uses different styles\n", 1)
+				.Append("Line2: and spans multiple lines\n", 2)
+				.Append("Line3: ", 0);
+
 			DataContext = this;
-
-			m_editor.Document.Styles[1] = new TextStyle(fore: Colour32.Red.ToMediaBrush());
-			m_editor.Document.Styles[2] = new TextStyle(fore: Colour32.Green.ToMediaBrush());
-
-			m_editor.Document.Lines.Add(new Line("Hello"));
-			m_editor.Document.Lines.Add(new Line("World", 1));
-			m_editor.Document.Lines.Add(new Line("One", 2));
-			m_editor.Document.Lines.Add(new Line("Two"));
-			m_editor.Document.Lines.Add(new Line("Three"));
-			m_editor.Document.Lines.Add(new Line("Four"));
-			m_editor.Document.Lines.Add(new Line("Five"));
-			m_editor.Document.Lines.Add(new Line("Six"));
-			m_editor.Document.Lines.Add(new Line("Seven"));
-			m_editor.Document.Lines.Add(new Line("Eight"));
-			m_editor.Document.Lines.Add(new Line("Nine"));
-			m_editor.Document.Lines.Add(new Line("Ten"));
-			m_editor.Document.Lines.Add(new Line("Yi"));
-			m_editor.Document.Lines.Add(new Line("Er"));
-			m_editor.Document.Lines.Add(new Line("San"));
-			m_editor.Document.Lines.Add(new Line("Si"));
-			m_editor.Document.Lines.Add(new Line("Wu"));
-			m_editor.Document.Lines.Add(new Line("Liu"));
-			m_editor.Document.Lines.Add(new Line("Qi"));
-			m_editor.Document.Lines.Add(new Line("Ba"));
-			m_editor.Document.Lines.Add(new Line("Jiu"));
-			m_editor.Document.Lines.Add(new Line("Shi"));
 		}
+
+		/// <summary>Text doc</summary>
+		public TextDocument Doc { get; }
 	}
 }

@@ -1,15 +1,21 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.TextEditor
 {
-	public class TextArea :Control, IScrollInfo
+	public class TextArea :Control, IScrollInfo, INotifyPropertyChanged
 	{
+		// Notes:
+		//  - 'TextArea' handles user input and caret.
+		//  - 'TextArea' is a wrapper around a 'TextView' that adds user input support
+
 		static TextArea()
 		{
 			DefaultStyleKeyProperty.OverrideMetadata(typeof(TextArea), new FrameworkPropertyMetadata(typeof(TextArea)));
@@ -18,13 +24,23 @@ namespace Rylogic.Gui.WPF.TextEditor
 			FocusableProperty.OverrideMetadata(typeof(TextArea), new FrameworkPropertyMetadata(Boxed.True));
 		}
 		public TextArea()
-			:this(new TextView())
+			: this(new OptionsData())
 		{
 		}
-		protected TextArea(TextView textview)
+		public TextArea(OptionsData options)
+			:this(options, new TextView(options))
 		{
-			TextView = textview;
 		}
+		protected TextArea(OptionsData options, TextView text_view)
+		{
+			Options = options;
+			TextView = text_view;
+			EmptySelection = new EmptySelection(this);
+			m_selection = EmptySelection;
+		}
+
+		/// <summary>Text editor options</summary>
+		public OptionsData Options { get; }
 
 		/// <summary>The view implementation</summary>
 		public TextView TextView
@@ -37,7 +53,9 @@ namespace Rylogic.Gui.WPF.TextEditor
 				{ }
 				m_textview = value;
 				if (m_textview != null)
-				{ }
+				{
+				}
+				NotifyPropertyChanged(nameof(TextView));
 			}
 		}
 		private TextView m_textview = null!;
@@ -70,6 +88,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			//caret.Location = new TextLocation(1, 1);
 			//this.ClearSelection();
 
+			NotifyPropertyChanged(nameof(Document));
 			DocumentChanged?.Invoke(this, EventArgs.Empty);
 			//CommandManager.InvalidateRequerySuggested();
 		}
@@ -78,22 +97,70 @@ namespace Rylogic.Gui.WPF.TextEditor
 		/// <inheritdoc/>
 		public event EventHandler? DocumentChanged;
 
-		/// <inheritdoc/>
-		public override void OnApplyTemplate()
+		#region Selection property
+
+		/// <summary>Empty selection</summary>
+		internal Selection EmptySelection { get; }
+
+		/// <summary>Gets/Sets the selection in this text area.</summary>
+		public Selection Selection
 		{
-			base.OnApplyTemplate();
-			//if (View is IScrollInfo si)
-			//{
-			//	si.ScrollOwner = scrollOwner;
-			//	si.CanVerticallyScroll = canVerticallyScroll;
-			//	si.CanHorizontallyScroll = canHorizontallyScroll;
-			//	scrollOwner = null;
-			//}
+			get => m_selection;
+			set
+			{
+				// Check the TextArea's are the same
+				if (value.TextArea != this)
+					throw new ArgumentException("Cannot use a Selection instance that belongs to another text area.");
+
+				if (m_selection == value) return;
+				var nue = value.SurroundingSegment;
+				var old = m_selection.SurroundingSegment;
+
+				// 
+				//if (!Options.EnableVirtualSpace && (m_selection is SimpleSelection && value is SimpleSelection && old != null && nue != null))
+				//{
+				//	// perf optimization:
+				//	// When a simple selection changes, don't redraw the whole selection, but only the changed parts.
+				//	int oldSegmentOffset = old.Offset;
+				//	int newSegmentOffset = nue.Offset;
+				//	if (oldSegmentOffset != newSegmentOffset)
+				//	{
+				//		text_view.Redraw(Math.Min(oldSegmentOffset, newSegmentOffset),
+				//						Math.Abs(oldSegmentOffset - newSegmentOffset),
+				//						DispatcherPriority.Background);
+				//	}
+				//	int oldSegmentEndOffset = old.EndOffset;
+				//	int newSegmentEndOffset = nue.EndOffset;
+				//	if (oldSegmentEndOffset != newSegmentEndOffset)
+				//	{
+				//		text_view.Redraw(Math.Min(oldSegmentEndOffset, newSegmentEndOffset),
+				//						Math.Abs(oldSegmentEndOffset - newSegmentEndOffset),
+				//						DispatcherPriority.Background);
+				//	}
+				//}
+				//else
+				{
+					TextView.Redraw(old, DispatcherPriority.Background);
+					TextView.Redraw(nue, DispatcherPriority.Background);
+				}
+
+				m_selection = value;
+				SelectionChanged?.Invoke(this, EventArgs.Empty);
+
+				// a selection change causes commands like copy/paste/etc. to change status
+				CommandManager.InvalidateRequerySuggested();
+			}
 		}
+		private Selection m_selection = null!;
 
+		/// <summary>Occurs when the selection has changed.</summary>
+		public event EventHandler? SelectionChanged;
 
-
-
+		/// <summary>Clears the current selection.</summary>
+		public void ClearSelection()
+		{
+			Selection = EmptySelection;
+		}
 
 		/// <summary>Gets/Sets the background brush used for the selection.</summary>
 		public Brush SelectionBrush
@@ -126,6 +193,8 @@ namespace Rylogic.Gui.WPF.TextEditor
 			set => SetValue(SelectionCornerRadiusProperty, value);
 		}
 		public static readonly DependencyProperty SelectionCornerRadiusProperty = Gui_.DPRegister<TextArea>(nameof(SelectionCornerRadius), 3.0);
+
+		#endregion
 
 		#region IScrollInfo implementation
 		ScrollViewer IScrollInfo.ScrollOwner
@@ -166,5 +235,9 @@ namespace Rylogic.Gui.WPF.TextEditor
 		void IScrollInfo.SetVerticalOffset(double offset) => ((IScrollInfo)TextView).SetVerticalOffset(offset);
 		Rect IScrollInfo.MakeVisible(Visual visual, Rect rectangle) => ((IScrollInfo)TextView).MakeVisible(visual, rectangle);
 		#endregion
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }
