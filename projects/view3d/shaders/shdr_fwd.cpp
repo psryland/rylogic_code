@@ -57,19 +57,19 @@ namespace pr::rdr
 	}
 
 	// Create the forward shaders
-	template <> void ShaderManager::CreateShader<FwdShaderVS>()
+	template <> void ShaderManager::CreateStockShader<FwdShaderVS>()
 	{
 		VShaderDesc desc(forward_vs, Vert());
 		auto dx = GetVS(RdrId(EStockShader::FwdShaderVS), &desc);
 		m_stock_shaders.emplace_back(CreateShader<FwdShaderVS>(RdrId(EStockShader::FwdShaderVS), dx, "fwd_shader_vs"));
 	}
-	template <> void ShaderManager::CreateShader<FwdShaderPS>()
+	template <> void ShaderManager::CreateStockShader<FwdShaderPS>()
 	{
 		PShaderDesc desc(forward_ps);
 		auto dx = GetPS(RdrId(EStockShader::FwdShaderPS), &desc);
 		m_stock_shaders.emplace_back(CreateShader<FwdShaderPS>(RdrId(EStockShader::FwdShaderPS), dx, "fwd_shader_ps"));
 	}
-	template <> void ShaderManager::CreateShader<FwdRadialFadePS>()
+	template <> void ShaderManager::CreateStockShader<FwdRadialFadePS>()
 	{
 		PShaderDesc desc(forward_radial_fade_ps);
 		auto dx = GetPS(RdrId(EStockShader::FwdRadialFadePS), &desc);

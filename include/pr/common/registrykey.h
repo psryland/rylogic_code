@@ -171,19 +171,21 @@ namespace pr
 		}
 
 		// Read/Write a value from/to the registry as a POD type
-		template <typename T, class = std::enable_if<std::is_pod<T>::value, void>> T Read(TCHAR const* value, int data_type) const
+		template <typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
+		T Read(TCHAR const* value, int data_type) const
 		{
 			auto data = T{};
 			Read(value, &data, DWORD(sizeof(data)), data_type);
 			return data;
 		}
-		template <typename T, class = std::enable_if<std::is_pod<T>::value, void>> T Read(TCHAR const* value) const
+		template <typename T, typename = std::enable_if_t<std::is_trivially_copyable_v<T>>>
+		T Read(TCHAR const* value) const
 		{
-			return Read<T>(value, subkey, REG_BINARY);
+			return Read<T>(value, REG_BINARY);
 		}
 
 		// Read/Write a string from/to the registry key.
-		template <> std::string Read<std::string>(TCHAR const* value) const
+		std::string Read(TCHAR const* value) const
 		{
 			if (!m_hkey)
 				throw std::exception("RegKey invalid");
@@ -254,7 +256,7 @@ namespace pr
 		// Read/Write a floating point value from/to the registry key.
 		template <> double Read<double>(TCHAR const* value) const
 		{
-			auto s = Read<std::string>(value);
+			auto s = Read(value);
 			return std::stod(s);
 		}
 		void Write(TCHAR const* value, double data)
@@ -315,7 +317,7 @@ namespace pr::common
 			PR_CHECK(rkey.HasValue("Blob"), true);
 
 			// Read the values
-			PR_CHECK(rkey.Read<std::string>("String") == "Paul Was Here", true);
+			PR_CHECK(rkey.Read("String") == "Paul Was Here", true);
 			PR_CHECK(rkey.Read<DWORD>("DWord") == 1234U, true);
 			PR_CHECK(FEql(rkey.Read<double>("Double"), 3.14), true);
 

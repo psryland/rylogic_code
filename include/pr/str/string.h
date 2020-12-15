@@ -6,6 +6,9 @@
 // Note: this file is made to match pr::vector as much as possible
 #pragma once
 
+// DEPRECATED - Stop using this, it's got bugs, it's basically just pr::vector<>
+//   it doesn't handle string encoding, I almost never use the LocalCount property
+
 // <type_traits> was introduced in sp1
 #if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
 #error VS2008 SP1 or greater is required to build this file
@@ -19,6 +22,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <utility>
+#include <cwchar>
 #include <cassert>
 
 #include "pr/str/string_core.h"
@@ -45,25 +49,25 @@ namespace pr
 	class string
 	{
 	public:
-		typedef string<Type, LocalCount, Fixed, Allocator> type;
-		typedef Type const*    const_iterator;
-		typedef Type*          iterator;
-		typedef Type const*    const_pointer;
-		typedef Type*          pointer;
-		typedef Type const&    const_reference;
-		typedef Type&          reference;
-		typedef std::size_t    size_type;
-		typedef std::ptrdiff_t difference_type;
-		typedef Type           value_type;
-		typedef Allocator      allocator_type;
-		typedef typename std::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
+		using type = string<Type, LocalCount, Fixed, Allocator>;
+		using value_type = Type;
+		using size_type = std::size_t;
+		using difference_type = std::ptrdiff_t;
+		using allocator_type = Allocator;
+		using const_reference = Type const&;
+		using const_iterator = Type const*;
+		using const_pointer = Type const*;
+		using reference = Type&;
+		using iterator = Type*;
+		using pointer = Type*;
+		using AllocType = std::remove_pointer_t<Allocator>; // The type of the allocator ignoring pointers
 
 		enum
 		{
 			LocalLength      = LocalCount,
 			LocalSizeInBytes = LocalCount * sizeof(value_type),
-			TypeIsPod        = std::is_pod<Type>::value,
-			TypeAlignment    = std::alignment_of<Type>::value,
+			TypeIsPod        = std::is_trivially_copyable_v<Type>,
+			TypeAlignment    = std::alignment_of_v<Type>,
 		};
 
 		// End of string index position
@@ -73,7 +77,45 @@ namespace pr
 
 		// type specific traits
 		struct traits :pr::char_traits<Type>
-		{};
+		{
+			#if 0
+			static void assign(value_type* dst, size_type count, value_type ch)
+			{
+				if constexpr (sizeof(value_type) == sizeof(char))
+					memset(dst, ch, count);
+				else if constexpr (std::is_same_v<value_type, wchar_t>)
+					wmemset(dst, ch, count);
+				else
+					for (; count-- != 0; ) *dst++ = ch;
+			}
+			static void move(value_type* dst, value_type const* src, size_type count)
+			{
+				memmove(dst, src, count * sizeof(value_type));
+			}
+			static void copy(value_type* dst, value_type const* src, size_type count)
+			{
+				memcpy(dst, src, count * sizeof(value_type));
+			}
+			static value_type const* find(value_type const* ptr, size_type count, value_type ch)
+			{
+				for (; count-- != 0 && *ptr != 0 && *ptr != ch; ++ptr) {}
+				return ptr;
+			}
+			static bool equal(value_type const* lhs, value_type const* rhs, size_type count)
+			{
+				return memcmp(lhs, rhs, count * sizeof(value_type)) == 0;
+			}
+			static bool compare(value_type const* lhs, value_type const* rhs, size_type count)
+			{
+				if constexpr (std::is_same_v<char, value_type>)
+					return strncmp(lhs, rhs, count);
+				else if constexpr (std::is_same_v<wchar_t, value_type>)
+					return wcsncmp(lhs, rhs, count);
+				else
+					static_assert(false, "not implemented");
+			}
+			#endif
+		};
 
 		// true if 'tchar' is the same as 'Type', ignoring references
 		template <typename tchar> using enable_if_same_char = std::enable_if_t<std::is_same_v<std::decay_t<tchar>,Type>>;
@@ -81,36 +123,36 @@ namespace pr
 		// true if 'tstr' is a 'pr::string<Type,...>' string
 		template <typename tstr> struct is_pr_str
 		{
-			static tstr* str();
+			static tstr* str() { return nullptr; }
 			template <int L, bool F, typename A> static std::true_type  check(string<Type, L, F, A>*);
 			template <int = 0>                   static std::false_type check(...);
 			using type = decltype(check(str()));
 			static bool const value = type::value;
 		};
-		static_assert( is_pr_str<string<Type, 1, true>>::value, "");
-		static_assert(!is_pr_str<std::basic_string<Type>>::value, "");
-		static_assert(!is_pr_str<Type[]>::value, "");
-		static_assert(!is_pr_str<Type*>::value, "");
+		static_assert( is_pr_str<string<Type, 1, true>>::value);
+		static_assert(!is_pr_str<std::basic_string<Type>>::value);
+		static_assert(!is_pr_str<Type[]>::value);
+		static_assert(!is_pr_str<Type*>::value);
 
 		// true if 'tstr' is a 'std::basic_string<Type>'
-		template <typename tstr> using is_std_str = typename std::integral_constant<bool, std::is_same<tstr, std::basic_string<Type>>::value>::type;
-		static_assert( is_std_str<std::basic_string<Type>>::value, "");
-		static_assert(!is_std_str<string<Type, 1, true>>::value, "");
-		static_assert(!is_std_str<Type[]>::value, "");
-		static_assert(!is_std_str<Type*>::value, "");
+		template <typename tstr> using is_std_str = typename std::conditional_t<std::is_same_v<tstr, std::basic_string<Type>>, std::true_type, std::false_type>;
+		static_assert( is_std_str<std::basic_string<Type>>::value);
+		static_assert(!is_std_str<string<Type, 1, true>>::value);
+		static_assert(!is_std_str<Type[]>::value);
+		static_assert(!is_std_str<Type*>::value);
 		
 		// true if 'tarr' has array-like semantics and an element type of 'Type' but is not a pointer
-		template <typename tarr> using is_char_array = typename std::integral_constant<bool, std::is_same<tarr, typename std::basic_string<Type>>::value || is_pr_str<tarr>::value>::type;
-		static_assert( is_char_array<std::basic_string<Type>>::value, "");
-		static_assert( is_char_array<string<Type, 1, true>>::value, "");
-		static_assert(!is_char_array<Type[]>::value, "");
-		static_assert(!is_char_array<Type*>::value, "");
-		static_assert(!is_char_array<std::vector<int>>::value, "");
-		static_assert(!is_char_array<int[]>::value, "");
-		static_assert(!is_char_array<int*>::value, "");
+		template <typename tarr> using is_char_array = typename std::conditional_t<std::is_same_v<tarr, typename std::basic_string<Type>> || is_pr_str<tarr>::value, std::true_type, std::false_type>;
+		static_assert( is_char_array<std::basic_string<Type>>::value);
+		static_assert( is_char_array<string<Type, 1, true>>::value);
+		static_assert(!is_char_array<Type[]>::value);
+		static_assert(!is_char_array<Type*>::value);
+		static_assert(!is_char_array<std::vector<int>>::value);
+		static_assert(!is_char_array<int[]>::value);
+		static_assert(!is_char_array<int*>::value);
 
 		// true if 'tptr' is a 'Type' iterator
-		template <typename tptr> using is_char_pointer = std::integral_constant<bool, std::is_same_v<typename std::iterator_traits<tptr>::value_type, Type>>;
+		template <typename tptr> using is_char_pointer = std::conditional_t<std::is_same_v<typename std::iterator_traits<tptr>::value_type, Type>, std::true_type, std::false_type>;
 		static_assert( is_char_pointer<Type const*>::value);
 		static_assert( is_char_pointer<Type*>::value);
 		static_assert(!is_char_pointer<int*>::value);
@@ -128,7 +170,7 @@ namespace pr
 	private:
 
 		// Use aligned storage so that we don't construct 'Type's in the local array.
-		using TLocalStore = typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type;
+		using TLocalStore = std::aligned_storage_t<sizeof(Type), std::alignment_of_v<Type>>;
 
 		Type*       m_ptr;                // Pointer to the array of data
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
@@ -141,10 +183,10 @@ namespace pr
 
 		// Access to the allocator object (independent over whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return  m_allocator; }
-		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return  m_allocator; }
-		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
+		template <typename A> typename std::enable_if_t<!std::is_pointer_v<A>, AllocType const&> alloc(A) const { return  m_allocator; }
+		template <typename A> typename std::enable_if_t< std::is_pointer_v<A>, AllocType const&> alloc(A) const { return *m_allocator; }
+		template <typename A> typename std::enable_if_t<!std::is_pointer_v<A>, AllocType&      > alloc(A)       { return  m_allocator; }
+		template <typename A> typename std::enable_if_t< std::is_pointer_v<A>, AllocType&      > alloc(A)       { return *m_allocator; }
 
 		// return true if 'ptr' points with the current container
 		bool inside(const_pointer ptr) const { return m_ptr <= ptr && ptr < m_ptr + m_count; }
@@ -154,16 +196,30 @@ namespace pr
 		Type*       local_ptr()       { return reinterpret_cast<Type*>      (&m_local[0]); }
 
 		// return true if 'm_ptr' points to our local buffer
-		bool local() const { return m_ptr == local_ptr(); }
+		bool local() const
+		{
+			return m_ptr == local_ptr();
+		}
 
 		// return true if 'arr' is actually this object
-		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
+		template <typename tarr> bool isthis(tarr const& arr) const
+		{
+			return static_cast<void const*>(this) == static_cast<void const*>(&arr);
+		}
 
 		// reverse a range of elements
-		void reverse(Type *first, Type* last) { for (; first != last && first != --last; ++first) std::swap(*first, *last); }
+		void reverse(Type* first, Type* last)
+		{
+			for (; first != last && first != --last; ++first)
+				std::swap(*first, *last);
+		}
 
 		// return the iterator category for 'iter'
-		template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const { typename std::iterator_traits<iter>::iterator_category cat; return cat; }
+		template <class iter> typename std::iterator_traits<iter>::iterator_category iter_cat(iter const&) const
+		{
+			typename std::iterator_traits<iter>::iterator_category cat;
+			return cat;
+		}
 
 		// Make sure 'm_ptr' is big enough to hold 'new_count' elements
 		// 'new_count' should equal 'size() + 1' to include the null term.
@@ -179,7 +235,7 @@ namespace pr
 				size_type bigger, new_cap = new_count;
 				if (autogrow && new_cap < (bigger = m_count*3/2)) { new_cap = bigger; }
 				assert(autogrow || new_count >= m_count && "don't use ensure_space to trim the allocated memory");
-				Type* new_array = alloc().allocate(new_cap);
+				value_type* new_array = alloc().allocate(new_cap);
 
 				// Copy elements from the old array to the new array
 				traits::copy(new_array, m_ptr, m_count);
@@ -1093,7 +1149,7 @@ namespace pr
 			if (ofs < size() && count <= (num = size() - ofs))
 			{
 				const value_type *u, *v;
-				for (num -= count - 1, v = m_ptr + ofs; (u = traits::find(v, num, *ptr)) != 0; num -= u - v + 1, v = u + 1)
+				for (num -= count - 1, v = m_ptr + ofs; (u = traits::find(v, num, *ptr)) != nullptr; num -= u - v + 1, v = u + 1)
 					if (traits::compare(u, ptr, count) == 0)
 						return u - m_ptr; // found a match
 			}
@@ -1189,7 +1245,7 @@ namespace pr
 			{
 				const_pointer v = m_ptr + size();
 				for (const_pointer u = m_ptr + ofs; u < v; ++u)
-					if (traits::find(ptr, count, *u) != 0)
+					if (traits::find(ptr, count, *u) != nullptr)
 						return u - m_ptr;	// found a match
 			}
 			return npos; // no match
@@ -1223,8 +1279,10 @@ namespace pr
 			{
 				for (const_pointer u = m_ptr + (ofs < size() ? ofs : size() - 1); ; --u)
 				{
-					if (traits::find(ptr, count, *u) != 0) return u - m_ptr; // found a match
-					else if (u == m_ptr)                   break;            // at beginning, no more chance for match
+					if (traits::find(ptr, count, *u) != nullptr)
+						return u - m_ptr; // found a match
+					if (u == m_ptr)
+						break; // at beginning, no more chance for match
 				}
 			}
 			return npos; // no match
@@ -1259,7 +1317,7 @@ namespace pr
 			{
 				const_pointer v = m_ptr + size();
 				for (const_pointer u = m_ptr + ofs; u < v; ++u)
-					if (traits::find(ptr, count, *u) == 0)
+					if (traits::find(ptr, count, *u) == nullptr)
 						return u - m_ptr;
 			}
 			return npos;
@@ -1293,8 +1351,10 @@ namespace pr
 			{
 				for (const_pointer u = m_ptr + (ofs < size() ? ofs : size() - 1); ; --u)
 				{
-					if (traits::find(ptr, count, *u) == 0) return u - m_ptr;
-					if (u == m_ptr) break;
+					if (traits::find(ptr, count, *u) == nullptr)
+						return u - m_ptr;
+					if (u == m_ptr)
+						break;
 				}
 			}
 			return npos;
@@ -1349,13 +1409,132 @@ namespace pr
 		//template <typename tstr> friend inline bool operator <= (tstr const& lhs, type const& rhs) { return !(rhs >  lhs); }
 		//template <typename tstr> friend inline bool operator >= (tstr const& lhs, type const& rhs) { return !(rhs <  lhs); }
 		//template <typename tstr> friend inline bool operator >  (tstr const& lhs, type const& rhs) { return !(rhs <= lhs); }
+
+		// string concatenation
+		template <int L, bool F, typename A> friend string operator + (string const& lhs, string<value_type,L,F,A> const& rhs)
+		{
+			string res;
+			res.reserve(lhs.size() + rhs.size());
+			res += lhs;
+			res += rhs;
+			return res;
+		}
+		template <int L, bool F, typename A> friend string operator + (string const& lhs, string<value_type,L,F,A>&& rhs)
+		{
+			return std::move(rhs.insert(0, lhs));
+		}
+		template <int L, bool F, typename A> friend string operator + (string&& lhs, string<value_type,L,F,A> const& rhs)
+		{
+			return std::move(lhs.append(rhs));
+		}
+		template <int L, bool F, typename A> friend string operator + (string&& lhs, string<value_type,L,F,A>&& rhs)
+		{
+			// return string + string
+			if (rhs.size() <= lhs.capacity() - lhs.size() || rhs.capacity() - rhs.size() < lhs.size())
+				return std::move(lhs.append(rhs));
+			else
+				return std::move(rhs.insert(0, lhs));
+		}
+		friend string operator + (value_type const* lhs, string const& rhs)
+		{
+			string res;
+			res.reserve(traits::length(lhs) + rhs.size());
+			res += lhs;
+			res += rhs;
+			return res;
+		}
+		friend string operator + (string const& lhs, value_type const* rhs)
+		{
+			string res;
+			res.reserve(lhs.size() + traits::length(rhs));
+			res += lhs;
+			res += rhs;
+			return res;
+		}
+		friend string operator + (value_type lhs, string const& rhs)
+		{
+			string res;
+			res.reserve(1 + rhs.size());
+			res += lhs;
+			res += rhs;
+			return res;
+		}
+		friend string operator + (string const& lhs, value_type rhs)
+		{
+			string res;
+			res.reserve(lhs.size() + 1);
+			res += lhs;
+			res += rhs;
+			return res;
+		}
+		friend string operator + (value_type const* lhs, string&& rhs)
+		{
+			return std::move(rhs.insert(0, lhs));
+		}
+		friend string operator + (string&& lhs, value_type const* rhs)
+		{
+			return std::move(lhs.append(rhs));
+		}
+		friend string operator + (value_type lhs, string&& rhs)
+		{
+			return std::move(rhs.insert(0, 1, lhs));
+		}
+		friend string operator + (string&& lhs, value_type rhs)
+		{
+			return std::move(lhs.append(1, rhs));
+		}
+
+		// streaming operators
+		//friend std::basic_ostream<value_type>& operator << (std::basic_ostream<value_type>& ostrm, string const& str)
+		//{
+		//	return ostrm << str.c_str();
+		//}
+		//friend std::basic_istream<value_type>& operator >> (std::basic_istream<value_type>& istrm, string& str)
+		//{
+		//	std::basic_string<value_type> s;
+		//	istrm >> s; str.append(s);
+		//	return istrm;
+		//}
+		friend std::basic_ostream<char>& operator << (std::basic_ostream<char>& ostrm, string const& str)
+		{
+			if constexpr (std::is_same_v<char, value_type>)
+				return ostrm << str.c_str();
+			else
+				return ostrm << std::string(Narrow(str));
+		}
+		friend std::basic_ostream<wchar_t>& operator << (std::basic_ostream<wchar_t>& ostrm, string const& str)
+		{
+			if constexpr (std::is_same_v<wchar_t, value_type>)
+				return ostrm << str.c_str();
+			else
+				return ostrm << std::wstring(Widen(str));
+		}
+		friend std::basic_istream<char>& operator >> (std::basic_istream<char>& istrm, string& str)
+		{
+			std::basic_string<char> s; istrm >> s; 
+			if constexpr (std::is_same_v<char, value_type>)
+				str.append(s);
+			else
+				str.append(Widen(s));
+			return istrm;
+		}
+		friend std::basic_istream<wchar_t>& operator >> (std::basic_istream<wchar_t>& istrm, string& str)
+		{
+			std::basic_string<wchar_t> s; istrm >> s;
+			if constexpr (std::is_same_v<wchar_t, value_type>)
+				str.append(s);
+			else
+				str.append(Narrow(s));
+			return istrm;
+		}
 	};
 
 	// string concatenation
+	#if 0
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
 	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs)
 	{
-		using tstr = string<T,L,F,A>;
+		using tstr = string<T,L0,F0,A0>;
 
 		tstr res;
 		res.reserve(lhs.size() + rhs.size());
@@ -1446,8 +1625,10 @@ namespace pr
 	{
 		return std::move(lhs.append(1, rhs));
 	}
+	#endif
 
 	// streaming operators
+	#if 0
 	template <typename T, int L, bool F, typename A> inline std::basic_ostream<T>& operator << (std::basic_ostream<T>& ostrm, string<T,L,F,A> const& str)
 	{
 		return ostrm << str.c_str();
@@ -1478,6 +1659,7 @@ namespace pr
 		istrm >> s; str.append(impl::narrow<string<char>>(s.c_str(), s.size()));
 		return istrm;
 	}
+	#endif
 
 	// 'string_traits' specialisation
 	template <typename T, int L, bool F, typename A>

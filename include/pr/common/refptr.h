@@ -232,7 +232,9 @@ namespace pr
 			//   D3DPtr p1(raw) (ref count = 1 still because the following DecRef)
 			//   p1->~D3DPtr()  (ref count = 0)
 			//   p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
+			#if PR_REFPTR_TRACE == 1
 			assert(pr::PtrRefCount(ptr) > 0 && "Pointer reference count is 0");
+			#endif
 			ptr->Release();
 		}
 
@@ -252,6 +254,21 @@ namespace pr
 		friend bool operator != (RefPtr const& lhs, nullptr_t) { return lhs.m_ptr != nullptr; }
 	};
 	static_assert(sizeof(RefPtr<void>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
+
+	// Implementation
+	namespace impl
+	{
+		template <typename T> inline long RefCount(T* ptr, decltype(&T::m_ref_count)*)
+		{
+			return ptr->m_ref_count;
+		}
+		template <typename T> inline long RefCount(T* ptr, ...)
+		{
+			auto count = ptr->AddRef();
+			ptr->Release();
+			return count - 1;
+		}
+	}
 
 	// The interface required by RefPtr.
 	// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface
@@ -282,19 +299,6 @@ namespace pr
 		//   D3DPtr<IBlah> p = CorrectlyCreatedBlah();
 		//   D3DPtr<IBlahBase> b = p.m_ptr; -- this is wrong, it should be: b = p;
 		return impl::RefCount(ptr, nullptr);
-	}
-	namespace impl
-	{
-		template <typename T> inline long RefCount(T* ptr, decltype(&T::m_ref_count)*)
-		{
-			return ptr->m_ref_count;
-		}
-		template <typename T> inline long RefCount(T* ptr, ...)
-		{
-			auto count = ptr->AddRef();
-			ptr->Release();
-			return count - 1;
-		}
 	}
 
 	// Some helper trace methods

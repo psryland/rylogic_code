@@ -564,7 +564,7 @@ struct Main
 
 		for (auto& mesh : m_model->m_scene.m_meshes)
 		{
-			auto bbox = BBoxReset;
+			auto bbox = BBox::Reset();
 			for (auto& pos : mesh.m_vert)
 			{
 				pos = o2w * static_cast<v4>(pos);

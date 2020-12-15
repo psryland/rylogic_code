@@ -39,13 +39,13 @@ namespace pr::rdr
 	};
 
 	// Create the GBuffer shaders
-	template <> void ShaderManager::CreateShader<GBufferVS>()
+	template <> void ShaderManager::CreateStockShader<GBufferVS>()
 	{
 		VShaderDesc desc(gbuffer_vs, Vert());
 		auto dx = GetVS(RdrId(EStockShader::GBufferVS), &desc);
 		m_stock_shaders.emplace_back(CreateShader<GBufferVS>(RdrId(EStockShader::GBufferVS), dx, "gbuffer_vs"));
 	}
-	template <> void ShaderManager::CreateShader<GBufferPS>()
+	template <> void ShaderManager::CreateStockShader<GBufferPS>()
 	{
 		PShaderDesc desc(gbuffer_ps);
 		auto dx = GetPS(RdrId(EStockShader::GBufferPS), &desc);

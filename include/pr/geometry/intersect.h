@@ -14,7 +14,8 @@ namespace pr
 	// Given a 2D line that passes through 'a' and 'b' and another that passes through 'c' and 'd'.
 	// Returns true if the lines intersect, false if they don't. Returns the point of intersection.
 	// Note: returns false if parallel, *even* if colinear.
-	inline bool Intersect2D_InfiniteLineToInfiniteLine(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, v2& intersect)
+	template <typename = void>
+	bool Intersect2D_InfiniteLineToInfiniteLine(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, v2& intersect)
 	{
 		auto da = a1 - a0;
 		auto db = b1 - b0;
@@ -28,7 +29,8 @@ namespace pr
 	}
 
 	// Find the intersection of two 2D line segments
-	inline bool Intersect2D_LineSegmentToLineSegment(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, float& ta, float& tb)
+	template <typename = void>
+	bool Intersect2D_LineSegmentToLineSegment(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, float& ta, float& tb)
 	{
 		// 'a' and 'b' intersect if there exists values for 'ta' and 'tb' such that: a0 + ta*da == b0 + tb*db
 		// Solve for 'ta'
@@ -84,9 +86,111 @@ namespace pr
 			: (ta >= 0 && ta <= 1) && (tb >= 0 && tb <= 1); // one of 'a' or 'b' is a point
 	}
 
+	// Clip a 2D line segment to a 2D bounding box.
+	// Returns the clipped line in 'A,B'
+	template <typename = void>
+	bool Intersect2D_LineSegmentToBBox(v2_cref<> a, v2_cref<> b, v2_cref<> bbox_min, v2_cref<> bbox_max, v2& A, v2& B)
+	{
+		// Cohen–Sutherland clipping algorithm clips a line from
+		// P0 = (x0, y0) to P1 = (x1, y1) against a rectangle with 
+		// diagonal from (xmin, ymin) to (xmax, ymax).
+
+		enum Zone
+		{
+			Inside = 0,
+			Left   = 1 << 0,
+			Right  = 1 << 1,
+			Bottom = 1 << 2,
+			Top    = 1 << 3,
+		};
+
+		// Compute the bit code for a point (x, y) using the clip
+		// bounded diagonally by (xmin, ymin), and (xmax, ymax)
+		auto GetZone = [=](float x, float y) -> int
+		{
+			int code = Zone::Inside;  // initialised as being inside of [[clip window]]
+			code |= (x < bbox_min.x) * Zone::Left;
+			code |= (x > bbox_max.x) * Zone::Right;
+			code |= (y < bbox_min.y) * Zone::Bottom;
+			code |= (y > bbox_max.y) * Zone::Top;
+			return code;
+		};
+
+		A = a;
+		B = b;
+
+		// Get the zones for the start and end of the line
+		auto zone0 = GetZone(A.x, A.y);
+		auto zone1 = GetZone(B.x, B.y);
+
+		for (;;)
+		{
+			// Bitwise OR is zero => both points inside the rectangle.
+			if ((zone0 | zone1) == 0)
+				return true;
+
+			// Bitwise AND is not 0 => both points share an outside zone, so both must be outside window
+			if ((zone0 & zone1) != 0)
+				return false;
+
+			// At least one end is outside the rectangle; pick it.
+			auto zone_out = std::max(zone1, zone0);
+
+			// Find the intersection point using formulas:
+			//   slope = (y1 - y0) / (x1 - x0)
+			//   x = x0 + (1 / slope) * (ym - y0), where ym is ymin or ymax
+			//   y = y0 + slope * (xm - x0), where xm is xmin or xmax
+			// No need to worry about divide-by-zero because, in each case, the
+			// outcode bit being tested guarantees the denominator is non-zero
+			float x, y;
+			auto dx = B.x - A.x;
+			auto dy = B.y - A.y;
+
+			// Point is above the clip window
+			if ((zone_out & Zone::Top) != 0)
+			{
+				x = A.x + dx * (bbox_max.y - A.y) / dy;
+				y = bbox_max.y;
+			}
+			// Point is below the clip window
+			else if (zone_out & Zone::Bottom)
+			{
+				x = A.x + dx * (bbox_min.y - A.y) / dy;
+				y = bbox_min.y;
+			}
+			// Point is to the right of clip window
+			else if (zone_out & Zone::Right)
+			{
+				y = A.y + dy * (bbox_max.x - A.x) / dx;
+				x = bbox_max.x;
+			}
+			// Point is to the left of clip window
+			else if (zone_out & Zone::Left)
+			{
+				y = A.y + dy * (bbox_min.x - A.x) / dx;
+				x = bbox_min.x;
+			}
+
+			// Move outside point to intersection point to clip and get ready for next pass.
+			if (zone_out == zone0)
+			{
+				A.x = x;
+				A.y = y;
+				zone0 = GetZone(A.x, A.y);
+			}
+			else
+			{
+				B.x = x;
+				B.y = y;
+				zone1 = GetZone(B.x, B.y);
+			}
+		}
+	}
+
 	// Find the region of intersection between two convex polygons.
 	// 'out' receives the vertices of the intersection polygon, in winding order
-	template <typename Out> bool pr_vectorcall Intersect_ConvexPolygonToConvexPolygon(v4 const* poly0, int count0, v4 const* poly1, int count1, v4_cref<> norm, Out& out)
+	template <typename Out>
+	bool pr_vectorcall Intersect_ConvexPolygonToConvexPolygon(v4 const* poly0, int count0, v4 const* poly1, int count1, v4_cref<> norm, Out& out)
 	{
 		#if 0
 		pr::v4 last_out;
@@ -135,7 +239,8 @@ namespace pr
 	// Return true if the line intersects the triangle and if so, also
 	// return the barycentric coordinates 'u,v,w' and parametric value 't'
 	// of the intersection point
-	inline bool pr_vectorcall Intersect_LineToTriangle(v4_cref<> s, v4_cref<> e, v4_cref<> a, v4_cref<> b, v4_cref<> c, float* t = nullptr, v4* bary = nullptr, float* f2b = nullptr, float tmin = 0.0f, float tmax = 1.0f)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToTriangle(v4_cref<> s, v4_cref<> e, v4_cref<> a, v4_cref<> b, v4_cref<> c, float* t = nullptr, v4* bary = nullptr, float* f2b = nullptr, float tmin = 0.0f, float tmax = 1.0f)
 	{
 		v4 ab = b - a;
 		v4 ac = c - a;
@@ -182,7 +287,8 @@ namespace pr
 	// Note about floating point accuracy: always ensure that the line direction and
 	// the triangle edges provided to this function have the same direction each time.
 	// This ensures the returned results are consistent
-	inline bool pr_vectorcall Intersect_LineToTriangle(v4_cref<> s, v4_cref<> e, v4_cref<> a, v4_cref<> b, v4_cref<> c, float& front_to_back, v4& bary)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToTriangle(v4_cref<> s, v4_cref<> e, v4_cref<> a, v4_cref<> b, v4_cref<> c, float& front_to_back, v4& bary)
 	{
 		v4 line = e - s;
 		v4 sa   = a - s;
@@ -215,7 +321,8 @@ namespace pr
 	// The sphere is centred on the origin, 's' and 'd' should be in sphere space
 	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
 	// Returns the parametric values of the intersection points.
-	inline bool pr_vectorcall Intersect_LineToSphere(v4_cref<> s, v4_cref<> d, float radius, float& tmin, float& tmax)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToSphere(v4_cref<> s, v4_cref<> d, float radius, float& tmin, float& tmax)
 	{
 		auto d_sq = Dot(d,d);
 		if (d_sq < maths::tinyf)
@@ -246,7 +353,8 @@ namespace pr
 	// returns true if the line pierces the axis aligned box within the initial range.
 	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
 	// Returns the parametric values of the intersection points.
-	inline bool pr_vectorcall Intersect_LineToBBox(v4_cref<> s, v4_cref<> d, BBox_cref box, float& tmin, float& tmax)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToBBox(v4_cref<> s, v4_cref<> d, BBox_cref box, float& tmin, float& tmax)
 	{
 		auto bb_min = box.Lower();
 		auto bb_max = box.Upper();
@@ -286,7 +394,8 @@ namespace pr
 	// 's' and 'd' must be in 'frustum' space where the frustum apex is at (0,0,0) and grows down the -z axis. (i.e. camera space).
 	// Note: this is an accumulative function, 't0' and 't1' must be initialised.
 	// Returns true if t0 < t1 i.e. some of the line is within the frustum.
-	inline bool pr_vectorcall Intersect_LineToFrustum(v4_cref<> s, v4_cref<> d, Frustum const& frustum, bool accumulative, float& t0, float& t1, bool include_zfar)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToFrustum(v4_cref<> s, v4_cref<> d, Frustum const& frustum, bool accumulative, float& t0, float& t1, bool include_zfar)
 	{
 		return frustum.clip(s, d, accumulative, t0, t1, include_zfar);
 	}
@@ -296,7 +405,8 @@ namespace pr
 	// The portion of the line on the positive side of the plane is returned, described
 	// by updated 't0' and 't1' values. 'plane' does not have to be a normalised plane.
 	// Returns true if the interval [t0,t1] is not zero.
-	inline bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, float& t0, float& t1)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, float& t0, float& t1)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = Distance_PointToPlane(s, plane);
@@ -314,7 +424,8 @@ namespace pr
 	// Test if the line segment starting at 's' and ending at 'e' intersects the infinite plane 'plane'.
 	// Returns true if any part of the line is on the positive side of the plane.
 	// Parameter aliasing is allowed, i.e. &s_out == &s is allowed
-	inline bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, v4& s_out, v4& e_out)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineSegmentToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, v4& s_out, v4& e_out)
 	{
 		float d0 = Distance_PointToPlane(s, plane);
 		float d1 = Distance_PointToPlane(e, plane);
@@ -329,7 +440,8 @@ namespace pr
 	}
 
 	// Test if a line segment specified by points 's' and 'e' intersects AABB b
-	inline bool pr_vectorcall Intersect_LineSegmentToBoundingBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineSegmentToBoundingBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
 	{
 		v4 lineM = (s + e) * 0.5f;     // Line segment midpoint
 		v4 lineH = e - lineM;          // Line segment half length vector
@@ -360,7 +472,8 @@ namespace pr
 	// through the infinite plane 'plane' (i.e. returns false if the line and plane are
 	// parallel but not coincident). Also returns the parametric value of the intercept 't'.
 	// 'plane' does not have to be a normalised plane.
-	inline bool pr_vectorcall Intersect_LineToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, float* t, float tmin, float tmax)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToPlane(Plane const& plane, v4_cref<> s, v4_cref<> e, float* t, float tmin, float tmax)
 	{
 		// Find the distances to the plane for the start and end of the line
 		float d0 = Distance_PointToPlane(s, plane);
@@ -380,7 +493,8 @@ namespace pr
 	// 'dist1' is the near plane distance, 'dist2' is the far plane distance
 	// Returns true if any part of the line segment is within the slab
 	// Parameter aliasing is allowed, i.e. &s_out == &s is allowed
-	inline bool pr_vectorcall Intersect_LineToSlab(v4_cref<> norm, float dist1, float dist2, v4_cref<> s, v4_cref<> e, v4& s_out, v4& e_out)
+	template <typename = void>
+	bool pr_vectorcall Intersect_LineToSlab(v4_cref<> norm, float dist1, float dist2, v4_cref<> s, v4_cref<> e, v4& s_out, v4& e_out)
 	{
 		assert(dist1 <= dist2);
 		auto plane = plane::make(norm, dist1);
@@ -402,7 +516,8 @@ namespace pr
 	}
 
 	// Returns true if 'bbox' intersects 'plane'
-	inline bool pr_vectorcall Intersect_BBoxToPlane(BBox_cref bbox, Plane const& plane)
+	template <typename = void>
+	bool pr_vectorcall Intersect_BBoxToPlane(BBox_cref bbox, Plane const& plane)
 	{
 		// Project the box onto the plane normal
 		auto r = Dot(Abs(plane.w0()), bbox.m_radius);
@@ -415,7 +530,8 @@ namespace pr
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool pr_vectorcall Intersect_BBoxToBBox(BBox_cref lhs, BBox_cref rhs)
+	template <typename = void>
+	bool pr_vectorcall Intersect_BBoxToBBox(BBox_cref lhs, BBox_cref rhs)
 	{
 		return
 			Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
@@ -424,7 +540,8 @@ namespace pr
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool pr_vectorcall Intersect_OBoxToOBox(OBox const& lhs, OBox const& rhs)
+	template <typename = void>
+	bool pr_vectorcall Intersect_OBoxToOBox(OBox const& lhs, OBox const& rhs)
 	{
 		auto l2w = lhs.m_box_to_world;
 		auto r2w = rhs.m_box_to_world;

@@ -51,7 +51,7 @@ namespace pr::rdr
 	}
 
 	// Create the point sprites shaders
-	template <> void ShaderManager::CreateShader<PointSpritesGS>()
+	template <> void ShaderManager::CreateStockShader<PointSpritesGS>()
 	{
 		// Create the dx shaders
 		GShaderDesc desc(point_sprites_gs);
@@ -84,7 +84,7 @@ namespace pr::rdr
 	}
 
 	// Create the thick line shaders
-	template <> void ShaderManager::CreateShader<ThickLineListGS>()
+	template <> void ShaderManager::CreateStockShader<ThickLineListGS>()
 	{
 		// Create the dx shaders
 		GShaderDesc desc(thick_line_list_gs);
@@ -117,7 +117,7 @@ namespace pr::rdr
 	}
 
 	// Create the thick line shaders
-	template <> void ShaderManager::CreateShader<ThickLineStripGS>()
+	template <> void ShaderManager::CreateStockShader<ThickLineStripGS>()
 	{
 		// Create the dx shaders
 		GShaderDesc desc(thick_line_strip_gs);
@@ -151,7 +151,7 @@ namespace pr::rdr
 	}
 
 	// Create the thick line shaders
-	template <> void ShaderManager::CreateShader<ArrowHeadGS>()
+	template <> void ShaderManager::CreateStockShader<ArrowHeadGS>()
 	{
 		GShaderDesc desc(arrow_head_gs);
 		auto dx = GetGS(RdrId(EStockShader::ArrowHeadGS), &desc);

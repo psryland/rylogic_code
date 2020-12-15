@@ -64,8 +64,8 @@ namespace pr
 			return Sqrt(DiametreSq());
 		}
 	};
-	static_assert(std::is_pod<OBox>::value, "Should be a pod type");
-	static_assert(std::alignment_of<OBox>::value == 16, "Should be 16 byte aligned");
+	static_assert(std::is_trivially_copyable_v<OBox>, "Should be a pod type");
+	static_assert(std::alignment_of_v<OBox> == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using OBox_cref = OBox const;
 	#else

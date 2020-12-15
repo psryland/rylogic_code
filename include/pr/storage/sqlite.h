@@ -491,13 +491,13 @@ namespace pr::sqlite
 	}
 	template <typename IntType> inline  void bind_integer(sqlite3_stmt* stmt, int idx, IntType value)
 	{
-		static_assert(std::is_integral<IntType>::value, "value must be an integer type");
+		static_assert(std::is_integral_v<IntType>, "value must be an integer type");
 		int res = sqlite3_bind_int64(stmt, idx, value);
 		if (res != SQLITE_OK) throw Exception(res, "Failed to bind int", false);
 	}
 	template <typename RealType> inline void bind_real(sqlite3_stmt* stmt, int idx, RealType value)
 	{
-		static_assert(std::is_floating_point<RealType>::value, "value must be a floating point type");
+		static_assert(std::is_floating_point_v<RealType>, "value must be a floating point type");
 		int res = sqlite3_bind_double(stmt, idx, value);
 		if (res != SQLITE_OK) throw Exception(res, "Failed to bind real", false);
 	}
@@ -532,13 +532,13 @@ namespace pr::sqlite
 	}
 	template <typename BlobType> inline void bind_blob(sqlite3_stmt* stmt, int idx, BlobType const& value)
 	{
-		static_assert(std::is_pod<BlobType>::value, "Blobs must be POD");
+		static_assert(std::is_trivially_copyable_v<BlobType>, "Blobs must be POD");
 		bind_blob(stmt, idx, &value, sizeof(value));
 	}
-	template <typename Cont> inline     void bind_blobcont(sqlite3_stmt* stmt, int idx, Cont const& value)
+	template <typename Cont> inline void bind_blobcont(sqlite3_stmt* stmt, int idx, Cont const& value)
 	{
-		static_assert(std::is_pod<Cont::value_type>::value, "Cont must contain POD elements");
-		static_assert(std::is_same<Cont::iterator::iterator_category, std::random_access_iterator_tag>::value, "Cont must be a random access container");
+		static_assert(std::is_trivially_copyable_v<Cont::value_type>, "Cont must contain POD elements");
+		static_assert(std::is_same_v<Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
 
 		auto first = std::begin(value), last  = std::end(value);
 		size_t length = (last - first) * sizeof(*first);
@@ -556,7 +556,7 @@ namespace pr::sqlite
 	}
 	template <typename IntType> inline                 IntType& read_int(sqlite3_stmt* stmt, int col, IntType& value)
 	{
-		static_assert(std::is_integral<IntType>::value == true, "value must be an integer type");
+		static_assert(std::is_integral_v<IntType> == true, "value must be an integer type");
 		return value = static_cast<IntType>(sqlite3_column_int64(stmt, col)); // Sqlite returns 0 if this column is null
 	}
 	inline                                                bool& read_int(sqlite3_stmt* stmt, int col, bool& value)
@@ -569,7 +569,7 @@ namespace pr::sqlite
 	}
 	template <typename RealType> inline               RealType& read_real(sqlite3_stmt* stmt, int col, RealType& value)
 	{
-		static_assert(std::is_floating_point<RealType>::value == true, "value must be a floating point type");
+		static_assert(std::is_floating_point_v<RealType> == true, "value must be a floating point type");
 		return value = static_cast<RealType>(sqlite3_column_double(stmt, col)); // Sqlite returns 0.0 if this column is null
 	}
 	template <typename StrType> inline                 StrType& read_text(sqlite3_stmt* stmt, int col, StrType& value)
@@ -620,7 +620,7 @@ namespace pr::sqlite
 	}
 	template <typename BlobType> inline               BlobType& read_blob(sqlite3_stmt* stmt, int col, BlobType& value)
 	{
-		static_assert(std::is_pod<BlobType>::value, "Blobs must be POD");
+		static_assert(std::is_trivially_copyable_v<BlobType>, "Blobs must be POD");
 
 		// Sqlite returns null if this column is null
 		BlobType const* ptr = static_cast<BlobType const*>(sqlite3_column_blob(stmt, col)); // have to call this first
@@ -631,7 +631,7 @@ namespace pr::sqlite
 	}
 	template <typename Elem, size_t Size> inline         Elem (&read_blob(sqlite3_stmt* stmt, int col, Elem (&value)[Size]))[Size]
 	{
-		static_assert(std::is_pod<Elem>::value, "Blobs must be POD");
+		static_assert(std::is_trivially_copyable_v<Elem>, "Blobs must be POD");
 
 		// Sqlite returns null if this column is null
 		Elem const* ptr = static_cast<Elem const*>(sqlite3_column_blob(stmt, col)); // have to call this first
@@ -643,8 +643,8 @@ namespace pr::sqlite
 	}
 	template <typename Cont> inline                       Cont& read_blobcont(sqlite3_stmt* stmt, int col, Cont& value)
 	{
-		static_assert(std::is_pod<Cont::value_type>::value, "Blobs must be POD");
-		static_assert(std::is_same<Cont::iterator::iterator_category, std::random_access_iterator_tag>::value, "Cont must be a random access container");
+		static_assert(std::is_trivially_copyable_v<Cont::value_type>, "Blobs must be POD");
+		static_assert(std::is_same_v<Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
 
 		// Sqlite returns null if this column is null
 		Cont::value_type const* ptr = static_cast<Cont::value_type const*>(sqlite3_column_blob(stmt, col)); // have to call this first

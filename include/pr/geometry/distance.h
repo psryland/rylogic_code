@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/maths/maths.h"
+#include "pr/geometry/common.h"
 #include "pr/geometry/closest_point.h"
 
 namespace pr
@@ -41,7 +42,7 @@ namespace pr
 			return 0.0f;
 
 		v4 b = Cross3(line0, line1);
-		if (FEql3(b, pr::v4Zero))
+		if (FEql(b, v4Zero))
 			return Sqrt(a_len_sq - Sqr(Dot3(a, line0)) / LengthSq(line0));
 		else
 			return Dot3(a, b) / LengthSq(b);
@@ -92,8 +93,10 @@ namespace pr
 	// 's' and 'e' must be in the same space as 'bbox'. A negative value means the line segment intersects the AABB.
 	template <typename = void> inline float pr_vectorcall Distance_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
 	{
+		geometry::MinSeparation ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox);
+
 		auto pen = ClosestPoint_LineSegmentToBBox(s, e, bbox);
-		return -pen.depth(); // pen.depth() is positive for penetration, in this case we want the opposite.
+		return -pen.Depth(); // 'depth' is positive for penetration, in this case we want the opposite.
 	}
 }
 

@@ -119,7 +119,7 @@ namespace pr::app
 			};
 
 			// Create the sky box model
-			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "sky box"));
+			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Reset(), "sky box"));
 
 			// Create a model nugget for the sky box
 			NuggetProps ddata;
@@ -173,7 +173,7 @@ namespace pr::app
 			};
 
 			// Create the sky box model
-			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "sky box"));
+			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Reset(), "sky box"));
 
 			// Create the model nuggets for the sky box
 			NuggetProps ddata(ETopo::TriList, EGeom::Vert|EGeom::Tex0);

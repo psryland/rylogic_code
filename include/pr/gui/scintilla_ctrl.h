@@ -41,7 +41,7 @@ namespace pr::gui
 			this_type& load_dll(wchar_t const* dllname = L"scintilla.dll", wchar_t const* dir = L".\\lib\\$(platform)")
 			{
 				pr::win32::LoadDll<struct Scintilla>(dllname, dir);
-				return me();
+				return this->me();
 			}
 		};
 

@@ -26,24 +26,28 @@ namespace pr
 
 		// Construct
 		Vec3() = default;
-		Vec3(float x_, float y_, float z_)
+		constexpr Vec3(float x_, float y_, float z_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 		{}
-		explicit Vec3(float x_)
+		constexpr explicit Vec3(float x_)
 			:Vec3(x_, x_, x_)
 		{}
-		template <typename V3, typename = maths::enable_if_v3<V3>> Vec3(V3 const& v)
+		template <typename V3, typename = maths::enable_if_v3<V3>>
+		constexpr explicit Vec3(V3 const& v)
 			:Vec3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> Vec3(V2 const& v, float z_)
+		template <typename V2, typename = maths::enable_if_v2<V2>>
+		constexpr Vec3(V2 const& v, float z_)
 			:Vec3(x_as<float>(v), y_as<float>(v), z_)
 		{}
-		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Vec3(CP const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>>
+		constexpr explicit Vec3(CP const* v)
 			:Vec3(x_as<float>(v), y_as<float>(v), z_as<float>(v))
 		{}
-		template <typename V3, typename = maths::enable_if_v3<V3>> Vec3& operator = (V3 const& rhs)
+		template <typename V3, typename = maths::enable_if_v3<V3>>
+		Vec3& operator = (V3 const& rhs)
 		{
 			x = x_as<float>(rhs);
 			y = y_as<float>(rhs);
@@ -83,6 +87,12 @@ namespace pr
 			return Vec2<T>(arr[i0], arr[i1]);
 		}
 
+		// Basic constants
+		static constexpr Vec3 Zero()   { return Vec3{0,0,0}; }
+		static constexpr Vec3 XAxis()  { return Vec3{1,0,0}; }
+		static constexpr Vec3 YAxis()  { return Vec3{0,1,0}; }
+		static constexpr Vec3 ZAxis()  { return Vec3{0,0,1}; }
+
 		// Construct normalised
 		static Vec3<T> Normal(float x, float y, float z)
 		{
@@ -90,11 +100,11 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend Vec3<T> operator + (v3_cref<T> vec)
+		friend constexpr Vec3<T> operator + (v3_cref<T> vec)
 		{
 			return vec;
 		}
-		friend Vec3<T> operator - (v3_cref<T> vec)
+		friend constexpr Vec3<T> operator - (v3_cref<T> vec)
 		{
 			return Vec3<T>(-vec.x, -vec.y, -vec.z);
 		}
@@ -151,7 +161,7 @@ namespace pr
 		friend constexpr float w_cp(v3_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec3<Vec3<void>>::value, "");
-	static_assert(std::is_pod_v<Vec3<void>>, "v3 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Vec3<void>>, "v3 must be a pod type");
 
 	#pragma region Functions
 

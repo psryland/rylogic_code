@@ -42,7 +42,7 @@ namespace pr::rdr
 			,m_point_sampler()
 		{
 			// Create a GBuffer sampler
-			Renderer::Lock lock(*m_rdr);
+			Renderer::Lock lock(rdr());
 			auto sdesc = SamplerDesc::PointClamp();
 			pr::Throw(lock.D3DDevice()->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler.get(), "dslighting point sampler"));
@@ -77,13 +77,13 @@ namespace pr::rdr
 	};
 
 	// Create shaders
-	template <> void ShaderManager::CreateShader<DSLightingVS>()
+	template <> void ShaderManager::CreateStockShader<DSLightingVS>()
 	{
 		VShaderDesc desc(dslighting_vs, Vert());
 		auto dx = GetVS(RdrId(EStockShader::DSLightingVS), &desc);
 		m_stock_shaders.emplace_back(CreateShader<DSLightingVS>(RdrId(EStockShader::DSLightingVS), dx, "dslighting_vs"));
 	}
-	template <> void ShaderManager::CreateShader<DSLightingPS>()
+	template <> void ShaderManager::CreateStockShader<DSLightingPS>()
 	{
 		PShaderDesc desc(dslighting_ps);
 		auto dx = GetPS(RdrId(EStockShader::DSLightingPS), &desc);

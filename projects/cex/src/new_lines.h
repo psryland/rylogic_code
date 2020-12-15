@@ -109,7 +109,7 @@ namespace cex
 				if (*src == '\n')
 					ofile << m_lineends;
 				else
-					ofile << *src;
+					ofile << (char)(*src);//wrong.. this needs to handle wchar_t properly
 			}
 
 			std::cout << "done\n";

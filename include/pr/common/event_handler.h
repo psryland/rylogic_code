@@ -228,7 +228,7 @@ namespace pr
 		}
 		void operator()(Sender& s) const
 		{
-			(*this)(s, EmptyArgs());
+			(*this)(s, Args{});
 		}
 
 		// Boolean test for no assigned handlers

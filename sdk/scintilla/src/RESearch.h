@@ -43,7 +43,7 @@ private:
 	// They are for readability only.
 	enum { MAXCHR = 256 };
 	enum { CHRBIT = 8 };
-	enum { BITBLK = MAXCHR / CHRBIT };
+	enum { BITBLK = MAXCHR / (int)CHRBIT };
 
 	void ChSet(unsigned char c);
 	void ChSetWithCase(unsigned char c, bool caseSensitive);

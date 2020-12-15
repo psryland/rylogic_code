@@ -40,30 +40,31 @@ namespace pr
 
 		// Construct
 		Mat4x4() = default;
-		Mat4x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_, v4_cref<> w_)
+		constexpr Mat4x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_, v4_cref<> w_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
 			,w(w_)
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		Mat4x4(m3_cref<A,B> rot_, v4_cref<> pos_)
+		constexpr Mat4x4(m3_cref<A,B> rot_, v4_cref<> pos_)
 			:rot(rot_)
 			,pos(pos_)
 		{
 			// Don't assert 'pos.w == 1' here. Not all m4x4's are affine transforms
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		explicit Mat4x4(float x_)
+		constexpr explicit Mat4x4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
 			,w(x_)
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Mat4x4(float x, float y, float z, float w)
+		template <typename V4, typename = maths::enable_if_v4<V4>>
+		constexpr explicit Mat4x4(float x, float y, float z, float w)
 			:Mat4x4(v4(x), v4(y), v4(z), v4(w))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
@@ -150,7 +151,7 @@ namespace pr
 		// Create a 4x4 matrix with this matrix as the rotation part
 		Mat4x4 w0() const
 		{
-			return Mat4x4{rot, v4Origin};
+			return Mat4x4{rot, v4{0, 0, 0, 1}};
 		}
 		Mat4x4 w1(v4_cref<> xyz) const
 		{
@@ -159,11 +160,11 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> mat)
+		friend constexpr Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> mat)
 		{
 			return mat;
 		}
-		friend Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> mat)
+		friend constexpr Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> mat)
 		{
 			return Mat4x4<A,B>{-mat.x, -mat.y, -mat.z, -mat.w};
 		}
@@ -287,12 +288,16 @@ namespace pr
 		friend constexpr v4_cref<> pr_vectorcall z_cp(m4_cref<A,B> v) { return v.z; }
 		friend constexpr v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
 
+		// Basic constants
+		static constexpr Mat4x4 Zero() { return Mat4x4{0, 0, 0, 0}; }
+		static constexpr Mat4x4 Identity() { return Mat4x4{v4{1, 0, 0, 0}, v4{0, 1, 0, 0}, v4{0, 0, 1, 0}, v4{0, 0, 0, 1}}; }
+
 		// Create a translation matrix
 		static Mat4x4 Translation(v4_cref<> xyz)
 		{
 			// 'xyz' can be a position or an offset
 			assert("translation should be an affine vector" && (xyz.w == 0.0f || xyz.w == 1.0f));
-			return Mat4x4(m3x4Identity, xyz.w1());
+			return Mat4x4(m3x4::Identity(), xyz.w1());
 		}
 		static Mat4x4 Translation(float x, float y, float z)
 		{
@@ -365,7 +370,7 @@ namespace pr
 		static Mat4x4 LookAt(v4_cref<> eye, v4_cref<> at, v4_cref<> up)
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
-			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4Zero);
+			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4{});
 			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, 0));
 			auto mat = Mat4x4{};
 			mat.z = Normalise(eye - at);
@@ -442,7 +447,7 @@ namespace pr
 		}
 	};
 	static_assert(maths::is_mat4<Mat4x4<void,void>>::value, "");
-	static_assert(std::is_pod_v<Mat4x4<void,void>>, "Should be a pod type");
+	static_assert(std::is_trivially_copyable_v<Mat4x4<void,void>>, "Should be a pod type");
 	static_assert(std::alignment_of_v<Mat4x4<void,void>> == 16, "Should be 16 byte aligned");
 
 	#pragma region Functions
@@ -705,16 +710,16 @@ namespace pr
 	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Sqrt(m4_cref<A,B> mat)
 	{
 		// Using 'Denman-Beavers' square root iteration. Should converge quadratically
-		auto A = mat;           // Converges to mat^0.5
-		auto B = m4x4Identity;  // Converges to mat^-0.5
+		auto a = mat;              // Converges to mat^0.5
+		auto b = m4x4::Identity(); // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
 		{
-			auto A_next = 0.5f * (A + Invert(B));
-			auto B_next = 0.5f * (B + Invert(A));
-			A = A_next;
-			B = B_next;
+			auto a_next = 0.5f * (a + Invert(B));
+			auto b_next = 0.5f * (b + Invert(A));
+			a = a_next;
+			b = b_next;
 		}
-		return A;
+		return a;
 	}
 
 	// Orthonormalises the rotation component of the matrix
@@ -769,7 +774,7 @@ namespace pr
 
 		auto q = Slerp(Quat<void>(lhs.rot), Quat<void>(rhs.rot), frac);
 		auto p = Lerp(lhs.pos, rhs.pos, frac);
-		return Mat4x4<T>{q, p};
+		return Mat4x4<A,B>{q, p};
 	}
 
 	#pragma endregion

@@ -182,8 +182,16 @@ namespace pr::rdr
 		MLock(MLock const&) = delete;
 		MLock& operator=(MLock const&) = delete;
 
-		// Pointers to the locked vert/index range
-		template <typename VType> VType* vptr() { return pr::type_ptr<VType>(m_vlock.pData) + m_vrange.m_begin; }
-		template <typename IType> IType* iptr() { return pr::type_ptr<IType>(m_ilock.pData) + m_irange.m_begin; }
+		//// Pointers to the locked vert/index range
+		//template <typename VType> VType* vptr()
+		//{
+		//	return type_ptr<VType>(m_vlock.pData) + m_model->m_vrange.m_begin;
+		//}
+		//template <typename IType> IType* iptr()
+		//{
+		//	return type_ptr<IType>(m_ilock.pData) + m_model->m_irange.m_begin;
+		//}
+		//void* vptr(size_t vsize);
+		//void* iptr(size_t isize);
 	};
 }

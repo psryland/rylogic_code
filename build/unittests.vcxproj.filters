@@ -1047,6 +1047,15 @@
     <ClInclude Include="..\include\pr\maths\fibonacci_sphere.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\str\char8.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\string2.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\convert_utf.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

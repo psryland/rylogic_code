@@ -29,7 +29,7 @@ namespace pr::gui
 				Title = 1 << 0,
 				Desc  = 1 << 1,
 				PC    = 1 << 2,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			HWND         m_hwnd;   // The hwnd of this progress window
 			std::wstring m_title;  // The title bar text
@@ -81,7 +81,7 @@ namespace pr::gui
 			NonBlocking        = 0,
 			BlockTillCancelled = 1 << 0,
 			OptionalCancel     = 1 << 1,
-			_bitwise_operators_allowed
+			allow_bitops
 		};
 
 		struct Params :Form::Params<Params>

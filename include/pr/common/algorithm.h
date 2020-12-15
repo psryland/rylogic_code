@@ -258,10 +258,10 @@ namespace pr
 	}
 
 	// Erase 'where' from 'cont'
-	template <typename TCont> inline void erase(TCont& cont, typename container_traits<TCont>::const_iterator where)
+	template <typename TCont> inline void erase_at(TCont& cont, typename container_traits<TCont>::const_iterator iter)
 	{
-		if (where == std::end(cont)) return;
-		cont.erase(where);
+		if (iter == std::end(cont)) return;
+		cont.erase(iter);
 	}
 	template <typename TCont> inline void erase_unstable(TCont& cont, typename container_traits<TCont>::iterator where)
 	{
@@ -271,10 +271,10 @@ namespace pr
 	}
 
 	// Erase the first instance of 'value' from 'cont'
-	template <typename TCont> inline void erase(TCont& cont, typename container_traits<TCont>::value_type const& value)
+	template <typename TCont> inline void erase_stable(TCont& cont, typename container_traits<TCont>::value_type const& value)
 	{
 		auto iter = std::remove(std::begin(cont), std::end(cont), value);
-		erase(cont, iter);
+		erase_at(cont, iter);
 	}
 	template <typename TCont> inline void erase_unstable(TCont& cont, typename container_traits<TCont>::value_type const& value)
 	{
@@ -286,7 +286,7 @@ namespace pr
 	template <typename TCont, typename Pred> inline void erase_first(TCont& cont, Pred pred)
 	{
 		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
-		erase(cont, iter);
+		erase_at(cont, iter);
 	}
 	template <typename TCont, typename Pred> inline void erase_first_unstable(TCont& cont, Pred pred)
 	{
@@ -348,36 +348,6 @@ namespace pr
 	}
 
 	// Set intersection/union
-	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_intersection(TCont0 const& cont0, TCont1 const& cont1)
-	{
-		if constexpr (container_traits<TCont0>::associative)
-		{
-			return impl::set_intersection_associative<TContOut>(cont0, cont1);
-		}
-		else if constexpr (container_traits<TCont1>::associative)
-		{
-			return impl::set_intersection_associative<TContOut>(cont1, cont0);
-		}
-		else
-		{
-			return impl::set_intersection_ordered<TContOut>(cont0, cont1);
-		}
-	}
-	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_union(TCont0 const& cont0, TCont1 const& cont1)
-	{
-		if constexpr (container_traits<TCont0>::associative)
-		{
-			return impl::set_union_associative<TContOut>(cont0, cont1);
-		}
-		else if constexpr (container_traits<TCont1>::associative)
-		{
-			return impl::set_union_associative<TContOut>(cont1, cont0);
-		}
-		else
-		{
-			return impl::set_union_ordered<TContOut>(cont0, cont1);
-		}
-	}
 	namespace impl
 	{
 		template <typename TContOut, typename TOrderedCont0, typename TOrderedCont1> TContOut set_intersection_ordered(TOrderedCont0 const& cont0, TOrderedCont1 const& cont1)
@@ -419,6 +389,36 @@ namespace pr
 				*write++ = item;
 			}
 			return std::move(out);
+		}
+	}
+	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_intersection(TCont0 const& cont0, TCont1 const& cont1)
+	{
+		if constexpr (container_traits<TCont0>::associative)
+		{
+			return impl::set_intersection_associative<TContOut>(cont0, cont1);
+		}
+		else if constexpr (container_traits<TCont1>::associative)
+		{
+			return impl::set_intersection_associative<TContOut>(cont1, cont0);
+		}
+		else
+		{
+			return impl::set_intersection_ordered<TContOut>(cont0, cont1);
+		}
+	}
+	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_union(TCont0 const& cont0, TCont1 const& cont1)
+	{
+		if constexpr (container_traits<TCont0>::associative)
+		{
+			return impl::set_union_associative<TContOut>(cont0, cont1);
+		}
+		else if constexpr (container_traits<TCont1>::associative)
+		{
+			return impl::set_union_associative<TContOut>(cont1, cont0);
+		}
+		else
+		{
+			return impl::set_union_ordered<TContOut>(cont0, cont1);
 		}
 	}
 

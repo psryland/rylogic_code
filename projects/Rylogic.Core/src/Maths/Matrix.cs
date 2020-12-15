@@ -181,7 +181,7 @@ namespace Rylogic.Maths
 				for (int r = 0; r != Vecs; ++r)
 				{
 					for (int c = 0; c != Cmps; ++c)
-						s.Append($"{this[r,c],5:0.00} ");
+						s.Append($"{this[r,c],5:0.0000} ");
 
 					s.AppendLine();
 				}

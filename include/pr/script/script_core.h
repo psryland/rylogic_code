@@ -55,6 +55,7 @@ namespace pr::script
 		#endif
 
 	protected:
+
 		// Warning fix
 		constexpr Src& This() { return *this; }
 
@@ -234,11 +235,7 @@ namespace pr::script
 				int ch = '\0';
 				switch (m_enc)
 				{
-				default:
-					{
-						throw std::runtime_error(FmtS("Unsupported character encoding: %d", m_enc));
-					}
-				case EEncoding::already_decoded:
+					case EEncoding::already_decoded:
 					{
 						// Already decoded streams should output characters and then 0s.
 						// EOS occurs for invalid character encodings only.
@@ -246,8 +243,8 @@ namespace pr::script
 						if (ch == EOS) throw std::runtime_error("Read() should not return EOS for 'already_decoded' streams.");
 						break;
 					}
-				case EEncoding::ascii:
-				case EEncoding::ascii_extended:
+					case EEncoding::ascii:
+					case EEncoding::ascii_extended:
 					{
 						auto const b = Read();
 						if (b == EOS) break;
@@ -258,7 +255,7 @@ namespace pr::script
 						ch = b;
 						break;
 					}
-				case EEncoding::utf8:
+					case EEncoding::utf8:
 					{
 						// Interpret a multi byte UTF8 character
 						for (auto mb = std::mbstate_t{};;)
@@ -277,7 +274,7 @@ namespace pr::script
 						}
 						break;
 					}
-				case EEncoding::utf16_le:
+					case EEncoding::utf16_le:
 					{
 						int lo, hi;
 						if ((lo = Read()) == EOS) break;
@@ -286,7 +283,7 @@ namespace pr::script
 						if (ch < 0 || ch > UnicodeMaxValue) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
 					}
-				case EEncoding::utf16_be:
+					case EEncoding::utf16_be:
 					{
 						int lo, hi;
 						if ((hi = Read()) == EOS) break;
@@ -294,6 +291,10 @@ namespace pr::script
 						ch = (static_cast<uint8_t>(hi) << 8) | static_cast<uint8_t>(lo);
 						if (ch < 0) throw ScriptException(EResult::WrongEncoding, Location(), Fmt("Unsupported UTF-16 encoding. Value %d is out of range", ch));
 						break;
+					}
+					default:
+					{
+						throw std::runtime_error(FmtS("Unsupported character encoding: %d", m_enc));
 					}
 				}
 

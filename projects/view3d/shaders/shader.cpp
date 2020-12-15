@@ -35,7 +35,7 @@ namespace pr::rdr
 		g_shader_cso[id] = pr::FmtS("%s\\%s", compile_shader_dir, cso_filepath);
 	}
 	#endif
-	
+
 	void Shader::Setup(ID3D11DeviceContext*, DeviceState&)
 	{
 		#if PR_RDR_RUNTIME_SHADERS

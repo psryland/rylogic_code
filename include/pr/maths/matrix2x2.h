@@ -24,25 +24,28 @@ namespace pr
 
 		// Construct
 		Mat2x2() = default;
-		Mat2x2(float xx, float xy, float yx, float yy)
+		constexpr Mat2x2(float xx, float xy, float yx, float yy)
 			:x(xx, xy)
 			,y(yx, yy)
 		{}
-		Mat2x2(v2_cref<> x_, v2_cref<> y_)
+		constexpr Mat2x2(v2_cref<> x_, v2_cref<> y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit Mat2x2(float x_)
+		constexpr explicit Mat2x2(float x_)
 			:x(x_)
 			,y(x_)
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> explicit Mat2x2(V2 const& v)
+		template <typename V2, typename = maths::enable_if_v2<V2>>
+		constexpr explicit Mat2x2(V2 const& v)
 			:Mat2x2(x_as<Vec2<void>>(v), y_as<Vec2<void>>(v))
 		{}
-		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat2x2(CP const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>>
+		constexpr explicit Mat2x2(CP const* v)
 			:Mat2x2(x_as<Vec2<void>>(v), y_as<Vec2<void>>(v))
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> Mat2x2& operator = (V2 const& rhs)
+		template <typename V2, typename = maths::enable_if_v2<V2>>
+		Mat2x2& operator = (V2 const& rhs)
 		{
 			x = x_as<Vec2<void>>(rhs);
 			y = y_as<Vec2<void>>(rhs);
@@ -62,11 +65,11 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend Mat2x2<A,B> operator + (m2_cref<A,B> mat)
+		friend constexpr Mat2x2<A,B> operator + (m2_cref<A,B> mat)
 		{
 			return mat;
 		}
-		friend Mat2x2<A,B> operator - (m2_cref<A,B> mat)
+		friend constexpr Mat2x2<A,B> operator - (m2_cref<A,B> mat)
 		{
 			return Mat2x2<A,B>{-mat.x, -mat.y};
 		}
@@ -133,7 +136,7 @@ namespace pr
 		}
 	};
 	static_assert(maths::is_mat2<Mat2x2<void,void>>::value, "");
-	static_assert(std::is_pod_v<Mat2x2<void,void>>, "m2x2 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Mat2x2<void,void>>, "m2x2 must be a pod type");
 
 	#pragma region Functions
 	

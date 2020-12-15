@@ -74,7 +74,7 @@ namespace pr
 		friend constexpr half_t pr_vectorcall z_cp(Half4<T> v) { return v.z; }
 		friend constexpr half_t pr_vectorcall w_cp(Half4<T> v) { return v.w; }
 	};
-	static_assert(std::is_pod_v<Half4<void>>, "half4 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Half4<void>>, "half4 must be a pod type");
 
 	#pragma region Functions
 

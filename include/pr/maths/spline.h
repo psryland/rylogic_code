@@ -4,6 +4,7 @@
 //*****************************************************************************
 #pragma once
 #include <random>
+#include "pr/container/vector.h"
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
@@ -254,7 +255,7 @@ namespace pr
 		times.insert(std::end(times), 1.0f);
 
 		int pts_remaining = max_points - 2;
-		L::Elem elem(spline, 0.0f, 1.0f, 1);
+		typename L::Elem elem(spline, 0.0f, 1.0f, 1);
 		L::Raster(points, times, &elem, pts_remaining, tol);
 	}
 	template <typename PCont>
@@ -310,8 +311,11 @@ namespace pr
 			return;
 		}
 
-		vector<v4, MaxPointsPerSpline, true> raster;
-		vector<float , MaxPointsPerSpline, true> times;
+		using points_t = typename pr::vector<v4, MaxPointsPerSpline, true>;
+		using times_t = typename pr::vector<float, MaxPointsPerSpline, true>;
+		points_t raster;
+		times_t times;
+
 		CreateSplines(points, [&](Spline const& spline, bool last)
 		{
 			raster.resize(0);

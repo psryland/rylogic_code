@@ -1,10 +1,12 @@
-//*********************************************
+﻿//*********************************************
 // Renderer
 //  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #pragma once
 #include "pr/view3d/forward.h"
 #include "pr/view3d/models/model.h"
+#include "pr/view3d/models/model_tree.h"
+#include "pr/view3d/render/renderer.h"
 #include "pr/view3d/shaders/input_layout.h"
 
 namespace pr::rdr
@@ -219,7 +221,7 @@ namespace pr::rdr
 				m_vcont.resize(0);
 				m_icont.resize(0);
 				m_ncont.resize(0);
-				m_bbox = BBoxReset;
+				m_bbox = BBox::Reset();
 			}
 
 			// Container item counts
@@ -620,10 +622,10 @@ namespace pr::rdr
 			// Create the model
 			return Create(rdr, cache);
 		}
-		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy)
+		static ModelPtr QuadPatch(Renderer& rdr, int dimx, int dimy, NuggetProps const* mat = nullptr)
 		{
 			// Calculate the required buffer sizes
-			auto [vcount, icount] = geometry::QuadPatchSize(num_quads);
+			auto [vcount, icount] = geometry::QuadPatchSize(dimx, dimy);
 
 			// Generate the geometry
 			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
@@ -1328,7 +1330,7 @@ namespace pr::rdr
 
 					// Name/Bounding box
 					cache.m_name = obj.m_name;
-					cache.m_bbox = BBoxReset;
+					cache.m_bbox = BBox::Reset();
 
 					// Populate 'cache' from the 3DS data
 					auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
@@ -1381,7 +1383,7 @@ namespace pr::rdr
 
 					// Name/Bounding box
 					cache.m_name = mesh.m_header;
-					cache.m_bbox = BBoxReset;
+					cache.m_bbox = BBox::Reset();
 
 					// Copy the verts
 					cache.m_vcont.resize(mesh.m_verts.size());

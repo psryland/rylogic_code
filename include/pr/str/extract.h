@@ -2,7 +2,6 @@
 // Extract
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
 
 #include <type_traits>
@@ -10,6 +9,7 @@
 #include "pr/common/number.h"
 #include "pr/common/flags_enum.h"
 #include "pr/str/string_core.h"
+#include "pr/macros/enum.h"
 
 namespace pr::str
 {
@@ -328,7 +328,7 @@ namespace pr::str
 
 	// Extract a contiguous block of characters up to (and possibly including) a new line character
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractLine(Str& line, Ptr& src, bool inc_cr, Char const* newline = nullptr)
+	bool ExtractLine(Str& line, Ptr& src, bool inc_cr, Char const* newline = nullptr)
 	{
 		if (newline == nullptr) newline = PR_STRLITERAL(Char,"\n");
 		auto len = Size(line);
@@ -348,7 +348,7 @@ namespace pr::str
 
 	// Extract a contiguous block of non-delimiter characters from 'src'
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractToken(Str& token, Ptr& src, Char const* delim = nullptr)
+	bool ExtractToken(Str& token, Ptr& src, Char const* delim = nullptr)
 	{
 		delim = Delim(delim);
 
@@ -373,7 +373,7 @@ namespace pr::str
 
 	// Extract a contiguous block of identifier characters from 'src' incrementing 'src'
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr)
+	bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr)
 	{
 		delim = Delim(delim);
 
@@ -404,17 +404,7 @@ namespace pr::str
 	// if 'escape' is not 0, it is treated as the escape character
 	// if 'quote' is not nullptr, it is treated as the accepted quote characters
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractString(Str& str, Ptr& src, Char const* delim = nullptr)
-	{
-		return ExtractString(str, src, Char(0), nullptr, delim);
-	}
-	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractString(Str& str, Ptr& src, Char escape, std::nullptr_t quotes, Char const* delim = nullptr)
-	{
-		return ExtractString(str, src, escape, static_cast<Char const*>(quotes), delim);
-	}
-	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractString(Str& str, Ptr& src, Char escape, Char const* quotes, Char const* delim = nullptr)
+	bool ExtractString(Str& str, Ptr& src, Char escape, Char const* quotes, Char const* delim = nullptr)
 	{
 		delim = Delim(delim);
 
@@ -455,6 +445,16 @@ namespace pr::str
 		return true;
 	}
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
+	inline bool ExtractString(Str& str, Ptr& src, Char escape, std::nullptr_t quotes, Char const* delim = nullptr)
+	{
+		return ExtractString(str, src, escape, static_cast<Char const*>(quotes), delim);
+	}
+	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
+	inline bool ExtractString(Str& str, Ptr& src, Char const* delim = nullptr)
+	{
+		return ExtractString(str, src, Char(0), nullptr, delim);
+	}
+	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractStringC(Str& str, Ptr src, Char const* delim = nullptr)
 	{
 		return ExtractStringC(str, src, Char(0), nullptr, delim);
@@ -481,7 +481,7 @@ namespace pr::str
 	// '0','1' must be followed by a non-identifier character
 	// 'true', 'false' can have any case
 	template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractBool(Bool& bool_, Ptr& src, Char const* delim = nullptr)
+	bool ExtractBool(Bool& bool_, Ptr& src, Char const* delim = nullptr)
 	{
 		delim = Delim(delim);
 
@@ -535,7 +535,7 @@ namespace pr::str
 	// as a decimal integer. The letters 'a' through 'z' (or 'A' through 'Z') are assigned the values 10 through 35; only letters
 	// whose assigned values are less than 'radix' are permitted.
 	template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractInt(Int& intg, int radix, Ptr& src, Char const* delim = nullptr)
+	bool ExtractInt(Int& intg, int radix, Ptr& src, Char const* delim = nullptr)
 	{
 		wchar_t str[256] = {}; int len = 0;
 		BufferNumber(src, str, len, radix, ENumType::Int, delim);
@@ -580,7 +580,7 @@ namespace pr::str
 	// The decimal digits can be followed by an exponent, which consists of an introductory letter (d, D, e, or E) and an optionally signed integer.
 	// If neither an exponent part nor a '.' character appears, a '.' character is assumed to follow the last digit in the string.
 	template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractReal(Real& real, Ptr& src, Char const* delim = nullptr)
+	bool ExtractReal(Real& real, Ptr& src, Char const* delim = nullptr)
 	{
 		int radix = 10;
 		wchar_t str[256] = {}; int len = 0;
@@ -640,14 +640,14 @@ namespace pr::str
 		return end - &str[0] == len && errno != ERANGE;
 	}
 	template <typename Ptr, typename Char = char_type_t<Ptr>>
-	bool ExtractNumberC(Number& num, Ptr src, int radix = 0, Char const* delim = nullptr)
+	inline bool ExtractNumberC(Number& num, Ptr src, int radix = 0, Char const* delim = nullptr)
 	{
 		return ExtractNumber(num, src, radix, delim);
 	}
 	template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractNumberArray(Real* real, size_t count, Ptr& src, int radix = 0, Char const* delim = nullptr)
 	{
-		while (count--) if (!ExtractNumber(*num++, src, radix, delim)) return false;
+		while (count--) if (!ExtractNumber(*real++, src, radix, delim)) return false;
 		return true;
 	}
 	template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>>
@@ -662,9 +662,9 @@ namespace pr::str
 
 	// This is basically a convenience wrapper around ExtractInt
 	template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>>
-	inline bool ExtractEnumValue(TEnum& enum_, int radix, Ptr& src, Char const* delim = nullptr)
+	bool ExtractEnumValue(TEnum& enum_, int radix, Ptr& src, Char const* delim = nullptr)
 	{
-		std::underlying_type<TEnum>::type val;
+		std::underlying_type_t<TEnum> val;
 		if (!ExtractInt(val, radix, src, delim)) return false;
 		enum_ = static_cast<TEnum>(val);
 		return true;

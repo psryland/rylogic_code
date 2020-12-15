@@ -239,7 +239,7 @@ namespace pr::rdr
 			if (GetCurrentThreadId() != m_main_thread_id)
 				throw std::runtime_error("RunTasks must be called from the main thread");
 
-			pr::erase(m_poll_callbacks, cb);
+			erase_stable(m_poll_callbacks, cb);
 		}
 
 		// Call all registered poll event callbacks

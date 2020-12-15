@@ -567,7 +567,7 @@ VIEW3D_API View3DBBox __stdcall View3D_WindowSceneBounds(View3DWindow window, EV
 		DllLockGuard;
 		return To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
 	}
-	CatchAndReport(View3D_WindowSceneBounds, window, To<View3DBBox>(BBoxUnit));
+	CatchAndReport(View3D_WindowSceneBounds, window, To<View3DBBox>(BBox::Unit()));
 }
 
 // Get/Set the animation time
@@ -1929,7 +1929,7 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object, int inc
 		DllLockGuard;
 		return To<View3DBBox>(object->BBoxMS(include_children != 0));
 	}
-	CatchAndReport(View3D_ObjectBBoxMS, , To<View3DBBox>(BBoxUnit));
+	CatchAndReport(View3D_ObjectBBoxMS, , To<View3DBBox>(BBox::Unit()));
 }
 
 // Materials ***************************************************************

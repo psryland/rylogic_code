@@ -136,6 +136,7 @@
     <ClInclude Include="..\include\pr\str\extract.h" />
     <ClInclude Include="..\include\pr\view3d\models\model_tree.h" />
     <ClInclude Include="..\include\pr\view3d\shaders\hlsl_proxy.h" />
+    <ClInclude Include="..\include\pr\view3d\shaders\shader_desc.h" />
     <ClInclude Include="..\include\pr\view3d\shaders\shdr_diagnostic.h" />
     <ClInclude Include="..\include\pr\view3d\util\diagnostic.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />

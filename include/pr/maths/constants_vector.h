@@ -30,16 +30,16 @@ namespace pr
 	constexpr v2 v2XAxis   = v2{1.0f, 0.0f};
 	constexpr v2 v2YAxis   = v2{0.0f, 1.0f};
 
-	static v3 const v3Zero    = v3{0.0f, 0.0f, 0.0f};
-	static v3 const v3Half    = v3{0.5f, 0.5f, 0.5f};
-	static v3 const v3One     = v3{1.0f, 1.0f, 1.0f};
-	static v3 const v3Min     = v3{+maths::float_min, +maths::float_min, +maths::float_min};
-	static v3 const v3Max     = v3{+maths::float_max, +maths::float_max, +maths::float_max};
-	static v3 const v3Lowest  = v3{-maths::float_max, -maths::float_max, -maths::float_max};
-	static v3 const v3Epsilon = v3{+maths::float_eps, +maths::float_eps, +maths::float_eps};
-	static v3 const v3XAxis   = v3{1.0f, 0.0f, 0.0f};
-	static v3 const v3YAxis   = v3{0.0f, 1.0f, 0.0f};
-	static v3 const v3ZAxis   = v3{0.0f, 0.0f, 1.0f};
+	constexpr v3 v3Zero    = v3{0.0f, 0.0f, 0.0f};
+	constexpr v3 v3Half    = v3{0.5f, 0.5f, 0.5f};
+	constexpr v3 v3One     = v3{1.0f, 1.0f, 1.0f};
+	constexpr v3 v3Min     = v3{+maths::float_min, +maths::float_min, +maths::float_min};
+	constexpr v3 v3Max     = v3{+maths::float_max, +maths::float_max, +maths::float_max};
+	constexpr v3 v3Lowest  = v3{-maths::float_max, -maths::float_max, -maths::float_max};
+	constexpr v3 v3Epsilon = v3{+maths::float_eps, +maths::float_eps, +maths::float_eps};
+	constexpr v3 v3XAxis   = v3{1.0f, 0.0f, 0.0f};
+	constexpr v3 v3YAxis   = v3{0.0f, 1.0f, 0.0f};
+	constexpr v3 v3ZAxis   = v3{0.0f, 0.0f, 1.0f};
 
 	constexpr v4 v4Zero    = v4{0.0f, 0.0f, 0.0f, 0.0f};
 	constexpr v4 v4Half    = v4{0.5f, 0.5f, 0.5f, 0.5f};
@@ -53,54 +53,54 @@ namespace pr
 	constexpr v4 v4ZAxis   = v4{0.0f, 0.0f, 1.0f, 0.0f};
 	constexpr v4 v4Origin  = v4{0.0f, 0.0f, 0.0f, 1.0f};
 
-	static v8 const v8Zero = v8{0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f};
+	constexpr v8 v8Zero = v8{0.0f, 0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 0.0f, 0.0f};
 
-	static quat const QuatZero     = quat{0.0f, 0.0f, 0.0f, 0.0f};
-	static quat const QuatIdentity = quat{0.0f, 0.0f, 0.0f, 1.0f};
+	constexpr quat QuatZero     = quat{0.0f, 0.0f, 0.0f, 0.0f};
+	constexpr quat QuatIdentity = quat{0.0f, 0.0f, 0.0f, 1.0f};
 
-	static m2x2 const m2x2Zero     = m2x2{v2Zero, v2Zero};
-	static m2x2 const m2x2Identity = m2x2{v2XAxis, v2YAxis};
-	static m2x2 const m2x2One      = m2x2{v2One, v2One};
-	static m2x2 const m2x2Min      = m2x2{+v2Min, +v2Min};
-	static m2x2 const m2x2Max      = m2x2{+v2Max, +v2Max};
-	static m2x2 const m2x2Lowest   = m2x2{-v2Max, -v2Max};
-	static m2x2 const m2x2Epsilon  = m2x2{+v2Epsilon, +v2Epsilon};
+	constexpr m2x2 m2x2Zero     = m2x2{v2Zero, v2Zero};
+	constexpr m2x2 m2x2Identity = m2x2{v2XAxis, v2YAxis};
+	constexpr m2x2 m2x2One      = m2x2{v2One, v2One};
+	constexpr m2x2 m2x2Min      = m2x2{+v2Min, +v2Min};
+	constexpr m2x2 m2x2Max      = m2x2{+v2Max, +v2Max};
+	constexpr m2x2 m2x2Lowest   = m2x2{-v2Max, -v2Max};
+	constexpr m2x2 m2x2Epsilon  = m2x2{+v2Epsilon, +v2Epsilon};
 
-	static m3x4 const m3x4Zero     = m3x4{v4Zero, v4Zero, v4Zero};
-	static m3x4 const m3x4Identity = m3x4{v4XAxis, v4YAxis, v4ZAxis};
-	static m3x4 const m3x4One      = m3x4{v4One, v4One, v4One};
-	static m3x4 const m3x4Min      = m3x4{+v4Min, +v4Min, +v4Min};
-	static m3x4 const m3x4Max      = m3x4{+v4Max, +v4Max, +v4Max};
-	static m3x4 const m3x4Lowest   = m3x4{-v4Max, -v4Max, -v4Max};
-	static m3x4 const m3x4Epsilon  = m3x4{+v4Epsilon, +v4Epsilon, +v4Epsilon};
+	constexpr m3x4 m3x4Zero     = m3x4{v4Zero, v4Zero, v4Zero};
+	constexpr m3x4 m3x4Identity = m3x4{v4XAxis, v4YAxis, v4ZAxis};
+	constexpr m3x4 m3x4One      = m3x4{v4One, v4One, v4One};
+	constexpr m3x4 m3x4Min      = m3x4{+v4Min, +v4Min, +v4Min};
+	constexpr m3x4 m3x4Max      = m3x4{+v4Max, +v4Max, +v4Max};
+	constexpr m3x4 m3x4Lowest   = m3x4{-v4Max, -v4Max, -v4Max};
+	constexpr m3x4 m3x4Epsilon  = m3x4{+v4Epsilon, +v4Epsilon, +v4Epsilon};
 
-	static m4x4 const m4x4Zero     = m4x4{v4Zero, v4Zero, v4Zero, v4Zero};
-	static m4x4 const m4x4Identity = m4x4{v4XAxis, v4YAxis, v4ZAxis, v4Origin};
-	static m4x4 const m4x4One      = m4x4{v4One, v4One, v4One, v4One};
-	static m4x4 const m4x4Min      = m4x4{+v4Min, +v4Min, +v4Min, +v4Min};
-	static m4x4 const m4x4Max      = m4x4{+v4Max, +v4Max, +v4Max, +v4Max};
-	static m4x4 const m4x4Lowest   = m4x4{-v4Max, -v4Max, -v4Max, -v4Max};
-	static m4x4 const m4x4Epsilon  = m4x4{+v4Epsilon, +v4Epsilon, +v4Epsilon, +v4Epsilon};
+	constexpr m4x4 m4x4Zero     = m4x4{v4Zero, v4Zero, v4Zero, v4Zero};
+	constexpr m4x4 m4x4Identity = m4x4{v4XAxis, v4YAxis, v4ZAxis, v4Origin};
+	constexpr m4x4 m4x4One      = m4x4{v4One, v4One, v4One, v4One};
+	constexpr m4x4 m4x4Min      = m4x4{+v4Min, +v4Min, +v4Min, +v4Min};
+	constexpr m4x4 m4x4Max      = m4x4{+v4Max, +v4Max, +v4Max, +v4Max};
+	constexpr m4x4 m4x4Lowest   = m4x4{-v4Max, -v4Max, -v4Max, -v4Max};
+	constexpr m4x4 m4x4Epsilon  = m4x4{+v4Epsilon, +v4Epsilon, +v4Epsilon, +v4Epsilon};
 
-	static m6x8 const m6x8Zero     = m6x8{ m3x4Zero, m3x4Zero, m3x4Zero, m3x4Zero };
-	static m6x8 const m6x8Identity = m6x8{ m3x4Identity, m3x4Zero, m3x4Zero, m3x4Identity };
+	constexpr m6x8 m6x8Zero     = m6x8{ m3x4Zero, m3x4Zero, m3x4Zero, m3x4Zero };
+	constexpr m6x8 m6x8Identity = m6x8{ m3x4Identity, m3x4Zero, m3x4Zero, m3x4Identity };
 
-	static iv2 const iv2Zero    = iv2{0, 0};
-	static iv2 const iv2One     = iv2{1, 1};
-	static iv2 const iv2Min     = iv2{+maths::int_min, +maths::int_min};
-	static iv2 const iv2Max     = iv2{+maths::int_max, +maths::int_max};
-	static iv2 const iv2Lowest  = iv2{-maths::int_max, -maths::int_max};
-	static iv2 const iv2XAxis   = iv2{1, 0};
-	static iv2 const iv2YAxis   = iv2{0, 1};
+	constexpr iv2 iv2Zero    = iv2{0, 0};
+	constexpr iv2 iv2One     = iv2{1, 1};
+	constexpr iv2 iv2Min     = iv2{+maths::int_min, +maths::int_min};
+	constexpr iv2 iv2Max     = iv2{+maths::int_max, +maths::int_max};
+	constexpr iv2 iv2Lowest  = iv2{-maths::int_max, -maths::int_max};
+	constexpr iv2 iv2XAxis   = iv2{1, 0};
+	constexpr iv2 iv2YAxis   = iv2{0, 1};
 
-	static iv4 const iv4Zero   = iv4{0, 0, 0, 0};
-	static iv4 const iv4One    = iv4{1, 1, 1, 1};
-	static iv4 const iv4Min    = iv4{+maths::int_min, +maths::int_min, +maths::int_min, +maths::int_min};
-	static iv4 const iv4Max    = iv4{+maths::int_max, +maths::int_max, +maths::int_max, +maths::int_max};
-	static iv4 const iv4Lowest = iv4{-maths::int_max, -maths::int_max, -maths::int_max, -maths::int_max};
-	static iv4 const iv4XAxis  = iv4{1, 0, 0, 0};
-	static iv4 const iv4YAxis  = iv4{0, 1, 0, 0};
-	static iv4 const iv4ZAxis  = iv4{0, 0, 1, 0};
-	static iv4 const iv4Origin = iv4{0, 0, 0, 1};
+	constexpr iv4 iv4Zero   = iv4{0, 0, 0, 0};
+	constexpr iv4 iv4One    = iv4{1, 1, 1, 1};
+	constexpr iv4 iv4Min    = iv4{+maths::int_min, +maths::int_min, +maths::int_min, +maths::int_min};
+	constexpr iv4 iv4Max    = iv4{+maths::int_max, +maths::int_max, +maths::int_max, +maths::int_max};
+	constexpr iv4 iv4Lowest = iv4{-maths::int_max, -maths::int_max, -maths::int_max, -maths::int_max};
+	constexpr iv4 iv4XAxis  = iv4{1, 0, 0, 0};
+	constexpr iv4 iv4YAxis  = iv4{0, 1, 0, 0};
+	constexpr iv4 iv4ZAxis  = iv4{0, 0, 1, 0};
+	constexpr iv4 iv4Origin = iv4{0, 0, 0, 1};
 }
 

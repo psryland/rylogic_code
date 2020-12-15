@@ -104,10 +104,6 @@ namespace pr::geometry
 	//  Since the polygon is given as a list of points, it's not possible
 	//  specify holes. Turn polygons with holes into a single continuous edge
 	//  by inserting degenerate edges from the holes to the split/merge vertices.
-	template <typename TOut> inline void TriangulatePolygon(v2 const* poly, int count, TOut out)
-	{
-		SeidelTriangulation<TOut>(poly, count, out);
-	}
 	template <typename TOut> struct SeidelTriangulation
 	{
 		// Using Seidel's algorithm
@@ -365,6 +361,10 @@ namespace pr::geometry
 			return lhs.y != rhs.y ? lhs.y < rhs.y : lhs.x < rhs.x;
 		}
 	};
+	template <typename TOut> inline void TriangulatePolygon(v2 const* poly, int count, TOut out)
+	{
+		SeidelTriangulation<TOut>(poly, count, out);
+	}
 }
 
 #if PR_UNITTESTS

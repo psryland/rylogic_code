@@ -70,7 +70,7 @@ namespace pr::geometry
 		bool  m_has_alpha; // True if the model contains any alpha
 
 		Props()
-			:m_bbox(BBoxReset)
+			:m_bbox(BBox::Reset())
 			,m_geom(EGeom::Vert)
 			,m_has_alpha(false)
 		{}
@@ -177,5 +177,55 @@ namespace pr::geometry
 			return *this;
 		}
 		FaceFlipper operator ++(int) = delete;
+	};
+
+	// Closest point result object
+	struct MinSeparation
+	{
+		v4 m_axis;
+		float m_axis_len_sq;
+		float m_depth_sq;
+
+		MinSeparation()
+			:m_axis()
+			,m_axis_len_sq()
+			,m_depth_sq(maths::float_inf)
+		{}
+
+		// Boolean test of penetration
+		bool Contact() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return m_depth_sq > 0;
+		}
+
+		// Return the depth of penetration
+		float Depth() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return SignedSqrt(m_depth_sq);
+		}
+
+		// The direction of minimum penetration (normalised)
+		v4 SeparatingAxis() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return m_axis / Sqrt(m_axis_len_sq);
+		}
+
+		// Record the minimum depth separation
+		void operator()(float depth, v4_cref<> axis)
+		{
+			// Defer the sqrt by comparing squared depths.
+			// Need to preserve the sign however.
+			auto len_sq = LengthSq(axis);
+			auto d_sq = SignedSqr(depth) / len_sq;
+			if (d_sq < m_depth_sq)
+			{
+				m_axis = axis;
+				m_axis_len_sq = len_sq;
+				m_depth_sq = d_sq;
+			}
+		};
 	};
 }

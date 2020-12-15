@@ -414,6 +414,9 @@
     <ClInclude Include="..\include\pr\view3d\shaders\hlsl_proxy.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\view3d\shaders\shader_desc.h">
+      <Filter>src\shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">

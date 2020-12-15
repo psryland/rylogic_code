@@ -61,7 +61,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::filesystem::path const& filepath)
 		mesh.m_nugget.reserve(o.m_mesh.m_matgroup.size());
 
 		// Bounding box / transform
-		mesh.m_bbox = BBoxReset;
+		mesh.m_bbox = BBox::Reset();
 		mesh.m_o2p = o.m_mesh.m_o2p;
 		auto bb = [&](v4 const& v) { Grow(mesh.m_bbox, v); return v; };
 
@@ -131,7 +131,7 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::filesystem::path const& filepath)
 		auto vcount = int(o.m_verts.size());
 
 		// Bounding box
-		mesh.m_bbox = BBoxReset;
+		mesh.m_bbox = BBox::Reset();
 		auto bb = [&](v4 const& v) { Grow(mesh.m_bbox, v); return v; };
 
 		// Copy the verts

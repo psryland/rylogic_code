@@ -7,11 +7,9 @@
 #include "cex/src/open_vs.h"
 
 // import EnvDTE
-#pragma warning(disable : 4278)
-#pragma warning(disable : 4146)
+#pragma warning(disable : 4278 4146 4471)
 #import "libid:80cc9f66-e7d8-4ddd-85b6-d9e6cd0e93e2" version("8.0") lcid("0") raw_interfaces_only named_guids
-#pragma warning(default : 4146)
-#pragma warning(default : 4278)
+#pragma warning(default : 4278 4146 4471)
 
 #pragma comment(lib, "Rpcrt4.lib")
 

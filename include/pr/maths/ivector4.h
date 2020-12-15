@@ -29,29 +29,23 @@ namespace pr
 
 		// Construct
 		IVec4() = default;
-		IVec4(int x_, int y_, int z_, int w_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_epi32(w_,z_,y_,x_))
-		#else
+		constexpr IVec4(int x_, int y_, int z_, int w_)
+			//:vec(_mm_set_epi32(w_,z_,y_,x_))
 			:x(x_)
 			,y(y_)
 			,z(z_)
 			,w(w_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		explicit IVec4(int x_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set1_epi32(x_))
-		#else
+		constexpr explicit IVec4(int x_)
+			//:vec(_mm_set1_epi32(x_))
 			:x(x_)
 			,y(x_)
 			,z(x_)
 			,w(x_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
 		template <typename V4, typename = maths::enable_if_v4<V4>> IVec4(V4 const& v)
 			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
@@ -101,7 +95,15 @@ namespace pr
 		{
 			return IVec2<T>{arr[i0], arr[i1]};
 		}
-		
+	
+		// Basic constants
+		static constexpr IVec4 Zero()   { return IVec4{0,0,0,0}; }
+		static constexpr IVec4 XAxis()  { return IVec4{1,0,0,0}; }
+		static constexpr IVec4 YAxis()  { return IVec4{0,1,0,0}; }
+		static constexpr IVec4 ZAxis()  { return IVec4{0,0,1,0}; }
+		static constexpr IVec4 WAxis()  { return IVec4{0,0,0,1}; }
+		static constexpr IVec4 Origin() { return IVec4{0,0,0,1}; }
+
 		// Explicit cast to v4
 		explicit operator Vec4<T>() const
 		{
@@ -109,11 +111,11 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend IVec4<T> pr_vectorcall operator + (iv4_cref<T> vec)
+		friend constexpr IVec4<T> pr_vectorcall operator + (iv4_cref<T> vec)
 		{
 			return vec;
 		}
-		friend IVec4<T> pr_vectorcall operator - (iv4_cref<T> vec)
+		friend constexpr IVec4<T> pr_vectorcall operator - (iv4_cref<T> vec)
 		{
 			return IVec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
 		}
@@ -214,7 +216,7 @@ namespace pr
 		friend constexpr int pr_vectorcall w_cp(iv4_cref<T> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<IVec4<void>>::value, "");
-	static_assert(std::is_pod_v<IVec4<void>>, "iv4 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<IVec4<void>>, "iv4 must be a pod type");
 
 	#pragma region Functions
 	

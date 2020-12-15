@@ -267,7 +267,7 @@ namespace pr::rdr
 		, m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::smap::CBufNugget>("smap::CBufNugget"))
 		, m_smap_format(format)
 		, m_smap_size(size)
-		, m_bbox_scene(BBoxReset)
+		, m_bbox_scene(BBox::Reset())
 		, m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapVS)))
 		, m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapPS)))
 	{
@@ -340,7 +340,7 @@ namespace pr::rdr
 	void ShadowMap::ClearDrawlist()
 	{
 		RenderStep::ClearDrawlist();
-		m_bbox_scene = BBoxReset;
+		m_bbox_scene = BBox::Reset();
 	}
 
 	// Add model nuggets to the draw list for this render step

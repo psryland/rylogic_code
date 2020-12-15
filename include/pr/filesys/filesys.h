@@ -13,6 +13,7 @@
 #include <locale>
 #include <codecvt>
 #include <cassert>
+#include "pr/str/char8.h"
 #include "pr/str/string_core.h"
 
 namespace pr::filesys
@@ -89,15 +90,15 @@ namespace pr::filesys
 	}
 
 	// Simple read/write a text file into memory
-	inline std::string ReadAllText(std::filesystem::path const& filepath)
+	inline std::u8string ReadAllText(std::filesystem::path const& filepath)
 	{
 		std::ifstream ifile(filepath);
-		return std::string(std::istreambuf_iterator<char>(ifile), {});
+		return std::u8string(std::istreambuf_iterator<char>(ifile), {});
 	}
-	inline void WriteAllText(std::string text, std::filesystem::path const& filepath)
+	inline void WriteAllText(std::u8string_view text, std::filesystem::path const& filepath)
 	{
 		std::ofstream ifile(filepath);
-		ifile << text;
+		ifile.write(char_ptr(text.data()), text.size());
 	}
 
 	// Examines 'filepath' to guess at the file data encoding (assumes 'filepath' is a text file)
@@ -330,7 +331,8 @@ namespace pr::filesys
 	// 'buf_enc' describes the encoding used in 'buf'
 	// 'append' is true if the file should be appended to
 	// 'add_bom' is true if a byte order mask should be written to the file (applies to text encoding only, prefer not for UTF-8)
-	inline bool BufferToFile(void const* buf, size_t size, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
+	template <typename = void>
+	bool BufferToFile(void const* buf, size_t size, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
 	{
 		// Open the output file stream
 		std::ofstream file(filepath, std::ios::binary | (append ? std::ios::app : 0));
@@ -362,7 +364,16 @@ namespace pr::filesys
 						if (false) {}
 						else if (buf_enc == EEncoding::utf16_le)
 						{
-							using cvt_t = std::codecvt<char16_t, char, std::mbstate_t>;
+							// 'std::codecvt<char16_t,char,mbstate_t>::codecvt': warning STL4020:
+							// std::codecvt<char16_t, char, mbstate_t>,
+							// std::codecvt<char32_t, char, mbstate_t>,
+							// std::codecvt_byname<char16_t, char, mbstate_t>, and
+							// std::codecvt_byname<char32_t, char, mbstate_t>
+							// are deprecated in C++20 and replaced by specializations with a second
+							// argument of type char8_t.
+							// You can define _SILENCE_CXX20_CODECVT_FACETS_DEPRECATION_WARNING or _SILENCE_ALL_CXX20_DEPRECATION_WARNINGS to acknowledge that you have received this warning.
+
+							using cvt_t = std::codecvt<char16_t, char8_t, std::mbstate_t>;
 							file.imbue(std::locale(file.getloc(), new cvt_t));
 						}
 						else
@@ -399,14 +410,14 @@ namespace pr::filesys
 
 	// Write a buffer to a file.
 	// 'ofs' and 'count' are the sub-range to write (in units of 'Elem')
-	template <typename Buf, typename = Buf::value_type>
+	template <typename Buf, typename Elem = Buf::value_type>
 	inline bool BufferToFile(Buf const& buf, size_t ofs, size_t len, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
 	{
 		return buf.empty()
-			? BufferToFile((void const*)nullptr, 0U, filepath, buf_enc, file_enc, append, add_bom)
-			: BufferToFile(&buf[0], ofs, len, filepath, file_enc, buf_enc, append, add_bom);
+			? BufferToFile((void const*)nullptr, 0U, filepath, file_enc, buf_enc, append, add_bom)
+			: BufferToFile(&buf[ofs], len * sizeof(Elem), filepath, file_enc, buf_enc, append, add_bom);
 	}
-	template <typename Buf, typename = Buf::value_type>
+	template <typename Buf, typename Elem = Buf::value_type>
 	inline bool BufferToFile(Buf const& buf, std::filesystem::path const& filepath, EEncoding file_enc = EEncoding::binary, EEncoding buf_enc = EEncoding::binary, bool append = false, bool add_bom = false)
 	{
 		return BufferToFile(buf, 0, buf.size(), filepath, file_enc, buf_enc, append, add_bom);
@@ -567,7 +578,7 @@ namespace pr::filesys
 		{// Buffer to/from File
 			auto filepath = temp_dir / L"file_test.txt";
 			{// Simple read text file
-				auto text = std::string{u8"你好，This is some test text"};
+				std::u8string text = char8_ptr(u8"你好，This is some test text");
 				WriteAllText(text, filepath);
 				auto read = ReadAllText(filepath);
 				PR_CHECK(read, text);

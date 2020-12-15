@@ -519,9 +519,9 @@ namespace pr::gui
 			auto tol = px_tol * m_plot_area.Width / m_xaxis.span();
 			auto dist_sq = tol * tol;
 
-			series.Values(pt.x - tol, pt.x + tol, [&](Elem const& e)
+			series.Values(pt.X - tol, pt.X + tol, [&](Elem const& e)
 			{
-				auto d = pr::Len2Sq(e.x - pt.x, e.y - pt.y);
+				auto d = pr::LenSq(e.x - pt.X, e.y - pt.Y);
 				if (d < dist_sq)
 				{
 					dist_sq = d;

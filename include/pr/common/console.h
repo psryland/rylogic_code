@@ -105,15 +105,27 @@ namespace pr
 		// Helper to correctly initialise CONSOLE_SCREEN_BUFFER_INFOEX
 		struct ConsoleScreenBufferInfo :CONSOLE_SCREEN_BUFFER_INFOEX
 		{
-			ConsoleScreenBufferInfo() :CONSOLE_SCREEN_BUFFER_INFOEX() { cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX); }
+			ConsoleScreenBufferInfo()
+				:CONSOLE_SCREEN_BUFFER_INFOEX()
+			{
+				cbSize = sizeof(CONSOLE_SCREEN_BUFFER_INFOEX);
+			}
 		};
 
 		// Helper to wrap 'COORD'
 		struct Coord :COORD
 		{
-			Coord() :COORD() {}
-			Coord(COORD c) :COORD(c) {}
-			Coord(int x, int y) { X = short(x); Y = short(y); }
+			Coord()
+				:COORD()
+			{}
+			Coord(COORD c)
+				:COORD(c)
+			{}
+			Coord(int x, int y)
+			{
+				X = short(x);
+				Y = short(y);
+			}
 		};
 
 		// Helper for combining fore and back colours
@@ -121,17 +133,45 @@ namespace pr
 		{
 			EColour m_fore;
 			EColour m_back;
-			Colours() :m_fore(EColour::Default) ,m_back(EColour::Default) {}
-			Colours(EColour fore) :m_fore(fore) ,m_back(EColour::Default) {}
-			Colours(EColour fore, EColour back) :m_fore(fore) ,m_back(back) {}
-			static Colours From(WORD colours) { Colours c; c.m_fore = EColour(colours & 0xf); c.m_back = EColour((colours >> 4) & 0xf); return c; }
-			operator WORD() const { return WORD((WORD(m_back) << 4) | WORD(m_fore)); }
-			bool operator == (Colours const& rhs) const { return m_fore == rhs.m_fore && m_back == rhs.m_back; }
+
+			Colours()
+				:m_fore(EColour::Default)
+				,m_back(EColour::Default)
+			{}
+			Colours(EColour fore)
+				:m_fore(fore)
+				,m_back(EColour::Default)
+			{}
+			Colours(EColour fore, EColour back)
+				:m_fore(fore)
+				,m_back(back)
+			{}
 			Colours Merge(Colours rhs) const
 			{
 				return Colours(
 					rhs.m_fore != EColour::Default ? rhs.m_fore : m_fore,
 					rhs.m_back != EColour::Default ? rhs.m_back : m_back);
+			}
+			operator WORD() const
+			{
+				return static_cast<WORD>(
+					(WORD(m_back) << 4) |
+					(WORD(m_fore) << 0));
+			}
+			friend bool operator == (Colours const& lhs, Colours const& rhs)
+			{
+				return
+					lhs.m_fore == rhs.m_fore &&
+					lhs.m_back == rhs.m_back;
+			}
+
+			// Construct from colours encoded in a WORD
+			static Colours From(WORD colours)
+			{
+				Colours c;
+				c.m_fore = EColour((colours >> 0) & 0xf);
+				c.m_back = EColour((colours >> 4) & 0xf);
+				return c;
 			}
 		};
 
@@ -156,19 +196,33 @@ namespace pr
 				Func(Delegate delegate, EventHandlerId id) :m_delegate(delegate) ,m_id(id) {}
 				void operator()(P0 p0, P1 p1) const { m_delegate(p0,p1); }
 			};
+
 			std::vector<Func> m_handlers;
 
-			void operator()(P0 p0, P1 p1) const { for (auto& h : m_handlers) h(p0,p1); }
+			// Raise the event
+			void operator()(P0 p0, P1 p1) const
+			{
+				for (auto& h : m_handlers)
+					h(p0,p1);
+			}
 
 			// Boolean test for no assigned handlers
-			struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
-			operator bool_type() const { return !m_handlers.empty() ? &bool_tester::x : static_cast<bool_type>(0); }
+			explicit operator bool() const
+			{
+				return !m_handlers.empty();
+			}
 
 			// Detach all handlers. NOTE: this invalidates all associated Handler's
-			void reset() { m_handlers.clear(); }
+			void reset()
+			{
+				m_handlers.clear();
+			}
 
 			// Number of attached handlers
-			size_t count() const { return m_handlers.size(); }
+			size_t count() const
+			{
+				return m_handlers.size();
+			}
 
 			// Attach/Detach handlers
 			EventHandlerId operator += (Delegate func)
@@ -196,9 +250,12 @@ namespace pr
 		class Console
 		{
 		public:
+
+			// Forwards
 			struct Pad;
 
 		private:
+
 			// Helpers for reading/writing char/wchar_t
 			#pragma region Traits
 			struct traits
@@ -395,29 +452,29 @@ namespace pr
 					bool ctrl = (k.dwControlKeyState & (LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED)) != 0;
 					switch (k.wVirtualKeyCode)
 					{
-					default:
-						if (k.wVirtualKeyCode >= VK_F1 && k.wVirtualKeyCode <= VK_F24)
-							OnFunctionKey(*this, Evt_FunctionKey(k.wVirtualKeyCode));
-						if (ch != 0)
-							line.write(ch);
-						break;
-					case VK_TAB:
-						OnTab(*this, Evt_Tab());
-						break;
-					case VK_RETURN:
-						OnLine(*this, Evt_Line<Char>(line.m_text));
-						line.reset();
-						break;
-					case VK_ESCAPE:
-						if (!line.empty()) line.reset();
-						else OnEscape(*this, Evt_Escape());
-						break;
-					case VK_BACK:    line.delback(ctrl); break;
-					case VK_DELETE:  line.delfwd(ctrl);  break;
-					case VK_LEFT:    line.left(ctrl);    break;
-					case VK_RIGHT:   line.right(ctrl);   break;
-					case VK_HOME:    line.home();        break;
-					case VK_END:     line.end();         break;
+						case VK_TAB:
+							OnTab(*this, Evt_Tab());
+							break;
+						case VK_RETURN:
+							OnLine(*this, Evt_Line<Char>(line.m_text));
+							line.reset();
+							break;
+						case VK_ESCAPE:
+							if (!line.empty()) line.reset();
+							else OnEscape(*this, Evt_Escape());
+							break;
+						case VK_BACK:    line.delback(ctrl); break;
+						case VK_DELETE:  line.delfwd(ctrl);  break;
+						case VK_LEFT:    line.left(ctrl);    break;
+						case VK_RIGHT:   line.right(ctrl);   break;
+						case VK_HOME:    line.home();        break;
+						case VK_END:     line.end();         break;
+						default:
+							if (k.wVirtualKeyCode >= VK_F1 && k.wVirtualKeyCode <= VK_F24)
+								OnFunctionKey(*this, Evt_FunctionKey(k.wVirtualKeyCode));
+							if (ch != 0)
+								line.write(ch);
+							break;
 					}
 				}
 			}
@@ -522,15 +579,27 @@ namespace pr
 			#pragma endregion
 
 			#pragma region Pad
-			// A helper for drawing rectangular blocks of text in the console
-			// A pad is like an off-screen buffer, it contains a collection of
-			// displayable elements. To see the pad in the console call 'Draw'
+
 			struct Pad
 			{
+				// Notes:
+				//  - A rectangular block of text in the console.
+				//  - A pad is like an off-screen buffer, it contains a collection of
+				//    displayable elements. To see the pad in the console call 'Draw'
 				using Console = Console<Char>;
-				enum EItem { Unknown, NewLine, CurrentInput, AString, WString, SetColours, SetCursor };
+				enum EItem
+				{
+					Unknown,
+					NewLine,
+					CurrentInput,
+					AString,
+					WString,
+					SetColours,
+					SetCursor,
+				};
 
 			private:
+
 				struct Item
 				{
 					EItem m_what;
@@ -960,9 +1029,11 @@ namespace pr
 					if (m_height == 0) m_height = size_t(sz.cy);
 				}
 			};
+
 			#pragma endregion
 
 		public:
+
 			Console()
 				:m_stdout()
 				,m_stdin()
@@ -1140,15 +1211,36 @@ namespace pr
 			}
 
 			// Get/Set auto scrolling for the console
-			bool AutoScroll() const  { return (OutMode() & ENABLE_WRAP_AT_EOL_OUTPUT) != 0; }
-			void AutoScroll(bool on) { if (on) OutMode(OutMode() | ENABLE_WRAP_AT_EOL_OUTPUT); else OutMode(OutMode() & ~ENABLE_WRAP_AT_EOL_OUTPUT); }
+			bool AutoScroll() const
+			{
+				return (OutMode() & ENABLE_WRAP_AT_EOL_OUTPUT) != 0;
+			}
+			void AutoScroll(bool on)
+			{
+				if (on)
+					OutMode(OutMode() | ENABLE_WRAP_AT_EOL_OUTPUT);
+				else
+					OutMode(OutMode() & ~ENABLE_WRAP_AT_EOL_OUTPUT);
+			}
 
 			// Get/Set echo mode
-			bool Echo() const { return (InMode() & ENABLE_ECHO_INPUT) != 0; }
-			void Echo(bool on) { if (on) InMode(InMode() | ENABLE_ECHO_INPUT); else InMode(InMode() & ~ENABLE_ECHO_INPUT); }
+			bool Echo() const
+			{
+				return (InMode() & ENABLE_ECHO_INPUT) != 0;
+			}
+			void Echo(bool on)
+			{
+				if (on)
+					InMode(InMode() | ENABLE_ECHO_INPUT);
+				else
+					InMode(InMode() & ~ENABLE_ECHO_INPUT);
+			}
 
 			// Get/Set double buffering for the console
-			bool DoubleBuffered() const { return m_double_buffered; }
+			bool DoubleBuffered() const
+			{
+				return m_double_buffered;
+			}
 			void DoubleBuffered(bool on)
 			{
 				if (on == m_double_buffered) return;
@@ -1182,15 +1274,17 @@ namespace pr
 				Throw(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
 			}
 
-			// Get/Set UNICODE input
-			bool UnicodeInput() const { return m_unicode_input; }
-			void UnicodeInput(bool on) { m_unicode_input = on; }
-
 			// Get the currently buffered line input
-			std::basic_string<Char> LineInput() const { return m_line.m_text; }
+			std::basic_string<Char> LineInput() const
+			{
+				return m_line.m_text;
+			}
 
 			// Return true if the console is open
-			bool IsOpen() const { return m_opened; }
+			bool IsOpen() const
+			{
+				return m_opened;
+			}
 
 			// Get/Set the position of the window
 			RECT WindowRect() const
@@ -1227,7 +1321,10 @@ namespace pr
 			}
 
 			// Get/Set the position of the cursor
-			COORD Cursor() const { return Info().dwCursorPosition; }
+			COORD Cursor() const
+			{
+				return Info().dwCursorPosition;
+			}
 			void Cursor(COORD coord, int dx = 0, int dy = 0)
 			{
 				// Limit the cursor position to within the console buffer
@@ -1236,13 +1333,28 @@ namespace pr
 				coord.Y = SHORT(std::max(std::min(coord.Y + dy, int(info.dwSize.Y - 1)), 0));
 				Throw(SetConsoleCursorPosition(*m_back, coord), "Failed to set cursor position");
 			}
-			void Cursor(int x, int y) { Cursor(Coord(x,y)); }
-			void Cursor(EAnchor anchor, int dx = 0, int dy = 0) { Cursor(CursorLocation(anchor, 1, 1, dx, dy)); }
+			void Cursor(int x, int y)
+			{
+				Cursor(Coord(x, y));
+			}
+			void Cursor(EAnchor anchor, int dx = 0, int dy = 0)
+			{
+				Cursor(CursorLocation(anchor, 1, 1, dx, dy));
+			}
 
 			// Get/Set the colour to use
-			Colours Colour() const { return Colours::From(Info().wAttributes); }
-			void Colour(Colours c) { Throw(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes"); }
-			void Colour(EColour fore, EColour back) { Colour(Colours(fore,back)); }
+			Colours Colour() const
+			{
+				return Colours::From(Info().wAttributes);
+			}
+			void Colour(Colours c)
+			{
+				Throw(SetConsoleTextAttribute(*m_back, m_colour.Merge(c)), "Failed to set colour text attributes");
+			}
+			void Colour(EColour fore, EColour back)
+			{
+				Colour(Colours(fore, back));
+			}
 
 			// Set an event handler routine for the console, only affects this console, doesn't require removing.
 			// 'ctrl_type' is one of:
@@ -1260,7 +1372,10 @@ namespace pr
 			}
 
 			// Clear the console
-			void Clear() { Clear(m_colour); }
+			void Clear()
+			{
+				Clear(m_colour);
+			}
 			void Clear(Colours col)
 			{
 				// Get the number of character cells in the current buffer
@@ -1270,8 +1385,14 @@ namespace pr
 				// Fill the area with blanks
 				traits::fill(*m_back, L' ', m_colour.Merge(col), num_chars, Coord(0,0));
 			}
-			void Clear(int x, int y, int sx, int sy) { Clear(x,y,sx,sy,m_colour); }
-			void Clear(int x, int y, int sx, int sy, Colours col) { Clear(x,y,sx,sy,true,col); }
+			void Clear(int x, int y, int sx, int sy)
+			{
+				Clear(x, y, sx, sy, m_colour);
+			}
+			void Clear(int x, int y, int sx, int sy, Colours col)
+			{
+				Clear(x, y, sx, sy, true, col);
+			}
 			void Clear(int x, int y, int sx, int sy, bool clear_text, Colours col)
 			{
 				// Get the number of character cells in the current buffer
@@ -1298,7 +1419,7 @@ namespace pr
 				FlushConsoleInputBuffer(m_stdin);
 			}
 
-			// Call this method to consume input events on std in for forward them to events
+			// Call this method to consume input events on stdin and forward them to events
 			void PumpInput()
 			{
 				for(;WaitForEvent(WORD(EEvent::Any), 0);)
@@ -1309,22 +1430,19 @@ namespace pr
 					{
 						switch (EEvent(in[i].EventType))
 						{
-						default:
-							throw std::runtime_error("Unknown input event type");
-						case EEvent::Key:
-							if (m_unicode_input)
-								TranslateKeyEvent(in[i].Event.KeyEvent, m_linew);
-							else
-								TranslateKeyEvent(in[i].Event.KeyEvent, m_linea);
-							break;
-						case EEvent::Mouse:
-							break;
-						case EEvent::Size:
-							break;
-						case EEvent::Menu:
-							break;
-						case EEvent::Focus:
-							break;
+							case EEvent::Key:
+								TranslateKeyEvent(in[i].Event.KeyEvent, m_line);
+								break;
+							case EEvent::Mouse:
+								break;
+							case EEvent::Size:
+								break;
+							case EEvent::Menu:
+								break;
+							case EEvent::Focus:
+								break;
+							default:
+								throw std::runtime_error("Unknown input event type");
 						}
 					}
 				}
@@ -1424,11 +1542,10 @@ namespace pr
 			}
 
 			// Read characters from the console that pass 'pred'
-			template <typename Str, typename Pred> Str Read(Pred pred, DWORD wait_ms = INFINITE) const
+			template <typename Str, typename Pred>
+			Str Read(Pred pred, DWORD wait_ms = INFINITE) const
 			{
-				typedef Str::value_type Char;
-				Str str;
-				for (;;)
+				for (Str str;;)
 				{
 					Char ch;
 					if (!ReadChar(ch, wait_ms))
@@ -1440,17 +1557,19 @@ namespace pr
 			}
 
 			// Read up to a '\n' character. Blocks until a return character is read
-			template <typename Str> Str ReadLine(DWORD wait_ms = INFINITE) const
+			template <typename Str>
+			Str ReadLine(DWORD wait_ms = INFINITE) const
 			{
-				typedef Str::value_type Char;
-				return Read([](Char ch){ return ch != Char('\n'); }, wait_ms);
+				auto pred = [](Char ch){ return ch != '\n'; };
+				return Read<Str>(pred, wait_ms);
 			}
 
 			// Read number characters from the console. Blocks until the first non-digit character is read
-			template <typename Str> Str ReadNumber(DWORD wait_ms = INFINITE) const
+			template <typename Str>
+			Str ReadNumber(DWORD wait_ms = INFINITE) const
 			{
-				typedef Str::value_type Char;
-				return Read([](Char ch){ return (ch >= Char('0') && ch <= Char('9')) || ch == Char('.') || ch == Char('e') || ch == Char('E') || ch == Char('-') || ch == Char('+'); }, wait_ms);
+				auto pred = [](Char ch) { return (ch >= '0' && ch <= '9') || ch == '.' || ch == 'e' || ch == 'E' || ch == '-' || ch == '+'; };
+				return Read<Str>(pred, wait_ms);
 			}
 
 			// Write N characters to the output window without changing the current cursor position

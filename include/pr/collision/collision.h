@@ -16,7 +16,10 @@ namespace pr::collision
 {
 	// Function type for collection detection
 	using Detect = bool (*)(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& c);
-	inline bool CollisionNotImplemented(Shape const&, m4_cref<>, Shape const&, m4_cref<>, Contact&) { throw std::runtime_error("Collision not implemented"); }
+	inline bool CollisionNotImplemented(Shape const&, m4_cref<>, Shape const&, m4_cref<>, Contact&)
+	{
+		throw std::runtime_error("Collision not implemented");
+	}
 
 	// Collide two shapes
 	inline bool Collide(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& contact)
@@ -24,15 +27,13 @@ namespace pr::collision
 		using namespace pr::tri_table;
 
 		// Check the order and index values haven't been changed
-		static_assert(int(EShape::Sphere  ) == 0, "");
-		static_assert(int(EShape::Box     ) == 1, "");
-		static_assert(int(EShape::Line    ) == 2, "");
-		static_assert(int(EShape::Triangle) == 3, "");
-		static_assert(int(EShape::Polytope) == 4, "");
-		static_assert(int(EShape::Array   ) == 5, "");
-		static_assert(int(EShape::BVTree  ) == 6, "");
-		static_assert(int(EShape::Terrain ) == 7, "");
-		static_assert(int(EShape::NumberOf) == 8, "");
+		static_assert(int(EShape::Sphere  ) == 0);
+		static_assert(int(EShape::Box     ) == 1);
+		static_assert(int(EShape::Line    ) == 2);
+		static_assert(int(EShape::Triangle) == 3);
+		static_assert(int(EShape::Polytope) == 4);
+		static_assert(int(EShape::Array   ) == 5);
+		static_assert(int(EShape::NumberOf) == 6);
 
 		// Tri-Table of collision functions
 		static Detect s_collision_functions[Size(EType::Inclusive, int(EShape::NumberOf))] = 
@@ -63,23 +64,6 @@ namespace pr::collision
 			CollisionNotImplemented, // (5 v 3) - Array v Triangle
 			CollisionNotImplemented, // (5 v 4) - Array v Polytope
 			CollisionNotImplemented, // (5 v 5) - Array v Array
-
-			CollisionNotImplemented, // (6 v 0) - BVTree v Sphere
-			CollisionNotImplemented, // (6 v 1) - BVTree v Box
-			CollisionNotImplemented, // (6 v 2) - BVTree v Line
-			CollisionNotImplemented, // (6 v 3) - BVTree v Triangle
-			CollisionNotImplemented, // (6 v 4) - BVTree v Polytope
-			CollisionNotImplemented, // (6 v 5) - BVTree v Array
-			CollisionNotImplemented, // (6 v 6) - BVTree v BVTree
-
-			CollisionNotImplemented, // (7 v 0) - Terrain v Sphere
-			CollisionNotImplemented, // (7 v 1) - Terrain v Box
-			CollisionNotImplemented, // (7 v 2) - Terrain v Line
-			CollisionNotImplemented, // (7 v 3) - Terrain v Triangle
-			CollisionNotImplemented, // (7 v 4) - Terrain v Polytope
-			CollisionNotImplemented, // (7 v 5) - Terrain v Array
-			CollisionNotImplemented, // (7 v 6) - Terrain v BVTree
-			CollisionNotImplemented, // (7 v 7) - Terrain v Terrain
 		};
 
 		// Get the appropriate collision function

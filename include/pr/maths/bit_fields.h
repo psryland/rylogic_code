@@ -117,7 +117,7 @@ namespace pr
 	}
 	template <typename T, typename = maths::enable_if_enum<T>> constexpr T LowBit(T n, int = 0)
 	{
-		auto x = static_cast<std::underlying_type<T>::type>(n);
+		auto x = static_cast<std::underlying_type_t<T>>(n);
 		return static_cast<T>(LowBit(x));
 	}
 
@@ -220,8 +220,24 @@ namespace pr
 		return x | (y << 1);
 	}
 
+	// Extract the bit range [hi,lo] (inclusive) from 'value'.
+	// 'hi' and 'lo' are zero-based bit indices. e.g. Bits(0b11111111, 6, 3) = 0b01111000
+	template <typename T> constexpr T Bits(unsigned long long value, int hi, int lo)
+	{
+		unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
+		return static_cast<T>((value >> lo) & mask);
+	}
+
+    // Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
+    // 'hi' and 'lo' are zero-based bit indices. e.g. BitStuff(1010101011, 6, 3) = 01011000
+    template <typename T> constexpr T BitStuff(unsigned long long value, int hi, int lo)
+    {
+	    unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
+	    return static_cast<T>((value & mask) << lo);
+    }
+
 	// Convert a string of 1s and 0s into a bitmask
-	template <typename T> inline T Bits(char const* bits)
+	template <typename T> inline T BitsFromString(char const* bits)
 	{
 		T n = 0;
 		for (;*bits != 0; ++bits)
@@ -230,7 +246,7 @@ namespace pr
 	}
 
 	// Convert an integral type into a string of 0s and 1s
-	template <typename T> inline char const* BitStr(T bits, bool leading_zeros = false)
+	template <typename T> inline char const* BitsToString(T bits, bool leading_zeros = false)
 	{
 		thread_local static char str[sizeof(T) * 8 + 1];
 		typedef std::make_unsigned<T>::type UT;
@@ -302,8 +318,8 @@ namespace pr::maths
 		}
 		{
 			char const* mask_str = "1001010011";
-			auto mask = Bits<long long>(mask_str);
-			PR_CHECK(BitStr(mask), mask_str);
+			auto mask = BitsFromString<long long>(mask_str);
+			PR_CHECK(BitsToString(mask), mask_str);
 
 			std::vector<long long> bits;
 			for (auto b : pr::EnumerateBits(mask))
@@ -330,9 +346,9 @@ namespace pr::maths
 		}
 		{
 			char const* mask_str = "1001110010";
-			auto mask = Bits<uint32_t>(mask_str);
+			auto mask = BitsFromString<uint32_t>(mask_str);
 			PR_CHECK(mask, 626U);
-			PR_CHECK(BitStr(mask), mask_str);
+			PR_CHECK(BitsToString(mask), mask_str);
 			PR_CHECK(HighBitIndex(mask), 9);
 			PR_CHECK(LowBitIndex(mask), 1);
 			PR_CHECK(LowBit(mask), 2U);
@@ -340,7 +356,7 @@ namespace pr::maths
 		}
 		{
 			char const* mask_str = "1111010100010";
-			auto mask = Bits<short>(mask_str);
+			auto mask = BitsFromString<short>(mask_str);
 			PR_CHECK(mask, 7842);
 			PR_CHECK(HighBitIndex(mask), 12);
 			PR_CHECK(LowBitIndex(mask), 1);
@@ -349,7 +365,7 @@ namespace pr::maths
 		}
 		{
 			char const* mask_str = "1001001100110010101010010100111010010110010101110110000110100100";
-			auto mask = Bits<unsigned long long>(mask_str);
+			auto mask = BitsFromString<unsigned long long>(mask_str);
 			PR_CHECK(mask, 0x9332A94E965761A4ULL);
 			PR_CHECK(HighBitIndex(mask), 63);
 			PR_CHECK(LowBitIndex(mask), 2);

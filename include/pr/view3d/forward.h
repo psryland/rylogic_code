@@ -65,6 +65,7 @@
 #include "pr/container/deque.h"
 #include "pr/container/byte_data.h"
 #include "pr/camera/camera.h"
+#include "pr/str/char8.h"
 #include "pr/str/string.h"
 #include "pr/str/to_string.h"
 #include "pr/filesys/filesys.h"
@@ -96,6 +97,11 @@
 #include "pr/ldraw/ldr_helper.h"
 
 #define PR_DBG_RDR PR_DBG
+
+// Set this in the project settings, not here
+#ifndef PR_RDR_RUNTIME_SHADERS
+#define PR_RDR_RUNTIME_SHADERS 0
+#endif
 
 namespace pr::rdr
 {

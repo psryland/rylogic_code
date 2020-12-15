@@ -102,7 +102,7 @@ namespace pr::geometry::obj
 	{
 		static int64_t TellPos(TSrc& src)
 		{
-			return static_cast<s64>(src.tellg());
+			return static_cast<int64_t>(src.tellg());
 		}
 		static bool SeekAbs(TSrc& src, int64_t pos)
 		{

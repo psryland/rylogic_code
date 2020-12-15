@@ -65,7 +65,7 @@ namespace view3d
 		,m_angle_tool_ui()
 		,m_editors()
 		,m_settings()
-		,m_bbox_scene(BBoxReset)
+		,m_bbox_scene(BBox::Reset())
 		,m_main_thread_id(std::this_thread::get_id())
 		,ReportError()
 	{
@@ -607,15 +607,15 @@ namespace view3d
 		default:
 			{
 				assert(!"Unknown scene bounds type");
-				bbox = BBoxUnit;
+				bbox = BBox::Unit();
 				break;
 			}
 		case EView3DSceneBounds::All:
 			{
 				// Update the scene bounding box if out of date
-				if (m_bbox_scene == BBoxReset)
+				if (m_bbox_scene == BBox::Reset())
 				{
-					bbox = BBoxReset;
+					bbox = BBox::Reset();
 					for (auto& obj : m_objects)
 					{
 						if (!pred(*obj)) continue;
@@ -629,7 +629,7 @@ namespace view3d
 			}
 		case EView3DSceneBounds::Selected:
 			{
-				bbox = BBoxReset;
+				bbox = BBox::Reset();
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
@@ -641,7 +641,7 @@ namespace view3d
 			}
 		case EView3DSceneBounds::Visible:
 			{
-				bbox = BBoxReset;
+				bbox = BBox::Reset();
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
@@ -652,13 +652,13 @@ namespace view3d
 				break;
 			}
 		}
-		return bbox.valid() ? bbox : BBoxUnit;
+		return bbox.valid() ? bbox : BBox::Unit();
 	}
 
-	// Set the position and size of the selection box. If 'bbox' is 'BBoxReset' the selection box is not shown
+	// Set the position and size of the selection box. If 'bbox' is 'BBox::Reset()' the selection box is not shown
 	void Window::SetSelectionBox(pr::BBox const& bbox, m3x4 const& ori)
 	{
-		if (bbox == BBoxReset)
+		if (bbox == BBox::Reset())
 		{
 			// Flag to not include the selection box
 			m_selection_box.m_i2w.pos.w = 0;
@@ -675,7 +675,7 @@ namespace view3d
 	void Window::SelectionBoxFitToSelected()
 	{
 		// Find the bounds of the selected objects
-		auto bbox = BBoxReset;
+		auto bbox = BBox::Reset();
 		for (auto& obj : m_objects)
 		{
 			obj->Apply([&](LdrObject const* c)
@@ -832,7 +832,7 @@ namespace view3d
 			m_scene.ClearDrawlists();
 
 		// Invalidate cached members
-		m_bbox_scene = BBoxReset;
+		m_bbox_scene = BBox::Reset();
 
 		// Notify scene changed
 		View3DSceneChanged args = {change_type, context_ids, count, object};

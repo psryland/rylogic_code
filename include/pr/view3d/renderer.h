@@ -35,11 +35,6 @@
 //      - Make sure fxc is run with the /Zi option to add debug symbols
 //      - Add *Dependency "file.hlsl" to the LDraw script for testing the shader
 
-// Set this in the project settings, not here
-#ifndef PR_RDR_RUNTIME_SHADERS
-#define PR_RDR_RUNTIME_SHADERS 0
-#endif
-
 // Forward
 #include "pr/view3d/forward.h"
 
