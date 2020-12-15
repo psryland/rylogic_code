@@ -1154,7 +1154,7 @@ namespace pr
 							bullet.m_state = EEntityState::Exploding1;
 							m_system->PlaySound(ESound::BunkerDamaged);
 							auto vec = RelativePosition(bunker, bullet);
-							onebit::Combine(bunker.SpriteW(), bullet.Sprite(), vec.x, vec.y + 1, [](auto& lhs, auto const&, int b, int x, auto block)
+							onebit::Combine(bunker.SpriteW(), bullet.Sprite(), vec.x, vec.y + 1, [](auto& lhs, auto const&, int b, int x, auto block, auto)
 							{
 								lhs.Block(b, x) &= ~block;
 								return false;
@@ -1231,7 +1231,7 @@ namespace pr
 							bomb.m_state = EEntityState::Exploding1;
 							m_system->PlaySound(ESound::BunkerDamaged);
 							auto vec = RelativePosition(bunker, bomb);
-							onebit::Combine(bunker.SpriteW(), bomb.Sprite(), vec.x, vec.y + 1, [](auto& lhs, auto const&, int b, int x, auto block)
+							onebit::Combine(bunker.SpriteW(), bomb.Sprite(), vec.x, vec.y + 1, [](auto& lhs, auto const&, int b, int x, auto block, auto)
 							{
 								lhs.Block(b, x) &= ~block;
 								return false;
@@ -1259,7 +1259,10 @@ namespace pr
 			auto const& s0 = obj0.Sprite();
 			auto const& s1 = obj1.Sprite();
 			auto vec = RelativePosition(obj0, obj1);
-			return onebit::Combine(s0, s1, vec.x, vec.y, [](auto& lhs, auto&, int b, int x, auto block) { return (lhs.Block(b, x) & block) != 0; });
+			return onebit::Combine(s0, s1, vec.x, vec.y, [](auto& lhs, auto&, int b, int x, auto block, auto)
+			{
+				return (lhs.Block(b, x) & block) != 0;
+			});
 		}
 
 		// Random number 

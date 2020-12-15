@@ -19,27 +19,19 @@
 namespace pr::collision
 {
 	// Support features of a collision shape
-	// Note: int(EFeature) is used as the number of points returned from 'SupportFeature()'
 	enum class EFeature :int
 	{
+		// Note
+		//  - int(EFeature) is used as the number of points returned from 'SupportFeature()'
 		Vert = 1,
 		Edge = 2,
 		Tri  = 3,
 		Quad = 4,
 		// higher order faces are supported
 	};
-	static int const EFeatureBits           = 3;
-	static int const EFeatureMask           = (1 << EFeatureBits) - 1;
-	static int const FeaturePolygonMaxSides = 8;
-
-	// Returns a support vertex for 'shape' for a given direction.
-	// Assumes 'direction' is in the shape's parent space (i.e. transformed by Invert(s2w) but not 'shape.m_s2p')
-	template <typename TShape>
-	inline v4 SupportVertex(TShape const& shape, v4_cref<> direction)
-	{
-		EFeature feature_type;
-		return SupportVertex(shape, direction, feature_type);
-	}
+	static constexpr int EFeatureBits = 3;
+	static constexpr int EFeatureMask = (1 << EFeatureBits) - 1;
+	static constexpr int FeaturePolygonMaxSides = 8;
 
 	// Returns a support vertex for a shape for a given direction.
 	// Assumes 'direction' is in the shape's root parent space (i.e. transformed
@@ -65,12 +57,6 @@ namespace pr::collision
 		}
 		return vert;
 	}
-	inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, EFeature& feature_type)
-	{
-		v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
-		feature_type = EFeature::Vert;
-		return shape.m_v[MaxElementIndex(d.xyz)];
-	}
 	inline v4 SupportVertex(ShapeLine const& shape, v4_cref<> direction, EFeature& feature_type)
 	{
 		auto d = Dot(direction, shape.m_base.m_s2p.z);
@@ -82,6 +68,18 @@ namespace pr::collision
 		else if (d < -maths::tinyf) vert -= r;
 		else feature_type = EFeature::Edge;
 		return vert;
+	}
+	inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, EFeature& feature_type)
+	{
+		v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
+		feature_type = EFeature::Vert;
+		return shape.m_v[MaxElementIndex(d.xyz)];
+	}
+	template <typename TShape, typename = enable_if_shape<TShape>>
+	inline v4 SupportVertex(TShape const& shape, v4_cref<> direction)
+	{
+		EFeature feature_type;
+		return SupportVertex(shape, direction, feature_type);
 	}
 
 	// Return the feature of the shape in a given direction.
@@ -165,18 +163,6 @@ namespace pr::collision
 	// 'pen' is the depth of penetration
 	// 'l2w' and 'r2w' transform 'lhs' and 'rhs' into the same space as 'axis' and the space
 	// that the contact point is returned in (typically world space).
-	template <typename Shape0, typename Shape1>
-	v4 FindContactPoint(Shape0 const& lhs, m4_cref<> l2w, Shape1 const& rhs, m4_cref<> r2w, v4_cref<> axis, float pen)
-	{
-		// Find the support feature on each shape (in each shape's space)
-		EFeature featA, featB;
-		v4 pointA[FeaturePolygonMaxSides];
-		v4 pointB[FeaturePolygonMaxSides];
-		SupportFeature(lhs, InvertFast(l2w) * +axis, featA, pointA);
-		SupportFeature(rhs, InvertFast(r2w) * -axis, featB, pointB);
-
-		return FindContactPoint(pointA, featA, pointB, featB, l2w, r2w, axis, pen);
-	}
 	template <typename = void>
 	v4 FindContactPoint(v4* pointA, EFeature featA, v4* pointB, EFeature featB, m4_cref<> l2w, m4_cref<> r2w, v4_cref<> axis, float pen)
 	{
@@ -298,5 +284,17 @@ namespace pr::collision
 
 		// Shift centre to the halfway point between the faces
 		return (0.5f * (centreA + centreB)).w1();
+	}
+	template <typename Shape0, typename Shape1>
+	v4 FindContactPoint(Shape0 const& lhs, m4_cref<> l2w, Shape1 const& rhs, m4_cref<> r2w, v4_cref<> axis, float pen)
+	{
+		// Find the support feature on each shape (in each shape's space)
+		EFeature featA, featB;
+		v4 pointA[FeaturePolygonMaxSides];
+		v4 pointB[FeaturePolygonMaxSides];
+		SupportFeature(lhs, InvertFast(l2w) * +axis, featA, pointA);
+		SupportFeature(rhs, InvertFast(r2w) * -axis, featB, pointB);
+
+		return FindContactPoint(pointA, featA, pointB, featB, l2w, r2w, axis, pen);
 	}
 }

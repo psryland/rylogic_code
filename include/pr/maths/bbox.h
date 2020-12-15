@@ -31,7 +31,7 @@ namespace pr
 		v4 m_radius;
 
 		BBox() = default;
-		BBox(v4 const& centre, v4 const& radius)
+		constexpr BBox(v4 const& centre, v4 const& radius)
 			:m_centre(centre)
 			,m_radius(radius)
 		{
@@ -269,6 +269,10 @@ namespace pr
 		}
 		#pragma endregion
 
+		// Constants
+		static constexpr BBox Unit() { return {v4{0, 0, 0, 1}, v4{0.5f, 0.5f, 0.5f, 0}}; }
+		static constexpr BBox Reset() { return {v4{0, 0, 0, 1}, v4{-1, -1, -1, 0}}; }
+
 		// Create a bounding box from lower/upper corners
 		static BBox Make(v4 const& lower, v4 const& upper)
 		{
@@ -278,7 +282,7 @@ namespace pr
 		// Create a bounding box from a collection of verts
 		template <typename VertCont> static BBox Make(VertCont const& verts)
 		{
-			auto bbox = BBoxReset;
+			auto bbox = Reset();
 			for (auto& vert : verts) pr::Grow(bbox, vert);
 			return bbox;
 		}
@@ -286,17 +290,17 @@ namespace pr
 		// Create a bounding box from a list of verts
 		template <typename Vert> static BBox Make(std::initializer_list<Vert> verts)
 		{
-			auto bbox = BBoxReset;
+			auto bbox = Reset();
 			for (auto& vert : verts) pr::Grow(bbox, vert);
 			return bbox;
 		}
 	};
-	static_assert(std::is_pod<BBox>::value, "Should be a pod type");
-	static_assert(std::alignment_of<BBox>::value == 16, "Should be 16 byte aligned");
+	static_assert(std::is_trivially_copyable_v<BBox>, "Should be a pod type");
+	static_assert(std::alignment_of_v<BBox> == 16, "Should be 16 byte aligned");
 
 	#pragma region Constants
-	static BBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
-	static BBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
+	[[deprecated]] static BBox const BBoxUnit  = BBox::Unit();
+	[[deprecated]] static BBox const BBoxReset = BBox::Reset();
 	#pragma endregion
 
 	#pragma region Functions
@@ -370,7 +374,7 @@ namespace pr
 	{
 		assert("Transforming an invalid bounding box" && rhs.valid());
 
-		auto bb = BBoxReset;
+		auto bb = BBox::Reset();
 		for (auto& c : Corners(rhs))
 		{
 			auto cnr = m * c;
@@ -472,7 +476,7 @@ namespace pr::maths
 			{+1,+1,+1,1},
 			{+0,-2,-1,1},
 		};
-		auto bbox = BBoxReset;
+		auto bbox = BBox::Reset();
 		for (auto& p : pt) Grow(bbox, p);
 		PR_CHECK(bbox.Lower().x, -1.0f);
 		PR_CHECK(bbox.Lower().y, -2.0f);

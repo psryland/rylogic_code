@@ -43,7 +43,7 @@ namespace pr::collision
 	// Return the bounding box for a sphere shape
 	inline BBox CalcBBox(ShapeTriangle const& shape)
 	{
-		auto bbox = BBoxReset;
+		auto bbox = BBox::Reset();
 		Grow(bbox, shape.m_v.x);
 		Grow(bbox, shape.m_v.y);
 		Grow(bbox, shape.m_v.z);

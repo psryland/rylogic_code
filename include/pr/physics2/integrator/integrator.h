@@ -9,6 +9,30 @@
 
 namespace pr::physics
 {
+	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'
+	template <typename = void>
+	float KineticEnergyChange(v8f force, v8f momentum0, InertiaInv const& inertia_inv, float time_s)
+	{
+		// Kinetic energy change:
+		//    0.5 * (v1*I*v1 - v0*I*v0)
+		//  = 0.5 * (v1.h1 - v0.h0)
+
+		// Initial velocity
+		auto velocity0 = inertia_inv * momentum0;
+
+		// 'force' causes a change in momentum
+		auto dmomentum = force * time_s;
+		auto momentum1 = momentum0 + dmomentum;
+
+		// Which corresponds to a change in velocity
+		auto dvelocity = inertia_inv * dmomentum;
+		auto velocity1 = velocity0 + dvelocity;
+
+		// Kinetic energy
+		auto ke = 0.5f * (Dot(velocity1, momentum1) - Dot(velocity0, momentum0));
+		return ke;
+	}
+
 	// Evolve a rigid body forward in time. 
 	template <typename = void>
 	void Evolve(RigidBody& rb, float elapsed_seconds)
@@ -76,29 +100,6 @@ namespace pr::physics
 
 		// Do this after the KE test because changing the orientation changes the KE.
 		rb.O2W(Orthonorm(rb.O2W()));
-	}
-
-	// Calculate the signed change in kinetic energy caused by applying 'force' for 'time_s'
-	inline float KineticEnergyChange(v8f force, v8f momentum0, InertiaInv const& inertia_inv, float time_s)
-	{
-		// Kinetic energy change:
-		//    0.5 * (v1*I*v1 - v0*I*v0)
-		//  = 0.5 * (v1.h1 - v0.h0)
-
-		// Initial velocity
-		auto velocity0 = inertia_inv * momentum0;
-
-		// 'force' causes a change in momentum
-		auto dmomentum = force * time_s;
-		auto momentum1 = momentum0 + dmomentum;
-
-		// Which corresponds to a change in velocity
-		auto dvelocity = inertia_inv * dmomentum;
-		auto velocity1 = velocity0 + dvelocity;
-
-		// Kinetic energy
-		auto ke = 0.5f * (Dot(velocity1, momentum1) - Dot(velocity0, momentum0));
-		return ke;
 	}
 }
 

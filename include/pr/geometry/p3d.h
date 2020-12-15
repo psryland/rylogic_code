@@ -585,7 +585,7 @@ namespace pr::geometry::p3d
 			,m_norm()
 			,m_tex0()
 			,m_nugget()
-			,m_bbox(BBoxReset)
+			,m_bbox(BBox::Reset())
 			,m_o2p(m4x4Identity)
 		{}
 
@@ -889,7 +889,8 @@ namespace pr::geometry::p3d
 			auto start = traits<TSrc>::tellg(src);
 
 			// Read the chunk header
-			auto hdr = Read<ChunkHeader>(src);
+			ChunkHeader hdr;
+			traits<TSrc>::read(src, &hdr, 1);
 			if (hdr.m_length <= len)
 				len -= hdr.m_length;
 			else
@@ -985,14 +986,8 @@ namespace pr::geometry::p3d
 
 		auto pos = traits<TOut>::tellp(out);
 		traits<TOut>::seekp(out, offset);
-		Write<ChunkHeader>(out, hdr);
+		traits<TOut>::write(out, &hdr, 1);
 		traits<TOut>::seekp(out, pos);
-	}
-
-	// Write bytes to 'out' to pad 'hdr' to a uint32_t boundary
-	template <typename TOut> uint32_t PadToU32(TOut& out, uint32_t chunk_size)
-	{
-		return Write(out, "\0\0\0\0", Pad<uint32_t>(chunk_size, sizeof(uint32_t)));
 	}
 
 	// Write an array
@@ -1000,6 +995,12 @@ namespace pr::geometry::p3d
 	{
 		traits<TOut>::write(out, in, count);
 		return s_cast<uint32_t>(count * sizeof(*in));
+	}
+
+	// Write bytes to 'out' to pad 'hdr' to a uint32_t boundary
+	template <typename TOut> uint32_t PadToU32(TOut& out, uint32_t chunk_size)
+	{
+		return Write(out, "\0\0\0\0", Pad<uint32_t>(chunk_size, sizeof(uint32_t)));
 	}
 
 	// Write an array of type 'TIn' and an array of type 'TAs'
@@ -1142,7 +1143,7 @@ namespace pr::geometry::p3d
 	// Write a bounding box to 'out'
 	template <typename TOut> uint32_t WriteMeshBBox(TOut& out, BBox const& bbox)
 	{
-		if (bbox == BBoxReset)
+		if (bbox == BBox::Reset())
 			return 0;
 
 		if (bbox.m_radius.x < 0 ||

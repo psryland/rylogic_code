@@ -135,17 +135,13 @@ namespace pr::physics
 			auto base = model_data.size();
 			switch (container)
 			{
-			default:
-				{
-					throw std::exception("Unsupported shape container type");
-				}
-			case EShape::NoShape:
+				case EShape::NoShape:
 				{
 					assert("Model contains multiple primitives. 'hierarchy' should be one of the composite shape types" && model.m_prim_list.size() == 1);
 					model_data.append(model.m_prim_list.front()->m_data);
 					return &model_data.at_byte_ofs<Shape>(base);
 				}
-			case EShape::Array:
+				case EShape::Array:
 				{
 					// Add the array shape header, followed by the shapes in the array
 					model_data.push_back<ShapeArray>();
@@ -160,9 +156,9 @@ namespace pr::physics
 					// Return the shape
 					return &arr.m_base;
 				}
-			case EShape::BVTree:
+				default:
 				{
-					throw std::exception("Not implemented");
+					throw std::runtime_error("Unsupported shape container type");
 				}
 			}
 		}
@@ -211,7 +207,7 @@ namespace pr::physics
 		{
 			auto& model = *m_model;
 
-			model.m_bbox = BBoxReset;
+			model.m_bbox = BBox::Reset();
 			for (auto& prim : model.m_prim_list)
 				Grow(model.m_bbox, prim->shape().m_s2p * prim->m_bbox);
 		}

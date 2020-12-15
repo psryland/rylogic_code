@@ -119,7 +119,7 @@ namespace pr
 			StandardClasses = ICC_STANDARD_CLASSES   ,
 			LinkClass       = ICC_LINK_CLASS         ,
 			All             = ~None,
-			_bitwise_operators_allowed,
+			allow_bitops,
 		};
 
 		//todo: unused at the mo
@@ -149,7 +149,7 @@ namespace pr
 			LeftTopBottom   = Left|Top|Bottom,
 			RightTopBottom  = Right|Top|Bottom,
 			All             = Left|Top|Right|Bottom,
-			_bitwise_operators_allowed,
+			allow_bitops,
 		};
 
 		// Window docking
@@ -211,7 +211,7 @@ namespace pr
 			NoClientSize   = 0x0800, // SWP_NOCLIENTSIZE (don't send WM_SIZE)
 			NoClientMove   = 0x1000, // SWP_NOCLIENTMOVE (don't send WM_MOVE)
 			StateChange    = 0x8000, // SWP_STATECHANGED (minimized, maximised, etc)
-			_bitwise_operators_allowed,
+			allow_bitops,
 		};
 
 		// Control key state
@@ -227,7 +227,7 @@ namespace pr
 			LAlt   = 1 << 4,
 			RAlt   = 1 << 5,
 			Alt    = LAlt | RAlt,
-			_bitwise_operators_allowed,
+			allow_bitops,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -242,7 +242,7 @@ namespace pr
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
 			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
-			_bitwise_operators_allowed,
+			allow_bitops,
 		};
 
 		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
@@ -407,18 +407,18 @@ namespace pr
 		}
 
 		// Enum class operator | and &
-		template <typename U> static std::true_type  has_bitops_allowed(decltype(U::_bitwise_operators_allowed)*);
-		template <typename>   static std::false_type has_bitops_allowed(...);
-		template <typename T> constexpr bool has_bitops_allowed_v = decltype(has_bitops_allowed<T>(nullptr))::value;
-		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator ~ (T rhs)
+		template <typename U> static std::true_type  has_allow_bitops(decltype(U::allow_bitops)*);
+		template <typename>   static std::false_type has_allow_bitops(...);
+		template <typename T> constexpr bool has_allow_bitops_v = decltype(has_allow_bitops<T>(nullptr))::value;
+		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator ~ (T rhs)
 		{
 			return static_cast<T>(~static_cast<std::underlying_type_t<T>>(rhs));
 		}
-		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator | (T lhs, T rhs)
+		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator | (T lhs, T rhs)
 		{
 			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) | static_cast<std::underlying_type_t<T>>(rhs));
 		}
-		template <typename T, typename = std::enable_if_t<has_bitops_allowed_v<T>>> inline T operator & (T lhs, T rhs)
+		template <typename T, typename = std::enable_if_t<has_allow_bitops_v<T>>> inline T operator & (T lhs, T rhs)
 		{
 			return static_cast<T>(static_cast<std::underlying_type_t<T>>(lhs) & static_cast<std::underlying_type_t<T>>(rhs));
 		}
@@ -810,7 +810,7 @@ namespace pr
 				MaxPosition  = 1 << 1,
 				MinTrackSize = 1 << 2,
 				MaxTrackSize = 1 << 3,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			EMask m_mask;
 			
@@ -1634,7 +1634,7 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			enum class EType :UINT
 			{
@@ -1648,7 +1648,7 @@ namespace pr
 				RightOrder   = MFT_RIGHTORDER,
 				Separator    = MFT_SEPARATOR,
 				String       = MFT_STRING,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			enum class EState :UINT
 			{
@@ -1660,7 +1660,7 @@ namespace pr
 				Disabled = MFS_DISABLED,
 				Hilite   = MFS_HILITE,
 				Unhilite = MFS_UNHILITE,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			enum class EStockBmp :INT_PTR
 			{
@@ -1939,7 +1939,7 @@ namespace pr
 				Background = 1 << 0,
 				Foreground = 1 << 1,
 				All = Background | Foreground,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 
 			EParts m_parts;    // The parts to be painted
@@ -3257,11 +3257,11 @@ namespace pr
 			}
 			this_type& tool_window(bool on = true)
 			{
-				return style(on ? '+' : '-', WS_EX_TOOLWINDOW);
+				return base_type::style(on ? '+' : '-', WS_EX_TOOLWINDOW);
 			}
 			this_type& mdi_child(bool mdi = true)
 			{
-				return style(mdi ? '+' : '-', WS_CHILD);
+				return base_type::style(mdi ? '+' : '-', WS_CHILD);
 			}
 			this_type& dlg_behaviour(bool on = true)
 			{
@@ -6136,6 +6136,7 @@ namespace pr
 			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				using base_type = typename Control::Params<not_void_t<Derived, Params<Derived>>>;
 
 				Params()
 				{
@@ -6149,11 +6150,11 @@ namespace pr
 				this_type& align(int ss)
 				{
 					// use one of SS_LEFT, SS_RIGHT, SS_CENTER, SS_LEFTNOWORDWRAP
-					return style('-', SS_TYPEMASK).style('+', ss);
+					return base_type::style('-', SS_TYPEMASK).style('+', ss);
 				}
 				this_type& centre_v(bool on = true)
 				{
-					return style(on ? '+' : '-', SS_CENTERIMAGE);
+					return base_type::style(on ? '+' : '-', SS_CENTERIMAGE);
 				}
 			};
 
@@ -6666,6 +6667,8 @@ namespace pr
 			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				using base_type = typename Control::Params<not_void_t<Derived, Params<Derived>>>;
+
 				Params()
 				{
 					this->wndclass(WndClassName())
@@ -6677,11 +6680,11 @@ namespace pr
 				}
 				this_type& editable(bool on = true)
 				{
-					return style('-', CBS_SIMPLE | CBS_DROPDOWN | CBS_DROPDOWNLIST).style('+', on ? CBS_DROPDOWN : CBS_DROPDOWNLIST);
+					return base_type::style('-', CBS_SIMPLE | CBS_DROPDOWN | CBS_DROPDOWNLIST).style('+', on ? CBS_DROPDOWN : CBS_DROPDOWNLIST);
 				}
 				this_type& sorted(bool on = true)
 				{
-					return style(on ? '+' : '-', CBS_SORT);
+					return base_type::style(on ? '+' : '-', CBS_SORT);
 				}
 			};
 
@@ -7503,6 +7506,7 @@ namespace pr
 			struct Params :TextBox::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				using base_type = typename TextBox::Params<not_void_t<Derived, Params<Derived>>>;
 
 				bool m_word_wrap;
 				bool m_detect_urls;
@@ -7518,7 +7522,7 @@ namespace pr
 				}
 				this_type& border(bool on = true)
 				{
-					return style_ex(on?'+':'-', WS_EX_STATICEDGE);
+					return base_type::style_ex(on?'+':'-', WS_EX_STATICEDGE);
 				}
 				this_type& word_wrap(bool on = true)
 				{
@@ -7695,7 +7699,7 @@ namespace pr
 				this_type& parts(std::initializer_list<int> p)
 				{
 					m_parts = p;
-					return me();
+					return this->me();
 				}
 			};
 
@@ -8189,17 +8193,17 @@ namespace pr
 				this_type& width(int w)
 				{
 					m_bar_width = w;
-					return me();
+					return this->me();
 				}
 				this_type& pos(float p)
 				{
 					m_bar_pos = std::min(1.0f, std::max(0.0f, p));
-					return me();
+					return this->me();
 				}
 				this_type& min_pane_width(int w)
 				{
 					m_min_pane_size = w;
-					return me();
+					return this->me();
 				}
 				this_type& vertical()
 				{
@@ -8209,12 +8213,12 @@ namespace pr
 				this_type& horizontal()
 				{
 					m_vertical = false;
-					return me();
+					return this->me();
 				}
 				this_type& full_drag(bool fd = true)
 				{
 					m_full_drag = fd;
-					return me();
+					return this->me();
 				}
 			};
 
@@ -8478,6 +8482,8 @@ namespace pr
 			struct Params :Control::Params<not_void_t<Derived, Params<Derived>>>
 			{
 				using this_type = typename Params::this_type;
+				using base_type = typename Control::Params<not_void_t<Derived, Params<Derived>>>;
+
 				Params()
 				{
 					this->wndclass(WndClassName())
@@ -8488,8 +8494,8 @@ namespace pr
 				}
 				this_type& show_always(bool on = true)
 				{
-					style('+',TTS_ALWAYSTIP);
-					return me(); 
+					base_type::style('+',TTS_ALWAYSTIP);
+					return this->me(); 
 				}
 			};
 
@@ -8711,7 +8717,7 @@ namespace pr
 				YesNoCancel      = YesNo | Cancel,
 				AbortRetryIgnore = (1 << int(EDialogResult::Abort)) | (1 << int(EDialogResult::Retry)) | (1 << int(EDialogResult::Ignore)),
 				RetryCancel      = (1 << int(EDialogResult::Retry)) | Cancel,
-				_bitwise_operators_allowed,
+				allow_bitops,
 			};
 			enum class EIcon
 			{

@@ -96,7 +96,7 @@ namespace pr
 		static_assert(sizeof(Type) >= sizeof(FreeObject), "The pooled type must be large enough to contain a pointer");
 
 		Block*      m_current_block;   // Points into a double linked list of Blocks
-		pr::byte*   m_block_ptr;       // The pointer within the current block (always 'm_current_block')
+		uint8_t*    m_block_ptr;       // The pointer within the current block (always 'm_current_block')
 		FreeObject* m_free_object;     // A single linked list of returned objects
 		PR_EXPAND(PR_OP_CHK, unsigned int m_num_allocated);
 		PR_EXPAND(PR_OP_CHK, unsigned int m_num_free);

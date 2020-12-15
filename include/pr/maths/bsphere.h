@@ -205,8 +205,8 @@ namespace pr
 		}
 		#pragma endregion
 	};
-	static_assert(std::is_pod<BSphere>::value, "Should be a pod type");
-	static_assert(std::alignment_of<BSphere>::value == 16, "Should be 16 byte aligned");
+	static_assert(std::is_trivially_copyable_v<BSphere>, "Should be a pod type");
+	static_assert(std::alignment_of_v<BSphere> == 16, "Should be 16 byte aligned");
 
 	#pragma region Constants
 	static BSphere const BSphereZero  = {v4Zero, 0.0f};

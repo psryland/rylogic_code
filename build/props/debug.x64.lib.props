@@ -31,7 +31,7 @@
       <AdditionalOptions>/Zm200 /Zc:twoPhase-</AdditionalOptions>
       <MinimalRebuild>false</MinimalRebuild>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <PostBuildEvent>

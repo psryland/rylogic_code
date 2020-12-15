@@ -6,10 +6,17 @@ Immediate ToDo:
 	Export Plane model
 	
 Work
-  RexNode Sensor
-	- MuRata to sleep between samples
-  RexNode Dongle
-  ZRT
+  UIv4
+	Set up sending drawlist in multiple parts
+	Add 'Language' menu option and runtime support for switching
+	Add 'Futurama' font
+    Remove header 'typedefs_ui.h'
+	Remove resource crc's, they're not needed.
+	Clean up header 'manager_user_interface.h'
+	Remove REX_USER_INTERFACE_V4
+	Remove most of the old UserInterface API. Port code to new API
+	Add string tables to the movement maps/RCT
+	Animated sprites
 	
   VRex
 	- Fix ground plane

@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Zip Compression
 //	Copyright (c) Rylogic 2019
 //*****************************************
@@ -239,7 +239,7 @@ namespace pr::storage::zip
 			}
 		};
 		static_assert(sizeof(LDH) == 30);
-		static_assert(std::is_pod_v<LDH>);
+		static_assert(std::is_trivially_copyable_v<LDH>);
 
 		// Central directory header
 		struct CDH
@@ -325,7 +325,7 @@ namespace pr::storage::zip
 			}
 		};
 		static_assert(sizeof(CDH) == 46);
-		static_assert(std::is_pod_v<CDH>);
+		static_assert(std::is_trivially_copyable_v<CDH>);
 
 		// End of central directory
 		struct ECD
@@ -357,7 +357,7 @@ namespace pr::storage::zip
 			{}
 		};
 		static_assert(sizeof(ECD) == 22);
-		static_assert(std::is_pod_v<ECD>);
+		static_assert(std::is_trivially_copyable_v<ECD>);
 
 		#pragma pack(pop)
 
@@ -2833,7 +2833,7 @@ namespace pr::storage::zip
 				// 'Extend' bytes duplicated at the end so that sequences of 'Extend' bytes are contiguous.
 				static_assert((Size & (Size - 1)) == 0, "RingBuffer size must be a power of 2");
 				static_assert(Extend <= Size, "Size must be large enough to contain 'Extend' bytes");
-				static_assert(std::is_pod_v<T>, "Designed for POD types only");
+				static_assert(std::is_trivially_copyable_v<T>, "Designed for POD types only");
 				static int const Capacity = Size;
 				static int const Mask = Size - 1;
 

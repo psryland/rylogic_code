@@ -77,6 +77,10 @@ namespace pr::ldr
 		FwdBack,
 	};
 
+	// Forward declarations
+	template <typename Arg0, typename... Args> TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args);
+	TStr& AppendSpace(TStr& str);
+
 	// See unit tests for example.
 	// This only works when the overloads of Append have only two parameters.
 	// For complex types, either create a struct like O2W above, or a different named function
@@ -89,19 +93,7 @@ namespace pr::ldr
 		// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
 		static_assert(false, "no overload for 'Type'");
 	}
-	template <typename Arg0, typename... Args> inline TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args)
-	{
-		Append(str, arg0);
-		return Append(str, std::forward<Args>(args)...);
-	}
-	inline TStr& AppendSpace(TStr& str)
-	{
-		TStr::value_type ch;
-		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
-		str.append(" ");
-		return str;
-	}
-	inline TStr& Append(TStr& str, typename TStr::value_type const* s)
+	inline TStr& Append(TStr& str, char const* s)
 	{
 		if (s == nullptr || *s == '\0') return str;
 		if (*s != '}' && *s != ')') AppendSpace(str);
@@ -196,6 +188,18 @@ namespace pr::ldr
 
 		auto affine = !IsAffine(o2w.m_mat) ? "*NonAffine": "";
 		return Append(AppendSpace(str), "*o2w{", affine, "*m4x4{", o2w.m_mat, "}}");
+	}
+	template <typename Arg0, typename... Args> inline TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args)
+	{
+		Append(str, arg0);
+		return Append(str, std::forward<Args>(args)...);
+	}
+	inline TStr& AppendSpace(TStr& str)
+	{
+		TStr::value_type ch;
+		if (str.empty() || isspace(ch = *(end(str)-1)) || ch == '{' || ch == '(') return str;
+		str.append(" ");
+		return str;
 	}
 	#pragma endregion
 
@@ -934,7 +938,7 @@ namespace pr::ldr
 			// Create from bounding box
 			LdrBox& bbox(BBox_cref bbox)
 			{
-				if (bbox == BBoxReset) return *this;
+				if (bbox == BBox::Reset()) return *this;
 				return dim(2 * bbox.Radius()).pos(bbox.Centre());
 			}
 

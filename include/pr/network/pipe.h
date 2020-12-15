@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Pipe
 //  Copyright (c) Rylogic Ltd 2007
 //**********************************
@@ -229,7 +229,7 @@ namespace pr
 		}
 
 		// Write an object from the i/o connection
-		template <typename Type, typename = std::enable_if_t<std::is_pod_v<Type>>>
+		template <typename Type, typename = std::enable_if_t<std::is_trivially_copyable_v<Type>>>
 		bool Write(Type const& type, DWORD timeout)
 		{
 			return Write(&type, sizeof(type), timeout);
@@ -306,7 +306,7 @@ namespace pr
 		}
 
 		// Read a POD object from the i/o connection. (Careful with padding!)
-		template <typename Type, typename = std::enable_if_t<std::is_pod_v<Type>>>
+		template <typename Type, typename = std::enable_if_t<std::is_trivially_copyable_v<Type>>>
 		bool Read(Type& type, DWORD timeout)
 		{
 			return Read(&type, sizeof(type), timeout);

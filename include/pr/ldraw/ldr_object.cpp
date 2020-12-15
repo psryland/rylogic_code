@@ -4437,7 +4437,7 @@ namespace pr::ldr
 			// Functions can have infinities and divide by zeros. Set the bbox
 			// to match the view volume so that auto-range doesn't zoom out to infinity.
 			model.m_bbox.reset();
-			model.m_bbox = BBoxUnit;
+			model.m_bbox = BBox::Unit();
 
 			// Update the model by evaluating the equation
 			switch (equation.m_args.unassigned_count())
@@ -4871,7 +4871,7 @@ namespace pr::ldr
 				case EType::ScreenSpace:
 				{
 					// Scale up the view port to reduce floating point precision noise.
-					enum { ViewPortSize = 1024 };
+					static constexpr int ViewPortSize = 1024;
 
 					// Do not include in scene bounds calculations because we're scaling
 					// this model at a point that the bounding box calculation can't see.
@@ -5542,7 +5542,7 @@ namespace pr::ldr
 		{
 			if (screen_space)
 			{
-				enum { ViewPortSize = 2 };
+				static constexpr int ViewPortSize = 2;
 
 				// Do not include in scene bounds calculations because we're scaling
 				// this model at a point that the bounding box calculation can't see.

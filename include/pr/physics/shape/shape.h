@@ -93,10 +93,10 @@ namespace pr
 		void			ClosestPoint		(Shape const& shape, v4 const& point, float& distance, v4& closest);
 
 		// Shape casting helpers
-		template <typename T> inline T const& shape_cast(Shape const& shape)			{ PR_ASSERT(1,           shape .m_type == T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape .m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T const&>(shape); }
-		template <typename T> inline T&       shape_cast(Shape&       shape)			{ PR_ASSERT(1,           shape .m_type == T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape .m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T&      >(shape); }
-		template <typename T> inline T const* shape_cast(Shape const* shape)			{ PR_ASSERT(1, !shape || shape->m_type == T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape->m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T const*>(shape); }
-		template <typename T> inline T*       shape_cast(Shape*       shape)			{ PR_ASSERT(1, !shape || shape->m_type == T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape->m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T*      >(shape); }
+		template <typename T> inline T const& shape_cast(Shape const& shape)			{ PR_ASSERT(1,           shape .m_type == (int)T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape .m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T const&>(shape); }
+		template <typename T> inline T&       shape_cast(Shape&       shape)			{ PR_ASSERT(1,           shape .m_type == (int)T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape .m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T&      >(shape); }
+		template <typename T> inline T const* shape_cast(Shape const* shape)			{ PR_ASSERT(1, !shape || shape->m_type == (int)T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape->m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T const*>(shape); }
+		template <typename T> inline T*       shape_cast(Shape*       shape)			{ PR_ASSERT(1, !shape || shape->m_type == (int)T::EShapeType, FmtS("Attempting to cast %s to %s", GetShapeTypeStr(shape->m_type), GetShapeTypeStr((pr::ph::EShape)T::EShapeType))); return reinterpret_cast<T*      >(shape); }
 
 		// Increment a shape pointer
 		template <typename ShapeType> inline ShapeType const* Inc(ShapeType const* p) { return reinterpret_cast<ShapeType const*>(byte_ptr(p) + p->m_base.m_size); }

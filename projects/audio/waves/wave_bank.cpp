@@ -1455,17 +1455,17 @@ namespace pr::audio
 		// Create a C header file to 'hdr'
 		void WriteHeader(char const* bank_name, std::ostream& hdr) const
 		{
-			hdr << L"// This is a generated file\r\n"
-				<< L"#pragma once\r\n"
-				<< L"\r\n"
-				<< L"// XACT Wave Bank Entries\r\n"
-				<< L"enum class " << bank_name << "\r\n"
-				<< L"{\r\n";
+			hdr << "// This is a generated file\r\n"
+				<< "#pragma once\r\n"
+				<< "\r\n"
+				<< "// XACT Wave Bank Entries\r\n"
+				<< "enum class " << bank_name << "\r\n"
+				<< "{\r\n";
 
 			int index = 0;
 			for (auto& wave : m_waves)
 			{
-				hdr << L"\t" << wave.Name().str << " = " << index << ",\r\n";
+				hdr << "\t" << wave.Name().str << " = " << index << ",\r\n";
 				++index;
 			}
 

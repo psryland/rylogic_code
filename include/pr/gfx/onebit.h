@@ -14,6 +14,22 @@
 
 namespace pr::onebit
 {
+	// LSB mask. e.g. i=3 => 0b00000111
+	template <typename TWord = uint8_t>
+	constexpr static TWord MaskLo(int i)
+	{
+		assert(i < 8*sizeof(TWord));
+		return static_cast<TWord>((1ULL << i) - 1);
+	}
+
+	// MSB mask. e.g. i=3 => 0b11111000
+	template <typename TWord = uint8_t>
+	constexpr static TWord MaskHi(int i)
+	{
+		assert(i < 8*sizeof(TWord));
+		return static_cast<TWord>(~0ULL << i);
+	}
+
 	// A 1-Bit readonly bitmap
 	template <typename TWord = uint8_t>
 	struct BitmapR
@@ -184,13 +200,13 @@ namespace pr::onebit
 				return;
 
 			// Fill the rectange with 'value'
-			auto bbeg = BlockIndex(Y + 0);
-			auto bend = BlockIndex(Y + H);
+			auto bbeg = BitmapR<TWord>::BlockIndex(Y + 0);
+			auto bend = BitmapR<TWord>::BlockIndex(Y + H);
 			for (int b = bbeg; b <= bend; ++b)
 			{
 				auto mask = value;
-				if (b == bbeg) mask |= MaskLo((Y + 0) % WordSize);
-				if (b == bend) mask |= MaskHi((Y + H) % WordSize);
+				if (b == bbeg) mask |= MaskLo<Word>((Y + 0) % WordSize);
+				if (b == bend) mask |= MaskHi<Word>((Y + H) % WordSize);
 				for (int x = X; x != X + W; ++x)
 					Block(b, x) &= mask;
 			}
@@ -200,35 +216,22 @@ namespace pr::onebit
 		template <typename Image>
 		void Draw(Image const& img, int X, int Y)
 		{
-			Combine(*this, img, X, Y, [](auto& lhs, auto const&, int b, int x, Word word)
+			Combine(*this, img, X, Y, [](auto& lhs, auto const&, int b, int x, Word word, Word)
 			{
 				// Combine bits with OR to print 'img' into this bitmap
 				lhs.Block(b, x) |= word;
 				return false;
 			});
 		}
-
-		// Word mask helpers
-		constexpr static Word MaskLo(int i)
-		{
-			// e.g.  0b00001111
-			assert(i < WordSize);
-			return static_cast<Word>((1ULL << i) - 1);
-		}
-		constexpr static Word MaskHi(int i)
-		{
-			// e.g.  0b11110000
-			assert(i < WordSize);
-			return static_cast<Word>(~0ULL << i);
-		}
 	};
 
 	// Combine 'lhs' and 'rhs' at (X,Y) relative to 'lhs' using 'op'
 	// Op should be callable with signature:
-	//   bool op(ImageL& lhs, ImageR& rhs, int block_index, int column_index, Word rhs_block);
+	//   bool op(ImageL& lhs, ImageR& rhs, int block_index, int column_index, Word bits, Word mask);
 	//   'lhs' and 'rhs' are writable if Combine is called with non-const parameters.
 	//   'block_index' and 'column_index' are the coordinates in 'lhs'
-	//   'rhs_block' is the block from from 'rhs' that coincides with the coordinates in 'lhs'.
+	//   'bits' is the bits from 'rhs' to write at the coordinates in 'lhs'.
+	//   'mask' is a bit mask of the valid bits in 'bits'
 	// Returns true if 'op' returns true
 	template <typename BitmapL, typename BitmapR, typename Op>
 	bool Combine(BitmapL&& lhs, BitmapR&& rhs, int X, int Y, Op op)
@@ -241,48 +244,62 @@ namespace pr::onebit
 		constexpr auto BlockIndex = BmpL::BlockIndex;
 		constexpr int WordSize = BmpL::WordSize;
 
-		auto ofs0 = Y - BlockIndex(Y) * WordSize; // Offset from a block boundary
-		auto ofs1 = ofs0 != 0 ? WordSize - ofs0 : 0; // Compliement of ofs0
+		// Offset from a block boundary for the top edge of 'rhs'
+		auto ytop = Y - BlockIndex(Y) * WordSize;
 
 		// Clip 'rhs' to the bounds of 'lhs'
-		// (sx,sy) is the top/left coord of the clipped region in 'rhs'
-		// (sw,sh) is the width/height of the clipped region in 'rhs'
-		int sx = 0, sy = 0;
-		int sw = rhs.m_dimx, sh = rhs.m_dimy;
-		if (X + sw > lhs.m_dimx) { sw = lhs.m_dimx - X; }
-		if (Y + sh > lhs.m_dimy) { sh = lhs.m_dimy - Y; }
-		if (X < 0) { sx -= X; sw += X; X = 0; }
-		if (Y < 0) { sy -= Y; sh += Y; Y = 0; }
-		if (sw <= 0 || sh <= 0)
+		// (cx,cy) is the top/left coord of the clipped region in 'rhs'
+		// (cw,ch) is the width/height of the clipped region in 'rhs'
+		int cx = 0, cy = 0;
+		int cw = rhs.m_dimx, ch = rhs.m_dimy;
+		if (X + cw > lhs.m_dimx) { cw = lhs.m_dimx - X; }
+		if (Y + ch > lhs.m_dimy) { ch = lhs.m_dimy - Y; }
+		if (X < 0) { cx -= X; cw += X; X = 0; }
+		if (Y < 0) { cy -= Y; ch += Y; Y = 0; }
+		if (cw <= 0 || ch <= 0)
 			return false;
 
-		// The inclusive block range in 'lhs' spanned by 'rhs'
-		auto bbeg = BlockIndex(Y + 0);
-		auto bend = BlockIndex(Y + sh - 1);
+		// Offset from a row boundary for the bottom edge of 'rhs'
+		auto ybot = (Y + ch) - BlockIndex(Y + ch) * WordSize;
 
-		// The inclusive block range in 'rhs' spanned by 'lhs'
-		auto Bbeg = BlockIndex(sy + 0);
-		auto Bend = BlockIndex(sy + sh - 1);
+		// The inclusive block range on 'lhs' spanned by 'rhs'
+		auto lhsb0 = BlockIndex(Y + 0);
+		auto lhsb1 = BlockIndex(Y + ch - 1);
+
+		// The inclusive block range on 'rhs' spanned by 'lhs'
+		auto rhsb0 = BlockIndex(cy + 0);
+		auto rhsb1 = BlockIndex(cy + ch - 1);
 
 		// Loop over the blocks that span 'rhs'
-		for (int b = bbeg; b <= bend; ++b)
+		for (int b = lhsb0; b <= lhsb1; ++b)
 		{
-			// Get the block indices in 'rhs' that span rows '(b+0)*WordSize' and '(b+1)*WordSize'
-			auto B0 = BlockIndex((b + 0) * WordSize - Y + sy);
-			auto B1 = BlockIndex((b + 1) * WordSize - Y + sy);
+			// Get the minimum (virtual) block index in 'rhs' that overlaps blk 'b' (can be negative)
+			int B = BlockIndex(b * WordSize - (Y - cy));
 
-			// The horizontal range in 'rhs'
-			for (int x = sx, xend = sx + sw; x != xend; ++x)
+			// Create a mask for the bits to write to in this block
+			Word mask = static_cast<Word>(~0U);
+			if (Y+0  > (b+0)*WordSize) mask &= MaskHi<Word>(ytop);
+			if (Y+ch < (b+1)*WordSize) mask &= MaskLo<Word>(ybot);
+
+			// Loop over the horizontal range in 'rhs'
+			for (int x = cx, xend = cx + cw; x != xend; ++x)
 			{
 				Word word = 0;
-
-				if (B0 >= Bbeg && B0 <= Bend)
-					word |= rhs.Block(B0, x) >> ofs1;
-				if (B1 >= Bbeg && B1 <= Bend)
-					word |= rhs.Block(B1, x) << ofs0;
+				if (B >= rhsb0)
+				{
+					auto bits = rhs.Block(B, x);
+					if (ytop != 0) bits >>= (WordSize - ytop); // shift down so that 'ytop' bits remain
+					word |= bits;
+				}
+				if (B < rhsb1 && ytop != 0)
+				{
+					auto bits = rhs.Block(B + 1, x);
+					bits <<= ytop; // shift up so that (WordSize-ytop) bits remain
+					word |= bits;
+				}
 
 				// Apply the combine operation
-				if (op(lhs, rhs, b, X + (x - sx), word))
+				if (op(lhs, rhs, b, X + (x - cx), word, mask))
 					return true;
 			}
 		}
@@ -398,13 +415,13 @@ namespace pr::onebit
 
 			bool hit;
 
-			hit = Combine(s0, s1, 10, 10, [](auto& lhs, auto&, int b, int x, auto word)
+			hit = Combine(s0, s1, 10, 10, [](auto& lhs, auto&, int b, int x, auto word, auto)
 			{
 				return (lhs.Block(b, x) & word) != 0;
 			});
 			PR_CHECK(hit, true);
 
-			hit = Combine(s0, s1, 10, 8, [](auto& lhs, auto&, int b, int x, auto word)
+			hit = Combine(s0, s1, 10, 8, [](auto& lhs, auto&, int b, int x, auto word, auto)
 			{
 				return (lhs.Block(b, x) & word) != 0;
 			});

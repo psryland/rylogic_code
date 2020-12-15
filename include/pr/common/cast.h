@@ -1,28 +1,35 @@
 ﻿//******************************************
-// Byte Ptr Cast
+// uint8_t Ptr Cast
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
-// Use to cast any pointer to a byte pointer
+// Use to cast any pointer to a uint8_t pointer
 #pragma once
 
+#include <cstdint>
 #include <cassert>
-#include <exception>
+#include <stdexcept>
 #include <type_traits>
 
 namespace pr
 {
-	using byte = unsigned char;
-
-	// Casting from any type of pointer to a byte pointer
+	// Casting from any type of pointer to a uint8_t pointer
 	// Use:
 	//   int* int_ptr = ...
-	//   byte* u8_ptr = byte_ptr(int_ptr);
-	template <typename T> constexpr byte const* byte_ptr(T const* t) { return reinterpret_cast<byte const*>(t); }
-	template <typename T> constexpr byte*       byte_ptr(T*       t) { return reinterpret_cast<byte*      >(t); }
-	template <typename T> constexpr char const* char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
-	template <typename T> constexpr char*       char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
-	constexpr byte const* byte_ptr(nullptr_t) { return static_cast<byte const*>(nullptr); }
-	constexpr char const* char_ptr(nullptr_t) { return static_cast<char const*>(nullptr); }
+	//   uint8_t* u8_ptr = byte_ptr(int_ptr);
+	template <typename T> constexpr uint8_t const* byte_ptr(T const* t) { return reinterpret_cast<uint8_t const*>(t); }
+	template <typename T> constexpr uint8_t*       byte_ptr(T*       t) { return reinterpret_cast<uint8_t*      >(t); }
+	template <typename T> constexpr char const*    char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
+	template <typename T> constexpr char*          char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
+	
+	// Handle casting nullptr to bytes/chars
+	constexpr uint8_t const* byte_ptr(nullptr_t)
+	{
+		return static_cast<uint8_t const*>(nullptr);
+	}
+	constexpr char const* char_ptr(nullptr_t)
+	{
+		return static_cast<char const*>(nullptr);
+	}
 
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
 	template <typename T> constexpr T const* type_ptr(void const* t)

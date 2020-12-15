@@ -1,4 +1,4 @@
-//***********************************************
+﻿//***********************************************
 // pr::deque<>
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -514,7 +514,7 @@ namespace pr
 
 		static_assert(std::is_same_v<typename std::iterator_traits<iterator>::value_type, Type>);
 
-		static constexpr bool type_is_pod_v = std::is_pod_v<value_type>;
+		static constexpr bool type_is_pod_v = std::is_trivially_copyable_v<value_type>;
 		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<value_type>;
 		static constexpr int type_alignment_v = std::alignment_of_v<value_type>;
 		static constexpr size_type CountPerBlock = BlockSize;
@@ -646,7 +646,7 @@ namespace pr
 		bool set_dbg_ptr()
 		{
 			auto ptr = &m_map[m_first][m_first & BlockIndexMask];
-			m_data = reinterpret_cast<DbgPtr<value_type>::type>(ptr);
+			m_data = reinterpret_cast<typename DbgPtr<value_type>::type>(ptr);
 			return true;
 		}
 		#endif

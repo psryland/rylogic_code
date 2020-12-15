@@ -243,7 +243,7 @@ namespace pr
 		using difference_type = typename alloc_traits::difference_type;
 		using size_type       = typename alloc_traits::size_type;
 
-		static constexpr bool type_is_pod_v      = std::is_pod_v<Type>;
+		static constexpr bool type_is_pod_v      = std::is_trivially_copyable_v<Type>;
 		static constexpr bool type_is_copyable_v = std::is_copy_constructible_v<Type>;
 		static constexpr int  type_alignment_v   = std::alignment_of_v<Type>;
 		static constexpr int  local_size_v       = LocalCount;

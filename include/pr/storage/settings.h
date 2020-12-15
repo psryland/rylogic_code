@@ -155,8 +155,9 @@ namespace pr::settings
 }
 namespace pr
 {
-	// A base class for settings types
-	template<typename TSettings> struct SettingsBase
+	// A CRTP base class for settings types
+	template<typename Derived>
+	struct SettingsBase
 	{
 		std::filesystem::path m_filepath; // The file path to save the settings
 		std::size_t m_crc;                // The CRC of the settings last time they were saved
@@ -216,7 +217,7 @@ namespace pr
 			}
 
 			auto settings = Export();
-			if (!pr::BufferToFile(settings, m_filepath))
+			if (!filesys::BufferToFile(settings, m_filepath))
 			{
 				OnError(*this, { Fmt(L"Failed to save user settings file '%S'", m_filepath.c_str()) });
 				return false;
@@ -237,8 +238,8 @@ namespace pr
 		{
 			std::stringstream out;
 			if (!m_comments.empty()) out << "// " << m_comments << "\r\n";
-			for (int i = 0; i != TSettings::NumberOf; ++i)
-				static_cast<TSettings const*>(this)->Write(out, TSettings::ByIndex(i));
+			for (int i = 0; i != Derived::NumberOf; ++i)
+				static_cast<Derived const*>(this)->Write(out, Derived::ByIndex(i));
 			return out.str();
 		}
 
@@ -254,20 +255,22 @@ namespace pr
 		}
 
 		// Load settings from a script reader
-		bool Import(pr::script::Reader& reader)
+		bool Import(script::Reader& reader)
 		{
+			using Enum_ = typename Derived::Enum_;
+
 			try
 			{
 				// Verify the hash values are correct
 				#if PR_DBG
 				std::string invalid_hashcodes;
-				for (int i = 0; i != TSettings::NumberOf; ++i)
+				for (int i = 0; i != Derived::NumberOf; ++i)
 				{
 					int hash;
-					auto setting = TSettings::ByIndex(i);
-					auto name    = TSettings::NameW(setting);
+					auto setting = Derived::ByIndex(i);
+					auto name    = Derived::NameW(setting);
 					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue>(setting))
-						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", TSettings::NameA(setting), hash);
+						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", Derived::NameA(setting), hash);
 				}
 				if (!invalid_hashcodes.empty())
 				{
@@ -277,8 +280,8 @@ namespace pr
 				#endif
 
 				// Read the settings
-				for (TSettings::Enum_ setting; reader.NextKeywordH<TSettings::Enum_>(setting);)
-					static_cast<TSettings*>(this)->Read(reader, setting);
+				for (Enum_ setting; reader.NextKeywordH<Enum_>(setting);)
+					static_cast<Derived*>(this)->Read(reader, setting);
 
 				m_crc = Crc(Export());
 				return true;
@@ -289,7 +292,7 @@ namespace pr
 			}
 
 			// Initialise to defaults on failure
-			static_cast<TSettings&>(*this) = TSettings(m_filepath, false);
+			static_cast<Derived&>(*this) = Derived(m_filepath, false);
 			return false;
 		}
 
@@ -319,7 +322,11 @@ namespace pr
 		/* Members */\
 		x(PR_SETTINGS_INSTANTIATE)\
 \
-		settings_name(std::wstring filepath = L"", bool load = false)\
+		/* Setting names and hash values*/\
+		static constexpr int NumberOf = 0 x(PR_SETTINGS_COUNT);\
+		enum Enum_ { x(PR_SETTINGS_ENUM) };\
+\
+		settings_name(std::filesystem::path const& filepath = L"", bool load = false)\
 			:SettingsBase(filepath)\
 			x(PR_SETTINGS_CONSTRUCT)\
 		{\
@@ -329,25 +336,21 @@ namespace pr
 				m_crc = Crc(Export());\
 		}\
 \
-		/* Setting names and hash values*/\
-		enum Enum_ { x(PR_SETTINGS_ENUM) };\
-		enum { NumberOf = 0 x(PR_SETTINGS_COUNT) };\
-\
 		/* Enum to string*/\
 		static char const* NameA(Enum_ setting)\
 		{\
 			switch (setting)\
 			{\
-			default: return pr::FmtS("Unknown setting. Hash value = %d", setting);\
-			x(PR_SETTINGS_ENUM_TOSTRINGA)\
+				x(PR_SETTINGS_ENUM_TOSTRINGA)\
+				default: return pr::FmtS("Unknown setting. Hash value = %d", setting);\
 			};\
 		}\
 		static wchar_t const* NameW(Enum_ setting)\
 		{\
 			switch (setting)\
 			{\
-			default: return pr::FmtS(L"Unknown setting. Hash value = %d", setting);\
-			x(PR_SETTINGS_ENUM_TOSTRINGW)\
+				x(PR_SETTINGS_ENUM_TOSTRINGW)\
+				default: return pr::FmtS(L"Unknown setting. Hash value = %d", setting);\
 			};\
 		}\
 \
@@ -355,7 +358,7 @@ namespace pr
 		static Enum_ ByIndex(int i)\
 		{\
 			static settings_name::Enum_ const map[] = { x(PR_SETTINGS_ENUM_FIELDS) };\
-			if (i < 0 || i > NumberOf) throw std::exception("index out of range for setting in "#settings_name);\
+			if (i < 0 || i >= NumberOf) throw std::runtime_error("index out of range for setting in "#settings_name);\
 			return map[i];\
 		}\
 \
@@ -367,8 +370,8 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); return false;\
-			x(PR_SETTINGS_READ)\
+				x(PR_SETTINGS_READ)\
+				default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); return false;\
 			}\
 		}\
 \
@@ -377,8 +380,8 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); break;\
-			x(PR_SETTINGS_WRITE)\
+				x(PR_SETTINGS_WRITE)\
+				default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); break;\
 			}\
 		}\
 	};

@@ -42,7 +42,7 @@ namespace pr
 		{
 			//assert(maths::is_aligned(this));
 		}
-		explicit constexpr Vec4(float x_)
+		constexpr explicit Vec4(float x_)
 			:x(x_)
 			,y(x_)
 			,z(x_)
@@ -119,6 +119,14 @@ namespace pr
 			return Vec3<T>{arr[i0], arr[i1], arr[i2]};
 		}
 
+		// Basic constants
+		static constexpr Vec4 Zero()   { return Vec4{0,0,0,0}; }
+		static constexpr Vec4 XAxis()  { return Vec4{1,0,0,0}; }
+		static constexpr Vec4 YAxis()  { return Vec4{0,1,0,0}; }
+		static constexpr Vec4 ZAxis()  { return Vec4{0,0,1,0}; }
+		static constexpr Vec4 WAxis()  { return Vec4{0,0,0,1}; }
+		static constexpr Vec4 Origin() { return Vec4{0,0,0,1}; }
+
 		// Construct normalised
 		static Vec4 Normal(float x, float y, float z, float w)
 		{
@@ -126,29 +134,17 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
-		{
-			#if PR_MATHS_USE_INTRINSICS
-			return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
-			#else
-			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
-			#endif
-		}
-		friend bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
-		{
-			return !(lhs == rhs);
-		}
-		friend Vec4<T> pr_vectorcall operator + (v4_cref<T> vec)
+		friend constexpr Vec4<T> pr_vectorcall operator + (v4_cref<T> vec)
 		{
 			return vec;
 		}
-		friend Vec4<T> pr_vectorcall operator - (v4_cref<T> vec)
+		friend constexpr Vec4<T> pr_vectorcall operator - (v4_cref<T> vec)
 		{
-			#if PR_MATHS_USE_INTRINSICS
-			return Vec4<T>{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
-			#else
+			//#if PR_MATHS_USE_INTRINSICS
+			//return Vec4<T>{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
+			//#else
 			return Vec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
-			#endif
+			//#endif
 		}
 		friend Vec4<T> pr_vectorcall operator * (float lhs, v4_cref<T> rhs)
 		{
@@ -230,6 +226,18 @@ namespace pr
 			//assert("divide by zero" && All(rhs, [](auto x) { return x != 0; }));
 			return Vec4<T>{Fmod(lhs.x, rhs.x), Fmod(lhs.y, rhs.y), Fmod(lhs.z, rhs.z), Fmod(lhs.w, rhs.w)};
 		}
+		friend bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			#if PR_MATHS_USE_INTRINSICS
+			return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
+			#else
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+			#endif
+		}
+		friend bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
+		{
+			return !(lhs == rhs);
+		}
 		#pragma endregion
 
 		// Component accessors
@@ -239,7 +247,7 @@ namespace pr
 		friend constexpr float pr_vectorcall w_cp(v4_cref<T> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<Vec4<void>>::value, "");
-	static_assert(std::is_pod_v<Vec4<void>>, "Vec4 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Vec4<void>>, "Vec4 must be a pod type");
 	static_assert(std::alignment_of_v<Vec4<void>> == 16, "Vec4 should have 16 byte alignment");
 
 	#pragma region Functions

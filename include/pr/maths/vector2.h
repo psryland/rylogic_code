@@ -30,13 +30,16 @@ namespace pr
 		constexpr explicit Vec2(float x_)
 			:Vec2(x_, x_)
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> constexpr Vec2(V2 const& v)
+		template <typename V2, typename = maths::enable_if_v2<V2>>
+		constexpr Vec2(V2 const& v)
 			:Vec2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Vec2(CP const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>>
+		constexpr explicit Vec2(CP const* v)
 			:Vec2(x_as<float>(v), y_as<float>(v))
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> Vec2& operator = (V2 const& rhs)
+		template <typename V2, typename = maths::enable_if_v2<V2>>
+		Vec2& operator = (V2 const& rhs)
 		{
 			x = x_as<float>(rhs);
 			y = y_as<float>(rhs);
@@ -61,6 +64,11 @@ namespace pr
 			return arr[i];
 		}
 
+		// Basic constants
+		static constexpr Vec2 Zero()   { return Vec2{0,0}; }
+		static constexpr Vec2 XAxis()  { return Vec2{1,0}; }
+		static constexpr Vec2 YAxis()  { return Vec2{0,1}; }
+
 		// Construct normalised
 		static Vec2 Normal(float x, float y)
 		{
@@ -68,11 +76,11 @@ namespace pr
 		}
 
 		#pragma region Operators
-		friend Vec2<T> operator + (v2_cref<T> vec)
+		friend constexpr Vec2<T> operator + (v2_cref<T> vec)
 		{
 			return vec;
 		}
-		friend Vec2<T> operator - (v2_cref<T> vec)
+		friend constexpr Vec2<T> operator - (v2_cref<T> vec)
 		{
 			return Vec2<T>{-vec.x, -vec.y};
 		}
@@ -129,7 +137,7 @@ namespace pr
 		friend constexpr float w_cp(v2_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec2<Vec2<void>>::value, "");
-	static_assert(std::is_pod<Vec2<void>>::value, "Vec2 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Vec2<void>>, "Vec2 must be a pod type");
 
 	#pragma region Functions
 	

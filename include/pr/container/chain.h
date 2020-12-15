@@ -315,7 +315,7 @@ namespace pr::chain
 			}
 			citer operator --(int)
 			{
-				autp i = *this;
+				auto i = *this;
 				m_elem = m_elem->m_prev;
 				return i;
 			}
@@ -540,7 +540,7 @@ namespace pr::chain
 		}
 		iterator insert(reference where, reference what)
 		{
-			chain::insert(where, what);
+			chain::Insert(where, what);
 			return iterator(&what);
 		}
 		iterator insert(iterator where, reference what)
@@ -550,7 +550,7 @@ namespace pr::chain
 		iterator erase(reference what)
 		{
 			iterator i(what.m_next);
-			chain::unlink(what);
+			chain::Remove(what);
 			return i;
 		}
 		iterator erase(iterator where)
@@ -565,11 +565,11 @@ namespace pr::chain
 		}
 		void push_front(link_type& what)
 		{
-			chain::insert(*m_next, what);
+			chain::Insert(*m_next, what);
 		}
 		void push_back(link_type& what)
 		{
-			chain::insert(*this, what);
+			chain::Insert(*this, what);
 		}
 		void splice(iterator  where, head_type& rhs)
 		{

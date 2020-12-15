@@ -250,13 +250,13 @@ namespace pr::geometry
 	template <typename VOut, typename IOut>
 	Props Quad(v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, VOut vout, IOut iout)
 	{
-		auto fwd = !IsZero3(forward) ? forward :  pr::v4YAxis;
-		auto up  = !IsZero3(top)     ? top     : -pr::v4ZAxis;
+		auto fwd = forward != v4Zero ? forward : v4YAxis;
+		auto up = top != v4Zero ? top : -v4ZAxis;
 		if (Parallel(up, fwd))
-			up = -pr::v4XAxis;
+			up = -v4XAxis;
 
-		auto quad_w = width  * Normalise(Cross3(up, fwd));
-		auto quad_h = height * Normalise(Cross3(fwd, quad_w));
+		auto quad_w = width  * Normalise(Cross(up, fwd));
+		auto quad_h = height * Normalise(Cross(fwd, quad_w));
 		auto origin = centre - 0.5f * quad_w - 0.5f * quad_h;
 		return Quad(origin, quad_w, quad_h, divisions, colour, t2q, vout, iout);
 	}

@@ -196,7 +196,7 @@ namespace pr::hash
 	}
 	template <typename Ty, typename = impl::str32<Ty>> inline HashValue HashI(Ty ch, uint32_t h = FNV_offset_basis32)
 	{
-		return HashCT(static_cast<Ty>(impl::Lower(*str)), h);
+		return HashCT(static_cast<Ty>(impl::Lower(ch)), h);
 	}
 
 	// Hash a sentinel string using the compile time 'Hash' function
@@ -224,14 +224,6 @@ namespace pr::hash
 	}
 
 	// Hash PODs given as arguments. Careful with hidden padding
-	template <typename Ty, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x)
-	{
-		return impl::HashPod(x);
-	}
-	template <typename Ty, typename... Args, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x, Args&&... args)
-	{
-		return impl::HashPod(x, args...);
-	}
 	namespace impl
 	{
 		#pragma warning (push)
@@ -294,6 +286,14 @@ namespace pr::hash
 			}
 		}
 		#pragma warning (pop)
+	}
+	template <typename Ty, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x)
+	{
+		return impl::HashPod(x);
+	}
+	template <typename Ty, typename... Args, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x, Args&&... args)
+	{
+		return impl::HashPod(x, args...);
 	}
 
 	// Hash in blocks of 16 bits

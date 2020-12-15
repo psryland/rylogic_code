@@ -124,6 +124,24 @@ namespace pr::geometry::stl
 		return rgb_order ? Colour32(R, G, B, 1.0f) : Colour32(B, G, R, 1.0f);
 	}
 
+	// Add a facet to the model
+	inline void AddFacet(Model& model, Facet const& facet, Options const& opts)
+	{
+		auto v0 = facet.vert[0].w1();
+		auto v1 = facet.vert[1].w1();
+		auto v2 = facet.vert[2].w1();
+		auto n = opts.m_calculate_normals
+			? Normalise(Cross(v1 - v0, v2 - v1))
+			: facet.norm.w0();
+
+		model.m_norms.push_back(n);
+		model.m_verts.push_back(v0);
+		model.m_verts.push_back(v1);
+		model.m_verts.push_back(v2);
+		if (opts.m_per_face_flags)
+			model.m_flags.push_back(facet.flags);
+	}
+
 	#pragma region Read
 
 	// Read an array
@@ -299,24 +317,6 @@ namespace pr::geometry::stl
 
 		// Output the model
 		out(std::move(model));
-	}
-
-	// Add a facet to the model
-	inline void AddFacet(Model& model, Facet const& facet, Options const& opts)
-	{
-		auto v0 = facet.vert[0].w1();
-		auto v1 = facet.vert[1].w1();
-		auto v2 = facet.vert[2].w1();
-		auto n = opts.m_calculate_normals
-			? Normalise(Cross(v1 - v0, v2 - v1))
-			: facet.norm.w0();
-
-		model.m_norms.push_back(n);
-		model.m_verts.push_back(v0);
-		model.m_verts.push_back(v1);
-		model.m_verts.push_back(v2);
-		if (opts.m_per_face_flags)
-			model.m_flags.push_back(facet.flags);
 	}
 
 	#pragma endregion

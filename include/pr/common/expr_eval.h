@@ -518,7 +518,7 @@ namespace pr::eval
 			return !(lhs < rhs);
 		}
 	};
-	static_assert(std::is_pod_v<Val>, "Val must be pod for performance");
+	static_assert(std::is_trivially_copyable_v<Val>, "Val must be pod for performance");
 	static_assert(std::alignment_of_v<Val> == 16, "Val should have 16 byte alignment");
 
 	// A collection of args with some rules enforced
@@ -540,7 +540,7 @@ namespace pr::eval
 				return m_value.has_value();
 			}
 		};
-		static_assert(std::is_pod_v<Arg>, "Arg must be pod for performance");
+		static_assert(std::is_trivially_copyable_v<Arg>, "Arg must be pod for performance");
 
 		// The names (and default values) of unique identifiers in the
 		// expression (in order of discovery from left to right).

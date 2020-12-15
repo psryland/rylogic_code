@@ -19,7 +19,7 @@ int Execute(std::string& cmdline)
 		auto hr = GetLastError();
 		wchar_t msg[256];
 		FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, 256, NULL);
-		std::cerr << "Elevate: CreateProcess() failed for [" << cmdline << L"]\nReason: " << msg << "\n";
+		std::cerr << "Elevate: CreateProcess() failed for [" << cmdline.c_str() << "]\nReason: " << pr::Narrow(msg) << "\n";
 		std::cerr << "Ensure the \"Run As Administrator\" option is checked under the compatibility tab in Properties.\n";
 		return -1;
 	}
@@ -114,7 +114,7 @@ int __cdecl main(int argc, char* argv[])
 	}
 	catch (std::exception const& ex)
 	{
-		std::cerr << "Elevate: Failed to run [" << cmdline << L"] as Administrator\n" << ex.what() << "\n";
+		std::cerr << "Elevate: Failed to run [" << cmdline << "] as Administrator\n" << ex.what() << "\n";
 		return -1;
 	}
 }

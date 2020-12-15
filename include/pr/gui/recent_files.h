@@ -13,22 +13,18 @@
 
 #include <list>
 #include <string>
+#include <filesystem>
 #include <windows.h>
-#include "pr/filesys/filesys.h"
 #include "pr/gui/menu_list.h"
 
-namespace pr
+namespace pr::gui
 {
-	namespace gui
+	// Extends menu-list with a method for adding filenames
+	struct RecentFiles :MenuList
 	{
-		// Extends menu-list with a method for adding filenames
-		struct RecentFiles :MenuList
+		void Add(std::filesystem::path const& file, bool update_menu = true)
 		{
-			template <typename Char> void Add(Char const* file, bool update_menu = true)
-			{
-				auto fpath = pr::filesys::Canonicalise(pr::Widen(file));
-				MenuList::Add(fpath.c_str(), nullptr, false, update_menu);
-			}
-		};
-	}
+			MenuList::Add(file.wstring().c_str(), nullptr, false, update_menu);
+		}
+	};
 }

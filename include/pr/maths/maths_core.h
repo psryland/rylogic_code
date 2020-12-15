@@ -68,22 +68,22 @@ namespace pr
 	#pragma endregion
 
 	// Component access to arrays
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A x_cp(A const* ptr) { return ptr[0]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A y_cp(A const* ptr) { return ptr[1]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A z_cp(A const* ptr) { return ptr[2]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A w_cp(A const* ptr) { return ptr[3]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A x_cp(A const* ptr) { return ptr[0]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A y_cp(A const* ptr) { return ptr[1]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A z_cp(A const* ptr) { return ptr[2]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A w_cp(A const* ptr) { return ptr[3]; }
 
 	// Component access to initialiser lists
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A x_cp(std::initializer_list<A> l) { return l.begin()[0]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A y_cp(std::initializer_list<A> l) { return l.begin()[1]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A z_cp(std::initializer_list<A> l) { return l.begin()[2]; }
-	template <typename A, typename = maths::enable_if_vec_cp<A>> inline A w_cp(std::initializer_list<A> l) { return l.begin()[3]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A x_cp(std::initializer_list<A> l) { return l.begin()[0]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A y_cp(std::initializer_list<A> l) { return l.begin()[1]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A z_cp(std::initializer_list<A> l) { return l.begin()[2]; }
+	template <typename A, typename = maths::enable_if_vec_cp<A>> constexpr A w_cp(std::initializer_list<A> l) { return l.begin()[3]; }
 
 	// Casting component accessors
-	template <typename R, typename A> inline R x_as(A const& x) { return static_cast<R>(x_cp(x)); }
-	template <typename R, typename A> inline R y_as(A const& x) { return static_cast<R>(y_cp(x)); }
-	template <typename R, typename A> inline R z_as(A const& x) { return static_cast<R>(z_cp(x)); }
-	template <typename R, typename A> inline R w_as(A const& x) { return static_cast<R>(w_cp(x)); }
+	template <typename R, typename A> constexpr R x_as(A const& x) { return static_cast<R>(x_cp(x)); }
+	template <typename R, typename A> constexpr R y_as(A const& x) { return static_cast<R>(y_cp(x)); }
+	template <typename R, typename A> constexpr R z_as(A const& x) { return static_cast<R>(z_cp(x)); }
+	template <typename R, typename A> constexpr R w_as(A const& x) { return static_cast<R>(w_cp(x)); }
 
 	// Compile time function for applying 'op' to each component of a vector
 	template <typename T, typename Op, typename = maths::enable_if_vN<T>> constexpr T CompOp(T const& a, Op op)
@@ -1302,7 +1302,9 @@ namespace pr
 	// Returns the number to add to pad 'size' up to 'alignment'
 	template <typename T, typename = maths::enable_if_intg<T>> constexpr T Pad(T size, T alignment)
 	{
-		return (alignment - (size % alignment)) % alignment;
+		assert(((alignment - 1) & alignment) == 0 && "alignment should be a power of two");
+		return ~(size - 1) & (alignment - 1);
+		//return (alignment - (size % alignment)) % alignment;
 	}
 
 	// Returns 'size' increased to a multiple of 'alignment'

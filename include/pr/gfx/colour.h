@@ -22,7 +22,6 @@ namespace pr
 	{
 		using elem_type = void;
 	};
-	template <typename T> using enable_if_col = typename std::enable_if<is_colour<T>::value>::type;
 	template <> struct is_colour<Colour32> :std::true_type
 	{
 		using elem_type = uint8_t;
@@ -31,6 +30,8 @@ namespace pr
 	{
 		using elem_type = float;
 	};
+	template <typename T> constexpr bool is_colour_v = is_colour<T>::value;
+	template <typename T> using enable_if_col = typename std::enable_if_t<is_colour_v<T>>;
 
 	namespace maths
 	{
@@ -388,8 +389,8 @@ namespace pr
 			return lhs = lhs % s;
 		}
 	};
-	static_assert(std::is_pod<Colour32>::value, "Colour32 should be a pod type");
-	static_assert(is_colour<Colour32>::value, "");
+	static_assert(std::is_trivially_copyable_v<Colour32>, "Colour32 should be a pod type");
+	static_assert(is_colour_v<Colour32>, "");
 
 	// Define component accessors
 	constexpr float r_cp(Colour32 v) { return v.r / 255.0f; }
@@ -642,9 +643,9 @@ namespace pr
 			return lhs = lhs / s;
 		}
 	};
-	static_assert(is_colour<Colour>::value, "");
-	static_assert(std::is_pod<Colour>::value, "Colour should be a pod type");
-	static_assert(std::alignment_of<Colour>::value == 16, "Colour should have 16 byte alignment");
+	static_assert(is_colour_v<Colour>, "");
+	static_assert(std::is_trivially_copyable_v<Colour>, "Colour should be a pod type");
+	static_assert(std::alignment_of_v<Colour> == 16, "Colour should have 16 byte alignment");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
 	using Colour_cref = Colour const;
 	#else

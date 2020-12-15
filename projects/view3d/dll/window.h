@@ -148,7 +148,7 @@ namespace view3d
 		template <typename Pred> pr::BBox BBox(Pred pred, bool objects = true, bool gizmos = false) const
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);
-			auto bbox = pr::BBoxReset;
+			auto bbox = BBox::Reset();
 			if (objects)
 			{
 				for (auto obj : m_objects)
@@ -163,9 +163,9 @@ namespace view3d
 				//for (auto giz : m_gizmos)
 				//	Grow(bbox, giz->BBoxWS(true));
 			}
-			if (bbox == pr::BBoxReset)
+			if (bbox == BBox::Reset())
 			{
-				bbox = pr::BBoxUnit;
+				bbox = BBox::Unit();
 			}
 			return bbox;
 		}

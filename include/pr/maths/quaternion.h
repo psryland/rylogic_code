@@ -1,4 +1,4 @@
-﻿//*****************************************************************************
+//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -39,39 +39,35 @@ namespace pr
 
 		// Construct
 		Quat() = default;
-		Quat(float x_, float y_, float z_, float w_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps(w_,z_,y_,x_))
-		#else
+		constexpr Quat(float x_, float y_, float z_, float w_)
+			//:vec(_mm_set_ps(w_,z_,y_,x_))
 			:x(x_)
 			,y(y_)
 			,z(z_)
 			,w(w_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		explicit Quat(float x_)
-		#if PR_MATHS_USE_INTRINSICS
-			:vec(_mm_set_ps1(x_))
-		#else
+		constexpr explicit Quat(float x_)
+			//:vec(_mm_set_ps1(x_))
 			:x(x_)
 			,y(x_)
 			,z(x_)
 			,w(x_)
-		#endif
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		explicit Quat(v4_cref<> vec)
+		explicit constexpr Quat(v4_cref<> vec)
 			:xyzw(vec)
 		{
-			assert(maths::is_aligned(this));
+			//assert(maths::is_aligned(this));
 		}
-		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Quat(V4 const& v)
+		template <typename V4, typename = maths::enable_if_v4<V4>>
+		constexpr explicit Quat(V4 const& v)
 			:Quat(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
-		template <typename C, typename = maths::enable_if_vec_cp<C>> explicit Quat(C const* v)
+		template <typename C, typename = maths::enable_if_vec_cp<C>>
+		constexpr explicit Quat(C const* v)
 			:Quat(x_as<float>(v), y_as<float>(v), z_as<float>(v), w_as<float>(v))
 		{}
 		#if PR_MATHS_USE_INTRINSICS
@@ -272,7 +268,7 @@ namespace pr
 		friend constexpr float w_cp(quat_cref<A,B> v) { return v.w; }
 	};
 	static_assert(maths::is_vec4<Quat<void,void>>::value, "");
-	static_assert(std::is_pod_v<Quat<void,void>>, "Should be a pod type");
+	static_assert(std::is_trivially_copyable_v<Quat<void,void>>, "Should be a pod type");
 	static_assert(std::alignment_of_v<Quat<void,void>> == 16, "Should have 16 byte alignment");
 
 	#pragma region Functions

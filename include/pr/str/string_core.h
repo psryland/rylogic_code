@@ -9,9 +9,9 @@
 // Note: char-array strings are not handled as special cases because there is no
 // guarantee that the entire buffer is filled by the string, the null terminator
 // may be midway through the buffer
-
 #pragma once
 
+#include <cuchar>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -20,7 +20,9 @@
 #include <locale>
 #include <cstdlib>
 #include <cassert>
+#include "pr/str/char8.h"
 #include "pr/str/encoding.h"
+#include "pr/str/convert_utf.h"
 
 // Use this define to declare a string literal in a function templated on 'tchar'
 #ifndef PR_STRLITERAL
@@ -43,16 +45,32 @@ namespace pr
 	//    e.g. template <typename T> void f(T&& x) {} => T will be a reference type (so you might
 	//    need to use std::decay_t when using traits)
 
+	// The largest code point defined in unicode 6.0
+	constexpr int UnicodeMaxValue = 0x10FFFF;
+
+	// A static instance of the locale, because this thing takes ages to construct
+	inline std::locale const& locale()
+	{
+		static std::locale s_locale("");
+		return s_locale;
+	}
+
 	// Convert an int to a byte
 	constexpr char operator "" _uc(unsigned long long arg) noexcept
 	{
 		return static_cast<unsigned char>(arg & 0xFF);
 	}
 
-	// Convert an int to a char8
-	constexpr char operator "" _c8(unsigned long long arg) noexcept
+	// Convert an int to a char
+	constexpr char operator "" _ch(unsigned long long arg) noexcept
 	{
 		return static_cast<char>(arg & 0xFF);
+	}
+
+	// Convert an int to a char8
+	constexpr char8_t operator "" _c8(unsigned long long arg) noexcept
+	{
+		return static_cast<char8_t>(arg & 0xFF);
 	}
 
 	// Convert an int to a wchar_t
@@ -67,32 +85,44 @@ namespace pr
 	template <typename Char>
 	struct char_traits;
 
-	// Common functionality
 	template <typename Char>
 	struct char_traits_common :std::char_traits<Char>
 	{
-		static Char lwr(Char ch) { return static_cast<Char>(::tolower(ch)); }
-		static Char upr(Char ch) { return static_cast<Char>(::toupper(ch)); }
-
+		// Return the length (in storage units, *NOT* code points) of a string
 		static size_t length(Char const* str)
 		{
 			size_t count = 0;
 			for (; *str; ++str, ++count) {}
 			return count;
 		}
-		static size_t length(Char const* str, size_t max_count)
+		static size_t lengthN(Char const* str, size_t max_bytes)
 		{
 			size_t count = 0;
-			for (; *str && max_count-- != 0; ++str, ++count) {}
+			for (; *str && max_bytes > 0; ++str, ++count, max_bytes -= sizeof(Char)) {}
 			return count;
+		}
+
+		// This is broken for multi-byte encodings
+		// Convert a code point to lower case
+		static Char lwr(Char ch)
+		{
+			return std::char_traits<Char>::to_char_type(std::tolower(std::char_traits<Char>::to_int_type(ch), locale()));
+		}
+		static Char upr(Char ch)
+		{
+			return std::char_traits<Char>::to_char_type(std::toupper(std::char_traits<Char>::to_int_type(ch), locale()));
 		}
 	};
 
-	// 'char' traits
+	// 'char' traits (aka ansi string)
 	template <>
 	struct char_traits<char> :char_traits_common<char>
 	{
-		static constexpr char const* str(char const* str, wchar_t const*) { return str; }
+		// String literal helper
+		static constexpr char const* str(char const* str, wchar_t const*)
+		{
+			return str;
+		}
 
 		static int strcmp(char const* lhs, char const* rhs)                     { return ::strcmp(lhs, rhs); }
 		static int strncmp(char const* lhs, char const* rhs, size_t max_count)  { return ::strncmp(lhs, rhs, max_count); }
@@ -126,11 +156,15 @@ namespace pr
 		}
 	};
 
-	// wchar_t traits
+	// wchar_t traits (aka utf-16/UCS-2 string)
 	template <>
 	struct char_traits<wchar_t> :char_traits_common<wchar_t>
 	{
-		static constexpr wchar_t const* str(char const*, wchar_t const* str) { return str; }
+		// String literal helper
+		static constexpr wchar_t const* str(char const*, wchar_t const* str)
+		{
+			return str; 
+		}
 
 		static int strcmp(wchar_t const* lhs, wchar_t const* rhs)                     { return ::wcscmp(lhs, rhs); }
 		static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)  { return ::wcsncmp(lhs, rhs, max_count); }
@@ -164,14 +198,19 @@ namespace pr
 		}
 	};
 
+	// char8_t traits (aka utf-8 string)
+	template <>
+	struct char_traits<char8_t> :char_traits_common<char8_t>
+	{};
+
 	// char16_t traits
 	template <>
-	struct char_traits<char16_t> : char_traits_common<char16_t>
+	struct char_traits<char16_t> :char_traits_common<char16_t>
 	{};
 
 	// char32_t traits
 	template <>
-	struct char_traits<char32_t> : char_traits_common<char32_t>
+	struct char_traits<char32_t> :char_traits_common<char32_t>
 	{};
 
 	// References to chars
@@ -186,6 +225,7 @@ namespace pr
 	template <typename T> struct is_char :std::false_type {};
 	template <> struct is_char<char> :std::true_type {};
 	template <> struct is_char<wchar_t> :std::true_type {};
+	template <> struct is_char<char8_t> :std::true_type {};
 	template <> struct is_char<char16_t> :std::true_type {};
 	template <> struct is_char<char32_t> :std::true_type {};
 	template <typename T> constexpr bool is_char_v = is_char<std::decay_t<T>>::value;
@@ -322,7 +362,7 @@ namespace pr
 
 		static value_type* c_str(string_type& str) { return str; }
 		static value_type* ptr(string_type& str)   { return str; }
-		static size_t size(string_type& str)       { return char_traits<Char>::length(str, Len); }
+		static size_t size(string_type& str)       { return char_traits<Char>::lengthN(str, Len * sizeof(Char)); }
 		static bool empty(string_type& str)        { return *str == 0; }
 		static void resize(string_type&, size_t)   { static_assert(false, "Immutable string cannot be resized"); }
 	};
@@ -388,306 +428,6 @@ namespace pr
 
 	#pragma region Encoding
 
-	// The largest code point defined in unicode 6.0
-	constexpr int UnicodeMaxValue = 0x10FFFF;
-
-	// A static instance of the locale, because this thing takes ages to construct
-	inline std::locale const& locale()
-	{
-		static std::locale s_locale("");
-		return s_locale;
-	}
-
-	// Return 'str_in' as type 'ToStr' avoiding the copy if possible
-	template <typename ToStr, typename FromStr, int MaxValue = std::numeric_limits<string_traits<ToStr>::value_type>::max()>
-	ToStr ReturnStr(FromStr const& str_in, [[maybe_unused]] int const max_value = MaxValue, [[maybe_unused]] char dflt = '_')
-	{
-		if constexpr (std::is_same_v<FromStr, ToStr>)
-		{
-			return str_in;
-		}
-		else if constexpr (std::is_convertible_v<FromStr, ToStr>)
-		{
-			return str_in;
-		}
-		else if constexpr (std::is_constructible_v<ToStr, FromStr>)
-		{
-			return ToStr(str_in);
-		}
-		else
-		{
-			auto length = string_traits<FromStr const>::size(str_in);
-
-			ToStr str_out = {};
-			string_traits<ToStr>::resize(str_out, length);
-
-			// Copy characters using casting
-			auto s = string_traits<FromStr const>::ptr(str_in);
-			auto d = string_traits<ToStr>::ptr(str_out);
-			for (; length-- != 0; ++s, ++d)
-			{
-				if (static_cast<int>(*s) <= max_value)
-					*d = char_cast<typename string_traits<ToStr>::value_type>(*s);
-				else
-					*d = char_cast<typename string_traits<ToStr>::value_type>(dflt);
-			}
-
-			return str_out;
-		}
-	}
-
-	// Apply 'converter' to 'str_in'
-	template <typename ToStr, typename FromStr, typename Converter, typename = std::enable_if_t<std::is_base_of_v<std::codecvt_base, Converter>>>
-	ToStr ConvertEncoding(FromStr const& str_in, Converter& converter)
-	{
-		using in_traits   = string_traits<FromStr const>;
-		using out_traits  = string_traits<ToStr>;
-		using in_char     = std::decay_t<in_traits::value_type>;
-		using out_char    = std::decay_t<out_traits::value_type>;
-		using intern_type = typename Converter::intern_type;
-		using extern_type = typename Converter::extern_type;
-
-		// Create the string to be returned
-		ToStr str_out = {};
-		
-		// Set the initial string size based on the relative size of the characters
-		// Use '15' as the min size so 16-byte arrays can be used as 'ToStr'.
-		auto out_size = std::max<size_t>(15, in_traits::size(str_in));
-		out_traits::resize(str_out, out_size);
-
-		// Get pointers to the 'from' string
-		auto in_beg = in_traits::ptr(str_in);
-		auto in_end = in_beg + in_traits::size(str_in);
-		auto in_next = in_beg;
-		auto in = in_beg;
-
-		// Get pointers to the 'to' string
-		auto out_beg = out_traits::ptr(str_out);
-		auto out_end = out_beg + out_size;
-		auto out_next = out_beg;
-		auto out = out_beg;
-
-		// Loop until all of 'str_in' has been converted
-		for (auto mb = std::mbstate_t{}; in_next != in_end;)
-		{
-			int r;
-
-			// Convert as many characters as will fit in 'out'
-			if constexpr (std::is_same_v<in_char, intern_type>)
-			{
-				r = converter.out(mb, in, in_end, in_next, out, out_end, out_next);
-			}
-			else if constexpr (std::is_same_v<out_char, intern_type>)
-			{
-				r = converter.in(mb, in, in_end, in_next, out, out_end, out_next);
-			}
-			else if constexpr (std::is_same_v<in_char, wchar_t> && std::is_same_v<intern_type, char16_t>)
-			{
-				r = converter.out(mb,
-					reinterpret_cast<intern_type const*>(in), 
-					reinterpret_cast<intern_type const*>(in_end), 
-					reinterpret_cast<intern_type const*&>(in_next), 
-					out, out_end, out_next);
-			}
-			else if constexpr (std::is_same_v<out_char, wchar_t> && std::is_same_v<intern_type, char16_t>)
-			{
-				r = converter.in(mb,
-					in, in_end, in_next, 
-					reinterpret_cast<intern_type*>(out),
-					reinterpret_cast<intern_type*>(out_end),
-					reinterpret_cast<intern_type*&>(out_next));
-			}
-			else
-			{
-				static_assert(false, "Converter type mismatch");
-			}
-			assert(in_next <= in_end);
-			assert(out_next <= out_end);
-
-			// 'str_in' has been completely converted
-			if (r == std::codecvt_base::ok && in_next == in_end)
-				break;
-			
-			// 'Out' is not big enough, allocate more space and carry on
-			if (r == std::codecvt_base::ok || r == std::codecvt_base::partial)
-			{
-				// The number of characters converted so far
-				auto out_count = out_next - out_beg;
-
-				// Grow 'str_out' can continue converting
-				out_traits::resize(str_out, out_size = (3 * out_size) / 2);
-				out_beg = out_traits::ptr(str_out);
-				out_end = out_beg + out_size;
-				out = out_beg + out_count;
-				in = in_next;
-				continue;
-			}
-
-			// 'str_in' contains an encoding error
-			r == std::codecvt_base::error
-				? throw std::runtime_error("Encoding error in input string")
-				: throw std::runtime_error("Unexpected encoding return code");
-		}
-
-		// Trim the out string to the correct length
-		out_traits::resize(str_out, out_next - out_beg);
-		return str_out;
-	}
-
-	// String encoding conversion
-	template <EEncoding ToEnc, typename ToStr, EEncoding FromEnc, typename FromStr>
-	ToStr ConvertEncoding(FromStr const& str_in, [[maybe_unused]] char dflt = '_')
-	{
-		// Notes:
-		//  - The size of 'wchar_t' is platform specific (i.e. not portable)
-		//  - UCS2 is a subset of utf-16.
-		//  - Windows used UCS2 up to Windows 2000, after that utf-16 is used.
-		//  - char16_t is used for utf-16
-		//  - char8_t is used for utf-8, 
-		//  - char can be ascii or utf-8
-		//  - wchar_t can be utf-16, ucs2, or whatever
-		//  - the codecvt class seems to infer the encoding from the character type
-		//  - The windows API actually uses utf-16 but codecvt<wchar_t, char>,..> doesn't accept 
-		// Old Methods:
-		//   std::string buffer(from.size(), '\0');
-		//   std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from.data(), from.data() + from.size(), '_', &buffer[0]);
-		//   return std::move(buffer);
-		//   
-		//   std::wstring buffer(from.size(), '\0');
-		//   std::use_facet<std::ctype<wchar_t>>(locale()).widen(from.data(), from.data() + from.size(), &buffer[0]);
-		//   return std::move(buffer);
-		//   
-		//   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
-		//   auto wide = convert.from_bytes(from.data(), from.data() + from.size());
-		//   return std::move(wide);
-
-		if constexpr (false) {}
-		else if constexpr (ToEnc == EEncoding::ascii)
-		{
-			if constexpr (false) {}
-			else if constexpr (FromEnc == EEncoding::ascii)
-			{
-				// ASCII to ASCII is a no-op
-				return ReturnStr<ToStr>(str_in);
-			}
-			else if constexpr (FromEnc == EEncoding::utf8)
-			{
-				// UTF-8 to ASCII
-				return ReturnStr<ToStr>(str_in, 127, dflt);
-			}
-			else if constexpr (FromEnc == EEncoding::utf16_le)
-			{
-				// UTF-16 to ASCII
-				return ReturnStr<ToStr>(str_in, 127, dflt);
-			}
-			else if constexpr (FromEnc == EEncoding::utf32)
-			{
-				// UTF-32 to ASCII
-				return ReturnStr<ToStr>(str_in, 127, dflt);
-			}
-			else
-			{
-				static_assert(false, "Unsupported encoding conversion");
-			}
-		}
-		else if constexpr (ToEnc == EEncoding::utf8)
-		{
-			if constexpr (false) {}
-			else if constexpr (FromEnc == EEncoding::ascii)
-			{
-				// ASCII to UTF-8 is a no-op
-				return ReturnStr<ToStr>(str_in);
-			}
-			else if constexpr (FromEnc == EEncoding::utf8)
-			{
-				// UTF-8 to UTF-8 is a no-op
-				return ReturnStr<ToStr>(str_in);
-			}
-			else if constexpr (FromEnc == EEncoding::utf16_le)
-			{
-				// UTF-16 to UTF-8
-				struct convert_t :std::codecvt<char16_t, char, std::mbstate_t> {} converter;
-				return ConvertEncoding<ToStr>(str_in, converter);
-			}
-			else if constexpr (FromEnc == EEncoding::utf32)
-			{
-				// UTF-32 to UTF-8
-				throw std::runtime_error("not implemented");
-			}
-			else if constexpr (FromEnc == EEncoding::ucs2_le)
-			{
-				// UCS2 to UTF-8 
-				struct convert_t :std::codecvt<char16_t, char, std::mbstate_t> {} converter;
-				return ConvertEncoding<ToStr>(str_in, converter);
-			}
-			else
-			{
-				static_assert(false, "Unsupported encoding conversion");
-			}
-		}
-		else if constexpr (ToEnc == EEncoding::utf16_le)
-		{
-			if constexpr (false) {}
-			else if constexpr (FromEnc == EEncoding::ascii)
-			{
-				// ASCII to UTF-16
-				return ReturnStr<ToStr>(str_in);
-			}
-			else if constexpr (FromEnc == EEncoding::utf8)
-			{
-				// UTF-8 to UTF-16
-				struct convert_t :std::codecvt<char16_t, char, std::mbstate_t> {} converter;
-				return ConvertEncoding<ToStr>(str_in, converter);
-			}
-			else if constexpr (FromEnc == EEncoding::utf16_le)
-			{
-				// UTF-16 to UTF-16 is a no-op
-				return ReturnStr(from);
-			}
-			else if constexpr (FromEnc == EEncoding::utf32)
-			{
-				// UTF-32 to UTF-16
-				throw std::runtime_error("not implemented");
-			}
-			else
-			{
-				static_assert(false, "Unsupported encoding conversion");
-			}
-		}
-		else if constexpr (ToEnc == EEncoding::utf32)
-		{
-			if constexpr (false) {}
-			else if constexpr (FromEnc == EEncoding::ascii)
-			{
-				// ASCII to UTF-32
-				return ReturnStr<ToStr>(str_in);
-			}
-			else if constexpr (FromEnc == EEncoding::utf8)
-			{
-				// UTF-8 to UTF-32
-				throw std::runtime_error("not implemented");
-			}
-			else if constexpr (FromEnc == EEncoding::utf16_le)
-			{
-				// UTF-16 to UTF-32
-				throw std::runtime_error("not implemented");
-			}
-			else if constexpr (FromEnc == EEncoding::utf32)
-			{
-				// UTF-32 to UTF-32 is a no-op
-				return ReturnStr(from);
-			}
-			else
-			{
-				static_assert(false, "Unsupported encoding conversion");
-			}
-		}
-		else
-		{
-			static_assert(false, "Unsupported encoding conversion");
-		}
-	}
-
 	// Narrow a string to utf-8
 	inline std::string Narrow(std::string const& from) // from ascii, utf8
 	{
@@ -705,7 +445,8 @@ namespace pr
 	}
 	inline std::string Narrow(std::wstring_view from) // from utf16
 	{
-		return ConvertEncoding<EEncoding::utf8, std::string, EEncoding::utf16_le>(from);
+		str::convert_utf<wchar_t, char> cvt;
+		return cvt.conv<std::string>(from);
 	}
 
 	// Widen string to utf16
@@ -725,7 +466,8 @@ namespace pr
 	}
 	inline std::wstring Widen(std::string_view from) // from utf-8
 	{
-		return ConvertEncoding<EEncoding::utf16_le, std::wstring, EEncoding::utf8>(from);
+		str::convert_utf<char, wchar_t> cvt;
+		return cvt.conv<std::wstring>(from);
 	}
 
 	#pragma endregion
@@ -1340,9 +1082,9 @@ namespace pr
 		inline Str& UpperCase(Str& str)
 		{
 			using traits = string_traits<Str>;
-
 			auto i = Begin(str);
 			auto iend = End(str);
+
 			for (; i != iend; ++i)
 				*i = traits::upr(*i);
 
@@ -1535,7 +1277,7 @@ namespace pr::str
 				PR_CHECK(r.c_str(), { -62, -79, 49, 0 });
 			}
 			{
-				char const s[] = {0xe4_c8, 0xbd_c8, 0xa0_c8, 0xe5_c8, 0xa5_c8, 0xbd_c8, 0_c8}; // 'ni hao' in utf-8
+				char const s[] = {0xe4_ch, 0xbd_ch, 0xa0_ch, 0xe5_ch, 0xa5_ch, 0xbd_ch, 0_ch}; // 'ni hao' in utf-8
 				auto r = Narrow(s);
 				PR_CHECK(r.size(), 6U);
 				PR_CHECK(r.c_str(), {-28, -67, -96, -27, -91, -67, 0});
@@ -1553,8 +1295,8 @@ namespace pr::str
 				auto r1 = Narrow(s1);
 				PR_CHECK(r0.size(), 10U);
 				PR_CHECK(r1.size(), 10U);
-				PR_CHECK(r0.c_str(), {0x7A_c8, 0xC3_c8, 0x9F_c8, 0xE6_c8, 0xB0_c8, 0xB4_c8, 0xF0_c8, 0x9F_c8, 0x8D_c8, 0x8C_c8, 0x00_c8});
-				PR_CHECK(r1.c_str(), {0x7A_c8, 0xC3_c8, 0x9F_c8, 0xE6_c8, 0xB0_c8, 0xB4_c8, 0xF0_c8, 0x9F_c8, 0x8D_c8, 0x8C_c8, 0x00_c8});
+				PR_CHECK(r0.c_str(), {0x7A_ch, 0xC3_ch, 0x9F_ch, 0xE6_ch, 0xB0_ch, 0xB4_ch, 0xF0_ch, 0x9F_ch, 0x8D_ch, 0x8C_ch, 0x00_ch});
+				PR_CHECK(r1.c_str(), {0x7A_ch, 0xC3_ch, 0x9F_ch, 0xE6_ch, 0xB0_ch, 0xB4_ch, 0xF0_ch, 0x9F_ch, 0x8D_ch, 0x8C_ch, 0x00_ch});
 			}
 		}
 		{// Widen
@@ -1573,7 +1315,7 @@ namespace pr::str
 				PR_CHECK(r.c_str(), { 177, 49, 0 });
 			}
 			{
-				char const s[] = {0xe4_c8, 0xbd_c8, 0xa0_c8, 0xe5_c8, 0xa5_c8, 0xbd_c8, 0_c8}; // 'ni hao' in utf-8
+				char const s[] = {0xe4_ch, 0xbd_ch, 0xa0_ch, 0xe5_ch, 0xa5_ch, 0xbd_ch, 0_ch}; // 'ni hao' in utf-8
 				auto r = Widen(s);
 				PR_CHECK(r.size(), 2U);
 				PR_CHECK(r.c_str(), {0x4f60, 0x597d, 0});
@@ -1593,35 +1335,6 @@ namespace pr::str
 				PR_CHECK(r1.size(), 5U);
 				PR_CHECK(r0.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
 				PR_CHECK(r1.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
-			}
-		}
-		{// ConvertEncoding
-			{// ASCII to ASCII
-				std::string s0 = "abc";
-				auto r0 = ConvertEncoding<EEncoding::ascii, std::string, EEncoding::ascii>(s0);
-				PR_CHECK(Equal(s0, r0), true);
-
-				std::wstring s1 = L"abc";
-				auto r1 = ConvertEncoding<EEncoding::ascii, std::string, EEncoding::ascii>(s1);
-				PR_CHECK(Equal(s1, r1), true);
-			}
-			{
-				char16_t s[] = u"\u00b1\U0001f34c";
-				auto r = ConvertEncoding<EEncoding::utf8, std::string, EEncoding::utf16_le>(s);
-				PR_CHECK(r.size(), 6U);
-				PR_CHECK(r.c_str(), { -62, -79, -16, -97, -115, -116, 0 });
-			}
-			{
-				char32_t s[] = U"\u00b1\U0001f34c";
-				auto r = ConvertEncoding<EEncoding::ascii, std::wstring, EEncoding::utf32>(s, char(1));
-				PR_CHECK(r.size(), 2U);
-				PR_CHECK(r.c_str(), { 1, 1, 0 });
-			}
-			{//UCS2LE to UTF-8
-				wchar_t const s[] = { 0x4f60, 0x597d }; // 'ni hao'
-				auto r = ConvertEncoding<EEncoding::utf8, std::string, EEncoding::ucs2_le>(s);
-				PR_CHECK(r.size(), 6U);
-				PR_CHECK(r.c_str(), { 0xe4_c8, 0xbd_c8, 0xa0_c8, 0xe5_c8, 0xa5_c8, 0xbd_c8, 0_c8 });
 			}
 		}
 		{// Empty

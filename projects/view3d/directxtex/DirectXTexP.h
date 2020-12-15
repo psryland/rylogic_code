@@ -86,8 +86,8 @@ namespace DirectX
     {
         static_assert( TEX_FILTER_DITHER == 0x10000, "TEX_FILTER_DITHER* flag values don't match mask" );
 
-        static_assert( TEX_FILTER_DITHER == WIC_FLAGS_DITHER, "TEX_FILTER_DITHER* should match WIC_FLAGS_DITHER*" );
-        static_assert( TEX_FILTER_DITHER_DIFFUSION == WIC_FLAGS_DITHER_DIFFUSION, "TEX_FILTER_DITHER* should match WIC_FLAGS_DITHER*" );
+        static_assert( TEX_FILTER_DITHER == (int)WIC_FLAGS_DITHER, "TEX_FILTER_DITHER* should match WIC_FLAGS_DITHER*" );
+        static_assert( TEX_FILTER_DITHER_DIFFUSION == (int)WIC_FLAGS_DITHER_DIFFUSION, "TEX_FILTER_DITHER* should match WIC_FLAGS_DITHER*" );
 
         switch( flags & 0xF0000 )
         {
@@ -106,10 +106,10 @@ namespace DirectX
     {
         static_assert( TEX_FILTER_POINT == 0x100000, "TEX_FILTER_ flag values don't match TEX_FILTER_MASK" );
 
-        static_assert( TEX_FILTER_POINT == WIC_FLAGS_FILTER_POINT, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*" );
-        static_assert( TEX_FILTER_LINEAR == WIC_FLAGS_FILTER_LINEAR, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
-        static_assert( TEX_FILTER_CUBIC == WIC_FLAGS_FILTER_CUBIC, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
-        static_assert( TEX_FILTER_FANT == WIC_FLAGS_FILTER_FANT, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
+        static_assert( TEX_FILTER_POINT == (int)WIC_FLAGS_FILTER_POINT, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*" );
+        static_assert( TEX_FILTER_LINEAR == (int)WIC_FLAGS_FILTER_LINEAR, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
+        static_assert( TEX_FILTER_CUBIC == (int)WIC_FLAGS_FILTER_CUBIC, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
+        static_assert( TEX_FILTER_FANT == (int)WIC_FLAGS_FILTER_FANT, "TEX_FILTER_* flags should match WIC_FLAGS_FILTER_*"  );
 
         switch( flags & TEX_FILTER_MASK )
         {

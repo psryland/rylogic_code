@@ -24,11 +24,11 @@ namespace pr
 
 		// Construct
 		IVec2() = default;
-		IVec2(int x_, int y_)
+		constexpr IVec2(int x_, int y_)
 			:x(x_)
 			,y(y_)
 		{}
-		explicit IVec2(int x_)
+		constexpr explicit IVec2(int x_)
 			:IVec2(x_, x_)
 		{}
 		template <typename V2, typename = maths::enable_if_v2<V2>> IVec2(V2 const& v)
@@ -56,12 +56,17 @@ namespace pr
 			return arr[i];
 		}
 
+		// Basic constants
+		static constexpr IVec2 Zero()   { return IVec2{0,0}; }
+		static constexpr IVec2 XAxis()  { return IVec2{1,0}; }
+		static constexpr IVec2 YAxis()  { return IVec2{0,1}; }
+
 		#pragma region Operators
-		friend IVec2<T> operator + (iv2_cref<T> vec)
+		friend constexpr IVec2<T> operator + (iv2_cref<T> vec)
 		{
 			return vec;
 		}
-		friend IVec2<T> operator - (iv2_cref<T> vec)
+		friend constexpr IVec2<T> operator - (iv2_cref<T> vec)
 		{
 			return IVec2<T>{-vec.x, -vec.y};
 		}
@@ -162,7 +167,7 @@ namespace pr
 		friend constexpr int w_cp(iv2_cref<T>)   { return 0; }
 	};
 	static_assert(maths::is_vec2<IVec2<void>>::value, "");
-	static_assert(std::is_pod_v<IVec2<void>>, "iv2 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<IVec2<void>>, "iv2 must be a pod type");
 
 	#pragma region Functions
 

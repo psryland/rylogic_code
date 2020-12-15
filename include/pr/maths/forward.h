@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <complex>
 #include <cassert>
+#include <random>
 #include "pr/container/span.h"
 
 // Libraries built to use DirectXMath should be fine when linked in projects

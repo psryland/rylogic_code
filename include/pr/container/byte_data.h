@@ -72,7 +72,7 @@ namespace pr
 			// Example use:
 			//   std::ifstream infile(filepath, std::ios::binary);
 			//   buf = byte_data{std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>()};
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			for (; first != last; ++first)
 				push_back<Type>(*first);
 		}
@@ -137,12 +137,12 @@ namespace pr
 		// Resize the container to contain 'new_size' multiples of 'Type'
 		template <typename Type> void resize(size_t new_size)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			resize(new_size * sizeof(Type));
 		}
 		template <typename Type> void resize(size_t new_size, Type fill)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			auto n = std::max<ptrdiff_t>(0, new_size - size<Type>());
 			resize<Type>(new_size);
 			for (auto ptr = end<Type>() - n; ptr != end<Type>(); ++ptr)
@@ -163,7 +163,7 @@ namespace pr
 		// Pre-allocate space
 		template <typename Type> void reserve(size_t new_capacity)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			reserve(new_capacity * sizeof(Type));
 		}
 		void reserve(size_t new_capacity)
@@ -180,17 +180,17 @@ namespace pr
 		}
 		template <typename Type> void append(Type const& rhs)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			push_back<Type>(rhs);
 		}
 		template <typename Type> void append(Type const* data, size_t count)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			push_back(data, count * sizeof(Type));
 		}
 		template <typename Type> void append(std::initializer_list<Type> items)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			push_back(items.begin(), items.size() * sizeof(Type));
 		}
 
@@ -232,12 +232,12 @@ namespace pr
 		// Add 'type' to the end of the container
 		template <typename Type> void push_back()
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			push_back(Type());
 		}
 		template <typename Type> void push_back(Type const& type)
 		{
-			static_assert(std::is_pod_v<Type>);
+			static_assert(std::is_trivially_copyable_v<Type>);
 			push_back(&type, sizeof(type));
 		}
 		void push_back(void const* data, size_t size)

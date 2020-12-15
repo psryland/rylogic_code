@@ -584,7 +584,7 @@ namespace pr::ldr
 			auto flags = m_flags | (pflags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
 
 			// Start with the bbox for this object
-			BBox bbox = BBoxReset;
+			auto bbox = BBox::Reset();
 			if (m_model != nullptr && !AnySet(flags, ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 			{
 				if (m_model->m_bbox.valid())

@@ -115,7 +115,7 @@ namespace pr::rdr
 			return *this;
 		}
 	};
-	static_assert(std::is_pod_v<SortKey>, "Softkey must be POD so that draw list elements are PODs");
+	static_assert(std::is_trivially_copyable_v<SortKey>, "Softkey must be POD so that draw list elements are PODs");
 
 	// A sort key override is a mask that is applied to a sort key
 	// to override specific parts of the sort key.

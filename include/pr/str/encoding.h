@@ -11,11 +11,12 @@ namespace pr
 	{
 		// Notes:
 		// - The ISO standard, Unicode 6.0, says that the latest code point is 0x10FFFF
-		// - The means char32_t encoding is fixed with because each all characters fit within an i32.
+		// - The means char32_t encoding is fixed width because all characters fit within an i32.
 		// - UCS2 and UTF-16 are the same on ranges [0,0xD800) and [0xE000,0xFFFE). Values in the range
 		//   [0xD800,0xDE00) are high surrogates, values in the range [0xDC00,0xE000) are low surrogates.
 		//   UCS2 surrogate pairs are invalid UTF-16 encodings.
 		// - UCS4 and UTF-32 are the same thing.
+		// - As of C++20, utf-8 strings should use char8_t
 
 		// No encoding
 		none,

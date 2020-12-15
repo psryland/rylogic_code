@@ -483,7 +483,7 @@ private:
 			throw std::overflow_error("LargeInt is fixed size");
 		}
 	};
-	static_assert(std::is_pod_v<LargeInt<4>>);
+	static_assert(std::is_trivially_copyable_v<LargeInt<4>>);
 
 	// Russian multiplication method
 	inline long long RussianMultiply(long a, long b)

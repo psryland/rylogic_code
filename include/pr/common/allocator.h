@@ -10,14 +10,16 @@
 #include <malloc.h>
 #include <cassert>
 
-//#define PR_DBG_MEMORY_ALLOC 0
-#ifndef PR_DBG_MEMORY_ALLOC
+#define PR_DBG_MEMORY_ALLOC_CALLSTACKS 0
+#if PR_DBG_MEMORY_ALLOC_CALLSTACKS
+#include "pr/win32/stackdump.h"
+#endif
+
 #ifdef NDEBUG
 constexpr int PR_DBG_MEMORY_ALLOC = 0;
 #else
 constexpr int PR_DBG_MEMORY_ALLOC = 1;
 #endif 
-#endif
 
 namespace pr
 {
@@ -100,16 +102,14 @@ namespace pr
 
 		struct Allocation
 		{
-			using call_stack_t = typename std::conditional<RecordCallStacks, std::string, void*>::type;
-
 			T* m_ptr;
-			call_stack_t m_callstack;
+			#if PR_DBG_MEMORY_ALLOC_CALLSTACKS
+			std::string m_callstack;
+			#endif
 
 			Allocation(T* ptr = nullptr)
 				:m_ptr(ptr)
-				, m_callstack()
 			{}
-
 			constexpr size_t operator()(Allocation const& val) const
 			{
 				// std::hash
@@ -139,8 +139,9 @@ namespace pr
 		bool add(T* ptr)
 		{
 			Allocation al(ptr);
-			if constexpr (RecordCallStacks)
-				pr::DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(pr::FmtS("%S(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
+			#if PR_DBG_MEMORY_ALLOC_CALLSTACKS
+			DumpStack([&](auto& name, auto& file, auto line) { al.m_callstack.append(FmtS("%S(%d): %s\n", file.c_str(), line, name.c_str())); }, 1, 10);
+			#endif
 
 			m_live.insert(al);
 			return true;

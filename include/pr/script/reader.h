@@ -347,7 +347,7 @@ namespace pr::script
 		template <typename StrType> StrType Token(wchar_t const* delim)
 		{
 			StrType token;
-			return Token(token, delim) ? x : StrType();
+			return Token(token, delim) ? token : StrType();
 		}
 		template <typename StrType> StrType TokenS(wchar_t const* delim)
 		{

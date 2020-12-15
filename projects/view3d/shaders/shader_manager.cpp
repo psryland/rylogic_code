@@ -48,28 +48,28 @@ namespace pr::rdr
 	void ShaderManager::CreateStockShaders()
 	{
 		// Forward shaders
-		CreateShader<FwdShaderVS>();
-		CreateShader<FwdShaderPS>();
-		CreateShader<FwdRadialFadePS>();
+		CreateStockShader<FwdShaderVS>();
+		CreateStockShader<FwdShaderPS>();
+		CreateStockShader<FwdRadialFadePS>();
 
 		// GBuffer shaders
-		CreateShader<GBufferVS>();
-		CreateShader<GBufferPS>();
-		CreateShader<DSLightingVS>();
-		CreateShader<DSLightingPS>();
+		CreateStockShader<GBufferVS>();
+		CreateStockShader<GBufferPS>();
+		CreateStockShader<DSLightingVS>();
+		CreateStockShader<DSLightingPS>();
 
 		// Shadow map shaders
-		CreateShader<ShadowMapVS>();
-		CreateShader<ShadowMapPS>();
+		CreateStockShader<ShadowMapVS>();
+		CreateStockShader<ShadowMapPS>();
 
 		// Other shaders
-		CreateShader<PointSpritesGS>();
-		CreateShader<ThickLineListGS>();
-		CreateShader<ThickLineStripGS>();
-		CreateShader<ArrowHeadGS>();
+		CreateStockShader<PointSpritesGS>();
+		CreateStockShader<ThickLineListGS>();
+		CreateStockShader<ThickLineStripGS>();
+		CreateStockShader<ArrowHeadGS>();
 
 		// Diagnostic shaders
-		CreateShader<ShowNormalsGS>();
+		CreateStockShader<ShowNormalsGS>();
 	}
 
 	// Get/Create a d3d resource of type 'TRes'.

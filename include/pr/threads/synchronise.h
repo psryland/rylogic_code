@@ -42,7 +42,7 @@ namespace pr::threads
 		{
 			if (this != &rhs)
 			{
-				std::swap(m_cobj, rhs.m_cobj);
+				std::swap(m_cptr, rhs.m_cptr);
 				std::swap(m_lock, rhs.m_lock);
 			}
 			return *this;

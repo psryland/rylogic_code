@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include "pr/maths/maths.h"
+#include "pr/geometry/common.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/point.h"
 
@@ -143,7 +144,7 @@ namespace pr
 			nearest.y = ratio * Sqrt(a - Sqr(nearest.x));
 			v2 tang(nearest.y / b, -nearest.x / a);
 
-			auto d = Sign(y) * Dot2(tang, pt - nearest);
+			auto d = Sign(y) * Dot(tang, pt - nearest);
 			bounds[d < 0.0f] = nearest.x;
 		}
 		while (!FEql(bounds[0], bounds[1]));
@@ -431,58 +432,8 @@ namespace pr
 		t1 = (a*f - b*c) / d;
 	}
 
-	// Closest point result object
-	struct MinSeparation
-	{
-		v4 m_axis;
-		float m_axis_len_sq;
-		float m_depth_sq;
-
-		MinSeparation()
-			:m_axis()
-			,m_axis_len_sq()
-			,m_depth_sq(maths::float_inf)
-		{}
-
-		// Boolean test of penetration
-		bool Contact() const
-		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
-			return m_depth_sq > 0;
-		}
-
-		// Return the depth of penetration
-		float Depth() const
-		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
-			return SignedSqrt(m_depth_sq);
-		}
-
-		// The direction of minimum penetration (normalised)
-		v4 SeparatingAxis() const
-		{
-			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
-			return m_axis / Sqrt(m_axis_len_sq);
-		}
-
-		// Record the minimum depth separation
-		void operator()(float depth, v4_cref<> axis)
-		{
-			// Defer the sqrt by comparing squared depths.
-			// Need to preserve the sign however.
-			auto len_sq = LengthSq(axis);
-			auto d_sq = SignedSqr(depth) / len_sq;
-			if (d_sq < m_depth_sq)
-			{
-				m_axis = axis;
-				m_axis_len_sq = len_sq;
-				m_depth_sq = d_sq;
-			}
-		};
-	};
-
 	// Returns the minimum distance of a line segment '(s,e)' to the AABB 'bbox'
-	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
+	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
 	{
 		// Note: This code is basically the same as col_box_vs_line.h.
 		// Make sure to maintain both
@@ -499,7 +450,7 @@ namespace pr
 		mid = mid - bbox.m_centre;
 
 		// Records the minimum penetration (position depth means overlap)
-		auto sep = MinSeparation{};
+		auto sep = geometry::MinSeparation{};
 
 		// Try world coordinate axes
 		sep(bbox.m_radius.x + rad.x - Abs(mid.x), Sign(mid.x) * v4XAxis);
@@ -516,7 +467,7 @@ namespace pr
 
 		return sep;
 	}
-	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
+	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
 	{
 		// Returns the parametric value of the closest point on the line segment '(s,e)' to the AABB 'bbox' and the distance.
 		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox);
@@ -576,7 +527,7 @@ namespace pr
 		assert("not implemented" && false);
 		return sep;
 	}
-	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
+	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
 	{
 		float t;
 		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, t);

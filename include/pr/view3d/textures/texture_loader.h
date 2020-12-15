@@ -125,17 +125,17 @@ namespace pr::rdr
 	}
 
 	// Return an ordered list of filepaths based on 'pattern'
-	inline vector<std::filesystem::path> PatternToPaths(std::filesystem::path const& dir, char const* pattern)
+	inline vector<std::filesystem::path> PatternToPaths(std::filesystem::path const& dir, char8_t const* pattern)
 	{
 		using namespace std::filesystem;
 
 		vector<path> paths;
 
 		// Assume the pattern is in the filename only
-		auto pat = std::regex(pattern, std::regex::flag_type::icase);
+		auto pat = std::regex(char_ptr(pattern), std::regex::flag_type::icase);
 		for (auto& entry : directory_iterator(dir))
 		{
-			if (!std::regex_match(entry.path().filename().u8string(), pat)) continue;
+			if (!std::regex_match(entry.path().filename().string(), pat)) continue;
 			paths.push_back(entry.path());
 		}
 

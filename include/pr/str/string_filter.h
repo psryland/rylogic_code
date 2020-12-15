@@ -12,9 +12,9 @@
 
 #pragma once
 
+#include <cmath>
 #include <array>
 #include <type_traits>
-#include <cmath>
 #include "pr/str/string_core.h"
 
 namespace pr::str
@@ -262,9 +262,10 @@ namespace pr::str
 	template <typename Char>
 	struct Escape
 	{
+		// 'Char' is assumed to be a multi-byte encoding, either utf-8 (char8_t or char) or utf-16 (char16_t or wchar)
 		enum class EEscSeq { None, Hex2, Octal3, Unicode4, Unicode8 };
-		static int const HighBit = 1 << (8*sizeof(Char) -  1);
-		static int const MaxLiteralLength = 8;
+		static constexpr int HighBit = 1 << (8*sizeof(Char) -  1);
+		static constexpr int MaxLiteralLength = 8;
 		using char_t = Char;
 
 		char_t m_escape_character;
@@ -303,47 +304,39 @@ namespace pr::str
 					}
 					else
 					{
-						// Buffer encoded characters
+						using converter_t = convert_utf<char_t, char32_t>;
+						converter_t cvt;
+
+						// Buffer character code units until we have a complete code point.
 						m_buf[m_buf_count++] = ch;
 
-						// Convert from 'char_t' to 'char32_t'
-						struct convert_t :std::codecvt<char32_t, char_t, std::mbstate_t> {} converter;
-						
-						auto const* in = &m_buf[0];
-						auto const* in_end = in + m_buf_count;
-						auto in_next = in;
-
-						auto c32 = char32_t{};
-						auto c32_next = &c32;
-
-						std::mbstate_t mb = {};
-						auto r = converter.in(mb, in, in_end, in_next, &c32, &c32 + 1, c32_next);
-						if (r == std::codecvt_base::ok)
-						{
-							char_t code[9] = {};
-							if (c32 <= 0xFFFF)
-							{
-								char_traits<char_t>::uitostr(c32, &code[0], _countof(code), 16);
-								Append(out, "\\u", len);
-							}
-							else
-							{
-								char_traits<char_t>::uitostr(c32, &code[0], _countof(code), 16);
-								Append(out, "\\U", len);
-							}
-							for (size_t i = 0, iend = char_traits<char_t>::length(code); i != iend; ++i)
-							{
-								Append(out, '0', len);
-							}
-							Append(out, code, len);
+						// Attempt to convert to utf-32... if incomplete, wait for more data
+						char32_t c32;
+						auto istr = std::basic_string_view<char_t>(&m_buf[0], m_buf_count);
+						auto r = cvt(istr, [&](auto s, auto) { c32 = *s; });
+						if (r == converter_t::error)
+							throw std::runtime_error("Unicode encoding error");
+						if (r == converter_t::partial)
 							break;
-						}
-						if (r == std::codecvt_base::partial)
+
+						// Convert the code point to an escaped unicode value
+						char_t code[9] = {};
+						if (c32 <= 0xFFFF)
 						{
-							// wait for more characters
-							break;
+							char_traits<char_t>::uitostr(c32, &code[0], _countof(code), 16);
+							Append(out, "\\u", len);
 						}
-						throw std::runtime_error("Unicode encoding error");
+						else
+						{
+							char_traits<char_t>::uitostr(c32, &code[0], _countof(code), 16);
+							Append(out, "\\U", len);
+						}
+						for (size_t i = 0, iend = char_traits<char_t>::length(code); i != iend; ++i)
+						{
+							Append(out, '0', len);
+						}
+						Append(out, code, len);
+						break;
 					}
 				}
 			}
@@ -360,6 +353,7 @@ namespace pr::str
 	template <typename Char>
 	struct Unescape
 	{
+		// 'Char' is assumed to be a multi-byte encoding, either utf-8 (char8_t or char) or utf-16 (char16_t or wchar)
 		enum class EEscSeq { None, Hex2, Octal3, Unicode4, Unicode8 };
 		static int const MaxLiteralLength = 8;
 		using char_t = Char;
@@ -420,13 +414,13 @@ namespace pr::str
 						m_buf[m_buf_count] = 0;
 
 						// Convert the character code to an integer
-						char32_t const code[2] = { static_cast<char32_t>(char_traits<char_t>::strtoul(&m_buf[0], nullptr, 16)), 0 };
+						char32_t code = static_cast<char32_t>(char_traits<char_t>::strtoul(&m_buf[0], nullptr, 16));
+						auto istr = std::basic_string_view<char32_t>(&code, 1);
 
 						// Convert from char32_t to to utf-8/utf-16 based on 'char_t'
-						struct convert_t :std::codecvt<char32_t, char_t, std::mbstate_t> {} converter;
-						auto converted = ConvertEncoding<std::array<char_t,16>>(&code[0], converter);
-						Append(out, converted.data(), len);
-						
+						convert_utf<char32_t, char_t> cvt;
+						cvt(istr, [&](auto s, auto e){ for (; s != e; ++s) Append(out, *s, len); });
+
 						// Leave the 'escaped' state
 						m_escape = false;
 						m_seq = EEscSeq::None;
@@ -461,12 +455,12 @@ namespace pr::str
 						m_buf[m_buf_count] = 0;
 
 						// Convert the character code to an integer value
-						char32_t const code[2] = { static_cast<char32_t>(char_traits<char_t>::strtoul(&m_buf[0], nullptr, 8)), 0 };
+						char32_t code = static_cast<char32_t>(char_traits<char_t>::strtoul(&m_buf[0], nullptr, 8));
+						auto istr = std::basic_string_view<char32_t>(&code, 1);
 
 						// Convert from char32_t to to utf-8/utf-16 based on 'char_t'
-						struct convert_t :std::codecvt<char32_t, char_t, std::mbstate_t> {} converter;
-						auto converted = ConvertEncoding<std::array<char_t,16>>(&code[0], converter);
-						Append(out, converted.data(), len);
+						convert_utf<char32_t, char_t> cvt;
+						cvt(istr, [&](auto s, auto e) { for (; s != e; ++s) Append(out, *s, len); });
 
 						// Leave the 'escaped' state
 						m_escape = false;
@@ -667,7 +661,7 @@ namespace pr::str
 			}
 		}
 		{// Escape
-			std::string str = u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?";
+			std::u8string str = char8_ptr(u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?");
 			std::string res = "abcS\\u00b1\\a\\b\\f\\n\\r\\t\\v\\\\\\\"\\\'\\?";
 			std::string out;
 
@@ -680,8 +674,8 @@ namespace pr::str
 		}
 		{// Unescape
 			std::string str = "abc\\123\\u00b1\\a\\b\\f\\n\\r\\t\\v\\\\\\\"\\\'\\?";
-			std::string res = u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?";
-			std::string out;
+			std::u8string res = char8_ptr(u8"abc\123\u00b1\a\b\f\n\r\t\v\\\"\'\?");
+			std::u8string out;
 
 			size_t len = 0;
 			Unescape<char> esc;

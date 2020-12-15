@@ -35,7 +35,7 @@ namespace pr::rdr
 	}
 
 	// Create the show normals shader
-	template <> void ShaderManager::CreateShader<ShowNormalsGS>()
+	template <> void ShaderManager::CreateStockShader<ShowNormalsGS>()
 	{
 		// Create the dx shaders
 		GShaderDesc desc(show_normals_gs);

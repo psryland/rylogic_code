@@ -34,7 +34,7 @@ namespace pr::script
 		static constexpr int Front = 0;
 
 		static_assert(sizeof(storage_t) == sizeof(value_type[Capacity]));
-		static_assert(std::is_pod_v<storage_t>);
+		static_assert(std::is_trivially_copyable_v<storage_t>);
 
 		// Shift register storage
 		union
@@ -161,7 +161,7 @@ namespace pr::script
 			{
 				return _mm_movemask_epi8(_mm_cmpeq_epi16(_mm_and_si128(lhs.m_store, rhs.m_store), lhs.m_store)) == 0xFFFF;
 			}
-			else if constexpr (std::is_integral_v<storage_type>)
+			else if constexpr (std::is_integral_v<storage_t>)
 			{
 				return (lhs.m_store & rhs.m_store) == lhs.m_store;
 			}

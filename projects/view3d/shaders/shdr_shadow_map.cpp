@@ -40,13 +40,13 @@ namespace pr::rdr
 	};
 
 	// Create the shadow map shaders
-	template <> void ShaderManager::CreateShader<ShadowMapVS>()
+	template <> void ShaderManager::CreateStockShader<ShadowMapVS>()
 	{
 		VShaderDesc desc(shadow_map_vs, Vert());
 		auto dx = GetVS(RdrId(EStockShader::ShadowMapVS), &desc);
 		m_stock_shaders.emplace_back(CreateShader<ShadowMapVS>(RdrId(EStockShader::ShadowMapVS), dx, "smap_vs"));
 	}
-	template <> void ShaderManager::CreateShader<ShadowMapPS>()
+	template <> void ShaderManager::CreateStockShader<ShadowMapPS>()
 	{
 		PShaderDesc desc(shadow_map_ps);
 		auto dx = GetPS(RdrId(EStockShader::ShadowMapPS), &desc);

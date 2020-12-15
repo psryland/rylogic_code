@@ -38,13 +38,13 @@ namespace pr
 
 		// Construct from sub matrices. WARNING: careful with layout.
 		Mat6x8() = default;
-		Mat6x8(m3_cref<> m00_, m3_cref<> m01_, m3_cref<> m10_, m3_cref<> m11_)
+		constexpr Mat6x8(m3_cref<> m00_, m3_cref<> m01_, m3_cref<> m10_, m3_cref<> m11_)
 			:m00(m00_)
 			,m10(m10_)
 			,m01(m01_)
 			,m11(m11_)
 		{}
-		Mat6x8(v8_cref<> x, v8_cref<> y, v8_cref<> z, v8_cref<> u, v8_cref<> v, v8_cref<> w)
+		constexpr Mat6x8(v8_cref<> x, v8_cref<> y, v8_cref<> z, v8_cref<> u, v8_cref<> v, v8_cref<> w)
 			:m00(x.ang, y.ang, z.ang)
 			,m10(x.lin, y.lin, z.lin)
 			,m01(u.ang, v.ang, w.ang)
@@ -84,11 +84,11 @@ namespace pr
 		}
 	
 		#pragma region Operators
-		friend Mat6x8<A, B> operator + (m6_cref<A,B> m)
+		friend constexpr Mat6x8<A, B> operator + (m6_cref<A,B> m)
 		{
 			return m;
 		}
-		friend Mat6x8<A, B> operator - (m6_cref<A,B> m)
+		friend constexpr Mat6x8<A, B> operator - (m6_cref<A,B> m)
 		{
 			return Mat6x8<A, B>{-m.m00, -m.m01, -m.m10, -m.m11};
 		}
@@ -127,7 +127,7 @@ namespace pr
 		#pragma endregion
 	};
 	static_assert(maths::is_vec<Mat6x8<void,void>>::value, "");
-	static_assert(std::is_pod_v<Mat6x8<void,void>>, "m6x8 must be a pod type");
+	static_assert(std::is_trivially_copyable_v<Mat6x8<void,void>>, "m6x8 must be a pod type");
 	static_assert(std::alignment_of_v<Mat6x8<void, void>> == 16, "m6x8 should have 16 byte alignment");
 
 	#pragma region Functions

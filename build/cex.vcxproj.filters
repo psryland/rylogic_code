@@ -68,6 +68,9 @@
     <ClCompile Include="..\projects\cex\src\shell_file_op.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\cex\src\wait2.ixx">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\cex\deploy_cex.py" />

@@ -43,7 +43,7 @@ namespace pr
 			}
 			template <typename T> static Str To(IVec4<T> const& x)
 			{
-				return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d %d"), x.x, x.y, x.z, x,w);
+				return pr::Fmt(PR_STRLITERAL(Char, "%d %d %d %d"), x.x, x.y, x.z, x.w);
 			}
 			template <typename A, typename B> static Str To(Mat2x2<A,B> const& m)
 			{

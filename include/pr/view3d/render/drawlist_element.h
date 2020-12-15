@@ -19,5 +19,5 @@ namespace pr::rdr
 		friend bool operator < (DrawListElement const& lhs, SortKey rhs) { return lhs.m_sort_key < rhs; }
 		friend bool operator < (SortKey lhs, DrawListElement const& rhs) { return lhs < rhs.m_sort_key; }
 	};
-	static_assert(std::is_pod_v<DrawListElement>, "DLE must be POD so that the drawlist can be sorted efficiently");
+	static_assert(std::is_trivially_copyable_v<DrawListElement>, "DLE must be POD so that the drawlist can be sorted efficiently");
 }

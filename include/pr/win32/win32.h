@@ -190,7 +190,7 @@ namespace pr
 		template <typename String, typename = std::enable_if_t<is_string_v<String>>>
 		inline bool WindowText(HWND hwnd, String& text)
 		{
-			using Char = typename = string_traits<String>::value_type;
+			using Char = typename string_traits<String>::value_type;
 
 			auto len = Win32<Char>::WindowTextLength(hwnd);
 			String text(len, 0);

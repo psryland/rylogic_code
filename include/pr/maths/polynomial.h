@@ -392,7 +392,7 @@ namespace pr::maths
 		{
 			1.0f,
 			0.0f,
-			(quartic.C - (quartic.U * quartic.B * 3.0f / (8.0f * quartic.A))) / quartic.A,
+			(quartic.C - (quartic.B * quartic.B * 3.0f / (8.0f * quartic.A))) / quartic.A,
 			((quartic.D + (quartic.B * quartic.B * quartic.B / (8.0f * quartic.A * quartic.A))) - (quartic.B * quartic.C / (2.0f * quartic.A))) / quartic.A,
 			(((quartic.E - (quartic.B * quartic.B * quartic.B * quartic.B * 3.0f / (256.0f * quartic.A * quartic.A * quartic.A))) + (quartic.B * quartic.B * quartic.C / (16.0f * quartic.A * quartic.A))) - (quartic.B * quartic.D / (4.0f * quartic.A))) / quartic.A
 		};
@@ -418,7 +418,7 @@ namespace pr::maths
 				return Roots{ 0 };
 		}
 		auto h = Sqrt(res_cubic_roots.m_root[n]);
-		auto j = (depressed_eqn.m_c + res_cubic_roots.m_root[n] - depressed_eqn.m_d / h) / 2.0f;
+		auto j = (depressed_eqn.C + res_cubic_roots.m_root[n] - depressed_eqn.D / h) / 2.0f;
 
 		auto roots = Roots{ 0 };
 		if (h * h - 4.0f * j >= 0.0f)
