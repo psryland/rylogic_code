@@ -1,4 +1,4 @@
-//****************************************************
+﻿//****************************************************
 // Fmt - An inline function for inserting formated text
 //  Copyright (c) Rylogic Ltd 2008
 //****************************************************
@@ -25,9 +25,10 @@
 #ifdef __cplusplus
 namespace pr
 {
+	// Implementation
 	namespace impl
 	{
-		// Version independent vsnprintf function
+		// Char type independent vsnprintf function
 		inline int Format(char* dst, size_t max_count, char const* fmt, va_list arg_list)
 		{
 			return _vsprintf_p(dst, max_count, fmt, arg_list);
@@ -76,7 +77,7 @@ namespace pr
 	}
 
 	// Puts a formatted string into 'str'
-	template <typename TString> inline TString& Fmt(TString& str, typename TString::value_type const* format, ...)
+	template <typename TString> inline TString& Format(TString& str, typename TString::value_type const* format, ...)
 	{
 		va_list arg_list;
 		va_start(arg_list, format);
@@ -166,7 +167,7 @@ namespace pr
 	}
 }
 #else
-	static __inline char const* Fmt(char* buffer, int length, char const* format, ...)
+	static __inline char const* Format(char* buffer, int length, char const* format, ...)
 	{
 		va_list arg_list;
 		va_start(arg_list, format);
@@ -269,7 +270,7 @@ namespace pr::common
 		}
 		{
 			std::string s0;
-			pr::Fmt(s0, "String %d", 0);
+			pr::Format(s0, "String %d", 0);
 			PR_CHECK(s0, "String 0");
 
 			char const* s1 = pr::FmtS("String %d",1);
