@@ -16,7 +16,9 @@ namespace Rylogic.Gui.WPF
 		//         DataContext="{Binding SomeOtherObject}"
 		//         >
 		//         <TextBlock
-		//             Text="{Binding Source={StaticResource WindowCtx}, Path=Ctx.Title}" // <- The Window.Title even though the parent DataContext is 'SomeOtherObject'
+		//             ** The Window.Title even though the parent DataContext is 'SomeOtherObject' **
+		//             ** Note: Use 'Ctx' not the key name 'WindowCtx' for accessing fields **
+		//             Text="{Binding Source={StaticResource WindowCtx}, Path=Ctx.Title}"
 		//             />
 
 		/// <summary>The DataContext of the saved</summary>

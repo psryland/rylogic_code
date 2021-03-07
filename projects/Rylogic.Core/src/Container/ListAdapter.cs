@@ -165,7 +165,7 @@ namespace Rylogic.Container
 		object? IList.this[int index]
 		{
 			get => this[index];
-			set => this[index] = (Out)value ?? throw new ArgumentNullException("This collection does not allow null values");
+			set => this[index] = (Out?)value ?? throw new ArgumentNullException("This collection does not allow null values");
 		}
 
 		/// <inheritdoc/>
@@ -177,7 +177,7 @@ namespace Rylogic.Container
 		}
 		int IList.IndexOf(object? value)
 		{
-			return IndexOf((Out)value ?? throw new ArgumentNullException("This collection does not allow null values"));
+			return IndexOf((Out?)value ?? throw new ArgumentNullException("This collection does not allow null values"));
 		}
 
 		/// <inheritdoc/>
@@ -196,7 +196,7 @@ namespace Rylogic.Container
 		}
 		int IList.Add(object? value)
 		{
-			Add((Out)value ?? throw new ArgumentNullException("This collection does not allow null values"));
+			Add((Out?)value ?? throw new ArgumentNullException("This collection does not allow null values"));
 			return Count - 1;
 		}
 
@@ -217,7 +217,7 @@ namespace Rylogic.Container
 		}
 		void IList.Insert(int index, object? value)
 		{
-			Insert(index, (Out)value ?? throw new ArgumentNullException("This collection does not allow null values"));
+			Insert(index, (Out?)value ?? throw new ArgumentNullException("This collection does not allow null values"));
 		}
 
 		/// <inheritdoc/>
@@ -244,7 +244,7 @@ namespace Rylogic.Container
 		}
 		void IList.Remove(object? value)
 		{
-			Remove((Out)value ?? throw new ArgumentNullException("This collection does not allow null values"));
+			Remove((Out?)value ?? throw new ArgumentNullException("This collection does not allow null values"));
 		}
 
 		/// <inheritdoc/>
@@ -267,7 +267,7 @@ namespace Rylogic.Container
 		}
 		bool IList.Contains(object? value)
 		{
-			return Contains((Out)value ?? throw new ArgumentNullException("This collection does not allow null values"));
+			return Contains((Out?)value ?? throw new ArgumentNullException("This collection does not allow null values"));
 		}
 
 		/// <inheritdoc/>

@@ -100,4 +100,6 @@ Emoji
 	Banana 🍌 (U+1f34c)
 	Music Flat Sign ♭ (U+266D)
 	Music Sharp Sign ♯ (U+266F)
+	Check Mark ✓ (U+2714)
+	Ballot Cross ✗ (U+2717)
 	

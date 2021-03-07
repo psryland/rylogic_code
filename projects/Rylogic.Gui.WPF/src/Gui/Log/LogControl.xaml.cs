@@ -356,7 +356,7 @@ namespace Rylogic.Gui.WPF
 		private void FilterLevel_Changed() => LogEntriesView?.Refresh();
 		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
 
-		/// <summary>The column names that are hidden by default</summary>
+		/// <summary>The column names that are hidden by default (Delimited by spaces, commas, or semicolons)</summary>
 		public string HiddenColumns
 		{
 			get => (string)GetValue(HiddenColumnsProperty);
