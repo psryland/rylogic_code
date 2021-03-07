@@ -95,8 +95,7 @@ namespace Rylogic.Container
 
 		public bool Remove(T0 key)
 		{
-			T1 value;
-			if (m_forward.TryGetValue(key, out value))
+			if (m_forward.TryGetValue(key, out var value))
 			{
 				m_forward.Remove(key);
 				m_reverse.Remove(value);
@@ -106,8 +105,7 @@ namespace Rylogic.Container
 		}
 		public bool Remove(T1 key)
 		{
-			T0 value;
-			if (m_reverse.TryGetValue(key, out value))
+			if (m_reverse.TryGetValue(key, out var value))
 			{
 				m_reverse.Remove(key);
 				m_forward.Remove(value);

@@ -38,7 +38,7 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>Construct from a single value repeated 'initial_count' times</summary>
-		public BindingListEx(int initial_count, T value = default) :base(Enumerable.Repeat<T>(value!, initial_count).ToList())
+		public BindingListEx(int initial_count, T value = default!) :base(Enumerable.Repeat<T>(value!, initial_count).ToList())
 		{
 			Init();
 		}

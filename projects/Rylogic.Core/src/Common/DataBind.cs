@@ -185,7 +185,7 @@ namespace Rylogic.Common
 
 	public static class DataBind
 	{
-		public static DataBind<TSrc, TValue> Make<TSrc, TValue>(TSrc data_source, string member_name, TValue def_value = default, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where TSrc:class
+		public static DataBind<TSrc, TValue> Make<TSrc, TValue>(TSrc data_source, string member_name, TValue def_value = default!, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where TSrc: class
 		{
 			return new DataBind<TSrc, TValue>(data_source, member_name, def_value!, flags);
 		}

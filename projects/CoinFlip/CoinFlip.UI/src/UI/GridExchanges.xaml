@@ -28,7 +28,6 @@
 				</Style>
 			</DataGridTextColumn.CellStyle>
 		</DataGridTextColumn>
-		
 		<DataGridTextColumn
 			Header="Exchange"
 			Binding="{Binding Name, Mode=OneWay}"

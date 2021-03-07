@@ -611,7 +611,7 @@ namespace pr::storage::zip
 		{
 			m_cdir = std::move(rhs.m_cdir);
 			m_cdir_index = std::move(rhs.m_cdir_index);
-			m_cdir_lookup std::move(rhs.m_cdir_lookup);
+			m_cdir_lookup = std::move(rhs.m_cdir_lookup);
 			m_cdir_offset = rhs.m_cdir_offset;
 			m_comment = std::move(rhs.m_comment);
 			m_filepath = std::move(rhs.m_filepath);
@@ -786,8 +786,6 @@ namespace pr::storage::zip
 				throw std::runtime_error("Item comment is invalid or too long");
 			if (buf.size() > 0xFFFFFFFF || uncompressed_size > 0xFFFFFFFF)
 				throw std::runtime_error("Data too large. Zip64 is not supported");
-			if (level < ECompressionLevel::None || level > ECompressionLevel::Uber)
-				throw std::runtime_error("Compression level out of range");
 			if (Count() >= 0xFFFF)
 				throw std::runtime_error("Too many files added.");
 			if (uncompressed_size == 0)
@@ -807,7 +805,7 @@ namespace pr::storage::zip
 				throw std::runtime_error("Zip too large. Zip64 is not supported");
 
 			EBitFlags bit_flags = 0;
-			uint16_t int_attribytes = 0;
+			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
 
 			// Record the current time so the item can be date stamped.
@@ -825,7 +823,7 @@ namespace pr::storage::zip
 			item_ofs += num_alignment_padding_bytes;
 
 			// Write the local directory header
-			LDH ldh(item_name.size(), extra.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_timestamp.time, dos_timestamp_date);
+			LDH ldh(item_name.size(), extra.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_timestamp.time, dos_timestamp);
 			m_write(*this, item_ofs, &ldh, sizeof(ldh));
 			item_ofs += sizeof(LDH);
 
@@ -1842,7 +1840,7 @@ namespace pr::storage::zip
 			#if defined (_MSC_VER)
 			// In VS, 'file_time_type' is in 100s of nanoseconds since 1601-01-01 (i.e. FILETIME).
 			// For whatever reason, 'from_time_t' isn't defined, so
-			return file_time_type(file_time_type::duration(long long(time) * 10000000LL + 116444736000000000LL));
+			return file_time_type(file_time_type::duration(static_cast<long long>(time) * 10000000LL + 116444736000000000LL));
 			#else
 			return file_time_type::clock::from_time_t(time);
 			#endif

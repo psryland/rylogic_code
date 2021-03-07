@@ -193,7 +193,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
-		public static T Div<T>(T a, T b, T def = default)
+		public static T Div<T>(T a, T b, T def = default!)
 		{
 			return !Equals(b, default) ? Operators<T>.Div(a, b) : def!;
 		}
@@ -229,8 +229,33 @@ namespace Rylogic.Maths
 				x.CompareTo(min) < 0 ? min : x;
 		}
 
+		/// <summary>Wrap 'x' to range [mn, mx)</summary>
+		public static long Wrap(long x, long min, long max)
+		{
+			// Given the range [mn, mx) and 'x' somewhere on the number line
+			// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+			Debug.Assert(min <= max);
+			return (x < min ? max : min) + (x - min) % (max - min);
+		}
+		//public static T Wrap<T>(T x, T min, T max) where T : IComparable<T>
+		//{
+		//	// Given the range [mn, mx) and 'x' somewhere on the number line
+		//	// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+		//	Debug.Assert(min.CompareTo(max) <= 0);
+		//	return (x.CompareTo(min) < 0 ? max : min) + Operators<T>.Mod(
+		//		Operators<T>.Sub(x, min), Operators<T>.Sub(max, min));
+		//}
+
+		/// <summary>Map 'x' to a value that 'ping pongs' between [0, N) (0 and N aren't repeated)</summary>
+		public static long PingPong(long x, long N)
+		{
+			var n = N - 1;
+			var v = Wrap(x, 0, 2*n);
+			return (v < n) ? (v) : (2*n - v);
+		}
+
 		/// <summary>True if 'x' is within the interval '[min-tol,max+tol]'</summary>
-		public static bool Within<T>(T min, T x, T max, T tol = default) where T : IComparable<T>
+		public static bool Within<T>(T min, T x, T max, T tol = default!) where T : IComparable<T>
 		{
 			min = Operators<T>.Sub(min, tol!);
 			max = Operators<T>.Add(max, tol!);

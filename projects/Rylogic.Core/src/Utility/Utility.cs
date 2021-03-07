@@ -30,7 +30,7 @@ namespace Rylogic.Utility
 	{
 		/// <summary>Return the result of a function or 'def' if the function throws, swallowing the exception</summary>
 		[DebuggerStepThrough]
-		public static T Try<T>(Func<T> func, T def = default)
+		public static T Try<T>(Func<T> func, T def)
 		{
 			try
 			{
@@ -38,7 +38,7 @@ namespace Rylogic.Utility
 			}
 			catch
 			{
-				return def!;
+				return def;
 			}
 		}
 

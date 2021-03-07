@@ -71,6 +71,8 @@ namespace pr::rdr
 		auto& o2w = GetO2W(inst);
 		PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
 		PR_ASSERT(PR_DBG_RDR, AllSet(flags, EInstFlags::NonAffine) || IsAffine(o2w), "Invalid instance transform");
+		#else
+		(void)flags;
 		#endif
 
 		// Add to the derived objects drawlist
