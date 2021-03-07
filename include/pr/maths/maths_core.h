@@ -450,6 +450,14 @@ namespace pr
 		return CompOp(x, y, [](auto x, auto y) { return Fmod(x, y); });
 	}
 
+	// Wrap 'x' to range [mn, mx)
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T Wrap(T x, T mn, T mx)
+	{
+		// Given the range [mn, mx) and 'x' somewhere on the number line
+		// return 'x' wrapped into the range, allowing for 'x' < 'mn'.
+		return (x < mn ? mx : mn) + (x - mn) % (mx - mn);
+	}
+
 	// Converts bool to +1,-1 (note: no 0 value)
 	constexpr int Bool2SignI(bool positive)
 	{

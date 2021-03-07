@@ -124,17 +124,20 @@ namespace Rylogic.Gui.WPF
 		#region Column Visibility
 
 		// Usage:
-		//  Add 'gui:DataGrid_.ColumnVisibiltySupport="True"' to your DataGrid.
+		//  Add 'gui:DataGrid_.ColumnVisibilitySupport="True"' to your DataGrid.
 
 		/// <summary>Add column visibility to a DataGrid attached property</summary>
-		private const int ColumnVisibiltySupport = 0;
-		public static readonly DependencyProperty ColumnVisibiltySupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnVisibiltySupport));
-		public static bool GetColumnVisibiltySupport(DependencyObject obj) => (bool)obj.GetValue(ColumnVisibiltySupportProperty);
-		public static void SetColumnVisibiltySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibiltySupportProperty, value);
-		private static void ColumnVisibiltySupport_Changed(DependencyObject obj)
+		private const int ColumnVisibilitySupport = 0;
+		public static readonly DependencyProperty ColumnVisibilitySupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnVisibilitySupport));
+		public static bool GetColumnVisibilitySupport(DependencyObject obj) => (bool)obj.GetValue(ColumnVisibilitySupportProperty);
+		public static void SetColumnVisibilitySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibilitySupportProperty, value);
+		private static void ColumnVisibilitySupport_Changed(DependencyObject obj)
 		{
 			if (!(obj is DataGrid data_grid)) return;
-			data_grid.MouseRightButtonUp += ColumnVisibility;
+
+			data_grid.MouseRightButtonUp -= ColumnVisibility;
+			if (GetColumnVisibilitySupport(obj))
+				data_grid.MouseRightButtonUp += ColumnVisibility;
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
@@ -145,7 +148,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var item = cmenu.Items.Add2(new MenuItem
 				{
-					Header = col.Header.ToString(),
+					Header = col.Header?.ToString() ?? "<no heading>",
 					IsChecked = col.Visibility == Visibility.Visible,
 					Tag = col
 				});
@@ -187,6 +190,67 @@ namespace Rylogic.Gui.WPF
 			{
 				grid.ColumnVisibilityCMenu();
 				args.Handled = true;
+			}
+		}
+
+		#endregion
+
+		#region AutoScrollToCurrent
+
+		// Usage:
+		//  Add 'gui:DataGrid_.AutoScrollToCurrent="True" to your DataGrid.
+
+		private const int AutoScrollToCurrent = 0;
+		public static readonly DependencyProperty AutoScrollToCurrentProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(AutoScrollToCurrent));
+		public static bool GetAutoScrollToCurrent(DependencyObject obj) => (bool)obj.GetValue(AutoScrollToCurrentProperty);
+		public static void SetAutoScrollToCurrent(DependencyObject obj, bool value) => obj.SetValue(AutoScrollToCurrentProperty, value);
+		private static void AutoScrollToCurrent_Changed(DependencyObject obj)
+		{
+			var enabled = GetAutoScrollToCurrent(obj);
+			if (!(obj is DataGrid data_grid)) return;
+
+			// This doesn't work using DataGrid's CurrentItem. For some reason only
+			// grids with focus generate the CurrentCellChanged event. Using the underlying
+			// ItemsSource avoids this problem.
+			
+			// The ItemsSource may not be assigned yet. Get the ItemSource property so we can see when its value changes.
+			if (DependencyPropertyDescriptor.FromProperty(ItemsControl.ItemsSourceProperty, typeof(DataGrid)) is not DependencyPropertyDescriptor items_source_dp)
+				return;
+
+			object pending = false;
+
+			// Wait for changes to the item source
+			items_source_dp.RemoveValueChanged(data_grid, HandleItemsSourceChanged);
+			items_source_dp.AddValueChanged(data_grid, HandleItemsSourceChanged);
+			void HandleItemsSourceChanged(object? sender, EventArgs e)
+			{
+				if (sender is not DataGrid data_grid) return;
+				if (data_grid.ItemsSource is ICollectionView cv)
+				{
+					// The old items source will still have the handler subscribed.
+					// but it wlll remove itself as soon as it doesn't match the data
+					// grid's item source.
+					cv.CurrentChanged -= HandleCurrentChanged;
+					cv.CurrentChanged += HandleCurrentChanged;
+				}
+			}
+			void HandleCurrentChanged(object? sender, EventArgs e)
+			{
+				if (sender is not ICollectionView cv) return;
+				if (!enabled || data_grid.ItemsSource != cv)
+				{
+					cv.CurrentChanged -= HandleCurrentChanged;
+					return;
+				}
+
+				// Invoke the scroll on the message queue
+				if ((bool)pending) return; else pending = true;
+				data_grid.Dispatcher.BeginInvoke(new Action(() =>
+				{
+					pending = false;
+					if (cv.CurrentItem != null)
+						data_grid.ScrollIntoView(cv.CurrentItem);
+				}));
 			}
 		}
 

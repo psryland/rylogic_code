@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF
 				void OnLoaded(object sender, RoutedEventArgs e)
 				{
 					var tb = Gui_.FindVisualChild<DatePickerTextBox>(obj);
-					if (tb != null) tb.Visibility = Visibility.Collapsed;
+					if (tb != null) tb.Visibility = GetHideTextBox(obj) ? Visibility.Collapsed : Visibility.Visible;
 				}
 			}
 		}
