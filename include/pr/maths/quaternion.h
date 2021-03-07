@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -198,7 +198,7 @@ namespace pr
 		Vec4<void> Axis() const
 		{
 			// The axis is arbitrary for identity rotations
-			return Normalise(xyzw.w0(), v4ZAxis);
+			return Normalise(xyzw.w0(), v4{0, 0, 1, 0});
 		}
 
 		// Return the angle of rotation about 'Axis()'
@@ -371,7 +371,7 @@ namespace pr
 		angle = 2.0f * ACos(w);
 		axis = !FEql(s, 0.0f)
 			? v4(q.x/s, q.y/s, q.z/s, 0.0f)
-			: v4ZAxis; // axis arbitrary for angle = 0
+			: v4{0, 0, 1, 0}; // axis arbitrary for angle = 0
 	}
 
 	// Return possible Euler angles for the quaternion 'q'

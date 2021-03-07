@@ -439,7 +439,7 @@ namespace Rylogic.Gui.WPF
 		public MenuItem WindowsMenu(string menu_name = "Windows")
 		{
 			var menu = new MenuItem { Header = menu_name };
-			menu.SubmenuOpened += RepopulateMenu;
+			menu.Click += RepopulateMenu;
 			return menu;
 		}
 

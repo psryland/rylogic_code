@@ -178,7 +178,7 @@ namespace EDTradeAdvisor.UI
 		}
 
 		/// <summary>Current app status</summary>
-		public string StatusMsg => StatusStack.Value;
+		public string StatusMsg => StatusStack.Message;
 
 		/// <summary>The found trade routes</summary>
 		public ICollectionView TradeRoutes { get; }

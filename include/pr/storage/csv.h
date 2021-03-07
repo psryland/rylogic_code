@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // CSV
 //  Copyright (c) Rylogic 2011
 //*****************************************************************************************
@@ -8,7 +8,6 @@
 //  csv.erase(csv.begin());                                                                 // Erase column header row
 //  std::sort(csv.begin(), csv.end(), pr::csv::SortColumn<>(0));                            // Sort by column zero
 //  csv.erase(std::unique(csv.begin(), csv.end(), pr::csv::UniqueColumn<>(0)), csv.end());  // Make unique in column zero
-
 #pragma once
 
 #include <cstdio>
@@ -65,6 +64,34 @@ namespace pr::csv
 			}
 		}
 	};
+
+	// Implementation
+	namespace impl
+	{
+		struct BufferAdapter
+		{
+			char* m_data;
+			size_t m_size;
+			size_t m_capacity;
+			
+			template <int Capacity>
+			explicit BufferAdapter(char (&item)[Capacity])
+				:m_data(&item[0])
+				,m_size(0)
+				,m_capacity(Capacity)
+			{
+				m_data[0] = 0;
+			}
+			void push_back(char ch)
+			{
+				if (m_size >= m_capacity - 1)
+					throw std::overflow_error("Provided character buffer is too small");
+
+				m_data[m_size++] = ch;
+				m_data[m_size] = 0;
+			}
+		};
+	}
 
 	// Range checked lookup
 	inline Str const& Item(Row const& row, std::size_t col)                  { static Str null_str; return (col < row.size()) ? row[col] : null_str; }
@@ -185,34 +212,10 @@ namespace pr::csv
 		if (!s.eof()) loc.inc(ch);
 		return true;
 	}
-	template <typename Stream, std::size_t N>
+	template <typename Stream, int N>
 	bool Read(Stream& s, char (&item)[N], Loc& loc)
 	{
-		struct adapter
-		{
-			char* m_data;
-			size_t m_size;
-			size_t m_capacity;
-			
-			template <size_t N>
-			explicit adapter(char (&item)[N])
-				:m_data(&item[0])
-				,m_size(0)
-				,m_capacity(N)
-			{
-				m_data[0] = 0;
-			}
-			void push_back(char ch)
-			{
-				if (m_size >= m_capacity - 1)
-					throw std::overflow_error();
-
-				m_data[m_size++] = ch;
-				m_data[m_size] = 0;
-			}
-		};
-
-		adapter adp(item);
+		impl::BufferAdapter adp(item);
 		return Read(s, adp, loc);
 	}
 	template <typename Stream>
