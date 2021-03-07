@@ -91,7 +91,7 @@ namespace Rylogic.Container
 			using var stack_inst = StackPool<T>.Instance.Alloc();
 			var stack = stack_inst.Value;
 
-			// Insert 'item'
+			// Insert 'item'. Record the path down the tree in 'stack'
 			stack.Push(root);
 			for (; ; )
 			{
@@ -141,7 +141,7 @@ namespace Rylogic.Container
 
 				// Case 3 -> swap 'parent' and 'gparent' and recolour
 				ops.Colour(gparent, EColour.Red);
-				gparent = Rotate(-parent_side, gparent, stack.Top, ops);
+				gparent = Rotate<T>(-parent_side, gparent, stack.Top, ops);
 				ops.Colour(gparent, EColour.Black);
 
 				// If we rotate the root element, update 'root'
@@ -257,11 +257,11 @@ namespace Rylogic.Container
 			var node = stack.Pop();
 
 			// Find the single child or 'node' (or null).
-			childL = ops.Child(Left, node);
-			childR = ops.Child(Right, node);
+			var child_l = ops.Child(Left, node);
+			var child_r = ops.Child(Right, node);
 			var child =
-				!Equals(childL, default) ? childL :
-				!Equals(childR, default) ? childR :
+				!Equals(child_l, default) ? child_l :
+				!Equals(child_r, default) ? child_r :
 				default;
 
 			// In all cases we replace 'node' with its child, but the
@@ -271,7 +271,7 @@ namespace Rylogic.Container
 			{
 				// If 'node' was the root, then 'child' becomes the root.
 				// If 'child' is null, then we just deleted the last node.
-				root = child;
+				root = child!;
 				if (Equals(root, default))
 					return root!;
 			}
@@ -318,7 +318,7 @@ namespace Rylogic.Container
 							//      X(b) Y(b)  C(bb)  X(b)
 							ops.Colour(parent, EColour.Red);
 							ops.Colour(sibbling, EColour.Black);
-							var new_parent = Rotate(node_side, parent, stack.Top, ops);
+							var new_parent = Rotate<T>(node_side, parent, stack.Top, ops);
 							stack.Push(new_parent);
 
 							// Find the new sibbling and possible new root after the rotation
@@ -343,7 +343,7 @@ namespace Rylogic.Container
 							//        /   \             /   \
 							//       X(b) Y(b)        X(b)  Y(b)
 							ops.Colour(sibbling, EColour.Red);
-							node_side = Side(parent, stack.Top, ops);
+							node_side = Side<T>(parent, stack.Top, ops);
 							child = parent;
 							continue;
 						}
@@ -395,7 +395,7 @@ namespace Rylogic.Container
 							ops.Colour(sibbling, ops.Colour(parent));
 							ops.Colour(parent, EColour.Black);
 							ops.Colour(nephew!, EColour.Black);
-							var new_parent = Rotate(node_side, parent, stack.Top, ops);
+							var new_parent = Rotate<T>(node_side, parent, stack.Top, ops);
 
 							// if 'parent' was the root, update the root
 							if (stack.Count == 0) root = new_parent;
