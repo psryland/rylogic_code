@@ -30,6 +30,70 @@ namespace pr::onebit
 		return static_cast<TWord>(~0ULL << i);
 	}
 
+	// Convert a Y coordinate to a block index
+	template <typename TWord = uint8_t>
+	constexpr static int BlockIndex(int y)
+	{
+		// Handle negative values correctly. e.g. [-WordSize,0) == block -1, [0, WordSize) = block 0
+		constexpr int WordSize = 8*sizeof(TWord);
+		return y >= 0 ? (y / WordSize) : (-~y / WordSize - 1);
+	}
+
+	// Viewport rectangle
+	struct Viewport
+	{
+		int l, t, r, b;
+	};
+
+	// Return data for a clipped rectangle
+	struct ClippedQuad
+	{
+		int x, y;         // The top/left corner in the quad that is on screen
+		int w, h;         // The width/height of the quad that is on screen
+		int scn0, scn1;   // The inclusive range of blocks spanned on the screen
+		int quad0, quad1; // The inclusive range of blocks spanned in the quad
+		int yofs;         // The relative offset between the quad and the screen (mod block height)
+	};
+
+	// Clip a rectangle to a viewport
+	template <typename TWord = uint8_t>
+	bool ClipQuadToViewport(int X, int Y, int dx, int dy, Viewport const& vp, ClippedQuad& clip)
+	{
+		// The region 'clip.x/y clip.w/h' represents the area within the quad that
+		// is still visible (i.e. in quad space). The screen coordinates of the top/left
+		// corner of the visible area are not returned, but can be inferred as the viewport
+		// top/left if clip.x/y is not (0,0). Equivalently, as (X + clip.x, Y + clip.y)
+		constexpr int WordSize = 8*sizeof(TWord);
+		
+		// Clip the quad to the the viewport bounds
+		clip.x = 0;
+		clip.y = 0;
+		clip.w = dx;
+		clip.h = dy;
+		if (X + dx > vp.r) { clip.w  = vp.r - X; }
+		if (Y + dy > vp.b) { clip.h  = vp.b - Y; }
+		if (X      < vp.l) { clip.w -= vp.l - X; clip.x += vp.l - X; }
+		if (Y      < vp.t) { clip.h -= vp.t - Y; clip.y += vp.t - Y; }
+		if (clip.w <= 0 || clip.h <= 0)
+			return false;
+
+		// Offset from a row boundary to the top edge of the quad
+		clip.yofs = Y - BlockIndex<TWord>(Y) * WordSize;
+
+		// The y position of the visible area of the quad
+		int y = Y + clip.y;
+
+		// The (inclusive) block range on the screen spanned by the quad
+		clip.scn0 = BlockIndex<TWord>(y);
+		clip.scn1 = BlockIndex<TWord>(y + clip.h - 1);
+
+		// The (inclusive) block range in the quad spanned by the screen
+		clip.quad0 = BlockIndex<TWord>(clip.y);
+		clip.quad1 = BlockIndex<TWord>(clip.y + clip.h - 1);
+
+		return true;
+	}
+
 	// A 1-Bit readonly bitmap
 	template <typename TWord = uint8_t>
 	struct BitmapR
@@ -50,7 +114,7 @@ namespace pr::onebit
 		//  - It's too complicated allowing mixed word size bitmaps. Only use bitmaps of the same word size together
 
 		using Word = TWord;
-		constexpr static int WordSize = sizeof(Word) * 8;
+		static constexpr int WordSize = sizeof(Word) * 8;
 
 		Word const* m_data;
 		int m_dimx, m_dimy;
@@ -66,7 +130,7 @@ namespace pr::onebit
 		// Access a block of pixel data
 		Word Block(int b, int x) const
 		{
-			assert(b >= 0 && b < BlockIndex(m_dimy + WordSize - 1));
+			assert(b >= 0 && b < BlockIndex<Word>(m_dimy + WordSize - 1));
 			assert(x >= 0 && x < m_dimx);
 			return m_data[b * m_stride + x];
 		}
@@ -76,16 +140,7 @@ namespace pr::onebit
 		{
 			if (x < 0 || x >= m_dimx) return false;
 			if (y < 0 || y >= m_dimy) return false;
-			return Block(BlockIndex(y), x) & (1 << (y % WordSize));
-		}
-
-		// Convert a Y coordinate to a block index
-		constexpr static int BlockIndex(int y)
-		{
-			// Handle negative values correctly. e.g. [-WordSize,0) == block -1, [0, WordSize) = block 0
-			return y >= 0
-				? y / WordSize
-				: -~y / WordSize - 1;
+			return Block(BlockIndex<Word>(y), x) & (1 << (y % WordSize));
 		}
 
 		// Write the bitmap to a file
@@ -112,7 +167,7 @@ namespace pr::onebit
 	{
 		using BitmapR = BitmapR<TWord>;
 		using Word = typename BitmapR::Word;
-		constexpr static int WordSize = sizeof(Word) * 8;
+		static constexpr int WordSize = sizeof(Word) * 8;
 
 		// The capacity of the bitmap
 		constexpr static int DimX = DimX;
@@ -122,6 +177,7 @@ namespace pr::onebit
 		// The height of the bitmap in blocks
 		constexpr static int BlockHeight = (DimY + WordSize - 1) / WordSize;
 
+		// The bitmap data
 		Word m_buf[DimX * BlockHeight];
 
 		Bitmap() noexcept
@@ -191,17 +247,18 @@ namespace pr::onebit
 		}
 		void Clear(int X, int Y, int W, int H, Word value = 0)
 		{
-			// Clip the clear rectange to the image
-			if (X + W > DimX) { W = DimX - X; }
-			if (Y + H > DimY) { H = DimY - Y; }
-			if (X < 0) { W += X; X = 0; }
-			if (Y < 0) { H += H; H = 0; }
-			if (W <= 0 || H <= 0)
+			// Clip the clear rectangle to the image
+			ClippedQuad clip;
+			if (!ClipQuadToViewport(X, Y, W, H, {0, 0, DimX, DimY}, clip))
 				return;
 
+			// Shift (X,Y) to the top/left of the visible area
+			X += clip.x;
+			Y += clip.y;
+
 			// Fill the rectange with 'value'
-			auto bbeg = BitmapR<TWord>::BlockIndex(Y + 0);
-			auto bend = BitmapR<TWord>::BlockIndex(Y + H);
+			auto bbeg = BlockIndex<Word>(Y + 0);
+			auto bend = BlockIndex<Word>(Y + H);
 			for (int b = bbeg; b <= bend; ++b)
 			{
 				auto mask = value;
@@ -239,67 +296,48 @@ namespace pr::onebit
 		using BmpL = std::decay_t<BitmapL>;
 		using BmpR = std::decay_t<BitmapR>;
 		using Word = typename BmpL::Word;
-		
-		static_assert(BmpL::WordSize == BmpR::WordSize, "Bitmaps must have the same Word size");
-		constexpr auto BlockIndex = BmpL::BlockIndex;
-		constexpr int WordSize = BmpL::WordSize;
-
-		// Offset from a block boundary for the top edge of 'rhs'
-		auto ytop = Y - BlockIndex(Y) * WordSize;
+		constexpr int WordSize = sizeof(Word) * 8;
+		static_assert(std::is_same_v<BmpL::Word, BmpR::Word>, "Bitmaps must have the same Word size");
 
 		// Clip 'rhs' to the bounds of 'lhs'
-		// (cx,cy) is the top/left coord of the clipped region in 'rhs'
-		// (cw,ch) is the width/height of the clipped region in 'rhs'
-		int cx = 0, cy = 0;
-		int cw = rhs.m_dimx, ch = rhs.m_dimy;
-		if (X + cw > lhs.m_dimx) { cw = lhs.m_dimx - X; }
-		if (Y + ch > lhs.m_dimy) { ch = lhs.m_dimy - Y; }
-		if (X < 0) { cx -= X; cw += X; X = 0; }
-		if (Y < 0) { cy -= Y; ch += Y; Y = 0; }
-		if (cw <= 0 || ch <= 0)
+		ClippedQuad clip;
+		if (!ClipQuadToViewport<Word>(X, Y, rhs.m_dimx, rhs.m_dimy, {0, 0, lhs.m_dimx, lhs.m_dimy}, clip))
 			return false;
 
-		// Offset from a row boundary for the bottom edge of 'rhs'
-		auto ybot = (Y + ch) - BlockIndex(Y + ch) * WordSize;
-
-		// The inclusive block range on 'lhs' spanned by 'rhs'
-		auto lhsb0 = BlockIndex(Y + 0);
-		auto lhsb1 = BlockIndex(Y + ch - 1);
-
-		// The inclusive block range on 'rhs' spanned by 'lhs'
-		auto rhsb0 = BlockIndex(cy + 0);
-		auto rhsb1 = BlockIndex(cy + ch - 1);
+		// Shift (X,Y) to the top/left of the visible area
+		X += clip.x;
+		Y += clip.y;
 
 		// Loop over the blocks that span 'rhs'
-		for (int b = lhsb0; b <= lhsb1; ++b)
+		for (auto b = clip.scn0; b <= clip.scn1; ++b)
 		{
 			// Get the minimum (virtual) block index in 'rhs' that overlaps blk 'b' (can be negative)
-			int B = BlockIndex(b * WordSize - (Y - cy));
+			auto B = BlockIndex<Word>(b * WordSize - (Y - clip.y));
 
 			// Create a mask for the bits to write to in this block
 			Word mask = static_cast<Word>(~0U);
-			if (Y+0  > (b+0)*WordSize) mask &= MaskHi<Word>(ytop);
-			if (Y+ch < (b+1)*WordSize) mask &= MaskLo<Word>(ybot);
+			if (Y        > (b+0)*WordSize) mask &= MaskHi<Word>(Y        - b*8);
+			if (Y+clip.h < (b+1)*WordSize) mask &= MaskLo<Word>(Y+clip.h - b*8);
 
 			// Loop over the horizontal range in 'rhs'
-			for (int x = cx, xend = cx + cw; x != xend; ++x)
+			for (int x = clip.x, xend = clip.x + clip.w; x != xend; ++x)
 			{
 				Word word = 0;
-				if (B >= rhsb0)
+				if (B >= clip.quad0)
 				{
 					auto bits = rhs.Block(B, x);
-					if (ytop != 0) bits >>= (WordSize - ytop); // shift down so that 'ytop' bits remain
+					if (clip.yofs != 0) bits >>= (WordSize - clip.yofs); // shift down so that 'yofs' bits remain
 					word |= bits;
 				}
-				if (B < rhsb1 && ytop != 0)
+				if (B < clip.quad1 && clip.yofs != 0)
 				{
 					auto bits = rhs.Block(B + 1, x);
-					bits <<= ytop; // shift up so that (WordSize-ytop) bits remain
+					bits <<= clip.yofs; // shift up so that (WordSize-yofs) bits remain
 					word |= bits;
 				}
 
 				// Apply the combine operation
-				if (op(lhs, rhs, b, X + (x - cx), word, mask))
+				if (op(lhs, rhs, b, X + (x - clip.x), word, mask))
 					return true;
 			}
 		}
@@ -415,15 +453,15 @@ namespace pr::onebit
 
 			bool hit;
 
-			hit = Combine(s0, s1, 10, 10, [](auto& lhs, auto&, int b, int x, auto word, auto)
+			hit = Combine(s0, s1, 10, 10, [](auto& lhs, auto&, int b, int x, auto word, auto mask)
 			{
-				return (lhs.Block(b, x) & word) != 0;
+				return (lhs.Block(b, x) & word & mask) != 0;
 			});
 			PR_CHECK(hit, true);
 
-			hit = Combine(s0, s1, 10, 8, [](auto& lhs, auto&, int b, int x, auto word, auto)
+			hit = Combine(s0, s1, 10, 8, [](auto& lhs, auto&, int b, int x, auto word, auto mask)
 			{
-				return (lhs.Block(b, x) & word) != 0;
+				return (lhs.Block(b, x) & word & mask) != 0;
 			});
 			PR_CHECK(hit, false);
 		}
