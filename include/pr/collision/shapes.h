@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (c) Rylogic Ltd 2016
 //*********************************************
@@ -38,7 +38,7 @@ namespace pr::collision
 
 	// Shift the centre a shape. Updates 'shape.m_shape_to_model' and 'shift'
 	template <typename>
-	void ShiftCentre(Shape& shape, v4& shift)
+	void ShiftCentre(Shape& shape, v4 const& shift)
 	{
 		switch (shape.m_type)
 		{

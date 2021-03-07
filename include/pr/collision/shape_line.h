@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************************
@@ -45,7 +45,7 @@ namespace pr::collision
 	}
 
 	// Shift the centre of a line
-	inline void ShiftCentre(ShapeLine&, v4& shift)
+	inline void ShiftCentre(ShapeLine&, v4 const& shift)
 	{
 		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
 		(void)shift; 

@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -161,7 +161,7 @@ namespace pr::collision
 	// Shift the verts of the polytope so they are centred on a new position.
 	// 'shift' should be in 'shape' space. NOTE: This invalidates the inertia matrix.
 	// You will need to translate the inertia matrix by the same shift.
-	inline void ShiftCentre(ShapePolytope& shape, v4_cref<> shift)
+	inline void ShiftCentre(ShapePolytope& shape, v4 const& shift)
 	{
 		assert(shift.w == 0.0f);
 		for (v4 *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) *v -= shift;
