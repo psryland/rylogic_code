@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -51,7 +51,7 @@ namespace pr::collision
 	}
 
 	// Shift the centre of a triangle
-	inline void ShiftCentre(ShapeTriangle& shape, v4& shift)
+	inline void ShiftCentre(ShapeTriangle& shape, v4 const& shift)
 	{
 		assert(shift.w == 0.0f);
 		if (FEql(shift, v4Zero)) return;
@@ -59,7 +59,6 @@ namespace pr::collision
 		shape.m_v.y -= shift;
 		shape.m_v.z -= shift;
 		shape.m_base.m_s2p.pos += shift;
-		shift = v4Zero;
 	}
 
 	// Return a support vertex for a triangle

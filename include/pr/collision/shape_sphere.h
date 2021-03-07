@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -48,7 +48,7 @@ namespace pr::collision
 	}
 
 	// Shift the centre of a sphere
-	inline void ShiftCentre(ShapeSphere&, v4& shift)
+	inline void ShiftCentre(ShapeSphere&, v4 const& shift)
 	{
 		assert("impossible to shift the centre of an implicit object" && FEql(shift, v4Zero));
 		(void)shift; 

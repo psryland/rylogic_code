@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Collision
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -227,7 +227,7 @@ namespace pr::collision
 
 	// Forward declare standard shape functions
 	template <typename = void> BBox CalcBBox(Shape const& shape);
-	template <typename = void> void ShiftCentre(Shape&, v4& shift);
+	template <typename = void> void ShiftCentre(Shape&, v4 const& shift);
 	template <typename = void> v4   SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id);
 	template <typename = void> void ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest);
 }
