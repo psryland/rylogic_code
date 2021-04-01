@@ -387,7 +387,19 @@ namespace Rylogic.Maths
 		/// <summary>Finite test of matrix elements</summary>
 		public static bool IsFinite(m3x4 m)
 		{
-			return IsFinite(m.x) && IsFinite(m.y) && IsFinite(m.z);
+			return
+				IsFinite(m.x) &&
+				IsFinite(m.y) &&
+				IsFinite(m.z);
+		}
+
+		/// <summary>Return true if any components of 'm' are NaN</summary>
+		public static bool IsNaN(m3x4 m)
+		{
+			return
+				IsNaN(m.x) ||
+				IsNaN(m.y) ||
+				IsNaN(m.z);
 		}
 
 		/// <summary>True if 'm' is orthonormal</summary>

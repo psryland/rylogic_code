@@ -267,9 +267,6 @@ namespace Rylogic.Gui.WPF
 				EPin.CentreRight  => new Point(rect.Right                   , (rect.Top + rect.Bottom) / 2) + pin_offset,
 				_                 => throw new Exception($"Unknown pin location '{PinSite}'"),
 			};
-
-			// Keep the window on-screen
-			pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
 			return pt;
 		}
 
@@ -288,6 +285,10 @@ namespace Rylogic.Gui.WPF
 			m_location_update_pending = false;
 			if (Location() is Point pt)
 			{
+				// Keep the window on-screen (if not being dragged by the user)
+				if (!PinWindow.IsActive)
+					pt = Gui_.OnScreen(pt, PinWindow.RenderSize);
+
 				using var s = Scope.Create(() => UpdatingLocation = true, () => UpdatingLocation = false);
 				PinWindow.SetLocation(pt);
 			}

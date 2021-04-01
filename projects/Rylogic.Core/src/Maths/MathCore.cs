@@ -72,6 +72,8 @@ namespace Rylogic.Maths
 
 		public static bool IsFinite(float x) { return !float.IsInfinity(x) && !float.IsNaN(x); }
 		public static bool IsFinite(double x) { return !double.IsInfinity(x) && !double.IsNaN(x); }
+		public static bool IsNaN(float x) { return float.IsNaN(x); }
+		public static bool IsNaN(double x) { return double.IsNaN(x); }
 		public static int SignI(bool positive) { return positive ? 1 : -1; }
 		public static float SignF(bool positive) { return positive ? 1f : -1f; }
 		public static double SignD(bool positive) { return positive ? 1.0 : -1.0; }

@@ -18,12 +18,6 @@ namespace TestWPF
 		public ChartUI()
 		{
 			InitializeComponent();
-
-			m_chart.Title = "My Chart Title";
-			m_chart.XAxis.Label = "My X Axis";
-			m_chart.YAxis.Label = "My Y Axis";
-			//m_chart.XAxis.Options.Side = Dock.Top;
-			//m_chart.YAxis.Options.Side = Dock.Right;
 			m_chart.Options.Orthographic = true;
 			m_chart.Options.SceneBorderThickness = 1;
 			m_chart.Options.SceneBorderColour = Colour32.Black;
@@ -85,7 +79,14 @@ namespace TestWPF
 			base.OnClosed(e);
 		}
 
-		public int Number => 4;
+		/// <summary></summary>
+		public ChartControl Chart => m_chart;
+
+		/// <summary></summary>
+		public int Number => 42;
+
+		/// <summary></summary>
+		public double LineY => 50.0;
 
 		/// <summary></summary>
 		public ICollectionView MyLegendItems { get; }

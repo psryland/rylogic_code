@@ -26,8 +26,8 @@ namespace Rylogic.Maths
 		public static int BitAt(this  long x, int bit) => (int)((x >> bit) & 1);
 
 		/// <summary>Get the range of bits as a value. e.g. x = 1011101, start=2,count=3 = [2,4] => 111 = 7</summary>
-		public static ulong Bits(this ulong x, int start, int count) => (x >> start) & ~(~0UL << count);
-		public static long Bits(this long x, int start, int count) => unchecked((long)Bits((ulong)x, start, count));
+		[Obsolete] public static ulong Bits(this ulong x, int start, int count) => (x >> start) & ~(~0UL << count);
+		[Obsolete] public static long Bits(this long x, int start, int count) => unchecked((long)Bits((ulong)x, start, count));
 
 		/// <summary>Set/Clear bits in 'value'</summary>
 		public static ulong SetBits(ulong value, ulong mask, bool state)
@@ -180,6 +180,26 @@ namespace Rylogic.Maths
 			value = ((value >> 16) & 0x0000FFFF0000FFFFUL) | ((value & 0x0000FFFF0000FFFFUL) << 16); // swap 2-byte words
 			value = ((value >> 32) & 0x00000000FFFFFFFFUL) | ((value & 0x00000000FFFFFFFFUL) << 32); // swap 4-byte words
 			return value;
+		}
+
+		/// <summary>
+		/// Extract the bit range [hi,lo] (inclusive) from 'value'.
+		/// 'hi' and 'lo' are zero-based bit indices. The returned result is shifted down by .lo'.
+		/// e.g. Bits(0b11111111, 6, 3) => 0b01111000 => 0b0001111 => 0xF</summary>
+		public static ulong Bits_(ulong value, int hi, int lo)
+		{
+			var mask = (1UL << (hi - lo + 1)) - 1;
+			return (value >> lo) & mask;
+		}
+
+		///<summary>
+		/// Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
+		/// 'hi' and 'lo' are zero-based bit indices.
+		/// e.g. BitStuff(0b11111111, 6, 3) => 0b00001111 => 0b01111000</summary>
+		public static ulong BitStuff(ulong value, int hi, int lo)
+		{
+			var mask = (1UL << (hi - lo + 1)) - 1;
+			return (value & mask) << lo;
 		}
 
 		/// <summary>Return the index of the single bit set in 'n'</summary>

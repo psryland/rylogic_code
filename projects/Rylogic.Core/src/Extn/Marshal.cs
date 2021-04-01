@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Rylogic.Utility;
 
 namespace Rylogic.Common
@@ -146,6 +147,18 @@ namespace Rylogic.Common
 				throw new InvalidOperationException($"Cannot convert pointer to {typeof(TFunc).Name} type");
 
 			return func;
+		}
+
+		/// <summary>Convert unmanaged memory to a UTF8 string</summary>
+		public static string PtrToStringUTF8(IntPtr ptr, int length)
+		{
+			#if NETCOREAPP3_1_OR_GREATER
+			return Marshal.PtrToStringUTF8(ptr, length);
+			#else
+			var bytes = new byte[length];
+			Marshal.Copy(ptr, bytes, 0, length);
+			return Encoding.UTF8.GetString(bytes);
+			#endif
 		}
 
 		/// <summary>Pin an object. No copy made. 'type' Pinned only works if 'obj' contains primitive/blittable data</summary>

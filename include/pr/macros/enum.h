@@ -1,4 +1,4 @@
-//******************************************************************************
+﻿//******************************************************************************
 // Reflective enum
 //  Copyright (c) Rylogic Ltd 2013
 //******************************************************************************
@@ -204,10 +204,10 @@ namespace pr
 		{\
 			using E = enum_name;\
 			switch (static_cast<E>(val)) {\
-			default: return false;\
 			enum_vals1(PR_ENUM_TOTRUE1)\
 			enum_vals2(PR_ENUM_TOTRUE2)\
 			enum_vals3(PR_ENUM_TOTRUE3)\
+			default: return false;\
 			}\
 		}\
 \

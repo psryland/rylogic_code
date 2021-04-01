@@ -301,11 +301,24 @@ namespace Rylogic.Common
 	[DebuggerDisplay("{Beg} {End} ({Size})")]
 	public struct RangeF
 	{
+		// Note:
+		//  - Using properties for 'Beg/End' so that WPF binding works
+
 		/// <summary>The value of the first element in the range</summary>
-		public double Beg;
+		public double Beg
+		{
+			get => beg;
+			set => beg = value;
+		}
+		public double beg;
 
 		/// <summary>The value of one past the last element in the range</summary>
-		public double End;
+		public double End
+		{
+			get => end;
+			set => end = value;
+		}
+		public double end;
 
 		/// <summary>The default empty range</summary>
 		public static readonly RangeF Zero = new RangeF { Beg = 0.0, End = 0.0 };
@@ -355,10 +368,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Construct from a range</summary>
-		public RangeF(double begin, double end)
+		public RangeF(double beg, double end)
 		{
-			Beg = begin;
-			End = end;
+			this.beg = beg;
+			this.end = end;
 		}
 
 		/// <summary>True if Beg == End</summary>
@@ -389,11 +402,27 @@ namespace Rylogic.Common
 			Beg = End = 0.0;
 		}
 
-		// Casting helpers
-		public float Begf => (float)Beg;
-		public float Endf => (float)End;
-		public float Sizef => (float)Size;
-		public float Midf => (float)Mid;
+		/// <summary>Casting helpers</summary>
+		public float Begf
+		{
+			get => (float)Beg;
+			set => Beg = value;
+		}
+		public float Endf
+		{
+			get => (float)End;
+			set => End = value;
+		}
+		public float Sizef
+		{
+			get => (float)Size;
+			set => Size = value;
+		}
+		public float Midf
+		{
+			get => (float)Mid;
+			set => Mid = value;
+		}
 
 		/// <summary>Enumerator for iterating over the range. 'step' is the step size, 'count' is the number of divisions. Use one or the other, not both. Defaults to step == 1.0</summary>
 		public IEnumerable<double> Enumerate(double? step = null, double? count = null)

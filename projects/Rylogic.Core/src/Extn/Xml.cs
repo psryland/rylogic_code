@@ -215,45 +215,17 @@ namespace Rylogic.Extn
 				if (type == typeof(string) || type.IsEnum)
 					return ToXmlDefault(obj, node);
 
-				// Handle unknown collections as arrays
-				if (obj is IEnumerable &&
-					type != typeof(Rylogic.Common.RangeI) &&
-					type != typeof(Rylogic.Common.RangeF) &&
-					gen_type != typeof(List<>) &&
-					gen_type != typeof(Dictionary<,>) &&
-					gen_type != typeof(HashSet<>))
-				{
-					// Derive an element name from the singular of the array name
-					var name = node.Name.LocalName;
-					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0, name.Length-1) : "_";
-
-					// Determine the type of the array elements
-					var elem_type = type.GetElementType();
-
-					// Add each element from the collection
-					foreach (var i in (IEnumerable)obj)
-					{
-						// The type attribute is not needed if actual type of the element matches the array element type.
-						// It is needed if the element is a sub-class of the element type, or the array element type is
-						// 'object', or the element is null (so 'As' knows what type of null to create).
-						var ty_attr = type_attr && (i == null || elem_type == typeof(object) || i.GetType() != elem_type);
-						node.Add(Convert(i, new XElement(elem_name), ty_attr));
-					}
-
-					// Make <elem></elem> different to <elem/>
-					if (!node.HasElements)
-						node.SetValue(string.Empty);
-
-					return node;
-				}
-
 				// Use the generalised generic type if generic
 				var lookup_type = type.IsGenericType ? gen_type : type;
 
-				// Otherwise, use the bound ToXml function
-				ToFunc? func = m_bind.TryGetValue(lookup_type, out var f) ? f : null;
-				for (;func == null;)
+				// Find a function that contains the type to XML
+				ToFunc? func = null;
+				for (;;)
 				{
+					// Look for a binding function
+					func = m_bind.TryGetValue(lookup_type, out var f) ? f : null;
+					if (func != null) { break; }
+
 					// See if 'obj' has a native 'ToXml' method
 					var mi = type.GetMethods(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
 					if (mi != null) { func = this[type] = ToXmlMethod; break; }
@@ -261,6 +233,34 @@ namespace Rylogic.Extn
 					// Try DataContract binding
 					var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
 					if (dca != null) { func = this[type] = ToXmlDataContract; break; }
+
+					// Handle unknown collections as arrays.
+					// Handle 'IEnumerable' after checking that 'obj' doesn't have a ToXml method
+					if (obj is IEnumerable enumerable)
+					{
+						// Derive an element name from the singular of the array name
+						var name = node.Name.LocalName;
+						var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0, name.Length - 1) : "_";
+
+						// Determine the type of the array elements
+						var elem_type = type.GetElementType();
+
+						// Add each element from the collection
+						foreach (var i in enumerable)
+						{
+							// The type attribute is not needed if actual type of the element matches the array element type.
+							// It is needed if the element is a sub-class of the element type, or the array element type is
+							// 'object', or the element is null (so 'As' knows what type of null to create).
+							var ty_attr = type_attr && (i == null || elem_type == typeof(object) || i.GetType() != elem_type);
+							node.Add(Convert(i, new XElement(elem_name), ty_attr));
+						}
+
+						// Make <elem></elem> different to <elem/>
+						if (!node.HasElements)
+							node.SetValue(string.Empty);
+
+						return node;
+					}
 
 					throw new NotSupportedException($"There is no 'ToXml' binding for type {type.FullName}");
 				}

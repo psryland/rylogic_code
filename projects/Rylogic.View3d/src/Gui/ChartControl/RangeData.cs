@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Controls;
 using Rylogic.Common;
@@ -19,8 +20,8 @@ namespace Rylogic.Gui.WPF
 			public RangeData(ChartControl chart)
 			{
 				m_chart = chart;
-				XAxis = new Axis(EAxis.XAxis, m_chart);
-				YAxis = new Axis(EAxis.YAxis, m_chart);
+				XAxis = new Axis(EAxis.XAxis, "X-Axis", m_chart);
+				YAxis = new Axis(EAxis.YAxis, "Y-Axis", m_chart);
 			}
 			public RangeData(RangeData rhs)
 			{
@@ -45,11 +46,13 @@ namespace Rylogic.Gui.WPF
 					{
 						m_xaxis.Scroll -= HandleAxisScrolled;
 						m_xaxis.Zoomed -= HandleAxisZoomed;
+						m_xaxis.PropertyChanged -= HandlePropertyChanged;
 						Util.Dispose(ref m_xaxis!);
 					}
 					m_xaxis = value;
 					if (m_xaxis != null)
 					{
+						m_xaxis.PropertyChanged += HandlePropertyChanged;
 						m_xaxis.Zoomed += HandleAxisZoomed;
 						m_xaxis.Scroll += HandleAxisScrolled;
 					}
@@ -68,11 +71,13 @@ namespace Rylogic.Gui.WPF
 					{
 						m_yaxis.Scroll -= HandleAxisScrolled;
 						m_yaxis.Zoomed -= HandleAxisZoomed;
+						m_yaxis.PropertyChanged -= HandlePropertyChanged;
 						Util.Dispose(ref m_yaxis!);
 					}
 					m_yaxis = value;
 					if (m_yaxis != null)
 					{
+						m_yaxis.PropertyChanged += HandlePropertyChanged;
 						m_yaxis.Zoomed += HandleAxisZoomed;
 						m_yaxis.Scroll += HandleAxisScrolled;
 					}
@@ -99,6 +104,20 @@ namespace Rylogic.Gui.WPF
 			{
 				XAxis.Gfx.UpdateScene(window);
 				YAxis.Gfx.UpdateScene(window);
+			}
+
+			/// <summary>Notify of the axis properties changing</summary>
+			private void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+			{
+				switch (e.PropertyName)
+				{
+					case nameof(Axis.Label):
+					{
+						if (sender == XAxis) m_chart.NotifyPropertyChanged(nameof(XLabel));
+						if (sender == YAxis) m_chart.NotifyPropertyChanged(nameof(YLabel));
+						break;
+					}
+				}
 			}
 
 			/// <summary>Notify of the axis zooming</summary>
@@ -142,21 +161,21 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>A axis on the chart (typically X or Y)</summary>
 			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
-			public sealed class Axis : IDisposable
+			public sealed class Axis : IDisposable, INotifyPropertyChanged
 			{
 				public delegate string TickTextCB(double x, double? step = null);
 
-				public Axis(EAxis axis, ChartControl chart)
-					: this(axis, chart, 0f, 1f)
+				public Axis(EAxis axis, string label, ChartControl chart)
+					: this(axis, label, chart, 0f, 1f)
 				{ }
-				public Axis(EAxis axis, ChartControl chart, double min, double max)
+				public Axis(EAxis axis, string label, ChartControl chart, double min, double max)
 				{
 					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
 					Chart = chart;
 					RangeLimits = new RangeF(-1e10, +1e10);
 					Set(min, max);
 					AxisType = axis;
-					Label = string.Empty;
+					Label = label;
 					AllowScroll = true;
 					AllowZoom = true;
 					TickText = DefaultTickText;
@@ -194,21 +213,20 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The axis label</summary>
 				public string Label
 				{
-					get => m_label ?? "X Axis";
+					get => m_label;
 					set
 					{
 						if (m_label == value) return;
 						m_label = value;
-						Chart.NotifyPropertyChanged(nameof(Label));
+						NotifyPropertyChanged(nameof(Label));
 					}
 				}
-				private string? m_label;
+				private string m_label = null!;
 
 				/// <summary>The minimum axis value</summary>
 				public double Min
 				{
-					[DebuggerStepThrough]
-					get { return m_min; }
+					get => m_min;
 					set
 					{
 						if (m_min == value) return;
@@ -220,8 +238,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The maximum axis value</summary>
 				public double Max
 				{
-					[DebuggerStepThrough]
-					get { return m_max; }
+					get => m_max;
 					set
 					{
 						if (m_max == value) return;
@@ -233,8 +250,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The total range of this axis (max - min)</summary>
 				public double Span
 				{
-					[DebuggerStepThrough]
-					get { return Max - Min; }
+					get => Max - Min;
 					set
 					{
 						if (Span == value) return;
@@ -246,8 +262,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The centre value of the range</summary>
 				public double Centre
 				{
-					[DebuggerStepThrough]
-					get { return (Min + Max) * 0.5; }
+					get => (Min + Max) * 0.5;
 					set
 					{
 						if (Centre == value) return;
@@ -258,8 +273,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The min/max limits as a range</summary>
 				public RangeF Range
 				{
-					[DebuggerStepThrough]
-					get { return new RangeF(Min, Max); }
+					get => new RangeF(Min, Max);
 					set
 					{
 						if (Equals(Range, value)) return;
@@ -270,7 +284,7 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The min/max value that the axis can scroll to</summary>
 				public RangeF RangeLimits
 				{
-					get { return m_range_limits; }
+					get => m_range_limits;
 					set
 					{
 						if (m_range_limits == value) return;
@@ -452,6 +466,10 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 				private AxisLinkData? m_link_to;
+
+				/// <inheritdoc/>
+				public event PropertyChangedEventHandler? PropertyChanged;
+				public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 				/// <summary>Friendly string view</summary>
 				public override string ToString()

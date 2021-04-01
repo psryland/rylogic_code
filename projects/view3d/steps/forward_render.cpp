@@ -185,7 +185,7 @@ namespace pr::rdr
 //	auto texs = PR_ALLOCA_POD(ID3D11ShaderResourceView*, proj_tex.size());
 //	auto samp = PR_ALLOCA_POD(ID3D11SamplerState*, proj_tex.size());
 //	// Set the number of projected textures
-//	auto pt_count = checked_cast<uint>(proj_tex.size());
+//	auto pt_count = s_cast<uint>(proj_tex.size());
 //	buf.m_proj_tex_count = pr::v4(static_cast<float>(pt_count),0.0f,0.0f,0.0f);
 //	// Set the PT transform and populate the textures/sampler arrays
 //	for (uint i = 0; i != pt_count; ++i)

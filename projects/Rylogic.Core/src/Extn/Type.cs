@@ -636,8 +636,8 @@ namespace Rylogic.Extn
 			// Translate the double into sign, exponent, and mantissa.
 			var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(x));
 			sign     = bits.BitAt(63) != 0 ? -1 : +1;
-			exponent = (int)bits.Bits(52, 11);
-			mantissa = (long)bits.Bits(0, 52);
+			exponent = (int)Bit.Bits_(bits, 63, 52);
+			mantissa = (long)Bit.Bits_(bits, 52, 0);
 			if (raw)
 				return;
 

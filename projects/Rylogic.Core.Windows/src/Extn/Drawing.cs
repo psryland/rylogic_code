@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Media;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn.Windows
@@ -257,6 +258,15 @@ namespace Rylogic.Extn.Windows
 			return
 				Math_.FEqlRelative(lhs.X, rhs.X, tol) &&
 				Math_.FEqlRelative(lhs.Y, rhs.Y, tol);
+		}
+	}
+
+	public static class Transform_
+	{
+		/// <summary>Convert a matrix to a WPF media transform</summary>
+		public static MatrixTransform ToTransform(this m4x4 o2w)
+		{
+			return new MatrixTransform(o2w.x.x, o2w.x.y, o2w.y.x, o2w.y.y, o2w.pos.x, o2w.pos.y);
 		}
 	}
 }

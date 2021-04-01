@@ -27,10 +27,8 @@
 		Background="{Binding Expanded, Converter={conv:BoolSelect}, ConverterParameter='#CEEE|Transparent'}"
 		HorizontalAlignment="Left"
 		>
-		<!--
-		{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}
-		-->
-		<!-- Expand button -->
+
+		<!-- Expand button (Top left) -->
 		<ToggleButton
 			IsChecked="{Binding Expanded}"
 			HorizontalAlignment="{Binding HorizontalAlignment, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}}"
@@ -47,7 +45,7 @@
 				/>
 		</ToggleButton>
 
-		<!-- Items -->
+		<!-- Legend Items List-->
 		<DataGrid
 			ItemsSource="{Binding ItemsSource}"
 			SelectedItem="{Binding SelectedItem, Mode=TwoWay}"

@@ -1,10 +1,8 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include <exception>
 #include <memory>
 #include <cuchar>
@@ -39,11 +37,12 @@
 namespace pr::script
 {
 	using char_t = wchar_t;
-	using string_t = std::basic_string<char_t>; // pr::string<wchar_t>;
+	using string_t = std::basic_string<char_t>;
 	using string_view_t = std::basic_string_view<char_t>;
 	using InLiteral = str::InLiteral;
 	using InComment = str::InComment;
 
+	// Script result codes
 	#define PR_ENUM(x)\
 		x(Success                       )\
 		x(Failed                        )\
@@ -77,6 +76,7 @@ namespace pr::script
 	PR_DEFINE_ENUM1(EResult, PR_ENUM);
 	#undef PR_ENUM
 
+	// Script token types
 	#define PR_ENUM(x)\
 		x(Invalid    ) /* Unknown */\
 		x(EndOfStream) /* The end of the input stream */\
@@ -87,43 +87,46 @@ namespace pr::script
 	PR_DEFINE_ENUM1(EToken, PR_ENUM); 
 	#undef PR_ENUM
 
+	// C/C++ keywords
 	#define PR_ENUM(x)\
-		x(Invalid  ,""         ,= pr::hash::HashCT(""         ))\
-		x(Auto     ,"auto"     ,= pr::hash::HashCT("auto"     ))\
-		x(Double   ,"double"   ,= pr::hash::HashCT("double"   ))\
-		x(Int      ,"int"      ,= pr::hash::HashCT("int"      ))\
-		x(Struct   ,"struct"   ,= pr::hash::HashCT("struct"   ))\
-		x(Break    ,"break"    ,= pr::hash::HashCT("break"    ))\
-		x(Else     ,"else"     ,= pr::hash::HashCT("else"     ))\
-		x(Long     ,"long"     ,= pr::hash::HashCT("long"     ))\
-		x(Switch   ,"switch"   ,= pr::hash::HashCT("switch"   ))\
-		x(Case     ,"case"     ,= pr::hash::HashCT("case"     ))\
-		x(Enum     ,"enum"     ,= pr::hash::HashCT("enum"     ))\
-		x(Register ,"register" ,= pr::hash::HashCT("register" ))\
-		x(Typedef  ,"typedef"  ,= pr::hash::HashCT("typedef"  ))\
-		x(Char     ,"char"     ,= pr::hash::HashCT("char"     ))\
-		x(Extern   ,"extern"   ,= pr::hash::HashCT("extern"   ))\
-		x(Return   ,"return"   ,= pr::hash::HashCT("return"   ))\
-		x(Union    ,"union"    ,= pr::hash::HashCT("union"    ))\
-		x(Const    ,"const"    ,= pr::hash::HashCT("const"    ))\
-		x(Float    ,"float"    ,= pr::hash::HashCT("float"    ))\
-		x(Short    ,"short"    ,= pr::hash::HashCT("short"    ))\
-		x(Unsigned ,"unsigned" ,= pr::hash::HashCT("unsigned" ))\
-		x(Continue ,"continue" ,= pr::hash::HashCT("continue" ))\
-		x(For      ,"for"      ,= pr::hash::HashCT("for"      ))\
-		x(Signed   ,"signed"   ,= pr::hash::HashCT("signed"   ))\
-		x(Void     ,"void"     ,= pr::hash::HashCT("void"     ))\
-		x(Default  ,"default"  ,= pr::hash::HashCT("default"  ))\
-		x(Goto     ,"goto"     ,= pr::hash::HashCT("goto"     ))\
-		x(Sizeof   ,"sizeof"   ,= pr::hash::HashCT("sizeof"   ))\
-		x(Volatile ,"volatile" ,= pr::hash::HashCT("volatile" ))\
-		x(Do       ,"do"       ,= pr::hash::HashCT("do"       ))\
-		x(If       ,"if"       ,= pr::hash::HashCT("if"       ))\
-		x(Static   ,"static"   ,= pr::hash::HashCT("static"   ))\
-		x(While    ,"while"    ,= pr::hash::HashCT("while"    ))
+		x(Invalid      ,""              ,= pr::hash::HashCT(""             ))\
+		x(Auto         ,"auto"          ,= pr::hash::HashCT("auto"         ))\
+		x(Double       ,"double"        ,= pr::hash::HashCT("double"       ))\
+		x(Int          ,"int"           ,= pr::hash::HashCT("int"          ))\
+		x(Struct       ,"struct"        ,= pr::hash::HashCT("struct"       ))\
+		x(Break        ,"break"         ,= pr::hash::HashCT("break"        ))\
+		x(Else         ,"else"          ,= pr::hash::HashCT("else"         ))\
+		x(Long         ,"long"          ,= pr::hash::HashCT("long"         ))\
+		x(Switch       ,"switch"        ,= pr::hash::HashCT("switch"       ))\
+		x(Case         ,"case"          ,= pr::hash::HashCT("case"         ))\
+		x(Enum         ,"enum"          ,= pr::hash::HashCT("enum"         ))\
+		x(Register     ,"register"      ,= pr::hash::HashCT("register"     ))\
+		x(Typedef      ,"typedef"       ,= pr::hash::HashCT("typedef"      ))\
+		x(Char         ,"char"          ,= pr::hash::HashCT("char"         ))\
+		x(Extern       ,"extern"        ,= pr::hash::HashCT("extern"       ))\
+		x(Return       ,"return"        ,= pr::hash::HashCT("return"       ))\
+		x(Union        ,"union"         ,= pr::hash::HashCT("union"        ))\
+		x(Const        ,"const"         ,= pr::hash::HashCT("const"        ))\
+		x(Float        ,"float"         ,= pr::hash::HashCT("float"        ))\
+		x(Short        ,"short"         ,= pr::hash::HashCT("short"        ))\
+		x(Unsigned     ,"unsigned"      ,= pr::hash::HashCT("unsigned"     ))\
+		x(Continue     ,"continue"      ,= pr::hash::HashCT("continue"     ))\
+		x(For          ,"for"           ,= pr::hash::HashCT("for"          ))\
+		x(Signed       ,"signed"        ,= pr::hash::HashCT("signed"       ))\
+		x(Void         ,"void"          ,= pr::hash::HashCT("void"         ))\
+		x(Default      ,"default"       ,= pr::hash::HashCT("default"      ))\
+		x(Goto         ,"goto"          ,= pr::hash::HashCT("goto"         ))\
+		x(Sizeof       ,"sizeof"        ,= pr::hash::HashCT("sizeof"       ))\
+		x(Volatile     ,"volatile"      ,= pr::hash::HashCT("volatile"     ))\
+		x(Do           ,"do"            ,= pr::hash::HashCT("do"           ))\
+		x(While        ,"while"         ,= pr::hash::HashCT("while"        ))\
+		x(If           ,"if"            ,= pr::hash::HashCT("if"           ))\
+		x(Static       ,"static"        ,= pr::hash::HashCT("static"       ))\
+		x(StaticAssert ,"static_assert" ,= pr::hash::HashCT("static_assert"))
 	PR_DEFINE_ENUM3(EKeyword, PR_ENUM); 
 	#undef PR_ENUM
 
+	// Preprocessor keywords
 	#define PR_ENUM(x)\
 		x(Invalid       ,""               ,= pr::hash::HashCT(""              ))\
 		x(Include       ,"include"        ,= pr::hash::HashCT("include"       ))\
@@ -151,6 +154,7 @@ namespace pr::script
 	PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 	#undef PR_ENUM
 
+	// Symbol characters
 	#define PR_ENUM(x)\
 		x(Invalid        ,""    ,=   0 )\
 		x(WhiteSpace     ," "   ,= ' ' )\
@@ -206,6 +210,7 @@ namespace pr::script
 	PR_DEFINE_ENUM3(ESymbol, PR_ENUM);
 	#undef PR_ENUM
 
+	// Constant literals
 	#define PR_ENUM(x)\
 		x(Invalid       )\
 		x(StringLiteral )\
@@ -213,5 +218,5 @@ namespace pr::script
 		x(Integral      )\
 		x(FloatingPoint )
 	PR_DEFINE_ENUM1(EConstant, PR_ENUM); 
-	#undef PR_ENUM 
+	#undef PR_ENUM
 }

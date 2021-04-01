@@ -212,10 +212,10 @@ namespace pr::storage::zip
 				,FileTime(dos_timestamp.time)
 				,FileDate(dos_timestamp.date)
 				,Crc(uncompressed_crc32)
-				,CompressedSize(checked_cast<uint32_t>(compressed_size))
-				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
-				,NameSize(checked_cast<uint16_t>(item_name_size))
-				,ExtraSize(checked_cast<uint16_t>(extra_size))
+				,CompressedSize(s_cast<uint32_t>(compressed_size))
+				,UncompressedSize(s_cast<uint32_t>(uncompressed_size))
+				,NameSize(s_cast<uint16_t>(item_name_size))
+				,ExtraSize(s_cast<uint16_t>(extra_size))
 			{}
 			size_t Size() const
 			{
@@ -282,15 +282,15 @@ namespace pr::storage::zip
 				,FileTime(dos_timestamp.time)
 				,FileDate(dos_timestamp.date)
 				,Crc(uncompressed_crc32)
-				,CompressedSize(checked_cast<uint32_t>(compressed_size))
-				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
-				,NameSize(checked_cast<uint16_t>(name_size))
-				,ExtraSize(checked_cast<uint16_t>(extra_size))
-				,CommentSize(checked_cast<uint16_t>(comment_size))
+				,CompressedSize(s_cast<uint32_t>(compressed_size))
+				,UncompressedSize(s_cast<uint32_t>(uncompressed_size))
+				,NameSize(s_cast<uint16_t>(name_size))
+				,ExtraSize(s_cast<uint16_t>(extra_size))
+				,CommentSize(s_cast<uint16_t>(comment_size))
 				,DiskNumberStart()
 				,InternalAttributes(int_attributes)
 				,ExternalAttributes(ext_attributes)
-				,LocalHeaderOffset(checked_cast<uint32_t>(local_header_ofs))
+				,LocalHeaderOffset(s_cast<uint32_t>(local_header_ofs))
 			{}
 			size_t Size() const
 			{
@@ -347,13 +347,13 @@ namespace pr::storage::zip
 			ECD() = default;
 			ECD(int disk_number, int cdir_disk_number, int num_entries_on_disk, int total_entries, int64_t cdir_size, int64_t cdir_offset, int comment_size)
 				:Sig(Signature)
-				,DiskNumber(checked_cast<uint16_t>(disk_number))
-				,CDirDiskNumber(checked_cast<uint16_t>(cdir_disk_number))
-				,NumEntriesOnDisk(checked_cast<uint16_t>(num_entries_on_disk))
-				,TotalEntries(checked_cast<uint16_t>(total_entries))
-				,CDirSize(checked_cast<uint32_t>(cdir_size))
-				,CDirOffset(checked_cast<uint32_t>(cdir_offset))
-				,CommentSize(checked_cast<uint16_t>(comment_size))
+				,DiskNumber(s_cast<uint16_t>(disk_number))
+				,CDirDiskNumber(s_cast<uint16_t>(cdir_disk_number))
+				,NumEntriesOnDisk(s_cast<uint16_t>(num_entries_on_disk))
+				,TotalEntries(s_cast<uint16_t>(total_entries))
+				,CDirSize(s_cast<uint32_t>(cdir_size))
+				,CDirOffset(s_cast<uint32_t>(cdir_offset))
+				,CommentSize(s_cast<uint16_t>(comment_size))
 			{}
 		};
 		static_assert(sizeof(ECD) == 22);
@@ -459,7 +459,7 @@ namespace pr::storage::zip
 
 			// Parse the central directory
 			m_imem = archive;
-			auto archive_size = checked_cast<int64_t>(m_imem.size());
+			auto archive_size = s_cast<int64_t>(m_imem.size());
 			ReadCentralDirectory(archive_size);
 		}
 
@@ -485,7 +485,7 @@ namespace pr::storage::zip
 
 					// Read the central directory
 					m_istream = IO::OpenForReading(m_filepath);
-					auto archive_size = checked_cast<int64_t>(std::filesystem::file_size(filepath));
+					auto archive_size = s_cast<int64_t>(std::filesystem::file_size(filepath));
 					ReadCentralDirectory(archive_size);
 					break;
 				}
@@ -501,7 +501,7 @@ namespace pr::storage::zip
 					{
 						// Read the central directory into memory
 						m_istream = IO::OpenForReading(m_filepath);
-						auto archive_size = checked_cast<int64_t>(std::filesystem::file_size(m_filepath));
+						auto archive_size = s_cast<int64_t>(std::filesystem::file_size(m_filepath));
 						ReadCentralDirectory(archive_size);
 						m_istream.close();
 
@@ -795,7 +795,7 @@ namespace pr::storage::zip
 			auto item_ofs = m_cdir_offset;
 			auto num_alignment_padding_bytes = CalcAlignmentPadding();
 			auto ldh_ofs = item_ofs + num_alignment_padding_bytes; // Record the header offset for later
-			auto cdh_ofs = checked_cast<uint32_t>(m_cdir.size());
+			auto cdh_ofs = s_cast<uint32_t>(m_cdir.size());
 			assert(is_aligned(ldh_ofs) && "local header offset should be aligned");
 
 			// Overflow check
@@ -892,7 +892,7 @@ namespace pr::storage::zip
 			auto item_ofs = m_cdir_offset;
 			auto num_alignment_padding_bytes = CalcAlignmentPadding();
 			auto ldh_ofs = item_ofs + num_alignment_padding_bytes; // Record the header offset for later
-			auto cdh_ofs = checked_cast<uint32_t>(m_cdir.size());
+			auto cdh_ofs = s_cast<uint32_t>(m_cdir.size());
 			assert(is_aligned(ldh_ofs) && "local header offset should be aligned");
 
 			EBitFlags bit_flags = EBitFlags::None;
@@ -1058,7 +1058,7 @@ namespace pr::storage::zip
 			auto item_ofs = m_cdir_offset;
 			auto num_alignment_padding_bytes = CalcAlignmentPadding();
 			auto ldh_ofs = item_ofs + num_alignment_padding_bytes; // Record the header offset for later
-			auto cdh_ofs = checked_cast<uint32_t>(m_cdir.size());
+			auto cdh_ofs = s_cast<uint32_t>(m_cdir.size());
 			assert(is_aligned(ldh_ofs) && "local header offset should be aligned");
 
 			EBitFlags bit_flags = EBitFlags::None;
@@ -1505,7 +1505,7 @@ namespace pr::storage::zip
 				if (cdh.Size() > n)
 					throw std::runtime_error("Invalid zip. Computed header size does not agree header end signature location");
 
-				m_cdir_index[i] = checked_cast<uint32_t>(p - m_cdir.data());
+				m_cdir_index[i] = s_cast<uint32_t>(p - m_cdir.data());
 				n -= cdh.Size();
 				p += cdh.Size();
 			}
@@ -1534,10 +1534,10 @@ namespace pr::storage::zip
 			ofs += m_cdir.size();
 
 			// Write the end marker record
-			auto total_entries = checked_cast<uint16_t>(Count());
-			auto comment_size = checked_cast<uint16_t>(m_comment.size());
-			auto cdir_size = checked_cast<uint32_t>(m_cdir.size());
-			auto cdir_offset = checked_cast<uint32_t>(m_cdir_offset);
+			auto total_entries = s_cast<uint16_t>(Count());
+			auto comment_size = s_cast<uint16_t>(m_comment.size());
+			auto cdir_size = s_cast<uint32_t>(m_cdir.size());
+			auto cdir_offset = s_cast<uint32_t>(m_cdir_offset);
 			ECD ecd(0, 0, total_entries, total_entries, cdir_size, cdir_offset, comment_size);
 			m_write(*this, ofs, &ecd, sizeof(ECD));
 			ofs += sizeof(ECD);
@@ -1992,7 +1992,7 @@ namespace pr::storage::zip
 
 		// Helper for detecting data lost when casting
 		template <typename T, typename U>
-		static constexpr T checked_cast(U x)
+		static constexpr T s_cast(U x)
 		{
 			assert(static_cast<U>(static_cast<T>(x)) == x && "Cast loses data");
 			return static_cast<T>(x);

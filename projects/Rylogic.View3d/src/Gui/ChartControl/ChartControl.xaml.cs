@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Common;
@@ -79,6 +80,7 @@ namespace Rylogic.Gui.WPF
 				InitCMenus();
 				InitCommands();
 				InitNavigation();
+
 				DataContext = this;
 			}
 			catch
@@ -270,6 +272,18 @@ namespace Rylogic.Gui.WPF
 		}
 		private string? m_title;
 
+		/// <summary>The Axis labels</summary>
+		public string XLabel
+		{
+			get => XAxis.Label;
+			set => XAxis.Label = value;
+		}
+		public string YLabel
+		{
+			get => YAxis.Label;
+			set => YAxis.Label = value;
+		}
+
 		/// <summary>All chart objects</summary>
 		public ElementCollection Elements { get; }
 
@@ -363,6 +377,92 @@ namespace Rylogic.Gui.WPF
 		}
 		private FrameworkElement? m_legend = null;
 
+		/// <summary>A control to use as overlay graphics in client space</summary>
+		public FrameworkElement? OverlayContent
+		{
+			// Notes:
+			//  - Use:
+			//      <view3d:ChartControl.OverlayContent>
+			//          <StackPanel
+			//              DataContext="{Binding DataContext, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"  -- Bind to the container of the chart control
+			//              Canvas.Left="10"  -- Position on the chart
+			//              Canvas.Top="10"   
+			//              >
+			//              <TextBlock Text="{Binding ., Converter={conv:ToString}}" /> -- Show the binding context
+			//              <Line X1="0" Y1="{Binding LineY}" X2="100" Y2="0" Stroke="Red" /> -- Graphics in client space
+			//          </StackPanel>
+			//      </view3d:ChartControl.OverlayContent>
+
+			get => m_overlay_content;
+			set
+			{
+				if (m_overlay_content == value) return;
+				if (m_overlay_content != null)
+				{
+					Overlay.Children.Remove(m_overlay_content);
+				}
+				m_overlay_content = value;
+				if (m_overlay_content != null)
+				{
+					Overlay.Children.Add(m_overlay_content);
+				}
+			}
+		}
+		private FrameworkElement? m_overlay_content = null;
+
+		/// <summary>A control to use as overlay graphics in chart space</summary>
+		public System.Windows.Shapes.Path? OverlayContentChartSpace
+		{
+			// Notes:
+			//  - Use chart-space graphics:
+			//    Using Geometry instead of 'Shapes' means the scaling doesn't affect the stroke thickness of lines etc
+			//
+			//     <view3d:ChartControl.OverlayContentChartSpace>
+			//         <Path Stroke="Green" StrokeThickness="1" Data="M0,1 L5,3 L10,0">
+			//     </view3d:ChartControl.OverlayContentChartSpace>
+			//
+			//  - Alternatively, use Geometry with bindings
+			//     <view3d:ChartControl.OverlayContentChartSpace>
+			//         <Path Stroke="Green" StrokeThickness="1" DataContext="{Binding DataContext, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}">
+			//             <Path.Data>
+			//                 <GeometryGroup>
+			//                     <LineGeometry StartPoint="{Binding StartPt}" EndPoint="{Binding EndPt" />
+			//                 </GeometryGroup>
+			//             </Path.Data>
+			//         </Path>
+			//     </view3d:ChartControl.OverlayContentChartSpace>
+
+			get => m_overlay_content_chart_space;
+			set
+			{
+				if (m_overlay_content_chart_space == value) return;
+				if (m_overlay_content_chart_space != null)
+				{
+					Overlay.Children.Remove(m_overlay_content_chart_space);
+				}
+				m_overlay_content_chart_space = value;
+				if (m_overlay_content_chart_space != null)
+				{
+					Overlay.Children.Add(m_overlay_content_chart_space);
+					ApplyScaleToChartSpaceOverlay();
+				}
+			}
+		}
+		private System.Windows.Shapes.Path? m_overlay_content_chart_space = null;
+
+		/// <summary>Apply the Chart-to-Overlay transform to all geometry</summary>
+		private void ApplyScaleToChartSpaceOverlay()
+		{
+			if (m_overlay_content_chart_space?.Data is System.Windows.Media.Geometry geom)
+			{
+				if (geom.IsFrozen)
+					geom = geom.Clone();
+				
+				geom.Transform = ChartToOverlaySpace().ToTransform();
+				m_overlay_content_chart_space.Data = geom.Freeze2();
+			}
+		}
+
 		/// <summary>View3d context reference</summary>
 		private View3d View3d
 		{
@@ -409,6 +509,7 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler<ChartMovedEventArgs>? ChartMoved;
 		protected virtual void OnChartMoved(ChartMovedEventArgs args)
 		{
+			ApplyScaleToChartSpaceOverlay();
 			ChartMoved?.Invoke(this, args);
 		}
 
@@ -426,13 +527,6 @@ namespace Rylogic.Gui.WPF
 				cc => { if (--m_chart_changed_suspended == 0) OnChartChanged(new ChartChangedEventArgs(EChangeType.Edited)); });
 		}
 		private int m_chart_changed_suspended;
-
-		/// <summary>Called after the chart has painted, allowing users to add graphics on top of the chart</summary>
-		public event EventHandler<AddOverlaysOnPaintEventArgs>? AddOverlaysOnPaint;
-		protected virtual void OnAddOverlaysOnPaint(AddOverlaysOnPaintEventArgs args)
-		{
-			AddOverlaysOnPaint?.Invoke(this, args);
-		}
 
 		/// <summary>Called during AutoRange to allow handlers to set the auto range</summary>
 		public event EventHandler<AutoRangeEventArgs>? AutoRanging;
@@ -611,6 +705,20 @@ namespace Rylogic.Gui.WPF
 		public m4x4 ClientToChartSpace()
 		{
 			return ClientToChartSpace(SceneBounds);
+		}
+
+		/// <summary>Get the scale and translation transform from Chart space to overlay(client) space.</summary>
+		public m4x4 ChartToOverlaySpace(Rect plot_area)
+		{
+			// C = chart, c = client
+			var C2c = ChartToClientSpace(plot_area);
+			C2c.pos.x -= (float)plot_area.X;
+			C2c.pos.y -= (float)plot_area.Y;
+			return C2c;
+		}
+		public m4x4 ChartToOverlaySpace()
+		{
+			return ChartToOverlaySpace(SceneBounds);
 		}
 
 		/// <summary>Convert between client space and normalised screen space</summary>
@@ -974,12 +1082,9 @@ namespace Rylogic.Gui.WPF
 		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 		public Visibility YAxisLabelVisibility => Options.ShowAxes && YAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>Chart control graphics context id</summary>
 		public static readonly Guid CtxId = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
