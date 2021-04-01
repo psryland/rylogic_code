@@ -1,4 +1,4 @@
-//***************************************************
+ï»¿//***************************************************
 // Quaternion
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -183,10 +183,10 @@ namespace Rylogic.Maths
 				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
 
 				// Trig:
-				//' cos²(x) = 0.5 * (1 + cos(2x))
+				//' cosï¿½(x) = 0.5 * (1 + cos(2x))
 				//' w == cos(x/2)
-				//' w² == cos²(x/2) == 0.5 * (1 + cos(x))
-				//' 2w² - 1 == cos(x)
+				//' wï¿½ == cosï¿½(x/2) == 0.5 * (1 + cos(x))
+				//' 2wï¿½ - 1 == cos(x)
 				return Math_.Clamp(2f * Math_.Sqr(w) - 1f, -1f, +1f);
 			}
 		}
@@ -199,9 +199,9 @@ namespace Rylogic.Maths
 				Debug.Assert(Math_.FEql(LengthSq, 1.0f), "quaternion isn't normalised");
 
 				// Trig:
-				//' sin²(x) + cos²(x) == 1
-				//' sin²(x) == 1 - cos²(x)
-				//' sin(x) == sqrt(1 - cos²(x))
+				//' sinï¿½(x) + cosï¿½(x) == 1
+				//' sinï¿½(x) == 1 - cosï¿½(x)
+				//' sin(x) == sqrt(1 - cosï¿½(x))
 				return (float)Math.Sqrt(1f - Math_.Sqr(CosAngle));
 			}
 		}
@@ -327,6 +327,18 @@ namespace Rylogic.Maths
 			return FEqlRelative(lhs, rhs, TinyF);
 		}
 
+		/// <summary>Return true if all components of 'vec' are finite</summary>
+		public static bool IsFinite(quat q)
+		{
+			return IsFinite(q.x) && IsFinite(q.y) && IsFinite(q.z) && IsFinite(q.w);
+		}
+
+		/// <summary>Return true if any components of 'vec' are NaN</summary>
+		public static bool IsNaN(quat q)
+		{
+			return IsNaN(q.x) || IsNaN(q.y) || IsNaN(q.z) || IsNaN(q.w);
+		}
+
 		/// <summary>Normalise a quaternion to unit length</summary>
 		public static quat Normalise(quat q)
 		{
@@ -361,9 +373,9 @@ namespace Rylogic.Maths
 			Debug.Assert(FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
 
 			// Trig:
-			//' sin²(x) + cos²(x) == 1
-			//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
-			//' s² == 1 - cos²(x/2) == sin²(x/2)
+			//' sinï¿½(x) + cosï¿½(x) == 1
+			//' s == sqrt(1 - wï¿½) == sqrt(1 - cosï¿½(x/2))
+			//' sï¿½ == 1 - cosï¿½(x/2) == sinï¿½(x/2)
 			//' s == sin(x/2)
 			var w = Clamp(q.w, -1f, 1f);           // = cos(x/2)
 			var s = (float)Math.Sqrt(1f - Sqr(w)); // = sin(x/2)

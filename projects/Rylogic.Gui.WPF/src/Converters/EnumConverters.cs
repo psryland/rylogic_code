@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -43,7 +42,7 @@ namespace Rylogic.Gui.WPF.Converters
 		// Use:
 		//  <ComboBox
 		//     ItemsSource="{Binding MyProp, Converter={conv:EnumValues}, Mode=OneTime}"
-		//     ItemTemplate= "{conv:EnumValues+ToDesc}"
+		//     ItemTemplate= "{conv:EnumValues+ToDesc}"  <-- Remove this if your enum doesn't use [Desc()] attributes
 		//     SelectedItem="{Binding MyProp}"
 		//     />
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -78,9 +77,15 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Select between options based on an enum. Parameter should be 'case0:value0|case1:value1|case2:value2|...' where 'value' is a string that is convertable to 'targetType'</summary>
+	/// <summary>Select between options based on an enum.</summary>
 	public class EnumSelect :MarkupExtension, IValueConverter
 	{
+		// Notes:
+		//  - Parameter should be 'case0:value0|case1:value1|case2:value2|default_value'
+		//    where 'value' is a string that is convertable to 'targetType'.
+		//  - Any value with no 'case' is assumed to be the default value.
+		//    The default case should always be last
+
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is Enum e))
@@ -93,8 +98,13 @@ namespace Rylogic.Gui.WPF.Converters
 				// Look for a matching case
 				foreach (var pair in s.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries))
 				{
-					// Valid 'case:value' pair?
 					var case_value = pair.Split(':');
+
+					// Default case?
+					if (case_value.Length == 1)
+						return InterpretValue(case_value[0]);
+
+					// Valid 'case:value' pair?
 					if (case_value.Length != 2)
 						continue;
 
@@ -102,43 +112,13 @@ namespace Rylogic.Gui.WPF.Converters
 					if (!Enum.IsDefined(value.GetType(), case_value[0]))
 						continue;
 
-					// Case matches 'value'
+					// Case matches 'value'?
 					var cas = Enum.Parse(value.GetType(), case_value[0]);
 					if (!Equals(cas, value))
 						continue;
 
 					// Interpret the value to the target type
-					var val = case_value[1];
-
-					// Special case conversions not handled by 'ConvertTo'
-					if (targetType == typeof(Colour32))
-					{
-						return Colour32.Parse(val);
-					}
-					if (targetType == typeof(Color))
-					{
-						return Colour32.Parse(val).ToMediaColor();
-					}
-					if (targetType == typeof(Brush))
-					{
-						return Colour32.Parse(val).ToMediaBrush();
-					}
-					if (targetType == typeof(Thickness))
-					{
-						var i = (int?)Util.ConvertTo(val, typeof(int)) ?? 0;
-						return new Thickness(i);
-					}
-					if (targetType == typeof(ImageSource))
-					{
-						// Use: ConverterParameter='image_key1|image_key2'
-						// Image keys should be static resource keys.
-						// Only works if the resources are in App.xml.
-						var res = Application.Current.TryFindResource(val);
-						res ??= Application.Current.MainWindow.TryFindResource(val);
-						res ??= Application.Current.Windows.Cast<Window>().Select(x => x.TryFindResource(val)).FirstOrDefault(x => x != null);
-						return res;
-					}
-					return Util.ConvertTo(val, targetType);
+					return InterpretValue(case_value[1]);
 				}
 				return null;
 			}
@@ -146,6 +126,40 @@ namespace Rylogic.Gui.WPF.Converters
 			{
 				// Handle this silently so that runtime editing XML works
 				return null;
+			}
+
+			// Convert the string to the target type
+			object? InterpretValue(string val)
+			{
+				// Special case conversions not handled by 'ConvertTo'
+				if (targetType == typeof(Colour32))
+				{
+					return Colour32.Parse(val);
+				}
+				if (targetType == typeof(Color))
+				{
+					return Colour32.Parse(val).ToMediaColor();
+				}
+				if (targetType == typeof(Brush))
+				{
+					return Colour32.Parse(val).ToMediaBrush();
+				}
+				if (targetType == typeof(Thickness))
+				{
+					var i = (int?)Util.ConvertTo(val, typeof(int)) ?? 0;
+					return new Thickness(i);
+				}
+				if (targetType == typeof(ImageSource))
+				{
+					// Use: ConverterParameter='image_key1|image_key2'
+					// Image keys should be static resource keys.
+					// Only works if the resources are in App.xml.
+					var res = Application.Current.TryFindResource(val);
+					res ??= Application.Current.MainWindow.TryFindResource(val);
+					res ??= Application.Current.Windows.Cast<Window>().Select(x => x.TryFindResource(val)).FirstOrDefault(x => x != null);
+					return res;
+				}
+				return Util.ConvertTo(val, targetType);
 			}
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

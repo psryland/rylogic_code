@@ -221,16 +221,18 @@ namespace pr
 	}
 
 	// Extract the bit range [hi,lo] (inclusive) from 'value'.
-	// 'hi' and 'lo' are zero-based bit indices. e.g. Bits(0b11111111, 6, 3) = 0b01111000
+	// 'hi' and 'lo' are zero-based bit indices. The returned result is shifted down by .lo'.
+	// e.g. Bits(0b11111111, 6, 3) => 0b01111000 => 0b0001111
 	template <typename T> constexpr T Bits(unsigned long long value, int hi, int lo)
 	{
 		unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 		return static_cast<T>((value >> lo) & mask);
 	}
 
-    // Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
-    // 'hi' and 'lo' are zero-based bit indices. e.g. BitStuff(1010101011, 6, 3) = 01011000
-    template <typename T> constexpr T BitStuff(unsigned long long value, int hi, int lo)
+	// Move 'value' to the range [hi,lo] (inclusive) (masking if necessary).
+	// 'hi' and 'lo' are zero-based bit indices.
+	// e.g. BitStuff(0b11111111, 6, 3) => 0b00001111 => 0b01111000
+	template <typename T> constexpr T BitStuff(unsigned long long value, int hi, int lo)
     {
 	    unsigned long long mask = (1ULL << (hi - lo + 1)) - 1;
 	    return static_cast<T>((value & mask) << lo);

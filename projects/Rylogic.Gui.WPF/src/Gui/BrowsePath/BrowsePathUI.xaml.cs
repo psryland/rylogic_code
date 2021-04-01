@@ -104,30 +104,30 @@ namespace Rylogic.Gui.WPF
 		{
 			switch (PathType)
 			{
-			default:
-				{
-					throw new Exception($"Unknown path type: {PathType}");
-				}
-			case EType.OpenFile:
+				case EType.OpenFile:
 				{
 					var dlg = new OpenFileDialog { Title = DialogTitle, Filter = FileFilter, FileName = SelectedPath };
 					if (dlg.ShowDialog(this) != true) break;
 					SelectedPath = dlg.FileName;
 					break;
 				}
-			case EType.SaveFile:
+				case EType.SaveFile:
 				{
 					var dlg = new SaveFileDialog { Title = DialogTitle, Filter = FileFilter, FileName = SelectedPath };
 					if (dlg.ShowDialog(this) != true) break;
 					SelectedPath = dlg.FileName;
 					break;
 				}
-			case EType.SelectDirectory:
+				case EType.SelectDirectory:
 				{
 					var dlg = new OpenFolderUI { Title = DialogTitle, SelectedPath = SelectedPath };
 					if (dlg.ShowDialog(this) != true) break;
 					SelectedPath = dlg.SelectedPath;
 					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown path type: {PathType}");
 				}
 			}
 		}

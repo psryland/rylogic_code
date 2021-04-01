@@ -226,11 +226,19 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Finite test of matrix elements</summary>
-		public static bool IsFinite(m2x2 vec)
+		public static bool IsFinite(m2x2 m)
 		{
 			return
-				IsFinite(vec.x) &&
-				IsFinite(vec.y);
+				IsFinite(m.x) &&
+				IsFinite(m.y);
+		}
+
+		/// <summary>Return true if any components of 'm' are NaN</summary>
+		public static bool IsNaN(m2x2 m)
+		{
+			return
+				IsNaN(m.x) ||
+				IsNaN(m.y);
 		}
 
 		/// <summary>Return the determinant of 'm'</summary>

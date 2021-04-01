@@ -496,7 +496,8 @@ namespace Rylogic.Gui.WPF
 		public static Rect RenderArea(this UIElement vis, UIElement? relative_to_ancestor = null)
 		{
 			var pt = new Point();
-			if (relative_to_ancestor != null) pt = vis.TransformToAncestor(relative_to_ancestor).Transform(pt);
+			if (relative_to_ancestor != null && relative_to_ancestor.IsAncestorOf(vis))
+				pt = vis.TransformToAncestor(relative_to_ancestor).Transform(pt);
 			return new Rect(pt, vis.RenderSize);
 		}
 

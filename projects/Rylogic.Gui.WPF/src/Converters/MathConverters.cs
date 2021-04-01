@@ -112,4 +112,41 @@ namespace Rylogic.Gui.WPF.Converters
 			return this;
 		}
 	}
+	public class NoNaN :MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+				case v4 vec4:
+					return !Math_.IsNaN(vec4) ? vec4 : "---";
+				case v3 vec3:
+					return !Math_.IsNaN(vec3) ? vec3 : "---";
+				case v2 vec2:
+					return !Math_.IsNaN(vec2) ? vec2 : "---";
+				case double db:
+					return !Math_.IsNaN(db) ? db : "---";
+				case float ft:
+					return !Math_.IsNaN(ft) ? ft : "---";
+			}
+			return null;
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value is string str)
+			{
+				if (targetType == typeof(v4)) return v4.NaN;
+				if (targetType == typeof(v3)) return v3.NaN;
+				if (targetType == typeof(v2)) return v2.NaN;
+				if (targetType == typeof(double)) return double.NaN;
+				if (targetType == typeof(float)) return float.NaN;
+			}
+			return value;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 }

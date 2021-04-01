@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Vector2
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -104,6 +104,7 @@ namespace Rylogic.Maths
 		public readonly static v2 XAxis    = new v2(1f, 0f);
 		public readonly static v2 YAxis    = new v2(0f, 1f);
 		public readonly static v2 One      = new v2(1f, 1f);
+		public readonly static v2 NaN      = new v2(float.NaN, float.NaN);
 		public readonly static v2 MinValue = new v2(float.MinValue, float.MinValue);
 		public readonly static v2 MaxValue = new v2(float.MaxValue, float.MaxValue);
 
@@ -332,6 +333,12 @@ namespace Rylogic.Maths
 		public static bool IsFinite(v2 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y);
+		}
+
+		/// <summary>Return true if any components of 'vec' are NaN</summary>
+		public static bool IsNaN(v2 vec)
+		{
+			return IsNaN(vec.x) || IsNaN(vec.y);
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>

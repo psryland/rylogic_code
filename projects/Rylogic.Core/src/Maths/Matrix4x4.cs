@@ -426,13 +426,23 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Finite test of matrix elements</summary>
-		public static bool IsFinite(m4x4 vec)
+		public static bool IsFinite(m4x4 m)
 		{
 			return
-				IsFinite(vec.x) &&
-				IsFinite(vec.y) &&
-				IsFinite(vec.z) &&
-				IsFinite(vec.w);
+				IsFinite(m.x) &&
+				IsFinite(m.y) &&
+				IsFinite(m.z) &&
+				IsFinite(m.w);
+		}
+
+		/// <summary>Return true if any components of 'm' are NaN</summary>
+		public static bool IsNaN(m4x4 m)
+		{
+			return
+				IsNaN(m.x) ||
+				IsNaN(m.y) ||
+				IsNaN(m.z) ||
+				IsNaN(m.w);
 		}
 
 		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>

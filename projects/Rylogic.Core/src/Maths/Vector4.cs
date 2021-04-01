@@ -159,6 +159,7 @@ namespace Rylogic.Maths
 		public readonly static v4 WAxis = new v4(0f, 0f, 0f, 1f);
 		public readonly static v4 Origin = new v4(0f, 0f, 0f, 1f);
 		public readonly static v4 One = new v4(1f, 1f, 1f, 1f);
+		public readonly static v4 NaN = new v4(float.NaN, float.NaN, float.NaN, float.NaN);
 		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
 
@@ -520,6 +521,12 @@ namespace Rylogic.Maths
 		public static bool IsFinite(v4 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
+		}
+
+		/// <summary>Return true if any components of 'vec' are NaN</summary>
+		public static bool IsNaN(v4 vec)
+		{
+			return IsNaN(vec.x) || IsNaN(vec.y) || IsNaN(vec.z) || IsNaN(vec.w);
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>

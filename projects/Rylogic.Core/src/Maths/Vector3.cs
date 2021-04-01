@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Vector2
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -114,6 +114,7 @@ namespace Rylogic.Maths
 		public readonly static v3 Yaxis = new v3(0f, 1f, 0f);
 		public readonly static v3 Zaxis = new v3(0f, 0f, 1f);
 		public readonly static v3 One = new v3(1f, 1f, 1f);
+		public readonly static v3 NaN = new v3(float.NaN, float.NaN, float.NaN);
 		public readonly static v3 MinValue = new v3(float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v3 MaxValue = new v3(float.MaxValue, float.MaxValue, float.MaxValue);
 
@@ -316,6 +317,12 @@ namespace Rylogic.Maths
 		public static bool IsFinite(v3 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z);
+		}
+
+		/// <summary>Return true if any components of 'vec' are NaN</summary>
+		public static bool IsNaN(v3 vec)
+		{
+			return IsNaN(vec.x) || IsNaN(vec.y) || IsNaN(vec.z);
 		}
 
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>

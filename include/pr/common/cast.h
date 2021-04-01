@@ -61,9 +61,4 @@ namespace pr
 		}
 		return static_cast<T>(x);
 	}
-	
-	template <typename T, typename U> [[deprecated("use s_cast")]] inline T checked_cast(U x)
-	{
-		return s_cast<T,U>(x);
-	}
 }

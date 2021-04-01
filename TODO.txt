@@ -1,33 +1,81 @@
 Immediate ToDo:
-	Sort out pdb's for native libraries
-	Get p3d support working with new format
-	Finish exporter for Blender
-	Export REX models in new format
-	Export Plane model
-	
+
 Work
+  Documentation:
+	- Write a "REX Software Architecture" (SYSTEM DESIGN)(EP0001022/1023)
+		- high level view of the 8 software products (SOFTWARE UNITS) that make up REX
+			- device addressing, assignment of addresses
+		- communication protocol
+			- packets with messages
+			- status packets
+		- configuration exchange
+			- startup scenarios
+		- shared software elements
+			- task manager
+			- packet/message handler
+			- device addressing
+			
+		- break down of each product
+			- MC
+				- module interfaces
+				- internal state machines
+			- UI
+			- AC
+				- fuzzy control
+			- AS
+			- SC
+			- FS
+			- BP
+			- LC
+		REX Software Requirements
+			- requirements that justify each product
+				- MC
+					- main system control
+				- UI
+					- user interaction
+					- reduced cabling between main board and UI arm rest
+				- AC
+					- control of an individual actuator
+					- high speed monitoring of position vs. time
+				- AS
+					- report extension data from actuator pot/encoder
+					- minimise cabling between actuators and MC
+				- SC
+					- monitor system temperatures
+					- 
+				- LC
+					- dedicated black-box data capture
+				
+			- break down of requirements for each product
+				- MC
+					- startup sequence/checks
+					- product communication protocol
+						- packet loss handling
+					- data driven movement
+						- movement data statically stable
+					- movement control
+						- warning before movement
+					- fault detection
+					- logging system
+					- controls lock
   UIv4
-	Set up sending drawlist in multiple parts
-	Add 'Language' menu option and runtime support for switching
-	Add 'Futurama' font
-    Remove header 'typedefs_ui.h'
-	Remove resource crc's, they're not needed.
-	Clean up header 'manager_user_interface.h'
-	Remove REX_USER_INTERFACE_V4
-	Remove most of the old UserInterface API. Port code to new API
-	Add string tables to the movement maps/RCT
-	Animated sprites
+	- Write a Polarian requirements sheet for the new UI
+	- Clean up rxs_AREX_...
+	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
+	- Replace Darcy's message queue implementation with a sane one
+	
+  ZeroRef
+    - Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
+    - Change the order of actuators in the CSV to FootL,LowerL,UpperL,HipL,HipR,UpperR,LowerR,FootR
 	
   VRex
+    - Port the tools from the old VRex over
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
-	- Update build scripts for new projects
+	- Finish the p3d exporter and get the high-def Rex graphics back
+
   Misc
 	- Set up Git on the machine that runs plastic...
-	
-SolarHotWater
-	- Auto scroll graph
-	- Schedule control
 	
 LDraw
 	- Camera type-in
@@ -44,8 +92,12 @@ LDraw
 TextAligner
 	
 P3D
+	- Finish exporter for Blender
+	- Export REX models in new format
+	- Export Plane model
+	- Get p3d support working with new format
 	- Support .obj files
-	
+		
 CoinFlip
 	Candle Charts:
 		- Add measure tool to charts
@@ -111,10 +163,15 @@ WinGUI
 	- Fix MsgBox icon not having a transparent background
 		
 Misc
+	- Sort out pdb's for native libraries
 	- Create a 'Dispatcher' in C++ using a HWND_MESSAGE window (see pr::Renderer)
 	- Implement pr::script in C#
 	- Better handling of native Settings
 	- Change ToolForm to have resizable but not NC border
+
+Music
+	- Score for horn part of Pick up the Pieces
+	- Score for Sir Duke
 
 Old:
 ldr_object_dlg

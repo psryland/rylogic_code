@@ -28,17 +28,108 @@
 		</ResourceDictionary>
 	</Window.Resources>
 	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		
 		<view3d:ChartControl
+			Grid.Row="0"
 			Title="My Chart"
+			XLabel="Sex Axis"
+			YLabel="Why Axis"
 			SceneCMenu="{StaticResource ChartCMenu}"
 			XAxisCMenu="{StaticResource ChartAxisCMenu}"
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
 			x:Name="m_chart"
 			>
+			<view3d:ChartControl.OverlayContent>
+				<StackPanel
+					DataContext="{Binding DataContext, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
+					Canvas.Left="10"
+					Canvas.Top="10"
+					>
+					<TextBlock
+						Text="{Binding ., Converter={conv:ToString}}"
+						/>
+					<Line
+						X1="0"
+						Y1="{Binding LineY}"
+						X2="100"
+						Y2="0"
+						Stroke="Red"
+						/>
+				</StackPanel>
+			</view3d:ChartControl.OverlayContent>
+			<view3d:ChartControl.OverlayContentChartSpace>
+				<Path
+					Stroke="Green"
+					StrokeThickness="1"
+					DataContext="{Binding DataContext, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Window}}}"
+					Data="M0,1 L5,3 L10,0"
+					>
+					<!--
+					Alternatively, use Geometry with bindings
+					<Path.Data>
+						<GeometryGroup>
+							<LineGeometry
+								StartPoint="0,1"
+								EndPoint="5,3"
+								/>
+							<LineGeometry
+								StartPoint="5,3"
+								EndPoint="10,0"
+								/>
+						</GeometryGroup>
+					</Path.Data>
+					-->
+				</Path>
+			</view3d:ChartControl.OverlayContentChartSpace>
 			<view3d:ChartControl.Legend>
 				<view3d:ChartLegend/>
 			</view3d:ChartControl.Legend>
 		</view3d:ChartControl>
+
+		<!-- Test Options -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			Margin="1"
+			>
+			<TextBlock
+				Text=" Nav Mode: "
+				VerticalAlignment="Center"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Chart.Options.NavigationMode, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Chart.Options.NavigationMode}"
+				VerticalAlignment="Center"
+				/>
+			<TextBlock
+				Text=" AreaSelectMode: "
+				VerticalAlignment="Center"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Chart.Options.AreaSelectMode, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Chart.Options.AreaSelectMode}"
+				VerticalAlignment="Center"
+				/>
+			<CheckBox
+				Content="Select With Shift "
+				IsChecked="{Binding Chart.Options.AreaSelectRequiresShiftKey}"
+				VerticalAlignment="Center"
+				/>
+			<CheckBox
+				Content="Show Axes "
+				IsChecked="{Binding Chart.Options.ShowAxes}"
+				VerticalAlignment="Center"
+				/>
+			<CheckBox
+				Content="Show Grid Lines "
+				IsChecked="{Binding Chart.Options.ShowGridLines}"
+				VerticalAlignment="Center"
+				/>
+		</StackPanel>
 	</Grid>
 </Window>
 

@@ -75,6 +75,10 @@ namespace Rylogic.Gui.WPF
 			{
 				var pt = Chart.ChartToClient(Selection.Location);
 				var sz = Chart.ChartToClient(Selection.Size);
+				
+				// Make the chart-space point plot-area-space relative
+				var bounds = Chart.SceneBounds;
+				pt -= new Vector(bounds.X, bounds.Y);
 
 				Canvas.SetLeft(Area, Math.Min(pt.X, pt.X + sz.Width));
 				Canvas.SetTop(Area, Math.Min(pt.Y, pt.Y - sz.Height));
