@@ -3,61 +3,10 @@ Immediate ToDo:
 Work
   Documentation:
 	- Write a "REX Software Architecture" (SYSTEM DESIGN)(EP0001022/1023)
-		- high level view of the 8 software products (SOFTWARE UNITS) that make up REX
-			- device addressing, assignment of addresses
-		- communication protocol
-			- packets with messages
-			- status packets
-		- configuration exchange
-			- startup scenarios
-		- shared software elements
-			- task manager
-			- packet/message handler
-			- device addressing
-			
-		- break down of each product
-			- MC
-				- module interfaces
-				- internal state machines
-			- UI
-			- AC
-				- fuzzy control
-			- AS
-			- SC
-			- FS
-			- BP
-			- LC
-		REX Software Requirements
-			- requirements that justify each product
-				- MC
-					- main system control
-				- UI
-					- user interaction
-					- reduced cabling between main board and UI arm rest
-				- AC
-					- control of an individual actuator
-					- high speed monitoring of position vs. time
-				- AS
-					- report extension data from actuator pot/encoder
-					- minimise cabling between actuators and MC
-				- SC
-					- monitor system temperatures
-					- 
-				- LC
-					- dedicated black-box data capture
-				
-			- break down of requirements for each product
-				- MC
-					- startup sequence/checks
-					- product communication protocol
-						- packet loss handling
-					- data driven movement
-						- movement data statically stable
-					- movement control
-						- warning before movement
-					- fault detection
-					- logging system
-					- controls lock
+
+  MC
+	- Refactor the movement manager into separate files
+	
   UIv4
 	- Write a Polarian requirements sheet for the new UI
 	- Clean up rxs_AREX_...

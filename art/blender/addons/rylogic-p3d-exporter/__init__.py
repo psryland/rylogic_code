@@ -260,7 +260,7 @@ class Mesh():
 
 		# Initialise the verts lists
 		self.verts = [Vec3] * len(mesh.vertices)
-		self.norms = [Vec2] * len(mesh.vertices)
+		self.norms = [Vec3] * len(mesh.vertices)
 		for i,v in enumerate(mesh.vertices):
 			self.verts[i] = self.bbox.encompass(Vec3(v.co.x, v.co.y, v.co.z))
 			self.norms[i] = Vec3(v.normal.x, v.normal.y, v.normal.z)
@@ -296,8 +296,10 @@ class Mesh():
 		for mat_idx, vidx in nuggets.items():
 			if len(vidx) == 0: continue
 
+			# Find the material, fallback to a default empty material
+			mat = mesh.materials[mat_idx] if mat_idx < len(mesh.materials) else {"name":"null"} # bpy.data.materials[0]
+
 			# Save a nugget for the geometry that uses this material
-			mat = mesh.materials[mat_idx] if len(mesh.materials) != 0 else bpy.data.materials[0]
 			nugget = Nugget(topo=ETopo.TriList, geom=geom, mat=mat.name, stride=stride, vidx=vidx)
 			self.nuggets.append(nugget)
 
