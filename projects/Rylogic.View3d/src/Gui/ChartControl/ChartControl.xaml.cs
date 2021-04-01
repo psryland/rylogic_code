@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -458,7 +458,7 @@ namespace Rylogic.Gui.WPF
 				if (geom.IsFrozen)
 					geom = geom.Clone();
 				
-				geom.Transform = ChartToOverlaySpace().ToTransform();
+				geom.Transform = ChartToClientSpace(true).ToTransform();
 				m_overlay_content_chart_space.Data = geom.Freeze2();
 			}
 		}
@@ -536,15 +536,24 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
-		public Point ClientToChart(Point client_point)
+		public Point ClientToChart(Point client_point, bool scene_relative = false)
 		{
 			var bounds = SceneBounds;
 			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
 
-			return new Point(
+			// If 'client_point' is relative to the 3d scene then convert it to true client space.
+			if (scene_relative)
+			{
+				client_point.X += bounds.X;
+				client_point.Y += bounds.Y;
+			}
+
+			var pt = new Point(
 				(XAxis.Min + (client_point.X - bounds.Left) * XAxis.Span / bounds.Width),
 				(YAxis.Min - (client_point.Y - bounds.Bottom) * YAxis.Span / bounds.Height));
+
+			return pt;
 		}
 		public Size ClientToChart(Size client_size)
 		{
@@ -552,9 +561,11 @@ namespace Rylogic.Gui.WPF
 			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
 
-			return new Size(
+			var pt = new Size(
 				(client_size.Width * XAxis.Span / bounds.Width),
 				(client_size.Height * YAxis.Span / bounds.Height));
+
+			return pt;
 		}
 		public Vector ClientToChart(Vector client_vec)
 		{
@@ -566,23 +577,32 @@ namespace Rylogic.Gui.WPF
 				(+client_vec.X * XAxis.Span / bounds.Width),
 				(-client_vec.Y * YAxis.Span / bounds.Height));
 		}
-		public Rect ClientToChart(Rect client_rect)
+		public Rect ClientToChart(Rect client_rect, bool scene_relative = false)
 		{
 			return new Rect(
-				ClientToChart(client_rect.Location),
+				ClientToChart(client_rect.Location, scene_relative),
 				ClientToChart(client_rect.Size));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
-		public Point ChartToClient(Point chart_point)
+		public Point ChartToClient(Point chart_point, bool scene_relative = false)
 		{
 			var bounds = SceneBounds;
 			if (bounds.Width == 0 || bounds.Height == 0)
 				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
 
-			return new Point(
+			var pt = new Point(
 				(bounds.Left + (chart_point.X - XAxis.Min) * bounds.Width / XAxis.Span),
 				(bounds.Bottom - (chart_point.Y - YAxis.Min) * bounds.Height / YAxis.Span));
+
+			// If the caller wants the point relative to the 3d scene, add the offset
+			if (scene_relative)
+			{
+				pt.X -= bounds.X;
+				pt.Y -= bounds.Y;
+			}
+
+			return pt;
 		}
 		public Size ChartToClient(Size chart_size)
 		{
@@ -604,10 +624,10 @@ namespace Rylogic.Gui.WPF
 				(+chart_vec.X * bounds.Width / XAxis.Span),
 				(-chart_vec.Y * bounds.Height / YAxis.Span));
 		}
-		public Rect ChartToClient(Rect chart_rect)
+		public Rect ChartToClient(Rect chart_rect, bool scene_relative = false)
 		{
 			return new Rect(
-				ChartToClient(chart_rect.Location),
+				ChartToClient(chart_rect.Location, scene_relative),
 				ChartToClient(chart_rect.Size));
 		}
 
@@ -633,12 +653,12 @@ namespace Rylogic.Gui.WPF
 			return new Point(pt.x - origin_cs.x, pt.y - origin_cs.y);
 		}
 
-		/// <summary>
-		/// Get the scale and translation transform from chart space to client space.
-		/// e.g. chart2client * Point(x_min, y_min) = plot_area.BottomLeft()
-		///      chart2client * Point(x_max, y_max) = plot_area.TopRight()</summary>
-		public m4x4 ChartToClientSpace(Rect plot_area)
+		/// <summary>Return a transform from chart space to client space.</summary>
+		public m4x4 ChartToClientSpace(Rect plot_area, bool scene_relative = false)
 		{
+			// e.g.
+			//   chart2client * Point(x_min, y_min) = plot_area.BottomLeft()
+			//   chart2client * Point(x_max, y_max) = plot_area.TopRight()
 			var scale_x = (float)+(plot_area.Width / XAxis.Span);
 			var scale_y = (float)-(plot_area.Height / YAxis.Span);
 			var offset_x = (float)+(plot_area.Left - XAxis.Min * scale_x);
@@ -651,7 +671,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-			#if false
+#			if false
 			// Check the XAxis corners map to the expected client space locations
 			var C_pt0 = new v4((float)XAxis.Min, (float)YAxis.Min, 0, 1);
 			var C_pt1 = new v4((float)XAxis.Max, (float)YAxis.Max, 0, 1);
@@ -661,21 +681,28 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(c_pt0.y - plot_area.Bottom) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.x - plot_area.Right ) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.y - plot_area.Top   ) < 0.001);
-			#endif
+#			endif
+
+			// If caller whats the transform to be 3d-scene relative, remove the offset
+			if (scene_relative)
+			{
+				C2c.pos.x -= (float)plot_area.X;
+				C2c.pos.y -= (float)plot_area.Y;
+			}
 
 			return C2c;
 		}
-		public m4x4 ChartToClientSpace()
+		public m4x4 ChartToClientSpace(bool scene_relative = false)
 		{
-			return ChartToClientSpace(SceneBounds);
+			return ChartToClientSpace(SceneBounds, scene_relative);
 		}
 
-		/// <summary>
-		/// Get the scale and translation transform from client space to chart space.
-		/// e.g. client2chart * plot_area.BottomLeft() = Point(x_min, y_min)
-		///      client2chart * plot_area.TopRight()   = Point(x_max, y_max)</summary>
-		public m4x4 ClientToChartSpace(Rect plot_area)
+		/// <summary>Return a transform from client space to chart space.</summary>
+		public m4x4 ClientToChartSpace(Rect plot_area, bool scene_relative = false)
 		{
+			// e.g.
+			//  client2chart * plot_area.BottomLeft() = Point(x_min, y_min)
+			//  client2chart * plot_area.TopRight()   = Point(x_max, y_max)
 			var scale_x = (float)+(XAxis.Span / plot_area.Width);
 			var scale_y = (float)-(YAxis.Span / plot_area.Height);
 			var offset_x = (float)+(XAxis.Min - plot_area.Left * scale_x);
@@ -688,7 +715,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-			#if false
+#			if false
 			// Check the plot_area corners map to the expected graph space locations
 			var c_pt0 = new v4((float)plot_area.Left, (float)plot_area.Bottom, 0, 1);
 			var c_pt1 = new v4((float)plot_area.Right, (float)plot_area.Top, 0, 1);
@@ -698,27 +725,20 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(C_pt0.y - YAxis.Min) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.x - XAxis.Max) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.y - YAxis.Max) < 0.001f);
-			#endif
+#			endif
+
+			// If the caller wants the transform relative to the 3d-scene, add the offset
+			if (scene_relative)
+			{
+				c2C.pos.x += (float)plot_area.Left * scale_x;
+				c2C.pos.y += (float)plot_area.Bottom * scale_y;
+			}
 
 			return c2C;
 		}
-		public m4x4 ClientToChartSpace()
+		public m4x4 ClientToChartSpace(bool scene_relative = false)
 		{
-			return ClientToChartSpace(SceneBounds);
-		}
-
-		/// <summary>Get the scale and translation transform from Chart space to overlay(client) space.</summary>
-		public m4x4 ChartToOverlaySpace(Rect plot_area)
-		{
-			// C = chart, c = client
-			var C2c = ChartToClientSpace(plot_area);
-			C2c.pos.x -= (float)plot_area.X;
-			C2c.pos.y -= (float)plot_area.Y;
-			return C2c;
-		}
-		public m4x4 ChartToOverlaySpace()
-		{
-			return ChartToOverlaySpace(SceneBounds);
+			return ClientToChartSpace(SceneBounds, scene_relative);
 		}
 
 		/// <summary>Convert between client space and normalised screen space</summary>
