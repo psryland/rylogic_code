@@ -8,7 +8,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ChartControl :IChartCMenu, IView3dCMenu
+	public partial class ChartControl :IChartCMenu, IView3dCMenu, IChartCMenuContext, IView3dCMenuContext
 	{
 		// Notes:
 		//  - Many commands are available on View3dControl but I want to make the Options the source
@@ -16,60 +16,95 @@ namespace Rylogic.Gui.WPF
 		//    setting the Options value first then forwarding to the View3dControl command.
 		//  - Boolean properties can't forward the ICommand to View3d because the property changed
 		//    notification occurs on the wrong object.
+		//  - Strictly, 'ChartControl' doesn't need to implement 'IChartCMenuContext, IView3dCMenuContext'
+		//    because cmenus should bind to the ChartPanel or a UserControl, but it's a handy place to copy
+		//    boilerplate from.
+		//
+		// Usage:
+		//  There are a couple of ways to use cmenus.
+		//  1) Use the default chart cmenus by putting this in your XAML:
+		//      <gui:ChartControl
+		//           SceneCMenu="{StaticResource ChartCMenu}"
+		//           XAxisCMenu="{StaticResource ChartAxisCMenu}"
+		//           YAxisCMenu="{StaticResource ChartAxisCMenu}"
+		//     This will set the DataContext to the ChartPanel and AxisPanels appropriately because the cmenus match the default names.
+		//  2) Assign the menus programmatically (like in LDraw):
+		//      private void InitCMenus()
+		//      {
+		//          SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", this);
+		//          SceneView.XAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.XAxis));
+		//          SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.YAxis));
+		//      }
+		//     In this case, you don't need anything in your XAML.
+		//  3) Create a custom menu resource (that includes MenuItem StaticResources) and have the class containing the ChartControl (i.e.
+		//     the DataContext for the UserControl or Window) implement 'IChartCMenuContext' and 'IView3dCMenuContext':
+		//      <gui:ChartControl
+		//           SceneCMenu="{StaticResource MyCustomCMenu}"
+		//           XAxisCMenu="{StaticResource ChartAxisCMenu}"
+		//           YAxisCMenu="{StaticResource ChartAxisCMenu}"
+		//     The DataContext for 'MyCustomCMenu' will not be assigned (because it's Name isn't the default) so it should fall back to the
+		//     DataContext of the containing window/control. Custom AxisCMenu's will need to be bound programmatically, because the CMenu
+		//     doesn't know which axis it's attached to.
 
 		/// <summary>Initialise the commands</summary>
 		private void InitCommands()
-		{
-			// Tools Menu
-			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
-			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
-			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
-			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
-			ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
-			ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
-			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
-			ToggleAxes = Command.Create(this, ToggleAxesInternal);
-			ToggleShowTapeMeasure = Command.Create(this, ToggleShowTapeMeasureInternal);
+			{
+				// Tools Menu
+				ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
+				ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+				ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
+				ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
+				ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
+				ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
+				ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
+				ToggleAllowSelection = Command.Create(this, ToggleAllowSelectionInternal);
+				ToggleAllowElementDragging = Command.Create(this, ToggleAllowElementDraggingInternal);
+				ToggleAxes = Command.Create(this, ToggleAxesInternal);
+				ToggleShowTapeMeasure = Command.Create(this, ToggleShowTapeMeasureInternal);
 
-			// Camera
-			AutoRangeView = Command.Create(this, AutoRangeViewInternal);
-			DoAspect11 = Command.Create(this, DoAspect11Internal);
-			ToggleLockAspect = Command.Create(this, ToggleLockAspectInternal);
-			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
-			ToggleMouseCentredZoom = Command.Create(this, ToggleMouseCentredZoomInternal);
+				// Camera
+				AutoRangeView = Command.Create(this, AutoRangeViewInternal);
+				DoAspect11 = Command.Create(this, DoAspect11Internal);
+				ToggleLockAspect = Command.Create(this, ToggleLockAspectInternal);
+				ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
+				ToggleMouseCentredZoom = Command.Create(this, ToggleMouseCentredZoomInternal);
 
-			// Rendering
-			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
-			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
-			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
-		}
-
-		/// <summary>Set default cmenu data contexts</summary>
-		private void InitCMenus()
-		{
-			if (Scene.ContextMenu != null && Scene.ContextMenu.DataContext == null)
-				Scene.ContextMenu.DataContext = this;
-			if (XAxisPanel.ContextMenu != null && XAxisPanel.ContextMenu.DataContext == null)
-				XAxisPanel.ContextMenu.DataContext = XAxisPanel;
-			if (YAxisPanel.ContextMenu != null && YAxisPanel.ContextMenu.DataContext == null)
-				YAxisPanel.ContextMenu.DataContext = YAxisPanel;
-		}
+				// Rendering
+				SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+				ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
+				ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
+			}
 
 		/// <summary>Accessors for setting the context menus in XAML</summary>
 		public ContextMenu SceneCMenu
 		{
 			get => Scene.ContextMenu;
-			set => Scene.ContextMenu = value;
+			set
+			{
+				Scene.ContextMenu = value;
+				if (Scene.ContextMenu != null && Scene.ContextMenu.Name == "ChartCMenu")
+					Scene.ContextMenu.DataContext = Scene;
+			}
 		}
 		public ContextMenu XAxisCMenu
 		{
 			get => XAxisPanel.ContextMenu;
-			set => XAxisPanel.ContextMenu = value;
+			set
+			{
+				XAxisPanel.ContextMenu = value;
+				if (XAxisPanel.ContextMenu != null && XAxisPanel.ContextMenu.Name == "ChartAxisCMenu")
+					XAxisPanel.ContextMenu.DataContext = XAxisPanel;
+			}
 		}
 		public ContextMenu YAxisCMenu
 		{
 			get => YAxisPanel.ContextMenu;
-			set => YAxisPanel.ContextMenu = value;
+			set
+			{
+				YAxisPanel.ContextMenu = value;
+				if (YAxisPanel.ContextMenu != null && YAxisPanel.ContextMenu.Name == "ChartAxisCMenu")
+					YAxisPanel.ContextMenu.DataContext = YAxisPanel;
+			}
 		}
 
 		/// <inheritdoc/>
@@ -234,13 +269,13 @@ namespace Rylogic.Gui.WPF
 				if (ShowAxes == value) return;
 				Options.ShowAxes = value;
 				NotifyPropertyChanged(nameof(ShowAxes));
+				Invalidate();
 			}
 		}
 		public ICommand ToggleAxes { get; private set; } = null!;
 		private void ToggleAxesInternal()
 		{
 			ShowAxes = !ShowAxes;
-			Invalidate();
 		}
 
 		/// <inheritdoc/>
@@ -252,13 +287,49 @@ namespace Rylogic.Gui.WPF
 				if (ShowGridLines == value) return;
 				Options.ShowGridLines = value;
 				NotifyPropertyChanged(nameof(ShowGridLines));
+				Invalidate();
 			}
 		}
 		public ICommand ToggleGridLines { get; private set; } = null!;
 		private void ToggleGridLinesInternal()
 		{
 			ShowGridLines = !ShowGridLines;
-			Invalidate();
+		}
+
+		/// <inheritdoc/>
+		public bool AllowSelection
+		{
+			get => Options.AllowSelection;
+			set
+			{
+				if (AllowSelection == value) return;
+				Options.AllowSelection = value;
+				NotifyPropertyChanged(nameof(AllowSelection));
+				Invalidate();
+			}
+		}
+		public ICommand ToggleAllowSelection { get; private set; } = null!;
+		private void ToggleAllowSelectionInternal()
+		{
+			AllowSelection = !AllowSelection;
+		}
+
+		/// <inheritdoc/>
+		public bool AllowElementDragging
+		{
+			get => Options.AllowElementDragging;
+			set
+			{
+				if (AllowElementDragging == value) return;
+				Options.AllowElementDragging = value;
+				NotifyPropertyChanged(nameof(AllowElementDragging));
+				Invalidate();
+			}
+		}
+		public ICommand ToggleAllowElementDragging { get; private set; } = null!;
+		private void ToggleAllowElementDraggingInternal()
+		{
+			AllowElementDragging = !AllowElementDragging;
 		}
 
 		/// <summary>Display the measurement tool</summary>
@@ -550,5 +621,11 @@ namespace Rylogic.Gui.WPF
 		/// <inheritdoc/>
 		public bool CanLinkCamera => false;
 		public ICommand LinkCamera => Command.NoOp;
+
+		/// <inheritdoc/>
+		public IView3dCMenu View3dCMenuContext => Scene.View3dCMenuContext;
+
+		/// <inheritdoc/>
+		public IChartCMenu ChartCMenuContext => Scene.ChartCMenuContext;
 	}
 }

@@ -1,23 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 
 namespace TestWPF
@@ -25,9 +18,16 @@ namespace TestWPF
 	/// <summary>Interaction logic for MainWindow.xaml</summary>
 	public partial class MainWindow : Window, INotifyPropertyChanged
 	{
+		static MainWindow()
+		{
+			View3d.LoadDll();
+		}
 		public MainWindow()
 		{
 			InitializeComponent();
+			View3d = View3d.Create();
+			View3d.Error += (object? sender, View3d.ErrorEventArgs e) => MsgBox.Show(this, e.Message, "View3d Error");
+
 			Things = new ListCollectionView(m_things);
 #if DEBUG
 			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
@@ -48,6 +48,10 @@ namespace TestWPF
 			ShowDiagram = Command.Create(this, () =>
 			{
 				new DiagramUI().Show();
+			});
+			ShowDiagram2 = Command.Create(this, () =>
+			{
+				new Diagram2UI().Show();
 			});
 			ShowDirectionPicker = Command.Create(this, () =>
 			{
@@ -166,10 +170,18 @@ namespace TestWPF
 			Exit = Command.Create(this, Close);
 			DataContext = this;
 		}
+		protected override void OnClosed(EventArgs e)
+		{
+			View3d.Dispose();
+			base.OnClosed(e);
+		}
+
+		private View3d View3d { get; }
 
 		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }
 		public Command ShowDiagram { get; }
+		public Command ShowDiagram2 { get; }
 		public Command ShowDirectionPicker { get; }
 		public Command ShowDockContainer { get; }
 		public Command ShowJoystick { get; }

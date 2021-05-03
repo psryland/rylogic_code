@@ -48,7 +48,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary></summary>
 			public class Hit
 			{
-				public Hit(Element elem, Point elem_point, object context)
+				public Hit(Element elem, Point elem_point, object? context)
 				{
 					Element = elem;
 					Point = elem_point;
@@ -66,7 +66,7 @@ namespace Rylogic.Gui.WPF
 				public m4x4 Location { get; }
 
 				/// <summary>Optional context information collected during the hit test</summary>
-				public object Context { get; }
+				public object? Context { get; }
 
 				/// <summary></summary>
 				public override string ToString() => Element.ToString() ?? string.Empty;

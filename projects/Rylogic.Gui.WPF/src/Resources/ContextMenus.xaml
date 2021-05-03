@@ -453,7 +453,7 @@
 	</MenuItem>
 
 	<!-- Default View3d Context Menu -->
-	<ContextMenu x:Key="View3dCMenu">
+	<ContextMenu x:Key="View3dCMenu" x:Name="View3dCMenu">
 		<!--
 		DataContext is expected to be set to an object with the properties:
 		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
@@ -618,10 +618,10 @@
 		/>
 
 	<!-- Default Chart Context Menu -->
-	<ContextMenu x:Key="ChartCMenu">
+	<ContextMenu x:Key="ChartCMenu" x:Name="ChartCMenu">
 		<!--
 		DataContext is expected to be set to an object with the properties:
-		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
+		'View3dCMenuContext' and/or 'ChartCMenuContext'.
 		PlacementTarget isn't used because there is no control over what that object is
 		-->
 		<!--
@@ -652,12 +652,18 @@
 			<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
 			<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
 			<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+			<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
+		</MenuItem>
+		<MenuItem Header="Diagnostics">
+			<StaticResource	ResourceKey="View3dMenuItem_ShowNormals"/>
+			<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
+			<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
+			<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>
 		</MenuItem>
 	</ContextMenu>
-	<ContextMenu x:Key="ChartAxisCMenu">
+	<ContextMenu x:Key="ChartAxisCMenu" x:Name="ChartAxisCMenu">
 		<!--
-		DataContext is expected to be set to an object with the properties:
-		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
+		DataContext is expected to be set to an object with the property: 'ChartAxisCMenuContext'.
 		PlacementTarget isn't used because there is no control over what that object is
 		-->
 		<!--
@@ -667,5 +673,22 @@
 		<StaticResource ResourceKey="ChartAxisMenuItem_AllowScroll"/>
 		<StaticResource ResourceKey="ChartAxisMenuItem_AllowZoom"/>
 	</ContextMenu>
+
+	<!-- Diagram Menu Items -->
+	<MenuItem x:Key="DiagramMenuItem_Scatter" x:Shared="False"
+		Header="Scatter"
+		StaysOpenOnClick="False"
+		IsChecked="{Binding Scattering, Mode=OneWay}"
+		Command="{Binding ToggleScattering}"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_Scatter"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource objects}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+	</MenuItem>
 
 </ResourceDictionary>

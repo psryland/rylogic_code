@@ -413,7 +413,7 @@ namespace Rylogic.Gui.WPF
 			case Key.Escape:
 				{
 					// Deselect all on escape
-					if (AllowSelection)
+					if (Options.AllowSelection)
 					{
 						Selected.Clear();
 						Invalidate();

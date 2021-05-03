@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WPF
 			protected List<View3d.Nugget> m_nbuf;
 			protected List<ushort> m_ibuf;
 
-			protected Element(Guid id, m4x4 position, string name)
+			protected Element(Guid id, string? name = null, m4x4? position = null)
 			{
 				View3d = View3d.Create();
 				m_vbuf = new List<View3d.Vertex>();
@@ -32,27 +32,27 @@ namespace Rylogic.Gui.WPF
 				m_ibuf = new List<ushort>();
 
 				Id = id;
-				Name = name;
+				m_name = name ?? string.Empty;
+				m_colour = Colour32.Black;
 				m_chart = null;
-				m_impl_position = position;
-				m_impl_bounds = new BBox(position.pos, v4.Zero);
-				m_impl_selected = false;
-				m_impl_hovered = false;
-				m_impl_visible = true;
-				m_impl_visible_to_find_range = true;
-				m_impl_screen_space = false;
-				m_impl_enabled = true;
+				m_position = position ?? m4x4.Identity;
+				m_selected = false;
+				m_hovered = false;
+				m_visible = true;
+				m_visible_to_find_range = true;
+				m_screen_space = false;
+				m_enabled = true;
 				IsInvalidated = true;
 				UserData = new Dictionary<Guid, object>();
 			}
 			protected Element(XElement node)
-				: this(Guid.Empty, m4x4.Identity, string.Empty)
+				: this(Guid.Empty)
 			{
 				// Note: Bounds, size, etc are not stored, the implementation
 				// of the element provides those (typically in UpdateGfx)
 				Id = node.Element(nameof(Id)).As(Id);
-				Position = node.Element(nameof(Position)).As(Position);
 				Name = node.Element(nameof(Name)).As(Name);
+				Position = node.Element(nameof(Position)).As(Position);
 			}
 			public void Dispose()
 			{
@@ -140,13 +140,33 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Unique id for this element</summary>
-			public Guid Id { get; private set; }
+			public Guid Id { get; }
 
 			/// <summary>Debugging name for the element</summary>
-			public string Name { get; set; }
+			public string Name
+			{
+				get => m_name;
+				set
+				{
+					if (Name == value) return;
+					m_name = value;
+					NotifyPropertyChanged(nameof(Name));
+				}
+			}
+			private string m_name;
 
 			/// <summary>Default identity colour</summary>
-			public virtual Colour32 Colour { get; set; } = Colour32.Black;
+			public virtual Colour32 Colour
+			{
+				get => m_colour;
+				set
+				{
+					if (Colour == value) return;
+					m_colour = value;
+					NotifyPropertyChanged(nameof(Colour));
+				}
+			}
+			private Colour32 m_colour;
 
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)
@@ -212,7 +232,7 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Raised whenever the element needs to be redrawn</summary>
 			public event EventHandler? Invalidated;
-			protected virtual void OnInvalidated()
+			protected virtual void NotifyInvalidated()
 			{
 				IsInvalidated = true;
 				InvalidateChart();
@@ -221,46 +241,46 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Raised whenever data associated with the element changes</summary>
 			public event EventHandler? DataChanged;
-			protected virtual void OnDataChanged()
+			protected virtual void NotifyDataChanged()
 			{
 				// Raise data changed on this element, and propagate
 				// the event to the containing chart as well.
 				DataChanged?.Invoke(this, EventArgs.Empty);
-				RaiseChartChanged();
+				NotifyChartChanged();
 			}
 
 			/// <summary>Raised whenever the element is moved</summary>
 			public event EventHandler? PositionChanged;
-			protected void OnPositionChanged()
+			protected virtual void NotifyPositionChanged()
 			{
 				PositionChanged?.Invoke(this, EventArgs.Empty);
-				RaiseChartChanged();
+				NotifyChartChanged();
 			}
 
 			/// <summary>Raised whenever the element changes size</summary>
 			public event EventHandler? SizeChanged;
-			protected void OnSizeChanged()
+			protected virtual void NotifySizeChanged()
 			{
 				SizeChanged?.Invoke(this, EventArgs.Empty);
-				RaiseChartChanged();
+				NotifyChartChanged();
 			}
 
 			/// <summary>Raised whenever the element is selected or deselected</summary>
 			public event EventHandler? SelectedChanged;
-			protected virtual void OnSelectedChanged()
+			protected virtual void NotifySelectedChanged()
 			{
 				SelectedChanged?.Invoke(this, EventArgs.Empty);
 			}
 
 			/// <summary>Raised whenever the element is hovered over with the mouse</summary>
 			public event EventHandler? HoveredChanged;
-			protected virtual void OnHoveredChanged()
+			protected virtual void NotifyHoveredChanged()
 			{
 				HoveredChanged?.Invoke(this, EventArgs.Empty);
 			}
 
 			/// <summary>Signal that the chart needs laying out</summary>
-			protected virtual void RaiseChartChanged()
+			protected virtual void NotifyChartChanged()
 			{
 				if (Chart == null) return;
 				Chart.OnChartChanged(new ChartChangedEventArgs(EChangeType.Edited));
@@ -277,34 +297,26 @@ namespace Rylogic.Gui.WPF
 			public void Invalidate(object? sender = null, EventArgs? args = null)
 			{
 				if (IsInvalidated) return;
-				OnInvalidated();
+				NotifyInvalidated();
 			}
 
 			/// <summary>True if this element has been invalidated. Call 'UpdateGfx' to clear the invalidated state</summary>
 			public bool IsInvalidated { get; private set; }
-
-			/// <summary>Get/Set the selected state</summary>
-			public virtual bool Selected
-			{
-				get { return m_impl_selected; }
-				set { SetSelectedInternal(value, true); }
-			}
-			private bool m_impl_selected;
 
 			/// <summary>Set the selected state of this element</summary>
 			internal void SetSelectedInternal(bool selected, bool update_selected_collection)
 			{
 				// This allows the chart to set the selected state without
 				// adding/removing from the chart's 'Selected' collection.
-				if (m_impl_selected == selected) return;
-				if (m_impl_selected && update_selected_collection)
+				if (m_selected == selected) return;
+				if (m_selected && update_selected_collection)
 				{
 					Chart?.Selected.Remove(this);
 				}
 
-				SetProp(ref m_impl_selected, selected, nameof(Selected), true, true);
+				SetProp(ref m_selected, selected, nameof(Selected), true, true);
 
-				if (m_impl_selected && update_selected_collection)
+				if (m_selected && update_selected_collection)
 				{
 					// Selection state is changed by assigning to this property or by
 					// addition/removal from the chart's 'Selected' collection.
@@ -312,32 +324,24 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Notify observers about the selection change
-				OnSelectedChanged();
+				NotifySelectedChanged();
 				Invalidate();
 			}
-
-			/// <summary>Get/Set the hovered state</summary>
-			public virtual bool Hovered
-			{
-				get { return m_impl_hovered; }
-				internal set { SetHoveredInternal(value, true); }
-			}
-			private bool m_impl_hovered;
 
 			/// <summary>Set the selected state of this element</summary>
 			internal void SetHoveredInternal(bool hovered, bool update_hovered_collection)
 			{
 				// This allows the chart to set the hovered state without
 				// adding/removing from the chart's 'Hovered' collection.
-				if (m_impl_hovered == hovered) return;
-				if (m_impl_hovered && update_hovered_collection)
+				if (m_hovered == hovered) return;
+				if (m_hovered && update_hovered_collection)
 				{
 					Chart?.Hovered.Remove(this);
 				}
 
-				SetProp(ref m_impl_hovered, hovered, nameof(Hovered), true, true);
+				SetProp(ref m_hovered, hovered, nameof(Hovered), true, true);
 
-				if (m_impl_hovered && update_hovered_collection)
+				if (m_hovered && update_hovered_collection)
 				{
 					// Hovered state is changed by assigning to this property or by
 					// addition/removal from the chart's 'Hovered' collection.
@@ -345,48 +349,63 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Notify observers about the hovered change
-				OnHoveredChanged();
+				NotifyHoveredChanged();
 				Invalidate();
 			}
+
+			/// <summary>Get/Set the selected state</summary>
+			public bool Selected
+			{
+				get => m_selected;
+				set => SetSelectedInternal(value, true);
+			}
+			private bool m_selected;
+
+			/// <summary>Get/Set the hovered state</summary>
+			public bool Hovered
+			{
+				get => m_hovered;
+				internal set => SetHoveredInternal(value, true);
+			}
+			private bool m_hovered;
 
 			/// <summary>Get/Set whether this element is visible in the chart</summary>
 			public bool Visible
 			{
-				get { return m_impl_visible; }
-				set { SetProp(ref m_impl_visible, value, nameof(Visible), false, true); } // Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
+				// Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
+				get => m_visible;
+				set => SetProp(ref m_visible, value, nameof(Visible), false, true);
 			}
-			private bool m_impl_visible;
+			private bool m_visible;
 
 			/// <summary>Get/Set whether this element is enabled</summary>
 			public bool Enabled
 			{
-				get { return m_impl_enabled; }
-				set { SetProp(ref m_impl_enabled, value, nameof(Enabled), true, true); } // Changing the enabled data of an element should result in the graphics changing in some way that implies 'Enabled/Disabled'
+				// Changing the enabled data of an element should result in the graphics changing in some way that implies 'Enabled/Disabled'
+				get => m_enabled;
+				set => SetProp(ref m_enabled, value, nameof(Enabled), true, true);
 			}
-			private bool m_impl_enabled;
+			private bool m_enabled;
 
 			/// <summary>True if this element is included when finding the range of data in the chart</summary>
 			public bool VisibleToFindRange
 			{
-				get { return m_impl_visible_to_find_range; }
-				set { SetProp(ref m_impl_visible_to_find_range, value, nameof(VisibleToFindRange), false, true); } // Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
+				// Making an element visible/invisible doesn't invalidate it, only the chart that is displaying it.
+				get => m_visible_to_find_range;
+				set => SetProp(ref m_visible_to_find_range, value, nameof(VisibleToFindRange), false, true);
 			}
-			private bool m_impl_visible_to_find_range;
+			private bool m_visible_to_find_range;
 
 			/// <summary>True if this is a screen-space element (i.e. Position is in normalised screen space, not chart space)</summary>
 			public bool ScreenSpace
 			{
-				get { return m_impl_screen_space; }
-				protected set { SetProp(ref m_impl_screen_space, value, nameof(ScreenSpace), false, true); }
+				get => m_screen_space;
+				protected set => SetProp(ref m_screen_space, value, nameof(ScreenSpace), false, true);
 			}
-			private bool m_impl_screen_space;
+			private bool m_screen_space;
 
 			/// <summary>Allow users to bind arbitrary data to the chart element</summary>
-			public IDictionary<Guid, object> UserData
-			{
-				get;
-				private set;
-			}
+			public IDictionary<Guid, object> UserData { get; }
 
 			/// <summary>Send this element to the bottom of the Z-order</summary>
 			public void SendToBack()
@@ -429,27 +448,27 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The element to chart transform</summary>
 			public m4x4 Position
 			{
-				get { return m_impl_position; }
+				get => m_position;
 				set
 				{
-					if (Math_.FEql(m_impl_position, value)) return;
+					if (Math_.FEql(m_position, value)) return;
 					SetPosition(value);
 				}
 			}
-			private m4x4 m_impl_position;
+			private m4x4 m_position;
 
 			/// <summary>Internal set position and raise event</summary>
 			protected virtual void SetPosition(m4x4 pos)
 			{
-				m_impl_position = pos;
-				OnPositionChanged();
+				m_position = pos;
+				NotifyPositionChanged();
 				NotifyPropertyChanged(nameof(Position));
 			}
 
 			/// <summary>Get/Set the XY position of the element</summary>
 			public v2 PositionXY
 			{
-				get { return Position.pos.xy; }
+				get => Position.pos.xy;
 				set
 				{
 					var o2p = Position;
@@ -470,24 +489,13 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>BBox for the element in chart space</summary>
-			public virtual BBox Bounds
-			{
-				get { return m_impl_bounds; }
-				protected set { SetProp(ref m_impl_bounds, value, nameof(Bounds), false, true); } // Doesn't invalidate graphics because bounds is usually set after graphics have been created
-			}
-			private BBox m_impl_bounds;
+			public virtual BBox Bounds => new BBox(Position.pos, v4.Zero);
 
 			/// <summary>Get/Set the centre point of the element (in chart space)</summary>
 			public v4 Centre
 			{
-				get { return Bounds.Centre; }
-				set { Position = new m4x4(Position.rot, value + (Position.pos - Centre)); }
-			}
-
-			/// <summary>True if this element can be resized</summary>
-			public virtual bool Resizeable
-			{
-				get { return false; }
+				get => Bounds.Centre;
+				set => Position = new m4x4(Position.rot, value + (Position.pos - Centre));
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
@@ -526,15 +534,15 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
 			public void UpdateGfx(object? sender = null, EventArgs? args = null)
 			{
-				if (m_impl_updating_gfx != 0) return; // Protect against reentrancy
-				using (Scope.Create(() => ++m_impl_updating_gfx, () => --m_impl_updating_gfx))
-				{
-					UpdateGfxCore();
-					IsInvalidated = false;
-				}
+				// Protect against reentrancy
+				if (m_updating_gfx != 0) return;
+				using var updating = Scope.Create(() => ++m_updating_gfx, () => --m_updating_gfx);
+
+				UpdateGfxCore();
+				IsInvalidated = false;
 			}
 			protected virtual void UpdateGfxCore() { }
-			private int m_impl_updating_gfx;
+			private int m_updating_gfx;
 
 			/// <summary>Add/Remove the graphics associated with this element to the scene</summary>
 			internal void UpdateScene()

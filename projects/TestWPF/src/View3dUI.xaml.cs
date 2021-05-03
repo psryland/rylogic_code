@@ -7,10 +7,6 @@ namespace TestWPF
 	/// <summary>Interaction logic for view3d_ui.xaml</summary>
 	public partial class View3dUI :Window
 	{
-		static View3dUI()
-		{
-			View3d.LoadDll();
-		}
 		public View3dUI()
 		{
 			InitializeComponent();

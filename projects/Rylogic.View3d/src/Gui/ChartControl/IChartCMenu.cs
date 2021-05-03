@@ -13,6 +13,14 @@ namespace Rylogic.Gui.WPF
 		bool ShowAxes { get; set; }
 		ICommand ToggleAxes { get; }
 
+		/// <summary>Allow elements on the chart to be selected</summary>
+		bool AllowSelection { get; set; }
+		ICommand ToggleAllowSelection { get; }
+
+		/// <summary>Allow elements on the chart to be dragged around</summary>
+		bool AllowElementDragging { get; set; }
+		ICommand ToggleAllowElementDragging { get; }
+
 		/// <summary>Show/hide the popup containing the pointer value</summary>
 		bool ShowValueAtPointer { get; set; }
 		ICommand ToggleShowValueAtPointer { get; }

@@ -9,7 +9,7 @@ using Rylogic.Utility;
 
 namespace TestWPF
 {
-	public partial class ChartUI : Window
+	public partial class ChartUI : Window, IChartCMenuContext, IView3dCMenuContext
 	{
 		private ChartDataSeries m_series;
 		private ChartDataLegend m_legend;
@@ -21,6 +21,7 @@ namespace TestWPF
 			m_chart.Options.Orthographic = true;
 			m_chart.Options.SceneBorderThickness = 1;
 			m_chart.Options.SceneBorderColour = Colour32.Black;
+			m_chart.Scene.ContextMenu.DataContext = this;
 
 			m_obj0 = new View3d.Object(
 				"test_object", 0xFFFFFFFF, 5, 18, 1,
@@ -68,6 +69,8 @@ namespace TestWPF
 			m_chart.Elements.Add(m_legend);
 
 			MyLegendItems = new ListCollectionView(new[] { m_series });
+
+			ShowBoobs = Command.Create(this, ShowBoobsInternal);
 			DataContext = this;
 		}
 		protected override void OnClosed(EventArgs e)
@@ -88,7 +91,20 @@ namespace TestWPF
 		/// <summary></summary>
 		public double LineY => 50.0;
 
+		/// <summary>Custom cmenu option</summary>
+		public Command ShowBoobs { get; }
+		private void ShowBoobsInternal()
+		{
+			MsgBox.Show(this, "Boobs!!");
+		}
+
 		/// <summary></summary>
 		public ICollectionView MyLegendItems { get; }
+
+		/// <summary>The data context for View3d menu items</summary>
+		public IView3dCMenu View3dCMenuContext => Chart.Scene.View3dCMenuContext;
+
+		/// <summary>The data context for Chart menu items</summary>
+		public IChartCMenu ChartCMenuContext => Chart.Scene.ChartCMenuContext;
 	}
 }

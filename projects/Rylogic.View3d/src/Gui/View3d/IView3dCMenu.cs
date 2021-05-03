@@ -7,10 +7,13 @@ namespace Rylogic.Gui.WPF
 	public interface IView3dCMenu :INotifyPropertyChanged
 	{
 		// TLDR:
-		//   - Make are CMenu from static resources
-		//   - Set it's data context to 'this'
-		//   - Add the View3dCMenuContext, etc properties to 'this' and return the object that implements
-		//     the functionality of the menu items.
+		//   - Make a CMenu from static resources
+		//   - In XAML, in the ChartControl or View3dControl instance, set the 'ContextMenu' to your CMenu
+		//     static resource.
+		//   - Ensure the data context implements 'IView3dCMenuContext' and/or 'IChartCMenuContext'.
+		//     Alternatively, you can set the ContextMenu programmatically (see InitCMenus in LDraw).
+		//   - For charts, the setters automatically set the cmenu.DataContext to the correct binding.
+		//     If you want non-default, you'll probably have to set them programmatically.
 		//
 		// Architecture:
 		//   Rylogic.Gui.WPF.Resources.ContextMenus - (Rylogic.Gui.WPF\src\Resources\ContextMenus.xaml)
@@ -39,7 +42,7 @@ namespace Rylogic.Gui.WPF
 		//      IView3dCMenu View3dCMenuContext { get; }
 		//      IChartCMenu ChartCMenuContext { get; }
 		//      IChartAxisCMenu ChartAxisCMenuContext { get; }
-		//   Making a menu that incorporates some view3d menu items with other things is them possible
+		//   Making a menu that incorporates some view3d menu items with other things is then possible
 		//   because the custom context menu can bind to your custom window or control, which provides
 		//   these properties for the view3d menu items.
 		//

@@ -59,8 +59,6 @@ namespace Rylogic.Gui.WPF
 			Selected = new SelectedCollection(this);
 			Hovered = new HoveredCollection(this);
 
-			AllowSelection = false;
-			AllowElementDragging = false;
 			DefaultMouseControl = true;
 			DefaultKeyboardShortcuts = true;
 
@@ -77,7 +75,6 @@ namespace Rylogic.Gui.WPF
 			{
 				View3d = View3d.Create();
 
-				InitCMenus();
 				InitCommands();
 				InitNavigation();
 
@@ -934,12 +931,6 @@ namespace Rylogic.Gui.WPF
 				elem.PositionZ = HighestZ += Camera.FocusDist * 0.001f;
 		}
 
-		/// <summary>True if users are allowed to select elements on the diagram</summary>
-		public bool AllowSelection { get; set; }
-
-		/// <summary>True if users are allowed to drag the selected elements around on the chart</summary>
-		public bool AllowElementDragging { get; set; }
-
 		/// <summary>Return a string representation of a location on the chart. 'location' is in ChartControl client space</summary>
 		public string LocationText(Point location)
 		{
@@ -990,7 +981,7 @@ namespace Rylogic.Gui.WPF
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
 		public void SelectElements(Rect rect, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
-			if (!AllowSelection)
+			if (!Options.AllowSelection)
 				return;
 
 			// Normalise the selection
