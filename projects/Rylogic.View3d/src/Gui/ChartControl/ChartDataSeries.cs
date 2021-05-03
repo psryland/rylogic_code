@@ -22,7 +22,7 @@ namespace Rylogic.Gui.WPF
 			: this(Guid.NewGuid(), name, format, options, capacity)
 		{ }
 		public ChartDataSeries(Guid id, string name, EFormat format, OptionsData? options = null, int? capacity = null)
-			: base(id, m4x4.Identity, name)
+			: base(id, name)
 		{
 			m_data = new List<Pt>(capacity ?? 100);
 			m_range_x = RangeF.Invalid;
@@ -130,7 +130,7 @@ namespace Rylogic.Gui.WPF
 				// Add each graphics piece over the range
 				foreach (var piece in Cache.Get(range).OfType<ChartGfxPiece>())
 				{
-					if (piece.Gfx == null) return;
+					if (piece.Gfx == null) continue;
 					Chart.Scene.Window.AddObject(piece.Gfx);
 				}
 			}

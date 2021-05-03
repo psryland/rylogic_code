@@ -13,7 +13,13 @@ namespace Rylogic.Gui.WPF
 			public GridLines(RangeData.Axis axis)
 			{
 				m_axis = axis;
-				MaxLines = 50;
+
+				// The grid lines model is being updated all the time, we don't want to reallocate
+				// for each update. The step sizes used for the axis mean there is a maximum number 
+				// of lines before a different step size is used, based on PixelsPerTick etc. Working
+				// out what it is a hard though. Have a reasonable guess and handle it if we guessed
+				// to small.
+				MaxLines = 100;
 			}
 			public void Dispose()
 			{
@@ -49,19 +55,29 @@ namespace Rylogic.Gui.WPF
 					return;
 				}
 
-				// Ensure the model exists
-				Gfx ??= CreateGfx();
+				// Get the number and spacing of the grid lines
+				m_axis.GridLines(out var min, out var max, out var step);
 
 				// Ensure the model is up to date
-				if (m_invalidated)
-					Gfx.Edit(UpdateGfxCB);
+				if (Gfx == null || m_invalidated)
+				{
+					// Ensure the grid lines model is big enough
+					var num_lines = (int)(2 + (max - min) / step);
+					if (num_lines > MaxLines)
+						MaxLines = num_lines + 10;
+
+					// Ensure the model exists and is up to date
+					if (Gfx == null)
+						Gfx = CreateGfx();
+					else
+						Gfx.Edit(UpdateGfxCB);
+				}
 
 				// Position the model instance so that they line up with the axis tick marks.
 				// Grid lines are modelled from the bottom left corner.
 				var cam = window.Camera;
 				var wh = cam.ViewArea(cam.FocusDist);
 				var z = (float)(cam.FocusDist * m_axis.Chart.Options.GridZOffset);
-				m_axis.GridLines(out var min, out _, out _);
 				var pos =
 					m_axis.AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, z, 0) :
 					m_axis.AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), z, 0) :
@@ -115,7 +131,7 @@ namespace Rylogic.Gui.WPF
 				m_axis.GridLines(out var min, out var max, out var step);
 				var num_lines = (int)(2 + (max - min) / step);
 				if (num_lines > MaxLines)
-					throw new Exception("Grid lines dynamic model is too small"); // todo?
+					throw new Exception("Grid lines dynamic model is too small");
 
 				// Create the grid lines at the origin, they get positioned as the camera moves
 				var v = 0;

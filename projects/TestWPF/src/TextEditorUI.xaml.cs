@@ -11,7 +11,6 @@ namespace TestWPF
 		{
 			InitializeComponent();
 
-			Doc = new TextDocument();
 			Doc.TextStyles[1] = new TextStyle(fore: Colour32.DarkRed.ToMediaBrush());
 			Doc.TextStyles[2] = new TextStyle(fore: Colour32.DarkGreen.ToMediaBrush());
 
@@ -25,6 +24,6 @@ namespace TestWPF
 		}
 
 		/// <summary>Text doc</summary>
-		public TextDocument Doc { get; }
+		public TextDocument Doc { get; } = new TextDocument();
 	}
 }

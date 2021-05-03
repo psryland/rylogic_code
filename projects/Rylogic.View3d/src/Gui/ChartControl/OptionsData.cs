@@ -17,6 +17,8 @@ namespace Rylogic.Gui.WPF
 			public OptionsData()
 			{
 				NavigationMode = ENavMode.Chart2D;
+				AllowSelection = false;
+				AllowElementDragging = false;
 				LockAspect = null;
 				BackgroundColour = Colour32.White;
 				SelectionColour = 0x8060A0E0;
@@ -54,6 +56,20 @@ namespace Rylogic.Gui.WPF
 			{
 				get => get<ENavMode>(nameof(NavigationMode));
 				set => set(nameof(NavigationMode), value);
+			}
+
+			/// <summary>True if users are allowed to select elements on the diagram</summary>
+			public bool AllowSelection
+			{
+				get => get<bool>(nameof(AllowSelection));
+				set => set(nameof(AllowSelection), value);
+			}
+
+			/// <summary>True if users are allowed to select elements on the diagram</summary>
+			public bool AllowElementDragging
+			{
+				get => get<bool>(nameof(AllowElementDragging));
+				set => set(nameof(AllowElementDragging), value);
 			}
 
 			/// <summary>Lock the aspect ratio for the chart (null means unlocked)</summary>

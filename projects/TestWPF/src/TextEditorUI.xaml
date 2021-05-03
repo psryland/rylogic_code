@@ -20,8 +20,6 @@
 			<RowDefinition Height="*"/>
 		</Grid.RowDefinitions>
 		
-		<!-- 
-		-->
 		<gui:TextEditorControl
 			Grid.Row="0"
 			x:Name="m_editor"
@@ -30,15 +28,17 @@
 			FontFamily="Consolas"
 			Padding="100"
 			/>
+		<!-- 
 		<gui_text:TextView
 			Grid.Row="1"
 			x:Name="m_view"
-			Document="{Binding Doc, Mode=OneWay}"
+			Document="{Binding Doc}"
 			/>
 		<gui_text:TextArea
 			Grid.Row="2"
 			x:Name="m_area"
-			Document="{Binding Doc, Mode=OneWay}"
+			Document="{Binding Doc}"
 			/>
+		-->
 	</Grid>
 </Window>

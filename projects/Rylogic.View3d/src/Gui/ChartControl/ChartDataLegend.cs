@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -28,7 +27,7 @@ namespace Rylogic.Gui.WPF
 			: this(Guid.NewGuid())
 		{ }
 		public ChartDataLegend(Guid id)
-			: base(id, m4x4.Identity, "Legend")
+			: base(id, "Legend")
 		{
 			m_bk_colour = 0xFFFFFFFF;
 			m_padding = new Thickness(5);
@@ -119,7 +118,7 @@ namespace Rylogic.Gui.WPF
 			set => SetProp(ref m_font_size, value, nameof(FontSize), true, false);
 		}
 		private double m_font_size;
-			
+
 		/// <summary>Generate the legend graphics</summary>
 		protected override void UpdateGfxCore()
 		{

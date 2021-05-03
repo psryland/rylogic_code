@@ -78,7 +78,7 @@ namespace Rylogic.Gui.WPF
 				Active = null;
 
 				// If the next op starts immediately, begin it now
-				if (Pending[btn] != null && !Pending[btn]!.StartOnMouseDown)
+				if (Pending[btn] is MouseOp op && !op.StartOnMouseDown)
 					BeginOp(btn);
 			}
 
@@ -343,7 +343,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// See if selected element dragging is enabled
-				if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
+				if (!args.Handled && Chart.Options.AllowElementDragging && m_hit_selected != null)
 				{
 					foreach (var elem in Chart.Selected)
 						elem.DragTranslate(args.Delta, args.State);
@@ -430,7 +430,7 @@ namespace Rylogic.Gui.WPF
 					}
 
 					// See if selected element dragging is enabled
-					if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
+					if (!args.Handled && Chart.Options.AllowElementDragging && m_hit_selected != null)
 					{
 						foreach (var elem in Chart.Selected)
 							elem.DragTranslate(args.Delta, args.State);

@@ -21,9 +21,48 @@
 	<Window.Resources>
 		<ResourceDictionary>
 			<ContextMenu x:Key="MyChartCMenu">
+				<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 				<MenuItem
 					Header="Boobs"
+					Command="{Binding ShowBoobs}"
 					/>
+				<Separator/>
+				<MenuItem
+					Header="Chart Tools"
+					>
+					<MenuItem Header="Tools">
+						<StaticResource ResourceKey="View3dMenuItem_Origin"/>
+						<StaticResource ResourceKey="View3dMenuItem_Focus"/>
+						<StaticResource ResourceKey="View3dMenuItem_BoundingBoxes"/>
+						<StaticResource ResourceKey="ChartMenuItem_CrossHair"/>
+						<StaticResource ResourceKey="ChartMenuItem_ValueAtPointer"/>
+						<StaticResource ResourceKey="ChartMenuItem_Axes"/>
+						<StaticResource ResourceKey="ChartMenuItem_GridLines"/>
+						<StaticResource ResourceKey="View3dMenuItem_MeasureTool"/>
+					</MenuItem>
+					<MenuItem Header="Camera">
+						<StaticResource ResourceKey="View3dMenuItem_AutoRangeView"/>
+						<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
+						<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
+						<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
+						<StaticResource ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+						<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
+					</MenuItem>
+					<MenuItem Header="Rendering">
+						<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
+						<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+						<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
+						<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
+						<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+						<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
+					</MenuItem>
+					<MenuItem Header="Diagnostics">
+						<StaticResource	ResourceKey="View3dMenuItem_ShowNormals"/>
+						<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
+						<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
+						<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>
+					</MenuItem>
+				</MenuItem>
 			</ContextMenu>
 		</ResourceDictionary>
 	</Window.Resources>
@@ -38,7 +77,7 @@
 			Title="My Chart"
 			XLabel="Sex Axis"
 			YLabel="Why Axis"
-			SceneCMenu="{StaticResource ChartCMenu}"
+			SceneCMenu="{StaticResource MyChartCMenu}"
 			XAxisCMenu="{StaticResource ChartAxisCMenu}"
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
 			x:Name="m_chart"
