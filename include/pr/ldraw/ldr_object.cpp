@@ -22,6 +22,7 @@
 #include "pr/view3d/renderer.h"
 #include "pr/storage/csv.h"
 #include "pr/str/extract.h"
+#include "pr/script/forward.h"
 
 using namespace pr::rdr;
 using namespace pr::script;
@@ -42,6 +43,7 @@ namespace pr::ldr
 	using GCont = pr::vector<pr::rdr::NuggetProps>;
 	using ModelCont = ParseResult::ModelLookup;
 	using EResult = pr::script::EResult;
+	using EResult_ = pr::script::EResult_;
 	using Font = pr::rdr::ModelGenerator<>::Font;
 	using TextFormat = pr::rdr::ModelGenerator<>::TextFormat;
 	using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
@@ -173,8 +175,9 @@ namespace pr::ldr
 		ParseParams& operator = (ParseParams const&) = delete;
 
 		// Report an error in the script
-		void ReportError(EResult result, std::string const& msg = {})
+		void ReportError(EResult result, std::string msg = {})
 		{
+			if (msg.empty()) msg = EResult_::ToStringA(result);
 			m_reader.ReportError(result, m_reader.Location(), msg);
 		}
 
@@ -2733,19 +2736,19 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						m_tex.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_width);
 					return true;
 				}
-			case EKeyword::Smooth:
+				case EKeyword::Smooth:
 				{
 					m_smooth = true;
 					return true;
@@ -4960,6 +4963,14 @@ namespace pr::ldr
 		p.m_reader.SectionStart();
 		for (;!p.m_cancel && !p.m_reader.IsSectionEnd();)
 		{
+			// Check for incomplete script
+			if (p.m_reader.IsSourceEnd())
+			{
+				p.ReportError(EResult::UnexpectedEndOfFile);
+				break;
+			}
+
+			// Handle keywords
 			if (p.m_reader.IsKeyword())
 			{
 				// The next script token is a keyword
@@ -4982,11 +4993,9 @@ namespace pr::ldr
 				p.ReportError(EResult::UnknownToken);
 				continue;
 			}
-			else
-			{
-				// Not a keyword, let the object creator interpret it
-				creator.Parse();
-			}
+
+			// Not a keyword, let the object creator interpret it
+			creator.Parse();
 		}
 		p.m_reader.SectionEnd();
 

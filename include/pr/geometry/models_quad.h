@@ -314,8 +314,8 @@ namespace pr::geometry
 
 			auto d0 = v1 - v0;
 			auto d1 = v2 - v1;
-			auto b0 = Normalise(Cross3(n1, d0), Perpendicular(n1));
-			auto b1 = Normalise(Cross3(n1, d1), Perpendicular(n1));
+			auto b0 = Normalise(Cross3(n1, d0), bi);
+			auto b1 = Normalise(Cross3(n1, d1), bi);
 			bi = Normalise(b0 + b1, bi); // The bisector at v1
 			// Note: bi always points to the left of d0 and d1
 			
@@ -335,8 +335,8 @@ namespace pr::geometry
 			//   => t = 1 - hwidth*w/y
 			auto d0_sq = LengthSq(d0);
 			auto d1_sq = LengthSq(d1);
-			auto w0 = Abs(Dot3(d0,bi)) / d0_sq;
-			auto w1 = Abs(Dot3(d1,bi)) / d1_sq;
+			auto w0 = Div(Abs(Dot3(d0,bi)), d0_sq, maths::tinyf);
+			auto w1 = Div(Abs(Dot3(d1,bi)), d1_sq, maths::tinyf);
 			auto y = Dot3(b0,bi); // == Dot3(b1,bi);
 			auto u0 = y <= hwidth*w0 ? 1.0f : hwidth*w0/y; // Cannot be a div/0 because w0,w1 are positive-semi-definite.
 			auto u1 = y <= hwidth*w1 ? 1.0f : hwidth*w1/y;

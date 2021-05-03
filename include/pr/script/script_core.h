@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -488,7 +488,7 @@ namespace pr::script
 		{
 			// We're returning bytes. Already decoded would mean we're returning utf-16 char_t's
 			assert(m_enc != EEncoding::already_decoded);
-			return m_ptr != m_end ? *m_ptr++ : EOS;
+			return m_ptr != m_end ? static_cast<uint8_t>(*m_ptr++) : EOS;
 		}
 
 		// Read all data into the local buffer
@@ -730,7 +730,10 @@ namespace pr::script
 			throw ScriptException(EResult::InvalidString, loc, Fmt(L"Expected the start of a string literal, but the next character is: %c", quote));
 
 		for (bool esc = true; *src != '\0' && (esc || *src != quote); esc = !esc && *src == '\\', ++src) {}
-		if (*src == quote) ++src; else throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
+		if (*src != quote)
+			throw ScriptException(EResult::InvalidString, loc, "Incomplete literal string or character");
+
+		++src;
 	}
 	template <typename TSrc> inline void EatLineComment(TSrc& src, string_view_t line_comment = L"//")
 	{
