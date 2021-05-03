@@ -3688,8 +3688,8 @@ namespace Rylogic.Gui.WinForms
 			foreach (var conn in connectors)
 			{
 				// Get the available anchor points on each node
-				var available0 = node_to_available_anchors[conn.Node0];
-				var available1 = node_to_available_anchors[conn.Node1];
+				var available0 = conn.Node0 != null ? node_to_available_anchors[conn.Node0] : new List<AnchorPoint>();
+				var available1 = conn.Node1 != null ? node_to_available_anchors[conn.Node1] : new List<AnchorPoint>();
 
 				// Search for the best pair of anchors to use
 				var best0 = (AnchorPoint)null;

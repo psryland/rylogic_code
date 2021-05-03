@@ -2,7 +2,9 @@ Immediate ToDo:
 
 Work
   Documentation:
-	- Write a "REX Software Architecture" (SYSTEM DESIGN)(EP0001022/1023)
+	- Create a test case that links to the ...?
+	
+	
 
   MC
 	- Refactor the movement manager into separate files
@@ -15,16 +17,12 @@ Work
 	
   ZeroRef
     - Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
-    - Change the order of actuators in the CSV to FootL,LowerL,UpperL,HipL,HipR,UpperR,LowerR,FootR
-	
+ 	
   VRex
     - Port the tools from the old VRex over
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
-
-  Misc
-	- Set up Git on the machine that runs plastic...
 	
 LDraw
 	- Camera type-in
@@ -37,8 +35,6 @@ LDraw
 	- Support sub models in object manager
 	- Rendering bug in demo scene (looks like a depth state is not being set each frame. Ribbon rendering through rabbit, but not after toggling visibility. Rabbit is occluding other alphas)
 	- Allow #include of temporary scripts
-
-TextAligner
 	
 P3D
 	- Finish exporter for Blender

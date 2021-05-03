@@ -130,7 +130,7 @@ namespace Rylogic.LDraw
 		{
 			return solid ? "*Solid" : string.Empty;
 		}
-		public static string Width(int width)
+		public static string Width(float width)
 		{
 			return width != 0 ? $"*Width {{{width}}}" : string.Empty;
 		}
@@ -141,6 +141,10 @@ namespace Rylogic.LDraw
 		public static string CornerRadius(float rad)
 		{
 			return $"*CornerRadius {{{rad}}}";
+		}
+		public static string Smooth(bool smooth)
+		{
+			return smooth ? "*Smooth" : string.Empty;
 		}
 
 		// Ldr single string
@@ -485,6 +489,10 @@ namespace Rylogic.LDraw
 		{
 			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
+		public void Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, float corner_radius, v4 position)
+		{
+			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.CornerRadius(corner_radius), " ", Ldr.Position(position), "}\n");
+		}
 
 		public void Triangle()
 		{
@@ -554,7 +562,16 @@ namespace Rylogic.LDraw
 		}
 		public void Axis(string name, Colour32 colour, m4x4 basis, float scale)
 		{
-			Append("*Matrix3x3 ",name," ",colour," {",basis.x*scale," ",basis.y*scale," ",basis.z*scale," ",Ldr.Position(basis.pos),"}\n");
+			Append("*Matrix3x3 ", name, " ", colour, " {", basis.x * scale, " ", basis.y * scale, " ", basis.z * scale, " ", Ldr.Position(basis.pos), "}\n");
+		}
+
+		public void Ribbon()
+		{
+			Ribbon(string.Empty, Colour32.White, new []{ v4.Origin, v4.XAxis.w1 }, EAxisId.PosZ, 3f, false);
+		}
+		public void Ribbon(string name, Colour32 colour, IEnumerable<v4> points, AxisId axis_id, float width, bool smooth, m4x4? o2w = null)
+		{
+			Append("*Ribbon ", name, " ", colour, " {", points, " ", axis_id, Ldr.Width(width), Ldr.Smooth(smooth), Ldr.Transform(o2w), "}\n");
 		}
 
 		public void Mesh(string name, Colour32 colour, IList<v4>? verts, IList<v4>? normals = null, IList<Colour32>? colours = null, IList<v2>? tex = null, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
@@ -593,6 +610,7 @@ namespace Rylogic.LDraw
 		{
 			Ldr.Write(ToString(), filepath, append);
 		}
+		public static implicit operator string(LdrBuilder ldr) => ldr.ToString();
 	}
 }
 
