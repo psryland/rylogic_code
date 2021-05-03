@@ -107,7 +107,7 @@ namespace Rylogic.Gui.WPF
 				//TextDocumentWeakEventManager.TextChanged.RemoveListener(oldValue, this);
 				//PropertyChangedEventManager.RemoveListener(oldValue.UndoStack, this, "IsOriginalFile");
 			}
-			TextArea.Document = new_value;
+			TextArea.Document = new_value ?? new TextDocument();
 			if (new_value != null)
 			{
 				//TextDocumentWeakEventManager.TextChanged.AddListener(newValue, this);

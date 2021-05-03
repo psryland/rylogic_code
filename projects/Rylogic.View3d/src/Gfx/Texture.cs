@@ -213,7 +213,7 @@ namespace Rylogic.Gfx
 				}
 
 				/// <summary>GDI+ graphics interface</summary>
-				public Graphics Gfx { get; private set; }
+				public Graphics Gfx { get; }
 			}
 
 			/// <summary>Proxy object for accessing the private data of a texture</summary>

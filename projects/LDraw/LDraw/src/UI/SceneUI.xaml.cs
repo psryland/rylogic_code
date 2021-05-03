@@ -273,12 +273,6 @@ namespace LDraw.UI
 			SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.YAxis));
 		}
 
-		/// <summary>The data context for View3d menu items</summary>
-		public IView3dCMenu View3dCMenuContext => SceneView.Scene.View3dCMenuContext;
-
-		/// <summary>The data context for View3d menu items</summary>
-		public IChartCMenu ChartCMenuContext => SceneView.Scene.ChartCMenuContext;
-
 		/// <summary>True if the animation UI is visible</summary>
 		public bool AnimationUI
 		{

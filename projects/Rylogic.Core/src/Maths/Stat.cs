@@ -59,7 +59,7 @@ namespace Rylogic.Maths
 	{ }
 
 	/// <summary>Simple Running Average</summary>
-	[DebuggerDisplay("{Mean} N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Average : IStatMeanSingleVariable<double>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
@@ -130,8 +130,11 @@ namespace Rylogic.Maths
 		{
 			return mean + (value - mean) / (1.0 + count);
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Mean} N={Count}";
 	}
-	[DebuggerDisplay("{Mean} N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Average<T> :IStatMeanSingleVariable<T>
 	{
 		protected int m_count;
@@ -191,10 +194,13 @@ namespace Rylogic.Maths
 		{
 			return Operators<T>.Add(mean, Operators<T, double>.Mul(Operators<T>.Sub(value, mean), 1.0 / (1.0 + count)));
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Mean} N={Count}";
 	}
 
 	/// <summary>Running Average with standard deviation and variance</summary>
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class AverageVariance : Average, IStatMeanAndVarianceSingleVariable<double>
 	{
 		// let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
@@ -270,8 +276,11 @@ namespace Rylogic.Maths
 			m_mean += diff * inv_count;
 			m_var += diff * diff * ((m_count - 1) * inv_count);
 		}
+		
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class AverageVariance<T> :Average<T>, IStatMeanAndVarianceSingleVariable<T>
 	{
 		protected T m_var;
@@ -320,10 +329,13 @@ namespace Rylogic.Maths
 			m_mean = Operators<T>.Add(m_mean, Operators<T, double>.Mul(diff, inv_count));
 			m_var = Operators<T>.Add(m_var, Operators<T, double>.Mul(Operators<T>.Mul(diff, diff), (m_count - 1.0) * inv_count));
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}
 
 	/// <summary>Running average with standard deviation and min/max range</summary>
-	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class AverageVarianceMinMax : AverageVariance, IStatMeanSingleVariable<double>
 	{
 		protected double m_min;
@@ -375,8 +387,11 @@ namespace Rylogic.Maths
 			if (value < m_min) m_min = value;
 			base.AddInternal(value);
 		}
+
+		/// <summary></summary>
+		private string Description => $"Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]";
 	}
-	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class AverageVarianceMinMax<T> :AverageVariance<T>, IStatMeanAndVarianceSingleVariable<T>
 	{
 		protected T m_min;
@@ -425,10 +440,13 @@ namespace Rylogic.Maths
 			if (Operators<T>.Less(value, m_min)) m_min = value;
 			base.AddInternal(value);
 		}
+
+		/// <summary></summary>
+		private string Description => $"Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]";
 	}
 
 	/// <summary>Moving Window Average</summary>
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class SimpleMovingAverage : IStatMeanAndVarianceSingleVariable<double>
 	{
 		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
@@ -526,10 +544,13 @@ namespace Rylogic.Maths
 		{
 			return Add(value);
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}
 
 	/// <summary>Exponential Moving Average</summary>
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class ExponentialMovingAverage : IStatMeanAndVarianceSingleVariable<double>
 	{
 		//  avr(k) = a * X(k) + (1 - a) * avr(k-1)
@@ -666,8 +687,11 @@ namespace Rylogic.Maths
 			}
 		}
 		IStatSingleVariable<double> IStatSingleVariable<double>.Add(double value) => Add(value);
+
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class ExponentialMovingAverage<T> :IStatMeanAndVarianceSingleVariable<T>
 	{
 		protected int m_size;
@@ -771,10 +795,13 @@ namespace Rylogic.Maths
 			}
 		}
 		IStatSingleVariable<T> IStatSingleVariable<T>.Add(T value) => Add(value);
+
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count}";
 	}
 
 	/// <summary>Exponential Moving Average and min/max</summary>
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class ExponentialMovingAverageMinMax :ExponentialMovingAverage
 	{
 		public ExponentialMovingAverageMinMax()
@@ -836,9 +863,13 @@ namespace Rylogic.Maths
 			if (value < m_min) m_min = value;
 			base.AddInternal(value);
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Mean} ({PopStdDev}) N={Count} R=[{Min},{Max}]";
 	}
 
 	/// <summary>Running average of two variables with standard deviation, variance, and correlation coefficient</summary>
+	[DebuggerDisplay("{Description,nq}")]
 	public class Correlation :IStatTwoVariables<double>
 	{
 		protected int m_count;
@@ -903,7 +934,7 @@ namespace Rylogic.Maths
 		/// <summary>The correlation coefficient between 'x' and 'y' (A value between [-1,+1])</summary>
 		public double CorrCoeff => m_count > 0 && !Math_.FEql(m_var_xy, 0) ? m_var_xy / Math_.Sqrt(m_var_x * m_var_y) : 0.0;
 
-		/// <summary>This is 'r�', i.e. a measure of how well the data fit the Linear Regression line</summary>
+		/// <summary>This is 'r²', i.e. a measure of how well the data fit the Linear Regression line</summary>
 		public double CoeffOfDetermination => Math_.Sqr(CorrCoeff);
 
 		/// <summary>Returns a "best-fit" linear polynomial for the data added</summary>
@@ -947,6 +978,9 @@ namespace Rylogic.Maths
 
 			m_var_xy += diff_x * diff_y * ((m_count - 1) * inv_count);
 		}
+
+		/// <summary></summary>
+		private string Description => $"N={Count}";
 	}
 
 	/// <summary>A class for tracking the distribution of a variable</summary>
@@ -961,37 +995,19 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>A name for the distribution</summary>
-		public string Name
-		{
-			get;
-			set;
-		}
+		public string Name { get; set; }
 
 		/// <summary>Get/Set the bucket size. Setting the bucket size resets the bucket collection</summary>
-		public double BucketSize
-		{
-			get;
-			private set;
-		}
+		public double BucketSize { get; }
 
 		/// <summary>The span of values added</summary>
-		public RangeF XRange
-		{
-			get { return Buckets.XRange; }
-		}
+		public RangeF XRange => Buckets.XRange;
 
 		/// <summary>The range of counts</summary>
-		public RangeF YRange
-		{
-			get { return new RangeF(Buckets.YRange.Beg * Normalisation, Buckets.YRange.End * Normalisation); }
-		}
+		public RangeF YRange => new RangeF(Buckets.YRange.Beg * Normalisation, Buckets.YRange.End * Normalisation);
 
 		/// <summary>The distribution data as an ordered list of buckets</summary>
-		public BucketCollection Buckets
-		{
-			[DebuggerStepThrough] get;
-			private set;
-		}
+		public BucketCollection Buckets { get; }
 		public class BucketCollection
 		{
 			// Notes:
@@ -1110,18 +1126,10 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>The number of values added to the distribution</summary>
-		public int Count
-		{
-			get;
-			private set;
-		}
+		public int Count { get; private set; }
 
 		/// <summary>A normalisation factor that effects values returned from 'this[i]'</summary>
-		public double Normalisation
-		{
-			get;
-			set;
-		}
+		public double Normalisation { get; set; }
 
 		/// <summary>Access the data as a continuous probability distribution</summary>
 		public double this[double value]

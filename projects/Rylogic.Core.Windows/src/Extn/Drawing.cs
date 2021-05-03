@@ -96,6 +96,22 @@ namespace Rylogic.Extn.Windows
 				Math_.FEqlRelative(lhs.Width, rhs.Width, tol) &&
 				Math_.FEqlRelative(lhs.Height, rhs.Height, tol);
 		}
+
+		/// <summary>The component-wise minimum of two sizes</summary>
+		public static Size Min(Size lhs, Size rhs)
+		{
+			return new Size(
+				Math.Min(lhs.Width, rhs.Width),
+				Math.Min(lhs.Height, rhs.Height));
+		}
+
+		/// <summary>The component-wise maximum of two sizes</summary>
+		public static Size Max(Size lhs, Size rhs)
+		{
+			return new Size(
+				Math.Max(lhs.Width, rhs.Width),
+				Math.Max(lhs.Height, rhs.Height));
+		}
 	}
 
 	public static class Rect_

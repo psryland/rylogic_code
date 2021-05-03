@@ -774,7 +774,7 @@ namespace Rylogic.Common
 		/// <summary>Save if 'AutoSaveOnChanges' is true</summary>
 		public void AutoSave()
 		{
-			if (!AutoSaveOnChanges || m_auto_save_pending)
+			if (!AutoSaveOnChanges || m_auto_save_pending || string.IsNullOrEmpty(Filepath))
 				return;
 
 			// If there is a sync context, then we can defer saving for a bit to catch batches of settings changes

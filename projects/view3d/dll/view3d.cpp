@@ -1278,6 +1278,7 @@ VIEW3D_API void __stdcall View3D_LightPropertiesSet(View3DWindow window, View3DL
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
+		assert(light.m_position.w == 1);
 
 		DllLockGuard;
 		window->m_light.m_position       = To<v4>(light.m_position);
@@ -1304,6 +1305,7 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 	try
 	{
 		if (!window) throw std::runtime_error("window is null");
+		assert(position.w == 1);
 
 		DllLockGuard;
 		window->m_light.m_position = To<v4>(position);
