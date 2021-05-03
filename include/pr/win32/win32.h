@@ -1,4 +1,4 @@
-//**********************************************
+﻿//**********************************************
 // Win32 API
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
@@ -40,9 +40,9 @@ namespace pr
 		// GetModuleHandleEx
 		static HMODULE ModuleHandleEx(DWORD flags, char const* module_name)
 		{
-			HMODULE module;
-			Throw(::GetModuleHandleExA(flags, module_name, &module), "GetModuleHandleExW failed");
-			return module;
+			HMODULE library;
+			Throw(::GetModuleHandleExA(flags, module_name, &library), "GetModuleHandleExW failed");
+			return library;
 		}
 
 		// ReplaceFile
@@ -68,9 +68,9 @@ namespace pr
 		// GetModuleHandleEx
 		static HMODULE ModuleHandleEx(DWORD flags, wchar_t const* module_name)
 		{
-			HMODULE module;
-			Throw(::GetModuleHandleExW(flags, module_name, &module), "GetModuleHandleExW failed");
-			return module;
+			HMODULE library;
+			Throw(::GetModuleHandleExW(flags, module_name, &library), "GetModuleHandleExW failed");
+			return library;
 		}
 
 		// ReplaceFile
@@ -155,16 +155,16 @@ namespace pr
 		}
 
 		// GetModuleFileName
-		static std::filesystem::path ModuleFileName(HMODULE module = nullptr)
+		static std::filesystem::path ModuleFileName(HMODULE library = nullptr)
 		{
 			// Get the required buffer size
 			wchar_t buf[_MAX_PATH];
-			auto len = ::GetModuleFileNameW(module, &buf[0], _countof(buf));
+			auto len = ::GetModuleFileNameW(library, &buf[0], _countof(buf));
 			if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
 				return std::filesystem::path(&buf[0], &buf[0] + len);
 
 			std::wstring name(len, 0);
-			len = ::GetModuleFileNameW(module, &name[0], len);
+			len = ::GetModuleFileNameW(library, &name[0], len);
 			Throw(len == name.size(), "GetModuleFileNameW failed");
 			return std::move(name);
 		}
@@ -299,16 +299,16 @@ namespace pr
 		{
 			using namespace std::filesystem;
 
-			static HMODULE module = nullptr;
-			if (module != nullptr)
-				return module;
+			static HMODULE library = nullptr;
+			if (library != nullptr)
+				return library;
 
 			constexpr wchar_t const* platform =
 				sizeof(void*) == 8 ? L"x64" :
 				sizeof(void*) == 4 ? L"x86" :
 				L"";
 
-			#ifdef DEBUG
+			#ifdef NDEBUG
 			constexpr wchar_t const* config = L"release";
 			#else
 			constexpr wchar_t const* config = L"debug";
@@ -325,9 +325,9 @@ namespace pr
 			auto dllpath = exe_dir / dir / dllname;
 			if (exists(dllpath))
 			{
-				module = ::LoadLibraryW(dllpath.c_str());
-				if (module != nullptr)
-					return module;
+				library = ::LoadLibraryW(dllpath.c_str());
+				if (library != nullptr)
+					return library;
 			}
 			else
 			{
@@ -338,9 +338,9 @@ namespace pr
 			dllpath = exe_dir / dllname;
 			if (exists(dllpath))
 			{
-				module = ::LoadLibraryW(dllpath.c_str());
-				if (module != nullptr)
-					return module;
+				library = ::LoadLibraryW(dllpath.c_str());
+				if (library != nullptr)
+					return library;
 			}
 			else
 			{

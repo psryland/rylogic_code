@@ -108,55 +108,67 @@ namespace pr::filesys
 	{
 		std::ifstream file(filepath, std::ios::binary);
 
-		EEncoding enc;
 		unsigned char bom[3];
 		auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
 		if (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
 		{
-			enc = EEncoding::utf8;
 			bom_size = 3;
+			return EEncoding::utf8;
 		}
-		else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)
+		if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)
 		{
-			enc = EEncoding::utf16_be;
 			bom_size = 2;
+			return EEncoding::utf16_be;
 		}
-		else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)
+		if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)
 		{
-			enc = EEncoding::utf16_le;
 			bom_size = 2;
+			return EEncoding::utf16_le;
 		}
-		else
-		{
-			// Assume utf-8 unless we find some invalid utf-8 sequences
-			enc = EEncoding::utf8;
-			bom_size = 0;
 
-			// Scan the file (or some of it) to look for invalid utf-8 sequences
-			unsigned char buf[0x10000];
-			constexpr int const max_scan_size = 0x100000 / sizeof(buf);
-			for (int j = 0; file.good(); ++j)
+		// Assume utf-8 unless we find some invalid utf-8 sequences
+		bom_size = 0;
+		auto char_ofs = 0;
+
+		// Scan the file (or some of it) to look for invalid utf-8 sequences
+		unsigned char buf[4096];
+		constexpr int jend = 0x100000 / sizeof(buf);
+		for (int j = 0, margin = 0; j != jend && file.good(); ++j)
+		{
+			// Read a chunk of the file.
+			auto count = file.read(reinterpret_cast<char*>(&buf[margin]), sizeof(buf) - margin).gcount();
+
+			// Scan up to sizeof(buf) - 8 to handle multi-byte characters than span the buffer boundary.
+			std::streamsize i = 0, iend = std::min<std::streamsize>(count, sizeof(buf) - 8);
+			for (;i < iend; ++i, ++char_ofs)
 			{
-				auto iend = file.read(reinterpret_cast<char*>(&buf[0]), sizeof(buf)).gcount();
-				for (std::streamsize i = 0; i != iend; ++i)
-				{
-					if ((buf[i] & 0b10000000) == 0) continue;
-					auto c = 
-						iend - i >= 4 && (buf[i] & 0b11110000) == 0b11110000 ? 3 :
-						iend - i >= 3 && (buf[i] & 0b11100000) == 0b11100000 ? 2 :
-						iend - i >= 2 && (buf[i] & 0b11000000) == 0b11000000 ? 1 : 0;
+				auto c =
+					(buf[i] & 0b10000000) == 0          ? 0 : // ASCII character, 0 continuation bytes
+					(buf[i] & 0b11100000) == 0b11000000 ? 1 : // 2-byte UTF-8 character, 1 continuation byte
+					(buf[i] & 0b11110000) == 0b11100000 ? 2 : // 3-byte UTF-8 character, 2 continuation bytes
+					(buf[i] & 0b11111000) == 0b11110000 ? 3 : // 4-byte UTF-8 character, 3 continuation bytes
+					-1;                                       // Not a valid UTF-8 character
 
-					// Following bytes should be 0b10xxxxxx for valid utf-8
-					for (++i; c-- != 0 && (buf[i] & 0b11000000) == 0b10000000; ++i) {}
-					if (c == 0) continue;
+				if (c == 0)
+					continue;
 
-					// Not valid UTF-8, assume extended ascii
-					enc = EEncoding::ascii_extended;
-					break;
-				}
+				// Continuation bytes should be 0b10xxxxxx for valid utf-8
+				for (; c > 0 && (buf[++i] & 0b11000000) == 0b10000000; --c) {}
+
+				// Not valid UTF-8, assume extended ascii
+				if (c != 0)
+					return EEncoding::ascii_extended;
 			}
+
+			// Reached the end of the file?
+			if (count != s_cast<std::streamsize>(sizeof(buf) - margin))
+				break;
+
+			// Copy the unscanned bytes to the start of buf and go round again
+			margin = s_cast<int>(sizeof(buf) - i);
+			memmove(&buf[0], &buf[i], margin);
 		}
-		return enc;
+		return EEncoding::utf8;
 	}
 	inline EEncoding DetectFileEncoding(std::filesystem::path const& filepath)
 	{
@@ -168,7 +180,7 @@ namespace pr::filesys
 	// 'buf_enc' is how to convert the file data. The encoding in the file is automatically detected and converted to 'buf_enc'
 	// 'file_enc' is used to say what the file encoding is. If equal to Text then the encoding is automatically detected
 	template <typename Buf>
-	inline bool FileToBuffer(std::filesystem::path const& filepath, Buf& buf, EEncoding buf_enc = EEncoding::binary, EEncoding file_enc = EEncoding::binary)
+	inline bool FileToBuffer(std::filesystem::path const& filepath, Buf& buf, EEncoding buf_enc = EEncoding::binary)
 	{
 		using Elem = std::decay_t<decltype(buf[0])>;
 
@@ -182,9 +194,9 @@ namespace pr::filesys
 		// If we need to do a text encoding conversion...
 		if (buf_enc != EEncoding::binary)
 		{
-			// Detect the file encoding
+			// Detect the file encoding and BOM length.
 			int bom_length = 0;
-			file_enc = (file_enc == EEncoding::binary || file_enc == EEncoding::auto_detect) ? DetectFileEncoding(filepath, bom_length) : file_enc;
+			auto file_enc = DetectFileEncoding(filepath, bom_length);
 
 			// Open the file stream
 			std::basic_ifstream<Elem> file(filepath, std::ios::binary);
@@ -194,14 +206,13 @@ namespace pr::filesys
 			// Imbue the file if the file encoding doesn't match the buffer encoding
 			switch (file_enc)
 			{
-			case EEncoding::ascii:
-			case EEncoding::ascii_extended:
-			case EEncoding::utf8:
+				case EEncoding::ascii:
+				case EEncoding::utf8:
 				{
-					if (buf_enc == EEncoding::ascii ||
-						buf_enc == EEncoding::ascii_extended ||
-						buf_enc == EEncoding::utf8)
-					{}
+					if (false) {}
+					else if (buf_enc == EEncoding::ascii || buf_enc == EEncoding::utf8)
+					{
+					}
 					else if (buf_enc == EEncoding::utf16_le)
 					{
 						using cvt_t = std::codecvt_utf8_utf16<wchar_t>;
@@ -214,12 +225,29 @@ namespace pr::filesys
 					}
 					else
 					{
-						throw std::exception("todo");
+						throw std::runtime_error("todo");
 					}
 					break;
 				}
-			case EEncoding::utf16_le:
-			case EEncoding::ucs2_le:
+				case EEncoding::ascii_extended:
+				{
+					if (false) {}
+					else if (buf_enc == EEncoding::ascii || buf_enc == EEncoding::ascii_extended)
+					{
+					}
+					else if (buf_enc == EEncoding::utf16_le || buf_enc == EEncoding::ucs2_le)
+					{
+						// treats the characters as ascii
+					}
+					else
+					{
+						// extended ascii involves code pages...
+						throw std::runtime_error("todo");
+					}
+					break;
+				}
+				case EEncoding::utf16_le:
+				case EEncoding::ucs2_le:
 				{
 					// Imbue the file if the file encoding doesn't match the buffer encoding
 					if (false) {}
@@ -274,13 +302,13 @@ namespace pr::filesys
 					}
 					else
 					{
-						throw std::exception("todo");
+						throw std::runtime_error("todo");
 					}
 					break;
 				}
-			default:
+				default:
 				{
-					throw std::exception("todo");
+					throw std::runtime_error("todo");
 				}
 			}
 
@@ -288,13 +316,16 @@ namespace pr::filesys
 			file.seekg(bom_length, std::ios::beg);
 			size -= bom_length;
 
-			// Read with formatting
+			// Read with formatting (appending to 'buf')
 			if (size != 0)
 			{
 				auto initial = buf.size();
 				buf.resize(size_t(initial + size));
 				auto read = file.read(reinterpret_cast<Elem*>(&buf[initial]), size).gcount();
 				buf.resize(size_t(initial + read));
+
+				//if (read != size)
+				//	throw std::runtime_error("Partial file read in FileToBuffer (text)");
 			}
 		}
 		else
@@ -304,22 +335,25 @@ namespace pr::filesys
 			if (!file.good())
 				return false;
 
-			// Read unformatted
+			// Read unformatted (appending to 'buf')
 			if (size != 0)
 			{
 				auto initial = buf.size();
 				buf.resize(size_t(initial + (size + sizeof(Elem) - 1) / sizeof(Elem)));
 				auto read = file.read(reinterpret_cast<char*>(&buf[initial]), size).gcount();
 				buf.resize(size_t(initial + (read + sizeof(Elem) - 1) / sizeof(Elem)));
+
+				//if (read != size)
+				//	throw std::runtime_error("Partial file read in FileToBuffer (binary)");
 			}
 		}
 		return true;
 	}
 	template <typename Buf>
-	inline Buf FileToBuffer(std::filesystem::path const& filepath, EEncoding buf_enc = EEncoding::binary, EEncoding file_enc = EEncoding::binary)
+	inline Buf FileToBuffer(std::filesystem::path const& filepath, EEncoding buf_enc = EEncoding::binary)
 	{
 		Buf buf;
-		if (!FileToBuffer(filepath, buf, buf_enc, file_enc)) throw std::exception("Failed to read file");
+		if (!FileToBuffer(filepath, buf, buf_enc)) throw std::runtime_error("Failed to read file");
 		return std::move(buf);
 	}
 
@@ -349,9 +383,9 @@ namespace pr::filesys
 				else if (file_enc == EEncoding::utf8)     { bom[0] = 0xEF; bom[1] = 0xBB; bom[2] = 0xBF; bom_length = 3; }
 				else if (file_enc == EEncoding::utf16_le) { bom[0] = 0xFF; bom[1] = 0xFE; bom_length = 2; }
 				else if (file_enc == EEncoding::utf16_be) { bom[0] = 0xFE; bom[1] = 0xFF; bom_length = 2; }
-				else throw std::exception("Cannot write the byte order mask for an unknown text encoding");
+				else throw std::runtime_error("Cannot write the byte order mask for an unknown text encoding");
 				if (!file.write(reinterpret_cast<char const*>(&bom[0]), bom_length).good())
-					throw std::exception("Failed to write the byte order mask");
+					throw std::runtime_error("Failed to write the byte order mask");
 			}
 
 			// Imbue the file stream if the buffer encoding doesn't match the file encoding
@@ -378,7 +412,7 @@ namespace pr::filesys
 						}
 						else
 						{
-							throw std::exception("todo");
+							throw std::runtime_error("todo");
 						}
 						break;
 					}
@@ -392,12 +426,12 @@ namespace pr::filesys
 						}
 						else
 						{
-							throw std::exception("todo");
+							throw std::runtime_error("todo");
 						}
 					}
 				default:
 					{
-						throw std::exception("todo");
+						throw std::runtime_error("todo");
 					}
 				}
 			}
