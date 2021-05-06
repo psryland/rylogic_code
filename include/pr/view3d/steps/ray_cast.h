@@ -54,6 +54,7 @@ namespace pr::rdr
 	struct RayCastStep :RenderStep
 	{
 		static ERenderStep const Id = ERenderStep::RayCast;
+		using Instances = std::function<BaseInstance const*()>;
 		using InstFilter = std::function<bool(BaseInstance const*)>;
 		using ResultsOut = std::function<bool(HitTestResult const&)>;
 
@@ -81,7 +82,7 @@ namespace pr::rdr
 		// 'snap_distance' is the distance (in world space) for point snapping.
 		// 'flags' controls what primitives snapping applies to.
 		// 'filter' filters instances added to the render step (i.e. decides what's hit-able)
-		void SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, InstFilter const& include);
+		void SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, InstFilter include);
 
 		// Read the results from the ray casts
 		void ReadOutput(ResultsOut const& cb);

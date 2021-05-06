@@ -75,7 +75,7 @@ namespace pr::rdr
 	}
 
 	// Perform an immediate hit test
-	void Scene::HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include, RayCastStep::ResultsOut const& results)
+	void Scene::HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::Instances instances, RayCastStep::ResultsOut const& results)
 	{
 		if (rays == nullptr || count == 0)
 			return;
@@ -90,13 +90,21 @@ namespace pr::rdr
 		auto& rs = *m_ht_immediate.get();
 
 		// Set the rays to cast
-		rs.SetRays(rays, count, snap_distance, flags, include);
+		rs.SetRays(rays, count, snap_distance, flags, [=](auto) { return true; });
 
 		// Create a ray cast render step and populate its draw list.
 		// Note: don't look for and reuse an existing RayCastStep because callers may want
 		// to invoke immediate ray casts without interfering with existing continuous ray casts.
-		for (auto& inst : m_instances)
-			rs.AddInstance(*inst);
+		if (instances != nullptr)
+		{
+			for (BaseInstance const* inst; (inst = instances()) != nullptr;)
+				rs.AddInstance(*inst);
+		}
+		else
+		{
+			for (auto& inst : m_instances)
+				rs.AddInstance(*inst);
+		}
 
 		// Render just this step
 		Renderer::Lock lock(m_wnd->rdr());

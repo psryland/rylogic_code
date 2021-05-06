@@ -80,6 +80,7 @@ namespace Rylogic.Gui.WPF
 		protected virtual void Dispose(bool _)
 		{
 			++m_resize_issue;
+			Disposing?.Invoke(this, EventArgs.Empty);
 			Source = null;
 			D3DImage = null!;
 			Window = null!;
@@ -515,6 +516,9 @@ namespace Rylogic.Gui.WPF
 			// because this catches all sources of a property changing, not just when it is explicity set.
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
+
+		/// <summary>Raised when the control is disposed</summary>
+		public event EventHandler? Disposing;
 
 		#region EventArgs
 		public class CustomContextMenuEventArgs : EventArgs

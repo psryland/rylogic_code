@@ -634,6 +634,29 @@ VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(View3DWindow window, View3
 	CatchAndReport(View3D_AnimationEventCBSet, , );
 }
 
+// Cast a ray into the scene, returning information about what it hit.
+// 'rays' - is an input buffer of rays to cast for hit testing
+// 'hits' - are the nearest intercepts with the given rays
+// 'ray_count' - is the length of the 'rays' array
+// 'snap_distance' - the world space distance to snap to
+// 'flags' - what can be hit.
+// 'objects' - An array of objects to hit test
+// 'object_count' - The length of the 'objects' array.
+VIEW3D_API void __stdcall View3D_WindowHitTestObjects(View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, View3DObject const* objects, int object_count)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		// todo: add the non-immediate version of this function
+		// to allow continuous hit-testing during constant rendering.
+
+		DllLockGuard;
+		window->HitTest(rays, hits, ray_count, snap_distance, flags, objects, object_count);
+	}
+	CatchAndReport(View3D_WindowHitTestObjects, window, );
+}
+
 // Cast a ray into the scene, returning information about what it hit
 // 'rays' - is an input buffer of rays to cast for hit testing
 // 'hits' - are the nearest intercepts with the given rays
@@ -644,7 +667,7 @@ VIEW3D_API void __stdcall View3D_WindowAnimEventCBSet(View3DWindow window, View3
 // 'include_count' - the number of context ids that should be included
 // 'exclude_count' - the number of context ids that should be excluded
 // 'include_count+exclude_count' = the length of the 'context_ids' array. If 0, then all context ids are included for hit testing
-VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+VIEW3D_API void __stdcall View3D_WindowHitTestByCtx(View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
@@ -656,7 +679,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTes
 		DllLockGuard;
 		window->HitTest(rays, hits, ray_count, snap_distance, flags, context_ids, include_count, exclude_count);
 	}
-	CatchAndReport(View3D_WindowMouseTrackGet, window, );
+	CatchAndReport(View3D_WindowHitTestByCtx, window, );
 }
 
 // Return the DPI of the monitor that 'window' is displayed on

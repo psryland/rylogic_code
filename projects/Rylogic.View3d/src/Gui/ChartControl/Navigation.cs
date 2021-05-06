@@ -110,7 +110,7 @@ namespace Rylogic.Gui.WPF
 
 				op.GrabClient = op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
 				op.GrabChart = op.DropChart = ClientToChart(location);
-				op.HitResult = HitTestCS(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
+				op.HitResult = HitTest(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
 			}
 		}
@@ -133,7 +133,7 @@ namespace Rylogic.Gui.WPF
 			// Otherwise, provide mouse hover detection
 			else if (SceneBounds != Rect_.Zero)
 			{
-				var hit = HitTestCS(location, Keyboard.Modifiers, args.ToMouseBtns(), null);
+				var hit = HitTest(location, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				var hovered = hit.Hits.Select(x => x.Element).ToHashSet(0);
 
 				// Remove elements that are no longer hovered
@@ -181,7 +181,7 @@ namespace Rylogic.Gui.WPF
 			var location = args.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
-			var hit = HitTestZoneCS(location, Keyboard.Modifiers, args.ToMouseBtns());
+			var hit = HitTestZone(location, Keyboard.Modifiers, args.ToMouseBtns());
 
 			// Batch mouse wheel events into 100ms groups
 			var defer_nav_checkpoint = DeferNavCheckpoints();

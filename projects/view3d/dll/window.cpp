@@ -1010,7 +1010,7 @@ namespace view3d
 	}
 
 	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
-	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, RayCastStep::Instances instances)
 	{
 		// Set up the ray cast
 		pr::vector<HitTestRay> ray_casts;
@@ -1028,14 +1028,8 @@ namespace view3d
 		for (auto& r : std::make_span(hits, ray_count))
 			r = invalid;
 
-		// Create an include function based on the context ids
-		RayCastStep::InstFilter include = [=](BaseInstance const* bi)
-		{
-			return IncludeFilter(cast<LdrObject>(bi)->m_context_id, context_ids, include_count, exclude_count);
-		};
-
 		// Do the ray casts into the scene and save the results
-		m_scene.HitTest(ray_casts.data(), int(ray_casts.size()), snap_distance, static_cast<EHitTestFlags>(flags), include, [=](HitTestResult const& hit)
+		m_scene.HitTest(ray_casts.data(), int(ray_casts.size()), snap_distance, static_cast<EHitTestFlags>(flags), instances, [=](HitTestResult const& hit)
 		{
 			// Check that 'hit.m_instance' is a valid instance in this scene.
 			// It could be a child instance, we need to search recursively for a match
@@ -1050,19 +1044,44 @@ namespace view3d
 			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
 				return true;
 
-			// The intercepts are already sorted from nearest to furtherest
+			// The intercepts are already sorted from nearest to furtherest.
 			// So we can just accept the first intercept as the hit test.
 
 			// Save the hit
 			auto& result = hits[hit.m_ray_index];
-			result.m_ws_ray_origin     = To<View3DV4>(hit.m_ws_origin);
-			result.m_ws_ray_direction  = To<View3DV4>(hit.m_ws_direction);
-			result.m_ws_intercept      = To<View3DV4>(hit.m_ws_intercept);
-			result.m_distance          = hit.m_distance;
-			result.m_obj               = const_cast<View3DObject>(ldr_obj);
-			result.m_snap_type         = static_cast<EView3DSnapType>(hit.m_snap_type);
+			result.m_ws_ray_origin    = To<View3DV4>(hit.m_ws_origin);
+			result.m_ws_ray_direction = To<View3DV4>(hit.m_ws_direction);
+			result.m_ws_intercept     = To<View3DV4>(hit.m_ws_intercept);
+			result.m_distance         = hit.m_distance;
+			result.m_obj              = const_cast<View3DObject>(ldr_obj);
+			result.m_snap_type        = static_cast<EView3DSnapType>(hit.m_snap_type);
 			return false;
 		});
+	}
+	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, pr::ldr::LdrObject const* const* objects, int object_count)
+	{
+		// Create an instances function based on the given list of objects
+		auto beg = &objects[0];
+		auto end = beg + object_count;
+		auto instances = [&]() -> BaseInstance const*
+		{
+			if (beg == end) return nullptr;
+			auto* inst = *beg++;
+			return &inst->m_base;
+		};
+		HitTest(rays, hits, ray_count, snap_distance, flags, instances);
+	}
+	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
+	{
+		// Create an instances function based on the context ids
+		auto beg = std::begin(m_scene.m_instances);
+		auto end = std::end(m_scene.m_instances);
+		auto instances = [&]() -> BaseInstance const*
+		{
+			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
+			return beg != end ? *beg : nullptr;
+		};
+		HitTest(rays, hits, ray_count, snap_distance, flags, instances);
 	}
 
 	// Get/Set the global environment map for this window
