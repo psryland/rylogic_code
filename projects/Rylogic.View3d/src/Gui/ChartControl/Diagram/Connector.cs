@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Rylogic.Gfx;
-using Rylogic.Gui.WPF;
-using Rylogic.Extn;
-using Rylogic.Maths;
-using Rylogic.Utility;
-using System.Diagnostics;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Xml.Linq;
 using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.ChartDiagram
 {
@@ -29,17 +26,16 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			: this(null, null)
 		{ }
 		public Connector(Node? node0, Node? node1, EType? type = null, Guid? id = null, ConnectorStyle? style = null, string? text = null)
-			: base(id ?? Guid.NewGuid(), text, m4x4.Translation(AttachCentre(node0, node1)))
+			: base(id ?? Guid.NewGuid(), text, m4x4.Identity)
 		{
 			m_anc0 = new AnchorPoint();
 			m_anc1 = new AnchorPoint();
 			m_centre_offset = v4.Zero;
 			Type = type ?? EType.Line;
 			Style = style ?? new ConnectorStyle();
+			Gfx = new View3d.Object("*Group{}", false, Id);
 			Node0 = node0;
 			Node1 = node1;
-
-			Init(false);
 		}
 		public Connector(XElement node)
 			: base(node)
@@ -51,41 +47,30 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Anc1 = node.Element(XmlTag.Anchor1).As<AnchorPoint>();
 			Type = node.Element(XmlTag.Type).As<EType>();
 			Style = new ConnectorStyle(node.Element(XmlTag.Style).As<Guid>());
-
-			Init(true);
-		}
-		private void Init(bool find_previous_anchors)
-		{
-			// Create graphics for the connector
-			m_gfx_line = new View3d.Object("*Group{}", false, Id);
-			m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false, Id);
-			m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false, Id);
-
-			Relink(find_previous_anchors);
+			Gfx = new View3d.Object("*Group{}", false, Id);
 		}
 		protected override void Dispose(bool disposing)
 		{
 			DetachNodes();
 			Style = null!;
-			Util.Dispose(ref m_gfx_line!);
-			Util.Dispose(ref m_gfx_fwd!);
-			Util.Dispose(ref m_gfx_bak!);
+			Gfx = null!;
 			base.Dispose(disposing);
 		}
-		private static readonly v4 Bias = new v4(0, 0, 0.001f, 0);
 
 		/// <summary>Graphics for the connector line</summary>
-		private View3d.Object m_gfx_line = null!;
+		private View3d.Object Gfx
+		{
+			get => m_gfx;
+			set
+			{
+				if (m_gfx == value) return;
+				Util.Dispose(ref m_gfx!);
+				m_gfx = value;
+			}
+		}
+		private View3d.Object m_gfx = null!;
 
-		/// <summary>Graphics for the forward arrow</summary>
-		private View3d.Object m_gfx_fwd = null!;
-
-		/// <summary>Graphics for the backward arrow</summary>
-		private View3d.Object m_gfx_bak = null!;
-
-		/// <summary>
-		/// Controls how the connector is positioned relative to the
-		/// mid point between Anc0.LocationDS and Anc1.LocationDS</summary>
+		/// <summary>The position of the mid-point relative to the average of Anc0.LocationDS and Anc1.LocationDS</summary>
 		private v4 m_centre_offset;
 
 		/// <summary>Export to XML</summary>
@@ -106,6 +91,25 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			base.FromXml(node);
 		}
 
+		/// <summary>The connector type</summary>
+		public EType Type
+		{
+			get => m_connector_type;
+			set
+			{
+				if (m_connector_type == value) return;
+				m_connector_type = value;
+				Invalidate();
+			}
+		}
+		private EType m_connector_type;
+
+		/// <summary>The connector end type at Anc0 (on Node0)</summary>
+		public EEnd End0 => Type.HasFlag(EType.Back) ? EEnd.Arrow : EEnd.Line;
+
+		/// <summary>The connector end type at Anc1 (on Node1)</summary>
+		public EEnd End1 => Type.HasFlag(EType.Forward) ? EEnd.Arrow : EEnd.Line;
+
 		/// <summary>The 'from' anchor. Note: assigning to this anchor changes it's content, not the instance</summary>
 		public AnchorPoint Anc0
 		{
@@ -115,6 +119,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				Node0 = value.Node;
 				m_anc0.Location = value.Location;
 				m_anc0.Normal = value.Normal;
+				m_anc0.UID = value.UID;
+				NotifyPropertyChanged(nameof(Anc0));
 			}
 		}
 		private readonly AnchorPoint m_anc0;
@@ -128,9 +134,21 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				Node1 = value.Node;
 				m_anc1.Location = value.Location;
 				m_anc1.Normal = value.Normal;
+				m_anc1.UID = value.UID;
+				NotifyPropertyChanged(nameof(Anc1));
 			}
 		}
 		private readonly AnchorPoint m_anc1;
+
+		/// <summary>The 'from' then 'to' anchor points as a sequence</summary>
+		public IEnumerable<AnchorPoint> Ancs
+		{
+			get
+			{
+				yield return Anc0;
+				yield return Anc1;
+			}
+		}
 
 		/// <summary>Get the anchor point associated with 'node'</summary>
 		public AnchorPoint? Anc(Node node)
@@ -159,7 +177,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				if (Node0 == value) return;
 				if (Node0 != null)
 				{
-					Node0.SizeChanged -= Relink;
 					Node0.PositionChanged -= Invalidate;
 					Node0.Connectors.Remove(this);
 				}
@@ -168,8 +185,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				{
 					Node0.Connectors.Add(this);
 					Node0.PositionChanged += Invalidate;
-					Node0.SizeChanged += Relink;
+
+					// Attach to the nearest anchor point on 'Node0'
+					var pt = Node1?.O2W.pos ?? v4.Origin;
+					var anc0 = Node0.NearestAnchor(pt, pt_in_node_space: false);
+					var anc1 = Node1?.NearestAnchor(anc0.LocationDS, pt_in_node_space: false) ?? AnchorPoint.Origin;
+					Anc0 = Node0.NearestAnchor(anc1.LocationDS, pt_in_node_space: false);
 				}
+				NotifyPropertyChanged(nameof(Node0));
 			}
 		}
 
@@ -182,7 +205,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				if (Node1 == value) return;
 				if (Node1 != null)
 				{
-					Node1.SizeChanged -= Relink;
 					Node1.PositionChanged -= Invalidate;
 					Node1.Connectors.Remove(this);
 				}
@@ -191,8 +213,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				{
 					Node1.Connectors.Add(this);
 					Node1.PositionChanged += Invalidate;
-					Node1.SizeChanged += Relink;
+
+					// Attach to the nearest anchor point on 'Node1'
+					var pt = Node0?.O2W.pos ?? v4.Origin;
+					var anc1 = Node1.NearestAnchor(pt, pt_in_node_space: false);
+					var anc0 = Node0?.NearestAnchor(anc1.LocationDS, pt_in_node_space: false) ?? AnchorPoint.Origin;
+					Anc1 = Node1.NearestAnchor(anc0.LocationDS, pt_in_node_space: false);
 				}
+				NotifyPropertyChanged(nameof(Node1));
 			}
 		}
 
@@ -214,19 +242,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			throw new Exception($"{Description} is not connected to {node}");
 		}
 
-		/// <summary>Get/Set the 'to' or 'from' end of the connector</summary>
-		internal Node? Node(bool to)
-		{
-			return to ? Node1 : Node0;
-		}
-		internal void Node(bool to, Node? node)
-		{
-			if (to)
-				Node1 = node;
-			else
-				Node0 = node;
-		}
-
 		/// <summary>True if the connector is not attached at both ends</summary>
 		public bool Dangling => Node0 == null || Node1 == null;
 
@@ -242,19 +257,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Node0 = null;
 			Node1 = null;
 		}
-
-		/// <summary>The connector type</summary>
-		public EType Type
-		{
-			get => m_connector_type;
-			set
-			{
-				if (m_connector_type == value) return;
-				m_connector_type = value;
-				Invalidate();
-			}
-		}
-		private EType m_connector_type;
 
 		///// <summary>A label graphic for the connector</summary>
 		//public virtual Label Label
@@ -298,13 +300,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private ConnectorStyle m_style = new ConnectorStyle();
 
 		/// <inheritdoc/>
-		protected override void SetPosition(m4x4 pos)
-		{
-			base.SetPosition(pos);
-			UpdatePositions();
-		}
-
-		/// <inheritdoc/>
 		public override BBox Bounds
 		{
 			get
@@ -319,45 +314,21 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <inheritdoc/>
 		public override ChartControl.HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
-		//	var points = Points(true);
-		//	var dist_sq = float.MaxValue;
-		//	var closest_pt = v2.Zero;
-		//	if (Style.Smooth && points.Length > 2)
-		//	{
-		//		// Smooth connectors convert the points to splines
-		//		foreach (var spline in Spline.CreateSplines(points.Select(x => new v4(x, 0, 1))))
-		//		{
-		//			// Find the closest point to the spline
-		//			var t = Geometry.ClosestPoint(spline, new v4(point, 0, 1));
-		//			var pt = spline.Position(t);
-		//			var dsq = (point - pt.xy).LengthSq;
-		//			if (dsq < dist_sq)
-		//			{
-		//				dist_sq = dsq;
-		//				closest_pt = pt.xy;
-		//			}
-		//		}
-		//	}
-		//	else
-		//	{
-		//		for (int i = 0; i < points.Length - 1; ++i)
-		//		{
-		//			var t = Geometry.ClosestPoint(points[i], points[i + 1], point);
-		//			var pt = Math_.Lerp(points[i], points[i + 1], t);
-		//			var dsq = (point - pt).LengthSq;
-		//			if (dsq < dist_sq)
-		//			{
-		//				dist_sq = dsq;
-		//				closest_pt = pt;
-		//			}
-		//		}
-		//	}
-		//
-		//	// Convert separating distance screen space
-		//	var dist_cs = cam.WSVecToSSVec(closest_pt, point);
-		//	if (dist_cs.LengthSq > MinCSSelectionDistanceSq) return null;
-		//	return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
-			return null; // todo
+			if (Chart is not ChartControl chart)
+				return null;
+
+			// Convert the screen space width into a distance on the focus plane
+			var snap = (float)chart.ClientToChart(new Size(Style.Width, Style.Width)).Width;
+			var ray = cam.RaySS(new v2((float)client_point.X, (float)client_point.Y));
+			var results = chart.Scene.Window.HitTest(ray, snap, View3d.EHitTestFlags.Edges, new[] { Gfx });
+			if (!results.IsHit)
+				return null;
+
+			// Convert the hit point to connector space
+			var pt_cs = Math_.InvertFast(O2W) * results.m_ws_intercept;
+			var pt = new Point(pt_cs.x, pt_cs.y);
+			var hit = new ChartControl.HitTestResult.Hit(this, pt, null);
+			return hit;
 		}
 
 		/// <summary>Handle a click event on this element</summary>
@@ -407,87 +378,52 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		yield break;
 		}
 
-		/// <summary>Set the position of the graphics models based on the current connector position</summary>
-		private void UpdatePositions()
-		{
-			// Raise selected objects above others
-			var bias = (Selected ? new v4(0, 0, 1, 0) : v4.Zero) + Bias;
-
-			// Set the line transform
-			if (m_gfx_line != null)
-				m_gfx_line.O2P = new m4x4(Position.rot, Position.pos + bias);
-
-			// If the connector has a back arrow, add the arrow head graphics
-			if (m_gfx_bak != null && Type.HasFlag(EType.Back))
-			{
-				var dir = -Anc0.NormalDS;
-				if (dir == v4.Zero) dir = Anc1.NormalDS;
-				if (dir == v4.Zero) dir = Math_.Normalise(Anc0.LocationDS - Anc1.LocationDS, v4.YAxis);
-				var pos = new v4(Anc0.LocationDS.xy, Math.Max(Anc0.LocationDS.z, PositionZ), 1f);
-				m_gfx_bak.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale((float)Style.Width, v4.Origin);
-			}
-
-			// If the connector has a forward arrow, add the arrow head graphics
-			if (m_gfx_fwd != null && Type.HasFlag(EType.Forward))
-			{
-				var dir = -Anc1.NormalDS;
-				if (dir == v4.Zero) dir = Anc0.NormalDS;
-				if (dir == v4.Zero) dir = Math_.Normalise(Anc1.LocationDS - Anc0.LocationDS, v4.YAxis);
-				var pos = new v4(Anc1.LocationDS.xy, Math.Max(Anc1.LocationDS.z, PositionZ), 1f);
-				m_gfx_fwd.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale((float)Style.Width, v4.Origin);
-			}
-		}
-
 		/// <inheritdoc/>
 		protected override void UpdateGfxCore()
 		{
 			// Update the transform
-			Position = m4x4.Translation(AttachCentre(Anc0, Anc1));
-
-			var col = Selected ? Style.Selected : Hovered ? Style.Hovered : Dangling ? Style.Dangling : Style.Line;
-			var width = Style.Width;
-			var pts = Points(false);
+			var centre = 0.5f * (Anc0.LocationDS + Anc1.LocationDS);
+			O2W = m4x4.Translation(centre);
+			var ty = Type switch
+			{
+				EType.Line => Ldr.EArrowType.Line,
+				EType.Forward => Ldr.EArrowType.Fwd,
+				EType.Back => Ldr.EArrowType.Back,
+				EType.BiDir => Ldr.EArrowType.FwdBack,
+				_ => throw new Exception("Unknown connector type"),
+			};
 
 			// Update the connector line graphics
 			var ldr = new LdrBuilder();
-			ldr.Ribbon("connector", col, pts, EAxisId.PosZ, (float)width, Style.Smooth);
-			m_gfx_line.UpdateModel(ldr);
-
-			// If the connector has a back arrow, add the arrow head graphics
-			if (Type.HasFlag(EType.Back))
-				m_gfx_bak.ColourSet(col);
-		
-			// If the connector has a forward arrow, add the arrow head graphics
-			if (Type.HasFlag(EType.Forward))
-				m_gfx_fwd.ColourSet(col);
-
-			UpdatePositions();
+			var pts = Points(false);
+			var col = Selected ? Style.Selected : Hovered ? Style.Hovered : Dangling ? Style.Dangling : Style.Line;
+			ldr.Arrow("Connector", col, ty, (float)Style.Width, Style.Smooth, pts);
+			Gfx.UpdateModel(ldr);
 		}
 
 		/// <inheritdoc/>
 		protected override void UpdateSceneCore()
 		{
 			base.UpdateSceneCore();
-			if (Chart == null)
+			if (Chart is not ChartControl chart)
 				return;
 
-			// Add the main connector line
+			// Bias the connectors toward the camera
+			var bias = (float)chart.ClientToChart(new Size(Style.Width, Style.Width)).Width;
+			if (Hovered) bias *= 1.1f;
+			if (Selected) bias *= 1.1f;
+			
+			var o2w = O2W;
+			o2w.pos += chart.Camera.Orthographic
+				? chart.Camera.O2W.z * bias
+				: Math_.Normalise(chart.Camera.O2W.pos - o2w.pos) * bias;
+			Gfx.O2P = o2w;
+
+			// Add to the scene
 			if (Visible)
-				Chart.Scene.Window.AddObject(m_gfx_line);
+				chart.Scene.Window.AddObject(Gfx);
 			else
-				Chart.Scene.Window.RemoveObject(m_gfx_line);
-
-			// If the connector has a back arrow, add the arrow head graphics
-			if (Visible && Type.HasFlag(EType.Back))
-				Chart.Scene.Window.AddObject(m_gfx_bak);
-			else
-				Chart.Scene.Window.RemoveObject(m_gfx_bak);
-
-			// If the connector has a forward arrow, add the arrow head graphics
-			if (Visible && Type.HasFlag(EType.Forward))
-				Chart.Scene.Window.AddObject(m_gfx_fwd);
-			else
-				Chart.Scene.Window.RemoveObject(m_gfx_fwd);
+				chart.Scene.Window.RemoveObject(Gfx);
 		}
 
 		/// <summary>Detach from 'node'</summary>
@@ -499,61 +435,12 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			throw new Exception($"Connector '{ToString()}' is not connected to node {node}");
 		}
 
-		/// <summary>Update the node anchors</summary>
-		public void Relink(bool find_previous_anchors)
-		{
-			if (find_previous_anchors)
-			{
-				m_anc0.Update();
-				m_anc1.Update();
-			}
-			else
-			{
-				// Find the preferred 'anc0' position closest to the centre of element1,
-				// then update the position of 'anc1' given 'anc0's position,
-				// finally update 'anc0' again since 'anc1' has possibly changed.
-				if (m_anc1.Node != null)
-					m_anc0.Update(m_anc1.Node.Position.pos, false);
-
-				m_anc1.Update(m_anc0.LocationDS, false);
-				m_anc0.Update(m_anc1.LocationDS, false);
-			}
-			Invalidate();
-		}
-		public void Relink(object? sender = null, EventArgs? args = null)
-		{
-		//	var find_previous_anchors = Diagram == null || !Diagram.Options.Node.AutoRelink;
-		//	Relink(find_previous_anchors);
-		}
-
-		/// <summary>Returns the diagram space position of the centre between nearest anchor points on two nodes</summary>
-		private static v4 AttachCentre(AnchorPoint anc0, AnchorPoint anc1)
-		{
-			var centre = 0.5f * (anc0.LocationDS + anc1.LocationDS);
-			return centre;
-		}
-		private static v4 AttachCentre(Node? node0, Node? node1)
-		{
-			AnchorPoint anc0, anc1;
-			AttachPoints(node0, node1, out anc0, out anc1);
-			return AttachCentre(anc0, anc1);
-		}
-
-		/// <summary>Returns the nearest anchor points on two nodes</summary>
-		private static void AttachPoints(Node? node0, Node? node1, out AnchorPoint anc0, out AnchorPoint anc1)
-		{
-			var pt0 = node1?.Centre ?? node0?.Centre ?? v4.Origin;
-			var pt1 = node0?.Centre ?? node1?.Centre ?? v4.Origin;
-			anc0 = node0?.NearestAnchor(pt0, false) ?? new AnchorPoint(null, pt0, v4.Zero);
-			anc1 = node1?.NearestAnchor(pt1, false) ?? new AnchorPoint(null, pt1, v4.Zero);
-		}
-
 		/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
 		private v4[] Points(bool diagram_space)
 		{
 			// A connector is a line from Anc0 to Anc1, via CentreOffset.
-			var origin = diagram_space ? v4.Zero : Position.pos.w0;
-			var centre = Position.pos - origin + m_centre_offset;
+			var origin = diagram_space ? v4.Zero : O2W.pos.w0;
+			var centre = O2W.pos - origin + m_centre_offset;
 			var beg = Anc0.LocationDS - origin;
 			var end = Anc1.LocationDS - origin;
 
@@ -617,17 +504,32 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>Debugging description</summary>
-		public string Description=> $"Connector[{Anc0} -> {Anc1}]";
+		public string Description => $"Connector[{Anc0.Description} -> {Anc1.Description}]";
 
-		/// <summary>Connector type</summary>
+		/// <summary>Connector types</summary>
 		[Flags]
 		public enum EType
 		{
-			Line = 1 << 0,
-			Forward = 1 << 1,
-			Back = 1 << 2,
+			Line = 0,
+			Forward = 1 << 0,
+			Back = 1 << 1,
 			BiDir = Forward | Back,
 		}
-	}
 
+		/// <summary>Connector end types</summary>
+		public enum EEnd
+		{
+			/// <summary>Used for AnchorPoints that aren't connected to connectors</summary>
+			None,
+
+			/// <summary>Simple line</summary>
+			Line,
+
+			/// <summary>An arrow pointing into the node</summary>
+			Arrow,
+
+			/// <summary>Special value used by AnchorPoints when a mixture of connector types are connected</summary>
+			Mixed,
+		}
+	}
 }

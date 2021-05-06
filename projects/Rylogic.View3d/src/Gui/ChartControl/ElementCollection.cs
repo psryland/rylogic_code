@@ -25,7 +25,7 @@ namespace Rylogic.Gui.WPF
 
 				switch (args.ChangeType)
 				{
-				case ListChg.Reset:
+					case ListChg.Reset:
 					{
 						// Remove all elements from the chart
 						foreach (var e in this)
@@ -39,10 +39,10 @@ namespace Rylogic.Gui.WPF
 						Debug.Assert(m_chart.CheckConsistency());
 						break;
 					}
-				case ListChg.ItemAdded:
+					case ListChg.ItemAdded:
 					{
 						// Remove from any previous chart
-						if (elem == null) throw new Exception("ItemAdded should provide the added element"); 
+						if (elem == null) throw new Exception("ItemAdded should provide the added element");
 						elem.SetChartInternal(m_chart, false);
 
 						// Track the ID
@@ -51,17 +51,17 @@ namespace Rylogic.Gui.WPF
 						Debug.Assert(m_chart.CheckConsistency());
 						break;
 					}
-				case ListChg.ItemPreRemove:
+					case ListChg.ItemPreRemove:
 					{
 						// Remove from selected or hovered sets before removing form the collection
-						if (elem == null) throw new Exception("ItemPreRemove should provide the element to be removed"); 
+						if (elem == null) throw new Exception("ItemPreRemove should provide the element to be removed");
 						elem.Selected = false;
 						elem.Hovered = false;
 
 						Debug.Assert(m_chart.CheckConsistency());
 						break;
 					}
-				case ListChg.ItemRemoved:
+					case ListChg.ItemRemoved:
 					{
 						// Remove from the chart
 						if (elem == null) throw new Exception("ItemRemoved should provide the removed element");

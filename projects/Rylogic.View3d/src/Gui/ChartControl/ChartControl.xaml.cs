@@ -1,18 +1,17 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
+using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -93,12 +92,26 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void Dispose(bool _)
 		{
+			// Note: if 'Gui_.DisposeChildren()' is used, the View3dControl will
+			// be disposed before this control, because it is a child.
+			Disposing?.Invoke(this, EventArgs.Empty);
+
+			// Dispose the 'Elements'? Can argue either way. I'm saying no, because
+			// where ever the caller is calling 'Dispose' on the chart, they can call
+			// 'Util.DisposeRange(chart.Elements)' first if that's what they want.
+			// That way the lifetime of the elements is independent of the chart.
+			Elements.Clear();
+
+			ShowHitTestRay = false;
 			MouseOperations = null!;
 			Range = null!;
 			Options = null!;
 			Scene.Dispose();
 			View3d = null!;
 		}
+
+		/// <summary>Raised when the ChartControl is being disposed</summary>
+		public event EventHandler? Disposing;
 
 		/// <summary>Rendering options for the chart</summary>
 		public OptionsData Options
@@ -781,7 +794,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on the chart but only test which zone is hit (faster)</summary>
-		public HitTestResult HitTestZoneCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
+		public HitTestResult HitTestZone(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
 			// Determine the hit zone of the control
 			var zone = EZone.None;
@@ -797,17 +810,21 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on the chart and all elements within the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool>? pred)
+		public HitTestResult HitTest(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool>? pred)
 		{
-			var result = HitTestZoneCS(client_point, modifier_keys, mouse_btns);
+			// Hit test the zones of the chart
+			var result = HitTestZone(client_point, modifier_keys, mouse_btns);
 
-			// Find elements that overlap 'client_point'
+			// If the 'Scene' is hit, find elements that overlap 'client_point'
 			if (result.Zone.HasFlag(EZone.Chart))
 			{
+				// Limit the elements to be tested
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(result.ChartPoint, result.ClientPoint, result.ModifierKeys, result.MouseBtns, Scene.Camera);
+					// Hit test each element
+					var scene_point = Gui_.MapPoint(this, Scene, result.ClientPoint);
+					var hit = elem.HitTest(result.ChartPoint, scene_point, result.ModifierKeys, result.MouseBtns, Scene.Camera);
 					if (hit != null)
 						result.Hits.Add(hit);
 				}
@@ -818,6 +835,54 @@ namespace Rylogic.Gui.WPF
 
 			return result;
 		}
+
+		/// <summary>Show/Hide a ray from the camera through the mouse pointer</summary>
+		public bool ShowHitTestRay
+		{
+			get => m_hit_test_ray != null;
+			set
+			{
+				if (ShowHitTestRay == value) return;
+				if (ShowHitTestRay)
+				{
+					MouseMove -= UpdateHitTestRay;
+					Util.Dispose(m_hit_test_ray);
+				}
+				m_hit_test_ray = value ? new View3d.Object(new LdrBuilder().Line("HitTestRay", Colour32.Green, v4.Origin, v4.Origin), false, null) : null;
+				if (ShowHitTestRay)
+				{
+					MouseMove += UpdateHitTestRay;
+				}
+				NotifyPropertyChanged(nameof(ShowHitTestRay));
+
+				// Handler
+				void UpdateHitTestRay(object sender, MouseEventArgs e)
+				{
+					if (m_hit_test_ray == null)
+						return;
+
+					var pt = e.GetPosition(this);
+					var zone = HitTestZone(pt, ModifierKeys.None, EMouseBtns.None);
+					if (zone.Zone == EZone.Chart)
+					{
+						// Remember, this will only be a point on-screen when the camera is not orthographic
+						pt = e.GetPosition(Scene);
+						var cam = Scene.Camera;
+						var ray = cam.RaySS(pt.ToV2());
+						var pt0 = ray.m_ws_origin + ray.m_ws_direction * cam.NearPlane / -Math_.Dot(cam.O2W.z, ray.m_ws_direction);
+						var pt1 = ray.m_ws_origin + ray.m_ws_direction * cam.FocusDist / -Math_.Dot(cam.O2W.z, ray.m_ws_direction);
+						m_hit_test_ray.UpdateModel(new LdrBuilder().Line(pt0, pt1), View3d.EUpdateObject.Model);
+						Scene.AddObject(m_hit_test_ray);
+					}
+					else
+					{
+						Scene.RemoveObject(m_hit_test_ray);
+					}
+					Scene.Invalidate();
+				}
+			}
+		}
+		private View3d.Object? m_hit_test_ray;
 
 		/// <summary>Find the default range, then reset to the default range</summary>
 		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All, EAxis axes = EAxis.Both)
@@ -994,7 +1059,7 @@ namespace Rylogic.Gui.WPF
 			if (is_click)
 			{
 				var pt = ChartToClient(rect.Location);
-				var hits = HitTestCS(pt, modifier_keys, mouse_btns, x => x.Enabled);
+				var hits = HitTest(pt, modifier_keys, mouse_btns, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (modifier_keys.HasFlag(ModifierKeys.Control))

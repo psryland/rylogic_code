@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Windows;
+using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -226,7 +226,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private NodeStyle m_style = new NodeStyle();
 
 		/// <inheritdoc/>
-		public override BBox Bounds => new BBox(Position.pos, Size / 2);
+		public override BBox Bounds => new BBox(O2W.pos, Size / 2);
 
 		/// <summary>Returns the position to draw text given the current size and text alignment</summary>
 		protected RectangleF TextLocation(Graphics gfx)
@@ -256,66 +256,44 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				Connectors[0].Remove(this);
 		}
 
-		/// <summary>Try to untangle the connectors to this node. True if connectors where tangled</summary>
-		public bool Untangle()
-		{
-			var tangled = false;
-
-			// For each connector pair, see if they cross
-			for (int i = 0; i != Connectors.Count; ++i)
-			{
-				for (int j = i + 1; j != Connectors.Count; ++j)
-				{
-					var c0 = Connectors[i];
-					var c1 = Connectors[j];
-
-					var c0a0 = c0.Anc(this);
-					var c1a0 = c1.Anc(this);
-					var c0a1 = c0.OtherAnc(this);
-					var c1a1 = c1.OtherAnc(this);
-					if (c0a0 == null) continue;
-					if (c1a0 == null) continue;
-					if (c0a1 == null) continue;
-					if (c1a1 == null) continue;
-
-					var c0_s = c0a0.LocationDS.xy;
-					var c1_s = c1a0.LocationDS.xy;
-					var c0_e = c0a1.LocationDS.xy;
-					var c1_e = c1a1.LocationDS.xy;
-
-					// See if the line segments cross
-					Geometry.ClosestPoint(c0_s, c0_e, c1_s, c1_e, out var t0, out var t1);
-					if (t0 > 0 && t0 < 1 && t1 > 0 && t1 < 1)
-					{
-						// Swap anchor points on this node
-						var loc = c0a0.Location;
-						c0a0.Location = c1a0.Location;
-						c1a0.Location = loc;
-
-						var norm = c0a0.Normal;
-						c0a0.Normal = c1a0.Normal;
-						c1a0.Normal = norm;
-
-						c0.Invalidate();
-						c1.Invalidate();
-						tangled = true;
-					}
-				}
-			}
-			return tangled;
-		}
-
-		/// <summary>Return all the locations that connectors can attach to this node (in node space)</summary>
+		/// <summary>The locations (in node space) that connectors can attach to</summary>
 		public virtual IEnumerable<AnchorPoint> AnchorPoints()
 		{
-			yield return new AnchorPoint(this, v4.Origin, v4.Zero);
+			yield return new AnchorPoint(this, v4.Origin, v4.Zero, 0);
+		}
+
+		/// <summary>The anchor points available for connecting to</summary>
+		public IEnumerable<AnchorPoint> AnchorPointsAvailable(Diagram_.EAnchorSharing sharing, Connector.EEnd end_type)
+		{
+			// Even though 'AnchorPoints' returns new instances of anchor points, the attached connectors
+			// are accessed through the node, which means any anchor point on the same node at a given location
+			// will have the same connections.
+			switch (sharing)
+			{
+				case Diagram_.EAnchorSharing.ShareAll:
+				{
+					return AnchorPoints();
+				}
+				case Diagram_.EAnchorSharing.ShareSameOnly:
+				{
+					return AnchorPoints().Where(x => x.Type == Connector.EEnd.None || x.Type == end_type);
+				}
+				case Diagram_.EAnchorSharing.NoSharing:
+				{
+					return AnchorPoints().Where(x => x.Type == Connector.EEnd.None);
+				}
+				default:
+				{
+					throw new Exception("Unknown sharing mode");
+				}
+			}
 		}
 
 		/// <summary>Return the attachment location and normal nearest to 'pt'.</summary>
 		public virtual AnchorPoint NearestAnchor(v4 pt, bool pt_in_node_space)
 		{
 			if (!pt_in_node_space)
-				pt = Math_.InvertFast(Position) * pt;
+				pt = Math_.InvertFast(O2W) * pt;
 
 			return AnchorPoints().MinBy(x => (x.Location - pt).LengthSq);
 		}
@@ -328,22 +306,12 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			{
 				if (conn.Node0 != this && conn.Node1 != this)
 					throw new Exception($"Node {ToString()} contains connector {conn} but is not referenced by the connector");
-
-				// Allow the connectors to be connected to this node at both ends
-				//if (conn.Node0 == this && conn.Node1 == this)
-				//	throw new Exception($"Node {ToString()} contains connector { conn.ToString(} that is attached to it at both ends"));
 			}
 
-			//// The style should be known to the diagram
-			//if (Diagram != null)
-			//{
-			//	if (!Diagram.m_node_styles.ContainsKey(Style.Id))
-			//		throw new Exception($"Node {ToString()} style is not in the diagram's style cache");
-			//}
 			return base.CheckConsistency();
 		}
 
 		/// <summary></summary>
-		public string Description => $"Node[{Text.Summary(20)}]";
+		public string Description => $"Text={Text.Summary(20)}";
 	}
 }
