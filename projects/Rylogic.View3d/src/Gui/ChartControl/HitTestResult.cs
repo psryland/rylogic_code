@@ -52,7 +52,7 @@ namespace Rylogic.Gui.WPF
 				{
 					Element = elem;
 					Point = elem_point;
-					Location = elem.Position;
+					Location = elem.O2W;
 					Context = context;
 				}
 

@@ -298,7 +298,7 @@ namespace Rylogic.Gui.WPF
 
 				// Record the drag start positions for selected objects
 				foreach (var elem in Chart.Selected)
-					elem.DragStartPosition = elem.Position;
+					elem.DragStartPosition = elem.O2W;
 
 				// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
 				if (Chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
@@ -345,8 +345,12 @@ namespace Rylogic.Gui.WPF
 				// See if selected element dragging is enabled
 				if (!args.Handled && Chart.Options.AllowElementDragging && m_hit_selected != null)
 				{
+					// Drag elements in the focus plane of the camera
+					var pt0 = Chart.Camera.SSPointToWSPoint(GrabClient.ToPointF());
+					var pt1 = Chart.Camera.SSPointToWSPoint(location.ToPointF());
+					var translate = pt1 - pt0;
 					foreach (var elem in Chart.Selected)
-						elem.DragTranslate(args.Delta, args.State);
+						elem.DragTranslate(translate, args.State);
 
 					args.Handled = true;
 				}
@@ -432,9 +436,7 @@ namespace Rylogic.Gui.WPF
 					// See if selected element dragging is enabled
 					if (!args.Handled && Chart.Options.AllowElementDragging && m_hit_selected != null)
 					{
-						foreach (var elem in Chart.Selected)
-							elem.DragTranslate(args.Delta, args.State);
-
+						// Already in position
 						args.Handled = true;
 					}
 

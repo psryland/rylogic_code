@@ -54,7 +54,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			set => set(nameof(Dangling), value);
 		}
 
-		/// <summary>The width of the connector line</summary>
+		/// <summary>The (screen-space) width of the connector line</summary>
 		public double Width
 		{
 			get => get<double>(nameof(Width));

@@ -8,6 +8,7 @@
 	<BitmapImage x:Key ="light_bulb" UriSource="/Rylogic.Gui.WPF;component/res/light_bulb.png"/>
 	<BitmapImage x:Key ="tape_measure" UriSource="/Rylogic.Gui.WPF;component/res/tape_measure_coloured.png"/>
 	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
+	<BitmapImage x:Key ="exchange" UriSource="/Rylogic.Gui.WPF;component/res/exchange.png"/>
 	<BitmapImage x:Key ="animation" UriSource="/Rylogic.Gui.WPF;component/res/movie_film.png"/>
 	<BitmapImage x:Key ="chain" UriSource="/Rylogic.Gui.WPF;component/res/chain.png"/>
 	<BitmapImage x:Key ="accept" UriSource="/Rylogic.Gui.WPF;component/res/check_accept.png"/>
@@ -675,12 +676,88 @@
 	</ContextMenu>
 
 	<!-- Diagram Menu Items -->
-	<MenuItem x:Key="DiagramMenuItem_Scatter" x:Shared="False"
-		Header="Scatter"
-		StaysOpenOnClick="False"
+	<MenuItem x:Key="DiagramMenuItem_ScatterContinuous" x:Shared="False"
+		Header="Enabled"
+		StaysOpenOnClick="True"
 		IsChecked="{Binding Scattering, Mode=OneWay}"
 		Command="{Binding ToggleScattering}"
 		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_ScatterContinuous"
+		/>
+	<MenuItem x:Key="DiagramMenuItem_ScatterCharge" x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_ScatterCharge"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Charge: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<gui:SliderFunction
+					Minimum="0"
+					Maximum="5"
+					FunctionExpr="x"
+					InverseExpr="x > 0 ? x : 0"
+					ValueFn="{Binding ScatterCharge}"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_ScatterSpring" x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_ScatterSpring"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Spring: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<gui:SliderFunction
+					Minimum="0"
+					Maximum="1"
+					FunctionExpr="x"
+					InverseExpr="x > 0 ? x : 0"
+					ValueFn="{Binding ScatterSpring}"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_ScatterFriction" x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_ScatterFriction"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Friction: "
+					VerticalAlignment="Center"
+					MinWidth="80"
+					/>
+				<gui:SliderFunction
+					Minimum="0"
+					Maximum="1"
+					FunctionExpr="x"
+					InverseExpr="x > 0 ? x : 0"
+					ValueFn="{Binding ScatterFriction}"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_Scatter" x:Shared="False"
+		Header="Scatter"
 		Name="DiagramMenuItem_Scatter"
 		>
 		<MenuItem.Icon>
@@ -689,6 +766,40 @@
 				RenderOptions.BitmapScalingMode="HighQuality"
 				/>
 		</MenuItem.Icon>
+		<StaticResource ResourceKey="DiagramMenuItem_ScatterContinuous"/>
+		<StaticResource ResourceKey="DiagramMenuItem_ScatterCharge"/>
+		<StaticResource ResourceKey="DiagramMenuItem_ScatterSpring"/>
+		<StaticResource ResourceKey="DiagramMenuItem_ScatterFriction"/>
 	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_RelinkContinuous" x:Shared="False"
+		Header="Enabled"
+		StaysOpenOnClick="True"
+		IsChecked="{Binding Relinking, Mode=OneWay}"
+		Command="{Binding ToggleRelinking}"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_RelinkContinuous"
+		/>
+	<MenuItem x:Key="DiagramMenuItem_RelinkOnce" x:Shared="False"
+		Header="Once"
+		StaysOpenOnClick="True"
+		IsEnabled="{Binding Relinking, Converter={conv:Not}}"
+		Command="{Binding DoRelink}"
+		DataContext="{Binding DiagramCMenuContext}"
+		Name="DiagramMenuItem_RelinkOnce"
+		/>
+	<MenuItem x:Key="DiagramMenuItem_Relink" x:Shared="False"
+		Header="Relink"
+		Name="DiagramMenuItem_Relink"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource exchange}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+		<StaticResource ResourceKey="DiagramMenuItem_RelinkContinuous"/>
+		<StaticResource ResourceKey="DiagramMenuItem_RelinkOnce"/>
+	</MenuItem>
+
 
 </ResourceDictionary>

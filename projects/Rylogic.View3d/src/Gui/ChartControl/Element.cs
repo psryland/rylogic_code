@@ -35,7 +35,7 @@ namespace Rylogic.Gui.WPF
 				m_name = name ?? string.Empty;
 				m_colour = Colour32.Black;
 				m_chart = null;
-				m_position = position ?? m4x4.Identity;
+				m_o2w = position ?? m4x4.Identity;
 				m_selected = false;
 				m_hovered = false;
 				m_visible = true;
@@ -52,7 +52,7 @@ namespace Rylogic.Gui.WPF
 				// of the element provides those (typically in UpdateGfx)
 				Id = node.Element(nameof(Id)).As(Id);
 				Name = node.Element(nameof(Name)).As(Name);
-				Position = node.Element(nameof(Position)).As(Position);
+				O2W = node.Element(nameof(O2W)).As(O2W);
 			}
 			public void Dispose()
 			{
@@ -172,7 +172,7 @@ namespace Rylogic.Gui.WPF
 			public virtual XElement ToXml(XElement node)
 			{
 				node.Add2(nameof(Id), Id, false);
-				node.Add2(nameof(Position), Position, false);
+				node.Add2(nameof(O2W), O2W, false);
 				node.Add2(nameof(Name), Name, false);
 				return node;
 			}
@@ -180,7 +180,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Import from XML. Used to update the state of this element without having to delete/recreate it</summary>
 			protected virtual void FromXml(XElement node)
 			{
-				Position = node.Element(nameof(Position)).As(Position);
+				O2W = node.Element(nameof(O2W)).As(O2W);
 				Name = node.Element(nameof(Name)).As(Name);
 			}
 
@@ -446,56 +446,56 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The element to chart transform</summary>
-			public m4x4 Position
+			public m4x4 O2W
 			{
-				get => m_position;
+				get => m_o2w;
 				set
 				{
-					if (Math_.FEql(m_position, value)) return;
-					SetPosition(value);
+					if (Math_.FEql(m_o2w, value)) return;
+					SetO2W(value);
 				}
 			}
-			private m4x4 m_position;
+			private m4x4 m_o2w;
 
 			/// <summary>Internal set position and raise event</summary>
-			protected virtual void SetPosition(m4x4 pos)
+			protected virtual void SetO2W(m4x4 o2w)
 			{
-				m_position = pos;
+				m_o2w = o2w;
 				NotifyPositionChanged();
-				NotifyPropertyChanged(nameof(Position));
+				NotifyPropertyChanged(nameof(O2W));
 			}
 
 			/// <summary>Get/Set the XY position of the element</summary>
 			public v2 PositionXY
 			{
-				get => Position.pos.xy;
+				get => O2W.pos.xy;
 				set
 				{
-					var o2p = Position;
-					Position = new m4x4(o2p.rot, new v4(value, o2p.pos.z, o2p.pos.w));
+					var o2p = O2W;
+					O2W = new m4x4(o2p.rot, new v4(value, o2p.pos.z, o2p.pos.w));
 				}
 			}
 
 			/// <summary>Get/Set the z position of the element</summary>
 			public float PositionZ
 			{
-				get { return Position.pos.z; }
+				get { return O2W.pos.z; }
 				set
 				{
-					var o2p = Position;
+					var o2p = O2W;
 					o2p.pos.z = value;
-					Position = o2p;
+					O2W = o2p;
 				}
 			}
 
 			/// <summary>BBox for the element in chart space</summary>
-			public virtual BBox Bounds => new BBox(Position.pos, v4.Zero);
+			public virtual BBox Bounds => new BBox(O2W.pos, v4.Zero);
 
 			/// <summary>Get/Set the centre point of the element (in chart space)</summary>
 			public v4 Centre
 			{
 				get => Bounds.Centre;
-				set => Position = new m4x4(Position.rot, value + (Position.pos - Centre));
+				set => O2W = new m4x4(O2W.rot, value + (O2W.pos - Centre));
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
@@ -515,17 +515,16 @@ namespace Rylogic.Gui.WPF
 			{}
 
 			/// <summary>Translate this element from the drag start position</summary>
-			public void DragTranslate(Vector delta, EDragState state)
+			public void DragTranslate(v4 delta, EDragState state)
 			{
 				var p = DragStartPosition;
-				p.pos.x += (float)delta.X;
-				p.pos.y += (float)delta.Y;
-				Position = p;
+				p.pos += delta;
+				O2W = p;
 
 				if (state == EDragState.Commit)
-					DragStartPosition = Position;
+					DragStartPosition = O2W;
 				if (state == EDragState.Cancel)
-					Position = DragStartPosition;
+					O2W = DragStartPosition;
 			}
 
 			/// <summary>Position recorded at the time dragging starts</summary>

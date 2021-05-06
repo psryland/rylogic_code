@@ -61,38 +61,41 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private Surface m_surf = null!;
 
 		/// <inheritdoc/>
-		public override BBox Bounds => new BBox(Position.pos, 0.5f*new v4(Size.x, Size.y, 0.02f, 0));
+		public override BBox Bounds => new BBox(O2W.pos, 0.5f * Size);
 
 		/// <inheritdoc/>
 		public override IEnumerable<AnchorPoint> AnchorPoints()
 		{
-			var units_per_anchor = Style.AnchorSpacing;
+			// Remember, returned points are in node space.
+			var units_per_anchor = (float)Style.AnchorSpacing;
 
 			// Get the dimensions and half dimensions
 			var sz = Size;
-			var hsx = Math.Max(0f, 0.5f * sz.x - Style.CornerRadius);
-			var hsy = Math.Max(0f, 0.5f * sz.y - Style.CornerRadius);
-			var z = PositionZ;
+			var hsx = Math.Max(0f, 0.5f * sz.x - (float)Style.CornerRadius);
+			var hsy = Math.Max(0f, 0.5f * sz.y - (float)Style.CornerRadius);
+			var z = 0f;
 
 			// Quantise to the minimum anchor spacing
 			hsx = (int)(hsx / units_per_anchor) * units_per_anchor;
 			hsy = (int)(hsy / units_per_anchor) * units_per_anchor;
 			
+			int id = 0;
+
 			// Left
 			for (var y = -hsy; y <= +hsy; y += units_per_anchor)
-				yield return new AnchorPoint(this, new v4(-0.5f * sz.x, (float)y, z, 1), -v4.XAxis);
+				yield return new AnchorPoint(this, new v4(-0.5f * sz.x, y, z, 1), -v4.XAxis, id++);
 
 			// Top
 			for (var x = -hsx; x <= +hsx; x += units_per_anchor)
-				yield return new AnchorPoint(this, new v4((float)x, +0.5f * sz.y, z, 1), +v4.YAxis);
+				yield return new AnchorPoint(this, new v4(x, +0.5f * sz.y, z, 1), +v4.YAxis, id++);
 
 			// Right
 			for (var y = +hsy; y >= -hsy; y -= units_per_anchor)
-				yield return new AnchorPoint(this, new v4(+0.5f * sz.x, (float)y, z, 1), +v4.XAxis);
+				yield return new AnchorPoint(this, new v4(+0.5f * sz.x, y, z, 1), +v4.XAxis, id++);
 
 			// Bottom
 			for (var x = +hsx; x >= -hsx; x -= units_per_anchor)
-				yield return new AnchorPoint(this, new v4((float)x, -0.5f * sz.y, z, 1), -v4.YAxis);
+				yield return new AnchorPoint(this, new v4(x, -0.5f * sz.y, z, 1), -v4.YAxis, id++);
 		}
 
 		/// <inheritdoc/>
@@ -113,7 +116,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				if (!Enabled) fill_colour = Style.Disabled;
 				tex.Gfx.Clear(fill_colour);
 				using var fill_brush = new SolidBrush(fill_colour);
-				tex.Gfx.FillRectangle(fill_brush, 0, 0, Size.xi, Size.yi);
+				tex.Gfx.FillRectangle(fill_brush, -1, -1, Size.xi+2, Size.yi+2);
 
 				var text_colour = Style.Text;
 				if (!Enabled) text_colour = Style.TextDisabled;
@@ -137,8 +140,30 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			base.UpdateSceneCore();
 			if (Chart == null || Gfx == null)
 				return;
-			
-			Gfx.O2P = Position;
+
+			switch (Chart.Options.NavigationMode)
+			{
+				case ChartControl.ENavMode.Scene3D:
+				{
+					var o2w = O2W;
+					o2w.rot = Chart.Camera.O2W.rot;
+					O2W = o2w;
+					break;
+				}
+				case ChartControl.ENavMode.Chart2D:
+				{
+					var o2w = O2W;
+					o2w.rot = m3x4.Identity;
+					O2W = o2w;
+					break;
+				}
+				default:
+					throw new Exception("Unknown navigation mode");
+			}
+
+			// Set the node to world transform
+			Gfx.O2P = O2W;
+
 			if (Visible)
 				Chart.Scene.Window.AddObject(Gfx);
 			else
@@ -148,14 +173,18 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <inheritdoc/>
 		public override ChartControl.HitTestResult.Hit? HitTest(System.Windows.Point chart_point, System.Windows.Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
-			var pt = new v4((float)chart_point.X, (float)chart_point.Y, 0, 1);
-			var bounds = Bounds;
-			if (!bounds.IsWithin(pt, Math_.TinyF))
+			if (Chart == null)
+				return null;
+
+			var ray = cam.RaySS(new v2((float)client_point.X, (float)client_point.Y));
+			var results = Chart.Scene.Window.HitTest(ray, 0f, View3d.EHitTestFlags.Faces, new[] { Gfx });
+			if (!results.IsHit)
 				return null;
 
 			// Convert the hit point to node space
-			pt -= bounds.Centre;
-			var hit = new ChartControl.HitTestResult.Hit(this, new System.Windows.Point(pt.x, pt.y), null);
+			var pt_ns = Math_.InvertFast(O2W) * results.m_ws_intercept;
+			var pt = new System.Windows.Point(pt_ns.x, pt_ns.y);
+			var hit = new ChartControl.HitTestResult.Hit(this, pt, null);
 			return hit;
 		}
 	}

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -8,22 +10,25 @@ using Rylogic.Maths;
 namespace Rylogic.Gui.WPF.ChartDiagram
 {
 	/// <summary>A point that a connector can connect to</summary>
+	[DebuggerDisplay("{Description,nq}")]
 	public class AnchorPoint
 	{
 		// Notes:
 		//  - An anchor point can be orphaned, allowing connectors to be dangling.
+		public const int NoUID = -1;
 
 		public AnchorPoint()
-			: this(null, v4.Origin, v4.YAxis)
+			: this(null, v4.Origin, v4.YAxis, NoUID)
 		{ }
 		public AnchorPoint(AnchorPoint rhs)
-			: this(rhs.m_node, rhs.m_location, rhs.m_normal)
+			: this(rhs.m_node, rhs.m_location, rhs.m_normal, rhs.UID)
 		{ }
-		public AnchorPoint(Node? node, v4 loc, v4 norm)
+		public AnchorPoint(Node? node, v4 loc, v4 norm, int uid)
 		{
 			m_node = node;
 			m_location = loc;
 			m_normal = norm;
+			UID = uid;
 		}
 		public AnchorPoint(IDictionary<Guid, Node> nodes, XElement node)
 			: this()
@@ -31,8 +36,10 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			var id = node.Element(XmlTag.ElementId).As<Guid>();
 			m_node = nodes.TryGetValue(id, out m_node) ? m_node : null;
 			m_location = node.Element(XmlTag.Location).As(v4.Origin);
-			Update();
 		}
+
+		/// <summary>A default anchor at the chart origin</summary>
+		public static readonly AnchorPoint Origin = new AnchorPoint(null, v4.Origin, v4.Zero, NoUID);
 
 		/// <summary>Export to XML</summary>
 		public XElement ToXml(XElement node)
@@ -87,36 +94,48 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 		private v4 m_normal;
 
+		/// <summary>An id assigned by the creator of the Anchor point for easy identification</summary>
+		public int UID;
+
 		/// <summary>Get the diagram space position of the anchor</summary>
-		public v4 LocationDS => Node?.Position * Location ?? Location;
+		public v4 LocationDS => Node?.O2W * Location ?? Location;
 
 		/// <summary>Get the diagram space anchor normal (can be zero)</summary>
-		public v4 NormalDS => Node?.Position * Normal ?? Normal;
+		public v4 NormalDS => Node?.O2W * Normal ?? Normal;
 
-		/// <summary>Update this anchor point location after it has moved/resized</summary>
-		public void Update(v4 pt, bool pt_in_node_space)
+		/// <summary>Get the connectors attached to this anchor point</summary>
+		public IEnumerable<Connector> Connectors => Node?.Connectors.Where(x => x.Anc0 == this || x.Anc1 == this) ?? Array.Empty<Connector>();
+
+		/// <summary>The connector end type based on the connectors linked to this anchor point</summary>
+		public Connector.EEnd Type
 		{
-			if (Node == null)
-				return;
-
-			var anc = Node.NearestAnchor(pt, pt_in_node_space);
-			Location = anc.Location;
-			Normal = anc.Normal;
-		}
-
-		/// <summary>Update this anchor point location after it has moved/resized</summary>
-		public void Update()
-		{
-			if (Node == null) return;
-			var anc = Node.NearestAnchor(Location, true);
-			Location = anc.Location;
-			Normal = anc.Normal;
+			get
+			{
+				// Find the union of connector types for all connectors attached to this node
+				var type = Connector.EEnd.None;
+				foreach (var conn in Connectors)
+				{
+					if (conn.Anc0 == this)
+					{
+						if (type == Connector.EEnd.None) type = conn.End0;
+						if (type != conn.End0) return Connector.EEnd.Mixed;
+					}
+					if (conn.Anc1 == this)
+					{
+						if (type == Connector.EEnd.None) type = conn.End1;
+						if (type != conn.End1) return Connector.EEnd.Mixed;
+					}
+				}
+				return type;
+			}
 		}
 
 		/// <summary></summary>
-		public string Description => $"Anc[{Node?.ToString() ?? "dangling"}]";
+		public string Description => $"{UID} '{Node?.Description ?? "dangling"}' Type={Type}";
 
 		/// <summary></summary>
+		public static bool operator ==(AnchorPoint? left, AnchorPoint? right) => Equals(left, right);
+		public static bool operator !=(AnchorPoint? left, AnchorPoint? right) => !Equals(left, right);
 		public bool Equals(AnchorPoint ap)
 		{
 			// Anchor points are equal if they're on the same object and at the same location

@@ -27,6 +27,22 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Enable/Disable continuous scattering of nodes</summary>
 		bool Scattering { get; }
 		ICommand ToggleScattering { get; }
+
+		/// <summary>The scattering coulomb charge value</summary>
+		double ScatterCharge { get; set; }
+
+		/// <summary>The scattering spring constant value</summary>
+		double ScatterSpring { get; set; }
+
+		/// <summary>The scattering friction constant value</summary>
+		double ScatterFriction { get; set; }
+
+		/// <summary>Enable/Disabled continuous optimisation of connector connections between nodes</summary>
+		bool Relinking { get; }
+		ICommand ToggleRelinking { get; }
+
+		/// <summary>Perform one iteration of relinking</summary>
+		ICommand DoRelink { get; }
 	}
 	public interface IDiagramCMenuContext
 	{

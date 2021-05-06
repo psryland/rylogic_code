@@ -163,7 +163,7 @@ namespace Rylogic.Gui.WPF
 			base.UpdateSceneCore();
 			if (Gfx != null && Chart != null)
 			{
-				Gfx.O2P = Position;
+				Gfx.O2P = O2W;
 				if (Visible)
 					Chart.Scene.Window.AddObject(Gfx);
 				else

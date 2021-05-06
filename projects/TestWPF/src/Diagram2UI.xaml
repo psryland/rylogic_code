@@ -15,8 +15,8 @@
 		<ResourceDictionary>
 			<ContextMenu x:Key="DiagramCMenu">
 				<MenuItem Header="Diagram">
-					<MenuItem Header="{Binding ., Converter={conv:ToString}}"/>
 					<StaticResource	ResourceKey="DiagramMenuItem_Scatter"/>
+					<StaticResource	ResourceKey="DiagramMenuItem_Relink"/>
 				</MenuItem>
 				<MenuItem Header="Tools">
 					<StaticResource	ResourceKey="View3dMenuItem_Origin"/>
@@ -28,6 +28,28 @@
 					<StaticResource	ResourceKey="ChartMenuItem_GridLines"/>
 					<StaticResource	ResourceKey="View3dMenuItem_MeasureTool"/>
 				</MenuItem>
+				<MenuItem Header="Camera">
+					<StaticResource ResourceKey="View3dMenuItem_AutoRangeView"/>
+					<StaticResource ResourceKey="ChartMenuItem_Aspect11"/>
+					<StaticResource ResourceKey="ChartMenuItem_LockAspect"/>
+					<StaticResource ResourceKey="View3dMenuItem_Orthographic"/>
+					<StaticResource ResourceKey="ChartMenuItem_MouseCentredZoom"/>
+					<StaticResource ResourceKey="ChartMenuItem_NavMode"/>
+				</MenuItem>
+				<MenuItem Header="Rendering">
+					<StaticResource ResourceKey="View3dMenuItem_BackgroundColour"/>
+					<StaticResource ResourceKey="View3dMenuItem_Antialiasing"/>
+					<StaticResource ResourceKey="View3dMenuItem_ShadowCastRange"/>
+					<StaticResource ResourceKey="View3dMenuItem_FillMode"/>
+					<StaticResource ResourceKey="View3dMenuItem_CullMode"/>
+					<StaticResource ResourceKey="View3dMenuItem_Lighting"/>
+				</MenuItem>
+				<MenuItem Header="Diagnostics">
+					<StaticResource	ResourceKey="View3dMenuItem_ShowNormals"/>
+					<StaticResource	ResourceKey="View3dMenuItem_NormalsLength"/>
+					<StaticResource	ResourceKey="View3dMenuItem_NormalsColour"/>
+					<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>
+				</MenuItem>
 			</ContextMenu>
 		</ResourceDictionary>
 	</Window.Resources>
@@ -37,6 +59,7 @@
 			ShowGridLines="True"
 			AllowSelection="True"
 			AllowElementDragging="True"
+			ShowHitTestRay="False"
 			SceneCMenu="{StaticResource DiagramCMenu}"
 			XAxisCMenu="{StaticResource ChartAxisCMenu}"
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
