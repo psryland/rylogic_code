@@ -112,17 +112,5 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			foreach (var elem in Chart.Elements)
 				elem.UpdateScene();
 		}
-
-		/// <summary>Returns a point in chart space from a point in ChartPanel-client space.</summary>
-		private Point ClientToChart(Point point)
-		{
-			return Gui_.MapPoint(this, Chart, point);
-		}
-
-		/// <summary>Returns a point in ChartPanel-client space from a point in chart space. Inverse of ClientToChart</summary>
-		private Point ChartToClient(Point point)
-		{
-			return Gui_.MapPoint(Chart, this, Chart.ChartToClient(point));
-		}
 	}
 }

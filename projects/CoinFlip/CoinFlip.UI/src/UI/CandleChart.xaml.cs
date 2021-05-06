@@ -1394,7 +1394,7 @@ namespace CoinFlip.UI
 				cmenu.Opened += delegate
 				{
 					// Get the price at the mouse location
-					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
+					var hit = Chart.HitTestZone(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
 					var visible = Instrument != null && hit.ChartPoint.Y > 0;
 
 					// Hide the buy/sell options when there is no instrument or the click price is invalid

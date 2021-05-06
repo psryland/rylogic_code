@@ -322,8 +322,7 @@ namespace Rylogic.Gfx
 				return;
 
 			// Perform a hit test to update the position of the active hit
-			var ray = new View3d.HitTestRay();
-			Window.Camera.SSPointToWSRay(point_cs, out ray.m_ws_origin, out ray.m_ws_direction);
+			var ray = Window.Camera.RaySS(point_cs);
 			var result = Window.HitTest(ray, (float)SnapDistance, Flags, ContextIds, IncludeCount, ExcludeCount);
 
 			// Update the current hit point

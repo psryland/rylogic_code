@@ -162,6 +162,7 @@ namespace Rylogic.Maths
 		public readonly static v4 NaN = new v4(float.NaN, float.NaN, float.NaN, float.NaN);
 		public readonly static v4 MinValue = new v4(float.MinValue, float.MinValue, float.MinValue, float.MinValue);
 		public readonly static v4 MaxValue = new v4(float.MaxValue, float.MaxValue, float.MaxValue, float.MaxValue);
+		public readonly static v4 TinyF = new v4(Math_.TinyF, Math_.TinyF, Math_.TinyF, Math_.TinyF);
 
 		/// <summary>Operators</summary>
 		public static v4 operator +(v4 vec)
@@ -529,10 +530,14 @@ namespace Rylogic.Maths
 			return IsNaN(vec.x) || IsNaN(vec.y) || IsNaN(vec.z) || IsNaN(vec.w);
 		}
 
-		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
+		/// <summary>Return the component-wise division 'a/b', or 'def' if 'b' contains zeros</summary>
 		public static v4 Div(v4 a, v4 b, v4 def)
 		{
-			return b != v4.Zero ? a / b : def;
+			return new v4(
+				Div(a.x, b.x, def.x),
+				Div(a.y, b.y, def.y),
+				Div(a.z, b.z, def.z),
+				Div(a.w, b.w, def.w));
 		}
 
 		/// <summary>Return the component-wise square root of a vector</summary>

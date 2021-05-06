@@ -261,8 +261,8 @@ namespace pr
 		}
 
 		// Return a point in world space corresponding to a normalised screen space point.
-		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
-		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive)
+		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left -> upper right).
+		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 		v4 NSSPointToWSPoint(v4 const& nss_point) const
 		{
 			float half_height = m_focus_dist * Tan(m_fovY * 0.5f);
@@ -283,7 +283,7 @@ namespace pr
 		}
 
 		// Return a point in normalised screen space corresponding to 'ws_point'
-		// The returned 'z' component will be the world space distance from the camera
+		// The returned 'z' component will be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 		v4 WSPointToNSSPoint(v4 const& ws_point) const
 		{
 			float half_height = m_focus_dist * Tan(m_fovY * 0.5f);
@@ -305,14 +305,24 @@ namespace pr
 			return point;
 		}
 
-		// Return a point and direction in world space corresponding to a normalised screen space point.
-		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
-		// The z component should be the world space distance from the camera
+		// Return a ray from the camera that passes through 'nss_point' (a normalised screen space point).
+		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left -> upper right).
+		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
 		void NSSPointToWSRay(v4 const& nss_point, v4& ws_point, v4& ws_direction) const
 		{
 			auto pt = NSSPointToWSPoint(nss_point);
-			ws_point = m_c2w.pos;
-			ws_direction = Normalise(pt - ws_point);
+			if (Orthographic())
+			{
+				auto hheight = m_focus_dist * tan(m_fovY * 0.5f);
+				auto hwidth = m_aspect * hheight;
+				ws_point = m_c2w.pos + (nss_point.x * hwidth * m_c2w.x) + (nss_point.y * hheight * m_c2w.y);
+				ws_direction = -m_c2w.z;
+			}
+			else
+			{
+				ws_point = m_c2w.pos;
+				ws_direction = Normalise(pt - ws_point);
+			}
 		}
 
 		// Get/Set the distances to the near and far clip planes

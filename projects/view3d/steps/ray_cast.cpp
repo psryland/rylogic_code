@@ -200,7 +200,7 @@ namespace pr::rdr
 	}
 
 	// Set the rays to cast.
-	void RayCastStep::SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, InstFilter const& include)
+	void RayCastStep::SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, InstFilter include)
 	{
 		// Save the rays so we can match ray indices to the actual ray.
 		m_rays.assign(rays, rays + std::min(count, MaxRays));

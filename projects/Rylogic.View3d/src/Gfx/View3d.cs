@@ -799,12 +799,13 @@ namespace Rylogic.Gfx
 				{
 					if (value)
 					{
+						// Don't make GDI textures automatically 'HasAlpha'.
+						// Leave that decision to the caller.
 						Data.Format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
 						Data.BindFlags |= EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET;
 						Data.MiscFlags |= EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
 						Data.MultiSamp = 1U;
 						Data.Mips = 1U;
-						Data.HasAlpha = true;
 					}
 					else
 					{
@@ -1565,7 +1566,9 @@ namespace ldr
 		[DllImport(Dll)]
 		private static extern void View3D_WindowAnimEventCBSet(HWindow window, AnimationCB anim_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)]
-		private static extern void View3D_WindowHitTest(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
+		private static extern void View3D_WindowHitTestObjects(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 7)] HObject[] objects, int object_count);
+		[DllImport(Dll)]
+		private static extern void View3D_WindowHitTestByCtx(HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
 		[DllImport(Dll)]
 		private static extern v2 View3D_WindowDpiScale(HWindow window);
 

@@ -532,8 +532,9 @@ namespace Rylogic.Gui.WinForms
 		private void DoHitTest(PointF mouse_location)
 		{
 			// Perform a hit test to update the position of the active hit
-			var ray = new View3d.HitTestRay();
-			Camera.SSPointToWSRay(mouse_location, out ray.m_ws_origin, out ray.m_ws_direction);
+			//var ray = new View3d.HitTestRay();
+			//Camera.SSPointToWSRay(mouse_location, out ray.m_ws_origin, out ray.m_ws_direction);
+			var ray = Camera.RaySS(mouse_location);
 			var result = Window.HitTest(ray, SnapDistance, Flags, m_context_ids, m_include_count, m_exclude_count);
 
 			// Update the current hit point

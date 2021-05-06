@@ -103,11 +103,11 @@ namespace pr::rdr
 			}
 
 			// Is reflective
-			auto reflec = inst.find<float>(EInstComp::EnvMapReflectivity);
-			if (reflec != nullptr &&                       // The instance has a reflectivity value
-				scene.m_global_envmap != nullptr &&        // There is an env map
-				pr::AllSet(nug.m_geom, EGeom::Norm) &&     // The model contains normals
-				*reflec * nug.m_relative_reflectivity != 0)// and the reflectivity isn't zero
+			float const* reflec;
+			if (scene.m_global_envmap != nullptr                                      && // There is an env map
+				AllSet(nug.m_geom, EGeom::Norm)                                       && // The model contains normals
+				(reflec = inst.find<float>(EInstComp::EnvMapReflectivity)) != nullptr && // The instance has a reflectivity value
+				*reflec * nug.m_relative_reflectivity != 0)                              // and the reflectivity isn't zero
 				texture_flags |= hlsl::TextureFlags_IsReflective;
 		}
 

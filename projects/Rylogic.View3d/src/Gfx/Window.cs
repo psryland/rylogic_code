@@ -11,7 +11,9 @@ using Rylogic.Extn.Windows;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using HWindow = System.IntPtr;
+using HObject = System.IntPtr;
 using HWND = System.IntPtr;
+using System.Linq;
 
 namespace Rylogic.Gfx
 {
@@ -212,7 +214,20 @@ namespace Rylogic.Gfx
 				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
 				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
 				using var guids_buf = Marshal_.Pin(guids, GCHandleType.Pinned);
-				View3D_WindowHitTest(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
+				View3D_WindowHitTestByCtx(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
+
+				return hits[0];
+			}
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, IEnumerable<Object> objects)
+			{
+				var rays = new HitTestRay[1] { ray };
+				var hits = new HitTestResult[1];
+				var insts = objects.Select(x => x.Handle).ToArray();
+
+				using var rays_buf = Marshal_.Pin(rays, GCHandleType.Pinned);
+				using var hits_buf = Marshal_.Pin(hits, GCHandleType.Pinned);
+				using var insts_buf = Marshal_.Pin(insts, GCHandleType.Pinned);
+				View3D_WindowHitTestObjects(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, insts, insts.Length);
 
 				return hits[0];
 			}

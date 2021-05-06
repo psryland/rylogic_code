@@ -269,6 +269,8 @@ namespace view3d
 		void SelectionBoxVisible(bool vis);
 
 		// Cast a ray into the scene, returning hit info
+		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, pr::rdr::RayCastStep::Instances instances);
+		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, pr::ldr::LdrObject const* const* objects, int object_count);
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
 		// Get/Set the global environment map for this window

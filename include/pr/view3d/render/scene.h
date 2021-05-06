@@ -57,8 +57,9 @@ namespace pr::rdr
 		// Set the render steps to use for rendering the scene
 		void SetRenderSteps(std::initializer_list<ERenderStep> rsteps);
 
-		// Perform an immediate hit test
-		void HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include, RayCastStep::ResultsOut const& results);
+		// Perform an immediate hit test on the instances provided by coroutine 'instances'
+		// Successive calls to 'instances' should return instances to be hit tested. Return nullptr when complete.
+		void HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::Instances instances, RayCastStep::ResultsOut const& results);
 
 		// Set the collection of rays to cast into the scene for continuous hit testing.
 		// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.

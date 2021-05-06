@@ -20,28 +20,28 @@ namespace Rylogic.Gfx
 				m_window = window;
 			}
 			public Camera(Window window, XElement node)
-				:this(window)
+				: this(window)
 			{
 				Load(node);
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(O2W         ), O2W         , false);
-				node.Add2(nameof(FocusDist   ), FocusDist   , false);
+				node.Add2(nameof(O2W), O2W, false);
+				node.Add2(nameof(FocusDist), FocusDist, false);
 				node.Add2(nameof(Orthographic), Orthographic, false);
-				node.Add2(nameof(Aspect      ), Aspect      , false);
-				node.Add2(nameof(FovY        ), FovY        , false);
-				node.Add2(nameof(AlignAxis   ), AlignAxis   , false);
+				node.Add2(nameof(Aspect), Aspect, false);
+				node.Add2(nameof(FovY), FovY, false);
+				node.Add2(nameof(AlignAxis), AlignAxis, false);
 				return node;
 			}
 			public void Load(XElement node)
 			{
-				O2W          = node.Element(nameof(O2W         )).As(O2W         );
-				FocusDist    = node.Element(nameof(FocusDist   )).As(FocusDist   );
+				O2W = node.Element(nameof(O2W)).As(O2W);
+				FocusDist = node.Element(nameof(FocusDist)).As(FocusDist);
 				Orthographic = node.Element(nameof(Orthographic)).As(Orthographic);
-				Aspect       = node.Element(nameof(Aspect      )).As(Aspect      );
-				FovY         = node.Element(nameof(FovY        )).As(FovY        );
-				AlignAxis    = node.Element(nameof(AlignAxis   )).As(AlignAxis   );
+				Aspect = node.Element(nameof(Aspect)).As(Aspect);
+				FovY = node.Element(nameof(FovY)).As(FovY);
+				AlignAxis = node.Element(nameof(AlignAxis)).As(AlignAxis);
 				Commit();
 			}
 
@@ -187,7 +187,7 @@ namespace Rylogic.Gfx
 				up ??= AlignAxis;
 				if (up.Value.LengthSq == 0f)
 					up = v4.YAxis;
-				
+
 				forward ??= up.Value.z > up.Value.y ? -v4.YAxis : -v4.ZAxis;
 				if (Math_.Parallel(up.Value, forward.Value))
 					up = Math_.Perpendicular(forward.Value);
@@ -292,17 +292,31 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>
-			/// Convert a screen space point into a position and direction in world space.
-			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
-			/// The z component of 'screen' should be the world space distance from the camera</summary>
+			/// Convert a normalised screen space point into a ray from the camera in world space.
+			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right).
+			/// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive).
+			/// 'ws_point' will be the camera position in world space.
+			/// 'ws_direction' will be the world space direction vector that passes through 'screen' at the depth 'screen.z'.</summary>
 			public void NSSPointToWSRay(v4 screen, out v4 ws_point, out v4 ws_direction)
 			{
 				View3D_NSSPointToWSRay(m_window.Handle, screen, out ws_point, out ws_direction);
 			}
+
+			/// <summary>
+			/// Convert a screen space point into a world space ray from the camera.
+			/// The ray will pass though the screen space point at the focus distance of the camera.</summary>
 			public void SSPointToWSRay(PointF screen, out v4 ws_point, out v4 ws_direction)
 			{
 				var nss = SSPointToNSSPoint(screen);
 				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistanceGet(m_window.Handle), 1.0f), out ws_point, out ws_direction);
+			}
+
+			/// <summary>A ray cast from the camera into the scene through client space point 'point_cs'</summary>
+			public HitTestRay RaySS(v2 point_ss)
+			{
+				var ray = new HitTestRay();
+				SSPointToWSRay(point_ss, out ray.m_ws_origin, out ray.m_ws_direction);
+				return ray;
 			}
 
 			/// <summary>Convert a mouse button to the default navigation operation</summary>
@@ -315,11 +329,11 @@ namespace Rylogic.Gfx
 			private string Description => $"{O2W.pos} FPoint={FocusPoint} FDist={FocusDist}";
 
 			#region Equals
-			public static bool operator == (Camera? lhs, Camera? rhs)
+			public static bool operator ==(Camera? lhs, Camera? rhs)
 			{
-				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Camera? lhs, Camera? rhs)
+			public static bool operator !=(Camera? lhs, Camera? rhs)
 			{
 				return !(lhs == rhs);
 			}

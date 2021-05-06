@@ -206,6 +206,15 @@ namespace Rylogic.LDraw
 		{
 			return $"*GridWH {name} {colour} {{{dimx} {dimy} {divx} {divy} {Transform(o2w, pos)}}}\n";
 		}
+
+		// Types
+		public enum EArrowType
+		{
+			Line    = 0,
+			Fwd     = 1 << 0,
+			Back    = 1 << 1,
+			FwdBack = Fwd | Back,
+		}
 	}
 
 	/// <summary>Like StringBuilder, but for ldr strings</summary>
@@ -238,13 +247,15 @@ namespace Rylogic.LDraw
 			m_sb = new StringBuilder(value, startIndex, length, capacity);
 		}
 
-		public void Clear()
+		public LdrBuilder Clear()
 		{
 			m_sb.Clear();
+			return this;
 		}
-		public void Remove(int start_index, int length)
+		public LdrBuilder Remove(int start_index, int length)
 		{
 			m_sb.Remove(start_index, length);
+			return this;
 		}
 		public LdrBuilder Append(object part)
 		{
@@ -265,11 +276,12 @@ namespace Rylogic.LDraw
 			return this;
 		}
 
-		public void Comment(string comments)
+		public LdrBuilder Comment(string comments)
 		{
 			var lines = comments.Split('\n');
 			foreach (var line in lines)
 				Append($"// {line}\n");
+			return this;
 		}
 
 		public Scope Group()
@@ -303,278 +315,292 @@ namespace Rylogic.LDraw
 				() => GroupClose(transform)
 				);
 		}
-		public void GroupOpen(string name)
+		public LdrBuilder GroupOpen(string name)
 		{
-			GroupOpen(name, 0xFFFFFFFF);
+			return GroupOpen(name, 0xFFFFFFFF);
 		}
-		public void GroupOpen(string name, Colour32 colour)
+		public LdrBuilder GroupOpen(string name, Colour32 colour)
 		{
-			Append("*Group ",name," ",colour," {\n");
+			return Append("*Group ",name," ",colour," {\n");
 		}
-		public void GroupClose()
+		public LdrBuilder GroupClose()
 		{
-			GroupClose(m4x4.Identity);
+			return GroupClose(m4x4.Identity);
 		}
-		public void GroupClose(m4x4 transform)
+		public LdrBuilder GroupClose(m4x4 transform)
 		{
-			Append(Ldr.Transform(transform, newline:true), "}\n");
+			return Append(Ldr.Transform(transform, newline:true), "}\n");
 		}
 
-		public void Line(v4 start, v4 end)
+		public LdrBuilder Line(v4 start, v4 end)
 		{
-			Line(Color.White, start, end);
+			return Line(Color.White, start, end);
 		}
-		public void Line(Colour32 colour, v4 start, v4 end)
+		public LdrBuilder Line(Colour32 colour, v4 start, v4 end)
 		{
-			Line(string.Empty, colour, start, end);
+			return Line(string.Empty, colour, start, end);
 		}
-		public void Line(string name, Colour32 colour, v4 start, v4 end)
+		public LdrBuilder Line(string name, Colour32 colour, v4 start, v4 end)
 		{
-			Append("*Line ", name, " ", colour, " {", start, " ", end, "}\n");
+			return Append("*Line ", name, " ", colour, " {", start, " ", end, "}\n");
 		}
-		public void Line(string name, Colour32 colour, int width, bool smooth, IEnumerable<v4> points)
+		public LdrBuilder Line(string name, Colour32 colour, float width, bool smooth, IEnumerable<v4> points)
 		{
-			if (!points.Any()) return;
-			var w = width != 0 ? $"*Width {{{width}}}" : string.Empty;
-			var s = smooth ? "*Smooth " : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w, s, points.Select(x => Ldr.Vec3(x)), "}\n");
+			if (!points.Any()) return this;
+			return Append("*LineStrip ", name, " ", colour, " {", Ldr.Width(width), Ldr.Smooth(smooth), points.Select(x => Ldr.Vec3(x)), "}\n");
 		}
-		public void Line(string name, Colour32 colour, int width, bool smooth, Func<int,v4?> points)
+		public LdrBuilder Line(string name, Colour32 colour, float width, bool smooth, Func<int, v4?> points)
 		{
 			int idx = 0;
-			var w = width != 0 ? $"*Width {{{width}}}" : string.Empty;
-			var s = smooth ? "*Smooth " : string.Empty;
-			Append("*LineStrip ", name, " ", colour, " {", w, s);
+			Append("*LineStrip ", name, " ", colour, " {", Ldr.Width(width), Ldr.Smooth(smooth));
 			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
 			Append("}\n");
+			return this;
 		}
-		public void LineD(string name, Colour32 colour, v4 start, v4 direction)
+		public LdrBuilder LineD(string name, Colour32 colour, v4 start, v4 direction)
 		{
-			LineD(name, colour, start, direction, 0);
+			return LineD(name, colour, start, direction, 0);
 		}
-		public void LineD(string name, Colour32 colour, v4 start, v4 direction, int width)
+		public LdrBuilder LineD(string name, Colour32 colour, v4 start, v4 direction, float width)
 		{
-			var w = width != 0 ? $"*Width {{{width}}} " : string.Empty;
-			Append("*LineD ",name," ",colour," {",w,start," ",direction,"}");
+			return Append("*LineD ", name, " ", colour, " {", Ldr.Width(width), start, " ", direction, "}");
 		}
 
-		public void Grid(Colour32 colour, AxisId axis_id, int width, int height)
+		public LdrBuilder Arrow()
 		{
-			Grid(string.Empty, colour, axis_id, width, height);
+			return Arrow(string.Empty, Colour32.White, Ldr.EArrowType.Fwd, 10f, true, new[] { v4.Origin, v4.XAxis.w1 });
 		}
-		public void Grid(string name, Colour32 colour, AxisId axis_id, int width, int height)
+		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, float width, bool smooth, IEnumerable<v4> points)
 		{
-			Grid(name, colour, axis_id, width, height, width, height, v4.Origin);
+			if (!points.Any()) return this;
+			return Append("*Arrow ", name, " ", colour, " {", type.ToString(), points.Select(x => Ldr.Vec3(x)), Ldr.Width(width), Ldr.Smooth(smooth), "}\n");
 		}
-		public void Grid(string name, Colour32 colour, AxisId axis_id, int width, int height, int wdiv, int hdiv, v4 position)
+		public LdrBuilder Arrow(string name, Colour32 colour, Ldr.EArrowType type, float width, bool smooth, Func<int, v4?> points)
 		{
-			Append("*Grid ", name, " ", colour, " {", width, " ", height, " ", wdiv, " ", hdiv, " ", axis_id, " ", Ldr.Position(position), "}\n");
-		}
-
-		public void Box(m4x4? o2w = null, v4? pos = null)
-		{
-			Box(string.Empty, Color.White, o2w, pos);
-		}
-		public void Box(Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
-		{
-			Box(string.Empty, colour, size, o2w, pos);
-		}
-		public void Box(Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
-		{
-			Box(string.Empty, colour, sx, sy, sz, o2w, pos);
-		}
-		public void Box(string name, Colour32 colour, m4x4? o2w = null, v4? pos = null)
-		{
-			Box(name, colour, 1f, o2w, pos);
-		}
-		public void Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
-		{
-			Append("*Box ",name," ",colour," {",size," ",Ldr.Transform(o2w, pos),"}\n");
-		}
-		public void Box(string name, Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
-		{
-			Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Transform(o2w, pos),"}\n");
-		}
-		public void Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
-		{
-			Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Transform(o2w,pos),"}\n");
+			int idx = 0;
+			Append("*Arrow ", name, " ", colour, " {");
+			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
+			Append(Ldr.Width(width), Ldr.Smooth(smooth), type.ToString(), "}\n");
+			return this;
 		}
 
-		public void Sphere()
+		public LdrBuilder Grid(Colour32 colour, AxisId axis_id, int width, int height)
 		{
-			Sphere(string.Empty, Color.White);
+			return Grid(string.Empty, colour, axis_id, width, height);
 		}
-		public void Sphere(string name, Colour32 colour)
+		public LdrBuilder Grid(string name, Colour32 colour, AxisId axis_id, int width, int height)
 		{
-			Sphere(name, colour, 1f);
+			return Grid(name, colour, axis_id, width, height, width, height, v4.Origin);
 		}
-		public void Sphere(string name, Colour32 colour, float radius)
+		public LdrBuilder Grid(string name, Colour32 colour, AxisId axis_id, int width, int height, int wdiv, int hdiv, v4 position)
 		{
-			Sphere(name, colour, radius, v4.Origin);
-		}
-		public void Sphere(string name, Colour32 colour, float radius, v4 position)
-		{
-			Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
+			return Append("*Grid ", name, " ", colour, " {", width, " ", height, " ", wdiv, " ", hdiv, " ", axis_id, " ", Ldr.Position(position), "}\n");
 		}
 
-		public void Cylinder(Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(m4x4? o2w = null, v4? pos = null)
 		{
-			Cylinder(string.Empty, colour, axis_id, height, radius, o2w, pos);
+			return Box(string.Empty, Color.White, o2w, pos);
 		}
-		public void Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
+		public LdrBuilder Box(Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*Cylinder ", name, " ", colour, " {", height, " ", radius, " ", axis_id, " ", Ldr.Transform(o2w, pos), "}\n");
+			return Box(string.Empty, colour, size, o2w, pos);
 		}
-
-		public void Circle()
+		public LdrBuilder Box(Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
 		{
-			Circle(string.Empty, Color.White, 3, true);
+			return Box(string.Empty, colour, sx, sy, sz, o2w, pos);
 		}
-		public void Circle(string name, Colour32 colour, AxisId axis_id, bool solid)
+		public LdrBuilder Box(string name, Colour32 colour, m4x4? o2w = null, v4? pos = null)
 		{
-			Circle(name, colour, axis_id, solid, v4.Origin);
+			return Box(name, colour, 1f, o2w, pos);
 		}
-		public void Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius)
+		public LdrBuilder Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			Circle(name, colour, axis_id, solid, radius, v4.Origin);
+			return Append("*Box ",name," ",colour," {",size," ",Ldr.Transform(o2w, pos),"}\n");
 		}
-		public void Circle(string name, Colour32 colour, AxisId axis_id, bool solid, v4 position)
+		public LdrBuilder Box(string name, Colour32 colour, float sx, float sy, float sz, m4x4? o2w = null, v4? pos = null)
 		{
-			Circle(name, colour, axis_id, solid, 1f, position);
+			return Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Transform(o2w, pos),"}\n");
 		}
-		public void Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius, v4 position)
+		public LdrBuilder Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*Circle ", name, " ", colour, " {", radius, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
-		}
-
-		public void Ellipse()
-		{
-			Ellipse(string.Empty, Color.White, 3, true, 1f, 0.5f);
-		}
-		public void Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy)
-		{
-			Ellipse(name, colour, axis_id, solid, radiusx, radiusy, v4.Origin);
-		}
-		public void Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy, v4 position)
-		{
-			Append("*Circle ", name, " ", colour, " {", radiusx, " ", radiusy, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
+			return Append("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Ldr.Transform(o2w,pos),"}\n");
 		}
 
-		public void Pie()
+		public LdrBuilder Sphere()
 		{
-			Pie(string.Empty, Color.White, 3, true, 0f, 45f);
+			return Sphere(string.Empty, Color.White);
 		}
-		public void Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1)
+		public LdrBuilder Sphere(string name, Colour32 colour)
 		{
-			Pie(name, colour, axis_id, solid, ang0, ang1, v4.Origin);
+			return Sphere(name, colour, 1f);
 		}
-		public void Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, v4 position)
+		public LdrBuilder Sphere(string name, Colour32 colour, float radius)
 		{
-			Pie(name, colour, axis_id, solid, ang0, ang1, 0f, 1f, position);
+			return Sphere(name, colour, radius, v4.Origin);
 		}
-		public void Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, v4 position)
+		public LdrBuilder Sphere(string name, Colour32 colour, float radius, v4 position)
 		{
-			Pie(name, colour, axis_id, solid, ang0, ang1, rad0, rad1, 1f, 1f, 40, position);
-		}
-		public void Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
-		{
-			Append("*Pie ", name, " ", colour, " {", ang0, " ", ang1, " ", rad0, " ", rad1, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Facets(facets), " *Scale ", sx, " ", sy, " ", Ldr.Position(position), "}\n");
+			return Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
 		}
 
-		public void Rect()
+		public LdrBuilder Cylinder(Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			Rect(string.Empty, Color.White, 3, 1f, 1f, false, v4.Origin);
+			return Cylinder(string.Empty, colour, axis_id, height, radius, o2w, pos);
 		}
-		public void Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, v4 position)
+		public LdrBuilder Cylinder(string name, Colour32 colour, AxisId axis_id, float height, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
-		}
-		public void Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, float corner_radius, v4 position)
-		{
-			Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.CornerRadius(corner_radius), " ", Ldr.Position(position), "}\n");
+			return Append("*Cylinder ", name, " ", colour, " {", height, " ", radius, " ", axis_id, " ", Ldr.Transform(o2w, pos), "}\n");
 		}
 
-		public void Triangle()
+		public LdrBuilder Circle()
 		{
-			Triangle(string.Empty, Colour32.White, v4.Origin, v4.XAxis.w1, v4.YAxis.w1);
+			return Circle(string.Empty, Color.White, 3, true);
 		}
-		public void Triangle(string name, Colour32 colour, v4 a, v4 b, v4 c, m4x4? o2w = null)
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid)
 		{
-			Append("*Triangle ", name, " ", colour, " {", a, " ", b, " ", c, " ", Ldr.Transform(o2w), "}");
+			return Circle(name, colour, axis_id, solid, v4.Origin);
 		}
-		public void Triangle(string name, Colour32 colour, IEnumerable<v4> pts, m4x4? o2w = null)
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius)
 		{
-			Append("*Triangle ", name, " ", colour, " {", pts, Ldr.Transform(o2w), "}");
+			return Circle(name, colour, axis_id, solid, radius, v4.Origin);
 		}
-
-		public void Quad()
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, v4 position)
 		{
-			Quad(string.Empty, Color.White);
+			return Circle(name, colour, axis_id, solid, 1f, position);
 		}
-		public void Quad(Colour32 colour)
+		public LdrBuilder Circle(string name, Colour32 colour, AxisId axis_id, bool solid, float radius, v4 position)
 		{
-			Quad(string.Empty, colour);
-		}
-		public void Quad(Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl)
-		{
-			Quad(string.Empty, colour, tl, tr, br, bl);
-		}
-		public void Quad(string name, Colour32 colour)
-		{
-			Quad(name, colour, new v4(0, 1, 0, 1), new v4(1, 1, 0, 1), new v4(1, 0, 0, 1), new v4(0, 0, 0, 1));
-		}
-		public void Quad(string name, Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl)
-		{
-			Quad(name, colour, tl, tr, br, bl, v4.Origin);
-		}
-		public void Quad(string name, Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
-		{
-			Append("*Quad ", name, " ", colour, " {", bl, " ", br, " ", tr, " ", tl, " ", Ldr.Position(position), "}\n");
-		}
-		public void Quad(string name, Colour32 colour, AxisId axis_id, float w, float h, v4 position)
-		{
-			Rect(name, colour, axis_id, w, h, true, position);
+			return Append("*Circle ", name, " ", colour, " {", radius, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
-		public void Axis()
+		public LdrBuilder Ellipse()
 		{
-			Axis(m4x4.Identity);
+			return Ellipse(string.Empty, Color.White, 3, true, 1f, 0.5f);
 		}
-		public void Axis(m3x4 basis)
+		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy)
 		{
-			Axis(new m4x4(basis, v4.Origin));
+			return Ellipse(name, colour, axis_id, solid, radiusx, radiusy, v4.Origin);
 		}
-		public void Axis(m4x4 basis)
+		public LdrBuilder Ellipse(string name, Colour32 colour, AxisId axis_id, bool solid, float radiusx, float radiusy, v4 position)
 		{
-			Axis(string.Empty, Color_.FromArgb(0xFFFFFFFF), basis);
-		}
-		public void Axis(string name, Colour32 colour, m3x4 basis)
-		{
-			Axis(name, colour, new m4x4(basis, v4.Origin));
-		}
-		public void Axis(string name, Colour32 colour, m4x4 basis)
-		{
-			Axis(name, colour, basis, 0.1f);
-		}
-		public void Axis(string name, Colour32 colour, m3x4 basis, float scale)
-		{
-			Axis(name, colour, new m4x4(basis, v4.Origin), scale);
-		}
-		public void Axis(string name, Colour32 colour, m4x4 basis, float scale)
-		{
-			Append("*Matrix3x3 ", name, " ", colour, " {", basis.x * scale, " ", basis.y * scale, " ", basis.z * scale, " ", Ldr.Position(basis.pos), "}\n");
+			return Append("*Circle ", name, " ", colour, " {", radiusx, " ", radiusy, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
 		}
 
-		public void Ribbon()
+		public LdrBuilder Pie()
 		{
-			Ribbon(string.Empty, Colour32.White, new []{ v4.Origin, v4.XAxis.w1 }, EAxisId.PosZ, 3f, false);
+			return Pie(string.Empty, Color.White, 3, true, 0f, 45f);
 		}
-		public void Ribbon(string name, Colour32 colour, IEnumerable<v4> points, AxisId axis_id, float width, bool smooth, m4x4? o2w = null)
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1)
 		{
-			Append("*Ribbon ", name, " ", colour, " {", points, " ", axis_id, Ldr.Width(width), Ldr.Smooth(smooth), Ldr.Transform(o2w), "}\n");
+			return Pie(name, colour, axis_id, solid, ang0, ang1, v4.Origin);
+		}
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, v4 position)
+		{
+			return Pie(name, colour, axis_id, solid, ang0, ang1, 0f, 1f, position);
+		}
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, v4 position)
+		{
+			return Pie(name, colour, axis_id, solid, ang0, ang1, rad0, rad1, 1f, 1f, 40, position);
+		}
+		public LdrBuilder Pie(string name, Colour32 colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
+		{
+			return Append("*Pie ", name, " ", colour, " {", ang0, " ", ang1, " ", rad0, " ", rad1, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Facets(facets), " *Scale ", sx, " ", sy, " ", Ldr.Position(position), "}\n");
 		}
 
-		public void Mesh(string name, Colour32 colour, IList<v4>? verts, IList<v4>? normals = null, IList<Colour32>? colours = null, IList<v2>? tex = null, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
+		public LdrBuilder Rect()
+		{
+			return Rect(string.Empty, Color.White, 3, 1f, 1f, false, v4.Origin);
+		}
+		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, v4 position)
+		{
+			return Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.Position(position), "}\n");
+		}
+		public LdrBuilder Rect(string name, Colour32 colour, AxisId axis_id, float width, float height, bool solid, float corner_radius, v4 position)
+		{
+			return Append("*Rect ", name, " ", colour, " {", width, " ", height, " ", axis_id, " ", Ldr.Solid(solid), " ", Ldr.CornerRadius(corner_radius), " ", Ldr.Position(position), "}\n");
+		}
+
+		public LdrBuilder Triangle()
+		{
+			return Triangle(string.Empty, Colour32.White, v4.Origin, v4.XAxis.w1, v4.YAxis.w1);
+		}
+		public LdrBuilder Triangle(string name, Colour32 colour, v4 a, v4 b, v4 c, m4x4? o2w = null)
+		{
+			return Append("*Triangle ", name, " ", colour, " {", a, " ", b, " ", c, " ", Ldr.Transform(o2w), "}");
+		}
+		public LdrBuilder Triangle(string name, Colour32 colour, IEnumerable<v4> pts, m4x4? o2w = null)
+		{
+			return Append("*Triangle ", name, " ", colour, " {", pts, Ldr.Transform(o2w), "}");
+		}
+
+		public LdrBuilder Quad()
+		{
+			return Quad(string.Empty, Color.White);
+		}
+		public LdrBuilder Quad(Colour32 colour)
+		{
+			return Quad(string.Empty, colour);
+		}
+		public LdrBuilder Quad(Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl)
+		{
+			return Quad(string.Empty, colour, tl, tr, br, bl);
+		}
+		public LdrBuilder Quad(string name, Colour32 colour)
+		{
+			return Quad(name, colour, new v4(0, 1, 0, 1), new v4(1, 1, 0, 1), new v4(1, 0, 0, 1), new v4(0, 0, 0, 1));
+		}
+		public LdrBuilder Quad(string name, Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl)
+		{
+			return Quad(name, colour, tl, tr, br, bl, v4.Origin);
+		}
+		public LdrBuilder Quad(string name, Colour32 colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
+		{
+			return Append("*Quad ", name, " ", colour, " {", bl, " ", br, " ", tr, " ", tl, " ", Ldr.Position(position), "}\n");
+		}
+		public LdrBuilder Quad(string name, Colour32 colour, AxisId axis_id, float w, float h, v4 position)
+		{
+			return Rect(name, colour, axis_id, w, h, true, position);
+		}
+
+		public LdrBuilder Axis()
+		{
+			return Axis(m4x4.Identity);
+		}
+		public LdrBuilder Axis(m3x4 basis)
+		{
+			return Axis(new m4x4(basis, v4.Origin));
+		}
+		public LdrBuilder Axis(m4x4 basis)
+		{
+			return Axis(string.Empty, Color_.FromArgb(0xFFFFFFFF), basis);
+		}
+		public LdrBuilder Axis(string name, Colour32 colour, m3x4 basis)
+		{
+			return Axis(name, colour, new m4x4(basis, v4.Origin));
+		}
+		public LdrBuilder Axis(string name, Colour32 colour, m4x4 basis)
+		{
+			return Axis(name, colour, basis, 0.1f);
+		}
+		public LdrBuilder Axis(string name, Colour32 colour, m3x4 basis, float scale)
+		{
+			return Axis(name, colour, new m4x4(basis, v4.Origin), scale);
+		}
+		public LdrBuilder Axis(string name, Colour32 colour, m4x4 basis, float scale)
+		{
+			return Append("*Matrix3x3 ", name, " ", colour, " {", basis.x * scale, " ", basis.y * scale, " ", basis.z * scale, " ", Ldr.Position(basis.pos), "}\n");
+		}
+
+		public LdrBuilder Ribbon()
+		{
+			return Ribbon(string.Empty, Colour32.White, new []{ v4.Origin, v4.XAxis.w1 }, EAxisId.PosZ, 3f, false);
+		}
+		public LdrBuilder Ribbon(string name, Colour32 colour, IEnumerable<v4> points, AxisId axis_id, float width, bool smooth, m4x4? o2w = null)
+		{
+			return Append("*Ribbon ", name, " ", colour, " {", points, " ", axis_id, Ldr.Width(width), Ldr.Smooth(smooth), Ldr.Transform(o2w), "}\n");
+		}
+
+		public LdrBuilder Mesh(string name, Colour32 colour, IList<v4>? verts, IList<v4>? normals = null, IList<Colour32>? colours = null, IList<v2>? tex = null, IList<ushort>? faces = null, IList<ushort>? lines = null, IList<ushort>? tetra = null, bool generate_normals = false, v4? position = null)
 		{
 			Append("*Mesh ",name," ",colour," {\n");
 			if (verts   != null) Append("*Verts {"    ).Append(verts  .Select(x => Ldr.Vec3(x)))  .Append("}\n");
@@ -587,19 +613,19 @@ namespace Rylogic.LDraw
 			if (generate_normals) Append("*GenerateNormals\n");
 			if (position != null) Append(Ldr.Position(position.Value));
 			Append("}\n");
+			return this;
 		}
 
-		public void Graph(string name, AxisId axis_id, bool smooth, IEnumerable<v4> data)
+		public LdrBuilder Graph(string name, AxisId axis_id, bool smooth, IEnumerable<v4> data)
 		{
 			var bbox = BBox.Reset;
 			foreach (var d in data)
 				BBox.Grow(ref bbox, d);
 
-			using (Group(name))
-			{
-				Grid(string.Empty, 0xFFAAAAAA, axis_id, (int)(bbox.SizeX * 1.1), (int)(bbox.SizeY * 1.1), 50, 50, new v4(bbox.Centre.x, bbox.Centre.y, 0f, 1f));
-				Line("data", 0xFFFFFFFF, 1, smooth, data);
-			}
+			using var grp = Group(name);
+			Grid(string.Empty, 0xFFAAAAAA, axis_id, (int)(bbox.SizeX * 1.1), (int)(bbox.SizeY * 1.1), 50, 50, new v4(bbox.Centre.x, bbox.Centre.y, 0f, 1f));
+			Line("data", 0xFFFFFFFF, 1, smooth, data);
+			return this;
 		}
 
 		public override string ToString()
