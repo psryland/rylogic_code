@@ -454,7 +454,7 @@
 	</MenuItem>
 
 	<!-- Default View3d Context Menu -->
-	<ContextMenu x:Key="View3dCMenu" x:Name="View3dCMenu">
+	<ContextMenu x:Key="View3dCMenu" x:Name="View3dCMenu" x:Shared="False">
 		<!--
 		DataContext is expected to be set to an object with the properties:
 		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
@@ -619,7 +619,7 @@
 		/>
 
 	<!-- Default Chart Context Menu -->
-	<ContextMenu x:Key="ChartCMenu" x:Name="ChartCMenu">
+	<ContextMenu x:Key="ChartCMenu" x:Name="ChartCMenu" x:Shared="False">
 		<!--
 		DataContext is expected to be set to an object with the properties:
 		'View3dCMenuContext' and/or 'ChartCMenuContext'.
@@ -662,7 +662,7 @@
 			<StaticResource	ResourceKey="View3dMenuItem_FillModePointsSize"/>
 		</MenuItem>
 	</ContextMenu>
-	<ContextMenu x:Key="ChartAxisCMenu" x:Name="ChartAxisCMenu">
+	<ContextMenu x:Key="ChartAxisCMenu" x:Name="ChartAxisCMenu" x:Shared="False">
 		<!--
 		DataContext is expected to be set to an object with the property: 'ChartAxisCMenuContext'.
 		PlacementTarget isn't used because there is no control over what that object is

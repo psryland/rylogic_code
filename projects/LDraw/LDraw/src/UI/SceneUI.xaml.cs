@@ -17,7 +17,7 @@ using Rylogic.Utility;
 
 namespace LDraw.UI
 {
-	public sealed partial class SceneUI :UserControl, IDockable, IDisposable, INotifyPropertyChanged
+	public sealed partial class SceneUI :UserControl, IDockable, IDisposable, INotifyPropertyChanged, IView3dCMenuContext, IChartCMenuContext
 	{
 		public SceneUI(Model model, string name)
 		{
@@ -37,13 +37,13 @@ namespace LDraw.UI
 			SceneView.Background = Colour32.LightSteelBlue.ToMediaBrush();
 			SceneView.Scene.Window.SetLightSource(v4.Origin, Math_.Normalise(new v4(0, 0, -1, 0)), true);
 			SceneView.Scene.Window.OnRendering += HandleSceneRendering;
+			SceneView.Scene.ContextMenu.DataContext = this;
 			Links = new List<ChartLink>();
 
 			ClearScene = Command.Create(this, ClearSceneInternal);
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
 
-			InitCMenus();
 			PopulateOtherScenes();
 			DataContext = this;
 		}
@@ -265,14 +265,6 @@ namespace LDraw.UI
 			Links.RemoveAll(x => x.Source == null || x.Target == null || (x.CamLink == ELinkCameras.None && x.AxisLink == ELinkAxes.None));
 		}
 
-		/// <summary>Set up the context menus</summary>
-		private void InitCMenus()
-		{
-			SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", this);
-			SceneView.XAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.XAxis));
-			SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.YAxis));
-		}
-
 		/// <summary>True if the animation UI is visible</summary>
 		public bool AnimationUI
 		{
@@ -324,7 +316,13 @@ namespace LDraw.UI
 			NotifyPropertyChanged(nameof(FocusPoint));
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
+		public IChartCMenu ChartCMenuContext => SceneView;
+
+		/// <inheritdoc/>
+		public IView3dCMenu View3dCMenuContext => SceneView;
+
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		public void NotifyPropertyChanged(string prop_name)
 		{

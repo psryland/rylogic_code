@@ -12,7 +12,7 @@ try:
 	dirs = [
 		#"P:\\projects",
 		#"P:\\include",
-		#"S:\\software\\PC\\RexConfig",
+		"S:\\software\\PC",
 		"S:\\software\\shared",
 		"S:\\software\\STM32",
 		"S:\\software\\ARM7\\products\\battery_pack_v2",
@@ -51,7 +51,7 @@ try:
 			fname,extn = os.path.splitext(fpath)
 			if extn in extns:
 				try:
-					with open(fpath) as f:
+					with open(fpath, encoding='utf8') as f:
 						for i,line in enumerate(f):
 							semi_count += line.count(';')
 							line_count += 1

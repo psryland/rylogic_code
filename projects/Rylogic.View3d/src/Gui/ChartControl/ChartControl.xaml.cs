@@ -77,6 +77,8 @@ namespace Rylogic.Gui.WPF
 				InitCommands();
 				InitNavigation();
 
+				// Binding to 'this' is needed because the axis and scene parts of the control
+				// need to be bound to the instances in this class.
 				DataContext = this;
 			}
 			catch

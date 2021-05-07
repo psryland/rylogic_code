@@ -15,7 +15,7 @@
 		<ResourceDictionary>
 			
 			<!-- A context menu for the 3D scene -->
-			<ContextMenu x:Key="LDrawCMenu">
+			<ContextMenu x:Key="LDrawCMenu" x:Shared="False">
 				<MenuItem Header="_Clear"
 					Command="{Binding ClearScene}"
 					/>
@@ -62,11 +62,12 @@
 				<StaticResource	ResourceKey="View3dMenuItem_ObjectManager"/>
 			</ContextMenu>
 
-			<!-- A context menu for axes -->
-			<ContextMenu x:Key="LDrawAxisCMenu" x:Shared="False"> <!-- Not shared because we need two of them -->
+			<!-- A context menu for axes 
+			<ContextMenu x:Key="LDrawAxisCMenu" x:Shared="False">
 				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowScroll"/>
 				<StaticResource	ResourceKey="ChartAxisMenuItem_AllowZoom"/>
 			</ContextMenu>
+			-->
 
 			<!-- A context menu for the scene tab -->
 			<ContextMenu
@@ -107,6 +108,9 @@
 		<gui:ChartControl
 			Grid.Row="1"
 			Name="m_scene"
+			SceneCMenu="{StaticResource LDrawCMenu}"
+			XAxisCMenu="{StaticResource ChartAxisCMenu}"
+			YAxisCMenu="{StaticResource ChartAxisCMenu}"
 			/>
 	</Grid>
 </UserControl>
