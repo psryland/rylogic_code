@@ -28,12 +28,12 @@ namespace Rylogic.Gui.WPF
 		//           XAxisCMenu="{StaticResource ChartAxisCMenu}"
 		//           YAxisCMenu="{StaticResource ChartAxisCMenu}"
 		//     This will set the DataContext to the ChartPanel and AxisPanels appropriately because the cmenus match the default names.
-		//  2) Assign the menus programmatically (like in LDraw):
+		//  2) Assign the menus programmatically:
 		//      private void InitCMenus()
 		//      {
-		//          SceneView.Scene.ContextMenu = this.FindCMenu("LDrawCMenu", this);
-		//          SceneView.XAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.XAxis));
-		//          SceneView.YAxisPanel.ContextMenu = this.FindCMenu("LDrawAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.YAxis));
+		//          SceneView.Scene.ContextMenu = this.FindCMenu("MyCustomCMenu", this);
+		//          SceneView.XAxisPanel.ContextMenu = this.FindCMenu("MyCustomAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.XAxis));
+		//          SceneView.YAxisPanel.ContextMenu = this.FindCMenu("MyCustomAxisCMenu", SceneView.GetAxisPanel(ChartControl.EAxis.YAxis));
 		//      }
 		//     In this case, you don't need anything in your XAML.
 		//  3) Create a custom menu resource (that includes MenuItem StaticResources) and have the class containing the ChartControl (i.e.
@@ -48,32 +48,32 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Initialise the commands</summary>
 		private void InitCommands()
-			{
-				// Tools Menu
-				ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
-				ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
-				ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
-				ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
-				ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
-				ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
-				ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
-				ToggleAllowSelection = Command.Create(this, ToggleAllowSelectionInternal);
-				ToggleAllowElementDragging = Command.Create(this, ToggleAllowElementDraggingInternal);
-				ToggleAxes = Command.Create(this, ToggleAxesInternal);
-				ToggleShowTapeMeasure = Command.Create(this, ToggleShowTapeMeasureInternal);
+		{
+			// Tools Menu
+			ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
+			ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+			ToggleBBoxesVisible = Command.Create(this, ToggleBBoxesVisibleInternal);
+			ToggleSelectionBox = Command.Create(this, ToggleSelectionBoxInternal);
+			ToggleShowCrossHair = Command.Create(this, ToggleShowCrossHairInternal);
+			ToggleShowValueAtPointer = Command.Create(this, ToggleShowValueAtPointerInternal);
+			ToggleGridLines = Command.Create(this, ToggleGridLinesInternal);
+			ToggleAllowSelection = Command.Create(this, ToggleAllowSelectionInternal);
+			ToggleAllowElementDragging = Command.Create(this, ToggleAllowElementDraggingInternal);
+			ToggleAxes = Command.Create(this, ToggleAxesInternal);
+			ToggleShowTapeMeasure = Command.Create(this, ToggleShowTapeMeasureInternal);
 
-				// Camera
-				AutoRangeView = Command.Create(this, AutoRangeViewInternal);
-				DoAspect11 = Command.Create(this, DoAspect11Internal);
-				ToggleLockAspect = Command.Create(this, ToggleLockAspectInternal);
-				ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
-				ToggleMouseCentredZoom = Command.Create(this, ToggleMouseCentredZoomInternal);
+			// Camera
+			AutoRangeView = Command.Create(this, AutoRangeViewInternal);
+			DoAspect11 = Command.Create(this, DoAspect11Internal);
+			ToggleLockAspect = Command.Create(this, ToggleLockAspectInternal);
+			ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
+			ToggleMouseCentredZoom = Command.Create(this, ToggleMouseCentredZoomInternal);
 
-				// Rendering
-				SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
-				ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
-				ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
-			}
+			// Rendering
+			SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+			ToggleAntialiasing = Command.Create(this, ToggleAntiAliasingInternal);
+			ToggleShowNormals = Command.Create(this, ToggleShowNormalsInternal);
+		}
 
 		/// <summary>Accessors for setting the context menus in XAML</summary>
 		public ContextMenu SceneCMenu
