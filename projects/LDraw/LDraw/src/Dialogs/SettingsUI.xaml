@@ -211,16 +211,23 @@
 		</TabControl>
 
 		<!-- Buttons -->
-		<StackPanel
+		<DockPanel
 			Grid.Row="1"
-			HorizontalAlignment="Right"
-			Margin="20,8,8,8"
+			Margin="8"
 			>
 			<Button
+				DockPanel.Dock="Left"
+				Command="{Binding ResetToDefaults}"
+				Content="Reset to Defaults"
+				MinWidth="120"
+				/>
+			<Button
+				DockPanel.Dock="Right"
 				Command="{Binding Accept}"
 				Content="OK"
 				MinWidth="80"
 				/>
-		</StackPanel>
+			<StackPanel/>
+		</DockPanel>
 	</Grid>
 </Window>

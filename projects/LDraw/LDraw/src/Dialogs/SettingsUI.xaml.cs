@@ -32,6 +32,7 @@ namespace LDraw.Dialogs
 			RemoveIncludePath = Command.Create(this, RemoveIncludePathInternal);
 			MoveIncludePathUp = Command.Create(this, MoveIncludePathUpInternal);
 			MoveIncludePathDown = Command.Create(this, MoveIncludePathDownInternal);
+			ResetToDefaults = Command.Create(this, ResetToDefaultsInternal);
 
 			DataContext = this;
 		}
@@ -93,6 +94,14 @@ namespace LDraw.Dialogs
 				Util.Swap(ref Settings.IncludePaths[index], ref Settings.IncludePaths[index + 1]);
 				Settings.IncludePaths = Settings.IncludePaths.ToArray();
 			}
+		}
+
+		/// <summary>Reset the settings to defaults</summary>
+		public Command ResetToDefaults { get; }
+		private void ResetToDefaultsInternal()
+		{
+			Settings.Reset();
+			Settings.Save();
 		}
 
 		/// <summary>Property changed</summary>
