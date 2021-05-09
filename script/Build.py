@@ -665,6 +665,10 @@ def Main(args:[str]):
 		elif arg == "-build":
 			i = i + 1
 			build = True
+		elif arg == "-rebuild":
+			i = i + 1
+			clean = True
+			build = True
 		elif arg == "-deploy":
 			i = i + 1
 			deploy = True
