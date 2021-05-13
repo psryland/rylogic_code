@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Threading;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
 
@@ -14,7 +15,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private readonly ChartControl m_diagram;
 		private readonly Diagram_.Options m_opts;
 		private readonly List<Link> m_springs;
-		private readonly List<Link> m_charges;
 		private readonly List<Body> m_body;
 		private DispatcherTimer m_timer;
 		private readonly Random m_rng;
@@ -26,7 +26,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			m_opts = opts;
 			m_rng = new Random();
 			m_springs = new List<Link>();
-			m_charges = new List<Link>();
 			m_body = new List<Body>();
 			m_timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background, Step, Dispatcher.CurrentDispatcher);
 
@@ -46,37 +45,19 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Create the bodies, springs, and charges from the nodes in the chart</summary>
 		private void Init()
 		{
-			m_body.Clear();
-			m_springs.Clear();
-			m_charges.Clear();
-
-			// Order the nodes by the number of connections to other nodes
-			// so that highly connected nodes tend to be near the start.
 			m_issue = m_diagram.Elements.IssueNumber;
-			m_body.AddRange(m_diagram.Elements.OfType<Node>().Select(x => new Body(x)));
-			m_body.Sort((l,r) => -l.LinkCount.CompareTo(r.LinkCount));
 
 			// Create a dynamics object for each node
-			var lookup = m_body.ToDictionary(x => x.Node, x => x);
+			var nodes = m_diagram.Elements.OfType<Node>().ToDictionary(x => x, x => new Body(x));
 
-			// Create links between all pairs of nodes
-			for (int i = 0; i != m_body.Count; ++i)
-			{
-				var node0 = m_body[i].Node;
-				var others = node0.Connectors.Select(x => x.OtherNode(node0)).ToHashSet(0);
-				for (int j = i + 1; j != m_body.Count; ++j)
-				{
-					var node1 = m_body[j].Node;
+			// Find the unique set of inter-node connections
+			var conns = nodes.Values.SelectMany(x => x.Node.Connectors)
+				.Where(x => !x.Dangling)                                // both ends connected
+				.Distinct(Eql<Connector>.From(Connector.HasSameNodes)); // only one per pair of nodes
 
-					// If there is a connector between node0 and node1
-					// then the link is a spring, otherwise it's a charge.
-					var link = new Link(lookup[node0], lookup[node1]);
-					if (others.Contains(node1))
-						m_springs.Add(link);
-					else
-						m_charges.Add(link);
-				}
-			}
+			// Cache the nodes and springs
+			m_body.Assign(nodes.Values);
+			m_springs.Assign(conns.Select(x => new Link(nodes[x.Node0!], nodes[x.Node1!])));
 		}
 
 		/// <summary>Step the force simulation</summary>
@@ -106,18 +87,50 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				}
 			}
 
-			//// Only re-link nodes when not in equilibrium so that they
-			//// don't jump around while the nodes aren't moving.
-			//if (!Equalibrium)
-			//	Diagram_.RelinkNodes(m_diagram);
-
 			// Redraw the chart
 			m_diagram.Invalidate();
+		}
+
+		/// <summary>Enumerates all pairs of bodies that experience a repulsive force between them</summary>
+		private IEnumerable<Link> Charges
+		{
+			get
+			{
+				if (m_body.Count < 2) yield break;
+				for (int i = 0; i != m_body.Count - 1; ++i)
+					for (int j = i + 1; j != m_body.Count; ++j)
+						yield return new Link(m_body[i], m_body[j]);
+			}
 		}
 
 		/// <summary>Accumulate forces on the bodies</summary>
 		private void CalculateForces()
 		{
+			// This is just a balance between a force that is linear with distance
+			// and a force that is quadratic with distance. Since spring simulations
+			// easily become unstable, use a modified spring force function.
+
+			// Determine coulomb forces
+			foreach (var link in Charges)
+			{
+				var body0 = link.Body0;
+				var body1 = link.Body1;
+
+				// Find the minimum separation and the current separation
+				Separation(body0, body1, out var sep, out var min_sep);
+
+				// A coulomb force (F = kQq/r^2) is quadratically proportional to separation distance.
+				// To handle nodes of unknown sizes, set all nodes to have the same charge, regardless of size
+				// but make the separation equal to the distance between nearest points. Use charge of 1.
+				var dist = Math_.Max(sep.Length - min_sep, 1.0);
+				var coulumb = m_opts.Scatter.CoulombConstant / (dist * dist);
+
+				// Add the forces to each node
+				var f = coulumb * Math_.Normalise(sep);
+				body0.Force -= f;
+				body1.Force += f;
+			}
+
 			// Determine spring forces
 			foreach (var link in m_springs)
 			{
@@ -125,37 +138,17 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				var body1 = link.Body1;
 
 				// Find the minimum separation and the current separation
-				var vec = Separation(body0, body1);
-				var min_sep = MinSeparation(vec, body0, body1);
-				var sep = Math.Max(0, vec.Length - min_sep);
+				Separation(body0, body1, out var sep, out var min_sep);
 
-				// Spring force F = -Kx
-				const float bias = 100f;
-				var spring = -m_opts.Scatter.SpringConstant * (sep - bias);
-
-				// Add the forces to each node
-				var f = spring * Math_.Normalise(vec);
-				body0.Force -= f;
-				body1.Force += f;
-			}
-
-			// Determine coulomb forces
-			foreach (var link in m_charges)
-			{
-				var body0 = link.Body0;
-				var body1 = link.Body1;
-
-				// Find the minimum separation and the current separation
-				var vec = Separation(body0, body1);
-				var min_sep = MinSeparation(vec, body0, body1);
-				var sep = Math.Max(min_sep, vec.Length);
-
-				// Coulomb force F = kQq/r�, assume all 'charges' are 1
-				const float charge = 1000f;
-				var coulumb = m_opts.Scatter.CoulombConstant * charge * charge / (sep * sep);
+				// A spring force (F = -Kx) is linearly proportional to the deviation from the rest length.
+				// To handle nodes of unknown sizes, set the rest length to 'min_sep'. To stop the
+				// simulation blowing up, make the force zero when less than 'min_sep' and a constant
+				// when above some maximum separation.
+				var dist = Math_.Clamp(sep.Length - min_sep, -10 * min_sep, 10 * min_sep);
+				var spring = -m_opts.Scatter.SpringConstant * dist;
 
 				// Add the forces to each node
-				var f = coulumb * Math_.Normalise(vec);
+				var f = spring * Math_.Normalise(sep);
 				body0.Force -= f;
 				body1.Force += f;
 			}
@@ -177,9 +170,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			const float mass = 1f;
 			foreach (var body in m_body)
 			{
-				// If the simulation blows up, ignore the forces
-				var force = Math_.IsFinite(body.Force) || body.Force.Length < 1000.0 ? body.Force : v4.Zero;
-				var a = force / mass;
+				var a = body.Force / mass;
 				var v = body.Vel + 0.5f * dt * a;
 
 				Equalibrium &= a.LengthSq < Math_.Sqr(m_opts.Scatter.Equilibrium);
@@ -198,30 +189,56 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				body.Pos -= centre;
 		}
 
-		/// <summary>Return the separation vector between two bodies.</summary>
-		private v4 Separation(Body b0, Body b1)
+		/// <summary>Return the separation vector between the two bodies and the minimum distance in that direction to separate the bodies.</summary>
+		private void Separation(Body b0, Body b1, out v4 sep, out float min_dist)
 		{
 			var vec = b1.Pos - b0.Pos;
-			if (vec.LengthSq < Math_.TinyF)
-				vec = v4.Random3N(0f, m_rng);
+			var size = b1.Size + b0.Size;
 
-			return m_diagram.Options.NavigationMode switch
-			{
-				ChartControl.ENavMode.Scene3D => vec,
-				ChartControl.ENavMode.Chart2D => new v4(vec.x, vec.y, 0, 0),
-				_ => throw new Exception("Unknown chart mode")
-			};
-		}
-
-		/// <summary>Finds the minimum separation distance between to nodes for a given direction</summary>
-		private float MinSeparation(v4 v, Body n0, Body n1)
-		{
 			// Treat nodes as AABBs. This function needs to be tolerant of overlapping nodes.
-			// Returns the minimum distance needed to separate the nodes
-			var sz = n1.Size + n0.Size;
-			var d = Math_.Abs(Math_.Div(v, sz, v4.TinyF));
-			var i = Math_.MaxElementIndex(d.xyz);
-			return sz[i] + (float)m_opts.NodeMargin;
+			// In 2D, separate the nodes in the camera view plane. In 3D separate the 3d boxes.
+			switch (m_diagram.Options.NavigationMode)
+			{
+				case ChartControl.ENavMode.Scene3D:
+				{
+					// 'pen' is the penetration depth. Positive for penetration.
+					var pen = size - Math_.Abs(vec);
+
+					// The separating axis is the axis with the minimum penetration depth.
+					var i = Math_.MinElementIndex(pen.xyz);
+					if (pen[i] < 0) // Not overlapping
+					{
+						sep = vec;
+						min_dist = size.Length;
+					}
+					else
+					{
+						// Push out of penetration first
+						sep = v4.Zero;
+						sep[i] = vec[i];
+						min_dist = size[i];
+					}
+					break;
+				}
+				case ChartControl.ENavMode.Chart2D:
+				{
+					// Assume the AABBs are aligned with the camera (so 'size' does not need rotating)
+					sep = m_diagram.Camera.W2O * vec;
+					sep.z = 0f;
+
+					if (sep.LengthSq < Math_.TinyF)
+						sep = v4.Random2N(0f, 0f, m_rng);
+
+					// Find the minimum distance along 'sep' needed to separate the bodies
+					min_dist = Math_.Dot(0.5f * size.xy, Math_.Abs(sep.xy)) / sep.xy.Length;
+					sep = m_diagram.Camera.O2W * sep;
+					break;
+				}
+				default:
+				{
+					throw new Exception("Unsupported navigation mode");
+				}
+			}
 		}
 
 		/// <summary>Wrapper of 'Node'</summary>

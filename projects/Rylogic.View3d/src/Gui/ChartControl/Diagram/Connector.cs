@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
@@ -30,7 +31,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		{
 			m_anc0 = new AnchorPoint();
 			m_anc1 = new AnchorPoint();
-			m_centre_offset = v4.Zero;
+			CentreOffset = v4.Zero;
 			Type = type ?? EType.Line;
 			Style = style ?? new ConnectorStyle();
 			Gfx = new View3d.Object("*Group{}", false, Id);
@@ -42,7 +43,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		{
 			m_anc0 = new AnchorPoint();
 			m_anc1 = new AnchorPoint();
-			m_centre_offset = node.Element(XmlTag.CentreOffset).As(v4.Zero);
+			CentreOffset = node.Element(XmlTag.CentreOffset).As(v4.Zero);
 			Anc0 = node.Element(XmlTag.Anchor0).As<AnchorPoint>();
 			Anc1 = node.Element(XmlTag.Anchor1).As<AnchorPoint>();
 			Type = node.Element(XmlTag.Type).As<EType>();
@@ -71,7 +72,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private View3d.Object m_gfx = null!;
 
 		/// <summary>The position of the mid-point relative to the average of Anc0.LocationDS and Anc1.LocationDS</summary>
-		private v4 m_centre_offset;
+		private v4 CentreOffset;
 
 		/// <summary>Export to XML</summary>
 		public override XElement ToXml(XElement node)
@@ -258,19 +259,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Node1 = null;
 		}
 
-		///// <summary>A label graphic for the connector</summary>
-		//public virtual Label Label
-		//{
-		//	get { return m_impl_label; }
-		//	set
-		//	{
-		//		if (m_impl_label == value) return;
-		//		m_impl_label = value;
-		//		Invalidate();
-		//	}
-		//}
-		//private Label m_impl_label;
-
 		/// <summary>Style attributes for the connector</summary>
 		public ConnectorStyle Style
 		{
@@ -365,17 +353,28 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Invalidate();
 		}
 
-		/// <summary>Return all the locations that connectors can attach to on this element</summary>
-		public virtual IEnumerable<AnchorPoint> AnchorPoints()
+		/// <summary>The location of the centre of the connector (in diagram space)</summary>
+		public v4 CentreDS
 		{
-		//	var pts = Points(false);
-		//	v4 ctr;
-		//	if (pts.Length == 4) ctr = new v4((pts[1] + pts[2]) / 2f, PositionZ, 1);
-		//	else if (pts.Length == 3 && !Style.Smooth) ctr = new v4(pts[1], PositionZ, 1);
-		//	else if (pts.Length == 3) ctr = Spline.CreateSplines(pts.Select(x => new v4(x, PositionZ, 1))).First().Position(0.5f);
-		//	else throw new Exception("unexpected number of connector points");
-		//	yield return new AnchorPoint(this, ctr, v4.Zero);
-		yield break;
+			get
+			{
+				v4 ctr;
+				var pts = Points(true);
+				if (Style.Smooth)
+				{
+					ctr = Spline.CreateSplines(pts).First().Position(0.5f);
+				}
+				else
+				{
+					ctr = pts.Length switch
+					{
+						4 => (pts[1] + pts[2]) / 2f,
+						3 => pts[1],
+						_ => throw new Exception("unexpected number of connector points"),
+					};
+				}
+				return ctr;
+			}
 		}
 
 		/// <inheritdoc/>
@@ -438,9 +437,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
 		private v4[] Points(bool diagram_space)
 		{
+			// A connector is constructed from: Anc0.LocationDS, CentreOffset, Anc1.LocationDS.
+			// A line from Anc0.LocationDS is extended in the direction of Anc0.NormalDS till it
+			// is perpendicular to CentreOffset. The same is done from Anc1.LocationDS
+			// A connecting line between these points is then formed.
+
 			// A connector is a line from Anc0 to Anc1, via CentreOffset.
 			var origin = diagram_space ? v4.Zero : O2W.pos.w0;
-			var centre = O2W.pos - origin + m_centre_offset;
+			var centre = O2W.pos - origin + CentreOffset;
 			var beg = Anc0.LocationDS - origin;
 			var end = Anc1.LocationDS - origin;
 
@@ -451,15 +455,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			if (dir1 == v4.Zero) dir1 = -dir0;
 			if (dir0 == v4.Zero) dir0 = Math_.Normalise(end - beg, v4.Zero);
 			if (dir1 == v4.Zero) dir1 = Math_.Normalise(beg - end, v4.Zero);
-
-			// If the directions 
-
-
-
-			// A connector is constructed from: Anc0.LocationDS, CentreOffset, Anc1.LocationDS.
-			// A line from Anc0.LocationDS is extended in the direction of Anc0.NormalDS till it
-			// is perpendicular to m_centre_offset. The same is done from Anc1.LocationDS
-			// A connecting line between these points is then formed.
 
 
 			//v2 intersect;
@@ -505,6 +500,43 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 		/// <summary>Debugging description</summary>
 		public string Description => $"Connector[{Anc0.Description} -> {Anc1.Description}]";
+
+		/// <summary>Between same nodes ignoring direction, equality comparer</summary>
+		public static bool HasSameNodes(Connector lhs, Connector rhs)
+		{
+			if (lhs.Node0 == null || lhs.Node1 == null) return false;
+			if (rhs.Node0 == null || rhs.Node1 == null) return false;
+			return
+				(lhs.Node0 == rhs.Node0 && lhs.Node1 == rhs.Node1) ||
+				(lhs.Node0 == rhs.Node1 && lhs.Node1 == rhs.Node0);
+		}
+
+		/// <summary>Between same nodes not ignoring direction, equality comparer</summary>
+		public static bool HasSameNodesAndDirection(Connector lhs, Connector rhs)
+		{
+			if (lhs.Node0 == null || lhs.Node1 == null) return false;
+			if (rhs.Node0 == null || rhs.Node1 == null) return false;
+
+			// Omnidirectional connectors
+			if ((lhs.Type == EType.Line && rhs.Type == EType.Line) ||
+				(lhs.Type == EType.BiDir && rhs.Type == EType.BiDir))
+				return
+					(lhs.Node0 == rhs.Node0 && lhs.Node1 == rhs.Node1) ||
+					(lhs.Node0 == rhs.Node1 && lhs.Node1 == rhs.Node0);
+
+			// Unidirectional connectors
+			if (lhs.Type == EType.Forward)
+				return
+					(rhs.Type == EType.Forward && lhs.Node0 == rhs.Node0 && lhs.Node1 == rhs.Node1) ||
+					(rhs.Type == EType.Back    && lhs.Node0 == rhs.Node1 && lhs.Node1 == rhs.Node0);
+
+			if (lhs.Type == EType.Back)
+				return
+					(rhs.Type == EType.Back && lhs.Node0 == rhs.Node0 && lhs.Node1 == rhs.Node1) ||
+					(rhs.Type == EType.Forward && lhs.Node0 == rhs.Node1 && lhs.Node1 == rhs.Node0);
+
+			throw new Exception($"Unknown connector type: {lhs.Type}");
+		}
 
 		/// <summary>Connector types</summary>
 		[Flags]

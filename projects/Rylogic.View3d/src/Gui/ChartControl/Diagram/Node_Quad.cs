@@ -13,13 +13,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 {
 	public class QuadNode :Node
 	{
-		public QuadNode(string text, v4? size = null, m4x4? position = null, NodeStyle? style = null)
-			:base(size ?? new v4(50,50,0,0), Guid.NewGuid(), text, position, style)
+		public QuadNode(string text, v4? size = null, m4x4? position = null, NodeStyle? style = null, Guid? id = null)
+			:base(size ?? new v4(1,1,0,0), id ?? Guid.NewGuid(), text, position, style)
 		{
 			Size = Style.AutoSize ? PreferredSize(SizeMax) : Size;
 
 			// Create a texture for drawing the node content into
-			Surf = new Surface(Size.xi, Size.yi);
+			var tex_size = Size.xy * Style.TexelDensity;
+			Surf = new Surface(tex_size.xi, tex_size.yi);
 
 			// Create a quad model
 			var ldr = new LdrBuilder();
@@ -35,7 +36,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>Graphics for the node</summary>
-		private View3d.Object Gfx
+		protected View3d.Object Gfx
 		{
 			get => m_gfx;
 			set
@@ -48,10 +49,10 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		private View3d.Object m_gfx = null!;
 
 		/// <summary>Texture surface</summary>
-		private Surface Surf
+		protected Surface Surf
 		{
 			get => m_surf;
-			set
+			private set
 			{
 				if (m_surf == value) return;
 				Util.Dispose(ref m_surf!);
@@ -105,6 +106,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 			// Refresh the texture content
 			{
+				var size = Surf.Size;
 				using var tex = Surf.LockSurface(discard: true);
 				tex.Gfx.CompositingMode = CompositingMode.SourceOver;
 				tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
@@ -114,15 +116,16 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				if (Hovered) fill_colour = Style.Hovered;
 				if (Selected) fill_colour = Style.Selected;
 				if (!Enabled) fill_colour = Style.Disabled;
-				tex.Gfx.Clear(fill_colour);
 				using var fill_brush = new SolidBrush(fill_colour);
-				tex.Gfx.FillRectangle(fill_brush, -1, -1, Size.xi+2, Size.yi+2);
+				tex.Gfx.FillRectangle(fill_brush, 0, 0, size.x, size.y);
+				//tex.Gfx.Clear(fill_colour);
 
 				var text_colour = Style.Text;
 				if (!Enabled) text_colour = Style.TextDisabled;
 				using var text_brush = new SolidBrush(text_colour);
 
-				tex.Gfx.DrawString(Text, Style.Font, text_brush, TextLocation(tex.Gfx), TextFormat);
+				var loc = TextLocation(tex.Gfx, size.ToRectangleF());
+				tex.Gfx.DrawString(Text, Style.Font, text_brush, loc, TextFormat);
 			}
 
 			// Refresh the model geometry
@@ -138,36 +141,17 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		protected override void UpdateSceneCore()
 		{
 			base.UpdateSceneCore();
-			if (Chart == null || Gfx == null)
+			if (Chart is not ChartControl chart || Gfx == null)
 				return;
-
-			switch (Chart.Options.NavigationMode)
-			{
-				case ChartControl.ENavMode.Scene3D:
-				{
-					var o2w = O2W;
-					o2w.rot = Chart.Camera.O2W.rot;
-					O2W = o2w;
-					break;
-				}
-				case ChartControl.ENavMode.Chart2D:
-				{
-					var o2w = O2W;
-					o2w.rot = m3x4.Identity;
-					O2W = o2w;
-					break;
-				}
-				default:
-					throw new Exception("Unknown navigation mode");
-			}
+			
+			// Don't set 'O2W' here, leave it to derived classes
 
 			// Set the node to world transform
 			Gfx.O2P = O2W;
-
 			if (Visible)
-				Chart.Scene.Window.AddObject(Gfx);
+				chart.Scene.Window.AddObject(Gfx);
 			else
-				Chart.Scene.Window.RemoveObject(Gfx);
+				chart.Scene.Window.RemoveObject(Gfx);
 		}
 
 		/// <inheritdoc/>

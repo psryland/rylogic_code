@@ -19,7 +19,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Selected  = Colour32.Blue;
 			Dangling  = Colour32.DarkRed;
 			Width     = 3.0;
-			MinLength = 30.0;
+			MinLength = 0.3;
 			Smooth    = false;
 		}
 

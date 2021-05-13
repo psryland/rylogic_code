@@ -20,6 +20,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		// Notes:
 		//  - A node is a chart element set up for connecting to other node elements via connectors.
 		//  - 'Node' has support for text and size, but does not imply a particular shape (2d or 3d).
+		// - The texel density is controlled by Style.TexelDensity where a '1 x 1' node contains
+		//   'TexelDensity x TexelDensity' pixels.
 
 		/// <summary>Base node constructor</summary>
 		/// <param name="id">Globally unique id for the element</param>
@@ -167,33 +169,24 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>Return the preferred node size given the current text and size limits</summary>
-		public virtual v4 PreferredSize(v4 layout)
+		public virtual v4 PreferredSize(SizeF layout)
 		{
 			if (!Text.HasValue())
 				return Size;
 
-			//if (layout.x == 0f)
-			//	layout.x = float.MaxValue;
-			//if (layout.y == 0f)
-			//	layout.y = float.MaxValue;
-			//if (layout.z == 0f)
-			//	layout.z = float.MaxValue;
-
 			using var img = new Bitmap(1, 1, PixelFormat.Format32bppArgb);
 			using var gfx = Graphics.FromImage(img);
-			v2 sz = gfx.MeasureString(Text, Style.Font, layout.xy.ToSizeF(), TextFormat);
-			sz.x += Style.Padding.Left + Style.Padding.Right;
-			sz.y += Style.Padding.Top + Style.Padding.Bottom;
-			return new v4(sz, 0, 0);
+			v2 texel_size = gfx.MeasureString(Text, Style.Font, layout, TextFormat);
+	
+			// Convert from texels to node units and add padding
+			var node_size = texel_size / Style.TexelDensity;
+			node_size.x += Style.Padding.Left + Style.Padding.Right;
+			node_size.y += Style.Padding.Top + Style.Padding.Bottom;
+			
+			return new v4(node_size, 0, 0);
 		}
-		public v4 PreferredSize(double max_width, double max_height)
-		{
-			return PreferredSize(new v4((float)max_width, (float)max_height, 0f, 0f));
-		}
-		public v4 PreferredSize()
-		{
-			return PreferredSize(SizeMax);
-		}
+		public v4 PreferredSize(v4 size) => PreferredSize(size.xy.ToSizeF());
+		public v4 PreferredSize() => PreferredSize(SizeMax);
 
 		/// <summary>Style attributes for the node</summary>
 		public NodeStyle Style
@@ -228,11 +221,11 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <inheritdoc/>
 		public override BBox Bounds => new BBox(O2W.pos, Size / 2);
 
-		/// <summary>Returns the position to draw text given the current size and text alignment</summary>
-		protected RectangleF TextLocation(Graphics gfx)
+		/// <summary>Returns the position to draw text given the available 'rect', padding, and text alignment</summary>
+		protected RectangleF TextLocation(Graphics gfx, RectangleF rect)
 		{
 			var pad = Style.Padding;
-			var bnd = Size.xy.ToRectangleF().Inflated(-pad.Left, -pad.Top, -pad.Right, -pad.Bottom);
+			var bnd = rect.Inflated(-pad.Left, -pad.Top, -pad.Right, -pad.Bottom);
 			var tx = gfx.MeasureString(Text, Style.Font, bnd.Size, TextFormat);
 			return Style.TextAlign switch
 			{
