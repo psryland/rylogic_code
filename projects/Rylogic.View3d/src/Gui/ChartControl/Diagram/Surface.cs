@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Xml.Linq;
 using Rylogic.Extn;
@@ -12,13 +12,10 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 	{
 		// Notes:
 		//  - A wrapper around a view3d texture
-		public Surface(int sx, int sy, double texture_scale = 2, string? dbg_name = null)
+		public Surface(int sx, int sy, string? dbg_name = null)
 		{
-			Debug.Assert(texture_scale > 0);
-			TextureScale = texture_scale;
-
-			sx = (int)Math.Max(1.0, sx * TextureScale + 0.5);
-			sy = (int)Math.Max(1.0, sy * TextureScale + 0.5);
+			sx = (int)Math.Max(1.0, sx + 0.5);
+			sy = (int)Math.Max(1.0, sy + 0.5);
 			var opts = new View3d.TextureOptions
 			{
 				GdiCompatible = true,
@@ -28,7 +25,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 		public Surface(XElement node)
 		{
-			TextureScale = node.Element(XmlTag.TextureScale).As<int>();
 			var sz = node.Element(XmlTag.Size).As<v2>();
 			var sx = (int)Math.Max(1.0, sz.x + 0.5);
 			var sy = (int)Math.Max(1.0, sz.y + 0.5);
@@ -46,22 +42,21 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		/// <summary>Export to XML</summary>
 		public XElement ToXml(XElement node)
 		{
-			node.Add2(XmlTag.TextureScale, TextureScale, false);
 			node.Add2(XmlTag.Size, Size, false);
 			return node;
 		}
 
-		/// <summary>Texture scaling factor</summary>
-		public double TextureScale { get; }
+		/// <summary>Texture format information</summary>
+		public View3d.ImageInfo Info => Surf.Info;
 
 		/// <summary>Get/Set the size of the texture</summary>
 		public v2 Size
 		{
-			get => v2.From(Surf.Size) / TextureScale;
+			get => v2.From(Surf.Size);
 			set
 			{
 				// Get the size in pixels
-				var tex_size = (value * TextureScale).ToSize();
+				var tex_size = value.ToSize();
 				if (Surf == null || Surf.Size == tex_size)
 					return;
 
@@ -91,7 +86,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		public View3d.Texture.Lock LockSurface(bool discard)
 		{
 			var lck = Surf.LockSurface(discard);
-			lck.Gfx.ScaleTransform((float)TextureScale, (float)TextureScale);
 			return lck;
 		}
 	}

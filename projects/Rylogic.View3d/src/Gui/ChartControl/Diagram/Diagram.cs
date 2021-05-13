@@ -17,34 +17,40 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 
 		/// <summary>Initialise a chart control to be used for diagrams</summary>
-		public static void Init(ChartControl diagram, Options options)
-		{
-			diagram.Scene.Window.LightProperties = View3d.LightInfo.Ambient(0xFF808080);
-			diagram.Options.Orthographic = true;
-			diagram.Options.LockAspect = 1.0;
-			diagram.Options.AllowElementDragging = options.AllowArrange;
-
-			// Add support for resizing nodes
-			//chart.MouseDown -= HandleMouseDown;
-			//chart.MouseDown += HandleMouseDown;
-			//void HandleMouseDown(object? sender, MouseButtonEventArgs e)
-			//{
-			//	if (sender is not ChartControl chart) return;
-			//	if (!chart.Selected.OfType<Node>().Any(x => x.Selected && x.Style.Resizeable))
-			//		return;
-			//	
-			//	chart.MouseOperations.Pending[MouseButton.Left] = new MouseOpResize(chart);
-			//	e.Handled = true;
-			//}
-		}
+		//public static void Init(ChartControl diagram, Options options)
+		//{
+		//	diagram.Scene.Window.LightProperties = View3d.LightInfo.Ambient(0xFF808080);
+		//	diagram.Options.Orthographic = true;
+		//	diagram.Options.LockAspect = 1.0;
+		//	diagram.Options.AllowElementDragging = options.AllowArrange;
+		//
+		//	// Add support for resizing nodes
+		//	//chart.MouseDown -= HandleMouseDown;
+		//	//chart.MouseDown += HandleMouseDown;
+		//	//void HandleMouseDown(object? sender, MouseButtonEventArgs e)
+		//	//{
+		//	//	if (sender is not ChartControl chart) return;
+		//	//	if (!chart.Selected.OfType<Node>().Any(x => x.Selected && x.Style.Resizeable))
+		//	//		return;
+		//	//	
+		//	//	chart.MouseOperations.Pending[MouseButton.Left] = new MouseOpResize(chart);
+		//	//	e.Handled = true;
+		//	//}
+		//}
 
 		/// <summary>Diagram Options</summary>
-		public class Options :SettingsSet<Options>
+		public class Options :ChartControl.OptionsData
 		{
 			public Options()
 			{
-				AllowArrange = true;
-				NodeMargin = 30.0;
+				NavigationMode = ChartControl.ENavMode.Chart2D;
+				BackgroundColour = Colour32.Gray;
+				AllowElementDragging = true;
+				AllowSelection = true;
+				ShowAxes = false;
+				ShowGridLines = false;
+				Orthographic = true;
+				LockAspect = 1.0;
 				Scatter = new ScatterOptions();
 				Relink = new RelinkOptions();
 			}
@@ -54,14 +60,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			{
 				get => get<bool>(nameof(AllowArrange));
 				set => set(nameof(AllowArrange), value);
-			}
-
-			/// <summary>The margin between nodes</summary>
-			[Description("The gap between nodes")]
-			public double NodeMargin
-			{
-				get => get<double>(nameof(NodeMargin));
-				set => set(nameof(NodeMargin), value);
 			}
 
 			/// <summary>Node scattering parameters</summary>

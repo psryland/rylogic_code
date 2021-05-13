@@ -14,21 +14,22 @@ namespace TestWPF
 		{
 			InitializeComponent();
 
-			// Setup the chart for diagram mode
-			DiagramOptions = new Diagram_.Options();
-			DiagramOptions.Relink.AnchorSharingMode = Diagram_.EAnchorSharing.ShareSameOnly;
-			DiagramCMenu = new Diagram_.CMenu(m_diag, DiagramOptions);
-			Diagram_.Init(m_diag, DiagramOptions);
-
+			var opts = new Diagram_.Options
+			{
+				Relink =
+				{
+					AnchorSharingMode = Diagram_.EAnchorSharing.ShareSameOnly,
+				}
+			};
 			var bs = new NodeStyle
 			{
-				AutoSize     = true,
-				Resizeable   = true,
-				Border       = Colour32.Black,
-				Fill         = Colour32.LightSteelBlue,
-				Hovered      = Colour32.LightGreen,
-				Selected     = Colour32.SteelBlue,
-				Text         = Colour32.Black,
+				AutoSize = true,
+				Resizeable = true,
+				Border = Colour32.Black,
+				Fill = Colour32.LightSteelBlue,
+				Hovered = Colour32.LightGreen,
+				Selected = Colour32.SteelBlue,
+				Text = Colour32.Black,
 				TextDisabled = Colour32.Gray,
 			};
 			var cs = new ConnectorStyle
@@ -41,12 +42,17 @@ namespace TestWPF
 				Width = 10.0,
 			};
 
-			var node0 = new QuadNode("Node0", position: m4x4.Translation(-100, -50, -20), style: bs) { Chart = m_diag };
-			var node1 = new QuadNode("Node1", position: m4x4.Translation(100, 100, 0), style: bs) { Chart = m_diag };
-			var node2 = new QuadNode("Node2", position: m4x4.Translation(200, -150, 0), style: bs) { Chart = m_diag };
-			var node3 = new QuadNode("Node3", position: m4x4.Translation(-200, 200, 0), style: bs) { Chart = m_diag };
-			var node4 = new QuadNode("Node4", position: m4x4.Translation(50, -200, 0), style: bs) { Chart = m_diag };
-			var node5 = new QuadNode("Node5", position: m4x4.Translation(50, 50, 10), style: bs) { Chart = m_diag };
+			// Setup the chart for diagram mode
+			m_diag.Options = opts;
+			m_diag.Scene.Window.LightProperties = View3d.LightInfo.Ambient(Colour32.Gray);
+			DiagramCMenuContext = new Diagram_.CMenu(m_diag, opts);
+
+			var node0 = new QuadNode("Node0\nIS A BIGGGG\n Node! \n Oh Yeaaahhh!!", position: m4x4.Translation(-10, -5, -2), style: bs) { Chart = m_diag };
+			var node1 = new QuadNode("Node1", position: m4x4.Translation(10, 10, 0), style: bs) { Chart = m_diag };
+			var node2 = new QuadNode("Node2", position: m4x4.Translation(20, -15, 0), style: bs) { Chart = m_diag };
+			var node3 = new QuadNode("Node3", position: m4x4.Translation(-20, 20, 0), style: bs) { Chart = m_diag };
+			var node4 = new QuadNode("Node4", position: m4x4.Translation(5, -20, 0), style: bs) { Chart = m_diag };
+			var node5 = new QuadNode("Node5", position: m4x4.Translation(5, 5, 1), style: bs) { Chart = m_diag };
 
 			var conn0 = new Connector(node0, node1, type:Connector.EType.BiDir, style:cs) { Chart = m_diag };
 			var conn1 = new Connector(node0, node2, type: Connector.EType.BiDir, style:cs) { Chart = m_diag };
@@ -58,6 +64,7 @@ namespace TestWPF
 			var conn7 = new Connector(node0, node5, type: Connector.EType.Forward, style: cs) { Chart = m_diag };
 			var conn8 = new Connector(node3, node0, type: Connector.EType.Forward, style: cs) { Chart = m_diag };
 			var conn9 = new Connector(node0, node4, type: Connector.EType.Forward, style: cs) { Chart = m_diag };
+			var connA = new Connector(node3, node4, type: Connector.EType.Line, style: cs) { Chart = m_diag };
 
 			m_diag.Scene.ContextMenu.DataContext = this;
 			DataContext = this;
@@ -69,9 +76,6 @@ namespace TestWPF
 			base.OnClosed(e);
 		}
 
-		private Diagram_.Options DiagramOptions { get; }
-		private Diagram_.CMenu DiagramCMenu { get; }
-
 		/// <inheritdoc/>
 		public IView3dCMenu View3dCMenuContext => m_diag.Scene.View3dCMenuContext;
 
@@ -79,6 +83,6 @@ namespace TestWPF
 		public IChartCMenu ChartCMenuContext => m_diag.Scene.ChartCMenuContext;
 
 		/// <inheritdoc/>
-		public IDiagramCMenu DiagramCMenuContext => DiagramCMenu;
+		public IDiagramCMenu DiagramCMenuContext { get; }
 	}
 }

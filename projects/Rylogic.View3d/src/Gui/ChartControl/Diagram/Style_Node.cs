@@ -25,11 +25,12 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Disabled      = Colour32.LightGray;
 			Text          = Colour32.Black;
 			TextDisabled  = Colour32.DarkGray;
-			CornerRadius  = 5.0;
-			AnchorSpacing = 25.0;
+			CornerRadius  = 0.1;
+			AnchorSpacing = 0.2;
+			TexelDensity  = 256.0;
 			TextAlign     = ContentAlignment.MiddleCenter;
-			Font          = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
-			Padding       = Rectangle.FromLTRB(10, 10, 10, 10);
+			Font          = new Font(FontFamily.GenericSansSerif, 36f, GraphicsUnit.Point);
+			Padding       = RectangleF.FromLTRB(0.1f, 0.1f, 0.1f, 0.1f);
 		}
 
 		/// <summary>Unique id for the style</summary>
@@ -123,6 +124,14 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			set => set(nameof(AnchorSpacing), value);
 		}
 
+		/// <summary>The texel density on the node, i.e. a '1 x 1' node contains 'TexelDensity x TexelDensity' pixels</summary>
+		[Description("The texel density on the node, i.e. a '1 x 1' node contains 'TexelDensity x TexelDensity' pixels")]
+		public double TexelDensity
+		{
+			get => get<double>(nameof(TexelDensity));
+			set => set(nameof(TexelDensity), value);
+		}
+
 		/// <summary>The alignment of the text within the node</summary>
 		[Description("The alignment of text within the node")]
 		public ContentAlignment TextAlign
@@ -139,8 +148,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			set => set(nameof(Font), value);
 		}
 
-		/// <summary>The padding surrounding the text in the node</summary>
-		[Description("The padding between the node edge and the contained text")]
+		/// <summary>The padding surrounding the text in the node (in node dimensions, not texels)</summary>
+		[Description("The padding between the node edge and the contained text (in node dimensions, not texels)")]
 		public RectangleF Padding
 		{
 			get => get<RectangleF>(nameof(Padding));
