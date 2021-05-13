@@ -1,4 +1,4 @@
-//*****************************************
+﻿//*****************************************
 // Quad Tree
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************
@@ -496,7 +496,7 @@ namespace Rylogic.UnitTests
 		public static bool Collide(Watzit lhs, Watzit rhs)
 		{
 			float[] diff = new[]{rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
-			return Math_.Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+			return Math_.Length0(diff[0], diff[1]) < lhs.radius + rhs.radius;
 		}
 
 		[Test] public void QuadTree()
@@ -541,7 +541,7 @@ namespace Rylogic.UnitTests
 
 			for (int i = 0; i != 10000; ++i)
 			{
-				var w = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Math_.Len2(qtree.Size.Width, qtree.Size.Height)));
+				var w = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Math_.Length0(qtree.Size.Width, qtree.Size.Height)));
 				var n = qtree.Insert(w, w.pos, w.radius);
 
 				// the root node can have arbitrarily large objects in it
@@ -572,7 +572,7 @@ namespace Rylogic.UnitTests
 					foreach (var item in node.m_items)
 						item.flag = false;
 
-				var W = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Math_.Len2(qtree.Size.Width, qtree.Size.Height)));
+				var W = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Math_.Length0(qtree.Size.Width, qtree.Size.Height)));
 				qtree.Traverse(W.pos, W.radius, (w,n) =>
 					{
 						w.flag = Collide(W, w);

@@ -697,10 +697,10 @@
 					MinWidth="80"
 					/>
 				<gui:SliderFunction
-					Minimum="0"
+					Minimum="-1"
 					Maximum="5"
-					FunctionExpr="x"
-					InverseExpr="x > 0 ? x : 0"
+					FunctionExpr="pow(10, x)"
+					InverseExpr="log10(x)"
 					ValueFn="{Binding ScatterCharge}"
 					Margin="1,1,20,1"
 					MinWidth="100"
@@ -721,10 +721,10 @@
 					MinWidth="80"
 					/>
 				<gui:SliderFunction
-					Minimum="0"
-					Maximum="1"
-					FunctionExpr="x"
-					InverseExpr="x > 0 ? x : 0"
+					Minimum="-2"
+					Maximum="5"
+					FunctionExpr="pow(10, x)"
+					InverseExpr="log10(x)"
 					ValueFn="{Binding ScatterSpring}"
 					Margin="1,1,20,1"
 					MinWidth="100"

@@ -10,7 +10,7 @@ namespace CoinFlip.UI.Indicators
 	public abstract class IndicatorView :ChartControl.Element, IIndicatorView
 	{
 		public IndicatorView(Guid id, string name, IChartView chart, IIndicator indicator)
-			: base(id, m4x4.Identity, name)
+			: base(id, name)
 		{
 			Indicator = indicator;
 			Instrument = chart.Instrument;

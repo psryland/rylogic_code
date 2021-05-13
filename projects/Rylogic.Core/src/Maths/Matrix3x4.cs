@@ -212,7 +212,7 @@ namespace Rylogic.Maths
 			return mat;
 		}
 
-		/// <summary>Create from an axis and angle. 'axis' should be normalised</summary>
+		/// <summary>Create from an axis and angle. 'axis' should be normalised. 'angle' is in radians</summary>
 		public static m3x4 Rotation(v4 axis_norm, float angle)
 		{
 			Debug.Assert(Math_.FEql(axis_norm.LengthSq, 1f), "'axis_norm' should be normalised");

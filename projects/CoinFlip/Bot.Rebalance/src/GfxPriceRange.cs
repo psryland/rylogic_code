@@ -12,7 +12,7 @@ namespace Bot.Rebalance
 		// Notes:
 		// - Chart graphics to represent the price range
 		public GfxPriceRange(Guid id)
-			:base(id, m4x4.Identity, "PriceRange")
+			:base(id, "PriceRange")
 		{
 		}
 		protected override void Dispose(bool _)

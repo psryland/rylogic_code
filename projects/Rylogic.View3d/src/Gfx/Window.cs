@@ -571,13 +571,13 @@ namespace Rylogic.Gfx
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
-			public v2 SSPointToNSSPoint(PointF screen)
+			public v2 SSPointToNSSPoint(v2 screen)
 			{
-				return View3D_SSPointToNSSPoint(Handle, v2.From(screen));
+				return View3D_SSPointToNSSPoint(Handle, screen);
 			}
 
 			/// <summary>Convert a normalised point into a screen space point</summary>
-			public v2 ScreenSpacePointF(v2 pt)
+			public v2 ScreenSpacePoint(v2 pt)
 			{
 				// Notes:
 				//  - What does screen space mean if there is no back buffer?
@@ -590,11 +590,6 @@ namespace Rylogic.Gfx
 				var dpi_scale = DpiScale;
 				var da = Hwnd != IntPtr.Zero ? BackBufferSize : RenderTargetSize;
 				return new v2((pt.x + 1f) * da.Width / (2f * dpi_scale.X), (1f - pt.y) * da.Height / (2f * dpi_scale.Y));
-			}
-			public Point ScreenSpacePoint(v2 pt)
-			{
-				var p = ScreenSpacePointF(pt);
-				return new Point((int)Math.Round(p.x), (int)Math.Round(p.y));
 			}
 
 			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>

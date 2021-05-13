@@ -16,7 +16,7 @@ namespace CoinFlip.UI.GfxObjects
 	public class TradeWidget : ChartControl.Element
 	{
 		public TradeWidget(Trade trade, CandleChart candle_chart)
-			: base(Guid.NewGuid(), m4x4.Identity, "Trade")
+			: base(Guid.NewGuid(), "Trade")
 		{
 			Trade = trade;
 			CandleChart = candle_chart;

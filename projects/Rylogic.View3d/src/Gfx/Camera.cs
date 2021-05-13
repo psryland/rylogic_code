@@ -1,4 +1,4 @@
-﻿//#define PR_VIEW3D_CREATE_STACKTRACE
+//#define PR_VIEW3D_CREATE_STACKTRACE
 using System.Diagnostics;
 using System.Drawing;
 using System.Xml.Linq;
@@ -240,7 +240,7 @@ namespace Rylogic.Gfx
 			public v4 SSPointToWSPoint(PointF screen)
 			{
 				var nss = SSPointToNSSPoint(screen);
-				return NSSPointToWSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistanceGet(m_window.Handle), 1.0f));
+				return NSSPointToWSPoint(new v4(nss.x, nss.y, FocusDist, 1.0f));
 			}
 
 			/// <summary>Return the normalised screen space point corresponding to a screen space point</summary>
@@ -256,12 +256,12 @@ namespace Rylogic.Gfx
 			{
 				return View3D_WSPointToNSSPoint(m_window.Handle, world);
 			}
-			public Point WSPointToSSPoint(v4 world)
+			public v2 WSPointToSSPoint(v4 world)
 			{
 				var nss = WSPointToNSSPoint(world);
 				return m_window.ScreenSpacePoint(new v2(nss.x, nss.y));
 			}
-			public Point WSPointToSSPoint(v2 world)
+			public v2 WSPointToSSPoint(v2 world)
 			{
 				return WSPointToSSPoint(new v4(world, 0, 1));
 			}
@@ -285,7 +285,7 @@ namespace Rylogic.Gfx
 			{
 				var nss_s = SSPointToNSSPoint(s);
 				var nss_e = SSPointToNSSPoint(e);
-				var z = View3D_CameraFocusDistanceGet(m_window.Handle);
+				var z = FocusDist;
 				return
 					NSSPointToWSPoint(new v4(nss_e.x, nss_e.y, z, 1.0f)) -
 					NSSPointToWSPoint(new v4(nss_s.x, nss_s.y, z, 1.0f));
@@ -308,7 +308,7 @@ namespace Rylogic.Gfx
 			public void SSPointToWSRay(PointF screen, out v4 ws_point, out v4 ws_direction)
 			{
 				var nss = SSPointToNSSPoint(screen);
-				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistanceGet(m_window.Handle), 1.0f), out ws_point, out ws_direction);
+				NSSPointToWSRay(new v4(nss.x, nss.y, FocusDist, 1.0f), out ws_point, out ws_direction);
 			}
 
 			/// <summary>A ray cast from the camera into the scene through client space point 'point_cs'</summary>

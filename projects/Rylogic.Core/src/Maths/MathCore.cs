@@ -70,6 +70,25 @@ namespace Rylogic.Maths
 		public const float GoldenAngleF = (float)GoldenAngle;
 		public const float PhiF = GoldenRatioF;
 
+		// SI unit conversion
+		public static double ident(double x) => x;
+		public static double ms_to_s(double x) => x / 1000.0;
+		public static double s_to_ms(double x) => x * 1000.0;
+		public static double um_to_m(double x) => x / 1000000.0;
+		public static double m_to_um(double x) => x * 1000000.0;
+		public static double mm_to_m(double x) => x / 1000.0;
+		public static double m_to_mm(double x) => x * 1000.0;
+		public static double um_to_mm(double x) => x / 1000.0;
+		public static double mm_to_um(double x) => x * 1000.0;
+		public static double l00um_to_m(double x) => x / 10000.0;
+		public static double m_to_100um(double x) => x * 10000.0;
+		public static double l00um_to_mm(double x) => x / 10.0;
+		public static double mm_to_100um(double x) => x * 10.0;
+		public static double um_to_100um(double x) => x / 100.0;
+		public static double l00um_to_um(double x) => x * 100.0;
+		public static double inches_to_m(double x) => x / 39.3701;
+		public static double m_to_inches(double x) => x * 39.3701;
+
 		public static bool IsFinite(float x) { return !float.IsInfinity(x) && !float.IsNaN(x); }
 		public static bool IsFinite(double x) { return !double.IsInfinity(x) && !double.IsNaN(x); }
 		public static bool IsNaN(float x) { return float.IsNaN(x); }
@@ -100,19 +119,26 @@ namespace Rylogic.Maths
 		public static double RadiansToDegrees(double radians) { return radians * _360ByTau; }
 		public static v4 RadiansToDegrees(v4 degrees) { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
 
-		public static void Swap<T>(ref T lhs, ref T rhs) { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		public static float Len2Sq(float x, float y) { return Sqr(x) + Sqr(y); }
-		public static float Len3Sq(float x, float y, float z) { return Sqr(x) + Sqr(y) + Sqr(z); }
-		public static float Len4Sq(float x, float y, float z, float w) { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
-		public static float Len2(float x, float y) { return Sqrt(Len2Sq(x, y)); }
-		public static float Len3(float x, float y, float z) { return Sqrt(Len3Sq(x, y, z)); }
-		public static float Len4(float x, float y, float z, float w) { return Sqrt(Len4Sq(x, y, z, w)); }
-		public static double Len2Sq(double x, double y) { return Sqr(x) + Sqr(y); }
-		public static double Len3Sq(double x, double y, double z) { return Sqr(x) + Sqr(y) + Sqr(z); }
-		public static double Len4Sq(double x, double y, double z, double w) { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
-		public static double Len2(double x, double y) { return Sqrt(Len2Sq(x, y)); }
-		public static double Len3(double x, double y, double z) { return Sqrt(Len3Sq(x, y, z)); }
-		public static double Len4(double x, double y, double z, double w) { return Sqrt(Len4Sq(x, y, z, w)); }
+		public static void Swap<T>(ref T lhs, ref T rhs)
+		{
+			var tmp = lhs;
+			lhs = rhs;
+			rhs = tmp;
+		}
+
+		/// <summary>Length</summary>
+		public static float LengthSq(float x, float y)                        { return Sqr(x) + Sqr(y); }
+		public static float LengthSq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static float LengthSq(float x, float y, float z, float w)      { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
+		public static double LengthSq(double x, double y)                     { return Sqr(x) + Sqr(y); }
+		public static double LengthSq(double x, double y, double z)           { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static double LengthSq(double x, double y, double z, double w) { return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w); }
+		public static float Length0(float x, float y)                          { return Sqrt(LengthSq(x, y)); }
+		public static float Length0(float x, float y, float z)                 { return Sqrt(LengthSq(x, y, z)); }
+		public static float Length0(float x, float y, float z, float w)        { return Sqrt(LengthSq(x, y, z, w)); }
+		public static double Length0(double x, double y)                       { return Sqrt(LengthSq(x, y)); }
+		public static double Length0(double x, double y, double z)             { return Sqrt(LengthSq(x, y, z)); }
+		public static double Length0(double x, double y, double z, double w)   { return Sqrt(LengthSq(x, y, z, w)); }
 
 		// Floating point comparisons
 
@@ -497,7 +523,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return the length of a triangle side given by two adjacent side lengths and an angle between them</summary>
-		public static double Length(double adj0, double adj1, double angle)
+		public static double EdgeLength(double adj0, double adj1, double angle)
 		{
 			var len_sq = adj0*adj0 + adj1*adj1 - 2.0f * adj0 * adj1 * Math.Cos(angle);
 			return len_sq > 0 ? Sqrt(len_sq) : 0.0;

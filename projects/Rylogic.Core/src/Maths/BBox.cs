@@ -113,13 +113,22 @@ namespace Rylogic.Maths
 		public float Upper(int axis) => Centre[axis] + Radius[axis];
 
 		/// <summary>Gets the x dimension of the bounding box</summary>
-		public float SizeX => 2.0f * Radius.x;
+		public float SizeX => 2f * Radius.x;
 
 		/// <summary>Gets the y dimension of the bounding box</summary>
-		public float SizeY => 2.0f * Radius.y;
+		public float SizeY => 2f * Radius.y;
 
 		/// <summary>Gets the z dimension of the bounding box</summary>
-		public float SizeZ => 2.0f * Radius.z;
+		public float SizeZ => 2f * Radius.z;
+
+		/// <summary>Gets the xy plane dimension of the bounding box</summary>
+		public float SizeXY => 2f * Math_.Length0(Radius.x, Radius.y);
+
+		/// <summary>Gets the yz plane dimension of the bounding box</summary>
+		public float SizeYZ => 2f * Math_.Length0(Radius.y, Radius.z);
+
+		/// <summary>Gets the zx plane dimension of the bounding box</summary>
+		public float SizeZX => 2f * Math_.Length0(Radius.z, Radius.x);
 
 		/// <summary>Get/Sets the centre point of the bounding box</summary>
 		public v4 Centre;

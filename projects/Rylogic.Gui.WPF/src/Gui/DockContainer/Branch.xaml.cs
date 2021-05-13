@@ -429,6 +429,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				throw new Exception($"Invalid size for this branch, can't determine dock size for {location}");
 
 			DockSizes.SetSize(location, DisplayRectangle, value, resize_mode);
+			DockContainer.NotifyLayoutChanged();
 		}
 
 		/// <summary>Get the bounds of a dock site in parent (DockContainer or containing Branch) space</summary>

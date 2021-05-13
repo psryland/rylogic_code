@@ -371,6 +371,7 @@ namespace Rylogic.Gui.WPF
 					var point_ss = e.GetPosition(Chart.Scene).ToPointF();
 					Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
+				Chart.SetRangeFromCamera();
 				Chart.Invalidate();
 
 				e.Handled = args.Handled;
