@@ -113,7 +113,9 @@ namespace Rylogic.Gui.WPF
 				// Attach to the new chart
 				if (m_chart != null && update)
 				{
-					Debug.Assert(!m_chart.Elements.Contains(this), "Element already in the Chart's Elements collection");
+					if (m_chart.Elements.Contains(this))
+						throw new Exception("Element is already in the Chart's Elements collection");
+
 					m_chart.Elements.Add(this);
 					InvalidateChart();
 				}

@@ -125,7 +125,7 @@ namespace Rylogic.Gui.WPF
 			var y = +1.0 - 2.0 * (pt.Y / ellipse.ActualHeight);
 
 			double z;
-			var xy_sq = Math_.Len2Sq(x, y);
+			var xy_sq = Math_.LengthSq(x, y);
 			if (xy_sq <= 1.0)
 			{
 				z = Math.Sqrt(1.0 - xy_sq);

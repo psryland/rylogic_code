@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
@@ -49,21 +49,21 @@ namespace Rylogic.Maths
 
 				switch (tok)
 				{
-				case ETok.None:
+					case ETok.None:
 					{
 						return i == expr.Length;
 					}
-				case ETok.Value:
+					case ETok.Value:
 					{
 						result[ridx] = Expression.Constant(val);
 						break;
 					}
-				case ETok.Variable:
+					case ETok.Variable:
 					{
 						result[ridx] = (Expression?)val ?? throw new Exception("Variable not found");
 						break;
 					}
-				case ETok.Add:
+					case ETok.Add:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -71,7 +71,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Add(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.Sub:
+					case ETok.Sub:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -79,7 +79,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Subtract(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.Mul:
+					case ETok.Mul:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -87,7 +87,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Multiply(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.Div:
+					case ETok.Div:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -95,7 +95,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Divide(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.Mod:
+					case ETok.Mod:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -103,7 +103,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Modulo(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.UnaryAdd:
+					case ETok.UnaryAdd:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -111,7 +111,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.UnaryPlus(rhs[0]);
 						break;
 					}
-				case ETok.UnaryMinus:
+					case ETok.UnaryMinus:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -119,7 +119,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Negate(rhs[0]);
 						break;
 					}
-				case ETok.Comp:
+					case ETok.Comp:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -127,7 +127,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.OnesComplement(rhs[0]);
 						break;
 					}
-				case ETok.Not:
+					case ETok.Not:
 					{
 						++i;
 						var rhs = new Expression[1];
@@ -135,7 +135,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Not(rhs[0]);
 						break;
 					}
-				case ETok.LogOR:
+					case ETok.LogOR:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -143,7 +143,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.OrElse(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogAND:
+					case ETok.LogAND:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -151,7 +151,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.AndAlso(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.BitOR:
+					case ETok.BitOR:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -159,7 +159,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Or(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.BitXOR:
+					case ETok.BitXOR:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -167,7 +167,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.ExclusiveOr(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.BitAND:
+					case ETok.BitAND:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -175,7 +175,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.And(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogEql:
+					case ETok.LogEql:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -183,7 +183,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Equal(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogNEql:
+					case ETok.LogNEql:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -191,7 +191,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.NotEqual(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogLT:
+					case ETok.LogLT:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -199,7 +199,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.LessThan(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogLTEql:
+					case ETok.LogLTEql:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -207,7 +207,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.LessThanOrEqual(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogGT:
+					case ETok.LogGT:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -215,7 +215,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.GreaterThan(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LogGTEql:
+					case ETok.LogGTEql:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -223,7 +223,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.GreaterThanOrEqual(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.LeftShift:
+					case ETok.LeftShift:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -231,7 +231,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.LeftShift(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.RightShift:
+					case ETok.RightShift:
 					{
 						i += 2;
 						var rhs = new Expression[1];
@@ -239,7 +239,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.RightShift(result[ridx], rhs[0]);
 						break;
 					}
-				case ETok.Fmod:
+					case ETok.Fmod:
 					{
 						i += 4;
 						var args = new Expression[2];
@@ -248,7 +248,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.IEEERemainder), null, args[0], args[1]);
 						break;
 					}
-				case ETok.Ceil:
+					case ETok.Ceil:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -257,7 +257,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Ceiling), null, args[0]);
 						break;
 					}
-				case ETok.Floor:
+					case ETok.Floor:
 					{
 						i += 5;
 						var args = new Expression[1];
@@ -266,7 +266,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Floor), null, args[0]);
 						break;
 					}
-				case ETok.Round:
+					case ETok.Round:
 					{
 						i += 5;
 						var args = new Expression[1];
@@ -275,7 +275,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Round), null, args[0]);
 						break;
 					}
-				case ETok.Min:
+					case ETok.Min:
 					{
 						i += 3;
 						var args = new Expression[2];
@@ -284,7 +284,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Min), null, args[0], args[1]);
 						break;
 					}
-				case ETok.Max:
+					case ETok.Max:
 					{
 						i += 3;
 						var args = new Expression[2];
@@ -293,7 +293,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Max), null, args[0], args[1]);
 						break;
 					}
-				case ETok.Clamp:
+					case ETok.Clamp:
 					{
 						i += 5;
 						var args = new Expression[3];
@@ -302,7 +302,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Clamp), new[] { args[0].Type }, args[0], args[1], args[2]);
 						break;
 					}
-				case ETok.Abs:
+					case ETok.Abs:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -311,7 +311,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Abs), null, args[0]);
 						break;
 					}
-				case ETok.Sin:
+					case ETok.Sin:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -320,7 +320,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Sin), null, args[0]);
 						break;
 					}
-				case ETok.Cos:
+					case ETok.Cos:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -329,7 +329,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Cos), null, args[0]);
 						break;
 					}
-				case ETok.Tan:
+					case ETok.Tan:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -338,7 +338,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Tan), null, args[0]);
 						break;
 					}
-				case ETok.ASin:
+					case ETok.ASin:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -347,7 +347,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Asin), null, args[0]);
 						break;
 					}
-				case ETok.ACos:
+					case ETok.ACos:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -356,7 +356,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Acos), null, args[0]);
 						break;
 					}
-				case ETok.ATan:
+					case ETok.ATan:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -365,7 +365,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Atan), null, args[0]);
 						break;
 					}
-				case ETok.ATan2:
+					case ETok.ATan2:
 					{
 						i += 5;
 						var args = new Expression[2];
@@ -374,7 +374,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Atan2), null, args[0], args[1]);
 						break;
 					}
-				case ETok.SinH:
+					case ETok.SinH:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -383,7 +383,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Sinh), null, args[0]);
 						break;
 					}
-				case ETok.CosH:
+					case ETok.CosH:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -392,7 +392,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Cosh), null, args[0]);
 						break;
 					}
-				case ETok.TanH:
+					case ETok.TanH:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -401,7 +401,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Tanh), null, args[0]);
 						break;
 					}
-				case ETok.Exp:
+					case ETok.Exp:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -410,7 +410,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Exp), null, args[0]);
 						break;
 					}
-				case ETok.Log:
+					case ETok.Log:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -419,7 +419,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Log), null, args[0]);
 						break;
 					}
-				case ETok.Log10:
+					case ETok.Log10:
 					{
 						i += 5;
 						var args = new Expression[1];
@@ -428,7 +428,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Log10), null, args[0]);
 						break;
 					}
-				case ETok.Pow:
+					case ETok.Pow:
 					{
 						i += 3;
 						var args = new Expression[2];
@@ -437,7 +437,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Pow), null, args[0], args[1]);
 						break;
 					}
-				case ETok.Sqr:
+					case ETok.Sqr:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -446,7 +446,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Sqr), null, args[0]);
 						break;
 					}
-				case ETok.Sqrt:
+					case ETok.Sqrt:
 					{
 						i += 4;
 						var args = new Expression[1];
@@ -455,34 +455,34 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math), nameof(Math.Sqrt), null, args[0]);
 						break;
 					}
-				case ETok.Len2:
+					case ETok.Len2:
 					{
 						i += 4;
 						var args = new Expression[2];
 						if (!Eval(expr, ref i, vars, args, 0, tok)) return false;
 						if (args[0] == null || args[1] == null) throw new Exception("insufficient parameters for 'len2'");
-						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Len2), null, args[0], args[1]);
+						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Length0), null, args[0], args[1]);
 						break;
 					}
-				case ETok.Len3:
+					case ETok.Len3:
 					{
 						i += 4;
 						var args = new Expression[3];
 						if (!Eval(expr, ref i, vars, args, 0, tok)) return false;
 						if (args[0] == null || args[1] == null || args[2] == null) throw new Exception("insufficient parameters for 'len3'");
-						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Len3), null, args[0], args[1], args[2]);
+						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Length0), null, args[0], args[1], args[2]);
 						break;
 					}
-				case ETok.Len4:
+					case ETok.Len4:
 					{
 						i += 4;
 						var args = new Expression[4];
 						if (!Eval(expr, ref i, vars, args, 0, tok)) return false;
 						if (args[0] == null || args[1] == null || args[2] == null || args[3] == null) throw new Exception("insufficient parameters for 'len4'");
-						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Len4), null, args[0], args[1], args[2], args[3]);
+						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.Length0), null, args[0], args[1], args[2], args[3]);
 						break;
 					}
-				case ETok.Deg:
+					case ETok.Deg:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -491,7 +491,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.RadiansToDegrees), null, args[0]);
 						break;
 					}
-				case ETok.Rad:
+					case ETok.Rad:
 					{
 						i += 3;
 						var args = new Expression[1];
@@ -500,7 +500,7 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Call(typeof(Math_), nameof(Math_.DegreesToRadians), null, args[0]);
 						break;
 					}
-				case ETok.Comma:
+					case ETok.Comma:
 					{
 						if (ridx + 1 == result.Length)
 							throw new Exception("too many parameters");
@@ -510,20 +510,20 @@ namespace Rylogic.Maths
 						follows_value = false;
 						break;
 					}
-				case ETok.OpenParenthesis:
+					case ETok.OpenParenthesis:
 					{
 						// Parent op is 'None' because it has the lowest precedence
 						++i;
 						if (!Eval(expr, ref i, vars, result, ridx, ETok.None)) return false;
 						break;
 					}
-				case ETok.CloseParenthesis:
+					case ETok.CloseParenthesis:
 					{
 						// Wait for the parent op to be the 'Open Parenthesis'
 						if (parent_op == ETok.None) ++i;
 						return true;
 					}
-				case ETok.If:
+					case ETok.If:
 					{
 						++i;
 						var args = new Expression[2];
@@ -532,16 +532,18 @@ namespace Rylogic.Maths
 						result[ridx] = Expression.Condition(result[ridx], args[0], args[1]);
 						break;
 					}
-				case ETok.Else:
+					case ETok.Else:
 					{
-						++i ;
+						++i;
 						var args = new Expression[1];
 						if (!Eval(expr, ref i, vars, result, ++ridx, ETok.Else)) return false;
 						++ridx;
 						return true;
 					}
-				default:
-					throw new Exception($"unknown expression token: {tok}");
+					default:
+					{
+						throw new Exception($"unknown expression token: {tok}");
+					}
 				}
 			}
 			return true;

@@ -2537,7 +2537,7 @@ namespace Rylogic.Gui.WinForms
 			// Check the mouse has moved enough to start dragging
 			if (!data.Dragging)
 			{
-				var distsq = Math_.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
+				var distsq = Math_.LengthSq(pt.X - data.GrabX, pt.Y - data.GrabY);
 				if (distsq < 25) return false;
 				data.Dragging = true;
 			}

@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -34,6 +34,8 @@ namespace Rylogic.Common
 
 		private readonly Func<T,T,int> m_cmp;
 		private Cmp(Func<T, T, int> cmp) => m_cmp = cmp ?? Default.m_cmp;
+		
+		/// <summary>Default comparer for 'T'</summary>
 		public static Cmp<T> Default => new Cmp<T>(Comparer<T>.Default.Compare);
 
 		/// <summary>Compares 'lhs' to 'rhs' returning -1,0,1</summary>
@@ -45,8 +47,14 @@ namespace Rylogic.Common
 		int IEqualityComparer.GetHashCode(object obj) => GetHashCode((T)obj);
 
 		// Convert To
-		public static implicit operator Cmp<T>(Func<T,T,int> c) { return new Cmp<T>(c); }
-		public static implicit operator Cmp<T>(Comparer<T>   c) { return new Cmp<T>(c.Compare); }
+		public static implicit operator Cmp<T>(Func<T, T, int> c)
+		{
+			return new Cmp<T>(c);
+		}
+		public static implicit operator Cmp<T>(Comparer<T> c)
+		{
+			return new Cmp<T>(c.Compare);
+		}
 
 		/// <summary>Create from comparison function</summary>
 		public static Cmp<T> From(Func<T,T,int> c)
@@ -85,14 +93,10 @@ namespace Rylogic.Common
 	{
 		// Same as: Func<T,T,int>
 		private readonly Func<T,T,bool> m_eql;
-		private Eql(Func<T,T,bool> eql)
-		{
-			m_eql = eql ?? Default.m_eql;
-		}
-		public static Eql<T> Default
-		{
-			get { return new Eql<T>(EqualityComparer<T>.Default.Equals); }
-		}
+		private Eql(Func<T, T, bool>? eql) => m_eql = eql ?? Default.m_eql;
+
+		/// <summary>Default equality comparer for 'T'</summary>
+		public static Eql<T> Default => new Eql<T>(EqualityComparer<T>.Default.Equals);
 
 		/// <summary>Equates 'lhs' to 'rhs' returning true,false</summary>
 		public bool Equals(T lhs, T rhs)
@@ -113,11 +117,20 @@ namespace Rylogic.Common
 		}
 
 		// Convert To
-		public static implicit operator Eql<T>(Func<T,T,bool> c) { return new Eql<T>(c); }
-		public static implicit operator Eql<T>(Comparer<T> c)    { return new Eql<T>((l,r) => c.Compare(l,r) == 0); }
+		public static implicit operator Eql<T>(Func<T, T, bool> c)
+		{
+			return new Eql<T>(c);
+		}
+		public static implicit operator Eql<T>(Comparer<T> c)
+		{
+			return new Eql<T>((l, r) => c.Compare(l, r) == 0);
+		}
 
 		// Construct From
-		public static Eql<T> From(Func<T,T,bool> c) { return new Eql<T>(c); } // c = Equal
+		public static Eql<T> From(Func<T, T, bool> c)
+		{
+			return new Eql<T>(c);
+		}
 	}
 }
 

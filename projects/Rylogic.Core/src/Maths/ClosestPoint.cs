@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Bounding Box
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -67,8 +67,29 @@ namespace Rylogic.Maths
 		/// <summary>Returns the average of the closest points between 'lhs' and 'rhs'.</summary>
 		public static v2 ClosestPoint(BRect lhs, BRect rhs)
 		{
-			v2 pt0, pt1;
-			ClosestPoint(lhs, rhs, out pt0, out pt1);
+			ClosestPoint(lhs, rhs, out var pt0, out var pt1);
+			return (pt0 + pt1) * 0.5f;
+		}
+
+		/// <summary>
+		/// Returns the closest points between 'lhs' and 'rhs'.
+		/// If 'lhs' and 'rhs' overlap, returns the points of deepest penetration.</summary>
+		public static void ClosestPoint(BBox lhs, BBox rhs, out v4 pt0, out v4 pt1)
+		{
+			pt0 = lhs.Centre;
+			pt1 = rhs.Centre;
+			if (rhs.Centre.x > lhs.Centre.x) { pt0.x += lhs.Radius.x; pt1.x += rhs.Radius.x; }
+			if (rhs.Centre.x < lhs.Centre.x) { pt0.x -= lhs.Radius.x; pt1.x -= rhs.Radius.x; }
+			if (rhs.Centre.y > lhs.Centre.y) { pt0.y += lhs.Radius.y; pt1.y += rhs.Radius.y; }
+			if (rhs.Centre.y < lhs.Centre.y) { pt0.y -= lhs.Radius.y; pt1.y -= rhs.Radius.y; }
+			if (rhs.Centre.z > lhs.Centre.z) { pt0.z += lhs.Radius.z; pt1.z += rhs.Radius.z; }
+			if (rhs.Centre.z < lhs.Centre.z) { pt0.z -= lhs.Radius.z; pt1.z -= rhs.Radius.z; }
+		}
+
+		/// <summary>Returns the average of the closest points between 'lhs' and 'rhs'.</summary>
+		public static v4 ClosestPoint(BBox lhs, BBox rhs)
+		{
+			ClosestPoint(lhs, rhs, out var pt0, out var pt1);
 			return (pt0 + pt1) * 0.5f;
 		}
 
