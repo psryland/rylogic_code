@@ -117,7 +117,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				if (Selected) fill_colour = Style.Selected;
 				if (!Enabled) fill_colour = Style.Disabled;
 				using var fill_brush = new SolidBrush(fill_colour);
-				tex.Gfx.FillRectangle(fill_brush, 0, 0, size.x, size.y);
+				tex.Gfx.FillRectangle(fill_brush, -1, -1, size.x+2, size.y+2);
 				//tex.Gfx.Clear(fill_colour);
 
 				var text_colour = Style.Text;
@@ -155,19 +155,18 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <inheritdoc/>
-		public override ChartControl.HitTestResult.Hit? HitTest(System.Windows.Point chart_point, System.Windows.Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+		public override ChartControl.HitTestResult.Hit? HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
 			if (Chart == null)
 				return null;
 
-			var ray = cam.RaySS(new v2((float)client_point.X, (float)client_point.Y));
+			var ray = cam.RaySS(scene_point);
 			var results = Chart.Scene.Window.HitTest(ray, 0f, View3d.EHitTestFlags.Faces, new[] { Gfx });
 			if (!results.IsHit)
 				return null;
 
 			// Convert the hit point to node space
-			var pt_ns = Math_.InvertFast(O2W) * results.m_ws_intercept;
-			var pt = new System.Windows.Point(pt_ns.x, pt_ns.y);
+			var pt = Math_.InvertFast(O2W) * results.m_ws_intercept;
 			var hit = new ChartControl.HitTestResult.Hit(this, pt, null);
 			return hit;
 		}

@@ -234,7 +234,7 @@ namespace view3d
 			// Apply the fill mode and cull mode to user models
 			obj->Apply([=](LdrObject* obj)
 				{
-					if (obj->m_model == nullptr || AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) return true;
+					if (obj->m_model == nullptr || AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude)) return true;
 					for (auto& nug : obj->m_model->m_nuggets)
 					{
 						nug.FillMode(m_fill_mode);
@@ -247,7 +247,7 @@ namespace view3d
 			obj->AddToScene(m_scene, anim_time);
 
 			// Only show bounding boxes for things that contribute to the scene bounds.
-			if (m_scene.m_diag.m_bboxes_visible && !AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude))
+			if (m_scene.m_diag.m_bboxes_visible && !AllSet(obj->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
 				obj->AddBBoxToScene(m_scene, anim_time);
 		}
 
@@ -599,7 +599,7 @@ namespace view3d
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto except_arr = std::make_span(except, except_count);
-		auto pred = [](LdrObject const& ob){ return !AllSet(ob.m_flags, ELdrFlags::SceneBoundsExclude); };
+		auto pred = [](LdrObject const& ob){ return !AllSet(ob.m_ldr_flags, ELdrFlags::SceneBoundsExclude); };
 
 		pr::BBox bbox;
 		switch (bounds)
@@ -633,7 +633,7 @@ namespace view3d
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (!AllSet(obj->m_flags, ELdrFlags::Selected)) continue;
+					if (!AllSet(obj->m_ldr_flags, ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -645,7 +645,7 @@ namespace view3d
 				for (auto& obj : m_objects)
 				{
 					if (!pred(*obj)) continue;
-					if (AllSet(obj->m_flags, ELdrFlags::Hidden)) continue;
+					if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					Grow(bbox, obj->BBoxWS(true, pred));
 				}
@@ -680,7 +680,7 @@ namespace view3d
 		{
 			obj->Apply([&](LdrObject const* c)
 			{
-				if (!AllSet(c->m_flags, ELdrFlags::Selected) || AllSet(c->m_flags, ELdrFlags::SceneBoundsExclude))
+				if (!AllSet(c->m_ldr_flags, ELdrFlags::Selected) || AllSet(c->m_ldr_flags, ELdrFlags::SceneBoundsExclude))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -1079,7 +1079,7 @@ namespace view3d
 		auto instances = [&]() -> BaseInstance const*
 		{
 			for (; beg != end && !IncludeFilter(cast<LdrObject>(*beg)->m_context_id, context_ids, include_count, exclude_count); ++beg) {}
-			return beg != end ? *beg : nullptr;
+			return beg != end ? *beg++ : nullptr;
 		};
 		HitTest(rays, hits, ray_count, snap_distance, flags, instances);
 	}

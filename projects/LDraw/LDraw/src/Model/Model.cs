@@ -69,14 +69,17 @@ namespace LDraw
 				}
 				void HandleSourcesChanged(object? sender, View3d.SourcesChangedEventArgs e)
 				{
-					// Just prior to reloading sources
-					if (e.Before && Settings.ClearErrorLogOnReload)
-						Log.Clear();
-					
-					// After a source change, reset
-					if (e.After && Settings.ResetOnLoad)
-						foreach (var scene in Scenes)
-							scene.SceneView.AutoRange();
+				// This implements auto range on load... but sources can change for reasons that don't require
+				// an auto range (e.g. measure tool graphics).
+
+				//	// Just prior to reloading sources
+				//	if (e.Before && Settings.ClearErrorLogOnReload)
+				//		Log.Clear();
+				//	
+				//	// After a source change, reset
+				//	if (e.After && Settings.ResetOnLoad)
+				//		foreach (var scene in Scenes)
+				//			scene.SceneView.AutoRange();
 				}
 				void HandleAddFileProgress(object? sender, View3d.AddFileProgressEventArgs e) // worker thread context
 				{

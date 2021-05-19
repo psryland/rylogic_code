@@ -93,7 +93,7 @@ namespace Rylogic.Common
 	{
 		// Same as: Func<T,T,int>
 		private readonly Func<T,T,bool> m_eql;
-		private Eql(Func<T, T, bool>? eql) => m_eql = eql ?? Default.m_eql;
+		private Eql(Func<T, T, bool> eql) => m_eql = eql ?? Default.m_eql;
 
 		/// <summary>Default equality comparer for 'T'</summary>
 		public static Eql<T> Default => new Eql<T>(EqualityComparer<T>.Default.Equals);

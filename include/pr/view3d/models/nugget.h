@@ -82,7 +82,7 @@ namespace pr::rdr
 		RSBlock        m_rsb;                   // Rendering states
 		SortKey        m_sort_key;              // A base sort key for this nugget
 		float          m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
-		ENuggetFlag    m_flags;                 // Flags for boolean properties of the nugget
+		ENuggetFlag    m_nflags;                // Flags for boolean properties of the nugget
 
 		// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 		// When copied to the nugget collection for the model they are converted to model buffer relative ranges.
@@ -139,7 +139,7 @@ namespace pr::rdr
 		{
 			// Ignore if flagged as not visible
 			// If not visible for other reasons, don't render but add child nuggets.
-			if (AllSet(m_flags, ENuggetFlag::Hidden))
+			if (AllSet(m_nflags, ENuggetFlag::Hidden))
 				return;
 
 			if (Visible())

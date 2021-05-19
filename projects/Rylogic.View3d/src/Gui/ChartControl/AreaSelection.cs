@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Shapes;
+using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
@@ -57,8 +57,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The selection area graphic</summary>
 			public Rectangle Area { get; }
 
-			/// <summary>The chart-space area of selection</summary>
-			public Rect Selection
+			/// <summary>The chart-space selection volume</summary>
+			public BBox Selection
 			{
 				get => m_selection;
 				set
@@ -68,22 +68,19 @@ namespace Rylogic.Gui.WPF
 					UpdateGfx();
 				}
 			}
-			private Rect m_selection;
+			private BBox m_selection;
 
 			/// <summary>Scale and position the selection rectangle</summary>
 			private void UpdateGfx()
 			{
-				var pt = Chart.ChartToClient(Selection.Location);
-				var sz = Chart.ChartToClient(Selection.Size);
-				
-				// Make the chart-space point plot-area-space relative
-				var bounds = Chart.SceneBounds;
-				pt -= new Vector(bounds.X, bounds.Y);
+				var scene_bbox = Chart.ChartToScene(Selection);
+				var pt = scene_bbox.TopLeft;
+				var sz = scene_bbox.Size;
 
-				Canvas.SetLeft(Area, Math.Min(pt.X, pt.X + sz.Width));
-				Canvas.SetTop(Area, Math.Min(pt.Y, pt.Y - sz.Height));
-				Area.Width = Math.Abs(sz.Width);
-				Area.Height = Math.Abs(sz.Height);
+				Canvas.SetLeft(Area, pt.X);
+				Canvas.SetTop(Area, pt.Y);
+				Area.Width = sz.Width;
+				Area.Height = sz.Height;
 			}
 		}
 	}

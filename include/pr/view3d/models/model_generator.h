@@ -252,8 +252,8 @@ namespace pr::rdr
 				auto nug = mat ? *mat : NuggetProps{};
 				nug.m_topo = topo;
 				nug.m_geom = geom;
-				nug.m_flags |= geometry_has_alpha ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
-				nug.m_flags |= tint_has_alpha ? ENuggetFlag::TintHasAlpha : ENuggetFlag::None;
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, geometry_has_alpha);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
 				m_ncont.push_back(nug);
 			}
 		};
@@ -1258,7 +1258,7 @@ namespace pr::rdr
 							if (nug.m_mat != m.m_id) continue;
 							nugget.m_tex_diffuse = m.TexDiffuse();
 							nugget.m_tint = m.Tint();
-							nugget.m_flags = SetBits(nugget.m_flags, ENuggetFlag::TintHasAlpha, nugget.m_tint.a != 0xff);
+							nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::TintHasAlpha, nugget.m_tint.a != 0xff);
 							break;
 						}
 
@@ -1350,7 +1350,7 @@ namespace pr::rdr
 						NuggetProps nugget(topo, geom, nullptr, vrange, irange);
 						nugget.m_tex_diffuse = mat.TexDiffuse(rdr);
 						nugget.m_tint = mat.Tint();
-						nugget.m_flags = SetBits(nugget.m_flags, ENuggetFlag::TintHasAlpha, !FEql(nugget.m_tint.a, 1.0f));
+						nugget.m_nflags = SetBits(nugget.m_nflags, ENuggetFlag::TintHasAlpha, !FEql(nugget.m_tint.a, 1.0f));
 						cache.m_ncont.push_back(nugget);
 					};
 					auto matlookup = [&](std::string const& name)

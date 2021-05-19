@@ -40,7 +40,7 @@ namespace Rylogic.Maths
 			Radius = radius;
 		}
 
-		// Construct from
+		/// <summary>Construct from min and max points (also works if min > max)</summary>
 		public static BBox From(v4 min, v4 max)
 		{
 			return new BBox((max + min) * 0.5f, Math_.Abs(max - min) * 0.5f);

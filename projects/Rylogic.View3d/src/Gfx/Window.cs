@@ -589,7 +589,9 @@ namespace Rylogic.Gfx
 				//    by the DPI.
 				var dpi_scale = DpiScale;
 				var da = Hwnd != IntPtr.Zero ? BackBufferSize : RenderTargetSize;
-				return new v2((pt.x + 1f) * da.Width / (2f * dpi_scale.X), (1f - pt.y) * da.Height / (2f * dpi_scale.Y));
+				return new v2(
+					(pt.x + 1f) * da.Width / (2f * dpi_scale.X),
+					(1f - pt.y) * da.Height / (2f * dpi_scale.Y));
 			}
 
 			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>

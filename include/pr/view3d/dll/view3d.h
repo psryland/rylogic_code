@@ -443,15 +443,15 @@ extern "C"
 	};
 	struct View3DNugget
 	{
-		EView3DTopo     m_topo;
-		EView3DGeom     m_geom;
-		EView3DCullMode m_cull_mode;
-		EView3DFillMode m_fill_mode;
-		UINT32          m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
-		UINT32          m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-		UINT32          m_flags;          // Nugget flags (EView3DNuggetFlag)
-		BOOL            m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
-		View3DMaterial  m_mat;
+		EView3DTopo       m_topo;
+		EView3DGeom       m_geom;
+		EView3DCullMode   m_cull_mode;
+		EView3DFillMode   m_fill_mode;
+		UINT32            m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
+		UINT32            m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
+		EView3DNuggetFlag m_nflags;         // Nugget flags
+		BOOL              m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
+		View3DMaterial    m_mat;
 	};
 	struct View3DImageInfo
 	{

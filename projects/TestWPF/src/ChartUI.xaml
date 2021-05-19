@@ -136,6 +136,15 @@
 			Margin="1"
 			>
 			<TextBlock
+				Text=" AreaSelectMode: "
+				VerticalAlignment="Center"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Chart.Options.AreaSelectMode, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Chart.Options.AreaSelectMode}"
+				VerticalAlignment="Center"
+				/>
+			<TextBlock
 				Text=" Nav Mode: "
 				VerticalAlignment="Center"
 				/>
@@ -144,13 +153,9 @@
 				SelectedItem="{Binding Chart.Options.NavigationMode}"
 				VerticalAlignment="Center"
 				/>
-			<TextBlock
-				Text=" AreaSelectMode: "
-				VerticalAlignment="Center"
-				/>
-			<ComboBox
-				ItemsSource="{Binding Chart.Options.AreaSelectMode, Converter={conv:EnumValues}}"
-				SelectedItem="{Binding Chart.Options.AreaSelectMode}"
+			<CheckBox
+				Content="Orthographic"
+				IsChecked="{Binding Chart.Options.Orthographic}"
 				VerticalAlignment="Center"
 				/>
 			<CheckBox
@@ -166,6 +171,11 @@
 			<CheckBox
 				Content="Show Grid Lines "
 				IsChecked="{Binding Chart.Options.ShowGridLines}"
+				VerticalAlignment="Center"
+				/>
+			<CheckBox
+				Content="Show Value "
+				IsChecked="{Binding Chart.ShowValueAtPointer}"
 				VerticalAlignment="Center"
 				/>
 		</StackPanel>

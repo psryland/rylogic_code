@@ -77,7 +77,6 @@ namespace Rylogic.Gui.WPF
 			//    then MouseDown is never raised, and override OnMouseDown isn't called.
 
 			base.OnMouseDown(args);
-			var location = args.GetPosition(this);
 
 			// If a mouse op is already active, ignore mouse down
 			if (MouseOperations.Active != null)
@@ -107,17 +106,19 @@ namespace Rylogic.Gui.WPF
 				// Don't capture the mouse here in mouse down because that prevents
 				// mouse up messages getting to subscribers of the MouseUp event.
 				// Only capture the mouse when we know it's a drag operation.
+				var client_point = args.GetPosition(this);
+				var scene_point = args.GetPosition(Scene).ToV2();
 
-				op.GrabClient = op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
-				op.GrabChart = op.DropChart = ClientToChart(location);
-				op.HitResult = HitTest(op.GrabClient, Keyboard.Modifiers, args.ToMouseBtns(), null);
+				op.GrabScene = op.DropScene = scene_point;
+				op.GrabChart = op.DropChart = SceneToChart(scene_point);
+				op.HitResult = HitTest(client_point, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
 			}
 		}
 		protected override void OnMouseMove(MouseEventArgs args)
 		{
 			base.OnMouseMove(args);
-			var location = args.GetPosition(this);
+			var client_point = args.GetPosition(this);
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
@@ -125,15 +126,15 @@ namespace Rylogic.Gui.WPF
 			{
 				if (!op.Cancelled)
 				{
-					op.DropClient = location; // Note: in ChartControl space, not ChartPanel space
-					op.DropChart = ClientToChart(location);
+					op.DropScene = Gui_.MapPoint(this, Scene, client_point).ToV2();
+					op.DropChart = SceneToChart(op.DropScene);
 					op.MouseMove(args);
 				}
 			}
 			// Otherwise, provide mouse hover detection
 			else if (SceneBounds != Rect_.Zero)
 			{
-				var hit = HitTest(location, Keyboard.Modifiers, args.ToMouseBtns(), null);
+				var hit = HitTest(client_point, Keyboard.Modifiers, args.ToMouseBtns());
 				var hovered = hit.Hits.Select(x => x.Element).ToHashSet(0);
 
 				// Remove elements that are no longer hovered
@@ -178,10 +179,10 @@ namespace Rylogic.Gui.WPF
 					return;
 			}
 
-			var location = args.GetPosition(this);
+			var client_point = args.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
-			var chart_pt = ClientToChart(location);
-			var hit = HitTestZone(location, Keyboard.Modifiers, args.ToMouseBtns());
+			var chart_point = SceneToChart(Gui_.MapPoint(this, Scene, client_point).ToV2());
+			var hit = HitTestZone(client_point, Keyboard.Modifiers, args.ToMouseBtns());
 
 			// Batch mouse wheel events into 100ms groups
 			var defer_nav_checkpoint = DeferNavCheckpoints();
@@ -201,8 +202,8 @@ namespace Rylogic.Gui.WPF
 			if (hit.Zone == EZone.Chart && XAxis.AllowZoom && YAxis.AllowZoom)
 			{
 				// Translate the camera along a ray through 'point'
-				var loc = Gui_.MapPoint(this, Scene, location);
-				Scene.Window.MouseNavigateZ(loc.ToPointF(), args.ToMouseBtns(Keyboard.Modifiers), args.Delta, along_ray);
+				var scene_point = Gui_.MapPoint(this, Scene, client_point);
+				Scene.Window.MouseNavigateZ(scene_point.ToPointF(), args.ToMouseBtns(Keyboard.Modifiers), args.Delta, along_ray);
 				chg = nameof(SetRangeFromCamera);
 			}
 			
@@ -218,7 +219,7 @@ namespace Rylogic.Gui.WPF
 				else if (!hit.ModifierKeys.HasFlag(ModifierKeys.Control) && XAxis.AllowZoom)
 				{
 					// Change the aspect ratio by zooming on the XAxis
-					var x = along_ray ? chart_pt.X : XAxis.Centre;
+					var x = along_ray ? chart_point.x : XAxis.Centre;
 					var left = (XAxis.Min - x) * (1f - delta);
 					var rite = (XAxis.Max - x) * (1f - delta);
 					XAxis.Set(x + left, x + rite);
@@ -239,7 +240,7 @@ namespace Rylogic.Gui.WPF
 				else if (!hit.ModifierKeys.HasFlag(ModifierKeys.Control) && YAxis.AllowZoom)
 				{
 					// Change the aspect ratio by zooming on the YAxis
-					var y = along_ray ? chart_pt.Y : YAxis.Centre;
+					var y = along_ray ? chart_point.y : YAxis.Centre;
 					var left = (YAxis.Min - y) * (1f - delta);
 					var rite = (YAxis.Max - y) * (1f - delta);
 					YAxis.Set(y + left, y + rite);
@@ -249,22 +250,25 @@ namespace Rylogic.Gui.WPF
 					chg = nameof(SetCameraFromRange);
 				}
 			}
-			
+
 			switch (chg)
 			{
-			// Update the axes from the camera position
-			case nameof(SetRangeFromCamera):
-				SetRangeFromCamera();
-				NotifyPropertyChanged(nameof(ValueAtPointer));
-				Invalidate();
-				break;
-
+				// Update the axes from the camera position
+				case nameof(SetRangeFromCamera):
+				{
+					SetRangeFromCamera();
+					NotifyPropertyChanged(nameof(ValueAtPointer));
+					Invalidate();
+					break;
+				}
 				// Set the camera position from the new axis ranges
-			case nameof(SetCameraFromRange):
-				SetCameraFromRange();
-				NotifyPropertyChanged(nameof(ValueAtPointer));
-				Invalidate();
-				break;
+				case nameof(SetCameraFromRange):
+				{
+					SetCameraFromRange();
+					NotifyPropertyChanged(nameof(ValueAtPointer));
+					Invalidate();
+					break;
+				}
 			}
 		}
 
@@ -331,27 +335,29 @@ namespace Rylogic.Gui.WPF
 			{
 				switch (Options.AreaSelectMode)
 				{
-				default: throw new Exception("Unknown area select mode");
-				case EAreaSelectMode.Disabled:
+					case EAreaSelectMode.Disabled:
 					{
 						break;
 					}
-				case EAreaSelectMode.SelectElements:
+					case EAreaSelectMode.SelectElements:
 					{
-						var rect = new Rect(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
-						SelectElements(rect, Keyboard.Modifiers, args.MouseBtns);
+						SelectElements(args.SelectionVolume, Keyboard.Modifiers, args.MouseBtns);
 						break;
 					}
-				case EAreaSelectMode.Zoom:
+					case EAreaSelectMode.Zoom:
 					{
-						PositionChart(args.SelectionArea);
+						PositionChart(args.SelectionVolume);
 						break;
 					}
-				case EAreaSelectMode.ZoomIfNoSelection:
+					case EAreaSelectMode.ZoomIfNoSelection:
 					{
 						if (Selected.Count == 0)
-							PositionChart(args.SelectionArea);
+							PositionChart(args.SelectionVolume);
 						break;
+					}
+					default:
+					{
+						throw new Exception("Unknown area select mode");
 					}
 				}
 			}
@@ -371,22 +377,22 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary>Adjust the X/Y axis of the chart to cover the given area</summary>
-		public void PositionChart(BBox area)
+		/// <summary>Adjust the X/Y axis of the chart to view the given volume</summary>
+		public void PositionChart(BBox chart_bbox)
 		{
 			// Ensure the selection area is >= 1 pixel for width/height
-			var sz = ClientToChart(new Size(1,1));
-			XAxis.Set(area.MinX, Math.Max(area.MaxX, area.MinX + sz.Width));
-			YAxis.Set(area.MinY, Math.Max(area.MaxY, area.MinY + sz.Height));
+			var chart_1px = SceneToChart(new Rect(new Size(1,1)));
+			XAxis.Set(chart_bbox.MinX, Math.Max(chart_bbox.MaxX, chart_bbox.MinX + chart_1px.SizeX));
+			YAxis.Set(chart_bbox.MinY, Math.Max(chart_bbox.MaxY, chart_bbox.MinY + chart_1px.SizeY));
 			SetCameraFromRange();
 		}
 
-		/// <summary>Shifts the X and Y range of the chart so that chart space position 'gs_point' is at client space position 'cs_point'</summary>
-		public void PositionChart(Point cs_point, Point gs_point)
+		/// <summary>Shifts the X and Y range of the chart so that chart space position 'chart_point' is at client space position 'client_point'</summary>
+		public void PositionChart(v4 chart_point, v2 scene_point)
 		{
-			var dst = ClientToChart(cs_point);
+			var dst = SceneToChart(scene_point);
 			var c2w = Scene.Camera.O2W;
-			c2w.pos += c2w.x * (float)(gs_point.X - dst.X) + c2w.y * (float)(gs_point.Y - dst.Y);
+			c2w.pos += c2w.x * (float)(chart_point.x - dst.x) + c2w.y * (float)(chart_point.y - dst.y);
 			Scene.Camera.O2W = c2w;
 			Invalidate();
 		}

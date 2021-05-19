@@ -500,8 +500,8 @@ namespace Rylogic.Gui.WPF
 				set => O2W = new m4x4(O2W.rot, value + (O2W.pos - Centre));
 			}
 
-			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			/// <summary>Perform a hit test on this object. Returns null for no hit. 'scene_point' is typically used for screen-space hit tolerances</summary>
+			public virtual HitTestResult.Hit? HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				return null;
 			}

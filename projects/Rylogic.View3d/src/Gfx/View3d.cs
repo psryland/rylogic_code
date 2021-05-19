@@ -651,7 +651,7 @@ namespace Rylogic.Gfx
 			public EFillMode m_fill_mode;
 			public uint m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
 			public uint m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-			public ENuggetFlag m_flags;   // Nugget flags (ENuggetFlag)
+			public ENuggetFlag m_nflags;   // Nugget flags (ENuggetFlag)
 			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 			public Material m_mat;
 
@@ -666,7 +666,7 @@ namespace Rylogic.Gfx
 				m_v1 = v1;
 				m_i0 = i0;
 				m_i1 = i1;
-				m_flags = flags;
+				m_nflags = flags;
 				m_range_overlaps = range_overlaps;
 				m_mat = mat ?? new Material(null);
 			}
@@ -1107,9 +1107,9 @@ namespace Rylogic.Gfx
 
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)][Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)][Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)][Out] Nugget[] nuggets,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)][In, Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)][In, Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)][In, Out] Nugget[] nuggets,
 			out int new_vcount, out int new_icount, out int new_ncount);
 
 		/// <summary>Embedded code handler callback</summary>

@@ -70,7 +70,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				{
 					SpringConstant = 0.1f;
 					CoulombConstant = 1f;
-					FrictionConstant = 0.1f;
+					FrictionConstant = 0.5f;
 					ConnectorScale = 1f;
 					Equilibrium = 0.01f;
 				}

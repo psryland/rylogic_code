@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 
@@ -205,15 +206,14 @@ namespace Rylogic.Gui.WPF
 				// Handlers
 				void OnMouseMoveCrossHair(object? sender, MouseEventArgs e)
 				{
-					var location = e.GetPosition(this);
-					if (m_xhair != null && SceneBounds.Contains(location))
-						m_xhair.PositionCrossHair(location);
+					var client_point = e.GetPosition(this);
+					if (m_xhair != null && SceneBounds.Contains(client_point))
+						m_xhair.PositionCrossHair(e.GetPosition(Scene).ToV2());
 				}
 				void OnMouseWheelCrossHair(object? sender, MouseEventArgs e)
 				{
-					var location = e.GetPosition(this);
 					if (m_xhair != null)
-						m_xhair.PositionCrossHair(location);
+						m_xhair.PositionCrossHair(e.GetPosition(Scene).ToV2());
 				}
 			}
 		}

@@ -39,44 +39,51 @@ namespace pr::rdr
 		BSBlock,             // pr::rdr::BSBlock
 		DSBlock,             // pr::rdr::DSBlock
 		RSBlock,             // pr::rdr::RSBlock
+		Flags,               // EInstFlag
 		TintColour32,        // pr::Colour32
 		EnvMapReflectivity,  // float
 		UniqueId,            // int32
 		SSSize,              // pr::v2 (screen space size)
 	};
-	constexpr int SizeOf(EInstComp comp)
-	{
-		switch (comp)
-		{
-		case EInstComp::None:                return 0;
-		case EInstComp::ModelPtr:            return sizeof(pr::rdr::ModelPtr);
-		case EInstComp::I2WTransform:        return sizeof(pr::m4x4);
-		case EInstComp::I2WTransformPtr:     return sizeof(pr::m4x4*);
-		case EInstComp::I2WTransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
-		case EInstComp::C2STransform:        return sizeof(pr::m4x4);
-		case EInstComp::C2SOptional:         return sizeof(pr::m4x4);
-		case EInstComp::C2STransformPtr:     return sizeof(pr::m4x4*);
-		case EInstComp::C2STransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
-		case EInstComp::SortkeyOverride:     return sizeof(pr::rdr::SKOverride);
-		case EInstComp::BSBlock:             return sizeof(pr::rdr::BSBlock);
-		case EInstComp::DSBlock:             return sizeof(pr::rdr::DSBlock);
-		case EInstComp::RSBlock:             return sizeof(pr::rdr::RSBlock);
-		case EInstComp::TintColour32:        return sizeof(pr::Colour32);
-		case EInstComp::EnvMapReflectivity:  return sizeof(float);
-		case EInstComp::UniqueId:            return sizeof(pr::int32);
-		case EInstComp::SSSize:              return sizeof(pr::v2);
-		default: throw std::exception("Unknown instance component type");
-		}
-	}
 
 	// Instance flags
-	enum class EInstFlags :uint32_t
+	enum class EInstFlag :uint32_t
 	{
 		None = 0,
 
 		// The object to world transform is not an affine transform
 		NonAffine = 1 << 5,
+
+		// Doesn't cast a shadow
+		ShadowCastExclude = 1 << 12,
 	};
+
+	// The size of an instance component
+	constexpr int SizeOf(EInstComp comp)
+	{
+		switch (comp)
+		{
+			case EInstComp::None:                return 0;
+			case EInstComp::ModelPtr:            return sizeof(pr::rdr::ModelPtr);
+			case EInstComp::I2WTransform:        return sizeof(pr::m4x4);
+			case EInstComp::I2WTransformPtr:     return sizeof(pr::m4x4*);
+			case EInstComp::I2WTransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
+			case EInstComp::C2STransform:        return sizeof(pr::m4x4);
+			case EInstComp::C2SOptional:         return sizeof(pr::m4x4);
+			case EInstComp::C2STransformPtr:     return sizeof(pr::m4x4*);
+			case EInstComp::C2STransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
+			case EInstComp::SortkeyOverride:     return sizeof(pr::rdr::SKOverride);
+			case EInstComp::BSBlock:             return sizeof(pr::rdr::BSBlock);
+			case EInstComp::DSBlock:             return sizeof(pr::rdr::DSBlock);
+			case EInstComp::RSBlock:             return sizeof(pr::rdr::RSBlock);
+			case EInstComp::Flags:               return sizeof(pr::rdr::EInstFlag);
+			case EInstComp::TintColour32:        return sizeof(pr::Colour32);
+			case EInstComp::EnvMapReflectivity:  return sizeof(float);
+			case EInstComp::UniqueId:            return sizeof(pr::int32);
+			case EInstComp::SSSize:              return sizeof(pr::v2);
+			default: throw std::runtime_error("Unknown instance component type");
+		}
+	}
 
 	// The header for an instance. All instances must start with one of these
 	struct BaseInstance
@@ -90,10 +97,22 @@ namespace pr::rdr
 		}
 
 		// Enumerate the component types
-		EInstComp const* begin() const { return pr::type_ptr<EInstComp>(this + 1); }
-		EInstComp const* end() const   { return begin() + m_cpt_count; }
-		EInstComp* begin()             { return pr::type_ptr<EInstComp>(this + 1); }
-		EInstComp* end()               { return begin() + m_cpt_count; }
+		EInstComp const* begin() const
+		{
+			return pr::type_ptr<EInstComp>(this + 1);
+		}
+		EInstComp const* end() const
+		{
+			return begin() + m_cpt_count;
+		}
+		EInstComp* begin()
+		{
+			return pr::type_ptr<EInstComp>(this + 1);
+		}
+		EInstComp* end()
+		{
+			return begin() + m_cpt_count;
+		}
 
 		// Access the component at 'ofs'
 		template <typename Comp> Comp const* get(size_t ofs) const
@@ -142,7 +161,7 @@ namespace pr::rdr
 		}
 	};
 
-	// A component that gets a transform via function pointer
+	// A component that gets a transform via function pointer.
 	struct m4x4Func
 	{
 		using m4x4FuncPtr = pr::m4x4 const& (*)(void* ctx);
@@ -156,14 +175,14 @@ namespace pr::rdr
 		}
 	};
 
-	// Return a pointer to the model that this is an instance of
+	// Return a pointer to the model that this is an instance of.
 	inline ModelPtr const& GetModel(BaseInstance const& inst)
 	{
 		return inst.get<ModelPtr>(EInstComp::ModelPtr);
 	}
 
-	// Return the instance to world transform for an instance
-	// An instance must have an i2w transform or a shared i2w transform
+	// Return the instance to world transform for an instance.
+	// An instance must have an i2w transform or a shared i2w transform.
 	inline m4x4 const& GetO2W(BaseInstance const& inst)
 	{
 		auto pi2w = inst.find<m4x4>(EInstComp::I2WTransform);
@@ -181,8 +200,8 @@ namespace pr::rdr
 		return m4x4Identity;
 	}
 
-	// Look for a camera to screen (or instance specific projection) transform for an instance
-	// Returns null if the instance doesn't have one
+	// Look for a camera to screen (or instance specific projection) transform for an instance.
+	// Returns null if the instance doesn't have one.
 	inline bool FindC2S(BaseInstance const& inst, pr::m4x4& camera_to_screen)
 	{
 		auto pc2s = inst.find<m4x4>(EInstComp::C2STransform);
@@ -214,6 +233,13 @@ namespace pr::rdr
 		}
 
 		return false;
+	}
+
+	// Return the instance flags associated with 'inst'
+	inline EInstFlag GetFlags(BaseInstance const& inst)
+	{
+		auto const* flags = inst.find<EInstFlag>(EInstComp::Flags);
+		return flags ? *flags : EInstFlag::None;
 	}
 
 	// Return the id assigned to this instance, or '0' if not found

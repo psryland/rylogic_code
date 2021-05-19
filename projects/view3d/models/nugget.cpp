@@ -21,7 +21,7 @@ namespace pr::rdr
 		,m_rsb()
 		,m_sort_key(ESortGroup::Default)
 		,m_relative_reflectivity(1)
-		,m_flags(ENuggetFlag::None)
+		,m_nflags(ENuggetFlag::None)
 		,m_vrange(vrange)
 		,m_irange(irange)
 	{}
@@ -111,7 +111,7 @@ namespace pr::rdr
 	bool Nugget::RequiresAlpha() const
 	{
 		return
-			AnySet(m_flags, ENuggetFlag::GeometryHasAlpha | ENuggetFlag::TintHasAlpha) ||
+			AnySet(m_nflags, ENuggetFlag::GeometryHasAlpha | ENuggetFlag::TintHasAlpha) ||
 			(m_tex_diffuse != nullptr ? m_tex_diffuse->m_has_alpha : false);
 	}
 

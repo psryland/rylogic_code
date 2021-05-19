@@ -93,7 +93,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for when an element or elements is dragged within the chart</summary>
 		public class ChartDraggedEventArgs :EventArgs
 		{
-			public ChartDraggedEventArgs(HitTestResult hits, Vector delta, EDragState state)
+			public ChartDraggedEventArgs(HitTestResult hits, v4 delta, EDragState state)
 			{
 				HitResult = hits;
 				Delta = delta;
@@ -105,7 +105,7 @@ namespace Rylogic.Gui.WPF
 			public HitTestResult HitResult { get; }
 
 			/// <summary>The drag vector from the start position (in chart space)</summary>
-			public Vector Delta { get; }
+			public v4 Delta { get; }
 
 			/// <summary>True when the drag is to be committed (i.e. at the end of a drag and escape not pressed)</summary>
 			public EDragState State { get; }
@@ -117,15 +117,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for area selection</summary>
 		public class ChartAreaSelectEventArgs : EventArgs
 		{
-			public ChartAreaSelectEventArgs(BBox selection_area, EMouseBtns mouse_btns)
+			public ChartAreaSelectEventArgs(BBox chart_selection_volume, EMouseBtns mouse_btns)
 			{
-				SelectionArea = selection_area;
+				SelectionVolume = chart_selection_volume;
 				MouseBtns = mouse_btns;
 				Handled = false;
 			}
 
-			/// <summary>The area (actually volume if you include Z) of the selection</summary>
-			public BBox SelectionArea { get; }
+			/// <summary>The volume of the selection (in chart space)</summary>
+			public BBox SelectionVolume { get; }
 
 			/// <summary>The current mouse button states</summary>
 			public EMouseBtns MouseBtns { get; }

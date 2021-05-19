@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn.Windows;
+using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
@@ -119,7 +120,7 @@ namespace Rylogic.Gui.WPF
 			private ChartControl m_chart = null!;
 
 			/// <summary>The grab point of the tape measure</summary>
-			private Point? Beg
+			private v4? Beg
 			{
 				get => m_beg;
 				set
@@ -141,10 +142,10 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private Point? m_beg;
+			private v4? m_beg;
 
 			/// <summary>The drop point of the tape measure</summary>
-			private Point? End
+			private v4? End
 			{
 				get => m_end;
 				set
@@ -166,7 +167,7 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 			}
-			private Point? m_end;
+			private v4? m_end;
 
 			/// <summary>The measurement area</summary>
 			private Rectangle Area { get; }
@@ -219,28 +220,28 @@ namespace Rylogic.Gui.WPF
 				if (Beg == null || End == null)
 					throw new Exception("UpdateGfx should only be called when both ends are valid");
 
-				var beg = Chart.ChartToClient(Beg.Value);
-				var end = Chart.ChartToClient(End.Value);
+				var beg = Chart.ChartToScene(Beg.Value);
+				var end = Chart.ChartToScene(End.Value);
 
-				Area.Width = Math.Abs(end.X - beg.X);
-				Area.Height = Math.Abs(end.Y - beg.Y);
-				Canvas.SetLeft(Area, Math.Min(beg.X, end.X));
-				Canvas.SetTop(Area, Math.Min(beg.Y, end.Y));
+				Area.Width = Math.Abs(end.x - beg.x);
+				Area.Height = Math.Abs(end.y - beg.y);
+				Canvas.SetLeft(Area, Math.Min(beg.x, end.x));
+				Canvas.SetTop(Area, Math.Min(beg.y, end.y));
 
-				DeltaX.X1 = beg.X;
-				DeltaX.Y1 = (beg.Y + end.Y) / 2;
-				DeltaX.X2 = end.X;
-				DeltaX.Y2 = (beg.Y + end.Y) / 2;
+				DeltaX.X1 = beg.x;
+				DeltaX.Y1 = (beg.y + end.y) / 2;
+				DeltaX.X2 = end.x;
+				DeltaX.Y2 = (beg.y + end.y) / 2;
 
-				DeltaY.X1 = (beg.X + end.X) / 2; 
-				DeltaY.Y1 = beg.Y;
-				DeltaY.X2 = (beg.X + end.X) / 2;
-				DeltaY.Y2 = end.Y;
+				DeltaY.X1 = (beg.x + end.x) / 2; 
+				DeltaY.Y1 = beg.y;
+				DeltaY.X2 = (beg.x + end.x) / 2;
+				DeltaY.Y2 = end.y;
 
-				DeltaD.X1 = beg.X;
-				DeltaD.Y1 = beg.Y;
-				DeltaD.X2 = end.X;
-				DeltaD.Y2 = end.Y;
+				DeltaD.X1 = beg.x;
+				DeltaD.Y1 = beg.y;
+				DeltaD.X2 = end.x;
+				DeltaD.Y2 = end.y;
 
 				var text = Chart.TapeMeasureStringFormat(Beg.Value, End.Value);
 
@@ -251,14 +252,14 @@ namespace Rylogic.Gui.WPF
 				LabelY.Measure(Size_.Infinity);
 				LabelD.Measure(Size_.Infinity);
 
-				Canvas.SetLeft(LabelX, end.X > beg.X ? end.X : end.X - LabelX.DesiredSize.Width);
-				Canvas.SetTop(LabelX, (beg.Y + end.Y - LabelX.DesiredSize.Height) / 2);
+				Canvas.SetLeft(LabelX, end.x > beg.x ? end.x : end.x - LabelX.DesiredSize.Width);
+				Canvas.SetTop(LabelX, (beg.y + end.y - LabelX.DesiredSize.Height) / 2);
 
-				Canvas.SetLeft(LabelY, (beg.X + end.X - LabelY.DesiredSize.Width) / 2);
-				Canvas.SetTop(LabelY, end.Y > beg.Y ? end.Y : end.Y - LabelY.DesiredSize.Height);
+				Canvas.SetLeft(LabelY, (beg.x + end.x - LabelY.DesiredSize.Width) / 2);
+				Canvas.SetTop(LabelY, end.y > beg.y ? end.y : end.y - LabelY.DesiredSize.Height);
 
-				Canvas.SetLeft(LabelD, end.X > beg.X ? end.X + 20 : end.X - LabelD.DesiredSize.Width);
-				Canvas.SetTop(LabelD, end.Y > beg.Y ? end.Y + 20 : end.Y - LabelY.DesiredSize.Height);
+				Canvas.SetLeft(LabelD, end.x > beg.x ? end.x + 20 : end.x - LabelD.DesiredSize.Width);
+				Canvas.SetTop(LabelD, end.y > beg.y ? end.y + 20 : end.y - LabelY.DesiredSize.Height);
 			}
 
 			/// <summary></summary>

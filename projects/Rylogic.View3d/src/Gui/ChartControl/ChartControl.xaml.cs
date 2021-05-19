@@ -23,6 +23,17 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl :UserControl, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
+		// - "Chart Space" is camera aligned and at the focus plane, with the world origin
+		//   projected onto the focus plane using the camera Z axis. So, (0,0,0) chart space
+		//   is the point on the camera focus plane where a line from the world origin, along
+		//   c2w.z intersects the camera focus plane. The Camera is at (w2c.pos.x, w2c.pos.y, FocusDist)
+		//   in chart space.
+		// - Naming convension:
+		//     client_point = a Point relative to this control,
+		//     scene_point = a v2 relative to 'Scene' (ChartPanel)
+		//     world_point = a v4 in world space
+		//     chart_point = a v4 in camera space, relative to the chart origin
+		//     chart_origin = the world space origin projected onto the camera focus plane using c2w.z
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
 		//   axis range, then determine the camera position from that. Both systems are used.
 		//   for mouse control, the camera is positioned and the axis range updated based on
@@ -36,6 +47,7 @@ namespace Rylogic.Gui.WPF
 		//   offset from the control origin. e.g. SceneBounds = [30,10,100,100] say.
 		//   Note: the overlay has a transform applied to it so that points in client space are
 		//   correctly positioned.
+
 		static ChartControl()
 		{
 			View3d.LoadDll(throw_if_missing: false);
@@ -401,7 +413,7 @@ namespace Rylogic.Gui.WPF
 			//              Canvas.Top="10"   
 			//              >
 			//              <TextBlock Text="{Binding ., Converter={conv:ToString}}" /> -- Show the binding context
-			//              <Line X1="0" Y1="{Binding LineY}" X2="100" Y2="0" Stroke="Red" /> -- Graphics in client space
+			//              <Line X1="0" Y1="{Binding LineY}" X2="100" Y2="0" Stroke="Red" /> -- Graphics in scene space
 			//          </StackPanel>
 			//      </view3d:ChartControl.OverlayContent>
 
@@ -470,7 +482,7 @@ namespace Rylogic.Gui.WPF
 				if (geom.IsFrozen)
 					geom = geom.Clone();
 				
-				geom.Transform = ChartToClientSpace(true).ToTransform();
+				geom.Transform = ChartToSceneSpace().ToTransform();
 				m_overlay_content_chart_space.Data = geom.Freeze2();
 			}
 		}
@@ -547,7 +559,141 @@ namespace Rylogic.Gui.WPF
 			AutoRanging?.Invoke(this, args);
 		}
 
+		/// <summary>Returns a point in chart space from a point in client scene space. Use to convert mouse (client-space) locations to chart coordinates</summary>
+		public v4 SceneToChart(v2 scene_point)
+		{
+			// Convert the scene space point to a world space point
+			var world_point = Scene.Camera.SSPointToWSPoint(scene_point);
+
+			// Convert to chart space (i.e. camera space, on the focus plane)
+			// Shift relative to the chart origin (i.e. (0,0,0) world space, projected onto the focus plane)
+			var w2c = Scene.Camera.W2O;
+			var chart_point = w2c * world_point;
+			chart_point.xy -= w2c.pos.xy;
+			chart_point.z += Scene.Camera.FocusDist;
+			return chart_point;
+		}
+
+		/// <summary>Returns a point in client scene space from a point in chart space. Inverse of ClientToChart3D</summary>
+		public v2 ChartToScene(v4 chart_point)
+		{
+			// Remember, chart space is camera aligned.
+			
+			// Shift relative to the camera
+			chart_point.xy += Scene.Camera.W2O.pos.xy;
+			chart_point.z -= Scene.Camera.FocusDist;
+
+			// Convert from camera space to world space
+			var world_point = Scene.Camera.O2W * chart_point;
+
+			// Convert from world space to client scene space
+			return WorldToScene(world_point);
+		}
+
+		/// <summary>Returns a point in client space from a point in world space.s</summary>
+		public v2 WorldToScene(v4 world_point)
+		{
+			var scene_point = Scene.Camera.WSPointToSSPoint(world_point);
+			return scene_point;
+		}
+
+		/// <summary>Convert a client scene space rectangle to a chart space bounding box (with infinite Z)</summary>
+		public BBox SceneToChart(Rect scene_rect)
+		{
+			var scene_pt0 = scene_rect.BottomLeft.ToV2();
+			var scene_pt1 = scene_rect.TopRight.ToV2();
+
+			var chart_pt0 = SceneToChart(scene_pt0); chart_pt0.z = -float.MaxValue/2f;
+			var chart_pt1 = SceneToChart(scene_pt1); chart_pt1.z = +float.MaxValue/2f;
+
+			return new BBox(
+				(chart_pt1 + chart_pt0) / 2f,
+				(chart_pt1 - chart_pt0) / 2f);
+		}
+
+		/// <summary>Convert a chart space bounding box to a client scene space rectangle. BBox's are chart/camera space aligned, so in scene space the bbox becomes a rectangle</summary>
+		public Rect ChartToScene(BBox chart_bbox)
+		{
+			var chart_pt0 = chart_bbox.Lower(); chart_pt0.z = 0;
+			var chart_pt1 = chart_bbox.Upper(); chart_pt1.z = 0;
+
+			var scene_pt0 = ChartToScene(chart_pt0);
+			var scene_pt1 = ChartToScene(chart_pt1);
+
+			var pt = Math_.Min(scene_pt0, scene_pt1).ToPointD();
+			var sz = Math_.Abs(scene_pt1 - scene_pt0).ToSizeD();
+			return new Rect(pt, sz);
+		}
+
+		/// <summary>Convert a world space bounding box to a client scene space rectangle. Chart space and world space are not necessarily aligned, so the returned Rect may be inflated</summary>
+		public Rect WorldToScene(BBox world_bbox)
+		{
+			var world_pt0 = world_bbox.Lower();
+			var world_pt1 = world_bbox.Upper();
+
+			var scene_pt0 = WorldToScene(world_pt0);
+			var scene_pt1 = WorldToScene(world_pt1);
+
+			return new Rect(scene_pt0.ToPointD(), scene_pt1.ToPointD());
+		}
+
+		/// <summary>Return a transform from scene space to chart space.</summary>
+		public m4x4 SceneToChartSpace()
+		{
+			// Notes:
+			//  - Chart space is aligned with the camera, so the transform from chart to
+			//    scene is basically just a 2D scale and offset transform.
+			// e.g.
+			//   client2chart * plot_area.BottomLeft() = Point(x_min, y_min)
+			//   client2chart * plot_area.TopRight()   = Point(x_max, y_max)
+
+			var size = SceneBounds.Size;
+			var scale_x = (float)+(XAxis.Span / size.Width);
+			var scale_y = (float)-(YAxis.Span / size.Height);
+			var offset_x = (float)+(XAxis.Min - 0 * scale_x);
+			var offset_y = (float)+(YAxis.Min - size.Height * scale_y);
+
+			// c = chart, s = scene
+			var s2c = new m4x4(
+				new v4(scale_x, 0, 0, 0),
+				new v4(0, scale_y, 0, 0),
+				new v4(0, 0, 1, 0),
+				new v4(offset_x, offset_y, 0, 1));
+
+			return s2c;
+		}
+
+		/// <summary>Return a transform from chart space to scene space.</summary>
+		public m4x4 ChartToSceneSpace()
+		{
+			// Notes:
+			//  - Chart space is aligned with the camera, so the transform from chart to
+			//    scene is basically just a 2D scale and offset transform.
+			// e.g.
+			//   chart2scene * [x_min, y_min, 0, 1] = chart_area.BottomLeft()
+			//   chart2scene * [x_max, y_max, 0, 1] = chart_area.TopRight()
+
+			var size = SceneBounds.Size;
+			var scale_x = (float)+(size.Width / XAxis.Span);
+			var scale_y = (float)-(size.Height / YAxis.Span);
+			var offset_x = (float)+(0 - XAxis.Min * scale_x);
+			var offset_y = (float)+(size.Height - YAxis.Min * scale_y);
+
+			// c = chart, s = scene
+			var c2s = new m4x4(
+				new v4(scale_x, 0, 0, 0),
+				new v4(0, scale_y, 0, 0),
+				new v4(0, 0, 1, 0),
+				new v4(offset_x, offset_y, 0, 1));
+
+			return c2s;
+		}
+
+		// Todo: these need to work in 3D
+#if false
+
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
+		//[Obsolete]
 		public Point ClientToChart(Point client_point, bool scene_relative = false)
 		{
 			var bounds = SceneBounds;
@@ -597,6 +743,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
+		//[Obsolete]
 		public Point ChartToClient(Point chart_point, bool scene_relative = false)
 		{
 			var bounds = SceneBounds;
@@ -683,7 +830,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-#			if false
+#if false
 			// Check the XAxis corners map to the expected client space locations
 			var C_pt0 = new v4((float)XAxis.Min, (float)YAxis.Min, 0, 1);
 			var C_pt1 = new v4((float)XAxis.Max, (float)YAxis.Max, 0, 1);
@@ -693,7 +840,7 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(c_pt0.y - plot_area.Bottom) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.x - plot_area.Right ) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.y - plot_area.Top   ) < 0.001);
-#			endif
+#endif
 
 			// If caller whats the transform to be 3d-scene relative, remove the offset
 			if (scene_relative)
@@ -727,7 +874,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-#			if false
+#if false
 			// Check the plot_area corners map to the expected graph space locations
 			var c_pt0 = new v4((float)plot_area.Left, (float)plot_area.Bottom, 0, 1);
 			var c_pt1 = new v4((float)plot_area.Right, (float)plot_area.Top, 0, 1);
@@ -737,7 +884,7 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(C_pt0.y - YAxis.Min) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.x - XAxis.Max) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.y - YAxis.Max) < 0.001f);
-#			endif
+#endif
 
 			// If the caller wants the transform relative to the 3d-scene, add the offset
 			if (scene_relative)
@@ -794,6 +941,7 @@ namespace Rylogic.Gui.WPF
 				NSSToClient(nss_rect.Location),
 				NSSToClient(nss_rect.Size));
 		}
+#endif
 
 		/// <summary>Perform a hit test on the chart but only test which zone is hit (faster)</summary>
 		public HitTestResult HitTestZone(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
@@ -805,36 +953,53 @@ namespace Rylogic.Gui.WPF
 			if (YAxisBounds.Contains(client_point)) zone |= EZone.YAxis;
 			if (TitleBounds.Contains(client_point)) zone |= EZone.Title;
 
-			// The hit test point in chart space
-			var chart_point = ClientToChart(client_point);
+			// Convert the client control space point to a scene space point
+			var scene_point = Gui_.MapPoint(this, Scene, client_point).ToV2();
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, mouse_btns, new List<HitTestResult.Hit>(), Scene.Camera);
+			// Get the hit test point in scene space
+			var chart_point = SceneToChart(scene_point);
+			return new HitTestResult(zone, scene_point, chart_point, modifier_keys, mouse_btns, new List<HitTestResult.Hit>(), Scene.Camera);
 		}
 
 		/// <summary>Perform a hit test on the chart and all elements within the chart</summary>
+		public HitTestResult HitTest(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
+		{
+			return HitTest(client_point, modifier_keys, mouse_btns, x => x.Visible && x.Enabled);
+		}
+
+		/// <summary>Perform a hit test on the chart and all elements within the chart (filtering elements using 'pred')</summary>
 		public HitTestResult HitTest(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool>? pred)
+		{
+			pred ??= x => x.Visible && x.Enabled;
+			return HitTest(client_point, modifier_keys, mouse_btns, HitTestElements);
+			void HitTestElements(IEnumerable<Element> elements, HitTestResult result)
+			{
+				foreach (var elem in elements.Where(pred))
+				{
+					// Hit test each element
+					var hit = elem.HitTest(result.ChartPoint, result.ScenePoint, result.ModifierKeys, result.MouseBtns, Scene.Camera);
+					if (hit != null)
+						result.Hits.Add(hit);
+				}
+			}
+		}
+
+		/// <summary>Perform a hit test on the chart and all elements within the chart (using a custom function for testing elements)</summary>
+		public HitTestResult HitTest(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Action<IEnumerable<Element>, HitTestResult> element_hit_func)
 		{
 			// Hit test the zones of the chart
 			var result = HitTestZone(client_point, modifier_keys, mouse_btns);
 
-			// If the 'Scene' is hit, find elements that overlap 'client_point'
+			// If the 'Scene' is hit, find elements that overlap 'client_point'.
+			// 'element_hit_func' allows all elements to be hit tested in one go if wanted.
 			if (result.Zone.HasFlag(EZone.Chart))
 			{
-				// Limit the elements to be tested
-				var elements = pred != null ? Elements.Where(pred) : Elements;
-				foreach (var elem in elements)
-				{
-					// Hit test each element
-					var scene_point = Gui_.MapPoint(this, Scene, result.ClientPoint);
-					var hit = elem.HitTest(result.ChartPoint, scene_point, result.ModifierKeys, result.MouseBtns, Scene.Camera);
-					if (hit != null)
-						result.Hits.Add(hit);
-				}
+				// Hit test the elements
+				element_hit_func(Elements, result);
 
 				// Sort the results by z order
 				result.Hits.Sort((l, r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
-
 			return result;
 		}
 
@@ -926,12 +1091,6 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Set the axis range based on the position of the camera and the field of view</summary>
 		public void SetRangeFromCamera()
 		{
-			// The grid is always parallel to the image plane of the camera.
-			// The camera forward vector points at the centre of the grid.
-
-			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
-			var w2c = Math_.InvertFast(Scene.Camera.O2W);
-
 			// The span of the X/Y axis is determined by the FoV and the focus point distance.
 			// Set the projection mode before 'ViewArea' because it depends on the projection mode.
 			Scene.Camera.Orthographic = Options.Orthographic;
@@ -939,6 +1098,7 @@ namespace Rylogic.Gui.WPF
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
 			// Set the axes range
+			var w2c = Math_.InvertFast(Scene.Camera.O2W);
 			var xmin = -w2c.pos.x - wh.x * 0.5;
 			var xmax = -w2c.pos.x + wh.x * 0.5;
 			var ymin = -w2c.pos.y - wh.y * 0.5;
@@ -952,6 +1112,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Position the camera based on the axis range</summary>
 		public void SetCameraFromRange()
 		{
+			// Notes:
+			//  - The grid is always parallel to the focus plane of the camera.
+			//  - The camera forward vector points at the centre of the grid.
+			//  - The Grid (0,0) point is world origin projected onto the focus plane along the
+			//    camera Z axis (*not* the ray from origin to camera) but should it??
+
 			// Set the new desired pixel aspect based on the
 			// axis ranges and the current size of the scene.
 			var sz = SceneBounds;
@@ -999,17 +1165,18 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Return a string representation of a location on the chart. 'location' is in ChartControl client space</summary>
-		public string LocationText(Point location)
+		public string LocationText(Point client_point)
 		{
 			var bounds = SceneBounds;
 			if (bounds.Width == 0 || bounds.Height == 0)
 				return string.Empty;
 
-			var pt = ClientToChart(location);
+			var scene_point = Gui_.MapPoint(this, Scene, client_point).ToV2();
+			var chart_point = SceneToChart(scene_point);
 			XAxis.GridLines(out var minx, out var maxx, out var stepx);
 			YAxis.GridLines(out var miny, out var maxy, out var stepy);
-			var xtick = XAxis.TickText(pt.X, stepx);
-			var ytick = YAxis.TickText(pt.Y, stepy);
+			var xtick = XAxis.TickText(chart_point.x, stepx);
+			var ytick = YAxis.TickText(chart_point.y, stepy);
 			return $"{xtick} , {ytick}";
 		}
 
@@ -1042,26 +1209,24 @@ namespace Rylogic.Gui.WPF
 		private MouseOps m_mouse_ops = null!;
 
 		/// <summary>
-		/// Select elements that are wholly within 'rect'. (rect is in chart space)
-		/// If no modifier keys are down, elements not in 'rect' are deselected.
-		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
-		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
-		public void SelectElements(Rect rect, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
+		/// Select elements that are wholly within 'chart_bbox'. (chart_bbox is axis aligned in chart space)
+		/// If no modifier keys are down, elements not in 'chart_bbox' are deselected.
+		/// If 'shift' is down, elements within 'chart_bbox' are selected in addition to the existing selection
+		/// If 'ctrl' is down, elements within 'chart_bbox' are removed from the existing selection.</summary>
+		public void SelectElements(BBox chart_bbox, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
 			if (!Options.AllowSelection)
 				return;
 
-			// Normalise the selection
-			var c = rect.Centre();
-			var s = rect.Size;
-			var r = new BBox(new v4((float)c.X, (float)c.Y, 0f, 1f), new v4(Math_.Abs(new v2(0.5f * (float)s.Width, 0.5f * (float)s.Height)), 1f, 0f));
-
 			// If the area of selection is less than the min drag distance, assume click selection
-			var is_click = r.DiametreSq < Math_.Sqr(Options.MinDragPixelDistance);
+			var scene_bbox = ChartToScene(chart_bbox);
+			var is_click = Math_.LengthSq(scene_bbox.Width, scene_bbox.Height) < Math_.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
-				var pt = ChartToClient(rect.Location);
-				var hits = HitTest(pt, modifier_keys, mouse_btns, x => x.Enabled);
+				// Hit test for elements to add to the selection
+				var scene_point = scene_bbox.Centre();
+				var client_point = Gui_.MapPoint(Scene, this, scene_point);
+				var hits = HitTest(client_point, modifier_keys, mouse_btns);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (modifier_keys.HasFlag(ModifierKeys.Control))
@@ -1099,27 +1264,26 @@ namespace Rylogic.Gui.WPF
 			// Otherwise it's area selection
 			else
 			{
-				using (Selected.SuspendEvents(true))
+				using var sus = Selected.SuspendEvents(true);
+
+				// If control is down, those in the selection area become deselected
+				if (modifier_keys.HasFlag(ModifierKeys.Control))
 				{
-					// If control is down, those in the selection area become deselected
-					if (modifier_keys.HasFlag(ModifierKeys.Control))
-					{
-						// Only need to look in the selected list
-						foreach (var elem in Selected.Where(x => r.IsWithin(x.Bounds, 0f)).ToArray())
-							elem.Selected = false;
-					}
-					// If shift is down, those in the selection area become selected
-					else if (modifier_keys.HasFlag(ModifierKeys.Shift))
-					{
-						foreach (var elem in Elements.Where(x => !x.Selected && r.IsWithin(x.Bounds, 0f)))
-							elem.Selected = true;
-					}
-					// Otherwise, the existing selection is cleared, and those within the selection area become selected
-					else
-					{
-						foreach (var elem in Elements)
-							elem.Selected = r.IsWithin(elem.Bounds, 0f);
-					}
+					// Only need to look in the selected list
+					foreach (var elem in Selected.Where(x => chart_bbox.IsWithin(x.Bounds, 0f)).ToArray())
+						elem.Selected = false;
+				}
+				// If shift is down, those in the selection area become selected
+				else if (modifier_keys.HasFlag(ModifierKeys.Shift))
+				{
+					foreach (var elem in Elements.Where(x => !x.Selected && chart_bbox.IsWithin(x.Bounds, 0f)))
+						elem.Selected = true;
+				}
+				// Otherwise, the existing selection is cleared, and those within the selection area become selected
+				else
+				{
+					foreach (var elem in Elements)
+						elem.Selected = chart_bbox.IsWithin(elem.Bounds, 0f);
 				}
 			}
 
@@ -1143,16 +1307,16 @@ namespace Rylogic.Gui.WPF
 		public string ValueAtPointer => LocationText(Mouse.GetPosition(this));
 
 		/// <summary>Callback for formatting the text display by the tape measure</summary>
-		public Func<Point, Point, TapeMeasure.LabelText> TapeMeasureStringFormat { get; set; } = DefaultTapeMeasureStringFormat;
-		public static TapeMeasure.LabelText DefaultTapeMeasureStringFormat(Point beg, Point end)
+		public Func<v4, v4, TapeMeasure.LabelText> TapeMeasureStringFormat { get; set; } = DefaultTapeMeasureStringFormat;
+		public static TapeMeasure.LabelText DefaultTapeMeasureStringFormat(v4 beg, v4 end)
 		{
-			var dx = end.X - beg.X;
-			var dy = end.Y - beg.Y;
+			var dx = end.x - beg.x;
+			var dy = end.y - beg.y;
 			return new TapeMeasure.LabelText
 			{
 				LabelX = $"{dx:F3}",
 				LabelY = $"{dy:F3}",
-				LabelD = $"{Math_.Len2(dx, dy):F3}",
+				LabelD = $"{Math_.Length0(dx, dy):F3}",
 			};
 		}
 

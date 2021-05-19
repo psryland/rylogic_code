@@ -13,8 +13,6 @@ namespace Rylogic.Extn.Windows
 		//    So use System.Drawing primitive types for shared code. System.Windows
 		//    primitive types are used by WPF however.
 
-		// Points
-
 		public static System.Drawing.PointF ToPointF(this Point pt)
 		{
 			return new System.Drawing.PointF((float)pt.X, (float)pt.Y);
@@ -31,15 +29,14 @@ namespace Rylogic.Extn.Windows
 		{
 			return new Vector(pt.x, pt.y);
 		}
+		public static Size ToSizeD(this v2 pt)
+		{
+			return new Size(pt.x, pt.y);
+		}
 		public static Point ToNormalisedScreenSpace(Point pt, double screen_width, double screen_height)
 		{
 			return new Point(pt.X / screen_width - 0.5, 0.5 - pt.Y / screen_height);
 		}
-
-		// Sizes
-
-		// Rectangles
-
 		public static System.Drawing.RectangleF ToRectF(this Rect rect)
 		{
 			return new System.Drawing.RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height);
@@ -82,6 +79,12 @@ namespace Rylogic.Extn.Windows
 
 		/// <summary>Infinite size</summary>
 		public static Size Infinity => new Size(double.PositiveInfinity, double.PositiveInfinity);
+
+		/// <summary>Convert to v2</summary>
+		public static v2 ToV2(this Size s)
+		{
+			return new v2((float)s.Width, (float)s.Height);
+		}
 
 		/// <summary>Compare sizes for approximate equality</summary>
 		public static bool FEql(Size lhs, Size rhs)

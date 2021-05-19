@@ -23,6 +23,7 @@ namespace pr
 	constexpr v2 v2Zero    = v2{0.0f, 0.0f};
 	constexpr v2 v2Half    = v2{0.5f, 0.5f};
 	constexpr v2 v2One     = v2{1.0f, 1.0f};
+	constexpr v2 v2TinyF   = v2{maths::tinyf, maths::tinyf};
 	constexpr v2 v2Min     = v2{+maths::float_min, +maths::float_min};
 	constexpr v2 v2Max     = v2{+maths::float_max, +maths::float_max};
 	constexpr v2 v2Lowest  = v2{-maths::float_max, -maths::float_max};
@@ -33,6 +34,7 @@ namespace pr
 	constexpr v3 v3Zero    = v3{0.0f, 0.0f, 0.0f};
 	constexpr v3 v3Half    = v3{0.5f, 0.5f, 0.5f};
 	constexpr v3 v3One     = v3{1.0f, 1.0f, 1.0f};
+	constexpr v3 v3TinyF   = v3{maths::tinyf, maths::tinyf, maths::tinyf};
 	constexpr v3 v3Min     = v3{+maths::float_min, +maths::float_min, +maths::float_min};
 	constexpr v3 v3Max     = v3{+maths::float_max, +maths::float_max, +maths::float_max};
 	constexpr v3 v3Lowest  = v3{-maths::float_max, -maths::float_max, -maths::float_max};
@@ -44,6 +46,7 @@ namespace pr
 	constexpr v4 v4Zero    = v4{0.0f, 0.0f, 0.0f, 0.0f};
 	constexpr v4 v4Half    = v4{0.5f, 0.5f, 0.5f, 0.5f};
 	constexpr v4 v4One     = v4{1.0f, 1.0f, 1.0f, 1.0f};
+	constexpr v4 v4TinyF   = v4{maths::tinyf, maths::tinyf, maths::tinyf, maths::tinyf};
 	constexpr v4 v4Min     = v4{+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
 	constexpr v4 v4Max     = v4{+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
 	constexpr v4 v4Lowest  = v4{-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
