@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
+using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
@@ -40,17 +42,19 @@ namespace Rylogic.Gui.WPF
 				};
 				LabelX = new TextBlock
 				{
-					Padding = new Thickness(2),
+					Padding = new Thickness(4,2,4,2),
 					TextAlignment = TextAlignment.Center,
 					Background = bkgd_colour.ToMediaBrush(),
 					Foreground = text_colour.ToMediaBrush(),
+					MinWidth = 50,
 				};
 				LabelY = new TextBlock
 				{
-					Padding = new Thickness(2),
+					Padding = new Thickness(4, 2, 4, 2),
 					TextAlignment = TextAlignment.Center,
 					Background = bkgd_colour.ToMediaBrush(),
 					Foreground = text_colour.ToMediaBrush(),
+					MinWidth = 50,
 				};
 
 				LabelX.Typeface(Chart.XAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
@@ -91,47 +95,65 @@ namespace Rylogic.Gui.WPF
 			private OptionsData Options => Chart.Options;
 
 			/// <summary>Set the chart position of the cross hair</summary>
-			public void PositionCrossHair(Point client_pt)
+			public void PositionCrossHair(v2 scene_point)
 			{
-				var chart_pt = Chart.ClientToChart(client_pt);
+				var chart_point = Chart.SceneToChart(scene_point);
 				var bounds = Chart.SceneBounds;
 
-				LineV.X1 = client_pt.X - bounds.Left;
-				LineV.X2 = client_pt.X - bounds.Left;
+				LineV.X1 = scene_point.x;
+				LineV.X2 = scene_point.x;
 				LineV.Y1 = 0;
 				LineV.Y2 = bounds.Height;
 
 				LineH.X1 = 0;
 				LineH.X2 = bounds.Width;
-				LineH.Y1 = client_pt.Y - bounds.Top;
-				LineH.Y2 = client_pt.Y - bounds.Top;
+				LineH.Y1 = scene_point.y;
+				LineH.Y2 = scene_point.y;
 
-				LabelX.Text = Chart.XAxis.TickText(chart_pt.X);
+				LabelX.Text = Chart.XAxis.TickText(chart_point.x);
 				switch (Chart.XAxis.Options.Side)
 				{
-				default: throw new Exception("CrossHair label: Unexpected side for the X axis");
-				case Dock.Top:
-					Canvas.SetLeft(LabelX, Chart.TransformToDescendant(Chart.XAxisPanel).Transform(client_pt).X - LabelX.RenderSize.Width / 2);
-					Canvas.SetTop(LabelY, Chart.XAxisPanel.Height - LabelX.RenderSize.Height);
-					break;
-				case Dock.Bottom:
-					Canvas.SetLeft(LabelX, Chart.TransformToDescendant(Chart.XAxisPanel).Transform(client_pt).X - LabelX.RenderSize.Width / 2);
-					Canvas.SetTop(LabelY, 0);
-					break;
+					case Dock.Top:
+					{
+						var axis_point = Gui_.MapPoint(Chart.Scene, Chart.XAxisPanel, scene_point.ToPointD());
+						Canvas.SetLeft(LabelX, axis_point.X - LabelX.RenderSize.Width / 2);
+						Canvas.SetTop(LabelX, Chart.XAxisPanel.Height - LabelX.RenderSize.Height - Chart.XAxis.Options.TickLength);
+						break;
+					}
+					case Dock.Bottom:
+					{
+						var axis_point = Gui_.MapPoint(Chart.Scene, Chart.XAxisPanel, scene_point.ToPointD());
+						Canvas.SetLeft(LabelX, axis_point.X - LabelX.RenderSize.Width / 2);
+						Canvas.SetTop(LabelX, Chart.XAxis.Options.TickLength);
+						break;
+					}
+					default:
+					{
+						throw new Exception("CrossHair label: Unexpected side for the X axis");
+					}
 				}
 
-				LabelY.Text = Chart.YAxis.TickText(chart_pt.Y);
+				LabelY.Text = Chart.YAxis.TickText(chart_point.y);
 				switch (Chart.YAxis.Options.Side)
 				{
-				default: throw new Exception("CrossHair label: Unexpected side for the Y axis");
-				case Dock.Left:
-					Canvas.SetLeft(LabelY, Chart.YAxisPanel.Width - LabelY.RenderSize.Width);
-					Canvas.SetTop(LabelY, Chart.TransformToDescendant(Chart.YAxisPanel).Transform(client_pt).Y - LabelY.RenderSize.Height / 2);
-					break;
-				case Dock.Right:
-					Canvas.SetLeft(LabelY, 0);
-					Canvas.SetTop(LabelY, Chart.TransformToDescendant(Chart.YAxisPanel).Transform(client_pt).Y - LabelY.RenderSize.Height / 2);
-					break;
+					case Dock.Left:
+					{
+						var axis_point = Gui_.MapPoint(Chart.Scene, Chart.YAxisPanel, scene_point.ToPointD());
+						Canvas.SetLeft(LabelY, Chart.YAxisPanel.Width - LabelY.RenderSize.Width - Chart.YAxis.Options.TickLength);
+						Canvas.SetTop(LabelY, axis_point.Y - LabelY.RenderSize.Height / 2);
+						break;
+					}
+					case Dock.Right:
+					{
+						var axis_point = Gui_.MapPoint(Chart.Scene, Chart.YAxisPanel, scene_point.ToPointD());
+						Canvas.SetLeft(LabelY, Chart.YAxis.Options.TickLength);
+						Canvas.SetTop(LabelY, axis_point.Y - LabelY.RenderSize.Height / 2);
+						break;
+					}
+					default:
+					{
+						throw new Exception("CrossHair label: Unexpected side for the Y axis");
+					}
 				}
 			}
 		}

@@ -105,7 +105,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 				// Look for a shorter pair. Use hysteresis to prevent snapping back and forth.
 				var best = possibles.MinBy(x => x.LengthSq);
-				if (crossing_count == initial_crossing_count && best.LengthSq > pairs[conn].LengthSq * 0.999)
+				if (crossing_count == initial_crossing_count && best.LengthSq > pairs[conn].LengthSq * 0.995)
 					continue;
 
 				// Update the connector

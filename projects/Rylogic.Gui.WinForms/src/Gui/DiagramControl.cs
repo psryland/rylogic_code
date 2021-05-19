@@ -448,7 +448,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
 		public v2 ClientToDiagram(Point point)
 		{
-			var ws = m_camera.SSPointToWSPoint(point);
+			var ws = m_camera.SSPointToWSPoint(v2.From(point));
 			return new v2(ws.x, ws.y);
 		}
 
@@ -465,7 +465,7 @@ namespace Rylogic.Gui.WinForms
 		public Point DiagramToClient(v2 point)
 		{
 			var ws = new v4(point, 0.0f, 1.0f);
-			return m_camera.WSPointToSSPoint(ws);
+			return m_camera.WSPointToSSPoint(ws).ToPoint();
 		}
 
 		/// <summary>Returns a rectangle in client space from a rectangle in diagram space. Inverse of ClientToDiagram</summary>
@@ -589,24 +589,27 @@ namespace Rylogic.Gui.WinForms
 		{
 			switch (btn)
 			{
-			default: return null;
-			case MouseButtons.Left:
+				case MouseButtons.Left:
 				{
 					// If elements are selected, see if the mouse has selected one of the resize-grabbers
 					if (AllowArranging && SelectionResizeable)
 					{
-						var pt_ds = ClientToDiagram(pt_cs);
-						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).LengthSq);
-						if (m_camera.WSVecToSSVec(pt_ds, nearest.O2P.pos.xy).LengthSq < MinCSSelectionDistanceSq)
+						var pt_ds = new v4(ClientToDiagram(pt_cs), 0, 1f);
+						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds.xy).LengthSq);
+						if (m_camera.WSVecToSSVec(pt_ds, nearest.O2P.pos).LengthSq < MinCSSelectionDistanceSq)
 							return new MouseOpResize(this, nearest);
 					}
 
 					// Otherwise, normal drag/click behaviour
 					return new MouseOpDragOrClickElements(this);
 				}
-			case MouseButtons.Right:
+				case MouseButtons.Right:
 				{
 					return new MouseOpDragOrClickDiagram(this);
+				}
+				default:
+				{
+					return null;
 				}
 			}
 		}
@@ -2743,7 +2746,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var points = Points(true);
 				var dist_sq = float.MaxValue;
-				var closest_pt = v2.Zero;
+				var closest_pt = v4.Zero;
 				if (Style.Smooth && points.Length > 2)
 				{
 					// Smooth connectors convert the points to splines
@@ -2756,7 +2759,7 @@ namespace Rylogic.Gui.WinForms
 						if (dsq < dist_sq)
 						{
 							dist_sq = dsq;
-							closest_pt = pt.xy;
+							closest_pt = pt;
 						}
 					}
 				}
@@ -2770,15 +2773,15 @@ namespace Rylogic.Gui.WinForms
 						if (dsq < dist_sq)
 						{
 							dist_sq = dsq;
-							closest_pt = pt;
+							closest_pt = new v4(pt, 0, 1);
 						}
 					}
 				}
 
 				// Convert separating distance screen space
-				var dist_cs = cam.WSVecToSSVec(closest_pt, point);
+				var dist_cs = cam.WSVecToSSVec(closest_pt, new v4(point, 0, 1));
 				if (dist_cs.LengthSq > MinCSSelectionDistanceSq) return null;
-				return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
+				return new HitTestResult.Hit(this, closest_pt.xy - Position.pos.xy);
 			}
 
 			/// <summary>Handle a click event on this element</summary>
@@ -2789,9 +2792,9 @@ namespace Rylogic.Gui.WinForms
 				{
 					// Hit point in screen space
 					var hit_point_ds = Position.pos + new v4(hit.Point, 0, 0);
-					var hit_point_cs = v2.From(cam.WSPointToSSPoint(hit_point_ds));
-					var anc0_cs = v2.From(cam.WSPointToSSPoint(Anc0.LocationDS));
-					var anc1_cs = v2.From(cam.WSPointToSSPoint(Anc1.LocationDS));
+					var hit_point_cs = cam.WSPointToSSPoint(hit_point_ds);
+					var anc0_cs = cam.WSPointToSSPoint(Anc0.LocationDS);
+					var anc1_cs = cam.WSPointToSSPoint(Anc1.LocationDS);
 
 					// If the click was at the ends of the connector and diagram editing
 					// is allowed, detach the connector and start a move link mouse op
@@ -4509,7 +4512,7 @@ namespace Rylogic.Gui.WinForms
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// The resize delta in diagram space
-				var vec_ds = m_diag.m_camera.SSVecToWSVec(m_grab_cs, e.Location);
+				var vec_ds = m_diag.m_camera.SSVecToWSVec(v2.From(m_grab_cs), v2.From(e.Location));
 				var delta = Math_.Dot(vec_ds.xy, m_grabber.Direction);
 
 				// Scale all of the resizeable selected elements

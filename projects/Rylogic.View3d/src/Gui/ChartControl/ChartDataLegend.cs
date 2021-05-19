@@ -119,7 +119,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private double m_font_size;
 
-		/// <summary>Generate the legend graphics</summary>
+		/// <inheritdoc/>
 		protected override void UpdateGfxCore()
 		{
 			base.UpdateGfxCore();
@@ -157,7 +157,7 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary>Add/Remove graphics from the scene</summary>
+		/// <inheritdoc/>
 		protected override void UpdateSceneCore()
 		{
 			base.UpdateSceneCore();
@@ -171,16 +171,17 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-		public override ChartControl.HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+		/// <inheritdoc/>
+		public override ChartControl.HitTestResult.Hit? HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
 			if (Gfx == null || Chart == null || !Gfx.Visible || mouse_btns == EMouseBtns.None)
 				return null;
 
-			// Get the area covered by the legend in screen space
-			var loc_nss = PositionXY;
-			var area = Gfx.BBoxMS(false).ToRectXY();
-			var loc_client = Chart.NSSToClient(new Point(loc_nss.x, loc_nss.y));
+			// TODO
+			//// Get the area covered by the legend in screen space
+			//var loc_nss = PositionXY;
+			//var area = Gfx.BBoxMS(false).ToRectXY();
+			//var loc_client = Chart.NSSToClient(new Point(loc_nss.x, loc_nss.y));
 
 			return null;
 			// todo:

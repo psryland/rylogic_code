@@ -50,7 +50,7 @@ namespace pr::rdr
 
 	// Add an instance. The instance, model, and nuggets must be resident for the entire time
 	// that the instance is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
-	void RenderStep::AddInstance(BaseInstance const& inst, EInstFlags flags)
+	void RenderStep::AddInstance(BaseInstance const& inst)
 	{
 		// Get the model associated with the instance
 		ModelPtr const& model = GetModel(inst);
@@ -61,18 +61,19 @@ namespace pr::rdr
 
 		// Debug checks
 		#if PR_DBG_RDR
-		if (nuggets.empty() && !AllSet(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets))
 		{
-			PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
-			model->m_dbg_flags = SetBits(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets, true);
-		}
+			if (nuggets.empty() && !AllSet(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets))
+			{
+				PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') has no nuggets, you need to call CreateNugget() on the model first\n", model->m_name.c_str()));
+				model->m_dbg_flags = SetBits(model->m_dbg_flags, Model::EDbgFlags::WarnedNoRenderNuggets, true);
+			}
 
-		// Check the instance transform is valid
-		auto& o2w = GetO2W(inst);
-		PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
-		PR_ASSERT(PR_DBG_RDR, AllSet(flags, EInstFlags::NonAffine) || IsAffine(o2w), "Invalid instance transform");
-		#else
-		(void)flags;
+			// Check the instance transform is valid
+			auto& o2w = GetO2W(inst);
+			auto flags = GetFlags(inst);
+			PR_ASSERT(PR_DBG_RDR, IsFinite(o2w), "Invalid instance transform");
+			PR_ASSERT(PR_DBG_RDR, AllSet(flags, EInstFlag::NonAffine) || IsAffine(o2w), "Invalid instance transform");
+		}
 		#endif
 
 		// Add to the derived objects drawlist

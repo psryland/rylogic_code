@@ -208,7 +208,7 @@ namespace view3d
 			if (n->m_fill_mode != EView3DFillMode::Default) nug.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(n->m_fill_mode));
 			nug.m_vrange = n->m_v0 != n->m_v1 ? rdr::Range(n->m_v0, n->m_v1) : rdr::Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? rdr::Range(n->m_i0, n->m_i1) : rdr::Range(0, icount);
-			nug.m_flags = static_cast<ENuggetFlag>(n->m_flags);
+			nug.m_nflags = static_cast<ENuggetFlag>(n->m_nflags);
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			nug.m_range_overlaps = n->m_range_overlaps;
 			nug.m_tint = n->m_mat.m_tint;
@@ -531,6 +531,7 @@ namespace view3d
 				View3DNugget n = {};
 				n.m_topo = static_cast<EView3DTopo>(nug.m_topo);
 				n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
+				n.m_nflags = static_cast<EView3DNuggetFlag>(nug.m_nflags);
 				n.m_cull_mode = static_cast<EView3DCullMode>(nug.m_rsb.Desc().CullMode);
 				n.m_fill_mode = static_cast<EView3DFillMode>(nug.m_rsb.Desc().FillMode);
 				n.m_v0 = pr::s_cast<UINT32>(nug.m_vrange.begin());
@@ -584,6 +585,7 @@ namespace view3d
 			NuggetProps mat;
 			mat.m_topo = static_cast<ETopo>(nug.m_topo);
 			mat.m_geom = static_cast<EGeom>(nug.m_geom);
+			mat.m_nflags = static_cast<ENuggetFlag>(nug.m_nflags);
 			mat.m_vrange = vrange;
 			mat.m_irange = irange;
 			mat.m_vrange.resize(new_vcount);

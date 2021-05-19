@@ -319,6 +319,7 @@ namespace pr::ldr
 		x(rdr::ModelPtr   ,m_model  ,rdr::EInstComp::ModelPtr           )/* 4 or 8 bytes */\
 		x(Colour32        ,m_colour ,rdr::EInstComp::TintColour32       )/*      4 bytes */\
 		x(float           ,m_env    ,rdr::EInstComp::EnvMapReflectivity )/*      4 bytes */\
+		x(rdr::EInstFlag  ,m_iflags ,rdr::EInstComp::Flags              )/*      4 bytes */\
 		x(rdr::SKOverride ,m_sko    ,rdr::EInstComp::SortkeyOverride    )/*      8 bytes */\
 		x(rdr::BSBlock    ,m_bsb    ,rdr::EInstComp::BSBlock            )/*    296 bytes */\
 		x(rdr::DSBlock    ,m_dsb    ,rdr::EInstComp::DSBlock            )/*     60 bytes */\
@@ -441,7 +442,7 @@ namespace pr::ldr
 		Animation    m_anim;          // Animation data
 		BBoxInstance m_bbox_instance; // Used for rendering the bounding box for this instance
 		Sub          m_screen_space;  // True if this object should be rendered in screen space
-		ELdrFlags    m_flags;         // Property flags controlling meta behaviour of the object
+		ELdrFlags    m_ldr_flags;     // Property flags controlling meta behaviour of the object
 		UserData     m_user_data;     // User data
 
 		LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id);
@@ -455,11 +456,11 @@ namespace pr::ldr
 		EventHandler<LdrObject&, rdr::Scene const&, true> OnAddToScene;
 
 		// Recursively add this object and its children to a scene
-		void AddToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None);
+		void AddToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Recursively add the bounding box instance for this object using 'bbox_model'
 		// located and scaled to the transform and box of this object
-		void AddBBoxToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None);
+		void AddBBoxToScene(rdr::Scene& scene, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None);
 
 		// Notes:
 		//  - Methods with a 'name' parameter apply an operation on this object
@@ -576,12 +577,12 @@ namespace pr::ldr
 		// Return the bounding box for this object in model space
 		// To convert this to parent space multiply by 'm_o2p'
 		// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-		template <typename Pred> BBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags pflags = ELdrFlags::None) const
+		template <typename Pred> BBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, m4x4 const* p2w = &m4x4Identity, ELdrFlags parent_flags = ELdrFlags::None) const
 		{
 			auto i2w = *p2w * m_anim.Step(time_s);
 
 			// Combine recursive flags
-			auto flags = m_flags | (pflags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
+			auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::BBoxExclude|ELdrFlags::NonAffine));
 
 			// Start with the bbox for this object
 			auto bbox = BBox::Reset();

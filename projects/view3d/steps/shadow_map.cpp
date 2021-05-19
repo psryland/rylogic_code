@@ -231,7 +231,7 @@ namespace pr::rdr
 			// Get the scene bounds in light space
 			// Inflate the bounds slightly so that the edge of the smap is avoided
 			auto ls_bounds = w2ls * ws_bounds;
-			ls_bounds.m_radius *= 1.01f;
+			ls_bounds.m_radius = Max(ls_bounds.m_radius * 1.01f, v4TinyF);
 			m_params.m_bounds = ls_bounds;
 
 			// Create a projection that encloses the scene bounds. This is basically "c2s"
@@ -346,6 +346,10 @@ namespace pr::rdr
 	// Add model nuggets to the draw list for this render step
 	void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
 	{
+		// Ignore instances that don't cast shadows
+		if (AnySet(GetFlags(inst), EInstFlag::ShadowCastExclude))
+			return;
+
 		Lock lock(*this);
 		auto& drawlist = lock.drawlist();
 		drawlist.reserve(drawlist.size() + nuggets.size());
@@ -354,7 +358,7 @@ namespace pr::rdr
 		Model const* model = nullptr;
 		for (auto& nug : nuggets)
 		{
-			if (AnySet(nug.m_flags, ENuggetFlag::ShadowCastExclude)) continue;
+			if (AnySet(nug.m_nflags, ENuggetFlag::ShadowCastExclude)) continue;
 			nug.AddToDrawlist(drawlist, inst, nullptr, Id);
 			model = nug.m_owner;
 		}

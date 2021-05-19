@@ -27,11 +27,11 @@ namespace TestWPF
 				"test_object", 0xFFFFFFFF, 5, 18, 1,
 				new View3d.Vertex[]
 				{
-					new View3d.Vertex(new v4(+0, +1, +0, 1), new v4(+0.00f, +1.00f, +0.00f, 0), 0xffff0000, new v2(0.50f, 1)),
-					new View3d.Vertex(new v4(-1, -1, -1, 1), new v4(-0.57f, -0.57f, -0.57f, 0), 0xff00ff00, new v2(0.00f, 0)),
-					new View3d.Vertex(new v4(-1, -1, +1, 1), new v4(-0.57f, -0.57f, +0.57f, 0), 0xff0000ff, new v2(0.25f, 0)),
-					new View3d.Vertex(new v4(+1, -1, +1, 1), new v4(+0.57f, -0.57f, +0.57f, 0), 0xffff00ff, new v2(0.50f, 0)),
-					new View3d.Vertex(new v4(+1, -1, -1, 1), new v4(+0.57f, -0.57f, -0.57f, 0), 0xff00ffff, new v2(0.75f, 0)),
+					new View3d.Vertex(new v4(+0, +0, +0, 1), new v4(+0.00f, +1.00f, +0.00f, 0), 0xffff0000, new v2(0.50f, 1)),
+					new View3d.Vertex(new v4(-1, -2, -1, 1), new v4(-0.57f, -0.57f, -0.57f, 0), 0xff00ff00, new v2(0.00f, 0)),
+					new View3d.Vertex(new v4(-1, -2, +1, 1), new v4(-0.57f, -0.57f, +0.57f, 0), 0xff0000ff, new v2(0.25f, 0)),
+					new View3d.Vertex(new v4(+1, -2, +1, 1), new v4(+0.57f, -0.57f, +0.57f, 0), 0xffff00ff, new v2(0.50f, 0)),
+					new View3d.Vertex(new v4(+1, -2, -1, 1), new v4(+0.57f, -0.57f, -0.57f, 0), 0xff00ffff, new v2(0.75f, 0)),
 				},
 				new ushort[]
 				{

@@ -585,70 +585,70 @@ namespace pr::ldr
 
 		switch (kw)
 		{
-		default: return false;
-		case EKeyword::O2W:
-		case EKeyword::Txfm:
+			case EKeyword::O2W:
+			case EKeyword::Txfm:
 			{
 				reader.TransformS(obj->m_o2p);
-				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NonAffine, !IsAffine(obj->m_o2p));
 				return true;
 			}
-		case EKeyword::Colour:
+			case EKeyword::Colour:
 			{
 				reader.IntS(obj->m_base_colour.argb, 16);
 				return true;
 			}
-		case EKeyword::ColourMask:
+			case EKeyword::ColourMask:
 			{
 				reader.IntS(obj->m_colour_mask, 16);
 				return true;
 			}
-		case EKeyword::Reflectivity:
+			case EKeyword::Reflectivity:
 			{
 				reader.RealS(obj->m_env);
 				return true;
 			};
-		case EKeyword::RandColour:
+			case EKeyword::RandColour:
 			{
 				obj->m_base_colour = pr::RandomRGB(g_rng());
 				return true;
 			}
-		case EKeyword::Animation:
+			case EKeyword::Animation:
 			{
 				ParseAnimation(p, obj->m_anim);
 				return true;
 			}
-		case EKeyword::Hidden:
+			case EKeyword::Hidden:
 			{
-				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::Hidden, true);
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Hidden, true);
 				return true;
 			}
-		case EKeyword::Wireframe:
+			case EKeyword::Wireframe:
 			{
-				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::Wireframe, true);
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::Wireframe, true);
 				return true;
 			}
-		case EKeyword::NoZTest:
+			case EKeyword::NoZTest:
 			{
-				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NoZTest, true);
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NoZTest, true);
 				return true;
 			}
-		case EKeyword::NoZWrite:
+			case EKeyword::NoZWrite:
 			{
-				obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NoZWrite, true);
+				obj->m_ldr_flags = SetBits(obj->m_ldr_flags, ELdrFlags::NoZWrite, true);
 				return true;
 			}
-		case EKeyword::ScreenSpace:
+			case EKeyword::ScreenSpace:
 			{
 				// Use a magic number to signal screen space mode to the ApplyState function
 				obj->m_screen_space = Sub((multicast::IMultiCast*)1, 0);
 				return true;
 			}
-		case EKeyword::Font:
+			case EKeyword::Font:
 			{
 				ParseFont(p, p.m_font.back());
 				return true;
 			}
+			default: return false;
 		}
 	}
 
@@ -664,15 +664,15 @@ namespace pr::ldr
 			obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
 
 		// If flagged as hidden, hide
-		if (AllSet(obj->m_flags, ELdrFlags::Hidden))
+		if (AllSet(obj->m_ldr_flags, ELdrFlags::Hidden))
 			obj->Visible(false);
 
 		// If flagged as wireframe, set wireframe
-		if (AllSet(obj->m_flags, ELdrFlags::Wireframe))
+		if (AllSet(obj->m_ldr_flags, ELdrFlags::Wireframe))
 			obj->Wireframe(true);
 
 		// If NoZTest
-		if (AllSet(obj->m_flags, ELdrFlags::NoZTest))
+		if (AllSet(obj->m_ldr_flags, ELdrFlags::NoZTest))
 		{
 			// Don't test against Z, and draw above all objects
 			obj->m_dsb.Set(rdr::EDS::DepthEnable, FALSE);
@@ -680,7 +680,7 @@ namespace pr::ldr
 		}
 
 		// If NoZWrite
-		if (AllSet(obj->m_flags, ELdrFlags::NoZWrite))
+		if (AllSet(obj->m_ldr_flags, ELdrFlags::NoZWrite))
 		{
 			// Don't write to Z and draw behind all objects
 			obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
@@ -2098,7 +2098,7 @@ namespace pr::ldr
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
 				obj->m_model->CreateNugget(nug);
 			}
 			{
@@ -2109,7 +2109,7 @@ namespace pr::ldr
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
 				obj->m_model->CreateNugget(nug);
 			}
 			if (m_type & EArrowType::Fwd)
@@ -2121,7 +2121,7 @@ namespace pr::ldr
 				nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 				nug.m_vrange = vrange;
 				nug.m_irange = irange;
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
 				obj->m_model->CreateNugget(nug);
 			}
 		}
@@ -3444,14 +3444,14 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						m_tex.ParseKeyword(p, kw) ||
 						m_gen_norms.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Verts:
+				case EKeyword::Verts:
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3464,7 +3464,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Normals:
+				case EKeyword::Normals:
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3477,7 +3477,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Colours:
+				case EKeyword::Colours:
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3490,7 +3490,7 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::TexCoords:
+				case EKeyword::TexCoords:
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3503,9 +3503,9 @@ namespace pr::ldr
 					p.m_reader.SectionEnd();
 					return true;
 				}
-			case EKeyword::Lines:
-			case EKeyword::LineList:
-			case EKeyword::LineStrip:
+				case EKeyword::Lines:
+				case EKeyword::LineList:
+				case EKeyword::LineStrip:
 				{
 					auto is_strip = kw == EKeyword::LineStrip;
 					auto nug = *m_tex.Material();
@@ -3514,7 +3514,7 @@ namespace pr::ldr
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 					nug.m_vrange = pr::rdr::Range::Reset();
 					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3532,9 +3532,9 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
-			case EKeyword::Faces:
-			case EKeyword::TriList:
-			case EKeyword::TriStrip:
+				case EKeyword::Faces:
+				case EKeyword::TriList:
+				case EKeyword::TriStrip:
 				{
 					auto is_strip = kw == EKeyword::TriStrip;
 					auto nug = *m_tex.Material();
@@ -3542,10 +3542,10 @@ namespace pr::ldr
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
-						(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
 					nug.m_vrange = pr::rdr::Range::Reset();
 					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3563,17 +3563,17 @@ namespace pr::ldr
 					m_nuggets.push_back(nug);
 					return true;
 				}
-			case EKeyword::Tetra:
+				case EKeyword::Tetra:
 				{
 					auto nug = *m_tex.Material();
 					nug.m_topo = ETopo::TriList;
 					nug.m_geom = EGeom::Vert |
 						(!m_normals.empty() ? EGeom::Norm : EGeom::None) |
 						(!m_colours.empty() ? EGeom::Colr : EGeom::None) |
-						(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
+						(!m_texs.empty() ? EGeom::Tex0 : EGeom::None);
 					nug.m_vrange = pr::rdr::Range::Reset();
 					nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, false);
 
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3651,7 +3651,7 @@ namespace pr::ldr
 					for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
 					{
 						if (!HasAlpha(m_colours[m_indices[i]])) continue;
-						nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, true);
+						nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::GeometryHasAlpha, true);
 						break;
 					}
 				}
@@ -4510,7 +4510,7 @@ namespace pr::ldr
 				n.m_geom = EGeom::Vert;
 				n.m_vrange = rdr::Range(0, count);
 				n.m_irange = rdr::Range(0, count);
-				n.m_flags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
+				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.DeleteNuggets();
 				model.CreateNugget(n);
 			}
@@ -4581,7 +4581,7 @@ namespace pr::ldr
 				n.m_geom = props.m_geom;
 				n.m_vrange = rdr::Range(0, vcount);
 				n.m_irange = rdr::Range(0, icount);
-				n.m_flags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
+				n.m_nflags = extras.has_alpha() ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
 				model.CreateNugget(n);
 			}
 		}
@@ -4912,7 +4912,7 @@ namespace pr::ldr
 				}
 				default:
 				{
-					throw std::exception(FmtS("Unknown Text mode: %d", m_type));
+					throw std::runtime_error(FmtS("Unknown Text mode: %d", m_type));
 				}
 			}
 		}
@@ -5243,6 +5243,7 @@ namespace pr::ldr
 				std::swap(object->m_bsb, rhs->m_bsb);
 				std::swap(object->m_dsb, rhs->m_dsb);
 				std::swap(object->m_rsb, rhs->m_rsb);
+				std::swap(object->m_iflags, rhs->m_iflags);
 			}
 			if (AllSet(flags, EUpdateObject::Transform))
 				std::swap(object->m_i2w, rhs->m_i2w);
@@ -5256,7 +5257,7 @@ namespace pr::ldr
 			if (AllSet(flags, EUpdateObject::Transform))
 				std::swap(object->m_o2p, rhs->m_o2p);
 			if (AllSet(flags, EUpdateObject::Flags))
-				std::swap(object->m_flags, rhs->m_flags);
+				std::swap(object->m_ldr_flags, rhs->m_ldr_flags);
 			if (AllSet(flags, EUpdateObject::Animation))
 				std::swap(object->m_anim, rhs->m_anim);
 			if (AllSet(flags, EUpdateObject::ColourMask))
@@ -5303,14 +5304,6 @@ namespace pr::ldr
 	void Remove(ObjectCont& objects, LdrObject* obj)
 	{
 		erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
-	}
-
-	// Convert ELdrFlags to EInstFlags
-	rdr::EInstFlags InstFlags(ELdrFlags ldr_flags)
-	{
-		auto flags = rdr::EInstFlags::None;
-		if (AllSet(ldr_flags, ELdrFlags::NonAffine)) flags = SetBits(flags, rdr::EInstFlags::NonAffine, true);
-		return flags;
 	}
 
 	// LdrObject ***********************************
@@ -5381,7 +5374,7 @@ namespace pr::ldr
 		,m_anim()
 		,m_bbox_instance()
 		,m_screen_space()
-		,m_flags(ELdrFlags::None)
+		,m_ldr_flags(ELdrFlags::None)
 		,m_user_data()
 	{
 		m_i2w = m4x4Identity;
@@ -5400,7 +5393,7 @@ namespace pr::ldr
 	}
 
 	// Recursively add this object and its children to a viewport
-	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags pflags)
+	void LdrObject::AddToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world.
 		// Take a copy in case the 'OnAddToScene' event changes it.
@@ -5409,7 +5402,7 @@ namespace pr::ldr
 		m_i2w = i2w;
 
 		// Combine recursive flags
-		auto flags = m_flags | (pflags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
 		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Allow the object to change it's transform just before rendering
@@ -5419,7 +5412,7 @@ namespace pr::ldr
 		if (m_model && !AllSet(flags, ELdrFlags::Hidden))
 		{
 			// Could add occlusion culling here...
-			scene.AddInstance(*this, InstFlags(flags));
+			scene.AddInstance(*this);
 		}
 
 		// Rinse and repeat for all children
@@ -5429,13 +5422,13 @@ namespace pr::ldr
 
 	// Recursively add this object using 'bbox_model' instead of its
 	// actual model, located and scaled to the transform and box of this object
-	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags pflags)
+	void LdrObject::AddBBoxToScene(Scene& scene, float time_s, m4x4 const* p2w, ELdrFlags parent_flags)
 	{
 		// Set the instance to world for this object
 		auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 
 		// Combine recursive flags
-		auto flags = m_flags | (pflags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
+		auto flags = m_ldr_flags | (parent_flags & (ELdrFlags::Hidden|ELdrFlags::Wireframe|ELdrFlags::NonAffine));
 		PR_ASSERT(PR_DBG, AllSet(flags, ELdrFlags::NonAffine) || IsAffine(m_i2w), "Invalid instance transform");
 
 		// Add the bbox instance to the scene drawlist
@@ -5444,7 +5437,7 @@ namespace pr::ldr
 			// Find the object to world for the bbox
 			m_bbox_instance.m_model = scene.rdr().m_mdl_mgr.m_bbox_model;
 			m_bbox_instance.m_i2w = i2w * BBoxTransform(m_model->m_bbox);
-			scene.AddInstance(m_bbox_instance, InstFlags(flags));
+			scene.AddInstance(m_bbox_instance);
 		}
 
 		// Rinse and repeat for all children
@@ -5510,7 +5503,7 @@ namespace pr::ldr
 	bool LdrObject::Visible(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? !AllSet(obj->m_flags, ELdrFlags::Hidden) : false;
+		return obj ? !AllSet(obj->m_ldr_flags, ELdrFlags::Hidden) : false;
 	}
 	void LdrObject::Visible(bool visible, char const* name)
 	{
@@ -5521,7 +5514,7 @@ namespace pr::ldr
 	bool LdrObject::Wireframe(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? AllSet(obj->m_flags, ELdrFlags::Wireframe) : false;
+		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Wireframe) : false;
 	}
 	void LdrObject::Wireframe(bool wireframe, char const* name)
 	{
@@ -5532,7 +5525,7 @@ namespace pr::ldr
 	bool LdrObject::Normals(char const* name) const
 	{
 		auto obj = Child(name);
-		return obj ? AllSet(obj->m_flags, ELdrFlags::Normals) : false;
+		return obj ? AllSet(obj->m_ldr_flags, ELdrFlags::Normals) : false;
 	}
 	void LdrObject::Normals(bool show, char const* name)
 	{
@@ -5555,7 +5548,7 @@ namespace pr::ldr
 
 				// Do not include in scene bounds calculations because we're scaling
 				// this model at a point that the bounding box calculation can't see.
-				o->m_flags = SetBits(o->m_flags, ELdrFlags::SceneBoundsExclude, true);
+				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, true);
 
 				// Update the rendering 'i2w' transform on add-to-scene.
 				o->m_screen_space = o->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
@@ -5588,7 +5581,7 @@ namespace pr::ldr
 			else
 			{
 				o->m_c2s = m4x4Zero;
-				o->m_flags = SetBits(o->m_flags, ELdrFlags::SceneBoundsExclude, false);
+				o->m_ldr_flags = SetBits(o->m_ldr_flags, ELdrFlags::SceneBoundsExclude, false);
 				o->OnAddToScene -= o->m_screen_space;
 			}
 			return true;
@@ -5601,27 +5594,27 @@ namespace pr::ldr
 		// Mainly used to allow non-user objects to be added to a scene
 		// and not affect the bounding box of the scene
 		auto obj = Child(name);
-		return obj ? obj->m_flags : ELdrFlags::None;
+		return obj ? obj->m_ldr_flags : ELdrFlags::None;
 	}
 	void LdrObject::Flags(ELdrFlags flags, bool state, char const* name)
 	{
 		Apply([=](LdrObject* o)
 		{
 			// Apply flag changes
-			o->m_flags = SetBits(o->m_flags, flags, state);
+			o->m_ldr_flags = SetBits(o->m_ldr_flags, flags, state);
 
 			// Hidden
 			if (o->m_model != nullptr)
 			{
 				// Even though Ldraw doesn't add instances that are hidden,
 				// set the visibility flags on the nuggets for consistency.
-				auto hidden = AllSet(o->m_flags, ELdrFlags::Hidden);
+				auto hidden = AllSet(o->m_ldr_flags, ELdrFlags::Hidden);
 				for (auto& nug : o->m_model->m_nuggets)
-					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::Hidden, hidden);
+					nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::Hidden, hidden);
 			}
 
 			// Wireframe
-			if (AllSet(o->m_flags, ELdrFlags::Wireframe))
+			if (AllSet(o->m_ldr_flags, ELdrFlags::Wireframe))
 			{
 				o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
 			}
@@ -5631,7 +5624,7 @@ namespace pr::ldr
 			}
 
 			// No Z Test
-			if (AllSet(o->m_flags, ELdrFlags::NoZTest))
+			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZTest))
 			{
 				// Don't test against Z, and draw above all objects
 				o->m_dsb.Set(rdr::EDS::DepthEnable, FALSE);
@@ -5644,7 +5637,7 @@ namespace pr::ldr
 			}
 
 			// If NoZWrite
-			if (AllSet(o->m_flags, ELdrFlags::NoZWrite))
+			if (AllSet(o->m_ldr_flags, ELdrFlags::NoZWrite))
 			{
 				// Don't write to Z and draw behind all objects
 				o->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
@@ -5659,15 +5652,20 @@ namespace pr::ldr
 			// Normals
 			if (o->m_model != nullptr)
 			{
-				ShowNormals(o->m_model.get(), AllSet(o->m_flags, ELdrFlags::Normals));
+				auto show_normals = AllSet(o->m_ldr_flags, ELdrFlags::Normals);
+				ShowNormals(o->m_model.get(), show_normals);
 			}
 
 			// Shadow cast
-			if (o->m_model != nullptr)
 			{
-				auto vampire = AllSet(o->m_flags, ELdrFlags::ShadowCastExclude);
-				for (auto& nug : o->m_model->m_nuggets)
-					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::ShadowCastExclude, vampire);
+				auto vampire = AllSet(o->m_ldr_flags, ELdrFlags::ShadowCastExclude);
+				o->m_iflags = SetBits(o->m_iflags, EInstFlag::ShadowCastExclude, vampire);
+			}
+
+			// Non-Affine
+			{
+				auto non_affine = AllSet(o->m_ldr_flags, ELdrFlags::NonAffine);
+				o->m_iflags = SetBits(o->m_iflags, EInstFlag::NonAffine, non_affine);
 			}
 
 			return true;
@@ -5701,7 +5699,7 @@ namespace pr::ldr
 
 		auto nug = obj->m_model->m_nuggets.begin();
 		for (int i = 0; i != index; ++i, ++nug) {}
-		return nug->m_flags;
+		return nug->m_nflags;
 	}
 	void LdrObject::NuggetFlags(rdr::ENuggetFlag flags, bool state, char const* name, int index)
 	{
@@ -5711,7 +5709,7 @@ namespace pr::ldr
 			{
 				auto nug = obj->m_model->m_nuggets.begin();
 				for (int i = 0; i != index; ++i, ++nug) {}
-				nug->m_flags = SetBits(nug->m_flags, flags, state);
+				nug->m_nflags = SetBits(nug->m_nflags, flags, state);
 			}
 			return true;
 		}, name);
@@ -5786,7 +5784,7 @@ namespace pr::ldr
 			auto tint_has_alpha = HasAlpha(o->m_colour);
 			for (auto& nug : o->m_model->m_nuggets)
 			{
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
 				nug.UpdateAlphaStates();
 			}
 
@@ -5805,7 +5803,7 @@ namespace pr::ldr
 			auto has_alpha = HasAlpha(o->m_colour);
 			for (auto& nug : o->m_model->m_nuggets)
 			{
-				nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::TintHasAlpha, has_alpha);
+				nug.m_nflags = SetBits(nug.m_nflags, ENuggetFlag::TintHasAlpha, has_alpha);
 				nug.UpdateAlphaStates();
 			}
 

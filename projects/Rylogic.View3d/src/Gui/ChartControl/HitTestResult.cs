@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -13,10 +12,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
-			public HitTestResult(EZone zone, Point client_point, Point chart_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, IEnumerable<Hit> hits, View3d.Camera cam)
+			public HitTestResult(EZone zone, v2 scene_point, v4 chart_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, IEnumerable<Hit> hits, View3d.Camera cam)
 			{
 				Zone = zone;
-				ClientPoint = client_point;
+				ScenePoint = scene_point;
 				ChartPoint = chart_point;
 				Hits = hits.ToList();
 				ModifierKeys = modifier_keys;
@@ -27,11 +26,11 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The zone on the chart that was hit</summary>
 			public EZone Zone { get; }
 
-			/// <summary>The client space location of where the hit test was performed</summary>
-			public Point ClientPoint { get; }
+			/// <summary>The client scene space location of where the hit test was performed</summary>
+			public v2 ScenePoint { get; }
 
 			/// <summary>The chart space location of where the hit test was performed</summary>
-			public Point ChartPoint { get; }
+			public v4 ChartPoint { get; }
 
 			/// <summary>The collection of hit objects</summary>
 			public List<Hit> Hits { get; }
@@ -48,7 +47,11 @@ namespace Rylogic.Gui.WPF
 			/// <summary></summary>
 			public class Hit
 			{
-				public Hit(Element elem, Point elem_point, object? context)
+				/// <summary></summary>
+				/// <param name="elem">The element that was hit</param>
+				/// <param name="elem_point">Where the element was hit (in element space)</param>
+				/// <param name="context">Context to provide with the hit result</param>
+				public Hit(Element elem, v4 elem_point, object? context)
 				{
 					Element = elem;
 					Point = elem_point;
@@ -59,8 +62,8 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The element that was hit</summary>
 				public Element Element { get; }
 
-				/// <summary>Where on the element it was hit (in element space)</summary>
-				public Point Point { get; }
+				/// <summary>Where on the element it was hit (in element space, i.e. typically world space, but element relative)</summary>
+				public v4 Point { get; }
 
 				/// <summary>The element's chart location at the time it was hit</summary>
 				public m4x4 Location { get; }

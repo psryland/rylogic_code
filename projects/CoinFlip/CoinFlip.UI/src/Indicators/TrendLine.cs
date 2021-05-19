@@ -439,7 +439,7 @@ namespace CoinFlip.UI.Indicators
 
 				var client_pt = e.GetPosition(Chart);
 				var chart_pt = Chart.ClientToChart(client_pt);
-				var delta = client_pt - GrabClient;
+				var delta = client_pt - GrabScene;
 
 				m_indy.Type =
 					!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? ETrendType.Slope :

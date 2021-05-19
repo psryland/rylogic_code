@@ -237,14 +237,14 @@ namespace Rylogic.Gfx
 			{
 				return View3D_NSSPointToWSPoint(m_window.Handle, screen);
 			}
-			public v4 SSPointToWSPoint(PointF screen)
+			public v4 SSPointToWSPoint(v2 screen)
 			{
 				var nss = SSPointToNSSPoint(screen);
 				return NSSPointToWSPoint(new v4(nss.x, nss.y, FocusDist, 1.0f));
 			}
 
 			/// <summary>Return the normalised screen space point corresponding to a screen space point</summary>
-			public v2 SSPointToNSSPoint(PointF screen)
+			public v2 SSPointToNSSPoint(v2 screen)
 			{
 				return m_window.SSPointToNSSPoint(screen);
 			}
@@ -259,11 +259,7 @@ namespace Rylogic.Gfx
 			public v2 WSPointToSSPoint(v4 world)
 			{
 				var nss = WSPointToNSSPoint(world);
-				return m_window.ScreenSpacePoint(new v2(nss.x, nss.y));
-			}
-			public v2 WSPointToSSPoint(v2 world)
-			{
-				return WSPointToSSPoint(new v4(world, 0, 1));
+				return m_window.ScreenSpacePoint(nss.xy);
 			}
 
 			/// <summary>
@@ -271,17 +267,13 @@ namespace Rylogic.Gfx
 			/// projected onto the screen.</summary>
 			public v2 WSVecToSSVec(v4 s, v4 e)
 			{
-				return v2.From(WSPointToSSPoint(e)) - v2.From(WSPointToSSPoint(s));
-			}
-			public v2 WSVecToSSVec(v2 s, v2 e)
-			{
-				return v2.From(WSPointToSSPoint(e)) - v2.From(WSPointToSSPoint(s));
+				return WSPointToSSPoint(e) - WSPointToSSPoint(s);
 			}
 
 			/// <summary>
 			/// Return a world space vector that is the screen space line a->b
 			/// at the focus depth from the camera.</summary>
-			public v4 SSVecToWSVec(Point s, Point e)
+			public v4 SSVecToWSVec(v2 s, v2 e)
 			{
 				var nss_s = SSPointToNSSPoint(s);
 				var nss_e = SSPointToNSSPoint(e);

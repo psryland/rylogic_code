@@ -300,21 +300,23 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <inheritdoc/>
-		public override ChartControl.HitTestResult.Hit? HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+		public override ChartControl.HitTestResult.Hit? HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
 			if (Chart is not ChartControl chart)
 				return null;
 
 			// Convert the screen space width into a distance on the focus plane
-			var snap = (float)chart.ClientToChart(new Size(Style.Width, Style.Width)).Width;
-			var ray = cam.RaySS(new v2((float)client_point.X, (float)client_point.Y));
+			var sz = new v2((float)Style.Width, (float)Style.Width);
+			var snap = (chart.SceneToChart(scene_point) - chart.SceneToChart(scene_point + sz)).xy.Length;
+
+			// Hit test the element
+			var ray = cam.RaySS(scene_point);
 			var results = chart.Scene.Window.HitTest(ray, snap, View3d.EHitTestFlags.Edges, new[] { Gfx });
 			if (!results.IsHit)
 				return null;
 
 			// Convert the hit point to connector space
-			var pt_cs = Math_.InvertFast(O2W) * results.m_ws_intercept;
-			var pt = new Point(pt_cs.x, pt_cs.y);
+			var pt = Math_.InvertFast(O2W) * results.m_ws_intercept;
 			var hit = new ChartControl.HitTestResult.Hit(this, pt, null);
 			return hit;
 		}
@@ -407,8 +409,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			if (Chart is not ChartControl chart)
 				return;
 
-			// Bias the connectors toward the camera
-			var bias = (float)chart.ClientToChart(new Size(Style.Width, Style.Width)).Width;
+			// Bias the connectors toward the camera by a fraction of the Focus Distance
+			var bias = chart.Camera.FocusDist * 0.01f;
 			if (Hovered) bias *= 1.1f;
 			if (Selected) bias *= 1.1f;
 			

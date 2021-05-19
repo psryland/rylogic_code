@@ -15,7 +15,7 @@ namespace Rylogic.Gui.WPF
 		//  - See the notes for the CreatePieceHandler.
 		//  - 'Range' should represent an X-axis region in the cache, *not* the size of the returned graphics.
 		//    If graphics can't be created for a region, then return a piece containing null graphics and a range
-		//    that covers the 'no-data' range
+		//    that covers the 'no-data' range.
 
 		/// <summary>The X-Axis span covered by this piece</summary>
 		RangeF Range { get; }
@@ -28,6 +28,8 @@ namespace Rylogic.Gui.WPF
 		// - This cache is intended to be used by ChartDataSeries-like classes.
 		//   If provides the functionality of breaking a data series up into pieces
 		//   so that the limit of 64K indices is not exceeded.
+		// - The cache only really works in Chart2D mode, where the camera is aligned
+		//   to world space.
 
 		public ChartGfxCache(CreatePieceHandler handler)
 		{
