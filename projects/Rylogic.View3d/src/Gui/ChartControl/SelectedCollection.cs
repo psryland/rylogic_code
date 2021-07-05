@@ -23,7 +23,7 @@ namespace Rylogic.Gui.WPF
 
 				switch (args.ChangeType)
 				{
-				case ListChg.Reset:
+					case ListChg.Reset:
 					{
 						// Clear the selected state from all elements
 						foreach (var e in m_chart.Elements)
@@ -36,7 +36,7 @@ namespace Rylogic.Gui.WPF
 						Debug.Assert(m_chart.CheckConsistency());
 						break;
 					}
-				case ListChg.ItemAdded:
+					case ListChg.ItemAdded:
 					{
 						// Set the selected state on the added element
 						if (elem == null) throw new Exception("ItemAdded should provide the added element");
@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF
 						Debug.Assert(m_chart.CheckConsistency());
 						break;
 					}
-				case ListChg.ItemRemoved:
+					case ListChg.ItemRemoved:
 					{
 						// Clear the selected state from the removed element
 						if (elem == null) throw new Exception("ItemRemoved should provide the removed element");

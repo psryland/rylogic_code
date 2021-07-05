@@ -71,7 +71,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 		private View3d.Object m_gfx = null!;
 
-		/// <summary>The position of the mid-point relative to the average of Anc0.LocationDS and Anc1.LocationDS</summary>
+		/// <summary>The position of the mid-point relative to the average of Anc0.LocationWS and Anc1.LocationWS</summary>
 		private v4 CentreOffset;
 
 		/// <summary>Export to XML</summary>
@@ -190,8 +190,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 					// Attach to the nearest anchor point on 'Node0'
 					var pt = Node1?.O2W.pos ?? v4.Origin;
 					var anc0 = Node0.NearestAnchor(pt, pt_in_node_space: false);
-					var anc1 = Node1?.NearestAnchor(anc0.LocationDS, pt_in_node_space: false) ?? AnchorPoint.Origin;
-					Anc0 = Node0.NearestAnchor(anc1.LocationDS, pt_in_node_space: false);
+					var anc1 = Node1?.NearestAnchor(anc0.LocationWS, pt_in_node_space: false) ?? AnchorPoint.Origin;
+					Anc0 = Node0.NearestAnchor(anc1.LocationWS, pt_in_node_space: false);
 				}
 				NotifyPropertyChanged(nameof(Node0));
 			}
@@ -218,8 +218,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 					// Attach to the nearest anchor point on 'Node1'
 					var pt = Node0?.O2W.pos ?? v4.Origin;
 					var anc1 = Node1.NearestAnchor(pt, pt_in_node_space: false);
-					var anc0 = Node0?.NearestAnchor(anc1.LocationDS, pt_in_node_space: false) ?? AnchorPoint.Origin;
-					Anc1 = Node1.NearestAnchor(anc0.LocationDS, pt_in_node_space: false);
+					var anc0 = Node0?.NearestAnchor(anc1.LocationWS, pt_in_node_space: false) ?? AnchorPoint.Origin;
+					Anc1 = Node1.NearestAnchor(anc0.LocationWS, pt_in_node_space: false);
 				}
 				NotifyPropertyChanged(nameof(Node1));
 			}
@@ -321,7 +321,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			return hit;
 		}
 
-		/// <summary>Handle a click event on this element</summary>
+		/// <inheritdoc/>
 		protected override void HandleClicked(ChartControl.ChartClickedEventArgs args)
 		{
 		//	// Only respond if selected and editing is allowed
@@ -330,8 +330,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		//		// Hit point in screen space
 		//		var hit_point_ds = Position.pos + new v4(hit.Point, 0, 0);
 		//		var hit_point_cs = v2.From(cam.WSPointToSSPoint(hit_point_ds));
-		//		var anc0_cs = v2.From(cam.WSPointToSSPoint(Anc0.LocationDS));
-		//		var anc1_cs = v2.From(cam.WSPointToSSPoint(Anc1.LocationDS));
+		//		var anc0_cs = v2.From(cam.WSPointToSSPoint(Anc0.LocationWS));
+		//		var anc1_cs = v2.From(cam.WSPointToSSPoint(Anc1.LocationWS));
 		//
 		//		// If the click was at the ends of the connector and diagram editing
 		//		// is allowed, detach the connector and start a move link mouse op
@@ -349,82 +349,107 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		//	return false;
 		}
 
-		/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
+		/// <inheritdoc/>
 		protected override void HandleDragged(ChartControl.ChartDraggedEventArgs args)
 		{
 			Invalidate();
 		}
 
-		/// <summary>The location of the centre of the connector (in diagram space)</summary>
-		public v4 CentreDS
+		/// <summary>The location of the centre of the connector (in world space)</summary>
+		public v4 CentreWS => PositionAt(0.5);
+
+		/// <summary>A position on the connector at parametric time, t (in world space)</summary>
+		public v4 PositionAt(double t)
 		{
-			get
+			return Style.EdgeStyle switch
 			{
-				v4 ctr;
-				var pts = Points(true);
-				if (Style.Smooth)
-				{
-					ctr = Spline.CreateSplines(pts).First().Position(0.5f);
-				}
-				else
-				{
-					ctr = pts.Length switch
-					{
-						4 => (pts[1] + pts[2]) / 2f,
-						3 => pts[1],
-						_ => throw new Exception("unexpected number of connector points"),
-					};
-				}
-				return ctr;
-			}
+				EEdgeStyle.Straight => Math_.Lerp(t, Points(true).ToArray()),
+				EEdgeStyle.Rectangular => Math_.Lerp(t, Points(true).ToArray()),
+				EEdgeStyle.Smooth => Math_.Lerp(t, Spline.CreateSplines(Points(true), Spline.ETopo.Disjoint4).ToArray()),
+				_ => throw new Exception($"Unknown edge style: {Style.EdgeStyle}"),
+			};
 		}
 
 		/// <inheritdoc/>
 		protected override void UpdateGfxCore()
 		{
+			// Ensure Nodes are updated before connectors
+			Node0?.UpdateGfx();
+			Node1?.UpdateGfx();
+
 			// Update the transform
-			var centre = 0.5f * (Anc0.LocationDS + Anc1.LocationDS);
+			var centre = 0.5f * (Anc0.LocationWS + Anc1.LocationWS);
 			O2W = m4x4.Translation(centre);
+
+			// Get the points of the connector
+			var pts = Points(false);
 			var ty = Type switch
 			{
 				EType.Line => Ldr.EArrowType.Line,
 				EType.Forward => Ldr.EArrowType.Fwd,
 				EType.Back => Ldr.EArrowType.Back,
 				EType.BiDir => Ldr.EArrowType.FwdBack,
-				_ => throw new Exception("Unknown connector type"),
+				_ => throw new Exception($"Unknown connector type: {Type}"),
 			};
+			var col =
+				Selected ? Style.Selected :
+				Hovered ? Style.Hovered :
+				Dangling ? Style.Dangling :
+				Style.Line;
 
 			// Update the connector line graphics
 			var ldr = new LdrBuilder();
-			var pts = Points(false);
-			var col = Selected ? Style.Selected : Hovered ? Style.Hovered : Dangling ? Style.Dangling : Style.Line;
-			ldr.Arrow("Connector", col, ty, (float)Style.Width, Style.Smooth, pts);
+			switch (Style.EdgeStyle)
+			{
+				case EEdgeStyle.Straight:
+				{
+					ldr.Arrow("Connector", col, ty, (float)Style.Width, false, pts);
+					break;
+				}
+				case EEdgeStyle.Rectangular:
+				{
+					ldr.Arrow("Connector", col, ty, (float)Style.Width, false, pts);
+					break;
+				}
+				case EEdgeStyle.Smooth:
+				{
+					ldr.Arrow("Connector", col, ty, (float)Style.Width, true, pts);
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown edge style: {Style.EdgeStyle}");
+				}
+			}
 			Gfx.UpdateModel(ldr);
 		}
 
 		/// <inheritdoc/>
-		protected override void UpdateSceneCore()
+		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
-			base.UpdateSceneCore();
-			if (Chart is not ChartControl chart)
-				return;
+			base.UpdateSceneCore(window, camera);
+			if (Gfx == null) return;
 
 			// Bias the connectors toward the camera by a fraction of the Focus Distance
-			var bias = chart.Camera.FocusDist * 0.01f;
+			var bias = camera.FocusDist * 0.01f;
 			if (Hovered) bias *= 1.1f;
 			if (Selected) bias *= 1.1f;
 			
 			var o2w = O2W;
-			o2w.pos += chart.Camera.Orthographic
-				? chart.Camera.O2W.z * bias
-				: Math_.Normalise(chart.Camera.O2W.pos - o2w.pos) * bias;
+			o2w.pos += camera.Orthographic
+				? camera.O2W.z * bias
+				: Math_.Normalise(camera.O2W.pos - o2w.pos) * bias;
 			Gfx.O2P = o2w;
 
 			// Add to the scene
-			if (Visible)
-				chart.Scene.Window.AddObject(Gfx);
-			else
-				chart.Scene.Window.RemoveObject(Gfx);
+			window.AddObject(Gfx);
+		}
+
+		protected override void RemoveFromSceneCore(View3d.Window window)
+		{
+			base.RemoveFromSceneCore(window);
+			if (Gfx == null) return;
+			window.RemoveObject(Gfx);
 		}
 
 		/// <summary>Detach from 'node'</summary>
@@ -437,44 +462,88 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
-		private v4[] Points(bool diagram_space)
+		private IEnumerable<v4> Points(bool world_space)
 		{
-			// A connector is constructed from: Anc0.LocationDS, CentreOffset, Anc1.LocationDS.
-			// A line from Anc0.LocationDS is extended in the direction of Anc0.NormalDS till it
-			// is perpendicular to CentreOffset. The same is done from Anc1.LocationDS
+			// A connector is constructed from: Anc0.LocationWS, CentreOffset, Anc1.LocationWS.
+			// A line from Anc0.LocationWS is extended in the direction of Anc0.NormalWS till it
+			// is perpendicular to CentreOffset. The same is done from Anc1.LocationWS
 			// A connecting line between these points is then formed.
 
 			// A connector is a line from Anc0 to Anc1, via CentreOffset.
-			var origin = diagram_space ? v4.Zero : O2W.pos.w0;
-			var centre = O2W.pos - origin + CentreOffset;
-			var beg = Anc0.LocationDS - origin;
-			var end = Anc1.LocationDS - origin;
+			var origin = world_space ? v4.Zero : O2W.pos.w0;
+			var beg = Anc0.LocationWS - origin;
+			var end = Anc1.LocationWS - origin;
+			var ctr = 0.5f * (beg + end) + CentreOffset;
 
 			// Choose directions for the end points
-			var dir0 = Anc0.NormalDS;
-			var dir1 = Anc1.NormalDS;
+			var dir0 = Anc0.NormalWS;
+			var dir1 = Anc1.NormalWS;
 			if (dir0 == v4.Zero) dir0 = -dir1;
 			if (dir1 == v4.Zero) dir1 = -dir0;
 			if (dir0 == v4.Zero) dir0 = Math_.Normalise(end - beg, v4.Zero);
 			if (dir1 == v4.Zero) dir1 = Math_.Normalise(beg - end, v4.Zero);
 
+			// Return the edge points
+			switch (Style.EdgeStyle)
+			{
+				case EEdgeStyle.Straight:
+				{
+					yield return beg;
+					yield return end;
+					break;
+				}
+				case EEdgeStyle.Rectangular:
+				{
+					// Grow the ends towards each other
+					var pts0 = new List<v4> { beg };
+					var pts1 = new List<v4> { end };
+					var min_length = Style.MinLength;
+					for (; ; )
+					{
+						if (Math_.FEql(dir0, v4.Zero) || Math_.FEql(dir1, v4.Zero))
+							break;
 
-			//v2 intersect;
-			//if (Geometry.Intersect(
-			//	start, start + Anc0.NormalDS.xy,
-			//	end  , end   + Anc1.NormalDS.xy, out intersect))
-			//{
-			//	if (v2.Dot2(intersect - start, Anc0.NormalDS.xy) > 0 &&
-			//		v2.Dot2(intersect - end  , Anc1.NormalDS.xy) > 0)
-			//		return new[]{start, intersect, end};
-			//}
+						// Go in the direction of 'dir', at least the minimum length, toward 'ctr'
+						beg += Math_.Max(min_length, Math_.Dot(dir0, ctr - beg)) * dir0;
+						end += Math_.Max(min_length, Math_.Dot(dir1, ctr - end)) * dir1;
+						if (Math_.FEql(beg, end))
+							break;
 
-			var blen = (double)Math_.Dot(centre - beg, dir0);
-			var elen = (double)Math_.Dot(centre - end, dir1);
-			blen = Style.Smooth ? Style.MinLength : Math.Max(blen, Style.MinLength);
-			elen = Style.Smooth ? Style.MinLength : Math.Max(elen, Style.MinLength);
-		
-			return new[] { beg, beg + blen * dir0, end + elen * dir1, end };
+						pts0.Add(beg);
+						pts1.Add(end);
+						dir0 = Math_.Normalise(ProjectToAxis(ctr - beg), v4.Zero);
+						dir1 = Math_.Normalise(ProjectToAxis(ctr - end), v4.Zero);
+						min_length = 0;
+					}
+					foreach (var pt in pts0)
+						yield return pt;
+					foreach (var pt in pts1.Reversed())
+						yield return pt;
+
+					// Return a vector with all but the largest magnitude component set to zero
+					static v4 ProjectToAxis(v4 vec)
+					{
+						var i = Math_.MaxElementIndex(Math_.Abs(vec));
+						vec.x = i == 0 ? vec.x : 0;
+						vec.y = i == 1 ? vec.y : 0;
+						vec.z = i == 2 ? vec.z : 0;
+						return vec;
+					}
+					break;
+				}
+				case EEdgeStyle.Smooth:
+				{
+					yield return beg;
+					yield return beg + dir0 * Style.MinLength;
+					yield return end + dir1 * Style.MinLength;
+					yield return end;
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown edge style: {Style.EdgeStyle}");
+				}
+			}
 		}
 
 		/// <summary>Check the self consistency of this element</summary>
@@ -540,16 +609,6 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			throw new Exception($"Unknown connector type: {lhs.Type}");
 		}
 
-		/// <summary>Connector types</summary>
-		[Flags]
-		public enum EType
-		{
-			Line = 0,
-			Forward = 1 << 0,
-			Back = 1 << 1,
-			BiDir = Forward | Back,
-		}
-
 		/// <summary>Connector end types</summary>
 		public enum EEnd
 		{
@@ -564,6 +623,29 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 			/// <summary>Special value used by AnchorPoints when a mixture of connector types are connected</summary>
 			Mixed,
+		}
+
+		/// <summary>Connector types</summary>
+		[Flags]
+		public enum EType
+		{
+			Line = 0,
+			Forward = 1 << 0,
+			Back = 1 << 1,
+			BiDir = Forward | Back,
+		}
+
+		/// <summary>Styles for connectors</summary>
+		public enum EEdgeStyle
+		{
+			/// <summary>Straight lines directly from anchor to anchor</summary>
+			Straight,
+
+			/// <summary>Straight horizontal and vertical lines from anchor to anchor</summary>
+			Rectangular,
+
+			/// <summary>A spline curve from from anchor to anchor</summary>
+			Smooth,
 		}
 	}
 }

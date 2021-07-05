@@ -48,12 +48,16 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			m_issue = m_diagram.Elements.IssueNumber;
 
 			// Create a dynamics object for each node
-			var nodes = m_diagram.Elements.OfType<Node>().ToDictionary(x => x, x => new Body(x));
+			var nodes = m_diagram.Elements.OfType<Node>()
+				.Where(x => x.Chart != null)
+				.ToDictionary(x => x, x => new Body(x));
 
 			// Find the unique set of inter-node connections
 			var conns = nodes.Values.SelectMany(x => x.Node.Connectors)
-				.Where(x => !x.Dangling)                                // both ends connected
-				.Distinct(Eql<Connector>.From(Connector.HasSameNodes)); // only one per pair of nodes
+				.Where(x => x.Chart != null)                                            // is in the diagram
+				.Where(x => !x.Dangling)                                                // both ends connected
+				.Where(x => nodes.ContainsKey(x.Node0!) && nodes.ContainsKey(x.Node1!)) // both ends are in the diagram
+				.Distinct(Eql<Connector>.From(Connector.HasSameNodes));                 // only one per pair of nodes
 
 			// Cache the nodes and springs
 			m_body.Assign(nodes.Values);
@@ -126,7 +130,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				var coulumb = m_opts.Scatter.CoulombConstant / (dist * dist);
 
 				// Add the forces to each node
-				var f = coulumb * Math_.Normalise(sep);
+				var f = coulumb * Math_.Normalise(sep, v4.Zero);
+				Debug.Assert(Math_.IsFinite(f));
 				body0.Force -= f;
 				body1.Force += f;
 			}
@@ -148,7 +153,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				var spring = -m_opts.Scatter.SpringConstant * dist;
 
 				// Add the forces to each node
-				var f = spring * Math_.Normalise(sep);
+				var f = spring * Math_.Normalise(sep, v4.Zero);
+				Debug.Assert(Math_.IsFinite(f));
 				body0.Force -= f;
 				body1.Force += f;
 			}
@@ -218,6 +224,11 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 						sep[i] = vec[i];
 						min_dist = size[i];
 					}
+
+					// Sep can be zero if the nodes are 2D. The zero-dimension will be the minimum penetration
+					if (sep.LengthSq < Math_.TinyF)
+						sep = v4.Random3N(0f, m_rng);
+
 					break;
 				}
 				case ChartControl.ENavMode.Chart2D:

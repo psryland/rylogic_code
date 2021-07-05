@@ -406,7 +406,7 @@ namespace Rylogic.Gui.WPF
 					// If the click is still unhandled, use the click to try to select something (if within the chart)
 					if (!args.Handled && HitResult.Zone.HasFlag(EZone.Chart))
 					{
-						var selection = BBox.From(GrabChart, v4.Zero);
+						var selection = new BBox(GrabChart, v4.Zero);
 						Chart.SelectElements(selection, Keyboard.Modifiers, e.ToMouseBtns());
 					}
 

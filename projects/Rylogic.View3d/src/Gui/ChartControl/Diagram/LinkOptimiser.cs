@@ -153,9 +153,9 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			{
 				return m_opts.Relink.AnchorSharingMode switch
 				{
-					Diagram_.EAnchorSharing.ShareAll => true,
-					Diagram_.EAnchorSharing.ShareSameOnly => lhs == rhs,
-					Diagram_.EAnchorSharing.NoSharing => false,
+					Node.EAnchorSharing.ShareAll => true,
+					Node.EAnchorSharing.ShareSameOnly => lhs == rhs,
+					Node.EAnchorSharing.NoSharing => false,
 					_ => throw new Exception("Unknown anchor sharing mode"),
 				};
 			}
@@ -185,7 +185,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				Pt1 = pt1;
 			}
 			public AnchorPair(Connector conn, AnchorPoint anc0, AnchorPoint anc1, m4x4 w2c)
-				: this(conn, anc0, anc1, (w2c * anc0.LocationDS).xy, (w2c * anc1.LocationDS).xy)
+				: this(conn, anc0, anc1, (w2c * anc0.LocationWS).xy, (w2c * anc1.LocationWS).xy)
 			{ }
 			public AnchorPair(Connector conn, m4x4 w2c)
 				: this(conn, conn.Anc0, conn.Anc1, w2c)

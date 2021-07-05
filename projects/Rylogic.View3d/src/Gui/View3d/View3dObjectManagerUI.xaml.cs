@@ -24,8 +24,6 @@ namespace Rylogic.Gui.WPF
 			ObjectManager = new View3d.ObjectManager(window, exclude ?? Array.Empty<Guid>());
 			ObjectsView = new ListCollectionView(ObjectManager.Objects);
 
-			ExpandAll = Command.Create(this, ExpandAllInternal);
-			CollapseAll = Command.Create(this, CollapseAllInternal);
 			ApplyFilter = Command.Create(this, ApplyFilterInternal);
 			SetVisible = Command.Create(this, SetVisibleInternal);
 			SetWireframe = Command.Create(this, SetWireframeInternal);
@@ -89,14 +87,21 @@ namespace Rylogic.Gui.WPF
 				}
 				void HandleObjectPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
+					if (sender is not View3d.Object obj)
+						return;
+
 					switch (e.PropertyName)
 					{
-					case nameof(View3d.Object.Flags):
+						case nameof(View3d.Object.Flags):
 						{
 							NotifyPropertyChanged(nameof(FirstSelected));
 							break;
 						}
 					}
+
+					// If an object within this window has changed, refresh
+					if (obj.Visible && ObjectManager.Window.HasObject(obj, search_children: false))
+						ObjectManager.Window.Invalidate();
 				}
 			}
 		}
@@ -116,18 +121,6 @@ namespace Rylogic.Gui.WPF
 		private void Invalidate() => ObjectManager.Window.Invalidate();
 
 		/// <summary></summary>
-		public Command ExpandAll { get; }
-		private void ExpandAllInternal()
-		{
-		}
-
-		/// <summary></summary>
-		public Command CollapseAll { get; }
-		private void CollapseAllInternal()
-		{
-		}
-
-		/// <summary></summary>
 		public Command ApplyFilter { get; }
 		private void ApplyFilterInternal(object? parameter)
 		{
@@ -141,7 +134,7 @@ namespace Rylogic.Gui.WPF
 		public Command SetVisible { get; }
 		private void SetVisibleInternal(object? parameter)
 		{
-			if (!(parameter is ESetVisibleCmd vis))
+			if (parameter is not ESetVisibleCmd vis)
 				throw new Exception($"SetVisible parameter '{parameter}' is invalid");
 
 			foreach (var x in Objects)
@@ -205,7 +198,7 @@ namespace Rylogic.Gui.WPF
 			foreach (var obj in Objects)
 				obj.Flags = Bit.SetBits(obj.Flags, View3d.EFlags.Selected, !obj.Flags.HasFlag(View3d.EFlags.Selected));
 		}
-		
+
 		/// <summary>Toggle show normals mode on selected objects</summary>
 		public Command ToggleShowNormals { get; }
 		private void InternalToggleShowNormals()

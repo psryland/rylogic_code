@@ -1000,6 +1000,7 @@ namespace Rylogic.Gfx
 				DepthMin = min;
 				DepthMax = max;
 			}
+			public float Aspect => Width / Height;
 			public Size ToSize() => new Size((int)Math.Round(Width), (int)Math.Round(Height));
 			public SizeF ToSizeF() => new SizeF(Width, Height);
 			public Rectangle ToRect() => new Rectangle((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));

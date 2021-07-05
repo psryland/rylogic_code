@@ -158,17 +158,20 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <inheritdoc/>
-		protected override void UpdateSceneCore()
+		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
-			base.UpdateSceneCore();
-			if (Gfx != null && Chart != null)
-			{
-				Gfx.O2P = O2W;
-				if (Visible)
-					Chart.Scene.Window.AddObject(Gfx);
-				else
-					Chart.Scene.Window.RemoveObject(Gfx);
-			}
+			base.UpdateSceneCore(window, camera);
+			if (Gfx == null) return;
+			Gfx.O2P = O2W;
+			window.AddObject(Gfx);
+		}
+
+		/// <inheritdoc/>
+		protected override void RemoveFromSceneCore(View3d.Window window)
+		{
+			base.RemoveFromSceneCore(window);
+			if (Gfx == null) return;
+			window.RemoveObject(Gfx);
 		}
 
 		/// <inheritdoc/>

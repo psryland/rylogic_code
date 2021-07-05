@@ -206,6 +206,7 @@ namespace Rylogic.Gfx
 					var dc = View3D_TextureGetDC(m_tex, discard);
 					if (dc == IntPtr.Zero) throw new Exception("Failed to get Texture DC. Check the texture is a GdiCompatible texture");
 					Gfx = Graphics.FromHdc(dc);
+					Size = tex.Size;
 				}
 				public void Dispose()
 				{
@@ -214,6 +215,9 @@ namespace Rylogic.Gfx
 
 				/// <summary>GDI+ graphics interface</summary>
 				public Graphics Gfx { get; }
+
+				/// <summary>The size of the texture surface</summary>
+				public Size Size { get; }
 			}
 
 			/// <summary>Proxy object for accessing the private data of a texture</summary>

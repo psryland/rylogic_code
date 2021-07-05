@@ -256,28 +256,28 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>The anchor points available for connecting to</summary>
-		public IEnumerable<AnchorPoint> AnchorPointsAvailable(Diagram_.EAnchorSharing sharing, Connector.EEnd end_type)
+		public IEnumerable<AnchorPoint> AnchorPointsAvailable(EAnchorSharing sharing, Connector.EEnd end_type)
 		{
 			// Even though 'AnchorPoints' returns new instances of anchor points, the attached connectors
 			// are accessed through the node, which means any anchor point on the same node at a given location
 			// will have the same connections.
 			switch (sharing)
 			{
-				case Diagram_.EAnchorSharing.ShareAll:
+				case EAnchorSharing.ShareAll:
 				{
 					return AnchorPoints();
 				}
-				case Diagram_.EAnchorSharing.ShareSameOnly:
+				case EAnchorSharing.ShareSameOnly:
 				{
 					return AnchorPoints().Where(x => x.Type == Connector.EEnd.None || x.Type == end_type);
 				}
-				case Diagram_.EAnchorSharing.NoSharing:
+				case EAnchorSharing.NoSharing:
 				{
 					return AnchorPoints().Where(x => x.Type == Connector.EEnd.None);
 				}
 				default:
 				{
-					throw new Exception("Unknown sharing mode");
+					throw new Exception($"Unknown sharing mode: {sharing}");
 				}
 			}
 		}
@@ -306,5 +306,18 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 		/// <summary></summary>
 		public string Description => $"Text={Text.Summary(20)}";
+
+		/// <summary>Behaviours of anchor sharing</summary>
+		public enum EAnchorSharing
+		{
+			/// <summary>Connectors can use anchors already in use by other connectors</summary>
+			ShareAll,
+
+			/// <summary>Connectors can use anchors already in use by other connectors if the connector direction is the same</summary>
+			ShareSameOnly,
+
+			/// <summary>Connectors don't share anchors unless there is no choice</summary>
+			NoSharing,
+		}
 	}
 }

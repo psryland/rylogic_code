@@ -61,8 +61,8 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				// anything connected to this anchor point doesn't snap to the origin.
 				if (value == null)
 				{
-					Location = LocationDS;
-					Normal = NormalDS;
+					Location = LocationWS;
+					Normal = NormalWS;
 				}
 
 				m_node = value;
@@ -98,10 +98,10 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		public int UID;
 
 		/// <summary>Get the diagram space position of the anchor</summary>
-		public v4 LocationDS => Node?.O2W * Location ?? Location;
+		public v4 LocationWS => Node?.O2W * Location ?? Location;
 
 		/// <summary>Get the diagram space anchor normal (can be zero)</summary>
-		public v4 NormalDS => Node?.O2W * Normal ?? Normal;
+		public v4 NormalWS => Node?.O2W * Normal ?? Normal;
 
 		/// <summary>Get the connectors attached to this anchor point</summary>
 		public IEnumerable<Connector> Connectors => Node?.Connectors.Where(x => x.Anc0 == this || x.Anc1 == this) ?? Array.Empty<Connector>();

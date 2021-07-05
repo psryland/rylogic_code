@@ -559,7 +559,7 @@ namespace Rylogic.Gui.WPF
 			AutoRanging?.Invoke(this, args);
 		}
 
-		/// <summary>Returns a point in chart space from a point in client scene space. Use to convert mouse (client-space) locations to chart coordinates</summary>
+		/// <summary>Returns a point in chart space from a point in scene space. Use to convert mouse (scene-space) locations to chart coordinates</summary>
 		public v4 SceneToChart(v2 scene_point)
 		{
 			// Convert the scene space point to a world space point
@@ -574,7 +574,7 @@ namespace Rylogic.Gui.WPF
 			return chart_point;
 		}
 
-		/// <summary>Returns a point in client scene space from a point in chart space. Inverse of ClientToChart3D</summary>
+		/// <summary>Returns a point in scene space from a point in chart space. Inverse of SceneToChart</summary>
 		public v2 ChartToScene(v4 chart_point)
 		{
 			// Remember, chart space is camera aligned.
@@ -590,14 +590,14 @@ namespace Rylogic.Gui.WPF
 			return WorldToScene(world_point);
 		}
 
-		/// <summary>Returns a point in client space from a point in world space.s</summary>
+		/// <summary>Returns a point in scene space from a point in world space.</summary>
 		public v2 WorldToScene(v4 world_point)
 		{
 			var scene_point = Scene.Camera.WSPointToSSPoint(world_point);
 			return scene_point;
 		}
 
-		/// <summary>Convert a client scene space rectangle to a chart space bounding box (with infinite Z)</summary>
+		/// <summary>Convert a scene space rectangle to a chart space bounding box (with infinite Z)</summary>
 		public BBox SceneToChart(Rect scene_rect)
 		{
 			var scene_pt0 = scene_rect.BottomLeft.ToV2();
@@ -609,6 +609,20 @@ namespace Rylogic.Gui.WPF
 			return new BBox(
 				(chart_pt1 + chart_pt0) / 2f,
 				(chart_pt1 - chart_pt0) / 2f);
+		}
+
+		/// <summary>Returns a size in chart space from a size (and centre point) in scene space ('centre' defaults to the centre of the view)</summary>
+		public Size SceneToChart(Size scene_size, Point? scene_point = null)
+		{
+			// Use the centre of the view. For Orthographic it makes no difference, but for perspective
+			// sizes in the centre are smaller than sizes near the edges of the view.
+			var scene_pt = scene_point ?? Scene.RenderArea().Centre();
+			scene_pt.X -= scene_size.Width / 2;
+			scene_pt.Y -= scene_size.Height / 2;
+
+			// Convert the size to a chart space volume
+			var bbox = SceneToChart(new Rect(scene_pt, scene_size));
+			return new Size(bbox.SizeX, bbox.SizeY);
 		}
 
 		/// <summary>Convert a chart space bounding box to a client scene space rectangle. BBox's are chart/camera space aligned, so in scene space the bbox becomes a rectangle</summary>
@@ -946,6 +960,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Perform a hit test on the chart but only test which zone is hit (faster)</summary>
 		public HitTestResult HitTestZone(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
+			// If the scene is not being displayed, we can't convert the point from client space to scene space
+			if (PresentationSource.FromVisual(this) == null)
+				return new HitTestResult(EZone.None, v2.Zero, v4.Zero, modifier_keys, mouse_btns, Array.Empty<HitTestResult.Hit>(), Scene.Camera);
+
 			// Determine the hit zone of the control
 			var zone = EZone.None;
 			if (SceneBounds.Contains(client_point)) zone |= EZone.Chart;

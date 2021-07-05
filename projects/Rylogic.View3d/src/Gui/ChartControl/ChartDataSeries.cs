@@ -105,35 +105,38 @@ namespace Rylogic.Gui.WPF
 				m_range_x.Grow(x_range);
 		}
 
-		/// <summary>Update the graphics for this series and add it to the scene</summary>
-		protected override void UpdateSceneCore()
+		/// <inheritdoc/>
+		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
-			if (Chart == null)
+			// Remove all series data graphics
+			window.RemoveObjects(new[] { Id }, 1, 0);
+
+			// If there is no data, then there's no graphics
+			var range_x = RangeX;
+			if (range_x == RangeF.Invalid)
 				return;
 
-			// Remove all series data graphics
-			Chart.Scene.Window.RemoveObjects(new[] { Id }, 1, 0);
+			// Get the range required for display
+			var chart = Chart ?? throw new NullReferenceException("Chart shouldn't be null in UpdateSceneCore");
+			var range = new RangeF(
+				Math.Max(chart.XAxis.Min, range_x.Beg),
+				Math.Min(chart.XAxis.Max, range_x.End));
 
 			// Add each graphics piece over the range
-			if (Visible)
+			foreach (var piece in Cache.Get(range).OfType<ChartGfxPiece>())
 			{
-				// If there is no data, then there's no graphics
-				var range_x = RangeX;
-				if (range_x == RangeF.Invalid)
-					return;
-
-				// Get the range required for display
-				var range = new RangeF(
-					Math.Max(Chart.XAxis.Min, range_x.Beg),
-					Math.Min(Chart.XAxis.Max, range_x.End));
-
-				// Add each graphics piece over the range
-				foreach (var piece in Cache.Get(range).OfType<ChartGfxPiece>())
-				{
-					if (piece.Gfx == null) continue;
-					Chart.Scene.Window.AddObject(piece.Gfx);
-				}
+				if (piece.Gfx == null) continue;
+				window.AddObject(piece.Gfx);
 			}
+		}
+
+		/// <inheritdoc/>
+		protected override void RemoveFromSceneCore(View3d.Window window)
+		{
+			base.RemoveFromSceneCore(window);
+
+			// Remove all series data graphics
+			window.RemoveObjects(new[] { Id }, 1, 0);
 		}
 
 		/// <summary>Generate a piece of the graphics for 'x'</summary>

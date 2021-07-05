@@ -1035,7 +1035,7 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Colours:
 				e.Value = "Click to change colours";
-				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx_.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
+				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx_.Lerp(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
 			case ColumnNames.Behaviour:

@@ -619,8 +619,8 @@ namespace Rylogic.Gui.WPF
 		public ICommand ShowObjectManagerUI => Scene.ShowObjectManagerUI;
 
 		/// <inheritdoc/>
-		public bool CanLinkCamera => false;
-		public ICommand LinkCamera => Command.NoOp;
+		public bool CanLinkCamera { get; set; } = false;
+		public ICommand LinkCamera { get; set; } = Command.NoOp;
 
 		/// <inheritdoc/>
 		public IView3dCMenu View3dCMenuContext => Scene.View3dCMenuContext;

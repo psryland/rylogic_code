@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 			Dangling  = Colour32.DarkRed;
 			Width     = 3.0;
 			MinLength = 0.3;
-			Smooth    = false;
+			EdgeStyle = Connector.EEdgeStyle.Straight;
 		}
 
 		/// <summary>Unique id for the style</summary>
@@ -69,10 +69,10 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <summary>True for a smooth connector, false for a straight edged connector</summary>
-		public bool Smooth
+		public Connector.EEdgeStyle EdgeStyle
 		{
-			get => get<bool>(nameof(Smooth));
-			set => set(nameof(Smooth), value);
+			get => get<Connector.EEdgeStyle>(nameof(EdgeStyle));
+			set => set(nameof(EdgeStyle), value);
 		}
 
 		/// <summary>Description</summary>

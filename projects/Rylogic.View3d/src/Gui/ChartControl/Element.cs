@@ -17,8 +17,13 @@ namespace Rylogic.Gui.WPF
 	{
 		/// <summary>Base class for anything on a chart</summary>
 		[DebuggerDisplay("{Name} {Id} {GetType().Name}")]
-		public abstract class Element : IDisposable, IChartLegendItem, INotifyPropertyChanged
+		public abstract class Element :IDisposable, IChartLegendItem, INotifyPropertyChanged
 		{
+			// Notes:
+			//  - Graphics should be added/removed from the scene in 'UpdateSceneCore' because an element can
+			//    exist before and after the scene (and therefore, window) exists. Don't be tempted to use
+			//    the View3d.Object.Visible property instead.
+
 			/// <summary>Buffers for creating the chart graphics</summary>
 			protected List<View3d.Vertex> m_vbuf;
 			protected List<View3d.Nugget> m_nbuf;
@@ -104,6 +109,7 @@ namespace Rylogic.Gui.WPF
 				if (m_chart != null && update)
 				{
 					InvalidateChart();
+					RemoveFromScene();
 					m_chart.Elements.Remove(this);
 				}
 
@@ -117,9 +123,9 @@ namespace Rylogic.Gui.WPF
 						throw new Exception("Element is already in the Chart's Elements collection");
 
 					m_chart.Elements.Add(this);
+					UpdateScene();
 					InvalidateChart();
 				}
-
 				Debug.Assert(CheckConsistency());
 			}
 
@@ -376,7 +382,15 @@ namespace Rylogic.Gui.WPF
 			{
 				// Make an element visible/invisible, doesn't invalidate it, only the chart that is displaying it.
 				get => m_visible;
-				set => SetProp(ref m_visible, value, nameof(Visible), false, true);
+				set
+				{
+					if (Visible == value) return;
+					SetProp(ref m_visible, value, nameof(Visible), false, true);
+					if (Visible)
+						UpdateScene();
+					else
+						RemoveFromScene();
+				}
 			}
 			private bool m_visible;
 
@@ -536,28 +550,45 @@ namespace Rylogic.Gui.WPF
 			public void UpdateGfx(object? sender = null, EventArgs? args = null)
 			{
 				// Protect against reentrancy
-				if (m_updating_gfx != 0) return;
+				if (m_updating_gfx != 0 || !IsInvalidated) return;
 				using var updating = Scope.Create(() => ++m_updating_gfx, () => --m_updating_gfx);
 
 				UpdateGfxCore();
 				IsInvalidated = false;
 			}
-			protected virtual void UpdateGfxCore() { }
+			protected virtual void UpdateGfxCore()
+			{
+				// Recreate invalidated graphics models
+			}
 			private int m_updating_gfx;
 
-			/// <summary>Add/Remove the graphics associated with this element to the scene</summary>
+			/// <summary>Add the graphics associated with this element to the scene</summary>
 			internal void UpdateScene()
 			{
-				if (IsInvalidated) UpdateGfx();
-				UpdateSceneCore();
+				if (IsInvalidated)
+					UpdateGfx();
+				if (Chart == null || !Visible)
+					return;
+
+				UpdateSceneCore(Chart.Scene.Window, Chart.Scene.Camera);
 			}
-			protected virtual void UpdateSceneCore()
+			protected virtual void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				// Add or remove associated graphics
-				// if (Visible)
-				// 	Chart.Scene.Window.AddObject();
-				// else
-				// 	Chart.Scene.Window.RemoveObject();
+				// Update graphics transforms
+				// Add graphics to 'window'
+				// Don't worry about Visible, it should already be handled
+			}
+
+			/// <summary>Remove the graphics associated with this element from the scene</summary>
+			internal void RemoveFromScene()
+			{
+				if (Chart == null) return;
+				RemoveFromSceneCore(Chart.Scene.Window);
+			}
+			protected virtual void RemoveFromSceneCore(View3d.Window window)
+			{
+				// Remove graphics from 'window'
+				// Remember you can remove by context id if needed
 			}
 
 			/// <summary>Check the self consistency of this element</summary>

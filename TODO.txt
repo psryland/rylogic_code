@@ -1,10 +1,12 @@
 Immediate ToDo:
 
 Work
-  Documentation:
-	- Create a test case that links to the ...?
-	
-	
+  Work:
+	- Refactor the FirmwareLoader tool (maybe use openocd, all it to run from anywhere, translate to Chinese)
+	- Push/pull zero ref values from REX
+	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
+	    - Fix the default zero ref values and min/max extension in the actuator ref data
+	- Need a way to generate complete SD cards again
 
   MC
 	- Refactor the movement manager into separate files
@@ -19,6 +21,7 @@ Work
     - Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
  	
   VRex
+	- Add support for connecting via RexLink to display 'live REX'
     - Port the tools from the old VRex over
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
@@ -26,6 +29,7 @@ Work
 	
 LDraw
 	- Camera type-in
+	- Support LinkCamera
 	- Drag and drop on Scene should not open the file, DnD on Script should. Handle large ldr files.
 	- Add a skybox to the demo scene
 	- Bug in Spline, missing last vertex

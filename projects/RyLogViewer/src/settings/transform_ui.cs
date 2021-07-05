@@ -264,7 +264,7 @@ namespace RyLogViewer
 			{
 			case ColumnNames.Tag:
 				e.CellStyle.BackColor = Constants.BkColors[e.RowIndex % Constants.BkColors.Length];
-				e.CellStyle.SelectionBackColor = Gfx_.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
+				e.CellStyle.SelectionBackColor = Gfx_.Lerp(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
 			}
 		}
