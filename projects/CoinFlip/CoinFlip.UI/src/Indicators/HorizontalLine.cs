@@ -7,8 +7,10 @@ using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 
 namespace CoinFlip.UI.Indicators
 {
@@ -139,9 +141,9 @@ namespace CoinFlip.UI.Indicators
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore()
+			protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				base.UpdateSceneCore();
+				base.UpdateSceneCore(window, camera);
 				if (Instrument.Count == 0)
 				{
 					Line.Detach();
@@ -150,19 +152,19 @@ namespace CoinFlip.UI.Indicators
 					return;
 				}
 
-				var pt0 = Chart.ChartToClient(new Point(Chart.XAxis.Min, HL.Price));
-				var pt1 = Chart.ChartToClient(new Point(Chart.XAxis.Max, HL.Price));
+				var pt0 = Chart.ChartToScene(new v4((float)Chart.XAxis.Min, (float)HL.Price, 0, 1f));
+				var pt1 = Chart.ChartToScene(new v4((float)Chart.XAxis.Max, (float)HL.Price, 0, 1f));
 
 				if (Visible)
 				{
-					Line.X1 = pt0.X;
-					Line.Y1 = pt0.Y;
-					Line.X2 = pt1.X;
-					Line.Y2 = pt1.Y;
+					Line.X1 = pt0.x;
+					Line.Y1 = pt0.y;
+					Line.X2 = pt1.x;
+					Line.Y2 = pt1.y;
 					Line.Stroke = HL.Colour.ToMediaBrush();
 					Chart.Overlay.Adopt(Line);
 
-					var pt = Chart.TransformToDescendant(Chart.YAxisPanel).Transform(pt1);
+					var pt = Chart.TransformToDescendant(Chart.YAxisPanel).Transform(pt1.ToPointD());
 					Canvas.SetLeft(Price, 0);
 					Canvas.SetTop(Price, pt.Y - Price.RenderSize.Height / 2);
 					Price.Text = HL.Price.ToString(8);
@@ -170,10 +172,10 @@ namespace CoinFlip.UI.Indicators
 
 					if (Hovered || Selected)
 					{
-						Glow.X1 = pt0.X;
-						Glow.X2 = pt1.X;
-						Glow.Y1 = pt0.Y;
-						Glow.Y2 = pt1.Y;
+						Glow.X1 = pt0.x;
+						Glow.X2 = pt1.x;
+						Glow.Y1 = pt0.y;
+						Glow.Y2 = pt1.y;
 						Glow.Stroke = HL.Colour.Alpha(Selected ? 0.25 : 0.15).ToMediaBrush();
 						Chart.Overlay.Adopt(Glow);
 					}
@@ -205,15 +207,15 @@ namespace CoinFlip.UI.Indicators
 			private HorizontalLineUI m_horizontal_line_ui;
 
 			/// <summary>Hit test the indicator</summary>
-			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				if (Instrument.Count == 0 || !Visible)
 					return null;
-
-				// Find the nearest point to 'client_point' on the line
-				var dist = Chart.ChartToClient(new Size(0, Math.Abs(chart_point.Y - HL.Price))).Height;
-				if (dist < Chart.Options.MinSelectionDistance)
-					return new ChartControl.HitTestResult.Hit(this, new Point(chart_point.X, HL.Price), null);
+				//Todo: Needs updating to 3D
+				//// Find the nearest point to 'client_point' on the line
+				//var dist = Chart.ChartToClient(new Size(0, Math.Abs(chart_point.Y - HL.Price))).Height;
+				//if (dist < Chart.Options.MinSelectionDistance)
+				//	return new ChartControl.HitTestResult.Hit(this, new Point(chart_point.X, HL.Price), null);
 
 				return null;
 			}
@@ -223,22 +225,22 @@ namespace CoinFlip.UI.Indicators
 			{
 				switch (args.State)
 				{
-				default: throw new Exception($"Unknown drag state: {args.State}");
-				case ChartControl.EDragState.Start:
+					default: throw new Exception($"Unknown drag state: {args.State}");
+					case ChartControl.EDragState.Start:
 					{
 						m_drag_start = HL.Price;
 						break;
 					}
-				case ChartControl.EDragState.Dragging:
+					case ChartControl.EDragState.Dragging:
 					{
-						HL.Price = m_drag_start + args.Delta.Y;
+						HL.Price = m_drag_start + args.Delta.y;
 						break;
 					}
-				case ChartControl.EDragState.Commit:
+					case ChartControl.EDragState.Commit:
 					{
 						break;
 					}
-				case ChartControl.EDragState.Cancel:
+					case ChartControl.EDragState.Cancel:
 					{
 						HL.Price = m_drag_start;
 						break;
@@ -266,7 +268,7 @@ namespace CoinFlip.UI.Indicators
 				base.MouseDown(e);
 				Model.Indicators.Add(Instrument.Pair.Name, new HorizontalLine
 				{
-					Price = GrabChart.Y,
+					Price = GrabChart.y,
 				});
 			}
 		}

@@ -12,7 +12,8 @@
 
 #include <vector>
 #include <filesystem>
-#pragma warning(push,3)
+#pragma warning(push,1)
+#pragma warning(disable:4458) 
 #include <gdiplus.h>
 #pragma warning(pop)
 #include "pr/common/to.h"

@@ -743,7 +743,7 @@ extern "C"
 	VIEW3D_API View3DM4x4        __stdcall View3D_ObjectO2PGet             (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectO2PSet             (View3DObject object, View3DM4x4 const& o2p, char const* name);
 	VIEW3D_API BOOL              __stdcall View3D_ObjectVisibilityGet      (View3DObject object, char const* name);
-	VIEW3D_API void              __stdcall View3D_ObjectVisibilitySet      (View3DObject obj, BOOL visible, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectVisibilitySet      (View3DObject object, BOOL visible, char const* name);
 	VIEW3D_API EView3DFlags      __stdcall View3D_ObjectFlagsGet           (View3DObject object, char const* name);
 	VIEW3D_API void              __stdcall View3D_ObjectFlagsSet           (View3DObject object, EView3DFlags flags, BOOL state, char const* name);
 	VIEW3D_API EView3DSortGroup  __stdcall View3D_ObjectSortGroupGet       (View3DObject object, char const* name);

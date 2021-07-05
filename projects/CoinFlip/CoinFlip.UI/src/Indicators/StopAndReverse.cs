@@ -103,7 +103,7 @@ namespace CoinFlip.UI.Indicators
 			public ETrend Trend { get; }
 
 			/// <summary>The SAR point in chart space</summary>
-			public Point Point => new Point(CandleIndex, Value);
+			public v4 Point => new v4((float)CandleIndex, (float)Value, 0, 1f);
 
 			/// <summary>Guess at whether double or long values are used</summary>
 			private string Description => $"{CandleIndex} {Value}";
@@ -467,9 +467,9 @@ namespace CoinFlip.UI.Indicators
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore()
+			protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				base.UpdateSceneCore();
+				base.UpdateSceneCore(window, camera);
 				Chart.Scene.RemoveObjects(new[] { SAR.Id }, 1, 0);
 
 				// No data, no SAR
@@ -513,20 +513,20 @@ namespace CoinFlip.UI.Indicators
 			private StopAndReverseUI m_ui;
 
 			/// <summary>Hit test this indicator</summary>
-			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				if (Data.Count == 0 || !Visible)
 					return null;
 
 				// Get the nearest SAR point to 'chart_point'
-				var candle_index = (int)Math.Round(chart_point.X);
+				var candle_index = (int)Math.Round(chart_point.x);
 				if (candle_index < 0 || candle_index >= Data.Count)
 					return null;
 
 				// Test for proximaty to the SAR point
 				var sar_pt = Data[candle_index].Point;
-				var sar_pt_scn = Chart.ChartToClient(sar_pt);
-				if ((sar_pt_scn - client_point).LengthSquared > Chart.Options.MinSelectionDistanceSq)
+				var sar_pt_scn = Chart.ChartToScene(sar_pt);
+				if ((sar_pt_scn - scene_point).LengthSq > Chart.Options.MinSelectionDistanceSq)
 					return null;
 
 				return new ChartControl.HitTestResult.Hit(this, sar_pt, null);

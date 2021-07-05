@@ -3,16 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using LDraw.UI;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -156,8 +148,8 @@ namespace LDraw.Dialogs
 		private void Set(ELinkCameras cam, bool value, string prop_name)
 		{
 			if (Has(cam) == value) return;
-			if (!(Source?.SceneUI is SceneUI source)) return;
-			if (!(Target?.SceneUI is SceneUI target)) return;
+			if (Source?.SceneUI is not SceneUI source) return;
+			if (Target?.SceneUI is not SceneUI target) return;
 			
 			var link0 = GetLink(source, target);
 			link0.CamLink = Bit.SetBits(link0.CamLink, cam, value);
@@ -173,8 +165,8 @@ namespace LDraw.Dialogs
 		private void Set(ELinkAxes axis, bool value, string prop_name)
 		{
 			if (Has(axis) == value) return;
-			if (!(Source?.SceneUI is SceneUI source)) return;
-			if (!(Target?.SceneUI is SceneUI target)) return;
+			if (Source?.SceneUI is not SceneUI source) return;
+			if (Target?.SceneUI is not SceneUI target) return;
 
 			var link0 = GetLink(source, target);
 			link0.AxisLink = Bit.SetBits(link0.AxisLink, axis, value);

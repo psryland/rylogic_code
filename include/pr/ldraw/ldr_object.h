@@ -73,6 +73,7 @@ namespace pr::ldr
 		x(Model      ,= HashI("Model"     ))\
 		x(Equation   ,= HashI("Equation"  ))\
 		x(Chart      ,= HashI("Chart"     ))\
+		x(Series     ,= HashI("Series"    ))\
 		x(Group      ,= HashI("Group"     ))\
 		x(Text       ,= HashI("Text"      ))\
 		x(Instance   ,= HashI("Instance"  ))\
@@ -85,114 +86,117 @@ namespace pr::ldr
 
 	#pragma region Ldr script keywords
 	#define PR_ENUM_LDRKEYWORDS(x)\
-		x(Name                 ,= HashI("Name"                ))\
-		x(Txfm                 ,= HashI("Txfm"                ))\
-		x(O2W                  ,= HashI("O2W"                 ))\
-		x(M4x4                 ,= HashI("M4x4"                ))\
-		x(M3x3                 ,= HashI("M3x3"                ))\
-		x(Pos                  ,= HashI("Pos"                 ))\
-		x(Up                   ,= HashI("Up"                  ))\
-		x(Direction            ,= HashI("Direction"           ))\
-		x(Quat                 ,= HashI("Quat"                ))\
-		x(QuatPos              ,= HashI("QuatPos"             ))\
-		x(Rand4x4              ,= HashI("Rand4x4"             ))\
-		x(RandPos              ,= HashI("RandPos"             ))\
-		x(RandOri              ,= HashI("RandOri"             ))\
-		x(Euler                ,= HashI("Euler"               ))\
-		x(Dim                  ,= HashI("Dim"                 ))\
-		x(Scale                ,= HashI("Scale"               ))\
-		x(Size                 ,= HashI("Size"                ))\
-		x(Weight               ,= HashI("Weight"              ))\
-		x(Transpose            ,= HashI("Transpose"           ))\
-		x(Inverse              ,= HashI("Inverse"             ))\
-		x(Normalise            ,= HashI("Normalise"           ))\
-		x(Orthonormalise       ,= HashI("Orthonormalise"      ))\
-		x(Colour               ,= HashI("Colour"              ))\
-		x(ForeColour           ,= HashI("ForeColour"          ))\
-		x(BackColour           ,= HashI("BackColour"          ))\
-		x(Font                 ,= HashI("Font"                ))\
-		x(Stretch              ,= HashI("Stretch"             ))\
-		x(Underline            ,= HashI("Underline"           ))\
-		x(Strikeout            ,= HashI("Strikeout"           ))\
-		x(NewLine              ,= HashI("NewLine"             ))\
-		x(CString              ,= HashI("CString"             ))\
-		x(AxisId               ,= HashI("AxisId"              ))\
-		x(Solid                ,= HashI("Solid"               ))\
-		x(Facets               ,= HashI("Facets"              ))\
-		x(CornerRadius         ,= HashI("CornerRadius"        ))\
-		x(RandColour           ,= HashI("RandColour"          ))\
-		x(ColourMask           ,= HashI("ColourMask"          ))\
-		x(Reflectivity          ,=HashI("Reflectivity"        ))\
-		x(Animation            ,= HashI("Animation"           ))\
-		x(Style                ,= HashI("Style"               ))\
-		x(Format               ,= HashI("Format"              ))\
-		x(TextLayout           ,= HashI("TextLayout"          ))\
-		x(Anchor               ,= HashI("Anchor"              ))\
-		x(Padding              ,= HashI("Padding"             ))\
-		x(Period               ,= HashI("Period"              ))\
-		x(Velocity             ,= HashI("Velocity"            ))\
-		x(Accel                ,= HashI("Accel"               ))\
-		x(AngVelocity          ,= HashI("AngVelocity"         ))\
-		x(AngAccel             ,= HashI("AngAccel"            ))\
-		x(Axis                 ,= HashI("Axis"                ))\
-		x(Hidden               ,= HashI("Hidden"              ))\
-		x(Wireframe            ,= HashI("Wireframe"           ))\
-		x(Delimiters           ,= HashI("Delimiters"          ))\
-		x(Camera               ,= HashI("Camera"              ))\
-		x(LookAt               ,= HashI("LookAt"              ))\
-		x(Align                ,= HashI("Align"               ))\
-		x(Aspect               ,= HashI("Aspect"              ))\
-		x(FovX                 ,= HashI("FovX"                ))\
-		x(FovY                 ,= HashI("FovY"                ))\
-		x(Fov                  ,= HashI("Fov"                 ))\
-		x(Near                 ,= HashI("Near"                ))\
-		x(Far                  ,= HashI("Far"                 ))\
-		x(Orthographic         ,= HashI("Orthographic"        ))\
-		x(Lock                 ,= HashI("Lock"                ))\
-		x(Width                ,= HashI("Width"               ))\
-		x(Dashed               ,= HashI("Dashed"              ))\
-		x(Smooth               ,= HashI("Smooth"              ))\
-		x(XAxis                ,= HashI("XAxis"               ))\
-		x(YAxis                ,= HashI("YAxis"               ))\
-		x(ZAxis                ,= HashI("ZAxis"               ))\
-		x(XColumn              ,= HashI("XColumn"             ))\
-		x(Closed               ,= HashI("Closed"              ))\
-		x(Param                ,= HashI("Param"               ))\
-		x(Texture              ,= HashI("Texture"             ))\
-		x(Video                ,= HashI("Video"               ))\
-		x(Resolution           ,= HashI("Resolution"          ))\
-		x(Divisions            ,= HashI("Divisions"           ))\
-		x(Layers               ,= HashI("Layers"              ))\
-		x(Wedges               ,= HashI("Wedges"              ))\
-		x(ViewPlaneZ           ,= HashI("ViewPlaneZ"          ))\
-		x(Verts                ,= HashI("Verts"               ))\
-		x(Normals              ,= HashI("Normals"             ))\
-		x(Colours              ,= HashI("Colours"             ))\
-		x(TexCoords            ,= HashI("TexCoords"           ))\
-		x(Lines                ,= HashI("Lines"               ))\
-		x(LineList             ,= HashI("LineList"            ))\
-		x(LineStrip            ,= HashI("LineStrip"           ))\
-		x(Faces                ,= HashI("Faces"               ))\
-		x(TriList              ,= HashI("TriList"             ))\
-		x(TriStrip             ,= HashI("TriStrip"            ))\
-		x(Tetra                ,= HashI("Tetra"               ))\
-		x(Part                 ,= HashI("Part"                ))\
-		x(GenerateNormals      ,= HashI("GenerateNormals"     ))\
-		x(BakeTransform        ,= HashI("BakeTransform"       ))\
-		x(Step                 ,= HashI("Step"                ))\
-		x(Addr                 ,= HashI("Addr"                ))\
-		x(Filter               ,= HashI("Filter"              ))\
-		x(Alpha                ,= HashI("Alpha"               ))\
-		x(Range                ,= HashI("Range"               ))\
-		x(Specular             ,= HashI("Specular"            ))\
-		x(ScreenSpace          ,= HashI("ScreenSpace"         ))\
-		x(NoZTest              ,= HashI("NoZTest"             ))\
-		x(NoZWrite             ,= HashI("NoZWrite"            ))\
-		x(Billboard            ,= HashI("Billboard"           ))\
-		x(Depth                ,= HashI("Depth"               ))\
-		x(LeftHanded           ,= HashI("LeftHanded"          ))\
-		x(CastShadow           ,= HashI("CastShadow"          ))\
-		x(NonAffine            ,= HashI("NonAffine"           ))
+		x(Name            ,= HashI("Name"                ))\
+		x(Txfm            ,= HashI("Txfm"                ))\
+		x(O2W             ,= HashI("O2W"                 ))\
+		x(M4x4            ,= HashI("M4x4"                ))\
+		x(M3x3            ,= HashI("M3x3"                ))\
+		x(Pos             ,= HashI("Pos"                 ))\
+		x(Up              ,= HashI("Up"                  ))\
+		x(Direction       ,= HashI("Direction"           ))\
+		x(Quat            ,= HashI("Quat"                ))\
+		x(QuatPos         ,= HashI("QuatPos"             ))\
+		x(Rand4x4         ,= HashI("Rand4x4"             ))\
+		x(RandPos         ,= HashI("RandPos"             ))\
+		x(RandOri         ,= HashI("RandOri"             ))\
+		x(Euler           ,= HashI("Euler"               ))\
+		x(Dim             ,= HashI("Dim"                 ))\
+		x(Scale           ,= HashI("Scale"               ))\
+		x(Size            ,= HashI("Size"                ))\
+		x(Weight          ,= HashI("Weight"              ))\
+		x(Transpose       ,= HashI("Transpose"           ))\
+		x(Inverse         ,= HashI("Inverse"             ))\
+		x(Normalise       ,= HashI("Normalise"           ))\
+		x(Orthonormalise  ,= HashI("Orthonormalise"      ))\
+		x(Colour          ,= HashI("Colour"              ))\
+		x(ForeColour      ,= HashI("ForeColour"          ))\
+		x(BackColour      ,= HashI("BackColour"          ))\
+		x(Font            ,= HashI("Font"                ))\
+		x(Stretch         ,= HashI("Stretch"             ))\
+		x(Underline       ,= HashI("Underline"           ))\
+		x(Strikeout       ,= HashI("Strikeout"           ))\
+		x(NewLine         ,= HashI("NewLine"             ))\
+		x(CString         ,= HashI("CString"             ))\
+		x(AxisId          ,= HashI("AxisId"              ))\
+		x(Solid           ,= HashI("Solid"               ))\
+		x(Facets          ,= HashI("Facets"              ))\
+		x(CornerRadius    ,= HashI("CornerRadius"        ))\
+		x(RandColour      ,= HashI("RandColour"          ))\
+		x(ColourMask      ,= HashI("ColourMask"          ))\
+		x(Reflectivity    ,=HashI("Reflectivity"        ))\
+		x(Animation       ,= HashI("Animation"           ))\
+		x(Style           ,= HashI("Style"               ))\
+		x(Format          ,= HashI("Format"              ))\
+		x(TextLayout      ,= HashI("TextLayout"          ))\
+		x(Anchor          ,= HashI("Anchor"              ))\
+		x(Padding         ,= HashI("Padding"             ))\
+		x(Period          ,= HashI("Period"              ))\
+		x(Velocity        ,= HashI("Velocity"            ))\
+		x(Accel           ,= HashI("Accel"               ))\
+		x(AngVelocity     ,= HashI("AngVelocity"         ))\
+		x(AngAccel        ,= HashI("AngAccel"            ))\
+		x(Axis            ,= HashI("Axis"                ))\
+		x(Hidden          ,= HashI("Hidden"              ))\
+		x(Wireframe       ,= HashI("Wireframe"           ))\
+		x(Delimiters      ,= HashI("Delimiters"          ))\
+		x(Camera          ,= HashI("Camera"              ))\
+		x(LookAt          ,= HashI("LookAt"              ))\
+		x(Align           ,= HashI("Align"               ))\
+		x(Aspect          ,= HashI("Aspect"              ))\
+		x(FovX            ,= HashI("FovX"                ))\
+		x(FovY            ,= HashI("FovY"                ))\
+		x(Fov             ,= HashI("Fov"                 ))\
+		x(Near            ,= HashI("Near"                ))\
+		x(Far             ,= HashI("Far"                 ))\
+		x(Orthographic    ,= HashI("Orthographic"        ))\
+		x(Lock            ,= HashI("Lock"                ))\
+		x(Width           ,= HashI("Width"               ))\
+		x(Dashed          ,= HashI("Dashed"              ))\
+		x(Smooth          ,= HashI("Smooth"              ))\
+		x(XAxis           ,= HashI("XAxis"               ))\
+		x(YAxis           ,= HashI("YAxis"               ))\
+		x(ZAxis           ,= HashI("ZAxis"               ))\
+		x(XColumn         ,= HashI("XColumn"             ))\
+		x(Closed          ,= HashI("Closed"              ))\
+		x(Param           ,= HashI("Param"               ))\
+		x(Texture         ,= HashI("Texture"             ))\
+		x(Video           ,= HashI("Video"               ))\
+		x(Resolution      ,= HashI("Resolution"          ))\
+		x(Divisions       ,= HashI("Divisions"           ))\
+		x(Layers          ,= HashI("Layers"              ))\
+		x(Wedges          ,= HashI("Wedges"              ))\
+		x(ViewPlaneZ      ,= HashI("ViewPlaneZ"          ))\
+		x(Verts           ,= HashI("Verts"               ))\
+		x(Normals         ,= HashI("Normals"             ))\
+		x(Colours         ,= HashI("Colours"             ))\
+		x(TexCoords       ,= HashI("TexCoords"           ))\
+		x(Lines           ,= HashI("Lines"               ))\
+		x(LineList        ,= HashI("LineList"            ))\
+		x(LineStrip       ,= HashI("LineStrip"           ))\
+		x(Faces           ,= HashI("Faces"               ))\
+		x(TriList         ,= HashI("TriList"             ))\
+		x(TriStrip        ,= HashI("TriStrip"            ))\
+		x(Tetra           ,= HashI("Tetra"               ))\
+		x(Part            ,= HashI("Part"                ))\
+		x(GenerateNormals ,= HashI("GenerateNormals"     ))\
+		x(BakeTransform   ,= HashI("BakeTransform"       ))\
+		x(Step            ,= HashI("Step"                ))\
+		x(Addr            ,= HashI("Addr"                ))\
+		x(Filter          ,= HashI("Filter"              ))\
+		x(Alpha           ,= HashI("Alpha"               ))\
+		x(Range           ,= HashI("Range"               ))\
+		x(Specular        ,= HashI("Specular"            ))\
+		x(ScreenSpace     ,= HashI("ScreenSpace"         ))\
+		x(NoZTest         ,= HashI("NoZTest"             ))\
+		x(NoZWrite        ,= HashI("NoZWrite"            ))\
+		x(Billboard       ,= HashI("Billboard"           ))\
+		x(Depth           ,= HashI("Depth"               ))\
+		x(LeftHanded      ,= HashI("LeftHanded"          ))\
+		x(CastShadow      ,= HashI("CastShadow"          ))\
+		x(NonAffine       ,= HashI("NonAffine"           ))\
+		x(Source          ,= HashI("Source"              ))\
+		x(Data            ,= HashI("Data"                ))\
+		x(Series          ,= HashI("Series"              ))
 	PR_DEFINE_ENUM2(EKeyword, PR_ENUM_LDRKEYWORDS);
 	#pragma endregion
 
@@ -330,9 +334,9 @@ namespace pr::ldr
 	// Attributes (with defaults) for an LdrObject
 	struct ObjectAttributes
 	{
-		ELdrObject   m_type;     // Object type
-		string32     m_name;     // Name of the object
-		Colour32 m_colour;   // Base colour of the object
+		ELdrObject m_type;     // Object type
+		string32   m_name;     // Name of the object
+		Colour32   m_colour;   // Base colour of the object
 
 		ObjectAttributes() :m_type(ELdrObject::Unknown) ,m_name("unnamed") ,m_colour(Colour32White) {}
 		ObjectAttributes(ELdrObject type) :m_type(type), m_name("unnamed") ,m_colour(Colour32White) {}
@@ -502,8 +506,10 @@ namespace pr::ldr
 						return false;
 				}
 				for (auto& child : obj->m_child)
+				{
 					if (!Apply(func, name, child.m_ptr))
 						return false;
+				}
 			}
 			return true;
 		}

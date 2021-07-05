@@ -3,7 +3,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
+using Rylogic.Extn.Windows;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 
 namespace CoinFlip.UI.GfxObjects
 {
@@ -61,18 +63,18 @@ namespace CoinFlip.UI.GfxObjects
 
 			if (spot_b2q != null)
 			{
-				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_b2q.Value.ToDouble()));
-				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_b2q.Value.ToDouble()));
+				var pt0 = chart.ChartToScene(new v4((float)chart.XAxis.Min, (float)spot_b2q.Value.ToDouble(), 0, 1));
+				var pt1 = chart.ChartToScene(new v4((float)chart.XAxis.Max, (float)spot_b2q.Value.ToDouble(), 0, 1));
 
 				// Add the line
-				B2QLine.X1 = pt0.X;
-				B2QLine.Y1 = pt0.Y;
-				B2QLine.X2 = pt1.X;
-				B2QLine.Y2 = pt1.Y;
+				B2QLine.X1 = pt0.x;
+				B2QLine.Y1 = pt0.y;
+				B2QLine.X2 = pt1.x;
+				B2QLine.Y2 = pt1.y;
 				chart.Overlay.Adopt(B2QLine);
 
 				// Add the price label
-				var pt = chart.TransformToDescendant(chart.YAxisPanel).Transform(pt1);
+				var pt = chart.TransformToDescendant(chart.YAxisPanel).Transform(pt1.ToPointD());
 				Canvas.SetLeft(B2QPrice, 0);
 				Canvas.SetTop(B2QPrice, pt.Y - B2QPrice.RenderSize.Height / 2);
 				B2QPrice.Text = spot_b2q.Value.ToString(8);
@@ -86,18 +88,18 @@ namespace CoinFlip.UI.GfxObjects
 
 			if (spot_q2b != null)
 			{
-				var pt0 = chart.ChartToClient(new Point(chart.XAxis.Min, spot_q2b.Value.ToDouble()));
-				var pt1 = chart.ChartToClient(new Point(chart.XAxis.Max, spot_q2b.Value.ToDouble()));
+				var pt0 = chart.ChartToScene(new v4((float)chart.XAxis.Min, (float)spot_q2b.Value.ToDouble(), 0, 1));
+				var pt1 = chart.ChartToScene(new v4((float)chart.XAxis.Max, (float)spot_q2b.Value.ToDouble(), 0, 1));
 
 				// Add the line
-				Q2BLine.X1 = pt0.X;
-				Q2BLine.Y1 = pt0.Y;
-				Q2BLine.X2 = pt1.X;
-				Q2BLine.Y2 = pt1.Y;
+				Q2BLine.X1 = pt0.x;
+				Q2BLine.Y1 = pt0.y;
+				Q2BLine.X2 = pt1.x;
+				Q2BLine.Y2 = pt1.y;
 				chart.Overlay.Adopt(Q2BLine);
 
 				// Add the price label
-				var pt = chart.TransformToDescendant(chart.YAxisPanel).Transform(pt1);
+				var pt = chart.TransformToDescendant(chart.YAxisPanel).Transform(pt1.ToPointD());
 				Canvas.SetLeft(Q2BPrice, 0);
 				Canvas.SetTop(Q2BPrice, pt.Y - Q2BPrice.RenderSize.Height / 2);
 				Q2BPrice.Text = spot_q2b.Value.ToString(8);

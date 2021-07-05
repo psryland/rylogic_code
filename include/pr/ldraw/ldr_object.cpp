@@ -47,6 +47,17 @@ namespace pr::ldr
 	using Font = pr::rdr::ModelGenerator<>::Font;
 	using TextFormat = pr::rdr::ModelGenerator<>::TextFormat;
 	using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
+	using EFlags = enum EFlags
+	{
+		None = 0,
+		ExplicitName = 1 << 0,
+		ExplicitColour = 1 << 1,
+		_allow_bitwise_operators,
+	};
+
+	// Template prototype for ObjectCreators
+	struct IObjectCreator;
+	template <ELdrObject ObjType> struct ObjectCreator;
 
 	// A global pool of 'Buffers' objects
 	#pragma region Buffer Pool / Cache
@@ -134,11 +145,13 @@ namespace pr::ldr
 		ModelCont&      m_models;
 		pr::Guid        m_context_id;
 		Cache           m_cache;
-		HashValue       m_keyword;
+		ELdrObject      m_type;
 		LdrObject*      m_parent;
+		IObjectCreator* m_parent_creator;
 		FontStack       m_font;
 		ParseProgressCB m_progress_cb;
 		time_point      m_last_progress_update;
+		int             m_flags; // EFlags
 		bool&           m_cancel;
 
 		ParseParams(Renderer& rdr, Reader& reader, ParseResult& result, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
@@ -149,14 +162,16 @@ namespace pr::ldr
 			,m_models(result.m_models)
 			,m_context_id(context_id)
 			,m_cache()
-			,m_keyword()
+			,m_type(ELdrObject::Unknown)
 			,m_parent()
+			,m_parent_creator()
 			,m_font(1)
 			,m_progress_cb(progress_cb)
 			,m_last_progress_update(system_clock::now())
+			,m_flags(EFlags::None)
 			,m_cancel(cancel)
 		{}
-		ParseParams(ParseParams& p, ObjectCont& objects, HashValue keyword, LdrObject* parent)
+		ParseParams(ParseParams& p, ObjectCont& objects, LdrObject* parent, IObjectCreator* parent_creator)
 			:m_rdr(p.m_rdr)
 			,m_reader(p.m_reader)
 			,m_result(p.m_result)
@@ -164,11 +179,13 @@ namespace pr::ldr
 			,m_models(p.m_models)
 			,m_context_id(p.m_context_id)
 			,m_cache()
-			,m_keyword(keyword)
+			,m_type(ELdrObject::Unknown)
 			,m_parent(parent)
+			,m_parent_creator(parent_creator)
 			,m_font(p.m_font)
 			,m_progress_cb(p.m_progress_cb)
 			,m_last_progress_update(p.m_last_progress_update)
+			,m_flags(p.m_flags)
 			,m_cancel(p.m_cancel)
 		{}
 		ParseParams(ParseParams const&) = delete;
@@ -202,15 +219,15 @@ namespace pr::ldr
 	};
 
 	// Forward declare the recursive object parsing function
-	bool ParseLdrObject(ParseParams& p);
+	bool ParseLdrObject(ELdrObject type, ParseParams& p);
 
 	#pragma region Parse Common Elements
 
 	// Read the name, colour, and instance flag for an object
-	ObjectAttributes ParseAttributes(ParseParams& p, ELdrObject model_type)
+	ObjectAttributes ParseAttributes(ParseParams& p)
 	{
 		ObjectAttributes attr;
-		attr.m_type = model_type;
+		attr.m_type = p.m_type;
 		attr.m_name = "";
 			
 		// Read the next tokens up to the section start
@@ -222,16 +239,18 @@ namespace pr::ldr
 
 		switch (count)
 		{
-		case 2:
+			case 2:
 			{
 				// Expect: *Type <name> <colour>
 				if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
 					p.ReportError(EResult::TokenNotFound, "object name is invalid");
 				if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
 					p.ReportError(EResult::TokenNotFound, "object colour is invalid");
+				p.m_flags |= EFlags::ExplicitName;
+				p.m_flags |= EFlags::ExplicitColour;
 				break;
 			}
-		case 1:
+			case 1:
 			{
 				// Expect: *Type <name>  or *Type <colour>
 				// If the first token is 8 hex digits, assume it is a colour, otherwise assume it is a name
@@ -240,18 +259,22 @@ namespace pr::ldr
 					attr.m_name = "";
 					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok0)))
 						p.ReportError(EResult::TokenNotFound, "object colour is invalid");
+	
+					p.m_flags |= EFlags::ExplicitColour;
 				}
 				else
 				{
 					attr.m_colour = 0xFFFFFFFF;
 					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
 						p.ReportError(EResult::TokenNotFound, "object name is invalid");
+				
+					p.m_flags |= EFlags::ExplicitName;
 				}
 				break;
 			}
-		case 0:
+			case 0:
 			{
-				attr.m_name = Enum<ELdrObject>::ToStringA(model_type);
+				attr.m_name = Enum<ELdrObject>::ToStringA(p.m_type);
 				attr.m_colour = 0xFFFFFFFF;
 				break;
 			}
@@ -1186,9 +1209,6 @@ namespace pr::ldr
 
 	#pragma region ObjectCreator
 
-	// Template prototype for ObjectCreators
-	template <ELdrObject ObjType> struct ObjectCreator;
-
 	// Base class for all object creators
 	struct IObjectCreator
 	{
@@ -1210,9 +1230,17 @@ namespace pr::ldr
 			,m_texs   (p.m_cache.m_texts)
 			,m_nuggets(p.m_cache.m_nugts)
 		{}
-		virtual bool ParseKeyword(EKeyword) { return false; }
-		virtual void Parse() { p.ReportError(EResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str())); }
-		virtual void CreateModel(LdrObject*) {}
+		virtual bool ParseKeyword(EKeyword)
+		{
+			return false;
+		}
+		virtual void Parse()
+		{
+			p.ReportError(EResult::UnknownToken, Fmt("Unknown token near '%S'", p.m_reader.LastKeyword().c_str()));
+		}
+		virtual void CreateModel(LdrObject*)
+		{
+		}
 	};
 
 	#pragma endregion
@@ -1309,11 +1337,11 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Param:
+				case EKeyword::Param:
 				{
 					float t[2];
 					p.m_reader.RealS(t, 2);
@@ -1329,12 +1357,12 @@ namespace pr::ldr
 					p1 = pt + t[1] * dir;
 					return true;
 				}
-			case EKeyword::Dashed:
+				case EKeyword::Dashed:
 				{
 					p.m_reader.Vector2S(m_dashed);
 					return true;
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
@@ -1410,11 +1438,11 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Param:
+				case EKeyword::Param:
 				{
 					float t[2];
 					p.m_reader.RealS(t, 2);
@@ -1430,12 +1458,12 @@ namespace pr::ldr
 					p1 = pt + t[1] * dir;
 					return true;
 				}
-			case EKeyword::Dashed:
+				case EKeyword::Dashed:
 				{
 					p.m_reader.Vector2S(m_dashed);
 					return true;
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
@@ -1579,7 +1607,7 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, m_verts);
+				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
 			}
 
 			// Convert lines to dashed lines
@@ -1969,17 +1997,17 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_line_width);
 					return true;
 				}
-			case EKeyword::Smooth:
+				case EKeyword::Smooth:
 				{
 					m_smooth = true;
 					return true;
@@ -2031,7 +2059,7 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, m_verts);
+				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
 			}
 
 			pr::geometry::Props props;
@@ -2785,7 +2813,7 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, m_verts);
+				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
 			}
 
 			pr::v4 normal = m_axis.m_align;
@@ -3420,7 +3448,7 @@ namespace pr::ldr
 			{
 				VCont verts;
 				std::swap(verts, m_verts);
-				pr::Smooth(verts, m_verts);
+				pr::Smooth(verts, Spline::ETopo::Continuous3, m_verts);
 			}
 
 			// Create the model
@@ -3688,14 +3716,14 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						m_tex.ParseKeyword(p, kw) ||
 						m_gen_norms.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::Verts:
+				case EKeyword::Verts:
 				{
 					int r = 1;
 					p.m_reader.SectionStart();
@@ -3758,6 +3786,181 @@ namespace pr::ldr
 	// ELdrObject::Chart
 	template <> struct ObjectCreator<ELdrObject::Chart> :IObjectCreator
 	{
+		// Notes:
+		//  - 'm_data' may be a fully populated NxM table, or a jaggered array.
+		//  - If jaggered, then 'm_index' will be non-empty and 'm_dim' will be the bounding dimensions of the table.
+		//  - If non-jaggered, then 'm_index' will be empty, and 'm_dim' represents the dimensions of the table.
+
+		using Index = std::vector<int>;         // The index for accessing rows in the data table
+		using Table = std::vector<double>;      // The source data loaded into memory
+
+		Table m_data;        // A 2D table of data (row major, i.e. rows are contiguous)
+		Index m_index;       // The offset into 'm_data' for the start if each row (if jaggered) else empty.
+		iv2   m_dim;         // Table dimensions or bounds of the table dimensions.
+
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_data()
+			,m_index()
+			,m_dim()
+		{}
+		template <typename Stream> void ParseDataStream(Stream& stream)
+		{
+			using namespace pr::csv;
+			using namespace pr::str;
+
+			m_data.clear();
+			m_index.clear();
+			m_dim = iv2Zero;
+
+			// Read CSV data up to the section close
+			m_data.reserve(100); Loc loc;
+			for (Row row; Read(stream, row, loc); row.resize(0))
+			{
+				// Trim trailing empty values and empty rows
+				if (row.size() == 1 && Trim(row[0], IsWhiteSpace<wchar_t>, false, true).empty())
+					row.pop_back();
+				if (!row.empty() && Trim(row.back(), IsWhiteSpace<wchar_t>, false, true).empty())
+					row.pop_back();
+				if (row.empty())
+					continue;
+
+				// Convert the row to values. Stop at the first element that fails to parse as a value
+				auto row_count = 0;
+				for (auto& item : row)
+				{
+					double value;
+					if (!ExtractRealC(value, item.c_str())) break;
+					m_data.push_back(value);
+					++row_count;
+				}
+
+				// Skip rows with no data
+				if (row_count == 0)
+					continue;
+
+				// Assume the table is non-jaggered until we find a different number of items in a row
+				if (!m_index.empty()) // Table is jaggered already
+				{
+					m_index.push_back(m_index.back() + row_count);
+					m_dim.x = max(m_dim.x, row_count);
+					m_dim.y++;
+				}
+				else if (m_dim.x == row_count) // Table is not jaggered (yet), row length is the same
+				{
+					m_dim.y++;
+				}
+				else if (m_dim.x == 0) // Table is empty, set the row length
+				{
+					m_dim.x = row_count;
+					m_dim.y = 1;
+				}
+				else // Row length has changed, convert to jaggered
+				{
+					m_index.reserve(m_dim.y + 1);
+
+					// Fill 'm_index' with rows of length 'm_dim.x'
+					m_index.push_back(0);
+					for (int i = 0; i != m_dim.y; ++i)
+						m_index.push_back(m_index.back() + m_dim.x);
+
+					m_index.push_back(m_index.back() + row_count);
+					m_dim.x = max(m_dim.x, row_count);
+					m_dim.y++;
+				}
+			}
+			
+			// If this is jaggered data, then 'm_index' should have 'm_dim.y + 1' items
+			// with the last value == to the number of elements in the data table.
+			assert(m_index.empty() || (int)m_index.size() == m_dim.y + 1);
+			assert(m_index.empty() || m_index.back() == (int)m_data.size());
+		}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+				case EKeyword::Data:
+				{
+					// Create an adapter that makes the script reader look like a std::stream
+					struct StreamWrapper
+					{
+						Reader&      m_reader; // The reader to adapt
+						std::wstring m_delims; // Preserve the delimiters
+
+						StreamWrapper(Reader& reader)
+							:m_reader(reader)
+							,m_delims(reader.Delimiters())
+						{
+							// Read up to the first non-delimiter. This is the start of the CSV data
+							m_reader.IsSectionEnd();
+
+							// Change the delimiters to suit CSV data
+							m_reader.Delimiters(L"");
+						}
+						~StreamWrapper()
+						{
+							// Restore the delimiters
+							m_reader.Delimiters(m_delims.c_str());
+						}
+						StreamWrapper(StreamWrapper const&) = delete;
+						StreamWrapper& operator =(StreamWrapper const&) = delete;
+						bool good() const
+						{
+							return !eof() && !bad();
+						}
+						bool eof() const
+						{
+							return m_reader.IsKeyword() || m_reader.IsSectionEnd();
+						}
+						bool bad() const
+						{
+							return m_reader.IsSourceEnd();
+						}
+						wchar_t peek()
+						{
+							return *m_reader.Source();
+						}
+						wchar_t get()
+						{
+							auto ch = peek();
+							++m_reader.Source();
+							return ch;
+						}
+					};
+					StreamWrapper wrap(p.m_reader);
+
+					// Data is literal data given in the script
+					p.m_reader.SectionStart();
+					ParseDataStream(wrap);
+					p.m_reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::Source:
+				{
+					// Source is a file containing data
+					auto filepath = p.m_reader.FilepathS();
+					std::ifstream file(filepath);
+					ParseDataStream(file);
+					return true;
+				}
+			}
+		}
+		//void CreateModel(LdrObject* obj) override
+		//{
+		//	using namespace pr::rdr;
+		//
+		//	// Record the range of data in the chart
+		//	auto xrange = pr::Range<float>::Reset();
+		//	auto yrange = pr::Range<float>::Reset();
+		//
+		//}
+
+		#if 1
+		#else
 		using Column = pr::vector<float>;
 		using Table  = pr::vector<Column>;
 
@@ -3783,38 +3986,38 @@ namespace pr::ldr
 		{
 			switch (kw)
 			{
-			default:
+				default:
 				{
 					return
 						m_axis.ParseKeyword(p, kw) ||
 						IObjectCreator::ParseKeyword(kw);
 				}
-			case EKeyword::YAxis:
+				case EKeyword::YAxis:
 				{
 					m_x0 = 0.0f;
 					p.m_reader.RealS(*m_x0);
 					return true;
 				}
-			case EKeyword::XAxis:
+				case EKeyword::XAxis:
 				{
 					m_y0 = 0.0f;
 					p.m_reader.RealS(*m_y0);
 					return true;
 				}
-			case EKeyword::XColumn:
+				case EKeyword::XColumn:
 				{
 					p.m_reader.IntS(m_xcolumn, 10);
 					return true;
 				}
-			case EKeyword::Width:
+				case EKeyword::Width:
 				{
 					p.m_reader.RealS(m_width);
 					return true;
 				}
-			case EKeyword::Colours:
+				case EKeyword::Colours:
 				{
 					p.m_reader.SectionStart();
-					for (;!p.m_reader.IsSectionEnd();)
+					for (; !p.m_reader.IsSectionEnd();)
 					{
 						Colour32 col;
 						p.m_reader.Int(col.argb, 16);
@@ -4035,6 +4238,197 @@ namespace pr::ldr
 				.nuggets(nugts.data(), int(nugts.size()));
 			obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, cdata);
 			obj->m_model->m_name = obj->TypeAndName();
+		}
+		#endif
+	};
+
+	// ELdrObject::Series
+	template <> struct ObjectCreator<ELdrObject::Series> :IObjectCreator
+	{
+		struct DataIter
+		{
+			eval::IdentHash m_arghash; // The hash of the argument name
+			iv2 m_idx0;                // The virtual coordinate of the iterator position
+			iv2 m_step;                // The amount to advance 'idx' by with each iteration
+			iv2 m_max;                 // Where iteration stops.
+
+			DataIter(std::string const& name, iv2 max)
+			{
+				// Convert a name like "C32" or "R21" into an iterator into 'm_data'
+				if (name.size() < 2)
+					throw std::runtime_error(Fmt("Invalid series data references: '%s'", name.c_str()));
+			
+				bool is_column = name[0] == 'c' || name[0] == 'C';
+				if (name[0] != 'c' && name[0] != 'C' && name[0] != 'r' && name[0] != 'R')
+					throw std::runtime_error(Fmt("Series data reference should start with 'C' or 'R': '%s'", name.c_str()));
+			
+				int idx = 0;
+				if (!str::ExtractIntC(idx, 10, name.c_str() + 1))
+					throw std::runtime_error(Fmt("Series data references should contain an index: '%s'", name.c_str()));
+
+				m_arghash = eval::hashname(name);
+				m_idx0 = is_column ? iv2{idx, 0} : iv2{0, idx};
+				m_step = is_column ? iv2{0, 1} : iv2{1, 0};
+				m_max = max; //todo
+			}
+		};
+
+		// Default colours to use for each series
+		static inline Colour32 const colours[] =
+		{
+			0xFF70ad47, 0xFF4472c4, 0xFFed7d31,
+			0xFF264478, 0xFF9e480e, 0xFFffc000,
+			0xFF9e480e, 0xFF636363,
+
+			//0xFF0000FF, 0xFF00FF00, 0xFFFF0000,
+			//0xFF0000A0, 0xFF00A000, 0xFFA00000,
+			//0xFF000080, 0xFF008000, 0xFF800000,
+			//0xFF00FFFF, 0xFFFFFF00, 0xFFFF00FF,
+			//0xFF00A0A0, 0xFFA0A000, 0xFFA000A0,
+			//0xFF008080, 0xFF808000, 0xFF800080,
+		};
+
+		ObjectCreator<ELdrObject::Chart> const* m_chart;
+		eval::Expression m_xaxis;
+		eval::Expression m_yaxis;
+		pr::vector<DataIter> m_xiter;
+		pr::vector<DataIter> m_yiter;
+		float m_line_width;
+		
+		ObjectCreator(ParseParams& p)
+			:IObjectCreator(p)
+			,m_xaxis()
+			,m_yaxis()
+			,m_xiter()
+			,m_yiter()
+		{
+			// Find the ancestor chart creator
+			auto const* parent = p.m_parent_creator;
+			for (; parent != nullptr && parent->p.m_type != ELdrObject::Chart; parent = parent->p.m_parent_creator) {}
+			if (parent != nullptr)
+			{
+				m_chart = static_cast<ObjectCreator<ELdrObject::Chart> const*>(parent);
+			}
+			else
+			{
+				p.ReportError(EResult::SyntaxError, "Series objects must be children of a Chart object");
+				throw std::runtime_error("Series objects must be children of a Chart object");
+			}
+		}
+		double GetValue(DataIter const& iter, int i, bool& in_range) const
+		{
+			// Points outside the data set are considered zeros
+			auto idx = iter.m_idx0 + i * iter.m_step;
+			auto is_within = idx.x >= 0 && idx.x < iter.m_max.x && idx.y >= 0 && idx.y < iter.m_max.y;
+			if (!is_within)
+				return 0.0;
+
+			// 'iter' still points to valid data
+			in_range |= true;
+
+			// Not jaggered
+			if (m_chart->m_index.empty())
+				return m_chart->m_data[idx.y * m_chart->m_dim.x + idx.x];
+
+			// If 'm_data' is a jaggered array, get the number of values on the current row
+			auto num_on_row = m_chart->m_index[idx.y + 1] - m_chart->m_index[idx.y];
+			return idx.x < num_on_row ? m_chart->m_data[m_chart->m_index[idx.y] + idx.x] : 0.0;
+		}
+		bool ParseKeyword(EKeyword kw) override
+		{
+			switch (kw)
+			{
+				default:
+				{
+					return IObjectCreator::ParseKeyword(kw);
+				}
+				case EKeyword::XAxis:
+				{
+					std::string expr;
+					p.m_reader.StringS(expr);
+					m_xaxis = pr::eval::Compile(expr);
+					for (auto& name : m_xaxis.m_arg_names)
+						m_xiter.push_back(DataIter{name, m_chart->m_dim});
+					
+					return true;
+				}
+				case EKeyword::YAxis:
+				{
+					std::string expr;
+					p.m_reader.StringS(expr);
+					m_yaxis = pr::eval::Compile(expr);
+					for (auto& name : m_yaxis.m_arg_names)
+						m_yiter.push_back(DataIter{name, m_chart->m_dim});
+
+					return true;
+				}
+				case EKeyword::Width:
+				{
+					p.m_reader.RealS(m_line_width);
+					return true;
+				}
+			}
+		}
+		void CreateModel(LdrObject* obj) override
+		{
+			// Determine the index of this series within the chart
+			int child_index = 0;
+			for (auto& child : p.m_parent->m_child)
+				child_index += int(child->m_type == ELdrObject::Series);
+
+			// Generate a name if none given
+			if (!AllSet(p.m_flags, EFlags::ExplicitName))
+			{
+				obj->m_name = FmtS("Series %d", child_index);
+			}
+
+			// Assign a colour if none given
+			if (!AllSet(p.m_flags, EFlags::ExplicitColour))
+			{
+				obj->m_base_colour = colours[child_index % _countof(colours)];
+			}
+
+			auto& verts = p.m_cache.m_point;
+			verts.clear();
+
+			// Merge the args from both expressions
+			auto args = eval::ArgSet{};
+			args.add(m_xaxis.m_args);
+			args.add(m_yaxis.m_args);
+
+			// Iterate over the data points
+			for (int i = 0;;++i)
+			{
+				// Initialise the expression arguments for 'i'
+				bool in_range = false;
+				for (auto& iter : m_xiter)
+					args.set(iter.m_arghash, GetValue(iter, i, in_range));
+				for (auto& iter : m_yiter)
+					args.set(iter.m_arghash, GetValue(iter, i, in_range));
+				if (!in_range)
+					break;
+
+				// Evaluate the i'th data point
+				auto x = m_xaxis(args);
+				auto y = m_yaxis(args);
+				verts.push_back(v4{static_cast<float>(x.db()), static_cast<float>(y.db()), 0, 1});
+			}
+				
+			// Create a plot from the points
+			if (!verts.empty())
+			{
+				obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(verts.size()) - 1, verts.data(), 1, &obj->m_base_colour);
+				obj->m_model->m_name = obj->TypeAndName();
+
+				// Use thick lines
+				if (m_line_width > 1.0f)
+				{
+					// Get or create an instance of the thick line shader
+					auto shdr = ThickLineShaderLL(p.m_rdr, m_line_width);
+					for (auto& nug : obj->m_model->m_nuggets)
+						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+				}
+			}
 		}
 	};
 
@@ -4946,9 +5340,10 @@ namespace pr::ldr
 		// Notes:
 		//  - Not using an output iterator style callback because model
 		//    instancing relies on the map from object to model.
+		p.m_type = ShapeType;
 
 		// Read the object attributes: name, colour, instance
-		auto attr = ParseAttributes(p, ShapeType);
+		auto attr = ParseAttributes(p);
 		auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
 
 		// Push a font onto the font stack, so that fonts are scoped to object declarations
@@ -4985,8 +5380,8 @@ namespace pr::ldr
 					continue;
 
 				// Recursively parse child objects
-				ParseParams pp(p, obj->m_child, HashValue(kw), obj.get());
-				if (ParseLdrObject(pp))
+				ParseParams pp(p, obj->m_child, obj.get(), &creator);
+				if (ParseLdrObject((ELdrObject)kw, pp))
 					continue;
 
 				// Unknown token
@@ -5017,14 +5412,13 @@ namespace pr::ldr
 
 	// Reads a single ldr object from a script adding object (+ children) to 'p.m_objects'.
 	// Returns true if an object was read or false if the next keyword is unrecognised
-	bool ParseLdrObject(ParseParams& p)
+	bool ParseLdrObject(ELdrObject type, ParseParams& p)
 	{
 		// Save the current number of objects
 		auto object_count = p.m_objects.size();
 
 		// Parse the object
-		auto kw = ELdrObject(p.m_keyword);
-		switch (kw)
+		switch (type)
 		{
 		#define PR_LDR_PARSE_IMPL(name, hash) case ELdrObject::name: Parse<ELdrObject::name>(p); break;
 		#define PR_LDR_PARSE(x) x(PR_LDR_PARSE_IMPL)
@@ -5050,10 +5444,9 @@ namespace pr::ldr
 		p.m_reader.CaseSensitive(false);
 
 		// Loop over keywords in the script
-		for (;!p.m_cancel && p.m_reader.NextKeywordH(p.m_keyword);)
+		for (HashValue kw; !p.m_cancel && p.m_reader.NextKeywordH(kw);)
 		{
-			auto kw = (EKeyword)p.m_keyword;
-			switch (kw)
+			switch ((EKeyword)kw)
 			{
 				case EKeyword::Camera:
 				{
@@ -5085,7 +5478,7 @@ namespace pr::ldr
 					auto object_count = int(p.m_objects.size());
 
 					// Assume the keyword is an object and start parsing
-					if (!ParseLdrObject(p))
+					if (!ParseLdrObject(static_cast<ELdrObject>(kw), p))
 					{
 						p.ReportError(EResult::UnknownToken, Fmt("Expected an object declaration"));
 						break;
@@ -5179,6 +5572,11 @@ namespace pr::ldr
 
 		// Use the same model
 		obj->m_model = existing->m_model;
+
+		// Recursively create instances of the child objects
+		for (auto& child : existing->m_child)
+			obj->m_child.push_back(CreateInstance(child.get()));
+
 		return obj;
 	}
 

@@ -22,7 +22,6 @@
     <ProjectGuid>{87A78A7C-5B8D-4816-ABB2-CCEB41214529}</ProjectGuid>
     <RootNamespace>gui</RootNamespace>
     <ProjectName>gui</ProjectName>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,6 +70,7 @@
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -87,6 +87,7 @@
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -103,6 +104,7 @@
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Manifest />
     <Manifest />
@@ -119,6 +121,7 @@
     </PostBuildEvent>
     <ClCompile>
       <AdditionalIncludeDirectories>..\sdk\WTL\v9.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Manifest />
     <Manifest />

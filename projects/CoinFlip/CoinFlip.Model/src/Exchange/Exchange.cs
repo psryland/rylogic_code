@@ -293,6 +293,10 @@ namespace CoinFlip
 						Thread.CurrentThread.Name = Name;
 						Model.Log.Write(ELogLevel.Debug, $"Exchange {Name} update thread started");
 
+						// Ensure there is a sync context
+						if (SynchronizationContext.Current == null)
+							SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+
 						// Note: there is no point in trying to run the updates in parallel because
 						// the 'nonce' system requires each query to be sequential.
 						for (; !m_update_thread_exit;)

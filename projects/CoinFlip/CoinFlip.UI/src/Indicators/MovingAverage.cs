@@ -475,9 +475,9 @@ namespace CoinFlip.UI.Indicators
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore()
+			protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				base.UpdateSceneCore();
+				base.UpdateSceneCore(window, camera);
 
 				// Detach all first
 				foreach (var piece in Cache.Pieces.OfType<MAPiece>())
@@ -491,7 +491,7 @@ namespace CoinFlip.UI.Indicators
 				var range = Data.CandleRange.Intersect(Chart.XAxis.Range);
 
 				// The graphics are in chart space, get the transform to client space
-				var c2c = Chart.ChartToClientSpace();
+				var c2c = Chart.ChartToSceneSpace();
 				var c2c_2d = new MatrixTransform(c2c.x.x, 0, 0, c2c.y.y, c2c.w.x + MA.XOffset, c2c.w.y);
 
 				// Add each graphics piece. Really, 'Cache.Get' should be
@@ -548,19 +548,19 @@ namespace CoinFlip.UI.Indicators
 			private MovingAverageUI m_ui;
 
 			/// <summary>Hit test this indicator</summary>
-			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				if (Data.Count == 0 || !Visible)
 					return null;
 
-				var pt = client_point.ToV2();
+				var pt = scene_point;
 				var dist_sq = Math_.Sqr(Chart.Options.MinSelectionDistance);
 
 				// Get the selection distance in chart space, and the index range that needs testing
-				var sel_dist = Chart.ClientToChart(new Size(Chart.Options.MinSelectionDistance, Chart.Options.MinSelectionDistance));
+				var sel_dist = Chart.SceneToChart(new Size(Chart.Options.MinSelectionDistance, Chart.Options.MinSelectionDistance));
 				var idx_range = new RangeI(
-					Data.IndexOf(Math.Floor(chart_point.X - sel_dist.Width) + 0),
-					Data.IndexOf(Math.Floor(chart_point.X + sel_dist.Width) + 1));
+					Data.IndexOf(Math.Floor(chart_point.x - sel_dist.Width) + 0),
+					Data.IndexOf(Math.Floor(chart_point.x + sel_dist.Width) + 1));
 
 				// The various y offsets to test
 				var yofs = MA.ShowBollingerBands && MA.BBStdDev != 0
@@ -575,8 +575,8 @@ namespace CoinFlip.UI.Indicators
 					var ma1 = Data[i + 1];
 					foreach (var y in yofs)
 					{
-						var p0 = Chart.ChartToClient(new Point(ma0.CandleIndex, ma0.Value + y * ma0.StdDev)).ToV2();
-						var p1 = Chart.ChartToClient(new Point(ma1.CandleIndex, ma1.Value + y * ma1.StdDev)).ToV2();
+						var p0 = Chart.ChartToScene(new v4((float)ma0.CandleIndex, (float)(ma0.Value + y * ma0.StdDev), 0, 1f));
+						var p1 = Chart.ChartToScene(new v4((float)ma1.CandleIndex, (float)(ma1.Value + y * ma1.StdDev), 0, 1f));
 						var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 						var closest = p0 * (1f - t) + p1 * (t);
 
@@ -591,7 +591,7 @@ namespace CoinFlip.UI.Indicators
 				}
 
 				return hit_pt != null
-					? new ChartControl.HitTestResult.Hit(this, new Point(hit_pt.Value.x, hit_pt.Value.y), null)
+					? new ChartControl.HitTestResult.Hit(this, new v4(hit_pt.Value.x, hit_pt.Value.y, 0, 1f), null)
 					: null;
 			}
 

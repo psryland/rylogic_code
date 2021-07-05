@@ -366,14 +366,14 @@ namespace CoinFlip.UI
 					// This solves the rounding problem for values near zero when the axis span could be anything
 					return !Math_.FEql(x / Chart.YAxis.Span, 0.0) ? Math_.RoundSD(x, 5).ToString("G8") : "0";
 				}
-				ChartControl.TapeMeasure.LabelText HandleTapeMeasureStringFormat(Point beg, Point end)
+				ChartControl.TapeMeasure.LabelText HandleTapeMeasureStringFormat(v4 beg, v4 end)
 				{
-					var dx = end.X - beg.X;
-					var dy = end.Y - beg.Y;
+					var dx = end.x - beg.x;
+					var dy = end.y - beg.y;
 					return new ChartControl.TapeMeasure.LabelText
 					{
 						LabelX = $"{new TimeFrameTime(dx, TimeFrame).ExactTimeSpan.ToPrettyString()}\n{Math.Floor(dx)} candles",
-						LabelY = $"{dy._(Instrument.Pair.Quote).ToString(4, true)} ({dy / beg.Y:P2})",
+						LabelY = $"{dy._(Instrument.Pair.Quote).ToString(4, true)} ({dy / beg.y:P2})",
 						LabelD = null,
 					};
 				}
@@ -628,23 +628,23 @@ namespace CoinFlip.UI
 					// Signal a refresh
 					Chart.Invalidate();
 				}
-				Point OrderToPosition(Confetti.IItem item)
+				v4 OrderToPosition(Confetti.IItem item)
 				{
 					if (item is OrderConfettiAdapter oca)
 					{
 						var time = Model.UtcNow;
 						var X = m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
 						var Y = oca.Order.PriceQ2B.ToDouble();
-						return new Point(X, Y);
+						return new v4((float)X, (float)Y, 0, 1);
 					}
 					if (item is OrderCompletedConfettiAdapter cca)
 					{
 						var time = cca.Order.Created;
 						var X = m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
 						var Y = cca.Order.PriceQ2B.ToDouble();
-						return new Point(X, Y);
+						return new v4((float)X, (float)Y, 0, 1);
 					}
-					return new Point();
+					return v4.Origin;
 				}
 			}
 		}
@@ -1395,7 +1395,7 @@ namespace CoinFlip.UI
 				{
 					// Get the price at the mouse location
 					var hit = Chart.HitTestZone(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
-					var visible = Instrument != null && hit.ChartPoint.Y > 0;
+					var visible = Instrument != null && hit.ChartPoint.y > 0;
 
 					// Hide the buy/sell options when there is no instrument or the click price is invalid
 					buy.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
@@ -1403,7 +1403,7 @@ namespace CoinFlip.UI
 					if (!visible)
 						return;
 
-					var click_price = ((decimal)hit.ChartPoint.Y)._(Pair.RateUnits);
+					var click_price = ((decimal)hit.ChartPoint.y)._(Pair.RateUnits);
 
 					// Buy base currency (Q2B)
 					{

@@ -519,14 +519,24 @@ namespace pr::rdr
 		{
 			// Calculate the required buffer sizes
 			auto [vcount, icount] = geometry::LineStripSize(num_lines);
+			auto big_indices = num_lines > 0xFFFF;
 
 			// Generate the geometry
-			Cache cache{vcount, icount, 0, sizeof(uint16_t)};
+			Cache cache{vcount, icount, 0, s_cast<int>(big_indices ? sizeof(uint32_t) : sizeof(uint16_t))};
 			auto vptr = cache.m_vcont.data();
-			auto iptr = cache.m_icont.data<uint16_t>();
+			auto iptr32 = cache.m_icont.data<uint32_t>();
+			auto iptr16 = cache.m_icont.data<uint16_t>();
 			auto props = geometry::LinesStrip(num_lines, points, num_colours, colour,
-				[&](v4_cref<> p, Colour32 c) { SetPC(*vptr++, p, c); },
-				[&](int idx) { *iptr++ = s_cast<uint16_t>(idx); });
+				[&](v4_cref<> p, Colour32 c)
+				{
+					SetPC(*vptr++, p, c);
+				},
+				[&](int idx)
+				{
+					big_indices
+						? *iptr32++ = s_cast<uint32_t>(idx)
+						: *iptr16++ = s_cast<uint16_t>(idx);
+				});
 
 			// Create a nugget
 			cache.AddNugget(ETopo::LineStrip, props.m_geom, props.m_has_alpha, false, mat);

@@ -320,6 +320,10 @@ namespace CoinFlip
 						Thread.CurrentThread.Name = $"{SymbolCode} PriceData Update";
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread started");
 
+						// Ensure this thread has a Sync Context
+						if (SynchronizationContext.Current == null)
+							SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+
 						// Limit requests to batches of 25K candles
 						const int max_candles_per_request = 25_000;
 						var max_request_period = Misc.TimeFrameToTicks(max_candles_per_request, time_frame);

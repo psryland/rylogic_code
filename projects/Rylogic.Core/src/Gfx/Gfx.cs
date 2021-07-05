@@ -13,14 +13,17 @@ namespace Rylogic.Gfx
 	/// <summary>Static functions related to graphics</summary>
 	public static class Gfx_
 	{
+		[Obsolete("Use Lerp")]
+		public static Color Blend(Color c0, Color c1, float t) => Lerp(c0, c1, t);
+
 		/// <summary>Linearly interpolate two colours</summary>
-		public static Color Blend(Color c0, Color c1, float t)
+		public static Color Lerp(Color c0, Color c1, double t)
 		{
 			return Color.FromArgb(
-				(int)(c0.A*(1f - t) + c1.A*t),
-				(int)(c0.R*(1f - t) + c1.R*t),
-				(int)(c0.G*(1f - t) + c1.G*t),
-				(int)(c0.B*(1f - t) + c1.B*t));
+				(int)(c0.A * (1.0 - t) + c1.A * t),
+				(int)(c0.R * (1.0 - t) + c1.R * t),
+				(int)(c0.G * (1.0 - t) + c1.G * t),
+				(int)(c0.B * (1.0 - t) + c1.B * t));
 		}
 
 		/// <summary>Add XML serialisation support for graphics types</summary>

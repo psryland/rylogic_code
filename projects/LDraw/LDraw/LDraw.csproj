@@ -18,9 +18,9 @@
 		<Copyright>Copyright (c) Rylogic 2007</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<ApplicationIcon>icon.ico</ApplicationIcon>
-		<Version>6.2.2</Version>
-		<FileVersion>6.2.2</FileVersion>
-		<AssemblyVersion>6.2.2</AssemblyVersion>
+		<Version>6.3.0</Version>
+		<FileVersion>6.3.0</FileVersion>
+		<AssemblyVersion>6.3.0</AssemblyVersion>
 	</PropertyGroup>
 
 	<!-- Code -->

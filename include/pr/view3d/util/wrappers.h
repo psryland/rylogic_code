@@ -190,10 +190,13 @@ namespace pr::rdr
 	// Multi sampling description
 	struct MultiSamp :DXGI_SAMPLE_DESC
 	{
-		MultiSamp()
-			:MultiSamp(1, 0)
-		{}
-		MultiSamp(UINT count, UINT quality = ~UINT())
+		constexpr MultiSamp()
+			:DXGI_SAMPLE_DESC()
+		{
+			Count   = 1;
+			Quality = 0;
+		}
+		constexpr MultiSamp(UINT count, UINT quality = ~UINT())
 			:DXGI_SAMPLE_DESC()
 		{
 			Count   = count;

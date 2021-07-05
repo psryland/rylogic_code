@@ -227,34 +227,38 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Minimum value</summary>
-		public static T Min<T>(T lhs, T rhs) where T : IComparable<T>
+		public static T Min<T>(T lhs, T rhs)// where T : IComparable<T>
 		{
-			return lhs.CompareTo(rhs) <= 0 ? lhs : rhs;
+			return Operators<T>.LessEql(lhs, rhs) ? lhs : rhs;
+			//return lhs.CompareTo(rhs) <= 0 ? lhs : rhs;
 		}
-		public static T Min<T>(T lhs, params T[] rhs) where T : IComparable<T>
+		public static T Min<T>(T lhs, params T[] rhs)// where T : IComparable<T>
 		{
 			foreach (var r in rhs) lhs = Min(lhs, r);
 			return lhs;
 		}
 
 		/// <summary>Maximum value</summary>
-		public static T Max<T>(T lhs, T rhs) where T : IComparable<T>
+		public static T Max<T>(T lhs, T rhs)// where T : IComparable<T>
 		{
-			return lhs.CompareTo(rhs) >= 0 ? lhs : rhs;
+			return Operators<T>.GreaterEql(lhs, rhs) ? lhs : rhs;
+			//return lhs.CompareTo(rhs) >= 0 ? lhs : rhs;
 		}
-		public static T Max<T>(T lhs, params T[] rhs) where T : IComparable<T>
+		public static T Max<T>(T lhs, params T[] rhs)// where T : IComparable<T>
 		{
 			foreach (var r in rhs) lhs = Max(lhs, r);
 			return lhs;
 		}
 
 		/// <summary>Clamp value to an inclusive range</summary>
-		public static T Clamp<T>(T x, T min, T max) where T : IComparable<T>
+		public static T Clamp<T>(T x, T min, T max)// where T : IComparable<T>
 		{
-			Debug.Assert(min.CompareTo(max) <= 0);
-			return
-				x.CompareTo(max) > 0 ? max :
-				x.CompareTo(min) < 0 ? min : x;
+			Debug.Assert(Operators<T>.LessEql(min, max));//min.CompareTo(max) <= 0);
+			//Debug.Assert(min.CompareTo(max) <= 0);
+			return Max(min, Min(max, x));
+			//return
+			//	x.CompareTo(max) > 0 ? max :
+			//	x.CompareTo(min) < 0 ? min : x;
 		}
 
 		/// <summary>Wrap 'x' to range [mn, mx)</summary>

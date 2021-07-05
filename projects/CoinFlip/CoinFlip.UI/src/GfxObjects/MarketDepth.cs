@@ -7,6 +7,7 @@ using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -159,12 +160,12 @@ namespace CoinFlip.UI.GfxObjects
 				// Add the volume at the cursor if the cross hair is visible
 				if (Chart.ShowCrossHair)
 				{
-					var client_pt = Mouse.GetPosition(Chart.Overlay);
-					var chart_pt = Chart.ClientToChart(client_pt);
-					var volume = ((Chart.XAxis.Max - chart_pt.X) / Scale)._(Market.Base);
+					var scene_pt = Mouse.GetPosition(Chart.Overlay).ToV2();
+					var chart_pt = Chart.SceneToChart(scene_pt);
+					var volume = ((Chart.XAxis.Max - chart_pt.x) / Scale)._(Market.Base);
 
 					CursorVolume.Text = volume.ToString(8, true); ;
-					Canvas.SetLeft(CursorVolume, client_pt.X - CursorVolume.ActualWidth / 2);
+					Canvas.SetLeft(CursorVolume, scene_pt.x - CursorVolume.ActualWidth / 2);
 					Canvas.SetTop(CursorVolume, 0);
 					Chart.Overlay.Adopt(CursorVolume);
 				}

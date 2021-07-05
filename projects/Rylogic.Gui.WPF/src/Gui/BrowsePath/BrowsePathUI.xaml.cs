@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
@@ -6,26 +7,32 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Rylogic.Common;
 using Rylogic.Core.Windows;
 using Rylogic.Gui.WPF.Validators;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class BrowsePathUI : UserControl
+	public partial class BrowsePathUI :UserControl
 	{
 		public BrowsePathUI()
 		{
 			InitializeComponent();
 
 			PathType = EType.OpenFile;
-			History = new ObservableCollection<string>();
-			HistoryView = CollectionViewSource.GetDefaultView(History);
+			PathMustExist = false;
+			RequireRoot = false;
+			History = CollectionViewSource.GetDefaultView(new ObservableCollection<string>());
 			MaxHistoryLength = 10;
 
 			// Commands
 			BrowsePath = Command.Create(this, BrowsePathInternal);
 			Commit = Command.Create(this, CommitInternal);
+
+			// Set up validation
+			var binding = BindingOperations.GetBinding(m_cb_path, ComboBox.TextProperty);
+			binding.ValidationRules.Add(new PredicateValidator(DoValidation));
 
 			// Don't set DataContext, we need to inherit the parent's context
 		}
@@ -36,49 +43,66 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The type of path to browse for</summary>
 		public EType PathType
 		{
-			get { return (EType)GetValue(PathTypeProperty); }
-			set { SetValue(PathTypeProperty, value); }
+			get => (EType)GetValue(PathTypeProperty);
+			set => SetValue(PathTypeProperty, value);
 		}
 		public static readonly DependencyProperty PathTypeProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathType));
 
 		/// <summary>The selected path</summary>
 		public string SelectedPath
 		{
-			get { return (string)GetValue(SelectedPathProperty); }
-			set { SetValue(SelectedPathProperty, value); }
+			get => (string)GetValue(SelectedPathProperty);
+			set => SetValue(SelectedPathProperty, value);
 		}
-		private void SelectedPath_Changed(string new_value)
+		private void SelectedPath_Changed()
 		{
-			if (string.IsNullOrWhiteSpace(new_value)) return;
-			Util.AddToHistoryList(History, new_value, true, MaxHistoryLength);
+			if (string.IsNullOrWhiteSpace(SelectedPath)) return;
+			if (History.SourceCollection is IList<string> history)
+			{
+				Util.AddToHistoryList(history, SelectedPath, true, MaxHistoryLength);
+				History.MoveCurrentTo(SelectedPath);
+			}
 			SelectedPathChanged?.Invoke(this, EventArgs.Empty);
 		}
 		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath));
 
-		/// <summary>Callback function for validating a selected path</summary>
-		public Func<string, ValidationResult> PathValidation
+		/// <summary>The allow missing filepaths</summary>
+		public bool PathMustExist
 		{
-			get { return (Func<string, ValidationResult>)GetValue(PathValidationProperty); }
-			set { SetValue(PathValidationProperty, value); }
+			get => (bool)GetValue(PathMustExistProperty);
+			set => SetValue(PathMustExistProperty, value);
 		}
-		private void PathValidation_Changed(Func<string, ValidationResult> new_value)
+		public static readonly DependencyProperty PathMustExistProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathMustExist));
+
+		/// <summary>The path must contain the root drive</summary>
+		public bool RequireRoot
 		{
-			// Update the set of validation rules
-			var binding = BindingOperations.GetBinding(m_cb_path, ComboBox.TextProperty);
-			binding.ValidationRules.Clear();
-			binding.ValidationRules.Add(new PredicateValidator<string>(new_value));
+			get => (bool)GetValue(RequireRootProperty);
+			set => SetValue(RequireRootProperty, value);
+		}
+		public static readonly DependencyProperty RequireRootProperty = Gui_.DPRegister<BrowsePathUI>(nameof(RequireRoot));
+
+		/// <summary>Callback function for validating a selected path</summary>
+		public Func<string, ValidationResult>? PathValidation
+		{
+			get => (Func<object, ValidationResult>)GetValue(PathValidationProperty);
+			set => SetValue(PathValidationProperty, value);
 		}
 		public static readonly DependencyProperty PathValidationProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathValidation), flags: FrameworkPropertyMetadataOptions.None);
 
 		/// <summary>The history of paths</summary>
-		public ObservableCollection<string> History { get; }
-		public ICollectionView HistoryView { get; }
+		public ICollectionView History
+		{
+			get => (ICollectionView)GetValue(HistoryProperty);
+			set => SetValue(HistoryProperty, value);
+		}
+		public static readonly DependencyProperty HistoryProperty = Gui_.DPRegister<BrowsePathUI>(nameof(History), flags: FrameworkPropertyMetadataOptions.None);
 
 		/// <summary>The maximum length of the stored history</summary>
 		public int MaxHistoryLength
 		{
-			get { return (int)GetValue(MaxHistoryLengthProperty); }
-			set { SetValue(MaxHistoryLengthProperty, value); }
+			get => (int)GetValue(MaxHistoryLengthProperty);
+			set => SetValue(MaxHistoryLengthProperty, value);
 		}
 		public static readonly DependencyProperty MaxHistoryLengthProperty = Gui_.DPRegister<BrowsePathUI>(nameof(MaxHistoryLength));
 
@@ -137,8 +161,8 @@ namespace Rylogic.Gui.WPF
 		private void CommitInternal()
 		{
 			// Trigger an update of the 'SelectedPath' bindings
-			var binding = GetBindingExpression(SelectedPathProperty);
-			binding.UpdateSource();
+			if (GetBindingExpression(SelectedPathProperty) is BindingExpression binding)
+				binding.UpdateSource();
 		}
 
 		/// <summary>Watch for enter key presses</summary>
@@ -151,6 +175,45 @@ namespace Rylogic.Gui.WPF
 			e.Handled = true;
 		}
 
+		/// <summary>Perform validation on the path</summary>
+		private ValidationResult DoValidation(object arg)
+		{
+			// 'arg' must be a string
+			if (arg is not string path)
+				return new ValidationResult(false, $"Value '{arg}' is not of the expected type");
+
+			// Check the path has a valid form
+			switch (PathType)
+			{
+				case EType.OpenFile:
+				case EType.SaveFile:
+				{
+					if (!Path_.IsValidFilepath(path, RequireRoot))
+						return new ValidationResult(false, $"Path '{path}' is not a valid file path string");
+					break;
+				}
+				case EType.SelectDirectory:
+				{
+					if (!Path_.IsValidDirectory(path, RequireRoot))
+						return new ValidationResult(false, $"Path '{path}' is not a valid directory path string");
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown path type: {PathType}");
+				}
+			}
+
+			// Path must exist?
+			if (PathMustExist && !Path_.PathExists(path))
+				return new ValidationResult(false, $"Path '{path}' does not exist");
+
+			// Custom validation function
+			return PathValidation != null
+				? PathValidation(path)
+				: ValidationResult.ValidResult;
+		}
+
 		/// <summary>The type of path to browse for</summary>
 		public enum EType
 		{
@@ -160,3 +223,4 @@ namespace Rylogic.Gui.WPF
 		}
 	}
 }
+

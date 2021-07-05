@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Spline
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -154,37 +154,124 @@ namespace Rylogic.Maths
 		/// <summary>
 		/// Convert a collection of points into a collection of splines.
 		/// Generates a spline from each set of three points in 'points'</summary>
-		public static IEnumerable<Spline> CreateSplines(IEnumerable<v4> points)
+		public static IEnumerable<Spline> CreateSplines(IEnumerable<v4> points, ETopo topo)
 		{
+			// No points, no splines
 			var iter = points.GetIterator();
-			if (iter.AtEnd) yield break;
+			if (iter.AtEnd)
+				yield break;
 			
-			v4 p0,p1,p2;
+			v4 p0,p1,p2,p3;
 
-			p1 = iter.Current;
-			iter.MoveNext();
-			if (iter.AtEnd) yield break;
+			// One point, no splines
+			p0 = iter.CurrentThenNext();
+			if (iter.AtEnd)
+				yield break;
 
-			p2 = iter.Current;
-			iter.MoveNext();
-			if (iter.AtEnd) yield return new Spline(p1, p2, p1, p2);
+			// Two points, straight line
+			p1 = iter.CurrentThenNext();
+			if (iter.AtEnd)
+				yield return new Spline(p0, p1, p0, p1);
 
-			// Generate a spline from each set of three points in 'points'
-			for (bool first = true, last = false; !last; first = false)
+			// Three points, degenerate control point
+			p2 = iter.CurrentThenNext();
+			if (iter.AtEnd)
+				yield return new Spline(p0, (p0 + p1) / 2f, (p1 + p2) / 2f, p2);
+
+			// Generate the stream of splines
+			switch (topo)
 			{
-				p0 = p1; p1 = p2; p2 = iter.Current;
-				iter.MoveNext();
-				last = iter.AtEnd;
+				case ETopo.Continuous3:
+				{
+					// Generate splines from a sliding window of three points
+					for (bool first = true, last = false; ; first = false)
+					{
+						var sp = first ? p0 : (p0 + p1)/2f;
+						var sc = p1;
+						var ec = p1;
+						var ep = last ? p2 : (p2 + p1)/2f;
 
-				// Generate points for the spline
-				var sp = first ? p0 : (p0 + p1) * 0.5f;
-				var sc = p1;
-				var ec = p1;
-				var ep = last ? p2 : (p2 + p1) * 0.5f;
-				yield return new Spline(sp, sc, ec, ep);
+						// Yield a spline
+						yield return new Spline(sp, sc, ec, ep);
+						if (last) break;
+
+						// Slide the window
+						p0 = p1; p1 = p2; p2 = iter.CurrentThenNext();
+						last = iter.AtEnd;
+					}
+					break;
+				}
+				case ETopo.Continuous4:
+				{
+					p3 = iter.CurrentThenNext();
+					for (; ; )
+					{
+						// Yield a spline
+						yield return new Spline(p0, p1, p2, p3);
+						if (iter.AtEnd) break;
+
+						// Slide the window. An exception means, the wrong number of points
+						p0 = p3;
+						p1 = iter.CurrentThenNext();
+						p2 = iter.CurrentThenNext();
+						p3 = iter.CurrentThenNext();
+					}
+					break;
+				}
+				case ETopo.Disjoint3:
+				{
+					// Generate splines from each set of three points
+					for (; ; )
+					{
+						// Yield a spline
+						yield return new Spline(p0, (p0 + p1)/2f, (p1 + p2)/2f, p2);
+						if (iter.AtEnd) break;
+
+						// Slide the window. An exception means, the wrong number of points
+						p0 = iter.CurrentThenNext();
+						p1 = iter.CurrentThenNext();
+						p2 = iter.CurrentThenNext();
+					}
+					break;
+				}
+				case ETopo.Disjoint4:
+				{
+					// Generate splines from each set of four points
+					p3 = iter.CurrentThenNext();
+					for (;;)
+					{
+						// Yield a spline
+						yield return new Spline(p0, p1, p2, p3);
+						if (iter.AtEnd) break;
+
+						// Slide the window. An exception means, the wrong number of points
+						p0 = iter.CurrentThenNext();
+						p1 = iter.CurrentThenNext();
+						p2 = iter.CurrentThenNext();
+						p3 = iter.CurrentThenNext();
+					}
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unsupported spline topology: {topo}");
+				}
 			}
 		}
+		public enum ETopo
+		{
+			/// <summary>3 points per spline. Sliding window of 3 points per spline</summary>
+			Continuous3,
 
+			/// <summary>4 points per spline. Last point is the first point of the next spline</summary>
+			Continuous4,
+
+			/// <summary>3 points per spline. Each set of 3 points is a separate spline</summary>
+			Disjoint3,
+
+			/// <summary>4 points per spline. Each set of 4 points is a separate spline</summary>
+			Disjoint4,
+		}
 		///// <summary>Fill a container of points with a rastered version of this spline</summary>
 		//void Raster(pr::Spline const& spline, Cont& points, int max_points, float tol = pr::maths::tinyf)
 		//{
@@ -242,5 +329,25 @@ namespace Rylogic.Maths
 		//	int pts_remaining = max_points - 2;
 		//	impl::spline::Raster(points, &elem, pts_remaining, tol);
 		//}
+	}
+
+	public static partial class Math_
+	{
+		/// <summary>Find a point along a string of splines</summary>
+		public static v4 Lerp(double frac, params Spline[] splines)
+		{
+			var len = splines.Length;
+			if (len == 0)
+				throw new Exception("No splines to interpolate");
+
+			// Scale 'frac' up to the number of splines
+			var fidx = frac * len;
+			if (fidx <= 0.0) return splines[0].Position(0);
+			if (fidx >= len) return splines[len - 1].Position(1);
+
+			// Interpolate along the 'idx'th spline
+			var idx = (int)fidx;
+			return splines[idx].Position((float)fidx - idx);
+		}
 	}
 }

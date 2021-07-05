@@ -11,6 +11,7 @@ using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 using Drawing_ = Rylogic.Extn.Windows.Drawing_;
 
 namespace CoinFlip.UI.Indicators
@@ -173,7 +174,7 @@ namespace CoinFlip.UI.Indicators
 			public View(TrianglePattern tri, IChartView chart)
 				:base(tri.Id, nameof(TrianglePattern), chart, tri)
 			{
-				var geom = Geometry_.MakePolygon(true, Pt0, Pt1, Pt2);
+				var geom = Geometry_.MakePolygon(true, Pt0.xy.ToPointD(), Pt1.xy.ToPointD(), Pt2.xy.ToPointD());
 				Line = new Path
 				{
 					Data = geom,
@@ -247,64 +248,64 @@ namespace CoinFlip.UI.Indicators
 			private Ellipse Grab2 { get; }
 
 			/// <summary>Chart space coordinates of the trend line end points</summary>
-			private Point Pt0
+			private v4 Pt0
 			{
 				get
 				{
 					var tft = new TimeFrameTime(Tri.Time0, Instrument.TimeFrame);
 					var x = Instrument.Count != 0 ? Instrument.FIndexAt(tft) : 0;
-					return new Point(x, Tri.Price0);
+					return new v4((float)x, (float)Tri.Price0, 0, 1f);
 				}
 				set
 				{
-					Tri.Time0 = Instrument.TimeAtFIndex(value.X);
-					Tri.Price0 = value.Y;
+					Tri.Time0 = Instrument.TimeAtFIndex(value.x);
+					Tri.Price0 = value.y;
 				}
 			}
-			private Point Pt1
+			private v4 Pt1
 			{
 				get
 				{
 					var tft = new TimeFrameTime(Tri.Time1, Instrument.TimeFrame);
 					var x = Instrument.Count != 0 ? Instrument.FIndexAt(tft) : 0;
-					return new Point(x, Tri.Price1);
+					return new v4((float)x, (float)Tri.Price1, 0, 1f);
 				}
 				set
 				{
-					Tri.Time1 = Instrument.TimeAtFIndex(value.X);
-					Tri.Price1 = value.Y;
+					Tri.Time1 = Instrument.TimeAtFIndex(value.x);
+					Tri.Price1 = value.y;
 				}
 			}
-			private Point Pt2
+			private v4 Pt2
 			{
 				get
 				{
 					var tft = new TimeFrameTime(Tri.Time0, Instrument.TimeFrame);
 					var x = Instrument.Count != 0 ? Instrument.FIndexAt(tft) : 0;
-					return new Point(x, Tri.Price2);
+					return new v4((float)x, (float)Tri.Price2, 0, 1f);
 				}
 				set
 				{
-					Tri.Time0 = Instrument.TimeAtFIndex(value.X);
-					Tri.Price2 = value.Y;
+					Tri.Time0 = Instrument.TimeAtFIndex(value.x);
+					Tri.Price2 = value.y;
 				}
 			}
 
 			/// <summary>Client space coordinates of the trend line end points</summary>
-			private Point ScnPt0
+			private v2 ScnPt0
 			{
-				get => Chart.ChartToClient(Pt0);
-				set => Pt0 = Chart.ClientToChart(value);
+				get => Chart.ChartToScene(Pt0);
+				set => Pt0 = Chart.SceneToChart(value);
 			}
-			private Point ScnPt1
+			private v2 ScnPt1
 			{
-				get => Chart.ChartToClient(Pt1);
-				set => Pt1 = Chart.ClientToChart(value);
+				get => Chart.ChartToScene(Pt1);
+				set => Pt1 = Chart.SceneToChart(value);
 			}
-			private Point ScnPt2
+			private v2 ScnPt2
 			{
-				get => Chart.ChartToClient(Pt2);
-				set => Pt2 = Chart.ClientToChart(value);
+				get => Chart.ChartToScene(Pt2);
+				set => Pt2 = Chart.SceneToChart(value);
 			}
 
 			/// <summary>Update when indicator settings change</summary>
@@ -315,18 +316,18 @@ namespace CoinFlip.UI.Indicators
 				{
 					switch (e.Key)
 					{
-					case nameof(Time0):
-					case nameof(Time1):
-					case nameof(Price2):
-					case nameof(Price0):
-					case nameof(Price1):
+						case nameof(Time0):
+						case nameof(Time1):
+						case nameof(Price2):
+						case nameof(Price0):
+						case nameof(Price1):
 						{
-							var geom = Geometry_.MakePolygon(true, Pt0, Pt1, Pt2);
+							var geom = Geometry_.MakePolygon(true, Pt0.xy.ToPointD(), Pt1.xy.ToPointD(), Pt2.xy.ToPointD());
 							Line.Data = geom;
 							Glow.Data = geom;
 							break;
 						}
-					case nameof(Colour):
+						case nameof(Colour):
 						{
 							Line.Stroke = Tri.Colour.ToMediaBrush();
 							Glow.Stroke = Tri.Colour.Alpha(0.25).ToMediaBrush();
@@ -338,13 +339,13 @@ namespace CoinFlip.UI.Indicators
 							Grab2.Fill = Tri.Colour.Alpha(0.25).ToMediaBrush();
 							break;
 						}
-					case nameof(Width):
+						case nameof(Width):
 						{
 							Line.StrokeThickness = Tri.Width;
 							Glow.StrokeThickness = Tri.Width + GlowRadius;
 							break;
 						}
-					case nameof(LineStyle):
+						case nameof(LineStyle):
 						{
 							Line.StrokeDashArray = Tri.LineStyle.ToStrokeDashArray();
 							break;
@@ -355,12 +356,12 @@ namespace CoinFlip.UI.Indicators
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore()
+			protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				base.UpdateSceneCore();
+				base.UpdateSceneCore(window, camera);
 
 				// The line graphics are in chart space, get the transform to client space
-				var c2c = Chart.ChartToClientSpace();
+				var c2c = Chart.ChartToSceneSpace();
 				var c2c_2d = new MatrixTransform(c2c.x.x, 0, 0, c2c.y.y, c2c.w.x, c2c.w.y);
 
 				if (Visible)
@@ -390,12 +391,12 @@ namespace CoinFlip.UI.Indicators
 					var pt0Lo = ScnPt0;
 					var pt1 = ScnPt1;
 
-					Canvas.SetLeft(Grab0, pt0Hi.X - GrabRadius);
-					Canvas.SetTop(Grab0, pt0Hi.Y - GrabRadius);
-					Canvas.SetLeft(Grab1, pt0Lo.X - GrabRadius);
-					Canvas.SetTop(Grab1, pt0Lo.Y - GrabRadius);
-					Canvas.SetLeft(Grab2, pt1.X - GrabRadius);
-					Canvas.SetTop(Grab2, pt1.Y - GrabRadius);
+					Canvas.SetLeft(Grab0, pt0Hi.x - GrabRadius);
+					Canvas.SetTop(Grab0, pt0Hi.y - GrabRadius);
+					Canvas.SetLeft(Grab1, pt0Lo.x - GrabRadius);
+					Canvas.SetTop(Grab1, pt0Lo.y - GrabRadius);
+					Canvas.SetLeft(Grab2, pt1.x - GrabRadius);
+					Canvas.SetTop(Grab2, pt1.y - GrabRadius);
 					Chart.Overlay.Adopt(Grab0);
 					Chart.Overlay.Adopt(Grab1);
 					Chart.Overlay.Adopt(Grab2);
@@ -422,7 +423,7 @@ namespace CoinFlip.UI.Indicators
 			private TrianglePatternUI m_ui;
 
 			/// <summary>Hit test the indicator</summary>
-			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				if (Instrument.Count == 0 || !Visible)
 					return null;
@@ -432,34 +433,30 @@ namespace CoinFlip.UI.Indicators
 				var scn_p2 = ScnPt2;
 
 				// Test the grab points
-				if ((scn_p0 - client_point).LengthSquared < Chart.Options.MinSelectionDistanceSq)
+				if ((scn_p0 - scene_point).LengthSq < Chart.Options.MinSelectionDistanceSq)
 					return new ChartControl.HitTestResult.Hit(this, Pt0, EMove.Pt0);
-				if ((scn_p1 - client_point).LengthSquared < Chart.Options.MinSelectionDistanceSq)
+				if ((scn_p1 - scene_point).LengthSq < Chart.Options.MinSelectionDistanceSq)
 					return new ChartControl.HitTestResult.Hit(this, Pt1, EMove.Pt1);
-				if ((scn_p2 - client_point).LengthSquared < Chart.Options.MinSelectionDistanceSq)
+				if ((scn_p2 - scene_point).LengthSq < Chart.Options.MinSelectionDistanceSq)
 					return new ChartControl.HitTestResult.Hit(this, Pt2, EMove.Pt2);
 
 				// Test the three edges if the triangle
-				if (HitEdge(scn_p0, scn_p1) is Point top_edge)
-					return new ChartControl.HitTestResult.Hit(this, top_edge, EMove.Pt0 | EMove.Pt1);
-				if (HitEdge(scn_p1, scn_p2) is Point bottom_edge)
-					return new ChartControl.HitTestResult.Hit(this, bottom_edge, EMove.Pt2 |EMove.Pt1);
-				if (HitEdge(scn_p2, scn_p0) is Point side_edge)
-					return new ChartControl.HitTestResult.Hit(this, side_edge, EMove.Pt0 | EMove.Pt2);
+				if (HitEdge(scn_p0, scn_p1) is v2 top_edge)
+					return new ChartControl.HitTestResult.Hit(this, new v4(top_edge, 0, 1), EMove.Pt0 | EMove.Pt1);
+				if (HitEdge(scn_p1, scn_p2) is v2 bottom_edge)
+					return new ChartControl.HitTestResult.Hit(this, new v4(bottom_edge, 0, 1), EMove.Pt2 |EMove.Pt1);
+				if (HitEdge(scn_p2, scn_p0) is v2 side_edge)
+					return new ChartControl.HitTestResult.Hit(this, new v4(side_edge, 0, 1), EMove.Pt0 | EMove.Pt2);
 
 				return null;
 
-				// Find the nearest point to 'client_point' on the line
-				Point? HitEdge(Point pt0, Point pt1)
+				// Find the nearest point to 'scene_point' on the line
+				v2? HitEdge(v2 pt0, v2 pt1)
 				{
-					var p0 = pt0.ToV2();
-					var p1 = pt1.ToV2();
-					var pt = client_point.ToV2();
-
-					var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
-					var closest = p0 * (1f - t) + p1 * (t);
-					if ((closest - pt).LengthSq < Chart.Options.MinSelectionDistanceSq)
-						return new Point(closest.x, closest.y);
+					var t = Rylogic.Maths.Geometry.ClosestPoint(pt0, pt1, scene_point);
+					var closest = pt0 * (1f - t) + pt1 * (t);
+					if ((closest - scene_point).LengthSq < Chart.Options.MinSelectionDistanceSq)
+						return closest;
 
 					return null;
 				}
@@ -470,8 +467,7 @@ namespace CoinFlip.UI.Indicators
 			{
 				switch (args.State)
 				{
-				default: throw new Exception($"Unknown drag state: {args.State}");
-				case ChartControl.EDragState.Start:
+					case ChartControl.EDragState.Start:
 					{
 						m_drag_start0 = ScnPt0;
 						m_drag_start1 = ScnPt1;
@@ -479,10 +475,10 @@ namespace CoinFlip.UI.Indicators
 						m_move = (EMove)args.HitResult.Hits.FirstOrDefault(x => x.Element is View)?.Context;
 						break;
 					}
-				case ChartControl.EDragState.Dragging:
+					case ChartControl.EDragState.Dragging:
 					{
-						var delta = Chart.ChartToClient(args.Delta);
-						if      (m_move == EMove.Pt0) ScnPt0 = m_drag_start0 + delta;
+						var delta = Chart.ChartToScene(args.Delta);
+						if (m_move == EMove.Pt0) ScnPt0 = m_drag_start0 + delta;
 						else if (m_move == EMove.Pt1) ScnPt1 = m_drag_start1 + delta;
 						else if (m_move == EMove.Pt2) ScnPt2 = m_drag_start2 + delta;
 						else if (m_move != EMove.None)
@@ -493,16 +489,20 @@ namespace CoinFlip.UI.Indicators
 						}
 						break;
 					}
-				case ChartControl.EDragState.Commit:
+					case ChartControl.EDragState.Commit:
 					{
 						break;
 					}
-				case ChartControl.EDragState.Cancel:
+					case ChartControl.EDragState.Cancel:
 					{
 						ScnPt0 = m_drag_start0;
 						ScnPt1 = m_drag_start1;
 						ScnPt2 = m_drag_start2;
 						break;
+					}
+					default:
+					{
+						throw new Exception($"Unknown drag state: {args.State}");
 					}
 				}
 				args.Handled = true;
@@ -514,9 +514,9 @@ namespace CoinFlip.UI.Indicators
 				Pt1 = 1 << 1,
 				Pt2 = 1 << 2,
 			}
-			private Point m_drag_start0;
-			private Point m_drag_start1;
-			private Point m_drag_start2;
+			private v2 m_drag_start0;
+			private v2 m_drag_start1;
+			private v2 m_drag_start2;
 			private EMove m_move;
 		}
 
@@ -538,43 +538,43 @@ namespace CoinFlip.UI.Indicators
 			{
 				base.MouseDown(e);
 
-				var time = Instrument.TimeAtFIndex(GrabChart.X);
+				var time = Instrument.TimeAtFIndex(GrabChart.x);
 				m_indy = Model.Indicators.Add(Instrument.Pair.Name, new TrianglePattern
 				{
 					Type = ETrianglePatternType.Symmetric,
 					Time0 = time,
 					Time1 = time,
-					Price0 = GrabChart.Y,
-					Price1 = GrabChart.Y,
-					Price2 = GrabChart.Y,
+					Price0 = GrabChart.y,
+					Price1 = GrabChart.y,
+					Price2 = GrabChart.y,
 				});
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
 				base.MouseMove(e);
 
-				var client_pt = e.GetPosition(Chart);
-				var chart_pt = Chart.ClientToChart(client_pt);
+				var scene_pt = e.GetPosition(Chart.Scene).ToV2();
+				var chart_pt = Chart.SceneToChart(scene_pt);
 				var delta = chart_pt - GrabChart;
 
 				m_indy.Type =
 					Keyboard.Modifiers == ModifierKeys.None ? ETrianglePatternType.Symmetric :
 					Keyboard.Modifiers == ModifierKeys.Control ? ETrianglePatternType.Asymmetric :
-					delta.Y > 0 ? ETrianglePatternType.Ascending : ETrianglePatternType.Descending;
+					delta.y > 0 ? ETrianglePatternType.Ascending : ETrianglePatternType.Descending;
 
-				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.X);
-				m_indy.Price1 = chart_pt.Y;
+				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.x);
+				m_indy.Price1 = chart_pt.y;
 				if (m_indy.Type == ETrianglePatternType.Symmetric)
 				{
-					if (delta.Y > 0)
-						m_indy.Price0 = GrabChart.Y - Math.Abs(delta.Y);
+					if (delta.y > 0)
+						m_indy.Price0 = GrabChart.y - Math.Abs(delta.y);
 					else
-						m_indy.Price2 = GrabChart.Y + Math.Abs(delta.Y);
+						m_indy.Price2 = GrabChart.y + Math.Abs(delta.y);
 				}
 				if (m_indy.Type == ETrianglePatternType.Asymmetric)
 				{
-					m_indy.Price0 = GrabChart.Y - Math.Abs(delta.Y);
-					m_indy.Price2 = GrabChart.Y + Math.Abs(delta.Y);
+					m_indy.Price0 = GrabChart.y - Math.Abs(delta.y);
+					m_indy.Price2 = GrabChart.y + Math.Abs(delta.y);
 				}
 			}
 			public override void NotifyCancelled()

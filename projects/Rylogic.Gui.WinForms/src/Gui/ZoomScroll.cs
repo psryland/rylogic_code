@@ -103,7 +103,7 @@ namespace Rylogic.Gui.WinForms
 			Point pt1 = new Point(bounds.Right, 0);
 
 			// Background
-			c0 = Gfx_.Blend(Color.Black, TrackColor, 0.7f);
+			c0 = Gfx_.Lerp(Color.Black, TrackColor, 0.7);
 			c1 = TrackColor;
 			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1)) // This throws OutOfMemoryException if pt0 == pt1.. ffs MS..
 				gfx.FillRectangle(bsh, bounds);

@@ -10,8 +10,10 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 
 namespace CoinFlip.UI.GfxObjects
 {
@@ -26,7 +28,7 @@ namespace CoinFlip.UI.GfxObjects
 		public Confetti()
 		{
 			m_gfx = new Dictionary<IItem, GfxItem>();
-			Position = x => new Point();
+			Position = x => v4.Origin;
 		}
 		public void Dispose()
 		{
@@ -34,7 +36,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>Callback function used to get the position of an item (in chart space)</summary>
-		public Func<IItem, Point> Position { get; set; }
+		public Func<IItem, v4> Position { get; set; }
 
 		/// <summary>Remove all graphics from the scene</summary>
 		public void ClearScene()
@@ -67,9 +69,9 @@ namespace CoinFlip.UI.GfxObjects
 
 				// Update the position
 				var pt = Position(item);
-				var s = chart.ChartToClient(pt);
+				var s = chart.ChartToScene(pt);
 				var hl = highlight.Contains(item);
-				gfx.Update(chart.Overlay, s, hl);
+				gfx.Update(chart.Overlay, s.ToPointD(), hl);
 			}
 		}
 

@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -82,12 +83,12 @@ namespace CoinFlip.UI.GfxObjects
 		private Line GlowEP { get; }
 
 		/// <summary>Update the scene</summary>
-		protected override void UpdateSceneCore()
+		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
 			if (Visible)
 			{
-				var pt0 = Chart.ChartToClient(new Point(Chart.XAxis.Min, PriceQ2B.ToDouble()));
-				var pt1 = Chart.ChartToClient(new Point(Chart.XAxis.Max, PriceQ2B.ToDouble()));
+				var pt0 = Chart.ChartToScene(new v4((float)Chart.XAxis.Min, (float)PriceQ2B.ToDouble(), 0, 1f));
+				var pt1 = Chart.ChartToScene(new v4((float)Chart.XAxis.Max, (float)PriceQ2B.ToDouble(), 0, 1f));
 
 				// Colour based on trade direction
 				var col =
@@ -100,25 +101,25 @@ namespace CoinFlip.UI.GfxObjects
 				LabelEP.Background = col.ToMediaBrush();
 				LabelEP.Foreground = col.InvertBW().ToMediaBrush();
 				LabelEP.Measure(Rylogic.Extn.Windows.Size_.Infinity);
-				Canvas.SetLeft(LabelEP, pt1.X - LabelEP.DesiredSize.Width);
-				Canvas.SetTop(LabelEP, pt1.Y - LabelEP.DesiredSize.Height / 2);
+				Canvas.SetLeft(LabelEP, pt1.x - LabelEP.DesiredSize.Width);
+				Canvas.SetTop(LabelEP, pt1.y - LabelEP.DesiredSize.Height / 2);
 				Chart.Overlay.Adopt(LabelEP);
 
 				// Entry price line
-				LineEP.X1 = pt0.X;
-				LineEP.Y1 = pt0.Y;
-				LineEP.X2 = pt1.X - LabelEP.DesiredSize.Width;
-				LineEP.Y2 = pt1.Y;
+				LineEP.X1 = pt0.x;
+				LineEP.Y1 = pt0.y;
+				LineEP.X2 = pt1.x - LabelEP.DesiredSize.Width;
+				LineEP.Y2 = pt1.y;
 				LineEP.Stroke = col.ToMediaBrush();
 				Chart.Overlay.Adopt(LineEP);
 
 				// Add the glow if hovered or selected
 				if (Hovered || Selected)
 				{
-					GlowEP.X1 = pt0.X;
-					GlowEP.Y1 = pt0.Y;
-					GlowEP.X2 = pt1.X - LabelEP.DesiredSize.Width;
-					GlowEP.Y2 = pt1.Y;
+					GlowEP.X1 = pt0.x;
+					GlowEP.Y1 = pt0.y;
+					GlowEP.X2 = pt1.x - LabelEP.DesiredSize.Width;
+					GlowEP.Y2 = pt1.y;
 					GlowEP.Stroke = col.Alpha(Selected ? 0.25 : 0.15).ToMediaBrush();
 					Chart.Overlay.Adopt(GlowEP);
 				}
@@ -135,20 +136,21 @@ namespace CoinFlip.UI.GfxObjects
 			}
 		}
 
-		/// <summary>Hit test the trade price indicator</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+		/// <inheritdoc/>
+		public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
 			if (Chart.IsAncestorOf(LabelEP))
 			{
-				// Hit if over a price label
-				var pt0 = Chart.TransformToDescendant(LabelEP).Transform(client_point);
-				if (LabelEP.RenderArea().Contains(pt0))
-					return new ChartControl.HitTestResult.Hit(this, pt0, null);
-
-				// Get the price in client space
-				var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B.ToDouble()));
-				if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
-					return new ChartControl.HitTestResult.Hit(this, client_price, null);
+				//todo: This was correct, just needs updating to 3D
+				//// Hit if over a price label
+				//var pt0 = Chart.TransformToDescendant(LabelEP).Transform(scene_point.ToPointD());
+				//if (LabelEP.RenderArea().Contains(pt0))
+				//	return new ChartControl.HitTestResult.Hit(this, pt0, null);
+				//
+				//// Get the price in client space
+				//var client_price = Chart.ChartToScene(new v4(chart_point.x, (float)PriceQ2B.ToDouble(), 0, 1));
+				//if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
+				//	return new ChartControl.HitTestResult.Hit(this, client_price, null);
 			}
 
 			return null;
@@ -159,22 +161,22 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			switch (args.State)
 			{
-			default: throw new Exception($"Unknown drag state: {args.State}");
-			case ChartControl.EDragState.Start:
+				default: throw new Exception($"Unknown drag state: {args.State}");
+				case ChartControl.EDragState.Start:
 				{
 					m_drag_start = PriceQ2B;
 					break;
 				}
-			case ChartControl.EDragState.Dragging:
+				case ChartControl.EDragState.Dragging:
 				{
-					PriceQ2B = (m_drag_start + (decimal)args.Delta.Y)._(PriceQ2B);
+					PriceQ2B = (m_drag_start + (decimal)args.Delta.y)._(PriceQ2B);
 					break;
 				}
-			case ChartControl.EDragState.Commit:
+				case ChartControl.EDragState.Commit:
 				{
 					break;
 				}
-			case ChartControl.EDragState.Cancel:
+				case ChartControl.EDragState.Cancel:
 				{
 					PriceQ2B = m_drag_start._(PriceQ2B);
 					break;
