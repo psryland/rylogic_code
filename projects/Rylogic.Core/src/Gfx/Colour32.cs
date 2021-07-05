@@ -94,10 +94,10 @@ namespace Rylogic.Gfx
 		public static Colour32 Lerp(Colour32 lhs, Colour32 rhs, double t)
 		{
 			return new Colour32(
-				(byte)(lhs.A*(1f - t) + rhs.A*t),
-				(byte)(lhs.R*(1f - t) + rhs.R*t),
-				(byte)(lhs.G*(1f - t) + rhs.G*t),
-				(byte)(lhs.B*(1f - t) + rhs.B*t));
+				(byte)(lhs.A * (1f - t) + rhs.A * t),
+				(byte)(lhs.R * (1f - t) + rhs.R * t),
+				(byte)(lhs.G * (1f - t) + rhs.G * t),
+				(byte)(lhs.B * (1f - t) + rhs.B * t));
 		}
 		public static Colour32 Lerp(double t, params (Colour32, double)[] p)
 		{

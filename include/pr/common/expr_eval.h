@@ -160,16 +160,6 @@ namespace pr::eval
 	struct alignas(16) Val
 	{
 		enum class EType :int { Unknown, Intg, Real, Intg4, Real4 };
-		static constexpr bool is_valid(EType ty) { return ty == EType::Intg || ty == EType::Real || ty == EType::Intg4 || ty == EType::Real4; }
-		static constexpr EType common_type(EType lhs, EType rhs)
-		{
-			return
-				(lhs == rhs) ? lhs :
-				(lhs == EType::Real4 || rhs == EType::Real4) ? EType::Real4 :
-				(lhs == EType::Intg4 || rhs == EType::Intg4) ? EType::Intg4 :
-				(lhs == EType::Real || rhs == EType::Real) ? EType::Real :
-				EType::Intg;
-		}
 
 		// The value
 		union
@@ -517,6 +507,18 @@ namespace pr::eval
 		{
 			return !(lhs < rhs);
 		}
+
+		static constexpr bool is_valid(EType ty) { return ty == EType::Intg || ty == EType::Real || ty == EType::Intg4 || ty == EType::Real4; }
+		static constexpr bool is_valid(Val v) { return is_valid(v.m_ty); }
+		static constexpr EType common_type(EType lhs, EType rhs)
+		{
+			return
+				(lhs == rhs) ? lhs :
+				(lhs == EType::Real4 || rhs == EType::Real4) ? EType::Real4 :
+				(lhs == EType::Intg4 || rhs == EType::Intg4) ? EType::Intg4 :
+				(lhs == EType::Real || rhs == EType::Real) ? EType::Real :
+				EType::Intg;
+		}
 	};
 	static_assert(std::is_trivially_copyable_v<Val>, "Val must be pod for performance");
 	static_assert(std::alignment_of_v<Val> == 16, "Val should have 16 byte alignment");
@@ -524,6 +526,10 @@ namespace pr::eval
 	// A collection of args with some rules enforced
 	struct ArgSet
 	{
+		// Notes:
+		//  ArgSet is treated as a value type, so doesn't
+		//  include argument name strings for performance.
+
 	private:
 		struct Arg
 		{
@@ -542,8 +548,8 @@ namespace pr::eval
 		};
 		static_assert(std::is_trivially_copyable_v<Arg>, "Arg must be pod for performance");
 
-		// The names (and default values) of unique identifiers in the
-		// expression (in order of discovery from left to right).
+		// The names (hashes) and default values of the unique identifiers
+		// in the expression (in order of discovery from left to right).
 		pr::vector<Arg, 4> m_args;
 
 		// Find the argument matching 'hash'
@@ -562,9 +568,8 @@ namespace pr::eval
 		}
 
 		// Add or replace an argument value by hash
-		void add(IdentHash hash, Val const& val, [[maybe_unused]] bool assigning)
+		void add_internal(IdentHash hash, Val const& val)
 		{
-			assert(Val::is_valid(val.m_ty) == assigning);
 			auto arg = find(hash);
 			if (arg == nullptr)
 				m_args.push_back(Arg(hash, val));
@@ -594,36 +599,58 @@ namespace pr::eval
 			return count;
 		}
 
+		// True if 'name' is already an argument
+		bool contains(std::string_view name) const
+		{
+			return contains(hashname(name));
+		}
+
+		// True if 'hash' is already an argument
+		bool contains(IdentHash hash) const
+		{
+			return find(hash) != nullptr;
+		}
+
 		// Add or replace an unassigned argument
 		void add(std::string_view name)
 		{
-			add(hashname(name), Val{}, false);
+			add_internal(hashname(name), Val{});
 		}
 
 		// Add or replace an argument value by name
 		void add(std::string_view name, Val const& val)
 		{
-			add(hashname(name), val, true);
+			assert(Val::is_valid(val));
+			add_internal(hashname(name), val);
 		}
 
 		// Add or replace an argument value by hash
 		void add(IdentHash hash, Val const& val)
 		{
-			add(hash, val, true);
+			assert(Val::is_valid(val));
+			add_internal(hash, val);
 		}
 
 		// Add or replace arguments from another arg set
 		void add(ArgSet const& rhs)
 		{
 			for (auto& arg : rhs.m_args)
-				add(arg.m_hash, arg.m_value);
+				add_internal(arg.m_hash, arg.m_value);
 		}
 
-		// Assign a value to an argument by index position
-		void assign(int i, Val const& val)
+		// Assign a value to an argument by the hash of its argument name
+		void set(IdentHash hash, Val const& val)
 		{
-			if (i < 0 || i >= static_cast<int>(m_args.size())) throw std::out_of_range(Fmt("Argument index %d is out of range", i));
-			m_args[i].m_value = val;
+			assert(Val::is_valid(val));
+			auto arg = find(hash);
+			if (arg == nullptr) throw std::invalid_argument("No argument with this hash exists");
+			arg->m_value = val;
+		}
+
+		// Assign a value to an argument by name
+		void set(std::string_view name, Val const& val)
+		{
+			set(hashname(name), val);
 		}
 
 		// True if all arguments have an assigned value
@@ -653,11 +680,34 @@ namespace pr::eval
 			return arg->m_value;
 		}
 
-		// Get an argument by index (in discovery order)
+		// Get/Set an argument by index (in discovery order)
 		Val const& operator [](int i) const
 		{
 			if (i < 0 || i >= static_cast<int>(m_args.size())) throw std::out_of_range(Fmt("Argument index %d is out of range", i));
 			return m_args[i].m_value;
+		}
+		Val& operator [](int i)
+		{
+			if (i < 0 || i >= static_cast<int>(m_args.size())) throw std::out_of_range(Fmt("Argument index %d is out of range", i));
+			return m_args[i].m_value;
+		}
+
+		// Iteration
+		Arg const* begin() const
+		{
+			return m_args.data();
+		}
+		Arg const* end() const
+		{
+			return begin() + m_args.size();
+		}
+		Arg* begin()
+		{
+			return m_args.data();
+		}
+		Arg* end()
+		{
+			return begin() + m_args.size();
 		}
 	};
 
@@ -697,18 +747,27 @@ namespace pr::eval
 	struct Expression
 	{
 		using ArgPair = struct { std::string_view name; Val val; };
+		using ArgNames = pr::vector<Ident>;
 
 		// The compiled expression
 		pr::byte_data<> m_op;
 
-		// The names (and default values) of unique identifiers in the
-		// expression (in order of discovery from left to right).
+		// The arguments (and default values) of the unique identifiers in the expression (in order of discovery from left to right).
 		ArgSet m_args;
+
+		// The unique argument names in the expression
+		ArgNames m_arg_names;
 
 		// Is callable/valid test
 		explicit operator bool() const
 		{
 			return !m_op.empty();
+		}
+
+		// Evaluate using the given args
+		Val operator()(ArgSet const& args) const
+		{
+			return call(args);
 		}
 
 		// Evaluate the expression with the given named arguments. e.g. expr({"x", 1.2}, {"y", 3})
@@ -739,7 +798,7 @@ namespace pr::eval
 				for (int i = 0, j = 0; i != int(args.size()) && j != int(values.size()); ++i)
 				{
 					if (args[i].has_value()) continue;
-					args.assign(i, values[j++]);
+					args[i] = values[j++];
 				}
 
 				// Evaluate
@@ -747,7 +806,7 @@ namespace pr::eval
 			}
 		}
 
-		// Execute the expression with the given arguments
+		// Execute the expression with the given arguments. You can pass 'm_args' to this if you don't care about default values and you've assign values to them all.
 		template <typename Stack = Stack<64>>
 		Val call(ArgSet const& args = {}) const
 		{
@@ -1859,20 +1918,22 @@ namespace pr::eval
 
 			switch (tok)
 			{
-			case ETok::None:
+				case ETok::None:
 				{
 					return expr;
 				}
-			case ETok::Identifier:
+				case ETok::Identifier:
 				{
 					auto name = Narrow(ident.str_view());
 					auto hash = hashname(name);
+					auto nue = !compiled.m_args.contains(hash);
 					compiled.m_op.append(tok);
 					compiled.m_op.append(hash);
 					compiled.m_args.add(name);
+					if (nue) compiled.m_arg_names.push_back(std::move(name));
 					break;
 				}
-			case ETok::Value:
+				case ETok::Value:
 				{
 					// Manually serialise 'val' to avoid structure padding being added to the CodeBuf.
 					// Could make this a function, but it's only used in a couple of places and I don't
@@ -1880,86 +1941,86 @@ namespace pr::eval
 					compiled.m_op.append(tok);
 					compiled.m_op.append(val.m_ty);
 					val.m_ty == Val::EType::Intg ? compiled.m_op.append(val.m_ll) :
-					val.m_ty == Val::EType::Real ? compiled.m_op.append(val.m_db) :
-					throw std::runtime_error("Invalid literal value");
+						val.m_ty == Val::EType::Real ? compiled.m_op.append(val.m_db) :
+						throw std::runtime_error("Invalid literal value");
 					break;
 				}
-			case ETok::Add:
-			case ETok::Sub:
-			case ETok::Mul:
-			case ETok::Div:
-			case ETok::Mod:
+				case ETok::Add:
+				case ETok::Sub:
+				case ETok::Mul:
+				case ETok::Div:
+				case ETok::Mod:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
 					compiled.m_op.append(tok);
 					break;
 				}
-			case ETok::UnaryPlus:
-			case ETok::UnaryMinus:
-			case ETok::Not:
-			case ETok::Comp:
+				case ETok::UnaryPlus:
+				case ETok::UnaryMinus:
+				case ETok::Not:
+				case ETok::Comp:
 				{
 					if (!Compile(expr, compiled, tok, false)) return false;
 					compiled.m_op.append(tok);
 					break;
 				}
-			case ETok::LogOR:
-			case ETok::LogAND:
-			case ETok::LogEql:
-			case ETok::LogNEql:
-			case ETok::LogLTEql:
-			case ETok::LogGTEql:
-			case ETok::LogLT:
-			case ETok::LogGT:
+				case ETok::LogOR:
+				case ETok::LogAND:
+				case ETok::LogEql:
+				case ETok::LogNEql:
+				case ETok::LogLTEql:
+				case ETok::LogGTEql:
+				case ETok::LogLT:
+				case ETok::LogGT:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
 					compiled.m_op.append(tok);
 					break;
 				}
-			case ETok::BitOR:
-			case ETok::BitXOR:
-			case ETok::BitAND:
-			case ETok::LeftShift:
-			case ETok::RightShift:
+				case ETok::BitOR:
+				case ETok::BitXOR:
+				case ETok::BitAND:
+				case ETok::LeftShift:
+				case ETok::RightShift:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
 					compiled.m_op.append(tok);
 					break;
 				}
-			case ETok::Ceil:
-			case ETok::Floor:
-			case ETok::Round:
-			case ETok::Min:
-			case ETok::Max:
-			case ETok::Clamp:
-			case ETok::Abs:
-			case ETok::Sin:
-			case ETok::Cos:
-			case ETok::Tan:
-			case ETok::ASin:
-			case ETok::ACos:
-			case ETok::ATan:
-			case ETok::ATan2:
-			case ETok::SinH:
-			case ETok::CosH:
-			case ETok::TanH:
-			case ETok::Exp:
-			case ETok::Log:
-			case ETok::Log10:
-			case ETok::Pow:
-			case ETok::Sqr:
-			case ETok::Sqrt:
-			case ETok::Len2:
-			case ETok::Len3:
-			case ETok::Len4:
-			case ETok::Deg:
-			case ETok::Rad:
+				case ETok::Ceil:
+				case ETok::Floor:
+				case ETok::Round:
+				case ETok::Min:
+				case ETok::Max:
+				case ETok::Clamp:
+				case ETok::Abs:
+				case ETok::Sin:
+				case ETok::Cos:
+				case ETok::Tan:
+				case ETok::ASin:
+				case ETok::ACos:
+				case ETok::ATan:
+				case ETok::ATan2:
+				case ETok::SinH:
+				case ETok::CosH:
+				case ETok::TanH:
+				case ETok::Exp:
+				case ETok::Log:
+				case ETok::Log10:
+				case ETok::Pow:
+				case ETok::Sqr:
+				case ETok::Sqrt:
+				case ETok::Len2:
+				case ETok::Len3:
+				case ETok::Len4:
+				case ETok::Deg:
+				case ETok::Rad:
 				{
 					if (!Compile(expr, compiled, tok)) return false;
 					compiled.m_op.append(tok);
 					break;
 				}
-			case ETok::Hash:
+				case ETok::Hash:
 				{
 					// Hash only supports literal strings, which are turned into int64 values
 					std::basic_string<Char> str;
@@ -1969,31 +2030,31 @@ namespace pr::eval
 					if (*expr == '"') ++expr; else return false;
 					for (bool esc = false; expr && (esc || *expr != '\"'); esc = !esc && *expr == '\\', ++expr) str.append(1, *expr);
 					if (*expr == '"') ++expr; else return false;
-				
+
 					auto hash = static_cast<long long>(hash::HashCT(str.data(), str.data() + str.size()));
 					compiled.m_op.append(ETok::Value);
 					compiled.m_op.append(Val::EType::Intg);
 					compiled.m_op.append(hash);
 					break;
 				}
-			case ETok::Comma:
+				case ETok::Comma:
 				{
 					follows_value = false;
 					break;
 				}
-			case ETok::OpenParenthesis:
+				case ETok::OpenParenthesis:
 				{
 					// Parent op is 'None' because it has the lowest precedence
 					if (!Compile(expr, compiled, ETok::None)) return false;
 					break;
 				}
-			case ETok::CloseParenthesis:
+				case ETok::CloseParenthesis:
 				{
 					// Wait for the parent op to be the 'Open Parenthesis'
 					if (parent_op != ETok::None) expr += -1;
 					return true;
 				}
-			case ETok::If:
+				case ETok::If:
 				{
 					// The boolean expression should already be in 'm_op' because it occurs to
 					// the left of the ternary ?: operator.
@@ -2016,7 +2077,7 @@ namespace pr::eval
 					compiled.m_op.at_byte_ofs<int>(ofs0) = jmp;
 					break;
 				}
-			case ETok::Else:
+				case ETok::Else:
 				{
 					// Add the 'Else' token which is basically a branch-always instruction.
 					// Executing an 'If' statement will jump over this instruction so that the else statement is executed.
@@ -2036,7 +2097,7 @@ namespace pr::eval
 					compiled.m_op.at_byte_ofs<int>(ofs0) = jmp;
 					return true;
 				}
-			default:
+				default:
 				{
 					throw std::runtime_error("unknown expression token");
 				}

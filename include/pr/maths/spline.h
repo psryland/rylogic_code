@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -21,6 +21,20 @@ namespace pr
 	struct Spline :m4x4
 	{
 		enum { Start, SCtrl, ECtrl, End };
+		enum class ETopo
+		{
+			/// <summary>3 points per spline. Sliding window of 3 points per spline</summary>
+			Continuous3,
+
+			/// <summary>4 points per spline. Last point is the first point of the next spline</summary>
+			Continuous4,
+
+			/// <summary>3 points per spline. Each set of 3 points is a separate spline</summary>
+			Disjoint3,
+
+			/// <summary>4 points per spline. Each set of 4 points is a separate spline</summary>
+			Disjoint4,
+		};
 
 		// Construct a spline from 4 control points
 		Spline() = default;
@@ -182,6 +196,126 @@ namespace pr
 		return t2;
 	}
 
+	// Convert a container of points into a list of splines
+	// Generates a spline from each set of three points in 'points'
+	// VOut(Spline const& spline, bool last);
+	template <typename Cont, typename VOut>
+	void CreateSplines(Cont const& points, Spline::ETopo topo, VOut out)
+	{
+		auto beg = std::begin(points);
+		auto end = std::end(points);
+		v4 p0,p1,p2,p3;
+
+		// Zero points, no splines
+		if (beg == end)
+		{
+			return;
+		}
+
+		// Zero points, no splines
+		p0 = *beg++;
+		if (beg == end)
+		{
+			return;
+		}
+
+		// Two points, straight line
+		p1 = *beg++;
+		if (beg == end)
+		{
+			out(Spline(p0, p1, p0, p1), true);
+			return;
+		}
+
+		// Degenerate control point
+		p2 = *beg++;
+		if (beg == end)
+		{
+			out(Spline(p0, (p0 + p1)*0.5f, (p1 + p2)*0.5f, p2), true);
+			return;
+		}
+
+		// Generate the stream of splines
+		switch (topo)
+		{
+			case Spline::ETopo::Continuous3:
+			{
+				// Generate splines from a sliding window of three points
+				for (bool first = true, last = false; ; first = false)
+				{
+					auto sp = first ? p0 : (p0 + p1)*0.5f;
+					auto sc = p1;
+					auto ec = p1;
+					auto ep = last ? p2 : (p2 + p1)*0.5f;
+
+					// Yield a spline
+					out(Spline(sp, sc, ec, ep), last);
+					if (last) break;
+
+					// Slide the window
+					p0 = p1; p1 = p2; p2 = *beg++;
+					last = beg == end;
+				}
+				break;
+			}
+			case Spline::ETopo::Continuous4:
+			{
+				p3 = *beg++;
+				for (; ; )
+				{
+					// Yield a spline
+					out(Spline(p0, p1, p2, p3), beg == end);
+					if (beg == end) break;
+
+					// Slide the window. An exception means, the wrong number of points
+					p0 = p3;
+					p1 = *beg++;
+					p2 = *beg++;
+					p3 = *beg++;
+				}
+				break;
+			}
+			case Spline::ETopo::Disjoint3:
+			{
+				// Generate splines from each set of three points
+				for (; ; )
+				{
+					// Yield a spline
+					out(Spline(p0, (p0 + p1)*0.5f, (p1 + p2)*0.5f, p2), beg == end);
+					if (beg == end) break;
+
+					// Slide the window. An exception means, the wrong number of points
+					p0 = *beg++;
+					p1 = *beg++;
+					p2 = *beg++;
+				}
+				break;
+			}
+			case Spline::ETopo::Disjoint4:
+			{
+				// Generate splines from each set of four points
+				p3 = *beg++;
+				for (;;)
+				{
+					// Yield a spline
+					out(Spline(p0, p1, p2, p3), beg == end);
+					if (beg == end) break;
+
+					// Slide the window. An exception means, the wrong number of points
+					p0 = *beg++;
+					p1 = *beg++;
+					p2 = *beg++;
+					p3 = *beg++;
+				}
+				break;
+			}
+			default:
+			{
+				throw std::runtime_error("Unsupported spline topology");
+			}
+		}
+	}
+
 	// Fill a container of points with a rastered version of 'spline'
 	// 'points' is the vert along the spline
 	// 'times' is the times along 'spline' at the point locations
@@ -271,38 +405,9 @@ namespace pr
 		Raster(spline, points, times, max_points, tol);
 	}
 
-	// Convert a container of points into a list of splines
-	// Generates a spline from each set of three points in 'points'
-	// VOut(Spline const& spline, bool last);
-	template <typename Cont, typename VOut>
-	void CreateSplines(Cont const& points, VOut out)
-	{
-		if (points.size() < 2)
-		{
-			return;
-		}
-		if (points.size() < 3)
-		{
-			out(Spline(points[0], points[1], points[0], points[1]), true);
-			return;
-		}
-
-		// Generate a spline from each set of three points in 'points'
-		for (size_t i = 1, iend = points.size() - 1; i != iend; ++i)
-		{
-			// Generate points for the spline
-			auto sp = i == 1 ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
-			auto sc = points[i];
-			auto ec = points[i];
-			auto ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
-			auto spline = Spline(sp, sc, ec, ep);
-			out(spline, i == iend-1);
-		}
-	}
-
 	// Fill a container of points with a smoothed spline based on 'points
 	template <typename Cont, typename VOut, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, VOut out, float tol = maths::tinyf)
+	void Smooth(Cont const& points, Spline::ETopo topo, VOut out, float tol = maths::tinyf)
 	{
 		if (points.size() < 3)
 		{
@@ -316,7 +421,7 @@ namespace pr
 		points_t raster;
 		times_t times;
 
-		CreateSplines(points, [&](Spline const& spline, bool last)
+		CreateSplines(points, topo, [&](Spline const& spline, bool last)
 		{
 			raster.resize(0);
 			times.resize(0);
@@ -329,9 +434,9 @@ namespace pr
 		});
 	}
 	template <typename Cont, int MaxPointsPerSpline = 30>
-	void Smooth(Cont const& points, Cont& out, float tol = maths::tinyf)
+	void Smooth(Cont const& points, Spline::ETopo topo, Cont& out, float tol = maths::tinyf)
 	{
-		Smooth(points, [&](v4 const* vert, float const*, size_t count)
+		Smooth(points, topo, [&](v4 const* vert, float const*, size_t count)
 		{
 			out.insert(std::end(out), vert, vert + count);
 		}, tol);

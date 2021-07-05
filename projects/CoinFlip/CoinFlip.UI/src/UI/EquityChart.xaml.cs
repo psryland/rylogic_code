@@ -442,13 +442,13 @@ namespace CoinFlip.UI
 				}
 
 				// Callbacks for positioning order graphics
-				Point OrderToPosition(GfxObjects.Confetti.IItem item)
+				v4 OrderToPosition(GfxObjects.Confetti.IItem item)
 				{
 					var order = (OrderCompletedConfettiAdapter)item;
-					if (nett_worth_history_snapshot.Count == 0) return new Point();
+					if (nett_worth_history_snapshot.Count == 0) return v4.Origin;
 					var X = nett_worth_history_snapshot.BinarySearch(x => x.Time.CompareTo(order.Order.Created), find_insert_position: true);
 					var Y = nett_worth_history_snapshot[Math.Min(X, nett_worth_history_snapshot.Count-1)].Worth;
-					return new Point(X, Y.ToDouble());
+					return new v4((float)X, (float)Y.ToDouble(), 0, 1);
 				}
 			}
 
@@ -497,13 +497,13 @@ namespace CoinFlip.UI
 				}
 
 				// Callbacks for positioning order graphics
-				Point OrderToPosition(GfxObjects.Confetti.IItem item)
+				v4 OrderToPosition(GfxObjects.Confetti.IItem item)
 				{
 					var xfer = (TransfersConfettiAdapter)item;
-					if (nett_worth_history_snapshot.Count == 0) return new Point();
+					if (nett_worth_history_snapshot.Count == 0) return v4.Origin;
 					var X = nett_worth_history_snapshot.BinarySearch(x => x.Time.CompareTo(xfer.Transfer.Created), find_insert_position: true);
 					var Y = nett_worth_history_snapshot[Math.Min(X, nett_worth_history_snapshot.Count - 1)].Worth;
-					return new Point(X, Y.ToDouble());
+					return new v4((float)X, (float)Y.ToDouble(), 0, 1);
 				}
 			}
 			else

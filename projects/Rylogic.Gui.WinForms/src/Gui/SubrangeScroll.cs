@@ -202,7 +202,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			// Background
-			c0 = Gfx_.Blend(Color.Black, TrackColor, 0.8f);
+			c0 = Gfx_.Lerp(Color.Black, TrackColor, 0.8);
 			c1 = TrackColor;
 			using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
 				gfx.FillRectangle(bsh, bounds);
@@ -222,7 +222,7 @@ namespace Rylogic.Gui.WinForms
 			foreach (var r in m_indicator_ranges)
 			{
 				c0 = r.Color;
-				c1 = Gfx_.Blend(c0, Color.FromArgb(c0.A, Color.White), 0.2f);
+				c1 = Gfx_.Lerp(c0, Color.FromArgb(c0.A, Color.White), 0.2);
 				using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
 					gfx.FillRectangle(bsh, r.m_rect);
 			}
@@ -230,7 +230,7 @@ namespace Rylogic.Gui.WinForms
 			// Thumb
 			{
 				var r = MakeThumbRect(bounds);
-				c0 = Gfx_.Blend(Color.White, Color.FromArgb(0x80, ThumbColor), 0.8f);
+				c0 = Gfx_.Lerp(Color.White, Color.FromArgb(0x80, ThumbColor), 0.8);
 				c1 = ThumbColor;
 				using (var bsh = new LinearGradientBrush(pt0, pt1, c0, c1))
 					gfx.FillRectangle(bsh, r);

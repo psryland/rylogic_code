@@ -2750,7 +2750,7 @@ namespace Rylogic.Gui.WinForms
 				if (Style.Smooth && points.Length > 2)
 				{
 					// Smooth connectors convert the points to splines
-					foreach (var spline in Spline.CreateSplines(points.Select(x => new v4(x, 0, 1))))
+					foreach (var spline in Spline.CreateSplines(points.Select(x => new v4(x, 0, 1)), Spline.ETopo.Continuous3))
 					{
 						// Find the closest point to the spline
 						var t = Geometry.ClosestPoint(spline, new v4(point, 0, 1));
@@ -2825,7 +2825,7 @@ namespace Rylogic.Gui.WinForms
 				v4 ctr;
 				if (pts.Length == 4) ctr = new v4((pts[1] + pts[2]) / 2f, PositionZ, 1);
 				else if (pts.Length == 3 && !Style.Smooth) ctr = new v4(pts[1], PositionZ, 1);
-				else if (pts.Length == 3) ctr = Spline.CreateSplines(pts.Select(x => new v4(x, PositionZ, 1))).First().Position(0.5f);
+				else if (pts.Length == 3) ctr = Math_.Lerp(0.5, Spline.CreateSplines(pts.Select(x => new v4(x, PositionZ, 1)), Spline.ETopo.Continuous3).ToArray());
 				else throw new Exception("unexpected number of connector points");
 				yield return new AnchorPoint(this, ctr, v4.Zero);
 			}

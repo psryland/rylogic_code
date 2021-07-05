@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 
 namespace CoinFlip.UI.GfxObjects
 {
@@ -30,9 +31,9 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			if (updating)
 			{
-				var pt = chart.ChartToClient(new Point(chart.XAxis.Max, chart.YAxis.Max));
-				Canvas.SetLeft(Text, pt.X - Text.RenderSize.Width);
-				Canvas.SetTop(Text, pt.Y);
+				var pt = chart.ChartToScene(new v4((float)chart.XAxis.Max, (float)chart.YAxis.Max, 0, 1));
+				Canvas.SetLeft(Text, pt.x - Text.RenderSize.Width);
+				Canvas.SetTop(Text, pt.y);
 				chart.Overlay.Adopt(Text);
 			}
 			else

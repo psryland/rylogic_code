@@ -28,8 +28,8 @@
 	
 		<ComboBox
 			Grid.Column="0"
-			ItemsSource="{Binding HistoryView}"
-			SelectedValue="{Binding SelectedPath}"
+			ItemsSource="{Binding History}"
+			SelectedItem="{Binding History/}"
 			Text="{Binding SelectedPath, UpdateSourceTrigger=LostFocus}"
 			PreviewKeyUp="HandlePreviewKeyUp"
 			VerticalContentAlignment="Center"

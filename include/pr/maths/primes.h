@@ -10,7 +10,7 @@ namespace pr
 	namespace maths
 	{
 		// The first 1000 primes
-		const unsigned int prime[] = 
+		const int prime[] = 
 		{
 			2    ,3    ,5    ,7    ,11   ,13   ,17   ,19   ,23   ,29   ,
 			31   ,37   ,41   ,43   ,47   ,53   ,59   ,61   ,67   ,71   ,
@@ -113,8 +113,6 @@ namespace pr
 			7727 ,7741 ,7753 ,7757 ,7759 ,7789 ,7793 ,7817 ,7823 ,7829 ,
 			7841 ,7853 ,7867 ,7873 ,7877 ,7879 ,7883 ,7901 ,7907 ,7919
 		};
-		
-		unsigned int prime_table_size = sizeof(prime)/sizeof(prime[0]);
 	}
 
 	// Return true if 'n' is a prime number
@@ -124,25 +122,64 @@ namespace pr
 		if (n % 2 == 0 || n % 3 == 0) return false;
 		for (auto i = 5; i * i <= n; i += 6)
 		{
-			if (n % i == 0 || n % (i + 2) != 0) continue;
+			if (n % i != 0 && n % (i + 2) != 0) continue;
 			return false;
 		}
 		return true;
 	}
 
-	// Return a prime number greater than or equal to 'n'
-	template <typename T> T PrimeGtrEq(T n)
+	// Return the next prime greater than 'n'
+	template <typename T> T PrimeGtrThan(T n)
 	{
-		if (n <= 2) return 2;
-		for (n |= 1; !IsPrime(n); n += 2) {}
-		return n;
+		if (n < 2) return 2;
+		auto next = (n + 1) | 1;
+		for (; !IsPrime(next); next += 2) {}
+		return next;
 	}
 
-	// Return a prime number less than or equal to 'n'
-	template <typename T> inline T PrimeLessEq(T n)
+	// Return the next prime less than 'n'
+	template <typename T> T PrimeLessThan(T n)
 	{
-		if (n <= 2) return 2;
-		for (n -= (n % 2) == 0 ? 1 : 0; !IsPrime(n); n -= 2) {}
-		return n;
+		if (n <= 2) throw std::runtime_error("There are no primes less than 2");
+		if (n == 3) return 2;
+		auto prev = (n | 1) - 2;
+		for (; !IsPrime(prev); prev -= 2) {}
+		return prev;
+
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr::maths
+{
+	PRUnitTest(Primes)
+	{
+		// Check the primes table...
+		for (int i = 0, j = 0; i <= maths::prime[_countof(maths::prime) - 1]; ++i)
+		{
+			auto is_prime = i == maths::prime[j];
+			PR_CHECK(IsPrime(i), is_prime);
+			j += int(is_prime);
+		}
+
+		{// Find the '10,000'th prime
+			auto p = 2;
+			for (int i = 0; i != 10000; ++i)
+				p = PrimeGtrThan(p);
+
+			PR_CHECK(p == 104743, true);
+			PR_CHECK(IsPrime(p), true);
+		}
+
+		{// Check PrevPrime
+			auto p = maths::prime[_countof(maths::prime) - 1] + 1;
+			for (int i = _countof(maths::prime); i-- != 0; )
+			{
+				p = PrimeLessThan(p);
+				PR_CHECK(p == maths::prime[i], true);
+				PR_CHECK(IsPrime(p), true);
+			}
+		}
+	}
+}
+#endif

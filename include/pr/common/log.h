@@ -213,37 +213,37 @@ namespace pr
 				{
 					pr::threads::SetCurrentThreadName("pr::Logger");
 
-					log::Event ev, last;
+					log::Event ev, prev;
 					for (;ctx.Dequeue(ev);)
 					{
-						auto is_same = log::Event::Same(ev, last);
+						auto is_same = log::Event::Same(ev, prev);
 
 						// Same event as last time? add it to the batch
-						if (is_same && last.m_occurrences < occurrences_batch_size)
+						if (is_same && prev.m_occurrences < occurrences_batch_size)
 						{
-							++last.m_occurrences;
-							last.m_timestamp = ev.m_timestamp;
+							++prev.m_occurrences;
+							prev.m_timestamp = ev.m_timestamp;
 							continue;
 						}
 
 						// Have events been batched? Report them now
-						if (last.m_occurrences != 0)
+						if (prev.m_occurrences != 0)
 						{
-							log_cb(last);
-							last.m_occurrences = 0;
+							log_cb(prev);
+							prev.m_occurrences = 0;
 						}
 
 						// Start of the next batch (and batching is enabled)? Add it to the batch
 						if (is_same && occurrences_batch_size != 0)
 						{
-							last.m_occurrences = 1;
-							last.m_timestamp = ev.m_timestamp;
+							prev.m_occurrences = 1;
+							prev.m_timestamp = ev.m_timestamp;
 						}
 						else
 						{
 							log_cb(ev);
-							last = ev;
-							last.m_occurrences = 0;
+							prev = ev;
+							prev.m_occurrences = 0;
 						}
 					}
 				}

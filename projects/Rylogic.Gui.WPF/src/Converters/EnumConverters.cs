@@ -2,12 +2,14 @@
 using System.Collections;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
 using Rylogic.Attrib;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Utility;
 
@@ -112,9 +114,11 @@ namespace Rylogic.Gui.WPF.Converters
 					if (!Enum.IsDefined(value.GetType(), case_value[0]))
 						continue;
 
-					// Case matches 'value'?
-					var cas = Enum.Parse(value.GetType(), case_value[0]);
-					if (!Equals(cas, value))
+					// Case matches 'value'
+					var cas = (Enum)Enum.Parse(value.GetType(), case_value[0]);
+					var is_flags = e.GetType().HasAttribute<FlagsAttribute>();
+					var is_match = is_flags ? e.HasFlag(cas) : Equals(cas, value);
+					if (!is_match)
 						continue;
 
 					// Interpret the value to the target type

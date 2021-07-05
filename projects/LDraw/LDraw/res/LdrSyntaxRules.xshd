@@ -52,6 +52,7 @@
 			<Word>*Model</Word>
 			<Word>*Equation</Word>
 			<Word>*Chart</Word>
+			<Word>*Series</Word>
 			<Word>*Group</Word>
 			<Word>*Text</Word>
 			<Word>*Instance</Word>
@@ -177,6 +178,9 @@
 			<Word>*LeftHanded</Word>
 			<Word>*CastShadow</Word>
 			<Word>*NonAffine</Word>
+			<Word>*Source</Word>
+			<Word>*Data</Word>
+			<Word>*Series</Word>
 			<!-- ##AUTO-GENERATED## EKeyword End -->
 		</Keywords>
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,7 +28,7 @@ namespace LDraw.UI
 				TabCMenu = this.FindCMenu("TabCMenu", this),
 				DestroyOnClose = true,
 			};
-			OtherScenes = new ListCollectionView(new List<SceneWrapper>());
+			OtherScenesView = new ListCollectionView(new List<SceneWrapper>());
 			Model = model;
 			SceneView = m_scene;
 			SceneName = name;
@@ -43,8 +42,13 @@ namespace LDraw.UI
 			ClearScene = Command.Create(this, ClearSceneInternal);
 			RenameScene = Command.Create(this, RenameSceneInternal);
 			CloseScene = Command.Create(this, CloseSceneInternal);
+			LinkCameras = Command.Create(this, LinkCamerasInternal);
 
 			PopulateOtherScenes();
+
+			SceneView.LinkCamera = LinkCameras;
+			SceneView.CanLinkCamera = OtherScenes.Count > 1;
+
 			DataContext = this;
 		}
 		public void Dispose()
@@ -113,8 +117,12 @@ namespace LDraw.UI
 				// Handlers
 				void HandleScenesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
+					// Update the collection of 'other' scenes
 					PopulateOtherScenes();
 					CleanupLinks();
+
+					// Enable/Disable the Link Cameras option in the scene context menu
+					SceneView.CanLinkCamera = OtherScenes.Count > 1;
 				}
 			}
 		}
@@ -248,13 +256,21 @@ namespace LDraw.UI
 		private string m_scene_name = null!;
 
 		/// <summary>Other available scenes</summary>
-		public ICollectionView OtherScenes { get; }
+		public ICollectionView OtherScenesView { get; }
+		private List<SceneWrapper> OtherScenes => (List<SceneWrapper>)OtherScenesView.SourceCollection;
 		private void PopulateOtherScenes()
 		{
-			var list = (List<SceneWrapper>)OtherScenes.SourceCollection;
-			list.Sync(Model.Scenes.Except(this).Select(x => new SceneWrapper(x)).Prepend(SceneWrapper.NullScene));
-			if (OtherScenes.CurrentItem == null) OtherScenes.MoveCurrentToFirst();
-			OtherScenes.Refresh();
+			var other_scenes = Model.Scenes.Except(this)
+				.Select(x => new SceneWrapper(x))
+				.Prepend(SceneWrapper.NullScene);
+
+			// Update the collection
+			OtherScenes.Sync(other_scenes);
+			OtherScenesView.Refresh();
+			if (OtherScenesView.CurrentItem == null)
+				OtherScenesView.MoveCurrentToFirst();
+
+			// Notify changed
 			NotifyPropertyChanged(nameof(OtherScenes));
 		}
 
@@ -309,6 +325,20 @@ namespace LDraw.UI
 			Model.Scenes.Remove(this);
 			Dispose();
 		}
+
+		/// <summary>Show the link cameras UI</summary>
+		public Command LinkCameras { get; }
+		private void LinkCamerasInternal()
+		{
+			if (m_link_cameras_ui == null)
+			{
+				m_link_cameras_ui = new LinkCamerasUI(Window.GetWindow(this), Model);
+				m_link_cameras_ui.Closed += delegate { m_link_cameras_ui = null; };
+				m_link_cameras_ui.Show();
+			}
+			m_link_cameras_ui.Focus();
+		}
+		private LinkCamerasUI? m_link_cameras_ui;
 
 		/// <summary>Event from the view3d window during rendering</summary>
 		private void HandleSceneRendering(object? sender, EventArgs e)

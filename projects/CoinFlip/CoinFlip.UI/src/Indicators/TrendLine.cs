@@ -12,7 +12,6 @@ using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
-using Drawing_ = Rylogic.Extn.Windows.Drawing_;
 
 namespace CoinFlip.UI.Indicators
 {
@@ -209,35 +208,45 @@ namespace CoinFlip.UI.Indicators
 			private Ellipse Grab1 { get; }
 
 			/// <summary>Chart space coordinates of the trend line end points</summary>
-			private Point Pt0
+			private v4 Pt0
 			{
-				get => new Point(Instrument.FIndexAt(new TimeFrameTime(TL.Time0, Instrument.TimeFrame)), TL.Price0);
+				get
+				{
+					var fidx = (float)Instrument.FIndexAt(new TimeFrameTime(TL.Time0, Instrument.TimeFrame));
+					var price = (float)TL.Price0;
+					return new v4(fidx, price, 0, 1f);
+				}
 				set
 				{
-					TL.Time0 = Instrument.TimeAtFIndex(value.X);
-					TL.Price0 = value.Y;
+					TL.Time0 = Instrument.TimeAtFIndex(value.x);
+					TL.Price0 = value.y;
 				}
 			}
-			private Point Pt1
+			private v4 Pt1
 			{
-				get => new Point(Instrument.FIndexAt(new TimeFrameTime(TL.Time1, Instrument.TimeFrame)), TL.Price1);
+				get
+				{
+					var fidx = (float)Instrument.FIndexAt(new TimeFrameTime(TL.Time1, Instrument.TimeFrame));
+					var price = (float)TL.Price1;
+					return new v4(fidx, price, 0, 1f);
+				}
 				set
 				{
-					TL.Time1 = Instrument.TimeAtFIndex(value.X);
-					TL.Price1 = value.Y;
+					TL.Time1 = Instrument.TimeAtFIndex(value.x);
+					TL.Price1 = value.y;
 				}
 			}
 
-			/// <summary>Client space coordinates of the trend line end points</summary>
-			private Point ScnPt0
+			/// <summary>Scene space coordinates of the trend line end points</summary>
+			private v2 ScnPt0
 			{
-				get => Chart.ChartToClient(Pt0);
-				set => Pt0 = Chart.ClientToChart(value);
+				get => Chart.ChartToScene(Pt0);
+				set => Pt0 = Chart.SceneToChart(value);
 			}
-			private Point ScnPt1
+			private v2 ScnPt1
 			{
-				get => Chart.ChartToClient(Pt1);
-				set => Pt1 = Chart.ClientToChart(value);
+				get => Chart.ChartToScene(Pt1);
+				set => Pt1 = Chart.SceneToChart(value);
 			}
 
 			/// <summary>Update when indicator settings change</summary>
@@ -248,7 +257,7 @@ namespace CoinFlip.UI.Indicators
 				{
 					switch (e.Key)
 					{
-					case nameof(Colour):
+						case nameof(Colour):
 						{
 							Line.Stroke = TL.Colour.ToMediaBrush();
 							Glow.Stroke = TL.Colour.Alpha(0.25).ToMediaBrush();
@@ -258,13 +267,13 @@ namespace CoinFlip.UI.Indicators
 							Grab1.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
 							break;
 						}
-					case nameof(Width):
+						case nameof(Width):
 						{
 							Line.StrokeThickness = TL.Width;
 							Glow.StrokeThickness = TL.Width + GlowRadius;
 							break;
 						}
-					case nameof(LineStyle):
+						case nameof(LineStyle):
 						{
 							Line.StrokeDashArray = TL.LineStyle.ToStrokeDashArray();
 							break;
@@ -275,9 +284,9 @@ namespace CoinFlip.UI.Indicators
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore()
+			protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 			{
-				base.UpdateSceneCore();
+				base.UpdateSceneCore(window, camera);
 				if (Instrument.Count == 0)
 				{
 					Line.Detach();
@@ -292,10 +301,10 @@ namespace CoinFlip.UI.Indicators
 
 				if (Visible)
 				{
-					Line.X1 = pt0.X;
-					Line.Y1 = pt0.Y;
-					Line.X2 = pt1.X;
-					Line.Y2 = pt1.Y;
+					Line.X1 = pt0.x;
+					Line.Y1 = pt0.y;
+					Line.X2 = pt1.x;
+					Line.Y2 = pt1.y;
 					Chart.Overlay.Adopt(Line);
 				}
 				else
@@ -305,10 +314,10 @@ namespace CoinFlip.UI.Indicators
 
 				if (Visible && (Hovered || Selected))
 				{
-					Glow.X1 = pt0.X;
-					Glow.X2 = pt1.X;
-					Glow.Y1 = pt0.Y;
-					Glow.Y2 = pt1.Y;
+					Glow.X1 = pt0.x;
+					Glow.X2 = pt1.x;
+					Glow.Y1 = pt0.y;
+					Glow.Y2 = pt1.y;
 					Chart.Overlay.Adopt(Glow);
 				}
 				else
@@ -318,10 +327,10 @@ namespace CoinFlip.UI.Indicators
 
 				if (Visible && Selected)
 				{
-					Canvas.SetLeft(Grab0, pt0.X - GrabRadius);
-					Canvas.SetTop (Grab0, pt0.Y - GrabRadius);
-					Canvas.SetLeft(Grab1, pt1.X - GrabRadius);
-					Canvas.SetTop (Grab1, pt1.Y - GrabRadius);
+					Canvas.SetLeft(Grab0, pt0.x - GrabRadius);
+					Canvas.SetTop (Grab0, pt0.y - GrabRadius);
+					Canvas.SetLeft(Grab1, pt1.x - GrabRadius);
+					Canvas.SetTop (Grab1, pt1.y - GrabRadius);
 					Chart.Overlay.Adopt(Grab0);
 					Chart.Overlay.Adopt(Grab1);
 				}
@@ -346,20 +355,23 @@ namespace CoinFlip.UI.Indicators
 			private TrendLineUI m_trend_line_ui;
 
 			/// <summary>Hit test the indicator</summary>
-			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
+			public override ChartControl.HitTestResult.Hit HitTest(v4 chart_point, v2 scene_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				if (Instrument.Count == 0 || !Visible)
 					return null;
 
-				// Find the nearest point to 'client_point' on the line
-				var p0 = ScnPt0.ToV2();
-				var p1 = ScnPt1.ToV2();
-				var pt = client_point.ToV2();
+				// Find the nearest point to 'scene_point' on the line
+				var p0 = ScnPt0;
+				var p1 = ScnPt1;
+				var pt = scene_point;
 				var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 				var closest = p0 * (1f - t) + p1 * (t);
 
 				if ((closest - pt).LengthSq < Math_.Sqr(Chart.Options.MinSelectionDistance))
-					return new ChartControl.HitTestResult.Hit(this, new Point(closest.x, closest.y), null);
+				{
+					var closest_cs = Chart.SceneToChart(closest);
+					return new ChartControl.HitTestResult.Hit(this, closest_cs, null);
+				}
 
 				return null;
 			}
@@ -369,40 +381,43 @@ namespace CoinFlip.UI.Indicators
 			{
 				switch (args.State)
 				{
-				default: throw new Exception($"Unknown drag state: {args.State}");
-				case ChartControl.EDragState.Start:
+					case ChartControl.EDragState.Start:
 					{
 						m_drag_start0 = ScnPt0;
 						m_drag_start1 = ScnPt1;
 						m_move = EMove.Beg | EMove.End;
-						var pos = args.HitResult.ClientPoint;
-						if ((pos - m_drag_start0).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.End;
-						if ((pos - m_drag_start1).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.Beg;
+						var pos = args.HitResult.ScenePoint;
+						if ((pos - m_drag_start0).LengthSq < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.End;
+						if ((pos - m_drag_start1).LengthSq < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.Beg;
 						break;
 					}
-				case ChartControl.EDragState.Dragging:
+					case ChartControl.EDragState.Dragging:
 					{
-						var ofs = Chart.ChartToClient(args.Delta);
+						var ofs = Chart.ChartToScene(args.Delta);
 						if (m_move.HasFlag(EMove.Beg)) ScnPt0 = m_drag_start0 + ofs;
 						if (m_move.HasFlag(EMove.End)) ScnPt1 = m_drag_start1 + ofs;
 						break;
 					}
-				case ChartControl.EDragState.Commit:
+					case ChartControl.EDragState.Commit:
 					{
 						break;
 					}
-				case ChartControl.EDragState.Cancel:
+					case ChartControl.EDragState.Cancel:
 					{
 						ScnPt0 = m_drag_start0;
 						ScnPt1 = m_drag_start1;
 						break;
 					}
+					default:
+					{
+						throw new Exception($"Unknown drag state: {args.State}");
+					}
 				}
 				args.Handled = true;
 			}
 			[Flags] private enum EMove { Beg = 1 << 0, End = 1 << 1 }
-			private Point m_drag_start0;
-			private Point m_drag_start1;
+			private v2 m_drag_start0;
+			private v2 m_drag_start1;
 			private EMove m_move;
 		}
 
@@ -424,34 +439,34 @@ namespace CoinFlip.UI.Indicators
 			{
 				base.MouseDown(e);
 
-				var time = Instrument.TimeAtFIndex(GrabChart.X);
+				var time = Instrument.TimeAtFIndex(GrabChart.x);
 				m_indy = Model.Indicators.Add(Instrument.Pair.Name, new TrendLine
 				{
 					Time0 = time,
 					Time1 = time,
-					Price0 = GrabChart.Y,
-					Price1 = GrabChart.Y,
+					Price0 = GrabChart.y,
+					Price1 = GrabChart.y,
 				});
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
 				base.MouseMove(e);
 
-				var client_pt = e.GetPosition(Chart);
-				var chart_pt = Chart.ClientToChart(client_pt);
-				var delta = client_pt - GrabScene;
+				var scene_pt = e.GetPosition(Chart.Scene).ToV2();
+				var chart_pt = Chart.SceneToChart(scene_pt);
+				var delta = scene_pt - GrabScene;
 
 				m_indy.Type =
 					!Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? ETrendType.Slope :
-					Math.Abs(delta.X) > Math.Abs(delta.Y) ? ETrendType.Horizontal : ETrendType.Vertical;
+					Math.Abs(delta.x) > Math.Abs(delta.y) ? ETrendType.Horizontal : ETrendType.Vertical;
 
 				if (m_indy.Type == ETrendType.Horizontal)
-					chart_pt.Y = GrabChart.Y;
+					chart_pt.y = GrabChart.y;
 				if (m_indy.Type == ETrendType.Vertical)
-					chart_pt.X = GrabChart.X;
+					chart_pt.x = GrabChart.x;
 
-				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.X);
-				m_indy.Price1 = chart_pt.Y;
+				m_indy.Time1 = Instrument.TimeAtFIndex(chart_pt.x);
+				m_indy.Price1 = chart_pt.y;
 			}
 			public override void NotifyCancelled()
 			{

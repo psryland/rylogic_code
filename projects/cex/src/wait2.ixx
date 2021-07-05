@@ -3,10 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 
-export module wait;
-
 #include "cex/src/forward.h"
 #include "cex/src/icex.h"
+export module wait;
 
 namespace cex
 {

@@ -483,13 +483,23 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Converts a Rect from screen space to the space of this visual</summary>
 		public static Rect RectFromScreen(this Visual vis, Rect rect)
 		{
-			return new Rect(vis.PointFromScreen(rect.TopLeft), new Size(rect.Width, rect.Height));
+			// if 'vis' is not connected to a presentation source, its position on screen is undefined.
+			var pt = PresentationSource.FromVisual(vis) != null
+				? vis.PointFromScreen(rect.TopLeft)
+				: rect.TopLeft; // This should really be an error...
+
+			return new Rect(pt, new Size(rect.Width, rect.Height));
 		}
 
 		/// <summary>Converts a Rect to screen space from the space of this visual</summary>
 		public static Rect RectToScreen(this Visual vis, Rect rect)
 		{
-			return new Rect(vis.PointToScreen(rect.TopLeft), new Size(rect.Width, rect.Height));
+			// if 'vis' is not connected to a presentation source, its position on screen is undefined.
+			var pt = PresentationSource.FromVisual(vis) != null
+				? vis.PointToScreen(rect.TopLeft)
+				: rect.TopLeft; // This should really be an error...
+			
+			return new Rect(pt, new Size(rect.Width, rect.Height));
 		}
 
 		/// <summary>Returns new Rect(0,0,RenderSize)</summary>

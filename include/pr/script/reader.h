@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/maths/maths.h"
 #include "pr/script/forward.h"
 #include "pr/script/script_core.h"
@@ -454,6 +452,34 @@ namespace pr::script
 		template <typename StrType> bool CStringS(StrType& cstring)
 		{
 			return SectionStart() && CString(cstring) && SectionEnd();
+		}
+
+		// Extract a filepath string from the source
+		std::filesystem::path Filepath()
+		{
+			std::filesystem::path filepath;
+			return Filepath(filepath) ? filepath : std::filesystem::path{};
+		}
+		std::filesystem::path FilepathS()
+		{
+			std::filesystem::path filepath;
+			return FilepathS(filepath) ? filepath : std::filesystem::path{};
+		}
+		bool Filepath(std::filesystem::path& path)
+		{
+			std::wstring s;
+			if (!String(s)) return ReportError(EResult::InvalidString, Location(), "'filepath' string expected");
+
+			// Apply path resolution to the filepath
+			path = s;
+			if (m_pp.Includes != nullptr)
+				path = m_pp.Includes->ResolveInclude(path, EIncludeFlags::IncludeLocalDir | EIncludeFlags::IgnoreMissing);
+
+			return true;
+		}
+		bool FilepathS(std::filesystem::path& path)
+		{
+			return SectionStart() && Filepath(path) && SectionEnd();
 		}
 
 		// Extract a bool from the source.

@@ -254,5 +254,8 @@ namespace pr::rdr
 		TextureManager m_tex_mgr;
 		ShaderManager m_shdr_mgr;
 		ModelManager m_mdl_mgr;
+
+		// For when I'm searching for the d3d device on this object
+		enum { D3DDevice_IsAccessedViaTheRendererLock };
 	};
 }
