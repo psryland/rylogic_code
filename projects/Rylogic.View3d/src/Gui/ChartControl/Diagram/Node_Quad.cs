@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Gfx;
@@ -14,7 +13,7 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 	public class QuadNode :Node
 	{
 		public QuadNode(string text, v4? size = null, m4x4? position = null, NodeStyle? style = null, Guid? id = null)
-			:base(size ?? new v4(1,1,0,0), id ?? Guid.NewGuid(), text, position, style)
+			: base(size ?? new v4(1, 1, 0, 0), id ?? Guid.NewGuid(), text, position, style)
 		{
 			Size = Style.AutoSize ? PreferredSize(SizeMax) : Size;
 
@@ -61,6 +60,31 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 		private Surface m_surf = null!;
 
+		/// <summary>The current node text colour given the hovering/selection state</summary>
+		public Colour32 TextColour
+		{
+			get
+			{
+				var text_colour = Style.Text;
+				if (!Enabled) text_colour = Style.TextDisabled;
+				return text_colour;
+			}
+		}
+
+		/// <summary>The current node background colour given the hovering/selection state</summary>
+		public Colour32 BackgroundColour
+		{
+			get
+			{
+				// Background colour
+				var fill_colour = Style.Fill;
+				if (Hovered) fill_colour = Style.Hovered;
+				if (Selected) fill_colour = Style.Selected;
+				if (!Enabled) fill_colour = Style.Disabled;
+				return fill_colour;
+			}
+		}
+
 		/// <inheritdoc/>
 		public override BBox Bounds => new BBox(O2W.pos, 0.5f * Size);
 
@@ -99,6 +123,21 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 				yield return new AnchorPoint(this, new v4(x, -0.5f * sz.y, z, 1), -v4.YAxis, id++);
 		}
 
+		/// <summary>Render the background colour to the node</summary>
+		protected void RenderBkgd(View3d.Texture.Lock tex)
+		{
+			using var fill_brush = new SolidBrush(BackgroundColour);
+			tex.Gfx.FillRectangle(fill_brush, -1, -1, tex.Size.Width + 2, tex.Size.Height + 2);
+		}
+
+		/// <summary>Render the text to the node texture</summary>
+		protected void RenderText(View3d.Texture.Lock tex)
+		{
+			using var text_brush = new SolidBrush(TextColour);
+			var loc = TextLocation(tex.Gfx, new RectangleF(PointF.Empty, tex.Size));
+			tex.Gfx.DrawString(Text, Style.Font, text_brush, loc, TextFormat);
+		}
+
 		/// <inheritdoc/>
 		protected override void UpdateGfxCore()
 		{
@@ -106,29 +145,13 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 
 			// Refresh the texture content
 			{
-				var size = Surf.Size;
 				using var tex = Surf.LockSurface(discard: true);
-				tex.Gfx.CompositingMode = CompositingMode.SourceOver;
-				tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
-				tex.Gfx.SmoothingMode = SmoothingMode.AntiAlias;
-
-				var fill_colour = Style.Fill;
-				if (Hovered) fill_colour = Style.Hovered;
-				if (Selected) fill_colour = Style.Selected;
-				if (!Enabled) fill_colour = Style.Disabled;
-				using var fill_brush = new SolidBrush(fill_colour);
-				tex.Gfx.FillRectangle(fill_brush, -1, -1, size.x+2, size.y+2);
-				//tex.Gfx.Clear(fill_colour);
-
-				var text_colour = Style.Text;
-				if (!Enabled) text_colour = Style.TextDisabled;
-				using var text_brush = new SolidBrush(text_colour);
-
-				var loc = TextLocation(tex.Gfx, size.ToRectangleF());
-				tex.Gfx.DrawString(Text, Style.Font, text_brush, loc, TextFormat);
+				RenderBkgd(tex);
+				RenderText(tex);
 			}
 
 			// Refresh the model geometry
+			if (Size.xy != Surf.Size)
 			{
 				var ldr = new LdrBuilder();
 				ldr.Rect("node", Colour32.White, EAxisId.PosZ, Size.x, Size.y, true, (float)Style.CornerRadius, v4.Origin);
@@ -138,20 +161,27 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 
 		/// <inheritdoc/>
-		protected override void UpdateSceneCore()
+		protected override void UpdateSceneCore(View3d.Window window, View3d.Camera camera)
 		{
-			base.UpdateSceneCore();
-			if (Chart is not ChartControl chart || Gfx == null)
+			base.UpdateSceneCore(window, camera);
+			if (Gfx == null)
 				return;
 			
 			// Don't set 'O2W' here, leave it to derived classes
 
 			// Set the node to world transform
 			Gfx.O2P = O2W;
-			if (Visible)
-				chart.Scene.Window.AddObject(Gfx);
-			else
-				chart.Scene.Window.RemoveObject(Gfx);
+			window.AddObject(Gfx);
+		}
+
+		/// <inheritdoc/>
+		protected override void RemoveFromSceneCore(View3d.Window window)
+		{
+			base.RemoveFromSceneCore(window);
+			if (Gfx == null)
+				return;
+
+			window.RemoveObject(Gfx);
 		}
 
 		/// <inheritdoc/>

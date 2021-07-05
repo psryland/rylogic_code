@@ -18,7 +18,7 @@ namespace TestWPF
 			{
 				Relink =
 				{
-					AnchorSharingMode = Diagram_.EAnchorSharing.ShareSameOnly,
+					AnchorSharingMode = Node.EAnchorSharing.ShareSameOnly,
 				}
 			};
 			var bs = new NodeStyle
@@ -38,14 +38,14 @@ namespace TestWPF
 				Dangling = Colour32.Red,
 				Selected = Colour32.SteelBlue,
 				Hovered = Colour32.LightGreen,
-				Smooth = true,
+				EdgeStyle = Connector.EEdgeStyle.Smooth,
 				Width = 10.0,
 			};
 
 			// Setup the chart for diagram mode
 			m_diag.Options = opts;
 			m_diag.Scene.Window.LightProperties = View3d.LightInfo.Ambient(Colour32.Gray);
-			DiagramCMenuContext = new Diagram_.CMenu(m_diag, opts);
+			DiagramCMenuContext = new Diagram_.CMenu(m_diag);
 
 			var node0 = new QuadNode("Node0\nIS A BIGGGG\n Node! \n Oh Yeaaahhh!!", position: m4x4.Translation(-10, -5, -2), style: bs) { Chart = m_diag };
 			var node1 = new QuadNode("Node1", position: m4x4.Translation(10, 10, 0), style: bs) { Chart = m_diag };

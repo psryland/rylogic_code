@@ -374,6 +374,7 @@ namespace Rylogic.Gfx
 			{
 				return View3D_WindowHasObject(Handle, obj.Handle, search_children);
 			}
+			[Obsolete("Use HasObject")] public bool Contains(Object obj, bool search_children) => HasObject(obj, search_children);
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
 			public BBox SceneBounds(ESceneBounds bounds, Guid[]? except = null)

@@ -10,10 +10,10 @@ namespace Rylogic.Net
 {
 	public sealed class WebSocket :IDisposable
 	{
-		public WebSocket(CancellationToken shutdown)
+		public WebSocket(CancellationToken shutdown, SynchronizationContext? sync = null)
 		{
 			Shutdown = shutdown;
-			Sync = SynchronizationContext.Current ?? throw new Exception("There is no synchronisation context for this thread");
+			Sync = sync ?? SynchronizationContext.Current ?? throw new Exception("There is no synchronisation context for this thread"); // This should be set up when the thread is created.
 			Socket = new ClientWebSocket();
 		}
 		public void Dispose()

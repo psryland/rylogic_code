@@ -8,16 +8,83 @@ using Rylogic.Extn;
 
 namespace Rylogic.Gui.WPF.Validators
 {
-	public class TextValidator : ValidationRule
+	/// <summary>Validator based on a predicate</summary>
+	public class PredicateValidator :ValidationRule
 	{
-		// Attached property for dependency objects that have a TextProperty
-		//
-		// Example Use:
-		//  <TextBox
-		//      Text="{Binding Price}"
-		//      val:TextValidator.Pred="{Binding ValidatePrice}"
-		//      />
-		// ViewModel:
+		// Notes:
+		//  - Attached property for dependency objects that have a TextProperty
+		// Usage:
+		//   <MyControl
+		//       Price="{Binding Price}"
+		//       gui:PredicateValidator.Pred="{Binding ValidatePrice}"
+		//       />
+		//   //ViewModel.cs
+		//   public decimal Price
+		//   {
+		//       get => m_price;
+		//       set => m_price = value;
+		//   }
+		//   private decimal m_price;
+		//   public Func<object, ValidationResult> ValidatePrice
+		//   {
+		//       get => x =>
+		//       {
+		//           if (x is not decimal price) return new ValidationResult(false, $"Value '{x}' is not of the expected type");
+		//           if (x <= 0) return new ValidationResult(false, "Price must be positive number");
+		//           return ValidationResult.ValidResult;
+		//       };
+		//   }
+		public PredicateValidator(Func<object, ValidationResult> pred) => Pred = pred;
+		public Func<object, ValidationResult> Pred { get; }
+
+		/// <inheritdoc/>
+		public override ValidationResult Validate(object value, CultureInfo cultureInfo)
+		{
+			// value is not T ty => new ValidationResult(false, $"Value '{value}' is not of the expected type ({typeof(T).Name})");
+			return Pred(value);
+		}
+
+		/// <summary>Create an attached property called 'Validate' that can be bound to a property of type Func(T,ValidationResult)</summary>
+		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<PredicateValidator>("Pred", flags:FrameworkPropertyMetadataOptions.None);
+		public static Func<object, ValidationResult> GetPred(DependencyObject obj) => (Func<object, ValidationResult>)obj.GetValue(PredProperty);
+		public static void SetPred(DependencyObject obj, Func<object, ValidationResult> value) => obj.SetValue(PredProperty, value);
+		private static void Pred_Changed(DependencyObject obj, Func<object, ValidationResult> new_value, Func<object, ValidationResult> old_value)
+		{
+			// Update the set of validation rules
+			Binding binding;
+			switch (obj)
+			{
+				case TextBox tb:
+				{
+					binding = BindingOperations.GetBinding(tb, TextBox.TextProperty);
+					break;
+				}
+				default:
+				{
+					binding = BindingOperations.GetBinding(obj, PredProperty);
+					break;
+				}
+			}
+
+			// Add/Replace/Remove the predicate validator
+			if (old_value != null)
+				binding.ValidationRules.RemoveIf(x => x is PredicateValidator pred && pred.Pred == old_value);
+			if (new_value != null)
+				binding.ValidationRules.Add(new PredicateValidator(new_value));
+		}
+	}
+
+	/// <summary>A validator for dependency objects that have a TextProperty dependency property</summary>
+	public class TextValidator :ValidationRule
+	{
+		// Notes:
+		//  - Attached property for dependency objects that have a TextProperty
+		// Usage:
+		//   <TextBox
+		//       Text="{Binding Price}"
+		//       gui:TextValidator.Pred="{Binding ValidatePrice}"
+		//       />
+		//   //ViewModel.cs
 		//   public string Price
 		//   {
 		//       get => m_price.ToString();
@@ -32,28 +99,19 @@ namespace Rylogic.Gui.WPF.Validators
 		//           return ValidationResult.ValidResult;
 		//       };
 		//   }
+		public TextValidator(Func<string, ValidationResult> pred) => Pred = pred;
+		public Func<string, ValidationResult> Pred { get; }
 
-		// A validator for dependency objects that have a TextProperty dependency property
-		static TextValidator()
+		/// <inheritdoc/>
+		public override ValidationResult Validate(object value, CultureInfo cultureInfo)
 		{
-			PredProperty = Gui_.DPRegisterAttached<TextValidator>(nameof(Pred), flags: FrameworkPropertyMetadataOptions.None);
-		}
-		public TextValidator(Func<string, ValidationResult> pred)
-		{
-			Pred = pred;
+			return value is string str ? Pred(str) : new ValidationResult(false, $"Value '{value}' is not of type string");
 		}
 
 		/// <summary>The predicate for validating text</summary>
-		public Func<string, ValidationResult> Pred { get; }
-		public static readonly DependencyProperty PredProperty;
-		public static Func<string, ValidationResult> GetPred(DependencyObject obj)
-		{
-			return (Func<string, ValidationResult>)obj.GetValue(PredProperty);
-		}
-		public static void SetPred(DependencyObject obj, Func<string, ValidationResult> value)
-		{
-			obj.SetValue(PredProperty, value);
-		}
+		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<TextValidator>(nameof(Pred), flags: FrameworkPropertyMetadataOptions.None);
+		public static Func<string, ValidationResult> GetPred(DependencyObject obj) => (Func<string, ValidationResult>)obj.GetValue(PredProperty);
+		public static void SetPred(DependencyObject obj, Func<string, ValidationResult> value) => obj.SetValue(PredProperty, value);
 		private static void Pred_Changed(DependencyObject obj, Func<string, ValidationResult> new_value, Func<string, ValidationResult> old_value)
 		{
 			// Reflect on 'obj' for the TextProperty dependency property
@@ -64,75 +122,13 @@ namespace Rylogic.Gui.WPF.Validators
 			// Get the binding to the TextProperty
 			var dep = (DependencyProperty?)fi.GetValue(null);
 			var binding = BindingOperations.GetBinding(obj, dep);
-			
+
 			// Add/Replace/Remove the predicate validator
 			if (old_value != null)
 				binding.ValidationRules.RemoveIf(x => x is TextValidator tv && tv.Pred == old_value);
 			if (new_value != null)
 				binding.ValidationRules.Add(new TextValidator(new_value));
 		}
-
-		/// <summary></summary>
-		public override ValidationResult Validate(object value, CultureInfo cultureInfo)
-		{
-			return value is string str ? Pred(str) : new ValidationResult(false, $"Value '{value}' is not of type string");
-		}
 	}
 
-
-
-
-	public class PredicateValidator<T> : ValidationRule
-	{
-		public PredicateValidator(Func<T, ValidationResult> pred)
-		{
-			Pred = pred;
-		}
-
-		/// <summary>The validation predicate</summary>
-		public Func<T, ValidationResult> Pred { get; }
-
-		/// <summary></summary>
-		public override ValidationResult Validate(object value, CultureInfo cultureInfo)
-		{
-			return value is T ty ? Pred(ty) : new ValidationResult(false, $"Value '{value}' is not of the expected type ({typeof(T).Name})");
-		}
-	}
-	public class PredicateValidator
-	{
-		/// <summary>Create an attached property called 'Validate' that can be bound to a property of type Func(T,ValidationResult)</summary>
-		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<PredicateValidator>("Pred", flags:FrameworkPropertyMetadataOptions.None);
-		public static Func<object, ValidationResult> GetPred(DependencyObject obj)
-		{
-			return (Func<object, ValidationResult>)obj.GetValue(PredProperty);
-		}
-		public static void SetPred(DependencyObject obj, Func<object, ValidationResult> value)
-		{
-			obj.SetValue(PredProperty, value);
-		}
-		private static void Pred_Changed(DependencyObject obj, Func<object, ValidationResult> new_value, Func<object, ValidationResult> old_value)
-		{
-			// Update the set of validation rules
-			Binding binding;
-			switch (obj)
-			{
-			default:
-				{
-					binding = BindingOperations.GetBinding(obj, PredProperty);
-					break;
-				}
-			case TextBox tb:
-				{
-					binding = BindingOperations.GetBinding(tb, TextBox.TextProperty);
-					break;
-				}
-			}
-
-			// Add/Replace/Remove the predicate validator
-			if (old_value != null)
-				binding.ValidationRules.RemoveIf(x => x is PredicateValidator<object> pred && pred.Pred == old_value);
-			if (new_value != null)
-				binding.ValidationRules.Add(new PredicateValidator<object>(new_value));
-		}
-	}
 }

@@ -22,6 +22,71 @@
 			<BitmapImage x:Key="plus" UriSource="/Rylogic.Gui.WPF;component/res/plus1.png"/>
 			<BitmapImage x:Key="minus" UriSource="/Rylogic.Gui.WPF;component/res/minus1.png"/>
 			<BitmapImage x:Key="refresh" UriSource="/Rylogic.Gui.WPF;component/res/refresh.png"/>
+			<BitmapImage x:Key="eye_visible" UriSource="/Rylogic.Gui.WPF;component/res/eye_visible.png"/>
+			<BitmapImage x:Key="eye_hidden" UriSource="/Rylogic.Gui.WPF;component/res/eye_hidden.png"/>
+
+			<SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#000000"/>
+			<SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0E0E0"/>
+
+			<!-- Checker brush -->
+			<DrawingBrush x:Key="CheckerBrush" AlignmentX="Left" AlignmentY="Top" TileMode="Tile" Viewport="0,0,0.25,0.25" Stretch="None">
+				<DrawingBrush.Drawing>
+					<DrawingGroup>
+						<GeometryDrawing Brush="White">
+							<GeometryDrawing.Geometry>
+								<GeometryGroup>
+									<RectangleGeometry Rect="0,0,100,100" />
+									<RectangleGeometry Rect="100,100,100,100" />
+								</GeometryGroup>
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+						<GeometryDrawing Brush="Gray">
+							<GeometryDrawing.Geometry>
+								<GeometryGroup>
+									<RectangleGeometry Rect="100,0,100,100" />
+									<RectangleGeometry Rect="0,100,100,100" />
+								</GeometryGroup>
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup>
+				</DrawingBrush.Drawing>
+			</DrawingBrush>
+
+			<!-- Button style for state buttons -->
+			<Style x:Key="StateButtonStyle" TargetType="{x:Type ToggleButton}">
+				<Setter Property="Background" Value="Transparent"/>
+				<Setter Property="Template">
+					<Setter.Value>
+						<ControlTemplate TargetType="{x:Type ToggleButton}">
+							<Border
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center"
+								Background="Transparent"
+								BorderThickness="0"
+								SnapsToDevicePixels="True"
+								x:Name="border"
+								>
+								<ContentPresenter x:Name="contentPresenter"/>
+							</Border>
+							<!--<ControlTemplate.Triggers>
+								<Trigger Property="IsMouseOver" Value="true">
+									<Setter Property="Background" TargetName="border" Value="Red"/>
+								</Trigger>
+								<Trigger Property="IsChecked" Value="true">
+									<Setter Property="Background" Value="Red"/>
+								</Trigger>
+								<MultiTrigger>
+									<MultiTrigger.Conditions>
+										<Condition Property="IsMouseOver" Value="true"/>
+										<Condition Property="IsChecked" Value="true"/>
+									</MultiTrigger.Conditions>
+									<Setter Property="Background" Value="Green"/>
+								</MultiTrigger>
+							</ControlTemplate.Triggers>-->
+						</ControlTemplate>
+					</Setter.Value>
+				</Setter>
+			</Style>
 
 			<!-- Context menu for the data grid part of the object manager -->
 			<ContextMenu x:Key="ObjectManagerListCMenu"
@@ -87,6 +152,7 @@
 
 		</ResourceDictionary>
 	</Window.Resources>
+	
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -117,7 +183,7 @@
 			<!-- Expand All button -->
 			<Button
 				Grid.Column="1"
-				Command="{Binding ExpandAll}"
+				Command="{Binding ExpandAll, ElementName=m_tree}"
 				Style="{StaticResource ExpandButtonStyle}"
 				>
 				<Image
@@ -129,7 +195,7 @@
 			<!-- Collapse All button -->
 			<Button
 				Grid.Column="2"
-				Command="{Binding CollapseAll}"
+				Command="{Binding CollapseAll, ElementName=m_tree}"
 				Style="{StaticResource ExpandButtonStyle}"
 				>
 				<Image
@@ -148,9 +214,123 @@
 
 		</Grid>
 		
+		<!-- Scene Graph -->
+		<gui:TreeViewMS
+			Grid.Row="1"
+			ItemsSource="{Binding ObjectsView}"
+			ContextMenu="{StaticResource ObjectManagerListCMenu}"
+			gui:Control_.EventToCommand="SelectionChanged:UpdateSelected"
+			BorderThickness="0"
+			Margin="2"
+			x:Name="m_tree"
+			>
+			<!-- Key Bindings -->
+			<gui:TreeViewMS.InputBindings>
+				<KeyBinding Key="Space"
+					Command="{Binding SetVisible}"
+					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
+					/>
+				<KeyBinding Key="Space" Modifiers="Ctrl"
+					Command="{Binding SetVisible}"
+					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ShowSelected}"
+					/>
+				<KeyBinding Key="Space" Modifiers="Ctrl+Shift"
+					Command="{Binding SetVisible}"
+					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.HideSelected}"
+					/>
+				<KeyBinding Key="W"
+					Command="{Binding SetWireframe}"
+					CommandParameter="0"/>
+				<KeyBinding Key="W" Modifiers="Ctrl"
+					Command="{Binding SetWireframe}"
+					CommandParameter="+1"/>
+				<KeyBinding Key="W" Modifiers="Ctrl+Shift"
+					Command="{Binding SetWireframe}"
+					CommandParameter="-1"
+					/>
+			</gui:TreeViewMS.InputBindings>
+
+			<!-- Item Container Style -->
+			<gui:TreeViewMS.ItemContainerStyle>
+				<Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource TreeViewMSItemStyle}">
+					<!--<Setter Property="Background" Value="AliceBlue"/>-->
+					<Style.Triggers>
+						<Trigger Property="gui:TreeViewMS.IsItemSelected" Value="True">
+							<Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+						</Trigger>
+						<!--<Trigger Property="HasItems" Value="True">
+							<Setter Property="Background" Value="Red"/>
+						</Trigger>-->
+					</Style.Triggers>
+				</Style>
+			</gui:TreeViewMS.ItemContainerStyle>
+
+			<!-- Item Template -->
+			<gui:TreeViewMS.ItemTemplate>
+				<HierarchicalDataTemplate ItemsSource="{Binding Children}">
+					<Grid
+						HorizontalAlignment="Stretch"
+						>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+
+						<!-- Row controls -->
+						<TextBlock
+							Grid.Column="0"
+							Text="{Binding Name}"
+							VerticalAlignment="Center"
+							Margin="3,1,3,1"
+							/>
+						<TextBlock
+							Grid.Column="1"
+							/>
+						<ToggleButton
+							Grid.Column="2"
+							Style="{StaticResource StateButtonStyle}"
+							IsChecked="{Binding Visible}"
+							HorizontalAlignment="Right"
+							VerticalAlignment="Center"
+							Background="Transparent"
+							BorderThickness="0"
+							Margin="3,1,3,1"
+							>
+							<Image
+								Source="{Binding Flags, Converter={conv:EnumSelect}, ConverterParameter='Hidden:eye_hidden|eye_visible'}"
+								RenderOptions.BitmapScalingMode="Fant"
+								Height="14"
+								/>
+						</ToggleButton>
+						<TextBlock
+							Grid.Column="3"
+							Text="{Binding Type}"
+							VerticalAlignment="Center"
+							MinWidth="80"
+							Margin="3,1,3,1"
+							/>
+						<TextBlock
+							Grid.Column="4"
+							Text="{Binding Colour}"
+							VerticalAlignment="Center"
+							Background="{Binding Colour, Converter={conv:ColourToBrush}}"
+							Foreground="{Binding Colour, Converter={conv:TextOverColourBrush}}"
+							MinWidth="60"
+							Margin="3,1,3,1"
+							/>
+					</Grid>
+				</HierarchicalDataTemplate>
+			</gui:TreeViewMS.ItemTemplate>
+		</gui:TreeViewMS>
+		
 		<!-- Tree and Grid -->
 		<Grid
 			Grid.Row="1"
+			Visibility="Collapsed"
 			>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="0.3*"/>
@@ -260,7 +440,7 @@
 						Header="Flags"
 						Binding="{Binding Flags}"
 						MinWidth="56"
-						Width="1*"
+						MaxWidth="80"
 						/>
 				</DataGrid.Columns>
 			</DataGrid>

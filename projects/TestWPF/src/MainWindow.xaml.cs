@@ -37,6 +37,10 @@ namespace TestWPF
 			m_recent_files.Add("Three");
 			m_recent_files.RecentFileSelected += s => Debug.WriteLine(s);
 
+			ShowBrowsePathUI = Command.Create(this, () =>
+			{
+				new BrowsePathUI().Show();
+			});
 			ShowColourPicker = Command.Create(this, () =>
 			{
 				new ColourPickerUI().Show();
@@ -167,6 +171,10 @@ namespace TestWPF
 			{
 				new View3dUI().Show();
 			});
+			ShowTreeViewMSUI = Command.Create(this, () =>
+			{
+				new TreeViewMSUI().Show();
+			});
 			Exit = Command.Create(this, Close);
 			DataContext = this;
 		}
@@ -178,6 +186,7 @@ namespace TestWPF
 
 		private View3d View3d { get; }
 
+		public Command ShowBrowsePathUI { get; }
 		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }
 		public Command ShowDiagram { get; }
@@ -196,6 +205,7 @@ namespace TestWPF
 		public Command ShowToolWindow { get; }
 		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }
+		public Command ShowTreeViewMSUI { get; }
 		public Command Exit { get; }
 
 		/// <summary>Some strings</summary>

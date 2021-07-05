@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -78,12 +79,13 @@ namespace Rylogic.Gui.WPF.ChartDiagram
 		}
 		private View3d.Texture m_surf = null!;
 
-		/// <summary>
-		/// Lock the texture for drawing on.
-		/// Draw in logical surface area units, ignore texture scale</summary>
+		/// <summary>Lock the texture for drawing on.</summary>
 		public View3d.Texture.Lock LockSurface(bool discard)
 		{
 			var lck = Surf.LockSurface(discard);
+			lck.Gfx.SmoothingMode = SmoothingMode.AntiAlias;
+			lck.Gfx.CompositingMode = CompositingMode.SourceOver;
+			lck.Gfx.CompositingQuality = CompositingQuality.HighQuality;
 			return lck;
 		}
 	}

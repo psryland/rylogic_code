@@ -9,6 +9,7 @@
 	<BitmapImage x:Key ="tape_measure" UriSource="/Rylogic.Gui.WPF;component/res/tape_measure_coloured.png"/>
 	<BitmapImage x:Key ="objects" UriSource="/Rylogic.Gui.WPF;component/res/objects.png"/>
 	<BitmapImage x:Key ="exchange" UriSource="/Rylogic.Gui.WPF;component/res/exchange.png"/>
+	<BitmapImage x:Key ="connector" UriSource="/Rylogic.Gui.WPF;component/res/connector4.png"/>
 	<BitmapImage x:Key ="animation" UriSource="/Rylogic.Gui.WPF;component/res/movie_film.png"/>
 	<BitmapImage x:Key ="chain" UriSource="/Rylogic.Gui.WPF;component/res/chain.png"/>
 	<BitmapImage x:Key ="accept" UriSource="/Rylogic.Gui.WPF;component/res/check_accept.png"/>
@@ -439,7 +440,7 @@
 		</MenuItem.Icon>
 	</MenuItem>
 	<MenuItem x:Key="View3dMenuItem_ObjectManager" x:Shared="False"
-		Header="Object Manager..."
+		Header="Scene Manager..."
 		StaysOpenOnClick="False"
 		Command="{Binding ShowObjectManagerUI}"
 		DataContext="{Binding View3dCMenuContext}"
@@ -799,6 +800,40 @@
 		</MenuItem.Icon>
 		<StaticResource ResourceKey="DiagramMenuItem_RelinkContinuous"/>
 		<StaticResource ResourceKey="DiagramMenuItem_RelinkOnce"/>
+	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_ConnectorEdgeStyle" x:Shared="False"
+		StaysOpenOnClick="False"
+		DataContext="{Binding DiagramCMenuCStyleContext}"
+		Name="DiagramMenuItem_ConnectorEdgeStyle"
+		>
+		<MenuItem.Header>
+			<StackPanel Orientation="Horizontal">
+				<TextBlock
+					Text="Style: "
+					VerticalAlignment="Center"
+					/>
+				<ComboBox
+					Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+					ItemsSource="{Binding EdgeStyle, Converter={conv:EnumValues}, Mode=OneTime}"
+					SelectedItem="{Binding EdgeStyle}"
+					BorderThickness="0"
+					Margin="1,1,20,1"
+					MinWidth="100"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="DiagramMenuItem_Connectors" x:Shared="False"
+		Header="Connectors"
+		Name="DiagramMenuItem_Connectors"
+		>
+		<MenuItem.Icon>
+			<Image
+				Source="{StaticResource connector}"
+				RenderOptions.BitmapScalingMode="HighQuality"
+				/>
+		</MenuItem.Icon>
+		<StaticResource ResourceKey="DiagramMenuItem_ConnectorEdgeStyle"/>
 	</MenuItem>
 
 
