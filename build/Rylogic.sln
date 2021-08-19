@@ -148,6 +148,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AceInspaders", "AceInspaders.vcxproj", "{F0BAE380-968F-4F1D-8CE0-989A6CCD331C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{7CC6930C-889B-4B6E-958F-BEE16ED2FF44} = {7CC6930C-889B-4B6E-958F-BEE16ED2FF44}
+		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+		{0618738D-AEAB-4643-9953-BE49459BCBA1} = {0618738D-AEAB-4643-9953-BE49459BCBA1}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SDK", "SDK", "{A7B4E0E6-2D40-4861-A11C-67521BD9E4FF}"
@@ -178,7 +180,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestWPF", "..\projects\Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FroniusMonitor.Service", "..\projects\SolarHotWater\FroniusMonitor.Service\FroniusMonitor.Service.csproj", "{3E0F6E20-9145-4A7B-8DD9-3D6D76354BE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolarHotWater.Common", "..\projects\SolarHotWater\SolarHotWater.Common\SolarHotWater.Common.csproj", "{13F45D1D-506C-49E2-9111-57CFBA9DD553}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SolarHotWater.Common", "..\projects\SolarHotWater\SolarHotWater.Common\SolarHotWater.Common.csproj", "{13F45D1D-506C-49E2-9111-57CFBA9DD553}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
