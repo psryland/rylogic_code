@@ -127,7 +127,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(WordWrapProperty);
 			set => SetValue(WordWrapProperty, Boxed.Box(value));
 		}
-		public static readonly DependencyProperty WordWrapProperty = Gui_.DPRegister<TextEditorControl>(nameof(WordWrap), Boxed.False);
+		public static readonly DependencyProperty WordWrapProperty = Gui_.DPRegister<TextEditorControl>(nameof(WordWrap), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;

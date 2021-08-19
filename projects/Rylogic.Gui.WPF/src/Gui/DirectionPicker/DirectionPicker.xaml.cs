@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Shapes;
 using Rylogic.Gfx;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -27,7 +28,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(Origin));
 		}
-		public static readonly DependencyProperty DirectionProperty = Gui_.DPRegister<DirectionPicker>(nameof(Direction));
+		public static readonly DependencyProperty DirectionProperty = Gui_.DPRegister<DirectionPicker>(nameof(Direction), -v4.ZAxis, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The sign of the X component of the direction vector</summary>
 		public double ScaleX
@@ -39,7 +40,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(Direction));
 		}
-		public static readonly DependencyProperty ScaleXProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleX), +1.0);
+		public static readonly DependencyProperty ScaleXProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleX), +1.0, Gui_.EDPFlags.None);
 
 		/// <summary>The sign of the Y component of the direction vector</summary>
 		public double ScaleY
@@ -51,7 +52,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(Direction));
 		}
-		public static readonly DependencyProperty ScaleYProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleY), +1.0);
+		public static readonly DependencyProperty ScaleYProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleY), +1.0, Gui_.EDPFlags.None);
 
 		/// <summary>The sign of the Z component of the direction vector</summary>
 		public double ScaleZ
@@ -63,7 +64,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(Direction));
 		}
-		public static readonly DependencyProperty ScaleZProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleZ), -1.0);
+		public static readonly DependencyProperty ScaleZProperty = Gui_.DPRegister<DirectionPicker>(nameof(ScaleZ), -1.0, Gui_.EDPFlags.None);
 
 		/// <summary></summary>
 		public Point Origin
@@ -86,7 +87,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(PerimeterColour));
 		}
-		public static readonly DependencyProperty MyPropertyProperty = Gui_.DPRegister<DirectionPicker>(nameof(PerimeterColour), def:new Colour32(0xFF404040));
+		public static readonly DependencyProperty MyPropertyProperty = Gui_.DPRegister<DirectionPicker>(nameof(PerimeterColour), new Colour32(0xFF404040), Gui_.EDPFlags.None);
 
 		/// <summary>True to display the direction vector in a Textbox below the 'dome'</summary>
 		public bool ShowTextValue
@@ -98,7 +99,7 @@ namespace Rylogic.Gui.WPF
 		{
 			NotifyPropertyChanged(nameof(ShowTextValue));
 		}
-		public static readonly DependencyProperty ShowTextValueProperty = Gui_.DPRegister<DirectionPicker>(nameof(ShowTextValue));
+		public static readonly DependencyProperty ShowTextValueProperty = Gui_.DPRegister<DirectionPicker>(nameof(ShowTextValue), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary></summary>
 		private void HandleMouseDown(object sender, MouseButtonEventArgs e)

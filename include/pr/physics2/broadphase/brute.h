@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -8,7 +8,7 @@
 
 namespace pr::physics::broadphase
 {
-	// A simple O(n�) broad phase implementation
+	// A simple O(n²) broad phase implementation
 	template <typename TObject>
 	class Brute
 	{

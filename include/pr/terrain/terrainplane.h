@@ -1,6 +1,6 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
-//	(c)opyright Paul Ryland 2006
+//	Copyright (C) Paul Ryland 2006
 //*********************************************
 
 #ifndef PR_PHYSICS_TERRAIN_PLANE_H

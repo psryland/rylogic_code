@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -15,7 +15,7 @@ namespace pr::physics
 	// decreases with larger angular momentum or greater 'dt'.
 	inline m4x4 ExtrapolateO2W(m4_cref<> o2w, v8f const& momentum, v8f const& force, InertiaInv const& inertia_inv, float dt)
 	{
-		// S = So + Vt + 0.5At�
+		// S = So + Vt + 0.5At²
 		//   = So + t * (V + 0.5At)
 		//   = So + 0.5 * t * (2*I^h + (I^f)t)
 		//   = So + 0.5 * t * I^(2*h + ft)

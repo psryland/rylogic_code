@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -155,7 +156,7 @@ namespace Rylogic.Gui.WPF
 			get => (EButtons)GetValue(ButtonsProperty);
 			set => SetValue(ButtonsProperty, value);
 		}
-		public static readonly DependencyProperty ButtonsProperty = Gui_.DPRegister<MsgBox>(nameof(Buttons));
+		public static readonly DependencyProperty ButtonsProperty = Gui_.DPRegister<MsgBox>(nameof(Buttons), EButtons.OK, Gui_.EDPFlags.None);
 
 		/// <summary>The image to show to the left of the message</summary>
 		public ImageSource? Image
@@ -163,7 +164,7 @@ namespace Rylogic.Gui.WPF
 			get => (ImageSource?)GetValue(ImageProperty);
 			set => SetValue(ImageProperty, value);
 		}
-		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<MsgBox>(nameof(Image));
+		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<MsgBox>(nameof(Image), null, Gui_.EDPFlags.None);
 
 		/// <summary>The message to display</summary>
 		public string Message
@@ -171,15 +172,15 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(MessageProperty);
 			set => SetValue(MessageProperty, value);
 		}
-		public static readonly DependencyProperty MessageProperty = Gui_.DPRegister<MsgBox>(nameof(Message));
+		public static readonly DependencyProperty MessageProperty = Gui_.DPRegister<MsgBox>(nameof(Message), string.Empty, Gui_.EDPFlags.None);
 
-		/// <summary>True if the always options is selected</summary>
+		/// <summary>True if the always option is selected</summary>
 		public bool Always
 		{
 			get => (bool)GetValue(AlwaysProperty);
 			set => SetValue(AlwaysProperty, value);
 		}
-		public static readonly DependencyProperty AlwaysProperty = Gui_.DPRegister<MsgBox>(nameof(Always));
+		public static readonly DependencyProperty AlwaysProperty = Gui_.DPRegister<MsgBox>(nameof(Always), Boxed.False, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Button text - Allows localisation</summary>
 		public string? OkText { get; set; }        = "OK";

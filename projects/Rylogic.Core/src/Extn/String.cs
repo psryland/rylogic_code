@@ -39,6 +39,12 @@ namespace Rylogic.Extn
 			return !string.IsNullOrEmpty(str);
 		}
 
+		/// <summary>Return this string if 'condition' is true, otherwise empty string</summary>
+		public static string If(this string? str, bool condition)
+		{
+			return str != null && condition ? str : string.Empty;
+		}
+
 		/// <summary>Return the index of the first character to satisfy 'pred' or str.Length</summary>
 		public static int Find(this string str, Func<char, bool> pred)
 		{

@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -69,18 +70,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The prompt text</summary>
 		public string Prompt
 		{
-			get { return (string)GetValue(PromptProperty); }
-			set { SetValue(PromptProperty, value); }
+			get => (string)GetValue(PromptProperty);
+			set => SetValue(PromptProperty, value);
 		}
-		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<ListUI>(nameof(Prompt));
+		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<ListUI>(nameof(Prompt), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>True if the cancel button is displayed</summary>
 		public bool AllowCancel
 		{
-			get { return (bool)GetValue(AllowCancelProperty); }
-			set { SetValue(AllowCancelProperty, value); }
+			get => (bool)GetValue(AllowCancelProperty);
+			set => SetValue(AllowCancelProperty, value);
 		}
-		public static readonly DependencyProperty AllowCancelProperty = Gui_.DPRegister<ListUI>(nameof(AllowCancel));
+		public static readonly DependencyProperty AllowCancelProperty = Gui_.DPRegister<ListUI>(nameof(AllowCancel), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>Items displayed in the list</summary>
 		public ObservableCollection<object> Items { get; }

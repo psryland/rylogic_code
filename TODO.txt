@@ -2,15 +2,15 @@ Immediate ToDo:
 
 Work
   Work:
-	- Refactor the FirmwareLoader tool (maybe use openocd, all it to run from anywhere, translate to Chinese)
-	- Push/pull zero ref values from REX
+	- Error prompt for 'libusb_open() failed with LIBUSB_ERROR_NOT_FOUND' = install driver
+	- Ask Duncan why Polarian isn't notifying Pete about customer services tickets any more
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
 	    - Fix the default zero ref values and min/max extension in the actuator ref data
-	- Need a way to generate complete SD cards again
+		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
+		- Back hip limits in released data are smaller than in .xml data
+	- Need a way to generate complete SD cards again -> Do this in Build.py
+	- Push/pull zero ref values from REX
 
-  MC
-	- Refactor the movement manager into separate files
-	
   UIv4
 	- Write a Polarian requirements sheet for the new UI
 	- Clean up rxs_AREX_...
@@ -18,14 +18,15 @@ Work
 	- Replace Darcy's message queue implementation with a sane one
 	
   ZeroRef
-    - Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
+    - Add the rexnode_driver to the installer
+	- Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
  	
   VRex
-	- Add support for connecting via RexLink to display 'live REX'
     - Port the tools from the old VRex over
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
+	- Fix the console text (missing a character)
 	
 LDraw
 	- Camera type-in
@@ -118,9 +119,6 @@ Misc
 	- Better handling of native Settings
 	- Change ToolForm to have resizable but not NC border
 
-Music
-	- Score for horn part of Pick up the Pieces
-	- Score for Sir Duke
 
 Old:
 ldr_object_dlg
@@ -128,13 +126,7 @@ measure tool
 angle tool
 Make Scintilla+Ldr support a dll
 Implement a XElement-like tree reader/writer for pr-script
-Implement Fmt() as a variadic template
 Fix non-pod types in pr::vector<>
-Fix crash in Diagram Control
-VS Extension - Align
- - stop at comment lines
- - Levistein distance rows (or maybe just use row 'form's)
-Add outline code only to VS Extension
 
 YouTube speed:
    vid = document.getElementsByClassName("video-stream html5-main-video")[0];

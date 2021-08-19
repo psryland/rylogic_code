@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -173,7 +174,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Attached property for 'IsItemSelected'</summary>
 		private const int IsItemSelected = 0;
-		public static readonly DependencyProperty IsItemSelectedProperty = Gui_.DPRegisterAttached<TreeViewMS>(nameof(IsItemSelected));
+		public static readonly DependencyProperty IsItemSelectedProperty = Gui_.DPRegisterAttached<TreeViewMS>(nameof(IsItemSelected), Boxed.False, Gui_.EDPFlags.None);
 		public static void SetIsItemSelected(UIElement element, bool value) => element.SetValue(IsItemSelectedProperty, value);
 		public static bool GetIsItemSelected(UIElement element) => (bool)element.GetValue(IsItemSelectedProperty);
 

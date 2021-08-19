@@ -5,11 +5,6 @@ namespace CoinFlip.UI
 {
 	public partial class APIKeysUI : Window
 	{
-		static APIKeysUI()
-		{
-			APIKeyProperty = Gui_.DPRegister<APIKeysUI>(nameof(APIKey));
-			APISecretProperty = Gui_.DPRegister<APIKeysUI>(nameof(APISecret));
-		}
 		public APIKeysUI(User user, string exchange_name)
 		{
 			InitializeComponent();
@@ -44,18 +39,18 @@ namespace CoinFlip.UI
 		/// <summary>API Key</summary>
 		public string APIKey
 		{
-			get { return (string)GetValue(APIKeyProperty); }
-			set { SetValue(APIKeyProperty, value); }
+			get => (string)GetValue(APIKeyProperty);
+			set => SetValue(APIKeyProperty, value);
 		}
-		public static readonly DependencyProperty APIKeyProperty;
+		public static readonly DependencyProperty APIKeyProperty = Gui_.DPRegister<APIKeysUI>(nameof(APIKey), string.Empty, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>API secret</summary>
 		public string APISecret
 		{
-			get { return (string)GetValue(APISecretProperty); }
-			set { SetValue(APISecretProperty, value); }
+			get => (string)GetValue(APISecretProperty);
+			set => SetValue(APISecretProperty, value);
 		}
-		public static readonly DependencyProperty APISecretProperty;
+		public static readonly DependencyProperty APISecretProperty = Gui_.DPRegister<APIKeysUI>(nameof(APISecret), string.Empty, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Ok Button click</summary>
 		private void HandleOk(object sender, RoutedEventArgs e)

@@ -1,8 +1,8 @@
-/////////////////////////////////////////////////////////////////////////////
+ï»¿/////////////////////////////////////////////////////////////////////////////
 // WTL Grid Control version 1.0 (June 1st, 2003)
 //
-// Written by Bjørnar Henden (bh@bhenden.org)
-// Copyright (c) 2003 Bjørnar Henden.
+// Written by BjÃ¸rnar Henden (bh@bhenden.org)
+// Copyright (c) 2003 BjÃ¸rnar Henden.
 // Thanks to Bjarke Viksoe for atlgdix.h
 // The CGridCtrl::CGridDC class uses some routines by Noel Frankinet.
 

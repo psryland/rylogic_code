@@ -1,4 +1,4 @@
-/*
+ï»¿/*
 CompareAsInt.cpp - various functions to compare floating point numbers using
 integer operations, other functions to test these comparisons, and other
 functions to print out floating point numbers and their representation.
@@ -24,7 +24,7 @@ functions to print out floating point numbers and their representation.
 //    return false;
 //}
 //
-//// Slightly better AlmostEqual function – still not recommended
+//// Slightly better AlmostEqual function - still not recommended
 //bool AlmostEqualRelative2(float A, float B, float maxRelativeError)
 //{
 //    if (A == B)
@@ -40,7 +40,7 @@ functions to print out floating point numbers and their representation.
 //}
 //
 //
-//// Slightly better AlmostEqual function – still not recommended
+//// Slightly better AlmostEqual function - still not recommended
 //bool AlmostEqualRelativeOrAbsolute(float A, float B,
 //                float maxRelativeError, float maxAbsoluteError)
 //{

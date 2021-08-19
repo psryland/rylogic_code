@@ -11,10 +11,6 @@ namespace CoinFlip.UI.Dialogs
 {
 	public partial class NewBotUI :Window, INotifyPropertyChanged
 	{
-		static NewBotUI()
-		{
-			BotNameProperty = Gui_.DPRegister<NewBotUI>(nameof(BotName));
-		}
 		public NewBotUI(Window owner = null)
 		{
 			InitializeComponent();
@@ -30,11 +26,11 @@ namespace CoinFlip.UI.Dialogs
 		/// <summary>Bot name</summary>
 		public string BotName
 		{
-			get { return (string)GetValue(BotNameProperty); }
-			set { SetValue(BotNameProperty, value); }
+			get => (string)GetValue(BotNameProperty);
+			set => SetValue(BotNameProperty, value);
 		}
 		private void BotName_Changed() => NotifyValidate();
-		public static readonly DependencyProperty BotNameProperty;
+		public static readonly DependencyProperty BotNameProperty = Gui_.DPRegister<NewBotUI>(nameof(BotName), string.Empty, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The bots to choose from</summary>
 		public ICollectionView AvailableBots { get; }

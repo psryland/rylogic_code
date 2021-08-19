@@ -37,6 +37,10 @@ namespace TestWPF
 			m_recent_files.Add("Three");
 			m_recent_files.RecentFileSelected += s => Debug.WriteLine(s);
 
+			ShowBitArrayUI = Command.Create(this, () =>
+			{
+				new BitArrayUI().Show();
+			});
 			ShowBrowsePathUI = Command.Create(this, () =>
 			{
 				new BrowsePathUI().Show();
@@ -186,6 +190,7 @@ namespace TestWPF
 
 		private View3d View3d { get; }
 
+		public Command ShowBitArrayUI { get; }
 		public Command ShowBrowsePathUI { get; }
 		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }

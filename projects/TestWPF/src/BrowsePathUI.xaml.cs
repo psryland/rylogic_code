@@ -14,7 +14,7 @@ namespace TestWPF
 			Path = string.Empty;
 			MustExist = false;
 			RequireRoot = false;
-			PathHistory = CollectionViewSource.GetDefaultView(new ObservableCollection<string>{"C:\\Path1\\File1.txt", "D:\\Path2\\File2.txt"});
+			PathHistory = new ObservableCollection<string>{"C:\\Path1\\File1.txt", "D:\\Path2\\File2.txt"};
 			Accept = Command.Create(this, Close);
 			DataContext = this;
 		}
@@ -33,7 +33,7 @@ namespace TestWPF
 		private string m_path = string.Empty;
 
 		/// <summary></summary>
-		public ICollectionView PathHistory { get; }
+		public ObservableCollection<string> PathHistory { get; }
 
 		/// <summary></summary>
 		public bool MustExist

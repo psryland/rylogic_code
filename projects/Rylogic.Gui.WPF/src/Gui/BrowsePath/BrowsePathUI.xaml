@@ -28,9 +28,9 @@
 	
 		<ComboBox
 			Grid.Column="0"
-			ItemsSource="{Binding History}"
-			SelectedItem="{Binding History/}"
-			Text="{Binding SelectedPath, UpdateSourceTrigger=LostFocus}"
+			ItemsSource="{Binding HistoryView}"
+			SelectedItem="{Binding HistoryView/}"
+			Text="{Binding SelectedPath}"
 			PreviewKeyUp="HandlePreviewKeyUp"
 			VerticalContentAlignment="Center"
 			VerticalAlignment="Center"

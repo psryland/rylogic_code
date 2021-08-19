@@ -17,10 +17,6 @@ namespace RyLogViewer
 		private readonly Settings m_settings;
 		private readonly IReport m_report;
 
-		static OptionsUI()
-		{
-			SelectedPageProperty = Gui_.DPRegister<OptionsUI>(nameof(SelectedPage), def: EOptionsPage.General);
-		}
 		public OptionsUI(Main main, Settings settings, IReport report)
 		{
 			InitializeComponent();
@@ -47,10 +43,10 @@ namespace RyLogViewer
 		/// <summary>The selected tab page in the options dialog</summary>
 		public EOptionsPage SelectedPage
 		{
-			get { return (EOptionsPage)GetValue(SelectedPageProperty); }
-			set { SetValue(SelectedPageProperty, value); }
+			get => (EOptionsPage)GetValue(SelectedPageProperty);
+			set => SetValue(SelectedPageProperty, value);
 		}
-		public static readonly DependencyProperty SelectedPageProperty;
+		public static readonly DependencyProperty SelectedPageProperty = Gui_.DPRegister<OptionsUI>(nameof(SelectedPage), EOptionsPage.General, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Handle the Reset to Defaults button</summary>
 		private void HandleResetToDefaults(object sender, RoutedEventArgs e)

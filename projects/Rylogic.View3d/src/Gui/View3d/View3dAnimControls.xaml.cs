@@ -47,7 +47,7 @@ namespace Rylogic.Gui.WPF
 				NotifyPropertyChanged(nameof(AnimClock));
 			}
 		}
-		public static readonly DependencyProperty ViewWindowProperty = Gui_.DPRegister<View3dAnimControls>(nameof(ViewWindow), flags:FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty ViewWindowProperty = Gui_.DPRegister<View3dAnimControls>(nameof(ViewWindow), null, Gui_.EDPFlags.None);
 
 		/// <summary>Animation time</summary>
 		public double AnimClock

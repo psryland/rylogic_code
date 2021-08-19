@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get => (FontFamily)GetValue(FontFamilyProperty);
 			set => SetValue(FontFamilyProperty, value);
 		}
-		public static readonly DependencyProperty FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
+		public static readonly DependencyProperty FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), new FontFamily("tahoma"), Gui_.EDPFlags.None);
 
 		/// <summary>Font style</summary>
 		public FontStyle FontStyle
@@ -48,7 +48,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get => (FontStyle)GetValue(FontStyleProperty);
 			set => SetValue(FontStyleProperty, value);
 		}
-		public static readonly DependencyProperty FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
+		public static readonly DependencyProperty FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), FontStyles.Normal, Gui_.EDPFlags.None);
 
 		/// <summary>Font weight</summary>
 		public FontWeight FontWeight
@@ -56,7 +56,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get => (FontWeight)GetValue(FontWeightProperty);
 			set => SetValue(FontWeightProperty, value);
 		}
-		public static readonly DependencyProperty FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);
+		public static readonly DependencyProperty FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), FontWeights.Normal, Gui_.EDPFlags.None);
 
 		/// <summary>Font stretch</summary>
 		public FontStretch FontStretch
@@ -64,7 +64,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get => (FontStretch)GetValue(FontStretchProperty);
 			set => SetValue(FontStretchProperty, value);
 		}
-		public static readonly DependencyProperty FontStretchProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStretch), def: FontStretches.Normal);
+		public static readonly DependencyProperty FontStretchProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStretch), FontStretches.Normal, Gui_.EDPFlags.None);
 
 		/// <summary>Font size for tick labels</summary>
 		public double FontSize
@@ -72,7 +72,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get => (double)GetValue(FontSizeProperty);
 			set => SetValue(FontSizeProperty, value);
 		}
-		public static readonly DependencyProperty FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), def: 10.0);
+		public static readonly DependencyProperty FontSizeProperty = Gui_.DPRegister<AxisPanel>(nameof(FontSize), 10.0, Gui_.EDPFlags.None);
 
 		/// <summary>Font for tick labels</summary>
 		public Typeface Typeface => new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
@@ -136,7 +136,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				}
 			}
 		}
-		public static readonly DependencyProperty AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis), flags: FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis), null, Gui_.EDPFlags.None);
 
 		/// <summary>The axis options</summary>
 		public ChartControl.OptionsData.Axis Options => Axis?.Options ?? new ChartControl.OptionsData.Axis();

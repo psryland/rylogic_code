@@ -21,6 +21,9 @@ namespace Rylogic.Maths
 		/// <summary>Create a 64-bit mask from 1 &lt;&lt; n</summary>
 		public static ulong Bit64(int n) => 1UL << n;
 
+		/// <summary>A bit mask with the lower 'n' bits set. e.g. Mask(4) = 0b00001111</summary>
+		public static ulong Mask(int n) => n < 64 ? ~(~0UL << n) : ~0UL;
+
 		/// <summary>Get the Nth bit of this value</summary>
 		public static int BitAt(this ulong x, int bit) => (int)((x >> bit) & 1);
 		public static int BitAt(this  long x, int bit) => (int)((x >> bit) & 1);
@@ -137,10 +140,10 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Iterate over the index positions of bits in a bit field</summary>
-		public static IEnumerable<int> EnumBitIndices(uint value)
+		public static IEnumerable<int> EnumBitIndices(ulong value)
 		{
 			for (var i = 0; value != 0; ++i, value >>= 1)
-				if ((value&1) != 0) yield return i;
+				if ((value & 1) != 0) yield return i;
 		}
 
 		/// <summary>Iterate over the set bits in a bit field</summary>
@@ -151,9 +154,9 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Iterate over the set bits in a bit field</summary>
-		public static IEnumerable<uint> EnumBitMasks(uint value)
+		public static IEnumerable<ulong> EnumBitMasks(ulong value)
 		{
-			for (uint mask; value != 0; value -= mask)
+			for (ulong mask; value != 0; value -= mask)
 				yield return mask = value & (value ^ (value - 1));
 		}
 
@@ -277,9 +280,10 @@ namespace Rylogic.Maths
 		/// BitIndex(0b10010010110, 4) == 10
 		/// BitIndex(0b10010010110, 5) == -1
 		/// Returns -1 if less than 'index' bits are set</summary>
-		public static int BitIndex(uint value, int n)
+		public static int BitIndex(ulong value, int n)
 		{
-			for (int pos = 0, b = 1; pos != 32; ++pos, b <<= 1)
+			ulong b = 1;
+			for (int pos = 0; pos != 32; ++pos, b <<= 1)
 				if ((value & b) != 0 && --n == -1) return pos;
 			return -1;
 		}
@@ -300,9 +304,10 @@ namespace Rylogic.Maths
 		/// are in the even positions and bits from y in the odd.
 		/// Returns the resulting 32-bit Morton Number.
 		/// </summary>
-		public static uint InterleaveBits(uint x, uint y)
+		public static ulong InterleaveBits(ulong x, ulong y)
 		{
-			var B = new uint[]{0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
+			// todo: upgrade this to 64-bit
+			var B = new ulong[]{0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
 			var S = new []{1, 2, 4, 8};
 			x = (x | (x << S[3])) & B[3];
 			x = (x | (x << S[2])) & B[2];
@@ -331,7 +336,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Convert a string (e.g. "10010110101") into a uint</summary>
-		public static uint Parse(string bits)
+		public static ulong Parse(string bits)
 		{
 			if (bits == null) throw new ArgumentNullException("bits", "Bits.Parse() string argument was null");
 			uint n = 0;
@@ -345,7 +350,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Try to convert a string (e.g. "10010110101") into a uint</summary>
-		public static bool TryParse(string bits, out uint value)
+		public static bool TryParse(string bits, out ulong value)
 		{
 			value = 0;
 			if (bits == null) return false;

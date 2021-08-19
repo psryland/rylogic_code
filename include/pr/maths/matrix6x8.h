@@ -157,12 +157,12 @@ namespace pr
 		// R = [A B]  R' = [E F]
 		//     [C D]       [G H]
 		// For square diagonal partitions of 'R' (i.e. submatrices are square)
-		// If 'A' is non-singular then 'R' is invertible iff the Schur complement "D - CA¯B" of A is invertible
-		// R'= [A¯ + A¯B(D-CA¯B)¯CA¯ ,  -A¯B(D-CA¯B)¯ ]
-		//     [    -(D-CA¯B)¯CA¯    ,    (D-CA¯B)¯   ]
+		// If 'A' is non-singular then 'R' is invertible iff the Schur complement "D - CAÂ¯B" of A is invertible
+		// R'= [AÂ¯ + AÂ¯B(D-CAÂ¯B)Â¯CAÂ¯ ,  -AÂ¯B(D-CAÂ¯B)Â¯ ]
+		//     [    -(D-CAÂ¯B)Â¯CAÂ¯    ,    (D-CAÂ¯B)Â¯   ]
 		// or:
-		//     [   (A-BD¯C)¯     ,    -(A-BD¯C)¯BD¯   ]
-		//     [ -D¯C(A-BD¯C)¯   , D¯+D¯C(A-BD¯C)¯BD¯ ]
+		//     [   (A-BDÂ¯C)Â¯     ,    -(A-BDÂ¯C)Â¯BDÂ¯   ]
+		//     [ -DÂ¯C(A-BDÂ¯C)Â¯   , DÂ¯+DÂ¯C(A-BDÂ¯C)Â¯BDÂ¯ ]
 
 		auto& a = m.m00;
 		auto& b = m.m01;
@@ -170,26 +170,26 @@ namespace pr
 		auto& d = m.m11;
 		if (IsInvertible(a))
 		{
-			auto a¯ = Invert(a);
-			auto schur = d - c * a¯ * b; // The 'Schur Complement'
+			auto aÂ¯ = Invert(a);
+			auto schur = d - c * aÂ¯ * b; // The 'Schur Complement'
 			if (IsInvertible(schur))
 			{
-				auto schur¯ = Invert(schur);
+				auto schurÂ¯ = Invert(schur);
 				return Mat6x8<B,A>{
-					a¯ + a¯ * b * schur¯ * c * a¯ , -a¯ * b * schur¯,
-					             -schur¯ * c * a¯ ,           schur¯};
+					aÂ¯ + aÂ¯ * b * schurÂ¯ * c * aÂ¯ , -aÂ¯ * b * schurÂ¯,
+					             -schurÂ¯ * c * aÂ¯ ,           schurÂ¯};
 			}
 		}
 		if (IsInvertible(d))
 		{
-			auto d¯ = Invert(d);
-			auto schur = a - b * d¯ * c; // The 'Schur Complement'
+			auto dÂ¯ = Invert(d);
+			auto schur = a - b * dÂ¯ * c; // The 'Schur Complement'
 			if (IsInvertible(schur))
 			{
-				auto schur¯ = Invert(schur);
+				auto schurÂ¯ = Invert(schur);
 				return Mat6x8<B,A>{
-					          schur¯ ,              -schur¯ * b * d¯,
-					-d¯ * c * schur¯ , d¯ + d¯ * c * schur¯ * b * d¯};
+					          schurÂ¯ ,              -schurÂ¯ * b * dÂ¯,
+					-dÂ¯ * c * schurÂ¯ , dÂ¯ + dÂ¯ * c * schurÂ¯ * b * dÂ¯};
 			}
 		}
 		throw std::runtime_error("matrix is singular");
@@ -400,7 +400,7 @@ namespace pr::maths
 				v8{+1, +2, +3, -2, +2, +3},
 				v8{+1, -1, -2, -3, +6, -1}
 			};
-			auto M¯ = m6x8
+			auto MÂ¯ = m6x8
 			{
 				v8{+227.0f/794.0f, -135.0f/397.0f, -101.0f/794.0f,  +84.0f/397.0f,  -16.0f/397.0f,  -4.0f/397.0f},
 				v8{+219.0f/397.0f,  -75.0f/794.0f, +382.0f/1985.f, +179.0f/794.0f, -2647.f/3970.f,-976.0f/1985.f},
@@ -410,13 +410,13 @@ namespace pr::maths
 				v8{ -50.0f/397.0f,  +14.0f/397.0f,  +17.0f/397.0f,  -44.0f/397.0f,  +84.0f/397.0f, +21.0f/397.0f}
 			};
 
-			auto m¯ = Invert(M);
-			PR_CHECK(FEql(m¯, M¯), true);
+			auto mÂ¯ = Invert(M);
+			PR_CHECK(FEql(mÂ¯, MÂ¯), true);
 
-			auto I = M * M¯;
+			auto I = M * MÂ¯;
 			PR_CHECK(FEql(I, m6x8Identity), true);
 			
-			auto i = M * m¯;
+			auto i = M * mÂ¯;
 			PR_CHECK(FEql(i, m6x8Identity), true);
 		}
 	}

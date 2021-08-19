@@ -1,14 +1,14 @@
-//*********************************************
+ï»¿//*********************************************
 // TetraMesh
 //	copyright Paul Ryland May 2007
 //*********************************************
 //
 //A "TetraMesh" in this file refers to a data structure containing a number of
-// tetrahedra with face adjacency information. It’s analogous to a triangle mesh
+// tetrahedra with face adjacency information. It's analogous to a triangle mesh
 // with edge adjacency. The main functions in this file are:
-// ConstrainVertexDisplacement – Allows vertices in the mesh to be moved without
+// ConstrainVertexDisplacement - Allows vertices in the mesh to be moved without
 //  turning any of the tetrahedral inside out.
-// Decompose – Turns an arbitrary tetramesh into convex polytopes. These polytopes
+// Decompose - Turns an arbitrary tetramesh into convex polytopes. These polytopes
 //  are then suitable for polytope collision detection.
 //
 // Note: this software is confidential and property of Rylogic Limited and cannot

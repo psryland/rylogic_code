@@ -230,5 +230,12 @@ namespace Binance.API.DomainObjects
 			[JsonProperty("maxNumIcebergOrders")]
 			private int MaxNumIcebergOrders { set => Limit = value; }
 		}
+		public class FilterMaxPosition :Filter
+		{
+			/// <summary></summary>
+			[JsonProperty("maxPosition")]
+			public double MaxPosition { get; private set; }
+
+		}
 	}
 }

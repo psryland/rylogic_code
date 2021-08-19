@@ -1,6 +1,6 @@
-//*****************************************
+ï»¿//*****************************************
 // PR Lua - Lua bindings for pr lib
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (C) Rylogic Ltd 2007
 //*****************************************
 // This is a dll that can be used in a lua script file
 // Usage:

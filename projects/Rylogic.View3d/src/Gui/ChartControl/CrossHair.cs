@@ -46,6 +46,7 @@ namespace Rylogic.Gui.WPF
 					TextAlignment = TextAlignment.Center,
 					Background = bkgd_colour.ToMediaBrush(),
 					Foreground = text_colour.ToMediaBrush(),
+					IsHitTestVisible = false,
 					MinWidth = 50,
 				};
 				LabelY = new TextBlock
@@ -54,6 +55,7 @@ namespace Rylogic.Gui.WPF
 					TextAlignment = TextAlignment.Center,
 					Background = bkgd_colour.ToMediaBrush(),
 					Foreground = text_colour.ToMediaBrush(),
+					IsHitTestVisible = false,
 					MinWidth = 50,
 				};
 

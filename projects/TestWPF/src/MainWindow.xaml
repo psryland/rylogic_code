@@ -29,6 +29,7 @@
 				<MenuItem Header="_Close" Command="{Binding Exit}"/>
 			</MenuItem>
 			<MenuItem Header="_UI Elements">
+				<MenuItem Header="_Bit Array" Command="{Binding ShowBitArrayUI}"/>
 				<MenuItem Header="_Browse Path" Command="{Binding ShowBrowsePathUI}"/>
 				<MenuItem Header="_Chart" Command="{Binding ShowChart}"/>
 				<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>

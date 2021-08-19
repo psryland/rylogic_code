@@ -179,7 +179,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Style Attached property</summary>
 		private const int Style = 0;
-		public static readonly DependencyProperty StyleProperty = Gui_.DPRegisterAttached(typeof(Scintilla_), nameof(Style));
+		public static readonly DependencyProperty StyleProperty = Gui_.DPRegisterAttached(typeof(Scintilla_), nameof(Style), EScintillaStyles.Default, Gui_.EDPFlags.None);
 		public static EScintillaStyles GetStyle(DependencyObject obj) => (EScintillaStyles)obj.GetValue(StyleProperty);
 		public static void SetStyle(DependencyObject obj, EScintillaStyles value) => obj.SetValue(StyleProperty, value);
 		private static void Style_Changed(DependencyObject obj)

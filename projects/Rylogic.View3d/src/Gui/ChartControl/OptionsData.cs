@@ -148,9 +148,9 @@ namespace Rylogic.Gui.WPF
 				get => XAxis.ShowGridLines || YAxis.ShowGridLines;
 				set
 				{
-					var shown = ShowGridLines;
-					XAxis.ShowGridLines = !shown;
-					YAxis.ShowGridLines = !shown;
+					if (value == ShowGridLines) return;
+					XAxis.ShowGridLines = value;
+					YAxis.ShowGridLines = value;
 					NotifyPropertyChanged(nameof(ShowGridLines));
 				}
 			}
@@ -200,8 +200,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Require the shift key to area select</summary>
 			public bool AreaSelectRequiresShiftKey
 			{
-				get => get<bool>(nameof(Orthographic));
-				set => set(nameof(Orthographic), value);
+				get => get<bool>(nameof(AreaSelectRequiresShiftKey));
+				set => set(nameof(AreaSelectRequiresShiftKey), value);
 			}
 
 			/// <summary>How close a click has to be for selection to occur (in client space)</summary>

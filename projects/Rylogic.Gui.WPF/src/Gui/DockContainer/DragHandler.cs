@@ -87,6 +87,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			// Create the semi-transparent non-modal window for the dragged item
 			Ghost = new GhostPane(this, loc_ghost) { Visibility = Visibility.Visible };
+			Ghost.Show();
 
 			// Create the dock site indicators
 			IndTop = new Indicator(this, EIndicator.dock_site_top, DockContainer.AutoHidePanels[EDockSite.Top].Root.DockPane(EDockSite.Centre), loc_top) { Visibility = Visibility.Visible };

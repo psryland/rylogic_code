@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Data;
@@ -14,17 +15,81 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
 {
-	/// <summary>Select on object from a collection</summary>
+	/// <summary>Use a function to convert a value to something else</summary>
+	public class Lambda :MarkupExtension, IValueConverter
+	{
+		/// <summary>Cache the lambda expression</summary>
+		private string m_expr_string = string.Empty;
+		private Func<object?, object>? m_expr = null;
+
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			// The parameter should be a lambda expression
+			if (parameter is not string lambda_expr)
+				return null;
+
+			try
+			{
+				if (m_expr == null || m_expr_string != lambda_expr)
+				{
+					// Add the assemblies and namespaces needed to compile the expression
+					var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+						.Where(x => x.IsDynamic == false)
+						.Where(x => !string.IsNullOrEmpty(x.Location))
+						.ToArray();
+					var namespaces = new[]
+					{
+						"System",
+						"System.Collections",
+						"System.Drawing",
+						"System.Globalization",
+						"System.Linq",
+						"System.Windows",
+						"System.Windows.Controls",
+						"Rylogic.Extn",
+						"Rylogic.Gui.WPF",
+						"Rylogic.Utility"
+					};
+
+					// Compile the lambda expression string into a lambda
+					var options = ScriptOptions.Default.AddReferences(assemblies).AddImports(namespaces);
+					var expr = CSharpScript.EvaluateAsync<Func<object?, object>>(lambda_expr, options).Result;
+
+					// Cache the compiled expression
+					m_expr = expr;
+					m_expr_string = lambda_expr;
+				}
+
+				// Evaluate the expression
+				return m_expr(value);
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine($"Converter '{nameof(Lambda)}' threw an error: {ex.Message}");
+			}
+			return null;
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException($"MarkupExtension '{nameof(Lambda)}' cannot convert back to '{targetType.Name}'");
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select an object from a collection</summary>
 	public class Select :MarkupExtension, IValueConverter
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			// The value should be an enumerable collection
-			if (!(value is IEnumerable collection))
+			if (value is not IEnumerable collection)
 				return null;
 
 			// The parameter should be a lambda expression
-			if (!(parameter is string filter_desc))
+			if (parameter is not string filter_desc)
 				return null;
 
 			try

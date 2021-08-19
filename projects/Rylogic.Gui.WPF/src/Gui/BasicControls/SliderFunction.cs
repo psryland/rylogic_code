@@ -63,7 +63,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		public static readonly DependencyProperty ValueFnProperty = Gui_.DPRegister<SliderFunction>(nameof(ValueFn));
+		public static readonly DependencyProperty ValueFnProperty = Gui_.DPRegister<SliderFunction>(nameof(ValueFn), 0.0, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The function that converts from slider value to output value</summary>
 		public string FunctionExpr
@@ -75,7 +75,7 @@ namespace Rylogic.Gui.WPF
 		{
 			Function = ExprLambda.Create(FunctionExpr) ?? (x => x);
 		}
-		public static readonly DependencyProperty FunctionExprProperty = Gui_.DPRegister<SliderFunction>(nameof(FunctionExpr));
+		public static readonly DependencyProperty FunctionExprProperty = Gui_.DPRegister<SliderFunction>(nameof(FunctionExpr), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>The function that converts from output values to slider values</summary>
 		public string InverseExpr
@@ -87,6 +87,6 @@ namespace Rylogic.Gui.WPF
 		{
 			Inverse = ExprLambda.Create(InverseExpr) ?? (x => x);
 		}
-		public static readonly DependencyProperty InverseExprProperty = Gui_.DPRegister<SliderFunction>(nameof(InverseExpr));
+		public static readonly DependencyProperty InverseExprProperty = Gui_.DPRegister<SliderFunction>(nameof(InverseExpr), string.Empty, Gui_.EDPFlags.None);
 	}
 }

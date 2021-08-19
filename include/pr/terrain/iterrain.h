@@ -1,6 +1,6 @@
-//*********************************************
+﻿//*********************************************
 // Physics engine
-//	(c)opyright Paul Ryland 2006
+//	Copyright (C) Paul Ryland 2006
 //*********************************************
 
 // Terrain is a system that can return points of contact and normals for

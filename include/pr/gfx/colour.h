@@ -443,6 +443,13 @@ namespace pr
 			int(lhs.a * (1.0f - frac) + rhs.a * frac));
 	}
 
+	// Convert this colour to it's associated gray-scale value
+	inline Colour32 ToGrayScale(Colour32 col)
+	{
+		auto gray = static_cast<uint8_t>(0.3f*col.r + 0.59f*col.g + 0.11f*col.b);
+		return Colour32(gray, gray, gray, col.a);
+	}
+
 	// Create a random colour
 	template <typename Rng = std::default_random_engine> inline Colour32 RandomRGB(Rng& rng, float a)
 	{
