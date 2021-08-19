@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -83,7 +84,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Column resizing attached property</summary>
 		private const int ColumnResizeMode = 0;
-		public static readonly DependencyProperty ColumnResizeModeProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnResizeMode));
+		public static readonly DependencyProperty ColumnResizeModeProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnResizeMode), EColumnResizeMode.None, Gui_.EDPFlags.None);
 		public static EColumnResizeMode GetColumnResizeMode(DependencyObject obj) => (EColumnResizeMode)obj.GetValue(ColumnResizeModeProperty);
 		public static void SetColumnResizeMode(DependencyObject obj, EColumnResizeMode value) => obj.SetValue(ColumnResizeModeProperty, value);
 		private static void ColumnResizeMode_Changed(DependencyObject obj)
@@ -128,7 +129,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Add column visibility to a DataGrid attached property</summary>
 		private const int ColumnVisibilitySupport = 0;
-		public static readonly DependencyProperty ColumnVisibilitySupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnVisibilitySupport));
+		public static readonly DependencyProperty ColumnVisibilitySupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ColumnVisibilitySupport), Boxed.False, Gui_.EDPFlags.None);
 		public static bool GetColumnVisibilitySupport(DependencyObject obj) => (bool)obj.GetValue(ColumnVisibilitySupportProperty);
 		public static void SetColumnVisibilitySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibilitySupportProperty, value);
 		private static void ColumnVisibilitySupport_Changed(DependencyObject obj)
@@ -201,7 +202,7 @@ namespace Rylogic.Gui.WPF
 		//  Add 'gui:DataGrid_.AutoScrollToCurrent="True" to your DataGrid.
 
 		private const int AutoScrollToCurrent = 0;
-		public static readonly DependencyProperty AutoScrollToCurrentProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(AutoScrollToCurrent));
+		public static readonly DependencyProperty AutoScrollToCurrentProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(AutoScrollToCurrent), Boxed.False, Gui_.EDPFlags.None);
 		public static bool GetAutoScrollToCurrent(DependencyObject obj) => (bool)obj.GetValue(AutoScrollToCurrentProperty);
 		public static void SetAutoScrollToCurrent(DependencyObject obj, bool value) => obj.SetValue(AutoScrollToCurrentProperty, value);
 		private static void AutoScrollToCurrent_Changed(DependencyObject obj)
@@ -270,7 +271,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Reorder rows with drag/drop attached property</summary>
 		private const int ReorderRowsWithDragDrop = 0;
-		public static readonly DependencyProperty ReorderRowsWithDragDropProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ReorderRowsWithDragDrop));
+		public static readonly DependencyProperty ReorderRowsWithDragDropProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ReorderRowsWithDragDrop), Boxed.False, Gui_.EDPFlags.None);
 		public static bool GetReorderRowsWithDragDrop(DependencyObject obj) => (bool)obj.GetValue(ReorderRowsWithDragDropProperty);
 		public static void SetReorderRowsWithDragDrop(DependencyObject obj, bool value) => obj.SetValue(ReorderRowsWithDragDropProperty, value);
 		private static void ReorderRowsWithDragDrop_Changed(DependencyObject obj)

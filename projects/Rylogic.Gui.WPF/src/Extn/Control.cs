@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Foreground Attached property</summary>
 		public const int Foreground = 0;
-		public static readonly DependencyProperty ForegroundProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(Foreground));
+		public static readonly DependencyProperty ForegroundProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(Foreground), Brushes.Black, Gui_.EDPFlags.None);
 		public static SolidColorBrush GetForeground(DependencyObject obj) => (SolidColorBrush)obj.GetValue(ForegroundProperty);
 		public static void SetForeground(DependencyObject obj, SolidColorBrush value) => obj.SetValue(ForegroundProperty, value);
 		private static void Foreground_Changed(DependencyObject obj)
@@ -31,7 +31,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>HorizontalContentAlignment Attached Property</summary>
 		public const int HorizontalContentAlignment = 0;
-		public static readonly DependencyProperty HorizontalContentAlignmentProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(HorizontalContentAlignment));
+		public static readonly DependencyProperty HorizontalContentAlignmentProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(HorizontalContentAlignment), HorizontalAlignment.Left, Gui_.EDPFlags.None);
 		public static HorizontalAlignment GetHorizontalContentAlignment(DependencyObject obj) => (HorizontalAlignment)obj.GetValue(HorizontalContentAlignmentProperty);
 		public static void SetHorizontalContentAlignment(DependencyObject obj, SolidColorBrush value) => obj.SetValue(HorizontalContentAlignmentProperty, value);
 		private static void HorizontalContentAlignment_Changed(DependencyObject obj)
@@ -42,7 +42,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>VerticalContentAlignment Attached Property</summary>
 		public const int VerticalContentAlignment = 0;
-		public static readonly DependencyProperty VerticalContentAlignmentProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(VerticalContentAlignment));
+		public static readonly DependencyProperty VerticalContentAlignmentProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(VerticalContentAlignment), VerticalAlignment.Top, Gui_.EDPFlags.None);
 		public static VerticalAlignment GetVerticalContentAlignment(DependencyObject obj) => (VerticalAlignment)obj.GetValue(VerticalContentAlignmentProperty);
 		public static void SetVerticalContentAlignment(DependencyObject obj, SolidColorBrush value) => obj.SetValue(VerticalContentAlignmentProperty, value);
 		private static void VerticalContentAlignment_Changed(DependencyObject obj)
@@ -53,7 +53,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>EventToCommand Attached Property</summary>
 		public const int EventToCommand = 0;
-		public static readonly DependencyProperty EventToCommandProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(EventToCommand));
+		public static readonly DependencyProperty EventToCommandProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(EventToCommand), null, Gui_.EDPFlags.None);
 		public static string GetEventToCommand(DependencyObject obj) => (string)obj.GetValue(EventToCommandProperty);
 		public static void SetEventToCommand(DependencyObject obj, string value) => obj.SetValue(EventToCommandProperty, value);
 		private static void EventToCommand_Changed(DependencyObject obj)
@@ -128,7 +128,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>VerticalOffset property</summary>
 		public const int VerticalOffset = 0;
-		public static readonly DependencyProperty VerticalOffsetProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(VerticalOffset));
+		public static readonly DependencyProperty VerticalOffsetProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(VerticalOffset), 0.0, Gui_.EDPFlags.None);
 		public static double GetVerticalOffset(DependencyObject obj) => (double)obj.GetValue(VerticalOffsetProperty);
 		public static void SetVerticalOffset(DependencyObject obj, double value) => obj.SetValue(VerticalOffsetProperty, value);
 		private static void VerticalOffset_Changed(DependencyObject obj)

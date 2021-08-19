@@ -1,4 +1,4 @@
-//*****************************************************************************
+﻿//*****************************************************************************
 // Maths library
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
@@ -270,7 +270,7 @@ namespace pr
 		}
 	};
 
-	// Naive DFT implementation, used for testing. O(N�)
+	// Naive DFT implementation, used for testing. O(N²)
 	template <typename Real> void DFTNaive(Real const* in, std::complex<Real>* out, int N)
 	{
 		for (int i = 0; i != N; ++i)

@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF.Validators
 		}
 
 		/// <summary>Create an attached property called 'Validate' that can be bound to a property of type Func(T,ValidationResult)</summary>
-		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<PredicateValidator>("Pred", flags:FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<PredicateValidator>("Pred", null, Gui_.EDPFlags.None);
 		public static Func<object, ValidationResult> GetPred(DependencyObject obj) => (Func<object, ValidationResult>)obj.GetValue(PredProperty);
 		public static void SetPred(DependencyObject obj, Func<object, ValidationResult> value) => obj.SetValue(PredProperty, value);
 		private static void Pred_Changed(DependencyObject obj, Func<object, ValidationResult> new_value, Func<object, ValidationResult> old_value)
@@ -109,7 +109,7 @@ namespace Rylogic.Gui.WPF.Validators
 		}
 
 		/// <summary>The predicate for validating text</summary>
-		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<TextValidator>(nameof(Pred), flags: FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty PredProperty = Gui_.DPRegisterAttached<TextValidator>(nameof(Pred), null, Gui_.EDPFlags.None);
 		public static Func<string, ValidationResult> GetPred(DependencyObject obj) => (Func<string, ValidationResult>)obj.GetValue(PredProperty);
 		public static void SetPred(DependencyObject obj, Func<string, ValidationResult> value) => obj.SetValue(PredProperty, value);
 		private static void Pred_Changed(DependencyObject obj, Func<string, ValidationResult> new_value, Func<string, ValidationResult> old_value)

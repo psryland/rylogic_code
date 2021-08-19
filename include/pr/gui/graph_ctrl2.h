@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Graph Control
 //  Copyright (c) Rylogic Ltd 2015
 //*****************************************************************************************
@@ -93,7 +93,7 @@ namespace pr
 			//	RectF r;
 			//	if (!m_title.empty())         { gfx.MeasureString(m_title.c_str()         ,int(m_title.size())         ,&m_opts.m_font_title         ,PointF(), &r); rect.Y      += r.Height; rect.Height -= r.Height; }
 			//	if (!m_xaxis.m_label.empty()) { gfx.MeasureString(m_xaxis.m_label.c_str() ,int(m_xaxis.m_label.size()) ,&m_xaxis.m_opts.m_font_label ,PointF(), &r); rect.Height -= r.Height; }
-			//	if (!m_yaxis.m_label.empty()) { gfx.MeasureString(m_yaxis.m_label.c_str() ,int(m_yaxis.m_label.size()) ,&m_yaxis.m_opts.m_font_label ,PointF(), &r); rect.X      += r.Height; rect.Width -= r.Height; } // will be rotated by 90�
+			//	if (!m_yaxis.m_label.empty()) { gfx.MeasureString(m_yaxis.m_label.c_str() ,int(m_yaxis.m_label.size()) ,&m_yaxis.m_opts.m_font_label ,PointF(), &r); rect.X      += r.Height; rect.Width -= r.Height; } // will be rotated by 90°
 			//	
 			//	// Add space for tick labels
 			//	wchar_t const lbl[] = L"99999.999";

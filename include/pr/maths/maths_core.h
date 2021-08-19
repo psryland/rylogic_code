@@ -1388,6 +1388,43 @@ namespace pr
 		auto rn = Pow<double>(ratio, n + 1);
 		return static_cast<Type>(a0 * (1 - rn) / (1 - ratio));
 	}
+
+	// Permute the elements in 'arr'. Start with an ordered array; [0,N).
+	// Repeated calls generates all permutations of elements in the array. Number of permutations == n!
+	template <typename T, typename = maths::enable_if_intg<T>> bool PermutationFirst(T* arr, int n)
+	{
+		std::sort(arr, arr+n);
+		return n != 0;
+	}
+	template <typename T, typename = maths::enable_if_intg<T>> bool PermutationNext(T* arr, int n)
+	{
+		// Algorithm:
+		// - find the last pair of values that has increasing order.
+		// - swap the first of the pair with the next greater value from the values in [i+1,n)
+		// - sort the values in [i+1,n)
+		// e.g.
+		//   Given '524761', the last pair with increasing order is '47'.
+		//   Swap '4' with '6' because its the next greater value to the right of '4' => '526741'
+		//   Sort the values right of '6' => '526147'
+
+		// Find the last pair
+		int i = n - 1;
+		for (; i-- > 0 && arr[i] > arr[i+1];) {}
+		if (i == -1) return false;
+
+		// Swap 'arr[i]' with the nearest value greater than 'arr[i]'
+		// to the right of 'i' then sort the values in the range: [i+1, n)
+		int j = i + 1;
+		for (int k = j + 1; k < n; ++k)
+		{
+			if (arr[k] < arr[i]) continue;
+			if (arr[k] > arr[j]) continue;
+			j = k;
+		}
+		std::swap(arr[i], arr[j]);
+		std::sort(arr + i + 1, arr + n);
+		return true;
+	}
 }
 
 // Specialise ::std
@@ -1414,6 +1451,55 @@ namespace pr::maths
 {
 	PRUnitTest(MathsCoreTests)
 	{
+		{// Permutations
+			auto eql = [](int const* arr, int a, int b, int c, int d)
+			{
+				return arr[0] == a && arr[1] == b && arr[2] == c && arr[3] == d;
+			};
+			{// 4-sequential
+				int arr1[] = {1, 2, 3, 4};
+				PR_CHECK(PermutationFirst(arr1, _countof(arr1)) && eql(arr1, 1, 2, 3, 4), true);//0
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 2, 4, 3), true);//1
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 2, 4), true);//2
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 3, 4, 2), true);//3
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 2, 3), true);//4
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 1, 4, 3, 2), true);//5
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 3, 4), true);//6
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 1, 4, 3), true);//7
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 1, 4), true);//8
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 3, 4, 1), true);//9
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 1, 3), true);//10
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 2, 4, 3, 1), true);//11
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 2, 4), true);//12
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 1, 4, 2), true);//13
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 1, 4), true);//14
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 2, 4, 1), true);//15
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 1, 2), true);//16
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 3, 4, 2, 1), true);//17
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 2, 3), true);//18
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 1, 3, 2), true);//19
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 1, 3), true);//20
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 2, 3, 1), true);//21
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 1, 2), true);//22
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)) && eql(arr1, 4, 3, 2, 1), true);//23
+				PR_CHECK(PermutationNext(arr1, _countof(arr1)), false);//24
+			}
+			{// non-sequential
+				int i, arr2[] = {-1, 4, 11, 20};
+				for (i = 1; i != 24; ++i)//== 4!
+				{
+					PR_CHECK(PermutationNext(arr2, _countof(arr2)), true);
+					if (i == 6) PR_CHECK(eql(arr2, 4, -1, 11, 20), true);
+					if (i == 13) PR_CHECK(eql(arr2, 11, -1, 20, 4), true);
+				}
+				PR_CHECK(PermutationNext(arr2, _countof(arr2)), false);
+			}
+			{// large number of permutations
+				int i, arr3[] = {-10, -9, -8, -1, 0, +1, +3, +6, +9};
+				for (i = 1; PermutationNext(arr3, _countof(arr3)); ++i) {}
+				PR_CHECK(i == 362880, true); // == 9!
+			}
+		}
 		{// Floating point compare
 			float const _6dp = 1.000000111e-6f;
 

@@ -1,6 +1,6 @@
-//*****************************************
+ï»¿//*****************************************
 // PR Lua - Lua bindings for pr lib
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (C) Rylogic Ltd 2007
 //*****************************************
 // To add a new binding search for "Template"
 // (case, !whole word) and add code appropriately

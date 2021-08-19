@@ -18,6 +18,46 @@ namespace Rylogic.Gui.WPF
 {
 	public static partial class Gui_
 	{
+		[Flags]
+		public enum EDPFlags
+		{
+			/// <summary>No options are specified; the dependency property uses the default behavior of the Windows Presentation Foundation (WPF) property system.</summary>
+			None = FrameworkPropertyMetadataOptions.None,
+
+			/// <summary>The measure pass of layout compositions is affected by value changes to this dependency property.</summary>
+			AffectsMeasure = FrameworkPropertyMetadataOptions.AffectsMeasure,
+
+			/// <summary>The arrange pass of layout composition is affected by value changes to this dependency property.</summary>
+			AffectsArrange = FrameworkPropertyMetadataOptions.AffectsArrange,
+
+			/// <summary>The measure pass on the parent element is affected by value changes to this dependency property.</summary>
+			AffectsParentMeasure = FrameworkPropertyMetadataOptions.AffectsParentMeasure,
+
+			/// <summary>The arrange pass on the parent element is affected by value changes to this dependency property.</summary>
+			AffectsParentArrange = FrameworkPropertyMetadataOptions.AffectsParentArrange,
+
+			/// <summary>Some aspect of rendering or layout composition (other than measure or arrange) is affected by value changes to this dependency property.</summary>
+			AffectsRender = FrameworkPropertyMetadataOptions.AffectsRender,
+
+			/// <summary>The values of this dependency property are inherited by child elements.</summary>
+			Inherits = FrameworkPropertyMetadataOptions.Inherits,
+
+			/// <summary>The values of this dependency property span separated trees for purposes of property value inheritance.</summary>
+			OverridesInheritanceBehavior = FrameworkPropertyMetadataOptions.OverridesInheritanceBehavior,
+
+			/// <summary>Data binding to this dependency property is not allowed.</summary>
+			NotDataBindable = FrameworkPropertyMetadataOptions.NotDataBindable,
+
+			/// <summary>The System.Windows.Data.BindingMode for data bindings on this dependency property defaults to System.Windows.Data.BindingMode.TwoWay.</summary>
+			TwoWay = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
+
+			/// <summary>The values of this dependency property should be saved or restored by journaling processes, or when navigating by Uniform resource identifiers (URIs).</summary>
+			Journal = FrameworkPropertyMetadataOptions.Journal,
+
+			/// <summary>The subproperties on the value of this dependency property do not affect any aspect of rendering.</summary>
+			SubPropertiesDoNotAffectRender = FrameworkPropertyMetadataOptions.SubPropertiesDoNotAffectRender,
+		}
+
 		/// <summary>Framework property meta data</summary>
 		private class DPMeta :FrameworkPropertyMetadata
 		{
@@ -106,8 +146,8 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegister<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegister(typeof(T), prop_name, def, flags, upd);
-		public static DependencyProperty DPRegister(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
+		public static DependencyProperty DPRegister<T>(string prop_name, object? def, EDPFlags flags, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegister(typeof(T), prop_name, def, flags, upd);
+		public static DependencyProperty DPRegister(Type class_type, string prop_name, object? def, EDPFlags flags, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -126,15 +166,15 @@ namespace Rylogic.Gui.WPF
 			//    binding.ValidationRules.Clear(); etc).
 
 			// Get the meta data
-			var meta = DPMetaData(true, class_type, prop_name, def, flags, upd);
+			var meta = DPMetaData(true, class_type, prop_name, def, (FrameworkPropertyMetadataOptions)flags, upd);
 
 			// Register the property
 			return DependencyProperty.Register(prop_name, meta.PropType, class_type, meta, meta.Validate);
 		}
 
 		/// <summary>Wrapper for DependencyProperty.RegisterAttached that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegisterAttached(typeof(T), prop_name, def, flags, upd);
-		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object? def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
+		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object? def, EDPFlags flags, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged) => DPRegisterAttached(typeof(T), prop_name, def, flags, upd);
+		public static DependencyProperty DPRegisterAttached(Type class_type, string prop_name, object? def, EDPFlags flags, UpdateSourceTrigger upd = UpdateSourceTrigger.PropertyChanged)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -149,7 +189,7 @@ namespace Rylogic.Gui.WPF
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
 			// may not be a reference type, and 'null' may not be a valid default value.
-			var meta = DPMetaData(false, class_type, prop_name, def, flags, upd);
+			var meta = DPMetaData(false, class_type, prop_name, def, (FrameworkPropertyMetadataOptions)flags, upd);
 
 			// Register the attached property using the return type of 'Get<prop_name>'
 			return DependencyProperty.RegisterAttached(prop_name, meta.PropType, class_type, meta);

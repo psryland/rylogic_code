@@ -27,7 +27,7 @@ namespace Rylogic.Gui.WPF
 			get => GetValue(CtxProperty);
 			set => SetValue(CtxProperty, value);
 		}
-		public static readonly DependencyProperty CtxProperty = Gui_.DPRegister<DataContextRef>(nameof(Ctx));
+		public static readonly DependencyProperty CtxProperty = Gui_.DPRegister<DataContextRef>(nameof(Ctx), null, Gui_.EDPFlags.None);
 		protected override Freezable CreateInstanceCore() => throw new NotImplementedException();
 	}
 }

@@ -243,18 +243,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Resolves an image source and updates the <see cref="Icon" /> property accordingly.</summary>
 		[Category(CategoryName)]
 		[Description("Sets the displayed taskbar icon.")]
-		public ImageSource IconSource
+		public ImageSource? IconSource
 		{
-			get => (ImageSource)GetValue(IconSourceProperty);
+			get => (ImageSource?)GetValue(IconSourceProperty);
 			set => SetValue(IconSourceProperty, value);
 		}
-		private void IconSource_Changed(ImageSource new_value)
+		private void IconSource_Changed(ImageSource? new_value)
 		{
 			// Resolving the ImageSource at design time is unlikely to work
 			if (!WPFUtil.IsDesignMode)
-				Icon = new_value.ToIcon();
+				Icon = new_value?.ToIcon();
 		}
-		public static readonly DependencyProperty IconSourceProperty = Gui_.DPRegister<NotificationIcon>(nameof(IconSource));
+		public static readonly DependencyProperty IconSourceProperty = Gui_.DPRegister<NotificationIcon>(nameof(IconSource), null, Gui_.EDPFlags.None);
 
 		/// <summary>A tooltip text that is being displayed if no custom <see cref="ToolTip"/> was set or if custom tooltips are not supported.</summary>
 		[Category(CategoryName)]
@@ -270,7 +270,7 @@ namespace Rylogic.Gui.WPF
 			IconData.szTip = new_value;
 			Shell32.NotifyIcon(Shell32.ENotifyCommand.Modify, ref IconData);
 		}
-		public static readonly DependencyProperty ToolTipTextProperty = Gui_.DPRegister<NotificationIcon>(nameof(ToolTipText));
+		public static readonly DependencyProperty ToolTipTextProperty = Gui_.DPRegister<NotificationIcon>(nameof(ToolTipText), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>Associates a command that is being executed if the tray icon is being left-clicked.</summary>
 		[Category(CategoryName)]
@@ -280,7 +280,7 @@ namespace Rylogic.Gui.WPF
 			get => (ICommand?)GetValue(LeftClickCommandProperty);
 			set => SetValue(LeftClickCommandProperty, value);
 		}
-		public static readonly DependencyProperty LeftClickCommandProperty = Gui_.DPRegister<NotificationIcon>(nameof(LeftClickCommand));
+		public static readonly DependencyProperty LeftClickCommandProperty = Gui_.DPRegister<NotificationIcon>(nameof(LeftClickCommand), null, Gui_.EDPFlags.None);
 
 		/// <summary>Associates a command that is being executed if the tray icon is being right-clicked.</summary>
 		[Category(CategoryName)]
@@ -290,7 +290,7 @@ namespace Rylogic.Gui.WPF
 			get => (ICommand?)GetValue(RightClickCommandProperty);
 			set => SetValue(RightClickCommandProperty, value);
 		}
-		public static readonly DependencyProperty RightClickCommandProperty = Gui_.DPRegister<NotificationIcon>(nameof(RightClickCommand));
+		public static readonly DependencyProperty RightClickCommandProperty = Gui_.DPRegister<NotificationIcon>(nameof(RightClickCommand), null, Gui_.EDPFlags.None);
 
 		/// <summary>Category name that is set on designer properties.</summary>
 		public const string CategoryName = "NotifyIcon";

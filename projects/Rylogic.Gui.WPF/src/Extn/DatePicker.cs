@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -8,7 +9,7 @@ namespace Rylogic.Gui.WPF
 	{
 		/// <summary>Hide the textbox, just displaying the calender icon</summary>
 		public const int HideTextBox = 0;
-		public static readonly DependencyProperty HideTextBoxProperty = Gui_.DPRegisterAttached(typeof(DatePicker_), nameof(HideTextBox));
+		public static readonly DependencyProperty HideTextBoxProperty = Gui_.DPRegisterAttached(typeof(DatePicker_), nameof(HideTextBox), Boxed.False, Gui_.EDPFlags.None);
 		public static bool GetHideTextBox(DependencyObject obj) => (bool)obj.GetValue(HideTextBoxProperty);
 		public static void SetHideTextBox(DependencyObject obj, bool value) => obj.SetValue(HideTextBoxProperty, value);
 		private static void HideTextBox_Changed(DependencyObject obj)
@@ -27,7 +28,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Change the watermark content</summary>
 		public const int Watermark = 0;
-		public static readonly DependencyProperty WatermarkProperty = Gui_.DPRegisterAttached(typeof(DatePicker_), nameof(Watermark));
+		public static readonly DependencyProperty WatermarkProperty = Gui_.DPRegisterAttached(typeof(DatePicker_), nameof(Watermark), string.Empty, Gui_.EDPFlags.None);
 		public static string GetWatermark(DependencyObject obj) => (string)obj.GetValue(WatermarkProperty);
 		public static void SetWatermark(DependencyObject obj, string value) => obj.SetValue(WatermarkProperty, value);
 		private static void Watermark_Changed(DependencyObject obj)

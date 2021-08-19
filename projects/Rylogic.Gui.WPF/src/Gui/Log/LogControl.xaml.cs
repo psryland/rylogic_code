@@ -100,6 +100,7 @@ namespace Rylogic.Gui.WPF
 			// Limit the number of log entries to display
 			MaxLines = 500;
 			MaxFileBytes = 2 * 1024 * 1024;
+			FileBaseOffset = 0;
 
 			// Commands
 			BrowseForLogFile = Command.Create(this, BrowseForLogFileInternal);
@@ -198,6 +199,7 @@ namespace Rylogic.Gui.WPF
 				m_watch!.Remove(old_value);
 				Util.Dispose(ref m_watch);
 			}
+			FileBaseOffset = 0;
 			if (new_value != null)
 			{
 				m_watch = new FileWatch { PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS) };
@@ -218,7 +220,7 @@ namespace Rylogic.Gui.WPF
 					var fend = file.Seek(0, SeekOrigin.End);
 
 					// Determine the file offset to start reading from
-					var fpos = Math.Max(0, fend - MaxFileBytes);
+					var fpos = Math.Max(FileBaseOffset, fend - MaxFileBytes);
 					var le = LogEntries.LastOrDefault(x => x.FromFile);
 					if (le != null) fpos = Math.Min(le.FPos, fend);
 
@@ -271,7 +273,7 @@ namespace Rylogic.Gui.WPF
 				return true;
 			}
 		}
-		public static readonly DependencyProperty LogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(LogFilepath));
+		public static readonly DependencyProperty LogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(LogFilepath), null, Gui_.EDPFlags.TwoWay);
 		private byte[] m_buf = new byte[8192];
 		private FileWatch? m_watch;
 
@@ -295,7 +297,7 @@ namespace Rylogic.Gui.WPF
 			SignalRefresh();
 			NotifyPropertyChanged(nameof(LogEntryPattern));
 		}
-		public static readonly DependencyProperty LogEntryPatternProperty = Gui_.DPRegister<LogControl>(nameof(LogEntryPattern));
+		public static readonly DependencyProperty LogEntryPatternProperty = Gui_.DPRegister<LogControl>(nameof(LogEntryPattern), null, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The time of the first log entry</summary>
 		public DateTimeOffset Epoch
@@ -304,7 +306,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(EpochProperty, value);
 		}
 		private void Epoch_Changed() => SignalRefresh();
-		public static readonly DependencyProperty EpochProperty = Gui_.DPRegister<LogControl>(nameof(Epoch));
+		public static readonly DependencyProperty EpochProperty = Gui_.DPRegister<LogControl>(nameof(Epoch), DateTimeOffset.Now, Gui_.EDPFlags.None);
 
 		/// <summary>If docked in a doc container, pop-out when new messages are added to the log</summary>
 		public bool PopOutOnNewMessages
@@ -312,7 +314,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(PopOutOnNewMessagesProperty);
 			set => SetValue(PopOutOnNewMessagesProperty, value);
 		}
-		public static readonly DependencyProperty PopOutOnNewMessagesProperty = Gui_.DPRegister<LogControl>(nameof(PopOutOnNewMessages));
+		public static readonly DependencyProperty PopOutOnNewMessagesProperty = Gui_.DPRegister<LogControl>(nameof(PopOutOnNewMessages), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>Show UI parts related to log files</summary>
 		public bool ShowLogFilepath
@@ -320,7 +322,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(ShowLogFilepathProperty);
 			set => SetValue(ShowLogFilepathProperty, value);
 		}
-		public static readonly DependencyProperty ShowLogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(ShowLogFilepath));
+		public static readonly DependencyProperty ShowLogFilepathProperty = Gui_.DPRegister<LogControl>(nameof(ShowLogFilepath), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>Line wrap mode</summary>
 		public bool LineWrap
@@ -332,7 +334,7 @@ namespace Rylogic.Gui.WPF
 		{
 			m_view.HorizontalScrollBarVisibility = new_value ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 		}
-		public static readonly DependencyProperty LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
+		public static readonly DependencyProperty LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap), Boxed.False, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Scroll the view to the last entry</summary>
 		public bool TailScroll
@@ -345,7 +347,7 @@ namespace Rylogic.Gui.WPF
 			if (new_value)
 				ScrollToEnd();
 		}
-		public static readonly DependencyProperty TailScrollProperty = Gui_.DPRegister<LogControl>(nameof(TailScroll));
+		public static readonly DependencyProperty TailScrollProperty = Gui_.DPRegister<LogControl>(nameof(TailScroll), Boxed.False, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The minimum log level to display</summary>
 		public ELogLevel FilterLevel
@@ -354,7 +356,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(FilterLevelProperty, value);
 		}
 		private void FilterLevel_Changed() => LogEntriesView?.Refresh();
-		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel));
+		public static readonly DependencyProperty FilterLevelProperty = Gui_.DPRegister<LogControl>(nameof(FilterLevel), ELogLevel.Info, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The column names that are hidden by default (Delimited by spaces, commas, or semicolons)</summary>
 		public string HiddenColumns
@@ -363,7 +365,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(HiddenColumnsProperty, value);
 		}
 		private void HiddenColumns_Changed() => UpdateColumnVisibility();
-		public static readonly DependencyProperty HiddenColumnsProperty = Gui_.DPRegister<LogControl>(nameof(HiddenColumns), string.Empty);
+		public static readonly DependencyProperty HiddenColumnsProperty = Gui_.DPRegister<LogControl>(nameof(HiddenColumns), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>String format for the timestamp</summary>
 		public string TimestampFormat
@@ -372,7 +374,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(TimestampFormatProperty, value);
 		}
 		private void TimestampFormat_Changed() => SignalRefresh();
-		public static readonly DependencyProperty TimestampFormatProperty = Gui_.DPRegister<LogControl>(nameof(TimestampFormat), "yyyy-MM-dd HH:mm:ss.fff");
+		public static readonly DependencyProperty TimestampFormatProperty = Gui_.DPRegister<LogControl>(nameof(TimestampFormat), "yyyy-MM-dd HH:mm:ss.fff", Gui_.EDPFlags.None);
 
 		/// <summary>String format for the elapsed time. Optional parts allowed, E.g. "[d\\.][hh\\:][mm\\:]ss\\.fff"</summary>
 		public string ElapsedFormat
@@ -381,7 +383,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(ElapsedFormatProperty, value);
 		}
 		private void ElapsedFormat_Changed() => SignalRefresh();
-		public static readonly DependencyProperty ElapsedFormatProperty = Gui_.DPRegister<LogControl>(nameof(ElapsedFormat), "c");
+		public static readonly DependencyProperty ElapsedFormatProperty = Gui_.DPRegister<LogControl>(nameof(ElapsedFormat), "c", Gui_.EDPFlags.None);
 
 		/// <summary>A special character used to mark the start of a log entry. Must be a 1-byte UTF8 character</summary>
 		public char EntryDelimiter { get; set; }
@@ -392,6 +394,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The maximum number of bytes to read from the log file</summary>
 		public int MaxFileBytes { get; set; }
 		
+		/// <summary>The minimum position in the log file to read from. Set when 'Clear' is called</summary>
+		public long FileBaseOffset { get; set; }
+
 		/// <summary>Get/Set watching of the log file for changes</summary>
 		public bool Freeze
 		{
@@ -602,6 +607,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Reset the error log to empty</summary>
 		public void Clear()
 		{
+			// Determine the file position of the last 'FromFile' log entry.
+			if (LogFilepath != null && LogEntries.LastOrDefault(x => x.FromFile) is LogEntry last)
+				FileBaseOffset = last.FPos + Encoding.UTF8.GetBytes(last.Text).Length;
+			else
+				FileBaseOffset = 0;
+
 			LogEntries.Clear();
 		}
 

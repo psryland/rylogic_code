@@ -1,4 +1,4 @@
-//*********************************************
+ï»¿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -199,10 +199,10 @@ namespace pr::physics
 		}
 		InertiaInv InertiaInvOS(m3_cref<> o2a, v4_cref<> com = v4{}) const
 		{
-			auto inertia¯ = InertiaInvOS();
-			inertia¯ = Rotate(inertia¯, o2a);
-			inertia¯.CoM(com);
-			return inertia¯;
+			auto inertiaÂ¯ = InertiaInvOS();
+			inertiaÂ¯ = Rotate(inertiaÂ¯, o2a);
+			inertiaÂ¯.CoM(com);
+			return inertiaÂ¯;
 		}
 		Inertia InertiaOS(m4_cref<> o2a) const
 		{
@@ -379,7 +379,7 @@ namespace pr::physics
 			Evolve(rb, 1.0f);
 
 			// Check position
-			// Distance travelled: S = So + Vot + 0.5At²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
+			// Distance travelled: S = So + Vot + 0.5AtÂ²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
 			auto o2w = rb.O2W();
 			PR_CHECK(FEql(o2w.rot, m3x4Identity), true);
 			PR_CHECK(FEql(o2w.pos, v4{0.5f / mass,0,0,1}), true);
@@ -414,8 +414,8 @@ namespace pr::physics
 			Evolve(rb, 1.0f);
 
 			// Check position
-			// Distance: S = So + Vot + 0.5At²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
-			// Rotation: O = Oo + Wot + 0.5At²; Oo = 0, Wo = 0, t = 1, A = I^T, T = 2  =>  O = 0.5*I^(0,0,2)
+			// Distance: S = So + Vot + 0.5AtÂ²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
+			// Rotation: O = Oo + Wot + 0.5AtÂ²; Oo = 0, Wo = 0, t = 1, A = I^T, T = 2  =>  O = 0.5*I^(0,0,2)
 			auto o2w = rb.O2W();
 			auto pos = v4{0.5f / mass,0,0,1};
 			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));

@@ -79,7 +79,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			InvalidateMeasure(DispatcherPriority.Normal);
 			DocumentChanged?.Invoke(this, EventArgs.Empty);
 		}
-		public static readonly DependencyProperty DocumentProperty = Gui_.DPRegister<TextView>(nameof(Document));
+		public static readonly DependencyProperty DocumentProperty = Gui_.DPRegister<TextView>(nameof(Document), null, Gui_.EDPFlags.None);
 
 		/// <summary>Raised when the document property has changed.</summary>
 		public event EventHandler? DocumentChanged;

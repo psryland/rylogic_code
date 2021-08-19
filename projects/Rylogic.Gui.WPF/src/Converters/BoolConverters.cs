@@ -122,7 +122,8 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 		public object? ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{
-			return parameter;
+			// Cannot convert back to enum flag, because there isn't a way to set one bit on the bound variable.
+			throw new Exception("Unsupported target type");
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
@@ -139,7 +140,7 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 		public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
 		{
-			if (!(value is bool b)) return null;
+			if (value is not bool b) return null;
 			return Array_.New<object>(targetTypes.Length, i => b);
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
@@ -157,7 +158,7 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 		public object[]? ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
 		{
-			if (!(value is bool b)) return null;
+			if (value is not bool b) return null;
 			return Array_.New<object>(targetTypes.Length, i => b);
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
@@ -169,14 +170,16 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Visible if true</summary>
 	public class BoolToVisible : MarkupExtension, IValueConverter
 	{
+		// Notes:
+		// Consider using BoolSelect
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is bool b)) return null;
+			if (value is not bool b) return null;
 			return b ? Visibility.Visible : Visibility.Collapsed;
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is Visibility v)) return null;
+			if (value is not Visibility v) return null;
 			return v == Visibility.Visible;
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
@@ -188,14 +191,16 @@ namespace Rylogic.Gui.WPF.Converters
 	/// <summary>Collapsed if true</summary>
 	public class BoolToCollapsed : MarkupExtension, IValueConverter
 	{
+		// Notes:
+		// Consider using BoolSelect
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is bool b)) return null;
+			if (value is not bool b) return null;
 			return b ? Visibility.Collapsed : Visibility.Visible;
 		}
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is Visibility v)) return null;
+			if (value is not Visibility v) return null;
 			return v == Visibility.Collapsed;
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
@@ -232,8 +237,8 @@ namespace Rylogic.Gui.WPF.Converters
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			// Allow 'value' to be non-boolean, where not-null == true
-			if (!(value is bool b)) b = value != null;
-			if (!(parameter is string s)) return null;
+			if (value is not bool b) b = value != null;
+			if (parameter is not string s) return null;
 
 			try
 			{

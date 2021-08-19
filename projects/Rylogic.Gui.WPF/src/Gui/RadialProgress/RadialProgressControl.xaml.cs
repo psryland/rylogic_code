@@ -1,6 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Drawing.Text;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -40,7 +39,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(MinimumProperty, value);
 		}
 		private void Minimum_Changed() => UpdateGfx();
-		public static readonly DependencyProperty MinimumProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Minimum), 0.0);
+		public static readonly DependencyProperty MinimumProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Minimum), 0.0, Gui_.EDPFlags.None);
 
 		/// <summary>Progress maximum value</summary>
 		public double Maximum
@@ -49,7 +48,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(MaximumProperty, value);
 		}
 		private void Maximum_Changed() => UpdateGfx();
-		public static readonly DependencyProperty MaximumProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Maximum), 1.0);
+		public static readonly DependencyProperty MaximumProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Maximum), 1.0, Gui_.EDPFlags.None);
 
 		/// <summary>Progress value</summary>
 		public double Value
@@ -58,7 +57,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(ValueProperty, value);
 		}
 		private void Value_Changed() => UpdateGfx();
-		public static readonly DependencyProperty ValueProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Value), 0.5);
+		public static readonly DependencyProperty ValueProperty = Gui_.DPRegister<RadialProgressControl>(nameof(Value), 0.5, Gui_.EDPFlags.None);
 
 		/// <summary>Background arc colour</summary>
 		public Brush BackArcColor
@@ -67,7 +66,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(BackArcColorProperty, value);
 		}
 		private void BackArcColor_Changed() => UpdateGfx();
-		public static readonly DependencyProperty BackArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BackArcColor), new Colour32(0x80A0A0A0).ToMediaBrush());
+		public static readonly DependencyProperty BackArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BackArcColor), new Colour32(0x80A0A0A0).ToMediaBrush(), Gui_.EDPFlags.None);
 
 		/// <summary>Width of the background arc</summary>
 		public double? BackArcWidth
@@ -76,7 +75,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(BackArcWidthProperty, value);
 		}
 		private void BackArcWidth_Changed() => UpdateGfx();
-		public static readonly DependencyProperty BackArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BackArcWidth));
+		public static readonly DependencyProperty BackArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BackArcWidth), null, Gui_.EDPFlags.None);
 
 		/// <summary>Glow arc colour</summary>
 		public Color? GlowArcColor
@@ -85,7 +84,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(GlowArcColorProperty, value);
 		}
 		private void GlowArcColor_Changed() => UpdateGfx();
-		public static readonly DependencyProperty GlowArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(GlowArcColor));
+		public static readonly DependencyProperty GlowArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(GlowArcColor), null, Gui_.EDPFlags.None);
 
 		/// <summary>Width of the glow arc</summary>
 		public double? GlowArcWidth
@@ -94,7 +93,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(GlowArcWidthProperty, value);
 		}
 		private void GlowArcWidth_Changed() => UpdateGfx();
-		public static readonly DependencyProperty GlowArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(GlowArcWidth));
+		public static readonly DependencyProperty GlowArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(GlowArcWidth), null, Gui_.EDPFlags.None);
 
 		/// <summary>Arc colour</summary>
 		public Color ArcColor
@@ -103,7 +102,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(ArcColorProperty, value);
 		}
 		private void ArcColor_Changed() => UpdateGfx();
-		public static readonly DependencyProperty ArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(ArcColor), new Colour32(0xFFA0C0E0).ToMediaColor());
+		public static readonly DependencyProperty ArcColorProperty = Gui_.DPRegister<RadialProgressControl>(nameof(ArcColor), new Colour32(0xFFA0C0E0).ToMediaColor(), Gui_.EDPFlags.None);
 
 		/// <summary>Arc width</summary>
 		public double ArcWidth
@@ -112,7 +111,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(ArcWidthProperty, value);
 		}
 		private void ArcWidth_Changed() => UpdateGfx();
-		public static readonly DependencyProperty ArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(ArcWidth), 6.0);
+		public static readonly DependencyProperty ArcWidthProperty = Gui_.DPRegister<RadialProgressControl>(nameof(ArcWidth), 6.0, Gui_.EDPFlags.None);
 
 		/// <summary>Start position angle</summary>
 		public double BegAngle
@@ -121,7 +120,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(BegAngleProperty, value);
 		}
 		private void BegAngle_Changed() => UpdateGfx();
-		public static readonly DependencyProperty BegAngleProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BegAngle), 0.0);
+		public static readonly DependencyProperty BegAngleProperty = Gui_.DPRegister<RadialProgressControl>(nameof(BegAngle), 0.0, Gui_.EDPFlags.None);
 
 		/// <summary>Start position angle</summary>
 		public double EndAngle
@@ -130,7 +129,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(EndAngleProperty, value);
 		}
 		private void EndAngle_Changed() => UpdateGfx();
-		public static readonly DependencyProperty EndAngleProperty = Gui_.DPRegister<RadialProgressControl>(nameof(EndAngle), 0.0);
+		public static readonly DependencyProperty EndAngleProperty = Gui_.DPRegister<RadialProgressControl>(nameof(EndAngle), 0.0, Gui_.EDPFlags.None);
 
 		/// <summary>Show the progress text</summary>
 		public ERadialProgressTextFormat TextFormat
@@ -139,7 +138,7 @@ namespace Rylogic.Gui.WPF
 			set => SetValue(TextFormatProperty, value);
 		}
 		private void TextFormat_Changed() => UpdateGfx();
-		public static readonly DependencyProperty TextFormatProperty = Gui_.DPRegister<RadialProgressControl>(nameof(TextFormat), ERadialProgressTextFormat.None);
+		public static readonly DependencyProperty TextFormatProperty = Gui_.DPRegister<RadialProgressControl>(nameof(TextFormat), ERadialProgressTextFormat.None, Gui_.EDPFlags.None);
 
 		/// <summary></summary>
 		private void UpdateGfx()

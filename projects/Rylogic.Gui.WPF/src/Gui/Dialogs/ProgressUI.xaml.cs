@@ -137,15 +137,15 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(DescriptionProperty);
 			set => SetValue(DescriptionProperty, value);
 		}
-		public static readonly DependencyProperty DescriptionProperty = Gui_.DPRegister<ProgressUI>(nameof(Description));
+		public static readonly DependencyProperty DescriptionProperty = Gui_.DPRegister<ProgressUI>(nameof(Description), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>Image source for the prompt icon</summary>
 		public ImageSource? Image
 		{
-			get => (ImageSource)GetValue(ImageProperty);
+			get => (ImageSource?)GetValue(ImageProperty);
 			set => SetValue(ImageProperty, value);
 		}
-		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<ProgressUI>(nameof(Image));
+		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<ProgressUI>(nameof(Image), null, Gui_.EDPFlags.None);
 
 		/// <summary>Text displayed within the progress bar</summary>
 		public string ProgressBarText
@@ -153,7 +153,7 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(ProgressBarTextProperty);
 			set => SetValue(ProgressBarTextProperty, value);
 		}
-		public static readonly DependencyProperty ProgressBarTextProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarText));
+		public static readonly DependencyProperty ProgressBarTextProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarText), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>True for tasks of unknown length</summary>
 		public bool ProgressIsIndeterminate
@@ -161,7 +161,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(ProgressIsIndeterminateProperty);
 			set => SetValue(ProgressIsIndeterminateProperty, value);
 		}
-		public static readonly DependencyProperty ProgressIsIndeterminateProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressIsIndeterminate));
+		public static readonly DependencyProperty ProgressIsIndeterminateProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressIsIndeterminate), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>True if the progress bar should be shown</summary>
 		public bool ProgressBarVisible
@@ -169,7 +169,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(ProgressBarVisibleProperty);
 			set => SetValue(ProgressBarVisibleProperty, value);
 		}
-		public static readonly DependencyProperty ProgressBarVisibleProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarVisible));
+		public static readonly DependencyProperty ProgressBarVisibleProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarVisible), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>True if the cancel button is enabled</summary>
 		public bool CancelEnabled
@@ -177,7 +177,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(CancelEnabledProperty);
 			set => SetValue(CancelEnabledProperty, value);
 		}
-		public static readonly DependencyProperty CancelEnabledProperty = Gui_.DPRegister<ProgressUI>(nameof(CancelEnabled));
+		public static readonly DependencyProperty CancelEnabledProperty = Gui_.DPRegister<ProgressUI>(nameof(CancelEnabled), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>An event raised when the task is complete</summary>
 		public ManualResetEvent Done { get; }

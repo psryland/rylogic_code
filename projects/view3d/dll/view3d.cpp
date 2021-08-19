@@ -1984,7 +1984,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 		Image src(width, height, data, options.m_format);
 		if (src.m_pixels != nullptr && src.m_pitch.x * src.m_pitch.y != pr::s_cast<int>(data_size))
 			throw std::runtime_error("Incorrect data size provided");
-		
+
 		Texture2DDesc tdesc(src);
 		tdesc.Format = options.m_format;
 		tdesc.MipLevels = options.m_mips;

@@ -1,4 +1,4 @@
-//*****************************************
+ï»¿//*****************************************
 // XmlLite wrapper
 //	Copyright (C) Paul Ryland 2009
 //*****************************************
@@ -322,7 +322,7 @@ namespace pr
 				case SC_E_MAXENTITYEXPANSION:     ss << "entity expansion exceeds limit in XmlReaderProperty_MaxEntityExpansion"; break;
 				case WR_E_NONWHITESPACE:          ss << "writer: specified string is not whitespace"; break;
 				case WR_E_NSPREFIXDECLARED:       ss << "writer: namespace prefix is already declared with a different namespace"; break;
-				case WR_E_NSPREFIXWITHEMPTYNSURI: ss << "writer: It is not allowed to declare a namespace prefix with empty URI (for example xmlns:p=””)."; break;
+				case WR_E_NSPREFIXWITHEMPTYNSURI: ss << "writer: It is not allowed to declare a namespace prefix with empty URI (for example xmlns:p='')."; break;
 				case WR_E_DUPLICATEATTRIBUTE:     ss << "writer: duplicate attribute"; break;
 				case WR_E_XMLNSPREFIXDECLARATION: ss << "writer: can not redefine the xmlns prefix"; break;
 				case WR_E_XMLPREFIXDECLARATION:   ss << "writer: xml prefix must have the http://www.w3.org/XML/1998/namespace URI"; break;

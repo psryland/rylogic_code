@@ -1,4 +1,4 @@
-//*********************************
+ï»¿//*********************************
 // GUID helper functions
 //  Copyright (c) Rylogic Ltd 2006
 //*********************************
@@ -48,7 +48,7 @@ namespace pr
 		return guid;
 	}
 
-	// Creates a name-based UUID using the algorithm from RFC 4122 §4.3.
+	// Creates a name-based UUID using the algorithm from RFC 4122 section 4.3.
 	// namespaceId - The ID of the namespace.
 	// name - The name (within that namespace).
 	// version - The version number of the UUID to create; this value must be either 3 (for MD5 hashing) or 5 (for SHA-1 hashing).

@@ -7,11 +7,6 @@ namespace RyLogViewer
 	/// <summary>Interaction logic for ColourPickerUI.xaml</summary>
 	public partial class ColourPickerUI : Window
 	{
-		static ColourPickerUI()
-		{
-			TextColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(TextColour), Colors.Black);
-			BackColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(BackColour), Colors.White);
-		}
 		public ColourPickerUI()
 		{
 			InitializeComponent();
@@ -27,17 +22,17 @@ namespace RyLogViewer
 		/// <summary></summary>
 		public Color TextColour
 		{
-			get { return (Color)GetValue(TextColourProperty); }
-			set { SetValue(TextColourProperty, value); }
+			get => (Color)GetValue(TextColourProperty);
+			set => SetValue(TextColourProperty, value);
 		}
-		public static readonly DependencyProperty TextColourProperty;
+		public static readonly DependencyProperty TextColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(TextColour), Colors.Black, Gui_.EDPFlags.TwoWay);
 
 		/// <summary></summary>
 		public Color BackColour
 		{
-			get { return (Color)GetValue(BackColourProperty); }
-			set { SetValue(BackColourProperty, value); }
+			get => (Color)GetValue(BackColourProperty);
+			set => SetValue(BackColourProperty, value);
 		}
-		public static readonly DependencyProperty BackColourProperty;
+		public static readonly DependencyProperty BackColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(BackColour), Colors.White, Gui_.EDPFlags.TwoWay);
 	}
 }

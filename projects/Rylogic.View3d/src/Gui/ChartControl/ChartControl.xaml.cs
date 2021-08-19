@@ -271,10 +271,15 @@ namespace Rylogic.Gui.WPF
 						PositionAxisPanels();
 						break;
 					}
+					case nameof(OptionsData.Axis.ShowGridLines):
+					{
+						Scene.Invalidate();
+						break;
+					}
 				}
 			}
 		}
-		public static readonly DependencyProperty OptionsProperty = Gui_.DPRegister<ChartControl>(nameof(Options), new OptionsData());
+		public static readonly DependencyProperty OptionsProperty = Gui_.DPRegister<ChartControl>(nameof(Options), new OptionsData(), Gui_.EDPFlags.None);
 
 		/// <summary>Scene background colour</summary>
 		public SolidColorBrush SceneBackground

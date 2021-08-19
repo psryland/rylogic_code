@@ -29,7 +29,7 @@ namespace Rylogic.Gui.WPF
 		{
 			ColorChanged?.Invoke(this, new ColourWheel.ColourEventArgs(Colour));
 		}
-		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour));
+		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour), Colour32.White, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Raised when the colour is changed</summary>
 		public event EventHandler<ColourWheel.ColourEventArgs>? ColorChanged;

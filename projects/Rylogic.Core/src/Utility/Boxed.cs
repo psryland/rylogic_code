@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Rylogic.Utility
+﻿namespace Rylogic.Utility
 {
 	public static class Boxed
 	{
@@ -17,5 +13,9 @@ namespace Rylogic.Utility
 		/// <summary>Boxed int constants</summary>
 		public static readonly object IntZero = 0;
 		public static readonly object IntOne = 1;
+
+		/// <summary>Boxed double constants</summary>
+		public static readonly object DblZero = 0.0;
+		public static readonly object DblOne = 1.0;
 	}
 }

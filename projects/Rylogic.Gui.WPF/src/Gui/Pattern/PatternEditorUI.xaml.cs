@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -47,7 +48,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(StayOpenProperty);
 			set => SetValue(StayOpenProperty, value);
 		}
-		public static readonly DependencyProperty StayOpenProperty = Gui_.DPRegister<PatternEditorUI>(nameof(StayOpen));
+		public static readonly DependencyProperty StayOpenProperty = Gui_.DPRegister<PatternEditorUI>(nameof(StayOpen), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>Close the window</summary>
 		public Command Cancel { get; }

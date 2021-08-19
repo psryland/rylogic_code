@@ -33,10 +33,14 @@ namespace Rylogic.Gui.WPF
 		private const int DockSiteCount = 5;
 
 		/// <summary>Create a new dock container</summary>
+		static DockContainer()
+		{
+			// DockContainer settings using WPF types
+			Xml_.Config.SupportWPFTypes();
+		}
 		public DockContainer()
 		{
 			InitializeComponent();
-
 			Options = new OptionsData();
 			m_all_content = new HashSet<DockControl>();
 			ActiveContentManager = new ActiveContentManager(this);

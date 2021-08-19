@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Rylogic.Gui.WPF.ChartDetail;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -59,7 +60,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(ExpandedProperty);
 			set => SetValue(ExpandedProperty, value);
 		}
-		public static readonly DependencyProperty ExpandedProperty = Gui_.DPRegister<ChartLegend>(nameof(Expanded), false);
+		public static readonly DependencyProperty ExpandedProperty = Gui_.DPRegister<ChartLegend>(nameof(Expanded), Boxed.True, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>True if items in the legend can be reordered</summary>
 		public bool CanUsersReorderItems
@@ -67,7 +68,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(CanUsersReorderItemsProperty);
 			set => SetValue(CanUsersReorderItemsProperty, value);
 		}
-		public static readonly DependencyProperty CanUsersReorderItemsProperty = Gui_.DPRegister<ChartLegend>(nameof(CanUsersReorderItems), false);
+		public static readonly DependencyProperty CanUsersReorderItemsProperty = Gui_.DPRegister<ChartLegend>(nameof(CanUsersReorderItems), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>The elements to display</summary>
 		public IEnumerable ItemsSource
@@ -75,7 +76,7 @@ namespace Rylogic.Gui.WPF
 			get => (IEnumerable)GetValue(ItemsSourceProperty);
 			set => SetValue(ItemsSourceProperty, value);
 		}
-		public static readonly DependencyProperty ItemsSourceProperty = Gui_.DPRegister<ChartLegend>(nameof(ItemsSource), flags: FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty ItemsSourceProperty = Gui_.DPRegister<ChartLegend>(nameof(ItemsSource), null, Gui_.EDPFlags.None);
 
 		/// <summary>The selected element</summary>
 		public IChartLegendItem? SelectedItem

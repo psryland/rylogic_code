@@ -14,18 +14,14 @@ namespace Rylogic.Gui.WPF
 		//  The column type is basically a factory for cells in that column, the 'GenerateElement' method
 		//  forwards the binding on to each created cell. The binding can contain a converter that converts
 		//  the row type into some other type that is used by the bindings in the 'DataTemplate'.
-		static DataGridBoundTemplateColumn()
-		{
-			BindingProperty = Gui_.DPRegister<DataGridBoundTemplateColumn>(nameof(Binding));
-		}
 
 		/// <summary>The binding forwarded to the 'CellTemplate' instances</summary>
 		public Binding Binding
 		{
-			get { return (Binding)GetValue(BindingProperty); }
-			set { SetValue(BindingProperty, value); }
+			get => (Binding)GetValue(BindingProperty);
+			set => SetValue(BindingProperty, value);
 		}
-		public static readonly DependencyProperty BindingProperty;
+		public static readonly DependencyProperty BindingProperty = Gui_.DPRegister<DataGridBoundTemplateColumn>(nameof(Binding), null, Gui_.EDPFlags.None);
 
 		// Cell factory methods
 		protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)

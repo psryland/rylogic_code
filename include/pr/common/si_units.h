@@ -1,4 +1,4 @@
-//***********************************************
+ï»¿//***********************************************
 // SI units
 //  Copyright (c) Rylogic Ltd 2014
 //***********************************************
@@ -12,20 +12,20 @@ namespace pr
 	typedef double seconds_t;
 	typedef double kilograms_t;
 	typedef double kilograms_p_sec_t;
-	typedef double kilograms_p_metre³_t;
+	typedef double kilograms_p_metreÂ³_t;
 	typedef double kilogram_metres_p_sec_t;
 	typedef double metres_t;
 	typedef double metres_p_sec_t;
-	typedef double metres_p_sec²_t;
-	typedef double metres³_t;
-	typedef double metres³_p_day_t;
+	typedef double metres_p_secÂ²_t;
+	typedef double metresÂ³_t;
+	typedef double metresÂ³_p_day_t;
 	typedef double days_t;
 	typedef double joules_t;
 	typedef double kelvin_t;
 	typedef double celsius_t;
-	typedef double joules_p_metres³_t;
+	typedef double joules_p_metresÂ³_t;
 	typedef double joules_p_kilogram_t;
-	typedef double metres³_p_kilogram_p_sec²_t;
+	typedef double metresÂ³_p_kilogram_p_secÂ²_t;
 
 	// Conversions
 	inline kelvin_t CelsiusToKelvin(celsius_t c) { return c + 273.15; }

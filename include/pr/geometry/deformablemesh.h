@@ -1,6 +1,6 @@
-//*********************************************
+ï»¿//*********************************************
 // DeformableMesh
-//  Copyright © Paul Ryland May 2007
+//  Copyright (C) Paul Ryland May 2007
 //*********************************************
 
 #ifndef PR_GEOM_DEFORMABLE_MESH_H

@@ -63,44 +63,73 @@ namespace Binance.API
 			var jObject = JObject.Load(reader);
 			var value = jObject.ToObject<ServerRulesData.Filter>();
 
-			var item = (ServerRulesData.Filter)null;
+			ServerRulesData.Filter item;
 			switch (value.FilterType)
 			{
-			case EFilterType.PRICE_FILTER:
-				item = new ServerRulesData.FilterPrice();
-				break;
-			case EFilterType.PERCENT_PRICE:
-				item = new ServerRulesData.FilterPercentPrice();
-				break;
-			case EFilterType.LOT_SIZE:
-				item = new ServerRulesData.FilterLotSize();
-				break;
-			case EFilterType.MARKET_LOT_SIZE:
-				item = new ServerRulesData.FilterLotSize();
-				break;
-			case EFilterType.MIN_NOTIONAL:
-				item = new ServerRulesData.FilterMinNotional();
-				break;
-			case EFilterType.MAX_NUM_ORDERS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			case EFilterType.MAX_NUM_ALGO_ORDERS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			case EFilterType.EXCHANGE_MAX_NUM_ORDERS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			case EFilterType.EXCHANGE_MAX_NUM_ALGO_ORDERS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			case EFilterType.MAX_NUM_ICEBERG_ORDERS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			case EFilterType.ICEBERG_PARTS:
-				item = new ServerRulesData.FilterLimit();
-				break;
-			default:
-				throw new Exception($"Unknown filter type: {value.FilterType}");
+				case EFilterType.PRICE_FILTER:
+				{
+					item = new ServerRulesData.FilterPrice();
+					break;
+				}
+				case EFilterType.PERCENT_PRICE:
+				{
+					item = new ServerRulesData.FilterPercentPrice();
+					break;
+				}
+				case EFilterType.LOT_SIZE:
+				{
+					item = new ServerRulesData.FilterLotSize();
+					break;
+				}
+				case EFilterType.MARKET_LOT_SIZE:
+				{
+					item = new ServerRulesData.FilterLotSize();
+					break;
+				}
+				case EFilterType.MIN_NOTIONAL:
+				{
+					item = new ServerRulesData.FilterMinNotional();
+					break;
+				}
+				case EFilterType.MAX_NUM_ORDERS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.MAX_NUM_ALGO_ORDERS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.EXCHANGE_MAX_NUM_ORDERS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.EXCHANGE_MAX_NUM_ALGO_ORDERS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.MAX_NUM_ICEBERG_ORDERS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.ICEBERG_PARTS:
+				{
+					item = new ServerRulesData.FilterLimit();
+					break;
+				}
+				case EFilterType.MAX_POSITION:
+				{
+					item = new ServerRulesData.FilterMaxPosition();
+					break;
+				}
+				default:
+				{
+					throw new Exception($"Unknown filter type: {value.FilterType}");
+				}
 			}
 
 			serializer.Populate(jObject.CreateReader(), item);

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -48,26 +49,26 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Image source for the prompt icon</summary>
-		public ImageSource Image
+		public ImageSource? Image
 		{
-			get { return (ImageSource)GetValue(ImageProperty); }
-			set { SetValue(ImageProperty, value); }
+			get => (ImageSource?)GetValue(ImageProperty);
+			set => SetValue(ImageProperty, value);
 		}
-		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<PromptUI>(nameof(Image));
+		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<PromptUI>(nameof(Image), null, Gui_.EDPFlags.None);
 
 		/// <summary>The prompt text</summary>
 		public string Prompt
 		{
-			get { return (string)GetValue(PromptProperty); }
-			set { SetValue(PromptProperty, value); }
+			get => (string)GetValue(PromptProperty);
+			set => SetValue(PromptProperty, value);
 		}
-		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<PromptUI>(nameof(Prompt));
+		public static readonly DependencyProperty PromptProperty = Gui_.DPRegister<PromptUI>(nameof(Prompt), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>The value of the user text field</summary>
 		public string Value
 		{
-			get { return (string)GetValue(ValueProperty); }
-			set { SetValue(ValueProperty, value); }
+			get => (string)GetValue(ValueProperty);
+			set => SetValue(ValueProperty, value);
 		}
 		private void Value_Changed()
 		{
@@ -83,47 +84,47 @@ namespace Rylogic.Gui.WPF
 				m_field.ToolTip = null;
 			}
 		}
-		public static readonly DependencyProperty ValueProperty = Gui_.DPRegister<PromptUI>(nameof(Value));
+		public static readonly DependencyProperty ValueProperty = Gui_.DPRegister<PromptUI>(nameof(Value), string.Empty, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>A units string to display after the value text box</summary>
 		public string Units
 		{
-			get { return (string)GetValue(UnitsProperty); }
-			set { SetValue(UnitsProperty, value); }
+			get => (string)GetValue(UnitsProperty);
+			set => SetValue(UnitsProperty, value);
 		}
-		public static readonly DependencyProperty UnitsProperty = Gui_.DPRegister<PromptUI>(nameof(Units));
+		public static readonly DependencyProperty UnitsProperty = Gui_.DPRegister<PromptUI>(nameof(Units), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>True if the value text should wrap</summary>
 		public bool Wrap
 		{
-			get { return (bool)GetValue(WrapProperty); }
-			set { SetValue(WrapProperty, value); }
+			get => (bool)GetValue(WrapProperty);
+			set => SetValue(WrapProperty, value);
 		}
-		public static readonly DependencyProperty WrapProperty = Gui_.DPRegister<PromptUI>(nameof(Wrap));
+		public static readonly DependencyProperty WrapProperty = Gui_.DPRegister<PromptUI>(nameof(Wrap), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>True if the prompt is just displaying text</summary>
 		public bool ReadOnly
 		{
-			get { return (bool)GetValue(ReadOnlyProperty); }
-			set { SetValue(ReadOnlyProperty, value); }
+			get => (bool)GetValue(ReadOnlyProperty);
+			set => SetValue(ReadOnlyProperty, value);
 		}
-		public static readonly DependencyProperty ReadOnlyProperty = Gui_.DPRegister<PromptUI>(nameof(ReadOnly));
+		public static readonly DependencyProperty ReadOnlyProperty = Gui_.DPRegister<PromptUI>(nameof(ReadOnly), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>True if the value can contain multiple lines</summary>
 		public bool MultiLine
 		{
-			get { return (bool)GetValue(MultiLineProperty); }
-			set { SetValue(MultiLineProperty, value); }
+			get => (bool)GetValue(MultiLineProperty);
+			set => SetValue(MultiLineProperty, value);
 		}
-		public static readonly DependencyProperty MultiLineProperty = Gui_.DPRegister<PromptUI>(nameof(MultiLine));
+		public static readonly DependencyProperty MultiLineProperty = Gui_.DPRegister<PromptUI>(nameof(MultiLine), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>How text in the value box should be aligned</summary>
 		public HorizontalAlignment ValueAlignment
 		{
-			get { return (HorizontalAlignment)GetValue(ValueAlignmentProperty); }
-			set { SetValue(ValueAlignmentProperty, value); }
+			get => (HorizontalAlignment)GetValue(ValueAlignmentProperty);
+			set => SetValue(ValueAlignmentProperty, value);
 		}
-		public static readonly DependencyProperty ValueAlignmentProperty = Gui_.DPRegister<PromptUI>(nameof(ValueAlignment));
+		public static readonly DependencyProperty ValueAlignmentProperty = Gui_.DPRegister<PromptUI>(nameof(ValueAlignment), HorizontalAlignment.Left, Gui_.EDPFlags.None);
 
 		/// <summary>Validation function for allowed value text</summary>
 		public Func<string, ValidationResult>? Validate

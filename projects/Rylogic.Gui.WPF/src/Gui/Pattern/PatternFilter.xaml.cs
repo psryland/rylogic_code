@@ -51,15 +51,15 @@ namespace Rylogic.Gui.WPF
 			get => (ICommand)GetValue(CommandProperty);
 			set => SetValue(CommandProperty, value);
 		}
-		public static readonly DependencyProperty CommandProperty = Gui_.DPRegister<PatternFilter>(nameof(Command), flags:FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty CommandProperty = Gui_.DPRegister<PatternFilter>(nameof(Command), null, Gui_.EDPFlags.None);
 
 		/// <summary>Parameter to pass to 'Command'</summary>
-		public object CommandParameter
+		public object? CommandParameter
 		{
 			get => GetValue(CommandParameterProperty);
 			set => SetValue(CommandParameterProperty, value);
 		}
-		public static readonly DependencyProperty CommandParameterProperty = Gui_.DPRegister<PatternFilter>(nameof(CommandParameter));
+		public static readonly DependencyProperty CommandParameterProperty = Gui_.DPRegister<PatternFilter>(nameof(CommandParameter), null, Gui_.EDPFlags.None);
 
 		/// <summary>Pop open the history list</summary>
 		public Command ShowHistoryList { get; }

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -171,7 +172,7 @@ namespace Rylogic.Gui.WPF
 			}
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SelectedProperty = Gui_.DPRegister<JoystickControl>(nameof(Selected), 1UL);
+		public static readonly DependencyProperty SelectedProperty = Gui_.DPRegister<JoystickControl>(nameof(Selected), 1UL, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The offset from 'North' for sector 1 (in degrees)</summary>
 		public double NorthOffset
@@ -183,7 +184,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty NorthOffsetProperty = Gui_.DPRegister<JoystickControl>(nameof(NorthOffset), 0.0);
+		public static readonly DependencyProperty NorthOffsetProperty = Gui_.DPRegister<JoystickControl>(nameof(NorthOffset), 0.0, Gui_.EDPFlags.None);
 
 		/// <summary>One or multiple sectors selected simultaneously</summary>
 		public bool SingleSelect
@@ -196,7 +197,7 @@ namespace Rylogic.Gui.WPF
 			Selected = Bit.LowBit(Selected);
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SingleSelectProperty = Gui_.DPRegister<JoystickControl>(nameof(SingleSelect), false);
+		public static readonly DependencyProperty SingleSelectProperty = Gui_.DPRegister<JoystickControl>(nameof(SingleSelect), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>The number of concentric rings</summary>
 		public int RingCount
@@ -208,7 +209,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty RingCountProperty = Gui_.DPRegister<JoystickControl>(nameof(RingCount), 1);
+		public static readonly DependencyProperty RingCountProperty = Gui_.DPRegister<JoystickControl>(nameof(RingCount), 1, Gui_.EDPFlags.None);
 
 		/// <summary>The number of sectors in the inner ring</summary>
 		public int SectorCount
@@ -220,7 +221,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SectorCountProperty = Gui_.DPRegister<JoystickControl>(nameof(SectorCount), 8);
+		public static readonly DependencyProperty SectorCountProperty = Gui_.DPRegister<JoystickControl>(nameof(SectorCount), 8, Gui_.EDPFlags.None);
 
 		/// <summary>True if the selected sectors cannot be changed via the UI</summary>
 		public bool IsReadOnly
@@ -228,7 +229,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(IsReadOnlyProperty);
 			set => SetValue(IsReadOnlyProperty, value);
 		}
-		public static readonly DependencyProperty IsReadOnlyProperty = Gui_.DPRegister<JoystickControl>(nameof(IsReadOnly), false);
+		public static readonly DependencyProperty IsReadOnlyProperty = Gui_.DPRegister<JoystickControl>(nameof(IsReadOnly), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>The brush used to fill the selected sectors</summary>
 		public Brush SelectedSectorBrush
@@ -240,7 +241,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty SelectedSectorBrushProperty = Gui_.DPRegister<JoystickControl>(nameof(SelectedSectorBrush), Brushes.DarkGreen);
+		public static readonly DependencyProperty SelectedSectorBrushProperty = Gui_.DPRegister<JoystickControl>(nameof(SelectedSectorBrush), Brushes.DarkGreen, Gui_.EDPFlags.None);
 
 		/// <summary>The width of the sector outlines</summary>
 		public double StrokeWidth
@@ -252,7 +253,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty StrokeWidthProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeWidth), 1.0);
+		public static readonly DependencyProperty StrokeWidthProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeWidth), 1.0, Gui_.EDPFlags.None);
 
 		/// <summary>The colour of the sector outlines</summary>
 		public Brush StrokeColour
@@ -264,7 +265,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty StrokeColourProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeColour), Brushes.Black);
+		public static readonly DependencyProperty StrokeColourProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeColour), Brushes.Black, Gui_.EDPFlags.None);
 
 		/// <summary>The background colour</summary>
 		public Brush Background
@@ -276,7 +277,7 @@ namespace Rylogic.Gui.WPF
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty BackgroundProperty = Gui_.DPRegister<JoystickControl>(nameof(Background), Brushes.Transparent);
+		public static readonly DependencyProperty BackgroundProperty = Gui_.DPRegister<JoystickControl>(nameof(Background), Brushes.Transparent, Gui_.EDPFlags.None);
 
 		/// <summary>The position of the thumb stick (polar coords). Null to hide</summary>
 		public Point? ThumbPos

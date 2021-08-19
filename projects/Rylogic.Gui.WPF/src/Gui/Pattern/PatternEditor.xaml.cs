@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -310,7 +311,8 @@ namespace Rylogic.Gui.WPF
 		{
 			var help_filepath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "RegularExpressionQuickReference.html");
 			File.WriteAllText(help_filepath, WPF.Resources.regex_quick_ref);
-			System.Diagnostics.Process.Start(help_filepath);
+			var psi = new ProcessStartInfo(help_filepath) { UseShellExecute = true };
+			Process.Start(psi);
 		}
 
 		/// <summary>Property changed notification</summary>

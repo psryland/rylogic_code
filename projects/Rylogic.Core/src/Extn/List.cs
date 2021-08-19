@@ -591,20 +591,23 @@ namespace Rylogic.Extn
 
 		/// <summary>
 		/// Update this list with elements from 'source' using minimal changes.
-		/// Factory signature: 'T factory(U source_item, int index)'</summary>
-		public static void SyncStable<T,U>(this IList<T> list, IEnumerable<U> source, Func<U,T,bool> eql, Func<U, int, T> factory)
+		/// Factory signature: 'T factory(U source_item, int index)'
+		/// Returns true if changes were made</summary>
+		public static bool SyncStable<T, U>(this IList<T> list, IEnumerable<U> source, Func<U, T, bool> eql, Func<U, int, T> factory)
 		{
 			// This method is mainly useful for observable collections used as
 			// backing stores for enumerated data. It ensures a 1-to-1 mapping between
 			// 'list' and 'source' while minimsing unnecessary adds/removes.
 			var iter = source.GetEnumerator();
 			var next = iter.MoveNext();
+			var changed = false;
 			for (int i = 0; i != list.Count; ++i, next = iter.MoveNext())
 			{
 				// End of 'source'?
 				if (!next)
 				{
 					list.RemoveRange(i, list.Count - i, dispose: false);
+					changed |= i != list.Count;
 					break;
 				}
 
@@ -625,6 +628,7 @@ namespace Rylogic.Extn
 					// Replace the i'th item with the saved item
 					// list[i+1] already == iter.Current;
 					list[i] = factory(save, i);
+					changed |= true;
 					++i;
 					continue;
 				}
@@ -632,16 +636,22 @@ namespace Rylogic.Extn
 				// Remove [i, Count) and add the saved item
 				list.RemoveRange(i, list.Count - i, dispose: false);
 				list.Add(factory(save, list.Count));
+				changed |= true;
 				break;
 			}
 
 			// Copy any remaining elements to 'list'
 			for (; next; next = iter.MoveNext())
+			{
 				list.Add(factory(iter.Current, list.Count));
+				changed |= true;
+			}
+
+			return changed;
 		}
-		public static void SyncStable<T>(this IList<T> list, IEnumerable<T> source)
+		public static bool SyncStable<T>(this IList<T> list, IEnumerable<T> source)
 		{
-			SyncStable(list, source, (l,r) => Equals(l,r), (x,i) => x);
+			return SyncStable(list, source, (l,r) => Equals(l,r), (x,i) => x);
 		}
 
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>

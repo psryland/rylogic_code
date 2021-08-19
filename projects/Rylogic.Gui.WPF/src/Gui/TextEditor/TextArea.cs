@@ -168,7 +168,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			get => (Brush)GetValue(SelectionBrushProperty);
 			set => SetValue(SelectionBrushProperty, value);
 		}
-		public static readonly DependencyProperty SelectionBrushProperty = Gui_.DPRegister<TextArea>(nameof(SelectionBrush));
+		public static readonly DependencyProperty SelectionBrushProperty = Gui_.DPRegister<TextArea>(nameof(SelectionBrush), Brushes.LightSteelBlue, Gui_.EDPFlags.None);
 
 		/// <summary>Gets/Sets the foreground brush used selected text.</summary>
 		public Brush SelectionForeground
@@ -176,7 +176,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			get => (Brush)GetValue(SelectionForegroundProperty);
 			set => SetValue(SelectionForegroundProperty, value);
 		}
-		public static readonly DependencyProperty SelectionForegroundProperty = Gui_.DPRegister<TextArea>(nameof(SelectionForeground));
+		public static readonly DependencyProperty SelectionForegroundProperty = Gui_.DPRegister<TextArea>(nameof(SelectionForeground), Brushes.White, Gui_.EDPFlags.None);
 
 		/// <summary>Gets/Sets the background brush used for the selection.</summary>
 		public Pen SelectionBorder
@@ -184,7 +184,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			get => (Pen)GetValue(SelectionBorderProperty);
 			set => SetValue(SelectionBorderProperty, value);
 		}
-		public static readonly DependencyProperty SelectionBorderProperty = Gui_.DPRegister<TextArea>(nameof(SelectionBorder));
+		public static readonly DependencyProperty SelectionBorderProperty = Gui_.DPRegister<TextArea>(nameof(SelectionBorder), new Pen(Brushes.SteelBlue,1), Gui_.EDPFlags.None);
 
 		/// <summary>Gets/Sets the corner radius of the selection.</summary>
 		public double SelectionCornerRadius
@@ -192,7 +192,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 			get => (double)GetValue(SelectionCornerRadiusProperty);
 			set => SetValue(SelectionCornerRadiusProperty, value);
 		}
-		public static readonly DependencyProperty SelectionCornerRadiusProperty = Gui_.DPRegister<TextArea>(nameof(SelectionCornerRadius), 3.0);
+		public static readonly DependencyProperty SelectionCornerRadiusProperty = Gui_.DPRegister<TextArea>(nameof(SelectionCornerRadius), 3.0, Gui_.EDPFlags.None);
 
 		#endregion
 

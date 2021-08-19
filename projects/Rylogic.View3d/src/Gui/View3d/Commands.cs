@@ -266,7 +266,7 @@ namespace Rylogic.Gui.WPF
 			Window.BackgroundColour = new_value;
 			NotifyPropertyChanged(nameof(BackgroundColour));
 		}
-		public static readonly DependencyProperty BackgroundColourProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColour), def: Colour32.LightGray);
+		public static readonly DependencyProperty BackgroundColourProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColour), Colour32.LightGray, Gui_.EDPFlags.None);
 		public ICommand SetBackgroundColour { get; private set; } = null!;
 		private void SetBackgroundColourInternal()
 		{

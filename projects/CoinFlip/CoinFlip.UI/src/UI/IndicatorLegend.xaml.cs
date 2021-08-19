@@ -4,16 +4,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Rylogic.Gui.WPF;
+using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
 	public partial class IndicatorLegend :UserControl
 	{
-		static IndicatorLegend()
-		{
-			ExpandedProperty = Gui_.DPRegister<IndicatorLegend>(nameof(Expanded));
-			IndicatorsProperty = Gui_.DPRegister<IndicatorLegend>(nameof(Indicators));
-		}
 		public IndicatorLegend()
 		{
 			InitializeComponent();
@@ -23,18 +19,18 @@ namespace CoinFlip.UI
 		/// <summary>True if the legend is expanded</summary>
 		public bool Expanded
 		{
-			get { return (bool)GetValue(ExpandedProperty); }
-			set { SetValue(ExpandedProperty, value); }
+			get => (bool)GetValue(ExpandedProperty);
+			set => SetValue(ExpandedProperty, value);
 		}
-		public static readonly DependencyProperty ExpandedProperty;
+		public static readonly DependencyProperty ExpandedProperty = Gui_.DPRegister<IndicatorLegend>(nameof(Expanded), Boxed.False, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The indicators to display</summary>
 		public ICollectionView Indicators
 		{
-			get { return (ICollectionView)GetValue(IndicatorsProperty); }
-			set { SetValue(IndicatorsProperty, value); }
+			get => (ICollectionView)GetValue(IndicatorsProperty);
+			set => SetValue(IndicatorsProperty, value);
 		}
-		public static readonly DependencyProperty IndicatorsProperty;
+		public static readonly DependencyProperty IndicatorsProperty = Gui_.DPRegister<IndicatorLegend>(nameof(Indicators), null, Gui_.EDPFlags.None);
 
 		/// <summary>The selected indicator</summary>
 		public IIndicatorView SelectedIndicator

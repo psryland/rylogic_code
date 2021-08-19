@@ -39,11 +39,11 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Get/Set the limit for how many files appear in the recent files list</summary>
 		public int MaxCount { get; set; }
-		public static readonly DependencyProperty MaxCountProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(MaxCount), 10);
+		public static readonly DependencyProperty MaxCountProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(MaxCount), 10, Gui_.EDPFlags.None);
 
 		/// <summary>The text to display as the last item allowing the user to clear the list</summary>
 		public string ResetListText { get; set; }
-		public static readonly DependencyProperty ResetListTextProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(ResetListText), "<Clear Recent Files>");
+		public static readonly DependencyProperty ResetListTextProperty = Gui_.DPRegister<RecentFilesMenuItem>(nameof(ResetListText), "<Clear Recent Files>", Gui_.EDPFlags.None);
 
 		/// <summary>Returns true if the given filepath is in the recent files list</summary>
 		public bool IsInRecents(string file)

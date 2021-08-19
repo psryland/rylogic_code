@@ -219,7 +219,7 @@ namespace Rylogic.Gui.WPF
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
 			InvalidateVisual();
 		}
-		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour));
+		public static readonly DependencyProperty ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour), Colour32.White, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The currently selected colour (HSV)</summary>
 		public HSV HSVColour

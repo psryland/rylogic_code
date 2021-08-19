@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -9,22 +11,18 @@ using System.Windows.Input;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Core.Windows;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF.Validators;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class BrowsePathUI :UserControl
+	public partial class BrowsePathUI :UserControl, INotifyPropertyChanged
 	{
 		public BrowsePathUI()
 		{
 			InitializeComponent();
-
-			PathType = EType.OpenFile;
-			PathMustExist = false;
-			RequireRoot = false;
-			History = CollectionViewSource.GetDefaultView(new ObservableCollection<string>());
-			MaxHistoryLength = 10;
+			HistoryView = CollectionViewSource.GetDefaultView(History);
 
 			// Commands
 			BrowsePath = Command.Create(this, BrowsePathInternal);
@@ -46,7 +44,7 @@ namespace Rylogic.Gui.WPF
 			get => (EType)GetValue(PathTypeProperty);
 			set => SetValue(PathTypeProperty, value);
 		}
-		public static readonly DependencyProperty PathTypeProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathType));
+		public static readonly DependencyProperty PathTypeProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathType), EType.OpenFile, Gui_.EDPFlags.None);
 
 		/// <summary>The selected path</summary>
 		public string SelectedPath
@@ -56,15 +54,22 @@ namespace Rylogic.Gui.WPF
 		}
 		private void SelectedPath_Changed()
 		{
-			if (string.IsNullOrWhiteSpace(SelectedPath)) return;
-			if (History.SourceCollection is IList<string> history)
+			// Update the history (if possible)
+			if (History != null && !History.IsReadOnly && !string.IsNullOrWhiteSpace(SelectedPath))
 			{
-				Util.AddToHistoryList(history, SelectedPath, true, MaxHistoryLength);
-				History.MoveCurrentTo(SelectedPath);
+				// Changing the history, affects the value of 'SelectedPath'
+				var selected_path = SelectedPath; 
+				Util.AddToHistoryList(History, selected_path, true, MaxHistoryLength);
+				HistoryView.Refresh();
+				HistoryView.MoveCurrentTo(selected_path);
+
+				UpdateHistoryString();
 			}
+
+			// Notify that the path has changed
 			SelectedPathChanged?.Invoke(this, EventArgs.Empty);
 		}
-		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath));
+		public static readonly DependencyProperty SelectedPathProperty = Gui_.DPRegister<BrowsePathUI>(nameof(SelectedPath), string.Empty, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>The allow missing filepaths</summary>
 		public bool PathMustExist
@@ -72,7 +77,7 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(PathMustExistProperty);
 			set => SetValue(PathMustExistProperty, value);
 		}
-		public static readonly DependencyProperty PathMustExistProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathMustExist));
+		public static readonly DependencyProperty PathMustExistProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathMustExist), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>The path must contain the root drive</summary>
 		public bool RequireRoot
@@ -80,23 +85,70 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(RequireRootProperty);
 			set => SetValue(RequireRootProperty, value);
 		}
-		public static readonly DependencyProperty RequireRootProperty = Gui_.DPRegister<BrowsePathUI>(nameof(RequireRoot));
+		public static readonly DependencyProperty RequireRootProperty = Gui_.DPRegister<BrowsePathUI>(nameof(RequireRoot), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>Callback function for validating a selected path</summary>
 		public Func<string, ValidationResult>? PathValidation
 		{
-			get => (Func<object, ValidationResult>)GetValue(PathValidationProperty);
+			get => (Func<string, ValidationResult>)GetValue(PathValidationProperty);
 			set => SetValue(PathValidationProperty, value);
 		}
-		public static readonly DependencyProperty PathValidationProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathValidation), flags: FrameworkPropertyMetadataOptions.None);
+		public static readonly DependencyProperty PathValidationProperty = Gui_.DPRegister<BrowsePathUI>(nameof(PathValidation), null, Gui_.EDPFlags.None);
 
-		/// <summary>The history of paths</summary>
-		public ICollectionView History
+		/// <summary>The history of paths. Don't bind to "string[] Settings.History", that can't work. You need an intermediate collection</summary>
+		public IList<string> History
 		{
-			get => (ICollectionView)GetValue(HistoryProperty);
+			get => (IList<string>)GetValue(HistoryProperty);
 			set => SetValue(HistoryProperty, value);
 		}
-		public static readonly DependencyProperty HistoryProperty = Gui_.DPRegister<BrowsePathUI>(nameof(History), flags: FrameworkPropertyMetadataOptions.None);
+		private void History_Changed()
+		{
+			History ??= new List<string>();
+			HistoryView = CollectionViewSource.GetDefaultView(History);
+			UpdateHistoryString();
+		}
+		public static readonly DependencyProperty HistoryProperty = Gui_.DPRegister<BrowsePathUI>(nameof(History), new List<string>(), Gui_.EDPFlags.None);
+
+		/// <summary>The path history as a '|' delimited string</summary>
+		public string HistoryString
+		{
+			get => (string)GetValue(HistoryStringProperty);
+			set => SetValue(HistoryStringProperty, value);
+		}
+		private void HistoryString_Changed()
+		{
+			if (m_updating_history_string) return;
+			using var upd = Scope.Create(() => m_updating_history_string = true, () => m_updating_history_string = false);
+
+			var selected_path = SelectedPath;
+			History.Assign(HistoryString.Split('|').Where(x => x.Length != 0));
+			HistoryView.Refresh();
+			HistoryView.MoveCurrentTo(selected_path);
+			NotifyPropertyChanged(nameof(HistoryString));
+		}
+		public static readonly DependencyProperty HistoryStringProperty = Gui_.DPRegister<BrowsePathUI>(nameof(HistoryString), string.Empty, Gui_.EDPFlags.TwoWay);
+
+		/// <summary>Populate the HistoryString value</summary>
+		private void UpdateHistoryString()
+		{
+			if (m_updating_history_string) return;
+			using var upd = Scope.Create(() => m_updating_history_string = true, () => m_updating_history_string = false);
+			HistoryString = string.Join("|", History);
+		}
+		private bool m_updating_history_string;
+
+		/// <summary>Binding view of the history</summary>
+		public ICollectionView HistoryView
+		{
+			get => m_history_view;
+			private set
+			{
+				if (m_history_view == value) return;
+				m_history_view = value;
+				NotifyPropertyChanged(nameof(HistoryView));
+			}
+		}
+		private ICollectionView m_history_view = null!;
 
 		/// <summary>The maximum length of the stored history</summary>
 		public int MaxHistoryLength
@@ -104,7 +156,7 @@ namespace Rylogic.Gui.WPF
 			get => (int)GetValue(MaxHistoryLengthProperty);
 			set => SetValue(MaxHistoryLengthProperty, value);
 		}
-		public static readonly DependencyProperty MaxHistoryLengthProperty = Gui_.DPRegister<BrowsePathUI>(nameof(MaxHistoryLength));
+		public static readonly DependencyProperty MaxHistoryLengthProperty = Gui_.DPRegister<BrowsePathUI>(nameof(MaxHistoryLength), 10, Gui_.EDPFlags.None);
 
 		/// <summary>The title to display on the path browser dialog</summary>
 		public string DialogTitle
@@ -112,7 +164,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(DialogTitleProperty) ?? $"Select a {(PathType == EType.SelectDirectory ? "Directory" : "File")}"; }
 			set { SetValue(DialogTitleProperty, value); }
 		}
-		public static readonly DependencyProperty DialogTitleProperty = Gui_.DPRegister<BrowsePathUI>(nameof(DialogTitle));
+		public static readonly DependencyProperty DialogTitleProperty = Gui_.DPRegister<BrowsePathUI>(nameof(DialogTitle), "Choose...", Gui_.EDPFlags.None);
 
 		/// <summary>The filter to apply in open/save file dialogs. Example: "Image files (*.bmp, *.jpg)|*.bmp;*.jpg|All files (*.*)|*.*"</summary>
 		public string FileFilter
@@ -120,7 +172,7 @@ namespace Rylogic.Gui.WPF
 			get { return (string)GetValue(FileFilterProperty); }
 			set { SetValue(FileFilterProperty, value); }
 		}
-		public static readonly DependencyProperty FileFilterProperty = Gui_.DPRegister<BrowsePathUI>(nameof(FileFilter));
+		public static readonly DependencyProperty FileFilterProperty = Gui_.DPRegister<BrowsePathUI>(nameof(FileFilter), "All files (*.*)|*.*", Gui_.EDPFlags.None);
 
 		/// <summary>Open the path browser</summary>
 		public Command BrowsePath { get; }
@@ -213,6 +265,10 @@ namespace Rylogic.Gui.WPF
 				? PathValidation(path)
 				: ValidationResult.ValidResult;
 		}
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		/// <summary>The type of path to browse for</summary>
 		public enum EType

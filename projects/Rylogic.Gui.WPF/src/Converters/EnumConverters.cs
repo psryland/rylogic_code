@@ -90,9 +90,9 @@ namespace Rylogic.Gui.WPF.Converters
 
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (!(value is Enum e))
+			if (value is not Enum e)
 				return null;
-			if (!(parameter is string s))
+			if (parameter is not string s)
 				return null;
 
 			try
@@ -169,6 +169,33 @@ namespace Rylogic.Gui.WPF.Converters
 		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Convert between int values in enum values</summary>
+	public class EnumToInt :MarkupExtension, IValueConverter
+	{
+		// Use:
+		//  <ComboBox
+		//     SelectedIndex="{Binding MyEnumValue, Converter={conv:EnumToInt}}"
+		//     />
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value is not Enum en)
+				throw new ArgumentException("Expected an enum property");
+
+			return Util.ConvertTo(value, typeof(int));
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!Enum.IsDefined(targetType, value))
+				throw new ArgumentException("Expected an enum property");
+
+			return Util.ConvertTo(value, targetType);
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
