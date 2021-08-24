@@ -14,6 +14,7 @@
 
 import sys, os, subprocess, datetime, re, shutil
 from importlib import machinery as Import
+from typing import List
 import Rylogic as Tools
 import RylogicAssembly as RA
 import BuildInstaller
@@ -27,8 +28,8 @@ restored = []
 class EProjects():
 	Sqlite3 = "Sqlite3"
 	Scintilla = "Scintilla"
-	View3d = "View3d"
 	Audio = "Audio"
+	View3d = "View3d"
 	P3d = "P3d"
 	Rylogic = "Rylogic"
 	RylogicCore = "Rylogic.Core"
@@ -39,6 +40,7 @@ class EProjects():
 	RylogicGuiWPF = "Rylogic.Gui.WPF"
 	CSex = "CSex"
 	LDraw = "LDraw"
+	SolarHotWater = "SolarHotWater"
 	AllNative = "AllNative"
 	AllManaged = "AllManaged"
 	All = "All"
@@ -63,7 +65,7 @@ def CleanDir(dir:str):
 	return
 
 # Ensure the directory 'dir' exists and is empty
-def CleanObj(dir:str, platforms:[str]=None, configs:[str]=None):
+def CleanObj(dir:str, platforms:List[str]=None, configs:List[str]=None):
 	if not platforms and not configs:
 		CleanDir(dir)
 	else:
@@ -77,7 +79,7 @@ def CleanObj(dir:str, platforms:[str]=None, configs:[str]=None):
 	return
 
 # Clean the 'bin' and 'obj' directory of a dot net project
-def CleanDotNet(proj_dir:str, platforms:[str], configs:[str]):
+def CleanDotNet(proj_dir:str, platforms:List[str], configs:List[str]):
 	if not platforms and not configs:
 		CleanDir(os.path.join(proj_dir, "obj"))
 		CleanDir(os.path.join(proj_dir, "bin"))
@@ -88,7 +90,7 @@ def CleanDotNet(proj_dir:str, platforms:[str], configs:[str]):
 	return
 
 # Invoke MSBuild on the given solution or project file
-def MSBuild(name:str, sln:str, projects:[str], platforms:[str], configs:[str], props:str=None):
+def MSBuild(name:str, sln:str, projects:List[str], platforms:List[str], configs:List[str], props:str=None):
 	print(f"\nBuilding {name}")
 	Tools.SetupVcEnvironment()
 	if Tools.MSBuild(sln, projects, platforms, configs, props): return
@@ -155,7 +157,7 @@ class Group(Common):
 
 # Native binary (base)
 class Native(Common):
-	def __init__(self, proj_name:str, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Common.__init__(self, workspace)
 		self.proj_name = proj_name
 		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
@@ -166,14 +168,15 @@ class Native(Common):
 		return
 
 	def Clean(self):
-		CleanObj(self.obj_dir, self.platforms, self.configs)
+		CleanObj(os.path.join(self.obj_dir, self.proj_name), self.platforms, self.configs)
 		return
 
 # Native SDK dll (base)
 class NativeSDKDll(Native):
-	def __init__(self, proj_name:str, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, proj_name, workspace, platforms, configs)
 		self.proj_dir = os.path.join(workspace, "sdk", self.proj_name)
+		self.obj_dir = os.path.join(self.proj_dir, "obj", UserVars.platform_toolset)
 		return
 
 	def Build(self):
@@ -182,19 +185,19 @@ class NativeSDKDll(Native):
 
 # Sqlite3 native dll
 class Sqlite3(NativeSDKDll):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		NativeSDKDll.__init__(self, "sqlite3", workspace, platforms, configs)
 		return
 
 # Scintilla native dll
 class Scintilla(NativeSDKDll):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		NativeSDKDll.__init__(self, "scintilla", workspace, platforms, configs)
 		return
 
 # Audio native dll
 class Audio(Native):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "audio", workspace, platforms, configs)
 		return
 
@@ -210,7 +213,7 @@ class Audio(Native):
 
 # View3d native dll
 class View3d(Native):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "view3d", workspace, platforms, configs)
 		return
 
@@ -226,7 +229,7 @@ class View3d(Native):
 
 # P3d
 class P3d(Native):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "p3d", workspace, platforms, configs)
 		return
 
@@ -244,7 +247,7 @@ class P3d(Native):
 
 # .NET assembly (base)
 class Managed(Common):
-	def __init__(self, proj_name:str, frameworks:[str], workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, proj_name:str, frameworks:List[str], workspace:str, platforms:List[str], configs:List[str]):
 		Common.__init__(self, workspace)
 		self.proj_name = proj_name
 		self.frameworks = frameworks
@@ -261,7 +264,7 @@ class Managed(Common):
 
 # Rylogic .NET assembly (base)
 class RylogicAssembly(Managed):
-	def __init__(self, proj_name:str, frameworks:[str], workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, proj_name:str, frameworks:List[str], workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, proj_name, frameworks, workspace, platforms, configs)
 		return
 
@@ -285,49 +288,49 @@ class RylogicAssembly(Managed):
 
 # Rylogic.Core .NET assembly
 class RylogicCore(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Core", ["netstandard2.0", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Core.Windows .NET assembly
 class RylogicCoreWindows(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Core.Windows", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Net .NET assembly
 class RylogicNet(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Net", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Scintilla .NET assembly
 class RylogicScintilla(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Scintilla", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.View3d .NET assembly
 class RylogicView3d(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WinForms .NET assembly
 class RylogicGuiWinForms(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WPF .NET assembly
 class RylogicGuiWPF(RylogicAssembly):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		RylogicAssembly.__init__(self, "Rylogic.Gui.WPF", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
 		return
 
 # Csex
 class Csex(Managed):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "CSex", ["net472"], workspace, platforms, configs)
 		self.requires_signing = False
 		return
@@ -339,7 +342,7 @@ class Csex(Managed):
 
 # LDraw
 class LDraw(Managed):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "LDraw", ["net472"], workspace, platforms, configs)
 		self.platforms = ["x64"]
 		self.proj_dir = os.path.join(workspace, "projects", "LDraw", self.proj_name)
@@ -394,7 +397,7 @@ class LDraw(Managed):
 
 # Solar Hot Water
 class SolarHotWater(Managed):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "SolarHotWater", ["netcoreapp3.1"], workspace, platforms, configs)
 		self.platforms = ["x64"]
 		self.proj_dir = os.path.join(workspace, "projects", "SolarHotWater")
@@ -503,7 +506,7 @@ class SolarHotWater(Managed):
 
 # Rylogic.TextAligner
 class RylogicTextAligner(Managed):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Rylogic.TextAligner", ["net472"], workspace, platforms, configs)
 		self.manifest  = os.path.join(self.proj_dir, "source.extension.vsixmanifest")
 		self.vsix_name = "Rylogic.TextAligner.vsix"
@@ -583,7 +586,7 @@ class RylogicTextAligner(Managed):
 
 # Rylogic .NET assemblies
 class Rylogic(Group):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Group.__init__(self, workspace)
 		self.requires_signing = True
 		self.items = [
@@ -599,7 +602,7 @@ class Rylogic(Group):
 
 # Build the native projects
 class AllNative(Group):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Group.__init__(self, workspace)
 		self.items = [
 			Sqlite3  (workspace, platforms, configs),
@@ -612,7 +615,7 @@ class AllNative(Group):
 
 # Build the managed projects
 class AllManaged(Group):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Group.__init__(self, workspace)
 		self.items = [
 			Rylogic      (workspace, platforms, configs),
@@ -624,7 +627,7 @@ class AllManaged(Group):
 
 # Build all Software projects
 class All(Group):
-	def __init__(self, workspace:str, platforms:[str], configs:[str]):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Group.__init__(self, workspace)
 		self.items = [
 			Sqlite3      (workspace, platforms, configs),
@@ -640,7 +643,7 @@ class All(Group):
 		return
 
 # Main
-def Main(args:[str]):
+def Main(args:List[str]):
 
 	# Set defaults for command line options
 	# Get the current workspace directory from the path of this file
@@ -763,6 +766,8 @@ if __name__ == "__main__":
 		#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy', '-publish']
 		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
+		#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']
+
 		#print(f"Command Line: {str(sys.argv)}")
 		Main(sys.argv)
 
