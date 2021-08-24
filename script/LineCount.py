@@ -12,10 +12,11 @@ try:
 	dirs = [
 		#"P:\\projects",
 		#"P:\\include",
-		"S:\\software\\PC",
-		"S:\\software\\shared",
-		"S:\\software\\STM32",
-		"S:\\software\\ARM7\\products\\battery_pack_v2",
+		"S:\\software",
+		#"S:\\software\\PC",
+		#"S:\\software\\shared",
+		#"S:\\software\\STM32",
+		#"S:\\software\\ARM7\\products\\battery_pack_v2",
 		#"S:\\software\\SDK\\pr",
 		#"S:\\software\\SDK\\pr\\projects\\Rylogic",
 		]
@@ -30,6 +31,8 @@ try:
 		"\\.vscode",
 		"\\.vs",
 		"\\directshow.net",
+		"\\Graveyard",
+		"\\Testing",
 		]
 		
 	extns = [
@@ -44,6 +47,7 @@ try:
 	
 	semi_count = 0
 	line_count = 0
+	bad_files = []
 	for dir in dirs:
 		for fpath in Tools.EnumFiles(dir):
 			if any([True for excl in excludes if fpath.find(excl) != -1]):
@@ -58,6 +62,7 @@ try:
 
 					print(str(i) + " - " + fpath)
 				except Exception as ex:
+					bad_files.append(fpath)
 					print(str(ex))
 					print(fpath)
 					print(i)
@@ -65,6 +70,8 @@ try:
 	print("\n")
 	print("Total Line Count: " + str(line_count))
 	print("Total Semi Colon Count: " + str(semi_count))
+	if len(bad_files) != 0:
+		print("Bad Files:" + "\n\t".join(bad_files))
 	Tools.OnSuccess()
 	
 except Exception as ex:
