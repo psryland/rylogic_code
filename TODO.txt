@@ -12,6 +12,9 @@ Work
 	- Push/pull zero ref values from REX
 
   UIv4
+	- Use DMA for clear and column blts
+	- Get SD Card working
+	- Check alignment of DMA'd buffers
 	- Write a Polarian requirements sheet for the new UI
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
