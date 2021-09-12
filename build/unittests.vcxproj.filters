@@ -438,7 +438,7 @@
     <ClInclude Include="..\include\pr\common\profile.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\profilemanager.h">
+    <ClInclude Include="..\include\pr\common\profile_manager.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\container\quadtree.h">

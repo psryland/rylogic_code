@@ -1,9 +1,8 @@
 ﻿//**********************************
 // Pipe
-//  Copyright (c) Rylogic Ltd 2007
+//  Copyright (C) Rylogic Ltd 2007
 //**********************************
 #pragma once
-
 #include <vector>
 #include <string>
 #include <exception>
@@ -226,13 +225,6 @@ namespace pr
 					return false;
 			}
 			return true;
-		}
-
-		// Write an object from the i/o connection
-		template <typename Type, typename = std::enable_if_t<std::is_trivially_copyable_v<Type>>>
-		bool Write(Type const& type, DWORD timeout)
-		{
-			return Write(&type, sizeof(type), timeout);
 		}
 
 		// Read data from the IO connection.

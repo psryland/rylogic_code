@@ -109,7 +109,7 @@
     <ClInclude Include="..\include\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\include\pr\common\predicate.h" />
     <ClInclude Include="..\include\pr\common\profile.h" />
-    <ClInclude Include="..\include\pr\common\profilemanager.h" />
+    <ClInclude Include="..\include\pr\common\profile_manager.h" />
     <ClInclude Include="..\include\pr\common\property.h" />
     <ClInclude Include="..\include\pr\common\proxy.h" />
     <ClInclude Include="..\include\pr\common\prsortkey.h" />
