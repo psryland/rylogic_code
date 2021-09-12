@@ -59,6 +59,8 @@ javascript/*/dist/
 symbol_cache/*
 script/UserVars.py
 $RECYCLE.BIN*
+tools/wix/*
+!tools/wix/_get_wix.py
 tools/HxD/HxD.ini
 tools/GrepWin/grepwin.ini
 *.log
