@@ -82,7 +82,7 @@ wix_light = Path(root, "tools", "WiX", "light.exe")
 wix_heat = Path(root, "tools", "WiX", "heat.exe")
 
 # Code signing cert
-code_sign_cert_pfx = Path("<CODE_SIGN_CERT_PATH>", check_exists=False)
+code_sign_cert_pfx = Path(root, "projects", "rylogic-code-signing-certificate.pfx", check_exists=False)
 code_sign_cert_pw = None # Leave as none, set once per script run
 
 # Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)
@@ -91,48 +91,3 @@ nuget_api_key = "<NUGET_API_KEY>"
 
 # Errout
 errout = Path(root, "tools", "Errout", "x64", "errout.exe")
-
-unused = """
-
-vs_envvars = Path(vs_dir, "Common7", "Tools", "VsDevCmd.bat")
-vs_compiler32 = Path(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x86", "cl.exe")
-vs_compiler64 = Path(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x64", "cl.exe")
-vs_linker32 = Path(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x86", "link.exe")
-vs_linker64 = Path(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x64", "link.exe")
-
-# Text templating
-ttbuild = Path(vs_dir, "Common7\\IDE\\TextTransform.exe")
-
-# Google Protobuf compiler
-protoc = Path(root, "tools", "Grpc", "x64", "protoc.exe")
-grpc_csharp_plugin = Path(root, "tools", "Grpc", "x64", "grpc_csharp_plugin.exe")
-
-# Rylogic code tools
-cex = Path(root, "bin\\Cex\\cex.exe", check_exists=False)
-p3d = Path(root, "bin\\P3d\\p3d.exe", check_exists=False)
-csex = Path(root, "bin\\Csex\\Csex.exe", check_exists=False)
-elevate = Path(root, "bin\\Elevate\\elevate.exe", check_exists=False)
-
-# The full path to the android SDK
-# e.g. android_sdkdir = Path("C:\\android\\android-sdk")
-android_sdkdir = Path("<ANDROID_SDK_DIRECTORY>")
-adb = Path(android_sdkdir, "platform-tools", "adb.exe")
-
-# The full path the the java sdk
-# e.g.java_sdkdir = Path("C:\\Program Files\\Java\\jdk1.8.0_20")
-java_sdkdir = Path("<JAVA_SDK_DIRECTORY>")
-
-# Text editor path
-# Note: scripts expect notepad++, so they probably won't work if you use a different tool
-# e.g. textedit = Path("C:\\Program Files\\Notepad++\\notepad++.exe")
-textedit = Path("<TEXTEDITOR_PATH>")
-
-# Merge tool path
-# Note: scripts expect araxis merge, so they probably won't work if you use a different tool
-# e.g. mergetool = Path("C:\\Program Files\\Araxis\\Araxis Merge\\Merge.exe")
-mergetool = Path("<MERGETOOL_PATH>")
-
-# Web site root
-wwwroot = Path("<WWW_ROOT_DIRECTORY>")
-
-"""
