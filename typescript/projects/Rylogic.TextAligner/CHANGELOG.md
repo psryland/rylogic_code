@@ -1,6 +1,9 @@
 # Change Log
 
-## [Unreleased]
+## [1.10.6] - 2021-09-13
+
+- Rebuild with updated packages. No other changes.
+- Updated readme.md
 
 ## [1.10.5] - 2020-07-27
 
