@@ -172,7 +172,8 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 		wsx_files.append(wxs_file)
 
 	# Compile all of the .wxs files to object files in 'objdir'
-	Tools.Exec([UserVars.wix_candle,
+	wix_candle = Tools.Path(UserVars.root, "tools\\WiX\\candle.exe")
+	Tools.Exec([wix_candle,
 		"-nologo",
 		"-dProjDir="+projdir,
 		"-dTargetDir="+targetdir,
@@ -182,7 +183,8 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 		[os.path.join(objdir, f) for f in wsx_files])
 
 	# Create the .msi
-	Tools.Exec([UserVars.wix_light,
+	wix_light = Tools.Path(UserVars.root, "tools\\WiX\\light.exe")
+	Tools.Exec([wix_light,
 		"-nologo",
 		"-dProjDir="+projdir,
 		"-dTargetDir="+targetdir,

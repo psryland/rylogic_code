@@ -27,10 +27,6 @@ def Path(*args, check_exists:bool = True, normalise:bool = True):
 #  1 - initial version
 version = 1
 
-# A unique name that identifies you. Used to add user specific behaviour to scripts
-# e.g. if user == 'Fred': do_fred_specific_thing()
-user = "<USER_NAME>"
-
 # Location of the root for the code library
 root = Path("<REPO_ROOT_DIRECTORY>")
 
@@ -58,12 +54,12 @@ dotnet = Path("<DOTNET_PATH>")
 vs_vers = "<VS_VERS>"
 vc_vers = "<VC_VERS>"
 vs_dir = Path("<VS_DIRECTORY>")
-vs_devenv = Path(vs_dir, "Common7", "IDE", "devenv.exe")
-vs_envvars = Path(vs_dir, "Common7", "Tools", "VsDevCmd.bat")
+vs_devenv = Path(vs_dir, "Common7\\IDE\\devenv.exe")
+vs_envvars = Path(vs_dir, "Common7\\Tools\\VsDevCmd.bat")
 
 # MSBuild path. Used by build scripts
 # e.g. msbuild = Path("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe")
-msbuild = Path(vs_dir, "MSBuild", "Current", "Bin", "MSBuild.exe")
+msbuild = Path(vs_dir, "MSBuild\\Current\\Bin\\MSBuild.exe")
 
 # The build system version. VS2013 == v120, VS2012 = v110, etc
 platform_toolset = "v142"
@@ -73,21 +69,13 @@ platform_toolset = "v142"
 pwsh = Path("<POWERSHELL_PATH>")
 
 # Assembly sign tool
-signtool = Path(winsdk, "bin", winsdkvers, "x64", "signtool.exe")
+signtool = Path(winsdk, "bin", winsdkvers, "x64\\signtool.exe")
 #vsixsigntool = Path("C:\\Program Files\\PackageManagement\\NuGet\\Packages\\Microsoft.VSSDK.VsixSignTool.16.2.29116.78\\tools\\vssdk\\vsixsigntool.exe")
 
-# WIX tools
-wix_candle = Path(root, "tools", "WiX", "candle.exe")
-wix_light = Path(root, "tools", "WiX", "light.exe")
-wix_heat = Path(root, "tools", "WiX", "heat.exe")
-
 # Code signing cert
-code_sign_cert_pfx = Path(root, "projects", "rylogic-code-signing-certificate.pfx", check_exists=False)
+code_sign_cert_pfx = Path(root, "projects\\rylogic-code-signing-certificate.pfx", check_exists=False)
 code_sign_cert_pw = None # Leave as none, set once per script run
 
 # Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)
-nuget = Path(root, "tools", "nuget", "nuget.exe")
+nuget = Path(root, "tools\\nuget\\nuget.exe")
 nuget_api_key = "<NUGET_API_KEY>"
-
-# Errout
-errout = Path(root, "tools", "Errout", "x64", "errout.exe")
