@@ -4,7 +4,7 @@ This repository contains the Rylogic Ltd code.
 
 ## Project structure
 
-	pr
+	rylogic_code
 	|-- art
 	|   |-- icons       - Art assets
 	|   |-- pngs        - Art assets
@@ -16,8 +16,8 @@ This repository contains the Rylogic Ltd code.
 	|   |-- cex.vcxproj - Project files
 	|   |-- etc...
 	|
-	|-- include         - Public headers and interfaces. Third party projects should add an include path
-	|   |-- pr            to '/pr/include'. All pr lib code uses includes relative to '/pr/include', e.g. #include "pr/common/..."
+	|-- include         - Public headers and interfaces. Users of this library should add this directory as an include path.
+	|   |-- pr            All rylogic library code uses includes relative to '/rylogic_code/include', e.g. #include "pr/common/..."
 	|       |-- common
 	|       |-- etc...
 	|
