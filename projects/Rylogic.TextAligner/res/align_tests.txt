@@ -4,13 +4,13 @@
 
 enum Values
 {
-	One = 0x0001,
-	Two = 0x0002,  
-	Three = 0x004,  
-	Four = 0x0008,			
-	Five = 0x0010,    
-	Six = 0x0200,
-	Seven = 0x0400,
+	One = 0x1001,
+	Two = 0x1002,  
+	Three = 0x104,  
+	Four = 0x1008,			
+	Five = 0x1010,    
+	Six = 0x1020,
+	Seven = 0x1040,
 }
 
 static void Main(string[] args)
