@@ -61,7 +61,12 @@ def SetupUserVars(workspace:str, name:str, ignore_missing:bool):
 	vc_vers = CheckValue(os.environ["VCToolsVersion"] if "VCToolsVersion" in os.environ else None, "Visual C++ tools version")
 
 	# Guess the Git command line tool path
-	git_path = CheckPath(os.path.join(os.environ["ProgramFiles"], "Git", "bin", "git.exe"), "Git command line tool")
+	git_path0 = os.path.join(os.environ["ProgramFiles"], "Git", "bin", "git.exe")
+	git_path1 = os.path.join(os.environ["LOCALAPPDATA"], "Programs", "Git", "bin", "git.exe")
+	git_path = CheckPath(
+		git_path0 if os.path.exists(git_path0) else
+		git_path1 if os.path.exists(git_path1) else
+		"", "Git command line tool")
 
 	# Guess the powershell path
 	pwsh7_path = os.path.join(os.environ["ProgramFiles"], "PowerShell", "7", "pwsh.exe")
