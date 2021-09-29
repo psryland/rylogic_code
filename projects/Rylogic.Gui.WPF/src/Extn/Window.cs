@@ -49,5 +49,11 @@ namespace Rylogic.Gui.WPF
 			wnd.Show();
 			return wnd;
 		}
+
+		/// <summary>The size of the window (in screen space)</summary>
+		public static Rect Bounds(this Window ctrl)
+		{
+			return new Rect(ctrl.Left, ctrl.Top, ctrl.Width, ctrl.Height);
+		}
 	}
 }

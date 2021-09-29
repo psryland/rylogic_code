@@ -688,11 +688,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			switch (indy)
 			{
-			default:
+				default:
 				{
 					throw new Exception("Unknown indicator type");
 				}
-			case EIndicator.dock_site_cross_lg:
+				case EIndicator.dock_site_cross_lg:
 				{
 					var clip = Geometry.Empty;
 					clip = Geometry.Combine(clip, new RectangleGeometry(new Rect(33, 43, 62, 42)), GeometryCombineMode.Union, Transform.Identity);
@@ -703,26 +703,26 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					clip = Geometry.Combine(clip, new RectangleGeometry(new Rect(39, 103, 50, 25)), GeometryCombineMode.Union, Transform.Identity);
 					return clip;
 				}
-			case EIndicator.dock_site_cross_sm:
+				case EIndicator.dock_site_cross_sm:
 				{
 					var clip = Geometry.Empty;
 					clip = Geometry.Combine(clip, new RectangleGeometry(new Rect(1, 11, 62, 42)), GeometryCombineMode.Union, Transform.Identity);
 					clip = Geometry.Combine(clip, new RectangleGeometry(new Rect(11, 1, 42, 62)), GeometryCombineMode.Union, Transform.Identity);
 					return clip;
 				}
-			case EIndicator.dock_site_left:
+				case EIndicator.dock_site_left:
 				{
 					return new RectangleGeometry(new Rect(0, 0, 25, 25));
 				}
-			case EIndicator.dock_site_top:
+				case EIndicator.dock_site_top:
 				{
 					return new RectangleGeometry(new Rect(0, 0, 25, 25));
 				}
-			case EIndicator.dock_site_right:
+				case EIndicator.dock_site_right:
 				{
 					return new RectangleGeometry(new Rect(0, 0, 25, 25));
 				}
-			case EIndicator.dock_site_bottom:
+				case EIndicator.dock_site_bottom:
 				{
 					return new RectangleGeometry(new Rect(0, 0, 25, 25));
 				}
