@@ -76,6 +76,18 @@ namespace Rylogic.Gui.WPF
 					(byte)((argb >>  0) & 0xFF));
 			};
 
+			Xml_.ToMap[typeof(Thickness)] = (obj, node) =>
+			{
+				var thickness = (Thickness)obj;
+				node.Add($"{thickness.Left} {thickness.Top} {thickness.Right} {thickness.Bottom}");
+				return node;
+			};
+			Xml_.AsMap[typeof(Thickness)] = (elem, type, ctor) =>
+			{
+				var ltrb = elem.Value.Split(Xml_.WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+				return new Thickness(double.Parse(ltrb[0]), double.Parse(ltrb[1]), double.Parse(ltrb[2]), double.Parse(ltrb[3]));
+			};
+
 			Xml_.ToMap[typeof(Typeface)] = (obj, node) =>
 			{
 				var font = (Typeface)obj;

@@ -1,0 +1,173 @@
+﻿<Window
+	x:Class="Fishomatic.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Fishomatic"
+	ResizeMode="CanResizeWithGrip"
+	MinWidth="270"
+	MinHeight="136"
+	Width="270"
+	Height="126"
+	>
+	<Window.Resources>
+		<BitmapImage x:Key="options" UriSource="/Fishomatic;component/res/options.png" />
+		<BitmapImage x:Key="fish0" UriSource="/Fishomatic;component/res/fish1.png" />
+		<BitmapImage x:Key="fish1" UriSource="/Fishomatic;component/res/fish2.png" />
+		<BitmapImage x:Key="area" UriSource="/Fishomatic;component/res/boxes.png" />
+	</Window.Resources>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Body -->
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Buttons -->
+			<Grid
+				Grid.Column="2"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="*"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Fishing Toggle -->
+				<Button
+					Grid.Column="1"
+					Grid.Row="0"
+					Grid.RowSpan="2"
+					Command="{Binding ToggleFishing}"
+					Background="Transparent"
+					BorderThickness="0"
+					MaxHeight="64"
+					>
+					<Image
+						Source="{Binding FishFinder.Run, Converter={conv:BoolSelect}, ConverterParameter='fish1|fish0'}"
+						RenderOptions.BitmapScalingMode="Fant"
+						/>
+				</Button>
+
+				<!-- Watch Area -->
+				<Button
+					Grid.Row="0"
+					Grid.Column="0"
+					Command="{Binding SetSearchArea}"
+					Background="Transparent"
+					BorderThickness="0"
+					MaxHeight="32"
+					>
+					<Image
+						Source="{StaticResource area}"
+						RenderOptions.BitmapScalingMode="Fant"
+						/>
+				</Button>
+
+				<!-- Options -->
+				<Button
+					Grid.Row="1"
+					Grid.Column="0"
+					Command="{Binding ShowOptions}"
+					HorizontalAlignment="Right"
+					Background="Transparent"
+					BorderThickness="0"
+					MaxHeight="32"
+					>
+					<Image
+						Source="{StaticResource options}"
+						RenderOptions.BitmapScalingMode="Fant"
+						/>
+				</Button>
+			</Grid>
+
+			<!-- Movement threshold -->
+			<StackPanel
+				Grid.Column="0"
+				Orientation="Vertical"
+				VerticalAlignment="Center"
+				Margin="3"
+				>
+				<StackPanel
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="Move Threshold:"
+						VerticalAlignment="Center"
+						/>
+					<TextBox
+						Text="{Binding Settings.MoveThreshold}"
+						MinWidth="40"
+						VerticalAlignment="Center"
+						Margin="8,0,0,0"
+						/>
+				</StackPanel>
+				<StackPanel
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<Slider
+						MinWidth="150"
+						Margin="3,0,0,0"
+						/>
+				</StackPanel>
+				<StackPanel
+					Orientation="Horizontal"
+					Margin="3"
+					>
+					<TextBlock
+						Text="Sample Colour:"
+						VerticalAlignment="Center"
+						/>
+					<Label
+						VerticalAlignment="Center"
+						Background="{Binding Settings.TargetColour, Converter={conv:ColourToBrush}}"
+						Margin="8,0,0,0"
+						MinHeight="16"
+						MinWidth="30"
+						/>
+				</StackPanel>
+			</StackPanel>
+		</Grid>
+
+		<!-- Log -->
+		<gui:LogControl
+			Grid.Row="1"
+			Visibility="Collapsed"
+			x:Name="m_log_control"
+			/>
+
+		<!-- Status Bar -->
+		<StatusBar
+			Grid.Row="10"
+			>
+			<StatusBarItem>
+				<TextBlock
+					Text="{Binding FishFinder.State}"
+					/>
+			</StatusBarItem>
+			<StatusBarItem>
+				<ProgressBar
+					MinWidth="100"
+					MinHeight="12"
+					/>
+			</StatusBarItem>
+		</StatusBar>
+	</Grid>
+</Window>

@@ -560,6 +560,36 @@ namespace Rylogic.Common
 			}
 			throw new Exception($"Failed to lock file: '{filepath}'");
 		}
+
+#if false
+		/// <summary>Test a directory for create file access permissions</summary>
+		public static bool HasDirectoryPermission(string dir, FileSystemRights rights)
+		{
+			if (string.IsNullOrEmpty(dir))
+				return false;
+
+			try
+			{
+				var rules = Directory.GetAccessControl(dir).GetAccessRules(true, true, typeof(SecurityIdentifier));
+				var identity = WindowsIdentity.GetCurrent();
+				foreach (FileSystemAccessRule rule in rules)
+				{
+					if (!identity.Groups.Contains(rule.IdentityReference))
+						continue;
+
+					if ((rights & rule.FileSystemRights) != rights)
+						continue;
+
+					if (rule.AccessControlType != AccessControlType.Allow)
+						continue;
+
+					return true;
+				}
+			}
+			catch { }
+			return false;
+		}
+#endif
 	}
 }
 

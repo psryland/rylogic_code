@@ -13,9 +13,17 @@ namespace Rylogic.Extn.Windows
 		//    So use System.Drawing primitive types for shared code. System.Windows
 		//    primitive types are used by WPF however.
 
+		public static System.Drawing.Point ToPointI(this Point pt)
+		{
+			return new System.Drawing.Point((int)Math.Round(pt.X), (int)Math.Round(pt.Y));
+		}
 		public static System.Drawing.PointF ToPointF(this Point pt)
 		{
 			return new System.Drawing.PointF((float)pt.X, (float)pt.Y);
+		}
+		public static Point ToPointD(this System.Drawing.Point pt)
+		{
+			return new Point(pt.X, pt.Y);
 		}
 		public static Point ToPointD(this System.Drawing.PointF pt)
 		{
@@ -37,9 +45,19 @@ namespace Rylogic.Extn.Windows
 		{
 			return new Point(pt.X / screen_width - 0.5, 0.5 - pt.Y / screen_height);
 		}
+		public static System.Drawing.Rectangle ToRectI(this Rect rect)
+		{
+			return new System.Drawing.Rectangle(
+				(int)Math.Round(rect.X), (int)Math.Round(rect.Y),
+				(int)Math.Round(rect.Width), (int)Math.Round(rect.Height));
+		}
 		public static System.Drawing.RectangleF ToRectF(this Rect rect)
 		{
 			return new System.Drawing.RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height);
+		}
+		public static Rect ToRectD(this System.Drawing.Rectangle rect)
+		{
+			return new Rect(rect.X, rect.Y, rect.Width, rect.Height);
 		}
 		public static Rect ToRectD(this System.Drawing.RectangleF rect)
 		{
@@ -192,6 +210,26 @@ namespace Rylogic.Extn.Windows
 			}
 
 			throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
+		}
+
+		/// <summary>Reduces the size of this rectangle by thickness 'x'</summary>
+		public static Rect ShrinkBy(this Rect r, Thickness x)
+		{
+			return new Rect(
+				r.Left + x.Left,
+				r.Top + x.Top,
+				r.Width - (x.Left + x.Right),
+				r.Height - (x.Top + x.Bottom));
+		}
+
+		/// <summary>Return the difference between two rectangles as a difference</summary>
+		public static Thickness ToThickness(Rect l, Rect r)
+		{
+			return new Thickness(
+				r.Left - l.Left,
+				r.Top - l.Top,
+				l.Right - r.Right,
+				l.Bottom - r.Bottom);
 		}
 
 		/// <summary>Compare sizes for approximate equality</summary>
