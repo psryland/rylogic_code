@@ -3,6 +3,7 @@
 	public enum EState
 	{
 		Idle,
+		Start,
 		Cast,
 		LookForBobber,
 		LookingForBobber,

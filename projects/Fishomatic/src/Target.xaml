@@ -1,0 +1,31 @@
+﻿<Window
+	x:Class="Fishomatic.Target"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d"
+	Title="Target"
+	ShowInTaskbar="False"
+	ShowActivated="False"
+	WindowStyle="None"
+	WindowStartupLocation="Manual"
+	AllowsTransparency="True"
+	Visibility="Collapsed"
+	Background="Transparent"
+	BorderThickness="0"
+	ResizeMode="NoResize"
+	Width="64"
+	Height="64"
+	>
+	<Window.Resources>
+		<BitmapImage
+			x:Key="target"
+			UriSource="/Fishomatic;component/res/target.png" />
+	</Window.Resources>
+	<Grid>
+		<Image
+			Source="{StaticResource target}"
+			RenderOptions.BitmapScalingMode="Fant" />
+	</Grid>
+</Window>
