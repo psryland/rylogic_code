@@ -1,15 +1,16 @@
-//******************************************************************************
+﻿//******************************************************************************
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
 // Add '_bitwise_operators_allowed' to your enum for bitwise operators
 // Add '_arithmetic_operators_allowed' to your enum for arithmetic operators
 #pragma once
+
+#ifdef __cplusplus // C does not require operators
 #include <type_traits>
 
-#ifdef __cplusplus
-namespace pr
-{
+	// These are in the global namespace so that they work in any namespace
+
 	// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
 	template <typename T> struct has_bitops_allowed
 	{
@@ -202,9 +203,7 @@ namespace pr
 	//{
 	//	return static_cast<ut>(lhs) >= rhs;
 	//}
-}
-#else
-// C does not require operators
+
 #endif
 
 #if PR_UNITTESTS
