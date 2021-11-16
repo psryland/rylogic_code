@@ -202,9 +202,17 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("user32.dll", EntryPoint = "GetClassLongPtrW", SetLastError = true)]
 		public static extern IntPtr GetClassLongPtr(HWND hwnd, int index);
-		
+
 		[DllImport("user32.dll")]
 		public static extern bool GetClientRect(HWND hwnd, out RECT rect);
+
+		/// <summary>Return the mouse position in screen coordinates</summary>
+		public static POINT GetCursorPos()
+		{
+			return GetCursorPos(out var pt) ? pt : throw new Win32Exception("GetCursorPos failed");
+		}
+		[DllImport("user32.dll")]
+		private static extern bool GetCursorPos(out POINT lpPoint);
 
 		[DllImport("user32.dll")]
 		public static extern IntPtr GetDC(HWND hwnd);

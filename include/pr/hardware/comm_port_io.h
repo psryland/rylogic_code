@@ -1,4 +1,4 @@
-//*********************************************************************
+﻿//*********************************************************************
 // Serial IO port comms
 //*********************************************************************
 #pragma once
@@ -602,7 +602,7 @@ namespace pr
 			if (res) return;
 			std::string error_desc;
 			auto last_error = LastError(&error_desc);
-			throw std::exception(pr::FmtS("%s. 0x%08X - %s", msg, last_error, error_desc.c_str()));
+			throw std::runtime_error(pr::FmtS("%s. 0x%08X - %s", msg, last_error, error_desc.c_str()));
 		}
 
 		// Helper for creating a port name from a port number

@@ -498,8 +498,8 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 		print("Running script under Administrator account...")
 	
 	try:
-		AssertPathsExist([UserVars.elevate])
-		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"]
+		elevate = Path(UserVars.root, "bin\\elevate\\elevate.exe")
+		args = [elevate, sys.executable] + sys.argv + ["elevated"]
 		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
 	except Exception as ex:
@@ -543,7 +543,7 @@ def SetupVcEnvironment():
 
 	# Add/Replace the environment variables in 'os.environ'
 	for line in env.splitlines():
-		m = re.fullmatch("(.+)=(.*)", line)
+		m = re.fullmatch("^(.+?)=(.*)$", line)
 		if m: os.environ[m[1]] = m[2]
 
 	return os.environ

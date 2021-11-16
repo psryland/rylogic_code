@@ -140,7 +140,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// Note: the 'ContentView' updates the ActiveContent.
 					switch (e.Action)
 					{
-					case NotifyCollectionChangedAction.Add:
+						case NotifyCollectionChangedAction.Add:
 						{
 							foreach (var dc in e.NewItems.Cast<DockControl>())
 							{
@@ -169,7 +169,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							}
 							break;
 						}
-					case NotifyCollectionChangedAction.Remove:
+						case NotifyCollectionChangedAction.Remove:
 						{
 							foreach (var dc in e.OldItems.Cast<DockControl>())
 							{

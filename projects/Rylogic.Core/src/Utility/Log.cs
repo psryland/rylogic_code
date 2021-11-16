@@ -6,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -326,19 +325,23 @@ namespace Rylogic.Utility
 						if (m_thread.IsAlive)
 							m_thread.Join();
 					}
-					m_thread = value ? new Thread(new ThreadStart(() => LogConsumerThread(this, LogCB, OccurrencesBatchSize))) : null;
+					
+					var stack_trace = Util.IsDebug ? new StackTrace(true).ToString() : string.Empty;
+					m_thread = value ? new Thread(new ThreadStart(() => LogConsumerThread(this, LogCB, OccurrencesBatchSize, stack_trace))) : null;
 					if (m_thread != null)
 					{
 						m_thread.Start();
 					}
 
 					// Entry point
-					void LogConsumerThread(SharedContext ctx, ILogWriter log_cb, int occurrences_batch_size = 0)
+					void LogConsumerThread(SharedContext ctx, ILogWriter log_cb, int occurrences_batch_size = 0, string? stack_trace = null)
 					{
 						try
 						{
-							Thread.CurrentThread.Name = "pr::Logger";
-
+							// Note: If this thread is still running at shutdown, check 'stack_trace' to
+							// see where it was created. All 'Logger' instances need to be disposed before
+							// this shared context is disposed (which shuts down the thread).
+							Thread.CurrentThread.Name = "Rylogic.Logger";
 							for (var last = new LogEvent(); Dequeue(out var ev);)
 							{
 								// Same event as last time? add it to the batch
@@ -402,10 +405,9 @@ namespace Rylogic.Utility
 					if (!Queue.TryTake(out ev!))
 					{
 						// Notes:
-						//  - If you get a block here on shutdown, it's probably because of leaked references to
-						//    the log shared context. Look at 'RefCount' in the debugger. You may turn on 'REFS'
-						//    and 'STACKTRACES' in the 'RefCount' class if you want. If each 'm_refs', look at the
-						//    'Tag' name.
+						//  - If you get a block here on shutdown, it's probably because of leaked references to the
+						//    log shared context. Look at 'RefCount' in the debugger. You may turn on 'REFS' and 'STACKTRACES'
+						//    in the 'RefCount' class if you want. In each 'm_refs', look at the 'Tag' name.
 						Idle.Set();
 						ev = Queue.Take(); // Blocks
 						Idle.Reset();

@@ -16,7 +16,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ScintillaControl :HwndHost, INotifyPropertyChanged
+	public class ScintillaControl :HwndHost, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - See http://www.scintilla.org/ScintillaDoc.html for documentation
@@ -54,8 +54,6 @@ namespace Rylogic.Gui.WPF
 		}
 		public ScintillaControl()
 		{
-			InitializeComponent();
-
 			// Notes:
 			//  - The examples suggest creating the scintilla control as a child of a static control
 			//    in order to fix some issue with notification messages sent from the native control.
@@ -397,10 +395,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		private void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		protected void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
 		#region Text
 
@@ -2289,7 +2284,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Set whether the built-in context menu is used</summary>
 		public bool UsePopUp
 		{
-			set { Cmd(Sci.SCI_USEPOPUP, value ? 1 : 0); }
+			set => Cmd(Sci.SCI_USEPOPUP, value ? 1 : 0);
 		}
 
 		#endregion

@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // String Core
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -1190,11 +1190,11 @@ namespace pr
 			auto beg = Begin(str);
 			auto end = End(str);
 			auto first = front ? FindFirst(beg  , end, [&](auto ch){ return !pred(ch); }) : beg;
-			auto last  = back  ? FindLast (first, end, [&](auto ch){ return !pred(ch); }) : end;
+			auto lastt = back  ? FindLast (first, end, [&](auto ch){ return !pred(ch); }) : end;
 
 			// Move the non-trimmed characters to the front of the string and trim the tail
 			auto out = beg;
-			for (; first != last; ++first, ++out) { *out = *first; }
+			for (; first != lastt; ++first, ++out) { *out = *first; }
 			Resize(str, out - beg);
 			return str;
 		}

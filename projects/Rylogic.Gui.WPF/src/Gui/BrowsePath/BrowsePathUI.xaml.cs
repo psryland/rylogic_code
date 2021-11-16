@@ -21,6 +21,7 @@ namespace Rylogic.Gui.WPF
 	{
 		public BrowsePathUI()
 		{
+			History = new List<string>();
 			InitializeComponent();
 			HistoryView = CollectionViewSource.GetDefaultView(History);
 
@@ -103,11 +104,13 @@ namespace Rylogic.Gui.WPF
 		}
 		private void History_Changed()
 		{
+			// Don't pass a 'new List<string>()' as the default to DPRegister or
+			// all instances of the BrowsePathUI control will share the same default history
 			History ??= new List<string>();
 			HistoryView = CollectionViewSource.GetDefaultView(History);
 			UpdateHistoryString();
 		}
-		public static readonly DependencyProperty HistoryProperty = Gui_.DPRegister<BrowsePathUI>(nameof(History), new List<string>(), Gui_.EDPFlags.None);
+		public static readonly DependencyProperty HistoryProperty = Gui_.DPRegister<BrowsePathUI>(nameof(History), null, Gui_.EDPFlags.None);
 
 		/// <summary>The path history as a '|' delimited string</summary>
 		public string HistoryString
@@ -161,16 +164,16 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The title to display on the path browser dialog</summary>
 		public string DialogTitle
 		{
-			get { return (string)GetValue(DialogTitleProperty) ?? $"Select a {(PathType == EType.SelectDirectory ? "Directory" : "File")}"; }
-			set { SetValue(DialogTitleProperty, value); }
+			get => (string)GetValue(DialogTitleProperty) ?? $"Select a {(PathType == EType.SelectDirectory ? "Directory" : "File")}";
+			set => SetValue(DialogTitleProperty, value);
 		}
 		public static readonly DependencyProperty DialogTitleProperty = Gui_.DPRegister<BrowsePathUI>(nameof(DialogTitle), "Choose...", Gui_.EDPFlags.None);
 
 		/// <summary>The filter to apply in open/save file dialogs. Example: "Image files (*.bmp, *.jpg)|*.bmp;*.jpg|All files (*.*)|*.*"</summary>
 		public string FileFilter
 		{
-			get { return (string)GetValue(FileFilterProperty); }
-			set { SetValue(FileFilterProperty, value); }
+			get => (string)GetValue(FileFilterProperty);
+			set => SetValue(FileFilterProperty, value);
 		}
 		public static readonly DependencyProperty FileFilterProperty = Gui_.DPRegister<BrowsePathUI>(nameof(FileFilter), "All files (*.*)|*.*", Gui_.EDPFlags.None);
 

@@ -1,22 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using System.Windows;
 using Rylogic.Gfx;
 using Rylogic.Scintilla;
 
 namespace Rylogic.Gui.WPF
 {
-	public enum EScintillaStyles
-	{
-		Default,
-		LdrLight,
-		LdrDark,
-	}
-
 	public static class Scintilla_
 	{
 		/// <summary>Initialise with reasonable default style</summary>
@@ -178,33 +166,39 @@ namespace Rylogic.Gui.WPF
 		};
 
 		/// <summary>Style Attached property</summary>
-		private const int Style = 0;
-		public static readonly DependencyProperty StyleProperty = Gui_.DPRegisterAttached(typeof(Scintilla_), nameof(Style), EScintillaStyles.Default, Gui_.EDPFlags.None);
-		public static EScintillaStyles GetStyle(DependencyObject obj) => (EScintillaStyles)obj.GetValue(StyleProperty);
-		public static void SetStyle(DependencyObject obj, EScintillaStyles value) => obj.SetValue(StyleProperty, value);
-		private static void Style_Changed(DependencyObject obj)
+		private const int Theme = 0;
+		public static EScintillaThemes GetTheme(DependencyObject obj) => (EScintillaThemes)obj.GetValue(ThemeProperty);
+		public static void SetTheme(DependencyObject obj, EScintillaThemes value) => obj.SetValue(ThemeProperty, value);
+		private static void Theme_Changed(DependencyObject obj)
 		{
 			if (obj is ScintillaControl sc)
 			{
-				switch (GetStyle(sc))
+				switch (GetTheme(sc))
 				{
-				case EScintillaStyles.Default:
+					case EScintillaThemes.Default:
 					{
 						sc.InitStyle = x => ConfigDefault(x);
 						break;
 					}
-				case EScintillaStyles.LdrLight:
+					case EScintillaThemes.LdrLight:
 					{
 						sc.InitStyle = x => ConfigLdrLight(x);
 						break;
 					}
-				case EScintillaStyles.LdrDark:
+					case EScintillaThemes.LdrDark:
 					{
 						sc.InitStyle = x => ConfigLdrDark(x);
 						break;
 					}
 				}
 			}
+		}
+		public static readonly DependencyProperty ThemeProperty = Gui_.DPRegisterAttached(typeof(Scintilla_), nameof(Theme), EScintillaThemes.Default, Gui_.EDPFlags.None);
+		public enum EScintillaThemes
+		{
+			Default,
+			LdrLight,
+			LdrDark,
 		}
 	}
 }

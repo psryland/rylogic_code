@@ -136,6 +136,27 @@ namespace pr
 			}
 		};
 
+		// RAII WaitForSingleObject
+		struct WaitForSingleObject
+		{
+			HANDLE m_handle;
+			explicit WaitForSingleObject(HANDLE handle, DWORD timeout = INFINITE)
+				:m_handle(handle)
+			{
+				switch (::WaitForSingleObject(m_handle, timeout))
+				{
+					case WAIT_OBJECT_0: break;
+					case WAIT_ABANDONED: throw std::runtime_error("WaitForSingleObject on destroyed mutex");
+					case WAIT_TIMEOUT: throw std::runtime_error("WaitForSingleObject timed out");
+					case WAIT_FAILED: throw std::runtime_error(pr::FmtS("WaitForSingleObject failed: %s", pr::HrMsg(GetLastError()).c_str()));
+				}
+			}
+			~WaitForSingleObject()
+			{
+				ReleaseMutex(m_handle);
+			}
+		};
+
 		// Windows API 'CreateFile'
 		// 'dwDesiredAccess' = e.g. GENERIC_READ
 		// 'dwShareMode' = e.g. FILE_SHARE_READ

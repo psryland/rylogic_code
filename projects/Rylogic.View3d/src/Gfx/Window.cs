@@ -61,7 +61,7 @@ namespace Rylogic.Gfx
 				void HandleRendering(IntPtr ctx, HWindow wnd) => OnRendering?.Invoke(this, EventArgs.Empty);
 
 				// Set up a callback for when the object store for this window changes
-				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
+				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
 				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) => OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args));
 
 				// Set up a callback for animation events
@@ -84,7 +84,7 @@ namespace Rylogic.Gfx
 				if (Handle == HWindow.Zero) return;
 				View3D_WindowAnimControl(Handle, EAnimCommand.Stop, 0.0);
 				View3D_WindowAnimEventCBSet(Handle, m_animation_cb, IntPtr.Zero, false);
-				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
+				View3D_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
 				View3D_WindowRenderingCB(Handle, m_render_cb, IntPtr.Zero, false);
 				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb, IntPtr.Zero, false);
 				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, IntPtr.Zero, false);

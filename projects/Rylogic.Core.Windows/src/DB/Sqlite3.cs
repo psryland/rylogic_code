@@ -3784,7 +3784,8 @@ namespace Rylogic.UnitTests
 	using Common;
 	using Utility;
 
-	[TestFixture] public class TestSqlite3
+	[TestFixture]
+	public class TestSqlite3
 	{
 		// Use an in-memory DB for normal unit tests, use an actual file when debugging
 		private static string FilePath = Sqlite.DBInMemory; //new FileInfo("tmpDB.db").FullName;
@@ -3834,7 +3835,7 @@ namespace Rylogic.UnitTests
 
 		public interface ITable0
 		{
-			int      Inc_Key  { get; set; }
+			int Inc_Key { get; set; }
 			SomeEnum Inc_Enum { get; set; }
 		}
 		private class Table0 :ITable0
@@ -3851,24 +3852,24 @@ namespace Rylogic.UnitTests
 			}
 			public Table0(ref int key, int seed)
 			{
-				Inc_Key             = ++key;
-				Inc_Value           = seed.ToString(CultureInfo.InvariantCulture);
-				Inc_Enum            = (SomeEnum)((seed % 3) + 1);
-				Ign_NoGetter        = seed;
-				Ign_PrivateProp     = seed != 0;
+				Inc_Key = ++key;
+				Inc_Value = seed.ToString(CultureInfo.InvariantCulture);
+				Inc_Enum = (SomeEnum)((seed % 3) + 1);
+				Ign_NoGetter = seed;
+				Ign_PrivateProp = seed != 0;
 				m_ign_private_field = seed;
-				Ign_PublicField     = (short)m_ign_private_field;
+				Ign_PublicField = (short)m_ign_private_field;
 			}
 
 			[Sqlite.Column(PrimaryKey = true)]
 			public int Inc_Key { get; set; }
-			public  string   Inc_Value               { get; set; }
-			public SomeEnum  Inc_Enum                { get; set; }
-			public  float    Ign_NoGetter            { set { } }
-			public  int      Ign_NoSetter            { get { return 42; } }
-			private bool     Ign_PrivateProp         { get; set; }
-			private int      m_ign_private_field;
-			public  short    Ign_PublicField;
+			public string Inc_Value { get; set; }
+			public SomeEnum Inc_Enum { get; set; }
+			public float Ign_NoGetter { set { } }
+			public int Ign_NoSetter { get { return 42; } }
+			private bool Ign_PrivateProp { get; set; }
+			private int m_ign_private_field;
+			public short Ign_PublicField;
 
 			public override string ToString()
 			{
@@ -3884,64 +3885,64 @@ namespace Rylogic.UnitTests
 		private class Table1
 		{
 			public Table1()
-				:this(0)
+				: this(0)
 			{ }
 			public Table1(int val)
 			{
-				m_key       = -1;
-				m_bool      = true;
-				m_char      = 'X';
-				m_sbyte     = 12;
-				m_byte      = 12;
-				m_short     = 1234;
-				m_ushort    = 1234;
-				m_int       = 12345678;
-				m_uint      = 12345678;
-				m_int64     = 1234567890000;
-				m_uint64    = 1234567890000;
-				m_decimal   = 1234567890.123467890m;
-				m_float     = 1.234567f;
-				m_double    = 1.2345678987654321;
-				m_string    = "string";
-				m_buf       = new byte[]{0,1,2,3,4,5,6,7,8,9};
+				m_key = -1;
+				m_bool = true;
+				m_char = 'X';
+				m_sbyte = 12;
+				m_byte = 12;
+				m_short = 1234;
+				m_ushort = 1234;
+				m_int = 12345678;
+				m_uint = 12345678;
+				m_int64 = 1234567890000;
+				m_uint64 = 1234567890000;
+				m_decimal = 1234567890.123467890m;
+				m_float = 1.234567f;
+				m_double = 1.2345678987654321;
+				m_string = "string";
+				m_buf = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 				m_empty_buf = null;
-				m_int_buf   = new[]{0x10000000,0x20000000,0x30000000,0x40000000};
-				m_guid      = Guid.NewGuid();
-				m_enum      = SomeEnum.One;
-				m_nullenum  = SomeEnum.Two;
+				m_int_buf = new[] { 0x10000000, 0x20000000, 0x30000000, 0x40000000 };
+				m_guid = Guid.NewGuid();
+				m_enum = SomeEnum.One;
+				m_nullenum = SomeEnum.Two;
 				m_dt_offset = DateTimeOffset.UtcNow;
-				m_custom    = new Custom();
-				m_nullint   = 23;
-				m_nulllong  = null;
-				Ignored     = val;
+				m_custom = new Custom();
+				m_nullint = 23;
+				m_nulllong = null;
+				Ignored = val;
 			}
 
 			// Fields
-			[Sqlite.Column(Order= 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
-			[Sqlite.Column(Order= 1)] protected bool        m_bool;
-			[Sqlite.Column(Order= 2)] public sbyte          m_sbyte;
-			[Sqlite.Column(Order= 3)] public byte           m_byte;
-			[Sqlite.Column(Order= 4)] private char          m_char;
-			[Sqlite.Column(Order= 5)] private short         m_short {get;set;}
-			[Sqlite.Column(Order= 6)] public ushort         m_ushort {get;set;}
-			[Sqlite.Column(Order= 7)] public int            m_int;
-			[Sqlite.Column(Order= 8)] public uint           m_uint;
-			[Sqlite.Column(Order= 9)] public long           m_int64;
-			[Sqlite.Column(Order=10)] public ulong          m_uint64;
-			[Sqlite.Column(Order=11)] public decimal        m_decimal;
-			[Sqlite.Column(Order=12)] public float          m_float;
-			[Sqlite.Column(Order=13)] public double         m_double;
-			[Sqlite.Column(Order=14)] public string?        m_string;
-			[Sqlite.Column(Order=15)] public byte[]?        m_buf;
-			[Sqlite.Column(Order=16)] public byte[]?        m_empty_buf;
-			[Sqlite.Column(Order=17)] public int[]?         m_int_buf;
-			[Sqlite.Column(Order=18)] public Guid           m_guid;
-			[Sqlite.Column(Order=19)] public SomeEnum       m_enum;
-			[Sqlite.Column(Order=20)] public SomeEnum?      m_nullenum;
-			[Sqlite.Column(Order=21)] public DateTimeOffset m_dt_offset;
-			[Sqlite.Column(Order=22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
-			[Sqlite.Column(Order=23)] public int?           m_nullint;
-			[Sqlite.Column(Order=24)] public long?          m_nulllong;
+			[Sqlite.Column(Order = 0, PrimaryKey = true, AutoInc = true, Constraints = "not null")] public int m_key;
+			[Sqlite.Column(Order = 1)] protected bool m_bool;
+			[Sqlite.Column(Order = 2)] public sbyte m_sbyte;
+			[Sqlite.Column(Order = 3)] public byte m_byte;
+			[Sqlite.Column(Order = 4)] private char m_char;
+			[Sqlite.Column(Order = 5)] private short m_short { get; set; }
+			[Sqlite.Column(Order = 6)] public ushort m_ushort { get; set; }
+			[Sqlite.Column(Order = 7)] public int m_int;
+			[Sqlite.Column(Order = 8)] public uint m_uint;
+			[Sqlite.Column(Order = 9)] public long m_int64;
+			[Sqlite.Column(Order = 10)] public ulong m_uint64;
+			[Sqlite.Column(Order = 11)] public decimal m_decimal;
+			[Sqlite.Column(Order = 12)] public float m_float;
+			[Sqlite.Column(Order = 13)] public double m_double;
+			[Sqlite.Column(Order = 14)] public string? m_string;
+			[Sqlite.Column(Order = 15)] public byte[]? m_buf;
+			[Sqlite.Column(Order = 16)] public byte[]? m_empty_buf;
+			[Sqlite.Column(Order = 17)] public int[]? m_int_buf;
+			[Sqlite.Column(Order = 18)] public Guid m_guid;
+			[Sqlite.Column(Order = 19)] public SomeEnum m_enum;
+			[Sqlite.Column(Order = 20)] public SomeEnum? m_nullenum;
+			[Sqlite.Column(Order = 21)] public DateTimeOffset m_dt_offset;
+			[Sqlite.Column(Order = 22, SqlDataType = Sqlite.DataType.Text)] public Custom m_custom;
+			[Sqlite.Column(Order = 23)] public int? m_nullint;
+			[Sqlite.Column(Order = 24)] public long? m_nulllong;
 
 			// A field that isn't added to the table
 			public int Ignored { get; set; }
@@ -3950,31 +3951,31 @@ namespace Rylogic.UnitTests
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
-				if (other.m_key      != m_key               ) return false;
-				if (other.m_bool     != m_bool              ) return false;
-				if (other.m_sbyte    != m_sbyte             ) return false;
-				if (other.m_byte     != m_byte              ) return false;
-				if (other.m_char     != m_char              ) return false;
-				if (other.m_short    != m_short             ) return false;
-				if (other.m_ushort   != m_ushort            ) return false;
-				if (other.m_int      != m_int               ) return false;
-				if (other.m_uint     != m_uint              ) return false;
-				if (other.m_int64    != m_int64             ) return false;
-				if (other.m_uint64   != m_uint64            ) return false;
-				if (other.m_decimal  != m_decimal           ) return false;
-				if (other.m_nullint  != m_nullint           ) return false;
-				if (other.m_nulllong != m_nulllong          ) return false;
-				if (!Equals(other.m_string, m_string)       ) return false;
-				if (!Equals(other.m_buf, m_buf)             ) return false;
-				if (!Equals(other.m_empty_buf, m_empty_buf) ) return false;
-				if (!Equals(other.m_int_buf, m_int_buf)     ) return false;
-				if (!Equals(other.m_enum, m_enum)           ) return false;
-				if (!Equals(other.m_nullenum, m_nullenum)   ) return false;
-				if (!other.m_guid.Equals(m_guid)            ) return false;
-				if (!other.m_dt_offset.Equals(m_dt_offset)  ) return false;
-				if (!other.m_custom.Equals(m_custom)        ) return false;
-				if (Math.Abs(other.m_float   - m_float  ) > float .Epsilon) return false;
-				if (Math.Abs(other.m_double  - m_double ) > double.Epsilon) return false;
+				if (other.m_key != m_key) return false;
+				if (other.m_bool != m_bool) return false;
+				if (other.m_sbyte != m_sbyte) return false;
+				if (other.m_byte != m_byte) return false;
+				if (other.m_char != m_char) return false;
+				if (other.m_short != m_short) return false;
+				if (other.m_ushort != m_ushort) return false;
+				if (other.m_int != m_int) return false;
+				if (other.m_uint != m_uint) return false;
+				if (other.m_int64 != m_int64) return false;
+				if (other.m_uint64 != m_uint64) return false;
+				if (other.m_decimal != m_decimal) return false;
+				if (other.m_nullint != m_nullint) return false;
+				if (other.m_nulllong != m_nulllong) return false;
+				if (!Equals(other.m_string, m_string)) return false;
+				if (!Equals(other.m_buf, m_buf)) return false;
+				if (!Equals(other.m_empty_buf, m_empty_buf)) return false;
+				if (!Equals(other.m_int_buf, m_int_buf)) return false;
+				if (!Equals(other.m_enum, m_enum)) return false;
+				if (!Equals(other.m_nullenum, m_nullenum)) return false;
+				if (!other.m_guid.Equals(m_guid)) return false;
+				if (!other.m_dt_offset.Equals(m_dt_offset)) return false;
+				if (!other.m_custom.Equals(m_custom)) return false;
+				if (Math.Abs(other.m_float - m_float) > float.Epsilon) return false;
+				if (Math.Abs(other.m_double - m_double) > double.Epsilon) return false;
 				return true;
 			}
 			private static bool Equals<T>(T[]? arr1, T[]? arr2)
@@ -4006,7 +4007,7 @@ namespace Rylogic.UnitTests
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
-				if (other.PK           != PK          ) return false;
+				if (other.PK != PK) return false;
 				if (other.Inc_Explicit != Inc_Explicit) return false;
 				return true;
 			}
@@ -4016,11 +4017,11 @@ namespace Rylogic.UnitTests
 		private class Table2 :Table2Base
 		{
 			public Table2()
-			   :this(string.Empty, string.Empty)
-			{}
+			   : this(string.Empty, string.Empty)
+			{ }
 			public Table2(string key, string str)
 			{
-				PK     = key;
+				PK = key;
 				UniStr = str;
 				Ign_PrivateField = true;
 				Ign_PrivateField = !Ign_PrivateField;
@@ -4055,7 +4056,7 @@ namespace Rylogic.UnitTests
 		public partial class Table3
 		{
 			public Table3()
-				:this(0, false, string.Empty)
+				: this(0, false, string.Empty)
 			{ }
 			public Table3(int key1, bool key2, string key3)
 			{
@@ -4072,25 +4073,25 @@ namespace Rylogic.UnitTests
 				Ignored2 = 2.0;
 			}
 
-			public int    Index { get; set; }
-			public bool   Key2 { get; set; }
+			public int Index { get; set; }
+			public bool Key2 { get; set; }
 			public string Prop1 { get; set; }
-			public float  Prop2 { get; set; }
-			public Guid   Prop3 { get; set; }
+			public float Prop2 { get; set; }
+			public Guid Prop3 { get; set; }
 			public float Ignored1 { get; set; }
 
 			public bool Equals(Table3 other)
 			{
 				if (ReferenceEquals(null, other)) return false;
 				if (ReferenceEquals(this, other)) return true;
-				if (other.Index    != Index   ) return false;
-				if (other.Key2    != Key2   ) return false;
-				if (other.Prop1   != Prop1  ) return false;
+				if (other.Index != Index) return false;
+				if (other.Key2 != Key2) return false;
+				if (other.Prop1 != Prop1) return false;
 				if (Math.Abs(other.Prop2 - Prop2) > float.Epsilon) return false;
-				if (other.Prop3   != Prop3  ) return false;
+				if (other.Prop3 != Prop3) return false;
 				if (other.Parent1 != Parent1) return false;
-				if (other.PropA   != PropA  ) return false;
-				if (other.PropB   != PropB  ) return false;
+				if (other.PropA != PropA) return false;
+				if (other.PropB != PropB) return false;
 				return true;
 			}
 		}
@@ -4098,7 +4099,7 @@ namespace Rylogic.UnitTests
 		[Sqlite.IgnoreColumns("Ignored2")]
 		public partial class Table3 :Table3Base
 		{
-			public string   PropA { get; set; }
+			public string PropA { get; set; }
 			public SomeEnum PropB { get; set; }
 		}
 		#endregion
@@ -4124,14 +4125,15 @@ namespace Rylogic.UnitTests
 		}
 		public class Table5 :Table5Base
 		{
-			public Table5() :this(string.Empty) {}
+			public Table5() : this(string.Empty) { }
 			public Table5(string data) { Data = data; }
 			public string Data { get; set; }
 			[Sqlite.Ignore] public int Tmp { get; set; }
 		}
 		#endregion
 
-		[TestFixtureSetUp] public void Setup()
+		[TestFixtureSetUp]
+		public void Setup()
 		{
 			var root = Path_.CombinePath(Path_.Directory(Util.__FILE__()), "..", "..", "..", "..");
 			Sqlite.LoadDll(root + "\\lib\\$(platform)\\$(config)");
@@ -4143,15 +4145,17 @@ namespace Rylogic.UnitTests
 			// Use single threading
 			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
 		}
-		[TestFixtureTearDown] public void Cleanup()
+		[TestFixtureTearDown]
+		public void Cleanup()
 		{
 			if (FilePath != Sqlite.DBInMemory)
 				File.Delete(FilePath);
 		}
-		[Test] public void StandardUse()
+		[Test]
+		public void StandardUse()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Tweak some DB settings for performance
 				db.Execute(Sqlite.Sql("PRAGMA synchronous = OFF"));
@@ -4167,8 +4171,8 @@ namespace Rylogic.UnitTests
 				Assert.Equal(3, table.ColumnCount);
 
 				// Check the columns
-				var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
-				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
+				var column_names = new[] { "Inc_Key", "Inc_Value", "Inc_Enum" };
+				using (var q = new Sqlite.Query(db, "select * from " + table.Name))
 				{
 					Assert.Equal(3, q.ColumnCount);
 					Assert.True(column_names.Contains(q.ColumnName(0)));
@@ -4189,15 +4193,16 @@ namespace Rylogic.UnitTests
 				Assert.Equal(3, table.RowCount);
 
 				// Check the query string
-				var sql_count = "select count(*) from "+table.Name;
+				var sql_count = "select count(*) from " + table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
 					Assert.Equal(sql_count, q.SqlString);
 			}
 		}
-		[Test] public void AllTypes()
+		[Test]
+		public void AllTypes()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table1>();
@@ -4209,34 +4214,34 @@ namespace Rylogic.UnitTests
 				Assert.Equal(25, table.ColumnCount);
 
 				// Check the columns
-				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
+				using (var q = new Sqlite.Query(db, "select * from " + table.Name))
 				{
 					Assert.Equal(25, q.ColumnCount);
-					Assert.Equal("m_key"       ,q.ColumnName( 0));
-					Assert.Equal("m_bool"      ,q.ColumnName( 1));
-					Assert.Equal("m_sbyte"     ,q.ColumnName( 2));
-					Assert.Equal("m_byte"      ,q.ColumnName( 3));
-					Assert.Equal("m_char"      ,q.ColumnName( 4));
-					Assert.Equal("m_short"     ,q.ColumnName( 5));
-					Assert.Equal("m_ushort"    ,q.ColumnName( 6));
-					Assert.Equal("m_int"       ,q.ColumnName( 7));
-					Assert.Equal("m_uint"      ,q.ColumnName( 8));
-					Assert.Equal("m_int64"     ,q.ColumnName( 9));
-					Assert.Equal("m_uint64"    ,q.ColumnName(10));
-					Assert.Equal("m_decimal"   ,q.ColumnName(11));
-					Assert.Equal("m_float"     ,q.ColumnName(12));
-					Assert.Equal("m_double"    ,q.ColumnName(13));
-					Assert.Equal("m_string"    ,q.ColumnName(14));
-					Assert.Equal("m_buf"       ,q.ColumnName(15));
-					Assert.Equal("m_empty_buf" ,q.ColumnName(16));
-					Assert.Equal("m_int_buf"   ,q.ColumnName(17));
-					Assert.Equal("m_guid"      ,q.ColumnName(18));
-					Assert.Equal("m_enum"      ,q.ColumnName(19));
-					Assert.Equal("m_nullenum"  ,q.ColumnName(20));
-					Assert.Equal("m_dt_offset" ,q.ColumnName(21));
-					Assert.Equal("m_custom"    ,q.ColumnName(22));
-					Assert.Equal("m_nullint"   ,q.ColumnName(23));
-					Assert.Equal("m_nulllong"  ,q.ColumnName(24));
+					Assert.Equal("m_key", q.ColumnName(0));
+					Assert.Equal("m_bool", q.ColumnName(1));
+					Assert.Equal("m_sbyte", q.ColumnName(2));
+					Assert.Equal("m_byte", q.ColumnName(3));
+					Assert.Equal("m_char", q.ColumnName(4));
+					Assert.Equal("m_short", q.ColumnName(5));
+					Assert.Equal("m_ushort", q.ColumnName(6));
+					Assert.Equal("m_int", q.ColumnName(7));
+					Assert.Equal("m_uint", q.ColumnName(8));
+					Assert.Equal("m_int64", q.ColumnName(9));
+					Assert.Equal("m_uint64", q.ColumnName(10));
+					Assert.Equal("m_decimal", q.ColumnName(11));
+					Assert.Equal("m_float", q.ColumnName(12));
+					Assert.Equal("m_double", q.ColumnName(13));
+					Assert.Equal("m_string", q.ColumnName(14));
+					Assert.Equal("m_buf", q.ColumnName(15));
+					Assert.Equal("m_empty_buf", q.ColumnName(16));
+					Assert.Equal("m_int_buf", q.ColumnName(17));
+					Assert.Equal("m_guid", q.ColumnName(18));
+					Assert.Equal("m_enum", q.ColumnName(19));
+					Assert.Equal("m_nullenum", q.ColumnName(20));
+					Assert.Equal("m_dt_offset", q.ColumnName(21));
+					Assert.Equal("m_custom", q.ColumnName(22));
+					Assert.Equal("m_nullint", q.ColumnName(23));
+					Assert.Equal("m_nulllong", q.ColumnName(24));
 				}
 
 				// Create some objects to stick in the table
@@ -4266,7 +4271,7 @@ namespace Rylogic.UnitTests
 				Assert.True(obj3.Equals(OBJ3));
 
 				// Check parameter binding
-				using (var q = new Sqlite.Query(db, Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
+				using (var q = new Sqlite.Query(db, Sqlite.Sql("select m_string,m_int from ", table.Name, " where m_string = @p1 and m_int = @p2")))
 				{
 					Assert.Equal(2, q.ParmCount);
 					Assert.Equal("@p1", q.ParmName(1));
@@ -4281,12 +4286,12 @@ namespace Rylogic.UnitTests
 
 					// Read the results
 					Assert.Equal(2, q.ColumnCount);
-					Assert.Equal(Sqlite.DataType.Text    ,q.ColumnType(0));
-					Assert.Equal(Sqlite.DataType.Integer ,q.ColumnType(1));
-					Assert.Equal("m_string"              ,q.ColumnName(0));
-					Assert.Equal("m_int"                 ,q.ColumnName(1));
-					Assert.Equal("string"                ,q.ReadColumn<string>(0));
-					Assert.Equal(12345678                ,q.ReadColumn<int>(1));
+					Assert.Equal(Sqlite.DataType.Text, q.ColumnType(0));
+					Assert.Equal(Sqlite.DataType.Integer, q.ColumnType(1));
+					Assert.Equal("m_string", q.ColumnName(0));
+					Assert.Equal("m_int", q.ColumnName(1));
+					Assert.Equal("string", q.ReadColumn<string>(0));
+					Assert.Equal(12345678, q.ReadColumn<int>(1));
 
 					// There should be 3 rows
 					Assert.True(q.Step());
@@ -4342,10 +4347,11 @@ namespace Rylogic.UnitTests
 				Assert.True(obj2.Equals(objs[0]));
 			}
 		}
-		[Test] public void Unicode()
+		[Test]
+		public void Unicode()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table2>();
@@ -4355,11 +4361,11 @@ namespace Rylogic.UnitTests
 				// Check the table
 				var table = db.Table<Table2>();
 				Assert.Equal(3, table.ColumnCount);
-				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
-				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
+				var column_names = new[] { "PK", "UniStr", "Inc_Explicit" };
+				using (var q = new Sqlite.Query(db, "select * from " + table.Name))
 				{
-					Assert.Equal(3        ,q.ColumnCount);
-					Assert.Equal("PK"     ,q.ColumnName(0));
+					Assert.Equal(3, q.ColumnCount);
+					Assert.Equal("PK", q.ColumnName(0));
 					Assert.True(column_names.Contains(q.ColumnName(0)));
 					Assert.True(column_names.Contains(q.ColumnName(1)));
 				}
@@ -4382,10 +4388,11 @@ namespace Rylogic.UnitTests
 				Assert.True(obj2.Equals(OBJ2));
 			}
 		}
-		[Test] public void MultiplePks()
+		[Test]
+		public void MultiplePks()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table3>();
@@ -4395,7 +4402,7 @@ namespace Rylogic.UnitTests
 				// Check the table
 				var table = db.Table<Table3>();
 				Assert.Equal(9, table.ColumnCount);
-				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
+				using (var q = new Sqlite.Query(db, "select * from " + table.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.Equal(9, q.ColumnCount);
@@ -4412,9 +4419,9 @@ namespace Rylogic.UnitTests
 
 				// Create some stuff
 				var obj1 = new Table3(1, false, "first");
-				var obj2 = new Table3(1, true , "first");
+				var obj2 = new Table3(1, true, "first");
 				var obj3 = new Table3(2, false, "first");
-				var obj4 = new Table3(2, true , "first");
+				var obj4 = new Table3(2, true, "first");
 
 				// Insert it an check they're there
 				Assert.Equal(1, table.Insert(obj1));
@@ -4423,7 +4430,7 @@ namespace Rylogic.UnitTests
 				Assert.Equal(1, table.Insert(obj4));
 				Assert.Equal(4, table.RowCount);
 
-				Assert.Throws<ArgumentException>(()=>table.Get(obj1.Index, obj1.Key2));
+				Assert.Throws<ArgumentException>(() => table.Get(obj1.Index, obj1.Key2));
 
 				var OBJ1 = table.Get(obj1.Index, obj1.Key2, obj1.Key3);
 				var OBJ2 = table.Get(obj2.Index, obj2.Key2, obj2.Key3);
@@ -4475,10 +4482,11 @@ namespace Rylogic.UnitTests
 				Assert.Null(OBJ3);
 			}
 		}
-		[Test] public void Transactions()
+		[Test]
+		public void Transactions()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table0>();
@@ -4489,7 +4497,7 @@ namespace Rylogic.UnitTests
 
 				// Create and insert some objects
 				int key = 0;
-				var objs = Enumerable.Range(0,10).Select(i => new Table0(ref key, i)).ToList();
+				var objs = Enumerable.Range(0, 10).Select(i => new Table0(ref key, i)).ToList();
 				foreach (var x in objs.Take(3))
 					table.Insert(x, Sqlite.OnInsertConstraint.Replace);
 
@@ -4511,7 +4519,7 @@ namespace Rylogic.UnitTests
 						tranny.Commit();
 					}
 				}
-				catch {}
+				catch { }
 				Assert.Equal(3, table.RowCount);
 
 				// Add objects with no call to commit
@@ -4559,10 +4567,11 @@ namespace Rylogic.UnitTests
 				}
 			}
 		}
-		[Test] public void RuntimeTypes()
+		[Test]
+		public void RuntimeTypes()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table1>();
@@ -4571,7 +4580,7 @@ namespace Rylogic.UnitTests
 				var table = db.Table(typeof(Table1));
 
 				// Create objects
-				var objs = Enumerable.Range(0,10).Select(i => new Table1(i)).ToList();
+				var objs = Enumerable.Range(0, 10).Select(i => new Table1(i)).ToList();
 				foreach (var x in objs)
 					Assert.Equal(1, table.Insert(x)); // insert without compile-time type info
 
@@ -4583,10 +4592,11 @@ namespace Rylogic.UnitTests
 					Assert.True(objs[i].Equals(OBJS[i]));
 			}
 		}
-		[Test] public void AlterTable()
+		[Test]
+		public void AlterTable()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a table
 				db.DropTable<Table3>();
@@ -4596,7 +4606,7 @@ namespace Rylogic.UnitTests
 				// Check the table
 				var table3 = db.Table<Table3>();
 				Assert.Equal(9, table3.ColumnCount);
-				using (var q = new Sqlite.Query(db, "select * from "+table3.Name))
+				using (var q = new Sqlite.Query(db, "select * from " + table3.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.Equal(9, q.ColumnCount);
@@ -4614,9 +4624,9 @@ namespace Rylogic.UnitTests
 
 				// Create some stuff
 				var obj1 = new Table3(1, false, "first");
-				var obj2 = new Table3(1, true , "first");
+				var obj2 = new Table3(1, true, "first");
 				var obj3 = new Table3(2, false, "first");
-				var obj4 = new Table3(2, true , "first");
+				var obj4 = new Table3(2, true, "first");
 
 				// Insert it an check they're there
 				Assert.Equal(1, table3.Insert(obj1));
@@ -4636,7 +4646,7 @@ namespace Rylogic.UnitTests
 				// Check the table
 				var table4 = db.Table<Table4>();
 				Assert.Equal(6, table4.ColumnCount);
-				using (var q = new Sqlite.Query(db, "select * from "+table4.Name))
+				using (var q = new Sqlite.Query(db, "select * from " + table4.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.Equal(10, q.ColumnCount);
@@ -4654,10 +4664,11 @@ namespace Rylogic.UnitTests
 				}
 			}
 		}
-		[Test] public void ExprTree()
+		[Test]
+		public void ExprTree()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a simple table
 				db.DropTable<Table0>();
@@ -4667,12 +4678,12 @@ namespace Rylogic.UnitTests
 
 				// Insert stuff
 				int key = 0;
-				var values = new[]{4,1,0,5,7,9,6,3,8,2};
+				var values = new[] { 4, 1, 0, 5, 7, 9, 6, 3, 8, 2 };
 				foreach (var v in values)
 					Assert.Equal(1, table.Insert(new Table0(ref key, v)));
 				Assert.Equal(10, table.RowCount);
 
-				string sql_count = "select count(*) from "+table.Name;
+				string sql_count = "select count(*) from " + table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
 					Assert.Equal(sql_count, q.SqlString);
 
@@ -4699,8 +4710,8 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[6].Inc_Key);
 				}
 				{// Where clause with 'like' method calling 'RowCount'
-					//var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
-					//Assert.AreEqual(1, q);
+				 //var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
+				 //Assert.AreEqual(1, q);
 				}
 				{// Where clause with x => true
 					var q = table.Where(x => true);
@@ -4718,7 +4729,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[9].Inc_Key);
 				}
 				{// Contains clause
-					var set = new[]{"2","4","8"};
+					var set = new[] { "2", "4", "8" };
 					var q = from x in table where set.Contains(x.Inc_Value) select x;
 					var list = q.ToList();
 					Assert.Equal(3, list.Count);
@@ -4727,7 +4738,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[2].Inc_Key);
 				}
 				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
+					var set = new List<string> { "2", "4", "8", "5", "9" };
 					var q = from x in table where set.Contains(x.Inc_Value) == false select x;
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
@@ -4738,7 +4749,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
+					var set = new List<string> { "2", "4", "8", "5", "9" };
 					var q = from x in table where !set.Contains(x.Inc_Value) select x;
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
@@ -4753,7 +4764,7 @@ namespace Rylogic.UnitTests
 					var list = q.ToList();
 					Assert.Equal(10, list.Count);
 					for (int i = 0; i != 10; ++i)
-						Assert.Equal(10-i, list[i].Inc_Key);
+						Assert.Equal(10 - i, list[i].Inc_Key);
 				}
 				{// Where and OrderBy clause
 					var q = from x in table where x.Inc_Key >= 5 orderby x.Inc_Value select x;
@@ -4826,7 +4837,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(5, list[4]);
 				}
 				{// Select tuple
-					var q = table.Select(x => new{x.Inc_Key, x.Inc_Enum});
+					var q = table.Select(x => new { x.Inc_Key, x.Inc_Enum });
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
 					Assert.Equal(1, list[0].Inc_Key);
@@ -4834,13 +4845,13 @@ namespace Rylogic.UnitTests
 					Assert.Equal(3, list[2].Inc_Key);
 					Assert.Equal(4, list[3].Inc_Key);
 					Assert.Equal(5, list[4].Inc_Key);
-					Assert.Equal(SomeEnum.Two   ,list[0].Inc_Enum);
-					Assert.Equal(SomeEnum.Two   ,list[1].Inc_Enum);
-					Assert.Equal(SomeEnum.One   ,list[2].Inc_Enum);
-					Assert.Equal(SomeEnum.Three ,list[3].Inc_Enum);
-					Assert.Equal(SomeEnum.Two   ,list[4].Inc_Enum);
+					Assert.Equal(SomeEnum.Two, list[0].Inc_Enum);
+					Assert.Equal(SomeEnum.Two, list[1].Inc_Enum);
+					Assert.Equal(SomeEnum.One, list[2].Inc_Enum);
+					Assert.Equal(SomeEnum.Three, list[3].Inc_Enum);
+					Assert.Equal(SomeEnum.Two, list[4].Inc_Enum);
 				}
-				#pragma warning disable 168
+#pragma warning disable 168
 				{// Check sql strings are correct
 					string? sql;
 
@@ -4848,7 +4859,7 @@ namespace Rylogic.UnitTests
 					sql = table.SqlString;
 					Assert.Equal("select Inc_Enum from Table0 where (Inc_Key==?)", sql);
 
-					var b = table.Where(x => x.Inc_Key == 3).Select(x => new{x.Inc_Value,x.Inc_Enum}).ToList();
+					var b = table.Where(x => x.Inc_Key == 3).Select(x => new { x.Inc_Value, x.Inc_Enum }).ToList();
 					sql = table.SqlString;
 					Assert.Equal("select Inc_Value,Inc_Enum from Table0 where (Inc_Key==?)", sql);
 
@@ -4869,7 +4880,7 @@ namespace Rylogic.UnitTests
 					sql = table.SqlString;
 					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 4 offset 2", sql);
 
-					var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
+					var q = (from x in table where x.Inc_Key == 3 select new { x.Inc_Key, x.Inc_Value }).ToList();
 					sql = table.SqlString;
 					Assert.Equal("select Inc_Key,Inc_Value from Table0 where (Inc_Key==?)", sql);
 
@@ -4877,13 +4888,14 @@ namespace Rylogic.UnitTests
 					sql = table.SqlString;
 					Assert.Equal("delete from Table0 where (Inc_Key==?)", sql);
 				}
-				#pragma warning restore 168
+#pragma warning restore 168
 			}
 		}
-		[Test] public void UntypedExprTree()
+		[Test]
+		public void UntypedExprTree()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a simple table
 				db.DropTable<Table0>();
@@ -4893,12 +4905,12 @@ namespace Rylogic.UnitTests
 
 				// Insert stuff
 				int key = 0;
-				var values = new[]{4,1,0,5,7,9,6,3,8,2};
+				var values = new[] { 4, 1, 0, 5, 7, 9, 6, 3, 8, 2 };
 				foreach (var v in values)
 					Assert.Equal(1, table.Insert(new Table0(ref key, v)));
 				Assert.Equal(10, table.RowCount);
 
-				string sql_count = "select count(*) from "+table.Name;
+				string sql_count = "select count(*) from " + table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
 					Assert.Equal(sql_count, q.SqlString);
 
@@ -4920,8 +4932,8 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[6].Inc_Key);
 				}
 				{// Where clause with 'like' method calling 'RowCount'
-					//var q = table.Where<Table0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
-					//Assert.AreEqual(1, q);
+				 //var q = table.Where<Table0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
+				 //Assert.AreEqual(1, q);
 				}
 				{// Where clause with x => true
 					var q = table.Where<Table0>(x => true).Cast<Table0>();
@@ -4939,7 +4951,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[9].Inc_Key);
 				}
 				{// Contains clause
-					var set = new[]{"2","4","8"};
+					var set = new[] { "2", "4", "8" };
 					var q = table.Where<Table0>(x => set.Contains(x.Inc_Value)).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(3, list.Count);
@@ -4948,7 +4960,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list[2].Inc_Key);
 				}
 				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
+					var set = new List<string> { "2", "4", "8", "5", "9" };
 					var q = table.Where<Table0>(x => set.Contains(x.Inc_Value) == false).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
@@ -4959,7 +4971,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// NOT Contains clause
-					var set = new List<string>{"2","4","8","5","9"};
+					var set = new List<string> { "2", "4", "8", "5", "9" };
 					var q = table.Where<Table0>(x => !set.Contains(x.Inc_Value)).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
@@ -4970,14 +4982,14 @@ namespace Rylogic.UnitTests
 					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// OrderBy clause
-					var q = table.OrderByDescending<Table0,int>(x => x.Inc_Key).Cast<Table0>();
+					var q = table.OrderByDescending<Table0, int>(x => x.Inc_Key).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(10, list.Count);
 					for (int i = 0; i != 10; ++i)
-						Assert.Equal(10-i, list[i].Inc_Key);
+						Assert.Equal(10 - i, list[i].Inc_Key);
 				}
 				{// Where and OrderBy clause
-					var q = table.Where<Table0>(x => x.Inc_Key >= 5).OrderBy<Table0,string>(x => x.Inc_Value).Cast<Table0>();
+					var q = table.Where<Table0>(x => x.Inc_Key >= 5).OrderBy<Table0, string>(x => x.Inc_Value).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(6, list.Count);
 					Assert.Equal(10, list[0].Inc_Key);
@@ -5015,7 +5027,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(10, list.Count);
 				}
 				{// Type conversions
-					var q = table.Where<Table0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<Table0>();
+					var q = table.Where<Table0>(x => (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f).Cast<Table0>();
 					var list = q.ToList();
 					Assert.Equal(5, list.Count);
 					Assert.Equal(3, list[0].Inc_Key);
@@ -5035,7 +5047,7 @@ namespace Rylogic.UnitTests
 					Assert.Equal(4, list[3].Inc_Key);
 					Assert.Equal(5, list[4].Inc_Key);
 				}
-				#pragma warning disable 168
+#pragma warning disable 168
 				{// Check sql strings are correct
 					string? sql;
 
@@ -5057,13 +5069,14 @@ namespace Rylogic.UnitTests
 					sql = table.SqlString;
 					Assert.Equal("delete from Table0 where (Inc_Key==?)", sql);
 				}
-				#pragma warning restore 168
+#pragma warning restore 168
 			}
 		}
-		[Test] public void Nullables()
+		[Test]
+		public void Nullables()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a simple table
 				db.DropTable<Table1>();
@@ -5072,10 +5085,10 @@ namespace Rylogic.UnitTests
 				var table = db.Table<Table1>();
 
 				// Create some objects to stick in the table
-				var obj1 = new Table1(1){m_nullint = 1, m_int = 4};
-				var obj2 = new Table1(2){m_nulllong = null};
-				var obj3 = new Table1(3){m_nullint = null};
-				var obj4 = new Table1(4){m_nulllong = 2};
+				var obj1 = new Table1(1) { m_nullint = 1, m_int = 4 };
+				var obj2 = new Table1(2) { m_nulllong = null };
+				var obj3 = new Table1(3) { m_nullint = null };
+				var obj4 = new Table1(4) { m_nulllong = 2 };
 
 				// Insert stuff
 				Assert.Equal(1, table.Insert(obj1));
@@ -5154,10 +5167,11 @@ namespace Rylogic.UnitTests
 				}
 			}
 		}
-		[Test] public void AttributeInheritance()
+		[Test]
+		public void AttributeInheritance()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Create a simple table
 				db.DropTable<Table5>();
@@ -5173,10 +5187,10 @@ namespace Rylogic.UnitTests
 				Assert.Equal("Data", meta.NonPks[0].Name);
 
 				// Create some objects to stick in the table
-				var obj1 = new Table5{Data = "1"};
-				var obj2 = new Table5{Data = "2"};
-				var obj3 = new Table5{Data = "3"};
-				var obj4 = new Table5{Data = "4"};
+				var obj1 = new Table5 { Data = "1" };
+				var obj2 = new Table5 { Data = "2" };
+				var obj3 = new Table5 { Data = "3" };
+				var obj4 = new Table5 { Data = "4" };
 
 				// Insert stuff
 				Assert.Equal(1, table.Insert(obj1));
@@ -5186,14 +5200,15 @@ namespace Rylogic.UnitTests
 				Assert.Equal(4, table.RowCount);
 			}
 		}
-		[Test] public void RowChangedEvents()
+		[Test]
+		public void RowChangedEvents()
 		{
 			// Create/Open the database connection
-			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create | Sqlite.OpenFlags.ReadWrite | Sqlite.OpenFlags.NoMutex))
 			{
 				// Sign up a handler for row changed
 				Sqlite.DataChangedArgs? args = null;
-				db.DataChangedImmediate += (s,a) => args = a;
+				db.DataChangedImmediate += (s, a) => args = a;
 
 				// Create a simple table
 				db.DropTable<Table5>();
@@ -5207,25 +5222,25 @@ namespace Rylogic.UnitTests
 
 				// Insert stuff and check the event fires
 				table.Insert(obj1);
-				Assert.Equal(Sqlite.ChangeType.Insert ,args!.ChangeType);
-				Assert.Equal("Table5"                 ,args!.TableName);
-				Assert.Equal(1L                       ,args!.RowId);
+				Assert.Equal(Sqlite.ChangeType.Insert, args!.ChangeType);
+				Assert.Equal("Table5", args!.TableName);
+				Assert.Equal(1L, args!.RowId);
 
 				table.Insert(obj2);
-				Assert.Equal(Sqlite.ChangeType.Insert ,args!.ChangeType);
-				Assert.Equal("Table5"                 ,args!.TableName);
-				Assert.Equal(2L                       ,args!.RowId);
+				Assert.Equal(Sqlite.ChangeType.Insert, args!.ChangeType);
+				Assert.Equal("Table5", args!.TableName);
+				Assert.Equal(2L, args!.RowId);
 
 				obj1.Data = "Updated";
 				table.Update(obj1);
-				Assert.Equal(Sqlite.ChangeType.Update ,args!.ChangeType);
-				Assert.Equal("Table5"                 ,args!.TableName);
-				Assert.Equal(1L                       ,args!.RowId);
+				Assert.Equal(Sqlite.ChangeType.Update, args!.ChangeType);
+				Assert.Equal("Table5", args!.TableName);
+				Assert.Equal(1L, args!.RowId);
 
 				table.Delete(obj2);
-				Assert.Equal(Sqlite.ChangeType.Delete ,args!.ChangeType);
-				Assert.Equal("Table5"                 ,args!.TableName);
-				Assert.Equal(2L                       ,args!.RowId);
+				Assert.Equal(Sqlite.ChangeType.Delete, args!.ChangeType);
+				Assert.Equal("Table5", args!.TableName);
+				Assert.Equal(2L, args!.RowId);
 			}
 		}
 

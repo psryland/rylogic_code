@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // Static Callback
 //  Copyright (c) Oct 2011 Rylogic Ltd
 //******************************************
@@ -23,6 +23,9 @@ namespace pr
 		func m_cb;
 		void* m_ctx;
 
+		StaticCB()
+			:StaticCB(nullptr)
+		{}
 		StaticCB(nullptr_t)
 			:StaticCB(nullptr, nullptr)
 		{}
@@ -33,7 +36,12 @@ namespace pr
 			:m_cb(cb)
 			,m_ctx(ctx)
 		{}
-		template <typename... A> Ret operator()(A&&... args)
+		StaticCB(StaticCB& rhs) = default;
+		StaticCB(StaticCB const& rhs) = default;
+		StaticCB& operator=(StaticCB&& rhs) = default;
+		StaticCB& operator=(StaticCB const& rhs) = default;
+
+		template <typename... A> Ret operator()(A&&... args) const
 		{
 			return m_cb(m_ctx, std::forward<A>(args)...);
 		}

@@ -1329,7 +1329,7 @@ namespace Rylogic.Interop.Win32
 		public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
+		public static IntPtr LoadDll(string dllname, out Exception? load_error, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true, ELoadLibraryFlags flags = ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|ELoadLibraryFlags.LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)
 		{
 			var searched = new List<string>();
 			var ass = Assembly.GetEntryAssembly();
@@ -1348,7 +1348,7 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path, out load_error);
+						return TryLoad(dll_path, out load_error, flags);
 				}
 			}
 
@@ -1362,7 +1362,7 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path, out load_error);
+						return TryLoad(dll_path, out load_error, flags);
 				}
 			}
 
@@ -1376,7 +1376,7 @@ namespace Rylogic.Interop.Win32
 				{
 					searched.Add(dll_path);
 					if (Path_.FileExists(dll_path))
-						return TryLoad(dll_path, out load_error);
+						return TryLoad(dll_path, out load_error, flags);
 				}
 			}
 
@@ -1385,12 +1385,12 @@ namespace Rylogic.Interop.Win32
 			return !throw_if_missing ? IntPtr.Zero : throw load_error;
 
 			// The path is found, attempt to load the dll
-			static HWND TryLoad(string path, out Exception? load_error)
+			static HWND TryLoad(string path, out Exception? load_error, ELoadLibraryFlags flags)
 			{
 				load_error = null;
 
 				Debug.WriteLine($"Loading native dll '{path}'...");
-				var module = LoadLibrary(path);
+				var module = LoadLibraryEx(path, IntPtr.Zero, flags);
 				if (module != IntPtr.Zero)
 					return module;
 

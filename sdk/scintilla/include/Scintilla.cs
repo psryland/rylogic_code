@@ -1,4 +1,4 @@
-/* Scintilla source code edit control */
+﻿/* Scintilla source code edit control */
 /** @file Scintilla.h
  ** Interface to the edit control.
  **/
@@ -18,7 +18,6 @@ namespace Rylogic.Scintilla
 
 	// For Sci_CharacterRange which is defined as long to be compatible with Win32 CHARRANGE
 	using Sci_PositionCR = System.Int32;
-
 	using SurfaceID = System.IntPtr;
 
 	public partial class Sci

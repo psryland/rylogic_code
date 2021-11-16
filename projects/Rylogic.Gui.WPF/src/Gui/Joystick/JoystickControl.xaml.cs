@@ -9,7 +9,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class JoystickControl :Image, INotifyPropertyChanged
+	public partial class JoystickControl :UserControl, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - "Selected = 1U << Sector"
@@ -20,17 +20,14 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The native radius of the control</summary>
 		private const double Radius = 128.0;
+		private readonly ImageSource ThumbImage;
 
 		public JoystickControl()
 		{
 			// Don't set default values for dependency properties because it overrides
 			// the default value passed to 'DPRegister' when used in other controls.
 			InitializeComponent();
-			Stretch = Stretch.Uniform;
-			//SizeChanged += (s, a) =>
-			//{
-			//	Width = Height = Math.Min(a.NewSize.Width, a.NewSize.Height);
-			//};
+			ThumbImage = (ImageSource)FindResource("thumb");
 		}
 		protected override void OnInitialized(EventArgs e)
 		{
@@ -231,6 +228,18 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty IsReadOnlyProperty = Gui_.DPRegister<JoystickControl>(nameof(IsReadOnly), Boxed.False, Gui_.EDPFlags.None);
 
+		/// <summary>The brush used to fill the non-selected sectors</summary>
+		public Brush SectorBrush
+		{
+			get => (Brush)GetValue(SectorBrushProperty);
+			set => SetValue(SectorBrushProperty, value);
+		}
+		private void SectorBrush_Changed()
+		{
+			UpdateGfx();
+		}
+		public static readonly DependencyProperty SectorBrushProperty = Gui_.DPRegister<JoystickControl>(nameof(SectorBrush), Brushes.WhiteSmoke, Gui_.EDPFlags.None);
+
 		/// <summary>The brush used to fill the selected sectors</summary>
 		public Brush SelectedSectorBrush
 		{
@@ -267,35 +276,17 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty StrokeColourProperty = Gui_.DPRegister<JoystickControl>(nameof(StrokeColour), Brushes.Black, Gui_.EDPFlags.None);
 
-		/// <summary>The background colour</summary>
-		public Brush Background
+		/// <summary>The position of the thumb stick (in polar coords, i.e. [angle (radians), deflection (0->1)]). Null to hide</summary>
+		public Point? ThumbPosition
 		{
-			get => (Brush)GetValue(BackgroundProperty);
-			set => SetValue(BackgroundProperty, value);
+			get => (Point?)GetValue(ThumbPositionProperty);
+			set => SetValue(ThumbPositionProperty, value);
 		}
-		private void Background_Changed()
+		private void ThumbPosition_Changed()
 		{
 			UpdateGfx();
 		}
-		public static readonly DependencyProperty BackgroundProperty = Gui_.DPRegister<JoystickControl>(nameof(Background), Brushes.Transparent, Gui_.EDPFlags.None);
-
-		/// <summary>The position of the thumb stick (polar coords). Null to hide</summary>
-		public Point? ThumbPos
-		{
-			get => m_thumb_pos;
-			set
-			{
-				if (m_thumb_pos == value) return;
-				m_thumb_pos = value;
-
-				/// X = angle (in radians) clockwise from north.
-				/// Y = normalised deflection.
-				/// Set to null to hide the thumb stick graphic
-				
-				//Invalidate();
-			}
-		}
-		private Point? m_thumb_pos;
+		public static readonly DependencyProperty ThumbPositionProperty = Gui_.DPRegister<JoystickControl>(nameof(ThumbPosition), null, Gui_.EDPFlags.TwoWay);
 
 		/// <summary>Update the graphics for the control</summary>
 		private void UpdateGfx()
@@ -311,9 +302,9 @@ namespace Rylogic.Gui.WPF
 			var drawing = new DrawingGroup();
 
 			// Fill the background
-			if (Background != Brushes.Transparent)
+			if (SectorBrush != Brushes.Transparent)
 			{
-				var bkgd = new GeometryDrawing(Background, new Pen(Brushes.Black, 0.0), new EllipseGeometry(centre, Radius, Radius));
+				var bkgd = new GeometryDrawing(SectorBrush, new Pen(Brushes.Black, 0.0), new EllipseGeometry(centre, Radius, Radius));
 				drawing.Children.Add(bkgd);
 			}
 
@@ -323,7 +314,7 @@ namespace Rylogic.Gui.WPF
 			{
 				// Each ring doubles the number of sectors from the inner ring
 				var sector_count = SectorCount << r;
-				var ang = (Math_.Tau / sector_count);
+				var ang = Math_.Tau / sector_count;
 				var ofs = Math_.DegreesToRadians(NorthOffset);
 				var rad0 = dr * (1 + 2*r);
 				var rad1 = dr * (3 + 2*r);
@@ -381,7 +372,23 @@ namespace Rylogic.Gui.WPF
 			var sector_drawing = new GeometryDrawing(SelectedSectorBrush, new Pen(StrokeColour, StrokeWidth), path).Freeze2();
 			drawing.Children.Add(sector_drawing);
 
-			Source = new DrawingImage(drawing);
+			// If the thumb position in not null, add the thumb graphic
+			if (ThumbPosition is Point thumb)
+			{
+				var thumb_radius = 0.25 * Radius;
+				var max_deflection = Radius - thumb_radius;
+
+				// Convert from polar coords to rect
+				var rect = new Rect(
+					max_deflection * thumb.Y * Math.Cos(thumb.X) - thumb_radius,
+					max_deflection * thumb.Y * Math.Sin(thumb.X) - thumb_radius,
+					2 * thumb_radius, 2 * thumb_radius);
+
+				var thumb_bitmap = new ImageDrawing(ThumbImage, rect);
+				drawing.Children.Add(thumb_bitmap);
+			}
+
+			m_image.Source = new DrawingImage(drawing);
 		}
 
 		/// <summary>Return the sector under 'client_pt' (where 'client_pt' is in client space)</summary>

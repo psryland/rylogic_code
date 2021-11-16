@@ -645,7 +645,7 @@ extern "C"
 	VIEW3D_API void           __stdcall View3D_WindowSettingsChangedCB  (View3DWindow window, View3D_SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowInvalidatedCB      (View3DWindow window, View3D_InvalidatedCB invalidated_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add);
-	VIEW3D_API void           __stdcall View3d_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void           __stdcall View3D_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void           __stdcall View3D_WindowAddObject          (View3DWindow window, View3DObject object);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveObject       (View3DWindow window, View3DObject object);
 	VIEW3D_API void           __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);

@@ -1,4 +1,4 @@
-//******************************************
+﻿//******************************************
 // pr::vector<>
 //  Copyright (c) Rylogic Ltd 2003
 //******************************************
@@ -413,10 +413,10 @@ namespace pr
 		}
 
 		// reverse a range of elements
-		void reverse(Type *first, Type* last)
+		void reverse(Type* beg, Type* end)
 		{
-			for (; first != last && first != --last; ++first)
-				std::swap(*first, *last);
+			for (; beg != end && beg != --end; ++beg)
+				std::swap(*beg, *end);
 		}
 
 		//// return the iterator category for 'iter'
@@ -523,11 +523,11 @@ namespace pr
 			impl_assign(right);
 		}
 
-		// construct from [first, last), with optional allocator
-		template <class iter> vector(iter first, iter last, allocator_type const& allocator = allocator_type())
+		// construct from [first, lastt), with optional allocator
+		template <class iter> vector(iter first, iter lastt, allocator_type const& allocator = allocator_type())
 			:vector(allocator)
 		{
-			insert(end(), first, last);
+			insert(end(), first, lastt);
 		}
 
 		// construct from another array-like object. 2nd parameter used to prevent overload issues with vector(count)
@@ -848,11 +848,11 @@ namespace pr
 			impl_assign(count, value);
 		}
 
-		// assign [first, last), iterators
-		template <typename iter> void assign(iter first, iter last)
+		// assign [first, lastt), iterators
+		template <typename iter> void assign(iter first, iter lastt)
 		{
 			erase(begin(), end());
-			insert(end(), first, last);
+			insert(end(), first, lastt);
 		}
 
 		// insert value at pos
@@ -930,19 +930,19 @@ namespace pr
 			return begin() + ofs;
 		}
 
-		// insert [first, last) at pos
-		template <typename iter> void insert(const_iterator pos, iter first, iter last)
+		// insert [first, lastt) at pos
+		template <typename iter> void insert(const_iterator pos, iter first, iter lastt)
 		{
-			if (first == last)
+			if (first == lastt)
 				return;
 
-			// assert(first <= last && "last must follow first"); <- Can't assume 'first' and 'last' define operators < or -
+			// assert(first <= lastt && "lastt must follow first"); <- Can't assume 'first' and 'lastt' define operators < or -
 			assert(begin() <= pos && pos <= end() && "pos must be within the array");
 			assert(!inside(&*first) && "Cannot insert a subrange because iterators are invalidated after the allocation grows");
 
 			auto ofs = pos - begin();
 			auto old_count = static_cast<ptrdiff_t>(m_count);
-			for (; first != last; ++first, ++m_count)
+			for (; first != lastt; ++first, ++m_count)
 			{
 				ensure_space(m_count + 1, true);
 				traits::fill_constr(alloc(), m_ptr + m_count, 1, *first);
@@ -962,12 +962,12 @@ namespace pr
 			return erase(pos, pos + 1);
 		}
 
-		// erase [first, last)
-		iterator erase(const_iterator first, const_iterator last)
+		// erase [first, lastt)
+		iterator erase(const_iterator first, const_iterator lastt)
 		{
-			assert(first <= last && "last must follow first");
-			assert(begin() <= first && last <= end() && "iterator range must be within the array");
-			size_type n = last - first, ofs = first - begin();
+			assert(first <= lastt && "lastt must follow first");
+			assert(begin() <= first && lastt <= end() && "iterator range must be within the array");
+			size_type n = lastt - first, ofs = first - begin();
 			if (n)
 			{
 				Type*     del = m_ptr + ofs;
@@ -989,12 +989,12 @@ namespace pr
 			return begin() + ofs;
 		}
 
-		// erase [first, last) without preserving order
-		iterator erase_fast(const_iterator first, const_iterator last)
+		// erase [first, lastt) without preserving order
+		iterator erase_fast(const_iterator first, const_iterator lastt)
 		{
-			assert(first <= last && "last must follow first");
-			assert(begin() <= first && last <= end() && "iterator range must be within the array");
-			size_type n = last - first, ofs = first - begin();
+			assert(first <= lastt && "lastt must follow first");
+			assert(begin() <= first && lastt <= end() && "iterator range must be within the array");
+			size_type n = lastt - first, ofs = first - begin();
 			if (n)
 			{
 				Type*     del = m_ptr + ofs;

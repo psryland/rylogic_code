@@ -220,17 +220,17 @@ namespace Rylogic.Gui.WPF
 					return dp.Children[i - 1] as FrameworkElement;
 			}
 			return null;
-	}
+		}
 
 		/// <summary>Record the current width/height of 'target'</summary>
 		private void RecordCurrentSize(FrameworkElement target)
 		{
-			if (!ProportionalResize && target != null)
+			if (!ProportionalResize && HasValidSize(target))
 			{
 				m_width = target.ActualWidth;
 				m_height = target.ActualHeight;
 			}
-			else if (Parent is DockPanel dp && target != null)
+			else if (Parent is DockPanel dp && HasValidSize(target))
 			{
 				m_width = target.ActualWidth / dp.ActualWidth;
 				m_height = target.ActualHeight / dp.ActualHeight;
@@ -259,10 +259,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Change the target width by 'dx'</summary>
 		private double AdjustWidth(FrameworkElement target, double dx, Dock dock)
 		{
+			if (!Math_.IsFinite(dx))
+				throw new Exception("Invalid width adjustment");
+
 			if (dock == Dock.Right)
 				dx = -dx;
 
-			if (ProportionalResize && Parent is DockPanel dp)
+			if (ProportionalResize && Parent is DockPanel dp && HasValidSize(dp))
 			{
 				m_width = (m_width * dp.ActualWidth + dx) / dp.ActualWidth;
 				SetTargetWidth(target, m_width * dp.ActualWidth);
@@ -294,6 +297,14 @@ namespace Rylogic.Gui.WPF
 			}
 
 			return dy;
+		}
+
+		/// <summary>Check that 'target' has a valid size</summary>
+		private bool HasValidSize(FrameworkElement? target)
+		{
+			return target != null &&
+				target.ActualWidth > 0 && target.ActualWidth < double.PositiveInfinity &&
+				target.ActualHeight > 0 && target.ActualHeight < double.PositiveInfinity;
 		}
 	}
 }

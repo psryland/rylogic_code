@@ -1,37 +1,54 @@
 Immediate ToDo:
 
 Work
-  Work:
-	- Error prompt for 'libusb_open() failed with LIBUSB_ERROR_NOT_FOUND' = install driver
-	- Ask Duncan why Polarian isn't notifying Pete about customer services tickets any more
+
+  Misc:
+    - Change embedded script to use ram method of removing ROP
+    - Fix the fucking stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
+	- Remove the "shared" PSRAM implementation from drivers to MC and LC, since it isn't really shared at all
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
 	    - Fix the default zero ref values and min/max extension in the actuator ref data
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
 	- Need a way to generate complete SD cards again -> Do this in Build.py
 	- Push/pull zero ref values from REX
+	- Add to RXS console to display current state
+	
+  FirmwareLoader
+	- Disable UI while programming
+	- Error prompt for 'libusb_open() failed with LIBUSB_ERROR_NOT_FOUND' = install driver
 
-  UIv4
-	- Use DMA for clear and column blts
-	- Get SD Card working
-	- Check alignment of DMA'd buffers
+  RexTerm:
+    - Make sure the control characters are passed through to the console (Ctrl-Z, etc)
+	
+  UIv4:
+    - Implement the console
+	- Come up with a test plan for the new UI based on the requirements (review with Stephanie)
+    - Joystick twist sensitivity on mmode selection screen (better debouncing)
+    - Fix backlight flash with different method
+    - Make Tunes an exported resource
 	- Write a Polarian requirements sheet for the new UI
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
-	- Replace Darcy's message queue implementation with a sane one
 	
-  ZeroRef
-    - Add the rexnode_driver to the installer
+  ZeroRef:
+    - Test the ZR process on a left-right see-saw to see what effect that has on the results.
 	- Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
  	
-  VRex
+  VRex:
     - Port the tools from the old VRex over
 	- Fix ground plane
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
 	- Fix the console text (missing a character)
-	
-LDraw
+	- Add a quick way to put REX in one of the available stances
+	- Fix devices going offline
+
+  Log Viewer:
+    - System for creating graphs of data in session logs
+  
+Rylogic:	
+  LDraw:
 	- Camera type-in
 	- Support LinkCamera
 	- Drag and drop on Scene should not open the file, DnD on Script should. Handle large ldr files.
@@ -44,14 +61,31 @@ LDraw
 	- Rendering bug in demo scene (looks like a depth state is not being set each frame. Ribbon rendering through rabbit, but not after toggling visibility. Rabbit is occluding other alphas)
 	- Allow #include of temporary scripts
 	
-P3D
+  P3D:
 	- Finish exporter for Blender
 	- Export REX models in new format
 	- Export Plane model
 	- Get p3d support working with new format
 	- Support .obj files
 		
-CoinFlip
+  DockContainer:
+	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
+
+  View3d:
+	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is
+	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
+	  pass the parametric value through)
+
+  Physics:
+	- debug the ClosestPoint_LineSegmentToBBox
+	- Update the collision shapes and detection functions in pr/collision/
+	- meta code for EShape to Shape type
+	- SupportVertex
+	- SupportFeature
+	- Integrator
+	- Spatial vector/matrices
+
+  CoinFlip:
 	Candle Charts:
 		- Add measure tool to charts
 	Equity Plot:
@@ -73,67 +107,31 @@ CoinFlip
 		- Support minimise to tray
 		- Better back testing playback controls: sub step count, playback speed, pause with space bar
 	
-EDTradeAdvisor
+  EDTradeAdvisor:
 	- Settings UI
-	- History of origin's 
+	- History of origins 
 	- Swap Origin<->Destination button
 	- Allow typing into station field with no system, to find system
-	
-		
-RCT/RST
-	- Setup VREX to reply with incorrect sizes message, see why there isn't a log message about corruption
-	- UI to move config between regions (needs an enhancement ticket)
-	- Make reference data filepaths support relative or 'working directory' relative, so that moving configs up and down directories doesn't break file links? (doesn't work for non-repo configs)
-	- Save sets of logon data (url, working dir, user, pass) associated with a url
-	- System for creating graphs of data in session logs
 
-VRex
-	- Add a quick way to put REX in one of the available stances
-	- Fix devices going offline
-	- Fix assert_param macro - threading issues
-	- Add named-pipe RexLink connection type
-
-	
-Physics
-	- debug the ClosestPoint_LineSegmentToBBox
-	- Update the collision shapes and detection functions in pr/collision/
-	- meta code for EShape to Shape type
-	- SupportVertex
-	- SupportFeature
-	- Integrator
-	- Spatial vector/matrices
-	
-Renderer/View3d
-	- Add a dashed line pixel shader. (Each vertex has a parametric value, parametric value is
-	  interpolated for the PS pixels. Use 'if (step(sin(pixel.parametric), 0.5)) clip'. GS will need to
-	  pass the parametric value through)
-
-DockContainer
-	- Allow more than one floating window (i.e. float 2, then try to float one from the already floating window)
-	
-WinGUI
+  WinGUI:
 	- OpenFolderUI
 	- Fix MsgBox icon not having a transparent background
 		
-Misc
-	- Sort out pdb's for native libraries
+  Misc:
+	- Sort out pdbs for native libraries
 	- Create a 'Dispatcher' in C++ using a HWND_MESSAGE window (see pr::Renderer)
 	- Implement pr::script in C#
 	- Better handling of native Settings
 	- Change ToolForm to have resizable but not NC border
 
-
-Old:
-ldr_object_dlg
-measure tool
-angle tool
-Make Scintilla+Ldr support a dll
-Implement a XElement-like tree reader/writer for pr-script
-Fix non-pod types in pr::vector<>
-
 YouTube speed:
    vid = document.getElementsByClassName("video-stream html5-main-video")[0];
    vid.playbackRate=3.0;
    
-   
+WoW:
+	- Spatial Realignment Appartus (Ve'nari)
+	- Primal Tide Core
+	
+	
    L3tMe1n!
+fxibi35mmr6qsdep4heioeppgdltwca4kki6sy2xk34ghzuco66q
