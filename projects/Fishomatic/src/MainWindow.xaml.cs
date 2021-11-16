@@ -1,9 +1,11 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using Rylogic.Extn.Windows;
 using Rylogic.Gui.WPF;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
 using Rectangle = System.Drawing.Rectangle;
 
@@ -15,9 +17,10 @@ namespace Fishomatic
 		{
 			try
 			{
-				InitializeComponent();
 				Settings = new Settings(SettingsFilepath);
 				FishFinder = new FishFinder(Settings);
+				TargetGraphic = new Target();
+				InitializeComponent();
 
 				SetSearchArea = Command.Create(this, SetSearchAreaInternal);
 				ShowOptions = Command.Create(this, ShowOptionsInternal);
@@ -31,12 +34,49 @@ namespace Fishomatic
 				throw;
 			}
 		}
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			TargetGraphic.Close();
+			base.OnClosing(e);
+		}
 
 		/// <summary></summary>
 		public Settings Settings { get; }
 
 		/// <summary></summary>
-		public FishFinder FishFinder { get; }
+		public FishFinder FishFinder
+		{
+			get => m_fish_finder;
+			set
+			{
+				if (FishFinder == value) return;
+				if (m_fish_finder != null)
+				{
+					m_fish_finder.BobberUpdate -= HandleBobberPositionChanged;
+				}
+				m_fish_finder = value;
+				if (m_fish_finder != null)
+				{
+					m_fish_finder.BobberUpdate += HandleBobberPositionChanged;
+				}
+
+				// Handler
+				void HandleBobberPositionChanged(object? sender, FishFinder.BobberUpdateEventArgs e)
+				{
+					TargetGraphic.Visibility = e.Visible ? Visibility.Visible : Visibility.Collapsed;
+					if (e.Visible && FishFinder.TargetWnd is CWindow wnd)
+					{
+						var wrect = wnd.WindowRectangle;
+						TargetGraphic.Left = wrect.Left + e.Position.X - TargetGraphic.Width / 2;
+						TargetGraphic.Top = wrect.Top + e.Position.Y - TargetGraphic.Height / 2;
+					}
+				}
+			}
+		}
+		private FishFinder m_fish_finder = null!;
+
+		/// <summary></summary>
+		private Window TargetGraphic { get; }
 
 		/// <summary></summary>
 		public ICommand SetSearchArea { get; }
@@ -106,6 +146,11 @@ namespace Fishomatic
 		public ICommand ShowOptions { get; }
 		private void ShowOptionsInternal()
 		{
+			System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+			{
+				FileName = "explorer",
+				Arguments = SettingsFilepath,
+			});
 		}
 
 		/// <summary>Enable/Disable fishing</summary>

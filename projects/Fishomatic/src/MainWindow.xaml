@@ -123,6 +123,9 @@
 					Margin="3"
 					>
 					<Slider
+						Minimum="1"
+						Maximum="30"
+						Value="{Binding Settings.MoveThreshold}"
 						MinWidth="150"
 						Margin="3,0,0,0"
 						/>
@@ -159,14 +162,24 @@
 			>
 			<StatusBarItem>
 				<TextBlock
-					Text="{Binding FishFinder.State}"
+					Text="{Binding FishFinder.Status, Mode=OneWay}"
 					/>
 			</StatusBarItem>
-			<StatusBarItem>
-				<ProgressBar
-					MinWidth="100"
-					MinHeight="12"
-					/>
+			<StatusBarItem
+				Visibility="Visible"
+				>
+				<Grid>
+					<ProgressBar
+						Minimum="0"
+						Maximum="1"
+						Value="{Binding FishFinder.ProgressFrac, Mode=OneWay}"
+						MinWidth="100"
+						MinHeight="12"
+						/>
+					<TextBlock
+						Text="{Binding FishFinder.Remaining, Converter={conv:ToPrettyString}}"
+						/>
+				</Grid>
 			</StatusBarItem>
 		</StatusBar>
 	</Grid>

@@ -11,6 +11,7 @@ namespace Fishomatic
 	{
 		public Settings()
 		{
+			TargetWindowName = "World of Warcraft";
 			AlwaysOnTop = true;
 			CastKey = '7';
 			MoveThreshold = 9;
@@ -18,15 +19,15 @@ namespace Fishomatic
 			SmallSearchSize = new Size(50, 50);
 			TargetColour = 0xFF962C1E;
 			ColourTolerence = 50;
-			ClickDelay = 250;
-			AfterCastWait = 3000;
-			AfterCatchWait = 3000;
-			MaxFishCycle = 17000;
-			AbortTime = 8000;
+			ClickDelay = TimeSpan.FromMilliseconds(250);
+			AfterCastWait = TimeSpan.FromSeconds(3);
+			AfterCatchWait = TimeSpan.FromSeconds(3);
+			MaxFishCycle = TimeSpan.FromSeconds(17);
+			AbortTime = TimeSpan.FromSeconds(8);
 			BaublesKey = '9';
 			FishingPoleKey = '0';
-			BaublesTime = 11;
-			BaublesApplyWait = 6000;
+			BaublesTime = TimeSpan.FromMinutes(11);
+			BaublesApplyWait = TimeSpan.FromSeconds(6);
 
 			AutoSaveOnChanges = true;
 		}
@@ -34,6 +35,14 @@ namespace Fishomatic
 			: base(filepath)
 		{
 			AutoSaveOnChanges = true;
+		}
+
+		/// <summary></summary>
+		[Description("The window title to search for")]
+		public string TargetWindowName
+		{
+			get => get<string>(nameof(TargetWindowName));
+			set => set(nameof(TargetWindowName), value);
 		}
 
 		/// <summary></summary>
@@ -94,41 +103,41 @@ namespace Fishomatic
 
 		/// <summary></summary>
 		[Description("Length of time to wait between detecting the bobber's moved and clicking (ms)")]
-		public int ClickDelay
+		public TimeSpan ClickDelay
 		{
-			get => get<int>(nameof(ClickDelay));
+			get => get<TimeSpan>(nameof(ClickDelay));
 			set => set(nameof(ClickDelay), value);
 		}
 
 		/// <summary></summary>
 		[Description("Length of time to wait after casting before looking for the bobber (ms)")]
-		public int AfterCastWait
+		public TimeSpan AfterCastWait
 		{
-			get => get<int>(nameof(AfterCastWait));
+			get => get<TimeSpan>(nameof(AfterCastWait));
 			set => set(nameof(AfterCastWait), value);
 		}
 
 		/// <summary></summary>
 		[Description("Length of time to wait after catch a fish before casting again")]
-		public int AfterCatchWait
+		public TimeSpan AfterCatchWait
 		{
-			get => get<int>(nameof(AfterCatchWait));
+			get => get<TimeSpan>(nameof(AfterCatchWait));
 			set => set(nameof(AfterCatchWait), value);
 		}
 
 		/// <summary></summary>
 		[Description("The maximum length of time the fishing process can take")]
-		public int MaxFishCycle
+		public TimeSpan MaxFishCycle
 		{
-			get => get<int>(nameof(MaxFishCycle));
+			get => get<TimeSpan>(nameof(MaxFishCycle));
 			set => set(nameof(MaxFishCycle), value);
 		}
 
 		/// <summary></summary>
 		[Description("The length of time to wait before deciding the bobber can't be found")]
-		public int AbortTime
+		public TimeSpan AbortTime
 		{
-			get => get<int>(nameof(AbortTime));
+			get => get<TimeSpan>(nameof(AbortTime));
 			set => set(nameof(AbortTime), value);
 		}
 
@@ -150,17 +159,17 @@ namespace Fishomatic
 
 		/// <summary></summary>
 		[Description("The time to wait (in minutes) between reapplication of baubles")]
-		public int BaublesTime
+		public TimeSpan BaublesTime
 		{
-			get => get<int>(nameof(BaublesTime));
+			get => get<TimeSpan>(nameof(BaublesTime));
 			set => set(nameof(BaublesTime), value);
 		}
 
 		/// <summary></summary>
 		[Description("The time to wait while baubles are being applied")]
-		public int BaublesApplyWait
+		public TimeSpan BaublesApplyWait
 		{
-			get => get<int>(nameof(BaublesApplyWait));
+			get => get<TimeSpan>(nameof(BaublesApplyWait));
 			set => set(nameof(BaublesApplyWait), value);
 		}
 
