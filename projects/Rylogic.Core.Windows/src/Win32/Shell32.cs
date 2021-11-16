@@ -668,10 +668,8 @@ namespace Rylogic.Interop.Win32
 		public static IShellItem CreateItemFromParsingName(string path)
 		{
 			var guid = new Guid(IIDGuid.IShellItem);
-
-			object item;
-			var hr = SHCreateItemFromParsingName(path, IntPtr.Zero, ref guid, out item);
-			if (hr != 0) throw new Win32Exception(hr);
+			var hr = SHCreateItemFromParsingName(path, IntPtr.Zero, ref guid, out var item);
+			if (hr != 0) throw new Win32Exception(hr); // This throws if 'path' starts with '.'
 			return (IShellItem)item;
 		}
 

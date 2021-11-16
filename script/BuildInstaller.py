@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Use:
@@ -135,6 +135,9 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 	# Check the installer file exists
 	if not os.path.exists(installer):
 		raise Exception(f"'{installer}' does not exist")
+
+	# Ensure the WiX Tools are available
+	Tools.Call(Tools.Path(UserVars.root, "tools\\wix\\_get_wix.py"))
 
 	# Create a temporary working directory for the 'wixobj' files
 	objdir = tempfile.mkdtemp()

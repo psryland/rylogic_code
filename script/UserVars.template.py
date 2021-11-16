@@ -28,7 +28,7 @@ def Path(*args, check_exists:bool = True, normalise:bool = True):
 version = 1
 
 # Location of the root for the code library
-root = Path("<REPO_ROOT_DIRECTORY>")
+root = Path(os.path.dirname(__file__), "..")
 
 # Location for temporary files
 dumpdir = Path("<DUMP_DIRECTORY>")

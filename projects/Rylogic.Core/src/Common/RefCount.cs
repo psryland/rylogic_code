@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Ref Count
 //  Copyright (c) Rylogic Ltd 2013
 //***************************************************
@@ -80,7 +80,7 @@ namespace Rylogic.Common
 		[Conditional("STACKTRACES")]
 		private void AddStack(object who)
 		{
-			m_stacks[who] = new StackTrace(true);
+			m_stacks[who] = new StackTrace(true).ToString();
 		}
 		[Conditional("STACKTRACES")]
 		private void RemoveStack(object who)
@@ -88,6 +88,6 @@ namespace Rylogic.Common
 			m_stacks.Remove(who);
 		}
 		private class RefList :List<object> { }
-		private class RefStacks :Dictionary<object, StackTrace> { }
+		private class RefStacks :Dictionary<object, string> { }
 	}
 }

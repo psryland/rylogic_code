@@ -1,4 +1,4 @@
-﻿<Image
+﻿<UserControl
 	x:Class="Rylogic.Gui.WPF.JoystickControl"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,17 +7,19 @@
 	mc:Ignorable="d" 
 	d:DesignHeight="256"
 	d:DesignWidth="256"
-	RenderOptions.BitmapScalingMode="Fant"
-	PreviewMouseDown="HandleMouseDown"
-	UseLayoutRounding="True"
-	IsHitTestVisible="True"
-	StretchDirection="Both"
-	Stretch="Fill"
-	Focusable="True"
+	Background="Transparent"
 	>
-	<Image.Resources>
-		<ResourceDictionary>
-			<BitmapImage x:Key="thumb" UriSource="/Rylogic.Gui.WPF;component/res/thumb_stick.png" />
-		</ResourceDictionary>
-	</Image.Resources>
-</Image>
+	<UserControl.Resources>
+		<BitmapImage x:Key="thumb" UriSource="/Rylogic.Gui.WPF;component/res/thumb_stick.png" />
+	</UserControl.Resources>
+	<Image
+		x:Name="m_image"
+		PreviewMouseDown="HandleMouseDown"
+		RenderOptions.BitmapScalingMode="Fant"
+		UseLayoutRounding="True"
+		IsHitTestVisible="True"
+		Focusable="True"
+		StretchDirection="Both"
+		Stretch="Uniform">
+	</Image>
+</UserControl>

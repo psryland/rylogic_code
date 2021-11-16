@@ -394,7 +394,7 @@ VIEW3D_API void __stdcall View3D_WindowRenderingCB(View3DWindow window, View3D_R
 }
 
 // Add/Remove a callback that is called when the collection of objects associated with 'window' changes
-VIEW3D_API void __stdcall View3d_WindowSceneChangedCB(View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_WindowSceneChangedCB(View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add)
 {
 	try
 	{
@@ -404,7 +404,7 @@ VIEW3D_API void __stdcall View3d_WindowSceneChangedCB(View3DWindow window, View3
 		else
 			window->OnSceneChanged -= pr::StaticCallBack(scene_changed_cb, ctx);
 	}
-	CatchAndReport(View3d_WindowSceneChangedCB, window, );
+	CatchAndReport(View3D_WindowSceneChangedCB, window, );
 }
 
 // Add/Remove objects to/from a window

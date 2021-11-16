@@ -1,4 +1,4 @@
-//*****************************************************************************************
+﻿//*****************************************************************************************
 // Log
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
@@ -348,11 +348,11 @@ namespace pr
 		}
 
 		// Log a message
-		void Write(log::ELevel level, std::string_view msg, std::filesystem::path const& file = L"", int line = -1)
+		void Write(log::ELevel level, std::string_view msg, std::filesystem::path const& file = L"", int line = -1) const
 		{
 			Write(level, Widen(msg), file, line);
 		}
-		void Write(log::ELevel level, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1)
+		void Write(log::ELevel level, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1) const
 		{
 			if (!Enabled) return;
 			log::Event evt(level, m_context->m_time_zero, Tag, msg, file, line);
@@ -360,11 +360,11 @@ namespace pr
 		}
 
 		// Log an exception with message 'msg'
-		void Write(log::ELevel level, std::exception const& ex, std::string_view msg, std::filesystem::path const& file = L"", int line = -1)
+		void Write(log::ELevel level, std::exception const& ex, std::string_view msg, std::filesystem::path const& file = L"", int line = -1) const
 		{
 			Write(level, ex, Widen(msg), file, line);
 		}
-		void Write(log::ELevel level, std::exception const& ex, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1)
+		void Write(log::ELevel level, std::exception const& ex, std::wstring_view msg, std::filesystem::path const& file = L"", int line = -1) const
 		{
 			if (!Enabled) return;
 			auto message = std::wstring(msg).append(L" - Exception: ").append(Widen(ex.what()));
@@ -373,7 +373,7 @@ namespace pr
 		}
 
 		// Block the caller until the logger is idle
-		void Flush()
+		void Flush() const
 		{
 			if (!Enabled) return;
 			m_context->WaitTillIdle(true);

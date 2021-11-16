@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 # Notes:
 #  - This script creates the UserVars.py file.
@@ -41,7 +41,7 @@ def SetupUserVars(workspace:str, name:str, ignore_missing:bool):
 	if vs_envvars:
 		env = subprocess.check_output(["cmd", "/C", "@echo", "off", "&", vs_envvars, "&", "@echo", "on", "&", "set"], universal_newlines=True)
 		for line in env.splitlines():
-			m = re.fullmatch("(.+)=(.*)", line)
+			m = re.fullmatch("^(.+?)=(.*)$", line)
 			if not m: continue
 			os.environ[m[1]] = m[2]
 

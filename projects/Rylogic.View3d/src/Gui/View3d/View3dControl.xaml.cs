@@ -347,7 +347,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The desired aspect ratio of pixels in the view</summary>
 		public double DesiredPixelAspect
 		{
-			get { return m_desired_pixel_aspect; }
+			get => m_desired_pixel_aspect;
 			set
 			{
 				if (DesiredPixelAspect == value) return;

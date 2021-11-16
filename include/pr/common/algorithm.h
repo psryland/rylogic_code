@@ -1,4 +1,4 @@
-//********************************
+﻿//********************************
 // Algorithm
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
@@ -93,6 +93,12 @@ namespace pr
 	template <typename TCont, typename Pred> inline bool all(TCont const& cont, Pred pred)
 	{
 		return std::all_of(std::begin(cont), std::end(cont), pred);
+	}
+
+	// Returns true if any in 'cont' pass 'pred'
+	template <typename TCont, typename Pred> inline bool any(TCont const& cont, Pred pred)
+	{
+		return std::any_of(std::begin(cont), std::end(cont), pred);
 	}
 
 	// True if 'func' returns true for any element in 'cont'

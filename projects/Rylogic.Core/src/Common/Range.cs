@@ -323,6 +323,9 @@ namespace Rylogic.Common
 		/// <summary>The default empty range</summary>
 		public static readonly RangeF Zero = new RangeF { Beg = 0.0, End = 0.0 };
 
+		/// <summary>The unit range [0,1]</summary>
+		public static readonly RangeF Unit = new RangeF { Beg = 0.0, End = 1.0 };
+
 		/// <summary>The default full range</summary>
 		public static readonly RangeF Max = new RangeF { Beg = double.MinValue, End = double.MaxValue };
 

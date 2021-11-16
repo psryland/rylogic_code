@@ -34,7 +34,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			var chart = Chart;
 			if (chart != null)
 			{
-				chart.SetRangeFromCamera();
+				// If the aspect is locked, resizing the render target zooms in/out.
+				// Otherwise, change the camera position so that the range is preserved.
+				if (chart.LockAspect)
+					chart.SetRangeFromCamera();
+				else
+					chart.SetCameraFromRange();
 				Invalidate();
 			}
 		}

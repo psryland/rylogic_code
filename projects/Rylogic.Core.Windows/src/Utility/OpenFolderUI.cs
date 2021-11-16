@@ -72,7 +72,7 @@ namespace Rylogic.Core.Windows
 				// Initialise the path in the dialog
 				if (!string.IsNullOrEmpty(SelectedPath))
 				{
-					var path = SelectedPath;
+					var path = System.IO.Path.GetFullPath(SelectedPath);
 					var dir = Path_.Directory(path);
 					if (dir == null || !Path_.DirExists(dir))
 					{

@@ -215,11 +215,13 @@ namespace Rylogic.Extn.Windows
 		/// <summary>Reduces the size of this rectangle by thickness 'x'</summary>
 		public static Rect ShrinkBy(this Rect r, Thickness x)
 		{
+			var dw = Math.Min(r.Width, x.Left + x.Right);
+			var dh = Math.Min(r.Height, x.Top + x.Bottom);
 			return new Rect(
 				r.Left + x.Left,
 				r.Top + x.Top,
-				r.Width - (x.Left + x.Right),
-				r.Height - (x.Top + x.Bottom));
+				r.Width - dw,
+				r.Height - dh);
 		}
 
 		/// <summary>Return the difference between two rectangles as a difference</summary>

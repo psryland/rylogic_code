@@ -1529,7 +1529,7 @@ namespace ldr
 		[DllImport(Dll)]
 		private static extern void View3D_WindowRenderingCB(HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)]
-		private static extern void View3d_WindowSceneChangedCB(HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
+		private static extern void View3D_WindowSceneChangedCB(HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)]
 		private static extern void View3D_WindowAddObject(HWindow window, HObject obj);
 		[DllImport(Dll)]

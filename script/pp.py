@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
 #Preprocess a given file
@@ -75,7 +75,8 @@ def Preprocess(src_filepath:str, out_filepath:str=None):
 	#print("AStyling output...")
 	#Tools.Exec([UserVars.root+'\\tools\\AStyle\\astyle.exe', '--options='+UserVars.root+'\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
 	print("Cleaning output...")
-	Tools.Exec([UserVars.cex, "-newlines", "-f", out_filepath, '-limit', '0', '1'], show_arguments=trace)
+	cex = Tools.Path(UserVars.root, "bin\\cex\\cex.exe")
+	Tools.Exec([cex, "-newlines", "-f", out_filepath, '-limit', '0', '1'], show_arguments=trace)
 	print("Showing output...")
 	Tools.Exec([UserVars.devenv, "/Edit", out_filepath], expected_return_code=0xffffffff)
 

@@ -836,5 +836,52 @@
 		<StaticResource ResourceKey="DiagramMenuItem_ConnectorEdgeStyle"/>
 	</MenuItem>
 
+	<!-- VT100 Terminal Items -->
+	<MenuItem x:Key="VT100MenuItem_Clear"
+		x:Shared="False"
+		Header="Clear"
+		StaysOpenOnClick="False"
+		Command="{Binding ClearAll}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_Clear" />
+	<MenuItem x:Key="VT100MenuItem_Copy"
+		x:Shared="False"
+		Header="Copy"
+		StaysOpenOnClick="False"
+		Command="{Binding Copy}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_Copy" />
+	<MenuItem x:Key="VT100MenuItem_Paste"
+		x:Shared="False"
+		Header="Paste"
+		StaysOpenOnClick="False"
+		Command="{Binding Paste}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_Paste" />
 
+	<!-- Default VT100 Context Menu -->
+	<ContextMenu x:Key="VT100CMenu" x:Name="VT100CMenu" x:Shared="False">
+		<!--
+		DataContext is expected to be set to an object with the property: 'VT100CMenuContext'.
+		PlacementTarget isn't used because there is no control over what that object is.
+		-->
+
+		<StaticResource ResourceKey="VT100MenuItem_Clear" />
+		<Separator />
+		<StaticResource ResourceKey="VT100MenuItem_Copy" />
+		<StaticResource ResourceKey="VT100MenuItem_Paste" />
+		<Separator />
+		<StaticResource ResourceKey="VT100MenuItem_CaptureToFile" />
+		<StaticResource ResourceKey="VT100MenuItem_SendFile" />
+		<Separator />
+		<MenuItem Header="Terminal Options">
+			<StaticResource ResourceKey="VT100MenuItem_LocalEcho" />
+			<StaticResource ResourceKey="VT100MenuItem_TerminalWidth" />
+			<StaticResource ResourceKey="VT100MenuItem_TerminalHeight" />
+			<StaticResource ResourceKey="VT100MenuItem_TabSize" />
+			<StaticResource ResourceKey="VT100MenuItem_NewLineRx" />
+			<StaticResource ResourceKey="VT100MenuItem_NewLineTx" />
+			<StaticResource ResourceKey="VT100MenuItem_HexOutput" />
+		</MenuItem>
+	</ContextMenu>
 </ResourceDictionary>
