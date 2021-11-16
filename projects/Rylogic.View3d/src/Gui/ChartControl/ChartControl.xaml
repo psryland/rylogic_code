@@ -13,7 +13,7 @@
 	UseLayoutRounding="True"
 	Background="#EEE"
 	>
-	<Grid>
+	<Grid x:Name="m_root">
 		<Grid.Resources>
 			<ResourceDictionary>
 				<TransformGroup x:Key="YAxisTransform">

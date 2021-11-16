@@ -9,7 +9,7 @@ using Rylogic.Utility;
 
 namespace TestWPF
 {
-	public partial class ChartUI : Window, IChartCMenuContext, IView3dCMenuContext
+	public partial class ChartUI : Window, IChartCMenuContext, IView3dCMenuContext, INotifyPropertyChanged
 	{
 		private ChartDataSeries m_series;
 		private ChartDataLegend m_legend;
@@ -91,6 +91,25 @@ namespace TestWPF
 		/// <summary></summary>
 		public double LineY => 50.0;
 
+		/// <summary></summary>
+		public string ChartTitle => "Test Chart";
+		public string XAxisLabel => FlipLabels ? "Why Axis" : "Ecks Axis";
+		public string YAxisLabel => FlipLabels ? "Ecks Axis" : "Why Axis";
+
+		/// <summary>Flip X/Y Labels</summary>
+		public bool FlipLabels
+		{
+			get => m_flip_labels;
+			set
+			{
+				if (m_flip_labels == value) return;
+				m_flip_labels = value;
+				NotifyPropertyChanged(nameof(XAxisLabel));
+				NotifyPropertyChanged(nameof(YAxisLabel));
+			}
+		}
+		private bool m_flip_labels;
+
 		/// <summary>Custom cmenu option</summary>
 		public Command ShowBoobs { get; }
 		private void ShowBoobsInternal()
@@ -106,5 +125,9 @@ namespace TestWPF
 
 		/// <summary>The data context for Chart menu items</summary>
 		public IChartCMenu ChartCMenuContext => Chart.Scene.ChartCMenuContext;
+
+		/// <inheritdoc/>
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 }

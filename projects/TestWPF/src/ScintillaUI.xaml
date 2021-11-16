@@ -18,11 +18,11 @@
 		
 		<gui:ScintillaControl
 			Grid.Row="0"
-			gui:Scintilla_.Style="LdrDark"
+			gui:Scintilla_.Theme="LdrDark"
 			/>
 		<gui:ScintillaControl
 			Grid.Row="1"
-			gui:Scintilla_.Style="LdrLight"
+			gui:Scintilla_.Theme="LdrLight"
 			/>
 	</Grid>
 </Window>

@@ -26,6 +26,7 @@ namespace Rylogic.Gui.WPF
 		{
 			m_data = new List<Pt>(capacity ?? 100);
 			m_range_x = RangeF.Invalid;
+			m_range_y = RangeF.Invalid;
 			Cache = new ChartGfxCache(CreatePiece);
 			Format = format;
 			Options = options ?? new OptionsData();
@@ -35,6 +36,7 @@ namespace Rylogic.Gui.WPF
 		{
 			m_data = new List<Pt>();
 			m_range_x = RangeF.Invalid;
+			m_range_y = RangeF.Invalid;
 			Cache = new ChartGfxCache(CreatePiece);
 			Format = node.Element(nameof(Format)).As<EFormat>();
 			Options = node.Element(nameof(Options)).As<OptionsData>();
@@ -74,19 +76,41 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_range_x == RangeF.Invalid)
 				{
-					using (Lock())
-					{
-						// 'Transform' only applies to the graphics
-						if (m_data.Count == 0) return RangeF.Invalid;
-						var beg = m_data.Front();
-						var end = m_data.Back();
-						m_range_x = new RangeF(beg.xf, end.xf);
-					}
+					// The X range is assumed to be ordered so this is an O(1) operation
+					// 'Transform' only applies to the graphics
+					using var lck = Lock();
+					if (m_data.Count == 0) return RangeF.Invalid;
+					var beg = m_data.Front();
+					var end = m_data.Back();
+					m_range_x = new RangeF(beg.xf, end.xf);
 				}
 				return m_range_x;
 			}
 		}
 		private RangeF m_range_x;
+
+		/// <summary>Return the Y-Axis range of the data</summary>
+		public RangeF RangeY
+		{
+			get
+			{
+				if (m_range_y == RangeF.Invalid)
+				{
+					// The Y range is not ordered so this is an O(n) operation
+					// 'Transform' only applies to the graphics
+					using var lck = Lock();
+					var range = RangeF.Invalid;
+					foreach (var pt in m_data) range.Grow(Format.HasFlag(EFormat.YIntg) ? pt.yi : pt.yf);
+					m_range_y = range;
+				}
+				return m_range_y;
+			}
+			private set
+			{
+				m_range_y = value;
+			}
+		}
+		private RangeF m_range_y;
 
 		/// <summary>Cause all graphics models to be recreated</summary>
 		public void FlushCachedGraphics()
@@ -94,9 +118,10 @@ namespace Rylogic.Gui.WPF
 			Invalidate();
 			Cache.Invalidate();
 			m_range_x = RangeF.Invalid;
+			m_range_y = RangeF.Invalid;
 		}
 
-		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
+		/// <summary>Cause graphics models that intersect 'x_range' to be recreated</summary>
 		public void FlushCachedGraphics(RangeF x_range)
 		{
 			Invalidate();
@@ -523,10 +548,12 @@ namespace Rylogic.Gui.WPF
 		public sealed class LockData : ICollection<Pt>, IDisposable
 		{
 			private RangeF m_changed_data_rangex;
+			private RangeF m_changed_data_rangey;
 			public LockData(ChartDataSeries owner)
 			{
 				Owner = owner;
 				m_changed_data_rangex = RangeF.Invalid;
+				m_changed_data_rangey = RangeF.Invalid;
 				Monitor.Enter(Data);
 			}
 			public void Dispose()
@@ -535,6 +562,8 @@ namespace Rylogic.Gui.WPF
 					Owner.FlushCachedGraphics();
 				else if (m_changed_data_rangex != RangeF.Invalid)
 					Owner.FlushCachedGraphics(m_changed_data_rangex);
+				if (m_changed_data_rangey != RangeF.Invalid)
+					Owner.RangeY = RangeF.Invalid;
 
 				Monitor.Exit(Data);
 			}
@@ -549,6 +578,7 @@ namespace Rylogic.Gui.WPF
 				set
 				{
 					m_changed_data_rangex = RangeF.Max;
+					m_changed_data_rangey = RangeF.Max;
 					Data.Resize(value);
 				}
 			}
@@ -557,6 +587,7 @@ namespace Rylogic.Gui.WPF
 			public void Clear()
 			{
 				m_changed_data_rangex = RangeF.Max;
+				m_changed_data_rangey = RangeF.Max;
 				Data.Clear();
 			}
 
@@ -564,6 +595,7 @@ namespace Rylogic.Gui.WPF
 			public Pt Add(Pt point)
 			{
 				m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? point.yi : point.yf);
 				Data.Add(point);
 				return point;
 			}
@@ -572,6 +604,7 @@ namespace Rylogic.Gui.WPF
 			public bool Remove(Pt item)
 			{
 				m_changed_data_rangex = RangeF.Max;
+				m_changed_data_rangey = RangeF.Max;
 				return Data.Remove(item);
 			}
 
@@ -579,6 +612,7 @@ namespace Rylogic.Gui.WPF
 			public Pt Insert(int index, Pt point)
 			{
 				m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? point.yi : point.yf);
 				Data.Insert(index, point);
 				return point;
 			}
@@ -590,6 +624,7 @@ namespace Rylogic.Gui.WPF
 				set
 				{
 					m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
+					m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? value.yi : value.yf);
 					Data[idx] = value;
 				}
 			}
@@ -601,11 +636,13 @@ namespace Rylogic.Gui.WPF
 			public void SortF()
 			{
 				m_changed_data_rangex = RangeF.Max;
+				m_changed_data_rangey = RangeF.Max;
 				Data.Sort(Pt.CompareXf);
 			}
 			public void SortI()
 			{
 				m_changed_data_rangex = RangeF.Max;
+				m_changed_data_rangey = RangeF.Max;
 				Data.Sort(Pt.CompareXi);
 			}
 

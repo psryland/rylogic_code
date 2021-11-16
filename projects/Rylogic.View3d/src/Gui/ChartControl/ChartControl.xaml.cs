@@ -91,7 +91,7 @@ namespace Rylogic.Gui.WPF
 
 				// Binding to 'this' is needed because the axis and scene parts of the control
 				// need to be bound to the instances in this class.
-				DataContext = this;
+				m_root.DataContext = this;
 			}
 			catch
 			{
@@ -291,27 +291,34 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The title of the chart</summary>
 		public string Title
 		{
-			get => m_title ?? string.Empty;
-			set
-			{
-				if (m_title == value) return;
-				m_title = value;
-				NotifyPropertyChanged(nameof(Title));
-			}
+			get => (string)GetValue(TitleProperty);
+			set => SetValue(TitleProperty, value);
 		}
-		private string? m_title;
+		public static readonly DependencyProperty TitleProperty = Gui_.DPRegister<ChartControl>(nameof(Title), string.Empty, Gui_.EDPFlags.None);
 
-		/// <summary>The Axis labels</summary>
+		/// <summary>X-Axis label</summary>
 		public string XLabel
 		{
-			get => XAxis.Label;
-			set => XAxis.Label = value;
+			get => (string)GetValue(XLabelProperty);
+			set => SetValue(XLabelProperty, value);
 		}
+		private void XLabel_Changed()
+		{
+			XAxis.Label = XLabel;
+		}
+		public static readonly DependencyProperty XLabelProperty = Gui_.DPRegister<ChartControl>(nameof(XLabel), string.Empty, Gui_.EDPFlags.None);
+		
+		/// <summary>Y-Axis label</summary>
 		public string YLabel
 		{
-			get => YAxis.Label;
-			set => YAxis.Label = value;
+			get => (string)GetValue(YLabelProperty);
+			set => SetValue(YLabelProperty, value);
 		}
+		private void YLabel_Changed()
+		{
+			YAxis.Label = YLabel;
+		}
+		public static readonly DependencyProperty YLabelProperty = Gui_.DPRegister<ChartControl>(nameof(YLabel), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>All chart objects</summary>
 		public ElementCollection Elements { get; }
@@ -329,13 +336,35 @@ namespace Rylogic.Gui.WPF
 			private set
 			{
 				if (value == m_range) return;
-				Util.Dispose(ref m_range!);
+				if (m_range != null)
+				{
+					m_range.XAxis.PropertyChanged -= HandleAxisPropertyChanged;
+					m_range.YAxis.PropertyChanged -= HandleAxisPropertyChanged;
+					Util.Dispose(ref m_range!);
+				}
 				m_range = value;
 				if (m_range != null)
 				{
+					m_range.XAxis.PropertyChanged += HandleAxisPropertyChanged;
+					m_range.YAxis.PropertyChanged += HandleAxisPropertyChanged;
+
 					NotifyPropertyChanged(nameof(Range));
 					NotifyPropertyChanged(nameof(XAxis));
 					NotifyPropertyChanged(nameof(YAxis));
+				}
+
+				// Handlers
+				void HandleAxisPropertyChanged(object sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+						case nameof(RangeData.Axis.Label):
+						{
+							if (ReferenceEquals(sender, XAxis)) NotifyPropertyChanged(nameof(XLabel));
+							if (ReferenceEquals(sender, YAxis)) NotifyPropertyChanged(nameof(YLabel));
+							break;
+						}
+					}
 				}
 			}
 		}
