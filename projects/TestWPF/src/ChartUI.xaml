@@ -74,9 +74,9 @@
 		
 		<view3d:ChartControl
 			Grid.Row="0"
-			Title="My Chart"
-			XLabel="Sex Axis"
-			YLabel="Why Axis"
+			Title="{Binding ChartTitle}"
+			XLabel="{Binding XAxisLabel}"
+			YLabel="{Binding YAxisLabel}"
 			SceneCMenu="{StaticResource MyChartCMenu}"
 			XAxisCMenu="{StaticResource ChartAxisCMenu}"
 			YAxisCMenu="{StaticResource ChartAxisCMenu}"
@@ -176,6 +176,11 @@
 			<CheckBox
 				Content="Show Value "
 				IsChecked="{Binding Chart.ShowValueAtPointer}"
+				VerticalAlignment="Center"
+				/>
+			<CheckBox
+				Content="Flip Axis Labels "
+				IsChecked="{Binding FlipLabels}"
 				VerticalAlignment="Center"
 				/>
 		</StackPanel>
