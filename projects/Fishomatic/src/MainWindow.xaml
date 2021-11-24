@@ -9,15 +9,18 @@
 	mc:Ignorable="d"
 	Title="Fishomatic"
 	ResizeMode="CanResizeWithGrip"
+	Topmost="True"
 	MinWidth="270"
-	MinHeight="136"
+	MinHeight="164"
 	Width="270"
-	Height="126"
+	Height="164"
 	>
 	<Window.Resources>
 		<BitmapImage x:Key="options" UriSource="/Fishomatic;component/res/options.png" />
 		<BitmapImage x:Key="fish0" UriSource="/Fishomatic;component/res/fish1.png" />
 		<BitmapImage x:Key="fish1" UriSource="/Fishomatic;component/res/fish2.png" />
+		<BitmapImage x:Key="target0" UriSource="/Fishomatic;component/res/target0.png" />
+		<BitmapImage x:Key="target1" UriSource="/Fishomatic;component/res/target1.png" />
 		<BitmapImage x:Key="area" UriSource="/Fishomatic;component/res/boxes.png" />
 	</Window.Resources>
 	<Grid>
@@ -40,6 +43,7 @@
 				Grid.Column="2"
 				>
 				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 				</Grid.RowDefinitions>
@@ -103,6 +107,8 @@
 				VerticalAlignment="Center"
 				Margin="3"
 				>
+
+				<!-- Move Threshold -->
 				<StackPanel
 					Orientation="Horizontal"
 					Margin="3"
@@ -118,6 +124,8 @@
 						Margin="8,0,0,0"
 						/>
 				</StackPanel>
+
+				<!-- Move Threshold slider -->
 				<StackPanel
 					Orientation="Horizontal"
 					Margin="3"
@@ -130,20 +138,49 @@
 						Margin="3,0,0,0"
 						/>
 				</StackPanel>
+
+				<!-- Sample Colour + MoveCursor -->
 				<StackPanel
 					Orientation="Horizontal"
-					Margin="3"
 					>
+					<!-- Sample Colour -->
+					<StackPanel
+						Orientation="Horizontal"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Sample Colour:"
+							VerticalAlignment="Center"
+							/>
+						<Label
+							VerticalAlignment="Center"
+							Background="{Binding Settings.TargetColour, Converter={conv:ColourToBrush}}"
+							Margin="8,0,0,0"
+							MinHeight="16"
+							MinWidth="30"
+							/>
+					</StackPanel>
+
+					<!-- Move Cursor -->
+					<ToggleButton
+						Grid.Row="2"
+						Grid.Column="0"
+						IsChecked="{Binding Settings.MoveCursor, Mode=TwoWay}"
+						HorizontalAlignment="Right"
+						Background="Transparent"
+						BorderThickness="0"
+						MaxHeight="32"
+						>
+						<Image
+							Source="{Binding Settings.MoveCursor, Converter={conv:BoolSelect}, ConverterParameter='target1|target0'}"
+							RenderOptions.BitmapScalingMode="Fant"
+							/>
+					</ToggleButton>
+				</StackPanel>
+
+				<StackPanel>
 					<TextBlock
-						Text="Sample Colour:"
-						VerticalAlignment="Center"
-						/>
-					<Label
-						VerticalAlignment="Center"
-						Background="{Binding Settings.TargetColour, Converter={conv:ColourToBrush}}"
-						Margin="8,0,0,0"
-						MinHeight="16"
-						MinWidth="30"
+						Text="{Binding FishFinder.MaxDelta, StringFormat=Max Movement: {0:N1}}"
 						/>
 				</StackPanel>
 			</StackPanel>

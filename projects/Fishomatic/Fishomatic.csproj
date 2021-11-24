@@ -22,6 +22,9 @@
 		<FileVersion>1.0.0</FileVersion>
 		<AssemblyVersion>1.0.0</AssemblyVersion>
 	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp3.1|AnyCPU'">
+	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
 
 	<!-- Code -->
 	<ItemGroup>

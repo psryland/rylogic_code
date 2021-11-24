@@ -13,6 +13,7 @@ namespace Fishomatic
 		{
 			TargetWindowName = "World of Warcraft";
 			AlwaysOnTop = true;
+			MoveCursor = true;
 			CastKey = '7';
 			MoveThreshold = 9;
 			SearchArea = new Thickness(8);
@@ -51,6 +52,14 @@ namespace Fishomatic
 		{
 			get => get<bool>(nameof(AlwaysOnTop));
 			set => set(nameof(AlwaysOnTop), value);
+		}
+
+		/// <summary></summary>
+		[Description("Move the cursor to the click position")]
+		public bool MoveCursor
+		{
+			get => get<bool>(nameof(MoveCursor));
+			set => set(nameof(MoveCursor), value);
 		}
 
 		/// <summary></summary>
