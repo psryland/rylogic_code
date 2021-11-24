@@ -9,7 +9,6 @@
 		LookingForBobber,
 		WatchBobber,
 		ClickBobber,
-		CastEnd,
 		ApplyBaubles,
 		ApplyBaublesToPole,
 		ApplyBaublesWaiting,
