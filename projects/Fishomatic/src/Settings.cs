@@ -14,21 +14,24 @@ namespace Fishomatic
 			TargetWindowName = "World of Warcraft";
 			AlwaysOnTop = true;
 			MoveCursor = true;
+			AutoThreshold = true;
+			AutoThresholdMargin = 3.0;
 			CastKey = '7';
-			MoveThreshold = 9;
+			MoveThreshold = 9.0;
+			SettlingTimeS = 2.5;
 			SearchArea = new Thickness(8);
 			SmallSearchSize = new Size(50, 50);
 			TargetColour = 0xFF962C1E;
 			ColourTolerence = 50;
-			ClickDelay = TimeSpan.FromMilliseconds(250);
-			AfterCastWait = TimeSpan.FromSeconds(3);
-			AfterCatchWait = TimeSpan.FromSeconds(3);
-			MaxFishCycle = TimeSpan.FromSeconds(17);
-			AbortTime = TimeSpan.FromSeconds(8);
+			ClickDelayS = 0.25;
+			AfterCastWaitS = 3.0;
+			AfterCatchWaitS = 3.0;
+			MaxFishCycleS = 17.0;
+			AbortTimeS = 8.0;
 			BaublesKey = '9';
 			FishingPoleKey = '0';
-			BaublesTime = TimeSpan.FromMinutes(11);
-			BaublesApplyWait = TimeSpan.FromSeconds(6);
+			BaublesTimeMins = 11.0;
+			BaublesApplyWaitS = 6.0;
 
 			AutoSaveOnChanges = true;
 		}
@@ -71,11 +74,35 @@ namespace Fishomatic
 		}
 
 		/// <summary></summary>
-		[Description("How far the bobber moves before clicking to catch fish")]
-		public int MoveThreshold
+		[Description("True if the threshold is set automatically after the settling time")]
+		public bool AutoThreshold
 		{
-			get => get<int>(nameof(MoveThreshold));
+			get => get<bool>(nameof(AutoThreshold));
+			set => set(nameof(AutoThreshold), value);
+		}
+
+		/// <summary></summary>
+		[Description("The margin above the settled movement level that triggers a catch")]
+		public double AutoThresholdMargin
+		{
+			get => get<double>(nameof(AutoThresholdMargin));
+			set => set(nameof(AutoThresholdMargin), value);
+		}
+
+		/// <summary></summary>
+		[Description("How far the bobber moves before clicking to catch fish")]
+		public double MoveThreshold
+		{
+			get => get<double>(nameof(MoveThreshold));
 			set => set(nameof(MoveThreshold), value);
+		}
+
+		/// <summary></summary>
+		[Description("The time to wait before determining the move threshold")]
+		public double SettlingTimeS
+		{
+			get => get<double>(nameof(SettlingTimeS));
+			set => set(nameof(SettlingTimeS), value);
 		}
 
 		/// <summary></summary>
@@ -111,43 +138,43 @@ namespace Fishomatic
 		}
 
 		/// <summary></summary>
-		[Description("Length of time to wait between detecting the bobber's moved and clicking (ms)")]
-		public TimeSpan ClickDelay
+		[Description("Length of time to wait between detecting the bobber's moved and clicking (s)")]
+		public double ClickDelayS
 		{
-			get => get<TimeSpan>(nameof(ClickDelay));
-			set => set(nameof(ClickDelay), value);
+			get => get<double>(nameof(ClickDelayS));
+			set => set(nameof(ClickDelayS), value);
 		}
 
 		/// <summary></summary>
 		[Description("Length of time to wait after casting before looking for the bobber (ms)")]
-		public TimeSpan AfterCastWait
+		public double AfterCastWaitS
 		{
-			get => get<TimeSpan>(nameof(AfterCastWait));
-			set => set(nameof(AfterCastWait), value);
+			get => get<double>(nameof(AfterCastWaitS));
+			set => set(nameof(AfterCastWaitS), value);
 		}
 
 		/// <summary></summary>
 		[Description("Length of time to wait after catch a fish before casting again")]
-		public TimeSpan AfterCatchWait
+		public double AfterCatchWaitS
 		{
-			get => get<TimeSpan>(nameof(AfterCatchWait));
-			set => set(nameof(AfterCatchWait), value);
+			get => get<double>(nameof(AfterCatchWaitS));
+			set => set(nameof(AfterCatchWaitS), value);
 		}
 
 		/// <summary></summary>
 		[Description("The maximum length of time the fishing process can take")]
-		public TimeSpan MaxFishCycle
+		public double MaxFishCycleS
 		{
-			get => get<TimeSpan>(nameof(MaxFishCycle));
-			set => set(nameof(MaxFishCycle), value);
+			get => get<double>(nameof(MaxFishCycleS));
+			set => set(nameof(MaxFishCycleS), value);
 		}
 
 		/// <summary></summary>
 		[Description("The length of time to wait before deciding the bobber can't be found")]
-		public TimeSpan AbortTime
+		public double AbortTimeS
 		{
-			get => get<TimeSpan>(nameof(AbortTime));
-			set => set(nameof(AbortTime), value);
+			get => get<double>(nameof(AbortTimeS));
+			set => set(nameof(AbortTimeS), value);
 		}
 
 		/// <summary></summary>
@@ -168,18 +195,18 @@ namespace Fishomatic
 
 		/// <summary></summary>
 		[Description("The time to wait (in minutes) between reapplication of baubles")]
-		public TimeSpan BaublesTime
+		public double BaublesTimeMins
 		{
-			get => get<TimeSpan>(nameof(BaublesTime));
-			set => set(nameof(BaublesTime), value);
+			get => get<double>(nameof(BaublesTimeMins));
+			set => set(nameof(BaublesTimeMins), value);
 		}
 
 		/// <summary></summary>
 		[Description("The time to wait while baubles are being applied")]
-		public TimeSpan BaublesApplyWait
+		public double BaublesApplyWaitS
 		{
-			get => get<TimeSpan>(nameof(BaublesApplyWait));
-			set => set(nameof(BaublesApplyWait), value);
+			get => get<double>(nameof(BaublesApplyWaitS));
+			set => set(nameof(BaublesApplyWaitS), value);
 		}
 
 		/// <summary>A rect for the small search area, centred on 'position'</summary>

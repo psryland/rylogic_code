@@ -650,7 +650,7 @@ namespace pr::script
 			m_file.seekg(bom_size + ofs);
 
 			// Update the location
-			m_loc = loc ? *loc : Loc(filepath, bom_size + ofs, 1, 1, ofs == 0);
+			m_loc = loc ? *loc : Loc(filepath, bom_size + ofs, bom_size + ofs, 1, 1, ofs == 0);
 
 			// If a limit is given, apply it
 			if (limit >= 0)
@@ -1142,6 +1142,10 @@ namespace pr::script
 				StringSrc src1("\"A \\\\\"#  \"@ ");
 				EatLiteral(src1);
 				PR_CHECK(*src1, '#');
+
+				StringSrc src2("\"\\\"\"#");
+				EatLiteral(src2);
+				PR_CHECK(*src2, '#');
 			}
 			{
 				StringSrc src(";comment \r\n#");

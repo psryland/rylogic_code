@@ -6,7 +6,6 @@
 		Start,
 		Cast,
 		LookForBobber,
-		LookingForBobber,
 		WatchBobber,
 		ClickBobber,
 		ApplyBaubles,

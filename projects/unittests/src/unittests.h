@@ -87,7 +87,7 @@
 #include "pr\common\pe_file.h"
 #include "pr\common\pollingtoevent.h"
 #include "pr\common\profile.h"
-#include "pr\common\profilemanager.h"
+#include "pr\common\profile_manager.h"
 #include "pr\common\property.h"
 #include "pr\common\range.h"
 #include "pr\common\refcount.h"

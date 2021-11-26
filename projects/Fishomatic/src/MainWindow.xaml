@@ -11,9 +11,9 @@
 	ResizeMode="CanResizeWithGrip"
 	Topmost="True"
 	MinWidth="270"
-	MinHeight="164"
+	MinHeight="180"
 	Width="270"
-	Height="164"
+	Height="180"
 	>
 	<Window.Resources>
 		<BitmapImage x:Key="options" UriSource="/Fishomatic;component/res/options.png" />
@@ -118,7 +118,8 @@
 						VerticalAlignment="Center"
 						/>
 					<TextBox
-						Text="{Binding Settings.MoveThreshold}"
+						Text="{Binding Settings.MoveThreshold, StringFormat=N1}"
+						IsReadOnly="True"
 						MinWidth="40"
 						VerticalAlignment="Center"
 						Margin="8,0,0,0"
@@ -128,6 +129,7 @@
 				<!-- Move Threshold slider -->
 				<StackPanel
 					Orientation="Horizontal"
+					IsEnabled="{Binding Settings.AutoThreshold, Converter={conv:Not}}"
 					Margin="3"
 					>
 					<Slider
@@ -139,6 +141,13 @@
 						/>
 				</StackPanel>
 
+				<!-- Auto Threshold -->
+				<CheckBox
+					Content="Auto Threshold"
+					IsChecked="{Binding Settings.AutoThreshold}"
+					Margin="3,0,3,0"
+					/>
+				
 				<!-- Sample Colour + MoveCursor -->
 				<StackPanel
 					Orientation="Horizontal"

@@ -41,6 +41,7 @@ class EProjects():
 	CSex = "CSex"
 	LDraw = "LDraw"
 	SolarHotWater = "SolarHotWater"
+	Fishomatic = "Fishomatic"
 	AllNative = "AllNative"
 	AllManaged = "AllManaged"
 	All = "All"
@@ -498,6 +499,31 @@ class SolarHotWater(Managed):
 		#print(f"{self.msi} created.\n")
 		return
 	
+	def Publish(self):
+	#	if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
+	#	print("\nPublishing to web site...")
+	#	Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
+		return
+
+# Fishomatic
+class Fishomatic(Managed):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		Managed.__init__(self, "Fishomatic", ["netcoreapp3.1"], workspace, platforms, configs)
+		self.platforms = ["x64"]
+		self.proj_dir = os.path.join(workspace, "projects", "Fishomatic")
+		return
+
+	def Clean(self):
+		CleanDotNet(os.path.join(self.proj_dir, "Fishomatic"), self.platforms, self.configs)
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\Ideas\\Fishomatic"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		return
+
 	def Publish(self):
 	#	if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
 	#	print("\nPublishing to web site...")

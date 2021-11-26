@@ -690,6 +690,13 @@ namespace Rylogic.UnitTests
 	public partial class TestScript
 	{
 		[Test]
+		public void EatFunctions()
+		{
+			var src = (Src)new StringSrc("\"\\\"\"#");
+			Extract.EatLiteral(src);
+			Assert.Equal('#', src.Peek);
+		}
+		[Test]
 		public void ExtractLine()
 		{
 			var src = (Src)new StringSrc("abcefg\nhijk\nlmnop");
