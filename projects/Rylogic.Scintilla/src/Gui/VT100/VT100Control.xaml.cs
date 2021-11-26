@@ -15,7 +15,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class VT100Control :ScintillaControl
+	public partial class VT100Control :ScintillaControl, IVT100CMenuContext
 	{
 		// Notes:
 		//  - This is a wrapper of the Scintilla control that provides methods for
@@ -24,14 +24,17 @@ namespace Rylogic.Gui.WPF
 		private readonly Sci.CellBuf m_cells; // Buffer for copying styled text to the scintilla control
 		private readonly Dictionary<VT100.Style, byte> m_sty; // map from vt100 style to scintilla style index
 
+		static VT100Control()
+		{
+			Sci.LoadDll(throw_if_missing: false);
+		}
 		public VT100Control()
 		{
 			InitializeComponent();
 			m_cells = new Sci.CellBuf();
 			m_sty = new Dictionary<VT100.Style, byte>();
-			Buffer = new VT100.Buffer(new VT100.Settings());
-			Blink = false;
 
+			Blink = false;
 			AllowDrop = true;
 			EndAtLastLine = true;
 
@@ -40,11 +43,78 @@ namespace Rylogic.Gui.WPF
 
 			// Turn off undo history
 			UndoCollection = false;
+
+			// Default context menu implementation
+			if (ContextMenu != null && ContextMenu.DataContext == null)
+				ContextMenu.DataContext = this;
+
+			InitCommands();
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Blink = false;
 			Buffer = null!;
+		}
+		protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{
+			//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+			switch (msg)
+			{
+				case Win32.WM_KEYDOWN:
+				{
+					var ks = new Win32.KeyState(lparam);
+					if (!ks.Alt && Buffer != null)
+					{
+						var vk = Win32.ToVKey(wparam);
+
+						// Forward navigation keys to the control
+						if (vk == EKeyCodes.Up || vk == EKeyCodes.Down || vk == EKeyCodes.Left || vk == EKeyCodes.Right)
+						{
+							Cmd(msg, wparam, lparam);
+							return IntPtr.Zero;
+						}
+
+						// Handle clipboard shortcuts
+						if (Win32.KeyDown(EKeyCodes.ControlKey))
+						{
+							if (vk == EKeyCodes.C) { Copy(); return IntPtr.Zero; }
+							if (vk == EKeyCodes.V) { Paste(); return IntPtr.Zero; }
+							return IntPtr.Zero; // Disable all other shortcuts
+						}
+
+						// Add the key press to the buffer input
+						AddToBuffer(vk);
+
+						// Let the key events through if local echo is on
+						handled = !Buffer.Settings.LocalEcho;
+						return IntPtr.Zero;
+					}
+					break;
+				}
+				case Win32.WM_CHAR:
+				{
+					handled = !Buffer.Settings.LocalEcho;
+					return IntPtr.Zero;
+				}
+				case Win32.WM_DROPFILES:
+				{
+					var drop_info = wparam;
+					var count = Shell32.DragQueryFile(drop_info, 0xFFFFFFFFU, null, 0);
+					var files = new List<string>();
+					for (int i = 0; i != count; ++i)
+					{
+						var sb = new StringBuilder((int)Shell32.DragQueryFile(drop_info, (uint)i, null, 0) + 1);
+						if (Shell32.DragQueryFile(drop_info, (uint)i, sb, (uint)sb.Capacity) == 0)
+							throw new Exception("Failed to query file name from dropped files");
+						files.Add(sb.ToString());
+						sb.Clear();
+					}
+					HandleDropFiles(files);
+					return IntPtr.Zero;
+				}
+			}
+
+			return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
 		}
 
 		/// <summary></summary>
@@ -58,13 +128,86 @@ namespace Rylogic.Gui.WPF
 		}
 		private void Buffer_Changed(VT100.Buffer nue, VT100.Buffer old)
 		{
-			// Ensure capturing is stopped on the old buffer
-			old?.CaptureToFileEnd();
+			if (old != null)
+			{
+				// Ensure capturing is stopped on the old buffer
+				old.CaptureToFileEnd();
+				old.BufferChanged -= HandleBufferChanged;
+				old.Settings.PropertyChanged -= HandleSettingChanged;
+			}
+			if (nue != null)
+			{
+				nue.Settings.PropertyChanged += HandleSettingChanged;
+				nue.BufferChanged += HandleBufferChanged;
+			}
 
-			// Batch buffer changed notifications
+			// Notify of affected changes
+			NotifyPropertyChanged(nameof(Settings));
 			SignalUpdateText();
+
+			// Handlers
+			void HandleSettingChanged(object sender, PropertyChangedEventArgs e)
+			{
+				switch (e.PropertyName)
+				{
+					case nameof(Settings.LocalEcho):
+					{
+						NotifyPropertyChanged(nameof(LocalEcho));
+						break;
+					}
+					case nameof(Settings.TerminalWidth):
+					{
+						NotifyPropertyChanged(nameof(TerminalWidth));
+						break;
+					}
+					case nameof(Settings.TerminalHeight):
+					{
+						NotifyPropertyChanged(nameof(TerminalHeight));
+						break;
+					}
+					case nameof(Settings.TabSize):
+					{
+						NotifyPropertyChanged(nameof(TabSize));
+						break;
+					}
+					case nameof(Settings.NewLineRecv):
+					{
+						NotifyPropertyChanged(nameof(NewLineRecv));
+						break;
+					}
+					case nameof(Settings.NewLineSend):
+					{
+						NotifyPropertyChanged(nameof(NewLineSend));
+						break;
+					}
+					case nameof(Settings.HexOutput):
+					{
+						NotifyPropertyChanged(nameof(HorizontalAlignment));
+						break;
+					}
+				}
+			}
+			void HandleBufferChanged(object? sender, VT100BufferChangedEventArgs e)
+			{
+				SignalUpdateText();
+			}
 		}
-		public static readonly DependencyProperty BufferProperty = Gui_.DPRegister<VT100Control>(nameof(Buffer), null, Gui_.EDPFlags.None);
+		
+		/// <summary>Shared-default buffer. This should only be used for initialisation, instances of the VT100Control should set their own Buffer instance</summary>
+		private static readonly VT100.Buffer DefaultBuffer = new VT100.Buffer(new VT100.Settings());
+		public static readonly DependencyProperty BufferProperty = Gui_.DPRegister<VT100Control>(nameof(Buffer), DefaultBuffer, Gui_.EDPFlags.None);
+
+		/// <summary>The terminal context menu</summary>
+		public ContextMenu CMenu
+		{
+			get => ContextMenu;
+			set
+			{
+				ContextMenu = value;
+				if (ContextMenu != null && ContextMenu.Name == "VT100CMenu")
+					ContextMenu.DataContext = this;
+			}
+		}
 
 		/// <summary>Enable/Disable blinking</summary>
 		private bool Blink
@@ -229,7 +372,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Start or stop capturing to a file</summary>
 		public void CaptureToFile(bool start)
 		{
-			if (Buffer == null) return;
+			if (Buffer == null)
+				return;
+
 			if (start)
 			{
 				var dlg = new SaveFileDialog
@@ -258,7 +403,7 @@ namespace Rylogic.Gui.WPF
 		public bool CapturingToFile => Buffer?.CapturingToFile ?? false;
 
 		/// <summary>Send a file to the terminal</summary>
-		public void SendFile(bool binary_mode)
+		public void SendFile()
 		{
 			if (Buffer == null) return;
 			var dlg = new OpenFileDialog
@@ -271,12 +416,20 @@ namespace Rylogic.Gui.WPF
 
 			try
 			{
-				Buffer.SendFile(dlg.FileName, binary_mode);
+				Buffer.SendFile(dlg.FileName);
 			}
 			catch (Exception ex)
 			{
 				MsgBox.Show(Window.GetWindow(this), $"Sending file {dlg.FileName} failed\r\n{ex.Message}", "Send File", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
 			}
+		}
+
+		/// <summary>Drag drop event</summary>
+		protected virtual void HandleDropFiles(IEnumerable<string> files)
+		{
+			if (Buffer == null) return;
+			foreach (var file in files)
+				Buffer.SendFile(file);
 		}
 	}
 }

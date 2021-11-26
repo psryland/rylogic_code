@@ -103,7 +103,7 @@ namespace Rylogic.Gui.WPF
 			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine($"Host: {str}");
 			switch (msg)
 			{
-			case Win32.WM_KILLFOCUS:
+				case Win32.WM_KILLFOCUS:
 				{
 					// This is a work around for a keyboard focus issue when hosting win32 api controls within a WPF app.
 					// The problem is WPF windows only have one HWND for the whole window and WPF tracks the keyboard focus
@@ -123,7 +123,7 @@ namespace Rylogic.Gui.WPF
 					}
 					break;
 				}
-			case Win32.WM_ACTIVATEAPP:
+				case Win32.WM_ACTIVATEAPP:
 				{
 					if (wparam != IntPtr.Zero) // Activate
 					{
@@ -132,7 +132,7 @@ namespace Rylogic.Gui.WPF
 					}
 					break;
 				}
-			case Win32.WM_COMMAND:
+				case Win32.WM_COMMAND:
 				{
 					var id = Win32.LoWord(wparam.ToInt32());
 					if (id != CtrlId.ToInt32())
@@ -151,7 +151,7 @@ namespace Rylogic.Gui.WPF
 					}
 					break;
 				}
-			case Win32.WM_NOTIFY:
+				case Win32.WM_NOTIFY:
 				{
 					var notif = Marshal.PtrToStructure<Sci.SCNotification>(lparam);
 					if (notif.nmhdr.idFrom != CtrlId)
@@ -159,7 +159,7 @@ namespace Rylogic.Gui.WPF
 
 					switch (notif.nmhdr.code)
 					{
-					case Sci.SCN_CHARADDED:
+						case Sci.SCN_CHARADDED:
 						{
 							if (AutoIndent)
 							{
@@ -179,12 +179,12 @@ namespace Rylogic.Gui.WPF
 							OnCharAdded((char)notif.ch);
 							break;
 						}
-					case Sci.SCN_UPDATEUI:
+						case Sci.SCN_UPDATEUI:
 						{
 							// There is one of these messages every time the caret moves
 							switch (notif.updated)
 							{
-							case Sci.SC_UPDATE_SELECTION:
+								case Sci.SC_UPDATE_SELECTION:
 								{
 									OnSelectionChanged();
 									NotifyPropertyChanged(nameof(Selection));
@@ -194,8 +194,8 @@ namespace Rylogic.Gui.WPF
 									NotifyPropertyChanged(nameof(Anchor));
 									break;
 								}
-							case Sci.SC_UPDATE_H_SCROLL:
-							case Sci.SC_UPDATE_V_SCROLL:
+								case Sci.SC_UPDATE_H_SCROLL:
+								case Sci.SC_UPDATE_V_SCROLL:
 								{
 									//var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
 									//OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
@@ -204,12 +204,12 @@ namespace Rylogic.Gui.WPF
 							}
 							break;
 						}
-					case Sci.SCN_AUTOCSELECTION:
+						case Sci.SCN_AUTOCSELECTION:
 						{
 							OnAutoCompleteSelection(notif.Position, notif.Text, (Sci.ECompletionMethods)notif.listCompletionMethod);
 							break;
 						}
-					case Sci.SCN_AUTOCCOMPLETED:
+						case Sci.SCN_AUTOCCOMPLETED:
 						{
 							OnAutoCompleteDone(notif.Position, notif.Text, (Sci.ECompletionMethods)notif.listCompletionMethod);
 							break;
@@ -229,7 +229,7 @@ namespace Rylogic.Gui.WPF
 			//if (str.Length != 0) System.Diagnostics.Debug.WriteLine("Native: {str}");
 			switch (msg)
 			{
-			case Win32.WM_SETFOCUS:
+				case Win32.WM_SETFOCUS:
 				{
 					// When the hosted control receives focus, give focus to the
 					// host momentarily so that 'IsKeyboardFocusWithin' gets updated.
@@ -237,6 +237,16 @@ namespace Rylogic.Gui.WPF
 					{
 						HACK($"Sc {Name} got focus");
 						FocusHosted();
+						handled = true;
+					}
+					break;
+				}
+				case Win32.WM_CONTEXTMENU:
+				{
+					// Handle context menu open requests from the native control
+					if (ContextMenu is System.Windows.Controls.ContextMenu cmenu)
+					{
+						cmenu.IsOpen = true;
 						handled = true;
 					}
 					break;
@@ -280,11 +290,11 @@ namespace Rylogic.Gui.WPF
 		{
 			switch (e.Key)
 			{
-			case Key.Tab:
-			case Key.Up:
-			case Key.Down:
-			case Key.Left:
-			case Key.Right:
+				case Key.Tab:
+				case Key.Up:
+				case Key.Down:
+				case Key.Left:
+				case Key.Right:
 				{
 					// Forward navigation keys to the native control.
 					// This cannot be done in WndProc because navigation keys never make
@@ -294,7 +304,7 @@ namespace Rylogic.Gui.WPF
 					e.Handled = true;
 					break;
 				}
-			case Key.Space:
+				case Key.Space:
 				{
 					// Ctrl+Space shows the auto complete list
 					if (AutoComplete != null && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))

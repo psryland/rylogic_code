@@ -16,68 +16,77 @@ namespace Rylogic.Common
 	// VT terminal emulation. see: http://ascii-table.com/ansi-escape-sequences.php
 	public static class VT100
 	{
+		// Usage:
+		//   - Add a 'Display' control to the window (Probably VT100Control).
+		//   - Use the 'Buffer.UserInput.Get()' method to retrieve user input (since last called).
+		//   - Send the user input to the remote device/system.
+		//   - Receive data from the remote device/system.
+		//   - Use 'Buffer.Output()' to update the in-memory screen buffer of characters. This will trigger 'BufferChanged' events.
+		//   - Buffer keeps track of the invalidated screen buffer region.
+		//   - Use 'Buffer.ReadTextArea()' to read regions of the in-memory screen buffer and update the display control</summary>
+
 		/// <summary>Terminal behaviour setting</summary>
 		[TypeConverter(typeof(Settings.TyConv))]
 		public class Settings : SettingsSet<Settings>
 		{
 			public Settings()
 			{
-				LocalEcho = false;
+				LocalEcho = true;
 				TabSize = 4;
 				TerminalWidth = 120;
 				TerminalHeight = 256;
-				NewlineRecv = ENewLineMode.LF;
-				NewlineSend = ENewLineMode.CR;
+				NewLineRecv = ENewLineMode.LF;
+				NewLineSend = ENewLineMode.CR;
 				HexOutput = false;
 			}
 
 			/// <summary>True if input characters should be echoed into the screen buffer</summary>
 			public bool LocalEcho
 			{
-				get { return get<bool>(nameof(LocalEcho)); }
-				set { set(nameof(LocalEcho), value); }
+				get => get<bool>(nameof(LocalEcho));
+				set => set(nameof(LocalEcho), value);
 			}
 
 			/// <summary>Get/Set the width of the terminal in columns</summary>
 			public int TerminalWidth
 			{
-				get { return get<int>(nameof(TerminalWidth)); }
-				set { set(nameof(TerminalWidth), value); }
+				get => get<int>(nameof(TerminalWidth));
+				set => set(nameof(TerminalWidth), value);
 			}
 
 			/// <summary>Get/Set the height of the terminal in lines</summary>
 			public int TerminalHeight
 			{
-				get { return get<int>(nameof(TerminalHeight)); }
-				set { set(nameof(TerminalHeight), value); }
+				get => get<int>(nameof(TerminalHeight));
+				set => set(nameof(TerminalHeight), value);
 			}
 
 			/// <summary>Get/Set the tab size in characters</summary>
 			public int TabSize
 			{
-				get { return get<int>(nameof(TabSize)); }
-				set { set(nameof(TabSize), value); }
+				get => get<int>(nameof(TabSize));
+				set => set(nameof(TabSize), value);
 			}
 
 			/// <summary>Get/Set the newline mode for received newlines</summary>
-			public ENewLineMode NewlineRecv
+			public ENewLineMode NewLineRecv
 			{
-				get { return get<ENewLineMode>(nameof(NewlineRecv)); }
-				set { set(nameof(NewlineRecv), value); }
+				get => get<ENewLineMode>(nameof(NewLineRecv));
+				set => set(nameof(NewLineRecv), value);
 			}
 
 			/// <summary>Get/Set the newline mode for sent newlines</summary>
-			public ENewLineMode NewlineSend
+			public ENewLineMode NewLineSend
 			{
-				get { return get<ENewLineMode>(nameof(NewlineSend)); }
-				set { set(nameof(NewlineSend), value); }
+				get => get<ENewLineMode>(nameof(NewLineSend));
+				set => set(nameof(NewLineSend), value);
 			}
 
 			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
 			public bool HexOutput
 			{
-				get { return get<bool>(nameof(HexOutput)); }
-				set { set(nameof(HexOutput), value); }
+				get => get<bool>(nameof(HexOutput));
+				set => set(nameof(HexOutput), value);
 			}
 
 			/// <summary>Type converter for displaying in a property grid</summary>
@@ -333,20 +342,29 @@ namespace Rylogic.Common
 			}
 		}
 
-		/// <summary>Buffer for user input. Separated into a class so Buffers user input and tracks the input caret location</summary>
+		/// <summary>Buffer for user input.</summary>
 		public class UserInput
 		{
-			// Note: all this needs to do is buffer key presses, those characters/keys
-			// are sent to the server which will reply causing changes to the buffer.
-			// User input should never be rendered directly into the display
+			// Note:
+			//  - This class is used to buffer user input into batches that can then be send to the terminal server.
+			//  - User input should never be rendered directly into the display, LocalEcho is handled at the UI level,
+			//    otherwise the terminal server echos the user input if necessary.
+			//  - This is really just a StringBuilder for bytes
 			private byte[] m_buf;
 			private int m_len;
 
-			public UserInput(int capacity = 8192)
+			public UserInput(Settings settings, int capacity = 8192)
 			{
+				Settings = settings;
 				m_buf = new byte[capacity != int.MaxValue ? capacity : 0];
 				m_len = 0;
 			}
+
+			/// <summary>Buffer settings</summary>
+			private Settings Settings { get; }
+
+			/// <summary>The number of available user input bytes</summary>
+			public int Length => m_len;
 
 			/// <summary>Append bytes to the user input</summary>
 			public void Add(byte[] bytes, int ofs, int count)
@@ -377,12 +395,49 @@ namespace Rylogic.Common
 					Add(buf, 0, read);
 			}
 
-			/// <summary>Return the contents of the buffer, optionally resetting it</summary>
-			public byte[] Get(bool reset)
+			/// <summary>Return access to the buffered user input</summary>
+			public Span<byte> Peek => new Span<byte>(m_buf, 0, m_len);
+
+			/// <summary>Return a whole line of buffered user input (including the 'NewLineSend' character(s)) or an empty span</summary>
+			public Span<byte> PeekLine
 			{
-				var ret = m_buf.Dup(0, m_len);
-				if (reset) m_len = 0;
-				return ret;
+				get
+				{
+					switch (Settings.NewLineSend)
+					{
+						case ENewLineMode.LF:
+						{
+							var end = 0;
+							for (; end != m_len && m_buf[end] != (byte)'\n'; ++end) { }
+							return end != m_len ? new Span<byte>(m_buf, 0, end + 1) : Span<byte>.Empty;
+						}
+						case ENewLineMode.CR:
+						{
+							var end = 0;
+							for (; end != m_len && m_buf[end] != (byte)'\r'; ++end) { }
+							return end != m_len ? new Span<byte>(m_buf, 0, end + 1) : Span<byte>.Empty;
+						}
+						case ENewLineMode.CR_LF:
+						{
+							var end = 0;
+							for (; end < m_len-1 && m_buf[end] != (byte)'\r' && m_buf[end+1] != (byte)'\n'; ++end) { }
+							return end < m_len-1 ? new Span<byte>(m_buf, 0, end + 2) : Span<byte>.Empty;
+						}
+						default:
+						{
+							throw new Exception($"Unknown new line mode {Settings.NewLineSend}");
+						}
+					}
+				}
+			}
+
+			/// <summary>Consume 'length' bytes from the user input</summary>
+			public void Consume(int length)
+			{
+				if (length >= m_len)
+					m_len = 0;
+				else if (length > 0)
+					Array.Copy(m_buf, length, m_buf, 0, m_len -= length);
 			}
 
 			/// <summary>Ensure 'm_buf' can hold 'size' bytes</summary>
@@ -393,20 +448,15 @@ namespace Rylogic.Common
 			}
 		}
 
-		/// <summary>
-		/// In-memory screen buffer.
-		/// Render the buffer into a window by requesting a rectangular area from the buffer
-		/// The buffer is a virtual space of Settings.TerminalWidth/TerminalHeight area.
-		/// The virtual space becomes allocated space when characters are written or style
-		/// set for the given character position. Line endings are not stored.
-		/// Usage:
-		///   Add the 'Display' control to a form.
-		///   Use the 'GetUserInput()' method to retrieve user input (since last called)
-		///   Send the user input to the remote device/system
-		///   Receive data from the remote device/system
-		///   Use 'Output()' to display the terminal output in the control</summary>
+		/// <summary>In-memory character/screen buffer</summary>
 		public class Buffer
 		{
+			// Notes:
+			//  - Render the buffer into a window by requesting a rectangular area from the buffer
+			//  - The buffer is a virtual space of Settings.TerminalWidth/TerminalHeight area.
+			//  - The virtual space becomes allocated space when characters are written or style
+			//    set for the given character position. Line endings are not stored.
+
 			/// <summary>The state of the terminal</summary>
 			private struct State
 			{
@@ -428,9 +478,6 @@ namespace Rylogic.Common
 			/// <summary>The state of the terminal</summary>
 			private readonly State m_state;
 
-			/// <summary>The terminal screen buffer</summary>
-			private List<Line> m_lines;
-
 			/// <summary>The current output caret state</summary>
 			private State m_out;
 			private State m_saved;
@@ -438,42 +485,43 @@ namespace Rylogic.Common
 			public Buffer(Settings settings)
 			{
 				Settings = settings ?? new Settings();
-				UserInput = new UserInput(8192);
+				UserInput = new UserInput(Settings, 8192);
 				m_seq = new StringBuilder();
-				m_lines = new List<Line>();
+				Lines = new List<Line>();
 				m_state = State.Default;
 				m_out = State.Default;
 				ValidateRect();
 			}
 
 			/// <summary>Terminal settings</summary>
-			public Settings Settings { get; private set; }
+			public Settings Settings { get; }
 
 			/// <summary>Return the number of lines of text in the control</summary>
-			public int LineCount { get { return m_lines.Count; } }
+			public int LineCount => Lines.Count;
 
 			/// <summary>Access the lines in the buffer</summary>
-			public List<Line> Lines { get { return m_lines; } }
+			public List<Line> Lines { get; }
 
 			/// <summary>The current position of the output caret</summary>
-			public Point CaretPos { get { return m_out.pos; } }
+			public Point CaretPos => m_out.pos;
 
 			/// <summary>The buffer region that has changed since ValidateRect() was last called</summary>
 			public Rectangle InvalidRect { get; private set; }
 
 			/// <summary>User input buffer</summary>
-			public UserInput UserInput { get; private set; }
+			public UserInput UserInput { get; }
 
 			/// <summary>Add a single character to the user input buffer.</summary>
 			public void AddInput(char c, bool notify = true)
 			{
 				if (c == '\n')
 				{
-					switch (Settings.NewlineSend)
+					switch (Settings.NewLineSend)
 					{
-					case ENewLineMode.LF: UserInput.Add('\n'); break;
-					case ENewLineMode.CR: UserInput.Add('\r'); break;
-					case ENewLineMode.CR_LF: "\r\n".ForEach(UserInput.Add); break;
+						case ENewLineMode.LF: UserInput.Add('\n'); break;
+						case ENewLineMode.CR: UserInput.Add('\r'); break;
+						case ENewLineMode.CR_LF: "\r\n".ForEach(UserInput.Add); break;
+						default: throw new Exception($"Unknown new line mode {Settings.NewLineSend}");
 					}
 				}
 				else
@@ -502,19 +550,19 @@ namespace Rylogic.Common
 			{
 				switch (vk)
 				{
-				default:
-					return false;
+					default:
+						return false;
 
-				case EKeyCodes.Left:
-				case EKeyCodes.Right:
-				case EKeyCodes.Up:
-				case EKeyCodes.Down:
-					return true; // ToDo: Send escape sequences for cursor control?
+					case EKeyCodes.Left:
+					case EKeyCodes.Right:
+					case EKeyCodes.Up:
+					case EKeyCodes.Down:
+						return true; // ToDo: Send escape sequences for cursor control?
 
-				case EKeyCodes.Back: AddInput('\b'); return true;
-				case EKeyCodes.Delete: AddInput(" \b"); return true;
-				case EKeyCodes.Return: AddInput('\n'); return true;
-				case EKeyCodes.Tab: AddInput('\t'); return true;
+					case EKeyCodes.Back: AddInput('\b'); return true;
+					case EKeyCodes.Delete: AddInput(" \b"); return true;
+					case EKeyCodes.Return: AddInput('\n'); return true;
+					case EKeyCodes.Tab: AddInput('\t'); return true;
 				}
 			}
 
@@ -535,16 +583,13 @@ namespace Rylogic.Common
 				if (m_output_thread != null && m_output_thread.Value != Thread.CurrentThread.ManagedThreadId)
 					throw new Exception("Cross thread call to VT100.Buffer.Output");
 
-				if (m_parsing)
-					throw new Exception("Re-entrant call to 'Output'");
+				if (m_parsing) throw new Exception("Re-entrant call to 'Output'");
+				using var scope = Scope.Create(() => m_parsing = true, () => m_parsing = false);
 
-				using (Scope.Create(() => m_parsing = true, () => m_parsing = false))
-				{
-					if (Settings.HexOutput)
-						OutputHex(text);
-					else
-						ParseOutput(text);
-				}
+				if (Settings.HexOutput)
+					OutputHex(text);
+				else
+					ParseOutput(text);
 			}
 			private int? m_output_thread;
 			private bool m_parsing;
@@ -555,7 +600,7 @@ namespace Rylogic.Common
 				// Invalidate the whole buffer
 				InvalidateRect(new Rectangle(Point.Empty, new Size(Settings.TerminalWidth, LineCount)));
 
-				m_lines.Clear();
+				Lines.Clear();
 				m_out.pos = MoveCaret(0, 0);
 				OnBufferChanged(new VT100BufferChangedEventArgs(Point.Empty, new Size(Settings.TerminalWidth, Settings.TerminalHeight)));
 			}
@@ -568,7 +613,7 @@ namespace Rylogic.Common
 			{
 				for (int j = y, jend = y + height; j != jend; ++j)
 				{
-					if (j == m_lines.Count) yield break;
+					if (j == Lines.Count) yield break;
 					var line = LineAt(j);
 					yield return line.Substr(x);
 				}
@@ -630,18 +675,18 @@ namespace Rylogic.Common
 			private bool m_capture_all_data;
 
 			/// <summary>Send the contents of a file to the terminal</summary>
-			public void SendFile(string filepath, bool binary_mode)
+			public void SendFile(string filepath)
 			{
-				using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-					UserInput.Add(fs);
+				using var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+				UserInput.Add(fs);
 				OnInputAdded();
 			}
 
 			/// <summary>Return the line at 'y', allocating if needed</summary>
 			private Line LineAt(int y)
 			{
-				if (m_lines.Count <= y) m_lines.Resize(y + 1, () => new Line());
-				return m_lines[y];
+				if (Lines.Count <= y) Lines.Resize(y + 1, () => new Line());
+				return Lines[y];
 			}
 
 			/// <summary>Output the string 'text' as hex</summary>
@@ -689,14 +734,14 @@ namespace Rylogic.Common
 						s = e;
 					}
 					else if (
-						(c == '\n' && Settings.NewlineRecv == ENewLineMode.LF) ||
-						(c == '\r' && Settings.NewlineRecv == ENewLineMode.CR) ||
-						(c == '\r' && e + 1 != eend && text[e + 1] == '\n' && Settings.NewlineRecv == ENewLineMode.CR_LF))
+						(c == '\n' && Settings.NewLineRecv == ENewLineMode.LF) ||
+						(c == '\r' && Settings.NewLineRecv == ENewLineMode.CR) ||
+						(c == '\r' && e + 1 != eend && text[e + 1] == '\n' && Settings.NewLineRecv == ENewLineMode.CR_LF))
 					{
 						Write(text, s, e - s);
 						Capture("\n", 0, 1, false);
 						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
-						e += Settings.NewlineRecv == ENewLineMode.CR_LF ? 2 : 1;
+						e += Settings.NewLineRecv == ENewLineMode.CR_LF ? 2 : 1;
 						s = e;
 					}
 					else if (char.IsControl(c))
@@ -862,18 +907,18 @@ namespace Rylogic.Common
 								case 0:
 									// Esc[J  Clear screen from cursor down ED0
 									// Esc[0J Clear screen from cursor down ED0
-									if (m_out.pos.Y < m_lines.Count)
+									if (m_out.pos.Y < Lines.Count)
 									{
-										m_lines.Resize(m_out.pos.Y + 1, () => new Line());
+										Lines.Resize(m_out.pos.Y + 1, () => new Line());
 										LineAt(m_out.pos.Y).Resize(m_out.pos.X);
 									}
 									break;
 								case 1:
 									// Esc[1J Clear screen from cursor up ED1
 									{
-										var num = Math.Min(m_lines.Count, m_out.pos.Y);
-										m_lines.RemoveRange(0, num);
-										if (m_lines.Count != 0)
+										var num = Math.Min(Lines.Count, m_out.pos.Y);
+										Lines.RemoveRange(0, num);
+										if (Lines.Count != 0)
 											LineAt(0).Erase(0, m_out.pos.X);
 									}
 									break;
@@ -895,21 +940,21 @@ namespace Rylogic.Common
 								case 0:
 									//Esc[K  Clear line from cursor right EL0
 									//Esc[0K Clear line from cursor right EL0
-									if (m_out.pos.Y < m_lines.Count)
+									if (m_out.pos.Y < Lines.Count)
 									{
 										LineAt(m_out.pos.Y).Resize(m_out.pos.X);
 									}
 									break;
 								case 1:
 									//Esc[1K Clear line from cursor left EL1
-									if (m_out.pos.Y < m_lines.Count)
+									if (m_out.pos.Y < Lines.Count)
 									{
 										LineAt(m_out.pos.Y).Erase(0, m_out.pos.X);
 									}
 									break;
 								case 2:
 									//Esc[2K Clear entire line EL2
-									if (m_out.pos.Y < m_lines.Count)
+									if (m_out.pos.Y < Lines.Count)
 									{
 										LineAt(m_out.pos.Y).Resize(0);
 									}
@@ -1253,7 +1298,7 @@ namespace Rylogic.Common
 					OnOverflow(new VT100BufferOverflowEventArgs(true, new RangeI(0, 0 + count)));
 
 					// Remove the lines and adjust anything that stores a line number
-					m_lines.RemoveRange(0, count);
+					Lines.RemoveRange(0, count);
 					y -= count;
 					m_out.pos.Y -= count;
 					m_saved.pos.Y -= count;
@@ -1386,6 +1431,16 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>A string to display in the console demonstrating/testing features</summary>
+			public static string TestTerminalText0
+			{
+				get =>
+					"[2J[0m" +
+					"[31m=========================\n" +
+					"[30m     Terminal Test       \n" +
+					"[31m=========================\n" +
+					"[30m" +
+					"\n\n> ";
+			}
 			public static string TestConsoleString0
 			{
 				get

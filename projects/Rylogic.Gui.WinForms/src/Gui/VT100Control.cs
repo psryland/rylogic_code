@@ -212,13 +212,13 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Send a file to the terminal</summary>
-		public void SendFile(bool binary_mode)
+		public void SendFile()
 		{
 			if (Buffer == null) return;
 			using (var dlg = new OpenFileDialog { Title = "Choose the file to send", Filter = FileFilters })
 			{
 				if (dlg.ShowDialog(this) != DialogResult.OK) return;
-				Buffer.SendFile(dlg.FileName, binary_mode);
+				Buffer.SendFile(dlg.FileName);
 			}
 		}
 
@@ -401,7 +401,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			if (Buffer == null) return;
 			foreach (var file in files)
-				Buffer.SendFile(file, true);
+				Buffer.SendFile(file);
 		}
 
 		/// <summary>The context menu for this vt100 display</summary>
@@ -456,7 +456,7 @@ namespace Rylogic.Gui.WinForms
 							};
 						item.Click += (s,e) =>
 							{
-								m_disp.SendFile(true);
+								m_disp.SendFile();
 							};
 					}
 					#endregion
@@ -548,11 +548,11 @@ namespace Rylogic.Gui.WinForms
 							var edit = item.DropDownItems.Add2(new ToolStripControlHost(cb));
 							item.DropDown.Opening += (s,a) =>
 								{
-									cb.SelectedItem = m_disp.Settings.NewlineRecv;
+									cb.SelectedItem = m_disp.Settings.NewLineRecv;
 								};
 							cb.SelectedIndexChanged += (s,e) =>
 								{
-									m_disp.Settings.NewlineRecv = (VT100.ENewLineMode)cb.SelectedItem;
+									m_disp.Settings.NewLineRecv = (VT100.ENewLineMode)cb.SelectedItem;
 								};
 						}
 						#endregion
@@ -563,11 +563,11 @@ namespace Rylogic.Gui.WinForms
 							var edit = item.DropDownItems.Add2(new ToolStripControlHost(cb));
 							item.DropDown.Opening += (s,a) =>
 								{
-									cb.SelectedItem = m_disp.Settings.NewlineSend;
+									cb.SelectedItem = m_disp.Settings.NewLineSend;
 								};
 							cb.SelectedIndexChanged += (s,e) =>
 								{
-									m_disp.Settings.NewlineSend = (VT100.ENewLineMode)cb.SelectedItem;
+									m_disp.Settings.NewLineSend = (VT100.ENewLineMode)cb.SelectedItem;
 								};
 						}
 						#endregion

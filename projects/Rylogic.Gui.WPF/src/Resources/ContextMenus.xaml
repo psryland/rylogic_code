@@ -459,7 +459,7 @@
 		<!--
 		DataContext is expected to be set to an object with the properties:
 		'View3dCMenuContext', 'ChartCMenuContext', and/or 'ChartAxisCMenuContext'.
-		PlacementTarget isn't used because there is no control over what that object is
+		PlacementTarget isn't used because there is no control over what that object is.
 		-->
 
 		<!--
@@ -837,27 +837,166 @@
 	</MenuItem>
 
 	<!-- VT100 Terminal Items -->
-	<MenuItem x:Key="VT100MenuItem_Clear"
+	<MenuItem x:Key="VT100MenuItem_DoClearAll"
 		x:Shared="False"
 		Header="Clear"
 		StaysOpenOnClick="False"
-		Command="{Binding ClearAll}"
+		Command="{Binding DoClearAll}"
 		DataContext="{Binding VT100CMenuContext}"
-		Name="VT100MenuItem_Clear" />
-	<MenuItem x:Key="VT100MenuItem_Copy"
+		Name="VT100MenuItem_DoClearAll" />
+	<MenuItem x:Key="VT100MenuItem_DoCopy"
 		x:Shared="False"
 		Header="Copy"
 		StaysOpenOnClick="False"
-		Command="{Binding Copy}"
+		Command="{Binding DoCopy}"
 		DataContext="{Binding VT100CMenuContext}"
-		Name="VT100MenuItem_Copy" />
-	<MenuItem x:Key="VT100MenuItem_Paste"
+		Name="VT100MenuItem_DoCopy" />
+	<MenuItem x:Key="VT100MenuItem_DoPaste"
 		x:Shared="False"
 		Header="Paste"
 		StaysOpenOnClick="False"
 		Command="{Binding Paste}"
 		DataContext="{Binding VT100CMenuContext}"
-		Name="VT100MenuItem_Paste" />
+		Name="VT100MenuItem_DoPaste" />
+	<MenuItem x:Key="VT100MenuItem_DoCaptureToFile"
+		x:Shared="False"
+		Header="Capture To File"
+		StaysOpenOnClick="False"
+		Command="{Binding DoCaptureToFile}"
+		IsChecked="{Binding CapturingToFile, Mode=OneWay}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_DoCaptureToFile"
+		/>
+	<MenuItem x:Key="VT100MenuItem_DoSendFile"
+		x:Shared="False"
+		Header="Send File"
+		StaysOpenOnClick="False"
+		Command="{Binding DoSendFile}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_DoSendFile"
+		/>
+	<MenuItem x:Key="VT100MenuItem_LocalEcho"
+		x:Shared="False"
+		Header="Local Echo"
+		StaysOpenOnClick="False"
+		Command="{Binding ToggleLocalEcho}"
+		IsChecked="{Binding LocalEcho, Mode=OneWay}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_LocalEcho"
+		/>
+	<MenuItem x:Key="VT100MenuItem_TerminalWidth"
+		x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_TerminalWidth"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal">
+				<TextBlock
+					Text="Terminal Width "
+					MinWidth="100"
+					/>
+				<TextBox
+					Text="{Binding TerminalWidth}" 
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_TerminalHeight"
+		x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_TerminalHeight"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal">
+				<TextBlock
+					Text="Terminal Height "
+					MinWidth="100"
+					/>
+				<TextBox
+					Text="{Binding TerminalHeight}"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_TabSize"
+		x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_TabSize"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal">
+				<TextBlock
+					Text="Tab Size "
+					MinWidth="100"
+					/>
+				<TextBox
+					Text="{Binding TabSize}"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_NewLineRecv"
+		x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_NewLineRecv"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal"
+				MinWidth="20">
+				<TextBlock
+					Text="New Lines (Rx) "
+					MinWidth="100"
+					/>
+				<ComboBox
+					ItemsSource="{Binding NewLineRecv, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding NewLineRecv}"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_NewLineSend"
+		x:Shared="False"
+		StaysOpenOnClick="True"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_NewLineSend"
+		>
+		<MenuItem.Header>
+			<StackPanel
+				Orientation="Horizontal"
+				MinWidth="20">
+				<TextBlock
+					Text="New Lines (Tx) "
+					MinWidth="100"
+					/>
+				<ComboBox
+					ItemsSource="{Binding NewLineSend, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding NewLineSend}"
+					MinWidth="60"
+					/>
+			</StackPanel>
+		</MenuItem.Header>
+	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_HexOutput"
+		x:Shared="False"
+		Header="Hex Output"
+		StaysOpenOnClick="True"
+		Command="{Binding ToggleHexOutput}"
+		IsChecked="{Binding HexOutput, Mode=OneWay}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_HexOutput"
+		/>
 
 	<!-- Default VT100 Context Menu -->
 	<ContextMenu x:Key="VT100CMenu" x:Name="VT100CMenu" x:Shared="False">
@@ -866,21 +1005,21 @@
 		PlacementTarget isn't used because there is no control over what that object is.
 		-->
 
-		<StaticResource ResourceKey="VT100MenuItem_Clear" />
+		<StaticResource ResourceKey="VT100MenuItem_DoClearAll" />
 		<Separator />
-		<StaticResource ResourceKey="VT100MenuItem_Copy" />
-		<StaticResource ResourceKey="VT100MenuItem_Paste" />
+		<StaticResource ResourceKey="VT100MenuItem_DoCopy" />
+		<StaticResource ResourceKey="VT100MenuItem_DoPaste" />
 		<Separator />
-		<StaticResource ResourceKey="VT100MenuItem_CaptureToFile" />
-		<StaticResource ResourceKey="VT100MenuItem_SendFile" />
+		<StaticResource ResourceKey="VT100MenuItem_DoCaptureToFile" />
+		<StaticResource ResourceKey="VT100MenuItem_DoSendFile" />
 		<Separator />
 		<MenuItem Header="Terminal Options">
 			<StaticResource ResourceKey="VT100MenuItem_LocalEcho" />
 			<StaticResource ResourceKey="VT100MenuItem_TerminalWidth" />
 			<StaticResource ResourceKey="VT100MenuItem_TerminalHeight" />
 			<StaticResource ResourceKey="VT100MenuItem_TabSize" />
-			<StaticResource ResourceKey="VT100MenuItem_NewLineRx" />
-			<StaticResource ResourceKey="VT100MenuItem_NewLineTx" />
+			<StaticResource ResourceKey="VT100MenuItem_NewLineRecv" />
+			<StaticResource ResourceKey="VT100MenuItem_NewLineSend" />
 			<StaticResource ResourceKey="VT100MenuItem_HexOutput" />
 		</MenuItem>
 	</ContextMenu>

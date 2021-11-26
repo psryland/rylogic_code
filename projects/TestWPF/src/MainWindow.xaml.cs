@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
+using Rylogic.Scintilla;
 
 namespace TestWPF
 {
@@ -21,6 +22,7 @@ namespace TestWPF
 		static MainWindow()
 		{
 			View3d.LoadDll();
+			Sci.LoadDll();
 		}
 		public MainWindow()
 		{
@@ -179,6 +181,10 @@ namespace TestWPF
 			{
 				new TreeViewMSUI().Show();
 			});
+			ShowVT100UI = Command.Create(this, () =>
+			{
+				new VT100UI().Show();
+			});
 			Exit = Command.Create(this, Close);
 			DataContext = this;
 		}
@@ -211,6 +217,7 @@ namespace TestWPF
 		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }
 		public Command ShowTreeViewMSUI { get; }
+		public Command ShowVT100UI { get; }
 		public Command Exit { get; }
 
 		/// <summary>Some strings</summary>
