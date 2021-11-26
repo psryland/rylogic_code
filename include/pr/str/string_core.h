@@ -448,6 +448,10 @@ namespace pr
 		str::convert_utf<wchar_t, char> cvt;
 		return cvt.conv<std::string>(from);
 	}
+	inline std::u8string Narrow(std::u8string_view from)
+	{
+		return std::u8string(from);
+	}
 
 	// Widen string to utf16
 	inline std::wstring Widen(std::wstring const& from) // from usc2, utf-16
@@ -467,6 +471,11 @@ namespace pr
 	inline std::wstring Widen(std::string_view from) // from utf-8
 	{
 		str::convert_utf<char, wchar_t> cvt;
+		return cvt.conv<std::wstring>(from);
+	}
+	inline std::wstring Widen(std::u8string_view from) // from utf-8
+	{
+		str::convert_utf<char8_t, wchar_t> cvt;
 		return cvt.conv<std::wstring>(from);
 	}
 
@@ -1272,9 +1281,9 @@ namespace pr::str
 				PR_CHECK(r.c_str(), { 'A', 'b', '3', '\0' });
 			}
 			{
-				auto r = Narrow("±1"sv);
+				auto r = Narrow(u8"±1"sv);
 				PR_CHECK(r.size(), 3U);
-				PR_CHECK(r.c_str(), { -62, -79, 49, 0 });
+				PR_CHECK(r.c_str(), { 0xc2_c8, 0xb1_c8, 49_c8, 0_c8 });
 			}
 			{
 				char const s[] = {0xe4_ch, 0xbd_ch, 0xa0_ch, 0xe5_ch, 0xa5_ch, 0xbd_ch, 0_ch}; // 'ni hao' in utf-8
@@ -1289,14 +1298,16 @@ namespace pr::str
 				PR_CHECK(r.c_str(), {-28, -67, -96, -27, -91, -67, 0});
 			}
 			{
-				wchar_t const s0[] = L"z\u00df\u6c34\U0001f34c";
-				char const s1[] = "zß水🍌";
-				auto r0 = Narrow(s0);
-				auto r1 = Narrow(s1);
-				PR_CHECK(r0.size(), 10U);
-				PR_CHECK(r1.size(), 10U);
-				PR_CHECK(r0.c_str(), {0x7A_ch, 0xC3_ch, 0x9F_ch, 0xE6_ch, 0xB0_ch, 0xB4_ch, 0xF0_ch, 0x9F_ch, 0x8D_ch, 0x8C_ch, 0x00_ch});
-				PR_CHECK(r1.c_str(), {0x7A_ch, 0xC3_ch, 0x9F_ch, 0xE6_ch, 0xB0_ch, 0xB4_ch, 0xF0_ch, 0x9F_ch, 0x8D_ch, 0x8C_ch, 0x00_ch});
+				wchar_t const s[] = L"z\u00df\u6c34\U0001f34c";
+				auto r = Narrow(s);
+				PR_CHECK(r.size(), 10U);
+				PR_CHECK(r.c_str(), {0x7A_ch, 0xC3_ch, 0x9F_ch, 0xE6_ch, 0xB0_ch, 0xB4_ch, 0xF0_ch, 0x9F_ch, 0x8D_ch, 0x8C_ch, 0x00_ch});
+			}
+			{
+				char8_t const s[] = u8"zß水🍌";
+				auto r = Narrow(s);
+				PR_CHECK(r.size(), 10U);
+				PR_CHECK(r.c_str(), {0x7A_c8, 0xC3_c8, 0x9F_c8, 0xE6_c8, 0xB0_c8, 0xB4_c8, 0xF0_c8, 0x9F_c8, 0x8D_c8, 0x8C_c8, 0x00_c8});
 			}
 		}
 		{// Widen
@@ -1310,7 +1321,7 @@ namespace pr::str
 				PR_CHECK(r.c_str(), { 'A', 'b', '3', '\0' });
 			}
 			{
-				auto r = Widen("±1"sv);
+				auto r = Widen(u8"±1"sv);
 				PR_CHECK(r.size(), 2U);
 				PR_CHECK(r.c_str(), { 177, 49, 0 });
 			}
@@ -1327,14 +1338,16 @@ namespace pr::str
 				PR_CHECK(r.c_str(), {0x4f60, 0x597d, 0});
 			}
 			{
-				wchar_t const s0[] = L"z\u00df\u6c34\U0001f34c";
-				char const s1[] = "zß水🍌";
-				auto r0 = Widen(s0);
-				auto r1 = Widen(s1);
-				PR_CHECK(r0.size(), 5U);
-				PR_CHECK(r1.size(), 5U);
-				PR_CHECK(r0.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
-				PR_CHECK(r1.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
+				wchar_t const s[] = L"z\u00df\u6c34\U0001f34c";
+				auto r = Widen(s);
+				PR_CHECK(r.size(), 5U);
+				PR_CHECK(r.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
+			}
+			{
+				char8_t const s[] = u8"zß水🍌";
+				auto r = Widen(s);
+				PR_CHECK(r.size(), 5U);
+				PR_CHECK(r.c_str(), {0x007a, 0x00df, 0x6c34, 0xd83c, 0xdf4c, 0});
 			}
 		}
 		{// Empty

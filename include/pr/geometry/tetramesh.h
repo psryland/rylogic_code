@@ -31,7 +31,7 @@
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/common/profile.h"
-#include "pr/common/profilemanager.h"
+#include "pr/common/profile_manager.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 

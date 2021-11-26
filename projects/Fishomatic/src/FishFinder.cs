@@ -231,7 +231,7 @@ namespace Fishomatic
 				case EState.Cast:
 				{
 					// See if it's time to apply baubles
-					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_baubles_time) > Settings.BaublesTime)
+					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_baubles_time).TotalMinutes > Settings.BaublesTimeMins)
 					{
 						StateChange(EState.ApplyBaubles);
 						break;
@@ -241,67 +241,82 @@ namespace Fishomatic
 					Status = "Casting";
 					PressKey(wow, Settings.CastKey);
 					m_cast_time = Environment.TickCount;
-					StateChange(EState.LookForBobber, Settings.AfterCastWait);
+					StateChange(EState.LookForBobber, TimeSpan.FromSeconds(Settings.AfterCastWaitS));
 					break;
 				}
 				case EState.LookForBobber:
 				{
-					// Find the bobber position
-					if (FindBobberPosition(target_colour, null) is Point pt)
+					// Find the bobber position.
+					// Do a large search, then a small search because the detected position
+					// can change a large amount between the searches.
+					if (FindBobberPosition(target_colour, null) is Point pt0 &&
+						FindBobberPosition(target_colour, pt0) is Point pt)
 					{
 						m_bobber_position = pt;
-						Status = $"Bobber @({m_bobber_position.X},{m_bobber_position.Y})";
+						m_found_time = Environment.TickCount;
 						StateChange(EState.WatchBobber, TimeSpan.FromMilliseconds(100));
 						MaxDelta = 0;
 						break;
 					}
 
 					// Can't find the bobber?
-					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_cast_time) > Settings.AbortTime)
+					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_cast_time) > TimeSpan.FromSeconds(Settings.AbortTimeS))
 					{
 						Status = "Bobber not found";
 						StateChange(EState.Cast, TimeSpan.FromMilliseconds(500));
 						break;
 					}
 
+					ProgressFrac = Math_.Frac(m_cast_time, Environment.TickCount, m_cast_time + Settings.MaxFishCycleS * 1000.0);
 					Status = "Looking for bobber";
 					break;
 				}
 				case EState.WatchBobber:
 				{
-					if (FindBobberPosition(target_colour, m_bobber_position) is Point pt)
+					if (!(FindBobberPosition(target_colour, m_bobber_position) is Point pt))
 					{
-						// Measure the movement away from 'm_bobber_position'
-						var dist = (m_bobber_position.ToPointD() - pt.ToPointD()).Length;
-						MaxDelta = Math.Max(MaxDelta, dist);
-						if (dist > Settings.MoveThreshold)
-						{
-							Status = "Bobber movement detected";
-							StateChange(EState.ClickBobber, Settings.ClickDelay);
-							break;
-						}
-
-						//Cursor.Position = pt;
-						Status = $"Bobber @({m_bobber_position.X},{m_bobber_position.Y}) [{dist:N0}/{MaxDelta:N0}]";
+						// If we lose the bobber, assume it's bobbed, and click
+						Status = $"Bobber lost, assumed bobbed";
+						StateChange(EState.ClickBobber, TimeSpan.FromSeconds(Settings.ClickDelayS));
+						break;
 					}
 
+					// Measure the movement away from 'm_bobber_position'
+					var dist = (m_bobber_position.ToPointD() - pt.ToPointD()).Length;
+					MaxDelta = Math.Max(MaxDelta, dist);
+
+					// For the first second gauge the movement
+					if (Settings.AutoThreshold && TimeSpan.FromMilliseconds(Environment.TickCount - m_found_time).TotalSeconds < Settings.SettlingTimeS)
+					{
+						Settings.MoveThreshold = MaxDelta + Settings.AutoThresholdMargin;
+					}
+					else if (dist > Settings.MoveThreshold)
+					{
+						Status = "Bobber movement detected";
+						StateChange(EState.ClickBobber, TimeSpan.FromSeconds(Settings.ClickDelayS));
+						break;
+					}
+
+					//Cursor.Position = pt;
+					Status = $"Bobber @({pt.X},{pt.Y})";
+
+
 					// Time Remaining
-					ProgressFrac = Math_.Frac(m_cast_time, Environment.TickCount, m_cast_time + (int)Settings.MaxFishCycle.TotalMilliseconds);
-					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_cast_time) > Settings.MaxFishCycle)
+					if (TimeSpan.FromMilliseconds(Environment.TickCount - m_cast_time).TotalSeconds > Settings.MaxFishCycleS)
 					{
 						Status = "No bobber movement detected";
 						StateChange(EState.Cast, TimeSpan.Zero);
 						break;
 					}
 
-					Status = "Catching...";
+					ProgressFrac = Math_.Frac(m_cast_time, Environment.TickCount, m_cast_time + Settings.MaxFishCycleS * 1000.0);
 					break;
 				}
 				case EState.ClickBobber:
 				{
-					Status = "Caught a fish!! (hopefully)";
+					Status = "Caught a fish!!";
 					ClickBobber(wow, m_bobber_position, MouseButton.Right);
-					StateChange(EState.Cast, Settings.AfterCatchWait);
+					StateChange(EState.Cast, TimeSpan.FromSeconds(Settings.AfterCatchWaitS));
 					break;
 				}
 				case EState.ApplyBaubles:
@@ -313,20 +328,20 @@ namespace Fishomatic
 				}
 				case EState.ApplyBaublesToPole:
 				{
-					Status = "Applying baubles...";
+					Status = "Applying baubles to Pole...";
 					PressKey(wow, Settings.FishingPoleKey);
 					StateChange(EState.ApplyBaublesWaiting, TimeSpan.FromMilliseconds(500));
 					break;
 				}
 				case EState.ApplyBaublesWaiting:
 				{
-					Status = "Applying baubles to the pole, waiting...";
-					StateChange(EState.ApplyBaublesDone, Settings.BaublesApplyWait);
+					Status = "Applying baubles to Pole, waiting...";
+					StateChange(EState.ApplyBaublesDone, TimeSpan.FromSeconds(Settings.BaublesApplyWaitS));
 					break;
 				}
 				case EState.ApplyBaublesDone:
 				{
-					Status = "Applying baubles to the pole, waiting... Done!";
+					Status = "Applying baubles to Pole, waiting... Done!";
 					m_baubles_time = Environment.TickCount;
 					StateChange(EState.Cast, TimeSpan.Zero);
 					break;
@@ -341,6 +356,7 @@ namespace Fishomatic
 		private Bitmap? m_large_grab;
 		private Point m_bobber_position;
 		private int m_baubles_time;
+		private int m_found_time;
 		private int m_start_time;
 		private int m_cast_time;
 
@@ -415,10 +431,13 @@ namespace Fishomatic
 				//Debug.Assert( .PrimaryScreen.BitsPerPixel == 32);
 				bm = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppRgb);
 			}
-			using var g = Graphics.FromImage(bm);
-			g.CopyFromScreen(area.Location, new Point(0, 0), area.Size);
-
-			//bm.Save(@"P:/dump/screen_grab.bmp");
+			try
+			{
+				using var g = Graphics.FromImage(bm);
+				g.CopyFromScreen(area.Location, new Point(0, 0), area.Size);
+				//bm.Save(@"P:/dump/screen_grab.bmp");
+			}
+			catch {}
 			return bm;
 		}
 

@@ -82,7 +82,9 @@ namespace Rylogic.Gui.WPF
 					if (m_data.Count == 0) return RangeF.Invalid;
 					var beg = m_data.Front();
 					var end = m_data.Back();
-					m_range_x = new RangeF(beg.xf, end.xf);
+					m_range_x = new RangeF(
+						Format.HasFlag(EFormat.XIntg) ? beg.xi : beg.xf,
+						Format.HasFlag(EFormat.XIntg) ? end.xi : end.xf);
 				}
 				return m_range_x;
 			}

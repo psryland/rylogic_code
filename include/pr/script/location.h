@@ -1,4 +1,4 @@
-//**********************************
+﻿//**********************************
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
@@ -26,7 +26,7 @@ namespace pr::script
 		// Line number in the character stream (natural number, i.e. 1-based)
 		int m_line;
 
-		// Column number in the character stream (natural number, i.e. 1-based)
+		// Column number in the character stream (natural number, i.e. 1-based) (note: *not* character index on the line because of tabs)
 		int m_col;
 
 		// The number of columns that a tab character corresponds to
@@ -41,12 +41,15 @@ namespace pr::script
 	public:
 
 		Loc()
-			:Loc(std::wstring_view())
+			:Loc(std::filesystem::path())
 		{}
-		Loc(std::filesystem::path const& filepath, std::streamoff pos = 0, int line = 1, int col = 1, bool lc_valid = true, int tab_size = DefTabSize)
+		explicit Loc(std::filesystem::path const& filepath)
+			:Loc(filepath, 0, 0, 1, 1, true)
+		{}
+		Loc(std::filesystem::path const& filepath, std::streamoff pos, std::streamoff line_pos, int line, int col, bool lc_valid, int tab_size = DefTabSize)
 			:m_filepath(filepath)
 			,m_pos(pos)
-			,m_line_pos(pos)
+			,m_line_pos(line_pos)
 			,m_line(std::max(line, 1))
 			,m_col(std::max(col, 1))
 			,m_tab_size(tab_size)
@@ -134,6 +137,12 @@ namespace pr::script
 		bool LCValid() const noexcept
 		{
 			return m_lc_valid;
+		}
+
+		// Return a copy of this location at the start of the current line
+		Loc LineStartLoc() const
+		{
+			return Loc(Filepath(), LinePos(), LinePos(), Line(), 1, LCValid(), m_tab_size);
 		}
 
 		// Output the location as a string

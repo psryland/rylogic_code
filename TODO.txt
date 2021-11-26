@@ -1,7 +1,6 @@
 Immediate ToDo:
 
 Work
-
   Misc:
     - Change embedded script to use ram method of removing ROP
     - Fix the fucking stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
@@ -10,7 +9,6 @@ Work
 	    - Fix the default zero ref values and min/max extension in the actuator ref data
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
-	- Need a way to generate complete SD cards again -> Do this in Build.py
 	- Push/pull zero ref values from REX
 	- Add to RXS console to display current state
 	
@@ -22,9 +20,7 @@ Work
     - Make sure the control characters are passed through to the console (Ctrl-Z, etc)
 	
   UIv4:
-    - Implement the console
 	- Come up with a test plan for the new UI based on the requirements (review with Stephanie)
-    - Joystick twist sensitivity on mmode selection screen (better debouncing)
     - Fix backlight flash with different method
     - Make Tunes an exported resource
 	- Write a Polarian requirements sheet for the new UI
@@ -37,7 +33,6 @@ Work
  	
   VRex:
     - Port the tools from the old VRex over
-	- Fix ground plane
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
 	- Fix the console text (missing a character)
@@ -47,6 +42,9 @@ Work
   Log Viewer:
     - System for creating graphs of data in session logs
   
+  RexLink:
+    - Create a RexLink service and convert applications to use the service (solves the problem of multiple apps wanting to connect to the same Rex).
+	
 Rylogic:	
   LDraw:
 	- Camera type-in
@@ -127,10 +125,6 @@ Rylogic:
 YouTube speed:
    vid = document.getElementsByClassName("video-stream html5-main-video")[0];
    vid.playbackRate=3.0;
-   
-WoW:
-	- Spatial Realignment Appartus (Ve'nari)
-	- Primal Tide Core
-	
+
 	
    L3tMe1n!

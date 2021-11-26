@@ -480,6 +480,7 @@ namespace Rylogic.Common
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
 		public void Grow(RangeF rng)
 		{
+			if (rng == Invalid) return;
 			Debug.Assert(rng.Size >= 0.0, "'rng' is inside out");
 			Beg = Math.Min(Beg, rng.Beg);
 			End = Math.Max(End, rng.End);
