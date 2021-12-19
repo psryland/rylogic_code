@@ -1,0 +1,43 @@
+﻿<Button
+	x:Class="Rylogic.Gui.WPF.CardinalButton"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	mc:Ignorable="d"
+	d:DesignHeight="64"
+	d:DesignWidth="64">
+	<Button.Resources>
+		<BitmapImage
+			x:Key="quad_button"
+			UriSource="/Rylogic.Gui.WPF;component/res/green_quad_button.png" />
+	</Button.Resources>
+	<!--<Button.OpacityMask>
+			<ImageBrush
+				ImageSource="{StaticResource quad_button}" />
+		</Button.OpacityMask>-->
+	<Button.Clip>
+		<PathGeometry>
+			<PathGeometry.Figures>
+				<PathFigureCollection>
+					<PathFigure>
+						<PathFigure.Segments>
+							<PolyLineSegment
+								Points="0,0 60,0 50,20 0,80" />
+						</PathFigure.Segments>
+					</PathFigure>
+				</PathFigureCollection>
+			</PathGeometry.Figures>
+		</PathGeometry>
+	</Button.Clip>
+	<Image
+		x:Name="m_image"
+		PreviewMouseDown="HandleMouseDown"
+		Source="{StaticResource quad_button}"
+		RenderOptions.BitmapScalingMode="Fant"
+		UseLayoutRounding="True"
+		IsHitTestVisible="True"
+		Focusable="True"
+		StretchDirection="Both"
+		Stretch="Uniform" />
+</Button>
