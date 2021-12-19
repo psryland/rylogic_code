@@ -27,10 +27,23 @@ namespace TestWPF
 		public MainWindow()
 		{
 			InitializeComponent();
+			Things = new List<Thing>
+			{
+				new Thing("One"  ),
+				new Thing("Two"  ),
+				new Thing("Three"),
+				new Thing("Four" ),
+				new Thing("Five" ),
+				new Thing("Six"  ),
+				new Thing("Seven"),
+				new Thing("Eight"),
+				new Thing("Nine" ),
+				new Thing("Ten"  ),
+			};
+			ThingsView = new ListCollectionView(Things);
+
 			View3d = View3d.Create();
 			View3d.Error += (object? sender, View3d.ErrorEventArgs e) => MsgBox.Show(this, e.Message, "View3d Error");
-
-			Things = new ListCollectionView(m_things);
 #if DEBUG
 			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
 #endif
@@ -54,6 +67,10 @@ namespace TestWPF
 			ShowChart = Command.Create(this, () =>
 			{
 				new ChartUI().Show();
+			});
+			ShowDataGrid = Command.Create(this, () =>
+			{
+				new DataGridUI().Show();
 			});
 			ShowDiagram = Command.Create(this, () =>
 			{
@@ -200,6 +217,7 @@ namespace TestWPF
 		public Command ShowBrowsePathUI { get; }
 		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }
+		public Command ShowDataGrid { get; }
 		public Command ShowDiagram { get; }
 		public Command ShowDiagram2 { get; }
 		public Command ShowDirectionPicker { get; }
@@ -220,9 +238,10 @@ namespace TestWPF
 		public Command ShowVT100UI { get; }
 		public Command Exit { get; }
 
-		/// <summary>Some strings</summary>
-		public ICollectionView Things { get; }
-		
+		/// <summary>Test collection</summary>
+		public ICollectionView ThingsView { get; }
+		private List<Thing> Things { get; }
+
 		/// <summary>Some enum value</summary>
 		public EEnum EnumValue
 		{
@@ -237,7 +256,7 @@ namespace TestWPF
 		private EEnum m_enum_value;
 
 		/// <summary>Comma separated list of selected things</summary>
-		public string SelectedDescription => string.Join(",", m_things.Where(x => x.IsChecked).Select(x => x.Name));
+		public string SelectedDescription => string.Join(", ", Things.Where(x => x.IsChecked).Select(x => x.Name));
 
 		/// <summary>Modify the strings collection</summary>
 		private void ComboBoxAutoComplete_Update(object sender, EventArgs e)
@@ -247,12 +266,11 @@ namespace TestWPF
 			var list = (List<Thing>)view.SourceCollection;
 
 			list.Clear();
-			list.AddRange(m_things.Where(x => x.Name.Contains(cb.Text)));
+			list.AddRange(Things.Where(x => x.Name.Contains(cb.Text)));
 			view.Refresh();
 		}
-		private List<Thing> m_things = new List<Thing> { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" };
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
 		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 
@@ -266,12 +284,6 @@ namespace TestWPF
 			}
 			public string Name { get; }
 			public bool IsChecked { get; set; }
-			public static implicit operator Thing(string name) { return new Thing(name); }
-		}
-
-		private void HandleReorderRowDrop(object sender, DataGrid_.ReorderRowDropEventArgs e)
-		{
-
 		}
 	}
 	public enum EEnum

@@ -7,9 +7,72 @@
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="Joystick UI"
-	Height="400"
+	Height="800"
 	Width="300"
 	>
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="btn_left" UriSource="/Rylogic.Gui.WPF;component/res/green_left.png" />
+			<BitmapImage x:Key="btn_right" UriSource="/Rylogic.Gui.WPF;component/res/green_right.png" />
+			<BitmapImage x:Key="btn_up" UriSource="/Rylogic.Gui.WPF;component/res/green_up.png" />
+			<BitmapImage x:Key="btn_down" UriSource="/Rylogic.Gui.WPF;component/res/green_down.png" />
+			<BitmapImage x:Key="quad_button" UriSource="/Rylogic.Gui.WPF;component/res/green_quad_button.png" />
+
+			<ControlTemplate
+				x:Key="Test"
+				TargetType="{x:Type ProgressBar}">
+				<Grid
+					x:Name="TemplateRoot">
+					<Border
+						x:Name="OuterBorder"
+						BorderBrush="{TemplateBinding BorderBrush}"
+						BorderThickness="{TemplateBinding BorderThickness}"
+						CornerRadius="10">
+						<Grid>
+							<Border
+								x:Name="MaskBorder"
+								Background="{TemplateBinding Background}"
+								CornerRadius="9.5" />
+
+							<Grid
+								x:Name="MainGrid">
+								<Grid.OpacityMask>
+									<VisualBrush
+										Visual="{Binding ElementName=MaskBorder}" />
+								</Grid.OpacityMask>
+
+								<Rectangle
+									x:Name="PART_Track"
+									Fill="White" />
+
+								<Border
+									x:Name="PART_Indicator"
+									HorizontalAlignment="Left">
+									<Grid
+										x:Name="Foreground">
+										<Rectangle
+											x:Name="Indicator"
+											Fill="{TemplateBinding Background}" />
+										<Grid
+											x:Name="Animation"
+											ClipToBounds="true">
+											<Rectangle
+												x:Name="PART_GlowRect"
+												Fill="#FF86C7EB"
+												HorizontalAlignment="Left"
+												Margin="-100,0,0,0"
+												Width="100" />
+										</Grid>
+									</Grid>
+								</Border>
+							</Grid>
+
+						</Grid>
+					</Border>
+				</Grid>
+			</ControlTemplate>
+		</ResourceDictionary>
+	</Window.Resources>
 	<StackPanel>
 		<gui:JoystickControl
 			SingleSelect="True"
@@ -35,6 +98,9 @@
 				</RadialGradientBrush>
 			</gui:JoystickControl.SelectedSectorBrush>
 		</gui:JoystickControl>
+		<gui:CardinalButton
+			Command="{Binding MovePosition}"
+			/>
 		<StackPanel Orientation="Horizontal">
 			<TextBlock Text="Angle: " />
 			<TextBlock Text="{Binding AngleDeg, ElementName=m_joy, FallbackValue=--}" />
@@ -50,6 +116,10 @@
 		<StackPanel Orientation="Horizontal">
 			<TextBlock Text="Selected: " />
 			<TextBlock Text="{Binding Selected, StringFormat=0x{0:x}, ElementName=m_joy, FallbackValue=--}" />
+		</StackPanel>
+		<StackPanel Orientation="Horizontal">
+			<TextBlock Text="Position: " />
+			<TextBlock Text="{Binding Position, FallbackValue=--}" />
 		</StackPanel>
 	</StackPanel>
 </Window>
