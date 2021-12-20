@@ -470,6 +470,11 @@ namespace Rylogic.Interop.Win32
 		private static extern IntPtr LoadLibraryEx_([MarshalAs(UnmanagedType.LPWStr)] string path, IntPtr hFile, ELoadLibraryFlags flags);
 
 		/// <summary></summary>
+		public static IntPtr GetProcAddress(IntPtr module, string proc_name) => GetProcAddress_(module, proc_name);
+		[DllImport("kernel32", EntryPoint = "GetProcAddress", SetLastError = true, CharSet = CharSet.Ansi)]
+		private static extern IntPtr GetProcAddress_(IntPtr hModule, string lpProcName);
+
+		/// <summary></summary>
 		public static SafeFileHandle ReOpenFile(SafeFileHandle hOriginalFile, EFileAccess dwDesiredAccess, EFileShare dwShareMode, EFileFlag dwFlagsAndAttributes)
 		{
 			return ReOpenFile_(hOriginalFile, (uint)dwDesiredAccess, (uint)dwShareMode, (uint)dwFlagsAndAttributes);

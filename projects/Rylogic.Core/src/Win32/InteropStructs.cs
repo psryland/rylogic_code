@@ -3,6 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using HWND     = System.IntPtr;
+using HCURSOR  = System.IntPtr;
 using UINT     = System.UInt32;
 using WORD     = System.UInt16;
 using DWORD    = System.UInt32;
@@ -55,6 +56,17 @@ namespace Rylogic.Interop.Win32
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct CURSORINFO
+		{
+			public DWORD cbSize;
+			public DWORD flags;
+			public HCURSOR hCursor;
+			public POINT ptScreenPos;
+
+			public static CURSORINFO Default => new CURSORINFO { cbSize = (uint)Marshal.SizeOf(typeof(CURSORINFO)) };
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
 		public struct NMHDR
 		{
 			// Notification message (WM_NOTIFY) header
@@ -74,10 +86,7 @@ namespace Rylogic.Interop.Win32
 			public int nPos;
 			public int nTrackPos;
 
-			public static SCROLLINFO Default
-			{
-				get { return new SCROLLINFO { cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO)) }; }
-			}
+			public static SCROLLINFO Default => new SCROLLINFO { cbSize = (uint)Marshal.SizeOf(typeof(SCROLLINFO)) };
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

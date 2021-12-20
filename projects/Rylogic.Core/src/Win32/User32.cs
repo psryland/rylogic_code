@@ -4,8 +4,10 @@ using System.Text;
 using Rylogic.Common;
 using Rylogic.Utility;
 using Microsoft.Win32.SafeHandles;
+using HDC = System.IntPtr;
 using HRGN = System.IntPtr;
 using HWND = System.IntPtr;
+using HICON = System.IntPtr;
 using LPARAM = System.IntPtr;
 using WPARAM = System.IntPtr;
 using Rylogic.Extn;
@@ -64,6 +66,14 @@ namespace Rylogic.Interop.Win32
 			Handle = 0x00000006,
 		}
 
+		/// <summary>Flags for the MonitorFromPoint function</summary>
+		public enum EMonitorFromFlags
+		{
+			DEFAULT_TO_NULL = 0x00000000,
+			DEFAULT_TO_PRIMARY = 0x00000001,
+			DEFAULT_TO_NEAREST = 0x00000002,
+		}
+
 		[StructLayout(LayoutKind.Sequential)]
 		public struct DEV_BROADCAST_HDR
 		{
@@ -74,7 +84,7 @@ namespace Rylogic.Interop.Win32
 			public EDeviceBroadcaseType dbch_devicetype;
 			public int dbch_reserved;
 		}
-		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
 		public struct DEV_BROADCAST_DEVICEINTERFACE
 		{
 			private const int NameLen = 255;
@@ -98,8 +108,6 @@ namespace Rylogic.Interop.Win32
 			[MarshalAs(UnmanagedType.ByValArray, SizeConst = NameLen)] private char[] name_;
 		}
 
-#pragma warning disable CA1401 // P/Invokes should not be visible
-
 		[UnmanagedFunctionPointer(CallingConvention.StdCall)]
 		public delegate IntPtr WNDPROC(HWND hwnd, int code, IntPtr wparam, IntPtr lparam);
 
@@ -122,24 +130,25 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "AppendMenuW", CharSet = CharSet.Unicode)]
 		private static extern bool AppendMenu_(IntPtr hMenu, uint uFlags, IntPtr uIDNewItem, [MarshalAs(UnmanagedType.LPWStr)] string lpNewItem);
 
+#pragma warning disable CA1401 // P/Invokes should not be visible
 		[DllImport("user32.dll")]
 		public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 
 		[DllImport("user32.dll")]
 		public static extern int CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
-		
+
 		[DllImport("user32.dll", EntryPoint = "CheckMenuItem")]
 		public static extern int CheckMenuItem(IntPtr hMenu, int uIDCheckItem, int uCheck);
 
 		[DllImport("user32.dll")]
 		public static extern HWND ChildWindowFromPointEx(HWND parent, POINT point, int flags);
-		
+
 		[DllImport("user32.dll")]
 		public static extern bool ClientToScreen(HWND hwnd, ref POINT pt);
-		
+
 		[DllImport("user32.dll")]
 		public static extern IntPtr CreateIconIndirect(ref ICONINFO icon);
-		
+
 		[DllImport("user32.dll")]
 		public static extern IntPtr CreatePopupMenu();
 
@@ -164,7 +173,7 @@ namespace Rylogic.Interop.Win32
 		public static extern IntPtr DefWindowProc(HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
-		public static extern bool DestroyIcon(IntPtr hicon);
+		public static extern bool DestroyIcon(HICON hicon);
 
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern bool DestroyWindow(HWND hwnd);
@@ -173,6 +182,15 @@ namespace Rylogic.Interop.Win32
 		public static int DispatchMessage(ref Message msg) => DispatchMessage(ref msg);
 		[DllImport("user32.dll", EntryPoint = "DispatchMessageW", CharSet = CharSet.Unicode)]
 		private static extern int DispatchMessage_(ref Message lpMsg);
+
+		/// <summary>Draw an icon into an HDC</summary>
+		public static void DrawIcon(HDC hDC, int X, int Y, HICON hIcon)
+		{
+			if (!DrawIcon_(hDC, X, Y, hIcon))
+				throw new Win32Exception("DrawIcon failed");
+		}
+		[DllImport("user32.dll", EntryPoint = "DrawIcon", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern bool DrawIcon_(HDC hDC, int X, int Y, HICON hIcon);
 
 		[DllImport("user32.dll")]
 		public static extern int EnumWindows(EnumWindowsProc ewp, int lParam);
@@ -203,19 +221,39 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", EntryPoint = "GetClassLongPtrW", SetLastError = true)]
 		public static extern IntPtr GetClassLongPtr(HWND hwnd, int index);
 
-		[DllImport("user32.dll")]
-		public static extern bool GetClientRect(HWND hwnd, out RECT rect);
+		/// <summary></summary>
+		public static RECT GetClientRect(HWND hwnd)
+		{
+			return GetClientRect_(hwnd, out var rect) ? rect : throw new Win32Exception("GetClientRect failed"); ;
+		}
+		[DllImport("user32.dll", EntryPoint = "GetClientRect")]
+		private static extern bool GetClientRect_(HWND hwnd, out RECT rect);
 
 		/// <summary>Return the mouse position in screen coordinates</summary>
 		public static POINT GetCursorPos()
 		{
-			return GetCursorPos(out var pt) ? pt : throw new Win32Exception("GetCursorPos failed");
+			return GetCursorPos_(out var pt) ? pt : throw new Win32Exception("GetCursorPos failed");
 		}
-		[DllImport("user32.dll")]
-		private static extern bool GetCursorPos(out POINT lpPoint);
+		[DllImport("user32.dll", EntryPoint = "GetCursorPos")]
+		private static extern bool GetCursorPos_(out POINT lpPoint);
+
+		/// <summary>Return info about the current mouse cursor</summary>
+		public static CURSORINFO GetCursorInfo()
+		{
+			var info = CURSORINFO.Default;
+			GetCursorInfo_(ref info);
+			return info;
+		}
+		[DllImport("user32.dll", EntryPoint = "GetCursorInfo", CharSet = CharSet.Unicode, SetLastError = true)]
+		private static extern bool GetCursorInfo_(ref CURSORINFO pci);
 
 		[DllImport("user32.dll")]
 		public static extern IntPtr GetDC(HWND hwnd);
+
+		/// <summary></summary>
+		public static IntPtr GetDesktopWindow() => GetDesktopWindow_();
+		[DllImport("user32", EntryPoint = "GetDesktopWindow")]
+		private static extern IntPtr GetDesktopWindow_();
 
 		[DllImport("user32.dll")]
 		public static extern int GetDoubleClickTime();
@@ -258,8 +296,21 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")]
 		public static extern int GetScrollPos(HWND hWnd, int nBar);
 
+		/// <summary></summary>
+		public static IntPtr GetShellWindow() => GetShellWindow_();
+		[DllImport("user32", EntryPoint = "GetShellWindow")]
+		private static extern IntPtr GetShellWindow_();
+
 		[DllImport("user32.dll")]
 		public static extern IntPtr GetSystemMenu(HWND hwnd, bool bRevert);
+
+		/// <summary>System metrics</summary>
+		public static int GetSystemMetrics(ESystemMetrics metric)
+		{
+			return GetSystemMetrics_((int)metric);
+		}
+		[DllImport("user32.dll", EntryPoint = "GetSystemMetrics")]
+		private static extern int GetSystemMetrics_(int nIndex);
 
 		[DllImport("user32.dll")]
 		public static extern bool GetUpdateRect(HWND hwnd, out Win32.RECT rect, bool erase);
@@ -273,8 +324,13 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern int GetWindowModuleFileName(HWND hwnd, StringBuilder title, int size);
 
-		[DllImport("user32.dll")]
-		public static extern bool GetWindowRect(HWND hwnd, out RECT rect);
+		/// <summary>Return the area of a window in screen space</summary>
+		public static RECT GetWindowRect(HWND hwnd)
+		{
+			return GetWindowRect_(hwnd, out var rect) ? rect : throw new Win32Exception("GetWindowRect failed");
+		}
+		[DllImport("user32.dll", EntryPoint = "GetWindowRect")]
+		private static extern bool GetWindowRect_(HWND hwnd, out RECT rect);
 
 		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
 		public static extern int GetWindowText(HWND hwnd, StringBuilder title, int size);
@@ -320,6 +376,17 @@ namespace Rylogic.Interop.Win32
 
 		[DllImport("user32.dll")]
 		public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+		/// <summary></summary>
+		public static IntPtr MonitorFromPoint(int x, int y, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint(new POINT { X = x, Y = y }, flags);
+		public static IntPtr MonitorFromPoint(POINT pt, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromPoint_(pt, (int)flags);
+		[DllImport("user32", EntryPoint = "MonitorFromPoint")]
+		private static extern IntPtr MonitorFromPoint_(POINT pt, int flags);
+
+		/// <summary></summary>
+		public static IntPtr MonitorFromWindow(IntPtr hwnd, EMonitorFromFlags flags = EMonitorFromFlags.DEFAULT_TO_NEAREST) => MonitorFromWindow_(hwnd, (int)flags);
+		[DllImport("user32", EntryPoint = "MonitorFromWindow")]
+		private static extern IntPtr MonitorFromWindow_(IntPtr hwnd, int flags);
 
 		[DllImport("user32.dll")]
 		public static extern bool MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
