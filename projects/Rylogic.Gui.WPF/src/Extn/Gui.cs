@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -561,6 +562,19 @@ namespace Rylogic.Gui.WPF
 			wnd.Left = left;
 			wnd.Top = top;
 			return wnd;
+		}
+
+		/// <summary>Return the mouse position relative to a given UI element allowing for DPI scaling</summary>
+		public static Point GetPositionPixels(this MouseEventArgs args, IInputElement input)
+		{
+			var pt = args.GetPosition(input);
+			if (input is DependencyObject obj)
+			{
+				var dpi = Dpi.DpiForWindow(obj.Hwnd());
+				pt.X *= dpi / 96.0;
+				pt.Y *= dpi / 96.0;
+			}
+			return pt;
 		}
 
 		/// <summary>True if this window was shown using ShowDialog</summary>

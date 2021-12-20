@@ -41,6 +41,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The format of newlines to transmit</summary>
 		VT100.ENewLineMode NewLineSend { get; set; }
 
+		/// <summary>Allow/Disallow unicode text in the terminal</summary>
+		bool UnicodeText { get; set; }
+		ICommand ToggleUnicodeText { get; }
+
 		/// <summary>Get/Set Hex output mode</summary>
 		bool HexOutput { get; set; }
 		ICommand ToggleHexOutput { get; }

@@ -37,6 +37,7 @@ namespace Rylogic.Common
 				TerminalHeight = 256;
 				NewLineRecv = ENewLineMode.LF;
 				NewLineSend = ENewLineMode.CR;
+				UnicodeText = false;
 				HexOutput = false;
 			}
 
@@ -80,6 +81,13 @@ namespace Rylogic.Common
 			{
 				get => get<ENewLineMode>(nameof(NewLineSend));
 				set => set(nameof(NewLineSend), value);
+			}
+
+			/// <summary>Allow/Disallow unicode text in the terminal</summary>
+			public bool UnicodeText
+			{
+				get => get<bool>(nameof(UnicodeText));
+				set => set(nameof(UnicodeText), value);
 			}
 
 			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
@@ -262,10 +270,10 @@ namespace Rylogic.Common
 			/// <summary>Get/Set a single character + style for this line</summary>
 			public Char this[int i]
 			{
-				get { return new Char(m_line[i], m_styl[i]); }
+				get => new Char(m_line[i], m_styl[i]);
 				set
 				{
-					if (i >= Size) Resize(i + 1, ' ', m_styl.LastOrDefault());
+					if (i >= Length) Resize(i + 1, ' ', m_styl.LastOrDefault());
 					Debug.Assert(value.m_char != 0);
 					m_line[i] = value.m_char;
 					m_styl[i] = value.m_styl;
@@ -277,8 +285,8 @@ namespace Rylogic.Common
 			{
 				get
 				{
-					if (Size == 0) yield break;
-					for (int s = 0, e = 0, end = Size; ;)
+					if (Length == 0) yield break;
+					for (int s = 0, e = 0, end = Length; ;)
 					{
 						var sty = m_styl[s];
 						for (e = s + 1; e != end && m_styl[e].Equal(sty); ++e) { }
@@ -289,11 +297,8 @@ namespace Rylogic.Common
 				}
 			}
 
-			/// <summary>Length of the line</summary>
-			public int Size
-			{
-				get { return m_line.Length; }
-			}
+			/// <summary>Length of the line (note, doesn't include '\n')</summary>
+			public int Length => m_line.Length;
 
 			/// <summary>Set the line size</summary>
 			public void Resize(int newsize, char fill, Style style)
@@ -310,8 +315,8 @@ namespace Rylogic.Common
 			// Erase a range within the line
 			public void Erase(int ofs, int count)
 			{
-				if (ofs >= Size) return;
-				var len = Math.Min(count, Size - ofs);
+				if (ofs >= Length) return;
+				var len = Math.Min(count, Length - ofs);
 				m_line.Remove(ofs, len);
 				m_styl.RemoveRange(ofs, len);
 			}
@@ -319,7 +324,7 @@ namespace Rylogic.Common
 			/// <summary>Write 'str[ofs->ofs+count]' into/over the line from 'col'</summary>
 			public void Write(int col, string str, int ofs, int count, Style style)
 			{
-				if (Size < col + count)
+				if (Length < col + count)
 					Resize(col + count, ' ', style);
 
 				for (; count-- != 0; ++ofs, ++col)
@@ -333,9 +338,10 @@ namespace Rylogic.Common
 			/// <summary>Return a subsection of this line starting from 'ofs'</summary>
 			public string Substr(int ofs)
 			{
-				return ofs < Size ? m_line.ToString(ofs, Size - ofs) : string.Empty;
+				return ofs < Length ? m_line.ToString(ofs, Length - ofs) : string.Empty;
 			}
 
+			/// <inheritdoc/>
 			public override string ToString()
 			{
 				return m_line.ToString();
@@ -526,7 +532,8 @@ namespace Rylogic.Common
 				}
 				else
 				{
-					UserInput.Add(c);
+					if (Settings.UnicodeText || (c >= 0 && c < 256))
+						UserInput.Add(c);
 				}
 
 				// Notify that input data was added
@@ -551,6 +558,19 @@ namespace Rylogic.Common
 				switch (vk)
 				{
 					default:
+						// Non-printing control characters
+						if (vk.HasFlag(EKeyCodes.Control))
+						{
+							// Ascii codes 0x01 to 0x1F are the non-printing control codes
+							// corresponding to Ctrl-A,...,Ctrl-Z,Ctrl-[,...,Ctrl-_.
+							// see: http://www.physics.udel.edu/~watson/scen103/ascii.html
+							var kc = (int)(vk & EKeyCodes.KeyCode);
+							if (kc >= 65 && kc <= 95)
+							{
+								AddInput((char)(kc - 64));
+								return true;
+							}
+						}
 						return false;
 
 					case EKeyCodes.Left:
@@ -703,7 +723,7 @@ namespace Rylogic.Common
 					str.Append(c);
 					if (++i == 16)
 					{
-						Write(hex.Append(" | ").Append(str).ToString());
+						WriteLine(hex.Append(" | ").Append(str).ToString());
 						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
 						hex.Length = 0;
 						str.Length = 0;
@@ -712,7 +732,7 @@ namespace Rylogic.Common
 				}
 				if (i != 0)
 				{
-					Write(hex.Append(' ', 3 * (16 - i)).Append(" | ").Append(str).ToString());
+					WriteLine(hex.Append(' ', 3 * (16 - i)).Append(" | ").Append(str).ToString());
 					m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
 				}
 			}
@@ -727,7 +747,7 @@ namespace Rylogic.Common
 					char c = text[e];
 					if (c == (char)EKeyCodes.Escape || m_seq.Length != 0)
 					{
-						Write(text, s, e - s);
+						WriteLine(text, s, e - s);
 						m_seq.Append(c);
 						ParseEscapeSeq();
 						++e;
@@ -738,7 +758,7 @@ namespace Rylogic.Common
 						(c == '\r' && Settings.NewLineRecv == ENewLineMode.CR) ||
 						(c == '\r' && e + 1 != eend && text[e + 1] == '\n' && Settings.NewLineRecv == ENewLineMode.CR_LF))
 					{
-						Write(text, s, e - s);
+						WriteLine(text, s, e - s);
 						Capture("\n", 0, 1, false);
 						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
 						e += Settings.NewLineRecv == ENewLineMode.CR_LF ? 2 : 1;
@@ -746,11 +766,11 @@ namespace Rylogic.Common
 					}
 					else if (char.IsControl(c))
 					{
-						Write(text, s, e - s);
+						WriteLine(text, s, e - s);
 						if (c == '\b') BackSpace();
 						if (c == '\r') m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 0);
 						if (c == '\n') m_out.pos = MoveCaret(m_out.pos, 0, 1);
-						if (c == '\t') Write(new string(' ', Settings.TabSize - (m_out.pos.X % Settings.TabSize)));
+						if (c == '\t') WriteLine(new string(' ', Settings.TabSize - (m_out.pos.X % Settings.TabSize)));
 						++e;
 						s = e;
 					}
@@ -762,7 +782,7 @@ namespace Rylogic.Common
 
 				// Print any remaining printable text
 				if (s != eend)
-					Write(text, s, eend - s);
+					WriteLine(text, s, eend - s);
 			}
 
 			/// <summary>Parses a stream of characters as a vt100 control sequence.</summary>
@@ -1322,7 +1342,6 @@ namespace Rylogic.Common
 
 				// Don't clamp x, the vt100 doesn't know what our buffer size is
 				// so we need to maintain a virtual space that might be outside our buffer
-				//x = Math_.Clamp(x, 0, Settings.TerminalWidth);
 				var loc = new Point(x, y);
 				return loc;
 			}
@@ -1334,64 +1353,64 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>
-			/// Write 'str' into the screen buffer at 'm_out.pos'.
-			/// Writes up to 'TerminalWidth - m_out.pos.X' or 'count' characters, whichever is less.
-			/// 'str' should not contain any non-printable characters (including \n,\r). These are removed by ParseOutput</summary>
-			private void Write(string str, int ofs = 0, int count = int.MaxValue)
+			/// Write a single line sub-string from 'str' into the screen buffer at 'm_out.pos'.
+			/// Writes up to 'TerminalWidth - m_out.pos.X' or 'count' characters, whichever is less.</summary>
+			private void WriteLine(string str, int ofs = 0, int count = int.MaxValue)
 			{
+				// Notes:
+				//  - The portion of 'str' written should not contain any non-printable characters (including \n,\r).
+				//    These are removed by ParseOutput.
+
 				Debug.Assert(ofs >= 0 && ofs < str.Length && count >= 0);
 				count = Math.Min(count, str.Length - ofs);
 
 				// Add received text to the capture file, if capturing
 				Capture(str, ofs, count, false);
 
-				// Just ignore caret positions outside the buffer. This can happen because
-				// the vt100 commands can move the caret but is unaware of the buffer size.
-				if (m_out.pos.Y < 0) return;
-
-				// If m_out.pos.X < 0, pretend Min(-m_out.pos.X, count) characters were written
-				if (m_out.pos.X < 0)
+				// Write the portion of the string that overlaps the buffer bounds
+				if (m_out.pos.Y >= 0 &&
+					m_out.pos.X >= -count &&
+					m_out.pos.X < Settings.TerminalWidth)
 				{
-					var dx = Math.Min(-m_out.pos.X, count);
-					Debug.Assert(dx <= count);
-					m_out.pos.X += dx;
-					count -= dx;
-					ofs += dx;
+					// The caret position can be outside the buffer because the vt100
+					// commands can move the caret but is unaware of the buffer size.
+					var pos = m_out.pos;
+					var clipped = false;
+					var i = ofs;
+					var n = count;
+
+					// Clip to the buffer bounds
+					if (pos.X < 0)
+					{
+						var dx = Math.Min(-pos.X, n);
+						pos.X += dx;
+						i += dx;
+						n -= dx;
+					}
+					if (pos.X + n >= Settings.TerminalWidth)
+					{
+						n = Settings.TerminalWidth - pos.X;
+						clipped = true;
+					}
+
+					// Get the line and ensure it's large enough
+					var line = LineAt(pos.Y);
+					if (line.Length < pos.X + n)
+						line.Resize(pos.X + n, ' ', m_out.style);
+
+					// Add to the invalid rect
+					InvalidateRect(new Rectangle(pos, new Size(n, 1)));
+
+					// Write the string
+					line.Write(pos.X, str, i, n, m_out.style);
+					if (clipped)
+						line.Write(Settings.TerminalWidth - 1, new string('~', 1), 0, 1, m_out.style);
+
+					// Notify whenever the buffer is changed
+					OnBufferChanged(new VT100BufferChangedEventArgs(pos, n));
 				}
-
-				// If m_out.pos.X >= Settings.TerminalWidth, pretend all characters were written
-				if (m_out.pos.X >= Settings.TerminalWidth)
-				{
-					m_out.pos.X += count;
-					count = 0;
-				}
-
-				if (count == 0)
-					return;
-
-				Debug.Assert(m_out.pos.X >= 0 && m_out.pos.X < Settings.TerminalWidth, "Output position out of range");
-
-				// Limit 'count' to the size of the terminal and the maximum string length
-				count = Math.Min(count, str.Length - ofs);
-				var clipped = count > Settings.TerminalWidth - m_out.pos.X;
-				count = Math.Min(count, Settings.TerminalWidth - m_out.pos.X);
-				Debug.Assert(count >= 0 && count <= str.Length - ofs);
-
-				// Get the line and ensure it's large enough
-				var line = LineAt(m_out.pos.Y);
-				if (line.Size < m_out.pos.X + count)
-					line.Resize(m_out.pos.X + count, ' ', m_out.style);
-
-				// Add to the invalid rect
-				InvalidateRect(new Rectangle(m_out.pos, new Size(count, 1)));
-
-				// Write the string
-				line.Write(m_out.pos.X, str, ofs, count, m_out.style);
-				if (clipped)
-					line.Write(Settings.TerminalWidth - 1, new string('~', 1), 0, 1, m_out.style);
-
-				// Notify whenever the buffer is changed
-				OnBufferChanged(new VT100BufferChangedEventArgs(m_out.pos, count));
+				
+				// Advance the caret position
 				m_out.pos = MoveCaret(m_out.pos, count, 0);
 			}
 
@@ -1415,7 +1434,7 @@ namespace Rylogic.Common
 				line.Erase(x, 1);
 
 				// Notify whenever the buffer is changed
-				OnBufferChanged(new VT100BufferChangedEventArgs(new Point(x, y), line.Size - x));
+				OnBufferChanged(new VT100BufferChangedEventArgs(new Point(x, y), line.Length - x));
 			}
 
 			/// <summary>Determines the terminal screen area used by 'str'</summary>
@@ -1498,10 +1517,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>True if the event is just before lines are dropped, false if just after</summary>
-		public bool Before { get; private set; }
+		public bool Before { get; }
 
 		/// <summary>The index range of lines that are dropped</summary>
-		public RangeI Dropped { get; private set; }
+		public RangeI Dropped { get; }
 	}
 	public class VT100BufferChangedEventArgs : EventArgs
 	{
@@ -1520,7 +1539,7 @@ namespace Rylogic.Common
 		{ }
 
 		/// <summary>The rectangular area that has changed</summary>
-		public Rectangle Area { get; private set; }
+		public Rectangle Area { get; }
 	}
 	#endregion
 }

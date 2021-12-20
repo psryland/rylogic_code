@@ -855,7 +855,7 @@
 		x:Shared="False"
 		Header="Paste"
 		StaysOpenOnClick="False"
-		Command="{Binding Paste}"
+		Command="{Binding DoPaste}"
 		DataContext="{Binding VT100CMenuContext}"
 		Name="VT100MenuItem_DoPaste" />
 	<MenuItem x:Key="VT100MenuItem_DoCaptureToFile"
@@ -988,10 +988,19 @@
 			</StackPanel>
 		</MenuItem.Header>
 	</MenuItem>
+	<MenuItem x:Key="VT100MenuItem_UnicodeText"
+		x:Shared="False"
+		Header="Unicode Text"
+		StaysOpenOnClick="false"
+		Command="{Binding ToggleUnicodeText}"
+		IsChecked="{Binding UnicodeText, Mode=OneWay}"
+		DataContext="{Binding VT100CMenuContext}"
+		Name="VT100MenuItem_UnicodeText"
+		/>
 	<MenuItem x:Key="VT100MenuItem_HexOutput"
 		x:Shared="False"
 		Header="Hex Output"
-		StaysOpenOnClick="True"
+		StaysOpenOnClick="False"
 		Command="{Binding ToggleHexOutput}"
 		IsChecked="{Binding HexOutput, Mode=OneWay}"
 		DataContext="{Binding VT100CMenuContext}"
@@ -1020,6 +1029,7 @@
 			<StaticResource ResourceKey="VT100MenuItem_TabSize" />
 			<StaticResource ResourceKey="VT100MenuItem_NewLineRecv" />
 			<StaticResource ResourceKey="VT100MenuItem_NewLineSend" />
+			<StaticResource ResourceKey="VT100MenuItem_UnicodeText" />
 			<StaticResource ResourceKey="VT100MenuItem_HexOutput" />
 		</MenuItem>
 	</ContextMenu>
