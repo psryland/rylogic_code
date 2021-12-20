@@ -11,7 +11,9 @@ namespace Rylogic.Gui.WPF
 			DoCopy = Command.Create(this, DoCopyInternal);
 			DoPaste = Command.Create(this, DoPasteInternal);
 			DoCaptureToFile = Command.Create(this, DoCaptureToFileInternal);
+			DoSendFile = Command.Create(this, DoSendFileInternal);
 			ToggleLocalEcho = Command.Create(this, ToggleLocalEchoInternal);
+			ToggleUnicodeText = Command.Create(this, ToggleUnicodeTextInternal);
 			ToggleHexOutput = Command.Create(this, ToggleHexOutputInternal);
 		}
 
@@ -98,6 +100,18 @@ namespace Rylogic.Gui.WPF
 		{
 			get => Settings.NewLineSend;
 			set => Settings.NewLineSend = value;
+		}
+
+		/// <inheritdoc/>
+		public bool UnicodeText
+		{
+			get => Settings.UnicodeText;
+			set => Settings.UnicodeText = value;
+		}
+		public ICommand ToggleUnicodeText { get; private set; } = null!;
+		private void ToggleUnicodeTextInternal()
+		{
+			UnicodeText = !UnicodeText;
 		}
 
 		/// <inheritdoc/>

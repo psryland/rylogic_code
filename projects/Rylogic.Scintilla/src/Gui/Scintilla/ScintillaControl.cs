@@ -1025,31 +1025,31 @@ namespace Rylogic.Gui.WPF
 		#region Cut, Copy And Paste
 
 		/// <summary></summary>
-		public void Cut()
+		public virtual void Cut()
 		{
 			Cmd(Sci.SCI_CUT);
 		}
 
 		/// <summary></summary>
-		public void Copy()
+		public virtual void Copy()
 		{
 			Cmd(Sci.SCI_COPY);
 		}
 
 		/// <summary></summary>
-		public void Paste()
+		public virtual void Paste()
 		{
 			Cmd(Sci.SCI_PASTE);
 		}
 
 		/// <summary></summary>
-		public bool CanPaste()
+		public virtual bool CanPaste()
 		{
 			return Cmd(Sci.SCI_CANPASTE) != 0;
 		}
 
 		/// <summary>Clear the *selected* text</summary>
-		public void Clear()
+		public virtual void Clear()
 		{
 			Cmd(Sci.SCI_CLEAR);
 		}

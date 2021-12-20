@@ -267,6 +267,12 @@ namespace Rylogic.Extn.Windows
 			return new v2((float)p.X, (float)p.Y);
 		}
 
+		/// <summary>Convert to Vector</summary>
+		public static Vector ToVectorD(this Point p)
+		{
+			return new Vector(p.X, p.Y);
+		}
+
 		/// <summary>True if any component of the point is NaN</summary>
 		public static bool IsNaN(Point v)
 		{
@@ -297,6 +303,12 @@ namespace Rylogic.Extn.Windows
 		public static v2 ToV2(this Vector v)
 		{
 			return new v2((float)v.X, (float)v.Y);
+		}
+
+		/// <summary>Convert to Point</summary>
+		public static Point ToPointD(this Vector v)
+		{
+			return new Point(v.X, v.Y);
 		}
 
 		/// <summary>True if any component of the vector is NaN</summary>

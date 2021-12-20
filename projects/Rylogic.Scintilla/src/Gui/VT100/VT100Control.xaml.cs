@@ -68,32 +68,41 @@ namespace Rylogic.Gui.WPF
 						var vk = Win32.ToVKey(wparam);
 
 						// Forward navigation keys to the control
-						if (vk == EKeyCodes.Up || vk == EKeyCodes.Down || vk == EKeyCodes.Left || vk == EKeyCodes.Right)
+						if (vk == EKeyCodes.Up || vk == EKeyCodes.Down || vk == EKeyCodes.Left || vk == EKeyCodes.Right ||
+							vk == EKeyCodes.PageUp || vk == EKeyCodes.PageDown || vk == EKeyCodes.End || vk == EKeyCodes.Home)
 						{
 							Cmd(msg, wparam, lparam);
+							handled = true;
 							return IntPtr.Zero;
 						}
 
 						// Handle clipboard shortcuts
-						if (Win32.KeyDown(EKeyCodes.ControlKey))
+						if (vk == (EKeyCodes.Control | EKeyCodes.C))
 						{
-							if (vk == EKeyCodes.C) { Copy(); return IntPtr.Zero; }
-							if (vk == EKeyCodes.V) { Paste(); return IntPtr.Zero; }
-							return IntPtr.Zero; // Disable all other shortcuts
+							Copy();
+							handled = true;
+							return IntPtr.Zero;
+						}
+						if (vk == (EKeyCodes.Control | EKeyCodes.V))
+						{
+							Paste();
+							handled = true;
+							return IntPtr.Zero;
 						}
 
-						// Add the key press to the buffer input
-						AddToBuffer(vk);
-
-						// Let the key events through if local echo is on
-						handled = !Buffer.Settings.LocalEcho;
+						// Add the key press to the input buffer.
+						var added = AddToBuffer(vk);
+						
+						// Let the key events through if local echo is on.
+						handled = added && !Buffer.Settings.LocalEcho;
 						return IntPtr.Zero;
 					}
 					break;
 				}
 				case Win32.WM_CHAR:
 				{
-					handled = !Buffer.Settings.LocalEcho;
+					var vk = Win32.ToVKey(wparam);
+					handled = vk.HasFlag(EKeyCodes.Control) || !Buffer.Settings.LocalEcho;
 					return IntPtr.Zero;
 				}
 				case Win32.WM_DROPFILES:
@@ -116,6 +125,21 @@ namespace Rylogic.Gui.WPF
 
 			return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
 		}
+		public override void Copy()
+		{
+			base.Copy();
+		}
+		public override void Paste()
+		{
+			try
+			{
+				// The Scintilla.Paste function writes text into the control, but we need the text to go into the VT100 input buffer first.
+				AddToBuffer(Clipboard.GetText(TextDataFormat.UnicodeText));
+				if (Buffer.Settings.LocalEcho)
+					base.Paste();
+			}
+			catch { }
+		}
 
 		/// <summary></summary>
 		public VT100.Settings Settings => Buffer.Settings;
@@ -128,20 +152,26 @@ namespace Rylogic.Gui.WPF
 		}
 		private void Buffer_Changed(VT100.Buffer nue, VT100.Buffer old)
 		{
+			Scope<RangeI>? selection = null;
+
 			if (old != null)
 			{
 				// Ensure capturing is stopped on the old buffer
 				old.CaptureToFileEnd();
+				old.Overflow -= HandleOverflow;
 				old.BufferChanged -= HandleBufferChanged;
 				old.Settings.PropertyChanged -= HandleSettingChanged;
 			}
+			ClearAll();
 			if (nue != null)
 			{
 				nue.Settings.PropertyChanged += HandleSettingChanged;
 				nue.BufferChanged += HandleBufferChanged;
+				nue.Overflow += HandleOverflow;
 			}
 
 			// Notify of affected changes
+			NotifyPropertyChanged(nameof(Buffer));
 			NotifyPropertyChanged(nameof(Settings));
 			SignalUpdateText();
 
@@ -182,7 +212,7 @@ namespace Rylogic.Gui.WPF
 					}
 					case nameof(Settings.HexOutput):
 					{
-						NotifyPropertyChanged(nameof(HorizontalAlignment));
+						NotifyPropertyChanged(nameof(HexOutput));
 						break;
 					}
 				}
@@ -191,8 +221,39 @@ namespace Rylogic.Gui.WPF
 			{
 				SignalUpdateText();
 			}
+			void HandleOverflow(object? sender, VT100BufferOverflowEventArgs e)
+			{
+				// Handle buffer lines being dropped</summary>
+				if (e.Before)
+				{
+					// Calculate the number of characters being dropped.
+					// Note: Buffer does not store line endings, but the saved selection does.
+					var chars_being_removed = 0;
+					for (int i = e.Dropped.Begi; i != e.Dropped.Endi; ++i)
+						chars_being_removed += Buffer.Lines[i].Length + 1; // +1 for the '\n'
+
+						// Save the selection and adjust it by the number of characters to be dropped
+					selection = PreserveSelection();
+					selection.Value.Beg -= chars_being_removed;
+					selection.Value.End -= chars_being_removed;
+
+					// Remove the dropped text from the control
+					DeleteRange(0, chars_being_removed);
+
+					// Scroll up to move with the buffer text
+					var vis = FirstVisibleLine;
+					vis = Math.Max(0, vis - e.Dropped.Sizei);
+					FirstVisibleLine = vis;
+				}
+				else
+				{
+					// Restore the selection
+					selection?.Dispose();
+					selection = null;
+				}
+			}
 		}
-		
+
 		/// <summary>Shared-default buffer. This should only be used for initialisation, instances of the VT100Control should set their own Buffer instance</summary>
 		private static readonly VT100.Buffer DefaultBuffer = new VT100.Buffer(new VT100.Settings());
 		public static readonly DependencyProperty BufferProperty = Gui_.DPRegister<VT100Control>(nameof(Buffer), DefaultBuffer, Gui_.EDPFlags.None);
@@ -258,10 +319,7 @@ namespace Rylogic.Gui.WPF
 
 			// No buffer = empty display
 			if (Buffer is not VT100.Buffer buf)
-			{
-				ClearAll();
 				return;
-			}
 
 			// Get the buffer region that has changed
 			var region = buf.InvalidRect;
@@ -270,7 +328,7 @@ namespace Rylogic.Gui.WPF
 				return;
 
 			// Preserve the scroll position
-			using var scroll_scope = ScrollScope();
+			using var scroll_scope = !AutoScrollToBottom ? ScrollScope() : null;
 
 			// Grow the text in the control to the required number of lines (if necessary)
 			var line_count = LineCount;
@@ -351,22 +409,43 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Adds text to the input buffer</summary>
-		protected virtual void AddToBuffer(EKeyCodes vk)
+		protected virtual bool AddToBuffer(EKeyCodes vk)
 		{
+			// Try to add the raw key code first.
+			var added = Buffer.AddInput(vk);
+
+			// If not handled, try to convert it to a character and then add it.
+			if (!added && Win32.CharFromVKey(vk, out var ch))
+			{
+				Buffer.AddInput(ch);
+				added = true;
+			}
+
 			// If input triggers auto scroll
-			if (ScrollToBottomOnInput)
+			if (added && ScrollToBottomOnInput)
 			{
 				AutoScrollToBottom = true;
 				ScrollToBottom();
 			}
 
-			// Try to add the raw key code first. If not handled,
-			// try to convert it to a character and add it again.
-			if (!Buffer.AddInput(vk))
+			return added;
+		}
+		protected virtual bool AddToBuffer(string text)
+		{
+			var added = text.Length != 0;
+			
+			// Add the text to the input buffer
+			foreach (var ch in text)
+				Buffer.AddInput(ch);
+
+			// If input triggers auto scroll
+			if (added && ScrollToBottomOnInput)
 			{
-				if (Win32.CharFromVKey(vk, out var ch))
-					Buffer.AddInput(ch);
+				AutoScrollToBottom = true;
+				ScrollToBottom();
 			}
+
+			return added;
 		}
 
 		/// <summary>Start or stop capturing to a file</summary>
