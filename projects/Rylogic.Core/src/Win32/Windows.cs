@@ -131,24 +131,10 @@ namespace Rylogic.Interop.Win32
 		private bool m_visible = true;
 
 		// Return the client rectangle for the window
-		public Rectangle ClientRectangle
-		{
-			get
-			{
-				Win32.GetClientRect(Hwnd, out var rect);
-				return rect.ToRectangle();
-			}
-		}
+		public Rectangle ClientRectangle => Win32.GetClientRect(Hwnd).ToRectangle();
 
 		// Return the screen rectangle for the window
-		public Rectangle WindowRectangle
-		{
-			get
-			{
-				Win32.GetWindowRect(Hwnd, out var rect);
-				return rect.ToRectangle();
-			}
-		}
+		public Rectangle WindowRectangle => Win32.GetWindowRect(Hwnd).ToRectangle();
 
 		// Sets focus to this Window Object
 		public void Activate()
