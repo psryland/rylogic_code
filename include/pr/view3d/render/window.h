@@ -64,7 +64,7 @@ namespace pr::rdr
 		DepthStateManager& ds_mgr() const;
 		RasterStateManager& rs_mgr() const;
 
-		// Return the current DPI for this window
+		// Return the current DPI for this window. Use DIPtoPhysical(pt, Dpi()) for converting points
 		v2 Dpi() const
 		{
 			// Don't cache the DPI value. It can change at any point.
@@ -108,9 +108,6 @@ namespace pr::rdr
 			//	dpi = 96.0f;
 			#endif
 		}
-
-		// Return the scaling factors to convert DIP to physical pixels
-		v2 DpiScale() const { return Dpi() / 96.0f; }
 
 		// Create the render target and depth buffer
 		void InitRT();

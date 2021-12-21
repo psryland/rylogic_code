@@ -3,7 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-
 #include "pr/view3d/forward.h"
 #include "pr/view3d/util/lock.h"
 
@@ -62,6 +61,28 @@ namespace pr::rdr
 	constexpr uint32_t MakeFourCC(uint8_t ch0, uint8_t ch1, uint8_t ch2, uint8_t ch3)
 	{
 		return static_cast<uint32_t>(ch0) | (static_cast<uint32_t>(ch1) << 8) | (static_cast<uint32_t>(ch2) << 16) | (static_cast<uint32_t>(ch3) << 24);
+	}
+
+	// Convert device independent pixels (DIP) to physical pixels using the given 'dpi'
+	constexpr float DIPtoPhysical(float dip, float dpi)
+	{
+		return dip * dpi / 96.0f;
+	}
+	constexpr float PhysicaltoDIP(float phys, float dpi)
+	{
+		return phys * 96.0f / dpi;
+	}
+	constexpr v2 DIPtoPhysical(v2 pt, v2 dpi)
+	{
+		return v2(
+			DIPtoPhysical(pt.x, dpi.x),
+			DIPtoPhysical(pt.y, dpi.y));
+	}
+	constexpr v2 PhysicaltoDIP(v2 pt, v2 dpi)
+	{
+		return v2(
+			PhysicaltoDIP(pt.x, dpi.x),
+			PhysicaltoDIP(pt.y, dpi.y));
 	}
 
 	// Return the number of bits per pixel for a given dx format

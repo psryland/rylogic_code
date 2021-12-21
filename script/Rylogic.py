@@ -255,7 +255,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 	elif "*" in src or "?" in src:
 		lst += [os.path.split(f)[1] for f in glob.glob(src)]
 	elif not ignore_non_existing:
-		raise FileNotFoundError("ERROR: "+src+" does not exist")
+		raise FileNotFoundError(f"ERROR: {src} does not exist")
 
 	# If the 'src' represents multiple files, 'dst' must be a directory
 	if src_is_dir or len(lst) > 1:
@@ -264,7 +264,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 			dst_is_dir = True
 		# or if it does exist, check that it is actually a directory
 		elif not dst_is_dir:
-			raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
+			raise FileNotFoundError(f"ERROR: {dst} is not a valid directory")
 
 	srcdir = (src if src_is_dir else os.path.dirname(src)).rstrip("/\\")
 	dstdir = (dst if dst_is_dir else os.path.dirname(dst)).rstrip("/\\")
@@ -342,7 +342,7 @@ def Gcc2Vs(line):
 
 # Executes a program and returns it's stdout/stderr as a string
 # Returns (result,output)
-def Run(args, expected_return_code=0,show_arguments=False):
+def Run(args, expected_return_code=0, show_arguments=False):
 	try:
 		if show_arguments: print(args)
 		outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
@@ -361,7 +361,7 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 		raise
 
 # Call another script. Remember, you can import and call directly.. probably preferable to this
-def Call(script, args, expected_return_code=0,show_arguments=False):
+def Call(script, args=[], expected_return_code=0,show_arguments=False):
 	Exec(["py.exe", script] + args, expected_return_code=expected_return_code, show_arguments=show_arguments)
 	return
 
@@ -380,7 +380,7 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 		cf = subprocess.CREATE_NEW_CONSOLE
 		if same_window:
 			cf = 0
-		proc = subprocess.Popen(args,creationflags=cf,startupinfo=si)
+		proc = subprocess.Popen(args, creationflags=cf, startupinfo=si)
 		return proc
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
@@ -523,8 +523,20 @@ def CheckDependencies(deps, touch_file):
 		
 # Find the visual studio batch file for setting up a NMake environment
 def SetupVcEnvironment():
-	if sys.platform != "win32": return
-	if 'VISUALSTUDIOVERSION' in os.environ: return
+	
+	# Already set up
+	if 'VISUALSTUDIOVERSION' in os.environ:
+		return
+
+	# Not a windows environment
+	if sys.platform != "win32":
+		return
+
+	# VS environment not set up in user vars
+	if not UserVars.vs_envvars: 
+		print("VS Environment not set in UserVars")
+		return
+
 	print("Initializing VS Environment", flush=True)
 
 	# Find 'vswhere.exe' from the VS installer
@@ -544,8 +556,11 @@ def SetupVcEnvironment():
 	# Add/Replace the environment variables in 'os.environ'
 	for line in env.splitlines():
 		m = re.fullmatch("^(.+?)=(.*)$", line)
-		if m: os.environ[m[1]] = m[2]
+		if not m: continue
+		os.environ[m[1]] = m[2]
 
+	#print("Environment:\n")
+	#for k in os.environ: print(f"{k} = {os.environ[k]}")
 	return os.environ
 	
 # Invoke MSBuild on a solution or project file.
@@ -561,15 +576,18 @@ def SetupVcEnvironment():
 #	platforms = ["x64","x86","AnyCPU"]
 #	configs = ["release","debug"]
 #	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True, msbuild_props=[]):
+def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True, additional_args=[]):
 	
+	if not UserVars.msbuild:
+		raise RuntimeError("MSBuild path has not been set in UserVars")
+		
 	# Handle None's
 	projects  = projects if projects else []
 	platforms = platforms if platforms else []
 	configs   = configs if configs else []
 
 	# Build the arguments list
-	args = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/verbosity:minimal", "/nologo"] # "/m", disabled parallel builds because of locked files
+	args = [UserVars.msbuild] + [sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"] + additional_args
 
 	# Set the targets to build
 	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)

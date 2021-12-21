@@ -91,8 +91,8 @@ namespace view3d
 		View3DViewport Viewport() const;
 		void Viewport(View3DViewport vp);
 
-		// The DPI scaling of the monitor that 'window' is displayed on (relative to 96dpi)
-		pr::v2 DpiScale() const;
+		// The DPI of the monitor that this window is displayed on
+		pr::v2 Dpi() const;
 
 		// Render this window into whatever render target is currently set
 		void Render();
