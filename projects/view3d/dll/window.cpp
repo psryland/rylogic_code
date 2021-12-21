@@ -135,10 +135,10 @@ namespace view3d
 		NotifySettingsChanged(EView3DSettings::Scene_Viewport);
 	}
 
-	// The DPI scaling of the monitor that 'window' is displayed on (relative to 96dpi)
-	v2 Window::DpiScale() const
+	// The DPI of the monitor that this window is displayed on
+	v2 Window::Dpi() const
 	{
-		return m_wnd.DpiScale();
+		return m_wnd.Dpi();
 	}
 
 	// Render this window into whatever render target is currently set
@@ -779,14 +779,18 @@ namespace view3d
 		OnAnimationEvent(this, command, m_anim_data.m_clock.load().count());
 	}
 
-	// Convert a screen space point to a normalised screen space point
+	// Convert a screen space point (in DIP) to a normalised screen space point
 	v2 Window::SSPointToNSSPoint(v2 const& ss_point) const
 	{
-		return m_scene.m_viewport.SSPointToNSSPoint(ss_point);
+		// Convert from DIP to physical pixels
+		auto pss_point = DIPtoPhysical(ss_point, Dpi());
+		return m_scene.m_viewport.SSPointToNSSPoint(pss_point);
 	}
 	v2 Window::NSSPointToSSPoint(v2 const& nss_point) const
 	{
-		return m_scene.m_viewport.NSSPointToSSPoint(nss_point);
+		// Convert from physical pixels back to DIP
+		auto pss_point = m_scene.m_viewport.NSSPointToSSPoint(nss_point);
+		return PhysicaltoDIP(pss_point, Dpi());
 	}
 
 	// Invoke the settings changed callback

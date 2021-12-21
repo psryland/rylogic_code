@@ -690,7 +690,8 @@ VIEW3D_API View3DV2 __stdcall View3D_WindowDpiScale(View3DWindow window)
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return To<View3DV2>(window->DpiScale());
+		auto dpi_scale = DIPtoPhysical(v2One, window->Dpi());
+		return To<View3DV2>(dpi_scale);
 	}
 	CatchAndReport(View3d_WindowDPI, window, View3DV2{});
 }

@@ -63,8 +63,9 @@ namespace pr::rdr
 		// Get the DXGI surface within this texture
 		D3DPtr<IDXGISurface> GetSurface();
 
-		// Get a d2d render target for the DXGI surface within this texture
-		D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget();
+		// Get a d2d render target for the DXGI surface within this texture.
+		// 'wnd' is optional, used to get the DPI scaling for the window that the render target is used in.
+		D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget(Window const* wnd = nullptr);
 
 		// Get a D2D device context for the DXGI surface within this texture
 		D3DPtr<ID2D1DeviceContext> GetD2DeviceContext();

@@ -568,13 +568,49 @@ namespace pr::rdr
 	// Viewport description
 	struct Viewport :D3D11_VIEWPORT
 	{
-		// Viewports represent an area on the backbuffer, *not* the target HWND.
-		// Viewports are in render target space
-		// e.g.
-		//  x,y          = 0,0 (not -0.5f,-0.5f)
-		//  width,height = 800,600 (not 1.0f,1.0f)
-		//  depth is normalised from 0.0f -> 1.0f
-		Viewport& set(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f)
+		// Notes:
+		//  - Viewports represent an area on the backbuffer, *not* the target HWND.
+		//  - Viewports are in render target space
+		//    e.g.
+		//     x,y          = 0,0 (not -0.5f,-0.5f)
+		//     width,height = 800,600 (not 1.0f,1.0f)
+		//     depth is normalised from 0.0f -> 1.0f
+		//  - Viewports are measured in real pixels not logical pixels. i.e. if the
+		//    DPI is not 96.0 then the viewport does not line up with client space
+		//    coordinates.
+		Viewport(float width, float height)
+			:D3D11_VIEWPORT()
+		{
+			Set(0.0f, 0.0f, width, height);
+		}
+		Viewport(UINT width, UINT height)
+			:D3D11_VIEWPORT()
+		{
+			Set(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+		}
+		Viewport(float x, float y, float width, float height)
+			:D3D11_VIEWPORT()
+		{
+			Set(x, y, width, height);
+		}
+		Viewport(float x, float y, float width, float height, float min_depth, float max_depth)
+			:D3D11_VIEWPORT()
+		{
+			Set(x, y, width, height, min_depth, max_depth);
+		}
+		Viewport(pr::iv2 const& area)
+			:D3D11_VIEWPORT()
+		{
+			Set(0.0f, 0.0f, float(area.x), float(area.y));
+		}
+		Viewport(IRect const& rect)
+			:D3D11_VIEWPORT()
+		{
+			auto r = FRect(rect);
+			Set(r.X(), r.Y(), r.SizeX(), r.SizeY());
+		}
+
+		Viewport& Set(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f)
 		{
 			PR_ASSERT(PR_DBG_RDR, x >= D3D11_VIEWPORT_BOUNDS_MIN && x <= D3D11_VIEWPORT_BOUNDS_MAX, "X value out of range");
 			PR_ASSERT(PR_DBG_RDR, y >= D3D11_VIEWPORT_BOUNDS_MIN && y <= D3D11_VIEWPORT_BOUNDS_MAX, "Y value out of range");
@@ -595,53 +631,39 @@ namespace pr::rdr
 			return *this;
 		}
 
-		Viewport(float width, float height)
-			:D3D11_VIEWPORT()
+		// The Width/Height of the viewport *in real pixels* (i.e. not DPI scaled)
+		size_t WidthUI() const
 		{
-			set(0.0f, 0.0f, width, height);
+			return static_cast<size_t>(Width);
 		}
-		Viewport(UINT width, UINT height)
-			:D3D11_VIEWPORT()
+		size_t HeightUI() const
 		{
-			set(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
-		}
-		Viewport(float x, float y, float width, float height)
-			:D3D11_VIEWPORT()
-		{
-			set(x, y, width, height);
-		}
-		Viewport(float x, float y, float width, float height, float min_depth, float max_depth)
-			:D3D11_VIEWPORT()
-		{
-			set(x, y, width, height, min_depth, max_depth);
-		}
-		Viewport(pr::iv2 const& area)
-			:D3D11_VIEWPORT()
-		{
-			set(0.0f, 0.0f, float(area.x), float(area.y));
-		}
-		Viewport(IRect const& rect)
-			:D3D11_VIEWPORT()
-		{
-			auto r = FRect(rect);
-			set(r.X(), r.Y(), r.SizeX(), r.SizeY());
+			return static_cast<size_t>(Height);
 		}
 
-		size_t WidthUI() const  { return static_cast<size_t>(Width); }
-		size_t HeightUI() const { return static_cast<size_t>(Height); }
-
-		FRect AsFRect() const { return FRect(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height); }
-		IRect AsIRect() const { return IRect(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height)); }
-		RECT  AsRECT() const  { return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)}; }
+		// The viewport rectangle, *in real pixels* (i.e. not DPI scaled)
+		FRect AsFRect() const
+		{
+			return FRect(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height);
+		}
+		IRect AsIRect() const
+		{
+			return IRect(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height));
+		}
+		RECT AsRECT() const
+		{
+			return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)};
+		}
 
 		// Convert a screen space point to normalised screen space
-		pr::v2 SSPointToNSSPoint(pr::v2 const& ss_point) const
+		// 'ss_point' must be in real pixels, not logical pixels (DIP).
+		v2 SSPointToNSSPoint(v2 const& ss_point) const
 		{
-			return pr::NormalisePoint(AsIRect(), ss_point, 1.0f, -1.0f);
+			return NormalisePoint(AsIRect(), ss_point, 1.0f, -1.0f);
 		}
-		pr::v2 NSSPointToSSPoint(pr::v2 const& nss_point) const
+		v2 NSSPointToSSPoint(v2 const& nss_point) const
 		{
-			return pr::ScalePoint(AsIRect(), nss_point, 1.0f, -1.0f);
+			return ScalePoint(AsIRect(), nss_point, 1.0f, -1.0f);
 		}
 	};
 }

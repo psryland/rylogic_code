@@ -4,6 +4,7 @@
 //*********************************************
 #include "pr/view3d/forward.h"
 #include "pr/view3d/render/renderer.h"
+#include "pr/view3d/render/window.h"
 #include "pr/view3d/textures/texture_2d.h"
 #include "pr/view3d/textures/texture_manager.h"
 #include "pr/view3d/util/util.h"
@@ -251,14 +252,14 @@ namespace pr::rdr
 	}
 
 	// Get a d2d render target for the DXGI surface within this texture
-	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget()
+	D3DPtr<ID2D1RenderTarget> Texture2D::GetD2DRenderTarget(Window const* wnd)
 	{
 		Renderer::Lock lock(m_mgr->m_rdr); 
 		auto surf = GetSurface();
 
 		// Create render target properties
 		auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-		auto dpi = m_mgr->m_rdr.Dpi();
+		auto dpi = wnd ? wnd->Dpi() : m_mgr->m_rdr.SystemDpi();
 		props.dpiX = dpi.x;
 		props.dpiY = dpi.y;
 
@@ -288,7 +289,7 @@ namespace pr::rdr
 		// Create a bitmap wrapper for 'surf'
 		D3DPtr<ID2D1Bitmap1> target;
 		auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-		auto dpi = m_mgr->m_rdr.Dpi();
+		auto dpi = m_mgr->m_rdr.SystemDpi();
 		bp.dpiX = dpi.x;
 		bp.dpiY = dpi.y;
 		pr::Throw(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));

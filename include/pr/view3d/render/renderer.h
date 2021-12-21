@@ -144,8 +144,8 @@ namespace pr::rdr
 			return m_dummy_hwnd;
 		}
 
-		// Return the current desktop DPI
-		v2 Dpi() const
+		// Return the current desktop DPI (Fallback if window DPI not available)
+		v2 SystemDpi() const
 		{
 			// Notes:
 			//  - Window's have their own version of this function which detects the DPI
@@ -157,12 +157,6 @@ namespace pr::rdr
 			auto dpi = (float)96.0f;
 			#endif
 			return v2(dpi, dpi);
-		}
-
-		// Return the scaling factors to convert DIP to physical pixels
-		v2 DpiScale() const
-		{
-			return Dpi() / 96.0f;
 		}
 
 		// Read access to the initialisation settings

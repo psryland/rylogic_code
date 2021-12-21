@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Notes:
@@ -15,6 +15,7 @@
 import sys, os, subprocess, datetime, re, shutil
 from importlib import machinery as Import
 from typing import List
+from enum import Enum
 import Rylogic as Tools
 import RylogicAssembly as RA
 import BuildInstaller
@@ -25,7 +26,7 @@ import UserVars
 restored = []
 
 # Available projects that can be built
-class EProjects():
+class EProjects(Enum):
 	Sqlite3 = "Sqlite3"
 	Scintilla = "Scintilla"
 	Audio = "Audio"
@@ -678,7 +679,7 @@ def Main(args:List[str]):
 	platforms = []
 	configs = []
 	clean = False
-	build = False
+	build = True
 	deploy = False
 	publish = False
 
@@ -694,6 +695,9 @@ def Main(args:List[str]):
 		elif arg == "-build":
 			i = i + 1
 			build = True
+		elif arg == "-nobuild":
+			i = i + 1
+			build = False
 		elif arg == "-rebuild":
 			i = i + 1
 			clean = True
@@ -751,7 +755,11 @@ def Main(args:List[str]):
 	for i in range(0, len(configs)):
 		if configs[i].lower() == "release": configs[i] = "Release"
 		if configs[i].lower() == "debug": configs[i] = "Debug"
-	if not projects: projects = ["All"]
+	for p in projects:
+		if p in EProjects.__members__: continue
+		raise RuntimeError(f"'{p}' is not a valid project name")
+	if len(projects) == 0: projects = ["All"]
+
 	if not clean and not build and not deploy and not publish: build = True
 	if publish: deploy = True
 
@@ -793,6 +801,7 @@ if __name__ == "__main__":
 		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']
+		#sys.argv=['build.py', '-projects', 'LDraw', '-deploy']
 
 		#print(f"Command Line: {str(sys.argv)}")
 		Main(sys.argv)

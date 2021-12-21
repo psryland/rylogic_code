@@ -4986,7 +4986,6 @@ namespace pr::ldr
 						ELdrFlags::SceneBoundsExclude |
 						ELdrFlags::HitTestExclude |
 						ELdrFlags::ShadowCastExclude, true, "");
-					
 
 					// Screen space uses a standard normalised orthographic projection
 					obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -4997,8 +4996,8 @@ namespace pr::ldr
 						// The 'ob.m_i2w' is a normalised screen space position
 						// (-1,-1,-0) is the lower left corner on the near plane,
 						// (+1,+1,-1) is the upper right corner on the far plane.
-						auto w = float(scene.m_viewport.Width);
-						auto h = float(scene.m_viewport.Height);
+						auto w = 1.0f * scene.m_viewport.Width;
+						auto h = 1.0f * scene.m_viewport.Height;
 						auto c2w = scene.m_view.CameraToWorld();
 
 						// Scale the object from physical pixels to normalised screen space

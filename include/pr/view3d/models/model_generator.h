@@ -1551,7 +1551,6 @@ namespace pr::rdr
 			//  specified in DIPs and then scaled to the current DPI setting."
 			Renderer::Lock lock(rdr);
 			auto dwrite = lock.DWrite();
-			auto dpi = rdr.DpiScale();
 
 			// Get the default format
 			auto def = formatting_count != 0 && formatting[0].empty() ? formatting[0] : TextFormat();
@@ -1602,7 +1601,7 @@ namespace pr::rdr
 				metrics.height + layout.m_padding.top + layout.m_padding.bottom);
 
 			// Determine the required texture size
-			auto text_size = v2(dip_size.x * dpi.x, dip_size.y * dpi.y);
+			auto text_size = dip_size;
 			auto texture_size = Ceil(text_size) * 2;
 
 			// Create a texture large enough to contain the text, and render the text into it
