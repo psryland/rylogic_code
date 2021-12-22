@@ -272,7 +272,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
-		public static object? ConvertTo(object value, Type result_type, bool ignore_case = false)
+		public static object? ConvertTo(object? value, Type result_type, bool ignore_case = false)
 		{
 			var is_nullable = Nullable.GetUnderlyingType(result_type) != null;
 			var root_type   = Nullable.GetUnderlyingType(result_type) ?? result_type;

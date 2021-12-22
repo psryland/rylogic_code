@@ -266,7 +266,7 @@ namespace Rylogic.Gui.WPF
 				throw new Win32Exception(Win32.GetLastError(), "Failed to reparent the native scintilla control");
 
 			// Resize to fit the parent
-			Win32.GetClientRect(ParentHwnd, out var parent_rect);
+			var parent_rect = Win32.GetClientRect(ParentHwnd);
 			Win32.MoveWindow(Hwnd, parent_rect.left, parent_rect.top, parent_rect.width, parent_rect.height, true);
 
 			// Add a hook on the WndProc of the parent so we can intercept messages sent from the control
