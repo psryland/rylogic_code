@@ -3,41 +3,29 @@ Immediate ToDo:
 Work
   Misc:
     - Change embedded script to use ram method of removing ROP
-    - Fix the fucking stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
-	- Remove the "shared" PSRAM implementation from drivers to MC and LC, since it isn't really shared at all
+    - Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
 	    - Fix the default zero ref values and min/max extension in the actuator ref data
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
-	- Push/pull zero ref values from REX
-	- Add to RXS console to display current state
-	
-  FirmwareLoader
-	- Disable UI while programming
-	- Error prompt for 'libusb_open() failed with LIBUSB_ERROR_NOT_FOUND' = install driver
 
-  RexTerm:
-    - Make sure the control characters are passed through to the console (Ctrl-Z, etc)
+  RexTerminal:
+	- Push/pull zero ref values from REX
 	
   UIv4:
 	- Come up with a test plan for the new UI based on the requirements (review with Stephanie)
     - Fix backlight flash with different method
     - Make Tunes an exported resource
-	- Write a Polarian requirements sheet for the new UI
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file
 	
   ZeroRef:
     - Test the ZR process on a left-right see-saw to see what effect that has on the results.
-	- Check for when the sensors are on the wrong side, safety. Set a 5mm bound on each actuator and error if it goes out of range.
  	
   VRex:
-    - Port the tools from the old VRex over
+    - Work out why the zero ref position is so different for VRex compared to REX
 	- Add Leg Total lengths to VRex
 	- Finish the p3d exporter and get the high-def Rex graphics back
-	- Fix the console text (missing a character)
-	- Add a quick way to put REX in one of the available stances
-	- Fix devices going offline
 
   Log Viewer:
     - System for creating graphs of data in session logs
@@ -45,7 +33,8 @@ Work
   RexLink:
     - Create a RexLink service and convert applications to use the service (solves the problem of multiple apps wanting to connect to the same Rex).
 	
-Rylogic:	
+Rylogic:
+  
   LDraw:
 	- Camera type-in
 	- Support LinkCamera

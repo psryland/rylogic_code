@@ -1,24 +1,48 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shapes;
+using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
 	public static class DataGrid_
 	{
-		public struct GridAddressData
+		/// <summary>Grid address</summary>
+		[DebuggerDisplay("[{RowIndex}, {ColIndex}]")]
+		public struct Address
 		{
-			public int CellIndex;
 			public int RowIndex;
+			public int ColIndex;
+			public Address(int r, int c)
+			{
+				RowIndex = r;
+				ColIndex = c;
+			}
+		}
+
+		/// <summary>Return the cell associated with a 'cell info' (i.e. SelectedCell)</summary>
+		public static DataGridCell? Cell(this DataGridCellInfo ci)
+		{
+			var cell_content = ci.Column.GetCellContent(ci.Item);
+			return (DataGridCell?)cell_content?.Parent ?? null;
 		}
 
 		/// <summary>Returns the cell that contains 'dp' (or null)</summary>
@@ -34,14 +58,66 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Returns the cell and column index of this cell</summary>
-		public static GridAddressData GridAddress(this DataGridCell cell)
+		public static Address GridAddress(this DataGridCell cell)
 		{
-			return new GridAddressData
+			return new Address
 			{
-				CellIndex = cell.Column.DisplayIndex,
+				ColIndex = cell.Column.DisplayIndex,
 				RowIndex = cell.GetRow().GetIndex(),
 			};
 		}
+		public static Address GridAddress(this DataGridCellInfo ci) => ci.Cell()?.GridAddress() ?? throw new Exception("Cell not found in grid");
+
+		/// <summary>True if the given row/col address is within the grid</summary>
+		public static bool IsWithin(this DataGrid grid, int r, int c)
+		{
+			return 
+				r >= 0 && r < grid.Items.Count &&
+				c >= 0 && c < grid.Columns.Count;
+		}
+		public static bool IsWithin(this DataGrid grid, Address addr) => IsWithin(grid, addr.RowIndex, addr.ColIndex);
+
+		/// <summary>Attempt to set the value of a cell</summary>
+		public static void SetCellValue(DataGrid grid, int r, int c, object? value)
+		{
+			// Note:
+			// - There is no 'UpdateBinding' call after setting the value because
+			//   it is expected that the bound property will notify of property changed.
+
+			switch (grid.Columns[c])
+			{
+				// If the column is bound, attempt to set the value via the binding
+				case DataGridBoundColumn col0:
+				{
+					if (col0.Binding is Binding binding &&
+						grid.Items[r] is object item &&
+						binding.Mode.HasFlag(BindingMode.TwoWay) &&
+						item.GetType().GetProperty(binding.Path.Path) is PropertyInfo pi)
+					{
+						value = Util.ConvertTo(value, pi.PropertyType);
+						pi.SetValue(item, value);
+					}
+					break;
+				}
+				case DataGridBoundTemplateColumn col1:
+				{
+					if (col1.Binding is Binding binding &&
+						grid.Items[r] is object item &&
+						binding.Mode.HasFlag(BindingMode.TwoWay) &&
+						item.GetType().GetProperty(binding.Path.Path) is PropertyInfo pi)
+					{
+						value = Util.ConvertTo(value, pi.PropertyType);
+						pi.SetValue(item, value);
+					}
+					break;
+				}
+				default:
+				{
+					throw new Exception("Unknown DataGrid column type");
+				}
+			}
+		}
+		public static void SetCellValue(DataGrid grid, Address addr, object? value) => SetCellValue(grid, addr.RowIndex, addr.ColIndex, value);
 
 		/// <summary>Parse a string representation of a DataGridLength</summary>
 		public static DataGridLength ParseDataGridLength(string length)
@@ -60,6 +136,202 @@ namespace Rylogic.Gui.WPF
 				return new DataGridLength(pixels, DataGridLengthUnitType.Pixel);
 			throw new Exception($"Failed to parse DataGridLength string: {length}");
 		}
+
+		#region Cut Copy Paste
+		
+		// Usage:
+		//   Add 'gui:DataGrid_.CopyPasteSupport="True"' to your DataGrid.
+
+		private const int CopyPasteSupport = 0;
+		public static readonly DependencyProperty CopyPasteSupportProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(CopyPasteSupport), Boxed.False, Gui_.EDPFlags.None);
+		public static bool GetCopyPasteSupport(DependencyObject obj) => (bool)obj.GetValue(CopyPasteSupportProperty);
+		public static void SetCopyPasteSupport(DependencyObject obj, bool value) => obj.SetValue(CopyPasteSupportProperty, value);
+		private static void CopyPasteSupport_Changed(DependencyObject obj)
+		{
+			if (obj is not DataGrid grid)
+				return;
+
+			if (GetCopyPasteSupport(obj))
+			{
+				var copy = new RoutedCommand(nameof(CopyPasteSupport) + "_DoCopy", typeof(DataGrid));
+				copy.InputGestures.Add(new KeyGesture(Key.C, ModifierKeys.Control));
+				grid.CommandBindings.Add(new CommandBinding(copy, DoCopyInternal));
+
+				var paste = new RoutedCommand(nameof(CopyPasteSupport) + "_DoPaste", typeof(DataGrid));
+				paste.InputGestures.Add(new KeyGesture(Key.V, ModifierKeys.Control));
+				grid.CommandBindings.Add(new CommandBinding(paste, DoPasteInternal));
+			}
+			else
+			{
+				// Remove the bindings added by this extension
+				var bindings = grid.CommandBindings.OfType<CommandBinding>().Where(x => x.Command is RoutedCommand rcmd && rcmd.Name.StartsWith(nameof(CopyPasteSupport))).ToList();
+				foreach (var b in bindings)
+					grid.CommandBindings.Remove(b);
+			}
+
+			const uint CLIPBRD_E_CANT_OPEN = 0x800401D0;
+			const uint CLIPBRD_E_BAD_DATA = 0x800401d3;
+
+			// Implement the clipboard operations
+			static void DoCopyInternal(object? sender, ExecutedRoutedEventArgs e)
+			{
+				if (sender is not DataGrid grid)
+					return;
+
+				// Copy the selected cells
+				for (int attempt = 0; ; ++attempt, Thread.Yield())
+				{
+					try
+					{
+						var csv = SelectedToCSV(grid);
+
+						var obj = new DataObject();
+						obj.SetText(csv.Export(false));
+						Clipboard.SetDataObject(obj, true);
+						break;
+					}
+					catch (COMException ex)
+					{
+						var code = unchecked((uint)ex.ErrorCode);
+						if (code != CLIPBRD_E_CANT_OPEN) throw;
+						if (attempt == 3)
+						{
+							MsgBox.Show(Window.GetWindow(grid), "Clipboard is unavailable. Another process has it locked.", "Clipboard Error", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+							return;
+						}
+					}
+				}
+
+				e.Handled = true;
+			}
+			static void DoPasteInternal(object? sender, ExecutedRoutedEventArgs e)
+			{
+				if (sender is not DataGrid grid)
+					return;
+
+				// Extract a table of CSV data from the clipboard
+				var csv = (CSVData?)null;
+				for (var attempt = 0; ; ++attempt, Thread.Yield())
+				{
+					try
+					{
+						var data = Clipboard.GetDataObject();
+						if (data.GetDataPresent(typeof(string)) && data.GetData(typeof(string)) is string str)
+						{
+							var ms = new MemoryStream(Encoding.UTF8.GetBytes(str), false);
+							csv = CSVData.Load(ms, true);
+							break;
+						}
+						break;
+					}
+					catch (COMException ex)
+					{
+						var code = unchecked((uint)ex.ErrorCode);
+						if (code == CLIPBRD_E_BAD_DATA) return;
+						if (code != CLIPBRD_E_CANT_OPEN) throw;
+						if (attempt == 3)
+						{
+							MsgBox.Show(Window.GetWindow(grid), "Clipboard is unavailable. Another process has it locked.", "Clipboard Error", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+							return;
+						}
+					}
+				}
+				if (csv == null)
+					return;
+
+				e.Handled = true;
+
+				// Map the data to the selected cells
+				var (rows, cols) = SelectedBounds(grid);
+
+				// Automatically transpose the clipboard data
+				var transpose =
+					(cols.Count == 1 && rows.Count > 1 && csv.RowCount == 1 && csv.ColCount > 1) ||
+					(cols.Count > 1 && rows.Count == 1 && csv.RowCount > 1 && csv.ColCount == 1);
+
+				var errors = new List<Exception>();
+
+				// If a single cell is selected, paste the given layout over the writeable cells,
+				// ignoring layout, and clip to the bounds of the grid.
+				if (cols.Count == 1 && rows.Count == 1)
+				{
+					// Iterate over the clipboard data
+					for (var r = 0; r != csv.Rows.Count; ++r)
+					{
+						for (var c = 0; c != csv.Rows[r].Count; ++c)
+						{
+							var addr = new Address(rows.Begi + r, cols.Begi + c);
+							if (grid.IsWithin(addr))
+							{
+								try { SetCellValue(grid, addr, csv[r, c]); }
+								catch (Exception ex) { errors.Add(ex); }
+							}
+						}
+					}
+				}
+				// Otherwise, only write over the selected writeable cells
+				else
+				{
+					// Iterate over the selected cells
+					foreach (var ci in grid.SelectedCells)
+					{
+						var addr = ci.GridAddress();
+						var r = addr.RowIndex - rows.Begi;
+						var c = addr.ColIndex - cols.Begi;
+						if (transpose) Math_.Swap(ref r, ref c);
+						if (csv.IsWithin(r, c))
+						{
+							try { SetCellValue(grid, addr, csv[r, c]); }
+							catch (Exception ex) { errors.Add(ex); }
+						}
+					}
+				}
+
+				// Report if errors occurred
+				if (errors.Count != 0)
+				{
+					MsgBox.Show(Window.GetWindow(grid),
+						$"Some values could not be pasted due to errors",
+						"Clipboard Errors", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+				}
+			}
+			static CSVData SelectedToCSV(DataGrid grid)
+			{
+				// Find the cell range of selected cells
+				var (rows, cols) = SelectedBounds(grid);
+
+				// Create a table of CSV data, populated from the selected cells
+				var csv = new CSVData { AutoSize = true };
+				foreach (var ci in grid.SelectedCells)
+				{
+					// Unknown cell address?
+					if (ci.Cell()?.GridAddress() is not Address addr)
+						continue;
+
+					// Only works for cells containing text
+					if (ci.IsValid && ci.Column.GetCellContent(ci.Item) is TextBlock tb)
+						csv[addr.RowIndex - rows.Begi, addr.ColIndex - cols.Begi] = tb.Text;
+				}
+				return csv;
+			}
+			static (RangeI, RangeI) SelectedBounds(DataGrid grid)
+			{
+				// Find the bounds of the selected cells
+				var row_bounds = RangeI.Invalid;
+				var col_bounds = RangeI.Invalid;
+				foreach (var ci in grid.SelectedCells)
+				{
+					if (ci.Cell()?.GridAddress() is not Address addr)
+						continue;
+
+					row_bounds.Grow(addr.RowIndex);
+					col_bounds.Grow(addr.ColIndex);
+				}
+				return (row_bounds, col_bounds);
+			}
+		}
+
+		#endregion
 
 		#region Auto Column Size
 
@@ -134,7 +406,8 @@ namespace Rylogic.Gui.WPF
 		public static void SetColumnVisibilitySupport(DependencyObject obj, bool value) => obj.SetValue(ColumnVisibilitySupportProperty, value);
 		private static void ColumnVisibilitySupport_Changed(DependencyObject obj)
 		{
-			if (!(obj is DataGrid data_grid)) return;
+			if (obj is not DataGrid data_grid)
+				return;
 
 			data_grid.MouseRightButtonUp -= ColumnVisibility;
 			if (GetColumnVisibilitySupport(obj))
@@ -266,7 +539,7 @@ namespace Rylogic.Gui.WPF
 		//  Alternatively, you can add a handler:
 		//   gui:DataGrid_.ReorderRowDrop="HandleReorderRowDrop"
 		//   private void HandleReorderRowDrop(object sender, DataGrid_.ReorderRowDropEventArgs e)
-		//  You can then handle reordered with custom code.
+		//  You can then handle reordering with custom code.
 		//  Use the 'RowsReordered' to get notification after a reorder has happened
 
 		/// <summary>Reorder rows with drag/drop attached property</summary>
@@ -381,8 +654,10 @@ namespace Rylogic.Gui.WPF
 				e.Effects = DragDropEffects.Move;
 
 				// Update the indicator position
-				var row_pt = e.GetPosition(row_header);
-				var scn_pt = row_header.PointToScreen(2 * row_pt.Y < row_header.ActualHeight ? new Point(0,0) : new Point(0,row_header.ActualHeight));
+				var row_pt = e.GetPosition(row_header); // The mouse position relative to the hovered row
+				var ins_pt = 2 * row_pt.Y < row_header.ActualHeight ? new Point(0, 0) : new Point(0, row_header.ActualHeight); // The insert point relative to the hovered row
+				var scn_pt = row_header.PointToScreen(ins_pt);
+
 				data.PositionIndicator(scn_pt);
 			}
 			static void HandleMouseDown(object? sender, MouseButtonEventArgs e)
@@ -411,12 +686,13 @@ namespace Rylogic.Gui.WPF
 				Row = (grid.InputHitTest(grab) as DependencyObject)?.FindVisualParent<DataGridRow>(root: grid) ?? throw new Exception("Dragged row not found");
 				Indicator = new Popup
 				{
-					Placement = PlacementMode.AbsolutePoint,
+					Placement = PlacementMode.Relative,
+					PlacementTarget = grid,
 					IsHitTestVisible = false,
 					AllowsTransparency = true,
 					StaysOpen = true,
 				};
-				Indicator.Child = new Path
+				Indicator.Child = new System.Windows.Shapes.Path
 				{
 					Data = Geometry_.MakePolygon(true, new Point(0, 0), new Point(10, 4), new Point(0, 8)),
 					Stroke = Brushes.DeepSkyBlue,
@@ -450,9 +726,10 @@ namespace Rylogic.Gui.WPF
 			private Popup Indicator { get; }
 
 			/// <summary>Position the insert indicator. 'pt' is in screen space</summary>
-			public void PositionIndicator(Point pt)
+			public void PositionIndicator(Point scn_pt)
 			{
 				var sz = Indicator.Child.DesiredSize;
+				var pt = Grid.PointFromScreen(scn_pt);
 				Indicator.HorizontalOffset = pt.X - sz.Width;
 				Indicator.VerticalOffset = pt.Y - sz.Height / 2;
 			}

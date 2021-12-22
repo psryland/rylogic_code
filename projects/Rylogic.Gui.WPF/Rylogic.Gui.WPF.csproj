@@ -42,9 +42,6 @@
 			<AutoGen>True</AutoGen>
 			<DependentUpon>Resources.resx</DependentUpon>
 		</Compile>
-		<Compile Update="src\Gui\Joystick\CardinalButton.xaml.cs">
-		  <SubType>Code</SubType>
-		</Compile>
 		<EmbeddedResource Update="res\Resources.resx">
 			<Generator>ResXFileCodeGenerator</Generator>
 			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -58,12 +55,6 @@
 		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Page Update="src\Gui\Joystick\CardinalButton.xaml">
-	    <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
-	    <SubType>Designer</SubType>
-	  </Page>
 	</ItemGroup>
 
 	<!-- Post Build -->

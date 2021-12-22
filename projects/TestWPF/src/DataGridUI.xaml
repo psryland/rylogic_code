@@ -24,6 +24,7 @@
 			SelectionUnit="Cell"
 			gui:DataGrid_.ReorderRowsWithDragDrop="True"
 			gui:DataGrid_.ReorderRowDrop="HandleReorderRowDrop"
+			gui:DataGrid_.CopyPasteSupport="True"
 			Background="Transparent"
 			>
 			<DataGrid.Columns>

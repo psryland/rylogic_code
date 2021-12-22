@@ -45,16 +45,46 @@ namespace TestWPF
 
 		/// <summary></summary>
 		[DebuggerDisplay("{Name,nq}")]
-		private class Thing
+		private class Thing :INotifyPropertyChanged
 		{
 			public Thing(string name, double value)
 			{
 				Name = name;
 				Value = value;
 			}
+
+			/// <summary></summary>
 			public string Name { get; }
-			public double Value { get; set; }
-			public bool IsChecked { get; set; }
+
+			/// <summary></summary>
+			public double Value
+			{
+				get => m_value;
+				set
+				{
+					if (Value == value) return;
+					m_value = value;
+					NotifyPropertyChanged(nameof(Value));
+				}
+			}
+			private double m_value;
+
+			/// <summary></summary>
+			public bool IsChecked
+			{
+				get => m_is_checked;
+				set
+				{
+					if (IsChecked == value) return;
+					m_is_checked = value;
+					NotifyPropertyChanged(nameof(IsChecked));
+				}
+			}
+			private bool m_is_checked;
+
+			/// <inheritdoc/>
+			public event PropertyChangedEventHandler? PropertyChanged;
+			private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 	}
 }

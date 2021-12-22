@@ -174,6 +174,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The offset from 'North' for sector 1 (in degrees)</summary>
 		public double NorthOffset
 		{
+			// Notes:
+			//  - This rotates the position of the sectors, but does not change the 'Angle' value.
+			//    'Angle == 0' is always north.
+			//  - If you want to change the Angle, use a render transform. e.g.
+			//       RenderTransform="0 -1 1 0 0 0"
+			//       RenderTransformOrigin="0.5,0.5"
 			get => (double)GetValue(NorthOffsetProperty);
 			set => SetValue(NorthOffsetProperty, value);
 		}

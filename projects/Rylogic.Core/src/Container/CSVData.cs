@@ -121,11 +121,11 @@ namespace Rylogic.Container
 		/// if false, out of bounds reads/writes cause exceptions</summary>
 		public bool AutoSize { get; set; }
 
-		/// <summary>Return the number of rows</summary>
-		public int RowCount
-		{
-			get { return Rows.Count; }
-		}
+		/// <summary>Return the number of rows. O(1) complexity</summary>
+		public int RowCount => Rows.Count;
+
+		/// <summary>Return the maximum number of columns. O(n) complexity</summary>
+		public int ColCount => Rows.Max(x => x.Count);
 
 		/// <summary>Read/Write access to the rows</summary>
 		public List<Row> Rows { get; }
@@ -172,6 +172,12 @@ namespace Rylogic.Container
 			return Rows.Add2(new CommentRow(comment));
 		}
 
+		/// <summary>Strip comments from the CSV data</summary>
+		public void RemoveCommentRows()
+		{
+			Rows.RemoveAll(x => x is CommentRow);
+		}
+
 		/// <summary>Reserve memory</summary>
 		public void Reserve(int rows, int columns)
 		{
@@ -216,6 +222,14 @@ namespace Rylogic.Container
 			}
 		}
 
+		/// <summary>True if the grid address is within the CSV data</summary>
+		public bool IsWithin(int r, int c)
+		{
+			return
+				r >= 0 && r < Rows.Count &&
+				c >= 0 && c < Rows[r].Count;
+		}
+
 		/// <summary>
 		/// Save a CSV file.
 		/// If 'quoted' is false, elements are written without quotes around them. If the elements contain
@@ -223,8 +237,31 @@ namespace Rylogic.Container
 		public void Save(string filepath, bool quoted = true)
 		{
 			using var file = new StreamWriter(filepath);
+			Save(file, quoted);
+		}
+		public void Save(StreamWriter sw, bool quoted = true)
+		{
 			foreach (var row in Rows)
-				row.Save(file, quoted);
+				row.Save(sw, quoted);
+		}
+
+		/// <summary>Export the CSV data as a string</summary>
+		public string Export(bool quoted = true)
+		{
+			using var ms = new MemoryStream();
+			using var sw = new StreamWriter(ms, Encoding.UTF8, 1024, true);
+			using var sr = new StreamReader(ms, Encoding.UTF8, false, 1024, true);
+			Save(sw, quoted);
+			sw.Flush();
+			ms.Position = 0;
+			var str = sr.ReadToEnd();
+			return str;
+		}
+
+		/// <inheritdoc/>
+		public override string ToString()
+		{
+			return Export(false);
 		}
 
 		/// <summary>
