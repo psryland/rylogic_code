@@ -10,6 +10,18 @@ using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
 using Task = System.Threading.Tasks.Task;
 
+[assembly: ComVisible(false)]
+[assembly: AssemblyTitle("Rylogic.TextAligner")]
+[assembly: AssemblyDescription("")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("Rylogic.TextAligner")]
+[assembly: AssemblyCopyright("")]
+[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCulture("")]
+[assembly: AssemblyVersion("1.12.0")]
+[assembly: AssemblyFileVersion("1.12.0")]
+
 namespace Rylogic.TextAligner
 {
 	/// <summary>
@@ -31,7 +43,7 @@ namespace Rylogic.TextAligner
 	/// </remarks>
 	[Guid(PackageGuidString)]
 	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                 // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.09", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.12", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                  // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                         // This attribute is needed to let the shell know that this package exposes an options page.
 	[ProvideBindingPath]                                                                                      // Include the local directory when resolving dependent assemblies

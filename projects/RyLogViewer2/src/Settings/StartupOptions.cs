@@ -7,6 +7,9 @@ namespace RyLogViewer
 {
 	public class StartupOptions
 	{
+		public StartupOptions()
+			:this(Array.Empty<string>())
+		{ }
 		public StartupOptions(string[] args)
 		{
 			var exe_dir = Util.ResolveAppPath();
@@ -84,13 +87,13 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The filepath to a file given on the command line</summary>
-		public string FileToLoad { get; private set; }
+		public string? FileToLoad { get; }
 
 		/// <summary>True if we should run the app in portable mode</summary>
-		public bool PortableMode { get; private set; }
+		public bool PortableMode { get; }
 
 		/// <summary>A location that the app should read settings from and write to</summary>
-		public string UserDataDir { get; private set; }
+		public string UserDataDir { get; }
 
 		/// <summary>The filepath to the settings file to use</summary>
 		public string SettingsPath { get; set; }
@@ -99,28 +102,28 @@ namespace RyLogViewer
 		public string LicenceFilepath { get; set; }
 
 		/// <summary>The file path to write log data do</summary>
-		public string LogFilePath { get; set; }
+		public string? LogFilePath { get; set; }
 
 		/// <summary>Settings for an export from the command line. Null if not an export</summary>
-		public string ExportPath { get; private set; }
+		public string? ExportPath { get; }
 
 		/// <summary>The row delimiter to use in the output file of an export (humanised)</summary>
-		public string RowDelim { get; private set; }
+		public string RowDelim { get; } = "\n";
 
 		/// <summary>The column delimiter to use in the output file of an export (humanised)</summary>
-		public string ColDelim { get; private set; }
+		public string ColDelim { get; } = ",";
 
 		/// <summary>The pattern set file to load</summary>
-		public string PatternSetFilepath { get; private set; }
+		public string? PatternSetFilepath { get; }
 
 		/// <summary>True if the app should run without displaying any UI</summary>
-		public bool NoGUI { get; private set; }
+		public bool NoGUI { get; }
 
 		/// <summary>True if the app shouldn't write anything to stdout</summary>
-		public bool Silent { get; private set; }
+		public bool Silent { get; }
 
 		/// <summary>True if the command line help options should be displayed</summary>
-		public bool ShowHelp { get; private set; }
+		public bool ShowHelp { get; }
 
 		private class CmdLineOption
 		{

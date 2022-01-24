@@ -84,7 +84,7 @@ namespace RyLogViewer
 				&& Equals(BackColour, rhs.BackColour)
 				&& Equals(BinaryMatch, rhs.BinaryMatch);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is Highlight hl && Equals(hl);
 		}

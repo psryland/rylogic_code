@@ -21,8 +21,8 @@ namespace RyLogViewer
 	{
 		void ApplicationMain(object sender, StartupEventArgs args)
 		{
-			var unhandled = (Exception)null;
-			var startup_options = (StartupOptions)null;
+			var unhandled = (Exception?)null;
+			var startup_options = (StartupOptions?)null;
 			#if !DEBUG || TRAP_UNHANDLED_EXCEPTIONS
 			try
 			#endif
@@ -31,7 +31,7 @@ namespace RyLogViewer
 				var report = new ErrorReporter();
 
 				// Parse command line arguments into startup options
-				var err = (Exception)null;
+				var err = (Exception?)null;
 				try { startup_options = new StartupOptions(args.Args); }
 				catch (Exception ex) { err = ex; }
 

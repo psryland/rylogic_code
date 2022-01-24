@@ -304,9 +304,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -390,7 +387,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite.Core">
-      <Version>1.0.112</Version>
+      <Version>1.0.115.5</Version>
     </PackageReference>
     <PackageReference Include="System.Net.Http">
       <Version>4.3.4</Version>

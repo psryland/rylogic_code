@@ -21,7 +21,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Convert an encoding name to encoding object</summary>
-		public static Encoding GetEncoding(string enc_name, Encoding prev = null)
+		public static Encoding GetEncoding(string enc_name, Encoding? prev = null)
 		{
 			// If 'enc_name' is empty, this is the auto detect case, in which case we don't
 			// modify it from what it's already set to. Auto detect will set it on file load.
@@ -34,7 +34,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Convert a line ending to a byte array</summary>
-		public static byte[] GetLineEnding(string ending, byte[] prev = null)
+		public static byte[] GetLineEnding(string ending, byte[]? prev = null)
 		{
 			// If 'ending' is empty, this is the auto detect case, in which case we don't
 			// modify it from what it's already set to. Auto detect will set it on file load.

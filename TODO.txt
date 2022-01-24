@@ -1,7 +1,9 @@
 Immediate ToDo:
-
+    - Release TextAligner for vs2022
+	- Fix drag/drop in dock control for high res screens
 Work
   Misc:
+    - Create change request for actdata.cfg change
     - Change embedded script to use ram method of removing ROP
     - Fix the stupid 'bus_port-1' shit, use enum types 'device_bus_type_and_port_t', 'device_bus_type_t', and 'typedef int device_bus_port_t'
 	- Sort out a new location for the MovementMap and Actuator Ref Data (.xml)
@@ -13,8 +15,6 @@ Work
 	- Push/pull zero ref values from REX
 	
   UIv4:
-	- Come up with a test plan for the new UI based on the requirements (review with Stephanie)
-    - Fix backlight flash with different method
     - Make Tunes an exported resource
 	- Clean up rxs_AREX_...
 	- Remove the zero-ref data from the 'actdata.cfg' file into its own file

@@ -70,7 +70,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		}
 		public override int GetHashCode()
 		{
-			return RuntimeHelpers.GetHashCode(this);
+			return 0;
 		}
 
 		#endregion

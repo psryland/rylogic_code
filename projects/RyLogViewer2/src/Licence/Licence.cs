@@ -57,47 +57,44 @@ namespace RyLogViewer
 		}
 
 		/// <summary>True if this is a free licence</summary>
-		public bool IsFreeLicence
-		{
-			get { return LicenceHolder == Constants.FreeLicence; }
-		}
+		public bool IsFreeLicence => LicenceHolder == Constants.FreeLicence;
 
 		/// <summary>The name of the licence holder</summary>
 		public string LicenceHolder
 		{
-			get { return m_licence_holder; }
-			set { SetProp(ref m_licence_holder, value); }
+			get => m_licence_holder;
+			set => SetProp(ref m_licence_holder, value);
 		}
-		private string m_licence_holder;
+		private string m_licence_holder = string.Empty;
 
 		/// <summary>The email address associated with the licence</summary>
 		public string EmailAddress
 		{
-			get { return m_email_address; }
-			set { SetProp(ref m_email_address, value); }
+			get => m_email_address;
+			set => SetProp(ref m_email_address, value);
 		}
-		private string m_email_address;
+		private string m_email_address = string.Empty;
 
 		/// <summary>The optional associated company name</summary>
 		public string Company
 		{
-			get { return m_company; }
-			set { SetProp(ref m_company, value); }
+			get => m_company;
+			set => SetProp(ref m_company, value);
 		}
-		private string m_company;
+		private string m_company = string.Empty;
 
 		/// <summary>The application version that the licence was issued for</summary>
 		public string VersionMask
 		{
-			get { return m_app_version; }
-			set { SetProp(ref m_app_version, value); }
+			get => m_app_version;
+			set => SetProp(ref m_app_version, value);
 		}
-		private string m_app_version;
+		private string m_app_version = string.Empty;
 
 		/// <summary>The code provided by the RyLogViewer web site</summary>
 		public string ActivationCode
 		{
-			get { return Convert.ToBase64String(m_activation_code, Base64FormattingOptions.InsertLineBreaks); }
+			get => Convert.ToBase64String(m_activation_code, Base64FormattingOptions.InsertLineBreaks);
 			set
 			{
 				try
@@ -108,7 +105,7 @@ namespace RyLogViewer
 				catch (Exception) { }
 			}
 		}
-		private byte[] m_activation_code;
+		private byte[] m_activation_code = null!;
 
 		/// <summary>Set the value of a property if different and notify</summary>
 		private void SetProp<T>(ref T prop, T value)
@@ -120,7 +117,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Raised whenever the licence data changes</summary>
-		public event EventHandler OnChanged;
+		public event EventHandler? OnChanged;
 		public bool Changed;
 
 		/// <summary>Returns a hash of the user details</summary>
@@ -171,10 +168,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>True if this licence is valid</summary>
-		public bool Valid
-		{
-			get { return ValidActivationCode && ValidForThisVersion; }
-		}
+		public bool Valid => ValidActivationCode && ValidForThisVersion;
 
 		/// <summary>Output the licence details to a licence file</summary>
 		public void WriteLicenceFile(string lic)

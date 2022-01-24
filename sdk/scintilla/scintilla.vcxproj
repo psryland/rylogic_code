@@ -27,21 +27,21 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -87,6 +87,7 @@
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -116,6 +117,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -144,6 +146,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -172,6 +175,7 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>

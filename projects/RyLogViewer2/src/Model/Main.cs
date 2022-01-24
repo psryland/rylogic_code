@@ -104,15 +104,12 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The byte range of the current log data source</summary>
-		public RangeI FileByteRange
-		{
-			get { return Lines?.LineIndex.FileByteRange ?? RangeI.Zero; }
-		}
+		public RangeI FileByteRange => Lines?.LineIndex.FileByteRange ?? RangeI.Zero;
 
 		/// <summary>Get/Set the log data to be displayed</summary>
-		public ILogDataSource LogDataSource
+		public ILogDataSource? LogDataSource
 		{
-			[DebuggerStepThrough] get { return m_log_data_source; }
+			get => m_log_data_source;
 			set
 			{
 				if (m_log_data_source == value) return;
@@ -122,7 +119,7 @@ namespace RyLogViewer
 					//todo Bookmarks.Clear();
 
 					Lines = null;
-					Util.Dispose(ref m_log_data_source);
+					Util.Dispose(ref m_log_data_source!);
 				}
 				m_log_data_source = value;
 				if (m_log_data_source != null)
@@ -148,12 +145,12 @@ namespace RyLogViewer
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
 		}
-		private ILogDataSource m_log_data_source;
+		private ILogDataSource? m_log_data_source;
 
 		/// <summary>The cache of lines for the current log data source</summary>
 		private LineCache Lines
 		{
-			[DebuggerStepThrough] get { return m_lines; }
+			get => m_lines;
 			set
 			{
 				if (m_lines == value) return;

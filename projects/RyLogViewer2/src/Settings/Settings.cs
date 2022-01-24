@@ -59,56 +59,43 @@ namespace RyLogViewer.Options
 		{
 			AutoSaveOnChanges = true;
 		}
-		public override string Version
-		{
-			get { return "v1.0"; }
-		}
+
+		/// <inheritdoc/>
+		public override string Version => "v1.0";
 
 		/// <summary>General settings</summary>
 		public General General
 		{
-			get { return get<General>(nameof(General)); }
-			set
-			{
-				Guard.ArgNotNull(value, $"Setting '{nameof(General)}' cannot be null");
-				set(nameof(General), value);
-			}
+			get => get<General>(nameof(General));
+			set => set(nameof(General), value);
 		}
 
 		/// <summary>LogData settings</summary>
 		public LogData LogData
 		{
-			get { return get<LogData>(nameof(LogData)); }
-			set
-			{
-				Guard.ArgNotNull(value, $"Setting '{nameof(LogData)}' cannot be null");
-				set(nameof(LogData), value);
-			}
+			get => get<LogData>(nameof(LogData));
+			set => set(nameof(LogData), value);
 		}
 
 		/// <summary>Format/Appearance settings</summary>
 		public Format Format
 		{
-			get { return get<Format>(nameof(Format)); }
-			set
-			{
-				Guard.ArgNotNull(value, $"Setting '{nameof(Format)}' cannot be null");
-				set(nameof(Format), value);
-			}
+			get => get<Format>(nameof(Format));
+			set => set(nameof(Format), value);
 		}
 
 		/// <summary>The recent log files list</summary>
 		public string RecentFiles
 		{
-			get { return get<string>(nameof(RecentFiles)); }
-			set { set(nameof(RecentFiles), value); }
+			get => get<string>(nameof(RecentFiles));
+			set => set(nameof(RecentFiles), value);
 		}
 
 		/// <summary>The recent pattern set files</summary>
 		public string RecentPatternSets
 		{
-			get { return get<string>(nameof(RecentPatternSets)); }
-			set { set(nameof(RecentPatternSets), value); }
+			get => get<string>(nameof(RecentPatternSets));
+			set => set(nameof(RecentPatternSets), value);
 		}
 
 		///// <summary>Log view font</summary>
@@ -121,57 +108,57 @@ namespace RyLogViewer.Options
 		/// <summary>The last open/save location of a pattern set</summary>
 		public string PatternSetDirectory
 		{
-			get { return get<string>(nameof(PatternSetDirectory)); }
-			set { set(nameof(PatternSetDirectory), value); }
+			get => get<string>(nameof(PatternSetDirectory));
+			set => set(nameof(PatternSetDirectory), value);
 		}
 
 		/// <summary>The last filepath used in the export dialog</summary>
 		public string ExportFilepath
 		{
-			get { return get<string>(nameof(ExportFilepath)); }
-			set { set(nameof(ExportFilepath), value); }
+			get => get<string>(nameof(ExportFilepath));
+			set => set(nameof(ExportFilepath), value);
 		}
 
 		/// <summary></summary>
 		public int FileScrollWidth
 		{
-			get { return get<int>(nameof(FileScrollWidth)); }
-			set { set(nameof(FileScrollWidth), value); }
+			get => get<int>(nameof(FileScrollWidth));
+			set => set(nameof(FileScrollWidth), value);
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarFileRangeColour
 		{
-			get { return get<Color>(nameof(ScrollBarFileRangeColour)); }
-			set { set(nameof(ScrollBarFileRangeColour), value); }
+			get => get<Color>(nameof(ScrollBarFileRangeColour));
+			set => set(nameof(ScrollBarFileRangeColour), value);
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarCachedRangeColour
 		{
-			get { return get<Color>(nameof(ScrollBarCachedRangeColour)); }
-			set { set(nameof(ScrollBarCachedRangeColour), value); }
+			get => get<Color>(nameof(ScrollBarCachedRangeColour));
+			set => set(nameof(ScrollBarCachedRangeColour), value);
 		}
 
 		/// <summary></summary>
 		public Color ScrollBarDisplayRangeColour
 		{
-			get { return get<Color>(nameof(ScrollBarDisplayRangeColour)); }
-			set { set(nameof(ScrollBarDisplayRangeColour), value); }
+			get => get<Color>(nameof(ScrollBarDisplayRangeColour));
+			set => set(nameof(ScrollBarDisplayRangeColour), value);
 		}
 
 		/// <summary></summary>
 		public Color BookmarkColour
 		{
-			get { return get<Color>(nameof(BookmarkColour)); }
-			set { set(nameof(BookmarkColour), value); }
+			get => get<Color>(nameof(BookmarkColour));
+			set => set(nameof(BookmarkColour), value);
 		}
 
 		/// <summary></summary>
 		public int TabSizeInSpaces
 		{
-			get { return get<int>(nameof(TabSizeInSpaces)); }
-			set { set(nameof(TabSizeInSpaces), value); }
+			get => get<int>(nameof(TabSizeInSpaces));
+			set => set(nameof(TabSizeInSpaces), value);
 		}
 
 		/// <summary></summary>
