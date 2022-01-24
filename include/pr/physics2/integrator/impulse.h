@@ -299,8 +299,10 @@ namespace pr::physics
 
 namespace pr::physics
 {
+	//HACK todo fix this!
 	PRUnitTest(ImpulseTests)
 	{
+		#if 0
 		ShapeSphere sph(0.5f);
 		ShapeBox    box(v4{maths::inv_root2f, maths::inv_root2f, maths::inv_root2f, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4Origin));
 		RigidBody objA(&box, m4x4::Transform(0, 0, 0, v4{-0.5f, 0, 1, 1}), Inertia::Box(v4{0.5f,0.5f,0.5f,0}, 10.0f));
@@ -308,7 +310,6 @@ namespace pr::physics
 
 		Contact c(objA, objB);
 		ImpulsePair impulse_pair;
-		return; //HACK todo fix this!
 		{
 			// Normal collision through the CoM for both objects, unequal masses.
 			objA.Mass(10);
@@ -441,59 +442,60 @@ namespace pr::physics
 		//	PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objA, v8f{}, 0.001f), true);
 		//	PR_CHECK(FEqlRelative(impulse_pair.m_os_impulse_objB, v8f{}, 0.001f), true);
 		//}
-			//{
-			//	// Glancing collision from two rotating, but not translating, objects.
-			//	// Collision should reverse the rotations because the collision is tangentially elastic.
-			//	RigidBody objA(&sph, m4x4::Transform(0, 0,                0, v4{-0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
-			//	RigidBody objB(&box, m4x4::Transform(0, 0, maths::tau_by_8f, v4{+0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));//Inertia::Box(v4{0.5f,0.5f,0.5f,0}, 10.0f));
-			//
-			//	// Spin the same way so that the contact point has opposing velocity.
-			//	objA.VelocityWS(v4{0, 0, +1, 0}, v4{});
-			//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{});
-			//
-			//	Contact c(objA, objB);
-			//	c.m_axis = v4{1,0,0,0};
-			//	c.m_point = v4{0.5f, 0, 0, 0};
-			//	c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
-			//	c.m_mat.m_elasticity_norm = 1.0f; // elastic
-			//	c.m_mat.m_elasticity_tang = -1.0f; // elastic
-			//
-			//	Dump(c);
-			//
-			//	auto impulse_pair = RestitutionImpulse(c);
-			//	objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
-			//	objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
-			//
-			//	auto velA = objA.VelocityWS();
-			//	auto velB = objB.VelocityWS();
-			//	PR_CHECK(FEql(velA, v8m{0, 0, -0.428571f,  0, -0.285714f, +0}), true);
-			//	PR_CHECK(FEql(velB, v8m{0, 0, -0.428571f,  0, +0.285714f, +0}), true);
-			//}
-			//{// ObjA and ObjB rotating in opposite directions, should stop after collision impulses
-			//	ShapeSphere sph(0.5f);
-			//	RigidBody objA(&sph, m4x4::Transform(0, 0, maths::tau_by_8f, v4{-0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
-			//	RigidBody objB(&sph, m4x4::Transform(0, 0, maths::tau_by_8f, v4{+0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
-			//
-			//	objA.VelocityWS(v4{0, 0, -1, 0}, v4{});
-			//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{});
-			//
-			//	Contact c(objA, objB);
-			//	c.m_axis = v4{1,0,0,0};
-			//	c.m_point = v4{0.5f, 0, 0, 0};
-			//	c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
-			//	c.m_mat.m_elasticity_norm = 1.0f;
-			//	c.m_mat.m_elasticity_tang = 0.0f;
-			//
-			//	auto impulse_pair = RestitutionImpulse(c);
-			//	objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
-			//	objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
-			//
-			//	// 
-			//	PR_CHECK(FEql(objA.O2W().pos, v4{-0.5f, 0, 1, 1}), true);
-			//	PR_CHECK(FEql(objB.O2W().pos, v4{+0.5f, 0, 1, 1}), true);
-			//	PR_CHECK(FEql(objA.VelocityWS(), v8m{}), true);
-			//	PR_CHECK(FEql(objB.VelocityWS(), v8m{}), true);
-			//}
+		//{
+		//	// Glancing collision from two rotating, but not translating, objects.
+		//	// Collision should reverse the rotations because the collision is tangentially elastic.
+		//	RigidBody objA(&sph, m4x4::Transform(0, 0,                0, v4{-0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
+		//	RigidBody objB(&box, m4x4::Transform(0, 0, maths::tau_by_8f, v4{+0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));//Inertia::Box(v4{0.5f,0.5f,0.5f,0}, 10.0f));
+		//
+		//	// Spin the same way so that the contact point has opposing velocity.
+		//	objA.VelocityWS(v4{0, 0, +1, 0}, v4{});
+		//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{});
+		//
+		//	Contact c(objA, objB);
+		//	c.m_axis = v4{1,0,0,0};
+		//	c.m_point = v4{0.5f, 0, 0, 0};
+		//	c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
+		//	c.m_mat.m_elasticity_norm = 1.0f; // elastic
+		//	c.m_mat.m_elasticity_tang = -1.0f; // elastic
+		//
+		//	Dump(c);
+		//
+		//	auto impulse_pair = RestitutionImpulse(c);
+		//	objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
+		//	objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
+		//
+		//	auto velA = objA.VelocityWS();
+		//	auto velB = objB.VelocityWS();
+		//	PR_CHECK(FEql(velA, v8m{0, 0, -0.428571f,  0, -0.285714f, +0}), true);
+		//	PR_CHECK(FEql(velB, v8m{0, 0, -0.428571f,  0, +0.285714f, +0}), true);
+		//}
+		//{// ObjA and ObjB rotating in opposite directions, should stop after collision impulses
+		//	ShapeSphere sph(0.5f);
+		//	RigidBody objA(&sph, m4x4::Transform(0, 0, maths::tau_by_8f, v4{-0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
+		//	RigidBody objB(&sph, m4x4::Transform(0, 0, maths::tau_by_8f, v4{+0.5f, 0, 1, 1}), Inertia::Sphere(0.5f, 10.0f));
+		//
+		//	objA.VelocityWS(v4{0, 0, -1, 0}, v4{});
+		//	objB.VelocityWS(v4{0, 0, +1, 0}, v4{});
+		//
+		//	Contact c(objA, objB);
+		//	c.m_axis = v4{1,0,0,0};
+		//	c.m_point = v4{0.5f, 0, 0, 0};
+		//	c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
+		//	c.m_mat.m_elasticity_norm = 1.0f;
+		//	c.m_mat.m_elasticity_tang = 0.0f;
+		//
+		//	auto impulse_pair = RestitutionImpulse(c);
+		//	objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
+		//	objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
+		//
+		//	// 
+		//	PR_CHECK(FEql(objA.O2W().pos, v4{-0.5f, 0, 1, 1}), true);
+		//	PR_CHECK(FEql(objB.O2W().pos, v4{+0.5f, 0, 1, 1}), true);
+		//	PR_CHECK(FEql(objA.VelocityWS(), v8m{}), true);
+		//	PR_CHECK(FEql(objB.VelocityWS(), v8m{}), true);
+		//}
+		#endif
 	}
 }
 #endif

@@ -8,7 +8,7 @@ namespace RyLogViewer
 		public static void ArgNotNull(object value, string msg)
 		{
 			if (value != null) return;
-			throw new ArgumentNullException(msg, (Exception)null);
+			throw new ArgumentNullException(msg, (Exception?)null);
 		}
 	}
 }

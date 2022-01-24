@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>27c4b643-4076-400f-82a5-b605aa028120</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Rylogic.TextAligner</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)src\AlignOptions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\Aligner.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\AlignGroup.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\AlignMenuCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\AlignPattern.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\AlignPos.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\EAction.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\EAlignCharacters.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\Selection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\Token.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\Align\UnalignMenuCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\BaseCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\RylogicTextAlignerPackage.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\UIElementDialogPage.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)src\UI\AlignOptionsUI.xaml.cs">
+      <DependentUpon>AlignOptionsUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)src\UI\HelpUI.xaml.cs">
+      <DependentUpon>HelpUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)src\UI\PatternEditorUI.xaml.cs">
+      <DependentUpon>PatternEditorUI.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)src\UI\AlignOptionsUI.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)src\UI\HelpUI.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="$(MSBuildThisFileDirectory)src\UI\PatternEditorUI.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)res\aligning_examples.txt" />
+    <Content Include="$(MSBuildThisFileDirectory)res\align_tests.txt" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\edit_add.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\exchange.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\gray_cross.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\green_down.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\green_tick.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\green_up.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\help_blue.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\icon_128x128.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\left_align.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\paypal_donate_logo.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\pencil.png" />
+    <Resource Include="$(MSBuildThisFileDirectory)res\red_x.png" />
+  </ItemGroup>
+</Project>

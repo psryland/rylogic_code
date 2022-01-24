@@ -137,7 +137,6 @@ namespace pr::common
 	PRUnitTest(CrcTests)
 	{
 		char const data[] = "Paul was here. CrC this, mofo";
-		char const data2[] = "paul was here. crc this, mofo";
 
 		{ // Check basic Crc32 and Crc64
 			auto crc0 = pr::Crc(sizeof(data), data);

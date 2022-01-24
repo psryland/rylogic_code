@@ -70,7 +70,7 @@ namespace RyLogViewer
 				&& base.Equals(rhs)
 				&& Equals(IfMatch, rhs.IfMatch);
 		}
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is Filter ft && Equals(ft);
 		}

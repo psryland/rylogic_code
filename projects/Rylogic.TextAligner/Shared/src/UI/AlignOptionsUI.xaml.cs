@@ -139,7 +139,7 @@ namespace Rylogic.TextAligner
 		public Command EditPattern { get; }
 		private void EditPatternInternal(object? pattern)
 		{
-			if (!(pattern is AlignPattern p))
+			if (pattern is not AlignPattern p)
 				return;
 
 			// Show the pattern editor for 'p'

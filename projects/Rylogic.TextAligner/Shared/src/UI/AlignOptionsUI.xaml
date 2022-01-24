@@ -11,34 +11,34 @@
 	Focusable="True"
 	>
 	<UserControl.Resources>
-		<ResourceDictionary>
-			<BitmapImage x:Key="help" UriSource="/Rylogic.TextAligner;component/res/help_blue.png" />
-			<BitmapImage x:Key="add" UriSource="/Rylogic.TextAligner;component/res/edit_add.png" />
-			<BitmapImage x:Key="remove" UriSource="/Rylogic.TextAligner;component/res/red_x.png" />
-			<BitmapImage x:Key="move_up" UriSource="/Rylogic.TextAligner;component/res/green_up.png" />
-			<BitmapImage x:Key="move_down" UriSource="/Rylogic.TextAligner;component/res/green_down.png" />
-			<BitmapImage x:Key="edit" UriSource="/Rylogic.TextAligner;component/res/pencil.png" />
-			<BitmapImage x:Key="enabled" UriSource="/Rylogic.TextAligner;component/res/green_tick.png" />
-			<BitmapImage x:Key="disabled" UriSource="/Rylogic.TextAligner;component/res/gray_cross.png" />
+        <BitmapImage x:Key="help" UriSource="/Rylogic.TextAligner;component/help_blue.png" />
+		<BitmapImage x:Key="add" UriSource="/Rylogic.TextAligner;component/edit_add.png" />
+		<BitmapImage x:Key="remove" UriSource="/Rylogic.TextAligner;component/red_x.png" />
+		<BitmapImage x:Key="move_up" UriSource="/Rylogic.TextAligner;component/green_up.png" />
+		<BitmapImage x:Key="move_down" UriSource="/Rylogic.TextAligner;component/green_down.png" />
+		<BitmapImage x:Key="edit" UriSource="/Rylogic.TextAligner;component/pencil.png" />
+		<BitmapImage x:Key="enabled" UriSource="/Rylogic.TextAligner;component/green_tick.png" />
+		<BitmapImage x:Key="disabled" UriSource="/Rylogic.TextAligner;component/gray_cross.png" />
 
-			<!-- Data Grid Style -->
-			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
-			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
-			<Style x:Key="StyleDataGridCell" TargetType="{x:Type DataGridCell}">
-				<Setter Property="VerticalAlignment" Value="Center"/>
-				<Setter Property="MinHeight" Value="22"/>
-				<Style.Triggers>
-					<Trigger Property="IsSelected" Value="True">
-						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
-						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
-						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
-					</Trigger>
-				</Style.Triggers>
-			</Style>
-			<Style x:Key="TextBlockCentred" TargetType="{x:Type TextBlock}">
-				<Setter Property="HorizontalAlignment" Value="Center"/>
-			</Style>
-		</ResourceDictionary>
+		<!-- Data Grid Style -->
+		<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
+		<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
+		<Style x:Key="StyleDataGridCell" TargetType="{x:Type DataGridCell}">
+			<Setter Property="VerticalAlignment" Value="Center"/>
+			<Setter Property="MinHeight" Value="22"/>
+			<Style.Triggers>
+				<Trigger Property="IsSelected" Value="True">
+					<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+					<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+					<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+				</Trigger>
+			</Style.Triggers>
+		</Style>
+		<Style x:Key="TextBlockCentred" TargetType="{x:Type TextBlock}">
+			<Setter Property="HorizontalAlignment" Value="Center"/>
+		</Style>
+		<!--<ResourceDictionary>
+		</ResourceDictionary>-->
 	</UserControl.Resources>
 	<Grid
 		x:Name="m_root"
@@ -62,8 +62,8 @@
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
-			
-			<!-- Alignment characters -->
+
+            <!-- Alignment characters -->
 			<StackPanel
 				Grid.Row="0"
 				Grid.Column="0"

@@ -45,8 +45,8 @@ try:
 	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
 	#Tools.Exec([])
 
-	Tools.AssertPath(UserVars.csex)
-	Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])
+	#Tools.AssertPath(UserVars.csex)
+	#Tools.Exec([UserVars.csex, "-signfile", "-f", targetdir+"\\RyLogViewer.exe", "-pk", projdir+"\\src\\licence\\private_key.xml"])
 
 except Exception as ex:
 	Tools.OnException(ex)

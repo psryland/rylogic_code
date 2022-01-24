@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 
-namespace Rylogic.Gui
+namespace Rylogic.Gui.WPF
 {
 	public class RichTextBox_
 	{

@@ -13,8 +13,8 @@
 	>
 	<Window.Resources>
 		<ResourceDictionary>
-			<BitmapImage x:Key="logo" UriSource="/Rylogic.TextAligner;component/res/icon_128x128.png" />
-			<BitmapImage x:Key="donate" UriSource="/Rylogic.TextAligner;component/res/paypal_donate_logo.png" />
+			<BitmapImage x:Key="logo" UriSource="/Rylogic.TextAligner;component/icon_128x128.png" />
+			<BitmapImage x:Key="donate" UriSource="/Rylogic.TextAligner;component/paypal_donate_logo.png" />
 		</ResourceDictionary>
 	</Window.Resources>
 	<Grid

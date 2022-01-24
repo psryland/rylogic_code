@@ -165,14 +165,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Dapper">
-      <Version>2.0.30</Version>
+      <Version>2.0.123</Version>
     </PackageReference>
     <PackageReference Include="System.Data.SQLite.Core">
-      <Version>1.0.112</Version>
+      <Version>1.0.115.5</Version>
     </PackageReference>
     <PackageReference Include="WindowsBase">
       <Version>4.6.1055</Version>

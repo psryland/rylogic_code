@@ -695,7 +695,7 @@ def SignVsix(vsix_filepath:str, algo:str):
 	#    and open it. Under 'details' find 'Thumbprint'. The OpenVsixSignTool uses this hash value to find the cert in the store.
 	# If the vsix supports VS versions less than 14.0, you need to use "-fd sha1" or the cert shows up as invalid. If the VSIX only
 	#    supports VS versions >= 14.0, use sha256 instead.
-	Exec(["openvsixsigntool", "sign", "--sha1", "e1053e6fa1aeb7bd4ee453302116a129ca4112f9", "-fd", algo, vsix_filepath])
+	Exec(["openvsixsigntool", "sign", "--sha1", UserVars.code_sign_cert_thumbprint, "-fd", algo, vsix_filepath])
 	return
 
 # Create a Nuget package from the given project file

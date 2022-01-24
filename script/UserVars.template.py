@@ -73,7 +73,9 @@ signtool = Path(winsdk, "bin", winsdkvers, "x64\\signtool.exe")
 #vsixsigntool = Path("C:\\Program Files\\PackageManagement\\NuGet\\Packages\\Microsoft.VSSDK.VsixSignTool.16.2.29116.78\\tools\\vssdk\\vsixsigntool.exe")
 
 # Code signing cert
+# Get 'thumbprint' from the cert manager. Find your code signing cert (Rylogic Limited, Sectigo RSA Code Signing CA), and open it. Under 'details' find 'Thumbprint'.
 code_sign_cert_pfx = Path(root, "projects\\rylogic-code-signing-certificate.pfx", check_exists=False)
+code_sign_cert_thumbprint = "28baca87f692ca5b46e8f98091c843d1b886dcda"
 code_sign_cert_pw = None # Leave as none, set once per script run
 
 # Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)

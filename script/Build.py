@@ -41,7 +41,9 @@ class EProjects(Enum):
 	RylogicGuiWPF = "Rylogic.Gui.WPF"
 	CSex = "CSex"
 	LDraw = "LDraw"
+	RyLogViewer = "RyLogViewer"
 	SolarHotWater = "SolarHotWater"
+	RylogicTextAligner = "Rylogic.TextAligner"
 	Fishomatic = "Fishomatic"
 	AllNative = "AllNative"
 	AllManaged = "AllManaged"
@@ -397,6 +399,58 @@ class LDraw(Managed):
 		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "ldraw", ""))
 		return
 
+# RylogViewer
+class RyLogViewer(Managed):
+	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
+		Managed.__init__(self, "RyLogViewer2", ["net472"], workspace, platforms, configs)
+		self.platforms = ["x64"]
+		self.proj_dir = os.path.join(workspace, "projects", "RyLogViewer", self.proj_name)
+		return
+
+	def Build(self):
+		DotNetRestore(self.rylogic_sln)
+		MSBuild(self.proj_name, self.rylogic_sln, [f"Apps\\RyLogViewer\\{self.proj_name}"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		# Check versions
+		version = Tools.Extract(os.path.join(self.proj_dir, "RyLogViewer2.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying RyLogViewer Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = os.path.join(UserVars.root, "bin", "RyLogViewer")
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(os.path.join(target_dir, "RyLogViewer.UI.exe"        ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), os.path.join(self.bin_dir, ""))
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), os.path.join(self.bin_dir, ""))
+
+		# Build the installer
+		#print("Building installer...\n")
+		#self.installer_wxs = os.path.join(self.proj_dir, "installer", "installer.wxs")
+		#self.msi = BuildInstaller.Build("LDraw", version, self.installer_wxs, self.proj_dir, target_dir,
+		#	os.path.join(self.bin_dir, ".."),
+		#	[
+		#		["binaries", "INSTALLFOLDER", ".", False,
+		#			r"LDraw\..*\.dll",
+		#			r"Rylogic\..*\.dll",
+		#			r"ICSharpCode.AvalonEdit.dll",
+		#		],
+		#		["lib_files", "lib", "lib", True],
+		#	])
+		#print(f"{self.msi} created.\n")
+		return
+	
+	def Publish(self):
+		if not hasattr(self, "msi") or not os.path.exists(self.msi): raise RuntimeError("Call Deploy before Publish")
+		print("\nPublishing to web site...")
+		Tools.Copy(self.msi, os.path.join(UserVars.wwwroot, "files", "rylogviewer", ""))
+		return
+
 # Solar Hot Water
 class SolarHotWater(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
@@ -535,80 +589,63 @@ class Fishomatic(Managed):
 class RylogicTextAligner(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Rylogic.TextAligner", ["net472"], workspace, platforms, configs)
-		self.manifest  = os.path.join(self.proj_dir, "source.extension.vsixmanifest")
-		self.vsix_name = "Rylogic.TextAligner.vsix"
+		self.targets = ['2019', '2022']
+		self.vsix_ids = ["DF402917-6013-40CA-A4C6-E1640DA86B90", "26C3C30A-6050-4CBF-860E-6C5590AF95EF"]
+		self.signing_algos = ["sha1", "sha256"]
 		return
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild(self.proj_name, self.rylogic_sln, [f"VSExtensions\\{self.proj_name}"], self.platforms, self.configs)
+		for target in self.targets:
+			MSBuild(f"{self.proj_name}.{target}", self.rylogic_sln, [f"VSExtensions\\{self.proj_name}\\{self.proj_name}.{target}"], self.platforms, self.configs)
 		return
 
 	def Deploy(self):
 
-		# Check the manifest version
-		self.vsix_id = "DF402917-6013-40CA-A4C6-E1640DA86B90"
-		version_regex = f'Id="{self.vsix_id}" Version="(?P<version>.*?)"'
-		match_version = Tools.Extract(self.manifest, version_regex)
-		if not match_version: raise RuntimeError("Failed to extract version number from:\r\n " + self.manifest)
-		self.version = match_version.group("version")
-		print(f"Deploying {self.proj_name} Version: {self.version}\n")
+		self.deployed = []
+		for target, vsix_id, algo in zip(self.targets, self.vsix_ids, self.signing_algos):
+			
+			proj_dir = Tools.Path(self.proj_dir, target)
+			manifest  = Tools.Path(proj_dir, "source.extension.vsixmanifest")
 
-		# Check version is greater than the last released version (update this after a release)
-		min_released_version = "1.09.0"
-		if self.version <= min_released_version:
-			raise RuntimeError("Version number needs bumping")
+			# Check the manifest version
+			version_regex = f'Id="{vsix_id}" Version="(?P<version>.*?)"'
+			match_version = Tools.Extract(manifest, version_regex)
+			if not match_version: raise RuntimeError(f"Failed to extract version number from:\r\n {manifest}")
+			version = match_version.group("version")
+			print(f"Deploying {self.proj_name} ({target}) Version: {version}\n")
 
-		# Check the assembly info
-		assinfo = os.path.join(self.proj_dir, "Properties", "AssemblyInfo.cs")
-		ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
-		ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
-		if not ass_version or ass_version.group("vers") != self.version:
-			raise RuntimeError(f"AssemblyVersion has not been updated to {version}")
-		if not ass_filevers or ass_filevers.group("vers") != self.version:
-			raise RuntimeError(f"AssemblyFileVersion has not been updated to {version}")
+			# Check version is greater than the last released version (update this after a release)
+			min_released_version = "1.11.0"
+			if version <= min_released_version:
+				raise RuntimeError("Version number needs bumping")
 
-		# Ensure the ouptut directory exists
-		self.bin_dir = os.path.join(UserVars.root, "bin")
-		self.bin_path = Tools.ChgExtn(os.path.join(self.bin_dir, self.vsix_name), f".v{self.version}.vsix")
+			# Check the assembly info
+			assinfo = Tools.Path(self.proj_dir, "Shared\\src\\RylogicTextAlignerPackage.cs")
+			ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
+			ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
+			if not ass_version or ass_version.group("vers") != version:
+				raise RuntimeError(f"AssemblyVersion has not been updated to {version} (in {assinfo})")
+			if not ass_filevers or ass_filevers.group("vers") != version:
+				raise RuntimeError(f"AssemblyFileVersion has not been updated to {version} (in {assinfo})")
 
-		# Copy build products to the output directory
-		print(f"Copying files to: {self.bin_dir}")
-		target_path = os.path.join(self.proj_dir, "bin", "Release", self.vsix_name)
-		Tools.Copy(target_path, self.bin_path)
+			# Ensure the ouptut directory exists
+			bin_dir = Tools.Path(UserVars.root, "bin", self.proj_name, check_exists=False)
+			bin_path = Tools.Path(bin_dir, f"{self.proj_name}.{target}.v{version}.vsix", check_exists=False)
 
-		# Sign the vsix
-		Tools.SignVsix(self.bin_path, "sha1")
+			# Copy build products to the output directory
+			print(f"Copying files to: {bin_dir}")
+			target_path = Tools.Path(proj_dir, f"bin\\Release\\{self.proj_name}.vsix")
+			Tools.Copy(target_path, bin_path)
+
+			# Sign the vsix
+			Tools.SignVsix(bin_path, algo)
+			self.deployed.append(bin_path)
+
 		return
 
 	def Publish(self):
-		if not hasattr(self, "bin_path") or not os.path.exists(self.bin_path): raise RuntimeError("Call Deploy before Publish")
-		print("\nPublishing...")
-
-		# Copy to www
-		# Can't download vsix file, so zip first
-		zip_path = Tools.ZipFile(self.bin_path)
-		print("\nPublishing to web site...")
-		Tools.Copy(zip_path, os.path.join(UserVars.wwwroot, "files", "rylogic", ""))
-
-		# Ask to install
-		print("\nInstall locally...")
-		install = input(f"Install {self.bin_path} (y/n)? ")
-		if install == 'y':
-			try:
-				print("Uninstalling previous versions...")
-				vsix_installer = CheckPath(os.path.join(UserVars.vs_dir, "Common7", "IDE", "VSIXInstaller.exe"))
-				Tools.Exec(["cmd", "/C", vsix_installer, "/a", f"/u:{self.vsix_id}"])
-			except Exception as ex:
-				print(f"Uninstall failed: {str(ex)}")
-			try:
-				print("Installing latest version...")
-				Tools.Exec(["cmd", "/C", self.bin_path])
-			except Exception as ex:
-				print(f"Install failed: {str(ex)}")
-
-		# Uploading to marketplace.visualstudio.com is a manual
-		# step... you don't want to bugger it up.
+		# Uploading to marketplace.visualstudio.com is a manual step... you don't want to bugger it up.
 		return
 
 # Rylogic .NET assemblies
@@ -665,6 +702,8 @@ class All(Group):
 			Rylogic      (workspace, platforms, configs),
 			Csex         (workspace, platforms, configs),
 			LDraw        (workspace, platforms, configs),
+			RyLogViewer  (workspace, platforms, configs),
+			Fishomatic   (workspace, platforms, configs),
 			SolarHotWater(workspace, platforms, configs),
 		]
 		return
@@ -747,6 +786,13 @@ def Main(args:List[str]):
 		else:
 			raise RuntimeError(f"Unknown command line argument: {args[i]}")
 
+	# Find the builder class name for the given project name
+	def FindProject(proj_name:str):
+		for x in EProjects.__members__:
+			if proj_name != EProjects[x].value: continue
+			return x
+		return None
+		
 	# Normalise parameters
 	for i in range(0, len(platforms)):
 		if platforms[i].lower() == "x64": platforms[i] = "x64"
@@ -756,7 +802,7 @@ def Main(args:List[str]):
 		if configs[i].lower() == "release": configs[i] = "Release"
 		if configs[i].lower() == "debug": configs[i] = "Debug"
 	for p in projects:
-		if p in EProjects.__members__: continue
+		if FindProject(p) != None: continue
 		raise RuntimeError(f"'{p}' is not a valid project name")
 	if len(projects) == 0: projects = ["All"]
 
@@ -765,7 +811,7 @@ def Main(args:List[str]):
 
 	# Build/Clean/Deploy each given project
 	for project in projects:
-		name = project.replace('.','')
+		name = FindProject(project)
 		builder = eval(name)(workspace, platforms, configs)
 
 		# Prompt for the cert password if signing is needed
@@ -774,18 +820,22 @@ def Main(args:List[str]):
 
 		# Clean if '-clean' is used
 		if clean:
+			print("")
 			builder.Clean()
 
 		# If no project name is given build them all
 		if build:
+			print("")
 			builder.Build()
 
 		# Deploy the named project(s)
 		if deploy:
+			print("")
 			builder.Deploy()
 
 		# Publish the named project(s)
 		if publish:
+			print("")
 			builder.Publish()
 
 	print(f"\nComplete: {workspace}")
@@ -797,7 +847,7 @@ if __name__ == "__main__":
 		# Examples:
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', '-platforms', 'x64', 'x86', '-configs', 'release', 'debug']
 		#sys.argv=['build.py', '-project', 'Rylogic.Core', 'Rylogic.Core.Windows', '-deploy']
-		#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy', '-publish']
+		#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy']
 		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
 		#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']

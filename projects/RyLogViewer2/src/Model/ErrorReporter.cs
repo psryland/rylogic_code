@@ -11,7 +11,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>The main window</summary>
-		public MainWindow Owner { get; set; }
+		public MainWindow? Owner { get; set; }
 
 		//todo string Status { get; private set; } // for binding
 		//todo string StatusMessage(string msg)

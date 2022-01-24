@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Rylogic.Common;
+using Rylogic.Gui.WPF;
 using RyLogViewer.Options;
 
 namespace RyLogViewer
 {
-	/// <summary>
-	/// Interaction logic for MainWindow.xaml
-	/// </summary>
 	public partial class MainWindow : Window, INotifyPropertyChanged
 	{
 		private readonly Settings m_settings;
@@ -30,16 +30,23 @@ namespace RyLogViewer
 			m_recent_files.RecentFileSelected += fp =>
 			{
 				m_recent_files.Add(fp);
-				Main.LogDataSource = new SingleFileSource(fp, m_settings);
+				try
+				{
+					Main.LogDataSource = new SingleFileSource(fp, m_settings);
+				}
+				catch (Exception ex)
+				{
+					Main.LogDataSource = null;
+				}
 			};
 
-			// Create commands once loaded
+			// Commands
+			OpenSingleLogFile = Command.Create(this, OpenSingleLogFileInternal);
+			ShowOptionsUI = Command.Create(this, ShowOptionsUIInternal);
+			Shutdown = Command.Create(this, ShutdownInternal);
+
 			Loaded += (s, a) =>
 			{
-				OpenSingleLogFile = new OpenSingleLogFileCommand(this, Main, m_settings, m_report);
-				ShowOptionsUI = new ShowOptionsUI(this, Main, m_settings, m_report);
-				Shutdown = new ShutdownCommand();
-
 				// Assign data contexts after properties have been set
 				DataContext = this;
 				m_panel.DataContext = this;
@@ -53,7 +60,7 @@ namespace RyLogViewer
 		/// <summary>Application logic</summary>
 		private Main Main
 		{
-			get { return m_main; }
+			get => m_main;
 			set
 			{
 				if (m_main == value) return;
@@ -78,28 +85,69 @@ namespace RyLogViewer
 		private Main m_main;
 
 		/// <summary>Open a single log file</summary>
-		public ICommand OpenSingleLogFile { get; private set; }
+		public ICommand OpenSingleLogFile { get; }
+		private void OpenSingleLogFileInternal()
+		{
+			// Prompt for a log file
+			var fd = new OpenFileDialog
+			{
+				Title = "Open a Log File",
+				Filter = Constants.LogFileFilter,
+				Multiselect = false,
+				CheckFileExists = true,
+			};
+			if (fd.ShowDialog(this) != true) return;
+			var filepath = fd.FileName;
+
+			try
+			{
+				// Validate
+				if (!Path_.FileExists(filepath))
+					throw new FileNotFoundException($"File '{filepath}' does not exist");
+
+				// Add the file to the recent files
+				AddToRecentFiles(filepath);
+
+				// Create a log data source from the log file
+				Main.LogDataSource = new SingleFileSource(filepath, m_settings);
+			}
+			catch (Exception ex)
+			{
+				m_report.ErrorPopup($"Failed to open file {filepath} due to an error.", ex);
+				Main.LogDataSource = null;
+			}
+		}
 
 		/// <summary>Open the Option UI</summary>
-		public ICommand ShowOptionsUI { get; private set; }
+		public ICommand ShowOptionsUI { get; }
+		private void ShowOptionsUIInternal(object? value)
+		{
+			if (m_options_ui == null)
+			{
+				m_options_ui = new OptionsUI(Main, m_settings, m_report) { Owner = this };
+				m_options_ui.SelectedPage = value is EOptionsPage page ? page : EOptionsPage.General;
+				m_options_ui.Closed += delegate { m_options_ui = null; };
+				m_options_ui.Show();
+			}
+			m_options_ui.Focus();
+		}
+		private OptionsUI? m_options_ui;
 
 		/// <summary>Shutdown the application</summary>
-		public ICommand Shutdown { get; private set; }
+		public ICommand Shutdown { get; }
+		private void ShutdownInternal()
+		{
+			Application.Current.Shutdown(0);
+		}
 
 		/// <summary>The data to display in the grid</summary>
 		public IReadOnlyCollection<ILine> LogData => Main;
 
 		/// <summary>Application title</summary>
-		public string WindowTitle
-		{
-			get { return Main.LogDataSource != null ? $"RyLogViewer - {Main.LogDataSource.Path}" : $"RyLogViewer"; }
-		}
+		public string WindowTitle => Main.LogDataSource != null ? $"RyLogViewer - {Main.LogDataSource.Path}" : $"RyLogViewer";
 
 		/// <summary>Status for the current log data source</summary>
-		public string StatusLogDataSource
-		{
-			get { return Main.LogDataSource == null ? "No Log Data Source" : string.Empty; }
-		}
+		public string StatusLogDataSource => Main.LogDataSource == null ? "No Log Data Source" : string.Empty;
 
 		/// <summary>Status for the current file position</summary>
 		public string StatusFilePosition
