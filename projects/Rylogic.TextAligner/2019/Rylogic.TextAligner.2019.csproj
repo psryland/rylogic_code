@@ -108,7 +108,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
-    <Folder Include="res\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\Shared\icon.png">

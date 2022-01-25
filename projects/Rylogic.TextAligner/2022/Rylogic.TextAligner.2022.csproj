@@ -106,7 +106,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
-    <Folder Include="res\" />
   </ItemGroup>
   <Import Project="..\Shared\Rylogic.TextAligner.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

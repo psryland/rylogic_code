@@ -2,13 +2,9 @@
 using System.ComponentModel.Design;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Rylogic.Common;
-using Task = System.Threading.Tasks.Task;
 
 [assembly: ComVisible(false)]
 [assembly: AssemblyTitle("Rylogic.TextAligner")]
@@ -42,11 +38,11 @@ namespace Rylogic.TextAligner
 	/// </para>
 	/// </remarks>
 	[Guid(PackageGuidString)]
-	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                 // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.11", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
-	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                  // This attribute is needed to let the shell know that this package exposes some menus.
-	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                         // This attribute is needed to let the shell know that this package exposes an options page.
-	[ProvideBindingPath]                                                                                      // Include the local directory when resolving dependent assemblies
+	[PackageRegistration(UseManagedResourcesOnly = true/*, AllowsBackgroundLoading = true*/)]                   // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.11.0", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[ProvideMenuResource("Menus.ctmenu", 1)]                                                                    // This attribute is needed to let the shell know that this package exposes some menus.
+	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]                           // This attribute is needed to let the shell know that this package exposes an options page.
+	[ProvideBindingPath]                                                                                        // Include the local directory when resolving dependent assemblies
 	public sealed class RylogicTextAlignerPackage :Package, IOleCommandTarget
 	{
 		/// <summary>Rylogic.TextAlignerPackage GUID string.</summary>
