@@ -624,10 +624,13 @@ class RylogicTextAligner(Managed):
 			assinfo = Tools.Path(self.proj_dir, "Shared\\src\\RylogicTextAlignerPackage.cs")
 			ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
 			ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
+			ipr_version = Tools.Extract(assinfo, r"InstalledProductRegistration\(\".*?\", \".*?\", \"(?P<vers>.*?)\"")
 			if not ass_version or ass_version.group("vers") != version:
 				raise RuntimeError(f"AssemblyVersion has not been updated to {version} (in {assinfo})")
 			if not ass_filevers or ass_filevers.group("vers") != version:
 				raise RuntimeError(f"AssemblyFileVersion has not been updated to {version} (in {assinfo})")
+			if not ipr_version or ipr_version.group("vers") != version:
+				raise RuntimeError(f"InstalledProductRegistration has not been updated to {version} (in {assinfo})")
 
 			# Ensure the ouptut directory exists
 			bin_dir = Tools.Path(UserVars.root, "bin", self.proj_name, check_exists=False)
