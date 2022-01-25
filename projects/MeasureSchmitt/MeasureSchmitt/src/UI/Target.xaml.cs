@@ -1,9 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Interop;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-using Rylogic.Interop.Win32;
 
 namespace MeasureSchmitt
 {
