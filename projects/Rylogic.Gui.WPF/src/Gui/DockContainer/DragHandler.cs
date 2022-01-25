@@ -565,10 +565,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 
+			var dpi_scale = 96.0 / this.Dpi();
+
 			// Update the bounds and region of the ghost
 			Ghost.Clip = clip;
-			Ghost.Left = bounds.X;
-			Ghost.Top = bounds.Y;
+			Ghost.Left = bounds.X * dpi_scale;
+			Ghost.Top = bounds.Y * dpi_scale;
 			Ghost.Width = bounds.Width;
 			Ghost.Height = bounds.Height;
 		}
@@ -589,12 +591,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				return;
 			}
 
+			var dpi_scale = 96.0 / this.Dpi();
+
 			// Display the large cross indicator when over the Centre site
 			// or the small cross indicator when over an edge site
 			if (pane.DockSite == EDockSite.Centre)
 			{
 				var pt = Point.Subtract(pane.Centre.RenderArea(pane).Centre(), new Vector(IndCrossLg.Width * 0.5, IndCrossLg.Height * 0.5));
-				IndCrossLg.SetLocation(pane.PointToScreen(pt));
+				pt = pane.PointToScreen(pt);
+				IndCrossLg.Left = pt.X * dpi_scale;
+				IndCrossLg.Top = pt.Y * dpi_scale;
 
 				IndCrossLg.Visibility = Visibility.Visible;
 				IndCrossSm.Visibility = Visibility.Collapsed;
@@ -602,7 +608,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			else
 			{
 				var pt = Point.Subtract(pane.Centre.RenderArea(pane).Centre(), new Vector(IndCrossSm.Width * 0.5, IndCrossSm.Height * 0.5));
-				IndCrossSm.SetLocation(pane.PointToScreen(pt));
+				pt = pane.PointToScreen(pt);
+				IndCrossSm.Left = pt.X * dpi_scale;
+				IndCrossSm.Top = pt.Y * dpi_scale;
 
 				IndCrossLg.Visibility = Visibility.Collapsed;
 				IndCrossSm.Visibility = Visibility.Visible;

@@ -616,7 +616,7 @@ class RylogicTextAligner(Managed):
 			print(f"Deploying {self.proj_name} ({target}) Version: {version}\n")
 
 			# Check version is greater than the last released version (update this after a release)
-			min_released_version = "1.11.0"
+			min_released_version = "1.10.0"
 			if version <= min_released_version:
 				raise RuntimeError("Version number needs bumping")
 

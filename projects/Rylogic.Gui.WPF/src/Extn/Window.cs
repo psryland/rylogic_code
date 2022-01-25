@@ -16,8 +16,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Return the window handle of the containing window</summary>
 		public static IntPtr Hwnd(this DependencyObject obj)
 		{
-			var window = Window.GetWindow(obj);
-			return window?.Hwnd() ?? IntPtr.Zero;
+			return Window.GetWindow(obj)?.Hwnd() ?? IntPtr.Zero;
+		}
+
+		/// <summary>Return the DPI for the monitor that this window is on</summary>
+		public static int Dpi(this Window wnd)
+		{
+			return Gfx.Dpi.DpiForWindow(wnd.Hwnd());
+		}
+
+		/// <summary>Return the DPI for the monitor that the containing window is on</summary>
+		public static int Dpi(this DependencyObject obj)
+		{
+			return Window.GetWindow(obj)?.Dpi() ?? 0;
 		}
 
 		/// <summary>True if the HWND for this window has been created</summary>
