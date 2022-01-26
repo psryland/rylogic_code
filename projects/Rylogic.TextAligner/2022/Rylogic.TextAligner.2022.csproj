@@ -99,8 +99,8 @@
       <Link>icon.png</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <Content Include="..\Shared\licence.txt">
-      <Link>licence.txt</Link>
+    <Content Include="..\Shared\license.txt">
+      <Link>license.txt</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
   </ItemGroup>
