@@ -41,6 +41,7 @@
 	<Grid
 		Name="m_titlebar"
 		DockPanel.Dock="Top"
+		Visibility="{Binding Options.ShowTitleBars, Converter={conv:BoolToVisible}}"
 		gui:Control_.EventToCommand="MouseDown:FocusPane"
 		>
 		<Grid.ColumnDefinitions>

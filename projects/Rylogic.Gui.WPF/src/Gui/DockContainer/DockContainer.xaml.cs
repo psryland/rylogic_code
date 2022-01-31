@@ -160,6 +160,9 @@ namespace Rylogic.Gui.WPF
 			return Root.DescendantAt(location)?.Item as DockPane;
 		}
 
+		/// <summary>The centre pane of the root level tree</summary>
+		public DockPane RootPane => Root.DockPane(EDockSite.Centre);
+
 		/// <summary>
 		/// Returns a reference to the dock sizes at a given level in the tree.
 		/// 'location' should point to a branch otherwise null is returned.
