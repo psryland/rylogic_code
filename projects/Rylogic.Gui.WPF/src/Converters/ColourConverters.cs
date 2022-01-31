@@ -69,22 +69,27 @@ namespace Rylogic.Gui.WPF.Converters
 			var colour = Colour32.Black;
 			switch (value)
 			{
-			case Color col:
-				{
-					colour = col.ToColour32();
-					break;
-				}
-			case Colour32 col32:
+				case Colour32 col32:
 				{
 					colour = col32;
 					break;
 				}
-			case uint u32:
+				case Color col:
+				{
+					colour = col.ToColour32();
+					break;
+				}
+				case System.Drawing.Color col1:
+				{
+					colour = col1.ToArgbU();
+					break;
+				}
+				case uint u32:
 				{
 					colour = new Colour32(u32);
 					break;
 				}
-			case int i32:
+				case int i32:
 				{
 					colour = new Colour32((uint)i32);
 					break;
