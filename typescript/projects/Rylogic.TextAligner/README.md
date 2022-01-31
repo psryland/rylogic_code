@@ -1,6 +1,6 @@
 # Rylogic Text Aligner
 
-_Rylogic Text Aligner is also available for [Visual Studio](https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner)_
+_Rylogic Text Aligner is also available for [Visual Studio 2019 and earlier](https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner) and [Visual Studio 2022 and above](https://marketplace.visualstudio.com/items?itemName=Rylogic.RylogicTextAligner64)_
 
 ## Overview
 

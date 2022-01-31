@@ -621,7 +621,7 @@ class RylogicTextAligner(Managed):
 				raise RuntimeError("Version number needs bumping")
 
 			# Check the assembly info
-			assinfo = Tools.Path(self.proj_dir, "Shared\\src\\RylogicTextAlignerPackage.cs")
+			assinfo = Tools.Path(proj_dir, "RylogicTextAlignerPackage.cs")
 			ass_version = Tools.Extract(assinfo, r"AssemblyVersion\(\"(?P<vers>.*?)\"\)")
 			ass_filevers = Tools.Extract(assinfo, r"AssemblyFileVersion\(\"(?P<vers>.*?)\"\)")
 			ipr_version = Tools.Extract(assinfo, r"InstalledProductRegistration\(\".*?\", \".*?\", \"(?P<vers>.*?)\"")

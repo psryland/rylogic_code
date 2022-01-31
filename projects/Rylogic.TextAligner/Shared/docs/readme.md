@@ -29,7 +29,7 @@ The first, and most basic use case, is to align assignments:
 ![unaligned](unaligned.png "Un-aligned code")
 ![aligned](aligned.png "Un-aligned code")
 
-To align some text, move the caret onto a line of text within a block and hit your keyboard shortcut. The extension intelligently searches above and below the current caret position, identifies the alignment group nearest the caret and aligns the text. Note that alignment is not limited to just assignments, repeatedly pressing your keyboard shortcut will identify other alignment groups and align to those. To demostrate this, create a new text file and copy in the following text:
+To align some text, move the caret onto a line of text within a block and hit your keyboard shortcut. The extension intelligently searches above and below the current caret position, identifies the alignment group nearest the caret and aligns the text. Note that alignment is not limited to just assignments, repeatedly pressing your keyboard shortcut will identify other alignment groups and align to those. To demonstrate this, create a new text file and copy in the following text:
 
 ```txt
 apple = red, 32;
