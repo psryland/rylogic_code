@@ -18,6 +18,12 @@ namespace Rylogic.Gui.WPF
 		//        <Setter Property = "VerticalContentAlignment" Value="Center" />
 		//    </Style>
 
+		/// <summary>General tag for any control</summary>
+		public const int Tag = 0;
+		public static readonly DependencyProperty TagProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(Tag), Brushes.Black, Gui_.EDPFlags.None);
+		public static object GetTag(DependencyObject obj) => obj.GetValue(TagProperty);
+		public static void SetTag(DependencyObject obj, object value) => obj.SetValue(TagProperty, value);
+
 		/// <summary>Foreground Attached property</summary>
 		public const int Foreground = 0;
 		public static readonly DependencyProperty ForegroundProperty = Gui_.DPRegisterAttached(typeof(Control_), nameof(Foreground), Brushes.Black, Gui_.EDPFlags.None);

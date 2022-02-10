@@ -1,5 +1,5 @@
 ﻿<TreeView
-	x:Class="Rylogic.Gui.WPF.TreeViewMS"
+	x:Class="Rylogic.Gui.WPF.TreeViewMultiSelect"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -182,7 +182,7 @@
 							</Trigger>
 
 							<!-- IsSelected -->
-							<Trigger Property="local:TreeViewMS.IsItemSelected" Value="true">
+							<Trigger Property="local:TreeViewMultiSelect.IsItemSelected" Value="true">
 								<Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
 								<Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
 							</Trigger>
@@ -190,7 +190,7 @@
 							<!-- IsSelected -->
 							<MultiTrigger>
 								<MultiTrigger.Conditions>
-									<Condition Property="local:TreeViewMS.IsItemSelected" Value="true"/>
+									<Condition Property="local:TreeViewMultiSelect.IsItemSelected" Value="true"/>
 									<Condition Property="IsSelectionActive" Value="false"/>
 								</MultiTrigger.Conditions>
 								<Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.InactiveSelectionHighlightBrushKey}}"/>

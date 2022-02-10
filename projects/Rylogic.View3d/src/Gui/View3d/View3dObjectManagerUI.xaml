@@ -215,7 +215,7 @@
 		</Grid>
 		
 		<!-- Scene Graph -->
-		<gui:TreeViewMS
+		<gui:TreeViewMultiSelect
 			Grid.Row="1"
 			ItemsSource="{Binding ObjectsView}"
 			ContextMenu="{StaticResource ObjectManagerListCMenu}"
@@ -225,7 +225,7 @@
 			x:Name="m_tree"
 			>
 			<!-- Key Bindings -->
-			<gui:TreeViewMS.InputBindings>
+			<gui:TreeViewMultiSelect.InputBindings>
 				<KeyBinding Key="Space"
 					Command="{Binding SetVisible}"
 					CommandParameter="{x:Static local:View3dObjectManagerUI+ESetVisibleCmd.ToggleSelected}"
@@ -248,10 +248,10 @@
 					Command="{Binding SetWireframe}"
 					CommandParameter="-1"
 					/>
-			</gui:TreeViewMS.InputBindings>
+			</gui:TreeViewMultiSelect.InputBindings>
 
 			<!-- Item Container Style -->
-			<gui:TreeViewMS.ItemContainerStyle>
+			<gui:TreeViewMultiSelect.ItemContainerStyle>
 				<Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource TreeViewMSItemStyle}">
 					<!--<Setter Property="Background" Value="AliceBlue"/>-->
 					<Style.Triggers>
@@ -263,10 +263,10 @@
 						</Trigger>-->
 					</Style.Triggers>
 				</Style>
-			</gui:TreeViewMS.ItemContainerStyle>
+			</gui:TreeViewMultiSelect.ItemContainerStyle>
 
 			<!-- Item Template -->
-			<gui:TreeViewMS.ItemTemplate>
+			<gui:TreeViewMultiSelect.ItemTemplate>
 				<HierarchicalDataTemplate ItemsSource="{Binding Children}">
 					<Grid
 						HorizontalAlignment="Stretch"
@@ -324,8 +324,8 @@
 							/>
 					</Grid>
 				</HierarchicalDataTemplate>
-			</gui:TreeViewMS.ItemTemplate>
-		</gui:TreeViewMS>
+			</gui:TreeViewMultiSelect.ItemTemplate>
+		</gui:TreeViewMultiSelect>
 		
 		<!-- Tree and Grid -->
 		<Grid

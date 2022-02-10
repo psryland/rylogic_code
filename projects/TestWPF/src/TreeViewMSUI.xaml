@@ -171,18 +171,18 @@
 		</Grid.RowDefinitions>
 		
 			<!--ItemContainerStyle="{StaticResource MultiSelectTreeViewItemStyle}"-->
-		<gui:TreeViewMS
+		<gui:TreeViewMultiSelect
 			x:Name="multiSelectTreeView"
 			ItemsSource="{Binding FoodGroups}"
 			>
-			<gui:TreeViewMS.ItemTemplate>
+			<gui:TreeViewMultiSelect.ItemTemplate>
 				<HierarchicalDataTemplate ItemsSource="{Binding Children}">
 					<Grid>
 						<TextBlock FontSize="14" Text="{Binding Name}"/>
 					</Grid>
 				</HierarchicalDataTemplate>
-			</gui:TreeViewMS.ItemTemplate>
-		</gui:TreeViewMS>
+			</gui:TreeViewMultiSelect.ItemTemplate>
+		</gui:TreeViewMultiSelect>
 
 		
 		<Button 

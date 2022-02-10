@@ -321,6 +321,7 @@ namespace Rylogic.Utility
 					if (LogConsumerThreadActive == value) return;
 					if (m_thread != null)
 					{
+						Queue.Add(ShutdownTerminator);
 						Queue.CompleteAdding();
 						if (m_thread.IsAlive)
 							m_thread.Join();
@@ -397,11 +398,16 @@ namespace Rylogic.Utility
 				}
 			}
 
-			// Pull an event from the queue of log events
+			/// <summary>Pull an event from the queue of log events</summary>
 			private bool Dequeue(out LogEvent ev)
 			{
 				try
 				{
+					if (Queue.IsAddingCompleted)
+					{
+						ev = new LogEvent();
+						return false;
+					}
 					if (!Queue.TryTake(out ev!))
 					{
 						// Notes:
@@ -412,6 +418,11 @@ namespace Rylogic.Utility
 						ev = Queue.Take(); // Blocks
 						Idle.Reset();
 					}
+					if (ReferenceEquals(ev, ShutdownTerminator))
+					{
+						ev = new LogEvent();
+						return false;
+					}
 					return true;
 				}
 				catch (InvalidOperationException) // means take called on completed collection
@@ -421,7 +432,7 @@ namespace Rylogic.Utility
 				}
 			}
 
-			// Wait for the log event queue to become empty
+			/// <summary>Wait for the log event queue to become empty</summary>
 			public void WaitTillIdle()
 			{
 				Idle.WaitOne();
@@ -430,6 +441,9 @@ namespace Rylogic.Utility
 			{
 				return Idle.WaitOne(timeout_ms);
 			}
+
+			/// <summary>Magic value to signal log shutdown</summary>
+			private static readonly LogEvent ShutdownTerminator = new LogEvent();
 		}
 
 		/// <summary>An individual log event</summary>

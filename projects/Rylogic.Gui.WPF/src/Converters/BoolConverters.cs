@@ -268,13 +268,32 @@ namespace Rylogic.Gui.WPF.Converters
 				}
 				if (targetType == typeof(ImageSource))
 				{
-					// Use: ConverterParameter='image_key1|image_key2'
-					// Image keys should be static resource keys.
-					// Only works if the resources are in App.xml.
-					var res = Application.Current.TryFindResource(val);
-					res ??= Application.Current.MainWindow.TryFindResource(val);
-					res ??= Application.Current.Windows.Cast<Window>().Select(x => x.TryFindResource(val)).FirstOrDefault(x => x != null);
+					// 'val' should be the name of a static resource. The problem is we don't have the control that
+					// this binding converter is being used on, so we don't know which window to search for resources.
+					// 'TryFindResource' only searches upwards through the parents, so really we need a pointer to the
+					// FrameworkElement that the converter is being used on. So far, I don't know how to get that reference,
+					// so instead, just search all the UserControls. A better solution is needed ...
+					var res = Application.Current.TryFindResource(val); // Search App.xaml resources first.
+					if (res == null)
+					{
+						foreach (var win in Application.Current.Windows.Cast<Window>())
+						{
+							res ??= win
+								.AllVisualChildren().OfType<UserControl>()
+								.Select(x => x.TryFindResource(val))
+								.FirstOrDefault(x => x != null);
+							if (res != null)
+								break;
+						}
+					}
 					return res;
+					//// Use: ConverterParameter='image_key1|image_key2'
+					//// Image keys should be static resource keys.
+					//// Only works if the resources are in App.xml or the parent window.
+					//var res = Application.Current.TryFindResource(val);
+					//res ??= Application.Current.MainWindow.TryFindResource(val);
+					//res ??= Application.Current.Windows.Cast<Window>().Select(x => x.TryFindResource(val)).FirstOrDefault(x => x != null);
+					//return res;
 				}
 				return Util.ConvertTo(val, targetType);
 			}

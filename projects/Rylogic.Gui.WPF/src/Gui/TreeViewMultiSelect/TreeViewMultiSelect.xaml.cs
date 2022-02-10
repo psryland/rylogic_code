@@ -11,9 +11,9 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class TreeViewMS :TreeView
+	public partial class TreeViewMultiSelect :TreeView
 	{
-		public TreeViewMS()
+		public TreeViewMultiSelect()
 		{
 			InitializeComponent();
 			ExpandAll = Command.Create(this, ExpandAllInternal);
@@ -56,7 +56,7 @@ namespace Rylogic.Gui.WPF
 			add { AddHandler(SelectionChangedEvent, value); }
 			remove { RemoveHandler(SelectionChangedEvent, value); }
 		}
-		public static readonly RoutedEvent SelectionChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectionChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(TreeViewMS));
+		public static readonly RoutedEvent SelectionChangedEvent = EventManager.RegisterRoutedEvent(nameof(SelectionChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(TreeViewMultiSelect));
 
 		/// <summary></summary>
 		private void SelectedItemChangedInternal(TreeViewItem selected_item)
@@ -174,7 +174,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Attached property for 'IsItemSelected'</summary>
 		private const int IsItemSelected = 0;
-		public static readonly DependencyProperty IsItemSelectedProperty = Gui_.DPRegisterAttached<TreeViewMS>(nameof(IsItemSelected), Boxed.False, Gui_.EDPFlags.None);
+		public static readonly DependencyProperty IsItemSelectedProperty = Gui_.DPRegisterAttached<TreeViewMultiSelect>(nameof(IsItemSelected), Boxed.False, Gui_.EDPFlags.None);
 		public static void SetIsItemSelected(UIElement element, bool value) => element.SetValue(IsItemSelectedProperty, value);
 		public static bool GetIsItemSelected(UIElement element) => (bool)element.GetValue(IsItemSelectedProperty);
 

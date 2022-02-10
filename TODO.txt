@@ -1,6 +1,5 @@
 Immediate ToDo:
-    - Release TextAligner for vs2022
-	- Fix drag/drop in dock control for high res screens
+	
 Work
   Misc:
     - Create change request for actdata.cfg change
@@ -11,7 +10,13 @@ Work
 		- Back Hip beyond limit for movement: "Walk Fwd - Turning Left - Left Leg TO Right Leg (Flat)"
 		- Back hip limits in released data are smaller than in .xml data
 
+  MovementEditor:
+    - Support editing
+	- Optimise the dynamic linking in the map view
+	
   RexTerminal:
+	- Implement the session log viewer
+	- Implement the battery log viewer
 	- Push/pull zero ref values from REX
 	
   UIv4:
