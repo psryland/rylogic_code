@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Rylogic.Common;
@@ -311,31 +311,13 @@ namespace Rylogic.Extn
 			return type.FindMethodsWithAttribute(typeof(T), flags);
 		}
 
-		/// <summary>Convert this type to is equivalent DbType</summary>
-		public static DbType DbType(this Type type)
+		/// <summary>Basically the same as GetProperty except a compiled function is returned</summary>
+		public static Func<T, Ret> Reflect<T, Ret>(string prop_name)
 		{
-			type = Nullable.GetUnderlyingType(type) ?? type;
-			type = type.IsEnum ? type.GetEnumUnderlyingType() : type;
-
-			return type.Name switch
-			{
-				"String"  => System.Data.DbType.String,
-				"Byte[]"  => System.Data.DbType.Binary,
-				"Boolean" => System.Data.DbType.Boolean,
-				"Byte"    => System.Data.DbType.Byte,
-				"SByte"   => System.Data.DbType.SByte,
-				"Int16"   => System.Data.DbType.Int16,
-				"Int32"   => System.Data.DbType.Int32,
-				"Int64"   => System.Data.DbType.Int64,
-				"UInt16"  => System.Data.DbType.UInt16,
-				"UInt32"  => System.Data.DbType.UInt32,
-				"UInt64"  => System.Data.DbType.UInt64,
-				"Single"  => System.Data.DbType.Single,
-				"Double"  => System.Data.DbType.Double,
-				"Decimal" => System.Data.DbType.Decimal,
-				"Guid"    => System.Data.DbType.Guid,
-				_ => throw new Exception($"Unknown conversion from {type.Name} to DbType"),
-			};
+			var inst = Expression.Parameter(typeof(T), "inst");
+			var prop = Expression.Property(inst, prop_name);
+			var func = Expression.Lambda(typeof(Func<T, Ret>), prop, inst);
+			return (Func<T, Ret>)func.Compile();
 		}
 
 		/// <summary>Reformat the stack trace string to suit the debugger output window</summary>

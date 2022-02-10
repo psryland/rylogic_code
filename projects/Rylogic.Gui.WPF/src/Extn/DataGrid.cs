@@ -38,6 +38,22 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
+		/// <summary>Return the grid that owns this column</summary>
+		public static DataGrid Grid(this DataGridColumn col)
+		{
+			m_pi_column_owner ??= typeof(DataGridColumn).GetProperty("DataGridOwner", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("DataGridOwner property not found");
+			return (DataGrid?)m_pi_column_owner.GetValue(col, null) ?? throw new Exception("DataGrid not found");
+		}
+		private static PropertyInfo? m_pi_column_owner;
+
+		/// <summary>Return the grid that owns this cell info</summary>
+		public static DataGrid Grid(this DataGridCellInfo ci)
+		{
+			m_pi_cellinfo_owner ??= typeof(DataGridCellInfo).GetProperty("Owner", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Owner property not found");
+			return (DataGrid?)m_pi_cellinfo_owner.GetValue(ci, null) ?? throw new Exception("DataGrid not found");
+		}
+		private static PropertyInfo? m_pi_cellinfo_owner;
+
 		/// <summary>Return the cell associated with a 'cell info' (i.e. SelectedCell)</summary>
 		public static DataGridCell? Cell(this DataGridCellInfo ci)
 		{
@@ -56,6 +72,23 @@ namespace Rylogic.Gui.WPF
 		{
 			return Gui_.FindVisualParent<DataGridRow>(cell) ?? throw new Exception("Cell does not have an associated row");
 		}
+		public static DataGridRow GetRow(this DataGridCellInfo ci)
+		{
+			var grid = ci.Column.Grid();
+			return grid.ItemContainerGenerator.ContainerFromItem(ci.Item) is DataGridRow row ? row : throw new Exception("Cell info does not correspond to a row in the grid");
+		}
+
+		/// <summary>Get the grid row from a cell info</summary>
+		public static int GetRowIndex(this DataGridCellInfo ci)
+		{
+			m_pi_cellinfo_iteminfo ??= typeof(DataGridCellInfo).GetProperty("ItemInfo", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("ItemInfo property not found");
+			m_pi_iteminfo_indx ??= m_pi_cellinfo_iteminfo.PropertyType.GetProperty("Index", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Index property not found");
+			var ii = m_pi_cellinfo_iteminfo.GetValue(ci, null) ?? throw new Exception("ItemInfo property not found");
+			var idx = m_pi_iteminfo_indx.GetValue(ii, null) ?? throw new Exception("Index property not found");
+			return (int)idx;
+		}
+		private static PropertyInfo? m_pi_cellinfo_iteminfo;
+		private static PropertyInfo? m_pi_iteminfo_indx;
 
 		/// <summary>Returns the cell and column index of this cell</summary>
 		public static Address GridAddress(this DataGridCell cell)
@@ -66,7 +99,26 @@ namespace Rylogic.Gui.WPF
 				RowIndex = cell.GetRow().GetIndex(),
 			};
 		}
-		public static Address GridAddress(this DataGridCellInfo ci) => ci.Cell()?.GridAddress() ?? throw new Exception("Cell not found in grid");
+		public static Address GridAddress(this DataGridCellInfo ci)
+		{
+			return new Address
+			{
+				ColIndex = ci.Column.DisplayIndex,
+				RowIndex = ci.GetRowIndex(),
+			};
+		}
+
+		/// <summary>Bounding ranges for the selected cells</summary>
+		public static (RangeI, RangeI) SelectedBounds(this DataGrid grid)
+		{
+			var parameters = new object[4];
+			m_mi_GetSelectionRange ??= grid.SelectedCells.GetType().GetMethod("GetSelectionRange", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("GetSelectionRange method not found");
+			m_mi_GetSelectionRange.Invoke(grid.SelectedCells, parameters);
+			var col_bounds = new RangeI((int)parameters[0], (int)parameters[1] + 1); // Exclusive range
+			var row_bounds = new RangeI((int)parameters[2], (int)parameters[3] + 1); // Exclusive range
+			return (row_bounds, col_bounds);
+		}
+		private static MethodInfo? m_mi_GetSelectionRange;
 
 		/// <summary>True if the given row/col address is within the grid</summary>
 		public static bool IsWithin(this DataGrid grid, int r, int c)
@@ -206,7 +258,7 @@ namespace Rylogic.Gui.WPF
 			}
 			static void DoPasteInternal(object? sender, ExecutedRoutedEventArgs e)
 			{
-				if (sender is not DataGrid grid)
+				if (sender is not DataGrid grid || grid.IsReadOnly)
 					return;
 
 				// Extract a table of CSV data from the clipboard
@@ -242,7 +294,7 @@ namespace Rylogic.Gui.WPF
 				e.Handled = true;
 
 				// Map the data to the selected cells
-				var (rows, cols) = SelectedBounds(grid);
+				var (rows, cols) = grid.SelectedBounds();
 
 				// Automatically transpose the clipboard data
 				var transpose =
@@ -298,36 +350,30 @@ namespace Rylogic.Gui.WPF
 			static CSVData SelectedToCSV(DataGrid grid)
 			{
 				// Find the cell range of selected cells
-				var (rows, cols) = SelectedBounds(grid);
+				var (rows, cols) = grid.SelectedBounds();
 
-				// Create a table of CSV data, populated from the selected cells
+				// Create a mapping from column index to visible column index
+				var idx = 0;
+				var col_index_map = new int[cols.Sizei];
+				for (var i = 0; i != col_index_map.Length; ++i)
+					col_index_map[i] = grid.Columns[i].Visibility == Visibility.Visible ? idx++ : -1;
+
+				// Create a table of CSV data, populated from the visible selected cells
 				var csv = new CSVData { AutoSize = true };
-				foreach (var ci in grid.SelectedCells)
+				foreach (var ci in grid.SelectedCells.Where(x => x.Column.Visibility == Visibility.Visible))
 				{
-					// Unknown cell address?
-					if (ci.Cell()?.GridAddress() is not Address addr)
-						continue;
+					Binding? binding =
+						ci.Column is DataGridBoundColumn col ? (Binding?)col.Binding :
+						ci.Column is DataGridBoundTemplateColumn tcol ? tcol.Binding :
+						null;
 
-					// Only works for cells containing text
-					if (ci.IsValid && ci.Column.GetCellContent(ci.Item) is TextBlock tb)
-						csv[addr.RowIndex - rows.Begi, addr.ColIndex - cols.Begi] = tb.Text;
+					if (binding != null)
+					{
+						var addr = ci.GridAddress();
+						csv[addr.RowIndex - rows.Begi, col_index_map[addr.ColIndex]] = binding.Eval(ci.Item)?.ToString() ?? string.Empty;
+					}
 				}
 				return csv;
-			}
-			static (RangeI, RangeI) SelectedBounds(DataGrid grid)
-			{
-				// Find the bounds of the selected cells
-				var row_bounds = RangeI.Invalid;
-				var col_bounds = RangeI.Invalid;
-				foreach (var ci in grid.SelectedCells)
-				{
-					if (ci.Cell()?.GridAddress() is not Address addr)
-						continue;
-
-					row_bounds.Grow(addr.RowIndex);
-					col_bounds.Grow(addr.ColIndex);
-				}
-				return (row_bounds, col_bounds);
 			}
 		}
 
@@ -422,7 +468,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var item = cmenu.Items.Add2(new MenuItem
 				{
-					Header = col.Header?.ToString() ?? "<no heading>",
+					Header = CopyHeader(col.Header),
 					IsChecked = col.Visibility == Visibility.Visible,
 					Tag = col
 				});
@@ -436,6 +482,18 @@ namespace Rylogic.Gui.WPF
 			cmenu.PlacementTarget = grid;
 			cmenu.StaysOpen = true;
 			cmenu.IsOpen = true;
+
+			// Make a copy of the header to use in the context menu
+			static object CopyHeader(object? hdr)
+			{
+				if (hdr is string str)
+					return str;
+				if (hdr is TextBlock tb)
+					return tb.Text;
+				if (hdr is Image img)
+					return new Image { Source = img.Source, MaxHeight = 18 };
+				return "<no heading>";
+			}
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid. Attach to 'MouseRightButtonUp'</summary>
@@ -807,6 +865,7 @@ namespace Rylogic.Gui.WPF
 		private const int RowsReordered = 0;
 		public delegate void RowsReorderedEventHandler(object sender, RoutedEventArgs args);
 		public static readonly RoutedEvent RowsReorderedEvent = EventManager.RegisterRoutedEvent(nameof(RowsReordered), RoutingStrategy.Bubble, typeof(RowsReorderedEventHandler), typeof(DataGrid_));
+
 		public static void AddRowsReorderedHandler(DependencyObject d, RowsReorderedEventHandler handler)
 		{
 			if (d is UIElement uie)

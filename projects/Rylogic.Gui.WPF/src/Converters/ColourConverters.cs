@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
-using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -15,25 +14,28 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
+			if (targetType == typeof(Brush))
+				throw new Exception("Target type is a brush, not a Color. Use ColourToBrush instead");
+
 			switch (value)
 			{
-			case Color col:
-				{
-					return col;
-				}
-			case System.Drawing.Color dcol:
-				{
-					return dcol.ToMediaColor();
-				}
-			case Colour32 col32:
+				case Colour32 col32:
 				{
 					return col32.ToMediaColor();
 				}
-			case uint u32:
+				case Color col:
+				{
+					return col;
+				}
+				case System.Drawing.Color dcol:
+				{
+					return dcol.ToMediaColor();
+				}
+				case uint u32:
 				{
 					return new Colour32(u32).ToMediaColor();
 				}
-			case int i32:
+				case int i32:
 				{
 					return new Colour32((uint)i32).ToMediaColor();
 				}
@@ -169,18 +171,31 @@ namespace Rylogic.Gui.WPF.Converters
 			var colour = Colour32.White;
 			switch (value)
 			{
-			case Color col:
-				colour = col.ToColour32();
-				break;
-			case Colour32 col32:
-				colour = col32;
-				break;
-			case uint u32:
-				colour = new Colour32(u32);
-				break;
-			case int i32:
-				colour = new Colour32((uint)i32);
-				break;
+				case Colour32 col32:
+				{
+					colour = col32;
+					break;
+				}
+				case Color col:
+				{
+					colour = col.ToColour32();
+					break;
+				}
+				case System.Drawing.Color dcol:
+				{
+					colour = dcol.ToMediaColor().ToColour32();
+					break;
+				}
+				case uint u32:
+				{
+					colour = new Colour32(u32);
+					break;
+				}
+				case int i32:
+				{
+					colour = new Colour32((uint)i32);
+					break;
+				}
 			}
 			return colour.Intensity > 0.5
 				? Brushes.Black
