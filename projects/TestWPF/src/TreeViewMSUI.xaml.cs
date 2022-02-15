@@ -39,7 +39,6 @@ namespace TestWPF
 		}
 	}
 
-
 	public sealed class DemoViewModel
 	{
 		public DemoViewModel()

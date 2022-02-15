@@ -194,6 +194,10 @@ namespace TestWPF
 			{
 				new View3dUI().Show();
 			});
+			ShowTreeGridUI = Command.Create(this, () =>
+			{
+				new TreeGridUI().Show();
+			});
 			ShowTreeViewMSUI = Command.Create(this, () =>
 			{
 				new TreeViewMSUI().Show();
@@ -234,6 +238,7 @@ namespace TestWPF
 		public Command ShowToolWindow { get; }
 		public Command ScintillaUI { get; }
 		public Command ShowView3DUI { get; }
+		public Command ShowTreeGridUI { get; }
 		public Command ShowTreeViewMSUI { get; }
 		public Command ShowVT100UI { get; }
 		public Command Exit { get; }

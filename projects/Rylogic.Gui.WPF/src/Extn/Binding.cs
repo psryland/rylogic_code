@@ -8,15 +8,16 @@ namespace Rylogic.Gui.WPF
 	public static class Binding_
 	{
 		/// <summary>Clone a binding</summary>
-		public static Binding Clone(this Binding binding, object? source = null, BindingMode mode = BindingMode.OneWay)
+		public static BindingBase Clone(this BindingBase binding, object? source = null, BindingMode? mode = null)
 		{
 			m_mi_binding_clone ??= typeof(BindingBase).GetMethod("Clone", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("Clone method not found on Binding");
 			m_fi_binding_sealed ??= typeof(BindingBase).GetField("_isSealed", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("_isSealed field not found on Binding");
 
-			var b = (Binding?)m_mi_binding_clone.Invoke(binding, new object[] { mode }) ?? throw new Exception("Binding.Clone() failed");
-			m_fi_binding_sealed.SetValue(b, false);
-			b.Source = source;
-			return b;
+			mode ??= (binding as Binding)?.Mode ?? BindingMode.Default;
+			var bb = (BindingBase?)m_mi_binding_clone.Invoke(binding, new object[] { mode }) ?? throw new Exception("Binding.Clone() failed");
+			m_fi_binding_sealed.SetValue(bb, false);
+			if (bb is Binding b) b.Source = source;
+			return bb;
 		}
 		private static MethodInfo? m_mi_binding_clone;
 		private static FieldInfo? m_fi_binding_sealed;

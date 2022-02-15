@@ -191,14 +191,43 @@ namespace Rylogic.Extn
 		/// <summary>Return the index of the first occurrence of 'pred(x) == true' or -1</summary>
 		public static int IndexOf<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> pred)
 		{
-			var idx = -1;
-			foreach (var x in source)
+			switch (source)
 			{
-				++idx;
-				if (pred(x))
-					return idx;
+				case IList<TSource> list:
+				{
+					return list.IndexOf(pred);
+				}
+				default:
+				{
+					var idx = 0;
+					foreach (var x in source)
+					{
+						if (!pred(x)) { ++idx; continue; }
+						return idx;
+					}
+					return -1;
+				}
 			}
-			return -1;
+		}
+		public static int IndexOf(this IEnumerable source, object obj)
+		{
+			switch (source)
+			{
+				case IList list:
+				{
+					return list.IndexOf(obj);
+				}
+				default:
+				{
+					var idx = 0;
+					foreach (var x in source)
+					{
+						if (!Equals(obj, x)) { ++idx; continue; }
+						return idx;
+					}
+					return -1;
+				}
+			}
 		}
 
 		/// <summary>Return the index of the last occurrence of 'pred(x) == true' or -1</summary>
