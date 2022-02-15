@@ -255,7 +255,7 @@
 				<Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource TreeViewMSItemStyle}">
 					<!--<Setter Property="Background" Value="AliceBlue"/>-->
 					<Style.Triggers>
-						<Trigger Property="gui:TreeViewMS.IsItemSelected" Value="True">
+						<Trigger Property="gui:TreeViewMultiSelect.IsItemSelected" Value="True">
 							<Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
 						</Trigger>
 						<!--<Trigger Property="HasItems" Value="True">

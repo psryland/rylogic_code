@@ -1,0 +1,83 @@
+﻿<Window
+	x:Class="TestWPF.TreeGridUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="TreeGridUI"
+	Height="450"
+	Width="800"
+	>
+	<Window.Resources>
+		<BitmapImage x:Key="one" UriSource="/TestWPF;component/res/check_accept.png" />
+		<BitmapImage x:Key="two" UriSource="/TestWPF;component/res/check_reject.png" />
+	</Window.Resources>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition
+				Height="*" />
+			<RowDefinition
+				Height="Auto" />
+		</Grid.RowDefinitions>
+		
+		<gui:TreeGrid
+			Grid.Row="0"
+			AutoGenerateColumns="False"
+			GridLinesVisibility="None"
+			CanUserSortColumns="False"
+			AlternatingRowBackground="#DEF"
+			RowHeaderWidth="0"
+			gui:DataGrid_.CopyPasteSupport="True"
+			gui:DataGrid_.ColumnVisibilitySupport="True"
+			TreeSource="{Binding DataView}"
+			>
+			<DataGrid.Columns>
+				<gui:TreeGridColumn
+					Header="Name"
+					Binding="{Binding Name, Mode=TwoWay}"
+					Children="{Binding Child}"
+					Image="{Binding Image}"
+					IndentSize="20"
+					IsReadOnly="False"
+					MaxHeight="20"
+					Width="1*"
+					/>
+				<DataGridTextColumn
+					Header="Description"
+					Binding="{Binding Description}"
+					
+					Width="2*"
+					/>
+				<DataGridTextColumn
+					Header="Value"
+					Binding="{Binding Value}"
+					Width="0.5*"
+					/>
+			</DataGrid.Columns>
+		</gui:TreeGrid>
+		
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			Background="White">
+			<Button
+				Content="Generate Data"
+				Command="{Binding GenData}"
+				MinWidth="80"
+				/>
+			<Button
+				Content="Add Item"
+				Command="{Binding AddItem}"
+				MinWidth="80"
+				/>
+			<Button
+				Content="Remove Item"
+				Command="{Binding RemoveItem}"
+				MinWidth="80"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>

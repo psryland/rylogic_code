@@ -175,6 +175,23 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
+	/// <summary>Convert an unknown type to a string of it's type name</summary>
+	public class ToTypeName : MarkupExtension, IValueConverter
+	{
+		public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value?.GetType().Name ?? "null";
+		}
+		public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>Convert bitmaps/icons to image sources</summary>
 	public class ToImageSource : MarkupExtension, IValueConverter
 	{

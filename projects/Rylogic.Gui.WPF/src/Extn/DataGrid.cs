@@ -60,6 +60,12 @@ namespace Rylogic.Gui.WPF
 			var cell_content = ci.Column.GetCellContent(ci.Item);
 			return (DataGridCell?)cell_content?.Parent ?? null;
 		}
+		public static DataGridCell? Cell(this DataGridRow row, int index)
+		{
+			m_mi_TryGetCell ??= typeof(DataGridRow).GetMethod("TryGetCell", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new Exception("TryGetCell method not found");
+			return (DataGridCell?)m_mi_TryGetCell.Invoke(row, new object[] { index });
+		}
+		private static MethodInfo? m_mi_TryGetCell;
 
 		/// <summary>Returns the cell that contains 'dp' (or null)</summary>
 		public static DataGridCell? FindCell(DependencyObject dp)
@@ -363,8 +369,9 @@ namespace Rylogic.Gui.WPF
 				foreach (var ci in grid.SelectedCells.Where(x => x.Column.Visibility == Visibility.Visible))
 				{
 					Binding? binding =
-						ci.Column is DataGridBoundColumn col ? (Binding?)col.Binding :
-						ci.Column is DataGridBoundTemplateColumn tcol ? tcol.Binding :
+						ci.Column is DataGridBoundColumn col0 ? (Binding?)col0.Binding :
+						ci.Column is DataGridBoundTemplateColumn col1 ? col1.Binding :
+						ci.Column is TreeGridColumn col2 ? (Binding?)col2.Binding :
 						null;
 
 					if (binding != null)

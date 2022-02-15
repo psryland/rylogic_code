@@ -82,8 +82,8 @@ namespace Rylogic.Gui.WPF
 			// Determine the type of the property
 			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
 			var prop_type = is_prop
-				? (class_type.GetProperty(prop_name)?.PropertyType                                                ?? throw new ArgumentNullException($"Property type is unknown"))
-				: (class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public)?.ReturnType ?? throw new ArgumentNullException($"Property return type is unknown"));
+				? (class_type.GetProperty(prop_name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)?.PropertyType ?? throw new ArgumentNullException($"Property {prop_name} not found on {class_type.Name}"))
+				: (class_type.GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)?.ReturnType ?? throw new ArgumentNullException($"Method Get{prop_name} not found on {class_type.Name}"));
 
 			// Set the default value
 			def ??= (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);

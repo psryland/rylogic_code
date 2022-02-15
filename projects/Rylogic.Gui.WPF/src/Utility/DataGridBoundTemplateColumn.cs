@@ -24,15 +24,15 @@ namespace Rylogic.Gui.WPF
 		public static readonly DependencyProperty BindingProperty = Gui_.DPRegister<DataGridBoundTemplateColumn>(nameof(Binding), null, Gui_.EDPFlags.None);
 
 		// Cell factory methods
-		protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)
-		{
-			var element = base.GenerateEditingElement(cell, dataItem);
-			if (Binding != null) element.SetBinding(ContentPresenter.ContentProperty, Binding);
-			return element;
-		}
 		protected override FrameworkElement GenerateElement(DataGridCell cell, object dataItem)
 		{
 			var element = base.GenerateElement(cell, dataItem);
+			if (Binding != null) element.SetBinding(ContentPresenter.ContentProperty, Binding);
+			return element;
+		}
+		protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)
+		{
+			var element = base.GenerateEditingElement(cell, dataItem);
 			if (Binding != null) element.SetBinding(ContentPresenter.ContentProperty, Binding);
 			return element;
 		}

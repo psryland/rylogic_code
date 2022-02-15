@@ -1,0 +1,100 @@
+﻿<DataGridTemplateColumn
+	x:Class="Rylogic.Gui.WPF.TreeGridColumn"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+	mc:Ignorable="d">
+
+	<DataGridTemplateColumn.CellTemplate>
+		<DataTemplate>
+			<DataTemplate.Resources>
+				<ResourceDictionary Source="TreeGridResources.xaml" />
+			</DataTemplate.Resources>
+			
+			<StackPanel
+				Orientation="Horizontal"
+				MaxHeight="{Binding Column.MaxHeight}"
+				>
+				
+				<!-- Indentation -->
+				<StackPanel
+					MinWidth="{Binding Indent}"/>
+
+				<!-- Expand button -->
+				<ToggleButton
+					Style="{StaticResource TreeGridColumn.ExpandCollapseToggleStyle}"
+					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=True}"
+					IsChecked="{Binding IsExpanded}"
+					ClickMode="Press"
+					/>
+
+				<!-- Optional Image -->
+				<Image
+					Source="{Binding Image}"
+					RenderOptions.BitmapScalingMode="Fant"
+					Stretch="Uniform"
+					/>
+
+				<!-- Item Text -->
+				<TextBlock
+					Text="{Binding Text}"
+					FontFamily="{Binding Column.FontFamily}"
+					FontSize="{Binding Column.FontSize}"
+					FontStyle="{Binding Column.FontStyle}"
+					FontWeight="{Binding Column.FontWeight}"
+					Foreground="{Binding Column.Foreground}"
+					VerticalAlignment="Center"
+					/>
+			</StackPanel>
+		</DataTemplate>
+	</DataGridTemplateColumn.CellTemplate>
+
+	<DataGridTemplateColumn.CellEditingTemplate>
+		<DataTemplate>
+			<DataTemplate.Resources>
+				<ResourceDictionary Source="TreeGridResources.xaml" />
+			</DataTemplate.Resources>
+			
+			<StackPanel
+				Orientation="Horizontal"
+				MaxHeight="{Binding Column.MaxHeight}"
+				>
+
+				<!-- Indentation -->
+				<StackPanel
+					MinWidth="{Binding Indent}" />
+
+				<!-- Expand button - Disabled while editing -->
+				<ToggleButton
+					Style="{StaticResource TreeGridColumn.ExpandCollapseToggleStyle}"
+					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=True}"
+					IsChecked="{Binding IsExpanded, Mode=OneWay}"
+					IsEnabled="False"
+					ClickMode="Press"
+					/>
+
+				<!-- Optional Image -->
+				<Image
+					Source="{Binding Image}"
+					RenderOptions.BitmapScalingMode="Fant"
+					Stretch="Uniform"
+					/>
+
+				<!-- Item Text -->
+				<TextBox
+					Text="{Binding Text, Mode=TwoWay}"
+					FontFamily="{Binding Column.FontFamily}"
+					FontSize="{Binding Column.FontSize}"
+					FontStyle="{Binding Column.FontStyle}"
+					FontWeight="{Binding Column.FontWeight}"
+					Foreground="{Binding Column.Foreground}"
+					VerticalAlignment="Center"
+					MinWidth="160"
+					/>
+			</StackPanel>
+		</DataTemplate>
+	</DataGridTemplateColumn.CellEditingTemplate>
+
+</DataGridTemplateColumn>
