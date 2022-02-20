@@ -87,6 +87,9 @@ namespace Rylogic.Common
 		/// <summary>True if the range spans zero elements</summary>
 		public bool Empty => End == Beg;
 
+		/// <summary>True if the range contains a positive interval</summary>
+		public bool Positive => End > Beg;
+
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public long Count
 		{
@@ -379,6 +382,9 @@ namespace Rylogic.Common
 
 		/// <summary>True if Beg == End</summary>
 		public bool Empty => Equals(Beg, End);
+
+		/// <summary>True if the range contains a positive interval</summary>
+		public bool Positive => End > Beg;
 
 		/// <summary>Get/Set the number of elements in the range. Setting changes 'End' only</summary>
 		public double Size

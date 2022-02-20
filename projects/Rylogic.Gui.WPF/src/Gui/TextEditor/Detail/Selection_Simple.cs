@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rylogic.Extn;
 
 namespace Rylogic.Gui.WPF.TextEditor
@@ -46,7 +43,7 @@ namespace Rylogic.Gui.WPF.TextEditor
 		public override int Length => Math.Abs(EndOffset - BegOffset);
 
 		/// <inheritdoc/>
-		public override IEnumerable<SelectionSegment> Segments => Enumerable_.Sequence(new SelectionSegment(BegOffset, Beg.VisualColumn ?? -1, EndOffset, End.VisualColumn ?? -1));
+		public override IEnumerable<SelectionSegment> Segments => Enumerable_.As(new SelectionSegment(BegOffset, Beg.VisualColumn ?? -1, EndOffset, End.VisualColumn ?? -1));
 
 		/// <inheritdoc/>
 		public override ISegment SurroundingSegment => new SelectionSegment(BegOffset, EndOffset);

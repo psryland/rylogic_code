@@ -15,51 +15,56 @@ using Rylogic.Extn;
 
 namespace Rylogic.Utility
 {
-	// Notes:
-	//  - There are *two* separate logging strategies in here;
-	//    The 'static Log' class is for basic application logging to console or file.
-	//       - The global methods are thread-safe (as the Log.XXXLogger class use synchronisation)
-	//    The 'Logger' class and 'LogToXXX' classes are a more sophisticated logging system.
-	//       - Allows for logging scopes
-	//       - Log entry time stamps
-	//       - Uses a producer/consumer queue for thread synchronisation
-
-	public enum ELogLevel
-	{
-		NoLevel,
-		Debug,
-		Info,
-		Warn,
-		Error,
-		Fatal,
-	}
-	public enum ELogOutputLevel
-	{
-		Debug,
-		Info,
-		Warn,
-		Error,
-		Exception,
-		Silent,
-	}
-	public interface ILogWriter
-	{
-		/// <summary>Write a message to the log. Filtering already applied</summary>
-		void Write(string msg);
-	}
-
-	public static class Log_
-	{
-		// Notes:
-		//  - The EntryDelimiter must be a single byte UTF8 character because the log control
-		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
-		//    blocks (for performance).
-		public const char EntryDelimiter = '\u001b';
-	}
-
 	/// <summary>Asynchronous logging instance</summary>
 	public class Logger :IDisposable
 	{
+		// Notes:
+		//  - This Logger isn't a singleton, it is completely instantiable. Applications
+		//    that want to use a singleton can create reference-counted singleton instances
+		//    of this object. (see boiler plate below)
+		//  - The shared context is only shared between Logger instances that are
+		//    created from an existing Logger instance. Each Logger constructor that
+		//    creates a new 'SharedContext' is independent of other Loggers.
+
+		/*	// Static Log Boiler Plate:
+			public static class Log
+			{
+				static Log()
+				{
+					m_ref_count = new RefCount();
+					m_ref_count.Referenced += delegate
+					{
+						m_logger = new Logger("VRex", new LogToFile(Filepath, LogToFile.EFlags.None));
+						
+						// Optional
+						m_logger.Serialise = evt => $"{Log_.EntryDelimiter}{evt.Level}|{evt.Timestamp}|{evt.Message}|\n";
+						m_logger.LogEntryPattern = new Regex($@"^(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*?)\|\n", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+					};
+					m_ref_count.ZeroCount += delegate
+					{
+						Util.Dispose(ref m_logger!);
+					};
+				}
+				private static RefCount m_ref_count;
+				private static Logger m_logger = null!;
+			
+				/// <summary>Get a reference token for the Log</summary>
+				public static IDisposable RefToken(object who) => m_ref_count.RefToken(who);
+			
+				/// <summary>Checked access to the 'm_logger' isntance</summary>
+				private static Logger m_log => m_logger ?? throw new Exception("No reference to the logger exists. Applications should create one before using the log");
+			
+				/// <summary>Log filepath</summary>
+				public static string Filepath => Util.ResolveUserDocumentsPath("Rylogic", "MyApp", "Logs", "log.txt");
+			
+				/// <summary>Log a message</summary>
+				public static void Write(ELogLevel level, string msg, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0) => m_log.Write(level, msg, file, line);
+			
+				/// <summary>Log an exception with message 'msg'</summary>
+				public static void Write(ELogLevel level, Exception ex, string msg, [CallerFilePath] string file = "", [CallerLineNumber] int line = 0) => m_log.Write(level, ex, msg, file, line);
+			}
+		*/
+
 		private Logger(string tag, SharedContext ctx, Logger? forward_log)
 		{
 			m_ctx = null!;
@@ -140,7 +145,10 @@ namespace Rylogic.Utility
 			set
 			{
 				if (m_ctx == value) return;
-				Util.Dispose(ref m_ref_token);
+				if (m_ctx != null)
+				{
+					Util.Dispose(ref m_ref_token);
+				}
 				m_ctx = value;
 				if (m_ctx != null)
 				{
@@ -321,7 +329,7 @@ namespace Rylogic.Utility
 					if (LogConsumerThreadActive == value) return;
 					if (m_thread != null)
 					{
-						Queue.Add(ShutdownTerminator);
+						Queue.Add(ShutdownSentinal);
 						Queue.CompleteAdding();
 						if (m_thread.IsAlive)
 							m_thread.Join();
@@ -418,7 +426,7 @@ namespace Rylogic.Utility
 						ev = Queue.Take(); // Blocks
 						Idle.Reset();
 					}
-					if (ReferenceEquals(ev, ShutdownTerminator))
+					if (ReferenceEquals(ev, ShutdownSentinal))
 					{
 						ev = new LogEvent();
 						return false;
@@ -443,7 +451,7 @@ namespace Rylogic.Utility
 			}
 
 			/// <summary>Magic value to signal log shutdown</summary>
-			private static readonly LogEvent ShutdownTerminator = new LogEvent();
+			private static readonly LogEvent ShutdownSentinal = new LogEvent();
 		}
 
 		/// <summary>An individual log event</summary>
@@ -471,22 +479,22 @@ namespace Rylogic.Utility
 			}
 
 			/// <summary>The importance of the log event</summary>
-			public ELogLevel Level { get; private set; }
+			public ELogLevel Level { get; }
 
 			/// <summary>When the log event was recorded (relative to the start time of the context)</summary>
 			public TimeSpan Timestamp { get; internal set; }
 
 			/// <summary>The tag of the logger through which the event was added</summary>
-			public string Tag { get; private set; }
+			public string Tag { get; }
 
 			/// <summary>The log message</summary>
-			public string Message { get; private set; }
+			public string Message { get; }
 
 			/// <summary>The associated file (if appropriate)</summary>
-			public string? File { get; private set; }
+			public string? File { get; }
 
 			/// <summary>The associated line number (if appropriate)</summary>
-			public int? Line { get; private set; }
+			public int? Line { get; }
 
 			/// <summary>The number of occurrences of the same log event</summary>
 			public int Occurrences { get; internal set; }
@@ -591,6 +599,41 @@ namespace Rylogic.Utility
 		public void Write(string msg)
 		{ }
 	}
+
+	/// <summary>Log extensions</summary>
+	public static class Log_
+	{
+		// Notes:
+		//  - The EntryDelimiter must be a single byte UTF8 character because the log control
+		//    reads bytes in blocks from the log file, and doesn't support delimiters spanning
+		//    blocks (for performance).
+		public const char EntryDelimiter = '\u001b';
+	}
+
+	/// <summary>Log entry levels</summary>
+	public enum ELogLevel
+	{
+		NoLevel,
+		Debug,
+		Info,
+		Warn,
+		Error,
+		Fatal,
+	}
+	public enum ELogOutputLevel
+	{
+		Debug,
+		Info,
+		Warn,
+		Error,
+		Exception,
+		Silent,
+	}
+	public interface ILogWriter
+	{
+		/// <summary>Write a message to the log. Filtering already applied</summary>
+		void Write(string msg);
+	}
 }
 
 #if PR_UNITTESTS
@@ -622,177 +665,4 @@ namespace Rylogic.UnitTests
 		}
 	}
 }
-#endif
-
-
-
-
-
-
-
-#if false // Remove or rename this... Log is too common a name
-	/// <summary>Static log instance for basic diagnostic logging</summary>
-	public static class Log
-	{
-		// Notes:
-		//   Usage:
-		//    At the start of your program call:
-		//     Log.Register(filepath, reset:false);
-		//   Throughout call
-		//     Log.Info(this, "Message");
-		//     etc
-		//   
-		//   To output to a file, Register with a valid filename
-		//   To output to the debug console, Register with the magic string "DebugConsole"
-		//   To output to nowhere, Register with null or an empty string
-
-		public const string ToDebugConsole = "DebugConsole";
-		public const char EntryDelimiter = '\u001b';
-
-		static Log()
-		{
-			Writer = new NullLogger();
-			FilterPattern = null;
-#if DEBUG
-			Level = ELogOutputLevel.Debug;
-#else
-			Level = ELogOutputLevel.Info;
-#endif
-		}
-
-		/// <summary>Set the log level. Messages below this level aren't logged</summary>
-		public static ELogOutputLevel Level { get; set; }
-
-		/// <summary>Where log output is sent</summary>
-		public static ILogWriter Writer { get; private set; }
-
-		/// <summary>Regex filter pattern</summary>
-		public static string? FilterPattern { get; set; }
-
-		/// <summary>Register a log file for the current process id. Pass null or empty string for filepath to log to the debug window</summary>
-		public static void Register(string filepath, bool reset)
-		{
-			try
-			{
-				if (filepath == ToDebugConsole)
-				{
-					Writer = new DebugConsoleLogger();
-					return;
-				}
-				if (Path_.IsValidFilepath(filepath, false))
-				{
-					Writer = new FileLogger(filepath, reset);
-					return;
-				}
-			}
-			catch {}
-			Writer = new NullLogger();
-			return;
-		}
-
-		/// <summary>Write debug trace statements into the log</summary>
-		public static void Debug(object sender, string str) => Write(ELogOutputLevel.Debug, sender, str);
-		public static void Debug(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Debug, sender, str, ex);
-
-		/// <summary>Write info to the current log</summary>
-		public static void Info(object sender, string str) => Write(ELogOutputLevel.Info, sender, str);
-		public static void Info(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Info, sender, str, ex);
-
-		/// <summary>Write info to the current log</summary>
-		public static void Warn(object sender, string str) => Write(ELogOutputLevel.Warn, sender, str);
-		public static void Warn(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Warn, sender, str, ex);
-
-		/// <summary>Write info to the current log</summary>
-		public static void Error(object sender, string str) => Write(ELogOutputLevel.Error, sender, str);
-		public static void Error(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Error, sender, str, ex);
-
-		/// <summary>Write info to the current log</summary>
-		public static void Exception(object sender, Exception? ex, string str) => Write(ELogOutputLevel.Exception, sender, str, ex);
-
-		/// <summary>Single method for filtering and formatting log messages</summary>
-		public static void Write(ELogOutputLevel level, object sender, string str, Exception? ex = null)
-		{
-			// Below the log level, ignore
-			if (level < Level)
-				return;
-
-			// Convert 'sender' to a tag
-			string tag;
-			if (sender == null)
-			{
-				tag = "";
-			}
-			else if (sender is string)
-			{
-				tag = (string)sender;
-			}
-			else
-			{
-				Type sender_type = sender.GetType();
-				tag = $"{sender_type.Namespace}.{sender_type.Name}";
-			}
-
-			// Filter out messages based on tag
-			if (FilterPattern != null && !Regex.IsMatch(tag, FilterPattern))
-				return;
-
-			// Construct the log message and write it
-			var msg = $"[{level}][{tag}] {str}{(ex != null ? Environment.NewLine + ex.MessageFull() : string.Empty)}"+Environment.NewLine;
-			Writer.Write(msg);
-		}
-
-#region Logger Implementations
-		public class NullLogger :ILogWriter
-		{
-			public void Write(string msg)
-			{ }
-		}
-		public class DebugConsoleLogger :ILogWriter
-		{
-			private readonly object m_lock;
-			public DebugConsoleLogger()
-			{
-				m_lock = new object();
-			}
-		
-			/// <summary>Add a string to the log</summary>
-			public void Write(string msg)
-			{
-				lock (m_lock)
-					System.Diagnostics.Debug.Write(msg);
-			}
-		}
-		public class FileLogger :ILogWriter
-		{
-			private readonly object m_lock;
-			public FileLogger(string filepath, bool reset)
-			{
-				System.Diagnostics.Debug.Assert(Path_.IsValidFilepath(filepath, false));
-				m_lock = new object();
-
-				// Ensure the directory exists (maybe this should go in an official logs folder?)
-				var dir = Path_.Directory(filepath);
-				if (!Path_.DirExists(dir))
-					Directory.CreateDirectory(dir);
-
-				// Ensure the file exists/is reset
-				Filepath = filepath;
-				using (File.Open(Filepath, reset ? FileMode.Create : FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite)) {}
-			}
-
-			/// <summary>The file being written</summary>
-			public string Filepath { get; set; }
-
-			/// <summary>Add a string to the log</summary>
-			public void Write(string str)
-			{
-				lock (m_lock)
-				{
-					using var f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite));
-					f.Write(str);
-				}
-			}
-		}
-#endregion
-	}
 #endif

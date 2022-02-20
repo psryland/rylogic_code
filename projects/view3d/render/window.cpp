@@ -696,26 +696,33 @@ namespace pr::rdr
 		auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
 		switch (res)
 		{
-		case S_OK:
-			m_idle = false;
-			break;
-
-		// This happens when the window is not visible on-screen, the app should go into idle mode
-		case DXGI_STATUS_OCCLUDED:
-			m_idle = true;
-			break;
-
-		// The device failed due to a badly formed command. This is a run-time issue;
-		// The application should destroy and recreate the device.
-		case DXGI_ERROR_DEVICE_RESET:
-			throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
-
-		// This happens in situations like, laptop un-docked, or remote desktop connect etc.
-		// We'll just throw so the app can shutdown/reset/whatever
-		case DXGI_ERROR_DEVICE_REMOVED:
+			case S_OK:
 			{
+				m_idle = false;
+				break;
+			}
+			case DXGI_STATUS_OCCLUDED:
+			{
+				// This happens when the window is not visible on-screen, the app should go into idle mode
+				m_idle = true;
+				break;
+			}
+			case DXGI_ERROR_DEVICE_RESET:
+			{
+				// The device failed due to a badly formed command. This is a run-time issue;
+				// The application should destroy and recreate the device.
+				throw Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
+			}
+			case DXGI_ERROR_DEVICE_REMOVED:
+			{
+				// This happens in situations like, laptop un-docked, or remote desktop connect etc.
+				// We'll just throw so the app can shutdown/reset/whatever
 				Renderer::Lock lock(*m_rdr);
 				throw Exception<HRESULT>(lock.D3DDevice()->GetDeviceRemovedReason(), "Graphics adapter no longer available");
+			}
+			default:
+			{
+				throw std::runtime_error("Unknown result from SwapChain::Present");
 			}
 		}
 	}

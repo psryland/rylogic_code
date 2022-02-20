@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -101,7 +98,7 @@ namespace Rylogic.Gui.WPF
 				void FinalInvalidate()
 				{
 					m_resize_invalidate_pending = false;
-					if (resize_issue != m_resize_issue || Window == null) return;
+					if (resize_issue != m_resize_issue) return;
 					Invalidate();
 				}
 			}
@@ -269,7 +266,7 @@ namespace Rylogic.Gui.WPF
 		private D3D11Image m_d3d_image = null!;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
-		public void Invalidate() => Window.Invalidate();
+		public void Invalidate() => Window?.Invalidate();
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
@@ -291,7 +288,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
 		public int ClickTimeMS
 		{
-			get { return m_click_time_ms; }
+			get => m_click_time_ms;
 			set
 			{
 				if (m_click_time_ms == value) return;
@@ -304,7 +301,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable default keyboard shortcuts</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get { return m_default_keyshortcuts; }
+			get => m_default_keyshortcuts;
 			set
 			{
 				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts))))

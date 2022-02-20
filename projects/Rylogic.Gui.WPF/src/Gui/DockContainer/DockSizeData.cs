@@ -44,27 +44,31 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The branch associated with this sizes</summary>
 		internal Branch? Owner { get; set; }
 
-		/// <summary>
-		/// The size of the left, top, right, bottom panes. If >= 1, then the value is interpreted
-		/// as pixels, if less than 1 then interpreted as a fraction of the client area width/height</summary>
+		/// <summary>The size of the left pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client width</summary>
 		public double Left
 		{
 			get => m_left;
 			set => SetProp(ref m_left, value);
 		}
 		private double m_left;
+
+		/// <summary>The size of the top pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client height</summary>
 		public double Top
 		{
 			get => m_top;
 			set => SetProp(ref m_top, value);
 		}
 		private double m_top;
+
+		/// <summary>The size of the right pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client width</summary>
 		public double Right
 		{
 			get => m_right;
 			set => SetProp(ref m_right, value);
 		}
 		private double m_right;
+
+		/// <summary>The size of the bottom pane. If >= 1, then the value is pixels, otherwise it's a fraction of the client height</summary>
 		public double Bottom
 		{
 			get => m_bottom;

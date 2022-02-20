@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -24,21 +25,16 @@ namespace Rylogic.Gui.WPF
 		//    grid can bind directly to the objects.
 		//  - For any object visibile in the grid, there is a Node object that wraps it and
 		//    provides methods for accessing the children and parent of the object.
-		//  - The 'TreeSource' can use INotifyCollectionChanged with Reset/Add/Remove/Replace but indices
-		//    will be ignored because they are meaningless in a tree structure.
+		//  - The 'TreeSource' can use INotifyCollectionChanged with Reset/Add/Remove/Replace
+		//    but indices will be ignored because they are meaningless in a tree structure.
+		//  - A 1:1 map from 'object' to 'Node' is used. This means each 'object' must be unique.
+		//    You may need to override the Equals/GetHashCode for your 'object' type.
 
-
-
-		//  This is needed because the bound collection contains only the root-level items.
-		//    We need to have an internal flat-list of items to bind to the DataGrid.ItemsSource.
-		//  - The FlatView must be a list of user items (i.e. not 'Node') because the other columns
-		//    in the grid bind to that object. Only the TreeColumn binds to Nodes (which wrap the user item).
 		public TreeGrid()
 		{
 			List = new FlatList(this);
 			ListView = new ListCollectionView(List);
-
-			IsSynchronizedWithCurrentItem = true;
+			ItemsSource = ListView; // Bind the grid to the flat list of 'objects'
 			Columns.CollectionChanged += delegate { m_tree_column = null; };
 		}
 		protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -93,41 +89,52 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
+		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
+		{
+			base.OnMouseDoubleClick(e);
+			if (ContainerFromElement((DependencyObject)e.OriginalSource) is DataGridRow row &&
+				List.FindNode(row.DataContext) is Node node)
+			{
+				node.IsExpanded = !node.IsExpanded;
+				e.Handled = true;
+			}
+		}
 
 		/// <summary>The tree column. There should be exactly one</summary>
 		private TreeGridColumn TreeColumn => m_tree_column ??= Columns.OfType<TreeGridColumn>().SingleOrDefault() ?? throw new Exception("TreeGrids should have exactly one DataGridTreeColumn");
 		private TreeGridColumn? m_tree_column;
 
-		/// <summary>The collection of root level tree items</summary>
-		public IEnumerable? TreeSource
+		/// <summary>The single, or collection of, root level tree items</summary>
+		public object? TreeSource
 		{
-			get => (IEnumerable?)GetValue(TreeSourceProperty);
+			get => GetValue(TreeSourceProperty);
 			set => SetValue(TreeSourceProperty, value);
 		}
-		private void TreeSource_Changed(IEnumerable? nue, IEnumerable? old)
+		private void TreeSource_Changed(object? nue, object? old)
 		{
-			using (var defer = List.DeferRefresh())
+			using var defer = List.DeferRefresh();
+
+			List.Clear();
+
+			if (old is INotifyCollectionChanged old_ncc)
 			{
-				List.Clear();
-
-				if (old is INotifyCollectionChanged old_ncc)
-				{
-					old_ncc.CollectionChanged -= HandleCollectionChanged;
-				}
-				if (nue is INotifyCollectionChanged nue_ncc)
-				{
-					nue_ncc.CollectionChanged += HandleCollectionChanged;
-					HandleCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-				}
-				else if (nue is IEnumerable nue_list)
-				{
-					foreach (var item in nue_list)
-						List.Add(item!, null);
-				}
+				old_ncc.CollectionChanged -= HandleCollectionChanged;
 			}
-
-			// Bind the grid to the flat list of 'objects'
-			ItemsSource = ListView;
+			if (nue is INotifyCollectionChanged nue_ncc)
+			{
+				nue_ncc.CollectionChanged += HandleCollectionChanged;
+				HandleCollectionChanged(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+			}
+			else if (nue is IEnumerable nue_list)
+			{
+				int child_index = 0;
+				foreach (var item in nue_list)
+					List.Add(item!, null, child_index++);
+			}
+			else if (nue != null)
+			{
+				List.Add(nue, null, 0);
+			}
 
 			// Handlers
 			void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -142,8 +149,9 @@ namespace Rylogic.Gui.WPF
 						List.Clear();
 						if (TreeSource is IEnumerable roots)
 						{
+							int child_index = 0;
 							foreach (var item in roots)
-								List.Add(item!, null);
+								List.Add(item!, null, child_index++);
 						}
 						break;
 					}
@@ -152,8 +160,9 @@ namespace Rylogic.Gui.WPF
 						// Items have been added to 'TreeSource'. Insert them into the flat list
 						foreach (var item in e.NewItems)
 						{
-							var parent = List.FindNode(item!) is Node node ? node.ParentNode : null;
-							List.Add(item!, parent);
+							var parent = List.FindNode(item) is Node node ? node.ParentNode : null;
+							var child_index = parent != null ? parent.ChildNodes.Count() : List.RootNodes.Count();
+							List.Add(item!, parent, child_index);
 						}
 						break;
 					}
@@ -177,7 +186,8 @@ namespace Rylogic.Gui.WPF
 						foreach (var item in e.NewItems)
 						{
 							var parent = List.FindNode(item!) is Node node ? node.ParentNode : null;
-							List.Add(item!, parent);
+							var child_index = parent != null ? parent.ChildNodes.Count() : List.RootNodes.Count();
+							List.Add(item!, parent, child_index);
 						}
 						break;
 					}
@@ -219,6 +229,12 @@ namespace Rylogic.Gui.WPF
 			node.IsExpanded = false;
 		}
 
+		/// <summary>Serialise the nodes that are expanded. All others are implicitly not expanded</summary>
+		public IEnumerable<NodeAddress> SaveState() => List.SaveState();
+
+		/// <summary>Expand/Collapse nodes based on the given state string</summary>
+		public void RestoreState(IEnumerable<NodeAddress> state) => List.RestoreState(state);
+
 		/// <summary>A collection optimised for expanding/collapsing tree nodes</summary>
 		internal class FlatList : IList, INotifyCollectionChanged
 		{
@@ -248,31 +264,40 @@ namespace Rylogic.Gui.WPF
 			private NodeMap Nodes { get; }
 
 			/// <summary>Enumerate the root level objects (in order)</summary>
-			private IEnumerable<object> RootItems => Owner.TreeSource?.Cast<object>() ?? Enumerable.Empty<object>();
+			public IEnumerable<object> RootItems =>
+				Owner.TreeSource is IEnumerable list ? list.Cast<object>() :
+				Owner.TreeSource != null ? Enumerable_.As(Owner.TreeSource!) :
+				Enumerable.Empty<object>();
 
 			/// <summary>Enumerate the root level nodes (in order)</summary>
-			private IEnumerable<Node> RootNodes => RootItems.Select(x => FindNode(x)).NotNull();
+			public IEnumerable<Node> RootNodes => RootItems.Select(x => FindNode(x)).NotNull();
 
-			/// <summary>Iterate over all visible items</summary>
-			public IEnumerator GetEnumerator()
+			/// <summary>Iterate over all nodes (in order)</summary>
+			public IEnumerable<Node> AllNodes
 			{
-				var stack = new Stack<IEnumerator<Node>>(new[] { RootNodes.GetEnumerator() });
-				for (; stack.Count != 0;)
+				get
 				{
-					var nodes = stack.Peek();
-					if (!nodes.MoveNext())
+					var stack = new Stack<IEnumerator<Node>>(new[] { RootNodes.GetEnumerator() });
+					for (; stack.Count != 0;)
 					{
-						stack.Pop();
-						continue;
+						var nodes = stack.Peek();
+						if (!nodes.MoveNext())
+						{
+							stack.Pop();
+							continue;
+						}
+
+						var node = nodes.Current;
+						yield return node;
+
+						if (node.IsExpanded)
+							stack.Push(node.ChildNodes.GetEnumerator());
 					}
-
-					var node = nodes.Current;
-					yield return node.DataItem;
-
-					if (node.IsExpanded)
-						stack.Push(node.ChildNodes.GetEnumerator());
 				}
 			}
+
+			/// <summary>Iterate over all visible items (in order)</summary>
+			public IEnumerable<object> AllItems => AllNodes.Select(x => x.DataItem);
 
 			/// <summary>The number of visible rows in the grid</summary>
 			public int Count => Nodes.Count;
@@ -283,7 +308,7 @@ namespace Rylogic.Gui.WPF
 				get
 				{
 					var i = -1;
-					foreach (var item in this)
+					foreach (var item in AllItems)
 					{
 						if (++i != index) continue;
 						return item!;
@@ -293,7 +318,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Return the node for an item. Returns null if 'item' is not visible</summary>
-			public Node? FindNode(object item)
+			public Node? FindNode(object? item)
 			{
 				if (item == null) return null;
 				return Nodes.TryGetValue(item, out var node) ? node : null;
@@ -311,9 +336,9 @@ namespace Rylogic.Gui.WPF
 				// Notes:
 				//  - The index is based on the visible nodes only
 				var index = 0;
-				foreach (var i in this)
+				foreach (var i in AllItems)
 				{
-					if (item == i) return index;
+					if (Equals(item, i)) return index;
 					++index;
 				}
 				return -1;
@@ -327,7 +352,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Add an item to the list of expanded nodes</summary>
-			public void Add(object item, Node? parent)
+			public void Add(object item, Node? parent, int child_index)
 			{
 				// Notes:
 				//  - add/remove are not symmetric. Add only adds immediate children
@@ -337,11 +362,17 @@ namespace Rylogic.Gui.WPF
 				//    only some of the children of a node are in the list.
 				if (item == null)
 					throw new Exception("Cannot add null items");
+				if (Nodes.ContainsKey(item))
+					throw new InvalidOperationException($"Item {item} is already in the tree. Tree items must be unique.");
 
-				// Add the node
-				var node = Node.Create(item, parent, Owner);
-				Nodes[item] = node;
+				// Add the node.
+				var node = Node.Create(item, parent, child_index, Owner);
+				Nodes.Add(item, node);
+
+				// Get the index of the newly added item
 				var index = IndexOf(item);
+				if (index == -1)
+					throw new Exception("The item just added does not have an index in the collection");
 
 				// Notify
 				NotifyCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, index));
@@ -360,8 +391,12 @@ namespace Rylogic.Gui.WPF
 					foreach (var child in node.ChildItems)
 						Remove(child);
 
-				// Remove the node
+				// Get the index of the item to be removed
 				var idx = IndexOf(item);
+				if (idx == -1)
+					throw new Exception("The item being removed is not in the collection");
+
+				// Remove the node
 				Nodes.Remove(item);
 
 				// If we're deleting the current item, make the previous one current
@@ -374,6 +409,50 @@ namespace Rylogic.Gui.WPF
 				NotifyCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, idx));
 			}
 
+			/// <summary>Serialise the nodes that are expanded. All others are implicitly not expanded</summary>
+			public IEnumerable<NodeAddress> SaveState()
+			{
+				return AllNodes
+					.Where(x => x.IsExpanded)
+					.Select(x => new NodeAddress { Level = x.Level, Index = x.ChildIndex });
+			}
+
+			/// <summary>Expand/Collapse nodes based on the given state string</summary>
+			public void RestoreState(IEnumerable<NodeAddress> expanded)
+			{
+				// 'states' contains the addresses of the expanded nodes only.
+				// Starting from the root nodes, expanded those that occur in 'states'.
+				var expanded_ordered = expanded.OrderBy(x => x.Level).ThenBy(x => x.Index).ToList();
+				bool ExpandedState(int level, int index)
+				{
+					var idx = expanded_ordered.BinarySearch(x => x.Level != level ? x.Level.CompareTo(level) : x.Index.CompareTo(index));
+					return idx >= 0; // Found means expanded
+				}
+
+				// Prevent refreshes while updating state
+				using var defer = DeferRefresh();
+
+				// Restore the states from the root down.
+				var queue = new Queue<IEnumerator<Node>>(new[] { RootNodes.GetEnumerator() });
+				for (; queue.Count != 0;)
+				{
+					var nodes = queue.Peek();
+					if (!nodes.MoveNext())
+					{
+						queue.Dequeue();
+						continue;
+					}
+
+					// Expand or collapse the node
+					var node = nodes.Current;
+					node.IsExpanded = ExpandedState(node.Level, node.ChildIndex);
+
+					// Queue up the children
+					if (node.IsExpanded)
+						queue.Enqueue(node.ChildNodes.GetEnumerator());
+				}
+			}
+
 			/// <inheritdoc/>
 			public event NotifyCollectionChangedEventHandler? CollectionChanged;
 			private void NotifyCollectionChanged(NotifyCollectionChangedEventArgs args)
@@ -381,7 +460,6 @@ namespace Rylogic.Gui.WPF
 				if (m_defer_ncc_events != 0) return;
 				CollectionChanged?.Invoke(this, args);
 			}
-			private int m_defer_ncc_events;
 
 			/// <summary>Suspended NCC events and do a refresh when disposed</summary>
 			public IDisposable DeferRefresh()
@@ -390,6 +468,7 @@ namespace Rylogic.Gui.WPF
 					() => ++m_defer_ncc_events,
 					() => { --m_defer_ncc_events; NotifyCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset)); });
 			}
+			private int m_defer_ncc_events;
 
 			#region IList
 
@@ -433,7 +512,7 @@ namespace Rylogic.Gui.WPF
 			{
 				throw new System.NotImplementedException();
 			}
-			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+			IEnumerator IEnumerable.GetEnumerator() => (IEnumerator)AllItems;
 
 			#endregion
 		}
@@ -443,19 +522,30 @@ namespace Rylogic.Gui.WPF
 		internal class Node : FrameworkElement, INotifyPropertyChanged
 		{
 			/// <summary>Node factory that adds bindings from the DataGridTreeColumn</summary>
-			public static Node Create(object item, Node? parent, TreeGrid owner)
+			public static Node Create(object item, Node? parent, int child_index, TreeGrid owner)
 			{
-				var node = new Node(item, parent, owner);
+				var node = new Node(item, parent, child_index, owner);
 				var tcol = owner.TreeColumn;
-				if (tcol.Binding is BindingBase name) node.SetBinding(TextProperty, Binding_.Clone(name, source: node.DataItem));
-				if (tcol.Image is BindingBase image) node.SetBinding(ImageProperty, Binding_.Clone(image, source: node.DataItem));
-				if (tcol.Children is BindingBase children) node.SetBinding(ChildrenProperty, Binding_.Clone(children, source: node.DataItem));
+				var is_readonly = owner.IsReadOnly || tcol.IsReadOnly;
+				if (tcol.Binding is Binding name) node.SetBinding(TextProperty, Binding_.Clone(name, source: node.DataItem, mode: CoerceMode(name.Mode)));
+				if (tcol.Image is Binding image) node.SetBinding(ImageProperty, Binding_.Clone(image, source: node.DataItem, mode: CoerceMode(image.Mode)));
+				if (tcol.Children is Binding children) node.SetBinding(ChildrenProperty, Binding_.Clone(children, source: node.DataItem, mode: BindingMode.OneWay));
 				return node;
+
+				// Helpers
+				BindingMode CoerceMode(BindingMode mode)
+				{
+					if (mode == BindingMode.Default) return is_readonly ? BindingMode.OneWay : BindingMode.TwoWay;
+					if (is_readonly && (mode == BindingMode.TwoWay || mode == BindingMode.OneWayToSource))
+						throw new InvalidOperationException("A TwoWay or OneWayToSource binding cannot work on a read-only property");
+					return mode;
+				}
 			}
-			private Node(object data_item, Node? parent, TreeGrid owner)
+			private Node(object data_item, Node? parent, int child_index, TreeGrid owner)
 			{
 				Owner = owner;
 				ParentNode = parent;
+				ChildIndex = child_index;
 				DataItem = data_item;
 			}
 
@@ -473,6 +563,9 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>The parent of this node</summary>
 			public Node? ParentNode { get; }
+
+			/// <summary>The index of this index within the parent</summary>
+			public int ChildIndex { get; }
 
 			/// <summary>Return the root-level node for this node</summary>
 			public Node RootNode
@@ -508,8 +601,9 @@ namespace Rylogic.Gui.WPF
 						m_is_expanded = true;
 
 						// Add each child to the flat list
+						int child_index = 0;
 						foreach (var child in ChildItems)
-							List.Add(child, this);
+							List.Add(child, this, child_index++);
 					}
 					else
 					{
@@ -577,71 +671,12 @@ namespace Rylogic.Gui.WPF
 			public event PropertyChangedEventHandler? PropertyChanged;
 			private void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
+
+		/// <summary>Record of the state of the state of a node</summary>
+		public struct NodeAddress
+		{
+			public int Level;
+			public int Index;
+		}
 	}
 }
-
-#if false
-			/// <summary>Return the count of all (visible) nodes below this one</summary>
-			public int DescendantCount
-			{
-				get
-				{
-					//if (m_descendant_count == null)
-					{
-						static int DescCount(Node n) => 1 + (n.IsExpanded ? n.ChildNodes.Sum(x => 1 + x.DescendantCount) : 0);
-						m_descendant_count = -1 + DescCount(this);
-					}
-					return m_descendant_count.Value;
-				}
-			}
-			private int? m_descendant_count;
-
-			/// <summary>Enumerate the expanded children of 'node'</summary>
-			private IEnumerable<Node> VisibleChildren(Node node)
-			{
-				if (!node.IsExpanded) yield break;
-				foreach (var child in node.Children!)
-					yield return Nodes[child!];
-			}
-
-
-		/// <summary>Expand 'node' in the tree view</summary>
-		internal bool Expand(Node node)
-		{
-			if (FlatView?.SourceCollection is not FlatList list)
-				return false;
-			if (!node.HasChildren)
-				return false;
-
-		//	// Find where 'node' is in the flat list (todo: optimise)
-		//	var idx = list.Lookup(node.DataItem);
-		//	if (idx == -1)
-		//		return false;
-		//
-		//	// Insert the children of 'node'
-		//	foreach (var child in children)
-		//		list.Insert(++idx, child!);
-
-			return true;
-		}
-
-		/// <summary>Collapse 'node' in the tree view</summary>
-		internal bool Collapse(Node node)
-		{
-			if (FlatView?.SourceCollection is not ObservableCollection<object> list)
-				return false;
-			if (node.Children is not IEnumerable children)
-				return false;
-
-			// Find where 'node' is in the flat list (todo: optimise)
-			var idx = list.IndexOf(node.DataItem);
-			if (idx == -1)
-				return false;
-
-			// Remove the children of 'node'
-			foreach (var child in children)
-				list.RemoveAt(++idx);
-
-			return true;
-		}
-#endif

@@ -25,6 +25,15 @@ namespace Rylogic.Gui.WPF
 {
 	public static class DataGrid_
 	{
+		// Notes:
+
+		// HowTos:
+		//  - Double click a row:
+		//    Create a row style like this and set it as the RowStyle on the grid.
+		//       <Style x:Key="StyleRow" TargetType="DataGridRow">
+		//            <EventSetter Event = "MouseDoubleClick" Handler="HandleDoubleClick" />
+		//       </Style>
+
 		/// <summary>Grid address</summary>
 		[DebuggerDisplay("[{RowIndex}, {ColIndex}]")]
 		public struct Address
@@ -529,6 +538,46 @@ namespace Rylogic.Gui.WPF
 			{
 				grid.ColumnVisibilityCMenu();
 				args.Handled = true;
+			}
+		}
+
+		#endregion
+
+		#region Arrows Commit Edits
+
+		// Usage:
+		//  Add 'gui:DataGrid_.ArrowsCommitEdits="True"'
+
+		private const int ArrowsCommitEdits = 0;
+		public static readonly DependencyProperty ArrowsCommitEditsProperty = Gui_.DPRegisterAttached(typeof(DataGrid_), nameof(ArrowsCommitEdits), Boxed.False, Gui_.EDPFlags.None);
+		public static bool GetArrowsCommitEdits(DependencyObject obj) => (bool)obj.GetValue(ArrowsCommitEditsProperty);
+		public static void SetArrowsCommitEdits(DependencyObject obj, bool value) => obj.SetValue(ArrowsCommitEditsProperty, value);
+		private static void ArrowsCommitEdits_Changed(DependencyObject obj)
+		{
+			if (obj is not DataGrid grid)
+				return;
+
+			grid.BeginningEdit -= HandleCellEditBeg;
+			grid.CellEditEnding -= HandleCellEditEnd;
+			if (GetArrowsCommitEdits(obj))
+			{
+				grid.BeginningEdit += HandleCellEditBeg;
+				grid.CellEditEnding += HandleCellEditEnd;
+			}
+
+			// Handlers
+			void HandleCellEditBeg(object? sender, DataGridBeginningEditEventArgs e)
+			{
+				grid.PreviewKeyDown += HandleKeyDown;
+			}
+			void HandleCellEditEnd(object? sender, DataGridCellEditEndingEventArgs e)
+			{
+				grid.PreviewKeyDown -= HandleKeyDown;
+			}
+			void HandleKeyDown(object? sender, KeyEventArgs e)
+			{
+				if (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.PageUp || e.Key == Key.PageDown)
+					grid.CommitEdit();
 			}
 		}
 

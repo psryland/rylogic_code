@@ -45,14 +45,16 @@ namespace Rylogic.Common
 		/// <summary>The current number of references</summary>
 		public int Count
 		{
-			get { return m_count; }
+			get => m_count;
 			private set
 			{
 				if (m_count == value) return;
-				Debug.Assert(Math.Abs(m_count - value) == 1);
+				if (Math.Abs(m_count - value) != 1) throw new Exception("RefCount should only be changed by one reference at a time");
+				var beg = m_count == 0 && value == 1;
+				var end = m_count == 1 && value == 0; 
 				m_count = value;
-				if (m_count == 1) Referenced?.Invoke(this, EventArgs.Empty);
-				if (m_count == 0) ZeroCount?.Invoke(this, EventArgs.Empty);
+				if (beg) Referenced?.Invoke(this, EventArgs.Empty);
+				if (end) ZeroCount?.Invoke(this, EventArgs.Empty);
 				if (m_count < 0) throw new Exception("Ref count mismatch");
 			}
 		}

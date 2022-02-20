@@ -15,6 +15,52 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
 {
+	///// <summary>Use the expression engine to evaluate a lambda</summary>
+	//public class Expr :MarkupExtension, IValueConverter
+	//{
+	//	/// <summary>Cache the lambda expression</summary>
+	//	private string m_expr_string = string.Empty;
+	//	private Func<object?, object>? m_expr = null;
+
+	//	public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		// The parameter should be a lambda expression
+	//		if (parameter is not string lambda_expr)
+	//			return null;
+
+	//		try
+	//		{
+	//			if (m_expr == null || m_expr_string != lambda_expr)
+	//			{
+	//				var p = Expression.Parameter(value.GetType(), "x");
+	//				var body = Expression.Call("
+
+	//				var expr = // Expression_.Parse(new[]{ p }, lambda_expr);
+	//					Expression.Lambda(body, p);
+	//				// Cache the compiled expression
+	//				m_expr = expr;
+	//				m_expr_string = lambda_expr;
+	//			}
+
+	//			// Evaluate the expression
+	//			return m_expr(value);
+	//		}
+	//		catch (Exception ex)
+	//		{
+	//			Debug.WriteLine($"Converter '{nameof(Lambda)}' threw an error: {ex.Message}");
+	//		}
+	//		return null;
+	//	}
+	//	public object? ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		throw new NotSupportedException($"MarkupExtension '{nameof(Lambda)}' cannot convert back to '{targetType.Name}'");
+	//	}
+	//	public override object ProvideValue(IServiceProvider serviceProvider)
+	//	{
+	//		return this;
+	//	}
+	//}
+
 	/// <summary>Use a function to convert a value to something else</summary>
 	public class Lambda :MarkupExtension, IValueConverter
 	{
@@ -32,6 +78,8 @@ namespace Rylogic.Gui.WPF.Converters
 			{
 				if (m_expr == null || m_expr_string != lambda_expr)
 				{
+					// TODO: this is sloooow. Could make a DependencyProperty for 'Namespaces' and 'Assemblies'
+
 					// Add the assemblies and namespaces needed to compile the expression
 					var assemblies = AppDomain.CurrentDomain.GetAssemblies()
 						.Where(x => x.IsDynamic == false)

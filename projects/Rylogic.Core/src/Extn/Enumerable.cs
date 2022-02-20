@@ -1,4 +1,4 @@
-//***************************************************
+﻿//***************************************************
 // Utility Functions
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
@@ -16,11 +16,20 @@ namespace Rylogic.Extn
 	/// <summary>Extensions for IEnumerable</summary>
 	public static class Enumerable_
 	{
-		/// <summary>Create an IEnumerable from a single value</summary>
-		public static IEnumerable<T> Sequence<T>(T value)
+		/// <summary>Create an IEnumerable from parameters</summary>
+		public static IEnumerable<T> As<T>(params T[] items)
 		{
-			yield return value;
+			foreach (var item in items)
+				yield return item;
 		}
+		public static IEnumerable<T> As<T>(params object?[] items)
+		{
+			foreach (var item in items)
+				yield return (T)item!;
+		}
+
+		/// <summary>Create an IEnumerable from a single value</summary>
+		[Obsolete] public static IEnumerable<T> Sequence<T>(T value) => As<T>(value);
 
 		/// <summary>Enumerate instances of a given type</summary>
 		public static IEnumerable OfType(this IEnumerable source, Type ty)
