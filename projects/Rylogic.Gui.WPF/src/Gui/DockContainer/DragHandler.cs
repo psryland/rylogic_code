@@ -365,12 +365,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Look for the dock pane under the mouse
 			if (pane == null)
 			{
+				// Get all the tree hosts from owning DockContainer and check for mouse over a dock pane.
+				// Careful though, have to check it's a dock pane that belongs to 'DockContainer'
 				var tree_hosts = DockContainer.AllTreeHosts.Except(DraggedFromTree).Prepend(DraggedFromTree);
 				foreach (var tree in tree_hosts)
 				{
 					var hit = VisualTreeHelper.HitTest(tree.Root, tree.Root.PointFromScreen(screen_pt));
-					pane = hit?.VisualHit is DependencyObject dp ? dp.FindVisualParent<DockPane>(root: tree.Root) : null;
-					if (pane != null) break;
+					if (hit?.VisualHit is not DependencyObject dp ||
+						dp.FindVisualParent<DockPane>(pred: x => ReferenceEquals(x.DockContainer, DockContainer), root: tree.Root) is not DockPane p)
+						continue;
+
+					pane = p;
+					break;
 				}
 			}
 
@@ -546,13 +552,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					if (branch.TreeHost is AutoHidePanel ahp)
 					{
 						var area = DockContainer.RenderArea();
-						var rect = DockContainer.DockSiteBounds(ahp.DockSite, area, branch.DockedMask, branch.DockSizes);
+						var rect = DockContainer.DockSiteBounds(ahp.DockSite, area, branch.DockedMask, branch.DockSize);
 						bounds = DockContainer.RectToScreen(rect);
 					}
 					else if (branch.IsVisible)
 					{
 						var area = branch.RenderArea();
-						var rect = DockContainer.DockSiteBounds(docksite, area, branch.DockedMask, branch.DockSizes);
+						var rect = DockContainer.DockSiteBounds(docksite, area, branch.DockedMask, branch.DockSize);
 						bounds = branch.RectToScreen(rect);
 					}
 					else

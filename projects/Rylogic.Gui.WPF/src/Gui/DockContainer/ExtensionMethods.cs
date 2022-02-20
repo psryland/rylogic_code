@@ -11,11 +11,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			switch (dock)
 			{
-			default: throw new Exception($"Unknown dock value {dock}");
-			case Dock.Left: return EDockSite.Left;
-			case Dock.Top: return EDockSite.Top;
-			case Dock.Right: return EDockSite.Right;
-			case Dock.Bottom: return EDockSite.Bottom;
+				case Dock.Left: return EDockSite.Left;
+				case Dock.Top: return EDockSite.Top;
+				case Dock.Right: return EDockSite.Right;
+				case Dock.Bottom: return EDockSite.Bottom;
+				default: throw new Exception($"Unknown dock value {dock}");
 			}
 		}
 
@@ -24,15 +24,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			switch (docksite)
 			{
-			default:
-				throw new Exception($"Unknown dock site value {docksite}");
-			case EDockSite.Centre:
-			case EDockSite.None:
-				throw new Exception($"No equivalent of {docksite} for DockPanel.Dock values");
-			case EDockSite.Left: return Dock.Left;
-			case EDockSite.Top: return Dock.Top;
-			case EDockSite.Right: return Dock.Right;
-			case EDockSite.Bottom: return Dock.Bottom;
+				case EDockSite.Centre:
+				case EDockSite.Left: return Dock.Left;
+				case EDockSite.Top: return Dock.Top;
+				case EDockSite.Right: return Dock.Right;
+				case EDockSite.Bottom: return Dock.Bottom;
+				case EDockSite.None:
+					throw new Exception($"No equivalent of {docksite} for DockPanel.Dock values");
+				default:
+					throw new Exception($"Unknown dock site value {docksite}");
 			}
 		}
 

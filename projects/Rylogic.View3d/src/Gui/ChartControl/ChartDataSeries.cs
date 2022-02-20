@@ -18,6 +18,9 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public partial class ChartDataSeries : ChartControl.Element
 	{
+		// Notes:
+		//  - Remember user data can be attached to this object using the 'Element's UserData property
+
 		public ChartDataSeries(string name, EFormat format, OptionsData? options = null, int? capacity = null)
 			: this(Guid.NewGuid(), name, format, options, capacity)
 		{ }
@@ -82,9 +85,7 @@ namespace Rylogic.Gui.WPF
 					if (m_data.Count == 0) return RangeF.Invalid;
 					var beg = m_data.Front();
 					var end = m_data.Back();
-					m_range_x = new RangeF(
-						Format.HasFlag(EFormat.XIntg) ? beg.xi : beg.xf,
-						Format.HasFlag(EFormat.XIntg) ? end.xi : end.xf);
+					m_range_x = new RangeF(beg.x, end.x);
 				}
 				return m_range_x;
 			}
@@ -102,7 +103,7 @@ namespace Rylogic.Gui.WPF
 					// 'Transform' only applies to the graphics
 					using var lck = Lock();
 					var range = RangeF.Invalid;
-					foreach (var pt in m_data) range.Grow(Format.HasFlag(EFormat.YIntg) ? pt.yi : pt.yf);
+					foreach (var pt in m_data) range.Grow(pt.y);
 					m_range_y = range;
 				}
 				return m_range_y;
@@ -173,12 +174,12 @@ namespace Rylogic.Gui.WPF
 			using (Lock())
 			{
 				// Find the nearest point in the data to 'x'
-				var idx = m_data.BinarySearch(pt => pt.xf.CompareTo(x), find_insert_position: true);
+				var idx = m_data.BinarySearch(pt => pt.x.CompareTo(x), find_insert_position: true);
 
 				// Convert 'missing' to an index range within the data
 				var idx_missing = new RangeI(
-					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.Beg), find_insert_position: true),
-					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.End), find_insert_position: true));
+					m_data.BinarySearch(pt => pt.x.CompareTo(missing.Beg), find_insert_position: true),
+					m_data.BinarySearch(pt => pt.x.CompareTo(missing.End), find_insert_position: true));
 
 				// Limit the size of 'idx_missing' to the block size
 				const int PieceBlockSize = 4096;
@@ -190,30 +191,33 @@ namespace Rylogic.Gui.WPF
 				//todo: this isn't right... need to handle this function returning 'failed to create piece'
 				switch (Options.PlotType)
 				{
-				default: throw new Exception($"Unsupported plot type: {Options.PlotType}");
-				case EPlotType.Point:
+					case EPlotType.Point:
 					{
 						return idx_range.Size > 0
 							? CreatePointPlot(idx_range)
 							: new ChartGfxPiece(null, missing);
 					}
-				case EPlotType.Line:
+					case EPlotType.Line:
 					{
 						return idx_range.Size > 1
 							? CreateLinePlot(idx_range)
 							: new ChartGfxPiece(null, missing);
 					}
-				case EPlotType.StepLine:
+					case EPlotType.StepLine:
 					{
 						return idx_range.Size > 1
 							? CreateStepLinePlot(idx_range)
 							: new ChartGfxPiece(null, missing);
 					}
-				case EPlotType.Bar:
+					case EPlotType.Bar:
 					{
 						return idx_range.Size > 1
 							? CreateBarPlot(idx_range)
 							: new ChartGfxPiece(null, missing);
+					}
+					default:
+					{
+						throw new Exception($"Unsupported plot type: {Options.PlotType}");
 					}
 				}
 			}
@@ -235,9 +239,9 @@ namespace Rylogic.Gui.WPF
 			for (int i = 0, iend = n; i != iend; ++i)
 			{
 				var pt = m_data[i + idx_range.Begi];
-				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
+				m_vbuf[i] = new View3d.Vertex(pt, col);
 				m_ibuf[i] = (ushort)i;
-				x_range.Grow(pt.xf);
+				x_range.Grow(pt.x);
 			}
 
 			// Create a nugget for the points using the sprite shader
@@ -275,10 +279,10 @@ namespace Rylogic.Gui.WPF
 				var pt = m_data[j];
 
 				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
-				m_ibuf[indx++] = (ushort)(v);
+				m_vbuf[vert++] = new View3d.Vertex(pt, col);
+				m_ibuf[indx++] = (ushort)v;
 
-				x_range.Grow(pt.xf);
+				x_range.Grow(pt.x);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
@@ -320,16 +324,16 @@ namespace Rylogic.Gui.WPF
 			{
 				// Get the point and the next point
 				var j = i + idx_range.Begi;
-				var pt = m_data[j];
-				var pt_r = j + 1 != m_data.Count ? m_data[j + 1] : pt;
+				var pt_l = m_data[j];
+				var pt_r = j + 1 != m_data.Count ? m_data[j + 1] : pt_l;
 
 				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt_r.xf, (float)pt.yf, 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(pt_l, col);
+				m_vbuf[vert++] = new View3d.Vertex(pt_r, col);
 				m_ibuf[indx++] = (ushort)(v + 0);
 				m_ibuf[indx++] = (ushort)(v + 1);
 
-				x_range.Grow(pt.xf);
+				x_range.Grow(pt_l.x);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
@@ -368,31 +372,63 @@ namespace Rylogic.Gui.WPF
 			m_ibuf.Resize(6 * n);
 			m_nbuf.Resize(1);
 
-			// Create the vertex/index data
-			int vidx = 0, iidx = 0, nidx = 0;
-			var col = Options.Colour;
-			var lwidth = (0.0 - Options.BarHorizontalAlignment) * Options.BarWidth;
-			var rwidth = (1.0 - Options.BarHorizontalAlignment) * Options.BarWidth;
+			// If there are mutliple bar plots on the chart, share the space with the others. Found the index of this bar chart, and the total number of bar charts
+			var bars = Chart?.Elements.OfType<ChartDataSeries>().Where(x => x.Options.PlotType == EPlotType.Bar && x.Visible) ?? Enumerable.Empty<ChartDataSeries>();
+			var total = Math.Max(bars.Count(), 1);
+			var index = Math.Max(bars.IndexOf(this), 0);
+
+			// Determine the size/colour/position of the bars relative to the x value
+			// These are still normalised here. They will be a fraction of the distance
+			// between neighbouring X values.
+			var edge_l = Math_.Lerp(
+				(0.0 - Options.BarHorizontalAlignment) * Options.BarWidth,
+				(1.0 - Options.BarHorizontalAlignment) * Options.BarWidth,
+				(index + 0.0) / total);
+			var edge_r = Math_.Lerp(
+				(0.0 - Options.BarHorizontalAlignment) * Options.BarWidth,
+				(1.0 - Options.BarHorizontalAlignment) * Options.BarWidth,
+				(index + 1.0) / total);
 			var x_range = RangeF.Invalid;
+			var col = Options.Colour;
+
+			// Create the vertex/index data
+			int vidx = 0, iidx = 0, nidx = 0, N = m_data.Count;
 			for (int i = 0; i != n; ++i)
 			{
-				// Get the points on either side of 'i'
+				// Get the data points on either side of 'i'
 				var j = i + idx_range.Begi;
-				var pt_l = j != 0 ? m_data[j - 1] : null;
 				var pt = m_data[j];
-				var pt_r = j + 1 != m_data.Count ? m_data[j + 1] : null;
+				var pt_l = j - 1 >= 0 ? m_data[j - 1] : null;
+				var pt_r = j + 1 <  N ? m_data[j + 1] : null;
 
-				// Get the distance to the left and right of 'pt.x'
-				var l = pt_l != null ? lwidth * (pt_l.xf - pt.xf) : 0;
-				var r = pt_r != null ? rwidth * (pt_r.xf - pt.xf) : 0;
-				if (j == 0 && j + 1 != m_data.Count && pt_r != null) l = -lwidth * (pt_r.xf - pt.xf);
-				if (j + 1 == m_data.Count && j != 0 && pt_l != null) r = -rwidth * (pt_l.xf - pt.xf);
+				// Get the position relative to 'pt.x' for the bar's left and right edge
+				// At the left/right boundary, make the bars symmetric
+				var dx_l = 
+					pt_l != null ? (pt.x - pt_l.x)/2 :
+					pt_r != null ? (pt_r.x - pt.x)/2 :
+					0.5;
+				var dx_r =
+					pt_r != null ? (pt_r.x - pt.x) / 2 :
+					pt_l != null ? (pt.x - pt_l.x) / 2 :
+					0.5;
+				var l = (float)(pt.x + edge_l * dx_l);
+				var r = (float)(pt.x + edge_r * dx_r);
 
 				var v = vidx;
-				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
-				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
-				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
-				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
+				if (pt.y >= 0)
+				{
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(l, 0f, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(r, 0f, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(r, (float)pt.y, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(l, (float)pt.y, 0f, 1f), col);
+				}
+				else
+				{
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(r, 0f, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(l, 0f, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(l, (float)pt.y, 0f, 1f), col);
+					m_vbuf[vidx++] = new View3d.Vertex(new v4(r, (float)pt.y, 0f, 1f), col);
+				}
 
 				m_ibuf[iidx++] = (ushort)(v + 0);
 				m_ibuf[iidx++] = (ushort)(v + 1);
@@ -401,7 +437,7 @@ namespace Rylogic.Gui.WPF
 				m_ibuf[iidx++] = (ushort)(v + 3);
 				m_ibuf[iidx++] = (ushort)(v + 0);
 
-				x_range.Grow(pt.xf);
+				x_range.Grow(pt.x);
 			}
 
 			// Create a nugget for the tri list
@@ -488,6 +524,49 @@ namespace Rylogic.Gui.WPF
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public class Pt
 		{
+			public Pt(double x_, double y_)
+			{
+				x = x_;
+				y = y_;
+			}
+			public Pt(double x_, long y_)
+			{
+				x = x_;
+				y = y_;
+			}
+			public Pt(long x_, double y_)
+			{
+				x = x_;
+				y = y_;
+			}
+			public Pt(long x_, long y_)
+			{
+				x = x_;
+				y = y_;
+			}
+			public Pt(Pt rhs)
+			{
+				x = rhs.x;
+				y = rhs.y;
+			}
+
+			[FieldOffset(0)] public double x;
+			[FieldOffset(8)] public double y;
+
+			public static implicit operator Pt(v2 pt) => new Pt(pt.x, pt.y);
+			public static implicit operator v2(Pt pt) => new v2((float)pt.x, (float)pt.y);
+			public static implicit operator v4(Pt pt) => new v4((float)pt.x, (float)pt.y, 0f, 1f);
+			public static implicit operator Pt(PointF pt) => new Pt(pt.X, pt.Y);
+			public static implicit operator PointF(Pt pt) => new PointF((float)pt.x, (float)pt.y);
+
+			/// <summary>Sorting predicate on X</summary>
+			public static IComparer<Pt> CompareX => Cmp<Pt>.From((l, r) => l.x.CompareTo(r.x));
+
+			/// <summary>Guess at whether double or long values are used</summary>
+			private string Description => $"{x} {y}";
+
+
+#if false // why did I do it this way?
 			// Notes:
 			// - The format of this data is given by 'Format' in the 'ChartDataSeries' owner.
 			// - Not IComparible because we don't know whether to compare 'xf' or 'xi'.
@@ -524,26 +603,18 @@ namespace Rylogic.Gui.WPF
 			[FieldOffset(0)] public long xi;
 			[FieldOffset(8)] public long yi;
 
-			public static implicit operator Pt(v2 pt) { return new Pt(pt.x, pt.y); }
-			public static implicit operator v2(Pt pt) { return new v2((float)pt.xf, (float)pt.yf); }
-			public static implicit operator Pt(PointF pt) { return new Pt(pt.X, pt.Y); }
-			public static implicit operator PointF(Pt pt) { return new PointF((float)pt.xf, (float)pt.yf); }
+			public static implicit operator Pt(v2 pt) => new Pt(pt.x, pt.y);
+			public static implicit operator v2(Pt pt) => new v2((float)pt.xf, (float)pt.yf);
+			public static implicit operator Pt(PointF pt) => new Pt(pt.X, pt.Y);
+			public static implicit operator PointF(Pt pt) => new PointF((float)pt.xf, (float)pt.yf);
 
 			/// <summary>Sorting predicate on X</summary>
-			public static IComparer<Pt> CompareXf
-			{
-				get { return Cmp<Pt>.From((l, r) => l.xf.CompareTo(r.xf)); }
-			}
-			public static IComparer<Pt> CompareXi
-			{
-				get { return Cmp<Pt>.From((l, r) => l.xi.CompareTo(r.xi)); }
-			}
+			public static IComparer<Pt> CompareXf => Cmp<Pt>.From((l, r) => l.xf.CompareTo(r.xf));
+			public static IComparer<Pt> CompareXi => Cmp<Pt>.From((l, r) => l.xi.CompareTo(r.xi));
 
 			/// <summary>Guess at whether double or long values are used</summary>
-			private string Description
-			{
-				get { return $"{(Math.Abs(xf) < 1e-200 ? xi.ToString() : xf.ToString())} {(Math.Abs(yf) < 1e-200 ? yi.ToString() : yf.ToString())}"; }
-			}
+			private string Description => $"{(Math.Abs(xf) < 1e-200 ? xi.ToString() : xf.ToString())} {(Math.Abs(yf) < 1e-200 ? yi.ToString() : yf.ToString())}";
+#endif
 		}
 
 		/// <summary>RAII object for synchronising access to the underlying data</summary>
@@ -596,8 +667,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Add a datum point</summary>
 			public Pt Add(Pt point)
 			{
-				m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
-				m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? point.yi : point.yf);
+				m_changed_data_rangex.Grow(point.x);
+				m_changed_data_rangey.Grow(point.y);
 				Data.Add(point);
 				return point;
 			}
@@ -613,8 +684,8 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Insert a datum point</summary>
 			public Pt Insert(int index, Pt point)
 			{
-				m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
-				m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? point.yi : point.yf);
+				m_changed_data_rangex.Grow(point.x);
+				m_changed_data_rangey.Grow(point.y);
 				Data.Insert(index, point);
 				return point;
 			}
@@ -622,11 +693,11 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The data series</summary>
 			public Pt this[int idx]
 			{
-				get { return Data[idx]; }
+				get => Data[idx];
 				set
 				{
-					m_changed_data_rangex.Grow(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
-					m_changed_data_rangey.Grow(Format.HasFlag(EFormat.YIntg) ? value.yi : value.yf);
+					m_changed_data_rangex.Grow(value.x);
+					m_changed_data_rangey.Grow(value.y);
 					Data[idx] = value;
 				}
 			}
@@ -634,18 +705,12 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Search for a point</summary>
 			public bool Contains(Pt point) => Data.Contains(point);
 
-			/// <summary>Sort the data series on X values (F = doubles, I = longs)</summary>
-			public void SortF()
+			/// <summary>Sort the data series on X values</summary>
+			public void SortX()
 			{
 				m_changed_data_rangex = RangeF.Max;
 				m_changed_data_rangey = RangeF.Max;
-				Data.Sort(Pt.CompareXf);
-			}
-			public void SortI()
-			{
-				m_changed_data_rangex = RangeF.Max;
-				m_changed_data_rangey = RangeF.Max;
-				Data.Sort(Pt.CompareXi);
+				Data.Sort(Pt.CompareX);
 			}
 
 			///<summary>
@@ -657,11 +722,11 @@ namespace Rylogic.Gui.WPF
 				var lwr = new Pt(xmin, 0.0);
 				var upr = new Pt(xmax, 0.0);
 
-				imin = Data.BinarySearch(0, Count, lwr, Pt.CompareXf);
+				imin = Data.BinarySearch(0, Count, lwr, Pt.CompareX);
 				if (imin < 0) imin = ~imin;
 				if (imin != 0) --imin;
 
-				imax = Data.BinarySearch(imin, Count - imin, upr, Pt.CompareXf);
+				imax = Data.BinarySearch(imin, Count - imin, upr, Pt.CompareX);
 				if (imax < 0) imax = ~imax;
 				if (imax != Count) ++imax;
 			}
@@ -713,12 +778,28 @@ namespace Rylogic.Gui.WPF
 			#endregion
 		}
 
-		/// <summary>Plot colour generator</summary>
-		public static Colour32 GenerateColour(int i)
+		// Notes:
+		//  - See https://chartio.com/learn/charts/how-to-choose-colors-data-visualization
+
+		/// <summary>Plot colour generator - Qualitative data - Colours that are all distinct representing categorical data (e.g. countries, genders, etc)</summary>
+		public static Colour32 GenColour_Qualitative(int i)
 		{
-			return m_colours[i % m_colours.Length];
+			
+			return m_palette_qualitative[i % m_palette_qualitative.Length];
 		}
-		private static readonly Colour32[] m_colours =
+		private static readonly Colour32[] m_palette_qualitative =
+		{
+			// See 'art/jpg/palette-qualitative.jpg'
+			0xFF0B84A5, 0xFFF6C85F, 0xFF6F4E7C, 0xFF9DD866, 0xFFCA472F, 0xFFFFA056, 0xFF8DDDD0,
+			0xFFB35EDB, 0xFF53DB8E, 0xFF41C1DB, 0xFF8C90DB, 0xFFDB7FAE, 0xFFDBB132, 0xFF76DB69,
+		};
+
+		/// <summary>Plot colour generator - Qualitative data</summary>
+		public static Colour32 GenColour_HighContrast(int i)
+		{
+			return m_palette_high_contrast[i % m_palette_high_contrast.Length];
+		}
+		private static readonly Colour32[] m_palette_high_contrast =
 		{
 			Colour32.Black     ,
 			Colour32.Blue      , Colour32.Red         , Colour32.Green      ,

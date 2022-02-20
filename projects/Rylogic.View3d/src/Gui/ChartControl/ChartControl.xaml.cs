@@ -1104,7 +1104,7 @@ namespace Rylogic.Gui.WPF
 		private View3d.Object? m_hit_test_ray;
 
 		/// <summary>Find the default range, then reset to the default range</summary>
-		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All, EAxis axes = EAxis.Both)
+		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All, EAxis axes = EAxis.Both, double inflate = 1.0)
 		{
 			// Allow the auto range to be handled by event
 			var args = new AutoRangeEventArgs(who, axes);
@@ -1118,6 +1118,9 @@ namespace Rylogic.Gui.WPF
 				throw new Exception($"View bounding box is invalid: {bbox}");
 			if (bbox.Radius == v4.Zero)
 				bbox.Radius = 0.5f * v4.One;
+
+			// Inflate the bounding box
+			bbox.Radius *= inflate;
 
 			// Position the camera to view the bounding box
 			var up = Camera.AlignAxis != v4.Zero ? Camera.AlignAxis : Options.ResetUp;

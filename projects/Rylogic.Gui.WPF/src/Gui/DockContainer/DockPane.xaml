@@ -120,7 +120,10 @@
 	</Grid>
 
 	<!-- Tab Strip -->
-	<local:TabStrip x:Name="m_tabstrip" DockPanel.Dock="Bottom"/>
+	<local:TabStrip
+		x:Name="m_tabstrip"
+		DockPanel.Dock="{Binding Options.TabStripLocation}"
+		/>
 	
 	<!--
 	Content 

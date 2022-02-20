@@ -64,7 +64,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The tab buttons in this tab strip</summary>
 		public ObservableCollection<TabButton> Buttons
 		{
-			get { return m_buttons; }
+			get => m_buttons;
 			private set
 			{
 				if (m_buttons == value) return;
@@ -83,7 +83,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					switch (e.Action)
 					{
-					case NotifyCollectionChangedAction.Add:
+						case NotifyCollectionChangedAction.Add:
 						{
 							// Ensure the order of children matches the order of the buttons
 							m_tabs.Children.Clear();
@@ -92,7 +92,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 							break;
 						}
-					case NotifyCollectionChangedAction.Remove:
+						case NotifyCollectionChangedAction.Remove:
 						{
 							foreach (var btn in e.OldItems.Cast<TabButton>())
 								m_tabs.Children.Remove(btn);
@@ -101,9 +101,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					}
 
 					// Show/Hide the tab strip
-					Visibility = 
+					Visibility =
 						AHPanel != null ||
-						Buttons.Count > 1 || 
+						Buttons.Count > 1 ||
 						(Buttons.Count == 1 && Options.AlwaysShowTabs)
 						? Visibility.Visible : Visibility.Collapsed;
 				}
@@ -126,20 +126,25 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			switch (StripLocation)
 			{
-			default: throw new Exception($"Invalid tab strip location: {StripLocation}");
-			case EDockSite.None:
-				break;
-			case EDockSite.Left:
-			case EDockSite.Right:
+				case EDockSite.None:
+				{
+					break;
+				}
+				case EDockSite.Left:
+				case EDockSite.Right:
 				{
 					LayoutTransform = new RotateTransform(90);
 					break;
 				}
-			case EDockSite.Top:
-			case EDockSite.Bottom:
+				case EDockSite.Top:
+				case EDockSite.Bottom:
 				{
 					LayoutTransform = Transform.Identity;
 					break;
+				}
+				default:
+				{
+					throw new Exception($"Invalid tab strip location: {StripLocation}");
 				}
 			}
 		}

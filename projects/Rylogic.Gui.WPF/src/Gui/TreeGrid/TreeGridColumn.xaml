@@ -25,7 +25,7 @@
 				<!-- Expand button -->
 				<ToggleButton
 					Style="{StaticResource TreeGridColumn.ExpandCollapseToggleStyle}"
-					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=True}"
+					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=Hidden}"
 					IsChecked="{Binding IsExpanded}"
 					ClickMode="Press"
 					/>
@@ -69,7 +69,7 @@
 				<!-- Expand button - Disabled while editing -->
 				<ToggleButton
 					Style="{StaticResource TreeGridColumn.ExpandCollapseToggleStyle}"
-					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=True}"
+					Visibility="{Binding HasChildren, Converter={conv:BoolSelect}, ConverterParameter='Visible|Hidden', FallbackValue=Hidden}"
 					IsChecked="{Binding IsExpanded, Mode=OneWay}"
 					IsEnabled="False"
 					ClickMode="Press"

@@ -34,7 +34,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public Branch(DockContainer dc, DockSizeData dock_sizes)
 		{
 			DockContainer = dc;
-			DockSizes = new DockSizeData(dock_sizes) { Owner = this };
+			DockSize = new DockSizeData(dock_sizes) { Owner = this };
 
 			// Create the collection to hold the five child controls (DockPanes or Branches)
 			Descendants = new DescendantCollection(this);
@@ -128,7 +128,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The sizes of the child controls</summary>
-		public DockSizeData DockSizes { get; }
+		public DockSizeData DockSize { get; }
 
 		/// <summary>Add a dockable instance to this tree at the position described by 'location'.</summary>
 		public DockPane Add(DockControl dc, int index, params EDockSite[] location)
@@ -313,7 +313,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Get the child at 'location' or null if the given location is not a valid location in the tree</summary>
-		public DescentantData? DescendantAt(IEnumerable<EDockSite> location)
+		public DescentantData? DescendantAt(params EDockSite[] location)
 		{
 			var b = (Branch?)this;
 			var c = (DescentantData?)null;
@@ -326,16 +326,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			return c;
 		}
 
-		/// <summary>Returns a reference to the dock sizes at a given level in the tree</summary>
-		public DockSizeData? GetDockSizes(IEnumerable<EDockSite> location)
+		/// <summary>Returns a *editable* reference to the dock sizes at a given level in the tree</summary>
+		public DockSizeData DockSizeAt(params EDockSite[] location)
 		{
-			var b = (Branch?)this;
+			var b = this;
 			foreach (var ds in location)
-			{
-				if (b == null) return null;
-				b = b.Descendants[ds].Item as Branch;
-			}
-			return b?.DockSizes;
+				b = b.Descendants[ds].Item as Branch ?? throw new Exception($"DockContainer location '{string.Join(", ", location)}' is not a branch"); ;
+
+			return b.DockSize;
 		}
 
 		/// <summary>The dock panes or branches of this branch (5 per branch)</summary>
@@ -419,7 +417,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the size for a dock site in this branch (in pixels)</summary>
 		public double ChildSize(EDockSite location)
 		{
-			return DockSizes.GetSize(location, DisplayRectangle, DockedMask);
+			return DockSize.GetSize(location, DisplayRectangle, DockedMask);
 		}
 		public void ChildSize(EDockSite location, double value, EDockResizeMode resize_mode)
 		{
@@ -428,7 +426,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (RenderSize.Width == 0 || RenderSize.Height == 0)
 				throw new Exception($"Invalid size for this branch, can't determine dock size for {location}");
 
-			DockSizes.SetSize(location, DisplayRectangle, value, resize_mode);
+			DockSize.SetSize(location, DisplayRectangle, value, resize_mode);
 			DockContainer.NotifyLayoutChanged();
 		}
 
@@ -438,7 +436,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var display_rect = new Rect(RenderSize);
 			display_rect.Width = Math.Max(0, display_rect.Width);
 			display_rect.Height = Math.Max(0, display_rect.Height);
-			return DockContainer.DockSiteBounds(location, display_rect, DockedMask, DockSizes);
+			return DockContainer.DockSiteBounds(location, display_rect, DockedMask, DockSize);
 		}
 
 		/// <summary>Return the child element relative to this sub-tree</summary>
@@ -477,7 +475,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public XElement ToXml(XElement node)
 		{
 			// Record the pane sizes
-			node.Add2(XmlTag.DockSizes, DockSizes, false);
+			node.Add2(XmlTag.DockSizes, DockSize, false);
 
 			// Recursively add the sub trees
 			foreach (var ch in Descendants)
@@ -506,10 +504,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				case XmlTag.DockSizes:
 					{
 						var dock_sizes = child_node.As<DockSizeData>();
-						DockSizes.Left = dock_sizes.Left;
-						DockSizes.Top = dock_sizes.Top;
-						DockSizes.Right = dock_sizes.Right;
-						DockSizes.Bottom = dock_sizes.Bottom;
+						DockSize.Left = dock_sizes.Left;
+						DockSize.Top = dock_sizes.Top;
+						DockSize.Right = dock_sizes.Right;
+						DockSize.Bottom = dock_sizes.Bottom;
 						break;
 					}
 				case XmlTag.Tree:

@@ -231,7 +231,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			var bsh = new SolidColorBrush(Options.TickColour.ToMediaColor());
 			switch (Options.Side)
 			{
-			case Dock.Left: // Left-side Y-Axis
+				case Dock.Left: // Left-side Y-Axis
 				{
 					// Position the axis line on the right side of this canvas
 					axis_line.X1 = ActualWidth;
@@ -260,7 +260,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					}
 					break;
 				}
-			case Dock.Bottom: // Bottom-side X-Axis
+				case Dock.Bottom: // Bottom-side X-Axis
 				{
 					// Position the axis line on the top side of this canvas
 					axis_line.X1 = 0;
@@ -289,7 +289,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					}
 					break;
 				}
-			case Dock.Right: // Right-side Y-Axis
+				case Dock.Right: // Right-side Y-Axis
 				{
 					// Position the axis line on the left side of this canvas
 					axis_line.X1 = 0;
@@ -318,7 +318,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					}
 					break;
 				}
-			case Dock.Top: // Top-side X-Axis
+				case Dock.Top: // Top-side X-Axis
 				{
 					// Position the axis line on the bottom side of this canvas
 					axis_line.X1 = 0;

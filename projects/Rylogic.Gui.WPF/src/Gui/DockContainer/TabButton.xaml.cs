@@ -43,18 +43,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				switch (e.PropertyName)
 				{
-				case nameof(DockControl.TabText):
+					case nameof(DockControl.TabText):
 					{
 						NotifyPropertyChanged(nameof(TabText));
 						NotifyPropertyChanged(nameof(TabToolTip));
 						break;
 					}
-				case nameof(DockControl.TabToolTip):
+					case nameof(DockControl.TabToolTip):
 					{
 						NotifyPropertyChanged(nameof(TabToolTip));
 						break;
 					}
-				case nameof(DockControl.TabIcon):
+					case nameof(DockControl.TabIcon):
 					{
 						NotifyPropertyChanged(nameof(TabIcon));
 						break;
@@ -194,12 +194,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				switch (TabStrip?.StripLocation ?? EDockSite.None)
 				{
-				default: throw new Exception("Unknown strip location");
-				case EDockSite.None: return new Thickness(1);
-				case EDockSite.Left: return new Thickness(1, 1, 0, 1);
-				case EDockSite.Top: return new Thickness(1, 1, 1, 0);
-				case EDockSite.Right: return new Thickness(0, 1, 1, 1);
-				case EDockSite.Bottom: return new Thickness(1, 0, 1, 1);
+					case EDockSite.None: return new Thickness(1);
+					case EDockSite.Left: return new Thickness(1, 1, 0, 1);
+					case EDockSite.Top: return new Thickness(1, 1, 1, 0);
+					case EDockSite.Right: return new Thickness(0, 1, 1, 1);
+					case EDockSite.Bottom: return new Thickness(1, 0, 1, 1);
+					default: throw new Exception("Unknown strip location");
 				}
 			}
 		}
@@ -211,12 +211,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				switch (TabStrip?.StripLocation ?? EDockSite.None)
 				{
-				default: throw new Exception("Unknown strip location");
-				case EDockSite.None: return new Thickness(0);
-				case EDockSite.Left: return new Thickness(2, 0, 0, 0);
-				case EDockSite.Top: return new Thickness(0, 2, 0, 0);
-				case EDockSite.Right: return new Thickness(0, 0, 2, 0);
-				case EDockSite.Bottom: return new Thickness(0, 0, 0, 2);
+					case EDockSite.None: return new Thickness(0);
+					case EDockSite.Left: return new Thickness(2, 0, 0, 0);
+					case EDockSite.Top: return new Thickness(0, 2, 0, 0);
+					case EDockSite.Right: return new Thickness(0, 0, 2, 0);
+					case EDockSite.Bottom: return new Thickness(0, 0, 0, 2);
+					default: throw new Exception("Unknown strip location");
 				}
 			}
 		}
@@ -224,7 +224,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>True if this button is the active one</summary>
 		public ETabState TabState
 		{
-			get { return m_tab_state; }
+			get => m_tab_state;
 			set
 			{
 				if (m_tab_state == value) return;

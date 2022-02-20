@@ -1,4 +1,4 @@
-//#define PR_VIEW3D_CREATE_STACKTRACE
+﻿//#define PR_VIEW3D_CREATE_STACKTRACE
 using System.Diagnostics;
 using System.Drawing;
 using System.Xml.Linq;
@@ -73,26 +73,28 @@ namespace Rylogic.Gfx
 			public float Aspect
 			{
 				get => View3D_CameraAspectGet(m_window.Handle);
-				set => View3D_CameraAspectSet(m_window.Handle, value);
+				set => View3D_CameraAspectSet(m_window.Handle, value > 0 && value < 1.0e10 ? value : throw new Exception("Aspect must be > 0 && < 1.0e10"));
 			}
 
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
 			public float FovX
 			{
 				get => View3D_CameraFovXGet(m_window.Handle);
-				set => View3D_CameraFovXSet(m_window.Handle, value);
+				set => View3D_CameraFovXSet(m_window.Handle, value < Math_.TauBy2 ? value : throw new Exception("FovX must be < tau/2"));
 			}
 
 			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public float FovY
 			{
 				get => View3D_CameraFovYGet(m_window.Handle);
-				set => View3D_CameraFovYSet(m_window.Handle, value);
+				set => View3D_CameraFovYSet(m_window.Handle, value < Math_.TauBy2 ? value : throw new Exception("FovY must be < tau/2"));
 			}
 
 			/// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
 			public void SetFov(float fovX, float fovY)
 			{
+				if (fovX >= Math_.TauBy2) throw new Exception("FovX must be < tau/2");
+				if (fovY >= Math_.TauBy2) throw new Exception("FovY must be < tau/2");
 				View3D_CameraFovSet(m_window.Handle, fovX, fovY);
 			}
 
@@ -105,21 +107,22 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the camera near plane distance. Focus relative</summary>
 			public float NearPlane
 			{
-				get { ClipPlanes(out var n, out _, true); return n; }
-				set { ClipPlanes(value, FarPlane, true); }
+				get => ClipPlanes(true).Near;
+				set => ClipPlanes(value, FarPlane, true);
 			}
 
 			/// <summary>Get/Set the camera far plane distance. Focus relative</summary>
 			public float FarPlane
 			{
-				get { ClipPlanes(out _, out var f, true); return f; }
-				set { ClipPlanes(NearPlane, value, true); }
+				get => ClipPlanes(true).Far;
+				set => ClipPlanes(NearPlane, value, true);
 			}
 
 			/// <summary>Get/Set the camera clip plane distances</summary>
-			public void ClipPlanes(out float near, out float far, bool focus_relative)
+			public (float Near, float Far) ClipPlanes(bool focus_relative)
 			{
-				View3D_CameraClipPlanesGet(m_window.Handle, out near, out far, focus_relative);
+				View3D_CameraClipPlanesGet(m_window.Handle, out var near, out var far, focus_relative);
+				return (near, far);
 			}
 			public void ClipPlanes(float near, float far, bool focus_relative)
 			{
@@ -129,31 +132,24 @@ namespace Rylogic.Gfx
 			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
 			public v4 FocusPoint
 			{
-				get { v4 pos; View3D_CameraFocusPointGet(m_window.Handle, out pos); return pos; }
-				set { View3D_CameraFocusPointSet(m_window.Handle, value); }
+				get { View3D_CameraFocusPointGet(m_window.Handle, out var pos); return pos; }
+				set => View3D_CameraFocusPointSet(m_window.Handle, value);
 			}
 
 			/// <summary>Get/Set the distance to the camera focus point</summary>
 			public float FocusDist
 			{
 				get => View3D_CameraFocusDistanceGet(m_window.Handle);
-				set
-				{
-					Debug.Assert(value >= 0, "Focus distance cannot be negative");
-					View3D_CameraFocusDistanceSet(m_window.Handle, value);
-				}
+				set => View3D_CameraFocusDistanceSet(m_window.Handle, value >= 0 ? value : throw new Exception("Focus distance cannot be negative"));
 			}
 
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
 			public m4x4 O2W
 			{
-				get { m4x4 c2w; View3D_CameraToWorldGet(m_window.Handle, out c2w); return c2w; }
-				set { View3D_CameraToWorldSet(m_window.Handle, ref value); }
+				get { View3D_CameraToWorldGet(m_window.Handle, out var c2w); return c2w; }
+				set => View3D_CameraToWorldSet(m_window.Handle, ref value);
 			}
-			public m4x4 W2O
-			{
-				get { return Math_.InvertFast(O2W); }
-			}
+			public m4x4 W2O => Math_.InvertFast(O2W);
 
 			/// <summary>Set the current O2W transform as the reference point</summary>
 			public void Commit()

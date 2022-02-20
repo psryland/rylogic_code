@@ -69,7 +69,6 @@ namespace Rylogic.Gui.WPF
 			DefaultDockLocation = new DockContainer.DockLocation();
 			TabText = PersistName;
 			TabIcon = null;
-			TabCMenu = DefaultTabCMenu();
 
 			DockAddresses = new Dictionary<Branch, EDockSite[]>();
 		}
@@ -140,6 +139,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Hide this item in the dock container. (Use Remove() to make remove it completely)</summary>
 		public void Close()
 		{
+			// Don't close if not allowed
+			if (!AllowClose)
+				return;
+
 			// Although removed from the UI, the dock container still remembers this instance.
 			// The 'Windows' menu can be used to reopen it. If 'DestroyOnClose' is true or the
 			// instance is 'Removed', then it can't be reopened.
@@ -170,6 +173,7 @@ namespace Rylogic.Gui.WPF
 				{
 					Closed += HandleClose;
 				}
+				NotifyPropertyChanged(nameof(DestroyOnClose));
 
 				// Handler
 				void HandleClose(object? sender, EventArgs args)
@@ -184,7 +188,20 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private bool m_destroy_on_close;
+		private bool m_destroy_on_close = false;
+
+		/// <summary>True if the dockable can be 'closed'</summary>
+		public bool AllowClose
+		{
+			get => m_allow_close;
+			set
+			{
+				if (m_allow_close == value) return;
+				m_allow_close = value;
+				NotifyPropertyChanged(nameof(AllowClose));
+			}
+		}
+		private bool m_allow_close = true;
 
 		/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
 		internal ITreeHost? TreeHost => DockPane?.TreeHost;
@@ -480,7 +497,17 @@ namespace Rylogic.Gui.WPF
 		private string? m_tab_tt;
 
 		/// <summary>A context menu to display when the tab for this content is right clicked</summary>
-		public ContextMenu? TabCMenu { get; set; }
+		public ContextMenu? TabCMenu
+		{
+			get => m_tab_cmenu ?? DefaultTabCMenu();
+			set
+			{
+				if (m_tab_cmenu == value) return;
+				m_tab_cmenu = value;
+				NotifyPropertyChanged(nameof(TabCMenu));
+			}
+		}
+		public ContextMenu? m_tab_cmenu;
 
 		/// <summary>The current state of the tab button associated with this content</summary>
 		public ETabState TabState
@@ -509,14 +536,15 @@ namespace Rylogic.Gui.WPF
 		private EDockResizeMode m_resize_mode;
 
 		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
-		public ContextMenu DefaultTabCMenu()
+		public ContextMenu? DefaultTabCMenu()
 		{
 			var cmenu = new ContextMenu();
+			if (AllowClose)
 			{
 				var opt = cmenu.Items.Add2(new MenuItem { Header = "Close" });
-				opt.Click += (s, a) => Close();
+				opt.Click += delegate { Close(); };
 			}
-			return cmenu;
+			return cmenu.Items.Count != 0 ? cmenu : null;
 		}
 
 		/// <summary>True if this content is the active content within the owning dock container</summary>
@@ -587,12 +615,9 @@ namespace Rylogic.Gui.WPF
 			LoadingLayout?.Invoke(this, new DockContainerLoadingLayoutEventArgs(user_data));
 		}
 
-		/// <summary></summary>
+		/// <inheritdoc/>
 		public event PropertyChangedEventHandler? PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-		}
+		public void NotifyPropertyChanged(string prop_name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 	}
 
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
