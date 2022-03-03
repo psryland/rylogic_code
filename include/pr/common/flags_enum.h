@@ -245,22 +245,22 @@ namespace pr::common
 		using namespace unittests::flag_enum;
 
 		{// Bitwise
-			using Enum = Flags;
-			//using Enum = NotFlags; // Uncomment to test not-compiling-ness
+			using EnumType = Flags;
+			//using EnumType = NotFlags; // Uncomment to test not-compiling-ness
 
-			Enum a =  Enum::One | Enum::Two;
-			Enum b =  Enum::One & Enum::Two;
-			Enum c =  Enum::One ^ Enum::Two;
-			Enum f = ~Enum::One;
+			auto a =  EnumType::One | EnumType::Two;
+			auto b =  EnumType::One & EnumType::Two;
+			auto c =  EnumType::One ^ EnumType::Two;
+			auto f = ~EnumType::One;
 
 			PR_CHECK((int)a, 3);
 			PR_CHECK((int)b, 0);
 			PR_CHECK((int)c, 3);
 			PR_CHECK((int)f, -2);
 
-			a |= Enum::Two;
-			b &= Enum::Two;
-			c ^= Enum::Two;
+			a |= EnumType::Two;
+			b &= EnumType::Two;
+			c ^= EnumType::Two;
 
 			PR_CHECK((int)a, 3);
 			PR_CHECK((int)b, 0);

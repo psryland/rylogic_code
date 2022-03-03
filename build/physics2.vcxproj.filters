@@ -46,7 +46,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\physics2/src\main.cpp">
+    <ClCompile Include="..\projects\rylogic\physics2\src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -69,10 +69,10 @@
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h">
       <Filter>pr\physics\rigid_body</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics2/src\body.h">
+    <ClInclude Include="..\projects\rylogic\physics2\src\body.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics2/src\forward.h">
+    <ClInclude Include="..\projects\rylogic\physics2\src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\physics.h">
@@ -212,7 +212,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\physics2/post_build.py" />
+    <None Include="..\projects\rylogic\physics2/post_build.py" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\miscellaneous\VisualStudio\pr_visualisers.natvis" />

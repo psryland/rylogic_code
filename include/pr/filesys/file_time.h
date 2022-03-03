@@ -13,6 +13,7 @@
 #include <ctime>
 #include <cstdint>
 #include <cassert>
+#include <minwinbase.h>
 //#include "pr/str/string_core.h"
 //#include "pr/win32/win32.h"
 
@@ -52,8 +53,6 @@ namespace pr::filesys
 	// Requires <windows.h> to be included
 	// Note: the 'int64_t's here are not the same as the timestamps in 'FileTime'
 	// those values are in Unix time. Use 'UnixTimetoI64()'
-	struct FILETIME;
-	struct SYSTEMTIME;
 	template <typename = void> inline int64_t FTtoI64(FILETIME ft)
 	{
 		int64_t  n = int64_t(ft.dwHighDateTime) << 32 | int64_t(ft.dwLowDateTime);

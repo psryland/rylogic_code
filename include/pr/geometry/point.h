@@ -3,29 +3,28 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-#include "pr/maths/maths.h"
-#include "pr/geometry/distance.h"
+#include "pr/geometry/common.h"
 
 namespace pr
 {
+	// Forwards
+	float pr_vectorcall Distance_PointToPlane(v4_cref<> point, Plane const& plane);
+
 	// Returns true if 'point' lies in front of the plane described by 'abc' (Cross3(b-a, c-a))
-	template <typename = void>
-	bool pr_vectorcall PointInFrontOfPlane(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
+	inline bool pr_vectorcall PointInFrontOfPlane(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
 	{
 		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		return Triple(point - a, b - a, c - a) >= 0.0f;
 	}
 
 	// Return a point that is the weighted result of verts 'a','b','c' and 'bary'
-	template <typename = void>
-	v4 pr_vectorcall BaryPoint(v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> bary)
+	inline v4 pr_vectorcall BaryPoint(v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> bary)
 	{
 		return bary.x * a + bary.y * b + bary.z * c;
 	}
 
 	// Return the 'Bary-Centric' coordinates for 'point' with respect to triangle a,b,c
-	template <typename = void>
-	v4 pr_vectorcall BaryCentric(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
+	inline v4 pr_vectorcall BaryCentric(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
 	{
 		assert(point.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 		v4 ab = b - a, ac = c - a, pa = point - a;
@@ -45,8 +44,7 @@ namespace pr
 	}
 
 	// Returns true if a point projects within a triangle using the triangle normal
-	template <typename = void>
-	bool pr_vectorcall PointWithinTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, float tol)
+	inline bool pr_vectorcall PointWithinTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, float tol)
 	{
 		v4 bary = BaryCentric(point, a, b, c);
 		return	bary.x >= -tol && bary.x <= 1.0f + tol &&
@@ -55,8 +53,7 @@ namespace pr
 	}
 
 	// Returns true if a point projects within a triangle using the triangle normal
-	template <typename = void>
-	bool pr_vectorcall PointWithinTriangle2(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, float tol)
+	inline bool pr_vectorcall PointWithinTriangle2(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, float tol)
 	{
 		v4 c0 = Cross3(point - a, b - a);
 		v4 c1 = Cross3(point - b, c - b);
@@ -65,8 +62,7 @@ namespace pr
 	}
 
 	// Returns true if a point projects within a triangle using the triangle normal. Also returns the point
-	template <typename = void>
-	bool pr_vectorcall PointWithinTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4& pt)
+	inline bool pr_vectorcall PointWithinTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4& pt)
 	{
 		v4 bary = BaryCentric(point, a, b, c);
 		pt = a * bary.x + b * bary.y + c * bary.z; pt.w = 1.0f;
@@ -76,8 +72,7 @@ namespace pr
 	}
 
 	// Returns true if 'point' lies on or within the tetrahedron described by 'abcd' (i.e. behind all of it's planes)
-	template <typename = void>
-	bool pr_vectorcall PointWithinTetrahedron(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d)
+	inline bool pr_vectorcall PointWithinTetrahedron(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d)
 	{
 		return	!PointInFrontOfPlane(point, a, b, c) &&
 				!PointInFrontOfPlane(point, a, c, d) &&
@@ -88,8 +83,7 @@ namespace pr
 	// Returns true if 'point' projects along 'norm' into the convex polygon 'poly'
 	// On the edge of the polygon counts as outside so that polygons with
 	// degenerate edges are all classed as outside. 
-	template <typename = void>
-	bool pr_vectorcall PointWithinConvexPolygon(v4_cref<> point, v4 const* poly, int count, v4_cref<> norm)
+	inline bool pr_vectorcall PointWithinConvexPolygon(v4_cref<> point, v4 const* poly, int count, v4_cref<> norm)
 	{
 		if (count < 3)
 			return false;
@@ -116,8 +110,7 @@ namespace pr
 		// 'point' is inside the polygon if it is left of the edge from v[low] to v[high]
 		return TriangleIsCCW(poly[lo], poly[hi], point);
 	}
-	template <typename = void>
-	bool pr_vectorcall PointWithinConvexPolygon(v4_cref<> point, v4 const* poly, int count)
+	inline bool pr_vectorcall PointWithinConvexPolygon(v4_cref<> point, v4 const* poly, int count)
 	{
 		if (count < 3)
 			return false;
@@ -135,8 +128,7 @@ namespace pr
 	}
 
 	// Returns true if 'point' is on the positive side of all of 'planes'
-	template <typename = void>
-	bool pr_vectorcall PointWithinHalfSpaces(v4_cref<> point, Plane const* planes, int count, float tol = maths::tinyf)
+	inline bool pr_vectorcall PointWithinHalfSpaces(v4_cref<> point, Plane const* planes, int count, float tol = maths::tinyf)
 	{
 		for (auto i = 0; i != count; ++i)
 		{
@@ -146,26 +138,3 @@ namespace pr
 		return true;
 	}
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::geometry
-{
-	PRUnitTest(PointTests)
-	{
-		{// PointWithinConvexPolygon
-			v4 poly[] =
-			{
-				v4(-2.0f, -1.0f, 0.0f, 1.0f),
-				v4(+2.5f, -1.5f, 0.0f, 1.0f),
-				v4(+2.0f, +0.5f, 0.0f, 1.0f),
-				v4(-0.5f, +2.0f, 0.0f, 1.0f),
-			};
-			PR_CHECK(PointWithinConvexPolygon(v4Origin, poly, _countof(poly)), true);
-			PR_CHECK(PointWithinConvexPolygon(poly[0], poly, _countof(poly)), false);
-			PR_CHECK(PointWithinConvexPolygon(v4(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)), false);
-			PR_CHECK(PointWithinConvexPolygon(v4(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)), true);
-		}
-	}
-}
-#endif

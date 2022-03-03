@@ -3,12 +3,14 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
-
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 
 // TODO:
+//  This was mostly working, but looks half changed. Fix
+// https://www.nayuki.io/page/free-small-fft-in-multiple-languages/fftcomplex.cpp
+// https://www.nayuki.io/page/free-small-fft-in-multiple-languages/fftrealpair.cpp
 //  Make use of 'ComplexArray' for performance
 //  Fix DFTBluestein
 //  Fix Convolve
@@ -16,6 +18,7 @@
 
 namespace pr
 {
+	#if 0
 	// A stratified array of complex numbers
 	template <typename Real> struct ComplexArray
 	{
@@ -374,7 +377,6 @@ namespace pr
 	// Uses 'Bluestein's chirp z-transform algorithm.
 	template <typename Real> void DFTBluestein(std::complex<Real>* signal, int length)
 	{
-		// https://www.nayuki.io/res/free-small-fft-in-multiple-languages/fft.cpp
 		using complex = std::complex<Real>;
 		using BufferC = std::vector<complex>;
 
@@ -469,6 +471,7 @@ namespace pr
 			outimag[i] = xi[i] / n;
 		}
 	}
+	#endif
 }
 
 #if PR_UNITTESTS
@@ -477,6 +480,7 @@ namespace pr::maths
 {
 	PRUnitTest(DiscreteFourierTransformTests)
 	{
+		#if 0
 		using BufferR = std::vector<double>;
 		using BufferC = std::vector<std::complex<double>>;
 
@@ -547,6 +551,7 @@ namespace pr::maths
 				pr::filesys::BufferToFile(s_out, "\\dump\\frequencies2.csv");
 			}
 		}
+		#endif
 	}
 }
 #endif

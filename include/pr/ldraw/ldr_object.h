@@ -35,8 +35,11 @@ namespace pr::ldr
 	using Renderer      = pr::rdr::Renderer;
 
 	// Map the compile time hash function to this namespace
-	using HashValue = hash::HashValue;
-	constexpr HashValue HashI(char const* str) { return hash::HashICT(str); }
+	using HashValue32 = hash::HashValue32;
+	constexpr HashValue32 HashI(char const* str)
+	{
+		return hash::HashICT(str);
+	}
 
 	#pragma region Ldr object types
 	#define PR_ENUM_LDROBJECTS(x)\

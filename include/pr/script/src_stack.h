@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
 #include "pr/script/fail_policy.h"
@@ -120,31 +118,3 @@ namespace pr::script
 	};
 }
 
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::script
-{
-	PRUnitTest(SrcStackTests)
-	{
-		char const str1[] = "one";
-		char const str2[] = "two";
-		StringSrc src1(str1);
-		StringSrc src2(str2);
-		SrcStack stack(src1);
-
-		for (int i = 0; i != 2; ++i, ++stack)
-			PR_CHECK(*stack, str1[i]);
-
-		stack.Push(src2);
-
-		for (int i = 0; i != 3; ++i, ++stack)
-			PR_CHECK(*stack, str2[i]);
-
-		for (int i = 2; i != 3; ++i, ++stack)
-			PR_CHECK(*stack, str1[i]);
-
-		PR_CHECK(*stack, '\0');
-	}
-}
-#endif

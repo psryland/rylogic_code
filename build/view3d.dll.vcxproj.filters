@@ -9,13 +9,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\view3d\dll\context.h">
+    <ClInclude Include="..\projects\rylogic\view3d\dll\context.h">
       <Filter>src\dll</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\dll\forward.h">
+    <ClInclude Include="..\projects\rylogic\view3d\dll\forward.h">
       <Filter>src\dll</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\dll\window.h">
+    <ClInclude Include="..\projects\rylogic\view3d\dll\window.h">
       <Filter>src\dll</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\dll\view3d.h">
@@ -26,13 +26,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\view3d\dll\context.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\dll\context.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\dll\view3d.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\dll\view3d.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\dll\window.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\dll\window.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
   </ItemGroup>

@@ -19,13 +19,9 @@
 
 namespace pr::hash
 {
-	// Notes:
-	// 'constexpr' functions have to use recursion for non-C++14 compilers
-	// When C++14 is supported, reimplement as iterative functions
-
 	// 'HashValue' is a signed int so that comparisons
 	// with enum values don't generate signed/unsigned warnings
-	using HashValue = int;
+	using HashValue32 = int;
 	using HashValue64 = long long;
 
 	static uint64_t const FNV_offset_basis64 = 14695981039346656037ULL;
@@ -35,12 +31,6 @@ namespace pr::hash
 
 	namespace impl
 	{
-		// Convert 'ch' to lower case
-		constexpr int Lower(int ch)
-		{
-			return ch + 32*(ch >= 'A' && ch <= 'Z');
-		}
-
 		// 32 bit multiply without an overflow warning...
 		constexpr uint32_t Mul32(uint32_t a, uint32_t b)
 		{
@@ -63,28 +53,37 @@ namespace pr::hash
 		}
 		static_assert(Mul64(0x1234567887654321, 0x1234567887654321) == 0x290D0FCAD7A44A41, "");
 
-		// EnableIf for types expected to be strings or not strings
-		template <typename Ty> struct intg32
+		static_assert(std::is_standard_layout_v<int*>);
+
+		// EnableIf for types expected to be strings or pods
+		template <typename Ty> constexpr bool is_char_v =
+			std::is_same_v<std::decay_t<Ty>, char> ||
+			std::is_same_v<std::decay_t<Ty>, wchar_t> ||
+			std::is_same_v<std::decay_t<Ty>, char8_t> ||
+			std::is_same_v<std::decay_t<Ty>, char16_t> ||
+			std::is_same_v<std::decay_t<Ty>, char32_t>;
+		template <typename Ty> constexpr bool is_pod_v =
+			std::is_standard_layout_v<Ty> &&
+			!std::is_pointer_v<std::decay_t<Ty>>;
+		template <typename Ty> constexpr bool is_pod32_v =
+			sizeof(Ty) <= sizeof(uint32_t) &&
+			is_pod_v<Ty>;
+		template <typename Ty> constexpr bool is_pod64_v =
+			sizeof(Ty) <= sizeof(uint64_t) &&
+			is_pod_v<Ty>;
+		template <typename Ty> using enable_if_pod = typename std::enable_if_t<is_pod_v<Ty>>;
+		template <typename Ty> using enable_if_char = typename std::enable_if_t<is_char_v<Ty>>;
+		template <typename Ty> using enable_if_pod32 = typename std::enable_if_t<is_pod32_v<Ty>>;
+		template <typename Ty> using enable_if_pod64 = typename std::enable_if_t<is_pod64_v<Ty>>;
+
+		// Dependant value for static asserts
+		template <typename T, bool Value> constexpr bool dependant = Value;
+
+		// Convert 'ch' to lower case
+		template <typename Ty, typename = enable_if_char<Ty>> constexpr Ty Lower(Ty ch)
 		{
-			static bool const value =
-				sizeof(Ty) <= sizeof(uint32_t) &&
-				std::is_integral<Ty>::value;
-		};
-		template <typename Ty> struct intg64
-		{
-			static bool const value =
-				sizeof(Ty) <= sizeof(uint64_t) &&
-				std::is_integral<Ty>::value;
-		};
-		template <typename Ty> using str32 = typename std::enable_if< intg32<Ty>::value, Ty>::type;
-		template <typename Ty> using pod32 = typename std::enable_if<!intg32<Ty>::value, Ty>::type;
-		template <typename Ty> using str64 = typename std::enable_if< intg64<Ty>::value, Ty>::type;
-		template <typename Ty> using pod64 = typename std::enable_if<!intg64<Ty>::value, Ty>::type;
-		static_assert(intg32<char>::value == true, "");
-		static_assert(intg32<wchar_t>::value == true, "");
-		static_assert(intg32<int>::value == true, "");
-		static_assert(intg32<char[5]>::value == false, "");
-		static_assert(intg32<double>::value == false, "");
+			return ch + 32 * (ch >= 'A' && ch <= 'Z');
+		}
 	}
 
 	// Compile Time ***************************************************************************
@@ -99,82 +98,108 @@ namespace pr::hash
 		return impl::Mul64(h ^ ch, FNV_prime64);
 	}
 
-	// Sentinel hash
-	template <typename Ty, typename = impl::str32<Ty>> constexpr uint32_t Hash32CT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
+	// Sentinel hash - Ty must be a character type
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint32_t Hash32CT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
-		return *str == term ? h : Hash32CT(str + 1, term, Hash32CT(uint32_t(*str), h));
+		for (; *str != term; ++str) h = Hash32CT(static_cast<uint32_t>(*str), h);
+		return h;
 	}
-	template <typename Ty, typename = impl::str64<Ty>> constexpr uint64_t Hash64CT(Ty const* str, Ty term = Ty(), uint64_t h = FNV_offset_basis64)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint64_t Hash64CT(Ty const* str, Ty term = Ty(), uint64_t h = FNV_offset_basis64)
 	{
-		return *str == term ? h : Hash64CT(str + 1, term, Hash64CT(uint64_t(*str), h));
-	}
-
-	// Case insensitive sentinel hash
-	template <typename Ty, typename = impl::str32<Ty>> constexpr uint32_t HashI32CT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
-	{
-		return *str == term ? h : HashI32CT(str + 1, term, Hash32CT(impl::Lower(*str), h));
-	}
-	template <typename Ty, typename = impl::str64<Ty>> constexpr uint64_t HashI64CT(Ty const* str, Ty term = Ty(), uint64_t h = FNV_offset_basis64)
-	{
-		return *str == term ? h : HashI64CT(str + 1, term, Hash64CT(impl::Lower(*str), h));
+		for (; *str != term; ++str) h = Hash64CT(static_cast<uint64_t>(*str), h);
+		return h;
 	}
 
-	// Range hash
-	template <typename Ty, typename = impl::str32<Ty>> constexpr uint32_t Hash32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+	// Case insensitive sentinel hash - Ty must be a character type
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint32_t HashI32CT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
-		return str == end ? h : Hash32CT(str + 1, end, Hash32CT(uint32_t(*str), h));
+		for (; *str != term; ++str) h = Hash32CT(static_cast<uint32_t>(impl::Lower(*str)), h);
+		return h;
 	}
-	template <typename Ty, typename = impl::str64<Ty>> constexpr uint32_t Hash64CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis64)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint64_t HashI64CT(Ty const* str, Ty term = Ty(), uint64_t h = FNV_offset_basis64)
 	{
-		return str == end ? h : Hash64CT(str + 1, end, Hash64CT(uint64_t(*str), h));
+		for (; *str != term; ++str) h = Hash64CT(static_cast<uint64_t>(impl::Lower(*str)), h);
+		return h;
 	}
 
-	// Case insensitive range hash
-	template <typename Ty, typename = impl::str32<Ty>> constexpr uint32_t HashI32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+	// Case insensitive range hash - Ty must be a character type
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint32_t HashI32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
 	{
-		return str == end ? h : HashI32CT(str + 1, end, Hash32CT(impl::Lower(*str), h));
+		for (; str != end; ++str) h = Hash32CT(static_cast<uint32_t>(impl::Lower(*str)), h);
+		return h;
 	}
-	template <typename Ty, typename = impl::str64<Ty>> constexpr uint64_t HashI64CT(Ty const* str, Ty const* end, uint64_t h = FNV_offset_basis64)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr uint64_t HashI64CT(Ty const* str, Ty const* end, uint64_t h = FNV_offset_basis64)
 	{
-		return str == end ? h : HashI64CT(str + 1, end, Hash64CT(impl::Lower(*str), h));
+		for (; str != end; ++str) h = Hash64CT(static_cast<uint64_t>(impl::Lower(*str)), h);
+		return h;
+	}
+
+	// Range hash - Ty must be a pod32/pod64
+	template <typename Ty, typename = impl::enable_if_pod32<Ty>> constexpr uint32_t Hash32CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+	{
+		for (; str != end; ++str) h = Hash32CT(static_cast<uint32_t>(*str), h);
+		return h;
+	}
+	template <typename Ty, typename = impl::enable_if_pod64<Ty>> constexpr uint64_t Hash64CT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis64)
+	{
+		for (; str != end; ++str) h = Hash64CT(static_cast<uint64_t>(*str), h);
+		return h;
 	}
 
 	// Default hash = 32 bit hash, even on 64bit builds for consistency
-	template <typename Ty, typename = impl::str32<Ty>> constexpr HashValue HashCT(Ty ch, uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_pod<Ty>> constexpr HashValue32 HashCT(Ty ch, uint32_t h = FNV_offset_basis32)
 	{
-		return static_cast<HashValue>(Hash32CT(ch, h));
+		// Types that can be converted to u32
+		if constexpr (std::is_convertible_v<Ty, uint32_t>)
+			return Hash32CT(static_cast<uint32_t>(ch), h);
+
+		// Types with size/alignment that is a multiple of 4 bytes
+		else if constexpr (std::is_standard_layout_v<Ty> && (sizeof(Ty) & 3) == 0 && alignof(Ty) >= 4)
+			return Hash32CT<uint32_t>(reinterpret_cast<uint32_t const*>(&ch), reinterpret_cast<uint32_t const*>(&ch) + sizeof(ch)/sizeof(uint32_t), h);
+		
+		// Types with size/alignment that is a multiple of 2 bytes
+		else if constexpr (std::is_standard_layout_v<Ty> && (sizeof(Ty) & 1) == 0 && alignof(Ty) >= 2)
+			return Hash32CT<uint16_t>(reinterpret_cast<uint16_t const*>(&ch), reinterpret_cast<uint16_t const*>(&ch) + sizeof(ch)/sizeof(uint16_t), h);
+
+		// Types with arbitrary size/alignment
+		else if constexpr (std::is_standard_layout_v<Ty>)
+			return Hash32CT<uint8_t>(reinterpret_cast<uint8_t const*>(&ch), reinterpret_cast<uint8_t const*>(&ch) + sizeof(ch), h);
+
+		// Not supported
+		else
+			static_assert(impl::dependant<Ty, false>, "Unsupported type for Hash()");
 	}
-	template <typename Ty, typename = impl::str32<Ty>> constexpr HashValue HashCT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr HashValue32 HashCT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
-		return static_cast<HashValue>(Hash32CT(str, term, h));
+		return static_cast<HashValue32>(Hash32CT(str, term, h));
 	}
-	template <typename Ty, typename = impl::str32<Ty>> constexpr HashValue HashICT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr HashValue32 HashICT(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
-		return static_cast<HashValue>(HashI32CT(str, term, h));
+		return static_cast<HashValue32>(HashI32CT(str, term, h));
 	}
-	template <typename Ty, typename = impl::str32<Ty>> constexpr HashValue HashCT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> constexpr HashValue32 HashICT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
 	{
-		return Hash32CT(str, end, h);
+		return static_cast<HashValue32>(HashI32CT(str, end, h));
 	}
-	template <typename Ty, typename = impl::str32<Ty>> constexpr HashValue HashICT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_pod32<Ty>> constexpr HashValue32 HashCT(Ty const* str, Ty const* end, uint32_t h = FNV_offset_basis32)
 	{
-		return HashI32CT(str, end, h);
+		return static_cast<HashValue32>(Hash32CT(str, end, h));
 	}
 
 	// string to hash value
-	constexpr HashValue operator "" _hash(char const* str, size_t n)
+	constexpr HashValue32 operator "" _hash(char const* str, size_t n)
 	{
 		return HashCT(str, str + n);
 	}
-	constexpr HashValue operator "" _hashi(char const* str, size_t n)
+	constexpr HashValue32 operator "" _hashi(char const* str, size_t n)
 	{
 		return HashICT(str, str + n);
 	}
-	constexpr HashValue operator "" _hash(wchar_t const* str, size_t n)
+	constexpr HashValue32 operator "" _hash(wchar_t const* str, size_t n)
 	{
 		return HashCT(str, str + n);
 	}
-	constexpr HashValue operator "" _hashi(wchar_t const* str, size_t n)
+	constexpr HashValue32 operator "" _hashi(wchar_t const* str, size_t n)
 	{
 		return HashICT(str, str + n);
 	}
@@ -182,123 +207,79 @@ namespace pr::hash
 	//template <unsigned int N> class C; C<HashI("ABC")> c;
 	static_assert(HashCT("ABC") == 1552166763U, "Compile time CRC failed");
 	static_assert(HashICT("ABC") == 440920331U, "Compile time CRC failed");
-	static_assert("hash me!"_hash == pr::hash::HashCT("hash me!"));
-	static_assert("HaSh Me ToO!"_hashi == pr::hash::HashICT("hash me too!"));
-	static_assert(  "hash me!"_hash == pr::hash::HashCT(L"hash me!"));
-	static_assert(L"HaSh Me ToO!"_hashi == pr::hash::HashICT(L"hash me too!"));
+	static_assert("hash me!"_hash == HashCT("hash me!"));
+	static_assert("HaSh Me ToO!"_hashi == HashICT("hash me too!"));
+	static_assert(L"hash me!"_hash == HashCT(L"hash me!"));
+	static_assert(L"HaSh Me ToO!"_hashi == HashICT(L"hash me too!"));
 
 	// Run Time *******************************************************************************
 
 	// Hash a single 'ch'
-	template <typename Ty, typename = impl::str32<Ty>> inline HashValue Hash(Ty ch, uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_pod32<Ty>> inline HashValue32 Hash(Ty ch, uint32_t h = FNV_offset_basis32)
 	{
 		return HashCT(ch, h);
 	}
-	template <typename Ty, typename = impl::str32<Ty>> inline HashValue HashI(Ty ch, uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> inline HashValue32 HashI(Ty ch, uint32_t h = FNV_offset_basis32)
 	{
-		return HashCT(static_cast<Ty>(impl::Lower(ch)), h);
+		return HashCT(impl::Lower(ch), h);
 	}
 
-	// Hash a sentinel string using the compile time 'Hash' function
-	template <typename Ty, typename = impl::str32<Ty>> inline HashValue Hash(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
+	// Hash a sentinel string
+	template <typename Ty, typename = impl::enable_if_char<Ty>> inline HashValue32 Hash(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
 		for (; *str != term; ++str) h = HashCT(*str, h);
 		return h;
 	}
-	template <typename Ty, typename = impl::str32<Ty>> inline HashValue HashI(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
+	template <typename Ty, typename = impl::enable_if_char<Ty>> inline HashValue32 HashI(Ty const* str, Ty term = Ty(), uint32_t h = FNV_offset_basis32)
 	{
-		for (; *str != term; ++str) h = HashCT(static_cast<Ty>(impl::Lower(*str)), h);
+		for (; *str != term; ++str) h = HashCT(impl::Lower(*str), h);
 		return h;
 	}
 
-	// Hash a range of elements using the compile time 'Hash' function
-	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::str32<Ty>> inline HashValue Hash(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
+	// Hash a range of elements
+	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::enable_if_pod32<Ty>> inline HashValue32 Hash(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
 	{
 		for (; first != last; ++first) h = HashCT(*first, h);
 		return h;
 	}
-	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::str32<Ty>> inline HashValue HashI(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
+	template <typename Iter, typename Ty = std::iterator_traits<Iter>::value_type, typename = impl::enable_if_char<Ty>> inline HashValue32 HashI(Iter first, Iter last, uint32_t h = FNV_offset_basis32)
 	{
-		for (; first != last; ++first) h = HashCT(static_cast<Ty>(impl::Lower(*first)), h);
+		for (; first != last; ++first) h = HashCT(impl::Lower(*first), h);
 		return h;
 	}
 
 	// Hash PODs given as arguments. Careful with hidden padding
-	namespace impl
+	template <typename... Args> inline HashValue32 Hash(Args&&... args)
 	{
-		#pragma warning (push)
-		#pragma warning (disable:4127)
-		template <typename Ty, typename = str32<Ty>> inline HashValue HashPod(Ty x)
+		auto h = FNV_offset_basis32;
+		auto hash_one = [&](auto& arg)
 		{
-			return Hash(x);
-		}
-		template <typename Ty, typename = str32<Ty>> inline HashValue HashPod(Ty const* x)
-		{
-			return Hash(x);
-		}
-		template <typename Ty, typename = pod32<Ty>> inline HashValue HashPod(Ty const& x)
-		{
-			if constexpr ((sizeof(Ty)&3) == 0)
-			{
-				auto ptr = reinterpret_cast<uint32_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint32_t));
-			}
-			else if constexpr ((sizeof(Ty) & 1) == 0)
-			{
-				auto ptr = reinterpret_cast<uint16_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint16_t));
-			}
-			else
-			{
-				auto ptr = reinterpret_cast<uint8_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint8_t));
-			}
-		}
+			using ArgTy = std::remove_cvref_t<decltype(arg)>;
+			using Ty = std::decay_t<ArgTy>;
 
-		template <typename Ty, typename... Args, typename = str32<Ty>> inline HashValue HashPod(Ty x, Args&&... args)
-		{
-			auto h = static_cast<uint32_t>(HashPod(std::forward<Args>(args)...));
-			return Hash(x, h);
-		}
-		template <typename Ty, typename... Args, typename = str32<Ty>> inline HashValue HashPod(Ty const* x, Args&&... args)
-		{
-			auto h = static_cast<uint32_t>(HashPod(std::forward<Args>(args)...));
-			return Hash(x, Ty(), h);
-		}
-		template <typename Ty, typename... Args, typename = pod32<Ty>> inline HashValue HashPod(Ty const& x, Args&&... args)
-		{
-			auto h = static_cast<uint32_t>(HashPod(std::forward<Args>(args)...));
+			// Pod types
+			if constexpr (impl::is_pod_v<Ty>)
+				h = HashCT(arg, h);
 
-			if constexpr ((sizeof(Ty) & 3) == 0)
-			{
-				auto ptr = reinterpret_cast<uint32_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint32_t), h);
-			}
-			else if constexpr ((sizeof(Ty) & 1) == 0)
-			{
-				auto ptr = reinterpret_cast<uint16_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint16_t), h);
-			}
+			// An array of pods
+			else if constexpr (std::is_bounded_array_v<ArgTy> && impl::is_pod_v<std::remove_pointer_t<Ty>>)
+				h = HashCT(&arg[0], &arg[0] + _countof(arg), h);
+
+			// A pointer to a null terminated string
+			else if constexpr (std::is_pointer_v<Ty> && impl::is_char_v<std::remove_pointer_t<Ty>>)
+				h = HashCT(arg, std::remove_pointer_t<Ty>(), h);
+
+			// Not supported
 			else
-			{
-				auto ptr = reinterpret_cast<uint8_t const*>(&x);
-				return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint8_t), h);
-			}
-		}
-		#pragma warning (pop)
-	}
-	template <typename Ty, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x)
-	{
-		return impl::HashPod(x);
-	}
-	template <typename Ty, typename... Args, typename = impl::pod32<Ty>> inline HashValue Hash(Ty const& x, Args&&... args)
-	{
-		return impl::HashPod(x, args...);
+				static_assert(impl::dependant<Ty, false>, "Unsupported type for Hash()");
+		};
+		(hash_one(args), ...);
+		return h;
 	}
 
 	// Hash in blocks of 16 bits
 	// http://www.azillionmonkeys.com/qed/hash.html, (c) Copyright 2004-2008 by Paul Hsieh
-	inline HashValue HsiehHash16(void const* data, size_t len, HashValue hash = -1)
+	inline HashValue32 HsiehHash16(void const* data, size_t len, HashValue32 hash = -1)
 	{
 		using uint8_t = unsigned char;
 		using uint_t = unsigned int;
@@ -368,7 +349,7 @@ namespace pr::hash
 	// And it has a few limitations -
 	// 1. It will not work incrementally.
 	// 2. It will not produce the same results on little-endian and big-endian machines.
-	inline HashValue MurmurHash2_32(void const* key, int len, HashValue seed = -1)
+	inline HashValue32 MurmurHash2_32(void const* key, int len, HashValue32 seed = -1)
 	{
 		// 'm' and 'r' are mixing constants generated offline.
 		// They're not really 'magic', they just happen to work well.
@@ -416,7 +397,7 @@ namespace pr::hash
 	// MurmurHash2, 64-bit versions, by Austin Appleby
 	// The same caveats as 32-bit MurmurHash2 apply here - beware of alignment 
 	// and endian-ness issues if used across multiple platforms.
-	inline HashValue64 MurmurHash2_64(void const* key, int len, HashValue seed = -1)
+	inline HashValue64 MurmurHash2_64(void const* key, int len, HashValue32 seed = -1)
 	{
 		using uint64_t = unsigned long long;
 		auto const m = 0xc6a4a7935bd1e995UL;
@@ -469,7 +450,7 @@ namespace pr::common
 
 		{// basic hashing
 			auto h0 = Hash("");
-			PR_CHECK(h0 == pr::hash::FNV_offset_basis32, true);
+			PR_CHECK(h0 == static_cast<HashValue32>(pr::hash::FNV_offset_basis32), true);
 		}
 		{// Compile time hash vs. std::hash
 			char const data[] = "Paul was here. CrC this, mofo";
@@ -494,6 +475,8 @@ namespace pr::common
 		}
 		{// Hash POD
 			struct POD { int i; char c[4]; float f; };
+			static_assert(std::is_standard_layout_v<POD>);
+
 			auto pod0 = POD{32,{ 'A','B','C','D' },6.28f};
 			auto pod1 = POD{31,{ 'D','C','B','A' },3.14f};
 			auto pod2 = POD{32,{ 'A','B','C','D' },6.28f};
@@ -523,8 +506,16 @@ namespace pr::common
 		}
 		{ // Hash arguments
 			char const* s = "was";
-			const auto h0 = Hash("Paul", s, L"here", 1976, 12.29, 1234U);
-			PR_CHECK(h0, HashValue(0xb0167e22));
+			struct POD { int i; char c; short s[3]; } pod;
+			memset(&pod, 0, sizeof(pod)); // Remember padding bytes are not initialised;
+			pod.i = 32;
+			pod.c = 'X';
+			pod.s[0] = 1;
+			pod.s[1] = 2;
+			pod.s[2] = 3;
+
+			const auto h0 = Hash("Paul", s, L"here", 1976, 12.29, 1234U, pod);
+			PR_CHECK(h0, static_cast<HashValue32>(0x43e662b8));
 		}
 	}
 }

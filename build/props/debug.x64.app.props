@@ -3,11 +3,10 @@
   <PropertyGroup Label="UserMacros">
     <TargetPlatform>x64</TargetPlatform>
   </PropertyGroup>
+  <PropertyGroup />
   <PropertyGroup>
-    <OutDir>..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
-  </PropertyGroup>
-  <PropertyGroup>
-    <IntDir>$(OutDir)</IntDir>
+    <IntDir>obj\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <OutDir>obj\$(PlatformTarget)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -19,13 +18,11 @@
     <ClCompile>
       <DisableSpecificWarnings>4351;4355;5105</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;_WIN32_WINNT=_WIN32_WINNT_WIN10;NOMINMAX;WIN32_LEAN_AND_MEAN;GDIPVER=0x0110</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\sqlite3\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <OmitFramePointers>false</OmitFramePointers>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <SDLCheck>true</SDLCheck>
@@ -33,15 +30,16 @@
       <MinimalRebuild>false</MinimalRebuild>
       <AdditionalOptions>/Zm200</AdditionalOptions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>
     </Lib>
     <Link>
-      <AdditionalLibraryDirectories>..\lib\$(PlatformTarget)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>onecore.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -49,7 +47,5 @@
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
-    <CustomBuildStep />
-    <CustomBuildStep />
   </ItemDefinitionGroup>
 </Project>

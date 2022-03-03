@@ -2647,31 +2647,31 @@ namespace pr::geometry
 				PR_CHECK(m0.m_norm.size(), m1.m_norm.size());
 				PR_CHECK(m0.m_tex0.size(), m1.m_tex0.size());
 				PR_CHECK(m0.m_nugget.size(), m1.m_nugget.size());
-				for (int j = 0; j != m1.m_vert.size(); ++j)
+				for (int j = 0; j != (int)m1.m_vert.size(); ++j)
 				{
 					auto& v0 = m0.m_vert[j];
 					auto& v1 = m1.m_vert[j];
 					PR_CHECK(v0 == v1, true);
 				}
-				for (int j = 0; j != m1.m_diff.size(); ++j)
+				for (int j = 0; j != (int)m1.m_diff.size(); ++j)
 				{
 					auto& c0 = m0.m_diff[j];
 					auto& c1 = m1.m_diff[j];
 					PR_CHECK(c0 == c1, true);
 				}
-				for (int j = 0; j != m1.m_norm.size(); ++j)
+				for (int j = 0; j != (int)m1.m_norm.size(); ++j)
 				{
 					auto& n0 = m0.m_norm[j];
 					auto& n1 = m1.m_norm[j];
 					PR_CHECK(n0 == n1, true);
 				}
-				for (int j = 0; j != m1.m_tex0.size(); ++j)
+				for (int j = 0; j != (int)m1.m_tex0.size(); ++j)
 				{
 					auto& t0 = m0.m_tex0[j];
 					auto& t1 = m1.m_tex0[j];
 					PR_CHECK(t0 == t1, true);
 				}
-				for (int j = 0; j != m1.m_nugget.size(); ++j)
+				for (int j = 0; j != (int)m1.m_nugget.size(); ++j)
 				{
 					auto& n0 = m0.m_nugget[j];
 					auto& n1 = m1.m_nugget[j];

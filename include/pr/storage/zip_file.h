@@ -4037,7 +4037,10 @@ namespace pr::storage
 {
 	PRUnitTest(ZipArchiveTests)
 	{
-		auto path = (std::filesystem::path(__FILE__).parent_path() / ".." / ".." / ".." / "projects" / "unittest_resources").lexically_normal();
+		auto path = (std::filesystem::path(__FILE__).parent_path() / ".." / ".." / ".." / "projects" / "tests" / "unittests" / "res").lexically_normal();
+		if (!std::filesystem::exists(path))
+			throw std::runtime_error("Unit test resources directory not found");
+
 		auto FileToBytes = [](std::filesystem::path const& filepath)
 		{
 			// Open the file and read it into memory

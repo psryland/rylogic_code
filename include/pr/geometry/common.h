@@ -4,6 +4,7 @@
 //********************************
 #pragma once
 
+#include <cassert>
 #include <type_traits>
 #include <d3dcommon.h>
 #include "pr/common/cast.h"
@@ -18,6 +19,7 @@
 #include "pr/container/ring.h"
 #include "pr/gfx/colour.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/line3.h"
 #include "pr/maths/interpolate.h"
 
 namespace pr::geometry

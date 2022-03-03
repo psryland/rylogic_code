@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Csex": {
+      "commandName": "Project",
+      "commandLineArgs": "-unittest \"P:\\pr\\projects\\rylogic\\Rylogic.Core\\bin\\Debug\\netstandard2.0\\Rylogic.Core.dll\""
+    }
+  }
+}

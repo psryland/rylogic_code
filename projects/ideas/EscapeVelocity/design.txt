@@ -1,0 +1,132 @@
+Escape Velocity:
+
+ Scientists discover that the star in your solar system is in the last stages of its life and will go supernova
+ within a year. The only hope for the survival of your civilisation is to build a space craft capable of
+ leaving your solar system. Your civilisation has a number of existing known materials but none is currently
+ suitable for this task. As the leading scientist of your time, you are tasked with researching new materials and
+ designing a space craft that will ultimately be the salvation of your civilisation.
+
+ Building a suitable space craft essentially boils down to two goals, choosing a material from which to build the
+ craft, and finding a fuel (combination of materials) that can provide the thrust needed to achieve escape velocity.
+ 
+ Player objective:
+  Discover the materials needed to build a space craft capable of reaching escape velocity from your solar system
+  transporting as many of your population as possible before your solar system is destroyed.
+  (Time frame = time till super nova, points = number of population saved)
+
+ Game-play:
+  Each game is different due to a randomly chosen number of electrons per orbital for the elements in the game universe.
+  All materials are the combination of two elements only (in the required ratios to produce stable combinations).
+  The player starts with a set of materials that they can combine to produce new materials. The combination
+  processes model real chemical reaction processes so that the player is able to roughly predict the outcome
+  of reacting two materials.
+  The materials the player is trying to find are:
+   - a strong ship building material (strongly bonded material with low atomic weight, highly ionic)
+   - two materials that react vigorously to use as fuel (materials that produce a strong exothermic reaction and hence
+     produce a high exhaust velocity). Atomic weight of the fuel is also important as it effects the mass of the ship.
+  The names of the elements are chosen randomly. The material names are then derived based on the ratio of elements
+   in the material. e.g. moronium (Mr) and bananite (Ba) in MrBa2 = moronium-di-bananite
+  The reaction of two materials can be endothermic or exothermic. Endothermic reactions require energy input which
+   defines the rate that the material can be produced, exothermic reactions happen instantly. Players will likely
+   need endothermic reactions to produce the two elements needed for fuel.
+
+ Game Views:
+  There are three main views in the game:
+  -Home View
+    -shows a countdown timer till the star explodes, the star mass, distance from the star
+    -shows a summary of the known materials and how much you have in your stockpile.
+    -shows a summary of your current leading ship design
+  -Ship Design view
+    -where you choose what materials to use for your ship and fuel
+    -the number of passengers your ship will carry
+    -the mass of fuel to carry
+    -the rate the ship will burn the fuel
+  -Material Lab view
+    -the interface for combining materials
+    -show detailed info about materials (name, elements, atomic weight, rarity, periodic table?)
+
+ Physics:
+  Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m³kg^-1s^-2, M = star mass, r = distance from star
+  Rocket Thrust:
+    Assume rocket constructed in space, only gravity influence is the star
+    mass(t)         = total_mass - t*mass_flow_rate
+	max_burn_time   = fuel_mass / mass_flow_rate
+	velocity(t)     = integrate(acceleration(t)) from 0 to t
+	acceleration(t) = total_force(t) / mass(t)
+	total_force(t)  = gravity_force(t) + thrust_force
+	thrust_force    = exhaust_velocity * mass_flow_rate + (pressure_at_nozzle_exit - atmospheric_pressure) * area_of_nozzle_exit
+	gravity_force   = G * star_mass * mass(t) / distance(t)²
+	distance(t)     = initial_distance + integrate(velocity(t)) from 0 to t
+	max_velocity    = velocity(max_burn_time)
+   Assuming space flight only, so atmospheric_pressure = 0
+   Assuming thrust_force is constant, i.e. mass_flow_rate and exhaust_velocity are constant
+   escape velocity is reached if max_velocity > escape_velocity
+   Note, circular dependency: velocity->accel->gravity_force->distance->velocity hence, iterative solver needed
+   Temperature:
+    As the star gets closer to supernova, the local temperature increases, remember to consider the melting points
+    of the ship material and fuel.
+    T(d) = Ts * sqrt(Rs / 2*d)
+    where:
+      Ts = average sun temperature ~ 6000K.
+      Rs = sun radius ~ 695,000km
+      d = average distance sun-planet ~ 149,600,000km
+      T = average planet temperature. ~16.18°C
+  Containment Pressure:
+    The player will decide the containment pressure for each fuel component.
+    Each material will have a relationship between container wall thickness and max pressure
+    Containment pressure therefore effects total ship mass
+	The fuel materials will have a matter state for the containment pressure and average local temperature
+	If the fuel is a gas then the density/volume are related by the ideal gas equation PV = nRT
+	 P = pressure, V = volume, n = molar mass, R = gas constant, T = temperature
+	 
+
+ Chemistry:
+  The chemistry of materials is defined by the valences of the elements (electrons per level). In our universe these
+  are: 2,8,8,18,18,32. The atomic weight of an element is the number of electrons it has (in its non-ionised state),
+  the number of electrons relative to how filled each valence level is controls how two elements react, how strongly
+  they become bonded when in a material.
+  In this simplified model, materials always consist of two elements (in various ratios)
+  Stability of a material depends on how close to filling the valence levels the element combination is
+  
+  The ideal material to build the space craft out of is a strong/light metal alloy. There doesn't seem to be any
+  periodic table inspired pattern for what makes an allow strong, so pick a light metal and the elements that from the
+  highest total bond energy
+
+ Game Systems:
+  Start with a random set of materials with random properties.
+  Inventory of materials increases with time based on rarity and time since discovered.
+  Player chooses combinations of known materials with a limited set of ratios, i.e. 1:1, 1:2, 1:3, 1:4, 1:5 in the hope
+   of discovering new materials.
+  Certain combinations of materials result in discoveries, once a material is discovered it becomes a known material.
+  Player has a set of variables for the space craft spec. They choose when to test the design. An iterative physical
+   simulation determines the viability of the craft. A percentage of the materials used in the test craft are consumed
+ The materials that can be discovered are generated randomly on game start by starting with four ideal materials and
+  generating backwards to produce enough intermediate materials (game difficulty control, more = harder)
+
+ Material generation:
+  Start with four materials suitably chosen to save 1000 people given the star mass and distance from star
+  Create an empty set of starting materials
+  Create an empty set of allowed materials
+  Generate a random material M1.
+  Choose M2, such that Combine(a * M1, b * M2) = IdealFuel (a,b are randomly chosen combination ratios)
+  Add IdealFuel to allowed materials, M1,M2 to starting materials
+  Generate a random material or choose from starting materials, call it M3 (may want to bias this)
+  Choose M4, such that Combine(a * M3, b * M4) = IdealMetal
+  Add IdealMetal to allowed materials, M3,M4 to starting materials
+  Repeat for IdealTech and IdealSheild
+  while number of final materials < number to create
+     Remove material M from the starting materials
+     Choose from the starting materials or randomly generate a material N (bias as needed)
+     Choose O such that Combine(a * N, b * O) = M
+     Add M to the allowed materials, O and N to the starting materials
+
+ Materials are introduced as 'ore' containing unknown elements. By reacting them with known elements
+  the properties can be determined (Players start with some known elements). E.g. if you start with NaCl
+  and react it with Blah Ore (XY), to produce NaX YCl, you can then infer something about X and Y.
+
+ At game start, star mass, and distance from star are not known. These must be researched in order to 
+  determine required ship specs.
+
+ Game intro start with a message from a solar observatory saying "Feck, Star's a gonner.." (to that effect)
+
+

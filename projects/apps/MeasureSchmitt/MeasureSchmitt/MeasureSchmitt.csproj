@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<RootNamespace>MeasureSchmitt</RootNamespace>
+		<AssemblyName>MeasureSchmitt</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>For measuring on screen stuff</Description>
+		<Copyright>Copyright (c) Rylogic 2021</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Code -->
+	<ItemGroup>
+		<ApplicationDefinition Include="src\App.xaml" />
+	</ItemGroup>
+
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png" />
+	</ItemGroup>
+
+	<!-- References -->
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj"/>
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj"/>
+	</ItemGroup>
+
+</Project>

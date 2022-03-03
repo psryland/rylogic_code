@@ -183,28 +183,28 @@
     <ClInclude Include="..\include\pr\geometry\3ds.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\directxtex\BC.h">
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\BC.h">
       <Filter>src\directxtex</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\common.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\shaders\common.h">
+    <ClInclude Include="..\projects\rylogic\view3d\shaders\common.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\config\config.h">
       <Filter>src\config</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\directxtex\DDS.h">
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DDS.h">
       <Filter>src\directxtex</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\util\demo_scene.h">
       <Filter>src\util</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\directxtex\DirectXTex.h">
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DirectXTex.h">
       <Filter>src\directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\directxtex\DirectXTexP.h">
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DirectXTexP.h">
       <Filter>src\directxtex</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\render\drawlist_element.h">
@@ -321,10 +321,10 @@
     <ClInclude Include="..\include\pr\view3d\render\scene_view.h">
       <Filter>src\render</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\directxtex\scoped.h">
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\scoped.h">
       <Filter>src\directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\shaders\shader_forward.h">
+    <ClInclude Include="..\projects\rylogic\view3d\shaders\shader_forward.h">
       <Filter>src\shaders</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\view3d\shaders\shader.h">
@@ -351,10 +351,10 @@
     <ClInclude Include="..\include\pr\view3d\render\state_block.h">
       <Filter>src\render</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\render\state_stack.h">
+    <ClInclude Include="..\projects\rylogic\view3d\render\state_stack.h">
       <Filter>src\render</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\render\stereo.h">
+    <ClInclude Include="..\projects\rylogic\view3d\render\stereo.h">
       <Filter>src\render</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\stl.h">
@@ -419,154 +419,154 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\view3d\directxtex\BC.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\BC4BC5.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC4BC5.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\BC6HBC7.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC6HBC7.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\config\config.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\config\config.cpp">
       <Filter>src\config</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexCompress.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexCompress.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexConvert.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexConvert.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexD3D11.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexD3D11.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexDDS.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexDDS.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexFlipRotate.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexFlipRotate.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexImage.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexImage.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMipmaps.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexMipmaps.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMisc.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexMisc.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexNormalMaps.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexNormalMaps.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexResize.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexResize.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexTGA.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexTGA.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexUtil.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexUtil.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexWIC.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexWIC.cpp">
       <Filter>src\directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\dslighting.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\dslighting.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\forward_render.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\forward_render.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\gbuffer.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\gbuffer.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\lights\light.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\lights\light.cpp">
       <Filter>src\lights</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\util\lock.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\util\lock.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\models\model.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\models\model.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\models\model_buffer.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\models\model_buffer.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\models\model_manager.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\models\model_manager.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\models\nugget.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\models\nugget.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\ray_cast.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\ray_cast.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\render_step.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\render_step.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\renderer.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\renderer.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\scene.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\scene.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\scene_view.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\scene_view.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shader.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shader.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shader_manager.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shader_manager.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\steps\shadow_map.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\steps\shadow_map.cpp">
       <Filter>src\steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_shadow_map.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_shadow_map.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_dslighting.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_dslighting.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_fwd.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_fwd.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_gbuffer.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_gbuffer.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_screen_space.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_screen_space.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\state_block.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\state_block.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\state_stack.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\state_stack.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\stereo.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\stereo.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_2d.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_2d.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_base.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_base.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_cube.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_cube.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_loader_dds.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_loader_dds.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_loader_wic.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_loader_wic.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\textures\texture_manager.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_manager.cpp">
       <Filter>src\textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\util\util.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\util\util.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\render\window.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\render\window.cpp">
       <Filter>src\render</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
@@ -584,104 +584,98 @@
     <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
       <Filter>pr\ldraw</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <Filter>pr\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <Filter>pr\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\view3d\util\diagnostic.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\util\diagnostic.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\view3d\shaders\shdr_diagnostic.cpp">
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_diagnostic.cpp">
       <Filter>src\shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\dslighting.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\dslighting.hlsl">
       <Filter>src\shaders\hlsl\deferred</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward.hlsl">
       <Filter>src\shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward_radial_fade.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <Filter>src\shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer.hlsl">
       <Filter>src\shaders\hlsl\deferred</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\ray_cast.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\utility\ray_cast.hlsl">
       <Filter>src\shaders\hlsl\utility</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\utility\show_normals.hlsl">
       <Filter>src\shaders\hlsl\utility</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\cbuf.hlsli">
       <Filter>src\shaders\hlsl</Filter>
     </None>
-    <None Include="..\projects\view3d\directxtex\DirectXTex.inl">
+    <None Include="..\projects\rylogic\view3d\directxtex\DirectXTex.inl">
       <Filter>src\directxtex</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\utility\env_map.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\env_map.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward.hlsli">
       <Filter>src\shaders\hlsl\forward</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\forward\forward_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward_cbuf.hlsli">
       <Filter>src\shaders\hlsl\forward</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\common\functions.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\functions.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer.hlsli">
       <Filter>src\shaders\hlsl\deferred</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
       <Filter>src\shaders\hlsl\deferred</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\common\geometry.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\geometry.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\lighting\phong_lighting.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\lighting\phong_lighting.hlsli">
       <Filter>src\shaders\hlsl\lighting</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_cast.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_cast.hlsli">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
       <Filter>src\shaders\hlsl\shadow</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\types.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\types.hlsli">
       <Filter>src\shaders\hlsl</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\common\vector.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\vector.hlsli">
       <Filter>src\shaders\hlsl\common</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli">
       <Filter>src\shaders\hlsl\screenspace</Filter>
     </None>
-    <None Include="..\projects\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli">
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli">
       <Filter>src\shaders\hlsl\utility</Filter>
     </None>
   </ItemGroup>

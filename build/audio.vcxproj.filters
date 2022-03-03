@@ -33,7 +33,7 @@
     <ClInclude Include="..\include\pr\audio\config\config.h">
       <Filter>src\config</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\audio\config\config.cpp">
+    <ClInclude Include="..\projects\rylogic\audio\config\config.cpp">
       <Filter>src\config</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\audio\directsound\player.h">
@@ -74,19 +74,19 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\audio\waves\wave_bank.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\waves\wave_bank.cpp">
       <Filter>src\waves</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\audio\waves\wave_file.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\waves\wave_file.cpp">
       <Filter>src\waves</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\audio\midi\midi.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\midi\midi.cpp">
       <Filter>src\midi</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\audio\audio\audio_manager.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\audio\audio_manager.cpp">
       <Filter>src\audio</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\audio\sound\sound.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\sound\sound.cpp">
       <Filter>src\sound</Filter>
     </ClCompile>
   </ItemGroup>

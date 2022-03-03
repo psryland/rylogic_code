@@ -90,7 +90,7 @@ namespace pr
 		// Construct from DirectX::XMMATRIX (if defined)
 		template <typename M, typename = maths::enable_if_dx_mat<M>> Mat4x4(M const& mat, int = 0)
 		{
-			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
+			static_assert(dependant<M, PR_MATHS_USE_DIRECTMATH>, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
 			vec[2] = mat.r[2];
@@ -98,7 +98,7 @@ namespace pr
 		}
 		template <typename M, typename = maths::enable_if_dx_mat<M>> Mat4x4(M const& mat, v4_cref<> pos_, int = 0)
 		{
-			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
+			static_assert(dependant<M, PR_MATHS_USE_DIRECTMATH>, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
 			vec[1] = mat.r[1];
 			vec[2] = mat.r[2];
@@ -779,129 +779,3 @@ namespace pr
 
 	#pragma endregion
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include <directxmath.h>
-namespace pr::maths
-{
-	PRUnitTest(Matrix4x4Tests)
-	{
-		using namespace pr;
-		std::default_random_engine rng;
-		{
-			auto m1 = m4x4Identity;
-			auto m2 = m4x4Identity;
-			auto m3 = m1 * m2;
-			PR_CHECK(FEql(m3, m4x4Identity), true);
-		}
-		{// Largest/Smallest element
-			auto m1 = m4x4{v4{1,2,3,4}, v4{-2,-3,-4,-5}, v4{1,1,-1,9}, v4{-8, 5, 0, 0}};
-			PR_CHECK(MinElement(m1) == -8, true);
-			PR_CHECK(MaxElement(m1) == +9, true);
-		}
-		{// FEql
-			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
-			auto m1 = m4x4Identity;
-			auto m2 = m4x4Identity;
-			
-			m1.x.x = m1.y.y = 1.0e-5f;
-			m2.x.x = m2.y.y = 1.1e-5f;
-			PR_CHECK(FEql(MaxElement(m1), 1), true);
-			PR_CHECK(FEql(MaxElement(m2), 1), true);
-			PR_CHECK(FEql(m1,m2), true);
-			
-			m1.z.z = m1.w.w = 1.0e-5f;
-			m2.z.z = m2.w.w = 1.1e-5f;
-			PR_CHECK(FEql(MaxElement(m1), 1.0e-5f), true);
-			PR_CHECK(FEql(MaxElement(m2), 1.1e-5f), true);
-			PR_CHECK(FEql(m1,m2), false);
-		}
-		{// Multiply scalar
-			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
-			auto m2 = 2.0f;
-			auto m3 = m4x4{v4{2,4,6,8}, v4{2,2,2,2}, v4{-4,-4,-4,-4}, v4{8,6,4,2}};
-			auto r = m1 * m2;
-			PR_CHECK(FEql(r, m3), true);
-		}
-		{// Multiply vector
-			auto m = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
-			auto v = v4{-3,4,2,-1};
-			auto R = v4{-7,-9,-11,-13};
-			auto r = m * v;
-			PR_CHECK(FEql(r, R), true);
-		}
-		{// Multiply matrix
-			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
-			auto m2 = m4x4{v4{1,1,1,1}, v4{2,2,2,2}, v4{-1,-1,-1,-1}, v4{-2,-2,-2,-2}};
-			auto m3 = m4x4{v4{4,4,4,4}, v4{8,8,8,8}, v4{-4,-4,-4,-4}, v4{-8,-8,-8,-8}};
-			auto r = m1 * m2;
-			PR_CHECK(FEql(r, m3), true);
-		}
-		{// Component multiply
-			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
-			auto m2 = v4(2,1,-2,-1);
-			auto m3 = m4x4{v4{2,4,6,8}, v4{1,1,1,1}, v4{+4,+4,+4,+4}, v4{-4,-3,-2,-1}};
-			auto r = CompMul(m1, m2);
-			PR_CHECK(FEql(r, m3), true);
-		}
-		{//m4x4Translation
-			auto m1 = m4x4(v4XAxis, v4YAxis, v4ZAxis, v4(1.0f, 2.0f, 3.0f, 1.0f));
-			auto m2 = m4x4::Translation(v4(1.0f, 2.0f, 3.0f, 1.0f));
-			PR_CHECK(FEql(m1, m2), true);
-		}
-		{//m4x4CreateFrom
-			auto V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
-			auto a2b = m4x4::Transform(v4::Normal(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
-			auto b2c = m4x4::Transform(v4::Normal(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
-			PR_CHECK(IsOrthonormal(a2b), true);
-			PR_CHECK(IsOrthonormal(b2c), true);
-			v4 V2 = a2b * V1;
-			v4 V3 = b2c * V2; V3;
-			m4x4 a2c = b2c * a2b;
-			v4 V4 = a2c * V1; V4;
-			PR_CHECK(FEql(V3, V4), true);
-		}
-		{//m4x4CreateFrom2
-			auto q = quat(1.0f, 0.5f, 0.7f);
-			m4x4 m1 = m4x4::Transform(1.0f, 0.5f, 0.7f, v4Origin);
-			m4x4 m2 = m4x4::Transform(q, v4Origin);
-			PR_CHECK(IsOrthonormal(m1), true);
-			PR_CHECK(IsOrthonormal(m2), true);
-			PR_CHECK(FEql(m1, m2), true);
-
-			std::uniform_real_distribution<float> dist(-1.0f,+1.0f);
-			float ang = dist(rng);
-			v4 axis = Random3N(rng, 0.0f);
-			m1 = m4x4::Transform(axis, ang, v4Origin);
-			m2 = m4x4::Transform(quat(axis, ang), v4Origin);
-			PR_CHECK(IsOrthonormal(m1), true);
-			PR_CHECK(IsOrthonormal(m2), true);
-			PR_CHECK(FEql(m1, m2), true);
-		}
-		{// Invert
-			m4x4 a2b = m4x4::Transform(v4::Normal(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
-			m4x4 b2a = Invert(a2b);
-			m4x4 a2a = b2a * a2b;
-			PR_CHECK(FEql(m4x4Identity, a2a), true);
-			{
-				#if PR_MATHS_USE_DIRECTMATH
-				auto dx_b2a = m4x4(DirectX::XMMatrixInverse(nullptr, a2b));
-				PR_CHECK(FEql(b2a, dx_b2a), true);
-				#endif
-			}
-
-			m4x4 b2a_fast = InvertFast(a2b);
-			PR_CHECK(FEql(b2a_fast, b2a), true);
-		}
-		{//m4x4Orthonormalise
-			m4x4 a2b;
-			a2b.x = v4(-2.0f, 3.0f, 1.0f, 0.0f);
-			a2b.y = v4(4.0f,-1.0f, 2.0f, 0.0f);
-			a2b.z = v4(1.0f,-2.0f, 4.0f, 0.0f);
-			a2b.w = v4(1.0f, 2.0f, 3.0f, 1.0f);
-			PR_CHECK(IsOrthonormal(Orthonorm(a2b)), true);
-		}
-	}
-}
-#endif

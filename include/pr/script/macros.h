@@ -284,38 +284,3 @@ namespace pr::script
 		}
 	};
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::script
-{
-	PRUnitTest(MacroTests)
-	{
-		MacroDB macros;
-
-		{
-			Macro macro1(L"One", L"OneExpanded");
-			Macro macro2(L"Two", L"TwoExpanded x y", { L"x", L"y" });
-			macros.Add(macro1);
-			macros.Add(macro2);
-
-			// Macros are copied into the DB
-			PR_CHECK(macros.Find(L"One") != &macro1, true);
-			PR_CHECK(macros.Find(L"Two") != &macro2, true);
-			PR_CHECK(*macros.Find(L"One") == macro1, true);
-			PR_CHECK(*macros.Find(L"Two") == macro2, true);
-		}
-
-		PR_CHECK(macros.Find(L"One") != nullptr, true);
-		PR_CHECK(macros.Find(L"Two") != nullptr, true);
-		PR_CHECK(macros.Find(L"Three") == nullptr, true);
-
-		string_t result;
-		macros.Find(L"One")->Expand(result, {}, Loc());
-		PR_CHECK(result, L"OneExpanded");
-
-		macros.Find(L"Two")->Expand(result, { L"A", L"B" }, Loc());
-		PR_CHECK(result, L"TwoExpanded A B");
-	}
-}
-#endif

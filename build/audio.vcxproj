@@ -1,122 +1,99 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- Globals -->
-  <PropertyGroup Label="Globals">
-    <ProjectName>audio</ProjectName>
-    <RootNamespace>View3D</RootNamespace>
-    <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}</ProjectGuid>
-    <PlatformToolset>v143</PlatformToolset>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-  </PropertyGroup>
-  <PropertyGroup Label="UserMacros" />
-  <!-- Configurations -->
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <!-- Build options -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <!-- Property Sheets -->
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="props\debug.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="props\debug.x64.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="props\release.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="props\release.x64.lib.props" />
-  </ImportGroup>
-  <!-- Build options -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <!-- Files -->
-  <ItemGroup>
-    <ClInclude Include="..\include\pr\audio\audio.h" />
-    <ClInclude Include="..\include\pr\audio\audio\audio_manager.h" />
-    <ClInclude Include="..\include\pr\audio\config\config.h" />
-    <ClInclude Include="..\include\pr\audio\directsound\player.h" />
-    <ClInclude Include="..\include\pr\audio\directsound\sound.h" />
-    <ClInclude Include="..\include\pr\audio\forward.h" />
-    <ClInclude Include="..\include\pr\audio\midi\midi.h" />
-    <ClInclude Include="..\include\pr\audio\sound\sound.h" />
-    <ClInclude Include="..\include\pr\audio\synth\note.h" />
-    <ClInclude Include="..\include\pr\audio\synth\synth.h" />
-    <ClInclude Include="..\include\pr\audio\util\util.h" />
-    <ClInclude Include="..\include\pr\audio\waves\wave_bank.h" />
-    <ClInclude Include="..\include\pr\audio\waves\wave_file.h" />
-    <ClInclude Include="..\projects\audio\config\config.cpp" />
-    <ClCompile Include="..\projects\audio\midi\midi.cpp" />
-    <ClCompile Include="..\projects\audio\sound\sound.cpp" />
-    <ClCompile Include="..\projects\audio\waves\wave_bank.cpp" />
-    <ClCompile Include="..\projects\audio\waves\wave_file.cpp" />
-    <ClCompile Include="..\projects\audio\audio\audio_manager.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Label="ExtensionTargets" />
+
+	<!-- Globals -->
+	<PropertyGroup Label="Globals">
+		<ProjectName>audio</ProjectName>
+		<RootNamespace>View3D</RootNamespace>
+		<VCProjectVersion>16.0</VCProjectVersion>
+		<ProjectGuid>{7CC6930C-889B-4B6E-958F-BEE16ED2FF44}</ProjectGuid>
+		<PlatformToolset>v143</PlatformToolset>
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+
+	<!-- Configurations -->
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="props\$(Configuration).$(Platform).lib.props" />
+
+	<!-- Build options -->
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>"pr/audio/forward.h"</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+
+	<!-- Files -->
+	<ItemGroup>
+		<ClInclude Include="..\include\pr\audio\audio.h" />
+		<ClInclude Include="..\include\pr\audio\audio\audio_manager.h" />
+		<ClInclude Include="..\include\pr\audio\config\config.h" />
+		<ClInclude Include="..\include\pr\audio\directsound\player.h" />
+		<ClInclude Include="..\include\pr\audio\directsound\sound.h" />
+		<ClInclude Include="..\include\pr\audio\forward.h" />
+		<ClInclude Include="..\include\pr\audio\midi\midi.h" />
+		<ClInclude Include="..\include\pr\audio\sound\sound.h" />
+		<ClInclude Include="..\include\pr\audio\synth\note.h" />
+		<ClInclude Include="..\include\pr\audio\synth\synth.h" />
+		<ClInclude Include="..\include\pr\audio\util\util.h" />
+		<ClInclude Include="..\include\pr\audio\waves\wave_bank.h" />
+		<ClInclude Include="..\include\pr\audio\waves\wave_file.h" />
+		<ClInclude Include="..\projects\rylogic\audio\config\config.cpp" />
+		<ClCompile Include="..\projects\rylogic\audio\midi\midi.cpp" />
+		<ClCompile Include="..\projects\rylogic\audio\sound\sound.cpp" />
+		<ClCompile Include="..\projects\rylogic\audio\waves\wave_bank.cpp" />
+		<ClCompile Include="..\projects\rylogic\audio\waves\wave_file.cpp" />
+		<ClCompile Include="..\projects\rylogic\audio\audio\audio_manager.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

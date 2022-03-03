@@ -1,0 +1,99 @@
+﻿<Application
+	x:Class="CoinFlip.UI.App"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	StartupUri="UI/MainWindow.xaml"
+	ShutdownMode="OnMainWindowClose"
+	>
+	<Application.Resources>
+		<ResourceDictionary>
+			<!--
+			Notes:
+				- App.xaml is the root of the resources hierarchy.
+				- Resources defined in App.xaml can be used statically in any other XAML file, *except* theme files such as Generic.xaml
+			-->
+			<BitmapImage x:Key="money" UriSource="/CoinFlip.UI;component/res/money.png" />
+			<BitmapImage x:Key="clock" UriSource="/CoinFlip.UI;component/res/clock.png" />
+			<BitmapImage x:Key="check_accept" UriSource="/CoinFlip.UI;component/res/check_accept.png" />
+			<BitmapImage x:Key="check_reject" UriSource="/CoinFlip.UI;component/res/check_reject.png" />
+			<BitmapImage x:Key="media_player_end" UriSource="/CoinFlip.UI;component/res/media_player_end.png" />
+			<BitmapImage x:Key="media_player_pause" UriSource="/CoinFlip.UI;component/res/media_player_pause.png" />
+			<BitmapImage x:Key="media_player_play" UriSource="/CoinFlip.UI;component/res/media_player_play.png" />
+			<BitmapImage x:Key="media_player_start" UriSource="/CoinFlip.UI;component/res/media_player_start.png" />
+			<BitmapImage x:Key="media_player_step_fwd" UriSource="/CoinFlip.UI;component/res/media_player_step_fwd.png" />
+			<BitmapImage x:Key="media_player_stop" UriSource="/CoinFlip.UI;component/res/media_player_stop.png" />
+			<BitmapImage x:Key="dollar_sign_black" UriSource="/CoinFlip.UI;component/res/dollar_sign_black.png" />
+			<BitmapImage x:Key="dollar_sign_green" UriSource="/CoinFlip.UI;component/res/dollar_sign_green.png" />
+			<BitmapImage x:Key="dollar_sign_blue" UriSource="/CoinFlip.UI;component/res/dollar_sign_blue.png" />
+			<BitmapImage x:Key="history_black" UriSource="/CoinFlip.UI;component/res/history_black.png" />
+			<BitmapImage x:Key="history_green" UriSource="/CoinFlip.UI;component/res/history_green.png" />
+			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
+			<BitmapImage x:Key="market_depth_colour" UriSource="/CoinFlip.UI;component/res/market_depth_colour.png" />
+			<BitmapImage x:Key="histogram_gray" UriSource="/CoinFlip.UI;component/res/histogram_gray.png" />
+			<BitmapImage x:Key="histogram_coloured" UriSource="/CoinFlip.UI;component/res/histogram_coloured.png" />
+			<BitmapImage x:Key="transfers_gray" UriSource="/CoinFlip.UI;component/res/transfers_gray.png" />
+			<BitmapImage x:Key="transfers_coloured" UriSource="/CoinFlip.UI;component/res/transfers_coloured.png" />
+			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
+			<BitmapImage x:Key="cross_hair_gray" UriSource="/CoinFlip.UI;component/res/cross_hair_gray.png" />
+			<BitmapImage x:Key="cross_hair_blue" UriSource="/CoinFlip.UI;component/res/cross_hair_blue.png" />
+			<BitmapImage x:Key="tape_measure_gray" UriSource="/CoinFlip.UI;component/res/tape_measure_gray.png" />
+			<BitmapImage x:Key="tape_measure_coloured" UriSource="/CoinFlip.UI;component/res/tape_measure_coloured.png" />
+			<BitmapImage x:Key="options" UriSource="/CoinFlip.UI;component/res/options.png" />
+			<BitmapImage x:Key="power_gray" UriSource="/CoinFlip.UI;component/res/power_gray.png" />
+			<BitmapImage x:Key="power_blue" UriSource="/CoinFlip.UI;component/res/power_blue.png" />
+			<BitmapImage x:Key="plus_gray" UriSource="/CoinFlip.UI;component/res/plus_gray.png" />
+			<BitmapImage x:Key="plus" UriSource="/CoinFlip.UI;component/res/plus.png" />
+
+			<!-- Fix for Library binding bugs -->
+			<Style TargetType="ComboBoxItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+			<Style TargetType="MenuItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+			
+			<!-- Global style for grids -->
+			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
+			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
+			<Style TargetType="{x:Type DataGridCell}">
+				<Style.Triggers>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+			
+			<!-- Style for combo boxes in grids -->
+			<Style x:Key="GridComboBoxStyle" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}">
+				<Setter Property="BorderThickness" Value="0"/>
+				<Setter Property="Background" Value="Transparent"/>
+				<Style.Triggers>
+					<Trigger Property="IsDropDownOpen" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+					</Trigger>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- Add skin resources -->
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="../skin/Dark.xaml" />
+				<ResourceDictionary Source="../skin/Default.xaml" />
+				<local:SkinResourceDictionary SourceDefault="../skin/Default.xaml" SourceDark="../skin/Dark.xaml"/>
+				<ResourceDictionary Source="../skin/Styles.xaml" />
+				<x:Static Member="gui:ContextMenus.Instance"/>
+			</ResourceDictionary.MergedDictionaries>
+
+		</ResourceDictionary>
+	</Application.Resources>
+</Application>

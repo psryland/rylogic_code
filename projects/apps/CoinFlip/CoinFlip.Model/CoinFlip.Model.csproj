@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<RootNamespace>CoinFlip.Model</RootNamespace>
+		<AssemblyName>CoinFlip.Model</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>ClipFlip Application Logic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- References -->
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.0.123" />
+		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.115.5" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj" />
+		<ProjectReference Include="..\ExchApi.Binance\ExchApi.Binance.csproj" />
+	</ItemGroup>
+
+</Project>

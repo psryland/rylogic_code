@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Notes:
@@ -17,7 +17,6 @@ from importlib import machinery as Import
 from typing import List
 from enum import Enum
 import Rylogic as Tools
-import RylogicAssembly as RA
 import BuildInstaller
 import BuildDocs
 import BuildInstaller
@@ -39,7 +38,7 @@ class EProjects(Enum):
 	RylogicView3d = "Rylogic.View3d"
 	RylogicGuiWinForms = "Rylogic.Gui.WinForms"
 	RylogicGuiWPF = "Rylogic.Gui.WPF"
-	CSex = "CSex"
+	Csex = "Csex"
 	LDraw = "LDraw"
 	RyLogViewer = "RyLogViewer"
 	SolarHotWater = "SolarHotWater"
@@ -99,6 +98,27 @@ def MSBuild(name:str, sln:str, projects:List[str], platforms:List[str], configs:
 	Tools.SetupVcEnvironment()
 	if Tools.MSBuild(sln, projects, platforms, configs, props): return
 	raise RuntimeError(f"Building {name} failed")
+
+# Deploy lib and/or dll files to the '/pr/lib' folder
+def DeployLib(target_name:str, obj_dir:str, platforms:List[str], configs:List[str]):
+	for p in platforms:
+		for c in configs:
+			target_dir = Tools.Path(obj_dir, p, c)
+			target_files = [
+				Tools.Path(target_dir, f"{target_name}.lib", check_exists=False),
+				Tools.Path(target_dir, f"{target_name}.dll", check_exists=False),
+				Tools.Path(target_dir, f"{target_name}.imp", check_exists=False),
+				Tools.Path(target_dir, f"{target_name}.pdb", check_exists=False),
+			]
+
+			# Get the destination directory: /pr/lib/p/c/target_name.extn
+			dst_dir = os.path.join(UserVars.root, "lib", p, c)
+
+			# Copy the target files to the destination directories
+			for filepath in filter(os.path.exists, target_files):
+				_,file = os.path.split(filepath)
+				Tools.Copy(filepath, os.path.join(dst_dir, file))
+	return
 
 # Restore nuget packages
 def DotNetRestore(sln_or_proj:str):
@@ -164,10 +184,10 @@ class Native(Common):
 	def __init__(self, proj_name:str, workspace:str, platforms:List[str], configs:List[str]):
 		Common.__init__(self, workspace)
 		self.proj_name = proj_name
-		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
-		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
+		#self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
 		self.platforms = platforms if platforms else ["x64", "x86"]
 		self.configs = configs if configs else ["Release", "Debug"]
+		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
 		self.obj_dir = os.path.join(workspace, "obj", UserVars.platform_toolset)
 		return
 
@@ -203,6 +223,7 @@ class Scintilla(NativeSDKDll):
 class Audio(Native):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "audio", workspace, platforms, configs)
+		self.proj_dir = Tools.Path(workspace, f"projects\\rylogic\\{self.proj_name}")
 		return
 
 	def Clean(self):
@@ -211,14 +232,20 @@ class Audio(Native):
 		return
 
 	def Build(self):
-		MSBuild("Audio", self.rylogic_sln, ["Rylogic\\audio"], self.platforms, self.configs)
-		MSBuild("Audio.dll", self.rylogic_sln, ["Rylogic\\audio.dll"], self.platforms, self.configs)
+		MSBuild("audio", self.rylogic_sln, ["Rylogic\\audio"], self.platforms, self.configs)
+		MSBuild("audio.dll", self.rylogic_sln, ["Rylogic\\audio.dll"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		DeployLib(self.proj_name, Tools.Path(self.obj_dir, "audio"), self.platforms, self.configs)
+		DeployLib(self.proj_name, Tools.Path(self.obj_dir, "audio.dll"), self.platforms, self.configs)
 		return
 
 # View3d native dll
 class View3d(Native):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Native.__init__(self, "view3d", workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, f"projects\\rylogic\\{self.proj_name}")
 		return
 
 	def Clean(self):
@@ -229,6 +256,11 @@ class View3d(Native):
 	def Build(self):
 		MSBuild("View3d", self.rylogic_sln, ["Rylogic\\view3d"], self.platforms, self.configs)
 		MSBuild("View3d.dll", self.rylogic_sln, ["Rylogic\\view3d.dll"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d"), self.platforms, self.configs)
+		DeployLib(self.proj_name, Tools.Path(self.obj_dir, "view3d.dll"), self.platforms, self.configs)
 		return
 
 # P3d
@@ -257,7 +289,7 @@ class Managed(Common):
 		self.frameworks = frameworks
 		self.platforms = platforms if platforms else ["Any CPU"]
 		self.configs = configs if configs else ["Release", "Debug"]
-		self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
+		#self.proj_dir = os.path.join(workspace, "projects", self.proj_name)
 		self.rylogic_sln = os.path.join(workspace, "build", "rylogic.sln")
 		self.requires_signing = True
 		return
@@ -270,6 +302,8 @@ class Managed(Common):
 class RylogicAssembly(Managed):
 	def __init__(self, proj_name:str, frameworks:List[str], workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, proj_name, frameworks, workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, "projects\\rylogic", self.proj_name)
+		self.sign_assemblies = False
 		return
 
 	def Build(self):
@@ -280,9 +314,10 @@ class RylogicAssembly(Managed):
 	def Deploy(self):
 		proj = os.path.join(self.proj_dir, f"{self.proj_name}.csproj")
 		output_dir = os.path.join(self.proj_dir, "bin", "Release")
-		for fw in self.frameworks:
-			SignAssembly(os.path.join(output_dir, fw, f"{self.proj_name}.dll"))
-		self.nupkg = Tools.NugetPackage(proj)
+		if self.sign_assemblies:
+			for fw in self.frameworks:
+				SignAssembly(os.path.join(output_dir, fw, f"{self.proj_name}.dll"))
+			self.nupkg = Tools.NugetPackage(proj)
 		return
 
 	def Publish(self):
@@ -293,63 +328,83 @@ class RylogicAssembly(Managed):
 # Rylogic.Core .NET assembly
 class RylogicCore(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Core", ["netstandard2.0", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Core", ["netstandard2.0"], workspace, platforms, configs)
 		return
 
 # Rylogic.Core.Windows .NET assembly
 class RylogicCoreWindows(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Core.Windows", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Core.Windows", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.Net .NET assembly
 class RylogicNet(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Net", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Net", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.Scintilla .NET assembly
 class RylogicScintilla(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Scintilla", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Scintilla", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.View3d .NET assembly
 class RylogicView3d(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.View3d", ["net472", "net6-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WinForms .NET assembly
 class RylogicGuiWinForms(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Gui.WinForms", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Rylogic.Gui.WPF .NET assembly
 class RylogicGuiWPF(RylogicAssembly):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		RylogicAssembly.__init__(self, "Rylogic.Gui.WPF", ["net472", "netcoreapp3.1"], workspace, platforms, configs)
+		RylogicAssembly.__init__(self, "Rylogic.Gui.WPF", ["net472", "net6.0-windows"], workspace, platforms, configs)
 		return
 
 # Csex
 class Csex(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "CSex", ["net472"], workspace, platforms, configs)
+		Managed.__init__(self, "Csex", ["net6.0-windows"], workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, "projects\\tools", self.proj_name)
 		self.requires_signing = False
 		return
 
 	def Build(self):
 		DotNetRestore(self.rylogic_sln)
-		MSBuild("CSex", self.rylogic_sln, ["Tools\\Csex"], self.platforms, self.configs)
+		MSBuild("Csex", self.rylogic_sln, ["Tools\\Csex"], self.platforms, self.configs)
+		return
+
+	def Deploy(self):
+		version = Tools.Extract(os.path.join(self.proj_dir, "Csex.csproj"), r"<Version>(.*)</Version>").group(1)
+		print(f"Deploying Csex Version: {version}\n")
+
+		# Ensure output directories exist and are empty
+		self.bin_dir = os.path.join(UserVars.root, "bin", "Csex")
+		CleanDir(self.bin_dir)
+
+		# Copy build products to the output directory
+		print(f"Copying files to {self.bin_dir}...\n")
+		target_dir = os.path.join(self.proj_dir, "bin", "Release", self.frameworks[0])
+		Tools.Copy(os.path.join(target_dir, "Csex.exe"                  ), self.bin_dir)
+		Tools.Copy(os.path.join(target_dir, "Csex.dll"                  ), self.bin_dir)
+		Tools.Copy(os.path.join(target_dir, "Csex.runtimeconfig.json"   ), self.bin_dir)
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.dll"          ), self.bin_dir)
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Core.Windows.dll"  ), self.bin_dir)
+		Tools.Copy(os.path.join(target_dir, "Rylogic.Gui.WPF.dll"       ), self.bin_dir)
 		return
 
 # LDraw
 class LDraw(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "LDraw", ["net472"], workspace, platforms, configs)
+		Managed.__init__(self, "LDraw", ["net6-windows"], workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, "projects\\apps", "LDraw", self.proj_name)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects", "LDraw", self.proj_name)
 		return
 
 	def Build(self):
@@ -402,9 +457,9 @@ class LDraw(Managed):
 # RylogViewer
 class RyLogViewer(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
-		Managed.__init__(self, "RyLogViewer2", ["net472"], workspace, platforms, configs)
+		Managed.__init__(self, "RyLogViewer", ["net6-windows"], workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects", "RyLogViewer", self.proj_name)
 		return
 
 	def Build(self):
@@ -455,8 +510,8 @@ class RyLogViewer(Managed):
 class SolarHotWater(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "SolarHotWater", ["netcoreapp3.1"], workspace, platforms, configs)
+		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects", "SolarHotWater")
 		return
 
 	def Clean(self):
@@ -565,7 +620,7 @@ class Fishomatic(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Fishomatic", ["netcoreapp3.1"], workspace, platforms, configs)
 		self.platforms = ["x64"]
-		self.proj_dir = os.path.join(workspace, "projects", "Fishomatic")
+		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
 		return
 
 	def Clean(self):
@@ -589,9 +644,10 @@ class Fishomatic(Managed):
 class RylogicTextAligner(Managed):
 	def __init__(self, workspace:str, platforms:List[str], configs:List[str]):
 		Managed.__init__(self, "Rylogic.TextAligner", ["net472"], workspace, platforms, configs)
-		self.targets = ['2019', '2022']
+		self.proj_dir = os.path.join(workspace, "projects\\apps", self.proj_name)
 		self.vsix_ids = ["DF402917-6013-40CA-A4C6-E1640DA86B90", "26C3C30A-6050-4CBF-860E-6C5590AF95EF"]
 		self.signing_algos = ["sha1", "sha256"]
+		self.targets = ['2019', '2022']
 		return
 
 	def Build(self):
@@ -846,20 +902,16 @@ def Main(args:List[str]):
 
 # Entry Point
 if __name__ == "__main__":
-	try:
-		# Examples:
-		#sys.argv=['build.py', '-project', 'Rylogic.Core', '-platforms', 'x64', 'x86', '-configs', 'release', 'debug']
-		#sys.argv=['build.py', '-project', 'Rylogic.Core', 'Rylogic.Core.Windows', '-deploy']
-		#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy']
-		#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
-		#sys.argv=['build.py', '-projects', 'Rylogic', '-clean', '-build', '-deploy']
-		#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']
-		#sys.argv=['build.py', '-projects', 'LDraw', '-deploy']
-
-		#print(f"Command Line: {str(sys.argv)}")
-		Main(sys.argv)
-
-	except Exception as ex:
-		print(f"ERROR: {str(ex)}")
-		sys.exit(-1)
-
+	# Examples:
+	#sys.argv=['build.py']
+	#sys.argv=['build.py', '-projects', 'Audio', '-deploy']
+	#sys.argv=['build.py', '-project', 'Rylogic.Core', '-platforms', 'x64', 'x86', '-configs', 'release', 'debug']
+	#sys.argv=['build.py', '-project', 'Rylogic.Core', 'Rylogic.Core.Windows', '-deploy']
+	#sys.argv=['build.py', '-projects', 'Rylogic.TextAligner', '-build', '-deploy']
+	#sys.argv=['build.py', '-projects', 'LDraw', '-configs', 'Release', '-deploy']
+	#sys.argv=['build.py', '-projects', 'Rylogic', '-deploy']
+	#sys.argv=['build.py', '-projects', 'Scintilla', '-clean']
+	#sys.argv=['build.py', '-projects', 'LDraw', '-deploy']
+	#sys.argv=['build.py', '-projects', 'Csex', '-deploy']
+	#print(f"Command Line: {str(sys.argv)}")
+	Main(sys.argv)

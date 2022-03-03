@@ -418,38 +418,3 @@ namespace pr::script
 	};
 }
 
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include "pr/str/string_core.h"
-#include "pr/win32/win32.h"
-namespace pr::script
-{
-	PRUnitTest(IncludesTests)
-	{
-		using namespace pr::str;
-		using string = pr::string<wchar_t>;
-
-		char data[] = "Included";
-		auto script_include = temp_dir / L"script_include.txt";
-		auto cleanup = CreateScope([] {}, [=] { std::filesystem::remove(script_include); });
-
-		{// Create the file
-			std::ofstream fout(script_include);
-			fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
-		}
-
-		{
-			Includes inc;
-
-			inc.AddSearchPath(win32::ExePath().parent_path());
-			inc.AddSearchPath(std::filesystem::current_path());
-
-			auto src_ptr = inc.Open(script_include, EIncludeFlags::None);
-			auto& src = *src_ptr;
-
-			std::wstring r; for (;*src; ++src) r.push_back(*src);
-			PR_CHECK(pr::str::Equal(r, data), true);
-		}
-	}
-}
-#endif

@@ -2,11 +2,6 @@
 // Archiver
 //  Copyright (c) Rylogic Ltd 2009
 //**************************************************************************
-#ifndef PR_ARCHIVER_H
-#define PR_ARCHIVER_H
-#define NEW_ARCHIVER
-#ifdef NEW_ARCHIVER
-
 // Archive File Format:
 //	4bytes - 'P', 'R', 'A', 'R'
 //	4bytes - Number of templates
@@ -37,405 +32,398 @@
 //	pr::archive::File arch("filename");
 //	arch.RegisterTemplate(MyType::ArchiveTemplate());
 //	arch.Write(my_type);
-//
+#pragma once
+
+#define NEW_ARCHIVER
+#ifdef NEW_ARCHIVER
+
+#include <cassert>
 #include <vector>
 #include <algorithm>
 #include <typeinfo>
 #include "pr/common/fmt.h"
 #include "pr/common/hash.h"
 
-#ifndef PR_ASSERT
-#	define PR_ASSERT_STR_DEFINED
-#	define PR_ASSERT(grp, exp, str)
-#endif
-#ifndef PR_EXPAND
-#	define PR_EXPAND_DEFINED
-#	define PR_EXPAND(grp, exp)
-#endif
-#define PR_ARCHIVE_DBG			1
-#define PR_ARCHIVE_SHOW_TYPES	0
-
-namespace pr
+namespace pr::archive
 {
-	namespace archive
+	#define PR_ARCHIVE_SHOW_TYPES 0
+
+	// Built-in types
+	enum class EType
 	{
-		// Built-in types
-		namespace EType
+		s8   = 0x0c5d8c41,
+		s16  = 0x0800461d,
+		s32  = 0x0537f586,
+		s64  = 0x07e9c746,
+		u8   = 0x1bf3bb96,
+		u16  = 0x18832d9b,
+		u32  = 0x15b49e00,
+		u64  = 0x176aacc0,
+		f32  = 0x1a8da2d5,
+		f64  = 0x18539015,
+		f128 = 0x1c5971be,
+	};
+	using S_008 = char;
+	using S_016 = short;
+	using S_032 = int;
+	using S_064 = __int64;
+	using U_008 = unsigned char;
+	using U_016 = unsigned short;
+	using U_032 = unsigned int;
+	using U_064 = unsigned __int64;
+	using F_032 = float;
+	using F_064 = double;
+	using F_128 = long double;
+
+	// A single field in a template type
+	struct Field
+	{
+		U_032 m_type;   // The hash of the type name, e.g. s8, f32, s32, or an earlier defined template id
+		U_032 m_name;   // The hash of the member name for this field
+		U_032 m_count;  // The number of fields of this type in an array
+		U_032 m_offset; // The byte offset to this member in the source type
+	};
+	using Fields = std::vector<Field>;
+
+	// A single template
+	struct Template
+	{
+		U_032  m_type_info; // The hash of the typeinfo name of this type
+		U_032  m_type_name; // The hash of the name of this type
+		U_032  m_size;      // The size in bytes of written instances of this template
+		Fields m_fields;    // The fields to be written for this template
+
+		friend bool operator == (Template const& lhs, Template const& rhs)
 		{
-			enum Type
+			return lhs.m_type_info == rhs.m_type_info;
+		}
+		friend bool match_typeinfo(Template const& lhs, U_032 type_info)
+		{
+			return lhs.m_type_info == type_info;
+		}
+		friend bool match_typename(Template const& lhs, U_032 type_name)
+		{
+			return lhs.m_type_name == type_name;
+		}
+	};
+	using Templates = std::vector<Template>;
+
+	// The data source that we're archiving to/from.
+	// 'IO' is a type providing read/write operations on 'Handle'
+	template <typename IO, typename Handle>
+	class Archive
+	{
+		#define PR_ARCHIVE_4CC "PRAR"
+
+		Templates m_templates;
+		Handle    m_data;
+
+		// Return the 'on-disk' size of data for a template
+		U_032 Sizeof(U_032 type_name) const
+		{
+			switch (type_name)
 			{
-				s8		= 0x0c5d8c41,
-				s16		= 0x0800461d,
-				s32		= 0x0537f586,
-				s64		= 0x07e9c746,
-				u8		= 0x1bf3bb96,
-				u16		= 0x18832d9b,
-				u32		= 0x15b49e00,
-				u64		= 0x176aacc0,
-				f32		= 0x1a8da2d5,
-				f64		= 0x18539015,
-				f128	= 0x1c5971be,
-			};
+				case EType::s8: case EType::u8: return 1;
+				case EType::s16: case EType::u16: return 2;
+				case EType::s32: case EType::u32: case EType::f32: return 4;
+				case EType::s64: case EType::u64: case EType::f64: return 8;
+				case EType::f128: return 16;
+				default: return GetTemplateByName(type_name).m_size;
+			}
 		}
 
-		typedef char				S_008;
-		typedef short				S_016;
-		typedef int					S_032;
-		typedef __int64				S_064;
-		typedef unsigned char		U_008;
-		typedef unsigned short		U_016;
-		typedef unsigned int		U_032;
-		typedef unsigned __int64	U_064;
-		typedef float				F_032;
-		typedef double				F_064;
-		typedef long double			F_128;
-
-		// A single field in a template type
-		struct Field
+		// Return true if 'type_name' is a built in type
+		constexpr bool IsBuiltinType(U_032 type_name) const
 		{
-			U_032 m_type;	// The hash of the type name, e.g. s8, f32, s32, or an earlier defined template id
-			U_032 m_name;	// The hash of the member name for this field
-			U_032 m_count;	// The number of fields of this type in an array
-			U_032 m_offset;	// The byte offset to this member in the source type
-		};
-		typedef std::vector<Field> Fields;
+			return
+				type_name == static_cast<U_032>(EType::s8) ||
+				type_name == static_cast<U_032>(EType::u8) ||
+				type_name == static_cast<U_032>(EType::s16) ||
+				type_name == static_cast<U_032>(EType::u16) ||
+				type_name == static_cast<U_032>(EType::s32) ||
+				type_name == static_cast<U_032>(EType::u32) ||
+				type_name == static_cast<U_032>(EType::f32) ||
+				type_name == static_cast<U_032>(EType::s64) ||
+				type_name == static_cast<U_032>(EType::u64) ||
+				type_name == static_cast<U_032>(EType::f64) ||
+				type_name == static_cast<U_032>(EType::f128);
+		}
 
-		// A single template
-		struct Template
+		// Return the template for 'type_name' or null if not found
+		Template const* FindTemplateByName(U_032 type_name) const
 		{
-			U_032	m_type_info;	// The hash of the typeinfo name of this type
-			U_032	m_type_name;	// The hash of the name of this type
-			U_032	m_size;			// The size in bytes of written instances of this template
-			Fields	m_fields;		// The fields to be written for this template
-		};
-		typedef std::vector<Template> Templates;
-		inline bool match_typeinfo	(Template const& lhs, U_032 type_info)		{ return lhs.m_type_info == type_info; }
-		inline bool match_typename	(Template const& lhs, U_032 type_name)		{ return lhs.m_type_name == type_name; }
-		inline bool operator ==		(Template const& lhs, Template const& rhs)	{ return lhs.m_type_info == rhs.m_type_info; }
+			for (auto& templ : m_templates)
+				if (templ.m_type_name == type_name) return &templ;
+			return nullptr;
+		}
 
-		// The data source that we're archiving to/from.
-		// 'IO' is a type providing read/write operations on 'Handle'
-		template <typename IO, typename Handle>
-		class Archive
+		// Return the template for 'type_info' or null if not found
+		Template const* FindTemplateByTypeInfo(U_032 type_info) const
 		{
-			#define PR_ARCHIVE_4CC "PRAR"
+			for (auto& templ : m_templates)
+				if (templ.m_type_info == type_info) return &templ;
+			return nullptr;
+		}
 
-			Templates	m_templates;
-			Handle		m_data;
+		// Return true if 'type_name' is a registered template id
+		bool IsTemplateName(U_032 type_name) const
+		{
+			return FindTemplateByName(type_name) != nullptr;
+		}
 
-			// Return the 'on-disk' size of data for a template
-			U_032 Sizeof(U_032 type_name) const
+		// Return true if 'type_info' is a registered template
+		bool IsTemplateTypeInfo(U_032 type_info) const
+		{
+			return FindTemplateByTypeInfo(type_info) != nullptr;
+		}
+
+		// Return the template corresponding to 'type_name'
+		Template const& GetTemplateByName(U_032 type_name) const
+		{
+			auto tmp = FindTemplateByName(type_name);
+			if (tmp == nullptr) throw std::runtime_error("Template not found");
+			return *tmp;
+		}
+
+		// Return the template corresponding to 'type_info'
+		Template const& GetTemplateByTypeInfo(U_032 type_info) const
+		{
+			Template const* tmp = FindTemplateByTypeInfo(type_info);
+			if (tmp == nullptr) throw std::runtime_error("Template not found");
+			return *tmp;
+		}
+
+		// Read bytes from 'src' using 'tmp' and write them to 'm_data'
+		void Write(Template const& tmp, char const* src)
+		{
+			for (auto const& field : tmp.m_fields)
 			{
-				switch (type_name)
-				{
-				case EType::s8:		case EType::u8:		return 1;
-				case EType::s16:	case EType::u16:	return 2;
-				case EType::s32:	case EType::u32:	case EType::f32:	return 4;
-				case EType::s64:	case EType::u64:	case EType::f64:	return 8;
-				case EType::f128:	return 16;
-				default:			return GetTemplateByName(type_name).m_size;
-				}
+				if (IsBuiltinType(field.m_type))
+					IO::Write(m_data, src + field.m_offset, Sizeof(field.m_type) * field.m_count);
+				else
+					Write(GetTemplateByName(field.m_type), src + field.m_offset);
 			}
+		}
 
-			// Return true if 'type_name' is a built in type
-			bool IsBuiltinType(U_032 type_name) const
+		// Read bytes from 'm_data' using 'tmp' and write them to 'dst'
+		void Read(Template const& tmp, char* dst)
+		{
+			for (auto const& field : tmp.m_fields)
 			{
-				return	type_name==EType::s8 ||
-						type_name==EType::u8 ||
-						type_name==EType::s16 ||
-						type_name==EType::u16 ||
-						type_name==EType::s32 ||
-						type_name==EType::u32 ||
-						type_name==EType::f32 ||
-						type_name==EType::s64 ||
-						type_name==EType::u64 ||
-						type_name==EType::f64 ||
-						type_name==EType::f128;
+				if (IsBuiltinType(field.m_type))
+					IO::Read(m_data, dst + field.m_offset, Sizeof(field.m_type) * field.m_count);
+				else
+					Read(GetTemplateByName(field.m_type), dst + field.m_offset);
 			}
+		}
 
-			// Return the template for 'type_name' or null if not found
-			Template const* FindTemplateByName(U_032 type_name) const
-			{
-				for (Templates::const_iterator i = m_templates.begin(), iend = m_templates.end(); i != iend; ++i)
-					if (i->m_type_name == type_name) return &*i;
-				return 0;
-			}
+	public:
 
-			// Return true if 'type_name' is a registered template id
-			bool IsTemplateName(U_032 type_name) const
-			{
-				return FindTemplateByName(type_name) != 0;
-			}
-
-			// Return the template corresponding to 'type_name'
-			Template const& GetTemplateByName(U_032 type_name) const
-			{
-				Template const* tmp = FindTemplateByName(type_name);
-				PR_ASSERT(PR_ARCHIVE_DBG, tmp != 0, "Template not found");
-				return *tmp;
-			}
-
-			// Return the template for 'type_info' or null if not found
-			Template const* FindTemplateByTypeInfo(U_032 type_info) const
-			{
-				for (Templates::const_iterator i = m_templates.begin(), iend = m_templates.end(); i != iend; ++i)
-					if (i->m_type_info == type_info) return &*i;
-				return 0;
-			}
-
-			// Return true if 'type_info' is a registered template
-			bool IsTemplateTypeInfo(U_032 type_info) const
-			{
-				return FindTemplateByTypeInfo(type_info) != 0;
-			}
-
-			// Return the template corresponding to 'type_info'
-			Template const& GetTemplateByTypeInfo(U_032 type_info) const
-			{
-				Template const* tmp = FindTemplateByTypeInfo(type_info);
-				PR_ASSERT(PR_ARCHIVE_DBG, tmp != 0, "Template not found");
-				return *tmp;
-			}
-
-			// Read bytes from 'src' using 'tmp' and write them to 'm_data'
-			void Write(Template const& tmp, char const* src)
-			{
-				for (Fields::const_iterator i = tmp.m_fields.begin(), iend = tmp.m_fields.end(); i != iend; ++i)
-				{
-					Field const& field = *i;
-					if (IsBuiltinType(field.m_type))
-						IO::Write(m_data, src + field.m_offset, Sizeof(field.m_type) * field.m_count);
-					else
-						Write(GetTemplateByName(field.m_type), src + field.m_offset);
-				}
-			}
-
-			// Read bytes from 'm_data' using 'tmp' and write them to 'dst'
-			void Read(Template const& tmp, char* dst)
-			{
-				for (Fields::const_iterator i = tmp.m_fields.begin(), iend = tmp.m_fields.end(); i != iend; ++i)
-				{
-					Field const& field = *i;
-					if (IsBuiltinType(field.m_type))
-						IO::Read(m_data, dst + field.m_offset, Sizeof(field.m_type) * field.m_count);
-					else
-						Read(GetTemplateByName(field.m_type), dst + field.m_offset);
-				}
-			}
-
-		public:
-
-			Archive()
+		Archive()
 			:m_templates()
 			,m_data()
+		{
+			using namespace pr::hash;
+			assert(HashCT("s8"  ) == (int)EType::s8   && FmtS("Hash of s8   is incorrect. Should be 0x%08x\n", HashCT("s8"  )));
+			assert(HashCT("s16" ) == (int)EType::s16  && FmtS("Hash of s16  is incorrect. Should be 0x%08x\n", HashCT("s16" )));
+			assert(HashCT("s32" ) == (int)EType::s32  && FmtS("Hash of s32  is incorrect. Should be 0x%08x\n", HashCT("s32" )));
+			assert(HashCT("s64" ) == (int)EType::s64  && FmtS("Hash of s64  is incorrect. Should be 0x%08x\n", HashCT("s64" )));
+			assert(HashCT("u8"  ) == (int)EType::u8   && FmtS("Hash of u8   is incorrect. Should be 0x%08x\n", HashCT("u8"  )));
+			assert(HashCT("u16" ) == (int)EType::u16  && FmtS("Hash of u16  is incorrect. Should be 0x%08x\n", HashCT("u16" )));
+			assert(HashCT("u32" ) == (int)EType::u32  && FmtS("Hash of u32  is incorrect. Should be 0x%08x\n", HashCT("u32" )));
+			assert(HashCT("u64" ) == (int)EType::u64  && FmtS("Hash of u64  is incorrect. Should be 0x%08x\n", HashCT("u64" )));
+			assert(HashCT("f32" ) == (int)EType::f32  && FmtS("Hash of f32  is incorrect. Should be 0x%08x\n", HashCT("f32" )));
+			assert(HashCT("f64" ) == (int)EType::f64  && FmtS("Hash of f64  is incorrect. Should be 0x%08x\n", HashCT("f64" )));
+			assert(HashCT("f128") == (int)EType::f128 && FmtS("Hash of f128 is incorrect. Should be 0x%08x\n", HashCT("f128")));
+		}
+
+		// Register a template description for 'Type'.
+		// Note templates should be registered before assigned the data
+		// source to write to. This is because Write(Handle) writes the header
+		// and templates immediately.
+		// Format:
+		//	template_tag,type:name:count,type:name:count,...,type:name:count,\0
+		template <typename Type> void RegisterTemplate(char const* template_desc)
+		{
+			assert(IO::Invalid(m_data) && "Register templates before assigning the data source");
+
+			// Add the template
+			Template tmp;
+			tmp.m_type_info = pr::hash::HashCT(typeid(Type).name());
+			tmp.m_type_name = pr::hash::Hash(template_desc, ','); ++template_desc;
+			assert(!IsBuiltinType(tmp.m_type_name) && "Do not register template descriptions for built-in types");
+			assert(!IsTemplateTypeInfo(tmp.m_type_info) && "Template already defined for this type");
+			assert(!IsTemplateName(tmp.m_type_name) && "Template for type with this name already defined");
+			#if PR_ARCHIVE_SHOW_TYPES
+			printf("Type: '%s' -> TypeInfo: 0x%08x  TypeName: 0x%08x\n", typeid(Type).name(), tmp.m_type_info, tmp.m_type_name);
+			#endif
+
+			U_032 offset = 0, size = 0;
+			while (*template_desc != 0)
 			{
-				using namespace pr::hash;
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("s8"  ) == EType::s8   ,FmtS("Hash of s8   is incorrect. Should be 0x%08x\n", HashC("s8"  )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("s16" ) == EType::s16  ,FmtS("Hash of s16  is incorrect. Should be 0x%08x\n", HashC("s16" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("s32" ) == EType::s32  ,FmtS("Hash of s32  is incorrect. Should be 0x%08x\n", HashC("s32" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("s64" ) == EType::s64  ,FmtS("Hash of s64  is incorrect. Should be 0x%08x\n", HashC("s64" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("u8"  ) == EType::u8   ,FmtS("Hash of u8   is incorrect. Should be 0x%08x\n", HashC("u8"  )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("u16" ) == EType::u16  ,FmtS("Hash of u16  is incorrect. Should be 0x%08x\n", HashC("u16" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("u32" ) == EType::u32  ,FmtS("Hash of u32  is incorrect. Should be 0x%08x\n", HashC("u32" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("u64" ) == EType::u64  ,FmtS("Hash of u64  is incorrect. Should be 0x%08x\n", HashC("u64" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("f32" ) == EType::f32  ,FmtS("Hash of f32  is incorrect. Should be 0x%08x\n", HashC("f32" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("f64" ) == EType::f64  ,FmtS("Hash of f64  is incorrect. Should be 0x%08x\n", HashC("f64" )));
-				PR_ASSERT(PR_ARCHIVE_DBG, HashC("f128") == EType::f128 ,FmtS("Hash of f128 is incorrect. Should be 0x%08x\n", HashC("f128")));
+				// A minus sign indicates the type should be skipped
+				bool add_field = *template_desc != '-';
+				template_desc += int(!add_field);
+
+				// Add a field to the template
+				Field field;
+				field.m_type = pr::hash::Hash(template_desc, ':'); ++template_desc;
+				field.m_name = pr::hash::Hash(template_desc, ':'); ++template_desc;
+				field.m_count = strtoul(template_desc, (char**)&template_desc, 10); template_desc += int(*template_desc == ',');
+				field.m_offset = offset;
+
+				// Check that 'type' is a built-in type or a previously defined template
+				assert((IsBuiltinType(field.m_type) || IsTemplateName(field.m_type)) && "Field type not defined");
+
+				U_032 sz = Sizeof(field.m_type) * field.m_count;
+				if (add_field)	{ size += sz; tmp.m_fields.push_back(field); }
+				offset += sz;
 			}
+			tmp.m_size = size;
+			m_templates.push_back(tmp);
+		}
 
-			// Register a template description for 'Type'.
-			// Note templates should be registered before assigned the data
-			// source to write to. This is because Write(Handle) writes the header
-			// and templates immediately.
-			// Format:
-			//	template_tag,type:name:count,type:name:count,...,type:name:count,\0
-			template <typename Type> void RegisterTemplate(char const* template_desc)
+		// Assign the source to write the archive to
+		void Write(Handle data)
+		{
+			m_data = data;
+
+			// Write the file identifier 4CC
+			IO::Write(m_data, PR_ARCHIVE_4CC, 4);
+
+			// Write the number of templates
+			U_032 tmp_count = U_032(m_templates.size());
+			IO::Write(m_data, &tmp_count, 4);
+
+			// Write each template
+			for (auto const& templ : m_templates)
 			{
-				PR_ASSERT(PR_ARCHIVE_DBG, IO::Invalid(m_data), "Register templates before assigning the data source");
+				U_032 field_count = U_032(templ.m_fields.size());
+				IO::Write(m_data, &templ.m_type_info, sizeof(templ.m_type_info));
+				IO::Write(m_data, &templ.m_type_name, sizeof(templ.m_type_name));
+				IO::Write(m_data, &templ.m_size, sizeof(templ.m_size));
+				IO::Write(m_data, &field_count, sizeof(field_count));
+				if (!templ.m_fields.empty())
+					IO::Write(m_data, &templ.m_fields[0], sizeof(Field) * templ.m_fields.size());
+			}
+		}
 
-				// Add the template
+		// Assign the source to read the archive from
+		void Read(Handle data)
+		{
+			m_data = data;
+
+			// Read the file identifier 4CC
+			char file_4cc[4];
+			IO::Read(m_data, &file_4cc[0], 4);
+			assert(
+				file_4cc[0] == PR_ARCHIVE_4CC[0] &&
+				file_4cc[1] == PR_ARCHIVE_4CC[1] &&
+				file_4cc[2] == PR_ARCHIVE_4CC[2] &&
+				file_4cc[3] == PR_ARCHIVE_4CC[3] &&
+				"Not an archive file");
+
+			// Read the number of templates
+			U_032 tmp_count;
+			IO::Read(m_data, &tmp_count, 4);
+
+			// Read each template definition
+			for (U_032 i = 0; i != tmp_count; ++i)
+			{
 				Template tmp;
-				tmp.m_type_info = pr::hash::HashC(typeid(Type).name());
-				tmp.m_type_name = pr::hash::Hash(template_desc, ','); ++template_desc;
-				PR_ASSERT(PR_ARCHIVE_DBG, !IsBuiltinType(tmp.m_type_name), "Do not register template descriptions for built-in types");
-				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateTypeInfo(tmp.m_type_info), "Template already defined for this type");
-				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateName(tmp.m_type_name), "Template for type with this name already defined");
-				PR_EXPAND(PR_ARCHIVE_SHOW_TYPES, printf("Type: '%s' -> TypeInfo: 0x%08x  TypeName: 0x%08x\n", typeid(Type).name(), tmp.m_type_info, tmp.m_type_name));
-
-				U_032 offset = 0, size = 0;
-				while (*template_desc != 0)
-				{
-					// A minus sign indicates the type should be skipped
-					bool add_field = *template_desc != '-';
-					template_desc += int(!add_field);
-
-					// Add a field to the template
-					Field field;
-					field.m_type	= pr::hash::Hash(template_desc, ':');	++template_desc;
-					field.m_name	= pr::hash::Hash(template_desc, ':');	++template_desc;
-					field.m_count	= strtoul(template_desc, (char**)&template_desc, 10);		template_desc += int(*template_desc == ',');
-					field.m_offset	= offset;
-
-					// Check that 'type' is a built-in type or a previously defined template
-					PR_ASSERT(PR_ARCHIVE_DBG, IsBuiltinType(field.m_type) || IsTemplateName(field.m_type), "Field type not defined");
-
-					U_032 sz = Sizeof(field.m_type) * field.m_count;
-					if (add_field)	{ size += sz; tmp.m_fields.push_back(field); }
-					offset += sz;
-				}
-				tmp.m_size = size;
+				U_032 field_count;
+				IO::Read(m_data, &tmp.m_type_info, sizeof(tmp.m_type_info));
+				IO::Read(m_data, &tmp.m_type_name, sizeof(tmp.m_type_name));
+				IO::Read(m_data, &tmp.m_size, sizeof(tmp.m_size));
+				IO::Read(m_data, &field_count, sizeof(field_count));
+				tmp.m_fields.resize(field_count);
+				if (!tmp.m_fields.empty())
+					IO::Read(m_data, &tmp.m_fields[0], sizeof(Field) * tmp.m_fields.size());
 				m_templates.push_back(tmp);
 			}
+		}
 
-			// Assign the source to write the archive to
-			void Write(Handle data)
-			{
-				m_data = data;
+		// Write a type for which a template has been registered
+		template <typename Type> void Write(Type const& type)
+		{
+			U_032 type_info = pr::hash::HashCT(typeid(Type).name());
+			Write(GetTemplateByTypeInfo(type_info), reinterpret_cast<char const*>(&type));
+		}
 
-				// Write the file identifier 4CC
-				IO::Write(m_data, PR_ARCHIVE_4CC, 4);
+		// Read a type from 'm_data'
+		template <typename Type> void Read(Type& type)
+		{
+			U_032 type_info = pr::hash::HashCT(typeid(Type).name());
+			Read(GetTemplateByTypeInfo(type_info), reinterpret_cast<char*>(&type));
+		}
 
-				// Write the number of templates
-				U_032 tmp_count = U_032(m_templates.size());
-				IO::Write(m_data, &tmp_count, 4);
+		#undef PR_ARCHIVE_4CC
+	};
 
-				// Write each template
-				for (Templates::const_iterator i = m_templates.begin(), iend = m_templates.end(); i != iend; ++i)
-				{
-					Template const& tmp = *i;
-					U_032 field_count = U_032(tmp.m_fields.size());
-					IO::Write(m_data, &tmp.m_type_info, sizeof(tmp.m_type_info));
-					IO::Write(m_data, &tmp.m_type_name, sizeof(tmp.m_type_name));
-					IO::Write(m_data, &tmp.m_size, sizeof(tmp.m_size));
-					IO::Write(m_data, &field_count, sizeof(field_count));
-					if (!tmp.m_fields.empty())
-						IO::Write(m_data, &tmp.m_fields[0], sizeof(Field) * tmp.m_fields.size());
-				}
-			}
+	//// Generic conversion function pointer
+	//typedef void (*ConvFunc)(void const* src, void* dst);
 
-			// Assign the source to read the archive from
-			void Read(Handle data)
-			{
-				m_data = data;
+	//// Read a value of type 'SrcType' from 'src', cast it to 'DstType' and write it to 'dst'
+	//template <typename SrcType, typename DstType> inline void Read(void const* src, void* dst)
+	//{
+	//	*static_cast<DstType*>(dst) = static_cast<DstType>(*static_cast<SrcType const*>(src));
+	//}
 
-				// Read the file identifier 4CC
-				char file_4cc[4];
-				IO::Read(m_data, &file_4cc[0], 4);
-				PR_ASSERT(PR_ARCHIVE_DBG,	file_4cc[0] == PR_ARCHIVE_4CC[0] &&
-												file_4cc[1] == PR_ARCHIVE_4CC[1] &&
-												file_4cc[2] == PR_ARCHIVE_4CC[2] &&
-												file_4cc[3] == PR_ARCHIVE_4CC[3], "Not an archive file");
+	//struct Converter
+	//{
+	//	impl::Fields m_fields;
 
-				// Read the number of templates
-				U_032 tmp_count;
-				IO::Read(m_data, &tmp_count, 4);
+	//	// Generate a mapping from src to dst
+	//	Converter(char const* src_archive_desc, char const* dst_archive_desc)
+	//	{
+	//	}
+	//};
 
-				// Read each template definition
-				for (U_032 i = 0; i != tmp_count; ++i)
-				{
-					Template tmp;
-					U_032 field_count;
-					IO::Read(m_data, &tmp.m_type_info, sizeof(tmp.m_type_info));
-					IO::Read(m_data, &tmp.m_type_name, sizeof(tmp.m_type_name));
-					IO::Read(m_data, &tmp.m_size, sizeof(tmp.m_size));
-					IO::Read(m_data, &field_count, sizeof(field_count));
-					tmp.m_fields.resize(field_count);
-					if (!tmp.m_fields.empty())
-						IO::Read(m_data, &tmp.m_fields[0], sizeof(Field) * tmp.m_fields.size());
-					m_templates.push_back(tmp);
-				}
-			}
+	//// Populate 'dst' from 'src' using 'conv' to interpret the data in 'src'
+	//template <typename Src, typename Dst> void Read(Dst& dst, byte const* src, Converter const& conv)
+	//{
+	//	// Each field in the converter writes to a field in 'dst'.
+	//	for (Converter::Fields::const_iterator i = conv.m_fields.begin(), iend = conv.m_fields.end(); i != iend; ++i)
+	//	{
+	//		Converter::Field const& field = *i;
+	//		src = field.Read(src, dst);
+	//	}
+	//}
 
-			// Write a type for which a template has been registered
-			template <typename Type> void Write(Type const& type)
-			{
-				U_032 type_info = pr::hash::HashC(typeid(Type).name());
-				Write(GetTemplateByTypeInfo(type_info), reinterpret_cast<char const*>(&type));
-			}
+	//// Write a type into the archive
+	//template <typename Type> void Write(Type const& value)
+	//{
+	//	// Locate the template for this type
+	//	int id = Hash(typeid(Type).name());
+	//	Templates::const_iterator iter = m_templates.find(id);
+	//	PR_ASSERT(1, iter != m_templates.end(), "Type not registered");
+	//
+	//	Fields& fields = iter->second;
 
-			// Read a type from 'm_data'
-			template <typename Type> void Read(Type& type)
-			{
-				U_032 type_info = pr::hash::HashC(typeid(Type).name());
-				Read(GetTemplateByTypeInfo(type_info), reinterpret_cast<char*>(&type));
-			}
+	//}
 
-			#undef PR_ARCHIVE_4CC
-		};
+	// Read a type from the archive
 
-		//// Generic conversion function pointer
-		//typedef void (*ConvFunc)(void const* src, void* dst);
-
-		//// Read a value of type 'SrcType' from 'src', cast it to 'DstType' and write it to 'dst'
-		//template <typename SrcType, typename DstType> inline void Read(void const* src, void* dst)
-		//{
-		//	*static_cast<DstType*>(dst) = static_cast<DstType>(*static_cast<SrcType const*>(src));
-		//}
-
-		//struct Converter
-		//{
-		//	impl::Fields m_fields;
-
-		//	// Generate a mapping from src to dst
-		//	Converter(char const* src_archive_desc, char const* dst_archive_desc)
-		//	{
-		//	}
-		//};
-
-		//// Populate 'dst' from 'src' using 'conv' to interpret the data in 'src'
-		//template <typename Src, typename Dst> void Read(Dst& dst, byte const* src, Converter const& conv)
-		//{
-		//	// Each field in the converter writes to a field in 'dst'.
-		//	for (Converter::Fields::const_iterator i = conv.m_fields.begin(), iend = conv.m_fields.end(); i != iend; ++i)
-		//	{
-		//		Converter::Field const& field = *i;
-		//		src = field.Read(src, dst);
-		//	}
-		//}
-
-		//// Write a type into the archive
-		//template <typename Type> void Write(Type const& value)
-		//{
-		//	// Locate the template for this type
-		//	int id = Hash(typeid(Type).name());
-		//	Templates::const_iterator iter = m_templates.find(id);
-		//	PR_ASSERT(1, iter != m_templates.end(), "Type not registered");
-		//
-		//	Fields& fields = iter->second;
-
-		//}
-
-		// Read a type from the archive
-
-		//// Read from 'src' and write to 'dst' using runtime types 'src_type' and 'dst_type'
-		//inline void Read(int src_type, int dst_type, void const* src, void* dst)
-		//{
-		//	static ConvFunc conv[EType::NumberOf][EType::NumberOf] =
-		//	{
-		//		{&Read<S_008,S_008> ,&Read<S_008,S_016> ,&Read<S_008,S_032> ,&Read<S_008,S_064> ,&Read<S_008,U_008> ,&Read<S_008,U_016> ,&Read<S_008,U_032> ,&Read<S_008,U_064> ,&Read<S_008,F_032> ,&Read<S_008,F_064> ,&Read<S_008,F_128> },
-		//		{&Read<S_016,S_008> ,&Read<S_016,S_016> ,&Read<S_016,S_032> ,&Read<S_016,S_064> ,&Read<S_016,U_008> ,&Read<S_016,U_016> ,&Read<S_016,U_032> ,&Read<S_016,U_064> ,&Read<S_016,F_032> ,&Read<S_016,F_064> ,&Read<S_016,F_128> },
-		//		{&Read<S_032,S_008> ,&Read<S_032,S_016> ,&Read<S_032,S_032> ,&Read<S_032,S_064> ,&Read<S_032,U_008> ,&Read<S_032,U_016> ,&Read<S_032,U_032> ,&Read<S_032,U_064> ,&Read<S_032,F_032> ,&Read<S_032,F_064> ,&Read<S_032,F_128> },
-		//		{&Read<S_064,S_008> ,&Read<S_064,S_016> ,&Read<S_064,S_032> ,&Read<S_064,S_064> ,&Read<S_064,U_008> ,&Read<S_064,U_016> ,&Read<S_064,U_032> ,&Read<S_064,U_064> ,&Read<S_064,F_032> ,&Read<S_064,F_064> ,&Read<S_064,F_128> },
-		//		{&Read<U_008,S_008> ,&Read<U_008,S_016> ,&Read<U_008,S_032> ,&Read<U_008,S_064> ,&Read<U_008,U_008> ,&Read<U_008,U_016> ,&Read<U_008,U_032> ,&Read<U_008,U_064> ,&Read<U_008,F_032> ,&Read<U_008,F_064> ,&Read<U_008,F_128> },
-		//		{&Read<U_016,S_008> ,&Read<U_016,S_016> ,&Read<U_016,S_032> ,&Read<U_016,S_064> ,&Read<U_016,U_008> ,&Read<U_016,U_016> ,&Read<U_016,U_032> ,&Read<U_016,U_064> ,&Read<U_016,F_032> ,&Read<U_016,F_064> ,&Read<U_016,F_128> },
-		//		{&Read<U_032,S_008> ,&Read<U_032,S_016> ,&Read<U_032,S_032> ,&Read<U_032,S_064> ,&Read<U_032,U_008> ,&Read<U_032,U_016> ,&Read<U_032,U_032> ,&Read<U_032,U_064> ,&Read<U_032,F_032> ,&Read<U_032,F_064> ,&Read<U_032,F_128> },
-		//		{&Read<U_064,S_008> ,&Read<U_064,S_016> ,&Read<U_064,S_032> ,&Read<U_064,S_064> ,&Read<U_064,U_008> ,&Read<U_064,U_016> ,&Read<U_064,U_032> ,&Read<U_064,U_064> ,&Read<U_064,F_032> ,&Read<U_064,F_064> ,&Read<U_064,F_128> },
-		//		{&Read<F_032,S_008> ,&Read<F_032,S_016> ,&Read<F_032,S_032> ,&Read<F_032,S_064> ,&Read<F_032,U_008> ,&Read<F_032,U_016> ,&Read<F_032,U_032> ,&Read<F_032,U_064> ,&Read<F_032,F_032> ,&Read<F_032,F_064> ,&Read<F_032,F_128> },
-		//		{&Read<F_064,S_008> ,&Read<F_064,S_016> ,&Read<F_064,S_032> ,&Read<F_064,S_064> ,&Read<F_064,U_008> ,&Read<F_064,U_016> ,&Read<F_064,U_032> ,&Read<F_064,U_064> ,&Read<F_064,F_032> ,&Read<F_064,F_064> ,&Read<F_064,F_128> },
-		//		{&Read<F_128,S_008> ,&Read<F_128,S_016> ,&Read<F_128,S_032> ,&Read<F_128,S_064> ,&Read<F_128,U_008> ,&Read<F_128,U_016> ,&Read<F_128,U_032> ,&Read<F_128,U_064> ,&Read<F_128,F_032> ,&Read<F_128,F_064> ,&Read<F_128,F_128> },
-		//	};
-		//	conv[src_type][dst_type](src, dst);
-		//}
-	}
+	//// Read from 'src' and write to 'dst' using runtime types 'src_type' and 'dst_type'
+	//inline void Read(int src_type, int dst_type, void const* src, void* dst)
+	//{
+	//	static ConvFunc conv[EType::NumberOf][EType::NumberOf] =
+	//	{
+	//		{&Read<S_008,S_008> ,&Read<S_008,S_016> ,&Read<S_008,S_032> ,&Read<S_008,S_064> ,&Read<S_008,U_008> ,&Read<S_008,U_016> ,&Read<S_008,U_032> ,&Read<S_008,U_064> ,&Read<S_008,F_032> ,&Read<S_008,F_064> ,&Read<S_008,F_128> },
+	//		{&Read<S_016,S_008> ,&Read<S_016,S_016> ,&Read<S_016,S_032> ,&Read<S_016,S_064> ,&Read<S_016,U_008> ,&Read<S_016,U_016> ,&Read<S_016,U_032> ,&Read<S_016,U_064> ,&Read<S_016,F_032> ,&Read<S_016,F_064> ,&Read<S_016,F_128> },
+	//		{&Read<S_032,S_008> ,&Read<S_032,S_016> ,&Read<S_032,S_032> ,&Read<S_032,S_064> ,&Read<S_032,U_008> ,&Read<S_032,U_016> ,&Read<S_032,U_032> ,&Read<S_032,U_064> ,&Read<S_032,F_032> ,&Read<S_032,F_064> ,&Read<S_032,F_128> },
+	//		{&Read<S_064,S_008> ,&Read<S_064,S_016> ,&Read<S_064,S_032> ,&Read<S_064,S_064> ,&Read<S_064,U_008> ,&Read<S_064,U_016> ,&Read<S_064,U_032> ,&Read<S_064,U_064> ,&Read<S_064,F_032> ,&Read<S_064,F_064> ,&Read<S_064,F_128> },
+	//		{&Read<U_008,S_008> ,&Read<U_008,S_016> ,&Read<U_008,S_032> ,&Read<U_008,S_064> ,&Read<U_008,U_008> ,&Read<U_008,U_016> ,&Read<U_008,U_032> ,&Read<U_008,U_064> ,&Read<U_008,F_032> ,&Read<U_008,F_064> ,&Read<U_008,F_128> },
+	//		{&Read<U_016,S_008> ,&Read<U_016,S_016> ,&Read<U_016,S_032> ,&Read<U_016,S_064> ,&Read<U_016,U_008> ,&Read<U_016,U_016> ,&Read<U_016,U_032> ,&Read<U_016,U_064> ,&Read<U_016,F_032> ,&Read<U_016,F_064> ,&Read<U_016,F_128> },
+	//		{&Read<U_032,S_008> ,&Read<U_032,S_016> ,&Read<U_032,S_032> ,&Read<U_032,S_064> ,&Read<U_032,U_008> ,&Read<U_032,U_016> ,&Read<U_032,U_032> ,&Read<U_032,U_064> ,&Read<U_032,F_032> ,&Read<U_032,F_064> ,&Read<U_032,F_128> },
+	//		{&Read<U_064,S_008> ,&Read<U_064,S_016> ,&Read<U_064,S_032> ,&Read<U_064,S_064> ,&Read<U_064,U_008> ,&Read<U_064,U_016> ,&Read<U_064,U_032> ,&Read<U_064,U_064> ,&Read<U_064,F_032> ,&Read<U_064,F_064> ,&Read<U_064,F_128> },
+	//		{&Read<F_032,S_008> ,&Read<F_032,S_016> ,&Read<F_032,S_032> ,&Read<F_032,S_064> ,&Read<F_032,U_008> ,&Read<F_032,U_016> ,&Read<F_032,U_032> ,&Read<F_032,U_064> ,&Read<F_032,F_032> ,&Read<F_032,F_064> ,&Read<F_032,F_128> },
+	//		{&Read<F_064,S_008> ,&Read<F_064,S_016> ,&Read<F_064,S_032> ,&Read<F_064,S_064> ,&Read<F_064,U_008> ,&Read<F_064,U_016> ,&Read<F_064,U_032> ,&Read<F_064,U_064> ,&Read<F_064,F_032> ,&Read<F_064,F_064> ,&Read<F_064,F_128> },
+	//		{&Read<F_128,S_008> ,&Read<F_128,S_016> ,&Read<F_128,S_032> ,&Read<F_128,S_064> ,&Read<F_128,U_008> ,&Read<F_128,U_016> ,&Read<F_128,U_032> ,&Read<F_128,U_064> ,&Read<F_128,F_032> ,&Read<F_128,F_064> ,&Read<F_128,F_128> },
+	//	};
+	//	conv[src_type][dst_type](src, dst);
+	//}
 }
-
-#ifdef PR_ASSERT_STR_DEFINED
-#	undef PR_ASSERT_STR_DEFINED
-#	undef PR_ASSERT
-#endif
-#ifdef PR_EXPAND_DEFINED
-#	undef PR_EXPAND
-#endif
 
 #else
 // If there is not an overload for your type here add one or more of the following
@@ -633,5 +621,4 @@ namespace pr
 		}
 	}// namespace archiver
 }//namespace pr
-#endif
 #endif

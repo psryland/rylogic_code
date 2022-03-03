@@ -73,6 +73,7 @@
 #include "pr/maths/bit_fields.h"
 #include "pr/gfx/colour.h"
 #include "pr/geometry/common.h"
+#include "pr/geometry/distance.h"
 #include "pr/geometry/index_buffer.h"
 #include "pr/geometry/models_point.h"
 #include "pr/geometry/models_line.h"

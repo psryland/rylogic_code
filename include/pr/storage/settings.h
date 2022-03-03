@@ -77,18 +77,19 @@ namespace pr::settings
 		s = str::Quotes(s, true);
 		return s;
 	}
+	inline string Write(char const* t)
+	{
+		auto s = Widen(t);
+		return Write(s.c_str());
+	}
 	template <typename Char> inline string Write(std::basic_string<Char> const& t)
 	{
 		return Write(t.c_str());
 	}
-	inline string Write(char const* t)
-	{
-		return Write(Widen(t));
-	}
 	template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
-		if constexpr (is_reflected_enum<TEnum>::value)
+		if constexpr (pr::is_reflected_enum_v<TEnum>)
 		{
 			return Enum<TEnum>::ToStringW(x);
 		}
@@ -142,7 +143,7 @@ namespace pr::settings
 	template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
-		if constexpr (is_reflected_enum<TEnum>::value)
+		if constexpr (pr::is_reflected_enum_v<TEnum>)
 		{
 			std::string ident;
 			return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
@@ -269,7 +270,7 @@ namespace pr
 					int hash;
 					auto setting = Derived::ByIndex(i);
 					auto name    = Derived::NameW(setting);
-					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue>(setting))
+					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue32>(setting))
 						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", Derived::NameA(setting), hash);
 				}
 				if (!invalid_hashcodes.empty())

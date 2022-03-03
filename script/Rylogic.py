@@ -1,10 +1,13 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
-import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request, getpass
+import sys, os, re, enum, time, shutil, glob, subprocess, threading, socket, code
+import zipfile, ctypes, hashlib, urllib.request, getpass
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
-from typing import Callable
+from typing import Callable, List
+
+from numpy import append
 import UserVars
 
 # Support symlink on windows
@@ -576,7 +579,7 @@ def SetupVcEnvironment():
 #	platforms = ["x64","x86","AnyCPU"]
 #	configs = ["release","debug"]
 #	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True, additional_args=[]):
+def MSBuild(sln_or_proj_file:str, projects:List[str], platforms:List[str], configs:List[str], parallel=False, same_window=True, additional_args=[]):
 	
 	if not UserVars.msbuild:
 		raise RuntimeError("MSBuild path has not been set in UserVars")
@@ -633,7 +636,7 @@ def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str]
 #	platforms = ["x64","x86","AnyCPU"]
 #	configs = ["release","debug"]
 #	Tools.DotNet("build", sln_or_proj_file, projects, platforms, configs, True, True)
-def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True):
+def DotNet(command:str, sln_or_proj_file:str, projects:List[str], platforms:List[str], configs:List[str], parallel=False, same_window=True):
 
 	# Handle None's
 	projects  = projects if projects else []
@@ -673,6 +676,82 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 
 	return not errors
 
+# Run the units tests in a .net assembly
+def UnitTest(assembly_filepath:str, deps:List[str]=[], run_tests:bool=True):
+
+	# Set this to false to disable running tests on compiling
+	RunTests = run_tests
+	#RunTests = False
+
+	# # The build outputs
+	# dll = os.path.join(target_dir, f"{assembly_name}.dll")
+	# exe = os.path.join(target_dir, f"{assembly_name}.exe")
+	# target = dll if os.path.exists(dll) else exe
+	target_dir, assembly_file = os.path.split(assembly_filepath)
+	assembly_name, _ = os.path.splitext(assembly_file)
+
+	# Run unit tests
+	if RunTests:
+		if not os.path.exists(assembly_filepath):
+			print(f"{assembly_name} assembly not found.   **** Unit tests skipped ****")
+
+		else:
+
+			# Using pythonnet
+			if True:
+				# Set the runtime to .net6 (or whatever is set int he runtime config)
+				import pythonnet, clr_loader
+				rt_config = Path(target_dir, f"{assembly_name}.runtimeconfig.json", check_exists=False)
+				rt = clr_loader.get_coreclr(rt_config) if os.path.exists(rt_config) else clr_loader.get_netfx()
+				pythonnet.set_runtime(rt)
+				import clr
+
+				# Import the assembly and run Program.Main
+				sys.path.append(target_dir)
+				ass = clr.AddReference(assembly_name)
+				prog = ass.GetType(f"{assembly_name}.Program")
+				meth = prog.GetMethod("Main") if prog is not None else None
+				res = meth.Invoke(None, None) if meth is not None else None
+				if res is not None and res != 0:
+					raise Exception("Unit tests failed")
+				pass
+
+			# Using powershell
+			if False:
+				#sys.path.append(UserVars.dotnet_dir)
+				#command = ( 
+				#	"& {\n" + 
+				#	f"    Set-Location {target_dir};\n" +
+				#	f"    $env:Path = '{UserVars.dotnet_dir};' + $env:Path;\n" + 
+				#	#f""   .join(f"    Add-Type -AssemblyName '{dep}';\n" for dep in deps) + 
+				#	f"    Add-Type -AssemblyName '{assembly_filepath}';\n" + 
+				#	#f""   .join(f"    [Reflection.Assembly]::LoadFile('{dep}')|Out-Null;\n" for dep in deps) +  
+				#	#f"    [Reflection.Assembly]::LoadFile('{target}')|Out-Null;\n" +  
+				#	f"    $result = [{assembly_name}.Program]::Main();\n" + 
+				#	f"    Exit $result;\n" + 
+				#	"}") 
+				#print(command) 
+				#res,outp = Run([UserVars.pwsh, "-NonInteractive", "-NoProfile", "-NoLogo", "-Command", command]) 
+				#sys.path.pop()
+				#print(outp) 
+				#if not res: 
+				#	raise Exception("   **** Unit tests failed ****   ") 
+				pass
+
+			# Using Csex
+			if False:
+				#csex = Path(UserVars.root, "bin\\Csex\\Csex.exe")
+				#res,outp = Run([csex, "-unittest", assembly_filepath])
+				#print(outp) 
+				#if not res: 
+				#	raise Exception("   **** Unit tests failed ****   ") 
+				pass
+
+	# Don't copy to the lib folder, that is the deploy step
+	# Rylogic assemblies shouldn't be copied anyway, as we don't know which framework
+	# to copy, i.e. netstandard2.0, netcoreapp3.1, ?
+	return
+
 # Prompt for the code signing certificate password
 def PromptCertPassword():
 	if UserVars.code_sign_cert_pw: return
@@ -683,7 +762,7 @@ def PromptCertPassword():
 def SignAssembly(target:str):
 	if not UserVars.code_sign_cert_pfx: return
 	PromptCertPassword()
-	Exec([UserVars.signtool, "sign", "/f", UserVars.code_sign_cert_pfx, "/p", UserVars.code_sign_cert_pw, target])
+	Exec([UserVars.signtool, "sign", "/f", UserVars.code_sign_cert_pfx, "/p", UserVars.code_sign_cert_pw, "/fd", "SHA1", target])
 	return
 
 # Sign a VSIX extension package
@@ -908,9 +987,40 @@ def MsgBox(msg:str, title:str, btns=EMsgBoxBtns.Ok):
 	ctypes.windll.user32.MessageBoxW(0, msg, title, btns
 	)
 
+# Start an interactive python console
+def interact(banner=None, local=None, exitmsg=None):
+	class ReloadingInteractiveConsole(code.InteractiveConsole):
+		def __init__(self, local=None):
+			super().__init__(local)
+			#readline.parse_and_bind("tab: complete")
+			self.stored_modifier_times = {}
+			self.CheckModulesForReload()
+
+		def runcode(self, code):
+			self.CheckModulesForReload()
+			super().runcode(code)
+			self.CheckModulesForReload() # maybe new modules are loaded
+
+		def CheckModulesForReload(self):
+			for module_name, module in sys.modules.items():
+				if not hasattr(module, '__file__') or module.__file__ is None:
+					continue
+
+				module_modifier_time = os.path.getmtime(module.__file__)
+				if self.stored_modifier_times.get(module_name, module_modifier_time) < module_modifier_time:
+					imp.reload(module)
+
+				self.stored_modifier_times[module_name] = module_modifier_time
+	
+	# Create a console instance
+	console = ReloadingInteractiveConsole(local)
+	console.interact(banner=banner, exitmsg=exitmsg)
+
 # Testing
 if __name__ == "__main__":
 	try:
+		UnitTest("P:\\pr\\projects\\rylogic\\Rylogic.Core\\bin\\debug\\netstandard2.0\\Rylogic.Core.dll")
+		#UnitTest("P:\\pr\\projects\\Rylogic.Core.Windows\\bin\\debug\\net6.0-windows\\Rylogic.Core.Windows.dll", ["Rylogic.Core.dll"])
 		pass
 	except KeyboardInterrupt:
 		pass

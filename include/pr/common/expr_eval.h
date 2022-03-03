@@ -150,7 +150,7 @@ namespace pr::eval
 	using Ident = std::string;
 
 	// Identifier hash
-	using IdentHash = pr::hash::HashValue;
+	using IdentHash = pr::hash::HashValue32;
 	constexpr IdentHash hashname(std::string_view name)
 	{
 		return hash::HashCT(name.data(), name.data() + name.size());

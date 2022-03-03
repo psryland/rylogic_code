@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<RootNamespace>Rylogic</RootNamespace>
+		<StartupObject></StartupObject>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+		<PublishTrimmed>true</PublishTrimmed>
+		<LangVersion>latest</LangVersion>
+		<Nullable>Enable</Nullable>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<PackageIconUrl></PackageIconUrl>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Build Options -->
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<DefineConstants>RELEASE</DefineConstants>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
+		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
+		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+	</PropertyGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.1.0" />
+		<PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+	</ItemGroup>
+
+	<!-- Post build -->
+	<ItemGroup>
+		<None Update="Rylogic.Core.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />
+	</Target>
+
+</Project>

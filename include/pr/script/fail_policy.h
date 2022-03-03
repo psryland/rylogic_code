@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
 

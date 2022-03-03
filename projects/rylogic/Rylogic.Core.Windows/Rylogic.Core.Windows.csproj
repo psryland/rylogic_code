@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFrameworks>net472;net6.0-windows</TargetFrameworks>
+		<RootNamespace>Rylogic.Core.Windows</RootNamespace>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<LangVersion>latest</LangVersion>
+		<Nullable>Enable</Nullable>
+		<UseWpf>True</UseWpf>
+	</PropertyGroup>
+
+	<!-- Assembly Properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<Version>1.1.0</Version>
+		<FileVersion>1.1.0</FileVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Build Options -->
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>RELEASE</DefineConstants>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>DEBUG;PR_UNITTESTS</DefineConstants>
+		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+	</PropertyGroup>
+
+	<!-- Dependencies -->
+	<ItemGroup>
+		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Drawing.Primitives" Version="4.3.0" />
+		<PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+		<ProjectReference Include="../Rylogic.Core/Rylogic.Core.csproj" />
+	</ItemGroup>
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net472' ">
+		<PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Update="Rylogic.Core.Windows.runtimeconfig.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+	
+	<!-- Post Build -->
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="py $(ProjectDir)post_build.py $(TargetPath)" />
+	</Target>
+</Project>

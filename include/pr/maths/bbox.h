@@ -289,7 +289,7 @@ namespace pr
 		template <typename VertCont> static BBox Make(VertCont const& verts)
 		{
 			auto bbox = Reset();
-			for (auto& vert : verts) pr::Grow(bbox, vert);
+			for (auto& vert : verts) bbox.Grow(vert);
 			return bbox;
 		}
 

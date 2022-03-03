@@ -1044,7 +1044,7 @@ namespace pr::rdr
 			// Model nugget properties for the sky box
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
-			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
+			mat.m_rsb.Set(ERS::CullMode, D3D11_CULL_MODE::D3D11_CULL_FRONT);
 			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
@@ -1070,7 +1070,7 @@ namespace pr::rdr
 			// Model nugget properties for the sky box
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
-			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
+			mat.m_rsb.Set(ERS::CullMode, D3D11_CULL_MODE::D3D11_CULL_FRONT);
 			cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
@@ -1099,7 +1099,7 @@ namespace pr::rdr
 				// Create the render nugget for this face of the sky box
 				NuggetProps mat = {};
 				mat.m_tex_diffuse = sky_texture[i];
-				mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
+				mat.m_rsb.Set(ERS::CullMode, D3D11_CULL_MODE::D3D11_CULL_FRONT);
 				mat.m_vrange = rdr::Range(i * 4, (i + 1) * 4);
 				mat.m_irange = rdr::Range(i * 6, (i + 1) * 6);
 				cache.AddNugget(ETopo::TriList, props.m_geom, props.m_has_alpha, &mat);

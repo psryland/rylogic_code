@@ -1,0 +1,389 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<!--#include file="..\inc\help_head.include.htm"-->
+	<body id="main_help">
+		<!--#include file="..\inc\help_title_panel.include.htm"-->
+		<!--#include file="..\inc\help_index_panel.include.htm"-->
+		<div id="content_panel">
+			<div class="title">Main Window</div>
+			<div>
+				<img class="centred" src="../img/main_view.png" alt="main view" usemap="#main_view_map" width="591" height="552"/>
+				<map id="main_view_map" name="main_view_map">
+					<area shape="rect" coords="5,82,25,102"   href="#log_view"    alt=""/>
+					<area shape="rect" coords="3,54,23,74"    href="#tool_bar"    alt=""/>
+					<area shape="rect" coords="555,71,575,91" href="#file_scroll" alt=""/>
+					<area shape="rect" coords="92,18,112,38"  href="#encoding"    alt=""/>
+					<area shape="rect" coords="161,18,181,38" href="#line_ending" alt=""/>
+					<area shape="rect" coords="219,43,239,63" href="#search"      alt=""/>
+					<area shape="rect" coords="251,43,271,63" href="#bookmarks"   alt=""/>
+					<area shape="rect" coords="5,514,25,534"  href="#status"      alt=""/>
+				</map>
+			</div>
+			<ol class="major_list">
+				<li id="log_view">
+					<div class="section_title">Log View</div>
+					<div class="content">
+						This region displays the contents of the loaded or streamed log data. Scroll
+						this view using the mouse wheel, page up/down keys, or up/down arrow keys. Select
+						rows by holding down the left mouse button and dragging, or hold down the Shift or
+						Control key while selecting. (Note: due to the way RyLogViewer spools data it is
+						not possible to select and copy the entire contents of very large files. Only the
+						portion of the file currently loaded is selected and copied.)
+					</div>
+					<div class="content">
+						Right clicking in this view displays a context menu. The menu items are:
+						<table class="minor_list">
+							<tbody>
+								<tr>
+									<th>Option</th>
+									<th>Function</th>
+								</tr>
+								<tr>
+									<td>Select All</td>
+									<td>
+										Select all log file data that is currently loaded into memory. For large
+										files this may not be the entire file contents due to the way RyLogViewer
+										spools log data.
+									</td>
+								</tr>
+								<tr>
+									<td>Copy</td>
+									<td>Copy the selected rows to the system clip board.</td>
+								</tr>
+								<tr>
+									<td><a href="#clear_log_file">Clear Log</a></td>
+									<td>Attempts<sup class="reference">[1]</sup> to reset the contents of the log file.</td>
+								</tr>
+								<tr>
+									<td>
+										<a href="options_highlighting.html">Highlight Row</a><br/>
+										<a href="options_filtering.html">Filter Row</a><br/>
+										<a href="options_transforms.html">Transform Row</a><br/>
+										<a href="options_actions.html">Action Row</a><br/>
+									</td>
+									<td>
+										Opens the highlighting, filtering, text transforms, or click actions pattern editor,
+										initialised with data from the selected line.
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<a href="#search">Find Next</a><br/>
+										<a href="#search">Find Previous</a><br/>
+									</td>
+									<td>
+										Jump to the next or previous line in the log file that matches the last search pattern.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="#bookmarks">Toggle Bookmark</a></td>
+									<td>Add or remove a bookmark from the selected line.</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="fine_print">
+							<sup class="reference">[1]</sup> Clearing the log file can fail if the application generating the log 
+							file does not allow write access to the file.
+						</div>
+					</div>
+				</li>
+				<li id="tool_bar">
+					<div class="section_title">Tool Bar</div>
+					<img class="centred" src="../img/tool_bar.png" alt="tool bar"/>
+					<div class="content">
+						The tool bar contains buttons that allow quick navigation to, and control of, various features of
+						RyLogViewer. In order from left to right, these are:
+						<table class="minor_list">
+							<tbody>
+								<tr>
+									<th>Button</th>
+									<th>Function</th>
+								</tr>
+								<tr>
+									<td>Open File</td>
+									<td>Choose a log file to be displayed.</td>
+								</tr>
+								<tr>
+									<td>Refresh</td>
+									<td>Update the display by forcing a reload of data from the currently loaded log file.</td>
+								</tr>
+								<tr>
+									<td>Quick Filter</td>
+									<td>Only show rows that are highlighted.</td>
+								</tr>
+								<tr>
+									<td><a href="options_highlighting.html">Highlighting</a></td>
+									<td>
+										Left click to enable or disable highlighting.<br/>
+										Right click to show the Highlighting pattern editor.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="options_filtering.html">Filtering</a></td>
+									<td>
+										Left click to enable or disable filtering.<br/>
+										Right click to show the Filtering pattern editor.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="options_transforms.html">Transforms</a></td>
+									<td>
+										Left click to enable or disable text transforms.<br/>
+										Right click to show the Text Transforms pattern editor.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="options_actions.html">Click Actions</a></td>
+									<td>
+										Left click to enable or disable click actions.<br/>
+										Right click to show the Click Actions pattern editor.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="#search">Find Dialog</a></td>
+									<td>Shows the find dialog.</td>
+								</tr>
+								<tr>
+									<td><a href="#bookmarks">Bookmarks</a></td>
+									<td>Shows the bookmarks dialog.</td>
+								</tr>
+								<tr>
+									<td>Select First</td>
+									<td>Selects the first line in the log file causing the view to scroll to the top.</td>
+								</tr>
+								<tr>
+									<td>Select Last</td>
+									<td>Selects the last line in the log file causing the view to scroll to the end.</td>
+								</tr>
+								<tr>
+									<td>Tail</td>
+									<td>Causes the view to automatically scroll to the end as new data is loaded.</td>
+								</tr>
+								<tr>
+									<td>Watch File</td>
+									<td>
+										Enables or disables watching for file changes. If enabled, RyLogViewer will automatically
+										display the new log data whenever it changes.
+									</td>
+								</tr>
+								<tr>
+									<td><a href="options_general.html#additive_changes_only">Assume Additive</a></td>
+									<td>
+										Enables or disables the assumption that all file changes are additive only. If enabled,
+										RyLogViewer will only read new data appended to the end of the file when it detects that
+										the file has changed. Otherwise, all data around the current selection position is reloaded.
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</li>
+				<li id="file_scroll">
+					<div class="section_title">File Scroll Indicator</div>
+					<div class="content">
+						The file scroll indicator serves two purposes. Primarily, it shows where the currently displayed data is
+						located within the log file as a whole. Secondarily, it is used to quickly navigate to another location
+						within the file.<br/>
+						<br/>
+						The different colours within the file scroll indicator convey the following information. These are the
+						default colours, however the file scroll indicator colours can be changed in the
+						<a href="options_appearance.html#appearance_cached_colour">options dialog</a>.
+						<ul class="minor_list">
+							<li><span style="background-color:#f0f0f0;padding:3px">white</span> - the regions of the log data not currently loaded into memory. This only occurs for large log files that cannot be fully cached in memory.</li>
+							<li><span style="background-color:#d9e7ec;padding:3px">pale blue</span> - the portion of the log data that is cached in memory.</li>
+							<li><span style="background-color:#adcbdd;padding:3px">light blue</span> - the portion of the file that is currently visible in the main window.</li>
+							<li><span style="background-color:#589d6b;padding:3px">green</span> - the selected rows.</li>
+							<li><span style="background-color:#dbaeee;padding:3px">light purple</span> - the bookmark locations.</li>
+						</ul>
+						Left clicking within the file scroll indicator selects the line at the corresponding position in the
+						log file.<br/>
+						<br/>
+						Note: When a small log file is loaded you may wonder why the selection indication on the file scroll
+						indicator changes size as different lines are selected. This is because the indicator represents the byte
+						range of the selected line within the file, longer lines correspond to larger byte ranges and therefore
+						a larger selection indicator.
+					</div>
+				</li>
+				<li id="encoding">
+					<div class="section_title">Text Encoding</div>
+					<div class="content">
+						RyLogViewer supports four common text encodings; ASCII, UTF-8, UCS-2 little-endian, and UCS-2 big-endian.
+						The text encoding to use can be set under the <i>Encoding</i> menu. RyLogViewer supports automatic detection
+						of the file text encoding, however, so it is usually not necessary to set the text encoding explicitly.
+					</div>
+				</li>
+				<li id="line_ending">
+					<div class="section_title">Line Endings</div>
+					<div class="content">
+						There are three line ending conventions in common use today:
+						<ul class="minor_list">
+							<li>Windows/DOS - carriage return, line feed character pairs,</li>
+							<li>Unix - single line feed character,</li>
+							<li>Macintosh - single carriage return character,</li>
+						</ul>
+						RyLogViewer supports all three conventions and is able to automatically detect the line ending style
+						in most cases. There is also support for custom line ending sequences that allow arbitrary combinations
+						of characters to be interpreted as a line ending. A <a href="options_general.html#line_ending">custom line ending</a>
+						can be set in the options window which can be accessed quickly by selecting the <i>Custom</i>
+						option under the <i>Line Ending</i> menu.
+					</div>
+				</li>
+				<li id="search">
+					<div class="section_title">Find Dialog / Searching</div>
+					<div class="content">
+						The ability to search for specific text within a log file is a vitally important feature. RyLogViewer
+						is designed to make searching fast and simple, with convenient keyboard shortcuts that eliminate
+						unnecessary switching between the mouse and keyboard. The following list details the shortcuts available:
+						<ul class="minor_list">
+							<li>Access the find dialog using the <span class="mono">Control+F</span> key combination.</li>
+							<li>On opening, the search pattern combo box is selected so that a pattern can be entered immediately.</li>
+							<li>The search pattern is initialised from the currently selected row in the log file.</li>
+							<li>Use the down arrow key to show and select previous search patterns.</li>
+							<li>
+								Hit <span class="mono">Enter</span> to search forward from the currently selected line,<br/>
+								<span class="mono">Control+Enter</span> searches forward from the beginning of the log file.
+							</li>
+							<li>
+								Hit <span class="mono">Shift+Enter</span> to search backward from the currently selected line,<br/>
+								<span class="mono">Control+Shift+Enter</span> searches backward from the end of the log file.
+							</li>
+							<li>Close the find dialog with the <span class="mono">Escape</span> key.</li>
+						</ul>
+						In the main log view, the following keyboard shortcuts are also available:
+						<ul class="minor_list">
+							<li><span class="mono">F3</span> - Search forward from the currently selected line using the last search pattern,</li>
+							<li><span class="mono">Shift+F3</span> - Search backward from the currently selected line using the last search pattern,</li>
+							<li>
+								<span class="mono">Control+F3</span> - Set the search pattern to the contents of the currently selected line,
+								and then search forward for the next occurrence.
+							</li>
+							<li>
+								<span class="mono">Control+Shift+F3</span> - Set the search pattern to the contents of the currently selected line,
+								and then search backward for the previous occurrence.
+							</li>
+						</ul>
+						<img class="right_inset" src="../img/find.png" alt="find dialog"/>
+						The find feature is based on the same algorithms as the other pattern matching features in RyLogViewer
+						(<a href="options_highlighting.html">highlighting</a>, <a href="options_filtering.html">filtering</a>, etc).
+						The controls function in the same way as described in the <a href="pattern_editor.html">pattern editor</a>
+						section, otherwise:
+						<ol class="minor_list">
+							<li>Drop down list of previous search patterns.</li>
+							<li>A list of previous search patterns.</li>
+							<li>Find Next - searches forward from the currently selected line.</li>
+							<li>Find Previous - searches backward from the currently selected line.</li>
+							<li>Bookmark All - sets a bookmark on all lines that match the search pattern.</li>
+						</ol>
+						When a search reaches the start or end of the log file, a message is displayed in the
+						<a href="main_window.html#status">Status bar</a> that indicates that the <i>Start of File</i>,
+						or <i>End of File</i> has been reached.
+					</div>
+				</li>
+				<li id="bookmarks">
+					<div class="section_title">Bookmarks</div>
+					<div class="content">
+						Bookmarks provide a means of saving and returning to particular locations in the log file. Like the Find
+						feature, convenient keyboard shortcuts are available to eliminate unnecessary switching between the mouse
+						and keyboard.
+						<ul class="minor_list">
+							<li><span class="mono">Control+F2</span> - Creates or clears a bookmark from the currently selected line.</li>
+							<li>
+								<span class="mono">F2</span> - Jumps forward through the file to the next bookmark, looping around to the
+								beginning of the file when the end of the file is reached.
+							</li>
+							<li>
+								<span class="mono">Shift+F2</span> - Jumps backward through the file to the previous bookmark, looping
+								around to the end of the file when the start of the file is reached.
+							</li>
+							<li>Access the bookmarks dialog using the <span class="mono">Control+B</span> key combination.</li>
+						</ul>
+						The bookmarks dialog is simply a list of saved bookmark positions. Selecting a bookmark in the list causes
+						the main view to jump to the bookmarked position.
+					</div>
+				</li>
+				<li id="status">
+					<div class="section_title">Status</div>
+					<div class="content">
+						The status bar displays information about the currently loaded log file, as well as transient informational
+						messages. From left to right, the status bar shows:
+						<ul class="minor_list">
+							<li>The byte offset of the currently selected line into the log file,</li>
+							<li>The line ending mode being used to parse lines in the log file,</li>
+							<li>The text encoding being used to read text from the log file,</li>
+							<li>The file loading progress bar,</li>
+							<li>A transient message describing the result of a recent operation.</li>
+							<li>A static message describing the state of a running operation.</li>
+						</ul>
+					</div>
+				</li>
+			</ol>
+			<div id="tools_menu">
+				<div class="section_title">Tools Menu</div>
+				<div id="always_on_top">
+					<div class="tag_label">Always On Top</div>
+					<div class="content">
+						When enabled, causes the RyLogViewer window to stay above other currently open windows.
+						This mode is helpful when monitoring log output while working with other programs.
+					</div>
+				</div>
+				<div id="monitor_mode">
+					<div class="tag_label">Monitor Mode</div>
+					<div class="content">
+						As an extension of the <i>Always On Top</i> option, <i>Monitor Mode</i> allows RyLogViewer to be put
+						into a state where the main window frame, menu, tool bar, and file scroll indicator are all hidden,
+						maximising the area of the main log view. The window can also optionally be made semi-transparent, and
+						set to 'click-through' mode where keyboard and mouse events pass through to any windows below.
+						To exit <i>Monitor Mode</i> click on the RyLogViewer icon in the system tray.
+					</div>
+				</div>
+				<div id="clear_log_file">
+					<div class="tag_label">Clear Log File</div>
+					<div class="content">
+						This option attempts to reset the contents of the loaded log file. It is not always possible
+						for this operation to succeed as other applications may hold a lock on the file preventing write access.
+						(Typically, the application writing to the log file does this). When file locks permit this operation however,
+						it can be a handy feature.
+					</div>
+				</div>
+				<div id="options_dialog">
+					<div class="tag_label">Options Dialog</div>
+					<div class="content">
+						This item opens the application options dialog.
+					</div>
+				</div>
+			</div>
+			<div id="help_menu">
+				<div class="section_title">Help Menu</div>
+				<div id="view_help">
+					<div class="tag_label">View Help</div>
+					<div class="content">
+						Opens the main application documentation. Documentation is in HTML format, so selecting this option
+						launches the default web browser.
+					</div>
+				</div>
+				<div id="first_run_tutorial">
+					<div class="tag_label">First-Run Tutorial</div>
+					<div class="content">
+						The first-run tutorial is a wizard-style walk through of the main features of RyLogViewer. It highlights
+						the various aspects of the application and provides a short description of usage.
+					</div>
+				</div>
+				<div id="tip_of_the_day">
+					<div class="tag_label">Tip of the Day</div>
+					<div class="content">
+						Tip-of-the-Day messages are typically displayed at startup and are used to convey features of RyLogViewer
+						that the user may be unaware of. They are brief descriptions of a feature, often with links to more information
+						provided in the main documentation.
+					</div>
+				</div>
+				<div id="activate_licence">
+					<div class="tag_label">Activate Licence</div>
+					<div class="content">
+						Opens a dialog that displays the current licence information. After purchasing a licence, RyLogViewer can
+						be <a href="licence_activation.html">activated</a> via this menu option.
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{a11fe3b1-8977-45a5-85d0-3a50cc335cde}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\clip.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\data_header_gen.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dir_path.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dll_proxy.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\exec.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\guid.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\hash.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\icex.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\lower.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\msg_box.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\new_lines.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\open_vs.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\shell_file_op.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\template.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\wait.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\data_header_gen.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\open_vs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\shell_file_op.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\wait2.ixx">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="deploy_cex.py" />
+  </ItemGroup>
+</Project>

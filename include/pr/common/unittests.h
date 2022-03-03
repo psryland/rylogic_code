@@ -331,7 +331,8 @@ namespace pr::unittests
 }
 
 #if USE_MS_UNITTESTS
-
+	
+	// This macro creates a class using the unit test name, followed by a method that is the body of the test case
 	#define PRUnitTest(testname)\
 		TEST_CLASS(testname)\
 		{\

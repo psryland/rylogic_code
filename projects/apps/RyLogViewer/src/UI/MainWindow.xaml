@@ -1,0 +1,170 @@
+﻿<Window x:Class="RyLogViewer.MainWindow"
+		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+		xmlns:local="clr-namespace:RyLogViewer"
+		mc:Ignorable="d"
+		Title="{Binding WindowTitle, Mode=OneWay}"
+		Height="450"
+		Width="800"
+		>
+	<DockPanel
+		Name="m_panel"
+		LastChildFill="True"
+		Style="{StaticResource MainWindowStyle}"
+		>
+		<Menu
+			DockPanel.Dock="Top"
+			VerticalAlignment =" Top"
+			IsMainMenu="True"
+			>
+			<Menu.ItemsPanel>
+				<ItemsPanelTemplate>
+					<DockPanel HorizontalAlignment="Stretch"/>
+				</ItemsPanelTemplate>
+			</Menu.ItemsPanel>
+			<MenuItem Header="_File">
+				<MenuItem Header="_Open Log File" Command="{Binding OpenSingleLogFile}"/>
+				<MenuItem Header="_Data Sources">
+					<MenuItem Header="_Program Output..."/>
+					<MenuItem Header="_Serial Port..."/>
+					<MenuItem Header="_Network Connection..."/>
+					<MenuItem Header="Named _Pipe..."/>
+					<Separator/>
+					<MenuItem Header="A_ggregate Log File..."/>
+					<MenuItem Header="_Android Logcat..."/>
+				</MenuItem>
+				<Separator/>
+				<MenuItem Header="_Close Log"/>
+				<Separator/>
+				<gui2:RecentFilesMenuItem Name="m_recent_files" Header="_Recent Files"/>
+				<Separator/>
+				<MenuItem Header="E_xit" Command="{Binding Shutdown}"/>
+			</MenuItem>
+			<MenuItem Header="_Edit"/>
+			<MenuItem Header="_Format">
+				<MenuItem Header="_Columns" Command="{Binding ShowOptionsUI}" CommandParameter="{x:Static local:EOptionsPage.Formatting}"/>
+				<Separator/>
+				<MenuItem Header="_Encoding">
+					<MenuItem Header="_Detect Automatically"/>
+					<Separator/>
+					<MenuItem Header="_ASCII"/>
+					<MenuItem Header="_UTF-8"/>
+					<MenuItem Header="_UCS-2 (Little Endian)"/>
+					<MenuItem Header="_UCS-2 (Big Endian)"/>
+				</MenuItem>
+				<MenuItem Header="_Line Ending">
+					<MenuItem Header="_Detect Automatically"/>
+					<Separator/>
+					<MenuItem Header="_CR"/>
+					<MenuItem Header="_CR+LF"/>
+					<MenuItem Header="_LF"/>
+					<MenuItem Header="_Custom"/>
+				</MenuItem>
+			</MenuItem>
+			<MenuItem Header="_Tools">
+				<MenuItem Header="_Export"/>
+				<Separator/>
+				<MenuItem Header="_Pattern Sets"/>
+				<Separator/>
+				<MenuItem Header="_Options" Command="{Binding ShowOptionsUI}"/>
+			</MenuItem>
+			<MenuItem Header="_Help"/>
+			<MenuItem Header="Free Edition" HorizontalAlignment="Right"/>
+		</Menu>
+		<ToolBarTray
+			DockPanel.Dock="Top"
+			>
+			<gui2:ToolBar Band="0" BandIndex="0" Height="32">
+				<Button ToolTip="Open a log file" Command="{Binding OpenSingleLogFile}">
+					<StackPanel Orientation="Horizontal">
+						<Image Source="{StaticResource folder}"/>
+					</StackPanel>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource refresh}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource quick_filter}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource highlight}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource filter}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource transform}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource execute}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource find}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource bookmark}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource prev_match}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource next_match}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource bottom}"/>
+				</Button>
+				<Button>
+					<Image Source="{StaticResource watch}"/>
+				</Button>
+				<Separator/>
+				<Button>
+					<Image Source="{StaticResource edit_add}"/>
+				</Button>
+			</gui2:ToolBar>
+		</ToolBarTray>
+		<StatusBar
+			DockPanel.Dock="Bottom"
+			>
+			<StatusBarItem
+				Content="{Binding StatusFilePosition}"
+				DockPanel.Dock="Left"
+				/>
+			<StatusBarItem
+				Content="{Binding StatusSelection}"
+				DockPanel.Dock="Left"
+				/>
+			<StatusBarItem
+				Content="{Binding StatusEncoding}"
+				DockPanel.Dock="Right"
+				/>
+			<StatusBarItem
+				Content="{Binding StatusLineEnding}"
+				DockPanel.Dock="Right"
+				/>
+			<StatusBarItem
+				Content="{Binding StatusLogDataSource}"
+				/>
+		</StatusBar>
+		<StackPanel
+			Name="FileScrollPlaceHolder"
+			DockPanel.Dock="Right"
+			Background="DarkGray"
+			Orientation="Vertical"
+			Width="18"
+			/>
+		<local:LogGrid
+			x:Name="m_grid"
+			Style="{StaticResource LogDataGridStyle}"
+			Background="{x:Static SystemColors.ControlDarkBrush}"
+			ItemsSource="{Binding LogData}"
+			/>
+	</DockPanel>
+</Window>

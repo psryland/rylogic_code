@@ -3,27 +3,26 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-
-#include <cassert>
-#include "pr/maths/maths.h"
 #include "pr/geometry/common.h"
-#include "pr/geometry/distance.h"
-#include "pr/geometry/point.h"
 
 namespace pr
 {
+	// Forwards
+	float pr_vectorcall Distance_PointToPlane(v4_cref<> point, Plane const& plane);
+	bool pr_vectorcall PointInFrontOfPlane(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c);
+
 	// Returns the point closest to 'point' on 'plane'
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToPlane(v4_cref<> point, Plane const& plane)
+	inline v4 pr_vectorcall ClosestPoint_PointToPlane(v4_cref<> point, Plane const& plane)
 	{
 		return point - Distance_PointToPlane(point, plane) * plane::Direction(plane);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToPlane(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
+	inline v4 pr_vectorcall ClosestPoint_PointToPlane(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
 	{
 		return ClosestPoint_PointToPlane(point, plane::make(a, b, c));
 	}
 
 	// Returns the parametric value of the closest point on 'line'
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, v4_cref<> start, v4_cref<> end, float& t)
+	inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, v4_cref<> start, v4_cref<> end, float& t)
 	{
 		assert(point.w == 1.0f && start.w == 1.0f && end.w == 1.0f);
 		assert(start != end);
@@ -31,23 +30,23 @@ namespace pr
 		t = Dot3(point - start, line) / LengthSq(line);
 		return start + t * line;
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, v4_cref<> start, v4_cref<> end)
+	inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, v4_cref<> start, v4_cref<> end)
 	{
 		float t;
 		return ClosestPoint_PointToInfiniteLine(point, start, end, t);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, const Line3& line, float& t)
+	inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, const Line3& line, float& t)
 	{
 		return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, const Line3& line)
+	inline v4 pr_vectorcall ClosestPoint_PointToInfiniteLine(v4_cref<> point, const Line3& line)
 	{
 		float t;
 		return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t);
 	}
 
 	// Returns the parametric value of the closest point on 'line'
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, v4_cref<> s, v4_cref<> e, float& t)
+	inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, v4_cref<> s, v4_cref<> e, float& t)
 	{
 		assert(point.w == 1.0f && s.w == 1.0f && e.w == 1.0f);
 		auto line = e - s;
@@ -73,16 +72,16 @@ namespace pr
 		t = t / denom;
 		return s + t * line;
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, v4_cref<> start, v4_cref<> end)
+	inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, v4_cref<> start, v4_cref<> end)
 	{
 		float t;
 		return ClosestPoint_PointToLineSegment(point, start, end, t);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, const Line3& line, float& t)
+	inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, const Line3& line, float& t)
 	{
 		return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, const Line3& line)
+	inline v4 pr_vectorcall ClosestPoint_PointToLineSegment(v4_cref<> point, const Line3& line)
 	{
 		float t;
 		return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t);
@@ -91,7 +90,7 @@ namespace pr
 	// Returns the point on an AABB that is closest to 'point'
 	// if 'surface_only' is true, the point is projected onto the bbox surface,
 	// otherwise points within the bounding box are counted as the closest point
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToBoundingBox(v4_cref<> point, BBox_cref bbox, bool surface_only = false)
+	inline v4 pr_vectorcall ClosestPoint_PointToBoundingBox(v4_cref<> point, BBox_cref bbox, bool surface_only = false)
 	{
 		v4 result;
 		v4 lower = bbox.Lower();
@@ -123,7 +122,7 @@ namespace pr
 	// 'minor' is the size of the minor radius of the ellipse (along the y axis)
 	// Note: this is only an approximation, the true solution involves finding the
 	// largest root of a quartic equation.
-	template <typename = void> inline v2 ClosestPoint_PointToEllipse(float x, float y, float major, float minor)
+	inline v2 ClosestPoint_PointToEllipse(float x, float y, float major, float minor)
 	{
 		assert(major >= 0.0f && minor >= 0.0f && major >= minor);
 
@@ -152,7 +151,7 @@ namespace pr
 	}
 
 	// Returns the closest point on a triangle to 'point'. From "Real time collision detection" by 'Christer Ericson'
-	template <typename = void> v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> p, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4& barycentric)
+	inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> p, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4& barycentric)
 	{
 		assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 
@@ -226,23 +225,23 @@ namespace pr
 		barycentric = v4(1.0f - v - w, v, w, 0.0f);
 		return a + ab * v + ac * w;
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
+	inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c)
 	{
 		v4 barycentric;
 		return ClosestPoint_PointToTriangle(point, a, b, c, barycentric);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, const v4* tri, v4& barycentric)
+	inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, const v4* tri, v4& barycentric)
 	{
 		return ClosestPoint_PointToTriangle(point, tri[0], tri[1], tri[2], barycentric);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, const v4* tri)
+	inline v4 pr_vectorcall ClosestPoint_PointToTriangle(v4_cref<> point, const v4* tri)
 	{
 		v4 barycentric;
 		return ClosestPoint_PointToTriangle(point, tri[0], tri[1], tri[2], barycentric);
 	}
 
 	// Returns the closest point on a tetrahedron to 'point'. From "Real time collision detection" by 'Christer Ericson'
-	template <typename = void> v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> p, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d, v4& barycentric)
+	inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> p, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d, v4& barycentric)
 	{
 		assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f);
 
@@ -286,16 +285,16 @@ namespace pr
 		}
 		return closest_point;
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d)
+	inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, v4_cref<> a, v4_cref<> b, v4_cref<> c, v4_cref<> d)
 	{
 		v4 barycentric;
 		return ClosestPoint_PointToTetrahedron(point, a, b, c, d, barycentric);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, const v4* tetra, v4& barycentric)
+	inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, const v4* tetra, v4& barycentric)
 	{
 		return ClosestPoint_PointToTetrahedron(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric);
 	}
-	template <typename = void> inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, const v4* tetra)
+	inline v4 pr_vectorcall ClosestPoint_PointToTetrahedron(v4_cref<> point, const v4* tetra)
 	{
 		v4 barycentric;
 		return ClosestPoint_PointToTetrahedron(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric);
@@ -304,7 +303,7 @@ namespace pr
 	// Finds the closest points between two line segments and also
 	// the parametric values on each line.
 	// From "Real time collision detection" by 'Christer Ericson'
-	template <typename = void> void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, float& t0, float& t1)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, float& t0, float& t1)
 	{
 		assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && e1.w == 1.0f);
 
@@ -347,20 +346,20 @@ namespace pr
 			t0 = Clamp((b - c) / len_sq0, 0.0f, 1.0f);
 		}
 	}
-	template <typename = void> inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, v4& pt0, v4& pt1)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, v4& pt0, v4& pt1)
 	{
 		float t0, t1;
 		ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, t0, t1);
 		pt0 = (1.0f - t0) * s0 + t0 * e0;
 		pt1 = (1.0f - t1) * s1 + t1 * e1;
 	}
-	template <typename = void> inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, v4& pt0, v4& pt1, float& t0, float& t1)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, v4& pt0, v4& pt1, float& t0, float& t1)
 	{
 		ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, t0, t1);
 		pt0 = (1.0f - t0) * s0 + t0 * e0;
 		pt1 = (1.0f - t1) * s1 + t1 * e1;
 	}
-	template <typename = void> inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, float& dist_sq)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToLineSegment(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> e1, float& dist_sq)
 	{
 		float t0, t1;
 		ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, t0, t1);
@@ -371,7 +370,7 @@ namespace pr
 
 	// Returns the parametric values of the closest point between a line segment '(s0,e0)'
 	// and an infinite line '(s1,line1)'. From "Real time collision detection" by 'Christer Ericson'
-	template <typename = void> void pr_vectorcall ClosestPoint_LineSegmentToInfiniteLine(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToInfiniteLine(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
 	{
 		assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && line1.w == 0.0f);
 		assert(line1 != v4Zero && "The infinite line should not be degenerate");
@@ -403,7 +402,7 @@ namespace pr
 		// using t1 = Dot3(pt0 - s1, line1) / line1_length_sq = (b*t0 + f) / line1_length_sq
 		t1 = (b*t0 + s0_on_line1) / line1_length_sq;
 	}
-	template <typename = void> inline void pr_vectorcall ClosestPoint_LineSegmentToInfiniteLine(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1, float& dist_sq)
+	inline void pr_vectorcall ClosestPoint_LineSegmentToInfiniteLine(v4_cref<> s0, v4_cref<> e0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1, float& dist_sq)
 	{
 		ClosestPoint_LineSegmentToInfiniteLine(s0, e0, s1, line1, t0, t1);
 		v4 pt0 = (1.0f - t0) * s0 + t0 * e0;
@@ -412,7 +411,7 @@ namespace pr
 	}
 
 	// Returns the parametric values of the closest points on two infinite lines
-	template <typename = void> void pr_vectorcall ClosestPoint_InfiniteLineToInfiniteLine(v4_cref<> s0, v4_cref<> line0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
+	inline void pr_vectorcall ClosestPoint_InfiniteLineToInfiniteLine(v4_cref<> s0, v4_cref<> line0, v4_cref<> s1, v4_cref<> line1, float& t0, float& t1)
 	{
 		// Degenerate lines should not be passed to this function
 		assert(line0 != v4Zero);
@@ -433,7 +432,7 @@ namespace pr
 	}
 
 	// Returns the minimum distance of a line segment '(s,e)' to the AABB 'bbox'
-	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
+	inline geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
 	{
 		// Note: This code is basically the same as col_box_vs_line.h.
 		// Make sure to maintain both
@@ -467,7 +466,7 @@ namespace pr
 
 		return sep;
 	}
-	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
+	inline geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
 	{
 		// Returns the parametric value of the closest point on the line segment '(s,e)' to the AABB 'bbox' and the distance.
 		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox);
@@ -527,7 +526,7 @@ namespace pr
 		assert("not implemented" && false);
 		return sep;
 	}
-	template <typename = void> geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
+	inline geometry::MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
 	{
 		float t;
 		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, t);
@@ -540,41 +539,3 @@ namespace pr
 		return sep;
 	}
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include "pr/maths/rand_vector.h"
-#include "pr/ldraw/ldr_helper.h"
-
-namespace pr::geometry
-{
-	PRUnitTest(ClosestPointTests)
-	{
-		{// ClosestPoint_PointToPlane
-
-		}
-		{// ClosestPoint_LineSegmentToBBox
-			std::default_random_engine rng;
-			for (int i = 0; i != 100; ++i)
-			{
-				auto bbox = BBox{Random3(rng, v4Origin, 3.0f, 1.0f), Random3(rng, v4(0), v4(3), 0.0f)};
-				auto s = Random3(rng, v4Origin, 10.0f, 1.0f);
-				auto e = Random3(rng, v4Origin, 10.0f, 1.0f);
-
-				v4 pt0, pt1;
-				auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, pt0, pt1);
-				//auto dist = -sep.Depth();
-				auto axis = sep.SeparatingAxis();
-
-				std::string str;
-				ldr::Box(str, "bbox", 0x8000FF00, bbox.m_radius*2, bbox.m_centre);
-				ldr::Line(str, "line", 0xFFFF0000, s, e);
-				ldr::Box(str, "cp1", 0xFF0000FF, 0.01f, pt0);
-				ldr::Box(str, "cp2", 0xFF0000FF, 0.01f, pt1);
-				ldr::Line(str, "axis", 0xFF0000FF, pt0, pt1);
-				//ldr::Write(str, L"\\dump\\test.ldr");
-			}
-		}
-	}
-}
-#endif

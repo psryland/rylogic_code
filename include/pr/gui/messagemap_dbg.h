@@ -1525,7 +1525,7 @@ namespace pr
 		PR_DEFINE_ENUM3(EWinMsg, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
-		static_assert(is_reflected_enum<EWinMsg>::value, "");
+		static_assert(is_reflected_enum_v<EWinMsg>, "");
 
 		#pragma region SysCommands
 		#define PR_ENUM(x)\

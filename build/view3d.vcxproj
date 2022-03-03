@@ -10,7 +10,6 @@
     <PlatformToolset>v143</PlatformToolset>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-  <PropertyGroup Label="UserMacros" />
   <!-- Configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -30,67 +29,42 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <!-- Build options -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <!-- Property Sheets -->
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/debug.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/debug.x64.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/release.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/release.x64.lib.props" />
-  </ImportGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="props\$(Configuration).$(Platform).lib.props" />
+  <Import Project="props\fxc_build_rule.props" />
   <!-- Build options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>pr/view3d/forward.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\projects\rylogic;..\sdk\lua\lua\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <!-- Files -->
@@ -146,49 +120,20 @@
     <ClInclude Include="..\include\pr\view3d\util\diagnostic.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClCompile Include="..\include\pr\ldraw\ldr_gizmo.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\ldraw\ldr_object.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\ldraw\ldr_objects_dlg.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\ldraw\ldr_object_demo_scene.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\include\pr\ldraw\ldr_object_templates.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\include\pr\view3d\forward.h" />
     <ClInclude Include="..\include\pr\view3d\renderer.h" />
     <ClInclude Include="..\include\pr\view3d\dll\view3d.h" />
@@ -236,130 +181,123 @@
     <ClInclude Include="..\include\pr\view3d\util\stock_resources.h" />
     <ClInclude Include="..\include\pr\view3d\util\util.h" />
     <ClInclude Include="..\include\pr\view3d\util\wrappers.h" />
-    <ClInclude Include="..\projects\view3d\directxtex\BC.h" />
-    <ClInclude Include="..\projects\view3d\directxtex\DDS.h" />
-    <ClInclude Include="..\projects\view3d\directxtex\DirectXTex.h" />
-    <ClInclude Include="..\projects\view3d\directxtex\DirectXTexP.h" />
-    <ClInclude Include="..\projects\view3d\directxtex\scoped.h" />
-    <ClInclude Include="..\projects\view3d\render\state_stack.h" />
-    <ClInclude Include="..\projects\view3d\render\stereo.h" />
-    <ClInclude Include="..\projects\view3d\shaders\common.h" />
-    <ClInclude Include="..\projects\view3d\shaders\shader_forward.h" />
-    <ClCompile Include="..\projects\view3d\models\nugget.cpp" />
-    <ClCompile Include="..\projects\view3d\render\state_block.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_diagnostic.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\ray_cast.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_base.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_cube.cpp" />
-    <ClCompile Include="..\projects\view3d\util\diagnostic.cpp" />
-    <ClCompile Include="..\projects\view3d\util\util.cpp" />
-    <ClCompile Include="..\projects\view3d\config\config.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\BC.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\BC4BC5.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\BC6HBC7.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexCompress.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexConvert.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexD3D11.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexDDS.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexFlipRotate.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexImage.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMipmaps.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexMisc.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexNormalMaps.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexResize.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexTGA.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexUtil.cpp" />
-    <ClCompile Include="..\projects\view3d\directxtex\DirectXTexWIC.cpp" />
-    <ClCompile Include="..\projects\view3d\lights\light.cpp" />
-    <ClCompile Include="..\projects\view3d\render\scene_view.cpp" />
-    <ClCompile Include="..\projects\view3d\render\state_stack.cpp" />
-    <ClCompile Include="..\projects\view3d\render\stereo.cpp" />
-    <ClCompile Include="..\projects\view3d\render\window.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_dslighting.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_fwd.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_gbuffer.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shader.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shader_manager.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_shadow_map.cpp" />
-    <ClCompile Include="..\projects\view3d\shaders\shdr_screen_space.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\dslighting.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\forward_render.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\gbuffer.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\render_step.cpp" />
-    <ClCompile Include="..\projects\view3d\steps\shadow_map.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_loader_dds.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_2d.cpp" />
-    <ClCompile Include="..\projects\view3d\models\model.cpp" />
-    <ClCompile Include="..\projects\view3d\models\model_buffer.cpp" />
-    <ClCompile Include="..\projects\view3d\models\model_manager.cpp" />
-    <ClCompile Include="..\projects\view3d\render\scene.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_manager.cpp" />
-    <ClCompile Include="..\projects\view3d\textures\texture_loader_wic.cpp" />
-    <ClCompile Include="..\projects\view3d\util\lock.cpp" />
-    <ClCompile Include="..\projects\view3d\render\renderer.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\BC.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DDS.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DirectXTex.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\DirectXTexP.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\directxtex\scoped.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\render\state_stack.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\render\stereo.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\shaders\common.h" />
+    <ClInclude Include="..\projects\rylogic\view3d\shaders\shader_forward.h" />
+    <ClCompile Include="..\projects\rylogic\view3d\models\nugget.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\state_block.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_diagnostic.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\ray_cast.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_base.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_cube.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\util\diagnostic.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\util\util.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\config\config.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC4BC5.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\BC6HBC7.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexCompress.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexConvert.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexD3D11.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexDDS.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexFlipRotate.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexImage.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexMipmaps.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexMisc.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexNormalMaps.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexResize.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexTGA.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexUtil.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\directxtex\DirectXTexWIC.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\lights\light.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\scene_view.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\state_stack.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\stereo.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\window.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_dslighting.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_fwd.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_gbuffer.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shader.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shader_manager.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_shadow_map.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\shaders\shdr_screen_space.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\dslighting.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\forward_render.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\gbuffer.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\render_step.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\steps\shadow_map.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_loader_dds.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_2d.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\models\model.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\models\model_buffer.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\models\model_manager.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\scene.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_manager.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\textures\texture_loader_wic.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\util\lock.cpp" />
+    <ClCompile Include="..\projects\rylogic\view3d\render\renderer.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <None Include="..\projects\rylogic\view3d\directxtex\DirectXTex.inl" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\types.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\functions.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\geometry.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\common\vector.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\lighting\phong_lighting.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_cast.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\env_map.hlsli" />
+    <None Include="..\projects\rylogic\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\view3d\directxtex\DirectXTex.inl" />
-    <None Include="..\projects\view3d\shaders\hlsl\cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\screenspace\screen_space_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\types.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\common\functions.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\common\geometry.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\common\vector.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\forward\forward_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\lighting\phong_lighting.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_cast.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\utility\env_map.hlsli" />
-    <None Include="..\projects\view3d\shaders\hlsl\utility\diagnostic_cbuf.hlsli" />
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\dslighting.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\dslighting.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\deferred\gbuffer.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\deferred\gbuffer.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\shadow\shadow_map.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\forward\forward_radial_fade.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\ray_cast.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\utility\ray_cast.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\arrow_head.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\point_sprites.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\thick_line_list.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\screenspace\thick_line_strip.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\view3d\shaders\hlsl\utility\show_normals.hlsl">
+    <CustomBuild Include="..\projects\rylogic\view3d\shaders\hlsl\utility\show_normals.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionSettings" />
-  <ImportGroup Label="ExtensionTargets" />
 </Project>

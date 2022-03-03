@@ -58,11 +58,9 @@ namespace pr::rdr
 		_bitwise_operators_allowed,
 	};
 
-	#pragma region StateBlock Base
-
-	// A template base class instance of a state block
+	// Wraps a DX state description and provides a bitmask of changed values
 	template <typename TStateDesc, typename TFieldEnum, size_t N>
-	struct StateBlock :TStateDesc
+	struct StateBlock
 	{
 		// 'TStateDesc' is a dx structure containing sets of render states such as 'D3D11_DEPTH_STENCIL_DESC'
 		// 'm_mask' is a bit field indicating which members in 'TStateDesc' have had a value set. The reason
@@ -81,22 +79,25 @@ namespace pr::rdr
 		using FieldEnum = TFieldEnum;
 		static_assert(has_bitops_allowed_v<FieldEnum>);
 
+		// The DX State block
+		TStateDesc m_state;
+
 		// A bit field of the members in 'TStateDesc' that have had a value set.
 		FieldEnum m_mask[N];
 
 		StateBlock()
-			:TStateDesc()
+			:m_state()
 			,m_mask()
 		{}
 
 		// Returns the description
 		TStateDesc const& Desc() const
 		{
-			return *this;
+			return m_state;
 		}
 		TStateDesc& Desc()
 		{
-			return *this;
+			return m_state;
 		}
 
 		// Clear a field in the state description
@@ -142,17 +143,17 @@ namespace pr::rdr
 			for (int i = 0; i != N; ++i)
 			{
 				for (auto field : pr::EnumerateBits(rhs.m_mask[i]))
-					merge((FieldEnum)field, i, rhs);
+					merge((FieldEnum)field, i, rhs.m_state);
 			}
 		}
 
 		// Operators
-		friend bool operator == (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		friend bool operator == (StateBlock const& lhs, StateBlock const& rhs)
 		{
 			// Direct memory compare is way faster than comparing CRCs of the blocks
 			return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 		}
-		friend bool operator != (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		friend bool operator != (StateBlock const& lhs, StateBlock const& rhs)
 		{
 			return !(lhs == rhs);
 		}
@@ -164,7 +165,7 @@ namespace pr::rdr
 	{
 		using base = StateManager<TStateBlock, TD3DInterface>;
 		using Lookup = Lookup<size_t, TD3DInterface*>;
-			
+
 		Renderer* m_rdr;
 		Lookup m_lookup;
 
@@ -214,17 +215,16 @@ namespace pr::rdr
 		}
 	};
 
-	#pragma endregion
-
-	#pragma region Blend State
-
-	struct BSBlock :private StateBlock<BlendStateDesc, EBS, 8>
+	// Blend states
+	struct BSBlock
 	{
-		using base = StateBlock<BlendStateDesc, EBS, 8>;
+		StateBlock<BlendStateDesc, EBS, 8> m_bsb;
 
 		BSBlock();
 
-		using base::Desc;
+		// Returns the description
+		BlendStateDesc const& Desc() const;
+		BlendStateDesc& Desc();
 
 		// Clear a field in the state description
 		void Clear(EBS field);
@@ -239,35 +239,21 @@ namespace pr::rdr
 
 		// Combine two states into one. 'rhs' has priority over 'this'
 		BSBlock& operator |= (BSBlock const& rhs);
-		bool operator == (BSBlock const& rhs) const { return (base&)*this == (base&)rhs; }
-		bool operator != (BSBlock const& rhs) const { return (base&)*this != (base&)rhs; }
+		friend bool operator == (BSBlock const& lhs, BSBlock const& rhs) { return lhs.m_bsb == rhs.m_bsb; }
+		friend bool operator != (BSBlock const& lhs, BSBlock const& rhs) { return lhs.m_bsb != rhs.m_bsb; }
 	};
+	static_assert(std::is_standard_layout_v<BSBlock>);
 
-	// Provides a pool of BlendState objects
-	class BlendStateManager :private StateManager<BSBlock, ID3D11BlendState>
+	// Depth states
+	struct DSBlock
 	{
-	public:
-		explicit BlendStateManager(Renderer& rdr);
-
-		// Get/Create a state object for 'desc'
-		D3DPtr<ID3D11BlendState> State(pr::rdr::BSBlock const& desc);
-
-		// Called to limit the number of pooled state objects
-		// Must be called while no state objects are in use
-		using base::Flush;
-	};
-
-	#pragma endregion
-
-	#pragma region Depth State
-
-	struct DSBlock :private StateBlock<DepthStateDesc, EDS, 2>
-	{
-		using base = StateBlock<DepthStateDesc, EDS, 2>;
+		StateBlock<DepthStateDesc, EDS, 2> m_dsb;
 
 		DSBlock();
 
-		using base::Desc;
+		// Returns the description
+		DepthStateDesc const& Desc() const;
+		DepthStateDesc& Desc();
 
 		// Clear a field in the state description
 		void Clear(EDS field);
@@ -283,42 +269,22 @@ namespace pr::rdr
 
 		// Combine two states into one. 'rhs' has priority over 'this'
 		DSBlock& operator |= (DSBlock const& rhs);
-		friend bool operator == (DSBlock const& lhs, DSBlock const& rhs)
-		{
-			return (base&)lhs == (base&)rhs;
-		}
-		friend bool operator != (DSBlock const& lhs, DSBlock const& rhs)
-		{
-			return (base&)lhs != (base&)rhs;
-		}
+		friend bool operator == (DSBlock const& lhs, DSBlock const& rhs) { return lhs.m_dsb == rhs.m_dsb; }
+		friend bool operator != (DSBlock const& lhs, DSBlock const& rhs) { return lhs.m_dsb != rhs.m_dsb; }
 	};
+	static_assert(std::is_standard_layout_v<DSBlock>);
 
-	// Provides a pool of BlendState objects
-	class DepthStateManager :private StateManager<DSBlock, ID3D11DepthStencilState>
+	// Raster states
+	struct RSBlock
 	{
-	public:
-		explicit DepthStateManager(Renderer& rdr);
-
-		// Get/Create a state object for 'desc'
-		D3DPtr<ID3D11DepthStencilState> State(DSBlock const& desc);
-
-		// Called to limit the number of pooled state objects
-		// Must be called while no state objects are in use
-		using base::Flush;
-	};
-
-	#pragma endregion
-
-	#pragma region Raster State
-
-	struct RSBlock :private StateBlock<RasterStateDesc, ERS, 1>
-	{
-		using base = StateBlock<RasterStateDesc, ERS, 1>;
+		StateBlock<RasterStateDesc, ERS, 1> m_rsb;
 
 		RSBlock();
 		RSBlock(D3D11_FILL_MODE fill, D3D11_CULL_MODE cull);
 
-		using base::Desc;
+		// Returns the description
+		RasterStateDesc const& Desc() const;
+		RasterStateDesc& Desc();
 
 		// Clear a field in the state description
 		void Clear(ERS field);
@@ -331,15 +297,8 @@ namespace pr::rdr
 
 		// Combine two states into one. 'rhs' has priority over 'this'
 		RSBlock& operator |= (RSBlock const& rhs);
-
-		friend bool operator == (RSBlock const& lhs, RSBlock const& rhs)
-		{
-			return (base&)lhs == (base&)rhs;
-		}
-		friend bool operator != (RSBlock const& lhs, RSBlock const& rhs)
-		{
-			return (base&)lhs != (base&)rhs;
-		}
+		friend bool operator == (RSBlock const& lhs, RSBlock const& rhs) { return lhs.m_rsb == rhs.m_rsb; }
+		friend bool operator != (RSBlock const& lhs, RSBlock const& rhs) { return lhs.m_rsb != rhs.m_rsb; }
 
 		// Some common raster states
 		static RSBlock SolidCullNone()
@@ -363,6 +322,35 @@ namespace pr::rdr
 			return s_rs;
 		}
 	};
+	static_assert(std::is_standard_layout_v<RSBlock>);
+
+	// Provides a pool of BlendState objects
+	class BlendStateManager :private StateManager<BSBlock, ID3D11BlendState>
+	{
+	public:
+		explicit BlendStateManager(Renderer& rdr);
+
+		// Get/Create a state object for 'desc'
+		D3DPtr<ID3D11BlendState> State(pr::rdr::BSBlock const& desc);
+
+		// Called to limit the number of pooled state objects
+		// Must be called while no state objects are in use
+		using base::Flush;
+	};
+
+	// Provides a pool of BlendState objects
+	class DepthStateManager :private StateManager<DSBlock, ID3D11DepthStencilState>
+	{
+	public:
+		explicit DepthStateManager(Renderer& rdr);
+
+		// Get/Create a state object for 'desc'
+		D3DPtr<ID3D11DepthStencilState> State(DSBlock const& desc);
+
+		// Called to limit the number of pooled state objects
+		// Must be called while no state objects are in use
+		using base::Flush;
+	};
 
 	// Provides a pool of RasterizerState objects
 	class RasterStateManager :private StateManager<RSBlock, ID3D11RasterizerState>
@@ -377,6 +365,4 @@ namespace pr::rdr
 		// Must be called while no state objects are in use
 		using base::Flush;
 	};
-
-	#pragma endregion
 }

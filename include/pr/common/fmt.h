@@ -248,10 +248,10 @@ namespace pr::common
 		}
 		{// char - length specifiers
 			auto s0 = FmtS("%hhd %hd %lx %llx %Lf"
-				,signed char(0x7f)
-				,signed short(0x7fff)
-				,long int(0x55555555)
-				,long long int(0x0123456789abcdef)
+				,static_cast<signed char>(0x7f)
+				,static_cast<signed short>(0x7fff)
+				,static_cast<long int>(0x55555555)
+				,static_cast<long long int>(0x0123456789abcdef)
 				,1000000000000000000.0
 				);
 
@@ -259,10 +259,10 @@ namespace pr::common
 		}
 		{// wchar_t - length specifiers
 			auto s0 = FmtS(L"%hhd %hd %lx %llx %Lf"
-				,signed char(0x7f)
-				,signed short(0x7fff)
-				,long int(0x55555555)
-				,long long int(0x0123456789abcdef)
+				,static_cast<signed char>(0x7f)
+				,static_cast<signed short>(0x7fff)
+				,static_cast<long int>(0x55555555)
+				,static_cast<long long int>(0x0123456789abcdef)
 				,1000000000000000000.0
 				);
 
