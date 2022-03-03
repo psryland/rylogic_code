@@ -5152,7 +5152,7 @@ namespace pr::ldr
 		p.m_reader.CaseSensitive(false);
 
 		// Loop over keywords in the script
-		for (HashValue kw; !p.m_cancel && p.m_reader.NextKeywordH(kw);)
+		for (HashValue32 kw; !p.m_cancel && p.m_reader.NextKeywordH(kw);)
 		{
 			switch ((EKeyword)kw)
 			{

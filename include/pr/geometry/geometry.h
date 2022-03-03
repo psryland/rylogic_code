@@ -3,8 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
-
-#include "pr/maths/maths.h"
+#include "pr/geometry/common.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/volume.h"
 #include "pr/geometry/point.h"

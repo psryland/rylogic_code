@@ -1,0 +1,57 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Free Version</title>
+		<!--#include file="..\inc\meta.include.htm"-->
+		<!--#include file="..\inc\auto_refresh.include.htm"-->
+		<style type="text/css">
+			* {
+				font-family: sans-serif;
+				font-size: 12pt;
+			}
+
+			body {
+				background: url(<!--#image file="..\img\background2.png"-->) no-repeat center center fixed;
+				background-size: cover;
+			}
+
+			#title {
+				text-align: center;
+				font-weight: bolder;
+				font-size: 150%;
+				margin: 20px;
+				color: #000060;
+			}
+
+			.content {
+				text-align: justify;
+				margin-top: 5px;
+				margin-bottom: 15px;
+			}
+		</style>
+	</head>
+	<body>
+		<!--#var name="FeatureEnableTime" file="..\..\src\misc.cs" value="const int FeatureEnableTimeInMinutes\s+= (?P<value>\d+);"-->
+		<!--#var name="StoreLink" file="..\..\src\misc.cs" value="const string StoreLink\s+= .(?P<value>.*).;"-->
+		<!--#var name="VisitStoreCmd" file="..\..\src\misc.cs" value="const string visit_store\s+= (?P<value>.*);"-->
+		<div id="title">
+			<span>RyLogViewer Free Edition</span>
+		</div>
+		<div class="content">
+			This is the free version of RyLogViewer.<br />
+			<br />
+			RyLogViewer is a shareware application, meaning there are limits applied to the free version of the
+			application that are removed in the licensed version. However, these limits do not restrict or disable any
+			of the functionally of the application. The free version merely prompts the user when a limit is exceeded
+			giving the user the option to enable the licensed feature. After <!--#value name="FeatureEnableTime"-->
+			minutes, the prompt will reappear.
+			<b style="font-size:15px; color: #080">
+				There is no time restriction or limit on the number of times licensed features can be enabled.
+			</b>
+		</div>
+		<div class="content">
+			If you would like to purchase a licence, please visit<br />
+			<a href=<!--#value name="VisitStoreCmd"-->><!--#value name="StoreLink"--></a>
+		</div>
+	</body>
+</html>

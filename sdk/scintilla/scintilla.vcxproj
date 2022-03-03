@@ -1,5 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Globals -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
+    <RootNamespace>scintilla</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <!-- Configuration -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -18,48 +29,11 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
-    <RootNamespace>scintilla</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-  </PropertyGroup>
+  <!-- Property Sheets -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="..\..\build\props\debug.x86.dll.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="..\..\build\props\debug.x64.dll.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="..\..\build\props\release.x86.dll.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="..\..\build\props\release.x64.dll.props" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
+  <Import Project="..\..\build\props\$(Configuration).$(Platform).dll.props" />
+  <!-- Output directory -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
@@ -79,17 +53,14 @@
     <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <!-- Build Options -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile />
-    <Link />
     <ClCompile>
       <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
-    <PostBuildEvent />
     <Lib>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
       <TargetMachine>MachineX86</TargetMachine>
@@ -98,28 +69,22 @@
       <Command>py $(ProjectDir)scripts\LexGen.py
 py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
-    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent />
     <PostBuildEvent>
       <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile />
-    <Link />
     <ClCompile>
       <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
-    <PostBuildEvent />
     <Lib>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
@@ -127,33 +92,26 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <Command>py $(ProjectDir)scripts\LexGen.py
 py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
-    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent />
     <PostBuildEvent>
       <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile />
-    <Link />
     <ClCompile>
       <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
-    <PostBuildEvent />
     <PreBuildEvent>
       <Command>py $(ProjectDir)scripts\LexGen.py
 py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
-    <PostBuildEvent />
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
@@ -162,38 +120,33 @@ py $(ProjectDir)scripts\HFacer.py</Command>
       <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent />
     <PostBuildEvent>
       <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile />
-    <Link />
     <ClCompile>
       <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1;SCI_LEXER</PreprocessorDefinitions>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
       <CompileAs>CompileAsCpp</CompileAs>
-      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
-    <PostBuildEvent />
     <PreBuildEvent>
       <Command>py $(ProjectDir)scripts\LexGen.py
 py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
-    <PostBuildEvent />
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;imm32.lib;ole32.lib;oleaut32.lib;msimg32.lib</AdditionalDependencies>
       <ModuleDefinitionFile>$(ProjectDir)win32\Scintilla.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
     </Link>
-    <PostBuildEvent />
     <PostBuildEvent>
       <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
+  <!-- Source -->
   <ItemGroup>
+    <ResourceCompile Include="win32\ScintRes.rc" />
     <ClCompile Include="lexers\LexCPP.cxx" />
     <ClCompile Include="lexers\LexLdr.cxx" />
     <ClCompile Include="lexlib\Accessor.cxx" />
@@ -240,28 +193,6 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClCompile Include="win32\PlatWin.cxx" />
     <ClCompile Include="win32\ScintillaDLL.cxx" />
     <ClCompile Include="win32\ScintillaWin.cxx" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="win32\ScintRes.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="include\SciLexer.cs" />
-    <None Include="include\Scintilla.cs" />
-    <None Include="include\Scintilla.iface" />
-    <None Include="scripts\Face.py" />
-    <None Include="scripts\FileGenerator.py" />
-    <None Include="scripts\GenerateCaseConvert.py" />
-    <None Include="scripts\GenerateCharacterCategory.py" />
-    <None Include="scripts\HFacer.py" />
-    <None Include="scripts\LexGen.py" />
-    <None Include="scripts\ScintillaData.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="lexers\_ReadMe.txt" />
-    <Text Include="License.txt" />
-    <Text Include="version.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="include\ILexer.h" />
     <ClInclude Include="include\ILoader.h" />
     <ClInclude Include="include\Platform.h" />
@@ -309,8 +240,19 @@ py $(ProjectDir)scripts\HFacer.py</Command>
     <ClInclude Include="src\UniqueString.h" />
     <ClInclude Include="src\ViewStyle.h" />
     <ClInclude Include="src\XPM.h" />
+    <None Include="include\SciLexer.cs" />
+    <None Include="include\Scintilla.cs" />
+    <None Include="include\Scintilla.iface" />
+    <None Include="scripts\Face.py" />
+    <None Include="scripts\FileGenerator.py" />
+    <None Include="scripts\GenerateCaseConvert.py" />
+    <None Include="scripts\GenerateCharacterCategory.py" />
+    <None Include="scripts\HFacer.py" />
+    <None Include="scripts\LexGen.py" />
+    <None Include="scripts\ScintillaData.py" />
+    <Text Include="lexers\_ReadMe.txt" />
+    <Text Include="License.txt" />
+    <Text Include="version.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
 </Project>

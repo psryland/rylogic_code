@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<RootNamespace>ExchApi.Binance</RootNamespace>
+		<AssemblyName>ExchApi.Binance</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>Interface to the Binance Exchange</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- References -->
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj" />
+	</ItemGroup>
+
+</Project>

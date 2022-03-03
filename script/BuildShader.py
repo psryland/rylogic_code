@@ -45,14 +45,14 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	# Show the command line options
 	if trace:
-		print("pp:" + str(pp) + "  obj:" + str(obj) + "  debug:" + str(dbg))
+		print(f"pp:{str(pp)}  obj:{str(obj)}  debug:{str(dbg)}")
 
 	# Find the source and output directories
 	_,fname = os.path.split(fullpath)
 	ftitle,extn  = os.path.splitext(fname)
 	if trace: print("File: " + ftitle + extn)
 
-	outdir = os.path.join(UserVars.root, "projects", "view3d", "shaders", "hlsl", "compiled", config)
+	outdir = os.path.join(UserVars.root, "projects\\rylogic\\view3d\\shaders\\hlsl\\compiled", config)
 	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 

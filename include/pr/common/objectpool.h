@@ -56,13 +56,13 @@ namespace pr
 		};
 		template <typename T> struct NonPOD
 		{
-			static void DestructRange(T* first, T* last)                                     { while (first != last) Destruct(first++); }
-			static void Destruct(T* target)                                                  { target->T::~T(); }
-			static void Construct(T* target)                                                 { new (target) T; }
-			template <typename P1> static void Construct(T*, P1 p1)                          { new (target) T(p1); }
-			template <typename P1, typename P2> static void Construct(T*, P1 p1, P2 p2)      { new (target) T(p1); }
+			static void DestructRange(T* first, T* last)                                      { while (first != last) Destruct(first++); }
+			static void Destruct(T* target)                                                   { target->T::~T(); }
+			static void Construct(T* target)                                                  { new (target) T; }
+			template <typename P1> static void Construct(T* target, P1 p1)                    { new (target) T(p1); }
+			template <typename P1, typename P2> static void Construct(T* target, P1 p1, P2 p2){ new (target) T(p1); }
 		};
-		typedef typename pr::meta::if_< pr::meta::is_pod<Type>::value, POD<Type>, NonPOD<Type> >::type Constructor;
+		using Constructor = typename pr::meta::if_< pr::meta::is_pod<Type>::value, POD<Type>, NonPOD<Type> >::type;
 
 		// A block contains room for a 'NumPerBlock' array of 'Type'
 		struct Block

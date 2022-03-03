@@ -1,0 +1,54 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<!--#include file="..\inc\help_head.include.htm"-->
+	<body id="main_help">
+		<!--#include file="..\inc\help_title_panel.include.htm" -->
+		<!--#include file="..\inc\help_index_panel.include.htm"-->
+		<div id="content_panel">
+			<div class="title">Installation</div>
+			<div>
+				<div class="section_title">System Requirements</div>
+				<div class="content">
+					<ul>
+						<li>Microsoft Windows XP or later (32 or 64 bit)</li>
+						<li>Microsoft .NET Framework 4.5.2</li>
+					</ul>
+				</div>
+
+				<div id="normal_installation">
+					<div class="section_title">Normal Installation</div>
+					<div class="content">
+						RyLogViewer is typically installed via the application installer MSI file.
+						With this type of installation, a folder is added to the user's Documents
+						folder to contain the user's preferences, pattern sets, and licence information.
+					</div>
+				</div>
+				<div id="portable_mode">
+					<div class="section_title">Portable Mode</div>
+					<div class="content">
+						RyLogViewer has been designed to support running from a removable drive. For
+						this style of use, simply copy the 'RyLogViewer' directory to a removable/USB
+						drive and create an empty file named <i>portable</i> (with no file extension)
+						in the same directory as <i>RyLogViewer.exe</i>
+						<br/>
+						<br />
+						On startup, RyLogViewer looks for the <i>portable</i> file in the same
+						directory as the application executable. If found, the application starts in
+						portable mode. Settings are loaded and saved to the same directory as the
+						application. Alternatively, RyLogViewer can also be started in portable mode
+						using the <i>-p</i> <a href="command_line.html">command line</a> switch.
+						<br/>
+						<br/>
+						<i>Note:</i> To run RyLogViewer in portable mode (such as from a USB drive),
+						the host system must have the .NET Framework 4.5.2 re-distributable package
+						installed. This is typically already installed on most windows computers,
+						however if needed, it can be downloaded from:<br/>
+						<a href="https://www.microsoft.com/en-us/download/details.aspx?id=42643">
+							https://www.microsoft.com/en-us/download/details.aspx?id=42643
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

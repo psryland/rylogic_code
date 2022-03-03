@@ -1,0 +1,10 @@
+// Menu system master script file
+// Defined values:
+//   ScreenWidth
+//   ScreenHeight
+
+// A page
+*Page
+{
+
+}

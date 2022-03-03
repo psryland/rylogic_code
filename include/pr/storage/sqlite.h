@@ -78,37 +78,37 @@ namespace pr::sqlite
 		struct MetaData :TableMetaData<type_name>\
 		{\
 			MetaData()\
-			:TableMetaData<TableType>(#type_name, table_constraints)\
+				:TableMetaData<type_name>(#type_name, table_constraints)\
 			{
-	// Columns that perform type converting on read/write to the record type
-	#define PR_SQLITE_COL_AS_CUST(column_name, adapter, datatype, constraints)\
-	AddColumn<adapter>("[" ## #column_name ## "]", #datatype, constraints);
+				// Columns that perform type converting on read/write to the record type
+				#define PR_SQLITE_COL_AS_CUST(column_name, adapter, datatype, constraints)\
+				AddColumn<adapter>("[" ## #column_name ## "]", #datatype, constraints);
 
-	// Default implementation of a converting column
-	#define PR_SQLITE_COL_AS(column_name, member, as_type, datatype, constraints)\
-	struct column_name##Adapter\
-	{\
-		typedef as_type ColumnType;\
-		static void Set(TableType& item, ColumnType const& value)              { pr::sqlite::Assign(item.member, value); }\
-		static void Get(TableType const& item, ColumnType& value)              { pr::sqlite::Assign(value, item.member); }\
-		static void Bind(sqlite3_stmt* stmt, int col, ColumnType const& value) { pr::sqlite::bind_##datatype(stmt, col, value); }\
-		static void Read(sqlite3_stmt* stmt, int col, ColumnType&       value) { pr::sqlite::read_##datatype(stmt, col, value); }\
-	};\
-	PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
+				// Default implementation of a converting column
+				#define PR_SQLITE_COL_AS(column_name, member, as_type, datatype, constraints)\
+				struct column_name##Adapter\
+				{\
+					using ColumnType = as_type;\
+					static void Set(MetaData::TableType& item, ColumnType const& value)    { pr::sqlite::Assign(item.member, value); }\
+					static void Get(MetaData::TableType const& item, ColumnType& value)    { pr::sqlite::Assign(value, item.member); }\
+					static void Bind(sqlite3_stmt* stmt, int col, ColumnType const& value) { pr::sqlite::bind_##datatype(stmt, col, value); }\
+					static void Read(sqlite3_stmt* stmt, int col, ColumnType&       value) { pr::sqlite::read_##datatype(stmt, col, value); }\
+				};\
+				PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
 
-	// Member columns that don't need conversion
-	#define PR_SQLITE_COLUMN(column_name, member, datatype, constraints)\
-	struct column_name##Adapter\
-	{\
-		typedef decltype(static_cast<TableType*>(0)->member) ColumnType;\
-		static void Set(TableType& item, ColumnType const& value)              { pr::sqlite::Assign(item.member, value); }\
-		static void Get(TableType const& item, ColumnType& value)              { pr::sqlite::Assign(value, item.member); }\
-		static void Bind(sqlite3_stmt* stmt, int col, ColumnType const& value) { pr::sqlite::bind_##datatype(stmt, col, value); }\
-		static void Read(sqlite3_stmt* stmt, int col, ColumnType&       value) { pr::sqlite::read_##datatype(stmt, col, value); }\
-	};\
-	PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
+				// Member columns that don't need conversion
+				#define PR_SQLITE_COLUMN(column_name, member, datatype, constraints)\
+				struct column_name##Adapter\
+				{\
+					using ColumnType = decltype(static_cast<MetaData::TableType*>(nullptr)->member);\
+					static void Set(MetaData::TableType& item, ColumnType const& value)    { pr::sqlite::Assign(item.member, value); }\
+					static void Get(MetaData::TableType const& item, ColumnType& value)    { pr::sqlite::Assign(value, item.member); }\
+					static void Bind(sqlite3_stmt* stmt, int col, ColumnType const& value) { pr::sqlite::bind_##datatype(stmt, col, value); }\
+					static void Read(sqlite3_stmt* stmt, int col, ColumnType&       value) { pr::sqlite::read_##datatype(stmt, col, value); }\
+				};\
+				PR_SQLITE_COL_AS_CUST(column_name, column_name##Adapter, datatype, constraints)
 
-	#define PR_SQLITE_TABLE_END()\
+				#define PR_SQLITE_TABLE_END()\
 				Validate();\
 			}\
 		};\
@@ -382,7 +382,8 @@ namespace pr::sqlite
 		// Adds quotes to a string and escapes quotes within the string
 		template <typename TString> static TString Quote(TString str, bool add)
 		{
-			TString::value_type q = TString::value_type('\'');
+			auto q = static_cast<TString::value_type>('\'');
+
 			TString out;
 			out.reserve(str.size() + 10);
 			if (add)
@@ -451,8 +452,8 @@ namespace pr::sqlite
 	// Returns the primary key values for 'item'
 	template <typename PKArgs, typename DBRecord> inline PKArgs PrimaryKeys(DBRecord const& item)
 	{
-		TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-		TableMetaData<DBRecord>::ColumnCont const& col = meta.PKs();
+		auto const& meta = DBRecord::Sqlite_TableMetaData();
+		auto const& col = meta.PKs();
 
 		PKArgs args;
 		size_t col_count = col.size();
@@ -647,7 +648,7 @@ namespace pr::sqlite
 		static_assert(std::is_same_v<Cont::iterator::iterator_category, std::random_access_iterator_tag>, "Cont must be a random access container");
 
 		// Sqlite returns null if this column is null
-		Cont::value_type const* ptr = static_cast<Cont::value_type const*>(sqlite3_column_blob(stmt, col)); // have to call this first
+		auto ptr = static_cast<Cont::value_type const*>(sqlite3_column_blob(stmt, col)); // have to call this first
 		size_t len = static_cast<size_t>(sqlite3_column_bytes(stmt, col));
 		size_t count = len / sizeof(Cont::value_type);
 		if (count * sizeof(Cont::value_type) != len) throw Exception(SQLITE_MISMATCH, "Blob size is not an exact multiple of the buffer element type", false);
@@ -684,8 +685,8 @@ namespace pr::sqlite
 	template <typename DBRecord, typename PKArgs> void BindPKs(sqlite3_stmt* stmt, PKArgs const& pks, int ofs = 0)
 	{
 		assert(ofs >= 0 && "parameter binding indices start at 1 so 'ofs' must be >= 0");
-		TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-		TableMetaData<DBRecord>::ColumnCont const& col = meta.PKs();
+		auto const& meta = DBRecord::Sqlite_TableMetaData();
+		auto const& col = meta.PKs();
 		size_t col_count = col.size();
 
 		// Generates:
@@ -723,11 +724,11 @@ namespace pr::sqlite
 	// Read and set all columns in 'item' from 'stmt'
 	template <typename DBRecord> inline DBRecord& Read(sqlite3_stmt* stmt, DBRecord& item)
 	{
-		TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+		auto const& meta = DBRecord::Sqlite_TableMetaData();
 
 		int col = 0;
-		for (auto i = begin(meta.Columns()), iend = end(meta.Columns()); i != iend; ++i)
-			(*i)->Read(stmt, col++, item);
+		for (auto column : meta.Columns())
+			column->Read(stmt, col++, item);
 
 		return item;
 	}
@@ -902,10 +903,10 @@ namespace pr::sqlite
 	template <typename RecordType> class TableMetaData
 	{
 	public:
-		typedef RecordType                      TableType;    // The class/struct that this table is based on
-		typedef ColumnMetaData<RecordType>      ColMetaData;  // The type of the column meta data for this table
-		typedef std::vector<ColMetaData const*> ColumnCCont;  // A container of immutable column meta data
-		typedef std::vector<ColMetaData*>       ColumnCont;   // A container of column meta data
+		using TableType   = RecordType;                      // The class/struct that this table is based on
+		using ColMetaData = ColumnMetaData<RecordType>;      // The type of the column meta data for this table
+		using ColumnCCont = std::vector<ColMetaData const*>; // A container of immutable column meta data
+		using ColumnCont  = std::vector<ColMetaData*>;       // A container of column meta data
 
 	private:
 		char const*  m_table_name;        // The name of the table
@@ -1185,8 +1186,7 @@ namespace pr::sqlite
 		// Returns the sql string for the insert command for type 'DBRecord'
 		static char const* SqlString(EOnConstraint on_constraint = EOnConstraint::Reject)
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-			typedef ColumnMetaData<DBRecord> const* ColPtr;
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 
 			char const* cons = "";
 			if      (on_constraint == EOnConstraint::Reject ) cons = "";
@@ -1196,9 +1196,9 @@ namespace pr::sqlite
 
 			return Sql(
 				"insert ",cons,"into ",meta.TableName()," (",
-				StrHelper::List(meta.NonAutoInc(), ",", [](ColPtr c){return c->Name;}),
+				StrHelper::List(meta.NonAutoInc(), ",", [](auto c){return c->Name;}),
 				") values (",
-				StrHelper::List(meta.NonAutoInc(), ",", [](ColPtr){return "?";}),
+				StrHelper::List(meta.NonAutoInc(), ",", [](auto){return "?";}),
 				")");
 		}
 
@@ -1211,12 +1211,12 @@ namespace pr::sqlite
 		// Bind the values in 'item' to this insert query making it ready for running
 		void Bind(DBRecord const& item)
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 
 			// Bind the item values
 			int idx = 1; // binding parameters are indexed from 1
-			for (auto i = begin(meta.NonAutoInc()), iend = end(meta.NonAutoInc()); i != iend; ++i)
-				(*i)->Bind(*this, idx++, item);
+			for (auto col : meta.NonAutoInc())
+				col->Bind(*this, idx++, item);
 		}
 	};
 
@@ -1226,7 +1226,7 @@ namespace pr::sqlite
 		// Returns the sql string for the get command for type 'DBRecord'
 		static char const* SqlString()
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 			return Sql("select * from ",meta.TableName()," where ",meta.PKConstraints());
 		}
 
@@ -1296,7 +1296,7 @@ namespace pr::sqlite
 		template <typename PKArgs> int Delete(PKArgs const& pks)
 		{
 			assert(m_db->IsOpen() && "Database closed");
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 			Query query(*m_db, Sql("delete from ",meta.TableName()," where ",meta.PKConstraints()));
 			pr::sqlite::Bind(query, pks);
 			query.Step();
@@ -1307,14 +1307,13 @@ namespace pr::sqlite
 		int Update(DBRecord const& item)
 		{
 			assert(m_db->IsOpen() && "Database closed");
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-			typedef ColumnMetaData<DBRecord> const* ColPtr;
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 
 			Query query(*m_db, Sql(
 				"update ",meta.TableName()," set ",
-				StrHelper::List(meta.NonPKs(),",",[](ColPtr c){return std::string(c->Name).append(" = ?");}),
+				StrHelper::List(meta.NonPKs(),",",[](auto c){return std::string(c->Name).append(" = ?");}),
 				" where ",
-				StrHelper::List(meta.PKs()," and ",[](ColPtr c){return std::string(c->Name).append(" = ?");})));
+				StrHelper::List(meta.PKs()," and ",[](auto c){return std::string(c->Name).append(" = ?");})));
 
 			int idx = 1; // binding parameters are indexed from 1
 			for (auto i = begin(meta.NonPKs()), iend = end(meta.NonPKs()); i != iend; ++i)
@@ -1331,8 +1330,8 @@ namespace pr::sqlite
 		template <typename ValueType, typename PKArgs> int Update(char const* column_name, ValueType const& value, PKArgs const& pks)
 		{
 			assert(m_db->IsOpen() && "Database closed");
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-			TableMetaData<DBRecord>::ColMetaData const& column = *meta.Column(column_name);
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& column = *meta.Column(column_name);
 
 			Query query(*m_db, Sql("update ",meta.TableName()," set ",column.Name," = ? where ",meta.PKConstraints()));
 			column.Bind(query, 1, value);
@@ -1374,8 +1373,8 @@ namespace pr::sqlite
 		template <typename Type, typename PKArgs> Type& GetColumn(PKArgs const& pks, int col, Type& value) const
 		{
 			assert(m_db->IsOpen() && "Database closed");
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
-			TableMetaData<DBRecord>::ColMetaData const& column = *meta.Columns()[col];
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& column = *meta.Columns()[col];
 
 			Query query(*m_db, Sql("select ",column.Name," from ",meta.TableName()," where ",meta.PKConstraints()));
 			pr::sqlite::BindPKs<DBRecord>(query, pks);
@@ -1482,7 +1481,7 @@ namespace pr::sqlite
 		}
 		template <typename DBRecord> bool TableExists() const
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 			return TableExists(meta.TableName());
 		}
 
@@ -1493,14 +1492,14 @@ namespace pr::sqlite
 		//  autoincrement must follow primary key without anything in between
 		template <typename DBRecord> int CreateTable(char const* options = "if not exists")
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 			return Execute(Sql("create table ",options," ",meta.TableName(),"(\n",meta.TableDecl(),")"));
 		}
 
 		// Drops a table from the database
 		template <typename DBRecord> int DropTable(char const* options = "if exists")
 		{
-			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
+			auto const& meta = DBRecord::Sqlite_TableMetaData();
 			return Execute(Sql("drop table ",options," ",meta.TableName()));
 		}
 

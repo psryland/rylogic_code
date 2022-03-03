@@ -1,145 +1,145 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\projects\physics\broadphase\broadphasebrute.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\broadphase\broadphasebrute.cpp">
       <Filter>broadphase</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\broadphase\broadphasesnp.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\broadphase\broadphasesnp.cpp">
       <Filter>broadphase</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_arrayvsarray.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_arrayvsarray.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_arrayvsterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_arrayvsterrain.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_boxvsbox.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_boxvsbox.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_boxvscylinder.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_boxvscylinder.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_boxvsterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_boxvsterrain.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_boxvstriangle.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_boxvstriangle.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_cylindervscylinder.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_cylindervscylinder.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_meshvsmesh.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_meshvsmesh.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_meshvsterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_meshvsterrain.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_spherevsbox.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_spherevsbox.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_spherevscylinder.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_spherevscylinder.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_spherevssphere.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_spherevssphere.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_spherevsterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_spherevsterrain.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_spherevstriangle.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_spherevstriangle.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_thingsvsarray.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_thingsvsarray.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\col_trianglevsterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\col_trianglevsterrain.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\collider.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\collider.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\collision.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\collision.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\collisioncache.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\collisioncache.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\collisioncouple.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\collisioncouple.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\engine\engine.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\engine\engine.cpp">
       <Filter>engine</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\engine\gravity.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\engine\gravity.cpp">
       <Filter>engine</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\contact.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\contact.cpp">
       <Filter>collision</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\material\material.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\material\material.cpp">
       <Filter>material</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\ray\raycast.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\ray\raycast.cpp">
       <Filter>ray</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\rigidbody\rigidbody.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\rigidbody\rigidbody.cpp">
       <Filter>rigidbody</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\rigidbody\support.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\rigidbody\support.cpp">
       <Filter>rigidbody</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\rigidbody\integrate.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\rigidbody\integrate.cpp">
       <Filter>rigidbody</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shape.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shape.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapearray.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapearray.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapebox.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapebox.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\builder\shapebuilder.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\builder\shapebuilder.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapecylinder.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapecylinder.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapepolytope.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapepolytope.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\builder\shapepolytopehelper.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\builder\shapepolytopehelper.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapesphere.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapesphere.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapeterrain.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapeterrain.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\shape\shapetriangle.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\shape\shapetriangle.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\solver\resolvecollision.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\solver\resolvecollision.cpp">
       <Filter>solver</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\solver\constraintaccumulator.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\solver\constraintaccumulator.cpp">
       <Filter>solver</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\solver\constraint.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\solver\constraint.cpp">
       <Filter>solver</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\utility\globalfunctions.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\utility\globalfunctions.cpp">
       <Filter>utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\utility\stdafx.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\utility\stdafx.cpp">
       <Filter>utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\utility\debug.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\utility\debug.cpp">
       <Filter>utility</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\collision\simplex.cpp">
+    <ClCompile Include="..\projects\rylogic\physics\collision\simplex.cpp">
       <Filter>collision</Filter>
     </ClCompile>
   </ItemGroup>
@@ -151,7 +151,7 @@
     <ClInclude Include="..\include\pr\physics\broadphase\broadphasesnp.h">
       <Filter>broadphase</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\broadphase\bppair.h">
+    <ClInclude Include="..\projects\rylogic\physics\broadphase\bppair.h">
       <Filter>broadphase</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics\broadphase\bpentity.h">
@@ -160,10 +160,10 @@
     <ClInclude Include="..\include\pr\physics\collision\collider.h">
       <Filter>collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\collision\collision.h">
+    <ClInclude Include="..\projects\rylogic\physics\collision\collision.h">
       <Filter>collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\collision\collisioncouple.h">
+    <ClInclude Include="..\projects\rylogic\physics\collision\collisioncouple.h">
       <Filter>collision</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics\engine\engine.h">
@@ -244,7 +244,7 @@
     <ClInclude Include="..\include\pr\physics\terrain\terrainplane.h">
       <Filter>terrain</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\utility\ldrhelper_private.h">
+    <ClInclude Include="..\projects\rylogic\physics\utility\ldrhelper_private.h">
       <Filter>utility</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics\utility\ldrhelper.h">
@@ -277,25 +277,25 @@
     <ClInclude Include="..\include\pr\physics\utility\globalfunctions.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\collision\idpaircache.h">
+    <ClInclude Include="..\projects\rylogic\physics\collision\idpaircache.h">
       <Filter>collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\utility\stdafx.h">
+    <ClInclude Include="..\projects\rylogic\physics\utility\stdafx.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\utility\profile.h">
+    <ClInclude Include="..\projects\rylogic\physics\utility\profile.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\utility\debug.h">
+    <ClInclude Include="..\projects\rylogic\physics\utility\debug.h">
       <Filter>utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\utility\assert.h">
+    <ClInclude Include="..\projects\rylogic\physics\utility\assert.h">
       <Filter>utility</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics\types\forward.h">
       <Filter>types</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\collision\simplex.h">
+    <ClInclude Include="..\projects\rylogic\physics\collision\simplex.h">
       <Filter>collision</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics\utility\event_types.h">

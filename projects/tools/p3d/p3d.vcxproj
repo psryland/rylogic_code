@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<PropertyGroup Label="Globals">
+		<VCProjectVersion>16.0</VCProjectVersion>
+		<ProjectGuid>{55743CFA-06D2-43DB-8B86-A03CC46F0847}</ProjectGuid>
+		<Keyword>Win32Proj</Keyword>
+		<RootNamespace>p3d</RootNamespace>
+		<ProjectName>p3d</ProjectName>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	<PropertyGroup Label="Configuration">
+		<ConfigurationType>Application</ConfigurationType>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="..\..\..\build\props\$(Configuration).$(Platform).app.props" />
+
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>src/forward.h</PrecompiledHeaderFile>
+			<AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+		<Link>
+			<SubSystem>Console</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+
+	<!-- Source -->
+	<ItemGroup>
+		<ClInclude Include="..\include\pr\geometry\3ds.h" />
+		<ClInclude Include="..\include\pr\geometry\obj.h" />
+		<ClInclude Include="..\include\pr\geometry\p3d.h" />
+		<ClInclude Include="..\include\pr\geometry\stl.h" />
+		<ClCompile Include="src\main.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+		<ClInclude Include="src\forward.h" />
+		<ClInclude Include="src\commands\cross_section.h" />
+		<ClCompile Include="src\commands\cross_section.cpp" />
+		<ClInclude Include="src\commands\generate_normals.h" />
+		<ClCompile Include="src\commands\generate_normals.cpp" />
+		<ClInclude Include="src\commands\model_io.h" />
+		<ClCompile Include="src\commands\model_io.cpp" />
+		<ClInclude Include="src\commands\remove_degenerates.h" />
+		<ClCompile Include="src\commands\remove_degenerates.cpp" />
+		<None Include="deploy_p3d.py" />
+		<None Include="example_script.ldr" />
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

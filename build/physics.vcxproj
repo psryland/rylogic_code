@@ -1,224 +1,182 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug|x64">
-      <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|x64">
-      <Configuration>Release</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-  </ItemGroup>
-  <PropertyGroup Label="Globals">
-    <ProjectGuid>{8C5E848D-B91C-49E0-8E9C-E47A67731AC2}</ProjectGuid>
-    <RootNamespace>physics</RootNamespace>
-    <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
-  </PropertyGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="props\release.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="props\release.x64.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="props\debug.x86.lib.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="props\debug.x64.lib.props" />
-  </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
-  <PropertyGroup>
-    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-    <PostBuildEvent />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-    <PostBuildEvent />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-    <PostBuildEvent />
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp20</LanguageStandard>
-    </ClCompile>
-    <PostBuildEvent />
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="..\include\pr\physics\broadphase\bpentity.h" />
-    <ClInclude Include="..\include\pr\physics\collision\collisioncache.h" />
-    <ClInclude Include="..\include\pr\physics\utility\events.h" />
-    <ClInclude Include="..\projects\physics\broadphase\bppair.h" />
-    <ClInclude Include="..\include\pr\physics\broadphase\broadphasebrute.h" />
-    <ClInclude Include="..\include\pr\physics\broadphase\broadphasesnp.h" />
-    <ClInclude Include="..\include\pr\physics\broadphase\ibroadphase.h" />
-    <ClInclude Include="..\include\pr\physics\collision\collider.h" />
-    <ClInclude Include="..\projects\physics\collision\collision.h" />
-    <ClInclude Include="..\projects\physics\collision\collisioncouple.h" />
-    <ClInclude Include="..\include\pr\physics\collision\contact.h" />
-    <ClInclude Include="..\include\pr\physics\collision\contactmanifold.h" />
-    <ClInclude Include="..\include\pr\physics\collision\icollisionobserver.h" />
-    <ClInclude Include="..\projects\physics\collision\idpaircache.h" />
-    <ClInclude Include="..\projects\physics\collision\simplex.h" />
-    <ClInclude Include="..\include\pr\physics\engine\engine.h" />
-    <ClInclude Include="..\include\pr\physics\engine\igravity.h" />
-    <ClInclude Include="..\include\pr\physics\engine\settings.h" />
-    <ClInclude Include="..\include\pr\physics\material\imaterial.h" />
-    <ClInclude Include="..\include\pr\physics\rigidbody\integrate.h" />
-    <ClInclude Include="..\include\pr\physics\rigidbody\rigidbody.h" />
-    <ClInclude Include="..\include\pr\physics\rigidbody\support.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shape.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapearray.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapebox.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapecylinder.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapepolytope.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapes.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapesphere.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapeterrain.h" />
-    <ClInclude Include="..\include\pr\physics\shape\shapetriangle.h" />
-    <ClInclude Include="..\include\pr\physics\shape\builder\shapebuilder.h" />
-    <ClInclude Include="..\include\pr\physics\shape\builder\shapebuilderresult.h" />
-    <ClInclude Include="..\include\pr\physics\shape\builder\shapepolytopehelper.h" />
-    <ClInclude Include="..\include\pr\physics\solver\constraint.h" />
-    <ClInclude Include="..\include\pr\physics\solver\constraintaccumulator.h" />
-    <ClInclude Include="..\include\pr\physics\solver\resolvecollision.h" />
-    <ClInclude Include="..\include\pr\physics\terrain\iterrain.h" />
-    <ClInclude Include="..\include\pr\physics\terrain\terrainimplicitsurface.h" />
-    <ClInclude Include="..\include\pr\physics\terrain\terrainplane.h" />
-    <ClInclude Include="..\include\pr\physics\terrain\terrainquadtree.h" />
-    <ClInclude Include="..\include\pr\physics\types\forward.h" />
-    <ClInclude Include="..\projects\physics\utility\assert.h" />
-    <ClInclude Include="..\projects\physics\utility\debug.h" />
-    <ClInclude Include="..\include\pr\physics\utility\event_types.h" />
-    <ClInclude Include="..\include\pr\physics\utility\globalfunctions.h" />
-    <ClInclude Include="..\include\pr\physics\utility\ldrhelper.h" />
-    <ClInclude Include="..\projects\physics\utility\ldrhelper_private.h" />
-    <ClInclude Include="..\projects\physics\utility\profile.h" />
-    <ClInclude Include="..\projects\physics\utility\stdafx.h" />
-    <ClInclude Include="..\include\pr\physics\ray\ray.h" />
-    <ClInclude Include="..\include\pr\physics\ray\raycast.h" />
-    <ClInclude Include="..\include\pr\physics\ray\raycastresult.h" />
-    <ClInclude Include="..\include\pr\physics\physics.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\projects\physics\broadphase\broadphasebrute.cpp" />
-    <ClCompile Include="..\projects\physics\broadphase\broadphasesnp.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_arrayvsarray.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_arrayvsterrain.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_boxvsbox.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_boxvscylinder.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_boxvsterrain.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_boxvstriangle.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_cylindervscylinder.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_meshvsmesh.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_meshvsterrain.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_spherevsbox.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_spherevscylinder.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_spherevssphere.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_spherevsterrain.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_spherevstriangle.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_thingsvsarray.cpp" />
-    <ClCompile Include="..\projects\physics\collision\col_trianglevsterrain.cpp" />
-    <ClCompile Include="..\projects\physics\collision\collider.cpp" />
-    <ClCompile Include="..\projects\physics\collision\collision.cpp" />
-    <ClCompile Include="..\projects\physics\collision\collisioncache.cpp" />
-    <ClCompile Include="..\projects\physics\collision\collisioncouple.cpp" />
-    <ClCompile Include="..\projects\physics\collision\contact.cpp" />
-    <ClCompile Include="..\projects\physics\collision\simplex.cpp" />
-    <ClCompile Include="..\projects\physics\engine\engine.cpp" />
-    <ClCompile Include="..\projects\physics\engine\gravity.cpp" />
-    <ClCompile Include="..\projects\physics\material\material.cpp" />
-    <ClCompile Include="..\projects\physics\rigidbody\integrate.cpp" />
-    <ClCompile Include="..\projects\physics\rigidbody\rigidbody.cpp" />
-    <ClCompile Include="..\projects\physics\rigidbody\support.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shape.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapearray.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapebox.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapecylinder.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapepolytope.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapesphere.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapeterrain.cpp" />
-    <ClCompile Include="..\projects\physics\shape\shapetriangle.cpp" />
-    <ClCompile Include="..\projects\physics\shape\builder\shapebuilder.cpp" />
-    <ClCompile Include="..\projects\physics\shape\builder\shapepolytopehelper.cpp" />
-    <ClCompile Include="..\projects\physics\solver\constraint.cpp" />
-    <ClCompile Include="..\projects\physics\solver\constraintaccumulator.cpp" />
-    <ClCompile Include="..\projects\physics\solver\resolvecollision.cpp" />
-    <ClCompile Include="..\projects\physics\utility\debug.cpp" />
-    <ClCompile Include="..\projects\physics\utility\globalfunctions.cpp" />
-    <ClCompile Include="..\projects\physics\utility\stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\projects\physics\ray\raycast.cpp" />
-  </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+
+	<!-- Globals -->
+	<PropertyGroup Label="Globals">
+		<ProjectGuid>{8C5E848D-B91C-49E0-8E9C-E47A67731AC2}</ProjectGuid>
+		<RootNamespace>physics</RootNamespace>
+		<Keyword>Win32Proj</Keyword>
+		<WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+	</PropertyGroup>
+	
+	<!-- Configuration -->
+	<PropertyGroup Label="Configuration">
+		<ConfigurationType>StaticLibrary</ConfigurationType>
+		<PlatformToolset>v143</PlatformToolset>
+	</PropertyGroup>
+	<ItemGroup Label="ProjectConfigurations">
+		<ProjectConfiguration Include="Debug|Win32">
+			<Configuration>Debug</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Debug|x64">
+			<Configuration>Debug</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|Win32">
+			<Configuration>Release</Configuration>
+			<Platform>Win32</Platform>
+		</ProjectConfiguration>
+		<ProjectConfiguration Include="Release|x64">
+			<Configuration>Release</Configuration>
+			<Platform>x64</Platform>
+		</ProjectConfiguration>
+	</ItemGroup>
+
+	<!-- Property Sheets -->
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+	<Import Project="props\$(Configuration).$(Platform).lib.props" />
+
+	<!-- Build Options -->
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+	<ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+		<ClCompile>
+			<PrecompiledHeader>Use</PrecompiledHeader>
+			<PrecompiledHeaderFile>physics/utility/stdafx.h</PrecompiledHeaderFile>
+			<PreprocessorDefinitions>_WIN32_WINNT=0x0700;PR_PH_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+			<AdditionalIncludeDirectories>..\projects\rylogic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+		</ClCompile>
+	</ItemDefinitionGroup>
+
+	<!-- Source -->
+	<ItemGroup>
+		<ClInclude Include="..\include\pr\physics\broadphase\bpentity.h" />
+		<ClInclude Include="..\include\pr\physics\collision\collisioncache.h" />
+		<ClInclude Include="..\include\pr\physics\utility\events.h" />
+		<ClInclude Include="..\projects\rylogic\physics\broadphase\bppair.h" />
+		<ClInclude Include="..\include\pr\physics\broadphase\broadphasebrute.h" />
+		<ClInclude Include="..\include\pr\physics\broadphase\broadphasesnp.h" />
+		<ClInclude Include="..\include\pr\physics\broadphase\ibroadphase.h" />
+		<ClInclude Include="..\include\pr\physics\collision\collider.h" />
+		<ClInclude Include="..\projects\rylogic\physics\collision\collision.h" />
+		<ClInclude Include="..\projects\rylogic\physics\collision\collisioncouple.h" />
+		<ClInclude Include="..\include\pr\physics\collision\contact.h" />
+		<ClInclude Include="..\include\pr\physics\collision\contactmanifold.h" />
+		<ClInclude Include="..\include\pr\physics\collision\icollisionobserver.h" />
+		<ClInclude Include="..\projects\rylogic\physics\collision\idpaircache.h" />
+		<ClInclude Include="..\projects\rylogic\physics\collision\simplex.h" />
+		<ClInclude Include="..\include\pr\physics\engine\engine.h" />
+		<ClInclude Include="..\include\pr\physics\engine\igravity.h" />
+		<ClInclude Include="..\include\pr\physics\engine\settings.h" />
+		<ClInclude Include="..\include\pr\physics\material\imaterial.h" />
+		<ClInclude Include="..\include\pr\physics\rigidbody\integrate.h" />
+		<ClInclude Include="..\include\pr\physics\rigidbody\rigidbody.h" />
+		<ClInclude Include="..\include\pr\physics\rigidbody\support.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shape.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapearray.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapebox.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapecylinder.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapepolytope.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapes.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapesphere.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapeterrain.h" />
+		<ClInclude Include="..\include\pr\physics\shape\shapetriangle.h" />
+		<ClInclude Include="..\include\pr\physics\shape\builder\shapebuilder.h" />
+		<ClInclude Include="..\include\pr\physics\shape\builder\shapebuilderresult.h" />
+		<ClInclude Include="..\include\pr\physics\shape\builder\shapepolytopehelper.h" />
+		<ClInclude Include="..\include\pr\physics\solver\constraint.h" />
+		<ClInclude Include="..\include\pr\physics\solver\constraintaccumulator.h" />
+		<ClInclude Include="..\include\pr\physics\solver\resolvecollision.h" />
+		<ClInclude Include="..\include\pr\physics\terrain\iterrain.h" />
+		<ClInclude Include="..\include\pr\physics\terrain\terrainimplicitsurface.h" />
+		<ClInclude Include="..\include\pr\physics\terrain\terrainplane.h" />
+		<ClInclude Include="..\include\pr\physics\terrain\terrainquadtree.h" />
+		<ClInclude Include="..\include\pr\physics\types\forward.h" />
+		<ClInclude Include="..\projects\rylogic\physics\utility\assert.h" />
+		<ClInclude Include="..\projects\rylogic\physics\utility\debug.h" />
+		<ClInclude Include="..\include\pr\physics\utility\event_types.h" />
+		<ClInclude Include="..\include\pr\physics\utility\globalfunctions.h" />
+		<ClInclude Include="..\include\pr\physics\utility\ldrhelper.h" />
+		<ClInclude Include="..\projects\rylogic\physics\utility\ldrhelper_private.h" />
+		<ClInclude Include="..\projects\rylogic\physics\utility\profile.h" />
+		<ClInclude Include="..\projects\rylogic\physics\utility\stdafx.h" />
+		<ClInclude Include="..\include\pr\physics\ray\ray.h" />
+		<ClInclude Include="..\include\pr\physics\ray\raycast.h" />
+		<ClInclude Include="..\include\pr\physics\ray\raycastresult.h" />
+		<ClInclude Include="..\include\pr\physics\physics.h" />
+		<ClCompile Include="..\projects\rylogic\physics\broadphase\broadphasebrute.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\broadphase\broadphasesnp.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_arrayvsarray.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_arrayvsterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_boxvsbox.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_boxvscylinder.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_boxvsterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_boxvstriangle.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_cylindervscylinder.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_meshvsmesh.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_meshvsterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_spherevsbox.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_spherevscylinder.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_spherevssphere.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_spherevsterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_spherevstriangle.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_thingsvsarray.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\col_trianglevsterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\collider.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\collision.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\collisioncache.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\collisioncouple.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\contact.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\collision\simplex.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\engine\engine.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\engine\gravity.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\material\material.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\rigidbody\integrate.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\rigidbody\rigidbody.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\rigidbody\support.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shape.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapearray.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapebox.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapecylinder.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapepolytope.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapesphere.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapeterrain.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\shapetriangle.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\builder\shapebuilder.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\shape\builder\shapepolytopehelper.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\solver\constraint.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\solver\constraintaccumulator.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\solver\resolvecollision.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\utility\debug.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\utility\globalfunctions.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\ray\raycast.cpp" />
+		<ClCompile Include="..\projects\rylogic\physics\utility\stdafx.cpp">
+			<PrecompiledHeader>Create</PrecompiledHeader>
+		</ClCompile>
+	</ItemGroup>
+	<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

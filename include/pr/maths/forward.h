@@ -18,6 +18,7 @@
 #include <cassert>
 #include <random>
 #include "pr/container/span.h"
+#include "pr/meta/dep_constants.h"
 
 // Libraries built to use DirectXMath should be fine when linked in projects
 // that don't use DirectXMath because all of the maths types have the same

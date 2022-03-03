@@ -91,7 +91,7 @@ namespace pr::ldr
 		// Also watch out for the error being a typedef of a common type,
 		// e.g. I've seen 'Type=std::ios_base::openmode' as an error, but really it was
 		// 'Type=int' that was missing, because of 'typedef int std::ios_base::openmode'
-		static_assert(false, "no overload for 'Type'");
+		static_assert(dependant_false<Type>, "no overload for 'Type'");
 	}
 	inline TStr& Append(TStr& str, char const* s)
 	{
@@ -555,12 +555,10 @@ namespace pr::ldr
 		}
 		return std::move(out);
 	};
-	#pragma endregion
 
 	// Ldr object fluent helper
 	namespace fluent
 	{
-		template <typename> struct LdrObj_;
 		struct LdrRawString;
 		struct LdrGroup;
 		struct LdrLine;
@@ -569,67 +567,32 @@ namespace pr::ldr
 		struct LdrBox;
 		struct LdrCylinder;
 		struct LdrFrustum;
-		using LdrObj = LdrObj_<void>;
-		using ObjPtr = std::unique_ptr<LdrObj>;
-		using ObjCont = std::vector<ObjPtr>;
 
-		template <typename> struct LdrObj_
+		struct LdrObj
 		{
+			using ObjPtr = std::unique_ptr<LdrObj>;
+			using ObjCont = std::vector<ObjPtr>;
+
 			ObjCont m_objects;
-			virtual ~LdrObj_() {}
+			virtual ~LdrObj() {}
 
 			template <typename Arg0, typename... Args>
-			LdrObj_& Append(Arg0 const& arg0, Args&&... args)
+			LdrObj& Append(Arg0 const& arg0, Args&&... args)
 			{
 				auto ptr = new LdrRawString(arg0, std::forward<Args>(args)...);
 				m_objects.emplace_back(ptr);
 				return *this;
 			}
-			LdrGroup& Group(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrGroup;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrLine& Line(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrLine;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrTriangle;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrSphere& Sphere(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrSphere;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrBox& Box(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrBox;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrCylinder& Cylinder(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrCylinder;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
-			LdrFrustum& Frustum(std::string_view name = "", Col colour = Col())
-			{
-				auto ptr = new LdrFrustum;
-				m_objects.emplace_back(ptr);
-				return (*ptr).name(name).col(colour);
-			}
+			LdrGroup& Group(std::string_view name = "", Col colour = Col());
+			LdrLine& Line(std::string_view name = "", Col colour = Col());
+			LdrTriangle& Triangle(std::string_view name = "", Col colour = Col());
+			LdrSphere& Sphere(std::string_view name = "", Col colour = Col());
+			LdrBox& Box(std::string_view name = "", Col colour = Col());
+			LdrCylinder& Cylinder(std::string_view name = "", Col colour = Col());
+			LdrFrustum& Frustum(std::string_view name = "", Col colour = Col());
 
 			// Extension objects
-			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj_, LdrCustom>>>
+			template <typename LdrCustom, typename = std::enable_if_t<std::is_base_of_v<LdrObj, LdrCustom>>>
 			LdrCustom& Add(std::string_view name = "", Col colour = Col())
 			{
 				auto ptr = new LdrCustom;
@@ -645,7 +608,7 @@ namespace pr::ldr
 			}
 
 			// Reset the builder
-			LdrObj_& Clear(int count = -1)
+			LdrObj& Clear(int count = -1)
 			{
 				auto size = static_cast<int>(m_objects.size());
 				if (count >= 0 && count < size)
@@ -657,11 +620,11 @@ namespace pr::ldr
 			}
 
 			// Write the script to a file
-			LdrObj_& Write(std::filesystem::path const& filepath)
+			LdrObj& Write(std::filesystem::path const& filepath)
 			{
 				return Write(filepath, false, false);
 			}
-			LdrObj_& Write(std::filesystem::path const& filepath, bool pretty, bool append)
+			LdrObj& Write(std::filesystem::path const& filepath, bool pretty, bool append)
 			{
 				std::string str;
 				ToString(str);
@@ -670,23 +633,8 @@ namespace pr::ldr
 				return *this;
 			}
 		};
-		struct LdrRawString :LdrObj
-		{
-			std::string m_str;
-			template <typename Arg0, typename... Args> 
-			LdrRawString(Arg0 const& arg0, Args&&... args)
-				:m_str()
-			{
-				ldr::Append(m_str, arg0, std::forward<Args>(args)...);
-			}
-
-			/// <inheritdoc/>
-			void ToString(std::string& str) const override
-			{
-				str.append(m_str);
-			}
-		};
-		template <typename Derived> struct LdrBase :LdrObj
+		template <typename Derived>
+		struct LdrBase :LdrObj
 		{
 			LdrBase()
 				: m_name()
@@ -776,6 +724,23 @@ namespace pr::ldr
 			{
 				LdrObj::ToString(str);
 				ldr::Append(str, Wireframe(m_wire), O2W(m_o2w));
+			}
+		};
+
+		struct LdrRawString :LdrObj
+		{
+			std::string m_str;
+			template <typename Arg0, typename... Args> 
+			LdrRawString(Arg0 const& arg0, Args&&... args)
+				:m_str()
+			{
+				ldr::Append(m_str, arg0, std::forward<Args>(args)...);
+			}
+
+			/// <inheritdoc/>
+			void ToString(std::string& str) const override
+			{
+				str.append(m_str);
 			}
 		};
 		struct LdrLine :LdrBase<LdrLine>
@@ -1089,6 +1054,51 @@ namespace pr::ldr
 				ldr::Append(str, "\n}\n");
 			}
 		};
+
+		#pragma region LdrObj::Implementation
+		inline LdrGroup& LdrObj::Group(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrGroup;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrLine& LdrObj::Line(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrLine;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrTriangle& LdrObj::Triangle(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrTriangle;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrSphere& LdrObj::Sphere(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrSphere;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrBox& LdrObj::Box(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrBox;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrCylinder& LdrObj::Cylinder(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrCylinder;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		inline LdrFrustum& LdrObj::Frustum(std::string_view name, Col colour)
+		{
+			auto ptr = new LdrFrustum;
+			m_objects.emplace_back(ptr);
+			return (*ptr).name(name).col(colour);
+		}
+		#pragma endregion
 	}
 
 	struct Builder : fluent::LdrObj

@@ -1,0 +1,35 @@
+1. (settings: load at end, 10000 lines cached)
+  load testlog.txt
+  select last row
+    => causes an incremental reload, but no effect on viewed file
+  select 2nd to last row
+    => causes an incremental reload, but no effect on viewed file
+  select jump to start button
+    => causes an incremental reload, but no effect on viewed file
+  
+2. (settings: 50 lines cached)
+  load testlog.txt
+  select jump to start button
+   =>  position jumps to start, row 0 selected
+  select row 5
+   => triggers LoadNearBoundary, loading at file pos 0, no effect on viewed file
+  select row 50
+   => triggers LoadNearBoundary, loading at file pos 196, cached lines should be centred around line 50
+  select row 73
+   => triggers LoadNearBoundary, loading at file pos 288, cached lines should be centred around line 73
+  select row 96
+   => triggers LoadNearBoundary, loading at file pos 380, cached lines should be between 51 and 100
+
+3. (settings: 50 lines cached, watch files)
+  load program output for loop.cmd
+   => view updates as the output file is changed, 50 lines max cached.
+  
+4. Find + filtering
+  Load a file,
+  Test find next/prev
+  Set a filter
+  Check find only finds visible lines
+  Turn on quick filter
+  Check find only finds visible lines
+  
+5. USB debugging + Visual Studio adb

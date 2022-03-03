@@ -1,0 +1,70 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<RootNamespace>CoinFlip.UI</RootNamespace>
+		<AssemblyName>CoinFlip.UI</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>ClipFlip Application</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<ApplicationIcon>money.ico</ApplicationIcon>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<Version>1.0.0</Version>
+		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Code -->
+	<ItemGroup>
+		<ApplicationDefinition Include="src\App.xaml" />
+	</ItemGroup>
+
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png" />
+	</ItemGroup>
+
+	<!-- References -->
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.0.123" />
+		<PackageReference Include="System.Net.Http" Version="4.3.4" />
+		<PackageReference Include="System.Data.SQLite.Core" Version="1.0.115.5" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+		<ProjectReference Include="..\..\..\rylogic\Rylogic.View3d\Rylogic.View3d.csproj" />
+		<ProjectReference Include="..\CoinFlip.Model\CoinFlip.Model.csproj" />
+		<ProjectReference Include="..\ExchApi.Common\ExchApi.Common.csproj" />
+		<ProjectReference Include="..\ExchApi.Binance\ExchApi.Binance.csproj" />
+	</ItemGroup>
+	
+	<!-- Dependencies -->
+	<ItemGroup>
+		<Content Include="..\..\..\..\lib\x64\debug\view3d.dll">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\..\lib\x64\release\view3d.dll">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<!--
+		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
+			<Link>lib\x86\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x86\release\view3d.dll">
+			<Link>lib\x86\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		-->
+	</ItemGroup>
+</Project>

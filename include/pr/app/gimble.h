@@ -60,7 +60,7 @@ namespace pr::app
 			};
 
 			// Create the gimble model
-			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Make(verts), "gimble"));
+			m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, BBox::Reset(), "gimble"));
 
 			NuggetProps mat; // Get a suitable shader
 			mat.m_topo = ETopo::LineList;

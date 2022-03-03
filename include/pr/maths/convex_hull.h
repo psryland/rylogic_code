@@ -19,494 +19,27 @@
 
 namespace pr
 {
-	namespace impl::hull
-	{
-		// A struct containing the parameters provided to ConvexHull()
-		// Prevents passing lots of variables around between functions
-		template <typename VertCont, typename VIter, typename FIter>
-		struct HullData
-		{
-			using VertIter = VIter;
-			using FaceIter = FIter;
-			using VIndex = typename std::iterator_traits<VIter>::value_type;
-
-			static constexpr int MaxVisFaceCount = 64;
-
-			FIter           m_fbegin;                            // Start of the face container
-			FIter           m_flast;                             // One past the last face added to the face container
-			FIter           m_fend;                              // End of the face container
-			VIter           m_vbegin;                            // Start of the vert index container
-			VIter           m_vhull_last;                        // One past the last vert index that is on the convex hull
-			VIter           m_vnon_hull;                         // First vert index that is definitely not on the convex hull
-			VIter           m_vend;                              // End of the vert index container
-			VertCont const& m_vcont;                             // Vertex container
-			v4* m_hs_begin;                          // Start of a buffer of face normals with the same length as fend - fbegin
-			v4* m_hs_last;                           // Pointer into the half space buffer, equilavent position to flast
-			v4* m_hs_end;                            // End of the buffer of face normals
-			int* m_visible_face;                      // Pointer to one of the m_vis_face_buf's
-			int             m_vis_face_buf1[MaxVisFaceCount];    // Double buffer for the
-			int             m_vis_face_buf2[MaxVisFaceCount];    //  indices of visible faces
-			int             m_vis_face_count;                    // The number of visible faces
-
-			HullData(HullData const&) = delete;
-			HullData& operator=(HullData const&) = delete;
-			HullData(VertCont const& vcont, VIter vbegin, VIter vend, FIter fbegin, FIter fend, v4* half_space)
-				:m_vcont(vcont)
-				, m_vbegin(vbegin)
-				, m_vhull_last(vbegin)
-				, m_vnon_hull(vend)
-				, m_vend(vend)
-				, m_fbegin(fbegin)
-				, m_flast(fbegin)
-				, m_fend(fend)
-				, m_hs_begin(half_space)
-				, m_hs_last(half_space)
-				, m_hs_end(half_space + (fend - fbegin))
-				, m_visible_face(m_vis_face_buf1)
-				, m_vis_face_count(0)
-			{
-			}
-			void SwapVisFaceDblBuffer()
-			{
-				m_visible_face = m_visible_face == m_vis_face_buf1 ? m_vis_face_buf2 : m_vis_face_buf1;
-			}
-		};
-
-		#if PR_DBG_CONVEX_HULL
-		void const* g_data;
-		template <typename HData> void DumpFaces(HData const& data);
-		template <typename HData> void DumpVerts(HData const& data);
-		#endif
-
-		// Add a face to the face container
-		template <typename HData>
-		inline void AddFace(HData& data, typename HData::VIndex a, typename HData::VIndex b, typename HData::VIndex c)
-		{
-			PR_ASSERT(PR_DBG_CONVEX_HULL, a != b && b != c && c != a, "Should not be adding degenerate faces");
-			PR_ASSERT(PR_DBG_CONVEX_HULL, !(data.m_flast == data.m_fend), "Shouldn't be trying to add faces if there isn't room");
-
-			// Set the face in the face container
-			pr::hull::SetFace(*data.m_flast, a, b, c);
-			++data.m_flast;
-
-			// Record the half space that this face represents
-			v4 const& A = data.m_vcont[*(data.m_vbegin + a)];
-			v4 e0 = data.m_vcont[*(data.m_vbegin + b)] - A;
-			v4 e1 = data.m_vcont[*(data.m_vbegin + c)] - A;
-			v4& plane = *data.m_hs_last;
-			plane = Normalise(Cross3(e0, e1));
-			plane.w = -Dot3(plane, A);
-			++data.m_hs_last;
-
-			PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-		}
-
-		// Initialise the convex hull by finding a shape with volume from the bounding verts
-		// This function is set up to return false if any degenerate cases are detected.
-		template <typename HData>
-		bool InitHull(HData& data)
-		{
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput ldr_extm("C:/DeleteMe/hull_extremeverts.pr_script", true); ldr_extm.clear());
-
-			// A minimum of 4 verts are needed for a hull with volume
-			if (data.m_vend - data.m_vbegin < 4)
-				return false;
-
-			// Check that there is room for the initial 4 faces
-			if (data.m_fend - data.m_flast < 4)
-				return false;
-
-			// Scan through and find the min/max verts on the Z axis
-			typename HData::VertIter vmin = data.m_vbegin, vmax = data.m_vbegin;
-			{
-				float dmin = maths::float_max;
-				float dmax = -maths::float_max;
-				for (typename HData::VertIter i = data.m_vbegin; i != data.m_vend; ++i)
-				{
-					float d = Dot3(v4ZAxis, data.m_vcont[*i]);
-					if (d < dmin) { dmin = d; vmin = i; }
-					if (d > dmax) { dmax = d; vmax = i; }
-				}
-
-				// If the span is zero then all verts must lie
-				// in a plane parallel to the XY plane.
-				if (dmax - dmin < maths::tinyf)
-					return false;
-			}
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("zaxis", "FF0000FF", data.m_vcont[*vmin], data.m_vcont[*vmax], ldr_extm));
-
-			// Use these extreme verts as the Z axis
-			v4 zaxis = data.m_vcont[*vmax] - data.m_vcont[*vmin];
-
-			// Move these vert indices to the convex hull end of the range.
-			// Ensure vmin is less than vmax, this prevents problems with swapping.
-			if (vmax < vmin) { std::swap(*vmin, *vmax); std::swap(vmin, vmax); }
-			std::swap(*vmin, *data.m_vhull_last++);
-			std::swap(*vmax, *data.m_vhull_last++);
-
-			v4 const& zmin = data.m_vcont[*data.m_vbegin];
-			float zaxis_lensq = LengthSq(zaxis);
-
-			{// Find the most radially distant vertex from the zaxis
-				float dmax = 0.0f;
-				for (typename HData::VertIter i = data.m_vhull_last; i != data.m_vend; ++i)
-				{
-					v4 vert = data.m_vcont[*i] - zmin;
-					float d = LengthSq(vert) - Sqr(Dot3(vert, zaxis)) / zaxis_lensq;
-					if (d > dmax) { dmax = d; vmax = i; }
-				}
-
-				// If all verts lie on the zaxis...
-				if (dmax < maths::tinyf)
-					return false;
-			}
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("yaxis", "FF00FF00", zmin, data.m_vcont[*vmax], ldr_extm));
-
-			// Choose a perpendicular axis
-			v4 axis = Cross3(zaxis, data.m_vcont[*vmax] - zmin);
-
-			// Move 'vmax' to the convex hull end of the range.
-			std::swap(*vmax, *data.m_vhull_last++);
-
-			bool flip = false;
-
-			{// Find the vert with the greatest distance along 'axis'
-				float dmax = 0.0f;
-				for (typename HData::VertIter i = data.m_vhull_last; i != data.m_vend; ++i)
-				{
-					float d = Dot3(axis, data.m_vcont[*i] - zmin);
-					if (Abs(d) > dmax) { dmax = Abs(d); vmax = i; flip = d < 0.0f; }
-				}
-
-				// If all verts lie on in the plane...
-				if (dmax < maths::tinyf)
-					return false;
-			}
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("xaxis", "FFFF0000", zmin, data.m_vcont[*vmax], ldr_extm));
-
-			// Move 'vmax' to the convex hull end of the range.
-			std::swap(*vmax, *data.m_vhull_last++);
-
-			// Generate the starting shape from the four hull verts we've found.
-			if (flip)
-			{
-				AddFace(data, 0, 1, 2);
-				AddFace(data, 0, 2, 3);
-				AddFace(data, 0, 3, 1);
-				AddFace(data, 3, 2, 1);
-			}
-			else
-			{
-				AddFace(data, 0, 2, 1);
-				AddFace(data, 0, 3, 2);
-				AddFace(data, 0, 1, 3);
-				AddFace(data, 1, 2, 3);
-			}
-			return true;
-		}
-
-		// Move vert indices that are inside the current hull to the 'non-hull' end of the range.
-		// Records the vertex with the greatest distance from any face in the hull, this must be
-		// a vertex on the convex hull because it is the extreme vertex in the direction of the
-		// face normal. Returns this extreme vert, also caches the indices of the faces that can
-		// see this max vert.
-		template <typename HData>
-		typename HData::VertIter PartitionVerts(HData& data)
-		{
-			float max_dist = 0.0f;
-			data.m_vis_face_count = 0;
-			typename HData::VertIter max_vert = data.m_vnon_hull;
-			for (typename HData::VertIter v = data.m_vhull_last; v != data.m_vnon_hull; )
-			{
-				// Find the maximum distance of 'v' from the faces of the hull
-				float dist = 0.0f;
-				int vis_count = 0, face_index = 0;
-				for (v4 const* plane = data.m_hs_begin; plane != data.m_hs_last; ++plane, ++face_index)
-				{
-					PR_ASSERT(PR_DBG_CONVEX_HULL, data.m_vcont[*v].w == 1.0f, "Should be finding the convex hull of positions, not directions");
-					float d = Dot4(*plane, data.m_vcont[*v]);
-					if (d <= 0.0f) continue; // behind 'plane'
-					dist = Max(dist, d);
-					if (vis_count < HData::MaxVisFaceCount)
-						data.m_visible_face[vis_count] = face_index;
-					++vis_count;
-				}
-
-				// If this vert is within all half spaces then it's not a hull vert
-				if (dist == 0.0f)
-				{
-					std::swap(*v, *(--data.m_vnon_hull));
-					continue;
-				}
-
-				// If this vert has the greatest distance from a face, record it.
-				if (dist > max_dist)
-				{
-					max_dist = dist;
-					max_vert = v;
-					data.m_vis_face_count = vis_count;
-					data.SwapVisFaceDblBuffer();
-				}
-				++v;
-			}
-			data.SwapVisFaceDblBuffer();
-			return max_vert;
-		}
-
-		// A structure used to keep track of the perimeter edges
-		// as faces are removed from the hull.
-		template <typename HData>
-		struct Perimeter
-		{
-			struct Edge { typename HData::VIndex m_i0, m_i1; };
-			Edge* m_begin, * m_last, * m_end;
-
-			Perimeter(Edge* buf, int count)
-				:m_begin(buf)
-				, m_last(m_begin)
-				, m_end(m_begin + count)
-			{
-			}
-			void AddEdge(typename HData::VIndex i0, typename HData::VIndex i1)
-			{
-				for (Edge* e = m_begin; e != m_last; ++e)
-				{
-					if (!(e->m_i0 == i1 && e->m_i1 == i0)) continue;
-					*e = *(--m_last); // erase 'e'
-					PR_EXPAND(PR_DBG_CONVEX_HULL, DumpEdges());
-					return;
-				}
-				PR_ASSERT(PR_DBG_CONVEX_HULL, m_last != m_end, "");
-				m_last->m_i0 = i0;
-				m_last->m_i1 = i1;
-				++m_last;
-				PR_EXPAND(PR_DBG_CONVEX_HULL, DumpEdges());
-			}
-
-			#if PR_DBG_CONVEX_HULL
-			void DumpEdges()
-			{
-				HData const& data = *(HData const*)g_data;
-				ldr::FileOutput file("C:/DeleteMe/hull_edges.pr_script"); file.Open();
-				ldr::GroupStart("Edges", file);
-				for (Edge* i = m_begin; i != m_last; ++i)
-				{
-					ldr::Line("edge", "FFFFFFFF",
-						data.m_vcont[data.m_vbegin[i->m_i0]],
-						data.m_vcont[data.m_vbegin[i->m_i1]], file);
-				}
-				ldr::GroupEnd(file);
-			}
-			#endif//PR_DBG_CONVEX_HULL
-		};
-
-		// Expand the convex hull to include 'v'.
-		template <typename HData>
-		void GrowHull(HData& data, typename HData::VertIter v)
-		{
-			typedef typename std::iterator_traits<typename HData::VertIter>::value_type VIndex;
-
-			// Move 'v' into the convex hull
-			std::swap(*v, *data.m_vhull_last);
-			typename HData::VIndex v_idx = static_cast<typename HData::VIndex>(data.m_vhull_last - data.m_vbegin);
-			v4 const& vert = data.m_vcont[*data.m_vhull_last];
-			++data.m_vhull_last;
-
-			// Allocate stack memory for the edges remaining when the faces that can
-			// see 'v' are removed. The number of perimeter edges will ultimately be
-			// 2 * vis_face_count, however in the worst case we can receive the faces
-			// in an order that doesn't sharing any edges so allow for 3 edges for each face.
-			int max_edge_count = 3 * data.m_vis_face_count;
-			Perimeter<HData> perimeter(PR_ALLOCA_POD(Perimeter<HData>::Edge, max_edge_count), max_edge_count);
-
-			// If the number of visible faces is less than the size of
-			// the visible face cache then we don't need to retest the faces
-			if (data.m_vis_face_count <= HData::MaxVisFaceCount)
-			{
-				for (int* i = data.m_visible_face + data.m_vis_face_count; i-- != data.m_visible_face; )
-				{
-					typename HData::FaceIter	face = data.m_fbegin + *i;
-					v4* plane = data.m_hs_begin + *i;
-
-					typename HData::VIndex a, b, c;
-					pr::hull::GetFace(*face, a, b, c);
-
-					// Add the edges of 'face' to the edge stack
-					perimeter.AddEdge(a, b);
-					perimeter.AddEdge(b, c);
-					perimeter.AddEdge(c, a);
-
-					// Erase 'face'
-					std::swap(*face, *(--data.m_flast));
-					std::swap(*plane, *(--data.m_hs_last));
-					PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-				}
-			}
-			// Otherwise we need to test all faces again for being able to see 'v'
-			else
-			{
-				v4* plane = data.m_hs_begin;
-				for (typename HData::FaceIter face = data.m_fbegin; !(face == data.m_flast); )
-				{
-					// Ignore faces that face away or are edge on to 'v'
-					if (Dot4(*plane, vert) <= 0.0f)
-					{
-						++face;
-						++plane;
-						continue;
-					}
-
-					typename HData::VIndex a, b, c;
-					pr::hull::GetFace(*face, a, b, c);
-
-					// Add the edges of 'face' to the edge stack
-					perimeter.AddEdge(a, b);
-					perimeter.AddEdge(b, c);
-					perimeter.AddEdge(c, a);
-
-					// Erase 'face'
-					std::swap(*face, *(--data.m_flast));
-					std::swap(*plane, *(--data.m_hs_last));
-					PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-				}
-			}
-
-			// Add faces for each remaining edge
-			for (Perimeter<HData>::Edge const* edge = perimeter.m_begin; edge != perimeter.m_last; ++edge)
-			{
-				AddFace(data, v_idx, edge->m_i0, edge->m_i1);
-			}
-		}
-
-		// Debugging functions *******************************************************************
-		#if PR_DBG_CONVEX_HULL
-		template <typename HData>
-		void DumpFaces(HData const& data)
-		{
-			ldr::FileOutput file("C:/DeleteMe/hull_faces.pr_script"); file.Open();
-			ldr::GroupStart("Faces", file);
-			for (typename HData::FaceIter f = data.m_fbegin; !(f == data.m_flast); ++f)
-			{
-				typename HData::VIndex i0, i1, i2; pr::hull::GetFace(*f, i0, i1, i2);
-				ldr::Triangle("face", "FF00FF00"
-					, data.m_vcont[*(data.m_vbegin + i0)]
-					, data.m_vcont[*(data.m_vbegin + i1)]
-					, data.m_vcont[*(data.m_vbegin + i2)]
-					, file);
-			}
-			ldr::GroupEnd(file);
-		}
-		template <typename HData>
-		void DumpVerts(HData const& data)
-		{
-			ldr::FileOutput file("C:/DeleteMe/hull_verts.pr_script"); file.Open();
-			ldr::GroupStart("Verts", file);
-			for (typename HData::VertIter v = data.m_vbegin; v != data.m_vend; ++v)
-			{
-				if (v < data.m_vhull_last)	ldr::Box("v", "FFA00000", data.m_vcont[*v], 0.05f, file);
-				else if (v < data.m_vnon_hull)		ldr::Box("v", "FF00A000", data.m_vcont[*v], 0.05f, file);
-				else								ldr::Box("v", "FF0000A0", data.m_vcont[*v], 0.05f, file);
-			}
-			ldr::GroupEnd(file);
-		}
-		#endif
-	}
-
-	// Generate the convex hull of a point cloud.
-	// 'vcont' is some container of verts that supports operator [] (e.g. v4 const*)
-	// 'vfirst','vlast' are a range of vertex indices into 'vcont' (i.e. the point cloud)
-	// 'ffirst','flast' are an output iterator range to faces
-	// This function partitions the range of vert indices with those on the convex hull at
-	// the start of the range. Returns true if the convex hull was generated. If false is
-	// returned and vert_count and face_count are not zero, then a convex closed polytope was
-	// generated.
-	// Notes:
-	// -A point cloud of N verts will have a convex hull with at most 2*(N-2) faces.
-	// -The faces output by this function are not necessarily the hull faces until the algorithm
-	//   has completed. 'ffirst' and 'flast' should point to a container of faces. Faces in this
-	//   container may be written to and read from several times.
-	// -The indices in the faces refer to the positions in the vert index container. This allows
-	//   new or old vert indices to be used. For new indices, map the verts using the vert index
-	//   buffer. For old indices use the vert index bufer as a look up map.
-	// -You may need to provide the "hull::SetFace" and "hull::GetFace" functions for your face
-	//   and vert index types
-	template <typename VertCont, typename VIter, typename FIter>
-	bool ConvexHull(VertCont const& vcont, VIter vbegin, VIter vend, FIter fbegin, FIter fend, std::size_t& vert_count, std::size_t& face_count)
-	{
-		using namespace impl::hull;
-
-		vert_count = 0;
-		face_count = 0;
-
-		// Allocate stack or heap memory for the normal directions of the faces.
-		v4* half_space = PR_MALLOCA(half_space, v4, fend - fbegin);
-
-		// Add all of the parameters to a struct to save on passing them around between function calls
-		HullData<VertCont, VIter, FIter> data(vcont, vbegin, vend, fbegin, fend, half_space);
-		PR_EXPAND(PR_DBG_CONVEX_HULL, g_data = &data);
-		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts(data));
-		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-
-		// Find an initial volume
-		if (!InitHull(data))
-			return false;
-
-		// Test the unclassified verts and move any that are within the convex hull to
-		// the 'non-hull' end of the range. 'v' is the vert most not in the convex hull.
-		// 'vis_count' is the number of faces of the current hull that can "see" 'v'
-		VIter v = PartitionVerts(data);
-
-		// While there are unclassified verts remaining
-		PR_EXPAND(PR_DBG_CONVEX_HULL, int iteration = 0);
-		while (data.m_vhull_last != data.m_vnon_hull)
-		{
-			// Check there is enough space in the face range to expand the convex hull.
-			// Since the hull is convex, the faces that can see 'v' will form one connected
-			// polygon. This means the number of perimeter edges will be 2 + vis_face_count.
-			// Since we're also removing vis_face_count faces, the number of new faces added
-			// will be 2.
-			if (data.m_fend - data.m_flast < 2)
-				break;
-
-			PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts(data));
-			PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput extm("C:/DeleteMe/hull_extremevert.pr_script"));
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Box("extreme", "FFFFFFFF", data.m_vcont[*v], 0.07f, extm));
-
-			// Expand the convex hull to include 'v'
-			GrowHull(data, v);
-
-			PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts(data));
-			PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-
-			// Test the unclassified verts and move any that are within the convex hull to
-			// the 'non-hull' end of the range. Find a new most not in the convex hull vertex.
-			v = PartitionVerts(data);
-			PR_EXPAND(PR_DBG_CONVEX_HULL, ++iteration);
-		}
-
-		vert_count = static_cast<int>(data.m_vhull_last - data.m_vbegin);
-		face_count = static_cast<int>(data.m_flast - data.m_fbegin);
-		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts(data));
-		PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces(data));
-		return data.m_vhull_last == data.m_vnon_hull;
-	}
-
 	namespace hull
 	{
 		// An object for iterating over faces
-		template <int StrideInBytes, typename VIndex> union Face
+		template <int StrideInBytes, typename VIdx>
+		union Face
 		{
-			typedef VIndex VIndex;
-			VIndex        vindex(int i) const { return m_vindex[i]; }
-			VIndex& vindex(int i) { return m_vindex[i]; }
+			using VIndex = VIdx;
+			static_assert(StrideInBytes >= 3 * sizeof(VIndex));
+
 			VIndex        m_vindex[3];
 			unsigned char m_stride[StrideInBytes];
+
+			VIndex vindex(int i) const
+			{
+				return m_vindex[i];
+			}
+			VIndex& vindex(int i)
+			{
+				return m_vindex[i];
+			}
 		};
-		template <int StrideInBytes, typename VIndex> inline Face<StrideInBytes, VIndex>* FaceIter(VIndex* index)
-		{
-			return reinterpret_cast<Face<StrideInBytes, VIndex>*>(index);
-		}
 
 		// Get/Set the indices of a face
 		template <typename Face, typename VIndex> inline void SetFace(Face& face, VIndex a, VIndex b, VIndex c)
@@ -521,49 +54,525 @@ namespace pr
 			b = static_cast<VIndex>(face.vindex(1));
 			c = static_cast<VIndex>(face.vindex(2));
 		}
+
+		// A struct containing the parameters provided to ConvexHull()
+		// Prevents passing lots of variables around between functions
+		template <typename VertCont, typename VIter, typename FIter>
+		struct HullGenerator
+		{
+			using VertIter = VIter;
+			using FaceIter = FIter;
+			using VIndex = typename std::iterator_traits<VIter>::value_type;
+
+			static constexpr int MaxVisFaceCount = 64;
+			#if PR_DBG_CONVEX_HULL
+			inline static HullGenerator const* g_data = nullptr;
+			#endif
+
+			VertCont const& m_vcont;              // Vertex container
+			VIter m_vbeg;                         // Start of the vert index container
+			VIter m_vhull_last;                   // One past the last vert index that is on the convex hull
+			VIter m_vnon_hull;                    // First vert index that is definitely not on the convex hull
+			VIter m_vend;                         // End of the vert index container
+			FIter m_fbeg;                         // Start of the face container
+			FIter m_flast;                        // One past the last face added to the face container
+			FIter m_fend;                         // End of the face container
+			v4* m_hs_beg;                         // Start of a buffer of face normals with the same length as fend - fbegin
+			v4* m_hs_last;                        // Pointer into the half space buffer, equilavent position to flast
+			v4* m_hs_end;                         // End of the buffer of face normals
+			int m_vis_face_count;                 // The number of visible faces
+			int m_vis_face_buf1[MaxVisFaceCount]; // Double buffer for the
+			int m_vis_face_buf2[MaxVisFaceCount]; //  indices of visible faces
+			int* m_visible_face;                  // Pointer to one of the m_vis_face_buf's
+
+			HullGenerator(VertCont const& vcont, VIter vbeg, VIter vend, FIter fbeg, FIter fend, v4* half_space)
+				: m_vcont(vcont)
+				, m_vbeg(vbeg)
+				, m_vhull_last(vbeg)
+				, m_vnon_hull(vend)
+				, m_vend(vend)
+				, m_fbeg(fbeg)
+				, m_flast(fbeg)
+				, m_fend(fend)
+				, m_hs_beg(half_space)
+				, m_hs_last(half_space)
+				, m_hs_end(half_space + (fend - fbeg))
+				, m_vis_face_count(0)
+				, m_visible_face(m_vis_face_buf1)
+			{
+				PR_EXPAND(PR_DBG_CONVEX_HULL, g_data = this);
+				PR_EXPAND(PR_DBG_CONVEX_HULL, DumpVerts());
+				PR_EXPAND(PR_DBG_CONVEX_HULL, DumpFaces());
+			}
+			HullGenerator(HullGenerator const&) = delete;
+			HullGenerator& operator=(HullGenerator const&) = delete;
+
+			// Initialise the convex hull by finding a shape with volume from the bounding verts
+			// This function is set up to return false if any degenerate cases are detected.
+			bool InitHull()
+			{
+				PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput ldr_extm("P:\\dump\\hull_extremeverts.ldr", true); ldr_extm.clear());
+
+				// A minimum of 4 verts are needed for a hull with volume
+				if (m_vend - m_vbeg < 4)
+					return false;
+
+				// Check that there is room for the initial 4 faces
+				if (m_fend - m_flast < 4)
+					return false;
+
+				// Scan through and find the min/max verts on the Z axis
+				VertIter vmin = m_vbeg, vmax = m_vbeg;
+				{
+					auto dmin = +maths::float_max;
+					auto dmax = -maths::float_max;
+					for (auto i = m_vbeg; i != m_vend; ++i)
+					{
+						auto d = Dot3(v4::ZAxis(), m_vcont[*i]);
+						if (d < dmin) { dmin = d; vmin = i; }
+						if (d > dmax) { dmax = d; vmax = i; }
+					}
+
+					// If the span is zero then all verts must lie
+					// in a plane parallel to the XY plane.
+					if (dmax - dmin < maths::tinyf)
+						return false;
+
+					PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("zaxis", "FF0000FF", m_vcont[*vmin], m_vcont[*vmax], ldr_extm));
+				}
+
+				// Use these extreme verts as the Z axis
+				auto zaxis = m_vcont[*vmax] - m_vcont[*vmin];
+
+				// Move these vert indices to the convex hull end of the range.
+				// Ensure vmin is less than vmax, this prevents problems with swapping.
+				if (vmax < vmin) { std::swap(*vmin, *vmax); std::swap(vmin, vmax); }
+				std::swap(*vmin, *m_vhull_last++);
+				std::swap(*vmax, *m_vhull_last++);
+
+				auto const& zmin = m_vcont[*m_vbeg];
+				auto zaxis_lensq = LengthSq(zaxis);
+
+				// Find the most radially distant vertex from the zaxis
+				{
+					float dmax = 0.0f;
+					for (auto i = m_vhull_last; i != m_vend; ++i)
+					{
+						auto vert = m_vcont[*i] - zmin;
+						auto d = LengthSq(vert) - Sqr(Dot3(vert, zaxis)) / zaxis_lensq;
+						if (d > dmax) { dmax = d; vmax = i; }
+					}
+
+					// If all verts lie on the zaxis...
+					if (dmax < maths::tinyf)
+						return false;
+				
+					PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("yaxis", "FF00FF00", zmin, m_vcont[*vmax], ldr_extm));
+				}
+
+				// Choose a perpendicular axis
+				auto axis = Cross3(zaxis, m_vcont[*vmax] - zmin);
+
+				// Move 'vmax' to the convex hull end of the range.
+				std::swap(*vmax, *m_vhull_last++);
+
+				bool flip = false;
+
+				// Find the vert with the greatest distance along 'axis'
+				{
+					float dmax = 0.0f;
+					for (auto i = m_vhull_last; i != m_vend; ++i)
+					{
+						auto d = Dot3(axis, m_vcont[*i] - zmin);
+						if (Abs(d) > dmax) { dmax = Abs(d); vmax = i; flip = d < 0.0f; }
+					}
+
+					// If all verts lie on in the plane...
+					if (dmax < maths::tinyf)
+						return false;
+				
+					PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Line("xaxis", "FFFF0000", zmin, m_vcont[*vmax], ldr_extm));
+				}
+
+				// Move 'vmax' to the convex hull end of the range.
+				std::swap(*vmax, *m_vhull_last++);
+
+				// Generate the starting shape from the four hull verts we've found.
+				if (flip)
+				{
+					AddFace(0, 1, 2);
+					AddFace(0, 2, 3);
+					AddFace(0, 3, 1);
+					AddFace(3, 2, 1);
+				}
+				else
+				{
+					AddFace(0, 2, 1);
+					AddFace(0, 3, 2);
+					AddFace(0, 1, 3);
+					AddFace(1, 2, 3);
+				}
+				return true;
+			}
+
+			// Move vert indices that are inside the current hull to the 'non-hull' end of the range.
+			// Records the vertex with the greatest distance from any face in the hull, this must be
+			// a vertex on the convex hull because it is the extreme vertex in the direction of the
+			// face normal. Returns this extreme vert, also caches the indices of the faces that can
+			// see this max vert.
+			VertIter PartitionVerts()
+			{
+				m_vis_face_count = 0;
+				auto max_dist = 0.0f;
+				auto max_vert = m_vnon_hull;
+				for (auto v = m_vhull_last; v != m_vnon_hull;)
+				{
+					// Find the maximum distance of 'v' from the faces of the hull
+					auto dist = 0.0f;
+					int vis_count = 0, face_index = 0;
+					for (auto plane = m_hs_beg; plane != m_hs_last; ++plane, ++face_index)
+					{
+						PR_ASSERT(PR_DBG_CONVEX_HULL, m_vcont[*v].w == 1.0f, "Should be finding the convex hull of positions, not directions");
+						auto d = Dot4(*plane, m_vcont[*v]);
+						if (d <= 0.0f)
+							continue; // behind 'plane'
+
+						dist = Max(dist, d);
+						if (vis_count < MaxVisFaceCount)
+							m_visible_face[vis_count] = face_index;
+
+						++vis_count;
+					}
+
+					// If this vert is within all half spaces then it's not a hull vert
+					if (dist == 0.0f)
+					{
+						std::swap(*v, *(--m_vnon_hull));
+						continue;
+					}
+
+					// If this vert has the greatest distance from a face, record it.
+					if (dist > max_dist)
+					{
+						max_dist = dist;
+						max_vert = v;
+						m_vis_face_count = vis_count;
+						SwapVisFaceDblBuffer();
+					}
+					++v;
+				}
+				SwapVisFaceDblBuffer();
+				return max_vert;
+			}
+
+			// Expand the convex hull to include 'v'.
+			void GrowHull(VertIter v)
+			{
+				// Move 'v' into the convex hull
+				std::swap(*v, *m_vhull_last);
+				auto v_idx = static_cast<VIndex>(m_vhull_last - m_vbeg);
+				auto const& vert = m_vcont[*m_vhull_last];
+				++m_vhull_last;
+
+				// Allocate stack memory for the edges remaining when the faces that can
+				// see 'v' are removed. The number of perimeter edges will ultimately be
+				// 2 * vis_face_count, however in the worst case we can receive the faces
+				// in an order that doesn't sharing any edges so allow for 3 edges for each face.
+				int max_edge_count = 3 * m_vis_face_count;
+				Perimeter perimeter(PR_ALLOCA_POD(Perimeter::Edge, max_edge_count), max_edge_count);
+
+				// If the number of visible faces is less than the size of
+				// the visible face cache then we don't need to retest the faces.
+				if (m_vis_face_count <= MaxVisFaceCount)
+				{
+					for (auto i = m_visible_face + m_vis_face_count; i-- != m_visible_face; )
+					{
+						auto face = m_fbeg + *i;
+						auto plane = m_hs_beg + *i;
+
+						VIndex a, b, c;
+						GetFace(*face, a, b, c);
+
+						// Add the edges of 'face' to the edge stack
+						perimeter.AddEdge(a, b);
+						perimeter.AddEdge(b, c);
+						perimeter.AddEdge(c, a);
+
+						// Erase 'face'
+						std::swap(*face, *(--m_flast));
+						std::swap(*plane, *(--m_hs_last));
+						PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+					}
+				}
+				// Otherwise we need to test all faces again for being able to see 'v'
+				else
+				{
+					auto plane = m_hs_beg;
+					for (auto face = m_fbeg; !(face == m_flast); )
+					{
+						// Ignore faces that face away or are edge on to 'v'
+						if (Dot4(*plane, vert) <= 0.0f)
+						{
+							++face;
+							++plane;
+							continue;
+						}
+
+						VIndex a, b, c;
+						GetFace(*face, a, b, c);
+
+						// Add the edges of 'face' to the edge stack
+						perimeter.AddEdge(a, b);
+						perimeter.AddEdge(b, c);
+						perimeter.AddEdge(c, a);
+
+						// Erase 'face'
+						std::swap(*face, *(--m_flast));
+						std::swap(*plane, *(--m_hs_last));
+						PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+					}
+				}
+
+				// Add faces for each remaining edge
+				for (auto edge = perimeter.m_beg; edge != perimeter.m_last; ++edge)
+				{
+					AddFace(v_idx, edge->m_i0, edge->m_i1);
+				}
+			}
+
+			// Add a face to the face container
+			void AddFace(VIndex a, VIndex b, VIndex c)
+			{
+				PR_ASSERT(PR_DBG_CONVEX_HULL, a != b && b != c && c != a, "Should not be adding degenerate faces");
+				PR_ASSERT(PR_DBG_CONVEX_HULL, !(m_flast == m_fend), "Shouldn't be trying to add faces if there isn't room");
+
+				// Set the face in the face container
+				SetFace(*m_flast, a, b, c);
+				++m_flast;
+
+				// Record the half space that this face represents
+				auto& A = m_vcont[*(m_vbeg + a)];
+				auto e0 = m_vcont[*(m_vbeg + b)] - A;
+				auto e1 = m_vcont[*(m_vbeg + c)] - A;
+				auto& plane = *m_hs_last;
+				plane = Normalise(Cross3(e0, e1));
+				plane.w = -Dot3(plane, A);
+				++m_hs_last;
+
+				PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+			}
+
+			// Swap the visible face double buffer
+			void SwapVisFaceDblBuffer()
+			{
+				m_visible_face = m_visible_face == m_vis_face_buf1 ? m_vis_face_buf2 : m_vis_face_buf1;
+			}
+
+			// A structure used to keep track of the perimeter edges as faces are removed from the hull.
+			struct Perimeter
+			{
+				struct Edge { VIndex m_i0, m_i1; };
+				Edge* m_beg;
+				Edge* m_last;
+				Edge* m_end;
+
+				Perimeter(Edge* buf, int count)
+					: m_beg(buf)
+					, m_last(m_beg)
+					, m_end(m_beg + count)
+				{}
+				void AddEdge(VIndex i0, VIndex i1)
+				{
+					for (auto e = m_beg; e != m_last; ++e)
+					{
+						if (!(e->m_i0 == i1 && e->m_i1 == i0))
+							continue;
+
+						// erase 'e'
+						*e = *(--m_last);
+						PR_EXPAND(PR_DBG_CONVEX_HULL, DumpEdges());
+						return;
+					}
+					PR_ASSERT(PR_DBG_CONVEX_HULL, m_last != m_end, "");
+					m_last->m_i0 = i0;
+					m_last->m_i1 = i1;
+					++m_last;
+					PR_EXPAND(PR_DBG_CONVEX_HULL, DumpEdges());
+				}
+
+				#if PR_DBG_CONVEX_HULL
+				void DumpEdges()
+				{
+					ldr::FileOutput file("P:\\dump\\hull_edges.ldr"); file.Open();
+					ldr::GroupStart("Edges", file);
+					for (auto i = m_beg; i != m_last; ++i)
+					{
+						ldr::Line("edge", "FFFFFFFF",
+							g_data->m_vcont[g_data->m_vbeg[i->m_i0]],
+							g_data->m_vcont[g_data->m_vbeg[i->m_i1]],
+							file);
+					}
+					ldr::GroupEnd(file);
+				}
+				#endif
+			};
+
+			// Debugging functions
+			#if PR_DBG_CONVEX_HULL
+			void DumpFaces()
+			{
+				ldr::FileOutput file("P:\\dump\\hull_faces.ldr"); file.Open();
+				ldr::GroupStart("Faces", file);
+				for (auto f = m_fbeg; !(f == m_flast); ++f)
+				{
+					VIndex i0, i1, i2; GetFace(*f, i0, i1, i2);
+					ldr::Triangle("face", "FF00FF00",
+						m_vcont[*(m_vbeg + i0)],
+						m_vcont[*(m_vbeg + i1)],
+						m_vcont[*(m_vbeg + i2)],
+						file);
+				}
+				ldr::GroupEnd(file);
+			}
+			void DumpVerts()
+			{
+				ldr::FileOutput file("P:\\dump\\hull_verts.ldr"); file.Open();
+				ldr::GroupStart("Verts", file);
+				for (auto v = m_vbeg; v != m_vend; ++v)
+				{
+					if      (v < m_vhull_last) ldr::Box("v", "FFA00000", m_vcont[*v], 0.05f, file);
+					else if (v < m_vnon_hull)  ldr::Box("v", "FF00A000", m_vcont[*v], 0.05f, file);
+					else                            ldr::Box("v", "FF0000A0", m_vcont[*v], 0.05f, file);
+				}
+				ldr::GroupEnd(file);
+			}
+			#endif
+		};
 	}
 
-	// Overload for faces given as an array of index triples.
-	template <typename VertCont, typename VIndex>
-	inline bool ConvexHull(VertCont const& vcont, VIndex* vfirst, VIndex* vlast, VIndex* ffirst, VIndex* flast, std::size_t& vert_count, std::size_t& face_count)
+	// Generate the convex hull of a point cloud.
+	// 'vcont' is some container of verts that supports operator [] (e.g. v4 const*)
+	// 'vbeg','vend' are a range of vertex indices into 'vcont' (i.e. the point cloud)
+	// 'fbeg','fend' are an output iterator range to faces
+	// This function partitions the range of vert indices with those on the convex hull at the start of the range.
+	// Returns true if the convex hull was generated. If false is returned and vert_count and face_count are not zero,
+	// then a convex closed polytope was generated.
+	// Notes:
+	//  - A point cloud of N verts will have a convex hull with at most 2*(N-2) faces.
+	//  - The faces output by this function are not necessarily the hull faces until the algorithm
+	//    has completed. 'fbeg' and 'fend' should point to a container of faces. Faces in this
+	//    container may be written to and read from several times.
+	//  - The indices in the faces refer to the positions in the vert index container. This allows
+	//    new or old vert indices to be used. For new indices, map the verts using the vert index
+	//    buffer. For old indices use the vert index bufer as a look up map.
+	//  - You may need to provide the "hull::SetFace" and "hull::GetFace" functions for your face
+	//    and vert index types.
+	template <typename VertCont, typename VIter, typename FIter>
+	bool ConvexHull(VertCont const& vcont, VIter vbeg, VIter vend, FIter fbeg, FIter fend, size_t& vert_count, size_t& face_count)
 	{
-		typedef typename hull::Face<3 * sizeof(VIndex), typename VIndex> Face;
-		Face* face_first = hull::FaceIter<3 * sizeof(VIndex)>(ffirst);
-		Face* face_last = hull::FaceIter<3 * sizeof(VIndex)>(flast);
-		return ConvexHull<VertCont, VIndex*, Face*>(vcont, vfirst, vlast, face_first, face_last, vert_count, face_count);
+		vert_count = 0;
+		face_count = 0;
+
+		// Allocate stack or heap memory for the normal directions of the faces.
+		v4* half_space = PR_MALLOCA(half_space, v4, fend - fbeg);
+
+		// Add all of the parameters to a struct to save on passing them around between function calls
+		hull::HullGenerator<VertCont, VIter, FIter> data(vcont, vbeg, vend, fbeg, fend, half_space);
+
+		// Find an initial volume
+		if (!data.InitHull())
+			return false;
+
+		// Test the unclassified verts and move any that are within the convex hull to
+		// the 'non-hull' end of the range. 'v' is the vert most not in the convex hull.
+		// 'vis_count' is the number of faces of the current hull that can "see" 'v'
+		auto v = data.PartitionVerts();
+
+		// While there are unclassified verts remaining
+		PR_EXPAND(PR_DBG_CONVEX_HULL, int iteration = 0);
+		while (data.m_vhull_last != data.m_vnon_hull)
+		{
+			// Check there is enough space in the face range to expand the convex hull.
+			// Since the hull is convex, the faces that can see 'v' will form one connected
+			// polygon. This means the number of perimeter edges will be 2 + vis_face_count.
+			// Since we're also removing vis_face_count faces, the number of new faces added
+			// will be 2.
+			if (data.m_fend - data.m_flast < 2)
+				break;
+
+			PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpVerts());
+			PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::FileOutput extm("P:\\dump\\hull_extremevert.ldr"));
+			PR_EXPAND(PR_DBG_CONVEX_HULL, ldr::Box("extreme", "FFFFFFFF", data.m_vcont[*v], 0.07f, extm));
+
+			// Expand the convex hull to include 'v'
+			data.GrowHull(v);
+
+			PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpVerts());
+			PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+
+			// Test the unclassified verts and move any that are within the convex hull to
+			// the 'non-hull' end of the range. Find a new most not in the convex hull vertex.
+			v = data.PartitionVerts();
+			PR_EXPAND(PR_DBG_CONVEX_HULL, ++iteration);
+		}
+
+		vert_count = static_cast<size_t>(data.m_vhull_last - data.m_vbeg);
+		face_count = static_cast<size_t>(data.m_flast - data.m_fbeg);
+		PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpVerts());
+		PR_EXPAND(PR_DBG_CONVEX_HULL, data.DumpFaces());
+		return data.m_vhull_last == data.m_vnon_hull;
 	}
 	
-	// Overload that reorders the verts in the vertex container
+	// Overload that reorders the verts in the vertex container.
 	// 'vcont' is the container of verts supporting operator [] (e.g v4*)
 	// 'num_verts' is the number of verts in 'vcont'
 	// Other parameters as for the main version of this function.
 	template <typename VertCont, typename FIter>
-	inline bool ConvexHull(VertCont& vcont, std::size_t num_verts, FIter fbegin, FIter fend, std::size_t& vert_count, std::size_t& face_count)
+	bool ConvexHull(VertCont& vcont, size_t num_verts, FIter fbeg, FIter fend, size_t& vert_count, size_t& face_count)
 	{
 		// Create an index buffer for the verts
 		int* index = PR_MALLOCA(index, int, num_verts);
-		for (int i = 0; i != int(num_verts); ++i) index[i] = i;
-		bool result = ConvexHull<VertCont, int*, FIter>(vcont, index, index + num_verts, fbegin, fend, vert_count, face_count);
+		for (int i = 0; i != int(num_verts); ++i)
+			index[i] = i;
+
+		// Find the hull
+		bool result = ConvexHull<VertCont, int*, FIter>(vcont, index, index + num_verts, fbeg, fend, vert_count, face_count);
 
 		// Write the indices into the 'w' component of the verts
-		// Then sort on 'w', then restore the 'w' component to '1.0f'
 		for (int* i = index, *i_end = i + num_verts; i != i_end; ++i)
 			vcont[*i].w = static_cast<float>(i - index);
+
+		// Then sort on 'w'
 		std::sort(&vcont[0], &vcont[0] + num_verts, [](v4 const& lhs, v4 const& rhs) { return lhs.w < rhs.w; });
+		
+		// Then restore the 'w' component to '1.0f'
 		for (v4* i = &vcont[0], *i_end = i + num_verts; i != i_end; ++i)
 			i->w = 1.0f;
 
 		return result;
 	}
 
+	// Overload for faces given as an array of index triples.
+	template <typename VertCont, typename VIndex>
+	bool ConvexHull(VertCont const& vcont, VIndex* vbeg, VIndex* vend, VIndex* ibeg, VIndex* iend, size_t& vert_count, size_t& face_count)
+	{
+		using Face = typename hull::Face<3 * sizeof(VIndex), VIndex>;
+
+		auto face_beg = reinterpret_cast<Face*>(ibeg);
+		auto face_end = reinterpret_cast<Face*>(iend);
+		return ConvexHull<VertCont, VIndex*, Face*>(vcont, vbeg, vend, face_beg, face_end, vert_count, face_count);
+	}
+
 	// Overload that reorders the verts in the vertex container
 	// and for faces given as an array of index triples.
 	template <typename VertCont, typename VIndex>
-	inline bool ConvexHull(VertCont& vcont, std::size_t num_verts, VIndex* ffirst, VIndex* flast, std::size_t& vert_count, std::size_t& face_count)
+	bool ConvexHull(VertCont& vcont, size_t num_verts, VIndex* ibeg, VIndex* iend, size_t& vert_count, size_t& face_count)
 	{
-		typedef typename hull::Face<3 * sizeof(VIndex), typename VIndex> Face;
-		Face* face_first = hull::FaceIter<3 * sizeof(VIndex)>(ffirst);
-		Face* face_last = hull::FaceIter<3 * sizeof(VIndex)>(flast);
-		return ConvexHull<VertCont, Face*>(vcont, num_verts, face_first, face_last, vert_count, face_count);
+		using Face = typename hull::Face<3 * sizeof(VIndex), VIndex>;
+
+		auto face_beg = reinterpret_cast<Face*>(ibeg);
+		auto face_end = reinterpret_cast<Face*>(iend);
+		return ConvexHull<VertCont, Face*>(vcont, num_verts, face_beg, face_end, vert_count, face_count);
 	}
 }

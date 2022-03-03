@@ -10,12 +10,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\audio\dll\audio.cpp">
+    <ClCompile Include="..\projects\rylogic\audio\dll\audio.cpp">
       <Filter>src\dll</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\audio\dll\context.h">
+    <ClInclude Include="..\projects\rylogic\audio\dll\context.h">
       <Filter>src\dll</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\audio\dll\audio.h">
@@ -23,7 +23,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\Rylogic.Core.Windows\src\Audio\Audio.cs">
+    <None Include="..\projects\rylogic\Rylogic.Core.Windows\src\Audio\Audio.cs">
       <Filter>src\dll</Filter>
     </None>
   </ItemGroup>

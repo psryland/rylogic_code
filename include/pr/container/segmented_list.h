@@ -1,11 +1,8 @@
 //*********************************************************************************
-//
-//	Segmented List
-//
+// Segmented List
+//  Copyright (C) Rylogic 2002
 //*********************************************************************************
-
-#ifndef PR_SEGMENTED_LIST_H
-#define PR_SEGMENTED_LIST_H
+#pragma once
 
 namespace pr
 {
@@ -140,7 +137,8 @@ namespace pr
 		template <typename Predicate>
 		void remove_if(Predicate pred)
 		{
-			for( std::size_t s = 0; s < NumSegments; ++s ) remove_if(s, pred)
+			for (std::size_t s = 0; s < NumSegments; ++s)
+				remove_if(s, pred);
 		}
 		template <typename Predicate>
 		void remove_if(std::size_t seg, Predicate pred)
@@ -171,9 +169,8 @@ namespace pr
 		}
 
 	private:
-		ListClass	m_list;
-		iterator	m_iter[NumSegments + 1];
+		ListClass m_list;
+		iterator m_iter[NumSegments + 1];
 	};
-}//namespace pr
+}
 
-#endif//PR_SEGMENTED_LIST_H

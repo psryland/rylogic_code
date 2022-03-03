@@ -202,13 +202,3 @@ namespace pr
 
 	#pragma endregion
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::maths
-{
-	PRUnitTest(Vector3Tests)
-	{
-	}
-}
-#endif

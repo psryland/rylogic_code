@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Globals -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8C08B476-AF59-47F4-8122-2E068D55066E}</ProjectGuid>
+    <RootNamespace>lua</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <!-- Configuration -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Property Sheets -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="..\..\build\props\$(Configuration).$(Platform).lib.props" />
+  <!-- Output directory -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <!-- Build Options -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING=1;_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1;_CRT_SECURE_NO_DEPRECATE=1;_SCL_SECURE_NO_WARNINGS=1;_ENABLE_EXTENDED_ALIGNED_STORAGE=1</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;$(ProjectDir)win32;$(ProjectDir)lexlib;$(ProjectDir)..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <!-- Source -->
+  <ItemGroup>
+    <ClCompile Include="src\lapi.c" />
+    <ClInclude Include="include\lapi.h" />
+    <ClInclude Include="include\lauxlib.h" />
+    <ClInclude Include="include\lcode.h" />
+    <ClInclude Include="include\ldebug.h" />
+    <ClInclude Include="include\ldo.h" />
+    <ClInclude Include="include\lfunc.h" />
+    <ClInclude Include="include\lgc.h" />
+    <ClInclude Include="include\llex.h" />
+    <ClInclude Include="include\llimits.h" />
+    <ClInclude Include="include\lmem.h" />
+    <ClInclude Include="include\lobject.h" />
+    <ClInclude Include="include\lopcodes.h" />
+    <ClInclude Include="include\lparser.h" />
+    <ClInclude Include="include\lstate.h" />
+    <ClInclude Include="include\lstring.h" />
+    <ClInclude Include="include\ltable.h" />
+    <ClInclude Include="include\ltm.h" />
+    <ClInclude Include="include\lua.h" />
+    <ClInclude Include="include\luaconf.h" />
+    <ClInclude Include="include\lualib.h" />
+    <ClInclude Include="include\lundump.h" />
+    <ClInclude Include="include\lvm.h" />
+    <ClInclude Include="include\lzio.h" />
+    <ClInclude Include="src\lapi.h" />
+    <ClCompile Include="src\lcode.c" />
+    <ClInclude Include="src\lcode.h" />
+    <ClCompile Include="src\ldebug.c" />
+    <ClInclude Include="src\ldebug.h" />
+    <ClCompile Include="src\ldo.c" />
+    <ClInclude Include="src\ldo.h" />
+    <ClCompile Include="src\ldump.c" />
+    <ClInclude Include="src\ldump.h" />
+    <ClCompile Include="src\lfunc.c" />
+    <ClInclude Include="src\lfunc.h" />
+    <ClCompile Include="src\lgc.c" />
+    <ClInclude Include="src\lgc.h" />
+    <ClCompile Include="src\linit.c" />
+    <ClInclude Include="src\linit.h" />
+    <ClCompile Include="src\llex.c" />
+    <ClInclude Include="src\llex.h" />
+    <ClCompile Include="src\lmem.c" />
+    <ClInclude Include="src\lmem.h" />
+    <ClCompile Include="src\lobject.c" />
+    <ClInclude Include="src\lobject.h" />
+    <ClCompile Include="src\lopcodes.c" />
+    <ClInclude Include="src\lopcodes.h" />
+    <ClCompile Include="src\lparser.c" />
+    <ClInclude Include="src\lparser.h" />
+    <ClCompile Include="src\lstate.c" />
+    <ClInclude Include="src\lstate.h" />
+    <ClCompile Include="src\lstring.c" />
+    <ClInclude Include="src\lstring.h" />
+    <ClCompile Include="src\ltable.c" />
+    <ClInclude Include="src\ltable.h" />
+    <ClCompile Include="src\ltm.c" />
+    <ClInclude Include="src\ltm.h" />
+    <ClCompile Include="src\lundump.c" />
+    <ClInclude Include="src\lundump.h" />
+    <ClCompile Include="src\lvm.c" />
+    <ClInclude Include="src\lvm.h" />
+    <ClCompile Include="src\lzio.c" />
+    <ClInclude Include="src\lzio.h" />
+    <ClCompile Include="src\loslib.c" />
+    <ClInclude Include="src\loslib.h" />
+    <ClCompile Include="src\lauxlib.c" />
+    <ClInclude Include="src\lauxlib.h" />
+    <ClCompile Include="src\lbaselib.c" />
+    <ClInclude Include="src\lbaselib.h" />
+    <ClCompile Include="src\ldblib.c" />
+    <ClInclude Include="src\ldblib.h" />
+    <ClCompile Include="src\liolib.c" />
+    <ClInclude Include="src\liolib.h" />
+    <ClCompile Include="src\lmathlib.c" />
+    <ClInclude Include="src\lmathlib.h" />
+    <ClCompile Include="src\loadlib.c" />
+    <ClInclude Include="src\loadlib.h" />
+    <ClCompile Include="src\lstrlib.c" />
+    <ClInclude Include="src\lstrlib.h" />
+    <ClCompile Include="src\ltablib.c" />
+    <ClInclude Include="src\ltablib.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\Makefile" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

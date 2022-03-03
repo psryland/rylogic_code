@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFrameworks>net6.0-windows</TargetFrameworks>
+		<RootNamespace>EscapeVelocity</RootNamespace>
+		<AssemblyName>EscapeVelocity</AssemblyName>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+
+	<!-- Assembly properties -->
+	<PropertyGroup>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>An idea for a game based on chemistry</Description>
+		<Copyright>Copyright (c) Rylogic 2007</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<Version>0.1.0</Version>
+		<FileVersion>0.1.0</FileVersion>
+		<AssemblyVersion>0.1.0</AssemblyVersion>
+	</PropertyGroup>
+
+	<!-- Code -->
+	<ItemGroup>
+		<ApplicationDefinition Include="src\App.xaml" />
+	</ItemGroup>
+
+	<!-- Resources -->
+	<ItemGroup>
+		<Resource Include="res\*.png" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Remove="src\UI\graph_form.cs" />
+	  <Compile Remove="src\UI\main_form.cs" />
+	  <Compile Remove="src\UI\main_form.Designer.cs" />
+	</ItemGroup>
+	<ItemGroup>
+	  <EmbeddedResource Remove="src\UI\main_form.resx" />
+	</ItemGroup>
+	
+	<!-- References -->
+	<ItemGroup>
+		<ProjectReference Include="..\..\rylogic\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\..\rylogic\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj" />
+	</ItemGroup>
+	
+	<!-- Dependencies -->
+	<ItemGroup>
+		<Content Include="..\..\..\lib\x64\debug\view3d.dll">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x64\release\view3d.dll">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<!--
+		<Content Include="..\..\..\lib\x86\debug\view3d.dll">
+			<Link>lib\x86\debug\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="..\..\..\lib\x86\release\view3d.dll">
+			<Link>lib\x86\release\view3d.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		-->
+	</ItemGroup>
+
+</Project>

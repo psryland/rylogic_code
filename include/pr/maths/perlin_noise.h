@@ -37,18 +37,6 @@ namespace pr
 		explicit PerlinNoiseGenerator(Rng& rng)
 			:m_rng(&rng)
 		{
-			// Generate a permutation table
-			for (int i = 0; i != PermTableSize; ++i)
-				m_perm[i] = i;
-
-			// Shuffle
-			std::uniform_int_distribution<int> dist(0, PermTableSize-1); // (inclusive-inclusive)
-			for (int i = 0; i != PermTableSize; ++i)
-			{
-				int j = dist(*m_rng);
-				std::swap(table[i], table[j]);
-			}
-
 			// Can also use this pre-generated one if you want...
 			//const int table[PermTableSize] =
 			//{
@@ -69,6 +57,18 @@ namespace pr
 			//	184,  84, 204, 176, 115, 121,  50,  45, 127,   4, 150, 254, 138, 236, 205,  93,
 			//	222, 114,  67,  29,  24,  72, 243, 141, 128, 195,  78,  66, 215,  61, 156, 180
 			//};
+
+			// Generate a permutation table
+			for (int i = 0; i != PermTableSize; ++i)
+				m_perm[i] = i;
+
+			// Shuffle
+			std::uniform_int_distribution<int> dist(0, PermTableSize-1); // (inclusive-inclusive)
+			for (int i = 0; i != PermTableSize; ++i)
+			{
+				int j = dist(*m_rng);
+				std::swap(m_perm[i], m_perm[j]);
+			}
 			for (int i = 0; i != PermTableSize; ++i)
 				m_perm[i+PermTableSize] = m_perm[i];
 		}

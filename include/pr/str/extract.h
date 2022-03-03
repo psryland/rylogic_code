@@ -457,7 +457,7 @@ namespace pr::str
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractStringC(Str& str, Ptr src, Char const* delim = nullptr)
 	{
-		return ExtractStringC(str, src, Char(0), nullptr, delim);
+		return ExtractString(str, src, Char(0), nullptr, delim);
 	}
 	template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>>
 	inline bool ExtractStringC(Str& str, Ptr src, Char escape, std::nullptr_t quotes, Char const* delim = nullptr)

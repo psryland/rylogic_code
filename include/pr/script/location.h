@@ -2,9 +2,7 @@
 // Script
 //  Copyright (c) Rylogic Ltd 2015
 //**********************************
-
 #pragma once
-
 #include "pr/script/forward.h"
 
 namespace pr::script
@@ -170,24 +168,3 @@ namespace pr::script
 		}
 	};
 }
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-namespace pr::script
-{
-	PRUnitTest(LocationTests)
-	{
-		char const* str =
-			"123\n"
-			"abc\n"
-			"\tx";
-
-		Loc loc(L"", 0, 0, 1, 1, true, 4);
-		for (auto s = str; *s; ++s)
-			loc.inc(*s);
-
-		PR_CHECK(loc.Line(), 3);
-		PR_CHECK(loc.Col(), 6);
-	}
-}
-#endif
