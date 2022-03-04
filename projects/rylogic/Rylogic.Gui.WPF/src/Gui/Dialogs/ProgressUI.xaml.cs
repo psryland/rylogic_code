@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -10,7 +11,10 @@ namespace Rylogic.Gui.WPF
 {
 	public sealed partial class ProgressUI : Window, IDisposable, INotifyPropertyChanged
 	{
-		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, CancellationToken cancel)
+		// Notes:
+		//  - Worker functions should test 'ui.CancelToken', not the cancel token they pass to the constructor.
+
+		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, CancellationToken? cancel)
 		{
 			InitializeComponent();
 			Owner = owner;
@@ -19,15 +23,15 @@ namespace Rylogic.Gui.WPF
 			Image = image;
 			Description = desc;
 			Done = new ManualResetEvent(false);
-			m_cancel = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+			Cancel = CancellationTokenSource.CreateLinkedTokenSource(cancel ?? CancellationToken.None);
 			ProgressBarVisible = true;
 			AllowCancel = true;
 			CancelEnabled = true;
 			SignalCancel = Command.Create(this, () => CancelPending = true);
 			DataContext = this;
 		}
-		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, CancellationToken cancel, WorkerFunc worker, object? arg = null, ThreadPriority priority = ThreadPriority.Normal)
-			:this(owner, title, desc, image, cancel)
+		public ProgressUI(Window? owner, string title, string desc, ImageSource? image, WorkerFunc worker, CancellationToken? cancel = null, object? arg = null, ThreadPriority priority = ThreadPriority.BelowNormal)
+			: this(owner, title, desc, image, cancel)
 		{
 			try
 			{
@@ -52,18 +56,18 @@ namespace Rylogic.Gui.WPF
 					try
 					{
 						// Run the worker task
-						worker(this, arg, us => Dispatcher.BeginInvoke(progress_cb, us));
+						worker(this, arg, us => Dispatcher.BeginInvoke(progress_cb, DispatcherPriority.Render, us));
 						Dispatcher.BeginInvoke(progress_cb, new UserState { FractionComplete = 1f });
 					}
 					catch (Exception ex)
 					{
-						if (ex is OperationCanceledException) m_cancel.Cancel();
+						if (ex is OperationCanceledException) Cancel.Cancel();
 						else Error = ex;
 					}
 
 					// Set the event to say "task done"
 					Done.Set();
-					Dispatcher.BeginInvoke(progress_cb, new UserState { CloseDialog = true });
+					Dispatcher.BeginInvoke(progress_cb, DispatcherPriority.Render, new UserState { CloseDialog = true });
 				}
 				m_thread.Start();
 			}
@@ -94,7 +98,7 @@ namespace Rylogic.Gui.WPF
 			}
 			else if (Result == null)
 			{
-				m_cancel.Cancel();
+				Cancel.Cancel();
 				e.Cancel = true;
 			}
 			else if (this.IsModal())
@@ -137,6 +141,10 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(DescriptionProperty);
 			set => SetValue(DescriptionProperty, value);
 		}
+		private void Description_Changed()
+		{
+			NotifyPropertyChanged(nameof(Description));
+		}
 		public static readonly DependencyProperty DescriptionProperty = Gui_.DPRegister<ProgressUI>(nameof(Description), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>Image source for the prompt icon</summary>
@@ -144,6 +152,10 @@ namespace Rylogic.Gui.WPF
 		{
 			get => (ImageSource?)GetValue(ImageProperty);
 			set => SetValue(ImageProperty, value);
+		}
+		private void Image_Changed()
+		{
+			NotifyPropertyChanged(nameof(Image));
 		}
 		public static readonly DependencyProperty ImageProperty = Gui_.DPRegister<ProgressUI>(nameof(Image), null, Gui_.EDPFlags.None);
 
@@ -153,6 +165,10 @@ namespace Rylogic.Gui.WPF
 			get => (string)GetValue(ProgressBarTextProperty);
 			set => SetValue(ProgressBarTextProperty, value);
 		}
+		private void ProgressBarText_Changed()
+		{
+			NotifyPropertyChanged(nameof(ProgressBarText));
+		}
 		public static readonly DependencyProperty ProgressBarTextProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarText), string.Empty, Gui_.EDPFlags.None);
 
 		/// <summary>True for tasks of unknown length</summary>
@@ -160,6 +176,10 @@ namespace Rylogic.Gui.WPF
 		{
 			get => (bool)GetValue(ProgressIsIndeterminateProperty);
 			set => SetValue(ProgressIsIndeterminateProperty, value);
+		}
+		private void ProgressIsIndeterminate_Changed()
+		{
+			NotifyPropertyChanged(nameof(ProgressIsIndeterminate));
 		}
 		public static readonly DependencyProperty ProgressIsIndeterminateProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressIsIndeterminate), Boxed.False, Gui_.EDPFlags.None);
 
@@ -169,6 +189,10 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(ProgressBarVisibleProperty);
 			set => SetValue(ProgressBarVisibleProperty, value);
 		}
+		private void ProgressBarVisible_Changed()
+		{
+			NotifyPropertyChanged(nameof(ProgressBarVisible));
+		}
 		public static readonly DependencyProperty ProgressBarVisibleProperty = Gui_.DPRegister<ProgressUI>(nameof(ProgressBarVisible), Boxed.True, Gui_.EDPFlags.None);
 
 		/// <summary>True if the cancel button is enabled</summary>
@@ -177,18 +201,25 @@ namespace Rylogic.Gui.WPF
 			get => (bool)GetValue(CancelEnabledProperty);
 			set => SetValue(CancelEnabledProperty, value);
 		}
+		private void CancelEnabled_Changed()
+		{
+			NotifyPropertyChanged(nameof(CancelEnabled));
+		}
 		public static readonly DependencyProperty CancelEnabledProperty = Gui_.DPRegister<ProgressUI>(nameof(CancelEnabled), Boxed.False, Gui_.EDPFlags.None);
 
 		/// <summary>An event raised when the task is complete</summary>
 		public ManualResetEvent Done { get; }
 
+		/// <summary>Access the cancel token</summary>
+		public CancellationToken CancelToken => Cancel.Token;
+		private CancellationTokenSource Cancel { get; }
+
 		/// <summary>The background task should cancel</summary>
 		public bool CancelPending
 		{
-			get => AllowCancel && m_cancel.IsCancellationRequested;
-			private set { if (AllowCancel) m_cancel.Cancel(); }
+			get => AllowCancel && Cancel.IsCancellationRequested;
+			private set { if (AllowCancel) Cancel.Cancel(); }
 		}
-		private readonly CancellationTokenSource m_cancel;
 
 		/// <summary>Set the state of 'CancelPending' to true</summary>
 		public Command SignalCancel { get; }
@@ -238,7 +269,7 @@ namespace Rylogic.Gui.WPF
 
 			if (us.Description != null)
 				Description = us.Description;
-		
+
 			if (us.Image != null)
 				Image = us.Image;
 
