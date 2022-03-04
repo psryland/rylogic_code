@@ -16,17 +16,19 @@ namespace Rylogic.TextAligner
 		private readonly ITextSnapshot m_snapshot;
 		private readonly List<AlignGroup> m_groups;
 		private readonly EAlignCharacters m_style;
+		private readonly AlignPattern m_ignore_line;
 		private readonly EAction m_action;
 		private readonly int m_tab_size;
 
-		public Aligner(IEnumerable<AlignGroup> groups, EAlignCharacters style, IWpfTextView view, EAction action)
+		public Aligner(IEnumerable<AlignGroup> groups, EAlignCharacters style, AlignPattern ignore_line, IWpfTextView view, EAction action)
 		{
-			m_view     = view;
-			m_groups   = groups.ToList();
-			m_snapshot = m_view.TextSnapshot;
-			m_tab_size = m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
-			m_action   = action;
-			m_style    = style;
+			m_view        = view;
+			m_groups      = groups.ToList();
+			m_snapshot    = m_view.TextSnapshot;
+			m_tab_size    = m_view.Options.GetOptionValue(DefaultOptions.TabSizeOptionId);
+			m_ignore_line = ignore_line;
+			m_action      = action;
+			m_style       = style;
 
 			// Get the current line number, line, line position, and selection
 			var selection = new Selection(m_view);
@@ -66,8 +68,8 @@ namespace Rylogic.TextAligner
 		/// <summary>Return a list of alignment patterns in priority order.</summary>
 		private List<AlignGroup> PrioritisePatterns(Selection selection)
 		{
-			// If there is a selection, see if we should use the selected text at the align pattern
-			// Only use single line, non-whole-line selections on the same line as the caret
+			// If there is a selection, see if we should use the selected text as the align pattern.
+			// Only use single line, non-whole-line selections on the same line as the caret.
 			var pattern_selection = !selection.IsEmpty && selection.IsSingleLine && !selection.IsWholeLines;
 			if (pattern_selection)
 			{
@@ -81,7 +83,7 @@ namespace Rylogic.TextAligner
 				return new[]{new AlignGroup("Selection", 0, new AlignPattern(EPattern.Substring, expr, ofs))}.ToList();
 			}
 
-			// If the cursor is next to an alignment pattern, move that pattern to the front of the priority list.
+			// If the caret is next to an alignment pattern, move that pattern to the front of the priority list.
 			// Only do this when there isn't a multi line selection as the 'near-pattern' behaviour is confusing.
 			if (selection.IsEmpty)
 			{
@@ -253,6 +255,16 @@ namespace Rylogic.TextAligner
 		{
 			for (var i = align.LineNumber + dir; line_range.ContainsInclusive(i); i += dir)
 			{
+				// If the line matches the IgnoreLinePattern, skip to the next line
+				if (m_ignore_line.IsValid)
+				{
+					// Read the line from the document
+					var line = m_snapshot.GetLineFromLineNumber(i);
+					var line_text = line.GetText();
+					if (m_ignore_line.IsMatch(line_text))
+						continue;
+				}
+
 				// Get the alignment boundaries on this line
 				var boundaries = FindAlignBoundariesOnLine(i, grps);
 

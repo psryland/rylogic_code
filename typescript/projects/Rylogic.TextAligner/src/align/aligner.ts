@@ -16,6 +16,7 @@ export class Aligner
 		this.groups = [];
 		this.tab_size = 4;
 		this.style = EAlignCharacters.Spaces;
+		this.ignore_line = null;
 
 		// Populate the groups list
 		this.ValidateSettings();
@@ -32,6 +33,9 @@ export class Aligner
 
 	/** The whitespace characters to use for alignment */
 	public style: EAlignCharacters;
+
+	/** The pattern to use to ignore lines during alignment */
+	public ignore_line: AlignPattern | null;
 
 	/** Align text in the editor */
 	DoAlign(editor: vscode.TextEditor, action: EAction) :void
@@ -270,6 +274,16 @@ export class Aligner
 		let edits: Token[] = []
 		for (let i = align.line.lineNumber + dir; line_range.contains_inclusive(i); i += dir)
 		{
+			// If the line matches the IgnoreLinePattern, skip to the next line
+			if (this.ignore_line != null)
+			{
+				// Read the line from the document
+				let line = doc.lineAt(i);
+				let line_text = line.text;
+				if (this.ignore_line.pattern.test(line_text))
+					continue;
+			}
+
 			// Get the alignment boundaries on this line
 			let boundaries = this.FindAlignBoundariesOnLine(doc, i, grps);
 
@@ -537,7 +551,7 @@ export class Aligner
 	ValidateSettings(): void
 	{
 		// Read the alignment characters
-		const style: string = vscode.workspace.getConfiguration('editor').get('align_characters') || "Spaces";
+		const style: string = vscode.workspace.getConfiguration('textaligner').get('alignCharacters') || "Spaces";
 		this.style = EAlignCharacters[style as keyof typeof EAlignCharacters];
 
 		// Read the tab size from settings
@@ -564,18 +578,46 @@ export class Aligner
 				}
 				catch (error)
 				{
-					err.push(error);
+					if (error instanceof Error)
+						err.push(error.message);
+					else
+						err.push(String(error));
 				}
 			}
 
 			// Add each valid group
 			this.groups.push(grp);
 		}
-		if (err.length == 0)
-			return;
 
-		// Toast message
-		vscode.window.showWarningMessage("Invalid regular expressions in 'textaligner.groups'", "" + err);
+		// Toast message if there are errors
+		if (err.length != 0)
+			vscode.window.showWarningMessage("Invalid regular expressions in 'textaligner.groups'", "" + err);
+
+		// Read the line ignore pattern
+		let ignore_line_pattern :string|null = vscode.workspace.getConfiguration('textaligner').get('ignoreLinePattern') || null;
+		if (ignore_line_pattern != null && ignore_line_pattern.length != 0)
+		{
+			try
+			{
+				let re = new RegExp(ignore_line_pattern, 'g');
+				this.ignore_line = new AlignPattern(re, {});
+			}
+			catch (error)
+			{
+				if (error instanceof Error)
+					err.push(error.message);
+				else
+					err.push(String(error));
+			}
+		}
+		else
+		{
+			this.ignore_line = null;
+		}
+
+		// Toast message if there are errors
+		if (err.length != 0)
+			vscode.window.showWarningMessage("Invalid regular expressions in 'textaligner.ignore_line_pattern'", "" + err);
 	}
 
 	/** IsWhitespace predicate */

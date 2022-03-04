@@ -1,17 +1,17 @@
 <UserControl
 	x:Class="Rylogic.TextAligner.AlignOptionsUI"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
-    mc:Ignorable="d" 
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	Focusable="True"
 	>
 	<UserControl.Resources>
-        <BitmapImage x:Key="help" UriSource="/Rylogic.TextAligner;component/help_blue.png" />
+		<BitmapImage x:Key="help" UriSource="/Rylogic.TextAligner;component/help_blue.png" />
 		<BitmapImage x:Key="add" UriSource="/Rylogic.TextAligner;component/edit_add.png" />
 		<BitmapImage x:Key="remove" UriSource="/Rylogic.TextAligner;component/red_x.png" />
 		<BitmapImage x:Key="move_up" UriSource="/Rylogic.TextAligner;component/green_up.png" />
@@ -37,8 +37,6 @@
 		<Style x:Key="TextBlockCentred" TargetType="{x:Type TextBlock}">
 			<Setter Property="HorizontalAlignment" Value="Center"/>
 		</Style>
-		<!--<ResourceDictionary>
-		</ResourceDictionary>-->
 	</UserControl.Resources>
 	<Grid
 		x:Name="m_root"
@@ -48,6 +46,7 @@
 			<RowDefinition Height="3*"/>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="2*"/>
+			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
 		<!-- General Settings -->
@@ -63,7 +62,7 @@
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
-            <!-- Alignment characters -->
+			<!-- Alignment characters -->
 			<StackPanel
 				Grid.Row="0"
 				Grid.Column="0"
@@ -505,5 +504,46 @@
 
 		</Grid>
 
+		<!-- Line Ignore -->
+		<Grid
+			Grid.Row="4"
+			Margin="3,3,8,3"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			<TextBlock
+				Grid.Column="0"
+				Text="Ignore Line Pattern: "
+				VerticalAlignment="Center"
+				/>
+			<TextBox
+				Grid.Column="1"
+				Text="{Binding LineIgnorePattern.Expr}"
+				ToolTip="Lines that match this pattern are ignored when aligning.&#x0a;Examples:&#x0a;
+  ^\s*$ - Skip blank lines&#x0a;
+  ^\s*// - Skips lines that start with a comment&#x0a;
+  (^\\s*$)|(^\\s*//) - Skips blanks lines and lines starting with comments"
+				VerticalAlignment="Center"
+				IsReadOnly="True"
+				/>
+			<Button
+				Grid.Column="2"
+				Command="{Binding Path=DataContext.EditPattern, ElementName=m_root}"
+				CommandParameter="{Binding LineIgnorePattern}"
+				Background="Transparent"
+				BorderThickness="0"
+				MaxWidth="20"
+				>
+				<Button.Content>
+					<Image
+						Source="{StaticResource edit}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						/>
+				</Button.Content>
+			</Button>
+		</Grid>
 	</Grid>
 </UserControl>

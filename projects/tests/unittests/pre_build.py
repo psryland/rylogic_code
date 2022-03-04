@@ -4,24 +4,17 @@
 # Generate a header file that includes all
 # headers in the pr library
 # Use:
-#   pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)
+#   pre_build.py $(PlatformTarget) $(Configuration)
 
 import sys, os, tempfile, re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../script")))
-import Rylogic as Tools
-import UserVars
+import Rylogic, UserVars
 
 try:
-	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root])
-
-	dir      = sys.argv[1] if len(sys.argv) > 1 else UserVars.root + "\\projects\\unittests"
-	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
-	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
-	outfile  = dir + "\\src\\unittests.h"
-	tempdir  = tempfile.gettempdir() + "\\" + platform + "\\" + config
-	tmpfile  = tempdir + "\\unittests.h.tmp"
-	os.makedirs(tempdir, exist_ok=True)
+	platform = sys.argv[1] if len(sys.argv) > 1 else "any"
+	config   = sys.argv[2] if len(sys.argv) > 2 else "release"
+	tmpfile = Rylogic.Path(tempfile.gettempdir(), f"unittests.{platform}.{config}.h", check_exists=False)
+	outfile = Rylogic.Path(os.path.dirname(__file__), "src\\unittests.h", check_exists=False)
 
 	srcdirs = [
 		UserVars.root + "\\include"
@@ -56,18 +49,18 @@ try:
 			"// Headers to unit test\n"
 			)
 		for sd in srcdirs:
-			for file in Tools.EnumFiles(sd):
+			for file in Rylogic.EnumFiles(sd):
 				file = file.lower().replace("\\","/")
 				if os.path.splitext(file)[1] != ".h": continue
-				if any([True for excl in exclude if file.find(excl) != -1]): continue;
-				outf.write("#include \""+os.path.relpath(file, sd)+"\"\n")
+				if any([True for excl in exclude if file.find(excl) != -1]): continue
+				outf.write(f"#include \"{os.path.relpath(file, sd)}\"\n")
 
 	# swap the tmp file with the file if difference
 	# This sometimes fails because 'VS intellisense' (vcpkgsrv.exe) holds a lock on the source file
-	Tools.Copy(tmpfile, outfile, only_if_modified=True)
+	Rylogic.Copy(tmpfile, outfile, only_if_modified=True)
 
 	# delete the tmp file
 	os.remove(tmpfile)
 
 except Exception as ex:
-	Tools.OnException(ex)
+	Rylogic.OnException(ex)

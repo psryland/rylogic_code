@@ -62,3 +62,20 @@ a== b
 	selected   text  containing  "C-style   mult-
 	line   \"  strings  \"" and    indentation!
 }
+
+
+enum AlignWithGaps
+{
+	// This line is ignored
+	One = 1,
+	TwoTwo = 22,
+	// This line is also ignored
+	Three = 3,
+	Four = 44444,
+	// And this one = ignored.
+	Five = 55,
+
+	Six = 6,
+	// Aligning stops before here
+	Seven = 7
+}

@@ -42,7 +42,6 @@ namespace Rylogic.Gui.WPF
 				"Application Paused",
 				"Waiting for the debugger to attach.\n\nClick 'Cancel' to skip",
 				SystemIcons.Information.ToBitmapSource(),
-				CancellationToken.None,
 				(u, o, p) =>
 				{
 					for (; !DebuggerAttached() && !u.CancelPending; Thread.Sleep(100))
